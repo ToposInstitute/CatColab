@@ -1,5 +1,8 @@
 //! Wasm bindings for models of a double theory.
 
+use std::collections::HashMap;
+use std::rc::Rc;
+
 use all_the_same::all_the_same;
 use derive_more::{From, TryInto};
 use nonempty::NonEmpty;
@@ -258,19 +261,46 @@ impl CanQuote<ModalMor, Mor> for Quoter {
 /// A box containing a model of a double theory of any kind.
 ///
 /// See [`DblTheoryBox`] for motivation.
-#[allow(clippy::large_enum_variant)]
-#[derive(From, TryInto)]
-#[try_into(ref, ref_mut)]
+#[derive(Clone, From, TryInto)]
+#[try_into(ref)]
 pub enum DblModelBox {
     /// A model of a discrete double theory.
-    Discrete(dbl_model::DiscreteDblModel),
+    Discrete(Rc<dbl_model::DiscreteDblModel>),
     /// A model of a discrete tabulator theory.
-    DiscreteTab(dbl_model::DiscreteTabModel),
+    DiscreteTab(Rc<dbl_model::DiscreteTabModel>),
     /// A model of a modal double theory.
-    Modal(dbl_model::ModalDblModel),
+    Modal(Rc<dbl_model::ModalDblModel>),
+}
+
+impl From<dbl_model::DiscreteDblModel> for DblModelBox {
+    fn from(value: dbl_model::DiscreteDblModel) -> Self {
+        Rc::new(value).into()
+    }
+}
+impl From<dbl_model::DiscreteTabModel> for DblModelBox {
+    fn from(value: dbl_model::DiscreteTabModel) -> Self {
+        Rc::new(value).into()
+    }
+}
+impl From<dbl_model::ModalDblModel> for DblModelBox {
+    fn from(value: dbl_model::ModalDblModel) -> Self {
+        Rc::new(value).into()
+    }
+}
+
+impl DblModelBox {
+    /// Constructs an empty boxed model of a double theory.
+    pub fn new(theory: &DblTheory) -> Self {
+        match &theory.0 {
+            DblTheoryBox::Discrete(th) => dbl_model::DiscreteDblModel::new(th.clone()).into(),
+            DblTheoryBox::DiscreteTab(th) => dbl_model::DiscreteTabModel::new(th.clone()).into(),
+            DblTheoryBox::Modal(th) => dbl_model::ModalDblModel::new(th.clone()).into(),
+        }
+    }
 }
 
 /// Wasm binding of a model of a double theory.
+#[derive(Clone)]
 #[wasm_bindgen]
 pub struct DblModel {
     /// The boxed underlying model.
@@ -281,43 +311,40 @@ pub struct DblModel {
 }
 
 impl DblModel {
-    /// Constructs a new model of a double theory.
+    /// Constructs an empty model of a double theory.
     pub fn new(theory: &DblTheory) -> Self {
-        let model = match &theory.0 {
-            DblTheoryBox::Discrete(th) => dbl_model::DiscreteDblModel::new(th.clone()).into(),
-            DblTheoryBox::DiscreteTab(th) => dbl_model::DiscreteTabModel::new(th.clone()).into(),
-            DblTheoryBox::Modal(th) => dbl_model::ModalDblModel::new(th.clone()).into(),
-        };
         Self {
-            model,
+            model: DblModelBox::new(theory),
             ob_namespace: Namespace::new_for_uuid(),
             mor_namespace: Namespace::new_for_uuid(),
         }
     }
 
+    /// Replaces the boxed model while preserving the namespaces.
+    pub fn replace_box(&self, model: DblModelBox) -> Self {
+        Self {
+            model,
+            ob_namespace: self.ob_namespace.clone(),
+            mor_namespace: self.mor_namespace.clone(),
+        }
+    }
+
     /// Tries to get a model of a discrete theory.
-    pub fn discrete(&self) -> Result<&dbl_model::DiscreteDblModel, String> {
+    pub fn discrete(&self) -> Result<&Rc<dbl_model::DiscreteDblModel>, String> {
         (&self.model)
             .try_into()
             .map_err(|_| "Model should be of a discrete theory".into())
     }
 
-    /// Tries to get a model of a discrete theory, by mutable reference.
-    pub fn discrete_mut(&mut self) -> Result<&mut dbl_model::DiscreteDblModel, String> {
-        (&mut self.model)
-            .try_into()
-            .map_err(|_| "Model should be of a discrete theory".into())
-    }
-
     /// Tries to get a model of a discrete tabulator theory.
-    pub fn discrete_tab(&self) -> Result<&dbl_model::DiscreteTabModel, String> {
+    pub fn discrete_tab(&self) -> Result<&Rc<dbl_model::DiscreteTabModel>, String> {
         (&self.model)
             .try_into()
             .map_err(|_| "Model should be of a discrete tabulator theory".into())
     }
 
     /// Tries to get a model of a modal theory.
-    pub fn modal(&self) -> Result<&dbl_model::ModalDblModel, String> {
+    pub fn modal(&self) -> Result<&Rc<dbl_model::ModalDblModel>, String> {
         (&self.model).try_into().map_err(|_| "Model should be of a modal theory".into())
     }
 
@@ -325,6 +352,7 @@ impl DblModel {
     pub fn add_ob(&mut self, decl: &ObDecl) -> Result<(), String> {
         all_the_same!(match &mut self.model {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+                let model = Rc::make_mut(model);
                 let ob_type = Elaborator.elab(&decl.ob_type)?;
                 model.add_ob(decl.id.into(), ob_type);
             }
@@ -339,6 +367,7 @@ impl DblModel {
     pub fn add_mor(&mut self, decl: &MorDecl) -> Result<(), String> {
         all_the_same!(match &mut self.model {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+                let model = Rc::make_mut(model);
                 let mor_type = Elaborator.elab(&decl.mor_type)?;
                 model.make_mor(decl.id.into(), mor_type);
                 if let Some(dom) = decl.dom.as_ref().map(|ob| Elaborator.elab(ob)).transpose()? {
@@ -533,15 +562,50 @@ pub fn collect_product(ob: Ob) -> Result<Vec<Ob>, String> {
     Ok(vec.into_iter().map(|ob| Quoter.quote(&ob)).collect())
 }
 
+/// A named collection of models of double theories.
+#[derive(Default)]
+#[wasm_bindgen]
+pub struct DblModelMap(#[wasm_bindgen(skip)] pub HashMap<String, DblModel>);
+
+#[wasm_bindgen]
+impl DblModelMap {
+    /// Constructs an empty collection of models.
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Default::default()
+    }
+
+    /// Returns whether the collection contains a model with the given name.
+    #[wasm_bindgen(js_name = "has")]
+    pub fn contains_key(&self, id: &str) -> bool {
+        self.0.contains_key(id)
+    }
+
+    /// Inserts a model with the given name.
+    #[wasm_bindgen(js_name = "set")]
+    pub fn insert(&mut self, id: String, model: &DblModel) {
+        self.0.insert(id, model.clone());
+    }
+}
+
 /// Elaborates a model defined by a notebook into a catlog model.
 #[wasm_bindgen(js_name = "elaborateModel")]
-pub fn elaborate_model(notebook: ModelNotebook, theory: &DblTheory) -> Result<DblModel, String> {
+pub fn elaborate_model(
+    notebook: &ModelNotebook,
+    instantiated: &DblModelMap,
+    theory: &DblTheory,
+) -> Result<DblModel, String> {
     let mut model = DblModel::new(theory);
     for judgment in notebook.0.formal_content() {
         match judgment {
             ModelJudgment::Object(decl) => model.add_ob(decl)?,
             ModelJudgment::Morphism(decl) => model.add_mor(decl)?,
-            ModelJudgment::Instantiation(_) => {} // FIXME: Ignored for now.
+            ModelJudgment::Instantiation(inst) => {
+                if let Some(link) = &inst.model {
+                    assert!(instantiated.0.contains_key(&link.stable_ref.id));
+                }
+                // FIXME: Do something with the instantiation.
+            }
         }
     }
     Ok(model)

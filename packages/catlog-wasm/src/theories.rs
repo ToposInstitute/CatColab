@@ -51,13 +51,13 @@ impl ThCategory {
 
     /// Sigma migrates a category to a schema.
     #[wasm_bindgen(js_name = "toSchema")]
-    pub fn to_schema(mut model: DblModel, th_schema: &DblTheory) -> Result<DblModel, String> {
-        let th = th_schema.discrete()?;
-        model.discrete_mut()?.push_forward(
+    pub fn to_schema(boxed: &DblModel, th_schema: &DblTheory) -> Result<DblModel, String> {
+        let (th, mut model) = (th_schema.discrete()?, boxed.discrete()?.as_ref().clone());
+        model.push_forward(
             &theory_morphisms::th_category_to_schema().functor_into(&th.0),
             th.clone(),
         );
-        Ok(model)
+        Ok(boxed.replace_box(model.into()))
     }
 }
 
@@ -79,13 +79,13 @@ impl ThSchema {
 
     /// Sigma migrates a schema to a category.
     #[wasm_bindgen(js_name = "toCategory")]
-    pub fn to_category(mut model: DblModel, th_category: &DblTheory) -> Result<DblModel, String> {
-        let th = th_category.discrete()?;
-        model.discrete_mut()?.push_forward(
+    pub fn to_category(boxed: &DblModel, th_category: &DblTheory) -> Result<DblModel, String> {
+        let (th, mut model) = (th_category.discrete()?, boxed.discrete()?.as_ref().clone());
+        model.push_forward(
             &theory_morphisms::th_schema_to_category().functor_into(&th.0),
             th.clone(),
         );
-        Ok(model)
+        Ok(boxed.replace_box(model.into()))
     }
 }
 
@@ -226,14 +226,14 @@ impl ThDelayableSignedCategory {
 
     /// Sigma migrates a delayable signed category to a signed category.
     #[wasm_bindgen(js_name = "toSignedCategory")]
-    pub fn to_signed_category(mut model: DblModel, th: &DblTheory) -> Result<DblModel, String> {
-        let th = th.discrete()?;
-        model.discrete_mut()?.push_forward(
+    pub fn to_signed_category(boxed: &DblModel, th: &DblTheory) -> Result<DblModel, String> {
+        let (th, mut model) = (th.discrete()?, boxed.discrete()?.as_ref().clone());
+        model.push_forward(
             &theory_morphisms::th_delayable_signed_category_to_signed_category()
                 .functor_into(&th.0),
             th.clone(),
         );
-        Ok(model)
+        Ok(boxed.replace_box(model.into()))
     }
 }
 

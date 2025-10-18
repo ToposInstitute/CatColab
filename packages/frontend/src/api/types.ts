@@ -1,15 +1,14 @@
-import { type DocumentId, Repo } from "@automerge/automerge-repo";
+import { type DocHandle, type DocumentId, Repo } from "@automerge/automerge-repo";
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 import { IndexedDBStorageAdapter } from "@automerge/automerge-repo-storage-indexeddb";
 import type { FirebaseApp } from "firebase/app";
-import { type Accessor, createResource } from "solid-js";
 import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
 import type { Permissions } from "catcolab-api";
 import type { Document, StableRef, Uuid } from "catlog-wasm";
 import type { InterfaceToType } from "../util/types";
-import { type LiveDoc, getLiveDocFromDocHandle } from "./document";
+import { type LiveDoc, findAndMigrate, makeLiveDoc } from "./document";
 import { type RpcClient, createRpcClient } from "./rpc";
 
 /** Bundle of everything needed to interact with the CatColab backend. */
@@ -66,26 +65,28 @@ export class Api {
         refId: Uuid,
         docType?: Doc["type"],
     ): Promise<LiveDoc<Doc>> {
-        const { docId, permissions, localOnly } = await this.getDocCacheEntry(refId);
-        const repo = localOnly ? this.localRepo : this.repo;
-        const docHandle = await repo.find<Doc>(docId);
-
-        return getLiveDocFromDocHandle(docHandle, docType, {
+        const docHandle = await this.getDocHandle<Doc>(refId, docType);
+        const permissions = await this.getPermissions(refId);
+        return makeLiveDoc(docHandle, {
             refId,
             permissions,
         });
     }
 
-    /** Get an Automerge document ID for the given document ref. */
-    async getDocId(refId: Uuid): Promise<DocumentId> {
-        const { docId } = await this.getDocCacheEntry(refId);
-        return docId;
+    /** Gets an Automerge document handle for the given document ref. */
+    async getDocHandle<Doc extends Document>(
+        refId: Uuid,
+        docType?: Doc["type"],
+    ): Promise<DocHandle<Doc>> {
+        const { docId, localOnly } = await this.getDocCacheEntry(refId);
+        const repo = localOnly ? this.localRepo : this.repo;
+        return await findAndMigrate<Doc>(repo, docId, docType);
     }
 
-    /** TODO */
-    useDocId(refId: () => Uuid | undefined): Accessor<DocumentId | undefined> {
-        const [docId] = createResource(refId, (refId) => this.getDocId(refId));
-        return docId;
+    /** Get permissions for the given document ref. */
+    async getPermissions(refId: Uuid): Promise<Permissions> {
+        const { permissions } = await this.getDocCacheEntry(refId);
+        return permissions;
     }
 
     private async getDocCacheEntry(refId: Uuid): Promise<DocCacheEntry> {
