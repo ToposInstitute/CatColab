@@ -261,8 +261,8 @@ impl CanQuote<ModalMor, Mor> for Quoter {
 ///
 /// See [`DblTheoryBox`] for motivation.
 #[allow(clippy::large_enum_variant)]
-#[derive(From, TryInto)]
-#[try_into(ref, ref_mut)]
+#[derive(Clone, From, TryInto)]
+#[try_into(ref)]
 pub enum DblModelBox {
     /// A model of a discrete double theory.
     Discrete(dbl_model::DiscreteDblModel),
@@ -273,6 +273,7 @@ pub enum DblModelBox {
 }
 
 /// Wasm binding of a model of a double theory.
+#[derive(Clone)]
 #[wasm_bindgen]
 pub struct DblModel {
     /// The boxed underlying model.
@@ -297,16 +298,18 @@ impl DblModel {
         }
     }
 
+    /// Replaces the boxed model while preserving the namespaces.
+    pub fn replace_box(&self, model: DblModelBox) -> Self {
+        Self {
+            model,
+            ob_namespace: self.ob_namespace.clone(),
+            mor_namespace: self.mor_namespace.clone(),
+        }
+    }
+
     /// Tries to get a model of a discrete theory.
     pub fn discrete(&self) -> Result<&dbl_model::DiscreteDblModel, String> {
         (&self.model)
-            .try_into()
-            .map_err(|_| "Model should be of a discrete theory".into())
-    }
-
-    /// Tries to get a model of a discrete theory, by mutable reference.
-    pub fn discrete_mut(&mut self) -> Result<&mut dbl_model::DiscreteDblModel, String> {
-        (&mut self.model)
             .try_into()
             .map_err(|_| "Model should be of a discrete theory".into())
     }
@@ -550,14 +553,16 @@ impl DblModelMap {
 
     /// Returns whether the collection contains a model with the given name.
     #[wasm_bindgen(js_name = "has")]
-    pub fn contains_key(&mut self, id: &str) -> bool {
+    pub fn contains_key(&self, id: &str) -> bool {
         self.0.contains_key(id)
     }
 
     /// Inserts a model with the given name.
     #[wasm_bindgen(js_name = "set")]
-    pub fn insert(&mut self, id: String, model: DblModel) {
-        self.0.insert(id, model);
+    pub fn insert(&mut self, id: String, model: &DblModel) {
+        // FIXME: `DblModel` should contain an `Rc` like `DblTheory` does, which
+        // would make this clone cheap.
+        self.0.insert(id, model.clone());
     }
 }
 
