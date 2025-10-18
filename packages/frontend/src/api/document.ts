@@ -1,4 +1,10 @@
-import type { ChangeFn, DocHandle, DocHandleChangePayload } from "@automerge/automerge-repo";
+import type {
+    AnyDocumentId,
+    ChangeFn,
+    DocHandle,
+    DocHandleChangePayload,
+    Repo,
+} from "@automerge/automerge-repo";
 import jsonpatch from "fast-json-patch";
 import { type Accessor, createEffect, createSignal } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
@@ -36,7 +42,7 @@ export type LiveDoc<Doc extends Document = Document> = {
 };
 
 /** Info about a document ref in the CatColab backend. */
-type DocRef = {
+export type DocRef = {
     /** ID of the document ref. */
     refId: string;
 
@@ -44,18 +50,18 @@ type DocRef = {
     permissions: Permissions;
 };
 
-/** Create a live document from an Automerge document handle.
+/** Gets a document from an Automerge repo, migrating it if necessary.
 
-When using the official CatColab backend, this function should be called only
-indirectly, via [`getLiveDoc`]. However, if you want to bypass the CatColab
-backend and fetch a document from another Automerge repo, you can call this
-function directly.
+Prefer calling this function over calling `Repo.find` directly to ensure that
+any necessary migrations are performed before the data is accessed.
  */
-export function getLiveDocFromDocHandle<Doc extends Document>(
-    docHandle: DocHandle<Doc>,
+export async function findAndMigrate<Doc extends Document>(
+    repo: Repo,
+    docId: AnyDocumentId,
     docType?: Doc["type"],
-    docRef?: DocRef,
-): LiveDoc<Doc> {
+): Promise<DocHandle<Doc>> {
+    const docHandle = await repo.find<Doc>(docId);
+
     // Perform any migrations on the document.
     // XXX: copied from automerge-doc-server/src/server.ts:
     const docBefore = docHandle.doc();
@@ -67,16 +73,29 @@ export function getLiveDocFromDocHandle<Doc extends Document>(
         });
     }
 
-    const doc = makeDocHandleReactive(docHandle);
     if (docType !== undefined) {
+        const actualType = docHandle.doc().type;
         invariant(
-            doc.type === docType,
-            () => `Expected document of type ${docType}, got ${doc.type}`,
+            actualType === docType,
+            () => `Expected document of type ${docType}, got ${actualType}`,
         );
     }
+    return docHandle;
+}
 
+/** Create a live document from an Automerge document handle.
+
+When using the official CatColab backend, this function should be called only
+indirectly, via [`getLiveDoc`]. However, if you want to bypass the CatColab
+backend and fetch a document from another Automerge repo, you can call this
+function directly.
+ */
+export function makeLiveDoc<Doc extends Document>(
+    docHandle: DocHandle<Doc>,
+    docRef?: DocRef,
+): LiveDoc<Doc> {
+    const doc = makeDocHandleReactive(docHandle);
     const changeDoc = (f: ChangeFn<Doc>) => docHandle.change(f);
-
     return { doc, changeDoc, docHandle, docRef };
 }
 

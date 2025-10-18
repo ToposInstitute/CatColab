@@ -1,6 +1,6 @@
 import { v7 } from "uuid";
 
-import type { DblModel, ModelJudgment, MorType, ObType, QualifiedName } from "catlog-wasm";
+import type { DblModel, Link, ModelJudgment, MorType, ObType, QualifiedName } from "catlog-wasm";
 import { deepCopyJSON } from "../util/deepcopy";
 
 /** Declaration of an object in a model. */
@@ -29,6 +29,17 @@ export const newMorphismDecl = (morType: MorType): MorphismDecl => ({
     morType,
     dom: null,
     cod: null,
+});
+
+/** Create a new instantiation of an existing model. */
+export const newInstantiatedModel = (
+    model?: Link | null,
+): ModelJudgment & { tag: "instantiation" } => ({
+    tag: "instantiation",
+    id: v7(),
+    name: "",
+    model: model ?? null,
+    specializations: [],
 });
 
 /** Duplicate a model judgment, creating a fresh UUID when applicable. */

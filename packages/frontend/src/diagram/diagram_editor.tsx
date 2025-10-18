@@ -6,7 +6,7 @@ import invariant from "tiny-invariant";
 import type { DiagramJudgment } from "catlog-wasm";
 import { useApi } from "../api";
 import { InlineInput } from "../components";
-import { LiveModelContext, createModelLibrary } from "../model";
+import { LiveModelContext, createModelLibraryWithApi } from "../model";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
@@ -33,11 +33,11 @@ import "./diagram_editor.css";
 
 export default function DiagramPage() {
     const params = useParams();
-    const api = useApi();
 
+    const api = useApi();
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Must provide theory library as context to diagram page");
-    const models = createModelLibrary(theories);
+    const models = createModelLibraryWithApi(api, theories);
 
     const [liveDiagram] = createResource(
         () => params.ref,

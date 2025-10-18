@@ -1,5 +1,7 @@
 //! Wasm bindings for models of a double theory.
 
+use std::collections::HashMap;
+
 use all_the_same::all_the_same;
 use derive_more::{From, TryInto};
 use nonempty::NonEmpty;
@@ -533,15 +535,50 @@ pub fn collect_product(ob: Ob) -> Result<Vec<Ob>, String> {
     Ok(vec.into_iter().map(|ob| Quoter.quote(&ob)).collect())
 }
 
+/// A named collection of models of double theories.
+#[derive(Default)]
+#[wasm_bindgen]
+pub struct DblModelMap(#[wasm_bindgen(skip)] pub HashMap<String, DblModel>);
+
+#[wasm_bindgen]
+impl DblModelMap {
+    /// Constructs an empty collection of models.
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Default::default()
+    }
+
+    /// Returns whether the collection contains a model with the given name.
+    #[wasm_bindgen(js_name = "has")]
+    pub fn contains_key(&mut self, id: &str) -> bool {
+        self.0.contains_key(id)
+    }
+
+    /// Inserts a model with the given name.
+    #[wasm_bindgen(js_name = "set")]
+    pub fn insert(&mut self, id: String, model: DblModel) {
+        self.0.insert(id, model);
+    }
+}
+
 /// Elaborates a model defined by a notebook into a catlog model.
 #[wasm_bindgen(js_name = "elaborateModel")]
-pub fn elaborate_model(notebook: ModelNotebook, theory: &DblTheory) -> Result<DblModel, String> {
+pub fn elaborate_model(
+    notebook: &ModelNotebook,
+    instantiated: &DblModelMap,
+    theory: &DblTheory,
+) -> Result<DblModel, String> {
     let mut model = DblModel::new(theory);
     for judgment in notebook.0.formal_content() {
         match judgment {
             ModelJudgment::Object(decl) => model.add_ob(decl)?,
             ModelJudgment::Morphism(decl) => model.add_mor(decl)?,
-            ModelJudgment::Instantiation(_) => {} // FIXME: Ignored for now.
+            ModelJudgment::Instantiation(inst) => {
+                if let Some(link) = &inst.model {
+                    assert!(instantiated.0.contains_key(&link.stable_ref.id));
+                }
+                // FIXME: Do something with the instantiation.
+            }
         }
     }
     Ok(model)

@@ -16,7 +16,7 @@ import { useApi } from "../api";
 import { IconButton, ResizableHandle } from "../components";
 import { DiagramPane } from "../diagram/diagram_editor";
 import { DiagramMenu } from "../diagram/diagram_menu";
-import { createModelLibrary } from "../model";
+import { createModelLibraryWithApi } from "../model";
 import { ModelPane } from "../model/model_editor";
 import { ModelMenu } from "../model/model_menu";
 import {
@@ -42,11 +42,11 @@ import PanelRightClose from "lucide-solid/icons/panel-right-close";
 
 export default function AnalysisPage() {
     const params = useParams();
-    const api = useApi();
 
+    const api = useApi();
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Must provide theory library as context to analysis page");
-    const models = createModelLibrary(theories);
+    const models = createModelLibraryWithApi(api, theories);
 
     const [liveAnalysis] = createResource(
         () => params.ref,

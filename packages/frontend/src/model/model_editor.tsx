@@ -22,7 +22,7 @@ import { TheorySelectorDialog } from "../theory/theory_selector";
 import { PermissionsButton } from "../user";
 import { LiveModelContext } from "./context";
 import { type LiveModelDocument, migrateModelDocument } from "./document";
-import { createModelLibrary } from "./model_library";
+import { createModelLibraryWithApi } from "./model_library";
 import { ModelMenu } from "./model_menu";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
@@ -38,13 +38,13 @@ import "./model_editor.css";
 
 export default function ModelPage() {
     const params = useParams();
-    const api = useApi();
 
+    const api = useApi();
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Must provide theory library as context to model page");
-    const models = createModelLibrary(theories);
+    const models = createModelLibraryWithApi(api, theories);
 
-    const liveModel = models.useLiveModelWithRefId(api, () => params.ref);
+    const liveModel = models.useLiveModel(() => params.ref);
 
     return (
         <Show when={liveModel()} fallback={<DocumentLoadingScreen />}>
@@ -101,7 +101,7 @@ export function ModelPane(props: {
                 </div>
                 <TheorySelectorDialog
                     theoryMeta={stdTheories.getMetadata(liveDoc().doc.theory)}
-                    setTheory={(id) => migrateModelDocument(liveDoc(), id, stdTheories)}
+                    setTheory={(id) => migrateModelDocument(props.liveModel, id, stdTheories)}
                     theories={selectableTheories()}
                 />
             </div>

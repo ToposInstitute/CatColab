@@ -5,9 +5,10 @@ import {
     type AnalysisType,
     type Document,
     type StableRef,
+    type Uuid,
     currentVersion,
 } from "catlog-wasm";
-import { type Api, type LiveDoc, getLiveDocFromDocHandle } from "../api";
+import { type Api, type LiveDoc, findAndMigrate, makeLiveDoc } from "../api";
 import { type LiveDiagramDocument, getLiveDiagram, getLiveDiagramFromRepo } from "../diagram";
 import type { LiveModelDocument, ModelLibrary } from "../model";
 import { newNotebook } from "../notebook";
@@ -78,16 +79,16 @@ export async function createAnalysis(api: Api, analysisType: AnalysisType, analy
 
 /** Retrieve an analysis and make it "live" for editing. */
 export async function getLiveAnalysis(
-    refId: string,
+    refId: Uuid,
     api: Api,
-    models: ModelLibrary,
+    models: ModelLibrary<Uuid>,
 ): Promise<LiveAnalysisDocument> {
     const liveDoc = await api.getLiveDoc<AnalysisDocument>(refId, "analysis");
     const { doc } = liveDoc;
 
     // XXX: TypeScript cannot narrow types in nested tagged unions.
     if (doc.analysisType === "model") {
-        const liveModel = await models.getLiveModelWithRefId(api, doc.analysisOf._id);
+        const liveModel = await models.getLiveModel(doc.analysisOf._id);
         return {
             type: "analysis",
             analysisType: "model",
@@ -113,15 +114,15 @@ Prefer [`getLiveAnalysis`] unless you're bypassing the official backend.
 export async function getLiveAnalysisFromRepo(
     docId: AnyDocumentId,
     repo: Repo,
-    models: ModelLibrary,
+    models: ModelLibrary<AnyDocumentId>,
 ): Promise<LiveAnalysisDocument> {
-    const docHandle = await repo.find<AnalysisDocument>(docId);
-    const liveDoc = getLiveDocFromDocHandle(docHandle);
+    const docHandle = await findAndMigrate<AnalysisDocument>(repo, docId, "analysis");
+    const liveDoc = makeLiveDoc(docHandle);
     const { doc } = liveDoc;
 
     const parentId = doc.analysisOf._id as AnyDocumentId;
     if (doc.analysisType === "model") {
-        const liveModel = await models.getLiveModelWithDocId(repo, parentId);
+        const liveModel = await models.getLiveModel(parentId);
         return {
             type: "analysis",
             analysisType: "model",

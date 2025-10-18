@@ -3,13 +3,13 @@ import { createResource, Switch, Match } from "solid-js";
 
 import { getLiveAnalysisFromRepo } from "../../frontend/src/analysis";
 import { AnalysisNotebookEditor } from "../../frontend/src/analysis/analysis_editor";
-import { createModelLibrary } from "../../frontend/src/model";
+import { createModelLibraryWithRepo } from "../../frontend/src/model";
 import { TheoryLibraryContext } from "../../frontend/src/theory";
 import { stdTheories } from "../../frontend/src/stdlib";
 import type { SolidToolProps } from "./tools";
 
 export function AnalysisPaneComponent(props: SolidToolProps) {
-    const models = createModelLibrary(stdTheories);
+    const models = createModelLibraryWithRepo(props.repo, stdTheories);
 
     const [liveAnalysis] = createResource(
         () => props.docUrl,

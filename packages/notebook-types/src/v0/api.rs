@@ -1,5 +1,3 @@
-use uuid::Uuid;
-
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
@@ -8,20 +6,22 @@ use tsify::Tsify;
 /// Such a reference identifies a specific document, possibly at a specific
 /// version. The keys are prefixed with an underscore, e.g. `_id` instead of
 /// `id`, to avoid conflicts with other keys and unambiguously signal that the
-/// ID and other data apply at the *database* level, rather than merely the
-/// *document* level. The same convention is used in document databases like
-/// CouchDB and MongoDB.
+/// data occur at the *database* level, rather than merely the *document* level.
+/// The same convention is used in document databases like CouchDB and MongoDB.
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 #[tsify(missing_as_null)]
 pub struct StableRef {
     /// Unique identifier of the referenced document.
+    ///
+    /// When using CatColab's official backend, this should be a document ref ID
+    /// (a UUID).
     #[serde(rename = "_id")]
-    pub id: Uuid,
+    pub id: String,
 
     /// Version of the document.
     ///
-    /// If null, refers to the head snapshot of document. This is the case when
+    /// If null, refers to the head commit of document. This is the case when
     /// the referenced document will receive live updates.
     #[serde(rename = "_version")]
     pub version: Option<String>,
