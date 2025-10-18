@@ -106,6 +106,27 @@ describe("Model in library", async () => {
         assert.strictEqual(status(), "Valid");
         assert.strictEqual(models.size, 2);
     });
+
+    const cyclicModel = newModelDocument("empty");
+    const cyclicModelHandle = repo.create(cyclicModel);
+    cyclicModelHandle.change((doc) => {
+        NotebookUtils.appendCell(
+            doc.notebook,
+            newFormalCell(
+                newInstantiatedModel({
+                    _id: cyclicModelHandle.documentId,
+                    _version: null,
+                    _server: "",
+                    type: "instantiation",
+                }),
+            ),
+        );
+    });
+
+    test("should gracefully fail to elaborate when it has a cycle", async () => {
+        const getEntry = await models.getElaboratedModel(cyclicModelHandle.documentId);
+        assert.strictEqual(getEntry()?.validatedModel.tag, "Illformed");
+    });
 });
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
