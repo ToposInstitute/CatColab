@@ -1,5 +1,7 @@
 //! Wasm bindings for diagrams in models of a double theory.
 
+use std::rc::Rc;
+
 use all_the_same::all_the_same;
 use derive_more::From;
 use serde::{Deserialize, Serialize};
@@ -17,10 +19,10 @@ use catlog::zero::{
 };
 use notebook_types::current::*;
 
-use super::model::{DblModel, DblModelBox};
+use super::model::DblModel;
 use super::notation::*;
 use super::result::JsResult;
-use super::theory::DblTheory;
+use super::theory::{DblTheory, DblTheoryBox};
 
 /// A box containing a diagram in a model of a double theory.
 #[derive(From)]
@@ -42,10 +44,10 @@ pub struct DblModelDiagram {
 impl DblModelDiagram {
     /// Creates an empty diagram for the given theory.
     pub fn new(theory: &DblTheory) -> Self {
-        let model = DblModel::new(theory);
-        let diagram = match model.model {
-            DblModelBox::Discrete(model) => {
+        let diagram = match &theory.0 {
+            DblTheoryBox::Discrete(theory) => {
                 let mapping = Default::default();
+                let model = DiscreteDblModel::new(theory.clone());
                 diagram::DblModelDiagram(mapping, model).into()
             }
             _ => panic!("Diagrams only implemented for discrete double theories"),
@@ -282,7 +284,7 @@ impl DblModelDiagram {
     pub fn infer_missing_from(&mut self, model: &DblModel) -> Result<(), String> {
         all_the_same!(match &mut self.diagram {
             DblModelDiagramBox::[Discrete](diagram) => {
-                let model = (&model.model).try_into().map_err(
+                let model: &Rc<_> = (&model.model).try_into().map_err(
                     |_| "Type of model should match type of diagram")?;
                 diagram.infer_missing_from(model);
             }
@@ -305,7 +307,7 @@ impl DblModelDiagram {
     pub fn validate_in(&self, model: &DblModel) -> Result<ModelDiagramValidationResult, String> {
         let result = all_the_same!(match &self.diagram {
             DblModelDiagramBox::[Discrete](diagram) => {
-                let model = (&model.model).try_into().map_err(
+                let model: &Rc<_> = (&model.model).try_into().map_err(
                     |_| "Type of model should match type of diagram")?;
                 diagram.validate_in(model)
             }
