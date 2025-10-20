@@ -22,7 +22,7 @@ in
       owner = "catcolab";
     };
     catcolabSecrets = {
-      file = ../../secrets/.env.prod.age;
+      file = ../../secrets/env.prod.age;
       owner = "catcolab";
     };
   };

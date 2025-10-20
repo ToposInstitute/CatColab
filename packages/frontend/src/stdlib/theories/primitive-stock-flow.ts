@@ -1,8 +1,6 @@
 import { ThCategoryLinks } from "catlog-wasm";
-
-import { Theory } from "../../theory";
+import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
-import type { TheoryMeta } from "../types";
 
 import styles from "../styles.module.css";
 import svgStyles from "../svg_styles.module.css";
@@ -45,13 +43,13 @@ export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): 
             },
         ],
         modelAnalyses: [
-            analyses.configureStockFlowDiagram({
+            analyses.stockFlowDiagram({
                 id: "diagram",
                 name: "Visualization",
                 description: "Visualize the stock and flow diagram",
                 help: "visualization",
             }),
-            analyses.configureMassAction({
+            analyses.massAction({
                 simulate(model, data) {
                     return thCategoryLinks.massAction(model, data);
                 },

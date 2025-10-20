@@ -1,8 +1,6 @@
 import { ThSymMonoidalCategory } from "catlog-wasm";
-
-import { Theory } from "../../theory";
+import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
-import type { TheoryMeta } from "../types";
 
 export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
     const thSymMonoidalCategory = new ThSymMonoidalCategory();
@@ -37,28 +35,28 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
             },
         ],
         modelAnalyses: [
-            analyses.configurePetriNetVisualization({
+            analyses.petriNetVisualization({
                 id: "diagram",
                 name: "Visualization",
                 description: "Visualize the Petri net",
             }),
-            analyses.configureReachability({
-                check(model, data) {
-                    return thSymMonoidalCategory.subreachability(model, data);
-                },
-            }),
-            analyses.configureMassAction({
+            analyses.massAction({
                 simulate(model, data) {
                     return thSymMonoidalCategory.massAction(model, data);
                 },
             }),
-            analyses.configureMassAction({
+            analyses.massAction({
                 id: "stochastic-mass-action",
                 name: "Stochastic mass action dynamics",
                 description: "Simulate a stochastic system using the law of mass action",
                 help: "stochastic-mass-action",
                 simulate(model, data) {
                     return thSymMonoidalCategory.stochasticMassAction(model, data);
+                },
+            }),
+            analyses.reachability({
+                check(model, data) {
+                    return thSymMonoidalCategory.subreachability(model, data);
                 },
             }),
         ],

@@ -7,6 +7,4 @@ at present this is the complete set of logics available in the application.
 @module
  */
 
-export * from "./types";
-export * from "./context";
 export { stdTheories } from "./theories";

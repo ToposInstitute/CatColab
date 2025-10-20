@@ -8,13 +8,12 @@ import {
     type CellConstructor,
     type FormalCellEditorProps,
     NotebookEditor,
-    cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
 import { WelcomeOverlay } from "../page/welcome_overlay";
-import type { ModelTypeMeta } from "../theory";
-import { LiveModelContext } from "./context";
 import type { LiveModelDocument } from "./document";
+import { type ModelTypeMeta } from "../theory";
+import { LiveModelContext } from "./context";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
 import {
@@ -108,7 +107,7 @@ function modelCellConstructor(meta: ModelTypeMeta): CellConstructor<ModelJudgmen
     return {
         name,
         description,
-        shortcut: shortcut && [cellShortcutModifier, ...shortcut],
+        shortcut,
         construct() {
             return meta.tag === "ObType"
                 ? newFormalCell(newObjectDecl(meta.obType))

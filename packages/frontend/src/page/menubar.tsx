@@ -5,10 +5,18 @@ import { useAuth, useFirebaseApp } from "solid-firebase";
 import { type JSX, Show, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
+<<<<<<< HEAD
 import { duplicateDoc, useApi } from "../api";
 import { IconButton } from "../components";
 import { createModel } from "../model/document";
 import { TheoryLibraryContext, stdTheories } from "../stdlib";
+=======
+import type { Document } from "catlog-wasm";
+import { useApi } from "../api";
+import { IconButton } from "../components";
+import { createModel } from "../model/document";
+import { TheoryLibraryContext } from "../theory";
+>>>>>>> main
 import { copyToClipboard, downloadJson } from "../util/json_export";
 import { PageActionsContext } from "./context";
 
@@ -121,9 +129,8 @@ export function DuplicateMenuItem(props: {
     const navigate = useNavigate();
 
     const onDuplicate = async () => {
-        const liveDoc = await getLiveDocumentFromStub(props.stub, api, stdTheories);
-        const newRef = await duplicateDoc(api, liveDoc.liveDoc.doc);
-        navigate(`/${liveDoc.type}/${newRef}`);
+        const newRef = await api.duplicateDoc(props.doc);
+        navigate(`/${props.doc.type}/${newRef}`);
     };
 
     const menuLabel = () => `Duplicate ${props.stub.typeName}`;

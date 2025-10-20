@@ -12,10 +12,11 @@ import {
     createNumericalColumn,
 } from "../../components";
 import type { LiveDiagramDocument } from "../../diagram";
-import type { DiagramAnalysisMeta } from "../../theory";
+import { NotebookUtils } from "../../notebook";
 import { uniqueIndexArray } from "../../util/indexing";
 import { PDEPlot2D, type PDEPlotData2D } from "../../visualization";
 import { createJuliaKernel, executeAndRetrieve } from "./jupyter";
+import type { DecapodesAnalysisContent } from "./simulator_types";
 
 import Loader from "lucide-solid/icons/loader";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
@@ -23,45 +24,8 @@ import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import "./decapodes.css";
 import "./simulation.css";
 
-/** Configuration for a Decapodes analysis of a diagram. */
-export type DecapodesContent = {
-    domain: string | null;
-    mesh: string | null;
-    initialConditions: Record<string, string>;
-    plotVariables: Record<string, boolean>;
-    scalars: Record<string, number>;
-    duration: number;
-};
-
-export function configureDecapodes(options: {
-    id?: string;
-    name?: string;
-    description?: string;
-}): DiagramAnalysisMeta<DecapodesContent> {
-    const {
-        id = "decapodes",
-        name = "Simulation",
-        description = "Simulate the PDE using Decapodes",
-    } = options;
-    return {
-        id,
-        name,
-        description,
-        component: (props) => <Decapodes {...props} />,
-        initialContent: () => ({
-            domain: null,
-            mesh: null,
-            initialConditions: {},
-            plotVariables: {},
-            scalars: {},
-            duration: 10,
-        }),
-    };
-}
-
-/** Analyze a DEC diagram by performing a simulation using Decapodes.jl.
- */
-export function Decapodes(props: DiagramAnalysisProps<DecapodesContent>) {
+/** Analyze a DEC diagram by performing a simulation using Decapodes.jl. */
+export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisContent>) {
     // Step 1: Start the Julia kernel.
     const [kernel, restartKernel] = createJuliaKernel({
         baseUrl: "http://127.0.0.1:8888",
@@ -364,7 +328,7 @@ const makeSimulationCode = (data: SimulationData) =>
 /** Create data to send to the Julia kernel. */
 const makeSimulationData = (
     liveDiagram: LiveDiagramDocument,
-    content: DecapodesContent,
+    content: DecapodesAnalysisContent,
 ): SimulationData | undefined => {
     const validatedDiagram = liveDiagram.validatedDiagram();
     if (validatedDiagram?.tag !== "Valid") {
@@ -380,7 +344,7 @@ const makeSimulationData = (
         diagram: validatedDiagram.diagram.judgments(),
         // FIXME: Depending on judgments from notebook means that model cannot
         // be composed of other models.
-        model: liveDiagram.liveModel.formalJudgments(),
+        model: NotebookUtils.getFormalContent(liveDiagram.liveModel.liveDoc.doc.notebook),
         domain,
         mesh,
         initialConditions,

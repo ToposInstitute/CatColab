@@ -216,21 +216,39 @@ jobs:
     name: Deploy backend to AWS
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request' && github.ref_name == 'main'
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Install Nix
+      uses: cachix/install-nix-action@v25
+      with:
+        nix_path: nixpkgs=channel:25.05
 
-      - name: Set up SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.CATCOLAB_NEXT_DEPLOYUSER_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan backend-next.catcolab.org >> ~/.ssh/known_hosts
+    - name: Configure Cachix
+      uses: cachix/cachix-action@v14
+      with:
+        name: catcolab-jmoggr
+        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
 
-      - name: Rsync the repo to remote host
-        run: |
-           rsync -az --delete ./ catcolab@backend-next.catcolab.org:~/catcolab
+    - name: Build the NixOS system for catcolab-next
+      run: nix build .#nixosConfigurations.catcolab-next.config.system.build.toplevel
 
-      - name: Run nixos-rebuild switch remotely
-        run:
-          ssh catcolab@backend-next.catcolab.org "sudo nixos-rebuild switch --flake ./catcolab#catcolab-next"
+    - name: Set the SSH key for deployment to catcolab-next
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.CATCOLAB_NEXT_DEPLOYUSER_KEY }}" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
+        ssh-keyscan backend-next.catcolab.org >> ~/.ssh/known_hosts
+
+    - name: Deploy to catcolab-next
+      run: |
+       nix run github:serokell/deploy-rs .#catcolab-next
+
+    # Ensure that a copy of the deployed repository is on the machine that it was deployed to. This is
+    # a nice-to-have which enables checking the configuration of the currently deployed system and could
+    # make recovery slightly less aweful in the event nix commands need to be run on the remote.
+    - name: Rsync the repo to remote host
+      run: |
+         rsync -az --delete ./ catcolab@backend-next.catcolab.org:~/catcolab

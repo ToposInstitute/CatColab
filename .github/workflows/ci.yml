@@ -75,6 +75,37 @@ jobs:
         run: |
           RUSTDOCFLAGS='--deny warnings' cargo doc --no-deps
 
+  frontend_tests:
+    name: frontend tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: Install Rust toolchain from file
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          # Don't override flags in cargo config files.
+          rustflags: ""
+
+      - name: Build frontend
+        run: |
+          pnpm install
+          pnpm --filter ./packages/frontend run build -- --mode development
+
+      - name: Run frontend tests
+        run: |
+          pnpm --filter ./packages/frontend run test:no-backend
+
   npm_checks:
     name: npm checks
     runs-on: ubuntu-latest

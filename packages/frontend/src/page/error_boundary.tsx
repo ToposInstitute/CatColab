@@ -1,13 +1,8 @@
 import Dialog, { Content, Portal } from "@corvu/dialog";
 
-import "./errors.css";
+import { PermissionsError } from "../api";
 
-export class PermissionsError extends Error {
-    constructor(message: string) {
-        super(message);
-        this.name = "AuthorizationError";
-    }
-}
+import "./error_boundary.css";
 
 export function ErrorBoundaryDialog(props: { error: Error }) {
     console.error(props.error);

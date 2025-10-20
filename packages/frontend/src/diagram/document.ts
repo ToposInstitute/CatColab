@@ -1,4 +1,4 @@
-import type { AutomergeUrl, Repo } from "@automerge/automerge-repo";
+import type { AnyDocumentId, Repo } from "@automerge/automerge-repo";
 import { type Accessor, createMemo } from "solid-js";
 
 import type {
@@ -7,12 +7,12 @@ import type {
     Document,
     ModelDiagramValidationResult,
     StableRef,
+    Uuid,
 } from "catlog-wasm";
 import { currentVersion, elaborateDiagram } from "catlog-wasm";
-import { type Api, type LiveDoc, createDoc, getLiveDoc, getLiveDocFromDocHandle } from "../api";
-import { type LiveModelDocument, getLiveModel, getLiveModelFromRepo } from "../model";
+import { type Api, type LiveDoc, findAndMigrate, makeLiveDoc } from "../api";
+import type { LiveModelDocument, ModelLibrary } from "../model";
 import { NotebookUtils, newNotebook } from "../notebook";
-import type { TheoryLibrary } from "../stdlib";
 
 /** A document defining a diagram in a model. */
 export type DiagramDocument = Document & { type: "diagram" };
@@ -127,19 +127,19 @@ export function enlivenDiagramDocument(
 /** Create a new, empty diagram in the backend. */
 export function createDiagram(api: Api, inModel: StableRef): Promise<string> {
     const init = newDiagramDocument(inModel);
-    return createDoc(api, init);
+    return api.createDoc(init);
 }
 
 /** Retrieve a diagram from the backend and make it "live" for editing. */
 export async function getLiveDiagram(
-    refId: string,
+    refId: Uuid,
     api: Api,
-    theories: TheoryLibrary,
+    models: ModelLibrary<Uuid>,
 ): Promise<LiveDiagramDocument> {
-    const liveDoc = await getLiveDoc<DiagramDocument>(api, refId, "diagram");
+    const liveDoc = await api.getLiveDoc<DiagramDocument>(refId, "diagram");
     const modelRefId = liveDoc.doc.diagramIn._id;
 
-    const liveModel = await getLiveModel(modelRefId, api, theories);
+    const liveModel = await models.getLiveModel(modelRefId);
     return enlivenDiagramDocument(liveDoc, liveModel);
 }
 
@@ -148,14 +148,14 @@ export async function getLiveDiagram(
 Prefer [`getLiveDiagram`] unless you're bypassing the official backend.
  */
 export async function getLiveDiagramFromRepo(
-    docId: AutomergeUrl,
+    docId: AnyDocumentId,
     repo: Repo,
-    theories: TheoryLibrary,
+    models: ModelLibrary<AnyDocumentId>,
 ): Promise<LiveDiagramDocument> {
-    const docHandle = await repo.find<DiagramDocument>(docId);
-    const liveDoc = getLiveDocFromDocHandle(docHandle);
-    const modelDocId = liveDoc.doc.diagramIn._id as AutomergeUrl;
+    const docHandle = await findAndMigrate<DiagramDocument>(repo, docId, "diagram");
+    const liveDoc = makeLiveDoc(docHandle);
+    const modelDocId = liveDoc.doc.diagramIn._id as AnyDocumentId;
 
-    const liveModel = await getLiveModelFromRepo(modelDocId, repo, theories);
+    const liveModel = await models.getLiveModel(modelDocId);
     return enlivenDiagramDocument(liveDoc, liveModel);
 }

@@ -1,8 +1,6 @@
 import { ThSchema } from "catlog-wasm";
-
-import { Theory } from "../../theory";
+import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
-import type { TheoryMeta } from "../types";
 
 import styles from "../styles.module.css";
 import svgStyles from "../svg_styles.module.css";
@@ -101,7 +99,7 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
             },
         ],
         modelAnalyses: [
-            analyses.configureModelGraph({
+            analyses.modelGraph({
                 id: "diagram",
                 name: "Visualization",
                 description: "Visualize the schema as a graph",
@@ -109,7 +107,7 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
             }),
         ],
         diagramAnalyses: [
-            analyses.configureDiagramGraph({
+            analyses.diagramGraph({
                 id: "graph",
                 name: "Visualization",
                 description: "Visualize the instance as a graph",

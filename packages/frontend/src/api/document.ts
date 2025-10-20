@@ -1,80 +1,67 @@
-import {
-    type ChangeFn,
-    type DocHandle,
-    type DocHandleChangePayload,
-    type DocumentId,
+import type {
+    AnyDocumentId,
+    ChangeFn,
+    DocHandle,
+    DocHandleChangePayload,
     Repo,
 } from "@automerge/automerge-repo";
 import jsonpatch from "fast-json-patch";
 import { type Accessor, createEffect, createSignal } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import invariant from "tiny-invariant";
-import * as uuid from "uuid";
 
+import type { Permissions } from "catcolab-api";
 import { type Document, migrateDocument } from "catlog-wasm";
-import { PermissionsError } from "../util/errors";
-import type { InterfaceToType } from "../util/types";
-import type { Api, LiveDoc } from "./types";
 
-/** An Automerge repo with no networking, used for read-only documents. */
-const localRepo = new Repo();
+/** Live document, typically retrieved from the backend.
 
-/** Retrieve a live document from the backend.
-
-When the user has write permissions, changes to the document will be propagated
-by Automerge to the backend and to other clients. When the user has only read
-permissions, the Automerge doc handle will be "fake", existing only locally in
-the client. And if the user doesn't even have read permissions, this function
-will yield an unauthorized error!
+A live document can be used in reactive contexts and is connected to an
+Automerge document handle.
  */
-export async function getLiveDoc<Doc extends Document>(
-    api: Api,
-    refId: string,
-    docType?: string,
-): Promise<LiveDoc<Doc>> {
-    invariant(uuid.validate(refId), () => `Invalid document ref ${refId}`);
-    const { rpc, repo } = api;
+export type LiveDoc<Doc extends Document = Document> = {
+    /** The document data, suitable for use in reactive contexts.
 
-    const result = await rpc.get_doc.query(refId);
-    if (result.tag !== "Ok") {
-        if (result.code === 403) {
-            throw new PermissionsError(result.message);
-        } else {
-            throw new Error(`Failed to retrieve document: ${result.message}`);
-        }
-    }
-    const refDoc = result.content;
+    This data should never be mutated directly. Instead, call `changeDoc` or, if
+    necessary, use the Automerge document handle.
+     */
+    doc: Doc;
 
-    let docHandle: DocHandle<Doc>;
-    if (refDoc.tag === "Live") {
-        const docId = refDoc.docId as DocumentId;
-        docHandle = (await repo.find(docId)) as DocHandle<Doc>;
-    } else {
-        const init = refDoc.content as unknown as Doc;
-        docHandle = localRepo.create(init);
-    }
+    /** Call this function to make changes to the document. */
+    changeDoc: (f: ChangeFn<Doc>) => void;
 
-    const { permissions } = refDoc;
-    return {
-        ...getLiveDocFromDocHandle(docHandle, docType),
-        docRef: {
-            refId,
-            permissions,
-        },
-    };
-}
+    /** The Automerge document handle for the document. */
+    docHandle: DocHandle<Doc>;
 
-/** Create a live document from an Automerge document handle.
+    /** Associated document ref in the backend, if any.
 
-When using the official CatColab backend, this function should be called only
-indirectly, via [`getLiveDoc`]. However, if you want to bypass the CatColab
-backend and fetch a document from another Automerge repo, you can call this
-function directly.
+    In typical usage of the official CatColab frontend and backend, this field
+    will be set, but lower-level components in the frontend are decoupled from
+    the backend, relying on Automerge only.
+     */
+    docRef?: DocRef;
+};
+
+/** Info about a document ref in the CatColab backend. */
+export type DocRef = {
+    /** ID of the document ref. */
+    refId: string;
+
+    /** Permissions for the document ref. */
+    permissions: Permissions;
+};
+
+/** Gets a document from an Automerge repo, migrating it if necessary.
+
+Prefer calling this function over calling `Repo.find` directly to ensure that
+any necessary migrations are performed before the data is accessed.
  */
-export function getLiveDocFromDocHandle<Doc extends Document>(
-    docHandle: DocHandle<Doc>,
-    docType?: string,
-): LiveDoc<Doc> {
+export async function findAndMigrate<Doc extends Document>(
+    repo: Repo,
+    docId: AnyDocumentId,
+    docType?: Doc["type"],
+): Promise<DocHandle<Doc>> {
+    const docHandle = await repo.find<Doc>(docId);
+
     // Perform any migrations on the document.
     // XXX: copied from automerge-doc-server/src/server.ts:
     const docBefore = docHandle.doc();
@@ -86,38 +73,30 @@ export function getLiveDocFromDocHandle<Doc extends Document>(
         });
     }
 
-    const doc = makeDocHandleReactive(docHandle);
     if (docType !== undefined) {
+        const actualType = docHandle.doc().type;
         invariant(
-            doc.type === docType,
-            () => `Expected document of type ${docType}, got ${doc.type}`,
+            actualType === docType,
+            () => `Expected document of type ${docType}, got ${actualType}`,
         );
     }
+    return docHandle;
+}
 
+/** Create a live document from an Automerge document handle.
+
+When using the official CatColab backend, this function should be called only
+indirectly, via [`getLiveDoc`]. However, if you want to bypass the CatColab
+backend and fetch a document from another Automerge repo, you can call this
+function directly.
+ */
+export function makeLiveDoc<Doc extends Document>(
+    docHandle: DocHandle<Doc>,
+    docRef?: DocRef,
+): LiveDoc<Doc> {
+    const doc = makeDocHandleReactive(docHandle);
     const changeDoc = (f: ChangeFn<Doc>) => docHandle.change(f);
-
-    return { doc, changeDoc, docHandle };
-}
-
-/** Create a new document in the backend, returning its ref ID. */
-export async function createDoc(api: Api, init: Document): Promise<string> {
-    const result = await api.rpc.new_ref.mutate(init as InterfaceToType<Document>);
-    invariant(result.tag === "Ok", `Failed to create a new ${init.type}`);
-
-    return result.content;
-}
-
-/** Duplicate a document in the backend, returning the new ref ID. */
-export async function duplicateDoc(api: Api, doc: Document): Promise<string> {
-    const init: Document = {
-        ...doc,
-        name: `${doc.name} (copy)`,
-    };
-
-    const result = await api.rpc.new_ref.mutate(init as InterfaceToType<Document>);
-    invariant(result.tag === "Ok", `Failed to duplicate the ${doc.type}`);
-
-    return result.content;
+    return { doc, changeDoc, docHandle, docRef };
 }
 
 /** Create a Solid Store that tracks an Automerge document. */

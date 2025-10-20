@@ -2,55 +2,21 @@ import ChevronLeft from "lucide-solid/icons/chevron-left";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import { Show, createMemo } from "solid-js";
 
-import type { DblModel, MotifOccurrence, MotifsOptions } from "catlog-wasm";
+import type { MotifOccurrence } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { Foldable, FormGroup, IconButton, InputField } from "../../components";
-
-import type { ModelAnalysisMeta } from "../../theory";
-import { ModelGraphviz } from "./model_graph";
+import { GraphvizSVG } from "../../visualization";
+import type { MotifFinder, MotifFindingAnalysisContent } from "./checker_types";
+import { modelToGraphviz } from "./model_graph";
 
 import "./submodel_graphs.css";
 
-type FindSubmodelsFn = (model: DblModel, options: MotifsOptions) => MotifOccurrence[];
-
-/** Configuration and state of a submodels analysis. */
-export type SubmodelsAnalysisContent = {
-    /** Index of active submodel. */
-    activeIndex: number;
-
-    /** Maximum length of paths used in morphism search. */
-    maxPathLength?: number | null;
-};
-
-/** Configure a submodel analysis for use with a double theory. */
-export function configureSubmodelsAnalysis(options: {
-    id: string;
-    name: string;
-    description?: string;
-    help?: string;
-    findSubmodels: FindSubmodelsFn;
-}): ModelAnalysisMeta<SubmodelsAnalysisContent> {
-    const { id, name, description, help, findSubmodels } = options;
-    return {
-        id,
-        name,
-        description,
-        help,
-        component: (props) => (
-            <SubmodelsAnalysis title={name} findSubmodels={findSubmodels} {...props} />
-        ),
-        initialContent: () => ({
-            activeIndex: 0,
-            maxPathLength: 5,
-        }),
-    };
-}
-
-function SubmodelsAnalysis(
+/** Find submodels of a model and visualize them as graphs. */
+export default function SubmodelGraphs(
     props: {
-        findSubmodels: FindSubmodelsFn;
+        findSubmodels: MotifFinder;
         title?: string;
-    } & ModelAnalysisProps<SubmodelsAnalysisContent>,
+    } & ModelAnalysisProps<MotifFindingAnalysisContent>,
 ) {
     const submodels = createMemo<MotifOccurrence[]>(
         () => {
@@ -92,6 +58,21 @@ function SubmodelsAnalysis(
         </div>
     );
 
+    const activeGraph = () => {
+        const theory = props.liveModel.theory();
+        const model = props.liveModel.elaboratedModel();
+        const submodel = submodels()[index()];
+        if (theory && model && submodel) {
+            return modelToGraphviz(
+                model,
+                theory,
+                undefined,
+                submodel.obGenerators,
+                submodel.morGenerators,
+            );
+        }
+    };
+
     return (
         <div class="submodel-graphs">
             <Foldable title={props.title} header={indexButtons}>
@@ -121,21 +102,14 @@ function SubmodelsAnalysis(
                     </Show>
                 </FormGroup>
             </Foldable>
-            <Show when={props.liveModel.elaboratedModel()}>
-                {(model) => (
-                    <Show when={submodels()[index()]}>
-                        {(submodel) => (
-                            <ModelGraphviz
-                                model={model()}
-                                theory={props.liveModel.theory()}
-                                obGenerators={submodel().obGenerators}
-                                morGenerators={submodel().morGenerators}
-                                options={{
-                                    engine: "dot",
-                                }}
-                            />
-                        )}
-                    </Show>
+            <Show when={activeGraph()}>
+                {(graph) => (
+                    <GraphvizSVG
+                        graph={graph()}
+                        options={{
+                            engine: "dot",
+                        }}
+                    />
                 )}
             </Show>
         </div>

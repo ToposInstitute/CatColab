@@ -8,10 +8,9 @@ import {
     type CellConstructor,
     type FormalCellEditorProps,
     NotebookEditor,
-    cellShortcutModifier,
     newFormalCell,
 } from "../notebook";
-import type { InstanceTypeMeta } from "../theory";
+import { type InstanceTypeMeta } from "../theory";
 import { LiveDiagramContext } from "./context";
 import type { LiveDiagramDocument } from "./document";
 import { DiagramMorphismCellEditor } from "./morphism_cell_editor";
@@ -101,7 +100,7 @@ function diagramCellConstructor(meta: InstanceTypeMeta): CellConstructor<Diagram
     return {
         name,
         description,
-        shortcut: shortcut && [cellShortcutModifier, ...shortcut],
+        shortcut,
         construct() {
             return meta.tag === "ObType"
                 ? newFormalCell(newDiagramObjectDecl(meta.obType))

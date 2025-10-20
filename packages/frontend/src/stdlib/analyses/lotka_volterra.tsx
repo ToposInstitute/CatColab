@@ -1,4 +1,4 @@
-import type { DblModel, LotkaVolterraProblemData, ODEResult, QualifiedName } from "catlog-wasm";
+import type { DblModel, LotkaVolterraProblemData, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
@@ -7,48 +7,16 @@ import {
     createNumericalColumn,
 } from "../../components";
 import { morLabelOrDefault } from "../../model";
-import type { ModelAnalysisMeta } from "../../theory";
 import { ODEResultPlot } from "../../visualization";
-import { createModelODEPlot } from "./simulation";
+import { createModelODEPlot } from "./model_ode_plot";
+import type { LotkaVolterraSimulator } from "./simulator_types";
 
 import "./simulation.css";
 
-type Simulator = (model: DblModel, data: LotkaVolterraProblemData) => ODEResult;
-
-/** Configure a Lotka-Volterra ODE analysis for use with models of a theory. */
-export function configureLotkaVolterra(options: {
-    id?: string;
-    name?: string;
-    description?: string;
-    help?: string;
-    simulate: Simulator;
-}): ModelAnalysisMeta<LotkaVolterraProblemData> {
-    const {
-        id = "lotka-volterra",
-        name = "Lotka-Volterra dynamics",
-        description = "Simulate the system using a Lotka-Volterra ODE",
-        help = "lotka-volterra",
-        simulate,
-    } = options;
-    return {
-        id,
-        name,
-        description,
-        help,
-        component: (props) => <LotkaVolterra simulate={simulate} title={name} {...props} />,
-        initialContent: () => ({
-            interactionCoefficients: {},
-            growthRates: {},
-            initialValues: {},
-            duration: 10,
-        }),
-    };
-}
-
 /** Analyze a model using Lotka-Volterra dynamics. */
-export function LotkaVolterra(
+export default function LotkaVolterra(
     props: ModelAnalysisProps<LotkaVolterraProblemData> & {
-        simulate: Simulator;
+        simulate: LotkaVolterraSimulator;
         title?: string;
     },
 ) {

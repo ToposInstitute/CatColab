@@ -1,8 +1,6 @@
 import { ThSignedCategory } from "catlog-wasm";
-
-import { Theory } from "../../theory";
+import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
-import type { TheoryMeta } from "../types";
 
 export default function createRegulatoryNetworkTheory(theoryMeta: TheoryMeta): Theory {
     const thSignedCategory = new ThSignedCategory();
@@ -42,34 +40,34 @@ export default function createRegulatoryNetworkTheory(theoryMeta: TheoryMeta): T
             },
         ],
         modelAnalyses: [
-            analyses.configureModelGraph({
+            analyses.modelGraph({
                 id: "diagram",
                 name: "Visualization",
                 description: "Visualize the regulatory network",
                 help: "visualization",
             }),
-            analyses.configureSubmodelsAnalysis({
+            analyses.motifFinding({
                 id: "positive-loops",
                 name: "Positive feedback",
                 description: "Analyze the network for positive feedback loops",
                 help: "loops",
-                findSubmodels(model, options) {
+                findMotifs(model, options) {
                     return thSignedCategory.positiveLoops(model, options);
                 },
             }),
-            analyses.configureSubmodelsAnalysis({
+            analyses.motifFinding({
                 id: "negative-loops",
                 name: "Negative feedback",
                 description: "Analyze the network for negative feedback loops",
                 help: "loops",
-                findSubmodels(model, options) {
+                findMotifs(model, options) {
                     return thSignedCategory.negativeLoops(model, options);
                 },
             }),
-            analyses.configureLinearODE({
+            analyses.linearODE({
                 simulate: (model, data) => thSignedCategory.linearODE(model, data),
             }),
-            analyses.configureLotkaVolterra({
+            analyses.lotkaVolterra({
                 simulate(model, data) {
                     return thSignedCategory.lotkaVolterra(model, data);
                 },

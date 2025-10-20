@@ -1,8 +1,6 @@
 import { ThSignedCategory } from "catlog-wasm";
-
-import { Theory } from "../../theory";
+import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
-import type { TheoryMeta } from "../types";
 
 export default function createCausalLoopTheory(theoryMeta: TheoryMeta): Theory {
     const thSignedCategory = new ThSignedCategory();
@@ -43,34 +41,34 @@ export default function createCausalLoopTheory(theoryMeta: TheoryMeta): Theory {
             },
         ],
         modelAnalyses: [
-            analyses.configureModelGraph({
+            analyses.modelGraph({
                 id: "diagram",
                 name: "Visualization",
                 description: "Visualize the causal loop diagram",
                 help: "visualization",
             }),
-            analyses.configureSubmodelsAnalysis({
+            analyses.motifFinding({
                 id: "negative-loops",
                 name: "Balancing loops",
                 description: "Analyze the diagram for balancing loops",
                 help: "loops",
-                findSubmodels(model, options) {
+                findMotifs(model, options) {
                     return thSignedCategory.negativeLoops(model, options);
                 },
             }),
-            analyses.configureSubmodelsAnalysis({
+            analyses.motifFinding({
                 id: "positive-loops",
                 name: "Reinforcing loops",
                 description: "Analyze the diagram for reinforcing loops",
                 help: "loops",
-                findSubmodels(model, options) {
+                findMotifs(model, options) {
                     return thSignedCategory.positiveLoops(model, options);
                 },
             }),
-            analyses.configureLinearODE({
+            analyses.linearODE({
                 simulate: (model, data) => thSignedCategory.linearODE(model, data),
             }),
-            analyses.configureLotkaVolterra({
+            analyses.lotkaVolterra({
                 simulate: (model, data) => thSignedCategory.lotkaVolterra(model, data),
             }),
         ],

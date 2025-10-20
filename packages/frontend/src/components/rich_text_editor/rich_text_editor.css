@@ -28,6 +28,10 @@
     padding: 5px;
 }
 
+.rich-text-editor > div {
+    position: relative;
+}
+
 .ref-id-view {
     background-color: grey;
     border-radius: 5px;
@@ -100,7 +104,8 @@ blockquote {
 .tooltipButton.tooltip::after {
     content: attr(data-tooltip);
     position: absolute;
-    bottom: 100%; /* sit above the button */
+    bottom: 100%;
+    /* sit above the button */
     left: 50%;
     transform: translateX(-50%) translateY(-4px);
     white-space: nowrap;
@@ -118,4 +123,45 @@ blockquote {
 .tooltipButton.tooltip:hover::after,
 .tooltipButton.tooltip:focus-within::after {
     opacity: 1;
+}
+
+.is-selected {
+    background-color: #ffe58a;
+}
+
+.link-editor-popup {
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-bottom: 12px;
+    border-radius: 10px;
+    background: white;
+    backdrop-filter: none;
+    max-width: calc(-24px + 100vw);
+    box-shadow: rgba(0, 0, 0, 0.1) 0px 14px 28px -6px, rgba(0, 0, 0, 0.06) 0px 2px 4px -1px,
+        rgba(84, 72, 49, 0.08) 0px 0px 0px 1px;
+    overflow: hidden;
+    width: 330px;
+    z-index: 1;
+
+    .input-field {
+        margin-top: 12px;
+
+        input {
+            margin-top: 8px;
+            background: whitesmoke;
+            outline: none;
+            border: 0;
+            box-shadow: 0 0 0 1px #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            padding-inline: 8px;
+            line-height: 20px;
+            width: 100%;
+
+            &:focus {
+                box-shadow: rgb(35, 131, 226) 0px 0px 0px 1px inset, rgb(35, 131, 226) 0px 0px 0px
+                    1px;
+            }
+        }
+    }
 }

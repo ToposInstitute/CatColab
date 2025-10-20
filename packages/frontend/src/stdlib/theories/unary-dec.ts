@@ -1,8 +1,6 @@
 import { ThCategoryWithScalars } from "catlog-wasm";
-
-import { Theory } from "../../theory";
+import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
-import type { TheoryMeta } from "../types";
 
 export default function createUnaryDECTheory(theoryMeta: TheoryMeta): Theory {
     const thCategoryWithScalars = new ThCategoryWithScalars();
@@ -65,7 +63,7 @@ export default function createUnaryDECTheory(theoryMeta: TheoryMeta): Theory {
             },
         ],
         modelAnalyses: [
-            analyses.configureModelGraph({
+            analyses.modelGraph({
                 id: "graph",
                 name: "Visualization",
                 description: "Visualize the operations as a graph",
@@ -73,12 +71,16 @@ export default function createUnaryDECTheory(theoryMeta: TheoryMeta): Theory {
             }),
         ],
         diagramAnalyses: [
-            analyses.configureDiagramGraph({
+            analyses.diagramGraph({
                 id: "graph",
                 name: "Visualization",
                 description: "Visualize the equations as a diagram",
             }),
-            analyses.configureDecapodes({}),
+            analyses.decapodes({
+                id: "decapodes",
+                name: "Simulation",
+                description: "Simulate the PDE using Decapodes",
+            }),
         ],
     });
 }
