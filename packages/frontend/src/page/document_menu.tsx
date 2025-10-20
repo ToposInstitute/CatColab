@@ -1,11 +1,13 @@
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 import { useNavigate } from "@solidjs/router";
 import Ellipsis from "lucide-solid/icons/ellipsis";
-import { Match, Switch } from "solid-js";
+import { Match, Switch, createMemo, createResource } from "solid-js";
+import { useContext } from "solid-js";
+import { Show } from "solid-js";
+import invariant from "tiny-invariant";
 
-import type { RefStub } from "catcolab-api";
 import { createAnalysis } from "../analysis";
-import { makeUnversionedRef, useApi } from "../api";
+import { type LiveDoc, useApi } from "../api";
 import { IconButton } from "../components";
 import { createDiagram } from "../diagram";
 import {
@@ -16,45 +18,67 @@ import {
     MenuItemLabel,
     MenuSeparator,
 } from "../page";
+import { TheoryLibraryContext } from "../theory";
 import { DocumentTypeIcon } from "../util/document_type_icon";
 
 export function DocumentMenu(props: {
-    stub: RefStub;
-    parentRefId: string | null;
+    liveDoc: LiveDoc;
+    onDocumentCreated?: () => void;
 }) {
     const api = useApi();
 
     const navigate = useNavigate();
+    const docType = () => props.liveDoc.doc.type;
 
     const onNewDiagram = async () => {
         let modelRefId: string | undefined;
-        switch (props.stub.typeName) {
+        switch (props.liveDoc.doc.type) {
             case "diagram":
-                if (!props.parentRefId) {
-                    throw "Diagram does not have a parent!";
-                }
-
-                modelRefId = props.parentRefId;
+                modelRefId = props.liveDoc.doc.diagramIn._id;
+                invariant(modelRefId, "To create diagram, parent model should have a ref ID");
                 break;
             case "model":
-                modelRefId = props.stub.refId;
+                modelRefId = props.liveDoc.docRef?.refId;
+                invariant(modelRefId, "To create diagram, model should have a ref ID");
                 break;
             default:
-                throw `Can't create diagram for ${props.stub.typeName}`;
+                throw `Can't create diagram for ${props.liveDoc.doc.type}`;
         }
 
-        const newRef = await createDiagram(api, makeUnversionedRef(api, modelRefId));
+        const newRef = await createDiagram(api, api.makeUnversionedRef(modelRefId));
+        props.onDocumentCreated?.();
         navigate(`/diagram/${newRef}`);
     };
 
     const onNewAnalysis = async () => {
-        const newRef = await createAnalysis(
-            api,
-            "diagram",
-            makeUnversionedRef(api, props.stub.refId),
-        );
+        const docRefId = props.liveDoc.docRef?.refId;
+        invariant(docRefId, "To create analysis, parent should have a ref ID");
+
+        const docType = props.liveDoc.doc.type;
+        invariant(docType !== "analysis", "Analysis cannot be created on other analysis");
+
+        const newRef = await createAnalysis(api, docType, api.makeUnversionedRef(docRefId));
+        props.onDocumentCreated?.();
         navigate(`/analysis/${newRef}`);
     };
+
+    const theories = useContext(TheoryLibraryContext);
+    invariant(theories, "Library of theories should be provided as context");
+
+    const [theory] = createResource(
+        () => (props.liveDoc.doc.type === "model" ? props.liveDoc.doc.theory : undefined),
+        async (theoryId) => {
+            return await theories.get(theoryId);
+        },
+    );
+
+    const showSeparator = createMemo(() => {
+        return (
+            theory()?.supportsInstances ||
+            docType() === "diagram" ||
+            props.liveDoc.doc.type !== "analysis"
+        );
+    });
 
     return (
         <DropdownMenu>
@@ -64,33 +88,31 @@ export function DocumentMenu(props: {
             <DropdownMenu.Portal>
                 <DropdownMenu.Content class="menu popup">
                     <Switch>
-                        <Match
-                            when={
-                                props.stub.typeName === "model"
-                                // TODO: refStub needs to have a theory field in order to check if it supports the diagram instance
-                                // && props.liveDocument.theory().supportsInstances
-                            }
-                        >
+                        <Match when={theory()?.supportsInstances}>
                             <MenuItem onSelect={() => onNewDiagram()}>
                                 <DocumentTypeIcon documentType="diagram" />
                                 <MenuItemLabel>{"New diagram in this model"}</MenuItemLabel>
                             </MenuItem>
                         </Match>
-                        <Match when={props.stub.typeName === "diagram"}>
+                        <Match when={docType() === "diagram"}>
                             <MenuItem onSelect={() => onNewDiagram()}>
                                 <DocumentTypeIcon documentType="diagram" />
                                 <MenuItemLabel>{"New diagram"}</MenuItemLabel>
                             </MenuItem>
                         </Match>
                     </Switch>
-                    <MenuItem onSelect={() => onNewAnalysis()}>
-                        <DocumentTypeIcon documentType="analysis" />
-                        <MenuItemLabel>{`New analysis of this ${props.stub.typeName}`}</MenuItemLabel>
-                    </MenuItem>
-                    <MenuSeparator />
-                    <DuplicateMenuItem stub={props.stub} />
-                    <ExportJSONMenuItem stub={props.stub} />
-                    <CopyJSONMenuItem stub={props.stub} />
+                    <Show when={props.liveDoc.doc.type !== "analysis"}>
+                        <MenuItem onSelect={() => onNewAnalysis()}>
+                            <DocumentTypeIcon documentType="analysis" />
+                            <MenuItemLabel>{`New analysis of this ${docType()}`}</MenuItemLabel>
+                        </MenuItem>
+                    </Show>
+                    <Show when={showSeparator()}>
+                        <MenuSeparator />
+                    </Show>
+                    <DuplicateMenuItem doc={props.liveDoc.doc} />
+                    <ExportJSONMenuItem doc={props.liveDoc.doc} />
+                    <CopyJSONMenuItem doc={props.liveDoc.doc} />
                 </DropdownMenu.Content>
             </DropdownMenu.Portal>
         </DropdownMenu>

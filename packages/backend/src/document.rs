@@ -6,8 +6,6 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use socketioxide::SocketIo;
-use std::future::Future;
-use std::pin::Pin;
 use ts_rs::TS;
 use uuid::Uuid;
 
@@ -377,149 +375,58 @@ pub async fn search_ref_stubs(
     })
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, TS)]
-pub struct RelatedRefStub {
-    pub stub: RefStub,
-    pub children: Vec<RelatedRefStub>,
-}
-
-fn find_root_ref<'a>(
-    db: &'a sqlx::PgPool,
-    start_id: Uuid,
-) -> Pin<Box<dyn Future<Output = Result<Uuid, AppError>> + Send + 'a>> {
-    Box::pin(async move {
-        let parent: Option<Uuid> = sqlx::query_scalar!(
-            r#"
-            SELECT (content->'analysisOf'->>'_id')::uuid
-              FROM snapshots
-            WHERE id = (SELECT head FROM refs WHERE id = $1)
-            UNION
-            SELECT (content->'diagramIn'->>'_id')::uuid
-              FROM snapshots
-            WHERE id = (SELECT head FROM refs WHERE id = $1)
-            LIMIT 1
-            "#,
-            start_id
-        )
-        .fetch_optional(db)
-        .await?
-        .flatten();
-
-        if let Some(parent_id) = parent {
-            find_root_ref(db, parent_id).await
-        } else {
-            Ok(start_id)
-        }
-    })
-}
-
-fn fetch_children<'a>(
-    db: &'a sqlx::PgPool,
-    user_id: Option<String>,
-    parent_id: Uuid,
-) -> Pin<Box<dyn Future<Output = Result<Vec<RelatedRefStub>, AppError>> + Send + 'a>> {
-    Box::pin(async move {
-        let rows = sqlx::query!(
-            r#"
-            SELECT refs.id AS "child_id!"
-            FROM refs
-            JOIN snapshots ON snapshots.id = refs.head
-            WHERE ((snapshots.content->'analysisOf'->>'_id')::uuid = $1
-                   OR (snapshots.content->'diagramIn'->>'_id')::uuid = $1)
-              AND get_max_permission($2, refs.id) >= 'read'
-            "#,
-            parent_id,
-            user_id,
-        )
-        .fetch_all(db)
-        .await?;
-
-        let child_ids: Vec<Uuid> = rows.into_iter().map(|r| r.child_id).collect();
-        if child_ids.is_empty() {
-            return Ok(Vec::new());
-        }
-
-        let stub_rows = sqlx::query!(
-            r#"
-            SELECT
-                stubs.ref_id          AS "ref_id!",
-                stubs.name,
-                stubs.type_name,
-                stubs.created_at       AS "created_at!",
-                stubs.permission_level AS "permission_level!: PermissionLevel",
-                stubs.owner_id,
-                stubs.owner_username,
-                stubs.owner_display_name
-            FROM get_ref_stubs($1, $2::uuid[]) AS stubs
-            "#,
-            user_id.clone(),
-            &child_ids,
-        )
-        .fetch_all(db)
-        .await?;
-
-        let mut result = Vec::with_capacity(stub_rows.len());
-        for row in stub_rows {
-            let stub = RefStub {
-                ref_id: row.ref_id,
-                name: row.name.unwrap_or_else(|| "untitled".into()),
-                type_name: row.type_name.unwrap(),
-                permission_level: row.permission_level,
-                owner: row.owner_id.map(|id| UserSummary {
-                    id,
-                    username: row.owner_username.clone(),
-                    display_name: row.owner_display_name.clone(),
-                }),
-                created_at: row.created_at,
-            };
-            let children = fetch_children(db, user_id.clone(), stub.ref_id).await?;
-            result.push(RelatedRefStub { stub, children });
-        }
-
-        Ok(result)
-    })
-}
-
-pub async fn get_related_ref_stubs(ctx: AppCtx, ref_id: Uuid) -> Result<RelatedRefStub, AppError> {
+pub async fn get_ref_children_stubs(ctx: AppCtx, ref_id: Uuid) -> Result<Vec<RefStub>, AppError> {
     let user_id = ctx.user.as_ref().map(|u| u.user_id.clone());
 
-    let root_ref_id = find_root_ref(&ctx.state.db, ref_id).await?;
-
-    let root_row = sqlx::query!(
+    let stub_rows = sqlx::query!(
         r#"
+        WITH child_refs AS (
+            SELECT ARRAY_AGG(refs.id) AS child_ids
+            FROM refs
+            JOIN snapshots ON snapshots.id = refs.head
+            WHERE (
+                get_max_permission($2, refs.id) >= 'read'
+                AND jsonb_path_exists(
+                    snapshots.content,
+                    '$.*[*] ? (@._id == $id && (@.type == "diagram-in" || @.type == "analysis-of"))',
+                    jsonb_build_object('id', $1::uuid)
+                )
+            )
+        )
         SELECT
-            stubs.ref_id AS "ref_id!",
+            stubs.ref_id           AS "ref_id!",
             stubs.name,
             stubs.type_name,
-            stubs.created_at AS "created_at!",
+            stubs.created_at       AS "created_at!",
             stubs.permission_level AS "permission_level!: PermissionLevel",
             stubs.owner_id,
             stubs.owner_username,
             stubs.owner_display_name
-        FROM get_ref_stubs($1, $2::uuid[]) AS stubs
+        FROM
+            child_refs,
+            get_ref_stubs($2, child_refs.child_ids) AS stubs
         "#,
+        ref_id,
         user_id,
-        &vec![root_ref_id],
     )
-    .fetch_one(&ctx.state.db)
+    .fetch_all(&ctx.state.db)
     .await?;
 
-    let root_stub = RefStub {
-        ref_id: root_row.ref_id,
-        name: root_row.name.unwrap_or_else(|| "untitled".to_string()),
-        type_name: root_row.type_name.expect("type_name should never be null"),
-        permission_level: root_row.permission_level,
-        owner: root_row.owner_id.map(|id| UserSummary {
-            id,
-            username: root_row.owner_username.clone(),
-            display_name: root_row.owner_display_name.clone(),
-        }),
-        created_at: root_row.created_at,
-    };
+    let result = stub_rows
+        .into_iter()
+        .map(|row| RefStub {
+            ref_id: row.ref_id,
+            name: row.name.unwrap_or_else(|| "untitled".into()),
+            type_name: row.type_name.unwrap(),
+            permission_level: row.permission_level,
+            owner: row.owner_id.map(|id| UserSummary {
+                id,
+                username: row.owner_username,
+                display_name: row.owner_display_name,
+            }),
+            created_at: row.created_at,
+        })
+        .collect();
 
-    let children = fetch_children(&ctx.state.db, user_id, root_ref_id).await?;
-    Ok(RelatedRefStub {
-        stub: root_stub,
-        children,
-    })
+    Ok(result)
 }

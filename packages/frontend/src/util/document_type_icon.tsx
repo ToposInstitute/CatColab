@@ -2,10 +2,10 @@ import ChartSpline from "lucide-solid/icons/chart-spline";
 import File from "lucide-solid/icons/file";
 import Network from "lucide-solid/icons/network";
 
-import type { Document } from "catlog-wasm";
+import type { DocumentType } from "../api";
 import { assertExhaustive } from "./assert_exhaustive";
 
-export function DocumentTypeIcon(props: { documentType: Document["type"] }) {
+export function DocumentTypeIcon(props: { documentType: DocumentType }) {
     switch (props.documentType) {
         case "model":
             return <File />;

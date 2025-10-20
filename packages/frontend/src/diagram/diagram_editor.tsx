@@ -10,7 +10,7 @@ import {
     NotebookEditor,
     newFormalCell,
 } from "../notebook";
-import { type InstanceTypeMeta } from "../theory";
+import type { InstanceTypeMeta } from "../theory";
 import { LiveDiagramContext } from "./context";
 import type { LiveDiagramDocument } from "./document";
 import { DiagramMorphismCellEditor } from "./morphism_cell_editor";

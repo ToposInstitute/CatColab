@@ -1,132 +1,70 @@
 import { useNavigate } from "@solidjs/router";
-import type { RefStub, RelatedRefStub } from "catcolab-api";
-import FilePlus from "lucide-solid/icons/file-plus";
-import { useContext } from "solid-js";
+import type { Link } from "catlog-wasm";
 import { For } from "solid-js";
 import { Show } from "solid-js";
-import { createResource } from "solid-js";
+import { createResource, createSignal } from "solid-js";
 import invariant from "tiny-invariant";
-import { Api, getLiveDoc, LiveDoc, useApi } from "../api";
-import { createModel, enlivenModelDocument, getLiveModel, ModelDocument } from "../model";
-import { TheoryLibrary, TheoryLibraryContext } from "../stdlib";
+
+import { type Api, type LiveDoc, useApi } from "../api";
 import { DocumentTypeIcon } from "../util/document_type_icon";
 import { DocumentMenu } from "./document_menu";
-import { AppMenu } from "./menubar";
-import { type AnyLiveDocument, type AnyLiveDocumentType, documentRefId } from "./utils";
-import { DiagramDocument, enlivenDiagramDocument, getLiveDiagram } from "../diagram";
-import { AnalysisDocument, DiagramAnalysisDocument, ModelAnalysisDocument } from "../analysis";
-import { assertExhaustive } from "../util/assert_exhaustive";
-import { Link } from "catlog-wasm";
+import { AppMenu, ImportMenuItem, NewModelItem } from "./menubar";
 
 export function DocumentSidebar(props: {
-    liveDocument: AnyLiveDocument;
+    liveDoc: LiveDoc;
 }) {
     return (
         <>
-            <AppMenu />
-            <RelatedDocuments liveDocument={props.liveDocument} />
-            <NewModelItem />
+            <AppMenu>
+                <NewModelItem />
+                <ImportMenuItem />
+            </AppMenu>
+            <RelatedDocuments liveDoc={props.liveDoc} />
         </>
     );
 }
 
-export async function getAnyLiveDocument(
-    refId: string,
-    api: Api,
-    theories: TheoryLibrary,
-): Promise<AnyLiveDocument> {
-    const liveDoc = await getLiveDoc(api, refId);
-    switch (liveDoc.doc.type) {
-        case "model":
-            return enlivenModelDocument(liveDoc as LiveDoc<ModelDocument>, theories);
-        case "diagram":
-            const modelRefId = liveDoc.doc.diagramIn._id;
-
-            const liveModel = await getLiveModel(modelRefId, api, theories);
-            return enlivenDiagramDocument(liveDoc as LiveDoc<DiagramDocument>, liveModel);
-        case "analysis":
-            const liveAnalysisDoc = await getLiveDoc<AnalysisDocument>(api, refId, "analysis");
-            const { doc } = liveAnalysisDoc;
-
-            // XXX: TypeScript cannot narrow types in nested tagged unions.
-            if (doc.analysisType === "model") {
-                const liveModel = await getLiveModel(doc.analysisOf._id, api, theories);
-                return {
-                    type: "analysis",
-                    analysisType: "model",
-                    liveDoc: liveDoc as LiveDoc<ModelAnalysisDocument>,
-                    liveModel,
-                };
-            } else if (doc.analysisType === "diagram") {
-                const liveDiagram = await getLiveDiagram(doc.analysisOf._id, api, theories);
-                return {
-                    type: "analysis",
-                    analysisType: "diagram",
-                    liveDoc: liveDoc as LiveDoc<DiagramAnalysisDocument>,
-                    liveDiagram,
-                };
-            }
-            throw new Error(`Unknown analysis type: ${doc.analysisType}`);
-
-        default:
-            assertExhaustive(liveDoc.doc);
-    }
-}
-
-export async function getLinkedLiveDocument(api: Api, theories: TheoryLibrary, link: Link) {
-    return getAnyLiveDocument(link._id, api, theories);
-}
-
-async function getLiveDocumentRoot(
-    liveDocument: AnyLiveDocument,
-    api: Api,
-    theories: TheoryLibrary,
-): Promise<AnyLiveDocument> {
+async function getLiveDocRoot(livDoc: LiveDoc, api: Api): Promise<LiveDoc> {
     let parentLink: Link;
-    switch (liveDocument.type) {
+    switch (livDoc.doc.type) {
         case "diagram":
-            parentLink = liveDocument.liveDoc.doc.diagramIn;
+            parentLink = livDoc.doc.diagramIn;
             break;
         case "analysis":
-            parentLink = liveDocument.liveDoc.doc.analysisOf;
+            parentLink = livDoc.doc.analysisOf;
             break;
         default:
-            return liveDocument;
+            return livDoc;
     }
 
-    const parentDoc = await getLinkedLiveDocument(api, theories, parentLink);
-    return getLiveDocumentRoot(parentDoc, api, theories);
+    const parentDoc = await api.getLiveDocFromLink(parentLink);
+    return getLiveDocRoot(parentDoc, api);
 }
-
-function test(liveDocument: AnyLiveDocument) {}
 
 function RelatedDocuments(props: {
-    liveDocument: AnyLiveDocument;
+    liveDoc: LiveDoc;
 }) {
     const api = useApi();
-    const [data] = createResource(
-        () => documentRefId(props.liveDocument),
-        async (refId) => {
-            const results = await api.rpc.get_related_ref_stubs.query(refId);
 
-            if (results.tag !== "Ok") {
-                throw "couldn't load related documents!";
-            }
+    // Signal to trigger refetch when documents are created
+    const [refreshCounter, setRefreshCounter] = createSignal(0);
+    const triggerRefresh = () => setRefreshCounter((c) => c + 1);
 
-            return results.content;
-        },
+    const [liveDocRoot] = createResource(
+        () => props.liveDoc,
+        async (liveDoc) => getLiveDocRoot(liveDoc, api),
     );
 
     return (
-        <Show when={data()} fallback={<div>Loading related items...</div>}>
-            {(tree) => (
+        <Show when={liveDocRoot()} fallback={<div>Loading related items...</div>}>
+            {(liveDocRoot) => (
                 <div class="related-tree">
                     <DocumentsTreeNode
-                        isDescendantOfActiveDocument={false}
-                        parentRefId={null}
-                        node={tree()}
+                        liveDoc={liveDocRoot()}
                         indent={1}
-                        currentLiveDoc={props.liveDocument}
+                        currentLiveDoc={props.liveDoc}
+                        refreshCounter={refreshCounter()}
+                        triggerRefresh={triggerRefresh}
                     />
                 </div>
             )}
@@ -135,62 +73,69 @@ function RelatedDocuments(props: {
 }
 
 function DocumentsTreeNode(props: {
-    node: RelatedRefStub;
+    liveDoc: LiveDoc;
     indent: number;
-    parentRefId: string | null;
-    isDescendantOfActiveDocument: boolean;
-    currentLiveDoc: AnyLiveDocument;
+    currentLiveDoc: LiveDoc;
+    refreshCounter: number;
+    triggerRefresh: () => void;
 }) {
-    const isDescendant = () => {
-        if (props.isDescendantOfActiveDocument) {
-            return true;
-        }
+    const api = useApi();
 
-        if (props.node.stub.refId === documentRefId(props.currentLiveDoc)) {
-            return true;
-        }
+    const [childDocs] = createResource(
+        () => [props.liveDoc, props.refreshCounter] as const,
+        async ([liveDoc, _counter]) => {
+            const docRefId = liveDoc.docRef?.refId;
+            invariant(docRefId, "Doc must have a valid ref");
 
-        return false;
-    };
+            const results = await api.rpc.get_ref_children_stubs.query(docRefId);
+
+            if (results.tag !== "Ok") {
+                throw "couldn't load child documents!";
+            }
+
+            return await Promise.all(
+                results.content.map((childStub) => api.getLiveDoc(childStub.refId)),
+            );
+        },
+    );
 
     return (
         <>
             <DocumentsTreeLeaf
-                stub={props.node.stub}
+                liveDoc={props.liveDoc}
                 indent={props.indent}
                 currentLiveDoc={props.currentLiveDoc}
-                parentRefId={props.parentRefId}
-                isDescendantOfActiveDocument={props.isDescendantOfActiveDocument}
+                triggerRefresh={props.triggerRefresh}
             />
-            <For each={props.node.children}>
-                {(child) => (
-                    <DocumentsTreeNode
-                        node={child}
-                        indent={props.indent + 1}
-                        parentRefId={props.node.stub.refId}
-                        currentLiveDoc={props.currentLiveDoc}
-                        isDescendantOfActiveDocument={isDescendant()}
-                    />
+            <Show when={childDocs()} fallback={<div>Loading children...</div>}>
+                {(childDocs) => (
+                    <For each={childDocs()}>
+                        {(child) => (
+                            <DocumentsTreeNode
+                                liveDoc={child}
+                                indent={props.indent + 1}
+                                currentLiveDoc={props.currentLiveDoc}
+                                refreshCounter={props.refreshCounter}
+                                triggerRefresh={props.triggerRefresh}
+                            />
+                        )}
+                    </For>
                 )}
-            </For>
+            </Show>
         </>
     );
 }
 
 function DocumentsTreeLeaf(props: {
-    stub: RefStub;
-    parentRefId: string | null;
+    liveDoc: LiveDoc;
     indent: number;
-    currentLiveDoc: AnyLiveDocument;
-    isDescendantOfActiveDocument: boolean;
+    currentLiveDoc: LiveDoc;
+    triggerRefresh: () => void;
 }) {
     const navigate = useNavigate();
-    const currentRefId = () => documentRefId(props.currentLiveDoc);
 
     const handleClick = () => {
-        navigate(
-            `/${props.currentLiveDoc.type}/${currentRefId()}/${props.stub.typeName}/${props.stub.refId}`,
-        );
+        navigate(`/${createLinkPart(props.currentLiveDoc)}/${createLinkPart(props.liveDoc)}`);
     };
 
     return (
@@ -198,41 +143,19 @@ function DocumentsTreeLeaf(props: {
             onClick={handleClick}
             class="related-document"
             classList={{
-                active: props.stub.refId === currentRefId(),
-                descendant: props.isDescendantOfActiveDocument,
+                active: props.liveDoc.docRef?.refId === props.currentLiveDoc.docRef?.refId,
             }}
             style={{ "padding-left": `${props.indent * 16}px` }}
         >
-            <DocumentTypeIcon documentType={props.stub.typeName as AnyLiveDocumentType} />
-            <div class="document-name">
-                {(props.stub.refId === currentRefId()
-                    ? props.currentLiveDoc.liveDoc.doc.name
-                    : props.stub.name) || "Untitled"}
-            </div>
-            <div class="document-actions">
-                <DocumentMenu stub={props.stub} parentRefId={props.parentRefId} />
+            <DocumentTypeIcon documentType={props.liveDoc.doc.type} />
+            <div class="document-name">{props.liveDoc.doc.name || "Untitled"}</div>
+            <div class="document-actions" onClick={(e) => e.stopPropagation()}>
+                <DocumentMenu liveDoc={props.liveDoc} onDocumentCreated={props.triggerRefresh} />
             </div>
         </div>
     );
 }
 
-// Re-implementation from page/menubar.tsx that works outside of a kobalte menu.
-function NewModelItem() {
-    const api = useApi();
-    const navigate = useNavigate();
-
-    const theories = useContext(TheoryLibraryContext);
-    invariant(theories, "Theory library must be provided as context");
-
-    const onNewModel = async () => {
-        const newRef = await createModel(api, theories.defaultTheoryMetadata().id);
-        navigate(`/model/${newRef}`);
-    };
-
-    return (
-        <div onClick={onNewModel}>
-            <FilePlus />
-            New Model
-        </div>
-    );
+function createLinkPart(liveDoc: LiveDoc): string {
+    return `${liveDoc.doc.type}/${liveDoc.docRef?.refId}`;
 }

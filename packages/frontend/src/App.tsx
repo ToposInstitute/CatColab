@@ -2,13 +2,13 @@ import { type FirebaseOptions, initializeApp } from "firebase/app";
 import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
+import Dialog, { Content, Portal } from "@corvu/dialog";
 import { MultiProvider } from "@solid-primitives/context";
 import { Navigate, type RouteDefinition, type RouteSectionProps, Router } from "@solidjs/router";
+import { getAuth, signOut } from "firebase/auth";
 import { FirebaseProvider } from "solid-firebase";
 import { ErrorBoundary, Show, createResource, createSignal, lazy } from "solid-js";
 
-import Dialog, { Content, Portal } from "@corvu/dialog";
-import { getAuth, signOut } from "firebase/auth";
 import { Api, ApiContext, useApi } from "./api";
 import { helpRoutes } from "./help/routes";
 import { createModel } from "./model/document";

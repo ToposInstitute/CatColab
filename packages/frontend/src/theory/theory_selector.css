@@ -44,3 +44,8 @@
         text-align: left;
     }
 }
+
+.theory-selector-trigger-wrapper {
+    display: flex;
+    gap: 10px;
+}

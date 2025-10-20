@@ -3,15 +3,20 @@ import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
 import {
+    type CellConstructor,
+    type FormalCellEditorProps,
+    NotebookEditor,
+    newFormalCell,
+} from "../notebook";
+import type { AnalysisMeta } from "../theory";
+import { assertExhaustive } from "../util/assert_exhaustive";
+import { LiveAnalysisContext } from "./context";
+import type {
     LiveAnalysisDocument,
     LiveDiagramAnalysisDocument,
     LiveModelAnalysisDocument,
 } from "./document";
-import { LiveAnalysisContext } from "./context";
-import { CellConstructor, FormalCellEditorProps, newFormalCell, NotebookEditor } from "../notebook";
-import { AnalysisMeta } from "../theory";
-import { Analysis } from "./types";
-import { assertExhaustive } from "../util/assert_exhaustive";
+import type { Analysis } from "./types";
 
 /** Notebook editor for analyses of models of double theories.
  */

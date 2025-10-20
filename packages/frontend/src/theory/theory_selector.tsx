@@ -27,14 +27,16 @@ export function TheorySelectorDialog(props: TheorySelectorProps) {
 
     return (
         <Dialog open={theorySelectorOpen()} onOpenChange={setTheorySelectorOpen}>
-            <Dialog.Trigger
-                as="a"
-                class="theory-selector-trigger"
-                data-disabled={props.theories?.length === 0 ? true : undefined}
-            >
-                {props.theoryMeta.name}
-            </Dialog.Trigger>
-            <HelpButton />
+            <div class="theory-selector-trigger-wrapper">
+                <Dialog.Trigger
+                    as="a"
+                    class="theory-selector-trigger"
+                    data-disabled={props.theories?.length === 0 ? true : undefined}
+                >
+                    {props.theoryMeta.name}
+                </Dialog.Trigger>
+                <HelpButton />
+            </div>
             <Dialog.Portal>
                 <Dialog.Overlay class="overlay" />
                 <Dialog.Content class="popup">

@@ -103,8 +103,13 @@ impl Operation<Postgres> for MigrationOperation {
     }
 
     async fn down(&self, conn: &mut PgConnection) -> Result<(), Error> {
+        let mut tx = conn.begin().await?;
         sqlx::query("DROP FUNCTION IF EXISTS get_ref_stubs(uuid, uuid[])")
-            .execute(conn)
+            .execute(&mut *tx)
+            .await?;
+
+        sqlx::query("DROP FUNCTION IF EXISTS get_max_permission(TEXT, UUID)")
+            .execute(&mut *tx)
             .await?;
         Ok(())
     }

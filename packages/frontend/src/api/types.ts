@@ -6,7 +6,7 @@ import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
 import type { Permissions } from "catcolab-api";
-import type { Document, StableRef, Uuid } from "catlog-wasm";
+import type { Document, Link, StableRef, Uuid } from "catlog-wasm";
 import type { InterfaceToType } from "../util/types";
 import { type LiveDoc, findAndMigrate, makeLiveDoc } from "./document";
 import { type RpcClient, createRpcClient } from "./rpc";
@@ -71,6 +71,10 @@ export class Api {
             refId,
             permissions,
         });
+    }
+
+    async getLiveDocFromLink<Doc extends Document>(link: Link): Promise<LiveDoc<Doc>> {
+        return this.getLiveDoc(link._id);
     }
 
     /** Gets an Automerge document handle for the given document ref. */

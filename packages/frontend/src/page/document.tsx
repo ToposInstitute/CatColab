@@ -13,27 +13,28 @@ import {
 } from "solid-js";
 import invariant from "tiny-invariant";
 
+import { type LiveAnalysisDocument, getLiveAnalysis } from "../analysis";
 import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
 import { AnalysisWidget } from "../analysis/analysis_widget";
-import { useApi } from "../api";
+import { type Api, type DocumentType, useApi } from "../api";
 import { IconButton, InlineInput, ResizableHandle } from "../components";
+import { type LiveDiagramDocument, getLiveDiagram } from "../diagram";
 import { DiagramNotebookEditor } from "../diagram/diagram_editor";
 import { DiagramWidget } from "../diagram/diagram_widget";
+import { type LiveModelDocument, createModelLibraryWithApi } from "../model";
 import { ModelNotebookEditor } from "../model/model_editor";
 import { ModelWidget } from "../model/model_widget";
-import { DocumentBreadcrumbs, DocumentLoadingScreen, TheoryHelpButton } from "../page";
+import { DocumentBreadcrumbs, DocumentLoadingScreen } from "../page";
 import { Layout } from "../page/layout";
-import { TheoryLibraryContext, stdTheories } from "../stdlib";
+import type { TheoryLibrary } from "../theory";
+import { TheoryLibraryContext } from "../theory";
+import { PermissionsButton } from "../user";
+import { assertExhaustive } from "../util/assert_exhaustive";
 import { DocumentSidebar } from "./document_sidebar";
-import {
-    type AnyLiveDocument,
-    type AnyLiveDocumentType,
-    getDocumentTheory,
-    getLiveDocument,
-} from "./utils";
 
 import "./document.css";
-import { PermissionsButton } from "../user";
+
+type AnyLiveDocument = LiveModelDocument | LiveDiagramDocument | LiveAnalysisDocument;
 
 export default function Document() {
     const api = useApi();
@@ -43,12 +44,12 @@ export default function Document() {
     const params = useParams();
     const isSidePanelOpen = () => !!params.subkind && !!params.subref;
 
-    const [liveDocument] = createResource(
+    const [primaryLiveDocument] = createResource(
         () => params.ref,
-        (refId) => getLiveDocument(refId, api, theories, params.kind as AnyLiveDocumentType),
+        (refId) => getLiveDocument(refId, api, theories, params.kind as DocumentType),
     );
 
-    const [secondaryLiveModel] = createResource(
+    const [secondaryLiveDocument] = createResource(
         () => {
             if (!params.subkind || !params.subref) {
                 return;
@@ -56,7 +57,7 @@ export default function Document() {
 
             return [params.subkind, params.subref] as const;
         },
-        ([refKind, refId]) => getLiveDocument(refId, api, theories, refKind as AnyLiveDocumentType),
+        ([refKind, refId]) => getLiveDocument(refId, api, theories, refKind as DocumentType),
     );
 
     const navigate = useNavigate();
@@ -81,7 +82,7 @@ export default function Document() {
     });
 
     return (
-        <Show when={liveDocument()} fallback={<DocumentLoadingScreen />}>
+        <Show when={primaryLiveDocument()} fallback={<DocumentLoadingScreen />}>
             {(liveDocument) => (
                 <Layout
                     toolbarContents={
@@ -92,7 +93,7 @@ export default function Document() {
                             closeSidePanel={closeSidePanel}
                         />
                     }
-                    sidebarContents={<DocumentSidebar liveDocument={liveDocument()} />}
+                    sidebarContents={<DocumentSidebar liveDoc={liveDocument().liveDoc} />}
                 >
                     <Resizable class="growable-container">
                         {() => {
@@ -115,7 +116,7 @@ export default function Document() {
                                             minSize={0.25}
                                             onCollapse={closeSidePanel}
                                         >
-                                            <Show when={secondaryLiveModel()}>
+                                            <Show when={secondaryLiveDocument()}>
                                                 {(secondaryLiveModel) => (
                                                     <>
                                                         <DocumentPane
@@ -144,17 +145,10 @@ function SplitPaneToolbar(props: {
 }) {
     const secondaryPanelSize = () => props.panelSizes?.[1];
 
-    const documentTheory = () => getDocumentTheory(props.document);
-
     return (
         <>
             <DocumentBreadcrumbs liveDoc={props.document.liveDoc} />
             <span class="filler" />
-            <Show when={documentTheory()}>
-                {(documentTheory) => (
-                    <TheoryHelpButton meta={stdTheories.getMetadata(documentTheory().id)} />
-                )}
-            </Show>
             <PermissionsButton liveDoc={props.document.liveDoc} />
             <Show when={secondaryPanelSize()}>
                 {(panelSize) => (
@@ -220,4 +214,23 @@ function DocumentPane(props: { document: AnyLiveDocument }) {
             </Switch>
         </div>
     );
+}
+
+async function getLiveDocument(
+    refId: string,
+    api: Api,
+    theories: TheoryLibrary,
+    type: DocumentType,
+): Promise<AnyLiveDocument> {
+    const models = createModelLibraryWithApi(api, theories);
+    switch (type) {
+        case "model":
+            return models.getLiveModel(refId);
+        case "diagram":
+            return getLiveDiagram(refId, api, models);
+        case "analysis":
+            return getLiveAnalysis(refId, api, models);
+        default:
+            assertExhaustive(type);
+    }
 }
