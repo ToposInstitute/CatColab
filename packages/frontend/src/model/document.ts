@@ -69,7 +69,7 @@ export type ValidatedModel =
           error: string;
       };
 
-function enlivenModelDocument(
+export function enlivenModelDocument(
     liveDoc: LiveDoc<ModelDocument>,
     theories: TheoryLibrary,
 ): LiveModelDocument {

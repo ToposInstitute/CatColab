@@ -6,13 +6,17 @@ import { For } from "solid-js";
 import { Show } from "solid-js";
 import { createResource } from "solid-js";
 import invariant from "tiny-invariant";
-import { useApi } from "../api";
-import { createModel } from "../model";
-import { TheoryLibraryContext } from "../stdlib";
+import { Api, getLiveDoc, LiveDoc, useApi } from "../api";
+import { createModel, enlivenModelDocument, getLiveModel, ModelDocument } from "../model";
+import { TheoryLibrary, TheoryLibraryContext } from "../stdlib";
 import { DocumentTypeIcon } from "../util/document_type_icon";
 import { DocumentMenu } from "./document_menu";
 import { AppMenu } from "./menubar";
 import { type AnyLiveDocument, type AnyLiveDocumentType, documentRefId } from "./utils";
+import { DiagramDocument, enlivenDiagramDocument, getLiveDiagram } from "../diagram";
+import { AnalysisDocument, DiagramAnalysisDocument, ModelAnalysisDocument } from "../analysis";
+import { assertExhaustive } from "../util/assert_exhaustive";
+import { Link } from "catlog-wasm";
 
 export function DocumentSidebar(props: {
     liveDocument: AnyLiveDocument;
@@ -25,6 +29,76 @@ export function DocumentSidebar(props: {
         </>
     );
 }
+
+export async function getAnyLiveDocument(
+    refId: string,
+    api: Api,
+    theories: TheoryLibrary,
+): Promise<AnyLiveDocument> {
+    const liveDoc = await getLiveDoc(api, refId);
+    switch (liveDoc.doc.type) {
+        case "model":
+            return enlivenModelDocument(liveDoc as LiveDoc<ModelDocument>, theories);
+        case "diagram":
+            const modelRefId = liveDoc.doc.diagramIn._id;
+
+            const liveModel = await getLiveModel(modelRefId, api, theories);
+            return enlivenDiagramDocument(liveDoc as LiveDoc<DiagramDocument>, liveModel);
+        case "analysis":
+            const liveAnalysisDoc = await getLiveDoc<AnalysisDocument>(api, refId, "analysis");
+            const { doc } = liveAnalysisDoc;
+
+            // XXX: TypeScript cannot narrow types in nested tagged unions.
+            if (doc.analysisType === "model") {
+                const liveModel = await getLiveModel(doc.analysisOf._id, api, theories);
+                return {
+                    type: "analysis",
+                    analysisType: "model",
+                    liveDoc: liveDoc as LiveDoc<ModelAnalysisDocument>,
+                    liveModel,
+                };
+            } else if (doc.analysisType === "diagram") {
+                const liveDiagram = await getLiveDiagram(doc.analysisOf._id, api, theories);
+                return {
+                    type: "analysis",
+                    analysisType: "diagram",
+                    liveDoc: liveDoc as LiveDoc<DiagramAnalysisDocument>,
+                    liveDiagram,
+                };
+            }
+            throw new Error(`Unknown analysis type: ${doc.analysisType}`);
+
+        default:
+            assertExhaustive(liveDoc.doc);
+    }
+}
+
+export async function getLinkedLiveDocument(api: Api, theories: TheoryLibrary, link: Link) {
+    return getAnyLiveDocument(link._id, api, theories);
+}
+
+async function getLiveDocumentRoot(
+    liveDocument: AnyLiveDocument,
+    api: Api,
+    theories: TheoryLibrary,
+): Promise<AnyLiveDocument> {
+    let parentLink: Link;
+    switch (liveDocument.type) {
+        case "diagram":
+            parentLink = liveDocument.liveDoc.doc.diagramIn;
+            break;
+        case "analysis":
+            parentLink = liveDocument.liveDoc.doc.analysisOf;
+            break;
+        default:
+            return liveDocument;
+    }
+
+    const parentDoc = await getLinkedLiveDocument(api, theories, parentLink);
+    return getLiveDocumentRoot(parentDoc, api, theories);
+}
+
+function test(liveDocument: AnyLiveDocument) {}
 
 function RelatedDocuments(props: {
     liveDocument: AnyLiveDocument;
