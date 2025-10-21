@@ -3,17 +3,18 @@ import { HelpAnalysisById } from "../logic_help_detail"
 
 ## Description
 
-**Petri nets** are traditionally a way of expressing discrete-event dynamical systems with concurrency, or networks of resources and processes, describing how various states (called **places**) relate to one another in terms of **transitions**.
-Each transition has incoming and outgoing arrows connected to places, which describe the **input** and **output** places of the transition (respectively).
+**Petri nets** were invented to express discrete-event dynamical systems with concurrency, or networks of resources and processes, describing how various states (called **places**) relate to one another in terms of **transitions**.
+Each transition has incoming and outgoing arrows (called **arcs**) connected to places, which describe the **input** and **output** places of the transition (respectively).
 
 One way of understanding Petri nets is through their **token semantics**.
 We place a number of "tokens" in each place and then check all the transitions to see if all their input places have a token: if so, then we can "fire" the transition, moving the tokens from the input places to the output places; if not, then nothing happens.
-In many classical references the token semantics are built directly in to the definition of Petri nets (often called a **marking** or **tokening**), but from a categorical point of view --- and, in particular, from the CatColab point of view --- the underlying shape of Petri nets is itself an expressive formal gadget.
+In many classical references the token semantics are built directly in to the definition of Petri nets (often called a **marking** or **tokening**), but an unmarked Petri net is already itself a useful formal gadget, analogous to how can be useful to consider an ordinary differential equation without giving its initial conditions.
 
 
 ### Further reading
 
 - Wikipedia: [Petri net](https://en.wikipedia.org/wiki/Petri_net)
+- John C. Baez, Blake S. Pollard, "A Compositional Framework for Reaction Networks", (2017) [arXiv:1704.02051](https://arxiv.org/abs/1704.02051)
 - Series of blog posts by John Baez on Petri nets, all listed
   [here](https://johncarlosbaez.wordpress.com/?s=petri)
 
@@ -36,27 +37,30 @@ This analysis shows a ❌ if there does exist any reachable tokening from the gi
 Places are interpreted as quantities that can vary in time ("concentrations"), and the transitions ("reactions") in the model determine equations constraining the time derivatives of the stocks.
 Each place is given an **initial value**.
 
-A transition $A\to T\to B$ between places $A$ and $B$ is interpreted as the equations $\{\dot{A}=-T,\dot{B}=T\}$, i.e. the transition $T$ goes out of $A$ and into $B$.
-Transitions add linearly, i.e. in an arbitrary Petri net, the equation governing a place $A$ is $\dot{A}=\sum_{A_\text{in}}T_i - \sum_{A_\text{out}}T_j$, where $A_\text{in}$ (resp. $A_\text{out}$) is the set of all transitions whose target (resp. source) is $A$.
-Transitions are determined by their **rate** coefficient $r$, i.e. a transition $A\to T\to B$ is defined to satisfy $T=rA$.
+- A transition $A\xrightarrow{T}B$ between places $A$ and $B$ is interpreted as the equations $\{\dot{A}=-T,\dot{B}=T\}$, i.e. the transition $T$ goes out of $A$ and into $B$.
+
+- Equations governing places add linearly: in an arbitrary Petri net, the equation governing a place $A$ is $\dot{A}=\sum_{A_\text{in}}T_i - \sum_{A_\text{out}}T_j$, where $A_\text{in}$ (resp. $A_\text{out}$) is the set of all transitions whose target (resp. source) is $A$.
+
+- Transitions are determined by their **rate** coefficient $r$ and take into account only *incoming* arcs: a transition $A\xrightarrow{T}B$ imposes the equation $T=rA$.
+However, equations governing transitions are *non-linear*: if a transition $T$ has two incoming arcs from places $A$ and $A'$, then $T=rAA'$.
 </HelpAnalysisById>
 
 <HelpAnalysisById theory={props.theory} analysisId="stochastic-mass-action">
-Like ordinary mass-action dynamics, stochastic mass-action dynamics for Petri Nets interpret places in their underlying model as time-varying quantities which transfer mass through transitions. The difference here is that the time between reactions is determined by an exponential distribution whose mean is the total reaction rate. The reaction rate is just the sum of *propensity* for each reaction, which is calculated as the product of the quantity for each reactant. This process was first popularized by Gillespie in "A General Method for Numerically Simulating the Stochastic Time Evolution of Coupled Chemical Reactions." 
+Like ordinary mass-action dynamics, stochastic mass-action dynamics for Petri nets interpret places as time-varying quantities that transfer mass through transitions. The difference in the *stochastic* analysis is that the time between reactions is determined by an exponential distribution whose mean is the total reaction rate. The reaction rate is just the sum of **propensity** for each reaction, which is calculated as the product of the quantity for each reactant.
 
-Let's consider the simple SIR model as an example,
-```
-[S, I] --infection--> [I, I]
-[I]    --recovery---> [R]
-```
+Let's consider the simple SIR model as an example:
+
+$[\mathrm{S}, \mathrm{I}]\xrightarrow{\text{infection}}[\mathrm{I},\mathrm{I}]$
+
+$[\mathrm{I}]\xrightarrow{\text{recovery}}[\mathrm{R}]$
+
 The infection rate is proportional to the product of the sizes between susceptible and infected populations, and the recovery rate is proportional to the infected populations. The time between events is sampled from an exponential distribution whose rate is the reaction rate. The probability that a certain event will occur at this next step is determined by its rate. After a particular event is chosen, the mass of the reactants are updated appropriately. In our example, if infection takes place, the susceptible population decreases by one and the infected increases by one, since an infected person was "used" to produce two new infected persons. If a recovery takes place, then the infected and recovery populations decrease and increase by one, respectively.
 
-We can add an additional `death` process by either considering a new population "D" for "deceased," or by leaving the list in the domain empty,
-```
-[I] --death--> []
-```
-In this case, a fatality is interpreted as only decrementing the infected population. The empty list, a valid term in the model, has a valid interpretation in the analysis.
+We can add an additional `death` process by either considering a new population "D" for "deceased," or by leaving the list in the domain empty:
 
-We use the Gillespie algorithm from the `rebop` package. 
+$[\mathrm{I}]\xrightarrow{\text{death}}[\phantom{I}]$
 
+In this case, a death is interpreted as only decrementing the infected population. The empty list (a valid term in the model) has a valid interpretation in the analysis.
+
+We use the Gillespie algorithm from the [`Armavica/rebop`](https://github.com/Armavica/rebop) package. This process was first popularized by Gillespie in ["A General Method for Numerically Simulating the Stochastic Time Evolution of Coupled Chemical Reactions"](https://doi.org/10.1016/0021-9991(76)90041-3).
 </HelpAnalysisById>
