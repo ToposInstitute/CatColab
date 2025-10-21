@@ -256,6 +256,7 @@ dependencies = [
  "hyper 1.6.0",
  "jsonrpsee 0.24.9",
  "jsonrpsee-server 0.24.9",
+ "notebook-types",
  "qubit",
  "regex",
  "sd-notify",
