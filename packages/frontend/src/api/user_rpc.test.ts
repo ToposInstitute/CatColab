@@ -5,7 +5,7 @@ import { v4 } from "uuid";
 import { assert, afterAll, describe, test } from "vitest";
 
 import type { UserProfile } from "catcolab-api";
-import { initTestUserAuth } from "../util/test_util.ts";
+import { createTestDocument, initTestUserAuth } from "../util/test_util.ts";
 import { createRpcClient, unwrap, unwrapErr } from "./rpc.ts";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
@@ -113,12 +113,7 @@ describe("Sharing documents between users", async () => {
     unwrap(await rpc.sign_up_or_sign_in.mutate());
 
     // Create the document to be shared.
-    const refId = unwrap(
-        await rpc.new_ref.mutate({
-            type: "model",
-            name: "My shared model",
-        }),
-    );
+    const refId = unwrap(await rpc.new_ref.mutate(createTestDocument("My shared model")));
 
     // Share the document with read-only permissions.
     unwrap(

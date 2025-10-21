@@ -5,7 +5,8 @@ import { deleteUser, getAuth, signOut } from "firebase/auth";
 import * as uuid from "uuid";
 import { assert, afterAll, describe, test } from "vitest";
 
-import { initTestUserAuth } from "../util/test_util.ts";
+import type { Document } from "catlog-wasm";
+import { createTestDocument, initTestUserAuth } from "../util/test_util.ts";
 import { createRpcClient, unwrap, unwrapErr } from "./rpc.ts";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
@@ -23,10 +24,7 @@ const repo = new Repo({
 //afterAll(() => repo.shutdown());
 
 describe("RPC for Automerge documents", async () => {
-    const content = {
-        type: "model",
-        name: "My model",
-    };
+    const content = createTestDocument("My model");
     const refId = unwrap(await rpc.new_ref.mutate(content));
     test.sequential("should get a valid ref UUID", () => {
         assert(uuid.validate(refId));
@@ -54,14 +52,24 @@ describe("RPC for Automerge documents", async () => {
         assert(result.tag === "Err" && result.code === 404);
     });
 
+    test("should reject invalid documents", async () => {
+        const invalidDoc = {
+            type: "model",
+            name: "Invalid model",
+        };
+        const invalidResult = await rpc.new_ref.mutate(invalidDoc);
+        assert(invalidResult.tag === "Err");
+        assert.strictEqual(invalidResult.code, 400);
+    });
+
     if (!isValidDocumentId(refDoc.docId)) {
         return;
     }
-    const docHandle = (await repo.find(refDoc.docId)) as DocHandle<typeof content>;
+    const docHandle = (await repo.find(refDoc.docId)) as DocHandle<Document>;
     const doc = docHandle.doc();
 
     test.sequential("should get the original document data", () => {
-        assert.deepStrictEqual(doc, content);
+        assert.deepStrictEqual(doc, content as unknown as Document);
     });
 
     const newName = "Renamed model";
@@ -70,7 +78,7 @@ describe("RPC for Automerge documents", async () => {
     });
 
     test.sequential("should autosave to the database", { timeout: 1000, retry: 5 }, async () => {
-        const newContent = unwrap(await rpc.head_snapshot.query(refId)) as typeof content;
+        const newContent = unwrap(await rpc.head_snapshot.query(refId)) as unknown as Document;
         assert.strictEqual(newContent.name, newName);
     });
 });
@@ -86,10 +94,7 @@ describe("Authorized RPC", async () => {
 
     unwrap(await rpc.sign_up_or_sign_in.mutate());
 
-    const content = {
-        type: "model",
-        name: "My private model",
-    };
+    const content = createTestDocument("My private model");
     const privateId = unwrap(await rpc.new_ref.mutate(content));
     test.sequential("should get a valid ref UUID when authenticated", () => {
         assert(uuid.validate(privateId));
@@ -111,12 +116,7 @@ describe("Authorized RPC", async () => {
         });
     });
 
-    const readonlyId = unwrap(
-        await rpc.new_ref.mutate({
-            type: "model",
-            name: "My readonly model",
-        }),
-    );
+    const readonlyId = unwrap(await rpc.new_ref.mutate(createTestDocument("My readonly model")));
     unwrap(
         await rpc.set_permissions.mutate(readonlyId, {
             anyone: "Read",
