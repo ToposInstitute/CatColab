@@ -1,5 +1,4 @@
 {
-  self,
   craneLib,
   cargoArtifacts,
   pkgs,
@@ -13,11 +12,7 @@ let
 
   # Common configuration shared between package build and tests
   common = {
-    cargoExtraArgs = "-p backend";
-
-    nativeBuildInputs = [
-      pkgs.pkg-config
-    ];
+    cargoExtraArgs = "-p catlog";
 
     buildInputs = [
       pkgs.openssl
@@ -30,7 +25,7 @@ let
         ../../Cargo.lock
         (craneLib.fileset.commonCargoSources ./.)
         (craneLib.fileset.commonCargoSources ../notebook-types)
-        ./.sqlx
+        ./examples
       ];
     };
   };
@@ -39,28 +34,12 @@ in
   # Export common configuration for reuse (e.g., in tests)
   inherit common;
 
-  # The backend package
+  # The catlog package
   package = craneLib.buildPackage (common // {
     inherit cargoArtifacts pname version;
-
-    buildInputs = common.buildInputs ++ [
-      pkgs.makeWrapper
-    ];
-
-    propagatedBuildInputs = [
-      self.packages.x86_64-linux.automerge
-    ];
-
-    postFixup = ''
-      wrapProgram $out/bin/${pname} \
-        --prefix PATH : ${pkgs.lib.makeBinPath [ self.packages.x86_64-linux.automerge ]}
-    '';
-    meta = {
-      mainProgram = pname;
-    };
   });
 
-  # Tests for the backend package
+  # Tests for the catlog package
   tests = craneLib.cargoNextest (common // {
     inherit cargoArtifacts;
   });

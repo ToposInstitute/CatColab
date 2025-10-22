@@ -199,20 +199,25 @@
             '';
           };
 
-          backend = pkgsLinux.callPackage ./packages/backend/default.nix {
+          backend = (pkgsLinux.callPackage ./packages/backend/default.nix {
             inherit craneLib cargoArtifacts self;
             pkgs = pkgsLinux;
-          };
+          }).package;
 
-          notebook-types-node = pkgsLinux.callPackage ./packages/notebook-types/default.nix {
+          catlog = (pkgsLinux.callPackage ./packages/catlog/default.nix {
             inherit craneLib cargoArtifacts;
             pkgs = pkgsLinux;
-          };
+          }).package;
 
-          catlog-wasm-browser = pkgsLinux.callPackage ./packages/catlog-wasm/default.nix {
+          notebook-types-node = (pkgsLinux.callPackage ./packages/notebook-types/default.nix {
             inherit craneLib cargoArtifacts;
             pkgs = pkgsLinux;
-          };
+          }).package;
+
+          catlog-wasm-browser = (pkgsLinux.callPackage ./packages/catlog-wasm/default.nix {
+            inherit craneLib cargoArtifacts;
+            pkgs = pkgsLinux;
+          }).package;
 
           automerge = pkgsLinux.callPackage ./packages/automerge-doc-server/default.nix {
             inherit inputs rustToolchainLinux self;
@@ -338,5 +343,27 @@
       #     ;
       #   rustToolchain = rustToolchainLinux;
       # };
+
+      checks.x86_64-linux = {
+        backend-tests = (pkgsLinux.callPackage ./packages/backend/default.nix {
+          inherit craneLib cargoArtifacts self;
+          pkgs = pkgsLinux;
+        }).tests;
+
+        catlog-tests = (pkgsLinux.callPackage ./packages/catlog/default.nix {
+          inherit craneLib cargoArtifacts;
+          pkgs = pkgsLinux;
+        }).tests;
+
+        notebook-types-tests = (pkgsLinux.callPackage ./packages/notebook-types/default.nix {
+          inherit craneLib cargoArtifacts;
+          pkgs = pkgsLinux;
+        }).tests;
+
+        catlog-wasm-tests = (pkgsLinux.callPackage ./packages/catlog-wasm/default.nix {
+          inherit craneLib cargoArtifacts;
+          pkgs = pkgsLinux;
+        }).tests;
+      };
     };
 }

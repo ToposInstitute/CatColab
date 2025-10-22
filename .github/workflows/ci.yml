@@ -133,6 +133,7 @@ jobs:
   build_nixos_system:
     name: build NixOS system
     runs-on: ubuntu-latest
+    needs: [run_nix_checks]
 
     steps:
     - name: Checkout
@@ -151,4 +152,26 @@ jobs:
 
     - name: Build the NixOS system for catcolab-next
       run: nix build .#nixosConfigurations.catcolab-next.config.system.build.toplevel
+
+  run_nix_checks:
+    name: run nix checks
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Install Nix
+      uses: cachix/install-nix-action@v25
+      with:
+        nix_path: nixpkgs=channel:25.05
+
+    - name: Configure Cachix
+      uses: cachix/cachix-action@v14
+      with:
+        name: catcolab-jmoggr
+        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+
+    - name: Run Nix checks
+      run: nix flake check
 
