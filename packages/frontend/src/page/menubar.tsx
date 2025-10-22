@@ -10,7 +10,7 @@ import type { Document } from "catlog-wasm";
 import { useApi } from "../api";
 import { createModel } from "../model/document";
 import { TheoryLibraryContext } from "../theory";
-import { copyToClipboard, downloadJson } from "../util/json_export";
+import { downloadJson } from "../util/json_export";
 import { PageActionsContext } from "./context";
 
 import CopyToClipboard from "lucide-solid/icons/clipboard-copy";
@@ -220,7 +220,7 @@ export function ExportJSONMenuItem(props: {
 export function CopyJSONMenuItem(props: {
     doc: Document;
 }) {
-    const onCopyJSON = () => copyToClipboard(JSON.stringify(props.doc));
+    const onCopyJSON = () => navigator.clipboard.writeText(JSON.stringify(props.doc));
 
     return (
         <MenuItem onSelect={onCopyJSON}>

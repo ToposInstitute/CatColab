@@ -99,13 +99,7 @@ export function PermissionsForm(props: {
         props.onComplete?.();
     };
 
-    const copyToClipboard = async () => {
-        if (navigator.clipboard) {
-            await navigator.clipboard.writeText(window.location.href);
-        } else {
-            throw new Error("Link to document could not be copied.");
-        }
-    };
+    const copyToClipboard = () => navigator.clipboard.writeText(window.location.href);
 
     // Bypass standard form submission so that pressing Enter does not submit.
     return (

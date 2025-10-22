@@ -6,12 +6,16 @@
 }
 
 .popup.document-picker-popup {
+    display: flex;
+    flex-direction: row;
+    gap: 1ex;
+
     font-size: smaller;
     padding: 0.4rem;
 
     & .lucide {
         color: dimgray;
-        width: 1em;
-        height: 1em;
+        width: 2.5ex;
+        height: 2.5ex;
     }
 }
