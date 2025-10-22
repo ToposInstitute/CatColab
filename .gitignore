@@ -104,4 +104,4 @@ instrument.mjs
 result
 
 # vm image
-nixos.qcow2
+catcolab-vm.qcow2
