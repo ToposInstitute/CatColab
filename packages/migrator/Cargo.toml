@@ -1,0 +1,29 @@
+[package]
+name = "migrator"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "migrator"
+path = "src/main.rs"
+
+[lib]
+name = "migrator"
+path = "src/lib.rs"
+
+[dependencies]
+async-trait = "0.1.88"
+clap = { version = "4.5.44", features = ["derive"] }
+dotenvy = "0.15.7"
+sqlx = { version = "0.8.2", features = [
+  "runtime-tokio",
+  "tls-rustls",
+  "postgres",
+  "uuid",
+  "json",
+  "chrono",
+] }
+sqlx_migrator = { version = "0.17.0", features = ["postgres"] }
+tokio = { version = "1.40.0", features = ["full"] }
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }

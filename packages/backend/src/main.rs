@@ -24,7 +24,6 @@ use tracing_subscriber::filter::{EnvFilter, LevelFilter};
 mod app;
 mod auth;
 mod document;
-mod migrations;
 mod rpc;
 mod socket;
 mod user;
@@ -77,7 +76,7 @@ async fn main() {
 
     let mut migrator = Migrator::default();
     migrator
-        .add_migrations(migrations::migrations())
+        .add_migrations(migrator::migrations())
         .expect("Failed to load migrations");
 
     match cli.command.unwrap_or(Command::Serve) {
