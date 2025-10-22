@@ -129,3 +129,26 @@ jobs:
       - name: Format/linting/import sorting
         run: |
           pnpm --filter "./packages/*" run ci
+
+  build_nixos_system:
+    name: build NixOS system
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Install Nix
+      uses: cachix/install-nix-action@v25
+      with:
+        nix_path: nixpkgs=channel:25.05
+
+    - name: Configure Cachix
+      uses: cachix/cachix-action@v14
+      with:
+        name: catcolab-jmoggr
+        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+
+    - name: Build the NixOS system for catcolab-next
+      run: nix build .#nixosConfigurations.catcolab-next.config.system.build.toplevel
+
