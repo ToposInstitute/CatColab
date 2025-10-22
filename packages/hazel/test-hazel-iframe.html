@@ -1,0 +1,74 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hazel Parent Simulator</title>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, -apple-system; margin: 0; padding: 16px; }
+      header { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+      iframe { width: 100%; height: 600px; border: 1px solid #ddd; }
+      pre { background: #f7f7f7; padding: 8px; border-radius: 6px; overflow: auto; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <button id="init">Send init</button>
+      <button id="constraints">Send constraints</button>
+      <span id="status">Idle</span>
+    </header>
+    <iframe id="child"></iframe>
+    <h3>Log</h3>
+    <pre id="log"></pre>
+    <script>
+      const logEl = document.getElementById('log');
+      const statusEl = document.getElementById('status');
+      const child = document.getElementById('child');
+      const childOrigin = 'http://localhost:5175';
+      const id = 'demo';
+
+      function log(...args) {
+        const line = args.map(x => typeof x === 'string' ? x : JSON.stringify(x)).join(' ');
+        console.log('[Parent]', ...args);
+        logEl.textContent += line + '\n';
+      }
+
+      function setStatus(text) { statusEl.textContent = text; }
+
+      // Load child app
+      child.src = `${childOrigin}/?id=${encodeURIComponent(id)}&parentOrigin=${encodeURIComponent(window.origin || '*')}`;
+
+      // Listen for messages from child
+      window.addEventListener('message', (event) => {
+        log('recv from child:', event.data);
+        const data = event.data;
+        if (!data || typeof data !== 'object') return;
+        if (data.id !== id) return;
+        if (data.type === 'ready') {
+          setStatus('Child is ready');
+        }
+        if (data.type === 'setSyntax') {
+          setStatus('Received setSyntax');
+        }
+        if (data.type === 'resize') {
+          setStatus(`resize ${data.width}x${data.height}`);
+        }
+      });
+
+      // Controls to send messages to child
+      document.getElementById('init').addEventListener('click', () => {
+        const initMsg = { type: 'init', id, value: JSON.stringify({ name: '', type: 'model', theory: 'empty', notebook: { cellOrder: [], cells: {} }, version: { major: 0, minor: 0 } }) };
+        child.contentWindow.postMessage(initMsg, childOrigin);
+        log('send to child:', initMsg);
+      });
+
+      document.getElementById('constraints').addEventListener('click', () => {
+        const constraintsMsg = { type: 'constraints', id, maxWidth: 680, maxHeight: 800 };
+        child.contentWindow.postMessage(constraintsMsg, childOrigin);
+        log('send to child:', constraintsMsg);
+      });
+    </script>
+  </body>
+  </html>
+
+
