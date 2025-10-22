@@ -10,6 +10,16 @@ let
   pname = crate.pname;
   version = crate.version;
 
+  # Fileset for this package (relative to repo root)
+  fileset = pkgs.lib.fileset.unions [
+    ../../Cargo.toml
+    ../../Cargo.lock
+    (craneLib.fileset.commonCargoSources ./.)
+    (craneLib.fileset.commonCargoSources ../catlog)
+    (craneLib.fileset.commonCargoSources ../notebook-types)
+    ./package.json
+  ];
+
   # Common configuration shared between package build and tests
   common = {
     cargoExtraArgs = "-p catlog-wasm";
@@ -27,18 +37,14 @@ let
 
     src = pkgs.lib.fileset.toSource {
       root = ../..;
-      fileset = pkgs.lib.fileset.unions [
-        ../../Cargo.toml
-        ../../Cargo.lock
-        (craneLib.fileset.commonCargoSources ./.)
-        (craneLib.fileset.commonCargoSources ../catlog)
-        (craneLib.fileset.commonCargoSources ../notebook-types)
-        ./package.json
-      ];
+      inherit fileset;
     };
   };
 in
 {
+  # Export fileset for combining with other packages
+  inherit fileset;
+
   # Export common configuration for reuse (e.g., in tests)
   inherit common;
 
@@ -64,10 +70,5 @@ in
       cp -r dist/pkg-browser/* $out/
       ls $out/
     '';
-  });
-
-  # Tests for the catlog-wasm package
-  tests = craneLib.cargoNextest (common // {
-    inherit cargoArtifacts;
   });
 }

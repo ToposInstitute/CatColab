@@ -11,6 +11,15 @@ let
   pname = crate.pname;
   version = crate.version;
 
+  # Fileset for this package (relative to repo root)
+  fileset = pkgs.lib.fileset.unions [
+    ../../Cargo.toml
+    ../../Cargo.lock
+    (craneLib.fileset.commonCargoSources ./.)
+    (craneLib.fileset.commonCargoSources ../notebook-types)
+    ./.sqlx
+  ];
+
   # Common configuration shared between package build and tests
   common = {
     cargoExtraArgs = "-p backend";
@@ -25,17 +34,14 @@ let
 
     src = pkgs.lib.fileset.toSource {
       root = ../..;
-      fileset = pkgs.lib.fileset.unions [
-        ../../Cargo.toml
-        ../../Cargo.lock
-        (craneLib.fileset.commonCargoSources ./.)
-        (craneLib.fileset.commonCargoSources ../notebook-types)
-        ./.sqlx
-      ];
+      inherit fileset;
     };
   };
 in
 {
+  # Export fileset for combining with other packages
+  inherit fileset;
+
   # Export common configuration for reuse (e.g., in tests)
   inherit common;
 
@@ -58,10 +64,5 @@ in
     meta = {
       mainProgram = pname;
     };
-  });
-
-  # Tests for the backend package
-  tests = craneLib.cargoNextest (common // {
-    inherit cargoArtifacts;
   });
 }
