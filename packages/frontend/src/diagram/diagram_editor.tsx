@@ -6,7 +6,7 @@ import invariant from "tiny-invariant";
 import type { DiagramJudgment, DiagramMorDecl, DiagramObDecl } from "catlog-wasm";
 import { useApi } from "../api";
 import { InlineInput } from "../components";
-import { LiveModelContext, createModelLibraryWithApi } from "../model";
+import { LiveModelContext, ModelLibraryContext } from "../model";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
@@ -14,7 +14,7 @@ import {
     newFormalCell,
 } from "../notebook";
 import { DocumentBreadcrumbs, DocumentLoadingScreen, Toolbar } from "../page";
-import { type InstanceTypeMeta, TheoryLibraryContext } from "../theory";
+import type { InstanceTypeMeta } from "../theory";
 import { PermissionsButton } from "../user";
 import { LiveDiagramContext } from "./context";
 import { DiagramMenu } from "./diagram_menu";
@@ -29,9 +29,8 @@ export default function DiagramPage() {
     const params = useParams();
 
     const api = useApi();
-    const theories = useContext(TheoryLibraryContext);
-    invariant(theories, "Must provide theory library as context to diagram page");
-    const models = createModelLibraryWithApi(api, theories);
+    const models = useContext(ModelLibraryContext);
+    invariant(models, "Must provide model library as context to diagram page");
 
     const [liveDiagram] = createResource(
         () => params.ref,

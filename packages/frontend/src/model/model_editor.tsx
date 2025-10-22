@@ -5,7 +5,6 @@ import { Match, Show, Switch, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { InstantiatedModel, ModelJudgment, MorDecl, ObDecl } from "catlog-wasm";
-import { useApi } from "../api";
 import { InlineInput } from "../components";
 import {
     type CellConstructor,
@@ -17,13 +16,12 @@ import {
 import { DocumentBreadcrumbs, DocumentLoadingScreen, Toolbar } from "../page";
 import { WelcomeOverlay } from "../page/welcome_overlay";
 import { stdTheories } from "../stdlib";
-import { type ModelTypeMeta, TheoryLibraryContext } from "../theory";
+import type { ModelTypeMeta } from "../theory";
 import { TheorySelectorDialog } from "../theory/theory_selector";
 import { PermissionsButton } from "../user";
-import { LiveModelContext } from "./context";
+import { LiveModelContext, ModelLibraryContext } from "./context";
 import { type LiveModelDocument, migrateModelDocument } from "./document";
 import { InstantiationCellEditor } from "./instantiation_cell_editor";
-import { createModelLibraryWithApi } from "./model_library";
 import { ModelMenu } from "./model_menu";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
@@ -39,10 +37,8 @@ import "./model_editor.css";
 export default function ModelPage() {
     const params = useParams();
 
-    const api = useApi();
-    const theories = useContext(TheoryLibraryContext);
-    invariant(theories, "Must provide theory library as context to model page");
-    const models = createModelLibraryWithApi(api, theories);
+    const models = useContext(ModelLibraryContext);
+    invariant(models, "Must provide model library as context to model page");
 
     const liveModel = models.useLiveModel(() => params.ref);
 

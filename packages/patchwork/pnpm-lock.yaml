@@ -20,6 +20,9 @@ importers:
       '@patchwork/sdk':
         specifier: link:../../../patchwork/sdk
         version: link:../../../patchwork/sdk
+      '@solid-primitives/context':
+        specifier: ^0.3.1
+        version: 0.3.2(solid-js@1.9.9)
       catlog-wasm:
         specifier: link:../catlog-wasm/dist/pkg-browser
         version: link:../catlog-wasm/dist/pkg-browser
@@ -530,6 +533,11 @@ packages:
     resolution: {integrity: sha512-rUrqINax0TvrPBXrFKg0YbQx18NpPN3NNrgmaao9xRNbTwek7lOXObhx8tQy8gelmQ/gLaGy1WptpU2eKJZImg==}
     cpu: [x64]
     os: [win32]
+
+  '@solid-primitives/context@0.3.2':
+    resolution: {integrity: sha512-6fvTtpK17PFHnUf/UOc1TzBjd+kLFjtA62aRFEm1kDP9ufTo7FYW2kUzQAWbfbRHi30yjBJtopbR8qd6nShwyg==}
+    peerDependencies:
+      solid-js: ^1.6.12
 
   '@swc/core-darwin-arm64@1.10.14':
     resolution: {integrity: sha512-Dh4VyrhDDb05tdRmqJ/MucOPMTnrB4pRJol18HVyLlqu1HOT5EzonUniNTCdQbUXjgdv5UVJSTE1lYTzrp+myA==}
@@ -1478,6 +1486,10 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.34.2':
     optional: true
+
+  '@solid-primitives/context@0.3.2(solid-js@1.9.9)':
+    dependencies:
+      solid-js: 1.9.9
 
   '@swc/core-darwin-arm64@1.10.14':
     optional: true

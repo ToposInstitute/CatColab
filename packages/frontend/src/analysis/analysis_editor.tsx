@@ -16,7 +16,7 @@ import { useApi } from "../api";
 import { IconButton, ResizableHandle } from "../components";
 import { DiagramPane } from "../diagram/diagram_editor";
 import { DiagramMenu } from "../diagram/diagram_menu";
-import { createModelLibraryWithApi } from "../model";
+import { ModelLibraryContext } from "../model/context";
 import { ModelPane } from "../model/model_editor";
 import { ModelMenu } from "../model/model_menu";
 import {
@@ -26,7 +26,7 @@ import {
     newFormalCell,
 } from "../notebook";
 import { DocumentBreadcrumbs, DocumentLoadingScreen, Toolbar } from "../page";
-import { type AnalysisMeta, TheoryLibraryContext } from "../theory";
+import type { AnalysisMeta } from "../theory";
 import { assertExhaustive } from "../util/assert_exhaustive";
 import { LiveAnalysisContext } from "./context";
 import {
@@ -44,9 +44,8 @@ export default function AnalysisPage() {
     const params = useParams();
 
     const api = useApi();
-    const theories = useContext(TheoryLibraryContext);
-    invariant(theories, "Must provide theory library as context to analysis page");
-    const models = createModelLibraryWithApi(api, theories);
+    const models = useContext(ModelLibraryContext);
+    invariant(models, "Must provide model library as context to analysis page");
 
     const [liveAnalysis] = createResource(
         () => params.ref,
