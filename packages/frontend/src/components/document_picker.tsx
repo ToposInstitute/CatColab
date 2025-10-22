@@ -18,6 +18,7 @@ import { FieldError } from "./form";
 import { IconButton } from "./icon_button";
 import { TextInput, type TextInputOptions } from "./text_input";
 
+import Copy from "lucide-solid/icons/copy";
 import Pencil from "lucide-solid/icons/pencil";
 
 import "./document_picker.css";
@@ -71,6 +72,12 @@ export function DocumentPicker(
         </Switch>
     );
 
+    const copyToClipboard = async () => {
+        if (props.refId) {
+            await navigator.clipboard.writeText(props.refId);
+        }
+    };
+
     const EditableDocLink = () => (
         <Tooltip placement="bottom">
             <Tooltip.Anchor>
@@ -78,6 +85,9 @@ export function DocumentPicker(
             </Tooltip.Anchor>
             <Tooltip.Portal>
                 <Tooltip.Content class="popup document-picker-popup">
+                    <IconButton onClick={copyToClipboard}>
+                        <Copy />
+                    </IconButton>
                     <IconButton onClick={enableEditMode}>
                         <Pencil />
                         {"Edit"}
