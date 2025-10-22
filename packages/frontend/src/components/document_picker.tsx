@@ -90,7 +90,8 @@ export function DocumentPicker(
             <Show when={editMode()} fallback={<EditableDocLink />}>
                 <RefInput
                     isActive={true}
-                    onSubmit={(refId) => {
+                    refId={props.refId}
+                    setRefId={(refId) => {
                         props.setRefId(refId);
                         disableEditMode();
                     }}
@@ -110,20 +111,28 @@ convenient for copy-paste.
  */
 function RefInput(
     allProps: TextInputOptions & {
-        onSubmit: (refId: Uuid | null) => void;
+        refId: Uuid | null;
+        setRefId: (refId: Uuid | null) => void;
         onCancel?: () => void;
         docType?: Document["type"];
     },
 ) {
-    const [props, inputOptions] = splitProps(allProps, ["onSubmit", "onCancel", "docType"]);
+    const [props, inputOptions] = splitProps(allProps, [
+        "refId",
+        "setRefId",
+        "onCancel",
+        "docType",
+    ]);
 
     const [inputText, setInputText] = createSignal("");
     const [errorText, setErrorText] = createSignal("");
 
+    createEffect(() => setInputText(props.refId ?? ""));
+
     const onSubmit = (text: string) => {
         text = text.trim();
         if (text === "") {
-            props.onSubmit(null);
+            props.setRefId(null);
             return;
         }
 
@@ -132,7 +141,7 @@ function RefInput(
             text = url.pathname.split("/").pop() ?? "";
         }
         if (uuid.validate(text)) {
-            props.onSubmit(text);
+            props.setRefId(text);
         } else {
             setErrorText(`The ${props.docType ?? "document"} identifier is not valid`);
         }
