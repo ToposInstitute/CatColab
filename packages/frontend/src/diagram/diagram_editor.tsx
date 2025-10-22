@@ -1,24 +1,18 @@
 import { MultiProvider } from "@solid-primitives/context";
-import { A, useParams } from "@solidjs/router";
-import { Match, Show, Switch, createResource, useContext } from "solid-js";
+import { Match, Switch, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { DiagramJudgment } from "catlog-wasm";
-import { useApi } from "../api";
-import { InlineInput } from "../components";
-import { LiveModelContext, createModelLibraryWithApi } from "../model";
+import { LiveModelContext } from "../model";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
     NotebookEditor,
     newFormalCell,
 } from "../notebook";
-import { DocumentBreadcrumbs, DocumentLoadingScreen, Toolbar } from "../page";
-import { type InstanceTypeMeta, TheoryLibraryContext } from "../theory";
-import { PermissionsButton } from "../user";
+import type { InstanceTypeMeta } from "../theory";
 import { LiveDiagramContext } from "./context";
-import { DiagramMenu } from "./diagram_menu";
-import { type LiveDiagramDocument, getLiveDiagram } from "./document";
+import type { LiveDiagramDocument } from "./document";
 import { DiagramMorphismCellEditor } from "./morphism_cell_editor";
 import { DiagramObjectCellEditor } from "./object_cell_editor";
 import {
@@ -28,79 +22,6 @@ import {
     newDiagramMorphismDecl,
     newDiagramObjectDecl,
 } from "./types";
-
-import "./diagram_editor.css";
-
-export default function DiagramPage() {
-    const params = useParams();
-
-    const api = useApi();
-    const theories = useContext(TheoryLibraryContext);
-    invariant(theories, "Must provide theory library as context to diagram page");
-    const models = createModelLibraryWithApi(api, theories);
-
-    const [liveDiagram] = createResource(
-        () => params.ref,
-        (refId) => getLiveDiagram(refId, api, models),
-    );
-
-    return (
-        <Show when={liveDiagram()} fallback={<DocumentLoadingScreen />}>
-            {(loadedDiagram) => <DiagramDocumentEditor liveDiagram={loadedDiagram()} />}
-        </Show>
-    );
-}
-
-export function DiagramDocumentEditor(props: {
-    liveDiagram: LiveDiagramDocument;
-}) {
-    return (
-        <div class="growable-container">
-            <Toolbar>
-                <DiagramMenu liveDiagram={props.liveDiagram} />
-                <DocumentBreadcrumbs liveDoc={props.liveDiagram.liveDoc} />
-                <span class="filler" />
-                <PermissionsButton liveDoc={props.liveDiagram.liveDoc} />
-            </Toolbar>
-            <DiagramPane liveDiagram={props.liveDiagram} />
-        </div>
-    );
-}
-
-/** Pane containing a diagram notebook plus a header for the title and model. */
-export function DiagramPane(props: {
-    liveDiagram: LiveDiagramDocument;
-}) {
-    const liveDoc = () => props.liveDiagram.liveDoc;
-    const liveModel = () => props.liveDiagram.liveModel;
-
-    return (
-        <div class="notebook-container">
-            <div class="diagram-head">
-                <div class="title">
-                    <InlineInput
-                        text={liveDoc().doc.name}
-                        setText={(text) => {
-                            liveDoc().changeDoc((doc) => {
-                                doc.name = text;
-                            });
-                        }}
-                        placeholder="Untitled"
-                    />
-                </div>
-                <div class="instance-of">
-                    <div class="name">{liveModel().theory()?.instanceOfName}</div>
-                    <div class="model">
-                        <A href={`/model/${liveModel().liveDoc.docRef?.refId}`}>
-                            {liveModel().liveDoc.doc.name || "Untitled"}
-                        </A>
-                    </div>
-                </div>
-            </div>
-            <DiagramNotebookEditor liveDiagram={props.liveDiagram} />
-        </div>
-    );
-}
 
 /** Notebook editor for a diagram in a model.
  */

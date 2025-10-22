@@ -69,7 +69,7 @@ export type ValidatedDiagram =
           error: string;
       };
 
-function enlivenDiagramDocument(
+export function enlivenDiagramDocument(
     liveDoc: LiveDoc<DiagramDocument>,
     liveModel: LiveModelDocument,
 ): LiveDiagramDocument {

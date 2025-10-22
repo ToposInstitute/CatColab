@@ -1,179 +1,22 @@
-import Resizable, { type ContextValue } from "@corvu/resizable";
-import { useParams } from "@solidjs/router";
-import {
-    Match,
-    Show,
-    Switch,
-    createEffect,
-    createResource,
-    createSignal,
-    useContext,
-} from "solid-js";
+import { Match, Switch, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
-import { useApi } from "../api";
-import { IconButton, ResizableHandle } from "../components";
-import { DiagramPane } from "../diagram/diagram_editor";
-import { DiagramMenu } from "../diagram/diagram_menu";
-import { createModelLibraryWithApi } from "../model";
-import { ModelPane } from "../model/model_editor";
-import { ModelMenu } from "../model/model_menu";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
     NotebookEditor,
     newFormalCell,
 } from "../notebook";
-import { DocumentBreadcrumbs, DocumentLoadingScreen, Toolbar } from "../page";
-import { type AnalysisMeta, TheoryLibraryContext } from "../theory";
+import type { AnalysisMeta } from "../theory";
 import { assertExhaustive } from "../util/assert_exhaustive";
 import { LiveAnalysisContext } from "./context";
-import {
-    type LiveAnalysisDocument,
-    type LiveDiagramAnalysisDocument,
-    type LiveModelAnalysisDocument,
-    getLiveAnalysis,
+import type {
+    LiveAnalysisDocument,
+    LiveDiagramAnalysisDocument,
+    LiveModelAnalysisDocument,
 } from "./document";
 import type { Analysis } from "./types";
-
-import PanelRight from "lucide-solid/icons/panel-right";
-import PanelRightClose from "lucide-solid/icons/panel-right-close";
-
-export default function AnalysisPage() {
-    const params = useParams();
-
-    const api = useApi();
-    const theories = useContext(TheoryLibraryContext);
-    invariant(theories, "Must provide theory library as context to analysis page");
-    const models = createModelLibraryWithApi(api, theories);
-
-    const [liveAnalysis] = createResource(
-        () => params.ref,
-        (refId) => getLiveAnalysis(refId, api, models),
-    );
-
-    return (
-        <Show when={liveAnalysis()} fallback={<DocumentLoadingScreen />}>
-            {(loadedAnalysis) => <AnalysisDocumentEditor liveAnalysis={loadedAnalysis()} />}
-        </Show>
-    );
-}
-
-/** Editor for a model of a double theory.
-
-The editor includes a notebook for the model itself plus another pane for
-performing analysis of the model.
- */
-export function AnalysisDocumentEditor(props: {
-    liveAnalysis: LiveAnalysisDocument;
-}) {
-    const [resizableContext, setResizableContext] = createSignal<ContextValue>();
-    const [isSidePanelOpen, setSidePanelOpen] = createSignal(true);
-
-    createEffect(() => {
-        const context = resizableContext();
-        if (isSidePanelOpen()) {
-            context?.expand(1);
-        } else {
-            context?.collapse(1);
-        }
-    });
-
-    const toggleSidePanel = () => {
-        const open = setSidePanelOpen(!isSidePanelOpen());
-        if (open) {
-            resizableContext()?.resize(1, 0.33);
-        }
-    };
-
-    return (
-        <Resizable class="growable-container">
-            {() => {
-                const context = Resizable.useContext();
-                setResizableContext(context);
-
-                return (
-                    <>
-                        <Resizable.Panel
-                            class="content-panel"
-                            collapsible
-                            initialSize={0.66}
-                            minSize={0.25}
-                        >
-                            <Toolbar>
-                                <AnalysisMenu liveAnalysis={props.liveAnalysis} />
-                                <DocumentBreadcrumbs liveDoc={props.liveAnalysis.liveDoc} />
-                                <span class="filler" />
-                                <IconButton
-                                    onClick={toggleSidePanel}
-                                    tooltip={
-                                        isSidePanelOpen()
-                                            ? "Hide the analysis panel"
-                                            : "Show the analysis panel"
-                                    }
-                                >
-                                    <Show when={isSidePanelOpen()} fallback={<PanelRight />}>
-                                        <PanelRightClose />
-                                    </Show>
-                                </IconButton>
-                            </Toolbar>
-                            <AnalysisOfPane liveAnalysis={props.liveAnalysis} />
-                        </Resizable.Panel>
-                        <ResizableHandle hidden={!isSidePanelOpen()} />
-                        <Resizable.Panel
-                            class="content-panel side-panel"
-                            collapsible
-                            initialSize={0.33}
-                            minSize={0.25}
-                            hidden={!isSidePanelOpen()}
-                            onCollapse={() => setSidePanelOpen(false)}
-                            onExpand={() => setSidePanelOpen(true)}
-                        >
-                            <div class="notebook-container">
-                                <div class="toolbar">
-                                    <div class="toolbar-spacer" />
-                                </div>
-                                <h2>Analysis</h2>
-                                <AnalysisNotebookEditor liveAnalysis={props.liveAnalysis} />
-                            </div>
-                        </Resizable.Panel>
-                    </>
-                );
-            }}
-        </Resizable>
-    );
-}
-
-const AnalysisMenu = (props: {
-    liveAnalysis: LiveAnalysisDocument;
-}) => (
-    <Switch>
-        <Match when={props.liveAnalysis.analysisType === "model" && props.liveAnalysis.liveModel}>
-            {(liveModel) => <ModelMenu liveModel={liveModel()} />}
-        </Match>
-        <Match
-            when={props.liveAnalysis.analysisType === "diagram" && props.liveAnalysis.liveDiagram}
-        >
-            {(liveDiagram) => <DiagramMenu liveDiagram={liveDiagram()} />}
-        </Match>
-    </Switch>
-);
-
-const AnalysisOfPane = (props: {
-    liveAnalysis: LiveAnalysisDocument;
-}) => (
-    <Switch>
-        <Match when={props.liveAnalysis.analysisType === "model" && props.liveAnalysis.liveModel}>
-            {(liveModel) => <ModelPane liveModel={liveModel()} />}
-        </Match>
-        <Match
-            when={props.liveAnalysis.analysisType === "diagram" && props.liveAnalysis.liveDiagram}
-        >
-            {(liveDiagram) => <DiagramPane liveDiagram={liveDiagram()} />}
-        </Match>
-    </Switch>
-);
 
 /** Notebook editor for analyses of models of double theories.
  */
@@ -208,7 +51,7 @@ export function AnalysisNotebookEditor(props: {
 }
 
 /** Editor for a notebook cell in an analysis notebook. */
-export function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
+function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
     const liveAnalysis = useContext(LiveAnalysisContext);
     invariant(liveAnalysis, "Live analysis should be provided as context for cell editor");
 

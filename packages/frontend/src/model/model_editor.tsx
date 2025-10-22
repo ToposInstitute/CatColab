@@ -1,29 +1,19 @@
-import { useParams } from "@solidjs/router";
 import { getAuth } from "firebase/auth";
 import { useAuth, useFirebaseApp } from "solid-firebase";
-import { Match, Show, Switch, createSignal, useContext } from "solid-js";
+import { Match, Switch, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { ModelJudgment } from "catlog-wasm";
-import { useApi } from "../api";
-import { InlineInput } from "../components";
 import {
     type CellConstructor,
     type FormalCellEditorProps,
     NotebookEditor,
-    NotebookUtils,
     newFormalCell,
 } from "../notebook";
-import { DocumentBreadcrumbs, DocumentLoadingScreen, Toolbar } from "../page";
 import { WelcomeOverlay } from "../page/welcome_overlay";
-import { stdTheories } from "../stdlib";
-import { type ModelTypeMeta, TheoryLibraryContext } from "../theory";
-import { TheorySelectorDialog } from "../theory/theory_selector";
-import { PermissionsButton } from "../user";
+import type { ModelTypeMeta } from "../theory";
 import { LiveModelContext } from "./context";
-import { type LiveModelDocument, migrateModelDocument } from "./document";
-import { createModelLibraryWithApi } from "./model_library";
-import { ModelMenu } from "./model_menu";
+import type { LiveModelDocument } from "./document";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
 import {
@@ -33,82 +23,6 @@ import {
     newMorphismDecl,
     newObjectDecl,
 } from "./types";
-
-import "./model_editor.css";
-
-export default function ModelPage() {
-    const params = useParams();
-
-    const api = useApi();
-    const theories = useContext(TheoryLibraryContext);
-    invariant(theories, "Must provide theory library as context to model page");
-    const models = createModelLibraryWithApi(api, theories);
-
-    const liveModel = models.useLiveModel(() => params.ref);
-
-    return (
-        <Show when={liveModel()} fallback={<DocumentLoadingScreen />}>
-            {(loadedModel) => <ModelDocumentEditor liveModel={loadedModel()} />}
-        </Show>
-    );
-}
-
-export function ModelDocumentEditor(props: {
-    liveModel: LiveModelDocument;
-}) {
-    return (
-        <div class="growable-container">
-            <Toolbar>
-                <ModelMenu liveModel={props.liveModel} />
-                <DocumentBreadcrumbs liveDoc={props.liveModel.liveDoc} />
-                <span class="filler" />
-                <PermissionsButton liveDoc={props.liveModel.liveDoc} />
-            </Toolbar>
-            <ModelPane liveModel={props.liveModel} />
-        </div>
-    );
-}
-
-/** Pane containing a model notebook plus a header with the title and theory.
- */
-export function ModelPane(props: {
-    liveModel: LiveModelDocument;
-}) {
-    const liveDoc = () => props.liveModel.liveDoc;
-
-    const selectableTheories = () => {
-        if (NotebookUtils.hasFormalCells(liveDoc().doc.notebook)) {
-            return props.liveModel.theory()?.migrationTargets ?? [];
-        } else {
-            // If the model has no formal cells, allow any theory to be selected.
-            return undefined;
-        }
-    };
-
-    return (
-        <div class="notebook-container">
-            <div class="model-head">
-                <div class="title">
-                    <InlineInput
-                        text={liveDoc().doc.name}
-                        setText={(text) => {
-                            liveDoc().changeDoc((doc) => {
-                                doc.name = text;
-                            });
-                        }}
-                        placeholder="Untitled"
-                    />
-                </div>
-                <TheorySelectorDialog
-                    theoryMeta={stdTheories.getMetadata(liveDoc().doc.theory)}
-                    setTheory={(id) => migrateModelDocument(props.liveModel, id, stdTheories)}
-                    theories={selectableTheories()}
-                />
-            </div>
-            <ModelNotebookEditor liveModel={props.liveModel} />
-        </div>
-    );
-}
 
 /** Notebook editor for a model of a double theory.
  */
