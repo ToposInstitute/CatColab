@@ -170,6 +170,26 @@
         in
         deploy-rs.lib.${linuxSystem}.activate.custom healthcheckWrapperScript
           "./bin/healthcheck-wrapper-script";
+
+      # Load Rust package configurations once
+      rustPackages = {
+        backend = pkgsLinux.callPackage ./packages/backend/default.nix {
+          inherit craneLib cargoArtifacts self;
+          pkgs = pkgsLinux;
+        };
+        catlog = pkgsLinux.callPackage ./packages/catlog/default.nix {
+          inherit craneLib cargoArtifacts;
+          pkgs = pkgsLinux;
+        };
+        notebookTypes = pkgsLinux.callPackage ./packages/notebook-types/default.nix {
+          inherit craneLib cargoArtifacts;
+          pkgs = pkgsLinux;
+        };
+        catlogWasm = pkgsLinux.callPackage ./packages/catlog-wasm/default.nix {
+          inherit craneLib cargoArtifacts;
+          pkgs = pkgsLinux;
+        };
+      };
     in
     {
       # Create devShells for all supported systems
@@ -199,20 +219,10 @@
             '';
           };
 
-          backend = pkgsLinux.callPackage ./packages/backend/default.nix {
-            inherit craneLib cargoArtifacts self;
-            pkgs = pkgsLinux;
-          };
-
-          notebook-types-node = pkgsLinux.callPackage ./packages/notebook-types/default.nix {
-            inherit craneLib cargoArtifacts;
-            pkgs = pkgsLinux;
-          };
-
-          catlog-wasm-browser = pkgsLinux.callPackage ./packages/catlog-wasm/default.nix {
-            inherit craneLib cargoArtifacts;
-            pkgs = pkgsLinux;
-          };
+          backend = rustPackages.backend.package;
+          catlog = rustPackages.catlog.package;
+          notebook-types-node = rustPackages.notebookTypes.package;
+          catlog-wasm-browser = rustPackages.catlogWasm.package;
 
           automerge = pkgsLinux.callPackage ./packages/automerge-doc-server/default.nix {
             inherit inputs rustToolchainLinux self;
@@ -338,5 +348,59 @@
       #     ;
       #   rustToolchain = rustToolchainLinux;
       # };
+
+      checks.x86_64-linux =
+        let
+          # Union all package filesets
+          combinedFileset = pkgsLinux.lib.fileset.unions [
+            rustPackages.backend.fileset
+            rustPackages.catlog.fileset
+            rustPackages.notebookTypes.fileset
+            rustPackages.catlogWasm.fileset
+            ./.rustfmt.toml
+          ];
+
+          # Common configuration for workspace-level checks
+          workspaceCommon = {
+            inherit cargoArtifacts;
+
+            nativeBuildInputs = with pkgsLinux; [
+              pkg-config
+              wasm-pack
+              wasm-bindgen-cli
+              binaryen
+              nodejs
+            ];
+
+            buildInputs = with pkgsLinux; [
+              openssl
+            ];
+
+            src = pkgsLinux.lib.fileset.toSource {
+              root = ./.;
+              fileset = combinedFileset;
+            };
+          };
+        in
+        {
+          # Run tests for all Rust packages
+          rust-tests = craneLib.cargoNextest workspaceCommon;
+
+          # Run clippy with warnings denied
+          rust-clippy = craneLib.cargoClippy (
+            workspaceCommon
+            // {
+              cargoClippyExtraArgs = "-- -D warnings";
+            }
+          );
+
+          # Run cargo fmt check with normalize_comments
+          rust-fmt = craneLib.cargoFmt (
+            workspaceCommon
+            // {
+              cargoFmtExtraArgs = "--check -- --config=normalize_comments=true";
+            }
+          );
+        };
     };
 }
