@@ -1,9 +1,10 @@
 import type { AutomergeUrl } from "@automerge/automerge-repo";
+import { MultiProvider } from "@solid-primitives/context";
 import { createResource, Switch, Match } from "solid-js";
 
 import { getLiveAnalysisFromRepo } from "../../frontend/src/analysis";
 import { AnalysisNotebookEditor } from "../../frontend/src/analysis/analysis_editor";
-import { createModelLibraryWithRepo } from "../../frontend/src/model";
+import { createModelLibraryWithRepo, ModelLibraryContext } from "../../frontend/src/model";
 import { TheoryLibraryContext } from "../../frontend/src/theory";
 import { stdTheories } from "../../frontend/src/stdlib";
 import type { SolidToolProps } from "./tools";
@@ -17,7 +18,12 @@ export function AnalysisPaneComponent(props: SolidToolProps) {
     );
 
     return (
-        <div>
+        <MultiProvider
+            values={[
+                [TheoryLibraryContext, stdTheories],
+                [ModelLibraryContext, models],
+            ]}
+        >
             <Switch>
                 <Match when={liveAnalysis.loading}>
                     <div>⏳ Loading analysis...</div>
@@ -28,13 +34,9 @@ export function AnalysisPaneComponent(props: SolidToolProps) {
                     </div>
                 </Match>
                 <Match when={liveAnalysis()}>
-                    {(liveAnalysis) => (
-                        <TheoryLibraryContext.Provider value={stdTheories}>
-                            <AnalysisNotebookEditor liveAnalysis={liveAnalysis()} />
-                        </TheoryLibraryContext.Provider>
-                    )}
+                    {(liveAnalysis) => <AnalysisNotebookEditor liveAnalysis={liveAnalysis()} />}
                 </Match>
             </Switch>
-        </div>
+        </MultiProvider>
     );
 }

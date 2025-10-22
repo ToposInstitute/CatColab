@@ -21,6 +21,7 @@
         "@automerge/automerge-repo": "^2.2.0",
         "@automerge/automerge-repo-react-hooks": "^2.2.0",
         "@patchwork/sdk": "link:../../../patchwork/sdk",
+        "@solid-primitives/context": "^0.3.1",
         "catlog-wasm": "link:../catlog-wasm/dist/pkg-browser",
         "react": "^18.3.1",
         "react-dom": "^18.3.1",

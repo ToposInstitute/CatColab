@@ -1,7 +1,8 @@
 import type { AnyDocumentId } from "@automerge/automerge-repo";
+import { MultiProvider } from "@solid-primitives/context";
 import { createResource, Switch, Match } from "solid-js";
 
-import { createModelLibraryWithRepo } from "../../frontend/src/model";
+import { createModelLibraryWithRepo, ModelLibraryContext } from "../../frontend/src/model";
 import { DocumentPane } from "../../frontend/src/page/document_page";
 import { TheoryLibraryContext } from "../../frontend/src/theory";
 import { stdTheories } from "../../frontend/src/stdlib";
@@ -25,7 +26,12 @@ export function ModelPaneComponent(props: SolidToolProps) {
     );
 
     return (
-        <div>
+        <MultiProvider
+            values={[
+                [TheoryLibraryContext, stdTheories],
+                [ModelLibraryContext, models],
+            ]}
+        >
             <Switch>
                 <Match when={liveModel.loading}>
                     <div>⏳ Loading model...</div>
@@ -34,13 +40,9 @@ export function ModelPaneComponent(props: SolidToolProps) {
                     <div>❌ Error loading model: {liveModel.error?.message || "Unknown error"}</div>
                 </Match>
                 <Match when={liveModel()}>
-                    {(liveModel) => (
-                        <TheoryLibraryContext.Provider value={stdTheories}>
-                            <DocumentPane document={liveModel()} />
-                        </TheoryLibraryContext.Provider>
-                    )}
+                    {(liveModel) => <DocumentPane document={liveModel()} />}
                 </Match>
             </Switch>
-        </div>
+        </MultiProvider>
     );
 }

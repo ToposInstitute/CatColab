@@ -11,6 +11,7 @@ import { ErrorBoundary, Show, createResource, createSignal, lazy } from "solid-j
 
 import { Api, ApiContext, useApi } from "./api";
 import { helpRoutes } from "./help/routes";
+import { ModelLibraryContext, createModelLibraryWithApi } from "./model";
 import { createModel } from "./model/document";
 import { ErrorBoundaryDialog } from "./page/error_boundary";
 import { PageContainer } from "./page/page_container";
@@ -33,16 +34,8 @@ const Root = (props: RouteSectionProps<unknown>) => {
             const result = await api.rpc.validate_session.query();
             if (result.tag === "Err") {
                 await signOut(getAuth(firebaseApp));
-
-                // Why this needs to be a separate modal:
-                // We cannot automatically reload the page because a bug in validate_session might
-                // trigger an infinite reload loop, so the reload must be user-triggered. Although
-                // ErrorBoundary might seem like the natural place to handle this, it only catches the
-                // first error, and there's no guarantee that an error from validate_session will be the
-                // first one encountered.
                 return true;
             }
-
             return false;
         },
         {
@@ -50,11 +43,15 @@ const Root = (props: RouteSectionProps<unknown>) => {
         },
     );
 
+    const theories = stdTheories;
+    const models = createModelLibraryWithApi(api, theories);
+
     return (
         <MultiProvider
             values={[
                 [ApiContext, api],
-                [TheoryLibraryContext, stdTheories],
+                [TheoryLibraryContext, theories],
+                [ModelLibraryContext, models],
             ]}
         >
             <FirebaseProvider app={firebaseApp}>
@@ -69,6 +66,12 @@ const Root = (props: RouteSectionProps<unknown>) => {
     );
 };
 
+// Why this needs to be a separate modal: we cannot automatically reload the
+// page because a bug in validate_session might trigger an infinite reload loop,
+// so the reload must be user-triggered. Although ErrorBoundary might seem like
+// the natural place to handle this, it only catches the first error, and
+// there's no guarantee that an error from validate_session will be the first
+// one encountered.
 export function SessionExpiredModal() {
     const [reloading, setReloading] = createSignal(false);
 

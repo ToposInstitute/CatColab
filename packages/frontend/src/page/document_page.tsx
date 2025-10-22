@@ -21,13 +21,11 @@ import { IconButton, InlineInput, ResizableHandle } from "../components";
 import { type LiveDiagramDocument, getLiveDiagram } from "../diagram";
 import { DiagramNotebookEditor } from "../diagram/diagram_editor";
 import { DiagramInfo } from "../diagram/diagram_info";
-import { type LiveModelDocument, createModelLibraryWithApi } from "../model";
+import { type LiveModelDocument, type ModelLibrary, ModelLibraryContext } from "../model";
 import { ModelNotebookEditor } from "../model/model_editor";
 import { ModelInfo } from "../model/model_info";
 import { DocumentBreadcrumbs, DocumentLoadingScreen } from "../page";
 import { SidebarLayout } from "../page/sidebar_layout";
-import type { TheoryLibrary } from "../theory";
-import { TheoryLibraryContext } from "../theory";
 import { PermissionsButton } from "../user";
 import { assertExhaustive } from "../util/assert_exhaustive";
 import { DocumentSidebar } from "./document_page_sidebar";
@@ -38,15 +36,15 @@ type AnyLiveDocument = LiveModelDocument | LiveDiagramDocument | LiveAnalysisDoc
 
 export default function DocumentPage() {
     const api = useApi();
-    const theories = useContext(TheoryLibraryContext);
-    invariant(theories, "Must provide theory library as context to model page");
+    const models = useContext(ModelLibraryContext);
+    invariant(models, "Must provide model library as context to page");
 
     const params = useParams();
     const isSidePanelOpen = () => !!params.subkind && !!params.subref;
 
     const [primaryLiveDocument] = createResource(
         () => params.ref,
-        (refId) => getLiveDocument(refId, api, theories, params.kind as DocumentType),
+        (refId) => getLiveDocument(refId, api, models, params.kind as DocumentType),
     );
 
     const [secondaryLiveDocument] = createResource(
@@ -57,7 +55,7 @@ export default function DocumentPage() {
 
             return [params.subkind, params.subref] as const;
         },
-        ([refKind, refId]) => getLiveDocument(refId, api, theories, refKind as DocumentType),
+        ([refKind, refId]) => getLiveDocument(refId, api, models, refKind as DocumentType),
     );
 
     const navigate = useNavigate();
@@ -170,9 +168,6 @@ function SplitPaneToolbar(props: {
 }
 
 export function DocumentPane(props: { document: AnyLiveDocument }) {
-    const theories = useContext(TheoryLibraryContext);
-    invariant(theories, "Library of theories should be provided as context");
-
     return (
         <div class="notebook-container">
             <div class="document-head">
@@ -219,11 +214,10 @@ export function DocumentPane(props: { document: AnyLiveDocument }) {
 async function getLiveDocument(
     refId: string,
     api: Api,
-    theories: TheoryLibrary,
-    type: DocumentType,
+    models: ModelLibrary<string>,
+    documentType: DocumentType,
 ): Promise<AnyLiveDocument> {
-    const models = createModelLibraryWithApi(api, theories);
-    switch (type) {
+    switch (documentType) {
         case "model":
             return models.getLiveModel(refId);
         case "diagram":
@@ -231,6 +225,6 @@ async function getLiveDocument(
         case "analysis":
             return getLiveAnalysis(refId, api, models);
         default:
-            assertExhaustive(type);
+            assertExhaustive(documentType);
     }
 }
