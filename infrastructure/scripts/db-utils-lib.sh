@@ -123,5 +123,6 @@ function find_git_root() {
 
 function run_local_migrations() {
   echo "Running local migrations..."
+  SQLX_OFFLINE=true cargo build -p backend
   cargo run -p backend migrator apply
 }
