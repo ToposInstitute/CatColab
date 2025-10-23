@@ -204,6 +204,11 @@
             pkgs = pkgsLinux;
           };
 
+          migrator = pkgsLinux.callPackage ./packages/migrator/default.nix {
+            inherit craneLib cargoArtifacts;
+            pkgs = pkgsLinux;
+          };
+
           notebook-types-node = pkgsLinux.callPackage ./packages/notebook-types/default.nix {
             inherit craneLib cargoArtifacts;
             pkgs = pkgsLinux;
