@@ -36,20 +36,23 @@ importers:
         specifier: ^0.2.4
         version: 0.2.4(solid-js@1.9.7)
       '@corvu/disclosure':
-        specifier: ^0.2.1
-        version: 0.2.1(solid-js@1.9.7)
+        specifier: ^0.2.2
+        version: 0.2.2(solid-js@1.9.7)
       '@corvu/popover':
         specifier: ^0.2.0
         version: 0.2.0(solid-js@1.9.7)
       '@corvu/resizable':
-        specifier: ^0.2.4
-        version: 0.2.4(solid-js@1.9.7)
+        specifier: ^0.2.5
+        version: 0.2.5(solid-js@1.9.7)
+      '@corvu/tooltip':
+        specifier: ^0.2.2
+        version: 0.2.2(solid-js@1.9.7)
       '@jupyterlab/services':
         specifier: ^7.3.1
         version: 7.3.1(react@18.3.1)
       '@kobalte/core':
-        specifier: ^0.13.10
-        version: 0.13.10(solid-js@1.9.7)
+        specifier: ^0.13.11
+        version: 0.13.11(solid-js@1.9.7)
       '@mdx-js/rollup':
         specifier: ^3.1.0
         version: 3.1.0(acorn@8.12.1)(rollup@4.22.5)
@@ -150,8 +153,8 @@ importers:
         specifier: ^5.2.0
         version: 5.4.0
       uuid:
-        specifier: ^11.0.3
-        version: 11.0.3
+        specifier: ^13.0.0
+        version: 13.0.0
     devDependencies:
       '@biomejs/biome':
         specifier: ^1.9.3
@@ -416,8 +419,8 @@ packages:
     peerDependencies:
       solid-js: ^1.8
 
-  '@corvu/disclosure@0.2.1':
-    resolution: {integrity: sha512-pHpYvAocbSxmuS62dl4i9DE0nY50J5ay/ThrjvL4Tj18eWRoLQQD2aIZk7u4Y80yjwL8tHjBAOPdpWOUItZMwQ==}
+  '@corvu/disclosure@0.2.2':
+    resolution: {integrity: sha512-d2E9zS0w9peeOiBDc8/ZcqS56ZeOIiKJcwMFpLjuhlfrtVAepwyhbwFHNQTb48VeRHW8amfrGliymT//VQFF9g==}
     peerDependencies:
       solid-js: ^1.8
 
@@ -426,8 +429,13 @@ packages:
     peerDependencies:
       solid-js: ^1.8
 
-  '@corvu/resizable@0.2.4':
-    resolution: {integrity: sha512-IWn9KAo7P6GCoRK96A3/oPSamc3fGjR7GhvyiGqMVIOr0kKKHpq0dQpmwq4NBM2xsuzEyIlWSn74MU9md2je/Q==}
+  '@corvu/resizable@0.2.5':
+    resolution: {integrity: sha512-psax38DraM9SXtaNh/sfvizGO6xLCL4sqT4rWYlMZP5ZsUM05Q30tvXgnTo2roQFNOz2e06WofhDsBXTjY6g4A==}
+    peerDependencies:
+      solid-js: ^1.8
+
+  '@corvu/tooltip@0.2.2':
+    resolution: {integrity: sha512-gyOBJ43GNAecDtmWc68A5YJvifXWwK0VZZdTOcFbX0rVQUA2ihBMltRE4oj7/lKidg2gXALjmFr71Blt5s3YuQ==}
     peerDependencies:
       solid-js: ^1.8
 
@@ -773,20 +781,20 @@ packages:
   '@firebase/webchannel-wrapper@1.0.1':
     resolution: {integrity: sha512-jmEnr/pk0yVkA7mIlHNnxCi+wWzOFUg0WyIotgkKAb2u1J7fAeDBcVNSTjTihbAYNusCLQdW5s9IJ5qwnEufcQ==}
 
-  '@floating-ui/core@1.6.8':
-    resolution: {integrity: sha512-7XJ9cPU+yI2QeLS+FCSlqNFZJq8arvswefkZrYI1yQBbftw6FyrZOxYSh+9S7z7TpeWlRt9zJ5IhM1WIL334jA==}
-
   '@floating-ui/core@1.6.9':
     resolution: {integrity: sha512-uMXCuQ3BItDUbAMhIXw7UPXRfAlOAvZzdK9BWpE60MCn+Svt3aLn9jsPTi/WNGlRUu2uI0v5S7JiIUsbsvh3fw==}
 
-  '@floating-ui/dom@1.6.11':
-    resolution: {integrity: sha512-qkMCxSR24v2vGkhYDo/UzxfJN3D4syqSjyuTFz6C7XcpU1pASPRieNI0Kj5VP3/503mOfYiGY891ugBX1GlABQ==}
+  '@floating-ui/core@1.7.3':
+    resolution: {integrity: sha512-sGnvb5dmrJaKEZ+LDIpguvdX3bDlEllmv4/ClQ9awcmCZrlx5jQyyMWFM5kBI+EyNOCDDiKk8il0zeuX3Zlg/w==}
 
   '@floating-ui/dom@1.6.13':
     resolution: {integrity: sha512-umqzocjDgNRGTuO7Q8CU32dkHkECqI8ZdMZ5Swb6QAM0t5rnlrN3lGo1hdpscRd3WS8T6DKYK4ephgIH9iRh3w==}
 
-  '@floating-ui/utils@0.2.8':
-    resolution: {integrity: sha512-kym7SodPp8/wloecOpcmSnWJsK7M0E5Wg8UcFA+uO4B9s5d0ywXOEro/8HM9x0rW+TljRzul/14UYz3TleT3ig==}
+  '@floating-ui/dom@1.7.4':
+    resolution: {integrity: sha512-OOchDgh4F2CchOX94cRVqhvy7b3AFb+/rQXyswmzmGakRfkMgoWVjfnLWkRirfLEfuD4ysVW16eXzwt3jHIzKA==}
+
+  '@floating-ui/utils@0.2.10':
+    resolution: {integrity: sha512-aGTxbpbg8/b5JfU1HXSrbH3wXZuLPJcNEcZQFMxLs3oSzgtVu6nFPkbbGGUvBcUjKV2YyB9Wxxabo+HEH9tcRQ==}
 
   '@floating-ui/utils@0.2.9':
     resolution: {integrity: sha512-MDWhGtE+eHw5JW7lq4qhc5yRLS11ERl1c7Z6Xd0a58DozHES6EnNNwUWbMiG4J9Cgj053Bhk8zvlhFYKVhULwg==}
@@ -852,8 +860,8 @@ packages:
   '@jupyterlab/statedb@4.3.1':
     resolution: {integrity: sha512-Uph0kEPgCZvI6XnRsf7Md4WWA+4WnJMzwubc7cxk7B2KjdRYOqJHVtQbdJk4ZUA2ARhyS8tBtit/BZb9e3wLZw==}
 
-  '@kobalte/core@0.13.10':
-    resolution: {integrity: sha512-lzP64ThxZqZB6O6MnMq6w7DxK38o2ClbW3Ob6afUI6p86cUMz5Hb4rdysvYI6m1TKYlOAlFODKkoRznqybQohw==}
+  '@kobalte/core@0.13.11':
+    resolution: {integrity: sha512-hK7TYpdib/XDb/r/4XDBFaO9O+3ZHz4ZWryV4/3BfES+tSQVgg2IJupDnztKXB0BqbSRy/aWlHKw1SPtNPYCFQ==}
     peerDependencies:
       solid-js: ^1.8.15
 
@@ -2560,8 +2568,8 @@ packages:
       firebase: '>=9.0.0'
       solid-js: '>=1.6.0'
 
-  solid-focus-trap@0.1.8:
-    resolution: {integrity: sha512-HbyCCfyytaOUJcKzAI3iRBincqCErUHA2J680nP9TftNbHsk0vVAmOd702iNlvNMORcu0XlV2mdZnGxkKg1ITA==}
+  solid-focus-trap@0.1.9:
+    resolution: {integrity: sha512-LTyNki6GUJPRLXV5uMWPkYClB07SUMubbr2EkAddiR0CJCF/I283txilMU9RURSr/P8EewMfXWu2o3aWrK7A5A==}
     peerDependencies:
       solid-js: ^1.8
 
@@ -2795,8 +2803,8 @@ packages:
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
-  uuid@11.0.3:
-    resolution: {integrity: sha512-d0z310fCWv5dJwnX1Y/MncBAqGMKEzlBb1AOf7z9K8ALnd0utBX/msg/fA0+sbyN1ihbMsLhrBlnl1ak7Wa0rg==}
+  uuid@13.0.0:
+    resolution: {integrity: sha512-XQegIaBTVUjSHliKqcnFqYypAd4S+WCYt5NIeRs6w/UAry7z8Y9j5ZwRRL4kzq9U3sD6v+85er9FvkEaBpji2w==}
     hasBin: true
 
   uuid@9.0.1:
@@ -3302,12 +3310,12 @@ snapshots:
     dependencies:
       '@corvu/utils': 0.4.2(solid-js@1.9.7)
       solid-dismissible: 0.1.1(solid-js@1.9.7)
-      solid-focus-trap: 0.1.8(solid-js@1.9.7)
+      solid-focus-trap: 0.1.9(solid-js@1.9.7)
       solid-js: 1.9.7
       solid-presence: 0.2.0(solid-js@1.9.7)
       solid-prevent-scroll: 0.1.10(solid-js@1.9.7)
 
-  '@corvu/disclosure@0.2.1(solid-js@1.9.7)':
+  '@corvu/disclosure@0.2.2(solid-js@1.9.7)':
     dependencies:
       '@corvu/utils': 0.4.2(solid-js@1.9.7)
       solid-js: 1.9.7
@@ -3317,22 +3325,30 @@ snapshots:
     dependencies:
       '@corvu/dialog': 0.2.4(solid-js@1.9.7)
       '@corvu/utils': 0.3.2(solid-js@1.9.7)
-      '@floating-ui/dom': 1.6.13
+      '@floating-ui/dom': 1.7.4
       solid-js: 1.9.7
 
-  '@corvu/resizable@0.2.4(solid-js@1.9.7)':
+  '@corvu/resizable@0.2.5(solid-js@1.9.7)':
     dependencies:
       '@corvu/utils': 0.4.2(solid-js@1.9.7)
       solid-js: 1.9.7
 
+  '@corvu/tooltip@0.2.2(solid-js@1.9.7)':
+    dependencies:
+      '@corvu/utils': 0.4.2(solid-js@1.9.7)
+      '@floating-ui/dom': 1.7.4
+      solid-dismissible: 0.1.1(solid-js@1.9.7)
+      solid-js: 1.9.7
+      solid-presence: 0.2.0(solid-js@1.9.7)
+
   '@corvu/utils@0.3.2(solid-js@1.9.7)':
     dependencies:
-      '@floating-ui/dom': 1.6.13
+      '@floating-ui/dom': 1.7.4
       solid-js: 1.9.7
 
   '@corvu/utils@0.4.2(solid-js@1.9.7)':
     dependencies:
-      '@floating-ui/dom': 1.6.11
+      '@floating-ui/dom': 1.7.4
       solid-js: 1.9.7
 
   '@esbuild/aix-ppc64@0.21.5':
@@ -3726,25 +3742,25 @@ snapshots:
 
   '@firebase/webchannel-wrapper@1.0.1': {}
 
-  '@floating-ui/core@1.6.8':
-    dependencies:
-      '@floating-ui/utils': 0.2.8
-
   '@floating-ui/core@1.6.9':
     dependencies:
       '@floating-ui/utils': 0.2.9
 
-  '@floating-ui/dom@1.6.11':
+  '@floating-ui/core@1.7.3':
     dependencies:
-      '@floating-ui/core': 1.6.8
-      '@floating-ui/utils': 0.2.8
+      '@floating-ui/utils': 0.2.10
 
   '@floating-ui/dom@1.6.13':
     dependencies:
       '@floating-ui/core': 1.6.9
       '@floating-ui/utils': 0.2.9
 
-  '@floating-ui/utils@0.2.8': {}
+  '@floating-ui/dom@1.7.4':
+    dependencies:
+      '@floating-ui/core': 1.7.3
+      '@floating-ui/utils': 0.2.10
+
+  '@floating-ui/utils@0.2.10': {}
 
   '@floating-ui/utils@0.2.9': {}
 
@@ -3859,7 +3875,7 @@ snapshots:
       '@lumino/properties': 2.0.2
       '@lumino/signaling': 2.1.3
 
-  '@kobalte/core@0.13.10(solid-js@1.9.7)':
+  '@kobalte/core@0.13.11(solid-js@1.9.7)':
     dependencies:
       '@floating-ui/dom': 1.6.13
       '@internationalized/date': 3.5.5
@@ -6235,7 +6251,7 @@ snapshots:
       firebase: 10.14.0
       solid-js: 1.9.7
 
-  solid-focus-trap@0.1.8(solid-js@1.9.7):
+  solid-focus-trap@0.1.9(solid-js@1.9.7):
     dependencies:
       '@corvu/utils': 0.4.2(solid-js@1.9.7)
       solid-js: 1.9.7
@@ -6513,7 +6529,7 @@ snapshots:
 
   util-deprecate@1.0.2: {}
 
-  uuid@11.0.3: {}
+  uuid@13.0.0: {}
 
   uuid@9.0.1: {}
 
