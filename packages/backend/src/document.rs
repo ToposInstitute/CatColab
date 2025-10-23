@@ -62,7 +62,7 @@ pub async fn head_snapshot(state: AppState, ref_id: Uuid) -> Result<Value, AppEr
     let query = sqlx::query!(
         "
         SELECT content FROM snapshots
-        WHERE id = (SELECT head FROM refs WHERE id = $1)
+        WHERE id = (SELECT head FROM refs WHERE id = $1 AND deleted_at IS NULL)
         ",
         ref_id
     );
@@ -136,7 +136,7 @@ pub async fn doc_id(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
     let query = sqlx::query!(
         "
         SELECT doc_id FROM snapshots
-        WHERE id = (SELECT head FROM refs WHERE id = $1)
+        WHERE id = (SELECT head FROM refs WHERE id = $1 AND deleted_at IS NULL)
         ",
         ref_id
     );

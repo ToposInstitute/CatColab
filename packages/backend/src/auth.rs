@@ -114,6 +114,7 @@ pub async fn max_permission_level(
         r#"
         SELECT MAX(level) AS "max: PermissionLevel" FROM permissions
         WHERE object = $1 AND (subject IS NULL OR subject = $2)
+        AND EXISTS (SELECT 1 FROM refs WHERE id = $1 AND deleted_at IS NULL)
         "#,
         ref_id,
         ctx.user.as_ref().map(|user| user.user_id.clone())
@@ -137,6 +138,7 @@ pub async fn permissions(ctx: &AppCtx, ref_id: Uuid) -> Result<Permissions, AppE
         FROM permissions
         LEFT OUTER JOIN users ON id = subject
         WHERE object = $1
+        AND EXISTS (SELECT 1 FROM refs WHERE id = $1 AND deleted_at IS NULL)
         "#,
         ref_id
     );
@@ -248,7 +250,8 @@ pub async fn set_permissions(
 
 /// Verify that the given ref exists.
 async fn ref_exists(ctx: &AppCtx, ref_id: Uuid) -> Result<(), AppError> {
-    let query = sqlx::query_scalar!("SELECT 1 FROM refs WHERE id = $1", ref_id);
+    let query =
+        sqlx::query_scalar!("SELECT 1 FROM refs WHERE id = $1 AND deleted_at IS NULL", ref_id);
     query.fetch_one(&ctx.state.db).await?;
     Ok(())
 }
