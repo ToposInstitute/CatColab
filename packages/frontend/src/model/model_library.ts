@@ -41,6 +41,7 @@ export type ValidatedModel =
     /** A model that failed to even elaborate. */
     | {
           tag: "Illformed";
+          model: null;
           error: string;
       };
 
@@ -241,7 +242,7 @@ export class ModelLibrary<RefId> {
         try {
             if (this.isElaborating.has(key)) {
                 const error = "Model contains a cycle of instantiations";
-                validatedModel = { tag: "Illformed", error };
+                validatedModel = { tag: "Illformed", model: null, error };
             } else {
                 this.isElaborating.add(key);
                 validatedModel = await this._elaborateAndValidate(doc.notebook, theory.theory);
@@ -273,7 +274,7 @@ export class ModelLibrary<RefId> {
             invariant(entry);
             if (entry.validatedModel.tag === "Illformed") {
                 const error = `Instantiated model is ill-formed: ${entry.validatedModel.error}`;
-                return { tag: "Illformed", error };
+                return { tag: "Illformed", model: null, error };
             }
             instantiated.set(refId, entry.validatedModel.model);
         }
@@ -292,7 +293,7 @@ function elaborateAndValidateModel(
     try {
         model = elaborateModel(notebook, instantiated, theory);
     } catch (e) {
-        return { tag: "Illformed", error: String(e) };
+        return { tag: "Illformed", model: null, error: String(e) };
     }
     const result = model.validate();
     if (result.tag === "Ok") {

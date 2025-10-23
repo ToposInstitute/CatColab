@@ -99,8 +99,7 @@ function obEditorForType(obType: ObType): Component<ObInputProps> {
     throw new Error(`No editor for object of type: ${obType}`);
 }
 
-/** Input a basic object via its human-readable name.
- */
+/** Input a basic object via its human-readable name. */
 function BasicObInput(allProps: ObInputProps & IdInputOptions) {
     const [props, otherProps] = splitProps(allProps, ["obType"]);
 

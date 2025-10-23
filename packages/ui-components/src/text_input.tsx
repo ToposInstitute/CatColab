@@ -38,8 +38,17 @@ type InputElementKeyboardEvent = Parameters<JSX.EventHandler<HTMLInputElement, K
 
 /** Actions invokable in `TextInput` component, possibly affecting nearby components. */
 type TextInputActions = {
-    /** Request to automatically fill out the input. */
+    /** Request to automatically fill out the input.
+
+    Typically triggered by pressing `Ctrl + Space`.
+     */
     autofill?: () => void;
+
+    /** Request to create something below this component and move to it.
+
+    Typically triggered by pressing `Enter`.
+     */
+    createBelow?: () => void;
 
     /** Request to delete this component and then move backward.
 
@@ -90,6 +99,7 @@ const TEXT_INPUT_OPTIONS = [
     "showCompletionsOnFocus",
     "interceptKeyDown",
     "autofill",
+    "createBelow",
     "deleteBackward",
     "deleteForward",
     "exitBackward",
@@ -166,11 +176,13 @@ export function TextInput(allProps: TextInputProps) {
             } else if (options.exitDown) {
                 options.exitDown();
             }
+        } else if (options.autofill && evt.code === "Space" && evt.ctrlKey) {
+            options.autofill();
         } else if (evt.key === "Enter" && !evt.shiftKey) {
             if (isCompletionsOpen()) {
                 completionsRef()?.selectPresumptive();
-            } else if (options.autofill) {
-                options.autofill();
+            } else if (options.createBelow) {
+                options.createBelow();
             }
         } else {
             return;

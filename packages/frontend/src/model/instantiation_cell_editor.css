@@ -1,4 +1,4 @@
-.model-instantiation {
+.model-instantiation-decl {
     display: flex;
     flex-direction: row;
     gap: 1ex;
@@ -6,5 +6,28 @@
 
     & .is-a:before {
         content: ":";
+    }
+}
+
+.model-specializations {
+    list-style: none;
+
+    margin-left: 0.5rem;
+    padding-left: 1rem;
+    border-left: 2px solid lightgray;
+}
+
+.model-specialization {
+    display: flex;
+    flex-direction: row;
+    gap: 1ex;
+    align-items: baseline;
+
+    & .specialize-as:before {
+        content: "⟵";
+    }
+
+    & .placeholder {
+        color: gray;
     }
 }
