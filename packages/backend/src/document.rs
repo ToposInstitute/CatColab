@@ -119,6 +119,19 @@ pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppErr
     Ok(())
 }
 
+pub async fn delete_ref(state: AppState, ref_id: Uuid) -> Result<(), AppError> {
+    let query = sqlx::query!(
+        "
+        UPDATE refs
+        SET deleted_at = NOW()
+        WHERE id = $1
+        ",
+        ref_id
+    );
+    query.execute(&state.db).await?;
+    Ok(())
+}
+
 pub async fn doc_id(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
     let query = sqlx::query!(
         "
