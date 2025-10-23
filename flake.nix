@@ -236,21 +236,28 @@
           #
           # use:
           # nix build .#catcolab-vm
-          # cp result/nixos.qcow2 nixos.qcow2
+          # cp result/catcolab-vm.qcow2 catcolab-vm.qcow2
           # db-utils vm start
           # deploy -s .#catcolab-vm
-          catcolab-vm = nixos-generators.nixosGenerate {
-            system = "x86_64-linux";
-            format = "qcow";
+          catcolab-vm = pkgsLinux.stdenv.mkDerivation {
+            name = "catcolab-vm";
+            src = nixos-generators.nixosGenerate {
+              system = "x86_64-linux";
+              format = "qcow";
 
-            modules = [
-              ./infrastructure/hosts/catcolab-vm
-            ];
+              modules = [
+                ./infrastructure/hosts/catcolab-vm
+              ];
 
-            specialArgs = {
-              inherit inputs self;
-              rustToolchain = rustToolchainLinux;
+              specialArgs = {
+                inherit inputs self;
+                rustToolchain = rustToolchainLinux;
+              };
             };
+            installPhase = ''
+              mkdir -p $out
+              cp $src/nixos.qcow2 $out/catcolab-vm.qcow2
+            '';
           };
         };
       };
