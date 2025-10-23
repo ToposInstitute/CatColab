@@ -7,7 +7,7 @@ mod migrations;
 
 #[tokio::main]
 async fn main() {
-    let database_url = std::env::var("DATABASE_URL").expect("`DATABASE_URL` must be set");
+    let database_url = dotenvy::var("DATABASE_URL").expect("`DATABASE_URL` should be set");
 
     let mut migrator = Migrator::default();
     migrator
