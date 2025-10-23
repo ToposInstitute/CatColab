@@ -80,4 +80,8 @@ pub enum AppError {
     /// document ref.
     #[error("Not authorized to access ref: {0}")]
     Forbidden(Uuid),
+
+    /// Document ref has been deleted.
+    #[error("Document ref has been deleted: {0}")]
+    Deleted(Uuid),
 }

@@ -1,6 +1,6 @@
 import Dialog, { Content, Portal } from "@corvu/dialog";
 
-import { PermissionsError } from "../api";
+import { NotFoundError, PermissionsError } from "../api";
 
 import "./error_boundary.css";
 
@@ -13,6 +13,9 @@ export function ErrorBoundaryDialog(props: { error: Error }) {
     if (props.error instanceof PermissionsError) {
         heading = "Permissions Error";
         message = "You are not permitted to view this resource.";
+    } else if (props.error instanceof NotFoundError) {
+        heading = "Not Found";
+        message = "This document does not exist or has been deleted.";
     } else {
         heading = "Error";
         message = "An unknown error occurred.";
