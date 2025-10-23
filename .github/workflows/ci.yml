@@ -130,6 +130,63 @@ jobs:
         run: |
           pnpm --filter "./packages/*" run ci
 
+  frontend_tests_with_backend:
+    name: frontend tests with backend
+    runs-on: ubuntu-latest
+    needs: [run_nix_checks]
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install Nix
+      uses: cachix/install-nix-action@v25
+      with:
+        nix_path: nixpkgs=channel:25.05
+
+    - name: Configure Cachix
+      uses: cachix/cachix-action@v14
+      with:
+        name: catcolab-jmoggr
+        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+
+    - name: Build frontend tests package
+      run: nix build .#frontend-tests --print-build-logs
+
+    - name: Enable KVM
+      run: |
+        echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+        sudo udevadm control --reload-rules
+        sudo udevadm trigger --name-match=kvm
+
+    - name: Build catcolab VM
+      run: nix build .#catcolab-vm
+
+    - name: Extract VM image
+      run: cp result/catcolab-vm.qcow2 catcolab-vm.qcow2
+
+    - name: Start catcolab VM
+      run: |
+        qemu-system-x86_64 \
+          -enable-kvm -cpu host -smp 2 -m 2048 \
+          -drive file=./catcolab-vm.qcow2,if=virtio,format=qcow2 \
+          -device virtio-net-pci,netdev=net0 \
+          -netdev user,id=net0,hostfwd=tcp::2221-:22,hostfwd=tcp::5433-:5432,hostfwd=tcp::8000-:8000,hostfwd=tcp::8010-:8010 \
+          -display none \
+          -daemonize
+
+    - name: Wait for backend to be ready
+      run: |
+        echo "Waiting for backend to start..."
+        timeout 300 bash -c 'until curl -s http://127.0.0.1:8000/health > /dev/null 2>&1; do sleep 2; done' || {
+          echo "Backend failed to start within 300 seconds"
+          exit 1
+        }
+        echo "Backend is ready"
+
+    - name: Run frontend tests
+      run: ./result/bin/frontend-tests
+
   build_nixos_system:
     name: build NixOS system
     runs-on: ubuntu-latest
@@ -138,7 +195,7 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-    
+
     - name: Install Nix
       uses: cachix/install-nix-action@v25
       with:

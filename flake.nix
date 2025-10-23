@@ -228,9 +228,15 @@
             inherit inputs rustToolchainLinux self;
           };
 
-          frontend = pkgsLinux.callPackage ./packages/frontend/default.nix {
-            inherit inputs rustToolchainLinux self;
-          };
+          frontend =
+            (pkgsLinux.callPackage ./packages/frontend/default.nix {
+              inherit inputs rustToolchainLinux self;
+            }).package;
+
+          frontend-tests =
+            (pkgsLinux.callPackage ./packages/frontend/default.nix {
+              inherit inputs rustToolchainLinux self;
+            }).tests;
 
           # VMs built with `nixos-rebuild build-vm` (like `nix build
           # .#nixosConfigurations.catcolab-vm.config.system.build.vm`) are not the same
