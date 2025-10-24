@@ -3,20 +3,19 @@ import { type DocHandle, type DocumentId, Repo, type RepoConfig } from "@automer
 import { NodeWSServerAdapter } from "@automerge/automerge-repo-network-websocket";
 import dotenv from "dotenv";
 import express from "express";
+import jsonpatch from "fast-json-patch";
 import * as ws from "ws";
-
-import * as notbookTypes from "notebook-types";
 
 // pg is a CommonJS package, and this is likely the least painful way of dealing with that
 import pgPkg from "pg";
 const { Pool } = pgPkg;
 import type { Pool as PoolType } from "pg";
 
+import * as notbookTypes from "notebook-types";
+
 import { PostgresStorageAdapter } from "./postgres_storage_adapter.js";
+import { type SocketIOHandlers, serializeError } from "./socket.js";
 import type { NewDocSocketResponse, StartListeningSocketResponse } from "./types.js";
-import type { SocketIOHandlers } from "./socket.js";
-import { serializeError } from "./socket.js";
-import jsonpatch from "fast-json-patch";
 
 // Load environment variables from .env
 dotenv.config();
@@ -134,7 +133,7 @@ export class AutomergeServer implements SocketIOHandlers {
 
         // NOTE: this listener is never removed
         handle.on("change", (payload) => {
-            this.handleChange!(refId, payload.doc);
+            this.handleChange?.(refId, payload.doc);
         });
 
         // Automerge relies on JS Proxy Objects to detect changes to the document, however the document
