@@ -109,21 +109,15 @@ in
         #!/usr/bin/env bash
         set -euo pipefail
 
-        # Create a temporary directory for running tests (Vite needs writable directory)
-        TMPDIR=$(mktemp -d)
-        trap "rm -rf $TMPDIR" EXIT
+        # Create temporary cache directory for Vite
+        export XDG_CACHE_HOME=$(mktemp -d)
+        trap "rm -rf $XDG_CACHE_HOME" EXIT
 
-        # Copy the test files to the temporary directory
-        cp -r "$out/lib"/* "$TMPDIR/"
-
-        # Make files writable (they're copied from read-only Nix store)
-        chmod -R +w "$TMPDIR"
-
-        # Navigate to the temporary frontend directory
-        cd "$TMPDIR/frontend"
+        # Navigate to the frontend directory (can run from read-only Nix store)
+        cd "$out/lib/frontend"
 
         # Run vitest tests
-        npm run test
+        npm run test -- --run
         EOF
 
         # Make the script executable

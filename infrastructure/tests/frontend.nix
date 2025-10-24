@@ -92,13 +92,13 @@ nixpkgs.legacyPackages.${linuxSystem}.testers.runNixOSTest {
     # Run the frontend tests pointing to the server
     # The tests read from .env.development which uses 127.0.0.1, so we need to override
     # print("\n===== Running frontend tests =====")
-    # status, output = client.execute(
-    #     f"VITE_SERVER_URL=http://{server_ip}:8000 "
-    #     f"VITE_AUTOMERGE_REPO_URL=ws://{server_ip}:8010 "
-    #     "frontend-tests"
-    # )
-    # print(output)
-    # if status != 0:
-    #     raise Exception(f"Frontend tests failed with status {status}")
+    status, output = client.execute(
+        f"VITE_SERVER_URL=http://{server_ip}:8000 "
+        f"VITE_AUTOMERGE_REPO_URL=ws://{server_ip}:8010 "
+        "frontend-tests"
+    )
+    print(output)
+    if status != 0:
+        raise Exception(f"Frontend tests failed with status {status}")
   '';
 }

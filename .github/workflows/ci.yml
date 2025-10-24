@@ -181,3 +181,25 @@ jobs:
     - name: Run Nix checks
       run: nix flake check
 
+  run_frontend_tests:
+    name: run frontend tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install Nix
+      uses: cachix/install-nix-action@v25
+      with:
+        nix_path: nixpkgs=channel:25.05
+
+    - name: Configure Cachix
+      uses: cachix/cachix-action@v14
+      with:
+        name: catcolab-jmoggr
+        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+
+    - name: Run frontend tests
+      run: nix build .#checks.x86_64-linux.frontend-tests -L --no-sandbox
+
