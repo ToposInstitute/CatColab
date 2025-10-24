@@ -29,15 +29,17 @@ pub fn generate(
 }
 
 // val must be an eta-expanded element of an object type
-fn name_of(val: &TmV) -> QualifiedName {
+fn name_of(val: &TmV) -> Option<QualifiedName> {
     let mut out = Vec::new();
-    let mut n = val.as_neu();
+    let TmV::Neu(mut n, _) = val.clone() else {
+        return None;
+    };
     while let TmN_::Proj(n1, f, _) = &*n.clone() {
         n = n1.clone();
         out.push(*f);
     }
     out.reverse();
-    out.into()
+    Some(out.into())
 }
 
 fn extract_to(
@@ -48,14 +50,14 @@ fn extract_to(
     label_prefix: Vec<LabelSegment>,
     val: &TmV,
     ty: &TyV,
-) {
+) -> Option<()> {
     match &**ty {
         TyV_::Object(ot) => {
             out.add_ob(prefix.clone().into(), ot.clone());
             name_translation.insert(prefix.into(), label_prefix.into());
         }
         TyV_::Morphism(mt, dom, cod) => {
-            out.add_mor(prefix.clone().into(), name_of(dom), name_of(cod), mt.0.clone());
+            out.add_mor(prefix.clone().into(), name_of(dom)?, name_of(cod)?, mt.0.clone());
             name_translation.insert(prefix.into(), label_prefix.into());
         }
         TyV_::Record(r) => {
@@ -72,12 +74,14 @@ fn extract_to(
                     label_prefix,
                     &eval.proj(val, *name, *label),
                     &eval.field_ty(ty, val, *name),
-                )
+                );
             }
         }
         TyV_::Sing(_, _) => {}
         TyV_::Unit => {}
+        TyV_::Meta(_) => {}
     }
+    Some(())
 }
 
 /// Display model output nicely

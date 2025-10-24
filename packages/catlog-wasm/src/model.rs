@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use all_the_same::all_the_same;
+use catlog::tt;
 use derive_more::{From, TryInto};
 use nonempty::NonEmpty;
 use serde::{Deserialize, Serialize};
@@ -307,6 +308,9 @@ pub struct DblModel {
     /// The boxed underlying model.
     #[wasm_bindgen(skip)]
     pub model: DblModelBox,
+    /// The elaborated type for the model.
+    #[wasm_bindgen(skip)]
+    pub ty: Option<tt::val::TyV>,
     ob_namespace: Namespace,
     mor_namespace: Namespace,
 }
@@ -316,6 +320,7 @@ impl DblModel {
     pub fn new(theory: &DblTheory) -> Self {
         Self {
             model: DblModelBox::new(theory),
+            ty: None,
             ob_namespace: Namespace::new_for_uuid(),
             mor_namespace: Namespace::new_for_uuid(),
         }
@@ -325,6 +330,7 @@ impl DblModel {
     pub fn replace_box(&self, model: DblModelBox) -> Self {
         Self {
             model,
+            ty: self.ty.clone(),
             ob_namespace: self.ob_namespace.clone(),
             mor_namespace: self.mor_namespace.clone(),
         }
@@ -630,11 +636,8 @@ pub fn elaborate_model(
         match judgment {
             ModelJudgment::Object(decl) => model.add_ob(decl)?,
             ModelJudgment::Morphism(decl) => model.add_mor(decl)?,
-            ModelJudgment::Instantiation(inst) => {
-                if let Some(link) = &inst.model {
-                    assert!(instantiated.0.contains_key(&link.stable_ref.id));
-                }
-                // FIXME: Do something with the instantiation.
+            ModelJudgment::Instantiation(_inst) => {
+                // legacy elaboration ignores instantiation
             }
         }
     }

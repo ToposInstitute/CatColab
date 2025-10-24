@@ -58,6 +58,7 @@ chk [G : Graph1] (G.src : EntityArr & [ .dom := G.E ] )
 
 #(should_fail)
 chk [G : Graph1] (G.src : EntityArr & [ .dom := G.V ] )
+#/ result: ?0
 #/ expected errors:
 #/ error[elab]: evaluated term [ dom := G.E, cod := G.V, arr := <opaque> ] is not an element of specialized type [ dom : Entity, cod : Entity, arr : (Id Entity)[ self.dom, self.cod ] ] &
 #/   [ .dom : @sing G.V ]:
@@ -75,6 +76,7 @@ type Graph1 := [
   E : Entity,
   src : EntityArr & [ .dom := E, .dom := V ]
 ]
+#/ declared: Graph1
 #/ expected errors:
 #/ error[elab]: Failed to specialize:
 #/ ... because @sing self.V is not a subtype of @sing self.E:
@@ -100,18 +102,24 @@ def reverse[G : Graph] : Graph := [
 #/ declared: reverse
 
 #(should_fail)
-def reverse[G : Graph] : Graph := [
+def reverse1[G : Graph] : Graph := [
   V := G.E,
   E := G.E,
   src := G.tgt,
   tgt := G.src
 ]
+#/ declared: reverse1
 #/ expected errors:
 #/ error[elab]: synthesized type (Id Entity)[ G.E, G.V ] does not match expected type (Id Entity)[ G.E, G.E ]:
 #/ could not convert codomains: Neutrals G.V and G.E are not equal.
 #/ --> examples/test.dbltt:70:10
 #/ 70|   src := G.tgt,
 #/ 70|          ^^^^^
+#/ error[elab]: synthesized type (Id Entity)[ G.E, G.V ] does not match expected type (Id Entity)[ G.E, G.E ]:
+#/ could not convert codomains: Neutrals G.V and G.E are not equal.
+#/ --> examples/test.dbltt:71:10
+#/ 71|   tgt := G.src
+#/ 71|          ^^^^^
 
 norm [G : Graph] (reverse[G]).E
 #/ result: G.E
@@ -191,6 +199,7 @@ set_theory ThCategory
 type Set := [
   A : Entity,
 ]
+#/ declared: Set
 #/ expected errors:
 #/ error[elab]: no such type Entity defined
 #/ --> examples/test.dbltt:113:7
@@ -227,5 +236,32 @@ generate NegFeedback
 #/ morphism generators:
 #/   f : X -> Y (Id Object)
 #/   g : Y -> X (Negative)
+
+
+#(should_fail)
+type NegFeedback1 := [
+  X : Object,
+  Y : Object,
+  f : (Id Object)[@hole, Y],
+  g : Negative[Y, f]
+]
+#/ declared: NegFeedback1
+#/ expected errors:
+#/ error[elab]: explicit hole
+#/ --> examples/test.dbltt:140:19
+#/ 140|   f : (Id Object)[@hole, Y],
+#/ 140|                   ^^^^^
+#/ error[elab]: synthesized type (Id Object)[ ?0, self.Y ] does not match expected type Object:
+#/ tried to convert between types of different type constructors
+#/ --> examples/test.dbltt:141:19
+#/ 141|   g : Negative[Y, f]
+#/ 141|                   ^
+
+generate NegFeedback1
+#/ result: 
+#/ object generators:
+#/   X : Object
+#/   Y : Object
+#/ morphism generators:
 
 

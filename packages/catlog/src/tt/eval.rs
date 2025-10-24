@@ -66,6 +66,7 @@ impl<'a> Evaluator<'a> {
                 })
             }
             TyS_::Unit => TyV::unit(),
+            TyS_::Meta(mv) => TyV::meta(*mv),
         }
     }
 
@@ -88,6 +89,7 @@ impl<'a> Evaluator<'a> {
             TmS_::Id(_) => TmV::Opaque,
             TmS_::Compose(_, _) => TmV::Opaque,
             TmS_::Opaque => TmV::Opaque,
+            TmS_::Meta(mv) => TmV::Meta(*mv),
         }
     }
 
@@ -183,6 +185,7 @@ impl<'a> Evaluator<'a> {
             }
             TyV_::Sing(ty, tm) => TyS::sing(self.quote_ty(ty), self.quote_tm(tm)),
             TyV_::Unit => TyS::unit(),
+            TyV_::Meta(mv) => TyS::meta(*mv),
         }
     }
 
@@ -205,6 +208,7 @@ impl<'a> Evaluator<'a> {
             TmV::Cons(fields) => TmS::cons(fields.map(|tm| self.quote_tm(tm))),
             TmV::Tt => TmS::tt(),
             TmV::Opaque => TmS::opaque(),
+            TmV::Meta(mv) => TmS::meta(*mv),
         }
     }
 
@@ -239,6 +243,7 @@ impl<'a> Evaluator<'a> {
             }
             TyV_::Sing(_, x) => self.equal_tm(tm, x),
             TyV_::Unit => Ok(()),
+            TyV_::Meta(_) => Ok(()),
         }
     }
 
@@ -286,9 +291,7 @@ impl<'a> Evaluator<'a> {
             (TyV_::Sing(ty1, _), _) => self.convertable_ty(ty1, ty2),
             (_, TyV_::Sing(ty2, _)) => self.convertable_ty(ty1, ty2),
             (TyV_::Unit, TyV_::Unit) => Ok(()),
-            _ => Err(t(
-                "tried to convert between types of different type constructors (for instance, object type and record type)",
-            )),
+            _ => Err(t("tried to convert between types of different type constructors")),
         }
     }
 
@@ -308,6 +311,7 @@ impl<'a> Evaluator<'a> {
             }
             TyV_::Sing(_, x) => x.clone(),
             TyV_::Unit => TmV::Tt,
+            TyV_::Meta(_) => TmV::Neu(n.clone(), ty.clone()),
         }
     }
 
@@ -324,6 +328,7 @@ impl<'a> Evaluator<'a> {
             ),
             TmV::Tt => TmV::Tt,
             TmV::Opaque => TmV::Opaque,
+            TmV::Meta(_) => v.clone(),
         }
     }
 
@@ -375,6 +380,13 @@ impl<'a> Evaluator<'a> {
             }
             (TmV::Tt, TmV::Tt) => Ok(()),
             (TmV::Opaque, TmV::Opaque) => Ok(()),
+            (TmV::Meta(mv1), TmV::Meta(mv2)) => {
+                if mv1 == mv2 {
+                    Ok(())
+                } else {
+                    Err(t(format!("Holes {} and {} are not equal.", mv1, mv2)))
+                }
+            }
             _ => Err(t(format!(
                 "failed to match terms {} and {}",
                 self.quote_tm(tm1),
