@@ -76,6 +76,7 @@ export class AutomergeServer implements SocketIOHandlers {
     }
 
     async createDoc(content: unknown): Promise<NewDocSocketResponse> {
+        // console.log("automerge here 11")
         const migrateResult = migrateDocument(content);
         if ("Err" in migrateResult) {
             return migrateResult;
@@ -89,6 +90,7 @@ export class AutomergeServer implements SocketIOHandlers {
         }
 
         const docJson = handle.doc();
+        // console.log("automerge here 12")
 
         return {
             Ok: {
@@ -116,6 +118,7 @@ export class AutomergeServer implements SocketIOHandlers {
     }
 
     async startListening(refId: string, docId: string): Promise<StartListeningSocketResponse> {
+        console.log("start listening ", refId);
         let handle = this.docMap.get(refId);
         if (handle) {
             return { Ok: null };

@@ -84,25 +84,30 @@ describe("RPC for Automerge documents", async () => {
     //     assert.strictEqual(invalidResult.code, 400);
     // });
 
+    
+    // console.log("docId: ", refDoc.docId)
+    
     if (!isValidDocumentId(refDoc.docId)) {
         return;
     }
     const docHandle = (await repo.find(refDoc.docId)) as DocHandle<Document>;
+    //@ts-ignore
     const doc = docHandle.doc();
 
     test.sequential("should get the original document data", () => {
         assert.deepStrictEqual(doc, content as unknown as Document);
     });
+    
 
-    // const newName = "Renamed model";
-    // docHandle.change((data) => {
-    //     data.name = newName;
-    // });
+    const newName = "Renamed model";
+    docHandle.change((data) => {
+        data.name = newName;
+    });
 
-    // test.sequential("should autosave to the database", { timeout: 1000, retry: 5 }, async () => {
-    //     const newContent = unwrap(await rpc.head_snapshot.query(refId)) as unknown as Document;
-    //     assert.strictEqual(newContent.name, newName);
-    // });
+    test.sequential("should autosave to the database", { timeout: 1000, retry: 5 }, async () => {
+        const newContent = unwrap(await rpc.head_snapshot.query(refId)) as unknown as Document;
+        assert.strictEqual(newContent.name, newName);
+    });
 });
 
 // describe("Authorized RPC", async () => {

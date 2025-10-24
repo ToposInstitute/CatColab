@@ -12,18 +12,19 @@ use crate::{auth::PermissionLevel, user::UserSummary};
 
 /// Creates a new document ref with initial content.
 pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
+    // println!("here1");
     // Validate document structure by attempting to deserialize it
     let _validated_doc: notebook_types::VersionedDocument = serde_json::from_value(content.clone())
         .map_err(|e| AppError::Invalid(format!("Failed to parse document: {}", e)))?;
 
     let ref_id = Uuid::now_v7();
-    println!("Creating new doc {}", ref_id);
 
     // If the document is created but the db transaction doesn't complete, then the document will be
     // orphaned. The only negative consequence of that is additional space used, but that should be
     // negligible and we can later create a service which periodically cleans out the orphans
     let new_doc_response = create_automerge_doc(&ctx.state.automerge_io, content.clone()).await?;
 
+    // println!("Creating new doc {} {}", ref_id, new_doc_response.doc_id);
     let mut transaction = ctx.state.db.begin().await?;
 
     let user_id = ctx.user.map(|user| user.user_id);
@@ -55,6 +56,7 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
     insert_permission.execute(&mut *transaction).await?;
 
     transaction.commit().await?;
+    // println!("here2");
     Ok(ref_id)
 }
 

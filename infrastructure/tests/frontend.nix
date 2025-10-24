@@ -87,18 +87,18 @@ nixpkgs.legacyPackages.${linuxSystem}.testers.runNixOSTest {
     # Dump server logs before running client tests
     print("\n===== Server status before client tests =====")
     print(catcolab_vm.succeed("curl http://localhost:8000/status"))
-    dump_logs(catcolab_vm, "database-setup.service", "automerge.service", "backend.service")
 
     # Run the frontend tests pointing to the server
     # The tests read from .env.development which uses 127.0.0.1, so we need to override
-    # print("\n===== Running frontend tests =====")
+    print("\n===== Running frontend tests =====")
     status, output = client.execute(
-        f"VITE_SERVER_URL=http://{server_ip}:8000 "
-        f"VITE_AUTOMERGE_REPO_URL=ws://{server_ip}:8010 "
+        f"VITE_SERVER_URL=http://{server_ip}:8000"
+        f"VITE_AUTOMERGE_REPO_URL=ws://{server_ip}:8010"
         "frontend-tests"
     )
     print(output)
     if status != 0:
         raise Exception(f"Frontend tests failed with status {status}")
+    dump_logs(catcolab_vm, "database-setup.service", "automerge.service", "backend.service")
   '';
 }
