@@ -7,7 +7,8 @@
         "build:wasm": "npm --prefix ../notebook-types run build:node",
         "main": "tsx src/main.ts",
         "format": "biome format --write",
-        "lint": "biome lint --write && biome check --write"
+        "lint": "biome lint --write && biome check --write",
+        "ci": "biome ci"
     },
     "author": "CatColab developer team",
     "license": "MIT",

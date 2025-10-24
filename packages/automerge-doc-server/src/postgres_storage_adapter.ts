@@ -37,7 +37,6 @@ export class PostgresStorageAdapter implements StorageAdapterInterface {
 
     // Load all entries that have keys starting with the keyPrefix.
     async loadRange(keyPrefix: StorageKey): Promise<{ key: StorageKey; data: Uint8Array }[]> {
-        // biome-ignore lint/suspicious/noExplicitAny: no typescript database types
         let result: QueryResult<any>;
         if (keyPrefix.length === 0) {
             // If prefix is empty, return all rows.
