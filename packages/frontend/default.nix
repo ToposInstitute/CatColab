@@ -51,7 +51,7 @@ let
 
       # See README.md
       # hash = "";
-      hash = "sha256-9S+1IKKbeIn6qvdcpn8Mn0PC86UNFnxgdjS7vl3xatM=";
+      hash = "sha256-X3rTwNcQhMCaqK5ZP/trIXbrmpvmW9pHzO3p9gV7il8=";
     };
   };
 
@@ -109,10 +109,23 @@ in
         #!/usr/bin/env bash
         set -euo pipefail
 
-        # Navigate to the frontend directory in the Nix store
+        # Create temporary cache directory for Vite
+        # export VITE_CACHE_DIR=$(mktemp -d)
+        # trap "rm -rf $VITE_CACHE_DIR" EXIT
+
+        # Navigate to the frontend directory
         cd "$out/lib/frontend"
 
-        # Run vitest tests with cache disabled
+        export VITE_FIREBASE_OPTIONS='{
+            "apiKey": "AIzaSyAsFvrzQg_V8cVhGi9PNkZiueGF0iDH9Ws",
+            "authDomain": "catcolab-next.firebaseapp.com",
+            "projectId": "catcolab-next",
+            "storageBucket": "catcolab-next.appspot.com",
+            "messagingSenderId": "666779369059",
+            "appId": "1:666779369059:web:f0319c1513d77996650256",
+            "measurementId": "G-WKFYSTDYLF"
+        }'
+        # Run tests (VITE_CACHE_DIR will be used by Vite for caching)
         npm run test:ci
         EOF
 

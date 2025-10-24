@@ -18,7 +18,7 @@
         "doc": "typedoc --entryPointStrategy expand ./src",
         "test": "vitest --mode development",
         "test:no-backend": "vitest --mode development --exclude 'src/api/*'",
-        "test:ci": "vitest --run --cache=false --configLoader=bundle"
+        "test:ci": "vitest --run --cache=false --configLoader=runner"
     },
     "dependencies": {
         "@atlaskit/pragmatic-drag-and-drop": "^1.3.0",
@@ -54,6 +54,7 @@
         "fast-json-patch": "^3.1.1",
         "firebase": "^10.14.0",
         "js-file-download": "^0.4.12",
+        "jsdom": "^27.0.1",
         "katex": "^0.16.22",
         "lucide-solid": "^0.471.0",
         "prosemirror-commands": "^1.7.1",
@@ -81,10 +82,10 @@
         "typed-css-modules": "^0.9.1",
         "typedoc": "^0.26.8",
         "typescript": "^5.2.2",
-        "vite": "^5.3.1",
+        "vite": "^5.4.21",
         "vite-plugin-solid": "^2.10.2",
         "vite-plugin-wasm": "^3.4.1",
-        "vitest": "^3.2.4",
+        "vitest": "^4.0.3",
         "wasm-pack": "^0.13.1"
     }
 }
