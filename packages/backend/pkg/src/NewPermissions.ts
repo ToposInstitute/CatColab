@@ -9,8 +9,9 @@ export type NewPermissions = {
  * Base permission level for any person, logged in or not.
  */
 anyone: PermissionLevel | null, 
-/** Permission levels for users.
-
-    A mapping from user IDs to permission levels.
-    */
+/**
+ * Permission levels for users.
+ *
+ * A mapping from user IDs to permission levels.
+ */
 users: { [key in string]?: PermissionLevel }, };

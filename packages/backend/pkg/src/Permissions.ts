@@ -14,8 +14,9 @@ anyone: PermissionLevel | null,
  * Permission level for the current user.
  */
 user: PermissionLevel | null, 
-/** Permission levels for all other users.
-
-    Only owners of the document have access to this information.
-     */
+/**
+ * Permission levels for all other users.
+ *
+ * Only owners of the document have access to this information.
+ */
 users: Array<UserPermissions> | null, };
