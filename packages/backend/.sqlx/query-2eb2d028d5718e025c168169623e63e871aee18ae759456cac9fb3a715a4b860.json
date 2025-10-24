@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT 1 FROM refs WHERE id = $1",
+  "query": "SELECT 1 FROM refs WHERE id = $1 AND deleted_at IS NULL",
   "describe": {
     "columns": [
       {
@@ -18,5 +18,5 @@
       null
     ]
   },
-  "hash": "1ddd7b172b0db3b5e7818013b6bb9e2d57dc2e2bc13e1d7faa82e48a77964dcc"
+  "hash": "2eb2d028d5718e025c168169623e63e871aee18ae759456cac9fb3a715a4b860"
 }

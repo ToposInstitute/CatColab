@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT content FROM snapshots\n        WHERE id = (SELECT head FROM refs WHERE id = $1)\n        ",
+  "query": "\n        SELECT content FROM snapshots\n        WHERE id = (SELECT head FROM refs WHERE id = $1 AND deleted_at IS NULL)\n        ",
   "describe": {
     "columns": [
       {
@@ -18,5 +18,5 @@
       false
     ]
   },
-  "hash": "92973a6dc72749d528465057e8bd674427db3a290d6db645dea5ac3c540167ef"
+  "hash": "34af4f7207b761dd8ee0dfa4d31cd9c1ce314fdba8429ffcb39f4b1800b6504b"
 }

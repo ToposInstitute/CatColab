@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT subject as \"user_id\", username, display_name,\n               level as \"level: PermissionLevel\"\n        FROM permissions\n        LEFT OUTER JOIN users ON id = subject\n        WHERE object = $1\n        ",
+  "query": "\n        SELECT subject as \"user_id\", username, display_name,\n               level as \"level: PermissionLevel\"\n        FROM permissions\n        LEFT OUTER JOIN users ON id = subject\n        WHERE object = $1\n        AND EXISTS (SELECT 1 FROM refs WHERE id = $1 AND deleted_at IS NULL)\n        ",
   "describe": {
     "columns": [
       {
@@ -48,5 +48,5 @@
       false
     ]
   },
-  "hash": "513719212b96e260e9c4ce840f716b1b6cb43563371fb35f9677fcf949827363"
+  "hash": "33606afbd5b6edb256180565069bea1fc96b2d3359d9b6a61c3dfa329251d133"
 }
