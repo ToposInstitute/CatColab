@@ -59,10 +59,17 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
 
 /// Gets the content of the head snapshot for a document ref.
 pub async fn head_snapshot(state: AppState, ref_id: Uuid) -> Result<Value, AppError> {
+    let deleted_check = sqlx::query!("SELECT deleted_at FROM refs WHERE id = $1", ref_id);
+    let ref_result = deleted_check.fetch_one(&state.db).await?;
+
+    if ref_result.deleted_at.is_some() {
+        return Err(AppError::Deleted(ref_id));
+    }
+
     let query = sqlx::query!(
         "
         SELECT content FROM snapshots
-        WHERE id = (SELECT head FROM refs WHERE id = $1 AND deleted_at IS NULL)
+        WHERE id = (SELECT head FROM refs WHERE id = $1)
         ",
         ref_id
     );
@@ -133,10 +140,17 @@ pub async fn delete_ref(state: AppState, ref_id: Uuid) -> Result<(), AppError> {
 }
 
 pub async fn doc_id(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
+    let deleted_check = sqlx::query!("SELECT deleted_at FROM refs WHERE id = $1", ref_id);
+    let ref_result = deleted_check.fetch_one(&state.db).await?;
+
+    if ref_result.deleted_at.is_some() {
+        return Err(AppError::Deleted(ref_id));
+    }
+
     let query = sqlx::query!(
         "
         SELECT doc_id FROM snapshots
-        WHERE id = (SELECT head FROM refs WHERE id = $1 AND deleted_at IS NULL)
+        WHERE id = (SELECT head FROM refs WHERE id = $1)
         ",
         ref_id
     );

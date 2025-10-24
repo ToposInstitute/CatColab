@@ -248,11 +248,14 @@ pub async fn set_permissions(
     Ok(())
 }
 
-/// Verify that the given ref exists.
 async fn ref_exists(ctx: &AppCtx, ref_id: Uuid) -> Result<(), AppError> {
-    let query =
-        sqlx::query_scalar!("SELECT 1 FROM refs WHERE id = $1 AND deleted_at IS NULL", ref_id);
-    query.fetch_one(&ctx.state.db).await?;
+    let query = sqlx::query!("SELECT deleted_at FROM refs WHERE id = $1", ref_id);
+    let result = query.fetch_one(&ctx.state.db).await?;
+
+    if result.deleted_at.is_some() {
+        return Err(AppError::Deleted(ref_id));
+    }
+
     Ok(())
 }
 
