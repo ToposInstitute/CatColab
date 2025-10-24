@@ -121,6 +121,7 @@
               python312Packages.requests
               python312Packages.ipykernel
               python3
+              firebase-tools
             ]
             ++ darwinDeps
             ++ [
@@ -407,6 +408,17 @@
               cargoFmtExtraArgs = "--check -- --config=normalize_comments=true";
             }
           );
+
+          # Run frontend tests against a backend server
+          frontend-tests = import ./infrastructure/tests/frontend.nix {
+            inherit
+              nixpkgs
+              inputs
+              self
+              linuxSystem
+              ;
+            rustToolchain = rustToolchainLinux;
+          };
         };
     };
 }

@@ -95,18 +95,32 @@ in
 
         # Create the output directory structure
         mkdir -p $out/bin
-        mkdir -p $out/lib/frontend-tests
+        mkdir -p $out/lib
 
-        # Copy the entire frontend directory to lib
-        cp -r . $out/lib/frontend-tests/
+        # Copy the entire workspace structure (catlog-wasm, backend, frontend)
+        # to maintain the relative symlinks in node_modules
+        cd ..
+        cp -r catlog-wasm $out/lib/
+        cp -r backend $out/lib/
+        cp -r frontend $out/lib/
 
         # Create executable wrapper script
         cat > $out/bin/frontend-tests <<'EOF'
         #!/usr/bin/env bash
         set -euo pipefail
 
-        # Navigate to the frontend tests directory
-        cd "$out/lib/frontend-tests"
+        # Create a temporary directory for running tests (Vite needs writable directory)
+        TMPDIR=$(mktemp -d)
+        trap "rm -rf $TMPDIR" EXIT
+
+        # Copy the test files to the temporary directory
+        cp -r "$out/lib"/* "$TMPDIR/"
+
+        # Make files writable (they're copied from read-only Nix store)
+        chmod -R +w "$TMPDIR"
+
+        # Navigate to the temporary frontend directory
+        cd "$TMPDIR/frontend"
 
         # Run vitest tests
         npm run test
