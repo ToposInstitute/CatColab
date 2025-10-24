@@ -101,6 +101,8 @@ export class Api {
         if (result.tag !== "Ok") {
             if (result.code === 403) {
                 throw new PermissionsError(result.message);
+            } else if (result.code === 404) {
+                throw new NotFoundError(result.message);
             } else {
                 throw new Error(`Failed to retrieve document: ${result.message}`);
             }
@@ -169,5 +171,13 @@ export class PermissionsError extends Error {
     constructor(message: string) {
         super(message);
         this.name = "PermisssionsError";
+    }
+}
+
+/** Error raised when backend reports that a resource is not found. */
+export class NotFoundError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = "NotFoundError";
     }
 }

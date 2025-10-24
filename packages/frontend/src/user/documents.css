@@ -62,6 +62,13 @@
     min-width: 120px;
 }
 
+.ref-table th:nth-child(6),
+.ref-table td:nth-child(6) {
+    width: 5%;
+    min-width: 50px;
+    text-align: center;
+}
+
 .ref-table-scroll tbody tr {
     transition: background-color 0.2s ease;
 }
@@ -106,4 +113,30 @@
 
 .ref-table .spinner {
     display: block;
+}
+
+.delete-cell {
+    padding: 8px !important;
+}
+
+.delete-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+    color: #666;
+}
+
+.delete-button:hover {
+    background-color: #fee;
+    color: #c00;
+}
+
+.delete-button:active {
+    background-color: #fdd;
 }

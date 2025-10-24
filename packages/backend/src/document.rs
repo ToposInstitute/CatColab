@@ -59,6 +59,13 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
 
 /// Gets the content of the head snapshot for a document ref.
 pub async fn head_snapshot(state: AppState, ref_id: Uuid) -> Result<Value, AppError> {
+    let deleted_check = sqlx::query!("SELECT deleted_at FROM refs WHERE id = $1", ref_id);
+    let ref_result = deleted_check.fetch_one(&state.db).await?;
+
+    if ref_result.deleted_at.is_some() {
+        return Err(AppError::Deleted(ref_id));
+    }
+
     let query = sqlx::query!(
         "
         SELECT content FROM snapshots
@@ -119,7 +126,27 @@ pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppErr
     Ok(())
 }
 
+pub async fn delete_ref(state: AppState, ref_id: Uuid) -> Result<(), AppError> {
+    let query = sqlx::query!(
+        "
+        UPDATE refs
+        SET deleted_at = NOW()
+        WHERE id = $1
+        ",
+        ref_id
+    );
+    query.execute(&state.db).await?;
+    Ok(())
+}
+
 pub async fn doc_id(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
+    let deleted_check = sqlx::query!("SELECT deleted_at FROM refs WHERE id = $1", ref_id);
+    let ref_result = deleted_check.fetch_one(&state.db).await?;
+
+    if ref_result.deleted_at.is_some() {
+        return Err(AppError::Deleted(ref_id));
+    }
+
     let query = sqlx::query!(
         "
         SELECT doc_id FROM snapshots
@@ -299,7 +326,8 @@ pub async fn search_ref_stubs(
             ON p_owner.object = refs.id AND p_owner.level = 'own'
         LEFT JOIN users AS owner
             ON owner.id = p_owner.subject
-        WHERE (
+        WHERE refs.deleted_at IS NULL
+        AND (
             owner.username = $2
             OR $2 IS NULL
         )
