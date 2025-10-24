@@ -17,6 +17,7 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
         .map_err(|e| AppError::Invalid(format!("Failed to parse document: {}", e)))?;
 
     let ref_id = Uuid::now_v7();
+    println!("Creating new doc {}", ref_id);
 
     // If the document is created but the db transaction doesn't complete, then the document will be
     // orphaned. The only negative consequence of that is additional space used, but that should be

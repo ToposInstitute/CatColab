@@ -159,21 +159,21 @@ with lib;
       };
     };
 
-    services.caddy = {
-      enable = true;
-      virtualHosts = {
-        "${cfg.backend.hostname}" = {
-          extraConfig = ''
-            reverse_proxy :${backendPortStr}
-          '';
-        };
+    # services.caddy = {
+    #   enable = true;
+    #   virtualHosts = {
+    #     "${cfg.backend.hostname}" = {
+    #       extraConfig = ''
+    #         reverse_proxy :${backendPortStr}
+    #       '';
+    #     };
 
-        "${cfg.automerge.hostname}" = {
-          extraConfig = ''
-            reverse_proxy :${automergePortStr}
-          '';
-        };
-      };
-    };
+    #     "${cfg.automerge.hostname}" = {
+    #       extraConfig = ''
+    #         reverse_proxy :${automergePortStr}
+    #       '';
+    #     };
+    #   };
+    # };
   };
 }
