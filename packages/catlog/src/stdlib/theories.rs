@@ -197,6 +197,28 @@ fn th_generalized_multicategory(list: List) -> ModalDblTheory {
     th
 }
 
+/// A theory of a power system.
+///
+/// This theory is inspired by the ontology in the PyPSA API, described with
+/// admirable precision in the
+/// [Design](https://docs.pypsa.org/latest/user-guide/design/) section of the
+/// PyPSA User Guide. Free models of the theory are models (in the colloquial
+/// sense) of a power system, such as a power grid.
+pub fn th_power_system() -> DiscreteDblTheory {
+    let mut cat = FpCategory::new();
+    cat.add_ob_generator(name("Bus"));
+    cat.add_mor_generator(name("Passive"), name("Bus"), name("Bus"));
+    cat.add_mor_generator(name("Controllable"), name("Bus"), name("Bus"));
+    cat.equate(Path::pair(name("Passive"), name("Passive")), name("Passive").into());
+    cat.equate(Path::pair(name("Passive"), name("Controllable")), name("Controllable").into());
+    cat.equate(Path::pair(name("Controllable"), name("Passive")), name("Controllable").into());
+    cat.equate(
+        Path::pair(name("Controllable"), name("Controllable")),
+        name("Controllable").into(),
+    );
+    cat.into()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -212,6 +234,7 @@ mod tests {
         assert!(th_delayable_signed_category().validate().is_ok());
         assert!(th_nullable_signed_category().validate().is_ok());
         assert!(th_category_with_scalars().validate().is_ok());
+        assert!(th_power_system().validate().is_ok());
     }
 
     #[test]
