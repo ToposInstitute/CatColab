@@ -3,4 +3,5 @@ packages:
   - "packages/automerge-doc-server"
   - "packages/backend/pkg"
   - "packages/frontend"
+  - "packages/notebook-types"
   - "packages/patchwork"
