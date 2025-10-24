@@ -109,15 +109,11 @@ in
         #!/usr/bin/env bash
         set -euo pipefail
 
-        # Create temporary cache directory for Vite
-        export XDG_CACHE_HOME=$(mktemp -d)
-        trap "rm -rf $XDG_CACHE_HOME" EXIT
-
-        # Navigate to the frontend directory (can run from read-only Nix store)
+        # Navigate to the frontend directory in the Nix store
         cd "$out/lib/frontend"
 
-        # Run vitest tests
-        npm run test -- --run
+        # Run vitest tests with cache disabled
+        npm run test:ci
         EOF
 
         # Make the script executable
