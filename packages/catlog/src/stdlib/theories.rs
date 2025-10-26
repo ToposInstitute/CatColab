@@ -199,11 +199,32 @@ fn th_generalized_multicategory(list: List) -> ModalDblTheory {
 
 /// A theory of a power system.
 ///
-/// This theory is inspired by the ontology in the PyPSA API, described with
-/// admirable precision in the
+/// Free models of this theory are models (in the colloquial sense) of a power
+/// system, such as a power grid. This theory is inspired by the ontology behind
+/// [PyPSA](https://pypsa.org/), described with admirable precision in the
 /// [Design](https://docs.pypsa.org/latest/user-guide/design/) section of the
-/// PyPSA User Guide. Free models of the theory are models (in the colloquial
-/// sense) of a power system, such as a power grid.
+/// PyPSA User Guide.
+///
+/// According to PyPSA's ontology, the fundamental nodes in a power system are
+/// **buses**. The **branches** between buses along which power flows are
+/// classified as follows:
+///
+/// 1. **Passive** branches: power flow is determined passively by impedances
+///    and power imbalances
+///    - **lines** include power transmission and distribution lines
+///    - **transformers** change AC voltage levels
+/// 2. **Active** branches: power flow can be actively controlled by optimization
+///    - **links** are the generic term for controllable directed flows
+///
+/// These types of branches form a hierarchy. Comparing the [line
+/// model](https://docs.pypsa.org/latest/user-guide/power-flow/#line-model) with
+/// the [transformer
+/// model](https://docs.pypsa.org/latest/user-guide/power-flow/#transformer-model),
+/// the analytical model of a line is a special case of that of a transformer
+/// (set the tap ratio to one and the phase shift to zero). It is meaningful to
+/// consider
+/// [sub-networks](https://docs.pypsa.org/latest/user-guide/components/sub-networks/)
+/// formed by passive branches.
 pub fn th_power_system() -> DiscreteDblTheory {
     let mut cat = FpCategory::new();
     cat.add_ob_generator(name("Bus"));
