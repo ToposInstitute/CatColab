@@ -200,44 +200,87 @@ fn th_generalized_multicategory(list: List) -> ModalDblTheory {
 /// A theory of a power system.
 ///
 /// Free models of this theory are models (in the colloquial sense) of a power
-/// system, such as a power grid. This theory is inspired by the ontology behind
-/// [PyPSA](https://pypsa.org/), described with admirable precision in the
-/// [Design](https://docs.pypsa.org/latest/user-guide/design/) section of the
-/// PyPSA User Guide.
+/// system, such as a power grid.
+///
+/// ## Motivation
+///
+/// This theory is inspired by the ontology behind [PyPSA](https://pypsa.org/)
+/// (Python for Power System Analysis), described with admirable precision in
+/// the [Design](https://docs.pypsa.org/latest/user-guide/design/) section of
+/// the PyPSA User Guide.
 ///
 /// According to PyPSA's ontology, the fundamental nodes in a power system are
-/// **buses**. The **branches** between buses along which power flows are
-/// classified as follows:
+/// **buses** and the connections between nodes are **branches**. Types of
+/// branches include:
 ///
 /// 1. **Passive** branches: power flow is determined passively by impedances
 ///    and power imbalances
 ///    - **lines** include power transmission and distribution lines
 ///    - **transformers** change AC voltage levels
-/// 2. **Active** branches: power flow can be actively controlled by optimization
-///    - **links** are the generic term for controllable directed flows
+/// 2. **Controllable** branches: power flow can be actively controlled by optimization
+///    - **links** encompass all controllable directed flows in PyPSA
 ///
-/// These types of branches form a hierarchy. Comparing the [line
-/// model](https://docs.pypsa.org/latest/user-guide/power-flow/#line-model) with
-/// the [transformer
+/// These types of branches implicitly form a hierarchy, made explicit in the
+/// compositional formalization of this theory.
+///
+/// ## Formalization
+///
+/// Morphisms between buses are lines; hence a composite of lines is again a
+/// line. This makes sense as lines are the most primitive type of branch, and
+/// it is standard to approximate a physical transmission line by a series of
+/// standard line components. See, for example, (Bergen & Vittal, *Power Systems
+/// Analysis*, 2nd ed, Section 4.3) and ([Aljanaideh & Bernstein
+/// 2019](https://doi.org/10.1109/MCS.2019.2925257), p. 105).
+///
+/// Transformers generalize lines. At least, comparing PyPSA's [line
+/// model](https://docs.pypsa.org/latest/user-guide/power-flow/#line-model) and
+/// [transformer
 /// model](https://docs.pypsa.org/latest/user-guide/power-flow/#transformer-model),
-/// the analytical model of a line is a special case of that of a transformer
-/// (set the tap ratio to one and the phase shift to zero). It is meaningful to
-/// consider
+/// the analytical model of a line is seen to specialize that of a transformer
+/// (set the tap ratio to one and the phase shift to zero). Lines and
+/// transformers are the *only* types of passive branch in PyPSA's ontology.
+/// Rather than introducing a morphism type just for transformers, we introduce
+/// a morphism type for all passive branches along with a promonad structure
+/// relating lines and passive branches. Thus, every line can be cast to a
+/// passive branch, the composite of passive branches is another passive branch,
+/// and a generating passive branche is generically a transformer. Note that
 /// [sub-networks](https://docs.pypsa.org/latest/user-guide/components/sub-networks/)
-/// formed by passive branches.
-pub fn th_power_system() -> DiscreteDblTheory {
-    let mut cat = FpCategory::new();
-    cat.add_ob_generator(name("Bus"));
-    cat.add_mor_generator(name("Passive"), name("Bus"), name("Bus"));
-    cat.add_mor_generator(name("Controllable"), name("Bus"), name("Bus"));
-    cat.equate(Path::pair(name("Passive"), name("Passive")), name("Passive").into());
-    cat.equate(Path::pair(name("Passive"), name("Controllable")), name("Controllable").into());
-    cat.equate(Path::pair(name("Controllable"), name("Passive")), name("Controllable").into());
-    cat.equate(
-        Path::pair(name("Controllable"), name("Controllable")),
-        name("Controllable").into(),
+/// formed by passive branches are meaningful.
+///
+/// Controllable branches are handled by another layer of promonad structure.
+/// Thus, every passive branch can be cast to a branch, the composite of
+/// branches is another branch, and a generating branch is generically a link.
+///
+/// In summary, the compositional structure of a power system is formalized as a
+/// (free) category graded by the linear order `Line < Passive < Branch`.
+pub fn th_power_system() -> ModalDblTheory {
+    let mut th = ModalDblTheory::new();
+
+    // Object type for buses, whose hom type is the morphism type for lines.
+    th.add_ob_type(name("Bus"));
+    let bus = ModeApp::new(name("Bus"));
+
+    // Morphism type for passive branches.
+    th.add_mor_type(name("Passive"), bus.clone(), bus.clone());
+    let passive = ModeApp::new(name("Passive"));
+    th.set_composite(passive.clone(), passive.clone(), passive.clone().into());
+    th.add_globular_mor_op(name("line_is_passive"), Path::Id(bus.clone()), passive.clone().into());
+    // TODO: Promonad cell equations
+
+    // Morphism type for generic branches.
+    th.add_mor_type(name("Branch"), bus.clone(), bus.clone());
+    let branch = ModeApp::new(name("Branch"));
+    th.set_composite(branch.clone(), passive.clone(), branch.clone().into());
+    th.set_composite(passive.clone(), branch.clone(), branch.clone().into());
+    th.set_composite(branch.clone(), branch.clone(), branch.clone().into());
+    th.add_globular_mor_op(
+        name("passive_is_branch"),
+        Path::single(passive.clone().into()),
+        branch.clone().into(),
     );
-    cat.into()
+    // TODO: Cell equations
+
+    th
 }
 
 #[cfg(test)]
@@ -255,7 +298,6 @@ mod tests {
         assert!(th_delayable_signed_category().validate().is_ok());
         assert!(th_nullable_signed_category().validate().is_ok());
         assert!(th_category_with_scalars().validate().is_ok());
-        assert!(th_power_system().validate().is_ok());
     }
 
     #[test]
@@ -269,6 +311,7 @@ mod tests {
         assert!(th_monoidal_category().validate().is_ok());
         assert!(th_lax_monoidal_category().validate().is_ok());
         assert!(th_multicategory().validate().is_ok());
+        assert!(th_power_system().validate().is_ok());
     }
 
     #[test]
