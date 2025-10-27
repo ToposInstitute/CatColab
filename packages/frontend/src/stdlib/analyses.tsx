@@ -2,6 +2,7 @@ import { lazy } from "solid-js";
 
 import type { MorType, ObType } from "catlog-wasm";
 import type { DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
+import * as SQLDownloadConfig from "./analyses/sql";
 import * as GraphLayoutConfig from "../visualization/graph_layout_config";
 import type * as Checkers from "./analyses/checker_types";
 import { defaultSchemaERDConfig, type SchemaERDConfig } from "./analyses/schema_erd_config";
@@ -312,3 +313,18 @@ export const stockFlowDiagram = (
 });
 
 const StockFlowDiagram = lazy(() => import("./analyses/stock_flow_diagram"));
+
+export const renderSql = (
+  options: AnalysisOptions,
+): ModelAnalysisMeta<SQLDownloadConfig.DownloadConfig> => ({
+  ...options,
+  component: DownloadTextButton,
+  initialContent: SQLDownloadConfig.defaultDownloadConfig, 
+	// () => ({
+	// backend: "MySQL",
+	// filename
+  // }),
+	// SQLDownloadConfig.defaultDownloadConfig,
+});
+
+const DownloadTextButton = lazy(() => import("./analyses/sql"));

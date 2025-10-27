@@ -107,6 +107,7 @@ function BasicObInput(allProps: ObInputProps & IdInputOptions) {
 
     const completions = (): QualifiedName[] | undefined =>
         liveModel().elaboratedModel()?.obGeneratorsWithType(props.obType);
+		console.log(props.obType);
 
     return (
         <ObIdInput

@@ -5,14 +5,15 @@
 
 use std::rc::Rc;
 
+use catlog::stdlib::analyses::sql::SqlBackend;
 use wasm_bindgen::prelude::*;
 
 use catlog::dbl::theory;
 use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
-use catlog::zero::{QualifiedName, name};
+use catlog::zero::{name, QualifiedName};
 
-use super::model_morphism::{MotifOccurrence, MotifsOptions, motifs};
+use super::model_morphism::{motifs, MotifOccurrence, MotifsOptions};
 use super::result::JsResult;
 use super::{analyses::*, model::DblModel, theory::DblTheory};
 
@@ -109,6 +110,17 @@ impl ThSchema {
             th.clone(),
         );
         Ok(boxed.replace_box(model.into()))
+    }
+
+    /// Renders a model into valid SQL
+    #[wasm_bindgen(js_name = "renderSql")]
+    pub fn render_sql(&self, model: &DblModel) -> Result<String, String> {
+        let sql_string = catlog::stdlib::analyses::sql::make_schema(
+            model.discrete()?,
+            model.ob_namespace()?,
+            model.mor_namespace()?,
+        );
+        Ok(sql_string)
     }
 }
 
