@@ -37,7 +37,7 @@ export default function createPowerSystemsTheory(theoryMeta: TheoryMeta): Theory
             },
             {
                 tag: "MorType",
-                morType: { tag: "Basic", content: "Controllable" },
+                morType: { tag: "Basic", content: "Branch" },
                 name: "Link",
                 description: "Controllable flow between buses",
                 preferUnnamed: true,
