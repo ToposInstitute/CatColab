@@ -21,6 +21,7 @@ export function BasicMorInput(
 
     const completions = (): QualifiedName[] | undefined =>
         props.morType && liveModel().elaboratedModel()?.morGeneratorsWithType(props.morType);
+	console.log(props.morType);
 
     return (
         <MorIdInput
