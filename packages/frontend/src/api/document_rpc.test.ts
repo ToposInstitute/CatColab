@@ -29,6 +29,7 @@ const firebaseApp = initializeApp(firebaseOptions);
 // @ts-ignore
 const rpc = createRpcClient(serverUrl, firebaseApp);
 
+
 // @ts-ignore
 const repo = new Repo({
     network: [new BrowserWebSocketClientAdapter(repoUrl)],
@@ -39,6 +40,7 @@ const repo = new Repo({
 
 describe("RPC for Automerge documents", async () => {
     const content = createTestDocument("My model");
+    console.log("repourl ", repoUrl);
     // console.log("herer2");
     const refId = unwrap(await rpc.new_ref.mutate(content));
     console.log("herer3");
@@ -90,6 +92,8 @@ describe("RPC for Automerge documents", async () => {
     if (!isValidDocumentId(refDoc.docId)) {
         return;
     }
+    console.log("peers: ", repo.peers);
+    // repo.metric
     const docHandle = (await repo.find(refDoc.docId)) as DocHandle<Document>;
     //@ts-ignore
     const doc = docHandle.doc();
@@ -108,65 +112,67 @@ describe("RPC for Automerge documents", async () => {
         const newContent = unwrap(await rpc.head_snapshot.query(refId)) as unknown as Document;
         assert.strictEqual(newContent.name, newName);
     });
+
+    assert(false);
 });
 
-// describe("Authorized RPC", async () => {
-//     const auth = getAuth(firebaseApp);
-//     const email = "test-document-rpc@catcolab.org";
-//     const password = "foobar";
-//     await initTestUserAuth(auth, email, password);
+describe("Authorized RPC", async () => {
+    const auth = getAuth(firebaseApp);
+    const email = "test-document-rpc@catcolab.org";
+    const password = "foobar";
+    await initTestUserAuth(auth, email, password);
 
-//     const user = auth.currentUser;
-//     afterAll(async () => user && (await deleteUser(user)));
+    const user = auth.currentUser;
+    afterAll(async () => user && (await deleteUser(user)));
 
-//     unwrap(await rpc.sign_up_or_sign_in.mutate());
+    unwrap(await rpc.sign_up_or_sign_in.mutate());
 
-//     const content = createTestDocument("My private model");
-//     const privateId = unwrap(await rpc.new_ref.mutate(content));
-//     test.sequential("should get a valid ref UUID when authenticated", () => {
-//         assert(uuid.validate(privateId));
-//     });
+    const content = createTestDocument("My private model");
+    const privateId = unwrap(await rpc.new_ref.mutate(content));
+    test.sequential("should get a valid ref UUID when authenticated", () => {
+        assert(uuid.validate(privateId));
+    });
 
-//     const fetchedContent = unwrap(await rpc.head_snapshot.query(privateId));
-//     test.sequential("should get document content when authenticated", () => {
-//         assert.deepStrictEqual(fetchedContent, content);
-//     });
+    const fetchedContent = unwrap(await rpc.head_snapshot.query(privateId));
+    test.sequential("should get document content when authenticated", () => {
+        assert.deepStrictEqual(fetchedContent, content);
+    });
 
-//     const refDoc = unwrap(await rpc.get_doc.query(privateId));
-//     test.sequential("should get a live document when authenticated", () => {
-//         assert(refDoc.tag === "Live");
-//         assert(isValidDocumentId(refDoc.docId));
-//         assert.deepStrictEqual(refDoc.permissions, {
-//             anyone: null,
-//             user: "Own",
-//             users: [],
-//         });
-//     });
+    const refDoc = unwrap(await rpc.get_doc.query(privateId));
+    test.sequential("should get a live document when authenticated", () => {
+        assert(refDoc.tag === "Live");
+        assert(isValidDocumentId(refDoc.docId));
+        assert.deepStrictEqual(refDoc.permissions, {
+            anyone: null,
+            user: "Own",
+            users: [],
+        });
+    });
 
-//     const readonlyId = unwrap(await rpc.new_ref.mutate(createTestDocument("My readonly model")));
-//     unwrap(
-//         await rpc.set_permissions.mutate(readonlyId, {
-//             anyone: "Read",
-//             users: {},
-//         }),
-//     );
+    const readonlyId = unwrap(await rpc.new_ref.mutate(createTestDocument("My readonly model")));
+    unwrap(
+        await rpc.set_permissions.mutate(readonlyId, {
+            anyone: "Read",
+            users: {},
+        }),
+    );
 
-//     await signOut(auth);
+    await signOut(auth);
 
-//     const forbiddenResult1 = await rpc.head_snapshot.query(privateId);
-//     const forbiddenResult2 = await rpc.get_doc.query(privateId);
-//     test.sequential("should prohibit document access when unauthenticated", () => {
-//         assert.strictEqual(unwrapErr(forbiddenResult1).code, 403);
-//         assert.strictEqual(unwrapErr(forbiddenResult2).code, 403);
-//     });
+    const forbiddenResult1 = await rpc.head_snapshot.query(privateId);
+    const forbiddenResult2 = await rpc.get_doc.query(privateId);
+    test.sequential("should prohibit document access when unauthenticated", () => {
+        assert.strictEqual(unwrapErr(forbiddenResult1).code, 403);
+        assert.strictEqual(unwrapErr(forbiddenResult2).code, 403);
+    });
 
-//     const readonlyDoc = unwrap(await rpc.get_doc.query(readonlyId));
-//     test.sequential("should allow read-only document access when unauthenticated", () => {
-//         assert.strictEqual(readonlyDoc.tag, "Readonly");
-//         assert.deepStrictEqual(readonlyDoc.permissions, {
-//             anyone: "Read",
-//             user: null,
-//             users: null,
-//         });
-//     });
-// });
+    const readonlyDoc = unwrap(await rpc.get_doc.query(readonlyId));
+    test.sequential("should allow read-only document access when unauthenticated", () => {
+        assert.strictEqual(readonlyDoc.tag, "Readonly");
+        assert.deepStrictEqual(readonlyDoc.permissions, {
+            anyone: "Read",
+            user: null,
+            users: null,
+        });
+    });
+});
