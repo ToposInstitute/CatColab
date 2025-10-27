@@ -5,14 +5,20 @@ use crate::{one::Path, zero::name};
 use itertools::Itertools;
 use sea_query::SchemaBuilder;
 use sea_query::{
-    ColumnDef, ForeignKey, ForeignKeyCreateStatement, Iden, Table, TableCreateStatement,
-    prepare::Write,
+    prepare::Write, ColumnDef, ForeignKey, ForeignKeyCreateStatement, Iden, Table,
+    TableCreateStatement,
 };
 use std::{collections::HashMap, default::Default};
 
 /// TODO
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct SqlBackend<T: SchemaBuilder + Default>(T);
+
+impl<T: SchemaBuilder + Default> Default for SqlBackend<T> {
+    fn default() -> Self {
+        SqlBackend(T::default())
+    }
+}
 
 impl<T: SchemaBuilder + Default> Clone for SqlBackend<T> {
     fn clone(&self) -> Self {
@@ -108,10 +114,11 @@ pub fn build_schema<T: SchemaBuilder + Default>(
 }
 
 /// TODO convert to schema statement
-pub fn make_schema<T: SchemaBuilder + Default>(
-    model: &DiscreteDblModel,
-    backend: SqlBackend<T>,
-) -> String {
+pub fn make_schema(model: &DiscreteDblModel) -> String
+// where
+    // T: SchemaBuilder + Default,
+{
+    let backend = SqlBackend(sea_query::MysqlQueryBuilder);
     let morphisms = table_morphisms(model);
     let create_stmts = create_stmts(model, morphisms.clone())
         .iter()
@@ -179,4 +186,7 @@ mod tests {
         // TODO Hash is nondeterministic
         // assert_eq!(make_schema(&model, SqlBackend(MysqlQueryBuilder)), raw.join("\n"));
     }
+
+    #[test]
+    fn sql_aswell() {}
 }
