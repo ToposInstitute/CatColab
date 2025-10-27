@@ -18,10 +18,12 @@
 //! 2-category or monoidal category. Instead, the mode theory is implicit and baked
 //! in at the type level.
 
+use std::hash::Hash;
 use std::iter::repeat_n;
 
 use derivative::Derivative;
 use derive_more::From;
+use indexmap::IndexMap;
 use ref_cast::RefCast;
 
 use crate::dbl::computad::{AVDCComputad, AVDCComputadTop};
@@ -32,7 +34,7 @@ use crate::validate::{self, Validate};
 use crate::{one::*, zero::*};
 
 /// Modalities available in a modal double theory.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, From)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, From)]
 pub enum Modality {
     /// List modalities, all of which are monads.
     #[from]
@@ -51,7 +53,7 @@ pub enum Modality {
 /// double category of sets admits, besides the [plain](Self::Plain) list double
 /// monad, a number of variations decorating the spans of lists with extra
 /// combinatorial data.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum List {
     /// Lists of objects and morphisms (of same length).
     Plain,
@@ -81,12 +83,12 @@ pub enum List {
     Biproduct,
 }
 
-/// Application of modalities.
+/// An application of modalities.
 ///
 /// Due to the simplicity of this logic, we can easily put terms in normal form:
 /// every term is a single argument along with a (possibly empty) list of modalities
 /// applied to it.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ModeApp<T> {
     /// Argument to which the modalities are applied.
     pub arg: T,
@@ -142,9 +144,14 @@ impl<T> ModeApp<T> {
     }
 }
 
+/// A basic type in a modal double theory.
+///
+/// These are (object or morphism) types that cannot be built out of others.
+pub type ModalType = ModeApp<QualifiedName>;
+
 /// A basic operation in a modal double theory.
 ///
-/// These are (object or morphisms) operations that cannot be built out of others
+/// These are (object or morphism) operations that cannot be built out of others
 /// using the structure of a VDC or virtual equipment.
 #[derive(Clone, Debug, PartialEq, Eq, From)]
 pub enum ModalOp {
@@ -156,14 +163,14 @@ pub enum ModalOp {
     ///
     /// This is a component of the monad multiplication for a [list](List) modality.
     /// It is given in unbiased style, where the second argument is the arity.
-    Concat(List, usize, ModeApp<QualifiedName>),
+    Concat(List, usize, ModalObType),
 }
 
 /// An object type in a modal double theory.
-pub type ModalObType = ModeApp<QualifiedName>;
+pub type ModalObType = ModalType;
 
 /// A morphism type in a modal double theory.
-pub type ModalMorType = ShortPath<ModalObType, ModeApp<QualifiedName>>;
+pub type ModalMorType = ShortPath<ModalType, ModalType>;
 
 impl ModalMorType {
     /// Applies a modality.
@@ -239,7 +246,8 @@ pub struct ModalDblTheory {
     pro_generators: ComputadTop<ModalObType, QualifiedName>,
     cell_generators: AVDCComputadTop<ModalObType, ModalObOp, ModalMorType, QualifiedName>,
     arr_equations: Vec<PathEq<ModalObType, ModeApp<ModalOp>>>,
-    // TODO: Cell equations and composites
+    pro_composites: IndexMap<(ModalType, ModalType), ModalMorType>,
+    // TODO: Cell equations
 }
 
 /// Set of object types in a modal double theory.
@@ -248,7 +256,7 @@ pub struct ModalDblTheory {
 pub(super) struct ModalObTypes(ModalDblTheory);
 
 impl Set for ModalObTypes {
-    type Elem = ModeApp<QualifiedName>;
+    type Elem = ModalObType;
 
     fn contains(&self, ob: &Self::Elem) -> bool {
         self.0.ob_generators.contains(&ob.arg)
@@ -262,7 +270,7 @@ struct ModalProedgeGraph(ModalDblTheory);
 
 impl Graph for ModalProedgeGraph {
     type V = ModalObType;
-    type E = ModeApp<QualifiedName>;
+    type E = ModalType;
 
     fn has_vertex(&self, ob: &Self::V) -> bool {
         self.0.loose_computad().has_vertex(ob)
@@ -426,8 +434,13 @@ impl VDblGraph for ModalVDblGraph {
                 ModalOp::Concat(_, _, p) => ModalProedgeGraph::ref_cast(&self.0).has_edge(p),
             },
             ModalNode::Unit(f) => ModalEdgeGraph::ref_cast(&self.0).has_edge(f),
-            // FIXME: Don't assume all composites exist.
-            ModalNode::Composite(_) => true,
+            ModalNode::Composite(path) => {
+                if path.len() <= 1 {
+                    true
+                } else {
+                    todo!("Non-trivial composites")
+                }
+            }
         }
     }
 
@@ -599,8 +612,7 @@ impl VDCWithComposites for ModalDblTheory {
                 if ms.len() == 1 {
                     Some(ms.head)
                 } else {
-                    // TODO: Support nontrivial composites.
-                    None
+                    todo!("Non-trivial composites")
                 }
             }
         }
@@ -611,7 +623,7 @@ impl VDCWithComposites for ModalDblTheory {
         _cell: Self::Cell,
         _range: std::ops::Range<usize>,
     ) -> Option<Self::Cell> {
-        panic!("Universal property of composites is not implemented")
+        todo!("Universal property of composites")
     }
 }
 
@@ -630,7 +642,17 @@ impl Validate for ModalDblTheory {
             let errs = eq.validate_in(graph).err()?;
             Some(InvalidDblTheory::ObOpEq(id, errs))
         });
-        validate::wrap_errors(arr_errors)
+
+        // Validate composites of morphism types.
+        let graph = ModalProedgeGraph::ref_cast(self);
+        let pro_errors =
+            self.pro_composites.iter().enumerate().filter_map(|(id, ((fst, snd), comp))| {
+                let eq = PathEq::new(Path::pair(fst.clone(), snd.clone()), comp.clone().into());
+                let errs = eq.validate_in(graph).err()?;
+                Some(InvalidDblTheory::MorTypeEq(id, errs))
+            });
+
+        validate::wrap_errors(arr_errors.chain(pro_errors))
     }
 }
 
@@ -682,6 +704,18 @@ impl ModalDblTheory {
         self.cell_generators.add_square(id, dom, cod.into(), src, tgt);
     }
 
+    /// Adds a morphism operation with identity source and target.
+    pub fn add_globular_mor_op(
+        &mut self,
+        id: QualifiedName,
+        dom: Path<ModalObType, ModalMorType>,
+        cod: ModalMorType,
+    ) {
+        let src = self.src(&cod); // == ModalMorTypeGraph::ref_cast(self).src(&dom)
+        let tgt = self.tgt(&cod); // == ModalMorTypeGraph::ref_cast(self).tgt(&dom)
+        self.add_mor_op(id, dom, cod, Path::Id(src), Path::Id(tgt));
+    }
+
     /// Adds a morphism operation with nullary domain and unit codomain.
     pub fn add_special_mor_op(&mut self, id: QualifiedName, src: ModalObOp, tgt: ModalObOp) {
         let dom = self.dom(&src); // == self.dom(&tgt)
@@ -692,5 +726,10 @@ impl ModalDblTheory {
     /// Equate two object operations in the theory.
     pub fn equate_ob_ops(&mut self, lhs: ModalObOp, rhs: ModalObOp) {
         self.arr_equations.push(PathEq::new(lhs, rhs))
+    }
+
+    /// Set composite of two basic morphism types.
+    pub fn set_composite(&mut self, fst: ModalType, snd: ModalType, composite: ModalMorType) {
+        self.pro_composites.insert((fst, snd), composite);
     }
 }

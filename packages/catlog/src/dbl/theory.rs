@@ -266,7 +266,7 @@ impl<VDC: VDCWithComposites> DblTheory for VDC {
 }
 
 /// A failure of a double theory to be well defined.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum InvalidDblTheory {
     /// Morphism type with an invalid source type.
     SrcType(QualifiedName),
