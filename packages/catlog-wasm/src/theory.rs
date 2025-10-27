@@ -287,6 +287,27 @@ impl DblTheory {
     pub fn discrete(&self) -> Result<&Rc<theory::DiscreteDblTheory>, String> {
         (&self.0).try_into().map_err(|_| "Theory should be discrete".into())
     }
+
+    /// Checks if the theory contains an object type with the given name.
+    pub fn has_object_type(&self, name: &str) -> bool {
+        let q_name = QualifiedName::from(NameSegment::Text(Ustr::from(name)));
+        all_the_same!(match &self.0 {
+            DblTheoryBox::[Discrete, DiscreteTab, Modal](th) => {
+                th.object_types().contains_key(&q_name)
+            }
+        })
+    }
+
+    /// Checks if the theory contains a morphism type with the given name.
+    pub fn has_morphism_type(&self, name: &str) -> bool {
+        let q_name = QualifiedName::from(NameSegment::Text(Ustr::from(name)));
+        let q_path = Path::single(q_name);
+        all_the_same!(match &self.0 {
+            DblTheoryBox::[Discrete, DiscreteTab, Modal](th) => {
+                th.morphism_types().contains_key(&q_path)
+            }
+        })
+    }
 }
 
 #[wasm_bindgen]
@@ -313,83 +334,5 @@ impl DblTheory {
         })
     }
 
-    /// Gets the domain of an object operation.
-    #[wasm_bindgen]
-    pub fn dom(&self, op: ObOp) -> Result<ObType, String> {
-        all_the_same!(match &self.0 {
-            DblTheoryBox::[Discrete, DiscreteTab, Modal](th) => {
-                let op = Elaborator.elab(&op)?;
-                Ok(Quoter.quote(&th.ob_op_dom(&op)))
-            }
-        })
-    }
-
-    /// Gets the codomain of an object operation.
-    #[wasm_bindgen]
-    pub fn cod(&self, op: ObOp) -> Result<ObType, String> {
-        all_the_same!(match &self.0 {
-            DblTheoryBox::[Discrete, DiscreteTab, Modal](th) => {
-                let op = Elaborator.elab(&op)?;
-                Ok(Quoter.quote(&th.ob_op_cod(&op)))
-            }
-        })
-    }
-}
-
-/// Mapping from object types to numerical indices.
-///
-/// Like [`MorTypeIndex`], this struct just compensates for the lack of hash maps
-/// with arbitrary keys in JavaScript.
-#[wasm_bindgen]
-#[derive(Clone, Default)]
-pub struct ObTypeIndex(HashMap<ObType, usize>);
-
-#[wasm_bindgen]
-impl ObTypeIndex {
-    /// Creates a new object type index.
-    #[wasm_bindgen(constructor)]
-    pub fn new() -> Self {
-        Default::default()
-    }
-
-    /// Gets the index of an object type, if set.
-    #[wasm_bindgen]
-    pub fn get(&self, x: &ObType) -> Option<usize> {
-        self.0.get(x).copied()
-    }
-
-    /// Sets the index of an object type.
-    #[wasm_bindgen]
-    pub fn set(&mut self, x: ObType, i: usize) {
-        self.0.insert(x, i);
-    }
-}
-
-/// Mapping from morphism types to numerical indices.
-///
-/// Like [`ObTypeIndex`], this struct just compensates for the lack of hash maps
-/// with arbitrary keys in JavaScript.
-#[wasm_bindgen]
-#[derive(Clone, Default)]
-pub struct MorTypeIndex(HashMap<MorType, usize>);
-
-#[wasm_bindgen]
-impl MorTypeIndex {
-    /// Creates a new morphism type index.
-    #[wasm_bindgen(constructor)]
-    pub fn new() -> Self {
-        Default::default()
-    }
-
-    /// Gets the index of a morphism type, if set.
-    #[wasm_bindgen]
-    pub fn get(&self, m: &MorType) -> Option<usize> {
-        self.0.get(m).copied()
-    }
-
-    /// Sets the index of a morphism type.
-    #[wasm_bindgen]
-    pub fn set(&mut self, m: MorType, i: usize) {
-        self.0.insert(m, i);
-    }
-}
+    /// Get
+```
