@@ -6,7 +6,9 @@
 }:
 {
   imports = [
-    (modulesPath + "/profiles/qemu-guest.nix")
+
+    "${modulesPath}/virtualisation/qemu-vm.nix"
+    # (modulesPath + "/profiles/qemu-guest.nix")
     ../../modules/catcolab
   ];
 
@@ -51,9 +53,38 @@
     5432
   ];
 
+  virtualisation.vmVariant = {
+    virtualisation.forwardPorts = [
+      {
+        from = "host";
+        host.port = 8000;
+        guest.port = 8000;
+      }
+      {
+        from = "host";
+        host.port = 8010;
+        guest.port = 8010;
+      }
+    ];
+    # Run headless without graphics (needed for CI)
+    virtualisation.graphics = false;
+    # Enable serial console for boot logs in headless mode
+    virtualisation.qemu.options = [
+      "-nographic"
+      "-serial stdio"
+    ];
+  };
+
+  # Fix for CI builds: ensure the VM is self-contained
+  # virtualisation.useBootLoader = false;
+  # virtualisation.mountHostNixStore = false;
+
   # This matches the default root device that is created by nixos-generators
   fileSystems."/".device = "/dev/disk/by-label/nixos";
   virtualisation.diskSize = 20 * 1024;
+  # virtualisation.qemu.options = [
+  #   "-nic user,hostfwd=tcp::8000-:8000"
+  # ];
   services.qemuGuest.enable = true;
   # needed for deploy-rs to works
   boot.loader.grub = {
