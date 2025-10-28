@@ -4,7 +4,7 @@ import type { LiveAnalysisDocument } from "./document";
 
 /** Widget in the top right corner of a diagram document pane.
  */
-export function AnalysisWidget(props: { liveAnalysis: LiveAnalysisDocument }) {
+export function AnalysisInfo(props: { liveAnalysis: LiveAnalysisDocument }) {
     const parentName = () => analysisParentName(props.liveAnalysis) || "Untitled";
     const parentUrl = () => analysisParentUrl(props.liveAnalysis);
 

@@ -375,6 +375,9 @@ pub async fn search_ref_stubs(
     })
 }
 
+
+// A child is defined as: any document snapshot which has an top level object which contains
+// fields `_id = parent.id` and `type = diagram-in | analysis-of`
 pub async fn get_ref_children_stubs(ctx: AppCtx, ref_id: Uuid) -> Result<Vec<RefStub>, AppError> {
     let user_id = ctx.user.as_ref().map(|u| u.user_id.clone());
 

@@ -3,7 +3,7 @@ import File from "lucide-solid/icons/file";
 import Network from "lucide-solid/icons/network";
 
 import type { DocumentType } from "../api";
-import { assertExhaustive } from "./assert_exhaustive";
+import { assertExhaustive } from "../util/assert_exhaustive";
 
 export function DocumentTypeIcon(props: { documentType: DocumentType }) {
     switch (props.documentType) {

@@ -19,7 +19,7 @@ import {
     MenuSeparator,
 } from "../page";
 import { TheoryLibraryContext } from "../theory";
-import { DocumentTypeIcon } from "../util/document_type_icon";
+import { DocumentTypeIcon } from "./document_type_icon";
 
 export function DocumentMenu(props: {
     liveDoc: LiveDoc;

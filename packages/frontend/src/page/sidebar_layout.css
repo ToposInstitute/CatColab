@@ -89,29 +89,6 @@
     gap: 2px;
 }
 
-.icon-button {
-    display: flex;
-    align-items: center;
-    height: 100%;
-    color: dimgray;
-}
-
-.icon-button > div {
-    height: 28px;
-    width: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 6px;
-    transition: background 20ms;
-}
-
-.icon-button:hover > div {
-    color: black;
-    background: #e8e8e8;
-    cursor: pointer;
-}
-
 .related-document {
     padding: 5px 8px;
     height: 30px;

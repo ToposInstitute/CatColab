@@ -5,7 +5,7 @@ import { type LiveModelDocument, migrateModelDocument } from "./document";
 
 /** Widget in the top right corner of a model document pane.
  */
-export function ModelWidget(props: { liveModel: LiveModelDocument }) {
+export function ModelInfo(props: { liveModel: LiveModelDocument }) {
     const liveDoc = () => props.liveModel.liveDoc;
 
     const selectableTheories = () => {

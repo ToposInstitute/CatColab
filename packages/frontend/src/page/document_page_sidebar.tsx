@@ -2,12 +2,12 @@ import { useNavigate } from "@solidjs/router";
 import type { Link } from "catlog-wasm";
 import { For } from "solid-js";
 import { Show } from "solid-js";
-import { createResource, createSignal } from "solid-js";
+import { createResource } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { type Api, type LiveDoc, useApi } from "../api";
-import { DocumentTypeIcon } from "../util/document_type_icon";
 import { DocumentMenu } from "./document_menu";
+import { DocumentTypeIcon } from "./document_type_icon";
 import { AppMenu, ImportMenuItem, NewModelItem } from "./menubar";
 
 export function DocumentSidebar(props: {
@@ -46,10 +46,6 @@ function RelatedDocuments(props: {
 }) {
     const api = useApi();
 
-    // Signal to trigger refetch when documents are created
-    const [refreshCounter, setRefreshCounter] = createSignal(0);
-    const triggerRefresh = () => setRefreshCounter((c) => c + 1);
-
     const [liveDocRoot] = createResource(
         () => props.liveDoc,
         async (liveDoc) => getLiveDocRoot(liveDoc, api),
@@ -63,8 +59,6 @@ function RelatedDocuments(props: {
                         liveDoc={liveDocRoot()}
                         indent={1}
                         currentLiveDoc={props.liveDoc}
-                        refreshCounter={refreshCounter()}
-                        triggerRefresh={triggerRefresh}
                     />
                 </div>
             )}
@@ -76,21 +70,19 @@ function DocumentsTreeNode(props: {
     liveDoc: LiveDoc;
     indent: number;
     currentLiveDoc: LiveDoc;
-    refreshCounter: number;
-    triggerRefresh: () => void;
 }) {
     const api = useApi();
 
-    const [childDocs] = createResource(
-        () => [props.liveDoc, props.refreshCounter] as const,
-        async ([liveDoc, _counter]) => {
+    const [childDocs, { refetch }] = createResource(
+        () => props.liveDoc,
+        async (liveDoc) => {
             const docRefId = liveDoc.docRef?.refId;
             invariant(docRefId, "Doc must have a valid ref");
 
             const results = await api.rpc.get_ref_children_stubs.query(docRefId);
 
             if (results.tag !== "Ok") {
-                throw "couldn't load child documents!";
+                throw new Error("couldn't load child documents!");
             }
 
             return await Promise.all(
@@ -105,7 +97,7 @@ function DocumentsTreeNode(props: {
                 liveDoc={props.liveDoc}
                 indent={props.indent}
                 currentLiveDoc={props.currentLiveDoc}
-                triggerRefresh={props.triggerRefresh}
+                triggerRefresh={refetch}
             />
             <Show when={childDocs()} fallback={<div>Loading children...</div>}>
                 {(childDocs) => (
@@ -115,8 +107,6 @@ function DocumentsTreeNode(props: {
                                 liveDoc={child}
                                 indent={props.indent + 1}
                                 currentLiveDoc={props.currentLiveDoc}
-                                refreshCounter={props.refreshCounter}
-                                triggerRefresh={props.triggerRefresh}
                             />
                         )}
                     </For>

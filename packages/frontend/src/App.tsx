@@ -119,7 +119,7 @@ const routes: RouteDefinition[] = [
             subkind: (v?: string) => !v || v === "analysis" || v === "diagram" || v === "model",
             subref: (v?: string) => !v || refIsUUIDFilter.ref(v),
         },
-        component: lazy(() => import("./page/document")),
+        component: lazy(() => import("./page/document_page")),
     },
     {
         path: "/help",

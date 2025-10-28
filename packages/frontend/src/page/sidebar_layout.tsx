@@ -1,11 +1,12 @@
 import { type JSX, createSignal } from "solid-js";
 
-import "./layout.css";
+import "./sidebar_layout.css";
 
 import ChevronsLeft from "lucide-solid/icons/chevrons-left";
 import MenuIcon from "lucide-solid/icons/menu";
+import { IconButton } from "../components";
 
-export function Layout(props: {
+export function SidebarLayout(props: {
     children?: JSX.Element;
     toolbarContents?: JSX.Element;
     sidebarContents?: JSX.Element;
@@ -60,16 +61,5 @@ function Header(props: {
             )}
             {props.children}
         </header>
-    );
-}
-
-function IconButton(props: {
-    children: JSX.Element;
-    onClick?: () => void;
-}) {
-    return (
-        <div onClick={props.onClick} class="icon-button" role="button">
-            <div>{props.children}</div>
-        </div>
     );
 }

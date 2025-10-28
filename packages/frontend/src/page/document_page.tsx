@@ -15,28 +15,28 @@ import invariant from "tiny-invariant";
 
 import { type LiveAnalysisDocument, getLiveAnalysis } from "../analysis";
 import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
-import { AnalysisWidget } from "../analysis/analysis_widget";
+import { AnalysisInfo } from "../analysis/analysis_info";
 import { type Api, type DocumentType, useApi } from "../api";
 import { IconButton, InlineInput, ResizableHandle } from "../components";
 import { type LiveDiagramDocument, getLiveDiagram } from "../diagram";
 import { DiagramNotebookEditor } from "../diagram/diagram_editor";
-import { DiagramWidget } from "../diagram/diagram_widget";
+import { DiagramInfo } from "../diagram/diagram_info";
 import { type LiveModelDocument, createModelLibraryWithApi } from "../model";
 import { ModelNotebookEditor } from "../model/model_editor";
-import { ModelWidget } from "../model/model_widget";
+import { ModelInfo } from "../model/model_info";
 import { DocumentBreadcrumbs, DocumentLoadingScreen } from "../page";
-import { Layout } from "../page/layout";
+import { SidebarLayout } from "../page/sidebar_layout";
 import type { TheoryLibrary } from "../theory";
 import { TheoryLibraryContext } from "../theory";
 import { PermissionsButton } from "../user";
 import { assertExhaustive } from "../util/assert_exhaustive";
-import { DocumentSidebar } from "./document_sidebar";
+import { DocumentSidebar } from "./document_page_sidebar";
 
-import "./document.css";
+import "./document_page.css";
 
 type AnyLiveDocument = LiveModelDocument | LiveDiagramDocument | LiveAnalysisDocument;
 
-export default function Document() {
+export default function DocumentPage() {
     const api = useApi();
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Must provide theory library as context to model page");
@@ -84,7 +84,7 @@ export default function Document() {
     return (
         <Show when={primaryLiveDocument()} fallback={<DocumentLoadingScreen />}>
             {(liveDocument) => (
-                <Layout
+                <SidebarLayout
                     toolbarContents={
                         <SplitPaneToolbar
                             document={liveDocument()}
@@ -131,7 +131,7 @@ export default function Document() {
                             );
                         }}
                     </Resizable>
-                </Layout>
+                </SidebarLayout>
             )}
         </Show>
     );
@@ -190,13 +190,13 @@ function DocumentPane(props: { document: AnyLiveDocument }) {
                 <div class="info">
                     <Switch>
                         <Match when={props.document.type === "model" && props.document}>
-                            {(liveModel) => <ModelWidget liveModel={liveModel()} />}
+                            {(liveModel) => <ModelInfo liveModel={liveModel()} />}
                         </Match>
                         <Match when={props.document.type === "diagram" && props.document}>
-                            {(liveDiagram) => <DiagramWidget liveDiagram={liveDiagram()} />}
+                            {(liveDiagram) => <DiagramInfo liveDiagram={liveDiagram()} />}
                         </Match>
                         <Match when={props.document.type === "analysis" && props.document}>
-                            {(liveAnalysis) => <AnalysisWidget liveAnalysis={liveAnalysis()} />}
+                            {(liveAnalysis) => <AnalysisInfo liveAnalysis={liveAnalysis()} />}
                         </Match>
                     </Switch>
                 </div>

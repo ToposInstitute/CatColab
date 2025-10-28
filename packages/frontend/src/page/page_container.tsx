@@ -5,8 +5,6 @@ import { Login } from "../user";
 import { type PageActions, PageActionsContext } from "./context";
 import { ImportDocument } from "./import_document";
 
-import "./page_container.css";
-
 /** Container for any page in the application.
 
 For now, this serves to anchor dialogs at a high level in the component
