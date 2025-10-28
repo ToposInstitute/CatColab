@@ -35,19 +35,82 @@ export class AutomergeServer implements SocketIOHandlers {
     private app: express.Express;
     private server: http.Server;
     private wss: ws.WebSocketServer;
+    private plainWss: ws.WebSocketServer;
     private repo: Repo;
     private pool: PoolType;
 
     public handleChange?: (refId: string, content: any) => void;
 
-    constructor(port: number | string) {
+    constructor(port: number | string, plainWsPort?: number | string) {
         this.docMap = new Map();
 
         this.app = express();
-        this.server = this.app.listen(port);
+        this.server = this.app.listen(port, () => {
+            const addr = this.server.address();
+            if (addr && typeof addr === "object") {
+                console.log(`HTTP server listening on ${addr.address}:${addr.port}`);
+            } else {
+                console.log(`HTTP server listening on port ${port}`);
+            }
+        });
+
+        // Add error handler for the HTTP server
+        this.server.on("error", (error: NodeJS.ErrnoException) => {
+            console.error(`HTTP server error:`, error);
+            if (error.code === "EADDRINUSE") {
+                console.error(`Port ${port} is already in use`);
+            } else if (error.code === "EACCES") {
+                console.error(`Permission denied to bind to port ${port}`);
+            }
+            throw error;
+        });
 
         this.wss = new ws.WebSocketServer({
             noServer: true,
+        });
+
+        // Add error handler for the WebSocket server
+        this.wss.on("error", (error) => {
+            console.error("WebSocket server error:", error);
+        });
+
+        // Log WebSocket connections
+        this.wss.on("connection", (socket, request) => {
+            console.log(`Automerge WebSocket client connected from ${request.socket.remoteAddress}`);
+
+            // Note: Don't add a message listener here - it will interfere with NodeWSServerAdapter
+            // The adapter needs to handle messages itself
+
+            socket.on("error", (error) => {
+                console.error("WebSocket client error:", error);
+            });
+
+            socket.on("close", () => {
+                console.log("Automerge WebSocket client disconnected");
+            });
+        });
+
+        // Create a plain WebSocket server on a separate port if provided
+        this.plainWss = new ws.WebSocketServer({
+            port: Number(3010),
+        });
+
+        this.plainWss.on("connection", (socket) => {
+            console.log("Plain WebSocket client connected");
+
+            socket.on("message", (message) => {
+                console.log("Received message:", message.toString());
+                // Echo the message back to the client
+                socket.send(`Echo: ${message.toString()}`);
+            });
+
+            socket.on("close", () => {
+                console.log("Plain WebSocket client disconnected");
+            });
+
+            socket.on("error", (error) => {
+                console.error("Plain WebSocket error:", error);
+            });
         });
 
         this.pool = new Pool({
@@ -56,16 +119,48 @@ export class AutomergeServer implements SocketIOHandlers {
 
         const storageAdapter = new PostgresStorageAdapter(this.pool);
 
+        const nodeAdapter = new NodeWSServerAdapter(this.wss);
+
+        // Log adapter events
+        nodeAdapter.on("peer-candidate", (event) => {
+            console.log(`NodeWSServerAdapter: peer-candidate event:`, event);
+        });
+
+        nodeAdapter.on("peer-disconnected", (event) => {
+            console.log(`NodeWSServerAdapter: peer-disconnected event:`, event);
+        });
+
+        nodeAdapter.on("message", (event) => {
+            console.log(`NodeWSServerAdapter: message event, type: ${event.message?.type}`);
+        });
+
         const config: RepoConfig = {
-            network: [new NodeWSServerAdapter(this.wss)],
-            sharePolicy: async () => false,
+            network: [nodeAdapter],
+            // Server repos should not be ephemeral - they need persistent peer IDs
+            peerId: `automerge-server-${port}` as any,
+            sharePolicy: async (peerId, documentId) => {
+                console.log(`Share policy called for peer ${peerId}, document ${documentId}`);
+                // Allow sharing - return true to permit document sync
+                return true;
+            },
             storage: storageAdapter,
         };
         this.repo = new Repo(config);
+        console.log(`Automerge repo created, peer ID: ${this.repo.peerId}`);
+        console.log(`Automerge repo peer metadata:`, this.repo.peerMetadata);
+
+        // IMPORTANT: The network adapter needs to be explicitly connected
+        // The Repo doesn't do this automatically for server adapters
+        nodeAdapter.connect(this.repo.peerId, this.repo.peerMetadata);
+        console.log(`NodeWSServerAdapter connected with peer ID: ${this.repo.peerId}`);
 
         this.server.on("upgrade", (request, socket, head) => {
-            this.wss.handleUpgrade(request, socket, head, (socket) => {
-                this.wss.emit("connection", socket, request);
+            console.log(`WebSocket upgrade request received: ${request.method} ${request.url}`);
+            console.log(`  Headers:`, request.headers);
+
+            this.wss.handleUpgrade(request, socket, head, (ws) => {
+                console.log("WebSocket upgrade successful, emitting connection event");
+                this.wss.emit("connection", ws, request);
             });
         });
 
@@ -166,6 +261,9 @@ export class AutomergeServer implements SocketIOHandlers {
 
     async close() {
         this.wss.close();
+        if (this.plainWss) {
+            this.plainWss.close();
+        }
         this.server.close();
     }
 

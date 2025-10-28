@@ -1,5 +1,4 @@
 import { type DocHandle, Repo, isValidDocumentId } from "@automerge/automerge-repo";
-import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 import { type FirebaseOptions, initializeApp } from "firebase/app";
 import { deleteUser, getAuth, signOut } from "firebase/auth";
 import * as uuid from "uuid";
@@ -8,22 +7,42 @@ import { assert, afterAll, describe, test } from "vitest";
 import type { Document } from "catlog-wasm";
 import { createTestDocument, initTestUserAuth } from "../util/test_util.ts";
 import { createRpcClient, unwrap, unwrapErr } from "./rpc.ts";
+import { LoggedWebSocketAdapter } from "./logged_websocket_adapter.ts";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
-const repoUrl = import.meta.env.VITE_AUTOMERGE_REPO_URL;
+// const repoUrl = import.meta.env.VITE_AUTOMERGE_REPO_URL;
+const repoUrl = "ws://127.0.0.1:8010";
 const firebaseOptions = JSON.parse(import.meta.env.VITE_FIREBASE_OPTIONS) as FirebaseOptions;
+
+console.log(`[Test] Initializing test with serverUrl: ${serverUrl}, repoUrl: ${repoUrl}`);
 
 const firebaseApp = initializeApp(firebaseOptions);
 const rpc = createRpcClient(serverUrl, firebaseApp);
 
+const wsAdapter = new LoggedWebSocketAdapter(repoUrl);
 const repo = new Repo({
-    network: [new BrowserWebSocketClientAdapter(repoUrl)],
+    network: [wsAdapter],
 });
+
+// @ts-ignore
+// Log repo events
+repo.on("peer", (event) => {
+    console.log(`[Test] Repo 'peer' event:`, event);
+});
+
+repo.on("document", (event) => {
+    console.log(`[Test] Repo 'document' event:`, event);
+});
+
+console.log("peers 1: ", repo.peers);
+console.log("[Test] Adapter isReady:", wsAdapter.isReady());
+console.log("[Test] Repo network adapters:", repo.networkSubsystem.adapters);
 
 // XXX: Proper shutdown requires Automerge v2.
 //afterAll(() => repo.shutdown());
 
 describe("RPC for Automerge documents", async () => {
+    console.log("peers 2: ", repo.peers);
     const content = createTestDocument("My model");
     const refId = unwrap(await rpc.new_ref.mutate(content));
     test.sequential("should get a valid ref UUID", () => {
@@ -65,10 +84,25 @@ describe("RPC for Automerge documents", async () => {
     if (!isValidDocumentId(refDoc.docId)) {
         return;
     }
-    // Wait 5 seconds for the document to be available in the repo
+    console.log("peers 3: ", repo.peers);
+    console.log("[Test] About to wait for document to be available");
+    console.log("[Test] Document ID we're looking for:", refDoc.docId);
+    console.log("[Test] Adapter isReady:", wsAdapter.isReady());
+    console.log("[Test] WebSocket readyState:", wsAdapter.socket?.readyState);
+    console.log("[Test] Remote peer ID:", wsAdapter.remotePeerId);
+
+    // Wait 10 seconds for the document to be available in the repo
     await new Promise((resolve) => setTimeout(resolve, 10000));
+
+    console.log("[Test] After wait - peers:", repo.peers);
+    console.log("[Test] After wait - adapter isReady:", wsAdapter.isReady());
+    console.log("[Test] After wait - WebSocket readyState:", wsAdapter.socket?.readyState);
+    console.log("[Test] After wait - Remote peer ID:", wsAdapter.remotePeerId);
+
     const docHandle = (await repo.find(refDoc.docId)) as DocHandle<Document>;
+    console.log("[Test] DocHandle obtained, state:", docHandle.state);
     const doc = docHandle.doc();
+    console.log("[Test] Document retrieved:", doc);
 
     test.sequential("should get the original document data", () => {
         assert.deepStrictEqual(doc, content as unknown as Document);
