@@ -31,6 +31,8 @@ craneLib.buildPackage {
       ../../Cargo.toml
       ../../Cargo.lock
       (craneLib.fileset.commonCargoSources ./.)
+      (craneLib.fileset.commonCargoSources ../migrator)
+      (craneLib.fileset.commonCargoSources ../notebook-types)
       ./.sqlx
     ];
   };

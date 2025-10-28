@@ -1,18 +1,39 @@
 import { type Socket, io } from "socket.io-client";
 
-import type { JsonValue, RefContent } from "../../backend/pkg/src/index.ts";
+import type { JsonValue } from "../../backend/pkg/src/index.ts";
 import type { NewDocSocketResponse, StartListeningSocketResponse } from "./types.js";
+
+/** Serialize an error to a meaningful string message. */
+export function serializeError(error: unknown): string {
+    // unwraps in rust wasm throw strings
+    if (typeof error === "string") {
+        return error;
+    } else if (error instanceof Error) {
+        return error.message;
+    } else {
+        console.warn("Serializing an invalid error object", error);
+        if (error && typeof error === "object" && "message" in error) {
+            return String(error.message);
+        } else {
+            try {
+                return String(error);
+            } catch {
+                return "Unknown error (failed to serialize)";
+            }
+        }
+    }
+}
 
 /** Messages handled by the `SocketServer`. */
 export type SocketIOHandlers = {
-    createDoc: (data: RefContent) => Promise<NewDocSocketResponse>;
+    createDoc: (content: unknown) => Promise<NewDocSocketResponse>;
     cloneDoc: (docId: string) => Promise<NewDocSocketResponse>;
     startListening: (refId: string, docId: string) => Promise<StartListeningSocketResponse>;
 };
 
 /** Messages emitted by the `SocketServer`. */
 export type Requests = {
-    autosave: (data: RefContent) => void;
+    autosave: (data: unknown) => void;
 };
 
 // Convert the type of each property from `(...args) => ret` to `(...args, (ret) => void) => void` to
@@ -38,7 +59,18 @@ function registerHandler<
         const result = handler.apply(automergeServer, args);
 
         // Wrap result in a promise so this doesn't blow up when a sync handler is added in the future
-        Promise.resolve(result).then(callback);
+        Promise.resolve(result)
+            .then(callback)
+            .catch((error) => {
+                console.error(`Error in socket handler '${String(event)}':`, error);
+                console.error("Arguments:", JSON.stringify(args, null, 2));
+
+                if (error instanceof Error) {
+                    console.error("Stack trace:", error.stack);
+                }
+
+                callback({ Err: serializeError(error) });
+            });
     };
 
     socket.on(event as any, listener);

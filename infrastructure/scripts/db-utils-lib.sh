@@ -123,5 +123,5 @@ function find_git_root() {
 
 function run_local_migrations() {
   echo "Running local migrations..."
-  cargo run -p backend migrator apply
+  cargo run -p migrator apply
 }

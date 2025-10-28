@@ -232,9 +232,6 @@ jobs:
         name: catcolab-jmoggr
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
 
-    - name: Build the NixOS system for catcolab-next
-      run: nix build .#nixosConfigurations.catcolab-next.config.system.build.toplevel
-
     - name: Set the SSH key for deployment to catcolab-next
       run: |
         mkdir -p ~/.ssh

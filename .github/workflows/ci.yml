@@ -106,6 +106,37 @@ jobs:
         run: |
           pnpm --filter ./packages/frontend run test:no-backend
 
+  backend_dev_setup:
+    name: backend dev setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain from file
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup wasm-pack
+        uses: jetli/wasm-pack-action@v0.4.0
+        with:
+          version: 'v0.13.1'
+
+      - name: Run dev setup
+        run: |
+            docker run --name catcolab-postgres -e POSTGRES_USER=postgres-user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=catcolab -p 5432:5432 -d postgres:15
+            cd packages/notebook-types
+            pnpm run build:node
+            cd ../automerge-doc-server
+            pnpm install
+            cd ../backend
+            cp .env.development .env && cp .env.development ../migrator/.env
+            # due to how we are detecting deploy vs dev we need to clear this env variable
+            unset INVOCATION_ID
+            cargo run -p migrator apply
+
   npm_checks:
     name: npm checks
     runs-on: ubuntu-latest
@@ -129,3 +160,26 @@ jobs:
       - name: Format/linting/import sorting
         run: |
           pnpm --filter "./packages/*" run ci
+
+  build_nixos_system:
+    name: build NixOS system
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Install Nix
+      uses: cachix/install-nix-action@v25
+      with:
+        nix_path: nixpkgs=channel:25.05
+
+    - name: Configure Cachix
+      uses: cachix/cachix-action@v14
+      with:
+        name: catcolab-jmoggr
+        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+
+    - name: Build the NixOS system for catcolab-next
+      run: nix build .#nixosConfigurations.catcolab-next.config.system.build.toplevel
+

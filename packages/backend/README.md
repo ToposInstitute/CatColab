@@ -9,12 +9,27 @@ You can find the auto-generated documentation for this Rust crate at [next.catco
 ## Setup
 
 1. Install Rust, say by using [rustup](https://rustup.rs/)
-2. Install PostgreSQL
-3. Create a new database named `catcolab`
-4. Change to this directory: `cd packages/backend`
-5. Update the `DATABASE_URL` variable in the file `.env` as needed with your
-   database username, password, and port
-6. Run the database migrations: `cargo run -p backend migrator apply`
+2. Install and run PostgreSQL and create a new database named `catcolab`
+    - (E.g. by using Docker)
+
+    ```sh
+    docker run --name catcolab-postgres -e POSTGRES_USER=postgres-user \
+        -e POSTGRES_PASSWORD=password -e POSTGRES_DB=catcolab -p 5432:5432 -d postgres:15
+    ```
+
+3. Make sure the required packages are built and installed:
+
+   ```sh
+   cd packages/notebook-types
+   pnpm run build:node
+   cd ../automerge-doc-server
+   pnpm install
+   ```
+
+4. Change to the migrator directory: `cd ../backend`
+5. Copy the .env.development to both folders (`cp .env.development .env && cp .env.development ../migrator/.env`) and update the `DATABASE_URL` variable with
+   database username, password, and port. (If you used the above Docker command _as is_ it should already be correct.)
+6. Run the initial database migration: `cargo run -p migrator apply`
 7. Build the backend binary: `cargo build`
 8. Run the unit tests: `cargo test`
 
@@ -71,13 +86,13 @@ automatically by the Nix dev shell defined in the repository's `flake.nix`.
 To view available commands, run
 
 ```sh
-cargo run -p backend migrator help
+cargo run -p migrator help
 ```
 
 To apply all migrations, run
 
 ```sh
-cargo run -p backend migrator apply
+cargo run -p migrator apply
 ```
 
 ## Writing new migrations

@@ -3,22 +3,31 @@ import { type DocHandle, type DocumentId, Repo, type RepoConfig } from "@automer
 import { NodeWSServerAdapter } from "@automerge/automerge-repo-network-websocket";
 import dotenv from "dotenv";
 import express from "express";
+import jsonpatch from "fast-json-patch";
 import * as ws from "ws";
-
-import * as notbookTypes from "notebook-types";
 
 // pg is a CommonJS package, and this is likely the least painful way of dealing with that
 import pgPkg from "pg";
 const { Pool } = pgPkg;
 import type { Pool as PoolType } from "pg";
 
+import * as notbookTypes from "notebook-types";
+
 import { PostgresStorageAdapter } from "./postgres_storage_adapter.js";
+import { type SocketIOHandlers, serializeError } from "./socket.js";
 import type { NewDocSocketResponse, StartListeningSocketResponse } from "./types.js";
-import type { SocketIOHandlers } from "./socket.js";
-import jsonpatch from "fast-json-patch";
 
 // Load environment variables from .env
 dotenv.config();
+
+/** Attempt to migrate a document, returning the migrated document or an error message. */
+function migrateDocument(doc: unknown): { Ok: any } | { Err: string } {
+    try {
+        return { Ok: notbookTypes.migrateDocument(doc) };
+    } catch (e) {
+        return { Err: `Failed to migrate document: ${serializeError(e)}` };
+    }
+}
 
 export class AutomergeServer implements SocketIOHandlers {
     private docMap: Map<string, DocHandle<unknown>>;
@@ -66,7 +75,12 @@ export class AutomergeServer implements SocketIOHandlers {
     }
 
     async createDoc(content: unknown): Promise<NewDocSocketResponse> {
-        const handle = this.repo.create(content);
+        const migrateResult = migrateDocument(content);
+        if ("Err" in migrateResult) {
+            return migrateResult;
+        }
+
+        const handle = this.repo.create(migrateResult.Ok);
         if (!handle) {
             return {
                 Err: "Failed to create a new document",
@@ -119,7 +133,7 @@ export class AutomergeServer implements SocketIOHandlers {
 
         // NOTE: this listener is never removed
         handle.on("change", (payload) => {
-            this.handleChange!(refId, payload.doc);
+            this.handleChange?.(refId, payload.doc);
         });
 
         // Automerge relies on JS Proxy Objects to detect changes to the document, however the document
@@ -133,14 +147,18 @@ export class AutomergeServer implements SocketIOHandlers {
         //
         // XXX: frontend/src/api/document.ts needs to be kept up to date with this
         const docBefore = handle.doc();
-        const docAfter = notbookTypes.migrateDocument(docBefore);
+        const migrateResult = migrateDocument(docBefore);
+        if ("Err" in migrateResult) {
+            return migrateResult;
+        }
+        const docAfter = migrateResult.Ok;
+
         if ((docBefore as any).version !== docAfter.version) {
             const patches = jsonpatch.compare(docBefore as any, docAfter);
             handle.change((doc: any) => {
                 jsonpatch.applyPatch(doc, patches);
             });
         }
-
         this.docMap.set(refId, handle);
 
         return { Ok: null };

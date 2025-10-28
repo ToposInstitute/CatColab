@@ -1,4 +1,4 @@
-import { Repo, type RepoConfig } from "@automerge/automerge-repo";
+import { type DocHandle, Repo, type RepoConfig } from "@automerge/automerge-repo";
 import dotenv from "dotenv";
 import pgPkg from "pg";
 import { PostgresStorageAdapter } from "../postgres_storage_adapter.js";
@@ -29,7 +29,7 @@ export async function fixAutomergeStorage() {
     const result = await pool.query("SELECT id, content, doc_id FROM snapshots");
 
     for (const { id, content, doc_id } of result.rows) {
-        let handle;
+        let handle: DocHandle<unknown>;
         try {
             handle = await repo.find(doc_id);
             continue;

@@ -9,6 +9,7 @@ axum = "0.7.7"
 chrono = { version = "0.4.40", features = ["serde"] }
 clap = "4.5.44"
 dotenvy = "0.15.7"
+migrator = { version = "0.1.0", path = "../migrator" }
 firebase-auth = { version = "0.5.1", default-features = false, features = [
   "rustls",
 ] }
@@ -16,6 +17,7 @@ http = "1.1.0"
 hyper = { version = "1.4.1", features = ["server"] }
 jsonrpsee = "0.24.6"
 jsonrpsee-server = "0.24.6"
+notebook-types = { version = "0.1.0", path = "../notebook-types" }
 qubit = "0.10.2"
 regex = "1.11.1"
 sd-notify = "0.4.5"

@@ -55,7 +55,7 @@ where
 /// We say "augmented" because the generating squares have co-arity zero or one,
 /// like the cells in an *augmented VDC* ([Koudenburg
 /// 2020](crate::refs::AugmentedVDCs)), though we use such computads to generate
-/// unital* VDCs.
+/// *unital* VDCs.
 #[derive(Constructor)]
 pub struct AVDCComputad<'a, Ob, Arr, Pro, ObSet, ArrGraph, ProGraph, Sq> {
     objects: &'a ObSet,

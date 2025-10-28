@@ -6,5 +6,8 @@
     "type": "module",
     "scripts": {
         "build:node": "wasm-pack build ./. --target nodejs -d ./dist/pkg-node"
+    },
+    "devDependencies": {
+        "wasm-pack": "^0.13.1"
     }
 }
