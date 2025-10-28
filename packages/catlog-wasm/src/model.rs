@@ -6,6 +6,7 @@ use std::str::FromStr;
 
 use all_the_same::all_the_same;
 use catlog::tt;
+use catlog::tt::modelgen::{generate, model_output};
 use catlog::tt::notebook_elab::Elaborator as ElaboratorNext;
 use catlog::tt::toplevel::{Theory, TopDecl, Toplevel, Type, std_theories};
 use derive_more::{From, TryInto};
@@ -632,7 +633,7 @@ impl DblModelMap {
     /// Inserts a model with the given name.
     #[wasm_bindgen(js_name = "set")]
     pub fn insert(&mut self, id: String, model: &DblModel) {
-        let id_ustr = ustr(&id);
+        let id_uuid = Uuid::from_str(&id).unwrap();
         self.models.insert(id, model.clone());
         if let Some((ty_s, ty_v)) = &model.ty {
             let theory = match &model.model {
@@ -642,7 +643,7 @@ impl DblModelMap {
                 }
             };
             self.toplevel.declarations.insert(
-                NameSegment::Text(id_ustr),
+                NameSegment::Uuid(id_uuid),
                 TopDecl::Type(Type::new(
                     Theory::new(QualifiedName::single(NameSegment::Text(ustr("_"))), theory),
                     ty_s.clone(),
@@ -661,12 +662,14 @@ pub fn elaborate_model(
     theory: &DblTheory,
     ref_id: String,
 ) -> Result<DblModel, String> {
+    web_sys::console::log_1(&"elaborating".into());
     let mut model = DblModel::new(theory);
     for judgment in notebook.0.formal_content() {
         match judgment {
             ModelJudgment::Object(decl) => model.add_ob(decl)?,
             ModelJudgment::Morphism(decl) => model.add_mor(decl)?,
             ModelJudgment::Instantiation(_inst) => {
+                web_sys::console::log_1(&format!("{:?}", _inst).into());
                 // legacy elaboration ignores instantiation
             }
         }
@@ -676,8 +679,19 @@ pub fn elaborate_model(
             let theory =
                 Theory::new(QualifiedName::single(NameSegment::Text(ustr("_"))), ddt.clone());
             let ref_id = Uuid::from_str(&ref_id).unwrap();
-            let mut elab = ElaboratorNext::new(theory, &instantiated.toplevel, ref_id);
+            let mut elab = ElaboratorNext::new(theory.clone(), &instantiated.toplevel, ref_id);
             let ty = elab.notebook(notebook.0.formal_content());
+            web_sys::console::log_1(&format!("{}", &ty.0).into());
+            let (ddm, name_translation) = generate(&instantiated.toplevel, &theory, &ty.1);
+            let mut out = String::new();
+            model_output("", &mut out, &ddm, &name_translation).unwrap();
+            web_sys::console::log_1(&out.into());
+            web_sys::console::log_1(
+                &format!("{:?}", &instantiated.toplevel.declarations.keys().collect::<Vec<_>>())
+                    .into(),
+            );
+            web_sys::console::log_1(&format!("{:?}", elab.errors()).into());
+            model.replace_box(DblModelBox::Discrete(Rc::new(ddm)));
             model.ty = Some(ty);
         }
         _ => {}
