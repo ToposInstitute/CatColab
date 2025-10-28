@@ -347,5 +347,15 @@
       #     ;
       #   rustToolchain = rustToolchainLinux;
       # };
+
+      checks.x86_64-linux.frontendTests = import ./infrastructure/tests/frontend.nix {
+        inherit
+          nixpkgs
+          inputs
+          self
+          linuxSystem
+          ;
+        rustToolchain = rustToolchainLinux;
+      };
     };
 }

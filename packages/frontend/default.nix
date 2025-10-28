@@ -117,6 +117,8 @@ let
         source .env.development
         set +a
 
+        echo $VITE_AUTOMERGE_REPO_URL
+        echo $VITE_SERVER_URL
         # Wait for server to be available
         echo "Waiting for backend at $VITE_SERVER_URL/status to be available..."
         timeout=30
@@ -138,6 +140,9 @@ let
           sleep 1
           elapsed=$((elapsed + 1))
         done
+
+        echo "Waiting 5 seconds for services to stabilize..."
+        sleep 3
 
         npm run test:ci
         EOF

@@ -65,6 +65,8 @@ describe("RPC for Automerge documents", async () => {
     if (!isValidDocumentId(refDoc.docId)) {
         return;
     }
+    // Wait 5 seconds for the document to be available in the repo
+    await new Promise((resolve) => setTimeout(resolve, 10000));
     const docHandle = (await repo.find(refDoc.docId)) as DocHandle<Document>;
     const doc = docHandle.doc();
 

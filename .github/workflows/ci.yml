@@ -165,7 +165,7 @@ jobs:
       with:
         # XXX: There is an issue building nix inside a virtualized environment,
         # the nix build command for the vm exits with error: "error: path
-        # ‘/nix/store/9y7z0wj024np8zrhwvpz6ph6ksckiwgy-linux-6.12.20-modules-shrunk/lib’ is not in the
+        # '/nix/store/9y7z0wj024np8zrhwvpz6ph6ksckiwgy-linux-6.12.20-modules-shrunk/lib' is not in the
         # Nix store". Using a more version of the Nix package manager seems to fix this. We can probably
         # remove this workaround when we move to NixOS 25.11
         # https://discourse.nixos.org/t/issue-building-linux-kernel-modules-after-flake-update/62322
@@ -184,45 +184,7 @@ jobs:
         sudo udevadm control --reload-rules
         sudo udevadm trigger --name-match=kvm
 
-    - name: build catcolab VM
+    - name: Run frontend tests with VM
       run: |
-        nix build .#nixosConfigurations.catcolab-vm.config.system.build.vm
-
-    - name: run catcolab VM
-      run: |
-        ./result/bin/run-catcolab-vm-vm --display none > vm.log 2>&1 &
-        VM_PID=$!
-        echo "VM_PID=$VM_PID" >> $GITHUB_ENV
-        echo "Started VM with PID: $VM_PID"
-
-    - name: Wait for VM to be ready
-      run: |
-        echo "Waiting for VM to start services..."
-        for i in {1..60}; do
-          echo "=== VM logs (attempt $i) ==="
-          tail -20 vm.log || echo "No logs yet"
-          echo "==========================="
-
-          if curl -s http://localhost:8000 > /dev/null 2>&1; then
-            echo "VM is ready!"
-            exit 0
-          fi
-          echo "Attempt $i/60: VM not ready yet, waiting..."
-          sleep 2
-        done
-        echo "VM failed to start within 120 seconds"
-        echo "=== Full VM logs ==="
-        cat vm.log
-        exit 1
-
-    # - name: Run frontend tests
-    #   run: |
-    #     nix run .#frontend-tests
-
-    - name: Stop VM
-      if: always()
-      run: |
-        if [ ! -z "$VM_PID" ]; then
-          kill $VM_PID || true
-        fi
+        nix build .#checks.x86_64-linux.frontendTests -L
 

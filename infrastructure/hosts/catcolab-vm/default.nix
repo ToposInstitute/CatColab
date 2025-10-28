@@ -6,9 +6,8 @@
 }:
 {
   imports = [
-
-    "${modulesPath}/virtualisation/qemu-vm.nix"
-    # (modulesPath + "/profiles/qemu-guest.nix")
+    # "${modulesPath}/virtualisation/qemu-vm.nix"
+    (modulesPath + "/profiles/qemu-guest.nix")
     ../../modules/catcolab
   ];
 
@@ -66,14 +65,33 @@
         guest.port = 8010;
       }
     ];
-    # Run headless without graphics (needed for CI)
-    virtualisation.graphics = false;
-    # Enable serial console for boot logs in headless mode
-    virtualisation.qemu.options = [
-      "-nographic"
-      "-serial stdio"
-    ];
+
+    # boot.kernelParams = [
+    #   "console=ttyS0"
+    #   "systemd.log_level=info"
+    #   "systemd.log_target=console"
+    # ];
+
+    # virtualisation.qemu.options = [
+    #   "-serial"
+    #   "stdio"
+    #   "-monitor"
+    #   "none" # Disable the monitor
+    #   "-nographic"
+    # ];
   };
+
+  # boot.kernelParams = [
+  #   "console=ttyS0" # Send kernel messages to serial
+  #   "earlyprintk=serial"
+  #   "debug"
+  # ];
+
+  # virtualisation.qemu.options = [
+  #   "-serial"
+  #   "stdio" # Redirect serial to stdout/stderr
+  #   "-nographic" # No graphical display
+  # ];
 
   # Fix for CI builds: ensure the VM is self-contained
   # virtualisation.useBootLoader = false;
