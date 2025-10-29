@@ -169,7 +169,7 @@ function SplitPaneToolbar(props: {
     );
 }
 
-function DocumentPane(props: { document: AnyLiveDocument }) {
+export function DocumentPane(props: { document: AnyLiveDocument }) {
     const theories = useContext(TheoryLibraryContext);
     invariant(theories, "Library of theories should be provided as context");
 
