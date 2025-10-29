@@ -379,9 +379,8 @@ pub async fn search_ref_stubs(
     })
 }
 
-
-// A child is defined as: any document snapshot which has an top level object which contains
-// fields `_id = parent.id` and `type = diagram-in | analysis-of`
+/// Gets ref stubs for children, where a child is defined as any document which
+/// has an top level object containing the field `_id = parent.id`.
 pub async fn get_ref_children_stubs(ctx: AppCtx, ref_id: Uuid) -> Result<Vec<RefStub>, AppError> {
     let user_id = ctx.user.as_ref().map(|u| u.user_id.clone());
 
@@ -395,7 +394,7 @@ pub async fn get_ref_children_stubs(ctx: AppCtx, ref_id: Uuid) -> Result<Vec<Ref
                 get_max_permission($2, refs.id) >= 'read'
                 AND jsonb_path_exists(
                     snapshots.content,
-                    '$.*[*] ? (@._id == $id && (@.type == "diagram-in" || @.type == "analysis-of"))',
+                    '$.*[*] ? (@._id == $id)',
                     jsonb_build_object('id', $1::uuid)
                 )
             )
