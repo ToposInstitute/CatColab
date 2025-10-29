@@ -2,7 +2,7 @@ import type { AnyDocumentId } from "@automerge/automerge-repo";
 import { createResource, Switch, Match } from "solid-js";
 
 import { createModelLibraryWithRepo } from "../../frontend/src/model";
-import { ModelPane } from "../../frontend/src/model/model_editor";
+import { DocumentPane } from "../../frontend/src/page/document_page";
 import { TheoryLibraryContext } from "../../frontend/src/theory";
 import { stdTheories } from "../../frontend/src/stdlib";
 import type { SolidToolProps } from "./tools";
@@ -36,7 +36,7 @@ export function ModelPaneComponent(props: SolidToolProps) {
                 <Match when={liveModel()}>
                     {(liveModel) => (
                         <TheoryLibraryContext.Provider value={stdTheories}>
-                            <ModelPane liveModel={liveModel()} />
+                            <DocumentPane document={liveModel()} />
                         </TheoryLibraryContext.Provider>
                     )}
                 </Match>

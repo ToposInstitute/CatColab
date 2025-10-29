@@ -1,0 +1,77 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        WITH child_refs AS (\n            SELECT ARRAY_AGG(refs.id) AS child_ids\n            FROM refs\n            JOIN snapshots ON snapshots.id = refs.head\n            WHERE (\n                get_max_permission($2, refs.id) >= 'read'\n                AND jsonb_path_exists(\n                    snapshots.content,\n                    '$.*[*] ? (@._id == $id)',\n                    jsonb_build_object('id', $1::uuid)\n                )\n            )\n        )\n        SELECT\n            stubs.ref_id           AS \"ref_id!\",\n            stubs.name,\n            stubs.type_name,\n            stubs.created_at       AS \"created_at!\",\n            stubs.permission_level AS \"permission_level!: PermissionLevel\",\n            stubs.owner_id,\n            stubs.owner_username,\n            stubs.owner_display_name\n        FROM\n            child_refs,\n            get_ref_stubs($2, child_refs.child_ids) AS stubs\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "ref_id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "type_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "created_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "permission_level!: PermissionLevel",
+        "type_info": {
+          "Custom": {
+            "name": "permission_level",
+            "kind": {
+              "Enum": [
+                "read",
+                "write",
+                "maintain",
+                "own"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "owner_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "owner_username",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "owner_display_name",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "8e85e7a8267869eae0e92e8cb86ca885ddca91e11c6fc4969b035e74fc67e910"
+}

@@ -1,0 +1,156 @@
+.layout {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+
+    & > .content {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        overflow-x: hidden;
+
+        & > header {
+            flex-shrink: 0;
+        }
+
+        & > main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+    }
+}
+
+.sidebar {
+    flex-shrink: 0;
+    background-color: #f8f8f8;
+    overflow: hidden;
+    transition: width 0.3s ease;
+    border-right: 2px solid #f0f0f0;
+    color: dimgray;
+}
+
+.sidebar.open {
+    width: 240px;
+}
+
+.sidebar.open .sidebar-header .icon-button {
+    visibility: hidden;
+}
+
+.sidebar.open:hover .sidebar-header .icon-button {
+    visibility: visible;
+}
+
+.sidebar.closed {
+    width: 0;
+}
+
+.sidebar-content {
+    display: flex;
+    flex-direction: column;
+    margin-left: 8px;
+    margin-right: 8px;
+}
+
+.sidebar-header {
+    display: flex;
+    justify-content: flex-end;
+    height: 32px;
+    margin-top: 6px;
+    margin-bottom: 6px;
+    border-radius: 6px;
+    transition: background 20ms;
+
+    & > .icon-button {
+        margin-right: 2px;
+    }
+}
+
+.sidebar-header:hover {
+    background: #f0f0f0;
+}
+
+.toolbar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 32px;
+    margin: 6px 8px;
+}
+
+.toolbar .filler {
+    flex: 1;
+}
+
+.secondary-toolbar {
+    position: absolute;
+    display: flex;
+    gap: 2px;
+}
+
+.related-document {
+    padding: 5px 8px;
+    height: 30px;
+    border-radius: 6px;
+    transition: background 20ms;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-sizing: border-box;
+    position: relative;
+
+    &:hover {
+        background: #f0f0f0;
+        cursor: pointer;
+
+        .document-actions {
+            position: static;
+            visibility: visible;
+        }
+    }
+
+    &.active {
+        background: #f0f0f0;
+
+        &:hover {
+            background: #e8e8e8;
+        }
+    }
+
+    .document-name {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        padding-left: 5px;
+    }
+
+    .document-actions {
+        position: absolute;
+        right: 0;
+        visibility: hidden;
+        align-items: center;
+
+        & {
+            display: flex;
+            align-items: center;
+            padding: 2px;
+            border-radius: 6px;
+
+            &:hover {
+                .icon-button {
+                    background-color: #d0d0d0;
+                }
+
+                background-color: #d0d0d0;
+            }
+        }
+    }
+}
+
+.resizeable-handle {
+    background: none;
+    border: none;
+    padding: 3px;
+    border-left: 2px solid #e7e6e4;
+}

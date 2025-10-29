@@ -2,13 +2,13 @@ import { type FirebaseOptions, initializeApp } from "firebase/app";
 import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
+import Dialog, { Content, Portal } from "@corvu/dialog";
 import { MultiProvider } from "@solid-primitives/context";
 import { Navigate, type RouteDefinition, type RouteSectionProps, Router } from "@solidjs/router";
+import { getAuth, signOut } from "firebase/auth";
 import { FirebaseProvider } from "solid-firebase";
 import { ErrorBoundary, Show, createResource, createSignal, lazy } from "solid-js";
 
-import Dialog, { Content, Portal } from "@corvu/dialog";
-import { getAuth, signOut } from "firebase/auth";
 import { Api, ApiContext, useApi } from "./api";
 import { helpRoutes } from "./help/routes";
 import { createModel } from "./model/document";
@@ -112,19 +112,14 @@ const routes: RouteDefinition[] = [
         component: CreateModel,
     },
     {
-        path: "/model/:ref",
-        matchFilters: refIsUUIDFilter,
-        component: lazy(() => import("./model/model_editor")),
-    },
-    {
-        path: "/diagram/:ref",
-        matchFilters: refIsUUIDFilter,
-        component: lazy(() => import("./diagram/diagram_editor")),
-    },
-    {
-        path: "/analysis/:ref",
-        matchFilters: refIsUUIDFilter,
-        component: lazy(() => import("./analysis/analysis_editor")),
+        path: "/:kind/:ref/:subkind?/:subref?",
+        matchFilters: {
+            kind: ["model", "diagram", "analysis"],
+            ref: refIsUUIDFilter.ref,
+            subkind: (v?: string) => !v || v === "analysis" || v === "diagram" || v === "model",
+            subref: (v?: string) => !v || refIsUUIDFilter.ref(v),
+        },
+        component: lazy(() => import("./page/document_page")),
     },
     {
         path: "/help",

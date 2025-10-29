@@ -41,6 +41,9 @@ export type LiveDoc<Doc extends Document = Document> = {
     docRef?: DocRef;
 };
 
+/** The type discriminator for documents */
+export type DocumentType = Document["type"];
+
 /** Info about a document ref in the CatColab backend. */
 export type DocRef = {
     /** ID of the document ref. */

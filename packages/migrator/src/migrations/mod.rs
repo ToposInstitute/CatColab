@@ -7,6 +7,7 @@ mod m20241025030906_users;
 mod m20250409171833_add_permissions_object_subject_idx;
 mod m20250516154702_automerge_storage;
 mod m20250805230408_fix_automerge_storage;
+mod m20251006141026_get_ref_stubs;
 
 pub fn migrations() -> Vec<Box<dyn Migration<Postgres>>> {
     vec_box![
@@ -15,5 +16,6 @@ pub fn migrations() -> Vec<Box<dyn Migration<Postgres>>> {
         m20250409171833_add_permissions_object_subject_idx::AddPermissionsObjectSubjectIdx,
         m20250516154702_automerge_storage::AutomergeStorage,
         m20250805230408_fix_automerge_storage::FixAutomergeStorage,
+        m20251006141026_get_ref_stubs::GetRefStubs,
     ]
 }

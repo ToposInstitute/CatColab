@@ -1,4 +1,4 @@
-.model-head {
+.document-head {
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -6,17 +6,11 @@
 
     & .title {
         font-size: var(--h1-font-size);
-    }
-
-    & .theory-selector-trigger {
-        font-size: var(--h4-font-size);
         flex: 1;
-        text-align: right;
     }
 
-    & .icon-button {
-        flex: 0;
-        margin-left: 0.5em;
+    & .info {
+        font-size: var(--h4-font-size);
     }
 
     & .lucide {
