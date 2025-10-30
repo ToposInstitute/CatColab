@@ -151,6 +151,6 @@
 .resizeable-handle {
     background: none;
     border: none;
-    padding: 3px;
     border-left: 2px solid #e7e6e4;
+    margin-right: -0.5rem;
 }

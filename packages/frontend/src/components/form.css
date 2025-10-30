@@ -42,6 +42,18 @@ form button.ok {
     border-radius: 6px;
 }
 
+form button.danger {
+    color: white;
+    background: #dc3545;
+    border: 1px solid #dc3545;
+    border-radius: 6px;
+}
+
+form button.danger:hover {
+    background: #ea4b5a;
+    border: 1px solid #ea4b5a;
+}
+
 form .error {
     color: firebrick;
     font-size: smaller;

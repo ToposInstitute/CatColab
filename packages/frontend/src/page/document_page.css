@@ -1,3 +1,20 @@
+.warning-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: var(--warning-bg, #fff3cd);
+    border: 1px solid var(--warning-border, #ffc107);
+    color: var(--warning-text, #856404);
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-radius: 0.25rem;
+    font-size: 1rem;
+}
+
+.warning-banner > .lucide-icon {
+    min-width: 20px;
+}
+
 .document-head {
     display: flex;
     flex-direction: row;

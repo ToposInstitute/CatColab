@@ -98,7 +98,7 @@ h4 {
 }
 
 .page-container {
-    max-width: 45em;
+    max-width: 52em;
     margin: 0 auto;
     padding-bottom: 10ex;
 }
@@ -110,6 +110,8 @@ h4 {
 .content-panel {
     overflow-x: auto;
     overflow-y: hidden;
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
 }
 
 .formal-judgment {
