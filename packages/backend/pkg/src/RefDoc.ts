@@ -5,4 +5,4 @@ import type { Permissions } from "./Permissions";
 /**
  * Document identified by a ref.
  */
-export type RefDoc = { "tag": "Readonly", content: JsonValue, permissions: Permissions, } | { "tag": "Live", docId: string, permissions: Permissions, };
+export type RefDoc = { "tag": "Readonly", content: JsonValue, isDeleted: boolean, permissions: Permissions, } | { "tag": "Live", docId: string, isDeleted: boolean, permissions: Permissions, };
