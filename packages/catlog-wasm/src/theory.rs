@@ -352,6 +352,12 @@ impl ObTypeIndex {
         Default::default()
     }
 
+    /// Returns whether the object type is set.
+    #[wasm_bindgen(js_name = "has")]
+    pub fn contains_key(&self, x: &ObType) -> bool {
+        self.0.contains_key(x)
+    }
+
     /// Gets the index of an object type, if set.
     #[wasm_bindgen]
     pub fn get(&self, x: &ObType) -> Option<usize> {
@@ -359,8 +365,8 @@ impl ObTypeIndex {
     }
 
     /// Sets the index of an object type.
-    #[wasm_bindgen]
-    pub fn set(&mut self, x: ObType, i: usize) {
+    #[wasm_bindgen(js_name = "set")]
+    pub fn insert(&mut self, x: ObType, i: usize) {
         self.0.insert(x, i);
     }
 }
@@ -381,6 +387,12 @@ impl MorTypeIndex {
         Default::default()
     }
 
+    /// Returns whether the morphism type is set.
+    #[wasm_bindgen(js_name = "has")]
+    pub fn contains_key(&self, m: &MorType) -> bool {
+        self.0.contains_key(m)
+    }
+
     /// Gets the index of a morphism type, if set.
     #[wasm_bindgen]
     pub fn get(&self, m: &MorType) -> Option<usize> {
@@ -388,8 +400,8 @@ impl MorTypeIndex {
     }
 
     /// Sets the index of a morphism type.
-    #[wasm_bindgen]
-    pub fn set(&mut self, m: MorType, i: usize) {
+    #[wasm_bindgen(js_name = "set")]
+    pub fn insert(&mut self, m: MorType, i: usize) {
         self.0.insert(m, i);
     }
 }
