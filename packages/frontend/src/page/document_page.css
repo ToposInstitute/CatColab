@@ -41,5 +41,9 @@
 
     & > .content-panel {
         overflow-y: auto;
+
+        & > .notebook-container {
+            padding-bottom: 30vh;
+        }
     }
 }
