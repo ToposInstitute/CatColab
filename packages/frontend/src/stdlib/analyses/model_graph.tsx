@@ -3,7 +3,10 @@ import type * as Viz from "@viz-js/viz";
 import type { DblModel, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import type { Theory } from "../../theory";
-import type { GraphLayoutConfig, GraphvizAttributes } from "../../visualization";
+import type {
+    GraphLayoutConfig,
+    GraphvizAttributes,
+} from "../../visualization";
 import * as graphStyles from "../graph_styles";
 import { GraphVisualization } from "./graph_visualization";
 
@@ -45,6 +48,7 @@ export function modelToGraphviz(
     obGenerators?: QualifiedName[],
     morGenerators?: QualifiedName[],
 ): Viz.Graph {
+    console.log(model.dump());
     const nodes: Required<Viz.Graph>["nodes"] = [];
     for (const id of obGenerators ?? model.obGenerators()) {
         const ob = model.obPresentation(id);
@@ -85,8 +89,17 @@ export function modelToGraphviz(
         directed: true,
         nodes,
         edges,
-        graphAttributes: { ...graphStyles.defaultGraphAttributes, ...attributes?.graph },
-        nodeAttributes: { ...graphStyles.defaultNodeAttributes, ...attributes?.node },
-        edgeAttributes: { ...graphStyles.defaultEdgeAttributes, ...attributes?.edge },
+        graphAttributes: {
+            ...graphStyles.defaultGraphAttributes,
+            ...attributes?.graph,
+        },
+        nodeAttributes: {
+            ...graphStyles.defaultNodeAttributes,
+            ...attributes?.node,
+        },
+        edgeAttributes: {
+            ...graphStyles.defaultEdgeAttributes,
+            ...attributes?.edge,
+        },
     };
 }

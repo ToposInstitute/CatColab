@@ -582,6 +582,11 @@ impl DblModel {
         })
     }
 
+    #[wasm_bindgen(js_name = "dump")]
+    pub fn dump(&self) -> String {
+        format!("{:?}\n{:?}", self.ob_generators(), self.mor_generators())
+    }
+
     /// Validates the model, returning any validation failures.
     pub fn validate(&self) -> ModelValidationResult {
         let result = all_the_same!(match &self.model {
@@ -662,41 +667,38 @@ pub fn elaborate_model(
     theory: &DblTheory,
     ref_id: String,
 ) -> Result<DblModel, String> {
-    web_sys::console::log_1(&"elaborating".into());
-    let mut model = DblModel::new(theory);
-    for judgment in notebook.0.formal_content() {
-        match judgment {
-            ModelJudgment::Object(decl) => model.add_ob(decl)?,
-            ModelJudgment::Morphism(decl) => model.add_mor(decl)?,
-            ModelJudgment::Instantiation(_inst) => {
-                web_sys::console::log_1(&format!("{:?}", _inst).into());
-                // legacy elaboration ignores instantiation
-            }
-        }
-    }
     match &theory.0 {
         DblTheoryBox::Discrete(ddt) => {
+            web_sys::console::log_1(&"elaborating".into());
             let theory =
                 Theory::new(QualifiedName::single(NameSegment::Text(ustr("_"))), ddt.clone());
             let ref_id = Uuid::from_str(&ref_id).unwrap();
             let mut elab = ElaboratorNext::new(theory.clone(), &instantiated.toplevel, ref_id);
             let ty = elab.notebook(notebook.0.formal_content());
-            web_sys::console::log_1(&format!("{}", &ty.0).into());
-            let (ddm, name_translation) = generate(&instantiated.toplevel, &theory, &ty.1);
-            let mut out = String::new();
-            model_output("", &mut out, &ddm, &name_translation).unwrap();
-            web_sys::console::log_1(&out.into());
-            web_sys::console::log_1(
-                &format!("{:?}", &instantiated.toplevel.declarations.keys().collect::<Vec<_>>())
-                    .into(),
-            );
-            web_sys::console::log_1(&format!("{:?}", elab.errors()).into());
-            model.replace_box(DblModelBox::Discrete(Rc::new(ddm)));
-            model.ty = Some(ty);
+            let (ddm, namespace) = generate(&instantiated.toplevel, &theory, &ty.1);
+            web_sys::console::log_1(&"finished elaborating".into());
+            Ok(DblModel {
+                model: DblModelBox::Discrete(Rc::new(ddm)),
+                ty: Some(ty),
+                ob_namespace: namespace.clone(),
+                mor_namespace: namespace.clone(),
+            })
         }
-        _ => {}
+        _ => {
+            // legacy elaboration
+            let mut model = DblModel::new(theory);
+            for judgment in notebook.0.formal_content() {
+                match judgment {
+                    ModelJudgment::Object(decl) => model.add_ob(decl)?,
+                    ModelJudgment::Morphism(decl) => model.add_mor(decl)?,
+                    ModelJudgment::Instantiation(_inst) => {
+                        // legacy elaboration ignores instantiation
+                    }
+                }
+            }
+            Ok(model)
+        }
     }
-    Ok(model)
 }
 
 #[cfg(test)]
