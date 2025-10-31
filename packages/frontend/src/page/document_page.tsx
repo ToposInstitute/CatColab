@@ -103,7 +103,12 @@ export default function DocumentPage() {
                             closeSidePanel={closeSidePanel}
                         />
                     }
-                    sidebarContents={<DocumentSidebar liveDoc={liveDocument().liveDoc} />}
+                    sidebarContents={
+                        <DocumentSidebar
+                            primaryLiveDoc={liveDocument().liveDoc}
+                            secondaryLiveDoc={secondaryLiveDocument()?.liveDoc}
+                        />
+                    }
                 >
                     <Resizable class="growable-container">
                         {() => {

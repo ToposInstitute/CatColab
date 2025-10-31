@@ -1,6 +1,6 @@
 import { useNavigate } from "@solidjs/router";
 import type { Link } from "catlog-wasm";
-import { For } from "solid-js";
+import { For, createMemo } from "solid-js";
 import { Show } from "solid-js";
 import { createResource } from "solid-js";
 import invariant from "tiny-invariant";
@@ -11,7 +11,8 @@ import { DocumentTypeIcon } from "./document_type_icon";
 import { AppMenu, ImportMenuItem, NewModelItem } from "./menubar";
 
 export function DocumentSidebar(props: {
-    liveDoc: LiveDoc;
+    primaryLiveDoc: LiveDoc;
+    secondaryLiveDoc?: LiveDoc;
 }) {
     return (
         <>
@@ -19,7 +20,10 @@ export function DocumentSidebar(props: {
                 <NewModelItem />
                 <ImportMenuItem />
             </AppMenu>
-            <RelatedDocuments liveDoc={props.liveDoc} />
+            <RelatedDocuments
+                primaryLiveDoc={props.primaryLiveDoc}
+                secondaryLiveDoc={props.secondaryLiveDoc}
+            />
         </>
     );
 }
@@ -42,12 +46,13 @@ async function getLiveDocRoot(livDoc: LiveDoc, api: Api): Promise<LiveDoc> {
 }
 
 function RelatedDocuments(props: {
-    liveDoc: LiveDoc;
+    primaryLiveDoc: LiveDoc;
+    secondaryLiveDoc?: LiveDoc;
 }) {
     const api = useApi();
 
     const [liveDocRoot] = createResource(
-        () => props.liveDoc,
+        () => props.primaryLiveDoc,
         async (liveDoc) => getLiveDocRoot(liveDoc, api),
     );
 
@@ -58,7 +63,8 @@ function RelatedDocuments(props: {
                     <DocumentsTreeNode
                         liveDoc={liveDocRoot()}
                         indent={1}
-                        currentLiveDoc={props.liveDoc}
+                        primaryLiveDoc={props.primaryLiveDoc}
+                        secondaryLiveDoc={props.secondaryLiveDoc}
                     />
                 </div>
             )}
@@ -69,7 +75,8 @@ function RelatedDocuments(props: {
 function DocumentsTreeNode(props: {
     liveDoc: LiveDoc;
     indent: number;
-    currentLiveDoc: LiveDoc;
+    primaryLiveDoc: LiveDoc;
+    secondaryLiveDoc?: LiveDoc;
 }) {
     const api = useApi();
 
@@ -96,7 +103,8 @@ function DocumentsTreeNode(props: {
             <DocumentsTreeLeaf
                 liveDoc={props.liveDoc}
                 indent={props.indent}
-                currentLiveDoc={props.currentLiveDoc}
+                primaryLiveDoc={props.primaryLiveDoc}
+                secondaryLiveDoc={props.secondaryLiveDoc}
                 triggerRefresh={refetch}
             />
             <Show when={childDocs()} fallback={<div>Loading children...</div>}>
@@ -106,7 +114,8 @@ function DocumentsTreeNode(props: {
                             <DocumentsTreeNode
                                 liveDoc={child}
                                 indent={props.indent + 1}
-                                currentLiveDoc={props.currentLiveDoc}
+                                primaryLiveDoc={props.primaryLiveDoc}
+                                secondaryLiveDoc={props.secondaryLiveDoc}
                             />
                         )}
                     </For>
@@ -119,13 +128,23 @@ function DocumentsTreeNode(props: {
 function DocumentsTreeLeaf(props: {
     liveDoc: LiveDoc;
     indent: number;
-    currentLiveDoc: LiveDoc;
+    primaryLiveDoc: LiveDoc;
+    secondaryLiveDoc?: LiveDoc;
     triggerRefresh: () => void;
 }) {
     const navigate = useNavigate();
+    const clickedRefId = createMemo(() => props.liveDoc.docRef?.refId);
+    const primaryRefId = createMemo(() => props.primaryLiveDoc.docRef?.refId);
+    const secondaryRefId = createMemo(() => props.secondaryLiveDoc?.docRef?.refId);
 
     const handleClick = () => {
-        navigate(`/${createLinkPart(props.currentLiveDoc)}/${createLinkPart(props.liveDoc)}`);
+        // If clicking on primary or secondary doc, navigate to just that doc
+        if (clickedRefId() === primaryRefId() || clickedRefId() === secondaryRefId()) {
+            navigate(`/${createLinkPart(props.liveDoc)}`);
+        } else {
+            // Otherwise, open it as a side panel
+            navigate(`/${createLinkPart(props.primaryLiveDoc)}/${createLinkPart(props.liveDoc)}`);
+        }
     };
 
     return (
@@ -133,7 +152,7 @@ function DocumentsTreeLeaf(props: {
             onClick={handleClick}
             class="related-document"
             classList={{
-                active: props.liveDoc.docRef?.refId === props.currentLiveDoc.docRef?.refId,
+                active: props.liveDoc.docRef?.refId === props.primaryLiveDoc.docRef?.refId,
             }}
             style={{ "padding-left": `${props.indent * 16}px` }}
         >
