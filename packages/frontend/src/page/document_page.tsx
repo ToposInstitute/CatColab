@@ -41,7 +41,15 @@ export default function DocumentPage() {
     invariant(models, "Must provide model library as context to page");
 
     const params = useParams();
+    const navigate = useNavigate();
     const isSidePanelOpen = () => !!params.subkind && !!params.subref;
+
+    // Redirect if primary and secondary refs match
+    createEffect(() => {
+        if (params.subref && params.ref === params.subref) {
+            navigate(`/${params.kind}/${params.ref}`, { replace: true });
+        }
+    });
 
     const [primaryLiveDocument] = createResource(
         () => params.ref,
@@ -54,12 +62,15 @@ export default function DocumentPage() {
                 return;
             }
 
+            // Prevent the fetcher from running right before the redirect runs for matching primary and secondary refs
+            if (params.subref === params.ref) {
+                return;
+            }
+
             return [params.subkind, params.subref] as const;
         },
         ([refKind, refId]) => getLiveDocument(refId, api, models, refKind as DocumentType),
     );
-
-    const navigate = useNavigate();
     const closeSidePanel = () => {
         navigate(`/${params.kind}/${params.ref}`);
     };
