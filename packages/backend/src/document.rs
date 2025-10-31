@@ -132,7 +132,7 @@ pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppErr
     Ok(())
 }
 
-/// Soft-deletes a ref by setting `deleted_at`.
+/// Soft-deletes a document reference by setting `deleted_at`.
 pub async fn delete_ref(state: AppState, ref_id: Uuid) -> Result<(), AppError> {
     let query = sqlx::query!(
         "
@@ -143,6 +143,21 @@ pub async fn delete_ref(state: AppState, ref_id: Uuid) -> Result<(), AppError> {
         ref_id
     );
     query.execute(&state.db).await?;
+    Ok(())
+}
+
+/// Restores a soft-deleted document reference.
+pub async fn restore_ref(state: AppState, ref_id: Uuid) -> Result<(), AppError> {
+    sqlx::query!(
+        "
+        UPDATE refs
+        SET deleted_at = NULL
+        WHERE id = $1
+        ",
+        ref_id
+    )
+    .execute(&state.db)
+    .await?;
     Ok(())
 }
 
