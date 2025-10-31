@@ -2,6 +2,7 @@ import Resizable, { type ContextValue } from "@corvu/resizable";
 import { useNavigate, useParams } from "@solidjs/router";
 import ChevronsRight from "lucide-solid/icons/chevrons-right";
 import Maximize2 from "lucide-solid/icons/maximize-2";
+import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import {
     Match,
     Show,
@@ -168,46 +169,58 @@ function SplitPaneToolbar(props: {
 }
 
 export function DocumentPane(props: { document: AnyLiveDocument }) {
+    const isDeleted = () => props.document.liveDoc.docRef?.isDeleted ?? false;
     return (
-        <div class="notebook-container">
-            <div class="document-head">
-                <div class="title">
-                    <InlineInput
-                        text={props.document.liveDoc.doc.name}
-                        setText={(text) => {
-                            props.document.liveDoc.changeDoc((doc) => {
-                                doc.name = text;
-                            });
-                        }}
-                        placeholder="Untitled"
-                    />
+        <>
+            <Show when={isDeleted()}>
+                <div class="warning-banner">
+                    <TriangleAlert size={20} />
+                    <span>
+                        Warning: This {props.document.type} has been deleted. The last snapshot
+                        before deletion is still visible below.
+                    </span>
                 </div>
-                <div class="info">
-                    <Switch>
-                        <Match when={props.document.type === "model" && props.document}>
-                            {(liveModel) => <ModelInfo liveModel={liveModel()} />}
-                        </Match>
-                        <Match when={props.document.type === "diagram" && props.document}>
-                            {(liveDiagram) => <DiagramInfo liveDiagram={liveDiagram()} />}
-                        </Match>
-                        <Match when={props.document.type === "analysis" && props.document}>
-                            {(liveAnalysis) => <AnalysisInfo liveAnalysis={liveAnalysis()} />}
-                        </Match>
-                    </Switch>
+            </Show>
+            <div class="notebook-container">
+                <div class="document-head">
+                    <div class="title">
+                        <InlineInput
+                            text={props.document.liveDoc.doc.name}
+                            setText={(text) => {
+                                props.document.liveDoc.changeDoc((doc) => {
+                                    doc.name = text;
+                                });
+                            }}
+                            placeholder="Untitled"
+                        />
+                    </div>
+                    <div class="info">
+                        <Switch>
+                            <Match when={props.document.type === "model" && props.document}>
+                                {(liveModel) => <ModelInfo liveModel={liveModel()} />}
+                            </Match>
+                            <Match when={props.document.type === "diagram" && props.document}>
+                                {(liveDiagram) => <DiagramInfo liveDiagram={liveDiagram()} />}
+                            </Match>
+                            <Match when={props.document.type === "analysis" && props.document}>
+                                {(liveAnalysis) => <AnalysisInfo liveAnalysis={liveAnalysis()} />}
+                            </Match>
+                        </Switch>
+                    </div>
                 </div>
+                <Switch>
+                    <Match when={props.document.type === "model" && props.document}>
+                        {(liveModel) => <ModelNotebookEditor liveModel={liveModel()} />}
+                    </Match>
+                    <Match when={props.document.type === "diagram" && props.document}>
+                        {(liveDiagram) => <DiagramNotebookEditor liveDiagram={liveDiagram()} />}
+                    </Match>
+                    <Match when={props.document.type === "analysis" && props.document}>
+                        {(liveAnalysis) => <AnalysisNotebookEditor liveAnalysis={liveAnalysis()} />}
+                    </Match>
+                </Switch>
             </div>
-            <Switch>
-                <Match when={props.document.type === "model" && props.document}>
-                    {(liveModel) => <ModelNotebookEditor liveModel={liveModel()} />}
-                </Match>
-                <Match when={props.document.type === "diagram" && props.document}>
-                    {(liveDiagram) => <DiagramNotebookEditor liveDiagram={liveDiagram()} />}
-                </Match>
-                <Match when={props.document.type === "analysis" && props.document}>
-                    {(liveAnalysis) => <AnalysisNotebookEditor liveAnalysis={liveAnalysis()} />}
-                </Match>
-            </Switch>
-        </div>
+        </>
     );
 }
 

@@ -67,9 +67,11 @@ export class Api {
     ): Promise<LiveDoc<Doc>> {
         const docHandle = await this.getDocHandle<Doc>(refId, docType);
         const permissions = await this.getPermissions(refId);
+        const isDeleted = await this.isDocumentDeleted(refId);
         return makeLiveDoc(docHandle, {
             refId,
             permissions,
+            isDeleted,
         });
     }
 
@@ -91,6 +93,17 @@ export class Api {
     async getPermissions(refId: Uuid): Promise<Permissions> {
         const { permissions } = await this.getDocCacheEntry(refId);
         return permissions;
+    }
+
+    /** Check if the document has been deleted. */
+    async isDocumentDeleted(refId: Uuid): Promise<boolean> {
+        const { isDeleted } = await this.getDocCacheEntry(refId);
+        return isDeleted;
+    }
+
+    /** Clear cached entry for a document ref. */
+    clearCachedDoc(refId: Uuid): void {
+        this.docCache.delete(refId);
     }
 
     private async getDocCacheEntry(refId: Uuid): Promise<DocCacheEntry> {
@@ -119,12 +132,14 @@ export class Api {
             const docHandle = this.localRepo.create(refDoc.content);
             docId = docHandle.documentId;
         }
+        const isDeleted = refDoc.isDeleted;
 
         const { permissions } = refDoc;
         const entry: DocCacheEntry = {
             docId,
             permissions,
             localOnly: !isLive,
+            isDeleted,
         };
         this.docCache.set(refId, entry);
 
@@ -166,6 +181,7 @@ type DocCacheEntry = {
     docId: DocumentId;
     permissions: Permissions;
     localOnly: boolean;
+    isDeleted: boolean;
 };
 
 /** Error raised when backend reports that permissions are insufficient. */

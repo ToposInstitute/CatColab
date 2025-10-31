@@ -125,7 +125,8 @@ export class ModelLibrary<RefId> {
             },
             async docRef(refId) {
                 const permissions = await api.getPermissions(refId);
-                return { refId, permissions };
+                const isDeleted = await api.isDocumentDeleted(refId);
+                return { refId, permissions, isDeleted };
             },
             theories,
         });

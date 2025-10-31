@@ -51,6 +51,9 @@ export type DocRef = {
 
     /** Permissions for the document ref. */
     permissions: Permissions;
+
+    /** Whether the document has been deleted. */
+    isDeleted: boolean;
 };
 
 /** Gets a document from an Automerge repo, migrating it if necessary.

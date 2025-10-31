@@ -68,6 +68,20 @@ pub async fn head_snapshot(state: AppState, ref_id: Uuid) -> Result<Value, AppEr
     Ok(query.fetch_one(&state.db).await?.content)
 }
 
+/// Gets the deleted_at timestamp for a document ref.
+pub async fn ref_deleted_at(
+    state: AppState,
+    ref_id: Uuid,
+) -> Result<Option<DateTime<Utc>>, AppError> {
+    let query = sqlx::query!(
+        "
+        SELECT deleted_at FROM refs WHERE id = $1
+        ",
+        ref_id
+    );
+    Ok(query.fetch_one(&state.db).await?.deleted_at)
+}
+
 /// Saves the document by overwriting the snapshot at the current head.
 pub async fn autosave(state: AppState, data: RefContent) -> Result<(), AppError> {
     let RefContent { ref_id, content } = data;
@@ -113,6 +127,20 @@ pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppErr
         ref_id,
         new_doc_response.doc_json,
         new_doc_response.doc_id,
+    );
+    query.execute(&state.db).await?;
+    Ok(())
+}
+
+/// Soft-deletes a ref by setting `deleted_at`.
+pub async fn delete_ref(state: AppState, ref_id: Uuid) -> Result<(), AppError> {
+    let query = sqlx::query!(
+        "
+        UPDATE refs
+        SET deleted_at = NOW()
+        WHERE id = $1
+        ",
+        ref_id
     );
     query.execute(&state.db).await?;
     Ok(())
@@ -306,6 +334,8 @@ pub async fn search_ref_stubs(
                             p_searcher.object = refs.id
                             AND p_searcher.subject = $1
                     )
+                ) AND (
+                    refs.deleted_at IS NULL
                 )
             ),
             paged_ids AS (

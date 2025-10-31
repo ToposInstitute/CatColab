@@ -21,6 +21,7 @@ pub fn router() -> Router<AppState> {
         .handler(get_doc)
         .handler(head_snapshot)
         .handler(create_snapshot)
+        .handler(delete_ref)
         .handler(get_permissions)
         .handler(set_permissions)
         .handler(validate_session)
@@ -45,16 +46,21 @@ async fn get_doc(ctx: AppCtx, ref_id: Uuid) -> RpcResult<RefDoc> {
 async fn _get_doc(ctx: AppCtx, ref_id: Uuid) -> Result<RefDoc, AppError> {
     let permissions = auth::permissions(&ctx, ref_id).await?;
     let max_level = permissions.max_level();
+    let deleted_at = doc::ref_deleted_at(ctx.state.clone(), ref_id).await?;
+    let is_deleted = deleted_at.is_some();
+
     if max_level >= Some(PermissionLevel::Write) {
         let doc_id = doc::doc_id(ctx.state, ref_id).await?;
         Ok(RefDoc::Live {
             doc_id,
+            is_deleted,
             permissions,
         })
     } else if max_level >= Some(PermissionLevel::Read) {
         let content = doc::head_snapshot(ctx.state, ref_id).await?;
         Ok(RefDoc::Readonly {
             content,
+            is_deleted,
             permissions,
         })
     } else {
@@ -69,6 +75,8 @@ enum RefDoc {
     /// Readonly document, containing content at the current head.
     Readonly {
         content: Value,
+        #[serde(rename = "isDeleted")]
+        is_deleted: bool,
         permissions: Permissions,
     },
 
@@ -76,6 +84,8 @@ enum RefDoc {
     Live {
         #[serde(rename = "docId")]
         doc_id: String,
+        #[serde(rename = "isDeleted")]
+        is_deleted: bool,
         permissions: Permissions,
     },
 }
@@ -107,6 +117,16 @@ async fn create_snapshot(ctx: AppCtx, ref_id: Uuid) -> RpcResult<()> {
     async {
         auth::authorize(&ctx, ref_id, PermissionLevel::Write).await?;
         doc::create_snapshot(ctx.state, ref_id).await
+    }
+    .await
+    .into()
+}
+
+#[handler(mutation)]
+async fn delete_ref(ctx: AppCtx, ref_id: Uuid) -> RpcResult<()> {
+    async {
+        auth::authorize(&ctx, ref_id, PermissionLevel::Own).await?;
+        doc::delete_ref(ctx.state, ref_id).await
     }
     .await
     .into()
