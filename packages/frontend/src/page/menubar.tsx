@@ -127,7 +127,7 @@ export function DuplicateMenuItem(props: {
     return (
         <MenuItem onSelect={onDuplicate}>
             <Copy />
-            <MenuItemLabel>{"Duplicate model"}</MenuItemLabel>
+            <MenuItemLabel>{`Duplicate ${props.doc.type}`}</MenuItemLabel>
         </MenuItem>
     );
 }
