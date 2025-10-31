@@ -46,6 +46,7 @@ import "prosemirror-view/style/prosemirror.css";
 import "./rich_text_editor.css";
 
 import Bold from "lucide-solid/icons/bold";
+import ChevronDown from "lucide-solid/icons/chevron-down";
 import Indent from "lucide-solid/icons/indent";
 import Italic from "lucide-solid/icons/italic";
 import Link from "lucide-solid/icons/link";
@@ -107,6 +108,7 @@ export const RichTextEditor = (
         onDecreaseIndent: null,
         onHeadingClicked: null,
         onMathClicked: null,
+        onHideMenubar: null,
     });
 
     const [markStates, setMarkStates] = createSignal<MarkStates>({
@@ -244,6 +246,13 @@ export const RichTextEditor = (
                 }
             },
             onMathClicked: () => insertMathDisplayCmd(view.state, view.dispatch),
+            onHideMenubar: () => {
+                if (view.dom instanceof HTMLElement) {
+                    view.dom.blur();
+                }
+                setEditorFocused(false);
+                setMenuActive(false);
+            },
         });
 
         onCleanup(() => view.destroy());
@@ -313,69 +322,80 @@ type MenuControls = {
     onDecreaseIndent: (() => void) | null;
     onHeadingClicked: ((level: number) => void) | null;
     onMathClicked: (() => void) | null;
+    onHideMenubar: (() => void) | null;
 };
 
 export function MenuBar(props: MenuControls & MarkStates & { headingLevel: number | null }) {
     return (
         <div id="menubar" class="menubar">
-            <TooltipButton
-                callback={props.onBoldClicked}
-                isActive={props.isBoldActive}
-                tooltip="Bold (shortcut: Mod+b)"
-            >
-                <Bold />
-            </TooltipButton>
-            <TooltipButton
-                callback={props.onItalicClicked}
-                isActive={props.isEmActive}
-                tooltip="Italics (shortcut: Mod+i)"
-            >
-                <Italic />
-            </TooltipButton>
-            <TooltipButton callback={props.onLinkClicked} tooltip="Add Link">
-                <Link />
-            </TooltipButton>
-            <TooltipButton callback={props.onMathClicked} tooltip="KaTeX block (shortcut: Mod+m)">
-                <Sigma />
-            </TooltipButton>
-
-            <TooltipButton callback={props.onBlockQuoteClicked} tooltip="Blockquote">
-                <TextQuote />
-            </TooltipButton>
-
-            <TooltipButton callback={props.onToggleOrderedList} tooltip="Ordered list">
-                <ListOrdered />
-            </TooltipButton>
-
-            <TooltipButton callback={props.onToggleBulletList} tooltip="Bullet list">
-                <List />
-            </TooltipButton>
-
-            <TooltipButton callback={props.onIncreaseIndent} tooltip="Indent">
-                <Indent />
-            </TooltipButton>
-
-            <TooltipButton callback={props.onDecreaseIndent} tooltip="Outdent">
-                <Outdent />
-            </TooltipButton>
-
-            <Show when={props.onHeadingClicked}>
-                <select
-                    value={props.headingLevel ?? 0}
-                    onInput={(e) => {
-                        const lvl = Number((e.currentTarget as HTMLSelectElement).value);
-                        props.onHeadingClicked?.(lvl);
-                    }}
+            <div class="menubar-left">
+                <TooltipButton
+                    callback={props.onBoldClicked}
+                    isActive={props.isBoldActive}
+                    tooltip="Bold (shortcut: Mod+b)"
                 >
-                    <option value={0}>Paragraph</option>
-                    <option value={1}>Heading 1</option>
-                    <option value={2}>Heading 2</option>
-                    <option value={3}>Heading 3</option>
-                    <option value={4}>Heading 4</option>
-                    <option value={5}>Heading 5</option>
-                    <option value={6}>Heading 6</option>
-                </select>
-            </Show>
+                    <Bold />
+                </TooltipButton>
+                <TooltipButton
+                    callback={props.onItalicClicked}
+                    isActive={props.isEmActive}
+                    tooltip="Italics (shortcut: Mod+i)"
+                >
+                    <Italic />
+                </TooltipButton>
+                <TooltipButton callback={props.onLinkClicked} tooltip="Add Link">
+                    <Link />
+                </TooltipButton>
+                <TooltipButton
+                    callback={props.onMathClicked}
+                    tooltip="KaTeX block (shortcut: Mod+m)"
+                >
+                    <Sigma />
+                </TooltipButton>
+
+                <TooltipButton callback={props.onBlockQuoteClicked} tooltip="Blockquote">
+                    <TextQuote />
+                </TooltipButton>
+
+                <TooltipButton callback={props.onToggleOrderedList} tooltip="Ordered list">
+                    <ListOrdered />
+                </TooltipButton>
+
+                <TooltipButton callback={props.onToggleBulletList} tooltip="Bullet list">
+                    <List />
+                </TooltipButton>
+
+                <TooltipButton callback={props.onIncreaseIndent} tooltip="Indent">
+                    <Indent />
+                </TooltipButton>
+
+                <TooltipButton callback={props.onDecreaseIndent} tooltip="Outdent">
+                    <Outdent />
+                </TooltipButton>
+
+                <Show when={props.onHeadingClicked}>
+                    <select
+                        value={props.headingLevel ?? 0}
+                        onInput={(e) => {
+                            const lvl = Number((e.currentTarget as HTMLSelectElement).value);
+                            props.onHeadingClicked?.(lvl);
+                        }}
+                    >
+                        <option value={0}>Paragraph</option>
+                        <option value={1}>Heading 1</option>
+                        <option value={2}>Heading 2</option>
+                        <option value={3}>Heading 3</option>
+                        <option value={4}>Heading 4</option>
+                        <option value={5}>Heading 5</option>
+                        <option value={6}>Heading 6</option>
+                    </select>
+                </Show>
+            </div>
+            <div class="menubar-right">
+                <TooltipButton callback={props.onHideMenubar} tooltip="Hide menubar">
+                    <ChevronDown />
+                </TooltipButton>
+            </div>
         </div>
     );
 }

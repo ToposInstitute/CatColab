@@ -42,16 +42,33 @@
     right: 5px;
     left: 5px;
     display: flex;
-    flex-direction: column;
     flex-direction: row;
-    justify-content: flex-start;
+    justify-content: space-between;
     border-radius: 5px 5px 0 0;
     border: 1px solid grey;
     background-color: #f0f0f0;
 }
 
-.menubar > :first-child > button {
+.menubar-left {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    flex-grow: 1;
+}
+
+.menubar-right {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.menubar-left > :first-child > button {
     border-radius: 5px 0 0 0;
+}
+
+.menubar-right > :last-child > button {
+    border-radius: 0 5px 0 0;
 }
 
 .menubar select .menubar button {
