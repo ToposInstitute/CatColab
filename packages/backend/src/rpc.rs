@@ -22,6 +22,7 @@ pub fn router() -> Router<AppState> {
         .handler(head_snapshot)
         .handler(create_snapshot)
         .handler(delete_ref)
+        .handler(restore_ref)
         .handler(get_permissions)
         .handler(set_permissions)
         .handler(validate_session)
@@ -129,6 +130,16 @@ async fn delete_ref(ctx: AppCtx, ref_id: Uuid) -> RpcResult<()> {
     async {
         auth::authorize(&ctx, ref_id, PermissionLevel::Own).await?;
         doc::delete_ref(ctx.state, ref_id).await
+    }
+    .await
+    .into()
+}
+
+#[handler(mutation)]
+async fn restore_ref(ctx: AppCtx, ref_id: Uuid) -> RpcResult<()> {
+    async {
+        auth::authorize(&ctx, ref_id, PermissionLevel::Own).await?;
+        doc::restore_ref(ctx.state, ref_id).await
     }
     .await
     .into()
