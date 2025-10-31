@@ -93,7 +93,7 @@ export default function DocumentPage() {
                     }
                     sidebarContents={<DocumentSidebar liveDoc={liveDocument().liveDoc} />}
                 >
-                    <Resizable class="growable-container">
+                    <Resizable class="resizeable-panels">
                         {() => {
                             const context = Resizable.useContext();
                             setResizableContext(context);
