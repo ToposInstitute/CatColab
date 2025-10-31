@@ -34,3 +34,12 @@
         color: var(--link-color);
     }
 }
+
+.resizeable-panels {
+    flex: 1;
+    overflow-y: hidden;
+
+    & > .content-panel {
+        overflow-y: auto;
+    }
+}

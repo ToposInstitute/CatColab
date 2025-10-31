@@ -110,7 +110,7 @@ export default function DocumentPage() {
                         />
                     }
                 >
-                    <Resizable class="growable-container">
+                    <Resizable class="resizeable-panels">
                         {() => {
                             const context = Resizable.useContext();
                             setResizableContext(context);
