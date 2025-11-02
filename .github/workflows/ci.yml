@@ -59,7 +59,7 @@ jobs:
 
       - name: Check clippy warnings
         run: |
-          cargo clippy -- -D warnings
+          cargo clippy --all-targets --all-features -- --deny warnings
 
   rust_docs:
     name: rust docs

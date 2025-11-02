@@ -234,7 +234,7 @@ fn snapshot_examples() {
             let golden = fs::read_to_string(&golden_path).unwrap_or_default();
             let result = output.result();
             let result_str = result.as_str();
-            if &golden != result_str {
+            if golden != result_str {
                 succeeded = false;
                 println!("failed snapshot test for examples/{fname}:");
                 let diff = TextDiff::from_lines(golden.as_str(), result_str);
