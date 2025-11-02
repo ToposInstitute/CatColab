@@ -51,7 +51,7 @@ export default function LotkaVolterra(
         {
             contentType: "string",
             header: true,
-            content: (id) => morLabelOrDefault(id, elaboratedModel()),
+            content: (id) => morLabelOrDefault(id, elaboratedModel()) ?? "",
         },
         createNumericalColumn({
             name: "Interaction",

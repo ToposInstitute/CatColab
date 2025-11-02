@@ -47,13 +47,13 @@ export function modelToGraphviz(
 ): Viz.Graph {
     const nodes: Required<Viz.Graph>["nodes"] = [];
     for (const id of obGenerators ?? model.obGenerators()) {
-        const obType = model.obType({ tag: "Basic", content: id });
-        const meta = theory.modelObTypeMeta(obType);
+        const ob = model.obPresentation(id);
+        const meta = theory.modelObTypeMeta(ob.obType);
         nodes.push({
             name: id,
             attributes: {
                 id,
-                label: model.obGeneratorLabel(id)?.join(".") ?? "",
+                label: ob.label?.join(".") ?? "",
                 class: graphStyles.svgCssClasses(meta).join(" "),
                 fontname: graphStyles.graphvizFontname(meta),
             },
@@ -62,18 +62,17 @@ export function modelToGraphviz(
 
     const edges: Required<Viz.Graph>["edges"] = [];
     for (const id of morGenerators ?? model.morGenerators()) {
-        const [dom, cod] = [model.getDom(id), model.getCod(id)];
-        if (!(dom?.tag === "Basic" && cod?.tag === "Basic")) {
+        const mor = model.morPresentation(id);
+        if (!(mor && mor.dom.tag === "Basic" && mor.cod.tag === "Basic")) {
             continue;
         }
-        const morType = model.morType({ tag: "Basic", content: id });
-        const meta = theory.modelMorTypeMeta(morType);
+        const meta = theory.modelMorTypeMeta(mor.morType);
         edges.push({
-            head: cod.content,
-            tail: dom.content,
+            head: mor.cod.content,
+            tail: mor.dom.content,
             attributes: {
                 id: id,
-                label: model.morGeneratorLabel(id)?.join(".") ?? "",
+                label: mor.label?.join(".") ?? "",
                 class: graphStyles.svgCssClasses(meta).join(" "),
                 fontname: graphStyles.graphvizFontname(meta),
                 // Not recognized by Graphviz but will be passed through!

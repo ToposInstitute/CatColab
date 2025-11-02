@@ -106,13 +106,18 @@ function StockFlowSVG(props: {
         const nodeMap = uniqueIndexArray(props.layout?.nodes ?? [], (node) => node.id);
         const edgeMap = uniqueIndexArray(props.layout?.edges ?? [], (edge) => edge.id);
         for (const id of model.morGenerators()) {
-            const [dom, cod] = [model.getDom(id), model.getCod(id)];
+            const mor = model.morPresentation(id);
             if (
-                !(dom?.tag === "Basic" && cod?.tag === "Tabulated" && cod.content.tag === "Basic")
+                !(
+                    mor &&
+                    mor.dom.tag === "Basic" &&
+                    mor.cod.tag === "Tabulated" &&
+                    mor.cod.content.tag === "Basic"
+                )
             ) {
                 continue;
             }
-            const [srcId, tgtId] = [dom.content, cod.content.content];
+            const [srcId, tgtId] = [mor.dom.content, mor.cod.content.content];
             const [srcNode, tgtEdge] = [nodeMap.get(srcId), edgeMap.get(tgtId)];
             if (!srcNode || !tgtEdge) {
                 continue;
