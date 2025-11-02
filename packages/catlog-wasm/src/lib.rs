@@ -16,6 +16,7 @@ pub mod result;
 
 pub mod model;
 pub mod model_diagram;
+pub mod model_diagram_presentation;
 pub mod model_morphism;
 pub mod model_presentation;
 pub mod theory;
