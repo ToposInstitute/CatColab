@@ -304,7 +304,7 @@ mod test {
         let mut elab = Elaborator::new(theory.clone(), &toplevel);
         let mut out = String::new();
         if let Some((_, ty_v)) = elab.notebook(&cells) {
-            let (model, name_translation) = generate(&toplevel, &theory, &ty_v);
+            let (model, name_translation) = generate(&toplevel, theory, &ty_v);
             model_output("", &mut out, &model, &name_translation).unwrap();
         } else {
             assert!(
