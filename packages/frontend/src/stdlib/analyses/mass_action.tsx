@@ -63,7 +63,7 @@ export default function MassAction(
         {
             contentType: "string",
             header: true,
-            content: (id) => morLabelOrDefault(id, elaboratedModel()),
+            content: (id) => morLabelOrDefault(id, elaboratedModel()) ?? "",
         },
         createNumericalColumn({
             name: "Rate",

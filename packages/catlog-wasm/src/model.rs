@@ -20,6 +20,7 @@ use catlog::validate::Validate;
 use catlog::zero::{NameLookup, Namespace, QualifiedLabel, QualifiedName};
 use notebook_types::current::{path as notebook_path, *};
 
+use super::model_presentation::*;
 use super::notation::*;
 use super::result::JsResult;
 use super::theory::{
@@ -431,26 +432,6 @@ impl DblModel {
         })
     }
 
-    /// Gets the domain of a morphism generator, if it is set.
-    #[wasm_bindgen(js_name = "getDom")]
-    pub fn get_dom(&self, id: &QualifiedName) -> Result<Option<Ob>, String> {
-        all_the_same!(match &self.model {
-            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
-                Ok(model.get_dom(id).map(|ob| Quoter.quote(ob)))
-            }
-        })
-    }
-
-    /// Gets the codomain of a morphism generator, if it is set.
-    #[wasm_bindgen(js_name = "getCod")]
-    pub fn get_cod(&self, id: &QualifiedName) -> Result<Option<Ob>, String> {
-        all_the_same!(match &self.model {
-            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
-                Ok(model.get_cod(id).map(|ob| Quoter.quote(ob)))
-            }
-        })
-    }
-
     /// Gets the object type of an object in the model.
     #[wasm_bindgen(js_name = "obType")]
     pub fn ob_type(&self, ob: Ob) -> Result<ObType, String> {
@@ -538,6 +519,55 @@ impl DblModel {
     #[wasm_bindgen(js_name = "morGeneratorWithLabel")]
     pub fn mor_generator_with_label(&self, label: &QualifiedLabel) -> NameLookup {
         self.mor_namespace.name_with_label(label)
+    }
+
+    /// Gets an object generator as it appears in the model's presentation.
+    #[wasm_bindgen(js_name = "obPresentation")]
+    pub fn ob_presentation(&self, id: QualifiedName) -> ObGenerator {
+        let label = self.ob_generator_label(&id);
+        let ob_type = all_the_same!(match &self.model {
+            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+                Quoter.quote(&model.ob_generator_type(&id))
+            }
+        });
+        ObGenerator { id, label, ob_type }
+    }
+
+    /// Gets a morphism generators as it appears in the model's presentation.
+    #[wasm_bindgen(js_name = "morPresentation")]
+    pub fn mor_presentation(&self, id: QualifiedName) -> Option<MorGenerator> {
+        let label = self.mor_generator_label(&id);
+        let (mor_type, dom, cod) = all_the_same!(match &self.model {
+            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+                (Quoter.quote(&model.mor_generator_type(&id)),
+                 Quoter.quote(model.get_dom(&id)?),
+                 Quoter.quote(model.get_cod(&id)?))
+            }
+        });
+        Some(MorGenerator {
+            id,
+            label,
+            mor_type,
+            dom,
+            cod,
+        })
+    }
+
+    /// Constructs a serializable presentation of the model.
+    #[wasm_bindgen]
+    pub fn presentation(&self) -> ModelPresentation {
+        all_the_same!(match &self.model {
+            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+                ModelPresentation {
+                    ob_generators: {
+                        model.ob_generators().map(|id| self.ob_presentation(id)).collect()
+                    },
+                    mor_generators: {
+                        model.mor_generators().filter_map(|id| self.mor_presentation(id)).collect()
+                    }
+                }
+            }
+        })
     }
 
     /// Validates the model, returning any validation failures.
@@ -665,8 +695,6 @@ pub(crate) mod tests {
         assert_eq!(model.has_mor(a.clone()), Ok(true));
         assert_eq!(model.dom(a.clone()), Ok(x.clone()));
         assert_eq!(model.cod(a.clone()), Ok(y.clone()));
-        assert_eq!(model.get_dom(&a_id.into()), Ok(Some(x.clone())));
-        assert_eq!(model.get_cod(&a_id.into()), Ok(Some(y.clone())));
         assert_eq!(model.ob_type(x.clone()), Ok(ObType::Basic("Entity".into())));
         assert_eq!(model.mor_type(a.clone()), Ok(MorType::Basic("Attr".into())));
         assert_eq!(model.ob_generators().len(), 2);
@@ -682,6 +710,10 @@ pub(crate) mod tests {
         assert_eq!(model.ob_generator_label(&x_id.into()), Some("entity".into()));
         assert_eq!(model.mor_generator_label(&a_id.into()), Some("attr".into()));
         assert_eq!(model.validate().0, JsResult::Ok(()));
+
+        let presentation = model.presentation();
+        assert_eq!(presentation.ob_generators.len(), 2);
+        assert_eq!(presentation.mor_generators.len(), 1);
 
         let mut model = DblModel::new(&th);
         assert!(

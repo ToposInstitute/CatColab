@@ -1,4 +1,5 @@
 import type * as Viz from "@viz-js/viz";
+import invariant from "tiny-invariant";
 
 import { type DblModel, collectProduct } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
@@ -34,11 +35,12 @@ export function petriNetToGraphviz(model: DblModel): Viz.Graph {
     // Add nodes for places.
     const nodes: Required<Viz.Graph>["nodes"] = [];
     for (const id of model.obGenerators()) {
+        const ob = model.obPresentation(id);
         nodes.push({
             name: id,
             attributes: {
                 id,
-                label: model.obGeneratorLabel(id)?.join(".") ?? "",
+                label: ob.label?.join(".") ?? "",
                 class: svgStyles["place"],
                 width: "0.5",
                 height: "0.5",
@@ -49,31 +51,30 @@ export function petriNetToGraphviz(model: DblModel): Viz.Graph {
     /// Add nodes for transitions and edges for arcs.
     const edges: Required<Viz.Graph>["edges"] = [];
     for (const id of model.morGenerators()) {
+        const mor = model.morPresentation(id);
+        if (!mor) {
+            continue;
+        }
         nodes.push({
             name: id,
             attributes: {
                 id,
-                label: model.morGeneratorLabel(id)?.join(".") ?? "",
+                label: mor.label?.join(".") ?? "",
                 class: svgStyles["transition"],
                 width: "1",
                 height: "0.25",
             },
         });
 
-        const [dom, cod] = [model.getDom(id), model.getCod(id)];
-        for (const ob of dom ? collectProduct(dom) : []) {
-            if (ob.tag !== "Basic") {
-                continue;
-            }
+        for (const ob of collectProduct(mor.dom)) {
+            invariant(ob.tag === "Basic");
             edges.push({
                 head: id,
                 tail: ob.content,
             });
         }
-        for (const ob of cod ? collectProduct(cod) : []) {
-            if (ob.tag !== "Basic") {
-                continue;
-            }
+        for (const ob of collectProduct(mor.cod)) {
+            invariant(ob.tag === "Basic");
             edges.push({
                 head: ob.content,
                 tail: id,
