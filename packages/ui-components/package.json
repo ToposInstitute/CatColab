@@ -11,7 +11,8 @@
         "format": "biome format --write",
         "lint": "biome lint --write && biome check --write",
         "dev": "storybook dev -p 6006 --no-version-updates --no-open",
-        "build": "storybook build"
+        "build": "NODE_ENV=production storybook build",
+        "test": "vitest --project=storybook"
     },
     "dependencies": {
         "@corvu/dialog": "^0.2.4",
