@@ -15,7 +15,14 @@ import { createStore, produce } from "solid-js/store";
 import invariant from "tiny-invariant";
 
 import type { NewPermissions, PermissionLevel, Permissions, UserSummary } from "catcolab-api";
-import { Dialog, FormGroup, IconButton, SelectField, Warning } from "catcolab-ui-components";
+import {
+    Button,
+    Dialog,
+    FormGroup,
+    IconButton,
+    SelectField,
+    Warning,
+} from "catcolab-ui-components";
 import type { Document } from "catlog-wasm";
 import { type LiveDoc, useApi } from "../api";
 import { deepCopyJSON } from "../util/deepcopy";
@@ -178,21 +185,21 @@ export function PermissionsForm(props: {
                 </Warning>
             </Show>
             <div class="permissions-button-container">
-                <button type="button" class="button utility" onClick={copyToClipboard}>
+                <Button type="button" variant="utility" onClick={copyToClipboard}>
                     <Link2 />
                     Copy link
-                </button>
+                </Button>
                 <div class="permissions-spacer" />
-                <button
+                <Button
                     type="button"
-                    class="ok"
+                    variant="primary"
                     disabled={
                         !props.refId || currentPermissions.loading || currentPermissions.error
                     }
                     onClick={submitPermissions}
                 >
                     Update permissions
-                </button>
+                </Button>
             </div>
         </form>
     );
@@ -307,10 +314,10 @@ const ReadonlyPermissionsButton = (props: {
             <form class="permissions" onSubmit={(evt) => evt.preventDefault()}>
                 <div class="duplicate-button-container">
                     <span>
-                        <button type="button" class="button utility" onClick={onDuplicateDocument}>
+                        <Button type="button" variant="utility" onClick={onDuplicateDocument}>
                             <Copy />
                             Duplicate {props.doc.type}
-                        </button>
+                        </Button>
                     </span>
                     <span class="duplicate-button-height-text"> to make permanent changes.</span>
                 </div>

@@ -3,7 +3,7 @@ import { createEffect, createResource } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { UserProfile } from "catcolab-api";
-import { FormGroup, TextInputField } from "catcolab-ui-components";
+import { Button, FormGroup, TextInputField } from "catcolab-ui-components";
 import { useApi } from "../api";
 import { BrandedToolbar } from "../page";
 import { LoginGate } from "./login";
@@ -92,7 +92,9 @@ export function UserProfileForm() {
                     )}
                 </Field>
             </FormGroup>
-            <button type="submit">Update profile</button>
+            <Button type="submit" variant="primary">
+                Update profile
+            </Button>
         </Form>
     );
 }

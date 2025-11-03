@@ -1,6 +1,6 @@
 import { type JSX, createSignal } from "solid-js";
 
-import { FormGroup, InputField, TextAreaField } from "catcolab-ui-components";
+import { Button, FormGroup, InputField, TextAreaField } from "catcolab-ui-components";
 import type { Document } from "catlog-wasm";
 
 import "./json_import.css";
@@ -105,9 +105,9 @@ export const JsonImport = ({ onImport, validate }: JsonImportProps) => {
                     onPaste={handleInput}
                     placeholder="Paste your JSON here..."
                 />
-                <button type="button" class="ok" onClick={handleTextareaSubmit}>
+                <Button type="button" variant="primary" onClick={handleTextareaSubmit}>
                     Import pasted JSON
-                </button>
+                </Button>
             </FormGroup>
 
             {/* Error display */}

@@ -7,7 +7,7 @@ import { BrandedToolbar } from "../page";
 import { LoginGate } from "./login";
 import "./documents.css";
 import { useNavigate } from "@solidjs/router";
-import { Dialog, IconButton, Spinner } from "catcolab-ui-components";
+import { Button, Dialog, IconButton, Spinner } from "catcolab-ui-components";
 import X from "lucide-solid/icons/x";
 
 export default function UserDocuments() {
@@ -286,16 +286,16 @@ function RefStubRow(props: { stub: RefStub; onDelete: () => void }) {
                     </p>
                     <div class="permissions-button-container">
                         <div class="permissions-spacer" />
-                        <button
+                        <Button
                             type="button"
-                            class="utility"
+                            variant="utility"
                             onClick={() => setShowDeleteConfirm(false)}
                         >
                             Cancel
-                        </button>
-                        <button type="button" class="danger" onClick={confirmDelete}>
+                        </Button>
+                        <Button type="button" variant="danger" onClick={confirmDelete}>
                             Delete
-                        </button>
+                        </Button>
                     </div>
                 </form>
             </Dialog>
@@ -305,9 +305,9 @@ function RefStubRow(props: { stub: RefStub; onDelete: () => void }) {
                     <p>{errorMessage()}</p>
                     <div class="permissions-button-container">
                         <div class="permissions-spacer" />
-                        <button type="button" class="ok" onClick={() => setShowError(false)}>
+                        <Button type="button" variant="primary" onClick={() => setShowError(false)}>
                             OK
-                        </button>
+                        </Button>
                     </div>
                 </form>
             </Dialog>
