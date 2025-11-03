@@ -24,7 +24,7 @@
     border-radius: 5px;
     position: relative;
     box-sizing: border-box;
-    padding: 0.3em; /* affects .menubar bottom */
+    padding: 0.3em;
 }
 
 .rich-text-editor.focussed {
@@ -34,7 +34,7 @@
 .menubar {
     position: absolute;
     box-sizing: border-box;
-    bottom: calc(100%); /* based on .rich-text-editor padding */
+    bottom: calc(100%);
     right: 5px;
     left: 5px;
     display: flex;
