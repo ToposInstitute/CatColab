@@ -1,13 +1,9 @@
 import { Match, Switch, createMemo } from "solid-js";
 
+import { PanelHeader } from "catcolab-ui-components";
 import type { QualifiedName, ReachabilityProblemData } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
-import {
-    type ColumnSchema,
-    FixedTableEditor,
-    PanelHeader,
-    createNumericalColumn,
-} from "../../components";
+import { type ColumnSchema, FixedTableEditor, createNumericalColumn } from "../../components";
 import type { ReachabilityChecker } from "./checker_types";
 
 import "./simulation.css";

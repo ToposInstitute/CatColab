@@ -3,8 +3,8 @@ import { createEffect, createResource } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { UserProfile } from "catcolab-api";
+import { FormGroup, TextInputField } from "catcolab-ui-components";
 import { useApi } from "../api";
-import { FormGroup, TextInputField } from "../components";
 import { BrandedToolbar } from "../page";
 import { LoginGate } from "./login";
 

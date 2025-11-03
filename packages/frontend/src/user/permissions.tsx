@@ -15,9 +15,9 @@ import { createStore, produce } from "solid-js/store";
 import invariant from "tiny-invariant";
 
 import type { NewPermissions, PermissionLevel, Permissions, UserSummary } from "catcolab-api";
+import { Dialog, FormGroup, IconButton, SelectField, Warning } from "catcolab-ui-components";
 import type { Document } from "catlog-wasm";
 import { type LiveDoc, useApi } from "../api";
-import { Dialog, FormGroup, IconButton, SelectField, Warning } from "../components";
 import { deepCopyJSON } from "../util/deepcopy";
 import { Login } from "./login";
 import { NameUser, UserInput } from "./username";

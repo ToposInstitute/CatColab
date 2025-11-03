@@ -1,16 +1,9 @@
 import { For, Match, Show, Switch, createMemo } from "solid-js";
 
+import { ErrorAlert, Foldable, IconButton, Warning } from "catcolab-ui-components";
 import type { DiagramJudgment, ModelJudgment, QualifiedName } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
-import {
-    type ColumnSchema,
-    ErrorAlert,
-    FixedTableEditor,
-    Foldable,
-    IconButton,
-    Warning,
-    createNumericalColumn,
-} from "../../components";
+import { type ColumnSchema, FixedTableEditor, createNumericalColumn } from "../../components";
 import type { LiveDiagramDocument } from "../../diagram";
 import { NotebookUtils } from "../../notebook";
 import { uniqueIndexArray } from "../../util/indexing";

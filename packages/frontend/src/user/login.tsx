@@ -13,8 +13,8 @@ import { useAuth, useFirebaseApp } from "solid-firebase";
 import { type JSX, Match, Switch } from "solid-js";
 import invariant from "tiny-invariant";
 
+import { IconButton } from "catcolab-ui-components";
 import { useApi } from "../api";
-import { IconButton } from "../components";
 
 import SignInIcon from "lucide-solid/icons/log-in";
 import SignUpIcon from "lucide-solid/icons/user-pen";

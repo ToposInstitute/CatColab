@@ -2,9 +2,9 @@ import { type JSX, createSignal } from "solid-js";
 
 import "./sidebar_layout.css";
 
+import { IconButton } from "catcolab-ui-components";
 import ChevronsLeft from "lucide-solid/icons/chevrons-left";
 import MenuIcon from "lucide-solid/icons/menu";
-import { IconButton } from "../components";
 
 export function SidebarLayout(props: {
     children?: JSX.Element;

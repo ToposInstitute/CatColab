@@ -1,7 +1,7 @@
 import { type JSX, createSignal } from "solid-js";
 
+import { FormGroup, InputField, TextAreaField } from "catcolab-ui-components";
 import type { Document } from "catlog-wasm";
-import { FormGroup, InputField, TextAreaField } from "./form";
 
 import "./json_import.css";
 

@@ -1,7 +1,7 @@
 import { A, useNavigate } from "@solidjs/router";
 import type { JSX } from "solid-js";
 
-import { IconButton } from "../components";
+import { IconButton } from "catcolab-ui-components";
 import type { TheoryMeta } from "../theory";
 import { DefaultAppMenu } from "./menubar";
 

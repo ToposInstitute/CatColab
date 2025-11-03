@@ -5,3 +5,4 @@ packages:
   - "packages/frontend"
   - "packages/notebook-types"
   - "packages/patchwork"
+  - "packages/ui-components"

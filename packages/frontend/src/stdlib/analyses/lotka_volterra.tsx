@@ -1,11 +1,7 @@
+import { Foldable } from "catcolab-ui-components";
 import type { DblModel, LotkaVolterraProblemData, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
-import {
-    type ColumnSchema,
-    FixedTableEditor,
-    Foldable,
-    createNumericalColumn,
-} from "../../components";
+import { type ColumnSchema, FixedTableEditor, createNumericalColumn } from "../../components";
 import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
 import { createModelODEPlot } from "./model_ode_plot";

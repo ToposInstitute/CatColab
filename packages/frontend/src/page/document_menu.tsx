@@ -6,9 +6,9 @@ import { useContext } from "solid-js";
 import { Show } from "solid-js";
 import invariant from "tiny-invariant";
 
+import { IconButton } from "catcolab-ui-components";
 import { createAnalysis } from "../analysis";
 import { type LiveDoc, useApi } from "../api";
-import { IconButton } from "../components";
 import { createDiagram } from "../diagram";
 import {
     CopyJSONMenuItem,

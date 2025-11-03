@@ -1,0 +1,78 @@
+:root {
+    --main-font: Inter, system-ui, Helvetica, Arial, sans-serif;
+    --mono-font: Roboto Mono, monospace;
+
+    --main-color: black;
+    --link-color: dimgray;
+    --topos-primary: rgb(83, 182, 178);
+    --topos-secondary: rgb(128, 49, 78);
+
+    --h1-font-size: 3em;
+    --h2-font-size: 2em;
+    --h3-font-size: 1.5em;
+    --h4-font-size: 1.3em;
+
+    color: var(--main-color);
+    font-family: var(--main-font);
+
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body {
+    margin: 0;
+    font-size: var(--body-font-size);
+}
+
+a {
+    color: var(--link-color);
+    text-decoration: underline;
+    cursor: pointer;
+
+    &[data-disabled] {
+        pointer-events: none;
+        text-decoration: none;
+        cursor: auto;
+    }
+}
+
+input,
+select {
+    background: whitesmoke;
+    border: 1px solid lightgray;
+    border-radius: 6px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    margin: 0;
+    font-weight: normal;
+}
+h1 {
+    font-size: var(--h1-font-size);
+}
+h2 {
+    font-size: var(--h2-font-size);
+}
+h3 {
+    font-size: var(--h3-font-size);
+}
+h4 {
+    font-size: var(--h4-font-size);
+}
+
+.popup {
+    background: white;
+    padding: 0.25em;
+    border: solid lightgray 1px;
+    border-radius: 6px;
+    box-shadow: rgba(15, 15, 15, 0.05) 0px 0px 0px 1px, rgba(15, 15, 15, 0.1) 0px 3px 6px,
+        rgba(15, 15, 15, 0.2) 0px 9px 24px;
+}

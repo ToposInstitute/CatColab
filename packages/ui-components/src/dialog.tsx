@@ -2,7 +2,7 @@ import { Close, Content, Label, Overlay, Portal, Root, Trigger } from "@corvu/di
 import X from "lucide-solid/icons/x";
 import { type Component, type ComponentProps, type JSX, Show } from "solid-js";
 
-import { IconButton } from "../components";
+import { IconButton } from "./icon_button";
 
 import "./dialog.css";
 

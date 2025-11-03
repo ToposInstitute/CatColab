@@ -7,9 +7,9 @@ import { BrandedToolbar } from "../page";
 import { LoginGate } from "./login";
 import "./documents.css";
 import { useNavigate } from "@solidjs/router";
+import { Dialog } from "catcolab-ui-components";
+import { Spinner } from "catcolab-ui-components";
 import X from "lucide-solid/icons/x";
-import { Dialog } from "../components";
-import { Spinner } from "../components/spinner";
 
 export default function UserDocuments() {
     return (
