@@ -144,10 +144,38 @@ jobs:
           name: math-docs
           path: math-docs/output
 
+  build_ui_components:
+    name: Build ui-components Storybook
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build ui-components Storybook
+        run: pnpm --filter ./packages/ui-components run build
+
+      - name: Upload ui-components Storybook
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-components
+          path: packages/ui-components/storybook-static
+
   deploy:
     name: Deploy to Netlify
     runs-on: ubuntu-latest
-    needs: [build_dev_docs, build_frontend, build_rust_docs, build_math-docs]
+    needs: [build_dev_docs, build_frontend, build_rust_docs, build_math-docs, build_ui_components]
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == 'ToposInstitute/CatColab'
     steps:
       - name: Checkout repository
@@ -178,6 +206,7 @@ jobs:
           mv dev-docs site/dev
           mv rust_docs site/dev/rust
           mv frontend_docs site/dev/frontend
+          mv ui-components site/dev/ui-components
           mv math-docs site/math
           echo '/dev/rust /dev/rust/catlog' >> site/_redirects
           echo '/dev/core /dev/rust/catlog' >> site/_redirects
