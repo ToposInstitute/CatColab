@@ -7,8 +7,8 @@ import Link2 from "lucide-solid/icons/link";
 import SignInIcon from "lucide-solid/icons/log-in";
 import Plus from "lucide-solid/icons/plus";
 import Save from "lucide-solid/icons/save";
-import Trash2 from "lucide-solid/icons/trash-2";
 import SignUpIcon from "lucide-solid/icons/user-pen";
+import X from "lucide-solid/icons/x";
 
 import { Button } from "./button";
 
@@ -85,7 +85,7 @@ export const Danger: Story = {
         <div style={{ display: "flex", gap: "8px", "flex-wrap": "wrap" }}>
             <Button variant="danger">Delete</Button>
             <Button variant="danger">
-                <Trash2 size={16} />
+                <X size={16} />
                 Delete
             </Button>
             <Button variant="danger" disabled>
@@ -111,7 +111,7 @@ export const WithIcons: Story = {
                 Copy Link
             </Button>
             <Button variant="danger">
-                <Trash2 size={16} />
+                <X size={16} />
                 Delete
             </Button>
         </div>
@@ -234,7 +234,7 @@ export const AllVariants: Story = {
                         Disabled
                     </Button>
                     <Button variant="danger">
-                        <Trash2 size={16} />
+                        <X size={16} />
                         Remove
                     </Button>
                 </div>

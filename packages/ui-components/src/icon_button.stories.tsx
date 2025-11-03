@@ -7,7 +7,6 @@ import ChevronsRight from "lucide-solid/icons/chevrons-right";
 import Globe from "lucide-solid/icons/globe";
 import Plus from "lucide-solid/icons/plus";
 import Settings from "lucide-solid/icons/settings";
-import Trash2 from "lucide-solid/icons/trash-2";
 import X from "lucide-solid/icons/x";
 
 import { IconButton } from "./icon_button";
@@ -30,7 +29,7 @@ export const Summary: Story = {
                 <Settings size={20} />
             </IconButton>
             <IconButton variant="danger" onClick={() => alert("Delete clicked")} tooltip="Delete">
-                <Trash2 size={20} />
+                <X size={20} />
             </IconButton>
         </div>
     ),
@@ -205,7 +204,7 @@ export const ActionButtons: Story = {
                 <Plus size={20} />
             </IconButton>
             <IconButton variant="danger" onClick={() => alert("Delete")} tooltip="Delete selected">
-                <Trash2 size={20} />
+                <X size={20} />
             </IconButton>
         </div>
     ),
@@ -215,13 +214,10 @@ export const DangerVariant: Story = {
     render: () => (
         <div style={{ display: "flex", gap: "8px", "align-items": "center" }}>
             <IconButton variant="danger" onClick={() => alert("Delete")} tooltip="Delete item">
-                <Trash2 size={20} />
-            </IconButton>
-            <IconButton variant="danger" onClick={() => alert("Close")} tooltip="Close">
                 <X size={20} />
             </IconButton>
             <IconButton variant="danger" onClick={() => alert("Remove")} tooltip="Remove" disabled>
-                <Trash2 size={20} />
+                <X size={20} />
             </IconButton>
         </div>
     ),
