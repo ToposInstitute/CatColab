@@ -41,31 +41,32 @@ async fn new_ref(ctx: AppCtx, content: Value) -> RpcResult<Uuid> {
 
 #[handler(query)]
 async fn get_doc(ctx: AppCtx, ref_id: Uuid) -> RpcResult<RefDoc> {
-    _get_doc(ctx, ref_id).await.into()
-}
-async fn _get_doc(ctx: AppCtx, ref_id: Uuid) -> Result<RefDoc, AppError> {
-    let permissions = auth::permissions(&ctx, ref_id).await?;
-    let max_level = permissions.max_level();
-    let deleted_at = doc::ref_deleted_at(ctx.state.clone(), ref_id).await?;
-    let is_deleted = deleted_at.is_some();
+    async {
+        let permissions = auth::permissions(&ctx, ref_id).await?;
+        let max_level = permissions.max_level();
+        let deleted_at = doc::ref_deleted_at(ctx.state.clone(), ref_id).await?;
+        let is_deleted = deleted_at.is_some();
 
-    if max_level >= Some(PermissionLevel::Write) {
-        let doc_id = doc::doc_id(ctx.state, ref_id).await?;
-        Ok(RefDoc::Live {
-            doc_id,
-            is_deleted,
-            permissions,
-        })
-    } else if max_level >= Some(PermissionLevel::Read) {
-        let content = doc::head_snapshot(ctx.state, ref_id).await?;
-        Ok(RefDoc::Readonly {
-            content,
-            is_deleted,
-            permissions,
-        })
-    } else {
-        Err(AppError::Forbidden(ref_id))
+        if max_level >= Some(PermissionLevel::Write) {
+            let doc_id = doc::doc_id(ctx.state, ref_id).await?;
+            Ok(RefDoc::Live {
+                doc_id,
+                is_deleted,
+                permissions,
+            })
+        } else if max_level >= Some(PermissionLevel::Read) {
+            let content = doc::head_snapshot(ctx.state, ref_id).await?;
+            Ok(RefDoc::Readonly {
+                content,
+                is_deleted,
+                permissions,
+            })
+        } else {
+            Err(AppError::Forbidden(ref_id))
+        }
     }
+    .await
+    .into()
 }
 
 /// Document identified by a ref.
@@ -105,11 +106,12 @@ async fn get_ref_children_stubs(ctx: AppCtx, ref_id: Uuid) -> RpcResult<Vec<RefS
 
 #[handler(query)]
 async fn head_snapshot(ctx: AppCtx, ref_id: Uuid) -> RpcResult<Value> {
-    _head_snapshot(ctx, ref_id).await.into()
-}
-async fn _head_snapshot(ctx: AppCtx, ref_id: Uuid) -> Result<Value, AppError> {
-    auth::authorize(&ctx, ref_id, PermissionLevel::Read).await?;
-    doc::head_snapshot(ctx.state, ref_id).await
+    async {
+        auth::authorize(&ctx, ref_id, PermissionLevel::Read).await?;
+        doc::head_snapshot(ctx.state, ref_id).await
+    }
+    .await
+    .into()
 }
 
 #[handler(mutation)]
@@ -139,14 +141,15 @@ async fn get_permissions(ctx: AppCtx, ref_id: Uuid) -> RpcResult<Permissions> {
 
 #[handler(mutation)]
 async fn set_permissions(ctx: AppCtx, ref_id: Uuid, new: NewPermissions) -> RpcResult<()> {
-    _set_permissions(ctx, ref_id, new).await.into()
-}
-async fn _set_permissions(ctx: AppCtx, ref_id: Uuid, new: NewPermissions) -> Result<(), AppError> {
-    if ctx.user.is_none() {
-        return Err(AppError::Unauthorized);
+    async {
+        if ctx.user.is_none() {
+            return Err(AppError::Unauthorized);
+        }
+        auth::authorize(&ctx, ref_id, PermissionLevel::Own).await?;
+        auth::set_permissions(&ctx.state, ref_id, new).await
     }
-    auth::authorize(&ctx, ref_id, PermissionLevel::Own).await?;
-    auth::set_permissions(&ctx.state, ref_id, new).await
+    .await
+    .into()
 }
 
 #[handler(query)]
