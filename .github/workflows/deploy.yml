@@ -186,9 +186,9 @@ jobs:
           echo '/maths /math/index.xml' >> site/_redirects
           echo '/* /index.html 200' >> site/_redirects
           cd .netlify-env
-          prod_flag=""
-          if [ "$BRANCH_NAME" = "main" ]; then prod_flag="--prod"; fi
-          npx netlify deploy --dir ../site --site ${{ secrets.NETLIFY_SITE_ID }} --auth ${{ secrets.NETLIFY_API_TOKEN }} $prod_flag --json > ../deploy_output.json
+          branch_flag=""
+          if [ "$BRANCH_NAME" = "main" ]; then branch_flag="--prod"; else branch_flag="--alias='branch-$BRANCH_NAME'"; fi
+          npx netlify deploy --dir ../site --site ${{ secrets.NETLIFY_SITE_ID }} --auth ${{ secrets.NETLIFY_API_TOKEN }} $branch_flag --json > ../deploy_output.json
 
       - name: Consolidate and deploy to Production
         if: github.event_name == 'release'
