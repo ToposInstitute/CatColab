@@ -10,7 +10,7 @@ type LinkState = {
     linkStart: number;
     linkEnd: number;
     left: number;
-    top: number;
+    bottom: number;
 };
 
 export function getLinkAtPos(view: EditorView, pos: number): LinkState | null {
@@ -79,7 +79,7 @@ export function getLinkAtPos(view: EditorView, pos: number): LinkState | null {
     const linkEnd = $pos.start() + end;
 
     const title = view.state.doc.textBetween(linkStart, linkEnd, "");
-    const { left, top } = getLinkCoords(view, linkStart);
+    const { left, bottom } = getLinkCoords(view, linkStart);
 
     return {
         href,
@@ -87,7 +87,7 @@ export function getLinkAtPos(view: EditorView, pos: number): LinkState | null {
         linkStart,
         linkEnd,
         left,
-        top,
+        bottom,
     };
 }
 
@@ -96,7 +96,7 @@ function getLinkCoords(
     linkPos: number,
 ): {
     left: number;
-    top: number;
+    bottom: number;
 } {
     const { node, offset } = view.domAtPos(linkPos);
     const linkEl = node.childNodes[offset];
@@ -116,11 +116,12 @@ function getLinkCoords(
 
     const editorRect = view.dom.getBoundingClientRect();
 
-    const top = linkRect.bottom - editorRect.top + 5 + window.scrollY;
+    // XXX: I don't understand why the bottom math works, it doesn't make sense to add linkRect.height
+    const bottom = linkRect.bottom + linkRect.height - editorRect.top + window.scrollY;
     const left = linkRect.left - editorRect.left + window.scrollX;
 
     return {
-        top,
+        bottom,
         left,
     };
 }
@@ -160,7 +161,7 @@ const LinkEditorWidget: Component<LinkEditorWidgetProps> = (props) => {
                     class="link-editor-popup"
                     style={{
                         position: "absolute",
-                        top: `${linkState().top}px`,
+                        top: `${linkState().bottom + 5}px`,
                         left: `${linkState().left}px`,
                         "z-index": 1,
                     }}

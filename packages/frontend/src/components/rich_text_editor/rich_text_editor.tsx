@@ -46,6 +46,8 @@ import "prosemirror-view/style/prosemirror.css";
 import "./rich_text_editor.css";
 
 import Bold from "lucide-solid/icons/bold";
+import ChevronDown from "lucide-solid/icons/chevron-down";
+import ChevronUp from "lucide-solid/icons/chevron-up";
 import Indent from "lucide-solid/icons/indent";
 import Italic from "lucide-solid/icons/italic";
 import Link from "lucide-solid/icons/link";
@@ -91,6 +93,7 @@ export const RichTextEditor = (
 ) => {
     let editorRoot!: HTMLDivElement;
     let menuRoot!: HTMLDivElement;
+    let reopenButtonRoot!: HTMLDivElement;
 
     // flags for determining if the menu bar is visible
     const [isEditorFocused, setEditorFocused] = createSignal(false);
@@ -107,6 +110,7 @@ export const RichTextEditor = (
         onDecreaseIndent: null,
         onHeadingClicked: null,
         onMathClicked: null,
+        onHideMenubar: null,
     });
 
     const [markStates, setMarkStates] = createSignal<MarkStates>({
@@ -191,13 +195,17 @@ export const RichTextEditor = (
                 },
                 focus: () => {
                     setEditorFocused(true);
+                    setMenuActive(true);
                     props.onFocus?.();
                     return false;
                 },
                 focusout: (view, event) => {
                     const relatedTarget = event.relatedTarget as Node | null;
-                    // Ignore focus shifts into the menu bar
-                    if (relatedTarget && menuRoot.contains(relatedTarget)) {
+                    // Ignore focus shifts into the menu bar and reopen button
+                    if (
+                        (relatedTarget && menuRoot.contains(relatedTarget)) ||
+                        (relatedTarget && reopenButtonRoot.contains(relatedTarget))
+                    ) {
                         // prevent the editor from losing focus and clearing the selection.
                         view.focus();
                         return true;
@@ -244,21 +252,40 @@ export const RichTextEditor = (
                 }
             },
             onMathClicked: () => insertMathDisplayCmd(view.state, view.dispatch),
+            onHideMenubar: () => {
+                // Keep editor focused, just hide the menubar
+                setMenuActive(false);
+            },
         });
 
         onCleanup(() => view.destroy());
     });
 
     return (
-        <div class={`rich-text-editor ${isEditorFocused() || isMenuActive() ? "focussed" : ""}`}>
-            <Show when={isEditorFocused() || isMenuActive()}>
-                <div
-                    ref={menuRoot}
-                    onFocusIn={() => setMenuActive(true)}
-                    onFocusOut={() => setMenuActive(false)}
+        <div class={`rich-text-editor ${isEditorFocused() ? "focussed" : ""}`}>
+            <Show when={isEditorFocused()}>
+                <Show
+                    when={isMenuActive()}
+                    fallback={
+                        <div ref={reopenButtonRoot} class="menubar-reopen-button-wrapper">
+                            <TooltipButton
+                                callback={() => setMenuActive(true)}
+                                tooltip="Show menubar"
+                            >
+                                <ChevronUp />
+                            </TooltipButton>
+                        </div>
+                    }
                 >
-                    <MenuBar {...menuControls()} {...markStates()} headingLevel={headingLevel()} />
-                </div>
+                    <MenuBar
+                        {...menuControls()}
+                        {...markStates()}
+                        headingLevel={headingLevel()}
+                        ref={menuRoot}
+                        onFocusIn={() => setMenuActive(true)}
+                        onFocusOut={() => setMenuActive(false)}
+                    />
+                </Show>
             </Show>
             <div ref={editorRoot} />
         </div>
@@ -313,69 +340,94 @@ type MenuControls = {
     onDecreaseIndent: (() => void) | null;
     onHeadingClicked: ((level: number) => void) | null;
     onMathClicked: (() => void) | null;
+    onHideMenubar: (() => void) | null;
 };
 
-export function MenuBar(props: MenuControls & MarkStates & { headingLevel: number | null }) {
+export function MenuBar(
+    props: MenuControls &
+        MarkStates & {
+            headingLevel: number | null;
+            ref?: HTMLDivElement;
+            onFocusIn?: () => void;
+            onFocusOut?: () => void;
+        },
+) {
     return (
-        <div id="menubar" class="menubar">
-            <TooltipButton
-                callback={props.onBoldClicked}
-                isActive={props.isBoldActive}
-                tooltip="Bold (shortcut: Mod+b)"
-            >
-                <Bold />
-            </TooltipButton>
-            <TooltipButton
-                callback={props.onItalicClicked}
-                isActive={props.isEmActive}
-                tooltip="Italics (shortcut: Mod+i)"
-            >
-                <Italic />
-            </TooltipButton>
-            <TooltipButton callback={props.onLinkClicked} tooltip="Add Link">
-                <Link />
-            </TooltipButton>
-            <TooltipButton callback={props.onMathClicked} tooltip="KaTeX block (shortcut: Mod+m)">
-                <Sigma />
-            </TooltipButton>
-
-            <TooltipButton callback={props.onBlockQuoteClicked} tooltip="Blockquote">
-                <TextQuote />
-            </TooltipButton>
-
-            <TooltipButton callback={props.onToggleOrderedList} tooltip="Ordered list">
-                <ListOrdered />
-            </TooltipButton>
-
-            <TooltipButton callback={props.onToggleBulletList} tooltip="Bullet list">
-                <List />
-            </TooltipButton>
-
-            <TooltipButton callback={props.onIncreaseIndent} tooltip="Indent">
-                <Indent />
-            </TooltipButton>
-
-            <TooltipButton callback={props.onDecreaseIndent} tooltip="Outdent">
-                <Outdent />
-            </TooltipButton>
-
-            <Show when={props.onHeadingClicked}>
-                <select
-                    value={props.headingLevel ?? 0}
-                    onInput={(e) => {
-                        const lvl = Number((e.currentTarget as HTMLSelectElement).value);
-                        props.onHeadingClicked?.(lvl);
-                    }}
+        <div
+            id="menubar"
+            class="menubar"
+            ref={props.ref}
+            onFocusIn={props.onFocusIn}
+            onFocusOut={props.onFocusOut}
+        >
+            <div class="menubar-left">
+                <TooltipButton
+                    callback={props.onBoldClicked}
+                    isActive={props.isBoldActive}
+                    tooltip="Bold (shortcut: Mod+b)"
                 >
-                    <option value={0}>Paragraph</option>
-                    <option value={1}>Heading 1</option>
-                    <option value={2}>Heading 2</option>
-                    <option value={3}>Heading 3</option>
-                    <option value={4}>Heading 4</option>
-                    <option value={5}>Heading 5</option>
-                    <option value={6}>Heading 6</option>
-                </select>
-            </Show>
+                    <Bold />
+                </TooltipButton>
+                <TooltipButton
+                    callback={props.onItalicClicked}
+                    isActive={props.isEmActive}
+                    tooltip="Italics (shortcut: Mod+i)"
+                >
+                    <Italic />
+                </TooltipButton>
+                <TooltipButton callback={props.onLinkClicked} tooltip="Add Link">
+                    <Link />
+                </TooltipButton>
+                <TooltipButton
+                    callback={props.onMathClicked}
+                    tooltip="KaTeX block (shortcut: Mod+m)"
+                >
+                    <Sigma />
+                </TooltipButton>
+
+                <TooltipButton callback={props.onBlockQuoteClicked} tooltip="Blockquote">
+                    <TextQuote />
+                </TooltipButton>
+
+                <TooltipButton callback={props.onToggleOrderedList} tooltip="Ordered list">
+                    <ListOrdered />
+                </TooltipButton>
+
+                <TooltipButton callback={props.onToggleBulletList} tooltip="Bullet list">
+                    <List />
+                </TooltipButton>
+
+                <TooltipButton callback={props.onIncreaseIndent} tooltip="Indent">
+                    <Indent />
+                </TooltipButton>
+
+                <TooltipButton callback={props.onDecreaseIndent} tooltip="Outdent">
+                    <Outdent />
+                </TooltipButton>
+
+                <Show when={props.onHeadingClicked}>
+                    <select
+                        value={props.headingLevel ?? 0}
+                        onInput={(e) => {
+                            const lvl = Number((e.currentTarget as HTMLSelectElement).value);
+                            props.onHeadingClicked?.(lvl);
+                        }}
+                    >
+                        <option value={0}>Paragraph</option>
+                        <option value={1}>Heading 1</option>
+                        <option value={2}>Heading 2</option>
+                        <option value={3}>Heading 3</option>
+                        <option value={4}>Heading 4</option>
+                        <option value={5}>Heading 5</option>
+                        <option value={6}>Heading 6</option>
+                    </select>
+                </Show>
+            </div>
+            <div class="menubar-right">
+                <TooltipButton callback={props.onHideMenubar} tooltip="Hide menubar">
+                    <ChevronDown />
+                </TooltipButton>
+            </div>
         </div>
     );
 }
