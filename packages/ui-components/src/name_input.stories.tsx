@@ -5,7 +5,7 @@ import { Button } from "./button";
 import { NameInput } from "./name_input";
 
 const meta = {
-    title: "Components/NameInput",
+    title: "NameInput",
     component: NameInput,
 } satisfies Meta<typeof NameInput>;
 

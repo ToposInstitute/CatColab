@@ -11,7 +11,7 @@ import type { Completion } from "./completions";
 import { InlineInput } from "./inline_input";
 
 const meta = {
-    title: "Components/InlineInput",
+    title: "InlineInput",
     component: InlineInput,
 } satisfies Meta<typeof InlineInput>;
 

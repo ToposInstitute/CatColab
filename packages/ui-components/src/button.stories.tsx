@@ -13,7 +13,7 @@ import SignUpIcon from "lucide-solid/icons/user-pen";
 import { Button } from "./button";
 
 const meta = {
-    title: "Components/Button",
+    title: "Buttons/Button",
     component: Button,
 } satisfies Meta<typeof Button>;
 

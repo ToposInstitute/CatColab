@@ -4,7 +4,7 @@ import type { Meta, StoryObj } from "storybook-solidjs-vite";
 import { ResizableHandle } from "./resizable";
 
 const meta = {
-    title: "Components/ResizableHandle",
+    title: "ResizableHandle",
     component: ResizableHandle,
 } satisfies Meta<typeof ResizableHandle>;
 

@@ -4,7 +4,7 @@ import type { Meta, StoryObj } from "storybook-solidjs-vite";
 import { Dialog } from "./dialog";
 
 const meta = {
-    title: "Components/Dialog",
+    title: "Dialog",
     component: Dialog,
 } satisfies Meta<typeof Dialog>;
 

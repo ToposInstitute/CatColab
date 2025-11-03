@@ -9,7 +9,7 @@ import Trash2 from "lucide-solid/icons/trash-2";
 import { Completions } from "./completions";
 
 const meta = {
-    title: "Components/Completions",
+    title: "Completions",
     component: Completions,
 } satisfies Meta<typeof Completions>;
 

@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "storybook-solidjs-vite";
 import { ErrorAlert, Note, Question, Warning } from "../src/alert";
 
 const meta = {
-    title: "Components/Alert",
+    title: "Alert",
 } satisfies Meta<typeof Warning>;
 
 export default meta;

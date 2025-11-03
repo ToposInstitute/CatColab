@@ -13,7 +13,7 @@ import X from "lucide-solid/icons/x";
 import { IconButton } from "./icon_button";
 
 const meta = {
-    title: "Components/IconButton",
+    title: "Buttons/IconButton",
     component: IconButton,
 } satisfies Meta<typeof IconButton>;
 

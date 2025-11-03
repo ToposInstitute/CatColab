@@ -5,7 +5,7 @@ import { Button } from "./button";
 import { Spinner } from "./spinner";
 
 const meta = {
-    title: "Components/Spinner",
+    title: "Spinner",
     component: Spinner,
 } satisfies Meta<typeof Spinner>;
 
