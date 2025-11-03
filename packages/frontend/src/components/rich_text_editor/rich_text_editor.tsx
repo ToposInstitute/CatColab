@@ -47,6 +47,7 @@ import "./rich_text_editor.css";
 
 import Bold from "lucide-solid/icons/bold";
 import ChevronDown from "lucide-solid/icons/chevron-down";
+import ChevronUp from "lucide-solid/icons/chevron-up";
 import Indent from "lucide-solid/icons/indent";
 import Italic from "lucide-solid/icons/italic";
 import Link from "lucide-solid/icons/link";
@@ -92,6 +93,7 @@ export const RichTextEditor = (
 ) => {
     let editorRoot!: HTMLDivElement;
     let menuRoot!: HTMLDivElement;
+    let reopenButtonRoot!: HTMLDivElement;
 
     // flags for determining if the menu bar is visible
     const [isEditorFocused, setEditorFocused] = createSignal(false);
@@ -193,6 +195,7 @@ export const RichTextEditor = (
                 },
                 focus: () => {
                     setEditorFocused(true);
+                    setMenuActive(true);
                     props.onFocus?.();
                     return false;
                 },
@@ -200,6 +203,17 @@ export const RichTextEditor = (
                     const relatedTarget = event.relatedTarget as Node | null;
                     // Ignore focus shifts into the menu bar
                     if (relatedTarget && menuRoot.contains(relatedTarget)) {
+                        // prevent the editor from losing focus and clearing the selection.
+                        view.focus();
+                        return true;
+                    }
+
+                    // Ignore focus shifts into the reopen button
+                    if (
+                        relatedTarget &&
+                        reopenButtonRoot &&
+                        reopenButtonRoot.contains(relatedTarget)
+                    ) {
                         // prevent the editor from losing focus and clearing the selection.
                         view.focus();
                         return true;
@@ -247,10 +261,7 @@ export const RichTextEditor = (
             },
             onMathClicked: () => insertMathDisplayCmd(view.state, view.dispatch),
             onHideMenubar: () => {
-                if (view.dom instanceof HTMLElement) {
-                    view.dom.blur();
-                }
-                setEditorFocused(false);
+                // Keep editor focused, just hide the menubar
                 setMenuActive(false);
             },
         });
@@ -259,15 +270,30 @@ export const RichTextEditor = (
     });
 
     return (
-        <div class={`rich-text-editor ${isEditorFocused() || isMenuActive() ? "focussed" : ""}`}>
-            <Show when={isEditorFocused() || isMenuActive()}>
-                <div
-                    ref={menuRoot}
-                    onFocusIn={() => setMenuActive(true)}
-                    onFocusOut={() => setMenuActive(false)}
+        <div class={`rich-text-editor ${isEditorFocused() ? "focussed" : ""}`}>
+            <Show when={isEditorFocused()}>
+                <Show
+                    when={isMenuActive()}
+                    fallback={
+                        <div ref={reopenButtonRoot} class="menubar-reopen-button-wrapper">
+                            <TooltipButton
+                                callback={() => setMenuActive(true)}
+                                tooltip="Show menubar"
+                            >
+                                <ChevronUp />
+                            </TooltipButton>
+                        </div>
+                    }
                 >
-                    <MenuBar {...menuControls()} {...markStates()} headingLevel={headingLevel()} />
-                </div>
+                    <MenuBar
+                        {...menuControls()}
+                        {...markStates()}
+                        headingLevel={headingLevel()}
+                        ref={menuRoot}
+                        onFocusIn={() => setMenuActive(true)}
+                        onFocusOut={() => setMenuActive(false)}
+                    />
+                </Show>
             </Show>
             <div ref={editorRoot} />
         </div>
@@ -325,9 +351,23 @@ type MenuControls = {
     onHideMenubar: (() => void) | null;
 };
 
-export function MenuBar(props: MenuControls & MarkStates & { headingLevel: number | null }) {
+export function MenuBar(
+    props: MenuControls &
+        MarkStates & {
+            headingLevel: number | null;
+            ref?: HTMLDivElement;
+            onFocusIn?: () => void;
+            onFocusOut?: () => void;
+        },
+) {
     return (
-        <div id="menubar" class="menubar">
+        <div
+            id="menubar"
+            class="menubar"
+            ref={props.ref}
+            onFocusIn={props.onFocusIn}
+            onFocusOut={props.onFocusOut}
+        >
             <div class="menubar-left">
                 <TooltipButton
                     callback={props.onBoldClicked}

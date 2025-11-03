@@ -31,14 +31,10 @@
     border: 1px solid grey;
 }
 
-.rich-text-editor > div {
-    position: relative;
-}
-
 .menubar {
     position: absolute;
     box-sizing: border-box;
-    bottom: calc(100% + 0.3em); /* based on .rich-text-editor padding */
+    bottom: calc(100%); /* based on .rich-text-editor padding */
     right: 5px;
     left: 5px;
     display: flex;
@@ -71,21 +67,42 @@
     border-radius: 0 5px 0 0;
 }
 
+.menubar-reopen-button-wrapper {
+    position: absolute;
+    top: -1px;
+    right: 2px;
+    z-index: 1;
+
+    & button {
+        padding: 0;    
+        margin: 3px;
+        box-sizing: border-box;
+        border-radius: 5px;
+    }
+}
+
+.menubar-reopen-button:hover {
+    background-color: #ccc;
+}
+
 .menubar select .menubar button {
     transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
 .menubar select:hover,
+.menubar-reopen-button-wrapper button:hover,
 .menubar button:hover {
     background-color: #ccc;
 }
 
+.menubar-reopen-button-wrapper button,
 .menubar button {
     overflow: hidden;
     padding: 3px;
     border: none;
     cursor: pointer;
     background-color: transparent; /* override default on firefox */
+    transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
 .menubar button.active {
