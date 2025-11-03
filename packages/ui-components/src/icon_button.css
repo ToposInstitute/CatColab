@@ -26,7 +26,6 @@
     background: transparent;
     cursor: pointer;
     border-radius: 4px;
-    color: #666;
     margin: 0;
 
     &:hover:enabled {
