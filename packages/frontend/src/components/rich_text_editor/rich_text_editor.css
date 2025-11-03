@@ -85,6 +85,7 @@
     padding: 3px;
     border: none;
     cursor: pointer;
+    background-color: transparent; /* override default on firefox */
 }
 
 .menubar button.active {
