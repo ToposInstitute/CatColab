@@ -201,18 +201,10 @@ export const RichTextEditor = (
                 },
                 focusout: (view, event) => {
                     const relatedTarget = event.relatedTarget as Node | null;
-                    // Ignore focus shifts into the menu bar
-                    if (relatedTarget && menuRoot.contains(relatedTarget)) {
-                        // prevent the editor from losing focus and clearing the selection.
-                        view.focus();
-                        return true;
-                    }
-
-                    // Ignore focus shifts into the reopen button
+                    // Ignore focus shifts into the menu bar and reopen button
                     if (
-                        relatedTarget &&
-                        reopenButtonRoot &&
-                        reopenButtonRoot.contains(relatedTarget)
+                        (relatedTarget && menuRoot.contains(relatedTarget)) ||
+                        (relatedTarget && reopenButtonRoot.contains(relatedTarget))
                     ) {
                         // prevent the editor from losing focus and clearing the selection.
                         view.focus();

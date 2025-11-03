@@ -116,7 +116,7 @@ function getLinkCoords(
 
     const editorRect = view.dom.getBoundingClientRect();
 
-    // XXX: I'm don't fully understand this math works, it doesn't make sense to add linkRect.height
+    // XXX: I don't understand why the bottom math works, it doesn't make sense to add linkRect.height
     const bottom = linkRect.bottom + linkRect.height - editorRect.top + window.scrollY;
     const left = linkRect.left - editorRect.left + window.scrollX;
 
