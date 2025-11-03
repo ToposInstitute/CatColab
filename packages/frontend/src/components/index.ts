@@ -1,4 +1,3 @@
-export * from "./fixed_table_editor";
 export * from "./id_input";
 export * from "./inline_input";
 export * from "./input_options";

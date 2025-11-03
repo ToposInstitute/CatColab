@@ -23,6 +23,9 @@ importers:
       '@modular-forms/solid':
         specifier: ^0.24.1
         version: 0.24.1(solid-js@1.9.10)(typescript@5.9.3)
+      '@solid-primitives/destructure':
+        specifier: ^0.2.1
+        version: 0.2.2(solid-js@1.9.10)
       lucide-solid:
         specifier: ^0.471.0
         version: 0.471.0(solid-js@1.9.10)
@@ -601,6 +604,11 @@ packages:
     resolution: {integrity: sha512-TAcgQh2sSkykPRWLrdyy2AiceMckNf5loITqXxFI5VuQjS5tSuw3WlwdN8qv8vzjLAUTvYaH/mVjSFpbkFbpTg==}
     cpu: [x64]
     os: [win32]
+
+  '@solid-primitives/destructure@0.2.2':
+    resolution: {integrity: sha512-ZMpWUdzAxH/ezFNXCea+h2TWgjBsVh43Ad8oRG7qzDMOGjsLvS3pbaG++8oB3DtF2G4bfDiangKz0cxgM4MYww==}
+    peerDependencies:
+      solid-js: ^1.6.12
 
   '@solid-primitives/event-listener@2.4.3':
     resolution: {integrity: sha512-h4VqkYFv6Gf+L7SQj+Y6puigL/5DIi7x5q07VZET7AWcS+9/G3WfIE9WheniHWJs51OEkRB43w6lDys5YeFceg==}
@@ -2075,6 +2083,11 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.52.5':
     optional: true
+
+  '@solid-primitives/destructure@0.2.2(solid-js@1.9.10)':
+    dependencies:
+      '@solid-primitives/utils': 6.3.2(solid-js@1.9.10)
+      solid-js: 1.9.10
 
   '@solid-primitives/event-listener@2.4.3(solid-js@1.9.10)':
     dependencies:
