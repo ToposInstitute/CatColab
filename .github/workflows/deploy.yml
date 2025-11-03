@@ -239,7 +239,8 @@ jobs:
         if: env.BRANCH_NAME != 'main' && (github.event_name == 'push' || github.event_name == 'pull_request')
         with:
           message: |
-            Preview url: ${{ steps.url_preview.outputs.NETLIFY_PREVIEW_URL }}
+              # <a href="${{ steps.url_preview.outputs.NETLIFY_PREVIEW_URL }}">**Netlify CatColab Preview**</a>
+              :arrow_right: <sub><a href="${{ steps.url_preview.outputs.NETLIFY_PREVIEW_URL }}/dev/ui-components">UI Components</a><sub>
 
   deploy_backend:
     name: Deploy backend to AWS
