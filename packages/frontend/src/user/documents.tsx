@@ -7,8 +7,7 @@ import { BrandedToolbar } from "../page";
 import { LoginGate } from "./login";
 import "./documents.css";
 import { useNavigate } from "@solidjs/router";
-import { Dialog } from "catcolab-ui-components";
-import { Spinner } from "catcolab-ui-components";
+import { Dialog, IconButton, Spinner } from "catcolab-ui-components";
 import X from "lucide-solid/icons/x";
 
 export default function UserDocuments() {
@@ -251,14 +250,13 @@ function RefStubRow(props: { stub: RefStub; onDelete: () => void }) {
                 </td>
                 <td class="delete-cell">
                     {canDelete && (
-                        <button
-                            class="delete-button"
+                        <IconButton
+                            variant="danger"
                             onClick={handleDeleteClick}
-                            title="Delete document"
-                            type="button"
+                            tooltip="Delete document"
                         >
                             <X size={16} />
-                        </button>
+                        </IconButton>
                     )}
                 </td>
             </tr>

@@ -6,6 +6,7 @@ import FileText from "lucide-solid/icons/file-text";
 import PieChart from "lucide-solid/icons/pie-chart";
 import Table from "lucide-solid/icons/table";
 
+import { Button } from "./button";
 import type { Completion } from "./completions";
 import { InlineInput } from "./inline_input";
 
@@ -123,13 +124,13 @@ export const WithActiveState: Story = {
                     isActive={isActive()}
                     hasFocused={() => setIsActive(true)}
                 />
-                <button
+                <Button
                     type="button"
                     onClick={() => setIsActive(!isActive())}
                     style={{ "margin-top": "8px" }}
                 >
                     {isActive() ? "Deactivate" : "Activate"} Input
-                </button>
+                </Button>
             </div>
         );
     },

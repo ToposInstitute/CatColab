@@ -1,4 +1,5 @@
 export * from "./alert";
+export * from "./button";
 export * from "./completions";
 export * from "./dialog";
 export * from "./fixed_table_editor";

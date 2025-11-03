@@ -29,7 +29,7 @@ export const Summary: Story = {
             <IconButton onClick={() => alert("Settings clicked")} tooltip="Settings">
                 <Settings size={20} />
             </IconButton>
-            <IconButton onClick={() => alert("Delete clicked")} tooltip="Delete">
+            <IconButton variant="danger" onClick={() => alert("Delete clicked")} tooltip="Delete">
                 <Trash2 size={20} />
             </IconButton>
         </div>
@@ -204,7 +204,23 @@ export const ActionButtons: Story = {
             <IconButton onClick={() => alert("Create")} tooltip="Create new">
                 <Plus size={20} />
             </IconButton>
-            <IconButton onClick={() => alert("Delete")} tooltip="Delete selected">
+            <IconButton variant="danger" onClick={() => alert("Delete")} tooltip="Delete selected">
+                <Trash2 size={20} />
+            </IconButton>
+        </div>
+    ),
+};
+
+export const DangerVariant: Story = {
+    render: () => (
+        <div style={{ display: "flex", gap: "8px", "align-items": "center" }}>
+            <IconButton variant="danger" onClick={() => alert("Delete")} tooltip="Delete item">
+                <Trash2 size={20} />
+            </IconButton>
+            <IconButton variant="danger" onClick={() => alert("Close")} tooltip="Close">
+                <X size={20} />
+            </IconButton>
+            <IconButton variant="danger" onClick={() => alert("Remove")} tooltip="Remove" disabled>
                 <Trash2 size={20} />
             </IconButton>
         </div>

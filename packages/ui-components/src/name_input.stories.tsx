@@ -1,6 +1,7 @@
 import { For, createSignal } from "solid-js";
 import type { Meta, StoryObj } from "storybook-solidjs-vite";
 
+import { Button } from "./button";
 import { NameInput } from "./name_input";
 
 const meta = {
@@ -91,13 +92,13 @@ export const WithActiveState: Story = {
                     isActive={isActive()}
                     hasFocused={() => setIsActive(true)}
                 />
-                <button
+                <Button
                     type="button"
                     onClick={() => setIsActive(!isActive())}
                     style={{ "margin-top": "8px" }}
                 >
                     {isActive() ? "Deactivate" : "Activate"}
-                </button>
+                </Button>
             </div>
         );
     },

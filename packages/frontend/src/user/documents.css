@@ -118,25 +118,3 @@
 .delete-cell {
     padding: 8px !important;
 }
-
-.delete-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 4px;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: background-color 0.2s ease;
-    color: #666;
-}
-
-.delete-button:hover {
-    background-color: #fee;
-    color: #c00;
-}
-
-.delete-button:active {
-    background-color: #fdd;
-}

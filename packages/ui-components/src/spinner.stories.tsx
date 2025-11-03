@@ -1,6 +1,7 @@
 import { Show, createSignal } from "solid-js";
 import type { Meta, StoryObj } from "storybook-solidjs-vite";
 
+import { Button } from "./button";
 import { Spinner } from "./spinner";
 
 const meta = {
@@ -30,13 +31,13 @@ export const LoadingState: Story = {
 
         return (
             <div style={{ padding: "16px" }}>
-                <button
+                <Button
                     type="button"
                     onClick={() => setIsLoading(!isLoading())}
                     style={{ "margin-bottom": "16px" }}
                 >
                     {isLoading() ? "Stop Loading" : "Start Loading"}
-                </button>
+                </Button>
                 <div
                     style={{
                         display: "flex",
