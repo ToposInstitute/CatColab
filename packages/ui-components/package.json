@@ -16,9 +16,11 @@
     "dependencies": {
         "@corvu/dialog": "^0.2.4",
         "@corvu/disclosure": "^0.2.1",
+        "@corvu/popover": "^0.2.0",
         "@corvu/resizable": "^0.2.4",
         "@kobalte/core": "^0.13.10",
         "@modular-forms/solid": "^0.24.1",
+        "@solid-primitives/active-element": "^2.1.1",
         "@solid-primitives/destructure": "^0.2.1",
         "lucide-solid": "^0.471.0",
         "solid-js": "^1.9.10"

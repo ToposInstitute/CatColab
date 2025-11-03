@@ -14,12 +14,11 @@ import {
 } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { IconButton, ResizableHandle } from "catcolab-ui-components";
+import { IconButton, InlineInput, ResizableHandle } from "catcolab-ui-components";
 import { type LiveAnalysisDocument, getLiveAnalysis } from "../analysis";
 import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
 import { AnalysisInfo } from "../analysis/analysis_info";
 import { type Api, type DocumentType, useApi } from "../api";
-import { InlineInput } from "../components";
 import { type LiveDiagramDocument, getLiveDiagram } from "../diagram";
 import { DiagramNotebookEditor } from "../diagram/diagram_editor";
 import { DiagramInfo } from "../diagram/diagram_info";

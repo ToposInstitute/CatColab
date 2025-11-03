@@ -1,6 +1,10 @@
 import { createEffect, createSignal, splitProps } from "solid-js";
 
-import { InlineInput, type InlineInputErrorStatus, type InlineInputOptions } from "./inline_input";
+import {
+    InlineInput,
+    type InlineInputErrorStatus,
+    type InlineInputOptions,
+} from "catcolab-ui-components";
 
 /** Input a human-readable name for a formal element.
 

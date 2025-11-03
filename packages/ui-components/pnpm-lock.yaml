@@ -14,6 +14,9 @@ importers:
       '@corvu/disclosure':
         specifier: ^0.2.1
         version: 0.2.2(solid-js@1.9.10)
+      '@corvu/popover':
+        specifier: ^0.2.0
+        version: 0.2.0(solid-js@1.9.10)
       '@corvu/resizable':
         specifier: ^0.2.4
         version: 0.2.5(solid-js@1.9.10)
@@ -23,6 +26,9 @@ importers:
       '@modular-forms/solid':
         specifier: ^0.24.1
         version: 0.24.1(solid-js@1.9.10)(typescript@5.9.3)
+      '@solid-primitives/active-element':
+        specifier: ^2.1.1
+        version: 2.1.3(solid-js@1.9.10)
       '@solid-primitives/destructure':
         specifier: ^0.2.1
         version: 0.2.2(solid-js@1.9.10)
@@ -254,8 +260,18 @@ packages:
     peerDependencies:
       solid-js: ^1.8
 
+  '@corvu/popover@0.2.0':
+    resolution: {integrity: sha512-zynRWyRV7mk2uX7t/COQL4OEa6H6FBgOxxlXLQJ1BV8hTiBJwmfAN/yB/9jy+zlp0G9vp64E8VdsNn6gxUEUEQ==}
+    peerDependencies:
+      solid-js: ^1.8
+
   '@corvu/resizable@0.2.5':
     resolution: {integrity: sha512-psax38DraM9SXtaNh/sfvizGO6xLCL4sqT4rWYlMZP5ZsUM05Q30tvXgnTo2roQFNOz2e06WofhDsBXTjY6g4A==}
+    peerDependencies:
+      solid-js: ^1.8
+
+  '@corvu/utils@0.3.2':
+    resolution: {integrity: sha512-ZWlyWEE8qV9+CB9OAyo2bTrZGXQN9ZeM+JfYv89zoR+lRACKTDuoOZEdiyL8Uc7U5dUSH1uTqKhTTnaHWb+wZA==}
     peerDependencies:
       solid-js: ^1.8
 
@@ -604,6 +620,11 @@ packages:
     resolution: {integrity: sha512-TAcgQh2sSkykPRWLrdyy2AiceMckNf5loITqXxFI5VuQjS5tSuw3WlwdN8qv8vzjLAUTvYaH/mVjSFpbkFbpTg==}
     cpu: [x64]
     os: [win32]
+
+  '@solid-primitives/active-element@2.1.3':
+    resolution: {integrity: sha512-9t5K4aR2naVDj950XU8OjnLgOg94a8k5wr6JNOPK+N5ESLsJDq42c1ZP8UKpewi1R+wplMMxiM6OPKRzbxJY7A==}
+    peerDependencies:
+      solid-js: ^1.6.12
 
   '@solid-primitives/destructure@0.2.2':
     resolution: {integrity: sha512-ZMpWUdzAxH/ezFNXCea+h2TWgjBsVh43Ad8oRG7qzDMOGjsLvS3pbaG++8oB3DtF2G4bfDiangKz0cxgM4MYww==}
@@ -1832,9 +1853,21 @@ snapshots:
       solid-js: 1.9.10
       solid-presence: 0.2.0(solid-js@1.9.10)
 
+  '@corvu/popover@0.2.0(solid-js@1.9.10)':
+    dependencies:
+      '@corvu/dialog': 0.2.4(solid-js@1.9.10)
+      '@corvu/utils': 0.3.2(solid-js@1.9.10)
+      '@floating-ui/dom': 1.7.4
+      solid-js: 1.9.10
+
   '@corvu/resizable@0.2.5(solid-js@1.9.10)':
     dependencies:
       '@corvu/utils': 0.4.2(solid-js@1.9.10)
+      solid-js: 1.9.10
+
+  '@corvu/utils@0.3.2(solid-js@1.9.10)':
+    dependencies:
+      '@floating-ui/dom': 1.7.4
       solid-js: 1.9.10
 
   '@corvu/utils@0.4.2(solid-js@1.9.10)':
@@ -2083,6 +2116,12 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.52.5':
     optional: true
+
+  '@solid-primitives/active-element@2.1.3(solid-js@1.9.10)':
+    dependencies:
+      '@solid-primitives/event-listener': 2.4.3(solid-js@1.9.10)
+      '@solid-primitives/utils': 6.3.2(solid-js@1.9.10)
+      solid-js: 1.9.10
 
   '@solid-primitives/destructure@0.2.2(solid-js@1.9.10)':
     dependencies:
