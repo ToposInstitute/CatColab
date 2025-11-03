@@ -10,6 +10,7 @@
     "scripts": {
         "format": "biome format --write",
         "lint": "biome lint --write && biome check --write",
+        "ci": "biome ci && tsc --noEmit",
         "dev": "storybook dev -p 6006 --no-version-updates --no-open",
         "build": "NODE_ENV=production storybook build",
         "test": "vitest --project=storybook"
