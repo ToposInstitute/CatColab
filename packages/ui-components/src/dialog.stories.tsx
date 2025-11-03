@@ -1,6 +1,7 @@
 import { createSignal } from "solid-js";
 import type { Meta, StoryObj } from "storybook-solidjs-vite";
 
+import { Button } from "./button";
 import { Dialog } from "./dialog";
 
 const meta = {
@@ -16,9 +17,7 @@ export const Summary: Story = {
         const [open, setOpen] = createSignal(false);
         return (
             <div>
-                <button type="button" onClick={() => setOpen(true)}>
-                    Open Dialog
-                </button>
+                <Button onClick={() => setOpen(true)}>Open Dialog</Button>
                 <Dialog open={open()} onOpenChange={setOpen} title="Example Dialog">
                     <p>This is a dialog component. It overlays content on top of the page.</p>
                     <p>Click the X button or outside the dialog to close it.</p>
@@ -34,9 +33,7 @@ export const Basic: Story = {
         const [open, setOpen] = createSignal(false);
         return (
             <div>
-                <button type="button" onClick={() => setOpen(true)}>
-                    Open Basic Dialog
-                </button>
+                <Button onClick={() => setOpen(true)}>Open Basic Dialog</Button>
                 <Dialog open={open()} onOpenChange={setOpen} title="Basic Dialog">
                     <p>This is a basic dialog with a title and content.</p>
                 </Dialog>
@@ -58,9 +55,7 @@ export const WithForm: Story = {
 
         return (
             <div>
-                <button type="button" onClick={() => setOpen(true)}>
-                    Open Form Dialog
-                </button>
+                <Button onClick={() => setOpen(true)}>Open Form Dialog</Button>
                 <Dialog open={open()} onOpenChange={setOpen} title="Enter Your Name">
                     <form onSubmit={handleSubmit} style={{ padding: "16px" }}>
                         <div style={{ "margin-bottom": "12px" }}>
@@ -75,7 +70,7 @@ export const WithForm: Story = {
                                 />
                             </label>
                         </div>
-                        <button type="submit">Submit</button>
+                        <Button type="submit">Submit</Button>
                     </form>
                 </Dialog>
             </div>
@@ -93,20 +88,20 @@ export const ConfirmationDialog: Story = {
 
         return (
             <div>
-                <button type="button" onClick={() => setOpen(true)}>
+                <Button variant="danger" onClick={() => setOpen(true)}>
                     Delete Item
-                </button>
+                </Button>
                 <Dialog open={open()} onOpenChange={setOpen} title="Delete Document">
                     <div style={{ padding: "16px" }}>
                         <p>Are you sure you want to delete this document?</p>
                         <p>This action cannot be undone.</p>
                         <div style={{ "margin-top": "16px", display: "flex", gap: "8px" }}>
-                            <button type="button" onClick={handleDelete}>
+                            <Button variant="danger" onClick={handleDelete}>
                                 Delete
-                            </button>
-                            <button type="button" onClick={() => setOpen(false)}>
+                            </Button>
+                            <Button variant="utility" onClick={() => setOpen(false)}>
                                 Cancel
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </Dialog>
@@ -120,9 +115,7 @@ export const WithoutTitle: Story = {
         const [open, setOpen] = createSignal(false);
         return (
             <div>
-                <button type="button" onClick={() => setOpen(true)}>
-                    Open Dialog Without Title
-                </button>
+                <Button onClick={() => setOpen(true)}>Open Dialog Without Title</Button>
                 <Dialog open={open()} onOpenChange={setOpen}>
                     <div style={{ padding: "16px" }}>
                         <p>This dialog has no title.</p>
