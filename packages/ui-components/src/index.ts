@@ -7,6 +7,7 @@ export * from "./form";
 export * from "./icon_button";
 export * from "./inline_input";
 export * from "./input_options";
+export * from "./name_input";
 export * from "./panel";
 export * from "./resizable";
 export * from "./spinner";
