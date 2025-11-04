@@ -1,6 +1,6 @@
 import { type JSX, createSignal } from "solid-js";
 
-import { Dialog } from "catcolab-ui-components";
+import { Dialog } from "../components";
 import { Login } from "../user";
 import { type PageActions, PageActionsContext } from "./context";
 import { ImportDocument } from "./import_document";
