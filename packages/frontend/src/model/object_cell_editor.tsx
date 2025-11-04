@@ -1,5 +1,5 @@
-import { NameInput } from "catcolab-ui-components";
 import type { ObType } from "catlog-wasm";
+import { NameInput } from "../components";
 import type { CellActions } from "../notebook";
 import type { Theory } from "../theory";
 import type { ObjectDecl } from "./types";
