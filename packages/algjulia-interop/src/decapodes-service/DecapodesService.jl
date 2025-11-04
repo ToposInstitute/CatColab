@@ -24,7 +24,7 @@ using OrdinaryDiffEq
 
 using ..CatColabInterop
 using ..CatColabInterop: AlgebraicJuliaIntegration, AbstractDiagram, AbstractAnalysis
-import ..CatColabInterop: Model, to_model
+import ..CatColabInterop: Model, to_model, ObGenerator, MorGenerator, DiagramObGenerator, DiagramMorGenerator
 
 # necessary to export
 export infer_types!, evalsim, default_dec_generate, default_dec_matrix_generate,
@@ -33,7 +33,10 @@ export infer_types!, evalsim, default_dec_generate, default_dec_matrix_generate,
 struct ThDecapode <: AlgebraicJuliaIntegration end
 export ThDecapode
 
-# funcitons for geometry and initial conditions
+struct ObTag end
+struct HomTag end
+
+# # funcitons for geometry and initial conditions
 include("geometry.jl")
 include("model.jl") ## model-building
 include("diagram.jl") ## diagram-building
