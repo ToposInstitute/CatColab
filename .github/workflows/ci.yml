@@ -75,37 +75,6 @@ jobs:
         run: |
           RUSTDOCFLAGS='--deny warnings' cargo doc --no-deps
 
-  frontend_tests:
-    name: frontend tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup NodeJS
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: "pnpm"
-
-      - name: Install Rust toolchain from file
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          # Don't override flags in cargo config files.
-          rustflags: ""
-
-      - name: Build frontend
-        run: |
-          pnpm install
-          pnpm --filter ./packages/frontend run build -- --mode development
-
-      - name: Run frontend tests
-        run: |
-          pnpm --filter ./packages/frontend run test:no-backend
-
   ui_components_tests:
     name: ui-components tests
     runs-on: ubuntu-latest
@@ -130,37 +99,6 @@ jobs:
 
       - name: Run ui-components tests
         run: pnpm --filter ./packages/ui-components run test
-
-  backend_dev_setup:
-    name: backend dev setup
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain from file
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup wasm-pack
-        uses: jetli/wasm-pack-action@v0.4.0
-        with:
-          version: 'v0.13.1'
-
-      - name: Run dev setup
-        run: |
-            docker run --name catcolab-postgres -e POSTGRES_USER=postgres-user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=catcolab -p 5432:5432 -d postgres:15
-            cd packages/notebook-types
-            pnpm run build:node
-            cd ../automerge-doc-server
-            pnpm install
-            cd ../backend
-            cp .env.development .env && cp .env.development ../migrator/.env
-            # due to how we are detecting deploy vs dev we need to clear this env variable
-            unset INVOCATION_ID
-            cargo run -p migrator apply
 
   npm_checks:
     name: npm checks
@@ -207,4 +145,27 @@ jobs:
 
     - name: Build the NixOS system for catcolab-next
       run: nix build .#nixosConfigurations.catcolab-next.config.system.build.toplevel
+
+  frontend_tests_with_backend:
+    name: frontend tests with backend
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install Nix
+      uses: cachix/install-nix-action@v25
+      with:
+        install_url: https://releases.nixos.org/nix/nix-2.29.2/install
+
+    - name: Configure Cachix
+      uses: cachix/cachix-action@v14
+      with:
+        name: catcolab-jmoggr
+        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+
+    - name: Run frontend tests with VM
+      run: |
+        nix build .#checks.x86_64-linux.frontendTests -L --no-sandbox
 

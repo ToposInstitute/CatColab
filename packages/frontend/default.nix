@@ -2,6 +2,7 @@
   pkgs,
   inputs,
   self,
+  lib,
   ...
 }:
 let
@@ -12,60 +13,164 @@ let
   pkgsUnstable = import inputs.nixpkgsUnstable {
     system = "x86_64-linux";
   };
-in
-pkgs.stdenv.mkDerivation {
-  pname = name;
-  version = version;
-  src = ./.;
 
-  nativeBuildInputs = with pkgs; [
-    pnpm_9.configHook
-  ];
+  commonAttrs = {
+    version = version;
+    # Filter source to only include packages needed for frontend build
+    # This prevents unnecessary rebuilds when unrelated files change
+    src = lib.fileset.toSource {
+      root = ../../.;
+      fileset = lib.fileset.unions [
+        ../../.npmrc
+        ../../pnpm-workspace.yaml
+        ../../pnpm-lock.yaml
+        ../../packages/frontend
+        ../../packages/ui-components
+        ../../packages/notebook-types
+        ../../packages/backend/pkg
+      ];
+    };
 
-  buildInputs = with pkgs; [
-    nodejs_24
-  ];
+    nativeBuildInputs = with pkgs; [
+      pnpm_9.configHook
+    ];
 
-  # package.json expects notebook-types to be at ../notebook-types, we COULD modify the parent of the nix
-  # `build` directory, but this is technically unsupported. Instead we recreate part of the `packages`
-  # directory structure in a way familiar to pnpm.
-  unpackPhase = ''
-    mkdir -p ./catlog-wasm/dist/pkg-browser
-    cp -r ${self.packages.x86_64-linux.catlog-wasm-browser}/* ./catlog-wasm/dist/pkg-browser/
+    buildInputs = with pkgs; [
+      nodejs_24
+    ];
 
-    mkdir -p ./backend/pkg
-    cp -r ${self.packages.x86_64-linux.catcolabApi}/* ./backend/pkg/
-
-    mkdir ./frontend
-    cp -r $src/* ./frontend
-    cp -r $src/.* ./frontend
-
-    cd ./frontend
-  '';
-
-  installPhase = ''
-    # The catcolab-api package is a bit odd since it's a built/generated dependency that's tracked by
-    # git. Fortunately it shares dependencies with the frontend, so we can just copy them.
-    mkdir -p ../backend/pkg/node_modules
-    cp -Lr node_modules/@qubit-rs ../backend/pkg/node_modules/
-    cp -Lr node_modules/typescript ../backend/pkg/node_modules/
-
-    npm run build:nix
-
-    mkdir -p $out
-    cp -r ./dist/* $out
-  '';
-
-  pnpmDeps = pkgsUnstable.pnpm_9.fetchDeps {
-    pname = name;
-
-    fetcherVersion = "2";
-    src = ./.;
-
-    # See README.md
-    # hash = "";
-    hash = "sha256-9S+1IKKbeIn6qvdcpn8Mn0PC86UNFnxgdjS7vl3xatM=";
+    pnpmDeps = pkgsUnstable.pnpm_9.fetchDeps {
+      pname = name;
+      fetcherVersion = "2";
+      # Only includes package.json and pnpm-lock.yaml files to ensure consistent hashing in different
+      # environments
+      src = lib.fileset.toSource {
+        root = ../../.;
+        fileset = lib.fileset.unions [
+          ../../.npmrc
+          ../../pnpm-workspace.yaml
+          ../../pnpm-lock.yaml
+          ../../packages/frontend/package.json
+          ../../packages/frontend/pnpm-lock.yaml
+          ../../packages/ui-components/package.json
+          ../../packages/ui-components/pnpm-lock.yaml
+          ../../packages/notebook-types/package.json
+          ../../packages/notebook-types/pnpm-lock.yaml
+          ../../packages/backend/pkg/package.json
+          ../../packages/backend/pkg/pnpm-lock.yaml
+        ];
+      };
+      # See README.md
+      # hash = "";
+      hash = "sha256-Jchw0zQuGQCaYC5ghMQRCvFRiFx4+NhNsGkWYybLBzU=";
+    };
   };
 
-  meta.mainProgram = name;
+  package = pkgs.stdenv.mkDerivation (
+    commonAttrs
+    // {
+      pname = name;
+
+      buildPhase = ''
+        # Set up catlog-wasm before TypeScript build needs it
+        mkdir -p packages/catlog-wasm/dist/pkg-browser
+        cp -r ${self.packages.x86_64-linux.catlog-wasm-browser}/* packages/catlog-wasm/dist/pkg-browser/
+
+        cd packages/frontend
+        npm run build:nix
+        cd -
+      '';
+
+      installPhase = ''
+        mkdir -p $out
+        cp -r packages/frontend/dist/* $out
+      '';
+    }
+  );
+
+  tests = pkgs.stdenv.mkDerivation (
+    commonAttrs
+    // {
+      pname = "${name}-tests";
+
+      nativeBuildInputs = commonAttrs.nativeBuildInputs ++ [ pkgs.makeWrapper ];
+
+      # Disable parts of the fixup phase. This is to improve performance, otherwise it would process
+      # all of node_modules for no benefit.
+      dontPatchELF = true;
+      dontStrip = true;
+      dontPatchShebangs = true;
+
+      installPhase = ''
+        # for vitest to work we need to basically recreate the development environment. We acheive this
+        # by setting of up a copy of the packages structure.
+        mkdir -p $out/packages
+
+        mkdir -p $out/packages/catlog-wasm/dist/pkg-browser
+        cp -r ${self.packages.x86_64-linux.catlog-wasm-browser}/* $out/packages/catlog-wasm/dist/pkg-browser/
+
+        cp -r packages/backend $out/packages/
+        cp -r packages/frontend $out/packages/
+        cp -r packages/ui-components $out/packages/
+        cp -r packages/notebook-types $out/packages/
+
+        mkdir -p $out/bin
+        # Wrapper script to load environment variables and wait for backend to become available
+        cat > $out/bin/.${name}-tests-unwrapped <<'EOF'
+        #!/usr/bin/env bash
+        set -euo pipefail
+
+        cd "@OUT@/packages/frontend"
+
+        if [ ! -f .env.development ]; then
+          echo "Error: .env.development file not found in $out/packages/frontend" >&2
+          exit 1
+        fi
+
+        # Export all environment variables from .env.development
+        set -a
+        source .env.development
+        set +a
+
+        # Wait for server to be available
+        echo "Waiting for backend at $VITE_SERVER_URL/status to be available..."
+        timeout=30
+        elapsed=0
+
+        while [ $elapsed -lt $timeout ]; do
+          if response=$(curl -s "$VITE_SERVER_URL/status" 2>/dev/null); then
+            if [ "$response" = "Running" ]; then
+              echo "Server is running!"
+              break
+            fi
+          fi
+
+          if [ $elapsed -ge $timeout ]; then
+            echo "Error: Timeout waiting for server to be available after ''${timeout}s" >&2
+            exit 1
+          fi
+
+          sleep 1
+          elapsed=$((elapsed + 1))
+        done
+
+        npm run test:ci
+        EOF
+
+        substituteInPlace $out/bin/.${name}-tests-unwrapped \
+          --replace '@OUT@' "$out"
+
+        chmod +x $out/bin/.${name}-tests-unwrapped
+
+        # Wrap the script to ensure nodejs is in PATH
+        makeWrapper $out/bin/.${name}-tests-unwrapped $out/bin/${name}-tests \
+          --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.nodejs_24 ]}
+      '';
+
+      meta.mainProgram = "${name}-tests";
+    }
+  );
+in
+{
+  inherit package tests;
 }
