@@ -1,62 +1,27 @@
-""" Constructs an analysis from the diagram of a Decapode Model"""
-function Analysis(analysis::JSON3.Object, diagram::DecapodeDiagram, hodge=GeometricHodge())
- 
-    # TODO want a safer way to get this information
-    id = findfirst(cell -> haskey(cell, :content), analysis[:notebook][:cells])
-    content = analysis[:notebook][:cells][id][:content][:content]
-
-    PodeSystem(content, diagram, hodge)
+struct DecapodeSimulation <: AbstractAnalysis{ThDecapode}
+    diagram::ModelDiagramPresentation{ThDecapode}
+    model::Model{ThDecapode}
+    data::AbstractDict
 end
-export Analysis
+export DecapodeSimulation
 
-# accepts payload
-function Analysis(::ThDecapode, payload::String, args...)
-    analysis = JSON3.read(payload)
-    Analysis(ThDecapode(), analysis)
+function DecapodeSimulation(path::String; hodge=GeometricHodge())
+    payload = Payload(ThDecapode(), path)
+    DecapodeSimulation(payload)
 end
 
-function Analysis(::ThDecapode, analysis::JSON3.Object, args...)
-    model = Model(ThDecapode(), analysis.model)
-    diagram = Diagram(analysis.diagram, model)
-    PodeSystem(analysis, diagram, args...)
-end
-
-struct PodeSystem <: AbstractAnalysis{ThDecapode}
-    pode::SummationDecapode
-    plotVars::Dict{String, Bool}
-    scalars::Dict{Symbol, Any} # closures
-    geometry::Geometry
-    init::ComponentArray
-    generate::Any
-    uuiddict::Dict{Symbol, String}
-    duration::Int
-end
-export PodeSystem
-
-function Base.show(io::IO, system::PodeSystem)
-    println(io, system.pode)
-end
-
-# the origin is the SimulationData payload 
-function PodeSystem(content::JSON3.Object, diagram::DecapodeDiagram, hodge=GeometricHodge())
-
-    domain = content[:domain]
-    duration = content[:duration]
-    initialConditions = content[:initialConditions]
-    mesh = content[:mesh]
-    # TODO we need a more principled way of defining this
-    plotVars = @match content[:plotVariables] begin
-        vars::AbstractArray => Dict{String, Bool}([ k => k ∈ vars for k in keys(diagram.vars)])
-        vars => Dict{String, Bool}([ "$k" => v for (k,v) in vars])
+#=
+Simulation: Payload => Analysis 
+=#
+function DecapodeSimulation(payload::Payload; hodge=GeometricHodge())
+    pode = DecapodeDiagram(payload)
+    plotVars = @match payload.data[:plotVariables] begin
+        vars::AbstractArray => Dict{String, Bool}(key => key ∈ vars for key ∈ keys(pode.vars))
+        vars => Dict{String, Bool}( "$key" => var for (key, var) in vars)
     end
-    scalars = content[:scalars]
-    anons = Dict{Symbol, Any}()
-
-    dot_rename!(diagram.pode)
-    uuid2symb = uuid_to_symb(diagram.pode, diagram.vars)
-    
-    geometry = Geometry(content)
-
+    dot_rename!(pode.pode)
+    uuid2symb = uuid_to_symb(pode.pode, pode.vars)
+    geometry = Geometry(payload) # TODO
     ♭♯_m = ♭♯_mat(geometry.dualmesh)
     wedge_dp10 = dec_wedge_product_dp(Tuple{1,0}, geometry.dualmesh)
     dual_d1_m = dec_dual_derivative(1, geometry.dualmesh)
@@ -65,8 +30,8 @@ function PodeSystem(content::JSON3.Object, diagram::DecapodeDiagram, hodge=Geome
     #fΔ0 = factorize(Δ0);
     function sys_generate(s, my_symbol)
         op = @match my_symbol begin
-            sym && if haskey(diagram.scalars, sym) end => x -> begin
-                k = scalars[diagram.scalars[sym]]
+            sym && if haskey(pode.scalars, sym) end => x -> begin
+                k = scalars[pode.scalars[sym]]
                 k * x
             end
             :♭♯ => x -> ♭♯_m * x
@@ -75,29 +40,40 @@ function PodeSystem(content::JSON3.Object, diagram::DecapodeDiagram, hodge=Geome
             :Δ⁻¹ => x -> begin
                 y = Δ0 \ x
                 y .- minimum(y)
-            end 
+            end
             _ => default_dec_matrix_generate(s, my_symbol, hodge)
         end
         return (args...) -> op(args...)
     end
-
-    u0 = initial_conditions(initialConditions, geometry, uuid2symb)
+    #
+    u0 = initial_conditions(payload.data[:initialConditions], geometry, uuid2symb)
 
     # reversing `uuid2symb` into `symbol => uuid.` we need this to reassociate the var to its UUID 
     symb2uuid = Dict([v => k for (k,v) in pairs(uuid2symb)])
 
-    # TODO return the whole system
-    return PodeSystem(diagram.pode, plotVars, anons, geometry, u0, sys_generate, symb2uuid, duration)
+    anons = Dict{Symbol, Any}()
+    data = Dict(
+        :pode => pode.pode,
+        :plotVars => plotVars,
+        :scalars => anons,
+        :geometry => geometry,
+        :init => u0,
+        :generate => sys_generate,
+        :uuiddict => symb2uuid,
+        :duration => payload.data[:duration])
+    return DecapodeSimulation(payload.diagram, payload.model, data)
 end
 
-points(system::PodeSystem) = collect(values(system.geometry.dualmesh.subparts.point.m))
-indexing_bounds(system::PodeSystem) = indexing_bounds(system.geometry.domain)
+Base.show(io::IO, system::DecapodeSimulation) = println(io, system.data[:pode])
 
-function run_sim(fm, u0, t0, constparam)
+points(system::DecapodeSimulation) = collect(values(system.data[:geometry].dualmesh.subparts.point.m))
+indexing_bounds(system::DecapodeSimulation) = indexing_bounds(system.data[:geometry].domain)
+
+function Base.run(fm, u0, t0, constparam)
     prob = ODEProblem(fm, u0, (0, t0), constparam)
-    soln = solve(prob, Tsit5(), saveat=0.01)
+    solve(prob, Tsit5(), saveat=0.01)
 end
-export run_sim
+export run
 
 struct SimResult
     time::Vector{Float64}
@@ -107,7 +83,7 @@ struct SimResult
 end
 export SimResult
 
-function SimResult(soln::ODESolution, system::PodeSystem)
+function SimResult(soln::ODESolution, system::DecapodeSimulation)
     idx_bounds = indexing_bounds(system)
     state_val_dict = variables_state(soln, system) # Dict("UUID1" => VectorMatrixSVectr...)
     SimResult(soln.t, state_val_dict, 0:idx_bounds.x, 0:idx_bounds.y)
@@ -115,23 +91,23 @@ end
 # TODO generalize to HasDeltaSet
 
 """ for the variables in a system, associate them to their state values over the duration of the simulation """
-function variables_state(soln::ODESolution, system::PodeSystem)
-    plottedVars = [ k for (k, v) in system.plotVars if v == true ]
-    uuid2symb = Dict([ v => k for (k, v) in system.uuiddict]) # TODO why reverse again?
+function variables_state(soln::ODESolution, system::DecapodeSimulation)
+    plottedVars = [ k for (k, v) in system.data[:plotVars] if v == true ]
+    uuid2symb = Dict([ v => k for (k, v) in system.data[:uuiddict]]) # TODO why reverse again?
     Dict([ String(uuid2symb[var]) => state_entire_sim(soln, system, uuid2symb[var]) for var ∈ plottedVars ])
 end
 
 """ given a simulation, a domain, and a variable, gets the state values over the duration of a simulation. 
 Called by `variables_state`[@ref] """
-function state_entire_sim(soln::ODESolution, system::PodeSystem, var::Symbol)
+function state_entire_sim(soln::ODESolution, system::DecapodeSimulation, var::Symbol)
     map(1:length(soln.t)) do i
         state_at_time(soln, system, var, i)
     end
 end
 
 # TODO type `points`
-function state_at_time(soln::ODESolution, system::PodeSystem, plotvar::Symbol, t::Int)
-    @match system.geometry.domain begin
+function state_at_time(soln::ODESolution, system::DecapodeSimulation, plotvar::Symbol, t::Int)
+    @match system.data[:geometry].domain begin
         # TODO check time indexing here
         domain::Rectangle => state_at_time(soln, domain, plotvar, t) 
         domain::Sphere => state_at_time(soln, domain, plotvar, t, points(system)) 

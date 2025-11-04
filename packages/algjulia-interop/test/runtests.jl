@@ -237,3 +237,23 @@ end
     @test typeof(result.state) == Dict{String, Vector{AbstractArray{SVector{3, Float64}}}}
     jv = JsonValue(result)
 end
+
+@testset "Analysis - !" begin
+
+    simulation = DecapodeSimulation("test/test_jsons/_payload.json")
+
+    # sim = evalsim(simulation.data[:pode])
+    path = joinpath(@__DIR__, "testsim.jl")
+    open(path, "w") do f
+        write(f, string(gensim(simulation.data[:pode])))
+    end
+    sim = include(path)
+
+
+    f = sim(simulation.data[:geometry].dualmesh, simulation.data[:generate], DiagonalHodge())
+    soln = run(f, simulation.data[:init], simulation.data[:duration], ComponentArray(k=0.5,))
+    @test soln.retcode == ReturnCode.Success
+    result = SimResult(soln, simulation)
+
+
+end
