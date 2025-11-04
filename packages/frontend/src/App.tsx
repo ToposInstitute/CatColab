@@ -147,6 +147,10 @@ const routes: RouteDefinition[] = [
         component: lazy(() => import("./user/documents")),
     },
     {
+        path: "/trash",
+        component: lazy(() => import("./user/trash")),
+    },
+    {
         path: "*",
         component: lazy(() => import("./page/404_page")),
     },
