@@ -288,6 +288,8 @@ pub struct RefQueryParams {
     pub searcher_min_level: Option<PermissionLevel>,
     #[serde(rename = "includePublicDocuments")]
     pub include_public_documents: Option<bool>,
+    #[serde(rename = "onlyDeleted")]
+    pub only_deleted: Option<bool>,
     pub limit: Option<i32>,
     pub offset: Option<i32>,
     // TODO: add param for document type
@@ -350,7 +352,9 @@ pub async fn search_ref_stubs(
                             AND p_searcher.subject = $1
                     )
                 ) AND (
-                    refs.deleted_at IS NULL
+                    -- optionally filter for only deleted refs
+                    ($8::bool IS TRUE AND refs.deleted_at IS NOT NULL)
+                    OR ($8::bool IS NOT TRUE AND refs.deleted_at IS NULL)
                 )
             ),
             paged_ids AS (
@@ -392,6 +396,7 @@ pub async fn search_ref_stubs(
         search_params.include_public_documents.unwrap_or(false),
         limit,
         offset,
+        search_params.only_deleted.unwrap_or(false),
     )
     .fetch_all(&ctx.state.db)
     .await?;
