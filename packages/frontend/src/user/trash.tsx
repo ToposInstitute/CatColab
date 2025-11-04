@@ -1,30 +1,30 @@
-import type { RefStub } from "catcolab-api";
-import { getAuth } from "firebase/auth";
-import { useFirebaseApp } from "solid-firebase";
-import { For, Match, Switch, createEffect, createResource, createSignal, onMount } from "solid-js";
-import { rpcResourceErr, rpcResourceOk, useApi } from "../api";
-import { useDeleteDocument } from "../components/delete_document_dialog";
-import { BrandedToolbar } from "../page";
-import { LoginGate } from "./login";
-import "./documents.css";
 import { useNavigate } from "@solidjs/router";
+import type { RefStub } from "catcolab-api";
 import { IconButton, Spinner } from "catcolab-ui-components";
-import X from "lucide-solid/icons/x";
+import { getAuth } from "firebase/auth";
+import RotateCcw from "lucide-solid/icons/rotate-ccw";
+import { useFirebaseApp } from "solid-firebase";
+import { For, Match, Switch, createResource, createSignal, onMount } from "solid-js";
+import { rpcResourceErr, rpcResourceOk, useApi } from "../api";
+import { Dialog } from "../components/dialog";
+import { BrandedToolbar } from "../page";
+import "./documents.css";
+import { LoginGate } from "./login";
 
-export default function UserDocuments() {
+export default function TrashBin() {
     return (
-        <div class="documents-page">
+        <div class="documents-page trash-bin-page">
             <BrandedToolbar />
             <div class="page-container">
                 <LoginGate>
-                    <DocumentsSearch />
+                    <TrashBinSearch />
                 </LoginGate>
             </div>
         </div>
     );
 }
 
-function DocumentsSearch() {
+function TrashBinSearch() {
     const api = useApi();
 
     const [searchQuery, setSearchQuery] = createSignal<string>("");
@@ -40,7 +40,7 @@ function DocumentsSearch() {
         setPage(0);
     };
 
-    const [pageData] = createResource(
+    const [pageData, { refetch }] = createResource(
         () => [debouncedQuery(), page()] as const,
         async ([debouncedQueryValue, pageValue]) => {
             const results = await api.rpc.search_ref_stubs.query({
@@ -48,7 +48,7 @@ function DocumentsSearch() {
                 refNameQuery: debouncedQueryValue,
                 includePublicDocuments: false,
                 searcherMinLevel: null,
-                onlyDeleted: false,
+                onlyDeleted: true,
                 limit: pageSize,
                 offset: pageValue * pageSize,
             });
@@ -58,7 +58,7 @@ function DocumentsSearch() {
     );
 
     onMount(() => {
-        setDebouncedQuery(""); // Trigger fetch on page load
+        setDebouncedQuery("");
     });
 
     return (
@@ -70,19 +70,19 @@ function DocumentsSearch() {
                 value={searchQuery()}
                 onInput={(e) => updateQuery(e.currentTarget.value)}
             />
-            <h3>My Documents</h3>
+            <h3>Trash</h3>
             <div class="ref-table-outer">
                 <div class="ref-table-header">
                     <div>
                         <table class="ref-table">
                             <thead>
                                 <tr>
+                                    <th />
                                     <th>Type</th>
                                     <th>Name</th>
                                     <th>Owner</th>
                                     <th>Permissions</th>
                                     <th>Created At</th>
-                                    <th />
                                 </tr>
                             </thead>
                         </table>
@@ -94,10 +94,6 @@ function DocumentsSearch() {
                             <Switch
                                 fallback={
                                     <tr>
-                                        {/* I think this is only used if `pageData.state` is "unresolved",
-                                            however the docs are specify which states cause `loading` to be
-                                            true, nor why the state would ever be "unresolved".
-                                        */}
                                         <td colspan="6">Unknown state...</td>
                                     </tr>
                                 }
@@ -136,6 +132,7 @@ function DocumentsSearch() {
                                                 page={page()}
                                                 setPage={setPage}
                                                 pageSize={pageSize}
+                                                refetch={refetch}
                                             />
                                         );
                                     }}
@@ -155,17 +152,12 @@ function DocumentRowsPagination(props: {
     page: number;
     setPage: (p: number) => void;
     pageSize: number;
+    refetch: () => void;
 }) {
-    const [items, setItems] = createSignal<RefStub[]>([]);
-    createEffect(() => {
-        setItems(props.items);
-    });
-    const optimisticDelete = (stub: RefStub) => () =>
-        setItems((items) => items.filter((item) => item.refId !== stub.refId));
     return (
         <>
-            <For each={items()}>
-                {(stub) => <RefStubRow stub={stub} onDelete={optimisticDelete(stub)} />}
+            <For each={props.items}>
+                {(stub) => <RefStubRow stub={stub} onRestore={props.refetch} />}
             </For>
 
             <tr class="pagination-row">
@@ -193,34 +185,63 @@ function DocumentRowsPagination(props: {
     );
 }
 
-function RefStubRow(props: { stub: RefStub; onDelete: () => void }) {
+function RefStubRow(props: { stub: RefStub; onRestore: () => void }) {
     const firebaseApp = useFirebaseApp();
     const auth = getAuth(firebaseApp);
     const navigate = useNavigate();
+    const api = useApi();
 
     const owner = props.stub.owner;
     const hasOwner = owner !== null;
     const isOwner = hasOwner && auth.currentUser?.uid === owner?.id;
     const ownerName = hasOwner ? (isOwner ? "me" : owner?.username) : "public";
-    const canDelete = props.stub.permissionLevel === "Own";
+    const canRestore = props.stub.permissionLevel === "Own";
 
-    const deleteDocument = useDeleteDocument(props.stub);
+    const [showError, setShowError] = createSignal(false);
+    const [errorMessage, setErrorMessage] = createSignal("");
+
+    const handleRestore = async () => {
+        if (!canRestore) return;
+
+        try {
+            const result = await api.rpc.restore_ref.mutate(props.stub.refId);
+            if (result.tag === "Ok") {
+                props.onRestore();
+                navigate("/documents");
+            } else {
+                setErrorMessage(`Failed to restore document: ${result.message}`);
+                setShowError(true);
+            }
+        } catch (error) {
+            setErrorMessage(`Error restoring document: ${error}`);
+            setShowError(true);
+        }
+    };
 
     const handleClick = () => {
         navigate(`/${props.stub.typeName}/${props.stub.refId}`);
     };
 
-    const handleDeleteClick = async (e: MouseEvent) => {
+    const handleRestoreClick = (e: MouseEvent) => {
         e.stopPropagation();
-        const success = await deleteDocument.openDeleteDialog();
-        if (success) {
-            props.onDelete();
-        }
+        handleRestore();
     };
 
     return (
         <>
-            <tr class="ref-stub-row" onClick={handleClick}>
+            <tr class="ref-stub-row restore-row" onClick={handleClick} title="View document">
+                <td class="delete-cell">
+                    {canRestore && (
+                        <IconButton
+                            variant="primary"
+                            onClick={handleRestoreClick}
+                            tooltip="Restore document"
+                            type="button"
+                        >
+                            <RotateCcw size={16} />
+                        </IconButton>
+                    )}
+                </td>
                 <td>{props.stub.typeName}</td>
                 <td>{props.stub.name}</td>
                 <td>{ownerName}</td>
@@ -232,20 +253,19 @@ function RefStubRow(props: { stub: RefStub; onDelete: () => void }) {
                         day: "numeric",
                     })}
                 </td>
-                <td class="delete-cell">
-                    {canDelete && (
-                        <IconButton
-                            variant="danger"
-                            onClick={handleDeleteClick}
-                            tooltip="Delete document"
-                        >
-                            <X size={16} />
-                        </IconButton>
-                    )}
-                </td>
             </tr>
 
-            <deleteDocument.DeleteDialogs />
+            <Dialog open={showError()} onOpenChange={setShowError} title="Error">
+                <form onSubmit={(evt) => evt.preventDefault()}>
+                    <p>{errorMessage()}</p>
+                    <div class="permissions-button-container">
+                        <div class="permissions-spacer" />
+                        <button type="button" class="ok" onClick={() => setShowError(false)}>
+                            OK
+                        </button>
+                    </div>
+                </form>
+            </Dialog>
         </>
     );
 }

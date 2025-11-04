@@ -24,6 +24,7 @@ import LogInIcon from "lucide-solid/icons/log-in";
 import LogOutIcon from "lucide-solid/icons/log-out";
 import MenuIcon from "lucide-solid/icons/menu";
 import SettingsIcon from "lucide-solid/icons/settings";
+import Trash2 from "lucide-solid/icons/trash-2";
 import UploadIcon from "lucide-solid/icons/upload";
 import X from "lucide-solid/icons/x";
 
@@ -75,6 +76,7 @@ export function AppMenu(props: {
                 </Show>
                 <Show when={auth.data} fallback={<LogInMenuItem />}>
                     <DocumentsMenuItem />
+                    <TrashBinMenuItem />
                     <SettingsMenuItem />
                     <LogOutMenuItem />
                 </Show>
@@ -267,5 +269,16 @@ export function DeleteMenuItem(props: {
             </MenuItem>
             <deleteDocument.DeleteDialogs />
         </>
+    );
+}
+
+function TrashBinMenuItem() {
+    const navigate = useNavigate();
+
+    return (
+        <MenuItem onSelect={() => navigate("/trash")}>
+            <Trash2 />
+            <MenuItemLabel>{"Trash"}</MenuItemLabel>
+        </MenuItem>
     );
 }
