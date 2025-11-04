@@ -89,7 +89,8 @@ export function DocumentMenu(props: {
         );
     });
 
-    const canDelete = () => props.liveDoc.docRef?.permissions.user === "Own";
+    const canDelete = () =>
+        props.liveDoc.docRef?.permissions.user === "Own" && !props.liveDoc.docRef?.isDeleted;
 
     const [isDropdownMenuOpen, setDropdownMenuOpen] = createSignal(false);
 
@@ -127,23 +128,24 @@ export function DocumentMenu(props: {
                         <DuplicateMenuItem doc={props.liveDoc.doc} />
                         <ExportJSONMenuItem doc={props.liveDoc.doc} />
                         <CopyJSONMenuItem doc={props.liveDoc.doc} />
-                        <Show when={canDelete()}>
-                            <MenuSeparator />
-                            <MenuItem
-                                onSelect={async () => {
-                                    // Explicitly closing the menu avoids some strange conflict between kobalte and corvu.
-                                    // Our UI locks if we don't close the menu _first_.
-                                    setDropdownMenuOpen(false);
-                                    const success = await deleteDocument.openDeleteDialog();
-                                    if (success) {
-                                        navigate("/documents");
-                                    }
-                                }}
-                            >
-                                <X />
-                                <MenuItemLabel>{`Delete ${docType()}`}</MenuItemLabel>
-                            </MenuItem>
-                        </Show>
+                        <MenuSeparator />
+                        <MenuItem
+                            disabled={!canDelete()}
+                            onSelect={async () => {
+                                // Explicitly closing the menu avoids some
+                                // strange conflict between kobalte and corvu.
+                                // Our UI locks if we don't close the menu
+                                // _first_.
+                                setDropdownMenuOpen(false);
+                                const success = await deleteDocument.openDeleteDialog();
+                                if (success) {
+                                    navigate("/documents");
+                                }
+                            }}
+                        >
+                            <X />
+                            <MenuItemLabel>{`Delete ${docType()}`}</MenuItemLabel>
+                        </MenuItem>
                     </DropdownMenu.Content>
                 </DropdownMenu.Portal>
             </DropdownMenu>
