@@ -11,8 +11,9 @@ import {
 } from "solid-js";
 import invariant from "tiny-invariant";
 
+import type { InputOptions } from "catcolab-ui-components";
 import type { Ob, QualifiedName } from "catlog-wasm";
-import { type InputOptions, ObIdInput } from "../components";
+import { ObIdInput } from "../components";
 import { deepCopyJSON } from "../util/deepcopy";
 import { LiveModelContext } from "./context";
 import type { ObInputProps } from "./object_input";

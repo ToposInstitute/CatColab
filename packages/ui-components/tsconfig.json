@@ -1,0 +1,17 @@
+{
+    "compilerOptions": {
+        "target": "ESNext",
+        "module": "ESNext",
+        "noEmit": true,
+        "moduleResolution": "bundler",
+        "allowJs": true,
+        "jsx": "preserve",
+        "jsxImportSource": "solid-js",
+        "types": ["vite/client"],
+        "skipLibCheck": true,
+        "paths": {
+            "#.storybook/*": ["./.storybook/*"]
+        }
+    },
+    "include": [".storybook/**/*.ts", ".storybook/**/*.tsx", "src/**/*.ts", "src/**/*.tsx"]
+}

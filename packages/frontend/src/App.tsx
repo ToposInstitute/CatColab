@@ -9,6 +9,7 @@ import { getAuth, signOut } from "firebase/auth";
 import { FirebaseProvider } from "solid-firebase";
 import { ErrorBoundary, Show, createResource, createSignal, lazy } from "solid-js";
 
+import { Button } from "catcolab-ui-components";
 import { Api, ApiContext, useApi } from "./api";
 import { helpRoutes } from "./help/routes";
 import { ModelLibraryContext, createModelLibraryWithApi } from "./model";
@@ -86,9 +87,9 @@ export function SessionExpiredModal() {
                 <Content class="popup error-dialog">
                     <h3>Session Expired</h3>
                     <p>Your session is no longer valid. Please reload the page to continue.</p>
-                    <button onClick={handleReload} disabled={reloading()}>
+                    <Button variant="primary" onClick={handleReload} disabled={reloading()}>
                         {reloading() ? "Reloading..." : "Reload Page"}
-                    </button>
+                    </Button>
                 </Content>
             </Portal>
         </Dialog>

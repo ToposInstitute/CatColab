@@ -1,7 +1,5 @@
 import { For, Match, Show, Switch, createMemo } from "solid-js";
 
-import type { DiagramJudgment, ModelJudgment, QualifiedName } from "catlog-wasm";
-import type { DiagramAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
     ErrorAlert,
@@ -10,7 +8,9 @@ import {
     IconButton,
     Warning,
     createNumericalColumn,
-} from "../../components";
+} from "catcolab-ui-components";
+import type { DiagramJudgment, ModelJudgment, QualifiedName } from "catlog-wasm";
+import type { DiagramAnalysisProps } from "../../analysis";
 import type { LiveDiagramDocument } from "../../diagram";
 import { NotebookUtils } from "../../notebook";
 import { uniqueIndexArray } from "../../util/indexing";

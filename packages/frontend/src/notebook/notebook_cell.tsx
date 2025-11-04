@@ -9,14 +9,9 @@ import Popover from "@corvu/popover";
 import type { EditorView } from "prosemirror-view";
 import { type JSX, Show, createEffect, createSignal, onCleanup } from "solid-js";
 
+import { type Completion, Completions, IconButton, InlineInput } from "catcolab-ui-components";
 import type { Uuid } from "catlog-wasm";
-import {
-    type Completion,
-    Completions,
-    IconButton,
-    InlineInput,
-    RichTextEditor,
-} from "../components";
+import { RichTextEditor } from "../components";
 
 import ArrowDown from "lucide-solid/icons/arrow-down";
 import ArrowUp from "lucide-solid/icons/arrow-up";

@@ -13,8 +13,8 @@ import { useAuth, useFirebaseApp } from "solid-firebase";
 import { type JSX, Match, Switch } from "solid-js";
 import invariant from "tiny-invariant";
 
+import { Button, IconButton } from "catcolab-ui-components";
 import { useApi } from "../api";
-import { IconButton } from "../components";
 
 import SignInIcon from "lucide-solid/icons/log-in";
 import SignUpIcon from "lucide-solid/icons/user-pen";
@@ -120,14 +120,14 @@ export function Login(props: {
                     )}
                 </Field>
                 <div class="buttons">
-                    <button type="submit" value="sign-in">
+                    <Button type="submit" variant="primary" value="sign-in">
                         <SignInIcon />
                         Login
-                    </button>
-                    <button type="submit" value="sign-up">
+                    </Button>
+                    <Button type="submit" variant="primary" value="sign-up">
                         <SignUpIcon />
                         Sign up
-                    </button>
+                    </Button>
                 </div>
             </Form>
             <div class="separator">{"Or continue with"}</div>

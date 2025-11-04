@@ -5,9 +5,9 @@ import { useAuth, useFirebaseApp } from "solid-firebase";
 import { type JSX, Show, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
+import { IconButton } from "catcolab-ui-components";
 import type { Document } from "catlog-wasm";
 import { useApi } from "../api";
-import { IconButton } from "../components";
 import { createModel } from "../model/document";
 import { TheoryLibraryContext } from "../theory";
 import { copyToClipboard, downloadJson } from "../util/json_export";

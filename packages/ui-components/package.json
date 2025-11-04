@@ -1,0 +1,51 @@
+{
+    "name": "catcolab-ui-components",
+    "version": "0.0.0",
+    "private": true,
+    "type": "module",
+    "exports": {
+        ".": "./src/index.ts",
+        "./*": "./src/*"
+    },
+    "scripts": {
+        "format": "biome format --write",
+        "lint": "biome lint --write && biome check --write",
+        "ci": "biome ci && tsc --noEmit",
+        "dev": "storybook dev -p 6006 --no-version-updates --no-open",
+        "build": "NODE_ENV=production storybook build",
+        "test": "vitest --project=storybook"
+    },
+    "dependencies": {
+        "@corvu/dialog": "^0.2.4",
+        "@corvu/disclosure": "^0.2.1",
+        "@corvu/popover": "^0.2.0",
+        "@corvu/resizable": "^0.2.4",
+        "@kobalte/core": "^0.13.10",
+        "@modular-forms/solid": "^0.24.1",
+        "@solid-primitives/active-element": "^2.1.1",
+        "@solid-primitives/destructure": "^0.2.1",
+        "lucide-solid": "^0.471.0",
+        "solid-js": "^1.9.10"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "^1.9.3",
+        "@chromatic-com/storybook": "^4.1.2",
+        "@storybook/addon-a11y": "^10.0.2",
+        "@storybook/addon-docs": "^10.0.2",
+        "@storybook/addon-links": "^10.0.2",
+        "@storybook/addon-onboarding": "^10.0.2",
+        "@storybook/addon-vitest": "^10.0.2",
+        "@storybook/builder-vite": "^10.0.2",
+        "@types/node": "^22.7.4",
+        "@vitest/browser": "^4.0.6",
+        "@vitest/browser-playwright": "^4.0.6",
+        "@vitest/coverage-v8": "^4.0.6",
+        "playwright": "^1.56.1",
+        "storybook": "^10.0.2",
+        "storybook-solidjs-vite": "^10.0.5",
+        "typescript": "^5.2.2",
+        "vite": "^6.0.0",
+        "vite-plugin-solid": "^2.10.2",
+        "vitest": "^4.0.6"
+    }
+}

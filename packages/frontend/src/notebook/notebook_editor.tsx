@@ -15,9 +15,14 @@ import {
 } from "solid-js";
 import invariant from "tiny-invariant";
 
+import {
+    type Completion,
+    IconButton,
+    type KbdKey,
+    type ModifierKey,
+    keyEventHasModifier,
+} from "catcolab-ui-components";
 import type { Cell, Notebook } from "catlog-wasm";
-import { type Completion, IconButton } from "../components";
-import { type KbdKey, type ModifierKey, keyEventHasModifier } from "../util/keyboard";
 import {
     type CellActions,
     type FormalCellEditorProps,

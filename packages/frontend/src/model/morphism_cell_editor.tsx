@@ -1,7 +1,7 @@
 import { createMemo, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { NameInput } from "../components";
+import { NameInput } from "catcolab-ui-components";
 import type { CellActions } from "../notebook";
 import type { Theory } from "../theory";
 import { LiveModelContext } from "./context";

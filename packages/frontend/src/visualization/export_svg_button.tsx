@@ -1,6 +1,6 @@
 import type { JSX } from "solid-js";
 
-import { IconButton } from "../components";
+import { IconButton } from "catcolab-ui-components";
 import { downloadSVG } from "./export_svg";
 
 import Download from "lucide-solid/icons/download";

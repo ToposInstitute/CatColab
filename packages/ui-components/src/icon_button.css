@@ -17,6 +17,23 @@
     }
 }
 
+.icon-button-danger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 4px;
+    margin: 0;
+
+    &:hover:enabled {
+        background-color: #fee;
+        color: #c00;
+    }
+}
+
 .tooltip-content {
     border-radius: 0.5rem;
     color: white;

@@ -1,13 +1,13 @@
 import { createMemo } from "solid-js";
 
-import type { DblModel, MassActionProblemData, MorType, ObType, QualifiedName } from "catlog-wasm";
-import type { ModelAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
     FixedTableEditor,
     Foldable,
     createNumericalColumn,
-} from "../../components";
+} from "catcolab-ui-components";
+import type { DblModel, MassActionProblemData, MorType, ObType, QualifiedName } from "catlog-wasm";
+import type { ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
 import { createModelODEPlot } from "./model_ode_plot";

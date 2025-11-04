@@ -1,11 +1,11 @@
-import type { DblModel, LinearODEProblemData, QualifiedName } from "catlog-wasm";
-import type { ModelAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
     FixedTableEditor,
     Foldable,
     createNumericalColumn,
-} from "../../components";
+} from "catcolab-ui-components";
+import type { DblModel, LinearODEProblemData, QualifiedName } from "catlog-wasm";
+import type { ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
 import { createModelODEPlot } from "./model_ode_plot";
