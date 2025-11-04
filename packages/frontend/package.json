@@ -33,7 +33,7 @@
         "@corvu/popover": "^0.2.0",
         "@corvu/resizable": "^0.2.4",
         "@jupyterlab/services": "^7.3.1",
-        "@kobalte/core": "^0.13.10",
+        "@kobalte/core": "^0.13.11",
         "@mdx-js/rollup": "^3.1.0",
         "@modular-forms/solid": "^0.24.1",
         "@qubit-rs/client": "^0.4.5",

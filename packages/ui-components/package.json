@@ -18,7 +18,7 @@
     "dependencies": {
         "@corvu/dialog": "^0.2.4",
         "@corvu/disclosure": "^0.2.1",
-        "@kobalte/core": "^0.13.10",
+        "@kobalte/core": "^0.13.11",
         "@solid-primitives/destructure": "^0.2.1",
         "lucide-solid": "^0.471.0",
         "solid-js": "^1.9.10"
