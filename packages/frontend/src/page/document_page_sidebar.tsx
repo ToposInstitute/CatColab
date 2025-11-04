@@ -156,8 +156,16 @@ function DocumentsTreeLeaf(props: {
             }}
             style={{ "padding-left": `${props.indent * 16}px` }}
         >
-            <DocumentTypeIcon documentType={props.liveDoc.doc.type} />
-            <div class="document-name">{props.liveDoc.doc.name || "Untitled"}</div>
+            <DocumentTypeIcon
+                documentType={props.liveDoc.doc.type}
+                isDeleted={props.liveDoc.docRef?.isDeleted}
+            />
+            <div
+                class="document-name"
+                style={{ color: props.liveDoc.docRef?.isDeleted ? "lightgray" : undefined }}
+            >
+                {props.liveDoc.doc.name || "Untitled"}
+            </div>
             <div class="document-actions" onClick={(e) => e.stopPropagation()}>
                 <DocumentMenu liveDoc={props.liveDoc} onDocumentCreated={props.triggerRefresh} />
             </div>
