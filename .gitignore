@@ -105,3 +105,6 @@ result
 
 # vm image
 catcolab-vm.qcow2
+
+# VSCode
+.vscode/*

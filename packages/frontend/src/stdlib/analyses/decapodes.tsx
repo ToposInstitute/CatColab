@@ -319,14 +319,14 @@ const makeSimulationCode = (data: SimulationData) =>
     # needed for returning large amounts of data, should be paired with a similar setting on the jupyter server
     IJulia.set_max_stdio(1_000_000_000) 
 
-    system = Analysis(ThDecapode(), raw"""${JSON.stringify(data)}""");
-    simulator = evalsim(system.pode);
+    simulation = DecapodeSimulation(raw"""${JSON.stringify(data)}""");
+    simulator = evalsim(simulation.pode);
 
-    f = simulator(system.geometry.dualmesh, system.generate, DiagonalHodge());
+    f = simulator(simulation.geometry.dualmesh, simulation.generate, DiagonalHodge());
 
-    soln = run_sim(f, system.init, system.duration, ComponentArray(k=0.5,));
+	result = run(f, simulation, ComponentArray(k=0.5,))
 
-    JSON3.write(stdout, SimResult(soln, system))
+    JSON3.write(stdout, result)
     `;
 
 /** Create data to send to the Julia kernel. */
