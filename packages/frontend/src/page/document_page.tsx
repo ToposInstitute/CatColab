@@ -213,8 +213,8 @@ export function DocumentPane(props: { document: AnyLiveDocument }) {
                 <div class="warning-banner">
                     <TriangleAlert size={20} />
                     <div class="warning-banner-content">
-                        <strong>Warning:</strong> This {props.document.type} has been deleted. The
-                        last snapshot before deletion is still visible below.
+                        <strong>Warning:</strong> This {props.document.type} has been deleted and
+                        will not be listed in your documents.
                     </div>
                     <Button
                         variant="utility"
