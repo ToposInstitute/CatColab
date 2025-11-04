@@ -2,6 +2,7 @@ import Resizable, { type ContextValue } from "@corvu/resizable";
 import { useNavigate, useParams } from "@solidjs/router";
 import ChevronsRight from "lucide-solid/icons/chevrons-right";
 import Maximize2 from "lucide-solid/icons/maximize-2";
+import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import {
     Match,
@@ -14,7 +15,7 @@ import {
 } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { IconButton } from "catcolab-ui-components";
+import { Button, IconButton } from "catcolab-ui-components";
 import { type LiveAnalysisDocument, getLiveAnalysis } from "../analysis";
 import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
 import { AnalysisInfo } from "../analysis/analysis_info";
@@ -186,16 +187,44 @@ function SplitPaneToolbar(props: {
 }
 
 export function DocumentPane(props: { document: AnyLiveDocument }) {
+    const api = useApi();
     const isDeleted = () => props.document.liveDoc.docRef?.isDeleted ?? false;
+
+    const handleRestore = async () => {
+        const refId = props.document.liveDoc.docRef?.refId;
+        if (!refId) return;
+
+        try {
+            const result = await api.rpc.restore_ref.mutate(refId);
+            if (result.tag === "Ok") {
+                // Refresh the page to show the restored document
+                window.location.reload();
+            } else {
+                console.error(`Failed to restore document: ${result.message}`);
+            }
+        } catch (error) {
+            console.error(`Error restoring document: ${error}`);
+        }
+    };
+
     return (
         <>
             <Show when={isDeleted()}>
                 <div class="warning-banner">
                     <TriangleAlert size={20} />
-                    <span>
-                        Warning: This {props.document.type} has been deleted. The last snapshot
-                        before deletion is still visible below.
-                    </span>
+                    <div class="warning-banner-content">
+                        <strong>Warning:</strong> This {props.document.type} has been deleted. The
+                        last snapshot before deletion is still visible below.
+                    </div>
+                    <Button
+                        variant="utility"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            handleRestore();
+                        }}
+                    >
+                        <RotateCcw size={16} /> Restore it
+                    </Button>
                 </div>
             </Show>
             <div class="notebook-container">
