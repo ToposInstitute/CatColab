@@ -122,6 +122,12 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
                 description: "Visualize the instance as a graph",
                 help: "visualization",
             }),
+            analyses.tabularView({
+                id: "tabularview",
+                name: "Tabular Visualization",
+                description: "Visualize the instance as a table",
+                help: "tabularview",
+            }),
         ],
     });
 }
