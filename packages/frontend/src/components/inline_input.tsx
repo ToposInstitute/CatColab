@@ -3,7 +3,7 @@ import { focus } from "@solid-primitives/active-element";
 import { type JSX, createEffect, createSignal } from "solid-js";
 focus;
 
-import { type Completion, Completions, type CompletionsRef } from "catcolab-ui-components";
+import { type Completion, Completions, type CompletionsRef } from "./completions";
 import type { InputOptions } from "./input_options";
 
 import "./inline_input.css";

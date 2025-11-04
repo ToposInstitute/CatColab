@@ -1,12 +1,6 @@
 import { createEffect, createSignal, splitProps } from "solid-js";
 import { P, match } from "ts-pattern";
 
-import {
-    type Completion,
-    InlineInput,
-    type InlineInputErrorStatus,
-    type InlineInputOptions,
-} from "catcolab-ui-components";
 import type {
     LabelSegment,
     Mor,
@@ -16,6 +10,12 @@ import type {
     QualifiedName,
     Uuid,
 } from "catlog-wasm";
+import {
+    type Completion,
+    InlineInput,
+    type InlineInputErrorStatus,
+    type InlineInputOptions,
+} from "./";
 
 import "./id_input.css";
 
