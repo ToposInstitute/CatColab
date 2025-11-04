@@ -9,7 +9,7 @@ export function IconButton(
     allProps: {
         children: JSX.Element;
         tooltip?: JSX.Element | string;
-        variant?: "default" | "danger";
+        variant?: "default" | "danger" | "primary";
     } & ComponentProps<"button">,
 ) {
     const [props, buttonProps] = splitProps(allProps, ["children", "tooltip", "variant"]);
@@ -18,7 +18,9 @@ export function IconButton(
 
     const buttonClass = () => {
         const baseClass = "icon-button";
-        return props.variant === "danger" ? `${baseClass} icon-button-danger` : baseClass;
+        if (props.variant === "danger") return `${baseClass} icon-button-danger`;
+        if (props.variant === "primary") return `${baseClass} icon-button-primary`;
+        return baseClass;
     };
 
     return (
