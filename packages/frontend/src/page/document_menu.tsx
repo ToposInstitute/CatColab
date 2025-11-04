@@ -2,7 +2,7 @@ import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 import { useNavigate } from "@solidjs/router";
 import Ellipsis from "lucide-solid/icons/ellipsis";
 import X from "lucide-solid/icons/x";
-import { Match, Switch, createMemo, createResource } from "solid-js";
+import { Match, Switch, createMemo, createResource, createSignal } from "solid-js";
 import { useContext } from "solid-js";
 import { Show } from "solid-js";
 import invariant from "tiny-invariant";
@@ -91,9 +91,11 @@ export function DocumentMenu(props: {
 
     const canDelete = () => props.liveDoc.docRef?.permissions.user === "Own";
 
+    const [isDropdownMenuOpen, setDropdownMenuOpen] = createSignal(false);
+
     return (
         <>
-            <DropdownMenu>
+            <DropdownMenu open={isDropdownMenuOpen()} onOpenChange={setDropdownMenuOpen}>
                 <DropdownMenu.Trigger as={IconButton}>
                     <Ellipsis size={18} />
                 </DropdownMenu.Trigger>
@@ -129,6 +131,9 @@ export function DocumentMenu(props: {
                             <MenuSeparator />
                             <MenuItem
                                 onSelect={async () => {
+                                    // Explicitly closing the menu avoids some strange conflict between kobalte and corvu.
+                                    // Our UI locks if we don't close the menu _first_.
+                                    setDropdownMenuOpen(false);
                                     const success = await deleteDocument.openDeleteDialog();
                                     if (success) {
                                         navigate("/documents");
