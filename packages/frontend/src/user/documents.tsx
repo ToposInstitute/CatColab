@@ -3,13 +3,13 @@ import { getAuth } from "firebase/auth";
 import { useFirebaseApp } from "solid-firebase";
 import { For, Match, Switch, createEffect, createResource, createSignal, onMount } from "solid-js";
 import { rpcResourceErr, rpcResourceOk, useApi } from "../api";
+import { useDeleteDocument } from "../components/delete_document_dialog";
 import { BrandedToolbar } from "../page";
 import { LoginGate } from "./login";
 import "./documents.css";
 import { useNavigate } from "@solidjs/router";
-import { Button, IconButton, Spinner } from "catcolab-ui-components";
+import { IconButton, Spinner } from "catcolab-ui-components";
 import X from "lucide-solid/icons/x";
-import { Dialog } from "../components";
 
 export default function UserDocuments() {
     return (
@@ -196,7 +196,6 @@ function RefStubRow(props: { stub: RefStub; onDelete: () => void }) {
     const firebaseApp = useFirebaseApp();
     const auth = getAuth(firebaseApp);
     const navigate = useNavigate();
-    const api = useApi();
 
     const owner = props.stub.owner;
     const hasOwner = owner !== null;
@@ -204,34 +203,17 @@ function RefStubRow(props: { stub: RefStub; onDelete: () => void }) {
     const ownerName = hasOwner ? (isOwner ? "me" : owner?.username) : "public";
     const canDelete = props.stub.permissionLevel === "Own";
 
-    const [showDeleteConfirm, setShowDeleteConfirm] = createSignal(false);
-    const [showError, setShowError] = createSignal(false);
-    const [errorMessage, setErrorMessage] = createSignal("");
+    const deleteDocument = useDeleteDocument(props.stub);
 
     const handleClick = () => {
         navigate(`/${props.stub.typeName}/${props.stub.refId}`);
     };
 
-    const handleDeleteClick = (e: MouseEvent) => {
+    const handleDeleteClick = async (e: MouseEvent) => {
         e.stopPropagation();
-        setShowDeleteConfirm(true);
-    };
-
-    const confirmDelete = async () => {
-        setShowDeleteConfirm(false);
-
-        try {
-            const result = await api.rpc.delete_ref.mutate(props.stub.refId);
-            if (result.tag === "Ok") {
-                api.clearCachedDoc(props.stub.refId);
-                props.onDelete();
-            } else {
-                setErrorMessage(`Failed to delete document: ${result.message}`);
-                setShowError(true);
-            }
-        } catch (error) {
-            setErrorMessage(`Error deleting document: ${error}`);
-            setShowError(true);
+        const success = await deleteDocument.openDeleteDialog();
+        if (success) {
+            props.onDelete();
         }
     };
 
@@ -262,56 +244,7 @@ function RefStubRow(props: { stub: RefStub; onDelete: () => void }) {
                 </td>
             </tr>
 
-            <Dialog
-                open={showDeleteConfirm()}
-                onOpenChange={setShowDeleteConfirm}
-                title="Delete Document"
-            >
-                <form onSubmit={(evt) => evt.preventDefault()}>
-                    <p>
-                        Are you sure you want to delete{" "}
-                        {props.stub.name ? (
-                            <>
-                                the {props.stub.typeName} "
-                                {props.stub.name.length > 40
-                                    ? `${props.stub.name.slice(0, 40)}...`
-                                    : props.stub.name}
-                                "
-                            </>
-                        ) : (
-                            <>
-                                this <em>untitled</em> {props.stub.typeName}
-                            </>
-                        )}
-                        ?
-                    </p>
-                    <div class="permissions-button-container">
-                        <div class="permissions-spacer" />
-                        <Button
-                            type="button"
-                            variant="utility"
-                            onClick={() => setShowDeleteConfirm(false)}
-                        >
-                            Cancel
-                        </Button>
-                        <Button type="button" variant="danger" onClick={confirmDelete}>
-                            Delete
-                        </Button>
-                    </div>
-                </form>
-            </Dialog>
-
-            <Dialog open={showError()} onOpenChange={setShowError} title="Error">
-                <form onSubmit={(evt) => evt.preventDefault()}>
-                    <p>{errorMessage()}</p>
-                    <div class="permissions-button-container">
-                        <div class="permissions-spacer" />
-                        <Button type="button" variant="primary" onClick={() => setShowError(false)}>
-                            OK
-                        </Button>
-                    </div>
-                </form>
-            </Dialog>
+            <deleteDocument.DeleteDialogs />
         </>
     );
 }

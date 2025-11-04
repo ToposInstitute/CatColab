@@ -1,6 +1,7 @@
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 import { useNavigate } from "@solidjs/router";
 import Ellipsis from "lucide-solid/icons/ellipsis";
+import X from "lucide-solid/icons/x";
 import { Match, Switch, createMemo, createResource } from "solid-js";
 import { useContext } from "solid-js";
 import { Show } from "solid-js";
@@ -9,6 +10,7 @@ import invariant from "tiny-invariant";
 import { IconButton } from "catcolab-ui-components";
 import { createAnalysis } from "../analysis";
 import { type LiveDoc, useApi } from "../api";
+import { useDeleteDocument } from "../components/delete_document_dialog";
 import { createDiagram } from "../diagram";
 import {
     CopyJSONMenuItem,
@@ -29,6 +31,13 @@ export function DocumentMenu(props: {
 
     const navigate = useNavigate();
     const docType = () => props.liveDoc.doc.type;
+
+    invariant(props.liveDoc.docRef, "No document reference found");
+    const deleteDocument = useDeleteDocument({
+        refId: props.liveDoc.docRef.refId,
+        name: props.liveDoc.doc.name,
+        typeName: props.liveDoc.doc.type,
+    });
 
     const onNewDiagram = async () => {
         let modelRefId: string | undefined;
@@ -80,41 +89,61 @@ export function DocumentMenu(props: {
         );
     });
 
+    const canDelete = () => props.liveDoc.docRef?.permissions.user === "Own";
+
     return (
-        <DropdownMenu>
-            <DropdownMenu.Trigger as={IconButton}>
-                <Ellipsis size={18} />
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Portal>
-                <DropdownMenu.Content class="menu popup">
-                    <Switch>
-                        <Match when={theory()?.supportsInstances}>
-                            <MenuItem onSelect={() => onNewDiagram()}>
-                                <DocumentTypeIcon documentType="diagram" />
-                                <MenuItemLabel>{"New diagram in this model"}</MenuItemLabel>
+        <>
+            <DropdownMenu>
+                <DropdownMenu.Trigger as={IconButton}>
+                    <Ellipsis size={18} />
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Portal>
+                    <DropdownMenu.Content class="menu popup">
+                        <Switch>
+                            <Match when={theory()?.supportsInstances}>
+                                <MenuItem onSelect={() => onNewDiagram()}>
+                                    <DocumentTypeIcon documentType="diagram" />
+                                    <MenuItemLabel>{"New diagram in this model"}</MenuItemLabel>
+                                </MenuItem>
+                            </Match>
+                            <Match when={docType() === "diagram"}>
+                                <MenuItem onSelect={() => onNewDiagram()}>
+                                    <DocumentTypeIcon documentType="diagram" />
+                                    <MenuItemLabel>{"New diagram"}</MenuItemLabel>
+                                </MenuItem>
+                            </Match>
+                        </Switch>
+                        <Show when={props.liveDoc.doc.type !== "analysis"}>
+                            <MenuItem onSelect={() => onNewAnalysis()}>
+                                <DocumentTypeIcon documentType="analysis" />
+                                <MenuItemLabel>{`New analysis of this ${docType()}`}</MenuItemLabel>
                             </MenuItem>
-                        </Match>
-                        <Match when={docType() === "diagram"}>
-                            <MenuItem onSelect={() => onNewDiagram()}>
-                                <DocumentTypeIcon documentType="diagram" />
-                                <MenuItemLabel>{"New diagram"}</MenuItemLabel>
+                        </Show>
+                        <Show when={showSeparator()}>
+                            <MenuSeparator />
+                        </Show>
+                        <DuplicateMenuItem doc={props.liveDoc.doc} />
+                        <ExportJSONMenuItem doc={props.liveDoc.doc} />
+                        <CopyJSONMenuItem doc={props.liveDoc.doc} />
+                        <Show when={canDelete()}>
+                            <MenuSeparator />
+                            <MenuItem
+                                onSelect={async () => {
+                                    const success = await deleteDocument.openDeleteDialog();
+                                    if (success) {
+                                        navigate("/documents");
+                                    }
+                                }}
+                            >
+                                <X />
+                                <MenuItemLabel>{`Delete ${docType()}`}</MenuItemLabel>
                             </MenuItem>
-                        </Match>
-                    </Switch>
-                    <Show when={props.liveDoc.doc.type !== "analysis"}>
-                        <MenuItem onSelect={() => onNewAnalysis()}>
-                            <DocumentTypeIcon documentType="analysis" />
-                            <MenuItemLabel>{`New analysis of this ${docType()}`}</MenuItemLabel>
-                        </MenuItem>
-                    </Show>
-                    <Show when={showSeparator()}>
-                        <MenuSeparator />
-                    </Show>
-                    <DuplicateMenuItem doc={props.liveDoc.doc} />
-                    <ExportJSONMenuItem doc={props.liveDoc.doc} />
-                    <CopyJSONMenuItem doc={props.liveDoc.doc} />
-                </DropdownMenu.Content>
-            </DropdownMenu.Portal>
-        </DropdownMenu>
+                        </Show>
+                    </DropdownMenu.Content>
+                </DropdownMenu.Portal>
+            </DropdownMenu>
+
+            <deleteDocument.DeleteDialogs />
+        </>
     );
 }
