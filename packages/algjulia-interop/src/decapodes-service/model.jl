@@ -1,28 +1,15 @@
-# Build the model
+#= Build the model
 
-export Model
-
-# """ 
-# A model for the Decapodes integration is the same as the default Model method. 
-# A dictionary mapping UUID strings with ModelElements is instantiated. 
-# """
-# Model(::ThDecapode) = Model{ThDecapode}(Dict{String, ModelElement}())
-
+A model for the Decapodes integration is the same as the default Model method. 
+A dictionary mapping UUID strings with ModelElements is instantiated. 
+=#
 function ObGenerator(::ThDecapode, obgen::AbstractDict)
     ObGenerator(obgen[:id], ob_name(ThDecapode(), obgen[:label]), obgen[:obType])
 end
 export ObGenerator
 
-# XXX the use of an `only` here means we're being hostile to multiarrows
-function MorGenerator(::ThDecapode, ob_generators::Vector{ObGenerator}, morgen::AbstractDict)
-    dom = only(filter(ob -> ob.id == morgen[:dom][:content], ob_generators))
-    cod = only(filter(ob -> ob.id == morgen[:cod][:content], ob_generators))
-    MorGenerator(morgen[:id], mor_name(ThDecapode(), morgen[:label]), morgen[:morType], dom, cod)
-end
-export MorGenerator
-
 """ Helper function to convert CatColab values (Obs) in Decapodes """
-function ob_name(model::ThDecapode,  name::String)
+function ob_name(model::ThDecapode, name::String)
     @match lowercase(name) begin
         "0-form" => :Form0
         "1-form" => :Form1
@@ -36,11 +23,20 @@ function ob_name(model::ThDecapode,  name::String)
         x => throw(ImplError(x))
     end
 end
-ob_name(model::ThDecapode, name::AbstractVector) = 
-    ob_name(model, join(String.(name), ""))
+export ob_name
+
+ob_name(model::ThDecapode, name::AbstractVector) = ob_name(model, join(String.(name), ""))
+
+# XXX the use of an `only` here means we're being hostile to multiarrows
+function MorGenerator(::ThDecapode, ob_generators::Vector{ObGenerator}, morgen::AbstractDict)
+    dom = only(filter(ob -> ob.id == morgen[:dom][:content], ob_generators))
+    cod = only(filter(ob -> ob.id == morgen[:cod][:content], ob_generators))
+    MorGenerator(morgen[:id], mor_name(ThDecapode(), morgen[:label]), morgen[:morType], dom, cod)
+end
+export MorGenerator
 
 """ Helper function to convert CatColab values (Homs) in Decapodes """
-function mor_name(model::ThDecapode,  name::String)
+function mor_name(model::ThDecapode, name::String)
     @match replace(name," " => "") begin
         "∂t" || "∂ₜ" => :∂ₜ
         "Δ" => :Δ
@@ -58,6 +54,7 @@ function mor_name(model::ThDecapode,  name::String)
         x => throw(ImplError(x))
     end
 end
+export mor_name
 
 mor_name(model::ThDecapode, name::AbstractVector) = mor_name(model, join(String.(name), ""))
 

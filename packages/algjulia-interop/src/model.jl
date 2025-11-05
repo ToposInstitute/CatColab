@@ -5,14 +5,10 @@ struct ObGenerator
 end
 
 # TODO macro
-function ObGenerator(data::AbstractDict)
-    ObGenerator(getindex.(Ref(data), fieldnames(ObGenerator))...)
-end
+ObGenerator(data::AbstractDict) = ObGenerator(getindex.(Ref(data), fieldnames(ObGenerator))...)
 
 Base.nameof(ob::ObGenerator) = Symbol(ob.label)
-
-Base.getindex(obs::Vector{ObGenerator}, id::String) = 
-only(filter(ob -> ob.id == id, obs))
+Base.getindex(obs::Vector{ObGenerator}, id::String) = only(filter(ob -> ob.id == id, obs))
 
 struct MorGenerator
     id::String
@@ -23,11 +19,10 @@ struct MorGenerator
 end
 
 # TODO macro
-function MorGenerator(data::AbstractDict)
-    MorGenerator(getindex.(Ref(data), fieldnames(MorGenerator))...)
-end
+MorGenerator(data::AbstractDict) = MorGenerator(getindex.(Ref(data), fieldnames(MorGenerator))...)
 
 Base.nameof(mor::MorGenerator) = Symbol(mor.label)
+Base.getindex(obs::Vector{MorGenerator}, id::String) = only(filter(mor -> mor.id == id, mors))
 
 struct Model{T<:AlgebraicJuliaIntegration}
     ob_generators::Vector{ObGenerator}
@@ -41,10 +36,4 @@ function Model(::T, data::AbstractDict) where T <: AlgebraicJuliaIntegration
     mor_generators = MorGenerator.(Ref(T()), data[:morGenerators])
     Model(T(), ob_generators, mor_generators)
 end
-
-""" 
-Functions to build a dictionary associating ids in the theory to elements in the model
-"""
-function to_model end
-export to_model
 
