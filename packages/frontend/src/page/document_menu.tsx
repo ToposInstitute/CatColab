@@ -1,7 +1,7 @@
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 import { useNavigate } from "@solidjs/router";
 import Ellipsis from "lucide-solid/icons/ellipsis";
-import { Match, Switch, createMemo, createResource } from "solid-js";
+import { Match, Switch, createMemo, createResource, createSignal } from "solid-js";
 import { useContext } from "solid-js";
 import { Show } from "solid-js";
 import invariant from "tiny-invariant";
@@ -12,6 +12,7 @@ import { type LiveDoc, useApi } from "../api";
 import { createDiagram } from "../diagram";
 import {
     CopyJSONMenuItem,
+    DeleteMenuItem,
     DuplicateMenuItem,
     ExportJSONMenuItem,
     MenuItem,
@@ -80,8 +81,13 @@ export function DocumentMenu(props: {
         );
     });
 
+    const canDelete = () =>
+        props.liveDoc.docRef?.permissions.user === "Own" && !props.liveDoc.docRef?.isDeleted;
+
+    const [isDropdownMenuOpen, setDropdownMenuOpen] = createSignal(false);
+
     return (
-        <DropdownMenu>
+        <DropdownMenu open={isDropdownMenuOpen()} onOpenChange={setDropdownMenuOpen}>
             <DropdownMenu.Trigger as={IconButton}>
                 <Ellipsis size={18} />
             </DropdownMenu.Trigger>
@@ -113,6 +119,17 @@ export function DocumentMenu(props: {
                     <DuplicateMenuItem doc={props.liveDoc.doc} />
                     <ExportJSONMenuItem doc={props.liveDoc.doc} />
                     <CopyJSONMenuItem doc={props.liveDoc.doc} />
+                    <MenuSeparator />
+                    <DeleteMenuItem
+                        refId={props.liveDoc.docRef?.refId}
+                        name={props.liveDoc.doc.name}
+                        typeName={props.liveDoc.doc.type}
+                        canDelete={canDelete()}
+                        // Explicitly closing the menu avoids some strange
+                        // conflict between kobalte and corvu. Our UI locks
+                        // if we don't close the menu _first_.
+                        onBeforeDelete={() => setDropdownMenuOpen(false)}
+                    />
                 </DropdownMenu.Content>
             </DropdownMenu.Portal>
         </DropdownMenu>

@@ -1,6 +1,7 @@
 export * from "./completions";
 export * from "./dialog";
 export * from "./foldable";
+export * from "./delete_document_dialog";
 export * from "./id_input";
 export * from "./inline_input";
 export * from "./input_options";

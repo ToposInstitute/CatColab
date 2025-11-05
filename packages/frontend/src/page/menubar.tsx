@@ -8,6 +8,7 @@ import invariant from "tiny-invariant";
 import { IconButton } from "catcolab-ui-components";
 import type { Document } from "catlog-wasm";
 import { useApi } from "../api";
+import { useDeleteDocument } from "../components/delete_document_dialog";
 import { createModel } from "../model/document";
 import { TheoryLibraryContext } from "../theory";
 import { copyToClipboard, downloadJson } from "../util/json_export";
@@ -24,6 +25,7 @@ import LogOutIcon from "lucide-solid/icons/log-out";
 import MenuIcon from "lucide-solid/icons/menu";
 import SettingsIcon from "lucide-solid/icons/settings";
 import UploadIcon from "lucide-solid/icons/upload";
+import X from "lucide-solid/icons/x";
 
 import "./menubar.css";
 
@@ -227,5 +229,43 @@ function DocumentsMenuItem() {
             <Files />
             <MenuItemLabel>{"My documents"}</MenuItemLabel>
         </MenuItem>
+    );
+}
+
+/** Menu item to delete a document. */
+export function DeleteMenuItem(props: {
+    refId: string | undefined;
+    name: string | null;
+    typeName: string;
+    canDelete: boolean;
+    onBeforeDelete?: () => void;
+}) {
+    invariant(props.refId, "No document reference found");
+
+    const navigate = useNavigate();
+    const deleteDocument = useDeleteDocument({
+        refId: props.refId,
+        name: props.name,
+        typeName: props.typeName,
+    });
+
+    const handleDelete = async () => {
+        // Call optional callback before deletion
+        props.onBeforeDelete?.();
+
+        const success = await deleteDocument.openDeleteDialog();
+        if (success) {
+            navigate("/documents");
+        }
+    };
+
+    return (
+        <>
+            <MenuItem disabled={!props.canDelete} onSelect={handleDelete}>
+                <X />
+                <MenuItemLabel>{`Delete ${props.typeName}`}</MenuItemLabel>
+            </MenuItem>
+            <deleteDocument.DeleteDialogs />
+        </>
     );
 }
