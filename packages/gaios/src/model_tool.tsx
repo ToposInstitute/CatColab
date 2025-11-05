@@ -7,7 +7,7 @@ import { stdTheories } from "../../frontend/src/stdlib";
 import { TheoryLibraryContext } from "../../frontend/src/theory";
 import type { ModelDoc } from "./model_datatype";
 import { render } from "solid-js/web";
-import "../../frontend/src/index.css";
+import styles from "../../frontend/src/index.css?inline";
 
 export function renderModelTool(handle: DocHandle<ModelDoc>, element: any) {
     const modelLibrary = createModelLibraryWithRepo(element.repo, stdTheories);
@@ -26,9 +26,25 @@ export function renderModelTool(handle: DocHandle<ModelDoc>, element: any) {
         }
     );
 
+    const shadowRoot = element.attachShadow({ mode: "open" });
+
+    // hack: vite currently injects styles into the head of the document
+    // because of the shadow dom we no longer get these styles
+    // for now we just copy them into the shadow root
+    for (const node of document.querySelectorAll(
+        "style,link[rel='stylesheet']"
+    )) {
+        shadowRoot.append(node.cloneNode(true));
+    }
+
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync(styles as string);
+    shadowRoot.adoptedStyleSheets ??= [];
+    shadowRoot.adoptedStyleSheets.push(sheet);
+
     return render(
         () => (
-            <div>
+            <div style="padding: 52px; height: 100%; overflow: scroll;">
                 <Switch>
                     <Match when={liveModel.loading}>
                         <div>⏳ Loading model...</div>
@@ -49,6 +65,6 @@ export function renderModelTool(handle: DocHandle<ModelDoc>, element: any) {
                 </Switch>
             </div>
         ),
-        element
+        shadowRoot
     );
 }
