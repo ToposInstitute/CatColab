@@ -1,7 +1,6 @@
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 import { useNavigate } from "@solidjs/router";
 import Ellipsis from "lucide-solid/icons/ellipsis";
-import X from "lucide-solid/icons/x";
 import { Match, Switch, createMemo, createResource, createSignal } from "solid-js";
 import { useContext } from "solid-js";
 import { Show } from "solid-js";
@@ -10,10 +9,10 @@ import invariant from "tiny-invariant";
 import { IconButton } from "catcolab-ui-components";
 import { createAnalysis } from "../analysis";
 import { type LiveDoc, useApi } from "../api";
-import { useDeleteDocument } from "../components/delete_document_dialog";
 import { createDiagram } from "../diagram";
 import {
     CopyJSONMenuItem,
+    DeleteMenuItem,
     DuplicateMenuItem,
     ExportJSONMenuItem,
     MenuItem,
@@ -31,13 +30,6 @@ export function DocumentMenu(props: {
 
     const navigate = useNavigate();
     const docType = () => props.liveDoc.doc.type;
-
-    invariant(props.liveDoc.docRef, "No document reference found");
-    const deleteDocument = useDeleteDocument({
-        refId: props.liveDoc.docRef.refId,
-        name: props.liveDoc.doc.name,
-        typeName: props.liveDoc.doc.type,
-    });
 
     const onNewDiagram = async () => {
         let modelRefId: string | undefined;
@@ -95,62 +87,51 @@ export function DocumentMenu(props: {
     const [isDropdownMenuOpen, setDropdownMenuOpen] = createSignal(false);
 
     return (
-        <>
-            <DropdownMenu open={isDropdownMenuOpen()} onOpenChange={setDropdownMenuOpen}>
-                <DropdownMenu.Trigger as={IconButton}>
-                    <Ellipsis size={18} />
-                </DropdownMenu.Trigger>
-                <DropdownMenu.Portal>
-                    <DropdownMenu.Content class="menu popup">
-                        <Switch>
-                            <Match when={theory()?.supportsInstances}>
-                                <MenuItem onSelect={() => onNewDiagram()}>
-                                    <DocumentTypeIcon documentType="diagram" />
-                                    <MenuItemLabel>{"New diagram in this model"}</MenuItemLabel>
-                                </MenuItem>
-                            </Match>
-                            <Match when={docType() === "diagram"}>
-                                <MenuItem onSelect={() => onNewDiagram()}>
-                                    <DocumentTypeIcon documentType="diagram" />
-                                    <MenuItemLabel>{"New diagram"}</MenuItemLabel>
-                                </MenuItem>
-                            </Match>
-                        </Switch>
-                        <Show when={props.liveDoc.doc.type !== "analysis"}>
-                            <MenuItem onSelect={() => onNewAnalysis()}>
-                                <DocumentTypeIcon documentType="analysis" />
-                                <MenuItemLabel>{`New analysis of this ${docType()}`}</MenuItemLabel>
+        <DropdownMenu open={isDropdownMenuOpen()} onOpenChange={setDropdownMenuOpen}>
+            <DropdownMenu.Trigger as={IconButton}>
+                <Ellipsis size={18} />
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Portal>
+                <DropdownMenu.Content class="menu popup">
+                    <Switch>
+                        <Match when={theory()?.supportsInstances}>
+                            <MenuItem onSelect={() => onNewDiagram()}>
+                                <DocumentTypeIcon documentType="diagram" />
+                                <MenuItemLabel>{"New diagram in this model"}</MenuItemLabel>
                             </MenuItem>
-                        </Show>
-                        <Show when={showSeparator()}>
-                            <MenuSeparator />
-                        </Show>
-                        <DuplicateMenuItem doc={props.liveDoc.doc} />
-                        <ExportJSONMenuItem doc={props.liveDoc.doc} />
-                        <CopyJSONMenuItem doc={props.liveDoc.doc} />
-                        <MenuSeparator />
-                        <MenuItem
-                            disabled={!canDelete()}
-                            onSelect={async () => {
-                                // Explicitly closing the menu avoids some
-                                // strange conflict between kobalte and corvu.
-                                // Our UI locks if we don't close the menu
-                                // _first_.
-                                setDropdownMenuOpen(false);
-                                const success = await deleteDocument.openDeleteDialog();
-                                if (success) {
-                                    navigate("/documents");
-                                }
-                            }}
-                        >
-                            <X />
-                            <MenuItemLabel>{`Delete ${docType()}`}</MenuItemLabel>
+                        </Match>
+                        <Match when={docType() === "diagram"}>
+                            <MenuItem onSelect={() => onNewDiagram()}>
+                                <DocumentTypeIcon documentType="diagram" />
+                                <MenuItemLabel>{"New diagram"}</MenuItemLabel>
+                            </MenuItem>
+                        </Match>
+                    </Switch>
+                    <Show when={props.liveDoc.doc.type !== "analysis"}>
+                        <MenuItem onSelect={() => onNewAnalysis()}>
+                            <DocumentTypeIcon documentType="analysis" />
+                            <MenuItemLabel>{`New analysis of this ${docType()}`}</MenuItemLabel>
                         </MenuItem>
-                    </DropdownMenu.Content>
-                </DropdownMenu.Portal>
-            </DropdownMenu>
-
-            <deleteDocument.DeleteDialogs />
-        </>
+                    </Show>
+                    <Show when={showSeparator()}>
+                        <MenuSeparator />
+                    </Show>
+                    <DuplicateMenuItem doc={props.liveDoc.doc} />
+                    <ExportJSONMenuItem doc={props.liveDoc.doc} />
+                    <CopyJSONMenuItem doc={props.liveDoc.doc} />
+                    <MenuSeparator />
+                    <DeleteMenuItem
+                        refId={props.liveDoc.docRef?.refId}
+                        name={props.liveDoc.doc.name}
+                        typeName={props.liveDoc.doc.type}
+                        canDelete={canDelete()}
+                        // Explicitly closing the menu avoids some strange
+                        // conflict between kobalte and corvu. Our UI locks
+                        // if we don't close the menu _first_.
+                        onBeforeDelete={() => setDropdownMenuOpen(false)}
+                    />
+                </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+        </DropdownMenu>
     );
 }
