@@ -9,7 +9,7 @@
     },
     "scripts": {
         "build": "vite build",
-        "push": "pnpm build && patchwork push",
+        "push": "pnpm build && pushwork sync",
         "format": "biome format --write",
         "lint": "biome lint --write && biome check --write",
         "watch": "nodemon --watch src -e js,tsx,ts,tsx,css,json --exec 'pnpm build && pnpm push'"

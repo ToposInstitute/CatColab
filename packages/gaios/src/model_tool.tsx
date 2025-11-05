@@ -1,28 +1,22 @@
 import type { AutomergeUrl, DocHandle, Repo } from "@automerge/automerge-repo";
 import { createResource, Switch, Match } from "solid-js";
 
-import { getLiveModelFromRepo } from "../../frontend/src/model";
-import { ModelPane } from "../../frontend/src/model/model_editor";
-import { stdTheories, TheoryLibraryContext } from "../../frontend/src/stdlib";
+import { createModelLibraryWithRepo } from "../../frontend/src/model";
+import { ModelNotebookEditor } from "../../frontend/src/model/model_editor";
+import { stdTheories } from "../../frontend/src/stdlib";
+import { TheoryLibraryContext } from "../../frontend/src/theory";
 import type { ModelDoc } from "./model_datatype";
 import { render } from "solid-js/web";
+import "../../frontend/src/index.css";
 
-type ModelToolProps = {
-    handle: DocHandle<ModelDoc>;
-    element: ShadowRoot | HTMLElement;
-    repo: Repo;
-};
+export function renderModelTool(handle: DocHandle<ModelDoc>, element: any) {
+    const modelLibrary = createModelLibraryWithRepo(element.repo, stdTheories);
 
-export function renderModelTool({ handle, element, repo }: ModelToolProps) {
     const [liveModel] = createResource(
         () => handle.url,
         async (docUrl) => {
             try {
-                return await getLiveModelFromRepo(
-                    docUrl as AutomergeUrl,
-                    repo,
-                    stdTheories
-                );
+                return await modelLibrary.getLiveModel(docUrl as AutomergeUrl);
             } catch (error) {
                 console.error("=== Model Loading Failed ===");
                 console.error("Error:", error);
@@ -48,7 +42,7 @@ export function renderModelTool({ handle, element, repo }: ModelToolProps) {
                     <Match when={liveModel()}>
                         {(liveModel) => (
                             <TheoryLibraryContext.Provider value={stdTheories}>
-                                <ModelPane liveModel={liveModel()} />
+                                <ModelNotebookEditor liveModel={liveModel()} />
                             </TheoryLibraryContext.Provider>
                         )}
                     </Match>

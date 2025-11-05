@@ -1,6 +1,6 @@
 export const plugins = [
     {
-        type: "patchwork:dataType",
+        type: "patchwork:datatype",
         id: "catcolab-model",
         name: "CatColab Model",
         icon: "Zap",
@@ -17,9 +17,7 @@ export const plugins = [
         supportedDataTypes: ["catcolab-model"],
         async load() {
             const { renderModelTool } = await import("./model_tool");
-            return {
-                render: renderModelTool,
-            };
+            return renderModelTool;
         },
     },
 ];
