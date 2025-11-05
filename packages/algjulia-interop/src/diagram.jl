@@ -17,9 +17,14 @@ function DiagramObGenerator(data::AbstractDict)
 end
 
 Base.nameof(ob::DiagramObGenerator) = ob.label
-
-Base.getindex(obs::Vector{MorGenerator}, id::String) = 
-only(filter(ob -> ob.id == id, obs))
+function Base.nameof(model::Model, ob::DiagramObGenerator)
+    if isnothing(ob.over)
+        :no_name
+    else
+        nameof(model.ob_generators[ob.over.content])
+    end
+end
+Base.getindex(obs::Vector{MorGenerator}, id::String) = only(filter(ob -> ob.id == id, obs))
 
 """ Struct defining an morphism generator """
 struct DiagramMorGenerator 
@@ -40,10 +45,14 @@ function DiagramMorGenerator(data::AbstractDict; obs::Vector{DiagramObGenerator}
 end
 
 Base.nameof(mor::DiagramMorGenerator) = mor.label
-
-Base.getindex(mors::Vector{MorGenerator}, id::String) = 
-only(filter(mor -> mor.id == id, mors))
-
+function Base.nameof(model::Model, mor::DiagramMorGenerator)
+    if isnothing(mor.over)
+        :no_name
+    else
+        nameof(model.mor_generators[mor.over.content])
+    end
+end
+Base.getindex(mors::Vector{MorGenerator}, id::String) = only(filter(mor -> mor.id == id, mors))
 
 """ Struct wrapping a dictionary """
 struct ModelDiagramPresentation{T<:AlgebraicJuliaIntegration}
@@ -54,7 +63,7 @@ struct ModelDiagramPresentation{T<:AlgebraicJuliaIntegration}
 end
 export ModelDiagramPresentation
 
-function ModelDiagramPresentation(::T, data::JSON3.Object) where T
+function ModelDiagramPresentation(::T, data::AbstractDict) where T
     ob_generators = DiagramObGenerator.(data[:obGenerators])
     mor_generators = DiagramMorGenerator.(data[:morGenerators]; obs=ob_generators)
     ModelDiagramPresentation(T(), ob_generators, mor_generators)

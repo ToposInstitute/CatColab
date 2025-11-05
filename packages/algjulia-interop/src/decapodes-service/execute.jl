@@ -1,3 +1,7 @@
+"""    DecapodeSimulation
+
+This analysis contains the data necessary to execute a simulation.
+"""
 struct DecapodeSimulation <: AbstractAnalysis{ThDecapode}
     diagram::ModelDiagramPresentation{ThDecapode}
     model::Model{ThDecapode}
@@ -10,12 +14,9 @@ function DecapodeSimulation(path::String; hodge=GeometricHodge())
     DecapodeSimulation(payload)
 end
 
-#=
-Simulation: Payload => Analysis 
-=#
 function DecapodeSimulation(payload::Payload; hodge=GeometricHodge())
     pode = DecapodeDiagram(payload)
-    plotVars = @match payload.data[:plotVariables] begin
+    plotVars = @match payload[:plotVariables] begin
         vars::AbstractArray => Dict{String, Bool}(key => key ∈ vars for key ∈ keys(pode.vars))
         vars => Dict{String, Bool}( "$key" => var for (key, var) in vars)
     end
@@ -46,11 +47,12 @@ function DecapodeSimulation(payload::Payload; hodge=GeometricHodge())
         return (args...) -> op(args...)
     end
     #
-    u0 = initial_conditions(payload.data[:initialConditions], geometry, uuid2symb)
+    u0 = initial_conditions(payload[:initialConditions], geometry, uuid2symb)
 
     # reversing `uuid2symb` into `symbol => uuid.` we need this to reassociate the var to its UUID 
     symb2uuid = Dict([v => k for (k,v) in pairs(uuid2symb)])
 
+    # TODO what is anons doing here?
     anons = Dict{Symbol, Any}()
     data = Dict(
         :pode => pode.pode,
@@ -60,17 +62,23 @@ function DecapodeSimulation(payload::Payload; hodge=GeometricHodge())
         :init => u0,
         :generate => sys_generate,
         :uuiddict => symb2uuid,
-        :duration => payload.data[:duration])
+        :duration => payload[:duration])
     return DecapodeSimulation(payload.diagram, payload.model, data)
 end
 
-Base.show(io::IO, system::DecapodeSimulation) = println(io, system.data[:pode])
+Base.show(io::IO, system::DecapodeSimulation) = println(io, system[:pode])
 
-points(system::DecapodeSimulation) = collect(values(system.data[:geometry].dualmesh.subparts.point.m))
-indexing_bounds(system::DecapodeSimulation) = indexing_bounds(system.data[:geometry].domain)
+Base.getindex(system::DecapodeSimulation, field::Symbol) = system.data[field]
 
-function Base.run(fm, u0, t0, constparam)
-    prob = ODEProblem(fm, u0, (0, t0), constparam)
+points(system::DecapodeSimulation) = collect(values(system[:geometry].dualmesh.subparts.point.m))
+indexing_bounds(system::DecapodeSimulation) = indexing_bounds(system[:geometry].domain)
+
+import Base: run
+
+"""
+"""
+function Base.run(fm, sim::DecapodeSimulation, constparam)
+    prob = ODEProblem(fm, sim[:init], sim[:duration], constparam)
     solve(prob, Tsit5(), saveat=0.01)
 end
 export run

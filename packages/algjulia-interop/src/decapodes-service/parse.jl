@@ -1,5 +1,7 @@
-include("ns_helper.jl")
-include("initial_conditions.jl")
+
+function uuid_to_symb(decapode::SummationDecapode, vars::Dict{String, Int})
+    Dict([key => (subpart(decapode, vars[key], :name)) for key ∈ keys(vars)])
+end
 
 #=
 We produce a ModelDiagramPresentation and Analysis data from the CCL payload.
@@ -56,31 +58,6 @@ function DecapodeDiagram(payload::Payload)
     return pode
 end
 
-# TODO move to diagram
-function Base.nameof(model::Model, ob::DiagramObGenerator)
-    if isnothing(ob.over)
-        :no_name
-    else
-        nameof(model.ob_generators[ob.over.content])
-    end
-end
-
-function Base.nameof(model::Model, mor::DiagramMorGenerator)
-    if isnothing(mor.over)
-        :no_name
-    else
-        nameof(model.mor_generators[mor.over.content])
-    end
-end
-
-function Base.nameof(model::Model, content::AbstractDict)
-    if isnothing(content[:over])
-        :no_name
-    else
-        Symbol(model.data[content[:over][:content]].name)
-    end
-end
-
 # endpoint being `dom` or `codom`
 function check_endpoint!(diagram::DecapodeDiagram, endpoint::DiagramObGenerator)
     if haskey(diagram.vars, endpoint.id)
@@ -99,4 +76,3 @@ function check_endpoint!(diagram::DecapodeDiagram, endpoint::DiagramObGenerator)
     end
 end
 
-include("simulation.jl")
