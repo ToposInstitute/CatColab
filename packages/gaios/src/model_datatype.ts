@@ -1,4 +1,4 @@
-import type { Cell, Uuid } from "catlog-wasm";
+import type { Cell } from "catlog-wasm";
 
 // SCHEMA
 
@@ -11,15 +11,11 @@ export type ModelDoc = {
     };
 };
 
-export const markCopy = (doc: ModelDoc) => {
-    doc.name = `Copy of ${doc.name}`;
-};
-
-const setTitle = async (doc: ModelDoc, title: string) => {
+const setTitle = (doc: ModelDoc, title: string) => {
     doc.name = title;
 };
 
-const getTitle = async (doc: ModelDoc) => {
+const getTitle = (doc: ModelDoc) => {
     return doc.name || "CatColab Model";
 };
 
@@ -36,5 +32,4 @@ export const dataType = {
     init,
     getTitle,
     setTitle,
-    markCopy,
 };
