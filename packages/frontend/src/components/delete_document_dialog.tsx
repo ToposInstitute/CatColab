@@ -31,7 +31,9 @@ export function useDeleteDocument() {
     const handleConfirmDelete = async () => {
         setShowDeleteConfirm(false);
         const info = currentDocInfo();
-        if (!info) return;
+        if (!info) {
+            return;
+        }
 
         try {
             const result = await api.rpc.delete_ref.mutate(info.refId);
@@ -61,7 +63,9 @@ export function useDeleteDocument() {
 
     const docName = () => {
         const info = currentDocInfo();
-        if (!info) return "";
+        if (!info) {
+            return "";
+        }
         return info.name ? (
             info.name.length > 40 ? (
                 `${info.name.slice(0, 40)}...`

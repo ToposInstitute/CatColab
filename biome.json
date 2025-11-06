@@ -42,7 +42,8 @@
                 },
                 "noUselessElse": {
                     "level": "off"
-                }
+                },
+                "useBlockStatements": "error"
             }
         }
     },

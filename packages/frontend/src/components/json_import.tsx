@@ -51,7 +51,9 @@ export const JsonImport = ({ onImport, validate }: JsonImportProps) => {
         const input = event.currentTarget;
 
         const file = input.files?.[0];
-        if (!file) return;
+        if (!file) {
+            return;
+        }
 
         // Validate file type
         if (file.type !== "application/json" && !file.name.endsWith(".json")) {
