@@ -201,8 +201,9 @@ function RefStubRow(props: { stub: RefStub; onRestore: () => void }) {
     const [errorMessage, setErrorMessage] = createSignal("");
 
     const handleRestore = async () => {
-        if (!canRestore) return;
-
+        if (!canRestore) {
+            return;
+        }
         try {
             const result = await api.rpc.restore_ref.mutate(props.stub.refId);
             if (result.tag === "Ok") {
