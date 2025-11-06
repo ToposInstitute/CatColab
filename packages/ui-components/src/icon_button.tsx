@@ -18,9 +18,14 @@ export function IconButton(
 
     const buttonClass = () => {
         const baseClass = "icon-button";
-        if (props.variant === "danger") return `${baseClass} icon-button-danger`;
-        if (props.variant === "primary") return `${baseClass} icon-button-primary`;
-        return baseClass;
+        switch (props.variant) {
+            case "danger":
+                return `${baseClass} icon-button-danger`;
+            case "primary":
+                return `${baseClass} icon-button-primary`;
+            default:
+                return baseClass;
+        }
     };
 
     return (
