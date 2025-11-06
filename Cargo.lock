@@ -2156,14 +2156,15 @@ dependencies = [
 
 [[package]]
 name = "ode_solvers"
-version = "0.5.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f899b49b30ecbcfc2db3328b9517741764266e8b42a91cde85573da67790019"
+checksum = "1f6dded742520a47ff6e4d61c9e88f3a437657221216f7b328c94bc282feca7a"
 dependencies = [
  "nalgebra",
  "num-traits",
+ "serde",
  "simba",
- "thiserror 1.0.69",
+ "thiserror 2.0.12",
 ]
 
 [[package]]
@@ -2498,9 +2499,9 @@ checksum = "60a357793950651c4ed0f3f52338f53b2f809f32d83a07f72909fa13e4c6c1e3"
 
 [[package]]
 name = "rebop"
-version = "0.9.3"
+version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21e68473e30430c07a9058b63688fe3a4bd25301be660ebc0f598a5fa320d9d1"
+checksum = "5139ca8a0b16655e894eedaf4eb23cd71a696d0c39758b2dbefc104995673693"
 dependencies = [
  "rand 0.9.2",
  "rand_distr",
