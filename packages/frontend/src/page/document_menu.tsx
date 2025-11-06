@@ -1,7 +1,7 @@
-import { DropdownMenu } from "@kobalte/core/dropdown-menu";
+import Popover from "@corvu/popover";
 import { useNavigate } from "@solidjs/router";
 import Ellipsis from "lucide-solid/icons/ellipsis";
-import { Match, Switch, createMemo, createResource, createSignal } from "solid-js";
+import { Match, Switch, createMemo, createResource } from "solid-js";
 import { useContext } from "solid-js";
 import { Show } from "solid-js";
 import invariant from "tiny-invariant";
@@ -84,15 +84,20 @@ export function DocumentMenu(props: {
     const canDelete = () =>
         props.liveDoc.docRef?.permissions.user === "Own" && !props.liveDoc.docRef?.isDeleted;
 
-    const [isDropdownMenuOpen, setDropdownMenuOpen] = createSignal(false);
-
     return (
-        <DropdownMenu open={isDropdownMenuOpen()} onOpenChange={setDropdownMenuOpen}>
-            <DropdownMenu.Trigger as={IconButton}>
+        <Popover
+            placement="bottom-end"
+            floatingOptions={{
+                offset: 4,
+                flip: true,
+                shift: true,
+            }}
+        >
+            <Popover.Trigger as={IconButton}>
                 <Ellipsis size={18} />
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Portal>
-                <DropdownMenu.Content class="menu popup">
+            </Popover.Trigger>
+            <Popover.Portal>
+                <Popover.Content class="menu popup">
                     <Switch>
                         <Match when={theory()?.supportsInstances}>
                             <MenuItem onSelect={() => onNewDiagram()}>
@@ -125,13 +130,9 @@ export function DocumentMenu(props: {
                         name={props.liveDoc.doc.name}
                         typeName={props.liveDoc.doc.type}
                         canDelete={canDelete()}
-                        // Explicitly closing the menu avoids some strange
-                        // conflict between kobalte and corvu. Our UI locks
-                        // if we don't close the menu _first_.
-                        onBeforeDelete={() => setDropdownMenuOpen(false)}
                     />
-                </DropdownMenu.Content>
-            </DropdownMenu.Portal>
-        </DropdownMenu>
+                </Popover.Content>
+            </Popover.Portal>
+        </Popover>
     );
 }

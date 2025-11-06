@@ -9,17 +9,19 @@ export type DeleteDocumentInfo = {
     typeName: string;
 };
 
-export function useDeleteDocument(docInfo: DeleteDocumentInfo) {
+export function useDeleteDocument() {
     const api = useApi();
 
     const [showDeleteConfirm, setShowDeleteConfirm] = createSignal(false);
     const [showError, setShowError] = createSignal(false);
     const [errorMessage, setErrorMessage] = createSignal("");
+    const [currentDocInfo, setCurrentDocInfo] = createSignal<DeleteDocumentInfo | null>(null);
     const [resolveDeletion, setResolveDeletion] = createSignal<
         ((success: boolean) => void) | undefined
     >();
 
-    const openDeleteDialog = () => {
+    const openDeleteDialog = (docInfo: DeleteDocumentInfo) => {
+        setCurrentDocInfo(docInfo);
         setShowDeleteConfirm(true);
         return new Promise<boolean>((resolve) => {
             setResolveDeletion(() => resolve);
@@ -28,11 +30,13 @@ export function useDeleteDocument(docInfo: DeleteDocumentInfo) {
 
     const handleConfirmDelete = async () => {
         setShowDeleteConfirm(false);
+        const info = currentDocInfo();
+        if (!info) return;
 
         try {
-            const result = await api.rpc.delete_ref.mutate(docInfo.refId);
+            const result = await api.rpc.delete_ref.mutate(info.refId);
             if (result.tag === "Ok") {
-                api.clearCachedDoc(docInfo.refId);
+                api.clearCachedDoc(info.refId);
                 resolveDeletion()?.(true);
                 setResolveDeletion(undefined);
             } else {
@@ -55,17 +59,21 @@ export function useDeleteDocument(docInfo: DeleteDocumentInfo) {
         setResolveDeletion(undefined);
     };
 
-    const docName = docInfo.name ? (
-        docInfo.name.length > 40 ? (
-            `${docInfo.name.slice(0, 40)}...`
+    const docName = () => {
+        const info = currentDocInfo();
+        if (!info) return "";
+        return info.name ? (
+            info.name.length > 40 ? (
+                `${info.name.slice(0, 40)}...`
+            ) : (
+                info.name
+            )
         ) : (
-            docInfo.name
-        )
-    ) : (
-        <>
-            this <em>untitled</em> {docInfo.typeName}
-        </>
-    );
+            <>
+                this <em>untitled</em> {info.typeName}
+            </>
+        );
+    };
 
     const DeleteDialogs = () => {
         return (
@@ -76,7 +84,7 @@ export function useDeleteDocument(docInfo: DeleteDocumentInfo) {
                     title="Delete Document"
                 >
                     <form onSubmit={(evt) => evt.preventDefault()}>
-                        <p>Are you sure you want to delete {docName}?</p>
+                        <p>Are you sure you want to delete {docName()}?</p>
                         <div class="permissions-button-container">
                             <div class="permissions-spacer" />
                             <Button type="button" variant="utility" onClick={handleCancel}>
