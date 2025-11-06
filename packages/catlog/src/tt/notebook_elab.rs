@@ -130,9 +130,7 @@ impl<'a> Elaborator<'a> {
     }
 
     fn lookup_tm(&mut self, name: VarName) -> Option<(TmS, TmV, TyV)> {
-        let Some((i, label, ty)) = self.ctx.lookup(name) else {
-            return None;
-        };
+        let (i, label, ty) = self.ctx.lookup(name)?;
         let v = self.ctx.env.get(*i).unwrap().clone();
         Some((TmS::var(i, name, label), v, ty.clone().unwrap()))
     }
@@ -221,7 +219,7 @@ impl<'a> Elaborator<'a> {
         let Some(TopDecl::Type(type_def)) = self.toplevel.declarations.get(&topname) else {
             return self.ty_error(InvalidDblModel::InvalidLink(name));
         };
-        if &type_def.theory != &self.theory {
+        if type_def.theory != self.theory {
             return self.ty_error(InvalidDblModel::InvalidLink(name));
         }
         let mut specializations = Vec::new();
@@ -231,7 +229,7 @@ impl<'a> Elaborator<'a> {
         let mut r = r.clone();
         for specialization in i_decl.specializations.iter() {
             if let (Some(field_id), Some(ob)) = (&specialization.id, &specialization.ob) {
-                let field_name = NameSegment::Uuid(Uuid::from_str(&field_id).unwrap());
+                let field_name = NameSegment::Uuid(Uuid::from_str(field_id).unwrap());
                 let Some((ob_s, ob_v, ob_type)) = self.ob(ob) else {
                     continue;
                 };
@@ -244,7 +242,9 @@ impl<'a> Elaborator<'a> {
                             continue;
                         }
                     }
-                    _ => {}
+                    _ => {
+                        continue;
+                    }
                 }
                 specializations.push((
                     vec![(field_name, *field_label)],

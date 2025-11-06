@@ -9,7 +9,6 @@ use crate::one::category::FgCategory;
 use crate::tt::stx::MorphismType;
 use crate::tt::{eval::*, prelude::*, toplevel::*, val::*};
 use crate::zero::Namespace;
-use crate::zero::QualifiedLabel;
 use crate::zero::QualifiedName;
 
 /// Generate a discrete double model from a type.
@@ -21,7 +20,7 @@ pub fn generate(toplevel: &Toplevel, theory: &Theory, ty: &TyV) -> (DiscreteDblM
     let elt = eval.eta_neu(&elt, ty);
     let mut out = DiscreteDblModel::new(theory.definition.clone());
     let namespace =
-        extract_to(&eval, &mut out, vec![], &elt, ty).unwrap_or_else(|| Namespace::new_for_uuid());
+        extract_to(&eval, &mut out, vec![], &elt, ty).unwrap_or_else(Namespace::new_for_uuid);
     (out, namespace)
 }
 
@@ -64,19 +63,16 @@ fn extract_to(
                     NameSegment::Uuid(uuid) => {
                         namespace.set_label(*uuid, *label);
                     }
-                    NameSegment::Text(_) => todo!(),
+                    NameSegment::Text(_) => {}
                 }
-                match extract_to(
+                if let Some(inner) = extract_to(
                     eval,
                     out,
                     prefix,
                     &eval.proj(val, *name, *label),
                     &eval.field_ty(ty, val, *name),
                 ) {
-                    Some(inner) => {
-                        namespace.add_inner(*name, inner);
-                    }
-                    None => {}
+                    namespace.add_inner(*name, inner);
                 };
             }
             Some(namespace)

@@ -6,7 +6,7 @@ use std::str::FromStr;
 
 use all_the_same::all_the_same;
 use catlog::tt;
-use catlog::tt::modelgen::{generate, model_output};
+use catlog::tt::modelgen::generate;
 use catlog::tt::notebook_elab::Elaborator as ElaboratorNext;
 use catlog::tt::toplevel::{Theory, TopDecl, Toplevel, Type, std_theories};
 use derive_more::{From, TryInto};
@@ -582,6 +582,7 @@ impl DblModel {
         })
     }
 
+    /// Dump the model as a string, used for debugging
     #[wasm_bindgen(js_name = "dump")]
     pub fn dump(&self) -> String {
         format!("{:?}\n{:?}", self.ob_generators(), self.mor_generators())
@@ -669,14 +670,12 @@ pub fn elaborate_model(
 ) -> Result<DblModel, String> {
     match &theory.0 {
         DblTheoryBox::Discrete(ddt) => {
-            web_sys::console::log_1(&"elaborating".into());
             let theory =
                 Theory::new(QualifiedName::single(NameSegment::Text(ustr("_"))), ddt.clone());
             let ref_id = Uuid::from_str(&ref_id).unwrap();
             let mut elab = ElaboratorNext::new(theory.clone(), &instantiated.toplevel, ref_id);
             let ty = elab.notebook(notebook.0.formal_content());
             let (ddm, namespace) = generate(&instantiated.toplevel, &theory, &ty.1);
-            web_sys::console::log_1(&"finished elaborating".into());
             Ok(DblModel {
                 model: DblModelBox::Discrete(Rc::new(ddm)),
                 ty: Some(ty),
