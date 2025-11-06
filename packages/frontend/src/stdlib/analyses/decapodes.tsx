@@ -8,9 +8,9 @@ import {
     Warning,
     createNumericalColumn,
 } from "catcolab-ui-components";
+import { Foldable } from "catcolab-ui-components";
 import type { DiagramJudgment, ModelJudgment, QualifiedName } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
-import { Foldable } from "../../components";
 import type { LiveDiagramDocument } from "../../diagram";
 import { NotebookUtils } from "../../notebook";
 import { uniqueIndexArray } from "../../util/indexing";

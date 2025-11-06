@@ -1,9 +1,9 @@
 import type * as Viz from "@viz-js/viz";
 import { type Component, For, Show, createResource, createSignal } from "solid-js";
 
+import { Foldable } from "catcolab-ui-components";
 import type { DblModel } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
-import { Foldable } from "../../components";
 import type { Theory } from "../../theory";
 import { uniqueIndexArray } from "../../util/indexing";
 import {

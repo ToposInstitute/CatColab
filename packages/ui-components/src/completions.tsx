@@ -1,6 +1,6 @@
 import { For, type JSX, Show, createMemo, createSignal, onMount } from "solid-js";
 
-import type { KbdKey } from "../util/keyboard";
+import type { KbdKey } from "./util/keyboard";
 
 import "./completions.css";
 
