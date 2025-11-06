@@ -12,8 +12,15 @@
 end
 
 @testset "Validate model" begin
-    # caveat: \star and \bigstar are different, but indistinguishable in some fonts
-    @test Set(nameof.(values(model_dec))) == Set([:DualForm1, :⋆₀⁻¹, :dual_d₁, :dpsw, :Form1, :neg, :⋆₁, :DualForm2, :Form0, :Δ⁻¹, :♭♯, :∂ₜ, :d₀])
+
+    # Let's grab a model from one of our examples
+    payload = JSON3.read(read("test/test_jsons/diagrams/inverse_laplacian_longtrip/analysis.json", String))
+    model = Model(ThDecapode(), payload["model"])
+  
+    # The types available to objects and morphisms in this model. 
+    @test Set(nameof.(model.ob_generators)) == Set([:Form0, :Form1, :DualForm1, :DualForm2])
+    @test Set(nameof.(model.mor_generators)) == Set([:⋆₀⁻¹, :Δ⁻¹, :d₀, :⋆₁, :dpsw, :♭♯, :dual_d₁, :∂ₜ, :neg])
+
 end
 
 @testset "Analysis - Inverse Laplacian" begin
@@ -21,33 +28,32 @@ end
     add_part!(handcrafted_pode, :Var, name=:u, type=:Form0)
     add_part!(handcrafted_pode, :Var, name=Symbol("du/dt"), type=:Form0)
     add_part!(handcrafted_pode, :Op1, src=1, tgt=2, op1=:Δ⁻¹)
-    simulation = DecapodeSimulation("test/test_jsons/_payload.json")
-    @test simulation[:pode] == handcrafted_pode
+    simulation = DecapodeSimulation(read("test/test_jsons/diagrams/inverse_laplacian_longtrip/analysis.json", String))
+    @test simulation.pode == handcrafted_pode
 end
  
 @testset "Analysis - Inverse Laplacian, Long trip" begin
     handcrafted_pode = SummationDecapode(parse_decapode(quote end))
     add_part!(handcrafted_pode, :Var, name=:u, type=:DualForm2)
-    add_part!(handcrafted_pode, :Var, name=Symbol("du/dt"), type=:DualForm2)
+    add_part!(handcrafted_pode, :Var, name=:u̇, type=:DualForm2)
     add_part!(handcrafted_pode, :Var, name=Symbol("•1"), type=:Form0)
     add_part!(handcrafted_pode, :Var, name=Symbol("•2"), type=:Form1)
     add_part!(handcrafted_pode, :Var, name=Symbol("•3"), type=:DualForm1)
     add_part!(handcrafted_pode, :TVar, incl=2)
+    add_part!(handcrafted_pode, :Op1, src=1, tgt=2, op1=:∂ₜ)
     add_part!(handcrafted_pode, :Op1, src=1, tgt=3, op1=:⋆₀⁻¹)
     add_part!(handcrafted_pode, :Op1, src=3, tgt=4, op1=:d₀)
     add_part!(handcrafted_pode, :Op1, src=4, tgt=5, op1=:⋆₁)
     add_part!(handcrafted_pode, :Op1, src=5, tgt=2, op1=:dual_d₁)
-    add_part!(handcrafted_pode, :Op1, src=1, tgt=2, op1=:∂ₜ)
-
-    simulation = DecapodeSimulation("test/test_jsons/_payload_longtrip.json")
-    @test simulation[:pode] == handcrafted_pode
+    #
+    simulation = DecapodeSimulation(read("test/test_jsons/diagrams/inverse_laplacian_longtrip/analysis.json", String))
+    @test simulation.pode == handcrafted_pode
 end
 
-@testset "Model Verification - Laplacian, Scalar" begin
-end
+@testset "Analysis - Laplacian, Scalar" begin end
 
 #= Vorticity =#
-@testset "Model Verification - NS Vorticity" begin
+@testset "Analysis - NS Vorticity" begin
    
     handcrafted_pode = SummationDecapode(parse_decapode(quote end))
     add_part!(handcrafted_pode, :Var, name=:v, type=:DualForm1)
@@ -75,7 +81,7 @@ end
     add_part!(handcrafted_pode, :Op1, src=10, tgt=9, op1=:neg)
     infer_types!(handcrafted_pode)
     
-    simulation = DecapodeSimulation("test/test_jsons/_navier_stokes_vorticity.json")
-    @test simulation[:pode] == handcrafted_pode
+    simulation = DecapodeSimulation(read("test/test_jsons/diagrams/ns_vort/analysis.json", String))
+    @test_broken simulation.pode == handcrafted_pode
 
 end

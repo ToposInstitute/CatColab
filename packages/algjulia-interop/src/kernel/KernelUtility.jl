@@ -1,5 +1,6 @@
 module KernelUtility
 
+using MLStyle
 import JSON3
 
 export JsonValue
@@ -33,6 +34,7 @@ function Base.show(io::IO, ::MIME"application/json", json::JsonValue)
   JSON3.write(io, json.value)
 end
 
+include("result.jl")
 include("kernel_management.jl")
 
 end
