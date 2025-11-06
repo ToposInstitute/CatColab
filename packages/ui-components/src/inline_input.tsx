@@ -18,7 +18,9 @@ export type InlineInputOptions = InputOptions & {
     interceptKeyDown?: (evt: InputElementKeyboardEvent) => boolean;
 };
 
-type InputElementKeyboardEvent = Parameters<JSX.EventHandler<HTMLInputElement, KeyboardEvent>>[0];
+export type InputElementKeyboardEvent = Parameters<
+    JSX.EventHandler<HTMLInputElement, KeyboardEvent>
+>[0];
 
 /** Error status for `InlineInput` component. */
 export type InlineInputErrorStatus = null | "incomplete" | "invalid";

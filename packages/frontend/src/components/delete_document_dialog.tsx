@@ -1,7 +1,6 @@
-import { Button } from "catcolab-ui-components";
+import { Button, Dialog } from "catcolab-ui-components";
 import { createSignal } from "solid-js";
 import { useApi } from "../api";
-import { Dialog } from "./dialog";
 
 export type DeleteDocumentInfo = {
     refId: string;
