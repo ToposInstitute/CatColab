@@ -1,89 +1,14 @@
-"""    DecapodeSimulation
-
-This analysis contains the data necessary to execute a simulation.
-"""
-struct DecapodeSimulation <: AbstractAnalysis{ThDecapode}
-    diagram::ModelDiagramPresentation{ThDecapode}
-    model::Model{ThDecapode}
-    data::AbstractDict
-end
-export DecapodeSimulation
-
-function DecapodeSimulation(path::String; hodge=GeometricHodge())
-    payload = Payload(ThDecapode(), path)
-    DecapodeSimulation(payload)
-end
-
-function DecapodeSimulation(payload::Payload; hodge=GeometricHodge())
-    pode = DecapodeDiagram(payload)
-    plotVars = @match payload[:plotVariables] begin
-        vars::AbstractArray => Dict{String, Bool}(key => key ∈ vars for key ∈ keys(pode.vars))
-        vars => Dict{String, Bool}( "$key" => var for (key, var) in vars)
-    end
-    dot_rename!(pode.pode)
-    uuid2symb = uuid_to_symb(pode.pode, pode.vars)
-    geometry = Geometry(payload) # TODO
-    ♭♯_m = ♭♯_mat(geometry.dualmesh)
-    wedge_dp10 = dec_wedge_product_dp(Tuple{1,0}, geometry.dualmesh)
-    dual_d1_m = dec_dual_derivative(1, geometry.dualmesh)
-    star0_inv_m = dec_inv_hodge_star(0, geometry.dualmesh, hodge)
-    Δ0 = Δ(0,geometry.dualmesh)
-    #fΔ0 = factorize(Δ0);
-    function sys_generate(s, my_symbol)
-        op = @match my_symbol begin
-            sym && if haskey(pode.scalars, sym) end => x -> begin
-                k = scalars[pode.scalars[sym]]
-                k * x
-            end
-            :♭♯ => x -> ♭♯_m * x
-            # TODO are we indexing right?
-            :dpsw => x -> wedge_dp10(x, star0_inv_m*(dual_d1_m*x))
-            :Δ⁻¹ => x -> begin
-                y = Δ0 \ x
-                y .- minimum(y)
-            end
-            _ => default_dec_matrix_generate(s, my_symbol, hodge)
-        end
-        return (args...) -> op(args...)
-    end
-    #
-    u0 = initial_conditions(payload[:initialConditions], geometry, uuid2symb)
-
-    # reversing `uuid2symb` into `symbol => uuid.` we need this to reassociate the var to its UUID 
-    symb2uuid = Dict([v => k for (k,v) in pairs(uuid2symb)])
-
-    # TODO what is anons doing here?
-    anons = Dict{Symbol, Any}()
-    data = Dict(
-        :pode => pode.pode,
-        :plotVars => plotVars,
-        :scalars => anons,
-        :geometry => geometry,
-        :init => u0,
-        :generate => sys_generate,
-        :uuiddict => symb2uuid,
-        :duration => payload[:duration])
-    return DecapodeSimulation(payload.diagram, payload.model, data)
-end
-
-Base.show(io::IO, system::DecapodeSimulation) = println(io, system[:pode])
-
-Base.getindex(system::DecapodeSimulation, field::Symbol) = system.data[field]
-
-points(system::DecapodeSimulation) = collect(values(system[:geometry].dualmesh.subparts.point.m))
-indexing_bounds(system::DecapodeSimulation) = indexing_bounds(system[:geometry].domain)
-
-import Base: run
-
-"""
-"""
+""" """
 function Base.run(fm, sim::DecapodeSimulation, constparam)
-    prob = ODEProblem(fm, sim[:init], sim[:duration], constparam)
-    solve(prob, Tsit5(), saveat=0.01)
+    prob = ODEProblem(fm, sim.init, sim.duration, constparam)
+    soln = solve(prob, Tsit5(), saveat=0.01)
+    SimResult(soln, sim)
 end
-export run
 
-struct SimResult
+abstract type AbstractResult end
+
+struct SimResult <: AbstractResult
+    retcode::Enum{Int32} # ReturnCode
     time::Vector{Float64}
     state::Dict{String, Vector{AbstractArray{SVector{3, Float64}}}}
     x::Vector{Float64} # axis
@@ -94,14 +19,17 @@ export SimResult
 function SimResult(soln::ODESolution, system::DecapodeSimulation)
     idx_bounds = indexing_bounds(system)
     state_val_dict = variables_state(soln, system) # Dict("UUID1" => VectorMatrixSVectr...)
-    SimResult(soln.t, state_val_dict, 0:idx_bounds.x, 0:idx_bounds.y)
+    SimResult(soln.retcode, soln.t, state_val_dict, 0:idx_bounds.x, 0:idx_bounds.y)
 end
 # TODO generalize to HasDeltaSet
 
+points(system::DecapodeSimulation) = collect(values(system.geometry.dualmesh.subparts.point.m))
+indexing_bounds(system::DecapodeSimulation) = indexing_bounds(system.geometry.domain)
+
 """ for the variables in a system, associate them to their state values over the duration of the simulation """
 function variables_state(soln::ODESolution, system::DecapodeSimulation)
-    plottedVars = [ k for (k, v) in system.data[:plotVars] if v == true ]
-    uuid2symb = Dict([ v => k for (k, v) in system.data[:uuiddict]]) # TODO why reverse again?
+    plottedVars = [ k for (k, v) in system.plotVariables if v == true ]
+    uuid2symb = Dict([ v => k for (k, v) in system.uuiddict]) # TODO why reverse again?
     Dict([ String(uuid2symb[var]) => state_entire_sim(soln, system, uuid2symb[var]) for var ∈ plottedVars ])
 end
 
@@ -115,7 +43,7 @@ end
 
 # TODO type `points`
 function state_at_time(soln::ODESolution, system::DecapodeSimulation, plotvar::Symbol, t::Int)
-    @match system.data[:geometry].domain begin
+    @match system.geometry.domain begin
         # TODO check time indexing here
         domain::Rectangle => state_at_time(soln, domain, plotvar, t) 
         domain::Sphere => state_at_time(soln, domain, plotvar, t, points(system)) 

@@ -1,5 +1,7 @@
 module DecapodesService
 
+import Base: run
+
 # algebraicjulia dependencies
 using ACSets
 using DiagrammaticEquations
