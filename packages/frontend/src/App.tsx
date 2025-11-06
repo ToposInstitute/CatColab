@@ -106,6 +106,8 @@ function CreateModel() {
     return <Show when={ref()}>{(ref) => <Navigate href={`/model/${ref()}`} />}</Show>;
 }
 
+const HomePage = lazy(() => import("./page/home_page"));
+
 const refIsUUIDFilter = {
     ref: (ref: string) => uuid.validate(ref),
 };
@@ -113,6 +115,10 @@ const refIsUUIDFilter = {
 const routes: RouteDefinition[] = [
     {
         path: "/",
+        component: HomePage,
+    },
+    {
+        path: "/new",
         component: CreateModel,
     },
     {
