@@ -100,6 +100,18 @@ export default function HomePage() {
                                 </div>
                                 <div class="resources-container">
                                     <div class="resources-list">
+                                        <a href="/help/" class="resource-link">
+                                            <span class="resource-icon">
+                                                <NotebookPen />
+                                            </span>
+                                            <span>Help pages</span>
+                                        </a>
+                                        <a href="/help/guides/example-models" class="resource-link">
+                                            <span class="resource-icon">
+                                                <Binoculars />
+                                            </span>
+                                            <span>Example models</span>
+                                        </a>
                                         <a
                                             href="https://topos.institute/blog/#category=CatColab"
                                             class="resource-link"
@@ -112,18 +124,6 @@ export default function HomePage() {
                                             <span class="external-link-icon">
                                                 <ExternalLink />
                                             </span>
-                                        </a>
-                                        <a href="/help/guides/example-models" class="resource-link">
-                                            <span class="resource-icon">
-                                                <Binoculars />
-                                            </span>
-                                            <span>Example models</span>
-                                        </a>
-                                        <a href="/help/" class="resource-link">
-                                            <span class="resource-icon">
-                                                <NotebookPen />
-                                            </span>
-                                            <span>Help pages</span>
                                         </a>
                                         <a
                                             href="https://github.com/ToposInstitute/CatColab"
