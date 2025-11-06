@@ -53,12 +53,12 @@ export default function DocumentPage() {
         }
     });
 
-    const [primaryLiveDocument] = createResource(
+    const [primaryLiveDocument, { refetch: refetchPrimaryDocument }] = createResource(
         () => params.ref,
         (refId) => getLiveDocument(refId, api, models, params.kind as DocumentType),
     );
 
-    const [secondaryLiveDocument] = createResource(
+    const [secondaryLiveDocument, { refetch: refetchSecondaryDocument }] = createResource(
         () => {
             if (!params.subkind || !params.subref) {
                 return;
@@ -124,7 +124,10 @@ export default function DocumentPage() {
                                         initialSize={1}
                                         minSize={0.25}
                                     >
-                                        <DocumentPane document={liveDocument()} />
+                                        <DocumentPane
+                                            document={liveDocument()}
+                                            refetch={refetchPrimaryDocument}
+                                        />
                                     </Resizable.Panel>
                                     <Show when={isSidePanelOpen()}>
                                         <ResizableHandle class="resizeable-handle" />
@@ -138,6 +141,7 @@ export default function DocumentPage() {
                                                     <>
                                                         <DocumentPane
                                                             document={secondaryLiveModel()}
+                                                            refetch={refetchSecondaryDocument}
                                                         />
                                                     </>
                                                 )}
@@ -186,19 +190,32 @@ function SplitPaneToolbar(props: {
     );
 }
 
-export function DocumentPane(props: { document: AnyLiveDocument }) {
+export function DocumentPane(props: {
+    document: AnyLiveDocument;
+    refetch: () => void;
+}) {
     const api = useApi();
-    const isDeleted = () => props.document.liveDoc.docRef?.isDeleted ?? false;
+    const [isDeleted, setIsDeleted] = createSignal(false);
+
+    createEffect(() => {
+        setIsDeleted(props.document.liveDoc.docRef?.isDeleted ?? false);
+    });
 
     const handleRestore = async () => {
         const refId = props.document.liveDoc.docRef?.refId;
-        if (!refId) return;
+
+        if (!refId) {
+            return;
+        }
+
+        // optimistic restore
+        setIsDeleted(false);
 
         try {
             const result = await api.rpc.restore_ref.mutate(refId);
             if (result.tag === "Ok") {
-                // Refresh the page to show the restored document
-                window.location.reload();
+                api.clearCachedDoc(refId);
+                props.refetch();
             } else {
                 console.error(`Failed to restore document: ${result.message}`);
             }
