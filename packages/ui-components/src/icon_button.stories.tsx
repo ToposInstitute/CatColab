@@ -6,6 +6,7 @@ import ChevronRight from "lucide-solid/icons/chevron-right";
 import ChevronsRight from "lucide-solid/icons/chevrons-right";
 import Globe from "lucide-solid/icons/globe";
 import Plus from "lucide-solid/icons/plus";
+import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import Settings from "lucide-solid/icons/settings";
 import X from "lucide-solid/icons/x";
 
@@ -27,6 +28,13 @@ export const Summary: Story = {
             </IconButton>
             <IconButton onClick={() => alert("Settings clicked")} tooltip="Settings">
                 <Settings size={20} />
+            </IconButton>
+            <IconButton
+                variant="primary"
+                onClick={() => alert("Restore clicked")}
+                tooltip="Restore"
+            >
+                <RotateCcw size={20} />
             </IconButton>
             <IconButton variant="danger" onClick={() => alert("Delete clicked")} tooltip="Delete">
                 <X size={20} />
@@ -205,6 +213,24 @@ export const ActionButtons: Story = {
             </IconButton>
             <IconButton variant="danger" onClick={() => alert("Delete")} tooltip="Delete selected">
                 <X size={20} />
+            </IconButton>
+        </div>
+    ),
+};
+
+export const PrimaryVariant: Story = {
+    render: () => (
+        <div style={{ display: "flex", gap: "8px", "align-items": "center" }}>
+            <IconButton variant="primary" onClick={() => alert("Restore")} tooltip="Restore item">
+                <RotateCcw size={20} />
+            </IconButton>
+            <IconButton
+                variant="primary"
+                onClick={() => alert("Restore")}
+                tooltip="Restore"
+                disabled
+            >
+                <RotateCcw size={20} />
             </IconButton>
         </div>
     ),

@@ -2,6 +2,7 @@ import Resizable, { type ContextValue } from "@corvu/resizable";
 import { useNavigate, useParams } from "@solidjs/router";
 import ChevronsRight from "lucide-solid/icons/chevrons-right";
 import Maximize2 from "lucide-solid/icons/maximize-2";
+import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import {
     Match,
@@ -14,7 +15,7 @@ import {
 } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { IconButton } from "catcolab-ui-components";
+import { Button, IconButton } from "catcolab-ui-components";
 import { type LiveAnalysisDocument, getLiveAnalysis } from "../analysis";
 import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
 import { AnalysisInfo } from "../analysis/analysis_info";
@@ -52,12 +53,12 @@ export default function DocumentPage() {
         }
     });
 
-    const [primaryLiveDocument] = createResource(
+    const [primaryLiveDocument, { refetch: refetchPrimaryDocument }] = createResource(
         () => params.ref,
         (refId) => getLiveDocument(refId, api, models, params.kind as DocumentType),
     );
 
-    const [secondaryLiveDocument] = createResource(
+    const [secondaryLiveDocument, { refetch: refetchSecondaryDocument }] = createResource(
         () => {
             if (!params.subkind || !params.subref) {
                 return;
@@ -123,7 +124,10 @@ export default function DocumentPage() {
                                         initialSize={1}
                                         minSize={0.25}
                                     >
-                                        <DocumentPane document={liveDocument()} />
+                                        <DocumentPane
+                                            document={liveDocument()}
+                                            refetch={refetchPrimaryDocument}
+                                        />
                                     </Resizable.Panel>
                                     <Show when={isSidePanelOpen()}>
                                         <ResizableHandle class="resizeable-handle" />
@@ -137,6 +141,7 @@ export default function DocumentPage() {
                                                     <>
                                                         <DocumentPane
                                                             document={secondaryLiveModel()}
+                                                            refetch={refetchSecondaryDocument}
                                                         />
                                                     </>
                                                 )}
@@ -185,17 +190,58 @@ function SplitPaneToolbar(props: {
     );
 }
 
-export function DocumentPane(props: { document: AnyLiveDocument }) {
-    const isDeleted = () => props.document.liveDoc.docRef?.isDeleted ?? false;
+export function DocumentPane(props: {
+    document: AnyLiveDocument;
+    refetch: () => void;
+}) {
+    const api = useApi();
+    const [isDeleted, setIsDeleted] = createSignal(false);
+
+    createEffect(() => {
+        setIsDeleted(props.document.liveDoc.docRef?.isDeleted ?? false);
+    });
+
+    const handleRestore = async () => {
+        const refId = props.document.liveDoc.docRef?.refId;
+
+        if (!refId) {
+            return;
+        }
+
+        // optimistic restore
+        setIsDeleted(false);
+
+        try {
+            const result = await api.rpc.restore_ref.mutate(refId);
+            if (result.tag === "Ok") {
+                api.clearCachedDoc(refId);
+                props.refetch();
+            } else {
+                console.error(`Failed to restore document: ${result.message}`);
+            }
+        } catch (error) {
+            console.error(`Error restoring document: ${error}`);
+        }
+    };
+
     return (
         <>
             <Show when={isDeleted()}>
                 <div class="warning-banner">
                     <TriangleAlert size={20} />
-                    <span>
-                        Warning: This {props.document.type} has been deleted. The last snapshot
-                        before deletion is still visible below.
-                    </span>
+                    <div class="warning-banner-content">
+                        <strong>Warning:</strong> This {props.document.type} has been deleted and
+                        will not be listed in your documents.
+                    </div>
+                    <Button
+                        variant="utility"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            handleRestore();
+                        }}
+                    >
+                        <RotateCcw size={16} /> Restore it
+                    </Button>
                 </div>
             </Show>
             <div class="notebook-container">
