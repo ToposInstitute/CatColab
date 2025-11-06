@@ -1,4 +1,4 @@
-import { DropdownMenu } from "@kobalte/core/dropdown-menu";
+import Popover from "@corvu/popover";
 import { useNavigate } from "@solidjs/router";
 import { getAuth, signOut } from "firebase/auth";
 import { useAuth, useFirebaseApp } from "solid-firebase";
@@ -8,7 +8,6 @@ import invariant from "tiny-invariant";
 import { IconButton } from "catcolab-ui-components";
 import type { Document } from "catlog-wasm";
 import { useApi } from "../api";
-import { useDeleteDocument } from "../components/delete_document_dialog";
 import { createModel } from "../model/document";
 import { TheoryLibraryContext } from "../theory";
 import { copyToClipboard, downloadJson } from "../util/json_export";
@@ -35,25 +34,76 @@ export function HamburgerMenu(props: {
     children: JSX.Element;
     disabled?: boolean;
 }) {
-    // XXX: Dropdown menu should be modal but we make it non-modal to work
-    // around bug that pointer events are not restored after a dialog is
-    // spawned. Similar issues have been reported and supposedly fixed upstream
-    // but I'm still seeing the problem as of Kobalte 0.13.7.
     return (
-        <DropdownMenu modal={false}>
-            <DropdownMenu.Trigger as={IconButton} disabled={props.disabled}>
+        <Popover
+            placement="bottom-start"
+            floatingOptions={{
+                offset: 4,
+                flip: true,
+                shift: true,
+            }}
+        >
+            <Popover.Trigger as={IconButton} disabled={props.disabled}>
                 <MenuIcon />
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Portal>
-                <DropdownMenu.Content class="menu popup">{props.children}</DropdownMenu.Content>
-            </DropdownMenu.Portal>
-        </DropdownMenu>
+            </Popover.Trigger>
+            <Popover.Portal>
+                <Popover.Content class="menu popup">{props.children}</Popover.Content>
+            </Popover.Portal>
+        </Popover>
     );
 }
 
-export const MenuItem = DropdownMenu.Item;
-export const MenuItemLabel = DropdownMenu.ItemLabel;
-export const MenuSeparator = DropdownMenu.Separator;
+import { type Component, type JSX as SolidJSX, createSignal, splitProps } from "solid-js";
+
+/** Menu item component for use within HamburgerMenu. */
+export const MenuItem: Component<{
+    children: SolidJSX.Element;
+    disabled?: boolean;
+    onSelect?: () => void;
+}> = (props) => {
+    const [local, others] = splitProps(props, ["children", "disabled", "onSelect"]);
+    const dialogContext = Popover.useDialogContext();
+    const [isHighlighted, setIsHighlighted] = createSignal(false);
+
+    const handleClick = () => {
+        if (!local.disabled && local.onSelect) {
+            local.onSelect();
+            dialogContext?.setOpen(false);
+        }
+    };
+
+    return (
+        <div
+            role="menuitem"
+            tabIndex={local.disabled ? -1 : 0}
+            aria-disabled={local.disabled}
+            data-disabled={local.disabled ? "" : undefined}
+            data-highlighted={isHighlighted() ? "" : undefined}
+            onClick={handleClick}
+            onMouseEnter={() => setIsHighlighted(true)}
+            onMouseLeave={() => setIsHighlighted(false)}
+            onFocus={() => setIsHighlighted(true)}
+            onBlur={() => setIsHighlighted(false)}
+            onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleClick();
+                }
+            }}
+            {...others}
+        >
+            {local.children}
+        </div>
+    );
+};
+
+export const MenuItemLabel: Component<{ children: SolidJSX.Element }> = (props) => {
+    return <span>{props.children}</span>;
+};
+
+export const MenuSeparator: Component = () => {
+    return <hr role="separator" style={{ margin: "0.5ex 0", "border-top": "1px solid #e5e7eb" }} />;
+};
 
 /** Top-level menu for application.
 
@@ -251,34 +301,27 @@ export function DeleteMenuItem(props: {
     name: string | null;
     typeName: string;
     canDelete: boolean;
-    onBeforeDelete?: () => void;
 }) {
-    invariant(props.refId, "No document reference found");
-
     const navigate = useNavigate();
-    const deleteDocument = useDeleteDocument({
-        refId: props.refId,
-        name: props.name,
-        typeName: props.typeName,
-    });
+    const actions = useContext(PageActionsContext);
+    invariant(actions, "Page actions should be provided");
 
     const handleDelete = async () => {
-        // Call optional callback before deletion
-        props.onBeforeDelete?.();
-
-        const success = await deleteDocument.openDeleteDialog();
+        invariant(props.refId, "No document reference found");
+        const success = await actions.showDeleteDialog({
+            refId: props.refId,
+            name: props.name,
+            typeName: props.typeName,
+        });
         if (success) {
             navigate("/documents");
         }
     };
 
     return (
-        <>
-            <MenuItem disabled={!props.canDelete} onSelect={handleDelete}>
-                <X />
-                <MenuItemLabel>{`Delete ${props.typeName}`}</MenuItemLabel>
-            </MenuItem>
-            <deleteDocument.DeleteDialogs />
-        </>
+        <MenuItem disabled={!props.canDelete} onSelect={handleDelete}>
+            <X />
+            <MenuItemLabel>{`Delete ${props.typeName}`}</MenuItemLabel>
+        </MenuItem>
     );
 }

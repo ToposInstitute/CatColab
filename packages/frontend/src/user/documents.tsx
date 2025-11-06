@@ -1,15 +1,24 @@
 import type { RefStub } from "catcolab-api";
 import { getAuth } from "firebase/auth";
 import { useFirebaseApp } from "solid-firebase";
-import { For, Match, Switch, createEffect, createResource, createSignal, onMount } from "solid-js";
+import {
+    For,
+    Match,
+    Switch,
+    createEffect,
+    createResource,
+    createSignal,
+    onMount,
+    useContext,
+} from "solid-js";
 import { rpcResourceErr, rpcResourceOk, useApi } from "../api";
-import { useDeleteDocument } from "../components/delete_document_dialog";
-import { BrandedToolbar } from "../page";
+import { BrandedToolbar, PageActionsContext } from "../page";
 import { LoginGate } from "./login";
 import "./documents.css";
 import { useNavigate } from "@solidjs/router";
 import { IconButton, Spinner } from "catcolab-ui-components";
 import X from "lucide-solid/icons/x";
+import invariant from "tiny-invariant";
 
 export default function UserDocuments() {
     return (
@@ -196,6 +205,8 @@ function RefStubRow(props: { stub: RefStub; onDelete: () => void }) {
     const firebaseApp = useFirebaseApp();
     const auth = getAuth(firebaseApp);
     const navigate = useNavigate();
+    const actions = useContext(PageActionsContext);
+    invariant(actions, "Page actions should be provided");
 
     const owner = props.stub.owner;
     const hasOwner = owner !== null;
@@ -203,48 +214,46 @@ function RefStubRow(props: { stub: RefStub; onDelete: () => void }) {
     const ownerName = hasOwner ? (isOwner ? "me" : owner?.username) : "public";
     const canDelete = props.stub.permissionLevel === "Own";
 
-    const deleteDocument = useDeleteDocument(props.stub);
-
     const handleClick = () => {
         navigate(`/${props.stub.typeName}/${props.stub.refId}`);
     };
 
     const handleDeleteClick = async (e: MouseEvent) => {
         e.stopPropagation();
-        const success = await deleteDocument.openDeleteDialog();
+        const success = await actions.showDeleteDialog({
+            refId: props.stub.refId,
+            name: props.stub.name,
+            typeName: props.stub.typeName,
+        });
         if (success) {
             props.onDelete();
         }
     };
 
     return (
-        <>
-            <tr class="ref-stub-row" onClick={handleClick}>
-                <td>{props.stub.typeName}</td>
-                <td>{props.stub.name}</td>
-                <td>{ownerName}</td>
-                <td>{props.stub.permissionLevel}</td>
-                <td>
-                    {new Date(props.stub.createdAt).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                    })}
-                </td>
-                <td class="delete-cell">
-                    {canDelete && (
-                        <IconButton
-                            variant="danger"
-                            onClick={handleDeleteClick}
-                            tooltip="Delete document"
-                        >
-                            <X size={16} />
-                        </IconButton>
-                    )}
-                </td>
-            </tr>
-
-            <deleteDocument.DeleteDialogs />
-        </>
+        <tr class="ref-stub-row" onClick={handleClick}>
+            <td>{props.stub.typeName}</td>
+            <td>{props.stub.name}</td>
+            <td>{ownerName}</td>
+            <td>{props.stub.permissionLevel}</td>
+            <td>
+                {new Date(props.stub.createdAt).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                })}
+            </td>
+            <td class="delete-cell">
+                {canDelete && (
+                    <IconButton
+                        variant="danger"
+                        onClick={handleDeleteClick}
+                        tooltip="Delete document"
+                    >
+                        <X size={16} />
+                    </IconButton>
+                )}
+            </td>
+        </tr>
     );
 }

@@ -1,6 +1,7 @@
 import { type JSX, createSignal } from "solid-js";
 
 import { Dialog } from "../components";
+import { useDeleteDocument } from "../components/delete_document_dialog";
 import { Login } from "../user";
 import { type PageActions, PageActionsContext } from "./context";
 import { ImportDocument } from "./import_document";
@@ -17,9 +18,12 @@ export function PageContainer(props: {
     const [loginOpen, setLoginOpen] = createSignal(false);
     const [openImport, setImportOpen] = createSignal(false);
 
+    const deleteDocument = useDeleteDocument();
+
     const actions: PageActions = {
         showLoginDialog: () => setLoginOpen(true),
         showImportDialog: () => setImportOpen(true),
+        showDeleteDialog: deleteDocument.openDeleteDialog,
     };
 
     return (
@@ -33,6 +37,7 @@ export function PageContainer(props: {
             <Dialog open={openImport()} onOpenChange={setImportOpen} title="Import">
                 <ImportDocument onComplete={() => setImportOpen(false)} />
             </Dialog>
+            <deleteDocument.DeleteDialogs />
         </>
     );
 }
