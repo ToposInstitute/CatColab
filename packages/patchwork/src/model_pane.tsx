@@ -11,7 +11,7 @@ import type { SolidToolProps } from "./tools";
 export function ModelPaneComponent(props: SolidToolProps) {
     const models = createModelLibraryWithRepo(props.repo, stdTheories);
 
-    const [liveModel] = createResource(
+    const [liveModel, { refetch }] = createResource(
         () => props.docUrl,
         async (docUrl) => {
             try {
@@ -40,7 +40,7 @@ export function ModelPaneComponent(props: SolidToolProps) {
                     <div>❌ Error loading model: {liveModel.error?.message || "Unknown error"}</div>
                 </Match>
                 <Match when={liveModel()}>
-                    {(liveModel) => <DocumentPane document={liveModel()} />}
+                    {(liveModel) => <DocumentPane document={liveModel()} refetch={refetch} />}
                 </Match>
             </Switch>
         </MultiProvider>
