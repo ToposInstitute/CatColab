@@ -1,4 +1,8 @@
 //! Kuramoto model of synchronization of coupled oscillators.
+//!
+//! The first-order and second-order Kuramoto models are both described in
+//! Section 2.1 of [Nitzbon et al, 2017](crate::refs::NitzbonNetworkStability),
+//! among other sources.
 
 use nalgebra::{DMatrix, DVector};
 
