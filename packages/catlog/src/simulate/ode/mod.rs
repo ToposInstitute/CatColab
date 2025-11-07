@@ -129,12 +129,21 @@ pub(crate) fn textplot_ode_result<Sys>(
     problem: &ODEProblem<Sys>,
     result: &SolverResult<f32, DVector<f32>>,
 ) -> String {
+    textplot_mapped_ode_result(problem, result, |x, i| x[i])
+}
+
+#[cfg(test)]
+pub(crate) fn textplot_mapped_ode_result<Sys>(
+    problem: &ODEProblem<Sys>,
+    result: &SolverResult<f32, DVector<f32>>,
+    f: impl Fn(&DVector<f32>, usize) -> f32,
+) -> String {
     let mut chart = Chart::new(100, 80, 0.0, problem.end_time);
     let (t_out, x_out) = result.get();
 
     let dim = problem.initial_values.len();
     let line_data: Vec<_> = (0..dim)
-        .map(|i| t_out.iter().copied().zip(x_out.iter().map(|x| x[i])).collect::<Vec<_>>())
+        .map(|i| t_out.iter().copied().zip(x_out.iter().map(|x| f(x, i))).collect::<Vec<_>>())
         .collect();
 
     let lines: Vec<_> = line_data.iter().map(|data| Shape::Lines(data)).collect();
@@ -144,12 +153,14 @@ pub(crate) fn textplot_ode_result<Sys>(
     chart.to_string()
 }
 
+pub mod kuramoto;
 #[allow(non_snake_case)]
 pub mod linear_ode;
 #[allow(non_snake_case)]
 pub mod lotka_volterra;
 pub mod polynomial;
 
+pub use kuramoto::*;
 pub use linear_ode::*;
 pub use lotka_volterra::*;
 pub use polynomial::*;
