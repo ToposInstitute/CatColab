@@ -46,9 +46,11 @@ However, equations governing transitions are *non-linear*: if a transition $T$ h
 </HelpAnalysisById>
 
 <HelpAnalysisById theory={props.theory} analysisId="stochastic-mass-action">
-In a stochastic Petri net (SPN), the input (output) arcs of each transition consume (produce) integer numbers of tokens at their respective places. Each transition has a clock, a random variable giving the next time it would fire, if it were the next one to fire. When all the clocks are exponential random variates, it is the stochastic analogue of the ordinary differential equation interpretation. The mass-action nets here consider the rate parameter of each exponential clock to be the product of the reactants, potentially multiplied by a reaction constant. The Gillespie method is one way to sample a trajectory from an SPN, which uses the fact that the sum of exponential distributions is also an exponential distribution, to first sample the next time any transition fires, and then samples the particular one which fired with probability proportional to the rate parameter of each transition.
+This analysis realises the Petri net as a stochastic Petri net (SPN).
+In an SPN, the input (resp. output) arcs of each transition consume (resp. produce) integer numbers of tokens at their respective places. Each transition has a **clock**: a random variable giving the next time it would fire, if it were the next one to fire. When all the clocks are exponential random variates, this gives the stochastic analogue of the *ordinary* differential equation semantics. In this analysis, we take the rate parameter of each exponential clock to be the product of the reactants, potentially multiplied by a reaction constant. The Gillespie method is one way to sample a trajectory from an SPN, which uses the fact that the sum of exponential distributions is also an exponential distribution to first sample the next time any transition fires, and then sample the particular one which fired with probability proportional to the rate parameter of each transition.
 
-Let's consider the simple SIR model as an example:
+**Example** (SIR model).
+Consider the SPN described by
 
 $[\mathrm{S}, \mathrm{I}]\xrightarrow{\text{infection}}[\mathrm{I},\mathrm{I}]$
 
