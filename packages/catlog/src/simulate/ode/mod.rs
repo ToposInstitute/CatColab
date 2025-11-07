@@ -129,13 +129,14 @@ pub(crate) fn textplot_ode_result<Sys>(
     problem: &ODEProblem<Sys>,
     result: &SolverResult<f32, DVector<f32>>,
 ) -> String {
-    textplot_mapped_ode_result(problem, result, |x, i| x[i])
+    textplot_mapped_ode_result(problem, result, |_| true, |x, i| x[i])
 }
 
 #[cfg(test)]
 pub(crate) fn textplot_mapped_ode_result<Sys>(
     problem: &ODEProblem<Sys>,
     result: &SolverResult<f32, DVector<f32>>,
+    include_var: impl Fn(usize) -> bool,
     f: impl Fn(&DVector<f32>, usize) -> f32,
 ) -> String {
     let mut chart = Chart::new(100, 80, 0.0, problem.end_time);
@@ -143,7 +144,10 @@ pub(crate) fn textplot_mapped_ode_result<Sys>(
 
     let dim = problem.initial_values.len();
     let line_data: Vec<_> = (0..dim)
-        .map(|i| t_out.iter().copied().zip(x_out.iter().map(|x| f(x, i))).collect::<Vec<_>>())
+        .filter(|i| include_var(*i))
+        .map(|i| {
+            std::iter::zip(t_out.iter().copied(), x_out.iter().map(|x| f(x, i))).collect::<Vec<_>>()
+        })
         .collect();
 
     let lines: Vec<_> = line_data.iter().map(|data| Shape::Lines(data)).collect();
