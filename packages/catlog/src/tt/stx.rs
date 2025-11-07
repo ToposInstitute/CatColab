@@ -4,7 +4,6 @@
 
 use ::pretty::RcDoc;
 use derive_more::Constructor;
-use uuid::Uuid;
 
 #[cfg(doc)]
 use crate::dbl::discrete::theory::DiscreteDblTheory;
@@ -61,13 +60,13 @@ impl MorphismType {
 /// Metavariables in notebook elaboration are namespaced to the notebook.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct MetaVar {
-    ref_id: Option<Uuid>,
+    ref_id: Option<Ustr>,
     id: usize,
 }
 
 impl MetaVar {
     /// Constructor for metavariables
-    pub fn new(ref_id: Option<Uuid>, id: usize) -> Self {
+    pub fn new(ref_id: Option<Ustr>, id: usize) -> Self {
         Self { ref_id, id }
     }
 }

@@ -40,7 +40,7 @@ pub struct Elaborator<'a> {
     toplevel: &'a Toplevel,
     ctx: Context,
     errors: Vec<InvalidDblModel>,
-    ref_id: Uuid,
+    ref_id: Ustr,
     next_meta: usize,
 }
 
@@ -50,7 +50,7 @@ struct ElaboratorCheckpoint {
 
 impl<'a> Elaborator<'a> {
     /// Create a new notebook elaborator
-    pub fn new(theory: Theory, toplevel: &'a Toplevel, ref_id: Uuid) -> Self {
+    pub fn new(theory: Theory, toplevel: &'a Toplevel, ref_id: Ustr) -> Self {
         Self {
             theory,
             toplevel,
@@ -214,8 +214,8 @@ impl<'a> Elaborator<'a> {
         let notebook_types::v1::LinkType::Instantiation = link.r#type else {
             return self.ty_error(InvalidDblModel::InvalidLink(name));
         };
-        let ref_id = Uuid::from_str(&link.stable_ref.id).unwrap();
-        let topname = NameSegment::Uuid(ref_id);
+        let ref_id = ustr(&link.stable_ref.id);
+        let topname = NameSegment::Text(ref_id);
         let Some(TopDecl::Type(type_def)) = self.toplevel.declarations.get(&topname) else {
             return self.ty_error(InvalidDblModel::InvalidLink(name));
         };
@@ -313,7 +313,7 @@ mod test {
     use serde_json;
     use std::fmt::Write;
     use std::{fs, rc::Rc};
-    use uuid::Uuid;
+    use ustr::ustr;
 
     use expect_test::{Expect, expect};
 
@@ -338,7 +338,7 @@ mod test {
             })
             .collect::<Vec<_>>();
         let toplevel = Toplevel::new(std_theories());
-        let mut elab = Elaborator::new(theory.clone(), &toplevel, Uuid::nil());
+        let mut elab = Elaborator::new(theory.clone(), &toplevel, ustr(""));
         let mut out = String::new();
         let (_, ty_v) = elab.notebook(cells.iter().map(|c| c.1));
         let (model, name_translation) = generate(&toplevel, &theory, &ty_v);

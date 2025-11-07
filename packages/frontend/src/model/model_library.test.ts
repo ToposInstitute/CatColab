@@ -2,7 +2,11 @@ import { type ChangeFn, Repo } from "@automerge/automerge-repo";
 import { afterAll, assert, describe, test } from "vitest";
 
 import { DblModel } from "catlog-wasm";
-import { NotebookUtils, newFormalCell, newRichTextCell } from "../notebook/types";
+import {
+    NotebookUtils,
+    newFormalCell,
+    newRichTextCell,
+} from "../notebook/types";
 import { stdTheories } from "../stdlib";
 import { Theory } from "../theory";
 import { type ModelDocument, newModelDocument } from "./document";
@@ -33,7 +37,11 @@ describe("Model in library", async () => {
     });
 
     test("should have elaborated and validated model", () => {
+        console.log("test that console works");
         const validated = getEntry()?.validatedModel;
+        if (validated?.tag === "Invalid") {
+            console.log(validated!.errors);
+        }
         assert(validated?.tag === "Valid");
         assert(validated.model instanceof DblModel);
     });
@@ -56,34 +64,48 @@ describe("Model in library", async () => {
         assert.strictEqual(models.size, 1);
     });
 
-    test.sequential("should NOT re-elaborate when document name changes", async () => {
-        await changeDoc((doc) => {
-            doc.name = "My causal loop diagram";
-        });
-        assert.strictEqual(generation(), 2);
-    });
+    test.sequential(
+        "should NOT re-elaborate when document name changes",
+        async () => {
+            await changeDoc((doc) => {
+                doc.name = "My causal loop diagram";
+            });
+            assert.strictEqual(generation(), 2);
+        },
+    );
 
-    test.sequential("should re-elaborate when notebook cells are added", async () => {
-        await changeDoc((doc) => {
-            NotebookUtils.appendCell(
-                doc.notebook,
-                newFormalCell(newObjectDecl({ tag: "Basic", content: "Object" })),
-            );
-            NotebookUtils.appendCell(doc.notebook, newRichTextCell());
-        });
-        assert.strictEqual(generation(), 3);
-        assert.strictEqual(status(), "Valid");
-    });
+    test.sequential(
+        "should re-elaborate when notebook cells are added",
+        async () => {
+            await changeDoc((doc) => {
+                NotebookUtils.appendCell(
+                    doc.notebook,
+                    newFormalCell(
+                        newObjectDecl({ tag: "Basic", content: "Object" }),
+                    ),
+                );
+                NotebookUtils.appendCell(doc.notebook, newRichTextCell());
+            });
+            assert.strictEqual(generation(), 3);
+            assert.strictEqual(status(), "Valid");
+        },
+    );
 
-    test.sequential("should NOT re-elaborate when rich text is edited", async () => {
-        await changeDoc((doc) => {
-            const cellId = NotebookUtils.getCellIdByIndex(docHandle.doc().notebook, 1);
-            const cell = doc.notebook.cellContents[cellId];
-            assert(cell?.tag === "rich-text");
-            cell.content = "Some text";
-        });
-        assert.strictEqual(generation(), 3);
-    });
+    test.sequential(
+        "should NOT re-elaborate when rich text is edited",
+        async () => {
+            await changeDoc((doc) => {
+                const cellId = NotebookUtils.getCellIdByIndex(
+                    docHandle.doc().notebook,
+                    1,
+                );
+                const cell = doc.notebook.cellContents[cellId];
+                assert(cell?.tag === "rich-text");
+                cell.content = "Some text";
+            });
+            assert.strictEqual(generation(), 3);
+        },
+    );
 
     const anotherModelDoc = newModelDocument("causal-loop");
     NotebookUtils.appendCell(
@@ -92,20 +114,23 @@ describe("Model in library", async () => {
     );
     const anotherDocHandle = repo.create(modelDoc);
 
-    test.sequential("should automatically include instantiated models", async () => {
-        const inst = newInstantiatedModel({
-            _id: anotherDocHandle.documentId,
-            _version: null,
-            _server: "",
-            type: "instantiation",
-        });
-        await changeDoc((doc) => {
-            NotebookUtils.appendCell(doc.notebook, newFormalCell(inst));
-        });
-        assert.strictEqual(generation(), 4);
-        assert.strictEqual(status(), "Valid");
-        assert.strictEqual(models.size, 2);
-    });
+    test.sequential(
+        "should automatically include instantiated models",
+        async () => {
+            const inst = newInstantiatedModel({
+                _id: anotherDocHandle.documentId,
+                _version: null,
+                _server: "",
+                type: "instantiation",
+            });
+            await changeDoc((doc) => {
+                NotebookUtils.appendCell(doc.notebook, newFormalCell(inst));
+            });
+            assert.strictEqual(generation(), 4);
+            assert.strictEqual(status(), "Valid");
+            assert.strictEqual(models.size, 2);
+        },
+    );
 
     const cyclicModel = newModelDocument("empty");
     const cyclicModelHandle = repo.create(cyclicModel);
@@ -124,7 +149,9 @@ describe("Model in library", async () => {
     });
 
     test("should gracefully fail to elaborate when it has a cycle", async () => {
-        const getEntry = await models.getElaboratedModel(cyclicModelHandle.documentId);
+        const getEntry = await models.getElaboratedModel(
+            cyclicModelHandle.documentId,
+        );
         assert.strictEqual(getEntry()?.validatedModel.tag, "Illformed");
     });
 });

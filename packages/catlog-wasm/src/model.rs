@@ -2,7 +2,6 @@
 
 use std::collections::HashMap;
 use std::rc::Rc;
-use std::str::FromStr;
 
 use all_the_same::all_the_same;
 use catlog::tt;
@@ -14,7 +13,6 @@ use nonempty::NonEmpty;
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 use ustr::ustr;
-use uuid::Uuid;
 use wasm_bindgen::prelude::*;
 
 use catlog::dbl::model::{
@@ -619,6 +617,12 @@ pub struct DblModelMap {
     toplevel: Toplevel,
 }
 
+impl Default for DblModelMap {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[wasm_bindgen]
 impl DblModelMap {
     /// Constructs an empty collection of models.
@@ -639,7 +643,7 @@ impl DblModelMap {
     /// Inserts a model with the given name.
     #[wasm_bindgen(js_name = "set")]
     pub fn insert(&mut self, id: String, model: &DblModel) {
-        let id_uuid = Uuid::from_str(&id).unwrap();
+        let id_ustr = ustr(&id);
         self.models.insert(id, model.clone());
         if let Some((ty_s, ty_v)) = &model.ty {
             let theory = match &model.model {
@@ -649,7 +653,7 @@ impl DblModelMap {
                 }
             };
             self.toplevel.declarations.insert(
-                NameSegment::Uuid(id_uuid),
+                NameSegment::Text(id_ustr),
                 TopDecl::Type(Type::new(
                     Theory::new(QualifiedName::single(NameSegment::Text(ustr("_"))), theory),
                     ty_s.clone(),
@@ -672,7 +676,7 @@ pub fn elaborate_model(
         DblTheoryBox::Discrete(ddt) => {
             let theory =
                 Theory::new(QualifiedName::single(NameSegment::Text(ustr("_"))), ddt.clone());
-            let ref_id = Uuid::from_str(&ref_id).unwrap();
+            let ref_id = ustr(&ref_id);
             let mut elab = ElaboratorNext::new(theory.clone(), &instantiated.toplevel, ref_id);
             let ty = elab.notebook(notebook.0.formal_content());
             let (ddm, namespace) = generate(&instantiated.toplevel, &theory, &ty.1);
