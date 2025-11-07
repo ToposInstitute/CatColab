@@ -3,10 +3,7 @@ import type * as Viz from "@viz-js/viz";
 import type { DblModel, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import type { Theory } from "../../theory";
-import type {
-    GraphLayoutConfig,
-    GraphvizAttributes,
-} from "../../visualization";
+import type { GraphLayoutConfig, GraphvizAttributes } from "../../visualization";
 import * as graphStyles from "../graph_styles";
 import { GraphVisualization } from "./graph_visualization";
 
