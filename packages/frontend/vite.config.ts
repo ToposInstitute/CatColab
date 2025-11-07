@@ -22,6 +22,11 @@ export default defineConfig({
         sourcemap: true,
         target: "es2022",
     },
+    resolve: {
+        // Needed to link other packages that use Solid.js:
+        // https://github.com/solidjs/solid/issues/1472
+        dedupe: ["solid-js", "solid-js/web"],
+    },
     server: {
         proxy: {
             "/api": {
