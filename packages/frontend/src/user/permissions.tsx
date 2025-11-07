@@ -188,7 +188,7 @@ export function PermissionsForm(props: {
                     type="button"
                     variant="primary"
                     disabled={
-                        !props.refId || currentPermissions.loading || currentPermissions.error
+                        !props.refId || currentPermissions.loading || !!currentPermissions.error
                     }
                     onClick={submitPermissions}
                 >

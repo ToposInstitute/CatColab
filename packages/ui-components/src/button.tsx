@@ -1,4 +1,4 @@
-import { type ComponentProps, type JSX, splitProps } from "solid-js";
+import { type ComponentProps, type JSX, mergeProps, splitProps } from "solid-js";
 
 import "./button.css";
 
@@ -27,12 +27,10 @@ export function Button(
         }
     };
 
+    const mergedProps = mergeProps({ type: "button" as const }, buttonProps);
+
     return (
-        <button
-            class={`button ${variantClass()}`}
-            type={buttonProps.type || "button"}
-            {...buttonProps}
-        >
+        <button class={`button ${variantClass()}`} {...mergedProps}>
             {props.children}
         </button>
     );
