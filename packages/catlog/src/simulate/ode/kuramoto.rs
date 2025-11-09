@@ -1,7 +1,7 @@
 //! Kuramoto model of synchronization of coupled oscillators.
 //!
 //! The first-order and second-order Kuramoto models are both described in
-//! Section 2.1 of [Nitzbon et al, 2017](crate::refs::NitzbonNetworkStability),
+//! Section 2.1 of [Nitzbon et al 2017](crate::refs::NitzbonNetworkStability),
 //! among other sources.
 
 use nalgebra::{DMatrix, DVector};
@@ -16,12 +16,16 @@ pub enum KuramotoOrder {
 
     /// Second-order Kuramoto system.
     ///
-    /// Reduced to a first-order ODE system by introducing auxiliary variables
+    /// Reduced to a first-order ODE system by introducing extra state variables
     /// for the angular frequencies `ω_i`.
     Second,
 }
 
 /// Kuramoto system of ODEs.
+///
+/// The state variables of the system are the phase angles `ϕ_i` and, in the
+/// second-order case, also the angular frequencies `ω_i`. The notation here
+/// follows [Nitzbon et al 2017](crate::refs::NitzbonNetworkStability).
 #[derive(Clone, Debug, PartialEq)]
 pub struct KuramotoSystem {
     /// Differential order of the system.
@@ -33,18 +37,20 @@ pub struct KuramotoSystem {
     /// Damping coefficients `α_i` (nonnegative).
     pub damping_coeffs: DVector<f32>,
 
-    /// Constant offsets to angular frequency (or its derivative) `P_i`
-    /// (arbitrary sign).
-    pub frequency_offsets: DVector<f32>,
+    /// Forcing parameter `P_i` (arbitrary sign).
+    ///
+    /// In the first-order case, these constant offsets are the *inherent
+    /// frequencies* of the oscillators, but in the second-order case, their
+    /// relationship to the inherent frequencies is more complicated; see
+    /// [Nishikawa & Motter
+    /// 2015](https://doi.org/10.1088/1367-2630/17/1/015012).
+    pub forcing_params: DVector<f32>,
 }
 
 impl KuramotoSystem {
     /// Constructs a homogeneous Kuramoto system on the complete graph.
-    pub fn fully_connected_homogeneous(
-        order: KuramotoOrder,
-        frequency_offsets: DVector<f32>,
-    ) -> Self {
-        let n = frequency_offsets.len();
+    pub fn fully_connected_homogeneous(order: KuramotoOrder, forcing_params: DVector<f32>) -> Self {
+        let n = forcing_params.len();
         let mut coupling_coeffs = DMatrix::from_element(n, n, 1.0);
         for i in 0..n {
             coupling_coeffs[(i, i)] = 0.0;
@@ -54,7 +60,7 @@ impl KuramotoSystem {
             order,
             coupling_coeffs,
             damping_coeffs,
-            frequency_offsets,
+            forcing_params,
         }
     }
 }
@@ -65,7 +71,7 @@ impl ODESystem for KuramotoSystem {
             KuramotoOrder::First => {
                 let n = x.len();
                 for i in 0..n {
-                    let mut rhs = self.frequency_offsets[i];
+                    let mut rhs = self.forcing_params[i];
                     for j in 0..n {
                         rhs -= self.coupling_coeffs[(i, j)] * (x[i] - x[j]).sin();
                     }
@@ -76,7 +82,7 @@ impl ODESystem for KuramotoSystem {
                 let n = x.len() / 2;
                 for i in 0..n {
                     dx[i] = x[i + n];
-                    let mut rhs = self.frequency_offsets[i] - self.damping_coeffs[i] * x[i + n];
+                    let mut rhs = self.forcing_params[i] - self.damping_coeffs[i] * x[i + n];
                     for j in 0..n {
                         rhs -= self.coupling_coeffs[(i, j)] * (x[i] - x[j]).sin();
                     }
