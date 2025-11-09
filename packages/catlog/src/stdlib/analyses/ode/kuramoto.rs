@@ -90,13 +90,25 @@ pub struct CommonKuramotoProblemData {
 
 /// Kuramoto ODE analysis of a model.
 pub struct KuramotoAnalysis {
-    /// Object type for nodes.
-    pub node_ob_type: ModalObType,
-    /// Morphism types for branches between nodes.
-    pub branch_mor_types: Vec<ModalMorType>,
+    node_ob_type: ModalObType,
+    link_mor_types: Vec<ModalMorType>,
 }
 
 impl KuramotoAnalysis {
+    /// Constructs a Kuramoto analysis with nodes the objects of given type.
+    pub fn new(ob_type: ModalObType) -> Self {
+        Self {
+            node_ob_type: ob_type,
+            link_mor_types: Default::default(),
+        }
+    }
+
+    /// Adds a type of morphism to be treated as links between nodes.
+    pub fn add_link_type(mut self, mor_type: ModalMorType) -> Self {
+        self.link_mor_types.push(mor_type);
+        self
+    }
+
     /// Creates a Kuramoto system from a model plus numerical data.
     pub fn build_system(
         &self,
@@ -114,7 +126,7 @@ impl KuramotoAnalysis {
         let n = ob_index.len();
 
         let mut coupling_coeffs = DMatrix::from_element(n, n, 0.0f32);
-        for mor_type in self.branch_mor_types.iter() {
+        for mor_type in self.link_mor_types.iter() {
             for mor in model.mor_generators_with_type(mor_type) {
                 let coef = common.coupling_coeffs.get(&mor).copied().unwrap_or_default();
                 let ModalOb::Generator(dom_id) = model.mor_generator_dom(&mor) else {
