@@ -16,8 +16,7 @@ use tsify::Tsify;
 
 use super::{ODEAnalysis, ODESolution};
 use crate::dbl::{
-    modal::model::ModalOb,
-    model::{DiscreteTabModel, FgDblModel, ModalDblModel, MutDblModel, TabEdge},
+    model::{DiscreteTabModel, FgDblModel, ModalDblModel, ModalOb, MutDblModel, TabEdge},
     theory::{ModalMorType, ModalObType, TabMorType, TabObType},
 };
 use crate::one::FgCategory;
@@ -25,7 +24,6 @@ use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSyst
 use crate::zero::{QualifiedName, alg::Polynomial, name, rig::Monomial};
 
 /// Data defining a mass-action ODE problem for a model.
-#[derive(Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(

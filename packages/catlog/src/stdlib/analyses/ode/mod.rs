@@ -65,11 +65,13 @@ impl<Sys> ODEAnalysis<Sys> {
     }
 }
 
+pub mod kuramoto;
 pub mod linear_ode;
 pub mod lotka_volterra;
 pub mod mass_action;
 pub mod signed_coefficients;
 
+pub use kuramoto::*;
 pub use linear_ode::*;
 pub use lotka_volterra::*;
 pub use mass_action::*;
