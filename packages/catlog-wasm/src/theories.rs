@@ -7,8 +7,8 @@ use std::rc::Rc;
 
 use wasm_bindgen::prelude::*;
 
-use catlog::dbl::theory;
-use catlog::one::Path;
+use catlog::dbl::theory::{self, ModeApp};
+use catlog::one::{Path, ShortPath};
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 use catlog::zero::name;
 
@@ -376,6 +376,25 @@ impl ThPowerSystem {
     #[wasm_bindgen]
     pub fn theory(&self) -> DblTheory {
         DblTheory(self.0.clone().into())
+    }
+
+    /// Simulates the Kuramoto system derived from a model.
+    #[wasm_bindgen]
+    pub fn kuramoto(
+        &self,
+        model: &DblModel,
+        data: &analyses::ode::KuramotoProblemData,
+    ) -> Result<ODEResult, String> {
+        Ok(ODEResult(
+            analyses::ode::KuramotoAnalysis::new(ModeApp::new(name("Bus")))
+                // Should we distinguish between lines and transformers?
+                .add_link_type(ShortPath::Zero(ModeApp::new(name("Bus"))))
+                .add_link_type(ShortPath::One(ModeApp::new(name("Passive"))))
+                .build_system(model.modal()?, data)
+                .solve_with_defaults()
+                .map_err(|err| format!("{err:?}"))
+                .into(),
+        ))
     }
 }
 

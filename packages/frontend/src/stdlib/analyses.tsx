@@ -40,6 +40,52 @@ export const diagramGraph = (
 
 const DiagramGraph = lazy(() => import("./analyses/diagram_graph"));
 
+export function kuramoto(
+    options: Partial<AnalysisOptions> & {
+        simulate: Simulators.KuramotoSimulator;
+        parameterLabels?: {
+            coupling?: string;
+            damping?: string;
+            forcing?: string;
+        };
+    },
+): ModelAnalysisMeta<Simulators.KuramotoProblemData> {
+    const {
+        id = "kuramoto",
+        name = "Kuramoto dynamics",
+        description = "Simulate the system using the Kuramoto dynamical model",
+        help = "kuramoto",
+        simulate,
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => (
+            <Kuramoto
+                simulate={simulate}
+                title={name}
+                couplingLabel={options.parameterLabels?.coupling}
+                dampingLabel={options.parameterLabels?.damping}
+                forcingLabel={options.parameterLabels?.forcing}
+                {...props}
+            />
+        ),
+        initialContent: () => ({
+            order: "second",
+            couplingCoefficients: {},
+            dampingCoefficients: {},
+            forcingParameters: {},
+            initialPhases: {},
+            initialFrequencies: {},
+            duration: 10,
+        }),
+    };
+}
+
+const Kuramoto = lazy(() => import("./analyses/kuramoto"));
+
 export function linearODE(
     options: Partial<AnalysisOptions> & {
         simulate: Simulators.LinearODESimulator;
