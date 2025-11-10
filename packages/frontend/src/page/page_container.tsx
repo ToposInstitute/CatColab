@@ -1,6 +1,6 @@
 import { type JSX, createSignal } from "solid-js";
 
-import { Dialog } from "../components";
+import { Dialog } from "catcolab-ui-components";
 import { useDeleteDocument } from "../components/delete_document_dialog";
 import { Login } from "../user";
 import { type PageActions, PageActionsContext } from "./context";

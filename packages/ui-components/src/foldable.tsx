@@ -5,7 +5,7 @@ import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 
 import "./foldable.css";
-import "catcolab-ui-components/panel.css";
+import "./panel.css";
 
 /** A component whose contents can be expanded or folded.
 

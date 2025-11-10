@@ -25,7 +25,15 @@ export default defineConfig({
     resolve: {
         // Needed to link other packages that use Solid.js:
         // https://github.com/solidjs/solid/issues/1472
-        dedupe: ["solid-js", "solid-js/web"],
+        // Run `pnpm run sync-dedupe` to update this list with deps used in ui-components
+        dedupe: [
+            "@corvu/dialog",
+            "@corvu/popover",
+            "@corvu/resizable",
+            "@solid-primitives/destructure",
+            "lucide-solid",
+            "solid-js",
+        ],
     },
     server: {
         proxy: {
