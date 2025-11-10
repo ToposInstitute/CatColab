@@ -9,6 +9,7 @@ import invariant from "tiny-invariant";
 import { IconButton } from "catcolab-ui-components";
 import { createAnalysis } from "../analysis";
 import { type LiveDoc, useApi } from "../api";
+import { DocumentTypeIcon } from "../components/document_type_icon";
 import { createDiagram } from "../diagram";
 import {
     CopyJSONMenuItem,
@@ -20,7 +21,6 @@ import {
     MenuSeparator,
 } from "../page";
 import { TheoryLibraryContext } from "../theory";
-import { DocumentTypeIcon } from "./document_type_icon";
 
 export function DocumentMenu(props: {
     liveDoc: LiveDoc;

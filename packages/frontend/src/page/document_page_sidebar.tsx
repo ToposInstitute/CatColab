@@ -6,8 +6,8 @@ import { createResource } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { type Api, type LiveDoc, useApi } from "../api";
+import { DocumentTypeIcon } from "../components/document_type_icon";
 import { DocumentMenu } from "./document_menu";
-import { DocumentTypeIcon } from "./document_type_icon";
 import { AppMenu, ImportMenuItem, NewModelItem } from "./menubar";
 
 export function DocumentSidebar(props: {
