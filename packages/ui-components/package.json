@@ -31,15 +31,15 @@
         "@storybook/addon-vitest": "^10.0.2",
         "@storybook/builder-vite": "^10.0.2",
         "@types/node": "^22.7.4",
-        "@vitest/browser": "^4.0.6",
-        "@vitest/browser-playwright": "^4.0.6",
-        "@vitest/coverage-v8": "^4.0.6",
+        "@vitest/browser": "^4.0.8",
+        "@vitest/browser-playwright": "^4.0.8",
+        "@vitest/coverage-v8": "^4.0.8",
         "playwright": "^1.56.1",
         "storybook": "^10.0.2",
         "storybook-solidjs-vite": "^10.0.5",
         "typescript": "^5.2.2",
-        "vite": "^6.0.0",
-        "vite-plugin-solid": "^2.10.2",
-        "vitest": "^4.0.6"
+        "vite": "^7.2.2",
+        "vite-plugin-solid": "^2.11.10",
+        "vitest": "^4.0.8"
     }
 }
