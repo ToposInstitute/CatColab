@@ -14,10 +14,12 @@
         "preview": "vite preview",
         "format": "biome format --write",
         "lint": "biome lint --write && biome check --write",
-        "ci": "biome ci",
+        "ci": "biome ci && npm run sync-dedupe:check",
         "doc": "typedoc --entryPointStrategy expand ./src",
         "test": "vitest --mode development",
-        "test:no-backend": "vitest --mode development --exclude 'src/api/*'"
+        "test:no-backend": "vitest --mode development --exclude 'src/api/*'",
+        "sync-dedupe": "node scripts/sync-dedupe.js",
+        "sync-dedupe:check": "node scripts/sync-dedupe.js --check"
     },
     "dependencies": {
         "@atlaskit/pragmatic-drag-and-drop": "^1.3.0",
