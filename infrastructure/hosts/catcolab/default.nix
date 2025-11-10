@@ -44,6 +44,7 @@ in
       userKeys = [
         owen
         epatters
+        jmoggr
       ];
       backup = {
         enable = true;
