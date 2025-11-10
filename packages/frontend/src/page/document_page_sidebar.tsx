@@ -13,6 +13,8 @@ import { AppMenu, ImportMenuItem, NewModelItem } from "./menubar";
 export function DocumentSidebar(props: {
     primaryLiveDoc: LiveDoc;
     secondaryLiveDoc?: LiveDoc;
+    refetchPrimaryDocument: () => void;
+    refetchSecondaryDocument: () => void;
 }) {
     return (
         <>
@@ -23,6 +25,8 @@ export function DocumentSidebar(props: {
             <RelatedDocuments
                 primaryLiveDoc={props.primaryLiveDoc}
                 secondaryLiveDoc={props.secondaryLiveDoc}
+                refetchPrimaryDocument={props.refetchPrimaryDocument}
+                refetchSecondaryDocument={props.refetchSecondaryDocument}
             />
         </>
     );
@@ -48,6 +52,8 @@ async function getLiveDocRoot(livDoc: LiveDoc, api: Api): Promise<LiveDoc> {
 function RelatedDocuments(props: {
     primaryLiveDoc: LiveDoc;
     secondaryLiveDoc?: LiveDoc;
+    refetchPrimaryDocument: () => void;
+    refetchSecondaryDocument: () => void;
 }) {
     const api = useApi();
 
@@ -65,6 +71,8 @@ function RelatedDocuments(props: {
                         indent={1}
                         primaryLiveDoc={props.primaryLiveDoc}
                         secondaryLiveDoc={props.secondaryLiveDoc}
+                        refetchPrimaryDocument={props.refetchPrimaryDocument}
+                        refetchSecondaryDocument={props.refetchSecondaryDocument}
                     />
                 </div>
             )}
@@ -77,6 +85,8 @@ function DocumentsTreeNode(props: {
     indent: number;
     primaryLiveDoc: LiveDoc;
     secondaryLiveDoc?: LiveDoc;
+    refetchPrimaryDocument: () => void;
+    refetchSecondaryDocument: () => void;
 }) {
     const api = useApi();
 
@@ -105,7 +115,9 @@ function DocumentsTreeNode(props: {
                 indent={props.indent}
                 primaryLiveDoc={props.primaryLiveDoc}
                 secondaryLiveDoc={props.secondaryLiveDoc}
-                triggerRefresh={refetch}
+                refetchDocument={refetch}
+                refetchPrimaryDocument={props.refetchPrimaryDocument}
+                refetchSecondaryDocument={props.refetchSecondaryDocument}
             />
             <For each={childDocs()}>
                 {(child) => (
@@ -114,6 +126,8 @@ function DocumentsTreeNode(props: {
                         indent={props.indent + 1}
                         primaryLiveDoc={props.primaryLiveDoc}
                         secondaryLiveDoc={props.secondaryLiveDoc}
+                        refetchPrimaryDocument={props.refetchPrimaryDocument}
+                        refetchSecondaryDocument={props.refetchSecondaryDocument}
                     />
                 )}
             </For>
@@ -126,7 +140,9 @@ function DocumentsTreeLeaf(props: {
     indent: number;
     primaryLiveDoc: LiveDoc;
     secondaryLiveDoc?: LiveDoc;
-    triggerRefresh: () => void;
+    refetchDocument: () => void;
+    refetchPrimaryDocument: () => void;
+    refetchSecondaryDocument: () => void;
 }) {
     const navigate = useNavigate();
     const clickedRefId = createMemo(() => props.liveDoc.docRef?.refId);
@@ -163,7 +179,15 @@ function DocumentsTreeLeaf(props: {
                 {props.liveDoc.doc.name || "Untitled"}
             </div>
             <div class="document-actions" onClick={(e) => e.stopPropagation()}>
-                <DocumentMenu liveDoc={props.liveDoc} onDocumentCreated={props.triggerRefresh} />
+                <DocumentMenu
+                    liveDoc={props.liveDoc}
+                    onDocumentCreated={props.refetchDocument}
+                    onDocumentDeleted={() => {
+                        props.refetchDocument();
+                        props.refetchPrimaryDocument();
+                        props.refetchSecondaryDocument();
+                    }}
+                />
             </div>
         </div>
     );
