@@ -88,14 +88,14 @@ function load_target_env() {
       export PGPORT="5433"
       ;;
     staging)
-      load_env DATABASE_URL "$(find_git_root)/infrastructure/secrets/.env.next.age"
+      load_env DATABASE_URL "$(find_git_root)/infrastructure/secrets/env.next.age"
 
       open_tunnel "catcolab" "backend-next.catcolab.org" "$STAGING_LOCAL_PGPORT" "$PGPORT" "STAGING_SSH_PID"
 
       export PGPORT="$STAGING_LOCAL_PGPORT"
       ;;
     production)
-      load_env DATABASE_URL "$(find_git_root)/infrastructure/secrets/.env.prod.age"
+      load_env DATABASE_URL "$(find_git_root)/infrastructure/secrets/env.prod.age"
 
       open_tunnel "catcolab" "backend.catcolab.org" "$PROD_LOCAL_PGPORT" "$PGPORT" "PROD_SSH_PID"
 
