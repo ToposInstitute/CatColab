@@ -126,7 +126,8 @@ export default function DocumentPage() {
                                     >
                                         <DocumentPane
                                             document={liveDocument()}
-                                            refetch={refetchPrimaryDocument}
+                                            refetchPrimaryDocument={refetchPrimaryDocument}
+                                            refetchSecondaryDocument={refetchSecondaryDocument}
                                         />
                                     </Resizable.Panel>
                                     <Show when={isSidePanelOpen()}>
@@ -141,7 +142,12 @@ export default function DocumentPage() {
                                                     <>
                                                         <DocumentPane
                                                             document={secondaryLiveModel()}
-                                                            refetch={refetchSecondaryDocument}
+                                                            refetchPrimaryDocument={
+                                                                refetchPrimaryDocument
+                                                            }
+                                                            refetchSecondaryDocument={
+                                                                refetchSecondaryDocument
+                                                            }
                                                         />
                                                     </>
                                                 )}
@@ -192,7 +198,8 @@ function SplitPaneToolbar(props: {
 
 export function DocumentPane(props: {
     document: AnyLiveDocument;
-    refetch: () => void;
+    refetchPrimaryDocument: () => void;
+    refetchSecondaryDocument: () => void;
 }) {
     const api = useApi();
     const [isDeleted, setIsDeleted] = createSignal(false);
@@ -215,7 +222,8 @@ export function DocumentPane(props: {
             const result = await api.rpc.restore_ref.mutate(refId);
             if (result.tag === "Ok") {
                 api.clearCachedDoc(refId);
-                props.refetch();
+                props.refetchPrimaryDocument();
+                props.refetchSecondaryDocument();
             } else {
                 console.error(`Failed to restore document: ${result.message}`);
             }
