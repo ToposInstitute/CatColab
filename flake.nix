@@ -243,7 +243,7 @@
           # use:
           # nix build .#catcolab-vm
           # cp result/catcolab-vm.qcow2 catcolab-vm.qcow2
-          # db-utils vm start
+          # cc-utils vm start
           # deploy -s .#catcolab-vm
           catcolab-vm = pkgsLinux.stdenv.mkDerivation {
             name = "catcolab-vm";
