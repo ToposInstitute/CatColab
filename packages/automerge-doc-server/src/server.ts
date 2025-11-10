@@ -164,9 +164,9 @@ export class AutomergeServer implements SocketIOHandlers {
         return { Ok: null };
     }
 
-    async close() {
-        this.wss.close();
+    close() {
         this.server.close();
+        this.wss.close();
     }
 
     private async isHeadMatching(refId: string, docId: string): Promise<boolean> {
