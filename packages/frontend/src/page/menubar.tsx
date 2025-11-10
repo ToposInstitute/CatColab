@@ -23,6 +23,7 @@ import Info from "lucide-solid/icons/info";
 import LogInIcon from "lucide-solid/icons/log-in";
 import LogOutIcon from "lucide-solid/icons/log-out";
 import MenuIcon from "lucide-solid/icons/menu";
+import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import SettingsIcon from "lucide-solid/icons/settings";
 import Trash2 from "lucide-solid/icons/trash-2";
 import UploadIcon from "lucide-solid/icons/upload";
@@ -324,6 +325,40 @@ export function DeleteMenuItem(props: {
         <MenuItem disabled={!props.canDelete} onSelect={handleDelete}>
             <X />
             <MenuItemLabel>{`Delete ${props.typeName}`}</MenuItemLabel>
+        </MenuItem>
+    );
+}
+
+/** Menu item to restore a deleted document. */
+export function RestoreMenuItem(props: {
+    refId: string | undefined;
+    typeName: string;
+    onRestored?: () => void;
+}) {
+    const api = useApi();
+
+    const handleRestore = async () => {
+        if (!props.refId) {
+            return;
+        }
+
+        try {
+            const result = await api.rpc.restore_ref.mutate(props.refId);
+            if (result.tag === "Ok") {
+                api.clearCachedDoc(props.refId);
+                props.onRestored?.();
+            } else {
+                console.error(`Failed to restore document: ${result.message}`);
+            }
+        } catch (error) {
+            console.error(`Error restoring document: ${error}`);
+        }
+    };
+
+    return (
+        <MenuItem onSelect={handleRestore}>
+            <RotateCcw />
+            <MenuItemLabel>{`Restore deleted ${props.typeName}`}</MenuItemLabel>
         </MenuItem>
     );
 }

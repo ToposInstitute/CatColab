@@ -18,6 +18,7 @@ import {
     MenuItem,
     MenuItemLabel,
     MenuSeparator,
+    RestoreMenuItem,
 } from "../page";
 import { TheoryLibraryContext } from "../theory";
 import { DocumentTypeIcon } from "./document_type_icon";
@@ -85,6 +86,9 @@ export function DocumentMenu(props: {
     const canDelete = () =>
         props.liveDoc.docRef?.permissions.user === "Own" && !props.liveDoc.docRef?.isDeleted;
 
+    const canRestore = () =>
+        props.liveDoc.docRef?.permissions.user === "Own" && props.liveDoc.docRef?.isDeleted;
+
     return (
         <Popover
             placement="bottom-end"
@@ -126,13 +130,24 @@ export function DocumentMenu(props: {
                     <ExportJSONMenuItem doc={props.liveDoc.doc} />
                     <CopyJSONMenuItem doc={props.liveDoc.doc} />
                     <MenuSeparator />
-                    <DeleteMenuItem
-                        refId={props.liveDoc.docRef?.refId}
-                        name={props.liveDoc.doc.name}
-                        typeName={props.liveDoc.doc.type}
-                        canDelete={canDelete()}
-                        onDeleted={props.onDocumentDeleted}
-                    />
+                    <Switch>
+                        <Match when={canRestore()}>
+                            <RestoreMenuItem
+                                refId={props.liveDoc.docRef?.refId}
+                                typeName={props.liveDoc.doc.type}
+                                onRestored={props.onDocumentDeleted}
+                            />
+                        </Match>
+                        <Match when={true}>
+                            <DeleteMenuItem
+                                refId={props.liveDoc.docRef?.refId}
+                                name={props.liveDoc.doc.name}
+                                typeName={props.liveDoc.doc.type}
+                                canDelete={canDelete()}
+                                onDeleted={props.onDocumentDeleted}
+                            />
+                        </Match>
+                    </Switch>
                 </Popover.Content>
             </Popover.Portal>
         </Popover>
