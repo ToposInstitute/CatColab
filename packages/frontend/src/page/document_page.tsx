@@ -109,6 +109,8 @@ export default function DocumentPage() {
                         <DocumentSidebar
                             primaryLiveDoc={liveDocument().liveDoc}
                             secondaryLiveDoc={secondaryLiveDocument()?.liveDoc}
+                            refetchPrimaryDocument={refetchPrimaryDocument}
+                            refetchSecondaryDocument={refetchSecondaryDocument}
                         />
                     }
                 >

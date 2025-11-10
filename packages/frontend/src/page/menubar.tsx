@@ -303,8 +303,8 @@ export function DeleteMenuItem(props: {
     name: string | null;
     typeName: string;
     canDelete: boolean;
+    onDeleted?: () => void;
 }) {
-    const navigate = useNavigate();
     const actions = useContext(PageActionsContext);
     invariant(actions, "Page actions should be provided");
 
@@ -316,7 +316,7 @@ export function DeleteMenuItem(props: {
             typeName: props.typeName,
         });
         if (success) {
-            navigate("/documents");
+            props.onDeleted?.();
         }
     };
 

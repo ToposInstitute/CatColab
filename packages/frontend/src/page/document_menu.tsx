@@ -25,6 +25,7 @@ import { DocumentTypeIcon } from "./document_type_icon";
 export function DocumentMenu(props: {
     liveDoc: LiveDoc;
     onDocumentCreated?: () => void;
+    onDocumentDeleted?: () => void;
 }) {
     const api = useApi();
 
@@ -130,6 +131,7 @@ export function DocumentMenu(props: {
                         name={props.liveDoc.doc.name}
                         typeName={props.liveDoc.doc.type}
                         canDelete={canDelete()}
+                        onDeleted={props.onDocumentDeleted}
                     />
                 </Popover.Content>
             </Popover.Portal>
