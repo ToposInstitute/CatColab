@@ -43,6 +43,7 @@ function print_dump_help {
   echo "Options:"
   echo "  -f, --from <target>    Target: local (default), staging, or production"
   echo "  -t, --to <filename>    Filename to write (defaults to './dumps/<target>_dump_<timestamp>.sql')"
+  echo "  -q, --quiet            Only output the dump file path"
   echo "  -h, --help             Print this help message"
 }
 
@@ -94,6 +95,7 @@ function run_connect() {
 function run_dump() {
   local target="local"
   local dump_file=""
+  local quiet=false
 
   while [[ ${1-} ]]; do
     case "$1" in
@@ -104,6 +106,9 @@ function run_dump() {
       "-t" | "--to")
         shift
         dump_file="$1"
+        ;;
+      "-q" | "--quiet")
+        quiet=true
         ;;
       "-h" | "--help")
         print_dump_help
@@ -130,9 +135,14 @@ function run_dump() {
 
   case "$target" in
     local|vm|staging|production)
-      echo "Dumping $target to $dump_file..."
+      if [[ "$quiet" != "true" ]]; then
+        echo "Dumping $target to $dump_file..."
+      fi
       load_target_env "$target"
       pg_dump --clean --if-exists > "$dump_file"
+      if [[ "$quiet" == "true" ]]; then
+        echo "$dump_file"
+      fi
       ;;
     *)
       echo "Unknown target: $target"
