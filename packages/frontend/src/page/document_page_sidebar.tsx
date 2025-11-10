@@ -57,7 +57,7 @@ function RelatedDocuments(props: {
     );
 
     return (
-        <Show when={liveDocRoot()} fallback={<div>Loading related items...</div>}>
+        <Show when={liveDocRoot()}>
             {(liveDocRoot) => (
                 <div class="related-tree">
                     <DocumentsTreeNode
@@ -107,20 +107,16 @@ function DocumentsTreeNode(props: {
                 secondaryLiveDoc={props.secondaryLiveDoc}
                 triggerRefresh={refetch}
             />
-            <Show when={childDocs()} fallback={<div>Loading children...</div>}>
-                {(childDocs) => (
-                    <For each={childDocs()}>
-                        {(child) => (
-                            <DocumentsTreeNode
-                                liveDoc={child}
-                                indent={props.indent + 1}
-                                primaryLiveDoc={props.primaryLiveDoc}
-                                secondaryLiveDoc={props.secondaryLiveDoc}
-                            />
-                        )}
-                    </For>
+            <For each={childDocs()}>
+                {(child) => (
+                    <DocumentsTreeNode
+                        liveDoc={child}
+                        indent={props.indent + 1}
+                        primaryLiveDoc={props.primaryLiveDoc}
+                        secondaryLiveDoc={props.secondaryLiveDoc}
+                    />
                 )}
-            </Show>
+            </For>
         </>
     );
 }
