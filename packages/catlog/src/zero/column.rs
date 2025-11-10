@@ -5,7 +5,7 @@ use std::hash::Hash;
 use std::marker::PhantomData;
 
 use derivative::Derivative;
-use derive_more::{Constructor, From};
+use indexmap::IndexMap;
 use nonempty::NonEmpty;
 use thiserror::Error;
 
@@ -374,15 +374,19 @@ impl SkelColumn {
 }
 
 /// An unindexed column backed by a hash map.
-#[derive(Clone, Debug, Derivative, Constructor, From)]
+///
+/// A stable order is guaranteed when iterating over the preimage of an element.
+/// Currently, this is achieved (in the unindexed case) by using an [`IndexMap`]
+/// rather than a `HashMap` for the underlying data structure.
+#[derive(Clone, Debug, Derivative)]
 #[derivative(PartialEq(bound = "K: Eq + Hash, V: PartialEq"))]
 #[derivative(Eq(bound = "K: Eq + Hash, V: Eq"))]
 #[derivative(Default(bound = ""))]
-pub struct HashColumn<K, V>(HashMap<K, V>);
+pub struct HashColumn<K, V>(IndexMap<K, V>);
 
 impl<K, V> IntoIterator for HashColumn<K, V> {
     type Item = (K, V);
-    type IntoIter = std::collections::hash_map::IntoIter<K, V>;
+    type IntoIter = indexmap::map::IntoIter<K, V>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
@@ -394,7 +398,7 @@ where
     K: Eq + Hash,
 {
     fn from_iter<Iter: IntoIterator<Item = (K, V)>>(iter: Iter) -> Self {
-        HashColumn(HashMap::from_iter(iter))
+        HashColumn(IndexMap::from_iter(iter))
     }
 }
 
@@ -429,7 +433,7 @@ where
         self.0.insert(x, y)
     }
     fn unset(&mut self, x: &K) -> Option<V> {
-        self.0.remove(x)
+        self.0.swap_remove(x)
     }
 }
 
@@ -639,15 +643,16 @@ where
     }
 
     fn set(&mut self, x: Dom, y: Cod) -> Option<Cod> {
-        let old = self.unset(&x);
+        if let Some(y_prev) = self.mapping.get(&x) {
+            self.index.remove(&x, y_prev);
+        }
         self.index.insert(x.clone(), &y);
-        self.mapping.set(x, y);
-        old
+        self.mapping.set(x, y)
     }
 
     fn unset(&mut self, x: &Dom) -> Option<Cod> {
         let old = self.mapping.unset(x);
-        if let Some(ref y) = old {
+        if let Some(y) = &old {
             self.index.remove(x, y);
         }
         old

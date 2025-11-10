@@ -1,6 +1,6 @@
 //! Morphisms between models of a discrete double theory.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::rc::Rc;
 
 use nonempty::NonEmpty;
@@ -26,10 +26,13 @@ type DiscreteDblModelMappingData = FpFunctorData<
 impl DiscreteDblModelMapping {
     /// Constructs a model mapping from a pair of hash maps.
     pub fn new(
-        ob_map: HashMap<QualifiedName, QualifiedName>,
-        mor_map: HashMap<QualifiedName, QualifiedPath>,
+        ob_pairs: impl IntoIterator<Item = (QualifiedName, QualifiedName)>,
+        mor_pairs: impl IntoIterator<Item = (QualifiedName, QualifiedPath)>,
     ) -> Self {
-        Self(FpFunctorData::new(HashColumn::new(ob_map), HashColumn::new(mor_map)))
+        Self(FpFunctorData::new(
+            ob_pairs.into_iter().collect(),
+            mor_pairs.into_iter().collect(),
+        ))
     }
 
     /// Assigns an object generator, returning the previous assignment.
@@ -476,8 +479,8 @@ mod tests {
         let posfeed = positive_feedback(theory.clone());
 
         let f = DiscreteDblModelMapping::new(
-            [(name("x"), name("x"))].into(),
-            [(name(""), Path::Id(name("negative")))].into(),
+            [(name("x"), name("x"))],
+            [(name(""), Path::Id(name("negative")))],
         );
         let dmm = DblModelMorphism(&f, &negloop, &negloop);
         assert!(dmm.validate().is_err());
@@ -486,8 +489,8 @@ mod tests {
         // but sent to something that doesn't exist) and for the hom generator
         // (not in the map)
         let f = DiscreteDblModelMapping::new(
-            [(name("x"), name("y"))].into(),
-            [(name("y"), Path::Id(name("y")))].into(),
+            [(name("x"), name("y"))],
+            [(name("y"), Path::Id(name("y")))],
         );
         let dmm = DblModelMorphism(&f, &negloop, &negloop);
         let errs: Vec<_> = dmm.validate().unwrap_err().into();
@@ -500,8 +503,8 @@ mod tests {
 
         // A bad map that doesn't preserve dom
         let f = DiscreteDblModelMapping::new(
-            [(name("x"), name("x"))].into(),
-            [(name("loop"), Path::single(name("positive1")))].into(),
+            [(name("x"), name("x"))],
+            [(name("loop"), Path::single(name("positive1")))],
         );
         let dmm = DblModelMorphism(&f, &negloop, &posfeed);
         let errs: Vec<_> = dmm.validate().unwrap_err().into();
@@ -514,8 +517,8 @@ mod tests {
 
         // A bad map that doesn't preserve codom
         let f = DiscreteDblModelMapping::new(
-            [(name("x"), name("x"))].into(),
-            [(name("loop"), Path::single(name("positive2")))].into(),
+            [(name("x"), name("x"))],
+            [(name("loop"), Path::single(name("positive2")))],
         );
         let dmm = DblModelMorphism(&f, &negloop, &posfeed);
         let errs: Vec<_> = dmm.validate().unwrap_err().into();
@@ -534,8 +537,8 @@ mod tests {
 
         // Identity map
         let f = DiscreteDblModelMapping::new(
-            [(name("x"), name("x"))].into(),
-            [(name("loop"), Path::single(name("loop")))].into(),
+            [(name("x"), name("x"))],
+            [(name("loop"), Path::single(name("loop")))],
         );
         let dmm = DblModelMorphism(&f, &negloop, &negloop);
         assert!(dmm.validate().is_ok());
@@ -543,8 +546,8 @@ mod tests {
 
         // Send generator to identity
         let f = DiscreteDblModelMapping::new(
-            [(name("x"), name("x"))].into(),
-            [(name("loop"), Path::Id(name("x")))].into(),
+            [(name("x"), name("x"))],
+            [(name("loop"), Path::Id(name("x")))],
         );
         let dmm = DblModelMorphism(&f, &negloop, &negloop);
         assert!(dmm.validate().is_ok());
