@@ -154,16 +154,12 @@ with lib;
       enable = true;
       wantedBy = [ "multi-user.target" ];
 
-      after = [
-        "database-setup.service"
-        "network-online.target"
-        "backend.service"
-      ];
+      # Bind automerge lifecycle to backend
+      bindsTo = [ "backend.service" ];
+      partOf = [ "backend.service" ];
 
-      wants = [
-        "database-setup.service"
-        "network-online.target"
-      ];
+      # Only need to wait for backend (which already waits for DB and network)
+      after = [ "backend.service" ];
 
       environment = {
         PORT = automergePortStr;
