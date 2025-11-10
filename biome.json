@@ -2,6 +2,7 @@
     "files": {
         "ignore": [
             "dist/**",
+            "dist-ssr/**",
             "docs/**",
             "catlog-wasm/**",
             "**/queries.ts",
