@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-source "$(dirname "${BASH_SOURCE[0]}")/db-utils-lib.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/cc-utils-lib.sh"
 
 STAGING_SSH_PID=""
 STAGING_LOCAL_PGPORT="5434"
@@ -14,21 +14,31 @@ function print_help {
   echo "Usage: $0 <subcommand> [options]"
   echo ""
   echo "Subcommands:"
+  echo "  db                    Database management commands"
+  echo "  vm                    Virtual machine commands"
+  echo ""
+  echo "Use '$0 <subcommand> --help' for more information."
+}
+
+function print_db_help {
+  echo "Usage: $0 db <subcommand> [options]"
+  echo ""
+  echo "Subcommands:"
   echo "  reset                 Reset the local database"
   echo "  load                  Load a dump into a target (local|staging|production)"
   echo "  dump                  Dump a target (local|staging|production) database"
   echo "  connect               Connect to a target (local|staging|production)"
   echo ""
-  echo "Use '$0 <subcommand> --help' for more information."
+  echo "Use '$0 db <subcommand> --help' for more information."
 }
 
 function print_connect_help {
-  echo "Usage: $0 connect <target>"
+  echo "Usage: $0 db connect <target>"
   echo "Targets: local, staging, production"
 }
 
 function print_dump_help {
-  echo "Usage: $0 dump [options]"
+  echo "Usage: $0 db dump [options]"
   echo ""
   echo "Options:"
   echo "  -f, --from <target>    Target: local (default), staging, or production"
@@ -37,7 +47,7 @@ function print_dump_help {
 }
 
 function print_load_help {
-  echo "Usage: $0 load [options]"
+  echo "Usage: $0 db load [options]"
   echo ""
   echo "Options:"
   echo "  -t, --to <target>      Target: local (default), staging, or production"
@@ -50,7 +60,7 @@ function print_load_help {
 }
 
 function print_reset_help {
-  echo "Usage: $0 reset [options]"
+  echo "Usage: $0 db reset [options]"
   echo ""
   echo "Reset the local database by dropping and recreating it."
   echo ""
@@ -310,20 +320,36 @@ subcommand="$1"
 shift || true
 
 case "$subcommand" in
+  db)
+    db_subcommand="${1-}"
+    shift || true
+
+    case "$db_subcommand" in
+      connect)
+        run_connect "$@"
+        ;;
+      dump)
+        run_dump "$@"
+        ;;
+      load)
+        run_load "$@"
+        ;;
+      reset)
+        run_reset "$@"
+        ;;
+      "-h" | "--help" | "")
+        print_db_help
+        ;;
+      *)
+        echo "Unknown db subcommand: $db_subcommand"
+        echo ""
+        print_db_help
+        exit 1
+        ;;
+    esac
+    ;;
   vm)
     run_vm "$@"
-    ;;
-  connect)
-    run_connect "$@"
-    ;;
-  dump)
-    run_dump "$@"
-    ;;
-  load)
-    run_load "$@"
-    ;;
-  reset)
-    run_reset "$@"
     ;;
   "-h" | "--help" | "")
     print_help
