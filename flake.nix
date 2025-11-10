@@ -223,9 +223,15 @@
             inherit inputs rustToolchainLinux self;
           };
 
-          frontend = pkgsLinux.callPackage ./packages/frontend/default.nix {
-            inherit inputs rustToolchainLinux self;
-          };
+          frontend =
+            (pkgsLinux.callPackage ./packages/frontend/default.nix {
+              inherit inputs rustToolchainLinux self;
+            }).package;
+
+          frontend-tests =
+            (pkgsLinux.callPackage ./packages/frontend/default.nix {
+              inherit inputs rustToolchainLinux self;
+            }).tests;
 
           # VMs built with `nixos-rebuild build-vm` (like `nix build
           # .#nixosConfigurations.catcolab-vm.config.system.build.vm`) are not the same
@@ -332,16 +338,14 @@
         };
       };
 
-      # Temporarily disabled until more meaningful tests are developed. Keeping the frontend dependecies
-      # up to date is currently not worth the hassle.
-      # checks.x86_64-linux.integrationTests = import ./infrastructure/tests/integration.nix {
-      #   inherit
-      #     nixpkgs
-      #     inputs
-      #     self
-      #     linuxSystem
-      #     ;
-      #   rustToolchain = rustToolchainLinux;
-      # };
+      checks.x86_64-linux.frontendTests = import ./infrastructure/tests/frontend.nix {
+        inherit
+          nixpkgs
+          inputs
+          self
+          linuxSystem
+          ;
+        rustToolchain = rustToolchainLinux;
+      };
     };
 }
