@@ -4,15 +4,14 @@ import {
     type ColumnSchema,
     ErrorAlert,
     FixedTableEditor,
+    Foldable,
     IconButton,
     Warning,
     createNumericalColumn,
 } from "catcolab-ui-components";
-import { Foldable } from "catcolab-ui-components";
-import type { DiagramJudgment, ModelJudgment, QualifiedName } from "catlog-wasm";
+import type { ModelDiagramPresentation, ModelPresentation, QualifiedName } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
 import type { LiveDiagramDocument } from "../../diagram";
-import { NotebookUtils } from "../../notebook";
 import { uniqueIndexArray } from "../../util/indexing";
 import { PDEPlot2D, type PDEPlotData2D } from "../../visualization";
 import { createJuliaKernel, executeAndRetrieve } from "./jupyter";
@@ -269,11 +268,11 @@ type Domain = {
 
 /** Data sent to the Julia kernel defining a simulation. */
 type SimulationData = {
-    /** Judgments defining the diagram, including inferred ones. */
-    diagram: Array<DiagramJudgment>;
+    /** Diagram defining the system of equations to simulate. */
+    diagram: ModelDiagramPresentation;
 
-    /** Judgments defining the model. */
-    model: Array<ModelJudgment>;
+    /** Model that the diagram is in. */
+    model: ModelPresentation;
 
     /** The geometric domain to use for the simulation. */
     domain: string;
@@ -330,8 +329,9 @@ const makeSimulationData = (
     liveDiagram: LiveDiagramDocument,
     content: DecapodesAnalysisContent,
 ): SimulationData | undefined => {
+    const validatedModel = liveDiagram.liveModel.validatedModel();
     const validatedDiagram = liveDiagram.validatedDiagram();
-    if (validatedDiagram?.tag !== "Valid") {
+    if (!(validatedModel?.tag === "Valid" && validatedDiagram?.tag === "Valid")) {
         return undefined;
     }
 
@@ -341,10 +341,8 @@ const makeSimulationData = (
     }
 
     return {
-        diagram: validatedDiagram.diagram.judgments(),
-        // FIXME: Depending on judgments from notebook means that model cannot
-        // be composed of other models.
-        model: NotebookUtils.getFormalContent(liveDiagram.liveModel.liveDoc.doc.notebook),
+        diagram: validatedDiagram.diagram.presentation(),
+        model: validatedModel.model.presentation(),
         domain,
         mesh,
         initialConditions,

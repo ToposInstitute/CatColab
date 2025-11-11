@@ -100,8 +100,8 @@ const LotkaVolterra = lazy(() => import("./analyses/lotka_volterra"));
 export function massAction(
     options: Partial<AnalysisOptions> & {
         simulate: Simulators.MassActionSimulator;
-        isState?: (obType: ObType) => boolean;
-        isTransition?: (morType: MorType) => boolean;
+        stateType?: ObType;
+        transitionType?: MorType;
     },
 ): ModelAnalysisMeta<Simulators.MassActionProblemData> {
     const {

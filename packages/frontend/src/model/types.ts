@@ -48,23 +48,23 @@ export const duplicateModelJudgment = (jgmt: ModelJudgment): ModelJudgment => ({
     id: v7(),
 });
 
-/** Return the label of a morphism if it exists, otherwise a label of the form "src->tgt" */
-export function morLabelOrDefault(id: QualifiedName, model?: DblModel): string {
-    const label = model?.morGeneratorLabel(id);
+/** Get the label of a morphism if it exists, otherwise a label of the form "src->tgt" */
+export function morLabelOrDefault(id: QualifiedName, model?: DblModel): string | undefined {
+    if (!model) {
+        return;
+    }
+
+    const label = model.morGeneratorLabel(id);
     if (label) {
         return label.join(".");
     }
 
-    const [dom, cod] = [model?.getDom(id), model?.getCod(id)];
-    if (dom?.tag !== "Basic" || cod?.tag !== "Basic") {
-        return "";
+    const mor = model.morPresentation(id);
+    if (mor && mor.dom.tag === "Basic" && mor.cod.tag === "Basic") {
+        const src = model.obGeneratorLabel(mor.dom.content);
+        const tgt = model.obGeneratorLabel(mor.cod.content);
+        if (src && tgt) {
+            return `${src.join(".")}→${tgt.join(".")}`;
+        }
     }
-
-    const source = model?.obGeneratorLabel(dom.content);
-    const target = model?.obGeneratorLabel(cod.content);
-    if (source && target) {
-        return `${source.join(".")}→${target.join(".")}`;
-    }
-
-    return "";
 }
