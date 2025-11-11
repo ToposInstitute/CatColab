@@ -10,6 +10,26 @@ using CatColabInterop
 using Oxygen
 using HTTP
 
+const CORS_HEADERS = [
+    "Access-Control-Allow-Origin" => "*",
+    "Access-Control-Allow-Headers" => "*",
+    "Access-Control-Allow-Methods" => "POST, GET, OPTIONS"
+]
+
+function CorsHandler(handle)
+    return function (req::HTTP.Request)
+        # return headers on OPTIONS request
+        if HTTP.method(req) == "OPTIONS"
+            return HTTP.Response(200, CORS_HEADERS)
+        else
+            r = handle(req)
+            append!(r.headers, ["Access-Control-Allow-Origin" => "*"])
+            r
+
+        end
+    end
+end
+
 defaults = [:Catlab,:ACSets] # all extensions to date
 
 for pkg in (isempty(ARGS) ? defaults : ARGS )
@@ -27,4 +47,4 @@ for m in methods(CatColabInterop.endpoint)
   invoke(fntype.instance, Tuple{argtypes...}, Val(name))
 end
 
-serve()
+serve(middleware=[CorsHandler])

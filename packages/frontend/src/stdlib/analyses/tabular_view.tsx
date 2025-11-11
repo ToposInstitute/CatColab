@@ -1,8 +1,10 @@
 
 import type { DiagramAnalysisProps } from "../../analysis";
 import type { GraphLayoutConfig } from "../../visualization";
-import { GraphVisualization } from "./graph_visualization";
-import { diagramToGraphviz } from "./diagram_graph";
+// import { GraphVisualization } from "./graph_visualization";
+// import { diagramToGraphviz } from "./diagram_graph";
+import { createResource, Switch, Match } from "solid-js";
+
 import axios from 'axios';
 
 const config = {
@@ -27,34 +29,32 @@ export default function TabularView(
         title?: string;
     },
 ) {
-    const graph = () => {
-        const theory = props.liveDiagram.liveModel.theory();
-        const model = props.liveDiagram.liveModel.elaboratedModel();
-        const diagram = props.liveDiagram.elaboratedDiagram();
-        if (theory && model && diagram) {
-            return diagramToGraphviz(diagram, model, theory);
+
+    const [res] = createResource(
+        () => {
+            const model = props.liveDiagram.liveModel.elaboratedModel();
+            const diagram = props.liveDiagram.elaboratedDiagram();
+            return model && diagram && [model, diagram];
+        },
+        async ([model, diagram]) => {
+        const response = await axios.post("http://127.0.0.1:8080/acsetcolim", {
+                model: model?.presentation(), diagram: diagram?.presentation()
+            }, config);
+        // console.log(response.data);
+        return response.data;
         }
-    };
-
-    // const call = async (data: string) => {return await ;}
-
-    const res = () => {
-        const model = props.liveDiagram.liveModel.elaboratedModel();
-        const diagram = props.liveDiagram.elaboratedDiagram();
-        const data = axios.post("http://127.0.0.1:8080/acsetcolim", {
-            model:model?.presentation(), diagram:diagram?.presentation()
-        }, config);
-        return data.then(res => { 
-    console.log(res); // getting a value
-    return res});
-   }
-
+    );
     return (
-        <GraphVisualization
-            title={"TABULAR VIEW: "+res()}
-            graph={graph()}
-            config={props.content}
-            changeConfig={props.changeContent}
-        />
+            <Switch>
+                <Match when={res.loading}>
+                    <div>⏳ Loading model...</div>
+                </Match>
+                <Match when={res.error}>
+                    <div>❌ Error loading model: {res.error?.message || "Unknown error"}</div>
+                </Match>
+                <Match when={res()}>
+                    {(res) => <div>Tabular Instance: {JSON.stringify(res())}</div>}
+                </Match>
+            </Switch>
     );
 }
