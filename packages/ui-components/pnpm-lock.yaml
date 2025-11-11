@@ -20,6 +20,9 @@ importers:
       '@corvu/resizable':
         specifier: ^0.2.5
         version: 0.2.5(solid-js@1.9.10)
+      '@corvu/tooltip':
+        specifier: ^0.2.2
+        version: 0.2.2(solid-js@1.9.10)
       '@kobalte/core':
         specifier: ^0.13.10
         version: 0.13.11(solid-js@1.9.10)
@@ -264,6 +267,11 @@ packages:
 
   '@corvu/resizable@0.2.5':
     resolution: {integrity: sha512-psax38DraM9SXtaNh/sfvizGO6xLCL4sqT4rWYlMZP5ZsUM05Q30tvXgnTo2roQFNOz2e06WofhDsBXTjY6g4A==}
+    peerDependencies:
+      solid-js: ^1.8
+
+  '@corvu/tooltip@0.2.2':
+    resolution: {integrity: sha512-gyOBJ43GNAecDtmWc68A5YJvifXWwK0VZZdTOcFbX0rVQUA2ihBMltRE4oj7/lKidg2gXALjmFr71Blt5s3YuQ==}
     peerDependencies:
       solid-js: ^1.8
 
@@ -1837,6 +1845,14 @@ snapshots:
     dependencies:
       '@corvu/utils': 0.4.2(solid-js@1.9.10)
       solid-js: 1.9.10
+
+  '@corvu/tooltip@0.2.2(solid-js@1.9.10)':
+    dependencies:
+      '@corvu/utils': 0.4.2(solid-js@1.9.10)
+      '@floating-ui/dom': 1.7.4
+      solid-dismissible: 0.1.1(solid-js@1.9.10)
+      solid-js: 1.9.10
+      solid-presence: 0.2.0(solid-js@1.9.10)
 
   '@corvu/utils@0.3.2(solid-js@1.9.10)':
     dependencies:
