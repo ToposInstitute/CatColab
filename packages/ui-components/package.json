@@ -20,6 +20,7 @@
         "@corvu/disclosure": "^0.2.2",
         "@corvu/popover": "^0.2.0",
         "@corvu/resizable": "^0.2.5",
+        "@corvu/tooltip": "^0.2.2",
         "@kobalte/core": "^0.13.10",
         "@solid-primitives/active-element": "^2.1.3",
         "@solid-primitives/destructure": "^0.2.1",

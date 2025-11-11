@@ -1,5 +1,5 @@
-import { Tooltip } from "@kobalte/core/tooltip";
-import { type ComponentProps, type JSX, Show, createSignal, splitProps } from "solid-js";
+import Tooltip from "@corvu/tooltip";
+import { type ComponentProps, type JSX, Show, splitProps } from "solid-js";
 
 import "./icon_button.css";
 
@@ -13,8 +13,6 @@ export function IconButton(
     } & ComponentProps<"button">,
 ) {
     const [props, buttonProps] = splitProps(allProps, ["children", "tooltip", "variant"]);
-
-    const [tooltipOpen, setTooltipOpen] = createSignal(false);
 
     const buttonClass = () => {
         const baseClass = "icon-button";
@@ -37,17 +35,14 @@ export function IconButton(
                 </button>
             }
         >
-            <Tooltip open={tooltipOpen()} onOpenChange={setTooltipOpen} openDelay={1000}>
-                <Tooltip.Trigger class={buttonClass()} {...buttonProps}>
-                    {props.children}
-                </Tooltip.Trigger>
+            <Tooltip hoverableContent={false} openOnFocus={false}>
+                <Tooltip.Anchor>
+                    <Tooltip.Trigger class="icon-button" {...buttonProps}>
+                        {props.children}
+                    </Tooltip.Trigger>
+                </Tooltip.Anchor>
                 <Tooltip.Portal>
-                    <Tooltip.Content
-                        class="tooltip-content"
-                        onMouseEnter={() => setTooltipOpen(false)}
-                    >
-                        {props.tooltip}
-                    </Tooltip.Content>
+                    <Tooltip.Content class="tooltip-content">{props.tooltip}</Tooltip.Content>
                 </Tooltip.Portal>
             </Tooltip>
         </Show>
