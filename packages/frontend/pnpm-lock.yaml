@@ -41,6 +41,9 @@ importers:
       '@corvu/resizable':
         specifier: ^0.2.5
         version: 0.2.5(solid-js@1.9.10)
+      '@corvu/tooltip':
+        specifier: ^0.2.2
+        version: 0.2.2(solid-js@1.9.10)
       '@jupyterlab/services':
         specifier: ^7.3.1
         version: 7.3.1(react@18.3.1)
@@ -144,8 +147,8 @@ importers:
         specifier: ^5.2.0
         version: 5.4.0
       uuid:
-        specifier: ^11.0.3
-        version: 11.0.3
+        specifier: ^13.0.0
+        version: 13.0.0
     devDependencies:
       '@biomejs/biome':
         specifier: ^1.9.3
@@ -420,6 +423,11 @@ packages:
 
   '@corvu/resizable@0.2.5':
     resolution: {integrity: sha512-psax38DraM9SXtaNh/sfvizGO6xLCL4sqT4rWYlMZP5ZsUM05Q30tvXgnTo2roQFNOz2e06WofhDsBXTjY6g4A==}
+    peerDependencies:
+      solid-js: ^1.8
+
+  '@corvu/tooltip@0.2.2':
+    resolution: {integrity: sha512-gyOBJ43GNAecDtmWc68A5YJvifXWwK0VZZdTOcFbX0rVQUA2ihBMltRE4oj7/lKidg2gXALjmFr71Blt5s3YuQ==}
     peerDependencies:
       solid-js: ^1.8
 
@@ -2748,8 +2756,8 @@ packages:
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
-  uuid@11.0.3:
-    resolution: {integrity: sha512-d0z310fCWv5dJwnX1Y/MncBAqGMKEzlBb1AOf7z9K8ALnd0utBX/msg/fA0+sbyN1ihbMsLhrBlnl1ak7Wa0rg==}
+  uuid@13.0.0:
+    resolution: {integrity: sha512-XQegIaBTVUjSHliKqcnFqYypAd4S+WCYt5NIeRs6w/UAry7z8Y9j5ZwRRL4kzq9U3sD6v+85er9FvkEaBpji2w==}
     hasBin: true
 
   uuid@9.0.1:
@@ -3281,6 +3289,14 @@ snapshots:
     dependencies:
       '@corvu/utils': 0.4.2(solid-js@1.9.10)
       solid-js: 1.9.10
+
+  '@corvu/tooltip@0.2.2(solid-js@1.9.10)':
+    dependencies:
+      '@corvu/utils': 0.4.2(solid-js@1.9.10)
+      '@floating-ui/dom': 1.6.13
+      solid-dismissible: 0.1.1(solid-js@1.9.10)
+      solid-js: 1.9.10
+      solid-presence: 0.2.0(solid-js@1.9.10)
 
   '@corvu/utils@0.3.2(solid-js@1.9.10)':
     dependencies:
@@ -6407,7 +6423,7 @@ snapshots:
 
   util-deprecate@1.0.2: {}
 
-  uuid@11.0.3: {}
+  uuid@13.0.0: {}
 
   uuid@9.0.1: {}
 

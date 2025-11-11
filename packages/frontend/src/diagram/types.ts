@@ -3,13 +3,11 @@ import { v7 } from "uuid";
 import type { DiagramJudgment, Mor, MorType, Ob, ObType } from "catlog-wasm";
 import { deepCopyJSON } from "../util/deepcopy";
 
-/** Declaration of an object in a diagram in a model. */
-export type DiagramObjectDecl = DiagramJudgment & {
-    tag: "object";
-};
-
 /** Create a new diagram object declaration with the given object type. */
-export const newDiagramObjectDecl = (obType: ObType, over?: Ob): DiagramObjectDecl => ({
+export const newDiagramObjectDecl = (
+    obType: ObType,
+    over?: Ob,
+): DiagramJudgment & { tag: "object" } => ({
     tag: "object",
     id: v7(),
     name: "",
@@ -17,13 +15,11 @@ export const newDiagramObjectDecl = (obType: ObType, over?: Ob): DiagramObjectDe
     over: over ?? null,
 });
 
-/** Declaration of a morphism in a diagram in a model. */
-export type DiagramMorphismDecl = DiagramJudgment & {
-    tag: "morphism";
-};
-
 /** Create a new diagram morphism declaration with the given morphism type. */
-export const newDiagramMorphismDecl = (morType: MorType, over?: Mor): DiagramMorphismDecl => ({
+export const newDiagramMorphismDecl = (
+    morType: MorType,
+    over?: Mor,
+): DiagramJudgment & { tag: "morphism" } => ({
     tag: "morphism",
     id: v7(),
     name: "",
