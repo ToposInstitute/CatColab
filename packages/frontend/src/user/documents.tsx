@@ -2,13 +2,13 @@ import type { RefStub } from "catcolab-api";
 import { getAuth } from "firebase/auth";
 import { useFirebaseApp } from "solid-firebase";
 import {
-    For,
-    Match,
-    Switch,
     createEffect,
     createResource,
     createSignal,
+    For,
+    Match,
     onMount,
+    Switch,
     useContext,
 } from "solid-js";
 import { rpcResourceErr, rpcResourceOk, useApi } from "../api";

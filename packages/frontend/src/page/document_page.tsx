@@ -1,27 +1,25 @@
 import Resizable, { type ContextValue } from "@corvu/resizable";
 import { useNavigate, useParams } from "@solidjs/router";
+import { Button, IconButton, InlineInput, ResizableHandle } from "catcolab-ui-components";
 import ChevronsRight from "lucide-solid/icons/chevrons-right";
 import Maximize2 from "lucide-solid/icons/maximize-2";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import {
-    Match,
-    Show,
-    Switch,
     createEffect,
     createResource,
     createSignal,
+    Match,
+    Show,
+    Switch,
     useContext,
 } from "solid-js";
 import invariant from "tiny-invariant";
-
-import { Button, IconButton } from "catcolab-ui-components";
-import { InlineInput, ResizableHandle } from "catcolab-ui-components";
-import { type LiveAnalysisDocument, getLiveAnalysis } from "../analysis";
+import { getLiveAnalysis, type LiveAnalysisDocument } from "../analysis";
 import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
 import { AnalysisInfo } from "../analysis/analysis_info";
 import { type Api, type DocumentType, useApi } from "../api";
-import { type LiveDiagramDocument, getLiveDiagram } from "../diagram";
+import { getLiveDiagram, type LiveDiagramDocument } from "../diagram";
 import { DiagramNotebookEditor } from "../diagram/diagram_editor";
 import { DiagramInfo } from "../diagram/diagram_info";
 import { type LiveModelDocument, type ModelLibrary, ModelLibraryContext } from "../model";

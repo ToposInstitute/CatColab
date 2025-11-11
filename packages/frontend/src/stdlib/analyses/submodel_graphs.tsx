@@ -1,10 +1,8 @@
+import { Foldable, FormGroup, IconButton, InputField } from "catcolab-ui-components";
+import type { MotifOccurrence } from "catlog-wasm";
 import ChevronLeft from "lucide-solid/icons/chevron-left";
 import ChevronRight from "lucide-solid/icons/chevron-right";
-import { Show, createMemo } from "solid-js";
-
-import { FormGroup, IconButton, InputField } from "catcolab-ui-components";
-import { Foldable } from "catcolab-ui-components";
-import type { MotifOccurrence } from "catlog-wasm";
+import { createMemo, Show } from "solid-js";
 import type { ModelAnalysisProps } from "../../analysis";
 import { GraphvizSVG } from "../../visualization";
 import type { MotifFinder, MotifFindingAnalysisContent } from "./checker_types";

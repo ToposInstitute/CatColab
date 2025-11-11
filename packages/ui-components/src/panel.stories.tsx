@@ -1,8 +1,7 @@
-import type { Meta, StoryObj } from "storybook-solidjs-vite";
-
 import Download from "lucide-solid/icons/download";
 import Settings from "lucide-solid/icons/settings";
 import X from "lucide-solid/icons/x";
+import type { Meta, StoryObj } from "storybook-solidjs-vite";
 
 import { IconButton } from "./icon_button";
 import { PanelHeader } from "./panel";

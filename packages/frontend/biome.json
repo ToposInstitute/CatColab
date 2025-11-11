@@ -3,8 +3,10 @@
     "extends": ["../../biome.json"],
     "linter": {
         "rules": {
-            "suspicious": {
-                "noExplicitAny": "off"
+            "style": {
+                "noDescendingSpecificity": {
+                    "level": "off"
+                }
             }
         }
     }

@@ -1,4 +1,4 @@
-import { type JSX, createSignal } from "solid-js";
+import { createSignal, type JSX } from "solid-js";
 
 import "./sidebar_layout.css";
 

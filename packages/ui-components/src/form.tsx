@@ -1,12 +1,9 @@
-import { type ComponentProps, type JSX, Show, createUniqueId, splitProps } from "solid-js";
+import { type ComponentProps, createUniqueId, type JSX, Show, splitProps } from "solid-js";
 
 import "./form.css";
 
 /** Group of related fields in a form. */
-export function FormGroup(props: {
-    children: JSX.Element;
-    compact?: boolean;
-}) {
+export function FormGroup(props: { children: JSX.Element; compact?: boolean }) {
     return <dl class={props.compact ? "compact-form-group" : "form-group"}>{props.children}</dl>;
 }
 

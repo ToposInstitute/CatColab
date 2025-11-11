@@ -1,6 +1,3 @@
-import { createSignal } from "solid-js";
-import type { Meta, StoryObj } from "storybook-solidjs-vite";
-
 import ChevronLeft from "lucide-solid/icons/chevron-left";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import ChevronsRight from "lucide-solid/icons/chevrons-right";
@@ -9,6 +6,8 @@ import Plus from "lucide-solid/icons/plus";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import Settings from "lucide-solid/icons/settings";
 import X from "lucide-solid/icons/x";
+import { createSignal } from "solid-js";
+import type { Meta, StoryObj } from "storybook-solidjs-vite";
 
 import { IconButton } from "./icon_button";
 

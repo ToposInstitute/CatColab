@@ -1,8 +1,7 @@
-import { Index, Show, batch, createSignal, splitProps, useContext } from "solid-js";
-import invariant from "tiny-invariant";
-
 import { NameInput, type TextInputOptions } from "catcolab-ui-components";
 import type { DblModel, InstantiatedModel, SpecializeModel } from "catlog-wasm";
+import { batch, createSignal, Index, Show, splitProps, useContext } from "solid-js";
+import invariant from "tiny-invariant";
 import { useApi } from "../api";
 import { DocumentPicker, IdInput } from "../components";
 import type { CellActions } from "../notebook";

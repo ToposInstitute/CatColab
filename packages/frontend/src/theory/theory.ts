@@ -1,6 +1,5 @@
-import type { DblModel, DblTheory, MorType, ObOp, ObType } from "catlog-wasm";
-
 import type { KbdKey } from "catcolab-ui-components";
+import type { DblModel, DblTheory, MorType, ObOp, ObType } from "catlog-wasm";
 import type { DiagramAnalysisComponent, ModelAnalysisComponent } from "../analysis";
 import { uniqueIndexArray } from "../util/indexing";
 import type { ArrowStyle } from "../visualization";

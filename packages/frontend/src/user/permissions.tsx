@@ -1,34 +1,38 @@
 import { useNavigate } from "@solidjs/router";
-import { getAuth, signOut } from "firebase/auth";
-import { useAuth, useFirebaseApp } from "solid-firebase";
-import {
-    type ComponentProps,
-    For,
-    Match,
-    Show,
-    Switch,
-    createEffect,
-    createResource,
-    createSignal,
-} from "solid-js";
-import { createStore, produce } from "solid-js/store";
-import invariant from "tiny-invariant";
-
 import type { NewPermissions, PermissionLevel, Permissions, UserSummary } from "catcolab-api";
-import { Button, FormGroup, IconButton, SelectField, Warning } from "catcolab-ui-components";
-import { Dialog } from "catcolab-ui-components";
+import {
+    Button,
+    Dialog,
+    FormGroup,
+    IconButton,
+    SelectField,
+    Warning,
+} from "catcolab-ui-components";
 import type { Document } from "catlog-wasm";
-import { type LiveDoc, useApi } from "../api";
-import { deepCopyJSON } from "../util/deepcopy";
-import { Login } from "./login";
-import { NameUser, UserInput } from "./username";
-
+import { getAuth, signOut } from "firebase/auth";
 import Copy from "lucide-solid/icons/copy";
 import FileLock from "lucide-solid/icons/file-lock-2";
 import FilePen from "lucide-solid/icons/file-pen";
 import FileUser from "lucide-solid/icons/file-user";
 import Globe from "lucide-solid/icons/globe";
 import Link2 from "lucide-solid/icons/link-2";
+import { useAuth, useFirebaseApp } from "solid-firebase";
+import {
+    type ComponentProps,
+    createEffect,
+    createResource,
+    createSignal,
+    For,
+    Match,
+    Show,
+    Switch,
+} from "solid-js";
+import { createStore, produce } from "solid-js/store";
+import invariant from "tiny-invariant";
+import { type LiveDoc, useApi } from "../api";
+import { deepCopyJSON } from "../util/deepcopy";
+import { Login } from "./login";
+import { NameUser, UserInput } from "./username";
 
 import "./permissions.css";
 
@@ -41,10 +45,7 @@ type PermissionsState = Partial<Omit<Permissions, "users">> & {
 
 /** Form to configure permissions on a document.
  */
-export function PermissionsForm(props: {
-    refId?: string;
-    onComplete?: () => void;
-}) {
+export function PermissionsForm(props: { refId?: string; onComplete?: () => void }) {
     const [state, setState] = createStore<PermissionsState>({});
 
     const pendingPermissions = (): NewPermissions => {
@@ -194,9 +195,7 @@ export function PermissionsForm(props: {
 }
 
 /** Toolbar button summarizing the document's permissions. */
-export const PermissionsButton = (props: {
-    liveDoc: LiveDoc;
-}) => (
+export const PermissionsButton = (props: { liveDoc: LiveDoc }) => (
     <Show when={props.liveDoc.docRef}>
         {(docRef) => {
             const anyone = () => docRef().permissions.anyone;
@@ -275,9 +274,7 @@ const AnonPermissionsTrigger = (props: ComponentProps<"button">) => {
     );
 };
 
-const ReadonlyPermissionsButton = (props: {
-    doc: Document;
-}) => {
+const ReadonlyPermissionsButton = (props: { doc: Document }) => {
     const [open, setOpen] = createSignal(false);
     const api = useApi();
     const navigate = useNavigate();
@@ -327,9 +324,7 @@ const ReadonlyPermissionsTrigger = (props: ComponentProps<"button">) => {
     );
 };
 
-const EditorPermissionsButton = (props: {
-    permissions: Permissions;
-}) => {
+const EditorPermissionsButton = (props: { permissions: Permissions }) => {
     const tooltip = (permissions: Permissions) => (
         <>
             {"This document "}
@@ -346,9 +341,7 @@ const EditorPermissionsButton = (props: {
     );
 };
 
-function OwnerPermissionsButton(props: {
-    refId?: string;
-}) {
+function OwnerPermissionsButton(props: { refId?: string }) {
     const [open, setOpen] = createSignal(false);
 
     return (

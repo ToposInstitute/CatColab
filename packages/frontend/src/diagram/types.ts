@@ -1,6 +1,5 @@
-import { v7 } from "uuid";
-
 import type { DiagramJudgment, Mor, MorType, Ob, ObType } from "catlog-wasm";
+import { v7 } from "uuid";
 import { deepCopyJSON } from "../util/deepcopy";
 
 /** Create a new diagram object declaration with the given object type. */

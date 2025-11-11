@@ -1,14 +1,5 @@
 import { useNavigate } from "@solidjs/router";
 import { getAuth } from "firebase/auth";
-import { useAuth, useFirebaseApp } from "solid-firebase";
-import { Match, Show, Switch, createSignal } from "solid-js";
-
-import { useApi } from "../api";
-import { createModel } from "../model/document";
-import { stdTheories } from "../stdlib";
-import { Login } from "../user";
-import { BrandedToolbar } from "./toolbar";
-
 import Binoculars from "lucide-solid/icons/binoculars";
 import Bird from "lucide-solid/icons/bird";
 import ExternalLink from "lucide-solid/icons/external-link";
@@ -17,6 +8,13 @@ import Files from "lucide-solid/icons/files";
 import Github from "lucide-solid/icons/github";
 import LogInIcon from "lucide-solid/icons/log-in";
 import NotebookPen from "lucide-solid/icons/notebook-pen";
+import { useAuth, useFirebaseApp } from "solid-firebase";
+import { createSignal, Match, Show, Switch } from "solid-js";
+import { useApi } from "../api";
+import { createModel } from "../model/document";
+import { stdTheories } from "../stdlib";
+import { Login } from "../user";
+import { BrandedToolbar } from "./toolbar";
 
 import "./home_page.css";
 
@@ -116,6 +114,7 @@ export default function HomePage() {
                                             href="https://topos.institute/blog/#category=CatColab"
                                             class="resource-link"
                                             target="_blank"
+                                            rel="noopener"
                                         >
                                             <span class="resource-icon">
                                                 <Bird />
@@ -129,6 +128,7 @@ export default function HomePage() {
                                             href="https://github.com/ToposInstitute/CatColab"
                                             class="resource-link"
                                             target="_blank"
+                                            rel="noopener"
                                         >
                                             <span class="resource-icon">
                                                 <Github />
@@ -142,6 +142,7 @@ export default function HomePage() {
                                             href="https://catcolab.zulipchat.com/"
                                             class="resource-link"
                                             target="_blank"
+                                            rel="noopener"
                                         >
                                             <span class="resource-icon">
                                                 <img src="/zulip_icon.png" width="24" height="24" />

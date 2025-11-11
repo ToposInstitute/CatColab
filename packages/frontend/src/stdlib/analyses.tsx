@@ -1,6 +1,5 @@
-import { lazy } from "solid-js";
-
 import type { MorType, ObType } from "catlog-wasm";
+import { lazy } from "solid-js";
 import type { DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
 import * as GraphLayoutConfig from "../visualization/graph_layout_config";
 import type * as Checkers from "./analyses/checker_types";

@@ -1,6 +1,3 @@
-import { createSignal } from "solid-js";
-import type { Meta, StoryObj } from "storybook-solidjs-vite";
-
 import Copy from "lucide-solid/icons/copy";
 import Download from "lucide-solid/icons/download";
 import Link2 from "lucide-solid/icons/link";
@@ -9,6 +6,8 @@ import Plus from "lucide-solid/icons/plus";
 import Save from "lucide-solid/icons/save";
 import SignUpIcon from "lucide-solid/icons/user-pen";
 import X from "lucide-solid/icons/x";
+import { createSignal } from "solid-js";
+import type { Meta, StoryObj } from "storybook-solidjs-vite";
 
 import { Button } from "./button";
 

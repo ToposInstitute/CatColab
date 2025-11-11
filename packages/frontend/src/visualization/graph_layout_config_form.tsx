@@ -1,6 +1,5 @@
-import { Show } from "solid-js";
-
 import { FormGroup, SelectField } from "catcolab-ui-components";
+import { Show } from "solid-js";
 import { type Config, Direction, Engine } from "./graph_layout_config";
 
 /** Form to configure a graph layout algorithm. */

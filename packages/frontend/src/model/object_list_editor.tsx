@@ -1,18 +1,17 @@
+import type { TextInputOptions } from "catcolab-ui-components";
+import type { Ob, QualifiedName } from "catlog-wasm";
 import {
-    Index,
-    type JSX,
-    Show,
     batch,
     createEffect,
     createSignal,
+    Index,
+    type JSX,
     mergeProps,
+    Show,
     untrack,
     useContext,
 } from "solid-js";
 import invariant from "tiny-invariant";
-
-import type { TextInputOptions } from "catcolab-ui-components";
-import type { Ob, QualifiedName } from "catlog-wasm";
 import { ObIdInput } from "../components";
 import { deepCopyJSON } from "../util/deepcopy";
 import { LiveModelContext } from "./context";

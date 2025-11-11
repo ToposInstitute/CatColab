@@ -1,23 +1,21 @@
 import Tooltip from "@corvu/tooltip";
 import { A } from "@solidjs/router";
+import { FieldError, IconButton, TextInput, type TextInputOptions } from "catcolab-ui-components";
+import type { Document, Uuid } from "catlog-wasm";
+import Copy from "lucide-solid/icons/copy";
+import Pencil from "lucide-solid/icons/pencil";
 import {
     type ComponentProps,
-    Match,
-    Show,
-    Switch,
     createEffect,
     createResource,
     createSignal,
+    Match,
+    Show,
+    Switch,
     splitProps,
 } from "solid-js";
 import * as uuid from "uuid";
-
-import { FieldError, IconButton, TextInput, type TextInputOptions } from "catcolab-ui-components";
-import type { Document, Uuid } from "catlog-wasm";
 import { useApi } from "../api";
-
-import Copy from "lucide-solid/icons/copy";
-import Pencil from "lucide-solid/icons/pencil";
 
 import "./document_picker.css";
 

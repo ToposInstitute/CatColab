@@ -1,8 +1,7 @@
 import { MultiProvider } from "@solid-primitives/context";
+import type { DiagramJudgment, DiagramMorDecl, DiagramObDecl } from "catlog-wasm";
 import { Match, Switch, useContext } from "solid-js";
 import invariant from "tiny-invariant";
-
-import type { DiagramJudgment, DiagramMorDecl, DiagramObDecl } from "catlog-wasm";
 import { LiveModelContext } from "../model";
 import {
     type CellConstructor,
@@ -19,9 +18,7 @@ import { duplicateDiagramJudgment, newDiagramMorphismDecl, newDiagramObjectDecl 
 
 /** Notebook editor for a diagram in a model.
  */
-export function DiagramNotebookEditor(props: {
-    liveDiagram: LiveDiagramDocument;
-}) {
+export function DiagramNotebookEditor(props: { liveDiagram: LiveDiagramDocument }) {
     const liveDoc = () => props.liveDiagram.liveDoc;
     const liveModel = () => props.liveDiagram.liveModel;
 

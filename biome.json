@@ -1,16 +1,27 @@
 {
+    "$schema": "https://biomejs.dev/schemas/2.3.4/schema.json",
+    "vcs": {
+        "enabled": true,
+        "clientKind": "git",
+        "useIgnoreFile": true
+    },
     "files": {
-        "ignore": [
-            "dist/**",
-            "docs/**",
-            "catlog-wasm/**",
-            "**/queries.ts",
-            "storybook-static/**"
+        "includes": [
+            "**",
+            "!!**/dist",
+            "!!**/docs",
+            "!!**/catlog-wasm",
+            "!!**/queries.ts",
+            "!!**/storybook-static"
         ]
     },
-    "$schema": "https://biomejs.dev/schemas/1.8.3/schema.json",
-    "organizeImports": {
-        "enabled": true
+    "assist": {
+        "enabled": true,
+        "actions": {
+            "source": {
+                "organizeImports": "on"
+            }
+        }
     },
     "formatter": {
         "indentStyle": "space",
@@ -20,10 +31,10 @@
     "linter": {
         "enabled": true,
         "rules": {
-            "a11y": {
-                "all": false
-            },
             "recommended": true,
+            "a11y": {
+                "recommended": false
+            },
             "suspicious": {
                 "noExplicitAny": "warn",
                 "noDuplicateTestHooks": {

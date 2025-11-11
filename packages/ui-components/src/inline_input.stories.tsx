@@ -1,10 +1,9 @@
-import { For, createSignal } from "solid-js";
-import type { Meta, StoryObj } from "storybook-solidjs-vite";
-
 import Book from "lucide-solid/icons/book";
 import FileText from "lucide-solid/icons/file-text";
 import PieChart from "lucide-solid/icons/pie-chart";
 import Table from "lucide-solid/icons/table";
+import { createSignal, For } from "solid-js";
+import type { Meta, StoryObj } from "storybook-solidjs-vite";
 
 import { Button } from "./button";
 import type { Completion } from "./completions";

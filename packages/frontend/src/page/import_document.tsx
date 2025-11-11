@@ -1,7 +1,6 @@
 import { useNavigate } from "@solidjs/router";
-import invariant from "tiny-invariant";
-
 import type { Document } from "catlog-wasm";
+import invariant from "tiny-invariant";
 import { useApi } from "../api";
 import { JsonImport } from "../components";
 

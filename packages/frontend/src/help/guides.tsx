@@ -28,9 +28,7 @@ export default function GuidesHelpPage() {
     return <GuidesHelp guides={guidesList} />;
 }
 
-function GuidesHelp(props: {
-    guides: Guide[];
-}) {
+function GuidesHelp(props: { guides: Guide[] }) {
     return (
         <>
             <GuidesContent />

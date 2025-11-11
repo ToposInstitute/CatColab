@@ -1,7 +1,6 @@
-import { createSignal } from "solid-js";
-
 import { NameInput } from "catcolab-ui-components";
 import type { DiagramObDecl } from "catlog-wasm";
+import { createSignal } from "solid-js";
 import { ObInput } from "../model/object_input";
 import type { CellActions } from "../notebook";
 import type { Theory } from "../theory";

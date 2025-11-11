@@ -3,10 +3,10 @@ import type { Meta, StoryObj } from "storybook-solidjs-vite";
 
 import {
     type BooleanColumnSchema,
+    createNumericalColumn,
     type EnumColumnSchema,
     FixedTableEditor,
     type TextColumnSchema,
-    createNumericalColumn,
 } from "./fixed_table_editor";
 
 const meta = {

@@ -1,23 +1,21 @@
-import { type SubmitHandler, createForm, email, minLength, required } from "@modular-forms/solid";
+import { createForm, email, minLength, required, type SubmitHandler } from "@modular-forms/solid";
+import { Button, IconButton } from "catcolab-ui-components";
 import {
+    createUserWithEmailAndPassword,
     GithubAuthProvider,
     GoogleAuthProvider,
-    type User,
-    type UserCredential,
-    createUserWithEmailAndPassword,
     getAuth,
     signInWithEmailAndPassword,
     signInWithPopup,
+    type User,
+    type UserCredential,
 } from "firebase/auth";
+import SignInIcon from "lucide-solid/icons/log-in";
+import SignUpIcon from "lucide-solid/icons/user-pen";
 import { useAuth, useFirebaseApp } from "solid-firebase";
 import { type JSX, Match, Switch } from "solid-js";
 import invariant from "tiny-invariant";
-
-import { Button, IconButton } from "catcolab-ui-components";
 import { useApi } from "../api";
-
-import SignInIcon from "lucide-solid/icons/log-in";
-import SignUpIcon from "lucide-solid/icons/user-pen";
 
 import "./login.css";
 
@@ -27,9 +25,7 @@ type EmailAndPassword = {
 };
 
 /** Form to log in using Firebase auth. */
-export function Login(props: {
-    onComplete?: (user: User) => void;
-}) {
+export function Login(props: { onComplete?: (user: User) => void }) {
     const api = useApi();
     const firebaseApp = useFirebaseApp();
 
@@ -156,9 +152,7 @@ export function Login(props: {
 If the user is logged in, the children of this component will be displayed;
 otherwise, a login panel is shown.
  */
-export function LoginGate(props: {
-    children: JSX.Element;
-}) {
+export function LoginGate(props: { children: JSX.Element }) {
     const firebaseApp = useFirebaseApp();
     const auth = useAuth(getAuth(firebaseApp));
 

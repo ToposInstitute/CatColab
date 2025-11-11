@@ -1,11 +1,10 @@
-import { type DocHandle, Repo, isValidDocumentId } from "@automerge/automerge-repo";
+import { type DocHandle, isValidDocumentId, Repo } from "@automerge/automerge-repo";
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
+import type { Document } from "catlog-wasm";
 import { type FirebaseOptions, initializeApp } from "firebase/app";
 import { deleteUser, getAuth, signOut } from "firebase/auth";
 import * as uuid from "uuid";
-import { assert, afterAll, describe, test } from "vitest";
-
-import type { Document } from "catlog-wasm";
+import { afterAll, assert, describe, test } from "vitest";
 import { createTestDocument, initTestUserAuth } from "../util/test_util.ts";
 import { createRpcClient, unwrap, unwrapErr } from "./rpc.ts";
 

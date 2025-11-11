@@ -8,7 +8,7 @@ import {
     NotebookEditor,
     newFormalCell,
 } from "../notebook";
-import type { AnalysisMeta } from "../theory";
+import type { AnalysisMeta, DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
 import { assertExhaustive } from "../util/assert_exhaustive";
 import { LiveAnalysisContext } from "./context";
 import type {
@@ -20,13 +20,11 @@ import type { Analysis } from "./types";
 
 /** Notebook editor for analyses of models of double theories.
  */
-export function AnalysisNotebookEditor(props: {
-    liveAnalysis: LiveAnalysisDocument;
-}) {
+export function AnalysisNotebookEditor(props: { liveAnalysis: LiveAnalysisDocument }) {
     const liveDoc = () => props.liveAnalysis.liveDoc;
 
     const cellConstructors = () => {
-        let meta = undefined;
+        let meta: ModelAnalysisMeta[] | DiagramAnalysisMeta[] | undefined;
         if (props.liveAnalysis.analysisType === "model") {
             meta = theoryForAnalysis(props.liveAnalysis)?.modelAnalyses;
         } else if (props.liveAnalysis.analysisType === "diagram") {

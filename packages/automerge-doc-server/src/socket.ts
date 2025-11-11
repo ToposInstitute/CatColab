@@ -1,4 +1,4 @@
-import { type Socket, io } from "socket.io-client";
+import { io, type Socket } from "socket.io-client";
 
 import type { JsonValue } from "../../backend/pkg/src/index.ts";
 import type { NewDocSocketResponse, StartListeningSocketResponse } from "./types.js";

@@ -1,6 +1,6 @@
 import {
-    type SetupFn,
     runStorageAdapterTests,
+    type SetupFn,
 } from "@automerge/automerge-repo/helpers/tests/storage-adapter-tests.js";
 import dotenv from "dotenv";
 import { Pool } from "pg";
