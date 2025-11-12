@@ -1,5 +1,5 @@
 import { createContext } from "solid-js";
-import type { DeleteDocumentInfo } from "../components/delete_document_dialog";
+import type { DeleteDocInfo } from "../components/delete_document_dialog";
 
 /** Actions that can be performed from any page. */
 export type PageActions = {
@@ -10,7 +10,7 @@ export type PageActions = {
     showImportDialog: () => void;
 
     /** Show a dialog to delete a document. */
-    showDeleteDialog: (docInfo: DeleteDocumentInfo) => Promise<boolean>;
+    showDeleteDialog: (docInfo: DeleteDocInfo) => Promise<boolean>;
 };
 
 /** Context for actions performable on any page. */

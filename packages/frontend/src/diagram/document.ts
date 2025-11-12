@@ -11,7 +11,7 @@ import type {
 } from "catlog-wasm";
 import { currentVersion, elaborateDiagram } from "catlog-wasm";
 import { type Api, type DocRef, type LiveDoc, findAndMigrate, makeLiveDoc } from "../api";
-import type { LiveModelDocument, ModelLibrary } from "../model";
+import type { LiveModelDoc, ModelLibrary } from "../model";
 import { NotebookUtils, newNotebook } from "../notebook";
 
 /** A document defining a diagram in a model. */
@@ -30,7 +30,7 @@ export const newDiagramDocument = (modelRef: StableRef): DiagramDocument => ({
 });
 
 /** A diagram document "live" for editing. */
-export type LiveDiagramDocument = {
+export type LiveDiagramDoc = {
     /** Tag for use in tagged unions of document types. */
     type: "diagram";
 
@@ -38,7 +38,7 @@ export type LiveDiagramDocument = {
     liveDoc: LiveDoc<DiagramDocument>;
 
     /** Live model that the diagram is in. */
-    liveModel: LiveModelDocument;
+    liveModel: LiveModelDoc;
 
     /** A memo of the formal content of the model. */
     formalJudgments: Accessor<Array<DiagramJudgment>>;
@@ -71,8 +71,8 @@ export type ValidatedDiagram =
 
 export function enlivenDiagramDocument(
     liveDoc: LiveDoc<DiagramDocument>,
-    liveModel: LiveModelDocument,
-): LiveDiagramDocument {
+    liveModel: LiveModelDoc,
+): LiveDiagramDoc {
     const { doc } = liveDoc;
 
     const formalJudgments = createMemo<Array<DiagramJudgment>>(
@@ -131,7 +131,7 @@ export function createDiagram(api: Api, inModel: StableRef): Promise<string> {
 }
 
 export type LiveDiagramLiveDocWithRef = {
-    liveDiagram: LiveDiagramDocument;
+    liveDiagram: LiveDiagramDoc;
     docRef: DocRef;
 };
 
@@ -157,7 +157,7 @@ export async function getLiveDiagramFromRepo(
     docId: AnyDocumentId,
     repo: Repo,
     models: ModelLibrary<AnyDocumentId>,
-): Promise<LiveDiagramDocument> {
+): Promise<LiveDiagramDoc> {
     const docHandle = await findAndMigrate<DiagramDocument>(repo, docId, "diagram");
     const liveDoc = makeLiveDoc(docHandle);
     const modelDocId = liveDoc.doc.diagramIn._id as AnyDocumentId;

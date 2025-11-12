@@ -26,8 +26,8 @@ import { TheoryLibraryContext } from "../theory";
 export function DocumentMenu(props: {
     liveDoc: LiveDoc;
     docRef: DocRef;
-    onDocumentCreated?: () => void;
-    onDocumentDeleted?: () => void;
+    onDocCreated?: () => void;
+    onDocDeleted?: () => void;
 }) {
     const api = useApi();
 
@@ -49,7 +49,7 @@ export function DocumentMenu(props: {
         }
 
         const newRef = await createDiagram(api, api.makeUnversionedRef(modelRefId));
-        props.onDocumentCreated?.();
+        props.onDocCreated?.();
         navigate(`/diagram/${newRef}`);
     };
 
@@ -59,7 +59,7 @@ export function DocumentMenu(props: {
         invariant(docType !== "analysis", "Analysis cannot be created on other analysis");
 
         const newRef = await createAnalysis(api, docType, api.makeUnversionedRef(docRefId));
-        props.onDocumentCreated?.();
+        props.onDocCreated?.();
         navigate(`/analysis/${newRef}`);
     };
 
@@ -129,7 +129,7 @@ export function DocumentMenu(props: {
                             <RestoreMenuItem
                                 refId={props.docRef.refId}
                                 typeName={props.liveDoc.doc.type}
-                                onRestored={props.onDocumentDeleted}
+                                onRestored={props.onDocDeleted}
                             />
                         </Match>
                         <Match when={true}>
@@ -138,7 +138,7 @@ export function DocumentMenu(props: {
                                 name={props.liveDoc.doc.name}
                                 typeName={props.liveDoc.doc.type}
                                 canDelete={canDelete()}
-                                onDeleted={props.onDocumentDeleted}
+                                onDeleted={props.onDocDeleted}
                             />
                         </Match>
                     </Switch>

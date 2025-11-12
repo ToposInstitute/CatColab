@@ -23,7 +23,7 @@ import {
 import { type Api, type LiveDoc, findAndMigrate, makeLiveDoc } from "../api";
 import { NotebookUtils } from "../notebook/types";
 import type { Theory, TheoryLibrary } from "../theory";
-import type { LiveModelDocument, ModelDocument } from "./document";
+import type { LiveModelDoc, ModelDocument } from "./document";
 
 /** An elaborated model along with its validation status. */
 export type ValidatedModel =
@@ -201,7 +201,7 @@ export class ModelLibrary<RefId> {
     }
 
     /** Gets "live" model containing a reactive model document. */
-    async getLiveModel(refId: RefId): Promise<LiveModelDocument> {
+    async getLiveModel(refId: RefId): Promise<LiveModelDoc> {
         await this.addModel(refId);
 
         const key = this.params.canonicalize(refId);
@@ -219,7 +219,7 @@ export class ModelLibrary<RefId> {
     }
 
     /** Use "live" model in a component. */
-    useLiveModel(refId: () => RefId | undefined): Accessor<LiveModelDocument | undefined> {
+    useLiveModel(refId: () => RefId | undefined): Accessor<LiveModelDoc | undefined> {
         const [liveModel] = createResource(refId, (refId) => this.getLiveModel(refId));
         return liveModel;
     }
@@ -318,7 +318,7 @@ function isPatchToFormalContent(doc: ModelDocument, patch: Patch): boolean {
 const makeLiveModel = (
     liveDoc: LiveDoc<ModelDocument>,
     getEntry: Accessor<ModelEntry | undefined>,
-): LiveModelDocument => ({
+): LiveModelDoc => ({
     type: "model",
     liveDoc,
     theory() {

@@ -1,10 +1,10 @@
 import { A } from "@solidjs/router";
 
-import type { LiveAnalysisDocument } from "./document";
+import type { LiveAnalysisDoc } from "./document";
 
 /** Widget in the top right corner of a diagram document pane.
  */
-export function AnalysisInfo(props: { liveAnalysis: LiveAnalysisDocument }) {
+export function AnalysisInfo(props: { liveAnalysis: LiveAnalysisDoc }) {
     const parentName = () => analysisParentName(props.liveAnalysis) || "Untitled";
     const parentUrl = () => analysisParentUrl(props.liveAnalysis);
 
@@ -18,14 +18,14 @@ export function AnalysisInfo(props: { liveAnalysis: LiveAnalysisDocument }) {
     );
 }
 
-function analysisParentUrl(liveAnalysis: LiveAnalysisDocument): string {
+function analysisParentUrl(liveAnalysis: LiveAnalysisDoc): string {
     const analysisType = liveAnalysis.analysisType;
     const parentRefId = liveAnalysis.liveDoc.doc.analysisOf._id;
 
     return `/${analysisType}/${parentRefId}`;
 }
 
-function analysisParentName(liveAnalysis: LiveAnalysisDocument): string {
+function analysisParentName(liveAnalysis: LiveAnalysisDoc): string {
     if (liveAnalysis.analysisType === "diagram") {
         return liveAnalysis.liveDiagram.liveDoc.doc.name;
     } else {

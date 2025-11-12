@@ -1,10 +1,10 @@
 import { A } from "@solidjs/router";
 
-import type { LiveDiagramDocument } from "./document";
+import type { LiveDiagramDoc } from "./document";
 
 /** Widget in the top right corner of a diagram document pane.
  */
-export function DiagramInfo(props: { liveDiagram: LiveDiagramDocument }) {
+export function DiagramInfo(props: { liveDiagram: LiveDiagramDoc }) {
     const liveModel = () => props.liveDiagram.liveModel;
     const liveModelDoc = () => props.liveDiagram.liveModel.liveDoc;
     const modelRefId = () => props.liveDiagram.liveDoc.doc.diagramIn._id;

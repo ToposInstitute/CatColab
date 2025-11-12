@@ -2,7 +2,7 @@ import { Button, Dialog } from "catcolab-ui-components";
 import { createSignal } from "solid-js";
 import { useApi } from "../api";
 
-export type DeleteDocumentInfo = {
+export type DeleteDocInfo = {
     refId: string;
     name: string | null;
     typeName: string;
@@ -14,12 +14,12 @@ export function useDeleteDocument() {
     const [showDeleteConfirm, setShowDeleteConfirm] = createSignal(false);
     const [showError, setShowError] = createSignal(false);
     const [errorMessage, setErrorMessage] = createSignal("");
-    const [currentDocInfo, setCurrentDocInfo] = createSignal<DeleteDocumentInfo | null>(null);
+    const [currentDocInfo, setCurrentDocInfo] = createSignal<DeleteDocInfo | null>(null);
     const [resolveDeletion, setResolveDeletion] = createSignal<
         ((success: boolean) => void) | undefined
     >();
 
-    const openDeleteDialog = (docInfo: DeleteDocumentInfo) => {
+    const openDeleteDialog = (docInfo: DeleteDocInfo) => {
         setCurrentDocInfo(docInfo);
         setShowDeleteConfirm(true);
         return new Promise<boolean>((resolve) => {

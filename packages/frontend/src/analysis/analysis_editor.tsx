@@ -11,17 +11,13 @@ import {
 import type { AnalysisMeta } from "../theory";
 import { assertExhaustive } from "../util/assert_exhaustive";
 import { LiveAnalysisContext } from "./context";
-import type {
-    LiveAnalysisDocument,
-    LiveDiagramAnalysisDocument,
-    LiveModelAnalysisDocument,
-} from "./document";
+import type { LiveAnalysisDoc, LiveDiagramAnalysisDoc, LiveModelAnalysisDoc } from "./document";
 import type { Analysis } from "./types";
 
 /** Notebook editor for analyses of models of double theories.
  */
 export function AnalysisNotebookEditor(props: {
-    liveAnalysis: LiveAnalysisDocument;
+    liveAnalysis: LiveAnalysisDoc;
 }) {
     const liveDoc = () => props.liveAnalysis.liveDoc;
 
@@ -66,7 +62,7 @@ function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
                 {(analysis) => (
                     <Dynamic
                         component={analysis().component}
-                        liveModel={(liveAnalysis() as LiveModelAnalysisDocument).liveModel}
+                        liveModel={(liveAnalysis() as LiveModelAnalysisDoc).liveModel}
                         content={props.content.content}
                         changeContent={(f: (c: unknown) => void) =>
                             props.changeContent((content) => f(content.content))
@@ -83,7 +79,7 @@ function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
                 {(analysis) => (
                     <Dynamic
                         component={analysis().component}
-                        liveDiagram={(liveAnalysis() as LiveDiagramAnalysisDocument).liveDiagram}
+                        liveDiagram={(liveAnalysis() as LiveDiagramAnalysisDoc).liveDiagram}
                         content={props.content.content}
                         changeContent={(f: (c: unknown) => void) =>
                             props.changeContent((content) => f(content.content))
@@ -108,7 +104,7 @@ function analysisCellConstructor<T>(meta: AnalysisMeta<T>): CellConstructor<Anal
     };
 }
 
-function theoryForAnalysis(liveAnalysis: LiveAnalysisDocument) {
+function theoryForAnalysis(liveAnalysis: LiveAnalysisDoc) {
     switch (liveAnalysis.analysisType) {
         case "model":
             return liveAnalysis.liveModel.theory();

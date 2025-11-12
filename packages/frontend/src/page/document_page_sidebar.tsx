@@ -11,8 +11,8 @@ import { AppMenu, ImportMenuItem, NewModelItem } from "./menubar";
 export function DocumentSidebar(props: {
     primaryDoc?: LiveDocWithRef;
     secondaryDoc?: LiveDocWithRef;
-    refetchPrimaryDocument: () => void;
-    refetchSecondaryDocument: () => void;
+    refetchPrimaryDoc: () => void;
+    refetchSecondaryDoc: () => void;
 }) {
     return (
         <>
@@ -25,8 +25,8 @@ export function DocumentSidebar(props: {
                     <RelatedDocuments
                         primaryDoc={primaryDoc()}
                         secondaryDoc={props.secondaryDoc}
-                        refetchPrimaryDocument={props.refetchPrimaryDocument}
-                        refetchSecondaryDocument={props.refetchSecondaryDocument}
+                        refetchPrimaryDoc={props.refetchPrimaryDoc}
+                        refetchSecondaryDoc={props.refetchSecondaryDoc}
                     />
                 )}
             </Show>
@@ -54,8 +54,8 @@ async function getLiveDocRoot(doc: LiveDocWithRef, api: Api): Promise<LiveDocWit
 function RelatedDocuments(props: {
     primaryDoc: LiveDocWithRef;
     secondaryDoc?: LiveDocWithRef;
-    refetchPrimaryDocument: () => void;
-    refetchSecondaryDocument: () => void;
+    refetchPrimaryDoc: () => void;
+    refetchSecondaryDoc: () => void;
 }) {
     const api = useApi();
 
@@ -73,8 +73,8 @@ function RelatedDocuments(props: {
                         indent={1}
                         primaryDoc={props.primaryDoc}
                         secondaryDoc={props.secondaryDoc}
-                        refetchPrimaryDocument={props.refetchPrimaryDocument}
-                        refetchSecondaryDocument={props.refetchSecondaryDocument}
+                        refetchPrimaryDoc={props.refetchPrimaryDoc}
+                        refetchSecondaryDoc={props.refetchSecondaryDoc}
                     />
                 </div>
             )}
@@ -87,8 +87,8 @@ function DocumentsTreeNode(props: {
     indent: number;
     primaryDoc: LiveDocWithRef;
     secondaryDoc?: LiveDocWithRef;
-    refetchPrimaryDocument: () => void;
-    refetchSecondaryDocument: () => void;
+    refetchPrimaryDoc: () => void;
+    refetchSecondaryDoc: () => void;
 }) {
     const api = useApi();
 
@@ -117,9 +117,9 @@ function DocumentsTreeNode(props: {
                 indent={props.indent}
                 primaryDoc={props.primaryDoc}
                 secondaryDoc={props.secondaryDoc}
-                refetchDocument={refetch}
-                refetchPrimaryDocument={props.refetchPrimaryDocument}
-                refetchSecondaryDocument={props.refetchSecondaryDocument}
+                refetchDoc={refetch}
+                refetchPrimaryDoc={props.refetchPrimaryDoc}
+                refetchSecondaryDoc={props.refetchSecondaryDoc}
             />
             <For each={childDocs()}>
                 {(child) => (
@@ -128,8 +128,8 @@ function DocumentsTreeNode(props: {
                         indent={props.indent + 1}
                         primaryDoc={props.primaryDoc}
                         secondaryDoc={props.secondaryDoc}
-                        refetchPrimaryDocument={props.refetchPrimaryDocument}
-                        refetchSecondaryDocument={props.refetchSecondaryDocument}
+                        refetchPrimaryDoc={props.refetchPrimaryDoc}
+                        refetchSecondaryDoc={props.refetchSecondaryDoc}
                     />
                 )}
             </For>
@@ -142,9 +142,9 @@ function DocumentsTreeLeaf(props: {
     indent: number;
     primaryDoc: LiveDocWithRef;
     secondaryDoc?: LiveDocWithRef;
-    refetchDocument: () => void;
-    refetchPrimaryDocument: () => void;
-    refetchSecondaryDocument: () => void;
+    refetchDoc: () => void;
+    refetchPrimaryDoc: () => void;
+    refetchSecondaryDoc: () => void;
 }) {
     const navigate = useNavigate();
     const clickedRefId = createMemo(() => props.doc.docRef.refId);
@@ -184,11 +184,11 @@ function DocumentsTreeLeaf(props: {
                 <DocumentMenu
                     liveDoc={props.doc.liveDoc}
                     docRef={props.doc.docRef}
-                    onDocumentCreated={props.refetchDocument}
-                    onDocumentDeleted={() => {
-                        props.refetchDocument();
-                        props.refetchPrimaryDocument();
-                        props.refetchSecondaryDocument();
+                    onDocCreated={props.refetchDoc}
+                    onDocDeleted={() => {
+                        props.refetchDoc();
+                        props.refetchPrimaryDoc();
+                        props.refetchSecondaryDoc();
                     }}
                 />
             </div>

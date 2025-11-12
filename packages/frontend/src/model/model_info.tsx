@@ -1,11 +1,11 @@
 import { NotebookUtils } from "../notebook";
 import { stdTheories } from "../stdlib";
 import { TheorySelectorDialog } from "../theory/theory_selector";
-import { type LiveModelDocument, migrateModelDocument } from "./document";
+import { type LiveModelDoc, migrateModelDocument } from "./document";
 
 /** Widget in the top right corner of a model document pane.
  */
-export function ModelInfo(props: { liveModel: LiveModelDocument }) {
+export function ModelInfo(props: { liveModel: LiveModelDoc }) {
     const liveDoc = () => props.liveModel.liveDoc;
 
     const selectableTheories = () => {

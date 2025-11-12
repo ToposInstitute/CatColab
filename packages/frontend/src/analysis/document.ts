@@ -9,8 +9,8 @@ import {
     currentVersion,
 } from "catlog-wasm";
 import { type Api, type DocRef, type LiveDoc, findAndMigrate, makeLiveDoc } from "../api";
-import { type LiveDiagramDocument, getLiveDiagram, getLiveDiagramFromRepo } from "../diagram";
-import type { LiveModelDocument, ModelLibrary } from "../model";
+import { type LiveDiagramDoc, getLiveDiagram, getLiveDiagramFromRepo } from "../diagram";
+import type { LiveModelDoc, ModelLibrary } from "../model";
 import { newNotebook } from "../notebook";
 
 /** A document defining an analysis. */
@@ -38,7 +38,7 @@ export const newAnalysisDocument = (
     version: currentVersion(),
 });
 
-type BaseLiveAnalysisDocument = {
+type BaseLiveAnalysisDoc = {
     /** Tag for use in tagged unions of document types. */
     type: "analysis";
 
@@ -47,29 +47,29 @@ type BaseLiveAnalysisDocument = {
 };
 
 /** A model analysis document "live" for editing. */
-export type LiveModelAnalysisDocument = BaseLiveAnalysisDocument & {
+export type LiveModelAnalysisDoc = BaseLiveAnalysisDoc & {
     analysisType: "model";
 
     /** Live document defining the analysis. */
     liveDoc: LiveDoc<ModelAnalysisDocument>;
 
     /** Live model that the analysis is of. */
-    liveModel: LiveModelDocument;
+    liveModel: LiveModelDoc;
 };
 
 /** A diagram analysis document "live" for editing. */
-export type LiveDiagramAnalysisDocument = BaseLiveAnalysisDocument & {
+export type LiveDiagramAnalysisDoc = BaseLiveAnalysisDoc & {
     analysisType: "diagram";
 
     /** Live document defining the analysis. */
     liveDoc: LiveDoc<DiagramAnalysisDocument>;
 
     /** Live diagram that the analysis is of. */
-    liveDiagram: LiveDiagramDocument;
+    liveDiagram: LiveDiagramDoc;
 };
 
 /** An analysis document "live" for editing. */
-export type LiveAnalysisDocument = LiveModelAnalysisDocument | LiveDiagramAnalysisDocument;
+export type LiveAnalysisDoc = LiveModelAnalysisDoc | LiveDiagramAnalysisDoc;
 
 /** Create a new, empty analysis in the backend. */
 export async function createAnalysis(api: Api, analysisType: AnalysisType, analysisOf: StableRef) {
@@ -78,7 +78,7 @@ export async function createAnalysis(api: Api, analysisType: AnalysisType, analy
 }
 
 export type LiveAnalysisLiveDocWithRef = {
-    liveAnalysis: LiveAnalysisDocument;
+    liveAnalysis: LiveAnalysisDoc;
     docRef: DocRef;
 };
 
@@ -91,7 +91,7 @@ export async function getLiveAnalysis(
     const { liveDoc, docRef } = await api.getLiveDoc<AnalysisDocument>(refId, "analysis");
     const { doc } = liveDoc;
 
-    let liveAnalysis: LiveAnalysisDocument;
+    let liveAnalysis: LiveAnalysisDoc;
     // XXX: TypeScript cannot narrow types in nested tagged unions.
     if (doc.analysisType === "model") {
         const liveModel = await models.getLiveModel(doc.analysisOf._id);
@@ -123,7 +123,7 @@ export async function getLiveAnalysisFromRepo(
     docId: AnyDocumentId,
     repo: Repo,
     models: ModelLibrary<AnyDocumentId>,
-): Promise<LiveAnalysisDocument> {
+): Promise<LiveAnalysisDoc> {
     const docHandle = await findAndMigrate<AnalysisDocument>(repo, docId, "analysis");
     const liveDoc = makeLiveDoc(docHandle);
     const { doc } = liveDoc;
