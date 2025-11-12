@@ -20,7 +20,7 @@ import {
     type Uuid,
     elaborateModel,
 } from "catlog-wasm";
-import { type Api, type DocRef, type LiveDoc, findAndMigrate, makeLiveDoc } from "../api";
+import { type Api, type LiveDoc, findAndMigrate, makeLiveDoc } from "../api";
 import { NotebookUtils } from "../notebook/types";
 import type { Theory, TheoryLibrary } from "../theory";
 import type { LiveModelDocument, ModelDocument } from "./document";
@@ -63,7 +63,6 @@ export type ModelEntry = {
 type ModelLibraryParameters<RefId> = {
     canonicalize: (refId: RefId) => ModelKey;
     fetch: (refId: RefId) => Promise<DocHandle<ModelDocument>>;
-    docRef?: (refId: RefId) => Promise<DocRef>;
     theories: TheoryLibrary;
 };
 
@@ -123,11 +122,6 @@ export class ModelLibrary<RefId> {
             },
             fetch(refId) {
                 return api.getDocHandle<ModelDocument>(refId, "model");
-            },
-            async docRef(refId) {
-                const permissions = await api.getPermissions(refId);
-                const isDeleted = await api.isDocumentDeleted(refId);
-                return { refId, permissions, isDeleted };
             },
             theories,
         });

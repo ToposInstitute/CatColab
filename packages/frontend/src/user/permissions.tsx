@@ -42,7 +42,7 @@ type PermissionsState = Partial<Omit<Permissions, "users">> & {
 /** Form to configure permissions on a document.
  */
 export function PermissionsForm(props: {
-    refId?: string;
+    refId: string;
     onComplete?: () => void;
 }) {
     const [state, setState] = createStore<PermissionsState>({});
@@ -88,7 +88,6 @@ export function PermissionsForm(props: {
         ) ?? false;
 
     const updatePermissions = async () => {
-        invariant(props.refId);
         invariant(!currentPermissions.loading && !currentPermissions.error);
         const result = await api.rpc.set_permissions.mutate(props.refId, pendingPermissions());
         invariant(result.tag === "Ok");
@@ -196,32 +195,24 @@ export function PermissionsForm(props: {
 /** Toolbar button summarizing the document's permissions. */
 export const PermissionsButton = (props: {
     liveDoc: LiveDoc;
-    docRef?: DocRef;
-}) => (
-    <Show when={props.docRef}>
-        {(docRef) => {
-            const anyone = () => docRef().permissions.anyone;
-            const user = () => docRef().permissions.user;
-            return (
-                <Switch fallback={<EditorPermissionsButton permissions={docRef().permissions} />}>
-                    <Match when={anyone() === "Own"}>
-                        <AnonPermissionsButton />
-                    </Match>
-                    <Match when={user() === "Own"}>
-                        <OwnerPermissionsButton refId={docRef().refId} />
-                    </Match>
-                    <Match
-                        when={[anyone(), user()].every(
-                            (level) => level === null || level === "Read",
-                        )}
-                    >
-                        <ReadonlyPermissionsButton doc={props.liveDoc.doc} />
-                    </Match>
-                </Switch>
-            );
-        }}
-    </Show>
-);
+    docRef: DocRef;
+}) => {
+    const anyone = () => props.docRef.permissions.anyone;
+    const user = () => props.docRef.permissions.user;
+    return (
+        <Switch fallback={<EditorPermissionsButton permissions={props.docRef.permissions} />}>
+            <Match when={anyone() === "Own"}>
+                <AnonPermissionsButton />
+            </Match>
+            <Match when={user() === "Own"}>
+                <OwnerPermissionsButton refId={props.docRef.refId} />
+            </Match>
+            <Match when={[anyone(), user()].every((level) => level === null || level === "Read")}>
+                <ReadonlyPermissionsButton doc={props.liveDoc.doc} />
+            </Match>
+        </Switch>
+    );
+};
 
 function AnonPermissionsButton() {
     const firebaseApp = useFirebaseApp();
@@ -348,7 +339,7 @@ const EditorPermissionsButton = (props: {
 };
 
 function OwnerPermissionsButton(props: {
-    refId?: string;
+    refId: string;
 }) {
     const [open, setOpen] = createSignal(false);
 
