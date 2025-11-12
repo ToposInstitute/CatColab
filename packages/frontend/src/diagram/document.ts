@@ -10,7 +10,7 @@ import type {
     Uuid,
 } from "catlog-wasm";
 import { currentVersion, elaborateDiagram } from "catlog-wasm";
-import { type Api, type LiveDoc, findAndMigrate, makeLiveDoc } from "../api";
+import { type Api, type DocRef, type LiveDoc, findAndMigrate, makeLiveDoc } from "../api";
 import type { LiveModelDocument, ModelLibrary } from "../model";
 import { NotebookUtils, newNotebook } from "../notebook";
 
@@ -130,17 +130,23 @@ export function createDiagram(api: Api, inModel: StableRef): Promise<string> {
     return api.createDoc(init);
 }
 
+export type LiveDiagramLiveDocWithRef = {
+    liveDiagram: LiveDiagramDocument;
+    docRef: DocRef;
+};
+
 /** Retrieve a diagram from the backend and make it "live" for editing. */
 export async function getLiveDiagram(
     refId: Uuid,
     api: Api,
     models: ModelLibrary<Uuid>,
-): Promise<LiveDiagramDocument> {
-    const liveDoc = await api.getLiveDoc<DiagramDocument>(refId, "diagram");
+): Promise<LiveDiagramLiveDocWithRef> {
+    const { liveDoc, docRef } = await api.getLiveDoc<DiagramDocument>(refId, "diagram");
     const modelRefId = liveDoc.doc.diagramIn._id;
 
     const liveModel = await models.getLiveModel(modelRefId);
-    return enlivenDiagramDocument(liveDoc, liveModel);
+    const liveDiagram = enlivenDiagramDocument(liveDoc, liveModel);
+    return { liveDiagram, docRef };
 }
 
 /** Get a diagram from an Automerge repo and make it "live" for editing.

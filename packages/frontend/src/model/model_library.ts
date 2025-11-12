@@ -214,8 +214,7 @@ export class ModelLibrary<RefId> {
         const docHandle = this.handles.get(key)?.docHandle;
         invariant(docHandle);
 
-        const docRef = this.params.docRef ? await this.params.docRef(refId) : undefined;
-        const liveDoc = makeLiveDoc(docHandle, docRef);
+        const liveDoc = makeLiveDoc(docHandle);
         return makeLiveModel(liveDoc, () => this.entries.get(key));
     }
 

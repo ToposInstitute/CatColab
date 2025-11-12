@@ -20,7 +20,7 @@ import { InlineInput, ResizableHandle } from "catcolab-ui-components";
 import { type LiveAnalysisDocument, getLiveAnalysis } from "../analysis";
 import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
 import { AnalysisInfo } from "../analysis/analysis_info";
-import { type Api, type DocumentType, useApi } from "../api";
+import { type Api, type DocRef, type DocumentType, useApi } from "../api";
 import { type LiveDiagramDocument, getLiveDiagram } from "../diagram";
 import { DiagramNotebookEditor } from "../diagram/diagram_editor";
 import { DiagramInfo } from "../diagram/diagram_info";
@@ -36,6 +36,16 @@ import { DocumentSidebar } from "./document_page_sidebar";
 import "./document_page.css";
 
 type AnyLiveDocument = LiveModelDocument | LiveDiagramDocument | LiveAnalysisDocument;
+
+/** A Live*Document bundled with its backend DocRef.
+ *
+ * This type is used in UI contexts where we need both the live document
+ * and its backend metadata.
+ */
+type AnyLiveDocWithRef = {
+    liveDocument: AnyLiveDocument;
+    docRef: DocRef;
+};
 
 export default function DocumentPage() {
     const api = useApi();
@@ -95,11 +105,12 @@ export default function DocumentPage() {
 
     return (
         <Show when={primaryLiveDocument()} fallback={<DocumentLoadingScreen />}>
-            {(liveDocument) => (
+            {(docWithRef) => (
                 <SidebarLayout
                     toolbarContents={
                         <SplitPaneToolbar
-                            document={liveDocument()}
+                            document={docWithRef().liveDocument}
+                            docRef={docWithRef().docRef}
                             panelSizes={resizableContext()?.sizes()}
                             maximizeSidePanel={maximizeSidePanel}
                             closeSidePanel={closeSidePanel}
@@ -107,8 +118,19 @@ export default function DocumentPage() {
                     }
                     sidebarContents={
                         <DocumentSidebar
-                            primaryLiveDoc={liveDocument().liveDoc}
-                            secondaryLiveDoc={secondaryLiveDocument()?.liveDoc}
+                            primaryDoc={{
+                                liveDoc: docWithRef().liveDocument.liveDoc,
+                                docRef: docWithRef().docRef,
+                            }}
+                            secondaryDoc={(() => {
+                                const secondary = secondaryLiveDocument();
+                                return secondary
+                                    ? {
+                                          liveDoc: secondary.liveDocument.liveDoc,
+                                          docRef: secondary.docRef,
+                                      }
+                                    : undefined;
+                            })()}
                             refetchPrimaryDocument={refetchPrimaryDocument}
                             refetchSecondaryDocument={refetchSecondaryDocument}
                         />
@@ -127,7 +149,8 @@ export default function DocumentPage() {
                                         minSize={0.25}
                                     >
                                         <DocumentPane
-                                            document={liveDocument()}
+                                            document={docWithRef().liveDocument}
+                                            docRef={docWithRef().docRef}
                                             refetchPrimaryDocument={refetchPrimaryDocument}
                                             refetchSecondaryDocument={refetchSecondaryDocument}
                                         />
@@ -140,10 +163,16 @@ export default function DocumentPage() {
                                             onCollapse={closeSidePanel}
                                         >
                                             <Show when={secondaryLiveDocument()}>
-                                                {(secondaryLiveModel) => (
+                                                {(secondaryLiveDocWithRef) => (
                                                     <>
                                                         <DocumentPane
-                                                            document={secondaryLiveModel()}
+                                                            document={
+                                                                secondaryLiveDocWithRef()
+                                                                    .liveDocument
+                                                            }
+                                                            docRef={
+                                                                secondaryLiveDocWithRef().docRef
+                                                            }
                                                             refetchPrimaryDocument={
                                                                 refetchPrimaryDocument
                                                             }
@@ -168,6 +197,7 @@ export default function DocumentPage() {
 
 function SplitPaneToolbar(props: {
     document: AnyLiveDocument;
+    docRef: DocRef;
     panelSizes: number[] | undefined;
     closeSidePanel: () => void;
     maximizeSidePanel: () => void;
@@ -176,9 +206,9 @@ function SplitPaneToolbar(props: {
 
     return (
         <>
-            <DocumentBreadcrumbs liveDoc={props.document.liveDoc} />
+            <DocumentBreadcrumbs liveDoc={props.document.liveDoc} docRefId={props.docRef.refId} />
             <span class="filler" />
-            <PermissionsButton liveDoc={props.document.liveDoc} />
+            <PermissionsButton liveDoc={props.document.liveDoc} docRef={props.docRef} />
             <Show when={secondaryPanelSize()}>
                 {(panelSize) => (
                     <div
@@ -200,6 +230,7 @@ function SplitPaneToolbar(props: {
 
 export function DocumentPane(props: {
     document: AnyLiveDocument;
+    docRef: DocRef;
     refetchPrimaryDocument: () => void;
     refetchSecondaryDocument: () => void;
 }) {
@@ -207,11 +238,11 @@ export function DocumentPane(props: {
     const [isDeleted, setIsDeleted] = createSignal(false);
 
     createEffect(() => {
-        setIsDeleted(props.document.liveDoc.docRef?.isDeleted ?? false);
+        setIsDeleted(props.docRef.isDeleted);
     });
 
     const handleRestore = async () => {
-        const refId = props.document.liveDoc.docRef?.refId;
+        const refId = props.docRef.refId;
 
         if (!refId) {
             return;
@@ -302,14 +333,21 @@ async function getLiveDocument(
     api: Api,
     models: ModelLibrary<string>,
     documentType: DocumentType,
-): Promise<AnyLiveDocument> {
+): Promise<AnyLiveDocWithRef> {
     switch (documentType) {
-        case "model":
-            return models.getLiveModel(refId);
-        case "diagram":
-            return getLiveDiagram(refId, api, models);
-        case "analysis":
-            return getLiveAnalysis(refId, api, models);
+        case "model": {
+            const { liveDoc: _, docRef } = await api.getLiveDoc(refId, "model");
+            const liveDocument = await models.getLiveModel(refId);
+            return { liveDocument, docRef };
+        }
+        case "diagram": {
+            const { liveDiagram, docRef } = await getLiveDiagram(refId, api, models);
+            return { liveDocument: liveDiagram, docRef };
+        }
+        case "analysis": {
+            const { liveAnalysis, docRef } = await getLiveAnalysis(refId, api, models);
+            return { liveDocument: liveAnalysis, docRef };
+        }
         default:
             assertExhaustive(documentType);
     }

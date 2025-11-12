@@ -18,7 +18,7 @@ import type { NewPermissions, PermissionLevel, Permissions, UserSummary } from "
 import { Button, FormGroup, IconButton, SelectField, Warning } from "catcolab-ui-components";
 import { Dialog } from "catcolab-ui-components";
 import type { Document } from "catlog-wasm";
-import { type LiveDoc, useApi } from "../api";
+import { type DocRef, type LiveDoc, useApi } from "../api";
 import { deepCopyJSON } from "../util/deepcopy";
 import { Login } from "./login";
 import { NameUser, UserInput } from "./username";
@@ -196,8 +196,9 @@ export function PermissionsForm(props: {
 /** Toolbar button summarizing the document's permissions. */
 export const PermissionsButton = (props: {
     liveDoc: LiveDoc;
+    docRef?: DocRef;
 }) => (
-    <Show when={props.liveDoc.docRef}>
+    <Show when={props.docRef}>
         {(docRef) => {
             const anyone = () => docRef().permissions.anyone;
             const user = () => docRef().permissions.user;

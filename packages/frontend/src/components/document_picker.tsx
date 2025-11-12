@@ -42,7 +42,7 @@ export function DocumentPicker(
 
     // TODO: API should cache mapping from ref ID to Automerge doc URL to avoid
     // hitting the backend too frequently.
-    const [liveDoc] = createResource(
+    const [liveDocWithRef] = createResource(
         () => props.refId,
         (refId) => api.getLiveDoc(refId),
     );
@@ -60,10 +60,13 @@ export function DocumentPicker(
                     {props.placeholder}
                 </a>
             </Match>
-            <Match when={liveDoc()}>
-                {(liveDoc) => (
-                    <A href={`/${liveDoc().doc.type}/${liveDoc().docRef?.refId}`} {...linkProps}>
-                        {liveDoc().doc.name}
+            <Match when={liveDocWithRef()}>
+                {(liveDocWithRef) => (
+                    <A
+                        href={`/${liveDocWithRef().liveDoc.doc.type}/${liveDocWithRef().docRef.refId}`}
+                        {...linkProps}
+                    >
+                        {liveDocWithRef().liveDoc.doc.name}
                     </A>
                 )}
             </Match>

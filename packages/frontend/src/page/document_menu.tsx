@@ -8,7 +8,7 @@ import invariant from "tiny-invariant";
 
 import { IconButton } from "catcolab-ui-components";
 import { createAnalysis } from "../analysis";
-import { type LiveDoc, useApi } from "../api";
+import { type DocRef, type LiveDoc, useApi } from "../api";
 import { DocumentTypeIcon } from "../components/document_type_icon";
 import { createDiagram } from "../diagram";
 import {
@@ -25,6 +25,7 @@ import { TheoryLibraryContext } from "../theory";
 
 export function DocumentMenu(props: {
     liveDoc: LiveDoc;
+    docRef?: DocRef;
     onDocumentCreated?: () => void;
     onDocumentDeleted?: () => void;
 }) {
@@ -41,7 +42,7 @@ export function DocumentMenu(props: {
                 invariant(modelRefId, "To create diagram, parent model should have a ref ID");
                 break;
             case "model":
-                modelRefId = props.liveDoc.docRef?.refId;
+                modelRefId = props.docRef?.refId;
                 invariant(modelRefId, "To create diagram, model should have a ref ID");
                 break;
             default:
@@ -54,7 +55,7 @@ export function DocumentMenu(props: {
     };
 
     const onNewAnalysis = async () => {
-        const docRefId = props.liveDoc.docRef?.refId;
+        const docRefId = props.docRef?.refId;
         invariant(docRefId, "To create analysis, parent should have a ref ID");
 
         const docType = props.liveDoc.doc.type;
@@ -83,11 +84,9 @@ export function DocumentMenu(props: {
         );
     });
 
-    const canDelete = () =>
-        props.liveDoc.docRef?.permissions.user === "Own" && !props.liveDoc.docRef?.isDeleted;
+    const canDelete = () => props.docRef?.permissions.user === "Own" && !props.docRef?.isDeleted;
 
-    const canRestore = () =>
-        props.liveDoc.docRef?.permissions.user === "Own" && props.liveDoc.docRef?.isDeleted;
+    const canRestore = () => props.docRef?.permissions.user === "Own" && props.docRef?.isDeleted;
 
     return (
         <Popover
@@ -133,14 +132,14 @@ export function DocumentMenu(props: {
                     <Switch>
                         <Match when={canRestore()}>
                             <RestoreMenuItem
-                                refId={props.liveDoc.docRef?.refId}
+                                refId={props.docRef?.refId}
                                 typeName={props.liveDoc.doc.type}
                                 onRestored={props.onDocumentDeleted}
                             />
                         </Match>
                         <Match when={true}>
                             <DeleteMenuItem
-                                refId={props.liveDoc.docRef?.refId}
+                                refId={props.docRef?.refId}
                                 name={props.liveDoc.doc.name}
                                 typeName={props.liveDoc.doc.type}
                                 canDelete={canDelete()}

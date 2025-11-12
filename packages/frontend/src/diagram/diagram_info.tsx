@@ -7,14 +7,13 @@ import type { LiveDiagramDocument } from "./document";
 export function DiagramInfo(props: { liveDiagram: LiveDiagramDocument }) {
     const liveModel = () => props.liveDiagram.liveModel;
     const liveModelDoc = () => props.liveDiagram.liveModel.liveDoc;
+    const modelRefId = () => props.liveDiagram.liveDoc.doc.diagramIn._id;
 
     return (
         <>
             <div class="name">{liveModel().theory()?.instanceOfName}</div>
             <div class="model">
-                <A href={`/model/${liveModelDoc().docRef?.refId}`}>
-                    {liveModelDoc().doc.name || "Untitled"}
-                </A>
+                <A href={`/model/${modelRefId()}`}>{liveModelDoc().doc.name || "Untitled"}</A>
             </div>
         </>
     );

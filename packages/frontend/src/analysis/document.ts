@@ -8,7 +8,7 @@ import {
     type Uuid,
     currentVersion,
 } from "catlog-wasm";
-import { type Api, type LiveDoc, findAndMigrate, makeLiveDoc } from "../api";
+import { type Api, type DocRef, type LiveDoc, findAndMigrate, makeLiveDoc } from "../api";
 import { type LiveDiagramDocument, getLiveDiagram, getLiveDiagramFromRepo } from "../diagram";
 import type { LiveModelDocument, ModelLibrary } from "../model";
 import { newNotebook } from "../notebook";
@@ -77,34 +77,42 @@ export async function createAnalysis(api: Api, analysisType: AnalysisType, analy
     return api.createDoc(init);
 }
 
+export type LiveAnalysisLiveDocWithRef = {
+    liveAnalysis: LiveAnalysisDocument;
+    docRef: DocRef;
+};
+
 /** Retrieve an analysis and make it "live" for editing. */
 export async function getLiveAnalysis(
     refId: Uuid,
     api: Api,
     models: ModelLibrary<Uuid>,
-): Promise<LiveAnalysisDocument> {
-    const liveDoc = await api.getLiveDoc<AnalysisDocument>(refId, "analysis");
+): Promise<LiveAnalysisLiveDocWithRef> {
+    const { liveDoc, docRef } = await api.getLiveDoc<AnalysisDocument>(refId, "analysis");
     const { doc } = liveDoc;
 
+    let liveAnalysis: LiveAnalysisDocument;
     // XXX: TypeScript cannot narrow types in nested tagged unions.
     if (doc.analysisType === "model") {
         const liveModel = await models.getLiveModel(doc.analysisOf._id);
-        return {
+        liveAnalysis = {
             type: "analysis",
             analysisType: "model",
             liveDoc: liveDoc as LiveDoc<ModelAnalysisDocument>,
             liveModel,
         };
     } else if (doc.analysisType === "diagram") {
-        const liveDiagram = await getLiveDiagram(doc.analysisOf._id, api, models);
-        return {
+        const { liveDiagram } = await getLiveDiagram(doc.analysisOf._id, api, models);
+        liveAnalysis = {
             type: "analysis",
             analysisType: "diagram",
             liveDoc: liveDoc as LiveDoc<DiagramAnalysisDocument>,
             liveDiagram,
         };
+    } else {
+        throw new Error(`Unknown analysis type: ${doc.analysisType}`);
     }
-    throw new Error(`Unknown analysis type: ${doc.analysisType}`);
+    return { liveAnalysis, docRef };
 }
 
 /** Get an analysis from an Automerge repo and make it "live" for editing.
