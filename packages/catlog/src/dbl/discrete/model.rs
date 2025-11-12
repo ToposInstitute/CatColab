@@ -149,6 +149,10 @@ impl Category for DiscreteDblModel {
     fn compose(&self, path: Path<Self::Ob, Self::Mor>) -> Self::Mor {
         self.category.compose(path)
     }
+
+    fn morphisms_are_equal(&self, p1: Self::Mor, p2: Self::Mor) -> bool {
+        self.category.morphisms_are_equal(p1, p2)
+    }
 }
 
 impl FgCategory for DiscreteDblModel {
