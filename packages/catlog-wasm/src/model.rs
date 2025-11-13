@@ -580,12 +580,6 @@ impl DblModel {
         })
     }
 
-    /// Dump the model as a string, used for debugging
-    #[wasm_bindgen(js_name = "dump")]
-    pub fn dump(&self) -> String {
-        format!("{:?}\n{:?}", self.ob_generators(), self.mor_generators())
-    }
-
     /// Validates the model, returning any validation failures.
     pub fn validate(&self) -> ModelValidationResult {
         let result = all_the_same!(match &self.model {
