@@ -1,6 +1,7 @@
 import Popover from "@corvu/popover";
 import { focus } from "@solid-primitives/active-element";
-import { type ComponentProps, type JSX, createEffect, createSignal, splitProps } from "solid-js";
+import { type ComponentProps, createEffect, createSignal, type JSX, splitProps } from "solid-js";
+
 focus;
 
 import { type Completion, Completions, type CompletionsRef } from "./completions";

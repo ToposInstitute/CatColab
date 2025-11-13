@@ -1,8 +1,8 @@
 import { useNavigate } from "@solidjs/router";
-import type { Link } from "catlog-wasm";
-import { For, Show, createMemo, createResource } from "solid-js";
+import { createMemo, createResource, For, Show } from "solid-js";
 import invariant from "tiny-invariant";
 
+import type { Link } from "catlog-wasm";
 import { type Api, type LiveDocWithRef, useApi } from "../api";
 import { DocumentTypeIcon } from "../components/document_type_icon";
 import { DocumentMenu } from "./document_menu";

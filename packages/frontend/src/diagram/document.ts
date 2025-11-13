@@ -10,7 +10,7 @@ import type {
     Uuid,
 } from "catlog-wasm";
 import { currentVersion, elaborateDiagram } from "catlog-wasm";
-import { type Api, type DocRef, type LiveDoc, findAndMigrate, makeLiveDoc } from "../api";
+import { type Api, type DocRef, findAndMigrate, type LiveDoc, makeLiveDoc } from "../api";
 import type { LiveModelDoc, ModelLibrary } from "../model";
 import { NotebookUtils, newNotebook } from "../notebook";
 

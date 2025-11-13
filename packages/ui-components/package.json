@@ -28,7 +28,7 @@
         "solid-js": "^1.9.10"
     },
     "devDependencies": {
-        "@biomejs/biome": "^1.9.3",
+        "@biomejs/biome": "^2.3.4",
         "@chromatic-com/storybook": "^4.1.2",
         "@storybook/addon-a11y": "^10.0.2",
         "@storybook/addon-docs": "^10.0.2",

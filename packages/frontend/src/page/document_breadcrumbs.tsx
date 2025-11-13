@@ -1,14 +1,11 @@
-import { For, Show, createResource } from "solid-js";
+import { createResource, For, Show } from "solid-js";
 
 import type { Document } from "catlog-wasm";
 import { type LiveDoc, type LiveDocWithRef, useApi } from "../api";
 import { assertExhaustive } from "../util/assert_exhaustive";
 import "./document_breadcrumbs.css";
 
-export function DocumentBreadcrumbs(props: {
-    liveDoc: LiveDoc;
-    docRefId: string;
-}) {
+export function DocumentBreadcrumbs(props: { liveDoc: LiveDoc; docRefId: string }) {
     const [documentChain] = createResource(
         () => ({ liveDoc: props.liveDoc, docRefId: props.docRefId }),
         getDocumentChain,

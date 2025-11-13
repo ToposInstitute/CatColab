@@ -1,5 +1,9 @@
-import { type ColumnSchema, FixedTableEditor, createNumericalColumn } from "catcolab-ui-components";
-import { Foldable } from "catcolab-ui-components";
+import {
+    type ColumnSchema,
+    createNumericalColumn,
+    FixedTableEditor,
+    Foldable,
+} from "catcolab-ui-components";
 import type { DblModel, LinearODEProblemData, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";

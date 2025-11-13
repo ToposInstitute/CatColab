@@ -1,11 +1,11 @@
 import type { Prop } from "@automerge/automerge";
 import type { DocHandle } from "@automerge/automerge-repo";
 import {
-    REGEX_BLOCK_MATH_DOLLARS,
     makeBlockMathInputRule,
     mathBackspaceCmd,
     mathPlugin,
     mathSerializer,
+    REGEX_BLOCK_MATH_DOLLARS,
 } from "@benrbray/prosemirror-math";
 import {
     baseKeymap,
@@ -21,7 +21,7 @@ import { keymap } from "prosemirror-keymap";
 import { splitListItem } from "prosemirror-schema-list";
 import { type Command, EditorState, type Plugin, type Transaction } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
-import { type JSX, Show, createEffect, createSignal, onCleanup } from "solid-js";
+import { createEffect, createSignal, type JSX, onCleanup, Show } from "solid-js";
 
 import { useDocHandleReady } from "../../api/document";
 import {

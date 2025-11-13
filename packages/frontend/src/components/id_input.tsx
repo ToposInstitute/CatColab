@@ -1,5 +1,5 @@
 import { createEffect, createSignal, splitProps } from "solid-js";
-import { P, match } from "ts-pattern";
+import { match, P } from "ts-pattern";
 
 import {
     type Completion,
@@ -55,7 +55,7 @@ export function IdInput(
     const textToId = (text: string): NameLookup => {
         let label: LabelSegment = text;
         if (/^\d+$/.test(text)) {
-            label = Number.parseInt(text);
+            label = Number.parseInt(text, 10);
         }
         return props.labelToId?.([label]) ?? { tag: "None" };
     };

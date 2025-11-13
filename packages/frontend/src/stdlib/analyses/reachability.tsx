@@ -1,10 +1,10 @@
-import { Match, Switch, createMemo } from "solid-js";
+import { createMemo, Match, Switch } from "solid-js";
 
 import {
     type ColumnSchema,
+    createNumericalColumn,
     FixedTableEditor,
     PanelHeader,
-    createNumericalColumn,
 } from "catcolab-ui-components";
 import type { QualifiedName, ReachabilityProblemData } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";

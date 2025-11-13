@@ -1,4 +1,5 @@
 import { createContext } from "solid-js";
+
 import type { DeleteDocInfo } from "../components/delete_document_dialog";
 
 /** Actions that can be performed from any page. */

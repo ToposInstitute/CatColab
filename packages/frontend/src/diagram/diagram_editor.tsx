@@ -19,9 +19,7 @@ import { duplicateDiagramJudgment, newDiagramMorphismDecl, newDiagramObjectDecl 
 
 /** Notebook editor for a diagram in a model.
  */
-export function DiagramNotebookEditor(props: {
-    liveDiagram: LiveDiagramDoc;
-}) {
+export function DiagramNotebookEditor(props: { liveDiagram: LiveDiagramDoc }) {
     const liveDoc = () => props.liveDiagram.liveDoc;
     const liveModel = () => props.liveDiagram.liveModel;
 

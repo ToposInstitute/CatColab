@@ -1,4 +1,4 @@
-import { type SubmitHandler, createForm, reset } from "@modular-forms/solid";
+import { createForm, reset, type SubmitHandler } from "@modular-forms/solid";
 import { createEffect, createResource } from "solid-js";
 import invariant from "tiny-invariant";
 

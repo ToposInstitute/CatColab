@@ -86,7 +86,9 @@
 }
 
 .menubar select .menubar button {
-    transition: background-color 0.2s ease, transform 0.2s ease;
+    transition:
+        background-color 0.2s ease,
+        transform 0.2s ease;
 }
 
 .menubar select:hover,
@@ -102,7 +104,9 @@
     border: none;
     cursor: pointer;
     background-color: transparent; /* override default on firefox */
-    transition: background-color 0.2s ease, transform 0.2s ease;
+    transition:
+        background-color 0.2s ease,
+        transform 0.2s ease;
 }
 
 .menubar button.active {
@@ -113,7 +117,9 @@
     background: transparent;
     border: none;
     border-radius: 0;
-    transition: background-color 0.15s ease, transform 0.15s ease;
+    transition:
+        background-color 0.15s ease,
+        transform 0.15s ease;
 }
 
 .menubar select option {
@@ -179,7 +185,9 @@ blockquote {
     background: white;
     backdrop-filter: none;
     max-width: calc(-24px + 100vw);
-    box-shadow: rgba(0, 0, 0, 0.1) 0px 14px 28px -6px, rgba(0, 0, 0, 0.06) 0px 2px 4px -1px,
+    box-shadow:
+        rgba(0, 0, 0, 0.1) 0px 14px 28px -6px,
+        rgba(0, 0, 0, 0.06) 0px 2px 4px -1px,
         rgba(84, 72, 49, 0.08) 0px 0px 0px 1px;
     overflow: hidden;
     width: 330px;
@@ -201,8 +209,9 @@ blockquote {
             width: 100%;
 
             &:focus {
-                box-shadow: rgb(35, 131, 226) 0px 0px 0px 1px inset, rgb(35, 131, 226) 0px 0px 0px
-                    1px;
+                box-shadow:
+                    rgb(35, 131, 226) 0px 0px 0px 1px inset,
+                    rgb(35, 131, 226) 0px 0px 0px 1px;
             }
         }
     }

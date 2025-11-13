@@ -1,24 +1,27 @@
-import type { RefStub } from "catcolab-api";
 import { getAuth } from "firebase/auth";
 import { useFirebaseApp } from "solid-firebase";
 import {
-    For,
-    Match,
-    Switch,
     createEffect,
     createResource,
     createSignal,
+    For,
+    Match,
     onMount,
+    Switch,
     useContext,
 } from "solid-js";
+
+import type { RefStub } from "catcolab-api";
 import { rpcResourceErr, rpcResourceOk, useApi } from "../api";
 import { BrandedToolbar, PageActionsContext } from "../page";
 import { LoginGate } from "./login";
 import "./documents.css";
+
 import { useNavigate } from "@solidjs/router";
-import { IconButton, Spinner } from "catcolab-ui-components";
 import X from "lucide-solid/icons/x";
 import invariant from "tiny-invariant";
+
+import { IconButton, Spinner } from "catcolab-ui-components";
 
 export default function UserDocuments() {
     return (

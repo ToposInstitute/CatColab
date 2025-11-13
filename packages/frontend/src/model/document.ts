@@ -1,7 +1,7 @@
 import type { Accessor } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { type DblModel, type Document, type ModelJudgment, currentVersion } from "catlog-wasm";
+import { currentVersion, type DblModel, type Document, type ModelJudgment } from "catlog-wasm";
 import type { Api, LiveDoc } from "../api";
 import { NotebookUtils, newNotebook } from "../notebook/types";
 import type { Theory, TheoryLibrary } from "../theory";

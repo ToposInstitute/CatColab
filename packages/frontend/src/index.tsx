@@ -1,4 +1,5 @@
 /* @refresh reload */
+
 import { render } from "solid-js/web";
 
 import * as catlog from "catlog-wasm";
