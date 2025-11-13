@@ -45,7 +45,6 @@ export function modelToGraphviz(
     obGenerators?: QualifiedName[],
     morGenerators?: QualifiedName[],
 ): Viz.Graph {
-    console.log(model.dump());
     const nodes: Required<Viz.Graph>["nodes"] = [];
     for (const id of obGenerators ?? model.obGenerators()) {
         const ob = model.obPresentation(id);
@@ -86,17 +85,8 @@ export function modelToGraphviz(
         directed: true,
         nodes,
         edges,
-        graphAttributes: {
-            ...graphStyles.defaultGraphAttributes,
-            ...attributes?.graph,
-        },
-        nodeAttributes: {
-            ...graphStyles.defaultNodeAttributes,
-            ...attributes?.node,
-        },
-        edgeAttributes: {
-            ...graphStyles.defaultEdgeAttributes,
-            ...attributes?.edge,
-        },
+        graphAttributes: { ...graphStyles.defaultGraphAttributes, ...attributes?.graph },
+        nodeAttributes: { ...graphStyles.defaultNodeAttributes, ...attributes?.node },
+        edgeAttributes: { ...graphStyles.defaultEdgeAttributes, ...attributes?.edge },
     };
 }

@@ -341,7 +341,7 @@ mod test {
         let mut elab = Elaborator::new(theory.clone(), &toplevel, ustr(""));
         let mut out = String::new();
         let (_, ty_v) = elab.notebook(cells.iter().map(|c| c.1));
-        let (model, name_translation) = generate(&toplevel, &theory, &ty_v);
+        let (model, name_translation) = generate(&toplevel, theory, &ty_v);
         model_output("", &mut out, &model, &name_translation).unwrap();
         for error in elab.errors() {
             writeln!(&mut out, "error {:?}", error).unwrap()
