@@ -23,9 +23,7 @@ import {
 
 /** Notebook editor for a model of a double theory.
  */
-export function ModelNotebookEditor(props: {
-    liveModel: LiveModelDocument;
-}) {
+export function ModelNotebookEditor(props: { liveModel: LiveModelDocument }) {
     const liveDoc = () => props.liveModel.liveDoc;
 
     const cellConstructors = (): CellConstructor<ModelJudgment>[] => [

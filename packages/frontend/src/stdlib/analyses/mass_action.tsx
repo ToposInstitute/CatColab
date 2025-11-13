@@ -1,7 +1,11 @@
 import { createMemo } from "solid-js";
 
-import { type ColumnSchema, FixedTableEditor, createNumericalColumn } from "catcolab-ui-components";
-import { Foldable } from "catcolab-ui-components";
+import {
+    type ColumnSchema,
+    createNumericalColumn,
+    FixedTableEditor,
+    Foldable,
+} from "catcolab-ui-components";
 import type { DblModel, MassActionProblemData, MorType, ObType, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";

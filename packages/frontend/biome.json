@@ -2,9 +2,12 @@
     "$schema": "https://biomejs.dev/schemas/2.3.4/schema.json",
     "extends": ["../../biome.json"],
     "linter": {
+        "domains": { "solid": "all" },
         "rules": {
-            "suspicious": {
-                "noExplicitAny": "off"
+            "style": {
+                "noDescendingSpecificity": {
+                    "level": "off"
+                }
             }
         }
     }

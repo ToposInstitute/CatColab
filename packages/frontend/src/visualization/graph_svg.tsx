@@ -1,5 +1,5 @@
 import { destructure } from "@solid-primitives/destructure";
-import { type Component, For, Index, Match, Show, Switch, createUniqueId } from "solid-js";
+import { type Component, createUniqueId, For, Index, Match, Show, Switch } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
 import type * as GraphLayout from "./graph_layout";
@@ -9,10 +9,7 @@ import "./graph_svg.css";
 
 /** Draw a graph with a layout using SVG.
  */
-export function GraphSVG<Id>(props: {
-    graph: GraphLayout.Graph<Id>;
-    ref?: SVGRefProp;
-}) {
+export function GraphSVG<Id>(props: { graph: GraphLayout.Graph<Id>; ref?: SVGRefProp }) {
     const edgeMarkers = () => {
         const markers = new Set<ArrowMarker>();
         for (const edge of props.graph.edges) {

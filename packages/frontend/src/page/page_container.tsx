@@ -1,4 +1,4 @@
-import { type JSX, createSignal } from "solid-js";
+import { createSignal, type JSX } from "solid-js";
 
 import { Dialog } from "catcolab-ui-components";
 import { useDeleteDocument } from "../components/delete_document_dialog";
@@ -12,9 +12,7 @@ For now, this serves to anchor dialogs at a high level in the component
 hierarchy. If you naively create them in the menu bar items that show the
 dialogs, the dialogs will be unmounted when the menu is.
  */
-export function PageContainer(props: {
-    children?: JSX.Element;
-}) {
+export function PageContainer(props: { children?: JSX.Element }) {
     const [loginOpen, setLoginOpen] = createSignal(false);
     const [openImport, setImportOpen] = createSignal(false);
 

@@ -2,9 +2,9 @@ import {
     type AnyDocumentId,
     type DocHandle,
     type DocHandleChangePayload,
+    interpretAsDocumentId,
     type Patch,
     type Repo,
-    interpretAsDocumentId,
 } from "@automerge/automerge-repo";
 import { ReactiveMap } from "@solid-primitives/map";
 import { type Accessor, createResource, onCleanup } from "solid-js";
@@ -15,12 +15,12 @@ import {
     type DblModel,
     DblModelMap,
     type DblTheory,
+    elaborateModel,
     type ModelNotebook,
     type ModelValidationResult,
     type Uuid,
-    elaborateModel,
 } from "catlog-wasm";
-import { type Api, type DocRef, type LiveDoc, findAndMigrate, makeLiveDoc } from "../api";
+import { type Api, type DocRef, findAndMigrate, type LiveDoc, makeLiveDoc } from "../api";
 import { NotebookUtils } from "../notebook/types";
 import type { Theory, TheoryLibrary } from "../theory";
 import type { LiveModelDocument, ModelDocument } from "./document";

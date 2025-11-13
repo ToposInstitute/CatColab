@@ -1,11 +1,11 @@
 import {
-    Index,
-    type JSX,
-    Show,
     batch,
     createEffect,
     createSignal,
+    Index,
+    type JSX,
     mergeProps,
+    Show,
     untrack,
     useContext,
 } from "solid-js";

@@ -3,13 +3,13 @@ import type { AnyDocumentId, Repo } from "@automerge/automerge-repo";
 import {
     type Analysis,
     type AnalysisType,
+    currentVersion,
     type Document,
     type StableRef,
     type Uuid,
-    currentVersion,
 } from "catlog-wasm";
-import { type Api, type LiveDoc, findAndMigrate, makeLiveDoc } from "../api";
-import { type LiveDiagramDocument, getLiveDiagram, getLiveDiagramFromRepo } from "../diagram";
+import { type Api, findAndMigrate, type LiveDoc, makeLiveDoc } from "../api";
+import { getLiveDiagram, getLiveDiagramFromRepo, type LiveDiagramDocument } from "../diagram";
 import type { LiveModelDocument, ModelLibrary } from "../model";
 import { newNotebook } from "../notebook";
 

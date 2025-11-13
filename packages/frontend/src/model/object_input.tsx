@@ -2,12 +2,11 @@ import { deepEqual } from "fast-equals";
 import { type Component, splitProps, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
-import { P, match } from "ts-pattern";
+import { match, P } from "ts-pattern";
 
 import type { TextInputOptions } from "catcolab-ui-components";
 import type { MorType, Ob, ObOp, ObType, QualifiedName, Uuid } from "catlog-wasm";
 import { IdInput, type IdInputOptions, ObIdInput } from "../components";
-
 import { LiveModelContext } from "./context";
 import { ObListEditor } from "./object_list_editor";
 

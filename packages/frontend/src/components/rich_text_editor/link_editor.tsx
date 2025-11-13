@@ -1,7 +1,7 @@
 import type { MarkType } from "prosemirror-model";
 import { Plugin, PluginKey } from "prosemirror-state";
 import type { EditorView } from "prosemirror-view";
-import { type Component, Show, createSignal } from "solid-js";
+import { type Component, createSignal, Show } from "solid-js";
 import { render } from "solid-js/web";
 
 type LinkState = {

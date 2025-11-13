@@ -1,4 +1,4 @@
-import { Index, Show, batch, createSignal, splitProps, useContext } from "solid-js";
+import { batch, createSignal, Index, Show, splitProps, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { NameInput, type TextInputOptions } from "catcolab-ui-components";

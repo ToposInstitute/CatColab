@@ -1,5 +1,5 @@
 import type { EChartsOption } from "echarts";
-import { Match, Switch, lazy } from "solid-js";
+import { lazy, Match, Switch } from "solid-js";
 
 import { ErrorAlert } from "catcolab-ui-components";
 import type { JsResult } from "catlog-wasm";
@@ -23,9 +23,7 @@ export type StateVarData = {
 Plots the output data if the simulation was successful and shows an error
 message otherwise.
  */
-export function ODEResultPlot(props: {
-    result?: JsResult<ODEPlotData, string>;
-}) {
+export function ODEResultPlot(props: { result?: JsResult<ODEPlotData, string> }) {
     return (
         <Switch>
             <Match when={props.result?.tag === "Ok" && props.result.content}>
@@ -39,9 +37,7 @@ export function ODEResultPlot(props: {
 }
 
 /** Plot the output data from an ODE simulation. */
-export function ODEPlot(props: {
-    data: ODEPlotData;
-}) {
+export function ODEPlot(props: { data: ODEPlotData }) {
     const options = (): EChartsOption => ({
         legend: {
             data: props.data.states.map((state) => state.name),

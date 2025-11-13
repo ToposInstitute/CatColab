@@ -8,8 +8,8 @@ import * as uuid from "uuid";
 import type { Permissions } from "catcolab-api";
 import type { Document, Link, LinkType, StableRef, Uuid } from "catlog-wasm";
 import type { InterfaceToType } from "../util/types";
-import { type LiveDoc, findAndMigrate, makeLiveDoc } from "./document";
-import { type RpcClient, createRpcClient } from "./rpc";
+import { findAndMigrate, type LiveDoc, makeLiveDoc } from "./document";
+import { createRpcClient, type RpcClient } from "./rpc";
 
 /** Bundle of everything needed to interact with the CatColab backend. */
 export class Api {

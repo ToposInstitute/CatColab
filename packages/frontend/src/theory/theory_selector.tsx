@@ -1,6 +1,6 @@
 import Dialog from "@corvu/dialog";
 import { useLocation } from "@solidjs/router";
-import { For, createMemo, createSignal, useContext } from "solid-js";
+import { createMemo, createSignal, For, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { TheoryHelpButton } from "../page/toolbar";

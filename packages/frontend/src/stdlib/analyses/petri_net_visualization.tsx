@@ -1,13 +1,12 @@
 import type * as Viz from "@viz-js/viz";
 import invariant from "tiny-invariant";
 
-import { type DblModel, collectProduct } from "catlog-wasm";
+import { collectProduct, type DblModel } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import type { GraphLayoutConfig } from "../../visualization";
 import * as graphStyles from "../graph_styles";
-import { GraphVisualization } from "./graph_visualization";
-
 import svgStyles from "../svg_styles.module.css";
+import { GraphVisualization } from "./graph_visualization";
 
 /** Visualize a Petri net. */
 export default function PetriNetVisualization(props: ModelAnalysisProps<GraphLayoutConfig.Config>) {

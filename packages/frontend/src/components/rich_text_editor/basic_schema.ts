@@ -1,10 +1,9 @@
 // from https://github.com/automerge/automerge-prosemirror/blob/main/src/basicSchema.ts
 
-import type { DOMOutputSpec, Mark, MarkSpec, Node, NodeSpec } from "prosemirror-model";
-
 import { next as am } from "@automerge/automerge/slim";
 import type { MappedSchemaSpec } from "@automerge/prosemirror";
 import type { BlockMarker } from "@automerge/prosemirror/dist/types";
+import type { DOMOutputSpec, Mark, MarkSpec, Node, NodeSpec } from "prosemirror-model";
 
 // basics
 const pDOM: DOMOutputSpec = ["p", 0];
@@ -271,7 +270,7 @@ export const basicSchema = {
                                 return {
                                     href: value.href || "",
                                 };
-                            } catch (e) {
+                            } catch (_e) {
                                 console.warn("failed to parse link mark as JSON");
                             }
                         }
