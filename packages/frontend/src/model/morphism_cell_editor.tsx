@@ -1,7 +1,8 @@
-import { NameInput } from "catcolab-ui-components";
-import type { MorDecl } from "catlog-wasm";
 import { createMemo, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
+
+import { NameInput } from "catcolab-ui-components";
+import type { MorDecl } from "catlog-wasm";
 import type { CellActions } from "../notebook";
 import arrowStyles from "../stdlib/arrow_styles.module.css";
 import type { Theory } from "../theory";

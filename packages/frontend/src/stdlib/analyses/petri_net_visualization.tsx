@@ -1,6 +1,7 @@
 import type * as Viz from "@viz-js/viz";
-import { collectProduct, type DblModel } from "catlog-wasm";
 import invariant from "tiny-invariant";
+
+import { collectProduct, type DblModel } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import type { GraphLayoutConfig } from "../../visualization";
 import * as graphStyles from "../graph_styles";

@@ -1,7 +1,8 @@
 import { A, useNavigate } from "@solidjs/router";
-import { IconButton } from "catcolab-ui-components";
 import CircleHelp from "lucide-solid/icons/circle-help";
 import type { JSX } from "solid-js";
+
+import { IconButton } from "catcolab-ui-components";
 import type { TheoryMeta } from "../theory";
 import { DefaultAppMenu } from "./menubar";
 

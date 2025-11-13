@@ -1,5 +1,6 @@
 import type * as Viz from "@viz-js/viz";
 import invariant from "tiny-invariant";
+
 import type * as GraphLayout from "./graph_layout";
 import type { Point } from "./graph_layout";
 import type * as GraphvizJSON from "./graphviz_json";

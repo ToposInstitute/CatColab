@@ -1,6 +1,7 @@
 import type * as Viz from "@viz-js/viz";
-import { Foldable } from "catcolab-ui-components";
 import { type ComponentProps, createSignal, Show } from "solid-js";
+
+import { Foldable } from "catcolab-ui-components";
 import {
     DownloadSVGButton,
     GraphLayoutConfig,

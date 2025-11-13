@@ -1,13 +1,15 @@
 import { useNavigate } from "@solidjs/router";
-import type { RefStub } from "catcolab-api";
-import { Dialog, IconButton, Spinner } from "catcolab-ui-components";
 import { getAuth } from "firebase/auth";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import { useFirebaseApp } from "solid-firebase";
 import { createResource, createSignal, For, Match, onMount, Switch } from "solid-js";
+
+import type { RefStub } from "catcolab-api";
+import { Dialog, IconButton, Spinner } from "catcolab-ui-components";
 import { rpcResourceErr, rpcResourceOk, useApi } from "../api";
 import { BrandedToolbar } from "../page";
 import "./documents.css";
+
 import { LoginGate } from "./login";
 
 export default function TrashBin() {

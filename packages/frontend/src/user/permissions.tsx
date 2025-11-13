@@ -1,14 +1,4 @@
 import { useNavigate } from "@solidjs/router";
-import type { NewPermissions, PermissionLevel, Permissions, UserSummary } from "catcolab-api";
-import {
-    Button,
-    Dialog,
-    FormGroup,
-    IconButton,
-    SelectField,
-    Warning,
-} from "catcolab-ui-components";
-import type { Document } from "catlog-wasm";
 import { getAuth, signOut } from "firebase/auth";
 import Copy from "lucide-solid/icons/copy";
 import FileLock from "lucide-solid/icons/file-lock-2";
@@ -29,6 +19,17 @@ import {
 } from "solid-js";
 import { createStore, produce } from "solid-js/store";
 import invariant from "tiny-invariant";
+
+import type { NewPermissions, PermissionLevel, Permissions, UserSummary } from "catcolab-api";
+import {
+    Button,
+    Dialog,
+    FormGroup,
+    IconButton,
+    SelectField,
+    Warning,
+} from "catcolab-ui-components";
+import type { Document } from "catlog-wasm";
 import { type LiveDoc, useApi } from "../api";
 import { deepCopyJSON } from "../util/deepcopy";
 import { Login } from "./login";

@@ -1,7 +1,5 @@
 import Popover from "@corvu/popover";
 import { useNavigate } from "@solidjs/router";
-import { IconButton } from "catcolab-ui-components";
-import type { Document } from "catlog-wasm";
 import { getAuth, signOut } from "firebase/auth";
 import CopyToClipboard from "lucide-solid/icons/clipboard-copy";
 import Copy from "lucide-solid/icons/copy";
@@ -21,6 +19,9 @@ import X from "lucide-solid/icons/x";
 import { useAuth, useFirebaseApp } from "solid-firebase";
 import { type JSX, Show, useContext } from "solid-js";
 import invariant from "tiny-invariant";
+
+import { IconButton } from "catcolab-ui-components";
+import type { Document } from "catlog-wasm";
 import { useApi } from "../api";
 import { createModel } from "../model/document";
 import { TheoryLibraryContext } from "../theory";

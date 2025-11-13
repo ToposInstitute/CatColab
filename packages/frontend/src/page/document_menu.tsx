@@ -1,9 +1,10 @@
 import Popover from "@corvu/popover";
 import { useNavigate } from "@solidjs/router";
-import { IconButton } from "catcolab-ui-components";
 import Ellipsis from "lucide-solid/icons/ellipsis";
 import { createMemo, createResource, Match, Show, Switch, useContext } from "solid-js";
 import invariant from "tiny-invariant";
+
+import { IconButton } from "catcolab-ui-components";
 import { createAnalysis } from "../analysis";
 import { type LiveDoc, useApi } from "../api";
 import { DocumentTypeIcon } from "../components/document_type_icon";

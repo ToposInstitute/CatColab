@@ -1,6 +1,7 @@
 import { type ChangeFn, Repo } from "@automerge/automerge-repo";
-import { DblModel } from "catlog-wasm";
 import { afterAll, assert, describe, test } from "vitest";
+
+import { DblModel } from "catlog-wasm";
 import { NotebookUtils, newFormalCell, newRichTextCell } from "../notebook/types";
 import { stdTheories } from "../stdlib";
 import { Theory } from "../theory";

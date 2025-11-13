@@ -1,6 +1,7 @@
-import type { Cell, Notebook, NotebookCell } from "catlog-wasm";
 import invariant from "tiny-invariant";
 import { v7 } from "uuid";
+
+import type { Cell, Notebook, NotebookCell } from "catlog-wasm";
 import { assertExhaustive } from "../util/assert_exhaustive";
 import { deepCopyJSON } from "../util/deepcopy";
 

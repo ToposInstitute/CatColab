@@ -1,6 +1,7 @@
-import type { Ob, ObType, QualifiedName } from "catlog-wasm";
 import { useContext } from "solid-js";
 import invariant from "tiny-invariant";
+
+import type { Ob, ObType, QualifiedName } from "catlog-wasm";
 import { type IdInputOptions, ObIdInput } from "../components";
 import { LiveDiagramContext } from "./context";
 

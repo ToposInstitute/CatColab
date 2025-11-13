@@ -10,6 +10,7 @@ import LogInIcon from "lucide-solid/icons/log-in";
 import NotebookPen from "lucide-solid/icons/notebook-pen";
 import { useAuth, useFirebaseApp } from "solid-firebase";
 import { createSignal, Match, Show, Switch } from "solid-js";
+
 import { useApi } from "../api";
 import { createModel } from "../model/document";
 import { stdTheories } from "../stdlib";

@@ -1,6 +1,7 @@
 import type { MarkType } from "prosemirror-model";
 import { type EditorState, Plugin } from "prosemirror-state";
 import type { EditorView } from "prosemirror-view";
+
 import type { CustomSchema } from "./schema";
 
 export function hasContent(state: EditorState): boolean {

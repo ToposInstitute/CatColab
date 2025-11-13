@@ -1,5 +1,6 @@
-import type { UserSummary } from "catcolab-api";
 import { type ComponentProps, Show, splitProps } from "solid-js";
+
+import type { UserSummary } from "catcolab-api";
 import { useApi } from "../api";
 
 import "./username.css";

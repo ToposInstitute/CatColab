@@ -1,7 +1,8 @@
 import { MultiProvider } from "@solid-primitives/context";
-import type { DiagramJudgment, DiagramMorDecl, DiagramObDecl } from "catlog-wasm";
 import { Match, Switch, useContext } from "solid-js";
 import invariant from "tiny-invariant";
+
+import type { DiagramJudgment, DiagramMorDecl, DiagramObDecl } from "catlog-wasm";
 import { LiveModelContext } from "../model";
 import {
     type CellConstructor,

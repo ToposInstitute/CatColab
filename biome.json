@@ -19,7 +19,18 @@
         "enabled": true,
         "actions": {
             "source": {
-                "organizeImports": "on"
+                "organizeImports": {
+                    "level": "on",
+                    "options": {
+                        "groups": [
+                            ":NODE:",
+                            [":PACKAGE:", "!catcolab-ui-components", "!catcolab-api", "!catlog-wasm"],
+                            ":BLANK_LINE:",
+                            ["catcolab-ui-components", "catcolab-api", "catlog-wasm"],
+                            ":PATH:"
+                        ]
+                    }
+                }
             }
         }
     },

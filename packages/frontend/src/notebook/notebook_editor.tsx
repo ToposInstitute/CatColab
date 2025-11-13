@@ -2,14 +2,6 @@ import { monitorForElements } from "@atlaskit/pragmatic-drag-and-drop/element/ad
 import { getReorderDestinationIndex } from "@atlaskit/pragmatic-drag-and-drop-hitbox/util/get-reorder-destination-index";
 import type { DocHandle, Prop } from "@automerge/automerge-repo";
 import { makeEventListener } from "@solid-primitives/event-listener";
-import {
-    type Completion,
-    IconButton,
-    type KbdKey,
-    keyEventHasModifier,
-    type ModifierKey,
-} from "catcolab-ui-components";
-import type { Cell, Notebook } from "catlog-wasm";
 import ListPlus from "lucide-solid/icons/list-plus";
 import {
     type Component,
@@ -22,6 +14,15 @@ import {
     Switch,
 } from "solid-js";
 import invariant from "tiny-invariant";
+
+import {
+    type Completion,
+    IconButton,
+    type KbdKey,
+    keyEventHasModifier,
+    type ModifierKey,
+} from "catcolab-ui-components";
+import type { Cell, Notebook } from "catlog-wasm";
 import {
     type CellActions,
     type FormalCellEditorProps,

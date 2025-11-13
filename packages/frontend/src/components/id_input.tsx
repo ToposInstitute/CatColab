@@ -1,3 +1,6 @@
+import { createEffect, createSignal, splitProps } from "solid-js";
+import { match, P } from "ts-pattern";
+
 import {
     type Completion,
     InlineInput,
@@ -13,8 +16,6 @@ import type {
     QualifiedName,
     Uuid,
 } from "catlog-wasm";
-import { createEffect, createSignal, splitProps } from "solid-js";
-import { match, P } from "ts-pattern";
 
 import "./id_input.css";
 

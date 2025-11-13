@@ -1,6 +1,5 @@
 import Resizable, { type ContextValue } from "@corvu/resizable";
 import { useNavigate, useParams } from "@solidjs/router";
-import { Button, IconButton, InlineInput, ResizableHandle } from "catcolab-ui-components";
 import ChevronsRight from "lucide-solid/icons/chevrons-right";
 import Maximize2 from "lucide-solid/icons/maximize-2";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
@@ -15,6 +14,8 @@ import {
     useContext,
 } from "solid-js";
 import invariant from "tiny-invariant";
+
+import { Button, IconButton, InlineInput, ResizableHandle } from "catcolab-ui-components";
 import { getLiveAnalysis, type LiveAnalysisDocument } from "../analysis";
 import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
 import { AnalysisInfo } from "../analysis/analysis_info";

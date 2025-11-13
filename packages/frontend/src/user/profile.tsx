@@ -1,8 +1,9 @@
 import { createForm, reset, type SubmitHandler } from "@modular-forms/solid";
-import type { UserProfile } from "catcolab-api";
-import { Button, FormGroup, TextInputField } from "catcolab-ui-components";
 import { createEffect, createResource } from "solid-js";
 import invariant from "tiny-invariant";
+
+import type { UserProfile } from "catcolab-api";
+import { Button, FormGroup, TextInputField } from "catcolab-ui-components";
 import { useApi } from "../api";
 import { BrandedToolbar } from "../page";
 import { LoginGate } from "./login";

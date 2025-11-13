@@ -1,6 +1,7 @@
-import type { InstantiatedModel, ModelJudgment, MorDecl, ObDecl } from "catlog-wasm";
 import { Match, Switch, useContext } from "solid-js";
 import invariant from "tiny-invariant";
+
+import type { InstantiatedModel, ModelJudgment, MorDecl, ObDecl } from "catlog-wasm";
 import {
     type CellConstructor,
     type FormalCellEditorProps,

@@ -1,6 +1,7 @@
-import type { Mor, MorType, QualifiedName } from "catlog-wasm";
 import { splitProps, useContext } from "solid-js";
 import invariant from "tiny-invariant";
+
+import type { Mor, MorType, QualifiedName } from "catlog-wasm";
 import { type IdInputOptions, MorIdInput } from "../components";
 import { LiveModelContext } from "./context";
 

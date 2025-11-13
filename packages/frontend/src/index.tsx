@@ -1,7 +1,8 @@
 /* @refresh reload */
 
-import * as catlog from "catlog-wasm";
 import { render } from "solid-js/web";
+
+import * as catlog from "catlog-wasm";
 import App from "./App";
 
 import "catcolab-ui-components/global.css";

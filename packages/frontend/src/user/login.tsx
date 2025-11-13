@@ -1,5 +1,4 @@
 import { createForm, email, minLength, required, type SubmitHandler } from "@modular-forms/solid";
-import { Button, IconButton } from "catcolab-ui-components";
 import {
     createUserWithEmailAndPassword,
     GithubAuthProvider,
@@ -15,6 +14,8 @@ import SignUpIcon from "lucide-solid/icons/user-pen";
 import { useAuth, useFirebaseApp } from "solid-firebase";
 import { type JSX, Match, Switch } from "solid-js";
 import invariant from "tiny-invariant";
+
+import { Button, IconButton } from "catcolab-ui-components";
 import { useApi } from "../api";
 
 import "./login.css";

@@ -1,13 +1,14 @@
 import Dialog, { Content, Portal } from "@corvu/dialog";
 import { MultiProvider } from "@solid-primitives/context";
 import { Navigate, type RouteDefinition, Router, type RouteSectionProps } from "@solidjs/router";
-import { Button } from "catcolab-ui-components";
 import { type FirebaseOptions, initializeApp } from "firebase/app";
 import { getAuth, signOut } from "firebase/auth";
 import { FirebaseProvider } from "solid-firebase";
 import { createResource, createSignal, ErrorBoundary, lazy, Show } from "solid-js";
 import invariant from "tiny-invariant";
 import * as uuid from "uuid";
+
+import { Button } from "catcolab-ui-components";
 import { Api, ApiContext, useApi } from "./api";
 import { helpRoutes } from "./help/routes";
 import { createModelLibraryWithApi, ModelLibraryContext } from "./model";

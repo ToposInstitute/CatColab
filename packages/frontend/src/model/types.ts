@@ -1,5 +1,6 @@
-import type { DblModel, Link, ModelJudgment, MorType, ObType, QualifiedName } from "catlog-wasm";
 import { v7 } from "uuid";
+
+import type { DblModel, Link, ModelJudgment, MorType, ObType, QualifiedName } from "catlog-wasm";
 import { deepCopyJSON } from "../util/deepcopy";
 
 /** Create a new object declaration with the given object type. */

@@ -7,6 +7,10 @@ import {
     type Repo,
 } from "@automerge/automerge-repo";
 import { ReactiveMap } from "@solid-primitives/map";
+import { type Accessor, createResource, onCleanup } from "solid-js";
+import invariant from "tiny-invariant";
+import * as uuid from "uuid";
+
 import {
     type DblModel,
     DblModelMap,
@@ -16,9 +20,6 @@ import {
     type ModelValidationResult,
     type Uuid,
 } from "catlog-wasm";
-import { type Accessor, createResource, onCleanup } from "solid-js";
-import invariant from "tiny-invariant";
-import * as uuid from "uuid";
 import { type Api, type DocRef, findAndMigrate, type LiveDoc, makeLiveDoc } from "../api";
 import { NotebookUtils } from "../notebook/types";
 import type { Theory, TheoryLibrary } from "../theory";

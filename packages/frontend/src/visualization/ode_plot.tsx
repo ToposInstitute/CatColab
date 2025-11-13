@@ -1,7 +1,8 @@
-import { ErrorAlert } from "catcolab-ui-components";
-import type { JsResult } from "catlog-wasm";
 import type { EChartsOption } from "echarts";
 import { lazy, Match, Switch } from "solid-js";
+
+import { ErrorAlert } from "catcolab-ui-components";
+import type { JsResult } from "catlog-wasm";
 
 const ECharts = lazy(() => import("./echarts"));
 

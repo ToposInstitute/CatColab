@@ -1,3 +1,7 @@
+import Loader from "lucide-solid/icons/loader";
+import RotateCcw from "lucide-solid/icons/rotate-ccw";
+import { createMemo, For, Match, Show, Switch } from "solid-js";
+
 import {
     type ColumnSchema,
     createNumericalColumn,
@@ -8,9 +12,6 @@ import {
     Warning,
 } from "catcolab-ui-components";
 import type { ModelDiagramPresentation, ModelPresentation, QualifiedName } from "catlog-wasm";
-import Loader from "lucide-solid/icons/loader";
-import RotateCcw from "lucide-solid/icons/rotate-ccw";
-import { createMemo, For, Match, Show, Switch } from "solid-js";
 import type { DiagramAnalysisProps } from "../../analysis";
 import type { LiveDiagramDocument } from "../../diagram";
 import { uniqueIndexArray } from "../../util/indexing";

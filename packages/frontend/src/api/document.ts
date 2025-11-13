@@ -5,12 +5,13 @@ import type {
     DocHandleChangePayload,
     Repo,
 } from "@automerge/automerge-repo";
-import type { Permissions } from "catcolab-api";
-import { type Document, migrateDocument } from "catlog-wasm";
 import jsonpatch from "fast-json-patch";
 import { type Accessor, createEffect, createSignal } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import invariant from "tiny-invariant";
+
+import type { Permissions } from "catcolab-api";
+import { type Document, migrateDocument } from "catlog-wasm";
 
 /** Live document, typically retrieved from the backend.
 
