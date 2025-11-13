@@ -13,7 +13,7 @@ import {
 } from "catcolab-ui-components";
 import type { ModelDiagramPresentation, ModelPresentation, QualifiedName } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
-import type { LiveDiagramDocument } from "../../diagram";
+import type { LiveDiagramDoc } from "../../diagram";
 import { uniqueIndexArray } from "../../util/indexing";
 import { PDEPlot2D, type PDEPlotData2D } from "../../visualization";
 import { createJuliaKernel, executeAndRetrieve } from "./jupyter";
@@ -325,7 +325,7 @@ const makeSimulationCode = (data: SimulationData) =>
 
 /** Create data to send to the Julia kernel. */
 const makeSimulationData = (
-    liveDiagram: LiveDiagramDocument,
+    liveDiagram: LiveDiagramDoc,
     content: DecapodesAnalysisContent,
 ): SimulationData | undefined => {
     const validatedModel = liveDiagram.liveModel.validatedModel();

@@ -30,7 +30,7 @@ import {
     Warning,
 } from "catcolab-ui-components";
 import type { Document } from "catlog-wasm";
-import { type LiveDoc, useApi } from "../api";
+import { type DocRef, type LiveDoc, useApi } from "../api";
 import { deepCopyJSON } from "../util/deepcopy";
 import { Login } from "./login";
 import { NameUser, UserInput } from "./username";
@@ -46,7 +46,7 @@ type PermissionsState = Partial<Omit<Permissions, "users">> & {
 
 /** Form to configure permissions on a document.
  */
-export function PermissionsForm(props: { refId?: string; onComplete?: () => void }) {
+export function PermissionsForm(props: { refId: string; onComplete?: () => void }) {
     const [state, setState] = createStore<PermissionsState>({});
 
     const pendingPermissions = (): NewPermissions => {
@@ -90,7 +90,6 @@ export function PermissionsForm(props: { refId?: string; onComplete?: () => void
         ) ?? false;
 
     const updatePermissions = async () => {
-        invariant(props.refId);
         invariant(!currentPermissions.loading && !currentPermissions.error);
         const result = await api.rpc.set_permissions.mutate(props.refId, pendingPermissions());
         invariant(result.tag === "Ok");
@@ -196,31 +195,23 @@ export function PermissionsForm(props: { refId?: string; onComplete?: () => void
 }
 
 /** Toolbar button summarizing the document's permissions. */
-export const PermissionsButton = (props: { liveDoc: LiveDoc }) => (
-    <Show when={props.liveDoc.docRef}>
-        {(docRef) => {
-            const anyone = () => docRef().permissions.anyone;
-            const user = () => docRef().permissions.user;
-            return (
-                <Switch fallback={<EditorPermissionsButton permissions={docRef().permissions} />}>
-                    <Match when={anyone() === "Own"}>
-                        <AnonPermissionsButton />
-                    </Match>
-                    <Match when={user() === "Own"}>
-                        <OwnerPermissionsButton refId={docRef().refId} />
-                    </Match>
-                    <Match
-                        when={[anyone(), user()].every(
-                            (level) => level === null || level === "Read",
-                        )}
-                    >
-                        <ReadonlyPermissionsButton doc={props.liveDoc.doc} />
-                    </Match>
-                </Switch>
-            );
-        }}
-    </Show>
-);
+export const PermissionsButton = (props: { liveDoc: LiveDoc; docRef: DocRef }) => {
+    const anyone = () => props.docRef.permissions.anyone;
+    const user = () => props.docRef.permissions.user;
+    return (
+        <Switch fallback={<EditorPermissionsButton permissions={props.docRef.permissions} />}>
+            <Match when={anyone() === "Own"}>
+                <AnonPermissionsButton />
+            </Match>
+            <Match when={user() === "Own"}>
+                <OwnerPermissionsButton refId={props.docRef.refId} />
+            </Match>
+            <Match when={[anyone(), user()].every((level) => level === null || level === "Read")}>
+                <ReadonlyPermissionsButton doc={props.liveDoc.doc} />
+            </Match>
+        </Switch>
+    );
+};
 
 function AnonPermissionsButton() {
     const firebaseApp = useFirebaseApp();
@@ -342,7 +333,7 @@ const EditorPermissionsButton = (props: { permissions: Permissions }) => {
     );
 };
 
-function OwnerPermissionsButton(props: { refId?: string }) {
+function OwnerPermissionsButton(props: { refId: string }) {
     const [open, setOpen] = createSignal(false);
 
     return (

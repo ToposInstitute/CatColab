@@ -1,7 +1,7 @@
 import { type Accessor, createMemo } from "solid-js";
 
 import type { DblModel, JsResult, ODEResult } from "catlog-wasm";
-import type { LiveModelDocument } from "../../model";
+import type { LiveModelDoc } from "../../model";
 import type { ODEPlotData, StateVarData } from "../../visualization";
 
 /** Reactively simulate and plot an ODE derived from a model.
@@ -9,7 +9,7 @@ import type { ODEPlotData, StateVarData } from "../../visualization";
 Assumes that the variables in the ODE come from objects in the model.
  */
 export function createModelODEPlot(
-    liveModel: Accessor<LiveModelDocument>,
+    liveModel: Accessor<LiveModelDoc>,
     simulate: (model: DblModel) => ODEResult,
 ) {
     return createMemo<JsResult<ODEPlotData, string> | undefined>(

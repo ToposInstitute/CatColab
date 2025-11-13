@@ -285,7 +285,7 @@ function DocumentsMenuItem() {
 
 /** Menu item to delete a document. */
 export function DeleteMenuItem(props: {
-    refId: string | undefined;
+    refId: string;
     name: string | null;
     typeName: string;
     canDelete: boolean;
@@ -295,7 +295,6 @@ export function DeleteMenuItem(props: {
     invariant(actions, "Page actions should be provided");
 
     const handleDelete = async () => {
-        invariant(props.refId, "No document reference found");
         const success = await actions.showDeleteDialog({
             refId: props.refId,
             name: props.name,
@@ -316,17 +315,13 @@ export function DeleteMenuItem(props: {
 
 /** Menu item to restore a deleted document. */
 export function RestoreMenuItem(props: {
-    refId: string | undefined;
+    refId: string;
     typeName: string;
     onRestored?: () => void;
 }) {
     const api = useApi();
 
     const handleRestore = async () => {
-        if (!props.refId) {
-            return;
-        }
-
         try {
             const result = await api.rpc.restore_ref.mutate(props.refId);
             if (result.tag === "Ok") {

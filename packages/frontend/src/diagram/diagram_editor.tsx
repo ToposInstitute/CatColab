@@ -12,14 +12,14 @@ import {
 } from "../notebook";
 import type { InstanceTypeMeta } from "../theory";
 import { LiveDiagramContext } from "./context";
-import type { LiveDiagramDocument } from "./document";
+import type { LiveDiagramDoc } from "./document";
 import { DiagramMorphismCellEditor } from "./morphism_cell_editor";
 import { DiagramObjectCellEditor } from "./object_cell_editor";
 import { duplicateDiagramJudgment, newDiagramMorphismDecl, newDiagramObjectDecl } from "./types";
 
 /** Notebook editor for a diagram in a model.
  */
-export function DiagramNotebookEditor(props: { liveDiagram: LiveDiagramDocument }) {
+export function DiagramNotebookEditor(props: { liveDiagram: LiveDiagramDoc }) {
     const liveDoc = () => props.liveDiagram.liveDoc;
     const liveModel = () => props.liveDiagram.liveModel;
 

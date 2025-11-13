@@ -31,14 +31,20 @@ export type LiveDoc<Doc extends Document = Document> = {
 
     /** The Automerge document handle for the document. */
     docHandle: DocHandle<Doc>;
+};
 
-    /** Associated document ref in the backend, if any.
+/** Live document with backend ref information.
 
-    In typical usage of the official CatColab frontend and backend, this field
-    will be set, but lower-level components in the frontend are decoupled from
-    the backend, relying on Automerge only.
-     */
-    docRef?: DocRef;
+This type combines a live document with its associated document ref from the
+backend. Use this type when you need access to both the live document and its
+backend metadata (permissions, ref ID, etc.).
+ */
+export type LiveDocWithRef<Doc extends Document = Document> = {
+    /** The live document. */
+    liveDoc: LiveDoc<Doc>;
+
+    /** Associated document ref in the backend. */
+    docRef: DocRef;
 };
 
 /** The type discriminator for documents */
@@ -96,13 +102,10 @@ indirectly, via [`getLiveDoc`]. However, if you want to bypass the CatColab
 backend and fetch a document from another Automerge repo, you can call this
 function directly.
  */
-export function makeLiveDoc<Doc extends Document>(
-    docHandle: DocHandle<Doc>,
-    docRef?: DocRef,
-): LiveDoc<Doc> {
+export function makeLiveDoc<Doc extends Document>(docHandle: DocHandle<Doc>): LiveDoc<Doc> {
     const doc = makeDocHandleReactive(docHandle);
     const changeDoc = (f: ChangeFn<Doc>) => docHandle.change(f);
-    return { doc, changeDoc, docHandle, docRef };
+    return { doc, changeDoc, docHandle };
 }
 
 /** Create a Solid Store that tracks an Automerge document. */

@@ -20,10 +20,10 @@ import {
     type ModelValidationResult,
     type Uuid,
 } from "catlog-wasm";
-import { type Api, type DocRef, findAndMigrate, type LiveDoc, makeLiveDoc } from "../api";
+import { type Api, findAndMigrate, type LiveDoc, makeLiveDoc } from "../api";
 import { NotebookUtils } from "../notebook/types";
 import type { Theory, TheoryLibrary } from "../theory";
-import type { LiveModelDocument, ModelDocument } from "./document";
+import type { LiveModelDoc, ModelDocument } from "./document";
 
 /** An elaborated model along with its validation status. */
 export type ValidatedModel =
@@ -63,7 +63,6 @@ export type ModelEntry = {
 type ModelLibraryParameters<RefId> = {
     canonicalize: (refId: RefId) => ModelKey;
     fetch: (refId: RefId) => Promise<DocHandle<ModelDocument>>;
-    docRef?: (refId: RefId) => Promise<DocRef>;
     theories: TheoryLibrary;
 };
 
@@ -123,11 +122,6 @@ export class ModelLibrary<RefId> {
             },
             fetch(refId) {
                 return api.getDocHandle<ModelDocument>(refId, "model");
-            },
-            async docRef(refId) {
-                const permissions = await api.getPermissions(refId);
-                const isDeleted = await api.isDocumentDeleted(refId);
-                return { refId, permissions, isDeleted };
             },
             theories,
         });
@@ -207,15 +201,14 @@ export class ModelLibrary<RefId> {
     }
 
     /** Gets "live" model containing a reactive model document. */
-    async getLiveModel(refId: RefId): Promise<LiveModelDocument> {
+    async getLiveModel(refId: RefId): Promise<LiveModelDoc> {
         await this.addModel(refId);
 
         const key = this.params.canonicalize(refId);
         const docHandle = this.handles.get(key)?.docHandle;
         invariant(docHandle);
 
-        const docRef = this.params.docRef ? await this.params.docRef(refId) : undefined;
-        const liveDoc = makeLiveDoc(docHandle, docRef);
+        const liveDoc = makeLiveDoc(docHandle);
         return makeLiveModel(liveDoc, () => this.entries.get(key));
     }
 
@@ -226,7 +219,7 @@ export class ModelLibrary<RefId> {
     }
 
     /** Use "live" model in a component. */
-    useLiveModel(refId: () => RefId | undefined): Accessor<LiveModelDocument | undefined> {
+    useLiveModel(refId: () => RefId | undefined): Accessor<LiveModelDoc | undefined> {
         const [liveModel] = createResource(refId, (refId) => this.getLiveModel(refId));
         return liveModel;
     }
@@ -325,7 +318,7 @@ function isPatchToFormalContent(doc: ModelDocument, patch: Patch): boolean {
 const makeLiveModel = (
     liveDoc: LiveDoc<ModelDocument>,
     getEntry: Accessor<ModelEntry | undefined>,
-): LiveModelDocument => ({
+): LiveModelDoc => ({
     type: "model",
     liveDoc,
     theory() {

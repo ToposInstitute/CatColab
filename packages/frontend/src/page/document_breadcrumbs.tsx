@@ -1,13 +1,15 @@
 import { createResource, For, Show } from "solid-js";
-import invariant from "tiny-invariant";
 
 import type { Document } from "catlog-wasm";
-import { type LiveDoc, useApi } from "../api";
+import { type LiveDoc, type LiveDocWithRef, useApi } from "../api";
 import { assertExhaustive } from "../util/assert_exhaustive";
 import "./document_breadcrumbs.css";
 
-export function DocumentBreadcrumbs(props: { liveDoc: LiveDoc }) {
-    const [documentChain] = createResource(() => props.liveDoc, getDocumentChain);
+export function DocumentBreadcrumbs(props: { liveDoc: LiveDoc; docRefId: string }) {
+    const [documentChain] = createResource(
+        () => ({ liveDoc: props.liveDoc, docRefId: props.docRefId }),
+        getDocumentChain,
+    );
 
     return (
         <div class="breadcrumbs-wrapper">
@@ -18,9 +20,9 @@ export function DocumentBreadcrumbs(props: { liveDoc: LiveDoc }) {
                             {index() > 0 && <span class="breadcrumb-spacer">/</span>}
                             <a
                                 class="breadcrumb-link"
-                                href={`/${doc.doc.type}/${doc.docRef?.refId}`}
+                                href={`/${doc.liveDoc.doc.type}/${doc.docRef.refId}`}
                             >
-                                {doc.doc.name || "untitled"}
+                                {doc.liveDoc.doc.name || "untitled"}
                             </a>
                         </>
                     )}
@@ -43,15 +45,18 @@ export function getParentRefId(document: Document): string | null {
     }
 }
 
-async function getDocumentChain(document: LiveDoc): Promise<LiveDoc[]> {
-    invariant(document.docRef, "Document should have a ref ID");
-
+async function getDocumentChain(props: {
+    liveDoc: LiveDoc;
+    docRefId: string;
+}): Promise<LiveDocWithRef[]> {
     const api = useApi();
-    const documentChain: LiveDoc[] = [document];
+    // We need to fetch the full document to get proper permissions
+    const firstDoc = await api.getLiveDoc(props.docRefId);
+    const documentChain: LiveDocWithRef[] = [firstDoc];
 
     while (true) {
         // biome-ignore lint/style/noNonNullAssertion: the array initializer guarantees that there will always be at least one item in the array
-        const parentRefId = getParentRefId(documentChain[0]!.doc);
+        const parentRefId = getParentRefId(documentChain[0]!.liveDoc.doc);
         if (!parentRefId) {
             break;
         }

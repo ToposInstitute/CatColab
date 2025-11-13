@@ -8,7 +8,7 @@ import * as uuid from "uuid";
 import type { Permissions } from "catcolab-api";
 import type { Document, Link, LinkType, StableRef, Uuid } from "catlog-wasm";
 import type { InterfaceToType } from "../util/types";
-import { findAndMigrate, type LiveDoc, makeLiveDoc } from "./document";
+import { findAndMigrate, type LiveDocWithRef, makeLiveDoc } from "./document";
 import { createRpcClient, type RpcClient } from "./rpc";
 
 /** Bundle of everything needed to interact with the CatColab backend. */
@@ -53,7 +53,7 @@ export class Api {
         this.docCache = new Map();
     }
 
-    /** Get a live document for the given document ref.
+    /** Get a live document with backend ref for the given document ref.
 
     When the user has write permissions, changes to the document will be
     propagated by Automerge to the backend and to other clients. When the user
@@ -64,18 +64,22 @@ export class Api {
     async getLiveDoc<Doc extends Document>(
         refId: Uuid,
         docType?: Doc["type"],
-    ): Promise<LiveDoc<Doc>> {
+    ): Promise<LiveDocWithRef<Doc>> {
         const docHandle = await this.getDocHandle<Doc>(refId, docType);
         const permissions = await this.getPermissions(refId);
         const isDeleted = await this.isDocumentDeleted(refId);
-        return makeLiveDoc(docHandle, {
-            refId,
-            permissions,
-            isDeleted,
-        });
+        const liveDoc = makeLiveDoc(docHandle);
+        return {
+            liveDoc,
+            docRef: {
+                refId,
+                permissions,
+                isDeleted,
+            },
+        };
     }
 
-    async getLiveDocFromLink<Doc extends Document>(link: Link): Promise<LiveDoc<Doc>> {
+    async getLiveDocFromLink<Doc extends Document>(link: Link): Promise<LiveDocWithRef<Doc>> {
         return this.getLiveDoc(link._id);
     }
 

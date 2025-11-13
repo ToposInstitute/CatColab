@@ -3,16 +3,16 @@ import { createMemo, createResource, For, Show } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { Link } from "catlog-wasm";
-import { type Api, type LiveDoc, useApi } from "../api";
+import { type Api, type LiveDocWithRef, useApi } from "../api";
 import { DocumentTypeIcon } from "../components/document_type_icon";
 import { DocumentMenu } from "./document_menu";
 import { AppMenu, ImportMenuItem, NewModelItem } from "./menubar";
 
 export function DocumentSidebar(props: {
-    primaryLiveDoc: LiveDoc;
-    secondaryLiveDoc?: LiveDoc;
-    refetchPrimaryDocument: () => void;
-    refetchSecondaryDocument: () => void;
+    primaryDoc?: LiveDocWithRef;
+    secondaryDoc?: LiveDocWithRef;
+    refetchPrimaryDoc: () => void;
+    refetchSecondaryDoc: () => void;
 }) {
     return (
         <>
@@ -20,27 +20,31 @@ export function DocumentSidebar(props: {
                 <NewModelItem />
                 <ImportMenuItem />
             </AppMenu>
-            <RelatedDocuments
-                primaryLiveDoc={props.primaryLiveDoc}
-                secondaryLiveDoc={props.secondaryLiveDoc}
-                refetchPrimaryDocument={props.refetchPrimaryDocument}
-                refetchSecondaryDocument={props.refetchSecondaryDocument}
-            />
+            <Show when={props.primaryDoc}>
+                {(primaryDoc) => (
+                    <RelatedDocuments
+                        primaryDoc={primaryDoc()}
+                        secondaryDoc={props.secondaryDoc}
+                        refetchPrimaryDoc={props.refetchPrimaryDoc}
+                        refetchSecondaryDoc={props.refetchSecondaryDoc}
+                    />
+                )}
+            </Show>
         </>
     );
 }
 
-async function getLiveDocRoot(livDoc: LiveDoc, api: Api): Promise<LiveDoc> {
+async function getLiveDocRoot(doc: LiveDocWithRef, api: Api): Promise<LiveDocWithRef> {
     let parentLink: Link;
-    switch (livDoc.doc.type) {
+    switch (doc.liveDoc.doc.type) {
         case "diagram":
-            parentLink = livDoc.doc.diagramIn;
+            parentLink = doc.liveDoc.doc.diagramIn;
             break;
         case "analysis":
-            parentLink = livDoc.doc.analysisOf;
+            parentLink = doc.liveDoc.doc.analysisOf;
             break;
         default:
-            return livDoc;
+            return doc;
     }
 
     const parentDoc = await api.getLiveDocFromLink(parentLink);
@@ -48,29 +52,29 @@ async function getLiveDocRoot(livDoc: LiveDoc, api: Api): Promise<LiveDoc> {
 }
 
 function RelatedDocuments(props: {
-    primaryLiveDoc: LiveDoc;
-    secondaryLiveDoc?: LiveDoc;
-    refetchPrimaryDocument: () => void;
-    refetchSecondaryDocument: () => void;
+    primaryDoc: LiveDocWithRef;
+    secondaryDoc?: LiveDocWithRef;
+    refetchPrimaryDoc: () => void;
+    refetchSecondaryDoc: () => void;
 }) {
     const api = useApi();
 
-    const [liveDocRoot] = createResource(
-        () => props.primaryLiveDoc,
-        async (liveDoc) => getLiveDocRoot(liveDoc, api),
+    const [docRoot] = createResource(
+        () => props.primaryDoc,
+        async (doc) => getLiveDocRoot(doc, api),
     );
 
     return (
-        <Show when={liveDocRoot()}>
-            {(liveDocRoot) => (
+        <Show when={docRoot()}>
+            {(docRoot) => (
                 <div class="related-tree">
                     <DocumentsTreeNode
-                        liveDoc={liveDocRoot()}
+                        doc={docRoot()}
                         indent={1}
-                        primaryLiveDoc={props.primaryLiveDoc}
-                        secondaryLiveDoc={props.secondaryLiveDoc}
-                        refetchPrimaryDocument={props.refetchPrimaryDocument}
-                        refetchSecondaryDocument={props.refetchSecondaryDocument}
+                        primaryDoc={props.primaryDoc}
+                        secondaryDoc={props.secondaryDoc}
+                        refetchPrimaryDoc={props.refetchPrimaryDoc}
+                        refetchSecondaryDoc={props.refetchSecondaryDoc}
                     />
                 </div>
             )}
@@ -79,19 +83,19 @@ function RelatedDocuments(props: {
 }
 
 function DocumentsTreeNode(props: {
-    liveDoc: LiveDoc;
+    doc: LiveDocWithRef;
     indent: number;
-    primaryLiveDoc: LiveDoc;
-    secondaryLiveDoc?: LiveDoc;
-    refetchPrimaryDocument: () => void;
-    refetchSecondaryDocument: () => void;
+    primaryDoc: LiveDocWithRef;
+    secondaryDoc?: LiveDocWithRef;
+    refetchPrimaryDoc: () => void;
+    refetchSecondaryDoc: () => void;
 }) {
     const api = useApi();
 
     const [childDocs, { refetch }] = createResource(
-        () => props.liveDoc,
-        async (liveDoc) => {
-            const docRefId = liveDoc.docRef?.refId;
+        () => props.doc,
+        async (doc) => {
+            const docRefId = doc.docRef.refId;
             invariant(docRefId, "Doc must have a valid ref");
 
             const results = await api.rpc.get_ref_children_stubs.query(docRefId);
@@ -109,23 +113,23 @@ function DocumentsTreeNode(props: {
     return (
         <>
             <DocumentsTreeLeaf
-                liveDoc={props.liveDoc}
+                doc={props.doc}
                 indent={props.indent}
-                primaryLiveDoc={props.primaryLiveDoc}
-                secondaryLiveDoc={props.secondaryLiveDoc}
-                refetchDocument={refetch}
-                refetchPrimaryDocument={props.refetchPrimaryDocument}
-                refetchSecondaryDocument={props.refetchSecondaryDocument}
+                primaryDoc={props.primaryDoc}
+                secondaryDoc={props.secondaryDoc}
+                refetchDoc={refetch}
+                refetchPrimaryDoc={props.refetchPrimaryDoc}
+                refetchSecondaryDoc={props.refetchSecondaryDoc}
             />
             <For each={childDocs()}>
                 {(child) => (
                     <DocumentsTreeNode
-                        liveDoc={child}
+                        doc={child}
                         indent={props.indent + 1}
-                        primaryLiveDoc={props.primaryLiveDoc}
-                        secondaryLiveDoc={props.secondaryLiveDoc}
-                        refetchPrimaryDocument={props.refetchPrimaryDocument}
-                        refetchSecondaryDocument={props.refetchSecondaryDocument}
+                        primaryDoc={props.primaryDoc}
+                        secondaryDoc={props.secondaryDoc}
+                        refetchPrimaryDoc={props.refetchPrimaryDoc}
+                        refetchSecondaryDoc={props.refetchSecondaryDoc}
                     />
                 )}
             </For>
@@ -134,26 +138,26 @@ function DocumentsTreeNode(props: {
 }
 
 function DocumentsTreeLeaf(props: {
-    liveDoc: LiveDoc;
+    doc: LiveDocWithRef;
     indent: number;
-    primaryLiveDoc: LiveDoc;
-    secondaryLiveDoc?: LiveDoc;
-    refetchDocument: () => void;
-    refetchPrimaryDocument: () => void;
-    refetchSecondaryDocument: () => void;
+    primaryDoc: LiveDocWithRef;
+    secondaryDoc?: LiveDocWithRef;
+    refetchDoc: () => void;
+    refetchPrimaryDoc: () => void;
+    refetchSecondaryDoc: () => void;
 }) {
     const navigate = useNavigate();
-    const clickedRefId = createMemo(() => props.liveDoc.docRef?.refId);
-    const primaryRefId = createMemo(() => props.primaryLiveDoc.docRef?.refId);
-    const secondaryRefId = createMemo(() => props.secondaryLiveDoc?.docRef?.refId);
+    const clickedRefId = createMemo(() => props.doc.docRef.refId);
+    const primaryRefId = createMemo(() => props.primaryDoc.docRef.refId);
+    const secondaryRefId = createMemo(() => props.secondaryDoc?.docRef.refId);
 
     const handleClick = () => {
         // If clicking on primary or secondary doc, navigate to just that doc
         if (clickedRefId() === primaryRefId() || clickedRefId() === secondaryRefId()) {
-            navigate(`/${createLinkPart(props.liveDoc)}`);
+            navigate(`/${createLinkPart(props.doc)}`);
         } else {
             // Otherwise, open it as a side panel
-            navigate(`/${createLinkPart(props.primaryLiveDoc)}/${createLinkPart(props.liveDoc)}`);
+            navigate(`/${createLinkPart(props.primaryDoc)}/${createLinkPart(props.doc)}`);
         }
     };
 
@@ -162,28 +166,29 @@ function DocumentsTreeLeaf(props: {
             onClick={handleClick}
             class="related-document"
             classList={{
-                active: props.liveDoc.docRef?.refId === props.primaryLiveDoc.docRef?.refId,
+                active: props.doc.docRef.refId === props.primaryDoc.docRef.refId,
             }}
             style={{ "padding-left": `${props.indent * 16}px` }}
         >
             <DocumentTypeIcon
-                documentType={props.liveDoc.doc.type}
-                isDeleted={props.liveDoc.docRef?.isDeleted}
+                documentType={props.doc.liveDoc.doc.type}
+                isDeleted={props.doc.docRef.isDeleted}
             />
             <div
                 class="document-name"
-                style={{ color: props.liveDoc.docRef?.isDeleted ? "lightgray" : undefined }}
+                style={{ color: props.doc.docRef.isDeleted ? "lightgray" : undefined }}
             >
-                {props.liveDoc.doc.name || "Untitled"}
+                {props.doc.liveDoc.doc.name || "Untitled"}
             </div>
             <div class="document-actions" onClick={(e) => e.stopPropagation()}>
                 <DocumentMenu
-                    liveDoc={props.liveDoc}
-                    onDocumentCreated={props.refetchDocument}
-                    onDocumentDeleted={() => {
-                        props.refetchDocument();
-                        props.refetchPrimaryDocument();
-                        props.refetchSecondaryDocument();
+                    liveDoc={props.doc.liveDoc}
+                    docRef={props.doc.docRef}
+                    onDocCreated={props.refetchDoc}
+                    onDocDeleted={() => {
+                        props.refetchDoc();
+                        props.refetchPrimaryDoc();
+                        props.refetchSecondaryDoc();
                     }}
                 />
             </div>
@@ -191,6 +196,6 @@ function DocumentsTreeLeaf(props: {
     );
 }
 
-function createLinkPart(liveDoc: LiveDoc): string {
-    return `${liveDoc.doc.type}/${liveDoc.docRef?.refId}`;
+function createLinkPart(doc: LiveDocWithRef): string {
+    return `${doc.liveDoc.doc.type}/${doc.docRef.refId}`;
 }

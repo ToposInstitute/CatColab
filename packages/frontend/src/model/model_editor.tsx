@@ -10,7 +10,7 @@ import {
 } from "../notebook";
 import type { ModelTypeMeta } from "../theory";
 import { LiveModelContext } from "./context";
-import type { LiveModelDocument } from "./document";
+import type { LiveModelDoc } from "./document";
 import { InstantiationCellEditor } from "./instantiation_cell_editor";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
@@ -23,7 +23,7 @@ import {
 
 /** Notebook editor for a model of a double theory.
  */
-export function ModelNotebookEditor(props: { liveModel: LiveModelDocument }) {
+export function ModelNotebookEditor(props: { liveModel: LiveModelDoc }) {
     const liveDoc = () => props.liveModel.liveDoc;
 
     const cellConstructors = (): CellConstructor<ModelJudgment>[] => [

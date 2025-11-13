@@ -6,7 +6,7 @@ import invariant from "tiny-invariant";
 
 import { IconButton } from "catcolab-ui-components";
 import { createAnalysis } from "../analysis";
-import { type LiveDoc, useApi } from "../api";
+import { type DocRef, type LiveDoc, useApi } from "../api";
 import { DocumentTypeIcon } from "../components/document_type_icon";
 import { createDiagram } from "../diagram";
 import {
@@ -23,8 +23,9 @@ import { TheoryLibraryContext } from "../theory";
 
 export function DocumentMenu(props: {
     liveDoc: LiveDoc;
-    onDocumentCreated?: () => void;
-    onDocumentDeleted?: () => void;
+    docRef: DocRef;
+    onDocCreated?: () => void;
+    onDocDeleted?: () => void;
 }) {
     const api = useApi();
 
@@ -39,27 +40,24 @@ export function DocumentMenu(props: {
                 invariant(modelRefId, "To create diagram, parent model should have a ref ID");
                 break;
             case "model":
-                modelRefId = props.liveDoc.docRef?.refId;
-                invariant(modelRefId, "To create diagram, model should have a ref ID");
+                modelRefId = props.docRef.refId;
                 break;
             default:
                 throw `Can't create diagram for ${props.liveDoc.doc.type}`;
         }
 
         const newRef = await createDiagram(api, api.makeUnversionedRef(modelRefId));
-        props.onDocumentCreated?.();
+        props.onDocCreated?.();
         navigate(`/diagram/${newRef}`);
     };
 
     const onNewAnalysis = async () => {
-        const docRefId = props.liveDoc.docRef?.refId;
-        invariant(docRefId, "To create analysis, parent should have a ref ID");
-
+        const docRefId = props.docRef.refId;
         const docType = props.liveDoc.doc.type;
         invariant(docType !== "analysis", "Analysis cannot be created on other analysis");
 
         const newRef = await createAnalysis(api, docType, api.makeUnversionedRef(docRefId));
-        props.onDocumentCreated?.();
+        props.onDocCreated?.();
         navigate(`/analysis/${newRef}`);
     };
 
@@ -80,13 +78,9 @@ export function DocumentMenu(props: {
             props.liveDoc.doc.type !== "analysis"
         );
     });
+    const canDelete = () => props.docRef.permissions.user === "Own" && !props.docRef.isDeleted;
 
-    const canDelete = () =>
-        props.liveDoc.docRef?.permissions.user === "Own" && !props.liveDoc.docRef?.isDeleted;
-
-    const canRestore = () =>
-        props.liveDoc.docRef?.permissions.user === "Own" && props.liveDoc.docRef?.isDeleted;
-
+    const canRestore = () => props.docRef.permissions.user === "Own" && props.docRef.isDeleted;
     return (
         <Popover
             placement="bottom-end"
@@ -131,18 +125,18 @@ export function DocumentMenu(props: {
                     <Switch>
                         <Match when={canRestore()}>
                             <RestoreMenuItem
-                                refId={props.liveDoc.docRef?.refId}
+                                refId={props.docRef.refId}
                                 typeName={props.liveDoc.doc.type}
-                                onRestored={props.onDocumentDeleted}
+                                onRestored={props.onDocDeleted}
                             />
                         </Match>
                         <Match when={true}>
                             <DeleteMenuItem
-                                refId={props.liveDoc.docRef?.refId}
+                                refId={props.docRef.refId}
                                 name={props.liveDoc.doc.name}
                                 typeName={props.liveDoc.doc.type}
                                 canDelete={canDelete()}
-                                onDeleted={props.onDocumentDeleted}
+                                onDeleted={props.onDocDeleted}
                             />
                         </Match>
                     </Switch>
