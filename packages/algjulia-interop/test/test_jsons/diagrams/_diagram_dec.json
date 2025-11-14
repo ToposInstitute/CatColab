@@ -1,0 +1,79 @@
+{
+  "diagramIn": {
+    "_id": "019a4be7-f557-7181-b642-d4c54bcf4f6f",
+    "_server": "backend-next.catcolab.org",
+    "_version": null,
+    "type": "diagram-in"
+  },
+  "name": "",
+  "notebook": {
+    "cellContents": {
+      "019a4be8-3d0f-747e-b791-546c731fcbf1": {
+        "tag": "formal",
+        "id": "019a4be8-3d0f-747e-b791-546c731fcbf1",
+        "content": {
+          "tag": "object",
+          "id": "019a4be8-3d0f-747e-b791-50a7dd0418fa",
+          "name": "A",
+          "obType": {
+            "tag": "Basic",
+            "content": "Object"
+          },
+          "over": {
+            "tag": "Basic",
+            "content": "0194d398-a28e-7433-89f8-563bae6e6875"
+          }
+        }
+      },
+      "019a4be8-502f-7777-a0dd-a9265a951830": {
+        "tag": "formal",
+        "id": "019a4be8-502f-7777-a0dd-a9265a951830",
+        "content": {
+          "tag": "object",
+          "id": "019a4be8-502f-7777-a0dd-a6684ff2a6ce",
+          "name": "B",
+          "obType": {
+            "tag": "Basic",
+            "content": "Object"
+          },
+          "over": {
+            "tag": "Basic",
+            "content": "0194d39a-89cf-762b-9d2a-5678b878d6c7"
+          }
+        }
+      },
+      "019a4be8-616f-77ae-80a4-1f9e462b2c91": {
+        "tag": "formal",
+        "id": "019a4be8-616f-77ae-80a4-1f9e462b2c91",
+        "content": {
+          "tag": "morphism",
+          "id": "019a4be8-616f-77ae-80a4-18f9eb06e548",
+          "name": "",
+          "morType": {
+            "tag": "Basic",
+            "content": "Nonscalar"
+          },
+          "over": {
+            "tag": "Basic",
+            "content": "0194d39a-6084-7537-aec1-caf560ba416b"
+          },
+          "dom": {
+            "tag": "Basic",
+            "content": "019a4be8-3d0f-747e-b791-50a7dd0418fa"
+          },
+          "cod": {
+            "tag": "Basic",
+            "content": "019a4be8-502f-7777-a0dd-a6684ff2a6ce"
+          }
+        }
+      }
+    },
+    "cellOrder": [
+      "019a4be8-3d0f-747e-b791-546c731fcbf1",
+      "019a4be8-502f-7777-a0dd-a9265a951830",
+      "019a4be8-616f-77ae-80a4-1f9e462b2c91"
+    ]
+  },
+  "type": "diagram",
+  "version": "1"
+}
