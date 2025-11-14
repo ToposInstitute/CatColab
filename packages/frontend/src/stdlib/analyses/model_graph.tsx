@@ -67,12 +67,13 @@ export function modelToGraphviz(
             continue;
         }
         const meta = theory.modelMorTypeMeta(mor.morType);
+        const label = mor.label?.every((seg) => seg !== "") ? mor.label.join(".") : "";
         edges.push({
             head: mor.cod.content,
             tail: mor.dom.content,
             attributes: {
-                id: id,
-                label: mor.label?.join(".") ?? "",
+                id,
+                label,
                 class: graphStyles.svgCssClasses(meta).join(" "),
                 fontname: graphStyles.graphvizFontname(meta),
                 // Not recognized by Graphviz but will be passed through!
