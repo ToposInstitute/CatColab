@@ -362,6 +362,23 @@ impl ThSymMonoidalCategory {
     }
 }
 
+/// A theory of power systems.
+#[wasm_bindgen]
+pub struct ThPowerSystem(Rc<theory::DiscreteDblTheory>);
+
+#[wasm_bindgen]
+impl ThPowerSystem {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Rc::new(theories::th_power_system()))
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory(self.0.clone().into())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
