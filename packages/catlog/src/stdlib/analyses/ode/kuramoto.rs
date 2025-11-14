@@ -10,11 +10,8 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use super::{ODEAnalysis, ODEProblem};
-use crate::dbl::{
-    model::{FgDblModel, ModalDblModel, ModalOb},
-    theory::{ModalMorType, ModalObType},
-};
-use crate::one::FgCategory;
+use crate::dbl::model::{DiscreteDblModel, FgDblModel};
+use crate::one::{FgCategory, QualifiedPath};
 use crate::simulate::ode::{KuramotoOrder, KuramotoSystem};
 use crate::zero::QualifiedName;
 
@@ -90,13 +87,13 @@ pub struct CommonKuramotoProblemData {
 
 /// Kuramoto ODE analysis of a model.
 pub struct KuramotoAnalysis {
-    node_ob_type: ModalObType,
-    link_mor_types: Vec<ModalMorType>,
+    node_ob_type: QualifiedName,
+    link_mor_types: Vec<QualifiedPath>,
 }
 
 impl KuramotoAnalysis {
     /// Constructs a Kuramoto analysis with nodes the objects of given type.
-    pub fn new(ob_type: ModalObType) -> Self {
+    pub fn new(ob_type: QualifiedName) -> Self {
         Self {
             node_ob_type: ob_type,
             link_mor_types: Default::default(),
@@ -104,7 +101,7 @@ impl KuramotoAnalysis {
     }
 
     /// Adds a type of morphism to be treated as links between nodes.
-    pub fn add_link_type(mut self, mor_type: ModalMorType) -> Self {
+    pub fn add_link_type(mut self, mor_type: QualifiedPath) -> Self {
         self.link_mor_types.push(mor_type);
         self
     }
@@ -112,7 +109,7 @@ impl KuramotoAnalysis {
     /// Creates a Kuramoto system from a model plus numerical data.
     pub fn build_system(
         &self,
-        model: &ModalDblModel,
+        model: &DiscreteDblModel,
         data: &KuramotoProblemData,
     ) -> ODEAnalysis<KuramotoSystem> {
         let common = data.common();
@@ -129,13 +126,8 @@ impl KuramotoAnalysis {
         for mor_type in self.link_mor_types.iter() {
             for mor in model.mor_generators_with_type(mor_type) {
                 let coef = common.coupling_coeffs.get(&mor).copied().unwrap_or_default();
-                let ModalOb::Generator(dom_id) = model.mor_generator_dom(&mor) else {
-                    panic!("Domain should be a generating object");
-                };
-                let ModalOb::Generator(cod_id) = model.mor_generator_cod(&mor) else {
-                    panic!("Codomain should be a generating object");
-                };
-                let (i, j) = (*ob_index.get(&dom_id).unwrap(), *ob_index.get(&cod_id).unwrap());
+                let (dom, cod) = (model.mor_generator_dom(&mor), model.mor_generator_cod(&mor));
+                let (i, j) = (*ob_index.get(&dom).unwrap(), *ob_index.get(&cod).unwrap());
                 // Coupling matrix is assumed symmetric in the literature.
                 coupling_coeffs[(i, j)] += coef;
                 coupling_coeffs[(j, i)] += coef;

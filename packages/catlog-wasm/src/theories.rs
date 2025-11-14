@@ -7,8 +7,8 @@ use std::rc::Rc;
 
 use wasm_bindgen::prelude::*;
 
-use catlog::dbl::theory::{self, ModeApp};
-use catlog::one::{Path, ShortPath};
+use catlog::dbl::theory;
+use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 use catlog::zero::name;
 
@@ -386,11 +386,11 @@ impl ThPowerSystem {
         data: &analyses::ode::KuramotoProblemData,
     ) -> Result<ODEResult, String> {
         Ok(ODEResult(
-            analyses::ode::KuramotoAnalysis::new(ModeApp::new(name("Bus")))
+            analyses::ode::KuramotoAnalysis::new(name("Bus"))
                 // Should we distinguish between lines and transformers?
-                .add_link_type(ShortPath::Zero(ModeApp::new(name("Bus"))))
-                .add_link_type(ShortPath::One(ModeApp::new(name("Passive"))))
-                .build_system(model.modal()?, data)
+                .add_link_type(Path::empty(name("Bus")))
+                .add_link_type(Path::single(name("Passive")))
+                .build_system(model.discrete()?, data)
                 .solve_with_defaults()
                 .map_err(|err| format!("{err:?}"))
                 .into(),
