@@ -364,7 +364,7 @@ impl ThSymMonoidalCategory {
 
 /// A theory of power systems.
 #[wasm_bindgen]
-pub struct ThPowerSystem(Rc<theory::ModalDblTheory>);
+pub struct ThPowerSystem(Rc<theory::DiscreteDblTheory>);
 
 #[wasm_bindgen]
 impl ThPowerSystem {

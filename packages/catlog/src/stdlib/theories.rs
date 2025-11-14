@@ -253,7 +253,22 @@ fn th_generalized_multicategory(list: List) -> ModalDblTheory {
 ///
 /// In summary, the compositional structure of a power system is formalized as a
 /// (free) category graded by the linear order `Line < Passive < Branch`.
-pub fn th_power_system() -> ModalDblTheory {
+pub fn th_power_system() -> DiscreteDblTheory {
+    let mut cat = FpCategory::new();
+    cat.add_ob_generator(name("Bus"));
+    cat.add_mor_generator(name("Passive"), name("Bus"), name("Bus"));
+    cat.add_mor_generator(name("Branch"), name("Bus"), name("Bus"));
+    cat.equate(Path::pair(name("Passive"), name("Passive")), name("Passive").into());
+    cat.equate(Path::pair(name("Passive"), name("Branch")), name("Branch").into());
+    cat.equate(Path::pair(name("Branch"), name("Passive")), name("Branch").into());
+    cat.equate(Path::pair(name("Branch"), name("Branch")), name("Branch").into());
+    cat.into()
+}
+
+// Not yet using a modal theory since instantiation is currently only supported in
+// models of discrete theories.
+#[allow(dead_code)]
+fn modal_th_power_system() -> ModalDblTheory {
     let mut th = ModalDblTheory::new();
 
     // Object type for buses, whose hom type is the morphism type for lines.
@@ -298,6 +313,7 @@ mod tests {
         assert!(th_delayable_signed_category().validate().is_ok());
         assert!(th_nullable_signed_category().validate().is_ok());
         assert!(th_category_with_scalars().validate().is_ok());
+        assert!(th_power_system().validate().is_ok());
     }
 
     #[test]
@@ -311,7 +327,7 @@ mod tests {
         assert!(th_monoidal_category().validate().is_ok());
         assert!(th_lax_monoidal_category().validate().is_ok());
         assert!(th_multicategory().validate().is_ok());
-        assert!(th_power_system().validate().is_ok());
+        assert!(modal_th_power_system().validate().is_ok());
     }
 
     #[test]
