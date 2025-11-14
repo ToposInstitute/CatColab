@@ -243,7 +243,6 @@ function EnumCellEditor<Row>(props: { row: Row; schema: EnumColumnSchema<Row> })
                 schema().setContent?.(row(), value);
             }}
         >
-            <option value="" />
             <For each={schema().variants(row())}>
                 {(variant) => <option value={variant}>{variant}</option>}
             </For>
