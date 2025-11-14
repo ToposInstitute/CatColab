@@ -2,13 +2,18 @@
 
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::str::FromStr;
 
 use all_the_same::all_the_same;
 use catlog::tt;
+use catlog::tt::notebook_elab::Elaborator as ElaboratorNext;
+use catlog::tt::toplevel::{Theory, TopDecl, Toplevel, Type, std_theories};
 use derive_more::{From, TryInto};
 use nonempty::NonEmpty;
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
+use ustr::ustr;
+use uuid::Uuid;
 use wasm_bindgen::prelude::*;
 
 use catlog::dbl::model::{
@@ -18,7 +23,7 @@ use catlog::dbl::model::{
 use catlog::dbl::theory::{self as dbl_theory, ModalObOp};
 use catlog::one::{Category as _, FgCategory, Path, QualifiedPath};
 use catlog::validate::Validate;
-use catlog::zero::{NameLookup, Namespace, QualifiedLabel, QualifiedName};
+use catlog::zero::{NameLookup, NameSegment, Namespace, QualifiedLabel, QualifiedName};
 use notebook_types::current::{path as notebook_path, *};
 
 use super::model_presentation::*;
@@ -310,7 +315,7 @@ pub struct DblModel {
     pub model: DblModelBox,
     /// The elaborated type for the model.
     #[wasm_bindgen(skip)]
-    pub ty: Option<tt::val::TyV>,
+    pub ty: Option<(tt::stx::TyS, tt::val::TyV)>,
     ob_namespace: Namespace,
     mor_namespace: Namespace,
 }
@@ -599,28 +604,52 @@ pub fn collect_product(ob: Ob) -> Result<Vec<Ob>, String> {
 }
 
 /// A named collection of models of double theories.
-#[derive(Default)]
 #[wasm_bindgen]
-pub struct DblModelMap(#[wasm_bindgen(skip)] pub HashMap<String, DblModel>);
+pub struct DblModelMap {
+    #[wasm_bindgen(skip)]
+    models: HashMap<String, DblModel>,
+    #[wasm_bindgen(skip)]
+    toplevel: Toplevel,
+}
 
 #[wasm_bindgen]
 impl DblModelMap {
     /// Constructs an empty collection of models.
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        Default::default()
+        DblModelMap {
+            models: HashMap::new(),
+            toplevel: Toplevel::new(std_theories()),
+        }
     }
 
     /// Returns whether the collection contains a model with the given name.
     #[wasm_bindgen(js_name = "has")]
     pub fn contains_key(&self, id: &str) -> bool {
-        self.0.contains_key(id)
+        self.models.contains_key(id)
     }
 
     /// Inserts a model with the given name.
     #[wasm_bindgen(js_name = "set")]
     pub fn insert(&mut self, id: String, model: &DblModel) {
-        self.0.insert(id, model.clone());
+        let id_ustr = ustr(&id);
+        self.models.insert(id, model.clone());
+        if let Some((ty_s, ty_v)) = &model.ty {
+            let theory = match &model.model {
+                DblModelBox::Discrete(ddm) => ddm.theory_rc(),
+                _ => {
+                    return;
+                }
+            };
+            self.toplevel.declarations.insert(
+                NameSegment::Text(id_ustr),
+                TopDecl::Type(Type::new(
+                    Theory::new(QualifiedName::single(NameSegment::Text(ustr("_"))), theory),
+                    ty_s.clone(),
+                    ty_v.clone(),
+                )),
+            );
+        }
     }
 }
 
@@ -630,6 +659,7 @@ pub fn elaborate_model(
     notebook: &ModelNotebook,
     instantiated: &DblModelMap,
     theory: &DblTheory,
+    ref_id: String,
 ) -> Result<DblModel, String> {
     let mut model = DblModel::new(theory);
     for judgment in notebook.0.formal_content() {
@@ -640,6 +670,17 @@ pub fn elaborate_model(
                 // legacy elaboration ignores instantiation
             }
         }
+    }
+    match &theory.0 {
+        DblTheoryBox::Discrete(ddt) => {
+            let theory =
+                Theory::new(QualifiedName::single(NameSegment::Text(ustr("_"))), ddt.clone());
+            let ref_id = Uuid::from_str(&ref_id).unwrap();
+            let mut elab = ElaboratorNext::new(theory, &instantiated.toplevel, ref_id);
+            let ty = elab.notebook(notebook.0.formal_content());
+            model.ty = Some(ty);
+        }
+        _ => {}
     }
     Ok(model)
 }

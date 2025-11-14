@@ -4,7 +4,6 @@
 
 use ::pretty::RcDoc;
 use derive_more::Constructor;
-use notebook_types::v1::StableRef;
 use uuid::Uuid;
 
 #[cfg(doc)]

@@ -238,7 +238,7 @@ export class ModelLibrary<RefId> {
                 validatedModel = { tag: "Illformed", model: null, error };
             } else {
                 this.isElaborating.add(key);
-                validatedModel = await this._elaborateAndValidate(doc.notebook, theory.theory);
+                validatedModel = await this._elaborateAndValidate(key, doc.notebook, theory.theory);
             }
         } finally {
             this.isElaborating.delete(key);
@@ -249,6 +249,7 @@ export class ModelLibrary<RefId> {
 
     // Inner method actually elaborates. Do not call directly!
     private async _elaborateAndValidate(
+        key: ModelKey,
         notebook: ModelNotebook,
         theory: DblTheory,
     ): Promise<ValidatedModel> {
@@ -272,7 +273,7 @@ export class ModelLibrary<RefId> {
             instantiated.set(refId, entry.validatedModel.model);
         }
 
-        return elaborateAndValidateModel(notebook, instantiated, theory);
+        return elaborateAndValidateModel(notebook, instantiated, theory, key);
     }
 }
 
@@ -281,10 +282,11 @@ function elaborateAndValidateModel(
     notebook: ModelNotebook,
     instantiated: DblModelMap,
     theory: DblTheory,
+    refId: string,
 ): ValidatedModel {
     let model: DblModel;
     try {
-        model = elaborateModel(notebook, instantiated, theory);
+        model = elaborateModel(notebook, instantiated, theory, refId);
     } catch (e) {
         return { tag: "Illformed", model: null, error: String(e) };
     }

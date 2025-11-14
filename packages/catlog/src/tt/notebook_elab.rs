@@ -1,5 +1,4 @@
 //! Elaboration for frontend notebooks.
-use fnotation::token::Kind::SPECIAL;
 use notebook_types::v1::{InstantiatedModel, ModelJudgment, MorDecl, Ob, ObDecl, ObType};
 use uuid::Uuid;
 
@@ -104,13 +103,6 @@ impl<'a> Elaborator<'a> {
         let i = self.next_meta;
         self.next_meta += 1;
         MetaVar::new(Some(self.ref_id), i)
-    }
-
-    fn syn_error(&mut self, error: InvalidDblModel) -> (TmS, TmV, TyV) {
-        self.errors.push(error);
-        let tm_m = self.fresh_meta();
-        let ty_m = self.fresh_meta();
-        (TmS::meta(tm_m), TmV::Meta(tm_m), TyV::meta(ty_m))
     }
 
     fn ty_error(&mut self, error: InvalidDblModel) -> (TyS, TyV) {
@@ -283,12 +275,12 @@ impl<'a> Elaborator<'a> {
     }
 
     /// Elaborate a notebook into a type.
-    pub fn notebook(&mut self, cells: &[(Uuid, &ModelJudgment)]) -> Option<(TyS, TyV)> {
+    pub fn notebook<'b>(&mut self, cells: impl Iterator<Item = &'b ModelJudgment>) -> (TyS, TyV) {
         let mut field_ty0s = Vec::new();
         let mut field_ty_vs = Vec::new();
         let self_var = self.intro(name_seg("self"), label_seg("self"), None).as_neu();
         let c = self.checkpoint();
-        for (_, cell) in cells.iter() {
+        for cell in cells {
             let (name, label, _, ty_v) = match cell {
                 ModelJudgment::Object(ob_decl) => self.object_cell(ob_decl),
                 ModelJudgment::Morphism(mor_decl) => self.morphism_cell(mor_decl),
@@ -308,9 +300,12 @@ impl<'a> Elaborator<'a> {
         let field_ty0s: Row<_> = field_ty0s.into_iter().collect();
         let r_s = RecordS::new(field_ty0s.clone(), field_tys.clone());
         let r_v = RecordV::new(field_ty0s, self.ctx.env.clone(), field_tys, Dtry::empty());
-        Some((TyS::record(r_s), TyV::record(r_v)))
+        (TyS::record(r_s), TyV::record(r_v))
     }
 }
+
+// We need to not only cache the `DblModel`s, but also the `TyS`/`TyV`s that
+// are being produced.
 
 #[cfg(test)]
 mod test {
@@ -345,17 +340,11 @@ mod test {
         let toplevel = Toplevel::new(std_theories());
         let mut elab = Elaborator::new(theory.clone(), &toplevel, Uuid::nil());
         let mut out = String::new();
-        if let Some((_, ty_v)) = elab.notebook(&cells) {
-            let (model, name_translation) = generate(&toplevel, theory, &ty_v);
-            model_output("", &mut out, &model, &name_translation).unwrap();
-        } else {
-            assert!(
-                !elab.errors().is_empty(),
-                "did not produce a model, but no errors were reported"
-            );
-            for error in elab.errors() {
-                writeln!(&mut out, "error {:?}", error).unwrap()
-            }
+        let (_, ty_v) = elab.notebook(cells.iter().map(|c| c.1));
+        let (model, name_translation) = generate(&toplevel, &theory, &ty_v);
+        model_output("", &mut out, &model, &name_translation).unwrap();
+        for error in elab.errors() {
+            writeln!(&mut out, "error {:?}", error).unwrap()
         }
         expected.assert_eq(&out);
     }
