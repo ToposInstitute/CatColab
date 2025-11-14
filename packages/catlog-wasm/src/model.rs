@@ -8,6 +8,7 @@ use derive_more::{From, TryInto};
 use nonempty::NonEmpty;
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
+use ustr::ustr;
 use wasm_bindgen::prelude::*;
 
 use catlog::dbl::model::{
@@ -16,8 +17,14 @@ use catlog::dbl::model::{
 };
 use catlog::dbl::theory::{self as dbl_theory, ModalObOp};
 use catlog::one::{Category as _, FgCategory, Path, QualifiedPath};
+use catlog::tt::{
+    self,
+    modelgen::generate,
+    notebook_elab::Elaborator as ElaboratorNext,
+    toplevel::{Theory, TopDecl, Toplevel, Type, std_theories},
+};
 use catlog::validate::Validate;
-use catlog::zero::{NameLookup, Namespace, QualifiedLabel, QualifiedName};
+use catlog::zero::{NameLookup, NameSegment, Namespace, QualifiedLabel, QualifiedName};
 use notebook_types::current::{path as notebook_path, *};
 
 use super::model_presentation::*;
@@ -307,6 +314,11 @@ pub struct DblModel {
     /// The boxed underlying model.
     #[wasm_bindgen(skip)]
     pub model: DblModelBox,
+
+    /// The elaborated type for the model.
+    #[wasm_bindgen(skip)]
+    pub ty: Option<(tt::stx::TyS, tt::val::TyV)>,
+
     ob_namespace: Namespace,
     mor_namespace: Namespace,
 }
@@ -316,6 +328,7 @@ impl DblModel {
     pub fn new(theory: &DblTheory) -> Self {
         Self {
             model: DblModelBox::new(theory),
+            ty: None,
             ob_namespace: Namespace::new_for_uuid(),
             mor_namespace: Namespace::new_for_uuid(),
         }
@@ -325,6 +338,7 @@ impl DblModel {
     pub fn replace_box(&self, model: DblModelBox) -> Self {
         Self {
             model,
+            ty: self.ty.clone(),
             ob_namespace: self.ob_namespace.clone(),
             mor_namespace: self.mor_namespace.clone(),
         }
@@ -593,28 +607,55 @@ pub fn collect_product(ob: Ob) -> Result<Vec<Ob>, String> {
 }
 
 /// A named collection of models of double theories.
-#[derive(Default)]
 #[wasm_bindgen]
-pub struct DblModelMap(#[wasm_bindgen(skip)] pub HashMap<String, DblModel>);
+pub struct DblModelMap {
+    #[wasm_bindgen(skip)]
+    models: HashMap<String, DblModel>,
+    #[wasm_bindgen(skip)]
+    toplevel: Toplevel,
+}
+
+impl Default for DblModelMap {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 #[wasm_bindgen]
 impl DblModelMap {
     /// Constructs an empty collection of models.
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        Default::default()
+        DblModelMap {
+            models: HashMap::new(),
+            toplevel: Toplevel::new(std_theories()),
+        }
     }
 
     /// Returns whether the collection contains a model with the given name.
     #[wasm_bindgen(js_name = "has")]
     pub fn contains_key(&self, id: &str) -> bool {
-        self.0.contains_key(id)
+        self.models.contains_key(id)
     }
 
     /// Inserts a model with the given name.
     #[wasm_bindgen(js_name = "set")]
     pub fn insert(&mut self, id: String, model: &DblModel) {
-        self.0.insert(id, model.clone());
+        let id_ustr = ustr(&id);
+        self.models.insert(id, model.clone());
+        if let Some((ty_s, ty_v)) = &model.ty {
+            let Ok(theory) = model.discrete().map(|ddm| ddm.theory_rc()) else {
+                return;
+            };
+            self.toplevel.declarations.insert(
+                NameSegment::Text(id_ustr),
+                TopDecl::Type(Type::new(
+                    Theory::new(QualifiedName::single(NameSegment::Text(ustr("_"))), theory),
+                    ty_s.clone(),
+                    ty_v.clone(),
+                )),
+            );
+        }
     }
 }
 
@@ -624,21 +665,38 @@ pub fn elaborate_model(
     notebook: &ModelNotebook,
     instantiated: &DblModelMap,
     theory: &DblTheory,
+    ref_id: String,
 ) -> Result<DblModel, String> {
-    let mut model = DblModel::new(theory);
-    for judgment in notebook.0.formal_content() {
-        match judgment {
-            ModelJudgment::Object(decl) => model.add_ob(decl)?,
-            ModelJudgment::Morphism(decl) => model.add_mor(decl)?,
-            ModelJudgment::Instantiation(inst) => {
-                if let Some(link) = &inst.model {
-                    assert!(instantiated.0.contains_key(&link.stable_ref.id));
+    match &theory.0 {
+        DblTheoryBox::Discrete(ddt) => {
+            let theory =
+                Theory::new(QualifiedName::single(NameSegment::Text(ustr("_"))), ddt.clone());
+            let ref_id = ustr(&ref_id);
+            let mut elab = ElaboratorNext::new(theory.clone(), &instantiated.toplevel, ref_id);
+            let ty = elab.notebook(notebook.0.formal_content());
+            let (ddm, namespace) = generate(&instantiated.toplevel, &theory, &ty.1);
+            Ok(DblModel {
+                model: DblModelBox::Discrete(Rc::new(ddm)),
+                ty: Some(ty),
+                ob_namespace: namespace.clone(),
+                mor_namespace: namespace.clone(),
+            })
+        }
+        _ => {
+            // legacy elaboration
+            let mut model = DblModel::new(theory);
+            for judgment in notebook.0.formal_content() {
+                match judgment {
+                    ModelJudgment::Object(decl) => model.add_ob(decl)?,
+                    ModelJudgment::Morphism(decl) => model.add_mor(decl)?,
+                    ModelJudgment::Instantiation(_) => {
+                        return Err("Legacy model elaborator does not support instantiation".into());
+                    }
                 }
-                // FIXME: Do something with the instantiation.
             }
+            Ok(model)
         }
     }
-    Ok(model)
 }
 
 #[cfg(test)]
