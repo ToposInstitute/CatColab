@@ -1,0 +1,9 @@
+[package]
+name = "work_trial_compiler"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+fnotation = "0.10.2"
+bumpalo = { version = "3.17.0", features = ["collections"] }
+tattle = "0.4.0"
