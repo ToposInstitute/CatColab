@@ -203,8 +203,8 @@ jobs:
   deploy:
     name: Deploy to Netlify
     runs-on: ubuntu-latest
-    needs: [create_deployment, build_dev_docs, build_frontend, build_rust_docs, build_math-docs, build_ui_components]
-    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == 'ToposInstitute/CatColab')
+    needs: [build_dev_docs, build_frontend, build_rust_docs, build_math-docs, build_ui_components]
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == 'ToposInstitute/CatColab'
     outputs:
       deploy_url: ${{ steps.url_preview.outputs.NETLIFY_PREVIEW_URL }}
     steps:
