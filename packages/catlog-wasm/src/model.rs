@@ -4,10 +4,6 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use all_the_same::all_the_same;
-use catlog::tt;
-use catlog::tt::modelgen::generate;
-use catlog::tt::notebook_elab::Elaborator as ElaboratorNext;
-use catlog::tt::toplevel::{Theory, TopDecl, Toplevel, Type, std_theories};
 use derive_more::{From, TryInto};
 use nonempty::NonEmpty;
 use serde::{Deserialize, Serialize};
@@ -21,6 +17,12 @@ use catlog::dbl::model::{
 };
 use catlog::dbl::theory::{self as dbl_theory, ModalObOp};
 use catlog::one::{Category as _, FgCategory, Path, QualifiedPath};
+use catlog::tt::{
+    self,
+    modelgen::generate,
+    notebook_elab::Elaborator as ElaboratorNext,
+    toplevel::{Theory, TopDecl, Toplevel, Type, std_theories},
+};
 use catlog::validate::Validate;
 use catlog::zero::{NameLookup, NameSegment, Namespace, QualifiedLabel, QualifiedName};
 use notebook_types::current::{path as notebook_path, *};
@@ -312,9 +314,11 @@ pub struct DblModel {
     /// The boxed underlying model.
     #[wasm_bindgen(skip)]
     pub model: DblModelBox,
+
     /// The elaborated type for the model.
     #[wasm_bindgen(skip)]
     pub ty: Option<(tt::stx::TyS, tt::val::TyV)>,
+
     ob_namespace: Namespace,
     mor_namespace: Namespace,
 }
@@ -640,11 +644,8 @@ impl DblModelMap {
         let id_ustr = ustr(&id);
         self.models.insert(id, model.clone());
         if let Some((ty_s, ty_v)) = &model.ty {
-            let theory = match &model.model {
-                DblModelBox::Discrete(ddm) => ddm.theory_rc(),
-                _ => {
-                    return;
-                }
+            let Ok(theory) = model.discrete().map(|ddm| ddm.theory_rc()) else {
+                return;
             };
             self.toplevel.declarations.insert(
                 NameSegment::Text(id_ustr),
@@ -688,8 +689,8 @@ pub fn elaborate_model(
                 match judgment {
                     ModelJudgment::Object(decl) => model.add_ob(decl)?,
                     ModelJudgment::Morphism(decl) => model.add_mor(decl)?,
-                    ModelJudgment::Instantiation(_inst) => {
-                        // legacy elaboration ignores instantiation
+                    ModelJudgment::Instantiation(_) => {
+                        return Err("Legacy model elaborator does not support instantiation".into());
                     }
                 }
             }
