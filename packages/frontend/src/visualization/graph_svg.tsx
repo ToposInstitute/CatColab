@@ -13,7 +13,10 @@ export function GraphSVG<Id>(props: { graph: GraphLayout.Graph<Id>; ref?: SVGRef
     const edgeMarkers = () => {
         const markers = new Set<ArrowMarker>();
         for (const edge of props.graph.edges) {
-            markers.add(styleToMarker[edge.style ?? "default"]);
+            const marker = styleToMarker[edge.style ?? "default"];
+            if (marker) {
+                markers.add(marker);
+            }
         }
         return Array.from(markers);
     };
@@ -197,10 +200,11 @@ const FlatMarker = (props: { id: string }) => (
  */
 export type ArrowMarker = "vee" | "double" | "triangle" | "flat";
 
-const styleToMarker: Record<ArrowStyle, ArrowMarker> = {
+const styleToMarker: Record<ArrowStyle, ArrowMarker | null> = {
     default: "vee",
     double: "double",
     flat: "flat",
+    unmarked: null,
     plus: "triangle",
     minus: "triangle",
     indeterminate: "triangle",

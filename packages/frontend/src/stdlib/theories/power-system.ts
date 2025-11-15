@@ -25,6 +25,7 @@ export default function createPowerSystemsTheory(theoryMeta: TheoryMeta): Theory
                 },
                 name: "Line",
                 description: "Passive line between buses",
+                arrowStyle: "unmarked",
                 preferUnnamed: true,
                 shortcut: ["L"],
             },
@@ -33,6 +34,7 @@ export default function createPowerSystemsTheory(theoryMeta: TheoryMeta): Theory
                 morType: { tag: "Basic", content: "Passive" },
                 name: "Transformer",
                 description: "Passive line allowing a change of voltage",
+                arrowStyle: "unmarked",
                 preferUnnamed: true,
             },
             {
@@ -40,6 +42,7 @@ export default function createPowerSystemsTheory(theoryMeta: TheoryMeta): Theory
                 morType: { tag: "Basic", content: "Branch" },
                 name: "Link",
                 description: "Controllable flow between buses",
+                arrowStyle: "unmarked",
                 preferUnnamed: true,
             },
         ],
