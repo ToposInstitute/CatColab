@@ -330,7 +330,7 @@ async function getLiveDocument(
 ): Promise<AnyLiveDocWithRef> {
     switch (documentType) {
         case "model": {
-            const { liveDoc: _, docRef } = await api.getLiveDoc(refId, "model");
+            const docRef = await api.getDocRef(refId);
             const liveDoc = await models.getLiveModel(refId);
             return { liveDoc, docRef };
         }

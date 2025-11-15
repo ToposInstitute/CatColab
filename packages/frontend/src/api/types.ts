@@ -8,7 +8,7 @@ import * as uuid from "uuid";
 import type { Permissions } from "catcolab-api";
 import type { Document, Link, LinkType, StableRef, Uuid } from "catlog-wasm";
 import type { InterfaceToType } from "../util/types";
-import { findAndMigrate, type LiveDocWithRef, makeLiveDoc } from "./document";
+import { type DocRef, findAndMigrate, type LiveDocWithRef, makeLiveDoc } from "./document";
 import { createRpcClient, type RpcClient } from "./rpc";
 
 /** Bundle of everything needed to interact with the CatColab backend. */
@@ -66,16 +66,11 @@ export class Api {
         docType?: Doc["type"],
     ): Promise<LiveDocWithRef<Doc>> {
         const docHandle = await this.getDocHandle<Doc>(refId, docType);
-        const permissions = await this.getPermissions(refId);
-        const isDeleted = await this.isDocumentDeleted(refId);
+        const docRef = await this.getDocRef(refId);
         const liveDoc = makeLiveDoc(docHandle);
         return {
             liveDoc,
-            docRef: {
-                refId,
-                permissions,
-                isDeleted,
-            },
+            docRef,
         };
     }
 
@@ -93,16 +88,14 @@ export class Api {
         return await findAndMigrate<Doc>(repo, docId, docType);
     }
 
-    /** Get permissions for the given document ref. */
-    async getPermissions(refId: Uuid): Promise<Permissions> {
-        const { permissions } = await this.getDocCacheEntry(refId);
-        return permissions;
-    }
-
-    /** Check if the document has been deleted. */
-    async isDocumentDeleted(refId: Uuid): Promise<boolean> {
-        const { isDeleted } = await this.getDocCacheEntry(refId);
-        return isDeleted;
+    /** Get a document reference from its id */
+    async getDocRef(refId: Uuid): Promise<DocRef> {
+        const { permissions, isDeleted } = await this.getDocCacheEntry(refId);
+        return {
+            refId,
+            permissions,
+            isDeleted,
+        };
     }
 
     /** Clear cached entry for a document ref. */
