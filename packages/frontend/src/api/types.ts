@@ -65,27 +65,20 @@ export class Api {
         refId: Uuid,
         docType?: Doc["type"],
     ): Promise<LiveDocWithRef<Doc>> {
-        const docHandle = await this.getDocHandle<Doc>(refId, docType);
+        const docHandle = await this.getDocHandle(refId);
         const docRef = await this.getDocRef(refId);
-        const liveDoc = makeLiveDoc(docHandle);
+        const liveDoc = makeLiveDoc<Doc>(docHandle, docType);
         return {
             liveDoc,
             docRef,
         };
     }
 
-    async getLiveDocFromLink<Doc extends Document>(link: Link): Promise<LiveDocWithRef<Doc>> {
-        return this.getLiveDoc(link._id);
-    }
-
     /** Gets an Automerge document handle for the given document ref. */
-    async getDocHandle<Doc extends Document>(
-        refId: Uuid,
-        docType?: Doc["type"],
-    ): Promise<DocHandle<Doc>> {
+    async getDocHandle(refId: Uuid): Promise<DocHandle<Document>> {
         const { docId, localOnly } = await this.getDocCacheEntry(refId);
         const repo = localOnly ? this.localRepo : this.repo;
-        return await findAndMigrate<Doc>(repo, docId, docType);
+        return await findAndMigrate(repo, docId);
     }
 
     /** Get a document reference from its id */

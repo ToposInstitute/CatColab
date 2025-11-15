@@ -22,7 +22,7 @@ export function DocumentBreadcrumbs(props: { liveDoc: LiveDoc; docRefId: string 
                                 class="breadcrumb-link"
                                 href={`/${doc.liveDoc.doc.type}/${doc.docRef.refId}`}
                             >
-                                {doc.liveDoc.doc.name || "untitled"}
+                                {doc.liveDoc.doc.name || "Untitled"}
                             </a>
                         </>
                     )}
