@@ -77,7 +77,7 @@ export async function createAnalysis(api: Api, analysisType: AnalysisType, analy
     return api.createDoc(init);
 }
 
-export type LiveAnalysisLiveDocWithRef = {
+export type LiveAnalysisDocWithRef = {
     liveAnalysis: LiveAnalysisDoc;
     docRef: DocRef;
 };
@@ -87,7 +87,7 @@ export async function getLiveAnalysis(
     refId: Uuid,
     api: Api,
     models: ModelLibrary<Uuid>,
-): Promise<LiveAnalysisLiveDocWithRef> {
+): Promise<LiveAnalysisDocWithRef> {
     const { liveDoc, docRef } = await api.getLiveDoc<AnalysisDocument>(refId, "analysis");
     const { doc } = liveDoc;
 
