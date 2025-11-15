@@ -130,7 +130,7 @@ export function createDiagram(api: Api, inModel: StableRef): Promise<string> {
     return api.createDoc(init);
 }
 
-export type LiveDiagramLiveDocWithRef = {
+export type LiveDiagramDocWithRef = {
     liveDiagram: LiveDiagramDoc;
     docRef: DocRef;
 };
@@ -140,7 +140,7 @@ export async function getLiveDiagram(
     refId: Uuid,
     api: Api,
     models: ModelLibrary<Uuid>,
-): Promise<LiveDiagramLiveDocWithRef> {
+): Promise<LiveDiagramDocWithRef> {
     const { liveDoc, docRef } = await api.getLiveDoc<DiagramDocument>(refId, "diagram");
     const modelRefId = liveDoc.doc.diagramIn._id;
 
