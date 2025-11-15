@@ -304,9 +304,6 @@ impl<'a> Elaborator<'a> {
     }
 }
 
-// We need to not only cache the `DblModel`s, but also the `TyS`/`TyV`s that
-// are being produced.
-
 #[cfg(test)]
 mod test {
     use notebook_types::v1::ModelDocumentContent;
@@ -318,29 +315,20 @@ mod test {
     use expect_test::{Expect, expect};
 
     use crate::stdlib::th_schema;
-    use crate::tt::toplevel::{Theory, std_theories};
     use crate::tt::{
         modelgen::{generate, model_output},
         notebook_elab::Elaborator,
-        toplevel::Toplevel,
+        toplevel::{Theory, Toplevel, std_theories},
     };
     use crate::zero::name;
 
     fn elab_example(theory: &Theory, name: &str, expected: Expect) {
         let src = fs::read_to_string(format!("examples/{name}.json")).unwrap();
         let doc: ModelDocumentContent = serde_json::from_str(&src).unwrap();
-        let cells = doc
-            .notebook
-            .cells()
-            .filter_map(|c| match c {
-                notebook_types::v1::NotebookCell::Formal { id, content } => Some((*id, content)),
-                _ => None,
-            })
-            .collect::<Vec<_>>();
         let toplevel = Toplevel::new(std_theories());
         let mut elab = Elaborator::new(theory.clone(), &toplevel, ustr(""));
         let mut out = String::new();
-        let (_, ty_v) = elab.notebook(cells.iter().map(|c| c.1));
+        let (_, ty_v) = elab.notebook(doc.notebook.formal_content());
         let (model, name_translation) = generate(&toplevel, theory, &ty_v);
         model_output("", &mut out, &model, &name_translation).unwrap();
         for error in elab.errors() {
