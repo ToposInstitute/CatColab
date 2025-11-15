@@ -1,7 +1,8 @@
 //! Kuramoto ODE analsysis of models.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
+use indexmap::IndexMap;
 use nalgebra::{DMatrix, DVector};
 
 #[cfg(feature = "serde")]
@@ -114,7 +115,7 @@ impl KuramotoAnalysis {
     ) -> ODEAnalysis<KuramotoSystem> {
         let common = data.common();
 
-        let ob_index: BTreeMap<_, _> = model
+        let ob_index: IndexMap<_, _> = model
             .ob_generators_with_type(&self.node_ob_type)
             .enumerate()
             .map(|(i, x)| (x, i))

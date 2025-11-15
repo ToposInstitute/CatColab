@@ -1,9 +1,10 @@
 //! ODE analyses of models.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
 use derivative::Derivative;
 use derive_more::Constructor;
+use indexmap::IndexMap;
 use ode_solvers::dop_shared::IntegrationError;
 
 #[cfg(feature = "serde")]
@@ -35,7 +36,7 @@ pub struct ODEAnalysis<Sys> {
     pub problem: ODEProblem<Sys>,
 
     /// Map from IDs in model (usually object IDs) to variable indices.
-    pub variable_index: BTreeMap<QualifiedName, usize>,
+    pub variable_index: IndexMap<QualifiedName, usize>,
 }
 
 impl<Sys> ODEAnalysis<Sys> {
