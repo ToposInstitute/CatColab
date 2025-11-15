@@ -92,7 +92,7 @@ export default function MassAction(
     ];
 
     const plotResult = createModelODEPlot(
-        () => props.liveModel,
+        () => props.liveModel.validatedModel(),
         (model: DblModel) => props.simulate(model, props.content),
     );
 
