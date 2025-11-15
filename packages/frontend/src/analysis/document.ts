@@ -124,8 +124,8 @@ export async function getLiveAnalysisFromRepo(
     repo: Repo,
     models: ModelLibrary<AnyDocumentId>,
 ): Promise<LiveAnalysisDoc> {
-    const docHandle = await findAndMigrate<AnalysisDocument>(repo, docId, "analysis");
-    const liveDoc = makeLiveDoc(docHandle);
+    const docHandle = await findAndMigrate(repo, docId);
+    const liveDoc = makeLiveDoc<AnalysisDocument>(docHandle, "analysis");
     const { doc } = liveDoc;
 
     const parentId = doc.analysisOf._id as AnyDocumentId;

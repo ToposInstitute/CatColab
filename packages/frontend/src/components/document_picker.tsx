@@ -65,7 +65,7 @@ export function DocumentPicker(
                         href={`/${liveDocWithRef().liveDoc.doc.type}/${liveDocWithRef().docRef.refId}`}
                         {...linkProps}
                     >
-                        {liveDocWithRef().liveDoc.doc.name}
+                        {liveDocWithRef().liveDoc.doc.name || "Untitled"}
                     </A>
                 )}
             </Match>

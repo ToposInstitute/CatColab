@@ -67,31 +67,23 @@ export type DocRef = {
 Prefer calling this function over calling `Repo.find` directly to ensure that
 any necessary migrations are performed before the data is accessed.
  */
-export async function findAndMigrate<Doc extends Document>(
+export async function findAndMigrate(
     repo: Repo,
     docId: AnyDocumentId,
-    docType?: Doc["type"],
-): Promise<DocHandle<Doc>> {
-    const docHandle = await repo.find<Doc>(docId);
+): Promise<DocHandle<Document>> {
+    const docHandle = await repo.find<Document>(docId);
 
     // Perform any migrations on the document.
     // XXX: copied from automerge-doc-server/src/server.ts:
     const docBefore = docHandle.doc();
     const docAfter = migrateDocument(docBefore);
-    if ((docBefore as Doc).version !== docAfter.version) {
-        const patches = jsonpatch.compare(docBefore as Doc, docAfter);
+    if (docBefore.version !== docAfter.version) {
+        const patches = jsonpatch.compare(docBefore, docAfter);
         docHandle.change((doc: unknown) => {
             jsonpatch.applyPatch(doc, patches);
         });
     }
 
-    if (docType !== undefined) {
-        const actualType = docHandle.doc().type;
-        invariant(
-            actualType === docType,
-            () => `Expected document of type ${docType}, got ${actualType}`,
-        );
-    }
     return docHandle;
 }
 
@@ -102,7 +94,19 @@ indirectly, via [`getLiveDoc`]. However, if you want to bypass the CatColab
 backend and fetch a document from another Automerge repo, you can call this
 function directly.
  */
-export function makeLiveDoc<Doc extends Document>(docHandle: DocHandle<Doc>): LiveDoc<Doc> {
+export function makeLiveDoc<Doc extends Document>(
+    unknownDocHandle: DocHandle<Document>,
+    docType?: DocumentType,
+): LiveDoc<Doc> {
+    if (docType !== undefined) {
+        const actualType = unknownDocHandle.doc().type;
+        invariant(
+            actualType === docType,
+            () => `Expected document of type ${docType}, got ${actualType}`,
+        );
+    }
+    const docHandle = unknownDocHandle as DocHandle<Doc>;
+
     const doc = makeDocHandleReactive(docHandle);
     const changeDoc = (f: ChangeFn<Doc>) => docHandle.change(f);
     return { doc, changeDoc, docHandle };

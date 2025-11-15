@@ -47,7 +47,7 @@ async function getLiveDocRoot(doc: LiveDocWithRef, api: Api): Promise<LiveDocWit
             return doc;
     }
 
-    const parentDoc = await api.getLiveDocFromLink(parentLink);
+    const parentDoc = await api.getLiveDoc(parentLink._id);
     return getLiveDocRoot(parentDoc, api);
 }
 

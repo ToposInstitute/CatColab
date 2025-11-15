@@ -158,8 +158,8 @@ export async function getLiveDiagramFromRepo(
     repo: Repo,
     models: ModelLibrary<AnyDocumentId>,
 ): Promise<LiveDiagramDoc> {
-    const docHandle = await findAndMigrate<DiagramDocument>(repo, docId, "diagram");
-    const liveDoc = makeLiveDoc(docHandle);
+    const docHandle = await findAndMigrate(repo, docId);
+    const liveDoc = makeLiveDoc<DiagramDocument>(docHandle, "diagram");
     const modelDocId = liveDoc.doc.diagramIn._id as AnyDocumentId;
 
     const liveModel = await models.getLiveModel(modelDocId);
