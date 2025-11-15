@@ -92,8 +92,8 @@ export const RichTextEditor = (
     } & RichTextEditorOptions,
 ) => {
     let editorRoot!: HTMLDivElement;
-    let menuRoot!: HTMLDivElement;
-    let reopenButtonRoot!: HTMLDivElement;
+    let menuRoot!: HTMLDivElement | undefined;
+    let reopenButtonRoot!: HTMLDivElement | undefined;
 
     // flags for determining if the menu bar is visible
     const [isEditorFocused, setEditorFocused] = createSignal(false);
@@ -203,8 +203,8 @@ export const RichTextEditor = (
                     const relatedTarget = event.relatedTarget as Node | null;
                     // Ignore focus shifts into the menu bar and reopen button
                     if (
-                        (relatedTarget && menuRoot.contains(relatedTarget)) ||
-                        (relatedTarget && reopenButtonRoot.contains(relatedTarget))
+                        (relatedTarget && menuRoot?.contains(relatedTarget)) ||
+                        (relatedTarget && reopenButtonRoot?.contains(relatedTarget))
                     ) {
                         // prevent the editor from losing focus and clearing the selection.
                         view.focus();
