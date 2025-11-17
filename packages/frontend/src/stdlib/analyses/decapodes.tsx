@@ -1,25 +1,23 @@
-import { For, Match, Show, Switch, createMemo } from "solid-js";
+import Loader from "lucide-solid/icons/loader";
+import RotateCcw from "lucide-solid/icons/rotate-ccw";
+import { createMemo, For, Match, Show, Switch } from "solid-js";
 
-import type { DiagramJudgment, ModelJudgment, QualifiedName } from "catlog-wasm";
-import type { DiagramAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
+    createNumericalColumn,
     ErrorAlert,
     FixedTableEditor,
     Foldable,
     IconButton,
     Warning,
-    createNumericalColumn,
-} from "../../components";
-import type { LiveDiagramDocument } from "../../diagram";
-import { NotebookUtils } from "../../notebook";
+} from "catcolab-ui-components";
+import type { ModelDiagramPresentation, ModelPresentation, QualifiedName } from "catlog-wasm";
+import type { DiagramAnalysisProps } from "../../analysis";
+import type { LiveDiagramDoc } from "../../diagram";
 import { uniqueIndexArray } from "../../util/indexing";
 import { PDEPlot2D, type PDEPlotData2D } from "../../visualization";
 import { createJuliaKernel, executeAndRetrieve } from "./jupyter";
 import type { DecapodesAnalysisContent } from "./simulator_types";
-
-import Loader from "lucide-solid/icons/loader";
-import RotateCcw from "lucide-solid/icons/rotate-ccw";
 
 import "./decapodes.css";
 import "./simulation.css";
@@ -269,11 +267,11 @@ type Domain = {
 
 /** Data sent to the Julia kernel defining a simulation. */
 type SimulationData = {
-    /** Judgments defining the diagram, including inferred ones. */
-    diagram: Array<DiagramJudgment>;
+    /** Diagram defining the system of equations to simulate. */
+    diagram: ModelDiagramPresentation;
 
-    /** Judgments defining the model. */
-    model: Array<ModelJudgment>;
+    /** Model that the diagram is in. */
+    model: ModelPresentation;
 
     /** The geometric domain to use for the simulation. */
     domain: string;
@@ -327,11 +325,12 @@ const makeSimulationCode = (data: SimulationData) =>
 
 /** Create data to send to the Julia kernel. */
 const makeSimulationData = (
-    liveDiagram: LiveDiagramDocument,
+    liveDiagram: LiveDiagramDoc,
     content: DecapodesAnalysisContent,
 ): SimulationData | undefined => {
+    const validatedModel = liveDiagram.liveModel.validatedModel();
     const validatedDiagram = liveDiagram.validatedDiagram();
-    if (validatedDiagram?.tag !== "Valid") {
+    if (!(validatedModel?.tag === "Valid" && validatedDiagram?.tag === "Valid")) {
         return undefined;
     }
 
@@ -341,10 +340,8 @@ const makeSimulationData = (
     }
 
     return {
-        diagram: validatedDiagram.diagram.judgments(),
-        // FIXME: Depending on judgments from notebook means that model cannot
-        // be composed of other models.
-        model: NotebookUtils.getFormalContent(liveDiagram.liveModel.liveDoc.doc.notebook),
+        diagram: validatedDiagram.diagram.presentation(),
+        model: validatedModel.model.presentation(),
         domain,
         mesh,
         initialConditions,

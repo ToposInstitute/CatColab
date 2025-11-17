@@ -1,12 +1,9 @@
-import { type ComponentProps, type JSX, Show, createUniqueId, splitProps } from "solid-js";
+import { type ComponentProps, createUniqueId, type JSX, Show, splitProps } from "solid-js";
 
 import "./form.css";
 
 /** Group of related fields in a form. */
-export function FormGroup(props: {
-    children: JSX.Element;
-    compact?: boolean;
-}) {
+export function FormGroup(props: { children: JSX.Element; compact?: boolean }) {
     return <dl class={props.compact ? "compact-form-group" : "form-group"}>{props.children}</dl>;
 }
 
@@ -97,7 +94,7 @@ export function TextAreaField(allProps: InputFieldProps & Omit<ComponentProps<"t
 }
 
 /** Validation error for a field. */
-const FieldError = (props: { error?: string }) => (
+export const FieldError = (props: { error?: string }) => (
     <Show when={props.error}>
         <div class="error">{props.error}</div>
     </Show>

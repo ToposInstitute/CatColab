@@ -7,7 +7,7 @@ import { stdTheories } from "../../frontend/src/stdlib";
 import { TheoryLibraryContext } from "../../frontend/src/theory";
 import type { ModelDoc } from "./model_datatype";
 import { render } from "solid-js/web";
-import styles from "../../frontend/src/index.css?inline";
+import styles from "../../ui-components/src/global.css?inline";
 
 export function renderModelTool(handle: DocHandle<ModelDoc>, element: any) {
     const modelLibrary = createModelLibraryWithRepo(element.repo, stdTheories);

@@ -4,14 +4,14 @@ import { NodeWSServerAdapter } from "@automerge/automerge-repo-network-websocket
 import dotenv from "dotenv";
 import express from "express";
 import jsonpatch from "fast-json-patch";
-import * as ws from "ws";
-
 // pg is a CommonJS package, and this is likely the least painful way of dealing with that
 import pgPkg from "pg";
+import * as ws from "ws";
+
 const { Pool } = pgPkg;
-import type { Pool as PoolType } from "pg";
 
 import * as notbookTypes from "notebook-types";
+import type { Pool as PoolType } from "pg";
 
 import { PostgresStorageAdapter } from "./postgres_storage_adapter.js";
 import { type SocketIOHandlers, serializeError } from "./socket.js";
@@ -164,9 +164,9 @@ export class AutomergeServer implements SocketIOHandlers {
         return { Ok: null };
     }
 
-    async close() {
-        this.wss.close();
+    close() {
         this.server.close();
+        this.wss.close();
     }
 
     private async isHeadMatching(refId: string, docId: string): Promise<boolean> {

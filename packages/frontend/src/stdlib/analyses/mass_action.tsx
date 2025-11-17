@@ -1,13 +1,13 @@
 import { createMemo } from "solid-js";
 
-import type { DblModel, MassActionProblemData, MorType, ObType, QualifiedName } from "catlog-wasm";
-import type { ModelAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
+    createNumericalColumn,
     FixedTableEditor,
     Foldable,
-    createNumericalColumn,
-} from "../../components";
+} from "catcolab-ui-components";
+import type { DblModel, MassActionProblemData, MorType, ObType, QualifiedName } from "catlog-wasm";
+import type { ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
 import { createModelODEPlot } from "./model_ode_plot";
@@ -19,31 +19,29 @@ import "./simulation.css";
 export default function MassAction(
     props: ModelAnalysisProps<MassActionProblemData> & {
         simulate: MassActionSimulator;
-        isState?: (obType: ObType) => boolean;
-        isTransition?: (morType: MorType) => boolean;
+        stateType?: ObType;
+        transitionType?: MorType;
         title?: string;
     },
 ) {
     const elaboratedModel = () => props.liveModel.elaboratedModel();
 
     const obGenerators = createMemo<QualifiedName[]>(() => {
-        const [model, pred] = [elaboratedModel(), props.isState];
+        const model = elaboratedModel();
         if (!model) {
             return [];
         }
-        return model
-            .obGenerators()
-            .filter((id) => !pred || pred(model.obType({ tag: "Basic", content: id })));
+        return props.stateType ? model.obGeneratorsWithType(props.stateType) : model.obGenerators();
     }, []);
 
     const morGenerators = createMemo<QualifiedName[]>(() => {
-        const [model, pred] = [elaboratedModel(), props.isTransition];
+        const model = elaboratedModel();
         if (!model) {
             return [];
         }
-        return model
-            .morGenerators()
-            .filter((id) => !pred || pred(model.morType({ tag: "Basic", content: id })));
+        return props.transitionType
+            ? model.morGeneratorsWithType(props.transitionType)
+            : model.morGenerators();
     }, []);
 
     const obSchema: ColumnSchema<QualifiedName>[] = [
@@ -67,7 +65,7 @@ export default function MassAction(
         {
             contentType: "string",
             header: true,
-            content: (id) => morLabelOrDefault(id, elaboratedModel()),
+            content: (id) => morLabelOrDefault(id, elaboratedModel()) ?? "",
         },
         createNumericalColumn({
             name: "Rate",
@@ -94,7 +92,7 @@ export default function MassAction(
     ];
 
     const plotResult = createModelODEPlot(
-        () => props.liveModel,
+        () => props.liveModel.validatedModel(),
         (model: DblModel) => props.simulate(model, props.content),
     );
 

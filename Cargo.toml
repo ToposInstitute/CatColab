@@ -12,6 +12,7 @@ exclude = [
   "packages/frontend",
   "packages/gaios",
   "packages/patchwork",
+  "packages/ui-components",
 ]
 
 [workspace.package]

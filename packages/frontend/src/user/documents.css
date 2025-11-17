@@ -32,41 +32,78 @@
     text-overflow: ellipsis;
 }
 
-.ref-table th:nth-child(1),
-.ref-table td:nth-child(1) {
+.documents-page .ref-table th:nth-child(1),
+.documents-page .ref-table td:nth-child(1) {
     width: 10%;
     min-width: 100px;
 }
 
-.ref-table th:nth-child(2),
-.ref-table td:nth-child(2) {
+.documents-page .ref-table th:nth-child(2),
+.documents-page .ref-table td:nth-child(2) {
     width: 40%;
     min-width: 200px;
 }
 
-.ref-table th:nth-child(3),
-.ref-table td:nth-child(3) {
+.documents-page .ref-table th:nth-child(3),
+.documents-page .ref-table td:nth-child(3) {
     width: 20%;
     min-width: 100px;
 }
 
-.ref-table th:nth-child(4),
-.ref-table td:nth-child(4) {
+.documents-page .ref-table th:nth-child(4),
+.documents-page .ref-table td:nth-child(4) {
     width: 15%;
     min-width: 80px;
 }
 
-.ref-table th:nth-child(5),
-.ref-table td:nth-child(5) {
+.documents-page .ref-table th:nth-child(5),
+.documents-page .ref-table td:nth-child(5) {
     width: 15%;
     min-width: 120px;
 }
 
-.ref-table th:nth-child(6),
-.ref-table td:nth-child(6) {
+.documents-page .ref-table th:nth-child(6),
+.documents-page .ref-table td:nth-child(6) {
     width: 5%;
     min-width: 50px;
     text-align: center;
+}
+
+.trash-bin-page .ref-table th:nth-child(1),
+.trash-bin-page .ref-table td:nth-child(1) {
+    width: 5%;
+    min-width: 50px;
+    text-align: center;
+}
+
+.trash-bin-page .ref-table th:nth-child(2),
+.trash-bin-page .ref-table td:nth-child(2) {
+    width: 10%;
+    min-width: 100px;
+}
+
+.trash-bin-page .ref-table th:nth-child(3),
+.trash-bin-page .ref-table td:nth-child(3) {
+    width: 40%;
+    min-width: 200px;
+}
+
+.trash-bin-page .ref-table th:nth-child(4),
+.trash-bin-page .ref-table td:nth-child(4) {
+    width: 20%;
+    min-width: 100px;
+}
+
+.trash-bin-page .ref-table th:nth-child(5),
+.trash-bin-page .ref-table td:nth-child(5) {
+    width: 15%;
+    min-width: 80px;
+}
+
+.trash-bin-page .ref-table th:nth-child(6),
+.trash-bin-page .ref-table td:nth-child(6) {
+    width: 15%;
+    min-width: 120px;
 }
 
 .ref-table-scroll tbody tr {
@@ -116,27 +153,6 @@
 }
 
 .delete-cell {
+    /* biome-ignore lint/complexity/noImportantStyles: existing style when upgrading biome */
     padding: 8px !important;
-}
-
-.delete-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 4px;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: background-color 0.2s ease;
-    color: #666;
-}
-
-.delete-button:hover {
-    background-color: #fee;
-    color: #c00;
-}
-
-.delete-button:active {
-    background-color: #fdd;
 }

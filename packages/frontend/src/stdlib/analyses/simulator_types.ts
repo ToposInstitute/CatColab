@@ -1,17 +1,22 @@
 import type {
     DblModel,
+    KuramotoProblemData,
     LinearODEProblemData,
     LotkaVolterraProblemData,
     MassActionProblemData,
     ODEResult,
 } from "catlog-wasm";
 
-export type { LinearODEProblemData, LotkaVolterraProblemData, MassActionProblemData };
+export type {
+    KuramotoProblemData,
+    LinearODEProblemData,
+    LotkaVolterraProblemData,
+    MassActionProblemData,
+};
 
+export type KuramotoSimulator = (model: DblModel, data: KuramotoProblemData) => ODEResult;
 export type LinearODESimulator = (model: DblModel, data: LinearODEProblemData) => ODEResult;
-
 export type LotkaVolterraSimulator = (model: DblModel, data: LotkaVolterraProblemData) => ODEResult;
-
 export type MassActionSimulator = (model: DblModel, data: MassActionProblemData) => ODEResult;
 
 /** Configuration for a Decapodes analysis of a diagram. */

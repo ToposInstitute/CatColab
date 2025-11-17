@@ -362,6 +362,42 @@ impl ThSymMonoidalCategory {
     }
 }
 
+/// A theory of power systems.
+#[wasm_bindgen]
+pub struct ThPowerSystem(Rc<theory::DiscreteDblTheory>);
+
+#[wasm_bindgen]
+impl ThPowerSystem {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Rc::new(theories::th_power_system()))
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory(self.0.clone().into())
+    }
+
+    /// Simulates the Kuramoto system derived from a model.
+    #[wasm_bindgen]
+    pub fn kuramoto(
+        &self,
+        model: &DblModel,
+        data: &analyses::ode::KuramotoProblemData,
+    ) -> Result<ODEResult, String> {
+        Ok(ODEResult(
+            analyses::ode::KuramotoAnalysis::new(name("Bus"))
+                // Should we distinguish between lines and transformers?
+                .add_link_type(Path::empty(name("Bus")))
+                .add_link_type(Path::single(name("Passive")))
+                .build_system(model.discrete()?, data)
+                .solve_with_defaults()
+                .map_err(|err| format!("{err:?}"))
+                .into(),
+        ))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

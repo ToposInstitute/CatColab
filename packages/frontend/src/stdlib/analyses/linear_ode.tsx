@@ -1,11 +1,11 @@
-import type { DblModel, LinearODEProblemData, QualifiedName } from "catlog-wasm";
-import type { ModelAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
+    createNumericalColumn,
     FixedTableEditor,
     Foldable,
-    createNumericalColumn,
-} from "../../components";
+} from "catcolab-ui-components";
+import type { DblModel, LinearODEProblemData, QualifiedName } from "catlog-wasm";
+import type { ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
 import { createModelODEPlot } from "./model_ode_plot";
@@ -43,7 +43,7 @@ export default function LinearODE(
         {
             contentType: "string",
             header: true,
-            content: (id) => morLabelOrDefault(id, elaboratedModel()),
+            content: (id) => morLabelOrDefault(id, elaboratedModel()) ?? "",
         },
         createNumericalColumn({
             name: "Coefficient",
@@ -70,7 +70,7 @@ export default function LinearODE(
     ];
 
     const plotResult = createModelODEPlot(
-        () => props.liveModel,
+        () => props.liveModel.validatedModel(),
         (model: DblModel) => props.simulate(model, props.content),
     );
 

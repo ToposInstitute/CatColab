@@ -1,5 +1,5 @@
 import { destructure } from "@solid-primitives/destructure";
-import { For, Match, Show, Switch, createEffect, createSignal } from "solid-js";
+import { createEffect, createSignal, For, Match, Show, Switch } from "solid-js";
 
 import "./fixed_table_editor.css";
 
@@ -164,10 +164,7 @@ export function FixedTableEditor<Row>(props: {
     );
 }
 
-function Cell<Row>(props: {
-    row: Row;
-    schema: ColumnSchema<Row>;
-}) {
+function Cell<Row>(props: { row: Row; schema: ColumnSchema<Row> }) {
     return (
         <Switch>
             <Match when={props.schema.contentType === "string" && props.schema}>
@@ -183,10 +180,7 @@ function Cell<Row>(props: {
     );
 }
 
-function TextCellEditor<Row>(props: {
-    row: Row;
-    schema: TextColumnSchema<Row>;
-}) {
+function TextCellEditor<Row>(props: { row: Row; schema: TextColumnSchema<Row> }) {
     const { row, schema } = destructure(props);
 
     const [text, setText] = createSignal("");
@@ -218,10 +212,7 @@ function TextCellEditor<Row>(props: {
     );
 }
 
-function BooleanCellEditor<Row>(props: {
-    row: Row;
-    schema: BooleanColumnSchema<Row>;
-}) {
+function BooleanCellEditor<Row>(props: { row: Row; schema: BooleanColumnSchema<Row> }) {
     const { row, schema } = destructure(props);
 
     return (
@@ -235,10 +226,7 @@ function BooleanCellEditor<Row>(props: {
     );
 }
 
-function EnumCellEditor<Row>(props: {
-    row: Row;
-    schema: EnumColumnSchema<Row>;
-}) {
+function EnumCellEditor<Row>(props: { row: Row; schema: EnumColumnSchema<Row> }) {
     const { row, schema } = destructure(props);
 
     return (
@@ -255,7 +243,6 @@ function EnumCellEditor<Row>(props: {
                 schema().setContent?.(row(), value);
             }}
         >
-            <option value="" />
             <For each={schema().variants(row())}>
                 {(variant) => <option value={variant}>{variant}</option>}
             </For>

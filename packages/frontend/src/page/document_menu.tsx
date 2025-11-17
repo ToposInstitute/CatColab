@@ -1,29 +1,31 @@
-import { DropdownMenu } from "@kobalte/core/dropdown-menu";
+import Popover from "@corvu/popover";
 import { useNavigate } from "@solidjs/router";
 import Ellipsis from "lucide-solid/icons/ellipsis";
-import { Match, Switch, createMemo, createResource } from "solid-js";
-import { useContext } from "solid-js";
-import { Show } from "solid-js";
+import { createMemo, createResource, Match, Show, Switch, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
+import { IconButton } from "catcolab-ui-components";
 import { createAnalysis } from "../analysis";
-import { type LiveDoc, useApi } from "../api";
-import { IconButton } from "../components";
+import { type DocRef, type LiveDoc, useApi } from "../api";
+import { DocumentTypeIcon } from "../components/document_type_icon";
 import { createDiagram } from "../diagram";
 import {
     CopyJSONMenuItem,
+    DeleteMenuItem,
     DuplicateMenuItem,
     ExportJSONMenuItem,
     MenuItem,
     MenuItemLabel,
     MenuSeparator,
+    RestoreMenuItem,
 } from "../page";
 import { TheoryLibraryContext } from "../theory";
-import { DocumentTypeIcon } from "./document_type_icon";
 
 export function DocumentMenu(props: {
     liveDoc: LiveDoc;
-    onDocumentCreated?: () => void;
+    docRef: DocRef;
+    onDocCreated?: () => void;
+    onDocDeleted?: () => void;
 }) {
     const api = useApi();
 
@@ -38,27 +40,24 @@ export function DocumentMenu(props: {
                 invariant(modelRefId, "To create diagram, parent model should have a ref ID");
                 break;
             case "model":
-                modelRefId = props.liveDoc.docRef?.refId;
-                invariant(modelRefId, "To create diagram, model should have a ref ID");
+                modelRefId = props.docRef.refId;
                 break;
             default:
                 throw `Can't create diagram for ${props.liveDoc.doc.type}`;
         }
 
         const newRef = await createDiagram(api, api.makeUnversionedRef(modelRefId));
-        props.onDocumentCreated?.();
+        props.onDocCreated?.();
         navigate(`/diagram/${newRef}`);
     };
 
     const onNewAnalysis = async () => {
-        const docRefId = props.liveDoc.docRef?.refId;
-        invariant(docRefId, "To create analysis, parent should have a ref ID");
-
+        const docRefId = props.docRef.refId;
         const docType = props.liveDoc.doc.type;
         invariant(docType !== "analysis", "Analysis cannot be created on other analysis");
 
         const newRef = await createAnalysis(api, docType, api.makeUnversionedRef(docRefId));
-        props.onDocumentCreated?.();
+        props.onDocCreated?.();
         navigate(`/analysis/${newRef}`);
     };
 
@@ -79,14 +78,23 @@ export function DocumentMenu(props: {
             props.liveDoc.doc.type !== "analysis"
         );
     });
+    const canDelete = () => props.docRef.permissions.user === "Own" && !props.docRef.isDeleted;
 
+    const canRestore = () => props.docRef.permissions.user === "Own" && props.docRef.isDeleted;
     return (
-        <DropdownMenu>
-            <DropdownMenu.Trigger as={IconButton}>
+        <Popover
+            placement="bottom-end"
+            floatingOptions={{
+                offset: 4,
+                flip: true,
+                shift: true,
+            }}
+        >
+            <Popover.Trigger as={IconButton}>
                 <Ellipsis size={18} />
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Portal>
-                <DropdownMenu.Content class="menu popup">
+            </Popover.Trigger>
+            <Popover.Portal>
+                <Popover.Content class="menu popup">
                     <Switch>
                         <Match when={theory()?.supportsInstances}>
                             <MenuItem onSelect={() => onNewDiagram()}>
@@ -113,8 +121,27 @@ export function DocumentMenu(props: {
                     <DuplicateMenuItem doc={props.liveDoc.doc} />
                     <ExportJSONMenuItem doc={props.liveDoc.doc} />
                     <CopyJSONMenuItem doc={props.liveDoc.doc} />
-                </DropdownMenu.Content>
-            </DropdownMenu.Portal>
-        </DropdownMenu>
+                    <MenuSeparator />
+                    <Switch>
+                        <Match when={canRestore()}>
+                            <RestoreMenuItem
+                                refId={props.docRef.refId}
+                                typeName={props.liveDoc.doc.type}
+                                onRestored={props.onDocDeleted}
+                            />
+                        </Match>
+                        <Match when={true}>
+                            <DeleteMenuItem
+                                refId={props.docRef.refId}
+                                name={props.liveDoc.doc.name}
+                                typeName={props.liveDoc.doc.type}
+                                canDelete={canDelete()}
+                                onDeleted={props.onDocDeleted}
+                            />
+                        </Match>
+                    </Switch>
+                </Popover.Content>
+            </Popover.Portal>
+        </Popover>
     );
 }

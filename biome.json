@@ -1,10 +1,38 @@
 {
-    "files": {
-        "ignore": ["dist/**", "docs/**", "catlog-wasm/**", "**/queries.ts"]
+    "$schema": "https://biomejs.dev/schemas/2.3.4/schema.json",
+    "vcs": {
+        "enabled": true,
+        "clientKind": "git",
+        "useIgnoreFile": true
     },
-    "$schema": "https://biomejs.dev/schemas/1.8.3/schema.json",
-    "organizeImports": {
-        "enabled": true
+    "files": {
+        "includes": [
+            "**",
+            "!!**/dist",
+            "!!**/docs",
+            "!!**/catlog-wasm",
+            "!!**/queries.ts",
+            "!!**/storybook-static"
+        ]
+    },
+    "assist": {
+        "enabled": true,
+        "actions": {
+            "source": {
+                "organizeImports": {
+                    "level": "on",
+                    "options": {
+                        "groups": [
+                            ":NODE:",
+                            [":PACKAGE:", "!catcolab-ui-components", "!catcolab-api", "!catlog-wasm"],
+                            ":BLANK_LINE:",
+                            ["catcolab-ui-components", "catcolab-api", "catlog-wasm"],
+                            ":PATH:"
+                        ]
+                    }
+                }
+            }
+        }
     },
     "formatter": {
         "indentStyle": "space",
@@ -14,10 +42,10 @@
     "linter": {
         "enabled": true,
         "rules": {
-            "a11y": {
-                "all": false
-            },
             "recommended": true,
+            "a11y": {
+                "recommended": false
+            },
             "suspicious": {
                 "noExplicitAny": "warn",
                 "noDuplicateTestHooks": {
@@ -36,7 +64,8 @@
                 },
                 "noUselessElse": {
                     "level": "off"
-                }
+                },
+                "useBlockStatements": "error"
             }
         }
     },

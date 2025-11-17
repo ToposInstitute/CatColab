@@ -1,5 +1,5 @@
 import { destructure } from "@solid-primitives/destructure";
-import { type Component, For, Index, Match, Show, Switch, createUniqueId } from "solid-js";
+import { type Component, createUniqueId, For, Index, Match, Show, Switch } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
 import type * as GraphLayout from "./graph_layout";
@@ -9,14 +9,14 @@ import "./graph_svg.css";
 
 /** Draw a graph with a layout using SVG.
  */
-export function GraphSVG<Id>(props: {
-    graph: GraphLayout.Graph<Id>;
-    ref?: SVGRefProp;
-}) {
+export function GraphSVG<Id>(props: { graph: GraphLayout.Graph<Id>; ref?: SVGRefProp }) {
     const edgeMarkers = () => {
         const markers = new Set<ArrowMarker>();
         for (const edge of props.graph.edges) {
-            markers.add(styleToMarker[edge.style ?? "default"]);
+            const marker = styleToMarker[edge.style ?? "default"];
+            if (marker) {
+                markers.add(marker);
+            }
         }
         return Array.from(markers);
     };
@@ -200,10 +200,11 @@ const FlatMarker = (props: { id: string }) => (
  */
 export type ArrowMarker = "vee" | "double" | "triangle" | "flat";
 
-const styleToMarker: Record<ArrowStyle, ArrowMarker> = {
+const styleToMarker: Record<ArrowStyle, ArrowMarker | null> = {
     default: "vee",
     double: "double",
     flat: "flat",
+    unmarked: null,
     plus: "triangle",
     minus: "triangle",
     indeterminate: "triangle",

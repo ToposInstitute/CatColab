@@ -200,4 +200,25 @@ pub enum InvalidDblModel {
 
     /// Equation between morphisms has one or more errors.
     Eq(usize, NonEmpty<InvalidPathEq>),
+
+    /// Tried to us a feature not yet supported by the elaborator
+    UnsupportedFeature(Feature),
+
+    /// No link provided for instantiation cell, or wrong type of link
+    InvalidLink(QualifiedName),
+}
+
+/// Various features that the new elaboration does not yet support
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(tag = "tag", content = "content"))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
+pub enum Feature {
+    /// Modal theories
+    Modal,
+    /// Tabulator theories
+    Tabulator,
+    /// Morphism types given by composites of generators
+    CompositeMorType,
 }

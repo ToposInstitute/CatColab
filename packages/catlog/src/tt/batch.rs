@@ -184,7 +184,7 @@ pub fn elaborate(src: &str, path: &str, output: &BatchOutput) -> io::Result<bool
                 }
             }
             if let Some(d) = topelab.elab(&toplevel, topntn) {
-                if should_fail {
+                if should_fail && !reporter.errored() {
                     reporter.error(
                         topntn.loc,
                         TOP_ERROR,

@@ -1,6 +1,6 @@
-import { For, type JSX, Show, createMemo, createSignal, onMount } from "solid-js";
+import { createMemo, createSignal, For, type JSX, onMount, Show } from "solid-js";
 
-import type { KbdKey } from "../util/keyboard";
+import type { KbdKey } from "./util/keyboard";
 
 import "./completions.css";
 
@@ -111,9 +111,7 @@ export function Completions(props: {
     );
 }
 
-const KbdShortcut = (props: {
-    shortcut: KbdKey[];
-}) => (
+const KbdShortcut = (props: { shortcut: KbdKey[] }) => (
     <kbd class="shortcut">
         <For each={props.shortcut}>{(key) => <kbd class="key">{key}</kbd>}</For>
     </kbd>

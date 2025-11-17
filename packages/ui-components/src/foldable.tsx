@@ -1,8 +1,7 @@
 import Discloure from "@corvu/disclosure";
-import { type JSX, Show, createSignal } from "solid-js";
-
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronRight from "lucide-solid/icons/chevron-right";
+import { createSignal, type JSX, Show } from "solid-js";
 
 import "./foldable.css";
 import "./panel.css";

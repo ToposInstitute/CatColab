@@ -88,7 +88,7 @@ jobs:
       - name: Setup NodeJS
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: "pnpm"
 
       - name: Install Rust toolchain from file
@@ -105,6 +105,31 @@ jobs:
       - name: Run frontend tests
         run: |
           pnpm --filter ./packages/frontend run test:no-backend
+
+  ui_components_tests:
+    name: ui-components tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Install Playwright browser
+        run: pnpm --filter ./packages/ui-components exec playwright install chromium
+
+      - name: Run ui-components tests
+        run: pnpm --filter ./packages/ui-components run test
 
   backend_dev_setup:
     name: backend dev setup
@@ -150,7 +175,7 @@ jobs:
       - name: Setup NodeJS
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: "pnpm"
 
       - name: Install NodeJS dependencies

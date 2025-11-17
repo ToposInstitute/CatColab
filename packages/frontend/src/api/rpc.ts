@@ -1,9 +1,9 @@
-import { http, build_client } from "@qubit-rs/client";
+import { build_client, http } from "@qubit-rs/client";
 import type { FirebaseApp } from "firebase/app";
-import { type User, getAuth } from "firebase/auth";
+import { getAuth, type User } from "firebase/auth";
+import type { Accessor } from "solid-js";
 
 import type { QubitServer, RpcResult } from "catcolab-api";
-import type { Accessor } from "solid-js";
 
 /** RPC client for communicating with the CatColab backend. */
 export type RpcClient = QubitServer;

@@ -1,0 +1,73 @@
+.icon-button {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 0.25rem;
+
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+
+    &:hover:enabled {
+        background: whitesmoke;
+        border-radius: 5px;
+    }
+}
+
+.icon-button-danger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 4px;
+    margin: 0;
+
+    &:hover:enabled {
+        background-color: #fee;
+        color: #c00;
+    }
+}
+
+.icon-button-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 4px;
+    margin: 0;
+    color: #666;
+    transition: background-color 0.2s ease;
+
+    &:hover:enabled {
+        background-color: #efe;
+        color: #0a0;
+    }
+
+    &:active:enabled {
+        background-color: #dfd;
+    }
+}
+
+.tooltip-content {
+    border-radius: 0.5rem;
+    color: white;
+    background-color: hsl(251, 9%, 23%);
+    padding: 0.5rem;
+    font-size: smaller;
+
+    & p:first-child {
+        margin-top: 0;
+    }
+
+    & p:last-child {
+        margin-bottom: 0;
+    }
+}

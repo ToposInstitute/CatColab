@@ -18,7 +18,6 @@ use crate::simulate::ode::{LinearODESystem, ODEProblem};
 use crate::{one::QualifiedPath, zero::QualifiedName};
 
 /// Data defining a linear ODE problem for a model.
-#[derive(Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(

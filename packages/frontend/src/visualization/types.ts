@@ -8,6 +8,7 @@ export type ArrowStyle =
     | "default"
     | "double"
     | "flat"
+    | "unmarked"
     | "plus"
     | "minus"
     | "indeterminate"

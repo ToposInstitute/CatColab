@@ -11,9 +11,7 @@ export default function GuideHelpPage() {
 }
 
 /** Contents of the guide page */
-export function GuideHelp(props: {
-    id?: string;
-}) {
+export function GuideHelp(props: { id?: string }) {
     // Note that guide should never be undefined, due to existingGuideFilter
     // in routes.ts
     const guide = guidesList.find((item) => item.id === props.id);

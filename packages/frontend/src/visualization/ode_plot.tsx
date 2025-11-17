@@ -1,8 +1,8 @@
 import type { EChartsOption } from "echarts";
-import { Match, Switch, lazy } from "solid-js";
+import { lazy, Match, Switch, splitProps } from "solid-js";
 
+import { ErrorAlert } from "catcolab-ui-components";
 import type { JsResult } from "catlog-wasm";
-import { ErrorAlert } from "../components";
 
 const ECharts = lazy(() => import("./echarts"));
 
@@ -18,18 +18,28 @@ export type StateVarData = {
     data: number[];
 };
 
+/** Optional props for ODE plot components. */
+type ODEPlotOptions = {
+    yAxis?: EChartsOption["yAxis"];
+    yTransform?: (value: number) => number;
+};
+
 /** Display the results from an ODE simulation.
 
 Plots the output data if the simulation was successful and shows an error
 message otherwise.
  */
-export function ODEResultPlot(props: {
-    result?: JsResult<ODEPlotData, string>;
-}) {
+export function ODEResultPlot(
+    allProps: {
+        result?: JsResult<ODEPlotData, string>;
+    } & ODEPlotOptions,
+) {
+    const [props, options] = splitProps(allProps, ["result"]);
+
     return (
         <Switch>
             <Match when={props.result?.tag === "Ok" && props.result.content}>
-                {(data) => <ODEPlot data={data()} />}
+                {(data) => <ODEPlot data={data()} {...options} />}
             </Match>
             <Match when={props.result?.tag === "Err" && props.result.content}>
                 {(err) => <ErrorAlert title="Integration error">{err()}</ErrorAlert>}
@@ -39,9 +49,11 @@ export function ODEResultPlot(props: {
 }
 
 /** Plot the output data from an ODE simulation. */
-export function ODEPlot(props: {
-    data: ODEPlotData;
-}) {
+export function ODEPlot(
+    props: {
+        data: ODEPlotData;
+    } & ODEPlotOptions,
+) {
     const options = (): EChartsOption => ({
         legend: {
             data: props.data.states.map((state) => state.name),
@@ -56,12 +68,12 @@ export function ODEPlot(props: {
                 },
             },
         },
-        yAxis: {
+        yAxis: props.yAxis ?? {
             type: "value",
         },
         series: props.data.states.map((state) => ({
             name: state.name,
-            data: state.data,
+            data: props.yTransform ? state.data.map(props.yTransform) : state.data,
             type: "line",
             symbol: "none",
         })),

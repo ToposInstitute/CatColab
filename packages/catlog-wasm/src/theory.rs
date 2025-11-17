@@ -334,6 +334,15 @@ impl DblTheory {
             }
         })
     }
+
+    /// Does the theory support instantiating models in other models?
+    ///
+    /// Eventually instantiation should be supported for every double doctrine
+    /// and then this method can be removed.
+    #[wasm_bindgen(js_name = "canInstantiateModels")]
+    pub fn can_instantiate_models(&self) -> bool {
+        matches!(&self.0, DblTheoryBox::Discrete(_))
+    }
 }
 
 /// Mapping from object types to numerical indices.

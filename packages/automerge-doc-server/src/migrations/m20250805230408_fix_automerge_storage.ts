@@ -1,6 +1,7 @@
 import { type DocHandle, Repo, type RepoConfig } from "@automerge/automerge-repo";
 import dotenv from "dotenv";
 import pgPkg from "pg";
+
 import { PostgresStorageAdapter } from "../postgres_storage_adapter.js";
 
 const { Pool } = pgPkg;

@@ -1,5 +1,3 @@
-// JsonExport.tsx
-
 export function downloadJson(data: string, filename = "export.json") {
     const blob = new Blob([data], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -12,8 +10,4 @@ export function downloadJson(data: string, filename = "export.json") {
     } finally {
         URL.revokeObjectURL(url);
     }
-}
-
-export async function copyToClipboard(data: string): Promise<void> {
-    await navigator.clipboard.writeText(data);
 }

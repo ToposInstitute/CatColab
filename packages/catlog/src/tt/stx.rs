@@ -52,6 +52,31 @@ impl MorphismType {
     }
 }
 
+/// A metavariable
+///
+/// Metavariables are emitted on elaboration error or when explicitly
+/// requested with `@hole`.
+///
+/// Metavariables in notebook elaboration are namespaced to the notebook.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct MetaVar {
+    ref_id: Option<Ustr>,
+    id: usize,
+}
+
+impl MetaVar {
+    /// Constructor for metavariables
+    pub fn new(ref_id: Option<Ustr>, id: usize) -> Self {
+        Self { ref_id, id }
+    }
+}
+
+impl fmt::Display for MetaVar {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "?{}", self.id)
+    }
+}
+
 /// Type in the base type theory.
 ///
 /// See [crate::tt] for more information about what this means. Note that this
@@ -64,6 +89,8 @@ pub enum Ty0 {
     Record(Row<Ty0>),
     /// Unit type.
     Unit,
+    /// Meta variable
+    Meta(MetaVar),
 }
 
 /// Content of record type syntax.
@@ -138,6 +165,12 @@ pub enum TyS_ {
     ///
     /// All terms of this type are convertable with `tt : Unit`.
     Unit,
+
+    /// A metavar.
+    ///
+    /// Currently, this is only used for handling elaboration errors, we might
+    /// add more unification/holes later.
+    Meta(MetaVar),
 }
 
 /// Syntax for total types, dereferences to [TyS_].
@@ -194,6 +227,11 @@ impl TyS {
         Self(Rc::new(TyS_::Unit))
     }
 
+    /// Smart constructor for [TyS], [TyS_::Meta] case.
+    pub fn meta(mv: MetaVar) -> Self {
+        Self(Rc::new(TyS_::Meta(mv)))
+    }
+
     fn to_doc<'a>(&self) -> D<'a> {
         match &**self {
             TyS_::TopVar(name) => t(format!("{}", name)),
@@ -213,6 +251,7 @@ impl TyS {
                 tuple(d.iter().map(|(name, ty)| binop(":", t(path_to_string(name)), ty.to_doc()))),
             ),
             TyS_::Unit => t("Unit"),
+            TyS_::Meta(mv) => t(format!("?{}", mv.id)),
         }
     }
 }
@@ -258,6 +297,10 @@ pub enum TmS_ {
     ///
     /// This only appears when we quote a value
     Opaque,
+    /// A metavar
+    ///
+    /// This only appears when we have an error in elaboration
+    Meta(MetaVar),
 }
 
 /// Syntax for total terms, dereferences to [TmS_].
@@ -321,6 +364,11 @@ impl TmS {
         Self(Rc::new(TmS_::Opaque))
     }
 
+    /// Smart constructor for [TmS], [TmS_::Meta] case.
+    pub fn meta(mv: MetaVar) -> Self {
+        Self(Rc::new(TmS_::Meta(mv)))
+    }
+
     fn to_doc<'a>(&self) -> D<'a> {
         match &**self {
             TmS_::TopVar(name) => t(format!("{}", name)),
@@ -338,6 +386,7 @@ impl TmS {
             TmS_::Compose(f, g) => binop("·", f.to_doc(), g.to_doc()),
             TmS_::Tt => t("tt"),
             TmS_::Opaque => t("<opaque>"),
+            TmS_::Meta(mv) => t(format!("?{}", mv.id)),
         }
     }
 }

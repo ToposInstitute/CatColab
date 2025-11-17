@@ -1,10 +1,10 @@
-import { type SubmitHandler, createForm, reset } from "@modular-forms/solid";
+import { createForm, reset, type SubmitHandler } from "@modular-forms/solid";
 import { createEffect, createResource } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { UserProfile } from "catcolab-api";
+import { Button, FormGroup, TextInputField } from "catcolab-ui-components";
 import { useApi } from "../api";
-import { FormGroup, TextInputField } from "../components";
 import { BrandedToolbar } from "../page";
 import { LoginGate } from "./login";
 
@@ -92,7 +92,9 @@ export function UserProfileForm() {
                     )}
                 </Field>
             </FormGroup>
-            <button type="submit">Update profile</button>
+            <Button type="submit" variant="primary">
+                Update profile
+            </Button>
         </Form>
     );
 }

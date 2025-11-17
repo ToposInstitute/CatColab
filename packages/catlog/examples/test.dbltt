@@ -64,7 +64,7 @@ def reverse[G : Graph] : Graph := [
 ]
 
 #(should_fail)
-def reverse[G : Graph] : Graph := [
+def reverse1[G : Graph] : Graph := [
   V := G.E,
   E := G.E,
   src := G.tgt,
@@ -132,3 +132,13 @@ type NegFeedback := [
 ]
 
 generate NegFeedback
+
+#(should_fail)
+type NegFeedback1 := [
+  X : Object,
+  Y : Object,
+  f : (Id Object)[@hole, Y],
+  g : Negative[Y, f]
+]
+
+generate NegFeedback1

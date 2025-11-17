@@ -1,18 +1,17 @@
 import { createSignal } from "solid-js";
 
-import { NameInput } from "../components";
+import { NameInput } from "catcolab-ui-components";
+import type { DiagramObDecl } from "catlog-wasm";
 import { ObInput } from "../model/object_input";
 import type { CellActions } from "../notebook";
 import type { Theory } from "../theory";
-import type { DiagramObjectDecl } from "./types";
 
 import "./object_cell_editor.css";
 
-/** Editor an object declaration cell in a diagram in a model.
- */
+/** Editor an object declaration cell in a diagram in a model. */
 export function DiagramObjectCellEditor(props: {
-    decl: DiagramObjectDecl;
-    modifyDecl: (f: (decl: DiagramObjectDecl) => void) => void;
+    decl: DiagramObDecl;
+    modifyDecl: (f: (decl: DiagramObDecl) => void) => void;
     isActive: boolean;
     actions: CellActions;
     theory: Theory;
@@ -34,6 +33,7 @@ export function DiagramObjectCellEditor(props: {
                 exitUp={props.actions.activateAbove}
                 exitDown={props.actions.activateBelow}
                 exitRight={() => setActiveInput("overOb")}
+                exitForward={() => setActiveInput("overOb")}
                 isActive={props.isActive && activeInput() === "name"}
                 hasFocused={() => {
                     setActiveInput("name");
@@ -53,6 +53,7 @@ export function DiagramObjectCellEditor(props: {
                 exitUp={props.actions.activateAbove}
                 exitDown={props.actions.activateBelow}
                 exitLeft={() => setActiveInput("name")}
+                exitBackward={() => setActiveInput("name")}
                 isActive={props.isActive && activeInput() === "overOb"}
                 hasFocused={() => {
                     setActiveInput("overOb");

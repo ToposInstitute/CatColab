@@ -1,16 +1,14 @@
-import type { ObType } from "catlog-wasm";
-import { NameInput } from "../components";
+import { NameInput } from "catcolab-ui-components";
+import type { ObDecl, ObType } from "catlog-wasm";
 import type { CellActions } from "../notebook";
 import type { Theory } from "../theory";
-import type { ObjectDecl } from "./types";
 
 import "./object_cell_editor.css";
 
-/** Editor for an object declaration cell in a model.
- */
+/** Editor for an object declaration cell in a model. */
 export function ObjectCellEditor(props: {
-    object: ObjectDecl;
-    modifyObject: (f: (decl: ObjectDecl) => void) => void;
+    object: ObDecl;
+    modifyObject: (f: (decl: ObDecl) => void) => void;
     isActive: boolean;
     actions: CellActions;
     theory: Theory;

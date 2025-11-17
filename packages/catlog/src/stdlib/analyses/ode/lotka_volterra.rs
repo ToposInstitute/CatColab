@@ -18,7 +18,6 @@ use crate::simulate::ode::{LotkaVolterraSystem, ODEProblem};
 use crate::{one::QualifiedPath, zero::QualifiedName};
 
 /// Data defining a Lotka-Volterra ODE problem for a model.
-#[derive(Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(
