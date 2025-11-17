@@ -1,24 +1,23 @@
-import { For, Match, Show, Switch, createMemo } from "solid-js";
+import Loader from "lucide-solid/icons/loader";
+import RotateCcw from "lucide-solid/icons/rotate-ccw";
+import { createMemo, For, Match, Show, Switch } from "solid-js";
 
 import {
     type ColumnSchema,
+    createNumericalColumn,
     ErrorAlert,
     FixedTableEditor,
     Foldable,
     IconButton,
     Warning,
-    createNumericalColumn,
 } from "catcolab-ui-components";
 import type { ModelDiagramPresentation, ModelPresentation, QualifiedName } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
-import type { LiveDiagramDocument } from "../../diagram";
+import type { LiveDiagramDoc } from "../../diagram";
 import { uniqueIndexArray } from "../../util/indexing";
 import { PDEPlot2D, type PDEPlotData2D } from "../../visualization";
 import { createJuliaKernel, executeAndRetrieve } from "./jupyter";
 import type { DecapodesAnalysisContent } from "./simulator_types";
-
-import Loader from "lucide-solid/icons/loader";
-import RotateCcw from "lucide-solid/icons/rotate-ccw";
 
 import "./decapodes.css";
 import "./simulation.css";
@@ -326,7 +325,7 @@ const makeSimulationCode = (data: SimulationData) =>
 
 /** Create data to send to the Julia kernel. */
 const makeSimulationData = (
-    liveDiagram: LiveDiagramDocument,
+    liveDiagram: LiveDiagramDoc,
     content: DecapodesAnalysisContent,
 ): SimulationData | undefined => {
     const validatedModel = liveDiagram.liveModel.validatedModel();

@@ -1,24 +1,23 @@
-import { attachClosestEdge } from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
 import { combine } from "@atlaskit/pragmatic-drag-and-drop/combine";
 import {
     draggable,
     dropTargetForElements,
 } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
+import { attachClosestEdge } from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
 import type { DocHandle, Prop } from "@automerge/automerge-repo";
 import Popover from "@corvu/popover";
-import type { EditorView } from "prosemirror-view";
-import { type JSX, Show, createEffect, createSignal, onCleanup } from "solid-js";
-
-import { type Completion, Completions, IconButton, InlineInput } from "catcolab-ui-components";
-import type { Uuid } from "catlog-wasm";
-import { RichTextEditor } from "../components";
-
 import ArrowDown from "lucide-solid/icons/arrow-down";
 import ArrowUp from "lucide-solid/icons/arrow-up";
 import Copy from "lucide-solid/icons/copy";
 import GripVertical from "lucide-solid/icons/grip-vertical";
 import Plus from "lucide-solid/icons/plus";
 import Trash2 from "lucide-solid/icons/trash-2";
+import type { EditorView } from "prosemirror-view";
+import { createEffect, createSignal, type JSX, onCleanup, Show } from "solid-js";
+
+import { type Completion, Completions, IconButton, InlineInput } from "catcolab-ui-components";
+import type { Uuid } from "catlog-wasm";
+import { RichTextEditor } from "../components";
 
 import "./notebook_cell.css";
 

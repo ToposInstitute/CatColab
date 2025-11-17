@@ -24,9 +24,7 @@ export type PDEPlotData2D = {
 type StateVarAtTime = Array<[xIndex: number, yIndex: number, value: number]>;
 
 /** Display the output data from a 2D PDE simulation. */
-export function PDEPlot2D(props: {
-    data: PDEPlotData2D;
-}) {
+export function PDEPlot2D(props: { data: PDEPlotData2D }) {
     // XXX: JavaScript is not stable under eta-equivalence.
     const min = (x: number, y: number) => Math.min(x, y);
     const max = (x: number, y: number) => Math.max(x, y);

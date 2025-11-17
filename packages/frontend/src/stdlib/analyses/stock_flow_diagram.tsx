@@ -1,5 +1,5 @@
 import type * as Viz from "@viz-js/viz";
-import { type Component, For, Show, createResource, createSignal } from "solid-js";
+import { type Component, createResource, createSignal, For, Show } from "solid-js";
 
 import { Foldable } from "catcolab-ui-components";
 import type { DblModel } from "catlog-wasm";
@@ -8,21 +8,20 @@ import type { Theory } from "../../theory";
 import { uniqueIndexArray } from "../../util/indexing";
 import {
     type ArrowMarker,
+    arrowMarkerSVG,
     DownloadSVGButton,
     EdgeSVG,
     type GraphLayout,
     GraphLayoutConfig,
     GraphLayoutConfigForm,
     type GraphvizAttributes,
+    loadViz,
     NodeSVG,
     type SVGRefProp,
-    arrowMarkerSVG,
-    loadViz,
     vizLayoutGraph,
 } from "../../visualization";
-import { modelToGraphviz } from "./model_graph";
-
 import svgStyles from "../svg_styles.module.css";
+import { modelToGraphviz } from "./model_graph";
 import "./graph_visualization.css";
 
 /** Visualize a stock flow diagram. */

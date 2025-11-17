@@ -12,9 +12,37 @@ env:
   BRANCH_NAME: ${{ github.ref_name }}
 
 permissions:
-  pull-requests: write
+  deployments: write
 
 jobs:
+  create_deployment:
+    name: Create GitHub deployment
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'ToposInstitute/CatColab'
+    outputs:
+      deployment_id: ${{ steps.create_deployment.outputs.deployment_id }}
+    steps:
+      - name: Create new GitHub deployment
+        id: create_deployment
+        uses: chrnorm/deployment-action@v2
+        with:
+          token: ${{ github.token }}
+          environment: netlify-preview
+          ref: ${{ github.event.pull_request.head.ref }}
+          sha: ${{ github.event.pull_request.head.sha }}
+          transient-environment: true
+          auto-inactive: true
+          log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Update deployment status to in_progress
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ github.token }}
+          description: 'Building and deploying...'
+          state: 'in_progress'
+          log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          deployment-id: ${{ steps.create_deployment.outputs.deployment_id }}
+
   build_dev_docs:
     name: Build developer docs
     runs-on: ubuntu-latest
@@ -28,7 +56,7 @@ jobs:
       - name: Setup NodeJS
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: "pnpm"
 
       - name: Build developer docs
@@ -55,7 +83,7 @@ jobs:
       - name: Setup NodeJS
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: "pnpm"
 
       - name: Install Rust toolchain from file
@@ -157,7 +185,7 @@ jobs:
       - name: Setup NodeJS
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: "pnpm"
 
       - name: Install dependencies
@@ -177,6 +205,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build_dev_docs, build_frontend, build_rust_docs, build_math-docs, build_ui_components]
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == 'ToposInstitute/CatColab'
+    outputs:
+      deploy_url: ${{ steps.url_preview.outputs.NETLIFY_PREVIEW_URL }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -187,7 +217,7 @@ jobs:
       - name: Setup NodeJS
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: "pnpm"
 
       - name: Install Netlify
@@ -234,13 +264,73 @@ jobs:
           NETLIFY_PREVIEW_URL=$(jq -r '.deploy_url' deploy_output.json)
           echo "NETLIFY_PREVIEW_URL=$NETLIFY_PREVIEW_URL" >> "$GITHUB_OUTPUT"
 
-      - name: Comment URL preview on PR
-        uses: mshick/add-pr-comment@v2
-        if: env.BRANCH_NAME != 'main' && (github.event_name == 'push' || github.event_name == 'pull_request')
+  report_deployment_status:
+    name: Report deployment status
+    runs-on: ubuntu-latest
+    needs: [create_deployment, deploy]
+    if: always() && github.event_name == 'pull_request' && needs.create_deployment.result == 'success'
+    steps:
+      - name: Invalidate old successful deployments
+        if: needs.deploy.result == 'success'
+        uses: actions/github-script@v7
         with:
-          message: |
-              # <a href="${{ steps.url_preview.outputs.NETLIFY_PREVIEW_URL }}">**Netlify CatColab Preview**</a>
-              :arrow_right: <sub><a href="${{ steps.url_preview.outputs.NETLIFY_PREVIEW_URL }}/dev/ui-components">UI Components</a><sub>
+          script: |
+            const { data: deployments } = await github.rest.repos.listDeployments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.payload.pull_request.head.ref,
+              environment: 'netlify-preview'
+            });
+            
+            console.log(`Found ${deployments.length} existing deployment(s)`);
+            
+            const currentDeploymentId = parseInt('${{ needs.create_deployment.outputs.deployment_id }}');
+            
+            for (const deployment of deployments) {
+              if (deployment.id !== currentDeploymentId) {
+                // Get the latest status for this deployment
+                const { data: statuses } = await github.rest.repos.listDeploymentStatuses({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  deployment_id: deployment.id
+                });
+                
+                // Only invalidate if the latest status was 'success'
+                if (statuses.length > 0 && statuses[0].state === 'success') {
+                  console.log(`Invalidating successful deployment ${deployment.id}`);
+                  await github.rest.repos.createDeploymentStatus({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    deployment_id: deployment.id,
+                    state: 'inactive',
+                    description: 'Superseded by newer deployment'
+                  });
+                } else {
+                  console.log(`Skipping deployment ${deployment.id} (not successful)`);
+                }
+              }
+            }
+
+      - name: Update deployment status to success
+        if: needs.deploy.result == 'success'
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ github.token }}
+          environment-url: ${{ needs.deploy.outputs.deploy_url }}
+          log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          description: 'Netlify preview deployment'
+          state: 'success'
+          deployment-id: ${{ needs.create_deployment.outputs.deployment_id }}
+
+      - name: Update deployment status to failure
+        if: needs.deploy.result != 'success'
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ github.token }}
+          log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          description: 'Deployment failed'
+          state: 'failure'
+          deployment-id: ${{ needs.create_deployment.outputs.deployment_id }}
 
   deploy_backend:
     name: Deploy backend to AWS

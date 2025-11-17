@@ -1,7 +1,7 @@
 import type { Accessor } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { type DblModel, type Document, type ModelJudgment, currentVersion } from "catlog-wasm";
+import { currentVersion, type DblModel, type Document, type ModelJudgment } from "catlog-wasm";
 import type { Api, LiveDoc } from "../api";
 import { NotebookUtils, newNotebook } from "../notebook/types";
 import type { Theory, TheoryLibrary } from "../theory";
@@ -23,7 +23,7 @@ export const newModelDocument = (theory: string): ModelDocument => ({
 
 Contains a live document for the model, plus various memos of derived data.
  */
-export type LiveModelDocument = {
+export type LiveModelDoc = {
     /** Tag for use in tagged unions of document types. */
     type: "model";
 
@@ -59,7 +59,7 @@ export async function createModel(
 
 /** Migrate a model document from one theory to another. */
 export async function migrateModelDocument(
-    liveModel: LiveModelDocument,
+    liveModel: LiveModelDoc,
     targetTheoryId: string,
     theories: TheoryLibrary,
 ) {

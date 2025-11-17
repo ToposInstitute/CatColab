@@ -1,18 +1,6 @@
 import Popover from "@corvu/popover";
 import { useNavigate } from "@solidjs/router";
 import { getAuth, signOut } from "firebase/auth";
-import { useAuth, useFirebaseApp } from "solid-firebase";
-import { type JSX, Show, useContext } from "solid-js";
-import invariant from "tiny-invariant";
-
-import { IconButton } from "catcolab-ui-components";
-import type { Document } from "catlog-wasm";
-import { useApi } from "../api";
-import { createModel } from "../model/document";
-import { TheoryLibraryContext } from "../theory";
-import { downloadJson } from "../util/json_export";
-import { PageActionsContext } from "./context";
-
 import CopyToClipboard from "lucide-solid/icons/clipboard-copy";
 import Copy from "lucide-solid/icons/copy";
 import Export from "lucide-solid/icons/download";
@@ -28,14 +16,22 @@ import SettingsIcon from "lucide-solid/icons/settings";
 import Trash2 from "lucide-solid/icons/trash-2";
 import UploadIcon from "lucide-solid/icons/upload";
 import X from "lucide-solid/icons/x";
+import { useAuth, useFirebaseApp } from "solid-firebase";
+import { type JSX, Show, useContext } from "solid-js";
+import invariant from "tiny-invariant";
+
+import { IconButton } from "catcolab-ui-components";
+import type { Document } from "catlog-wasm";
+import { useApi } from "../api";
+import { createModel } from "../model/document";
+import { TheoryLibraryContext } from "../theory";
+import { downloadJson } from "../util/json_export";
+import { PageActionsContext } from "./context";
 
 import "./menubar.css";
 
 /** Menu triggered from a hamburger button. */
-export function HamburgerMenu(props: {
-    children: JSX.Element;
-    disabled?: boolean;
-}) {
+export function HamburgerMenu(props: { children: JSX.Element; disabled?: boolean }) {
     return (
         <Popover
             placement="bottom-start"
@@ -55,7 +51,7 @@ export function HamburgerMenu(props: {
     );
 }
 
-import { type Component, type JSX as SolidJSX, createSignal, splitProps } from "solid-js";
+import { type Component, createSignal, type JSX as SolidJSX, splitProps } from "solid-js";
 
 /** Menu item component for use within HamburgerMenu. */
 export const MenuItem: Component<{
@@ -111,32 +107,27 @@ export const MenuSeparator: Component = () => {
 
 Contains menu items common to all pages, plus space for page-specific items.
  */
-export function AppMenu(props: {
-    children?: JSX.Element;
-    disabled?: boolean;
-}) {
+export function AppMenu(props: { children?: JSX.Element; disabled?: boolean }) {
     const firebaseApp = useFirebaseApp();
     const auth = useAuth(getAuth(firebaseApp));
 
     // Root the dialog here so that it is not destroyed when the menu closes.
     return (
-        <>
-            <HamburgerMenu disabled={props.disabled}>
-                {props.children}
-                <Show when={props.children}>
-                    <MenuSeparator />
-                </Show>
-                <Show when={auth.data} fallback={<LogInMenuItem />}>
-                    <HomeMenuItem />
-                    <DocumentsMenuItem />
-                    <TrashBinMenuItem />
-                    <SettingsMenuItem />
-                    <LogOutMenuItem />
-                </Show>
+        <HamburgerMenu disabled={props.disabled}>
+            {props.children}
+            <Show when={props.children}>
                 <MenuSeparator />
-                <HelpMenuItem />
-            </HamburgerMenu>
-        </>
+            </Show>
+            <Show when={auth.data} fallback={<LogInMenuItem />}>
+                <HomeMenuItem />
+                <DocumentsMenuItem />
+                <TrashBinMenuItem />
+                <SettingsMenuItem />
+                <LogOutMenuItem />
+            </Show>
+            <MenuSeparator />
+            <HelpMenuItem />
+        </HamburgerMenu>
     );
 }
 
@@ -170,9 +161,7 @@ export function NewModelItem() {
 }
 
 /** Menu item to duplicate a document. */
-export function DuplicateMenuItem(props: {
-    doc: Document;
-}) {
+export function DuplicateMenuItem(props: { doc: Document }) {
     const api = useApi();
     const navigate = useNavigate();
 
@@ -203,9 +192,7 @@ export function ImportMenuItem() {
 }
 
 /** Menu item to export document as JSON. */
-export function ExportJSONMenuItem(props: {
-    doc: Document;
-}) {
+export function ExportJSONMenuItem(props: { doc: Document }) {
     const onExportJSON = () => downloadJson(JSON.stringify(props.doc), `${props.doc.name}.json`);
 
     return (
@@ -217,9 +204,7 @@ export function ExportJSONMenuItem(props: {
 }
 
 /** Menu item to copy document to clipboard in JSON format. */
-export function CopyJSONMenuItem(props: {
-    doc: Document;
-}) {
+export function CopyJSONMenuItem(props: { doc: Document }) {
     const onCopyJSON = () => navigator.clipboard.writeText(JSON.stringify(props.doc));
 
     return (
@@ -300,7 +285,7 @@ function DocumentsMenuItem() {
 
 /** Menu item to delete a document. */
 export function DeleteMenuItem(props: {
-    refId: string | undefined;
+    refId: string;
     name: string | null;
     typeName: string;
     canDelete: boolean;
@@ -310,7 +295,6 @@ export function DeleteMenuItem(props: {
     invariant(actions, "Page actions should be provided");
 
     const handleDelete = async () => {
-        invariant(props.refId, "No document reference found");
         const success = await actions.showDeleteDialog({
             refId: props.refId,
             name: props.name,
@@ -331,17 +315,13 @@ export function DeleteMenuItem(props: {
 
 /** Menu item to restore a deleted document. */
 export function RestoreMenuItem(props: {
-    refId: string | undefined;
+    refId: string;
     typeName: string;
     onRestored?: () => void;
 }) {
     const api = useApi();
 
     const handleRestore = async () => {
-        if (!props.refId) {
-            return;
-        }
-
         try {
             const result = await api.rpc.restore_ref.mutate(props.refId);
             if (result.tag === "Ok") {

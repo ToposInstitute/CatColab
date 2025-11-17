@@ -1,13 +1,15 @@
 import Tooltip from "@corvu/tooltip";
 import { A } from "@solidjs/router";
+import Copy from "lucide-solid/icons/copy";
+import Pencil from "lucide-solid/icons/pencil";
 import {
     type ComponentProps,
-    Match,
-    Show,
-    Switch,
     createEffect,
     createResource,
     createSignal,
+    Match,
+    Show,
+    Switch,
     splitProps,
 } from "solid-js";
 import * as uuid from "uuid";
@@ -15,9 +17,6 @@ import * as uuid from "uuid";
 import { FieldError, IconButton, TextInput, type TextInputOptions } from "catcolab-ui-components";
 import type { Document, Uuid } from "catlog-wasm";
 import { useApi } from "../api";
-
-import Copy from "lucide-solid/icons/copy";
-import Pencil from "lucide-solid/icons/pencil";
 
 import "./document_picker.css";
 
@@ -42,7 +41,7 @@ export function DocumentPicker(
 
     // TODO: API should cache mapping from ref ID to Automerge doc URL to avoid
     // hitting the backend too frequently.
-    const [liveDoc] = createResource(
+    const [liveDocWithRef] = createResource(
         () => props.refId,
         (refId) => api.getLiveDoc(refId),
     );
@@ -60,10 +59,13 @@ export function DocumentPicker(
                     {props.placeholder}
                 </a>
             </Match>
-            <Match when={liveDoc()}>
-                {(liveDoc) => (
-                    <A href={`/${liveDoc().doc.type}/${liveDoc().docRef?.refId}`} {...linkProps}>
-                        {liveDoc().doc.name}
+            <Match when={liveDocWithRef()}>
+                {(liveDocWithRef) => (
+                    <A
+                        href={`/${liveDocWithRef().liveDoc.doc.type}/${liveDocWithRef().docRef.refId}`}
+                        {...linkProps}
+                    >
+                        {liveDocWithRef().liveDoc.doc.name || "Untitled"}
                     </A>
                 )}
             </Match>

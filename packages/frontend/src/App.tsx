@@ -1,18 +1,17 @@
-import { type FirebaseOptions, initializeApp } from "firebase/app";
-import invariant from "tiny-invariant";
-import * as uuid from "uuid";
-
 import Dialog, { Content, Portal } from "@corvu/dialog";
 import { MultiProvider } from "@solid-primitives/context";
-import { Navigate, type RouteDefinition, type RouteSectionProps, Router } from "@solidjs/router";
+import { Navigate, type RouteDefinition, Router, type RouteSectionProps } from "@solidjs/router";
+import { type FirebaseOptions, initializeApp } from "firebase/app";
 import { getAuth, signOut } from "firebase/auth";
 import { FirebaseProvider } from "solid-firebase";
-import { ErrorBoundary, Show, createResource, createSignal, lazy } from "solid-js";
+import { createResource, createSignal, ErrorBoundary, lazy, Show } from "solid-js";
+import invariant from "tiny-invariant";
+import * as uuid from "uuid";
 
 import { Button } from "catcolab-ui-components";
 import { Api, ApiContext, useApi } from "./api";
 import { helpRoutes } from "./help/routes";
-import { ModelLibraryContext, createModelLibraryWithApi } from "./model";
+import { createModelLibraryWithApi, ModelLibraryContext } from "./model";
 import { createModel } from "./model/document";
 import { ErrorBoundaryDialog } from "./page/error_boundary";
 import { PageContainer } from "./page/page_container";

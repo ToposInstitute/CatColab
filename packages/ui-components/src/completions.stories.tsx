@@ -1,10 +1,9 @@
-import { createSignal } from "solid-js";
-import type { Meta, StoryObj } from "storybook-solidjs-vite";
-
 import ArrowDown from "lucide-solid/icons/arrow-down";
 import ArrowUp from "lucide-solid/icons/arrow-up";
 import Copy from "lucide-solid/icons/copy";
 import Trash2 from "lucide-solid/icons/trash-2";
+import { createSignal } from "solid-js";
+import type { Meta, StoryObj } from "storybook-solidjs-vite";
 
 import { Completions } from "./completions";
 

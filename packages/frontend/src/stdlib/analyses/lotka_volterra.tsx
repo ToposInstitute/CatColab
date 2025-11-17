@@ -1,5 +1,9 @@
-import { type ColumnSchema, FixedTableEditor, createNumericalColumn } from "catcolab-ui-components";
-import { Foldable } from "catcolab-ui-components";
+import {
+    type ColumnSchema,
+    createNumericalColumn,
+    FixedTableEditor,
+    Foldable,
+} from "catcolab-ui-components";
 import type { DblModel, LotkaVolterraProblemData, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
@@ -74,7 +78,7 @@ export default function LotkaVolterra(
     ];
 
     const plotResult = createModelODEPlot(
-        () => props.liveModel,
+        () => props.liveModel.validatedModel(),
         (model: DblModel) => props.simulate(model, props.content),
     );
 

@@ -153,5 +153,6 @@
 }
 
 .delete-cell {
+    /* biome-ignore lint/complexity/noImportantStyles: existing style when upgrading biome */
     padding: 8px !important;
 }

@@ -8,8 +8,8 @@ import * as uuid from "uuid";
 import type { Permissions } from "catcolab-api";
 import type { Document, Link, LinkType, StableRef, Uuid } from "catlog-wasm";
 import type { InterfaceToType } from "../util/types";
-import { type LiveDoc, findAndMigrate, makeLiveDoc } from "./document";
-import { type RpcClient, createRpcClient } from "./rpc";
+import { type DocRef, findAndMigrate, type LiveDocWithRef, makeLiveDoc } from "./document";
+import { createRpcClient, type RpcClient } from "./rpc";
 
 /** Bundle of everything needed to interact with the CatColab backend. */
 export class Api {
@@ -53,7 +53,7 @@ export class Api {
         this.docCache = new Map();
     }
 
-    /** Get a live document for the given document ref.
+    /** Get a live document with backend ref for the given document ref.
 
     When the user has write permissions, changes to the document will be
     propagated by Automerge to the backend and to other clients. When the user
@@ -64,41 +64,31 @@ export class Api {
     async getLiveDoc<Doc extends Document>(
         refId: Uuid,
         docType?: Doc["type"],
-    ): Promise<LiveDoc<Doc>> {
-        const docHandle = await this.getDocHandle<Doc>(refId, docType);
-        const permissions = await this.getPermissions(refId);
-        const isDeleted = await this.isDocumentDeleted(refId);
-        return makeLiveDoc(docHandle, {
-            refId,
-            permissions,
-            isDeleted,
-        });
-    }
-
-    async getLiveDocFromLink<Doc extends Document>(link: Link): Promise<LiveDoc<Doc>> {
-        return this.getLiveDoc(link._id);
+    ): Promise<LiveDocWithRef<Doc>> {
+        const docHandle = await this.getDocHandle(refId);
+        const docRef = await this.getDocRef(refId);
+        const liveDoc = makeLiveDoc<Doc>(docHandle, docType);
+        return {
+            liveDoc,
+            docRef,
+        };
     }
 
     /** Gets an Automerge document handle for the given document ref. */
-    async getDocHandle<Doc extends Document>(
-        refId: Uuid,
-        docType?: Doc["type"],
-    ): Promise<DocHandle<Doc>> {
+    async getDocHandle(refId: Uuid): Promise<DocHandle<Document>> {
         const { docId, localOnly } = await this.getDocCacheEntry(refId);
         const repo = localOnly ? this.localRepo : this.repo;
-        return await findAndMigrate<Doc>(repo, docId, docType);
+        return await findAndMigrate(repo, docId);
     }
 
-    /** Get permissions for the given document ref. */
-    async getPermissions(refId: Uuid): Promise<Permissions> {
-        const { permissions } = await this.getDocCacheEntry(refId);
-        return permissions;
-    }
-
-    /** Check if the document has been deleted. */
-    async isDocumentDeleted(refId: Uuid): Promise<boolean> {
-        const { isDeleted } = await this.getDocCacheEntry(refId);
-        return isDeleted;
+    /** Get a document reference from its id */
+    async getDocRef(refId: Uuid): Promise<DocRef> {
+        const { permissions, isDeleted } = await this.getDocCacheEntry(refId);
+        return {
+            refId,
+            permissions,
+            isDeleted,
+        };
     }
 
     /** Clear cached entry for a document ref. */

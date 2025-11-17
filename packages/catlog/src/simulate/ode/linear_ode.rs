@@ -16,7 +16,7 @@ pub struct LinearODESystem {
 }
 
 impl LinearODESystem {
-    /// Create a new LinearODE system.
+    /// Constructs a linear ODE system with the given coefficient matrix.
     pub fn new(A: DMatrix<f32>) -> Self {
         Self { coefficients: A }
     }

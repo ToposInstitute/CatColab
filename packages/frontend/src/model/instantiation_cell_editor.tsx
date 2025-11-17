@@ -1,8 +1,8 @@
-import { Index, Show, batch, createSignal, splitProps, useContext } from "solid-js";
+import { batch, createSignal, Index, Show, splitProps, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { NameInput, type TextInputOptions } from "catcolab-ui-components";
-import type { DblModel, InstantiatedModel, SpecializeModel } from "catlog-wasm";
+import type { DblModel, InstantiatedModel, Ob, SpecializeModel } from "catlog-wasm";
 import { useApi } from "../api";
 import { DocumentPicker, IdInput } from "../components";
 import type { CellActions } from "../notebook";
@@ -171,7 +171,12 @@ function SpecializationEditor(
 
     const obType = () => {
         const id = props.specialization.id;
-        return id ? props.instantiatedModel?.obType({ tag: "Basic", content: id }) : undefined;
+        if (id) {
+            const ob: Ob = { tag: "Basic", content: id };
+            if (props.instantiatedModel?.hasOb(ob)) {
+                return props.instantiatedModel.obType(ob);
+            }
+        }
     };
 
     return (

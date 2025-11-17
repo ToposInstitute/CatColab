@@ -2,9 +2,9 @@ import {
     type AnyDocumentId,
     type DocHandle,
     type DocHandleChangePayload,
+    interpretAsDocumentId,
     type Patch,
     type Repo,
-    interpretAsDocumentId,
 } from "@automerge/automerge-repo";
 import { ReactiveMap } from "@solid-primitives/map";
 import { type Accessor, createResource, onCleanup } from "solid-js";
@@ -15,15 +15,16 @@ import {
     type DblModel,
     DblModelMap,
     type DblTheory,
+    type Document,
+    elaborateModel,
     type ModelNotebook,
     type ModelValidationResult,
     type Uuid,
-    elaborateModel,
 } from "catlog-wasm";
-import { type Api, type DocRef, type LiveDoc, findAndMigrate, makeLiveDoc } from "../api";
+import { type Api, findAndMigrate, type LiveDoc, makeLiveDoc } from "../api";
 import { NotebookUtils } from "../notebook/types";
 import type { Theory, TheoryLibrary } from "../theory";
-import type { LiveModelDocument, ModelDocument } from "./document";
+import type { LiveModelDoc, ModelDocument } from "./document";
 
 /** An elaborated model along with its validation status. */
 export type ValidatedModel =
@@ -62,17 +63,16 @@ export type ModelEntry = {
 
 type ModelLibraryParameters<RefId> = {
     canonicalize: (refId: RefId) => ModelKey;
-    fetch: (refId: RefId) => Promise<DocHandle<ModelDocument>>;
-    docRef?: (refId: RefId) => Promise<DocRef>;
+    fetch: (refId: RefId) => Promise<DocHandle<Document>>;
     theories: TheoryLibrary;
 };
 
-type ModelHandle = {
-    docHandle: DocHandle<ModelDocument>;
+type ModelKey = string & { __modelLibraryKey: true };
+
+type DocHandleWithDestructor = {
+    docHandle: DocHandle<Document>;
     destroy: () => void;
 };
-
-type ModelKey = string & { __modelLibraryKey: true };
 
 /** Create a `ModelLibrary` from an API object within a Solid component. */
 export function createModelLibraryWithApi(api: Api, theories: TheoryLibrary): ModelLibrary<Uuid> {
@@ -100,7 +100,7 @@ reactive context.
  */
 export class ModelLibrary<RefId> {
     private entries: ReactiveMap<ModelKey, ModelEntry>;
-    private handles: Map<ModelKey, ModelHandle>;
+    private handles: Map<ModelKey, DocHandleWithDestructor>;
     private isElaborating: Set<ModelKey>;
     private params: ModelLibraryParameters<RefId>;
 
@@ -122,12 +122,7 @@ export class ModelLibrary<RefId> {
                 return refId as ModelKey;
             },
             fetch(refId) {
-                return api.getDocHandle<ModelDocument>(refId, "model");
-            },
-            async docRef(refId) {
-                const permissions = await api.getPermissions(refId);
-                const isDeleted = await api.isDocumentDeleted(refId);
-                return { refId, permissions, isDeleted };
+                return api.getDocHandle(refId);
             },
             theories,
         });
@@ -139,7 +134,7 @@ export class ModelLibrary<RefId> {
                 return interpretAsDocumentId(docId) as string as ModelKey;
             },
             fetch(docId) {
-                return findAndMigrate<ModelDocument>(repo, docId, "model");
+                return findAndMigrate(repo, docId);
             },
             theories,
         });
@@ -170,8 +165,7 @@ export class ModelLibrary<RefId> {
         const docHandle = await this.params.fetch(refId);
         const [theory, validatedModel] = await this.elaborateAndValidate(key, docHandle.doc());
 
-        const onChange = (payload: DocHandleChangePayload<ModelDocument>) =>
-            this.onChange(key, payload);
+        const onChange = (payload: DocHandleChangePayload<Document>) => this.onChange(key, payload);
         docHandle.on("change", onChange);
 
         this.handles.set(key, {
@@ -188,7 +182,7 @@ export class ModelLibrary<RefId> {
         });
     }
 
-    private async onChange(key: ModelKey, payload: DocHandleChangePayload<ModelDocument>) {
+    private async onChange(key: ModelKey, payload: DocHandleChangePayload<Document>) {
         const doc = payload.doc;
         if (payload.patches.some((patch) => isPatchToFormalContent(doc, patch))) {
             const [theory, validatedModel] = await this.elaborateAndValidate(key, doc);
@@ -207,15 +201,14 @@ export class ModelLibrary<RefId> {
     }
 
     /** Gets "live" model containing a reactive model document. */
-    async getLiveModel(refId: RefId): Promise<LiveModelDocument> {
+    async getLiveModel(refId: RefId): Promise<LiveModelDoc> {
         await this.addModel(refId);
 
         const key = this.params.canonicalize(refId);
         const docHandle = this.handles.get(key)?.docHandle;
         invariant(docHandle);
 
-        const docRef = this.params.docRef ? await this.params.docRef(refId) : undefined;
-        const liveDoc = makeLiveDoc(docHandle, docRef);
+        const liveDoc = makeLiveDoc<ModelDocument>(docHandle, "model");
         return makeLiveModel(liveDoc, () => this.entries.get(key));
     }
 
@@ -226,7 +219,7 @@ export class ModelLibrary<RefId> {
     }
 
     /** Use "live" model in a component. */
-    useLiveModel(refId: () => RefId | undefined): Accessor<LiveModelDocument | undefined> {
+    useLiveModel(refId: () => RefId | undefined): Accessor<LiveModelDoc | undefined> {
         const [liveModel] = createResource(refId, (refId) => this.getLiveModel(refId));
         return liveModel;
     }
@@ -234,10 +227,21 @@ export class ModelLibrary<RefId> {
     // Outer method detects cycles to avoid looping infinitely.
     private async elaborateAndValidate(
         key: ModelKey,
-        doc: ModelDocument,
+        doc: Document,
     ): Promise<[Theory, ValidatedModel]> {
-        const theory = await this.params.theories.get(doc.theory);
+        const theories = this.params.theories;
 
+        if (doc.type !== "model") {
+            const theory = await theories.get(theories.defaultTheoryMetadata().id);
+            const validatedModel: ValidatedModel = {
+                tag: "Illformed",
+                model: null,
+                error: `Document should be a model, but has type: ${doc.type}`,
+            };
+            return [theory, validatedModel];
+        }
+
+        const theory = await theories.get(doc.theory);
         let validatedModel: ValidatedModel;
         try {
             if (this.isElaborating.has(key)) {
@@ -245,7 +249,7 @@ export class ModelLibrary<RefId> {
                 validatedModel = { tag: "Illformed", model: null, error };
             } else {
                 this.isElaborating.add(key);
-                validatedModel = await this._elaborateAndValidate(doc.notebook, theory.theory);
+                validatedModel = await this._elaborateAndValidate(key, doc.notebook, theory.theory);
             }
         } finally {
             this.isElaborating.delete(key);
@@ -256,6 +260,7 @@ export class ModelLibrary<RefId> {
 
     // Inner method actually elaborates. Do not call directly!
     private async _elaborateAndValidate(
+        key: ModelKey,
         notebook: ModelNotebook,
         theory: DblTheory,
     ): Promise<ValidatedModel> {
@@ -279,7 +284,7 @@ export class ModelLibrary<RefId> {
             instantiated.set(refId, entry.validatedModel.model);
         }
 
-        return elaborateAndValidateModel(notebook, instantiated, theory);
+        return elaborateAndValidateModel(notebook, instantiated, theory, key);
     }
 }
 
@@ -288,10 +293,11 @@ function elaborateAndValidateModel(
     notebook: ModelNotebook,
     instantiated: DblModelMap,
     theory: DblTheory,
+    refId: string,
 ): ValidatedModel {
     let model: DblModel;
     try {
-        model = elaborateModel(notebook, instantiated, theory);
+        model = elaborateModel(notebook, instantiated, theory, refId);
     } catch (e) {
         return { tag: "Illformed", model: null, error: String(e) };
     }
@@ -304,9 +310,9 @@ function elaborateAndValidateModel(
 }
 
 /** Does the patch to the model document affect its formal content? */
-function isPatchToFormalContent(doc: ModelDocument, patch: Patch): boolean {
+function isPatchToFormalContent(doc: Document, patch: Patch): boolean {
     const path = patch.path;
-    if (!(path[0] === "theory" || path[0] === "notebook")) {
+    if (!(path[0] === "type" || path[0] === "theory" || path[0] === "notebook")) {
         // Ignore changes to top-level data like document name.
         return false;
     }
@@ -325,7 +331,7 @@ function isPatchToFormalContent(doc: ModelDocument, patch: Patch): boolean {
 const makeLiveModel = (
     liveDoc: LiveDoc<ModelDocument>,
     getEntry: Accessor<ModelEntry | undefined>,
-): LiveModelDocument => ({
+): LiveModelDoc => ({
     type: "model",
     liveDoc,
     theory() {

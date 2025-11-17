@@ -8,9 +8,9 @@ import {
     NotebookEditor,
     newFormalCell,
 } from "../notebook";
-import type { ModelTypeMeta } from "../theory";
+import type { ModelTypeMeta, Theory } from "../theory";
 import { LiveModelContext } from "./context";
-import type { LiveModelDocument } from "./document";
+import type { LiveModelDoc } from "./document";
 import { InstantiationCellEditor } from "./instantiation_cell_editor";
 import { MorphismCellEditor } from "./morphism_cell_editor";
 import { ObjectCellEditor } from "./object_cell_editor";
@@ -23,22 +23,13 @@ import {
 
 /** Notebook editor for a model of a double theory.
  */
-export function ModelNotebookEditor(props: {
-    liveModel: LiveModelDocument;
-}) {
+export function ModelNotebookEditor(props: { liveModel: LiveModelDoc }) {
     const liveDoc = () => props.liveModel.liveDoc;
 
-    const cellConstructors = (): CellConstructor<ModelJudgment>[] => [
-        {
-            name: "Instantiate",
-            description: "Instantiate an existing model into this one",
-            shortcut: ["I"],
-            construct() {
-                return newFormalCell(newInstantiatedModel());
-            },
-        },
-        ...(props.liveModel.theory()?.modelTypes ?? []).map(modelCellConstructor),
-    ];
+    const cellConstructors = () => {
+        const theory = props.liveModel.theory();
+        return theory ? modelCellConstructors(theory) : [];
+    };
 
     return (
         <LiveModelContext.Provider value={() => props.liveModel}>
@@ -101,6 +92,24 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
             </Match>
         </Switch>
     );
+}
+
+function modelCellConstructors(theory: Theory): CellConstructor<ModelJudgment>[] {
+    const constructors: CellConstructor<ModelJudgment>[] = [];
+    if (theory.theory.canInstantiateModels()) {
+        constructors.push({
+            name: "Instantiate",
+            description: "Instantiate an existing model into this one",
+            shortcut: ["I"],
+            construct() {
+                return newFormalCell(newInstantiatedModel());
+            },
+        });
+    }
+    for (const meta of theory.modelTypes ?? []) {
+        constructors.push(modelCellConstructor(meta));
+    }
+    return constructors;
 }
 
 function modelCellConstructor(meta: ModelTypeMeta): CellConstructor<ModelJudgment> {
