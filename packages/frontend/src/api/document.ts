@@ -76,6 +76,9 @@ export async function findAndMigrate(
     // Perform any migrations on the document.
     // XXX: copied from automerge-doc-server/src/server.ts:
     const docBefore = docHandle.doc();
+    // @ts-expect-error: patchwork hack
+    // biome-ignore lint/performance/noDelete: TODO: remove this workaround
+    delete docBefore["@patchwork"];
     const docAfter = migrateDocument(docBefore);
     if (docBefore.version !== docAfter.version) {
         const patches = jsonpatch.compare(docBefore, docAfter);
