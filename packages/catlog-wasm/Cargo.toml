@@ -28,3 +28,6 @@ wasm-bindgen = "0.2.106"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.50"
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
