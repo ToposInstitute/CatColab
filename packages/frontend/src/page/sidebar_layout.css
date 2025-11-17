@@ -122,6 +122,7 @@
     .document-name {
         flex: 1;
         overflow: hidden;
+        text-wrap-mode: nowrap;
         text-overflow: ellipsis;
         padding-left: 5px;
     }
