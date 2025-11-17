@@ -8,7 +8,6 @@ import invariant from "tiny-invariant";
 import { type Api, type LiveDoc, useApi } from "../api";
 import { DocumentTypeIcon } from "../components/document_type_icon";
 import { DocumentMenu } from "./document_menu";
-import { AppMenu, ImportMenuItem, NewModelItem } from "./menubar";
 
 export function DocumentSidebar(props: {
     primaryLiveDoc: LiveDoc;
@@ -17,18 +16,12 @@ export function DocumentSidebar(props: {
     refetchSecondaryDocument: () => void;
 }) {
     return (
-        <>
-            <AppMenu>
-                <NewModelItem />
-                <ImportMenuItem />
-            </AppMenu>
-            <RelatedDocuments
-                primaryLiveDoc={props.primaryLiveDoc}
-                secondaryLiveDoc={props.secondaryLiveDoc}
-                refetchPrimaryDocument={props.refetchPrimaryDocument}
-                refetchSecondaryDocument={props.refetchSecondaryDocument}
-            />
-        </>
+        <RelatedDocuments
+            primaryLiveDoc={props.primaryLiveDoc}
+            secondaryLiveDoc={props.secondaryLiveDoc}
+            refetchPrimaryDocument={props.refetchPrimaryDocument}
+            refetchSecondaryDocument={props.refetchSecondaryDocument}
+        />
     );
 }
 
