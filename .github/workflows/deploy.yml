@@ -1,215 +1,121 @@
 name: deploy
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-  release:
-    types: [published]
+  workflow_run:
+    workflows: ["build"]
+    types:
+      - requested
+      - completed
 
 env:
   BRANCH_NAME: ${{ github.ref_name }}
 
 permissions:
   deployments: write
+  actions: read
+  contents: read
 
 jobs:
   create_deployment:
     name: Create GitHub deployment
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'ToposInstitute/CatColab'
-    outputs:
-      deployment_id: ${{ steps.create_deployment.outputs.deployment_id }}
+    if: github.event.workflow_run.event == 'pull_request' && github.event.action == 'requested'
     steps:
+      - name: Get PR info
+        id: pr_info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Get the workflow run to access PR information
+            const workflowRun = context.payload.workflow_run;
+
+            // For pull_request events, log repository information
+            const prRepo = workflowRun.head_repository.full_name;
+            const baseRepo = workflowRun.repository.full_name;
+
+            console.log(`PR repo: ${prRepo}, Base repo: ${baseRepo}`);
+
+            core.setOutput('pr_branch', workflowRun.head_branch);
+            core.setOutput('pr_sha', workflowRun.head_sha);
+
       - name: Create new GitHub deployment
         id: create_deployment
         uses: chrnorm/deployment-action@v2
         with:
           token: ${{ github.token }}
           environment: netlify-preview
-          ref: ${{ github.event.pull_request.head.ref }}
-          sha: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ steps.pr_info.outputs.pr_branch }}
+          sha: ${{ steps.pr_info.outputs.pr_sha }}
           transient-environment: true
           auto-inactive: true
-          log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}
 
       - name: Update deployment status to in_progress
         uses: chrnorm/deployment-status@v2
         with:
           token: ${{ github.token }}
-          description: 'Building and deploying...'
-          state: 'in_progress'
-          log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          description: "Building..."
+          state: "in_progress"
+          log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}
           deployment-id: ${{ steps.create_deployment.outputs.deployment_id }}
 
-  build_dev_docs:
-    name: Build developer docs
+  report_build_failure:
+    name: Report build failure
     runs-on: ubuntu-latest
+    if: github.event.action == 'completed' && github.event.workflow_run.conclusion != 'success' && github.event.workflow_run.event == 'pull_request'
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup NodeJS
-        uses: actions/setup-node@v4
+      - name: Find deployment for this workflow run
+        id: find_deployment
+        uses: actions/github-script@v7
         with:
-          node-version: 24
-          cache: "pnpm"
+          script: |
+            const workflowRun = context.payload.workflow_run;
 
-      - name: Build developer docs
-        run: |
-          pnpm install
-          pnpm --filter ./dev-docs run doc
+            // List deployments for this ref
+            const { data: deployments } = await github.rest.repos.listDeployments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: workflowRun.head_branch,
+              environment: 'netlify-preview'
+            });
 
-      - name: Upload developer docs
-        uses: actions/upload-artifact@v4
+            console.log(`Found ${deployments.length} deployment(s) for ref ${workflowRun.head_branch}`);
+
+            // Find the most recent deployment for this SHA
+            const deployment = deployments.find(d => d.sha === workflowRun.head_sha);
+
+            if (deployment) {
+              console.log(`Found deployment ${deployment.id} for SHA ${workflowRun.head_sha}`);
+              core.setOutput('deployment_id', deployment.id.toString());
+              core.setOutput('has_deployment', 'true');
+            } else {
+              console.log('No deployment found for this workflow run');
+              core.setOutput('has_deployment', 'false');
+            }
+
+      - name: Update deployment status to failure
+        if: steps.find_deployment.outputs.has_deployment == 'true'
+        uses: chrnorm/deployment-status@v2
         with:
-          name: dev-docs
-          path: dev-docs/output
-
-  build_frontend:
-    name: Build frontend
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup NodeJS
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: "pnpm"
-
-      - name: Install Rust toolchain from file
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          # Don't override flags in cargo config files.
-          rustflags: ""
-
-      - name: Build for Staging
-        if: github.event_name == 'push' || github.event_name == 'pull_request'
-        run: |
-          pnpm install
-          pnpm --filter ./packages/frontend run build -- --mode staging
-
-      - name: Build for Production
-        if: github.event_name == 'release'
-        run: |
-          pnpm install
-          pnpm --filter ./packages/frontend run build
-
-      - name: Upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: app
-          path: packages/frontend/dist
-
-      - name: Build frontend docs
-        run: |
-          pnpm --filter ./packages/frontend run doc
-
-      - name: Upload frontend docs
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend_docs
-          path: packages/frontend/docs
-
-  build_rust_docs:
-    name: Build Rust docs
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain from file
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-
-      - name: Build Rust docs
-        run: |
-          cargo doc --all-features --no-deps --workspace --exclude "migrator"
-
-      - name: Upload Rust docs
-        uses: actions/upload-artifact@v4
-        with:
-          name: rust_docs
-          path: target/doc
-
-  build_math-docs:
-    name: Build mathematical docs
-    runs-on: ubuntu-latest
-    steps:
-      - name: Repository Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup TinyTeX
-        uses: r-lib/actions/setup-tinytex@v2
-
-      - name: Install TeX Packages
-        run: |
-          tlmgr update --self
-          tlmgr install dvisvgm
-          tlmgr install standalone
-          tlmgr install pgf
-          tlmgr install tikz-cd
-          tlmgr install amsmath
-          tlmgr install quiver
-          tlmgr install spath3
-
-      - name: Build mathematical docs
-        run: |
-          cd math-docs
-          ./forester build
-
-      - name: Upload mathematical docs
-        uses: actions/upload-artifact@v4
-        with:
-          name: math-docs
-          path: math-docs/output
-
-  build_ui_components:
-    name: Build ui-components Storybook
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup NodeJS
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Build ui-components Storybook
-        run: pnpm --filter ./packages/ui-components run build
-
-      - name: Upload ui-components Storybook
-        uses: actions/upload-artifact@v4
-        with:
-          name: ui-components
-          path: packages/ui-components/storybook-static
+          token: ${{ github.token }}
+          log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }}
+          description: "Build failed"
+          state: "failure"
+          deployment-id: ${{ steps.find_deployment.outputs.deployment_id }}
 
   deploy:
     name: Deploy to Netlify
     runs-on: ubuntu-latest
-    needs: [build_dev_docs, build_frontend, build_rust_docs, build_math-docs, build_ui_components]
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == 'ToposInstitute/CatColab'
+    if: github.event.action == 'completed' && github.event.workflow_run.conclusion == 'success'
     outputs:
       deploy_url: ${{ steps.url_preview.outputs.NETLIFY_PREVIEW_URL }}
+      pr_number: ${{ steps.pr_metadata.outputs.pr_number }}
+      deployment_id: ${{ steps.deployment_info.outputs.deployment_id }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -226,10 +132,176 @@ jobs:
           pnpm install
 
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            // List all artifacts from the workflow run
+            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: ${{ github.event.workflow_run.id }},
+            });
+
+            console.log(`Found ${artifacts.data.artifacts.length} artifacts`);
+
+            // Download each artifact
+            for (const artifact of artifacts.data.artifacts) {
+              console.log(`Downloading artifact: ${artifact.name}`);
+              
+              const download = await github.rest.actions.downloadArtifact({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                artifact_id: artifact.id,
+                archive_format: 'zip',
+              });
+              
+              fs.writeFileSync(`${artifact.name}.zip`, Buffer.from(download.data));
+            }
+
+      - name: Extract artifacts
+        run: |
+          for zip in *.zip; do
+            name="${zip%.zip}"
+            echo "Extracting $name"
+            mkdir -p "$name"
+            unzip -q "$zip" -d "$name"
+          done
+
+      - name: Find deployment for this workflow run
+        id: deployment_info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const workflowRun = context.payload.workflow_run;
+
+            // List deployments for this ref
+            const { data: deployments } = await github.rest.repos.listDeployments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: workflowRun.head_branch,
+              environment: 'netlify-preview'
+            });
+
+            console.log(`Found ${deployments.length} deployment(s) for ref ${workflowRun.head_branch}`);
+
+            // Find the most recent deployment for this SHA
+            const deployment = deployments.find(d => d.sha === workflowRun.head_sha);
+
+            if (deployment) {
+              console.log(`Found deployment ${deployment.id} for SHA ${workflowRun.head_sha}`);
+              core.setOutput('deployment_id', deployment.id.toString());
+              core.setOutput('has_deployment', 'true');
+            } else {
+              console.log('No deployment found for this workflow run');
+              core.setOutput('has_deployment', 'false');
+            }
+
+      - name: Read PR metadata
+        id: pr_metadata
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const workflowRun = context.payload.workflow_run;
+
+            // Check if this is a PR event
+            if (workflowRun.event !== 'pull_request') {
+              console.log('No PR metadata found - this is a push or release');
+              core.setOutput('is_pr', 'false');
+              return;
+            }
+
+            // Get the workflow that triggered this run to access its outputs
+            const jobs = await github.rest.actions.listJobsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: workflowRun.id,
+            });
+
+            console.log(`Found ${jobs.data.jobs.length} jobs in workflow run`);
+
+            // Find the save_pr_metadata job
+            const metadataJob = jobs.data.jobs.find(job => job.name === 'Save PR metadata');
+
+            if (!metadataJob) {
+              console.log('No PR metadata job found');
+              core.setOutput('is_pr', 'false');
+              return;
+            }
+
+            // Get the workflow to access outputs
+            const workflow = await github.rest.actions.getWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: workflowRun.id,
+            });
+
+            // Since we can't directly access job outputs from workflow_run event,
+            // we'll use the workflow_run data directly
+            const prNumber = workflowRun.pull_requests[0]?.number;
+            const prBranch = workflowRun.head_branch;
+            const prSha = workflowRun.head_sha;
+            const prRepo = workflowRun.head_repository.full_name;
+
+            if (prNumber) {
+              console.log(`Found PR number: ${prNumber}`);
+              core.setOutput('pr_number', prNumber.toString());
+              core.setOutput('pr_branch', prBranch);
+              core.setOutput('pr_sha', prSha);
+              core.setOutput('pr_repo', prRepo);
+              core.setOutput('is_pr', 'true');
+              
+              // Get the base ref from the PR
+              const pr = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+              });
+              
+              console.log(`Found base ref: ${pr.data.base.ref}`);
+              core.setOutput('base_ref', pr.data.base.ref);
+            } else {
+              console.log('No PR metadata found');
+              core.setOutput('is_pr', 'false');
+            }
+
+      - name: Determine event type
+        id: event_type
+        run: |
+          # The workflow_run event gives us the triggering workflow's event
+          TRIGGER_EVENT="${{ github.event.workflow_run.event }}"
+          echo "trigger_event=$TRIGGER_EVENT" >> "$GITHUB_OUTPUT"
+          echo "Triggered by event: $TRIGGER_EVENT"
+
+          # Check if this is a release by looking at the head branch
+          if [[ "${{ github.event.workflow_run.head_branch }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "is_release=true" >> "$GITHUB_OUTPUT"
+            echo "This appears to be a release"
+          else
+            echo "is_release=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          # Determine if this is main branch
+          if [ "${{ github.event.workflow_run.head_branch }}" = "main" ]; then
+            echo "is_main=true" >> "$GITHUB_OUTPUT"
+            echo "This is the main branch"
+          else
+            echo "is_main=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update deployment status to in_progress
+        if: steps.deployment_info.outputs.has_deployment == 'true'
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ github.token }}
+          description: "Deploying to Netlify..."
+          state: "in_progress"
+          log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          deployment-id: ${{ steps.deployment_info.outputs.deployment_id }}
 
       - name: Consolidate and deploy to Staging
-        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        if: steps.event_type.outputs.is_release != 'true'
         id: netlify_deploy
         run: |
           mv app site/
@@ -246,11 +318,16 @@ jobs:
           echo '/* /index.html 200' >> site/_redirects
           cd .netlify-env
           branch_flag=""
-          if [ "$BRANCH_NAME" = "main" ]; then branch_flag="--prod"; else branch_flag="--alias='branch-$BRANCH_NAME'"; fi
+          BRANCH="${{ github.event.workflow_run.head_branch }}"
+          if [ "$BRANCH" = "main" ]; then 
+            branch_flag="--prod"
+          else 
+            branch_flag="--alias='branch-$BRANCH'"
+          fi
           npx netlify deploy --dir ../site --site ${{ secrets.NETLIFY_SITE_ID }} --auth ${{ secrets.NETLIFY_API_TOKEN }} $branch_flag --json > ../deploy_output.json
 
       - name: Consolidate and deploy to Production
-        if: github.event_name == 'release'
+        if: steps.event_type.outputs.is_release == 'true'
         run: |
           mv app site/
           echo '/* /index.html 200' >> site/_redirects
@@ -259,33 +336,30 @@ jobs:
 
       - name: Generate URL preview
         id: url_preview
-        if: env.BRANCH_NAME != 'main' && (github.event_name == 'push' || github.event_name == 'pull_request')
+        if: steps.event_type.outputs.is_main != 'true' && steps.event_type.outputs.is_release != 'true'
         run: |
           NETLIFY_PREVIEW_URL=$(jq -r '.deploy_url' deploy_output.json)
           echo "NETLIFY_PREVIEW_URL=$NETLIFY_PREVIEW_URL" >> "$GITHUB_OUTPUT"
 
-  report_deployment_status:
-    name: Report deployment status
-    runs-on: ubuntu-latest
-    needs: [create_deployment, deploy]
-    if: always() && github.event_name == 'pull_request' && needs.create_deployment.result == 'success'
-    steps:
       - name: Invalidate old successful deployments
-        if: needs.deploy.result == 'success'
+        if: steps.pr_metadata.outputs.is_pr == 'true' && steps.pr_metadata.outputs.pr_number != '' && steps.deployment_info.outputs.has_deployment == 'true'
         uses: actions/github-script@v7
         with:
           script: |
+            const prNumber = '${{ steps.pr_metadata.outputs.pr_number }}';
+            const prBranch = '${{ steps.pr_metadata.outputs.pr_branch }}';
+
             const { data: deployments } = await github.rest.repos.listDeployments({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              ref: context.payload.pull_request.head.ref,
+              ref: prBranch,
               environment: 'netlify-preview'
             });
-            
+
             console.log(`Found ${deployments.length} existing deployment(s)`);
-            
-            const currentDeploymentId = parseInt('${{ needs.create_deployment.outputs.deployment_id }}');
-            
+
+            const currentDeploymentId = parseInt('${{ steps.deployment_info.outputs.deployment_id }}');
+
             for (const deployment of deployments) {
               if (deployment.id !== currentDeploymentId) {
                 // Get the latest status for this deployment
@@ -312,60 +386,52 @@ jobs:
             }
 
       - name: Update deployment status to success
-        if: needs.deploy.result == 'success'
+        if: steps.deployment_info.outputs.has_deployment == 'true'
         uses: chrnorm/deployment-status@v2
         with:
           token: ${{ github.token }}
-          environment-url: ${{ needs.deploy.outputs.deploy_url }}
+          environment-url: ${{ steps.url_preview.outputs.NETLIFY_PREVIEW_URL }}
           log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          description: 'Netlify preview deployment'
-          state: 'success'
-          deployment-id: ${{ needs.create_deployment.outputs.deployment_id }}
-
-      - name: Update deployment status to failure
-        if: needs.deploy.result != 'success'
-        uses: chrnorm/deployment-status@v2
-        with:
-          token: ${{ github.token }}
-          log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          description: 'Deployment failed'
-          state: 'failure'
-          deployment-id: ${{ needs.create_deployment.outputs.deployment_id }}
+          description: "Netlify preview deployment"
+          state: "success"
+          deployment-id: ${{ steps.deployment_info.outputs.deployment_id }}
 
   deploy_backend:
     name: Deploy backend to AWS
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' && github.ref_name == 'main'
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main'
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-    
-    - name: Install Nix
-      uses: cachix/install-nix-action@v25
-      with:
-        nix_path: nixpkgs=channel:25.05
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
 
-    - name: Configure Cachix
-      uses: cachix/cachix-action@v14
-      with:
-        name: catcolab-jmoggr
-        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+      - name: Install Nix
+        uses: cachix/install-nix-action@v25
+        with:
+          nix_path: nixpkgs=channel:25.05
 
-    - name: Set the SSH key for deployment to catcolab-next
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.CATCOLAB_NEXT_DEPLOYUSER_KEY }}" > ~/.ssh/id_ed25519
-        chmod 600 ~/.ssh/id_ed25519
-        ssh-keyscan backend-next.catcolab.org >> ~/.ssh/known_hosts
+      - name: Configure Cachix
+        uses: cachix/cachix-action@v14
+        with:
+          name: catcolab-jmoggr
+          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
 
-    - name: Deploy to catcolab-next
-      run: |
-       nix run github:serokell/deploy-rs .#catcolab-next
+      - name: Set the SSH key for deployment to catcolab-next
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.CATCOLAB_NEXT_DEPLOYUSER_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan backend-next.catcolab.org >> ~/.ssh/known_hosts
 
-    # Ensure that a copy of the deployed repository is on the machine that it was deployed to. This is
-    # a nice-to-have which enables checking the configuration of the currently deployed system and could
-    # make recovery slightly less aweful in the event nix commands need to be run on the remote.
-    - name: Rsync the repo to remote host
-      run: |
-         rsync -az --delete ./ catcolab@backend-next.catcolab.org:~/catcolab
+      - name: Deploy to catcolab-next
+        run: |
+          nix run github:serokell/deploy-rs .#catcolab-next
+
+      # Ensure that a copy of the deployed repository is on the machine that it was deployed to. This is
+      # a nice-to-have which enables checking the configuration of the currently deployed system and could
+      # make recovery slightly less aweful in the event nix commands need to be run on the remote.
+      - name: Rsync the repo to remote host
+        run: |
+          rsync -az --delete ./ catcolab@backend-next.catcolab.org:~/catcolab
