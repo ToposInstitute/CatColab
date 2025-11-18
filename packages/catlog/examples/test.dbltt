@@ -98,6 +98,14 @@ norm [g : Graph2] g.g1.V
 
 generate Graph2
 
+type ProfunctorGraph := [
+  g1 : Graph,
+  g2 : Graph,
+  het : (Id Entity)[g1.V, g2.V]
+]
+
+generate ProfunctorGraph
+
 type WeightedGraph2 := [
   V : Entity,
   g1 : WeightedGraph & [ .V := V ],

@@ -168,6 +168,28 @@ generate Graph2
 #/   g2.tgt : g2.E -> V (Id Entity)
 
 
+type ProfunctorGraph := [
+  g1 : Graph,
+  g2 : Graph,
+  het : (Id Entity)[g1.V, g2.V]
+]
+#/ declared: ProfunctorGraph
+
+generate ProfunctorGraph
+#/ result: 
+#/ object generators:
+#/   g1.V : Entity
+#/   g1.E : Entity
+#/   g2.V : Entity
+#/   g2.E : Entity
+#/ morphism generators:
+#/   g1.src : g1.E -> g1.V (Id Entity)
+#/   g1.tgt : g1.E -> g1.V (Id Entity)
+#/   g2.src : g2.E -> g2.V (Id Entity)
+#/   g2.tgt : g2.E -> g2.V (Id Entity)
+#/   het : g1.V -> g2.V (Id Entity)
+
+
 type WeightedGraph2 := [
   V : Entity,
   g1 : WeightedGraph & [ .V := V ],
@@ -202,9 +224,9 @@ type Set := [
 #/ declared: Set
 #/ expected errors:
 #/ error[elab]: no such type Entity defined
-#/ --> examples/test.dbltt:113:7
-#/ 113|   A : Entity,
-#/ 113|       ^^^^^^
+#/ --> examples/test.dbltt:121:7
+#/ 121|   A : Entity,
+#/ 121|       ^^^^^^
 
 type Set := [
   A : Object
@@ -248,14 +270,14 @@ type NegFeedback1 := [
 #/ declared: NegFeedback1
 #/ expected errors:
 #/ error[elab]: explicit hole
-#/ --> examples/test.dbltt:140:19
-#/ 140|   f : (Id Object)[@hole, Y],
-#/ 140|                   ^^^^^
+#/ --> examples/test.dbltt:148:19
+#/ 148|   f : (Id Object)[@hole, Y],
+#/ 148|                   ^^^^^
 #/ error[elab]: synthesized type (Id Object)[ ?0, self.Y ] does not match expected type Object:
 #/ tried to convert between types of different type constructors
-#/ --> examples/test.dbltt:141:19
-#/ 141|   g : Negative[Y, f]
-#/ 141|                   ^
+#/ --> examples/test.dbltt:149:19
+#/ 149|   g : Negative[Y, f]
+#/ 149|                   ^
 
 generate NegFeedback1
 #/ result: 
