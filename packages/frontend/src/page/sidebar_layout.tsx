@@ -4,9 +4,9 @@ import "./sidebar_layout.css";
 
 import ChevronsLeft from "lucide-solid/icons/chevrons-left";
 import MenuIcon from "lucide-solid/icons/menu";
-import { AppMenu, ImportMenuItem, NewModelItem } from "./menubar";
 
 import { IconButton } from "catcolab-ui-components";
+import { AppMenu, ImportMenuItem, NewModelItem } from "./menubar";
 
 export function SidebarLayout(props: {
     children?: JSX.Element;
