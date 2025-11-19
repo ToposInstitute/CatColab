@@ -22,6 +22,12 @@
     }
 }
 
+.collapse-button {
+    position: absolute;
+    right: 0;
+    margin: 2px;
+}
+
 .sidebar {
     flex-shrink: 0;
     background-color: #f8f8f8;
@@ -35,11 +41,11 @@
     width: 240px;
 }
 
-.sidebar.open .sidebar-header .icon-button {
+.sidebar.open .collapse-button {
     visibility: hidden;
 }
 
-.sidebar.open:hover .sidebar-header .icon-button {
+.sidebar.open:hover .collapse-button {
     visibility: visible;
 }
 
@@ -55,17 +61,15 @@
 }
 
 .sidebar-header {
+    position: relative;
     display: flex;
-    justify-content: flex-end;
+    justify-content: center;
+    align-items: center;
     height: 32px;
     margin-top: 6px;
     margin-bottom: 6px;
     border-radius: 6px;
     transition: background 20ms;
-
-    & > .icon-button {
-        margin-right: 2px;
-    }
 }
 
 .sidebar-header:hover {

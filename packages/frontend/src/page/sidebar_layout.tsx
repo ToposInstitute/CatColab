@@ -6,6 +6,7 @@ import ChevronsLeft from "lucide-solid/icons/chevrons-left";
 import MenuIcon from "lucide-solid/icons/menu";
 
 import { IconButton } from "catcolab-ui-components";
+import { AppMenu, ImportMenuItem, NewModelItem } from "./menubar";
 
 export function SidebarLayout(props: {
     children?: JSX.Element;
@@ -37,9 +38,15 @@ function Sidebar(props: { isOpen: boolean; closeSidebar: () => void; children?: 
             {props.isOpen && (
                 <div class="sidebar-content">
                     <div class="sidebar-header">
-                        <IconButton onClick={props.closeSidebar}>
-                            <ChevronsLeft />
-                        </IconButton>
+                        <AppMenu>
+                            <NewModelItem />
+                            <ImportMenuItem />
+                        </AppMenu>
+                        <div class="collapse-button">
+                            <IconButton onClick={props.closeSidebar}>
+                                <ChevronsLeft />
+                            </IconButton>
+                        </div>
                     </div>
                     {props.children}
                 </div>

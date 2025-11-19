@@ -6,7 +6,6 @@ import type { Link } from "catlog-wasm";
 import { type Api, type LiveDocWithRef, useApi } from "../api";
 import { DocumentTypeIcon } from "../components/document_type_icon";
 import { DocumentMenu } from "./document_menu";
-import { AppMenu, ImportMenuItem, NewModelItem } from "./menubar";
 
 export function DocumentSidebar(props: {
     primaryDoc?: LiveDocWithRef;
@@ -15,22 +14,16 @@ export function DocumentSidebar(props: {
     refetchSecondaryDoc: () => void;
 }) {
     return (
-        <>
-            <AppMenu>
-                <NewModelItem />
-                <ImportMenuItem />
-            </AppMenu>
-            <Show when={props.primaryDoc}>
-                {(primaryDoc) => (
-                    <RelatedDocuments
-                        primaryDoc={primaryDoc()}
-                        secondaryDoc={props.secondaryDoc}
-                        refetchPrimaryDoc={props.refetchPrimaryDoc}
-                        refetchSecondaryDoc={props.refetchSecondaryDoc}
-                    />
-                )}
-            </Show>
-        </>
+        <Show when={props.primaryDoc}>
+            {(primaryDoc) => (
+                <RelatedDocuments
+                    primaryDoc={primaryDoc()}
+                    secondaryDoc={props.secondaryDoc}
+                    refetchPrimaryDoc={props.refetchPrimaryDoc}
+                    refetchSecondaryDoc={props.refetchSecondaryDoc}
+                />
+            )}
+        </Show>
     );
 }
 
