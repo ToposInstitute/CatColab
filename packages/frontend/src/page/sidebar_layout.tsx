@@ -38,12 +38,10 @@ function Sidebar(props: { isOpen: boolean; closeSidebar: () => void; children?: 
             {props.isOpen && (
                 <div class="sidebar-content">
                     <div class="sidebar-header">
-                        <div class="menu-button">
-                            <AppMenu>
-                                <NewModelItem />
-                                <ImportMenuItem />
-                            </AppMenu>
-                        </div>
+                        <AppMenu>
+                            <NewModelItem />
+                            <ImportMenuItem />
+                        </AppMenu>
                         <div class="collapse-button">
                             <IconButton onClick={props.closeSidebar}>
                                 <ChevronsLeft />

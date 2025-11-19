@@ -22,12 +22,6 @@
     }
 }
 
-.menu-button {
-    visibility: visible;
-    position: absolute;
-    margin: auto;
-}
-
 .collapse-button {
     position: absolute;
     right: 0;
