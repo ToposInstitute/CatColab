@@ -11,24 +11,14 @@ use crate::{
 use itertools::Itertools;
 use sea_query::SchemaBuilder;
 use sea_query::{
-    prepare::Write, ColumnDef, ForeignKey, ForeignKeyCreateStatement, Iden, Table,
-    TableCreateStatement,
+    prepare::Write, ColumnDef, ForeignKey, ForeignKeyCreateStatement, Iden, MysqlQueryBuilder,
+    PostgresQueryBuilder, SqliteQueryBuilder, Table, TableCreateStatement,
 };
 use std::{collections::HashMap, default::Default};
 
-/// TODO
-#[derive(Debug)]
-pub struct SqlBackend<T: SchemaBuilder + Default>(T);
-
-impl<T: SchemaBuilder + Default> Default for SqlBackend<T> {
-    fn default() -> Self {
-        SqlBackend(T::default())
-    }
-}
-
-impl<T: SchemaBuilder + Default> Clone for SqlBackend<T> {
-    fn clone(&self) -> Self {
-        SqlBackend(Default::default())
+impl Namespace {
+    fn label_name(self, name: QualifiedName) -> QualifiedLabel {
+        self.label(&name.clone()).unwrap_or(QualifiedLabel::single("".into()))
     }
 }
 
@@ -44,129 +34,144 @@ impl Iden for QualifiedLabel {
     }
 }
 
-fn table_morphisms(model: &DiscreteDblModel) -> HashMap<&QualifiedName, Vec<QualifiedName>> {
-    model
-        .mor_generators()
-        .filter_map(|mor| Some((model.get_dom(&mor)?, mor)))
-        .into_group_map()
+impl From<QualifiedLabel> for TableCreateStatement {
+    fn from(label: QualifiedLabel) -> Self {
+        Table::create()
+            .table(label)
+            .if_not_exists()
+            .col(ColumnDef::new("id").integer().not_null().auto_increment().primary_key())
+            .to_owned()
+    }
 }
 
-fn create_stmts(
-    model: &DiscreteDblModel,
-    morphisms: HashMap<&QualifiedName, Vec<QualifiedName>>,
-    ob_namespace: Namespace,
-    mor_namespace: Namespace,
-) -> HashMap<QualifiedName, TableCreateStatement> {
-    model
-        .objects_with_type(&name("Entity"))
-        .map(|ob| {
-            let ob_name =
-                ob_namespace.label(&ob.clone()).unwrap_or(QualifiedLabel::single("".into()));
-            let t = morphisms
-                .get(&ob)
-                .unwrap_or(&Vec::<_>::new())
-                .iter()
-                .fold(
-                    Table::create().table(ob_name.clone()).if_not_exists().col(
+/// Struct for building a valid SQL DDL
+pub struct SQLAnalysis {
+    obns: Namespace,
+    morns: Namespace,
+    backend: SqlBackend,
+}
+
+impl SQLAnalysis {
+    pub fn new(obns: Namespace, morns: Namespace, backend: &str) -> Result<SQLAnalysis, String> {
+        if let Ok(backend) = SqlBackend::try_from(backend) {
+            Ok(SQLAnalysis {
+                obns,
+                morns,
+                backend,
+            })
+        } else {
+            Err(String::from("!!!!"))
+        }
+    }
+
+    pub fn render(&self, model: &DiscreteDblModel) -> String {
+        // hashmap of sources and their targets
+        let mut morphisms = model
+            .mor_generators()
+            // TODO mor_with_type?
+            .filter_map(|mor| Some((model.get_dom(&mor)?.clone(), mor)))
+            .into_group_map();
+
+        for obj in model.objects_with_type(&name("Entity")) {
+            morphisms.entry(obj.clone()).or_insert_with(|| Vec::new());
+        }
+
+        let tables: Vec<TableCreateStatement> = morphisms
+            .into_iter()
+            .map(|(ob, mors)| {
+                let mut tbl = Table::create();
+
+                // the targets for arrows
+                let mut table_column_defs = mors.iter().fold(
+                    tbl.table(self.obns.clone().label_name(ob.clone())).if_not_exists().col(
                         ColumnDef::new("id").integer().not_null().auto_increment().primary_key(),
                     ),
-                    // if mor is a Mapping, it is an integer type column. otherwise, look to AttrTypes
                     |acc, mor| {
-                        let mor_name = mor_namespace
-                            .label(&mor.clone())
-                            .unwrap_or(QualifiedLabel::single("".into()));
-                        if &model.mor_generator_type(mor) == &Path::Id(name("Entity")) {
+                        let mor_name = self.morns.clone().label_name(mor.clone());
+                        // if the Id of the name is an entity, it is assumed to be a column
+                        // which references the primary key of another table.
+                        if model.mor_generator_type(mor) == Path::Id(name("Entity")) {
                             acc.col(ColumnDef::new(mor_name.clone()).integer().not_null())
                         } else {
                             acc.col(ColumnDef::new(mor_name.clone()).text().not_null())
                         }
                     },
-                )
-                .to_owned();
-            (ob, t)
-        })
-        .collect()
-}
+                );
 
-fn fk_stmts(
-    model: &DiscreteDblModel,
-    morphisms: HashMap<&QualifiedName, Vec<QualifiedName>>,
-    ob_namespace: Namespace,
-    mor_namespace: Namespace,
-) -> Vec<ForeignKeyCreateStatement> {
-    morphisms
-        .iter()
-        .map(|(&src, tgts)| {
-            let src_name =
-                ob_namespace.label(&src.clone()).unwrap_or(QualifiedLabel::single("".into()));
-            tgts.iter()
-                .filter(|mor| &model.mor_generator_type(mor) == &Path::Id(name("Entity")))
-                .filter_map(|mapping| {
-                    if let Some(tgt) = model.get_cod(&mapping) {
-                        let tgt_name = ob_namespace
-                            .label(&tgt.clone())
-                            .unwrap_or(QualifiedLabel::single("".into()));
-                        let mapping_name = mor_namespace
-                            .label(&mapping.clone())
-                            .unwrap_or(QualifiedLabel::single("".into()));
-                        Some(
-                            ForeignKey::create()
-                                .name(format!("FK_{}_{}", src_name.clone(), tgt_name.clone()))
-                                .from(src_name.clone(), mapping_name)
-                                .to(tgt_name.clone(), "id")
-                                .to_owned(),
-                        )
-                    } else {
-                        None
-                    }
-                })
-                .collect::<Vec<ForeignKeyCreateStatement>>()
-        })
-        .flatten()
-        .collect()
-}
-
-/// TODO
-pub fn build_schema<T: SchemaBuilder + Default>(
-    model: &DiscreteDblModel,
-    backend: SqlBackend<T>,
-    ob_namespace: Namespace,
-    mor_namespace: Namespace,
-) -> Vec<String> {
-    let morphisms = table_morphisms(model);
-    let create_stmts: Vec<String> =
-        create_stmts(model, morphisms.clone(), ob_namespace.clone(), mor_namespace.clone())
-            .iter()
-            .map(|(_, c)| c.to_string(backend.clone().0))
+                mors.iter()
+                    .filter(|mor| model.mor_generator_type(mor) == Path::Id(name("Entity")))
+                    .fold(
+                        // TABLE AND COLUMN DEFS
+                        table_column_defs,
+                        |acc, mor| {
+                            let tgt = model.get_cod(mor).unwrap(); // TODO
+                            acc.foreign_key(&mut self.fk(ob.clone(), tgt.clone(), mor.clone()))
+                        },
+                    )
+                    .to_owned()
+            })
             .collect();
-    let fk_stmts: Vec<String> = fk_stmts(model, morphisms, ob_namespace, mor_namespace)
-        .iter()
-        .map(|fk| fk.to_string(backend.clone().0))
-        .collect();
-    vec![create_stmts, fk_stmts].into_iter().flatten().collect()
+
+        // convert to string
+        let output = tables
+            .iter()
+            .map(|table| match self.backend {
+                SqlBackend::MySql => table.to_string(MysqlQueryBuilder),
+                SqlBackend::Sqlite => table.to_string(SqliteQueryBuilder),
+                SqlBackend::Postgres => table.to_string(PostgresQueryBuilder),
+            })
+            .join(";\n");
+
+        match self.backend {
+            SqlBackend::Sqlite => ["PRAGMA foreign_keys = ON", &output].join(";\n\n"),
+            _ => output,
+        }
+    }
+
+    fn fk(
+        &self,
+        src: QualifiedName,
+        tgt: QualifiedName,
+        mor: QualifiedName,
+    ) -> ForeignKeyCreateStatement {
+        let src_name = self.obns.clone().label_name(src);
+        let tgt_name = self.obns.clone().label_name(tgt);
+        let mapping_name = self.morns.clone().label_name(mor);
+        ForeignKey::create()
+            .name(format!("FK_{}_{}_{}", mapping_name, src_name, tgt_name))
+            .from(src_name.clone(), mapping_name)
+            .to(tgt_name.clone(), "id")
+            .to_owned()
+    }
 }
 
-/// TODO convert to schema statement
-pub fn make_schema(
-    model: &DiscreteDblModel,
-    ob_namespace: Namespace,
-    mor_namespace: Namespace,
-) -> String
-// where
-    // T: SchemaBuilder + Default,
-{
-    let backend = SqlBackend(sea_query::MysqlQueryBuilder);
-    let morphisms = table_morphisms(model);
-    let create_stmts =
-        create_stmts(model, morphisms.clone(), ob_namespace.clone(), mor_namespace.clone())
-            .iter()
-            .map(|(_, c)| c.to_string(backend.clone().0))
-            .join(";\n");
-    let fk_stmts = fk_stmts(model, morphisms, ob_namespace, mor_namespace)
-        .iter()
-        .map(|fk| fk.to_string(backend.clone().0))
-        .join(";\n");
-    vec![create_stmts, fk_stmts].join(";\n\n")
+#[derive(Debug, Clone)]
+pub enum SqlBackend {
+    MySql,
+    Sqlite,
+    Postgres,
+}
+
+impl SqlBackend {
+    pub fn as_type(&self) -> Box<dyn SchemaBuilder> {
+        match self {
+            SqlBackend::MySql => Box::new(MysqlQueryBuilder),
+            SqlBackend::Sqlite => Box::new(SqliteQueryBuilder),
+            SqlBackend::Postgres => Box::new(PostgresQueryBuilder),
+        }
+    }
+}
+
+impl TryFrom<&str> for SqlBackend {
+    type Error = String;
+    fn try_from(backend: &str) -> Result<Self, Self::Error> {
+        match backend {
+            "MySQL" => Ok(SqlBackend::MySql),
+            "SQLite" => Ok(SqlBackend::Sqlite),
+            "PostgresSQL" => Ok(SqlBackend::Postgres),
+            _ => Err(String::from("Invalid backend")),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -185,9 +190,9 @@ mod tests {
         let (person, dog) = (name("Person"), name("Dog"));
         model.add_ob(person.clone(), name("Entity"));
         model.add_ob(dog.clone(), name("Entity"));
-        let mut ob_namespace = Namespace::new_for_text();
-        let mut mor_namespace = Namespace::new_for_text();
-        // ob_namespace.set_label(name("Person"), name("Person"));
+        let mut obns = Namespace::new_for_text();
+        let mut morns = Namespace::new_for_text();
+        // obns.set_label(name("Person"), name("Person"));
 
         // `Person --walks--> Dog` means that the Person table gains a new column called "walks" so we should look at the domains of ...
         model.add_mor(name("walks"), person.clone(), dog.clone(), name("Entity").into());
@@ -207,28 +212,10 @@ mod tests {
             r"ALTER TABLE `Person` ADD CONSTRAINT `FK_Person_Dog` FOREIGN KEY (`walks`) REFERENCES `Dog` (`id`)",
         ];
 
-        let morphisms = table_morphisms(&model);
-        let mut creates: Vec<String> =
-            create_stmts(&model, morphisms.clone(), ob_namespace.clone(), mor_namespace.clone())
-                .iter()
-                .map(|(_, c)| c.to_string(MysqlQueryBuilder))
-                .collect();
-        creates.sort();
-
-        assert_eq!(creates, raw_creates);
-
-        let mut fks: Vec<String> =
-            fk_stmts(&model, morphisms, ob_namespace.clone(), mor_namespace.clone())
-                .iter()
-                .map(|fk| fk.to_string(MysqlQueryBuilder))
-                .collect();
-        fks.sort();
-        dbg!(&fks);
-
-        assert_eq!(fks, raw_fks);
+        let ddl = SQLAnalysis::new(obns, morns, "mysql").expect("!").render(&model);
 
         // TODO Hash is nondeterministic
-        // assert_eq!(make_schema(&model, SqlBackend(MysqlQueryBuilder)), raw.join("\n"));
+        assert_eq!(ddl, [raw_creates.join(";\n"), raw_fks.join(";\n")].join(";\n"));
     }
 
     #[test]
