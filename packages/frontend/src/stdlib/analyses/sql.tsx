@@ -1,12 +1,16 @@
 // import type { JSX } from "solid-js";
 import { ThSchema } from "catlog-wasm";
 import download from "js-file-download";
-import { Show } from "solid-js";
+import { createSignal, Show } from "solid-js";
+
+import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 
 import type { ModelAnalysisProps } from "../../analysis";
 import { IconButton } from "../../components";
 
+import MenuIcon from "lucide-solid/icons/menu";
 import Download from "lucide-solid/icons/download";
+
 
 // export function configureDownloadSQLAnalysis(options: {}) & ModelAnalysisMeta<_> {
 //   const { id, name, description, help } = options;
@@ -37,26 +41,53 @@ import Download from "lucide-solid/icons/download";
 // 	)
 // }
 
+export const MenuItem = DropdownMenu.Item;
+export const MenuItemLabel = DropdownMenu.ItemLabel;
+export const MenuSeparator = DropdownMenu.Separator;
 
 /** Button to download an SVG. */
 export default function DownloadTextButton(props: ModelAnalysisProps<DownloadConfig>) {
 	const thSchema = new ThSchema();  
-    
-	const downloadText = () => {
-        downloadTextContent("!", 
+   
+	// TODO SQLite can be an invalid change
+	const [backend, setBackend] = createSignal("mysql");
+	const sqlOutput = () => {
+        const model = props.liveModel.elaboratedModel();
+        return model ? thSchema.renderSql(model, backend()) : null;
+	};
+	const downloadText = (text: string) => {
+        downloadTextContent(text, 
 										  // props.filename ?? 
 											"export.sql");
     };
-
     return (
 	  <div>
-	  <Show when={props.liveModel.elaboratedModel()}>
-        {(model) => (
+	  <DropdownMenu modal={false}>
+            <DropdownMenu.Trigger as={IconButton} disabled={false}>
+                <MenuIcon />
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Portal>
+                <DropdownMenu.Content class="menu popup">
+					<MenuItem onSelect={() => setBackend('mysql')}>
+						<MenuItemLabel>{"MySQL"}</MenuItemLabel>
+					</MenuItem>
+					<MenuItem onSelect={() => setBackend('sqlite')}>
+						<MenuItemLabel>{"SQLite"}</MenuItemLabel>
+					</MenuItem>
+					<MenuItem onSelect={() => setBackend('postgres')}>
+						<MenuItemLabel>{"PostgresSQL"}</MenuItemLabel>
+					</MenuItem>
+				</DropdownMenu.Content>
+            </DropdownMenu.Portal>
+        </DropdownMenu>
+	  <Show when={sqlOutput()}>
+        {(sql) => (
 		  <div>
-		  <IconButton onClick={downloadText} disabled={false} tooltip={""}>
+		  <IconButton onClick={() => downloadText(sql())} disabled={false} tooltip={""}>
             <Download size={10} />
           </IconButton>
-		  <pre>{thSchema.renderSql(model())}</pre>
+		  <span>{backend()}</span>
+		  <pre>{sql()}</pre>
 		  </div>)}
 	   </Show>
 	  </div>

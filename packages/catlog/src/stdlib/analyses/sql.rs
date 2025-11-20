@@ -11,24 +11,36 @@ use crate::{
 use itertools::Itertools;
 use sea_query::SchemaBuilder;
 use sea_query::{
-    prepare::Write, ColumnDef, ForeignKey, ForeignKeyCreateStatement, Iden, Table,
-    TableCreateStatement,
+    prepare::Write, ColumnDef, ForeignKey, ForeignKeyCreateStatement, Iden, MysqlQueryBuilder,
+    PostgresQueryBuilder, SqliteQueryBuilder, Table, TableCreateStatement,
 };
 use std::{collections::HashMap, default::Default};
 
-/// TODO
-#[derive(Debug)]
-pub struct SqlBackend<T: SchemaBuilder + Default>(T);
+pub enum SqlBackend {
+    MySql,
+    Sqlite,
+    Postgres,
+}
 
-impl<T: SchemaBuilder + Default> Default for SqlBackend<T> {
-    fn default() -> Self {
-        SqlBackend(T::default())
+impl SqlBackend {
+    pub fn builder(&self) -> Box<dyn SchemaBuilder> {
+        match self {
+            SqlBackend::MySql => Box::new(MysqlQueryBuilder),
+            SqlBackend::Sqlite => Box::new(SqliteQueryBuilder),
+            SqlBackend::Postgres => Box::new(PostgresQueryBuilder),
+        }
     }
 }
 
-impl<T: SchemaBuilder + Default> Clone for SqlBackend<T> {
-    fn clone(&self) -> Self {
-        SqlBackend(Default::default())
+impl TryFrom<&str> for SqlBackend {
+    type Error = String;
+    fn try_from(backend: &str) -> Result<Self, Self::Error> {
+        match backend {
+            "mysql" => Ok(SqlBackend::MySql),
+            "sqlite" => Ok(SqlBackend::Sqlite),
+            "postgres" => Ok(SqlBackend::Postgres),
+            _ => Err(String::from("Invalid backend")),
+        }
     }
 }
 
@@ -111,7 +123,12 @@ fn fk_stmts(
                             .unwrap_or(QualifiedLabel::single("".into()));
                         Some(
                             ForeignKey::create()
-                                .name(format!("FK_{}_{}", src_name.clone(), tgt_name.clone()))
+                                .name(format!(
+                                    "FK_{}_{}_{}",
+                                    src_name.clone(),
+                                    tgt_name.clone(),
+                                    mapping_name.clone()
+                                ))
                                 .from(src_name.clone(), mapping_name)
                                 .to(tgt_name.clone(), "id")
                                 .to_owned(),
@@ -126,47 +143,34 @@ fn fk_stmts(
         .collect()
 }
 
-/// TODO
-pub fn build_schema<T: SchemaBuilder + Default>(
-    model: &DiscreteDblModel,
-    backend: SqlBackend<T>,
-    ob_namespace: Namespace,
-    mor_namespace: Namespace,
-) -> Vec<String> {
-    let morphisms = table_morphisms(model);
-    let create_stmts: Vec<String> =
-        create_stmts(model, morphisms.clone(), ob_namespace.clone(), mor_namespace.clone())
-            .iter()
-            .map(|(_, c)| c.to_string(backend.clone().0))
-            .collect();
-    let fk_stmts: Vec<String> = fk_stmts(model, morphisms, ob_namespace, mor_namespace)
-        .iter()
-        .map(|fk| fk.to_string(backend.clone().0))
-        .collect();
-    vec![create_stmts, fk_stmts].into_iter().flatten().collect()
-}
-
 /// TODO convert to schema statement
+/// SQLite schema cannot change FK constraints
 pub fn make_schema(
     model: &DiscreteDblModel,
     ob_namespace: Namespace,
     mor_namespace: Namespace,
-) -> String
-// where
-    // T: SchemaBuilder + Default,
-{
-    let backend = SqlBackend(sea_query::MysqlQueryBuilder);
+    backend: &str,
+) -> String {
+    let sqlbackend = SqlBackend::try_from(backend).unwrap();
     let morphisms = table_morphisms(model);
     let create_stmts =
         create_stmts(model, morphisms.clone(), ob_namespace.clone(), mor_namespace.clone())
             .iter()
-            .map(|(_, c)| c.to_string(backend.clone().0))
+            .map(|(_, c)| match sqlbackend {
+                SqlBackend::MySql => c.to_string(MysqlQueryBuilder),
+                SqlBackend::Sqlite => c.to_string(SqliteQueryBuilder),
+                SqlBackend::Postgres => c.to_string(PostgresQueryBuilder),
+            })
             .join(";\n");
     let fk_stmts = fk_stmts(model, morphisms, ob_namespace, mor_namespace)
         .iter()
-        .map(|fk| fk.to_string(backend.clone().0))
+        .map(|fk| match sqlbackend {
+            SqlBackend::MySql => fk.to_string(MysqlQueryBuilder),
+            SqlBackend::Sqlite => fk.to_string(SqliteQueryBuilder),
+            SqlBackend::Postgres => fk.to_string(PostgresQueryBuilder),
+        })
         .join(";\n");
-    vec![create_stmts, fk_stmts].join(";\n\n")
+    [create_stmts, fk_stmts].join(";\n\n")
 }
 
 #[cfg(test)]

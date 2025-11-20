@@ -93,11 +93,12 @@ impl ThSchema {
 
     /// Renders a model into valid SQL
     #[wasm_bindgen(js_name = "renderSql")]
-    pub fn render_sql(&self, model: &DblModel) -> Result<String, String> {
+    pub fn render_sql(&self, model: &DblModel, backend: &str) -> Result<String, String> {
         let sql_string = catlog::stdlib::analyses::sql::make_schema(
             model.discrete()?,
             model.ob_namespace()?,
             model.mor_namespace()?,
+            backend,
         );
         Ok(sql_string)
     }
