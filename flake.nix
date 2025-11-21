@@ -93,6 +93,9 @@
             else
               [ ];
 
+          pkgsUnstable = import inputs.nixpkgsUnstable {
+            system = "x86_64-linux";
+          };
         in
         pkgs.mkShell {
           name = "catcolab-devshell";
@@ -110,7 +113,6 @@
               pnpm_9
               nodejs_24
               sqlx-cli
-              biome
               wasm-pack
               vscode-langservers-extracted
               wasm-bindgen-cli
@@ -126,6 +128,7 @@
             ++ [
               inputs.agenix.packages.${system}.agenix
               inputs.deploy-rs.packages.${system}.default
+              pkgsUnstable.biome
             ];
 
           # macOS-specific environment variables for OpenSSL and pkg-config

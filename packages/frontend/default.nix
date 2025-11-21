@@ -59,12 +59,12 @@ pkgs.stdenv.mkDerivation {
   pnpmDeps = pkgsUnstable.pnpm_9.fetchDeps {
     pname = name;
 
-    fetcherVersion = "2";
+    fetcherVersion = 2;
     src = ./.;
 
     # See README.md
     # hash = "";
-    hash = "sha256-9S+1IKKbeIn6qvdcpn8Mn0PC86UNFnxgdjS7vl3xatM=";
+    hash = "sha256-krMxJvNarhwZK8O08RonIwpzaTlmjT2ToWINe+tm9n8=";
   };
 
   meta.mainProgram = name;
