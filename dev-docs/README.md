@@ -7,7 +7,6 @@ This directory contains documentation for CatColab developers working on testing
 ### [Testing Guide](docs/testing-guide.md)
 Learn how to run integration tests, test deployments, and debug test failures with a progressive isolation strategy.
 
-
 ### [Development Workflows](docs/workflows.md)
 Example workflows demonstrating how to use `cc-utils` script for common development tasks.
 
@@ -21,14 +20,9 @@ Reference for `cc-utils db` commands used to manage databases across environment
 
 ## Quick Start
 
-**Run integration tests:**
+**Preview remote branch:**
 ```bash
-nix build .#checks.x86_64-linux.frontendTests -L --no-sandbox
-```
-
-**Start a local VM:**
-```bash
-cc-utils vm start
+cc-utils vm start my-feature-branch --db cached
 ```
 
 **Test a deployment:**
@@ -41,6 +35,6 @@ cc-utils vm test-deploy
 # Dump staging database
 cc-utils db dump --from staging
 
-# Load into local
-cc-utils db load --from ./dumps/staging_dump_*.sql
+# Load most recent staging dump into local db
+cc-utils db load --from staging
 ```
