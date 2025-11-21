@@ -7,11 +7,13 @@ source "$(dirname "${BASH_SOURCE[0]}")/cc-utils-lib.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/cc-utils-db.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/cc-utils-vm.sh"
 
+# Global variables for for tracking ssh tunnels, see open_tunnel
 STAGING_SSH_PID=""
-STAGING_LOCAL_PGPORT="5434"
-
 PROD_SSH_PID=""
-PROD_PGPORT="5433"
+
+# The local ports to use when tunnelling remote PostgreSQL ports
+STAGING_LOCAL_PGPORT="5434"
+PROD_LOCAL_PGPORT="5435"
 
 function print_help {
   echo "Usage: $0 <subcommand> [options]"
