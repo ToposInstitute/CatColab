@@ -29,11 +29,11 @@ const defaultAttributes: SVGAttributes = {
     "stroke-linejoin": "round",
 };
 
-interface FileIconProps {
+interface ModelFileIconProps {
     theory: string;
 }
 
-export function FileIcon(props: LucideProps & FileIconProps) {
+export function ModelFileIcon(props: LucideProps & ModelFileIconProps) {
     const [localProps, rest] = splitProps(props, [
         "absoluteStrokeWidth",
         "children",
@@ -43,10 +43,7 @@ export function FileIcon(props: LucideProps & FileIconProps) {
         "size",
         "strokeWidth",
     ]);
-    let letters = theoryToLetterMap[localProps.theory];
-    if (!letters) {
-        letters = [" ", " "];
-    }
+    const letters = () => theoryToLetterMap[localProps.theory] ?? [" ", " "];
     return (
         <svg
             {...defaultAttributes}
@@ -79,7 +76,7 @@ export function FileIcon(props: LucideProps & FileIconProps) {
                 font-family="'Source Code Pro'"
                 fill={localProps.color ?? defaultAttributes.stroke}
             >
-                {letters[0]}
+                {letters()[0]}
             </text>
             <text
                 x="18.3403"
@@ -91,7 +88,7 @@ export function FileIcon(props: LucideProps & FileIconProps) {
                 font-family="'Source Code Pro'"
                 fill={localProps.color ?? defaultAttributes.stroke}
             >
-                {letters[1]}
+                {letters()[1]}
             </text>
         </svg>
     );
