@@ -2,6 +2,18 @@
 
 set -euo pipefail
 
+function confirm_action() {
+  local message="$1"
+  echo "$message"
+  read -n1 -r -p "Continue? [y/N] " yn
+  echo  # newline after prompt
+  if [[ $yn != [yY] ]]; then
+    echo "Aborted."
+    return 1
+  fi
+  return 0
+}
+
 function load_env() {
   local varname="$1"
   local env_file="$2"
