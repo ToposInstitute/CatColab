@@ -122,7 +122,8 @@ function run_vm_logs() {
   if [[ "$follow" == "true" ]]; then
     tail -f "$log_file"
   else
-    cat "$log_file"
+    # Show ANSI colors and prevent screen clearing
+    less -RX "$log_file"
   fi
 }
 
