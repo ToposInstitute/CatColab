@@ -2,16 +2,10 @@
 
 set -euo pipefail
 
-source "$(dirname "${BASH_SOURCE[0]}")/db-utils-lib.sh"
+# Database subcommand functions
 
-STAGING_SSH_PID=""
-STAGING_LOCAL_PGPORT="5434"
-
-PROD_SSH_PID=""
-PROD_PGPORT="5433"
-
-function print_help {
-  echo "Usage: $0 <subcommand> [options]"
+function print_db_help {
+  echo "Usage: $0 db <subcommand> [options]"
   echo ""
   echo "Subcommands:"
   echo "  reset                 Reset the local database"
@@ -19,25 +13,26 @@ function print_help {
   echo "  dump                  Dump a target (local|staging|production) database"
   echo "  connect               Connect to a target (local|staging|production)"
   echo ""
-  echo "Use '$0 <subcommand> --help' for more information."
+  echo "Use '$0 db <subcommand> --help' for more information."
 }
 
 function print_connect_help {
-  echo "Usage: $0 connect <target>"
+  echo "Usage: $0 db connect <target>"
   echo "Targets: local, staging, production"
 }
 
 function print_dump_help {
-  echo "Usage: $0 dump [options]"
+  echo "Usage: $0 db dump [options]"
   echo ""
   echo "Options:"
   echo "  -f, --from <target>    Target: local (default), staging, or production"
   echo "  -t, --to <filename>    Filename to write (defaults to './dumps/<target>_dump_<timestamp>.sql')"
+  echo "  -q, --quiet            Only output the dump file path"
   echo "  -h, --help             Print this help message"
 }
 
 function print_load_help {
-  echo "Usage: $0 load [options]"
+  echo "Usage: $0 db load [options]"
   echo ""
   echo "Options:"
   echo "  -t, --to <target>      Target: local (default), staging, or production"
@@ -50,7 +45,7 @@ function print_load_help {
 }
 
 function print_reset_help {
-  echo "Usage: $0 reset [options]"
+  echo "Usage: $0 db reset [options]"
   echo ""
   echo "Reset the local database by dropping and recreating it."
   echo ""
@@ -58,6 +53,35 @@ function print_reset_help {
   echo "  -s, --skip-migrations     Skip running migrations after resetting"
   echo "  -t, --to <target>      Target to reset (only 'local' is supported)"
   echo "  -h, --help             Print this help message"
+}
+
+function run_db() {
+  local subcommand="${1-}"
+  shift || true
+
+  case "$subcommand" in
+    connect)
+      run_connect "$@"
+      ;;
+    dump)
+      run_dump "$@"
+      ;;
+    load)
+      run_load "$@"
+      ;;
+    reset)
+      run_reset "$@"
+      ;;
+    "-h" | "--help" | "")
+      print_db_help
+      ;;
+    *)
+      echo "Unknown db subcommand: $subcommand"
+      echo ""
+      print_db_help
+      exit 1
+      ;;
+  esac
 }
 
 function run_connect() {
@@ -84,6 +108,7 @@ function run_connect() {
 function run_dump() {
   local target="local"
   local dump_file=""
+  local quiet=false
 
   while [[ ${1-} ]]; do
     case "$1" in
@@ -94,6 +119,9 @@ function run_dump() {
       "-t" | "--to")
         shift
         dump_file="$1"
+        ;;
+      "-q" | "--quiet")
+        quiet=true
         ;;
       "-h" | "--help")
         print_dump_help
@@ -120,9 +148,14 @@ function run_dump() {
 
   case "$target" in
     local|vm|staging|production)
-      echo "Dumping $target to $dump_file..."
+      if [[ "$quiet" != "true" ]]; then
+        echo "Dumping $target to $dump_file..."
+      fi
       load_target_env "$target"
       pg_dump --clean --if-exists > "$dump_file"
+      if [[ "$quiet" == "true" ]]; then
+        echo "$dump_file"
+      fi
       ;;
     *)
       echo "Unknown target: $target"
@@ -166,7 +199,7 @@ function run_load() {
   done
 
   if [[ -z $dump_file ]]; then
-    echo "Missing dump specifier."
+    echo "Error: Missing dump specifier"
     print_load_help
     exit 1
   fi
@@ -192,9 +225,13 @@ function run_load() {
 
   case "$target" in
     local|vm)
+      if ! confirm_action "WARNING: This will overwrite the $target database."; then
+        exit 1
+      fi
+
       load_target_env "$target"
       echo "Loading into $target..."
-      psql --dbname="$PGDATABASE" -f "$dump_file"
+      psql -q --dbname="$PGDATABASE" -f "$dump_file"
 
       if [[ "$skip_migrate" != "true" ]]; then
         echo ""
@@ -202,8 +239,7 @@ function run_load() {
       fi
     ;;
     staging|production)
-      echo "Not allow to modify target: $target"
-      echo ""
+      echo "Error: Not allowed to modify target: $target"
       exit 1
     ;;
     *)
@@ -249,10 +285,7 @@ function run_reset() {
     exit 1
   fi
 
-  echo "WARNING: This will reset your local 'catcolab' database."
-  read -n1 -r -p "Continue? [y/N] " yn
-  if [[ $yn != [yY] ]]; then
-    echo "Aborted."
+  if ! confirm_action "WARNING: This will reset your local 'catcolab' database."; then
     exit 1
   fi
 
@@ -275,63 +308,3 @@ function run_reset() {
     run_local_migrations
   fi
 }
-
-function run_vm() {
-  local target="local"
-  local skip_migrate=false
-
-  while [[ ${1-} ]]; do
-    case "$1" in
-      "start")
-        run_vm_start
-        ;;
-      *)
-        echo "Unknown argument: $1"
-        echo ""
-        print_load_help
-        exit 1
-        ;;
-    esac
-    shift
-  done
-}
-
-function run_vm_start() {
-    qemu-system-x86_64 \
-    -enable-kvm -cpu host -smp 2 -m 2048 \
-    -drive file=./catcolab-vm.qcow2,if=virtio,format=qcow2 \
-    -device virtio-net-pci,netdev=net0 \
-    -netdev user,id=net0,hostfwd=tcp::2221-:22,hostfwd=tcp::5433-:5432,hostfwd=tcp::8000-:8000,hostfwd=tcp::8010-:8010 \
-    -nographic
-}
-
-# Entry point
-subcommand="$1"
-shift || true
-
-case "$subcommand" in
-  vm)
-    run_vm "$@"
-    ;;
-  connect)
-    run_connect "$@"
-    ;;
-  dump)
-    run_dump "$@"
-    ;;
-  load)
-    run_load "$@"
-    ;;
-  reset)
-    run_reset "$@"
-    ;;
-  "-h" | "--help" | "")
-    print_help
-    ;;
-  *)
-    echo "Unknown subcommand: $subcommand"
-    echo ""
-    print_help
-    exit 1
-    ;;
-esac

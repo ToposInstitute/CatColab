@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Source library files
+source "$(dirname "${BASH_SOURCE[0]}")/cc-utils-lib.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/cc-utils-db.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/cc-utils-vm.sh"
+
+# Global variables for for tracking ssh tunnels, see open_tunnel
+STAGING_SSH_PID=""
+PROD_SSH_PID=""
+
+# The local ports to use when tunnelling remote PostgreSQL ports
+STAGING_LOCAL_PGPORT="5434"
+PROD_LOCAL_PGPORT="5435"
+
+function print_help {
+  echo "Usage: $0 <subcommand> [options]"
+  echo ""
+  echo "Subcommands:"
+  echo "  db                    Database management commands"
+  echo "  vm                    Virtual machine commands"
+  echo ""
+  echo "Use '$0 <subcommand> --help' for more information."
+}
+
+# Entry point
+subcommand="$1"
+shift || true
+
+case "$subcommand" in
+  db)
+    run_db "$@"
+    ;;
+  vm)
+    run_vm "$@"
+    ;;
+  "-h" | "--help" | "")
+    print_help
+    ;;
+  *)
+    echo "Unknown subcommand: $subcommand"
+    echo ""
+    print_help
+    exit 1
+    ;;
+esac
