@@ -255,7 +255,10 @@ function run_vm_test_deploy() {
     echo "Error: Built VM image not found at result/catcolab-vm.qcow2"
     exit 1
   fi
-  cp "result/$vm_disk" "$vm_disk"
+
+  # Nix store files are read only and qemu needs to write to the vm disk image
+  cp --remove-destination "result/$vm_disk" "$vm_disk"
+  chmod +w  "$vm_disk"
 
   echo "Starting VM with QEMU..."
   local monitor_socket="$(get_vm_monitor_socket)"
