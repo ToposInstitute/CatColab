@@ -2,9 +2,9 @@ import { useNavigate } from "@solidjs/router";
 import { createMemo, createResource, For, Show } from "solid-js";
 import invariant from "tiny-invariant";
 
+import { DocumentTypeIcon } from "catcolab-ui-components";
 import type { Link } from "catlog-wasm";
 import { type Api, type LiveDocWithRef, useApi } from "../api";
-import { DocumentTypeIcon } from "../components/document_type_icon";
 import { DocumentMenu } from "./document_menu";
 
 export function DocumentSidebar(props: {

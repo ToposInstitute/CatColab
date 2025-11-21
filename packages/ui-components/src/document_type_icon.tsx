@@ -4,8 +4,9 @@ import FileX from "lucide-solid/icons/file-x";
 import Network from "lucide-solid/icons/network";
 import { Match, Switch } from "solid-js";
 
-import { FileIcon } from "catcolab-ui-components";
-import type { DocumentType } from "../api";
+import { ModelFileIcon } from "./model_file_icon";
+
+export type DocumentType = "model" | "diagram" | "analysis";
 
 export function DocumentTypeIcon(props: {
     documentType: DocumentType;
@@ -18,7 +19,7 @@ export function DocumentTypeIcon(props: {
                 <FileX style={{ color: "darkgray" }} />
             </Match>
             <Match when={props.documentType === "model" && props.theory}>
-                {(theory) => <FileIcon theory={theory()} />}
+                {(theory) => <ModelFileIcon theory={theory()} />}
             </Match>
             <Match when={props.documentType === "model"}>
                 <File />
