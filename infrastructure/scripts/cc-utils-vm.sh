@@ -143,18 +143,36 @@ function run_vm_connect() {
   fi
 }
 
-function load_staging_db_to_vm() {
-  echo "Dumping staging database..."
+function get_or_create_staging_dump() {
+  # Find most recent staging dump in dumps/
+  local dumps_dir="$(find_git_root)/dumps"
+  mkdir -p "$dumps_dir"
+
+  local recent_dump=$(ls -t "$dumps_dir"/staging_dump_*.sql 2>/dev/null | head -1)
+
+  if [[ -n "$recent_dump" && -f "$recent_dump" ]]; then
+    echo "$recent_dump"
+    return 0
+  fi
+
+  # No cached dump found, create a new one
+  echo "No cached staging dump found, creating new dump..." >&2
   local dump_file=$(run_dump --from staging --quiet)
+  echo "$dump_file"
+}
+
+function load_dump_to_vm() {
+  local dump_file="$1"
+
   if [[ ! -f "$dump_file" ]]; then
-    echo "Error: Failed to create staging dump"
+    echo "Error: Dump file not found: $dump_file"
     return 1
   fi
 
   echo "Stopping backend service..."
   ssh $VM_SSH_OPTS catcolab@localhost "sudo systemctl stop backend"
 
-  echo "Loading staging database into VM..."
+  echo "Loading database into VM..."
   if ! run_load --to vm --from "$dump_file" --skip-migrations; then
     echo "Error: Failed to load database"
     return 1
@@ -171,21 +189,46 @@ function load_staging_db_to_vm() {
   return 0
 }
 
-function run_vm_start() {
-  local skip_db=false
+function load_staging_db_to_vm() {
+  echo "Dumping staging database..."
+  local dump_file=$(run_dump --from staging --quiet)
+  if [[ ! -f "$dump_file" ]]; then
+    echo "Error: Failed to create staging dump"
+    return 1
+  fi
 
-  # Parse arguments
+  load_dump_to_vm "$dump_file"
+}
+
+function run_vm_start() {
+  local branch=""
+  local db_source="default"
+
+  # Parse positional branch argument first
+  if [[ ${1-} && ! "$1" =~ ^-- ]]; then
+    branch="$1"
+    shift
+  fi
+
+  # Parse options
   while [[ ${1-} ]]; do
     case "$1" in
-      "--skip-db")
-        skip_db=true
+      "--db")
+        shift
+        db_source="$1"
         ;;
       "-h"|"--help")
-        echo "Usage: $0 vm start [options]"
+        echo "Usage: $0 vm start [branch] [--db skip|cached|<file>]"
+        echo ""
+        echo "Arguments:"
+        echo "  branch               Optional: GitHub branch to build VM from"
         echo ""
         echo "Options:"
-        echo "  --skip-db    Skip loading staging database"
-        echo "  -h, --help   Show this help message"
+        echo "  --db skip           Don't load any database"
+        echo "  --db cached         Use most recent staging dump or create new"
+        echo "  --db <file>         Load from specific dump file"
+        echo "  (default)           Fresh staging dump (no --db flag)"
+        echo "  -h, --help          Show this help message"
         exit 0
         ;;
       *)
@@ -205,30 +248,83 @@ function run_vm_start() {
   local monitor_socket="$(get_vm_monitor_socket)"
   local log_file="$(get_vm_log_file)"
 
-  # Start the nix VM in background with a monitor socket
-  # We pass additional QEMU args via -- to add monitor socket support
-  nix run .#nixosConfigurations.catcolab-vm.config.system.build.vm -- \
-    -nographic \
-    -monitor "unix:$monitor_socket,server,nowait" \
-    >> "$log_file" 2>&1 &
+  # Build and start VM based on whether branch is specified
+  if [[ -n "$branch" ]]; then
+    # Build VM from GitHub branch
+    echo "Building VM from branch: $branch..."
+    if ! nix build "github:ToposInstitute/CatColab/$branch#catcolab-vm"; then
+      echo "Error: Failed to build VM from branch: $branch"
+      exit 1
+    fi
 
-   
+    echo "Copying VM disk image to working directory..."
+    local vm_disk="./catcolab-vm.qcow2"
+    if [[ ! -f "result/catcolab-vm.qcow2" ]]; then
+      echo "Error: Built VM image not found at result/catcolab-vm.qcow2"
+      exit 1
+    fi
+
+    # Nix store files are read-only, make writable for QEMU
+    cp --remove-destination "result/catcolab-vm.qcow2" "$vm_disk"
+    chmod +w "$vm_disk"
+
+    echo "Starting VM with QEMU..."
+    # Start QEMU VM in background
+    qemu-system-x86_64 \
+      -enable-kvm -cpu host -smp 2 -m 2048 \
+      -nographic \
+      -drive file="$vm_disk",if=virtio,format=qcow2 \
+      -device virtio-net-pci,netdev=net0 \
+      -netdev user,id=net0,hostfwd=tcp::2221-:22,hostfwd=tcp::5433-:5432,hostfwd=tcp::8000-:8000,hostfwd=tcp::8010-:8010 \
+      -monitor "unix:$monitor_socket,server,nowait" \
+      >> "$log_file" 2>&1 &
+  else
+    # Start local nix VM
+    echo "Starting local VM..."
+    nix run .#nixosConfigurations.catcolab-vm.config.system.build.vm -- \
+      -nographic \
+      -monitor "unix:$monitor_socket,server,nowait" \
+      >> "$log_file" 2>&1 &
+  fi
+
   echo "Logs: cc-utils vm logs"
 
   echo "Waiting for VM to start..."
   if ! wait_for_backend 60; then
     echo "Error: Timeout waiting for VM to be available"
-    echo "Logs: cc-utils vm logs"
+    echo "Check logs: $log_file"
     exit 1
   fi
 
-  if [[ "$skip_db" == "false" ]]; then
-    echo "Loading staging database..."
-    if ! load_staging_db_to_vm; then
-      echo "Error: Failed to load staging database"
-      exit 1
-    fi
-  fi
+  # Handle database loading based on --db option
+  case "$db_source" in
+    "skip")
+      echo "Skipping database load"
+      ;;
+    "cached")
+      echo "Using cached staging dump..."
+      local dump_file=$(get_or_create_staging_dump)
+      if ! load_dump_to_vm "$dump_file"; then
+        echo "Error: Failed to load cached dump"
+        exit 1
+      fi
+      ;;
+    "default")
+      echo "Loading fresh staging database..."
+      if ! load_staging_db_to_vm; then
+        echo "Error: Failed to load staging database"
+        exit 1
+      fi
+      ;;
+    *)
+      # Treat as file path
+      echo "Loading database from: $db_source"
+      if ! load_dump_to_vm "$db_source"; then
+        echo "Error: Failed to load database from file"
+        exit 1
+      fi
+      ;;
+  esac
 
   print_vm_ready
 }
