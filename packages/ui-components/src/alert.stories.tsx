@@ -53,7 +53,7 @@ export const WarningWithCustomTitle: Story = {
 };
 
 export const ErrorAlertStory: Story = {
-    storyName: "Error Alert",
+    name: "Error Alert",
     render: (args) => (
         <ErrorAlert {...args}>
             <p>An error occurred while processing your request. Please try again later.</p>

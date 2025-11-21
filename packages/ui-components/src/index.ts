@@ -2,6 +2,7 @@ export * from "./alert";
 export * from "./button";
 export * from "./completions";
 export * from "./dialog";
+export * from "./file_icon";
 export * from "./fixed_table_editor";
 export * from "./foldable";
 export * from "./form";
