@@ -144,6 +144,11 @@ function DocumentsTreeLeaf(props: {
     const primaryRefId = createMemo(() => props.primaryDoc.docRef.refId);
     const secondaryRefId = createMemo(() => props.secondaryDoc?.docRef.refId);
 
+    const theory = () => {
+        const doc = props.doc.liveDoc.doc;
+        return doc.type === "model" ? doc.theory : undefined;
+    };
+
     const handleClick = () => {
         // If clicking on primary or secondary doc, navigate to just that doc
         if (clickedRefId() === primaryRefId() || clickedRefId() === secondaryRefId()) {
@@ -166,6 +171,7 @@ function DocumentsTreeLeaf(props: {
             <DocumentTypeIcon
                 documentType={props.doc.liveDoc.doc.type}
                 isDeleted={props.doc.docRef.isDeleted}
+                theory={theory()}
             />
             <div
                 class="document-name"
