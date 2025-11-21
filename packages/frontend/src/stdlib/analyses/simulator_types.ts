@@ -19,6 +19,10 @@ export type LinearODESimulator = (model: DblModel, data: LinearODEProblemData) =
 export type LotkaVolterraSimulator = (model: DblModel, data: LotkaVolterraProblemData) => ODEResult;
 export type MassActionSimulator = (model: DblModel, data: MassActionProblemData) => ODEResult;
 
+export type KuramotoAnalysisContent = KuramotoProblemData & {
+    plotVariant: "phase" | "phaseDifference";
+};
+
 /** Configuration for a Decapodes analysis of a diagram. */
 export type DecapodesAnalysisContent = {
     domain: string | null;

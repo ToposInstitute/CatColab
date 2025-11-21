@@ -1,19 +1,19 @@
 import invariant from "tiny-invariant";
 
 import { type ColumnSchema, FixedTableEditor, createNumericalColumn } from "catcolab-ui-components";
-import type { DblModel, KuramotoProblemData, QualifiedName } from "catlog-wasm";
+import type { DblModel, JsResult, ODEResult, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { Foldable } from "../../components";
-import { morLabelOrDefault } from "../../model";
-import { ODEResultPlot } from "../../visualization";
-import { createModelODEPlot } from "./model_ode_plot";
-import type { KuramotoSimulator } from "./simulator_types";
+import { LiveModelDocument, morLabelOrDefault } from "../../model";
+import { ODEPlotData, ODEResultPlot, StateVarData } from "../../visualization";
+import type { KuramotoSimulator, KuramotoAnalysisContent } from "./simulator_types";
 
 import "./simulation.css";
+import { Accessor, createMemo } from "solid-js";
 
 /** Analyse a model using first- or second-order Kuramoto dynamics. */
 export default function Kuramoto(
-    props: ModelAnalysisProps<KuramotoProblemData> & {
+    props: ModelAnalysisProps<KuramotoAnalysisContent> & {
         simulate: KuramotoSimulator;
         title?: string;
         couplingLabel?: string;
@@ -114,6 +114,16 @@ export default function Kuramoto(
                     content.order = data === "second" ? data : "first";
                 }),
         },
+        {
+            name: "Plot",
+            contentType: "enum",
+            variants: (_) => ["phase", "phaseDifference"],
+            content: (_) => props.content.plotVariant,
+            setContent: (_, data) =>
+                props.changeContent((content) => {
+                    content.plotVariant = data === "phaseDifference" ? "phaseDifference" : "phase";
+                }),
+        },
         createNumericalColumn({
             name: "Duration",
             data: (_) => props.content.duration,
@@ -125,7 +135,69 @@ export default function Kuramoto(
         }),
     ];
 
-    const plotResult = createModelODEPlot(
+    function createModelODEPlotKuramoto(
+        liveModel: Accessor<LiveModelDocument>,
+        simulate: (model: DblModel) => ODEResult,
+    ) {
+        return createMemo<JsResult<ODEPlotData, string> | undefined>(
+            () => {
+                const validated = liveModel().validatedModel();
+                if (validated?.tag !== "Valid") {
+                    return;
+                }
+
+                const model = validated.model;
+                const simulationResult = simulate(model);
+                if (simulationResult?.tag !== "Ok") {
+                    return simulationResult;
+                }
+                const solution = simulationResult.content;
+
+                const states: StateVarData[] = [];
+                if (props.content.plotVariant == "phase") {
+                    for (const id of model.obGenerators()) {
+                        const data = solution.states.get(id);
+                        if (data !== undefined) {
+                            states.push({
+                                name: model.obGeneratorLabel(id)?.join(".") ?? "",
+                                data,
+                            });
+                        }
+                    }
+                } else if (props.content.plotVariant == "phaseDifference") {
+                    for (let i = 0; i < model.obGenerators().length; i++) {
+                        for (let j = i+1; j < model.obGenerators().length; j++) {
+                            const first_id = model.obGenerators()[i];
+                            const second_id = model.obGenerators()[j];
+                            if (first_id !== undefined && second_id !== undefined) {
+                                const first_label = model.obGeneratorLabel(first_id)?.join(".") ?? "";
+                                const first_data = solution.states.get(first_id);
+                                const second_label = model.obGeneratorLabel(second_id)?.join(".") ?? "";
+                                const second_data = solution.states.get(second_id);
+                                if (first_data !== undefined && second_data !== undefined) {
+                                    let data : number[] = [];
+                                    for (let k = 0; k < first_data.length; k++) {
+                                        data[k] = (first_data[k] as number) - (second_data[k] as number);
+                                    };
+                                    states.push({
+                                        name: first_label.concat(" - ").concat(second_label),
+                                        data,
+                                    })
+                                }
+                            }
+                        }
+                    }
+                }
+                const content = { time: solution.time, states };
+                return { tag: "Ok", content };
+            },
+            undefined,
+            { equals: false },
+        );
+    }
+
+    // Alternative to createModelODEPlot
+    const plotResult = createModelODEPlotKuramoto(
         () => props.liveModel,
         (model: DblModel) => props.simulate(model, props.content),
     );

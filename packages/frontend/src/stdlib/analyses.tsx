@@ -49,7 +49,7 @@ export function kuramoto(
             forcing?: string;
         };
     },
-): ModelAnalysisMeta<Simulators.KuramotoProblemData> {
+): ModelAnalysisMeta<Simulators.KuramotoAnalysisContent> {
     const {
         id = "kuramoto",
         name = "Kuramoto dynamics",
@@ -80,6 +80,7 @@ export function kuramoto(
             initialPhases: {},
             initialFrequencies: {},
             duration: 10,
+            plotVariant: "phase",
         }),
     };
 }
