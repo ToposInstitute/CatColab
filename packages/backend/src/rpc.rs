@@ -56,9 +56,9 @@ async fn get_doc(ctx: AppCtx, ref_id: Uuid) -> RpcResult<RefDoc> {
                 permissions,
             })
         } else if max_level >= Some(PermissionLevel::Read) {
-            let content = doc::head_snapshot(ctx.state, ref_id).await?;
+            let binary_data = doc::head_snapshot_binary(ctx.state, ref_id).await?;
             Ok(RefDoc::Readonly {
-                content,
+                binary_data,
                 is_deleted,
                 permissions,
             })
@@ -74,9 +74,10 @@ async fn get_doc(ctx: AppCtx, ref_id: Uuid) -> RpcResult<RefDoc> {
 #[derive(Clone, Debug, Serialize, TS)]
 #[serde(tag = "tag")]
 enum RefDoc {
-    /// Readonly document, containing content at the current head.
+    /// Readonly document, containing binary automerge data (base64 encoded).
     Readonly {
-        content: Value,
+        #[serde(rename = "binaryData")]
+        binary_data: String,
         #[serde(rename = "isDeleted")]
         is_deleted: bool,
         permissions: Permissions,

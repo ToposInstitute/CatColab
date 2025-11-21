@@ -119,7 +119,14 @@ export class Api {
         if (isLive) {
             docId = refDoc.docId as DocumentId;
         } else {
-            const docHandle = this.localRepo.create(refDoc.content);
+            // Decode base64 string to Uint8Array
+            const binaryString = atob(refDoc.binaryData);
+            const binaryData = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                binaryData[i] = binaryString.charCodeAt(i);
+            }
+            // Import the binary automerge document
+            const docHandle = await this.localRepo.import(binaryData);
             docId = docHandle.documentId;
         }
         const isDeleted = refDoc.isDeleted;

@@ -1,4 +1,5 @@
 import type * as http from "node:http";
+import { save } from "@automerge/automerge";
 import { type DocHandle, type DocumentId, Repo, type RepoConfig } from "@automerge/automerge-repo";
 import { NodeWSServerAdapter } from "@automerge/automerge-repo-network-websocket";
 import dotenv from "dotenv";
@@ -15,7 +16,11 @@ import type { Pool as PoolType } from "pg";
 
 import { PostgresStorageAdapter } from "./postgres_storage_adapter.js";
 import { type SocketIOHandlers, serializeError } from "./socket.js";
-import type { NewDocSocketResponse, StartListeningSocketResponse } from "./types.js";
+import type {
+    ExportDocSocketResponse,
+    NewDocSocketResponse,
+    StartListeningSocketResponse,
+} from "./types.js";
 
 // Load environment variables from .env
 dotenv.config();
@@ -161,6 +166,26 @@ export class AutomergeServer implements SocketIOHandlers {
         this.docMap.set(refId, handle);
 
         return { Ok: null };
+    }
+
+    async exportDoc(docId: string): Promise<ExportDocSocketResponse> {
+        const handle = await this.repo.find(docId as DocumentId);
+        if (!handle) {
+            return { Err: `Failed to find doc handle in repo for doc_id '${docId}'` };
+        }
+
+        await handle.whenReady();
+        const doc = handle.doc();
+        if (!doc) {
+            return { Err: `Document ${docId} is not ready` };
+        }
+
+        const binaryData = save(doc);
+        return {
+            Ok: {
+                binaryData: Array.from(binaryData),
+            },
+        };
     }
 
     close() {

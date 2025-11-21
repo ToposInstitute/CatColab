@@ -13,6 +13,7 @@
     "author": "CatColab developer team",
     "license": "MIT",
     "dependencies": {
+        "@automerge/automerge": "^3.1.1",
         "@automerge/automerge-repo": "^2.2.0",
         "@automerge/automerge-repo-network-websocket": "^2.2.0",
         "dotenv": "^16.5.0",

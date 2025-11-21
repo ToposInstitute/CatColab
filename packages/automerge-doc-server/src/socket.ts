@@ -1,7 +1,11 @@
 import { io, type Socket } from "socket.io-client";
 
 import type { JsonValue } from "../../backend/pkg/src/index.ts";
-import type { NewDocSocketResponse, StartListeningSocketResponse } from "./types.js";
+import type {
+    ExportDocSocketResponse,
+    NewDocSocketResponse,
+    StartListeningSocketResponse,
+} from "./types.js";
 
 /** Serialize an error to a meaningful string message. */
 export function serializeError(error: unknown): string {
@@ -29,6 +33,7 @@ export type SocketIOHandlers = {
     createDoc: (content: unknown) => Promise<NewDocSocketResponse>;
     cloneDoc: (docId: string) => Promise<NewDocSocketResponse>;
     startListening: (refId: string, docId: string) => Promise<StartListeningSocketResponse>;
+    exportDoc: (docId: string) => Promise<ExportDocSocketResponse>;
 };
 
 /** Messages emitted by the `SocketServer`. */
@@ -87,6 +92,7 @@ export class SocketServer {
         registerHandler(socket, "createDoc", automergeServer);
         registerHandler(socket, "cloneDoc", automergeServer);
         registerHandler(socket, "startListening", automergeServer);
+        registerHandler(socket, "exportDoc", automergeServer);
 
         this.socket = socket;
     }
