@@ -117,11 +117,11 @@ export default function Kuramoto(
         {
             name: "Plot",
             contentType: "enum",
-            variants: (_) => ["phase", "phaseDifference"],
+            variants: (_) => ["phase", "phase difference"],
             content: (_) => props.content.plotVariant,
             setContent: (_, data) =>
                 props.changeContent((content) => {
-                    content.plotVariant = data === "phaseDifference" ? "phaseDifference" : "phase";
+                    content.plotVariant = data === "phase difference" ? "phaseDifference" : "phase";
                 }),
         },
         createNumericalColumn({
