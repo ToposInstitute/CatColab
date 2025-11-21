@@ -182,9 +182,6 @@
         }) devShellSystems
       );
 
-      # Example of how to build and test individual package built by nix:
-      # nix build .#packages.x86_64-linux.automerge
-      # node ./result/main.cjs
       packages = {
         x86_64-linux = {
           catcolabApi = pkgsLinux.stdenv.mkDerivation {
@@ -238,13 +235,7 @@
           # as "traditional" VMs, which causes deploy-rs to fail when deploying to them.
           # https://github.com/serokell/deploy-rs/issues/85#issuecomment-885782350
           #
-          # This is worked around by creating a full featured VM image.
-          #
-          # use:
-          # nix build .#catcolab-vm
-          # cp result/catcolab-vm.qcow2 catcolab-vm.qcow2
-          # cc-utils vm start
-          # deploy -s .#catcolab-vm
+          # This is worked around by creating a full featured QEMU VM image.
           catcolab-vm = pkgsLinux.stdenv.mkDerivation {
             name = "catcolab-vm";
             src = nixos-generators.nixosGenerate {
