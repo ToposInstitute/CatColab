@@ -25,6 +25,17 @@ This command:
 4. Deploys your current local branch to the running VM
 5. Runs the frontend tests
 
+## Testing Individual Nix Packages
+```bash
+# Build the nix package for backend
+nix build .#backend
+
+# Run the nix-built backend
+# This can be used alongside the development services for frontend and automerge-doc-server to complete
+# the app
+./result/bin/backend
+```
+
 ## Debugging Test Failures
 
 When integration tests or deployment tests fail, debugging directly through the Nix commands can be slow due to long cycle times and complexity. Use this progressive debugging strategy to isolate the issue:
