@@ -1,26 +1,36 @@
 # Development Workflows
 
-## Database Workflows
-
-These examples demonstrate how to combine the db commands for common development tasks.
-
-### Example 1: Testing a migration against staging data
+## Review a branch locally
 
 ```bash
-# 1. Dump the staging database
+# Start a VM from a remote branch with the staging database
+# Uses the most recent staging dump in ./dumps/, or creates one if missing
+cc-utils vm start my-feature-branch --db cached
+
+# App available at http://localhost:8000
+# No need to stop local development services
+
+# Stop the VM when done
+cc-utils vm stop
+```
+
+## Testing a migration against staging data
+
+```bash
+# Dump the staging database
 # This will print the dump file path, e.g.: ./dumps/staging_dump_20240115_143022.sql
 cc-utils db dump --from staging
 
-# 2. Create your migration in the migrator package
+# Create your migration in the migrator package
 # See packages/migrator/README.md for instructions on creating migrations
 
-# 3. Load the dump into your local db (migrations run automatically after loading)
+# Load the dump into your local db (migrations run automatically after loading)
 cc-utils db load --from ./dumps/staging_dump_20240115_143022.sql
 
-# 4. To iterate, edit the migration and re-run the load command
+# To iterate, edit the migration and re-run the load command
 ```
 
-### Example 2: Flexible development with db snapshots
+## Flexible development with db snapshots
 
 ```bash
 # Dump the local database to ./dumps/local_snapshot.sql

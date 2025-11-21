@@ -7,10 +7,34 @@ The `cc-utils vm` commands provide tools for managing local NixOS VMs for testin
 ### start
 
 ```bash
-cc-utils vm start [--skip-db]
+cc-utils vm start [branch] [--db skip|cached|<file>]
 ```
 
-Starts a local VM with the staging database loaded by default. Use `--skip-db` to skip loading the database.
+Starts a VM, optionally from a specific GitHub branch.
+
+**Arguments:**
+- `branch` (optional) - GitHub branch name to build VM from. If omitted, uses local nix configuration.
+
+**Database options:**
+- No `--db` flag (default) - Load fresh staging database dump
+- `--db skip` - Don't load any database
+- `--db cached` - Use most recent staging dump in dumps/, or create new if missing
+- `--db <file>` - Load from specific dump file path
+
+**Examples:**
+```bash
+# Start local VM with fresh staging DB
+cc-utils vm start
+
+# Start VM from branch with cached DB
+cc-utils vm start my-feature-branch --db cached
+
+# Start without loading database
+cc-utils vm start --db skip
+
+# Start with specific dump file
+cc-utils vm start --db ./dumps/my_dump.sql
+```
 
 ### stop
 
