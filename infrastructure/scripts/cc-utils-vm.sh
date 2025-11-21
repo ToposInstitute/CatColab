@@ -295,5 +295,12 @@ function run_vm_test_deploy() {
     exit 1
   fi
 
+  echo "Running frontend tests..."
+  if ! ssh $VM_SSH_OPTS catcolab@localhost "frontend-tests"; then
+    echo "Error: Frontend tests failed"
+    echo "Check VM logs: cc-utils vm logs"
+    exit 1
+  fi
+
   print_vm_ready "Test deployment complete!"
 }
