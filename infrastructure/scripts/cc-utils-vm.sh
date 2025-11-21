@@ -239,6 +239,10 @@ function run_vm_test_deploy() {
     exit 1
   fi
 
+  if ! confirm_action "WARNING: This will delete and recreate the VM image."; then
+    exit 1
+  fi
+
   echo "Building VM from frontend-tests-ci branch..."
   if ! nix build github:ToposInstitute/CatColab/frontend-tests-ci#catcolab-vm; then
     echo "Error: Failed to build VM from frontend-tests-ci branch"

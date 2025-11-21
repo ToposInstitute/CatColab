@@ -225,6 +225,10 @@ function run_load() {
 
   case "$target" in
     local|vm)
+      if ! confirm_action "WARNING: This will overwrite the $target database."; then
+        exit 1
+      fi
+
       load_target_env "$target"
       echo "Loading into $target..."
       psql -q --dbname="$PGDATABASE" -f "$dump_file"
@@ -281,10 +285,7 @@ function run_reset() {
     exit 1
   fi
 
-  echo "WARNING: This will reset your local 'catcolab' database."
-  read -n1 -r -p "Continue? [y/N] " yn
-  if [[ $yn != [yY] ]]; then
-    echo "Aborted."
+  if ! confirm_action "WARNING: This will reset your local 'catcolab' database."; then
     exit 1
   fi
 
