@@ -38,7 +38,9 @@ nix build .#backend
 
 ## Debugging Test Failures
 
-When integration tests or deployment tests fail, debugging directly through the Nix commands can be slow due to long cycle times and complexity. Use this progressive debugging strategy to isolate the issue:
+When integration tests or deployment tests fail, debugging directly through Nix commands is slow due to long cycle times. The issue is usually in your code, not the Nix configuration.
+
+This progressive strategy isolates the problem by testing in increasingly complex environments:
 
 ### Step 1: Sanity Check - Local Development Environment
 
@@ -118,3 +120,14 @@ frontend-tests
 VM must be running (use `cc-utils vm start` if needed).
 
 **What this tests:** Manual execution inside the VM environment, useful for debugging test runner issues or inspecting the VM state.
+
+### Beyond Step 6: Debugging Nix Test Environment
+
+If you are unable to reproduce the problem after Step 6, then there is likely a problem somewhere the nix
+configuration. This would be a good time to bug Jason, or failing that, to cancel your weekend plans (/s,
+but nix commands are slow, causing painfully long cycle times).
+
+This will start an interactive Python shell in the Nix test environment:
+```bash
+nix build .#checks.x86_64-linux.frontendTests.driverInteractive
+```
