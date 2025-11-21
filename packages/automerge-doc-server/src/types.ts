@@ -7,3 +7,10 @@ export type NewDocSocketResponse =
       }
     | { Err: string };
 export type StartListeningSocketResponse = { Ok: null } | { Err: string };
+export type ExportDocSocketResponse =
+    | {
+          Ok: {
+              binaryData: number[];
+          };
+      }
+    | { Err: string };

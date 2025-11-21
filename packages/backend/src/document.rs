@@ -68,6 +68,26 @@ pub async fn head_snapshot(state: AppState, ref_id: Uuid) -> Result<Value, AppEr
     Ok(query.fetch_one(&state.db).await?.content)
 }
 
+/// Gets the binary automerge data for a document ref.
+pub async fn head_snapshot_binary(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
+    let query = sqlx::query!(
+        "
+        SELECT doc_id FROM snapshots
+        WHERE id = (SELECT head FROM refs WHERE id = $1)
+        ",
+        ref_id
+    );
+    let doc_id = query.fetch_one(&state.db).await?.doc_id;
+
+    let export_response = export_automerge_doc(&state.automerge_io, doc_id).await?;
+
+    // Convert Vec<u8> to base64 string
+    use base64::{Engine as _, engine::general_purpose};
+    let base64_data = general_purpose::STANDARD.encode(&export_response.binary_data);
+
+    Ok(base64_data)
+}
+
 /// Gets the deleted_at timestamp for a document ref.
 pub async fn ref_deleted_at(
     state: AppState,
@@ -244,6 +264,19 @@ async fn create_automerge_doc(
     .await
 }
 
+async fn export_automerge_doc(
+    automerge_io: &SocketIo,
+    doc_id: String,
+) -> Result<ExportDocSocketResponse, AppError> {
+    call_automerge_io::<ExportDocSocketResponse, _>(
+        automerge_io,
+        "exportDoc",
+        doc_id,
+        "Failed to call exportDoc from backend".to_string(),
+    )
+    .await
+}
+
 /// A document ref along with its content.
 #[derive(Debug, Serialize, Deserialize, TS)]
 pub struct RefContent {
@@ -258,6 +291,12 @@ pub struct NewDocSocketResponse {
     pub doc_id: String,
     #[serde(rename = "docJson")]
     pub doc_json: Value,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExportDocSocketResponse {
+    #[serde(rename = "binaryData")]
+    pub binary_data: Vec<u8>,
 }
 
 /// A subset of user relevant information about a ref. Used for showing users
