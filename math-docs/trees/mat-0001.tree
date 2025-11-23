@@ -48,12 +48,12 @@ systems interpretation:}
   \tr{\td{[[dct-0007]]} \td{Nullable signed graphs} \td{Variant of causal loop diagram}}
   \tr{\td{[[dct-0003]]} \td{Graphs with links} \td{Stock-flow diagrams}}
   \tr{\td{Symmetric monoidal categories / [PROPs](dct-000E)} \td{Petri nets} \td{Reaction networks}}
+  \tr{\td{[[dct-000A]]} \td{Multigraphs} \td{Term graphs/diagrammatic equations}}
   \tr{\td{[[dct-0004]]} \td{Sets} \td{Labels}}
   \tr{\td{[[dct-0005]]} \td{Deterministic transition systems, aka semiautomata} \td{State diagrams}}
 }
 
-\p{Additional doctrines: [[dct-0008]], [[dct-0009]], [[dct-000A]], [[dct-000C]],
-[[dct-000D]]}
+\p{Additional doctrines: [[dct-0008]], [[dct-0009]], [[dct-000C]], [[dct-000D]]}
 
 }
 
