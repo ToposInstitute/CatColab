@@ -68,14 +68,14 @@ category" of a monad on a virtual double category.}
   restriction, #{\gamma} uniquely determines the composition cell on the
   right-hand side.}
 
-  \p{The normalization axiom ensures that the
-  morphisms of \cat{X} are in natural bijection with the \em{unary}
-  multimorphisms of the multicategory, hence the category \cat{X} contains no
-  extra data; cf. [Cruttwell-Shulman, §8](cruttwell-shulman-2010).}
+  \p{The two normalization axioms make the category \cat{X} be isomorphic to the
+  category of \em{unary} multimorphisms in the multicategory. Hence the category
+  \cat{X} contains no extra data; cf. [Cruttwell-Shulman,
+  §8](cruttwell-shulman-2010).}
 
   \p{Most complicated is the associativity law. Using the associativity of
   composites, the assumption that #{T} preserves composites, and the third
-  axiom, we have
+  axiom, we have the equation
   \centerfigs{
   \quiverinline{
   % https://q.uiver.app/#q=WzAsOSxbMCwwLCJUXjMgeCJdLFsxLDAsIlReMiB4Il0sWzIsMCwiVHgiXSxbMywwLCJ4Il0sWzAsMSwiVF4zIHgiXSxbMiwxLCJUeCJdLFszLDEsIngiXSxbMCwyLCJUXjMgeCJdLFszLDIsIngiXSxbNCw1LCIoVFxcbXVfeClfISBcXG9kb3QgVHAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbNSw2LCJwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzcsOCwiKFRcXG11X3gpXyEgXFxvZG90IChcXG11X3gpXyEgXFxvZG90IHAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMiwzLCJwIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzAsMSwiVF4yIHAiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMSwyLCJUcCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsyLDUsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzMsNiwiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMCw0LCIiLDIseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs2LDgsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzQsNywiIiwxLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMTIsMTAsIjFfcCIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxLDksIlQoXFxtYXRocm17Y29tcH0pIiwxLHsibGFiZWxfcG9zaXRpb24iOjQwLCJzaG9ydGVuIjp7InRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMTksMTgsIlxcbWF0aHJte2NvbXB9IiwxLHsib2Zmc2V0IjoxLCJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
