@@ -17,10 +17,10 @@ multicategories](dct-000F).}
   \title{Models of the theory of generalized PROs}
   \taxon{proposition}
 
-  \p{A model of the modal double theory #{(\dbl{T}, T)} of generalized PROs...
+  \p{A model of the modal theory #{(\dbl{T}, T)} of generalized PROs...
   \ul{
-    \li{...in #{(\SSet, \List)} is exactly a multisorted PRO,}
-    \li{...in #{(\SSet, \mathrm{SymList})} is exactly a multisorted PROP,}
+    \li{...in #{(\SSet, \List)} is exactly a multisorted PRO}
+    \li{...in #{(\SSet, \mathrm{SymList})} is exactly a multisorted PROP}
     \li{...in #{(\SSet, \mathrm{CartList})} is exactly a multisorted Lawvere theory.}
   }
   }
