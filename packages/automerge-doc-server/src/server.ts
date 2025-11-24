@@ -32,7 +32,6 @@ function migrateDocument(doc: unknown): { Ok: any } | { Err: string } {
 export class AutomergeServer implements SocketIOHandlers {
     private docMap: Map<string, DocHandle<unknown>>;
 
-    private app: express.Express;
     private server: http.Server;
     private wss: ws.WebSocketServer;
     private repo: Repo;
@@ -43,8 +42,8 @@ export class AutomergeServer implements SocketIOHandlers {
     constructor(port: number | string) {
         this.docMap = new Map();
 
-        this.app = express();
-        this.server = this.app.listen(port);
+        const app = express();
+        this.server = app.listen(port);
 
         this.wss = new ws.WebSocketServer({
             noServer: true,
