@@ -2,8 +2,8 @@
 \taxon{doctrine}
 \import{macros}
 
-\p{A \nlab{multicategory}, also known as a \em{colored} or \em{typed operad}, is
-a model of the following double theory.}
+\p{A \nlab{multicategory}, also known as a \em{colored} or \em{typed
+non-symmetric operad}, is precisely a model of the following double theory.}
 
 \transclude{thy-000A}
 

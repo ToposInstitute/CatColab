@@ -89,5 +89,6 @@
 \def\tabulator[ob]{#{\top\ob}}
 
 \def\dbl[name]{#{\mathbb{\name}}}
+\def\SSet{#{\mathbb{S}\mathsf{et}}}
 \def\Span{#{\mathbb{S}\mathsf{pan}}}
 \def\Mod{#{\mathbb{M}}\mathsf{od}}

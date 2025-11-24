@@ -1,0 +1,260 @@
+\title{Generalized multicategories}
+\taxon{doctrine}
+\import{macros}
+
+\p{Depending on the base monad, a \nlab{generalized multicategory} could be a
+multicategory, symmetric multicategory, cartesian multicategory, or something
+more exotic. Our axiomatization of these doctrines via a double theory is
+reminiscent of [Cruttwell-Shulman's](cruttwell-shulman-2010) definition but
+bypasses the complicated construction of the "horizontal Kleisli virtual double
+category" of a monad on a virtual double category.}
+
+\transclude{thy-000F}
+
+\subtree{
+  \title{Models of the theory of generalized multicategories}
+  \taxon{proposition}
+
+  \p{A model of the modal theory #{(\dbl{T}, T)} of generalized multicategories
+  in a virtual equipment #{(\dbl{S}, S)} carrying a virtual double monad is
+  precisely a normalized #{S}-multicategory. In particular, a model...
+  \ul{
+    \li{...in #{(\SSet, \List)} is exactly a multicategory}
+    \li{...in #{(\SSet, \mathrm{SymList})} is exactly a symmetric multicategory}
+    \li{...in #{(\SSet, \mathrm{CartList})} is exactly a cartesian multicategory.}
+  }
+  }
+
+  \proof{
+  \p{A model consists, first of all, of a category object \cat{X} in \dbl{S} and
+  a profunctor #{P: S(\cat{X}) \proto \cat{X}}. By the first axiom, we can
+  define a cell #{\gamma} in \dbl{T} as:
+  \centerfigs{
+  \quiverinline{
+  % https://q.uiver.app/#q=WzAsNSxbMCwwLCJUXjIgeCJdLFsxLDAsIlR4Il0sWzIsMCwieCJdLFswLDEsIlR4Il0sWzIsMSwieCJdLFsxLDIsInAiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMCwxLCJUcCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFswLDMsIlxcbXVfeCIsMl0sWzIsNCwiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMyw0LCJwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzEsOSwiXFxnYW1tYSIsMSx7ImxhYmVsX3Bvc2l0aW9uIjo0MCwic2hvcnRlbiI6eyJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV1d
+  \begin{tikzcd}
+	{T^2 x} & Tx & x \\
+	Tx && x
+	\arrow["Tp"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-2]
+	\arrow["{\mu_x}"', from=1-1, to=2-1]
+	\arrow["p"{inner sep=.8ex}, "\shortmid"{marking}, from=1-2, to=1-3]
+	\arrow[equals, from=1-3, to=2-3]
+	\arrow[""{name=0, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-3]
+	\arrow["\gamma"{description, pos=0.4}, draw=none, from=1-2, to=0]
+  \end{tikzcd}
+  }
+  #{\qquad\coloneqq\qquad}
+  \quiverinline{
+  % https://q.uiver.app/#q=WzAsNyxbMCwwLCJUXjIgeCJdLFsyLDAsIngiXSxbMSwwLCJUeCJdLFswLDEsIlReMiB4Il0sWzIsMSwieCJdLFswLDIsIlR4Il0sWzIsMiwieCJdLFswLDIsIlRwIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzIsMSwicCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFszLDQsIihcXG11X3gpXyEgXFxvZG90IHAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMCwzLCIiLDIseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxLDQsIiIsMCx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzMsNSwiXFxtdV94IiwyXSxbNCw2LCIiLDIseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs1LDYsInAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMiw5LCJcXG1hdGhybXtjb21wfSIsMSx7ImxhYmVsX3Bvc2l0aW9uIjo0MCwic2hvcnRlbiI6eyJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzksMTQsIlxcbWF0aHJte3Jlc30iLDEseyJsYWJlbF9wb3NpdGlvbiI6NjAsInNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dXQ==
+  \begin{tikzcd}
+	{T^2 x} & Tx & x \\
+	{T^2 x} && x \\
+	Tx && x
+	\arrow["Tp"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-2]
+	\arrow[equals, from=1-1, to=2-1]
+	\arrow["p"{inner sep=.8ex}, "\shortmid"{marking}, from=1-2, to=1-3]
+	\arrow[equals, from=1-3, to=2-3]
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{(\mu_x)_! \odot p}"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-3]
+	\arrow["{\mu_x}"', from=2-1, to=3-1]
+	\arrow[equals, from=2-3, to=3-3]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-3]
+	\arrow["{\mathrm{comp}}"{description, pos=0.4}, draw=none, from=1-2, to=0]
+	\arrow["{\mathrm{res}}"{description, pos=0.6}, draw=none, from=0, to=1]
+  \end{tikzcd}
+  }
+  }
+  The image of this cell in \dbl{S} is the composition operation of the
+  generalized multicategory; turning this around, by the universal property of
+  restriction, #{\gamma} uniquely determines the composition cell on the
+  right-hand side.}
+
+  \p{The two normalization axioms make the category \cat{X} be isomorphic to the
+  category of \em{unary} multimorphisms in the multicategory. Hence the category
+  \cat{X} contains no extra data; cf. [Cruttwell-Shulman,
+  §8](cruttwell-shulman-2010).}
+
+  \p{Most complicated is the associativity law. Using the associativity of
+  composites, the assumption that #{T} preserves composites, and the third
+  axiom, we have the equation
+  \centerfigs{
+  \quiverinline{
+  % https://q.uiver.app/#q=WzAsOSxbMCwwLCJUXjMgeCJdLFsxLDAsIlReMiB4Il0sWzIsMCwiVHgiXSxbMywwLCJ4Il0sWzAsMSwiVF4zIHgiXSxbMiwxLCJUeCJdLFszLDEsIngiXSxbMCwyLCJUXjMgeCJdLFszLDIsIngiXSxbNCw1LCIoVFxcbXVfeClfISBcXG9kb3QgVHAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbNSw2LCJwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzcsOCwiKFRcXG11X3gpXyEgXFxvZG90IChcXG11X3gpXyEgXFxvZG90IHAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMiwzLCJwIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzAsMSwiVF4yIHAiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMSwyLCJUcCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsyLDUsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzMsNiwiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMCw0LCIiLDIseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs2LDgsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzQsNywiIiwxLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMTIsMTAsIjFfcCIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxLDksIlQoXFxtYXRocm17Y29tcH0pIiwxLHsibGFiZWxfcG9zaXRpb24iOjQwLCJzaG9ydGVuIjp7InRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMTksMTgsIlxcbWF0aHJte2NvbXB9IiwxLHsib2Zmc2V0IjoxLCJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
+  \begin{tikzcd}
+	{T^3 x} & {T^2 x} & Tx & x \\
+	{T^3 x} && Tx & x \\
+	{T^3 x} &&& x
+	\arrow["{T^2 p}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-2]
+	\arrow[equals, from=1-1, to=2-1]
+	\arrow["Tp"{inner sep=.8ex}, "\shortmid"{marking}, from=1-2, to=1-3]
+	\arrow[""{name=0, anchor=center, inner sep=0}, "p"{inner sep=.8ex}, "\shortmid"{marking}, from=1-3, to=1-4]
+	\arrow[equals, from=1-3, to=2-3]
+	\arrow[equals, from=1-4, to=2-4]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "{(T\mu_x)_! \odot Tp}"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-3]
+	\arrow[""{name=2, anchor=center, inner sep=0}, equals, from=2-1, to=3-1]
+	\arrow[""{name=3, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-3, to=2-4]
+	\arrow[""{name=4, anchor=center, inner sep=0}, equals, from=2-4, to=3-4]
+	\arrow["{(T\mu_x)_! \odot (\mu_x)_! \odot p}"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-4]
+	\arrow["{T(\mathrm{comp})}"{description, pos=0.4}, draw=none, from=1-2, to=1]
+	\arrow["{1_p}"{description}, draw=none, from=0, to=3]
+	\arrow["{\mathrm{comp}}"{description}, shift right, draw=none, from=2, to=4]
+  \end{tikzcd}
+  }
+  #{\qquad=\qquad}
+  \quiverinline{
+  % https://q.uiver.app/#q=WzAsOSxbMCwwLCJUXjMgeCJdLFsxLDAsIlReMiB4Il0sWzIsMCwiVHgiXSxbMywwLCJ4Il0sWzEsMSwiVF4yIHgiXSxbMywxLCJ4Il0sWzAsMSwiVF4zIHgiXSxbMCwyLCJUXjMgeCJdLFszLDIsIngiXSxbMiwzLCJwIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzAsMSwiVF4yIHAiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMSwyLCJUcCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFs0LDUsIihcXG11X3gpXyEgXFxvZG90IHAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMyw1LCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxLDQsIiIsMCx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzYsNCwiVF4yIHAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMCw2LCIiLDIseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs3LDgsIihcXG11X3tUeH0pXyEgXFxvZG90IChcXG11X3gpXyEgXFxvZG90IHAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbNSw4LCIiLDIseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs2LDcsIiIsMix7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzIsMTIsIlxcbWF0aHJte2NvbXB9IiwxLHsibGFiZWxfcG9zaXRpb24iOjQwLCJzaG9ydGVuIjp7InRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMTAsMTUsIjEiLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMTksMTgsIlxcbWF0aHJte2NvbXB9IiwxLHsib2Zmc2V0IjoxLCJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
+  \begin{tikzcd}
+	{T^3 x} & {T^2 x} & Tx & x \\
+	{T^3 x} & {T^2 x} && x \\
+	{T^3 x} &&& x
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{T^2 p}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-2]
+	\arrow[equals, from=1-1, to=2-1]
+	\arrow["Tp"{inner sep=.8ex}, "\shortmid"{marking}, from=1-2, to=1-3]
+	\arrow[equals, from=1-2, to=2-2]
+	\arrow["p"{inner sep=.8ex}, "\shortmid"{marking}, from=1-3, to=1-4]
+	\arrow[equals, from=1-4, to=2-4]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "{T^2 p}"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-2]
+	\arrow[""{name=2, anchor=center, inner sep=0}, equals, from=2-1, to=3-1]
+	\arrow[""{name=3, anchor=center, inner sep=0}, "{(\mu_x)_! \odot p}"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-2, to=2-4]
+	\arrow[""{name=4, anchor=center, inner sep=0}, equals, from=2-4, to=3-4]
+	\arrow["{(\mu_{Tx})_! \odot (\mu_x)_! \odot p}"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-4]
+	\arrow["1"{description}, draw=none, from=0, to=1]
+	\arrow["{\mathrm{comp}}"{description, pos=0.4}, draw=none, from=1-3, to=3]
+	\arrow["{\mathrm{comp}}"{description}, shift right, draw=none, from=2, to=4]
+  \end{tikzcd}
+  }
+  }
+  Postcomposing both sides by the restriction
+  \centerfigs{
+  \quiverinline{
+  % https://q.uiver.app/#q=WzAsNixbMiwwLCJ4Il0sWzAsMCwiVF4zIHgiXSxbMCwxLCJUXjIgeCJdLFsyLDIsIngiXSxbMCwyLCJUeCJdLFsyLDEsIngiXSxbMSwwLCIoVFxcbXVfeClfISBcXG9kb3QgKFxcbXVfeClfISBcXG9kb3QgcCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxLDIsIlRcXG11X3giLDJdLFs0LDMsInAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMiw0LCJcXG11X3giLDJdLFs1LDMsIiIsMCx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzAsNSwiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMiw1LCIoXFxtdV94KV8hIFxcb2RvdCBwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzEyLDgsIlxcbWF0aHJte3Jlc30iLDEseyJsYWJlbF9wb3NpdGlvbiI6NjAsInNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs2LDEyLCJcXG1hdGhybXtyZXN9IiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV1d
+  \begin{tikzcd}
+	{T^3 x} && x \\
+	{T^2 x} && x \\
+	Tx && x
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{(T\mu_x)_! \odot (\mu_x)_! \odot p}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-3]
+	\arrow["{T\mu_x}"', from=1-1, to=2-1]
+	\arrow[equals, from=1-3, to=2-3]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "{(\mu_x)_! \odot p}"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-3]
+	\arrow["{\mu_x}"', from=2-1, to=3-1]
+	\arrow[equals, from=2-3, to=3-3]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-3]
+	\arrow["{\mathrm{res}}"{description}, draw=none, from=0, to=1]
+	\arrow["{\mathrm{res}}"{description, pos=0.6}, draw=none, from=1, to=2]
+  \end{tikzcd}
+  #{\qquad=\qquad}
+  % https://q.uiver.app/#q=WzAsNixbMiwwLCJ4Il0sWzAsMCwiVF4zIHgiXSxbMCwxLCJUXjIgeCJdLFsyLDIsIngiXSxbMCwyLCJUeCJdLFsyLDEsIngiXSxbMSwwLCIoXFxtdV97VHh9KV8hIFxcb2RvdCAoXFxtdV94KV8hIFxcb2RvdCBwIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzEsMiwiXFxtdV97VHh9IiwyXSxbNCwzLCJwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzIsNCwiXFxtdV94IiwyXSxbNSwzLCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFswLDUsIiIsMCx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzIsNSwiKFxcbXVfeClfISBcXG9kb3QgcCIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxMiw4LCJcXG1hdGhybXtyZXN9IiwxLHsibGFiZWxfcG9zaXRpb24iOjYwLCJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNiwxMiwiXFxtYXRocm17cmVzfSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dXQ==
+  \begin{tikzcd}
+	{T^3 x} && x \\
+	{T^2 x} && x \\
+	Tx && x
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{(\mu_{Tx})_! \odot (\mu_x)_! \odot p}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-3]
+	\arrow["{\mu_{Tx}}"', from=1-1, to=2-1]
+	\arrow[equals, from=1-3, to=2-3]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "{(\mu_x)_! \odot p}"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-3]
+	\arrow["{\mu_x}"', from=2-1, to=3-1]
+	\arrow[equals, from=2-3, to=3-3]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-3]
+	\arrow["{\mathrm{res}}"{description}, draw=none, from=0, to=1]
+	\arrow["{\mathrm{res}}"{description, pos=0.6}, draw=none, from=1, to=2]
+  \end{tikzcd}
+  }
+  }
+  and using the final axiom on the right-hand side and the following equation
+  (which follows from the assumption that #{T} preserves restrictions and the
+  formula for restrictions in a virtual equipment, [Cruttwell-Shulman, Theorem
+  7.16](cruttwell-shulman-2010)) 
+  \centerfigs{
+  \quiverinline{
+  % https://q.uiver.app/#q=WzAsNyxbMCwwLCJUXjMgeCJdLFsyLDAsIlR4Il0sWzMsMCwieCJdLFszLDEsIngiXSxbMywyLCJ4Il0sWzAsMiwiVF4yIHgiXSxbMCwxLCJUXjMgeCJdLFsyLDMsIiIsMCx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzAsMSwiKFRcXG11X3gpXyEgXFxvZG90IFRwIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzEsMiwicCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFszLDQsIiIsMix7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzUsNCwiVHAgXFxvZG90IHAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbNiwzLCIoVFxcbXVfeClfISBcXG9kb3QgVHAgXFxvZG90IHAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbNiw1LCJUXFxtdV94IiwyXSxbMCw2LCIiLDIseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxMiwxMSwiXFxtYXRocm17cmVzfSIsMSx7ImxhYmVsX3Bvc2l0aW9uIjo2MCwic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzE0LDcsIlxcbWF0aHJte2NvbXB9IiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV1d
+  \begin{tikzcd}
+	{T^3 x} && Tx & x \\
+	{T^3 x} &&& x \\
+	{T^2 x} &&& x
+	\arrow["{(T\mu_x)_! \odot Tp}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-3]
+	\arrow[""{name=0, anchor=center, inner sep=0}, equals, from=1-1, to=2-1]
+	\arrow["p"{inner sep=.8ex}, "\shortmid"{marking}, from=1-3, to=1-4]
+	\arrow[""{name=1, anchor=center, inner sep=0}, equals, from=1-4, to=2-4]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "{(T\mu_x)_! \odot Tp \odot p}"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-4]
+	\arrow["{T\mu_x}"', from=2-1, to=3-1]
+	\arrow[equals, from=2-4, to=3-4]
+	\arrow[""{name=3, anchor=center, inner sep=0}, "{Tp \odot p}"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-4]
+	\arrow["{\mathrm{comp}}"{description}, draw=none, from=0, to=1]
+	\arrow["{\mathrm{res}}"{description, pos=0.6}, draw=none, from=2, to=3]
+  \end{tikzcd}
+  }
+  #{\qquad=\qquad}
+  \quiverinline{
+  % https://q.uiver.app/#q=WzAsOCxbMCwwLCJUXjMgeCJdLFsyLDAsIlR4Il0sWzMsMCwieCJdLFszLDEsIngiXSxbMywyLCJ4Il0sWzAsMSwiVF4yIHgiXSxbMiwxLCJUeCJdLFswLDIsIlReMiB4Il0sWzIsMywiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMCwxLCIoVFxcbXVfeClfISBcXG9kb3QgVHAiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMSwyLCJwIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzEsNiwiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNiwzLCJwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzMsNCwiIiwyLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMCw1LCJUXFxtdV94IiwyXSxbNSw2LCJUcCIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFs3LDQsIlRwIFxcb2RvdCBwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzUsNywiIiwyLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMTAsMTIsIjFfcCIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs5LDE1LCJUKFxcbWF0aHJte3Jlc30pIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzE3LDEzLCJcXG1hdGhybXtjb21wfSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dXQ==
+  \begin{tikzcd}
+	{T^3 x} && Tx & x \\
+	{T^2 x} && Tx & x \\
+	{T^2 x} &&& x
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{(T\mu_x)_! \odot Tp}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-3]
+	\arrow["{T\mu_x}"', from=1-1, to=2-1]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "p"{inner sep=.8ex}, "\shortmid"{marking}, from=1-3, to=1-4]
+	\arrow[equals, from=1-3, to=2-3]
+	\arrow[equals, from=1-4, to=2-4]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "Tp"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-3]
+	\arrow[""{name=3, anchor=center, inner sep=0}, equals, from=2-1, to=3-1]
+	\arrow[""{name=4, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-3, to=2-4]
+	\arrow[""{name=5, anchor=center, inner sep=0}, equals, from=2-4, to=3-4]
+	\arrow["{Tp \odot p}"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-4]
+	\arrow["{T(\mathrm{res})}"{description}, draw=none, from=0, to=2]
+	\arrow["{1_p}"{description}, draw=none, from=1, to=4]
+	\arrow["{\mathrm{comp}}"{description}, draw=none, from=3, to=5]
+  \end{tikzcd}
+  }
+  }
+  on the left-hand side, we deduce the associativity law for a generalized
+  multicategory:
+  \centerfigs{
+  \quiverinline{
+  % https://q.uiver.app/#q=WzAsOSxbMCwwLCJUXjMgeCJdLFsxLDAsIlReMiB4Il0sWzIsMCwiVHgiXSxbMywwLCJ4Il0sWzAsMSwiVF4yIHgiXSxbMiwxLCJUeCJdLFszLDEsIngiXSxbMCwyLCJUeCJdLFszLDIsIngiXSxbMiwzLCJwIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzAsMSwiVF4yIHAiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMSwyLCJUcCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFswLDQsIlQgXFxtdV94IiwyXSxbNCw1LCJUcCIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsyLDUsIiIsMix7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzMsNiwiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNSw2LCJwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzQsNywiXFxtdV94IiwyXSxbNiw4LCIiLDIseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs3LDgsInAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMSwxMywiVCBcXGdhbW1hIiwxLHsibGFiZWxfcG9zaXRpb24iOjQwLCJzaG9ydGVuIjp7InRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbOSwxNiwiMV9wIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzE3LDE4LCJcXGdhbW1hIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV1d
+  \begin{tikzcd}[column sep=scriptsize]
+	{T^3 x} & {T^2 x} & Tx & x \\
+	{T^2 x} && Tx & x \\
+	Tx &&& x
+	\arrow["{T^2 p}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-2]
+	\arrow["{T \mu_x}"', from=1-1, to=2-1]
+	\arrow["Tp"{inner sep=.8ex}, "\shortmid"{marking}, from=1-2, to=1-3]
+	\arrow[""{name=0, anchor=center, inner sep=0}, "p"{inner sep=.8ex}, "\shortmid"{marking}, from=1-3, to=1-4]
+	\arrow[equals, from=1-3, to=2-3]
+	\arrow[equals, from=1-4, to=2-4]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "Tp"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-3]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "{\mu_x}"', from=2-1, to=3-1]
+	\arrow[""{name=3, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-3, to=2-4]
+	\arrow[""{name=4, anchor=center, inner sep=0}, equals, from=2-4, to=3-4]
+	\arrow["p"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-4]
+	\arrow["{T \gamma}"{description, pos=0.4}, draw=none, from=1-2, to=1]
+	\arrow["{1_p}"{description}, draw=none, from=0, to=3]
+	\arrow["\gamma"{description}, draw=none, from=2, to=4]
+  \end{tikzcd}
+  }
+  #{\qquad=\qquad}
+  \quiverinline{
+  % https://q.uiver.app/#q=WzAsOSxbMCwwLCJUXjMgeCJdLFsxLDAsIlReMiB4Il0sWzIsMCwiVHgiXSxbMywwLCJ4Il0sWzAsMiwiVHgiXSxbMywyLCJ4Il0sWzEsMSwiVHgiXSxbMCwxLCJUXjIgeCJdLFszLDEsIngiXSxbMiwzLCJwIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzAsMSwiVF4yIHAiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMSwyLCJUcCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFs0LDUsInAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMCw3LCJcXG11X3tUeH0iLDJdLFsxLDYsIlxcbXVfeCJdLFs3LDYsIlRwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzcsNCwiXFxtdV94IiwyXSxbMyw4LCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs2LDgsInAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbOCw1LCIiLDIseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxMCwxNSwiXFxtdV9wIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzIsMTgsIlxcZ2FtbWEiLDEseyJsYWJlbF9wb3NpdGlvbiI6NDAsInNob3J0ZW4iOnsidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxNiwxOSwiXFxnYW1tYSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dXQ==
+  \begin{tikzcd}[column sep=scriptsize]
+	{T^3 x} & {T^2 x} & Tx & x \\
+	{T^2 x} & Tx && x \\
+	Tx &&& x
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{T^2 p}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-2]
+	\arrow["{\mu_{Tx}}"', from=1-1, to=2-1]
+	\arrow["Tp"{inner sep=.8ex}, "\shortmid"{marking}, from=1-2, to=1-3]
+	\arrow["{\mu_x}", from=1-2, to=2-2]
+	\arrow["p"{inner sep=.8ex}, "\shortmid"{marking}, from=1-3, to=1-4]
+	\arrow[equals, from=1-4, to=2-4]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "Tp"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-2]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "{\mu_x}"', from=2-1, to=3-1]
+	\arrow[""{name=3, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-2, to=2-4]
+	\arrow[""{name=4, anchor=center, inner sep=0}, equals, from=2-4, to=3-4]
+	\arrow["p"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-4]
+	\arrow["{\mu_p}"{description}, draw=none, from=0, to=1]
+	\arrow["\gamma"{description, pos=0.4}, draw=none, from=1-3, to=3]
+	\arrow["\gamma"{description}, draw=none, from=2, to=4]
+  \end{tikzcd}
+  }
+  }
+  }
+
+  }
+}
