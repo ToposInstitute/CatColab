@@ -1,15 +1,16 @@
-> **Note:** This page can be viewed at either [next.catcolab.org/dev](https://next.catcolab.org/dev) or [github.com/ToposInstitute/CatColab/contribute](https://github.com/ToposInstitute/CatColab/contribute)
+> **Note:** This page can be viewed at either [next.catcolab.org/dev](https://next.catcolab.org/dev) or [github.com/ToposInstitute/CatColab/blob/main/CONTRIBUTING.md](https://github.com/ToposInstitute/CatColab/blob/main/CONTRIBUTING.md).
 
 
 ## Package documentation
 
-| Grouping | Package | Language | Instructions | Documentation |
-| :------- | :------ | :------- | :----------- | :------------ |
-| Core | `catlog` | Rust | — | [/dev/rust/catlog](https://next.catcolab.org/dev/rust/catlog) |
-| Frontend | `frontend` | TypeScript | — | [/dev/frontend/](https://next.catcolab.org/dev/frontend/) |
-| | `catlog-wasm` | Rust | — | [/dev/rust/catlog_wasm](https://next.catcolab.org/dev/rust/catlog_wasm) |
-| Backend | `backend` | Rust | [README](https://github.com/ToposInstitute/CatColab/tree/main/packages/backend) | [/dev/rust/backend](https://next.catcolab.org/dev/rust/backend) |
-| | `automerge-doc-server` | TypeScript | [README](https://github.com/ToposInstitute/CatColab/tree/main/packages/automerge-doc-server) | — |
+| Grouping | Package                | Language   | Instructions                                                                                 | Documentation                                                           |
+| :------- | :------                | :-------   | :-----------                                                                                 | :------------                                                           |
+| Core     | `catlog`               | Rust       | —                                                                                            | [/dev/rust/catlog](https://next.catcolab.org/dev/rust/catlog/)           |
+| Frontend | `frontend`             | TypeScript | —                                                                                            | [/dev/frontend](https://next.catcolab.org/dev/frontend/)               |
+|          | `ui-components`        | TypeScript | —                                                                                            | [/dev/ui-components](https://next.catcolab.org/dev/ui-components/)       |
+|          | `catlog-wasm`          | Rust       | —                                                                                            | [/dev/rust/catlog_wasm](https://next.catcolab.org/dev/rust/catlog_wasm/) |
+| Backend  | `backend`              | Rust       | [README](https://github.com/ToposInstitute/CatColab/tree/main/packages/backend)              | [/dev/rust/backend](https://next.catcolab.org/dev/rust/backend/)         |
+|          | `automerge-doc-server` | TypeScript | [README](https://github.com/ToposInstitute/CatColab/tree/main/packages/automerge-doc-server) | —                                                                       |
 
 
 ## Development build

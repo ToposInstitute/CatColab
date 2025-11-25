@@ -26,7 +26,7 @@ You can find the auto-generated documentation for this Rust crate at [next.catco
    pnpm install
    ```
 
-4. Change to the migrator directory: `cd ../backend`
+4. Change to the migrator directory: `cd ../migrator`
 5. Copy the .env.development to both folders (`cp .env.development .env && cp .env.development ../migrator/.env`) and update the `DATABASE_URL` variable with
    database username, password, and port. (If you used the above Docker command _as is_ it should already be correct.)
 6. Run the initial database migration: `cargo run -p migrator apply`
