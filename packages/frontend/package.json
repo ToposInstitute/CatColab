@@ -16,8 +16,8 @@
         "lint": "biome lint --write && biome check --write",
         "ci": "biome ci",
         "doc": "typedoc --entryPointStrategy expand ./src",
-        "test": "vitest --mode development",
-        "test:no-backend": "vitest --mode development --exclude 'src/api/*'"
+        "test": "vitest --mode=development",
+        "test:ci": "vitest --mode=development --cache=false --configLoader=runner --run"
     },
     "dependencies": {
         "@atlaskit/pragmatic-drag-and-drop": "^1.3.0",
