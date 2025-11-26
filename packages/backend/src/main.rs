@@ -1,5 +1,6 @@
 use axum::extract::Request;
 
+use axum::extract::ws::WebSocketUpgrade;
 use axum::middleware::{Next, from_fn_with_state};
 use axum::{Router, routing::get};
 use axum::{extract::State, response::IntoResponse};
@@ -184,6 +185,15 @@ async fn status_handler(State(status_rx): State<watch::Receiver<AppStatus>>) -> 
     }
 }
 
+async fn websocket_handler(
+    ws: WebSocketUpgrade,
+    State(repo): State<samod::Repo>,
+) -> axum::response::Response {
+    ws.on_upgrade(|socket| async move {
+        repo.accept_axum(socket).await;
+    })
+}
+
 use axum::routing::get_service;
 use tower_http::services::{ServeDir, ServeFile};
 
@@ -191,7 +201,7 @@ async fn run_web_server(
     state: app::AppState,
     firebase_auth: Arc<FirebaseAuth>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let _repo = samod::Repo::builder(tokio::runtime::Handle::current())
+    let repo = samod::Repo::builder(tokio::runtime::Handle::current())
         .with_storage(samod::storage::InMemoryStorage::new())
         .load()
         .await;
@@ -204,8 +214,14 @@ async fn run_web_server(
 
     let rpc_router = Router::<()>::new()
         .layer(from_fn_with_state(state.app_status.clone(), app_status_gate))
-        .layer(from_fn_with_state(firebase_auth, auth_middleware))
+        .layer(from_fn_with_state(firebase_auth.clone(), auth_middleware))
         .nest_service("/rpc", qubit_service);
+
+    let samod_router = Router::new()
+        .layer(from_fn_with_state(firebase_auth, auth_middleware))
+        .layer(from_fn_with_state(state.app_status.clone(), app_status_gate))
+        .route("/repo-ws", get(websocket_handler))
+        .with_state(repo);
 
     // NOTE: Currently nothing is using the /status endpoint. It will likely be used in the future by
     // tests.
@@ -213,7 +229,7 @@ async fn run_web_server(
         .route("/status", get(status_handler))
         .with_state(state.app_status.clone());
 
-    let mut app = Router::new().merge(status_router).merge(rpc_router);
+    let mut app = Router::new().merge(status_router).merge(rpc_router).merge(samod_router);
 
     if let Some(spa_dir) = spa_directory() {
         let index = Path::new(&spa_dir).join("index.html");
