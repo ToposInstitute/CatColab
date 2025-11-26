@@ -192,6 +192,11 @@ async fn run_web_server(
     state: app::AppState,
     firebase_auth: Arc<FirebaseAuth>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let repo = samod::Repo::builder(tokio::runtime::Handle::current())
+        .with_storage(samod::storage::InMemoryStorage::new())
+        .load()
+        .await;
+
     let port = web_port();
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await?;
 
