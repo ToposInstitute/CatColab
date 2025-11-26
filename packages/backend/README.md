@@ -9,15 +9,8 @@ You can find the auto-generated documentation for this Rust crate at [next.catco
 ## Setup
 
 1. Install Rust, say by using [rustup](https://rustup.rs/)
-2. Install and run PostgreSQL and create a new database named `catcolab`
-    - (E.g. by using Docker)
 
-    ```sh
-    docker run --name catcolab-postgres -e POSTGRES_USER=postgres-user \
-        -e POSTGRES_PASSWORD=password -e POSTGRES_DB=catcolab -p 5432:5432 -d postgres:15
-    ```
-
-3. Make sure the required packages are built and installed:
+2. Make sure the required packages are built and installed:
 
    ```sh
    cd packages/notebook-types
@@ -26,10 +19,44 @@ You can find the auto-generated documentation for this Rust crate at [next.catco
    pnpm install
    ```
 
-4. Change to the migrator directory: `cd ../backend`
-5. Copy the .env.development to both folders (`cp .env.development .env && cp .env.development ../migrator/.env`) and update the `DATABASE_URL` variable with
-   database username, password, and port. (If you used the above Docker command _as is_ it should already be correct.)
-6. Run the initial database migration: `cargo run -p migrator apply`
+3. Set up PostgreSQL (choose one of the options below)
+
+   - **Option A: Using Docker (Recommended)**
+
+     Run PostgreSQL in a Docker container:
+
+     ```sh
+     docker run --name catcolab-postgres -e POSTGRES_PASSWORD=password \
+         -p 5432:5432 -d postgres:15
+     ```
+
+     This creates a PostgreSQL instance with superuser `postgres` and password `password`. The `catcolab` database and user will be created automatically by the setup script in step 6.
+
+     The default `.env.development` file is pre-configured to work with this Docker setup.
+
+   - **Option B: Using local PostgreSQL installation**
+
+     Install and run PostgreSQL locally. Ensure you have superuser access (typically the `postgres` user).
+
+     **Note:** The default `.env.development` assumes the PostgreSQL superuser is `postgres` with password `password`.
+     If your local PostgreSQL has different superuser credentials, you'll need to update `DATABASE_SUPERUSER_URL`
+     in your `.env` file (see next step).
+
+4. Change to the backend directory: `cd packages/backend`
+5. Copy the `.env.development` file: `cp .env.development .env`
+   - If you're using the Docker command above as-is, the defaults will work perfectly
+   - If you're using local PostgreSQL with different superuser credentials, you can either:
+     - Update `DATABASE_SUPERUSER_URL` in `.env` to match your postgres superuser credentials, OR
+     - Remove `DATABASE_SUPERUSER_URL` from `.env` and you'll be prompted for your postgres password when running the setup
+   - **If NOT using Nix shell:** Also copy the `.env` file to the migrator directory: `cp .env ../migrator/.env`
+   - **If using Nix shell:** The environment is automatically configured and you don't need to copy `.env` files manually
+6. Run the database setup:
+   - If using Nix shell: `cc-utils db setup` (the script is in your PATH)
+   - Otherwise: `../../infrastructure/scripts/cc-utils db setup`
+   - This command connects as the PostgreSQL superuser and automatically creates:
+     - The `catcolab` database user with appropriate permissions
+     - The `catcolab` database owned by that user
+   - It then runs all database migrations
 7. Build the backend binary: `cargo build`
 8. Run the unit tests: `cargo test`
 
@@ -72,16 +99,16 @@ pnpm run dev
 
 ## Running migrations
 
-This package runs databaes migrations using `migrator` subcommand which uses the
+Migrations are in the `migrator` package which uses the
 [sqlx_migrator](https://github.com/iamsauravsharma/sqlx_migrator) framework.
 
-### Usage
 The migrator tool can be run from any directory using the `cargo run -p backend migrator ...` command.
 The migrator tool uses the default CLI interface provided by `sqlx_migrator`, which is very similar to
 the `sqlx` CLI.
 
 The `DATABASE_URL` environment variable must be set for the target database. This is typically configured
-automatically by the Nix dev shell defined in the repository's `flake.nix`.
+automatically by the Nix dev shell defined in the repository's `flake.nix`. Alternatively it is read from
+the `.env` file in the current directory.
 
 To view available commands, run
 
