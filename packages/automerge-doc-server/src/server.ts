@@ -1,5 +1,4 @@
 import type * as http from "node:http";
-import { save } from "@automerge/automerge";
 import { type DocHandle, type DocumentId, Repo, type RepoConfig } from "@automerge/automerge-repo";
 import { NodeWSServerAdapter } from "@automerge/automerge-repo-network-websocket";
 import dotenv from "dotenv";
@@ -169,18 +168,10 @@ export class AutomergeServer implements SocketIOHandlers {
     }
 
     async exportDoc(docId: string): Promise<ExportDocSocketResponse> {
-        const handle = await this.repo.find(docId as DocumentId);
-        if (!handle) {
-            return { Err: `Failed to find doc handle in repo for doc_id '${docId}'` };
+        const binaryData = await this.repo.export(docId as DocumentId);
+        if (!binaryData) {
+            return { Err: `Failed to find document in repo with ID '${docId}'` };
         }
-
-        await handle.whenReady();
-        const doc = handle.doc();
-        if (!doc) {
-            return { Err: `Document ${docId} is not ready` };
-        }
-
-        const binaryData = save(doc);
         return {
             Ok: {
                 binaryData: Array.from(binaryData),
