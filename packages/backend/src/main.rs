@@ -16,7 +16,6 @@ use sqlx_migrator::{Info, Plan};
 use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::watch;
-use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
 use tracing::{error, info};
 use tracing_subscriber::filter::{EnvFilter, LevelFilter};
@@ -192,7 +191,7 @@ async fn run_web_server(
     state: app::AppState,
     firebase_auth: Arc<FirebaseAuth>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let repo = samod::Repo::builder(tokio::runtime::Handle::current())
+    let _repo = samod::Repo::builder(tokio::runtime::Handle::current())
         .with_storage(samod::storage::InMemoryStorage::new())
         .load()
         .await;
@@ -201,12 +200,12 @@ async fn run_web_server(
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await?;
 
     let rpc_router = rpc::router();
-    let (qubit_service, qubit_handle) = rpc_router.to_service(state.clone());
+    let (qubit_service, qubit_handle) = rpc_router.as_rpc(state.clone()).into_service();
 
-    let rpc_with_mw = ServiceBuilder::new()
+    let rpc_router = Router::<()>::new()
         .layer(from_fn_with_state(state.app_status.clone(), app_status_gate))
         .layer(from_fn_with_state(firebase_auth, auth_middleware))
-        .service(qubit_service);
+        .nest_service("/rpc", qubit_service);
 
     // NOTE: Currently nothing is using the /status endpoint. It will likely be used in the future by
     // tests.
@@ -214,7 +213,7 @@ async fn run_web_server(
         .route("/status", get(status_handler))
         .with_state(state.app_status.clone());
 
-    let mut app = Router::new().merge(status_router).nest_service("/rpc", rpc_with_mw);
+    let mut app = Router::new().merge(status_router).merge(rpc_router);
 
     if let Some(spa_dir) = spa_directory() {
         let index = Path::new(&spa_dir).join("index.html");
