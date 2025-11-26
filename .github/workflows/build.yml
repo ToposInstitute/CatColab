@@ -1,0 +1,190 @@
+name: build
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  save_pr_metadata:
+    name: Save PR metadata
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    outputs:
+      pr_number: ${{ steps.metadata.outputs.pr_number }}
+      pr_branch: ${{ steps.metadata.outputs.pr_branch }}
+      pr_sha: ${{ steps.metadata.outputs.pr_sha }}
+      pr_repo: ${{ steps.metadata.outputs.pr_repo }}
+      base_ref: ${{ steps.metadata.outputs.base_ref }}
+    steps:
+      - name: Save PR metadata
+        id: metadata
+        run: |
+          echo "pr_number=${{ github.event.number }}" >> "$GITHUB_OUTPUT"
+          echo "pr_branch=${{ github.event.pull_request.head.ref }}" >> "$GITHUB_OUTPUT"
+          echo "pr_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          echo "pr_repo=${{ github.event.pull_request.head.repo.full_name }}" >> "$GITHUB_OUTPUT"
+          echo "base_ref=${{ github.event.pull_request.base.ref }}" >> "$GITHUB_OUTPUT"
+
+  build_dev_docs:
+    name: Build developer docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      - name: Build developer docs
+        run: |
+          pnpm install
+          pnpm --filter ./dev-docs run doc
+
+      - name: Upload developer docs
+        uses: actions/upload-artifact@v4
+        with:
+          name: dev-docs
+          path: dev-docs/output
+
+  build_frontend:
+    name: Build frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      - name: Install Rust toolchain from file
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          # Don't override flags in cargo config files.
+          rustflags: ""
+
+      - name: Build for Staging
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        run: |
+          pnpm install
+          pnpm --filter ./packages/frontend run build -- --mode staging
+
+      - name: Build for Production
+        if: github.event_name == 'release'
+        run: |
+          pnpm install
+          pnpm --filter ./packages/frontend run build
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: app
+          path: packages/frontend/dist
+
+      - name: Build frontend docs
+        run: |
+          pnpm --filter ./packages/frontend run doc
+
+      - name: Upload frontend docs
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend_docs
+          path: packages/frontend/docs
+
+  build_rust_docs:
+    name: Build Rust docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain from file
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Build Rust docs
+        run: |
+          cargo doc --all-features --no-deps --workspace --exclude "migrator"
+
+      - name: Upload Rust docs
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust_docs
+          path: target/doc
+
+  build_math-docs:
+    name: Build mathematical docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup TinyTeX
+        uses: r-lib/actions/setup-tinytex@v2
+
+      - name: Install TeX Packages
+        run: |
+          tlmgr update --self
+          tlmgr install dvisvgm
+          tlmgr install standalone
+          tlmgr install pgf
+          tlmgr install tikz-cd
+          tlmgr install amsmath
+          tlmgr install quiver
+          tlmgr install spath3
+
+      - name: Build mathematical docs
+        run: |
+          cd math-docs
+          ./forester build
+
+      - name: Upload mathematical docs
+        uses: actions/upload-artifact@v4
+        with:
+          name: math-docs
+          path: math-docs/output
+
+  build_ui_components:
+    name: Build ui-components Storybook
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build ui-components Storybook
+        run: pnpm --filter ./packages/ui-components run build
+
+      - name: Upload ui-components Storybook
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-components
+          path: packages/ui-components/storybook-static
