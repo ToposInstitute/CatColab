@@ -17,26 +17,16 @@ let
   automergePortStr = builtins.toString cfg.automerge.port;
 
   # idempotent script for intializing the catcolab database
+  # Wraps the shared database-setup.sh script, extracting the password from DATABASE_URL
   databaseSetupScript = pkgs.writeShellScriptBin "database-setup" ''
     #!/usr/bin/env bash
     set -ex
 
-    # Extract the password from the secret file
+    export PATH="${pkgs.postgresql}/bin:$PATH"
+
     password=$(echo $DATABASE_URL | sed -n 's|.*://[^:]*:\([^@]*\)@.*|\1|p')
 
-    # Create the user only if it doesn't already exist.
-    if ! ${pkgs.postgresql}/bin/psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='catcolab'" | grep -q 1; then
-      ${pkgs.postgresql}/bin/psql -c "CREATE USER catcolab WITH ENCRYPTED PASSWORD '$password';"
-    fi
-
-    # Create the database only if it doesn't already exist.
-    if ! ${pkgs.postgresql}/bin/psql -tAc "SELECT 1 FROM pg_database WHERE datname='catcolab'" | grep -q 1; then
-      ${pkgs.postgresql}/bin/psql -c "CREATE DATABASE catcolab;"
-    fi
-
-    ${pkgs.postgresql}/bin/psql -c "alter database catcolab owner to catcolab;"
-    ${pkgs.postgresql}/bin/psql -c "grant all privileges on database catcolab to catcolab;"
-    ${pkgs.postgresql}/bin/psql -d catcolab -c "grant all on schema public to catcolab;"
+    ${pkgs.writeShellScript "database-setup-impl" (builtins.readFile ../../scripts/database-setup.sh)} "$password"
   '';
 in
 with lib;

@@ -8,6 +8,7 @@ function print_db_help {
   echo "Usage: $0 db <subcommand> [options]"
   echo ""
   echo "Subcommands:"
+  echo "  setup                 Set up the local database (idempotent)"
   echo "  reset                 Reset the local database"
   echo "  load                  Load a dump into a target (local|staging|production)"
   echo "  dump                  Dump a target (local|staging|production) database"
@@ -55,6 +56,12 @@ function print_reset_help {
   echo "  -h, --help             Print this help message"
 }
 
+function print_setup_help {
+  echo "Usage: $0 db setup"
+  echo ""
+  echo "Set up the local database for local development"
+}
+
 function run_db() {
   local subcommand="${1-}"
   shift || true
@@ -68,6 +75,9 @@ function run_db() {
       ;;
     load)
       run_load "$@"
+      ;;
+    setup)
+      run_setup "$@"
       ;;
     reset)
       run_reset "$@"
@@ -290,21 +300,30 @@ function run_reset() {
   fi
 
   load_target_env local
-  local pwd="$PGPASSWORD"
+  local catcolab_db_password="$PGPASSWORD"
   load_target_env local_superuser
-
-  if ! psql --dbname=postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname='catcolab'" | grep -q 1; then
-    psql --dbname=postgres --command "CREATE USER catcolab WITH ENCRYPTED PASSWORD '$pwd';"
-  fi
 
   psql --dbname=postgres --command "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='catcolab' AND pid<>pg_backend_pid();"
   psql --dbname=postgres --command "DROP DATABASE IF EXISTS catcolab;"
-  psql --dbname=postgres --command "CREATE DATABASE catcolab;"
-  psql --dbname=postgres --command "ALTER DATABASE catcolab OWNER TO catcolab;"
-  psql --dbname=catcolab --command "GRANT ALL ON SCHEMA public TO catcolab;"
 
+  database-setup.sh "$catcolab_db_password"
 
   if [[ "$skip_migrate" != "true" ]]; then
     run_local_migrations
   fi
+}
+
+function run_setup() {
+  if [[ "${1-}" == "-h" || "${1-}" == "--help" ]]; then
+    print_setup_help
+    exit 0
+  fi
+
+  load_target_env local
+  local catcolab_db_password="$PGPASSWORD"
+  load_target_env local_superuser
+
+  database-setup.sh "$catcolab_db_password"
+
+  run_local_migrations
 }

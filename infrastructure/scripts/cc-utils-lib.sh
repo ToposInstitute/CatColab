@@ -38,7 +38,7 @@ function load_env() {
     content=$(<"$env_file")
   fi
 
-  # extract VAR=
+  # get the contents of the varname variable
   local url=$(printf '%s\n' "$content" | grep -E "^${varname}=" | cut -d '=' -f2-)
   if [[ -z $url ]]; then
     echo "Error: '$varname' missing in $env_file." >&2
