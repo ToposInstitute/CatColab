@@ -89,7 +89,28 @@ function wait_for_port() {
 function load_target_env() {
   case "$1" in
     local_superuser)
-      load_env DATABASE_SUPERUSER_URL "$(find_git_root)/packages/backend/.env"
+      local env_file="$(find_git_root)/packages/backend/.env"
+
+      if grep -q "^DATABASE_SUPERUSER_URL=" "$env_file" 2>/dev/null; then
+        load_env DATABASE_SUPERUSER_URL "$env_file"
+      else
+        # Fall back to constructing from DATABASE_URL + prompted password
+        echo "Tip: Add 'DATABASE_SUPERUSER_URL=postgresql://postgres:<password>@localhost:5432/postgres' to $env_file to configure postgres superuser access" >&2
+        echo "" >&2
+
+        load_env DATABASE_URL "$env_file"
+        local db_host="$PGHOST"
+        local db_port="$PGPORT"
+
+        read -s -p "Enter postgres user password: " pg_password
+        echo ""
+
+        export PGUSER="postgres"
+        export PGPASSWORD="$pg_password"
+        export PGHOST="$db_host"
+        export PGPORT="$db_port"
+        export PGDATABASE="postgres"
+      fi
       ;;
     local)
       load_env DATABASE_URL "$(find_git_root)/packages/backend/.env"
