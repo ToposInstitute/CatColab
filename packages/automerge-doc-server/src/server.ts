@@ -15,7 +15,11 @@ import type { Pool as PoolType } from "pg";
 
 import { PostgresStorageAdapter } from "./postgres_storage_adapter.js";
 import { type SocketIOHandlers, serializeError } from "./socket.js";
-import type { NewDocSocketResponse, StartListeningSocketResponse } from "./types.js";
+import type {
+    ExportDocSocketResponse,
+    NewDocSocketResponse,
+    StartListeningSocketResponse,
+} from "./types.js";
 
 // Load environment variables from .env
 dotenv.config();
@@ -161,6 +165,18 @@ export class AutomergeServer implements SocketIOHandlers {
         this.docMap.set(refId, handle);
 
         return { Ok: null };
+    }
+
+    async exportDoc(docId: string): Promise<ExportDocSocketResponse> {
+        const binaryData = await this.repo.export(docId as DocumentId);
+        if (!binaryData) {
+            return { Err: `Failed to find document in repo with ID '${docId}'` };
+        }
+        return {
+            Ok: {
+                binaryData: Array.from(binaryData),
+            },
+        };
     }
 
     close() {
