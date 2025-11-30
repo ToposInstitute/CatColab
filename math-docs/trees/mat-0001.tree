@@ -47,6 +47,7 @@ systems interpretation:}
   \tr{\td{[[dct-000B]]} \td{Signed graphs with delays} \td{CLDs with delays}}
   \tr{\td{[[dct-0007]]} \td{Nullable signed graphs} \td{CLDs with indeterminates}}
   \tr{\td{[[dct-0003]]} \td{Graphs with links} \td{Stock-flow diagrams}}
+  \tr{\td{[[dct-0004]]} \td{[no name]} \td{Hierarchies of arrows}}
   \tr{\td{Symmetric monoidal categories / [PROPs](dct-000E)} \td{Petri nets} \td{Reaction networks}}
   \tr{\td{[[dct-000A]] / [[dct-000F]]} \td{Multigraphs} \td{Term graphs/diagrammatic equations}}
 }

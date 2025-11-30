@@ -1,0 +1,13 @@
+\title{Promonads}
+\taxon{doctrine}
+\import{macros}
+
+\p{A \nlab{promonad} is succinctly defined as a monad in the bicategory of
+profunctors. Its interest lies in being equivalently an identity-on-objects
+functor, used to model categorical structures with a two-level hierarchy of
+morphisms on the same objects.}
+
+\transclude{thy-0004}
+
+\p{A model of this theory is precisely a promonad. For a proof, see the blog
+post [Patterson 2024](promonads-are-algebras-2024).}
