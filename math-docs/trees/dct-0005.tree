@@ -1,0 +1,13 @@
+\title{Generalized monoidal categories}
+\taxon{doctrine}
+\import{macros}
+
+\p{\wikipedia{Monoidal categories} can be axiomatized as double theories in
+several ways. [Lambert & Patterson 2024](cartesian-double-theories-2024) present
+cartesian double theories for both strict and weak monoidal categories,
+categorifying the familiar Lawvere theory for monoids. Here we present [modal
+double theories](mdt-0008) for "generalized" monoidal categories parameterized
+by a monad, which are unbiased in the same spirit as [generalized
+multicategories](dct-000F) and [generalized PROs](dct-000E).}
+
+\transclude{thy-0005}

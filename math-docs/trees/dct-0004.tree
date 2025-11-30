@@ -2,10 +2,11 @@
 \taxon{doctrine}
 \import{macros}
 
-\p{A \nlab{promonad} is succinctly defined as a monad in the bicategory of
-profunctors. Its interest lies in being equivalently an identity-on-objects
-functor, used to model categorical structures with a two-level hierarchy of
-morphisms on the same objects.}
+\p{A \nlab{promonad} is a monad in the bicategory of profunctors. Its interest
+lies in being equivalent to an identity-on-objects functor, used to model
+categorical structures with two kinds of morphisms, where one can be cast to the
+other. Promonads can be iterated to capture hierarchies of morphisms with more
+than two levels.}
 
 \transclude{thy-0004}
 
