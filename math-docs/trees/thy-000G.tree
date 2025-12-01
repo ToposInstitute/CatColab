@@ -4,9 +4,9 @@
 
 \p{
 
-The \define{theory of monoidal promonads} is the modal theory #{(\dbl{T},T)}
-that combines the [theory of generalized monoidal categories](thy-0005) and the
-[theory of promonads](thy-0004) with a cell
+The \define{theory of (generalized) monoidal promonads} is the modal double
+theory #{(\dbl{T},T)} that combines the [theory of generalized monoidal
+categories](thy-0005) and the [theory of promonads](thy-0004) with a cell
 
 \quiver{
 % https://q.uiver.app/#q=WzAsNCxbMCwwLCJUeCJdLFsxLDAsIlR4Il0sWzAsMSwieCJdLFsxLDEsIngiXSxbMCwxLCJUcCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFswLDIsIlxcb3RpbWVzIiwyXSxbMSwzLCJcXG90aW1lcyJdLFsyLDMsInAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbNCw3LCJcXG90aW1lcyIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dXQ==
@@ -27,7 +27,7 @@ subject to the axioms:
   \li{\em{Compatibility of products}:
   \centerfigs{
   \quiverinline{
-  % https://q.uiver.app/#q=WzAsNixbMCwxLCJUeCJdLFsxLDEsIlR4Il0sWzAsMiwieCJdLFsxLDIsIngiXSxbMCwwLCJUeCJdLFsxLDAsIlR4Il0sWzAsMSwiVHAiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMCwyLCJcXG90aW1lcyIsMl0sWzEsMywiXFxvdGltZXMiXSxbMiwzLCJwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzQsNSwiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzUsMSwiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNCwwLCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs2LDksIlxcb3RpbWVzIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzEwLDYsIlRcXHBoaSIsMSx7ImxhYmVsX3Bvc2l0aW9uIjo0MCwic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV1d
+  % https://q.uiver.app/#q=WzAsNixbMCwxLCJUeCJdLFsxLDEsIlR4Il0sWzAsMiwieCJdLFsxLDIsIngiXSxbMCwwLCJUeCJdLFsxLDAsIlR4Il0sWzAsMSwiVHAiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMCwyLCJcXG90aW1lcyIsMl0sWzEsMywiXFxvdGltZXMiXSxbMiwzLCJwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzQsNSwiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzUsMSwiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNCwwLCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs2LDksIlxcb3RpbWVzIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzEwLDYsIlRcXHRoZXRhIiwxLHsibGFiZWxfcG9zaXRpb24iOjQwLCJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
   \begin{tikzcd}
 	Tx & Tx \\
 	Tx & Tx \\
@@ -39,13 +39,13 @@ subject to the axioms:
 	\arrow["\otimes"', from=2-1, to=3-1]
 	\arrow["\otimes", from=2-2, to=3-2]
 	\arrow[""{name=2, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-2]
-	\arrow["{T\phi}"{description, pos=0.4}, draw=none, from=0, to=1]
+	\arrow["{T\theta}"{description, pos=0.4}, draw=none, from=0, to=1]
 	\arrow["\otimes"{description}, draw=none, from=1, to=2]
   \end{tikzcd}
   }
   #{\qquad=\qquad}
   \quiverinline{
-  % https://q.uiver.app/#q=WzAsNixbMCwyLCJ4Il0sWzEsMiwieCJdLFswLDAsIlR4Il0sWzEsMCwiVHgiXSxbMCwxLCJ4Il0sWzEsMSwieCJdLFswLDEsInAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMiwzLCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMiw0LCJcXG90aW1lcyIsMl0sWzMsNSwiXFxvdGltZXMiXSxbNCw1LCIiLDIseyJsZXZlbCI6Miwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNCwwLCIiLDEseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs1LDEsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzcsMTAsIlxcbWF0aHJte2lkfV9cXG90aW1lcyIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxMCw2LCJcXHBoaSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dXQ==
+  % https://q.uiver.app/#q=WzAsNixbMCwyLCJ4Il0sWzEsMiwieCJdLFswLDAsIlR4Il0sWzEsMCwiVHgiXSxbMCwxLCJ4Il0sWzEsMSwieCJdLFswLDEsInAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMiwzLCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMiw0LCJcXG90aW1lcyIsMl0sWzMsNSwiXFxvdGltZXMiXSxbNCw1LCIiLDIseyJsZXZlbCI6Miwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNCwwLCIiLDEseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs1LDEsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzcsMTAsIlxcbWF0aHJte2lkfV9cXG90aW1lcyIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxMCw2LCJcXHRoZXRhIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV1d
   \begin{tikzcd}
 	Tx & Tx \\
 	x & x \\
@@ -58,7 +58,40 @@ subject to the axioms:
 	\arrow[equals, from=2-2, to=3-2]
 	\arrow[""{name=2, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-2]
 	\arrow["{\mathrm{id}_\otimes}"{description}, draw=none, from=0, to=1]
-	\arrow["\phi"{description}, draw=none, from=1, to=2]
+	\arrow["\theta"{description}, draw=none, from=1, to=2]
+  \end{tikzcd}
+  }
+  }
+  }
+  \li{\em{Functorality}: #{\otimes \odot \otimes = \otimes}, i.e.,
+  \centerfigs{
+  \quiverinline{
+  % https://q.uiver.app/#q=WzAsNixbMCwwLCJUeCJdLFsxLDAsIlR4Il0sWzAsMSwieCJdLFsxLDEsIngiXSxbMiwwLCJUeCJdLFsyLDEsIngiXSxbMCwxLCJUcCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFswLDIsIlxcb3RpbWVzIiwyXSxbMSwzLCJcXG90aW1lcyIsMV0sWzIsMywicCIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxLDQsIlRwIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzMsNSwicCIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFs0LDUsIlxcb3RpbWVzIl0sWzYsOSwiXFxvdGltZXMiLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMTAsMTEsIlxcb3RpbWVzIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV1d
+  \begin{tikzcd}
+	Tx & Tx & Tx \\
+	x & x & x
+	\arrow[""{name=0, anchor=center, inner sep=0}, "Tp"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-2]
+	\arrow["\otimes"', from=1-1, to=2-1]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "Tp"{inner sep=.8ex}, "\shortmid"{marking}, from=1-2, to=1-3]
+	\arrow["\otimes"{description}, from=1-2, to=2-2]
+	\arrow["\otimes", from=1-3, to=2-3]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-2]
+	\arrow[""{name=3, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-2, to=2-3]
+	\arrow["\otimes"{description}, draw=none, from=0, to=2]
+	\arrow["\otimes"{description}, draw=none, from=1, to=3]
+  \end{tikzcd}
+  }
+  #{\qquad=\qquad}
+  \quiverinline{
+  % https://q.uiver.app/#q=WzAsNCxbMCwwLCJUeCJdLFsxLDAsIlR4Il0sWzAsMSwieCJdLFsxLDEsIngiXSxbMCwxLCJUcCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFswLDIsIlxcb3RpbWVzIiwyXSxbMSwzLCJcXG90aW1lcyJdLFsyLDMsInAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbNCw3LCJcXG90aW1lcyIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dXQ==
+  \begin{tikzcd}
+	Tx & Tx \\
+	x & x
+	\arrow[""{name=0, anchor=center, inner sep=0}, "Tp"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-2]
+	\arrow["\otimes"', from=1-1, to=2-1]
+	\arrow["\otimes", from=1-2, to=2-2]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-2]
+	\arrow["\otimes"{description}, draw=none, from=0, to=1]
   \end{tikzcd}
   }
   }

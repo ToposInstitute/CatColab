@@ -2,6 +2,62 @@
 \taxon{doctrine}
 \import{macros}
 
-\p{\strong{TODO}: Motivate and define in elementary terms}
+\subtree{
+  \title{Motivation}
+
+  \p{In the standard formulation of a Markov category, one defines a monoidal
+  category whose morphisms are regarded as stochastic maps, then carves out the
+  deterministic maps as those satisfying a certain equation (commuting with copy
+  maps). However, this logic can be turned around: start with a monoidal
+  category of deterministic maps, then introduce an identity-on-objects functor
+  into another category of stochastic maps along with a compatible monoidal
+  structure. The latter approach is axiomatized by a \em{monoidal promonad}.}
+
+}
+
+\subtree{
+  \title{Monoidal promonad}
+  \taxon{definition}
+
+  \p{A \define{monoidal promonad} consists of
+
+  \ul{
+    \li{an (unbiased) monoidal category #{(\cat{C},\otimes)}}
+    \li{a promonad #{(P: \cat{C} \proto \cat{C},
+    H: \Hom_{\cat{C}} \To P)} on the underlying category \cat{C}}
+    \li{an (unbiased) monoidal product on #{P}, namely a natural transformation
+
+    \quiver{
+    % https://q.uiver.app/#q=WzAsNCxbMCwwLCJcXG1hdGhybXtMaXN0fShcXG1hdGhzZntDfSkiXSxbMCwxLCJcXG1hdGhzZntDfSJdLFsxLDAsIlxcbWF0aHJte0xpc3R9KFxcbWF0aHNme0N9KSJdLFsxLDEsIlxcbWF0aHNme0N9Il0sWzAsMSwiXFxvdGltZXMiLDJdLFsyLDMsIlxcb3RpbWVzIl0sWzAsMiwiXFxtYXRocm17TGlzdH0oUCkiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMSwzLCJQIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzYsNywiXFxvdGltZXMiLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
+    \begin{tikzcd}
+	{\mathrm{List}(\mathsf{C})} & {\mathrm{List}(\mathsf{C})} \\
+	{\mathsf{C}} & {\mathsf{C}}
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{\mathrm{List}(P)}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-2]
+	\arrow["\otimes"', from=1-1, to=2-1]
+	\arrow["\otimes", from=1-2, to=2-2]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "P"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-2]
+	\arrow["\otimes"{description}, draw=none, from=0, to=1]
+    \end{tikzcd}
+    }
+    }
+  }
+
+  that obeys the following axioms:
+
+  \ul{
+    \li{\em{Compatibility of products}: for any list of morphisms
+    #{(f_i)_{i=1}^n} in \cat{C},
+    ##{ H(\otimes_{i=1}^n f_i) = \otimes_{i=1}^n H(f_i) }
+    }
+    \li{\em{Functorality} with respect to composition of arbitrary morphisms in
+    #{P}}
+    \li{\em{Associativity} and \em{unitality} relative to the associators and
+    unitors \em{of the base monoidal category #{(\cat{C},\otimes)}.}}
+  }
+
+  }
+}
+
+\p{\strong{TODO}}
 
 \transclude{thy-000G}
