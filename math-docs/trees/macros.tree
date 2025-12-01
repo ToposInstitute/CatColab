@@ -65,14 +65,6 @@
 
 \def\cat[name]{#{\mathsf{\name}}}
 \def\Set{#{\mathsf{Set}}}
-\def\Fam{#{\mathsf{Fam}}}
-\def\FinFam{#{\mathsf{FinFam}}}
-
-\def\func[name]{#{\mathrm{\name}}}
-\def\List{#{\func{List}}}
-% There is a mystery error if you try to name this \fun
-
-\def\Disc{#{\mathop{\mathrm{Disc}}}}
 
 % 2-category theory
 
@@ -92,3 +84,15 @@
 \def\SSet{#{\mathbb{S}\mathsf{et}}}
 \def\Span{#{\mathbb{S}\mathsf{pan}}}
 \def\Mod{#{\mathbb{M}}\mathsf{od}}
+
+% Monads
+
+\def\Fam{#{\mathrm{Fam}}}
+\def\FinFam{#{\mathrm{FinFam}}}
+
+\def\List{#{\mathrm{List}}}
+\def\ListSym{#{\mathrm{List}_{\id,\mathrm{bij}}}}
+\def\ListCart{#{\mathrm{List}_{\mathrm{fun},\id}}}
+
+\def\Disc{#{\mathop{\mathrm{Disc}}}}
+\def\coDisc{#{\mathop{\mathrm{coDisc}}}}

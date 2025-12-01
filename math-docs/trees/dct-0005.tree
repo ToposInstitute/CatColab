@@ -11,3 +11,28 @@ by a monad, which are unbiased in the same spirit as [generalized
 multicategories](dct-000F) and [generalized PROs](dct-000E).}
 
 \transclude{thy-0005}
+
+\p{When the intended semantics is the list double monad on #{\Span} or one of
+its many variants, we will give these theories more suggestive names. We'll also
+denote the structure map as a tensor product, #{\otimes: Tx \to x}.}
+
+\table{
+  \tr{\th{Generic name} \th{Specific name for list monads}}
+  \tr{\td{monad algebras} \td{generalized strict monoidal categories}}
+  \tr{\td{monad pseudoalgebras} \td{generalized monoidal categories}}
+  \tr{\td{monad lax algebras} \td{generalized lax monoidal categories}}
+}
+
+\subtree{
+  \title{Models of the theory of generalized monoidal categories}
+  \taxon{proposition}
+
+  \p{A model of the modal theory of generalized (strict) monoidal categories...
+  \ul{
+    \li{... in #{(\SSet, \List)} is exactly a (strict) monoidal category}
+    \li{... in #{(\SSet, \ListSym)} is exactly a symmetric (strict) monoidal category}
+    \li{... in #{(\SSet, \ListCart)} is exactly a cartesian (strict) monoidal category}
+  }
+  where in all cases the monoidal product \em{and} additional structure is unbiased.
+  }
+}

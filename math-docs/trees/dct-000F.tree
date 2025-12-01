@@ -20,8 +20,8 @@ category" of a monad on a virtual double category.}
   precisely a normalized #{S}-multicategory. In particular, a model...
   \ul{
     \li{...in #{(\SSet, \List)} is exactly a multicategory}
-    \li{...in #{(\SSet, \mathrm{SymList})} is exactly a symmetric multicategory}
-    \li{...in #{(\SSet, \mathrm{CartList})} is exactly a cartesian multicategory.}
+    \li{...in #{(\SSet, \ListSym)} is exactly a symmetric multicategory}
+    \li{...in #{(\SSet, \ListCart)} is exactly a cartesian multicategory.}
   }
   }
 
