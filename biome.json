@@ -65,7 +65,10 @@
                 "noUselessElse": {
                     "level": "off"
                 },
-                "useBlockStatements": "error"
+                "useBlockStatements": "error",
+                "noDescendingSpecificity": {
+                    "level": "off"
+                }
             }
         }
     },

@@ -19,7 +19,7 @@ import { stdTheories } from "./stdlib";
 import { TheoryLibraryContext } from "./theory";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
-const repoUrl = import.meta.env.VITE_AUTOMERGE_REPO_URL;
+        const repoUrl = import.meta.env.VITE_AUTOMERGE_REPO_URL;
 const firebaseOptions = JSON.parse(import.meta.env.VITE_FIREBASE_OPTIONS) as FirebaseOptions;
 
 const Root = (props: RouteSectionProps<unknown>) => {

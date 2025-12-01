@@ -97,6 +97,10 @@ jobs:
           # Don't override flags in cargo config files.
           rustflags: ""
 
+      - name: pnpm version
+        run: |
+          pnpm --version
+
       - name: Build frontend
         run: |
           pnpm install
