@@ -76,13 +76,7 @@ export async function findAndMigrate(
     // Perform any migrations on the document.
     // XXX: copied from automerge-doc-server/src/server.ts:
     const docBefore = docHandle.doc();
-    let docAfter;
-    try {
-        docAfter = migrateDocument(docBefore);
-    } catch (e) {
-        console.log("error");
-    }
-
+    const docAfter = migrateDocument(docBefore);
     if (docBefore.version !== docAfter.version) {
         const patches = jsonpatch.compare(docBefore, docAfter);
         docHandle.change((doc: unknown) => {

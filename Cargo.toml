@@ -12,7 +12,6 @@ exclude = [
   "packages/frontend",
   "packages/patchwork",
   "packages/ui-components",
-  "packages/repro-frontend",
 ]
 
 [workspace.package]

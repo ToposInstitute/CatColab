@@ -41,7 +41,6 @@
     },
     "linter": {
         "enabled": true,
-        "domains": { "solid": "all" },
         "rules": {
             "recommended": true,
             "a11y": {
@@ -66,10 +65,7 @@
                 "noUselessElse": {
                     "level": "off"
                 },
-                "useBlockStatements": "error",
-                "noDescendingSpecificity": {
-                    "level": "off"
-                }
+                "useBlockStatements": "error"
             }
         }
     },

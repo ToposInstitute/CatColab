@@ -25,7 +25,6 @@ mod app;
 mod auth;
 mod document;
 mod rpc;
-mod socket;
 mod user;
 
 use app::AppStatus;
