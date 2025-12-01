@@ -54,12 +54,8 @@ export function ModelFileIcon(props: LucideProps & ModelFileIconProps) {
                       Number(localProps.size)
                     : Number(localProps.strokeWidth ?? defaultAttributes["stroke-width"])
             }
-            class={mergeClasses(
-                "lucide",
-                "lucide-icon",
-                "lucide-file-catcolab",
-                localProps.class != null ? localProps.class : "",
-            )}
+            class="lucide lucide-icon lucide-file-catcolab"
+            classList={{ [localProps.class ?? ""]: localProps.class != null }}
             {...rest}
         >
             <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" />
