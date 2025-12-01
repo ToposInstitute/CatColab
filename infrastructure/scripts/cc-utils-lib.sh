@@ -2,6 +2,18 @@
 
 set -euo pipefail
 
+function confirm_action() {
+  local message="$1"
+  echo "$message"
+  read -n1 -r -p "Continue? [y/N] " yn
+  echo  # newline after prompt
+  if [[ $yn != [yY] ]]; then
+    echo "Aborted."
+    return 1
+  fi
+  return 0
+}
+
 function load_env() {
   local varname="$1"
   local env_file="$2"
@@ -16,7 +28,7 @@ function load_env() {
     exit 1
   fi
 
-  # Decrypt if it’s an agenix file
+  # Decrypt if it's an agenix file
   local content
   if [[ $env_file == *.age ]]; then
     pushd "$(dirname "$env_file")" >/dev/null
@@ -27,8 +39,7 @@ function load_env() {
   fi
 
   # extract VAR=
-  local url
-  url=$(printf '%s\n' "$content" | grep -E "^${varname}=" | cut -d '=' -f2-)
+  local url=$(printf '%s\n' "$content" | grep -E "^${varname}=" | cut -d '=' -f2-)
   if [[ -z $url ]]; then
     echo "Error: '$varname' missing in $env_file." >&2
     exit 1
@@ -88,14 +99,14 @@ function load_target_env() {
       export PGPORT="5433"
       ;;
     staging)
-      load_env DATABASE_URL "$(find_git_root)/infrastructure/secrets/.env.next.age"
+      load_env DATABASE_URL "$(find_git_root)/infrastructure/secrets/env.next.age"
 
       open_tunnel "catcolab" "backend-next.catcolab.org" "$STAGING_LOCAL_PGPORT" "$PGPORT" "STAGING_SSH_PID"
 
       export PGPORT="$STAGING_LOCAL_PGPORT"
       ;;
     production)
-      load_env DATABASE_URL "$(find_git_root)/infrastructure/secrets/.env.prod.age"
+      load_env DATABASE_URL "$(find_git_root)/infrastructure/secrets/env.prod.age"
 
       open_tunnel "catcolab" "backend.catcolab.org" "$PROD_LOCAL_PGPORT" "$PGPORT" "PROD_SSH_PID"
 
@@ -124,4 +135,89 @@ function find_git_root() {
 function run_local_migrations() {
   echo "Running local migrations..."
   cargo run -p migrator apply
+}
+
+# VM management functions
+function get_vm_cache_dir() {
+  local cache_dir
+  if [[ -n "${XDG_CACHE_HOME:-}" ]]; then
+    cache_dir="$XDG_CACHE_HOME/catcolab"
+  elif [[ "$(uname)" == "Darwin" ]]; then
+    cache_dir="$HOME/Library/Caches/catcolab"
+  else
+    cache_dir="$HOME/.cache/catcolab"
+  fi
+  mkdir -p "$cache_dir"
+  echo "$cache_dir"
+}
+
+function get_vm_log_file() {
+  echo "$(get_vm_cache_dir)/vm.log"
+}
+
+function get_vm_monitor_socket() {
+  echo "$(get_vm_cache_dir)/vm-monitor.sock"
+}
+
+function vm_is_running() {
+  local monitor_socket="$(get_vm_monitor_socket)"
+
+  # Check if socket exists and is connectable
+  if [[ -S "$monitor_socket" ]]; then
+    # Try to connect to verify it's active (without sending a command)
+    if echo | socat -T 1 - "UNIX-CONNECT:$monitor_socket" >/dev/null 2>&1; then
+      return 0
+    fi
+  fi
+
+  # Stale socket file
+  rm -f "$monitor_socket"
+  return 1
+}
+
+function wait_for_vm_shutdown() {
+  local timeout="${1:-30}"
+  local elapsed=0
+
+  while vm_is_running; do
+    if (( elapsed >= timeout )); then
+      return 1
+    fi
+    sleep 1
+    (( elapsed++ ))
+  done
+
+  return 0
+}
+
+function wait_for_backend() {
+  local timeout="${1:-60}"
+  local backend_url="http://localhost:8000/status"
+  local elapsed=0
+
+  while [ $elapsed -lt $timeout ]; do
+    if curl -s "$backend_url" >/dev/null 2>&1; then
+      return 0
+    fi
+
+    if [ $elapsed -ge $timeout ]; then
+      return 1
+    fi
+
+    sleep 1
+    elapsed=$((elapsed + 1))
+  done
+
+  return 1
+}
+
+function print_vm_ready() {
+  local message="${1:-VM is ready!}"
+  echo ""
+  echo "$message"
+  echo "  Backend: http://localhost:8000"
+  echo "  Database: localhost:5433"
+  echo "  SSH: cc-utils vm connect"
+  echo ""
+  echo "To stop: cc-utils vm stop"
 }
