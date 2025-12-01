@@ -151,7 +151,7 @@ importers:
         version: 13.0.0
     devDependencies:
       '@biomejs/biome':
-        specifier: ^2.3.6
+        specifier: ^2.3.7
         version: 2.3.7
       '@mdx-js/mdx':
         specifier: ^2.3.0
