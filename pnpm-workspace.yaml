@@ -6,3 +6,4 @@ packages:
   - "packages/notebook-types"
   - "packages/patchwork"
   - "packages/ui-components"
+  - "packages/repro-frontend"

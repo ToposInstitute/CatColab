@@ -7,8 +7,8 @@ use axum::{extract::State, response::IntoResponse};
 use clap::{Parser, Subcommand};
 use firebase_auth::FirebaseAuth;
 use http::StatusCode;
-use socketioxide::SocketIo;
-use socketioxide::layer::SocketIoLayer;
+// use socketioxide::SocketIo;
+// use socketioxide::layer::SocketIoLayer;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{PgPool, Postgres};
 use sqlx_migrator::cli::MigrationCommand;
@@ -35,12 +35,15 @@ fn web_port() -> String {
     dotenvy::var("PORT").unwrap_or("8000".to_string())
 }
 
+// Commented out - not using separate automerge doc server anymore
+/*
 /// Port for internal communication with the Automerge doc server.
 ///
 /// This port should *not* be open to the public.
 fn automerge_io_port() -> String {
     dotenvy::var("AUTOMERGE_IO_PORT").unwrap_or("3000".to_string())
 }
+*/
 
 #[derive(Parser, Debug)]
 #[command(name = "catcolab")]
@@ -88,13 +91,21 @@ async fn main() {
         }
 
         Command::Serve => {
-            let (io_layer, io) = SocketIo::new_layer();
+            // let (io_layer, io) = SocketIo::new_layer();
 
             let (status_tx, status_rx) = watch::channel(AppStatus::Starting);
+
+            // Create samod repo
+            let repo = samod::Repo::builder(tokio::runtime::Handle::current())
+                .with_storage(samod::storage::InMemoryStorage::new())
+                .load()
+                .await;
+
             let state = app::AppState {
-                automerge_io: io,
+                // automerge_io: io,
                 db: db.clone(),
                 app_status: status_rx.clone(),
+                repo,
             };
 
             // We need to wrap FirebaseAuth in an Arc because if it's ever dropped the process which updates it's
@@ -109,12 +120,12 @@ async fn main() {
                 .await,
             );
 
-            socket::setup_automerge_socket(state.clone());
+            // socket::setup_automerge_socket(state.clone());
 
             tokio::try_join!(
                 run_migrator_apply(db.clone(), migrator, status_tx.clone()),
                 run_web_server(state.clone(), firebase_auth.clone()),
-                run_automerge_socket(io_layer),
+                // run_automerge_socket(io_layer),
             )
             .unwrap();
         }
@@ -201,11 +212,6 @@ async fn run_web_server(
     state: app::AppState,
     firebase_auth: Arc<FirebaseAuth>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let repo = samod::Repo::builder(tokio::runtime::Handle::current())
-        .with_storage(samod::storage::InMemoryStorage::new())
-        .load()
-        .await;
-
     let port = web_port();
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await?;
 
@@ -221,7 +227,7 @@ async fn run_web_server(
         .layer(from_fn_with_state(firebase_auth, auth_middleware))
         .layer(from_fn_with_state(state.app_status.clone(), app_status_gate))
         .route("/repo-ws", get(websocket_handler))
-        .with_state(repo);
+        .with_state(state.repo.clone());
 
     // NOTE: Currently nothing is using the /status endpoint. It will likely be used in the future by
     // tests.
@@ -266,6 +272,8 @@ fn spa_directory() -> Option<String> {
     None
 }
 
+// Commented out - not using separate automerge doc server anymore
+/*
 async fn run_automerge_socket(
     io_layer: SocketIoLayer,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -276,3 +284,4 @@ async fn run_automerge_socket(
     axum::serve(listener, app).await?;
     Ok(())
 }
+*/

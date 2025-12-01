@@ -2,10 +2,11 @@
 
 use crate::app::{AppCtx, AppError, AppState, Paginated};
 use crate::{auth::PermissionLevel, user::UserSummary};
+use automerge::transaction::Transactable;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use socketioxide::SocketIo;
+// use socketioxide::SocketIo;
 use ts_rs::TS;
 use uuid::Uuid;
 
@@ -20,7 +21,23 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
     // If the document is created but the db transaction doesn't complete, then the document will be
     // orphaned. The only negative consequence of that is additional space used, but that should be
     // negligible and we can later create a service which periodically cleans out the orphans
-    let new_doc_response = create_automerge_doc(&ctx.state.automerge_io, content.clone()).await?;
+    // let new_doc_response = create_automerge_doc(&ctx.state.automerge_io, content.clone()).await?;
+
+    // Use samod repo directly instead of IPC
+    // Create automerge document and populate it with the JSON content
+    let mut automerge_doc = automerge::Automerge::new();
+
+    // Populate the document with the content using a transaction
+    automerge_doc.transact(|tx| {
+        populate_automerge_from_json(tx, automerge::ROOT, &content)?;
+        Ok::<_, automerge::AutomergeError>(())
+    }).map_err(|e| AppError::Invalid(format!("Failed to populate document: {:?}", e)))?;
+
+    let doc_handle = ctx.state.repo.create(automerge_doc).await.map_err(|e| AppError::Invalid(format!("Failed to create document: {:?}", e)))?;
+    let new_doc_response = NewDocSocketResponse {
+        doc_id: doc_handle.document_id().to_string(),
+        doc_json: content.clone(),
+    };
 
     let mut transaction = ctx.state.db.begin().await?;
 
@@ -111,7 +128,23 @@ pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppErr
     );
 
     let head_doc_id = head_doc_id_query.fetch_one(&state.db).await?.doc_id;
-    let new_doc_response = clone_automerge_doc(&state.automerge_io, ref_id, head_doc_id).await?;
+    // let new_doc_response = clone_automerge_doc(&state.automerge_io, ref_id, head_doc_id).await?;
+
+    // Use samod repo directly instead of IPC
+    // TODO: Properly implement document cloning
+    let doc_id: samod::DocumentId = head_doc_id.parse().map_err(|_| AppError::Invalid("Invalid document ID".to_string()))?;
+    let doc_handle = state.repo.find(doc_id).await.map_err(|e| AppError::Invalid(format!("Failed to find document: {:?}", e)))?.ok_or_else(|| AppError::Invalid("Document not found".to_string()))?;
+
+    // Clone the underlying document
+    let cloned_doc = doc_handle.with_document(|doc| doc.clone());
+    let cloned_handle = state.repo.create(cloned_doc).await.map_err(|e| AppError::Invalid(format!("Failed to create cloned document: {:?}", e)))?;
+
+    // Get the content from head snapshot to use as doc_json
+    let content = head_snapshot(state.clone(), ref_id).await?;
+    let new_doc_response = NewDocSocketResponse {
+        doc_id: cloned_handle.document_id().to_string(),
+        doc_json: content,
+    };
 
     let query = sqlx::query!(
         "
@@ -172,11 +205,118 @@ pub async fn doc_id(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
 
     let doc_id = query.fetch_one(&state.db).await?.doc_id;
 
-    start_listening_automerge_doc(&state.automerge_io, ref_id, doc_id.clone()).await?;
+    // start_listening_automerge_doc(&state.automerge_io, ref_id, doc_id.clone()).await?;
+    // TODO: Implement start_listening with samod repo
 
     Ok(doc_id)
 }
 
+/// Insert a JSON value into a map property
+fn insert_value_into_map<'a>(
+    tx: &mut automerge::transaction::Transaction<'a>,
+    parent: &automerge::ObjId,
+    key: &str,
+    value: &Value,
+) -> Result<(), automerge::AutomergeError> {
+    match value {
+        Value::String(s) => {
+            // Use ObjType::Text instead of scalar string to avoid ImmutableString in JavaScript
+            let text_id = tx.put_object(parent, key, automerge::ObjType::Text)?;
+            tx.splice_text(&text_id, 0, 0, s.as_str())?;
+        }
+        Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                tx.put(parent, key, i)?;
+            } else if let Some(f) = n.as_f64() {
+                tx.put(parent, key, f)?;
+            }
+        }
+        Value::Bool(b) => {
+            tx.put(parent, key, *b)?;
+        }
+        Value::Null => {
+            tx.put(parent, key, ())?;
+        }
+        Value::Object(_) => {
+            let obj_id = tx.put_object(parent, key, automerge::ObjType::Map)?;
+            populate_automerge_from_json(tx, obj_id, value)?;
+        }
+        Value::Array(arr) => {
+            let list_id = tx.put_object(parent, key, automerge::ObjType::List)?;
+            for (i, item) in arr.iter().enumerate() {
+                insert_value_into_list(tx, &list_id, i, item)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Insert a JSON value into a list at index
+fn insert_value_into_list<'a>(
+    tx: &mut automerge::transaction::Transaction<'a>,
+    parent: &automerge::ObjId,
+    index: usize,
+    value: &Value,
+) -> Result<(), automerge::AutomergeError> {
+    match value {
+        Value::String(s) => {
+            // Use ObjType::Text instead of scalar string to avoid ImmutableString in JavaScript
+            let text_id = tx.insert_object(parent, index, automerge::ObjType::Text)?;
+            tx.splice_text(&text_id, 0, 0, s.as_str())?;
+        }
+        Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                tx.insert(parent, index, i)?;
+            } else if let Some(f) = n.as_f64() {
+                tx.insert(parent, index, f)?;
+            }
+        }
+        Value::Bool(b) => {
+            tx.insert(parent, index, *b)?;
+        }
+        Value::Null => {
+            tx.insert(parent, index, ())?;
+        }
+        Value::Object(_) => {
+            let obj_id = tx.insert_object(parent, index, automerge::ObjType::Map)?;
+            populate_automerge_from_json(tx, obj_id, value)?;
+        }
+        Value::Array(arr) => {
+            let list_id = tx.insert_object(parent, index, automerge::ObjType::List)?;
+            for (i, item) in arr.iter().enumerate() {
+                insert_value_into_list(tx, &list_id, i, item)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Populate an automerge document from a JSON value.
+///
+/// Handles root-level objects by delegating to helper functions that recursively
+/// process nested structures (objects and arrays).
+fn populate_automerge_from_json<'a>(
+    tx: &mut automerge::transaction::Transaction<'a>,
+    obj_id: automerge::ObjId,
+    value: &Value,
+) -> Result<(), automerge::AutomergeError> {
+    match value {
+        Value::Object(map) => {
+            for (key, val) in map {
+                insert_value_into_map(tx, &obj_id, key.as_str(), val)?;
+            }
+            Ok(())
+        }
+        _ => {
+            // If the root is not an object, we can't populate it at ROOT
+            // This shouldn't happen for CatColab documents
+            Ok(())
+        }
+    }
+}
+
+// Commented out IPC functions - using samod repo directly instead
+/*
 async fn call_automerge_io<T, P>(
     automerge_io: &SocketIo,
     event: impl Into<String>,
@@ -243,6 +383,7 @@ async fn create_automerge_doc(
     )
     .await
 }
+*/
 
 /// A document ref along with its content.
 #[derive(Debug, Serialize, Deserialize, TS)]

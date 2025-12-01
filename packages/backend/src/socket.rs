@@ -1,3 +1,5 @@
+// Commented out - not using socket.io IPC anymore
+/*
 use socketioxide::extract::{Data, SocketRef};
 use tracing::{error, info};
 
@@ -18,3 +20,4 @@ pub fn setup_automerge_socket(state: AppState) {
         });
     });
 }
+*/

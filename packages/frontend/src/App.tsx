@@ -1,7 +1,11 @@
 import Dialog, { Content, Portal } from "@corvu/dialog";
+
 import { MultiProvider } from "@solid-primitives/context";
+
 import { Navigate, type RouteDefinition, Router, type RouteSectionProps } from "@solidjs/router";
+
 import { type FirebaseOptions, initializeApp } from "firebase/app";
+
 import { getAuth, signOut } from "firebase/auth";
 import { FirebaseProvider } from "solid-firebase";
 import { createResource, createSignal, ErrorBoundary, lazy, Show } from "solid-js";
@@ -17,6 +21,8 @@ import { ErrorBoundaryDialog } from "./page/error_boundary";
 import { PageContainer } from "./page/page_container";
 import { stdTheories } from "./stdlib";
 import { TheoryLibraryContext } from "./theory";
+import { WebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
+import { Repo } from "@automerge/automerge-repo";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 const repoUrl = import.meta.env.VITE_AUTOMERGE_REPO_URL;
@@ -27,6 +33,7 @@ const Root = (props: RouteSectionProps<unknown>) => {
     invariant(repoUrl, "Must set environment variable VITE_AUTOMERGE_REPO_URL");
 
     const firebaseApp = initializeApp(firebaseOptions);
+
     const api = new Api({ serverUrl, repoUrl, firebaseApp });
 
     const [isSessionInvalid] = createResource(
@@ -65,6 +72,70 @@ const Root = (props: RouteSectionProps<unknown>) => {
         </MultiProvider>
     );
 };
+
+const BACKEND_URL = "http://localhost:8080";
+const WS_URL = "ws://localhost:8080/repo-ws";
+
+async function main() {
+    console.log("🚀 Starting Automerge client...");
+
+    // Fetch the document ID from the backend
+    console.log(`📡 Fetching document ID from ${BACKEND_URL}/doc-id...`);
+    const response = await fetch(`${BACKEND_URL}/doc-id`);
+    const { doc_id } = await response.json();
+    console.log(`📄 Document ID: ${doc_id}`);
+
+    // Create automerge repo with WebSocket adapter
+    console.log(`🔌 Connecting to WebSocket at ${WS_URL}...`);
+    const repo = new Repo({
+        network: [new WebSocketClientAdapter(WS_URL)],
+    });
+
+    // Find the document (now returns a Promise)
+    console.log(`🔍 Finding document ${doc_id}...`);
+    const handle = await repo.find(doc_id as any);
+    console.log("✅ Document ready!");
+
+    // Log initial document state
+    const doc = handle.doc();
+    console.log("📖 Initial document state:", JSON.stringify(doc, null, 2));
+
+    // Listen for changes
+    handle.on("change", ({ doc, patches }) => {
+        console.log("🔄 Document changed!");
+        console.log("   New state:", JSON.stringify(doc, null, 2));
+        console.log("   Patches:", patches);
+    });
+
+    // Make a test change after 2 seconds
+    setTimeout(() => {
+        console.log("✏️  Making a test change...");
+        handle.change((doc: any) => {
+            doc.count = (doc.count || 0) + 1;
+            doc.clientMessage = "Hello from TypeScript client!";
+            doc.timestamp = new Date().toISOString();
+        });
+        console.log("✅ Change submitted");
+    }, 2000);
+
+    // Make another change after 4 seconds
+    setTimeout(() => {
+        console.log("✏️  Making another test change...");
+        handle.change((doc: any) => {
+            doc.count = (doc.count || 0) + 1;
+            doc.lastUpdate = new Date().toISOString();
+        });
+        console.log("✅ Second change submitted");
+    }, 4000);
+
+    // Keep the process running
+    console.log("👀 Watching for changes...");
+}
+
+// Run main function on startup
+main().catch((error) => {
+    console.error("❌ Error:", error);
+});
 
 // Why this needs to be a separate modal: we cannot automatically reload the
 // page because a bug in validate_session might trigger an infinite reload loop,
