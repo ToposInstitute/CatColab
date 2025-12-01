@@ -36,8 +36,8 @@
 \subtree{
 \title{Doctrines}
 
-\p{Systems of categorical logic, or \em{doctrines}, whose free objects have a
-systems interpretation:}
+\p{Systems of categorical logic, or \define{doctrines}, whose \em{free} objects
+have a systems interpretation:}
 
 \table{
   \tr{\th{Doctrine} \th{Free objects} \th{Systems interpretation}}
@@ -47,9 +47,18 @@ systems interpretation:}
   \tr{\td{[[dct-000B]]} \td{Signed graphs with delays} \td{CLDs with delays}}
   \tr{\td{[[dct-0007]]} \td{Nullable signed graphs} \td{CLDs with indeterminates}}
   \tr{\td{[[dct-0003]]} \td{Graphs with links} \td{Stock-flow diagrams}}
-  \tr{\td{[[dct-0004]]} \td{[no name]} \td{Hierarchies of arrows}}
-  \tr{\td{[[dct-0005]] / [[dct-000E]]} \td{Monoidal signatures} \td{Petri nets/reaction networks}}
-  \tr{\td{[[dct-000A]] / [[dct-000F]]} \td{Multigraphs} \td{Term graphs/diagrammatic equations}}
+  \tr{\td{Symmetric or commutative monoidal categories} \td{Hypergraphs} \td{Petri nets/reaction networks}}
+  \tr{\td{[[dct-000A]]} \td{Multigraphs} \td{Term graphs/diagrammatic equations}}
+}
+
+\p{Doctrines whose objects have interpretations as process theories:}
+
+\table{
+  \tr{\th{Doctrine} \th{As process theories}}
+  \tr{\td{[[dct-0004]]} \td{Hierarchy of morphisms}}
+  \tr{\td{[[dct-0005]] / [[dct-000E]]} \td{Monoidal theory, algebraic theory, ...}}
+  \tr{\td{[[dct-000A]] / [[dct-000F]]} \td{Operad, algebraic theory, ...}}
+  \tr{\td{[[dct-000G]]} \td{Hierarchy of processes}}
 }
 
 \p{Additional doctrines: [[dct-0008]], [[dct-0009]], [[dct-000C]], [[dct-000D]]}

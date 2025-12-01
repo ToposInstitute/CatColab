@@ -102,3 +102,18 @@ algebras augmented with two more special cells, #{\gamma^{-1}} and
 #{\iota}, respectively.
 
 }
+
+\p{
+
+When the intended semantics is the list double monad on \SSet or one of its
+many variants, we'll give these theories more suggestive names. We'll also
+denote the structure map as a tensor product, #{\otimes: Tx \to x}.
+
+\table{
+  \tr{\th{Generic name} \th{Name for semantics in list monads}}
+  \tr{\td{theory of monad algebras} \td{theory of generalized strict monoidal categories}}
+  \tr{\td{theory of monad pseudoalgebras} \td{theory of generalized monoidal categories}}
+  \tr{\td{theory of monad lax algebras} \td{theory of generalized lax monoidal categories}}
+}
+
+}

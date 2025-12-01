@@ -1,0 +1,7 @@
+\title{Monoidal promonads}
+\taxon{doctrine}
+\import{macros}
+
+\p{\strong{TODO}: Motivate and define in elementary terms}
+
+\transclude{thy-000G}
