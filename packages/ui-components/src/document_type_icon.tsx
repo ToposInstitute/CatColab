@@ -4,9 +4,10 @@ import FileX from "lucide-solid/icons/file-x";
 import Network from "lucide-solid/icons/network";
 import { Match, Switch } from "solid-js";
 
+import type { Document } from "catlog-wasm";
 import { ModelFileIcon } from "./model_file_icon";
 
-export type DocumentType = "model" | "diagram" | "analysis";
+export type DocumentType = Document["type"];
 
 export function DocumentTypeIcon(props: {
     documentType: DocumentType;
