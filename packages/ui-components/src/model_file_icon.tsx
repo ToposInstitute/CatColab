@@ -1,20 +1,6 @@
 import type { LucideProps, SVGAttributes } from "lucide-solid";
 import { splitProps } from "solid-js";
 
-export const theoryToLetterMap: Record<string, [string, string]> = {
-    empty: ["I", "n"],
-    "simple-olog": ["O", "l"],
-    "simple-schema": ["S", "c"],
-    "petri-net": ["P", "n"],
-    "causal-loop": ["C", "l"],
-    "causal-loop-delays": ["C", "d"],
-    "indeterminate-causal-loop": ["C", "i"],
-    "primitive-stock-flow": ["S", "f"],
-    "reg-net": ["R", "n"],
-    "unary-dec": ["D", "c"],
-    "power-system": ["P", "s"],
-};
-
 const defaultAttributes: SVGAttributes = {
     xmlns: "http://www.w3.org/2000/svg",
     width: 24,
@@ -28,7 +14,7 @@ const defaultAttributes: SVGAttributes = {
 };
 
 interface ModelFileIconProps {
-    theory: string;
+    letters: [string, string];
 }
 
 export function ModelFileIcon(props: LucideProps & ModelFileIconProps) {
@@ -37,11 +23,10 @@ export function ModelFileIcon(props: LucideProps & ModelFileIconProps) {
         "children",
         "class",
         "color",
-        "theory",
+        "letters",
         "size",
         "strokeWidth",
     ]);
-    const letters = () => theoryToLetterMap[localProps.theory] ?? [" ", " "];
     return (
         <svg
             {...defaultAttributes}
@@ -70,7 +55,7 @@ export function ModelFileIcon(props: LucideProps & ModelFileIconProps) {
                 font-family="'Source Code Pro'"
                 fill={localProps.color ?? defaultAttributes.stroke}
             >
-                {letters()[0]}
+                {localProps.letters[0]}
             </text>
             <text
                 x="18.3403"
@@ -82,7 +67,7 @@ export function ModelFileIcon(props: LucideProps & ModelFileIconProps) {
                 font-family="'Source Code Pro'"
                 fill={localProps.color ?? defaultAttributes.stroke}
             >
-                {letters()[1]}
+                {localProps.letters[1]}
             </text>
         </svg>
     );

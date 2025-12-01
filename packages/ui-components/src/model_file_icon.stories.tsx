@@ -2,7 +2,21 @@ import { File } from "lucide-solid";
 import { For } from "solid-js";
 import type { Meta, StoryObj } from "storybook-solidjs-vite";
 
-import { ModelFileIcon, theoryToLetterMap } from "./model_file_icon";
+import { ModelFileIcon } from "./model_file_icon";
+
+const theoryToLetterMap: Record<string, [string, string]> = {
+    empty: ["I", "n"],
+    "simple-olog": ["O", "l"],
+    "simple-schema": ["S", "c"],
+    "petri-net": ["P", "n"],
+    "causal-loop": ["C", "l"],
+    "causal-loop-delays": ["C", "d"],
+    "indeterminate-causal-loop": ["C", "i"],
+    "primitive-stock-flow": ["S", "f"],
+    "reg-net": ["R", "n"],
+    "unary-dec": ["D", "c"],
+    "power-system": ["P", "s"],
+};
 
 const meta = {
     title: "Icons/_internal/ModelFileIcon",
@@ -20,16 +34,16 @@ export const Summary: Story = {
 export const AllIcons: Story = {
     render: () => (
         <>
-            <For each={Object.keys(theoryToLetterMap)}>
-                {(modelType) => (
+            <For each={Object.entries(theoryToLetterMap)}>
+                {([modelType, letters]) => (
                     <div>
-                        <ModelFileIcon theory={modelType} />
+                        <ModelFileIcon letters={letters} />
                         {modelType}
                     </div>
                 )}
             </For>
             <div>
-                <ModelFileIcon theory="unknown" />
+                <ModelFileIcon letters={["?", "?"]} />
                 unknown
             </div>
         </>
@@ -38,14 +52,14 @@ export const AllIcons: Story = {
 
 export const DifferentSizes: Story = {
     render: () => (
-        <For each={Object.keys(theoryToLetterMap)}>
-            {(modelType) => (
+        <For each={Object.values(theoryToLetterMap)}>
+            {(letters) => (
                 <div style={{ display: "flex", gap: "16px", "align-items": "center" }}>
-                    <ModelFileIcon theory={modelType} size={16} />
-                    <ModelFileIcon theory={modelType} size={20} />
-                    <ModelFileIcon theory={modelType} size={24} />
-                    <ModelFileIcon theory={modelType} size={32} />
-                    <ModelFileIcon theory={modelType} size={48} />
+                    <ModelFileIcon letters={letters} size={16} />
+                    <ModelFileIcon letters={letters} size={20} />
+                    <ModelFileIcon letters={letters} size={24} />
+                    <ModelFileIcon letters={letters} size={32} />
+                    <ModelFileIcon letters={letters} size={48} />
                 </div>
             )}
         </For>
@@ -64,16 +78,52 @@ export const DifferentColors: Story = {
                         background: color === "#fff" ? "black" : "white",
                     }}
                 >
-                    <ModelFileIcon size={32} theory="simple-olog" color={color} />
-                    <ModelFileIcon size={32} theory="simple-schema" color={color} />
-                    <ModelFileIcon size={32} theory="petri-net" color={color} />
-                    <ModelFileIcon size={32} theory="causal-loop" color={color} />
-                    <ModelFileIcon size={32} theory="causal-loop-delays" color={color} />
-                    <ModelFileIcon size={32} theory="indeterminate-causal-loop" color={color} />
-                    <ModelFileIcon size={32} theory="primitive-stock-flow" color={color} />
-                    <ModelFileIcon size={32} theory="reg-net" color={color} />
-                    <ModelFileIcon size={32} theory="unary-dec" color={color} />
-                    <ModelFileIcon size={32} theory="power-system" color={color} />
+                    <ModelFileIcon
+                        size={32}
+                        letters={theoryToLetterMap["simple-olog"]}
+                        color={color}
+                    />
+                    <ModelFileIcon
+                        size={32}
+                        letters={theoryToLetterMap["simple-schema"]}
+                        color={color}
+                    />
+                    <ModelFileIcon
+                        size={32}
+                        letters={theoryToLetterMap["petri-net"]}
+                        color={color}
+                    />
+                    <ModelFileIcon
+                        size={32}
+                        letters={theoryToLetterMap["causal-loop"]}
+                        color={color}
+                    />
+                    <ModelFileIcon
+                        size={32}
+                        letters={theoryToLetterMap["causal-loop-delays"]}
+                        color={color}
+                    />
+                    <ModelFileIcon
+                        size={32}
+                        letters={theoryToLetterMap["indeterminate-causal-loop"]}
+                        color={color}
+                    />
+                    <ModelFileIcon
+                        size={32}
+                        letters={theoryToLetterMap["primitive-stock-flow"]}
+                        color={color}
+                    />
+                    <ModelFileIcon size={32} letters={theoryToLetterMap["reg-net"]} color={color} />
+                    <ModelFileIcon
+                        size={32}
+                        letters={theoryToLetterMap["unary-dec"]}
+                        color={color}
+                    />
+                    <ModelFileIcon
+                        size={32}
+                        letters={theoryToLetterMap["power-system"]}
+                        color={color}
+                    />
                 </div>
             )}
         </For>
@@ -84,10 +134,10 @@ export const ComparedToLucide: Story = {
     render: () => (
         <div>
             <div>
-                <For each={Object.keys(theoryToLetterMap)}>
-                    {(modelType) => <ModelFileIcon theory={modelType} />}
+                <For each={Object.values(theoryToLetterMap)}>
+                    {(letters) => <ModelFileIcon letters={letters} />}
                 </For>
-                <ModelFileIcon theory="unknown" />
+                <ModelFileIcon letters={[" ", " "]} />
             </div>
             <div>
                 <For each={Object.keys(theoryToLetterMap)}>{(_) => <File />}</For>

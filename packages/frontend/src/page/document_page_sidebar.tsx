@@ -1,10 +1,11 @@
 import { useNavigate } from "@solidjs/router";
-import { createMemo, createResource, For, Show } from "solid-js";
+import { createMemo, createResource, For, Show, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { DocumentTypeIcon } from "catcolab-ui-components";
 import type { Link } from "catlog-wasm";
 import { type Api, type LiveDocWithRef, useApi } from "../api";
+import { TheoryLibraryContext } from "../theory";
 import { DocumentMenu } from "./document_menu";
 
 export function DocumentSidebar(props: {
@@ -140,14 +141,24 @@ function DocumentsTreeLeaf(props: {
     refetchSecondaryDoc: () => void;
 }) {
     const navigate = useNavigate();
+    const theories = useContext(TheoryLibraryContext);
     const clickedRefId = createMemo(() => props.doc.docRef.refId);
     const primaryRefId = createMemo(() => props.primaryDoc.docRef.refId);
     const secondaryRefId = createMemo(() => props.secondaryDoc?.docRef.refId);
 
-    const theory = () => {
+    const iconLetters = createMemo(() => {
         const doc = props.doc.liveDoc.doc;
-        return doc.type === "model" ? doc.theory : undefined;
-    };
+        const theoryId = doc.type === "model" ? doc.theory : undefined;
+        if (theoryId && theories && props.doc.liveDoc.doc.type === "model") {
+            try {
+                const theoryMeta = theories.getMetadata(theoryId);
+                return theoryMeta.iconLetters;
+            } catch (_e) {
+                return undefined;
+            }
+        }
+        return undefined;
+    });
 
     const handleClick = () => {
         // If clicking on primary or secondary doc, navigate to just that doc
@@ -171,7 +182,7 @@ function DocumentsTreeLeaf(props: {
             <DocumentTypeIcon
                 documentType={props.doc.liveDoc.doc.type}
                 isDeleted={props.doc.docRef.isDeleted}
-                theory={theory()}
+                letters={iconLetters()}
             />
             <div
                 class="document-name"

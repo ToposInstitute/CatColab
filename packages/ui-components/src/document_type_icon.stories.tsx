@@ -2,7 +2,20 @@ import { For } from "solid-js";
 import type { Meta, StoryObj } from "storybook-solidjs-vite";
 
 import { type DocumentType, DocumentTypeIcon } from "./document_type_icon";
-import { theoryToLetterMap } from "./model_file_icon";
+
+const theoryToLetterMap: Record<string, [string, string]> = {
+    empty: ["I", "n"],
+    "simple-olog": ["O", "l"],
+    "simple-schema": ["S", "c"],
+    "petri-net": ["P", "n"],
+    "causal-loop": ["C", "l"],
+    "causal-loop-delays": ["C", "d"],
+    "indeterminate-causal-loop": ["C", "i"],
+    "primitive-stock-flow": ["S", "f"],
+    "reg-net": ["R", "n"],
+    "unary-dec": ["D", "c"],
+    "power-system": ["P", "s"],
+};
 
 const meta = {
     title: "Icons/DocumentTypeIcon",
@@ -78,7 +91,10 @@ export const ModelWithTheories: Story = {
                             gap: "8px",
                         }}
                     >
-                        <DocumentTypeIcon documentType="model" theory={theory} />
+                        <DocumentTypeIcon
+                            documentType="model"
+                            letters={theoryToLetterMap[theory]}
+                        />
                         <span style={{ "font-size": "12px" }}>{theory}</span>
                     </div>
                 )}
@@ -120,7 +136,11 @@ export const DeletedModelWithTheory: Story = {
                     gap: "8px",
                 }}
             >
-                <DocumentTypeIcon documentType="model" theory="simple-olog" isDeleted={false} />
+                <DocumentTypeIcon
+                    documentType="model"
+                    letters={theoryToLetterMap["simple-olog"]}
+                    isDeleted={false}
+                />
                 <span style={{ "font-size": "12px" }}>active</span>
             </div>
             <div
@@ -131,7 +151,11 @@ export const DeletedModelWithTheory: Story = {
                     gap: "8px",
                 }}
             >
-                <DocumentTypeIcon documentType="model" theory="simple-olog" isDeleted={true} />
+                <DocumentTypeIcon
+                    documentType="model"
+                    letters={theoryToLetterMap["simple-olog"]}
+                    isDeleted={true}
+                />
                 <span style={{ "font-size": "12px" }}>deleted</span>
             </div>
         </div>

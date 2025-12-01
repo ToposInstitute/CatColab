@@ -11,15 +11,15 @@ export type DocumentType = "model" | "diagram" | "analysis";
 export function DocumentTypeIcon(props: {
     documentType: DocumentType;
     isDeleted?: boolean;
-    theory?: string;
+    letters?: [string, string];
 }) {
     return (
         <Switch fallback={<File />}>
             <Match when={props.isDeleted}>
                 <FileX style={{ color: "darkgray" }} />
             </Match>
-            <Match when={props.documentType === "model" && props.theory}>
-                {(theory) => <ModelFileIcon theory={theory()} />}
+            <Match when={props.documentType === "model" && props.letters}>
+                {(letters) => <ModelFileIcon letters={letters()} />}
             </Match>
             <Match when={props.documentType === "model"}>
                 <File />
