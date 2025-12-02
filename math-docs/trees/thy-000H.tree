@@ -1,0 +1,226 @@
+\title{Relative monoidal promonads}
+\taxon{theory}
+\import{macros}
+
+\p{
+
+The \define{theory of relative monoidal promonads} is the modal double theory
+#{(\dbl{T}, T, T_0, \phi)}, where ##{\phi: T_0 \To T: \dbl{T} \to \dbl{T}} is a
+monad morphism, that combines the [theory of generalized monoidal
+categories](thy-0005) (for the monad #{T}) and the [theory of
+promonads](thy-0004) with a cell
+
+\quiver{
+% https://q.uiver.app/#q=WzAsNixbMCwwLCJUXzAgeCJdLFsxLDAsIlRfMCB4Il0sWzAsMSwiVHgiXSxbMCwyLCJ4Il0sWzEsMSwiVHgiXSxbMSwyLCJ4Il0sWzAsMSwiVF8wIHAiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMiwzLCJcXG90aW1lcyIsMl0sWzAsMiwiXFxwaGlfeCIsMl0sWzQsNSwiXFxvdGltZXMiXSxbMSw0LCJcXHBoaV94Il0sWzMsNSwicCIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFs2LDExLCJcXG90aW1lcyIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dXQ==
+\begin{tikzcd}
+	{T_0 x} & {T_0 x} \\
+	Tx & Tx \\
+	x & x
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{T_0 p}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-2]
+	\arrow["{\phi_x}"', from=1-1, to=2-1]
+	\arrow["{\phi_x}", from=1-2, to=2-2]
+	\arrow["\otimes"', from=2-1, to=3-1]
+	\arrow["\otimes", from=2-2, to=3-2]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-2]
+	\arrow["\otimes"{description}, draw=none, from=0, to=1]
+\end{tikzcd}
+}
+
+subject to the axioms:
+
+\ul{
+  \li{\em{Compatibility of products}:
+  \centerfigs{
+  \quiverinline{
+  % https://q.uiver.app/#q=WzAsOCxbMCwxLCJUXzAgeCJdLFsxLDEsIlRfMCB4Il0sWzAsMiwiVHgiXSxbMCwzLCJ4Il0sWzEsMiwiVHgiXSxbMSwzLCJ4Il0sWzAsMCwiVF8wIHgiXSxbMSwwLCJUXzAgeCJdLFswLDEsIlRfMCBwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzIsMywiXFxvdGltZXMiLDJdLFswLDIsIlxccGhpX3giLDJdLFs0LDUsIlxcb3RpbWVzIl0sWzEsNCwiXFxwaGlfeCJdLFszLDUsInAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbNiw3LCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNiwwLCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs3LDEsIiIsMCx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzgsMTMsIlxcb3RpbWVzIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzE0LDgsIlRfMCBcXHRoZXRhIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV1d
+  \begin{tikzcd}
+	{T_0 x} & {T_0 x} \\
+	{T_0 x} & {T_0 x} \\
+	Tx & Tx \\
+	x & x
+	\arrow[""{name=0, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=1-1, to=1-2]
+	\arrow[equals, from=1-1, to=2-1]
+	\arrow[equals, from=1-2, to=2-2]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "{T_0 p}"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-2]
+	\arrow["{\phi_x}"', from=2-1, to=3-1]
+	\arrow["{\phi_x}", from=2-2, to=3-2]
+	\arrow["\otimes"', from=3-1, to=4-1]
+	\arrow["\otimes", from=3-2, to=4-2]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=4-1, to=4-2]
+	\arrow["{T_0 \theta}"{description}, draw=none, from=0, to=1]
+	\arrow["\otimes"{description}, draw=none, from=1, to=2]
+  \end{tikzcd}
+  }
+  #{\quad=\quad}
+  \quiverinline{
+  % https://q.uiver.app/#q=WzAsOCxbMCwzLCJ4Il0sWzEsMywieCJdLFswLDAsIlRfMCB4Il0sWzEsMCwiVF8wIHgiXSxbMCwxLCJUeCJdLFsxLDEsIlR4Il0sWzAsMiwieCJdLFsxLDIsIngiXSxbMCwxLCJwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzIsMywiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzIsNCwiXFxwaGlfeCIsMl0sWzMsNSwiXFxwaGlfeCJdLFs0LDUsIiIsMix7ImxldmVsIjoyLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs2LDAsIiIsMix7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzcsMSwiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNiw3LCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNCw2LCJcXG90aW1lcyIsMl0sWzUsNywiXFxvdGltZXMiXSxbOSwxMiwiXFxwaGlfe1xcbWF0aHJte2lkfV94fSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxMiwxNSwiXFxtYXRocm17aWR9X3tcXG90aW1lc30iLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMTUsOCwiXFx0aGV0YSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dXQ==
+  \begin{tikzcd}
+	{T_0 x} & {T_0 x} \\
+	Tx & Tx \\
+	x & x \\
+	x & x
+	\arrow[""{name=0, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=1-1, to=1-2]
+	\arrow["{\phi_x}"', from=1-1, to=2-1]
+	\arrow["{\phi_x}", from=1-2, to=2-2]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=2-1, to=2-2]
+	\arrow["\otimes"', from=2-1, to=3-1]
+	\arrow["\otimes", from=2-2, to=3-2]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=3-1, to=3-2]
+	\arrow[equals, from=3-1, to=4-1]
+	\arrow[equals, from=3-2, to=4-2]
+	\arrow[""{name=3, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=4-1, to=4-2]
+	\arrow["{\phi_{\mathrm{id}_x}}"{description}, draw=none, from=0, to=1]
+	\arrow["{\mathrm{id}_{\otimes}}"{description}, draw=none, from=1, to=2]
+	\arrow["\theta"{description}, draw=none, from=2, to=3]
+  \end{tikzcd}
+  }
+  }
+  }
+  \li{\em{Functorality}: #{\otimes \odot \otimes = \otimes}}
+  \li{\em{Associativity}:
+  \centerfigs{
+  \quiverinline{
+  % https://q.uiver.app/#q=WzAsMjAsWzAsMiwiVF8wIHgiXSxbMSwyLCJUXzAgeCJdLFswLDMsIlR4Il0sWzAsNCwieCJdLFsxLDMsIlR4Il0sWzEsNCwieCJdLFswLDAsIlRfMF4yIHgiXSxbMSwwLCJUXzBeMiB4Il0sWzAsMSwiVF8wIFR4Il0sWzEsMSwiVF8wIFR4Il0sWzIsMSwiVF8wIFR4Il0sWzIsMiwiVF4yeCJdLFsyLDMsIlR4Il0sWzIsNCwieCJdLFszLDIsIlReMiB4Il0sWzMsMywiVHgiXSxbMyw0LCJ4Il0sWzIsMCwiVF8wXjIgeCJdLFszLDEsIlRfMCBUeCJdLFszLDAsIlRfMF4yIHgiXSxbMCwxLCJUXzAgcCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsyLDMsIlxcb3RpbWVzIiwyXSxbMCwyLCJcXHBoaV94IiwyXSxbNCw1LCJcXG90aW1lcyJdLFsxLDQsIlxccGhpX3giXSxbMyw1LCJwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzYsNywiVF8wXjIgcCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFs2LDgsIlRfMCBcXHBoaV94IiwyXSxbOCwwLCJUXzAgXFxvdGltZXMiLDJdLFs3LDksIlRfMCBcXHBoaV94IiwyXSxbOSwxLCJUXzAgXFxvdGltZXMiXSxbMTAsMTEsIlxccGhpX3tUeH0iXSxbMTEsMTIsIlRcXG90aW1lcyJdLFsxMiwxMywiXFxvdGltZXMiXSxbNCwxMiwiIiwxLHsibGV2ZWwiOjIsInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzksMTAsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxNSwxNiwiXFxvdGltZXMiXSxbMTQsMTUsIlxcbXVfeCJdLFsxMSwxNCwiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzEzLDE2LCIiLDEseyJsZXZlbCI6Miwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNSwxMywiIiwxLHsibGV2ZWwiOjIsInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzE3LDEwLCJUXzAgXFxwaGlfeCJdLFs3LDE3LCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMTgsMTQsIlxccGhpX3tUeH0iXSxbMTksMTgsIlRfMCBcXHBoaV94Il0sWzE3LDE5LCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMjAsMjUsIlxcb3RpbWVzIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzI2LDIwLCJUXzAgXFxvdGltZXMiLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMzgsMzksIlxcZ2FtbWEiLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMzQsNDAsIlxcbWF0aHJte2lkfV9cXG90aW1lcyIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFszNSwzNCwiXFxtYXRocm17aWR9IiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzQ1LDM4LCJcXG1hdGhybXtpZH0iLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNDIsMzUsIlxcbWF0aHJte2lkfSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dXQ==
+  \begin{tikzcd}[column sep=small]
+	{T_0^2 x} & {T_0^2 x} & {T_0^2 x} & {T_0^2 x} \\
+	{T_0 Tx} & {T_0 Tx} & {T_0 Tx} & {T_0 Tx} \\
+	{T_0 x} & {T_0 x} & {T^2x} & {T^2 x} \\
+	Tx & Tx & Tx & Tx \\
+	x & x & x & x
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{T_0^2 p}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-2]
+	\arrow["{T_0 \phi_x}"', from=1-1, to=2-1]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=1-2, to=1-3]
+	\arrow["{T_0 \phi_x}"', from=1-2, to=2-2]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=1-3, to=1-4]
+	\arrow["{T_0 \phi_x}", from=1-3, to=2-3]
+	\arrow["{T_0 \phi_x}", from=1-4, to=2-4]
+	\arrow["{T_0 \otimes}"', from=2-1, to=3-1]
+	\arrow[""{name=3, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=2-2, to=2-3]
+	\arrow["{T_0 \otimes}", from=2-2, to=3-2]
+	\arrow["{\phi_{Tx}}", from=2-3, to=3-3]
+	\arrow["{\phi_{Tx}}", from=2-4, to=3-4]
+	\arrow[""{name=4, anchor=center, inner sep=0}, "{T_0 p}"{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-2]
+	\arrow["{\phi_x}"', from=3-1, to=4-1]
+	\arrow["{\phi_x}", from=3-2, to=4-2]
+	\arrow[""{name=5, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=3-3, to=3-4]
+	\arrow["{T\otimes}", from=3-3, to=4-3]
+	\arrow["{\mu_x}", from=3-4, to=4-4]
+	\arrow["\otimes"', from=4-1, to=5-1]
+	\arrow[""{name=6, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=4-2, to=4-3]
+	\arrow["\otimes", from=4-2, to=5-2]
+	\arrow["\otimes", from=4-3, to=5-3]
+	\arrow["\otimes", from=4-4, to=5-4]
+	\arrow[""{name=7, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=5-1, to=5-2]
+	\arrow[""{name=8, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=5-2, to=5-3]
+	\arrow[""{name=9, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=5-3, to=5-4]
+	\arrow["{T_0 \otimes}"{description}, draw=none, from=0, to=4]
+	\arrow["{\mathrm{id}}"{description}, draw=none, from=1, to=3]
+	\arrow["{\mathrm{id}}"{description}, draw=none, from=2, to=5]
+	\arrow["{\mathrm{id}}"{description}, draw=none, from=3, to=6]
+	\arrow["\otimes"{description}, draw=none, from=4, to=7]
+	\arrow["\gamma"{description}, draw=none, from=5, to=9]
+	\arrow["{\mathrm{id}_\otimes}"{description}, draw=none, from=6, to=8]
+  \end{tikzcd}
+  }
+  #{=}
+  \quiverinline{
+  % https://q.uiver.app/#q=WzAsMTgsWzIsMSwiVF8wIHgiXSxbMywxLCJUXzAgeCJdLFsyLDMsIlR4Il0sWzIsNCwieCJdLFszLDMsIlR4Il0sWzMsNCwieCJdLFsyLDAsIlRfMF4yIHgiXSxbMywwLCJUXzBeMiB4Il0sWzEsMCwiVF8wXjJ4Il0sWzEsMiwiVF4yeCJdLFsxLDEsIlRfMCBUeCJdLFsxLDMsIlR4Il0sWzEsNCwieCJdLFswLDIsIlReMiB4Il0sWzAsMywiVHgiXSxbMCw0LCJ4Il0sWzAsMCwiVF8wXjIgeCJdLFswLDEsIlRfMCBUeCJdLFswLDEsIlRfMCBwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzIsMywiXFxvdGltZXMiXSxbMCwyLCJcXHBoaV94IiwyXSxbNCw1LCJcXG90aW1lcyJdLFsxLDQsIlxccGhpX3giXSxbMyw1LCJwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzYsNywiVF8wXjIgcCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFs2LDAsIlxcbXVfeCIsMl0sWzcsMSwiXFxtdV94Il0sWzgsMTAsIlRfMCBcXHBoaV94Il0sWzEwLDksIlxccGhpX3tUeH0iXSxbOSwxMSwiXFxtdV94Il0sWzExLDIsIiIsMCx7ImxldmVsIjoyLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs4LDYsIiIsMCx7ImxldmVsIjoyLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxMSwxMiwiXFxvdGltZXMiLDJdLFsxMyw5LCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMTMsMTQsIlQgXFxvdGltZXMiLDJdLFsxNCwxNSwiXFxvdGltZXMiLDJdLFsxNSwxMiwiIiwyLHsibGV2ZWwiOjIsInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzE3LDEzLCJcXHBoaV97VHh9IiwyXSxbMTYsMTcsIlRfMCBcXHBoaV94IiwyXSxbMTYsOCwiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzEyLDMsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxOCwyMywiXFxvdGltZXMiLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMjQsMTgsIlxcbXVfcCIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFszMywzNiwiXFxnYW1tYSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFszMCw0MCwiXFxtYXRocm17aWR9X1xcb3RpbWVzIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzM5LDMzLCJcXG1hdGhybXtpZH0iLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMzEsMzAsIlxcbWF0aHJte2lkfSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dXQ==
+  \begin{tikzcd}[column sep=small]
+	{T_0^2 x} & {T_0^2x} & {T_0^2 x} & {T_0^2 x} \\
+	{T_0 Tx} & {T_0 Tx} & {T_0 x} & {T_0 x} \\
+	{T^2 x} & {T^2x} \\
+	Tx & Tx & Tx & Tx \\
+	x & x & x & x
+	\arrow[""{name=0, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=1-1, to=1-2]
+	\arrow["{T_0 \phi_x}"', from=1-1, to=2-1]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=1-2, to=1-3]
+	\arrow["{T_0 \phi_x}", from=1-2, to=2-2]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "{T_0^2 p}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-3, to=1-4]
+	\arrow["{\mu_x}"', from=1-3, to=2-3]
+	\arrow["{\mu_x}", from=1-4, to=2-4]
+	\arrow["{\phi_{Tx}}"', from=2-1, to=3-1]
+	\arrow["{\phi_{Tx}}", from=2-2, to=3-2]
+	\arrow[""{name=3, anchor=center, inner sep=0}, "{T_0 p}"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-3, to=2-4]
+	\arrow["{\phi_x}"', from=2-3, to=4-3]
+	\arrow["{\phi_x}", from=2-4, to=4-4]
+	\arrow[""{name=4, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=3-1, to=3-2]
+	\arrow["{T \otimes}"', from=3-1, to=4-1]
+	\arrow["{\mu_x}", from=3-2, to=4-2]
+	\arrow["\otimes"', from=4-1, to=5-1]
+	\arrow[""{name=5, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=4-2, to=4-3]
+	\arrow["\otimes"', from=4-2, to=5-2]
+	\arrow["\otimes", from=4-3, to=5-3]
+	\arrow["\otimes", from=4-4, to=5-4]
+	\arrow[""{name=6, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=5-1, to=5-2]
+	\arrow[""{name=7, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=5-2, to=5-3]
+	\arrow[""{name=8, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=5-3, to=5-4]
+	\arrow["{\mathrm{id}}"{description}, draw=none, from=0, to=4]
+	\arrow["{\mathrm{id}}"{description}, draw=none, from=1, to=5]
+	\arrow["{\mu_p}"{description}, draw=none, from=2, to=3]
+	\arrow["\otimes"{description}, draw=none, from=3, to=8]
+	\arrow["\gamma"{description}, draw=none, from=4, to=6]
+	\arrow["{\mathrm{id}_\otimes}"{description}, draw=none, from=5, to=7]
+  \end{tikzcd}
+  }
+  }
+  where the equation is well-formed by the compatibility of #{\phi} with the
+  monad multiplications
+  }
+  \li{\em{Unitality}:
+  \centerfigs{
+  \quiverinline{
+  % https://q.uiver.app/#q=WzAsNyxbMiwwLCJ4Il0sWzIsMSwiVHgiXSxbMiwyLCJ4Il0sWzEsMCwieCJdLFsxLDIsIngiXSxbMCwwLCJ4Il0sWzAsMiwieCJdLFswLDEsIlxcZXRhX3giLDJdLFsxLDIsIlxcb3RpbWVzIiwyXSxbMywwLCIiLDEseyJsZXZlbCI6Miwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMyw0LCIiLDEseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs0LDIsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs1LDYsIiIsMCx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzYsNCwicCIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFs1LDMsInAiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbOSwxMSwiXFxpb3RhIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzE0LDEzLCIxX3AiLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
+  \begin{tikzcd}
+	x & x & x \\
+	&& Tx \\
+	x & x & x
+	\arrow[""{name=0, anchor=center, inner sep=0}, "p"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-2]
+	\arrow[equals, from=1-1, to=3-1]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=1-2, to=1-3]
+	\arrow[equals, from=1-2, to=3-2]
+	\arrow["{\eta_x}"', from=1-3, to=2-3]
+	\arrow["\otimes"', from=2-3, to=3-3]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-2]
+	\arrow[""{name=3, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=3-2, to=3-3]
+	\arrow["{1_p}"{description}, draw=none, from=0, to=2]
+	\arrow["\iota"{description}, draw=none, from=1, to=3]
+  \end{tikzcd}
+  }
+  #{\quad=\quad}
+  \quiverinline{
+  % https://q.uiver.app/#q=WzAsMTMsWzIsMSwiVF8wIHgiXSxbMywxLCJUXzAgeCJdLFsyLDIsIlR4Il0sWzIsMywieCJdLFszLDIsIlR4Il0sWzMsMywieCJdLFsyLDAsIngiXSxbMywwLCJ4Il0sWzEsMCwieCJdLFsxLDIsIlR4Il0sWzEsMywieCJdLFswLDAsIngiXSxbMCwzLCJ4Il0sWzAsMSwiVF8wIHAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMiwzLCJcXG90aW1lcyIsMl0sWzAsMiwiXFxwaGlfeCIsMl0sWzQsNSwiXFxvdGltZXMiXSxbMSw0LCJcXHBoaV94Il0sWzMsNSwicCIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFs2LDAsIlxcZXRhX3giLDJdLFs2LDcsInAiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbNywxLCJcXGV0YV94Il0sWzksMiwiIiwxLHsibGV2ZWwiOjIsInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzgsOSwiXFxldGFfeCIsMl0sWzksMTAsIlxcb3RpbWVzIiwyXSxbMTAsMywiIiwyLHsibGV2ZWwiOjIsInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzgsNiwiIiwxLHsibGV2ZWwiOjIsInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzExLDgsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxMSwxMiwiIiwxLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMTIsMTAsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxMywxOCwiXFxvdGltZXMiLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMjAsMTMsIlxcZXRhX3AiLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMjIsMjUsIlxcbWF0aHJte2lkfV9cXG90aW1lcyIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsyNiwyMiwiXFxtYXRocm17aWR9IiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzI3LDI5LCJcXGlvdGEiLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
+  \begin{tikzcd}
+	x & x & x & x \\
+	&& {T_0 x} & {T_0 x} \\
+	& Tx & Tx & Tx \\
+	x & x & x & x
+	\arrow[""{name=0, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=1-1, to=1-2]
+	\arrow[equals, from=1-1, to=4-1]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=1-2, to=1-3]
+	\arrow["{\eta_x}"', from=1-2, to=3-2]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "p"{inner sep=.8ex}, "\shortmid"{marking}, from=1-3, to=1-4]
+	\arrow["{\eta_x}"', from=1-3, to=2-3]
+	\arrow["{\eta_x}", from=1-4, to=2-4]
+	\arrow[""{name=3, anchor=center, inner sep=0}, "{T_0 p}"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-3, to=2-4]
+	\arrow["{\phi_x}"', from=2-3, to=3-3]
+	\arrow["{\phi_x}", from=2-4, to=3-4]
+	\arrow[""{name=4, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=3-2, to=3-3]
+	\arrow["\otimes"', from=3-2, to=4-2]
+	\arrow["\otimes"', from=3-3, to=4-3]
+	\arrow["\otimes", from=3-4, to=4-4]
+	\arrow[""{name=5, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=4-1, to=4-2]
+	\arrow[""{name=6, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=4-2, to=4-3]
+	\arrow[""{name=7, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=4-3, to=4-4]
+	\arrow["\iota"{description}, draw=none, from=0, to=5]
+	\arrow["{\mathrm{id}}"{description}, draw=none, from=1, to=4]
+	\arrow["{\eta_p}"{description}, draw=none, from=2, to=3]
+	\arrow["\otimes"{description}, draw=none, from=3, to=7]
+	\arrow["{\mathrm{id}_\otimes}"{description}, draw=none, from=4, to=6]
+  \end{tikzcd}
+  }
+  }
+  where the equation uses the compatibility of #{\phi} with the monad units
+  }
+}
+
+}

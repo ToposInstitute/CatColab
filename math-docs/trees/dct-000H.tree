@@ -1,0 +1,7 @@
+\title{Relative monoidal promonads}
+\taxon{doctrine}
+\import{macros}
+
+\p{\strong{TODO}: Motivate as generalization of: [[dct-000G]]}
+
+\transclude{thy-000H}

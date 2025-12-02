@@ -25,7 +25,7 @@
 }
 
 \subtree{
-  \title{Monoidal promonad}
+  \title{Monoidal promonads}
   \taxon{definition}
 
   \p{A \define{monoidal promonad} consists of
@@ -69,7 +69,7 @@
 
 \p{In the following theory for monoidal promonads, we generalize from the list
 double monad to an arbitrary lax double monad as the semantics. We can then
-recover not only monoidal promonads, but symmetric monoidal promonads and other
-variants as models.}
+recover not only monoidal promonads, but the more important \em{symmetric
+monoidal promonads} and other variants as models.}
 
 \transclude{thy-000G}
