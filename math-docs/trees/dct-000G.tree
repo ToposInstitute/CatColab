@@ -5,13 +5,22 @@
 \subtree{
   \title{Motivation}
 
-  \p{In the standard formulation of a Markov category, one defines a monoidal
-  category whose morphisms are regarded as stochastic maps, then carves out the
-  deterministic maps as those satisfying a certain equation (commuting with copy
-  maps). However, this logic can be turned around: start with a monoidal
-  category of deterministic maps, then introduce an identity-on-objects functor
-  into another category of stochastic maps along with a compatible monoidal
-  structure. The latter approach is axiomatized by a \em{monoidal promonad}.}
+  \p{In the standard formulation of a Markov category, one first defines a
+  monoidal category whose morphisms are regarded as stochastic maps, then carves
+  out the deterministic maps as those satisfying a certain equation (commuting
+  with copy maps). However, this logic can be turned around: start with a
+  monoidal category of deterministic maps, then introduce an identity-on-objects
+  functor into another category of stochastic maps along with a compatible
+  monoidal structure. The latter approach is axiomatized by a \em{monoidal
+  promonad}.}
+
+  \p{Like a [promonad](dct-0004) is equivalently an identity-on-objects functor,
+  a monoidal promonad is equivalently an identity-on-objects \em{strict}
+  monoidal functor (cf. [Román 2024](roman-2024), Remark 8.2), but that
+  description suggests that one must explicitly give the associators and unitors
+  of the target monoidal category. A virtue of the following formulation is that
+  the associators and unitors are only defined once, for the base monoidal
+  category, and are then reused via the left and right profunctor actions.}
 
 }
 
@@ -58,6 +67,9 @@
   }
 }
 
-\p{\strong{TODO}}
+\p{In the following theory for monoidal promonads, we generalize from the list
+double monad to an arbitrary lax double monad as the semantics. We can then
+recover not only monoidal promonads, but symmetric monoidal promonads and other
+variants as models.}
 
 \transclude{thy-000G}
