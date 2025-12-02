@@ -1,7 +1,9 @@
 {
+  pkgs,
   config,
   lib,
   modulesPath,
+  self,
   ...
 }:
 {
@@ -71,6 +73,10 @@
       }
     ];
   };
+
+  environment.systemPackages = [
+    self.packages.${pkgs.system}.frontend-tests
+  ];
 
   # This matches the default root device that is created by nixos-generators
   fileSystems."/".device = "/dev/disk/by-label/nixos";

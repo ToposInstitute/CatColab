@@ -9,7 +9,6 @@ let
   cfg = config.catcolab;
 
   frontendPkg = self.packages.${pkgs.system}.frontend;
-  frontendTestsPkg = self.packages.${pkgs.system}.frontend-tests;
   backendPkg = self.packages.${pkgs.system}.backend;
   automergePkg = self.packages.${pkgs.system}.automerge;
 
@@ -105,7 +104,6 @@ with lib;
     environment.systemPackages = [
       backendPkg
       automergePkg
-      frontendTestsPkg
       databaseSetupScript
     ];
 
