@@ -312,9 +312,8 @@
         catcolab = {
           hostname = "backend.catcolab.org";
           profiles.system = {
-            # TODO: can be changed to catcolab after the next deploy (the host needs to first update the
-            # permissions of the catcolab user)
-            sshUser = "root";
+            sshUser = "catcolab";
+            user = "root";
             path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab;
           };
         };
