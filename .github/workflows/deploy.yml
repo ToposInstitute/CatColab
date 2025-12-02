@@ -96,12 +96,14 @@ jobs:
         if: github.event_name == 'push' || github.event_name == 'pull_request'
         run: |
           pnpm install
+          # Uses env from packages/frontend/.env.staging
           pnpm --filter ./packages/frontend run build -- --mode staging
 
       - name: Build for Production
         if: github.event_name == 'release'
         run: |
           pnpm install
+          # Uses env from packages/frontend/.env.production
           pnpm --filter ./packages/frontend run build
 
       - name: Upload
