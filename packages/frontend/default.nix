@@ -76,10 +76,8 @@ let
         cp -r ${self.packages.x86_64-linux.catlog-wasm-browser}/* packages/catlog-wasm/dist/pkg-browser/
 
         cd packages/frontend
-
         # Build with development mode to use .env.development configuration
         npm run build:nix -- --mode development
-
         cd -
       '';
 
