@@ -18,9 +18,9 @@ builtins.mapAttrs (_: publicKeys: { inherit publicKeys; }) ({
   ];
   "env.prod.age" = [
     catcolab
-    owen
     epatters
     jmoggr
+    kasbah
   ];
   "rclone.conf.next.age" = [
     catcolab-next
@@ -32,8 +32,8 @@ builtins.mapAttrs (_: publicKeys: { inherit publicKeys; }) ({
   ];
   "rclone.conf.prod.age" = [
     catcolab
-    owen
     epatters
     jmoggr
+    kasbah
   ];
 })
