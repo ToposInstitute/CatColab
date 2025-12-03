@@ -1,0 +1,57 @@
+\title{Markov categories}
+\taxon{doctrine}
+\import{macros}
+
+\subtree{
+  \taxon{warning}
+
+  \p{
+
+  A \nlab{Markov category} is standardly defined as a symmetric monoidal
+  category with a supply of commutative comonoids (also known as "copy-discard
+  category"), such that the monoidal unit is a terminal object. While fairly
+  succinct, this definition has some unsatisfactory features:
+
+  \ul{
+
+    \li{It postulates an \em{unnatural} transformation, the family of copying
+    maps, a strange concept for a category theorist and in particular not
+    allowed in our approach to formal category theory, which automatically makes
+    every transformation be natural.}
+
+    \li{In the original motivating example, the category of measurable spaces
+    and Markov kernels, its notion of determinism is subtly wrong; see, for
+    example, ([Patterson 2020](patterson-thesis-2020), Corollary 3.2.2).}
+    
+  }
+
+  The following definition corrects both problems by making the deterministic
+  maps be structure rather than property. Be warned that it is \em{not}
+  equivalent to, but slightly generalizes, the standard definition.
+  
+  }
+}
+
+\subtree{
+  \title{Markov categories}
+  \taxon{definition}
+
+  \p{
+
+  A \define{Markov category} is a model of the theory #{(\dbl{T}, T, T_0, \phi)}
+  of [relative monoidal promonads](dct-000H) in the semantics #{(\SSet,
+  \ListCart, \ListSemicart, \Phi)}, where the monad morphism ##{\Phi:
+  \ListSemicart \To \ListCart} is the inclusion, whose object components
+  #{\Phi_A = 1_{\List(A)}} are identities.
+  
+  }
+
+  \p{
+
+  Thus, a Markov category consists of a cartesian monoidal category, whose
+  morphisms are called \strong{deterministic}, over which there is a
+  semicartesian monoidal promonad, whose morphisms are called
+  \strong{stochastic}.
+  
+  }
+}

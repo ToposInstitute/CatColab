@@ -93,6 +93,7 @@
 \def\List{#{\mathrm{List}}}
 \def\ListSym{#{\mathrm{List}_{\id,\mathrm{bij}}}}
 \def\ListCart{#{\mathrm{List}_{\mathrm{fun},\id}}}
+\def\ListSemicart{#{\mathrm{List}_{\mathrm{inj},\id}}}
 \def\ListCocart{#{\mathrm{List}_{\id,\mathrm{fun}}}}
 
 \def\Disc{#{\mathop{\mathrm{Disc}}}}
