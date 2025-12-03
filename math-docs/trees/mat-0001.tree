@@ -60,7 +60,8 @@ have a systems interpretation:}
   \tr{\td{[[dct-000A]] / [[dct-000F]]} \td{Operad, algebraic theory, ...}}
   \tr{\td{[[dct-000G]] / [[dct-000H]]} \td{Hierarchy of processes}}
   \tr{\td{[[dct-000I]]} \td{Probabilistic processes/statistical models}}
-  \tr{\td{[[dct-000J]]} \td{Fallible/guarded processes}}
+  \tr{\td{[[dct-000J]]} \td{Fallible processes/processes with constraints}}
+  \tr{\td{[[dct-000L]]} \td{Fallible, probabilistic processes}}
 }
 
 \p{Additional doctrines: [[dct-0008]], [[dct-0009]], [[dct-000C]], [[dct-000D]]}
