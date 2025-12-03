@@ -36,8 +36,8 @@
   1987](carboni-1987-partial)). As with the deterministic maps in [[dct-000I]],
   our formulation differs by making the total maps be structure rather than
   property. While we do not postulate a local ordering, we can derive a local
-  preorder by, for any two partial morphisms #{f,g: X \to Y}, declaring that #{f
-  \leq g} if and only if
+  preordering by, for any two partial morphisms #{f,g: X \to Y}, declaring that
+  #{f \leq g} if and only if
 
   ##{ \Copy_X \cdot ((f \cdot \Delete_Y) \otimes g) = f. }
 

@@ -66,6 +66,7 @@
 \def\hetto{#{\dashrightarrow}}
 
 \def\cat[name]{#{\mathsf{\name}}}
+\def\catV{#{\mathcal{V}}}
 \def\Set{#{\mathsf{Set}}}
 \def\Stoch{#{\mathsf{Stoch}}}
 
