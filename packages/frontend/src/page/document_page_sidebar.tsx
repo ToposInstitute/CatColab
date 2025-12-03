@@ -149,8 +149,17 @@ function DocumentsTreeLeaf(props: {
         if (clickedRefId() === primaryRefId() || clickedRefId() === secondaryRefId()) {
             navigate(`/${createLinkPart(props.doc)}`);
         } else {
-            // Otherwise, open it as a side panel
-            navigate(`/${createLinkPart(props.primaryDoc)}/${createLinkPart(props.doc)}`);
+            // Otherwise, open it as a side panel with model always on the left
+            const clickedDoc = props.doc;
+            const primaryDoc = props.primaryDoc;
+
+            const clickedIsModel = clickedDoc.liveDoc.doc.type === "model";
+
+            if (clickedIsModel) {
+                navigate(`/${createLinkPart(clickedDoc)}/${createLinkPart(primaryDoc)}`);
+            } else {
+                navigate(`/${createLinkPart(primaryDoc)}/${createLinkPart(clickedDoc)}`);
+            }
         }
     };
 
