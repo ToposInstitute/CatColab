@@ -3,9 +3,9 @@
 \import{macros}
 
 \p{Depending on the base monad, a \nlab{generalized multicategory} could be a
-multicategory, symmetric multicategory, cartesian multicategory, or something
-more exotic. Our axiomatization of these doctrines via a double theory is
-reminiscent of [Cruttwell-Shulman's](cruttwell-shulman-2010) definition but
+[multicategory](dct-000A), symmetric multicategory, cartesian multicategory, or
+something more exotic. Our axiomatization of these doctrines via a double theory
+is reminiscent of [Cruttwell-Shulman's](cruttwell-shulman-2010) definition but
 bypasses the complicated construction of the "horizontal Kleisli virtual double
 category" of a monad on a virtual double category.}
 

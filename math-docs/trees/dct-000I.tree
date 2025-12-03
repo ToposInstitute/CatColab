@@ -3,25 +3,27 @@
 \import{macros}
 
 \subtree{
+  \title{Contrast with the standard definition of Markov category}
   \taxon{warning}
 
   \p{
 
-  A \nlab{Markov category} is standardly defined as a symmetric monoidal
+  A \nlab{Markov category} is standardly defined to be a symmetric monoidal
   category with a supply of commutative comonoids (also known as "copy-discard
-  category"), such that the monoidal unit is a terminal object. While fairly
-  succinct, this definition has some unsatisfactory features:
+  category"), such that the monoidal unit is a terminal object ([Fritz
+  2020](fritz-2020)). While fairly succinct, this definition has some
+  unsatisfactory features:
 
   \ul{
 
-    \li{It postulates an \em{unnatural} transformation, the family of copying
-    maps, a strange concept for a category theorist and in particular not
+    \li{It postulates an \nlab{unnatural transformation}, the family of copying
+    maps, a strange concept for any category theorist and in particular not
     allowed in our approach to formal category theory, which automatically makes
     every transformation be natural.}
 
-    \li{In the original motivating example, the category of measurable spaces
-    and Markov kernels, its notion of determinism is subtly wrong; see, for
-    example, ([Patterson 2020](patterson-thesis-2020), Corollary 3.2.2).}
+    \li{In the original motivating example, the category \Stoch of measurable
+    spaces and Markov kernels, the equational characterization of determinism is
+    subtly wrong ([Patterson 2020](patterson-thesis-2020), Corollary 3.2.2).}
     
   }
 

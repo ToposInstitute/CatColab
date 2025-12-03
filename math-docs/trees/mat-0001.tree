@@ -47,7 +47,7 @@ have a systems interpretation:}
   \tr{\td{[[dct-000B]]} \td{Signed graphs with delays} \td{CLDs with delays}}
   \tr{\td{[[dct-0007]]} \td{Nullable signed graphs} \td{CLDs with indeterminates}}
   \tr{\td{[[dct-0003]]} \td{Graphs with links} \td{Stock-flow diagrams}}
-  \tr{\td{Symmetric or commutative monoidal categories} \td{Hypergraphs} \td{Petri nets/reaction networks}}
+  \tr{\td{Symmetric (or commutative) monoidal categories} \td{Hypergraphs} \td{Petri nets/reaction networks}}
   \tr{\td{[[dct-000A]]} \td{Multigraphs} \td{Term graphs/diagrammatic equations}}
 }
 
@@ -60,6 +60,7 @@ have a systems interpretation:}
   \tr{\td{[[dct-000A]] / [[dct-000F]]} \td{Operad, algebraic theory, ...}}
   \tr{\td{[[dct-000G]] / [[dct-000H]]} \td{Hierarchy of processes}}
   \tr{\td{[[dct-000I]]} \td{Probabilistic processes/statistical models}}
+  \tr{\td{[[dct-000J]]} \td{Fallible/guarded processes}}
 }
 
 \p{Additional doctrines: [[dct-0008]], [[dct-0009]], [[dct-000C]], [[dct-000D]]}

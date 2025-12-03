@@ -57,6 +57,8 @@
 \def\cod{#{\operatorname{cod}}}
 \def\id{#{\operatorname{id}}}
 \def\op{#{\mathrm{op}}}
+\def\Copy{#{\operatorname{copy}}}
+\def\Delete{#{\operatorname{del}}}
 
 \def\xto[label]{#{\xrightarrow{\label}}}
 \def\xfrom[label]{#{\xleftarrow{\label}}}
@@ -65,6 +67,7 @@
 
 \def\cat[name]{#{\mathsf{\name}}}
 \def\Set{#{\mathsf{Set}}}
+\def\Stoch{#{\mathsf{Stoch}}}
 
 % 2-category theory
 
@@ -94,6 +97,7 @@
 \def\ListSym{#{\mathrm{List}_{\id,\mathrm{bij}}}}
 \def\ListCart{#{\mathrm{List}_{\mathrm{fun},\id}}}
 \def\ListSemicart{#{\mathrm{List}_{\mathrm{inj},\id}}}
+\def\ListRelevance{#{\mathrm{List}_{\mathrm{surj},\id}}}
 \def\ListCocart{#{\mathrm{List}_{\id,\mathrm{fun}}}}
 
 \def\Disc{#{\mathop{\mathrm{Disc}}}}
