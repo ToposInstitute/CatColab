@@ -1,0 +1,20 @@
+\title{Graded categories}
+\taxon{doctrine}
+\import{macros}
+
+\p{Strictly speaking, graded categories are not a doctrine but a family of
+doctrines. For each monoidal category \catV, there is a doctrine of
+#{\catV}-graded categories. See the blog post [Patterson
+2025](graded-categories-2025) and references therein. Note that here we depart
+from that post and the literature by making the grading in \catV covariant
+rather than contravariant.}
+
+\transclude{thy-000K}
+
+\subtree{
+  \title{Promonads}
+  \taxon{example}
+
+  \p{A [promonad](dct-0004) is a category graded by the linear order #{\{0 \leq
+  1\}}, made into a monoidal poset under the join.}
+}

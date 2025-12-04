@@ -1,0 +1,117 @@
+\title{Markov categories}
+\taxon{doctrine}
+\import{macros}
+
+\subtree{
+  \title{Contrast with the standard definition of Markov category}
+  \taxon{warning}
+
+  \p{
+
+  A \nlab{Markov category} is standardly defined to be a symmetric monoidal
+  category with a supply of commutative comonoids (also known as "copy-discard
+  category"), such that the monoidal unit is a terminal object ([Fritz
+  2020](fritz-2020)). While fairly succinct, this definition has some strange
+  properties:
+
+  \ul{
+
+    \li{It postulates an \nlab{unnatural transformation}, the family of copying
+    maps, always questionable in category theory and simply not allowed in our
+    approach to formal category theory, in which every transformation is
+    automatically natural.}
+
+    \li{In the original motivating example of a Markov category, the category
+    \Stoch of measurable spaces and Markov kernels, the equational
+    characterization of determinism is subtly wrong ([Patterson
+    2020](patterson-thesis-2020), Corollary 3.2.2).}
+    
+  }
+
+  The following definition corrects both problems by making the deterministic
+  maps be structure rather than property. Be warned that it is \em{not}
+  equivalent to, but slightly generalizes, the standard definition of a Markov
+  category.
+  
+  }
+}
+
+\subtree{
+  \title{Markov categories}
+  \taxon{definition}
+
+  \p{
+
+  A \define{Markov category} is a model of the theory #{(\dbl{T}, T, T_0, \phi)}
+  of [relative monoidal promonads](dct-000H) in the semantics #{(\SSet,
+  \ListCart, \ListSemicart, \Phi)}, where the monad morphism ##{\Phi:
+  \ListSemicart \To \ListCart} is the inclusion, whose object components
+  #{\Phi_A = 1_{\List(A)}} are identities.
+  
+  }
+  \p{
+
+  Thus, a Markov category consists of a [cartesian monoidal category](dct-000M),
+  whose morphisms are called \strong{deterministic}, over which there is a
+  semicartesian monoidal promonad, whose morphisms are called
+  \strong{stochastic}.
+  
+  }
+}
+
+\subtree{
+  \title{Equivalent definitions}
+  \taxon{remark}
+
+  \p{
+
+  Other modal theories with the equivalent models can be given. For example,
+  inspired by the unbiased adjoint characterization of cartesian categories, we
+  could use the [theory of right adjoints to the unit](thy-000M) for the base
+  category. The associator needed in the [theory of relative monoidal
+  promonads](thy-000H) would then be derived rather than primitive:
+
+  \centerfigs{
+  \quiverinline{
+  % https://q.uiver.app/#q=WzAsNixbMCwwLCJUXjIgeCJdLFsxLDAsIlReMiB4Il0sWzAsMiwieCJdLFsxLDIsIngiXSxbMSwxLCJUeCJdLFswLDEsIlR4Il0sWzAsMSwiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzIsMywiIiwxLHsibGV2ZWwiOjIsInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzAsNSwiVCBcXG90aW1lcyIsMl0sWzUsMiwiXFxvdGltZXMiLDJdLFs0LDMsIlxcb3RpbWVzIl0sWzEsNCwiXFxtdV94Il0sWzYsNywiXFxnYW1tYSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dXQ==
+  \begin{tikzcd}
+	{T^2 x} & {T^2 x} \\
+	Tx & Tx \\
+	x & x
+	\arrow[""{name=0, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=1-1, to=1-2]
+	\arrow["{T \otimes}"', from=1-1, to=2-1]
+	\arrow["{\mu_x}", from=1-2, to=2-2]
+	\arrow["\otimes"', from=2-1, to=3-1]
+	\arrow["\otimes", from=2-2, to=3-2]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=3-1, to=3-2]
+	\arrow["\gamma"{description}, draw=none, from=0, to=1]
+  \end{tikzcd}
+  }
+  #{\quad:=\quad}
+  \quiverinline{
+  % https://q.uiver.app/#q=WzAsOSxbMCwwLCJUXjIgeCJdLFsxLDAsIlReMiB4Il0sWzAsMSwiVHgiXSxbMCwyLCJUXjIgeCJdLFsxLDIsIlReMiB4Il0sWzAsMywiVHgiXSxbMSwzLCJUeCJdLFswLDQsIngiXSxbMSw0LCJ4Il0sWzAsMiwiVFxcb3RpbWVzIiwyXSxbMyw0LCIiLDIseyJsZXZlbCI6Miwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMSw0LCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFswLDEsIiIsMCx7ImxldmVsIjoyLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsyLDMsIlRcXGV0YV94IiwyXSxbMyw1LCJcXG11X3giLDJdLFs0LDYsIlxcbXVfeCJdLFs1LDYsIiIsMix7ImxldmVsIjoyLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs3LDgsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs1LDcsIlxcb3RpbWVzIiwyXSxbNiw4LCJcXG90aW1lcyJdLFsxMiwxMCwiVFxccGkiLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMTAsMTYsIlxcbXVfe1xcbWF0aHJte2lkfV94fSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxNiwxNywiXFxtYXRocm17aWR9X1xcb3RpbWVzIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV1d
+  \begin{tikzcd}[row sep=scriptsize]
+	{T^2 x} & {T^2 x} \\
+	Tx \\
+	{T^2 x} & {T^2 x} \\
+	Tx & Tx \\
+	x & x
+	\arrow[""{name=0, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=1-1, to=1-2]
+	\arrow["{T\otimes}"', from=1-1, to=2-1]
+	\arrow[equals, from=1-2, to=3-2]
+	\arrow["{T\eta_x}"', from=2-1, to=3-1]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=3-1, to=3-2]
+	\arrow["{\mu_x}"', from=3-1, to=4-1]
+	\arrow["{\mu_x}", from=3-2, to=4-2]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=4-1, to=4-2]
+	\arrow["\otimes"', from=4-1, to=5-1]
+	\arrow["\otimes", from=4-2, to=5-2]
+	\arrow[""{name=3, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=5-1, to=5-2]
+	\arrow["{T\pi}"{description}, draw=none, from=0, to=1]
+	\arrow["{\mu_{\mathrm{id}_x}}"{description}, draw=none, from=1, to=2]
+	\arrow["{\mathrm{id}_\otimes}"{description}, draw=none, from=2, to=3]
+  \end{tikzcd}
+  }
+  }
+  }
+}

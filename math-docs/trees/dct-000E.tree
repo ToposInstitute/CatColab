@@ -20,8 +20,8 @@ multicategories](dct-000F).}
   \p{A model of the modal theory #{(\dbl{T}, T)} of generalized PROs...
   \ul{
     \li{...in #{(\SSet, \List)} is exactly a multisorted PRO}
-    \li{...in #{(\SSet, \mathrm{SymList})} is exactly a multisorted PROP}
-    \li{...in #{(\SSet, \mathrm{CartList})} is exactly a multisorted Lawvere theory.}
+    \li{...in #{(\SSet, \ListSym)} is exactly a multisorted PROP}
+    \li{...in #{(\SSet, \ListCart)} is exactly a multisorted Lawvere theory.}
   }
   }
   
