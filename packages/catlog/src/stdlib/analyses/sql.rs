@@ -6,16 +6,14 @@ use crate::{
 use crate::{dbl::model::*, one::FgCategory};
 use crate::{
     one::Path,
-    zero::{name, Namespace},
+    zero::{Namespace, name},
 };
 use itertools::Itertools;
 use sea_query::SchemaBuilder;
 use sea_query::{
-    prepare::Write, ColumnDef, ForeignKey, ForeignKeyCreateStatement, Iden, MysqlQueryBuilder,
-    PostgresQueryBuilder, SqliteQueryBuilder, Table, TableCreateStatement,
+    ColumnDef, ForeignKey, ForeignKeyCreateStatement, Iden, MysqlQueryBuilder,
+    PostgresQueryBuilder, SqliteQueryBuilder, Table, TableCreateStatement, prepare::Write,
 };
-use std::{collections::HashMap, default::Default};
-use web_sys::console;
 
 impl Namespace {
     fn label_name(self, name: QualifiedName) -> QualifiedLabel {
@@ -53,6 +51,7 @@ pub struct SQLAnalysis {
 }
 
 impl SQLAnalysis {
+    /// Constructs a new SQLAnalysis instance
     pub fn new(obns: Namespace, morns: Namespace, backend: &str) -> Result<SQLAnalysis, String> {
         if let Ok(backend) = SqlBackend::try_from(backend) {
             Ok(SQLAnalysis {
@@ -65,11 +64,8 @@ impl SQLAnalysis {
         }
     }
 
+    /// Consumes itself and a discrete double model to produce a SQL string
     pub fn render(&self, model: &DiscreteDblModel) -> String {
-        console::log_1(&format!("{:#?}", model).into());
-        console::log_1(&format!("{:#?}", self.obns).into());
-        console::log_1(&format!("{:#?}", self.morns).into());
-
         // hashmap of sources and their targets
         let mut morphisms = model
             .mor_generators()
@@ -78,7 +74,7 @@ impl SQLAnalysis {
             .into_group_map();
 
         for obj in model.objects_with_type(&name("Entity")) {
-            morphisms.entry(obj.clone()).or_insert_with(|| Vec::new());
+            morphisms.entry(obj.clone()).or_insert_with(Vec::new);
         }
 
         let tables: Vec<TableCreateStatement> = morphisms
@@ -87,7 +83,7 @@ impl SQLAnalysis {
                 let mut tbl = Table::create();
 
                 // the targets for arrows
-                let mut table_column_defs = mors.iter().fold(
+                let table_column_defs = mors.iter().fold(
                     tbl.table(self.obns.clone().label_name(ob.clone())).if_not_exists().col(
                         ColumnDef::new("id").integer().not_null().auto_increment().primary_key(),
                     ),
@@ -177,14 +173,23 @@ impl SQLAnalysis {
     }
 }
 
+/// Variants of SQL backends. Each correspond to types which implement the
+/// `SchemaBuilder` trait that is used to render into the correct backend. The `SchemaBuilder` and
+/// the types implementing that trait are owned by `sea_query`.
 #[derive(Debug, Clone)]
 pub enum SqlBackend {
+    /// The MySQL backend
     MySql,
+
+    /// The SQLite3 backend
     Sqlite,
+
+    /// The Postgres backend
     Postgres,
 }
 
 impl SqlBackend {
+    /// Produces a boxed implementation of the SchemaBuilder trait
     pub fn as_type(&self) -> Box<dyn SchemaBuilder> {
         match self {
             SqlBackend::MySql => Box::new(MysqlQueryBuilder),
@@ -213,7 +218,7 @@ mod tests {
     use super::*;
     use crate::dbl::model::*;
     use crate::stdlib::th_schema;
-    use crate::zero::{name, Namespace};
+    use crate::zero::{Namespace, name};
     use std::rc::Rc;
 
     #[test]

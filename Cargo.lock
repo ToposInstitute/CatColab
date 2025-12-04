@@ -448,7 +448,6 @@ dependencies = [
  "ustr",
  "uuid",
  "wasm-bindgen",
- "web-sys",
 ]
 
 [[package]]
@@ -470,7 +469,6 @@ dependencies = [
  "uuid",
  "wasm-bindgen",
  "wasm-bindgen-test",
- "web-sys",
 ]
 
 [[package]]
