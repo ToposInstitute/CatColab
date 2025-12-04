@@ -315,16 +315,16 @@ export const stockFlowDiagram = (
 const StockFlowDiagram = lazy(() => import("./analyses/stock_flow_diagram"));
 
 export const renderSql = (
-  options: AnalysisOptions,
+    options: AnalysisOptions,
 ): ModelAnalysisMeta<SQLDownloadConfig.DownloadConfig> => ({
-  ...options,
-  component: DownloadTextButton,
-  initialContent: SQLDownloadConfig.defaultDownloadConfig, 
-	// () => ({
-	// backend: "MySQL",
-	// filename
-  // }),
-	// SQLDownloadConfig.defaultDownloadConfig,
+    ...options,
+    component: DownloadTextButton,
+    initialContent: SQLDownloadConfig.defaultDownloadConfig,
+    // () => ({
+    // backend: "MySQL",
+    // filename
+    // }),
+    // SQLDownloadConfig.defaultDownloadConfig,
 });
 
 const DownloadTextButton = lazy(() => import("./analyses/sql"));
