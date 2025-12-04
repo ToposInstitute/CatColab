@@ -107,9 +107,18 @@ function DocumentsTreeNode(props: {
                 throw new Error("couldn't load child documents!");
             }
 
-            return await Promise.all(
+            const childDocs = await Promise.all(
                 results.content.map((childStub) => api.getLiveDoc(childStub.refId)),
             );
+
+            function isDocOwnerless(doc: LiveDocWithRef) {
+                return doc.docRef.permissions.anyone === "Own";
+            }
+
+            const isParentOwnerless = isDocOwnerless(props.doc);
+
+            // Don't show ownerless children under owned document
+            return childDocs.filter((childDoc) => isParentOwnerless || !isDocOwnerless(childDoc));
         },
     );
 
