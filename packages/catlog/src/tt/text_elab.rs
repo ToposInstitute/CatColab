@@ -8,7 +8,7 @@ use crate::{
 };
 use fnotation::*;
 use nonempty::nonempty;
-use scopeguard::{ScopeGuard, guard};
+use scopeguard::{guard, ScopeGuard};
 use std::fmt::Write;
 
 use tattle::declare_error;
@@ -220,7 +220,8 @@ impl TopElaborator {
     }
 }
 
-struct Elaborator<'a> {
+/// Elaborator
+pub struct Elaborator<'a> {
     theory: Theory,
     reporter: Reporter,
     toplevel: &'a Toplevel,
@@ -237,7 +238,8 @@ struct ElaboratorCheckpoint {
 declare_error!(ELAB_ERROR, "elab", "an error during elaboration");
 
 impl<'a> Elaborator<'a> {
-    fn new(theory: Theory, reporter: Reporter, toplevel: &'a Toplevel) -> Self {
+    /// Constructs a new elaborator
+    pub fn new(theory: Theory, reporter: Reporter, toplevel: &'a Toplevel) -> Self {
         Self {
             theory,
             reporter,
@@ -427,7 +429,7 @@ impl<'a> Elaborator<'a> {
         }
     }
 
-    fn ty(&mut self, n: &FNtn) -> (TyS, TyV) {
+    pub fn ty(&mut self, n: &FNtn) -> (TyS, TyV) {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
             Var(name) => elab.lookup_ty(name_seg(*name)),
