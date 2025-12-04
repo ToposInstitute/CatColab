@@ -6,14 +6,15 @@ use crate::{
 use crate::{dbl::model::*, one::FgCategory};
 use crate::{
     one::Path,
-    zero::{Namespace, name},
+    zero::{name, Namespace},
 };
 use itertools::Itertools;
 use sea_query::SchemaBuilder;
 use sea_query::{
-    ColumnDef, ForeignKey, ForeignKeyCreateStatement, Iden, MysqlQueryBuilder,
-    PostgresQueryBuilder, SqliteQueryBuilder, Table, TableCreateStatement, prepare::Write,
+    prepare::Write, ColumnDef, ForeignKey, ForeignKeyCreateStatement, Iden, MysqlQueryBuilder,
+    PostgresQueryBuilder, SqliteQueryBuilder, Table, TableCreateStatement,
 };
+use std::fmt;
 
 impl Namespace {
     fn label_name(self, name: QualifiedName) -> QualifiedLabel {
@@ -60,7 +61,10 @@ impl SQLAnalysis {
                 backend,
             })
         } else {
-            Err(String::from("!!!!"))
+            Err(format!(
+                "Backend {} is invalid. Pass `MySQL`, `SQLite`, or PostgresSQL` instead",
+                backend
+            ))
         }
     }
 
@@ -141,14 +145,20 @@ impl SQLAnalysis {
             .collect();
 
         // convert to string
-        let output = tables
+        let mut output: Vec<String> = tables
             .iter()
             .map(|table| match self.backend {
                 SqlBackend::MySql => table.to_string(MysqlQueryBuilder),
                 SqlBackend::Sqlite => table.to_string(SqliteQueryBuilder),
                 SqlBackend::Postgres => table.to_string(PostgresQueryBuilder),
             })
-            .join(";\n");
+            .collect();
+
+        // to ensure tests pass consistently. However, sea_query should probably allow multiple
+        // tables
+        output.sort();
+
+        let output = output.join(";\n") + ";";
 
         match self.backend {
             SqlBackend::Sqlite => ["PRAGMA foreign_keys = ON", &output].join(";\n\n"),
@@ -211,50 +221,81 @@ impl TryFrom<&str> for SqlBackend {
     }
 }
 
+impl fmt::Display for SqlBackend {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let string = match self {
+            SqlBackend::MySql => "MySQL",
+            SqlBackend::Sqlite => "SQLite",
+            SqlBackend::Postgres => "PostgresSQL",
+        };
+        write!(f, "{}", string)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use sea_query::MysqlQueryBuilder;
 
     use super::*;
-    use crate::dbl::model::*;
+    use crate::dbl::{model::*, theory::DiscreteDblTheory};
     use crate::stdlib::th_schema;
-    use crate::zero::{Namespace, name};
+    use crate::tt::{
+        batch::PARSE_CONFIG,
+        modelgen::generate,
+        text_elab::Elaborator,
+        toplevel::{std_theories, Theory, Toplevel},
+    };
+    use crate::validate::Validate;
+    use crate::zero::{name, Namespace};
     use std::rc::Rc;
+    use tattle::Reporter;
 
-    #[test]
-    fn sql() {
-        let mut model = DiscreteDblModel::new(Rc::new(th_schema()));
-        let (person, dog) = (name("Person"), name("Dog"));
-        model.add_ob(person.clone(), name("Entity"));
-        model.add_ob(dog.clone(), name("Entity"));
-        let mut obns = Namespace::new_for_text();
-        let mut morns = Namespace::new_for_text();
-        // obns.set_label(name("Person"), name("Person"));
+    impl DiscreteDblModel {
+        /// Make a model of the theory of schema from a string
+        fn parse(th_: Rc<DiscreteDblTheory>, s: &str) -> DiscreteDblModel {
+            let th = Theory::new("".into(), th_.clone());
 
-        // `Person --walks--> Dog` means that the Person table gains a new column called "walks" so we should look at the domains of ...
-        model.add_mor(name("walks"), person.clone(), dog.clone(), name("Entity").into());
+            let reporter = Reporter::new();
+            let toplevel = Toplevel::new(std_theories());
 
-        let moniker = name("Name");
-        model.add_ob(moniker.clone(), name("AttrType"));
-        // possibility for conflict
-        model.add_mor(name("person_name"), person.clone(), moniker.clone(), name("Attr").into());
-        model.add_mor(name("dog_name"), dog.clone(), moniker.clone(), name("Attr").into());
-
-        let raw_creates = vec![
-            r"CREATE TABLE IF NOT EXISTS `Dog` ( `id` int NOT NULL AUTO_INCREMENT PRIMARY KEY, `dog_name` text NOT NULL )",
-            r"CREATE TABLE IF NOT EXISTS `Person` ( `id` int NOT NULL AUTO_INCREMENT PRIMARY KEY, `walks` int NOT NULL, `person_name` text NOT NULL )",
-        ];
-
-        let raw_fks = vec![
-            r"ALTER TABLE `Person` ADD CONSTRAINT `FK_Person_Dog` FOREIGN KEY (`walks`) REFERENCES `Dog` (`id`)",
-        ];
-
-        let ddl = SQLAnalysis::new(obns, morns, "mysql").expect("!").render(&model);
-
-        // TODO Hash is nondeterministic
-        assert_eq!(ddl, [raw_creates.join(";\n"), raw_fks.join(";\n")].join(";\n"));
+            if let Some(model) = PARSE_CONFIG.with_parsed(s, reporter.clone(), |n| {
+                let mut elaborator = Elaborator::new(th.clone(), reporter.clone(), &toplevel);
+                let (_, ty_v) = elaborator.ty(n);
+                let (model, _) = generate(&toplevel, &th, &ty_v);
+                Some(model)
+            }) {
+                model
+            } else {
+                DiscreteDblModel::new(th_)
+            }
+        }
     }
 
     #[test]
-    fn sql_aswell() {}
+    fn sql() {
+        let mut model = DiscreteDblModel::parse(
+            Rc::new(th_schema()),
+            "[
+                Person : Entity,
+                Dog : Entity,
+                walks : (Id Entity)[Person, Dog],
+                Hair : AttrType,
+                has : (Attr)[Person, Hair],
+            ]",
+        );
+        // Since we are constructing the model from human-readable names and not UUIDs, we don't
+        // need to lookup the human-readable name from these namespaces. They're just to pass into
+        // the function.
+        let mut obns = Namespace::new_for_text();
+        let mut morns = Namespace::new_for_text();
+
+        let raw_creates = vec![
+            r"CREATE TABLE IF NOT EXISTS `Dog` ( `id` int NOT NULL AUTO_INCREMENT PRIMARY KEY )",
+            r"CREATE TABLE IF NOT EXISTS `Person` ( `id` int NOT NULL AUTO_INCREMENT PRIMARY KEY, `walks` int NOT NULL, `has` text NOT NULL, CONSTRAINT `FK_walks_Person_Dog` FOREIGN KEY (`walks`) REFERENCES `Dog` (`id`) )",
+        ];
+
+        let ddl = SQLAnalysis::new(obns, morns, "MySQL").expect("!").render(&model);
+
+        // TODO Hash is nondeterministic
+        assert_eq!(ddl, raw_creates.join(";\n") + ";");
+    }
 }
