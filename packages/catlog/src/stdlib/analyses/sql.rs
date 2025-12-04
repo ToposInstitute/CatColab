@@ -15,6 +15,7 @@ use sea_query::{
     PostgresQueryBuilder, SqliteQueryBuilder, Table, TableCreateStatement,
 };
 use std::{collections::HashMap, default::Default};
+use web_sys::console;
 
 impl Namespace {
     fn label_name(self, name: QualifiedName) -> QualifiedLabel {
@@ -65,6 +66,10 @@ impl SQLAnalysis {
     }
 
     pub fn render(&self, model: &DiscreteDblModel) -> String {
+        console::log_1(&format!("{:#?}", model).into());
+        console::log_1(&format!("{:#?}", self.obns).into());
+        console::log_1(&format!("{:#?}", self.morns).into());
+
         // hashmap of sources and their targets
         let mut morphisms = model
             .mor_generators()
@@ -93,7 +98,34 @@ impl SQLAnalysis {
                         if model.mor_generator_type(mor) == Path::Id(name("Entity")) {
                             acc.col(ColumnDef::new(mor_name.clone()).integer().not_null())
                         } else {
-                            acc.col(ColumnDef::new(mor_name.clone()).text().not_null())
+                            let tgt_name = self
+                                .obns
+                                .clone()
+                                .label_name(model.get_cod(mor).unwrap_or(&name("")).clone());
+                            match format!("{}", tgt_name).as_str() {
+                                "Int" => {
+                                    acc.col(ColumnDef::new(mor_name.clone()).text().not_null())
+                                }
+                                "TinyInt" => acc.col(
+                                    ColumnDef::new(mor_name.clone()).tiny_integer().not_null(),
+                                ),
+                                "Float" => {
+                                    acc.col(ColumnDef::new(mor_name.clone()).float().not_null())
+                                }
+                                "Time" => {
+                                    acc.col(ColumnDef::new(mor_name.clone()).timestamp().not_null())
+                                }
+                                "Bool" => {
+                                    acc.col(ColumnDef::new(mor_name.clone()).boolean().not_null())
+                                }
+                                "Date" => {
+                                    acc.col(ColumnDef::new(mor_name.clone()).date().not_null())
+                                }
+                                "DateTime" => {
+                                    acc.col(ColumnDef::new(mor_name.clone()).date_time().not_null())
+                                }
+                                _ => acc.col(ColumnDef::new(mor_name.clone()).text().not_null()),
+                            }
                         }
                     },
                 );
