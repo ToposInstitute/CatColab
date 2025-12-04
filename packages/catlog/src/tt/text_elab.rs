@@ -220,7 +220,8 @@ impl TopElaborator {
     }
 }
 
-struct Elaborator<'a> {
+/// Elaborator
+pub struct Elaborator<'a> {
     theory: Theory,
     reporter: Reporter,
     toplevel: &'a Toplevel,
@@ -236,7 +237,8 @@ struct ElaboratorCheckpoint {
 declare_error!(ELAB_ERROR, "elab", "an error during elaboration");
 
 impl<'a> Elaborator<'a> {
-    fn new(theory: Theory, reporter: Reporter, toplevel: &'a Toplevel) -> Self {
+    /// Create a new elaborator
+    pub fn new(theory: Theory, reporter: Reporter, toplevel: &'a Toplevel) -> Self {
         Self {
             theory,
             reporter,
@@ -388,7 +390,8 @@ impl<'a> Elaborator<'a> {
         }
     }
 
-    fn ty(&mut self, n: &FNtn) -> Option<(TyS, TyV)> {
+    /// DOCSTRING
+    pub fn ty(&mut self, n: &FNtn) -> Option<(TyS, TyV)> {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
             Var(name) => elab.lookup_ty(name_seg(*name)),

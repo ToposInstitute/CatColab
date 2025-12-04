@@ -16,7 +16,8 @@ use tattle::{Reporter, declare_error};
 use text_elab::*;
 use toplevel::*;
 
-const PARSE_CONFIG: ParseConfig = ParseConfig::new(
+/// Parser configuration
+pub const PARSE_CONFIG: ParseConfig = ParseConfig::new(
     &[
         (":", Prec::nonassoc(20)),
         (":=", Prec::nonassoc(10)),

@@ -345,16 +345,39 @@ impl<'a> InstanceMorphism<'a> {
 mod tests {
     use super::*;
 
-    use std::rc::Rc;
-
     use crate::dbl::discrete::model::DiscreteDblModel;
     use crate::dbl::discrete::model_morphism::DiscreteDblModelMapping;
-    use crate::dbl::model::MutDblModel;
     use crate::one::{Path, PathEq};
+    use crate::tt::{
+        batch::PARSE_CONFIG,
+        modelgen::generate,
+        text_elab::Elaborator,
+        toplevel::{Theory, Toplevel, std_theories},
+    };
     use crate::validate::Validate;
+    use std::rc::Rc;
+    use tattle::Reporter;
 
     use crate::stdlib::*;
     use crate::zero::name;
+
+    /// Make a model of the trivial double theory from a string
+    fn mk_model(s: &str) -> DiscreteDblModel {
+        let th_ = Rc::new(th_category());
+        let th = Theory::new("".into(), th_.clone());
+
+        let reporter = Reporter::new();
+        let toplevel = Toplevel::new(std_theories());
+
+        PARSE_CONFIG
+            .with_parsed(s, reporter.clone(), |n| {
+                let mut elaborator = Elaborator::new(th.clone(), reporter.clone(), &toplevel);
+                let (_, ty_v) = elaborator.ty(n)?;
+                let (model, _) = generate(&toplevel, &th, &ty_v);
+                Some(model)
+            })
+            .unwrap()
+    }
 
     // First we define two diagrams D and D' in the following category, C,
     // which consists in their (disjoint) images, plus two morphisms
@@ -378,67 +401,57 @@ mod tests {
         DblModelDiagram<DiscreteDblModelMapping, DiscreteDblModel>,
         DblModelDiagram<DiscreteDblModelMapping, DiscreteDblModel>,
     ) {
-        let th = Rc::new(th_category());
-        let o = name("Object");
-        let i: Path<QualifiedName, QualifiedName> = Path::empty(o.clone());
-        let mut c = DiscreteDblModel::new(th.clone());
-        c.add_ob(name("00"), o.clone());
-        c.add_ob(name("02"), o.clone());
-        c.add_ob(name("10"), o.clone());
-        c.add_ob(name("11"), o.clone());
-        c.add_ob(name("12"), o.clone());
+        let mut c = mk_model(
+            "[
+            o00 : Object, o02 : Object, o10: Object, o11: Object, o12: Object,
+            m02_00 : (Id Object)[o02, o00], m10_00 : (Id Object)[o10, o00],
+            m11_00 : (Id Object)[o11, o00], m10_11 : (Id Object)[o10, o11],
+            m12_11 : (Id Object)[o12, o11], m12_02 : (Id Object)[o12, o02]
+        ]",
+        );
 
-        c.add_mor(name("02_00"), name("02"), name("00"), i.clone());
-        c.add_mor(name("10_00"), name("10"), name("00"), i.clone());
-        c.add_mor(name("11_00"), name("11"), name("00"), i.clone());
-        c.add_mor(name("10_11"), name("10"), name("11"), i.clone());
-        c.add_mor(name("12_11"), name("12"), name("11"), i.clone());
-        c.add_mor(name("12_02"), name("12"), name("02"), i.clone());
-
-        c.add_equation(PathEq::new(name("10_00").into(), Path::pair(name("10_11"), name("11_00"))));
+        c.add_equation(PathEq::new(
+            name("m10_00").into(),
+            Path::pair(name("m10_11"), name("m11_00")),
+        ));
         if commutes {
             c.add_equation(PathEq::new(
-                Path::pair(name("12_02"), name("02_00")),
-                Path::pair(name("12_11"), name("11_00")),
-            ));
-
-            assert!(c.morphisms_are_equal(
-                Path::pair(name("12_02"), name("02_00")),
-                Path::pair(name("12_11"), name("11_00"))
+                Path::pair(name("m12_02"), name("m02_00")),
+                Path::pair(name("m12_11"), name("m11_00")),
             ));
         }
-
         assert!(!c.is_free());
         assert!(c.validate().is_ok());
 
         // J presents an instance on C with one 02 and one 00.
-        let mut j = DiscreteDblModel::new(th.clone());
-        j.add_ob(name("j00"), o.clone());
-        j.add_ob(name("j02"), o.clone());
-        j.add_mor(name("j02_00"), name("j02"), name("j00"), i.clone());
+        let j = mk_model(
+            "[
+            j00 : Object, j02 : Object, j02_00 : (Id Object)[j02, j00]
+        ]",
+        );
 
         let mut dm: DiscreteDblModelMapping = Default::default();
-        dm.assign_ob(name("j00"), name("00"));
-        dm.assign_ob(name("j02"), name("02"));
-        dm.assign_mor(name("j02_00"), name("02_00").into());
+        dm.assign_ob(name("j00"), name("o00"));
+        dm.assign_ob(name("j02"), name("o02"));
+        dm.assign_mor(name("j02_00"), name("m02_00").into());
         let d = DblModelDiagram(dm, j);
 
         assert!(d.validate_in(&c).is_ok());
 
         // J' presents the terminal instance on C
-        let mut j_ = DiscreteDblModel::new(th.clone());
-        j_.add_ob(name("j'10"), o.clone().into());
-        j_.add_ob(name("j'11"), o.clone().into());
-        j_.add_ob(name("j'12"), o.clone().into());
-        j_.add_mor(name("j'10_11"), name("j'10"), name("j'11"), i.clone());
-        j_.add_mor(name("j'12_11"), name("j'12"), name("j'11"), i.clone());
+        let j_ = mk_model(
+            "[
+            j_10 : Object, j_11 : Object, j_12: Object, 
+            j_10_11 : (Id Object)[j_10, j_11], j_12_11 : (Id Object)[j_12, j_11]
+        ]",
+        );
 
         let mut dm_: DiscreteDblModelMapping = Default::default();
-        dm_.assign_ob(name("j'10"), name("10"));
-        dm_.assign_ob(name("j'11"), name("11"));
-        dm_.assign_ob(name("j'12"), name("12"));
-        dm_.assign_mor(name("j'10_11"), name("10_11").into());
-        dm_.assign_mor(name("j'12_11"), name("12_11").into());
+        dm_.assign_ob(name("j_10"), name("o10"));
+        dm_.assign_ob(name("j_11"), name("o11"));
+        dm_.assign_ob(name("j_12"), name("o12"));
+        dm_.assign_mor(name("j_10_11"), name("m10_11").into());
+        dm_.assign_mor(name("j_12_11"), name("m12_11").into());
         let d_ = DblModelDiagram(dm_, j_);
 
         assert!(d_.validate_in(&c).is_ok());
@@ -452,8 +465,8 @@ mod tests {
         assert!(d.zigzag(
             name("j02"),
             name("j00"),
-            name("02_00").into(),
-            QualifiedPath::empty(name("00")),
+            name("m02_00").into(),
+            QualifiedPath::empty(name("o00")),
             &c,
             None
         ));
@@ -461,17 +474,17 @@ mod tests {
         assert!(d.zigzag(
             name("j00"),
             name("j02"),
-            QualifiedPath::empty(name("00")),
-            name("02_00").into(),
+            QualifiedPath::empty(name("o00")),
+            name("m02_00").into(),
             &c,
             None
         ));
 
         assert!(d_.zigzag(
-            name("j'12"),
-            name("j'10"),
-            QualifiedPath::pair(name("12_02"), name("02_00")),
-            name("10_00").into(),
+            name("j_12"),
+            name("j_10"),
+            QualifiedPath::pair(name("m12_02"), name("m02_00")),
+            name("m10_00").into(),
             &c,
             None
         ));
@@ -479,10 +492,10 @@ mod tests {
         // If one square of does not commute - there is no zig zag anymore.
         let (c, _, d_) = create_two_diagrams(false);
         assert!(!d_.zigzag(
-            name("j'12"),
-            name("j'10"),
-            QualifiedPath::pair(name("12_02"), name("02_00")),
-            name("10_00").into(),
+            name("j_12"),
+            name("j_10"),
+            QualifiedPath::pair(name("m12_02"), name("m02_00")),
+            name("m10_00").into(),
             &c,
             None
         ));
@@ -494,8 +507,8 @@ mod tests {
 
         let m: HashColumn<QualifiedName, (QualifiedName, QualifiedPath)> = HashColumn::new(
             [
-                (name("j02"), (name("j'12"), Path::single(name("12_02")))),
-                (name("j00"), (name("j'10"), Path::single(name("10_00")))),
+                (name("j02"), (name("j_12"), Path::single(name("m12_02")))),
+                (name("j00"), (name("j_10"), Path::single(name("m10_00")))),
             ]
             .into(),
         );
@@ -507,8 +520,8 @@ mod tests {
 
         let m: HashColumn<QualifiedName, (QualifiedName, QualifiedPath)> = HashColumn::new(
             [
-                (name("j02"), (name("j'12"), Path::single(name("12_02")))),
-                (name("j00"), (name("j'10"), Path::single(name("10_00")))),
+                (name("j02"), (name("j_12"), Path::single(name("m12_02")))),
+                (name("j00"), (name("j_10"), Path::single(name("m10_00")))),
             ]
             .into(),
         );
@@ -524,15 +537,15 @@ mod tests {
         // -----------------------
         // Missing a component
         let m: HashColumn<QualifiedName, (QualifiedName, QualifiedPath)> =
-            HashColumn::new([(name("j02"), (name("j'12"), Path::single(name("12_02"))))].into());
+            HashColumn::new([(name("j02"), (name("j_12"), Path::single(name("m12_02"))))].into());
         let im = InstanceMorphism(&m, &d, &d_);
         assert!(im.validate_in(&c).is_err());
 
         // Unnatural (bad target)
         let m: HashColumn<QualifiedName, (QualifiedName, QualifiedPath)> = HashColumn::new(
             [
-                (name("j02"), (name("j'12"), Path::single(name("12_11")))),
-                (name("j00"), (name("j'10"), Path::single(name("10_00")))),
+                (name("j02"), (name("j_12"), Path::single(name("m12_11")))),
+                (name("j00"), (name("j_10"), Path::single(name("m10_00")))),
             ]
             .into(),
         );
@@ -542,8 +555,8 @@ mod tests {
         // Unnatural (bad src)
         let m: HashColumn<QualifiedName, (QualifiedName, QualifiedPath)> = HashColumn::new(
             [
-                (name("j02"), (name("j'12"), Path::single(name("12_11")))),
-                (name("j00"), (name("j'10"), Path::single(name("11_00")))),
+                (name("j02"), (name("j_12"), Path::single(name("m12_11")))),
+                (name("j00"), (name("j_10"), Path::single(name("m11_00")))),
             ]
             .into(),
         );
@@ -556,8 +569,8 @@ mod tests {
 
         let m: HashColumn<QualifiedName, (QualifiedName, QualifiedPath)> = HashColumn::new(
             [
-                (name("j02"), (name("j'12"), Path::single(name("12_02")))),
-                (name("j00"), (name("j'10"), Path::single(name("10_00")))),
+                (name("j02"), (name("j_12"), Path::single(name("m12_02")))),
+                (name("j00"), (name("j_10"), Path::single(name("m10_00")))),
             ]
             .into(),
         );
@@ -566,8 +579,8 @@ mod tests {
 
         let m2: HashColumn<QualifiedName, (QualifiedName, QualifiedPath)> = HashColumn::new(
             [
-                (name("j02"), (name("j'12"), Path::single(name("12_02")))),
-                (name("j00"), (name("j'12"), Path::pair(name("12_11"), name("11_00")))),
+                (name("j02"), (name("j_12"), Path::single(name("m12_02")))),
+                (name("j00"), (name("j_12"), Path::pair(name("m12_11"), name("m11_00")))),
             ]
             .into(),
         );
