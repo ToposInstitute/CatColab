@@ -1,15 +1,15 @@
 // import type { JSX } from "solid-js";
 import { ThSchema } from "catlog-wasm";
 import download from "js-file-download";
-import { createSignal, Show } from "solid-js";
+import { Show, createSignal } from "solid-js";
 
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
 
 import type { ModelAnalysisProps } from "../../analysis";
 import { IconButton } from "../../components";
 
-import Download from "lucide-solid/icons/download";
 import CircleHelp from "lucide-solid/icons/circle-help";
+import Download from "lucide-solid/icons/download";
 
 export const MenuItem = DropdownMenu.Item;
 export const MenuItemLabel = DropdownMenu.ItemLabel;
@@ -37,7 +37,9 @@ export default function DownloadTextButton(props: ModelAnalysisProps<DownloadCon
     const tooltip = () => (
         <>
             <p>
-                {"The following attribute types are parsed as SQL types. Any others are parsed as text."}
+                {
+                    "The following attribute types are parsed as SQL types. Any others are parsed as text."
+                }
             </p>
             <ul>
                 <li>{"Int"}</li>
@@ -83,7 +85,7 @@ export default function DownloadTextButton(props: ModelAnalysisProps<DownloadCon
                                 <Download size={16} />
                             </IconButton>
                             <IconButton tooltip={tooltip()}>
-                                <CircleHelp size={16}/>
+                                <CircleHelp size={16} />
                             </IconButton>
                         </div>
                         <pre style="white-space: pre-wrap;">{sql()}</pre>
