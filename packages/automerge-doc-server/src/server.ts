@@ -168,6 +168,14 @@ export class AutomergeServer implements SocketIOHandlers {
     }
 
     async exportDoc(docId: string): Promise<ExportDocSocketResponse> {
+        // repo.find ensures that the doc handle is available when repo.export is called below. This
+        // prevents the "DocHandle is not ready" error when exporting read-only documents that were
+        // not previously listened/connected to.
+        const handle = await this.repo.find(docId as DocumentId);
+        if (!handle) {
+            return { Err: `Failed to find doc handle in repo for doc_id '${docId}'` };
+        }
+
         const binaryData = await this.repo.export(docId as DocumentId);
         if (!binaryData) {
             return { Err: `Failed to find document in repo with ID '${docId}'` };
