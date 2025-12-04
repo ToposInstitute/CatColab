@@ -7,14 +7,14 @@
 
   \p{We motivated the concept of a [monoidal promonad](dct-000G) by
   reconstructing the concept of a [Markov category](dct-000I), starting from the
-  category of deterministic maps. But that does not account for an important
-  distinction: the category of deterministic maps is not just a monoidal
-  category but a \em{cartesian} monoidal category, whereas the promonad of
-  stochastic maps, while it inherits copying and deleting maps, is not cartesian
-  but only a \nlab{semicartesian monoidal category}. This motivates a further
-  generalization of (generalized) monoidal promonads, where the two generalized
-  monoidal products are with respect to different monads, related by a monad
-  morphism. We call this structure a \em{relative monoidal promonad}
+  category of deterministic maps. But a monoidal promonad does not account for
+  an important distinction: the category of deterministic maps is not just a
+  monoidal category but a \em{cartesian} monoidal category, whereas the promonad
+  of stochastic maps, while it inherits copying and deleting maps, is not
+  cartesian but only a \nlab{semicartesian monoidal category}. This motivates a
+  further generalization of (generalized) monoidal promonads, where the two
+  generalized monoidal products are with respect to different monads, related by
+  a monad morphism. We call this structure a \em{relative monoidal promonad}
   (nonstandard terminology).}
 
 }

@@ -16,10 +16,10 @@
   }
   \p{
 
-  Thus, a category of partial maps consists of a cartesian monoidal category,
-  whose morphisms are called \strong{total}, over which there is a relevance
-  monoidal promonad (in the sense of a \nlab{relevance monoidal category}),
-  whose morphisms are called \strong{partial}.
+  Thus, a category of partial maps consists of a [cartesian monoidal
+  category](dct-000M), whose morphisms are called \strong{total}, over which
+  there is a relevance monoidal promonad (in the sense of a \nlab{relevance
+  monoidal category}), whose morphisms are called \strong{partial}.
   
   }
 }

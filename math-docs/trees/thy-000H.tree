@@ -169,7 +169,7 @@ subject to the axioms:
   \li{\em{Unitality}:
   \centerfigs{
   \quiverinline{
-  % https://q.uiver.app/#q=WzAsNyxbMiwwLCJ4Il0sWzIsMSwiVHgiXSxbMiwyLCJ4Il0sWzEsMCwieCJdLFsxLDIsIngiXSxbMCwwLCJ4Il0sWzAsMiwieCJdLFswLDEsIlxcZXRhX3giLDJdLFsxLDIsIlxcb3RpbWVzIiwyXSxbMywwLCIiLDEseyJsZXZlbCI6Miwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMyw0LCIiLDEseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs0LDIsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs1LDYsIiIsMCx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzYsNCwicCIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFs1LDMsInAiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbOSwxMSwiXFxpb3RhIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzE0LDEzLCIxX3AiLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
+  % https://q.uiver.app/#q=WzAsNyxbMiwwLCJ4Il0sWzIsMSwiVHgiXSxbMiwyLCJ4Il0sWzEsMCwieCJdLFsxLDIsIngiXSxbMCwwLCJ4Il0sWzAsMiwieCJdLFswLDEsIlxcZXRhX3giXSxbMSwyLCJcXG90aW1lcyJdLFszLDAsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFszLDQsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzQsMiwiIiwxLHsibGV2ZWwiOjIsInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzUsNiwiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNiw0LCJwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzUsMywicCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFs5LDExLCJcXGlvdGEiLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMTQsMTMsIjFfcCIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dXQ==
   \begin{tikzcd}
 	x & x & x \\
 	&& Tx \\
@@ -178,8 +178,8 @@ subject to the axioms:
 	\arrow[equals, from=1-1, to=3-1]
 	\arrow[""{name=1, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=1-2, to=1-3]
 	\arrow[equals, from=1-2, to=3-2]
-	\arrow["{\eta_x}"', from=1-3, to=2-3]
-	\arrow["\otimes"', from=2-3, to=3-3]
+	\arrow["{\eta_x}", from=1-3, to=2-3]
+	\arrow["\otimes", from=2-3, to=3-3]
 	\arrow[""{name=2, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-2]
 	\arrow[""{name=3, anchor=center, inner sep=0}, "\shortmid"{marking}, equals, from=3-2, to=3-3]
 	\arrow["{1_p}"{description}, draw=none, from=0, to=2]
