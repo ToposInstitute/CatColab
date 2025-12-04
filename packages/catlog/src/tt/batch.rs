@@ -12,11 +12,12 @@ use fnotation::parser::Prec;
 use fnotation::{FNtnTop, ParseConfig};
 use scopeguard::guard;
 use tattle::display::SourceInfo;
-use tattle::{Reporter, declare_error};
+use tattle::{declare_error, Reporter};
 use text_elab::*;
 use toplevel::*;
 
-const PARSE_CONFIG: ParseConfig = ParseConfig::new(
+/// Constant specifying operator precedence
+pub const PARSE_CONFIG: ParseConfig = ParseConfig::new(
     &[
         (":", Prec::nonassoc(20)),
         (":=", Prec::nonassoc(10)),
