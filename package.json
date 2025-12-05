@@ -18,7 +18,7 @@
     },
     "homepage": "https://next.catcolab.org",
     "devDependencies": {
-        "@biomejs/biome": "^2.3.6",
+        "@biomejs/biome": "^2.3.7",
         "depcheck": "^1.4.7",
         "tsx": "^4.16.5",
         "typedoc": "^0.26.5"
