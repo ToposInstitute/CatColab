@@ -8,7 +8,7 @@ use crate::{
 };
 use fnotation::*;
 use nonempty::nonempty;
-use scopeguard::{guard, ScopeGuard};
+use scopeguard::{ScopeGuard, guard};
 use std::fmt::Write;
 
 use tattle::declare_error;
@@ -429,8 +429,8 @@ impl<'a> Elaborator<'a> {
         }
     }
 
-    /// ty
-    pub fn ty(&mut self, n: &FNtn) -> Option<(TyS, TyV)> {
+    /// Ty
+    pub fn ty(&mut self, n: &FNtn) -> (TyS, TyV) {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
             Var(name) => elab.lookup_ty(name_seg(*name)),

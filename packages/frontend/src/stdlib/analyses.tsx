@@ -255,11 +255,6 @@ export const renderSql = (
     ...options,
     component: DownloadTextButton,
     initialContent: SQLDownloadConfig.defaultDownloadConfig,
-    // () => ({
-    // backend: "MySQL",
-    // filename
-    // }),
-    // SQLDownloadConfig.defaultDownloadConfig,
 });
 
 const DownloadTextButton = lazy(() => import("./analyses/sql"));
