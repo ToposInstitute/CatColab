@@ -12,7 +12,7 @@ use fnotation::parser::Prec;
 use fnotation::{FNtnTop, ParseConfig};
 use scopeguard::guard;
 use tattle::display::SourceInfo;
-use tattle::{declare_error, Reporter};
+use tattle::{Reporter, declare_error};
 use text_elab::*;
 use toplevel::*;
 
