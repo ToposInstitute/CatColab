@@ -43,6 +43,12 @@ with lib;
   options.catcolab = {
     enable = lib.mkEnableOption "Catcolab services";
 
+    enableCaddy = mkOption {
+      type = types.bool;
+      default = true;
+      description = "Enable Caddy reverse proxy for the backend and automerge services.";
+    };
+
     backend = {
       port = mkOption {
         type = types.port;
@@ -90,7 +96,7 @@ with lib;
       groups.catcolab = { };
     };
 
-    networking.firewall.allowedTCPPorts = [
+    networking.firewall.allowedTCPPorts = lib.mkIf cfg.enableCaddy [
       80
       443
     ];
@@ -135,7 +141,7 @@ with lib;
 
       serviceConfig = {
         User = "catcolab";
-        Type = "notify";
+        Type = "simple";
         Restart = "on-failure";
         ExecStart = lib.getExe backendPkg;
         EnvironmentFile = cfg.environmentFile;
@@ -145,6 +151,17 @@ with lib;
     systemd.services.automerge = {
       enable = true;
       wantedBy = [ "multi-user.target" ];
+
+      after = [
+        "database-setup.service"
+        "network-online.target"
+        "backend.service"
+      ];
+
+      wants = [
+        "database-setup.service"
+        "network-online.target"
+      ];
 
       environment = {
         PORT = automergePortStr;
@@ -159,7 +176,7 @@ with lib;
       };
     };
 
-    services.caddy = {
+    services.caddy = lib.mkIf cfg.enableCaddy {
       enable = true;
       virtualHosts = {
         "${cfg.backend.hostname}" = {

@@ -3,7 +3,7 @@ import { createMemo, createResource, For, Show, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { DocumentTypeIcon } from "catcolab-ui-components";
-import type { Link } from "catlog-wasm";
+import type { Document, Link } from "catlog-wasm";
 import { type Api, type LiveDocWithRef, useApi } from "../api";
 import { TheoryLibraryContext } from "../theory";
 import { DocumentMenu } from "./document_menu";
@@ -29,20 +29,30 @@ export function DocumentSidebar(props: {
 }
 
 async function getLiveDocRoot(doc: LiveDocWithRef, api: Api): Promise<LiveDocWithRef> {
-    let parentLink: Link;
-    switch (doc.liveDoc.doc.type) {
+    const parentDoc = await getDocParent(doc.liveDoc.doc, api);
+    if (!parentDoc) {
+        return doc;
+    }
+    return getLiveDocRoot(parentDoc, api);
+}
+
+async function getDocParent(doc: Document, api: Api): Promise<LiveDocWithRef | undefined> {
+    let parentLink: Link | undefined;
+    switch (doc.type) {
         case "diagram":
-            parentLink = doc.liveDoc.doc.diagramIn;
+            parentLink = doc.diagramIn;
             break;
         case "analysis":
-            parentLink = doc.liveDoc.doc.analysisOf;
+            parentLink = doc.analysisOf;
             break;
         default:
-            return doc;
+            break;
     }
-
+    if (!parentLink) {
+        return;
+    }
     const parentDoc = await api.getLiveDoc(parentLink._id);
-    return getLiveDocRoot(parentDoc, api);
+    return parentDoc;
 }
 
 function RelatedDocuments(props: {
@@ -98,9 +108,18 @@ function DocumentsTreeNode(props: {
                 throw new Error("couldn't load child documents!");
             }
 
-            return await Promise.all(
+            const childDocs = await Promise.all(
                 results.content.map((childStub) => api.getLiveDoc(childStub.refId)),
             );
+
+            function isDocOwnerless(doc: LiveDocWithRef) {
+                return doc.docRef.permissions.anyone === "Own";
+            }
+
+            const isParentOwnerless = isDocOwnerless(props.doc);
+
+            // Don't show ownerless children under owned document
+            return childDocs.filter((childDoc) => isParentOwnerless || !isDocOwnerless(childDoc));
         },
     );
 
@@ -142,6 +161,8 @@ function DocumentsTreeLeaf(props: {
 }) {
     const navigate = useNavigate();
     const theories = useContext(TheoryLibraryContext);
+    const api = useApi();
+
     const clickedRefId = createMemo(() => props.doc.docRef.refId);
     const primaryRefId = createMemo(() => props.primaryDoc.docRef.refId);
     const secondaryRefId = createMemo(() => props.secondaryDoc?.docRef.refId);
@@ -160,13 +181,19 @@ function DocumentsTreeLeaf(props: {
         return undefined;
     });
 
-    const handleClick = () => {
+    const handleClick = async () => {
         // If clicking on primary or secondary doc, navigate to just that doc
         if (clickedRefId() === primaryRefId() || clickedRefId() === secondaryRefId()) {
             navigate(`/${createLinkPart(props.doc)}`);
         } else {
-            // Otherwise, open it as a side panel
-            navigate(`/${createLinkPart(props.primaryDoc)}/${createLinkPart(props.doc)}`);
+            // Otherwise, open it as a side panel or put on the left if it is a parent doc
+            const clickedDoc = props.doc;
+            const parentOfPrimary = await getDocParent(props.primaryDoc.liveDoc.doc, api);
+            if (parentOfPrimary && clickedDoc.docRef.refId === parentOfPrimary.docRef.refId) {
+                navigate(`/${createLinkPart(clickedDoc)}/${createLinkPart(props.primaryDoc)}`);
+            } else {
+                navigate(`/${createLinkPart(props.primaryDoc)}/${createLinkPart(clickedDoc)}`);
+            }
         }
     };
 

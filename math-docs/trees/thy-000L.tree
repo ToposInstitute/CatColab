@@ -1,0 +1,43 @@
+\title{Diamond-graded monoidal categories}
+\taxon{theory}
+\import{macros}
+
+\p{
+
+The \define{theory of diamond-graded (generalized) monoidal categories} is the
+modal double theory that combines the [theory of categories graded](thy-000K) by
+the monoidal poset whose Hasse diagram is the diamond
+
+\quiver{
+% https://q.uiver.app/#q=WzAsNCxbMSwyLCIoMCwwKSJdLFswLDEsIigxLDApIl0sWzIsMSwiKDAsMSkiXSxbMSwwLCIoMSwxKSJdLFswLDFdLFswLDJdLFsxLDNdLFsyLDNdXQ==
+\begin{tikzcd}[sep=small]
+	& {(1,1)} \\
+	{(1,0)} && {(0,1)} \\
+	& {(0,0)}
+	\arrow[from=2-1, to=1-2]
+	\arrow[from=2-3, to=1-2]
+	\arrow[from=3-2, to=2-1]
+	\arrow[from=3-2, to=2-3]
+\end{tikzcd}
+}
+
+and monoidal product is the join with the analogue of the [theory of relative
+monoidal promonads](thy-000H) that makes sense for the mode theory that is a
+commutative square
+
+\quiver{
+% https://q.uiver.app/#q=WzAsNCxbMSwyLCJUPVRfeygwLDApfSJdLFswLDEsIlRfeygxLDApfSJdLFsxLDAsIlRfeygxLDEpfSJdLFsyLDEsIlRfeygwLDEpfSJdLFsxLDAsIiIsMCx7ImxldmVsIjoyfV0sWzMsMCwiIiwyLHsibGV2ZWwiOjJ9XSxbMiwxLCIiLDAseyJsZXZlbCI6Mn1dLFsyLDMsIiIsMix7ImxldmVsIjoyfV1d
+\begin{tikzcd}[sep=small]
+	& {T_{(1,1)}} \\
+	{T_{(1,0)}} && {T_{(0,1)}} \\
+	& {T=T_{(0,0)}}
+	\arrow[Rightarrow, from=1-2, to=2-1]
+	\arrow[Rightarrow, from=1-2, to=2-3]
+	\arrow[Rightarrow, from=2-1, to=3-2]
+	\arrow[Rightarrow, from=2-3, to=3-2]
+\end{tikzcd}
+}
+
+of monads and monad morphisms.
+
+}
