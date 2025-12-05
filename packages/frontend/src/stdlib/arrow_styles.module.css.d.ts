@@ -12,5 +12,6 @@ declare const styles: {
     readonly plus: string;
     readonly plusCaesura: string;
     readonly scalar: string;
+    readonly unmarked: string;
 };
 export = styles;

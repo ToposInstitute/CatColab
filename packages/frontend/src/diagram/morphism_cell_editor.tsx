@@ -2,21 +2,19 @@ import { createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 import { v7 } from "uuid";
 
+import type { DiagramMorDecl } from "catlog-wasm";
 import { BasicMorInput } from "../model/morphism_input";
 import type { CellActions } from "../notebook";
+import arrowStyles from "../stdlib/arrow_styles.module.css";
 import type { Theory } from "../theory";
 import { LiveDiagramContext } from "./context";
 import { BasicObInput } from "./object_input";
-import type { DiagramMorphismDecl } from "./types";
-
-import arrowStyles from "../stdlib/arrow_styles.module.css";
 import "./morphism_cell_editor.css";
 
-/** Editor for a morphism declaration cell in a diagram in a model.
- */
+/** Editor for a morphism declaration cell in a diagram in a model. */
 export function DiagramMorphismCellEditor(props: {
-    decl: DiagramMorphismDecl;
-    modifyDecl: (f: (decl: DiagramMorphismDecl) => void) => void;
+    decl: DiagramMorDecl;
+    modifyDecl: (f: (decl: DiagramMorDecl) => void) => void;
     isActive: boolean;
     actions: CellActions;
     theory: Theory;

@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 async-trait = "0.1.88"
 axum = "0.7.7"
+base64 = "0.22"
 chrono = { version = "0.4.40", features = ["serde"] }
 clap = "4.5.44"
 dotenvy = "0.15.7"

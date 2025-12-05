@@ -138,3 +138,13 @@ pub const KockGraphs: () = ();
 ///
 /// - [DOI:10.1007/978-3-319-10575-8](https://doi.org/10.1007/978-3-319-10575-8)
 pub const HandbookModelChecking: () = ();
+
+/// Reference: Impact of topology on nonlinear dynamical network stability.
+///
+///
+/// J. Nitzbon et al, 2017: Deciphering the imprint of topology on nonlinear
+/// dynamical network stability.
+///
+/// - [DOI:10.1088/1367-2630/aa6321](https://doi.org/10.1088/1367-2630/aa6321)
+/// - [arXiv:1612.03654](https://arxiv.org/abs/1612.03654)
+pub const NitzbonNetworkStability: () = ();

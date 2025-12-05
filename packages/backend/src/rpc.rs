@@ -22,6 +22,7 @@ pub fn router() -> Router<AppState> {
         .handler(head_snapshot)
         .handler(create_snapshot)
         .handler(delete_ref)
+        .handler(restore_ref)
         .handler(get_permissions)
         .handler(set_permissions)
         .handler(validate_session)
@@ -41,40 +42,42 @@ async fn new_ref(ctx: AppCtx, content: Value) -> RpcResult<Uuid> {
 
 #[handler(query)]
 async fn get_doc(ctx: AppCtx, ref_id: Uuid) -> RpcResult<RefDoc> {
-    _get_doc(ctx, ref_id).await.into()
-}
-async fn _get_doc(ctx: AppCtx, ref_id: Uuid) -> Result<RefDoc, AppError> {
-    let permissions = auth::permissions(&ctx, ref_id).await?;
-    let max_level = permissions.max_level();
-    let deleted_at = doc::ref_deleted_at(ctx.state.clone(), ref_id).await?;
-    let is_deleted = deleted_at.is_some();
+    async {
+        let permissions = auth::permissions(&ctx, ref_id).await?;
+        let max_level = permissions.max_level();
+        let deleted_at = doc::ref_deleted_at(ctx.state.clone(), ref_id).await?;
+        let is_deleted = deleted_at.is_some();
 
-    if max_level >= Some(PermissionLevel::Write) {
-        let doc_id = doc::doc_id(ctx.state, ref_id).await?;
-        Ok(RefDoc::Live {
-            doc_id,
-            is_deleted,
-            permissions,
-        })
-    } else if max_level >= Some(PermissionLevel::Read) {
-        let content = doc::head_snapshot(ctx.state, ref_id).await?;
-        Ok(RefDoc::Readonly {
-            content,
-            is_deleted,
-            permissions,
-        })
-    } else {
-        Err(AppError::Forbidden(ref_id))
+        if max_level >= Some(PermissionLevel::Write) {
+            let doc_id = doc::doc_id(ctx.state, ref_id).await?;
+            Ok(RefDoc::Live {
+                doc_id,
+                is_deleted,
+                permissions,
+            })
+        } else if max_level >= Some(PermissionLevel::Read) {
+            let binary_data = doc::head_snapshot_binary(ctx.state, ref_id).await?;
+            Ok(RefDoc::Readonly {
+                binary_data,
+                is_deleted,
+                permissions,
+            })
+        } else {
+            Err(AppError::Forbidden(ref_id))
+        }
     }
+    .await
+    .into()
 }
 
 /// Document identified by a ref.
 #[derive(Clone, Debug, Serialize, TS)]
 #[serde(tag = "tag")]
 enum RefDoc {
-    /// Readonly document, containing content at the current head.
+    /// Readonly document, containing binary automerge data (base64 encoded).
     Readonly {
-        content: Value,
+        #[serde(rename = "binaryData")]
+        binary_data: String,
         #[serde(rename = "isDeleted")]
         is_deleted: bool,
         permissions: Permissions,
@@ -105,11 +108,12 @@ async fn get_ref_children_stubs(ctx: AppCtx, ref_id: Uuid) -> RpcResult<Vec<RefS
 
 #[handler(query)]
 async fn head_snapshot(ctx: AppCtx, ref_id: Uuid) -> RpcResult<Value> {
-    _head_snapshot(ctx, ref_id).await.into()
-}
-async fn _head_snapshot(ctx: AppCtx, ref_id: Uuid) -> Result<Value, AppError> {
-    auth::authorize(&ctx, ref_id, PermissionLevel::Read).await?;
-    doc::head_snapshot(ctx.state, ref_id).await
+    async {
+        auth::authorize(&ctx, ref_id, PermissionLevel::Read).await?;
+        doc::head_snapshot(ctx.state, ref_id).await
+    }
+    .await
+    .into()
 }
 
 #[handler(mutation)]
@@ -132,6 +136,16 @@ async fn delete_ref(ctx: AppCtx, ref_id: Uuid) -> RpcResult<()> {
     .into()
 }
 
+#[handler(mutation)]
+async fn restore_ref(ctx: AppCtx, ref_id: Uuid) -> RpcResult<()> {
+    async {
+        auth::authorize(&ctx, ref_id, PermissionLevel::Own).await?;
+        doc::restore_ref(ctx.state, ref_id).await
+    }
+    .await
+    .into()
+}
+
 #[handler(query)]
 async fn get_permissions(ctx: AppCtx, ref_id: Uuid) -> RpcResult<Permissions> {
     auth::permissions(&ctx, ref_id).await.into()
@@ -139,14 +153,15 @@ async fn get_permissions(ctx: AppCtx, ref_id: Uuid) -> RpcResult<Permissions> {
 
 #[handler(mutation)]
 async fn set_permissions(ctx: AppCtx, ref_id: Uuid, new: NewPermissions) -> RpcResult<()> {
-    _set_permissions(ctx, ref_id, new).await.into()
-}
-async fn _set_permissions(ctx: AppCtx, ref_id: Uuid, new: NewPermissions) -> Result<(), AppError> {
-    if ctx.user.is_none() {
-        return Err(AppError::Unauthorized);
+    async {
+        if ctx.user.is_none() {
+            return Err(AppError::Unauthorized);
+        }
+        auth::authorize(&ctx, ref_id, PermissionLevel::Own).await?;
+        auth::set_permissions(&ctx.state, ref_id, new).await
     }
-    auth::authorize(&ctx, ref_id, PermissionLevel::Own).await?;
-    auth::set_permissions(&ctx.state, ref_id, new).await
+    .await
+    .into()
 }
 
 #[handler(query)]

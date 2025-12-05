@@ -14,4 +14,12 @@
     & .lucide {
         color: dimgray;
     }
+
+    &[data-disabled] {
+        & .lucide {
+            color: #aeaeae;
+        }
+        color: #aeaeae;
+        cursor: default;
+    }
 }

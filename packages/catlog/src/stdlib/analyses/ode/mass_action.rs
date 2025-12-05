@@ -3,8 +3,9 @@
 //! Such ODEs are based on the *law of mass action* familiar from chemistry and
 //! mathematical epidemiology.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
+use indexmap::IndexMap;
 use nalgebra::DVector;
 use num_traits::Zero;
 use rebop::gillespie;
@@ -16,8 +17,7 @@ use tsify::Tsify;
 
 use super::{ODEAnalysis, ODESolution};
 use crate::dbl::{
-    modal::model::ModalOb,
-    model::{DiscreteTabModel, FgDblModel, ModalDblModel, MutDblModel, TabEdge},
+    model::{DiscreteTabModel, FgDblModel, ModalDblModel, ModalOb, MutDblModel, TabEdge},
     theory::{ModalMorType, ModalObType, TabMorType, TabObType},
 };
 use crate::one::FgCategory;
@@ -25,7 +25,6 @@ use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSyst
 use crate::zero::{QualifiedName, alg::Polynomial, name, rig::Monomial};
 
 /// Data defining a mass-action ODE problem for a model.
-#[derive(Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(
@@ -50,7 +49,7 @@ pub struct StochasticMassActionAnalysis {
     pub problem: rebop::gillespie::Gillespie,
 
     /// Map from object IDs to variable indices.
-    pub variable_index: BTreeMap<QualifiedName, usize>,
+    pub variable_index: IndexMap<QualifiedName, usize>,
 
     /// Map from object IDs to initial values.
     pub initial_values: HashMap<QualifiedName, f32>,
@@ -200,7 +199,7 @@ impl PetriNetMassActionAnalysis {
             }
         }
 
-        let variable_index: BTreeMap<_, _> =
+        let variable_index: IndexMap<_, _> =
             ob_generators.into_iter().enumerate().map(|(i, x)| (x, i)).collect();
 
         StochasticMassActionAnalysis {
@@ -299,7 +298,7 @@ fn into_numerical_system(
     sys: PolynomialSystem<QualifiedName, Parameter<QualifiedName>, u8>,
     data: MassActionProblemData,
 ) -> ODEAnalysis<NumericalPolynomialSystem<u8>> {
-    let ob_index: BTreeMap<_, _> =
+    let ob_index: IndexMap<_, _> =
         sys.components.keys().cloned().enumerate().map(|(i, x)| (x, i)).collect();
     let n = ob_index.len();
 

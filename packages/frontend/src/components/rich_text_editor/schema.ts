@@ -1,7 +1,8 @@
 import type { DocHandle, Prop } from "@automerge/automerge-repo";
-import { type MappedSchemaSpec, SchemaAdapter, init } from "@automerge/prosemirror";
+import { init, type MappedSchemaSpec, SchemaAdapter } from "@automerge/prosemirror";
 import type { Node, Schema } from "prosemirror-model";
 import type { Plugin } from "prosemirror-state";
+
 import { basicSchema } from "./basic_schema";
 import { catcolabSchema } from "./catcolab_schema";
 import { katexSchema } from "./katex_schema";

@@ -20,9 +20,9 @@ export default function DiagramGraph(
     const graph = () => {
         const theory = props.liveDiagram.liveModel.theory();
         const model = props.liveDiagram.liveModel.elaboratedModel();
-        const validatedDiagram = props.liveDiagram.validatedDiagram();
-        if (theory && model && validatedDiagram?.tag === "Valid") {
-            return diagramToGraphviz(validatedDiagram.diagram, model, theory);
+        const diagram = props.liveDiagram.elaboratedDiagram();
+        if (theory && model && diagram) {
+            return diagramToGraphviz(diagram, model, theory);
         }
     };
 
@@ -45,14 +45,13 @@ export function diagramToGraphviz(
 ): Viz.Graph {
     const nodes = new Map<string, Required<Viz.Graph>["nodes"][0]>();
     for (const id of diagram.obGenerators()) {
-        const over = diagram.getObOver(id);
-        if (over?.tag !== "Basic") {
+        const ob = diagram.obPresentation(id);
+        if (!(ob && ob.over.tag === "Basic")) {
             continue;
         }
-        const obType = diagram.obType({ tag: "Basic", content: id });
-        const meta = theory.instanceObTypeMeta(obType);
-        const label = diagram.obGeneratorLabel(id)?.join(".");
-        const overLabel = model.obGeneratorLabel(over.content)?.join(".");
+        const meta = theory.instanceObTypeMeta(ob.obType);
+        const label = ob.label?.join(".");
+        const overLabel = model.obGeneratorLabel(ob.over.content)?.join(".");
         nodes.set(id, {
             name: id,
             attributes: {
@@ -66,16 +65,17 @@ export function diagramToGraphviz(
 
     const edges: Required<Viz.Graph>["edges"] = [];
     for (const id of diagram.morGenerators()) {
-        const [dom, cod, over] = [diagram.getDom(id), diagram.getCod(id), diagram.getMorOver(id)];
-        if (dom?.tag !== "Basic" || cod?.tag !== "Basic" || over?.tag !== "Basic") {
+        const mor = diagram.morPresentation(id);
+        if (
+            !(mor && mor.dom.tag === "Basic" && mor.cod.tag === "Basic" && mor.over.tag === "Basic")
+        ) {
             continue;
         }
-        const morType = diagram.morType({ tag: "Basic", content: id });
-        const meta = theory.instanceMorTypeMeta(morType);
-        const overLabel = model.morGeneratorLabel(over.content)?.join(".");
+        const meta = theory.instanceMorTypeMeta(mor.morType);
+        const overLabel = model.morGeneratorLabel(mor.over.content)?.join(".");
         edges.push({
-            head: cod.content,
-            tail: dom.content,
+            head: mor.cod.content,
+            tail: mor.dom.content,
             attributes: {
                 id,
                 label: overLabel ?? "",

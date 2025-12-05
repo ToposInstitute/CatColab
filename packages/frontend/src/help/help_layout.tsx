@@ -4,9 +4,7 @@ import { BrandedToolbar } from "../page/toolbar";
 
 import "./help_layout.css";
 
-export default function HelpLayout(props: {
-    children?: JSX.Element;
-}) {
+export default function HelpLayout(props: { children?: JSX.Element }) {
     return (
         <div class="growable-container">
             <BrandedToolbar />

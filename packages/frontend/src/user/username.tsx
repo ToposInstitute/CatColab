@@ -6,10 +6,7 @@ import { useApi } from "../api";
 import "./username.css";
 
 /** Name a user by their username and/or display name. */
-export const NameUser = (props: {
-    username: string | null;
-    displayName: string | null;
-}) => (
+export const NameUser = (props: { username: string | null; displayName: string | null }) => (
     <div class="name-user">
         <Show when={props.username} fallback="[No username]">
             {(username) => <span class="username">{username()}</span>}

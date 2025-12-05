@@ -68,6 +68,26 @@ pub async fn head_snapshot(state: AppState, ref_id: Uuid) -> Result<Value, AppEr
     Ok(query.fetch_one(&state.db).await?.content)
 }
 
+/// Gets the binary automerge data for a document ref.
+pub async fn head_snapshot_binary(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
+    let query = sqlx::query!(
+        "
+        SELECT doc_id FROM snapshots
+        WHERE id = (SELECT head FROM refs WHERE id = $1)
+        ",
+        ref_id
+    );
+    let doc_id = query.fetch_one(&state.db).await?.doc_id;
+
+    let export_response = export_automerge_doc(&state.automerge_io, doc_id).await?;
+
+    // Convert Vec<u8> to base64 string
+    use base64::{Engine as _, engine::general_purpose};
+    let base64_data = general_purpose::STANDARD.encode(&export_response.binary_data);
+
+    Ok(base64_data)
+}
+
 /// Gets the deleted_at timestamp for a document ref.
 pub async fn ref_deleted_at(
     state: AppState,
@@ -132,7 +152,7 @@ pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppErr
     Ok(())
 }
 
-/// Soft-deletes a ref by setting `deleted_at`.
+/// Soft-deletes a document reference by setting `deleted_at`.
 pub async fn delete_ref(state: AppState, ref_id: Uuid) -> Result<(), AppError> {
     let query = sqlx::query!(
         "
@@ -143,6 +163,21 @@ pub async fn delete_ref(state: AppState, ref_id: Uuid) -> Result<(), AppError> {
         ref_id
     );
     query.execute(&state.db).await?;
+    Ok(())
+}
+
+/// Restores a soft-deleted document reference.
+pub async fn restore_ref(state: AppState, ref_id: Uuid) -> Result<(), AppError> {
+    sqlx::query!(
+        "
+        UPDATE refs
+        SET deleted_at = NULL
+        WHERE id = $1
+        ",
+        ref_id
+    )
+    .execute(&state.db)
+    .await?;
     Ok(())
 }
 
@@ -229,6 +264,19 @@ async fn create_automerge_doc(
     .await
 }
 
+async fn export_automerge_doc(
+    automerge_io: &SocketIo,
+    doc_id: String,
+) -> Result<ExportDocSocketResponse, AppError> {
+    call_automerge_io::<ExportDocSocketResponse, _>(
+        automerge_io,
+        "exportDoc",
+        doc_id,
+        "Failed to call exportDoc from backend".to_string(),
+    )
+    .await
+}
+
 /// A document ref along with its content.
 #[derive(Debug, Serialize, Deserialize, TS)]
 pub struct RefContent {
@@ -243,6 +291,12 @@ pub struct NewDocSocketResponse {
     pub doc_id: String,
     #[serde(rename = "docJson")]
     pub doc_json: Value,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExportDocSocketResponse {
+    #[serde(rename = "binaryData")]
+    pub binary_data: Vec<u8>,
 }
 
 /// A subset of user relevant information about a ref. Used for showing users
@@ -273,6 +327,8 @@ pub struct RefQueryParams {
     pub searcher_min_level: Option<PermissionLevel>,
     #[serde(rename = "includePublicDocuments")]
     pub include_public_documents: Option<bool>,
+    #[serde(rename = "onlyDeleted")]
+    pub only_deleted: Option<bool>,
     pub limit: Option<i32>,
     pub offset: Option<i32>,
     // TODO: add param for document type
@@ -335,7 +391,9 @@ pub async fn search_ref_stubs(
                             AND p_searcher.subject = $1
                     )
                 ) AND (
-                    refs.deleted_at IS NULL
+                    -- optionally filter for only deleted refs
+                    ($8::bool IS TRUE AND refs.deleted_at IS NOT NULL)
+                    OR ($8::bool IS NOT TRUE AND refs.deleted_at IS NULL)
                 )
             ),
             paged_ids AS (
@@ -377,6 +435,7 @@ pub async fn search_ref_stubs(
         search_params.include_public_documents.unwrap_or(false),
         limit,
         offset,
+        search_params.only_deleted.unwrap_or(false),
     )
     .fetch_all(&ctx.state.db)
     .await?;

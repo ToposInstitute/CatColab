@@ -321,15 +321,12 @@ mod tests {
     #[test]
     fn sch_sgraph_to_hgraph() {
         let (sch_hgraph, sch_sgraph) = (sch_hgraph(), sch_sgraph());
-        let ob_map = HashColumn::new([(name("V"), name("V")), (name("E"), name("H"))].into());
-        let mor_map = HashColumn::new(
-            [
-                (name("src"), Path::single(name("vert"))),
-                (name("tgt"), Path::pair(name("inv"), name("vert"))),
-                (name("inv"), Path::single(name("inv"))),
-            ]
-            .into(),
-        );
+        let ob_map = HashColumn::from_iter([(name("V"), name("V")), (name("E"), name("H"))]);
+        let mor_map = HashColumn::from_iter([
+            (name("src"), Path::single(name("vert"))),
+            (name("tgt"), Path::pair(name("inv"), name("vert"))),
+            (name("inv"), Path::single(name("inv"))),
+        ]);
         let data = FpFunctorData::new(ob_map, mor_map);
         let functor = data.functor_into(&sch_hgraph);
         assert_eq!(functor.apply_ob(name("E")), Some(name("H")));
@@ -344,15 +341,12 @@ mod tests {
     #[test]
     fn sch_sgraph_to_graph() {
         let (sch_graph, sch_sgraph) = (sch_graph(), sch_sgraph());
-        let ob_map = HashColumn::new([(name("V"), name("V")), (name("E"), name("E"))].into());
-        let mor_map = HashColumn::new(
-            [
-                (name("src"), Path::single(name("src"))),
-                (name("tgt"), Path::single(name("tgt"))),
-                (name("inv"), Path::empty(name("E"))),
-            ]
-            .into(),
-        );
+        let ob_map = HashColumn::from_iter([(name("V"), name("V")), (name("E"), name("E"))]);
+        let mor_map = HashColumn::from_iter([
+            (name("src"), Path::single(name("src"))),
+            (name("tgt"), Path::single(name("tgt"))),
+            (name("inv"), Path::empty(name("E"))),
+        ]);
         let data = FpFunctorData::new(ob_map, mor_map);
         let functor = data.functor_into(&sch_graph);
         // Two equations fail, namely that `inv` swaps `src` and `tgt`.

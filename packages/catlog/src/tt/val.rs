@@ -94,6 +94,8 @@ pub enum TyV_ {
     Sing(TyV, TmV),
     /// Type constructor for unit types, also see [TyS_::Unit].
     Unit,
+    /// A metavariable, also see [TyS_::Meta]
+    Meta(MetaVar),
 }
 
 /// Value for total types, dereferences to [TyV_].
@@ -171,6 +173,11 @@ impl TyV {
         Self(Rc::new(TyV_::Unit))
     }
 
+    /// Smart constructor for [TyV], [TyV_::Meta] case.
+    pub fn meta(mv: MetaVar) -> Self {
+        Self(Rc::new(TyV_::Meta(mv)))
+    }
+
     /// The base type
     pub fn ty0(&self) -> Ty0 {
         match &**self {
@@ -179,6 +186,7 @@ impl TyV {
             TyV_::Record(record_v) => Ty0::Record(record_v.fields0.clone()),
             TyV_::Sing(ty_v, _) => ty_v.ty0(),
             TyV_::Unit => Ty0::Unit,
+            TyV_::Meta(mv) => Ty0::Meta(*mv),
         }
     }
 }
@@ -236,6 +244,8 @@ pub enum TmV {
     Tt,
     /// An element of a type that is opaque to conversion checking
     Opaque,
+    /// A metavariable
+    Meta(MetaVar),
 }
 
 impl TmV {

@@ -1,9 +1,9 @@
 //! Helper module to build analyses based on signed coefficient matrices.
 
-use nalgebra::DMatrix;
+use std::{collections::HashMap, hash::Hash};
 
-use std::collections::{BTreeMap, HashMap};
-use std::hash::Hash;
+use indexmap::IndexMap;
+use nalgebra::DMatrix;
 
 use crate::dbl::model::FgDblModel;
 
@@ -47,11 +47,11 @@ impl<ObType, MorType> SignedCoefficientBuilder<ObType, MorType> {
         &self,
         model: &impl FgDblModel<ObType = ObType, MorType = MorType, Ob = Id, ObGen = Id, MorGen = Id>,
         coeffs: &HashMap<Id, f32>,
-    ) -> (DMatrix<f32>, BTreeMap<Id, usize>)
+    ) -> (DMatrix<f32>, IndexMap<Id, usize>)
     where
         Id: Eq + Clone + Hash + Ord,
     {
-        let ob_index: BTreeMap<_, _> = model
+        let ob_index: IndexMap<_, _> = model
             .ob_generators_with_type(&self.var_ob_type)
             .enumerate()
             .map(|(i, x)| (x, i))

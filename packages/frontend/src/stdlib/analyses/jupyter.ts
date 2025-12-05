@@ -3,10 +3,10 @@ import type { IKernelConnection, IKernelOptions } from "@jupyterlab/services/lib
 import type { ISessionConnection } from "@jupyterlab/services/lib/session/session";
 import {
     type Accessor,
-    type Resource,
-    type ResourceReturn,
     createResource,
     onCleanup,
+    type Resource,
+    type ResourceReturn,
 } from "solid-js";
 
 type ResourceRefetch<T> = ResourceReturn<T>[1]["refetch"];
@@ -22,7 +22,7 @@ export function createKernel(
     serverOptions: ServerSettings,
     kernelOptions: IKernelOptions,
 ): [Resource<IKernelConnection>, ResourceRefetch<IKernelConnection>] {
-    let session: ISessionConnection | undefined = undefined;
+    let session: ISessionConnection | undefined;
 
     const [kernel, { refetch: restartKernel }] = createResource(async () => {
         const jupyter = await import("@jupyterlab/services");

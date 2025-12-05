@@ -1,17 +1,17 @@
+import Dialog, { Content, Portal } from "@corvu/dialog";
+import { MultiProvider } from "@solid-primitives/context";
+import { Navigate, type RouteDefinition, Router, type RouteSectionProps } from "@solidjs/router";
 import { type FirebaseOptions, initializeApp } from "firebase/app";
+import { getAuth, signOut } from "firebase/auth";
+import { FirebaseProvider } from "solid-firebase";
+import { createResource, createSignal, ErrorBoundary, lazy, Show } from "solid-js";
 import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
-import Dialog, { Content, Portal } from "@corvu/dialog";
-import { MultiProvider } from "@solid-primitives/context";
-import { Navigate, type RouteDefinition, type RouteSectionProps, Router } from "@solidjs/router";
-import { getAuth, signOut } from "firebase/auth";
-import { FirebaseProvider } from "solid-firebase";
-import { ErrorBoundary, Show, createResource, createSignal, lazy } from "solid-js";
-
+import { Button } from "catcolab-ui-components";
 import { Api, ApiContext, useApi } from "./api";
 import { helpRoutes } from "./help/routes";
-import { ModelLibraryContext, createModelLibraryWithApi } from "./model";
+import { createModelLibraryWithApi, ModelLibraryContext } from "./model";
 import { createModel } from "./model/document";
 import { ErrorBoundaryDialog } from "./page/error_boundary";
 import { PageContainer } from "./page/page_container";
@@ -86,9 +86,9 @@ export function SessionExpiredModal() {
                 <Content class="popup error-dialog">
                     <h3>Session Expired</h3>
                     <p>Your session is no longer valid. Please reload the page to continue.</p>
-                    <button onClick={handleReload} disabled={reloading()}>
+                    <Button variant="primary" onClick={handleReload} disabled={reloading()}>
                         {reloading() ? "Reloading..." : "Reload Page"}
-                    </button>
+                    </Button>
                 </Content>
             </Portal>
         </Dialog>
@@ -105,6 +105,8 @@ function CreateModel() {
     return <Show when={ref()}>{(ref) => <Navigate href={`/model/${ref()}`} />}</Show>;
 }
 
+const HomePage = lazy(() => import("./page/home_page"));
+
 const refIsUUIDFilter = {
     ref: (ref: string) => uuid.validate(ref),
 };
@@ -112,6 +114,10 @@ const refIsUUIDFilter = {
 const routes: RouteDefinition[] = [
     {
         path: "/",
+        component: HomePage,
+    },
+    {
+        path: "/new",
         component: CreateModel,
     },
     {
@@ -144,6 +150,10 @@ const routes: RouteDefinition[] = [
     {
         path: "/documents",
         component: lazy(() => import("./user/documents")),
+    },
+    {
+        path: "/trash",
+        component: lazy(() => import("./user/trash")),
     },
     {
         path: "*",

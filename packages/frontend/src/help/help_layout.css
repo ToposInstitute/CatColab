@@ -38,7 +38,9 @@
                 &:hover {
                     background-color: var(--topos-secondary);
                     color: white;
-                    transition: color .15s ease-in-out, background-color .15s ease-in-out;
+                    transition:
+                        color 0.15s ease-in-out,
+                        background-color 0.15s ease-in-out;
                 }
             }
         }

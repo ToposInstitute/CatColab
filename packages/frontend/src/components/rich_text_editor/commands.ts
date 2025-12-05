@@ -1,6 +1,7 @@
 import { chainCommands, wrapIn } from "prosemirror-commands";
 import { liftListItem, sinkListItem, wrapInList } from "prosemirror-schema-list";
 import { type Command, NodeSelection, type Transaction } from "prosemirror-state";
+
 import type { CustomSchema } from "./schema";
 import { hasContent } from "./utils";
 

@@ -25,9 +25,9 @@ itertools = "0.14"
 nalgebra = { version = "0.33", optional = true }
 nonempty = "0.12"
 num-traits = "0.2"
-ode_solvers = { version = "0.5.0", optional = true }
+ode_solvers = { version = "0.6", optional = true }
 pretty = "0.12.4"
-rebop = { version = "0.9.3", default-features = false, optional = true }
+rebop = { version = "0.9.4", default-features = false, optional = true }
 ref-cast = "1"
 scopeguard = "1.2.0"
 serde = { version = "1", features = ["derive"], optional = true }

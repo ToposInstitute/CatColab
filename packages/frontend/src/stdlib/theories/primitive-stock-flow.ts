@@ -1,7 +1,6 @@
 import { ThCategoryLinks } from "catlog-wasm";
 import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
-
 import styles from "../styles.module.css";
 import svgStyles from "../svg_styles.module.css";
 
@@ -53,8 +52,9 @@ export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): 
                 simulate(model, data) {
                     return thCategoryLinks.massAction(model, data);
                 },
-                isTransition(morType) {
-                    return morType.tag === "Hom";
+                transitionType: {
+                    tag: "Hom",
+                    content: { tag: "Basic", content: "Object" },
                 },
             }),
         ],

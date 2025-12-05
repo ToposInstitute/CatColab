@@ -1,30 +1,35 @@
-import { getReorderDestinationIndex } from "@atlaskit/pragmatic-drag-and-drop-hitbox/util/get-reorder-destination-index";
 import { monitorForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
+import { getReorderDestinationIndex } from "@atlaskit/pragmatic-drag-and-drop-hitbox/util/get-reorder-destination-index";
 import type { DocHandle, Prop } from "@automerge/automerge-repo";
 import { makeEventListener } from "@solid-primitives/event-listener";
 import ListPlus from "lucide-solid/icons/list-plus";
 import {
     type Component,
-    For,
-    Match,
-    Show,
-    Switch,
     createEffect,
     createSignal,
+    For,
+    Match,
     onCleanup,
+    Show,
+    Switch,
 } from "solid-js";
 import invariant from "tiny-invariant";
 
+import {
+    type Completion,
+    IconButton,
+    type KbdKey,
+    keyEventHasModifier,
+    type ModifierKey,
+} from "catcolab-ui-components";
 import type { Cell, Notebook } from "catlog-wasm";
-import { type Completion, IconButton } from "../components";
-import { type KbdKey, type ModifierKey, keyEventHasModifier } from "../util/keyboard";
 import {
     type CellActions,
     type FormalCellEditorProps,
+    isCellDragData,
     NotebookCell,
     RichTextCellEditor,
     StemCellEditor,
-    isCellDragData,
 } from "./notebook_cell";
 import { type FormalCell, NotebookUtils, newRichTextCell, newStemCell } from "./types";
 
@@ -192,8 +197,8 @@ export function NotebookEditor<T>(props: {
                 }
                 const [sourceId, targetId] = [source.data.cellId, target.data.cellId];
                 const nb = props.notebook;
-                const sourceIndex = nb.cellOrder.findIndex((cellId) => cellId === sourceId);
-                const targetIndex = nb.cellOrder.findIndex((cellId) => cellId === targetId);
+                const sourceIndex = nb.cellOrder.indexOf(sourceId);
+                const targetIndex = nb.cellOrder.indexOf(targetId);
                 if (sourceIndex < 0 || targetIndex < 0) {
                     return;
                 }
@@ -215,7 +220,7 @@ export function NotebookEditor<T>(props: {
     return (
         <div class="notebook">
             <Show when={props.notebook.cellOrder.length === 0}>
-                <div class="notebook-empty placeholder">
+                <div class="notebook-cell-placeholder">
                     <IconButton onClick={() => appendCell(newStemCell())}>
                         <ListPlus />
                     </IconButton>
@@ -352,12 +357,8 @@ export function NotebookEditor<T>(props: {
                     }}
                 </For>
             </ul>
-            <Show
-                when={props.notebook.cellOrder.some(
-                    (cellId) => props.notebook.cellContents[cellId]?.tag !== "stem",
-                )}
-            >
-                <div class="placeholder">
+            <Show when={NotebookUtils.getCells(props.notebook).some((cell) => cell.tag !== "stem")}>
+                <div class="notebook-cell-placeholder">
                     <IconButton
                         onClick={() => appendCell(newStemCell())}
                         tooltip="Create a new cell"

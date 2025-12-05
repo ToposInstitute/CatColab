@@ -1,7 +1,6 @@
 import type * as Viz from "@viz-js/viz";
 
 import type { BaseTypeMeta } from "../theory";
-
 import textStyles from "./text_styles.module.css";
 
 /** Default graph attributes for Graphviz. */

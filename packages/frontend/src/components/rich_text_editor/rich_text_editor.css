@@ -19,48 +19,94 @@
     pointer-events: none;
 }
 
+.rich-text-editor {
+    border: 1px solid transparent;
+    border-radius: 5px;
+    position: relative;
+    box-sizing: border-box;
+    padding: 0.3em;
+}
+
 .rich-text-editor.focussed {
     border: 1px solid grey;
-    border-radius: 5px;
-}
-
-.rich-text-editor.focussed .ProseMirror {
-    padding: 5px;
-}
-
-.rich-text-editor > div {
-    position: relative;
-}
-
-.ref-id-view {
-    background-color: grey;
-    border-radius: 5px;
-    padding-left: 5px;
-    padding-right: 5px;
 }
 
 .menubar {
-    background-color: #f0f0f0;
+    position: absolute;
+    box-sizing: border-box;
+    bottom: calc(100%);
+    right: 5px;
+    left: 5px;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    justify-content: space-between;
+    border-radius: 5px 5px 0 0;
+    border: 1px solid grey;
+    background-color: #f0f0f0;
+}
+
+.menubar-left {
+    display: flex;
     flex-direction: row;
     justify-content: flex-start;
+    flex-grow: 1;
+}
+
+.menubar-right {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.menubar-left > :first-child > button {
+    border-radius: 5px 0 0 0;
+}
+
+.menubar-right > :last-child > button {
+    border-radius: 0 5px 0 0;
+}
+
+.menubar-reopen-button-wrapper {
+    position: absolute;
+    top: -1px;
+    right: 2px;
+    z-index: 1;
+
+    & button {
+        padding: 0;
+        margin: 3px;
+        box-sizing: border-box;
+        border-radius: 5px;
+    }
+}
+
+.menubar-reopen-button:hover {
+    background-color: #ccc;
 }
 
 .menubar select .menubar button {
-    transition: background-color 0.2s ease, transform 0.2s ease;
+    transition:
+        background-color 0.2s ease,
+        transform 0.2s ease;
 }
 
 .menubar select:hover,
+.menubar-reopen-button-wrapper button:hover,
 .menubar button:hover {
     background-color: #ccc;
 }
 
+.menubar-reopen-button-wrapper button,
 .menubar button {
     overflow: hidden;
     padding: 3px;
     border: none;
     cursor: pointer;
+    background-color: transparent; /* override default on firefox */
+    transition:
+        background-color 0.2s ease,
+        transform 0.2s ease;
 }
 
 .menubar button.active {
@@ -71,7 +117,9 @@
     background: transparent;
     border: none;
     border-radius: 0;
-    transition: background-color 0.15s ease, transform 0.15s ease;
+    transition:
+        background-color 0.15s ease,
+        transform 0.15s ease;
 }
 
 .menubar select option {
@@ -137,7 +185,9 @@ blockquote {
     background: white;
     backdrop-filter: none;
     max-width: calc(-24px + 100vw);
-    box-shadow: rgba(0, 0, 0, 0.1) 0px 14px 28px -6px, rgba(0, 0, 0, 0.06) 0px 2px 4px -1px,
+    box-shadow:
+        rgba(0, 0, 0, 0.1) 0px 14px 28px -6px,
+        rgba(0, 0, 0, 0.06) 0px 2px 4px -1px,
         rgba(84, 72, 49, 0.08) 0px 0px 0px 1px;
     overflow: hidden;
     width: 330px;
@@ -159,8 +209,9 @@ blockquote {
             width: 100%;
 
             &:focus {
-                box-shadow: rgb(35, 131, 226) 0px 0px 0px 1px inset, rgb(35, 131, 226) 0px 0px 0px
-                    1px;
+                box-shadow:
+                    rgb(35, 131, 226) 0px 0px 0px 1px inset,
+                    rgb(35, 131, 226) 0px 0px 0px 1px;
             }
         }
     }

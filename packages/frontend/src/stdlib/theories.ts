@@ -99,7 +99,17 @@ stdTheories.add(
         id: "unary-dec",
         name: "Discrete exterior calculus (DEC)",
         description: "DEC operators on a geometrical space",
-        group: "Applied Mathematics",
+        group: "Experimental",
     },
     async () => (await import("./theories/unary-dec")).default,
+);
+
+stdTheories.add(
+    {
+        id: "power-system",
+        name: "Power system",
+        description: "Power systems in the style of PyPSA",
+        group: "Experimental",
+    },
+    async () => (await import("./theories/power-system")).default,
 );

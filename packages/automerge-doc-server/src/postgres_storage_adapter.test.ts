@@ -1,10 +1,11 @@
 import {
-    type SetupFn,
     runStorageAdapterTests,
+    type SetupFn,
 } from "@automerge/automerge-repo/helpers/tests/storage-adapter-tests.js";
 import dotenv from "dotenv";
 import { Pool } from "pg";
 import { afterEach, describe } from "vitest";
+
 import { PostgresStorageAdapter } from "./postgres_storage_adapter.js";
 
 dotenv.config();

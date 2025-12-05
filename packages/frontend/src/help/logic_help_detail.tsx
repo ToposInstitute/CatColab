@@ -1,5 +1,5 @@
 import { useParams } from "@solidjs/router";
-import { For, type JSXElement, Show, createResource, lazy, useContext } from "solid-js";
+import { createResource, For, type JSXElement, lazy, Show, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
@@ -21,9 +21,7 @@ export default function LogicHelpPage() {
     return <Show when={theory()}>{(theory) => <LogicHelpDetail theory={theory()} />}</Show>;
 }
 
-function LogicHelpDetail(props: {
-    theory: Theory;
-}) {
+function LogicHelpDetail(props: { theory: Theory }) {
     const Content = lazy(async () => {
         try {
             return await import(`./logics/${props.theory.id}.mdx`);

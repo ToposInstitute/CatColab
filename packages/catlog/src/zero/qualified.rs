@@ -200,15 +200,6 @@ impl<'de> Deserialize<'de> for QualifiedName {
     }
 }
 
-impl QualifiedName {
-    /// Add another segment onto the end
-    pub fn snoc(&self, segment: NameSegment) -> Self {
-        let mut segments = self.0.clone();
-        segments.push(segment);
-        Self(segments)
-    }
-}
-
 #[cfg(feature = "serde")]
 struct QualifiedNameVisitor;
 
@@ -234,6 +225,11 @@ impl QualifiedName {
         Self(vec![segment])
     }
 
+    /// Extracts a slice containing the name segments.
+    pub fn as_slice(&self) -> &[NameSegment] {
+        self.0.as_slice()
+    }
+
     /// Iterates over the segments of the qualified name.
     pub fn segments(&self) -> impl Iterator<Item = &NameSegment> {
         self.0.iter()
@@ -246,6 +242,13 @@ impl QualifiedName {
         } else {
             None
         }
+    }
+
+    /// Add another segment onto the end.
+    pub fn snoc(&self, segment: NameSegment) -> Self {
+        let mut segments = self.0.clone();
+        segments.push(segment);
+        Self(segments)
     }
 
     /// Serializes the qualified name into a string.

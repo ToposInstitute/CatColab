@@ -75,8 +75,8 @@ jobs:
         run: |
           RUSTDOCFLAGS='--deny warnings' cargo doc --no-deps
 
-  frontend_tests:
-    name: frontend tests
+  ui_components_tests:
+    name: ui-components tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -88,23 +88,63 @@ jobs:
       - name: Setup NodeJS
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: "pnpm"
 
-      - name: Install Rust toolchain from file
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          # Don't override flags in cargo config files.
-          rustflags: ""
+      - name: Install dependencies
+        run: pnpm install
 
-      - name: Build frontend
+      - name: Install Playwright browser
+        run: pnpm --filter ./packages/ui-components exec playwright install chromium
+
+      - name: Run ui-components tests
+        run: pnpm --filter ./packages/ui-components run test
+
+  npm_checks:
+    name: npm checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      - name: Install NodeJS dependencies
         run: |
           pnpm install
-          pnpm --filter ./packages/frontend run build -- --mode development
 
-      - name: Run frontend tests
+      - name: Format/linting/import sorting
         run: |
-          pnpm --filter ./packages/frontend run test:no-backend
+          pnpm --filter "./packages/*" run ci
+
+  build_nixos_system:
+    name: build NixOS system
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Install Nix
+      uses: cachix/install-nix-action@v25
+      with:
+        nix_path: nixpkgs=channel:25.05
+
+    - name: Configure Cachix
+      uses: cachix/cachix-action@v14
+      with:
+        name: catcolab-jmoggr
+        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+
+    - name: Build the NixOS system for catcolab-next
+      run: nix build .#nixosConfigurations.catcolab-next.config.system.build.toplevel
 
   backend_dev_setup:
     name: backend dev setup
@@ -137,42 +177,18 @@ jobs:
             unset INVOCATION_ID
             cargo run -p migrator apply
 
-  npm_checks:
-    name: npm checks
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup NodeJS
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: "pnpm"
-
-      - name: Install NodeJS dependencies
-        run: |
-          pnpm install
-
-      - name: Format/linting/import sorting
-        run: |
-          pnpm --filter "./packages/*" run ci
-
-  build_nixos_system:
-    name: build NixOS system
+  frontend_tests_with_backend:
+    name: frontend tests with backend
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-    
+
     - name: Install Nix
       uses: cachix/install-nix-action@v25
       with:
-        nix_path: nixpkgs=channel:25.05
+        install_url: https://releases.nixos.org/nix/nix-2.29.2/install
 
     - name: Configure Cachix
       uses: cachix/cachix-action@v14
@@ -180,6 +196,7 @@ jobs:
         name: catcolab-jmoggr
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
 
-    - name: Build the NixOS system for catcolab-next
-      run: nix build .#nixosConfigurations.catcolab-next.config.system.build.toplevel
+    - name: Run frontend tests with VM
+      run: |
+        nix build .#checks.x86_64-linux.frontendTests -L --no-sandbox
 

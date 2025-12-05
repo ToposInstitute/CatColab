@@ -2,7 +2,7 @@ import { type FirebaseOptions, initializeApp } from "firebase/app";
 import { deleteUser, getAuth, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import invariant from "tiny-invariant";
 import { v4 } from "uuid";
-import { assert, afterAll, describe, test } from "vitest";
+import { afterAll, assert, describe, test } from "vitest";
 
 import type { UserProfile } from "catcolab-api";
 import { createTestDocument, initTestUserAuth } from "../util/test_util.ts";

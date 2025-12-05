@@ -1,6 +1,6 @@
 import { type Accessor, createContext } from "solid-js";
 
-import type { LiveDiagramDocument } from "./document";
+import type { LiveDiagramDoc } from "./document";
 
 /** Context for a live diagram in a model. */
-export const LiveDiagramContext = createContext<Accessor<LiveDiagramDocument>>();
+export const LiveDiagramContext = createContext<Accessor<LiveDiagramDoc>>();

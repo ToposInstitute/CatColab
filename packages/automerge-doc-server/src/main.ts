@@ -24,15 +24,13 @@ async function main() {
 
     server.handleChange = (refId, content) => socket_server.autosave(refId, content);
 
-    process.once("SIGINT", () => {
+    const shutdown = () => {
         socket_server.close();
         server.close();
-    });
+    };
 
-    process.once("SIGTERM", () => {
-        socket_server.close();
-        server.close();
-    });
+    process.once("SIGINT", shutdown);
+    process.once("SIGTERM", shutdown);
 }
 
 main();

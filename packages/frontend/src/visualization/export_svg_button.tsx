@@ -1,9 +1,8 @@
+import Download from "lucide-solid/icons/download";
 import type { JSX } from "solid-js";
 
-import { IconButton } from "../components";
+import { IconButton } from "catcolab-ui-components";
 import { downloadSVG } from "./export_svg";
-
-import Download from "lucide-solid/icons/download";
 
 /** Button to download an SVG. */
 export function DownloadSVGButton(props: {

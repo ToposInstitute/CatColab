@@ -29,6 +29,11 @@ impl<T> Row<T> {
         self.0.get(&name).map(|p| &p.1)
     }
 
+    /// Lookup the field `name` if it exists, and get its value and label.
+    pub fn get_with_label(&self, name: FieldName) -> Option<&(LabelSegment, T)> {
+        self.0.get(&name)
+    }
+
     /// Iterate through the fields in insertion order.
     pub fn iter(&self) -> impl Iterator<Item = (&FieldName, &(LabelSegment, T))> {
         self.0.iter()
