@@ -24,7 +24,6 @@
         "@kobalte/core": "^0.13.10",
         "@solid-primitives/active-element": "^2.1.3",
         "@solid-primitives/destructure": "^0.2.1",
-        "catlog-wasm": "link:../catlog-wasm/dist/pkg-browser",
         "lucide-solid": "^0.471.0",
         "solid-js": "^1.9.10"
     },

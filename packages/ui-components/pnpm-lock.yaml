@@ -32,9 +32,6 @@ importers:
       '@solid-primitives/destructure':
         specifier: ^0.2.1
         version: 0.2.2(solid-js@1.9.10)
-      catlog-wasm:
-        specifier: link:../catlog-wasm/dist/pkg-browser
-        version: link:../catlog-wasm/dist/pkg-browser
       lucide-solid:
         specifier: ^0.471.0
         version: 0.471.0(solid-js@1.9.10)
