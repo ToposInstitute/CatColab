@@ -244,8 +244,7 @@ mod tests {
         text_elab::Elaborator,
         toplevel::{std_theories, Theory, Toplevel},
     };
-    use crate::validate::Validate;
-    use crate::zero::{name, Namespace};
+    use crate::zero::Namespace;
     use std::rc::Rc;
     use tattle::Reporter;
 
@@ -272,7 +271,7 @@ mod tests {
 
     #[test]
     fn sql() {
-        let mut model = DiscreteDblModel::parse(
+        let model = DiscreteDblModel::parse(
             Rc::new(th_schema()),
             "[
                 Person : Entity,
@@ -285,15 +284,17 @@ mod tests {
         // Since we are constructing the model from human-readable names and not UUIDs, we don't
         // need to lookup the human-readable name from these namespaces. They're just to pass into
         // the function.
-        let mut obns = Namespace::new_for_text();
-        let mut morns = Namespace::new_for_text();
+        let obns = Namespace::new_for_text();
+        let morns = Namespace::new_for_text();
 
-        let raw_creates = vec![
+        let raw_creates = [
             r"CREATE TABLE IF NOT EXISTS `Dog` ( `id` int NOT NULL AUTO_INCREMENT PRIMARY KEY )",
             r"CREATE TABLE IF NOT EXISTS `Person` ( `id` int NOT NULL AUTO_INCREMENT PRIMARY KEY, `walks` int NOT NULL, `has` text NOT NULL, CONSTRAINT `FK_walks_Person_Dog` FOREIGN KEY (`walks`) REFERENCES `Dog` (`id`) )",
         ];
 
-        let ddl = SQLAnalysis::new(obns, morns, "MySQL").expect("!").render(&model);
+        let ddl = SQLAnalysis::new(obns, morns, "MySQL")
+            .expect("Model building failed")
+            .render(&model);
 
         // TODO Hash is nondeterministic
         assert_eq!(ddl, raw_creates.join(";\n") + ";");

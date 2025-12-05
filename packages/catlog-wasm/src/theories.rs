@@ -118,8 +118,7 @@ impl ThSchema {
             model.ob_namespace()?,
             model.mor_namespace()?,
             backend,
-        )
-        .expect("!")
+        )?
         .render(model.discrete()?);
         Ok(sql_string)
     }

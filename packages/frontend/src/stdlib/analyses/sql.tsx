@@ -1,15 +1,14 @@
 // import type { JSX } from "solid-js";
-import { ThSchema } from "catlog-wasm";
-import download from "js-file-download";
-import { Show, createSignal } from "solid-js";
 
 import { DropdownMenu } from "@kobalte/core/dropdown-menu";
-
-import type { ModelAnalysisProps } from "../../analysis";
-import { IconButton } from "../../components";
-
+import download from "js-file-download";
 import CircleHelp from "lucide-solid/icons/circle-help";
 import Download from "lucide-solid/icons/download";
+import { createSignal, Show } from "solid-js";
+
+import { ThSchema } from "catlog-wasm";
+import type { ModelAnalysisProps } from "../../analysis";
+import { IconButton } from "../../components";
 
 export const MenuItem = DropdownMenu.Item;
 export const MenuItemLabel = DropdownMenu.ItemLabel;
