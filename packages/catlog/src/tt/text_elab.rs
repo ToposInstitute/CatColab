@@ -429,6 +429,7 @@ impl<'a> Elaborator<'a> {
         }
     }
 
+    /// Ty
     pub fn ty(&mut self, n: &FNtn) -> (TyS, TyV) {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
