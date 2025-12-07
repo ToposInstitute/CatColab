@@ -1,6 +1,6 @@
 // import type { JSX } from "solid-js";
 
-import { DropdownMenu } from "@kobalte/core/dropdown-menu";
+import Popover from "@corvu/popover";
 import download from "js-file-download";
 import CircleHelp from "lucide-solid/icons/circle-help";
 import Download from "lucide-solid/icons/download";
@@ -8,11 +8,8 @@ import { createSignal, Show } from "solid-js";
 
 import { ThSchema } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
-import { IconButton } from "../../components";
-
-export const MenuItem = DropdownMenu.Item;
-export const MenuItemLabel = DropdownMenu.ItemLabel;
-export const MenuSeparator = DropdownMenu.Separator;
+import { IconButton } from "catcolab-ui-components";
+import { MenuItem, MenuItemLabel } from "../../page";
 
 /** Button to download an SVG. */
 export default function DownloadTextButton(props: ModelAnalysisProps<DownloadConfig>) {
@@ -58,12 +55,12 @@ export default function DownloadTextButton(props: ModelAnalysisProps<DownloadCon
                 {(sql) => (
                     <div>
                         <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-bottom: 8px;">
-                            <DropdownMenu modal={false}>
-                                <DropdownMenu.Trigger as={IconButton} disabled={false}>
-                                    <span>{backend()}</span>
-                                </DropdownMenu.Trigger>
-                                <DropdownMenu.Portal>
-                                    <DropdownMenu.Content class="menu popup">
+                            <Popover>
+                                <Popover.Trigger as={IconButton}>
+									<span>{backend()}</span>
+								</Popover.Trigger>
+                                <Popover.Portal>
+                                    <Popover.Content class="menu popup">
                                         <MenuItem onSelect={() => setBackend("MySQL")}>
                                             <MenuItemLabel>{"MySQL"}</MenuItemLabel>
                                         </MenuItem>
@@ -73,9 +70,10 @@ export default function DownloadTextButton(props: ModelAnalysisProps<DownloadCon
                                         <MenuItem onSelect={() => setBackend("PostgresSQL")}>
                                             <MenuItemLabel>{"PostgresSQL"}</MenuItemLabel>
                                         </MenuItem>
-                                    </DropdownMenu.Content>
-                                </DropdownMenu.Portal>
-                            </DropdownMenu>
+                                    </Popover.Content>
+                                </Popover.Portal>
+                            </Popover>
+
                             <IconButton
                                 onClick={() => downloadText(sql())}
                                 disabled={false}
