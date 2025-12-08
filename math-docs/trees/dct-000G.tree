@@ -1,0 +1,79 @@
+\title{Monoidal promonads}
+\taxon{doctrine}
+\import{macros}
+
+\subtree{
+  \taxon{motivation}
+
+  \p{In the standard way of defining a [Markov category](dct-000I), one first
+  postulates a monoidal category (with extra structure) whose morphisms are
+  regarded as stochastic maps, then one carves out the deterministic maps as the
+  morphisms satisfying a certain equation (commuting with copy maps). However,
+  this logic can be turned around: start by postulating a monoidal category of
+  deterministic maps, then introduce an identity-on-objects functor into another
+  category of stochastic maps along with a compatible monoidal structure. The
+  latter approach is axiomatized by a \em{monoidal promonad}.}
+
+  \p{Like a [promonad](dct-0004) is equivalently an identity-on-objects functor,
+  a monoidal promonad is equivalently an identity-on-objects \em{strict}
+  monoidal functor (cf. [Román 2024](roman-2024), Remark 8.2). However, that
+  description suggests that one must explicitly give the associators and unitors
+  of the target monoidal category. A virtue of the following definition is that
+  the associators and unitors are only defined once, for the base monoidal
+  category, and are then reused via the left and right actions of the promonad.}
+
+}
+
+\subtree{
+  \title{Monoidal promonads}
+  \taxon{definition}
+
+  \p{A \define{monoidal promonad} consists of
+
+  \ul{
+    \li{an (unbiased) monoidal category #{(\cat{C},\otimes)}}
+    \li{a [promonad](dct-0004) #{(P: \cat{C} \proto \cat{C},
+    H: \Hom_{\cat{C}} \To P)} on the underlying category \cat{C}}
+    \li{an (unbiased) monoidal product on #{P}, namely a natural transformation
+
+    \quiver{
+    % https://q.uiver.app/#q=WzAsNCxbMCwwLCJcXG1hdGhybXtMaXN0fShcXG1hdGhzZntDfSkiXSxbMCwxLCJcXG1hdGhzZntDfSJdLFsxLDAsIlxcbWF0aHJte0xpc3R9KFxcbWF0aHNme0N9KSJdLFsxLDEsIlxcbWF0aHNme0N9Il0sWzAsMSwiXFxvdGltZXMiLDJdLFsyLDMsIlxcb3RpbWVzIl0sWzAsMiwiXFxtYXRocm17TGlzdH0oUCkiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMSwzLCJQIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzYsNywiXFxvdGltZXMiLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
+    \begin{tikzcd}
+	{\mathrm{List}(\mathsf{C})} & {\mathrm{List}(\mathsf{C})} \\
+	{\mathsf{C}} & {\mathsf{C}}
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{\mathrm{List}(P)}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-2]
+	\arrow["\otimes"', from=1-1, to=2-1]
+	\arrow["\otimes", from=1-2, to=2-2]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "P"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-2]
+	\arrow["\otimes"{description}, draw=none, from=0, to=1]
+    \end{tikzcd}
+    }
+    }
+  }
+
+  that obeys the following axioms:
+
+  \ul{
+    \li{\em{Compatibility of products}: for any list of morphisms
+    #{(f_i)_{i=1}^n} in \cat{C},
+    ##{ H(\otimes_{i=1}^n f_i) = \otimes_{i=1}^n H(f_i) }
+    }
+    \li{\em{Functorality} with respect to composition of arbitrary morphisms in
+    #{P}}
+    \li{\em{Associativity} and \em{unitality} relative to the associators and
+    unitors \em{of the base monoidal category #{(\cat{C},\otimes)}.}}
+  }
+
+  }
+}
+
+\p{In the following theory for monoidal promonads, we generalize from the list
+double monad to an arbitrary lax double monad as the semantics. We can then
+recover not only monoidal promonads, but the more important \em{symmetric
+monoidal promonads} and other variants as models.}
+
+\transclude{thy-000G}
+
+\p{We can generalize still further by allowing the base category and the
+promonad to have generalized monoidal products with respect to different monads.
+See: [[dct-000H]].}
