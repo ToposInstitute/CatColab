@@ -31,11 +31,7 @@
                                 "!catlog-wasm"
                             ],
                             ":BLANK_LINE:",
-                            [
-                                "catcolab-ui-components",
-                                "catcolab-api",
-                                "catlog-wasm"
-                            ],
+                            ["catcolab-ui-components", "catcolab-api", "catlog-wasm"],
                             ":PATH:"
                         ]
                     }
