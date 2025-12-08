@@ -14,6 +14,7 @@ use sea_query::{
     ColumnDef, ForeignKey, ForeignKeyCreateStatement, Iden, MysqlQueryBuilder,
     PostgresQueryBuilder, SqliteQueryBuilder, Table, TableCreateStatement, prepare::Write,
 };
+use sqlformat::{Dialect, format};
 use std::fmt;
 
 impl Namespace {
@@ -157,12 +158,21 @@ impl SQLAnalysis {
         // to ensure tests pass consistently. However, sea_query should probably allow multiple
         // tables
         output.sort();
-
         let output = output.join(";\n") + ";";
 
+        let formatted_output = format(
+            &output,
+            &sqlformat::QueryParams::None,
+            &sqlformat::FormatOptions {
+                lines_between_queries: 2,
+                dialect: self.backend.clone().into(),
+                ..Default::default()
+            },
+        );
+
         match self.backend {
-            SqlBackend::Sqlite => ["PRAGMA foreign_keys = ON", &output].join(";\n\n"),
-            _ => output,
+            SqlBackend::Sqlite => ["PRAGMA foreign_keys = ON", &formatted_output].join(";\n\n"),
+            _ => formatted_output,
         }
     }
 
@@ -205,6 +215,15 @@ impl SqlBackend {
             SqlBackend::MySql => Box::new(MysqlQueryBuilder),
             SqlBackend::Sqlite => Box::new(SqliteQueryBuilder),
             SqlBackend::Postgres => Box::new(PostgresQueryBuilder),
+        }
+    }
+}
+
+impl From<SqlBackend> for Dialect {
+    fn from(backend: SqlBackend) -> sqlformat::Dialect {
+        match backend {
+            SqlBackend::Postgres => Dialect::PostgreSql,
+            _ => Dialect::Generic,
         }
     }
 }
@@ -288,8 +307,8 @@ mod tests {
         let morns = Namespace::new_for_text();
 
         let raw_creates = [
-            r"CREATE TABLE IF NOT EXISTS `Dog` ( `id` int NOT NULL AUTO_INCREMENT PRIMARY KEY )",
-            r"CREATE TABLE IF NOT EXISTS `Person` ( `id` int NOT NULL AUTO_INCREMENT PRIMARY KEY, `walks` int NOT NULL, `has` text NOT NULL, CONSTRAINT `FK_walks_Person_Dog` FOREIGN KEY (`walks`) REFERENCES `Dog` (`id`) )",
+            "CREATE TABLE IF NOT EXISTS `Dog` (`id` int NOT NULL AUTO_INCREMENT PRIMARY KEY)",
+            "CREATE TABLE IF NOT EXISTS `Person` (\n  `id` int NOT NULL AUTO_INCREMENT PRIMARY KEY,\n  `walks` int NOT NULL,\n  `has` text NOT NULL,\n  CONSTRAINT `FK_walks_Person_Dog` FOREIGN KEY (`walks`) REFERENCES `Dog` (`id`)\n)",
         ];
 
         let ddl = SQLAnalysis::new(obns, morns, "MySQL")
@@ -297,6 +316,6 @@ mod tests {
             .render(&model);
 
         // TODO Hash is nondeterministic
-        assert_eq!(ddl, raw_creates.join(";\n") + ";");
+        assert_eq!(ddl, raw_creates.join(";\n\n") + ";");
     }
 }
