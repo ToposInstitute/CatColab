@@ -1,9 +1,8 @@
-// import type { JSX } from "solid-js";
-
 import Popover from "@corvu/popover";
 import download from "js-file-download";
 import CircleHelp from "lucide-solid/icons/circle-help";
 import Download from "lucide-solid/icons/download";
+import Link2 from "lucide-solid/icons/link-2";
 import { createSignal, Show } from "solid-js";
 
 import { IconButton } from "catcolab-ui-components";
@@ -22,13 +21,11 @@ export default function DownloadTextButton(props: ModelAnalysisProps<DownloadCon
         return model ? thSchema.renderSql(model, backend()) : null;
     };
     const downloadText = (text: string) => {
-        downloadTextContent(
-            text,
-            // props.filename ??
-            "schema.sql",
-        );
+        downloadTextContent(text, "schema.sql");
         // TODO get the name of analysis
     };
+
+    const copyToClipboard = (text: string) => navigator.clipboard.writeText(text);
 
     const tooltip = () => (
         <>
@@ -73,7 +70,13 @@ export default function DownloadTextButton(props: ModelAnalysisProps<DownloadCon
                                     </Popover.Content>
                                 </Popover.Portal>
                             </Popover>
-
+                            <IconButton
+                                onClick={() => copyToClipboard(sql())}
+                                disabled={false}
+                                tooltip={"Copy SQL to clipboard"}
+                            >
+                                <Link2 size={16} />
+                            </IconButton>
                             <IconButton
                                 onClick={() => downloadText(sql())}
                                 disabled={false}
