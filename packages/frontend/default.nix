@@ -61,7 +61,7 @@ let
         ];
       };
       # See README.md
-      hash = "sha256-TQzF+hhRABG7xKlTIThRsYvGHRnvxZs6XAJFbWOyBYk=";
+      hash = "sha256-ARVyVYi011iyTK1sLYc6RLNuwK2I3axKoQG8+7JOrQY=";
     };
   };
 

@@ -1,5 +1,5 @@
 {
-    "$schema": "https://biomejs.dev/schemas/2.3.4/schema.json",
+    "$schema": "https://biomejs.dev/schemas/2.3.8/schema.json",
     "vcs": {
         "enabled": true,
         "clientKind": "git",
@@ -24,7 +24,12 @@
                     "options": {
                         "groups": [
                             ":NODE:",
-                            [":PACKAGE:", "!catcolab-ui-components", "!catcolab-api", "!catlog-wasm"],
+                            [
+                                ":PACKAGE:",
+                                "!catcolab-ui-components",
+                                "!catcolab-api",
+                                "!catlog-wasm"
+                            ],
                             ":BLANK_LINE:",
                             ["catcolab-ui-components", "catcolab-api", "catlog-wasm"],
                             ":PATH:"
