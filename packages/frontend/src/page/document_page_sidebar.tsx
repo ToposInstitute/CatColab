@@ -207,10 +207,26 @@ function DocumentsTreeLeaf(props: {
                     liveDoc={props.doc.liveDoc}
                     docRef={props.doc.docRef}
                     onDocCreated={props.refetchDoc}
-                    onDocDeleted={() => {
+                    onDocDeleted={async () => {
+                        const deletedRefId = props.doc.docRef.refId;
+                        const isPrimaryDeleted = deletedRefId === primaryRefId();
+                        const isSecondaryDeleted = deletedRefId === secondaryRefId();
+
                         props.refetchDoc();
                         props.refetchPrimaryDoc();
                         props.refetchSecondaryDoc();
+
+                        // Navigate away if the deleted document is currently being viewed
+                        if (isPrimaryDeleted || isSecondaryDeleted) {
+                            const parentDoc = await getDocParent(props.doc.liveDoc.doc, api);
+
+                            if (!parentDoc) {
+                                // This is a root document: navigate to documents list
+                                navigate("/documents");
+                            } else {
+                                navigate(`/${createLinkPart(parentDoc)}`);
+                            }
+                        }
                     }}
                 />
             </div>
