@@ -85,7 +85,7 @@ In other words, the set corresponding to an attribute type starts as empty and n
 <HelpAnalysisById theory={props.theory} analysisId="diagram"/>
 <HelpAnalysisById theory={props.theory} analysisId="erd"/>
 
-<HelpAnalysisById theory={props.theory} analysisId="sql">
+<HelpAnalysisById theory={props.theory} analysisId="sql"/>
 This analysis uses the [sea_query](https://docs.rs/sea-query/latest/sea_query/) crate to convert discrete double models into valid SQL. Following the correspondence above, schema entities are interpreted as tables, mappings are interpreted as foreign key relations between tables, attribute types are interpreted as column types, and **attributes** as columns.
 
 There are several caveats:
@@ -100,16 +100,18 @@ For example, the following model in Schema
 ```
 Person : Entity
 Dog : Entity
-Person --walks--> Dog : Mapping
+Person -walks-> Dog : Mapping
 Name : AttributeType
 Int: AttributeType
-Person --name--> Name
-Dog --name--> Name
-Person --age--> Int
-Dog --age--> Int
+Person -name-> Name
+Dog -name-> Name
+Person -age-> Int
+Dog -age-> Int
 ```
 corresponds to a database schema:
 
+<div style={{ display: 'flex', gap: '2rem' }}>
+<div>
 **Person**
 <table>
   <thead>
@@ -134,8 +136,11 @@ corresponds to a database schema:
     <tr>
       <td>walks</td>
       <td>Int (FK Dog.id)</td>
+    </tr>
   </tbody>
 </table>
+</div>
+<div>
 **Dog**
 <table>
   <thead>
@@ -159,3 +164,5 @@ corresponds to a database schema:
     </tr>
   </tbody>
 </table>
+</div>
+</div>
