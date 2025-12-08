@@ -1,20 +1,19 @@
-import Popover from "@corvu/popover";
 import download from "js-file-download";
 import CircleHelp from "lucide-solid/icons/circle-help";
+import Copy from "lucide-solid/icons/copy";
 import Download from "lucide-solid/icons/download";
-import Link2 from "lucide-solid/icons/link-2";
-import { createSignal, Show } from "solid-js";
+import { createSignal, For, Show } from "solid-js";
 
-import { IconButton } from "catcolab-ui-components";
+import { Foldable, IconButton } from "catcolab-ui-components";
 import { ThSchema } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
-import { MenuItem, MenuItemLabel } from "../../page";
 
 /** Button to download an SVG. */
 export default function DownloadTextButton(props: ModelAnalysisProps<DownloadConfig>) {
     const thSchema = new ThSchema();
 
-    // TODO SQLite can be an invalid change
+    const backends = ["MySQL", "SQLite", "PostgresSQL"];
+
     const [backend, setBackend] = createSignal("MySQL");
     const sqlOutput = () => {
         const model = props.liveModel.elaboratedModel();
@@ -46,48 +45,52 @@ export default function DownloadTextButton(props: ModelAnalysisProps<DownloadCon
         </>
     );
 
+    const BackendConfig = (backends: string[]) => (
+        <div>
+            <span>Backend: </span>
+            <select
+                value={backend() ?? undefined}
+                onInput={(evt) =>
+                    props.changeContent((content) => {
+                        setBackend(evt.currentTarget.value);
+                        content.backend = backend();
+                    })
+                }
+            >
+                <For each={Array.from(backends)}>
+                    {(bknd) => <option value={bknd}>{bknd}</option>}
+                </For>
+            </select>
+        </div>
+    );
+
+    const title = () => "SQL Schema";
+    const header = (sql: string) => (
+        <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-bottom: 8px;">
+            <IconButton
+                onClick={() => copyToClipboard(sql)}
+                disabled={false}
+                tooltip={"Copy SQL to clipboard"}
+            >
+                <Copy size={16} />
+            </IconButton>
+            <IconButton onClick={() => downloadText(sql)} disabled={false} tooltip={""}>
+                <Download size={16} />
+            </IconButton>
+            <IconButton tooltip={tooltip()}>
+                <CircleHelp size={16} />
+            </IconButton>
+        </div>
+    );
+
     return (
         <div>
             <Show when={sqlOutput()}>
                 {(sql) => (
                     <div>
-                        <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-bottom: 8px;">
-                            <Popover>
-                                <Popover.Trigger as={IconButton}>
-                                    <span>{backend()}</span>
-                                </Popover.Trigger>
-                                <Popover.Portal>
-                                    <Popover.Content class="menu popup">
-                                        <MenuItem onSelect={() => setBackend("MySQL")}>
-                                            <MenuItemLabel>{"MySQL"}</MenuItemLabel>
-                                        </MenuItem>
-                                        <MenuItem onSelect={() => setBackend("SQLite")}>
-                                            <MenuItemLabel>{"SQLite"}</MenuItemLabel>
-                                        </MenuItem>
-                                        <MenuItem onSelect={() => setBackend("PostgresSQL")}>
-                                            <MenuItemLabel>{"PostgresSQL"}</MenuItemLabel>
-                                        </MenuItem>
-                                    </Popover.Content>
-                                </Popover.Portal>
-                            </Popover>
-                            <IconButton
-                                onClick={() => copyToClipboard(sql())}
-                                disabled={false}
-                                tooltip={"Copy SQL to clipboard"}
-                            >
-                                <Link2 size={16} />
-                            </IconButton>
-                            <IconButton
-                                onClick={() => downloadText(sql())}
-                                disabled={false}
-                                tooltip={""}
-                            >
-                                <Download size={16} />
-                            </IconButton>
-                            <IconButton tooltip={tooltip()}>
-                                <CircleHelp size={16} />
-                            </IconButton>
-                        </div>
+                        <Foldable title={title()} header={header(sql())}>
+                            {BackendConfig(backends)}
+                        </Foldable>
                         <pre style="white-space: pre-wrap;">{sql()}</pre>
                     </div>
                 )}
