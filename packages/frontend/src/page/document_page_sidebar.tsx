@@ -117,8 +117,11 @@ function DocumentsTreeNode(props: {
 
             const isParentOwnerless = isDocOwnerless(props.doc);
 
-            // Don't show ownerless children under owned document
-            return childDocs.filter((childDoc) => isParentOwnerless || !isDocOwnerless(childDoc));
+            // Don't show ownerless children or deleted documents
+            return childDocs.filter(
+                (childDoc) =>
+                    !childDoc.docRef.isDeleted && (isParentOwnerless || !isDocOwnerless(childDoc)),
+            );
         },
     );
 
