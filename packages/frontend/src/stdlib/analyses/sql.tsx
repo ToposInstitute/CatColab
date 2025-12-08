@@ -6,9 +6,9 @@ import CircleHelp from "lucide-solid/icons/circle-help";
 import Download from "lucide-solid/icons/download";
 import { createSignal, Show } from "solid-js";
 
+import { IconButton } from "catcolab-ui-components";
 import { ThSchema } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
-import { IconButton } from "catcolab-ui-components";
 import { MenuItem, MenuItemLabel } from "../../page";
 
 /** Button to download an SVG. */
@@ -57,8 +57,8 @@ export default function DownloadTextButton(props: ModelAnalysisProps<DownloadCon
                         <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-bottom: 8px;">
                             <Popover>
                                 <Popover.Trigger as={IconButton}>
-									<span>{backend()}</span>
-								</Popover.Trigger>
+                                    <span>{backend()}</span>
+                                </Popover.Trigger>
                                 <Popover.Portal>
                                     <Popover.Content class="menu popup">
                                         <MenuItem onSelect={() => setBackend("MySQL")}>
