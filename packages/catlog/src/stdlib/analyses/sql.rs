@@ -6,13 +6,13 @@ use crate::{
 use crate::{dbl::model::*, one::FgCategory};
 use crate::{
     one::Path,
-    zero::{name, Namespace},
+    zero::{Namespace, name},
 };
 use itertools::Itertools;
 use sea_query::SchemaBuilder;
 use sea_query::{
-    prepare::Write, ColumnDef, ForeignKey, ForeignKeyCreateStatement, Iden, MysqlQueryBuilder,
-    PostgresQueryBuilder, SqliteQueryBuilder, Table, TableCreateStatement,
+    ColumnDef, ForeignKey, ForeignKeyCreateStatement, Iden, MysqlQueryBuilder,
+    PostgresQueryBuilder, SqliteQueryBuilder, Table, TableCreateStatement, prepare::Write,
 };
 use std::fmt;
 
@@ -242,7 +242,7 @@ mod tests {
         batch::PARSE_CONFIG,
         modelgen::generate,
         text_elab::Elaborator,
-        toplevel::{std_theories, Theory, Toplevel},
+        toplevel::{Theory, Toplevel, std_theories},
     };
     use crate::zero::Namespace;
     use std::rc::Rc;
