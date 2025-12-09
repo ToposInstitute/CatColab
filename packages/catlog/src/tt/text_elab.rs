@@ -8,7 +8,7 @@ use crate::{
 };
 use fnotation::*;
 use nonempty::nonempty;
-use scopeguard::{guard, ScopeGuard};
+use scopeguard::{ScopeGuard, guard};
 use std::fmt::Write;
 
 use tattle::declare_error;
