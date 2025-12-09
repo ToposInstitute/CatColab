@@ -73,10 +73,9 @@ h4 {
     font-size: var(--h4-font-size);
 }
 pre {
-	white-space: pre-wrap;
-	font-family: var(--mono-font);
+    white-space: pre-wrap;
+    font-family: var(--mono-font);
 }
-
 
 .popup {
     background: var(--color-background);
