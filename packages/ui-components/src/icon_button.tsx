@@ -37,7 +37,7 @@ export function IconButton(
         >
             <Tooltip hoverableContent={false} openOnFocus={false}>
                 <Tooltip.Anchor>
-                    <Tooltip.Trigger class="icon-button" {...buttonProps}>
+                    <Tooltip.Trigger class={buttonClass()} {...buttonProps}>
                         {props.children}
                     </Tooltip.Trigger>
                 </Tooltip.Anchor>
