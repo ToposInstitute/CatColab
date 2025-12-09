@@ -91,7 +91,7 @@ export default function DownloadTextButton(props: ModelAnalysisProps<DownloadCon
                         <Foldable title={title()} header={header(sql())}>
                             {BackendConfig(backends)}
                         </Foldable>
-                        <pre style="white-space: pre-wrap;">{sql()}</pre>
+                        <pre>{sql()}</pre>
                     </div>
                 )}
             </Show>
