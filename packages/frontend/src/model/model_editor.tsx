@@ -27,6 +27,9 @@ export function ModelNotebookEditor(props: { liveModel: LiveModelDoc }) {
     const liveDoc = () => props.liveModel.liveDoc;
 
     const cellConstructors = () => {
+	    // const cells = liveDoc().doc.notebook.cellOrder;
+		// console.log(cells);
+
         const theory = props.liveModel.theory();
         return theory ? modelCellConstructors(theory) : [];
     };
@@ -54,6 +57,7 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 
+    console.log(props);
     return (
         <Switch>
             <Match when={props.content.tag === "object" && liveModel().theory()}>
@@ -106,6 +110,7 @@ function modelCellConstructors(theory: Theory): CellConstructor<ModelJudgment>[]
             },
         });
     }
+
     for (const meta of theory.modelTypes ?? []) {
         constructors.push(modelCellConstructor(meta));
     }

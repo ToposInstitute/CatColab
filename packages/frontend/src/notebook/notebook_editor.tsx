@@ -22,7 +22,7 @@ import {
     keyEventHasModifier,
     type ModifierKey,
 } from "catcolab-ui-components";
-import type { Cell, Notebook } from "catlog-wasm";
+import type { Cell, Notebook, MorType, ObType } from "catlog-wasm";
 import {
     type CellActions,
     type FormalCellEditorProps,
@@ -139,6 +139,33 @@ export function NotebookEditor<T>(props: {
         });
     };
 
+    const isFormalCell = (cell: Cell<T>): cell is { tag: "formal"; id: string; content: T } => {
+        return cell.tag === "formal";
+    };
+
+    const isObType = (content: any): content is { tag: "object"; obType: ObType } => {
+        return content && content.tag === "object";
+    };
+
+    const isMorType = (content: any): content is { tag: "morphism"; morType: MorType } => {
+        return content && content.tag === "morphism";
+    };
+
+    const retypeCellAs = (i: number, newCell: Cell<T>) => {
+	    if (!newCell || !isFormalCell(newCell)) return;
+        const mutator = (cellContent: T) => {
+            if (isObType(cellContent) && isObType(newCell.content)) {
+                cellContent.obType = newCell.content.obType;
+            } else if (isMorType(cellContent) && isMorType(newCell.content)) {
+                cellContent.morType = newCell.content.morType;
+            }
+        };
+        props.changeNotebook((nb) => {
+			NotebookUtils.retypeCell(nb, i, mutator);
+        });
+		setActiveCell(i);
+    };
+
     const cellConstructors = (): CellConstructor<T>[] => [
         {
             name: "Text",
@@ -157,6 +184,17 @@ export function NotebookEditor<T>(props: {
                 description,
                 shortcut: shortcut && [cellShortcutModifier, ...shortcut],
                 onComplete: () => replaceCellWith(i, cc.construct()),
+            };
+        });
+
+    const retypeCommands = (i: number): Completion[] =>
+        cellConstructors().map((cc) => {
+            const { name, description, shortcut } = cc;
+            return {
+                name,
+                description,
+                shortcut,
+                onComplete: () => retypeCellAs(i, cc.construct()),
             };
         });
 
@@ -289,6 +327,19 @@ export function NotebookEditor<T>(props: {
                         const cell = props.notebook.cellContents[cellId];
                         invariant(cell, `Failed to find contents for cell '${cellId}'`);
 
+						// const tag = (cell.tag === "formal" ? props.cellLabel?.(cell.content) : undefined) as string;
+						const cellName = (cell: Cell<T>) =>
+                            (cell.tag === "formal"
+                                ? props.cellLabel?.(cell.content)
+                                : undefined) as string;
+						// const cellType = isFormalCell(cell)
+                            // ? isObType(cell.content)
+                                // ? "ObType"
+                                // : isMorType(cell.content)
+                                  // ? "MorType"
+                                  // : ""
+                            // : "";
+
                         if (cell.tag !== "rich-text") {
                             cellActions.duplicate = () => {
                                 const index = i();
@@ -310,12 +361,12 @@ export function NotebookEditor<T>(props: {
                                     index={i()}
                                     actions={cellActions}
                                     tag={
-                                        cell.tag === "formal"
-                                            ? props.cellLabel?.(cell.content)
-                                            : undefined
+                                       cellName(cell) 
                                     }
                                     currentDropTarget={currentDropTarget()}
                                     setCurrentDropTarget={setCurrentDropTarget}
+									isActive={isActive()}
+									replaceCommands={retypeCommands(i())}
                                 >
                                     <Switch>
                                         <Match when={cell.tag === "rich-text"}>
