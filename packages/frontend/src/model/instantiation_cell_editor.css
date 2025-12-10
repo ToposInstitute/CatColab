@@ -14,7 +14,7 @@
 
     margin-left: 0.5rem;
     padding-left: 1rem;
-    border-left: 2px solid lightgray;
+    border-left: 2px solid var(--color-gray-450);
 }
 
 .model-specialization {
@@ -28,6 +28,6 @@
     }
 
     & .placeholder {
-        color: gray;
+        color: var(--color-gray-750);
     }
 }

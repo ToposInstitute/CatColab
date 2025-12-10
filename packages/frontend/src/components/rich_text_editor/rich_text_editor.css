@@ -13,7 +13,7 @@
 }
 
 .ProseMirror[data-placeholder]::before {
-    color: darkgray;
+    color: var(--color-rich-text-placeholder);
     position: absolute;
     content: attr(data-placeholder);
     pointer-events: none;
@@ -28,7 +28,7 @@
 }
 
 .rich-text-editor.focussed {
-    border: 1px solid grey;
+    border: 1px solid var(--color-rich-text-editor-border);
 }
 
 .menubar {
@@ -41,8 +41,8 @@
     flex-direction: row;
     justify-content: space-between;
     border-radius: 5px 5px 0 0;
-    border: 1px solid grey;
-    background-color: #f0f0f0;
+    border: 1px solid var(--color-rich-text-menubar-border);
+    background-color: var(--color-rich-text-menubar-bg);
 }
 
 .menubar-left {
@@ -82,7 +82,7 @@
 }
 
 .menubar-reopen-button:hover {
-    background-color: #ccc;
+    background-color: var(--color-hover-button-bg);
 }
 
 .menubar select .menubar button {
@@ -94,7 +94,7 @@
 .menubar select:hover,
 .menubar-reopen-button-wrapper button:hover,
 .menubar button:hover {
-    background-color: #ccc;
+    background-color: var(--color-hover-button-bg);
 }
 
 .menubar-reopen-button-wrapper button,
@@ -110,7 +110,7 @@
 }
 
 .menubar button.active {
-    background-color: #ccc;
+    background-color: var(--color-rich-text-menubar-button-active);
 }
 
 .menubar select {
@@ -123,12 +123,12 @@
 }
 
 .menubar select option {
-    background-color: #ffffff;
+    background-color: var(--color-background);
 }
 
 blockquote {
-    background: #f9f9f9;
-    border-left: 10px solid #ccc;
+    background: var(--color-rich-text-blockquote-bg);
+    border-left: 10px solid var(--color-rich-text-blockquote-border);
     margin: 1em 10px;
     padding: 0.5em 10px;
     quotes: "\201C" "\201D" "\2018" "\2019";
@@ -157,8 +157,8 @@ blockquote {
     left: 50%;
     transform: translateX(-50%) translateY(-4px);
     white-space: nowrap;
-    background: rgba(0, 0, 0, 0.75);
-    color: white;
+    background: var(--color-tooltip-bg);
+    color: var(--color-background);
     padding: 4px 8px;
     border-radius: 4px;
     font-size: 0.75rem;
@@ -174,7 +174,7 @@ blockquote {
 }
 
 .is-selected {
-    background-color: #ffe58a;
+    background-color: var(--color-rich-text-selection-bg);
 }
 
 .link-editor-popup {
@@ -182,13 +182,13 @@ blockquote {
     padding-right: 12px;
     padding-bottom: 12px;
     border-radius: 10px;
-    background: white;
+    background: var(--color-background);
     backdrop-filter: none;
     max-width: calc(-24px + 100vw);
     box-shadow:
-        rgba(0, 0, 0, 0.1) 0px 14px 28px -6px,
-        rgba(0, 0, 0, 0.06) 0px 2px 4px -1px,
-        rgba(84, 72, 49, 0.08) 0px 0px 0px 1px;
+        var(--color-link-editor-shadow-1) 0px 14px 28px -6px,
+        var(--color-link-editor-shadow-2) 0px 2px 4px -1px,
+        var(--color-link-editor-shadow-3) 0px 0px 0px 1px;
     overflow: hidden;
     width: 330px;
     z-index: 1;
@@ -198,10 +198,10 @@ blockquote {
 
         input {
             margin-top: 8px;
-            background: whitesmoke;
+            background: var(--color-rich-text-link-input-bg);
             outline: none;
             border: 0;
-            box-shadow: 0 0 0 1px #ccc;
+            box-shadow: 0 0 0 1px var(--color-rich-text-link-input-outline);
             border-radius: 6px;
             box-sizing: border-box;
             padding-inline: 8px;
@@ -210,8 +210,8 @@ blockquote {
 
             &:focus {
                 box-shadow:
-                    rgb(35, 131, 226) 0px 0px 0px 1px inset,
-                    rgb(35, 131, 226) 0px 0px 0px 1px;
+                    var(--color-link-editor-focus) 0px 0px 0px 1px inset,
+                    var(--color-link-editor-focus) 0px 0px 0px 1px;
             }
         }
     }

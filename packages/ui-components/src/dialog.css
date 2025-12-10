@@ -27,6 +27,6 @@
 
 [data-corvu-dialog-close] {
     & .lucide {
-        color: dimgray;
+        color: var(--color-text-secondary);
     }
 }
