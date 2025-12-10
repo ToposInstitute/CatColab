@@ -198,7 +198,7 @@ function DocumentsTreeLeaf(props: {
             />
             <div
                 class="document-name"
-                style={{ color: props.doc.docRef.isDeleted ? "lightgray" : undefined }}
+                style={{ color: props.doc.docRef.isDeleted ? "var(--color-gray-450)" : undefined }}
             >
                 {props.doc.liveDoc.doc.name || "Untitled"}
             </div>

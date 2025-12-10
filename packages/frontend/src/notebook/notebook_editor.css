@@ -20,8 +20,8 @@
     column-gap: 0.5ex;
     margin: 1rem 0;
 
-    color: darkgray;
+    color: var(--color-gray-600);
     & .lucide {
-        color: darkgray;
+        color: var(--color-gray-600);
     }
 }

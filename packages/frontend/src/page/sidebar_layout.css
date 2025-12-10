@@ -30,11 +30,11 @@
 
 .sidebar {
     flex-shrink: 0;
-    background-color: #f8f8f8;
+    background-color: var(--color-gray-50);
     overflow: hidden;
     transition: width 0.3s ease;
-    border-right: 2px solid #f0f0f0;
-    color: dimgray;
+    border-right: 2px solid var(--color-gray-150);
+    color: var(--color-gray-800);
 }
 
 .sidebar.open {
@@ -73,7 +73,7 @@
 }
 
 .sidebar-header:hover {
-    background: #f0f0f0;
+    background: var(--color-hover-bg);
 }
 
 .toolbar {
@@ -106,7 +106,7 @@
     position: relative;
 
     &:hover {
-        background: #f0f0f0;
+        background: var(--color-hover-bg);
         cursor: pointer;
 
         .document-actions {
@@ -116,10 +116,10 @@
     }
 
     &.active {
-        background: #f0f0f0;
+        background: var(--color-gray-150);
 
         &:hover {
-            background: #e8e8e8;
+            background: var(--color-hover-bg-dark);
         }
     }
 
@@ -145,10 +145,10 @@
 
             &:hover {
                 .icon-button {
-                    background-color: #d0d0d0;
+                    background-color: var(--color-hover-bg-strong);
                 }
 
-                background-color: #d0d0d0;
+                background-color: var(--color-hover-bg-strong);
             }
         }
     }
@@ -157,6 +157,6 @@
 .resizeable-handle {
     background: none;
     border: none;
-    border-left: 2px solid #e7e6e4;
+    border-left: 2px solid var(--color-gray-400);
     margin-right: -0.5rem;
 }

@@ -5,10 +5,10 @@
     padding: 3px;
 
     &.active {
-        background: gray;
+        background: var(--color-gray-750);
     }
 
     &:hover {
-        background: gray;
+        background: var(--color-gray-750);
     }
 }

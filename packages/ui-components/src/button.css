@@ -21,34 +21,34 @@
     cursor: not-allowed;
 }
 
-.button-primary {
-    color: white;
-    background: #2e8b57;
-    border: 1px solid darkgreen;
+.button-positive {
+    color: var(--color-background);
+    background: var(--color-button-positive-base);
+    border: 1px solid var(--color-button-positive-border);
 }
 
-.button-primary:hover:not(:disabled) {
-    background: #3cb371;
-    border-color: #2e8b57;
+.button-positive:hover:not(:disabled) {
+    background: var(--color-button-positive-hover);
+    border-color: var(--color-button-positive-base);
 }
 
 .button-utility {
-    border: 1px solid #e0e0e0;
-    background: white;
+    border: 1px solid var(--color-button-utility-border);
+    background: var(--color-button-utility-bg);
 }
 
 .button-utility:hover:not(:disabled) {
-    background: #f8f8f8;
-    border-color: #ccc;
+    background: var(--color-button-utility-hover-bg);
+    border-color: var(--color-button-utility-hover-border);
 }
 
 .button-danger {
-    color: white;
-    background: #dc3545;
-    border: 1px solid #dc3545;
+    color: var(--color-background);
+    background: var(--color-button-danger-base);
+    border: 1px solid var(--color-button-danger-base);
 }
 
 .button-danger:hover:not(:disabled) {
-    background: #ea4b5a;
-    border: 1px solid #ea4b5a;
+    background: var(--color-button-danger-hover);
+    border: 1px solid var(--color-button-danger-hover);
 }

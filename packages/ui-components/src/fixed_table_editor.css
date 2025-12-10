@@ -1,6 +1,6 @@
 .fixed-table-editor {
-    background: white;
-    --border-color: lightgray;
+    background: var(--color-background);
+    --border-color: var(--color-gray-450);
     --cell-padding: 5px;
 
     border-collapse: collapse;
@@ -36,5 +36,5 @@
 }
 
 .fixed-table-cell-input.invalid {
-    background: #f8d7da;
+    background: var(--color-form-invalid-bg);
 }

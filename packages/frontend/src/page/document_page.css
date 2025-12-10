@@ -14,7 +14,7 @@
     }
 
     & .lucide {
-        color: var(--link-color);
+        color: var(--color-gray-800);
     }
 }
 

@@ -10,6 +10,6 @@
 
     & .display-name {
         font-size: smaller;
-        color: dimgray;
+        color: var(--color-text-secondary);
     }
 }

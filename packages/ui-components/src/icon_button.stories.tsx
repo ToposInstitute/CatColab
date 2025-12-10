@@ -29,7 +29,7 @@ export const Summary: Story = {
                 <Settings size={20} />
             </IconButton>
             <IconButton
-                variant="primary"
+                variant="positive"
                 onClick={() => alert("Restore clicked")}
                 tooltip="Restore"
             >
@@ -217,14 +217,14 @@ export const ActionButtons: Story = {
     ),
 };
 
-export const PrimaryVariant: Story = {
+export const PositiveVariant: Story = {
     render: () => (
         <div style={{ display: "flex", gap: "8px", "align-items": "center" }}>
-            <IconButton variant="primary" onClick={() => alert("Restore")} tooltip="Restore item">
+            <IconButton variant="positive" onClick={() => alert("Restore")} tooltip="Restore item">
                 <RotateCcw size={20} />
             </IconButton>
             <IconButton
-                variant="primary"
+                variant="positive"
                 onClick={() => alert("Restore")}
                 tooltip="Restore"
                 disabled
