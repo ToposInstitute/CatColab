@@ -92,7 +92,7 @@ export function UserProfileForm() {
                     )}
                 </Field>
             </FormGroup>
-            <Button type="submit" variant="primary">
+            <Button type="submit" variant="positive">
                 Update profile
             </Button>
         </Form>

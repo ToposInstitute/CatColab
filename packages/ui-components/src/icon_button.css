@@ -11,7 +11,7 @@
     padding: 0;
 
     &:hover:enabled {
-        background: whitesmoke;
+        background: var(--color-icon-button-utility-hover-bg);
         border-radius: 5px;
     }
 }
@@ -28,12 +28,12 @@
     margin: 0;
 
     &:hover:enabled {
-        background-color: #fee;
-        color: #c00;
+        background-color: var(--color-icon-button-danger-hover);
+        color: var(--color-icon-button-danger-text);
     }
 }
 
-.icon-button-primary {
+.icon-button-positive {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -43,23 +43,22 @@
     cursor: pointer;
     border-radius: 4px;
     margin: 0;
-    color: #666;
     transition: background-color 0.2s ease;
 
     &:hover:enabled {
-        background-color: #efe;
-        color: #0a0;
+        background-color: var(--color-icon-button-positive-hover);
+        color: var(--color-icon-button-positive-text);
     }
 
     &:active:enabled {
-        background-color: #dfd;
+        background-color: var(--color-icon-button-positive-active);
     }
 }
 
 .tooltip-content {
     border-radius: 0.5rem;
-    color: white;
-    background-color: hsl(251, 9%, 23%);
+    color: var(--color-background);
+    background-color: var(--color-tooltip-bg);
     padding: 0.5rem;
     font-size: smaller;
 

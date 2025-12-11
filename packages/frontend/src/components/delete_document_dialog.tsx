@@ -108,7 +108,7 @@ export function useDeleteDocument() {
                             <div class="permissions-spacer" />
                             <Button
                                 type="button"
-                                variant="primary"
+                                variant="positive"
                                 onClick={() => setShowError(false)}
                             >
                                 OK

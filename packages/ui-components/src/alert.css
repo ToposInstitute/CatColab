@@ -1,5 +1,5 @@
 .alert {
-    --alert-color: black;
+    --alert-color: var(--color-foreground);
 
     box-sizing: border-box;
     border-left: 4px solid var(--alert-color);
@@ -22,17 +22,17 @@
 }
 
 .alert-warning {
-    --alert-color: GoldenRod;
+    --alert-color: var(--color-alert-warning);
 }
 
 .alert-error {
-    --alert-color: Maroon;
+    --alert-color: var(--color-alert-danger);
 }
 
 .alert-note {
-    --alert-color: Teal;
+    --alert-color: var(--color-alert-note);
 }
 
 .alert-question {
-    --alert-color: CornflowerBlue;
+    --alert-color: var(--color-alert-question);
 }

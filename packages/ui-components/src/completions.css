@@ -10,7 +10,7 @@
 }
 
 .completion-list li.active {
-    background: #f1f5f9;
+    background: var(--color-highlight-bg);
 }
 
 .completion-head {
@@ -21,7 +21,7 @@
 
 .completion-description {
     font-size: 0.75em;
-    color: dimgray;
+    color: var(--color-text-secondary);
 }
 
 .completion-shortcut {
@@ -31,7 +31,7 @@
 
 .completion-empty {
     font-size: 0.75em;
-    color: dimgray;
+    color: var(--color-text-secondary);
 }
 
 kbd.shortcut {
