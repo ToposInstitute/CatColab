@@ -50,3 +50,10 @@
     /* border-radius: 50%; */
     top: -2px;
 }
+
+button.plain {
+    background: transparent;
+    border: none;
+    color: darkgray;
+    font-size: 11pt;
+}

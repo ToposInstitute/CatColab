@@ -22,7 +22,7 @@ import {
     keyEventHasModifier,
     type ModifierKey,
 } from "catcolab-ui-components";
-import type { Cell, Notebook, MorType, ObType } from "catlog-wasm";
+import type { Cell, MorType, Notebook, ObType } from "catlog-wasm";
 import {
     type CellActions,
     type FormalCellEditorProps,
@@ -72,7 +72,7 @@ export function NotebookEditor<T>(props: {
     changeNotebook: (f: (nb: Notebook<T>) => void) => void;
 
     formalCellEditor: Component<FormalCellEditorProps<T>>;
-    cellConstructors?: CellConstructor<T>[];
+    cellConstructors: (cellType?: string, cellName?: string) => CellConstructor<T>[];
     cellLabel?: (content: T) => string | undefined;
 
     /** Called to duplicate an existing cell.
@@ -143,16 +143,28 @@ export function NotebookEditor<T>(props: {
         return cell.tag === "formal";
     };
 
-    const isObType = (content: any): content is { tag: "object"; obType: ObType } => {
-        return content && content.tag === "object";
+    const isObType = (content: unknown): content is { tag: "object"; obType: ObType } => {
+        return (
+            typeof content === "object" &&
+            content !== null &&
+            "tag" in content &&
+            content.tag === "object"
+        );
     };
 
-    const isMorType = (content: any): content is { tag: "morphism"; morType: MorType } => {
-        return content && content.tag === "morphism";
+    const isMorType = (content: unknown): content is { tag: "morphism"; morType: MorType } => {
+        return (
+            typeof content === "object" &&
+            content !== null &&
+            "tag" in content &&
+            content.tag === "morphism"
+        );
     };
 
     const retypeCellAs = (i: number, newCell: Cell<T>) => {
-	    if (!newCell || !isFormalCell(newCell)) return;
+        if (!newCell || !isFormalCell(newCell)) {
+            return;
+        }
         const mutator = (cellContent: T) => {
             if (isObType(cellContent) && isObType(newCell.content)) {
                 cellContent.obType = newCell.content.obType;
@@ -161,19 +173,22 @@ export function NotebookEditor<T>(props: {
             }
         };
         props.changeNotebook((nb) => {
-			NotebookUtils.retypeCell(nb, i, mutator);
+            NotebookUtils.retypeCell(nb, i, mutator);
         });
-		setActiveCell(i);
     };
 
-    const cellConstructors = (): CellConstructor<T>[] => [
-        {
-            name: "Text",
-            description: "Start writing text",
-            shortcut: ["T"],
-            construct: () => newRichTextCell(),
-        },
-        ...(props.cellConstructors ?? []),
+    const cellConstructors = (cellType?: string, cellName?: string): CellConstructor<T>[] => [
+        ...(cellType && cellName
+            ? []
+            : [
+                  {
+                      name: "Text",
+                      description: "Start writing text",
+                      shortcut: ["T"],
+                      construct: () => newRichTextCell(),
+                  },
+              ]),
+        ...(props.cellConstructors(cellType, cellName) ?? []),
     ];
 
     const replaceCommands = (i: number): Completion[] =>
@@ -187,8 +202,8 @@ export function NotebookEditor<T>(props: {
             };
         });
 
-    const retypeCommands = (i: number): Completion[] =>
-        cellConstructors().map((cc) => {
+    const retypeCommands = (i: number, cellType?: string, cellName?: string): Completion[] =>
+        cellConstructors(cellType, cellName).map((cc) => {
             const { name, description, shortcut } = cc;
             return {
                 name,
@@ -327,18 +342,17 @@ export function NotebookEditor<T>(props: {
                         const cell = props.notebook.cellContents[cellId];
                         invariant(cell, `Failed to find contents for cell '${cellId}'`);
 
-						// const tag = (cell.tag === "formal" ? props.cellLabel?.(cell.content) : undefined) as string;
-						const cellName = (cell: Cell<T>) =>
+                        const cellName = (cell: Cell<T>) =>
                             (cell.tag === "formal"
                                 ? props.cellLabel?.(cell.content)
                                 : undefined) as string;
-						// const cellType = isFormalCell(cell)
-                            // ? isObType(cell.content)
-                                // ? "ObType"
-                                // : isMorType(cell.content)
-                                  // ? "MorType"
-                                  // : ""
-                            // : "";
+
+                        const cellType = (cell: Cell<T>) =>
+                            cell.tag === "formal"
+                                ? isObType(cell.content)
+                                    ? "ObType"
+                                    : "MorType"
+                                : undefined;
 
                         if (cell.tag !== "rich-text") {
                             cellActions.duplicate = () => {
@@ -360,13 +374,15 @@ export function NotebookEditor<T>(props: {
                                     cellId={cell.id}
                                     index={i()}
                                     actions={cellActions}
-                                    tag={
-                                       cellName(cell) 
-                                    }
+                                    tag={cellName(cell)}
                                     currentDropTarget={currentDropTarget()}
                                     setCurrentDropTarget={setCurrentDropTarget}
-									isActive={isActive()}
-									replaceCommands={retypeCommands(i())}
+                                    isActive={isActive()}
+                                    replaceCommands={retypeCommands(
+                                        i(),
+                                        cellType(cell),
+                                        cellName(cell),
+                                    )}
                                 >
                                     <Switch>
                                         <Match when={cell.tag === "rich-text"}>

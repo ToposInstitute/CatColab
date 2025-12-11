@@ -26,12 +26,9 @@ import {
 export function ModelNotebookEditor(props: { liveModel: LiveModelDoc }) {
     const liveDoc = () => props.liveModel.liveDoc;
 
-    const cellConstructors = () => {
-	    // const cells = liveDoc().doc.notebook.cellOrder;
-		// console.log(cells);
-
+    const cellConstructors = (cellType?: string, cellName?: string) => {
         const theory = props.liveModel.theory();
-        return theory ? modelCellConstructors(theory) : [];
+        return theory ? modelCellConstructors(theory, cellType, cellName) : [];
     };
 
     return (
@@ -44,7 +41,7 @@ export function ModelNotebookEditor(props: { liveModel: LiveModelDoc }) {
                     liveDoc().changeDoc((doc) => f(doc.notebook));
                 }}
                 formalCellEditor={ModelCellEditor}
-                cellConstructors={cellConstructors()}
+                cellConstructors={cellConstructors}
                 cellLabel={judgmentLabel}
                 duplicateCell={duplicateModelJudgment}
             />
@@ -57,7 +54,6 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 
-    console.log(props);
     return (
         <Switch>
             <Match when={props.content.tag === "object" && liveModel().theory()}>
@@ -98,9 +94,13 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
     );
 }
 
-function modelCellConstructors(theory: Theory): CellConstructor<ModelJudgment>[] {
+function modelCellConstructors(
+    theory: Theory,
+    cellType?: string,
+    cellName?: string,
+): CellConstructor<ModelJudgment>[] {
     const constructors: CellConstructor<ModelJudgment>[] = [];
-    if (theory.theory.canInstantiateModels()) {
+    if (theory.theory.canInstantiateModels() && !cellType && !cellName) {
         constructors.push({
             name: "Instantiate",
             description: "Instantiate an existing model into this one",
@@ -112,7 +112,13 @@ function modelCellConstructors(theory: Theory): CellConstructor<ModelJudgment>[]
     }
 
     for (const meta of theory.modelTypes ?? []) {
-        constructors.push(modelCellConstructor(meta));
+        if (cellName && cellType) {
+            if (meta.name !== cellName && meta.tag === cellType) {
+                constructors.push(modelCellConstructor(meta));
+            }
+        } else {
+            constructors.push(modelCellConstructor(meta));
+        }
     }
     return constructors;
 }
