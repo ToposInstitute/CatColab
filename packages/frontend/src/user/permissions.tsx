@@ -6,6 +6,7 @@ import FilePen from "lucide-solid/icons/file-pen";
 import FileUser from "lucide-solid/icons/file-user";
 import Globe from "lucide-solid/icons/globe";
 import Link2 from "lucide-solid/icons/link-2";
+import UserPlus from "lucide-solid/icons/user-plus";
 import { useAuth, useFirebaseApp } from "solid-firebase";
 import {
     type ComponentProps,
@@ -33,7 +34,7 @@ import type { Document } from "catlog-wasm";
 import { type DocRef, type LiveDoc, useApi } from "../api";
 import { deepCopyJSON } from "../util/deepcopy";
 import { Login } from "./login";
-import { NameUser, UserInput } from "./username";
+import { AddUserInput, NameUser } from "./username";
 
 import "./permissions.css";
 
@@ -48,6 +49,8 @@ type PermissionsState = Partial<Omit<Permissions, "users">> & {
  */
 export function PermissionsForm(props: { refId: string; onComplete?: () => void }) {
     const [state, setState] = createStore<PermissionsState>({});
+    const [showAddUser, setShowAddUser] = createSignal(false);
+    const [addUserError, setAddUserError] = createSignal<string | undefined>();
 
     const pendingPermissions = (): NewPermissions => {
         const entries = state.users
@@ -82,6 +85,17 @@ export function PermissionsForm(props: { refId: string; onComplete?: () => void 
             return;
         }
         setState(produce((state) => state.users?.push({ user, level: "Read" })));
+    };
+
+    const handleAddUser = async (username: string) => {
+        setAddUserError(undefined);
+        const result = await api.rpc.user_by_username.query(username);
+        if (result.tag === "Ok" && result.content != null) {
+            addEntry(result.content);
+            setShowAddUser(false);
+        } else {
+            setAddUserError(`User "${username}" not found`);
+        }
     };
 
     const willAddOwners = (): boolean =>
@@ -161,10 +175,28 @@ export function PermissionsForm(props: { refId: string; onComplete?: () => void 
                             </div>
                         )}
                     </For>
-                    <UserInput
-                        setUser={addEntry}
-                        placeholder="Add a person by entering their username"
-                    />
+                    <Show
+                        when={showAddUser()}
+                        fallback={
+                            <Button
+                                type="button"
+                                variant="utility"
+                                onClick={() => {
+                                    setShowAddUser(true);
+                                    setAddUserError(undefined);
+                                }}
+                            >
+                                <UserPlus />
+                                Add a user
+                            </Button>
+                        }
+                    >
+                        <AddUserInput
+                            onSubmit={handleAddUser}
+                            onCancel={() => setShowAddUser(false)}
+                            error={addUserError()}
+                        />
+                    </Show>
                 </dd>
             </FormGroup>
             <Show when={willAddOwners()}>
@@ -173,23 +205,25 @@ export function PermissionsForm(props: { refId: string; onComplete?: () => void 
                     <p>{"Ownership, once granted, cannot be revoked."}</p>
                 </Warning>
             </Show>
-            <div class="permissions-button-container">
-                <Button type="button" variant="utility" onClick={copyToClipboard}>
-                    <Link2 />
-                    Copy link
-                </Button>
-                <div class="permissions-spacer" />
-                <Button
-                    type="button"
-                    variant="positive"
-                    disabled={
-                        !props.refId || currentPermissions.loading || currentPermissions.error
-                    }
-                    onClick={submitPermissions}
-                >
-                    Update permissions
-                </Button>
-            </div>
+            <Show when={!showAddUser()}>
+                <div class="permissions-button-container">
+                    <Button type="button" variant="utility" onClick={copyToClipboard}>
+                        <Link2 />
+                        Copy link
+                    </Button>
+                    <div class="permissions-spacer" />
+                    <Button
+                        type="button"
+                        variant="positive"
+                        disabled={
+                            !props.refId || currentPermissions.loading || currentPermissions.error
+                        }
+                        onClick={submitPermissions}
+                    >
+                        Update permissions
+                    </Button>
+                </div>
+            </Show>
         </form>
     );
 }
