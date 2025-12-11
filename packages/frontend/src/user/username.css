@@ -13,3 +13,31 @@
         color: var(--color-text-secondary);
     }
 }
+
+.add-user-input {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding: 1rem;
+    border-top: 1px solid var(--color-menu-separator);
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-around;
+}
+.add-user-input input {
+    max-width: 170px;
+}
+
+.add-user-error {
+    color: var(--color-danger);
+}
+
+.add-user-input-buttons {
+    padding-top: 1.4rem;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.add-user-input-buttons > button {
+    min-width: 90px;
+}
