@@ -11,6 +11,7 @@ import ArrowUp from "lucide-solid/icons/arrow-up";
 import Copy from "lucide-solid/icons/copy";
 import GripVertical from "lucide-solid/icons/grip-vertical";
 import Plus from "lucide-solid/icons/plus";
+import SquarePen from "lucide-solid/icons/square-pen";
 import Trash2 from "lucide-solid/icons/trash-2";
 import type { EditorView } from "prosemirror-view";
 import { createEffect, createSignal, type JSX, onCleanup, Show } from "solid-js";
@@ -273,8 +274,9 @@ export function CellSwitcher(props: { tag: string | undefined; completions: Comp
                 trapFocus={false}
             >
                 <Popover.Anchor as="span">
-                    <button type="button" class="plain" onClick={openSwitchMenu}>
+                    <button type="button" class="plain flex items-center" onClick={openSwitchMenu}>
                         {props.tag}
+                        <SquarePen size={16} />
                     </button>
                 </Popover.Anchor>
                 <Popover.Portal>
