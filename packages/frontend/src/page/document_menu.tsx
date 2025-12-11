@@ -4,10 +4,9 @@ import Ellipsis from "lucide-solid/icons/ellipsis";
 import { createMemo, createResource, Match, Show, Switch, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { IconButton } from "catcolab-ui-components";
+import { DocumentTypeIcon, IconButton } from "catcolab-ui-components";
 import { createAnalysis } from "../analysis";
 import { type DocRef, type LiveDoc, useApi } from "../api";
-import { DocumentTypeIcon } from "../components/document_type_icon";
 import { createDiagram } from "../diagram";
 import {
     CopyJSONMenuItem,

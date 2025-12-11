@@ -15,6 +15,11 @@ export type TheoryMeta = {
     /** Short description of models of theory. */
     description: string;
 
+    /** Two-letter icon abbreviation for the theory.
+    The first letter is usually uppercase and the second is lowercase.
+     */
+    iconLetters: [string, string];
+
     /** Is this theory the default theory for new models?
     It is enforced that at most one theory will have this status.
      */

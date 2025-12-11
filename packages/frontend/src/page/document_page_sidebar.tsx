@@ -1,10 +1,11 @@
 import { useNavigate } from "@solidjs/router";
-import { createMemo, createResource, For, Show } from "solid-js";
+import { createMemo, createResource, For, Show, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
+import { DocumentTypeIcon } from "catcolab-ui-components";
 import type { Document, Link } from "catlog-wasm";
 import { type Api, type LiveDocWithRef, useApi } from "../api";
-import { DocumentTypeIcon } from "../components/document_type_icon";
+import { TheoryLibraryContext } from "../theory";
 import { DocumentMenu } from "./document_menu";
 
 export function DocumentSidebar(props: {
@@ -162,10 +163,26 @@ function DocumentsTreeLeaf(props: {
     refetchSecondaryDoc: () => void;
 }) {
     const navigate = useNavigate();
+    const theories = useContext(TheoryLibraryContext);
     const api = useApi();
+
     const clickedRefId = createMemo(() => props.doc.docRef.refId);
     const primaryRefId = createMemo(() => props.primaryDoc.docRef.refId);
     const secondaryRefId = createMemo(() => props.secondaryDoc?.docRef.refId);
+
+    const iconLetters = createMemo(() => {
+        const doc = props.doc.liveDoc.doc;
+        const theoryId = doc.type === "model" ? doc.theory : undefined;
+        if (theoryId && theories && props.doc.liveDoc.doc.type === "model") {
+            try {
+                const theoryMeta = theories.getMetadata(theoryId);
+                return theoryMeta.iconLetters;
+            } catch (_e) {
+                return undefined;
+            }
+        }
+        return undefined;
+    });
 
     const handleClick = async () => {
         // If clicking on primary or secondary doc, navigate to just that doc
@@ -195,6 +212,7 @@ function DocumentsTreeLeaf(props: {
             <DocumentTypeIcon
                 documentType={props.doc.liveDoc.doc.type}
                 isDeleted={props.doc.docRef.isDeleted}
+                letters={iconLetters()}
             />
             <div
                 class="document-name"
