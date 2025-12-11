@@ -131,6 +131,15 @@ export namespace NotebookUtils {
         return notebook.cellOrder.some((cellId) => notebook.cellContents[cellId]?.tag === "formal");
     }
 
+    export function retypeCell<T>(
+        notebook: Notebook<T>,
+        index: number,
+        mutator: (cellContent: T) => void,
+    ) {
+        const cellId = getCellIdByIndex(notebook, index);
+        cellId && mutateCellContentById(notebook, cellId, mutator);
+    }
+
     export function numCells<T>(notebook: Notebook<T>): number {
         return notebook.cellOrder.length;
     }
