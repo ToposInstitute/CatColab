@@ -10,7 +10,7 @@ import type { Completion } from "./completions";
 import { TextInput } from "./text_input";
 
 const meta = {
-    title: "TextInput",
+    title: "Forms & Inputs/TextInput",
     component: TextInput,
 } satisfies Meta<typeof TextInput>;
 

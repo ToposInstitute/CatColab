@@ -7,7 +7,7 @@ import { IconButton } from "./icon_button";
 import { PanelHeader } from "./panel";
 
 const meta = {
-    title: "PanelHeader",
+    title: "Layout/PanelHeader",
     component: PanelHeader,
 } satisfies Meta<typeof PanelHeader>;
 

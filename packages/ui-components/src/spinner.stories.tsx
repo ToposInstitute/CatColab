@@ -5,7 +5,7 @@ import { Button } from "./button";
 import { Spinner } from "./spinner";
 
 const meta = {
-    title: "Spinner",
+    title: "Loading/Spinner",
     component: Spinner,
 } satisfies Meta<typeof Spinner>;
 
@@ -15,14 +15,6 @@ type Story = StoryObj<typeof meta>;
 export const Summary: Story = {
     render: () => <Spinner />,
     tags: ["!autodocs", "!dev"],
-};
-
-export const Basic: Story = {
-    render: () => (
-        <div style={{ padding: "32px" }}>
-            <Spinner />
-        </div>
-    ),
 };
 
 export const LoadingState: Story = {
