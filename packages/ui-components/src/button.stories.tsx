@@ -183,17 +183,6 @@ export const FormActions: Story = {
     },
 };
 
-export const WelcomeButtons: Story = {
-    render: () => (
-        <div style={{ display: "flex", gap: "16px", "flex-direction": "column", padding: "20px" }}>
-            <Button class="button-welcome" variant="positive">
-                Get Started
-            </Button>
-            <Button variant="utility">Learn More</Button>
-        </div>
-    ),
-};
-
 export const AllVariants: Story = {
     render: () => (
         <div style={{ display: "flex", "flex-direction": "column", gap: "16px" }}>

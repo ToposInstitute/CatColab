@@ -4,7 +4,7 @@ import type { Meta, StoryObj } from "storybook-solidjs-vite";
 import { FormGroup, InputField, SelectField, TextAreaField, TextInputField } from "./form";
 
 const meta = {
-    title: "Form",
+    title: "Forms & Inputs/Form",
     component: FormGroup,
 } satisfies Meta<typeof FormGroup>;
 
