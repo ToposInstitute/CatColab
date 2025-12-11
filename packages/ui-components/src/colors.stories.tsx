@@ -2844,7 +2844,7 @@ export const DangerColorUsage: Story = {
                             "font-weight": "600",
                         }}
                     >
-                        Form Error Messages (form.css)
+                        Form Error Messages (form.module.css)
                     </h2>
                     <p style={{ "margin-bottom": "1rem", color: "var(--color-gray-800)" }}>
                         Form validation errors use --color-form-error-text to display error messages

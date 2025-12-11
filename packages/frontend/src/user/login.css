@@ -50,3 +50,29 @@
     max-width: 30em;
     margin: 0 auto;
 }
+
+/* TODO: Migrate login to use the form component from ui-components and remove these styles */
+.login form input,
+.login form select,
+.login form textarea {
+    font-size: inherit;
+    padding: 6px;
+}
+
+.login form input[type="file"] {
+    border: 1px solid var(--color-gray-450);
+    border-radius: 6px;
+    padding: 10px;
+}
+
+.login form textarea {
+    border: 1px solid var(--color-gray-450);
+    border-radius: 6px;
+    min-height: 5rem;
+    resize: both;
+}
+
+.login form .error {
+    color: var(--color-form-error-text);
+    font-size: smaller;
+}
