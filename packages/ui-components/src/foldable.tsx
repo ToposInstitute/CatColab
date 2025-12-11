@@ -8,8 +8,7 @@ import "./panel.css";
 
 /** A component whose contents can be expanded or folded.
 
-This component is a styled wrapper around corvu's `Disclosure`. We could likely
-just as well have used kobalte's `Collapsible`.
+This component is a styled wrapper around corvu's `Disclosure`.
  */
 export function Foldable(props: {
     /** Title for the component, shown next to the fold/expand button. */
