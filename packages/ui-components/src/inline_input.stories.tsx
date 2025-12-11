@@ -181,21 +181,21 @@ export const DocumentTitleEditor: Story = {
 export const WithAutofill: Story = {
     render: () => {
         const [text, setText] = createSignal("");
-        const [submitted, setSubmitted] = createSignal(false);
+        const [autofillTriggered, setAutofillTriggered] = createSignal(false);
 
         return (
             <div style={{ padding: "16px" }}>
-                <p>Press Enter to submit:</p>
+                <p>Press Ctrl+Space to trigger autofill:</p>
                 <InlineInput
                     text={text()}
                     setText={setText}
                     placeholder="Type and press Enter..."
                     autofill={() => {
-                        setSubmitted(true);
-                        setTimeout(() => setSubmitted(false), 2000);
+                        setAutofillTriggered(true);
+                        setTimeout(() => setAutofillTriggered(false), 2000);
                     }}
                 />
-                {submitted() && <p style={{ color: "green" }}>Submitted: {text()}</p>}
+                {autofillTriggered() && <p style={{ color: "green" }}>Autofill triggered</p>}
             </div>
         );
     },
