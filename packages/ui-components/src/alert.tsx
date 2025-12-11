@@ -16,7 +16,7 @@ export type AlertProps = {
 
 /** A warning alert. */
 export const Warning = (props: AlertProps) => (
-    <div role="alert" class="alert alert-warning">
+    <div class="alert alert-warning">
         <div class="alert-heading">
             <TriangleAlert />
             {props.title ?? "Warning"}
@@ -29,7 +29,7 @@ export const Warning = (props: AlertProps) => (
 Not called `Error` to avoid shadowing that name in JavaScript.
  */
 export const ErrorAlert = (props: AlertProps) => (
-    <div role="alert" class="alert alert-error">
+    <div class="alert alert-error">
         <div class="alert-heading">
             <OctagonX />
             {props.title ?? "Error"}
@@ -40,7 +40,7 @@ export const ErrorAlert = (props: AlertProps) => (
 
 /** A note alert. */
 export const Note = (props: AlertProps) => (
-    <div role="alert" class="alert alert-note">
+    <div class="alert alert-note">
         <div class="alert-heading">
             <Info />
             {props.title ?? "Note"}
@@ -51,7 +51,7 @@ export const Note = (props: AlertProps) => (
 
 /** A question alert. */
 export const Question = (props: AlertProps) => (
-    <div role="alert" class="alert alert-question">
+    <div class="alert alert-question">
         <div class="alert-heading">
             <MessageCircleQuestion />
             {props.title ?? "Question"}
