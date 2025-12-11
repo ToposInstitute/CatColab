@@ -87,6 +87,18 @@ impl ThSchema {
         );
         Ok(boxed.replace_box(model.into()))
     }
+
+    /// Renders a model into valid SQL
+    #[wasm_bindgen(js_name = "renderSql")]
+    pub fn render_sql(&self, model: &DblModel, backend: &str) -> Result<String, String> {
+        let sql_string = catlog::stdlib::analyses::sql::SQLAnalysis::new(
+            model.ob_namespace()?,
+            model.mor_namespace()?,
+            backend,
+        )?
+        .render(model.discrete()?);
+        Ok(sql_string)
+    }
 }
 
 /// The theory of signed categories.
