@@ -22,7 +22,7 @@ use crate::dbl::{
 };
 use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
-use crate::zero::{QualifiedName, alg::Polynomial, name, rig::Monomial};
+use crate::zero::{alg::Polynomial, name, rig::Monomial, QualifiedName};
 
 /// Data defining a mass-action ODE problem for a model.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -218,7 +218,9 @@ pub struct StockFlowMassActionAnalysis {
     /// Morphism types for flows between stocks.
     pub flow_mor_type: TabMorType,
     /// Morphism types for links for stocks to flows.
-    pub link_mor_type: TabMorType,
+    pub pos_link_mor_type: TabMorType,
+    /// Morphism types for links for stocks to flows.
+    pub neg_link_mor_type: TabMorType,
 }
 
 impl Default for StockFlowMassActionAnalysis {
@@ -228,7 +230,8 @@ impl Default for StockFlowMassActionAnalysis {
         Self {
             stock_ob_type,
             flow_mor_type,
-            link_mor_type: TabMorType::Basic(name("Link")),
+            pos_link_mor_type: TabMorType::Basic(name("PositiveLink")),
+            neg_link_mor_type: TabMorType::Basic(name("NegativeLink")),
         }
     }
 }
@@ -247,7 +250,10 @@ impl StockFlowMassActionAnalysis {
             })
             .collect();
 
-        for link in model.mor_generators_with_type(&self.link_mor_type) {
+        for link in model
+            .mor_generators_with_type(&self.pos_link_mor_type)
+            .chain(model.mor_generators_with_type(&self.neg_link_mor_type))
+        {
             let dom = model.mor_generator_dom(&link).unwrap_basic();
             let path = model.mor_generator_cod(&link).unwrap_tabulated();
             let Some(TabEdge::Basic(cod)) = path.only() else {

@@ -12,7 +12,7 @@ use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 use catlog::zero::name;
 
-use super::model_morphism::{MotifOccurrence, MotifsOptions, motifs};
+use super::model_morphism::{motifs, MotifOccurrence, MotifsOptions};
 use super::result::JsResult;
 use super::{analyses::*, model::DblModel, theory::DblTheory};
 
@@ -280,6 +280,39 @@ impl ThCategoryLinks {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
         Self(Rc::new(theories::th_category_links()))
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory(self.0.clone().into())
+    }
+
+    /// Simulates the mass-action ODE system derived from a model.
+    #[wasm_bindgen(js_name = "massAction")]
+    pub fn mass_action(
+        &self,
+        model: &DblModel,
+        data: analyses::ode::MassActionProblemData,
+    ) -> Result<ODEResult, String> {
+        Ok(ODEResult(
+            analyses::ode::StockFlowMassActionAnalysis::default()
+                .build_numerical_system(model.discrete_tab()?, data)
+                .solve_with_defaults()
+                .map_err(|err| format!("{err:?}"))
+                .into(),
+        ))
+    }
+}
+
+/// The theory of categories with signed links.
+#[wasm_bindgen]
+pub struct ThCategorySignedLinks(Rc<theory::DiscreteTabTheory>);
+
+#[wasm_bindgen]
+impl ThCategorySignedLinks {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Rc::new(theories::th_category_signed_links()))
     }
 
     #[wasm_bindgen]
