@@ -78,7 +78,7 @@ stdTheories.add(
     {
         id: "primitive-stock-flow",
         name: "Stock and flow",
-        description: "Model accumulation (stocks) and change (flows)",
+        description: "Accumulation (stocks) and change (flows)",
         group: "System Dynamics",
     },
     async () => (await import("./theories/primitive-stock-flow")).default,
