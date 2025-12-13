@@ -1,4 +1,4 @@
-module DecapodesService
+module DecapodesExt 
 
 import Base: run
 
@@ -24,9 +24,9 @@ Point3D = Point3{Float64}
 # simulation
 using OrdinaryDiffEq
 
-using ..CatColabInterop
-using ..CatColabInterop: AlgebraicJuliaIntegration, AbstractDiagram, AbstractAnalysis
-import ..CatColabInterop: Model, ObGenerator, MorGenerator, DiagramObGenerator, DiagramMorGenerator
+using CatColabInterop
+using CatColabInterop: AlgebraicJuliaIntegration, AbstractDiagram, AbstractAnalysis
+import CatColabInterop: Model, ObGenerator, MorGenerator, DiagramObGenerator, DiagramMorGenerator
 
 # necessary to export
 export infer_types!, evalsim, default_dec_generate, default_dec_matrix_generate, DiagonalHodge, ComponentArray
