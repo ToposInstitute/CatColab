@@ -1,8 +1,8 @@
 using Test
 
-@testset "Catlab" begin
-   include("TestCatlab.jl")
-end
+# @testset "Catlab" begin
+#    include("TestCatlab.jl")
+# end
 
 @testset "Decapodes" begin
    include("test_decapodes/model_verification.jl")

@@ -10,6 +10,9 @@ using CatColabInterop
 using Oxygen
 using HTTP
 
+using TOML
+using ArgParse
+
 const CORS_HEADERS = [
     "Access-Control-Allow-Origin" => "*",
     "Access-Control-Allow-Headers" => "*",
@@ -30,12 +33,19 @@ function CorsHandler(handle)
     end
 end
 
-defaults = [:Catlab,:ACSets] # all extensions to date
-
-for pkg in (isempty(ARGS) ? defaults : ARGS )
-  @info "using $pkg"
-  @eval using $pkg
+s = ArgParseSettings()
+@add_arg_table s begin
+    "--toml", "-t"
+        arg_type = String
+        default = "Project.toml"
+    "--pkg", "-p"
+        arg_type = String
+        default = "CatlabExt"
 end
+parsed_args = parse_args(ARGS, s)
+
+# TODO
+@ext DecapodesExt("../Project.toml")
 
 for m in methods(CatColabInterop.endpoint)
   sig = m.sig.parameters

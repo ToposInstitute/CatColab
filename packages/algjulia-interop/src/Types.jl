@@ -3,8 +3,9 @@
 module Types 
 
 export ObType, MorType, DiagramObGenerator, DiagramMorGenerator, ObGenerator, 
-       MorGenerator, Diagram, Model, ModelDiagram
+       MorGenerator, Diagram, Model, ModelDiagram, Analysis
 
+import JSON3: read
 using StructTypes
 
 struct ObType 
@@ -13,19 +14,25 @@ struct ObType
 end
 StructTypes.StructType(::Type{ObType}) = StructTypes.Struct()
 
+Base.nameof(ob::ObType) = ob.tag
+
 struct MorType 
     tag::String 
     content::Union{String,ObType}
 end
 StructTypes.StructType(::Type{MorType}) = StructTypes.Struct()
 
+Base.nameof(mor::MorType) = mor.tag
+
 struct DiagramObGenerator 
     id::String
-    label::Vector{String}
+    label::Vector{Union{Integer, String}}
     obType::ObType
     over::ObType
 end 
 StructTypes.StructType(::Type{DiagramObGenerator}) = StructTypes.Struct()
+
+Base.nameof(dob::DiagramObGenerator) = join(string.(dob.label), ".")
 
 struct DiagramMorGenerator
     id::String
@@ -36,21 +43,27 @@ struct DiagramMorGenerator
 end
 StructTypes.StructType(::Type{DiagramMorGenerator}) = StructTypes.Struct()
 
+Base.nameof(dmor::DiagramMorGenerator) = join(string.(dmor.label), ".")
+
 struct ObGenerator 
     id::String
-    label::Vector{String}
+    label::Vector{Union{Integer, String}}
     obType::ObType
 end 
 StructTypes.StructType(::Type{ObGenerator}) = StructTypes.Struct()
 
+Base.nameof(obg::ObGenerator) = join(string.(obg.label), ".")
+
 struct MorGenerator
     id::String
-    label::Vector{String}
+    label::Vector{Union{Integer, String}}
     morType::MorType
     dom::ObType
     cod::ObType
 end
 StructTypes.StructType(::Type{MorGenerator}) = StructTypes.Struct()
+
+Base.nameof(morg::MorGenerator) = join(string.(morg.label), ".")
 
 struct Diagram 
     obGenerators::Vector{DiagramObGenerator}
@@ -64,11 +77,25 @@ struct Model
 end
 StructTypes.StructType(::Type{Model}) = StructTypes.Struct()
 
-
 struct ModelDiagram 
     model::Model
     diagram::Diagram
 end
 StructTypes.StructType(::Type{ModelDiagram}) = StructTypes.Struct()
+
+# Intermediate variables enter as integers
+struct Analysis
+    model::Model
+    diagram::Diagram
+    analysis::Dict{Symbol, Any} 
+end
+
+function read(content::String, ::Type{Analysis})
+    obj = read(content)
+    model = StructTypes.constructfrom(Model, obj[:model])
+    diagram = StructTypes.constructfrom(Diagram, obj[:diagram])
+    Analysis(model, diagram, obj[:analysis]) 
+end
+
 
 end # module

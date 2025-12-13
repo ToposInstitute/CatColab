@@ -83,10 +83,15 @@ function Geometry(json_object::AbstractDict)
     Geometry(domain)
 end
 
-function Geometry(payload::DiagramPayload{ThDecapode})
-    domain = PREDEFINED_MESHES[Symbol(payload.data[:mesh])]
+function Geometry(analysis::Analysis)
+    domain = PREDEFINED_MESHES[Symbol(analysis.analysis[:mesh])]
     Geometry(domain)
 end
+
+# function Geometry(payload::DiagramPayload{ThDecapode})
+#     domain = PREDEFINED_MESHES[Symbol(payload.data[:mesh])]
+#     Geometry(domain)
+# end
 
 # function Geometry(d::Domain, args...)
 #     throw(ImplError("The mesh ($(d)) is"))

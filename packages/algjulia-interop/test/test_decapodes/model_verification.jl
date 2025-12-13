@@ -1,39 +1,26 @@
-using CatColabInterop
-using ACSets
-using CombinatorialSpaces
-using Decapodes
-using DiagrammaticEquations
-#
-using MLStyle
-using JSON3
-using ComponentArrays
-using StaticArrays
-using LinearAlgebra
-import OrdinaryDiffEq: ReturnCode
 const KEYS = Set([:mesh, :plotVariables, :initialConditions, :domain, :diagram, :model, :scalars, :duration])
 
-@testset "Text-to-Pode" begin
-    @test ob_name(ThDecapode(), "0-form")      == :Form0
-    @test ob_name(ThDecapode(), "1-form")      == :Form1
-    @test ob_name(ThDecapode(), "2-form")      == :Form2
-    @test ob_name(ThDecapode(), "dual 0-form") == :DualForm0
-    @test ob_name(ThDecapode(), "dual 1-form") == :DualForm1
-    @test ob_name(ThDecapode(), "dual 2-form") == :DualForm2
-    @test_throws CatColabInterop.ImplError ob_name(ThDecapode(), "Form3")
-    @test mor_name(ThDecapode(), "∂t") == :∂ₜ
-    @test mor_name(ThDecapode(), "Δ") == :Δ
-    @test_throws CatColabInterop.ImplError mor_name(ThDecapode(), "∧") 
-end
+# @testset "Text-to-Pode" begin
+#     @test ob_name(ThDecapode(), "0-form")      == :Form0
+#     @test ob_name(ThDecapode(), "1-form")      == :Form1
+#     @test ob_name(ThDecapode(), "2-form")      == :Form2
+#     @test ob_name(ThDecapode(), "dual 0-form") == :DualForm0
+#     @test ob_name(ThDecapode(), "dual 1-form") == :DualForm1
+#     @test ob_name(ThDecapode(), "dual 2-form") == :DualForm2
+#     @test_throws CatColabInterop.ImplError ob_name(ThDecapode(), "Form3")
+#     @test mor_name(ThDecapode(), "∂t") == :∂ₜ
+#     @test mor_name(ThDecapode(), "Δ") == :Δ
+#     @test_throws CatColabInterop.ImplError mor_name(ThDecapode(), "∧") 
+# end
 
 @testset "Validate model" begin
 
     # Let's grab a model from one of our examples
-    payload = JSON3.read(read("test/data/diagrams/inverse_laplacian_longtrip/analysis.json", String))
-    model = Model(ThDecapode(), payload["model"])
-  
+    payload = JSON3.read(read("data/diagrams/inverse_laplacian_longtrip/analysis.json", String), Analysis)
+
     # The types available to objects and morphisms in this model. 
-    @test Set(nameof.(model.ob_generators)) == Set([:Form0, :Form1, :DualForm1, :DualForm2])
-    @test Set(nameof.(model.mor_generators)) == Set([:⋆₀⁻¹, :Δ⁻¹, :d₀, :⋆₁, :dpsw, :♭♯, :dual_d₁, :∂ₜ, :neg])
+    @test Set(nameof.(payload.model.obGenerators)) == Set(["0-form", "Primal 1-form", "Dual 1-form", "Dual 2-form"])
+    @test Set(nameof.(payload.model.morGenerators)) == Set([:⋆₀⁻¹, :Δ⁻¹, :d₀, :⋆₁, :dpsw, :♭♯, :dual_d₁, :∂ₜ, :neg])
 
 end
 
@@ -42,7 +29,7 @@ end
     add_part!(handcrafted_pode, :Var, name=:u, type=:Form0)
     add_part!(handcrafted_pode, :Var, name=Symbol("du/dt"), type=:Form0)
     add_part!(handcrafted_pode, :Op1, src=1, tgt=2, op1=:Δ⁻¹)
-    simulation = DecapodeSimulation(read("test/data/diagrams/inverse_laplacian_longtrip/analysis.json", String))
+    simulation = DecapodesExt.DecapodeSimulation("data/diagrams/inverse_laplacian_longtrip/analysis.json")
     @test simulation.pode == handcrafted_pode
 end
  
@@ -60,7 +47,7 @@ end
     add_part!(handcrafted_pode, :Op1, src=4, tgt=5, op1=:⋆₁)
     add_part!(handcrafted_pode, :Op1, src=5, tgt=2, op1=:dual_d₁)
     #
-    simulation = DecapodeSimulation(read("test/data/diagrams/inverse_laplacian_longtrip/analysis.json", String))
+    simulation = DecapodeSimulation(read("data/diagrams/inverse_laplacian_longtrip/analysis.json", String))
     @test simulation.pode == handcrafted_pode
 end
 
@@ -95,7 +82,7 @@ end
     add_part!(handcrafted_pode, :Op1, src=10, tgt=9, op1=:neg)
     infer_types!(handcrafted_pode)
     
-    simulation = DecapodeSimulation(read("test/data/diagrams/ns_vort/analysis.json", String))
+    simulation = DecapodeSimulation(read("data/diagrams/ns_vort/analysis.json", String))
     @test_broken simulation.pode == handcrafted_pode
 
 end

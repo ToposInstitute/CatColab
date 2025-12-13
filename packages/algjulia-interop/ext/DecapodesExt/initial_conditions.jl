@@ -80,7 +80,7 @@ end
 
 function initial_conditions(ics::GaussianIC, geometry::Geometry)
     c_dist = MvNormal(ics.ξ)
-    c = [pdf(c_dist, [p[1], p[2]]) for p ∈ geometry.dualmesh[:point]]
+    c = [Distributions.pdf(c_dist, [p[1], p[2]]) for p ∈ geometry.dualmesh[:point]]
     return c
 end
 

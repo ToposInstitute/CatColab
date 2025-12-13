@@ -1,4 +1,4 @@
-module DecapodesService
+module DecapodesExt 
 
 import Base: run
 
@@ -24,21 +24,18 @@ Point3D = Point3{Float64}
 # simulation
 using OrdinaryDiffEq
 
-using ..CatColabInterop
-using ..CatColabInterop: AlgebraicJuliaIntegration, AbstractDiagram, AbstractAnalysis
-import ..CatColabInterop: Model, ObGenerator, MorGenerator, DiagramObGenerator, DiagramMorGenerator
+
+using CatColabInterop, Oxygen, HTTP
+import CatColabInterop: Model, ModelDiagram, ObGenerator, MorGenerator, DiagramObGenerator, DiagramMorGenerator
+import CatColabInterop: endpoint
 
 # necessary to export
 export infer_types!, evalsim, default_dec_generate, default_dec_matrix_generate, DiagonalHodge, ComponentArray
 
-struct ThDecapode <: AlgebraicJuliaIntegration end
-export ThDecapode
+include("interop.jl")
 
 # functions for geometry and initial conditions
 include("geometry.jl")
-
-# responsible for constructing a valid model 
-include("model.jl")
 
 # helper functions for Navier-Stokes
 include("ns_helper.jl")
@@ -46,10 +43,23 @@ include("ns_helper.jl")
 # constructing initial conditions
 include("initial_conditions.jl")
 
-# parses a payload to a valid analysis 
-include("parse.jl")
+# constructs a simulation from the payload
+include("simulation.jl")
 
 # executes the analysis 
 include("execute.jl")
+
+"""
+"""
+function endpoint(::Val{:DecapodeSimulation})
+    @post "/decapodes-simulation" function(req::HTTP.Request)
+        payload = json(req, ModelDiagrma)
+        simulation = DecapodesSimulation(payload)
+        sim = evalsim(simulation.pode)
+        f = sim(simulation.geometry.dualmesh, simulation.generate, DiagonalHodge())
+        res = run(f, simulation, ComponentArray(k=0.5,))
+        sim_to_json(res)
+    end
+end
 
 end

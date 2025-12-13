@@ -50,6 +50,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         initedKernel,
         () => {
             const simulationData = makeSimulationData(props.liveDiagram, props.content);
+			console.log(simulationData);
             if (!simulationData) {
                 return undefined;
             }
@@ -274,7 +275,13 @@ type SimulationData = {
     /** Model that the diagram is in. */
     model: ModelPresentation;
 
-    /** The geometric domain to use for the simulation. */
+	/** */
+    analysis: SimulationAnalysis; 
+};
+
+type SimulationAnalysis = {
+	
+	/** The geometric domain to use for the simulation. */
     domain: string;
 
     /** The mesh to use for the simulation. */
@@ -291,7 +298,8 @@ type SimulationData = {
 
     /** Duration */
     duration: number;
-};
+
+}
 
 /** Julia code run after kernel is started. */
 const makeInitCode = () =>
@@ -343,11 +351,13 @@ const makeSimulationData = (
     return {
         diagram: validatedDiagram.diagram.presentation(),
         model: validatedModel.model.presentation(),
-        domain,
-        mesh,
-        initialConditions,
-        plotVariables: Object.keys(plotVariables).filter((v) => plotVariables[v]),
-        scalars,
-        duration,
+        analysis: {
+			domain,
+			mesh,
+			initialConditions,
+			plotVariables: Object.keys(plotVariables).filter((v) => plotVariables[v]),
+			scalars,
+			duration,
+		}
     };
 };
