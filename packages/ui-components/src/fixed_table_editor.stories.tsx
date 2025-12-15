@@ -10,7 +10,7 @@ import {
 } from "./fixed_table_editor";
 
 const meta = {
-    title: "FixedTableEditor",
+    title: "Forms & Inputs/FixedTableEditor",
     component: FixedTableEditor,
 } satisfies Meta<typeof FixedTableEditor>;
 
