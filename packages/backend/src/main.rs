@@ -12,9 +12,11 @@ use sqlx::{PgPool, Postgres};
 use sqlx_migrator::cli::MigrationCommand;
 use sqlx_migrator::migrator::{Migrate, Migrator};
 use sqlx_migrator::{Info, Plan};
+use std::collections::HashSet;
 use std::path::Path;
 use std::sync::Arc;
-use tokio::sync::watch;
+use tokio::sync::{watch, RwLock};
+use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
 use tracing::{error, info};
 use tracing_subscriber::filter::{EnvFilter, LevelFilter};
@@ -91,6 +93,7 @@ async fn main() {
                 db: db.clone(),
                 app_status: status_rx.clone(),
                 repo,
+                active_listeners: Arc::new(RwLock::new(HashSet::new())),
             };
 
             // We need to wrap FirebaseAuth in an Arc because if it's ever dropped the process which updates it's
@@ -200,10 +203,10 @@ async fn run_web_server(
     let rpc_router = rpc::router();
     let (qubit_service, qubit_handle) = rpc_router.as_rpc(state.clone()).into_service();
 
-    let rpc_router = Router::<()>::new()
+    let rpc_with_mw = ServiceBuilder::new()
         .layer(from_fn_with_state(state.app_status.clone(), app_status_gate))
         .layer(from_fn_with_state(firebase_auth.clone(), auth_middleware))
-        .nest_service("/rpc", qubit_service);
+        .service(qubit_service);
 
     let samod_router = Router::new()
         .layer(from_fn_with_state(firebase_auth, auth_middleware))
@@ -216,7 +219,10 @@ async fn run_web_server(
         .route("/status", get(status_handler))
         .with_state(state.app_status.clone());
 
-    let mut app = Router::new().merge(status_router).merge(rpc_router).merge(samod_router);
+    let mut app = Router::new()
+        .merge(status_router)
+        .nest_service("/rpc", rpc_with_mw)
+        .merge(samod_router);
 
     if let Some(spa_dir) = spa_directory() {
         let index = Path::new(&spa_dir).join("index.html");

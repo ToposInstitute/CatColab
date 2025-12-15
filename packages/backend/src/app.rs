@@ -2,8 +2,10 @@ use firebase_auth::FirebaseUser;
 use serde::Serialize;
 // use socketioxide::SocketIo;
 use sqlx::PgPool;
+use std::collections::HashSet;
+use std::sync::Arc;
 use thiserror::Error;
-use tokio::sync::watch;
+use tokio::sync::{watch, RwLock};
 use ts_rs::TS;
 use uuid::Uuid;
 
@@ -19,6 +21,9 @@ pub struct AppState {
     pub repo: samod::Repo,
 
     pub app_status: watch::Receiver<AppStatus>,
+
+    /// Tracks which ref_ids have active autosave listeners to prevent duplicates
+    pub active_listeners: Arc<RwLock<HashSet<Uuid>>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

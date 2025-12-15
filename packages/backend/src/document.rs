@@ -1,7 +1,7 @@
 //! Procedures to create and manipulate documents.
 
 use crate::app::{AppCtx, AppError, AppState, Paginated};
-use crate::automerge_json::populate_automerge_from_json;
+use crate::automerge_json::{ensure_autosave_listener, populate_automerge_from_json};
 use crate::{auth::PermissionLevel, user::UserSummary};
 use chrono::{DateTime, Utc};
 use samod::DocumentId;
@@ -78,6 +78,8 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
 
     txn.commit().await?;
 
+    ensure_autosave_listener(ctx.state.clone(), ref_id, doc_handle).await;
+
     Ok(ref_id)
 }
 
@@ -96,24 +98,21 @@ pub async fn head_snapshot(state: AppState, ref_id: Uuid) -> Result<Value, AppEr
 
 /// Gets the binary automerge data for a document ref.
 pub async fn head_snapshot_binary(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
-    let query = sqlx::query!(
-        "
-        SELECT doc_id FROM snapshots
-        WHERE id = (SELECT head FROM refs WHERE id = $1)
-        ",
-        ref_id
-    );
-    let doc_id = query.fetch_one(&state.db).await?.doc_id;
+    let doc_id = get_doc_id(state.clone(), ref_id).await?;
 
-    // let export_response = export_automerge_doc(&state.automerge_io, doc_id).await?;
+    let doc_handle = state
+        .repo
+        .find(doc_id)
+        .await
+        .map_err(|e| AppError::Invalid(format!("Failed to find document: {:?}", e)))?
+        .ok_or_else(|| AppError::Invalid("Document not found".to_string()))?;
 
-    // Convert Vec<u8> to base64 string
-    // use base64::{Engine as _, engine::general_purpose};
-    // let base64_data = general_purpose::STANDARD.encode(&export_response.binary_data);
+    let binary_data = doc_handle.with_document(|doc| doc.save());
 
-    // Ok(base64_data)
-    //
-    Ok("bad".to_string())
+    use base64::{Engine as _, engine::general_purpose};
+    let base64_data = general_purpose::STANDARD.encode(&binary_data);
+
+    Ok(base64_data)
 }
 
 /// Gets the deleted_at timestamp for a document ref.
@@ -236,6 +235,15 @@ pub async fn get_doc_id(state: AppState, ref_id: Uuid) -> Result<DocumentId, App
         .parse()
         .map_err(|_| AppError::Invalid("Invalid document ID".to_string()))?;
 
+    let doc_handle = state
+        .repo
+        .find(doc_id.clone())
+        .await
+        .map_err(|e| AppError::Invalid(format!("Failed to find document: {:?}", e)))?
+        .ok_or_else(|| AppError::Invalid("Document not found".to_string()))?;
+
+    ensure_autosave_listener(state, ref_id, doc_handle).await;
+
     Ok(doc_id)
 }
 
@@ -245,20 +253,6 @@ pub struct RefContent {
     #[serde(rename = "refId")]
     pub ref_id: Uuid,
     pub content: Value,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct NewDocSocketResponse {
-    #[serde(rename = "docId")]
-    pub doc_id: String,
-    #[serde(rename = "docJson")]
-    pub doc_json: Value,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ExportDocSocketResponse {
-    #[serde(rename = "binaryData")]
-    pub binary_data: Vec<u8>,
 }
 
 /// A subset of user relevant information about a ref. Used for showing users

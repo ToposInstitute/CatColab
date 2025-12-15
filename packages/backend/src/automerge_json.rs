@@ -1,7 +1,13 @@
-//! Utilities for converting JSON values to Automerge documents.
+//! Utilities for converting between JSON values and Automerge documents.
 
+use automerge::hydrate;
 use automerge::transaction::Transactable;
+use crate::app::AppState;
+use crate::document::{RefContent, autosave};
+use futures_util::stream::StreamExt;
+use samod::DocHandle;
 use serde_json::Value;
+use uuid::Uuid;
 
 /// Insert a JSON value into a map property
 fn insert_value_into_map<'a>(
@@ -114,4 +120,84 @@ pub(crate) fn populate_automerge_from_json<'a>(
     }
 
     Ok(())
+}
+
+/// Convert automerge hydrate::Value to serde_json::Value
+pub(crate) fn hydrate_to_json(value: &hydrate::Value) -> Value {
+    match value {
+        hydrate::Value::Scalar(s) => scalar_to_json(s),
+        hydrate::Value::Map(m) => {
+            let mut map = serde_json::Map::new();
+            for (key, map_value) in m.iter() {
+                map.insert(key.to_string(), hydrate_to_json(&map_value.value));
+            }
+            Value::Object(map)
+        }
+        hydrate::Value::List(l) => {
+            Value::Array(l.iter().map(|list_value| hydrate_to_json(&list_value.value)).collect())
+        }
+        hydrate::Value::Text(t) => Value::String(t.to_string()),
+    }
+}
+
+fn scalar_to_json(s: &automerge::ScalarValue) -> Value {
+    use automerge::ScalarValue;
+    match s {
+        ScalarValue::Bytes(b) => {
+            Value::Array(b.iter().map(|v| Value::Number((*v).into())).collect())
+        }
+        ScalarValue::Str(s) => Value::String(s.to_string()),
+        ScalarValue::Int(i) => Value::Number((*i).into()),
+        ScalarValue::Uint(u) => Value::Number((*u).into()),
+        ScalarValue::F64(f) => {
+            serde_json::Number::from_f64(*f).map(Value::Number).unwrap_or(Value::Null)
+        }
+        ScalarValue::Counter(c) => Value::Number(i64::from(c).into()),
+        ScalarValue::Timestamp(t) => Value::Number((*t).into()),
+        ScalarValue::Boolean(b) => Value::Bool(*b),
+        ScalarValue::Null => Value::Null,
+        ScalarValue::Unknown { type_code, bytes } => Value::Object(serde_json::Map::from_iter([
+            ("type_code".to_string(), Value::Number((*type_code).into())),
+            (
+                "bytes".to_string(),
+                Value::Array(bytes.iter().map(|b| Value::Number((*b).into())).collect()),
+            ),
+        ])),
+    }
+}
+
+/// Spawns a background task that listens for document changes and triggers autosave.
+pub(crate) async fn ensure_autosave_listener(
+    state: AppState,
+    ref_id: Uuid,
+    doc_handle: DocHandle,
+) {
+    let listeners = state.active_listeners.read().await;
+    if listeners.contains(&ref_id) {
+        return;
+    }
+
+    let mut listeners = state.active_listeners.write().await;
+    listeners.insert(ref_id);
+
+    tokio::spawn({
+        let state = state.clone();
+        async move {
+            let mut changes = doc_handle.changes();
+
+            while let Some(_) = changes.next().await {
+                let cloned_doc = doc_handle.with_document(|doc| doc.clone());
+                let hydrated = cloned_doc.hydrate(None);
+                let content = hydrate_to_json(&hydrated);
+
+                let data = RefContent { ref_id, content };
+                if let Err(e) = autosave(state.clone(), data).await {
+                    tracing::error!("Autosave failed for ref {}: {:?}", ref_id, e);
+                }
+            }
+
+            state.active_listeners.write().await.remove(&ref_id);
+            tracing::error!("Autosave listener stopped for ref {}", ref_id);
+        }
+    });
 }
