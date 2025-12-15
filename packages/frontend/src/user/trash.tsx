@@ -236,7 +236,7 @@ function RefStubRow(props: { stub: RefStub; onRestore: () => void }) {
                 <td class="delete-cell">
                     {canRestore && (
                         <IconButton
-                            variant="primary"
+                            variant="positive"
                             onClick={handleRestoreClick}
                             tooltip="Restore document"
                             type="button"

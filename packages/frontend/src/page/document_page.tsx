@@ -3,7 +3,6 @@ import { useNavigate, useParams } from "@solidjs/router";
 import ChevronsRight from "lucide-solid/icons/chevrons-right";
 import Maximize2 from "lucide-solid/icons/maximize-2";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
-import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import {
     createEffect,
     createResource,
@@ -15,7 +14,13 @@ import {
 } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { Button, IconButton, InlineInput, ResizableHandle } from "catcolab-ui-components";
+import {
+    Button,
+    IconButton,
+    InlineInput,
+    ResizableHandle,
+    WarningBanner,
+} from "catcolab-ui-components";
 import { getLiveAnalysis, type LiveAnalysisDoc } from "../analysis";
 import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
 import { AnalysisInfo } from "../analysis/analysis_info";
@@ -262,22 +267,21 @@ export function DocumentPane(props: {
     return (
         <>
             <Show when={isDeleted()}>
-                <div class="warning-banner">
-                    <TriangleAlert size={20} />
-                    <div class="warning-banner-content">
-                        <strong>Warning:</strong> This {props.doc.type} has been deleted and will
-                        not be listed in your documents.
-                    </div>
-                    <Button
-                        variant="utility"
-                        onClick={(e) => {
-                            e.preventDefault();
-                            handleRestore();
-                        }}
-                    >
-                        <RotateCcw size={16} /> Restore it
-                    </Button>
-                </div>
+                <WarningBanner
+                    actions={
+                        <Button
+                            variant="utility"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                handleRestore();
+                            }}
+                        >
+                            <RotateCcw size={16} /> Restore it
+                        </Button>
+                    }
+                >
+                    This {props.doc.type} has been deleted and will not be listed in your documents.
+                </WarningBanner>
             </Show>
             <div class="notebook-container">
                 <div class="document-head">

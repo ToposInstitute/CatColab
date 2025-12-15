@@ -107,7 +107,7 @@ export const JsonImport = ({ onImport, validate }: JsonImportProps) => {
                     onPaste={handleInput}
                     placeholder="Paste your JSON here..."
                 />
-                <Button type="button" variant="primary" onClick={handleTextareaSubmit}>
+                <Button type="button" variant="positive" onClick={handleTextareaSubmit}>
                     Import pasted JSON
                 </Button>
             </FormGroup>

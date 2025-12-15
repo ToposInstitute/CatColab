@@ -1,20 +1,16 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&display=swap");
+@import "./colors.css";
 
 :root {
     --main-font: Inter, system-ui, Helvetica, Arial, sans-serif;
     --mono-font: "Source Code Pro", monospace;
-
-    --main-color: black;
-    --link-color: dimgray;
-    --topos-primary: rgb(83, 182, 178);
-    --topos-secondary: rgb(128, 49, 78);
 
     --h1-font-size: 3em;
     --h2-font-size: 2em;
     --h3-font-size: 1.5em;
     --h4-font-size: 1.3em;
 
-    color: var(--main-color);
+    color: var(--color-foreground);
     font-family: var(--main-font);
 
     font-synthesis: none;
@@ -37,7 +33,7 @@ body,
 }
 
 a {
-    color: var(--link-color);
+    color: var(--color-text-secondary);
     text-decoration: underline;
     cursor: pointer;
 
@@ -50,8 +46,8 @@ a {
 
 input,
 select {
-    background: whitesmoke;
-    border: 1px solid lightgray;
+    background: var(--color-gray-100);
+    border: 1px solid var(--color-gray-450);
     border-radius: 6px;
 }
 
@@ -78,14 +74,14 @@ h4 {
 }
 
 .popup {
-    background: white;
+    background: var(--color-background);
     padding: 0.25rem;
-    border: solid lightgray 1px;
+    border: solid var(--color-gray-450) 1px;
     border-radius: 6px;
     box-shadow:
-        rgba(15, 15, 15, 0.05) 0px 0px 0px 1px,
-        rgba(15, 15, 15, 0.1) 0px 3px 6px,
-        rgba(15, 15, 15, 0.2) 0px 9px 24px;
+        var(--color-shadow-base) 0px 0px 0px 1px,
+        var(--color-shadow-medium) 0px 3px 6px,
+        var(--color-shadow-strong) 0px 9px 24px;
 }
 
 .overlay {
@@ -94,7 +90,7 @@ h4 {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: var(--color-overlay-base);
 }
 
 .growable-container {
@@ -108,7 +104,7 @@ h4 {
 }
 
 .side-panel {
-    background: #f8f8f8;
+    background: var(--color-gray-50);
 }
 
 .content-panel {

@@ -16,7 +16,7 @@ export function DocumentTypeIcon(props: {
     return (
         <Switch fallback={<File />}>
             <Match when={props.isDeleted}>
-                <FileX style={{ color: "darkgray" }} />
+                <FileX style={{ color: "var(--color-gray-600)" }} />
             </Match>
             <Match when={props.documentType === "model" && props.letters}>
                 {(letters) => <ModelFileIcon letters={letters()} />}

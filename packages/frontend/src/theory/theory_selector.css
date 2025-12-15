@@ -18,7 +18,7 @@
     }
 
     & label:hover {
-        color: var(--topos-primary);
+        color: var(--color-topos-primary);
         cursor: pointer;
     }
 
@@ -39,7 +39,7 @@
     }
 
     & .description {
-        color: rgb(106, 106, 106);
+        color: var(--color-text-secondary);
         font-size: 11px;
         text-align: left;
     }

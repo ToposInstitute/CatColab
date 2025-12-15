@@ -86,7 +86,7 @@ export function SessionExpiredModal() {
                 <Content class="popup error-dialog">
                     <h3>Session Expired</h3>
                     <p>Your session is no longer valid. Please reload the page to continue.</p>
-                    <Button variant="primary" onClick={handleReload} disabled={reloading()}>
+                    <Button variant="positive" onClick={handleReload} disabled={reloading()}>
                         {reloading() ? "Reloading..." : "Reload Page"}
                     </Button>
                 </Content>

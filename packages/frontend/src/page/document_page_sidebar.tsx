@@ -118,8 +118,11 @@ function DocumentsTreeNode(props: {
 
             const isParentOwnerless = isDocOwnerless(props.doc);
 
-            // Don't show ownerless children under owned document
-            return childDocs.filter((childDoc) => isParentOwnerless || !isDocOwnerless(childDoc));
+            // Don't show ownerless children or deleted documents
+            return childDocs.filter(
+                (childDoc) =>
+                    !childDoc.docRef.isDeleted && (isParentOwnerless || !isDocOwnerless(childDoc)),
+            );
         },
     );
 
@@ -213,7 +216,7 @@ function DocumentsTreeLeaf(props: {
             />
             <div
                 class="document-name"
-                style={{ color: props.doc.docRef.isDeleted ? "lightgray" : undefined }}
+                style={{ color: props.doc.docRef.isDeleted ? "var(--color-gray-450)" : undefined }}
             >
                 {props.doc.liveDoc.doc.name || "Untitled"}
             </div>
@@ -222,10 +225,26 @@ function DocumentsTreeLeaf(props: {
                     liveDoc={props.doc.liveDoc}
                     docRef={props.doc.docRef}
                     onDocCreated={props.refetchDoc}
-                    onDocDeleted={() => {
+                    onDocDeleted={async () => {
+                        const deletedRefId = props.doc.docRef.refId;
+                        const isPrimaryDeleted = deletedRefId === primaryRefId();
+                        const isSecondaryDeleted = deletedRefId === secondaryRefId();
+
                         props.refetchDoc();
                         props.refetchPrimaryDoc();
                         props.refetchSecondaryDoc();
+
+                        // Navigate away if the deleted document is currently being viewed
+                        if (isPrimaryDeleted || isSecondaryDeleted) {
+                            const parentDoc = await getDocParent(props.doc.liveDoc.doc, api);
+
+                            if (!parentDoc) {
+                                // This is a root document: navigate to documents list
+                                navigate("/documents");
+                            } else {
+                                navigate(`/${createLinkPart(parentDoc)}`);
+                            }
+                        }
                     }}
                 />
             </div>

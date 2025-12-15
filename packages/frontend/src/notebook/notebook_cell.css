@@ -17,12 +17,12 @@
     flex-direction: row;
 
     & .lucide {
-        color: darkgray;
+        color: var(--color-gray-600);
     }
 }
 
 .cell-tag {
-    color: darkgray;
+    color: var(--color-gray-600);
     font-size: 11pt;
 }
 
@@ -38,7 +38,7 @@
     border-radius: 1px;
     margin: 5px 0;
     position: relative;
-    background: linear-gradient(270deg, transparent 0, #6b7280 100%);
+    background: linear-gradient(270deg, transparent 0, var(--color-dnd-insert) 100%);
 }
 
 .drop-indicator-with-dots::before {
@@ -46,7 +46,6 @@
     position: absolute;
     width: 6px;
     height: 6px;
-    background-color: #6b7280;
-    /* border-radius: 50%; */
+    background-color: var(--color-dnd-insert);
     top: -2px;
 }
