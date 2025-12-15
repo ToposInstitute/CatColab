@@ -49,9 +49,9 @@ async fn get_doc(ctx: AppCtx, ref_id: Uuid) -> RpcResult<RefDoc> {
         let is_deleted = deleted_at.is_some();
 
         if max_level >= Some(PermissionLevel::Write) {
-            let doc_id = doc::doc_id(ctx.state, ref_id).await?;
+            let doc_id = doc::get_doc_id(ctx.state, ref_id).await?;
             Ok(RefDoc::Live {
-                doc_id,
+                doc_id: doc_id.to_string(),
                 is_deleted,
                 permissions,
             })

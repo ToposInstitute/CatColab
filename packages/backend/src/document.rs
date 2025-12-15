@@ -1,12 +1,12 @@
 //! Procedures to create and manipulate documents.
 
 use crate::app::{AppCtx, AppError, AppState, Paginated};
+use crate::automerge_json::populate_automerge_from_json;
 use crate::{auth::PermissionLevel, user::UserSummary};
-use automerge::transaction::Transactable;
 use chrono::{DateTime, Utc};
+use samod::DocumentId;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-// use socketioxide::SocketIo;
 use ts_rs::TS;
 use uuid::Uuid;
 
@@ -18,31 +18,31 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
 
     let ref_id = Uuid::now_v7();
 
-    // If the document is created but the db transaction doesn't complete, then the document will be
-    // orphaned. The only negative consequence of that is additional space used, but that should be
-    // negligible and we can later create a service which periodically cleans out the orphans
-    // let new_doc_response = create_automerge_doc(&ctx.state.automerge_io, content.clone()).await?;
-
-    // Use samod repo directly instead of IPC
     // Create automerge document and populate it with the JSON content
     let mut automerge_doc = automerge::Automerge::new();
+    automerge_doc
+        .transact(|tx| {
+            populate_automerge_from_json(tx, automerge::ROOT, &content)?;
+            Ok::<_, automerge::AutomergeError>(())
+        })
+        .map_err(|e| AppError::Invalid(format!("Failed to populate document: {:?}", e)))?;
 
-    // Populate the document with the content using a transaction
-    automerge_doc.transact(|tx| {
-        populate_automerge_from_json(tx, automerge::ROOT, &content)?;
-        Ok::<_, automerge::AutomergeError>(())
-    }).map_err(|e| AppError::Invalid(format!("Failed to populate document: {:?}", e)))?;
+    // Insert the new automerge document into automerge-repo
+    let doc_handle = ctx
+        .state
+        .repo
+        .create(automerge_doc)
+        .await
+        .map_err(|e| AppError::Invalid(format!("Failed to create document: {:?}", e)))?;
 
-    let doc_handle = ctx.state.repo.create(automerge_doc).await.map_err(|e| AppError::Invalid(format!("Failed to create document: {:?}", e)))?;
-    let new_doc_response = NewDocSocketResponse {
-        doc_id: doc_handle.document_id().to_string(),
-        doc_json: content.clone(),
-    };
+    let doc_id = doc_handle.document_id().to_string();
 
-    let mut transaction = ctx.state.db.begin().await?;
+    // let doc_content = doc_handle.with_document(|doc| doc.clone());
+
+    let mut txn = ctx.state.db.begin().await?;
 
     let user_id = ctx.user.map(|user| user.user_id);
-    let insert_ref = sqlx::query!(
+    sqlx::query!(
         "
         WITH snapshot AS (
             INSERT INTO snapshots(for_ref, content, last_updated, doc_id)
@@ -54,22 +54,26 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
         ",
         ref_id,
         // Use the JSON provided by automerge as the authoritative content
-        new_doc_response.doc_json,
-        new_doc_response.doc_id,
-    );
-    insert_ref.execute(&mut *transaction).await?;
+        // serde_json::to_value(doc_content),
+        content,
+        doc_id,
+    )
+    .execute(&mut *txn)
+    .await?;
 
-    let insert_permission = sqlx::query!(
+    sqlx::query!(
         "
         INSERT INTO permissions(subject, object, level)
         VALUES ($1, $2, 'own')
         ",
         user_id,
         ref_id,
-    );
-    insert_permission.execute(&mut *transaction).await?;
+    )
+    .execute(&mut *txn)
+    .await?;
 
-    transaction.commit().await?;
+    txn.commit().await?;
+
     Ok(ref_id)
 }
 
@@ -82,6 +86,7 @@ pub async fn head_snapshot(state: AppState, ref_id: Uuid) -> Result<Value, AppEr
         ",
         ref_id
     );
+
     Ok(query.fetch_one(&state.db).await?.content)
 }
 
@@ -96,13 +101,14 @@ pub async fn ref_deleted_at(
         ",
         ref_id
     );
+
     Ok(query.fetch_one(&state.db).await?.deleted_at)
 }
 
 /// Saves the document by overwriting the snapshot at the current head.
 pub async fn autosave(state: AppState, data: RefContent) -> Result<(), AppError> {
     let RefContent { ref_id, content } = data;
-    let query = sqlx::query!(
+    sqlx::query!(
         "
         UPDATE snapshots
         SET content = $2, last_updated = NOW()
@@ -110,8 +116,10 @@ pub async fn autosave(state: AppState, data: RefContent) -> Result<(), AppError>
         ",
         ref_id,
         content
-    );
-    query.execute(&state.db).await?;
+    )
+    .execute(&state.db)
+    .await?;
+
     Ok(())
 }
 
@@ -119,34 +127,25 @@ pub async fn autosave(state: AppState, data: RefContent) -> Result<(), AppError>
 ///
 /// The snapshot at the previous head is *not* deleted.
 pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppError> {
-    let head_doc_id_query = sqlx::query!(
-        "
-        SELECT doc_id FROM snapshots
-        WHERE id = (SELECT head FROM refs WHERE id = $1)
-        ",
-        ref_id
-    );
+    let doc_id = get_doc_id(state.clone(), ref_id).await?;
 
-    let head_doc_id = head_doc_id_query.fetch_one(&state.db).await?.doc_id;
-    // let new_doc_response = clone_automerge_doc(&state.automerge_io, ref_id, head_doc_id).await?;
+    let doc_handle = state
+        .repo
+        .find(doc_id)
+        .await
+        .map_err(|e| AppError::Invalid(format!("Failed to find document: {:?}", e)))?
+        .ok_or_else(|| AppError::Invalid("Document not found".to_string()))?;
 
-    // Use samod repo directly instead of IPC
-    // TODO: Properly implement document cloning
-    let doc_id: samod::DocumentId = head_doc_id.parse().map_err(|_| AppError::Invalid("Invalid document ID".to_string()))?;
-    let doc_handle = state.repo.find(doc_id).await.map_err(|e| AppError::Invalid(format!("Failed to find document: {:?}", e)))?.ok_or_else(|| AppError::Invalid("Document not found".to_string()))?;
-
-    // Clone the underlying document
     let cloned_doc = doc_handle.with_document(|doc| doc.clone());
-    let cloned_handle = state.repo.create(cloned_doc).await.map_err(|e| AppError::Invalid(format!("Failed to create cloned document: {:?}", e)))?;
+    let cloned_handle = state
+        .repo
+        .create(cloned_doc)
+        .await
+        .map_err(|e| AppError::Invalid(format!("Failed to create cloned document: {:?}", e)))?;
 
-    // Get the content from head snapshot to use as doc_json
-    let content = head_snapshot(state.clone(), ref_id).await?;
-    let new_doc_response = NewDocSocketResponse {
-        doc_id: cloned_handle.document_id().to_string(),
-        doc_json: content,
-    };
+    let doc_content = head_snapshot(state.clone(), ref_id).await?;
 
-    let query = sqlx::query!(
+    sqlx::query!(
         "
         WITH snapshot AS (
             INSERT INTO snapshots(for_ref, content, last_updated, doc_id)
@@ -158,24 +157,27 @@ pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppErr
         WHERE id = $1
         ",
         ref_id,
-        new_doc_response.doc_json,
-        new_doc_response.doc_id,
-    );
-    query.execute(&state.db).await?;
+        doc_content,
+        cloned_handle.document_id().to_string(),
+    )
+    .execute(&state.db)
+    .await?;
+
     Ok(())
 }
 
 /// Soft-deletes a document reference by setting `deleted_at`.
 pub async fn delete_ref(state: AppState, ref_id: Uuid) -> Result<(), AppError> {
-    let query = sqlx::query!(
+    sqlx::query!(
         "
         UPDATE refs
         SET deleted_at = NOW()
         WHERE id = $1
         ",
         ref_id
-    );
-    query.execute(&state.db).await?;
+    )
+    .execute(&state.db)
+    .await?;
     Ok(())
 }
 
@@ -194,7 +196,7 @@ pub async fn restore_ref(state: AppState, ref_id: Uuid) -> Result<(), AppError> 
     Ok(())
 }
 
-pub async fn doc_id(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
+pub async fn get_doc_id(state: AppState, ref_id: Uuid) -> Result<DocumentId, AppError> {
     let query = sqlx::query!(
         "
         SELECT doc_id FROM snapshots
@@ -204,186 +206,12 @@ pub async fn doc_id(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
     );
 
     let doc_id = query.fetch_one(&state.db).await?.doc_id;
-
-    // start_listening_automerge_doc(&state.automerge_io, ref_id, doc_id.clone()).await?;
-    // TODO: Implement start_listening with samod repo
+    let doc_id: samod::DocumentId = doc_id
+        .parse()
+        .map_err(|_| AppError::Invalid("Invalid document ID".to_string()))?;
 
     Ok(doc_id)
 }
-
-/// Insert a JSON value into a map property
-fn insert_value_into_map<'a>(
-    tx: &mut automerge::transaction::Transaction<'a>,
-    parent: &automerge::ObjId,
-    key: &str,
-    value: &Value,
-) -> Result<(), automerge::AutomergeError> {
-    match value {
-        Value::String(s) => {
-            // Use ObjType::Text instead of scalar string to avoid ImmutableString in JavaScript
-            let text_id = tx.put_object(parent, key, automerge::ObjType::Text)?;
-            tx.splice_text(&text_id, 0, 0, s.as_str())?;
-        }
-        Value::Number(n) => {
-            if let Some(i) = n.as_i64() {
-                tx.put(parent, key, i)?;
-            } else if let Some(f) = n.as_f64() {
-                tx.put(parent, key, f)?;
-            }
-        }
-        Value::Bool(b) => {
-            tx.put(parent, key, *b)?;
-        }
-        Value::Null => {
-            tx.put(parent, key, ())?;
-        }
-        Value::Object(_) => {
-            let obj_id = tx.put_object(parent, key, automerge::ObjType::Map)?;
-            populate_automerge_from_json(tx, obj_id, value)?;
-        }
-        Value::Array(arr) => {
-            let list_id = tx.put_object(parent, key, automerge::ObjType::List)?;
-            for (i, item) in arr.iter().enumerate() {
-                insert_value_into_list(tx, &list_id, i, item)?;
-            }
-        }
-    }
-    Ok(())
-}
-
-/// Insert a JSON value into a list at index
-fn insert_value_into_list<'a>(
-    tx: &mut automerge::transaction::Transaction<'a>,
-    parent: &automerge::ObjId,
-    index: usize,
-    value: &Value,
-) -> Result<(), automerge::AutomergeError> {
-    match value {
-        Value::String(s) => {
-            // Use ObjType::Text instead of scalar string to avoid ImmutableString in JavaScript
-            let text_id = tx.insert_object(parent, index, automerge::ObjType::Text)?;
-            tx.splice_text(&text_id, 0, 0, s.as_str())?;
-        }
-        Value::Number(n) => {
-            if let Some(i) = n.as_i64() {
-                tx.insert(parent, index, i)?;
-            } else if let Some(f) = n.as_f64() {
-                tx.insert(parent, index, f)?;
-            }
-        }
-        Value::Bool(b) => {
-            tx.insert(parent, index, *b)?;
-        }
-        Value::Null => {
-            tx.insert(parent, index, ())?;
-        }
-        Value::Object(_) => {
-            let obj_id = tx.insert_object(parent, index, automerge::ObjType::Map)?;
-            populate_automerge_from_json(tx, obj_id, value)?;
-        }
-        Value::Array(arr) => {
-            let list_id = tx.insert_object(parent, index, automerge::ObjType::List)?;
-            for (i, item) in arr.iter().enumerate() {
-                insert_value_into_list(tx, &list_id, i, item)?;
-            }
-        }
-    }
-    Ok(())
-}
-
-/// Populate an automerge document from a JSON value.
-///
-/// Handles root-level objects by delegating to helper functions that recursively
-/// process nested structures (objects and arrays).
-fn populate_automerge_from_json<'a>(
-    tx: &mut automerge::transaction::Transaction<'a>,
-    obj_id: automerge::ObjId,
-    value: &Value,
-) -> Result<(), automerge::AutomergeError> {
-    match value {
-        Value::Object(map) => {
-            for (key, val) in map {
-                insert_value_into_map(tx, &obj_id, key.as_str(), val)?;
-            }
-            Ok(())
-        }
-        _ => {
-            // If the root is not an object, we can't populate it at ROOT
-            // This shouldn't happen for CatColab documents
-            Ok(())
-        }
-    }
-}
-
-// Commented out IPC functions - using samod repo directly instead
-/*
-async fn call_automerge_io<T, P>(
-    automerge_io: &SocketIo,
-    event: impl Into<String>,
-    payload: P,
-    fail_msg: impl Into<String>,
-) -> Result<T, AppError>
-where
-    P: Serialize,
-    T: for<'de> serde::Deserialize<'de>,
-{
-    let event = event.into();
-    let fail_msg = fail_msg.into();
-
-    let ack = automerge_io
-        .emit_with_ack::<Vec<Result<T, String>>>(event, payload)
-        .map_err(|e| AppError::AutomergeServer(format!("{fail_msg}: {e}")))?;
-
-    let response_array = ack.await?.data;
-    let response = response_array
-        .into_iter()
-        .next()
-        .ok_or_else(|| AppError::AutomergeServer("Empty ack response".to_string()))?;
-
-    response.map_err(AppError::AutomergeServer)
-}
-
-async fn start_listening_automerge_doc(
-    automerge_io: &SocketIo,
-    ref_id: Uuid,
-    doc_id: String,
-) -> Result<(), AppError> {
-    call_automerge_io::<(), _>(
-        automerge_io,
-        "startListening",
-        [ref_id.to_string(), doc_id],
-        "Failed to call startListening from backend".to_string(),
-    )
-    .await
-}
-
-async fn clone_automerge_doc(
-    automerge_io: &SocketIo,
-    ref_id: Uuid,
-    doc_id: String,
-) -> Result<NewDocSocketResponse, AppError> {
-    call_automerge_io::<NewDocSocketResponse, _>(
-        automerge_io,
-        "cloneDoc",
-        [ref_id.to_string(), doc_id],
-        "Failed to call cloneDoc from backend".to_string(),
-    )
-    .await
-}
-
-async fn create_automerge_doc(
-    automerge_io: &SocketIo,
-    content: serde_json::Value,
-) -> Result<NewDocSocketResponse, AppError> {
-    call_automerge_io::<NewDocSocketResponse, _>(
-        automerge_io,
-        "createDoc",
-        content,
-        "Failed to call createDoc from backend".to_string(),
-    )
-    .await
-}
-*/
 
 /// A document ref along with its content.
 #[derive(Debug, Serialize, Deserialize, TS)]

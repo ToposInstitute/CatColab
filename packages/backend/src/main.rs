@@ -7,8 +7,6 @@ use axum::{extract::State, response::IntoResponse};
 use clap::{Parser, Subcommand};
 use firebase_auth::FirebaseAuth;
 use http::StatusCode;
-// use socketioxide::SocketIo;
-// use socketioxide::layer::SocketIoLayer;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{PgPool, Postgres};
 use sqlx_migrator::cli::MigrationCommand;
@@ -23,6 +21,7 @@ use tracing_subscriber::filter::{EnvFilter, LevelFilter};
 
 mod app;
 mod auth;
+mod automerge_json;
 mod document;
 mod rpc;
 mod user;
@@ -33,16 +32,6 @@ use app::AppStatus;
 fn web_port() -> String {
     dotenvy::var("PORT").unwrap_or("8000".to_string())
 }
-
-// Commented out - not using separate automerge doc server anymore
-/*
-/// Port for internal communication with the Automerge doc server.
-///
-/// This port should *not* be open to the public.
-fn automerge_io_port() -> String {
-    dotenvy::var("AUTOMERGE_IO_PORT").unwrap_or("3000".to_string())
-}
-*/
 
 #[derive(Parser, Debug)]
 #[command(name = "catcolab")]
@@ -90,8 +79,6 @@ async fn main() {
         }
 
         Command::Serve => {
-            // let (io_layer, io) = SocketIo::new_layer();
-
             let (status_tx, status_rx) = watch::channel(AppStatus::Starting);
 
             // Create samod repo
@@ -101,7 +88,6 @@ async fn main() {
                 .await;
 
             let state = app::AppState {
-                // automerge_io: io,
                 db: db.clone(),
                 app_status: status_rx.clone(),
                 repo,
@@ -119,12 +105,9 @@ async fn main() {
                 .await,
             );
 
-            // socket::setup_automerge_socket(state.clone());
-
             tokio::try_join!(
                 run_migrator_apply(db.clone(), migrator, status_tx.clone()),
                 run_web_server(state.clone(), firebase_auth.clone()),
-                // run_automerge_socket(io_layer),
             )
             .unwrap();
         }
@@ -228,8 +211,7 @@ async fn run_web_server(
         .route("/repo-ws", get(websocket_handler))
         .with_state(state.repo.clone());
 
-    // NOTE: Currently nothing is using the /status endpoint. It will likely be used in the future by
-    // tests.
+    // used by tests to tell when the backend is ready
     let status_router = Router::new()
         .route("/status", get(status_handler))
         .with_state(state.app_status.clone());
@@ -268,19 +250,6 @@ fn spa_directory() -> Option<String> {
             return Some(candidate);
         }
     }
+
     None
 }
-
-// Commented out - not using separate automerge doc server anymore
-/*
-async fn run_automerge_socket(
-    io_layer: SocketIoLayer,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let port = automerge_io_port();
-    let listener = tokio::net::TcpListener::bind(format!("localhost:{port}")).await?;
-    let app = Router::new().layer(io_layer);
-    info!("Automerge socket listening at port {port}");
-    axum::serve(listener, app).await?;
-    Ok(())
-}
-*/

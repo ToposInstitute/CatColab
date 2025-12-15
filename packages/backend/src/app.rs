@@ -15,12 +15,10 @@ pub struct AppState {
     /// Connection to the Postgres database.
     pub db: PgPool,
 
-    /// Socket for communicating with Automerge document server.
-    // pub automerge_io: SocketIo,
+    /// Automerge-repo provider
+    pub repo: samod::Repo,
 
     pub app_status: watch::Receiver<AppStatus>,
-
-    pub repo: samod::Repo,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -62,10 +60,6 @@ pub enum AppError {
     #[error("SQL database error: {0}")]
     Db(#[from] sqlx::Error),
 
-    /// Error from the socket communicating with the Automerge document server.
-    // #[error("Error receiving acknowledgment from socket: {0}")]
-    // Ack(#[from] socketioxide::AckError<()>),
-
     /// Client made request with invalid data.
     #[error("Request with invalid data: {0}")]
     Invalid(String),
@@ -73,10 +67,6 @@ pub enum AppError {
     /// Client has not authenticated using Firebase auth.
     #[error("Authentication credentials were not provided")]
     Unauthorized,
-
-    /// Something went wrong in a socket call to the automerge server
-    // #[error("Automerge server error: {0}")]
-    // AutomergeServer(String),
 
     /// Client does not have permission to perform the requested action on the
     /// document ref.
