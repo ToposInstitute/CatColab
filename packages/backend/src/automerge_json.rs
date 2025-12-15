@@ -4,7 +4,7 @@ use automerge::transaction::Transactable;
 use serde_json::Value;
 
 /// Insert a JSON value into a map property
-pub(crate) fn insert_value_into_map<'a>(
+fn insert_value_into_map<'a>(
     tx: &mut automerge::transaction::Transaction<'a>,
     parent: &automerge::ObjId,
     key: &str,
@@ -29,9 +29,11 @@ pub(crate) fn insert_value_into_map<'a>(
         Value::Null => {
             tx.put(parent, key, ())?;
         }
-        Value::Object(_) => {
+        Value::Object(map) => {
             let obj_id = tx.put_object(parent, key, automerge::ObjType::Map)?;
-            populate_automerge_from_json(tx, obj_id, value)?;
+            for (nested_key, nested_val) in map {
+                insert_value_into_map(tx, &obj_id, nested_key.as_str(), nested_val)?;
+            }
         }
         Value::Array(arr) => {
             let list_id = tx.put_object(parent, key, automerge::ObjType::List)?;
@@ -44,7 +46,7 @@ pub(crate) fn insert_value_into_map<'a>(
 }
 
 /// Insert a JSON value into a list at index
-pub(crate) fn insert_value_into_list<'a>(
+fn insert_value_into_list<'a>(
     tx: &mut automerge::transaction::Transaction<'a>,
     parent: &automerge::ObjId,
     index: usize,
@@ -69,9 +71,11 @@ pub(crate) fn insert_value_into_list<'a>(
         Value::Null => {
             tx.insert(parent, index, ())?;
         }
-        Value::Object(_) => {
+        Value::Object(map) => {
             let obj_id = tx.insert_object(parent, index, automerge::ObjType::Map)?;
-            populate_automerge_from_json(tx, obj_id, value)?;
+            for (nested_key, nested_val) in map {
+                insert_value_into_map(tx, &obj_id, nested_key.as_str(), nested_val)?;
+            }
         }
         Value::Array(arr) => {
             let list_id = tx.insert_object(parent, index, automerge::ObjType::List)?;
@@ -84,25 +88,30 @@ pub(crate) fn insert_value_into_list<'a>(
 }
 
 /// Populate an automerge document from a JSON value.
-///
-/// Handles root-level objects by delegating to helper functions that recursively
-/// process nested structures (objects and arrays).
 pub(crate) fn populate_automerge_from_json<'a>(
     tx: &mut automerge::transaction::Transaction<'a>,
     obj_id: automerge::ObjId,
     value: &Value,
 ) -> Result<(), automerge::AutomergeError> {
-    match value {
-        Value::Object(map) => {
-            for (key, val) in map {
-                insert_value_into_map(tx, &obj_id, key.as_str(), val)?;
-            }
-            Ok(())
-        }
-        _ => {
-            // If the root is not an object, we can't populate it at ROOT
-            // This shouldn't happen for CatColab documents
-            Ok(())
-        }
+    let Value::Object(map) = value else {
+        let value_type = match value {
+            Value::Null => "Null",
+            Value::Bool(_) => "Bool",
+            Value::Number(_) => "Number",
+            Value::String(_) => "String",
+            Value::Array(_) => "Array",
+            Value::Object(_) => unreachable!(),
+        };
+
+        return Err(automerge::AutomergeError::InvalidValueType {
+            expected: "Object".to_string(),
+            unexpected: format!("{} as document root", value_type),
+        });
+    };
+
+    for (key, val) in map {
+        insert_value_into_map(tx, &obj_id, key.as_str(), val)?;
     }
+
+    Ok(())
 }
