@@ -112,7 +112,7 @@ jobs:
         id: cache-key
         run: |
           # Get git hash of the most recent commit affecting frontend or any of its dependencies
-          hash=$(git log -1 --format="%H" -- packages/frontend packages/backend/pkg packages/catlog packages/catlog-wasm packages/notebook-types packages/ui-components Cargo.toml)
+          hash=$(git log -1 --format="%H" -- packages/frontend packages/backend/pkg packages/catlog packages/catlog-wasm packages/notebook-types packages/ui-components Cargo.toml Cargo.lock)
           echo "git-hash=${hash}" >> $GITHUB_OUTPUT
           echo "Frontend git hash: ${git_hash}"
 
