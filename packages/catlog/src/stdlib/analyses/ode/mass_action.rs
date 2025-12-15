@@ -82,7 +82,7 @@ impl StochasticMassActionAnalysis {
 }
 
 /// Symbolic parameter in mass-action polynomial system.
-type Parameter<Id> = Polynomial<Id, f32, u8>;
+type Parameter<Id> = Polynomial<Id, f32, i8>;
 
 /// Mass-action ODE analysis for Petri nets.
 ///
@@ -110,7 +110,7 @@ impl PetriNetMassActionAnalysis {
     pub fn build_system(
         &self,
         model: &ModalDblModel,
-    ) -> PolynomialSystem<QualifiedName, Parameter<QualifiedName>, u8> {
+    ) -> PolynomialSystem<QualifiedName, Parameter<QualifiedName>, i8> {
         let mut sys = PolynomialSystem::new();
         for ob in model.ob_generators_with_type(&self.place_ob_type) {
             sys.add_term(ob, Polynomial::zero());
@@ -146,7 +146,7 @@ impl PetriNetMassActionAnalysis {
         &self,
         model: &ModalDblModel,
         data: MassActionProblemData,
-    ) -> ODEAnalysis<NumericalPolynomialSystem<u8>> {
+    ) -> ODEAnalysis<NumericalPolynomialSystem<i8>> {
         into_numerical_system(self.build_system(model), data)
     }
 
@@ -241,8 +241,8 @@ impl StockFlowMassActionAnalysis {
     pub fn build_system(
         &self,
         model: &DiscreteTabModel,
-    ) -> PolynomialSystem<QualifiedName, Parameter<QualifiedName>, u8> {
-        let mut terms: HashMap<QualifiedName, Monomial<QualifiedName, u8>> = model
+    ) -> PolynomialSystem<QualifiedName, Parameter<QualifiedName>, i8> {
+        let mut terms: HashMap<QualifiedName, Monomial<QualifiedName, i8>> = model
             .mor_generators_with_type(&self.flow_mor_type)
             .map(|flow| {
                 let dom = model.mor_generator_dom(&flow).unwrap_basic();
@@ -260,7 +260,8 @@ impl StockFlowMassActionAnalysis {
                 panic!("Codomain of link should be basic morphism");
             };
             if let Some(term) = terms.get_mut(&cod) {
-                *term = std::mem::take(term) * Monomial::generator(dom);
+                let mon: Monomial<_, i8> = [(dom, -1)].into_iter().collect();
+                *term = std::mem::take(term) * mon;
             } else {
                 panic!("Codomain of link does not belong to model");
             };
@@ -295,15 +296,15 @@ impl StockFlowMassActionAnalysis {
         &self,
         model: &DiscreteTabModel,
         data: MassActionProblemData,
-    ) -> ODEAnalysis<NumericalPolynomialSystem<u8>> {
+    ) -> ODEAnalysis<NumericalPolynomialSystem<i8>> {
         into_numerical_system(self.build_system(model), data)
     }
 }
 
 fn into_numerical_system(
-    sys: PolynomialSystem<QualifiedName, Parameter<QualifiedName>, u8>,
+    sys: PolynomialSystem<QualifiedName, Parameter<QualifiedName>, i8>,
     data: MassActionProblemData,
-) -> ODEAnalysis<NumericalPolynomialSystem<u8>> {
+) -> ODEAnalysis<NumericalPolynomialSystem<i8>> {
     let ob_index: IndexMap<_, _> =
         sys.components.keys().cloned().enumerate().map(|(i, x)| (x, i)).collect();
     let n = ob_index.len();

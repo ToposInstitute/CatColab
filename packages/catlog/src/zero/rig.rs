@@ -14,7 +14,7 @@
 //! the same data structure, but with different notation!
 
 use num_traits::{One, Pow, Zero};
-use std::collections::{BTreeMap, btree_map};
+use std::collections::{btree_map, BTreeMap};
 use std::fmt::Display;
 use std::iter::{Product, Sum};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg};
@@ -633,5 +633,8 @@ mod tests {
 
         let monomial: Monomial<_, u32> = [('x', 1), ('y', 0), ('x', 2)].into_iter().collect();
         assert_eq!(monomial.normalize().to_string(), "x^3");
+
+        let monomial: Monomial<_, i32> = [('x', -1), ('y', -2), ('x', 2)].into_iter().collect();
+        assert_eq!(monomial.normalize().to_string(), "x y^{-2}");
     }
 }
