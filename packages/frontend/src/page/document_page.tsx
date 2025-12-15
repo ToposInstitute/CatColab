@@ -51,6 +51,9 @@ type AnyLiveDocWithRef = {
     docRef: DocRef;
 };
 
+// The initial size of the right panel in a split as a percentage of the total available width
+const INITIAL_SPLIT_SIZE = 0.33;
+
 export default function DocumentPage() {
     const api = useApi();
     const models = useContext(ModelLibraryContext);
@@ -99,10 +102,12 @@ export default function DocumentPage() {
     createEffect(() => {
         const context = resizableContext();
         if (isSidePanelOpen()) {
+            // expand the second panel
             context?.expand(1);
-            context?.resize(1, 0.33);
         } else {
+            // collapse the second panel
             context?.collapse(1);
+            // Set the first panel to be the full size
             context?.resize(0, 1);
         }
     });
@@ -163,6 +168,7 @@ export default function DocumentPage() {
                                         <ResizableHandle class="resizeable-handle" />
                                         <Resizable.Panel
                                             class="content-panel"
+                                            initialSize={INITIAL_SPLIT_SIZE}
                                             minSize={0.25}
                                             onCollapse={closeSidePanel}
                                         >
