@@ -49,20 +49,48 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # Need full history for `git log` for cache key
+          fetch-depth: 0
+
+      - name: Compute cache key
+        id: cache-key
+        run: |
+          hash=$(git log -1 --format="%H" -- dev-docs)
+          echo "git-hash=${hash}" >> $GITHUB_OUTPUT
+          echo "Dev docs hash: ${hash}"
+
+      - name: Cache dev docs build
+        id: cache-dev-docs-build
+        uses: actions/cache@v4
+        with:
+          path: dev-docs/output
+          key: dev-docs-build-${{ steps.cache-key.outputs.git-hash }}
 
       - name: Setup pnpm
+        if: steps.cache-dev-docs-build.outputs.cache-hit != 'true'
         uses: pnpm/action-setup@v4
 
       - name: Setup NodeJS
+        if: steps.cache-dev-docs-build.outputs.cache-hit != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: "pnpm"
 
       - name: Build developer docs
+        if: steps.cache-dev-docs-build.outputs.cache-hit != 'true'
         run: |
           pnpm install
           pnpm --filter ./dev-docs run doc
+
+      - name: Report cache status
+        run: |
+          if [ "${{ steps.cache-dev-docs-build.outputs.cache-hit }}" = "true" ]; then
+            echo "✅ Dev docs restored from cache"
+          else
+            echo "🔨 Dev docs built and cached"
+          fi
 
       - name: Upload developer docs
         uses: actions/upload-artifact@v4
@@ -76,24 +104,48 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # Need full history for `git log` for cache key
+          fetch-depth: 0 
+
+      - name: Compute cache key
+        id: cache-key
+        run: |
+          # Get git hash of the most recent commit affecting frontend or any of its dependencies
+          hash=$(git log -1 --format="%H" -- packages/frontend packages/backend/pkg packages/catlog packages/catlog-wasm packages/notebook-types packages/ui-components Cargo.toml Cargo.lock)
+          echo "git-hash=${hash}" >> $GITHUB_OUTPUT
+          echo "Frontend git hash: ${git_hash}"
+
+      - name: Cache frontend build
+        id: cache-frontend-build
+        # Skip caching for production builds
+        if: github.event_name != 'release'
+        uses: actions/cache@v4
+        with:
+          path: |
+            packages/frontend/dist
+          key: frontend-build-${{ steps.cache-key.outputs.git-hash }}-${{ github.event_name == 'release' && 'production' || 'staging' }}
 
       - name: Setup pnpm
+        if: github.event_name == 'release' || steps.cache-frontend-build.outputs.cache-hit != 'true'
         uses: pnpm/action-setup@v4
 
       - name: Setup NodeJS
+        if: github.event_name == 'release' || steps.cache-frontend-build.outputs.cache-hit != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: "pnpm"
 
       - name: Install Rust toolchain from file
+        if: github.event_name == 'release' || steps.cache-frontend-build.outputs.cache-hit != 'true'
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           # Don't override flags in cargo config files.
           rustflags: ""
 
       - name: Build for Staging
-        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        if: (github.event_name == 'push' || github.event_name == 'pull_request') && steps.cache-frontend-build.outputs.cache-hit != 'true'
         run: |
           pnpm install
           # Uses env from packages/frontend/.env.staging
@@ -106,15 +158,41 @@ jobs:
           # Uses env from packages/frontend/.env.production
           pnpm --filter ./packages/frontend run build
 
+      - name: Report cache status
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "🔨 Frontend production build completed (cache disabled)"
+          elif [ "${{ steps.cache-frontend-build.outputs.cache-hit }}" = "true" ]; then
+            echo "✅ Frontend build restored from cache"
+          else
+            echo "🔨 Frontend build completed and cached"
+          fi
+
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: app
           path: packages/frontend/dist
 
+      - name: Cache frontend docs build
+        id: cache-frontend-docs
+        uses: actions/cache@v4
+        with:
+          path: packages/frontend/docs
+          key: frontend-docs-${{ steps.cache-key.outputs.git-hash }}
+
       - name: Build frontend docs
+        if: steps.cache-frontend-docs.outputs.cache-hit != 'true'
         run: |
           pnpm --filter ./packages/frontend run doc
+
+      - name: Report frontend docs cache status
+        run: |
+          if [ "${{ steps.cache-frontend-docs.outputs.cache-hit }}" = "true" ]; then
+            echo "✅ Frontend docs restored from cache"
+          else
+            echo "🔨 Frontend docs built and cached"
+          fi
 
       - name: Upload frontend docs
         uses: actions/upload-artifact@v4
@@ -128,13 +206,41 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # Need full history for `git log` for cache key
+          fetch-depth: 0
+
+      - name: Compute cache key
+        id: cache-key
+        run: |
+          # Get git hash for all Rust packages
+          hash=$(git log -1 --format="%H" -- packages/catlog packages/catlog-wasm packages/backend packages/notebook-types Cargo.toml Cargo.lock)
+          echo "git-hash=${hash}" >> $GITHUB_OUTPUT
+          echo "Rust hash: ${hash}"
+
+      - name: Cache Rust docs build
+        id: cache-rust-docs
+        uses: actions/cache@v4
+        with:
+          path: target/doc
+          key: rust-docs-${{ steps.cache-key.outputs.git-hash }}
 
       - name: Install Rust toolchain from file
+        if: steps.cache-rust-docs.outputs.cache-hit != 'true'
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Build Rust docs
+        if: steps.cache-rust-docs.outputs.cache-hit != 'true'
         run: |
           cargo doc --all-features --no-deps --workspace --exclude "migrator"
+
+      - name: Report cache status
+        run: |
+          if [ "${{ steps.cache-rust-docs.outputs.cache-hit }}" = "true" ]; then
+            echo "✅ Rust docs restored from cache"
+          else
+            echo "🔨 Rust docs built and cached"
+          fi
 
       - name: Upload Rust docs
         uses: actions/upload-artifact@v4
@@ -148,11 +254,30 @@ jobs:
     steps:
       - name: Repository Checkout
         uses: actions/checkout@v4
+        with:
+          # Need full history for `git log` for cache key
+          fetch-depth: 0
+
+      - name: Compute cache key
+        id: cache-key
+        run: |
+          hash=$(git log -1 --format="%H" -- math-docs)
+          echo "git-hash=${hash}" >> $GITHUB_OUTPUT
+          echo "Math docs hash: ${hash}"
+
+      - name: Cache math docs build
+        id: cache-math-docs
+        uses: actions/cache@v4
+        with:
+          path: math-docs/output
+          key: math-docs-${{ steps.cache-key.outputs.git-hash }}
 
       - name: Setup TinyTeX
+        if: steps.cache-math-docs.outputs.cache-hit != 'true'
         uses: r-lib/actions/setup-tinytex@v2
 
       - name: Install TeX Packages
+        if: steps.cache-math-docs.outputs.cache-hit != 'true'
         run: |
           tlmgr update --self
           tlmgr install dvisvgm
@@ -164,9 +289,18 @@ jobs:
           tlmgr install spath3
 
       - name: Build mathematical docs
+        if: steps.cache-math-docs.outputs.cache-hit != 'true'
         run: |
           cd math-docs
           ./forester build
+
+      - name: Report cache status
+        run: |
+          if [ "${{ steps.cache-math-docs.outputs.cache-hit }}" = "true" ]; then
+            echo "✅ Math docs restored from cache"
+          else
+            echo "🔨 Math docs built and cached"
+          fi
 
       - name: Upload mathematical docs
         uses: actions/upload-artifact@v4
@@ -180,21 +314,50 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # Need full history for `git log` for cache key
+          fetch-depth: 0
+
+      - name: Compute cache key
+        id: cache-key
+        run: |
+          hash=$(git log -1 --format="%H" -- packages/ui-components)
+          echo "git-hash=${hash}" >> $GITHUB_OUTPUT
+          echo "UI Components hash: ${hash}"
+
+      - name: Cache ui-components build
+        id: cache-ui-components
+        uses: actions/cache@v4
+        with:
+          path: packages/ui-components/storybook-static
+          key: ui-components-${{ steps.cache-key.outputs.git-hash }}
 
       - name: Setup pnpm
+        if: steps.cache-ui-components.outputs.cache-hit != 'true'
         uses: pnpm/action-setup@v4
 
       - name: Setup NodeJS
+        if: steps.cache-ui-components.outputs.cache-hit != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: "pnpm"
 
       - name: Install dependencies
+        if: steps.cache-ui-components.outputs.cache-hit != 'true'
         run: pnpm install
 
       - name: Build ui-components Storybook
+        if: steps.cache-ui-components.outputs.cache-hit != 'true'
         run: pnpm --filter ./packages/ui-components run build
+
+      - name: Report cache status
+        run: |
+          if [ "${{ steps.cache-ui-components.outputs.cache-hit }}" = "true" ]; then
+            echo "✅ UI Components Storybook restored from cache"
+          else
+            echo "🔨 UI Components Storybook built and cached"
+          fi
 
       - name: Upload ui-components Storybook
         uses: actions/upload-artifact@v4
