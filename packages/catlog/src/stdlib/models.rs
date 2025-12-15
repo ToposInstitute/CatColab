@@ -108,6 +108,44 @@ pub fn backward_link(th: Rc<DiscreteTabTheory>) -> DiscreteTabModel {
     model
 }
 
+/// The "walking" backward positive link.
+///
+/// This is the free category with signed links that has a positive link from
+/// the codomain of a morphism back to the morphism itself.
+pub fn positive_backward_link(th: Rc<DiscreteTabTheory>) -> DiscreteTabModel {
+    let ob_type = TabObType::Basic(name("Object"));
+    let mut model = DiscreteTabModel::new(th.clone());
+    model.add_ob(name("x"), ob_type.clone());
+    model.add_ob(name("y"), ob_type.clone());
+    model.add_mor(name("f"), name("x").into(), name("y").into(), th.hom_type(ob_type));
+    model.add_mor(
+        name("link"),
+        name("y").into(),
+        model.tabulated_gen(name("f")),
+        TabMorType::Basic(name("PositiveLink")),
+    );
+    model
+}
+
+/// The "walking" backward negative link.
+///
+/// This is the free category with signed links that has a negative link from
+/// the codomain of a morphism back to the morphism itself.
+pub fn negative_backward_link(th: Rc<DiscreteTabTheory>) -> DiscreteTabModel {
+    let ob_type = TabObType::Basic(name("Object"));
+    let mut model = DiscreteTabModel::new(th.clone());
+    model.add_ob(name("x"), ob_type.clone());
+    model.add_ob(name("y"), ob_type.clone());
+    model.add_mor(name("f"), name("x").into(), name("y").into(), th.hom_type(ob_type));
+    model.add_mor(
+        name("link"),
+        name("y").into(),
+        model.tabulated_gen(name("f")),
+        TabMorType::Basic(name("NegativeLink")),
+    );
+    model
+}
+
 /// A reaction involving three species, one playing the role of a catalyst.
 ///
 /// A free symmetric monoidal category, viewed as a reaction network.

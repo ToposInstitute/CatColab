@@ -1,7 +1,7 @@
 //! Standard library of double theories.
 
 use crate::dbl::theory::*;
-use crate::one::{fp_category::FpCategory, Path};
+use crate::one::{Path, fp_category::FpCategory};
 use crate::zero::name;
 
 /// The empty theory, which has a single model, the empty model.

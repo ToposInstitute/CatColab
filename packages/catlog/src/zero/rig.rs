@@ -14,7 +14,7 @@
 //! the same data structure, but with different notation!
 
 use num_traits::{One, Pow, Zero};
-use std::collections::{btree_map, BTreeMap};
+use std::collections::{BTreeMap, btree_map};
 use std::fmt::Display;
 use std::iter::{Product, Sum};
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg};

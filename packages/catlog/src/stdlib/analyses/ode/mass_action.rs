@@ -22,7 +22,7 @@ use crate::dbl::{
 };
 use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
-use crate::zero::{alg::Polynomial, name, rig::Monomial, QualifiedName};
+use crate::zero::{QualifiedName, alg::Polynomial, name, rig::Monomial};
 
 /// Data defining a mass-action ODE problem for a model.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -250,10 +250,21 @@ impl StockFlowMassActionAnalysis {
             })
             .collect();
 
-        for link in model
-            .mor_generators_with_type(&self.pos_link_mor_type)
-            .chain(model.mor_generators_with_type(&self.neg_link_mor_type))
-        {
+        for link in model.mor_generators_with_type(&self.pos_link_mor_type) {
+            let dom = model.mor_generator_dom(&link).unwrap_basic();
+            let path = model.mor_generator_cod(&link).unwrap_tabulated();
+            let Some(TabEdge::Basic(cod)) = path.only() else {
+                panic!("Codomain of link should be basic morphism");
+            };
+            if let Some(term) = terms.get_mut(&cod) {
+                let mon: Monomial<_, i8> = [(dom, 1)].into_iter().collect();
+                *term = std::mem::take(term) * mon;
+            } else {
+                panic!("Codomain of link does not belong to model");
+            };
+        }
+
+        for link in model.mor_generators_with_type(&self.neg_link_mor_type) {
             let dom = model.mor_generator_dom(&link).unwrap_basic();
             let path = model.mor_generator_cod(&link).unwrap_tabulated();
             let Some(TabEdge::Basic(cod)) = path.only() else {
@@ -331,13 +342,25 @@ mod tests {
     use crate::stdlib::{models::*, theories::*};
 
     #[test]
-    fn backward_link_dynamics() {
+    fn positive_backward_link_dynamics() {
         let th = Rc::new(th_category_links());
-        let model = backward_link(th);
+        let model = positive_backward_link(th);
         let sys = StockFlowMassActionAnalysis::default().build_system(&model);
         let expected = expect!([r#"
             dx = ((-1) f) x y
             dy = f x y
+        "#]);
+        expected.assert_eq(&sys.to_string());
+    }
+
+    #[test]
+    fn negative_backward_link_dynamics() {
+        let th = Rc::new(th_category_links());
+        let model = negative_backward_link(th);
+        let sys = StockFlowMassActionAnalysis::default().build_system(&model);
+        let expected = expect!([r#"
+            dx = ((-1) f) x y^{-1}
+            dy = f x y^{-1}
         "#]);
         expected.assert_eq(&sys.to_string());
     }
