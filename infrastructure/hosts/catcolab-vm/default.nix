@@ -24,10 +24,6 @@
       hostname = "backend-next.catcolab.org";
       serveFrontend = true;
     };
-    automerge = {
-      port = 8010;
-      hostname = "automerge-next.catcolab.org";
-    };
     environmentFile = /etc/catcolab/catcolab-secrets.env;
     host = {
       enable = true;
@@ -47,7 +43,6 @@
 
   networking.firewall.allowedTCPPorts = [
     config.catcolab.backend.port
-    config.catcolab.automerge.port
     5432
   ];
 

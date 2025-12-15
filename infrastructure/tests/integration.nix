@@ -49,7 +49,6 @@ nixpkgs.legacyPackages.${linuxSystem}.testers.runNixOSTest {
     test_oneshot_service(catcolab, "database-setup.service")
     test_oneshot_service(catcolab, "migrations.service")
 
-    test_service(catcolab, "automerge.service");
     test_service(catcolab, "backend.service");
     test_service(catcolab, "caddy.service");
 

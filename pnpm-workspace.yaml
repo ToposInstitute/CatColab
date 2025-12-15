@@ -1,6 +1,5 @@
 packages:
   - "dev-docs"
-  - "packages/automerge-doc-server"
   - "packages/backend/pkg"
   - "packages/frontend"
   - "packages/notebook-types"

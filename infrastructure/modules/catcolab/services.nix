@@ -10,10 +10,8 @@ let
 
   frontendPkg = self.packages.${pkgs.system}.frontend;
   backendPkg = self.packages.${pkgs.system}.backend;
-  automergePkg = self.packages.${pkgs.system}.automerge;
 
   backendPortStr = builtins.toString cfg.backend.port;
-  automergePortStr = builtins.toString cfg.automerge.port;
 
   # idempotent script for intializing the catcolab database
   databaseSetupScript = pkgs.writeShellScriptBin "database-setup" ''
@@ -55,17 +53,6 @@ with lib;
       };
       serveFrontend = lib.mkEnableOption "serving the frontend.";
     };
-    automerge = {
-      port = mkOption {
-        type = types.port;
-        default = 8010;
-        description = "Port for the automerge service.";
-      };
-      hostname = mkOption {
-        type = types.str;
-        description = "Hostname for the automerge reverse proxy.";
-      };
-    };
     environmentFile = mkOption {
       type = types.path;
       description = ''
@@ -97,7 +84,6 @@ with lib;
 
     environment.systemPackages = [
       backendPkg
-      automergePkg
       databaseSetupScript
     ];
 
@@ -142,35 +128,12 @@ with lib;
       };
     };
 
-    systemd.services.automerge = {
-      enable = true;
-      wantedBy = [ "multi-user.target" ];
-
-      environment = {
-        PORT = automergePortStr;
-      };
-
-      serviceConfig = {
-        EnvironmentFile = cfg.environmentFile;
-        User = "catcolab";
-        ExecStart = lib.getExe automergePkg;
-        Type = "simple";
-        Restart = "on-failure";
-      };
-    };
-
     services.caddy = {
       enable = true;
       virtualHosts = {
         "${cfg.backend.hostname}" = {
           extraConfig = ''
             reverse_proxy :${backendPortStr}
-          '';
-        };
-
-        "${cfg.automerge.hostname}" = {
-          extraConfig = ''
-            reverse_proxy :${automergePortStr}
           '';
         };
       };

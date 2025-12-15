@@ -222,10 +222,6 @@
             pkgs = pkgsLinux;
           };
 
-          automerge = pkgsLinux.callPackage ./packages/automerge-doc-server/default.nix {
-            inherit inputs rustToolchainLinux self;
-          };
-
           frontend = pkgsLinux.callPackage ./packages/frontend/default.nix {
             inherit inputs rustToolchainLinux self;
           };
