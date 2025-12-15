@@ -74,19 +74,28 @@ export default function DocumentPage() {
 
     const [secondaryLiveDoc, { refetch: refetchSecondaryDoc }] = createResource(
         () => {
-            if (!params.subkind || !params.subref) {
-                return;
-            }
-
-            // Prevent the fetcher from running right before the redirect runs for matching primary and secondary refs
-            if (params.subref === params.ref) {
-                return;
-            }
-
-            return [params.subkind, params.subref] as const;
+            // Always return an object so fetcher runs and can clear the resource
+            return {
+                kind: params.subkind || null,
+                ref: params.subref || null,
+                primaryRef: params.ref,
+            };
         },
-        ([refKind, refId]) => getLiveDocument(refId, api, models, refKind as DocumentType),
+        async (source) => {
+            // Return undefined to clear resource when there's no secondary in URL
+            if (!source.kind || !source.ref) {
+                return undefined;
+            }
+
+            // Prevent fetching right before redirect for matching refs (maximizing)
+            if (source.ref === source.primaryRef) {
+                return undefined;
+            }
+
+            return getLiveDocument(source.ref, api, models, source.kind as DocumentType);
+        },
     );
+
     const closeSidePanel = () => {
         navigate(`/${params.kind}/${params.ref}`);
     };
