@@ -1,0 +1,13 @@
+\title{Graded categories}
+\taxon{theory}
+\import{macros}
+
+\p{
+
+Given a strict monoidal category \catV, the \define{theory of #{\catV}-graded
+categories} is the delooping double category #{\mathbb{B}(\catV)}. That is, it
+is the simple double theory with trivial category of objects and arrows, and
+proarrows and cells given by the objects and morphisms of \catV, respectively.
+External composition in #{\mathbb{B}(\catV)} is the monoidal product in \catV.
+
+}

@@ -1,11 +1,7 @@
 import Dialog, { Content, Portal } from "@corvu/dialog";
-
 import { MultiProvider } from "@solid-primitives/context";
-
 import { Navigate, type RouteDefinition, Router, type RouteSectionProps } from "@solidjs/router";
-
 import { type FirebaseOptions, initializeApp } from "firebase/app";
-
 import { getAuth, signOut } from "firebase/auth";
 import { FirebaseProvider } from "solid-firebase";
 import { createResource, createSignal, ErrorBoundary, lazy, Show } from "solid-js";
@@ -21,8 +17,6 @@ import { ErrorBoundaryDialog } from "./page/error_boundary";
 import { PageContainer } from "./page/page_container";
 import { stdTheories } from "./stdlib";
 import { TheoryLibraryContext } from "./theory";
-import { WebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
-import { Repo } from "@automerge/automerge-repo";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 const repoUrl = import.meta.env.VITE_AUTOMERGE_REPO_URL;
@@ -33,7 +27,6 @@ const Root = (props: RouteSectionProps<unknown>) => {
     invariant(repoUrl, "Must set environment variable VITE_AUTOMERGE_REPO_URL");
 
     const firebaseApp = initializeApp(firebaseOptions);
-
     const api = new Api({ serverUrl, repoUrl, firebaseApp });
 
     const [isSessionInvalid] = createResource(
@@ -93,7 +86,7 @@ export function SessionExpiredModal() {
                 <Content class="popup error-dialog">
                     <h3>Session Expired</h3>
                     <p>Your session is no longer valid. Please reload the page to continue.</p>
-                    <Button variant="primary" onClick={handleReload} disabled={reloading()}>
+                    <Button variant="positive" onClick={handleReload} disabled={reloading()}>
                         {reloading() ? "Reloading..." : "Reload Page"}
                     </Button>
                 </Content>

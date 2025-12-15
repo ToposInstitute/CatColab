@@ -3,9 +3,9 @@
 \import{macros}
 
 \p{Depending on the base monad, a \nlab{generalized multicategory} could be a
-multicategory, symmetric multicategory, cartesian multicategory, or something
-more exotic. Our axiomatization of these doctrines via a double theory is
-reminiscent of [Cruttwell-Shulman's](cruttwell-shulman-2010) definition but
+[multicategory](dct-000A), symmetric multicategory, cartesian multicategory, or
+something more exotic. Our axiomatization of these doctrines via a double theory
+is reminiscent of [Cruttwell-Shulman's](cruttwell-shulman-2010) definition but
 bypasses the complicated construction of the "horizontal Kleisli virtual double
 category" of a monad on a virtual double category.}
 
@@ -20,8 +20,8 @@ category" of a monad on a virtual double category.}
   precisely a normalized #{S}-multicategory. In particular, a model...
   \ul{
     \li{...in #{(\SSet, \List)} is exactly a multicategory}
-    \li{...in #{(\SSet, \mathrm{SymList})} is exactly a symmetric multicategory}
-    \li{...in #{(\SSet, \mathrm{CartList})} is exactly a cartesian multicategory.}
+    \li{...in #{(\SSet, \ListSym)} is exactly a symmetric multicategory}
+    \li{...in #{(\SSet, \ListCart)} is exactly a cartesian multicategory.}
   }
   }
 

@@ -264,6 +264,7 @@ dependencies = [
  "async-trait",
  "automerge",
  "axum",
+ "base64 0.22.1",
  "chrono",
  "clap",
  "dotenvy",

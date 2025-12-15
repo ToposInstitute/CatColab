@@ -117,7 +117,7 @@ This visibly produces a functor on the loose category of \Span.
 }
 
 \p{
-    We now put a double monad structure on #{\S}. The tight part of the monad will be restricted from that of #{\func{List}}, which implies that #{\S_0} contains #{1} and the sum of any family of
+    We now put a double monad structure on #{\S}. The tight part of the monad will be restricted from that of \List, which implies that #{\S_0} contains #{1} and the sum of any family of
     its elements indexed by any of its members. (The only obvious examples of that are all the natural numbers, the positive ones, and #{1}, although more singular examples exist.) 
     On spans, the unit will map an element #{x:a\proto b} of a span #{A\leftarrow X\to B} to the element 
     % https://q.uiver.app/#q=WzAsNixbMCwwLCIxIl0sWzEsMCwiMSJdLFsyLDAsIjEiXSxbMCwxLCJBIl0sWzEsMSwiWCJdLFsyLDEsIkIiXSxbMSwwLCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxLDIsIiIsMix7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzQsM10sWzQsNV0sWzAsMywiYSIsMV0sWzEsNCwieCIsMV0sWzIsNSwiYiIsMV1d

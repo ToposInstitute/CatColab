@@ -14,7 +14,7 @@
     padding: 0.4rem;
 
     & .lucide {
-        color: dimgray;
+        color: var(--color-gray-800);
         width: 2.5ex;
         height: 2.5ex;
     }

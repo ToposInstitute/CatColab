@@ -1,0 +1,30 @@
+.warningBanner {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    background-color: var(--color-warning-banner-bg);
+    border: 1px solid var(--color-warning-banner-border);
+    color: var(--color-warning-banner-text);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    border-radius: 0.375rem;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+}
+
+.warningBannerIcon {
+    flex-shrink: 0;
+    min-width: 20px;
+}
+
+.warningBannerContent {
+    flex: 1;
+    min-width: 200px;
+}
+
+.warningBannerActions :global(.button) {
+    margin: 0;
+    flex-shrink: 0;
+    white-space: nowrap;
+}

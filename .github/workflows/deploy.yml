@@ -96,12 +96,14 @@ jobs:
         if: github.event_name == 'push' || github.event_name == 'pull_request'
         run: |
           pnpm install
+          # Uses env from packages/frontend/.env.staging
           pnpm --filter ./packages/frontend run build -- --mode staging
 
       - name: Build for Production
         if: github.event_name == 'release'
         run: |
           pnpm install
+          # Uses env from packages/frontend/.env.production
           pnpm --filter ./packages/frontend run build
 
       - name: Upload
@@ -361,7 +363,7 @@ jobs:
 
     - name: Deploy to catcolab-next
       run: |
-       nix run github:serokell/deploy-rs .#catcolab-next
+       nix run github:serokell/deploy-rs -- --skip-checks .#catcolab-next
 
     # Ensure that a copy of the deployed repository is on the machine that it was deployed to. This is
     # a nice-to-have which enables checking the configuration of the currently deployed system and could

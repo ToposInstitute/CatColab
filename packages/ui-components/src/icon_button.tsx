@@ -9,7 +9,7 @@ export function IconButton(
     allProps: {
         children: JSX.Element;
         tooltip?: JSX.Element | string;
-        variant?: "default" | "danger" | "primary";
+        variant?: "default" | "danger" | "positive";
     } & ComponentProps<"button">,
 ) {
     const [props, buttonProps] = splitProps(allProps, ["children", "tooltip", "variant"]);
@@ -19,8 +19,8 @@ export function IconButton(
         switch (props.variant) {
             case "danger":
                 return `${baseClass} icon-button-danger`;
-            case "primary":
-                return `${baseClass} icon-button-primary`;
+            case "positive":
+                return `${baseClass} icon-button-positive`;
             default:
                 return baseClass;
         }
@@ -37,7 +37,7 @@ export function IconButton(
         >
             <Tooltip hoverableContent={false} openOnFocus={false}>
                 <Tooltip.Anchor>
-                    <Tooltip.Trigger class="icon-button" {...buttonProps}>
+                    <Tooltip.Trigger class={buttonClass()} {...buttonProps}>
                         {props.children}
                     </Tooltip.Trigger>
                 </Tooltip.Anchor>

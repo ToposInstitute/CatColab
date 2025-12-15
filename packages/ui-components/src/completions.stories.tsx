@@ -8,7 +8,7 @@ import type { Meta, StoryObj } from "storybook-solidjs-vite";
 import { Completions } from "./completions";
 
 const meta = {
-    title: "Completions",
+    title: "Forms & Inputs/Completions",
     component: Completions,
 } satisfies Meta<typeof Completions>;
 

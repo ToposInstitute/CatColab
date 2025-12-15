@@ -119,7 +119,15 @@ export class Api {
         if (isLive) {
             docId = refDoc.docId as DocumentId;
         } else {
-            const docHandle = this.localRepo.create(refDoc.content);
+            const binaryString = atob(refDoc.binaryData);
+            // TODO: In the future we should be able go directly from base64 to a Uint8Array
+            // const binaryData = new Uint8Array.fromBase64(binaryString);
+            const binaryData = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                binaryData[i] = binaryString.charCodeAt(i);
+            }
+
+            const docHandle = this.localRepo.import(binaryData);
             docId = docHandle.documentId;
         }
         const isDeleted = refDoc.isDeleted;

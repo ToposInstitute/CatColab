@@ -9,5 +9,5 @@ non-symmetric operad}, is precisely a model of the following double theory.}
 
 \p{A model #{M} of the theory of promonoids maps the object #{x} to the object
 set #{M_0 \coloneqq M(x)} of the multicategory and maps the proarrow #{\mu_n} to
-the span #{M_0^n\proto M_0} whose preimage at #{((x_i)_1^n,y)} is the set of
-multimorphisms #{(x_i)_1^n \to y}.}
+the span #{M_0^n\proto M_0} whose preimage at #{((x_i)_{i=1}^n,y)} is the set of
+multimorphisms #{(x_i)_{i=1}^n \to y}.}

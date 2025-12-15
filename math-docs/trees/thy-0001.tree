@@ -6,4 +6,5 @@
 terminal double category \dbl{1}.}
 
 \p{The trivial double theory is a simple double theory, but it can also be
-regarded as a finite-product double theory that trivially has products.}
+regarded as a cartesian or finite-product double theory that trivially has
+products.}

@@ -117,11 +117,11 @@ export function Login(props: { onComplete?: (user: User) => void }) {
                     )}
                 </Field>
                 <div class="buttons">
-                    <Button type="submit" variant="primary" value="sign-in">
+                    <Button type="submit" variant="positive" value="sign-in">
                         <SignInIcon />
                         Login
                     </Button>
-                    <Button type="submit" variant="primary" value="sign-up">
+                    <Button type="submit" variant="positive" value="sign-up">
                         <SignUpIcon />
                         Sign up
                     </Button>
