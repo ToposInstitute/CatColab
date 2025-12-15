@@ -206,7 +206,10 @@ function DocumentsTreeLeaf(props: {
                 <DocumentMenu
                     liveDoc={props.doc.liveDoc}
                     docRef={props.doc.docRef}
-                    onDocCreated={props.refetchDoc}
+                    onDocCreated={(docType, refId) => {
+                        props.refetchDoc();
+                        navigate(`/${createLinkPart(props.doc)}/${docType}/${refId}`);
+                    }}
                     onDocDeleted={async () => {
                         const deletedRefId = props.doc.docRef.refId;
                         const isPrimaryDeleted = deletedRefId === primaryRefId();
