@@ -100,7 +100,12 @@ export const MenuItemLabel: Component<{ children: SolidJSX.Element }> = (props) 
 };
 
 export const MenuSeparator: Component = () => {
-    return <hr role="separator" style={{ margin: "0.5ex 0", "border-top": "1px solid #e5e7eb" }} />;
+    return (
+        <hr
+            role="separator"
+            style={{ margin: "0.5ex 0", "border-top": "1px solid var(--color-menu-separator)" }}
+        />
+    );
 };
 
 /** Top-level menu for application.

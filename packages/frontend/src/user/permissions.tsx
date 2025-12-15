@@ -181,7 +181,7 @@ export function PermissionsForm(props: { refId: string; onComplete?: () => void 
                 <div class="permissions-spacer" />
                 <Button
                     type="button"
-                    variant="primary"
+                    variant="positive"
                     disabled={
                         !props.refId || currentPermissions.loading || currentPermissions.error
                     }

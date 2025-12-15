@@ -1,5 +1,5 @@
 .error-dialog {
     & h3 {
-        color: #dc2626;
+        color: var(--color-danger-base);
     }
 }

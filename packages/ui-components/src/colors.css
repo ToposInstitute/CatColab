@@ -1,0 +1,160 @@
+/**
+ * CatColab Color System
+ *
+ * This file contains all color custom properties used across the application.
+ */
+
+:root {
+    /* ========================================
+     * Base Colors
+     * ======================================== */
+    --color-foreground: black;
+    --color-background: white;
+
+    /* ========================================
+     * Brand Colors
+     * ======================================== */
+    --color-topos-primary: rgb(83, 182, 178);
+    --color-topos-primary-hover: #45a19d;
+    --color-topos-secondary: rgb(128, 49, 78);
+
+    /* ========================================
+     * Neutral Colors - Grays
+     * From lightest to darkest
+     * ======================================== */
+    --color-gray-25: #f9f9f9;
+    --color-gray-50: #f8f8f8;
+    --color-gray-100: #f5f5f5;
+    --color-gray-125: #f2f2f2;
+    --color-gray-150: #f0f0f0;
+    --color-gray-200: #eeeeee;
+    --color-gray-250: #e9e9e9;
+    --color-gray-300: #e8e8e8;
+    --color-gray-350: #e7e7e7;
+    --color-gray-400: #e0e0e0;
+    --color-gray-450: #d3d3d3;
+    --color-gray-500: #d0d0d0;
+    --color-gray-550: #cccccc;
+    --color-gray-600: #aeaeae;
+    --color-gray-650: #a9a9a9;
+    --color-gray-700: #999999;
+    --color-gray-750: #808080;
+    --color-gray-800: #696969;
+    --color-gray-850: #444444;
+    --color-gray-900: #333333;
+    --color-gray-950: #222222;
+
+    /* ========================================
+     * Hover Colors
+     * Background colors for hover states
+     * ======================================== */
+    --color-hover-bg: var(--color-gray-150);
+    --color-hover-bg-light: var(--color-gray-100);
+    --color-hover-bg-medium: var(--color-gray-250);
+    --color-hover-bg-dark: var(--color-gray-300);
+    --color-hover-bg-strong: var(--color-gray-500);
+    --color-hover-button-bg: var(--color-gray-550);
+    --color-hover-button-light: var(--color-gray-200);
+
+    /* ========================================
+     * Text Colors
+     * Semantic aliases for text and icon colors
+     * ======================================== */
+    --color-text-secondary: var(--color-gray-800);
+    --color-text-muted: var(--color-gray-600);
+    --color-text-disabled: var(--color-gray-450);
+    --color-text-placeholder: var(--color-gray-750);
+
+    /* ========================================
+     * Utility Colors
+     * ======================================== */
+    --color-button-utility-bg: var(--color-background);
+    --color-button-utility-border: var(--color-gray-400);
+    --color-button-utility-hover-bg: var(--color-gray-50);
+    --color-button-utility-hover-border: var(--color-gray-550);
+    --color-icon-button-utility-hover-bg: var(--color-gray-100);
+
+    /* ========================================
+     * Positive Colors
+     * From lightest to darkest
+     * ======================================== */
+    --color-icon-button-positive-hover: #efe;
+    --color-icon-button-positive-active: #dfd;
+    --color-button-positive-hover: #3cb371;
+    --color-button-positive-base: #2e8b57;
+    --color-icon-button-positive-text: #0a0;
+    --color-button-positive-border: darkgreen;
+
+    /* ========================================
+     * Danger Colors
+     * From lightest to darkest
+     * ======================================== */
+    --color-icon-button-danger-hover: #fee;
+    --color-form-invalid-bg: #f8d7da;
+    --color-button-danger-hover: #ea4b5a;
+    --color-button-danger-base: #dc3545;
+    --color-inline-input-danger: indianred;
+    --color-icon-button-danger-text: #c00;
+    --color-form-error-text: firebrick;
+    --color-alert-danger: maroon;
+
+    /* ========================================
+     * Warning Colors
+     * From lightest to darkest
+     * ======================================== */
+    --color-warning-banner-bg: #fff3cd;
+    --color-warning-banner-border: #ffc107;
+    --color-inline-input-warning: sandybrown;
+    --color-alert-warning: goldenrod;
+    --color-warning-banner-text: #856404;
+
+    /* ========================================
+     * Information Colors 
+     * ======================================== */
+    --color-alert-question: cornflowerblue;
+    --color-alert-note: teal;
+
+    /* ========================================
+     * Rich Text Editor Colors
+     * ======================================== */
+    --color-rich-text-editor-border: var(--color-gray-750);
+    --color-rich-text-menubar-bg: var(--color-gray-150);
+    --color-rich-text-menubar-border: var(--color-gray-750);
+    --color-rich-text-menubar-button-active: var(--color-gray-550);
+    --color-rich-text-placeholder: var(--color-gray-600);
+    --color-rich-text-blockquote-bg: var(--color-gray-25);
+    --color-rich-text-blockquote-border: var(--color-gray-550);
+    --color-rich-text-link-input-bg: var(--color-gray-100);
+    --color-rich-text-link-input-outline: var(--color-gray-550);
+
+    /* ========================================
+     * Selection, Focus & Highlight
+     * ======================================== */
+    --color-dnd-insert: #6b7280;
+    --color-highlight-bg: #f1f5f9;
+    --color-rich-text-selection-bg: #ffe58a;
+    --color-link-editor-focus: rgb(35, 131, 226);
+    --color-id-input-anonymous-base: lightsteelblue;
+
+    /* ========================================
+     * Overlays & Shadows
+     * ======================================== */
+    --color-overlay-base: rgba(0, 0, 0, 0.5);
+    --color-overlay-light: rgba(0, 0, 0, 0.1);
+
+    --color-shadow-base: rgba(15, 15, 15, 0.05);
+    --color-shadow-medium: rgba(15, 15, 15, 0.1);
+    --color-shadow-strong: rgba(15, 15, 15, 0.2);
+
+    --color-tooltip-bg: hsl(251, 9%, 23%);
+
+    --color-link-editor-shadow-1: rgba(0, 0, 0, 0.1);
+    --color-link-editor-shadow-2: rgba(0, 0, 0, 0.06);
+    --color-link-editor-shadow-3: rgba(84, 72, 49, 0.08);
+
+    /* ========================================
+     * Borders & Separators
+     * ======================================== */
+    --color-help-border: rgba(0, 0, 0, 0.2);
+    --color-menu-separator: #e5e7eb;
+}

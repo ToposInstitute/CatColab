@@ -1,10 +1,10 @@
 .box {
-    border: 1px solid black;
+    border: 1px solid var(--color-foreground);
     padding: 2px;
 }
 
 .cornerBox {
-    border: 1px solid black;
+    border: 1px solid var(--color-foreground);
     padding: 2px;
 
     /* Source: https://stackoverflow.com/a/61913549 */

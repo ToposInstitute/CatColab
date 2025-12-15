@@ -10,7 +10,7 @@ export function DocumentTypeIcon(props: { documentType: DocumentType; isDeleted?
     return (
         <Switch fallback={<File />}>
             <Match when={props.isDeleted}>
-                <FileX style={{ color: "darkgray" }} />
+                <FileX style={{ color: "var(--color-gray-600)" }} />
             </Match>
             <Match when={props.documentType === "model"}>
                 <File />
