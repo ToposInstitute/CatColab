@@ -101,6 +101,9 @@ importers:
       firebase:
         specifier: ^10.14.0
         version: 10.14.0
+      html-escaper:
+        specifier: ^3.0.3
+        version: 3.0.3
       js-file-download:
         specifier: ^0.4.12
         version: 0.4.12
@@ -156,6 +159,9 @@ importers:
       '@mdx-js/mdx':
         specifier: ^2.3.0
         version: 2.3.0
+      '@types/html-escaper':
+        specifier: ^3.0.4
+        version: 3.0.4
       '@types/mdx':
         specifier: ^2.0.13
         version: 2.0.13
@@ -1204,6 +1210,9 @@ packages:
   '@types/hast@3.0.4':
     resolution: {integrity: sha512-WPs+bbQw5aCj+x6laNGWLH3wviHtoCv/P3+otBhbOhJgG8qtpdAMlTCxLtsTWA7LH1Oh/bFCHsBn0TPS5m30EQ==}
 
+  '@types/html-escaper@3.0.4':
+    resolution: {integrity: sha512-UKSaMPMXXKnq1jDj74seVikfdq5pWvoXcIgOUbwYzHuAEGiv8/juom1i/MsWBF8boFSI0uHQCSZauzr5OYnnJA==}
+
   '@types/katex@0.16.7':
     resolution: {integrity: sha512-HMwFiRujE5PjrgwHQ25+bsLJgowjGjm5Z8FVSf0N6PwgJrwxH0QxzHYDcKsTfV3wva0vzrpqMTJS2jXPr5BMEQ==}
 
@@ -1748,6 +1757,9 @@ packages:
 
   html-entities@2.3.3:
     resolution: {integrity: sha512-DV5Ln36z34NNTDgnz0EWGBLZENelNAtkiFA4kyNOG2tDI6Mz1uSWiq1wAKdyjnJwyDiDO7Fa2SO1CTxPXL8VxA==}
+
+  html-escaper@3.0.3:
+    resolution: {integrity: sha512-RuMffC89BOWQoY0WKGpIhn5gX3iI54O6nRA0yC124NYVtzjmFWBIiFd8M0x+ZdX0P9R4lADg1mgP8C7PxGOWuQ==}
 
   html-void-elements@3.0.0:
     resolution: {integrity: sha512-bEqo66MRXsUGxWHV5IP0PUiAWwoEjba4VCzg0LjFJBpchPaTfyfCKTG6bc5F8ucKec3q5y6qOdGyYTSBEvhCrg==}
@@ -4204,6 +4216,8 @@ snapshots:
     dependencies:
       '@types/unist': 3.0.3
 
+  '@types/html-escaper@3.0.4': {}
+
   '@types/katex@0.16.7': {}
 
   '@types/mdast@3.0.15':
@@ -4919,6 +4933,8 @@ snapshots:
       space-separated-tokens: 2.0.2
 
   html-entities@2.3.3: {}
+
+  html-escaper@3.0.3: {}
 
   html-void-elements@3.0.0: {}
 
