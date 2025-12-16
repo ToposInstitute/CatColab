@@ -6,7 +6,7 @@ import invariant from "tiny-invariant";
 
 import { IconButton } from "catcolab-ui-components";
 import { createAnalysis } from "../analysis";
-import { type DocRef, type LiveDoc, useApi } from "../api";
+import { type DocRef, DocumentType, type LiveDoc, useApi } from "../api";
 import { DocumentTypeIcon } from "../components/document_type_icon";
 import { createDiagram } from "../diagram";
 import {
@@ -24,13 +24,21 @@ import { TheoryLibraryContext } from "../theory";
 export function DocumentMenu(props: {
     liveDoc: LiveDoc;
     docRef: DocRef;
-    onDocCreated?: () => void;
+    onDocCreated?: (docType: DocumentType, refId: string) => void;
     onDocDeleted?: () => void;
 }) {
     const api = useApi();
 
     const navigate = useNavigate();
     const docType = () => props.liveDoc.doc.type;
+
+    const handleDocCreated = (docType: DocumentType, refId: string) => {
+        if (props.onDocCreated) {
+            props.onDocCreated(docType, refId);
+        } else {
+            navigate(`/${docType}/${refId}`);
+        }
+    };
 
     const onNewDiagram = async () => {
         let modelRefId: string | undefined;
@@ -47,8 +55,7 @@ export function DocumentMenu(props: {
         }
 
         const newRef = await createDiagram(api, api.makeUnversionedRef(modelRefId));
-        props.onDocCreated?.();
-        navigate(`/diagram/${newRef}`);
+        handleDocCreated("diagram", newRef);
     };
 
     const onNewAnalysis = async () => {
@@ -57,8 +64,7 @@ export function DocumentMenu(props: {
         invariant(docType !== "analysis", "Analysis cannot be created on other analysis");
 
         const newRef = await createAnalysis(api, docType, api.makeUnversionedRef(docRefId));
-        props.onDocCreated?.();
-        navigate(`/analysis/${newRef}`);
+        handleDocCreated("analysis", newRef);
     };
 
     const theories = useContext(TheoryLibraryContext);
