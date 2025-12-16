@@ -122,7 +122,7 @@ pub fn positive_backward_link(th: Rc<DiscreteTabTheory>) -> DiscreteTabModel {
         name("link"),
         name("y").into(),
         model.tabulated_gen(name("f")),
-        TabMorType::Basic(name("PositiveLink")),
+        TabMorType::Basic(name("Link")),
     );
     model
 }

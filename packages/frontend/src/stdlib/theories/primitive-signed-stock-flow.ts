@@ -1,15 +1,15 @@
-import { ThCategoryLinks } from "catlog-wasm";
+import { ThCategorySignedLinks } from "catlog-wasm";
 import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
 import styles from "../styles.module.css";
 import svgStyles from "../svg_styles.module.css";
 
 export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): Theory {
-    const thCategoryLinks = new ThCategoryLinks();
+    const thCategorySignedLinks = new ThCategorySignedLinks();
 
     return new Theory({
         ...theoryMeta,
-        theory: thCategoryLinks.theory(),
+        theory: thCategorySignedLinks.theory(),
         onlyFreeModels: true,
         modelTypes: [
             {
@@ -35,10 +35,20 @@ export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): 
             {
                 tag: "MorType",
                 morType: { tag: "Basic", content: "Link" },
-                name: "Link",
-                description: "Influence of a stock on a flow",
+                name: "Positive link",
+                description: "Positive influence of a stock on a flow",
+                arrowStyle: "plus",
                 preferUnnamed: true,
                 shortcut: ["L"],
+            },
+            {
+                tag: "MorType",
+                morType: { tag: "Basic", content: "NegativeLink" },
+                name: "Negative link",
+                description: "Negative influence of a stock on a flow",
+                arrowStyle: "minus",
+                preferUnnamed: true,
+                shortcut: ["K"],
             },
         ],
         modelAnalyses: [
@@ -50,7 +60,7 @@ export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): 
             }),
             analyses.massAction({
                 simulate(model, data) {
-                    return thCategoryLinks.massAction(model, data);
+                    return thCategorySignedLinks.massAction(model, data);
                 },
                 transitionType: {
                     tag: "Hom",

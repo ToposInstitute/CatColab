@@ -94,6 +94,16 @@ stdTheories.add(
 
 stdTheories.add(
     {
+        id: "primitive-signed-stock-flow",
+        name: "Stock and flow with signed links",
+        description: "Accumulation (stocks) and change (flows), with signed links",
+        group: "System Dynamics",
+    },
+    async () => (await import("./theories/primitive-signed-stock-flow")).default,
+);
+
+stdTheories.add(
+    {
         id: "reg-net",
         name: "Regulatory network",
         description: "Biochemical species that promote or inhibit each other",

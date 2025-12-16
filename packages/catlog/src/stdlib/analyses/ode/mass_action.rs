@@ -230,7 +230,7 @@ impl Default for StockFlowMassActionAnalysis {
         Self {
             stock_ob_type,
             flow_mor_type,
-            pos_link_mor_type: TabMorType::Basic(name("PositiveLink")),
+            pos_link_mor_type: TabMorType::Basic(name("Link")),
             neg_link_mor_type: TabMorType::Basic(name("NegativeLink")),
         }
     }
@@ -342,8 +342,20 @@ mod tests {
     use crate::stdlib::{models::*, theories::*};
 
     #[test]
-    fn positive_backward_link_dynamics() {
+    fn backward_link_dynamics() {
         let th = Rc::new(th_category_links());
+        let model = backward_link(th);
+        let sys = StockFlowMassActionAnalysis::default().build_system(&model);
+        let expected = expect!([r#"
+            dx = ((-1) f) x y
+            dy = f x y
+        "#]);
+        expected.assert_eq(&sys.to_string());
+    }
+
+    #[test]
+    fn positive_backward_link_dynamics() {
+        let th = Rc::new(th_category_signed_links());
         let model = positive_backward_link(th);
         let sys = StockFlowMassActionAnalysis::default().build_system(&model);
         let expected = expect!([r#"
@@ -355,7 +367,7 @@ mod tests {
 
     #[test]
     fn negative_backward_link_dynamics() {
-        let th = Rc::new(th_category_links());
+        let th = Rc::new(th_category_signed_links());
         let model = negative_backward_link(th);
         let sys = StockFlowMassActionAnalysis::default().build_system(&model);
         let expected = expect!([r#"
