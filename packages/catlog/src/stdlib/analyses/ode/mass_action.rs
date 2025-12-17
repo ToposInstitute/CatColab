@@ -215,11 +215,11 @@ impl PetriNetMassActionAnalysis {
 pub struct StockFlowMassActionAnalysis {
     /// Object type for stocks.
     pub stock_ob_type: TabObType,
-    /// Morphism types for flows between stocks.
+    /// Morphism type for flows between stocks.
     pub flow_mor_type: TabMorType,
-    /// Morphism types for links for stocks to flows.
+    /// Morphism type for positive links from stocks to flows.
     pub pos_link_mor_type: TabMorType,
-    /// Morphism types for links for stocks to flows.
+    /// Morphism type for negative links from stocks to flows.
     pub neg_link_mor_type: TabMorType,
 }
 
@@ -250,32 +250,25 @@ impl StockFlowMassActionAnalysis {
             })
             .collect();
 
-        for link in model.mor_generators_with_type(&self.pos_link_mor_type) {
+        let mut multiply_for_link = |link: QualifiedName, exponent: i8| {
             let dom = model.mor_generator_dom(&link).unwrap_basic();
             let path = model.mor_generator_cod(&link).unwrap_tabulated();
             let Some(TabEdge::Basic(cod)) = path.only() else {
                 panic!("Codomain of link should be basic morphism");
             };
             if let Some(term) = terms.get_mut(&cod) {
-                let mon: Monomial<_, i8> = [(dom, 1)].into_iter().collect();
+                let mon: Monomial<_, i8> = [(dom, exponent)].into_iter().collect();
                 *term = std::mem::take(term) * mon;
             } else {
                 panic!("Codomain of link does not belong to model");
             };
-        }
+        };
 
+        for link in model.mor_generators_with_type(&self.pos_link_mor_type) {
+            multiply_for_link(link, 1);
+        }
         for link in model.mor_generators_with_type(&self.neg_link_mor_type) {
-            let dom = model.mor_generator_dom(&link).unwrap_basic();
-            let path = model.mor_generator_cod(&link).unwrap_tabulated();
-            let Some(TabEdge::Basic(cod)) = path.only() else {
-                panic!("Codomain of link should be basic morphism");
-            };
-            if let Some(term) = terms.get_mut(&cod) {
-                let mon: Monomial<_, i8> = [(dom, -1)].into_iter().collect();
-                *term = std::mem::take(term) * mon;
-            } else {
-                panic!("Codomain of link does not belong to model");
-            };
+            multiply_for_link(link, -1);
         }
 
         let terms: Vec<_> = terms
