@@ -85,7 +85,7 @@ stdTheories.add(
     {
         id: "primitive-stock-flow",
         name: "Stock and flow",
-        description: "Model accumulation (stocks) and change (flows)",
+        description: "Accumulation (stocks) and change (flows)",
         iconLetters: ["S", "f"],
         group: "System Dynamics",
     },
