@@ -1,5 +1,5 @@
 import { useParams } from "@solidjs/router";
-import { lazy } from "solid-js";
+import { createResource, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
 import { guidesList } from "./guides";
@@ -14,19 +14,27 @@ export default function GuideHelpPage() {
 export function GuideHelp(props: { id?: string }) {
     // Note that guide should never be undefined, due to existingGuideFilter
     // in routes.ts
-    const guide = guidesList.find((item) => item.id === props.id);
+    const guide = () => guidesList.find((item) => item.id === props.id);
+
+    const [content] = createResource(
+        () => props.id,
+        async (guideId) => {
+            if (!guideId) {
+                return null;
+            }
+            return await import(`./guide/${guideId}.mdx`);
+        },
+    );
 
     return (
         <>
             <h1>
-                <a href="/help/guides/">Guides</a> / {guide?.title}
+                <a href="/help/guides/">Guides</a> / {guide()?.title}
             </h1>
             <p>
-                <i>{guide?.description}</i>
+                <i>{guide()?.description}</i>
             </p>
-            <Dynamic component={helpGuideContent(props.id)} />
+            <Show when={content()}>{(module) => <Dynamic component={module().default} />}</Show>
         </>
     );
 }
-
-const helpGuideContent = (id?: string) => lazy(() => import(`./guide/${id}.mdx`));
