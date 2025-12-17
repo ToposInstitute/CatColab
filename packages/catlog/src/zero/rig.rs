@@ -633,5 +633,8 @@ mod tests {
 
         let monomial: Monomial<_, u32> = [('x', 1), ('y', 0), ('x', 2)].into_iter().collect();
         assert_eq!(monomial.normalize().to_string(), "x^3");
+
+        let monomial: Monomial<_, i32> = [('x', -1), ('y', -2), ('x', 2)].into_iter().collect();
+        assert_eq!(monomial.normalize().to_string(), "x y^{-2}");
     }
 }

@@ -85,11 +85,22 @@ stdTheories.add(
     {
         id: "primitive-stock-flow",
         name: "Stock and flow",
-        description: "Model accumulation (stocks) and change (flows)",
-        iconLetters: ["S", "f"],
+        description: "Accumulation (stocks) and change (flows)",
+        iconLetters: ["S", "F"],
         group: "System Dynamics",
     },
     async () => (await import("./theories/primitive-stock-flow")).default,
+);
+
+stdTheories.add(
+    {
+        id: "primitive-signed-stock-flow",
+        name: "Stock and flow with signed links",
+        description: "Accumulation (stocks) and change (flows), with signed links",
+        iconLetters: ["S", "F"],
+        group: "System Dynamics",
+    },
+    async () => (await import("./theories/primitive-signed-stock-flow")).default,
 );
 
 stdTheories.add(

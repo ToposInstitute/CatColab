@@ -82,7 +82,7 @@ impl StochasticMassActionAnalysis {
 }
 
 /// Symbolic parameter in mass-action polynomial system.
-type Parameter<Id> = Polynomial<Id, f32, u8>;
+type Parameter<Id> = Polynomial<Id, f32, i8>;
 
 /// Mass-action ODE analysis for Petri nets.
 ///
@@ -110,7 +110,7 @@ impl PetriNetMassActionAnalysis {
     pub fn build_system(
         &self,
         model: &ModalDblModel,
-    ) -> PolynomialSystem<QualifiedName, Parameter<QualifiedName>, u8> {
+    ) -> PolynomialSystem<QualifiedName, Parameter<QualifiedName>, i8> {
         let mut sys = PolynomialSystem::new();
         for ob in model.ob_generators_with_type(&self.place_ob_type) {
             sys.add_term(ob, Polynomial::zero());
@@ -146,7 +146,7 @@ impl PetriNetMassActionAnalysis {
         &self,
         model: &ModalDblModel,
         data: MassActionProblemData,
-    ) -> ODEAnalysis<NumericalPolynomialSystem<u8>> {
+    ) -> ODEAnalysis<NumericalPolynomialSystem<i8>> {
         into_numerical_system(self.build_system(model), data)
     }
 
@@ -215,10 +215,12 @@ impl PetriNetMassActionAnalysis {
 pub struct StockFlowMassActionAnalysis {
     /// Object type for stocks.
     pub stock_ob_type: TabObType,
-    /// Morphism types for flows between stocks.
+    /// Morphism type for flows between stocks.
     pub flow_mor_type: TabMorType,
-    /// Morphism types for links for stocks to flows.
-    pub link_mor_type: TabMorType,
+    /// Morphism type for positive links from stocks to flows.
+    pub pos_link_mor_type: TabMorType,
+    /// Morphism type for negative links from stocks to flows.
+    pub neg_link_mor_type: TabMorType,
 }
 
 impl Default for StockFlowMassActionAnalysis {
@@ -228,7 +230,8 @@ impl Default for StockFlowMassActionAnalysis {
         Self {
             stock_ob_type,
             flow_mor_type,
-            link_mor_type: TabMorType::Basic(name("Link")),
+            pos_link_mor_type: TabMorType::Basic(name("Link")),
+            neg_link_mor_type: TabMorType::Basic(name("NegativeLink")),
         }
     }
 }
@@ -238,8 +241,8 @@ impl StockFlowMassActionAnalysis {
     pub fn build_system(
         &self,
         model: &DiscreteTabModel,
-    ) -> PolynomialSystem<QualifiedName, Parameter<QualifiedName>, u8> {
-        let mut terms: HashMap<QualifiedName, Monomial<QualifiedName, u8>> = model
+    ) -> PolynomialSystem<QualifiedName, Parameter<QualifiedName>, i8> {
+        let mut terms: HashMap<QualifiedName, Monomial<QualifiedName, i8>> = model
             .mor_generators_with_type(&self.flow_mor_type)
             .map(|flow| {
                 let dom = model.mor_generator_dom(&flow).unwrap_basic();
@@ -247,17 +250,25 @@ impl StockFlowMassActionAnalysis {
             })
             .collect();
 
-        for link in model.mor_generators_with_type(&self.link_mor_type) {
+        let mut multiply_for_link = |link: QualifiedName, exponent: i8| {
             let dom = model.mor_generator_dom(&link).unwrap_basic();
             let path = model.mor_generator_cod(&link).unwrap_tabulated();
             let Some(TabEdge::Basic(cod)) = path.only() else {
                 panic!("Codomain of link should be basic morphism");
             };
             if let Some(term) = terms.get_mut(&cod) {
-                *term = std::mem::take(term) * Monomial::generator(dom);
+                let mon: Monomial<_, i8> = [(dom, exponent)].into_iter().collect();
+                *term = std::mem::take(term) * mon;
             } else {
                 panic!("Codomain of link does not belong to model");
             };
+        };
+
+        for link in model.mor_generators_with_type(&self.pos_link_mor_type) {
+            multiply_for_link(link, 1);
+        }
+        for link in model.mor_generators_with_type(&self.neg_link_mor_type) {
+            multiply_for_link(link, -1);
         }
 
         let terms: Vec<_> = terms
@@ -289,15 +300,15 @@ impl StockFlowMassActionAnalysis {
         &self,
         model: &DiscreteTabModel,
         data: MassActionProblemData,
-    ) -> ODEAnalysis<NumericalPolynomialSystem<u8>> {
+    ) -> ODEAnalysis<NumericalPolynomialSystem<i8>> {
         into_numerical_system(self.build_system(model), data)
     }
 }
 
 fn into_numerical_system(
-    sys: PolynomialSystem<QualifiedName, Parameter<QualifiedName>, u8>,
+    sys: PolynomialSystem<QualifiedName, Parameter<QualifiedName>, i8>,
     data: MassActionProblemData,
-) -> ODEAnalysis<NumericalPolynomialSystem<u8>> {
+) -> ODEAnalysis<NumericalPolynomialSystem<i8>> {
     let ob_index: IndexMap<_, _> =
         sys.components.keys().cloned().enumerate().map(|(i, x)| (x, i)).collect();
     let n = ob_index.len();
@@ -331,6 +342,30 @@ mod tests {
         let expected = expect!([r#"
             dx = ((-1) f) x y
             dy = f x y
+        "#]);
+        expected.assert_eq(&sys.to_string());
+    }
+
+    #[test]
+    fn positive_backward_link_dynamics() {
+        let th = Rc::new(th_category_signed_links());
+        let model = positive_backward_link(th);
+        let sys = StockFlowMassActionAnalysis::default().build_system(&model);
+        let expected = expect!([r#"
+            dx = ((-1) f) x y
+            dy = f x y
+        "#]);
+        expected.assert_eq(&sys.to_string());
+    }
+
+    #[test]
+    fn negative_backward_link_dynamics() {
+        let th = Rc::new(th_category_signed_links());
+        let model = negative_backward_link(th);
+        let sys = StockFlowMassActionAnalysis::default().build_system(&model);
+        let expected = expect!([r#"
+            dx = ((-1) f) x y^{-1}
+            dy = f x y^{-1}
         "#]);
         expected.assert_eq(&sys.to_string());
     }
