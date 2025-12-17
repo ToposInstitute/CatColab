@@ -4,7 +4,7 @@ import * as analyses from "../analyses";
 import styles from "../styles.module.css";
 import svgStyles from "../svg_styles.module.css";
 
-export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): Theory {
+export default function createPrimitiveSignedStockFlowTheory(theoryMeta: TheoryMeta): Theory {
     const thCategorySignedLinks = new ThCategorySignedLinks();
 
     return new Theory({
@@ -39,7 +39,7 @@ export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): 
                 description: "Positive influence of a stock on a flow",
                 arrowStyle: "plus",
                 preferUnnamed: true,
-                shortcut: ["L"],
+                shortcut: ["P"],
             },
             {
                 tag: "MorType",
@@ -48,7 +48,7 @@ export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): 
                 description: "Negative influence of a stock on a flow",
                 arrowStyle: "minus",
                 preferUnnamed: true,
-                shortcut: ["K"],
+                shortcut: ["N"],
             },
         ],
         modelAnalyses: [
