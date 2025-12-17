@@ -89,23 +89,12 @@ pub fn walking_attr(th: Rc<DiscreteDblTheory>) -> DiscreteDblModel {
 /// morphism back to the morphism itself.
 ///
 /// In system dynamics jargon, a backward link defines a "reinforcing loop,"
-/// assuming the link has a positive effect on the flow. An example is an infection
-/// flow in a model of an infectious disease, where increasing the number of
-/// infectives increases the rate of infection of the remaining susceptibles (other
-/// things equal).
+/// assuming the link has a positive effect on the flow. An example is an
+/// infection flow an infectious disease model, where increasing the number of
+/// infectives increases the rate of infection of the remaining susceptibles
+/// (other things equal).
 pub fn backward_link(th: Rc<DiscreteTabTheory>) -> DiscreteTabModel {
-    let ob_type = TabObType::Basic(name("Object"));
-    let mut model = DiscreteTabModel::new(th.clone());
-    model.add_ob(name("x"), ob_type.clone());
-    model.add_ob(name("y"), ob_type.clone());
-    model.add_mor(name("f"), name("x").into(), name("y").into(), th.hom_type(ob_type));
-    model.add_mor(
-        name("link"),
-        name("y").into(),
-        model.tabulated_gen(name("f")),
-        TabMorType::Basic(name("Link")),
-    );
-    model
+    backward_link_of_type(th, TabMorType::Basic(name("Link")))
 }
 
 /// The "walking" backward positive link.
@@ -113,18 +102,8 @@ pub fn backward_link(th: Rc<DiscreteTabTheory>) -> DiscreteTabModel {
 /// This is the free category with signed links that has a positive link from
 /// the codomain of a morphism back to the morphism itself.
 pub fn positive_backward_link(th: Rc<DiscreteTabTheory>) -> DiscreteTabModel {
-    let ob_type = TabObType::Basic(name("Object"));
-    let mut model = DiscreteTabModel::new(th.clone());
-    model.add_ob(name("x"), ob_type.clone());
-    model.add_ob(name("y"), ob_type.clone());
-    model.add_mor(name("f"), name("x").into(), name("y").into(), th.hom_type(ob_type));
-    model.add_mor(
-        name("link"),
-        name("y").into(),
-        model.tabulated_gen(name("f")),
-        TabMorType::Basic(name("Link")),
-    );
-    model
+    // The type for positive links is just `Link`.
+    backward_link_of_type(th, TabMorType::Basic(name("Link")))
 }
 
 /// The "walking" backward negative link.
@@ -132,17 +111,16 @@ pub fn positive_backward_link(th: Rc<DiscreteTabTheory>) -> DiscreteTabModel {
 /// This is the free category with signed links that has a negative link from
 /// the codomain of a morphism back to the morphism itself.
 pub fn negative_backward_link(th: Rc<DiscreteTabTheory>) -> DiscreteTabModel {
+    backward_link_of_type(th, TabMorType::Basic(name("NegativeLink")))
+}
+
+fn backward_link_of_type(th: Rc<DiscreteTabTheory>, link_type: TabMorType) -> DiscreteTabModel {
     let ob_type = TabObType::Basic(name("Object"));
     let mut model = DiscreteTabModel::new(th.clone());
     model.add_ob(name("x"), ob_type.clone());
     model.add_ob(name("y"), ob_type.clone());
     model.add_mor(name("f"), name("x").into(), name("y").into(), th.hom_type(ob_type));
-    model.add_mor(
-        name("link"),
-        name("y").into(),
-        model.tabulated_gen(name("f")),
-        TabMorType::Basic(name("NegativeLink")),
-    );
+    model.add_mor(name("link"), name("y").into(), model.tabulated_gen(name("f")), link_type);
     model
 }
 
@@ -228,6 +206,13 @@ mod tests {
     fn categories_with_links() {
         let th = Rc::new(th_category_links());
         assert!(backward_link(th).validate().is_ok());
+    }
+
+    #[test]
+    fn categories_with_signed_links() {
+        let th = Rc::new(th_category_signed_links());
+        assert!(positive_backward_link(th.clone()).validate().is_ok());
+        assert!(negative_backward_link(th.clone()).validate().is_ok());
     }
 
     #[test]
