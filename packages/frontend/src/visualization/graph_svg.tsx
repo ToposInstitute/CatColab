@@ -46,7 +46,7 @@ export function NodeSVG<Id>(props: { node: GraphLayout.Node<Id> }) {
     } = destructure(props, { deep: true });
 
     return (
-        <g class={`node ${props.node.cssClass ?? ""}`}>
+        <g class={props.node.cssClass ?? "node"}>
             <rect x={x() - width() / 2} y={y() - height() / 2} width={width()} height={height()} />
             <Show when={props.node.label}>
                 <text class="label" x={x()} y={y()} dominant-baseline="middle" text-anchor="middle">
@@ -89,7 +89,7 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
     };
 
     return (
-        <g class={`edge ${props.edge.cssClass ?? ""}`}>
+        <g class={props.edge.cssClass ?? "edge"}>
             <Switch fallback={defaultPath()}>
                 <Match when={props.edge.style === "double"}>
                     <path class="double-outer" d={path()} />
