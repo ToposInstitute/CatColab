@@ -22,13 +22,16 @@ export default function LogicHelpPage() {
 }
 
 function LogicHelpDetail(props: { theory: Theory }) {
-    const Content = lazy(async () => {
-        try {
-            return await import(`./logics/${props.theory.id}.mdx`);
-        } catch {
-            return { default: LogicHelpNotFound };
-        }
-    });
+    const [content] = createResource(
+        () => props.theory.id,
+        async (theoryId) => {
+            try {
+                return await import(`./logics/${theoryId}.mdx`);
+            } catch {
+                return { default: LogicHelpNotFound };
+            }
+        },
+    );
 
     return (
         <>
@@ -73,7 +76,9 @@ function LogicHelpDetail(props: { theory: Theory }) {
                     </Show>
                 </div>
             </Show>
-            <Content theory={props.theory} />
+            <Show when={content()}>
+                {(module) => <Dynamic component={module().default} theory={props.theory} />}
+            </Show>
         </>
     );
 }
