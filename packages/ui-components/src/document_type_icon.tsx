@@ -4,13 +4,22 @@ import FileX from "lucide-solid/icons/file-x";
 import Network from "lucide-solid/icons/network";
 import { Match, Switch } from "solid-js";
 
-import type { DocumentType } from "../api";
+import { ModelFileIcon } from "./model_file_icon";
 
-export function DocumentTypeIcon(props: { documentType: DocumentType; isDeleted?: boolean }) {
+export type DocumentType = "model" | "diagram" | "analysis";
+
+export function DocumentTypeIcon(props: {
+    documentType: DocumentType;
+    isDeleted?: boolean;
+    letters?: [string, string];
+}) {
     return (
         <Switch fallback={<File />}>
             <Match when={props.isDeleted}>
                 <FileX style={{ color: "var(--color-gray-600)" }} />
+            </Match>
+            <Match when={props.documentType === "model" && props.letters}>
+                {(letters) => <ModelFileIcon letters={letters()} />}
             </Match>
             <Match when={props.documentType === "model"}>
                 <File />
