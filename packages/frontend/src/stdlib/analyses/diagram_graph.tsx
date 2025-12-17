@@ -57,7 +57,7 @@ export function diagramToGraphviz(
             attributes: {
                 id,
                 label: [label, overLabel].filter((s) => s).join(" : "),
-                class: graphStyles.svgCssClasses(meta).join(" "),
+                class: graphStyles.svgNodeCssClasses(meta).join(" "),
                 fontname: graphStyles.graphvizFontname(meta),
             },
         });
@@ -79,7 +79,7 @@ export function diagramToGraphviz(
             attributes: {
                 id,
                 label: overLabel ?? "",
-                class: graphStyles.svgCssClasses(meta).join(" "),
+                class: graphStyles.svgEdgeCssClasses(meta).join(" "),
                 fontname: graphStyles.graphvizFontname(meta),
             },
         });
