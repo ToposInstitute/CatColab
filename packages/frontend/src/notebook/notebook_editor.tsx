@@ -25,6 +25,7 @@ import {
 import type { Cell, Notebook } from "catlog-wasm";
 import {
     type CellActions,
+    type CellDragData,
     type FormalCellEditorProps,
     isCellDragData,
     NotebookCell,
@@ -190,16 +191,24 @@ export function NotebookEditor<T>(props: {
                 );
             },
             onDrop({ location, source }) {
-                const target = location.current.dropTargets[0];
-                if (!(target && isCellDragData(source.data) && isCellDragData(target.data))) {
+                const target =
+                    location.current.dropTargets[0] ??
+                    (currentDropTarget() ? { data: { cellId: currentDropTarget() } } : null);
+                if (!(target && isCellDragData(source.data))) {
                     setCurrentDropTarget(null);
                     return;
                 }
-                const [sourceId, targetId] = [source.data.cellId, target.data.cellId];
+                const targetData = target.data as CellDragData;
+                if (!targetData.cellId) {
+                    setCurrentDropTarget(null);
+                    return;
+                }
+                const [sourceId, targetId] = [source.data.cellId, targetData.cellId];
                 const nb = props.notebook;
                 const sourceIndex = nb.cellOrder.indexOf(sourceId);
                 const targetIndex = nb.cellOrder.indexOf(targetId);
                 if (sourceIndex < 0 || targetIndex < 0) {
+                    setCurrentDropTarget(null);
                     return;
                 }
                 const finalIndex = getReorderDestinationIndex({
