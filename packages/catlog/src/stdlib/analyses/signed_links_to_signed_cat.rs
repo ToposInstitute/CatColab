@@ -34,7 +34,7 @@ use crate::zero::name;
  *     (vertex corresponding to the) source stock to the (vertex corresponding
  *     to the) target flow
  */
-pub fn migrate(model: DiscreteTabModel) -> DiscreteDblModel {
+pub fn span_migrate(model: DiscreteTabModel) -> DiscreteDblModel {
     let mut migrated_model: DiscreteDblModel =
         DiscreteDblModel::new(Rc::new(theories::th_signed_category()));
 
@@ -102,7 +102,7 @@ mod tests {
     fn negative_backward_link_to_cld() {
         // Build the negative backwards link stock-flow diagram
         let csl_th = Rc::new(theories::th_category_signed_links());
-        let _sf_model = negative_backward_link(csl_th);
+        let sf_model = negative_backward_link(csl_th);
 
         // Manually construct the correct migration
         let sc_th = Rc::new(theories::th_signed_category());
@@ -115,7 +115,7 @@ mod tests {
         cld_model.add_mor(name("link"), name("y"), name("f"), name("Negative").into());
 
         // Test the putative migration against the correct one
-        // TO-DO: I don't think you can use assert_eq!() on models
-        // assert_eq!(migrate(sf_model), cld_model);
+        // TO-DO: I don't think you can use assert_eq!() on models?
+        assert_eq!(span_migrate(sf_model), cld_model);
     }
 }
