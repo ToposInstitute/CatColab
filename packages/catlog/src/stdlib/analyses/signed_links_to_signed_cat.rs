@@ -16,10 +16,10 @@ use crate::stdlib::theories;
 use crate::zero::name;
 
 /// Span-migration for categories with signed links.
-/// 
+///
 /// We create a CLD from a category with signed links from the query defined on
 /// objects as
-/// 
+///
 /// V  |-> stock : S | flow : F
 /// E+ |-> out : F   | link : L+
 /// E- |-> in : F    | link : L-
