@@ -9,8 +9,13 @@
 \def\tr[body]{\<html:tr>{\body}}
 \def\td[body]{\<html:td>{\body}}
 
-\def\nlab[article]{\<html:span>[class]{nlab}{[\article](https://ncatlab.org/nlab/show/\article)}}
-\def\wikipedia[article]{\<html:span>[class]{wikipedia}{[\article](https://en.wikipedia.org/wiki/\article)}}
+\def\nlab[article]{
+  \<html:span>[class]{nlab}{[\article](https://ncatlab.org/nlab/show/\article)}
+}
+
+\def\wikipedia[article]{
+  \<html:span>[class]{wikipedia}{[\article](https://en.wikipedia.org/wiki/\article)}
+}
 
 % Figures
 
@@ -20,11 +25,15 @@
 
 \def\quiver[body]{\<html:center>{\quiverinline{\body}}}
 
-\def\centerfigs[body]{
-    \<html:div>[class]{centerfigs}{\body}
+\def\prooftreeinline[body]{
+  \tex{\usepackage{ebproof,amsopn,amssymb}}{\begin{prooftree}\body\end{prooftree}}
 }
 
-% Theorems
+\def\prooftree[body]{\<html:center>{\prooftreeinline{\body}}}
+
+\def\centerfigs[body]{\<html:div>[class]{centerfigs}{\body}}
+
+% Theorems and proofs
 
 \def\definition[head][body]{
   \subtree{\title{\head} \taxon{definition} \body}
@@ -38,16 +47,16 @@
   \subtree{\title{\head} \taxon{example} \body}
 }
 
-% General mathematics
-
-\def\define[name]{\strong{\name}}
-
 \def\proof[body]{
   \subtree{
     \taxon{proof}
     \body
   }
 }
+
+% General mathematics
+
+\def\define[name]{\strong{\name}}
 
 % Category theory
 
@@ -65,6 +74,8 @@
 \def\To{#{\Rightarrow}}
 \def\hetto{#{\dashrightarrow}}
 
+% Categories
+
 \def\cat[name]{#{\mathsf{\name}}}
 \def\catV{#{\mathcal{V}}}
 \def\Set{#{\mathsf{Set}}}
@@ -73,6 +84,9 @@
 % 2-category theory
 
 \def\twocat[name]{#{\mathbf{\name}}}
+
+% 2-categories
+
 \def\Cat{\twocat{Cat}}
 \def\Dbl{\twocat{Dbl}}
 
@@ -83,6 +97,8 @@
 \def\proTo{#{\mathrel{\mkern3mu\vcenter{\hbox{$\shortmid$}}\mkern-10mu{\Rightarrow}}}}
 
 \def\tabulator[ob]{#{\top\ob}}
+
+% Double categories
 
 \def\dbl[name]{#{\mathbb{\name}}}
 \def\SSet{#{\mathbb{S}\mathsf{et}}}
@@ -103,3 +119,8 @@
 
 \def\Disc{#{\mathop{\mathrm{Disc}}}}
 \def\coDisc{#{\mathop{\mathrm{coDisc}}}}
+
+% DoubleTT
+
+\def\obtype{#{\mathsf{ob}\,\mathsf{ty}}}
+\def\mortype{#{\mathsf{mor}\,\mathsf{ty}}}
