@@ -118,7 +118,6 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
                 description: "Visualize the instance as a table",
                 help: "tabularview",
             }),
-
         ],
     });
 }

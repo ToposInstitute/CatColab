@@ -1,10 +1,10 @@
+import axios from "axios";
+import { createResource, For, Match, Switch } from "solid-js";
+
+import { PanelHeader, Spinner } from "catcolab-ui-components";
+import type { DblModel } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
 import type { GraphLayoutConfig } from "../../visualization";
-import type { DblModel } from "catlog-wasm";
-import { createResource, Switch, Match, For } from "solid-js";
-import { PanelHeader, Spinner } from "catcolab-ui-components";
-
-import axios from "axios";
 import "./tabular_view.css";
 
 /** This should live somewhere more general, once multiple analyses use local 
@@ -55,7 +55,6 @@ function createTable(headers: Array<string>, data: Array<Array<string>>) {
     and a particular object `obname` in the schema, create an HTML table with
 */
 function createACSetTable(model: DblModel, rawdata: object, obname: string) {
-
     // The primary key of this table is given by `rawdata[obname]`
     const rows: Array<string> = rawdata[obname as keyof typeof rawdata];
 
@@ -64,7 +63,7 @@ function createACSetTable(model: DblModel, rawdata: object, obname: string) {
         .morGenerators()
         .filter(
             (m) =>
-                obname ==
+                obname ===
                 model
                     .obGeneratorLabel(model.morPresentation(m)?.dom.content.toString() || "")
                     ?.toString(),
