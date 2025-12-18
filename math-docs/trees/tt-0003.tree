@@ -1,0 +1,45 @@
+\title{Rules of DoubleTT}
+\import{macros}
+
+\subtree{
+\title{Contexts and substitutions}
+
+}
+
+\subtree{
+\title{Type formers}
+
+\ul{
+
+  \li{\em{Basic object type}: For each generating object of the double theory,
+  there is an object type:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \mathsf{ob}\,\mathsf{gen}}
+  \infer1{\vdash X\ \obtype}
+  }
+  }
+
+  \li{\em{Basic morphism type}: For each generating proarrow of the double
+  theory, there is a family of morphism types:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash P: X \proto Y\ \mathsf{pro}\,\mathsf{gen}}
+  \hypo{\Gamma \vdash x: X}
+  \hypo{\Gamma \vdash y: Y}
+  \infer3{\Gamma: P(x,y)\ \mortype}
+  }
+  }
+
+  \li{\em{Hom type}:
+
+  \prooftree{
+  \hypo{\vdash X\ \obtype}
+  \hypo{\Gamma \vdash x: X}
+  \hypo{\Gamma \vdash x': X}
+  \infer3{\Gamma: \Hom_X(x,x')\ \mortype}
+  }
+  }
+
+}
+}

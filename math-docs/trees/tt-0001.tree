@@ -1,48 +1,11 @@
 \title{DoubleTT}
 \import{macros}
 
-\p{
+\p{DoubleTT is a type theory for models of double theories. To be more precise,
+it is a family of type theories, parameterized by double theories: for each
+double theory \dbl{T}, there is a type theory #{\mathsf{DoubleTT}(\dbl{T})} for
+models of \dbl{T}.}
 
-DoubleTT has six basic types of judgments:
+\transclude{tt-0002}
 
-\ol{
-
-  \li{\em{Context}: the judgment ##{\vdash \Gamma\ \mathsf{cx}} asserts that
-  #{\Gamma} is a context.}
-
-  \li{\em{Substitution}: presupposing #{\vdash \Delta\ \mathsf{cx}} and #{\vdash
-  \Gamma\ \mathsf{cx}}, the judgment ##{\Delta \vdash \gamma: \Gamma} asserts
-  that #{\gamma} is a substitution from context #{\Delta} to #{\Gamma}.}
-
-  \li{\em{Object type}: the judgment ##{\vdash X\ \obtype} asserts that #{X} is
-  an object type.}
-
-  \li{\em{Morphism type}: presupposing #{\vdash \Gamma\ \mathsf{cx}}, the
-  judgment ##{\Gamma \vdash M\ \mortype} asserts that #{M} is a morphism type in
-  context #{\Gamma}.}
-
-  \li{\em{Object term}: presupposing #{\vdash \Gamma\ \mathsf{cx}} and #{\vdash
-  X\ \obtype}, the judgment ##{\Gamma \vdash x: X} asserts that #{x} is an
-  object term of type #{X} in context #{\Gamma}.}
-
-  \li{\em{Morphism term}: presupposing #{\Gamma: M\ \mortype}, the judgment
-  ##{\Gamma \vdash m: M} asserts that #{m} is a morphism term of type #{M} in
-  context #{\Gamma}.}
-
-}
-
-Notice that morphism types depend on contexts, as in dependent type theory,
-whereas object types need no context, as in simple type theory.
-
-}
-
-\p{
-
-\strong{TODO}: Rules
-
-\prooftree{
-\hypo{\mathbb{T} \vDash X\ \mathsf{ob}}
-\infer1{\vdash X\ \obtype}
-}
-
-}
+\transclude{tt-0003}

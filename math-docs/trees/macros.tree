@@ -122,5 +122,6 @@
 
 % DoubleTT
 
+\def\context{#{\mathsf{cx}}}
 \def\obtype{#{\mathsf{ob}\,\mathsf{ty}}}
 \def\mortype{#{\mathsf{mor}\,\mathsf{ty}}}

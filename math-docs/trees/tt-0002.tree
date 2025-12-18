@@ -1,0 +1,38 @@
+\title{Judgments of DoubleTT}
+\import{macros}
+
+\p{
+
+DoubleTT has six sorts (meta types), corresponding to the following basic
+judgments:
+
+\ol{
+
+  \li{\em{Context}: the judgment ##{\vdash \Gamma\ \context} asserts that
+  #{\Gamma} is a context.}
+
+  \li{\em{Substitution}: presupposing #{\vdash \Delta\ \context} and #{\vdash
+  \Gamma\ \context}, the judgment ##{\Delta \vdash \gamma: \Gamma} asserts that
+  #{\gamma} is a substitution from context #{\Delta} to #{\Gamma}.}
+
+  \li{\em{Object type}: the judgment ##{\vdash X\ \obtype} asserts that #{X} is
+  an object type.}
+
+  \li{\em{Morphism type}: presupposing #{\vdash \Gamma\ \context}, the judgment
+  ##{\Gamma \vdash M\ \mortype} asserts that #{M} is a morphism type in context
+  #{\Gamma}.}
+
+  \li{\em{Object term}: presupposing #{\vdash \Gamma\ \context} and
+  #{\vdash X\ \obtype}, the judgment ##{\Gamma \vdash x: X} asserts that #{x} is
+  an object term of type #{X} in context #{\Gamma}.}
+
+  \li{\em{Morphism term}: presupposing #{\Gamma: M\ \mortype}, the judgment
+  ##{\Gamma \vdash m: M} asserts that #{m} is a morphism term of type #{M} in
+  context #{\Gamma}.}
+
+}
+
+Notice that morphism types depend on contexts, as in dependent type theory,
+whereas object types do not need contexts, as in simple type theory.
+
+}
