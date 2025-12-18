@@ -57,14 +57,14 @@ pub fn migrate(model: DiscreteTabModel) -> DiscreteDblModel {
             format!("{}_in", f).as_str().into(),
             f.clone(),
             model.mor_generator_dom(&f).unwrap_basic(),
-            Path::Id(name("Object")),
+            name("Negative").into(),
         );
         // A positive link from the flow object to the flow-target object
         migrated_model.add_mor(
-            format!("{}_in", f).as_str().into(),
+            format!("{}_out", f).as_str().into(),
             f.clone(),
             model.mor_generator_cod(&f).unwrap_basic(),
-            name("Negative").into(),
+            Path::Id(name("Object")),
         );
     }
 
@@ -91,3 +91,31 @@ pub fn migrate(model: DiscreteTabModel) -> DiscreteDblModel {
 }
 
 // TO-DO: add test !
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dbl::model::MutDblModel;
+    use crate::stdlib::{negative_backward_link};
+    use std::rc::Rc;
+
+    #[test]
+    fn negative_backward_link_to_cld() {
+        // Build the negative backwards link stock-flow diagram
+        let csl_th = Rc::new(theories::th_category_signed_links());
+        let _sf_model = negative_backward_link(csl_th);
+
+        // Manually construct the correct migration
+        let sc_th = Rc::new(theories::th_signed_category());
+        let mut cld_model = DiscreteDblModel::new(sc_th);
+        cld_model.add_ob(name("x"), name("Object"));
+        cld_model.add_ob(name("y"), name("Object"));
+        cld_model.add_ob(name("f"), name("Object"));
+        cld_model.add_mor(name("f_in"), name("f"), name("x"), name("Negative").into());
+        cld_model.add_mor(name("f_out"), name("f"), name("y"), Path::Id(name("Object")));
+        cld_model.add_mor(name("link"), name("y"), name("f"), name("Negative").into());
+
+        // Test the putative migration against the correct one
+        // TO-DO: I don't think you can use assert_eq!() on models
+        // assert_eq!(migrate(sf_model), cld_model);
+    }
+}
