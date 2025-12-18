@@ -38,10 +38,6 @@ in
       port = 8000;
       hostname = "backend-next.catcolab.org";
     };
-    automerge = {
-      port = 8010;
-      hostname = "automerge-next.catcolab.org";
-    };
     environmentFile = config.age.secrets.catcolabSecrets.path;
     host = {
       enable = true;
