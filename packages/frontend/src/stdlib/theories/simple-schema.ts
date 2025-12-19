@@ -104,6 +104,12 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
                 description: "Visualize the schema as a graph",
                 help: "visualization",
             }),
+            analyses.renderSql({
+                id: "sql",
+                name: "SQL Schema",
+                description: "Produce SQL DML from this schema",
+                help: "sql",
+            }),
         ],
         diagramAnalyses: [
             analyses.diagramGraph({
