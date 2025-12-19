@@ -3,6 +3,7 @@ import {
     draggable,
     dropTargetForElements,
 } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
+import { preventUnhandled } from "@atlaskit/pragmatic-drag-and-drop/prevent-unhandled";
 import { attachClosestEdge } from "@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge";
 import type { DocHandle, Prop } from "@automerge/automerge-repo";
 import Popover from "@corvu/popover";
@@ -150,6 +151,7 @@ export function NotebookCell(props: {
 
     const [closestEdge, setClosestEdge] = createSignal<ClosestEdge>(null);
     const [dropTarget, setDropTarget] = createSignal(false);
+    const [isDragging, setIsDragging] = createSignal(false);
 
     const isActiveDropTarget = () => props.currentDropTarget === props.cellId;
     createEffect(() => {
@@ -164,6 +166,32 @@ export function NotebookCell(props: {
             draggable({
                 element: handleRef,
                 getInitialData: () => createCellDragData(props.cellId, props.index),
+                onGenerateDragPreview({ nativeSetDragImage }) {
+                    if (nativeSetDragImage) {
+                        // Clone the cell content for the drag preview
+                        const cellContent = rootRef.querySelector(".cell-content");
+                        if (cellContent) {
+                            const preview = cellContent.cloneNode(true) as HTMLElement;
+                            preview.style.width = `${cellContent.clientWidth}px`;
+                            preview.style.opacity = "0.8";
+                            preview.style.pointerEvents = "none";
+                            document.body.appendChild(preview);
+                            nativeSetDragImage(preview, 0, 0);
+
+                            setTimeout(() => {
+                                preview.remove();
+                            }, 0);
+                        }
+                    }
+                },
+                onDragStart() {
+                    setIsDragging(true);
+                    preventUnhandled.start();
+                },
+                onDrop() {
+                    setIsDragging(false);
+                    preventUnhandled.stop();
+                },
             }),
             dropTargetForElements({
                 element: rootRef,
@@ -205,7 +233,13 @@ export function NotebookCell(props: {
     });
 
     return (
-        <div class="cell" onMouseEnter={showGutter} onMouseLeave={hideGutter} ref={rootRef}>
+        <div
+            class="cell"
+            classList={{ "cell-dragging": isDragging() }}
+            onMouseEnter={showGutter}
+            onMouseLeave={hideGutter}
+            ref={rootRef}
+        >
             <div class="cell-gutter">
                 <IconButton
                     onClick={props.actions.createBelow}
