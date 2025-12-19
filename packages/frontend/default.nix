@@ -61,7 +61,7 @@ let
         ];
       };
       # See README.md
-      hash = pkgs.lib.fakeHash;
+      hash = "sha256-YYJOWkpBuB7PzXJSKWUBBPjkugGkXPbrHnRD/Gyu3C8=";
     };
   };
 
