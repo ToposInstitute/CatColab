@@ -210,23 +210,11 @@ export function NotebookCell(props: {
                 onDragEnter(args) {
                     const sourceIndex = args.source.data.index as number;
                     const targetIndex = args.self.data.index as number;
-                    const sourceCellId = args.source.data.cellId as string;
 
-                    // Allow dropping back to original position (same cell)
-                    if (sourceCellId === props.cellId) {
-                        // Show drop indicator to allow dropping back to original position
-                        props.setCurrentDropTarget(props.cellId);
-                        setClosestEdge("top");
-                        setDropTarget(true);
-                    } else if (sourceIndex === targetIndex) {
-                        setClosestEdge(null);
-                        setDropTarget(false);
-                    } else {
-                        props.setCurrentDropTarget(props.cellId);
-                        const edge = sourceIndex < targetIndex ? "bottom" : "top";
-                        setClosestEdge(edge);
-                        setDropTarget(true);
-                    }
+                    props.setCurrentDropTarget(props.cellId);
+                    const edge = sourceIndex < targetIndex ? "bottom" : "top";
+                    setClosestEdge(edge);
+                    setDropTarget(true);
                 },
                 onDrop() {
                     setDropTarget(false);
