@@ -197,9 +197,6 @@ export function NotebookCell(props: {
                 element: rootRef,
                 canDrop({ source }) {
                     // TODO: Reject if cell belongs to a different notebook.
-                    if (source.data.cellId === props.cellId) {
-                        return false;
-                    }
                     return isCellDragData(source.data);
                 },
                 getData({ input }) {
@@ -213,7 +210,15 @@ export function NotebookCell(props: {
                 onDragEnter(args) {
                     const sourceIndex = args.source.data.index as number;
                     const targetIndex = args.self.data.index as number;
-                    if (sourceIndex === targetIndex) {
+                    const sourceCellId = args.source.data.cellId as string;
+
+                    // Allow dropping back to original position (same cell)
+                    if (sourceCellId === props.cellId) {
+                        // Show drop indicator to allow dropping back to original position
+                        props.setCurrentDropTarget(props.cellId);
+                        setClosestEdge("top");
+                        setDropTarget(true);
+                    } else if (sourceIndex === targetIndex) {
                         setClosestEdge(null);
                         setDropTarget(false);
                     } else {
