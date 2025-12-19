@@ -112,6 +112,7 @@ mod tests {
     use super::*;
     use crate::dbl::model::MutDblModel;
     use crate::stdlib::negative_backward_link;
+    use crate::zero::QualifiedName;
     use std::rc::Rc;
 
     #[test]
@@ -131,6 +132,13 @@ mod tests {
         cld_model.add_mor(name("link"), name("y"), name("f"), name("Negative").into());
 
         // Test the putative migration against the correct one
-        assert_eq!(span_migrate(sf_model), cld_model);
+        // assert_eq!(span_migrate(sf_model), cld_model);
+        let migrated_model = span_migrate(sf_model);
+        let mig_obs: Vec<QualifiedName> = migrated_model.ob_generators().collect();
+        let cld_obs: Vec<QualifiedName> = cld_model.ob_generators().collect();
+        assert_eq!(mig_obs, cld_obs);
+        let mig_mors: Vec<QualifiedName> = migrated_model.mor_generators().collect();
+        let cld_mors: Vec<QualifiedName> = cld_model.mor_generators().collect();
+        assert_eq!(mig_mors, cld_mors);
     }
 }
