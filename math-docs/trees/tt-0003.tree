@@ -13,21 +13,12 @@
   }
   }
 
-  \li{\em{Extension by object type}:
+  \li{\em{Context extension}:
 
   \prooftree{
   \hypo{\vdash \Gamma\ \context}
-  \hypo{\vdash A\ \obtype}
-  \infer2{\vdash \Gamma, x: A\ \context}
-  }
-  }
-
-  \li{\em{Extension by morphism type}:
-
-  \prooftree{
-  \hypo{\vdash \Gamma\ \context}
-  \hypo{\Gamma \vdash M\ \mortype}
-  \infer2{\vdash \Gamma, f: M\ \context}
+  \hypo{\Gamma \vdash A\ \type}
+  \infer2{\vdash \Gamma, u: A\ \context}
   }
   }
 
@@ -39,23 +30,24 @@
 
 \ul{
 
-  \li{\em{Basic object type}: For each generating object of the double theory,
-  there is an object type:
+  \li{\em{Object type}: For each object in the double theory, there is an object
+  type:
 
   \prooftree{
-  \hypo{\dbl{T} \vDash X\ \mathsf{ob}\,\mathsf{gen}}
-  \infer1{\vdash X\ \obtype}
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\vdash \Gamma\ \context}
+  \infer2{\vdash \Ob_X\ \type}
   }
   }
 
-  \li{\em{Basic morphism type}: For each generating proarrow of the double
-  theory, there is a family of morphism types:
+  \li{\em{Morphism type}: For each proarrow in the double theory, there is a
+  family of morphism types, parameterized by pairs of object terms:
 
   \prooftree{
-  \hypo{\dbl{T} \vDash P: A \proto B\ \mathsf{pro}\,\mathsf{gen}}
-  \hypo{\Gamma \vdash a: A}
-  \hypo{\Gamma \vdash b: B}
-  \infer3{\Gamma: P(a,b)\ \mortype}
+  \hypo{\dbl{T} \vDash (P: X \proto Y)}
+  \hypo{\Gamma \vdash x: X}
+  \hypo{\Gamma \vdash y: Y}
+  \infer3{\Gamma \vdash P(x,y)\ \type}
   }
   }
 
@@ -67,13 +59,82 @@
 
 \ul{
   
-  \li{\em{Hom introduction}:
+  \li{\em{Hom type former}:
 
   \prooftree{
-  \hypo{\vdash A\ \obtype}
-  \hypo{\Gamma \vdash a: A}
-  \hypo{\Gamma \vdash a': A}
-  \infer3{\Gamma: \Hom_A(a,a')\ \mortype}
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \hypo{\Gamma \vdash x': \Ob_X}
+  \infer3{\Gamma \vdash \Hom_X(x,x')\ \type}
+  }
+  }
+
+  \li{\em{Identity morphism}:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \infer2{\Gamma \vdash 1_x: \Hom_X(x,x)}
+  }
+  }
+
+  \li{\em{Pre-composition}:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash (P: X \proto Y)}
+  \hypo{\Gamma \vdash x, x': \Ob_X}
+  \hypo{\Gamma \vdash y: \Ob_Y}
+  \hypo{\Gamma \vdash p: P(x,y)}
+  \hypo{\Gamma \vdash m: \Hom_X(x',x)}
+  \infer5{\Gamma \vdash m \cdot p: P(x',y)}
+  }
+  }
+
+  \li{\em{Post-composition}:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash (P: X \proto Y)}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \hypo{\Gamma \vdash y, y': \Ob_Y}
+  \hypo{\Gamma \vdash p: P(x,y)}
+  \hypo{\Gamma \vdash n: \Hom_Y(y,y')}
+  \infer5{\Gamma \vdash p \cdot n: P(x,y')}
+  }
+  }
+
+}
+}
+
+\subtree{
+\title{Codiscrete modality}
+
+\ul{
+
+  \li{Action on object types:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\vdash \Gamma\ \context}
+  \infer2{\Gamma \vdash \Ob_{\coDisc(X)} = \Ob_X\ \type}
+  }
+  }
+
+  \li{Action on morphism types:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash (P: X \proto Y)}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \hypo{\Gamma \vdash y: \Ob_Y}
+  \infer3{\Gamma \dashv \coDisc(P)(x,y) = 1\ \type}
+  }
+  }
+
+  \li{Action on Hom types:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash x, x': \Ob_X}
+  \infer2{\Gamma \vdash \Hom_{\coDisc(X)}(x,x') = 1\ \type}
   }
   }
 
