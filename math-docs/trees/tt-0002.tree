@@ -15,7 +15,7 @@ judgments:
   \Gamma\ \context}, the judgment ##{\Delta \vdash \gamma: \Gamma} asserts that
   #{\gamma} is a substitution from context #{\Delta} to #{\Gamma}.}
 
-  \li{\em{Object type}: the judgment ##{\vdash X\ \obtype} asserts that #{X} is
+  \li{\em{Object type}: the judgment ##{\vdash A\ \obtype} asserts that #{A} is
   an object type.}
 
   \li{\em{Morphism type}: presupposing #{\vdash \Gamma\ \context}, the judgment
@@ -23,8 +23,8 @@ judgments:
   #{\Gamma}.}
 
   \li{\em{Object term}: presupposing #{\vdash \Gamma\ \context} and
-  #{\vdash X\ \obtype}, the judgment ##{\Gamma \vdash x: X} asserts that #{x} is
-  an object term of type #{X} in context #{\Gamma}.}
+  #{\vdash A\ \obtype}, the judgment ##{\Gamma \vdash a: A} asserts that #{a} is
+  an object term of type #{A} in context #{\Gamma}.}
 
   \li{\em{Morphism term}: presupposing #{\Gamma: M\ \mortype}, the judgment
   ##{\Gamma \vdash m: M} asserts that #{m} is a morphism term of type #{M} in

@@ -4,10 +4,38 @@
 \subtree{
 \title{Contexts and substitutions}
 
+\ul{
+
+  \li{\em{Empty context}:
+
+  \prooftree{
+  \infer0{\vdash \cdot\ \context}
+  }
+  }
+
+  \li{\em{Extension by object type}:
+
+  \prooftree{
+  \hypo{\vdash \Gamma\ \context}
+  \hypo{\vdash A\ \obtype}
+  \infer2{\vdash \Gamma, x: A\ \context}
+  }
+  }
+
+  \li{\em{Extension by morphism type}:
+
+  \prooftree{
+  \hypo{\vdash \Gamma\ \context}
+  \hypo{\Gamma \vdash M\ \mortype}
+  \infer2{\vdash \Gamma, f: M\ \context}
+  }
+  }
+
+}
 }
 
 \subtree{
-\title{Type formers}
+\title{Basic type formers}
 
 \ul{
 
@@ -24,20 +52,28 @@
   theory, there is a family of morphism types:
 
   \prooftree{
-  \hypo{\dbl{T} \vDash P: X \proto Y\ \mathsf{pro}\,\mathsf{gen}}
-  \hypo{\Gamma \vdash x: X}
-  \hypo{\Gamma \vdash y: Y}
-  \infer3{\Gamma: P(x,y)\ \mortype}
+  \hypo{\dbl{T} \vDash P: A \proto B\ \mathsf{pro}\,\mathsf{gen}}
+  \hypo{\Gamma \vdash a: A}
+  \hypo{\Gamma \vdash b: B}
+  \infer3{\Gamma: P(a,b)\ \mortype}
   }
   }
 
-  \li{\em{Hom type}:
+}
+}
+
+\subtree{
+\title{Hom types}
+
+\ul{
+  
+  \li{\em{Hom introduction}:
 
   \prooftree{
-  \hypo{\vdash X\ \obtype}
-  \hypo{\Gamma \vdash x: X}
-  \hypo{\Gamma \vdash x': X}
-  \infer3{\Gamma: \Hom_X(x,x')\ \mortype}
+  \hypo{\vdash A\ \obtype}
+  \hypo{\Gamma \vdash a: A}
+  \hypo{\Gamma \vdash a': A}
+  \infer3{\Gamma: \Hom_A(a,a')\ \mortype}
   }
   }
 
