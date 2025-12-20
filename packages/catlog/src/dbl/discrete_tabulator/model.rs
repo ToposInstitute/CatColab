@@ -74,6 +74,21 @@ pub enum TabEdge {
     },
 }
 
+impl TabEdge {
+    /// Extracts a basic object or nothing.
+    pub fn basic(self) -> Option<QualifiedName> {
+        match self {
+            TabEdge::Basic(id) => Some(id),
+            _ => None,
+        }
+    }
+
+    /// Unwraps a basic object, or panics.
+    pub fn unwrap_basic(self) -> QualifiedName {
+        self.basic().expect("Morphism should be a basic Morphism")
+    }
+}
+
 /// Morphism in a model of a discrete tabulator theory.
 pub type TabMor = Path<TabOb, TabEdge>;
 
