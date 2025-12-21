@@ -12,6 +12,7 @@ import ArrowUp from "lucide-solid/icons/arrow-up";
 import Copy from "lucide-solid/icons/copy";
 import GripVertical from "lucide-solid/icons/grip-vertical";
 import Plus from "lucide-solid/icons/plus";
+import SquarePen from "lucide-solid/icons/square-pen";
 import Trash2 from "lucide-solid/icons/trash-2";
 import type { EditorView } from "prosemirror-view";
 import { createEffect, createSignal, type JSX, onCleanup, Show } from "solid-js";
@@ -109,6 +110,8 @@ export function NotebookCell(props: {
     tag?: string;
     currentDropTarget: string | null;
     setCurrentDropTarget: (cellId: string | null) => void;
+    isActive: boolean;
+    replaceCommands: Completion[];
 }) {
     let rootRef!: HTMLDivElement;
     let handleRef!: HTMLButtonElement;
@@ -275,10 +278,41 @@ export function NotebookCell(props: {
                     <div class="drop-indicator-with-dots" />
                 </Show>
             </div>
-            <Show when={props.tag}>
-                <div class="cell-tag">{props.tag}</div>
-            </Show>
+            <CellSwitcher tag={props.tag} completions={props.replaceCommands}></CellSwitcher>
         </div>
+    );
+}
+
+export function CellSwitcher(props: { tag: string | undefined; completions: Completion[] }) {
+    const [isSwitchMenuOpen, setSwitchMenuOpen] = createSignal(false);
+    const openSwitchMenu = () => setSwitchMenuOpen(true);
+    const closeSwitchMenu = () => setSwitchMenuOpen(false);
+
+    return (
+        <Show when={props.tag}>
+            <Popover
+                open={isSwitchMenuOpen()}
+                onOpenChange={setSwitchMenuOpen}
+                floatingOptions={{
+                    autoPlacement: {
+                        allowedPlacements: ["left-start", "bottom-start", "top-start"],
+                    },
+                }}
+                trapFocus={false}
+            >
+                <Popover.Anchor as="span">
+                    <button type="button" class="plain flex items-center" onClick={openSwitchMenu}>
+                        {props.tag}
+                        <SquarePen size={16} />
+                    </button>
+                </Popover.Anchor>
+                <Popover.Portal>
+                    <Popover.Content class="popup">
+                        <Completions completions={props.completions} onComplete={closeSwitchMenu} />
+                    </Popover.Content>
+                </Popover.Portal>
+            </Popover>
+        </Show>
     );
 }
 
