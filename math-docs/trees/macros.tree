@@ -29,7 +29,7 @@
   \tex{\usepackage{ebproof,amsopn,amssymb}}{\begin{prooftree}\body\end{prooftree}}
 }
 
-\def\prooftree[body]{\<html:center>{\prooftreeinline{\body}}}
+\def\prooftree[body]{\p{\<html:center>{\prooftreeinline{\body}}}}
 
 \def\centerfigs[body]{\<html:div>[class]{centerfigs}{\body}}
 

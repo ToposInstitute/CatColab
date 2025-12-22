@@ -1,0 +1,51 @@
+\title{Double theories}
+\import{macros}
+
+\p{For the purpose of parameterizing DoubleTT, we reformulate double theories to
+be as syntactical as possible, preferring to add \em{primitive} structure over
+equipping a simple base structure with algebraic operations or universal
+properties. This strategy is in the spirit of Shulman's [\em{Categorical logic
+from a categorical point of view}](shulman-2016), where [generalized
+multicategories](dct-000F) are preferred over cartesian categories or monoidal
+categories for the categorical semantics of simple type theories. Here we adopt
+Koudenburg's \em{augmented virtual double categories} as a way of minimizing the
+role of units by adding co-nullary cells as primitive structure ([Koudenburg
+2020](koudenburg-2020)).}
+
+\subtree{
+\title{Simple double theory}
+\taxon{definition}
+
+\p{A \define{simple double theory} is an augmented virtual double category with
+all restrictions, i.e., having both unary and nullary restrictions.}
+
+}
+
+\subtree{
+\title{Model of simple double theory}
+\taxon{definition}
+
+\p{Let \dbl{S} be a virtual double category with restrictions. A \define{model}
+of a simple double theory \dbl{T} in \dbl{S} is a functor (of augmented virtual
+double categories) #{M: \dbl{T} \to \Mod(\dbl{S})} that preserves restrictions.}
+
+\p{A \define{model} of a double theory \dbl{T} without qualifcation is a model
+of \dbl{T} in #{\dbl{S} = \SSet}.}
+  
+}
+
+\p{The definition of a model makes sense because:
+
+\ul{
+  
+  \li{For any VDC \dbl{S}, the module construction #{\Mod(\dbl{S})} is a unital
+  VDC, hence admits the structure of an augmented VDC ([Koudenburg
+  2020](koudenburg-2020), Example 2.2).}
+
+  \li{For any VDC \dbl{S} with restrictions, #{\Mod(\dbl{S})} also has
+  restrictions ([Cruttwell-Shulman 2010](cruttwell-shulman-2010), Proposition
+  7.4).}
+  
+}
+  
+}

@@ -2,7 +2,7 @@
 \import{macros}
 
 \subtree{
-\title{Contexts and substitutions}
+\title{Contexts}
 
 \ul{
 
@@ -23,15 +23,25 @@
   }
 
 }
+
+\subtree{
+  \title{Variables}
+  \taxon{notation}
+
+  \p{In a departure from the standard type-theoretic notation, we use the
+  letters #{u, v, \dots} for variables and the letters #{x, y, \dots} for
+  arbitrary terms of object types.}
+
+}
 }
 
 \subtree{
-\title{Basic type formers}
+\title{Object types}
 
 \ul{
 
-  \li{\em{Object type}: For each object in the double theory, there is an object
-  type:
+  \li{\em{Object type former}: For each object in the double theory, there is an
+  object type:
 
   \prooftree{
   \hypo{\dbl{T} \vDash X\ \ob}
@@ -40,14 +50,12 @@
   }
   }
 
-  \li{\em{Morphism type}: For each proarrow in the double theory, there is a
-  family of morphism types, parameterized by pairs of object terms:
+  \li{\em{Functor application}:
 
   \prooftree{
-  \hypo{\dbl{T} \vDash (P: X \proto Y)}
-  \hypo{\Gamma \vdash x: X}
-  \hypo{\Gamma \vdash y: Y}
-  \infer3{\Gamma \vdash P(x,y)\ \type}
+  \hypo{\dbl{T} \vDash (F: X \to Y)}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \infer2{\Gamma \vdash F(x): \Ob_Y}
   }
   }
 
@@ -59,7 +67,8 @@
 
 \ul{
   
-  \li{\em{Hom type former}:
+  \li{\em{Hom type former}: For each object in the double theory, there is a
+  family of Hom types, parameterized by pairs of object terms:
 
   \prooftree{
   \hypo{\dbl{T} \vDash X\ \ob}
@@ -69,12 +78,53 @@
   }
   }
 
-  \li{\em{Identity morphism}:
+  \li{\em{Functor application}:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash (F: X \to Y)}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \hypo{\Gamma \vdash x': \Ob_X}
+  \hypo{\Gamma \vdash m: \Hom_X(x,x')}
+  \infer4{\Gamma \vdash F(m): \Hom_Y(F(x), F(x'))}
+  }
+  }
+
+  \li{\em{Identity}:
 
   \prooftree{
   \hypo{\dbl{T} \vDash X\ \ob}
   \hypo{\Gamma \vdash x: \Ob_X}
   \infer2{\Gamma \vdash 1_x: \Hom_X(x,x)}
+  }
+  }
+
+  \li{\em{Composition}:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash x,x',x'': \Ob_X}
+  \hypo{\Gamma \vdash f: \Hom_X(x,x')}
+  \hypo{\Gamma \vdash g: \Hom_X(x',x'')}
+  \infer4{\Gamma \vdash f \cdot g: \Hom_X(x,x'')}
+  }
+  }
+
+}
+}
+
+\subtree{
+\title{Morphism types}
+
+\ul{
+
+  \li{\em{Morphism type former}: For each proarrow in the double theory, there
+  is a family of morphism types, parameterized by pairs of object terms:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash (P: X \proto Y)}
+  \hypo{\Gamma \vdash x: X}
+  \hypo{\Gamma \vdash y: Y}
+  \infer3{\Gamma \vdash P(x,y)\ \type}
   }
   }
 
@@ -85,8 +135,8 @@
   \hypo{\Gamma \vdash x, x': \Ob_X}
   \hypo{\Gamma \vdash y: \Ob_Y}
   \hypo{\Gamma \vdash p: P(x,y)}
-  \hypo{\Gamma \vdash m: \Hom_X(x',x)}
-  \infer5{\Gamma \vdash m \cdot p: P(x',y)}
+  \hypo{\Gamma \vdash f: \Hom_X(x',x)}
+  \infer5{\Gamma \vdash f \cdot p: P(x',y)}
   }
   }
 
@@ -97,8 +147,40 @@
   \hypo{\Gamma \vdash x: \Ob_X}
   \hypo{\Gamma \vdash y, y': \Ob_Y}
   \hypo{\Gamma \vdash p: P(x,y)}
-  \hypo{\Gamma \vdash n: \Hom_Y(y,y')}
-  \infer5{\Gamma \vdash p \cdot n: P(x,y')}
+  \hypo{\Gamma \vdash g: \Hom_Y(y,y')}
+  \infer5{\Gamma \vdash p \cdot g: P(x,y')}
+  }
+  }
+
+}
+}
+
+\subtree{
+\title{Unit type}
+
+\ul{
+
+  \li{\em{Unit type former}:
+
+  \prooftree{
+  \hypo{\Gamma\ \context}
+  \infer1{\Gamma: 1\ \type}
+  }
+  }
+
+  \li{\em{Unit introduction}:
+
+  \prooftree{
+  \hypo{\Gamma\ \context}
+  \infer1{\Gamma \vdash *: 1}
+  }
+  }
+
+  \li{\em{Universal property of unit}:
+
+  \prooftree{
+  \hypo{\Gamma \vdash x: 1}
+  \infer1{\Gamma \vdash x = *: 1}
   }
   }
 
@@ -110,7 +192,7 @@
 
 \ul{
 
-  \li{Action on object types:
+  \li{Evaluation on object types:
 
   \prooftree{
   \hypo{\dbl{T} \vDash X\ \ob}
@@ -119,23 +201,40 @@
   }
   }
 
-  \li{Action on morphism types:
-
-  \prooftree{
-  \hypo{\dbl{T} \vDash (P: X \proto Y)}
-  \hypo{\Gamma \vdash x: \Ob_X}
-  \hypo{\Gamma \vdash y: \Ob_Y}
-  \infer3{\Gamma \dashv \coDisc(P)(x,y) = 1\ \type}
-  }
-  }
-
-  \li{Action on Hom types:
+  \li{Evaluation on Hom types:
 
   \prooftree{
   \hypo{\dbl{T} \vDash X\ \ob}
   \hypo{\Gamma \vdash x, x': \Ob_X}
   \infer2{\Gamma \vdash \Hom_{\coDisc(X)}(x,x') = 1\ \type}
   }
+  }
+
+  \li{Evaluation on morphism types:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash (P: X \proto Y)}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \hypo{\Gamma \vdash y: \Ob_Y}
+  \infer3{\Gamma \dashv (\coDisc P)(x,y) = 1\ \type}
+  }
+  }
+
+  \li{Evaluation on functors:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash (F: X \to Y)}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \infer2{\Gamma \vdash (\coDisc F)(x) = F(x) : \Ob_Y}
+  }
+  \prooftree{
+  \hypo{\dbl{T} \vdash (F: X \to Y)}
+  \hypo{\Gamma \vdash x, x': \Ob_X}
+  \hypo{\Gamma \vdash f: \Hom_X(x,x')}
+  \infer[dashed]3{\Gamma \vdash (\coDisc F)(f) = *: 1}
+  }
+
+  The latter judgment is admissable due to the evaluation rule on Hom types.
   }
 
 }
