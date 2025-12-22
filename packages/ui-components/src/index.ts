@@ -3,6 +3,7 @@ export * from "./button";
 export * from "./completions";
 export * from "./dialog";
 export * from "./document_type_icon";
+export * from "./expandable_list";
 export * from "./fixed_table_editor";
 export * from "./foldable";
 export * from "./form";

@@ -1,8 +1,8 @@
 import { createSignal } from "solid-js";
 import type { Meta, StoryObj } from "storybook-solidjs-vite";
 
-import { KatexDisplay } from "./katex_display";
 import { Button } from "./button";
+import { KatexDisplay } from "./katex_display";
 
 const meta: Meta<typeof KatexDisplay> = {
     title: "Misc/KatexDisplay",
