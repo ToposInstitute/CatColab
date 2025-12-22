@@ -123,5 +123,6 @@
 % DoubleTT
 
 \def\ob{#{\mathsf{ob}}}
+\def\ind{#{\mathsf{ind}}}
 \def\context{#{\mathsf{cx}}}
 \def\type{#{\mathsf{ty}}}
