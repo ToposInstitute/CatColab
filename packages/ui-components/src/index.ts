@@ -9,6 +9,7 @@ export * from "./form";
 export * from "./icon_button";
 export * from "./inline_input";
 export * from "./input_options";
+export * from "./katex_display";
 export * from "./model_file_icon";
 export * from "./name_input";
 export * from "./panel";
