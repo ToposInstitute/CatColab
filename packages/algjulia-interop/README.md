@@ -15,3 +15,10 @@ Having done that, to start the server, navigate to this directory and run:
 ```sh
 julia --project=test scripts/endpoint.jl
 ```
+
+## For developers
+
+If one is interested in using a version of AlgJuliaInterop.jl that doesn't match
+the latest tagged release, then one must first open the Julia environment from the 
+test directory (`julia --project=test`) and declare one wants to use the local 
+version of the package (press `]` and then `dev .`)
