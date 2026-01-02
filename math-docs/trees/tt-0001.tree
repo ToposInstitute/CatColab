@@ -2,8 +2,8 @@
 \import{macros}
 
 \p{DoubleTT is a type theory for models of double theories. To be more precise,
-DoubleTT is a family of type theories, parameterized by double theories: for
-each double theory \dbl{T}, there is a type theory #{\mathsf{DoubleTT}(\dbl{T})}
+DoubleTT is a family of type theories parameterized by double theories: for each
+double theory \dbl{T}, there is a type theory #{\mathsf{DoubleTT}(\dbl{T})}
 describing models of \dbl{T}.}
 
 \transclude{tt-0004}

@@ -33,9 +33,9 @@ standard dependent type theory (see, e.g., [Angiuli & Gratzer](principles-dtt)).
 \title{Alternative judgment structures}
 \taxon{Remark}
 
-\p{Another approach to DoubleTT would introduce a base sort specifically for
-object types, denoted #{\vdash A\ \type_0} or #{\vdash A\ \ob\,\type}, along
-with a coercion to the general sort for types:
+\p{Another approach to DoubleTT is to introduce a base sort for object types,
+denoted #{\vdash A\ \type_0} or #{\vdash A\ \ob\,\type}, along with a coercion
+to the general sort for types:
 
 \prooftree{
 \hypo{\Gamma\ \context}
