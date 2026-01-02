@@ -343,20 +343,12 @@ the double theory.}
   \hypo{\Gamma \vdash x: \Ob_X}
   \infer2{\Gamma \vdash \Hom_{\Disc(X)}(x,x) = 1\ \type}
   }
-  \prooftree{
-  \hypo{\dbl{T} \vDash X\ \ob}
-  \hypo{\Gamma \vdash x, x': \Ob_X}
-  \hypo{\Gamma \vdash f: \Hom_{\Disc(X)}(x, x')}
-  \infer3{\Gamma \vdash x = x': \Ob_X}
-  }
-  \prooftree{
-  \hypo{\dbl{T} \vDash X\ \ob}
-  \hypo{\Gamma \vdash x, x': \Ob_X}
-  \hypo{\Gamma \vdash f: \Hom_{\Disc(X)}(x, x')}
-  \infer[dashed]3{\Gamma \vdash f = 1_x: \Hom_{\Disc(X)}(x, x)}
-  }
-
-  Note the close resemblance here to extensional equality types.
+  %\prooftree{
+  %\hypo{\dbl{T} \vDash X\ \ob}
+  %\hypo{\Gamma \vdash x, x': \Ob_X}
+  %\hypo{\Gamma \vdash f: \Hom_{\Disc(X)}(x,x')}
+  %\infer3{\Gamma \vdash \varepsilon_X(f) = f: \Hom_X(x,x')}
+  %}
   }
 
   \li{Computation rule for morphism types:
@@ -378,4 +370,40 @@ the double theory.}
   }
 
 }
+
+\subtree{
+  \title{Relation to equality types}
+  \taxon{remark}
+
+  \p{
+
+  The discrete Hom types are effectively equality/identity types and so in
+  principle import into DoubleTT all the notorious subtleties of the
+  \nlab{identity type} in dependent type theory. For the time being we avoid
+  committing to the approach of either extensional or intensional type theory.
+  In particular, we do not postulate the \em{equality reflection} rule of
+  extensional type theory
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash x, x': \Ob_X}
+  \hypo{\Gamma \vdash f: \Hom_{\Disc(X)}(x, x')}
+  \infer3{\Gamma \vdash x = x': \Ob_X}
+  }
+
+  which, together with the above axioms, would imply a \em{uniqueness rule} for
+  discrete Hom types:
+  
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash x, x': \Ob_X}
+  \hypo{\Gamma \vdash f: \Hom_{\Disc(X)}(x, x')}
+  \infer[dashed]3{\Gamma \vdash f = 1_x: \Hom_{\Disc(X)}(x, x)}
+  }
+
+  Our description of the discrete modality is thus currently incomplete.
+  
+}
+}
+
 }
