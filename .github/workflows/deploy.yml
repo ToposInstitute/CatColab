@@ -287,6 +287,7 @@ jobs:
           tlmgr install amsmath
           tlmgr install quiver
           tlmgr install spath3
+          tlmgr install ebproof
 
       - name: Build mathematical docs
         if: steps.cache-math-docs.outputs.cache-hit != 'true'
