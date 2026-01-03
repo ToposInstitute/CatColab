@@ -57,6 +57,7 @@
 % General mathematics
 
 \def\define[name]{\strong{\name}}
+\def\vec[body]{#{\underline{\body}}}
 
 % Category theory
 
@@ -89,6 +90,8 @@
 
 \def\Cat{\twocat{Cat}}
 \def\Dbl{\twocat{Dbl}}
+\def\DblColax{#{\twocat{Dbl}_{\mathrm{clx}}}}
+\def\Vdc{\twocat{VDC}}
 
 % Double category theory
 
