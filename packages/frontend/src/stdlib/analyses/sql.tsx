@@ -107,8 +107,3 @@ export type DownloadConfig = {
     backend: string;
     filename: string;
 };
-
-export const defaultDownloadConfig = (): DownloadConfig => ({
-    backend: "MySQL",
-    filename: "schema.sql",
-});
