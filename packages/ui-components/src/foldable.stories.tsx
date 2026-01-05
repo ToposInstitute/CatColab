@@ -20,7 +20,7 @@ export const Summary: Story = {
             <Foldable title="Expandable Section">
                 <div style={{ padding: "16px" }}>
                     <p>This content can be expanded or collapsed.</p>
-                    <p>Click the chevron icon to toggle visibility.</p>
+                    <p>Click the settings icon to toggle visibility.</p>
                 </div>
             </Foldable>
         </div>

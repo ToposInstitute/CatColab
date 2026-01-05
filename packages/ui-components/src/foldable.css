@@ -1,3 +1,8 @@
+.foldable-wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
 .foldable-trigger {
     background: none;
     border: none;
@@ -5,22 +10,33 @@
     outline: none;
     font: inherit;
     padding: 0;
+    max-width: 100px;
 
     display: flex;
     flex-direction: row;
-    align-items: center;
+    align-items: flex-start;
+    margin-top: 4px;
+    margin-left: 4px;
 
     & .lucide {
-        color: var(--color-gray-600);
+        color: var(--color-gray-900);
+    }
+}
+
+.foldable-trigger:hover {
+    & .lucide {
+        color: var(--color-foreground);
     }
 }
 
 [data-corvu-disclosure-content] {
     overflow: hidden;
 }
+
 [data-corvu-disclosure-content][data-collapsed] {
     animation: collapse 200ms linear;
 }
+
 [data-corvu-disclosure-content][data-expanded] {
     animation: expand 200ms linear;
 }
@@ -29,6 +45,7 @@
     0% {
         height: var(--corvu-disclosure-content-height);
     }
+
     100% {
         height: 0px;
     }
@@ -38,6 +55,7 @@
     0% {
         height: 0px;
     }
+
     100% {
         height: var(--corvu-disclosure-content-height);
     }
