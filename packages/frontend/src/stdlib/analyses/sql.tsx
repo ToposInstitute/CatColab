@@ -30,7 +30,7 @@ export default function DownloadTextButton(props: ModelAnalysisProps<DownloadCon
         <>
             <p>
                 {
-                    "The following attribute types are parsed as SQL types. Any others are parsed as text."
+                    "The following attribute types are parsed as the SQL type in ihe chosen dialect. Any other types will be parsed literally. For example, an Attribute Type 'CustomType' will be parsed as a type 'CustomType' independent of its dialect, whereas 'Int' will be parsed as 'integer' in SQLite and 'int' in MySQL"
                 }
             </p>
             <ul>
