@@ -103,9 +103,9 @@ impl SQLAnalysis {
                                 .obns
                                 .clone()
                                 .label_name(model.get_cod(mor).unwrap_or(&name("")).clone());
-                            match format!("{}", tgt_name).as_str() {
+                            match format!("{}", tgt_name.clone()).as_str() {
                                 "Int" => {
-                                    acc.col(ColumnDef::new(mor_name.clone()).text().not_null())
+                                    acc.col(ColumnDef::new(mor_name.clone()).integer().not_null())
                                 }
                                 "TinyInt" => acc.col(
                                     ColumnDef::new(mor_name.clone()).tiny_integer().not_null(),
@@ -125,7 +125,9 @@ impl SQLAnalysis {
                                 "DateTime" => {
                                     acc.col(ColumnDef::new(mor_name.clone()).date_time().not_null())
                                 }
-                                _ => acc.col(ColumnDef::new(mor_name.clone()).text().not_null()),
+                                _ => acc.col(
+                                    ColumnDef::new(mor_name.clone()).custom(tgt_name).not_null(),
+                                ),
                             }
                         }
                     },
@@ -308,7 +310,7 @@ mod tests {
 
         let raw_creates = [
             "CREATE TABLE IF NOT EXISTS `Dog` (`id` int NOT NULL AUTO_INCREMENT PRIMARY KEY)",
-            "CREATE TABLE IF NOT EXISTS `Person` (\n  `id` int NOT NULL AUTO_INCREMENT PRIMARY KEY,\n  `walks` int NOT NULL,\n  `has` text NOT NULL,\n  CONSTRAINT `FK_walks_Person_Dog` FOREIGN KEY (`walks`) REFERENCES `Dog` (`id`)\n)",
+            "CREATE TABLE IF NOT EXISTS `Person` (\n  `id` int NOT NULL AUTO_INCREMENT PRIMARY KEY,\n  `walks` int NOT NULL,\n  `has` Hair NOT NULL,\n  CONSTRAINT `FK_walks_Person_Dog` FOREIGN KEY (`walks`) REFERENCES `Dog` (`id`)\n)",
         ];
 
         let ddl = SQLAnalysis::new(obns, morns, "MySQL")
