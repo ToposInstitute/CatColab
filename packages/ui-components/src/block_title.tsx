@@ -4,7 +4,7 @@ import ChevronRight from "lucide-solid/icons/chevron-right";
 import Settings from "lucide-solid/icons/settings";
 import { createSignal, type JSX, Show } from "solid-js";
 
-import "./block_title.css";
+import styles from "./block_title.module.css";
 import "./panel.css";
 
 /** A component with a title bar and optional settings pane.
@@ -28,7 +28,7 @@ export function BlockTitle(props: {
             onExpandedChange={setIsExpanded}
             collapseBehavior="hide"
         >
-            <div class="block-title-wrapper">
+            <div class={styles.wrapper}>
                 <div class="block-title-header panel-header">
                     <Show when={props.title}>
                         <span class="title">{props.title}</span>
@@ -39,7 +39,7 @@ export function BlockTitle(props: {
                     </Show>
                 </div>
                 <Show when={props.settingsPane}>
-                    <Disclosure.Trigger class="block-title-trigger">
+                    <Disclosure.Trigger class={styles.trigger}>
                         <Settings size={14} />
                         <Show when={isExpanded()} fallback={<ChevronRight size={14} />}>
                             <ChevronDown size={14} />

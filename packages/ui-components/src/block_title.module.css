@@ -1,9 +1,9 @@
-.block-title-wrapper {
+.wrapper {
     display: flex;
     flex-direction: column;
 }
 
-.block-title-trigger {
+.trigger {
     background: none;
     border: none;
     cursor: pointer;
@@ -23,7 +23,7 @@
     }
 }
 
-.block-title-trigger:hover {
+.trigger:hover {
     & .lucide {
         color: var(--color-foreground);
     }
