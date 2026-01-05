@@ -6,7 +6,7 @@ import * as GraphLayoutConfig from "../visualization/graph_layout_config";
 import type * as Checkers from "./analyses/checker_types";
 import { defaultSchemaERDConfig, type SchemaERDConfig } from "./analyses/schema_erd_config";
 import type * as Simulators from "./analyses/simulator_types";
-import * as SQLDownloadConfig from "./analyses/sql";
+import type * as SQLDownloadConfig from "./analyses/sql";
 
 type AnalysisOptions = {
     id: string;
@@ -319,7 +319,10 @@ export const renderSql = (
 ): ModelAnalysisMeta<SQLDownloadConfig.DownloadConfig> => ({
     ...options,
     component: DownloadTextButton,
-    initialContent: SQLDownloadConfig.defaultDownloadConfig,
+    initialContent: () => ({
+        backend: "MySQL",
+        filename: "schema.sql",
+    }),
 });
 
 const DownloadTextButton = lazy(() => import("./analyses/sql"));
