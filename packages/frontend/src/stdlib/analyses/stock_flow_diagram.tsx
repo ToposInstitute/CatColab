@@ -1,7 +1,7 @@
 import type * as Viz from "@viz-js/viz";
 import { type Component, createResource, createSignal, For, Show } from "solid-js";
 
-import { Foldable } from "catcolab-ui-components";
+import { BlockTitle } from "catcolab-ui-components";
 import type { DblModel } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import type { Theory } from "../../theory";
@@ -35,9 +35,16 @@ export default function StockFlowDiagram(props: ModelAnalysisProps<GraphLayoutCo
 
     return (
         <div class="graph-visualization-container">
-            <Foldable title="Visualization" header={header()}>
-                <GraphLayoutConfigForm config={props.content} changeConfig={props.changeContent} />
-            </Foldable>
+            <BlockTitle
+                title="Visualization"
+                actions={header()}
+                settingsPane={
+                    <GraphLayoutConfigForm
+                        config={props.content}
+                        changeConfig={props.changeContent}
+                    />
+                }
+            />
             <div class="graph-visualization">
                 <Show when={props.liveModel.elaboratedModel()}>
                     {(model) => (

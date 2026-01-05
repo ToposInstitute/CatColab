@@ -1,7 +1,7 @@
 import type * as Viz from "@viz-js/viz";
 import { type ComponentProps, createSignal, Show } from "solid-js";
 
-import { Foldable } from "catcolab-ui-components";
+import { BlockTitle } from "catcolab-ui-components";
 import {
     DownloadSVGButton,
     GraphLayoutConfig,
@@ -35,9 +35,16 @@ export function GraphVisualization(
 
     return (
         <div class="graph-visualization-container">
-            <Foldable title={title()} header={header()}>
-                <GraphLayoutConfigForm config={props.config} changeConfig={props.changeConfig} />
-            </Foldable>
+            <BlockTitle
+                title={title()}
+                actions={header()}
+                settingsPane={
+                    <GraphLayoutConfigForm
+                        config={props.config}
+                        changeConfig={props.changeConfig}
+                    />
+                }
+            />
             <div class="graph-visualization">
                 <Show when={props.graph}>
                     {(graph) => (

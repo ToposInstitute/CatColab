@@ -1,9 +1,9 @@
-.foldable-wrapper {
+.block-title-wrapper {
     display: flex;
     flex-direction: column;
 }
 
-.foldable-trigger {
+.block-title-trigger {
     background: none;
     border: none;
     cursor: pointer;
@@ -23,7 +23,7 @@
     }
 }
 
-.foldable-trigger:hover {
+.block-title-trigger:hover {
     & .lucide {
         color: var(--color-foreground);
     }
