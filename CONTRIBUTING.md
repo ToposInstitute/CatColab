@@ -9,7 +9,6 @@
 | Frontend | `frontend` | TypeScript | — | [/dev/frontend/](https://next.catcolab.org/dev/frontend/) |
 | | `catlog-wasm` | Rust | — | [/dev/rust/catlog_wasm](https://next.catcolab.org/dev/rust/catlog_wasm) |
 | Backend | `backend` | Rust | [README](https://github.com/ToposInstitute/CatColab/tree/main/packages/backend) | [/dev/rust/backend](https://next.catcolab.org/dev/rust/backend) |
-| | `automerge-doc-server` | TypeScript | [README](https://github.com/ToposInstitute/CatColab/tree/main/packages/automerge-doc-server) | — |
 
 
 ## Development build

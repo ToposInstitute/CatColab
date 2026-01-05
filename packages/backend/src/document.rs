@@ -1,11 +1,12 @@
 //! Procedures to create and manipulate documents.
 
 use crate::app::{AppCtx, AppError, AppState, Paginated};
+use crate::automerge_json::{ensure_autosave_listener, populate_automerge_from_json};
 use crate::{auth::PermissionLevel, user::UserSummary};
 use chrono::{DateTime, Utc};
+use samod::DocumentId;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use socketioxide::SocketIo;
 use ts_rs::TS;
 use uuid::Uuid;
 
@@ -17,15 +18,35 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
 
     let ref_id = Uuid::now_v7();
 
-    // If the document is created but the db transaction doesn't complete, then the document will be
-    // orphaned. The only negative consequence of that is additional space used, but that should be
-    // negligible and we can later create a service which periodically cleans out the orphans
-    let new_doc_response = create_automerge_doc(&ctx.state.automerge_io, content.clone()).await?;
+    // Create automerge document and populate it with the JSON content
+    let mut automerge_doc = automerge::Automerge::new();
+    automerge_doc
+        .transact(|tx| {
+            populate_automerge_from_json(tx, automerge::ROOT, &content)?;
+            Ok::<_, automerge::AutomergeError>(())
+        })
+        .map_err(|e| AppError::Invalid(format!("Failed to populate document: {:?}", e)))?;
 
-    let mut transaction = ctx.state.db.begin().await?;
+    // Insert the new automerge document into automerge-repo
+    let doc_handle = ctx
+        .state
+        .repo
+        .create(automerge_doc)
+        .await
+        .map_err(|e| AppError::Invalid(format!("Failed to create document: {:?}", e)))?;
+
+    let doc_id = doc_handle.document_id().to_string();
+
+    // let doc_content = doc_handle.with_document(|doc| doc.clone());
+
+    // If the automerge-repo document is created but the db transaction doesn't complete, then the
+    // document will be orphaned. The only negative consequence of that is additional space used, but
+    // that should be negligible and we can later create a service which periodically cleans out the
+    // orphans
+    let mut txn = ctx.state.db.begin().await?;
 
     let user_id = ctx.user.map(|user| user.user_id);
-    let insert_ref = sqlx::query!(
+    sqlx::query!(
         "
         WITH snapshot AS (
             INSERT INTO snapshots(for_ref, content, last_updated, doc_id)
@@ -37,22 +58,28 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
         ",
         ref_id,
         // Use the JSON provided by automerge as the authoritative content
-        new_doc_response.doc_json,
-        new_doc_response.doc_id,
-    );
-    insert_ref.execute(&mut *transaction).await?;
+        // serde_json::to_value(doc_content),
+        content,
+        doc_id,
+    )
+    .execute(&mut *txn)
+    .await?;
 
-    let insert_permission = sqlx::query!(
+    sqlx::query!(
         "
         INSERT INTO permissions(subject, object, level)
         VALUES ($1, $2, 'own')
         ",
         user_id,
         ref_id,
-    );
-    insert_permission.execute(&mut *transaction).await?;
+    )
+    .execute(&mut *txn)
+    .await?;
 
-    transaction.commit().await?;
+    txn.commit().await?;
+
+    ensure_autosave_listener(ctx.state.clone(), ref_id, doc_handle).await;
+
     Ok(ref_id)
 }
 
@@ -65,25 +92,25 @@ pub async fn head_snapshot(state: AppState, ref_id: Uuid) -> Result<Value, AppEr
         ",
         ref_id
     );
+
     Ok(query.fetch_one(&state.db).await?.content)
 }
 
 /// Gets the binary automerge data for a document ref.
 pub async fn head_snapshot_binary(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
-    let query = sqlx::query!(
-        "
-        SELECT doc_id FROM snapshots
-        WHERE id = (SELECT head FROM refs WHERE id = $1)
-        ",
-        ref_id
-    );
-    let doc_id = query.fetch_one(&state.db).await?.doc_id;
+    let doc_id = get_doc_id(state.clone(), ref_id).await?;
 
-    let export_response = export_automerge_doc(&state.automerge_io, doc_id).await?;
+    let doc_handle = state
+        .repo
+        .find(doc_id)
+        .await
+        .map_err(|e| AppError::Invalid(format!("Failed to find document: {:?}", e)))?
+        .ok_or_else(|| AppError::Invalid("Document not found".to_string()))?;
 
-    // Convert Vec<u8> to base64 string
+    let binary_data = doc_handle.with_document(|doc| doc.save());
+
     use base64::{Engine as _, engine::general_purpose};
-    let base64_data = general_purpose::STANDARD.encode(&export_response.binary_data);
+    let base64_data = general_purpose::STANDARD.encode(&binary_data);
 
     Ok(base64_data)
 }
@@ -99,13 +126,14 @@ pub async fn ref_deleted_at(
         ",
         ref_id
     );
+
     Ok(query.fetch_one(&state.db).await?.deleted_at)
 }
 
 /// Saves the document by overwriting the snapshot at the current head.
 pub async fn autosave(state: AppState, data: RefContent) -> Result<(), AppError> {
     let RefContent { ref_id, content } = data;
-    let query = sqlx::query!(
+    sqlx::query!(
         "
         UPDATE snapshots
         SET content = $2, last_updated = NOW()
@@ -113,8 +141,10 @@ pub async fn autosave(state: AppState, data: RefContent) -> Result<(), AppError>
         ",
         ref_id,
         content
-    );
-    query.execute(&state.db).await?;
+    )
+    .execute(&state.db)
+    .await?;
+
     Ok(())
 }
 
@@ -122,18 +152,25 @@ pub async fn autosave(state: AppState, data: RefContent) -> Result<(), AppError>
 ///
 /// The snapshot at the previous head is *not* deleted.
 pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppError> {
-    let head_doc_id_query = sqlx::query!(
-        "
-        SELECT doc_id FROM snapshots
-        WHERE id = (SELECT head FROM refs WHERE id = $1)
-        ",
-        ref_id
-    );
+    let doc_id = get_doc_id(state.clone(), ref_id).await?;
 
-    let head_doc_id = head_doc_id_query.fetch_one(&state.db).await?.doc_id;
-    let new_doc_response = clone_automerge_doc(&state.automerge_io, ref_id, head_doc_id).await?;
+    let doc_handle = state
+        .repo
+        .find(doc_id)
+        .await
+        .map_err(|e| AppError::Invalid(format!("Failed to find document: {:?}", e)))?
+        .ok_or_else(|| AppError::Invalid("Document not found".to_string()))?;
 
-    let query = sqlx::query!(
+    let cloned_doc = doc_handle.with_document(|doc| doc.clone());
+    let cloned_handle = state
+        .repo
+        .create(cloned_doc)
+        .await
+        .map_err(|e| AppError::Invalid(format!("Failed to create cloned document: {:?}", e)))?;
+
+    let doc_content = head_snapshot(state.clone(), ref_id).await?;
+
+    sqlx::query!(
         "
         WITH snapshot AS (
             INSERT INTO snapshots(for_ref, content, last_updated, doc_id)
@@ -145,24 +182,27 @@ pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppErr
         WHERE id = $1
         ",
         ref_id,
-        new_doc_response.doc_json,
-        new_doc_response.doc_id,
-    );
-    query.execute(&state.db).await?;
+        doc_content,
+        cloned_handle.document_id().to_string(),
+    )
+    .execute(&state.db)
+    .await?;
+
     Ok(())
 }
 
 /// Soft-deletes a document reference by setting `deleted_at`.
 pub async fn delete_ref(state: AppState, ref_id: Uuid) -> Result<(), AppError> {
-    let query = sqlx::query!(
+    sqlx::query!(
         "
         UPDATE refs
         SET deleted_at = NOW()
         WHERE id = $1
         ",
         ref_id
-    );
-    query.execute(&state.db).await?;
+    )
+    .execute(&state.db)
+    .await?;
     Ok(())
 }
 
@@ -181,7 +221,7 @@ pub async fn restore_ref(state: AppState, ref_id: Uuid) -> Result<(), AppError> 
     Ok(())
 }
 
-pub async fn doc_id(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
+pub async fn get_doc_id(state: AppState, ref_id: Uuid) -> Result<DocumentId, AppError> {
     let query = sqlx::query!(
         "
         SELECT doc_id FROM snapshots
@@ -191,90 +231,20 @@ pub async fn doc_id(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
     );
 
     let doc_id = query.fetch_one(&state.db).await?.doc_id;
+    let doc_id: samod::DocumentId = doc_id
+        .parse()
+        .map_err(|_| AppError::Invalid("Invalid document ID".to_string()))?;
 
-    start_listening_automerge_doc(&state.automerge_io, ref_id, doc_id.clone()).await?;
+    let doc_handle = state
+        .repo
+        .find(doc_id.clone())
+        .await
+        .map_err(|e| AppError::Invalid(format!("Failed to find document: {:?}", e)))?
+        .ok_or_else(|| AppError::Invalid("Document not found".to_string()))?;
+
+    ensure_autosave_listener(state, ref_id, doc_handle).await;
 
     Ok(doc_id)
-}
-
-async fn call_automerge_io<T, P>(
-    automerge_io: &SocketIo,
-    event: impl Into<String>,
-    payload: P,
-    fail_msg: impl Into<String>,
-) -> Result<T, AppError>
-where
-    P: Serialize,
-    T: for<'de> serde::Deserialize<'de>,
-{
-    let event = event.into();
-    let fail_msg = fail_msg.into();
-
-    let ack = automerge_io
-        .emit_with_ack::<Vec<Result<T, String>>>(event, payload)
-        .map_err(|e| AppError::AutomergeServer(format!("{fail_msg}: {e}")))?;
-
-    let response_array = ack.await?.data;
-    let response = response_array
-        .into_iter()
-        .next()
-        .ok_or_else(|| AppError::AutomergeServer("Empty ack response".to_string()))?;
-
-    response.map_err(AppError::AutomergeServer)
-}
-
-async fn start_listening_automerge_doc(
-    automerge_io: &SocketIo,
-    ref_id: Uuid,
-    doc_id: String,
-) -> Result<(), AppError> {
-    call_automerge_io::<(), _>(
-        automerge_io,
-        "startListening",
-        [ref_id.to_string(), doc_id],
-        "Failed to call startListening from backend".to_string(),
-    )
-    .await
-}
-
-async fn clone_automerge_doc(
-    automerge_io: &SocketIo,
-    ref_id: Uuid,
-    doc_id: String,
-) -> Result<NewDocSocketResponse, AppError> {
-    call_automerge_io::<NewDocSocketResponse, _>(
-        automerge_io,
-        "cloneDoc",
-        [ref_id.to_string(), doc_id],
-        "Failed to call cloneDoc from backend".to_string(),
-    )
-    .await
-}
-
-async fn create_automerge_doc(
-    automerge_io: &SocketIo,
-    content: serde_json::Value,
-) -> Result<NewDocSocketResponse, AppError> {
-    call_automerge_io::<NewDocSocketResponse, _>(
-        automerge_io,
-        "createDoc",
-        content,
-        "Failed to call createDoc from backend".to_string(),
-    )
-    .await
-}
-
-async fn export_automerge_doc(
-    automerge_io: &SocketIo,
-    doc_id: String,
-) -> Result<ExportDocSocketResponse, AppError> {
-    call_automerge_io::<ExportDocSocketResponse, _>(
-        automerge_io,
-        "exportDoc",
-        doc_id,
-        "Failed to call exportDoc from backend".to_string(),
-    )
-    .await
 }
 
 /// A document ref along with its content.
@@ -283,20 +253,6 @@ pub struct RefContent {
     #[serde(rename = "refId")]
     pub ref_id: Uuid,
     pub content: Value,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct NewDocSocketResponse {
-    #[serde(rename = "docId")]
-    pub doc_id: String,
-    #[serde(rename = "docJson")]
-    pub doc_json: Value,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ExportDocSocketResponse {
-    #[serde(rename = "binaryData")]
-    pub binary_data: Vec<u8>,
 }
 
 /// A subset of user relevant information about a ref. Used for showing users

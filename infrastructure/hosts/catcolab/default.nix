@@ -35,10 +35,6 @@ in
       port = 8000;
       hostname = "backend.catcolab.org";
     };
-    automerge = {
-      port = 8010;
-      hostname = "automerge.catcolab.org";
-    };
     environmentFile = config.age.secrets.catcolabSecrets.path;
     host = {
       enable = true;
