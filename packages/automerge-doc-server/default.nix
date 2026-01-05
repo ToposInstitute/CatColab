@@ -10,7 +10,7 @@ let
   version = packageJson.version;
 
   pkgsUnstable = import inputs.nixpkgsUnstable {
-    system = "x86_64-linux";
+    system = pkgs.stdenv.hostPlatform.system;
   };
 in
 pkgs.stdenv.mkDerivation {
