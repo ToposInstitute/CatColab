@@ -11,7 +11,7 @@
 .edge line,
 .edge path {
     fill: none;
-    stroke: black;
+    stroke: var(--color-foreground);
     stroke-width: 1.5;
 }
 
@@ -20,12 +20,12 @@
     stroke-linecap: round;
 }
 .edge path.double-inner {
-    stroke: white;
+    stroke: var(--color-background);
     stroke-width: 3.5;
     stroke-linecap: round;
 }
 .edge path.double-marker {
-    stroke: white;
+    stroke: var(--color-background);
     stroke-width: 1.5;
 }
 
@@ -33,7 +33,7 @@
 #arrowhead-flat,
 #arrowhead-double {
     fill: none;
-    stroke: black;
+    stroke: var(--color-foreground);
 }
 
 #arrowhead-flat {

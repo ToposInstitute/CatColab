@@ -54,7 +54,7 @@ export function modelToGraphviz(
             attributes: {
                 id,
                 label: ob.label?.join(".") ?? "",
-                class: graphStyles.svgCssClasses(meta).join(" "),
+                class: graphStyles.svgNodeCssClasses(meta).join(" "),
                 fontname: graphStyles.graphvizFontname(meta),
             },
         });
@@ -74,7 +74,7 @@ export function modelToGraphviz(
             attributes: {
                 id,
                 label,
-                class: graphStyles.svgCssClasses(meta).join(" "),
+                class: graphStyles.svgEdgeCssClasses(meta).join(" "),
                 fontname: graphStyles.graphvizFontname(meta),
                 // Not recognized by Graphviz but will be passed through!
                 arrowstyle: meta?.arrowStyle ?? "default",

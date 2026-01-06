@@ -2,7 +2,7 @@ import { type ComponentProps, type JSX, splitProps } from "solid-js";
 
 import "./button.css";
 
-export type ButtonVariant = "primary" | "utility" | "danger";
+export type ButtonVariant = "positive" | "utility" | "danger";
 
 export function Button(
     allProps: {
@@ -16,8 +16,8 @@ export function Button(
 
     const variantClass = () => {
         switch (props.variant) {
-            case "primary":
-                return "button-primary";
+            case "positive":
+                return "button-positive";
             case "utility":
                 return "button-utility";
             case "danger":

@@ -3,7 +3,6 @@ import { useNavigate, useParams } from "@solidjs/router";
 import ChevronsRight from "lucide-solid/icons/chevrons-right";
 import Maximize2 from "lucide-solid/icons/maximize-2";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
-import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import {
     createEffect,
     createResource,
@@ -15,7 +14,13 @@ import {
 } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { Button, IconButton, InlineInput, ResizableHandle } from "catcolab-ui-components";
+import {
+    Button,
+    IconButton,
+    InlineInput,
+    ResizableHandle,
+    WarningBanner,
+} from "catcolab-ui-components";
 import { getLiveAnalysis, type LiveAnalysisDoc } from "../analysis";
 import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
 import { AnalysisInfo } from "../analysis/analysis_info";
@@ -46,6 +51,9 @@ type AnyLiveDocWithRef = {
     docRef: DocRef;
 };
 
+// The initial size of the right panel in a split as a percentage of the total available width
+const INITIAL_SPLIT_SIZE = 0.33;
+
 export default function DocumentPage() {
     const api = useApi();
     const models = useContext(ModelLibraryContext);
@@ -69,19 +77,28 @@ export default function DocumentPage() {
 
     const [secondaryLiveDoc, { refetch: refetchSecondaryDoc }] = createResource(
         () => {
-            if (!params.subkind || !params.subref) {
-                return;
-            }
-
-            // Prevent the fetcher from running right before the redirect runs for matching primary and secondary refs
-            if (params.subref === params.ref) {
-                return;
-            }
-
-            return [params.subkind, params.subref] as const;
+            // Always return an object so fetcher runs and can clear the resource
+            return {
+                kind: params.subkind || null,
+                ref: params.subref || null,
+                primaryRef: params.ref,
+            };
         },
-        ([refKind, refId]) => getLiveDocument(refId, api, models, refKind as DocumentType),
+        async (source) => {
+            // Return undefined to clear resource when there's no secondary in URL
+            if (!source.kind || !source.ref) {
+                return undefined;
+            }
+
+            // Prevent fetching right before redirect for matching refs (maximizing)
+            if (source.ref === source.primaryRef) {
+                return undefined;
+            }
+
+            return getLiveDocument(source.ref, api, models, source.kind as DocumentType);
+        },
     );
+
     const closeSidePanel = () => {
         navigate(`/${params.kind}/${params.ref}`);
     };
@@ -94,10 +111,12 @@ export default function DocumentPage() {
     createEffect(() => {
         const context = resizableContext();
         if (isSidePanelOpen()) {
+            // expand the second panel
             context?.expand(1);
-            context?.resize(1, 0.33);
         } else {
+            // collapse the second panel
             context?.collapse(1);
+            // Set the first panel to be the full size
             context?.resize(0, 1);
         }
     });
@@ -158,6 +177,7 @@ export default function DocumentPage() {
                                         <ResizableHandle class="resizeable-handle" />
                                         <Resizable.Panel
                                             class="content-panel"
+                                            initialSize={INITIAL_SPLIT_SIZE}
                                             minSize={0.25}
                                             onCollapse={closeSidePanel}
                                         >
@@ -262,22 +282,21 @@ export function DocumentPane(props: {
     return (
         <>
             <Show when={isDeleted()}>
-                <div class="warning-banner">
-                    <TriangleAlert size={20} />
-                    <div class="warning-banner-content">
-                        <strong>Warning:</strong> This {props.doc.type} has been deleted and will
-                        not be listed in your documents.
-                    </div>
-                    <Button
-                        variant="utility"
-                        onClick={(e) => {
-                            e.preventDefault();
-                            handleRestore();
-                        }}
-                    >
-                        <RotateCcw size={16} /> Restore it
-                    </Button>
-                </div>
+                <WarningBanner
+                    actions={
+                        <Button
+                            variant="utility"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                handleRestore();
+                            }}
+                        >
+                            <RotateCcw size={16} /> Restore it
+                        </Button>
+                    }
+                >
+                    This {props.doc.type} has been deleted and will not be listed in your documents.
+                </WarningBanner>
             </Show>
             <div class="notebook-container">
                 <div class="document-head">

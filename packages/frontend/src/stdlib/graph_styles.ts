@@ -28,8 +28,14 @@ export const defaultEdgeAttributes: Required<Viz.Graph>["edgeAttributes"] = {
 export const graphvizFontname = (meta?: BaseTypeMeta): string =>
     meta?.textClasses?.includes(textStyles.code) ? "Courier" : "Helvetica";
 
-// XXX: This should probably go somewhere else.
-export const svgCssClasses = (meta?: BaseTypeMeta): string[] => [
-    ...(meta?.svgClasses ?? []),
+/** CSS classes applied to a node in an SVG graph. */
+export const svgNodeCssClasses = (meta?: BaseTypeMeta): string[] => [
+    ...(meta?.svgClasses ?? ["node"]),
+    ...(meta?.textClasses ?? []),
+];
+
+/** CSS classes applied to an edge in an SVG graph. */
+export const svgEdgeCssClasses = (meta?: BaseTypeMeta): string[] => [
+    ...(meta?.svgClasses ?? ["edge"]),
     ...(meta?.textClasses ?? []),
 ];

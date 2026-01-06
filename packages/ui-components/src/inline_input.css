@@ -35,9 +35,9 @@
     color: inherit;
 
     &.incomplete {
-        border-bottom: 2px solid sandybrown;
+        border-bottom: 2px solid var(--color-inline-input-warning);
     }
     &.invalid {
-        border-bottom: 2px solid indianred;
+        border-bottom: 2px solid var(--color-inline-input-danger);
     }
 }

@@ -129,17 +129,35 @@ impl<'a> Elaborator<'a> {
         (name, label, ty_s, ty_v)
     }
 
-    fn lookup_tm(&mut self, name: VarName) -> Option<(TmS, TmV, TyV)> {
+    fn lookup_tm(&self, name: VarName) -> Option<(TmS, TmV, TyV)> {
         let (i, label, ty) = self.ctx.lookup(name)?;
         let v = self.ctx.env.get(*i).unwrap().clone();
         Some((TmS::var(i, name, label), v, ty.clone().unwrap()))
     }
 
+    fn resolve_name(&self, segments: &[VarName]) -> Option<(TmS, TmV, TyV)> {
+        let (&last, rest) = segments.split_last()?;
+        if rest.is_empty() {
+            self.lookup_tm(last)
+        } else {
+            let (tm_s, tm_v, ty_v) = self.resolve_name(rest)?;
+            let TyV_::Record(r) = &*ty_v else {
+                return None;
+            };
+            let &(label, _) = r.fields1.get_with_label(last)?;
+            Some((
+                TmS::proj(tm_s, last, label),
+                self.evaluator().proj(&tm_v, last, label),
+                self.evaluator().field_ty(&ty_v, &tm_v, last),
+            ))
+        }
+    }
+
     fn ob(&mut self, n: &Ob) -> Option<(TmS, TmV, ObjectType)> {
         match n {
             Ob::Basic(name) => {
-                let (tm, val, ty) =
-                    self.lookup_tm(NameSegment::Uuid(Uuid::from_str(name).unwrap()))?;
+                let name = QualifiedName::deserialize_str(name).unwrap();
+                let (tm, val, ty) = self.resolve_name(name.as_slice())?;
                 let ob_type = match &*ty {
                     TyV_::Object(ob_type) => ob_type.clone(),
                     _ => {

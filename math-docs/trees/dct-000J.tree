@@ -1,0 +1,48 @@
+\title{Categories of partial maps}
+\taxon{doctrine}
+\import{macros}
+
+\subtree{
+  \title{Categories of partial maps}
+  \taxon{definition}
+
+  \p{
+
+  An \define{(abstract) category of partial maps} is a model of the theory
+  #{(\dbl{T}, T, T_0, \phi)} of [relative monoidal promonads](dct-000H) in the
+  semantics #{(\SSet, \ListCart, \ListRelevance, \Phi)}, where the monad
+  morphism ##{\Phi: \ListRelevance \To \ListCart} is the inclusion.
+  
+  }
+  \p{
+
+  Thus, a category of partial maps consists of a [cartesian monoidal
+  category](dct-000M), whose morphisms are called \strong{total}, over which
+  there is a relevance monoidal promonad (in the sense of a \nlab{relevance
+  monoidal category}), whose morphisms are called \strong{partial}.
+  
+  }
+}
+
+\subtree{
+  \title{Comparison with the literature}
+  \taxon{remark}
+
+  \p{
+
+  There are several existing approaches to axiomatizing the category of sets and
+  partial functions and related categories. The closest of these to the above
+  formulation is Carboni's abstract "bicategory of partial maps" ([Carboni
+  1987](carboni-1987-partial)). As with the deterministic maps in [[dct-000I]],
+  our formulation differs by making the total maps be structure rather than
+  property. While we do not postulate a local ordering, we can derive a local
+  preordering by, for any two partial morphisms #{f,g: X \to Y}, declaring that
+  #{f \leq g} if and only if
+
+  ##{ \Copy_X \cdot ((f \cdot \Delete_Y) \otimes g) = f. }
+
+  Note that the transitivity and reflexivity of this relation depends on the
+  partial morphisms commuting with the copy maps.
+
+  }
+}

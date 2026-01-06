@@ -129,7 +129,6 @@ function StockFlowSVG(props: {
         return result;
     };
 
-    const linkClass = ["edge", svgStyles["link"]].join(" ");
     return (
         <svg
             ref={props.ref}
@@ -144,7 +143,7 @@ function StockFlowSVG(props: {
             <For each={props.layout?.edges ?? []}>{(edge) => <EdgeSVG edge={edge} />}</For>
             <For each={linkPaths()}>
                 {(data) => (
-                    <g class={linkClass}>
+                    <g class={svgStyles["link"]}>
                         <path marker-end={`url(#arrowhead-${linkMarker})`} d={data} />
                     </g>
                 )}

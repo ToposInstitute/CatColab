@@ -15,7 +15,11 @@ import type { Pool as PoolType } from "pg";
 
 import { PostgresStorageAdapter } from "./postgres_storage_adapter.js";
 import { type SocketIOHandlers, serializeError } from "./socket.js";
-import type { NewDocSocketResponse, StartListeningSocketResponse } from "./types.js";
+import type {
+    ExportDocSocketResponse,
+    NewDocSocketResponse,
+    StartListeningSocketResponse,
+} from "./types.js";
 
 // Load environment variables from .env
 dotenv.config();
@@ -32,7 +36,6 @@ function migrateDocument(doc: unknown): { Ok: any } | { Err: string } {
 export class AutomergeServer implements SocketIOHandlers {
     private docMap: Map<string, DocHandle<unknown>>;
 
-    private app: express.Express;
     private server: http.Server;
     private wss: ws.WebSocketServer;
     private repo: Repo;
@@ -43,8 +46,8 @@ export class AutomergeServer implements SocketIOHandlers {
     constructor(port: number | string) {
         this.docMap = new Map();
 
-        this.app = express();
-        this.server = this.app.listen(port);
+        const app = express();
+        this.server = app.listen(port);
 
         this.wss = new ws.WebSocketServer({
             noServer: true,
@@ -162,6 +165,26 @@ export class AutomergeServer implements SocketIOHandlers {
         this.docMap.set(refId, handle);
 
         return { Ok: null };
+    }
+
+    async exportDoc(docId: string): Promise<ExportDocSocketResponse> {
+        // repo.find ensures that the doc handle is available when repo.export is called below. This
+        // prevents the "DocHandle is not ready" error when exporting read-only documents that were
+        // not previously listened/connected to.
+        const handle = await this.repo.find(docId as DocumentId);
+        if (!handle) {
+            return { Err: `Failed to find doc handle in repo for doc_id '${docId}'` };
+        }
+
+        const binaryData = await this.repo.export(docId as DocumentId);
+        if (!binaryData) {
+            return { Err: `Failed to find document in repo with ID '${docId}'` };
+        }
+        return {
+            Ok: {
+                binaryData: Array.from(binaryData),
+            },
+        };
     }
 
     close() {

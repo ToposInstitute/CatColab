@@ -22,7 +22,7 @@ type Story = StoryObj<typeof meta>;
 export const Summary: Story = {
     render: () => (
         <div style={{ display: "flex", gap: "8px", "flex-wrap": "wrap" }}>
-            <Button variant="primary">Primary</Button>
+            <Button variant="positive">Positive</Button>
             <Button variant="utility">Utility</Button>
             <Button variant="danger">Danger</Button>
         </div>
@@ -30,15 +30,15 @@ export const Summary: Story = {
     tags: ["!autodocs", "!dev"],
 };
 
-export const Primary: Story = {
+export const Positive: Story = {
     render: () => (
         <div style={{ display: "flex", gap: "8px", "flex-wrap": "wrap" }}>
-            <Button variant="primary">Submit</Button>
-            <Button variant="primary">
+            <Button variant="positive">Submit</Button>
+            <Button variant="positive">
                 <Save size={16} />
                 Save
             </Button>
-            <Button variant="primary" disabled>
+            <Button variant="positive" disabled>
                 Disabled
             </Button>
         </div>
@@ -97,7 +97,7 @@ export const Danger: Story = {
 export const WithIcons: Story = {
     render: () => (
         <div style={{ display: "flex", gap: "8px", "flex-wrap": "wrap" }}>
-            <Button variant="primary">
+            <Button variant="positive">
                 <Plus size={16} />
                 Add New
             </Button>
@@ -120,11 +120,11 @@ export const WithIcons: Story = {
 export const LoginButtons: Story = {
     render: () => (
         <div style={{ display: "flex", gap: "8px", "flex-wrap": "wrap" }}>
-            <Button variant="primary" type="submit" value="sign-in">
+            <Button variant="positive" type="submit" value="sign-in">
                 <SignInIcon />
                 Login
             </Button>
-            <Button variant="primary" type="submit" value="sign-up">
+            <Button variant="positive" type="submit" value="sign-up">
                 <SignUpIcon />
                 Sign up
             </Button>
@@ -172,7 +172,7 @@ export const FormActions: Story = {
 
         return (
             <div style={{ display: "flex", gap: "8px" }}>
-                <Button variant="primary" onClick={handleSubmit} disabled={isSubmitting()}>
+                <Button variant="positive" onClick={handleSubmit} disabled={isSubmitting()}>
                     {isSubmitting() ? "Saving..." : "Save Changes"}
                 </Button>
                 <Button variant="utility" disabled={isSubmitting()}>
@@ -183,28 +183,17 @@ export const FormActions: Story = {
     },
 };
 
-export const WelcomeButtons: Story = {
-    render: () => (
-        <div style={{ display: "flex", gap: "16px", "flex-direction": "column", padding: "20px" }}>
-            <Button class="button-welcome" variant="primary">
-                Get Started
-            </Button>
-            <Button variant="utility">Learn More</Button>
-        </div>
-    ),
-};
-
 export const AllVariants: Story = {
     render: () => (
         <div style={{ display: "flex", "flex-direction": "column", gap: "16px" }}>
             <div>
-                <h4>Primary Buttons</h4>
+                <h4>Positive Buttons</h4>
                 <div style={{ display: "flex", gap: "8px" }}>
-                    <Button variant="primary">Submit</Button>
-                    <Button variant="primary" disabled>
+                    <Button variant="positive">Submit</Button>
+                    <Button variant="positive" disabled>
                         Disabled
                     </Button>
-                    <Button variant="primary">
+                    <Button variant="positive">
                         <Save size={16} />
                         Save
                     </Button>

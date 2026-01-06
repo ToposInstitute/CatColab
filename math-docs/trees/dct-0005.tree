@@ -1,24 +1,28 @@
-\title{Monoid actions}
+\title{Generalized monoidal categories}
 \taxon{doctrine}
 \import{macros}
 
-\p{As categories are more primitive than [monoids](dct-0004) in the formalism of
-double theories, so are category actions (presheaves and copresheaves)
-more primitive than monoid actions. Nevertheless, monoid actions are models
-of a double theory.}
+\p{\wikipedia{Monoidal categories} can be axiomatized as double theories in
+several ways. [Lambert & Patterson 2024](cartesian-double-theories-2024) present
+cartesian double theories for both strict and weak monoidal categories,
+categorifying the familiar Lawvere theory for monoids. Here we present [modal
+double theories](mdt-0008) for "generalized" monoidal categories parameterized
+by a monad, which are unbiased in the same spirit as [generalized
+multicategories](dct-000F) and [generalized PROs](dct-000E).}
 
 \transclude{thy-0005}
 
-\example{Dynamical systems}{
-On one definition, a \nlab{dynamical system} is a monoid action in a concrete
-category. Common choice of monoids are the nonnegative natural or real numbers
-under addition.
-}
+\subtree{
+  \title{Models of the theory of generalized monoidal categories}
+  \taxon{proposition}
 
-\example{Transition systems}{
-\p{Actions of free monoids can be identified with deterministic, labelled
-transition systems, also known as \wikipedia{semiautomata}.}
-
-\p{When such transition systems are equipped with an output function, one
-obtains \nlab{Moore machines} or, more generally, \nlab{Mealy machines}.}
+  \p{A model of the modal theory of generalized (strict) monoidal categories...
+  \ul{
+    \li{... in #{(\SSet, \List)} is exactly a (strict) monoidal category}
+    \li{... in #{(\SSet, \ListSym)} is exactly a symmetric (strict) monoidal category}
+    \li{... in #{(\SSet, \ListCart)} is exactly a cartesian (strict) monoidal category}
+    \li{... in #{(\SSet, \ListCocart)} is exactly a cocartesian (strict) monoidal category}
+  }
+  where in all cases the monoidal product \em{and} additional structure is unbiased.
+  }
 }

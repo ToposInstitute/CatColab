@@ -22,24 +22,30 @@
     }
 }
 
+.collapse-button {
+    position: absolute;
+    right: 0;
+    margin: 2px;
+}
+
 .sidebar {
     flex-shrink: 0;
-    background-color: #f8f8f8;
+    background-color: var(--color-gray-50);
     overflow: hidden;
     transition: width 0.3s ease;
-    border-right: 2px solid #f0f0f0;
-    color: dimgray;
+    border-right: 2px solid var(--color-gray-150);
+    color: var(--color-gray-800);
 }
 
 .sidebar.open {
     width: 240px;
 }
 
-.sidebar.open .sidebar-header .icon-button {
+.sidebar.open .collapse-button {
     visibility: hidden;
 }
 
-.sidebar.open:hover .sidebar-header .icon-button {
+.sidebar.open:hover .collapse-button {
     visibility: visible;
 }
 
@@ -55,21 +61,19 @@
 }
 
 .sidebar-header {
+    position: relative;
     display: flex;
-    justify-content: flex-end;
+    justify-content: center;
+    align-items: center;
     height: 32px;
     margin-top: 6px;
     margin-bottom: 6px;
     border-radius: 6px;
     transition: background 20ms;
-
-    & > .icon-button {
-        margin-right: 2px;
-    }
 }
 
 .sidebar-header:hover {
-    background: #f0f0f0;
+    background: var(--color-hover-bg);
 }
 
 .toolbar {
@@ -102,7 +106,7 @@
     position: relative;
 
     &:hover {
-        background: #f0f0f0;
+        background: var(--color-hover-bg);
         cursor: pointer;
 
         .document-actions {
@@ -112,16 +116,17 @@
     }
 
     &.active {
-        background: #f0f0f0;
+        background: var(--color-gray-150);
 
         &:hover {
-            background: #e8e8e8;
+            background: var(--color-hover-bg-dark);
         }
     }
 
     .document-name {
         flex: 1;
         overflow: hidden;
+        text-wrap-mode: nowrap;
         text-overflow: ellipsis;
         padding-left: 5px;
     }
@@ -140,10 +145,10 @@
 
             &:hover {
                 .icon-button {
-                    background-color: #d0d0d0;
+                    background-color: var(--color-hover-bg-strong);
                 }
 
-                background-color: #d0d0d0;
+                background-color: var(--color-hover-bg-strong);
             }
         }
     }
@@ -152,6 +157,6 @@
 .resizeable-handle {
     background: none;
     border: none;
-    border-left: 2px solid #e7e6e4;
+    border-left: 2px solid var(--color-gray-400);
     margin-right: -0.5rem;
 }

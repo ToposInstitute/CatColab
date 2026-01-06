@@ -119,6 +119,23 @@ pub fn th_category_links() -> DiscreteTabTheory {
     th
 }
 
+/// The theory of categories with signed links.
+///
+/// It can be useful to consider a version of stock and flow diagrams where the
+/// links are labelled with a sign: positive or negative
+pub fn th_category_signed_links() -> DiscreteTabTheory {
+    let mut th = DiscreteTabTheory::new();
+    th.add_ob_type(name("Object"));
+    let ob_type = TabObType::Basic(name("Object"));
+    th.add_mor_type(name("Link"), ob_type.clone(), th.tabulator(th.hom_type(ob_type.clone())));
+    th.add_mor_type(
+        name("NegativeLink"),
+        ob_type.clone(),
+        th.tabulator(th.hom_type(ob_type.clone())),
+    );
+    th
+}
+
 /// The theory of strict monoidal categories.
 pub fn th_monoidal_category() -> ModalDblTheory {
     th_list_algebra(List::Plain)

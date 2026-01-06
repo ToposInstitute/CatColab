@@ -8,6 +8,7 @@ let
   owen = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIF2sBTuqGoEXRWpBRqTBwZZPDdLGGJ0GQcuX5dfIZKb4 o@red-special";
   epatters = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAKXx6wMJSeYKCHNmbyR803RQ72uto9uYsHhAPPWNl2D evan@epatters.org";
   jmoggr = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMiaHaeJ5PQL0mka/lY1yGXIs/bDK85uY1O3mLySnwHd j@jmoggr.com";
+  kasbah = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM1K/FB6dCjo1/xfddi9VoHEGchFo/bcz6v7SC7wAuFQ kaspar@topos";
 in
 {
   imports = [
@@ -42,9 +43,9 @@ in
     host = {
       enable = true;
       userKeys = [
-        owen
         epatters
         jmoggr
+        kasbah
       ];
       backup = {
         enable = true;

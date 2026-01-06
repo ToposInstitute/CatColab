@@ -1,0 +1,49 @@
+\title{Partial Markov categories}
+\taxon{doctrine}
+\import{macros}
+
+\p{Partial Markov categories generalize both [Markov categories](dct-000I) and
+[categories of partial maps](dct-000J) to enable synthetic reasoning about
+nondeterministic and/or fallible processes within a single categorical
+structure.}
+
+\transclude{thy-000L}
+
+\subtree{
+  \title{Partial Markov categories}
+  \taxon{definition}
+  
+  \p{
+
+  A \define{partial Markov category} is a model of the theory of diamond-graded
+  monoidal categories in the semantics given by the following square of list
+  double monads on \SSet and inclusions between them:
+
+  \quiver{
+  % https://q.uiver.app/#q=WzAsNCxbMSwyLCJcXG1hdGhybXtMaXN0fV97XFxtYXRocm17ZnVufSxcXG1hdGhybXtpZH19Il0sWzAsMSwiXFxtYXRocm17TGlzdH1fe1xcbWF0aHJte2luan0sXFxtYXRocm17aWR9fSJdLFsxLDAsIlxcbWF0aHJte0xpc3R9X3tcXG1hdGhybXtiaWp9LFxcbWF0aHJte2lkfX0iXSxbMiwxLCJcXG1hdGhybXtMaXN0fV97XFxtYXRocm17c3Vyan0sXFxtYXRocm17aWR9fSJdLFsxLDAsIiIsMCx7ImxldmVsIjoyfV0sWzMsMCwiIiwyLHsibGV2ZWwiOjJ9XSxbMiwxLCIiLDAseyJsZXZlbCI6Mn1dLFsyLDMsIiIsMix7ImxldmVsIjoyfV1d
+  \begin{tikzcd}[sep=small]
+	& {\mathrm{List}_{\mathrm{bij},\mathrm{id}}} \\
+	{\mathrm{List}_{\mathrm{inj},\mathrm{id}}} && {\mathrm{List}_{\mathrm{surj},\mathrm{id}}} \\
+	& {\mathrm{List}_{\mathrm{fun},\mathrm{id}}}
+	\arrow[Rightarrow, from=1-2, to=2-1]
+	\arrow[Rightarrow, from=1-2, to=2-3]
+	\arrow[Rightarrow, from=2-1, to=3-2]
+	\arrow[Rightarrow, from=2-3, to=3-2]
+  \end{tikzcd}
+  }
+  
+  }
+}
+
+\subtree{
+  \title{Comparison with the literature}
+  \taxon{remark}
+
+  \p{Partial Markov categories have been defined and studied by [Di Lavore et al
+  2025](partial-markov-categories-2025). The definition above, like our other
+  definitions, differs by making the deterministic and total maps be structure
+  rather than properties. It also differs from Di Lavore et al (but agrees with
+  Fritz and others) by not assuming at the outset that (partial) Markov
+  categories have conditionals.}
+
+}

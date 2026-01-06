@@ -8,18 +8,18 @@
     cursor: pointer;
 
     &[data-highlighted] {
-        background: #f1f5f9;
+        background: var(--color-highlight-bg);
     }
 
     & .lucide {
-        color: dimgray;
+        color: var(--color-gray-800);
     }
 
     &[data-disabled] {
         & .lucide {
-            color: #aeaeae;
+            color: var(--color-gray-600);
         }
-        color: #aeaeae;
+        color: var(--color-gray-600);
         cursor: default;
     }
 }

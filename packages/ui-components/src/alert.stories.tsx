@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "storybook-solidjs-vite";
 import { ErrorAlert, Note, Question, Warning } from "../src/alert";
 
 const meta = {
-    title: "Alert",
+    title: "Messages/Alert",
 } satisfies Meta<typeof Warning>;
 
 export default meta;
@@ -26,7 +26,6 @@ export const Summary: Story = {
             </Question>
         </>
     ),
-    args: { title: "Alert" },
     // excluding from autodocs and dev seems to be the way to have this
     // component as the first thing in the docs and only there
     tags: ["!autodocs", "!dev"],
@@ -53,7 +52,7 @@ export const WarningWithCustomTitle: Story = {
 };
 
 export const ErrorAlertStory: Story = {
-    storyName: "Error Alert",
+    name: "Error Alert",
     render: (args) => (
         <ErrorAlert {...args}>
             <p>An error occurred while processing your request. Please try again later.</p>

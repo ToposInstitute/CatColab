@@ -4,6 +4,7 @@ import type { MorType, ObType } from "catlog-wasm";
 import type { DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
 import * as GraphLayoutConfig from "../visualization/graph_layout_config";
 import type * as Checkers from "./analyses/checker_types";
+import { defaultSchemaERDConfig, type SchemaERDConfig } from "./analyses/schema_erd_config";
 import type * as Simulators from "./analyses/simulator_types";
 
 type AnalysisOptions = {
@@ -182,6 +183,14 @@ export const modelGraph = (
 });
 
 const ModelGraph = lazy(() => import("./analyses/model_graph"));
+
+export const schemaERD = (options: AnalysisOptions): ModelAnalysisMeta<SchemaERDConfig> => ({
+    ...options,
+    component: (props) => <SchemaERD {...props} />,
+    initialContent: defaultSchemaERDConfig,
+});
+
+const SchemaERD = lazy(() => import("./analyses/schema_erd"));
 
 export function motifFinding(
     options: AnalysisOptions & {

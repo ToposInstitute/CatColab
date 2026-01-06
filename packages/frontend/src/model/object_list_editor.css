@@ -12,7 +12,7 @@
 
     .default-delimiter,
     .default-separator {
-        color: dimgray;
+        color: var(--color-gray-800);
     }
     .default-delimiter {
         transform: scale(1, 1.5);
