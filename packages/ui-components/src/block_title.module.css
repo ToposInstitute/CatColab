@@ -4,29 +4,29 @@
 }
 
 .trigger {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 0.25rem;
+
     background: none;
     border: none;
     cursor: pointer;
-    outline: none;
-    font: inherit;
     padding: 0;
-    max-width: 100px;
+    margin-left: 0.25rem;
+    margin-right: 0.25rem;
 
-    display: flex;
-    flex-direction: row;
-    align-items: flex-start;
-    margin-top: 4px;
-    margin-left: 4px;
-
-    & .lucide {
-        color: var(--color-gray-900);
+    &:hover {
+        background: var(--color-icon-button-utility-hover-bg);
     }
 }
 
-.trigger:hover {
-    & .lucide {
-        color: var(--color-foreground);
-    }
+.settingsPane {
+    display: flex;
+    justify-content: right;
+    align-items: right;
+    margin: 0.5rem;
 }
 
 [data-corvu-disclosure-content] {

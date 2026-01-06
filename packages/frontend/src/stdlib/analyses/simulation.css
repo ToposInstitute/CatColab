@@ -10,6 +10,7 @@
     align-items: flex-start;
     justify-content: space-around;
     padding-bottom: 1em;
+    width: 100%;
 }
 
 .simulation .plot {
