@@ -1,8 +1,8 @@
 import {
+    BlockTitle,
     type ColumnSchema,
     createNumericalColumn,
     FixedTableEditor,
-    Foldable,
 } from "catcolab-ui-components";
 import type { DblModel, LinearODEProblemData, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
@@ -76,19 +76,22 @@ export default function LinearODE(
 
     return (
         <div class="simulation">
-            <Foldable title={props.title}>
-                <div class="parameters">
-                    <FixedTableEditor
-                        rows={elaboratedModel()?.obGenerators() ?? []}
-                        schema={obSchema}
-                    />
-                    <FixedTableEditor
-                        rows={elaboratedModel()?.morGenerators() ?? []}
-                        schema={morSchema}
-                    />
-                    <FixedTableEditor rows={[null]} schema={toplevelSchema} />
-                </div>
-            </Foldable>
+            <BlockTitle
+                title={props.title}
+                settingsPane={
+                    <div class="parameters">
+                        <FixedTableEditor
+                            rows={elaboratedModel()?.obGenerators() ?? []}
+                            schema={obSchema}
+                        />
+                        <FixedTableEditor
+                            rows={elaboratedModel()?.morGenerators() ?? []}
+                            schema={morSchema}
+                        />
+                        <FixedTableEditor rows={[null]} schema={toplevelSchema} />
+                    </div>
+                }
+            />
             <ODEResultPlot result={plotResult()} />
         </div>
     );

@@ -3,11 +3,11 @@ import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import { createMemo, For, Match, Show, Switch } from "solid-js";
 
 import {
+    BlockTitle,
     type ColumnSchema,
     createNumericalColumn,
     ErrorAlert,
     FixedTableEditor,
-    Foldable,
     IconButton,
     Warning,
 } from "catcolab-ui-components";
@@ -202,14 +202,20 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
 
     return (
         <div class="simulation">
-            <Foldable title="Simulation" header={RestartOrRerunButton()}>
-                <Show when={options()}>{(options) => DomainConfig(options().domains)}</Show>
-                <div class="parameters">
-                    <FixedTableEditor rows={variables()} schema={variableSchema} />
-                    <FixedTableEditor rows={scalars()} schema={scalarSchema} />
-                    <FixedTableEditor rows={[null]} schema={toplevelSchema} />
-                </div>
-            </Foldable>
+            <BlockTitle
+                title="Simulation"
+                actions={RestartOrRerunButton()}
+                settingsPane={
+                    <>
+                        <Show when={options()}>{(options) => DomainConfig(options().domains)}</Show>
+                        <div class="parameters">
+                            <FixedTableEditor rows={variables()} schema={variableSchema} />
+                            <FixedTableEditor rows={scalars()} schema={scalarSchema} />
+                            <FixedTableEditor rows={[null]} schema={toplevelSchema} />
+                        </div>
+                    </>
+                }
+            />
             <Switch>
                 <Match when={kernel.loading || options.loading}>
                     {"Loading the Julia kernel..."}

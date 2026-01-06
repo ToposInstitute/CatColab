@@ -4,7 +4,7 @@ import download from "js-file-download";
 import Download from "lucide-solid/icons/download";
 import { createResource, Show } from "solid-js";
 
-import { Foldable, FormGroup, IconButton, SelectField } from "catcolab-ui-components";
+import { BlockTitle, FormGroup, IconButton, SelectField } from "catcolab-ui-components";
 import type { DblModel, MorType, ObType } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { loadViz } from "../../visualization";
@@ -61,22 +61,26 @@ export default function SchemaERD(props: ModelAnalysisProps<SchemaERDConfig>) {
 
     return (
         <div class="graph-visualization-container">
-            <Foldable title="Entity-relationship diagram" header={header()}>
-                <FormGroup compact>
-                    <SelectField
-                        label="Direction"
-                        value={props.content.direction ?? Direction.Vertical}
-                        onChange={(evt) => {
-                            props.changeContent((content) => {
-                                content.direction = evt.currentTarget.value as Direction;
-                            });
-                        }}
-                    >
-                        <option value={Direction.Horizontal}>{"Horizontal"}</option>
-                        <option value={Direction.Vertical}>{"Vertical"}</option>
-                    </SelectField>
-                </FormGroup>
-            </Foldable>
+            <BlockTitle
+                title="Entity-relationship diagram"
+                actions={header()}
+                settingsPane={
+                    <FormGroup compact>
+                        <SelectField
+                            label="Direction"
+                            value={props.content.direction ?? Direction.Vertical}
+                            onChange={(evt) => {
+                                props.changeContent((content) => {
+                                    content.direction = evt.currentTarget.value as Direction;
+                                });
+                            }}
+                        >
+                            <option value={Direction.Horizontal}>{"Horizontal"}</option>
+                            <option value={Direction.Vertical}>{"Vertical"}</option>
+                        </SelectField>
+                    </FormGroup>
+                }
+            />
             <div class="graph-visualization">
                 <Show when={svgString()}>{(svg) => <div innerHTML={svg()} />}</Show>
             </div>
