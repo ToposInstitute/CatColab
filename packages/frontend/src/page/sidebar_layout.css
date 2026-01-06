@@ -103,6 +103,15 @@
     gap: 2px;
 }
 
+.secondary-permissions-toolbar {
+    position: absolute;
+    top: -6px;
+    right: -11px;
+    display: flex;
+    align-items: center;
+    padding-right: 8px;
+}
+
 .related-document {
     padding: 5px 8px;
     height: 30px;

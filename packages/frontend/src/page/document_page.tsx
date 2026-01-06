@@ -129,6 +129,8 @@ export default function DocumentPage() {
                         <SplitPaneToolbar
                             doc={docWithRef().liveDoc}
                             docRef={docWithRef().docRef}
+                            secondaryDoc={secondaryLiveDoc()?.liveDoc}
+                            secondaryDocRef={secondaryLiveDoc()?.docRef}
                             panelSizes={resizableContext()?.sizes()}
                             maximizeSidePanel={maximizeSidePanel}
                             closeSidePanel={closeSidePanel}
@@ -212,6 +214,8 @@ export default function DocumentPage() {
 function SplitPaneToolbar(props: {
     doc: AnyLiveDoc;
     docRef: DocRef;
+    secondaryDoc: AnyLiveDoc | undefined;
+    secondaryDocRef: DocRef | undefined;
     panelSizes: number[] | undefined;
     closeSidePanel: () => void;
     maximizeSidePanel: () => void;
@@ -236,17 +240,40 @@ function SplitPaneToolbar(props: {
             </Show>
             <Show when={secondaryPanelSize()}>
                 {(panelSize) => (
-                    <div
-                        class="secondary-toolbar toolbar"
-                        style={{ left: `${(1 - panelSize()) * 100}%` }}
-                    >
-                        <IconButton onClick={props.closeSidePanel} tooltip="Close">
-                            <ChevronsRight />
-                        </IconButton>
-                        <IconButton onClick={props.maximizeSidePanel} tooltip="Open in full page">
-                            <Maximize2 />
-                        </IconButton>
-                    </div>
+                    <>
+                        <div
+                            class="secondary-toolbar toolbar"
+                            style={{ left: `${(1 - panelSize()) * 100}%` }}
+                        >
+                            <IconButton onClick={props.closeSidePanel} tooltip="Close">
+                                <ChevronsRight />
+                            </IconButton>
+                            <IconButton
+                                onClick={props.maximizeSidePanel}
+                                tooltip="Open in full page"
+                            >
+                                <Maximize2 />
+                            </IconButton>
+                        </div>
+                        <Show
+                            when={
+                                props.secondaryDoc &&
+                                props.secondaryDocRef && {
+                                    doc: props.secondaryDoc,
+                                    docRef: props.secondaryDocRef,
+                                }
+                            }
+                        >
+                            {(secondary) => (
+                                <div class="secondary-permissions-toolbar toolbar">
+                                    <PermissionsButton
+                                        liveDoc={secondary().doc.liveDoc}
+                                        docRef={secondary().docRef}
+                                    />
+                                </div>
+                            )}
+                        </Show>
+                    </>
                 )}
             </Show>
         </>
