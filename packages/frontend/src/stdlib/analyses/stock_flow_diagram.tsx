@@ -17,6 +17,7 @@ import {
     type GraphvizAttributes,
     loadViz,
     NodeSVG,
+    perpendicularLabelPosition,
     type SVGRefProp,
     vizLayoutGraph,
 } from "../../visualization";
@@ -197,12 +198,8 @@ function LinkSVG(props: { path: string; morType: MorType; theory?: Theory }) {
         // Get a nearby point to calculate direction vector
         const nearby = pathElem.getPointAtLength(pathLength - pathLength / 3 - 1);
 
-        // Calculate direction vector
-        const vec = { x: oneThird.x - nearby.x, y: oneThird.y - nearby.y };
-        const scale = 10 / Math.sqrt(vec.x ** 2 + vec.y ** 2);
-
-        // Offset perpendicular to the direction
-        const pos = { x: oneThird.x - scale * vec.y, y: oneThird.y + scale * vec.x };
+        // Calculate position perpendicular to the direction
+        const pos = perpendicularLabelPosition(nearby, oneThird);
 
         return {
             label,
