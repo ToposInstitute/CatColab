@@ -2,7 +2,7 @@ import type * as Viz from "@viz-js/viz";
 import { type Component, createResource, createSignal, For, Show } from "solid-js";
 
 import { BlockTitle } from "catcolab-ui-components";
-import type { DblModel } from "catlog-wasm";
+import type { DblModel, MorType } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import type { Theory } from "../../theory";
 import { uniqueIndexArray } from "../../util/indexing";
@@ -85,7 +85,14 @@ export function StockFlowGraphviz(props: {
         }
     };
 
-    return <StockFlowSVG model={props.model} layout={vizLayout()} ref={props.ref} />;
+    return (
+        <StockFlowSVG
+            model={props.model}
+            theory={props.theory}
+            layout={vizLayout()}
+            ref={props.ref}
+        />
+    );
 }
 
 const stockFlowAttributes: GraphvizAttributes = {
@@ -100,14 +107,15 @@ const stockFlowAttributes: GraphvizAttributes = {
 
 function StockFlowSVG(props: {
     model: DblModel;
+    theory?: Theory;
     layout?: GraphLayout.Graph<string>;
     ref?: SVGRefProp;
 }) {
     // Path element used only for computation. Not added to the DOM.
     const pathElem = document.createElementNS("http://www.w3.org/2000/svg", "path");
 
-    const linkPaths = () => {
-        const result: string[] = [];
+    const links = () => {
+        const result: { path: string; morType: MorType }[] = [];
         const model = props.model;
         const nodeMap = uniqueIndexArray(props.layout?.nodes ?? [], (node) => node.id);
         const edgeMap = uniqueIndexArray(props.layout?.edges ?? [], (edge) => edge.id);
@@ -131,7 +139,11 @@ function StockFlowSVG(props: {
             pathElem.setAttribute("d", tgtEdge.path);
             const midpoint = pathElem.getPointAtLength(pathElem.getTotalLength() / 2);
             const path = quadraticCurve(srcNode.pos, midpoint, 1.0);
-            result.push(path.join(" "));
+
+            result.push({
+                path: path.join(" "),
+                morType: mor.morType,
+            });
         }
         return result;
     };
@@ -148,15 +160,74 @@ function StockFlowSVG(props: {
                 <LinkMarker />
             </defs>
             <For each={props.layout?.edges ?? []}>{(edge) => <EdgeSVG edge={edge} />}</For>
-            <For each={linkPaths()}>
-                {(data) => (
-                    <g class={svgStyles["link"]}>
-                        <path marker-end={`url(#arrowhead-${linkMarker})`} d={data} />
-                    </g>
+            <For each={links()}>
+                {(link) => (
+                    <LinkSVG path={link.path} morType={link.morType} theory={props.theory} />
                 )}
             </For>
             <For each={props.layout?.nodes ?? []}>{(node) => <NodeSVG node={node} />}</For>
         </svg>
+    );
+}
+
+/** Draw a link from a stock to a flow with optional +/- label. */
+function LinkSVG(props: { path: string; morType: MorType; theory?: Theory }) {
+    const labelData = () => {
+        if (props.theory?.id !== "primitive-signed-stock-flow") {
+            return null;
+        }
+        const label =
+            props.morType.content === "Link"
+                ? "+"
+                : props.morType.content === "NegativeLink"
+                  ? "-"
+                  : undefined;
+
+        if (!label) {
+            return null;
+        }
+
+        // Path element used only for computation. Not added to the DOM.
+        const pathElem = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        pathElem.setAttribute("d", props.path);
+        const pathLength = pathElem.getTotalLength();
+
+        // Get position at one third from the end
+        const oneThird = pathElem.getPointAtLength(pathLength - pathLength / 3);
+        // Get a nearby point to calculate direction vector
+        const nearby = pathElem.getPointAtLength(pathLength - pathLength / 3 - 1);
+
+        // Calculate direction vector
+        const vec = { x: oneThird.x - nearby.x, y: oneThird.y - nearby.y };
+        const scale = 10 / Math.sqrt(vec.x ** 2 + vec.y ** 2);
+
+        // Offset perpendicular to the direction
+        const pos = { x: oneThird.x - scale * vec.y, y: oneThird.y + scale * vec.x };
+
+        return {
+            label,
+            x: pos.x,
+            y: pos.y,
+        };
+    };
+
+    return (
+        <g class={svgStyles["link"]}>
+            <path marker-end={`url(#arrowhead-${linkMarker})`} d={props.path} />
+            <Show when={labelData()}>
+                {(data) => (
+                    <text
+                        class="label"
+                        x={data().x}
+                        y={data().y}
+                        dominant-baseline="middle"
+                        text-anchor="middle"
+                    >
+                        {data().label}
+                    </text>
+                )}
+            </Show>
+        </g>
     );
 }
 
