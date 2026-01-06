@@ -1,13 +1,13 @@
-import type { AutomergeUrl, DocHandle, Repo } from "@automerge/automerge-repo";
-import { createResource, Switch, Match } from "solid-js";
-
-import { createModelLibraryWithRepo } from "../../frontend/src/model";
-import { ModelNotebookEditor } from "../../frontend/src/model/model_editor";
-import { stdTheories } from "../../frontend/src/stdlib";
-import { TheoryLibraryContext } from "../../frontend/src/theory";
-import type { ModelDoc } from "./model_datatype";
+import type { AutomergeUrl, DocHandle } from "@automerge/automerge-repo";
+import styles from "catcolab-ui-components/global.css?inline";
+import { createModelLibraryWithRepo } from "frontend/src/model";
+import { ModelNotebookEditor } from "frontend/src/model/model_editor";
+import { stdTheories } from "frontend/src/stdlib";
+import { TheoryLibraryContext } from "frontend/src/theory";
+import { createResource, Match, Switch } from "solid-js";
 import { render } from "solid-js/web";
-import styles from "../../ui-components/src/global.css?inline";
+
+import type { ModelDoc } from "./model_datatype";
 
 export function renderModelTool(handle: DocHandle<ModelDoc>, element: any) {
     const modelLibrary = createModelLibraryWithRepo(element.repo, stdTheories);
@@ -23,7 +23,7 @@ export function renderModelTool(handle: DocHandle<ModelDoc>, element: any) {
                 console.error("Stack:", (error as Error).stack);
                 throw error;
             }
-        }
+        },
     );
 
     const shadowRoot = element.attachShadow({ mode: "open" });
@@ -31,9 +31,7 @@ export function renderModelTool(handle: DocHandle<ModelDoc>, element: any) {
     // hack: vite currently injects styles into the head of the document
     // because of the shadow dom we no longer get these styles
     // for now we just copy them into the shadow root
-    for (const node of document.querySelectorAll(
-        "style,link[rel='stylesheet']"
-    )) {
+    for (const node of document.querySelectorAll("style,link[rel='stylesheet']")) {
         shadowRoot.append(node.cloneNode(true));
     }
 
@@ -51,8 +49,7 @@ export function renderModelTool(handle: DocHandle<ModelDoc>, element: any) {
                     </Match>
                     <Match when={liveModel.error}>
                         <div>
-                            ❌ Error loading model:{" "}
-                            {liveModel.error?.message || "Unknown error"}
+                            ❌ Error loading model: {liveModel.error?.message || "Unknown error"}
                         </div>
                     </Match>
                     <Match when={liveModel()}>
@@ -65,6 +62,6 @@ export function renderModelTool(handle: DocHandle<ModelDoc>, element: any) {
                 </Switch>
             </div>
         ),
-        shadowRoot
+        shadowRoot,
     );
 }

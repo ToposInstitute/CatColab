@@ -19,19 +19,16 @@
     "dependencies": {
         "@automerge/automerge": "^3.1.1",
         "@automerge/automerge-repo": "^2.2.0",
-        "@automerge/automerge-repo-react-hooks": "^2.2.0",
         "@patchwork/context": "github:inkandswitch/context",
+        "catcolab-ui-components": "workspace:*",
         "catlog-wasm": "link:../catlog-wasm/dist/pkg-browser",
-        "react": "^18.3.1",
-        "react-dom": "^18.3.1",
-        "solid-js": "^1.9.7",
+        "frontend": "workspace:*",
+        "solid-js": "^1.9.10",
         "uuid": "^11.0.3"
     },
     "devDependencies": {
-        "@biomejs/biome": "^1.9.3",
-        "@types/react": "^18.3.3",
+        "@biomejs/biome": "^2.3.8",
         "@types/uuid": "^10.0.0",
-        "@vitejs/plugin-react": "^4.3.1",
         "autoprefixer": "^10.4.20",
         "nodemon": "^3.1.9",
         "typescript": "^5.2.2",
