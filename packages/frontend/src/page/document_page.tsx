@@ -217,12 +217,23 @@ function SplitPaneToolbar(props: {
     maximizeSidePanel: () => void;
 }) {
     const secondaryPanelSize = () => props.panelSizes?.[1];
+    const primaryPanelSize = () => props.panelSizes?.[0];
 
     return (
         <>
             <DocumentBreadcrumbs liveDoc={props.doc.liveDoc} docRefId={props.docRef.refId} />
             <span class="filler" />
-            <PermissionsButton liveDoc={props.doc.liveDoc} docRef={props.docRef} />
+            <Show when={!secondaryPanelSize()}>
+                <PermissionsButton liveDoc={props.doc.liveDoc} docRef={props.docRef} />
+            </Show>
+            <Show when={secondaryPanelSize()}>
+                <div
+                    class="primary-permissions-toolbar toolbar"
+                    style={{ left: `${(primaryPanelSize() ?? 0) * 100}%` }}
+                >
+                    <PermissionsButton liveDoc={props.doc.liveDoc} docRef={props.docRef} />
+                </div>
+            </Show>
             <Show when={secondaryPanelSize()}>
                 {(panelSize) => (
                     <div
