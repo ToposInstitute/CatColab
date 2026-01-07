@@ -2,12 +2,13 @@ import type * as Viz from "@viz-js/viz";
 import { type Component, createResource, createSignal, For, Show } from "solid-js";
 
 import { BlockTitle } from "catcolab-ui-components";
-import type { DblModel, MorType } from "catlog-wasm";
+import type { DblModel } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import type { Theory } from "../../theory";
 import { uniqueIndexArray } from "../../util/indexing";
 import {
     type ArrowMarker,
+    type ArrowStyle,
     arrowMarkerSVG,
     DownloadSVGButton,
     EdgeSVG,
@@ -115,8 +116,8 @@ function StockFlowSVG(props: {
     // Path element used only for computation. Not added to the DOM.
     const pathElem = document.createElementNS("http://www.w3.org/2000/svg", "path");
 
-    const links = () => {
-        const result: { path: string; morType: MorType }[] = [];
+    const links = (): Array<{ path: string; arrowStyle?: ArrowStyle }> => {
+        const result = [];
         const model = props.model;
         const nodeMap = uniqueIndexArray(props.layout?.nodes ?? [], (node) => node.id);
         const edgeMap = uniqueIndexArray(props.layout?.edges ?? [], (edge) => edge.id);
@@ -143,7 +144,7 @@ function StockFlowSVG(props: {
 
             result.push({
                 path: path.join(" "),
-                morType: mor.morType,
+                arrowStyle: props.theory?.modelMorTypeMeta(mor.morType)?.arrowStyle,
             });
         }
         return result;
@@ -162,9 +163,7 @@ function StockFlowSVG(props: {
             </defs>
             <For each={props.layout?.edges ?? []}>{(edge) => <EdgeSVG edge={edge} />}</For>
             <For each={links()}>
-                {(link) => (
-                    <LinkSVG path={link.path} morType={link.morType} theory={props.theory} />
-                )}
+                {(link) => <LinkSVG path={link.path} arrowStyle={link.arrowStyle} />}
             </For>
             <For each={props.layout?.nodes ?? []}>{(node) => <NodeSVG node={node} />}</For>
         </svg>
@@ -172,19 +171,14 @@ function StockFlowSVG(props: {
 }
 
 /** Draw a link from a stock to a flow with optional +/- label. */
-function LinkSVG(props: { path: string; morType: MorType; theory?: Theory }) {
+function LinkSVG(props: { path: string; arrowStyle?: ArrowStyle }) {
     const labelData = () => {
-        if (props.theory?.id !== "primitive-signed-stock-flow") {
-            return null;
-        }
-        const label =
-            props.morType.content === "Link"
-                ? "+"
-                : props.morType.content === "NegativeLink"
-                  ? "-"
-                  : undefined;
-
-        if (!label) {
+        let label: string;
+        if (props.arrowStyle === "plus") {
+            label = "+";
+        } else if (props.arrowStyle === "minus") {
+            label = "-";
+        } else {
             return null;
         }
 
