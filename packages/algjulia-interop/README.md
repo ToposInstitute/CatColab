@@ -1,47 +1,37 @@
 # AlgebraicJulia Service
 
 This small package makes functionality from
-[AlgebraicJulia](https://www.algebraicjulia.org/) available to CatColab,
-intermediated by a Julia kernel running in the [Jupyter](https://jupyter.org/)
-server. At this time, only a
-[Decapodes.jl](https://github.com/AlgebraicJulia/Decapodes.jl) service is
-provided. Other packages may be added in the future.
-
-## Setup
-
-1. Install [Julia](https://julialang.org/), say by using
-[`juliaup`](https://github.com/JuliaLang/juliaup)
-2. Install [Jupyter](https://jupyter.org/), say by using `pip` or `conda`
-3. Install [IJulia](https://github.com/JuliaLang/IJulia.jl), which provides the
-   Julia kernel to Jupyter
-   
-At this stage, you should be able to launch a Julia kernel inside a JupyterLab.
-
-Having done that, navigate to this directory and run:
-
-```sh
-julia --project -e 'import Pkg; Pkg.instantiate()'
-```
+[AlgebraicJulia](https://www.algebraicjulia.org/) available to CatColab.At this 
+time, only a [Catlab.jl](https://github.com/AlgebraicJulia/Catlab.jl) service is
+provided. Other packages (e.g. Decapodes.jl) will be added in the future.
 
 ## Usage
 
-To start the server, run the following in a Julia REPL
-```julia
-using CatColabInterop
-start_server!()
+First, install [Julia](https://julialang.org/), say by using
+[`juliaup`](https://github.com/JuliaLang/juliaup).
+
+We then need a Julia environment that has all the requisite packages installed.
+The `test` folder of this repo is a perfectly good candidate for this, although 
+in principal one might want to use their own environment (if they don't want to 
+load all dependencies for all possible analyses, or if they have a locally 
+modified version of the code that is running the analysis). To make sure this 
+environment is ready to use, navigate to this directory and run 
+`julia --project=test` and then press `]` and enter the commands `instantiate` 
+and `precompile`.
+   
+Having done that, to start the server, from this directory run:
+
+```sh
+julia --project=test scripts/endpoint.jl
 ```
-This will run the Jupyter kernel in the REPL. You may stop the server by
-running `stop_server!()`. While the Jupyter server is running, the AlgebraicJulia service will be usable by CatColab when served locally.
 
-## Compiling a Sysimage
+This starts an instance that is listening on localhost port 8080. When you run 
+CatColab, you should be able to use analyses that communicate with Julia via 
+this address.
 
-Precompiling dependencies like `CairoMakie.jl` and `OrdinaryDiffEq.jl` can be
-time-consuming. A **sysimage** is a file that stores precompilation statements,
-making future invocations of `AlgebraicJuliaService` and its dependencies
-immediate.
+## For developers
 
-To build a sysimage, run `build_sysimage()` in a REPL where `CatColabInterop`
-module is in scope. This process may take upwards of five minutes or longer, depending on your machine.
-
-Building a sysimage installs an additional kernel which points to the sysimage. You may change the kernel to your sysimage by running `change_kernel!()`, which will populate a menu of kernels in your IJulia kernel directory.
-
+If one is interested in using a version of CatColabInterop.jl that doesn't match
+the latest tagged release, then one must first open the Julia environment from the 
+test directory (`julia --project=test`) and declare one wants to use the local 
+version of the package (press `]` and then `dev .`)
