@@ -223,7 +223,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: target/doc
-          key: rust-docs-${{ steps.cache-key.outputs.git-hash }}
+          key: rust-docs-${{ steps.cache-key.outputs.git-hash }}-test
 
       - name: Install Rust toolchain from file
       #  if: steps.cache-rust-docs.outputs.cache-hit != 'true'
