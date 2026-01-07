@@ -27,17 +27,9 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
         })
         .map_err(|e| AppError::Invalid(format!("Failed to populate document: {:?}", e)))?;
 
-    // Insert the new automerge document into automerge-repo
-    let doc_handle = ctx
-        .state
-        .repo
-        .create(automerge_doc)
-        .await
-        .map_err(|e| AppError::Invalid(format!("Failed to create document: {:?}", e)))?;
+    let doc_handle = ctx.state.repo.create(automerge_doc).await?;
 
     let doc_id = doc_handle.document_id().to_string();
-
-    // let doc_content = doc_handle.with_document(|doc| doc.clone());
 
     // If the automerge-repo document is created but the db transaction doesn't complete, then the
     // document will be orphaned. The only negative consequence of that is additional space used, but
@@ -103,8 +95,7 @@ pub async fn head_snapshot_binary(state: AppState, ref_id: Uuid) -> Result<Strin
     let doc_handle = state
         .repo
         .find(doc_id)
-        .await
-        .map_err(|e| AppError::Invalid(format!("Failed to find document: {:?}", e)))?
+        .await?
         .ok_or_else(|| AppError::Invalid("Document not found".to_string()))?;
 
     let binary_data = doc_handle.with_document(|doc| doc.save());
@@ -157,16 +148,11 @@ pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppErr
     let doc_handle = state
         .repo
         .find(doc_id)
-        .await
-        .map_err(|e| AppError::Invalid(format!("Failed to find document: {:?}", e)))?
+        .await?
         .ok_or_else(|| AppError::Invalid("Document not found".to_string()))?;
 
     let cloned_doc = doc_handle.with_document(|doc| doc.clone());
-    let cloned_handle = state
-        .repo
-        .create(cloned_doc)
-        .await
-        .map_err(|e| AppError::Invalid(format!("Failed to create cloned document: {:?}", e)))?;
+    let cloned_handle = state.repo.create(cloned_doc).await?;
 
     let doc_content = head_snapshot(state.clone(), ref_id).await?;
 
@@ -238,8 +224,7 @@ pub async fn get_doc_id(state: AppState, ref_id: Uuid) -> Result<DocumentId, App
     let doc_handle = state
         .repo
         .find(doc_id.clone())
-        .await
-        .map_err(|e| AppError::Invalid(format!("Failed to find document: {:?}", e)))?
+        .await?
         .ok_or_else(|| AppError::Invalid("Document not found".to_string()))?;
 
     ensure_autosave_listener(state, ref_id, doc_handle).await;

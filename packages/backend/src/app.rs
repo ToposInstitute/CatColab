@@ -64,6 +64,10 @@ pub enum AppError {
     #[error("SQL database error: {0}")]
     Db(#[from] sqlx::Error),
 
+    /// Error from the Automerge Repo.
+    #[error("AutomergeRepo error: {0}")]
+    AutomergeRepo(#[from] samod::Stopped),
+
     /// Client made request with invalid data.
     #[error("Request with invalid data: {0}")]
     Invalid(String),
