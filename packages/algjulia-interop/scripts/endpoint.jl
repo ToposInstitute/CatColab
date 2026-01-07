@@ -23,9 +23,8 @@ function CorsHandler(handle)
             return HTTP.Response(200, CORS_HEADERS)
         else
             r = handle(req)
-            append!(r.headers, ["Access-Control-Allow-Origin" => "*"])
+            r.headers = CORS_HEADERS
             r
-
         end
     end
 end
