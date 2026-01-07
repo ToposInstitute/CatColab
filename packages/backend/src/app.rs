@@ -1,9 +1,10 @@
 use firebase_auth::FirebaseUser;
 use serde::Serialize;
-use socketioxide::SocketIo;
 use sqlx::PgPool;
+use std::collections::HashSet;
+use std::sync::Arc;
 use thiserror::Error;
-use tokio::sync::watch;
+use tokio::sync::{RwLock, watch};
 use ts_rs::TS;
 use uuid::Uuid;
 
@@ -15,10 +16,13 @@ pub struct AppState {
     /// Connection to the Postgres database.
     pub db: PgPool,
 
-    /// Socket for communicating with Automerge document server.
-    pub automerge_io: SocketIo,
+    /// Automerge-repo provider
+    pub repo: samod::Repo,
 
     pub app_status: watch::Receiver<AppStatus>,
+
+    /// Tracks which ref_ids have active autosave listeners to prevent duplicates
+    pub active_listeners: Arc<RwLock<HashSet<Uuid>>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -60,9 +64,9 @@ pub enum AppError {
     #[error("SQL database error: {0}")]
     Db(#[from] sqlx::Error),
 
-    /// Error from the socket communicating with the Automerge document server.
-    #[error("Error receiving acknowledgment from socket: {0}")]
-    Ack(#[from] socketioxide::AckError<()>),
+    /// Error from the Automerge Repo.
+    #[error("AutomergeRepo error: {0}")]
+    AutomergeRepo(#[from] samod::Stopped),
 
     /// Client made request with invalid data.
     #[error("Request with invalid data: {0}")]
@@ -71,10 +75,6 @@ pub enum AppError {
     /// Client has not authenticated using Firebase auth.
     #[error("Authentication credentials were not provided")]
     Unauthorized,
-
-    /// Something went wrong in a socket call to the automerge server
-    #[error("Automerge server error: {0}")]
-    AutomergeServer(String),
 
     /// Client does not have permission to perform the requested action on the
     /// document ref.

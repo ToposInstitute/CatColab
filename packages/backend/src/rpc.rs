@@ -49,9 +49,9 @@ async fn get_doc(ctx: AppCtx, ref_id: Uuid) -> RpcResult<RefDoc> {
         let is_deleted = deleted_at.is_some();
 
         if max_level >= Some(PermissionLevel::Write) {
-            let doc_id = doc::doc_id(ctx.state, ref_id).await?;
+            let doc_id = doc::get_doc_id(ctx.state, ref_id).await?;
             Ok(RefDoc::Live {
-                doc_id,
+                doc_id: doc_id.to_string(),
                 is_deleted,
                 permissions,
             })
@@ -175,13 +175,13 @@ async fn sign_up_or_sign_in(ctx: AppCtx) -> RpcResult<()> {
 }
 
 #[handler(query)]
-async fn user_by_username(ctx: AppCtx, username: &str) -> RpcResult<Option<user::UserSummary>> {
-    user::user_by_username(ctx.state, username).await.into()
+async fn user_by_username(ctx: AppCtx, username: String) -> RpcResult<Option<user::UserSummary>> {
+    user::user_by_username(ctx.state, &username).await.into()
 }
 
 #[handler(query)]
-async fn username_status(ctx: AppCtx, username: &str) -> RpcResult<user::UsernameStatus> {
-    user::username_status(ctx.state, username).await.into()
+async fn username_status(ctx: AppCtx, username: String) -> RpcResult<user::UsernameStatus> {
+    user::username_status(ctx.state, &username).await.into()
 }
 
 #[handler(query)]
@@ -238,16 +238,5 @@ impl FromRequestExtensions<AppState> for AppCtx {
             debug!("Handling request from user: {}", some_user.user_id);
         }
         Ok(AppCtx { state, user })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::path::PathBuf;
-
-    #[test]
-    fn rspc_type_defs() {
-        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("pkg").join("src");
-        super::router().write_bindings_to_dir(dir);
     }
 }
