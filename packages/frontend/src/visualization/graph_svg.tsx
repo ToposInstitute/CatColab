@@ -3,6 +3,7 @@ import { type Component, createUniqueId, For, Index, Match, Show, Switch } from 
 import { Dynamic } from "solid-js/web";
 
 import type * as GraphLayout from "./graph_layout";
+import { perpendicularLabelPosition } from "./label_position";
 import type { ArrowStyle, SVGRefProp } from "./types";
 
 import "./graph_svg.css";
@@ -77,10 +78,7 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
     const tgtLabel = (text: string) => {
         // Place the target label offset from the target in the direction
         // orthogonal to the vector from the source to the target.
-        const [srcPos, tgtPos] = [props.edge.sourcePos, props.edge.targetPos];
-        const vec = { x: tgtPos.x - srcPos.x, y: tgtPos.y - srcPos.y };
-        const scale = 10 / Math.sqrt(vec.x ** 2 + vec.y ** 2);
-        const pos = { x: tgtPos.x - scale * vec.y, y: tgtPos.y + scale * vec.x };
+        const pos = perpendicularLabelPosition(props.edge.sourcePos, props.edge.targetPos);
         return (
             <text class="label" x={pos.x} y={pos.y} dominant-baseline="middle" text-anchor="middle">
                 {text}
