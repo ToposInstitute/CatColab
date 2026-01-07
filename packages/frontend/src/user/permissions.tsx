@@ -232,22 +232,23 @@ export function PermissionsForm(props: { refId: string; onComplete?: () => void 
 export const PermissionsButton = (props: { liveDoc: LiveDoc; docRef: DocRef }) => {
     const anyone = () => props.docRef.permissions.anyone;
     const user = () => props.docRef.permissions.user;
+    const docName = () => props.liveDoc.doc.name || "Untitled";
     return (
         <Switch fallback={<EditorPermissionsButton permissions={props.docRef.permissions} />}>
             <Match when={anyone() === "Own"}>
-                <AnonPermissionsButton />
+                <AnonPermissionsButton docName={docName()} />
             </Match>
             <Match when={user() === "Own"}>
-                <OwnerPermissionsButton refId={props.docRef.refId} />
+                <OwnerPermissionsButton refId={props.docRef.refId} docName={docName()} />
             </Match>
             <Match when={[anyone(), user()].every((level) => level === null || level === "Read")}>
-                <ReadonlyPermissionsButton doc={props.liveDoc.doc} />
+                <ReadonlyPermissionsButton doc={props.liveDoc.doc} docName={docName()} />
             </Match>
         </Switch>
     );
 };
 
-function AnonPermissionsButton() {
+function AnonPermissionsButton(props: { docName: string }) {
     const firebaseApp = useFirebaseApp();
     const user = useAuth(getAuth(firebaseApp));
 
@@ -261,7 +262,7 @@ function AnonPermissionsButton() {
         <Dialog
             open={open()}
             onOpenChange={setOpen}
-            title="Permissions"
+            title={`Permissions for "${props.docName}"`}
             trigger={AnonPermissionsTrigger}
         >
             <p>
@@ -300,7 +301,7 @@ const AnonPermissionsTrigger = (props: ComponentProps<"button">) => {
     );
 };
 
-const ReadonlyPermissionsButton = (props: { doc: Document }) => {
+const ReadonlyPermissionsButton = (props: { doc: Document; docName: string }) => {
     const [open, setOpen] = createSignal(false);
     const api = useApi();
     const navigate = useNavigate();
@@ -314,7 +315,7 @@ const ReadonlyPermissionsButton = (props: { doc: Document }) => {
         <Dialog
             open={open()}
             onOpenChange={setOpen}
-            title="Read-only document"
+            title={`Permissions for "${props.docName}"`}
             trigger={ReadonlyPermissionsTrigger}
         >
             <p>
@@ -367,14 +368,14 @@ const EditorPermissionsButton = (props: { permissions: Permissions }) => {
     );
 };
 
-function OwnerPermissionsButton(props: { refId: string }) {
+function OwnerPermissionsButton(props: { refId: string; docName: string }) {
     const [open, setOpen] = createSignal(false);
 
     return (
         <Dialog
             open={open()}
             onOpenChange={setOpen}
-            title="Permissions"
+            title={`Permissions for "${props.docName}"`}
             trigger={OwnerPermissionsTrigger}
         >
             <PermissionsForm refId={props.refId} onComplete={() => setOpen(false)} />

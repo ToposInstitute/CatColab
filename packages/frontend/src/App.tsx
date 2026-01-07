@@ -1,5 +1,6 @@
 import Dialog, { Content, Portal } from "@corvu/dialog";
 import { MultiProvider } from "@solid-primitives/context";
+import { MetaProvider, Title } from "@solidjs/meta";
 import { Navigate, type RouteDefinition, Router, type RouteSectionProps } from "@solidjs/router";
 import { type FirebaseOptions, initializeApp } from "firebase/app";
 import { getAuth, signOut } from "firebase/auth";
@@ -55,12 +56,15 @@ const Root = (props: RouteSectionProps<unknown>) => {
             ]}
         >
             <FirebaseProvider app={firebaseApp}>
-                <ErrorBoundary fallback={(err) => <ErrorBoundaryDialog error={err} />}>
-                    <PageContainer>{props.children}</PageContainer>
-                </ErrorBoundary>
-                <Show when={isSessionInvalid()}>
-                    <SessionExpiredModal />
-                </Show>
+                <MetaProvider>
+                    <Title>{import.meta.env.VITE_APP_TITLE}</Title>
+                    <ErrorBoundary fallback={(err) => <ErrorBoundaryDialog error={err} />}>
+                        <PageContainer>{props.children}</PageContainer>
+                    </ErrorBoundary>
+                    <Show when={isSessionInvalid()}>
+                        <SessionExpiredModal />
+                    </Show>
+                </MetaProvider>
             </FirebaseProvider>
         </MultiProvider>
     );

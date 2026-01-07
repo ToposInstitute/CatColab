@@ -1,6 +1,5 @@
 {
   pkgs,
-  inputs,
   self,
   lib,
   ...
@@ -9,10 +8,6 @@ let
   packageJson = builtins.fromJSON (builtins.readFile ./package.json);
   name = packageJson.name;
   version = packageJson.version;
-
-  pkgsUnstable = import inputs.nixpkgsUnstable {
-    system = "x86_64-linux";
-  };
 
   commonAttrs = {
     version = version;
@@ -32,14 +27,14 @@ let
     };
 
     nativeBuildInputs = with pkgs; [
-      pnpm_9.configHook
+      pnpm.configHook
     ];
 
     buildInputs = with pkgs; [
       nodejs_24
     ];
 
-    pnpmDeps = pkgsUnstable.pnpm_9.fetchDeps {
+    pnpmDeps = pkgs.fetchPnpmDeps {
       pname = name;
       fetcherVersion = 2;
       # Only includes package.json and pnpm-lock.yaml files to ensure consistent hashing in different
@@ -61,7 +56,7 @@ let
         ];
       };
       # See README.md
-      hash = "sha256-uRwqgYJC4+7SMb6gT/dp6YdQXizCJVTgHJYB6I6L4Mc=";
+      hash = "sha256-TsNHNmsn925wku+yZWIFgyakvpn1luzPlBjD53OSZqI=";
     };
   };
 

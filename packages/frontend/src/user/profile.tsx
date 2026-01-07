@@ -1,4 +1,5 @@
 import { createForm, reset, type SubmitHandler } from "@modular-forms/solid";
+import { Title } from "@solidjs/meta";
 import { createEffect, createResource } from "solid-js";
 import invariant from "tiny-invariant";
 
@@ -10,16 +11,21 @@ import { LoginGate } from "./login";
 
 /** Page to configure user profile. */
 export default function UserProfilePage() {
+    const appTitle = import.meta.env.VITE_APP_TITLE;
+
     return (
-        <div class="growable-container">
-            <BrandedToolbar />
-            <div class="page-container">
-                <LoginGate>
-                    <h2>Public profile</h2>
-                    <UserProfileForm />
-                </LoginGate>
+        <>
+            <Title>Profile - {appTitle}</Title>
+            <div class="growable-container">
+                <BrandedToolbar />
+                <div class="page-container">
+                    <LoginGate>
+                        <h2>Public profile</h2>
+                        <UserProfileForm />
+                    </LoginGate>
+                </div>
             </div>
-        </div>
+        </>
     );
 }
 

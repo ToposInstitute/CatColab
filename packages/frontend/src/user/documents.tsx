@@ -1,3 +1,4 @@
+import { Title } from "@solidjs/meta";
 import { getAuth } from "firebase/auth";
 import { useFirebaseApp } from "solid-firebase";
 import {
@@ -24,15 +25,20 @@ import invariant from "tiny-invariant";
 import { IconButton, Spinner } from "catcolab-ui-components";
 
 export default function UserDocuments() {
+    const appTitle = import.meta.env.VITE_APP_TITLE;
+
     return (
-        <div class="documents-page">
-            <BrandedToolbar />
-            <div class="page-container">
-                <LoginGate>
-                    <DocumentsSearch />
-                </LoginGate>
+        <>
+            <Title>My Documents - {appTitle}</Title>
+            <div class="documents-page">
+                <BrandedToolbar />
+                <div class="page-container">
+                    <LoginGate>
+                        <DocumentsSearch />
+                    </LoginGate>
+                </div>
             </div>
-        </div>
+        </>
     );
 }
 

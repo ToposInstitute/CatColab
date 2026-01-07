@@ -1,0 +1,29 @@
+\title{DoubleTT}
+\import{macros}
+
+\p{DoubleTT is a type theory for models of double theories. To be more precise,
+DoubleTT is a family of type theories parameterized by double theories: for each
+double theory \dbl{T}, there is a type theory #{\mathsf{DoubleTT}(\dbl{T})}
+describing models of \dbl{T}.}
+
+\transclude{tt-0004}
+
+\transclude{tt-0002}
+
+\transclude{tt-0003}
+
+\transclude{tt-0005}
+
+\subtree{
+\title{Modalities in DoubleTT}
+
+\p{Of the following modalities on the double theory, the [codiscrete
+modality](tt-0007) is particularly important as it makes admissible a
+[truncation modality](tt-0009) on the type theory itself. By contrast, the
+[discrete modality](tt-0006) is work in progress and not included below.}
+
+\transclude{tt-0007}
+\transclude{tt-0008}
+}
+
+\transclude{tt-0009}

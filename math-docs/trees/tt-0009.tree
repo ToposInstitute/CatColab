@@ -1,0 +1,81 @@
+\title{Truncation modality on DoubleTT}
+\import{macros}
+
+\p{The codiscrete modality \em{in} DoubleTT induces an admissible modality
+\em{on} DoubleTT: a meta-level operation that truncates a type generically
+involving both object and morphism types to one involving only object types.
+This is useful for type checking because the object part of DoubleTT is a simple
+type theory, hence types and terms can be normalized using standard
+normalization-by-evaluation algorithms.}
+
+\p{The idea behind this meta-level modality, denoted #{\bigcirc}, is to apply
+the codiscrete functor to types, apply the unit of the codiscrete monad to
+terms, and then apply the computation rules for the codiscrete modality to
+normalize the result.}
+
+\p{To be more precise, we define #{\bigcirc} by structural induction on
+contexts, types, and terms, with the following definitions as base cases:
+
+\ul{
+  \li{on object types and terms:
+
+  \p{\centerfigs{
+  \prooftreeinline{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\vdash \Gamma\ \context}
+  \infer2{\Gamma \vdash \bigcirc \Ob_X := \Ob_{\coDisc(X)}\ \type}
+  }
+  #{\qquad\qquad}
+  \prooftreeinline{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \infer2{\Gamma \vdash \bigcirc x := \eta_X(x): \bigcirc \Ob_X}
+  }
+  }}
+  }
+
+  \li{on Hom types and terms:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash x, x': \Ob_X}
+  \infer2{\Gamma \vdash \bigcirc \Hom_X(x,x') := \Hom_{\coDisc(X)}(\bigcirc x, \bigcirc x')\ \type}
+  }
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash x, x': \Ob_X}
+  \hypo{\Gamma \vdash f: \Hom_X(x, x')}
+  \infer3{\Gamma \vdash \bigcirc f := \eta_X(f): \bigcirc \Hom_X(x,x')}
+  }
+  }
+
+  \li{on morphism types and terms:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash (P: X \proto Y)}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \hypo{\Gamma \vdash y: \Ob_Y}
+  \infer3{\Gamma \vdash \bigcirc P(x,y) := (\coDisc P)(\bigcirc x, \bigcirc y)\ \type}
+  }
+  \prooftree{
+  \hypo{\dbl{T} \vDash (P: X \proto Y)}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \hypo{\Gamma \vdash y: \Ob_Y}
+  \hypo{\Gamma \vdash p: P(x,y)}
+  \infer4{\Gamma \vdash \bigcirc p := \eta_P(p): \bigcirc P(x,y)}
+  }
+  }
+
+}
+
+}
+
+\p{For example, on a context, we can compute
+
+\prooftree{
+\hypo{\dbl{T} \vDash X\ \ob}
+\infer[dashed]1{\bigcirc [x: \Ob_X,\  y: \Ob_X,\ f: \Hom_X(x,y)] = [x: \Ob_X,\ y: \Ob_X,\ f: 1]}
+}
+
+}

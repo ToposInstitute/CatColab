@@ -8,6 +8,7 @@ import type { Theory } from "../../theory";
 import { uniqueIndexArray } from "../../util/indexing";
 import {
     type ArrowMarker,
+    type ArrowStyle,
     arrowMarkerSVG,
     DownloadSVGButton,
     EdgeSVG,
@@ -17,6 +18,7 @@ import {
     type GraphvizAttributes,
     loadViz,
     NodeSVG,
+    perpendicularLabelPosition,
     type SVGRefProp,
     vizLayoutGraph,
 } from "../../visualization";
@@ -85,7 +87,14 @@ export function StockFlowGraphviz(props: {
         }
     };
 
-    return <StockFlowSVG model={props.model} layout={vizLayout()} ref={props.ref} />;
+    return (
+        <StockFlowSVG
+            model={props.model}
+            theory={props.theory}
+            layout={vizLayout()}
+            ref={props.ref}
+        />
+    );
 }
 
 const stockFlowAttributes: GraphvizAttributes = {
@@ -100,14 +109,15 @@ const stockFlowAttributes: GraphvizAttributes = {
 
 function StockFlowSVG(props: {
     model: DblModel;
+    theory?: Theory;
     layout?: GraphLayout.Graph<string>;
     ref?: SVGRefProp;
 }) {
     // Path element used only for computation. Not added to the DOM.
     const pathElem = document.createElementNS("http://www.w3.org/2000/svg", "path");
 
-    const linkPaths = () => {
-        const result: string[] = [];
+    const links = (): Array<{ path: string; arrowStyle?: ArrowStyle }> => {
+        const result = [];
         const model = props.model;
         const nodeMap = uniqueIndexArray(props.layout?.nodes ?? [], (node) => node.id);
         const edgeMap = uniqueIndexArray(props.layout?.edges ?? [], (edge) => edge.id);
@@ -131,7 +141,11 @@ function StockFlowSVG(props: {
             pathElem.setAttribute("d", tgtEdge.path);
             const midpoint = pathElem.getPointAtLength(pathElem.getTotalLength() / 2);
             const path = quadraticCurve(srcNode.pos, midpoint, 1.0);
-            result.push(path.join(" "));
+
+            result.push({
+                path: path.join(" "),
+                arrowStyle: props.theory?.modelMorTypeMeta(mor.morType)?.arrowStyle,
+            });
         }
         return result;
     };
@@ -148,15 +162,63 @@ function StockFlowSVG(props: {
                 <LinkMarker />
             </defs>
             <For each={props.layout?.edges ?? []}>{(edge) => <EdgeSVG edge={edge} />}</For>
-            <For each={linkPaths()}>
-                {(data) => (
-                    <g class={svgStyles["link"]}>
-                        <path marker-end={`url(#arrowhead-${linkMarker})`} d={data} />
-                    </g>
-                )}
+            <For each={links()}>
+                {(link) => <LinkSVG path={link.path} arrowStyle={link.arrowStyle} />}
             </For>
             <For each={props.layout?.nodes ?? []}>{(node) => <NodeSVG node={node} />}</For>
         </svg>
+    );
+}
+
+/** Draw a link from a stock to a flow with optional +/- label. */
+function LinkSVG(props: { path: string; arrowStyle?: ArrowStyle }) {
+    const labelData = () => {
+        let label: string;
+        if (props.arrowStyle === "plus") {
+            label = "+";
+        } else if (props.arrowStyle === "minus") {
+            label = "-";
+        } else {
+            return null;
+        }
+
+        // Path element used only for computation. Not added to the DOM.
+        const pathElem = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        pathElem.setAttribute("d", props.path);
+        const pathLength = pathElem.getTotalLength();
+
+        // Get position at one third from the end
+        const oneThird = pathElem.getPointAtLength(pathLength - pathLength / 3);
+        // Get a nearby point to calculate direction vector
+        const nearby = pathElem.getPointAtLength(pathLength - pathLength / 3 - 1);
+
+        // Calculate position perpendicular to the direction
+        const pos = perpendicularLabelPosition(nearby, oneThird);
+
+        return {
+            label,
+            x: pos.x,
+            y: pos.y,
+        };
+    };
+
+    return (
+        <g class={svgStyles["link"]}>
+            <path marker-end={`url(#arrowhead-${linkMarker})`} d={props.path} />
+            <Show when={labelData()}>
+                {(data) => (
+                    <text
+                        class="label"
+                        x={data().x}
+                        y={data().y}
+                        dominant-baseline="middle"
+                        text-anchor="middle"
+                    >
+                        {data().label}
+                    </text>
+                )}
+            </Show>
+        </g>
     );
 }
 

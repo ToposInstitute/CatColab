@@ -2,7 +2,7 @@
   description = "configurations for deploying catcolab";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
     agenix.url = "github:ryantm/agenix";
     deploy-rs.url = "github:serokell/deploy-rs";
     fenix = {
@@ -15,10 +15,7 @@
     };
 
     nixpkgsUnstable = {
-      # TODO: this should be changed from 'master' to 'nixos-unstable' when the
-      # pnpm.fetchDeps.fetcherVersion option lands in nixos-unstable (it's not clear how long that will
-      # be)
-      url = "github:NixOS/nixpkgs/master";
+      url = "github:NixOS/nixpkgs/nixos-unstable";
     };
 
     nixos-generators.url = "github:nix-community/nixos-generators";
@@ -49,6 +46,23 @@
         import nixpkgs {
           inherit system;
           config.allowUnfree = true;
+          overlays = [
+            # Override wasm-bindgen-cli to match version used in Cargo.lock
+            (final: prev: {
+              wasm-bindgen-cli = prev.buildWasmBindgenCli rec {
+                src = prev.fetchCrate {
+                  pname = "wasm-bindgen-cli";
+                  version = "0.2.106";
+                  hash = "sha256-M6WuGl7EruNopHZbqBpucu4RWz44/MSdv6f0zkYw+44=";
+                };
+                cargoDeps = prev.rustPlatform.fetchCargoVendor {
+                  inherit src;
+                  inherit (src) pname version;
+                  hash = "sha256-ElDatyOwdKwHg3bNH/1pcxKI7LXkhsotlDPQjiLHBwA=";
+                };
+              };
+            })
+          ];
         };
 
       rustToolchainFor =
@@ -110,7 +124,7 @@
               rustfmt
               clippy
               pkg-config
-              pnpm_9
+              pnpm
               nodejs_24
               sqlx-cli
               wasm-pack
@@ -208,11 +222,6 @@
           };
 
           migrator = pkgsLinux.callPackage ./packages/migrator/default.nix {
-            inherit craneLib cargoArtifacts;
-            pkgs = pkgsLinux;
-          };
-
-          notebook-types-node = pkgsLinux.callPackage ./packages/notebook-types/default.nix {
             inherit craneLib cargoArtifacts;
             pkgs = pkgsLinux;
           };
