@@ -6,22 +6,6 @@ import type { DiagramAnalysisProps } from "../../analysis";
 import type { GraphLayoutConfig } from "../../visualization";
 import "./tabular_view.css";
 
-/** This should live somewhere more general, once multiple analyses use local 
-    computation. Furthermore, although it can default to localhost 8080, one 
-    ought be able to put some AWS credentials in their user profile to run 
-    remote computation there.
-*/
-const config = {
-    url: "http://127.0.0.1:8080",
-    method: "post",
-    headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, PUT, DELETE, GET, OPTIONS",
-        "Access-Control-Allow-Headers": "*",
-        "Access-Control-Allow-Credentials": "false",
-    },
-};
-
 /** Create a table from row-wise data */
 function createTable(headers: Array<string>, data: Array<Array<string>>) {
     return (
@@ -122,7 +106,6 @@ export default function TabularView(
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    ...config.headers,
                 },
                 body: JSON.stringify({
                     model: model?.presentation(),
