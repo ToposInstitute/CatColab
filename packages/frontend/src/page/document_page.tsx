@@ -177,60 +177,16 @@ export default function DocumentPage() {
                             />
                         }
                     >
-                        <Resizable class="resizeable-panels">
-                            {() => {
-                                const context = Resizable.useContext();
-                                setResizableContext(context);
-
-                                return (
-                                    <>
-                                        <Resizable.Panel
-                                            class="content-panel"
-                                            initialSize={1}
-                                            minSize={0.25}
-                                        >
-                                            <DocumentPane
-                                                doc={docWithRef().liveDoc}
-                                                docRef={docWithRef().docRef}
-                                                refetchPrimaryDoc={refetchPrimaryDoc}
-                                                refetchSecondaryDoc={refetchSecondaryDoc}
-                                            />
-                                        </Resizable.Panel>
-                                        <Show when={isSidePanelOpen()}>
-                                            <ResizableHandle class="resizeable-handle" />
-                                            <Resizable.Panel
-                                                class="content-panel"
-                                                initialSize={INITIAL_SPLIT_SIZE}
-                                                minSize={0.25}
-                                                onCollapse={closeSidePanel}
-                                            >
-                                                <Show when={secondaryLiveDoc()}>
-                                                    {(secondaryLiveDocWithRef) => (
-                                                        <>
-                                                            <DocumentPane
-                                                                doc={
-                                                                    secondaryLiveDocWithRef()
-                                                                        .liveDoc
-                                                                }
-                                                                docRef={
-                                                                    secondaryLiveDocWithRef().docRef
-                                                                }
-                                                                refetchPrimaryDoc={
-                                                                    refetchPrimaryDoc
-                                                                }
-                                                                refetchSecondaryDoc={
-                                                                    refetchSecondaryDoc
-                                                                }
-                                                            />
-                                                        </>
-                                                    )}
-                                                </Show>
-                                            </Resizable.Panel>
-                                        </Show>
-                                    </>
-                                );
-                            }}
-                        </Resizable>
+                        <ResizablePanels
+                            primaryDoc={docWithRef().liveDoc}
+                            primaryDocRef={docWithRef().docRef}
+                            secondaryDoc={secondaryLiveDoc()}
+                            isSidePanelOpen={isSidePanelOpen()}
+                            closeSidePanel={closeSidePanel}
+                            refetchPrimaryDoc={refetchPrimaryDoc}
+                            refetchSecondaryDoc={refetchSecondaryDoc}
+                            setResizableContext={setResizableContext}
+                        />
                     </SidebarLayout>
                 )}
             </Show>
@@ -267,43 +223,111 @@ function SplitPaneToolbar(props: {
             </Show>
             <Show when={secondaryPanelSize()}>
                 {(panelSize) => (
-                    <>
-                        <div
-                            class="secondary-toolbar toolbar"
-                            style={{ left: `${(1 - panelSize()) * 100}%` }}
-                        >
-                            <IconButton onClick={props.closeSidePanel} tooltip="Close">
-                                <ChevronsRight />
-                            </IconButton>
-                            <IconButton
-                                onClick={props.maximizeSidePanel}
-                                tooltip="Open in full page"
-                            >
-                                <Maximize2 />
-                            </IconButton>
-                        </div>
-                        <Show
-                            when={
-                                props.secondaryDoc &&
-                                props.secondaryDocRef && {
-                                    doc: props.secondaryDoc,
-                                    docRef: props.secondaryDocRef,
-                                }
-                            }
-                        >
-                            {(secondary) => (
-                                <div class="secondary-permissions-toolbar toolbar">
-                                    <PermissionsButton
-                                        liveDoc={secondary().doc.liveDoc}
-                                        docRef={secondary().docRef}
-                                    />
-                                </div>
-                            )}
-                        </Show>
-                    </>
+                    <SecondaryToolbar
+                        panelSize={panelSize()}
+                        secondaryDoc={props.secondaryDoc}
+                        secondaryDocRef={props.secondaryDocRef}
+                        closeSidePanel={props.closeSidePanel}
+                        maximizeSidePanel={props.maximizeSidePanel}
+                    />
                 )}
             </Show>
         </>
+    );
+}
+
+function SecondaryToolbar(props: {
+    panelSize: number;
+    secondaryDoc: AnyLiveDoc | undefined;
+    secondaryDocRef: DocRef | undefined;
+    closeSidePanel: () => void;
+    maximizeSidePanel: () => void;
+}) {
+    return (
+        <>
+            <div
+                class="secondary-toolbar toolbar"
+                style={{ left: `${(1 - props.panelSize) * 100}%` }}
+            >
+                <IconButton onClick={props.closeSidePanel} tooltip="Close">
+                    <ChevronsRight />
+                </IconButton>
+                <IconButton onClick={props.maximizeSidePanel} tooltip="Open in full page">
+                    <Maximize2 />
+                </IconButton>
+            </div>
+            <Show
+                when={
+                    props.secondaryDoc &&
+                    props.secondaryDocRef && {
+                        doc: props.secondaryDoc,
+                        docRef: props.secondaryDocRef,
+                    }
+                }
+            >
+                {(secondary) => (
+                    <div class="secondary-permissions-toolbar toolbar">
+                        <PermissionsButton
+                            liveDoc={secondary().doc.liveDoc}
+                            docRef={secondary().docRef}
+                        />
+                    </div>
+                )}
+            </Show>
+        </>
+    );
+}
+
+function ResizablePanels(props: {
+    primaryDoc: AnyLiveDoc;
+    primaryDocRef: DocRef;
+    secondaryDoc: AnyLiveDocWithRef | undefined;
+    isSidePanelOpen: boolean;
+    closeSidePanel: () => void;
+    refetchPrimaryDoc: () => void;
+    refetchSecondaryDoc: () => void;
+    setResizableContext: (context: ContextValue) => void;
+}) {
+    return (
+        <Resizable class="resizeable-panels">
+            {() => {
+                const context = Resizable.useContext();
+                props.setResizableContext(context);
+
+                return (
+                    <>
+                        <Resizable.Panel class="content-panel" initialSize={1} minSize={0.25}>
+                            <DocumentPane
+                                doc={props.primaryDoc}
+                                docRef={props.primaryDocRef}
+                                refetchPrimaryDoc={props.refetchPrimaryDoc}
+                                refetchSecondaryDoc={props.refetchSecondaryDoc}
+                            />
+                        </Resizable.Panel>
+                        <Show when={props.isSidePanelOpen}>
+                            <ResizableHandle class="resizeable-handle" />
+                            <Resizable.Panel
+                                class="content-panel"
+                                initialSize={INITIAL_SPLIT_SIZE}
+                                minSize={0.25}
+                                onCollapse={props.closeSidePanel}
+                            >
+                                <Show when={props.secondaryDoc}>
+                                    {(secondaryLiveDocWithRef) => (
+                                        <DocumentPane
+                                            doc={secondaryLiveDocWithRef().liveDoc}
+                                            docRef={secondaryLiveDocWithRef().docRef}
+                                            refetchPrimaryDoc={props.refetchPrimaryDoc}
+                                            refetchSecondaryDoc={props.refetchSecondaryDoc}
+                                        />
+                                    )}
+                                </Show>
+                            </Resizable.Panel>
+                        </Show>
+                    </>
+                );
+            }}
+        </Resizable>
     );
 }
 
