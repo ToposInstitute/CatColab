@@ -2,7 +2,7 @@ import { useParams } from "@solidjs/router";
 import { createResource, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
-import { guidesList } from "./guides";
+import { guidesList } from "./guides_list";
 
 /** Help page of a guide */
 export default function GuideHelpPage() {
