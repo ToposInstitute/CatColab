@@ -71,7 +71,19 @@ export async function findAndMigrate(
     repo: Repo,
     docId: AnyDocumentId,
 ): Promise<DocHandle<Document>> {
+    //console.log(docId);
     const docHandle = await repo.find<Document>(docId);
+    console.log(JSON.stringify(docHandle.doc().type));
+    console.log(JSON.stringify(docHandle.doc()));
+
+    docHandle.change((doc) => {
+        if (doc.type != "diagram" && doc.type != "analysis") {
+            doc.type = "model"; }
+        if ("diagramIn" in doc) {
+            doc.type = "diagram"; }
+        if ("analysisType" in doc) {
+            doc.type = "analysis"; }
+    });
 
     // Perform any migrations on the document.
     // XXX: copied from automerge-doc-server/src/server.ts:
@@ -83,7 +95,7 @@ export async function findAndMigrate(
             jsonpatch.applyPatch(doc, patches);
         });
     }
-
+    console.log(JSON.stringify(docHandle.doc().type));
     return docHandle;
 }
 
