@@ -19,7 +19,7 @@ pkgs.stdenv.mkDerivation {
   src = ./.;
 
   nativeBuildInputs = with pkgs; [
-    pnpm_9.configHook
+    pnpm.configHook
     esbuild
     makeWrapper
   ];
@@ -61,7 +61,7 @@ pkgs.stdenv.mkDerivation {
     makeWrapper ${pkgs.nodejs_24}/bin/node $out/bin/${name} --add-flags "$out/main.cjs"
   '';
 
-  pnpmDeps = pkgsUnstable.pnpm_9.fetchDeps {
+  pnpmDeps = pkgs.fetchPnpmDeps {
     pname = name;
 
     fetcherVersion = 2;

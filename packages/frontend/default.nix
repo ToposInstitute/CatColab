@@ -27,7 +27,7 @@ let
     };
 
     nativeBuildInputs = with pkgs; [
-      pnpm_9.configHook
+      pnpm.configHook
     ];
 
     buildInputs = with pkgs; [
