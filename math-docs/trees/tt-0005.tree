@@ -14,7 +14,7 @@
   \prooftree{
   \hypo{\dbl{T} \vDash X\ \ob}
   \hypo{\vdash \Gamma\ \context}
-  \infer2{\vdash \Ob_X\ \type}
+  \infer2{\Gamma \vdash \Ob_X\ \type}
   }
   }
 

@@ -15,13 +15,15 @@ describing models of \dbl{T}.}
 \transclude{tt-0005}
 
 \subtree{
-\title{Modalities of DoubleTT}
+\title{Modalities in DoubleTT}
 
 \p{Of the following modalities on the double theory, the [codiscrete
-modality](tt-0007) is particularly important as it makes admissable a modality
-on the type theory itself. By contrast, the [discrete modality](tt-0006) is work
-in progress and not included below.}
+modality](tt-0007) is particularly important as it makes admissible a
+[truncation modality](tt-0009) on the type theory itself. By contrast, the
+[discrete modality](tt-0006) is work in progress and not included below.}
 
 \transclude{tt-0007}
 \transclude{tt-0008}
 }
+
+\transclude{tt-0009}

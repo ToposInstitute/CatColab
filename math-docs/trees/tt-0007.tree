@@ -48,7 +48,7 @@ the double theory.}
   \infer[dashed]3{\Gamma \vdash (\coDisc F)(f) = *: 1}
   }
 
-  Note that the first judgment makes the other two judgments admissable.
+  Note that the first judgment makes the other two judgments admissible.
   }
 
   \li{Computation rules for morphism types:
@@ -67,7 +67,7 @@ the double theory.}
   \infer[dashed]4{\Gamma \vdash \eta_P(p) = *: 1}
   }
 
-  \strong{TODO}: Admissable rule for cell applications
+  \strong{TODO}: Admissible rule for cell applications
   }
 
 }
