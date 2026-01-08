@@ -70,6 +70,7 @@ with lib;
         User = "catcolab";
         Type = "oneshot";
         ExecStart = getExe backupdbScript;
+        EnvironmentFile = config.catcolab.environmentFile;
       };
     };
 
