@@ -1,3 +1,4 @@
+import { Title } from "@solidjs/meta";
 import { useNavigate } from "@solidjs/router";
 import { getAuth } from "firebase/auth";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
@@ -13,15 +14,20 @@ import "./documents.css";
 import { LoginGate } from "./login";
 
 export default function TrashBin() {
+    const appTitle = import.meta.env.VITE_APP_TITLE;
+
     return (
-        <div class="documents-page trash-bin-page">
-            <BrandedToolbar />
-            <div class="page-container">
-                <LoginGate>
-                    <TrashBinSearch />
-                </LoginGate>
+        <>
+            <Title>Trash - {appTitle}</Title>
+            <div class="documents-page trash-bin-page">
+                <BrandedToolbar />
+                <div class="page-container">
+                    <LoginGate>
+                        <TrashBinSearch />
+                    </LoginGate>
+                </div>
             </div>
-        </div>
+        </>
     );
 }
 
