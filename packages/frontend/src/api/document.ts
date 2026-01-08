@@ -71,7 +71,6 @@ export async function findAndMigrate(
     repo: Repo,
     docId: AnyDocumentId,
 ): Promise<DocHandle<Document>> {
-    //console.log(docId);
     const docHandle = await repo.find<Document>(docId);
 
     // Perform any migrations on the document.
