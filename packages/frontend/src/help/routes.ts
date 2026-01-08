@@ -3,7 +3,7 @@ import { lazy } from "solid-js";
 
 import { stdTheories } from "../stdlib";
 import { lazyMdx } from "../util/mdx";
-import { guidesList } from "./guides";
+import { guidesList } from "./guides_list";
 
 const theoryWithIdFilter = {
     id: (id: string) => stdTheories.has(id),

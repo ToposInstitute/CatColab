@@ -4,7 +4,6 @@ import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
 import { type Theory, TheoryLibraryContext } from "../theory";
-import LogicHelpNotFound from "./logics/logic-help-not-found.mdx";
 
 /** Help page for a theory in the standard library. */
 export default function LogicHelpPage() {
@@ -28,7 +27,8 @@ function LogicHelpDetail(props: { theory: Theory }) {
             try {
                 return await import(`./logics/${theoryId}.mdx`);
             } catch {
-                return { default: LogicHelpNotFound };
+                const fallback = await import("./logics/logic-help-not-found.mdx");
+                return fallback;
             }
         },
     );
