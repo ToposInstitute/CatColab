@@ -1,0 +1,53 @@
+\title{Judgments of DoubleTT}
+\import{macros}
+
+\p{
+
+DoubleTT has the four standard sorts (meta types) of dependent type theory:
+
+\ol{
+
+  \li{\em{Context}: the judgment ##{\vdash \Gamma\ \context} asserts that
+  #{\Gamma} is a context.}
+
+  \li{\em{Substitution}: presupposing #{\vdash \Delta\ \context} and #{\vdash
+  \Gamma\ \context}, the judgment ##{\Delta \vdash \gamma: \Gamma} asserts that
+  #{\gamma} is a substitution from context #{\Delta} to #{\Gamma}.}
+
+  \li{\em{Type}: presupposing #{\vdash \Gamma\ \context}, the judgment ##{\Gamma
+  \vdash A\ \type} asserts that #{A} is a type in context #{\Gamma}.}
+
+  \li{\em{Term}: presupposing #{\vdash \Gamma\ \context} and
+  #{\Gamma \vdash A\ \type}, the judgment ##{\Gamma \vdash a: A} asserts that
+  #{a} is a term of type #{A} in context #{\Gamma}.}
+
+}
+
+In addition, there are judgments of equality between substitutions, between
+types, and between terms. Thus, DoubleTT has the sorts and judgments of a
+standard dependent type theory (see, e.g., [Angiuli & Gratzer](principles-dtt)).
+
+}
+
+\subtree{
+\title{Alternative judgment structures}
+\taxon{Remark}
+
+\p{Another approach to DoubleTT is to introduce a base sort for object types,
+denoted #{\vdash A\ \type_0} or #{\vdash A\ \ob\,\type}, along with a coercion
+to the general sort for types:
+
+\prooftree{
+\hypo{\Gamma\ \context}
+\hypo{\vdash A\ \type_0}
+\infer2{\Gamma \vdash A\ \type}
+}
+
+This approach has the virtue of making explicit that object types in DoubleTT do
+not depend on contexts, i.e., object types are the types of a \em{simple type
+theory}. However, we find that we can achieve much the same benefit by working
+in a standard dependent type theory that includes a \em{codiscrete modality}.
+
+}
+
+}

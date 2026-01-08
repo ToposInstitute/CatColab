@@ -1,0 +1,54 @@
+\title{Double theories for type theory}
+\import{macros}
+
+\p{For the purpose of parameterizing DoubleTT, we reformulate double theories to
+be as syntactical as possible. That means preferring extra \em{primitive}
+structure over equipping a simpler base structure with algebraic operations or
+universal properties. The same spirit is taken in Shulman's [\em{Categorical
+logic from a categorical point of view}](shulman-2016), where [generalized
+multicategories](dct-000F) are preferred over cartesian categories or monoidal
+categories as the categorical semantics of simple type theories.}
+
+\p{Here we adopt not just \nlab{virtual double categories} (VDCs) but even
+Koudenburg's [\em{augmented VDCs}](koudenburg-2020) as an alternative to unital
+VDCs. Units in a VDC are elegantly but indirectly defined by a universal
+property. In an augmented VDC, much of the complexity of units is sidestepped by
+adding co-nullary cells as primitive structure.}
+
+\subtree{
+\title{Simple double theory}
+\taxon{definition}
+
+\p{A \define{simple double theory} is an augmented virtual double category with
+all restrictions, i.e., having both unary and nullary restrictions.}
+
+}
+
+\subtree{
+\title{Model of simple double theory}
+\taxon{definition}
+
+\p{Let \dbl{S} be a virtual double category with restrictions. A \define{model}
+of a simple double theory \dbl{T} in \dbl{S} is a functor (of augmented virtual
+double categories) #{M: \dbl{T} \to \Mod(\dbl{S})} that preserves restrictions.}
+  
+}
+
+\p{The definition of a model makes sense because:
+
+\ul{
+  
+  \li{For any VDC \dbl{S}, the module construction #{\Mod(\dbl{S})} is a unital
+  VDC ([Cruttwell-Shulman 2010](cruttwell-shulman-2010), Proposition 5.5), hence
+  admits the structure of an augmented VDC ([Koudenburg 2020](koudenburg-2020),
+  Example 2.2).}
+
+  \li{For any VDC \dbl{S} with restrictions, #{\Mod(\dbl{S})} also has
+  restrictions ([Cruttwell-Shulman 2010](cruttwell-shulman-2010), Proposition
+  7.4).}
+  
+}
+
+When the semantics is not specified, we assume it is #{\dbl{S} = \SSet}.
+  
+}

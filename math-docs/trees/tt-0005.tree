@@ -1,0 +1,124 @@
+\title{Special rules of DoubleTT}
+\import{macros}
+
+\p{The following rules are specific to DoubleTT.}
+
+\subtree{
+\title{Object types}
+
+\ul{
+
+  \li{\em{Object type former}: For each object in the double theory, there is an
+  object type:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\vdash \Gamma\ \context}
+  \infer2{\Gamma \vdash \Ob_X\ \type}
+  }
+  }
+
+  \li{\em{Functor application}:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash (F: X \to Y)}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \infer2{\Gamma \vdash F(x): \Ob_Y}
+  }
+  }
+
+}
+}
+
+\subtree{
+\title{Hom types}
+
+\ul{
+  
+  \li{\em{Hom type former}: For each object in the double theory, there is a
+  family of Hom types, parameterized by pairs of object terms:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \hypo{\Gamma \vdash x': \Ob_X}
+  \infer3{\Gamma \vdash \Hom_X(x,x')\ \type}
+  }
+  }
+
+  \li{\em{Functor application}:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash (F: X \to Y)}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \hypo{\Gamma \vdash x': \Ob_X}
+  \hypo{\Gamma \vdash f: \Hom_X(x,x')}
+  \infer4{\Gamma \vdash F(f): \Hom_Y(F(x), F(x'))}
+  }
+  }
+
+  \li{\em{Identity}:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \infer2{\Gamma \vdash 1_x: \Hom_X(x,x)}
+  }
+  }
+
+  \li{\em{Composition}:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash x,x',x'': \Ob_X}
+  \hypo{\Gamma \vdash f: \Hom_X(x,x')}
+  \hypo{\Gamma \vdash g: \Hom_X(x',x'')}
+  \infer4{\Gamma \vdash f \cdot g: \Hom_X(x,x'')}
+  }
+  }
+
+}
+}
+
+\subtree{
+\title{Morphism types}
+
+\ul{
+
+  \li{\em{Morphism type former}: For each proarrow in the double theory, there
+  is a family of morphism types, parameterized by pairs of object terms:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash (P: X \proto Y)}
+  \hypo{\Gamma \vdash x: X}
+  \hypo{\Gamma \vdash y: Y}
+  \infer3{\Gamma \vdash P(x,y)\ \type}
+  }
+  }
+
+  \li{\em{Pre-composition}:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash (P: X \proto Y)}
+  \hypo{\Gamma \vdash x, x': \Ob_X}
+  \hypo{\Gamma \vdash y: \Ob_Y}
+  \hypo{\Gamma \vdash p: P(x,y)}
+  \hypo{\Gamma \vdash f: \Hom_X(x',x)}
+  \infer5{\Gamma \vdash f \cdot p: P(x',y)}
+  }
+  }
+
+  \li{\em{Post-composition}:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash (P: X \proto Y)}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \hypo{\Gamma \vdash y, y': \Ob_Y}
+  \hypo{\Gamma \vdash p: P(x,y)}
+  \hypo{\Gamma \vdash g: \Hom_Y(y,y')}
+  \infer5{\Gamma \vdash p \cdot g: P(x,y')}
+  }
+  }
+
+}
+}

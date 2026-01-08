@@ -1,0 +1,108 @@
+\title{Discrete modality}
+\import{macros}
+
+\p{The discrete modality is an idempotent comonad #{(\dbl{T}, \Disc, \varepsilon)} on
+the double theory.}
+
+\subtree{
+\title{Work in progress}
+\taxon{warning}
+
+\p{Multiple unsolved problems present themselves in adding a discrete modality
+to DoubleTT. Not just the type-theoretic aspects (see remark below) but even the
+semantics is unclear, as I know how to define the discrete modality as a comonad
+on \SSet in the 2-category \DblColax but not in \Vdc.}
+
+}
+
+\ul{
+
+  \li{Computation rules for object types:
+
+  \p{\centerfigs{
+  \prooftreeinline{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\vdash \Gamma\ \context}
+  \infer2{\Gamma \vdash \Ob_{\Disc(X)} = \Ob_X\ \type}
+  }
+  #{\qquad\qquad}
+  \prooftreeinline{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \infer2{\Gamma \vdash \varepsilon_X(x) = x: \Ob_X}
+  }
+  }}
+  \prooftree{
+  \hypo{\dbl{T} \vDash (F: X \to Y)}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \infer2{\Gamma \vdash (\Disc F)(x) = F(x) : \Ob_Y}
+  }
+  }
+
+  \li{Computation rules for Hom types:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \infer2{\Gamma \vdash \Hom_{\Disc(X)}(x,x) = 1\ \type}
+  }
+  %\prooftree{
+  %\hypo{\dbl{T} \vDash X\ \ob}
+  %\hypo{\Gamma \vdash x, x': \Ob_X}
+  %\hypo{\Gamma \vdash f: \Hom_{\Disc(X)}(x,x')}
+  %\infer3{\Gamma \vdash \varepsilon_X(f) = f: \Hom_X(x,x')}
+  %}
+  }
+
+  \li{Computation rule for morphism types:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash (P: X \proto Y)}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \hypo{\Gamma \vdash y: \Ob_Y}
+  \infer3{\Gamma \vdash (\Disc P)(x,y) = 0\ \type}
+  }
+  \prooftree{
+  \hypo{\dbl{T} \vDash (P: X \proto Y)}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \hypo{\Gamma \vdash y: \Ob_Y}
+  \hypo{\Gamma \vdash p: (\Disc P)(x, y)}
+  \infer4{\Gamma \vdash \varepsilon_P(p) = \ind_0(p): P(x,y)}
+  }
+
+  }
+
+}
+
+\subtree{
+  \title{Relation to equality types}
+  \taxon{remark}
+
+  \p{
+
+  The discrete Hom types are effectively equality/identity types and so in
+  principle import into DoubleTT all the notorious subtleties of the
+  \nlab{identity type} in dependent type theory. For the time being we avoid
+  committing to the approach of either extensional or intensional type theory.
+  In particular, we do not postulate the \em{equality reflection} rule of
+  extensional type theory
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash x, x': \Ob_X}
+  \hypo{\Gamma \vdash f: \Hom_{\Disc(X)}(x, x')}
+  \infer3{\Gamma \vdash x = x': \Ob_X}
+  }
+
+  which, together with the above axioms, would imply a \em{uniqueness rule} for
+  discrete Hom types:
+  
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash x, x': \Ob_X}
+  \hypo{\Gamma \vdash f: \Hom_{\Disc(X)}(x, x')}
+  \infer[dashed]3{\Gamma \vdash f = 1_x: \Hom_{\Disc(X)}(x, x)}
+  }
+  
+}
+}

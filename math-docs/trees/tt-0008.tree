@@ -1,0 +1,60 @@
+\title{List modality}
+\import{macros}
+
+\p{The list modality is a monad #{(\dbl{T}, \List, \mu, \eta)} on the double
+theory. We use the standard description of lists as an inductive data type,
+except that we write #{[]} for #{\mathtt{nil}} and #{[x, \vec{x}]} for
+#{\mathtt{cons}(x, \vec{x})}.}
+
+\ul{
+  \li{Introduction rules for object types:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma\ \context}
+  \infer2{\Gamma \vdash []: \Ob_{\List X}}
+  }
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash \vec{x}: \Ob_{\List X}}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \infer3{\Gamma \vdash [x,\vec{x}]: \Ob_{\List X}}
+  }
+  }
+
+  \li{Introduction rules for Hom types:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma\ \context}
+  \infer2{\Gamma \vdash []: \Hom_{\List{X}}([], [])}
+  }
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash \vec{x}, \vec{x}': \Ob_{\List X}}
+  \infer[no rule]1{\Gamma \vdash \vec{f}: \Hom_{\List X}(\vec{x},\vec{x}')}
+  \hypo{\Gamma \vdash x, x': \Ob_X}
+  \infer[no rule]1{\Gamma \vdash f: \Hom_X(x,x')}
+  \infer3{\Gamma \vdash [f,\vec{f}]: \Hom_{\List X}([x,\vec{x}], [x',\vec{x}'])}
+  }
+  }
+
+  \li{Introduction rules for morphism types:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash (P: X \proto Y)}
+  \hypo{\Gamma\ \context}
+  \infer2{\Gamma \vdash []: (\List P)([], [])}
+  }
+  \prooftree{
+  \hypo{\dbl{T} \vDash (P: X \proto Y)}
+  \hypo{\Gamma \vdash \vec{x}: \Ob_{\List X}}
+  \hypo{\Gamma \vdash \vec{y}: \Ob_{\List Y}}
+  \infer[no rule]2{\Gamma \vdash \vec{p}: (\List P)(\vec{x},\vec{y})}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \hypo{\Gamma \vdash y: \Ob_X}
+  \infer[no rule]2{\Gamma \vdash p: \Hom_X(x,y)}
+  \infer3{\Gamma \vdash [p,\vec{p}]: (\List P)([x,\vec{x}], [y,\vec{y}])}
+  }
+  }
+}
