@@ -16,11 +16,11 @@ const existingGuideFilter = {
 export const helpRoutes: RouteDefinition[] = [
     {
         path: "/",
-        component: lazyMdx(() => import("./overview.mdx")),
+        component: lazyMdx(() => import("./overview.mdx"), "Help"),
     },
     {
         path: "/credits",
-        component: lazyMdx(() => import("./credits.mdx")),
+        component: lazyMdx(() => import("./credits.mdx"), "Credits"),
     },
     {
         path: "/guides",

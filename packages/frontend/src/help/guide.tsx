@@ -1,3 +1,4 @@
+import { Title } from "@solidjs/meta";
 import { useParams } from "@solidjs/router";
 import { createResource, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
@@ -12,6 +13,7 @@ export default function GuideHelpPage() {
 
 /** Contents of the guide page */
 export function GuideHelp(props: { id?: string }) {
+    const appTitle = import.meta.env.VITE_APP_TITLE;
     // Note that guide should never be undefined, due to existingGuideFilter
     // in routes.ts
     const guide = () => guidesList.find((item) => item.id === props.id);
@@ -28,6 +30,9 @@ export function GuideHelp(props: { id?: string }) {
 
     return (
         <>
+            <Title>
+                {guide()?.title ?? ""} - {appTitle}
+            </Title>
             <h1>
                 <a href="/help/guides/">Guides</a> / {guide()?.title}
             </h1>

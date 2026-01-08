@@ -1,3 +1,4 @@
+import { Title } from "@solidjs/meta";
 import { useParams } from "@solidjs/router";
 import { createResource, For, type JSXElement, lazy, Show, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
@@ -17,7 +18,20 @@ export default function LogicHelpPage() {
         (theoryId) => theories.get(theoryId),
     );
 
-    return <Show when={theory()}>{(theory) => <LogicHelpDetail theory={theory()} />}</Show>;
+    const appTitle = import.meta.env.VITE_APP_TITLE;
+
+    return (
+        <Show when={theory()}>
+            {(theory) => (
+                <>
+                    <Title>
+                        {theory().name} - {appTitle}
+                    </Title>
+                    <LogicHelpDetail theory={theory()} />
+                </>
+            )}
+        </Show>
+    );
 }
 
 function LogicHelpDetail(props: { theory: Theory }) {

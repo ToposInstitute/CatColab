@@ -27,7 +27,7 @@ let
     };
 
     nativeBuildInputs = with pkgs; [
-      pnpm_9.configHook
+      pnpm.configHook
     ];
 
     buildInputs = with pkgs; [
@@ -56,7 +56,7 @@ let
         ];
       };
       # See README.md
-      hash = "sha256-SiCCxguB8toAk57rsbPPjfxJVdyEvmaaRIT+onhfDcA=";
+      hash = "sha256-OFAOu6g4aZXkZuEFQgtkR6AHpOrfpmX2MNYMVWMIjoI=";
     };
   };
 

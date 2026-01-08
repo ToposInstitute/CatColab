@@ -124,7 +124,7 @@
               rustfmt
               clippy
               pkg-config
-              pnpm_9
+              pnpm
               nodejs_24
               sqlx-cli
               wasm-pack
