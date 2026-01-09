@@ -1,10 +1,12 @@
 import { type ComponentProps, createUniqueId, type JSX, Show, splitProps } from "solid-js";
 
-import "./form.css";
+import styles from "./form.module.css";
 
 /** Group of related fields in a form. */
 export function FormGroup(props: { children: JSX.Element; compact?: boolean }) {
-    return <dl class={props.compact ? "compact-form-group" : "form-group"}>{props.children}</dl>;
+    return (
+        <dl class={props.compact ? styles.compactFormGroup : styles.formGroup}>{props.children}</dl>
+    );
 }
 
 type InputFieldProps = {
@@ -18,13 +20,15 @@ export function InputField(allProps: InputFieldProps & Omit<ComponentProps<"inpu
 
     const [props, inputProps] = splitProps(allProps, ["label", "error"]);
 
+    const inputClass = inputProps.type === "file" ? styles.fileInput : styles.input;
+
     return (
         <>
             <dt>
                 <label for={fieldId}>{props.label}</label>
             </dt>
             <dd>
-                <input {...inputProps} id={fieldId} />
+                <input {...inputProps} id={fieldId} class={inputClass} />
                 <FieldError error={props.error} />
             </dd>
         </>
@@ -62,6 +66,7 @@ export function SelectField(
             <dd>
                 <select
                     id={fieldId}
+                    class={styles.select}
                     value={selectProps.value}
                     disabled={selectProps.disabled}
                     onChange={selectProps.onChange}
@@ -86,7 +91,7 @@ export function TextAreaField(allProps: InputFieldProps & Omit<ComponentProps<"t
                 <label for={fieldId}>{props.label}</label>
             </dt>
             <dd>
-                <textarea id={fieldId} {...textProps} />
+                <textarea id={fieldId} class={styles.textarea} {...textProps} />
                 <FieldError error={props.error} />
             </dd>
         </>
@@ -96,6 +101,6 @@ export function TextAreaField(allProps: InputFieldProps & Omit<ComponentProps<"t
 /** Validation error for a field. */
 export const FieldError = (props: { error?: string }) => (
     <Show when={props.error}>
-        <div class="error">{props.error}</div>
+        <div class={styles.error}>{props.error}</div>
     </Show>
 );
