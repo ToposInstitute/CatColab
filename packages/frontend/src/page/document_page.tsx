@@ -368,20 +368,24 @@ export function DocumentPane(props: {
         }
     };
 
+    const canRestore = () => props.docRef.permissions.user === "Own";
+
     return (
         <>
             <Show when={isDeleted()}>
                 <WarningBanner
                     actions={
-                        <Button
-                            variant="utility"
-                            onClick={(e) => {
-                                e.preventDefault();
-                                handleRestore();
-                            }}
-                        >
-                            <RotateCcw size={16} /> Restore it
-                        </Button>
+                        <Show when={canRestore()}>
+                            <Button
+                                variant="utility"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    handleRestore();
+                                }}
+                            >
+                                <RotateCcw size={16} /> Restore it
+                            </Button>
+                        </Show>
                     }
                 >
                     This {props.doc.type} has been deleted and will not be listed in your documents.
