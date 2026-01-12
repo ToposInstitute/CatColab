@@ -2,5 +2,9 @@
     "entryPoints": ["./index.ts"],
     "out": "output",
     "name": "CatColab: for developers",
+    "projectDocuments": [
+        "../CONTRIBUTING.md",
+        "fixing-hash-mismatches.md"
+    ]
     // "favicon": "./favicon.png",
 }
