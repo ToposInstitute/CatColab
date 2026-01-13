@@ -4,7 +4,7 @@ import Copy from "lucide-solid/icons/copy";
 import Download from "lucide-solid/icons/download";
 import { createSignal, For, Show } from "solid-js";
 
-import { Foldable, IconButton } from "catcolab-ui-components";
+import { BlockTitle, IconButton } from "catcolab-ui-components";
 import { ThSchema } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 
@@ -66,7 +66,7 @@ export default function DownloadTextButton(props: ModelAnalysisProps<DownloadCon
 
     const title = () => "SQL Schema";
     const header = (sql: string) => (
-        <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-bottom: 8px;">
+        <div style="display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
             <IconButton
                 onClick={() => copyToClipboard(sql)}
                 disabled={false}
@@ -88,9 +88,11 @@ export default function DownloadTextButton(props: ModelAnalysisProps<DownloadCon
             <Show when={sqlOutput()}>
                 {(sql) => (
                     <div>
-                        <Foldable title={title()} header={header(sql())}>
-                            {BackendConfig(backends)}
-                        </Foldable>
+                        <BlockTitle
+                            title={title()}
+                            actions={header(sql())}
+                            settingsPane={BackendConfig(backends)}
+                        />
                         <pre>{sql()}</pre>
                     </div>
                 )}
