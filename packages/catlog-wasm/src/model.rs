@@ -344,6 +344,16 @@ impl DblModel {
         }
     }
 
+    /// Tries to return the object namespace
+    pub fn ob_namespace(&self) -> Result<Namespace, String> {
+        Ok(self.ob_namespace.clone())
+    }
+
+    /// Tries to returns the morphism namespace
+    pub fn mor_namespace(&self) -> Result<Namespace, String> {
+        Ok(self.mor_namespace.clone())
+    }
+
     /// Tries to get a model of a discrete theory.
     pub fn discrete(&self) -> Result<&Rc<dbl_model::DiscreteDblModel>, String> {
         (&self.model)
