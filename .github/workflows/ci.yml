@@ -134,8 +134,6 @@ jobs:
     
     - name: Install Nix
       uses: cachix/install-nix-action@v25
-      with:
-        nix_path: nixpkgs=channel:25.05
 
     - name: Configure Cachix
       uses: cachix/cachix-action@v14
