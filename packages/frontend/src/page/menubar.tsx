@@ -227,7 +227,7 @@ function HelpMenuItem() {
     return (
         <MenuItem onSelect={() => navigate("/help")}>
             <Info />
-            <MenuItemLabel>Info & documentation</MenuItemLabel>
+            <MenuItemLabel>Help and documentation</MenuItemLabel>
         </MenuItem>
     );
 }
