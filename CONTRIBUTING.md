@@ -1,3 +1,7 @@
+---
+title: "Developer documentation: overview"
+---
+
 > **Note:** This page can be viewed at either [next.catcolab.org/dev](https://next.catcolab.org/dev) or [github.com/ToposInstitute/CatColab/contribute](https://github.com/ToposInstitute/CatColab/contribute)
 
 
@@ -55,3 +59,9 @@ cargo clippy
 
 Try to remember to run these commands before making a PR. (If you forget, the CI
 will remind you.)
+
+## Developer documentation
+
+Additional documentation for developers:
+
+- [Fixing Hash Mismatches in Nix](./dev-docs/fixing-hash-mismatches.md)

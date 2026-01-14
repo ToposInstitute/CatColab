@@ -33,3 +33,15 @@ where `$MODE` is replaced with one of the following:
   default if `--mode` is omitted)
 - `production`: uses the production deployment of CatColab at `catcolab.org`
   (*not* recommended)
+
+## Troubleshooting
+
+### Nix Hash Mismatches
+
+If this package fails to build in Nix with the error: 
+```
+> ERROR: pnpm failed to install dependencies
+```
+
+Refer to the "pnpm Dependencies" section in [Fixing Hash Mismatches in
+Nix](../../dev-docs/fixing-hash-mismatches.md).
