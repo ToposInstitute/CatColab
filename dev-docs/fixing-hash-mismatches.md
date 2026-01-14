@@ -1,3 +1,7 @@
+---
+title: "Fixing hash mismatches in Nix"
+---
+
 ### Fixing Hash Mismatches in Nix
 
 Nix uses **fixed-output derivations** to fetch external dependencies (from npm, crates.io, GitHub, etc.).
