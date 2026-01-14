@@ -206,47 +206,25 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v25
+
+      - name: Configure Cachix
+        uses: cachix/cachix-action@v14
         with:
-          # Need full history for `git log` for cache key
-          fetch-depth: 0
-
-      - name: Compute cache key
-        id: cache-key
-        run: |
-          # Get git hash for all Rust packages
-          hash=$(git log -1 --format="%H" -- packages/catlog packages/catlog-wasm packages/backend packages/notebook-types Cargo.toml Cargo.lock)
-          echo "git-hash=${hash}" >> $GITHUB_OUTPUT
-          echo "Rust hash: ${hash}"
-
-      - name: Cache Rust docs build
-        id: cache-rust-docs
-        uses: actions/cache@v4
-        with:
-          path: target/doc
-          key: rust-docs-${{ steps.cache-key.outputs.git-hash }}
-
-      - name: Install Rust toolchain from file
-        if: steps.cache-rust-docs.outputs.cache-hit != 'true'
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+          name: catcolab-jmoggr
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
 
       - name: Build Rust docs
-        if: steps.cache-rust-docs.outputs.cache-hit != 'true'
         run: |
-          cargo doc --all-features --no-deps --workspace --exclude "migrator"
-
-      - name: Report cache status
-        run: |
-          if [ "${{ steps.cache-rust-docs.outputs.cache-hit }}" = "true" ]; then
-            echo "✅ Rust docs restored from cache"
-          else
-            echo "🔨 Rust docs built and cached"
-          fi
+          nix build .#rust-docs
 
       - name: Upload Rust docs
         uses: actions/upload-artifact@v4
         with:
           name: rust_docs
-          path: target/doc
+          path: result/share/doc
 
   build_math-docs:
     name: Build mathematical docs
