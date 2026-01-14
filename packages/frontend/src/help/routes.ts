@@ -16,7 +16,7 @@ const existingGuideFilter = {
 export const helpRoutes: RouteDefinition[] = [
     {
         path: "/",
-        component: lazyMdx(() => import("./overview.mdx"), "Help"),
+        component: lazyMdx(() => import("./overview.mdx"), "Help and documentation"),
     },
     {
         path: "/credits",
