@@ -205,7 +205,7 @@ async fn websocket_handler(
     State(repo): State<samod::Repo>,
 ) -> axum::response::Response {
     ws.on_upgrade(|socket| async move {
-        repo.accept_axum(socket).await;
+        repo.accept_axum(socket).expect("Failed to accept WebSocket connection");
     })
 }
 
