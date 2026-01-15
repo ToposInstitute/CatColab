@@ -217,7 +217,7 @@
           };
 
           backend = pkgsLinux.callPackage ./packages/backend/default.nix {
-            inherit craneLib cargoArtifacts self;
+            inherit craneLib cargoArtifacts;
             pkgs = pkgsLinux;
           };
 
@@ -226,18 +226,9 @@
             pkgs = pkgsLinux;
           };
 
-          notebook-types-node = pkgsLinux.callPackage ./packages/notebook-types/default.nix {
-            inherit craneLib cargoArtifacts;
-            pkgs = pkgsLinux;
-          };
-
           catlog-wasm-browser = pkgsLinux.callPackage ./packages/catlog-wasm/default.nix {
             inherit craneLib cargoArtifacts;
             pkgs = pkgsLinux;
-          };
-
-          automerge = pkgsLinux.callPackage ./packages/automerge-doc-server/default.nix {
-            inherit inputs rustToolchainLinux self;
           };
 
           frontend =
