@@ -1,4 +1,4 @@
-import { createSignal, useContext } from "solid-js";
+import { Match, Switch, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 import { v7 } from "uuid";
 
@@ -8,6 +8,7 @@ import type { CellActions } from "../notebook";
 import arrowStyles from "../stdlib/arrow_styles.module.css";
 import type { Theory } from "../theory";
 import { LiveDiagramContext } from "./context";
+import { LiteralInput } from "./literal_input";
 import { BasicObInput } from "./object_input";
 import "./morphism_cell_editor.css";
 
@@ -93,27 +94,53 @@ export function DiagramMorphismCellEditor(props: {
                     <div class={[arrowStyles.arrow, arrowStyles.default].join(" ")} />
                 </div>
             </div>
-            <BasicObInput
-                placeholder="..."
-                ob={props.decl.cod}
-                setOb={(ob) => {
-                    props.modifyDecl((decl) => {
-                        decl.cod = ob;
-                    });
-                }}
-                obType={codType()}
-                generateId={v7}
-                isInvalid={codInvalid()}
-                isActive={props.isActive && activeInput() === "cod"}
-                deleteBackward={() => setActiveInput("mor")}
-                exitBackward={() => setActiveInput("dom")}
-                exitForward={props.actions.activateBelow}
-                exitLeft={() => setActiveInput("mor")}
-                hasFocused={() => {
-                    setActiveInput("cod");
-                    props.actions.hasFocused?.();
-                }}
-            />
+            <Switch>
+                {/* Use LiteralInput for Attr morphisms (attributes have literal codomains) */}
+                <Match when={props.decl.morType?.tag === "Basic" && props.decl.morType?.content === "Attr"}>
+                    <LiteralInput
+                        ob={props.decl.cod}
+                        setOb={(ob) => {
+                            props.modifyDecl((decl) => {
+                                decl.cod = ob;
+                            });
+                        }}
+                        placeholder="value..."
+                        isInvalid={codInvalid()}
+                        isActive={props.isActive && activeInput() === "cod"}
+                        deleteBackward={() => setActiveInput("mor")}
+                        exitBackward={() => setActiveInput("dom")}
+                        exitForward={props.actions.activateBelow}
+                        exitLeft={() => setActiveInput("mor")}
+                        hasFocused={() => {
+                            setActiveInput("cod");
+                            props.actions.hasFocused?.();
+                        }}
+                    />
+                </Match>
+                <Match when={true}>
+                    <BasicObInput
+                        placeholder="..."
+                        ob={props.decl.cod}
+                        setOb={(ob) => {
+                            props.modifyDecl((decl) => {
+                                decl.cod = ob;
+                            });
+                        }}
+                        obType={codType()}
+                        generateId={v7}
+                        isInvalid={codInvalid()}
+                        isActive={props.isActive && activeInput() === "cod"}
+                        deleteBackward={() => setActiveInput("mor")}
+                        exitBackward={() => setActiveInput("dom")}
+                        exitForward={props.actions.activateBelow}
+                        exitLeft={() => setActiveInput("mor")}
+                        hasFocused={() => {
+                            setActiveInput("cod");
+                            props.actions.hasFocused?.();
+                        }}
+                    />
+                </Match>
+            </Switch>
         </div>
     );
 }

@@ -1,7 +1,13 @@
 import type { Accessor } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { currentVersion, type DblModel, type Document, type ModelJudgment } from "catlog-wasm";
+import {
+    currentVersion,
+    type DblModel,
+    type Document,
+    type ModelJudgment,
+    type Notebook,
+} from "catlog-wasm";
 import type { Api, LiveDoc } from "../api";
 import { NotebookUtils, newNotebook } from "../notebook/types";
 import type { Theory, TheoryLibrary } from "../theory";
@@ -10,12 +16,15 @@ import type { ValidatedModel } from "./model_library";
 /** A document defining a model. */
 export type ModelDocument = Document & { type: "model" };
 
-/** Create an empty model document. */
-export const newModelDocument = (theory: string): ModelDocument => ({
+/** Create a model document, optionally with initial notebook content. */
+export const newModelDocument = (
+    theory: string,
+    notebook?: Notebook<ModelJudgment>,
+): ModelDocument => ({
     name: "",
     type: "model",
     theory,
-    notebook: newNotebook<ModelJudgment>(),
+    notebook: notebook ?? newNotebook<ModelJudgment>(),
     version: currentVersion(),
 });
 
@@ -43,14 +52,32 @@ export type LiveModelDoc = {
 /** Create a new model in the backend.
 
 Returns the ref ID of the created document.
+
+@param api - The API client
+@param initOrTheoryId - Either a complete ModelDocument or a theory ID string
+@param theories - Optional theory library to look up initial notebook content
  */
 export async function createModel(
     api: Api,
     initOrTheoryId: ModelDocument | string,
+    theories?: TheoryLibrary,
 ): Promise<string> {
     let init: ModelDocument;
     if (typeof initOrTheoryId === "string") {
-        init = newModelDocument(initOrTheoryId);
+        const theoryId = initOrTheoryId;
+        let notebook: Notebook<ModelJudgment> | undefined;
+
+        // Try to get initial notebook from the theory
+        if (theories) {
+            try {
+                const theory = await theories.get(theoryId);
+                notebook = theory.initialNotebook?.();
+            } catch {
+                // Ignore errors, just use empty notebook
+            }
+        }
+
+        init = newModelDocument(theoryId, notebook);
     } else {
         init = initOrTheoryId;
     }
@@ -73,6 +100,11 @@ export async function migrateModelDocument(
     if (!NotebookUtils.hasFormalCells(doc.notebook) || theory.inclusions.includes(targetTheoryId)) {
         changeDoc((doc) => {
             doc.theory = targetTheoryId;
+            // Add initial notebook content if the target theory has it and notebook is empty
+            if (!NotebookUtils.hasFormalCells(doc.notebook) && targetTheory.initialNotebook) {
+                const initialNotebook = targetTheory.initialNotebook();
+                doc.notebook = initialNotebook;
+            }
         });
         return;
     }

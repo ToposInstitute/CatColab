@@ -1,0 +1,49 @@
+.tableContainer {
+    padding: 1rem;
+    overflow: auto;
+}
+
+.title {
+    margin: 0 0 1rem 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.tableWrapper {
+    margin-bottom: 1.5rem;
+}
+
+.tableName {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--sl-color-neutral-700);
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.table th,
+.table td {
+    border: 1px solid var(--sl-color-neutral-300);
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+}
+
+.table th {
+    background-color: var(--sl-color-neutral-100);
+    font-weight: 600;
+}
+
+.table tbody tr:hover {
+    background-color: var(--sl-color-neutral-50);
+}
+
+.emptyMessage {
+    color: var(--sl-color-neutral-500);
+    font-style: italic;
+    margin: 0.5rem 0;
+}

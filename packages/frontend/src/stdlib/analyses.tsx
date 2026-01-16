@@ -4,6 +4,7 @@ import type { MorType, ObType } from "catlog-wasm";
 import type { DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
 import * as GraphLayoutConfig from "../visualization/graph_layout_config";
 import type * as Checkers from "./analyses/checker_types";
+import { defaultTableConfig, type TableConfig } from "./analyses/diagram_table";
 import { defaultSchemaERDConfig, type SchemaERDConfig } from "./analyses/schema_erd_config";
 import type * as Simulators from "./analyses/simulator_types";
 
@@ -40,6 +41,16 @@ export const diagramGraph = (
 });
 
 const DiagramGraph = lazy(() => import("./analyses/diagram_graph"));
+
+export const diagramTable = (
+    options: AnalysisOptions,
+): DiagramAnalysisMeta<TableConfig> => ({
+    ...options,
+    component: (props) => <DiagramTable title={options.name} {...props} />,
+    initialContent: () => defaultTableConfig,
+});
+
+const DiagramTable = lazy(() => import("./analyses/diagram_table"));
 
 export function kuramoto(
     options: Partial<AnalysisOptions> & {
