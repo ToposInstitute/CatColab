@@ -169,6 +169,7 @@ impl<'a> Elaborator<'a> {
             Ob::App { .. } => None,
             Ob::List { .. } => None,
             Ob::Tabulated(_) => None,
+            Ob::Literal(_) => None,
         }
     }
 

@@ -71,6 +71,11 @@ export default function createOlogTheory(theoryMeta: TheoryMeta): Theory {
                 description: "Visualize the instance as a graph",
                 help: "visualization",
             }),
+            analyses.diagramTable({
+                id: "table",
+                name: "Table view",
+                description: "View the instance as relational tables",
+            }),
         ],
     });
 }

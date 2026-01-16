@@ -1,5 +1,6 @@
 //! Wasm bindings for diagrams in models of a double theory.
 
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use all_the_same::all_the_same;
@@ -8,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 
-use catlog::dbl::model::{DblModel as _, DiscreteDblModel, FgDblModel, MutDblModel};
+use catlog::dbl::model::{DblModel as _, DiscreteDblModel, FgDblModel, InvalidDblModel, MutDblModel};
 use catlog::dbl::model_diagram as diagram;
 use catlog::dbl::model_morphism::DiscreteDblModelMapping;
 use catlog::one::FgCategory;
@@ -36,6 +37,9 @@ pub struct DblModelDiagram {
     #[wasm_bindgen(skip)]
     pub diagram: DblModelDiagramBox,
     ob_namespace: Namespace,
+    /// Literal codomains for morphisms (attribute values).
+    /// Stores (literal_value, over_morphism) where over_morphism is used to look up expected type.
+    literal_cods: HashMap<QualifiedName, (LiteralValue, Option<QualifiedName>)>,
 }
 
 impl DblModelDiagram {
@@ -52,6 +56,7 @@ impl DblModelDiagram {
         Self {
             diagram,
             ob_namespace: Namespace::new_for_uuid(),
+            literal_cods: HashMap::new(),
         }
     }
 
@@ -75,6 +80,15 @@ impl DblModelDiagram {
 
     /// Adds a morphism to the diagram.
     pub fn add_mor(&mut self, decl: &DiagramMorDecl) -> Result<(), String> {
+        // Check if codomain is a literal value (for attribute morphisms)
+        let literal_cod = decl.cod.as_ref().and_then(|ob| {
+            if let Ob::Literal(lit) = ob {
+                Some(lit.clone())
+            } else {
+                None
+            }
+        });
+
         all_the_same!(match &mut self.diagram {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (mapping, model) = diagram.into();
@@ -83,14 +97,29 @@ impl DblModelDiagram {
                 if let Some(dom) = decl.dom.as_ref().map(|ob| Elaborator.elab(ob)).transpose()? {
                     model.set_dom(decl.id.into(), dom);
                 }
-                if let Some(cod) = decl.cod.as_ref().map(|ob| Elaborator.elab(ob)).transpose()? {
-                    model.set_cod(decl.id.into(), cod);
+                // Only set codomain if it's not a literal
+                if literal_cod.is_none() {
+                    if let Some(cod) = decl.cod.as_ref().map(|ob| Elaborator.elab(ob)).transpose()? {
+                        model.set_cod(decl.id.into(), cod);
+                    }
                 }
                 if let Some(over) = decl.over.as_ref().map(|mor| Elaborator.elab(mor)).transpose()? {
                     mapping.assign_mor(decl.id.into(), over);
                 }
             }
         });
+
+        // Store literal codomain if present, along with the `over` morphism for type checking
+        if let Some(lit) = literal_cod {
+            let over_mor = decl.over.as_ref().and_then(|mor| {
+                match mor {
+                    Mor::Basic(name) => QualifiedName::deserialize_str(name).ok(),
+                    _ => None,
+                }
+            });
+            self.literal_cods.insert(decl.id.into(), (lit, over_mor));
+        }
+
         if decl.name.is_empty() {
             Ok(())
         } else {
@@ -207,13 +236,18 @@ impl DblModelDiagram {
     /// Gets a morphism generator as it appears in the diagram's presentation.
     #[wasm_bindgen(js_name = "morPresentation")]
     pub fn mor_presentation(&self, id: QualifiedName) -> Option<DiagramMorGenerator> {
+        // Check for literal codomain first (extract just the literal, not the over morphism)
+        let literal_cod = self.literal_cods.get(&id).map(|(lit, _)| Ob::Literal(lit.clone()));
+
         let (mor_type, over, dom, cod) = all_the_same!(match &self.diagram {
             DblModelDiagramBox::[Discrete](diagram) => {
                 let (mapping, model) = diagram.into();
-                (Quoter.quote(&model.mor_generator_type(&id)),
-                 Quoter.quote(mapping.0.mor_generator_map.get(&id)?),
-                 Quoter.quote(model.get_dom(&id)?),
-                 Quoter.quote(model.get_cod(&id)?))
+                let mor_type = Quoter.quote(&model.mor_generator_type(&id));
+                let over = Quoter.quote(mapping.0.mor_generator_map.get(&id)?);
+                let dom = Quoter.quote(model.get_dom(&id)?);
+                // Use literal codomain if present, otherwise get from model
+                let cod = literal_cod.clone().or_else(|| model.get_cod(&id).map(|c| Quoter.quote(c)))?;
+                (mor_type, over, dom, cod)
             }
         });
         Some(DiagramMorGenerator {
@@ -272,14 +306,96 @@ impl DblModelDiagram {
     /// Validates that the diagram is well defined in a model.
     #[wasm_bindgen(js_name = "validateIn")]
     pub fn validate_in(&self, model: &DblModel) -> Result<ModelDiagramValidationResult, String> {
+        use catlog::dbl::model_diagram::InvalidDblModelDiagram;
+
+        let mut all_errors: Vec<diagram::InvalidDiscreteDblModelDiagram> = Vec::new();
+
+        // First, run the existing validation
         let result = all_the_same!(match &self.diagram {
             DblModelDiagramBox::[Discrete](diagram) => {
-                let model: &Rc<_> = (&model.model).try_into().map_err(
+                let model_rc: &Rc<_> = (&model.model).try_into().map_err(
                     |_| "Type of model should match type of diagram")?;
-                diagram.validate_in(model)
+                diagram.validate_in(model_rc)
             }
         });
-        Ok(ModelDiagramValidationResult(result.map_err(|errs| errs.into()).into()))
+
+        if let Err(errs) = result {
+            // Filter out "Cod" errors for morphisms that have literal codomains,
+            // since we deliberately don't set the codomain in the model for those
+            for err in errs.into_iter() {
+                let should_filter = match &err {
+                    InvalidDblModelDiagram::Dom(InvalidDblModel::Cod(mor_id)) => {
+                        self.literal_cods.contains_key(mor_id)
+                    }
+                    _ => false,
+                };
+                if !should_filter {
+                    all_errors.push(err);
+                }
+            }
+        }
+
+        // Then, validate literal types
+        let literal_type_errors = self.validate_literal_types(model)?;
+        all_errors.extend(literal_type_errors);
+
+        if all_errors.is_empty() {
+            Ok(ModelDiagramValidationResult(JsResult::Ok(())))
+        } else {
+            Ok(ModelDiagramValidationResult(JsResult::Err(all_errors)))
+        }
+    }
+
+    /// Validates that literal codomain types match the expected AttrType from the model.
+    fn validate_literal_types(&self, model: &DblModel) -> Result<Vec<diagram::InvalidDiscreteDblModelDiagram>, String> {
+        use catlog::dbl::model_diagram::InvalidDblModelDiagram;
+
+        let mut errors = Vec::new();
+
+        for (mor_id, (literal, over_mor)) in &self.literal_cods {
+            // Skip if no over morphism (user hasn't selected which attribute)
+            let Some(attr_name) = over_mor else {
+                continue;
+            };
+
+            // Look up the expected AttrType from the model's morphism codomain
+            let expected_type = match &model.model {
+                super::model::DblModelBox::Discrete(m) => {
+                    use catlog::zero::LabelSegment;
+                    // Get the codomain object ID for this attribute
+                    m.get_cod(attr_name).and_then(|cod_id| {
+                        // Look up the label (name) for that object using the public method
+                        model.ob_generator_label(&cod_id).and_then(|label| {
+                            // Extract the text from the first segment of the label
+                            label.segments().find_map(|seg| {
+                                if let LabelSegment::Text(s) = seg {
+                                    Some(s.to_string())
+                                } else {
+                                    None
+                                }
+                            })
+                        })
+                    })
+                }
+                _ => None,
+            };
+
+            // Check if literal type matches expected type
+            if let Some(expected) = expected_type {
+                let actual_type = match literal {
+                    LiteralValue::String(_) => "String",
+                    LiteralValue::Int(_) => "Int",
+                    LiteralValue::Float(_) => "Float",
+                    LiteralValue::Bool(_) => "Bool",
+                };
+
+                if actual_type != expected {
+                    errors.push(InvalidDblModelDiagram::Dom(InvalidDblModel::CodType(mor_id.clone())));
+                }
+            }
+        }
+
+        Ok(errors)
     }
 }
 

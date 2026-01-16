@@ -4,3 +4,22 @@
     align-items: center;
     gap: 1ex;
 }
+
+.literal-input {
+    font-family: inherit;
+    font-size: inherit;
+    padding: 0.25em 0.5em;
+    border: 2px solid var(--sl-color-neutral-400);
+    border-radius: 4px;
+    min-width: 8em;
+}
+
+.literal-input:focus {
+    outline: none;
+    border-color: var(--sl-color-primary-500);
+}
+
+.literal-input.invalid {
+    border-color: var(--sl-color-danger-500);
+    background-color: var(--sl-color-danger-50, #fee);
+}

@@ -1,5 +1,5 @@
 import type { KbdKey } from "catcolab-ui-components";
-import type { DblModel, DblTheory, MorType, ObOp, ObType } from "catlog-wasm";
+import type { DblModel, DblTheory, ModelJudgment, MorType, Notebook, ObOp, ObType } from "catlog-wasm";
 import type { DiagramAnalysisComponent, ModelAnalysisComponent } from "../analysis";
 import { uniqueIndexArray } from "../util/indexing";
 import type { ArrowStyle } from "../visualization";
@@ -64,6 +64,9 @@ export class Theory {
     /** List of pushforward (covariant) migrations out of this theory. */
     readonly pushforwards: ModelMigration[];
 
+    /** Initial notebook content for new models of this theory. */
+    readonly initialNotebook?: () => Notebook<ModelJudgment>;
+
     private readonly modelObTypeMap: ObTypeMap<ModelObTypeMeta>;
     private readonly modelMorTypeMap: MorTypeMap<ModelMorTypeMeta>;
     private readonly instanceObTypeMap: ObTypeMap<InstanceObTypeMeta>;
@@ -89,6 +92,7 @@ export class Theory {
         instanceOfName?: string;
         instanceTypes?: InstanceTypeMeta[];
         diagramAnalyses?: DiagramAnalysisMeta[];
+        initialNotebook?: () => Notebook<ModelJudgment>;
     }) {
         // Theory.
         this.id = props.id;
@@ -98,6 +102,9 @@ export class Theory {
         // Migrations.
         this.inclusions = props.inclusions ?? [];
         this.pushforwards = props.pushforwards ?? [];
+
+        // Initial notebook content.
+        this.initialNotebook = props.initialNotebook;
 
         // Models.
         this.name = props.name;

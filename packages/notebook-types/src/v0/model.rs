@@ -3,13 +3,34 @@ use tsify::Tsify;
 
 use super::{path::Path, theory::*};
 
+/// A literal value for attribute types.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Tsify)]
+#[serde(tag = "tag", content = "content")]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub enum LiteralValue {
+    /// A string value.
+    String(String),
+
+    /// An integer value.
+    Int(i64),
+
+    /// A floating-point value.
+    Float(f64),
+
+    /// A boolean value.
+    Bool(bool),
+}
+
 /// An object in a model of a double theory.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Tsify)]
 #[serde(tag = "tag", content = "content")]
 #[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
 pub enum Ob {
     /// Basic or generating object.
     Basic(String),
+
+    /// A literal value (for attribute codomains).
+    Literal(LiteralValue),
 
     /// Application of an object operation to another object.
     App { op: ObOp, ob: Box<Ob> },
@@ -25,7 +46,7 @@ pub enum Ob {
 }
 
 /// A morphism in a model of a double theory.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Tsify)]
 #[serde(tag = "tag", content = "content")]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum Mor {

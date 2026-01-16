@@ -38,7 +38,7 @@ export default function HomePage() {
     const handleCreateModel = async () => {
         setCreating(true);
         try {
-            const ref = await createModel(api, stdTheories.defaultTheoryMetadata().id);
+            const ref = await createModel(api, stdTheories.defaultTheoryMetadata().id, stdTheories);
             navigate(`/model/${ref}`);
         } catch (error) {
             console.error("Failed to create model:", error);

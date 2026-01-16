@@ -6,7 +6,7 @@ use super::model::{Mor, Ob};
 use super::theory::{MorType, ObType};
 
 /// Declares an object of a diagram in a model.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
 pub struct DiagramObDecl {
     /// Human-readable label for object.
@@ -24,7 +24,7 @@ pub struct DiagramObDecl {
 }
 
 /// Declares a morphism of a diagram in a model.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
 pub struct DiagramMorDecl {
     /// Human-readable label for morphism.
@@ -48,7 +48,7 @@ pub struct DiagramMorDecl {
 }
 
 /// A judgment defining part of a diagram in a model.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Tsify)]
 #[serde(tag = "tag")]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum DiagramJudgment {

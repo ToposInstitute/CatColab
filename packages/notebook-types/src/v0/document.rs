@@ -9,14 +9,14 @@ use tsify::Tsify;
 
 /// The content of a model document. For legacy reasons, we reserve the name
 /// `ModelDocument` for the type `Document & { type: "model" }`.
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct ModelDocumentContent {
     pub name: String,
     pub theory: String,
     pub notebook: Notebook<ModelJudgment>,
 }
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct DiagramDocumentContent {
     pub name: String,
     #[serde(rename = "diagramIn")]
@@ -33,7 +33,7 @@ pub enum AnalysisType {
     Diagram,
 }
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub struct AnalysisDocumentContent {
     pub name: String,
     #[serde(rename = "analysisType")]
@@ -43,7 +43,7 @@ pub struct AnalysisDocumentContent {
     pub notebook: Notebook<Analysis>,
 }
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum Document {
     #[serde(rename = "model")]

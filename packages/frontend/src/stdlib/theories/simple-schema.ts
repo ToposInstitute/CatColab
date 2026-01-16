@@ -1,9 +1,11 @@
-import { ThSchema } from "catlog-wasm";
+import { ThSchema, type ModelJudgment } from "catlog-wasm";
 import { Theory, type TheoryMeta } from "../../theory";
+import { newFormalCell, newNotebook, NotebookUtils } from "../../notebook";
 import * as analyses from "../analyses";
 import styles from "../styles.module.css";
 import svgStyles from "../svg_styles.module.css";
 import textStyles from "../text_styles.module.css";
+import { v7 as uuidv7 } from "uuid";
 
 export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
     const thSchema = new ThSchema();
@@ -118,6 +120,30 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
                 description: "Visualize the instance as a graph",
                 help: "visualization",
             }),
+            analyses.diagramTable({
+                id: "table",
+                name: "Table view",
+                description: "View the instance as relational tables",
+            }),
         ],
+        initialNotebook: () => {
+            const notebook = newNotebook<ModelJudgment>();
+            const attrTypeOb = { tag: "Basic" as const, content: "AttrType" };
+
+            // Built-in attribute types
+            const builtInTypes = ["String", "Int", "Float", "Bool"];
+            for (const typeName of builtInTypes) {
+                const judgment: ModelJudgment = {
+                    tag: "object",
+                    name: typeName,
+                    id: uuidv7(),
+                    obType: attrTypeOb,
+                };
+                const cell = newFormalCell(judgment);
+                NotebookUtils.appendCell(notebook, cell);
+            }
+
+            return notebook;
+        },
     });
 }

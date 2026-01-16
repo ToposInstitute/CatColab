@@ -22,7 +22,7 @@ pub struct ObDecl {
 }
 
 /// Declares a morphism in a model of a double theory.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
 pub struct MorDecl {
     /// Human-readable label for morphism.
@@ -43,7 +43,7 @@ pub struct MorDecl {
 }
 
 /// Instantiates an existing model into the current model.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
 pub struct InstantiatedModel {
     /// Human-readable label for the instantiation.
@@ -60,7 +60,7 @@ pub struct InstantiatedModel {
 }
 
 /// A specialization of a generating object in an instantiated model.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
 pub struct SpecializeModel {
     /// ID (qualified name) of generating object to specialize.
@@ -71,7 +71,7 @@ pub struct SpecializeModel {
 }
 
 /// A judgment defining part of a model of a double theory.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Tsify)]
 #[serde(tag = "tag")]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum ModelJudgment {
