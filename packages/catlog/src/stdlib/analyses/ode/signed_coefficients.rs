@@ -77,3 +77,41 @@ impl<ObType, MorType> SignedCoefficientBuilder<ObType, MorType> {
         (mat, ob_index)
     }
 }
+
+// TODO add to SignedCoefficients
+///
+pub struct SignedDelayCoefficientBuilder<ObType, MorType> {
+    signed_coefficient_builder: SignedCoefficientBuilder<ObType, MorType>,
+    lags: Vec<MorType>,
+}
+
+impl SignedDelayCoefficientBuilder<QualifiedName, QualifiedPath> {
+    pub fn new(var_ob_tyoe: ObType) -> Self {
+        Self {
+            signed_coefficient_builder: SignedCoefficientBuilder::new(var_ob_type),
+            lags: Vec::new(),
+        }
+    }
+
+    pub fn add_positive(mut self, mor_type: MorType) -> Self {
+        self.signed_coefficient_builder.push(mor_type);
+        self
+    }
+
+    pub fn add_negative(mut self, mor_type: MorType) -> Self {
+        self.signed_coefficient_builder.push(mor_type);
+        self
+    }
+
+    ///
+    pub fn build_matrix<Id>(
+        &self,
+        model: &impl FgDblModel<ObType = ObType, MorType = MorType, Ob = Id, ObGen = Id, MorGen = Id>,
+        coeffs: &HashMap<Id, f32>,
+    ) -> (DMatrix<f32>, IndexMap<Id, usize>)
+    where
+        Id: Eq + Clone + Hash + Ord,
+    {
+        self.signed_coefficient_builder.build_matrix(model, coeffs)
+    }
+}
