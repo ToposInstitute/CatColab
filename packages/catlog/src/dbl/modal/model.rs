@@ -3,6 +3,7 @@
 use std::fmt::Debug;
 use std::rc::Rc;
 
+use ansi_term::Style;
 use derive_more::From;
 use itertools::Itertools;
 use ref_cast::RefCast;
@@ -26,6 +27,22 @@ pub enum ModalOb {
 
     /// List of objects in a [list modality](List).
     List(List, Vec<Self>),
+}
+
+impl std::fmt::Display for ModalOb {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let _ = match self {
+            ModalOb::Generator(name) => write!(f, "{name}"),
+            ModalOb::App(ob, app) => write!(f, "{app}({ob})"),
+            ModalOb::List(_, vec) => {
+                let vector: String =
+                    Itertools::intersperse(vec.iter().map(|el| el.to_string()), ", ".to_string())
+                        .collect();
+                write!(f, "[{vector}]")
+            }
+        };
+        Ok(())
+    }
 }
 
 /// Morphism is a model of a modal double theory.
@@ -71,7 +88,7 @@ impl MorListData {
 }
 
 /// A model of a modal double theory.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ModalDblModel {
     theory: Rc<ModalDblTheory>,
     ob_generators: HashFinSet<QualifiedName>,
@@ -79,6 +96,22 @@ pub struct ModalDblModel {
     // TODO: Equations
     ob_types: HashColumn<QualifiedName, ModalObType>,
     mor_types: HashColumn<QualifiedName, ModalMorType>,
+}
+
+impl std::fmt::Display for ModalDblModel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "{}", Style::new().bold().paint("Obs:"))?;
+        for (left, right) in self.ob_types.clone() {
+            writeln!(f, "{left}::{right}")?
+        }
+        writeln!(f, "{}", Style::new().bold().paint("Mors:"))?;
+        for (left, _) in self.mor_types.clone() {
+            let (dom, cod) =
+                (self.get_dom(&left.clone()).unwrap(), self.get_cod(&left.clone()).unwrap());
+            writeln!(f, "({left}: {dom} --> {cod})")?
+        }
+        Ok(())
+    }
 }
 
 impl ModalDblModel {

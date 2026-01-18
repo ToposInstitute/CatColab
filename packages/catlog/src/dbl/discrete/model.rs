@@ -1,7 +1,9 @@
 //! Models of discrete double theories.
 
+use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 
+use ansi_term::Style;
 use derivative::Derivative;
 
 use super::theory::DiscreteDblTheory;
@@ -248,6 +250,31 @@ impl Validate for DiscreteDblModel {
 
     fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
         validate::wrap_errors(self.iter_invalid())
+    }
+}
+
+impl Display for DiscreteDblModel {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "{}", Style::new().bold().paint("Obs:"))?;
+        for (left, right) in self.ob_types.clone() {
+            writeln!(f, "{left}::{right}")?
+        }
+        writeln!(f, "{}", Style::new().bold().paint("Mors:"))?;
+        for (left, right) in self.mor_types.clone() {
+            let (dom, cod) =
+                (self.get_dom(&left.clone()).unwrap(), self.get_cod(&left.clone()).unwrap());
+            let val = right
+                .clone()
+                .into_iter()
+                .map(|m| m.to_string())
+                .reduce(|mut cur, nxt| {
+                    cur.push_str(&nxt);
+                    cur
+                })
+                .unwrap();
+            writeln!(f, "({left}: {dom} -|-> {cod})::{val}")?
+        }
+        Ok(())
     }
 }
 

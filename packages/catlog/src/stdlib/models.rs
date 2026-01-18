@@ -199,12 +199,14 @@ mod tests {
     #[test]
     fn schemas() {
         let th = Rc::new(th_schema());
+        println!("{}", walking_attr(th.clone()));
         assert!(walking_attr(th).validate().is_ok());
     }
 
     #[test]
     fn categories_with_links() {
         let th = Rc::new(th_category_links());
+        println!("{}", backward_link(th.clone()));
         assert!(backward_link(th).validate().is_ok());
     }
 
@@ -218,6 +220,14 @@ mod tests {
     #[test]
     fn sym_monoidal_categories() {
         let th = Rc::new(th_sym_monoidal_category());
+        println!("{}", catalyzed_reaction(th.clone()));
         assert!(catalyzed_reaction(th).validate().is_ok());
+    }
+
+    #[test]
+    fn sir() {
+        let th = Rc::new(th_sym_monoidal_category());
+        println!("{}", sir_petri(th.clone()));
+        assert!(sir_petri(th).validate().is_ok());
     }
 }

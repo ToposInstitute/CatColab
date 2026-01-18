@@ -38,6 +38,7 @@ ustr = "1"
 uuid = { version = "1.18" }
 wasm-bindgen = { version = "0.2.100", optional = true }
 notebook-types = { version = "0.1.0", path = "../notebook-types" }
+ansi_term = "0.12.1"
 
 [dev-dependencies]
 clap = { version = "4.5.47", features = ["derive"] }

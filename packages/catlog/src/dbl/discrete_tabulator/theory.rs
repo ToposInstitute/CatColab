@@ -21,6 +21,16 @@ pub enum TabObType {
     Tabulator(Box<TabMorType>),
 }
 
+impl std::fmt::Display for TabObType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let _ = match self {
+            TabObType::Basic(x) => write!(f, "{x}"),
+            TabObType::Tabulator(mor) => write!(f, "{mor}"),
+        };
+        Ok(())
+    }
+}
+
 /// Morphism type in a discrete tabulator theory.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, From)]
 pub enum TabMorType {
@@ -30,6 +40,16 @@ pub enum TabMorType {
 
     /// Hom type on an object type.
     Hom(Box<TabObType>),
+}
+
+impl std::fmt::Display for TabMorType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let _ = match self {
+            TabMorType::Basic(x) => write!(f, "{x}"),
+            TabMorType::Hom(mor) => write!(f, "{mor}"),
+        };
+        Ok(())
+    }
 }
 
 /// Projection onto object type in a discrete tabulator theory.
