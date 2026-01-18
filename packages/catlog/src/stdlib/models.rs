@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use crate::dbl::{model::*, theory::*};
 use crate::one::{Path, QualifiedPath};
-use crate::zero::{QualifiedName, name};
+use crate::zero::{name, QualifiedName};
 
 /// The positive self-loop.
 ///
@@ -199,6 +199,7 @@ mod tests {
     #[test]
     fn schemas() {
         let th = Rc::new(th_schema());
+        println!("{}", walking_attr(th.clone()));
         assert!(walking_attr(th).validate().is_ok());
     }
 

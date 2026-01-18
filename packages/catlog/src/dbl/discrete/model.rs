@@ -118,11 +118,11 @@ impl DiscreteDblModel {
     pub fn push_forward<F>(&mut self, f: &F, new_theory: Rc<DiscreteDblTheory>)
     where
         F: CategoryMap<
-                DomOb = QualifiedName,
-                DomMor = QualifiedPath,
-                CodOb = QualifiedName,
-                CodMor = QualifiedPath,
-            >,
+            DomOb = QualifiedName,
+            DomMor = QualifiedPath,
+            CodOb = QualifiedName,
+            CodMor = QualifiedPath,
+        >,
     {
         self.ob_types = std::mem::take(&mut self.ob_types).postcompose(f.ob_map());
         self.mor_types = std::mem::take(&mut self.mor_types).postcompose(f.mor_map());
@@ -248,6 +248,33 @@ impl Validate for DiscreteDblModel {
 
     fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
         validate::wrap_errors(self.iter_invalid())
+    }
+}
+
+impl std::fmt::Display for DiscreteDblModel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Obs:");
+        for ob in self.ob_types.clone() {
+            let (left, right) = ob.clone();
+            writeln!(f, "{}::{}", left.to_string(), right.to_string())?
+        }
+        writeln!(f, "\nMors:");
+        for mor in self.mor_types.clone() {
+            let (left, right) = mor.clone();
+            let (dom, cod) =
+                (self.get_dom(&left.clone()).unwrap(), self.get_cod(&left.clone()).unwrap());
+            let val = right
+                .clone()
+                .into_iter()
+                .map(|m| m.to_string())
+                .reduce(|mut cur, nxt| {
+                    cur.push_str(&nxt);
+                    cur
+                })
+                .unwrap();
+            writeln!(f, "({}: {dom} --> {cod})::{val}", left.to_string())?
+        }
+        Ok(())
     }
 }
 
