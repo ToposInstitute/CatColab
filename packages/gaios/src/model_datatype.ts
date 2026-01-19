@@ -1,4 +1,4 @@
-import type { Cell } from "catlog-wasm";
+import type { Notebook } from "catlog-wasm";
 
 // SCHEMA
 
@@ -6,9 +6,7 @@ export type ModelDoc = {
     name: string;
     theory: string;
     type: string;
-    notebook: {
-        cells: Cell<unknown>[];
-    };
+    notebook: Notebook<unknown>;
 };
 
 const setTitle = (doc: ModelDoc, title: string) => {
@@ -24,7 +22,8 @@ export const init = (doc: ModelDoc) => {
     doc.theory = "simple-olog";
     doc.type = "model";
     doc.notebook = {
-        cells: [],
+        cellOrder: [],
+        cellContents: {},
     };
 };
 

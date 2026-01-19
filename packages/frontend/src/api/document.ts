@@ -5,13 +5,12 @@ import type {
     DocHandleChangePayload,
     Repo,
 } from "@automerge/automerge-repo";
-import jsonpatch from "fast-json-patch";
 import { type Accessor, createEffect, createSignal } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import invariant from "tiny-invariant";
 
 import type { Permissions } from "catcolab-api";
-import { type Document, migrateDocument } from "catlog-wasm";
+import { type Document } from "catlog-wasm";
 
 /** Live document, typically retrieved from the backend.
 
@@ -73,19 +72,22 @@ export async function findAndMigrate(
 ): Promise<DocHandle<Document>> {
     const docHandle = await repo.find<Document>(docId);
 
+    // todo: even when deleteing @patchwork before running migrate
+    // the migrate still mutates the in memory state of the doc handle somehow
+
     // Perform any migrations on the document.
     // XXX: copied from automerge-doc-server/src/server.ts:
-    const docBefore = docHandle.doc();
-    // @ts-expect-error: patchwork hack
-    // biome-ignore lint/performance/noDelete: TODO: remove this workaround
-    delete docBefore["@patchwork"];
-    const docAfter = migrateDocument(docBefore);
-    if (docBefore.version !== docAfter.version) {
-        const patches = jsonpatch.compare(docBefore, docAfter);
-        docHandle.change((doc: unknown) => {
-            jsonpatch.applyPatch(doc, patches);
-        });
-    }
+    // const docBefore = docHandle.doc();
+    // // @ts-expect-error: patchwork hack
+    // // biome-ignore lint/performance/noDelete: TODO: remove this workaround
+    // delete docBefore["@patchwork"];
+    // const docAfter = migrateDocument(docBefore);
+    // if (docBefore.version !== docAfter.version) {
+    //     const patches = jsonpatch.compare(docBefore, docAfter);
+    //     docHandle.change((doc: unknown) => {
+    //         jsonpatch.applyPatch(doc, patches);
+    //     });
+    // }
 
     return docHandle;
 }

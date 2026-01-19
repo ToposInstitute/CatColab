@@ -1,8 +1,10 @@
+
 import { defineConfig } from "vite";
 import cssInjectedByJsPlugin from "vite-plugin-css-injected-by-js";
 import solid from "vite-plugin-solid";
 import topLevelAwait from "vite-plugin-top-level-await";
 import wasm from "vite-plugin-wasm";
+import external from "@inkandswitch/patchwork-bootloader/externals";
 
 export default defineConfig({
     base: "./",
@@ -11,13 +13,7 @@ export default defineConfig({
     build: {
         minify: false,
         rollupOptions: {
-            external: [
-                "@automerge/automerge",
-                "@automerge/automerge-repo",
-                "@patchwork/rootstock",
-                "@patchwork/context",
-                "@patchwork/context/diff",
-            ],
+            external,
             input: "./src/index.ts",
             output: {
                 format: "es",

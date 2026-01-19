@@ -1,6 +1,9 @@
 import { monitorForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { getReorderDestinationIndex } from "@atlaskit/pragmatic-drag-and-drop-hitbox/util/get-reorder-destination-index";
 import type { DocHandle, Prop } from "@automerge/automerge-repo";
+import { Diff } from "@inkandswitch/annotations-diff";
+import { ref } from "@inkandswitch/patchwork-refs";
+import { useSubscribe } from "@inkandswitch/subscribables-solid";
 import { makeEventListener } from "@solid-primitives/event-listener";
 import ListPlus from "lucide-solid/icons/list-plus";
 import {
@@ -23,8 +26,10 @@ import {
     type ModifierKey,
 } from "catcolab-ui-components";
 import type { Cell, Notebook } from "catlog-wasm";
+import { useAnnotations } from "./annotations_context";
 import {
     type CellActions,
+    type CellDiffType,
     type CellDragData,
     type FormalCellEditorProps,
     isCellDragData,
@@ -87,6 +92,19 @@ export function NotebookEditor<T>(props: {
 }) {
     const [activeCell, setActiveCell] = createSignal<number | null>(null);
     const [currentDropTarget, setCurrentDropTarget] = createSignal<string | null>(null);
+
+    // Optional annotations support - subscribe to changes
+    const annotations = useAnnotations();
+    const annotationsAccessor = useSubscribe(annotations);
+
+    // Helper to get diff type for a cell
+    const getCellDiffType = (cellId: string): CellDiffType => {
+        const annotationsValue = annotationsAccessor?.();
+        if (!annotationsValue) return undefined;
+        // Cast handle to any to avoid version mismatch between automerge-repo versions
+        const cellRef = ref(props.handle as any, ...props.path, "cellContents", cellId);
+        return annotationsValue.onRef(cellRef).lookup(Diff)?.type as CellDiffType;
+    };
 
     // Set up commands and their keyboard shortcuts.
     const addAfterActiveCell = (cell: Cell<T>) => {
@@ -325,6 +343,7 @@ export function NotebookEditor<T>(props: {
                                     }
                                     currentDropTarget={currentDropTarget()}
                                     setCurrentDropTarget={setCurrentDropTarget}
+                                    diffType={getCellDiffType(cell.id)}
                                 >
                                     <Switch>
                                         <Match when={cell.tag === "rich-text"}>

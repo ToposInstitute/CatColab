@@ -96,6 +96,9 @@ export function isCellDragData(data: Record<string | symbol, unknown>): data is 
 
 type ClosestEdge = "top" | "bottom" | null;
 
+/** Diff type for cell annotations. */
+export type CellDiffType = "added" | "changed" | "deleted" | undefined;
+
 /** An individual cell in a notebook.
 
 This component contains UI elements common to any cell. The actual content of
@@ -109,6 +112,8 @@ export function NotebookCell(props: {
     tag?: string;
     currentDropTarget: string | null;
     setCurrentDropTarget: (cellId: string | null) => void;
+    /** Optional diff type for highlighting changes. */
+    diffType?: CellDiffType;
 }) {
     let rootRef!: HTMLDivElement;
     let handleRef!: HTMLButtonElement;
@@ -228,7 +233,12 @@ export function NotebookCell(props: {
     return (
         <div
             class="cell"
-            classList={{ "cell-dragging": isDragging() }}
+            classList={{
+                "cell-dragging": isDragging(),
+                "cell-diff-added": props.diffType === "added",
+                "cell-diff-changed": props.diffType === "changed",
+                "cell-diff-deleted": props.diffType === "deleted",
+            }}
             onMouseEnter={showGutter}
             onMouseLeave={hideGutter}
             ref={rootRef}

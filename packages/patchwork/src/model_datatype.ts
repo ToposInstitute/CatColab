@@ -5,7 +5,7 @@ import type {
     DecodedChangeWithMetadata,
 } from "@patchwork/sdk/versionControl";
 import { type DataTypeImplementation, type DocLink, initFrom } from "@patchwork/sdk";
-import type { Cell, Uuid } from "catlog-wasm";
+import type { Cell, Notebook, Uuid } from "catlog-wasm";
 import type { AutomergeUrl, Repo } from "@automerge/automerge-repo";
 import { type AnalysisDoc, init as initAnalysis } from "./analysis_datatype";
 
@@ -15,9 +15,7 @@ export type ModelDoc = HasVersionControlMetadata<Uuid, Cell<unknown>> & {
     name: string;
     theory: string;
     type: string;
-    notebook: {
-        cells: Cell<unknown>[];
-    };
+    notebook: Notebook<unknown>;
     analysisDocUrl: AutomergeUrl;
 };
 
@@ -65,7 +63,8 @@ export const init = (doc: ModelDoc, repo: Repo) => {
         theory: "simple-olog",
         type: "model",
         notebook: {
-            cells: [],
+            cellOrder: [],
+            cellContents: {},
         },
         analysisDocUrl: analysisDocHandle.url,
     });
