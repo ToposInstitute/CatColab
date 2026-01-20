@@ -527,6 +527,20 @@ jobs:
       run: |
        nix run github:serokell/deploy-rs -- --skip-checks .#catcolab-next
 
+    - name: Verify deployment
+      run: |
+        EXPECTED=$(nix eval --raw .#nixosConfigurations.catcolab-next.config.system.build.toplevel)
+        ACTUAL=$(ssh catcolab@backend-next.catcolab.org "readlink -f /run/current-system")
+
+        if [[ "$ACTUAL" != "$EXPECTED" ]]; then
+          echo "ERROR: Deployment verification failed, the server is not running the expected nix profile"
+          echo "Expected: $EXPECTED"
+          echo "Actual:   $ACTUAL"
+          exit 1
+        fi
+
+        echo "Deployment verified: $ACTUAL"
+
     # Ensure that a copy of the deployed repository is on the machine that it was deployed to. This is
     # a nice-to-have which enables checking the configuration of the currently deployed system and could
     # make recovery slightly less aweful in the event nix commands need to be run on the remote.
