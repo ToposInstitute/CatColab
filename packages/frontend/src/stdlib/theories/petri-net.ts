@@ -45,6 +45,9 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
                 simulate(model, data) {
                     return thSymMonoidalCategory.massAction(model, data);
                 },
+                getEquations(model) {
+                    return thSymMonoidalCategory.massActionEquations(model);
+                },
             }),
             analyses.massAction({
                 id: "stochastic-mass-action",
@@ -53,6 +56,9 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
                 help: "stochastic-mass-action",
                 simulate(model, data) {
                     return thSymMonoidalCategory.stochasticMassAction(model, data);
+                },
+                getEquations(model) {
+                    return thSymMonoidalCategory.massActionEquations(model);
                 },
             }),
             analyses.reachability({

@@ -302,6 +302,16 @@ impl ThCategoryLinks {
                 .into(),
         ))
     }
+
+    /// Returns the symbolic mass-action equations in LaTeX format.
+    #[wasm_bindgen(js_name = "massActionEquations")]
+    pub fn mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
+        use catlog::simulate::ode::polynomial::ToLatex;
+        let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
+        let tab_model = model.discrete_tab()?;
+        let sys = analysis.build_system(tab_model);
+        Ok(ODELatex(sys.to_latex()))
+    }
 }
 
 /// The theory of categories with signed links.
@@ -335,6 +345,16 @@ impl ThCategorySignedLinks {
                 .into(),
         ))
     }
+
+    /// Returns the symbolic mass-action equations in LaTeX format.
+    #[wasm_bindgen(js_name = "massActionEquations")]
+    pub fn mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
+        use catlog::simulate::ode::polynomial::ToLatex;
+        let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
+        let tab_model = model.discrete_tab()?;
+        let sys = analysis.build_system(tab_model);
+        Ok(ODELatex(sys.to_latex()))
+    }
 }
 
 /// The theory of strict symmetric monoidal categories.
@@ -367,6 +387,16 @@ impl ThSymMonoidalCategory {
                 .map_err(|err| format!("{err:?}"))
                 .into(),
         ))
+    }
+
+    /// Returns the symbolic mass-action equations in LaTeX format.
+    #[wasm_bindgen(js_name = "massActionEquations")]
+    pub fn mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
+        use catlog::simulate::ode::polynomial::ToLatex;
+        let analysis = analyses::ode::PetriNetMassActionAnalysis::default();
+        let modal_model = model.modal()?;
+        let sys = analysis.build_system(modal_model.as_ref());
+        Ok(ODELatex(sys.to_latex()))
     }
 
     /// Simulates the stochastic mass-action system derived from a model.

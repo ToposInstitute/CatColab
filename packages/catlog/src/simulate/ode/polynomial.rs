@@ -91,6 +91,13 @@ where
     }
 }
 
+/// Trait for converting to LaTeX strings. We are using 2D vectors for laying them out as tables
+/// down the line.
+pub trait ToLatex {
+    /// Converts to a 2D vector of LaTeX strings.
+    fn to_latex(&self) -> Vec<Vec<String>>;
+}
+
 impl<Var, Coef, Exp> Display for PolynomialSystem<Var, Coef, Exp>
 where
     Var: Display,
@@ -105,6 +112,24 @@ where
     }
 }
 
+impl<Var, Coef, Exp> ToLatex for PolynomialSystem<Var, Coef, Exp>
+where
+    Var: Display,
+    Coef: Display + PartialEq + One,
+    Exp: Display + PartialEq + One,
+{
+    fn to_latex(&self) -> Vec<Vec<String>> {
+        let mut result = Vec::new();
+        for (var, poly) in self.components.iter() {
+            let mut row = Vec::new();
+            row.push(format!("\\dot{{{var}}}"));
+            row.push("=".to_string());
+            row.push(poly.to_string());
+            result.push(row);
+        }
+        result
+    }
+}
 impl<Var, Coef, Exp> FromIterator<(Var, Polynomial<Var, Coef, Exp>)>
     for PolynomialSystem<Var, Coef, Exp>
 where

@@ -62,6 +62,9 @@ export default function createPrimitiveSignedStockFlowTheory(theoryMeta: TheoryM
                 simulate(model, data) {
                     return thCategorySignedLinks.massAction(model, data);
                 },
+                getEquations(model) {
+                    return thCategorySignedLinks.massActionEquations(model);
+                },
                 transitionType: {
                     tag: "Hom",
                     content: { tag: "Basic", content: "Object" },

@@ -52,6 +52,9 @@ export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): 
                 simulate(model, data) {
                     return thCategoryLinks.massAction(model, data);
                 },
+                getEquations(model) {
+                    return thCategoryLinks.massActionEquations(model);
+                },
                 transitionType: {
                     tag: "Hom",
                     content: { tag: "Basic", content: "Object" },

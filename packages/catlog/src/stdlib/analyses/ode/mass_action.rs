@@ -332,6 +332,7 @@ mod tests {
     use std::rc::Rc;
 
     use super::*;
+    use crate::simulate::ode::polynomial::ToLatex;
     use crate::stdlib::{models::*, theories::*};
 
     #[test]
@@ -399,5 +400,17 @@ mod tests {
         let sys = PetriNetMassActionAnalysis::default().build_stochastic_system(&model, data);
         assert_eq!(2, sys.problem.nb_reactions());
         assert_eq!(3, sys.problem.nb_species());
+    }
+
+    #[test]
+    fn to_latex() {
+        let th = Rc::new(th_category_links());
+        let model = backward_link(th);
+        let sys = StockFlowMassActionAnalysis::default().build_system(&model);
+        let expected = vec![
+            vec!["\\dot{x}".to_string(), "=".to_string(), "((-1) f) x y".to_string()],
+            vec!["\\dot{y}".to_string(), "=".to_string(), "f x y".to_string()],
+        ];
+        assert_eq!(expected, sys.to_latex());
     }
 }

@@ -10,3 +10,8 @@ use catlog::stdlib::analyses;
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct ODEResult(pub JsResult<analyses::ode::ODESolution, String>);
+
+/// Symbolic equations in LaTeX format.
+#[derive(Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct ODELatex(pub Vec<Vec<String>>);

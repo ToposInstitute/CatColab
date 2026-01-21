@@ -1,17 +1,19 @@
-import { createMemo } from "solid-js";
+import { createMemo, Show } from "solid-js";
 
 import {
     BlockTitle,
     type ColumnSchema,
     createNumericalColumn,
+    ExpandableTable,
     FixedTableEditor,
+    KatexDisplay,
 } from "catcolab-ui-components";
 import type { DblModel, MassActionProblemData, MorType, ObType, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
-import { createModelODEPlot } from "./model_ode_plot";
-import type { MassActionSimulator } from "./simulator_types";
+import { createModelODELatex, createModelODEPlot } from "./model_ode_plot";
+import type { MassActionEquations, MassActionSimulator } from "./simulator_types";
 
 import "./simulation.css";
 
@@ -19,6 +21,7 @@ import "./simulation.css";
 export default function MassAction(
     props: ModelAnalysisProps<MassActionProblemData> & {
         simulate: MassActionSimulator;
+        getEquations: MassActionEquations;
         stateType?: ObType;
         transitionType?: MorType;
         title?: string;
@@ -96,6 +99,11 @@ export default function MassAction(
         (model: DblModel) => props.simulate(model, props.content),
     );
 
+    const equations = createModelODELatex(
+        () => props.liveModel.validatedModel(),
+        (model: DblModel) => props.getEquations(model),
+    );
+
     return (
         <div class="simulation">
             <BlockTitle
@@ -108,6 +116,19 @@ export default function MassAction(
                     </div>
                 }
             />
+            <Show when={(equations() ?? []).length > 0}>
+                <div class="mass-action-equations">
+                    <ExpandableTable
+                        rows={equations() ?? []}
+                        title="Equations"
+                        columns={[
+                            { cell: (row) => <KatexDisplay math={row[0] ?? ""} /> },
+                            { cell: (row) => <KatexDisplay math={row[1] ?? ""} /> },
+                            { cell: (row) => <KatexDisplay math={row[2] ?? ""} /> },
+                        ]}
+                    />
+                </div>
+            </Show>
             <ODEResultPlot result={plotResult()} />
         </div>
     );
