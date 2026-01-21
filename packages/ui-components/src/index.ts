@@ -5,6 +5,7 @@ export * from "./completions";
 export * from "./dialog";
 export * from "./document_type_icon";
 export * from "./expandable_list";
+export * from "./expandable_table";
 export * from "./fixed_table_editor";
 export * from "./form";
 export * from "./icon_button";
