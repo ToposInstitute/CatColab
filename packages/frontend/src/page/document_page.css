@@ -16,6 +16,10 @@
     & .lucide {
         color: var(--color-gray-800);
     }
+
+    & .inline-input-filler {
+        text-wrap-mode: nowrap;
+    }
 }
 
 .resizeable-panels {
