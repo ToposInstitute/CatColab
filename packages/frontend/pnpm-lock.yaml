@@ -27,8 +27,8 @@ importers:
         specifier: ^2.2.0
         version: 2.2.0
       '@automerge/prosemirror':
-        specifier: v0.1.0
-        version: 0.1.0
+        specifier: v0.2.0-alpha.0
+        version: 0.2.0-alpha.0
       '@benrbray/prosemirror-math':
         specifier: ^1.0.0
         version: 1.0.0(katex@0.16.22)(prosemirror-commands@1.7.1)(prosemirror-history@1.4.1)(prosemirror-inputrules@1.5.0)(prosemirror-keymap@1.2.3)(prosemirror-model@1.25.2)(prosemirror-state@1.4.3)(prosemirror-transform@1.10.4)(prosemirror-view@1.40.1)
@@ -235,8 +235,8 @@ packages:
   '@automerge/automerge@3.1.1':
     resolution: {integrity: sha512-x7tZiMBLk4/SKYimVEVl1/wPntT9buGvLOWCey9ZcH8JUsB0dgm49C0S7Ojzgvflcs2hc/YjiXRPcFeFkinIgw==}
 
-  '@automerge/prosemirror@0.1.0':
-    resolution: {integrity: sha512-1VDuVzey6/UksmenUv3pbUH+kaEhboVDpqgo3RC1bd6Tztk3ZjxJ2hBSuKaVRfl+4q4v+VysI4oHGgNhrBv5Xg==}
+  '@automerge/prosemirror@0.2.0-alpha.0':
+    resolution: {integrity: sha512-ho0ghRZxpWoVs0RPJV3a1b6AhZeMfXJhmWGAjrftGeg0JuZFJ0kyLol5TnNslLwyKCfBG42cLiciH/9ztSpFKQ==}
 
   '@babel/code-frame@7.25.7':
     resolution: {integrity: sha512-0xZJFNE5XMpENsgfHYTw8FbX4kv53mFLn2i3XPoq69LyhYSCBJtitaHx9QnsVTrsogI4Z3+HtEfZ2/GFPOtf5g==}
@@ -3100,7 +3100,7 @@ snapshots:
 
   '@automerge/automerge@3.1.1': {}
 
-  '@automerge/prosemirror@0.1.0':
+  '@automerge/prosemirror@0.2.0-alpha.0':
     dependencies:
       '@automerge/automerge': 3.1.1
       ordered-map: 0.1.0
