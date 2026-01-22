@@ -17,9 +17,9 @@
     "keywords": [],
     "author": "Ink & Switch",
     "dependencies": {
-        "@automerge/automerge": "^3.1.1",
-        "@automerge/automerge-repo": "^2.2.0",
-        "@automerge/automerge-repo-react-hooks": "^2.2.0",
+        "@automerge/automerge": "^3.2.2",
+        "@automerge/automerge-repo": "^2.5.1",
+        "@automerge/automerge-repo-react-hooks": "^2.5.1",
         "@patchwork/sdk": "link:../../../patchwork/sdk",
         "@solid-primitives/context": "^0.3.1",
         "catlog-wasm": "link:../catlog-wasm/dist/pkg-browser",
