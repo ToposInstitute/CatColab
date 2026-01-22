@@ -1,4 +1,4 @@
-import { createMemo, Show } from "solid-js";
+import { createMemo } from "solid-js";
 
 import {
     BlockTitle,
@@ -17,6 +17,8 @@ import { createModelODEPlotWithEquations } from "./model_ode_plot";
 import type { MassActionSimulator } from "./simulator_types";
 
 import "./simulation.css";
+
+import styles from "./mass_action.module.css";
 
 /** Analyze a model using mass-action dynamics. */
 export default function MassAction(
@@ -112,7 +114,7 @@ export default function MassAction(
                     <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
             </Foldable>
-            <Foldable title="Equations">
+            <Foldable title="Equations" class={styles.equations}>
                 <ExpandableTable
                     rows={latexEquations() ?? []}
                     threshold={20}
