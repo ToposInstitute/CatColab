@@ -7,6 +7,7 @@ export * from "./document_type_icon";
 export * from "./expandable_list";
 export * from "./expandable_table";
 export * from "./fixed_table_editor";
+export * from "./foldable";
 export * from "./form";
 export * from "./icon_button";
 export * from "./inline_input";
