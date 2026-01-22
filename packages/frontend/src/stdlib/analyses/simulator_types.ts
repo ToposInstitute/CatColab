@@ -19,6 +19,10 @@ export type KuramotoSimulator = (model: DblModel, data: KuramotoProblemData) => 
 export type LinearODESimulator = (model: DblModel, data: LinearODEProblemData) => ODEResult;
 export type LotkaVolterraSimulator = (model: DblModel, data: LotkaVolterraProblemData) => ODEResult;
 export type MassActionSimulator = (model: DblModel, data: MassActionProblemData) => ODEResult;
+export type StochasticMassActionSimulator = (
+    model: DblModel,
+    data: MassActionProblemData,
+) => ODEResult;
 export type MassActionEquations = (model: DblModel) => ODELatex;
 
 /** Configuration for a Decapodes analysis of a diagram. */
