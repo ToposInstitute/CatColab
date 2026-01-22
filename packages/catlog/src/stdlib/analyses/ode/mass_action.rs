@@ -292,7 +292,7 @@ pub struct NumericalSystemWithEquations {
     /// The ODE analysis ready for solving.
     pub analysis: ODEAnalysis<NumericalPolynomialSystem<i8>>,
     /// The equations in LaTeX format with parameters substituted.
-    pub equations: Vec<Vec<String>>,
+    pub latex_equations: Vec<Vec<String>>,
 }
 
 /// Converts to a mass-action system with numerical rate coefficients.
@@ -311,16 +311,15 @@ pub fn into_numerical_system(
         .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
     let x0 = DVector::from_iterator(n, initial_values);
 
-    let with_scalars = sys.extend_scalars(|poly| {
-        poly.eval(|flow| data.rates.get(flow).copied().unwrap_or_default())
-    });
+    let with_scalars = sys
+        .extend_scalars(|poly| poly.eval(|flow| data.rates.get(flow).copied().unwrap_or_default()));
     let equations = with_scalars.to_latex();
     let num_sys = with_scalars.to_numerical();
     let problem = ODEProblem::new(num_sys, x0).end_time(data.duration);
 
     NumericalSystemWithEquations {
         analysis: ODEAnalysis::new(problem, ob_index),
-        equations,
+        latex_equations: equations,
     }
 }
 

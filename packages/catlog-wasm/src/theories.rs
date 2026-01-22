@@ -302,7 +302,7 @@ impl ThCategoryLinks {
         let solution = num_sys.analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
         Ok(ODEResultWithEquations {
             solution: solution.into(),
-            equations: num_sys.equations,
+            latex_equations: num_sys.latex_equations,
         })
     }
 
@@ -346,7 +346,7 @@ impl ThCategorySignedLinks {
         let solution = num_sys.analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
         Ok(ODEResultWithEquations {
             solution: solution.into(),
-            equations: num_sys.equations,
+            latex_equations: num_sys.latex_equations,
         })
     }
 
@@ -390,7 +390,7 @@ impl ThSymMonoidalCategory {
         let solution = num_sys.analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
         Ok(ODEResultWithEquations {
             solution: solution.into(),
-            equations: num_sys.equations,
+            latex_equations: num_sys.latex_equations,
         })
     }
 

@@ -99,7 +99,7 @@ export default function MassAction(
     );
 
     const plotResult = () => result()?.plotData;
-    const equations = () => result()?.equations;
+    const latexEquations = () => result()?.latexEquations;
 
     return (
         <div class="simulation">
@@ -113,10 +113,10 @@ export default function MassAction(
                     </div>
                 }
             />
-            <Show when={(equations() ?? []).length > 0}>
+            <Show when={(latexEquations() ?? []).length > 0}>
                 <div class="mass-action-equations">
                     <ExpandableTable
-                        rows={equations() ?? []}
+                        rows={latexEquations() ?? []}
                         title="Equations"
                         columns={[
                             { cell: (row) => <KatexDisplay math={row[0] ?? ""} /> },

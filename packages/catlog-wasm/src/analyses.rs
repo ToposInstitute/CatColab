@@ -18,7 +18,8 @@ pub struct ODEResultWithEquations {
     /// The result of the simulation
     pub solution: JsResult<analyses::ode::ODESolution, String>,
     /// The equations in LaTeX format with parameters substituted
-    pub equations: Vec<Vec<String>>,
+    #[serde(rename = "latexEquations")]
+    pub latex_equations: Vec<Vec<String>>,
 }
 
 /// Symbolic equations in LaTeX format.

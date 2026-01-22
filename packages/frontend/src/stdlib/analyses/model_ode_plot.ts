@@ -7,7 +7,7 @@ import type { ODEPlotData, StateVarData } from "../../visualization";
 /** Result of simulating an ODE with equations, containing both plot data and LaTeX equations. */
 export type ODEPlotDataWithEquations = {
     plotData: JsResult<ODEPlotData, string>;
-    equations: string[][];
+    latexEquations: string[][];
 };
 
 /** Replace braced UUIDs in equation strings with human-readable labels from the model. */
@@ -91,10 +91,10 @@ export function createModelODEPlotWithEquations(
             const model = validated.model;
             const result = simulate(model);
             const plotData = solutionToPlotData(model, result.solution);
-            const equations = result.equations.map((row) =>
+            const latexEquations = result.latexEquations.map((row) =>
                 row.map((cell) => replaceUuidsWithLabels(cell, model)),
             );
-            return { plotData, equations };
+            return { plotData, latexEquations };
         },
         undefined,
         { equals: false },
