@@ -46,6 +46,11 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
                     return thSymMonoidalCategory.massAction(model, data);
                 },
             }),
+            analyses.massActionEquations({
+                getEquations(model) {
+                    return thSymMonoidalCategory.massActionEquations(model);
+                },
+            }),
             analyses.stochasticMassAction({
                 id: "stochastic-mass-action",
                 name: "Stochastic mass action dynamics",

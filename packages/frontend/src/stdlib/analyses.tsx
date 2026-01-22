@@ -174,6 +174,32 @@ export function massAction(
 
 const MassAction = lazy(() => import("./analyses/mass_action"));
 
+export function massActionEquations(
+    options: Partial<AnalysisOptions> & {
+        getEquations: Simulators.MassActionEquations;
+    },
+): ModelAnalysisMeta<Record<string, never>> {
+    const {
+        id = "mass-action-equations",
+        name = "Mass-action dynamics equations",
+        description = "Display the symbolic mass-action dynamics equations",
+        help = "mass-action-equations",
+        getEquations,
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => (
+            <MassActionEquationsDisplay title={name} getEquations={getEquations} {...props} />
+        ),
+        initialContent: () => ({}),
+    };
+}
+
+const MassActionEquationsDisplay = lazy(() => import("./analyses/mass_action_equations"));
+
 export function stochasticMassAction(
     options: Partial<AnalysisOptions> & {
         simulate: Simulators.StochasticMassActionSimulator;

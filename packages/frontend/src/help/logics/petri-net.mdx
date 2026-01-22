@@ -50,6 +50,10 @@ Each place is given an **initial value**.
 However, equations governing transitions are *non-linear*: if a transition $T$ has two incoming arcs from places $A$ and $A'$, then $T=rAA'$.
 </HelpAnalysisById>
 
+<HelpAnalysisById theory={props.theory} analysisId="mass-action-equations">
+This analysis displays the symbolic form of the derived mass-action equations.
+</HelpAnalysisById>
+
 <HelpAnalysisById theory={props.theory} analysisId="stochastic-mass-action">
 This analysis realises the Petri net as a stochastic Petri net (SPN).
 In an SPN, the input (resp. output) arcs of each transition consume (resp. produce) integer numbers of tokens at their respective places. Each transition has a **clock**: a random variable giving the next time it would fire, if it were the next one to fire. When all the clocks are exponential random variates, this gives the stochastic analogue of the *ordinary* differential equation semantics. In this analysis, we take the rate parameter of each exponential clock to be the product of the reactants, potentially multiplied by a reaction constant. The Gillespie method is one way to sample a trajectory from an SPN, which uses the fact that the sum of exponential distributions is also an exponential distribution to first sample the next time any transition fires, and then sample the particular one which fired with probability proportional to the rate parameter of each transition.

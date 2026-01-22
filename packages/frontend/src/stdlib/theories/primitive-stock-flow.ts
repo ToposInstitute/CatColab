@@ -57,6 +57,11 @@ export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): 
                     content: { tag: "Basic", content: "Object" },
                 },
             }),
+            analyses.massActionEquations({
+                getEquations(model) {
+                    return thCategoryLinks.massActionEquations(model);
+                },
+            }),
         ],
     });
 }
