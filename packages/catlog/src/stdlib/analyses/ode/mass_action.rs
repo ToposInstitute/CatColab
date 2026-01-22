@@ -338,7 +338,7 @@ mod tests {
         let model = backward_link(th);
         let sys = StockFlowMassActionAnalysis::default().build_system(&model);
         let expected = expect!([r#"
-            dx = ((-1) f) x y
+            dx = (-f) x y
             dy = f x y
         "#]);
         expected.assert_eq(&sys.to_string());
@@ -350,7 +350,7 @@ mod tests {
         let model = positive_backward_link(th);
         let sys = StockFlowMassActionAnalysis::default().build_system(&model);
         let expected = expect!([r#"
-            dx = ((-1) f) x y
+            dx = (-f) x y
             dy = f x y
         "#]);
         expected.assert_eq(&sys.to_string());
@@ -362,7 +362,7 @@ mod tests {
         let model = negative_backward_link(th);
         let sys = StockFlowMassActionAnalysis::default().build_system(&model);
         let expected = expect!([r#"
-            dx = ((-1) f) x y^{-1}
+            dx = (-f) x y^{-1}
             dy = f x y^{-1}
         "#]);
         expected.assert_eq(&sys.to_string());
@@ -375,7 +375,7 @@ mod tests {
         let sys = PetriNetMassActionAnalysis::default().build_system(&model);
         let expected = expect!([r#"
             dc = 0
-            dx = ((-1) f) c x
+            dx = (-f) c x
             dy = f c x
         "#]);
         expected.assert_eq(&sys.to_string());
@@ -405,7 +405,7 @@ mod tests {
         let model = backward_link(th);
         let sys = StockFlowMassActionAnalysis::default().build_system(&model);
         let expected = vec![
-            vec!["\\dot{x}".to_string(), "=".to_string(), "((-1) f) x y".to_string()],
+            vec!["\\dot{x}".to_string(), "=".to_string(), "(-f) x y".to_string()],
             vec!["\\dot{y}".to_string(), "=".to_string(), "f x y".to_string()],
         ];
         assert_eq!(expected, sys.to_latex());

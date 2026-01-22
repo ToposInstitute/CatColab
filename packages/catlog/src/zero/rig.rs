@@ -214,19 +214,36 @@ where
     Coef: Display + PartialEq + One,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let is_simple = |s: &str| {
+            // Numeric: digits and dots
+            if s.chars().all(|c| c.is_ascii_digit() || c == '.') {
+                return true;
+            }
+            // Alphabetic identifier
+            if s.chars().all(|c| c.is_alphabetic()) {
+                return true;
+            }
+            // Braced identifier like {uuid} or {name}
+            if s.starts_with('{') && s.ends_with('}') && s.matches('{').count() == 1 {
+                return true;
+            }
+            false
+        };
+
         let mut pairs = self.0.iter();
         let fmt_scalar_mul = |f: &mut std::fmt::Formatter<'_>, coef: &Coef, var: &Var| {
-            if !coef.is_one() {
-                let coef = coef.to_string();
-                if coef.chars().all(|c| c.is_alphabetic())
-                    || coef.chars().all(|c| c.is_ascii_digit() || c == '.')
-                {
-                    write!(f, "{coef} ")?;
+            if coef.is_one() {
+                write!(f, "{var}")
+            } else {
+                let coef_str = coef.to_string();
+                if coef_str == "-1" {
+                    write!(f, "-{var}")
+                } else if is_simple(&coef_str) {
+                    write!(f, "{coef_str} {var}")
                 } else {
-                    write!(f, "({coef}) ")?;
+                    write!(f, "({coef_str}) {var}")
                 }
             }
-            write!(f, "{var}")
         };
         if let Some((var, coef)) = pairs.next() {
             fmt_scalar_mul(f, coef, var)?;
@@ -607,8 +624,8 @@ mod tests {
         assert_eq!(Combination::<char, u32>::zero().to_string(), "0");
 
         let x = Combination::generator('x');
-        assert_eq!((x.clone() * -1i32).to_string(), "(-1) x");
-        assert_eq!(x.clone().neg().to_string(), "(-1) x");
+        assert_eq!((x.clone() * -1i32).to_string(), "-x");
+        assert_eq!(x.clone().neg().to_string(), "-x");
 
         let combination = x.clone() + x.neg();
         assert_ne!(combination, Combination::default());

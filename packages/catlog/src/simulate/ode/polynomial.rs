@@ -189,17 +189,17 @@ mod tests {
         ];
         let sys: PolynomialSystem<_, _, _> = terms.into_iter().collect();
         let expected = expect![[r#"
-            dI = ((-1) γ) I + β I S
+            dI = (-γ) I + β I S
             dR = γ I
-            dS = ((-1) β) I S
+            dS = (-β) I S
         "#]];
         expected.assert_eq(&sys.to_string());
 
         let sys = sys.extend_scalars(|p| p.eval(|_| 1.0));
         let expected = expect![[r#"
-            dI = (-1) I + I S
+            dI = -I + I S
             dR = I
-            dS = (-1) I S
+            dS = -I S
         "#]];
         expected.assert_eq(&sys.to_string());
 
