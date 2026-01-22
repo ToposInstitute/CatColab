@@ -6,6 +6,7 @@ import {
     createNumericalColumn,
     ExpandableTable,
     FixedTableEditor,
+    Foldable,
     KatexDisplay,
 } from "catcolab-ui-components";
 import type { MassActionProblemData, MorType, ObType, QualifiedName } from "catlog-wasm";
@@ -103,29 +104,25 @@ export default function MassAction(
 
     return (
         <div class="simulation">
-            <BlockTitle
-                title={props.title}
-                settingsPane={
-                    <div class="parameters">
-                        <FixedTableEditor rows={obGenerators()} schema={obSchema} />
-                        <FixedTableEditor rows={morGenerators()} schema={morSchema} />
-                        <FixedTableEditor rows={[null]} schema={toplevelSchema} />
-                    </div>
-                }
-            />
-            <Show when={(latexEquations() ?? []).length > 0}>
-                <div class="mass-action-equations">
-                    <ExpandableTable
-                        rows={latexEquations() ?? []}
-                        title="Equations"
-                        columns={[
-                            { cell: (row) => <KatexDisplay math={row[0] ?? ""} /> },
-                            { cell: (row) => <KatexDisplay math={row[1] ?? ""} /> },
-                            { cell: (row) => <KatexDisplay math={row[2] ?? ""} /> },
-                        ]}
-                    />
+            <BlockTitle title={props.title} />
+            <Foldable title="Parameters" defaultExpanded>
+                <div class="parameters">
+                    <FixedTableEditor rows={obGenerators()} schema={obSchema} />
+                    <FixedTableEditor rows={morGenerators()} schema={morSchema} />
+                    <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
-            </Show>
+            </Foldable>
+            <Foldable title="Equations">
+                <ExpandableTable
+                    rows={latexEquations() ?? []}
+                    threshold={20}
+                    columns={[
+                        { cell: (row) => <KatexDisplay math={row[0] ?? ""} /> },
+                        { cell: (row) => <KatexDisplay math={row[1] ?? ""} /> },
+                        { cell: (row) => <KatexDisplay math={row[2] ?? ""} /> },
+                    ]}
+                />
+            </Foldable>
             <ODEResultPlot result={plotResult()} />
         </div>
     );

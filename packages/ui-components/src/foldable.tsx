@@ -18,8 +18,10 @@ export function Foldable(props: {
     header?: JSX.Element;
     /** Content that is expanded or folded. */
     children: JSX.Element;
+    /** Whether the foldable should be expanded by default. */
+    defaultExpanded?: boolean;
 }) {
-    const [isExpanded, setIsExpanded] = createSignal(false);
+    const [isExpanded, setIsExpanded] = createSignal(props.defaultExpanded ?? false);
 
     return (
         <Discloure expanded={isExpanded()} onExpandedChange={setIsExpanded} collapseBehavior="hide">
