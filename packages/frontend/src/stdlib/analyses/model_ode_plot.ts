@@ -1,8 +1,14 @@
 import { type Accessor, createMemo } from "solid-js";
 
-import type { DblModel, JsResult, ODELatex, ODEResult } from "catlog-wasm";
+import type { DblModel, JsResult, ODELatex, ODEResult, ODEResultWithEquations } from "catlog-wasm";
 import type { ValidatedModel } from "../../model";
 import type { ODEPlotData, StateVarData } from "../../visualization";
+
+/** Result of simulating an ODE with equations, containing both plot data and LaTeX equations. */
+export type ODEPlotDataWithEquations = {
+    plotData: JsResult<ODEPlotData, string>;
+    equations: string[][];
+};
 
 /** Replace braced UUIDs in equation strings with human-readable labels from the model. */
 function replaceUuidsWithLabels(equation: string, model: DblModel): string {
@@ -62,6 +68,33 @@ export function createModelODEPlot(
             const model = validated.model;
             const solutionResult = simulate(model);
             return solutionToPlotData(model, solutionResult);
+        },
+        undefined,
+        { equals: false },
+    );
+}
+
+/** Reactively simulate an ODE with equations derived from a model.
+
+Returns both plot data and LaTeX equations with UUIDs replaced by human-readable labels.
+ */
+export function createModelODEPlotWithEquations(
+    validatedModel: Accessor<ValidatedModel | undefined>,
+    simulate: (model: DblModel) => ODEResultWithEquations,
+) {
+    return createMemo<ODEPlotDataWithEquations | undefined>(
+        () => {
+            const validated = validatedModel();
+            if (validated?.tag !== "Valid") {
+                return;
+            }
+            const model = validated.model;
+            const result = simulate(model);
+            const plotData = solutionToPlotData(model, result.solution);
+            const equations = result.equations.map((row) =>
+                row.map((cell) => replaceUuidsWithLabels(cell, model)),
+            );
+            return { plotData, equations };
         },
         undefined,
         { equals: false },

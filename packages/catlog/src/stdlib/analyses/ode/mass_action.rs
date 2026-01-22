@@ -141,15 +141,6 @@ impl PetriNetMassActionAnalysis {
         sys.normalize()
     }
 
-    /// Creates a mass-action system with numerical rate coefficients.
-    pub fn build_numerical_system(
-        &self,
-        model: &ModalDblModel,
-        data: MassActionProblemData,
-    ) -> ODEAnalysis<NumericalPolynomialSystem<i8>> {
-        into_numerical_system(self.build_system(model), data)
-    }
-
     /// Creates a stochastic mass-action system.
     pub fn build_stochastic_system(
         &self,
@@ -294,21 +285,23 @@ impl StockFlowMassActionAnalysis {
         }
         sys
     }
-
-    /// Creates a mass-action system with numerical rate coefficients.
-    pub fn build_numerical_system(
-        &self,
-        model: &DiscreteTabModel,
-        data: MassActionProblemData,
-    ) -> ODEAnalysis<NumericalPolynomialSystem<i8>> {
-        into_numerical_system(self.build_system(model), data)
-    }
 }
 
-fn into_numerical_system(
+/// Result of converting a symbolic system to a numerical one.
+pub struct NumericalSystemWithEquations {
+    /// The ODE analysis ready for solving.
+    pub analysis: ODEAnalysis<NumericalPolynomialSystem<i8>>,
+    /// The equations in LaTeX format with parameters substituted.
+    pub equations: Vec<Vec<String>>,
+}
+
+/// Converts to a mass-action system with numerical rate coefficients.
+pub fn into_numerical_system(
     sys: PolynomialSystem<QualifiedName, Parameter<QualifiedName>, i8>,
     data: MassActionProblemData,
-) -> ODEAnalysis<NumericalPolynomialSystem<i8>> {
+) -> NumericalSystemWithEquations {
+    use crate::simulate::ode::polynomial::ToLatex;
+
     let ob_index: IndexMap<_, _> =
         sys.components.keys().cloned().enumerate().map(|(i, x)| (x, i)).collect();
     let n = ob_index.len();
@@ -318,12 +311,17 @@ fn into_numerical_system(
         .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
     let x0 = DVector::from_iterator(n, initial_values);
 
-    let sys = sys
-        .extend_scalars(|poly| poly.eval(|flow| data.rates.get(flow).copied().unwrap_or_default()))
-        .to_numerical();
+    let with_scalars = sys.extend_scalars(|poly| {
+        poly.eval(|flow| data.rates.get(flow).copied().unwrap_or_default())
+    });
+    let equations = with_scalars.to_latex();
+    let num_sys = with_scalars.to_numerical();
+    let problem = ODEProblem::new(num_sys, x0).end_time(data.duration);
 
-    let problem = ODEProblem::new(sys, x0).end_time(data.duration);
-    ODEAnalysis::new(problem, ob_index)
+    NumericalSystemWithEquations {
+        analysis: ODEAnalysis::new(problem, ob_index),
+        equations,
+    }
 }
 
 #[cfg(test)]

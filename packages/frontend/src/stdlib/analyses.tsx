@@ -147,7 +147,6 @@ const LotkaVolterra = lazy(() => import("./analyses/lotka_volterra"));
 export function massAction(
     options: Partial<AnalysisOptions> & {
         simulate: Simulators.MassActionSimulator;
-        getEquations: Simulators.MassActionEquations;
         stateType?: ObType;
         transitionType?: MorType;
     },

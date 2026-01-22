@@ -9,6 +9,7 @@ use wasm_bindgen::prelude::*;
 
 use catlog::dbl::theory;
 use catlog::one::Path;
+use catlog::simulate::ode::polynomial::ToLatex;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 use catlog::zero::name;
 
@@ -293,20 +294,21 @@ impl ThCategoryLinks {
         &self,
         model: &DblModel,
         data: analyses::ode::MassActionProblemData,
-    ) -> Result<ODEResult, String> {
-        Ok(ODEResult(
-            analyses::ode::StockFlowMassActionAnalysis::default()
-                .build_numerical_system(model.discrete_tab()?, data)
-                .solve_with_defaults()
-                .map_err(|err| format!("{err:?}"))
-                .into(),
-        ))
+    ) -> Result<ODEResultWithEquations, String> {
+        let tab_model = model.discrete_tab()?;
+        let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
+        let sys = analysis.build_system(tab_model);
+        let num_sys = analyses::ode::into_numerical_system(sys, data);
+        let solution = num_sys.analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
+        Ok(ODEResultWithEquations {
+            solution: solution.into(),
+            equations: num_sys.equations,
+        })
     }
 
     /// Returns the symbolic mass-action equations in LaTeX format.
     #[wasm_bindgen(js_name = "massActionEquations")]
     pub fn mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
-        use catlog::simulate::ode::polynomial::ToLatex;
         let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
         let tab_model = model.discrete_tab()?;
         let sys = analysis.build_system(tab_model);
@@ -336,20 +338,21 @@ impl ThCategorySignedLinks {
         &self,
         model: &DblModel,
         data: analyses::ode::MassActionProblemData,
-    ) -> Result<ODEResult, String> {
-        Ok(ODEResult(
-            analyses::ode::StockFlowMassActionAnalysis::default()
-                .build_numerical_system(model.discrete_tab()?, data)
-                .solve_with_defaults()
-                .map_err(|err| format!("{err:?}"))
-                .into(),
-        ))
+    ) -> Result<ODEResultWithEquations, String> {
+        let tab_model = model.discrete_tab()?;
+        let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
+        let sys = analysis.build_system(tab_model);
+        let num_sys = analyses::ode::into_numerical_system(sys, data);
+        let solution = num_sys.analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
+        Ok(ODEResultWithEquations {
+            solution: solution.into(),
+            equations: num_sys.equations,
+        })
     }
 
     /// Returns the symbolic mass-action equations in LaTeX format.
     #[wasm_bindgen(js_name = "massActionEquations")]
     pub fn mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
-        use catlog::simulate::ode::polynomial::ToLatex;
         let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
         let tab_model = model.discrete_tab()?;
         let sys = analysis.build_system(tab_model);
@@ -379,20 +382,21 @@ impl ThSymMonoidalCategory {
         &self,
         model: &DblModel,
         data: analyses::ode::MassActionProblemData,
-    ) -> Result<ODEResult, String> {
-        Ok(ODEResult(
-            analyses::ode::PetriNetMassActionAnalysis::default()
-                .build_numerical_system(model.modal()?, data)
-                .solve_with_defaults()
-                .map_err(|err| format!("{err:?}"))
-                .into(),
-        ))
+    ) -> Result<ODEResultWithEquations, String> {
+        let modal_model = model.modal()?;
+        let analysis = analyses::ode::PetriNetMassActionAnalysis::default();
+        let sys = analysis.build_system(modal_model.as_ref());
+        let num_sys = analyses::ode::into_numerical_system(sys, data);
+        let solution = num_sys.analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
+        Ok(ODEResultWithEquations {
+            solution: solution.into(),
+            equations: num_sys.equations,
+        })
     }
 
     /// Returns the symbolic mass-action equations in LaTeX format.
     #[wasm_bindgen(js_name = "massActionEquations")]
     pub fn mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
-        use catlog::simulate::ode::polynomial::ToLatex;
         let analysis = analyses::ode::PetriNetMassActionAnalysis::default();
         let modal_model = model.modal()?;
         let sys = analysis.build_system(modal_model.as_ref());

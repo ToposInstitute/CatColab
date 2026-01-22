@@ -8,12 +8,12 @@ import {
     FixedTableEditor,
     KatexDisplay,
 } from "catcolab-ui-components";
-import type { DblModel, MassActionProblemData, MorType, ObType, QualifiedName } from "catlog-wasm";
+import type { MassActionProblemData, MorType, ObType, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
-import { createModelODELatex, createModelODEPlot } from "./model_ode_plot";
-import type { MassActionEquations, MassActionSimulator } from "./simulator_types";
+import { createModelODEPlotWithEquations } from "./model_ode_plot";
+import type { MassActionSimulator } from "./simulator_types";
 
 import "./simulation.css";
 
@@ -21,7 +21,6 @@ import "./simulation.css";
 export default function MassAction(
     props: ModelAnalysisProps<MassActionProblemData> & {
         simulate: MassActionSimulator;
-        getEquations: MassActionEquations;
         stateType?: ObType;
         transitionType?: MorType;
         title?: string;
@@ -94,15 +93,13 @@ export default function MassAction(
         }),
     ];
 
-    const plotResult = createModelODEPlot(
+    const result = createModelODEPlotWithEquations(
         () => props.liveModel.validatedModel(),
-        (model: DblModel) => props.simulate(model, props.content),
+        (model) => props.simulate(model, props.content),
     );
 
-    const equations = createModelODELatex(
-        () => props.liveModel.validatedModel(),
-        (model: DblModel) => props.getEquations(model),
-    );
+    const plotResult = () => result()?.plotData;
+    const equations = () => result()?.equations;
 
     return (
         <div class="simulation">

@@ -130,6 +130,7 @@ where
         result
     }
 }
+
 impl<Var, Coef, Exp> FromIterator<(Var, Polynomial<Var, Coef, Exp>)>
     for PolynomialSystem<Var, Coef, Exp>
 where
