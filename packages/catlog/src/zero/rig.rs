@@ -168,6 +168,62 @@ where
     }
 }
 
+impl<Var, Coef> Combination<Var, Coef>
+where
+    Var: Display,
+    Coef: Display + PartialEq + One,
+{
+    /// Convert to a LaTeX string
+    pub fn to_latex(&self) -> String {
+        let is_simple = |s: &str| {
+            // Numeric: digits and dots
+            if s.chars().all(|c| c.is_ascii_digit() || c == '.') {
+                return true;
+            }
+            // Alphabetic identifier
+            if s.chars().all(|c| c.is_alphabetic()) {
+                return true;
+            }
+            // Braced identifier like {uuid} or {name}
+            if s.starts_with('{') && s.ends_with('}') && s.matches('{').count() == 1 {
+                return true;
+            }
+            false
+        };
+
+        let fmt_scalar_mul = |coef: &Coef, var: &Var| -> String {
+            if coef.is_one() {
+                format!("{var}")
+            } else {
+                let coef_str = coef.to_string();
+                if coef_str == "-1" {
+                    format!("-{var}")
+                } else if is_simple(&coef_str) {
+                    format!("{coef_str} {var}")
+                } else {
+                    format!("({coef_str}) {var}")
+                }
+            }
+        };
+
+        let mut pairs = self.0.iter();
+        let mut output = String::new();
+
+        if let Some((var, coef)) = pairs.next() {
+            output.push_str(&fmt_scalar_mul(coef, var));
+        } else {
+            output.push('0');
+        }
+
+        for (var, coef) in pairs {
+            output.push_str(" + ");
+            output.push_str(&fmt_scalar_mul(coef, var));
+        }
+
+        output
+    }
+}
+
 /// Constructs a combination from a list of terms (coefficient-variable pairs).
 impl<Var, Coef> FromIterator<(Coef, Var)> for Combination<Var, Coef>
 where
@@ -205,56 +261,17 @@ impl<'a, Var, Coef> IntoIterator for &'a Combination<Var, Coef> {
     }
 }
 
-/// Pretty print the combination using ASCII.
+/// Print the combination using ASCII.
 ///
-/// Intended for debugging/testing rather than any serious use.
+/// Intended for debugging/testing. It currently just uses the LaTeX format since we are not yet
+/// using any LaTeX-specific characters there.
 impl<Var, Coef> Display for Combination<Var, Coef>
 where
     Var: Display,
     Coef: Display + PartialEq + One,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let is_simple = |s: &str| {
-            // Numeric: digits and dots
-            if s.chars().all(|c| c.is_ascii_digit() || c == '.') {
-                return true;
-            }
-            // Alphabetic identifier
-            if s.chars().all(|c| c.is_alphabetic()) {
-                return true;
-            }
-            // Braced identifier like {uuid} or {name}
-            if s.starts_with('{') && s.ends_with('}') && s.matches('{').count() == 1 {
-                return true;
-            }
-            false
-        };
-
-        let mut pairs = self.0.iter();
-        let fmt_scalar_mul = |f: &mut std::fmt::Formatter<'_>, coef: &Coef, var: &Var| {
-            if coef.is_one() {
-                write!(f, "{var}")
-            } else {
-                let coef_str = coef.to_string();
-                if coef_str == "-1" {
-                    write!(f, "-{var}")
-                } else if is_simple(&coef_str) {
-                    write!(f, "{coef_str} {var}")
-                } else {
-                    write!(f, "({coef_str}) {var}")
-                }
-            }
-        };
-        if let Some((var, coef)) = pairs.next() {
-            fmt_scalar_mul(f, coef, var)?;
-        } else {
-            write!(f, "0")?;
-        }
-        for (var, coef) in pairs {
-            write!(f, " + ")?;
-            fmt_scalar_mul(f, coef, var)?;
-        }
-        Ok(())
+        write!(f, "{}", self.to_latex())
     }
 }
 

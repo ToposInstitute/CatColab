@@ -146,6 +146,18 @@ where
     }
 }
 
+impl<Var, Coef, Exp> Polynomial<Var, Coef, Exp>
+where
+    Var: Display,
+    Coef: Display + PartialEq + One,
+    Exp: Display + PartialEq + One,
+{
+    /// Convert to a LaTeX string
+    pub fn to_latex(&self) -> String {
+        self.0.to_latex()
+    }
+}
+
 impl<Var, Coef, Exp> FromIterator<(Coef, Monomial<Var, Exp>)> for Polynomial<Var, Coef, Exp>
 where
     Var: Ord,
@@ -164,7 +176,7 @@ where
     Exp: Display + PartialEq + One,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
+        write!(f, "{}", self.to_latex())
     }
 }
 

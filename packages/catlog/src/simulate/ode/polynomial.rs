@@ -104,7 +104,7 @@ where
             .iter()
             .map(|(var, poly)| LatexEquation {
                 lhs: format!("\\dot{{{var}}}"),
-                rhs: poly.to_string(),
+                rhs: poly.to_latex(),
             })
             .collect()
     }
