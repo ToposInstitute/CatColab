@@ -171,7 +171,7 @@ where
 impl<Var, Coef> Combination<Var, Coef>
 where
     Var: Display,
-    Coef: Display + PartialEq + One,
+    Coef: Display + PartialEq + One + Neg<Output = Coef>,
 {
     /// Convert to a LaTeX string
     pub fn to_latex(&self) -> String {
@@ -194,11 +194,11 @@ where
         let fmt_scalar_mul = |coef: &Coef, var: &Var| -> String {
             if coef.is_one() {
                 format!("{var}")
+            } else if *coef == Coef::one().neg() {
+                format!("-{var}")
             } else {
                 let coef_str = coef.to_string();
-                if coef_str == "-1" {
-                    format!("-{var}")
-                } else if is_simple(&coef_str) {
+                if is_simple(&coef_str) {
                     format!("{coef_str} {var}")
                 } else {
                     format!("({coef_str}) {var}")
@@ -268,7 +268,7 @@ impl<'a, Var, Coef> IntoIterator for &'a Combination<Var, Coef> {
 impl<Var, Coef> Display for Combination<Var, Coef>
 where
     Var: Display,
-    Coef: Display + PartialEq + One,
+    Coef: Display + PartialEq + One + Neg<Output = Coef>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.to_latex())
@@ -627,18 +627,18 @@ mod tests {
 
     #[test]
     fn combinations() {
-        let x = || Combination::generator('x');
-        let y = || Combination::generator('y');
+        let x = || Combination::<_, i32>::generator('x');
+        let y = || Combination::<_, i32>::generator('y');
         assert_eq!(x().to_string(), "x");
         assert_eq!((x() + y() + y() + x()).to_string(), "2 x + 2 y");
 
-        let combination = x() * 2u32 + y() * 3u32;
+        let combination = x() * 2 + y() * 3;
         assert_eq!(combination.to_string(), "2 x + 3 y");
         assert_eq!(combination.eval_with_order([5, 1]), 13);
         let vars: Vec<_> = combination.variables().cloned().collect();
         assert_eq!(vars, vec!['x', 'y']);
 
-        assert_eq!(Combination::<char, u32>::zero().to_string(), "0");
+        assert_eq!(Combination::<char, i32>::zero().to_string(), "0");
 
         let x = Combination::generator('x');
         assert_eq!((x.clone() * -1i32).to_string(), "-x");

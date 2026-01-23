@@ -149,7 +149,7 @@ where
 impl<Var, Coef, Exp> Polynomial<Var, Coef, Exp>
 where
     Var: Display,
-    Coef: Display + PartialEq + One,
+    Coef: Display + PartialEq + One + Neg<Output = Coef>,
     Exp: Display + PartialEq + One,
 {
     /// Convert to a LaTeX string
@@ -172,7 +172,7 @@ where
 impl<Var, Coef, Exp> Display for Polynomial<Var, Coef, Exp>
 where
     Var: Display,
-    Coef: Display + PartialEq + One,
+    Coef: Display + PartialEq + One + Neg<Output = Coef>,
     Exp: Display + PartialEq + One,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

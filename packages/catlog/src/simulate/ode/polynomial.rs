@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 use std::fmt::Display;
-use std::ops::Add;
+use std::ops::{Add, Neg};
 
 use derivative::Derivative;
 use nalgebra::DVector;
@@ -97,7 +97,7 @@ where
     pub fn to_latex_equations(&self) -> Vec<LatexEquation>
     where
         Var: Display,
-        Coef: Display + PartialEq + One,
+        Coef: Display + PartialEq + One + Neg<Output = Coef>,
         Exp: Display + PartialEq + One,
     {
         self.components
@@ -146,7 +146,7 @@ where
 impl<Var, Coef, Exp> Display for PolynomialSystem<Var, Coef, Exp>
 where
     Var: Display,
-    Coef: Display + PartialEq + One,
+    Coef: Display + PartialEq + One + Neg<Output = Coef>,
     Exp: Display + PartialEq + One,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
