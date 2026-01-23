@@ -9,7 +9,7 @@ use wasm_bindgen::prelude::*;
 
 use catlog::dbl::theory;
 use catlog::one::Path;
-use catlog::simulate::ode::PolynomialSystem;
+use catlog::simulate::ode::{LatexEquation, PolynomialSystem};
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 use catlog::zero::{QualifiedName, alg::Polynomial, name};
 
@@ -20,7 +20,7 @@ use super::{analyses::*, model::DblModel, theory::DblTheory};
 fn latex_with_labels(
     system: &PolynomialSystem<QualifiedName, Polynomial<QualifiedName, f32, i8>, i8>,
     model: &DblModel,
-) -> Vec<Vec<String>> {
+) -> Vec<LatexEquation> {
     let ob_name = |id: &QualifiedName| {
         let name = model
             .ob_generator_label(id)
@@ -42,7 +42,7 @@ fn latex_with_labels(
     system
         .map_variables(ob_name)
         .extend_scalars(|param| param.map_variables(mor_name))
-        .to_latex()
+        .to_latex_equations()
 }
 
 /// The empty or initial theory.

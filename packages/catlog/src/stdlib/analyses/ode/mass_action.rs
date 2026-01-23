@@ -21,7 +21,9 @@ use crate::dbl::{
     theory::{ModalMorType, ModalObType, TabMorType, TabObType},
 };
 use crate::one::FgCategory;
-use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
+use crate::simulate::ode::{
+    LatexEquation, NumericalPolynomialSystem, ODEProblem, PolynomialSystem,
+};
 use crate::zero::{QualifiedName, alg::Polynomial, name, rig::Monomial};
 
 /// Data defining a mass-action ODE problem for a model.
@@ -292,7 +294,7 @@ pub struct NumericalSystemWithEquations {
     /// The ODE analysis ready for solving.
     pub analysis: ODEAnalysis<NumericalPolynomialSystem<i8>>,
     /// The equations in LaTeX format with parameters substituted.
-    pub latex_equations: Vec<Vec<String>>,
+    pub latex_equations: Vec<LatexEquation>,
 }
 
 /// Converts to a mass-action system with numerical rate coefficients.
@@ -311,7 +313,7 @@ pub fn into_numerical_system(
 
     let with_scalars = sys
         .extend_scalars(|poly| poly.eval(|flow| data.rates.get(flow).copied().unwrap_or_default()));
-    let equations = with_scalars.to_latex();
+    let equations = with_scalars.to_latex_equations();
     let num_sys = with_scalars.to_numerical();
     let problem = ODEProblem::new(num_sys, x0).end_time(data.duration);
 
@@ -402,9 +404,15 @@ mod tests {
         let model = backward_link(th);
         let sys = StockFlowMassActionAnalysis::default().build_system(&model);
         let expected = vec![
-            vec!["\\dot{x}".to_string(), "=".to_string(), "(-f) x y".to_string()],
-            vec!["\\dot{y}".to_string(), "=".to_string(), "f x y".to_string()],
+            LatexEquation {
+                lhs: "\\dot{x}".to_string(),
+                rhs: "(-f) x y".to_string(),
+            },
+            LatexEquation {
+                lhs: "\\dot{y}".to_string(),
+                rhs: "f x y".to_string(),
+            },
         ];
-        assert_eq!(expected, sys.to_latex());
+        assert_eq!(expected, sys.to_latex_equations());
     }
 }

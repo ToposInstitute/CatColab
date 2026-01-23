@@ -8,6 +8,11 @@ use derivative::Derivative;
 use nalgebra::DVector;
 use num_traits::{One, Pow, Zero};
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+#[cfg(feature = "serde-wasm")]
+use tsify::Tsify;
+
 #[cfg(test)]
 use super::ODEProblem;
 use super::ODESystem;
@@ -88,24 +93,33 @@ where
         PolynomialSystem { components }
     }
 
-    /// Converts to a 2D vector of LaTeX strings.
-    ///We are using 2D vectors for laying them out as tables down the line.
-    pub fn to_latex(&self) -> Vec<Vec<String>>
+    /// Converts to equations as LaTeX strings.
+    pub fn to_latex_equations(&self) -> Vec<LatexEquation>
     where
         Var: Display,
         Coef: Display + PartialEq + One,
         Exp: Display + PartialEq + One,
     {
-        let mut result = Vec::new();
-        for (var, poly) in self.components.iter() {
-            let mut row = Vec::new();
-            row.push(format!("\\dot{{{var}}}"));
-            row.push("=".to_string());
-            row.push(poly.to_string());
-            result.push(row);
-        }
-        result
+        self.components
+            .iter()
+            .map(|(var, poly)| LatexEquation {
+                lhs: format!("\\dot{{{var}}}"),
+                rhs: poly.to_string(),
+            })
+            .collect()
     }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
+/// An equation in LaTeX format with a left-hand side and a right-hand side.
+pub struct LatexEquation {
+    /// The left-hand side of the equation.
+    pub lhs: String,
+    /// The right-hand side of the equation.
+    pub rhs: String,
 }
 
 impl<Var, Exp> PolynomialSystem<Var, f32, Exp>
