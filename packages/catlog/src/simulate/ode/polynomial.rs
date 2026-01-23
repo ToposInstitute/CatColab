@@ -51,6 +51,25 @@ where
         self.map(|poly| poly.extend_scalars(f.clone()))
     }
 
+    /// Maps the variables of the polynomials comprising the system.
+    pub fn map_variables<NewVar, F>(&self, mut f: F) -> PolynomialSystem<NewVar, Coef, Exp>
+    where
+        NewVar: Clone + Ord,
+        Coef: Clone + Add<Output = Coef>,
+        Exp: Clone + Add<Output = Exp>,
+        F: FnMut(&Var) -> NewVar,
+    {
+        let components = self
+            .components
+            .iter()
+            .map(|(var, poly)| {
+                let new_var = f(var);
+                (new_var, poly.map_variables(|v| f(v)))
+            })
+            .collect();
+        PolynomialSystem { components }
+    }
+
     /// Normalizes the polynomial system by normalizing each polynomial in it.
     pub fn normalize(self) -> Self
     where

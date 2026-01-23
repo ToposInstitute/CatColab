@@ -1,32 +1,21 @@
 import { type Accessor, createMemo } from "solid-js";
 
-import type { DblModel, JsResult, ODELatex, ODEResult, ODEResultWithEquations } from "catlog-wasm";
+import type {
+    DblModel,
+    JsResult,
+    LatexEquation,
+    ODELatex,
+    ODEResult,
+    ODEResultWithEquations,
+} from "catlog-wasm";
 import type { ValidatedModel } from "../../model";
 import type { ODEPlotData, StateVarData } from "../../visualization";
 
 /** Result of simulating an ODE with equations, containing both plot data and LaTeX equations. */
 export type ODEPlotDataWithEquations = {
     plotData: JsResult<ODEPlotData, string>;
-    latexEquations: string[][];
+    latexEquations: LatexEquation[];
 };
-
-/** Replace braced UUIDs in equation strings with human-readable labels from the model. */
-function replaceUuidsWithLabels(equation: string, model: DblModel): string {
-    const uuidPattern =
-        /\{([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\}/g;
-
-    return equation.replace(uuidPattern, (_match, uuid) => {
-        const morLabel = model.morGeneratorLabel(uuid);
-        if (morLabel) {
-            return `r_{\\text{${morLabel.join(".")}}}`;
-        }
-        const obLabel = model.obGeneratorLabel(uuid);
-        if (obLabel) {
-            return obLabel.join(".");
-        }
-        return "\\text{Unnamed}";
-    });
-}
 
 /** Convert an ODE solution result to plot data for a model. */
 function solutionToPlotData(
@@ -76,7 +65,7 @@ export function createModelODEPlot(
 
 /** Reactively simulate an ODE with equations derived from a model.
 
-Returns both plot data and LaTeX equations with UUIDs replaced by human-readable labels.
+Returns both plot data and LaTeX equations.
  */
 export function createModelODEPlotWithEquations(
     validatedModel: Accessor<ValidatedModel | undefined>,
@@ -91,10 +80,7 @@ export function createModelODEPlotWithEquations(
             const model = validated.model;
             const result = simulate(model);
             const plotData = solutionToPlotData(model, result.solution);
-            const latexEquations = result.latexEquations.map((row) =>
-                row.map((cell) => replaceUuidsWithLabels(cell, model)),
-            );
-            return { plotData, latexEquations };
+            return { plotData, latexEquations: result.latexEquations };
         },
         undefined,
         { equals: false },
@@ -103,13 +89,12 @@ export function createModelODEPlotWithEquations(
 
 /** Reactively compute the symbolic ODE equations for a model in LaTeX.
 
-Returns equations with UUIDs replaced by human-readable labels.
  */
 export function createModelODELatex(
     validatedModel: Accessor<ValidatedModel | undefined>,
     getEquations: (model: DblModel) => ODELatex,
 ) {
-    return createMemo<string[][] | undefined>(
+    return createMemo<LatexEquation[] | undefined>(
         () => {
             const validated = validatedModel();
             if (validated?.tag !== "Valid") {
@@ -117,7 +102,7 @@ export function createModelODELatex(
             }
             const model = validated.model;
             const latex = getEquations(model);
-            return latex.map((row) => row.map((cell) => replaceUuidsWithLabels(cell, model)));
+            return latex;
         },
         undefined,
         { equals: false },

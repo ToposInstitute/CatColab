@@ -102,7 +102,7 @@ export default function MassAction(
     );
 
     const plotResult = () => result()?.plotData;
-    const latexEquations = () => result()?.latexEquations;
+    const latexEquations = () => result()?.latexEquations ?? [];
 
     return (
         <div class="simulation">
@@ -116,12 +116,12 @@ export default function MassAction(
             </Foldable>
             <Foldable title="Equations" class={styles.equations}>
                 <ExpandableTable
-                    rows={latexEquations() ?? []}
                     threshold={20}
+                    rows={latexEquations()}
                     columns={[
-                        { cell: (row) => <KatexDisplay math={row[0] ?? ""} /> },
-                        { cell: (row) => <KatexDisplay math={row[1] ?? ""} /> },
-                        { cell: (row) => <KatexDisplay math={row[2] ?? ""} /> },
+                        { cell: (row) => <KatexDisplay math={row.lhs} /> },
+                        { cell: () => <KatexDisplay math="=" /> },
+                        { cell: (row) => <KatexDisplay math={row.rhs} /> },
                     ]}
                 />
             </Foldable>

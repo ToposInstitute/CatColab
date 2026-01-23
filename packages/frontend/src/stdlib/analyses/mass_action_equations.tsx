@@ -24,9 +24,9 @@ export default function MassActionEquationsDisplay(
                 rows={latexEquations() ?? []}
                 threshold={20}
                 columns={[
-                    { cell: (row) => <KatexDisplay math={row[0] ?? ""} /> },
-                    { cell: (row) => <KatexDisplay math={row[1] ?? ""} /> },
-                    { cell: (row) => <KatexDisplay math={row[2] ?? ""} /> },
+                    { cell: (row) => <KatexDisplay math={row.lhs} /> },
+                    { cell: () => <KatexDisplay math="=" /> },
+                    { cell: (row) => <KatexDisplay math={row.rhs} /> },
                 ]}
             />
         </div>
