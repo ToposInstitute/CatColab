@@ -9,7 +9,7 @@ use wasm_bindgen::prelude::*;
 
 use catlog::dbl::theory;
 use catlog::one::Path;
-use catlog::simulate::ode::{PolynomialSystem, polynomial::ToLatex};
+use catlog::simulate::ode::PolynomialSystem;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 use catlog::zero::{QualifiedName, alg::Polynomial, name};
 

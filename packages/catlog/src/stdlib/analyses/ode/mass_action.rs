@@ -300,8 +300,6 @@ pub fn into_numerical_system(
     sys: PolynomialSystem<QualifiedName, Parameter<QualifiedName>, i8>,
     data: MassActionProblemData,
 ) -> NumericalSystemWithEquations {
-    use crate::simulate::ode::polynomial::ToLatex;
-
     let ob_index: IndexMap<_, _> =
         sys.components.keys().cloned().enumerate().map(|(i, x)| (x, i)).collect();
     let n = ob_index.len();
@@ -329,7 +327,6 @@ mod tests {
     use std::rc::Rc;
 
     use super::*;
-    use crate::simulate::ode::polynomial::ToLatex;
     use crate::stdlib::{models::*, theories::*};
 
     #[test]
