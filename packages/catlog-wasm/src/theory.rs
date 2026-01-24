@@ -291,6 +291,26 @@ impl DblTheory {
 
 #[wasm_bindgen]
 impl DblTheory {
+    /// Returns whether the theory contains the object type.
+    #[wasm_bindgen(js_name = "hasObType")]
+    pub fn has_ob_type(&self, ob_type: ObType) -> Result<bool, String> {
+        all_the_same!(match &self.0 {
+            DblTheoryBox::[Discrete, DiscreteTab, Modal](th) => {
+                Ok(th.has_ob_type(&Elaborator.elab(&ob_type)?))
+            }
+        })
+    }
+
+    /// Returns whether the theory contains the morphism type.
+    #[wasm_bindgen(js_name = "hasMorType")]
+    pub fn has_mor_type(&self, mor_type: MorType) -> Result<bool, String> {
+        all_the_same!(match &self.0 {
+            DblTheoryBox::[Discrete, DiscreteTab, Modal](th) => {
+                Ok(th.has_mor_type(&Elaborator.elab(&mor_type)?))
+            }
+        })
+    }
+
     /// Gets the source of a morphism type.
     #[wasm_bindgen]
     pub fn src(&self, mor_type: MorType) -> Result<ObType, String> {

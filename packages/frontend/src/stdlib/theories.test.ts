@@ -1,4 +1,4 @@
-import { assert, describe, expect, test } from "vitest";
+import { assert, describe, test } from "vitest";
 
 import { stdTheories } from "./theories.ts";
 
@@ -29,38 +29,27 @@ describe("Standard library of theories", () => {
         }
     });
 
-    test.sequential("mor and ob types in modelTypes should exist in WASM theory", async () => {
+    test.sequential("types bound for models should exist in theory", async () => {
         for (const meta of theories.allMetadata()) {
             const theory = await theories.get(meta.id);
-            for (const mt of theory.modelTypes) {
-                if (mt.tag === "MorType") {
-                    expect(() => theory.theory.src(mt.morType)).not.toThrow();
+            for (const meta of theory.modelTypes) {
+                if (meta.tag === "MorType") {
+                    assert(theory.theory.hasMorType(meta.morType));
                 } else {
-                    // ObType
-                    expect(() =>
-                        theory.theory.src({
-                            tag: "Hom",
-                            content: mt.obType,
-                        }),
-                    ).not.toThrow();
+                    assert(theory.theory.hasObType(meta.obType));
                 }
             }
         }
     });
 
-    test.sequential("mor and ob types in instanceTypes should exist in WASM theory", async () => {
+    test.sequential("types bound for instances should exist in theory", async () => {
         for (const meta of theories.allMetadata()) {
             const theory = await theories.get(meta.id);
-            for (const mt of theory.instanceTypes) {
-                if (mt.tag === "MorType") {
-                    expect(() => theory.theory.src(mt.morType)).not.toThrow();
+            for (const meta of theory.instanceTypes) {
+                if (meta.tag === "MorType") {
+                    assert(theory.theory.hasMorType(meta.morType));
                 } else {
-                    expect(() =>
-                        theory.theory.src({
-                            tag: "Hom",
-                            content: mt.obType,
-                        }),
-                    ).not.toThrow();
+                    assert(theory.theory.hasObType(meta.obType));
                 }
             }
         }
