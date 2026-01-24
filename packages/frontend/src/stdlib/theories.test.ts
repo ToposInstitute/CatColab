@@ -1,4 +1,4 @@
-import { assert, describe, test } from "vitest";
+import { assert, describe, expect, test } from "vitest";
 
 import { stdTheories } from "./theories.ts";
 
@@ -26,6 +26,43 @@ describe("Standard library of theories", () => {
             const theory = await theories.get(meta.id);
             assert(theory.inclusions.every((id) => theories.has(id)));
             assert(theory.migrationTargets.every((id) => theories.has(id)));
+        }
+    });
+
+    test.sequential("mor and ob types in modelTypes should exist in WASM theory", async () => {
+        for (const meta of theories.allMetadata()) {
+            const theory = await theories.get(meta.id);
+            for (const mt of theory.modelTypes) {
+                if (mt.tag === "MorType") {
+                    expect(() => theory.theory.src(mt.morType)).not.toThrow();
+                } else {
+                    // ObType
+                    expect(() =>
+                        theory.theory.src({
+                            tag: "Hom",
+                            content: mt.obType,
+                        }),
+                    ).not.toThrow();
+                }
+            }
+        }
+    });
+
+    test.sequential("mor and ob types in instanceTypes should exist in WASM theory", async () => {
+        for (const meta of theories.allMetadata()) {
+            const theory = await theories.get(meta.id);
+            for (const mt of theory.instanceTypes) {
+                if (mt.tag === "MorType") {
+                    expect(() => theory.theory.src(mt.morType)).not.toThrow();
+                } else {
+                    expect(() =>
+                        theory.theory.src({
+                            tag: "Hom",
+                            content: mt.obType,
+                        }),
+                    ).not.toThrow();
+                }
+            }
         }
     });
 });
