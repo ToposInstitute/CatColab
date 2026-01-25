@@ -22,6 +22,7 @@ jsonrpsee = "0.24.6"
 jsonrpsee-server = "0.24.6"
 notebook-types = { version = "0.1.0", path = "../notebook-types" }
 qubit = { version = "1.0.0-beta.0", features = ["ts-serde-json", "ts-uuid"] }
+rand = "0.8"
 regex = "1.11.1"
 samod = { git = "https://github.com/alexjg/samod", features = [
   "tokio",
