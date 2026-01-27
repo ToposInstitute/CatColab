@@ -10,8 +10,20 @@ use serde_json::Value;
 use ts_rs::TS;
 use uuid::Uuid;
 
+/// Maximum allowed document size in bytes (5MB).
+const MAX_DOCUMENT_SIZE: usize = 5 * 1024 * 1024;
+
 /// Creates a new document ref with initial content.
 pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
+    // Check document size before processing
+    let content_size = serde_json::to_string(&content).map(|s| s.len()).unwrap_or(0);
+    if content_size > MAX_DOCUMENT_SIZE {
+        return Err(AppError::Invalid(format!(
+            "Document size ({} bytes) exceeds maximum allowed size ({} bytes)",
+            content_size, MAX_DOCUMENT_SIZE
+        )));
+    }
+
     // Validate document structure by attempting to deserialize it
     let _validated_doc: notebook_types::VersionedDocument = serde_json::from_value(content.clone())
         .map_err(|e| AppError::Invalid(format!("Failed to parse document: {}", e)))?;
