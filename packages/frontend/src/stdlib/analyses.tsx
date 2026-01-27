@@ -174,6 +174,62 @@ export function massAction(
 
 const MassAction = lazy(() => import("./analyses/mass_action"));
 
+export function massActionEquations(
+    options: Partial<AnalysisOptions> & {
+        getEquations: Simulators.MassActionEquations;
+    },
+): ModelAnalysisMeta<Record<string, never>> {
+    const {
+        id = "mass-action-equations",
+        name = "Mass-action dynamics equations",
+        description = "Display the symbolic mass-action dynamics equations",
+        help = "mass-action-equations",
+        getEquations,
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => (
+            <MassActionEquationsDisplay title={name} getEquations={getEquations} {...props} />
+        ),
+        initialContent: () => ({}),
+    };
+}
+
+const MassActionEquationsDisplay = lazy(() => import("./analyses/mass_action_equations"));
+
+export function stochasticMassAction(
+    options: Partial<AnalysisOptions> & {
+        simulate: Simulators.StochasticMassActionSimulator;
+        stateType?: ObType;
+        transitionType?: MorType;
+    },
+): ModelAnalysisMeta<Simulators.MassActionProblemData> {
+    const {
+        id = "stochastic-mass-action",
+        name = "Stochastic mass-action dynamics",
+        description = "Simulate the system using stochastic mass-action dynamics",
+        help = "stochastic-mass-action",
+        ...otherOptions
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => <StochasticMassAction title={name} {...otherOptions} {...props} />,
+        initialContent: () => ({
+            rates: {},
+            initialValues: {},
+            duration: 10,
+        }),
+    };
+}
+
+const StochasticMassAction = lazy(() => import("./analyses/stochastic_mass_action"));
+
 export const modelGraph = (
     options: AnalysisOptions,
 ): ModelAnalysisMeta<GraphLayoutConfig.Config> => ({
