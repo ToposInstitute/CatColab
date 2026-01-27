@@ -366,9 +366,9 @@ mod tests {
         let model = catalyzed_reaction(th);
         let sys = PetriNetMassActionAnalysis::default().build_system(&model);
         let expected = expect!([r#"
-            dc = 0
             dx = (-f) c x
             dy = f c x
+            dc = 0
         "#]);
         expected.assert_eq(&sys.to_string());
     }

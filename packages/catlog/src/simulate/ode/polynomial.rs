@@ -1,10 +1,11 @@
 //! Polynomial differential equations.
 
-use std::collections::BTreeMap;
 use std::fmt::Display;
+use std::hash::Hash;
 use std::ops::{Add, Neg};
 
 use derivative::Derivative;
+use indexmap::IndexMap;
 use nalgebra::DVector;
 use num_traits::{One, Pow, Zero};
 
@@ -23,12 +24,12 @@ use crate::zero::alg::Polynomial;
 #[derivative(Default(bound = ""))]
 pub struct PolynomialSystem<Var, Coef, Exp> {
     /// Components of the vector field.
-    pub components: BTreeMap<Var, Polynomial<Var, Coef, Exp>>,
+    pub components: IndexMap<Var, Polynomial<Var, Coef, Exp>>,
 }
 
 impl<Var, Coef, Exp> PolynomialSystem<Var, Coef, Exp>
 where
-    Var: Ord,
+    Var: Hash + Ord,
     Exp: Ord,
 {
     /// Constructs a new polynomial system, with no equations.
@@ -59,7 +60,7 @@ where
     /// Maps the variables of the polynomials comprising the system.
     pub fn map_variables<NewVar, F>(&self, mut f: F) -> PolynomialSystem<NewVar, Coef, Exp>
     where
-        NewVar: Clone + Ord,
+        NewVar: Clone + Hash + Ord,
         Coef: Clone + Add<Output = Coef>,
         Exp: Clone + Add<Output = Exp>,
         F: FnMut(&Var) -> NewVar,
@@ -124,7 +125,7 @@ pub struct LatexEquation {
 
 impl<Var, Exp> PolynomialSystem<Var, f32, Exp>
 where
-    Var: Clone + Ord,
+    Var: Clone + Hash + Ord,
     Exp: Clone + Ord + Add<Output = Exp>,
 {
     /// Converts the polynomial system to a numerical one.
@@ -132,7 +133,7 @@ where
     /// The order of the components in the new system is given by the order of the
     /// variables in the old one.
     pub fn to_numerical(&self) -> NumericalPolynomialSystem<Exp> {
-        let indices: BTreeMap<Var, usize> =
+        let indices: IndexMap<Var, usize> =
             self.components.keys().enumerate().map(|(i, var)| (var.clone(), i)).collect();
         let components = self
             .components
@@ -160,7 +161,7 @@ where
 impl<Var, Coef, Exp> FromIterator<(Var, Polynomial<Var, Coef, Exp>)>
     for PolynomialSystem<Var, Coef, Exp>
 where
-    Var: Ord,
+    Var: Hash + Ord,
     Coef: Add<Output = Coef>,
     Exp: Ord,
 {
@@ -215,21 +216,21 @@ mod tests {
         ];
         let sys: PolynomialSystem<_, _, _> = terms.into_iter().collect();
         let expected = expect![[r#"
+            dS = (-β) I S
             dI = (-γ) I + β I S
             dR = γ I
-            dS = (-β) I S
         "#]];
         expected.assert_eq(&sys.to_string());
 
         let sys = sys.extend_scalars(|p| p.eval(|_| 1.0));
         let expected = expect![[r#"
+            dS = -I S
             dI = -I + I S
             dR = I
-            dS = -I S
         "#]];
         expected.assert_eq(&sys.to_string());
 
-        let initial = DVector::from_column_slice(&[1.0, 0.0, 4.0]);
+        let initial = DVector::from_column_slice(&[4.0, 1.0, 0.0]);
         let problem = ODEProblem::new(sys.to_numerical(), initial).end_time(5.0);
         let result = problem.solve_rk4(0.1).unwrap();
         let expected = expect![[r#"
