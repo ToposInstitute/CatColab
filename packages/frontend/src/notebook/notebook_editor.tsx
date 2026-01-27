@@ -95,16 +95,7 @@ export function NotebookEditor<T>(props: {
 
     // Optional annotations support - subscribe to changes
     const annotations = useAnnotations();
-    const annotationsAccessor = useSubscribe(annotations);
-
-    // Helper to get diff type for a cell
-    const getCellDiffType = (cellId: string): CellDiffType => {
-        const annotationsValue = annotationsAccessor?.();
-        if (!annotationsValue) return undefined;
-        // Cast handle to any to avoid version mismatch between automerge-repo versions
-        const cellRef = ref(props.handle as any, ...props.path, "cellContents", cellId);
-        return annotationsValue.onRef(cellRef).lookup(Diff)?.type as CellDiffType;
-    };
+   
 
     // Set up commands and their keyboard shortcuts.
     const addAfterActiveCell = (cell: Cell<T>) => {
@@ -330,6 +321,10 @@ export function NotebookEditor<T>(props: {
                             };
                         }
 
+                        const cellRef = ref(props.handle as any, ...props.path, "cellContents",  cell.id);
+                        const cellAnnotations = useSubscribe(annotations.onRef(cellRef));
+                        const diffType = cellAnnotations().lookup(Diff)?.type;
+
                         return (
                             <li>
                                 <NotebookCell
@@ -343,7 +338,7 @@ export function NotebookEditor<T>(props: {
                                     }
                                     currentDropTarget={currentDropTarget()}
                                     setCurrentDropTarget={setCurrentDropTarget}
-                                    diffType={getCellDiffType(cell.id)}
+                                    diffType={diffType}
                                 >
                                     <Switch>
                                         <Match when={cell.tag === "rich-text"}>

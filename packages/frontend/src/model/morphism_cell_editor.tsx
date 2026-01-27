@@ -125,6 +125,7 @@ export function MorphismCellEditor(props: {
                     placeholder="..."
                     ob={props.morphism.cod}
                     setOb={(ob) => {
+                        console.log("SET OB", ob);
                         props.modifyMorphism((mor) => {
                             mor.cod = ob;
                         });

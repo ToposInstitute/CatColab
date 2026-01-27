@@ -1,5 +1,3 @@
-@import "../../frontend/src/index.css";
-
 .split-view-container {
     display: flex;
     flex-direction: row;

@@ -131,7 +131,7 @@ export function TextInput(allProps: TextInputProps) {
     let ref!: HTMLInputElement;
 
     createEffect(() => {
-        if (options.isActive && document.activeElement !== ref) {
+        if (ref && options.isActive && document.activeElement !== ref) {
             ref.focus();
             // Move cursor to end of input.
             ref.selectionStart = ref.selectionEnd = ref.value.length;
