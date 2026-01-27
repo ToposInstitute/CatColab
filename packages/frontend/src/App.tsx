@@ -103,7 +103,7 @@ function CreateModel() {
     const api = useApi();
 
     const [ref] = createResource<string>(() => {
-        return createModel(api, stdTheories.defaultTheoryMetadata().id);
+        return createModel(api, stdTheories.defaultTheoryMetadata().id, stdTheories);
     });
 
     return <Show when={ref()}>{(ref) => <Navigate href={`/model/${ref()}`} />}</Show>;

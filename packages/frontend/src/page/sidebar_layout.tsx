@@ -6,6 +6,7 @@ import ChevronsLeft from "lucide-solid/icons/chevrons-left";
 import MenuIcon from "lucide-solid/icons/menu";
 
 import { IconButton } from "catcolab-ui-components";
+import { copyDebugData, getDebugStatus } from "../debug/debug_store";
 import { AppMenu, ImportMenuItem, NewModelItem } from "./menubar";
 
 export function SidebarLayout(props: {
@@ -49,6 +50,27 @@ function Sidebar(props: { isOpen: boolean; closeSidebar: () => void; children?: 
                         </div>
                     </div>
                     {props.children}
+                    <div
+                        style={{
+                            "margin-top": "auto",
+                            padding: "0.5rem",
+                            "border-top": "1px solid var(--sl-color-neutral-200)",
+                        }}
+                    >
+                        <button
+                            onClick={copyDebugData}
+                            style={{
+                                padding: "0.25rem 0.5rem",
+                                cursor: "pointer",
+                                "font-size": "0.8rem",
+                            }}
+                        >
+                            Debug
+                        </button>
+                        <span style={{ "margin-left": "0.5rem", "font-size": "0.8rem" }}>
+                            {getDebugStatus()}
+                        </span>
+                    </div>
                 </div>
             )}
         </div>
