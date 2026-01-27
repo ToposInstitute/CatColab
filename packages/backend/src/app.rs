@@ -4,7 +4,7 @@ use sqlx::PgPool;
 use std::collections::HashSet;
 use std::sync::Arc;
 use thiserror::Error;
-use tokio::sync::{RwLock, watch};
+use tokio::sync::RwLock;
 use ts_rs::TS;
 use uuid::Uuid;
 
@@ -19,19 +19,8 @@ pub struct AppState {
     /// Automerge-repo provider
     pub repo: samod::Repo,
 
-    pub app_status: watch::Receiver<AppStatus>,
-
     /// Tracks which ref_ids have active autosave listeners to prevent duplicates
     pub active_listeners: Arc<RwLock<HashSet<Uuid>>>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum AppStatus {
-    Starting,
-    Migrating,
-    Running,
-    #[allow(dead_code)]
-    Failed(String),
 }
 
 /// Context available to RPC procedures.

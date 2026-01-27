@@ -1,21 +1,19 @@
 use axum::extract::Request;
 
 use axum::extract::ws::WebSocketUpgrade;
-use axum::middleware::{Next, from_fn_with_state};
+use axum::middleware::from_fn_with_state;
 use axum::{Router, routing::get};
 use axum::{extract::State, response::IntoResponse};
 use clap::{Parser, Subcommand};
 use firebase_auth::FirebaseAuth;
-use http::StatusCode;
 use sqlx::postgres::PgPoolOptions;
-use sqlx::{PgPool, Postgres};
 use sqlx_migrator::cli::MigrationCommand;
 use sqlx_migrator::migrator::{Migrate, Migrator};
 use sqlx_migrator::{Info, Plan};
 use std::collections::HashSet;
 use std::path::Path;
 use std::sync::Arc;
-use tokio::sync::{RwLock, watch};
+use tokio::sync::RwLock;
 use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
 use tracing::{error, info};
@@ -26,9 +24,8 @@ mod auth;
 mod automerge_json;
 mod document;
 mod rpc;
+mod storage;
 mod user;
-
-use app::AppStatus;
 
 /// Port for the web server providing the RPC API.
 fn web_port() -> String {
@@ -100,17 +97,21 @@ async fn main() {
         }
 
         Command::Serve => {
-            let (status_tx, status_rx) = watch::channel(AppStatus::Starting);
+            info!("Applying database migrations...");
+            let mut conn = db.acquire().await.expect("Failed to acquire DB connection");
+            migrator
+                .run(&mut conn, &Plan::apply_all())
+                .await
+                .expect("Failed to run migrations");
+            info!("Migrations complete");
 
-            // Create samod repo
             let repo = samod::Repo::builder(tokio::runtime::Handle::current())
-                .with_storage(samod::storage::InMemoryStorage::new())
+                .with_storage(storage::PostgresStorage::new(db.clone()))
                 .load()
                 .await;
 
             let state = app::AppState {
                 db: db.clone(),
-                app_status: status_rx.clone(),
                 repo,
                 active_listeners: Arc::new(RwLock::new(HashSet::new())),
             };
@@ -127,48 +128,10 @@ async fn main() {
                 .await,
             );
 
-            tokio::try_join!(
-                run_migrator_apply(db.clone(), migrator, status_tx.clone()),
-                run_web_server(state.clone(), firebase_auth.clone()),
-            )
-            .unwrap();
-        }
-    }
-}
+            // Notify systemd we're ready
+            sd_notify::notify(false, &[sd_notify::NotifyState::Ready]).ok();
 
-async fn run_migrator_apply(
-    db: PgPool,
-    migrator: Migrator<Postgres>,
-    status_tx: watch::Sender<AppStatus>,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    status_tx.send(AppStatus::Migrating)?;
-    info!("Applying database migrations...");
-
-    let mut conn = db.acquire().await?;
-    migrator.run(&mut conn, &Plan::apply_all()).await.unwrap();
-
-    status_tx.send(AppStatus::Running)?;
-    sd_notify::notify(false, &[sd_notify::NotifyState::Ready])?;
-    info!("Migrations complete");
-
-    Ok(())
-}
-
-async fn app_status_gate(
-    State(status_rx): State<watch::Receiver<AppStatus>>,
-    req: Request,
-    next: Next,
-) -> impl IntoResponse {
-    // Combining the following 2 lines will anger the rust gods
-    let status = status_rx.borrow().clone();
-    match status {
-        AppStatus::Running => next.run(req).await,
-        AppStatus::Failed(reason) => {
-            (StatusCode::INTERNAL_SERVER_ERROR, format!("App failed to start: {reason}"))
-                .into_response()
-        }
-        AppStatus::Starting | AppStatus::Migrating => {
-            (StatusCode::SERVICE_UNAVAILABLE, "Server not ready yet").into_response()
+            run_web_server(state.clone(), firebase_auth.clone()).await.unwrap();
         }
     }
 }
@@ -191,13 +154,8 @@ async fn auth_middleware(
     next.run(req).await
 }
 
-async fn status_handler(State(status_rx): State<watch::Receiver<AppStatus>>) -> String {
-    match status_rx.borrow().clone() {
-        AppStatus::Starting => "Starting".into(),
-        AppStatus::Migrating => "Migrating".into(),
-        AppStatus::Running => "Running".into(),
-        AppStatus::Failed(reason) => format!("Failed: {reason}"),
-    }
+async fn status_handler() -> &'static str {
+    "Running"
 }
 
 async fn websocket_handler(
@@ -223,20 +181,16 @@ async fn run_web_server(
     let (qubit_service, qubit_handle) = rpc_router.as_rpc(state.clone()).into_service();
 
     let rpc_with_mw = ServiceBuilder::new()
-        .layer(from_fn_with_state(state.app_status.clone(), app_status_gate))
         .layer(from_fn_with_state(firebase_auth.clone(), auth_middleware))
         .service(qubit_service);
 
     let samod_router = Router::new()
         .layer(from_fn_with_state(firebase_auth, auth_middleware))
-        .layer(from_fn_with_state(state.app_status.clone(), app_status_gate))
         .route("/repo-ws", get(websocket_handler))
         .with_state(state.repo.clone());
 
     // used by tests to tell when the backend is ready
-    let status_router = Router::new()
-        .route("/status", get(status_handler))
-        .with_state(state.app_status.clone());
+    let status_router = Router::new().route("/status", get(status_handler));
 
     let mut app = Router::new()
         .merge(status_router)

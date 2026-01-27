@@ -277,6 +277,7 @@ dependencies = [
  "migrator",
  "notebook-types",
  "qubit",
+ "rand 0.8.5",
  "regex",
  "samod",
  "sd-notify",
