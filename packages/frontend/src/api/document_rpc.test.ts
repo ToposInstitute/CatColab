@@ -62,6 +62,29 @@ describe("RPC for Automerge documents", async () => {
         assert.strictEqual(invalidResult.code, 400);
     });
 
+    test("should reject documents exceeding 5MB size limit", async () => {
+        const largeString = "x".repeat(6 * 1024 * 1024); // 6MB of text
+        const largeDoc = {
+            type: "model",
+            name: "Large model",
+            theory: "empty",
+            notebook: {
+                cellOrder: ["cell1"],
+                cellContents: {
+                    cell1: {
+                        content: largeString,
+                    },
+                },
+            },
+            version: "1",
+        };
+
+        const result = await rpc.new_ref.mutate(largeDoc);
+        assert(result.tag === "Err");
+        assert.strictEqual(result.code, 400);
+        assert(result.message.includes("exceeds maximum allowed size"));
+    });
+
     if (!isValidDocumentId(refDoc.docId)) {
         return;
     }
