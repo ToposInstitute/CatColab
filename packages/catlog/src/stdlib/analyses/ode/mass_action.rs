@@ -21,9 +21,7 @@ use crate::dbl::{
     theory::{ModalMorType, ModalObType, TabMorType, TabObType},
 };
 use crate::one::FgCategory;
-use crate::simulate::ode::{
-    LatexEquation, NumericalPolynomialSystem, ODEProblem, PolynomialSystem,
-};
+use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
 use crate::zero::{QualifiedName, alg::Polynomial, name, rig::Monomial};
 
 /// Data defining a mass-action ODE problem for a model.
@@ -289,19 +287,19 @@ impl StockFlowMassActionAnalysis {
     }
 }
 
-/// Result of converting a symbolic system to a numerical one.
-pub struct NumericalSystemWithEquations {
-    /// The ODE analysis ready for solving.
-    pub analysis: ODEAnalysis<NumericalPolynomialSystem<i8>>,
-    /// The equations in LaTeX format with parameters substituted.
-    pub latex_equations: Vec<LatexEquation>,
+/// Substitutes numerical rate coefficients into a symbolic mass-action system.
+pub fn extend_mass_action_scalars(
+    sys: PolynomialSystem<QualifiedName, Parameter<QualifiedName>, i8>,
+    data: &MassActionProblemData,
+) -> PolynomialSystem<QualifiedName, f32, i8> {
+    sys.extend_scalars(|poly| poly.eval(|flow| data.rates.get(flow).copied().unwrap_or_default()))
 }
 
-/// Converts to a mass-action system with numerical rate coefficients.
-pub fn into_numerical_system(
-    sys: PolynomialSystem<QualifiedName, Parameter<QualifiedName>, i8>,
+/// Builds the numerical ODE analysis for a mass-action system whose scalars have been substituted.
+pub fn into_mass_action_analysis(
+    sys: PolynomialSystem<QualifiedName, f32, i8>,
     data: MassActionProblemData,
-) -> NumericalSystemWithEquations {
+) -> ODEAnalysis<NumericalPolynomialSystem<i8>> {
     let ob_index: IndexMap<_, _> =
         sys.components.keys().cloned().enumerate().map(|(i, x)| (x, i)).collect();
     let n = ob_index.len();
@@ -311,16 +309,10 @@ pub fn into_numerical_system(
         .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
     let x0 = DVector::from_iterator(n, initial_values);
 
-    let with_scalars = sys
-        .extend_scalars(|poly| poly.eval(|flow| data.rates.get(flow).copied().unwrap_or_default()));
-    let equations = with_scalars.to_latex_equations();
-    let num_sys = with_scalars.to_numerical();
+    let num_sys = sys.to_numerical();
     let problem = ODEProblem::new(num_sys, x0).end_time(data.duration);
 
-    NumericalSystemWithEquations {
-        analysis: ODEAnalysis::new(problem, ob_index),
-        latex_equations: equations,
-    }
+    ODEAnalysis::new(problem, ob_index)
 }
 
 #[cfg(test)]
@@ -329,6 +321,7 @@ mod tests {
     use std::rc::Rc;
 
     use super::*;
+    use crate::simulate::ode::LatexEquation;
     use crate::stdlib::{models::*, theories::*};
 
     #[test]
