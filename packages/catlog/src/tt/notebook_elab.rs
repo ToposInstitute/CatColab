@@ -294,12 +294,25 @@ impl<'a> Elaborator<'a> {
 
     /// Elaborate a notebook into a type.
     pub fn notebook<'b>(&mut self, cells: impl Iterator<Item = &'b ModelJudgment>) -> (TyS, TyV) {
+        // Make two passes to allow morphisms to reference objects that appear
+        // later in the notebook. This is important because the UI allows users
+        // to reorder cells freely, and morphisms should be able to reference
+        // any object regardless of cell order.
+        //
+        // Pass 1: Process all object and instantiation declarations to populate the context.
+        // Pass 2: Process all morphism declarations (which can now resolve any
+        // object reference).
+        let (pass1, pass2): (Vec<_>, Vec<_>) = cells.partition(|cell| {
+            matches!(cell, ModelJudgment::Object(_) | ModelJudgment::Instantiation(_))
+        });
+
         let mut field_ty0s = Vec::new();
         let mut field_ty_vs = Vec::new();
         let self_var = self.intro(name_seg("self"), label_seg("self"), None).as_neu();
         let c = self.checkpoint();
-        for cell in cells {
-            let (name, label, _, ty_v) = match cell {
+
+        for cell in pass1.into_iter().chain(pass2.into_iter()) {
+            let (name, label, _, ty_v) = match &cell {
                 ModelJudgment::Object(ob_decl) => self.object_cell(ob_decl),
                 ModelJudgment::Morphism(mor_decl) => self.morphism_cell(mor_decl),
                 ModelJudgment::Instantiation(i_decl) => self.instantiation_cell(i_decl),
@@ -310,6 +323,7 @@ impl<'a> Elaborator<'a> {
             self.ctx.env =
                 self.ctx.env.snoc(TmV::Neu(TmN::proj(self_var.clone(), name, label), ty_v));
         }
+
         self.reset_to(c);
         let field_tys: Row<_> = field_ty_vs
             .iter()
@@ -370,6 +384,24 @@ mod test {
                   weight : E -> Weight (Attr)
                   src : E -> V (Id Entity)
                   tgt : E -> V (Id Entity)
+            "#]],
+        );
+    }
+
+    /// Test that morphisms can reference objects that appear later in the notebook.
+    #[test]
+    fn morphism_before_codomain() {
+        let th_schema = Theory::new(name("ThSchema"), Rc::new(th_schema()));
+        // In this example, the cell order is: A (object), f (morphism A->B), B (object)
+        elab_example(
+            &th_schema,
+            "morphism_before_codomain",
+            expect![[r#"
+                object generators:
+                  A : Entity
+                  B : Entity
+                morphism generators:
+                  f : A -> B (Id Entity)
             "#]],
         );
     }
