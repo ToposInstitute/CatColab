@@ -293,42 +293,29 @@ impl<'a> Elaborator<'a> {
     }
 
     /// Elaborate a notebook into a type.
-    ///
-    /// Uses two-pass elaboration to allow morphisms to reference objects that
-    /// appear later in the notebook. This is important because the UI allows
-    /// users to reorder cells freely, and morphisms should be able to reference
-    /// any object regardless of cell order.
-    ///
-    /// Pass 1: Process all object and instantiation declarations to populate the context.
-    /// Pass 2: Process all morphism declarations (which can now resolve any object reference).
     pub fn notebook<'b>(&mut self, cells: impl Iterator<Item = &'b ModelJudgment>) -> (TyS, TyV) {
-        let cells: Vec<_> = cells.collect();
+        // Make two passes to allow morphisms to reference objects that appear
+        // later in the notebook. This is important because the UI allows users
+        // to reorder cells freely, and morphisms should be able to reference
+        // any object regardless of cell order.
+        //
+        // Pass 1: Process all object and instantiation declarations to populate the context.
+        // Pass 2: Process all morphism declarations (which can now resolve any
+        // object reference).
+        let (pass1, pass2): (Vec<_>, Vec<_>) = cells.partition(|cell| {
+            matches!(cell, ModelJudgment::Object(_) | ModelJudgment::Instantiation(_))
+        });
 
         let mut field_ty0s = Vec::new();
         let mut field_ty_vs = Vec::new();
         let self_var = self.intro(name_seg("self"), label_seg("self"), None).as_neu();
         let c = self.checkpoint();
 
-        // Pass 1: Process objects and instantiations first to populate the context.
-        // This ensures all objects are available for morphism domain/codomain resolution.
-        for cell in &cells {
-            let (name, label, _, ty_v) = match cell {
+        for cell in pass1.into_iter().chain(pass2.into_iter()) {
+            let (name, label, _, ty_v) = match &cell {
                 ModelJudgment::Object(ob_decl) => self.object_cell(ob_decl),
-                ModelJudgment::Instantiation(i_decl) => self.instantiation_cell(i_decl),
-                ModelJudgment::Morphism(_) => continue, // Skip morphisms in first pass
-            };
-            field_ty0s.push((name, (label, ty_v.ty0())));
-            field_ty_vs.push((name, (label, ty_v.clone())));
-            self.ctx.scope.push(VarInContext::new(name, label, Some(ty_v.clone())));
-            self.ctx.env =
-                self.ctx.env.snoc(TmV::Neu(TmN::proj(self_var.clone(), name, label), ty_v));
-        }
-
-        // Pass 2: Process morphisms now that all objects are in context.
-        for cell in &cells {
-            let (name, label, _, ty_v) = match cell {
                 ModelJudgment::Morphism(mor_decl) => self.morphism_cell(mor_decl),
-                ModelJudgment::Object(_) | ModelJudgment::Instantiation(_) => continue, /* Already processed */
+                ModelJudgment::Instantiation(i_decl) => self.instantiation_cell(i_decl),
             };
             field_ty0s.push((name, (label, ty_v.ty0())));
             field_ty_vs.push((name, (label, ty_v.clone())));
