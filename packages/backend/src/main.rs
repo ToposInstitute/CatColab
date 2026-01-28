@@ -107,6 +107,7 @@ async fn main() {
 
             let repo = samod::Repo::builder(tokio::runtime::Handle::current())
                 .with_storage(storage::PostgresStorage::new(db.clone()))
+                .with_announce_policy(|_doc_id, _peer_id| false)
                 .load()
                 .await;
 
