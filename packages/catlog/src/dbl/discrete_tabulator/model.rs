@@ -1,9 +1,11 @@
 //! Models of discrete tabulator theories.
 
+use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 
 use derivative::Derivative;
 use derive_more::From;
+use itertools::Itertools;
 
 use super::theory::*;
 use crate::dbl::{category::*, model::*, theory::DblTheory};
@@ -11,7 +13,7 @@ use crate::validate::{self, Validate};
 use crate::{one::*, zero::*};
 
 /// Object in a model of a discrete tabulator theory.
-#[derive(Clone, PartialEq, Eq, From)]
+#[derive(Clone, Debug, PartialEq, Eq, From)]
 pub enum TabOb {
     /// Basic or generating object.
     #[from]
@@ -19,6 +21,16 @@ pub enum TabOb {
 
     /// A morphism viewed as an object of a tabulator.
     Tabulated(Box<TabMor>),
+}
+
+impl Display for TabOb {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let _ = match self {
+            TabOb::Basic(name) => write!(f, "{name}"),
+            TabOb::Tabulated(x) => write!(f, "⊤{x}"),
+        };
+        Ok(())
+    }
 }
 
 impl TabOb {
@@ -52,7 +64,7 @@ impl TabOb {
 /// "Edge" in a model of a discrete tabulator theory.
 ///
 /// Morphisms of these two forms generate all the morphisms in the model.
-#[derive(Clone, PartialEq, Eq, From)]
+#[derive(Clone, Debug, PartialEq, Eq, From)]
 pub enum TabEdge {
     /// Basic morphism between any two objects.
     #[from]
@@ -74,8 +86,31 @@ pub enum TabEdge {
     },
 }
 
+impl Display for TabEdge {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let _ = match self {
+            TabEdge::Basic(name) => write!(f, "{}", name),
+            // TODO
+            TabEdge::Square {
+                dom,
+                cod,
+                pre,
+                post,
+            } => write!(f, "Square(dom: {dom}, cod: {cod}, pre: {pre}, post: {post})"),
+        };
+        Ok(())
+    }
+}
+
 /// Morphism in a model of a discrete tabulator theory.
 pub type TabMor = Path<TabOb, TabEdge>;
+
+impl Display for TabMor {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let _ = write!(f, "{}", &self.iter().map(|x| x.to_string()).join("."));
+        Ok(())
+    }
+}
 
 impl From<QualifiedName> for TabMor {
     fn from(value: QualifiedName) -> Self {
@@ -349,6 +384,25 @@ impl Validate for DiscreteTabModel {
 
     fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
         validate::wrap_errors(self.iter_invalid())
+    }
+}
+
+impl Display for DiscreteTabModel {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Obs:")?;
+        for (left, right) in self.ob_types.clone() {
+            writeln!(f, "{}::{}", left, right)?
+        }
+        writeln!(f, "\nMors:")?;
+        for (left, right) in self.mor_types.clone() {
+            let (dom, cod) =
+                (self.get_dom(&left.clone()).unwrap(), self.get_cod(&left.clone()).unwrap());
+            match right.clone() {
+                TabMorType::Hom(_) => writeln!(f, "({left}: {dom} --> {cod})::Hom({right})")?,
+                _ => writeln!(f, "({left}: {dom} -|-> {cod})::{right}")?,
+            }
+        }
+        Ok(())
     }
 }
 
