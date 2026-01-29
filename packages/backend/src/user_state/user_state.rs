@@ -16,35 +16,13 @@ mod tests {
 
     use crate::{auth::PermissionLevel, user::UserSummary};
 
-    fn arb_permission_level() -> impl Strategy<Value = PermissionLevel> {
-        prop_oneof![
-            Just(PermissionLevel::Read),
-            Just(PermissionLevel::Write),
-            Just(PermissionLevel::Maintain),
-            Just(PermissionLevel::Own),
-        ]
-    }
-
-    fn arb_user_summary() -> impl Strategy<Value = UserSummary> {
-        (
-            any::<String>(),
-            prop::option::of(any::<String>()),
-            prop::option::of(any::<String>()),
-        )
-            .prop_map(|(id, username, display_name)| UserSummary {
-                id,
-                username,
-                display_name,
-            })
-    }
-
     fn arb_ref_stub() -> impl Strategy<Value = RefStub> {
         (
             any::<String>(),
             any::<String>(),
             any::<[u8; 16]>(),
-            arb_permission_level(),
-            prop::option::of(arb_user_summary()),
+            any::<PermissionLevel>(),
+            prop::option::of(any::<UserSummary>()),
             any::<i64>(),
         )
             .prop_map(

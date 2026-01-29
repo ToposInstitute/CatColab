@@ -1,3 +1,5 @@
+#[cfg(test)]
+use proptest_derive::Arbitrary;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
@@ -41,6 +43,7 @@ pub async fn user_by_username(
 /// The minimal information needed to uniquely identify a user and display the user
 /// in human-readable form.
 #[qubit::ts]
+#[cfg_attr(test, derive(Arbitrary))]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UserSummary {
     pub id: String,

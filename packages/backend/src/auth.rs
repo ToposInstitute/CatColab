@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
 use firebase_auth::{FirebaseAuth, FirebaseUser};
+#[cfg(test)]
+use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -9,6 +11,7 @@ use super::user::UserSummary;
 
 /// Levels of permission that a user can have on a document.
 #[qubit::ts]
+#[cfg_attr(test, derive(Arbitrary))]
 #[derive(
     Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize, sqlx::Type,
 )]
