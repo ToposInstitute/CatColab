@@ -317,16 +317,14 @@
         catcolab = {
           hostname = "backend.catcolab.org";
           profiles.system = {
-            sshUser = "catcolab";
-            user = "root";
+            sshUser = "root";
             path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab;
           };
         };
         catcolab-next = {
           hostname = "backend-next.catcolab.org";
           profiles.system = {
-            sshUser = "catcolab";
-            user = "root";
+            sshUser = "root";
             path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab-next;
           };
         };
@@ -338,9 +336,8 @@
               "-p"
               "2221"
             ];
-            sshUser = "catcolab";
+            sshUser = "root";
             path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab-vm;
-            user = "root";
           };
         };
       };

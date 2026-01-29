@@ -17,6 +17,10 @@ with lib;
       description = "SSH public keys to access the catcolab user.";
       default = [ ];
     };
+    sudoPasswordHash = mkOption {
+      type = types.str;
+      description = "Hashed password for sudo authentication. Generate with: mkpasswd";
+    };
   };
 
   config = lib.mkIf config.catcolab.host.enable {
@@ -26,8 +30,11 @@ with lib;
           isNormalUser = true;
           extraGroups = [ "wheel" ];
           openssh.authorizedKeys.keys = config.catcolab.host.userKeys;
+          hashedPassword = config.catcolab.host.sudoPasswordHash;
         };
-        # TODO: root access can be dropped after the next prod deploy
+
+        # Need to access root for deploying to bypass sudo password. The root user should not generally
+        # not be used directly.
         root.openssh.authorizedKeys.keys = config.catcolab.host.userKeys;
       };
 
@@ -35,11 +42,11 @@ with lib;
       mutableUsers = false;
     };
 
-    security.sudo = {
-      wheelNeedsPassword = false;
+    services.openssh = {
+      enable = true;
+      settings.PasswordAuthentication = false;
     };
 
-    services.openssh.enable = true;
     nix = {
       settings.trusted-users = [
         "catcolab"
