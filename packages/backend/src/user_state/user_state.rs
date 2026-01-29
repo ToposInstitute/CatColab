@@ -10,43 +10,22 @@ pub struct UserState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::{TimeZone, Utc};
-    use proptest::prelude::*;
-    use uuid::Uuid;
+    use proptest::{arbitrary::Arbitrary, prelude::*};
 
-    use crate::{auth::PermissionLevel, user::UserSummary};
+    impl Arbitrary for UserState {
+        type Parameters = ();
+        type Strategy = BoxedStrategy<Self>;
 
-    fn arb_ref_stub() -> impl Strategy<Value = RefStub> {
-        (
-            any::<String>(),
-            any::<String>(),
-            any::<[u8; 16]>(),
-            any::<PermissionLevel>(),
-            prop::option::of(any::<UserSummary>()),
-            any::<i64>(),
-        )
-            .prop_map(
-                |(name, type_name, ref_id_bytes, permission_level, owner, seconds)| RefStub {
-                    name,
-                    type_name,
-                    ref_id: Uuid::from_bytes(ref_id_bytes),
-                    permission_level,
-                    owner,
-                    created_at: Utc
-                        .timestamp_opt(seconds, 0)
-                        .single()
-                        .unwrap_or_else(|| Utc.timestamp_opt(0, 0).single().unwrap()),
-                },
-            )
-    }
-
-    fn arb_user_state() -> impl Strategy<Value = UserState> {
-        prop::collection::vec(arb_ref_stub(), 0..5).prop_map(|documents| UserState { documents })
+        fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+            prop::collection::vec(any::<RefStub>(), 0..5)
+                .prop_map(|documents| UserState { documents })
+                .boxed()
+        }
     }
 
     proptest! {
         #[test]
-        fn generates_user_states_always_true(_state in arb_user_state()) {
+        fn generates_user_states_always_true(_state in any::<UserState>()) {
             prop_assert!(true);
         }
     }
