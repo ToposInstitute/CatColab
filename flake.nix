@@ -241,6 +241,17 @@
               inherit inputs rustToolchainLinux self;
             }).tests;
 
+          rust-docs = pkgsLinux.callPackage ./infrastructure/rust-docs.nix {
+            inherit craneLib cargoArtifacts;
+            pkgs = pkgsLinux;
+          };
+
+          rust-docs-check = pkgsLinux.callPackage ./infrastructure/rust-docs.nix {
+            inherit craneLib cargoArtifacts;
+            pkgs = pkgsLinux;
+            checkMode = true;
+          };
+
           # VMs built with `nixos-rebuild build-vm` (like `nix build
           # .#nixosConfigurations.catcolab-vm.config.system.build.vm`) are not the same
           # as "traditional" VMs, which causes deploy-rs to fail when deploying to them.
