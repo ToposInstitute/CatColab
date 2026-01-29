@@ -1,3 +1,5 @@
+# 9 days, in minutes
+minimumReleaseAge: 12960
 packages:
   - "dev-docs"
   - "packages/backend/pkg"
