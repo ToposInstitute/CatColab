@@ -26,6 +26,7 @@ mod document;
 mod rpc;
 mod storage;
 mod user;
+mod user_state;
 
 /// Port for the web server providing the RPC API.
 fn web_port() -> String {
