@@ -7,7 +7,6 @@ use chrono::{DateTime, Utc};
 use samod::DocumentId;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use ts_rs::TS;
 use uuid::Uuid;
 
 /// Maximum allowed document size in bytes (5MB).
@@ -245,7 +244,8 @@ pub async fn get_doc_id(state: AppState, ref_id: Uuid) -> Result<DocumentId, App
 }
 
 /// A document ref along with its content.
-#[derive(Debug, Serialize, Deserialize, TS)]
+#[qubit::ts]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct RefContent {
     #[serde(rename = "refId")]
     pub ref_id: Uuid,
@@ -254,7 +254,8 @@ pub struct RefContent {
 
 /// A subset of user relevant information about a ref. Used for showing users
 /// information on a variety of refs without having to load whole refs.
-#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[qubit::ts]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RefStub {
     pub name: String,
     #[serde(rename = "typeName")]
@@ -270,7 +271,8 @@ pub struct RefStub {
 }
 
 /// Parameters for filtering a search of refs
-#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[qubit::ts]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RefQueryParams {
     #[serde(rename = "ownerUsernameQuery")]
     pub owner_username_query: Option<String>,

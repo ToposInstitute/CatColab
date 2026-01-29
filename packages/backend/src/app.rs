@@ -5,7 +5,6 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::sync::RwLock;
-use ts_rs::TS;
 use uuid::Uuid;
 
 /// Top-level application state.
@@ -34,7 +33,8 @@ pub struct AppCtx {
 }
 
 /// A page of items along with pagination metadata.
-#[derive(Clone, Debug, Serialize, TS)]
+#[qubit::ts]
+#[derive(Clone, Debug, Serialize)]
 pub struct Paginated<T> {
     /// The total number of items matching the query criteria.
     pub total: i32,

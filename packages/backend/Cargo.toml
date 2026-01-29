@@ -21,7 +21,7 @@ hyper = { version = "1.4.1", features = ["server"] }
 jsonrpsee = "0.24.6"
 jsonrpsee-server = "0.24.6"
 notebook-types = { version = "0.1.0", path = "../notebook-types" }
-qubit = { version = "1.0.0-beta.0", features = ["ts-serde-json", "ts-uuid"] }
+qubit = { version = "1.0.0-beta.0", features = ["ts-serde-json", "ts-uuid", "ts-chrono"] }
 rand = "0.8"
 regex = "1.11.1"
 samod = { git = "https://github.com/alexjg/samod", features = [
@@ -46,9 +46,4 @@ tower = { version = "0.5.2", features = ["util"] }
 tower-http = { version = "0.6.1", features = ["cors", "trace", "fs"] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
-ts-rs = { version = "11.1.0", features = [
-  "serde-json-impl",
-  "uuid-impl",
-  "chrono-impl",
-] }
 uuid = { version = "1.10.0", features = ["v7", "serde"] }

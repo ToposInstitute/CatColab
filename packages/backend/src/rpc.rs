@@ -4,7 +4,6 @@ use qubit::{Extensions, FromRequestExtensions, Router, RpcError, handler};
 use serde::Serialize;
 use serde_json::Value;
 use tracing::debug;
-use ts_rs::TS;
 use uuid::Uuid;
 
 use crate::app::Paginated;
@@ -71,7 +70,8 @@ async fn get_doc(ctx: AppCtx, ref_id: Uuid) -> RpcResult<RefDoc> {
 }
 
 /// Document identified by a ref.
-#[derive(Clone, Debug, Serialize, TS)]
+#[qubit::ts]
+#[derive(Clone, Debug, Serialize)]
 #[serde(tag = "tag")]
 enum RefDoc {
     /// Readonly document, containing binary automerge data (base64 encoded).
@@ -195,7 +195,8 @@ async fn set_active_user_profile(ctx: AppCtx, user: user::UserProfile) -> RpcRes
 }
 
 /// Result returned by an RPC handler.
-#[derive(Debug, Clone, Serialize, TS)]
+#[qubit::ts]
+#[derive(Debug, Clone, Serialize)]
 #[serde(tag = "tag")]
 enum RpcResult<T> {
     Ok { content: T },
