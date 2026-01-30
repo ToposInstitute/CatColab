@@ -27,9 +27,9 @@ generate WeightedGraph
 #/   E : Entity
 #/   Weight : AttrType
 #/ morphism generators:
-#/   src : E -> V (Id Entity)
-#/   tgt : E -> V (Id Entity)
-#/   weight : E -> Weight (Attr)
+#/   src : E -> V : (Id Entity)
+#/   tgt : E -> V : (Id Entity)
+#/   weight : E -> Weight : Attr
 
 
 type EntityArr := [
@@ -162,10 +162,10 @@ generate Graph2
 #/   g1.E : Entity
 #/   g2.E : Entity
 #/ morphism generators:
-#/   g1.src : g1.E -> V (Id Entity)
-#/   g1.tgt : g1.E -> V (Id Entity)
-#/   g2.src : g2.E -> V (Id Entity)
-#/   g2.tgt : g2.E -> V (Id Entity)
+#/   g1.src : g1.E -> V : (Id Entity)
+#/   g1.tgt : g1.E -> V : (Id Entity)
+#/   g2.src : g2.E -> V : (Id Entity)
+#/   g2.tgt : g2.E -> V : (Id Entity)
 
 
 type ProfunctorGraph := [
@@ -183,11 +183,11 @@ generate ProfunctorGraph
 #/   g2.V : Entity
 #/   g2.E : Entity
 #/ morphism generators:
-#/   g1.src : g1.E -> g1.V (Id Entity)
-#/   g1.tgt : g1.E -> g1.V (Id Entity)
-#/   g2.src : g2.E -> g2.V (Id Entity)
-#/   g2.tgt : g2.E -> g2.V (Id Entity)
-#/   het : g1.V -> g2.V (Id Entity)
+#/   g1.src : g1.E -> g1.V : (Id Entity)
+#/   g1.tgt : g1.E -> g1.V : (Id Entity)
+#/   g2.src : g2.E -> g2.V : (Id Entity)
+#/   g2.tgt : g2.E -> g2.V : (Id Entity)
+#/   het : g1.V -> g2.V : (Id Entity)
 
 
 type WeightedGraph2 := [
@@ -206,12 +206,12 @@ generate WeightedGraph2
 #/   g2.E : Entity
 #/   g2.Weight : AttrType
 #/ morphism generators:
-#/   g1.src : g1.E -> V (Id Entity)
-#/   g1.tgt : g1.E -> V (Id Entity)
-#/   g1.weight : g1.E -> g1.Weight (Attr)
-#/   g2.src : g2.E -> V (Id Entity)
-#/   g2.tgt : g2.E -> V (Id Entity)
-#/   g2.weight : g2.E -> g2.Weight (Attr)
+#/   g1.src : g1.E -> V : (Id Entity)
+#/   g1.tgt : g1.E -> V : (Id Entity)
+#/   g1.weight : g1.E -> g1.Weight : Attr
+#/   g2.src : g2.E -> V : (Id Entity)
+#/   g2.tgt : g2.E -> V : (Id Entity)
+#/   g2.weight : g2.E -> g2.Weight : Attr
 
 
 set_theory ThCategory
@@ -256,8 +256,8 @@ generate NegFeedback
 #/   X : Object
 #/   Y : Object
 #/ morphism generators:
-#/   f : X -> Y (Id Object)
-#/   g : Y -> X (Negative)
+#/   f : X -> Y : (Id Object)
+#/   g : Y -> X : Negative
 
 
 #(should_fail)

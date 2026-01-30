@@ -20,18 +20,7 @@ pub struct MorphismType(pub Path<QualifiedName, QualifiedName>);
 
 impl fmt::Display for MorphismType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self.0 {
-            Path::Id(ot) => write!(f, "Id {ot}"),
-            Path::Seq(non_empty) => {
-                for (i, segment) in non_empty.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, " · ")?;
-                    }
-                    write!(f, "{segment}")?;
-                }
-                Ok(())
-            }
-        }
+        write!(f, "{}", self.to_doc().group().pretty())
     }
 }
 

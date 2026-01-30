@@ -103,7 +103,7 @@ pub fn model_output(
     for morgen in model.mor_generators() {
         writeln!(
             out,
-            "{prefix}  {} : {} -> {} ({})",
+            "{prefix}  {} : {} -> {} : {}",
             name_translation.label(&morgen).unwrap(),
             name_translation.label(&model.mor_generator_dom(&morgen)).unwrap(),
             name_translation.label(&model.mor_generator_cod(&morgen)).unwrap(),
