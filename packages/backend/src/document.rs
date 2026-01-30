@@ -348,7 +348,7 @@ pub async fn search_ref_stubs(
 ) -> Result<Paginated<RefStub>, AppError> {
     let min_level = search_params.searcher_min_level.unwrap_or(PermissionLevel::Read);
 
-    let limit = search_params.limit.unwrap_or(100);
+    let limit = search_params.limit;
     let offset = search_params.offset.unwrap_or(0);
 
     let results = sqlx::query!(
