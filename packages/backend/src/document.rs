@@ -276,6 +276,7 @@ pub mod arbitrary {
     use super::*;
     use chrono::TimeZone;
     use proptest::{arbitrary::Arbitrary, prelude::*};
+    use proptest_arbitrary_interop::arb;
 
     impl Arbitrary for RefStub {
         type Parameters = ();
@@ -285,23 +286,21 @@ pub mod arbitrary {
             (
                 any::<String>(),
                 any::<String>(),
-                any::<[u8; 16]>(),
+                arb::<Uuid>(),
                 any::<PermissionLevel>(),
                 prop::option::of(any::<UserSummary>()),
                 any::<i64>(),
             )
-                .prop_map(|(name, type_name, ref_id_bytes, permission_level, owner, seconds)| {
-                    RefStub {
-                        name,
-                        type_name,
-                        ref_id: Uuid::from_bytes(ref_id_bytes),
-                        permission_level,
-                        owner,
-                        created_at: Utc
-                            .timestamp_opt(seconds, 0)
-                            .single()
-                            .unwrap_or_else(|| Utc.timestamp_opt(0, 0).single().unwrap()),
-                    }
+                .prop_map(|(name, type_name, ref_id, permission_level, owner, seconds)| RefStub {
+                    name,
+                    type_name,
+                    ref_id,
+                    permission_level,
+                    owner,
+                    created_at: Utc
+                        .timestamp_opt(seconds, 0)
+                        .single()
+                        .unwrap_or_else(|| Utc.timestamp_opt(0, 0).single().unwrap()),
                 })
                 .boxed()
         }

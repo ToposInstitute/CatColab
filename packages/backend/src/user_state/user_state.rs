@@ -2,9 +2,10 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
 use crate::app::AppError;
-use crate::document::{RefQueryParams, RefStub, run_search_ref_stubs, search_ref_stubs};
+use crate::document::{RefQueryParams, RefStub, search_ref_stubs};
 
-#[derive(Debug, Clone, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "proptest", derive(PartialEq, Eq))]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserState {
     documents: Vec<RefStub>,
 }
