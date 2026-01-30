@@ -270,7 +270,7 @@ pub struct RefStub {
     pub created_at: DateTime<Utc>,
 }
 
-#[cfg(test)]
+#[cfg(feature = "proptest")]
 pub mod arbitrary {
     use super::*;
     use chrono::TimeZone;

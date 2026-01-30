@@ -7,7 +7,7 @@ pub struct UserState {
     documents: Vec<RefStub>,
 }
 
-#[cfg(test)]
+#[cfg(feature = "proptest")]
 pub mod arbitrary {
     use super::*;
     use proptest::{arbitrary::Arbitrary, prelude::*};
