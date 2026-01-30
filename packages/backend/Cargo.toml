@@ -3,6 +3,10 @@ name = "backend"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = []
+proptest = ["dep:proptest", "dep:proptest-derive"]
+
 [dependencies]
 async-trait = "0.1.88"
 automerge = "0.7.1"
@@ -47,7 +51,5 @@ tower-http = { version = "0.6.1", features = ["cors", "trace", "fs"] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 uuid = { version = "1.10.0", features = ["v7", "serde"] }
-
-[dev-dependencies]
-proptest = "1.9.0"
-proptest-derive = "0.7.0"
+proptest = { version = "1.9.0", optional = true }
+proptest-derive = { version = "0.7.0", optional = true }
