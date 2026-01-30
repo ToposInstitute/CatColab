@@ -93,7 +93,7 @@ mod tests {
                 doc.ref_id,
                 content,
                 doc.created_at,
-                format!("doc_{}", doc.ref_id) // Generate a placeholder doc_id
+                format!("test_fake_automerge_doc_{}", doc.ref_id) // Generate a placeholder doc_id
             )
             .execute(db)
             .await?;
@@ -131,7 +131,7 @@ mod tests {
         Ok(())
     }
 
-    #[proptest(async = "tokio", cases = 32)]
+    #[proptest(async = "tokio", cases = 256)]
     async fn user_state_roundtrip(
         #[strategy(arbitrary_user_state_with_id())] user_id_and_state: (String, UserState),
     ) {

@@ -32,6 +32,7 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
 
 #[cfg(feature = "proptest")]
 pub mod arbitrary {
+    #![allow(dead_code)]
     use super::*;
     use crate::auth::PermissionLevel;
     use crate::user::UserSummary;
@@ -42,7 +43,7 @@ pub mod arbitrary {
     /// Generates a consistent RefStub where:
     /// - If permission_level is Own, the owner matches the user_id parameter
     /// - Otherwise, a separate owner is generated (always present and different from user)
-    fn consistent_ref_stub(user_id: String) -> impl Strategy<Value = RefStub> {
+    fn ref_stub_with_owner(user_id: String) -> impl Strategy<Value = RefStub> {
         (
             any::<String>(),          // name
             any::<String>(),          // type_name
@@ -78,7 +79,7 @@ pub mod arbitrary {
                         created_at: Utc
                             .timestamp_opt(seconds, 0)
                             .single()
-                            .unwrap_or_else(|| Utc.timestamp_opt(0, 0).single().unwrap()),
+                            .expect("valid timestamp"),
                     }
                 },
             )
@@ -90,23 +91,8 @@ pub mod arbitrary {
     pub fn arbitrary_user_state_with_id() -> impl Strategy<Value = (String, UserState)> {
         arb::<uuid::Uuid>().prop_flat_map(|user_uuid| {
             let user_id = format!("test_user_{}", user_uuid);
-            let uid = user_id.clone();
-            prop::collection::vec(consistent_ref_stub(user_id), 0..5).prop_map(
-                move |mut documents| {
-                    // Ensure unique owner IDs and usernames by using UUIDs
-                    for (i, doc) in documents.iter_mut().enumerate() {
-                        if let Some(owner) = &mut doc.owner
-                            && owner.id != uid
-                        {
-                            // Generate unique owner ID
-                            owner.id = format!("owner_{}_{}", uid, i);
-                            // Make username unique if present (or None to avoid conflicts)
-                            owner.username = None;
-                        }
-                    }
-                    (uid.clone(), UserState { documents })
-                },
-            )
+            prop::collection::vec(ref_stub_with_owner(user_id.clone()), 0..5)
+                .prop_map(move |documents| (user_id.clone(), UserState { documents }))
         })
     }
 
