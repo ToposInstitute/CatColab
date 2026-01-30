@@ -6,7 +6,35 @@ mod tests {
     use proptest::prelude::*;
     use sqlx::PgPool;
 
-    /// Writes user state to the database.
+    struct UserStateTestFixture {
+        pool: PgPool,
+    }
+
+    impl UserStateTestFixture {
+        async fn setup() -> Self {
+            let database_url =
+                std::env::var("DATABASE_URL").expect("DATABASE_URL must be set for tests");
+
+            let pool = PgPool::connect(&database_url).await.expect("Failed to connect to database");
+
+            Self { pool }
+        }
+
+        async fn cleanup(&self, user_ids: &[&str]) {
+            // TODO: find saner way to setup and cleanup a test db
+            let _ = sqlx::query("DELETE FROM permissions WHERE subject = ANY($1)")
+                .bind(user_ids)
+                .execute(&self.pool)
+                .await;
+
+            let _ = sqlx::query("DELETE FROM users WHERE id = ANY($1)")
+                .bind(user_ids)
+                .execute(&self.pool)
+                .await;
+        }
+    }
+
+    /// Writes user state to the database. This is only for testing purposes.
     ///
     /// This function persists a `UserState` by:
     /// 1. Ensuring all owner users exist in the `users` table
