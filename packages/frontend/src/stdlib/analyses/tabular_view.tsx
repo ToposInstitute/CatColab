@@ -37,7 +37,7 @@ function createTable(headers: Array<string>, data: Array<Array<string>>) {
     and a particular object `obname` in the schema, create an HTML table with
     the outgoing homs/attributes from that object.
 */
-function createACSetTable(model: DblModel, rawdata: object, obname: string) {
+function createACSetTable(model: DblModel, rawdata: Record<string, string[]>, obname: string) {
     // The primary key of this table is given by `rawdata[obname]`
     const rows: Array<string> = rawdata[obname as keyof typeof rawdata];
 
@@ -71,7 +71,7 @@ function createACSetTable(model: DblModel, rawdata: object, obname: string) {
 }
 
 /** Stack tables on top of each other in a naive way, one per ob/attrtype */
-function createACSet(model: DblModel, rawdata: object) {
+function createACSet(model: DblModel, rawdata: Record<string, string[]>) {
     return (
         <div class="simulation">
             <PanelHeader title="Tabular view" />
