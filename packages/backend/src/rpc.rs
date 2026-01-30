@@ -98,7 +98,7 @@ async fn search_ref_stubs(
     ctx: AppCtx,
     query_params: doc::RefQueryParams,
 ) -> RpcResult<Paginated<doc::RefStub>> {
-    doc::search_ref_stubs(ctx, query_params).await.into()
+    doc::run_search_ref_stubs(ctx, query_params).await.into()
 }
 
 #[handler(query)]
