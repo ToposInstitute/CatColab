@@ -44,7 +44,7 @@ pub async fn user_by_username(
 /// The minimal information needed to uniquely identify a user and display the user
 /// in human-readable form.
 #[qubit::ts]
-#[cfg_attr(feature = "proptest", derive(Arbitrary))]
+#[cfg_attr(feature = "proptest", derive(Arbitrary, Eq, PartialEq))]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UserSummary {
     pub id: String,

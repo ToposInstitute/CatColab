@@ -255,6 +255,7 @@ pub struct RefContent {
 /// A subset of user relevant information about a ref. Used for showing users
 /// information on a variety of refs without having to load whole refs.
 #[qubit::ts]
+#[cfg_attr(feature = "proptest", derive(Eq, PartialEq))]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RefStub {
     pub name: String,
@@ -327,13 +328,24 @@ pub struct RefQueryParams {
 }
 
 /// Searches for `RefStub`s that the current user has permission to access,
-/// returning lightweight metadata about each matching ref
-pub async fn search_ref_stubs(
+/// returning lightweight metadata about each matching ref.
+///
+/// This is a wrapper around [`search_ref_stubs`]
+pub async fn run_search_ref_stubs(
     ctx: AppCtx,
     search_params: RefQueryParams,
 ) -> Result<Paginated<RefStub>, AppError> {
-    let searcher_id = ctx.user.as_ref().map(|user| user.user_id.clone());
+    let user_id = ctx.user.as_ref().map(|user| user.user_id.clone());
+    search_ref_stubs(user_id, &ctx.state.db, search_params).await
+}
 
+/// Searches for `RefStub`s that the given user has permission to access,
+/// returning lightweight metadata about each matching ref.
+pub async fn search_ref_stubs(
+    user_id: Option<String>,
+    db: &sqlx::PgPool,
+    search_params: RefQueryParams,
+) -> Result<Paginated<RefStub>, AppError> {
     let min_level = search_params.searcher_min_level.unwrap_or(PermissionLevel::Read);
 
     let limit = search_params.limit.unwrap_or(100);
@@ -420,7 +432,7 @@ pub async fn search_ref_stubs(
         FROM stubs
         CROSS JOIN total;
         "#,
-        searcher_id,
+        user_id,
         search_params.owner_username_query,
         search_params.ref_name_query,
         min_level as PermissionLevel,
@@ -429,7 +441,7 @@ pub async fn search_ref_stubs(
         offset,
         search_params.only_deleted.unwrap_or(false),
     )
-    .fetch_all(&ctx.state.db)
+    .fetch_all(db)
     .await?;
 
     let total = results.first().and_then(|r| r.total_count).unwrap_or(0);
