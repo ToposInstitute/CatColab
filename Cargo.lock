@@ -129,6 +129,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "arbitrary"
+version = "1.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3d036a3c4ab069c7b410a2ce876bd74808d2d0888a82667669f8e783a898bf1"
+
+[[package]]
 name = "arrayvec"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -277,6 +283,7 @@ dependencies = [
  "migrator",
  "notebook-types",
  "proptest",
+ "proptest-arbitrary-interop",
  "proptest-derive",
  "qubit",
  "rand 0.8.5",
@@ -2509,6 +2516,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "proptest-arbitrary-interop"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1981e49bd2432249da8b0e11e5557099a8e74690d6b94e721f7dc0bb7f3555f"
+dependencies = [
+ "arbitrary",
+ "proptest",
+]
+
+[[package]]
 name = "proptest-derive"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4212,6 +4229,7 @@ version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f33196643e165781c20a5ead5582283a7dacbb87855d867fbc2df3f81eddc1be"
 dependencies = [
+ "arbitrary",
  "getrandom 0.3.3",
  "js-sys",
  "serde",
