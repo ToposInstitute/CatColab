@@ -7,4 +7,3 @@ proptest! {
         prop_assert!(true);
     }
 }
-

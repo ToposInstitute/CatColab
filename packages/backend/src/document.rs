@@ -271,7 +271,7 @@ pub struct RefStub {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod arbitrary {
     use super::*;
     use chrono::TimeZone;
     use proptest::{arbitrary::Arbitrary, prelude::*};
