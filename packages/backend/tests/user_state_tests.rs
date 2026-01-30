@@ -2,36 +2,28 @@
 mod tests {
     use backend::app::AppError;
     use backend::auth::PermissionLevel;
-    use backend::user_state::UserState;
-    use proptest::prelude::*;
+    use backend::user_state::arbitrary::arbitrary_user_state_with_id;
+    use backend::user_state::{UserState, read_user_state_from_db};
     use sqlx::PgPool;
+    use test_strategy::proptest;
 
-    struct UserStateTestFixture {
-        pool: PgPool,
+    async fn get_pool() -> PgPool {
+        let database_url =
+            std::env::var("DATABASE_URL").expect("DATABASE_URL must be set for tests");
+        PgPool::connect(&database_url).await.expect("Failed to connect to database")
     }
 
-    impl UserStateTestFixture {
-        async fn setup() -> Self {
-            let database_url =
-                std::env::var("DATABASE_URL").expect("DATABASE_URL must be set for tests");
+    async fn cleanup(pool: &PgPool, user_ids: &[&str]) {
+        // TODO: find saner way to setup and cleanup a test db
+        let _ = sqlx::query("DELETE FROM permissions WHERE subject = ANY($1)")
+            .bind(user_ids)
+            .execute(pool)
+            .await;
 
-            let pool = PgPool::connect(&database_url).await.expect("Failed to connect to database");
-
-            Self { pool }
-        }
-
-        async fn cleanup(&self, user_ids: &[&str]) {
-            // TODO: find saner way to setup and cleanup a test db
-            let _ = sqlx::query("DELETE FROM permissions WHERE subject = ANY($1)")
-                .bind(user_ids)
-                .execute(&self.pool)
-                .await;
-
-            let _ = sqlx::query("DELETE FROM users WHERE id = ANY($1)")
-                .bind(user_ids)
-                .execute(&self.pool)
-                .await;
-        }
+        let _ = sqlx::query("DELETE FROM users WHERE id = ANY($1)")
+            .bind(user_ids)
+            .execute(pool)
+            .await;
     }
 
     /// Writes user state to the database. This is only for testing purposes.
@@ -44,7 +36,7 @@ mod tests {
     /// Note: The owner of a document is determined by who has the 'own' permission.
     /// If the doc has an owner specified, that user gets 'own' permission.
     /// The requesting user gets their specified permission level.
-    pub async fn write_user_state_to_db(
+    async fn write_user_state_to_db(
         user_id: String,
         db: &PgPool,
         state: &UserState,
@@ -62,15 +54,7 @@ mod tests {
         .await?;
 
         for doc in &state.documents {
-            // Determine the actual owner: use specified owner, or the user if permission is Own
-            let owner_id = doc.owner.as_ref().map(|o| o.id.clone()).unwrap_or_else(|| {
-                if doc.permission_level == PermissionLevel::Own {
-                    user_id.clone()
-                } else {
-                    // No owner specified and user doesn't own - skip this invalid case
-                    return user_id.clone();
-                }
-            });
+            let owner_id = doc.owner.as_ref().map(|o| o.id.clone()).expect("No owner specified");
 
             // Ensure the owner exists in the users table
             if let Some(owner) = &doc.owner {
@@ -147,61 +131,33 @@ mod tests {
         Ok(())
     }
 
-    proptest! {
-        #[test]
-        fn generates_user_states_always_true(_state in any::<UserState>()) {
-            prop_assert!(true);
-        }
-    }
+    #[proptest(async = "tokio", cases = 32)]
+    async fn user_state_roundtrip(
+        #[strategy(arbitrary_user_state_with_id())] user_id_and_state: (String, UserState),
+    ) {
+        let (user_id, state) = user_id_and_state;
+        let pool = get_pool().await;
 
-    #[tokio::test]
-    async fn user_state_roundtrip() {
-        use backend::user_state::arbitrary::arbitrary_user_state_with_id;
-        use backend::user_state::read_user_state_from_db;
-        use proptest::strategy::ValueTree;
-        use proptest::test_runner::TestRunner;
+        write_user_state_to_db(user_id.clone(), &pool, &state)
+            .await
+            .expect("Failed to write user state");
 
-        // Skip test if DATABASE_URL is not set
-        if std::env::var("DATABASE_URL").is_err() {
-            eprintln!("Skipping user_state_roundtrip: DATABASE_URL not set");
-            return;
-        }
+        let read_state = read_user_state_from_db(user_id.clone(), &pool)
+            .await
+            .expect("Failed to read user state");
 
-        let fixture = UserStateTestFixture::setup().await;
+        // Sort both document lists by ref_id for comparison
+        let mut expected_docs = state.documents.clone();
+        let mut actual_docs = read_state.documents.clone();
+        expected_docs.sort_by(|a, b| a.ref_id.cmp(&b.ref_id));
+        actual_docs.sort_by(|a, b| a.ref_id.cmp(&b.ref_id));
 
-        // Generate test cases synchronously
-        let mut runner = TestRunner::default();
-        let strategy = arbitrary_user_state_with_id();
+        // Cleanup test data
+        let user_ids: Vec<&str> = std::iter::once(user_id.as_str())
+            .chain(state.documents.iter().filter_map(|d| d.owner.as_ref().map(|o| o.id.as_str())))
+            .collect();
+        cleanup(&pool, &user_ids).await;
 
-        for _ in 0..256 {
-            let (user_id, state) =
-                strategy.new_tree(&mut runner).expect("Failed to generate test case").current();
-
-            // Write state to db
-            write_user_state_to_db(user_id.clone(), &fixture.pool, &state)
-                .await
-                .expect("Failed to write user state");
-
-            // Read state back from db
-            let read_state = read_user_state_from_db(user_id.clone(), &fixture.pool)
-                .await
-                .expect("Failed to read user state");
-
-            // Cleanup test data
-            let user_ids: Vec<&str> = std::iter::once(user_id.as_str())
-                .chain(
-                    state.documents.iter().filter_map(|d| d.owner.as_ref().map(|o| o.id.as_str())),
-                )
-                .collect();
-            fixture.cleanup(&user_ids).await;
-
-            // Sort both document lists by ref_id for comparison (read returns sorted by created_at DESC)
-            let mut expected_docs = state.documents.clone();
-            let mut actual_docs = read_state.documents.clone();
-            expected_docs.sort_by(|a, b| a.ref_id.cmp(&b.ref_id));
-            actual_docs.sort_by(|a, b| a.ref_id.cmp(&b.ref_id));
-
-            assert_eq!(expected_docs, actual_docs, "UserState roundtrip failed");
-        }
+        proptest::prop_assert_eq!(expected_docs, actual_docs);
     }
 }
