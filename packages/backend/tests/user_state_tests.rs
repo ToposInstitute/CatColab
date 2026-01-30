@@ -141,29 +141,28 @@ mod tests {
     async fn user_state_roundtrip(
         #[strategy(arbitrary_user_state_with_id())] user_id_and_state: (String, UserState),
     ) {
-        let (user_id, state) = user_id_and_state;
+        let (user_id, input_state) = user_id_and_state;
         let pool = get_pool().await;
 
-        write_user_state_to_db(user_id.clone(), &pool, &state)
+        write_user_state_to_db(user_id.clone(), &pool, &input_state)
             .await
             .expect("Failed to write user state");
 
-        let read_state = read_user_state_from_db(user_id.clone(), &pool)
+        let output_state = read_user_state_from_db(user_id.clone(), &pool)
             .await
             .expect("Failed to read user state");
 
-        // Sort both document lists by ref_id for comparison
-        let mut expected_docs = state.documents.clone();
-        let mut actual_docs = read_state.documents.clone();
-        expected_docs.sort_by(|a, b| a.ref_id.cmp(&b.ref_id));
-        actual_docs.sort_by(|a, b| a.ref_id.cmp(&b.ref_id));
-
         // Cleanup test data
         let user_ids: Vec<&str> = std::iter::once(user_id.as_str())
-            .chain(state.documents.iter().filter_map(|d| d.owner.as_ref().map(|o| o.id.as_str())))
+            .chain(
+                input_state
+                    .documents
+                    .iter()
+                    .filter_map(|d| d.owner.as_ref().map(|o| o.id.as_str())),
+            )
             .collect();
         cleanup(&pool, &user_ids).await;
 
-        proptest::prop_assert_eq!(expected_docs, actual_docs);
+        proptest::prop_assert_eq!(input_state, output_state);
     }
 }
