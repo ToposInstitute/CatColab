@@ -3,8 +3,7 @@
 //! See [crate::tt] for what this means.
 
 use bwd::Bwd;
-use derive_more::Constructor;
-use std::ops::Deref;
+use derive_more::{Constructor, Deref};
 
 use crate::{
     tt::{prelude::*, stx::*},
@@ -94,16 +93,9 @@ pub enum TyV_ {
 }
 
 /// Value for total types, dereferences to [TyV_].
-#[derive(Clone)]
+#[derive(Clone, Deref)]
+#[deref(forward)]
 pub struct TyV(Rc<TyV_>);
-
-impl Deref for TyV {
-    type Target = TyV_;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
 
 impl TyV {
     /// Smart constructor for [TyV], [TyV_::Object] case.
@@ -184,16 +176,9 @@ pub enum TmN_ {
 }
 
 /// Neutrals for base terms, dereferences to [TmN_].
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Deref, PartialEq, Eq)]
+#[deref(forward)]
 pub struct TmN(Rc<TmN_>);
-
-impl Deref for TmN {
-    type Target = TmN_;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
 
 impl TmN {
     /// Smart constructor for [TmN], [TmN_::Var] case.

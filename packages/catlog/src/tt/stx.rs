@@ -3,7 +3,7 @@
 //! See [crate::tt] for what this means.
 
 use ::pretty::RcDoc;
-use derive_more::Constructor;
+use derive_more::{Constructor, Deref};
 
 #[cfg(doc)]
 use crate::dbl::discrete::theory::DiscreteDblTheory;
@@ -11,7 +11,6 @@ use crate::zero::LabelSegment;
 use crate::{tt::prelude::*, zero::QualifiedName};
 use std::fmt;
 use std::fmt::Write as _;
-use std::ops::Deref;
 
 /// Object types are just qualified names, see [DiscreteDblTheory].
 pub type ObjectType = QualifiedName;
@@ -149,16 +148,9 @@ pub enum TyS_ {
 ///
 /// See [crate::tt] for an explanation of what total types are, and for an
 /// explanation of our approach to Rc pointers in abstract syntax trees.
-#[derive(Clone)]
+#[derive(Clone, Deref)]
+#[deref(forward)]
 pub struct TyS(Rc<TyS_>);
-
-impl Deref for TyS {
-    type Target = TyS_;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
 
 impl TyS {
     /// Smart constructor for [TyS], [TyS_::TopVar] case.
@@ -279,16 +271,9 @@ pub enum TmS_ {
 ///
 /// See [crate::tt] for an explanation of what total types are, and for an
 /// explanation of our approach to Rc pointers in abstract syntax trees.
-#[derive(Clone)]
+#[derive(Clone, Deref)]
+#[deref(forward)]
 pub struct TmS(Rc<TmS_>);
-
-impl Deref for TmS {
-    type Target = TmS_;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
 
 impl TmS {
     /// Smart constructor for [TmS], [TmS_::TopVar] case.

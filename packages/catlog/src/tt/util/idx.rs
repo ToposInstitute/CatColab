@@ -11,22 +11,11 @@
 //!
 //! We take this terminology from [narya](https://github.com/gwaithimirdain/narya).
 
-use derive_more::From;
-use std::ops::Deref;
+use derive_more::{Deref, From};
 
-/// Forward indices (aka DeBruijn levels)
-///
-/// Get the underlying `usize` using the [Deref] implementation.
-#[derive(Copy, Clone, PartialEq, Eq, Debug, From)]
+/// Forward indices (aka DeBruijn levels).
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Deref, From)]
 pub struct FwdIdx(usize);
-
-impl Deref for FwdIdx {
-    type Target = usize;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
 
 impl FwdIdx {
     /// The forward index refering the the next variable in the scope
@@ -42,18 +31,8 @@ impl FwdIdx {
 }
 
 /// Backward indices (aka DeBruijn indices).
-///
-/// Get the underlying `usize` using the [Deref] implementation.
-#[derive(Copy, Clone, PartialEq, Eq, Debug, From)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Deref, From)]
 pub struct BwdIdx(usize);
-
-impl Deref for BwdIdx {
-    type Target = usize;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
 
 impl BwdIdx {
     /// The backwards index refering to the previous variable in the scope
