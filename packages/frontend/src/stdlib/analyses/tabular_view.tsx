@@ -36,6 +36,7 @@ function createTable(headers: Array<string>, data: Array<Array<string>>) {
 
 /** Given a schema (DblModel of ThSchema), a JSON output `rawdata` from Catlab,
     and a particular object `obname` in the schema, create an HTML table with
+    the outgoing homs/attributes from that object.
 */
 function createACSetTable(model: DblModel, rawdata: object, obname: string) {
     // The primary key of this table is given by `rawdata[obname]`
