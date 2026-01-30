@@ -3,7 +3,6 @@ import { createResource, For, Match, Switch } from "solid-js";
 import { PanelHeader, Spinner } from "catcolab-ui-components";
 import type { DblModel } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
-import type { GraphLayoutConfig } from "../../visualization";
 import "./tabular_view.css";
 
 /** Create a table from row-wise data */
@@ -88,10 +87,10 @@ function createACSet(model: DblModel, rawdata: object) {
 /** Visualize a diagram in a model of ThSchema as a collection of tables.
 
 Such a visualization makes sense for any discrete double theory and is in
-general restricted to basic objects. See `ModelGraph` for more.
+general restricted to basic objects.
  */
 export default function TabularView(
-    props: DiagramAnalysisProps<GraphLayoutConfig.Config> & {
+    props: DiagramAnalysisProps<{}> & {
         title?: string;
     },
 ) {
