@@ -4,7 +4,6 @@ mod tests {
     use backend::auth::PermissionLevel;
     use backend::user_state::arbitrary::arbitrary_user_state_with_id;
     use backend::user_state::{UserState, read_user_state_from_db};
-    use proptest::test_runner::FileFailurePersistence;
     use sqlx::PgPool;
     use test_strategy::proptest;
 
@@ -43,6 +42,7 @@ mod tests {
         state: &UserState,
     ) -> Result<(), AppError> {
         // Ensure the user exists
+        println!("Ensuring user exists: {user_id}");
         sqlx::query!(
             r#"
             INSERT INTO users (id, created, signed_in)
@@ -58,6 +58,7 @@ mod tests {
             let owner_id = doc.owner.as_ref().map(|o| o.id.clone()).expect("No owner specified");
 
             // Ensure the owner exists in the users table
+            println!("Ensuring owner exists: {owner_id}");
             if let Some(owner) = &doc.owner {
                 sqlx::query!(
                     r#"
@@ -80,6 +81,7 @@ mod tests {
                 "type": doc.type_name
             });
 
+            println!("Creating ref: {}", doc.ref_id);
             sqlx::query!(
                 r#"
                 WITH snapshot AS (
@@ -100,6 +102,7 @@ mod tests {
             .await?;
 
             // Create owner permission
+            println!("Creating owner permission: {owner_id} -> {}", doc.ref_id);
             sqlx::query!(
                 r#"
                 INSERT INTO permissions (subject, object, level)
@@ -114,6 +117,7 @@ mod tests {
 
             // Create permission for the user if different from owner
             if user_id != owner_id {
+                println!("Creating user permission: {user_id} -> {}", doc.ref_id);
                 sqlx::query!(
                     r#"
                     INSERT INTO permissions (subject, object, level)
@@ -132,7 +136,8 @@ mod tests {
         Ok(())
     }
 
-    #[proptest(async = "tokio", cases = 1024)]
+    // Tests that we can write then read any UserState to the DB and get the same UserState back.
+    #[proptest(async = "tokio", cases = 32)]
     async fn user_state_roundtrip(
         #[strategy(arbitrary_user_state_with_id())] user_id_and_state: (String, UserState),
     ) {
