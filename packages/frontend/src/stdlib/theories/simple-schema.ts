@@ -1,5 +1,5 @@
 import { ThSchema } from "catlog-wasm";
-import { Theory, type TheoryMeta } from "../../theory";
+import { Theory, type TheoryMeta, DiagramAnalysisMeta } from "../../theory";
 import * as analyses from "../analyses";
 import styles from "../styles.module.css";
 import svgStyles from "../svg_styles.module.css";
@@ -7,7 +7,27 @@ import textStyles from "../text_styles.module.css";
 
 export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
     const thSchema = new ThSchema();
+    let diagramAnalyses: DiagramAnalysisMeta[] = [];
 
+    diagramAnalyses.push(
+        analyses.diagramGraph({
+            id: "graph",
+            name: "Visualization",
+            description: "Visualize the instance as a graph",
+            help: "visualization",
+        }),
+    );
+
+    if (import.meta.env.DEV) {
+        diagramAnalyses.push(
+            analyses.tabularView({
+                id: "tabularview",
+                name: "Tabular Visualization",
+                description: "Visualize the instance as a table",
+                help: "tabularview",
+            }),
+        );
+    }
     return new Theory({
         ...theoryMeta,
         theory: thSchema.theory(),
@@ -115,19 +135,6 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
                 render: (model, data) => thSchema.renderSQL(model, data),
             }),
         ],
-        diagramAnalyses: [
-            analyses.diagramGraph({
-                id: "graph",
-                name: "Visualization",
-                description: "Visualize the instance as a graph",
-                help: "visualization",
-            }),
-            analyses.tabularView({
-                id: "tabularview",
-                name: "Tabular Visualization",
-                description: "Visualize the instance as a table",
-                help: "tabularview",
-            }),
-        ],
+        diagramAnalyses: diagramAnalyses,
     });
 }
