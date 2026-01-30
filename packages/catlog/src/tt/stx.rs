@@ -2,43 +2,12 @@
 //!
 //! See [crate::tt] for what this means.
 
-use ::pretty::RcDoc;
 use derive_more::{Constructor, Deref};
-
-#[cfg(doc)]
-use crate::dbl::discrete::theory::DiscreteDblTheory;
-use crate::zero::LabelSegment;
-use crate::{tt::prelude::*, zero::QualifiedName};
 use std::fmt;
 use std::fmt::Write as _;
 
-/// Object types are just qualified names, see [DiscreteDblTheory].
-pub type ObjectType = QualifiedName;
-/// Morphism types are paths of qualified names, see [DiscreteDblTheory].
-#[derive(Clone, PartialEq, Eq)]
-pub struct MorphismType(pub Path<QualifiedName, QualifiedName>);
-
-impl fmt::Display for MorphismType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.to_doc().group().pretty())
-    }
-}
-
-impl MorphismType {
-    fn to_doc<'a>(&self) -> D<'a> {
-        match &self.0 {
-            Path::Id(ot) => (t("Id") + s() + t(format!("{ot}"))).parens(),
-            Path::Seq(non_empty) => {
-                if non_empty.len() == 1 {
-                    t(format!("{}", non_empty[0]))
-                } else {
-                    D(RcDoc::intersperse(non_empty.iter().map(|x| t(format!("{x}")).0), t(" · ").0))
-                        .parens()
-                }
-            }
-        }
-    }
-}
+use super::{prelude::*, theory::*};
+use crate::zero::LabelSegment;
 
 /// A metavariable
 ///

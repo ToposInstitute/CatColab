@@ -2,40 +2,10 @@
 //!
 //! Specifically, notebooks will produce [TopDecl::Type] declarations.
 
-use derivative::Derivative;
 use derive_more::Constructor;
-use std::fmt;
 
-use crate::{
-    dbl::theory::DiscreteDblTheory,
-    stdlib::{th_category, th_schema, th_signed_category},
-    tt::{prelude::*, stx::*, val::*},
-    zero::{QualifiedName, name},
-};
-
-/// A theory supported by doublett.
-///
-/// Equality of these theories is nominal; two theories are the same if and only
-/// if they have the same name.
-///
-/// When we add features to doublett, this will become an enum; doublett will
-/// never be parametric (e.g., we will not thread a "theory" type through a bunch
-/// of structs in doublett).
-#[derive(Constructor, Clone, Derivative)]
-#[derivative(PartialEq, Eq)]
-pub struct Theory {
-    /// The name of the theory.
-    pub name: QualifiedName,
-    /// The definition of the theory.
-    #[derivative(PartialEq = "ignore")]
-    pub definition: Rc<DiscreteDblTheory>,
-}
-
-impl fmt::Display for Theory {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.name)
-    }
-}
+use super::{prelude::*, stx::*, theory::*, val::*};
+use crate::zero::QualifiedName;
 
 /// A toplevel declaration.
 #[derive(Clone)]
@@ -124,18 +94,6 @@ impl TopDecl {
             _ => panic!("top-level should be a term judgment"),
         }
     }
-}
-
-/// Construct a library of standard theories
-pub fn std_theories() -> HashMap<QualifiedName, Theory> {
-    [
-        (name("ThSchema"), th_schema()),
-        (name("ThCategory"), th_category()),
-        (name("ThSignedCategory"), th_signed_category()),
-    ]
-    .into_iter()
-    .map(|(name, def)| (name.clone(), Theory::new(name.clone(), Rc::new(def))))
-    .collect()
 }
 
 /// Storage for toplevel declarations.

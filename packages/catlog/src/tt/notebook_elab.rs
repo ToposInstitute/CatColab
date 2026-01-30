@@ -1,17 +1,16 @@
 //! Elaboration for frontend notebooks.
-use notebook_types::v1::{InstantiatedModel, ModelJudgment, MorDecl, Ob, ObDecl, ObType};
+
+use std::str::FromStr;
 use uuid::Uuid;
 
+use notebook_types::v1::{InstantiatedModel, ModelJudgment, MorDecl, Ob, ObDecl, ObType};
+
+use super::{context::*, eval::*, prelude::*, stx::*, theory::*, toplevel::*, val::*};
 use crate::dbl::{
     model::{Feature, InvalidDblModel},
     theory::{DblTheory, DiscreteDblTheory},
 };
-use std::str::FromStr;
-
-use crate::{
-    tt::{context::*, eval::*, prelude::*, stx::*, toplevel::*, val::*},
-    zero::QualifiedName,
-};
+use crate::zero::QualifiedName;
 
 // There is some infrastructure that needs to be put into place before
 // notebook elaboration can be fully successful.
@@ -347,7 +346,8 @@ mod test {
     use crate::tt::{
         modelgen::{generate, model_output},
         notebook_elab::Elaborator,
-        toplevel::{Theory, Toplevel, std_theories},
+        theory::{Theory, std_theories},
+        toplevel::Toplevel,
     };
     use crate::zero::name;
 

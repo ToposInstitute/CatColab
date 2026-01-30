@@ -5,11 +5,9 @@ use std::fmt;
 use crate::dbl::model::DiscreteDblModel;
 use crate::dbl::model::MutDblModel;
 use crate::dbl::model::{DblModel, FgDblModel};
-use crate::one::category::FgCategory;
-use crate::tt::stx::MorphismType;
-use crate::tt::{eval::*, prelude::*, toplevel::*, val::*};
-use crate::zero::Namespace;
-use crate::zero::QualifiedName;
+use crate::one::FgCategory;
+use crate::tt::{eval::*, prelude::*, theory::*, toplevel::*, val::*};
+use crate::zero::{Namespace, QualifiedName};
 
 /// Generate a discrete double model from a type.
 ///

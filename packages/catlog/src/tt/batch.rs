@@ -14,6 +14,7 @@ use scopeguard::guard;
 use tattle::display::SourceInfo;
 use tattle::{Reporter, declare_error};
 use text_elab::*;
+use theory::std_theories;
 use toplevel::*;
 
 const PARSE_CONFIG: ParseConfig = ParseConfig::new(

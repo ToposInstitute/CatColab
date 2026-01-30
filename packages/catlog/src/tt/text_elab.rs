@@ -1,11 +1,5 @@
 //! Elaboration for doublett
-use crate::{
-    dbl::{
-        category::VDblCategory,
-        theory::{DblTheory, DiscreteDblTheory},
-    },
-    zero::name,
-};
+
 use fnotation::*;
 use nonempty::nonempty;
 use scopeguard::{ScopeGuard, guard};
@@ -13,10 +7,12 @@ use std::fmt::Write;
 
 use tattle::declare_error;
 
-use crate::{
-    tt::{context::*, eval::*, modelgen::*, prelude::*, stx::*, toplevel::*, val::*},
-    zero::QualifiedName,
+use super::{context::*, eval::*, modelgen::*, prelude::*, stx::*, theory::*, toplevel::*, val::*};
+use crate::dbl::{
+    category::VDblCategory,
+    theory::{DblTheory, DiscreteDblTheory},
 };
+use crate::zero::{QualifiedName, name};
 
 /// The result of elaborating a top-level statement.
 pub enum TopElabResult {

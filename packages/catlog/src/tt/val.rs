@@ -5,10 +5,8 @@
 use bwd::Bwd;
 use derive_more::{Constructor, Deref};
 
-use crate::{
-    tt::{prelude::*, stx::*},
-    zero::LabelSegment,
-};
+use super::{prelude::*, stx::*, theory::*};
+use crate::zero::LabelSegment;
 
 /// A way of resolving [BwdIdx] found in [TmS_::Var] to values
 pub type Env = Bwd<TmV>;
