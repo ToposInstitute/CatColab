@@ -66,12 +66,12 @@ Receiver of the data already knows the schema, so the JSON payload to CatColab
 just includes the columns of data. Every part is named, so we use the names 
 (including for primary key columns) rather than numeric indices.
 """
-function acset_to_json(X::ACSet, S::Schema, names::Dict{Symbol, Vector{String}}
+function acset_to_json(X::ACSet, S::Schema, ids::Dict{String, Symbol}, names::Dict{Symbol, Vector{String}}
                       )::AbstractDict
-  Dict{Symbol, Vector{String}}(
-    [t => names[t] for t in types(S)] 
-    ∪ [f => names[c][X[f]] for (f,_,c) in homs(S)] 
-    ∪ [f => names[c][getvalue.(X[f])] for (f,_,c) in attrs(S)] )
+  Dict{String, Vector{String}}(
+    [findfirst(==(t), ids) => names[t] for t in types(S)] 
+    ∪ [findfirst(==(f), ids) => names[c][X[f]] for (f,_,c) in homs(S)] 
+    ∪ [findfirst(==(f), ids) => names[c][getvalue.(X[f])] for (f,_,c) in attrs(S)] )
 end
 
 """
@@ -107,13 +107,13 @@ Top level function called by CatColab. Computes an ACSet colimit of a
 function endpoint(::Val{:ACSetColim})
   @post "/acsetcolim" function(req::HTTP.Request)
     payload = json(req, ModelDiagram)
-    schema, names = model_to_schema(payload.model)
-    data = diagram_to_data(payload.diagram, names)
+    schema, ids = model_to_schema(payload.model)
+    data = diagram_to_data(payload.diagram, ids)
     acset_type = AnonACSet(
       schema; type_assignment=Dict(a=>Nothing for a in schema.attrtypes))
     y = yoneda(constructor(acset_type))
     names, res = colimit_representables(data, y)
-    acset_to_json(res, schema, make_names(res, names))
+    acset_to_json(res, schema, ids, make_names(res, names))
   end
 end
 
