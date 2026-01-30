@@ -37,20 +37,15 @@ function createTable(headers: Array<string>, data: Array<Array<string>>) {
     and a particular object `obname` in the schema, create an HTML table with
     the outgoing homs/attributes from that object.
 */
-function createACSetTable(model: DblModel, rawdata: Record<string, string[]>, obname: string) {
+function createACSetTable(model: DblModel, rawdata: Record<string, string[]>, obId: string) {
     // The primary key of this table is given by `rawdata[obname]`
-    const rows: Array<string> = rawdata[obname as keyof typeof rawdata];
+    const rows: Array<string> = rawdata[obId] || [];
+    const obname: string = model.obGeneratorLabel(obId)?.toString() || "";
 
     // Get the homs and attrs with source `obname`
     const outhoms = model
         .morGenerators()
-        .filter(
-            (m) =>
-                obname ===
-                model
-                    .obGeneratorLabel(model.morPresentation(m)?.dom.content.toString() || "")
-                    ?.toString(),
-        );
+        .filter((m) => obId === model.morPresentation(m)?.dom.content.toString());
 
     // Convert morgenerators to user-friendly names
     const headers = [obname].concat(
@@ -58,12 +53,12 @@ function createACSetTable(model: DblModel, rawdata: Record<string, string[]>, ob
     );
 
     // Data for column from indexing rawdata
-    const columnardata: Array<Array<string>> = headers.map(
-        (m: string) => rawdata[m as keyof typeof rawdata] || [""],
-    );
+    const columnardata: Array<Array<string>> = [obId]
+        .concat(outhoms)
+        .map((m: string) => rawdata[m as keyof typeof rawdata] || [""]);
 
     // Convert columnar data to row data
-    const data = Array.from(rows.keys()).map((colIndex) =>
+    const data = Array.from(rows?.keys()).map((colIndex) =>
         columnardata.map((row) => row[colIndex] || ""),
     );
 
@@ -75,11 +70,7 @@ function createACSet(model: DblModel, rawdata: Record<string, string[]>) {
     return (
         <div class="simulation">
             <PanelHeader title="Tabular view" />
-            <For each={model?.obGenerators()}>
-                {(ob) =>
-                    createACSetTable(model, rawdata, model.obGeneratorLabel(ob)?.toString() || "")
-                }
-            </For>
+            <For each={model?.obGenerators()}>{(ob) => createACSetTable(model, rawdata, ob)}</For>
         </div>
     );
 }
@@ -135,7 +126,7 @@ export default function TabularView(
             </Match>
             <Match when={res()}>
                 {(data) => {
-                    let result = data();
+                    const result = data();
                     return <div>{createACSet(result.model, result.data)}</div>;
                 }}
             </Match>
