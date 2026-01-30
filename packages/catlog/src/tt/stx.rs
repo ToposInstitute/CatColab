@@ -77,32 +77,11 @@ impl fmt::Display for MetaVar {
     }
 }
 
-/// Type in the base type theory.
-///
-/// See [crate::tt] for more information about what this means. Note that this
-/// is a simple type, so we don't need syntax and value variants.
-#[derive(Clone, PartialEq, Eq)]
-pub enum Ty0 {
-    /// The type of (objects of a given object type).
-    Object(ObjectType),
-    /// Non-dependent record type.
-    Record(Row<Ty0>),
-    /// Unit type.
-    Unit,
-    /// Meta variable
-    Meta(MetaVar),
-}
-
 /// Content of record type syntax.
 #[derive(Clone, Constructor)]
 pub struct RecordS {
-    /// The base types of the fields.
-    pub fields0: Row<Ty0>,
-    ///  The total types of the fields.
-    ///
-    /// Each of these types is meant to be evaluated in an environment
-    /// where the last element is a value of type `fields0`.
-    pub fields1: Row<TyS>,
+    /// The total types of the fields.
+    pub fields: Row<TyS>,
 }
 
 /// Inner enum for [TyS].
@@ -240,7 +219,7 @@ impl TyS {
                 morphism_type.to_doc() + tuple([dom.to_doc(), cod.to_doc()])
             }
             TyS_::Record(r) => {
-                tuple(r.fields1.iter().map(|(_, (label, ty))| {
+                tuple(r.fields.iter().map(|(_, (label, ty))| {
                     binop(":", t(format!("{}", label)).group(), ty.to_doc())
                 }))
             }

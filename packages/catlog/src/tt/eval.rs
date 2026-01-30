@@ -36,7 +36,7 @@ impl<'a> Evaluator<'a> {
     }
 
     fn eval_record(&self, r: &RecordS) -> RecordV {
-        RecordV::new(r.fields0.clone(), self.env.clone(), r.fields1.clone(), Dtry::empty())
+        RecordV::new(self.env.clone(), r.fields.clone(), Dtry::empty())
     }
 
     /// Return a new [Evaluator] with environment `env`
@@ -109,7 +109,7 @@ impl<'a> Evaluator<'a> {
     pub fn field_ty(&self, ty: &TyV, val: &TmV, field_name: FieldName) -> TyV {
         match &**ty {
             TyV_::Record(r) => {
-                let field_ty_s = r.fields1.get(field_name).unwrap();
+                let field_ty_s = r.fields.get(field_name).unwrap();
                 let orig_field_ty = self.with_env(r.env.snoc(val.clone())).eval_ty(field_ty_s);
                 match r.specializations.entry(&field_name) {
                     Some(DtryEntry::File(ty)) => ty.clone(),
@@ -159,9 +159,9 @@ impl<'a> Evaluator<'a> {
             TyV_::Record(r) => {
                 let r_eval = self.with_env(r.env.clone()).bind_self(ty.clone()).1;
                 let fields1 = r
-                    .fields1
+                    .fields
                     .map(|ty_s| self.bind_self(ty.clone()).1.quote_ty(&r_eval.eval_ty(ty_s)));
-                let record_ty_s = TyS::record(RecordS::new(r.fields0.clone(), fields1));
+                let record_ty_s = TyS::record(RecordS::new(fields1));
                 if r.specializations.is_empty() {
                     record_ty_s
                 } else {
@@ -236,7 +236,7 @@ impl<'a> Evaluator<'a> {
             TyV_::Object(_) => Ok(()),
             TyV_::Morphism(_, _, _) => Ok(()),
             TyV_::Record(r) => {
-                for (name, (label, _)) in r.fields1.iter() {
+                for (name, (label, _)) in r.fields.iter() {
                     self.element_of(&self.proj(tm, *name, *label), &self.field_ty(ty, tm, *name))?
                 }
                 Ok(())
@@ -270,13 +270,10 @@ impl<'a> Evaluator<'a> {
                 Ok(())
             }
             (TyV_::Record(r1), TyV_::Record(r2)) => {
-                if r1.fields0 != r2.fields0 {
-                    return Err(t("record types have unequal base types"));
-                }
                 let mut fields = IndexMap::new();
                 let mut self1 = self.clone();
                 for ((name, (label, field_ty1_s)), (_, (_, field_ty2_s))) in
-                    r1.fields1.iter().zip(r2.fields1.iter())
+                    r1.fields.iter().zip(r2.fields.iter())
                 {
                     let v = TmV::Cons(fields.clone().into());
                     let field_ty1_v = self1.with_env(r1.env.snoc(v.clone())).eval_ty(field_ty1_s);
@@ -302,7 +299,7 @@ impl<'a> Evaluator<'a> {
             TyV_::Morphism(_, _, _) => TmV::Opaque,
             TyV_::Record(r) => {
                 let mut fields = Row::empty();
-                for (name, (label, _)) in r.fields1.iter() {
+                for (name, (label, _)) in r.fields.iter() {
                     let ty_v = self.field_ty(ty, &TmV::Cons(fields.clone()), *name);
                     let v = self.eta_neu(&TmN::proj(n.clone(), *name, *label), &ty_v);
                     fields = fields.insert(*name, *label, v);
@@ -409,7 +406,7 @@ impl<'a> Evaluator<'a> {
         };
 
         let (field, path) = (path[0], &path[1..]);
-        if !r.fields1.has(field.0) {
+        if !r.fields.has(field.0) {
             return Err(format!("no such field .{}", field.1));
         }
         let orig_field_ty = self.field_ty(ty, val, field.0);
