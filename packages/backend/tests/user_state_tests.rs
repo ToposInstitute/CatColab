@@ -4,12 +4,13 @@ mod tests {
     use backend::auth::PermissionLevel;
     use backend::user_state::arbitrary::arbitrary_user_state_with_id;
     use backend::user_state::{UserState, read_user_state_from_db};
+    use proptest::test_runner::FileFailurePersistence;
     use sqlx::PgPool;
     use test_strategy::proptest;
 
     async fn get_pool() -> PgPool {
         let database_url =
-            std::env::var("DATABASE_URL").expect("DATABASE_URL must be set for tests");
+            dotenvy::var("DATABASE_URL").expect("DATABASE_URL must be set for tests");
         PgPool::connect(&database_url).await.expect("Failed to connect to database")
     }
 
@@ -131,7 +132,7 @@ mod tests {
         Ok(())
     }
 
-    #[proptest(async = "tokio", cases = 256)]
+    #[proptest(async = "tokio", cases = 1024)]
     async fn user_state_roundtrip(
         #[strategy(arbitrary_user_state_with_id())] user_id_and_state: (String, UserState),
     ) {

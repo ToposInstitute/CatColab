@@ -42,7 +42,7 @@ pub mod arbitrary {
 
     /// Generates a consistent RefStub where:
     /// - If permission_level is Own, the owner matches the user_id parameter
-    /// - Otherwise, a separate owner is generated (always present and different from user)
+    /// - Otherwise, a separate owner is generated (always different from user)
     fn ref_stub_with_owner(user_id: String) -> impl Strategy<Value = RefStub> {
         (
             any::<String>(),          // name
@@ -87,7 +87,6 @@ pub mod arbitrary {
 
     /// Generates a (user_id, UserState) pair where the UserState is consistent
     /// with the user_id (i.e., owned documents have the user as owner).
-    /// Each document has a unique owner to avoid conflicts.
     pub fn arbitrary_user_state_with_id() -> impl Strategy<Value = (String, UserState)> {
         arb::<uuid::Uuid>().prop_flat_map(|user_uuid| {
             let user_id = format!("test_user_{}", user_uuid);
