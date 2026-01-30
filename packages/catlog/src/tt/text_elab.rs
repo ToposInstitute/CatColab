@@ -35,7 +35,7 @@ pub struct TopElaborator {
 }
 
 impl TopElaborator {
-    /// Constructor
+    /// Constructs a context for top-level elaboration.
     pub fn new(reporter: Reporter) -> Self {
         Self {
             current_theory: None,
@@ -437,14 +437,14 @@ impl<'a> Elaborator<'a> {
                 (TyS::sing(elab.evaluator().quote_ty(&ty_v), tm_s), TyV::sing(ty_v, tm_v))
             }
             App1(mt_n, L(_, Tuple(domcod_n))) => {
-                if domcod_n.len() != 2 {
+                let [dom_n, cod_n] = domcod_n.as_slice() else {
                     return elab.ty_error("expected two arguments for morphism type");
-                }
+                };
                 let Some((mt, dom_ty, cod_ty)) = elab.morphism_ty(mt_n) else {
                     return elab.ty_hole();
                 };
-                let (dom_s, dom_v) = elab.chk(&TyV::object(dom_ty.clone()), domcod_n[0]);
-                let (cod_s, cod_v) = elab.chk(&TyV::object(cod_ty.clone()), domcod_n[1]);
+                let (dom_s, dom_v) = elab.chk(&TyV::object(dom_ty.clone()), dom_n);
+                let (cod_s, cod_v) = elab.chk(&TyV::object(cod_ty.clone()), cod_n);
                 (TyS::morphism(mt.clone(), dom_s, cod_s), TyV::morphism(mt.clone(), dom_v, cod_v))
             }
             Tuple(field_ns) => {
@@ -460,7 +460,6 @@ impl<'a> Elaborator<'a> {
                         }
                         _ => elab.error("expected fields in the form <name> : <type>"),
                     }) else {
-                        println!("failed");
                         failed = true;
                         continue;
                     };

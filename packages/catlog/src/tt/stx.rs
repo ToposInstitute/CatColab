@@ -58,17 +58,10 @@ impl MorphismType {
 /// requested with `@hole`.
 ///
 /// Metavariables in notebook elaboration are namespaced to the notebook.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Constructor, Clone, Copy, PartialEq, Eq)]
 pub struct MetaVar {
     ref_id: Option<Ustr>,
     id: usize,
-}
-
-impl MetaVar {
-    /// Constructor for metavariables
-    pub fn new(ref_id: Option<Ustr>, id: usize) -> Self {
-        Self { ref_id, id }
-    }
 }
 
 impl fmt::Display for MetaVar {

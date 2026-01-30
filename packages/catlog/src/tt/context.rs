@@ -1,24 +1,24 @@
 //! Contexts store the type and values of in-scope variables during elaboration.
+
+use derive_more::Constructor;
+
 use crate::tt::{prelude::*, val::*};
 
 /// Each variable in context is associated with a label and a type.
 ///
 /// Multiple variables with the same name can show up in context; in this case
-/// the most recent one is selected, as follows the standard scope conventions.
+/// the most recent one is selected, following the standard scope conventions.
+#[derive(Constructor)]
 pub struct VarInContext {
     /// The name of the variable.
     pub name: VarName,
     /// The label for the variable.
     pub label: LabelSegment,
     /// The type of the variable.
+    ///
+    /// We allow the type to be null as a hack for the `self` variable before we
+    /// know the type of the `self` variable.
     pub ty: Option<TyV>,
-}
-
-impl VarInContext {
-    /// Constructor for VarInContext.
-    pub fn new(name: VarName, label: LabelSegment, ty: Option<TyV>) -> Self {
-        Self { name, label, ty }
-    }
 }
 
 /// The variable context during elaboration
@@ -26,9 +26,6 @@ pub struct Context {
     /// Stores the value of each of the variables in context
     pub env: Env,
     /// Stores the names and types of each of the variables in context.
-    ///
-    /// We allow the type to be "none" as a hack for the `self` variable before we
-    /// know the type of the `self` variable.
     pub scope: Vec<VarInContext>,
 }
 
@@ -38,7 +35,6 @@ pub struct ContextCheckpoint {
     scope: usize,
 }
 
-// Clippy wants this for some reason
 impl Default for Context {
     fn default() -> Self {
         Self::new()

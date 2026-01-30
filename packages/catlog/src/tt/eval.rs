@@ -5,6 +5,9 @@
 //! - `eval : syntax -> value` ([Evaluator::eval_tm], [Evaluator::eval_ty])
 //! - `quote : value -> syntax` ([Evaluator::quote_tm], [Evaluator::quote_neu], [Evaluator::quote_ty])
 //! - `convertable? : value -> value -> bool` ([Evaluator::equal_tm], [Evaluator::element_of], [Evaluator::subtype])
+
+use derive_more::Constructor;
+
 use crate::{
     tt::{prelude::*, stx::*, toplevel::*, val::*},
     zero::LabelSegment,
@@ -17,7 +20,7 @@ use crate::{
 /// involves evaluating the body of the lambda in the context of a freshly
 /// introduced variable; even though we don't have lambdas, a similar
 /// thing applies to dependent records.
-#[derive(Clone)]
+#[derive(Constructor, Clone)]
 pub struct Evaluator<'a> {
     toplevel: &'a Toplevel,
     env: Env,
@@ -26,15 +29,6 @@ pub struct Evaluator<'a> {
 }
 
 impl<'a> Evaluator<'a> {
-    /// Constructor for [Evaluator]
-    pub fn new(toplevel: &'a Toplevel, env: Env, scope_length: usize) -> Self {
-        Self {
-            toplevel,
-            env,
-            scope_length,
-        }
-    }
-
     fn eval_record(&self, r: &RecordS) -> RecordV {
         RecordV::new(self.env.clone(), r.fields.clone(), Dtry::empty())
     }
@@ -53,7 +47,7 @@ impl<'a> Evaluator<'a> {
     /// to self.env
     pub fn eval_ty(&self, ty: &TyS) -> TyV {
         match &**ty {
-            TyS_::TopVar(tv) => self.toplevel.declarations.get(tv).unwrap().as_ty().val,
+            TyS_::TopVar(tv) => self.toplevel.declarations.get(tv).unwrap().clone().unwrap_ty().val,
             TyS_::Object(ot) => TyV::object(ot.clone()),
             TyS_::Morphism(pt, dom, cod) => {
                 TyV::morphism(pt.clone(), self.eval_tm(dom), self.eval_tm(cod))
@@ -76,10 +70,12 @@ impl<'a> Evaluator<'a> {
     /// to self.env
     pub fn eval_tm(&self, tm: &TmS) -> TmV {
         match &**tm {
-            TmS_::TopVar(tv) => self.toplevel.declarations.get(tv).unwrap().as_const().val,
+            TmS_::TopVar(tv) => {
+                self.toplevel.declarations.get(tv).unwrap().clone().unwrap_const().val
+            }
             TmS_::TopApp(tv, args_s) => {
                 let env = Env::nil().extend_by(args_s.iter().map(|arg_s| self.eval_tm(arg_s)));
-                let def = self.toplevel.declarations.get(tv).unwrap().as_def();
+                let def = self.toplevel.declarations.get(tv).unwrap().clone().unwrap_def();
                 self.with_env(env).eval_tm(&def.body)
             }
             TmS_::Var(i, _, _) => self.env.get(**i).cloned().unwrap(),
