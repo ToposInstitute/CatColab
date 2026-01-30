@@ -8,7 +8,7 @@ pub struct UserState {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod arbitrary {
     use super::*;
     use proptest::{arbitrary::Arbitrary, prelude::*};
 
