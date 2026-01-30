@@ -87,11 +87,17 @@ pub mod arbitrary {
 
     /// Generates a (user_id, UserState) pair where the UserState is consistent
     /// with the user_id (i.e., owned documents have the user as owner).
+    /// Documents are sorted by created_at descending to match DB ordering.
     pub fn arbitrary_user_state_with_id() -> impl Strategy<Value = (String, UserState)> {
         arb::<uuid::Uuid>().prop_flat_map(|user_uuid| {
             let user_id = format!("test_user_{}", user_uuid);
-            prop::collection::vec(ref_stub_with_owner(user_id.clone()), 0..5)
-                .prop_map(move |documents| (user_id.clone(), UserState { documents }))
+            prop::collection::vec(ref_stub_with_owner(user_id.clone()), 0..5).prop_map(
+                move |mut documents| {
+                    // Sort by created_at descending to match default search_ref_stubs ordering
+                    documents.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+                    (user_id.clone(), UserState { documents })
+                },
+            )
         })
     }
 
