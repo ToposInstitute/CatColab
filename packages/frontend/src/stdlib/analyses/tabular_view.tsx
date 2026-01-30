@@ -55,7 +55,7 @@ function createACSetTable(model: DblModel, rawdata: object, obname: string) {
 
     // Convert morgenerators to user-friendly names
     const headers = [obname].concat(
-        outhoms.map((m) => model.morGeneratorLabel(m)?.toString() || ""),
+        outhoms.map((m) => model.morGeneratorLabel(m)?.join(".") ?? ""),
     );
 
     // Data for column from indexing rawdata
@@ -99,18 +99,22 @@ export default function TabularView(
         () => {
             const model = props.liveDiagram.liveModel.elaboratedModel();
             const diagram = props.liveDiagram.elaboratedDiagram();
-            return model && diagram && [model, diagram];
+            if (model === undefined || diagram === undefined) {
+                return undefined;
+            } else {
+                return { model: model, diagram: diagram };
+            }
         },
 
-        async ([model, diagram]) => {
+        async (modeldiagram) => {
             const response = await fetch("http://127.0.0.1:8080/acsetcolim", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    model: model?.presentation(),
-                    diagram: diagram?.presentation(),
+                    model: modeldiagram?.model.presentation(),
+                    diagram: modeldiagram?.diagram.presentation(),
                 }),
             });
 
@@ -118,13 +122,9 @@ export default function TabularView(
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            return response.json();
+            return { model: modeldiagram.model, data: await response.json() };
         },
     );
-    const model = props.liveDiagram.liveModel.elaboratedModel();
-    if (model === undefined) {
-        throw "Bad model";
-    }
     return (
         <Switch>
             <Match when={res.loading}>
@@ -134,7 +134,12 @@ export default function TabularView(
             <Match when={res.error}>
                 <div>❌ Error loading model: {res.error?.message || "Unknown error"}</div>
             </Match>
-            <Match when={res()}>{(data) => <div>{createACSet(model, data())}</div>}</Match>
+            <Match when={res()}>
+                {(data) => {
+                    let result = data();
+                    return <div>{createACSet(result.model, result.data)}</div>;
+                }}
+            </Match>
         </Switch>
     );
 }
