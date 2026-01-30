@@ -3,8 +3,7 @@
 //! See [crate::tt] for what this means.
 
 use bwd::Bwd;
-use derive_more::Constructor;
-use std::ops::Deref;
+use derive_more::{Constructor, Deref};
 
 use crate::{
     tt::{prelude::*, stx::*},
@@ -17,15 +16,10 @@ pub type Env = Bwd<TmV>;
 /// The content of a record type value
 #[derive(Clone, Constructor)]
 pub struct RecordV {
-    /// The base type.
-    pub fields0: Row<Ty0>,
     /// The closed-over environment.
     pub env: Env,
-    /// The total types for the fields.
-    ///
-    /// These are ready to be evaluated in `env.snoc(x)` where `x` is a value of
-    /// type `Ty0::Record(fields0)`.
-    pub fields1: Row<TyS>,
+    /// The types for the fields.
+    pub fields: Row<TyS>,
     /// Specializations of the fields.
     ///
     /// When we get to actually computing the type of fields, we will look here
@@ -99,16 +93,9 @@ pub enum TyV_ {
 }
 
 /// Value for total types, dereferences to [TyV_].
-#[derive(Clone)]
+#[derive(Clone, Deref)]
+#[deref(forward)]
 pub struct TyV(Rc<TyV_>);
-
-impl Deref for TyV {
-    type Target = TyV_;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
 
 impl TyV {
     /// Smart constructor for [TyV], [TyV_::Object] case.
@@ -177,18 +164,6 @@ impl TyV {
     pub fn meta(mv: MetaVar) -> Self {
         Self(Rc::new(TyV_::Meta(mv)))
     }
-
-    /// The base type
-    pub fn ty0(&self) -> Ty0 {
-        match &**self {
-            TyV_::Object(qname) => Ty0::Object(qname.clone()),
-            TyV_::Morphism(_, _, _) => Ty0::Unit,
-            TyV_::Record(record_v) => Ty0::Record(record_v.fields0.clone()),
-            TyV_::Sing(ty_v, _) => ty_v.ty0(),
-            TyV_::Unit => Ty0::Unit,
-            TyV_::Meta(mv) => Ty0::Meta(*mv),
-        }
-    }
 }
 
 /// Inner enum for [TmN].
@@ -201,16 +176,9 @@ pub enum TmN_ {
 }
 
 /// Neutrals for base terms, dereferences to [TmN_].
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Deref, PartialEq, Eq)]
+#[deref(forward)]
 pub struct TmN(Rc<TmN_>);
-
-impl Deref for TmN {
-    type Target = TmN_;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
 
 impl TmN {
     /// Smart constructor for [TmN], [TmN_::Var] case.

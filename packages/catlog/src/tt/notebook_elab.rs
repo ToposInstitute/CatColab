@@ -144,7 +144,7 @@ impl<'a> Elaborator<'a> {
             let TyV_::Record(r) = &*ty_v else {
                 return None;
             };
-            let &(label, _) = r.fields1.get_with_label(last)?;
+            let &(label, _) = r.fields.get_with_label(last)?;
             Some((
                 TmS::proj(tm_s, last, label),
                 self.evaluator().proj(&tm_v, last, label),
@@ -251,7 +251,7 @@ impl<'a> Elaborator<'a> {
                 let Some((ob_s, ob_v, ob_type)) = self.ob(ob) else {
                     continue;
                 };
-                let Some((field_label, field_ty)) = r.fields1.get_with_label(field_name) else {
+                let Some((field_label, field_ty)) = r.fields.get_with_label(field_name) else {
                     continue;
                 };
                 match &**field_ty {
@@ -306,7 +306,6 @@ impl<'a> Elaborator<'a> {
             matches!(cell, ModelJudgment::Object(_) | ModelJudgment::Instantiation(_))
         });
 
-        let mut field_ty0s = Vec::new();
         let mut field_ty_vs = Vec::new();
         let self_var = self.intro(name_seg("self"), label_seg("self"), None).as_neu();
         let c = self.checkpoint();
@@ -317,7 +316,6 @@ impl<'a> Elaborator<'a> {
                 ModelJudgment::Morphism(mor_decl) => self.morphism_cell(mor_decl),
                 ModelJudgment::Instantiation(i_decl) => self.instantiation_cell(i_decl),
             };
-            field_ty0s.push((name, (label, ty_v.ty0())));
             field_ty_vs.push((name, (label, ty_v.clone())));
             self.ctx.scope.push(VarInContext::new(name, label, Some(ty_v.clone())));
             self.ctx.env =
@@ -329,9 +327,8 @@ impl<'a> Elaborator<'a> {
             .iter()
             .map(|(name, (label, ty_v))| (*name, (*label, self.evaluator().quote_ty(ty_v))))
             .collect();
-        let field_ty0s: Row<_> = field_ty0s.into_iter().collect();
-        let r_s = RecordS::new(field_ty0s.clone(), field_tys.clone());
-        let r_v = RecordV::new(field_ty0s, self.ctx.env.clone(), field_tys, Dtry::empty());
+        let r_s = RecordS::new(field_tys.clone());
+        let r_v = RecordV::new(self.ctx.env.clone(), field_tys, Dtry::empty());
         (TyS::record(r_s), TyV::record(r_v))
     }
 }

@@ -56,7 +56,7 @@ fn extract_to(
         }
         TyV_::Record(r) => {
             let mut namespace = Namespace::new_for_uuid();
-            for (name, (label, _)) in r.fields1.iter() {
+            for (name, (label, _)) in r.fields.iter() {
                 let mut prefix = prefix.clone();
                 prefix.push(*name);
                 match name {

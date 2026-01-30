@@ -35,7 +35,7 @@ pub struct TopElaborator {
 }
 
 impl TopElaborator {
-    /// Constructor
+    /// Constructs a context for top-level elaboration.
     pub fn new(reporter: Reporter) -> Self {
         Self {
             current_theory: None,
@@ -437,18 +437,17 @@ impl<'a> Elaborator<'a> {
                 (TyS::sing(elab.evaluator().quote_ty(&ty_v), tm_s), TyV::sing(ty_v, tm_v))
             }
             App1(mt_n, L(_, Tuple(domcod_n))) => {
-                if domcod_n.len() != 2 {
+                let [dom_n, cod_n] = domcod_n.as_slice() else {
                     return elab.ty_error("expected two arguments for morphism type");
-                }
+                };
                 let Some((mt, dom_ty, cod_ty)) = elab.morphism_ty(mt_n) else {
                     return elab.ty_hole();
                 };
-                let (dom_s, dom_v) = elab.chk(&TyV::object(dom_ty.clone()), domcod_n[0]);
-                let (cod_s, cod_v) = elab.chk(&TyV::object(cod_ty.clone()), domcod_n[1]);
+                let (dom_s, dom_v) = elab.chk(&TyV::object(dom_ty.clone()), dom_n);
+                let (cod_s, cod_v) = elab.chk(&TyV::object(cod_ty.clone()), cod_n);
                 (TyS::morphism(mt.clone(), dom_s, cod_s), TyV::morphism(mt.clone(), dom_v, cod_v))
             }
             Tuple(field_ns) => {
-                let mut field_ty0s = Vec::<(FieldName, (LabelSegment, Ty0))>::new();
                 let mut field_ty_vs = Vec::<(FieldName, (LabelSegment, TyV))>::new();
                 let mut failed = false;
                 let self_var = elab.intro(name_seg("self"), label_seg("self"), None).as_neu();
@@ -461,12 +460,10 @@ impl<'a> Elaborator<'a> {
                         }
                         _ => elab.error("expected fields in the form <name> : <type>"),
                     }) else {
-                        println!("failed");
                         failed = true;
                         continue;
                     };
                     let (_, ty_v) = elab.ty(ty_n);
-                    field_ty0s.push((name, (label, ty_v.ty0())));
                     field_ty_vs.push((name, (label, ty_v.clone())));
                     elab.ctx.push_scope(name, label, Some(ty_v.clone()));
                     elab.ctx.env =
@@ -480,9 +477,8 @@ impl<'a> Elaborator<'a> {
                     .iter()
                     .map(|(name, (label, ty_v))| (*name, (*label, elab.evaluator().quote_ty(ty_v))))
                     .collect();
-                let field_ty0s: Row<_> = field_ty0s.into_iter().collect();
-                let r_s = RecordS::new(field_ty0s.clone(), field_tys.clone());
-                let r_v = RecordV::new(field_ty0s, elab.ctx.env.clone(), field_tys, Dtry::empty());
+                let r_s = RecordS::new(field_tys.clone());
+                let r_v = RecordV::new(elab.ctx.env.clone(), field_tys, Dtry::empty());
                 (TyS::record(r_s), TyV::record(r_v))
             }
             App2(L(_, Keyword("&")), ty_n, L(_, Tuple(specialization_ns))) => {
@@ -547,7 +543,7 @@ impl<'a> Elaborator<'a> {
                 };
                 let label = label_seg(*f);
                 let f = name_seg(*f);
-                if !r.fields1.has(f) {
+                if !r.fields.has(f) {
                     return elab.syn_error(format!("no such field {f}"));
                 }
                 (
@@ -642,17 +638,16 @@ impl<'a> Elaborator<'a> {
                 let TyV_::Record(r) = &**ty else {
                     return elab.chk_error("must check record former against record type");
                 };
-                if r.fields1.len() != field_ns.len() {
+                if r.fields.len() != field_ns.len() {
                     return elab.chk_error(format!(
                         "wrong number of fields provided, expected {}, got {}",
-                        r.fields1.len(),
-                        r.fields0.len(),
+                        r.fields.len(),
+                        field_ns.len(),
                     ));
                 }
                 let mut field_stxs = IndexMap::new();
                 let mut field_vals = IndexMap::new();
-                for (field_n, (name, (label, field_ty_s))) in field_ns.iter().zip(r.fields1.iter())
-                {
+                for (field_n, (name, (label, field_ty_s))) in field_ns.iter().zip(r.fields.iter()) {
                     elab.loc = Some(field_n.loc());
                     let tm_n = match field_n.ast0() {
                         App2(L(_, Keyword(":=")), L(_, Var(given_name)), field_val_n) => {

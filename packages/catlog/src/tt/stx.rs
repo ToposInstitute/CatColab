@@ -3,7 +3,7 @@
 //! See [crate::tt] for what this means.
 
 use ::pretty::RcDoc;
-use derive_more::Constructor;
+use derive_more::{Constructor, Deref};
 
 #[cfg(doc)]
 use crate::dbl::discrete::theory::DiscreteDblTheory;
@@ -11,7 +11,6 @@ use crate::zero::LabelSegment;
 use crate::{tt::prelude::*, zero::QualifiedName};
 use std::fmt;
 use std::fmt::Write as _;
-use std::ops::Deref;
 
 /// Object types are just qualified names, see [DiscreteDblTheory].
 pub type ObjectType = QualifiedName;
@@ -58,17 +57,10 @@ impl MorphismType {
 /// requested with `@hole`.
 ///
 /// Metavariables in notebook elaboration are namespaced to the notebook.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Constructor, Clone, Copy, PartialEq, Eq)]
 pub struct MetaVar {
     ref_id: Option<Ustr>,
     id: usize,
-}
-
-impl MetaVar {
-    /// Constructor for metavariables
-    pub fn new(ref_id: Option<Ustr>, id: usize) -> Self {
-        Self { ref_id, id }
-    }
 }
 
 impl fmt::Display for MetaVar {
@@ -77,32 +69,11 @@ impl fmt::Display for MetaVar {
     }
 }
 
-/// Type in the base type theory.
-///
-/// See [crate::tt] for more information about what this means. Note that this
-/// is a simple type, so we don't need syntax and value variants.
-#[derive(Clone, PartialEq, Eq)]
-pub enum Ty0 {
-    /// The type of (objects of a given object type).
-    Object(ObjectType),
-    /// Non-dependent record type.
-    Record(Row<Ty0>),
-    /// Unit type.
-    Unit,
-    /// Meta variable
-    Meta(MetaVar),
-}
-
 /// Content of record type syntax.
 #[derive(Clone, Constructor)]
 pub struct RecordS {
-    /// The base types of the fields.
-    pub fields0: Row<Ty0>,
-    ///  The total types of the fields.
-    ///
-    /// Each of these types is meant to be evaluated in an environment
-    /// where the last element is a value of type `fields0`.
-    pub fields1: Row<TyS>,
+    /// The total types of the fields.
+    pub fields: Row<TyS>,
 }
 
 /// Inner enum for [TyS].
@@ -177,16 +148,9 @@ pub enum TyS_ {
 ///
 /// See [crate::tt] for an explanation of what total types are, and for an
 /// explanation of our approach to Rc pointers in abstract syntax trees.
-#[derive(Clone)]
+#[derive(Clone, Deref)]
+#[deref(forward)]
 pub struct TyS(Rc<TyS_>);
-
-impl Deref for TyS {
-    type Target = TyS_;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
 
 impl TyS {
     /// Smart constructor for [TyS], [TyS_::TopVar] case.
@@ -240,7 +204,7 @@ impl TyS {
                 morphism_type.to_doc() + tuple([dom.to_doc(), cod.to_doc()])
             }
             TyS_::Record(r) => {
-                tuple(r.fields1.iter().map(|(_, (label, ty))| {
+                tuple(r.fields.iter().map(|(_, (label, ty))| {
                     binop(":", t(format!("{}", label)).group(), ty.to_doc())
                 }))
             }
@@ -307,16 +271,9 @@ pub enum TmS_ {
 ///
 /// See [crate::tt] for an explanation of what total types are, and for an
 /// explanation of our approach to Rc pointers in abstract syntax trees.
-#[derive(Clone)]
+#[derive(Clone, Deref)]
+#[deref(forward)]
 pub struct TmS(Rc<TmS_>);
-
-impl Deref for TmS {
-    type Target = TmS_;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
 
 impl TmS {
     /// Smart constructor for [TmS], [TmS_::TopVar] case.

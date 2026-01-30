@@ -5,6 +5,9 @@
 //! - `eval : syntax -> value` ([Evaluator::eval_tm], [Evaluator::eval_ty])
 //! - `quote : value -> syntax` ([Evaluator::quote_tm], [Evaluator::quote_neu], [Evaluator::quote_ty])
 //! - `convertable? : value -> value -> bool` ([Evaluator::equal_tm], [Evaluator::element_of], [Evaluator::subtype])
+
+use derive_more::Constructor;
+
 use crate::{
     tt::{prelude::*, stx::*, toplevel::*, val::*},
     zero::LabelSegment,
@@ -17,7 +20,7 @@ use crate::{
 /// involves evaluating the body of the lambda in the context of a freshly
 /// introduced variable; even though we don't have lambdas, a similar
 /// thing applies to dependent records.
-#[derive(Clone)]
+#[derive(Constructor, Clone)]
 pub struct Evaluator<'a> {
     toplevel: &'a Toplevel,
     env: Env,
@@ -26,17 +29,8 @@ pub struct Evaluator<'a> {
 }
 
 impl<'a> Evaluator<'a> {
-    /// Constructor for [Evaluator]
-    pub fn new(toplevel: &'a Toplevel, env: Env, scope_length: usize) -> Self {
-        Self {
-            toplevel,
-            env,
-            scope_length,
-        }
-    }
-
     fn eval_record(&self, r: &RecordS) -> RecordV {
-        RecordV::new(r.fields0.clone(), self.env.clone(), r.fields1.clone(), Dtry::empty())
+        RecordV::new(self.env.clone(), r.fields.clone(), Dtry::empty())
     }
 
     /// Return a new [Evaluator] with environment `env`
@@ -53,7 +47,7 @@ impl<'a> Evaluator<'a> {
     /// to self.env
     pub fn eval_ty(&self, ty: &TyS) -> TyV {
         match &**ty {
-            TyS_::TopVar(tv) => self.toplevel.declarations.get(tv).unwrap().as_ty().val,
+            TyS_::TopVar(tv) => self.toplevel.declarations.get(tv).unwrap().clone().unwrap_ty().val,
             TyS_::Object(ot) => TyV::object(ot.clone()),
             TyS_::Morphism(pt, dom, cod) => {
                 TyV::morphism(pt.clone(), self.eval_tm(dom), self.eval_tm(cod))
@@ -76,10 +70,12 @@ impl<'a> Evaluator<'a> {
     /// to self.env
     pub fn eval_tm(&self, tm: &TmS) -> TmV {
         match &**tm {
-            TmS_::TopVar(tv) => self.toplevel.declarations.get(tv).unwrap().as_const().val,
+            TmS_::TopVar(tv) => {
+                self.toplevel.declarations.get(tv).unwrap().clone().unwrap_const().val
+            }
             TmS_::TopApp(tv, args_s) => {
                 let env = Env::nil().extend_by(args_s.iter().map(|arg_s| self.eval_tm(arg_s)));
-                let def = self.toplevel.declarations.get(tv).unwrap().as_def();
+                let def = self.toplevel.declarations.get(tv).unwrap().clone().unwrap_def();
                 self.with_env(env).eval_tm(&def.body)
             }
             TmS_::Var(i, _, _) => self.env.get(**i).cloned().unwrap(),
@@ -109,7 +105,7 @@ impl<'a> Evaluator<'a> {
     pub fn field_ty(&self, ty: &TyV, val: &TmV, field_name: FieldName) -> TyV {
         match &**ty {
             TyV_::Record(r) => {
-                let field_ty_s = r.fields1.get(field_name).unwrap();
+                let field_ty_s = r.fields.get(field_name).unwrap();
                 let orig_field_ty = self.with_env(r.env.snoc(val.clone())).eval_ty(field_ty_s);
                 match r.specializations.entry(&field_name) {
                     Some(DtryEntry::File(ty)) => ty.clone(),
@@ -159,9 +155,9 @@ impl<'a> Evaluator<'a> {
             TyV_::Record(r) => {
                 let r_eval = self.with_env(r.env.clone()).bind_self(ty.clone()).1;
                 let fields1 = r
-                    .fields1
+                    .fields
                     .map(|ty_s| self.bind_self(ty.clone()).1.quote_ty(&r_eval.eval_ty(ty_s)));
-                let record_ty_s = TyS::record(RecordS::new(r.fields0.clone(), fields1));
+                let record_ty_s = TyS::record(RecordS::new(fields1));
                 if r.specializations.is_empty() {
                     record_ty_s
                 } else {
@@ -236,7 +232,7 @@ impl<'a> Evaluator<'a> {
             TyV_::Object(_) => Ok(()),
             TyV_::Morphism(_, _, _) => Ok(()),
             TyV_::Record(r) => {
-                for (name, (label, _)) in r.fields1.iter() {
+                for (name, (label, _)) in r.fields.iter() {
                     self.element_of(&self.proj(tm, *name, *label), &self.field_ty(ty, tm, *name))?
                 }
                 Ok(())
@@ -270,13 +266,10 @@ impl<'a> Evaluator<'a> {
                 Ok(())
             }
             (TyV_::Record(r1), TyV_::Record(r2)) => {
-                if r1.fields0 != r2.fields0 {
-                    return Err(t("record types have unequal base types"));
-                }
                 let mut fields = IndexMap::new();
                 let mut self1 = self.clone();
                 for ((name, (label, field_ty1_s)), (_, (_, field_ty2_s))) in
-                    r1.fields1.iter().zip(r2.fields1.iter())
+                    r1.fields.iter().zip(r2.fields.iter())
                 {
                     let v = TmV::Cons(fields.clone().into());
                     let field_ty1_v = self1.with_env(r1.env.snoc(v.clone())).eval_ty(field_ty1_s);
@@ -302,7 +295,7 @@ impl<'a> Evaluator<'a> {
             TyV_::Morphism(_, _, _) => TmV::Opaque,
             TyV_::Record(r) => {
                 let mut fields = Row::empty();
-                for (name, (label, _)) in r.fields1.iter() {
+                for (name, (label, _)) in r.fields.iter() {
                     let ty_v = self.field_ty(ty, &TmV::Cons(fields.clone()), *name);
                     let v = self.eta_neu(&TmN::proj(n.clone(), *name, *label), &ty_v);
                     fields = fields.insert(*name, *label, v);
@@ -409,7 +402,7 @@ impl<'a> Evaluator<'a> {
         };
 
         let (field, path) = (path[0], &path[1..]);
-        if !r.fields1.has(field.0) {
+        if !r.fields.has(field.0) {
             return Err(format!("no such field .{}", field.1));
         }
         let orig_field_ty = self.field_ty(ty, val, field.0);
