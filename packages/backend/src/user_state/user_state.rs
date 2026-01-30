@@ -22,11 +22,4 @@ mod tests {
                 .boxed()
         }
     }
-
-    proptest! {
-        #[test]
-        fn generates_user_states_always_true(_state in any::<UserState>()) {
-            prop_assert!(true);
-        }
-    }
 }
