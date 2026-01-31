@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
 use crate::app::AppError;
-use crate::automerge_json::populate_automerge_from_json;
+use crate::automerge_json::{hydrate_to_json, populate_automerge_from_json};
 use crate::document::{RefQueryParams, RefStub, search_ref_stubs};
 
 #[cfg_attr(feature = "proptest", derive(PartialEq, Eq))]
@@ -33,9 +33,6 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
 }
 
 /// Converts a `UserState` into an Automerge document.
-///
-/// The resulting document contains the JSON serialization of the `UserState`,
-/// which can be synced with clients using Automerge's sync protocol.
 pub fn user_state_to_automerge(state: &UserState) -> Result<Automerge, AppError> {
     let json_value = serde_json::to_value(state)?;
 
@@ -45,6 +42,14 @@ pub fn user_state_to_automerge(state: &UserState) -> Result<Automerge, AppError>
     tx.commit();
 
     Ok(doc)
+}
+
+/// Converts an Automerge document to a `UserState`.
+pub fn automerge_to_user_state(doc: &Automerge) -> Result<UserState, AppError> {
+    let hydrated = doc.hydrate(None);
+    let json_value = hydrate_to_json(&hydrated);
+    let state = serde_json::from_value(json_value)?;
+    Ok(state)
 }
 
 #[cfg(feature = "proptest")]
@@ -125,5 +130,21 @@ pub mod arbitrary {
         fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
             arbitrary_user_state_with_id().prop_map(|(_, state)| state).boxed()
         }
+    }
+}
+
+#[cfg(all(test, feature = "proptest"))]
+mod tests {
+    use super::*;
+    use test_strategy::proptest;
+
+    /// Tests that converting UserState to Automerge and back yields the same UserState.
+    #[proptest(cases = 16)]
+    fn user_state_automerge_roundtrip(input_state: UserState) {
+        let doc = user_state_to_automerge(&input_state).expect("Failed to convert to Automerge");
+        let output_state =
+            automerge_to_user_state(&doc).expect("Failed to convert from Automerge");
+
+        proptest::prop_assert_eq!(input_state, output_state);
     }
 }

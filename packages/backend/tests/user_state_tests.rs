@@ -138,7 +138,7 @@ mod tests {
 
     // Tests that we can write then read any UserState to the DB and get the same UserState back.
     #[proptest(async = "tokio", cases = 32)]
-    async fn user_state_roundtrip(
+    async fn user_state_db_roundtrip(
         #[strategy(arbitrary_user_state_with_id())] user_id_and_state: (String, UserState),
     ) {
         let (user_id, input_state) = user_id_and_state;

@@ -123,7 +123,7 @@ pub fn populate_automerge_from_json<'a>(
 }
 
 /// Convert automerge hydrate::Value to serde_json::Value
-pub(crate) fn hydrate_to_json(value: &hydrate::Value) -> Value {
+pub fn hydrate_to_json(value: &hydrate::Value) -> Value {
     match value {
         hydrate::Value::Scalar(s) => scalar_to_json(s),
         hydrate::Value::Map(m) => {
