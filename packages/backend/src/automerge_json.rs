@@ -94,7 +94,7 @@ fn insert_value_into_list<'a>(
 }
 
 /// Populate an automerge document from a JSON value.
-pub(crate) fn populate_automerge_from_json<'a>(
+pub fn populate_automerge_from_json<'a>(
     tx: &mut automerge::transaction::Transaction<'a>,
     obj_id: automerge::ObjId,
     value: &Value,

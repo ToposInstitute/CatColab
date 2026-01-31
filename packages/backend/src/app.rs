@@ -57,6 +57,14 @@ pub enum AppError {
     #[error("AutomergeRepo error: {0}")]
     AutomergeRepo(#[from] samod::Stopped),
 
+    /// Error from Automerge operations.
+    #[error("Automerge error: {0}")]
+    Automerge(#[from] automerge::AutomergeError),
+
+    /// Error from JSON serialization.
+    #[error("JSON serialization error: {0}")]
+    Json(#[from] serde_json::Error),
+
     /// Client made request with invalid data.
     #[error("Request with invalid data: {0}")]
     Invalid(String),

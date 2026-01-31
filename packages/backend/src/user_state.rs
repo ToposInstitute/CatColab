@@ -1,7 +1,9 @@
+use automerge::Automerge;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
 use crate::app::AppError;
+use crate::automerge_json::populate_automerge_from_json;
 use crate::document::{RefQueryParams, RefStub, search_ref_stubs};
 
 #[cfg_attr(feature = "proptest", derive(PartialEq, Eq))]
@@ -28,6 +30,21 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
     Ok(UserState {
         documents: result.items,
     })
+}
+
+/// Converts a `UserState` into an Automerge document.
+///
+/// The resulting document contains the JSON serialization of the `UserState`,
+/// which can be synced with clients using Automerge's sync protocol.
+pub fn user_state_to_automerge(state: &UserState) -> Result<Automerge, AppError> {
+    let json_value = serde_json::to_value(state)?;
+
+    let mut doc = Automerge::new();
+    let mut tx = doc.transaction();
+    populate_automerge_from_json(&mut tx, automerge::ROOT, &json_value)?;
+    tx.commit();
+
+    Ok(doc)
 }
 
 #[cfg(feature = "proptest")]
