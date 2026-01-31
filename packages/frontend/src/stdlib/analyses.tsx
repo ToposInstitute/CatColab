@@ -7,6 +7,7 @@ import type * as Checkers from "./analyses/checker_types";
 import { defaultSchemaERDConfig, type SchemaERDConfig } from "./analyses/schema_erd_config";
 import type * as Simulators from "./analyses/simulator_types";
 import type * as SQLDownloadConfig from "./analyses/sql";
+import { SqlBackend } from "./analyses/sql";
 
 type AnalysisOptions = {
     id: string;
@@ -318,11 +319,11 @@ export const renderSql = (
     options: AnalysisOptions,
 ): ModelAnalysisMeta<SQLDownloadConfig.DownloadConfig> => ({
     ...options,
-    component: DownloadTextButton,
+    component: SqlSchemaInterface,
     initialContent: () => ({
-        backend: "MySQL",
+        backend: SqlBackend.MySQL,
         filename: "schema.sql",
     }),
 });
 
-const DownloadTextButton = lazy(() => import("./analyses/sql"));
+const SqlSchemaInterface = lazy(() => import("./analyses/sql"));

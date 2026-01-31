@@ -10,7 +10,7 @@ use wasm_bindgen::prelude::*;
 use catlog::dbl::theory;
 use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
-use catlog::zero::{name, QualifiedName};
+use catlog::zero::{QualifiedLabel, QualifiedName, name};
 
 use super::model_morphism::{MotifOccurrence, MotifsOptions, motifs};
 use super::result::JsResult;
@@ -114,13 +114,25 @@ impl ThSchema {
     /// Renders a model into valid SQL
     #[wasm_bindgen(js_name = "renderSql")]
     pub fn render_sql(&self, model: &DblModel, backend: &str) -> Result<String, String> {
-        let sql_string = catlog::stdlib::analyses::sql::SQLAnalysis::new(
-            model.ob_namespace()?,
-            model.mor_namespace()?,
-            backend,
-        )?
-        .render(model.discrete()?);
-        Ok(sql_string)
+        match analyses::sql::SqlBackend::try_from(backend) {
+            Ok(backend) => {
+                let sql_string = analyses::sql::SQLAnalysis::new(backend).render(
+                    model.discrete()?,
+                    |id| {
+                        model
+                            .ob_generator_label(id)
+                            .unwrap_or_else(|| QualifiedLabel::single("".into()))
+                    },
+                    |id| {
+                        model
+                            .mor_generator_label(id)
+                            .unwrap_or_else(|| QualifiedLabel::single("".into()))
+                    },
+                );
+                Ok(sql_string)
+            }
+            Err(e) => Err(e),
+        }
     }
 }
 

@@ -1,7 +1,7 @@
 //! Elaboration from plain text for DoubleTT.
 
 use fnotation::*;
-use scopeguard::{guard, ScopeGuard};
+use scopeguard::{ScopeGuard, guard};
 use std::fmt::Write;
 
 use fnotation::{parser::Prec, ParseConfig};
@@ -10,7 +10,7 @@ use tattle::declare_error;
 use super::{context::*, eval::*, modelgen::*, prelude::*, stx::*, theory::*, toplevel::*, val::*};
 use crate::{
     dbl::model::DblModelPrinter,
-    zero::{name, QualifiedName},
+    zero::{QualifiedName, name},
 };
 
 /// Parser config for DoubleTT.

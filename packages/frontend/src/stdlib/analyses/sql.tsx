@@ -8,20 +8,20 @@ import { BlockTitle, IconButton } from "catcolab-ui-components";
 import { ThSchema } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 
-/** Button to download an SVG. */
-export default function DownloadTextButton(props: ModelAnalysisProps<DownloadConfig>) {
+export enum SqlBackend {
+    MySQL = "MySQL",
+    SQLite = "SQLite",
+    PostgresSQL = "PostgresSQL",
+}
+
+/** Component to interface with SQL analysis. Allows user to download the script and change the backend. */
+export default function SqlSchemaInterface(props: ModelAnalysisProps<DownloadConfig>) {
     const thSchema = new ThSchema();
 
-    const backends = ["MySQL", "SQLite", "PostgresSQL"];
-
-    const [backend, setBackend] = createSignal("MySQL");
+    const [backend, setBackend] = createSignal(SqlBackend.MySQL);
     const sqlOutput = () => {
         const model = props.liveModel.elaboratedModel();
         return model ? thSchema.renderSql(model, backend()) : null;
-    };
-    const downloadText = (text: string) => {
-        downloadTextContent(text, "schema.sql");
-        // TODO get the name of analysis
     };
 
     const copyToClipboard = (text: string) => navigator.clipboard.writeText(text);
@@ -45,19 +45,19 @@ export default function DownloadTextButton(props: ModelAnalysisProps<DownloadCon
         </>
     );
 
-    const BackendConfig = (backends: string[]) => (
+    const BackendConfig = () => (
         <div>
             <span>Backend: </span>
             <select
                 value={backend() ?? undefined}
                 onInput={(evt) =>
                     props.changeContent((content) => {
-                        setBackend(evt.currentTarget.value);
+                        setBackend(evt.currentTarget.value as SqlBackend);
                         content.backend = backend();
                     })
                 }
             >
-                <For each={Array.from(backends)}>
+                <For each={Object.values(SqlBackend)}>
                     {(bknd) => <option value={bknd}>{bknd}</option>}
                 </For>
             </select>
@@ -74,7 +74,11 @@ export default function DownloadTextButton(props: ModelAnalysisProps<DownloadCon
             >
                 <Copy size={16} />
             </IconButton>
-            <IconButton onClick={() => downloadText(sql)} disabled={false} tooltip={""}>
+            <IconButton
+                onClick={() => download(sql, "schema.sql", "text/plain")}
+                disabled={false}
+                tooltip={""}
+            >
                 <Download size={16} />
             </IconButton>
             <IconButton tooltip={tooltip()}>
@@ -91,7 +95,7 @@ export default function DownloadTextButton(props: ModelAnalysisProps<DownloadCon
                         <BlockTitle
                             title={title()}
                             actions={header(sql())}
-                            settingsPane={BackendConfig(backends)}
+                            settingsPane={BackendConfig()}
                         />
                         <pre>{sql()}</pre>
                     </div>
@@ -101,11 +105,7 @@ export default function DownloadTextButton(props: ModelAnalysisProps<DownloadCon
     );
 }
 
-export function downloadTextContent(text: string, filename: string) {
-    return download(text, filename, "text/plain");
-}
-
 export type DownloadConfig = {
-    backend: string;
+    backend: SqlBackend;
     filename: string;
 };
