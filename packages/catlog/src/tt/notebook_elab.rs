@@ -336,8 +336,7 @@ impl<'a> Elaborator<'a> {
 mod test {
     use notebook_types::current::ModelDocumentContent;
     use serde_json;
-    use std::fmt::Write;
-    use std::{fs, rc::Rc};
+    use std::{fmt::Write, fs};
     use ustr::ustr;
 
     use expect_test::{Expect, expect};
@@ -346,7 +345,7 @@ mod test {
     use crate::tt::{
         modelgen::{generate, model_output},
         notebook_elab::Elaborator,
-        theory::{Theory, std_theories},
+        theory::{Theory, TheoryDef, std_theories},
         toplevel::Toplevel,
     };
     use crate::zero::name;
@@ -368,7 +367,7 @@ mod test {
 
     #[test]
     fn examples() {
-        let th_schema = Theory::new(name("ThSchema"), Rc::new(th_schema()).into());
+        let th_schema = Theory::new(name("ThSchema"), TheoryDef::discrete(th_schema()));
         elab_example(
             &th_schema,
             "weighted_graph",
@@ -388,7 +387,7 @@ mod test {
     /// Test that morphisms can reference objects that appear later in the notebook.
     #[test]
     fn morphism_before_codomain() {
-        let th_schema = Theory::new(name("ThSchema"), Rc::new(th_schema()).into());
+        let th_schema = Theory::new(name("ThSchema"), TheoryDef::discrete(th_schema()));
         // In this example, the cell order is: A (object), f (morphism A->B), B (object)
         elab_example(
             &th_schema,

@@ -27,7 +27,7 @@ nalgebra = { version = "0.33", optional = true }
 nonempty = "0.12"
 num-traits = "0.2"
 ode_solvers = { version = "0.6", optional = true }
-pretty = "0.12.4"
+pretty = "0.12"
 rebop = { version = "0.9.4", default-features = false, optional = true }
 ref-cast = "1"
 scopeguard = "1.2.0"

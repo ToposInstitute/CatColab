@@ -42,7 +42,7 @@ impl fmt::Display for Theory {
 }
 
 /// Definition of a double theory supported by DoubleTT.
-#[derive(Clone, From)]
+#[derive(Clone)]
 pub enum TheoryDef {
     /// A discrete double theory.
     Discrete(Rc<DiscreteDblTheory>),
@@ -51,6 +51,11 @@ pub enum TheoryDef {
 }
 
 impl TheoryDef {
+    /// Smart constructor for [`TheoryDef::Discrete`] case.
+    pub fn discrete(theory: DiscreteDblTheory) -> Self {
+        TheoryDef::Discrete(Rc::new(theory))
+    }
+
     /// Gets the basic object type with given name, if it exists.
     pub fn basic_ob_type(&self, name: QualifiedName) -> Option<ObType> {
         match self {
@@ -172,12 +177,9 @@ impl MorType {
 /// Construct a library of standard theories
 pub fn std_theories() -> HashMap<QualifiedName, Theory> {
     [
-        (name("ThSchema"), TheoryDef::from(Rc::new(theories::th_schema()))),
-        (name("ThCategory"), TheoryDef::from(Rc::new(theories::th_category()))),
-        (
-            name("ThSignedCategory"),
-            TheoryDef::from(Rc::new(theories::th_signed_category())),
-        ),
+        (name("ThSchema"), TheoryDef::discrete(theories::th_schema())),
+        (name("ThCategory"), TheoryDef::discrete(theories::th_category())),
+        (name("ThSignedCategory"), TheoryDef::discrete(theories::th_signed_category())),
     ]
     .into_iter()
     .map(|(name, def)| (name.clone(), Theory::new(name, def)))
