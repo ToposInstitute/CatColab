@@ -18,7 +18,7 @@ impl testing::StorageTestFixture for PostgresTestFixture {
 
     async fn setup() -> Self {
         let database_url =
-            std::env::var("DATABASE_URL").expect("DATABASE_URL must be set for tests");
+            dotenvy::var("DATABASE_URL").expect("DATABASE_URL must be set for tests");
 
         let pool = PgPool::connect(&database_url).await.expect("Failed to connect to database");
 
@@ -41,7 +41,7 @@ impl testing::StorageTestFixture for PostgresTestFixture {
 #[tokio::test]
 async fn postgres_storage_adapter_tests() {
     // Skip test if DATABASE_URL is not set (e.g., in CI without postgres)
-    if std::env::var("DATABASE_URL").is_err() {
+    if dotenvy::var("DATABASE_URL").is_err() {
         eprintln!("Skipping postgres_storage_adapter_tests: DATABASE_URL not set");
         return;
     }
