@@ -12,9 +12,10 @@ serde = ["dep:serde", "nonempty/serialize", "ustr/serde", "uuid/serde"]
 serde-wasm = ["serde", "dep:wasm-bindgen", "dep:tsify", "dep:instant", "instant/wasm-bindgen"]
 
 [dependencies]
+all-the-same = "1.1.0"
 bwd = "0.2.1"
 derivative = "2"
-derive_more = { version = "2", features = ["constructor", "deref", "from", "into"] }
+derive_more = { version = "2", features = ["constructor", "deref", "from", "into", "try_into"] }
 duplicate = "2"
 egglog = { version = "0.5", default-features = false }
 ego-tree = "0.10"

@@ -170,6 +170,11 @@ impl DiscreteTabModel {
         }
     }
 
+    /// Gets reference-counting pointer to the theory that this model is of.
+    pub fn theory_rc(&self) -> Rc<DiscreteTabTheory> {
+        self.theory.clone()
+    }
+
     /// Convenience method to turn a morphism into an object.
     pub fn tabulated(&self, mor: TabMor) -> TabOb {
         TabOb::Tabulated(Box::new(mor))

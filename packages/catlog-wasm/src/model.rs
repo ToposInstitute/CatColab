@@ -21,7 +21,7 @@ use catlog::tt::{
     self,
     modelgen::generate,
     notebook_elab::Elaborator as ElaboratorNext,
-    toplevel::{Theory, TopDecl, Toplevel, Type, std_theories},
+    toplevel::{TopDecl, Toplevel, Type},
 };
 use catlog::validate::Validate;
 use catlog::zero::{NameLookup, NameSegment, Namespace, QualifiedLabel, QualifiedName};
@@ -296,6 +296,14 @@ impl From<dbl_model::ModalDblModel> for DblModelBox {
     }
 }
 
+impl From<tt::modelgen::Model> for DblModelBox {
+    fn from(value: tt::modelgen::Model) -> Self {
+        match value {
+            tt::modelgen::Model::Discrete(model) => DblModelBox::Discrete(Rc::new(model)),
+        }
+    }
+}
+
 impl DblModelBox {
     /// Constructs an empty boxed model of a double theory.
     pub fn new(theory: &DblTheory) -> Self {
@@ -342,6 +350,15 @@ impl DblModel {
             ob_namespace: self.ob_namespace.clone(),
             mor_namespace: self.mor_namespace.clone(),
         }
+    }
+
+    /// Returns the theory that the model is of.
+    pub fn theory(&self) -> DblTheory {
+        all_the_same!(match &self.model {
+            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+                DblTheory(model.theory_rc().into())
+            }
+        })
     }
 
     /// Tries to get a model of a discrete theory.
@@ -628,7 +645,7 @@ impl DblModelMap {
     pub fn new() -> Self {
         DblModelMap {
             models: HashMap::new(),
-            toplevel: Toplevel::new(std_theories()),
+            toplevel: Toplevel::new(tt::theory::std_theories()),
         }
     }
 
@@ -644,13 +661,13 @@ impl DblModelMap {
         let id_ustr = ustr(&id);
         self.models.insert(id, model.clone());
         if let Some((ty_s, ty_v)) = &model.ty {
-            let Ok(theory) = model.discrete().map(|ddm| ddm.theory_rc()) else {
+            let Some(theory) = model.theory().try_into_tt() else {
                 return;
             };
             self.toplevel.declarations.insert(
                 NameSegment::Text(id_ustr),
                 TopDecl::Type(Type::new(
-                    Theory::new(QualifiedName::single(NameSegment::Text(ustr("_"))), theory),
+                    tt::theory::Theory::new(ustr("_").into(), theory),
                     ty_s.clone(),
                     ty_v.clone(),
                 )),
@@ -667,35 +684,31 @@ pub fn elaborate_model(
     theory: &DblTheory,
     ref_id: String,
 ) -> Result<DblModel, String> {
-    match &theory.0 {
-        DblTheoryBox::Discrete(ddt) => {
-            let theory =
-                Theory::new(QualifiedName::single(NameSegment::Text(ustr("_"))), ddt.clone());
-            let ref_id = ustr(&ref_id);
-            let mut elab = ElaboratorNext::new(theory.clone(), &instantiated.toplevel, ref_id);
-            let ty = elab.notebook(notebook.0.formal_content());
-            let (ddm, namespace) = generate(&instantiated.toplevel, &theory, &ty.1);
-            Ok(DblModel {
-                model: DblModelBox::Discrete(Rc::new(ddm)),
-                ty: Some(ty),
-                ob_namespace: namespace.clone(),
-                mor_namespace: namespace.clone(),
-            })
-        }
-        _ => {
-            // legacy elaboration
-            let mut model = DblModel::new(theory);
-            for judgment in notebook.0.formal_content() {
-                match judgment {
-                    ModelJudgment::Object(decl) => model.add_ob(decl)?,
-                    ModelJudgment::Morphism(decl) => model.add_mor(decl)?,
-                    ModelJudgment::Instantiation(_) => {
-                        return Err("Legacy model elaborator does not support instantiation".into());
-                    }
+    if let Some(theory_def) = theory.try_into_tt() {
+        let theory = tt::theory::Theory::new(ustr("_").into(), theory_def);
+        let ref_id = ustr(&ref_id);
+        let mut elab = ElaboratorNext::new(theory.clone(), &instantiated.toplevel, ref_id);
+        let ty = elab.notebook(notebook.0.formal_content());
+        let (model, namespace) = generate(&instantiated.toplevel, &theory, &ty.1);
+        Ok(DblModel {
+            model: model.into(),
+            ty: Some(ty),
+            ob_namespace: namespace.clone(),
+            mor_namespace: namespace.clone(),
+        })
+    } else {
+        // Legacy elaboration.
+        let mut model = DblModel::new(theory);
+        for judgment in notebook.0.formal_content() {
+            match judgment {
+                ModelJudgment::Object(decl) => model.add_ob(decl)?,
+                ModelJudgment::Morphism(decl) => model.add_mor(decl)?,
+                ModelJudgment::Instantiation(_) => {
+                    return Err("Legacy model elaborator does not support instantiation".into());
                 }
             }
-            Ok(model)
         }
+        Ok(model)
     }
 }
 

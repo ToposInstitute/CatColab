@@ -345,6 +345,11 @@ impl<T> From<InferredType<T>> for Option<T> {
 }
 
 impl ModalDblModel {
+    /// Gets reference-counting pointer to the theory that this model is of.
+    pub fn theory_rc(&self) -> Rc<ModalDblTheory> {
+        self.theory.clone()
+    }
+
     /// Tries to infer the type of an object in the model.
     fn infer_ob_type(&self, ob: &ModalOb) -> Result<InferredType<ModalObType>, String> {
         match ob {

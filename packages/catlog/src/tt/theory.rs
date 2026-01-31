@@ -1,24 +1,30 @@
 //! Double theories as used by DoubleTT.
+//!
+//! In `catlog`, double theories belonging to different double doctrines
+//! (discrete theories, modal theories, etc) are represented using different
+//! data structures. By contrast, there is just one implementation of DoubleTT,
+//! intended to support all the features that we need. To provide a uniform
+//! interface to theories of different doctrine, theories are boxed in an enum
+//! ([`TheoryDef`]). This design is similar to the one taken for catlog's Wasm
+//! bindings (`catlog-wasm`).
 
+use all_the_same::all_the_same;
 use derivative::Derivative;
-use derive_more::Constructor;
+use derive_more::{Constructor, From, TryInto};
 use std::fmt;
 use std::rc::Rc;
 
 use super::prelude::*;
+use crate::dbl::theory::{DblTheory, DiscreteDblTheory};
 use crate::one::Path;
+use crate::stdlib::theories;
 use crate::zero::{QualifiedName, name};
-use crate::{dbl::theory::DiscreteDblTheory, stdlib::theories};
 use ::pretty::RcDoc;
 
-/// A theory supported by doublett.
+/// A theory supported by DoubleTT, comprising a name and a definition.
 ///
 /// Equality of these theories is nominal; two theories are the same if and only
 /// if they have the same name.
-///
-/// When we add features to doublett, this will become an enum; doublett will
-/// never be parametric (e.g., we will not thread a "theory" type through a bunch
-/// of structs in doublett).
 #[derive(Constructor, Clone, Derivative)]
 #[derivative(PartialEq, Eq)]
 pub struct Theory {
@@ -26,7 +32,7 @@ pub struct Theory {
     pub name: QualifiedName,
     /// The definition of the theory.
     #[derivative(PartialEq = "ignore")]
-    pub definition: Rc<DiscreteDblTheory>,
+    pub definition: TheoryDef,
 }
 
 impl fmt::Display for Theory {
@@ -35,25 +41,123 @@ impl fmt::Display for Theory {
     }
 }
 
-/// Object types are just qualified names, see [DiscreteDblTheory].
-pub type ObjectType = QualifiedName;
+/// Definition of a double theory supported by DoubleTT.
+#[derive(Clone, From)]
+pub enum TheoryDef {
+    /// A discrete double theory.
+    Discrete(Rc<DiscreteDblTheory>),
+    // A modal double theory.
+    // Modal(Rc<ModalDblTheory>),
+}
 
-/// Morphism types are paths of qualified names, see [DiscreteDblTheory].
-#[derive(Clone, PartialEq, Eq)]
-pub struct MorphismType(pub Path<QualifiedName, QualifiedName>);
+impl TheoryDef {
+    /// Gets the basic object type with given name, if it exists.
+    pub fn basic_ob_type(&self, name: QualifiedName) -> Option<ObType> {
+        match self {
+            TheoryDef::Discrete(th) => {
+                if th.has_ob_type(&name) {
+                    Some(ObType::Discrete(name))
+                } else {
+                    None
+                }
+            }
+        }
+    }
 
-impl fmt::Display for MorphismType {
+    /// Gets the basic morphism type with given name, if it exists.
+    pub fn basic_mor_type(&self, name: QualifiedName) -> Option<MorType> {
+        match self {
+            TheoryDef::Discrete(th) => {
+                let mor_type = Path::single(name);
+                if th.has_mor_type(&mor_type) {
+                    Some(MorType::Discrete(mor_type))
+                } else {
+                    None
+                }
+            }
+        }
+    }
+
+    /// Gets the source type of a morphism type.
+    pub fn src_type(&self, mor_type: &MorType) -> ObType {
+        all_the_same!(match self {
+            TheoryDef::[Discrete](th) => {
+                th.src_type(mor_type.try_into().unwrap()).into()
+            }
+        })
+    }
+
+    /// Gets the target type of a morphism type.
+    pub fn tgt_type(&self, mor_type: &MorType) -> ObType {
+        all_the_same!(match self {
+            TheoryDef::[Discrete](th) => {
+                th.tgt_type(mor_type.try_into().unwrap()).into()
+            }
+        })
+    }
+
+    /// Gets the hom (identity) type for an object type.
+    pub fn hom_type(&self, ob_type: ObType) -> MorType {
+        all_the_same!(match self {
+            TheoryDef::[Discrete](th) => {
+                th.hom_type(ob_type.try_into().unwrap()).into()
+            }
+        })
+    }
+
+    /// Composes a pair of morphism types, if they have a composite.
+    pub fn compose_types2(&self, mt1: MorType, mt2: MorType) -> Option<MorType> {
+        all_the_same!(match self {
+            TheoryDef::[Discrete](th) => {
+                let path = Path::pair(mt1.try_into().unwrap(), mt2.try_into().unwrap());
+                th.compose_types(path).map(|mt| mt.into())
+            }
+        })
+    }
+}
+
+/// Object type in a double theory supported by DoubleTT.
+#[derive(Clone, Debug, From, TryInto, PartialEq, Eq)]
+#[try_into(owned, ref)]
+pub enum ObType {
+    /// Object type in a discrete theory.
+    Discrete(QualifiedName),
+}
+
+impl fmt::Display for ObType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.to_doc().group().pretty())
     }
 }
 
-impl MorphismType {
+impl ObType {
+    fn to_doc<'a>(&self) -> D<'a> {
+        match self {
+            ObType::Discrete(name) => t(format!("{name}")),
+        }
+    }
+}
+
+/// Morphism type in a double theory supported by DoubleTT.
+#[derive(Clone, Debug, From, TryInto, PartialEq, Eq)]
+#[try_into(owned, ref)]
+pub enum MorType {
+    /// Morphism type in a discrete theory.
+    Discrete(Path<QualifiedName, QualifiedName>),
+}
+
+impl fmt::Display for MorType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_doc().group().pretty())
+    }
+}
+
+impl MorType {
     /// Pretty prints the morphism type.
     pub fn to_doc<'a>(&self) -> D<'a> {
-        match &self.0 {
-            Path::Id(ot) => (t("Id") + s() + t(format!("{ot}"))).parens(),
-            Path::Seq(non_empty) => {
+        match self {
+            MorType::Discrete(Path::Id(ot)) => (t("Id") + s() + t(format!("{ot}"))).parens(),
+            MorType::Discrete(Path::Seq(non_empty)) => {
                 if non_empty.len() == 1 {
                     t(format!("{}", non_empty[0]))
                 } else {
@@ -68,11 +172,14 @@ impl MorphismType {
 /// Construct a library of standard theories
 pub fn std_theories() -> HashMap<QualifiedName, Theory> {
     [
-        (name("ThSchema"), theories::th_schema()),
-        (name("ThCategory"), theories::th_category()),
-        (name("ThSignedCategory"), theories::th_signed_category()),
+        (name("ThSchema"), TheoryDef::from(Rc::new(theories::th_schema()))),
+        (name("ThCategory"), TheoryDef::from(Rc::new(theories::th_category()))),
+        (
+            name("ThSignedCategory"),
+            TheoryDef::from(Rc::new(theories::th_signed_category())),
+        ),
     ]
     .into_iter()
-    .map(|(name, def)| (name.clone(), Theory::new(name.clone(), Rc::new(def))))
+    .map(|(name, def)| (name.clone(), Theory::new(name, def)))
     .collect()
 }

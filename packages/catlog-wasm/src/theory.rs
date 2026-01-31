@@ -14,6 +14,7 @@ use catlog::dbl::theory::{
     TabObOp, TabObType,
 };
 use catlog::one::{Path, QualifiedPath, ShortPath};
+use catlog::tt;
 use catlog::zero::{NameSegment, QualifiedName};
 use notebook_types::current::theory::*;
 
@@ -286,6 +287,14 @@ impl DblTheory {
     /// Tries to get a discrete double theory.
     pub fn discrete(&self) -> Result<&Rc<theory::DiscreteDblTheory>, String> {
         (&self.0).try_into().map_err(|_| "Theory should be discrete".into())
+    }
+
+    /// Tries to convert into a theory usable by DoubleTT.
+    pub fn try_into_tt(&self) -> Option<tt::theory::TheoryDef> {
+        match &self.0 {
+            DblTheoryBox::Discrete(th) => Some(tt::theory::TheoryDef::Discrete(th.clone())),
+            _ => None,
+        }
     }
 }
 

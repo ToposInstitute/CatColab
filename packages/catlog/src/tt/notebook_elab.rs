@@ -3,13 +3,10 @@
 use std::str::FromStr;
 use uuid::Uuid;
 
-use notebook_types::v1::{InstantiatedModel, ModelJudgment, MorDecl, Ob, ObDecl, ObType};
+use notebook_types::current as nb;
 
 use super::{context::*, eval::*, prelude::*, stx::*, theory::*, toplevel::*, val::*};
-use crate::dbl::{
-    model::{Feature, InvalidDblModel},
-    theory::{DblTheory, DiscreteDblTheory},
-};
+use crate::dbl::model::{Feature, InvalidDblModel};
 use crate::zero::QualifiedName;
 
 // There is some infrastructure that needs to be put into place before
@@ -60,7 +57,7 @@ impl<'a> Elaborator<'a> {
         }
     }
 
-    fn dbl_theory(&self) -> &DiscreteDblTheory {
+    fn theory(&self) -> &TheoryDef {
         &self.theory.definition
     }
 
@@ -110,15 +107,15 @@ impl<'a> Elaborator<'a> {
         (TyS::meta(ty_m), TyV::meta(ty_m))
     }
 
-    fn ob_type(&mut self, ob_type: &ObType) -> Option<QualifiedName> {
+    fn ob_type(&mut self, ob_type: &nb::ObType) -> Option<ObType> {
         match &ob_type {
-            ObType::Basic(name) => Some(QualifiedName::single(NameSegment::Text(*name))),
-            ObType::Tabulator(_) => None,
-            ObType::ModeApp { .. } => None,
+            nb::ObType::Basic(name) => self.theory().basic_ob_type((*name).into()),
+            nb::ObType::Tabulator(_) => None,
+            nb::ObType::ModeApp { .. } => None,
         }
     }
 
-    fn object_cell(&mut self, ob_decl: &ObDecl) -> (NameSegment, LabelSegment, TyS, TyV) {
+    fn object_cell(&mut self, ob_decl: &nb::ObDecl) -> (NameSegment, LabelSegment, TyS, TyV) {
         let name = NameSegment::Uuid(ob_decl.id);
         let label = LabelSegment::Text(ustr(&ob_decl.name));
         let (ty_s, ty_v) = match self.ob_type(&ob_decl.ob_type) {
@@ -152,9 +149,9 @@ impl<'a> Elaborator<'a> {
         }
     }
 
-    fn ob(&mut self, n: &Ob) -> Option<(TmS, TmV, ObjectType)> {
+    fn ob(&mut self, n: &nb::Ob) -> Option<(TmS, TmV, ObType)> {
         match n {
-            Ob::Basic(name) => {
+            nb::Ob::Basic(name) => {
                 let name = QualifiedName::deserialize_str(name).unwrap();
                 let (tm, val, ty) = self.resolve_name(name.as_slice())?;
                 let ob_type = match &*ty {
@@ -165,49 +162,49 @@ impl<'a> Elaborator<'a> {
                 };
                 Some((tm, val, ob_type))
             }
-            Ob::App { .. } => None,
-            Ob::List { .. } => None,
-            Ob::Tabulated(_) => None,
+            nb::Ob::App { .. } => None,
+            nb::Ob::List { .. } => None,
+            nb::Ob::Tabulated(_) => None,
         }
     }
 
-    fn morphism_cell_ty(&mut self, mor_decl: &MorDecl) -> (TyS, TyV) {
-        let name = QualifiedName::single(NameSegment::Uuid(mor_decl.id));
+    fn morphism_cell_ty(&mut self, mor_decl: &nb::MorDecl) -> (TyS, TyV) {
+        let id = QualifiedName::from(mor_decl.id);
         let (mor_type, dom_ty, cod_ty) = match &mor_decl.mor_type {
-            notebook_types::v1::MorType::Basic(name) => {
-                let name = QualifiedName::single(name_seg(*name));
-                let mor_type = Path::single(name);
-                let dom_ty = self.dbl_theory().src_type(&mor_type);
-                let cod_ty = self.dbl_theory().tgt_type(&mor_type);
-                (MorphismType(mor_type), dom_ty, cod_ty)
-            }
-            notebook_types::v1::MorType::Hom(ob_type) => match self.ob_type(ob_type) {
-                Some(ob_type) => {
-                    (MorphismType(Path::Id(ob_type.clone())), ob_type.clone(), ob_type)
+            nb::MorType::Basic(name) => {
+                if let Some(mor_type) = self.theory().basic_mor_type((*name).into()) {
+                    let dom_ty = self.theory().src_type(&mor_type);
+                    let cod_ty = self.theory().tgt_type(&mor_type);
+                    (mor_type, dom_ty, cod_ty)
+                } else {
+                    return self.ty_error(InvalidDblModel::MorType(id));
                 }
-                None => return self.ty_error(InvalidDblModel::MorType(name)),
+            }
+            nb::MorType::Hom(ob_type) => match self.ob_type(ob_type.as_ref()) {
+                Some(ot) => (self.theory().hom_type(ot.clone()), ot.clone(), ot),
+                None => return self.ty_error(InvalidDblModel::MorType(id)),
             },
-            notebook_types::v1::MorType::Composite(_) => {
+            nb::MorType::Composite(_) => {
                 return self
                     .ty_error(InvalidDblModel::UnsupportedFeature(Feature::CompositeMorType));
             }
-            notebook_types::v1::MorType::ModeApp { .. } => {
+            nb::MorType::ModeApp { .. } => {
                 return self.ty_error(InvalidDblModel::UnsupportedFeature(Feature::Modal));
             }
         };
         let Some((dom_s, dom_v, synthed_dom_ty)) = mor_decl.dom.as_ref().and_then(|ob| self.ob(ob))
         else {
-            return self.ty_error(InvalidDblModel::Dom(name));
+            return self.ty_error(InvalidDblModel::Dom(id));
         };
         let Some((cod_s, cod_v, synthed_cod_ty)) = mor_decl.cod.as_ref().and_then(|ob| self.ob(ob))
         else {
-            return self.ty_error(InvalidDblModel::Cod(name));
+            return self.ty_error(InvalidDblModel::Cod(id));
         };
         if synthed_dom_ty != dom_ty {
-            return self.ty_error(InvalidDblModel::DomType(name));
+            return self.ty_error(InvalidDblModel::DomType(id));
         };
         if synthed_cod_ty != cod_ty {
-            return self.ty_error(InvalidDblModel::CodType(name));
+            return self.ty_error(InvalidDblModel::CodType(id));
         };
         (
             TyS::morphism(mor_type.clone(), dom_s, cod_s),
@@ -215,14 +212,14 @@ impl<'a> Elaborator<'a> {
         )
     }
 
-    fn morphism_cell(&mut self, mor_decl: &MorDecl) -> (NameSegment, LabelSegment, TyS, TyV) {
+    fn morphism_cell(&mut self, mor_decl: &nb::MorDecl) -> (NameSegment, LabelSegment, TyS, TyV) {
         let name = NameSegment::Uuid(mor_decl.id);
         let label = LabelSegment::Text(ustr(&mor_decl.name));
         let (ty_s, ty_v) = self.morphism_cell_ty(mor_decl);
         (name, label, ty_s, ty_v)
     }
 
-    fn instantiation_cell_ty(&mut self, i_decl: &InstantiatedModel) -> (TyS, TyV) {
+    fn instantiation_cell_ty(&mut self, i_decl: &nb::InstantiatedModel) -> (TyS, TyV) {
         let name = QualifiedName::single(NameSegment::Uuid(i_decl.id));
         let link = match &i_decl.model {
             Some(l) => l,
@@ -283,7 +280,7 @@ impl<'a> Elaborator<'a> {
 
     fn instantiation_cell(
         &mut self,
-        i_decl: &InstantiatedModel,
+        i_decl: &nb::InstantiatedModel,
     ) -> (NameSegment, LabelSegment, TyS, TyV) {
         let name = NameSegment::Uuid(i_decl.id);
         let label = LabelSegment::Text(ustr(&i_decl.name));
@@ -292,7 +289,10 @@ impl<'a> Elaborator<'a> {
     }
 
     /// Elaborate a notebook into a type.
-    pub fn notebook<'b>(&mut self, cells: impl Iterator<Item = &'b ModelJudgment>) -> (TyS, TyV) {
+    pub fn notebook<'b>(
+        &mut self,
+        cells: impl Iterator<Item = &'b nb::ModelJudgment>,
+    ) -> (TyS, TyV) {
         // Make two passes to allow morphisms to reference objects that appear
         // later in the notebook. This is important because the UI allows users
         // to reorder cells freely, and morphisms should be able to reference
@@ -302,7 +302,7 @@ impl<'a> Elaborator<'a> {
         // Pass 2: Process all morphism declarations (which can now resolve any
         // object reference).
         let (pass1, pass2): (Vec<_>, Vec<_>) = cells.partition(|cell| {
-            matches!(cell, ModelJudgment::Object(_) | ModelJudgment::Instantiation(_))
+            matches!(cell, nb::ModelJudgment::Object(_) | nb::ModelJudgment::Instantiation(_))
         });
 
         let mut field_ty_vs = Vec::new();
@@ -311,9 +311,9 @@ impl<'a> Elaborator<'a> {
 
         for cell in pass1.into_iter().chain(pass2.into_iter()) {
             let (name, label, _, ty_v) = match &cell {
-                ModelJudgment::Object(ob_decl) => self.object_cell(ob_decl),
-                ModelJudgment::Morphism(mor_decl) => self.morphism_cell(mor_decl),
-                ModelJudgment::Instantiation(i_decl) => self.instantiation_cell(i_decl),
+                nb::ModelJudgment::Object(ob_decl) => self.object_cell(ob_decl),
+                nb::ModelJudgment::Morphism(mor_decl) => self.morphism_cell(mor_decl),
+                nb::ModelJudgment::Instantiation(i_decl) => self.instantiation_cell(i_decl),
             };
             field_ty_vs.push((name, (label, ty_v.clone())));
             self.ctx.scope.push(VarInContext::new(name, label, Some(ty_v.clone())));
@@ -334,7 +334,7 @@ impl<'a> Elaborator<'a> {
 
 #[cfg(test)]
 mod test {
-    use notebook_types::v1::ModelDocumentContent;
+    use notebook_types::current::ModelDocumentContent;
     use serde_json;
     use std::fmt::Write;
     use std::{fs, rc::Rc};
@@ -368,7 +368,7 @@ mod test {
 
     #[test]
     fn examples() {
-        let th_schema = Theory::new(name("ThSchema"), Rc::new(th_schema()));
+        let th_schema = Theory::new(name("ThSchema"), Rc::new(th_schema()).into());
         elab_example(
             &th_schema,
             "weighted_graph",
@@ -388,7 +388,7 @@ mod test {
     /// Test that morphisms can reference objects that appear later in the notebook.
     #[test]
     fn morphism_before_codomain() {
-        let th_schema = Theory::new(name("ThSchema"), Rc::new(th_schema()));
+        let th_schema = Theory::new(name("ThSchema"), Rc::new(th_schema()).into());
         // In this example, the cell order is: A (object), f (morphism A->B), B (object)
         elab_example(
             &th_schema,

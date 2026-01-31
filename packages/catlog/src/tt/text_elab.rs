@@ -1,17 +1,12 @@
 //! Elaboration for doublett
 
 use fnotation::*;
-use nonempty::nonempty;
 use scopeguard::{ScopeGuard, guard};
 use std::fmt::Write;
 
 use tattle::declare_error;
 
 use super::{context::*, eval::*, modelgen::*, prelude::*, stx::*, theory::*, toplevel::*, val::*};
-use crate::dbl::{
-    category::VDblCategory,
-    theory::{DblTheory, DiscreteDblTheory},
-};
 use crate::zero::{QualifiedName, name};
 
 /// The result of elaborating a top-level statement.
@@ -244,7 +239,7 @@ impl<'a> Elaborator<'a> {
         }
     }
 
-    fn dbl_theory(&self) -> &DiscreteDblTheory {
+    fn theory(&self) -> &TheoryDef {
         &self.theory.definition
     }
 
@@ -342,8 +337,8 @@ impl<'a> Elaborator<'a> {
 
     fn lookup_ty(&mut self, name: VarName) -> (TyS, TyV) {
         let qname = QualifiedName::single(name);
-        if self.dbl_theory().has_ob(&qname) {
-            (TyS::object(qname.clone()), TyV::object(qname))
+        if let Some(ob_type) = self.theory().basic_ob_type(qname) {
+            (TyS::object(ob_type.clone()), TyV::object(ob_type))
         } else if let Some(d) = self.toplevel.declarations.get(&name) {
             match d {
                 TopDecl::Type(t) => {
@@ -365,25 +360,24 @@ impl<'a> Elaborator<'a> {
         }
     }
 
-    fn morphism_ty(&mut self, n: &FNtn) -> Option<(MorphismType, ObjectType, ObjectType)> {
+    fn morphism_ty(&mut self, n: &FNtn) -> Option<(MorType, ObType, ObType)> {
         let elab = self.enter(n.loc());
+        let theory = elab.theory();
         match n.ast0() {
             App1(L(_, Keyword("Id")), L(_, Var(name))) => {
                 let qname = QualifiedName::single(name_seg(*name));
-                if elab.dbl_theory().has_ob(&qname) {
-                    Some((MorphismType(Path::Id(qname.clone())), qname.clone(), qname))
+                if let Some(ob_type) = theory.basic_ob_type(qname) {
+                    Some((theory.hom_type(ob_type.clone()), ob_type.clone(), ob_type))
                 } else {
                     elab.error(format!("no such object type {name}"))
                 }
             }
             Var(name) => {
                 let qname = QualifiedName::single(name_seg(*name));
-                let mt = Path::single(qname);
-                let theory = elab.dbl_theory();
-                if theory.has_proarrow(&mt) {
-                    let dom = theory.src(&mt);
-                    let cod = theory.tgt(&mt);
-                    Some((MorphismType(mt), dom, cod))
+                if let Some(mor_type) = theory.basic_mor_type(qname) {
+                    let dom = theory.src_type(&mor_type);
+                    let cod = theory.tgt_type(&mor_type);
+                    Some((mor_type, dom, cod))
                 } else {
                     elab.error(format!("no such morphism type {name}"))
                 }
@@ -550,14 +544,11 @@ impl<'a> Elaborator<'a> {
             }
             App1(L(_, Prim("id")), ob_n) => {
                 let (ob_s, ob_v, ob_t) = elab.syn(ob_n);
-                let TyV_::Object(ot) = &*ob_t else {
+                let TyV_::Object(ob_type) = &*ob_t else {
                     return elab.syn_error("can only apply @id to objects");
                 };
-                (
-                    TmS::id(ob_s),
-                    TmV::Tt,
-                    TyV::morphism(MorphismType(Path::Id(ot.clone())), ob_v.clone(), ob_v),
-                )
+                let mor_type = elab.theory().hom_type(ob_type.clone());
+                (TmS::id(ob_s), TmV::Tt, TyV::morphism(mor_type, ob_v.clone(), ob_v))
             }
             App2(L(_, Keyword("*")), f_n, g_n) => {
                 let (f_s, _, f_ty) = elab.syn(f_n);
@@ -570,7 +561,8 @@ impl<'a> Elaborator<'a> {
                     elab.loc = Some(g_n.loc());
                     return elab.syn_error("expected a morphism");
                 };
-                if elab.dbl_theory().tgt(&f_mt.0) != elab.dbl_theory().src(&g_mt.0) {
+                let theory = elab.theory();
+                if theory.tgt_type(f_mt) != theory.src_type(g_mt) {
                     return elab.syn_error("incompatible morphism types");
                 }
                 if let Err(s) = elab.evaluator().equal_tm(f_cod, g_dom) {
@@ -587,11 +579,7 @@ impl<'a> Elaborator<'a> {
                     TmS::compose(f_s, g_s),
                     TmV::Tt,
                     TyV::morphism(
-                        MorphismType(
-                            elab.dbl_theory()
-                                .compose_types(Path::Seq(nonempty![f_mt.0.clone(), g_mt.0.clone()]))
-                                .unwrap(),
-                        ),
+                        elab.theory().compose_types2(f_mt.clone(), g_mt.clone()).unwrap(),
                         f_dom.clone(),
                         g_cod.clone(),
                     ),
