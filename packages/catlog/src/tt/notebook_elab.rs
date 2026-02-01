@@ -378,8 +378,8 @@ mod test {
                   Weight : AttrType
                 morphism generators:
                   weight : E -> Weight : Attr
-                  src : E -> V : (Id Entity)
-                  tgt : E -> V : (Id Entity)
+                  src : E -> V : (Hom Entity)
+                  tgt : E -> V : (Hom Entity)
             "#]],
         );
     }
@@ -397,7 +397,7 @@ mod test {
                   A : Entity
                   B : Entity
                 morphism generators:
-                  f : A -> B : (Id Entity)
+                  f : A -> B : (Hom Entity)
             "#]],
         );
     }

@@ -24,7 +24,7 @@ const PARSE_CONFIG: ParseConfig = ParseConfig::new(
         ("&", Prec::lassoc(40)),
         ("*", Prec::lassoc(60)),
     ],
-    &[":", ":=", "&", "Unit", "Id", "*"],
+    &[":", ":=", "&", "Unit", "Hom", "*"],
     &["type", "def", "syn", "chk", "norm", "generate", "set_theory"],
 );
 

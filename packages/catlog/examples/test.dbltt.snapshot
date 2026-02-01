@@ -14,8 +14,8 @@ type WeightedGraph := [
   V : Entity,
   E : Entity,
   Weight : AttrType,
-  src : (Id Entity)[E, V],
-  tgt : (Id Entity)[E, V],
+  src : (Hom Entity)[E, V],
+  tgt : (Hom Entity)[E, V],
   weight : Attr[E, Weight]
 ]
 #/ declared: WeightedGraph
@@ -27,15 +27,15 @@ generate WeightedGraph
 #/   E : Entity
 #/   Weight : AttrType
 #/ morphism generators:
-#/   src : E -> V : (Id Entity)
-#/   tgt : E -> V : (Id Entity)
+#/   src : E -> V : (Hom Entity)
+#/   tgt : E -> V : (Hom Entity)
 #/   weight : E -> Weight : Attr
 
 
 type EntityArr := [
   dom : Entity,
   cod : Entity,
-  arr : (Id Entity)[dom, cod]
+  arr : (Hom Entity)[dom, cod]
 ]
 #/ declared: EntityArr
 
@@ -47,7 +47,7 @@ type Graph1 := [
 ]
 #/ declared: Graph1
 
-chk [G : Graph1] (G.src.arr : (Id Entity)[G.E, G.V])
+chk [G : Graph1] (G.src.arr : (Hom Entity)[G.E, G.V])
 #/ result: G.src.arr
 
 chk [G : Graph1] (G.src : EntityArr)
@@ -60,7 +60,7 @@ chk [G : Graph1] (G.src : EntityArr & [ .dom := G.E ] )
 chk [G : Graph1] (G.src : EntityArr & [ .dom := G.V ] )
 #/ result: ?0
 #/ expected errors:
-#/ error[elab]: evaluated term [ dom := G.E, cod := G.V, arr := <opaque> ] is not an element of specialized type [ dom : Entity, cod : Entity, arr : (Id Entity)[ self.dom, self.cod ] ] &
+#/ error[elab]: evaluated term [ dom := G.E, cod := G.V, arr := <opaque> ] is not an element of specialized type [ dom : Entity, cod : Entity, arr : (Hom Entity)[ self.dom, self.cod ] ] &
 #/   [ .dom : @sing G.V ]:
 #/ Neutrals G.E and G.V are not equal.
 #/ --> examples/test.dbltt:41:19
@@ -88,8 +88,8 @@ type Graph1 := [
 type Graph := [
   V : Entity,
   E : Entity,
-  src : (Id Entity)[E, V],
-  tgt : (Id Entity)[E, V]
+  src : (Hom Entity)[E, V],
+  tgt : (Hom Entity)[E, V]
 ]
 #/ declared: Graph
 
@@ -110,12 +110,12 @@ def reverse1[G : Graph] : Graph := [
 ]
 #/ declared: reverse1
 #/ expected errors:
-#/ error[elab]: synthesized type (Id Entity)[ G.E, G.V ] does not match expected type (Id Entity)[ G.E, G.E ]:
+#/ error[elab]: synthesized type (Hom Entity)[ G.E, G.V ] does not match expected type (Hom Entity)[ G.E, G.E ]:
 #/ could not convert codomains: Neutrals G.V and G.E are not equal.
 #/ --> examples/test.dbltt:70:10
 #/ 70|   src := G.tgt,
 #/ 70|          ^^^^^
-#/ error[elab]: synthesized type (Id Entity)[ G.E, G.V ] does not match expected type (Id Entity)[ G.E, G.E ]:
+#/ error[elab]: synthesized type (Hom Entity)[ G.E, G.V ] does not match expected type (Hom Entity)[ G.E, G.E ]:
 #/ could not convert codomains: Neutrals G.V and G.E are not equal.
 #/ --> examples/test.dbltt:71:10
 #/ 71|   tgt := G.src
@@ -125,21 +125,21 @@ norm [G : Graph] (reverse[G]).E
 #/ result: G.E
 
 syn [G : Graph] (reverse[G]).src
-#/ result: reverse[ G ].src : (Id Entity)[ G.E, G.V ]
+#/ result: reverse[ G ].src : (Hom Entity)[ G.E, G.V ]
 
 type ReflexiveGraph := [
   V : Entity,
   E : Entity,
-  src : (Id Entity)[E, V],
-  tgt : (Id Entity)[E, V],
-  refl : (Id Entity)[V, E]
+  src : (Hom Entity)[E, V],
+  tgt : (Hom Entity)[E, V],
+  refl : (Hom Entity)[V, E]
 ]
 #/ declared: ReflexiveGraph
 
-def edge_id[G : ReflexiveGraph] : (Id Entity)[G.E, G.E] := @id G.E
+def edge_id[G : ReflexiveGraph] : (Hom Entity)[G.E, G.E] := @id G.E
 #/ declared: edge_id
 
-def edge_src[G : ReflexiveGraph] : (Id Entity)[G.E, G.E] := G.src * G.refl
+def edge_src[G : ReflexiveGraph] : (Hom Entity)[G.E, G.E] := G.src * G.refl
 #/ declared: edge_src
 
 type Graph2 := [
@@ -162,16 +162,16 @@ generate Graph2
 #/   g1.E : Entity
 #/   g2.E : Entity
 #/ morphism generators:
-#/   g1.src : g1.E -> V : (Id Entity)
-#/   g1.tgt : g1.E -> V : (Id Entity)
-#/   g2.src : g2.E -> V : (Id Entity)
-#/   g2.tgt : g2.E -> V : (Id Entity)
+#/   g1.src : g1.E -> V : (Hom Entity)
+#/   g1.tgt : g1.E -> V : (Hom Entity)
+#/   g2.src : g2.E -> V : (Hom Entity)
+#/   g2.tgt : g2.E -> V : (Hom Entity)
 
 
 type ProfunctorGraph := [
   g1 : Graph,
   g2 : Graph,
-  het : (Id Entity)[g1.V, g2.V]
+  het : (Hom Entity)[g1.V, g2.V]
 ]
 #/ declared: ProfunctorGraph
 
@@ -183,11 +183,11 @@ generate ProfunctorGraph
 #/   g2.V : Entity
 #/   g2.E : Entity
 #/ morphism generators:
-#/   g1.src : g1.E -> g1.V : (Id Entity)
-#/   g1.tgt : g1.E -> g1.V : (Id Entity)
-#/   g2.src : g2.E -> g2.V : (Id Entity)
-#/   g2.tgt : g2.E -> g2.V : (Id Entity)
-#/   het : g1.V -> g2.V : (Id Entity)
+#/   g1.src : g1.E -> g1.V : (Hom Entity)
+#/   g1.tgt : g1.E -> g1.V : (Hom Entity)
+#/   g2.src : g2.E -> g2.V : (Hom Entity)
+#/   g2.tgt : g2.E -> g2.V : (Hom Entity)
+#/   het : g1.V -> g2.V : (Hom Entity)
 
 
 type WeightedGraph2 := [
@@ -206,11 +206,11 @@ generate WeightedGraph2
 #/   g2.E : Entity
 #/   g2.Weight : AttrType
 #/ morphism generators:
-#/   g1.src : g1.E -> V : (Id Entity)
-#/   g1.tgt : g1.E -> V : (Id Entity)
+#/   g1.src : g1.E -> V : (Hom Entity)
+#/   g1.tgt : g1.E -> V : (Hom Entity)
 #/   g1.weight : g1.E -> g1.Weight : Attr
-#/   g2.src : g2.E -> V : (Id Entity)
-#/   g2.tgt : g2.E -> V : (Id Entity)
+#/   g2.src : g2.E -> V : (Hom Entity)
+#/   g2.tgt : g2.E -> V : (Hom Entity)
 #/   g2.weight : g2.E -> g2.Weight : Attr
 
 
@@ -235,7 +235,7 @@ type Set := [
 
 type DDS := [
   X : Object,
-  φ : (Id Object)[X, X]
+  φ : (Hom Object)[X, X]
 ]
 #/ declared: DDS
 
@@ -245,7 +245,7 @@ set_theory ThSignedCategory
 type NegFeedback := [
   X : Object,
   Y : Object,
-  f : (Id Object)[X, Y],
+  f : (Hom Object)[X, Y],
   g : Negative[Y, X]
 ]
 #/ declared: NegFeedback
@@ -256,7 +256,7 @@ generate NegFeedback
 #/   X : Object
 #/   Y : Object
 #/ morphism generators:
-#/   f : X -> Y : (Id Object)
+#/   f : X -> Y : (Hom Object)
 #/   g : Y -> X : Negative
 
 
@@ -264,16 +264,16 @@ generate NegFeedback
 type NegFeedback1 := [
   X : Object,
   Y : Object,
-  f : (Id Object)[@hole, Y],
+  f : (Hom Object)[@hole, Y],
   g : Negative[Y, f]
 ]
 #/ declared: NegFeedback1
 #/ expected errors:
 #/ error[elab]: explicit hole
-#/ --> examples/test.dbltt:148:19
-#/ 148|   f : (Id Object)[@hole, Y],
-#/ 148|                   ^^^^^
-#/ error[elab]: synthesized type (Id Object)[ ?0, self.Y ] does not match expected type Object:
+#/ --> examples/test.dbltt:148:20
+#/ 148|   f : (Hom Object)[@hole, Y],
+#/ 148|                    ^^^^^
+#/ error[elab]: synthesized type (Hom Object)[ ?0, self.Y ] does not match expected type Object:
 #/ tried to convert between types of different type constructors
 #/ --> examples/test.dbltt:149:19
 #/ 149|   g : Negative[Y, f]

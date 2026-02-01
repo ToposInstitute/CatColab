@@ -159,7 +159,7 @@ impl fmt::Display for MorType {
 impl ToDoc for MorType {
     fn to_doc<'a>(&self) -> D<'a> {
         match self {
-            MorType::Discrete(path) => path.to_doc(" · ", "Id"),
+            MorType::Discrete(path) => path.to_doc(" ⊙ ", "Hom"),
         }
     }
 }

@@ -364,7 +364,7 @@ impl<'a> Elaborator<'a> {
         let elab = self.enter(n.loc());
         let theory = elab.theory();
         match n.ast0() {
-            App1(L(_, Keyword("Id")), L(_, Var(name))) => {
+            App1(L(_, Keyword("Hom")), L(_, Var(name))) => {
                 let qname = QualifiedName::single(name_seg(*name));
                 if let Some(ob_type) = theory.basic_ob_type(qname) {
                     Some((theory.hom_type(ob_type.clone()), ob_type.clone(), ob_type))
