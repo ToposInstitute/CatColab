@@ -111,11 +111,11 @@ impl<'a> DiscreteDblModelMorphism<'a> {
                 None
             }
         });
-        let th_cat = &cod.theory().0;
-        let mor_type_errors = dom.mor_generators().filter_map(|f| {
+        let th_cat = cod.theory();
+        let mor_type_errors = dom.mor_generators().filter_map(move |f| {
             if let Some(g) = mapping.mor_generator_map.get(&f)
                 && cod.has_mor(g)
-                && !th_cat.morphisms_are_equal(dom.mor_generator_type(&f), cod.mor_type(g))
+                && !th_cat.0.morphisms_are_equal(dom.mor_generator_type(&f), cod.mor_type(g))
             {
                 Some(InvalidDblModelMorphism::MorType(f))
             } else {
@@ -224,7 +224,7 @@ pub struct DiscreteDblModelMorphismFinder<'a> {
 impl<'a> DiscreteDblModelMorphismFinder<'a> {
     fn new(dom: &'a DiscreteDblModel, cod: &'a DiscreteDblModel) -> Self {
         assert!(
-            Rc::ptr_eq(&dom.theory_rc(), &cod.theory_rc()),
+            Rc::ptr_eq(&dom.theory(), &cod.theory()),
             "Domain and codomain model should have the same theory"
         );
         assert!(dom.is_free(), "Domain model should be free");

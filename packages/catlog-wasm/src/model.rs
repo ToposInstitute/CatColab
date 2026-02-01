@@ -356,7 +356,7 @@ impl DblModel {
     pub fn theory(&self) -> DblTheory {
         all_the_same!(match &self.model {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
-                DblTheory(model.theory_rc().into())
+                DblTheory(model.theory().into())
             }
         })
     }

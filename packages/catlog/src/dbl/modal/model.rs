@@ -207,8 +207,8 @@ impl DblModel for ModalDblModel {
     type MorOp = ModalMorOp;
     type Theory = ModalDblTheory;
 
-    fn theory(&self) -> &Self::Theory {
-        &self.theory
+    fn theory(&self) -> Rc<Self::Theory> {
+        self.theory.clone()
     }
 
     fn ob_type(&self, ob: &Self::Ob) -> Self::ObType {
@@ -345,11 +345,6 @@ impl<T> From<InferredType<T>> for Option<T> {
 }
 
 impl ModalDblModel {
-    /// Gets reference-counting pointer to the theory that this model is of.
-    pub fn theory_rc(&self) -> Rc<ModalDblTheory> {
-        self.theory.clone()
-    }
-
     /// Tries to infer the type of an object in the model.
     fn infer_ob_type(&self, ob: &ModalOb) -> Result<InferredType<ModalObType>, String> {
         match ob {

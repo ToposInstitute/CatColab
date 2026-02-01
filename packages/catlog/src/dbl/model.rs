@@ -33,6 +33,7 @@
 //!   whose type is the composite of the corresponding morphism types.
 
 use nonempty::NonEmpty;
+use std::rc::Rc;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -95,7 +96,7 @@ pub trait DblModel: Category {
         >;
 
     /// The double theory that this model is a model of.
-    fn theory(&self) -> &Self::Theory;
+    fn theory(&self) -> Rc<Self::Theory>;
 
     /// Type of an object.
     fn ob_type(&self, x: &Self::Ob) -> Self::ObType;

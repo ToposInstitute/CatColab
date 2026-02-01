@@ -37,11 +37,6 @@ impl DiscreteDblModel {
         }
     }
 
-    /// Gets reference-counting pointer to the theory that this model is of.
-    pub fn theory_rc(&self) -> Rc<DiscreteDblTheory> {
-        self.theory.clone()
-    }
-
     /// Returns the underlying graph of the model.
     pub fn generating_graph(&self) -> &impl FinGraph<V = QualifiedName, E = QualifiedName> {
         self.category.generators()
@@ -176,8 +171,8 @@ impl DblModel for DiscreteDblModel {
     type MorOp = Path<QualifiedName, QualifiedPath>;
     type Theory = DiscreteDblTheory;
 
-    fn theory(&self) -> &Self::Theory {
-        &self.theory
+    fn theory(&self) -> Rc<Self::Theory> {
+        self.theory.clone()
     }
 
     fn ob_act(&self, x: Self::Ob, _: &Self::ObOp) -> Self::Ob {
