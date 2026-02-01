@@ -266,8 +266,8 @@ impl DblModel for DiscreteTabModel {
     type MorOp = TabMorOp;
     type Theory = DiscreteTabTheory;
 
-    fn theory(&self) -> &Self::Theory {
-        &self.theory
+    fn theory(&self) -> Rc<Self::Theory> {
+        self.theory.clone()
     }
 
     fn ob_type(&self, ob: &Self::Ob) -> Self::ObType {

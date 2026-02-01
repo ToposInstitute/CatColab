@@ -5,10 +5,8 @@
 use bwd::Bwd;
 use derive_more::{Constructor, Deref};
 
-use crate::{
-    tt::{prelude::*, stx::*},
-    zero::LabelSegment,
-};
+use super::{prelude::*, stx::*, theory::*};
+use crate::zero::LabelSegment;
 
 /// A way of resolving [BwdIdx] found in [TmS_::Var] to values
 pub type Env = Bwd<TmV>;
@@ -73,9 +71,9 @@ pub fn merge_specializations(old: &Dtry<TyV>, new: &Dtry<TyV>) -> Dtry<TyV> {
 /// Inner enum for [TyV]
 pub enum TyV_ {
     /// Type constructor for object types, also see [TyS_::Object].
-    Object(ObjectType),
+    Object(ObType),
     /// Type constructor for morphism types, also see [TyS_::Morphism].
-    Morphism(MorphismType, TmV, TmV),
+    Morphism(MorType, TmV, TmV),
     /// Type constructor for specialized record types.
     ///
     /// This is the target of both [TyS_::Specialize] and [TyS_::Record].
@@ -99,12 +97,12 @@ pub struct TyV(Rc<TyV_>);
 
 impl TyV {
     /// Smart constructor for [TyV], [TyV_::Object] case.
-    pub fn object(object_type: ObjectType) -> Self {
+    pub fn object(object_type: ObType) -> Self {
         Self(Rc::new(TyV_::Object(object_type)))
     }
 
     /// Smart constructor for [TyV], [TyV_::Morphism] case.
-    pub fn morphism(morphism_type: MorphismType, dom: TmV, cod: TmV) -> Self {
+    pub fn morphism(morphism_type: MorType, dom: TmV, cod: TmV) -> Self {
         Self(Rc::new(TyV_::Morphism(morphism_type, dom, cod)))
     }
 

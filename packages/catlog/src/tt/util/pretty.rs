@@ -3,11 +3,16 @@
 use pretty::RcDoc;
 use std::{borrow::Cow, fmt, ops};
 
-/// A wrapper around RcDoc that allows us to add some new methods, and also is
-/// shorter to type.
+/// A type that can be pretty-printed.
+pub trait ToDoc {
+    /// Pretty prints the object, returning a doc.
+    fn to_doc<'a>(&self) -> D<'a>;
+}
+
+/// A wrapper around RcDoc with new methods and a shorter name.
 ///
-/// In particular, we implement [ops::Add], which allows concatenating docs with
-/// `+`.
+/// In particular, we implement [ops::Add], which enables docs to be
+/// concatenated with `+`.
 #[derive(Clone)]
 pub struct D<'a>(pub RcDoc<'a, ()>);
 
@@ -24,9 +29,14 @@ pub fn t<'a, U: Into<Cow<'a, str>>>(data: U) -> D<'a> {
     D(RcDoc::text(data))
 }
 
-/// Creates a space.
+/// Creates a soft line break (becomes a space when grouped).
 pub fn s<'a>() -> D<'a> {
     D(RcDoc::line())
+}
+
+/// Creates a hard line break (always a newline).
+pub fn hardline<'a>() -> D<'a> {
+    D(RcDoc::hardline())
 }
 
 /// Creates a binary operator applied to two arguments.
@@ -39,6 +49,11 @@ pub fn tuple<'a, I: IntoIterator<Item = D<'a>>>(i: I) -> D<'a> {
     D(RcDoc::intersperse(i.into_iter().map(|d| d.0.group()), (t(",") + s()).0))
         .brackets()
         .group()
+}
+
+/// Intersperses documents with hard line breaks.
+pub fn intersperse_hardlines<'a, I: IntoIterator<Item = D<'a>>>(i: I) -> D<'a> {
+    D(RcDoc::intersperse(i.into_iter().map(|d| d.0), RcDoc::hardline()))
 }
 
 impl<'a> D<'a> {

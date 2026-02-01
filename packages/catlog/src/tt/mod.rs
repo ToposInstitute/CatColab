@@ -359,6 +359,7 @@ pub mod notebook_elab;
 pub mod prelude;
 pub mod stx;
 pub mod text_elab;
+pub mod theory;
 pub mod toplevel;
 pub mod util;
 pub mod val;

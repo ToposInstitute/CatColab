@@ -2,43 +2,12 @@
 //!
 //! See [crate::tt] for what this means.
 
-use ::pretty::RcDoc;
 use derive_more::{Constructor, Deref};
-
-#[cfg(doc)]
-use crate::dbl::discrete::theory::DiscreteDblTheory;
-use crate::zero::LabelSegment;
-use crate::{tt::prelude::*, zero::QualifiedName};
 use std::fmt;
 use std::fmt::Write as _;
 
-/// Object types are just qualified names, see [DiscreteDblTheory].
-pub type ObjectType = QualifiedName;
-/// Morphism types are paths of qualified names, see [DiscreteDblTheory].
-#[derive(Clone, PartialEq, Eq)]
-pub struct MorphismType(pub Path<QualifiedName, QualifiedName>);
-
-impl fmt::Display for MorphismType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.to_doc().group().pretty())
-    }
-}
-
-impl MorphismType {
-    fn to_doc<'a>(&self) -> D<'a> {
-        match &self.0 {
-            Path::Id(ot) => (t("Id") + s() + t(format!("{ot}"))).parens(),
-            Path::Seq(non_empty) => {
-                if non_empty.len() == 1 {
-                    t(format!("{}", non_empty[0]))
-                } else {
-                    D(RcDoc::intersperse(non_empty.iter().map(|x| t(format!("{x}")).0), t(" · ").0))
-                        .parens()
-                }
-            }
-        }
-    }
-}
+use super::{prelude::*, theory::*};
+use crate::zero::LabelSegment;
 
 /// A metavariable
 ///
@@ -77,7 +46,7 @@ pub enum TyS_ {
     /// A term of type `Object(ot)` represents an object of object type `ot`.
     ///
     /// The base type for `Object(ot)` is `Ty0::Object(ot)`.
-    Object(ObjectType),
+    Object(ObType),
 
     /// Type constructor for morphism types.
     ///
@@ -88,7 +57,7 @@ pub enum TyS_ {
     /// type `mt` from `dom` to `cod`.
     ///
     /// The base type for `Morphism(mt, dom, cod)` is Ty0::Unit.
-    Morphism(MorphismType, TmS, TmS),
+    Morphism(MorType, TmS, TmS),
 
     /// Type constructor for record types.
     ///
@@ -148,12 +117,12 @@ impl TyS {
     }
 
     /// Smart constructor for [TyS], [TyS_::Object] case.
-    pub fn object(object_type: ObjectType) -> Self {
+    pub fn object(object_type: ObType) -> Self {
         Self(Rc::new(TyS_::Object(object_type)))
     }
 
     /// Smart constructor for [TyS], [TyS_::Morphism] case.
-    pub fn morphism(morphism_type: MorphismType, dom: TmS, cod: TmS) -> Self {
+    pub fn morphism(morphism_type: MorType, dom: TmS, cod: TmS) -> Self {
         Self(Rc::new(TyS_::Morphism(morphism_type, dom, cod)))
     }
 

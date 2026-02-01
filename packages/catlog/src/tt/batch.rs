@@ -14,6 +14,7 @@ use scopeguard::guard;
 use tattle::display::SourceInfo;
 use tattle::{Reporter, declare_error};
 use text_elab::*;
+use theory::std_theories;
 use toplevel::*;
 
 const PARSE_CONFIG: ParseConfig = ParseConfig::new(
@@ -23,7 +24,7 @@ const PARSE_CONFIG: ParseConfig = ParseConfig::new(
         ("&", Prec::lassoc(40)),
         ("*", Prec::lassoc(60)),
     ],
-    &[":", ":=", "&", "Unit", "Id", "*"],
+    &[":", ":=", "&", "Unit", "Hom", "*"],
     &["type", "def", "syn", "chk", "norm", "generate", "set_theory"],
 );
 

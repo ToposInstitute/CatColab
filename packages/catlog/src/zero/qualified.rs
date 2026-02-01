@@ -1,6 +1,4 @@
 //! Qualified names and labels.
-//!
-//! TODO
 
 use std::fmt::Display;
 use std::{collections::HashMap, hash::Hash};
@@ -16,6 +14,7 @@ use serde::{self, Deserialize, Serialize};
 use tsify::Tsify;
 
 use super::column::{Column, IndexedHashColumn, Mapping, MutMapping};
+use crate::tt::util::pretty::*;
 
 /// A segment in a [qualified name](QualifiedName).
 ///
@@ -145,6 +144,12 @@ impl From<Ustr> for QualifiedName {
 impl From<&str> for QualifiedName {
     fn from(name: &str) -> Self {
         Self::single(name.into())
+    }
+}
+
+impl ToDoc for QualifiedName {
+    fn to_doc<'a>(&self) -> D<'a> {
+        t(format!("{self}"))
     }
 }
 
@@ -338,6 +343,12 @@ impl From<&str> for QualifiedLabel {
 impl From<usize> for QualifiedLabel {
     fn from(value: usize) -> Self {
         Self::single(value.into())
+    }
+}
+
+impl ToDoc for QualifiedLabel {
+    fn to_doc<'a>(&self) -> D<'a> {
+        t(format!("{self}"))
     }
 }
 
