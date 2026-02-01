@@ -203,7 +203,10 @@ impl TopElaborator {
                 let (model, name_translation) = generate(toplevel, &theory, &ty_v);
                 let mut out = String::new();
                 writeln!(&mut out).unwrap();
-                model_output("#/ ", &mut out, &model, &name_translation).unwrap();
+                let rendered = format!("{}", model_output(&model, &name_translation).pretty());
+                for line in rendered.lines() {
+                    writeln!(&mut out, "#/ {line}").unwrap();
+                }
                 Some(TopElabResult::Output(out))
             }
             _ => self.error(tn.loc, "unknown toplevel declaration"),

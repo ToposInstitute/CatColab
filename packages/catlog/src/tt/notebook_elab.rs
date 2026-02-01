@@ -355,10 +355,9 @@ mod test {
         let doc: ModelDocumentContent = serde_json::from_str(&src).unwrap();
         let toplevel = Toplevel::new(std_theories());
         let mut elab = Elaborator::new(theory.clone(), &toplevel, ustr(""));
-        let mut out = String::new();
         let (_, ty_v) = elab.notebook(doc.notebook.formal_content());
         let (model, name_translation) = generate(&toplevel, theory, &ty_v);
-        model_output("", &mut out, &model, &name_translation).unwrap();
+        let mut out = model_output(&model, &name_translation).pretty().to_string();
         for error in elab.errors() {
             writeln!(&mut out, "error {:?}", error).unwrap()
         }

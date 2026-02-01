@@ -1,7 +1,5 @@
 //! Generate catlog models from DoubleTT types.
 
-use std::fmt;
-
 use crate::dbl::model::{DblModel, DiscreteDblModel, FgDblModel, MutDblModel};
 use crate::one::FgCategory;
 use crate::tt::{eval::*, prelude::*, theory::*, toplevel::*, val::*};
@@ -121,37 +119,46 @@ fn extract_to(
     }
 }
 
-/// Display model output nicely
-pub fn model_output(
-    prefix: &str,
-    out: &mut impl fmt::Write,
-    model: &Model,
-    name_translation: &Namespace,
-) -> fmt::Result {
+/// Pretty print model output as a document.
+pub fn model_output<'a>(model: &Model, name_translation: &Namespace) -> D<'a> {
     #[allow(irrefutable_let_patterns)]
     let Model::Discrete(model) = model else {
         todo!("Model output only supported for discrete theories");
     };
 
-    writeln!(out, "{prefix}object generators:")?;
-    for obgen in model.ob_generators() {
-        writeln!(
-            out,
-            "{prefix}  {} : {}",
-            name_translation.label(&obgen).unwrap(),
-            model.ob_type(&obgen)
-        )?;
-    }
-    writeln!(out, "{prefix}morphism generators:")?;
-    for morgen in model.mor_generators() {
-        writeln!(
-            out,
-            "{prefix}  {} : {} -> {} : {}",
-            name_translation.label(&morgen).unwrap(),
-            name_translation.label(&model.mor_generator_dom(&morgen)).unwrap(),
-            name_translation.label(&model.mor_generator_cod(&morgen)).unwrap(),
-            MorType::Discrete(model.mor_generator_type(&morgen))
-        )?;
-    }
-    Ok(())
+    let ob_entries: Vec<_> = model
+        .ob_generators()
+        .map(|obgen| {
+            name_translation.label(&obgen).unwrap().to_doc()
+                + t(" : ")
+                + model.ob_type(&obgen).to_doc()
+        })
+        .collect();
+
+    let mor_entries: Vec<_> = model
+        .mor_generators()
+        .map(|morgen| {
+            name_translation.label(&morgen).unwrap().to_doc()
+                + t(" : ")
+                + name_translation.label(&model.mor_generator_dom(&morgen)).unwrap().to_doc()
+                + t(" -> ")
+                + name_translation.label(&model.mor_generator_cod(&morgen)).unwrap().to_doc()
+                + t(" : ")
+                + MorType::Discrete(model.mor_generator_type(&morgen)).to_doc()
+        })
+        .collect();
+
+    let ob_section = if ob_entries.is_empty() {
+        t("object generators:")
+    } else {
+        t("object generators:") + (hardline() + intersperse_hardlines(ob_entries)).indented()
+    };
+
+    let mor_section = if mor_entries.is_empty() {
+        t("morphism generators:")
+    } else {
+        t("morphism generators:") + (hardline() + intersperse_hardlines(mor_entries)).indented()
+    };
+
+    ob_section + hardline() + mor_section + hardline()
 }

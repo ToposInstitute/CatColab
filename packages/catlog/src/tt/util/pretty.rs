@@ -29,9 +29,14 @@ pub fn t<'a, U: Into<Cow<'a, str>>>(data: U) -> D<'a> {
     D(RcDoc::text(data))
 }
 
-/// Creates a space.
+/// Creates a soft line break (becomes a space when grouped).
 pub fn s<'a>() -> D<'a> {
     D(RcDoc::line())
+}
+
+/// Creates a hard line break (always a newline).
+pub fn hardline<'a>() -> D<'a> {
+    D(RcDoc::hardline())
 }
 
 /// Creates a binary operator applied to two arguments.
@@ -44,6 +49,11 @@ pub fn tuple<'a, I: IntoIterator<Item = D<'a>>>(i: I) -> D<'a> {
     D(RcDoc::intersperse(i.into_iter().map(|d| d.0.group()), (t(",") + s()).0))
         .brackets()
         .group()
+}
+
+/// Intersperses documents with hard line breaks.
+pub fn intersperse_hardlines<'a, I: IntoIterator<Item = D<'a>>>(i: I) -> D<'a> {
+    D(RcDoc::intersperse(i.into_iter().map(|d| d.0), RcDoc::hardline()))
 }
 
 impl<'a> D<'a> {
