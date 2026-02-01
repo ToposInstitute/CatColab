@@ -1,13 +1,16 @@
 //! Elaboration for doublett
 
 use fnotation::*;
-use itertools::Itertools;
 use scopeguard::{ScopeGuard, guard};
+use std::fmt::Write;
 
 use tattle::declare_error;
 
 use super::{context::*, eval::*, modelgen::*, prelude::*, stx::*, theory::*, toplevel::*, val::*};
-use crate::zero::{QualifiedName, name};
+use crate::{
+    dbl::model::DblModelPrinter,
+    zero::{QualifiedName, name},
+};
 
 /// The result of elaborating a top-level statement.
 pub enum TopElabResult {
@@ -200,11 +203,13 @@ impl TopElaborator {
                 let theory = self.get_theory(tn.loc)?;
                 let mut elab = self.elaborator(&theory, toplevel);
                 let (_, ty_v) = elab.ty(tn.body);
-                let (model, name_translation) = generate(toplevel, &theory, &ty_v);
-                let rendered = model_output(&model, &name_translation).0.pretty(77).to_string();
-                let out = std::iter::once("".into())
-                    .chain(rendered.lines().map(|line| format!("#/ {line}")))
-                    .join("\n");
+                let (model, ns) = generate(toplevel, &theory, &ty_v);
+                let printer = DblModelPrinter::new().include_summary(false);
+                let mut out = model.summmary(&printer);
+                let body = model.to_doc(&printer, &ns).0.pretty(77).to_string();
+                for line in body.lines() {
+                    write!(&mut out, "\n#/ {line}").unwrap();
+                }
                 Some(TopElabResult::Output(out))
             }
             _ => self.error(tn.loc, "unknown toplevel declaration"),
