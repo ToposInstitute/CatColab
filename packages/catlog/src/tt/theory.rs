@@ -19,7 +19,6 @@ use crate::dbl::theory::{DblTheory, DiscreteDblTheory};
 use crate::one::Path;
 use crate::stdlib::theories;
 use crate::zero::{QualifiedName, name};
-use ::pretty::RcDoc;
 
 /// A theory supported by DoubleTT, comprising a name and a definition.
 ///
@@ -135,11 +134,11 @@ impl fmt::Display for ObType {
     }
 }
 
-impl ObType {
+impl ToDoc for ObType {
     fn to_doc<'a>(&self) -> D<'a> {
-        match self {
-            ObType::Discrete(name) => t(format!("{name}")),
-        }
+        all_the_same!(match self {
+            ObType::[Discrete](ob_type) => ob_type.to_doc()
+        })
     }
 }
 
@@ -157,19 +156,10 @@ impl fmt::Display for MorType {
     }
 }
 
-impl MorType {
-    /// Pretty prints the morphism type.
-    pub fn to_doc<'a>(&self) -> D<'a> {
+impl ToDoc for MorType {
+    fn to_doc<'a>(&self) -> D<'a> {
         match self {
-            MorType::Discrete(Path::Id(ot)) => (t("Id") + s() + t(format!("{ot}"))).parens(),
-            MorType::Discrete(Path::Seq(non_empty)) => {
-                if non_empty.len() == 1 {
-                    t(format!("{}", non_empty[0]))
-                } else {
-                    D(RcDoc::intersperse(non_empty.iter().map(|x| t(format!("{x}")).0), t(" · ").0))
-                        .parens()
-                }
-            }
+            MorType::Discrete(path) => path.to_doc(" · ", "Id"),
         }
     }
 }

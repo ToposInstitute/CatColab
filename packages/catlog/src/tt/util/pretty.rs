@@ -3,11 +3,16 @@
 use pretty::RcDoc;
 use std::{borrow::Cow, fmt, ops};
 
-/// A wrapper around RcDoc that allows us to add some new methods, and also is
-/// shorter to type.
+/// A type that can be pretty-printed.
+pub trait ToDoc {
+    /// Pretty prints the object, returning a doc.
+    fn to_doc<'a>(&self) -> D<'a>;
+}
+
+/// A wrapper around RcDoc with new methods and a shorter name.
 ///
-/// In particular, we implement [ops::Add], which allows concatenating docs with
-/// `+`.
+/// In particular, we implement [ops::Add], which enables docs to be
+/// concatenated with `+`.
 #[derive(Clone)]
 pub struct D<'a>(pub RcDoc<'a, ()>);
 

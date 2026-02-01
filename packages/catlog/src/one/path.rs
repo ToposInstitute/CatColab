@@ -10,6 +10,7 @@ use std::{collections::HashSet, hash::Hash};
 use derive_more::{Constructor, From};
 use itertools::{Either, Itertools};
 use nonempty::{NonEmpty, nonempty};
+use pretty::RcDoc;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -17,8 +18,8 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use super::graph::{Graph, ReflexiveGraph};
-use crate::validate;
 use crate::zero::QualifiedName;
+use crate::{tt::util::pretty::*, validate};
 
 /// A path in a [graph](Graph) or [category](crate::one::category::Category).
 ///
@@ -431,6 +432,16 @@ impl<V, E> Path<V, Path<V, E>> {
             None
         } else {
             Some(self.flatten())
+        }
+    }
+}
+
+impl<V: ToDoc, E: ToDoc> Path<V, E> {
+    /// Pretty prints the path.
+    pub fn to_doc<'a>(&self, sep: &'a str, id: &'a str) -> D<'a> {
+        match self {
+            Path::Id(v) => (t(id) + s() + v.to_doc()).parens(),
+            Path::Seq(edges) => D(RcDoc::intersperse(edges.iter().map(|e| e.to_doc().0), t(sep).0)),
         }
     }
 }
