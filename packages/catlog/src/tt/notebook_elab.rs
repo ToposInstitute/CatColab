@@ -371,15 +371,12 @@ mod test {
             &th_schema,
             "weighted_graph",
             expect![[r#"
-                object generators:
-                  E : Entity
-                  V : Entity
-                  Weight : AttrType
-                morphism generators:
-                  weight : E -> Weight : Attr
-                  src : E -> V : (Hom Entity)
-                  tgt : E -> V : (Hom Entity)
-            "#]],
+                E : Entity
+                V : Entity
+                Weight : AttrType
+                weight : E -> Weight : Attr
+                src : E -> V : (Hom Entity)
+                tgt : E -> V : (Hom Entity)"#]],
         );
     }
 
@@ -392,12 +389,9 @@ mod test {
             &th_schema,
             "morphism_before_codomain",
             expect![[r#"
-                object generators:
-                  A : Entity
-                  B : Entity
-                morphism generators:
-                  f : A -> B : (Hom Entity)
-            "#]],
+                A : Entity
+                B : Entity
+                f : A -> B : (Hom Entity)"#]],
         );
     }
 }

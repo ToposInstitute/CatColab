@@ -126,39 +126,27 @@ pub fn model_output<'a>(model: &Model, name_translation: &Namespace) -> D<'a> {
         todo!("Model output only supported for discrete theories");
     };
 
-    let ob_entries: Vec<_> = model
-        .ob_generators()
-        .map(|obgen| {
-            name_translation.label(&obgen).unwrap().to_doc()
-                + t(" : ")
-                + model.ob_type(&obgen).to_doc()
-        })
-        .collect();
+    let sep = |sep: &'a str| s() + t(sep) + s();
 
-    let mor_entries: Vec<_> = model
-        .mor_generators()
-        .map(|morgen| {
-            name_translation.label(&morgen).unwrap().to_doc()
-                + t(" : ")
-                + name_translation.label(&model.mor_generator_dom(&morgen)).unwrap().to_doc()
-                + t(" -> ")
-                + name_translation.label(&model.mor_generator_cod(&morgen)).unwrap().to_doc()
-                + t(" : ")
-                + MorType::Discrete(model.mor_generator_type(&morgen)).to_doc()
-        })
-        .collect();
+    let ob_entries = model.ob_generators().map(|obgen| {
+        (name_translation.label(&obgen).unwrap().to_doc()
+            + sep(":")
+            + model.ob_type(&obgen).to_doc())
+        .group()
+    });
+    let ob_section = intersperse_hardlines(ob_entries);
 
-    let ob_section = if ob_entries.is_empty() {
-        t("object generators:")
-    } else {
-        t("object generators:") + (hardline() + intersperse_hardlines(ob_entries)).indented()
-    };
+    let mor_entries = model.mor_generators().map(|morgen| {
+        (name_translation.label(&morgen).unwrap().to_doc()
+            + sep(":")
+            + name_translation.label(&model.mor_generator_dom(&morgen)).unwrap().to_doc()
+            + sep("->")
+            + name_translation.label(&model.mor_generator_cod(&morgen)).unwrap().to_doc()
+            + sep(":")
+            + MorType::Discrete(model.mor_generator_type(&morgen)).to_doc())
+        .group()
+    });
+    let mor_section = intersperse_hardlines(mor_entries);
 
-    let mor_section = if mor_entries.is_empty() {
-        t("morphism generators:")
-    } else {
-        t("morphism generators:") + (hardline() + intersperse_hardlines(mor_entries)).indented()
-    };
-
-    ob_section + hardline() + mor_section + hardline()
+    ob_section + hardline() + mor_section
 }

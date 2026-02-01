@@ -22,15 +22,12 @@ type WeightedGraph := [
 
 generate WeightedGraph
 #/ result: 
-#/ object generators:
-#/   V : Entity
-#/   E : Entity
-#/   Weight : AttrType
-#/ morphism generators:
-#/   src : E -> V : (Hom Entity)
-#/   tgt : E -> V : (Hom Entity)
-#/   weight : E -> Weight : Attr
-
+#/ V : Entity
+#/ E : Entity
+#/ Weight : AttrType
+#/ src : E -> V : (Hom Entity)
+#/ tgt : E -> V : (Hom Entity)
+#/ weight : E -> Weight : Attr
 
 type EntityArr := [
   dom : Entity,
@@ -157,16 +154,13 @@ norm [g : Graph2] g.g1.V
 
 generate Graph2
 #/ result: 
-#/ object generators:
-#/   V : Entity
-#/   g1.E : Entity
-#/   g2.E : Entity
-#/ morphism generators:
-#/   g1.src : g1.E -> V : (Hom Entity)
-#/   g1.tgt : g1.E -> V : (Hom Entity)
-#/   g2.src : g2.E -> V : (Hom Entity)
-#/   g2.tgt : g2.E -> V : (Hom Entity)
-
+#/ V : Entity
+#/ g1.E : Entity
+#/ g2.E : Entity
+#/ g1.src : g1.E -> V : (Hom Entity)
+#/ g1.tgt : g1.E -> V : (Hom Entity)
+#/ g2.src : g2.E -> V : (Hom Entity)
+#/ g2.tgt : g2.E -> V : (Hom Entity)
 
 type ProfunctorGraph := [
   g1 : Graph,
@@ -177,18 +171,15 @@ type ProfunctorGraph := [
 
 generate ProfunctorGraph
 #/ result: 
-#/ object generators:
-#/   g1.V : Entity
-#/   g1.E : Entity
-#/   g2.V : Entity
-#/   g2.E : Entity
-#/ morphism generators:
-#/   g1.src : g1.E -> g1.V : (Hom Entity)
-#/   g1.tgt : g1.E -> g1.V : (Hom Entity)
-#/   g2.src : g2.E -> g2.V : (Hom Entity)
-#/   g2.tgt : g2.E -> g2.V : (Hom Entity)
-#/   het : g1.V -> g2.V : (Hom Entity)
-
+#/ g1.V : Entity
+#/ g1.E : Entity
+#/ g2.V : Entity
+#/ g2.E : Entity
+#/ g1.src : g1.E -> g1.V : (Hom Entity)
+#/ g1.tgt : g1.E -> g1.V : (Hom Entity)
+#/ g2.src : g2.E -> g2.V : (Hom Entity)
+#/ g2.tgt : g2.E -> g2.V : (Hom Entity)
+#/ het : g1.V -> g2.V : (Hom Entity)
 
 type WeightedGraph2 := [
   V : Entity,
@@ -199,20 +190,17 @@ type WeightedGraph2 := [
 
 generate WeightedGraph2
 #/ result: 
-#/ object generators:
-#/   V : Entity
-#/   g1.E : Entity
-#/   g1.Weight : AttrType
-#/   g2.E : Entity
-#/   g2.Weight : AttrType
-#/ morphism generators:
-#/   g1.src : g1.E -> V : (Hom Entity)
-#/   g1.tgt : g1.E -> V : (Hom Entity)
-#/   g1.weight : g1.E -> g1.Weight : Attr
-#/   g2.src : g2.E -> V : (Hom Entity)
-#/   g2.tgt : g2.E -> V : (Hom Entity)
-#/   g2.weight : g2.E -> g2.Weight : Attr
-
+#/ V : Entity
+#/ g1.E : Entity
+#/ g1.Weight : AttrType
+#/ g2.E : Entity
+#/ g2.Weight : AttrType
+#/ g1.src : g1.E -> V : (Hom Entity)
+#/ g1.tgt : g1.E -> V : (Hom Entity)
+#/ g1.weight : g1.E -> g1.Weight : Attr
+#/ g2.src : g2.E -> V : (Hom Entity)
+#/ g2.tgt : g2.E -> V : (Hom Entity)
+#/ g2.weight : g2.E -> g2.Weight : Attr
 
 set_theory ThCategory
 #/ result: set theory to ThCategory
@@ -252,13 +240,10 @@ type NegFeedback := [
 
 generate NegFeedback
 #/ result: 
-#/ object generators:
-#/   X : Object
-#/   Y : Object
-#/ morphism generators:
-#/   f : X -> Y : (Hom Object)
-#/   g : Y -> X : Negative
-
+#/ X : Object
+#/ Y : Object
+#/ f : X -> Y : (Hom Object)
+#/ g : Y -> X : Negative
 
 #(should_fail)
 type NegFeedback1 := [
@@ -281,9 +266,6 @@ type NegFeedback1 := [
 
 generate NegFeedback1
 #/ result: 
-#/ object generators:
-#/   X : Object
-#/   Y : Object
-#/ morphism generators:
-
+#/ X : Object
+#/ Y : Object
 

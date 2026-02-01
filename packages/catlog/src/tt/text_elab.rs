@@ -1,8 +1,8 @@
 //! Elaboration for doublett
 
 use fnotation::*;
+use itertools::Itertools;
 use scopeguard::{ScopeGuard, guard};
-use std::fmt::Write;
 
 use tattle::declare_error;
 
@@ -201,12 +201,10 @@ impl TopElaborator {
                 let mut elab = self.elaborator(&theory, toplevel);
                 let (_, ty_v) = elab.ty(tn.body);
                 let (model, name_translation) = generate(toplevel, &theory, &ty_v);
-                let mut out = String::new();
-                writeln!(&mut out).unwrap();
-                let rendered = format!("{}", model_output(&model, &name_translation).pretty());
-                for line in rendered.lines() {
-                    writeln!(&mut out, "#/ {line}").unwrap();
-                }
+                let rendered = model_output(&model, &name_translation).0.pretty(77).to_string();
+                let out = std::iter::once("".into())
+                    .chain(rendered.lines().map(|line| format!("#/ {line}")))
+                    .join("\n");
                 Some(TopElabResult::Output(out))
             }
             _ => self.error(tn.loc, "unknown toplevel declaration"),
