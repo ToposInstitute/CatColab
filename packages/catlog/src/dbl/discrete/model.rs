@@ -243,11 +243,23 @@ impl PrintableDblModel for DiscreteDblModel {
     fn ob_to_doc<'a>(&self, ob: &Self::Ob, ob_ns: &Namespace, _mor_ns: &Namespace) -> D<'a> {
         t(ob_ns.label_string(ob))
     }
+
+    fn mor_to_doc<'a>(&self, mor: &Self::Mor, ob_ns: &Namespace, mor_ns: &Namespace) -> D<'a> {
+        match mor {
+            Path::Id(ob) => unop("Id", self.ob_to_doc(ob, ob_ns, mor_ns)),
+            Path::Seq(seq) => intersperse(seq.iter().map(|f| t(mor_ns.label_string(f))), t(" ⋅ ")),
+        }
+    }
+
     fn ob_type_to_doc<'a>(ob_type: &Self::ObType) -> D<'a> {
         ob_type.to_doc()
     }
+
     fn mor_type_to_doc<'a>(mor_type: &Self::MorType) -> D<'a> {
-        mor_type.to_doc(" ⊙ ", "Hom")
+        match mor_type {
+            Path::Id(ob_type) => unop("Hom", Self::ob_type_to_doc(ob_type)),
+            Path::Seq(seq) => intersperse(seq.iter().map(|m| m.to_doc()), t(" ⊙ ")),
+        }
     }
 }
 

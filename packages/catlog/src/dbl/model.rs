@@ -185,6 +185,9 @@ pub trait PrintableDblModel: FgDblModel<ObGen = QualifiedName, MorGen = Qualifie
     /// Pretty prints an object in the model.
     fn ob_to_doc<'a>(&self, ob: &Self::Ob, ob_ns: &Namespace, mor_ns: &Namespace) -> D<'a>;
 
+    /// Pretty prints a morphism in the model.
+    fn mor_to_doc<'a>(&self, mor: &Self::Mor, ob_ns: &Namespace, mor_ns: &Namespace) -> D<'a>;
+
     /// Pretty prints an object type in the model's theory.
     fn ob_type_to_doc<'a>(ob_type: &Self::ObType) -> D<'a>;
 
