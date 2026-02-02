@@ -17,8 +17,8 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use super::graph::{Graph, ReflexiveGraph};
+use crate::validate;
 use crate::zero::QualifiedName;
-use crate::{tt::util::pretty::*, validate};
 
 /// A path in a [graph](Graph) or [category](crate::one::category::Category).
 ///
@@ -431,16 +431,6 @@ impl<V, E> Path<V, Path<V, E>> {
             None
         } else {
             Some(self.flatten())
-        }
-    }
-}
-
-impl<V: ToDoc, E: ToDoc> Path<V, E> {
-    /// Pretty prints the path.
-    pub fn to_doc<'a>(&self, sep: &'a str, id: &'a str) -> D<'a> {
-        match self {
-            Path::Id(v) => unop(id, v.to_doc()),
-            Path::Seq(edges) => intersperse(edges.iter().map(|e| e.to_doc()), t(sep)),
         }
     }
 }
