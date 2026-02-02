@@ -439,7 +439,7 @@ impl<V: ToDoc, E: ToDoc> Path<V, E> {
     /// Pretty prints the path.
     pub fn to_doc<'a>(&self, sep: &'a str, id: &'a str) -> D<'a> {
         match self {
-            Path::Id(v) => unop(id, v.to_doc()).parens(),
+            Path::Id(v) => unop(id, v.to_doc()),
             Path::Seq(edges) => intersperse(edges.iter().map(|e| e.to_doc()), t(sep)),
         }
     }

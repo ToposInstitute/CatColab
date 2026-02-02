@@ -157,9 +157,9 @@ impl TyS {
     fn to_doc<'a>(&self) -> D<'a> {
         match &**self {
             TyS_::TopVar(name) => t(format!("{}", name)),
-            TyS_::Object(object_type) => t(format!("{}", object_type)),
-            TyS_::Morphism(morphism_type, dom, cod) => {
-                morphism_type.to_doc() + tuple([dom.to_doc(), cod.to_doc()])
+            TyS_::Object(ob_type) => t(format!("{}", ob_type)),
+            TyS_::Morphism(mor_type, dom, cod) => {
+                mor_type.to_doc().parens() + tuple([dom.to_doc(), cod.to_doc()])
             }
             TyS_::Record(r) => {
                 tuple(r.fields.iter().map(|(_, (label, ty))| {
