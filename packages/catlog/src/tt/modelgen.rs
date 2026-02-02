@@ -51,7 +51,7 @@ impl Model {
     }
 
     /// Pretty prints a summary of the model.
-    pub fn summmary(&self, printer: &DblModelPrinter) -> String {
+    pub fn summary(&self, printer: &DblModelPrinter) -> String {
         all_the_same!(match self {
             Model::[Discrete](model) => printer.summary(model)
         })

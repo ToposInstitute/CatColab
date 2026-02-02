@@ -205,7 +205,7 @@ impl TopElaborator {
                 let (_, ty_v) = elab.ty(tn.body);
                 let (model, ns) = generate(toplevel, &theory, &ty_v);
                 let printer = DblModelPrinter::new().include_summary(false);
-                let mut out = model.summmary(&printer);
+                let mut out = model.summary(&printer);
                 let body = model.to_doc(&printer, &ns).0.pretty(77).to_string();
                 for line in body.lines() {
                     write!(&mut out, "\n#/ {line}").unwrap();
