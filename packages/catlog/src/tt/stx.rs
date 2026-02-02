@@ -161,16 +161,16 @@ impl TyS {
             TyS_::Morphism(mor_type, dom, cod) => {
                 mor_type.to_doc().parens() + tuple([dom.to_doc(), cod.to_doc()])
             }
-            TyS_::Record(r) => {
-                tuple(r.fields.iter().map(|(_, (label, ty))| {
-                    binop(":", t(format!("{}", label)).group(), ty.to_doc())
-                }))
-            }
+            TyS_::Record(r) => tuple(r.fields.iter().map(|(_, (label, ty))| {
+                binop(t(":"), t(format!("{}", label)).group(), ty.to_doc())
+            })),
             TyS_::Sing(_, tm) => t("@sing") + s() + tm.to_doc(),
             TyS_::Specialize(ty, d) => binop(
-                "&",
+                t("&"),
                 ty.to_doc(),
-                tuple(d.iter().map(|(name, ty)| binop(":", t(path_to_string(name)), ty.to_doc()))),
+                tuple(
+                    d.iter().map(|(name, ty)| binop(t(":"), t(path_to_string(name)), ty.to_doc())),
+                ),
             ),
             TyS_::Unit => t("Unit"),
             TyS_::Meta(mv) => t(format!("?{}", mv.id)),
@@ -292,13 +292,11 @@ impl TmS {
             }
             TmS_::Var(_, _, label) => t(format!("{}", label)),
             TmS_::Proj(tm, _, label) => tm.to_doc() + t(format!(".{}", label)),
-            TmS_::Cons(fields) => {
-                tuple(fields.iter().map(|(_, (label, field))| {
-                    binop(":=", t(format!("{}", label)), field.to_doc())
-                }))
-            }
+            TmS_::Cons(fields) => tuple(fields.iter().map(|(_, (label, field))| {
+                binop(t(":="), t(format!("{}", label)), field.to_doc())
+            })),
             TmS_::Id(ob) => (t("@id") + s() + ob.to_doc()).parens(),
-            TmS_::Compose(f, g) => binop("·", f.to_doc(), g.to_doc()),
+            TmS_::Compose(f, g) => binop(t("·"), f.to_doc(), g.to_doc()),
             TmS_::Tt => t("tt"),
             TmS_::Opaque => t("<opaque>"),
             TmS_::Meta(mv) => t(format!("?{}", mv.id)),

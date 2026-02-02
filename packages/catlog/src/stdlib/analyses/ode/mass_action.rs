@@ -378,7 +378,7 @@ mod tests {
         let th = Rc::new(th_sym_monoidal_category());
         let model = sir_petri(th);
         let data = MassActionProblemData {
-            rates: HashMap::from_iter([(name("infection"), 1e-5f32), (name("recovery"), 1e-2f32)]),
+            rates: HashMap::from_iter([(name("infect"), 1e-5f32), (name("recover"), 1e-2f32)]),
             initial_values: HashMap::from_iter([
                 (name("S"), 1e5f32),
                 (name("I"), 1f32),

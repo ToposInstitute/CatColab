@@ -152,7 +152,7 @@ pub fn sir_petri(th: Rc<ModalDblTheory>) -> ModalDblModel {
     model.add_ob(i.clone(), ob_type.clone());
     model.add_ob(r.clone(), ob_type.clone());
     model.add_mor(
-        name("infection"),
+        name("infect"),
         ModalOb::App(
             ModalOb::List(List::Symmetric, vec![s.into(), i.clone().into()]).into(),
             op.clone(),
@@ -164,7 +164,7 @@ pub fn sir_petri(th: Rc<ModalDblTheory>) -> ModalDblModel {
         ModalMorType::Zero(ob_type.clone()),
     );
     model.add_mor(
-        name("recovery"),
+        name("recover"),
         ModalOb::App(ModalOb::List(List::Symmetric, vec![i.into()]).into(), op.clone()),
         ModalOb::App(ModalOb::List(List::Symmetric, vec![r.into()]).into(), op),
         ModalMorType::Zero(ob_type),
@@ -218,6 +218,7 @@ mod tests {
     #[test]
     fn sym_monoidal_categories() {
         let th = Rc::new(th_sym_monoidal_category());
-        assert!(catalyzed_reaction(th).validate().is_ok());
+        assert!(catalyzed_reaction(th.clone()).validate().is_ok());
+        assert!(sir_petri(th).validate().is_ok());
     }
 }

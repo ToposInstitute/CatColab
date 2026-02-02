@@ -37,7 +37,7 @@ impl ToDoc for TabObType {
     fn to_doc<'a>(&self) -> D<'a> {
         match self {
             TabObType::Basic(name) => name.to_doc(),
-            TabObType::Tabulator(mor_type) => unop("Tab", mor_type.to_doc()),
+            TabObType::Tabulator(mor_type) => unop(t("Tab"), mor_type.to_doc()),
         }
     }
 }
@@ -46,7 +46,7 @@ impl ToDoc for TabMorType {
     fn to_doc<'a>(&self) -> D<'a> {
         match self {
             TabMorType::Basic(name) => name.to_doc(),
-            TabMorType::Hom(ob_type) => unop("Hom", ob_type.to_doc()),
+            TabMorType::Hom(ob_type) => unop(t("Hom"), ob_type.to_doc()),
         }
     }
 }

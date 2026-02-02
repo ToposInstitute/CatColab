@@ -40,13 +40,13 @@ pub fn hardline<'a>() -> D<'a> {
 }
 
 /// Creates a unary operator applied to one argument in [fnotation].
-pub fn unop<'a>(op: &'a str, arg: D<'a>) -> D<'a> {
-    (t(op) + s() + arg).group()
+pub fn unop<'a>(op: D<'a>, arg: D<'a>) -> D<'a> {
+    (op + s() + arg).group()
 }
 
 /// Creates a binary operator applied to two arguments.
-pub fn binop<'a>(op: &'a str, l: D<'a>, r: D<'a>) -> D<'a> {
-    ((l + s() + t(op)).group() + (s() + r).indented()).group()
+pub fn binop<'a>(op: D<'a>, l: D<'a>, r: D<'a>) -> D<'a> {
+    ((l + s() + op).group() + (s() + r).indented()).group()
 }
 
 /// Creates a tuple in [fnotation]: (`[x, y, z, ...]`)
