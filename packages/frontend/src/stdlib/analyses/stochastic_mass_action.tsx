@@ -7,7 +7,13 @@ import {
     FixedTableEditor,
     Foldable,
 } from "catcolab-ui-components";
-import type { DblModel, MassActionProblemData, MorType, ObType, QualifiedName } from "catlog-wasm";
+import type {
+    DblModel,
+    MorType,
+    ObType,
+    QualifiedName,
+    StochasticMassActionProblemData,
+} from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
@@ -18,7 +24,7 @@ import "./simulation.css";
 
 /** Analyze a model using stochastic mass-action dynamics. */
 export default function StochasticMassAction(
-    props: ModelAnalysisProps<MassActionProblemData> & {
+    props: ModelAnalysisProps<StochasticMassActionProblemData> & {
         simulate: StochasticMassActionSimulator;
         stateType?: ObType;
         transitionType?: MorType;
@@ -52,9 +58,9 @@ export default function StochasticMassAction(
             content: (id) => elaboratedModel()?.obGeneratorLabel(id)?.join(".") ?? "",
         },
         createNumericalColumn({
-            name: "Initial value",
+            name: "Initial values (positive integers)",
             data: (id) => props.content.initialValues[id],
-            validate: (_, data) => data >= 0,
+            validate: (_, data) => data >= 0 && Number.isInteger(data),
             setData: (id, data) =>
                 props.changeContent((content) => {
                     content.initialValues[id] = data;

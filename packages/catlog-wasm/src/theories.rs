@@ -454,7 +454,7 @@ impl ThSymMonoidalCategory {
     pub fn stochastic_mass_action(
         &self,
         model: &DblModel,
-        data: analyses::ode::MassActionProblemData,
+        data: analyses::ode::StochasticMassActionProblemData,
     ) -> Result<ODEResult, String> {
         Ok(ODEResult(JsResult::Ok(
             analyses::ode::PetriNetMassActionAnalysis::default()
