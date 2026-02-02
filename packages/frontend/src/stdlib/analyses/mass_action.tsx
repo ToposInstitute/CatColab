@@ -1,4 +1,4 @@
-import { createMemo } from "solid-js";
+import { createMemo, createSignal, on } from "solid-js";
 
 import {
     BlockTitle,
@@ -11,6 +11,7 @@ import {
 } from "catcolab-ui-components";
 import type { MassActionProblemData, MorType, ObType, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
+import { ExecuteGuard } from "../../components";
 import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
 import { createModelODEPlotWithEquations } from "./model_ode_plot";
@@ -101,12 +102,28 @@ export default function MassAction(
         (model) => props.simulate(model, props.content),
     );
 
-    const plotResult = () => result()?.plotData;
+    const [autoUpdate, setAutoUpdate] = createSignal(true);
+    const [shouldUpdate, trigger] = createSignal(false);
+    const plotResult = createMemo(
+        on(
+            () => (autoUpdate() ? result()?.plotData : shouldUpdate()),
+            () => result()?.plotData,
+        ),
+    );
     const latexEquations = () => result()?.latexEquations ?? [];
+
+    const execute = () => (
+        <ExecuteGuard
+            text="Execute"
+            triggerText="auto-simulate"
+            canTrigger={[autoUpdate, setAutoUpdate]}
+            shouldTrigger={[shouldUpdate, trigger]}
+        />
+    );
 
     return (
         <div class="simulation">
-            <BlockTitle title={props.title} />
+            <BlockTitle title={props.title} settingsPane={execute()} />
             <Foldable title="Parameters" defaultExpanded>
                 <div class="parameters">
                     <FixedTableEditor rows={obGenerators()} schema={obSchema} />
