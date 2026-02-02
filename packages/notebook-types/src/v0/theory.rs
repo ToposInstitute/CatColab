@@ -71,7 +71,7 @@ pub enum Modality {
     Codiscrete,
     List,
     SymmetricList,
-    CoproductList,
-    ProductList,
-    BiproductList,
+    CocartesianList,
+    CartesianList,
+    AdditiveList,
 }

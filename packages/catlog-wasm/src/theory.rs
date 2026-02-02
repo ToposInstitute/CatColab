@@ -148,9 +148,9 @@ pub(crate) fn promote_modality(modality: Modality) -> theory::Modality {
         Modality::Codiscrete => theory::Modality::Codiscrete(),
         Modality::List => theory::Modality::List(theory::List::Plain),
         Modality::SymmetricList => theory::Modality::List(theory::List::Symmetric),
-        Modality::ProductList => theory::Modality::List(theory::List::Product),
-        Modality::CoproductList => theory::Modality::List(theory::List::Coproduct),
-        Modality::BiproductList => theory::Modality::List(theory::List::Biproduct),
+        Modality::CartesianList => theory::Modality::List(theory::List::Cartesian),
+        Modality::CocartesianList => theory::Modality::List(theory::List::Cocartesian),
+        Modality::AdditiveList => theory::Modality::List(theory::List::Additive),
     }
 }
 
@@ -255,9 +255,9 @@ pub(crate) fn demote_modality(modality: theory::Modality) -> Modality {
         theory::Modality::List(list_type) => match list_type {
             theory::List::Plain => Modality::List,
             theory::List::Symmetric => Modality::SymmetricList,
-            theory::List::Product => Modality::ProductList,
-            theory::List::Coproduct => Modality::CoproductList,
-            theory::List::Biproduct => Modality::BiproductList,
+            theory::List::Cartesian => Modality::CartesianList,
+            theory::List::Cocartesian => Modality::CocartesianList,
+            theory::List::Additive => Modality::AdditiveList,
         },
     }
 }

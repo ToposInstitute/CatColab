@@ -355,7 +355,7 @@ impl PrintableDblModel for DiscreteTabModel {
 
     fn mor_to_doc<'a>(&self, mor: &Self::Mor, ob_ns: &Namespace, mor_ns: &Namespace) -> D<'a> {
         match mor {
-            Path::Id(ob) => unop("Id", self.ob_to_doc(ob, ob_ns, mor_ns)),
+            Path::Id(ob) => unop(t("Id"), self.ob_to_doc(ob, ob_ns, mor_ns)),
             Path::Seq(edges) => intersperse(edges.iter().map(|e| edge_to_doc(e, mor_ns)), t(" ⋅ ")),
         }
     }

@@ -88,9 +88,9 @@ function obEditorForType(obType: ObType): Component<ObInputProps> {
                 return obEditorForType(obType.content.obType);
             case "List":
             case "SymmetricList":
-            case "CoproductList":
-            case "ProductList":
-            case "BiproductList": {
+            case "CocartesianList":
+            case "CartesianList":
+            case "AdditiveList": {
                 return ObListEditor;
             }
         }
