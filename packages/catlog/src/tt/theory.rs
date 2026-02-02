@@ -15,8 +15,9 @@ use std::fmt;
 use std::rc::Rc;
 
 use super::prelude::*;
+use crate::dbl::model::{DiscreteDblModel, PrintableDblModel};
 use crate::dbl::theory::{DblTheory, DiscreteDblTheory};
-use crate::one::Path;
+use crate::one::QualifiedPath;
 use crate::stdlib::theories;
 use crate::zero::{QualifiedName, name};
 
@@ -136,9 +137,9 @@ impl fmt::Display for ObType {
 
 impl ToDoc for ObType {
     fn to_doc<'a>(&self) -> D<'a> {
-        all_the_same!(match self {
-            ObType::[Discrete](ob_type) => ob_type.to_doc()
-        })
+        match self {
+            ObType::Discrete(name) => DiscreteDblModel::ob_type_to_doc(name),
+        }
     }
 }
 
@@ -147,7 +148,7 @@ impl ToDoc for ObType {
 #[try_into(owned, ref)]
 pub enum MorType {
     /// Morphism type in a discrete theory.
-    Discrete(Path<QualifiedName, QualifiedName>),
+    Discrete(QualifiedPath),
 }
 
 impl fmt::Display for MorType {
@@ -159,7 +160,7 @@ impl fmt::Display for MorType {
 impl ToDoc for MorType {
     fn to_doc<'a>(&self) -> D<'a> {
         match self {
-            MorType::Discrete(path) => path.to_doc(" ⊙ ", "Hom"),
+            MorType::Discrete(path) => DiscreteDblModel::mor_type_to_doc(path),
         }
     }
 }

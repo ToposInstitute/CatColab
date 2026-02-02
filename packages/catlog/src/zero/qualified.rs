@@ -454,6 +454,28 @@ impl Namespace {
         Some(labels?.into())
     }
 
+    /// Gets a human-readable string label for a name.
+    ///
+    /// Unlike [`label`](Self::label), this method is infallible: UUIDs without
+    /// a corresponding label are just displayed directly. That makes this
+    /// method suitable for debugging and text dumps but not for situations when
+    /// a user should never see a UUID.
+    pub fn label_string(&self, name: &QualifiedName) -> String {
+        let mut namespace = Some(self);
+        let labels = name.segments().map(|segment| {
+            let label = match segment {
+                NameSegment::Uuid(uuid) => namespace
+                    .and_then(|ns| ns.uuid_labels.as_ref())
+                    .and_then(|ul| ul.apply_to_ref(uuid))
+                    .unwrap_or_else(|| LabelSegment::Text(uuid.braced().to_string().into())),
+                NameSegment::Text(name) => LabelSegment::Text(*name),
+            };
+            namespace = namespace.and_then(|ns| ns.inner.get(segment));
+            label
+        });
+        QualifiedLabel(labels.collect()).to_string()
+    }
+
     /// Tries to get a name corresponding to a label.
     pub fn name_with_label(&self, label: &QualifiedLabel) -> NameLookup {
         let mut namespace = Some(self);
@@ -531,17 +553,18 @@ mod tests {
 
     #[test]
     fn namespaces() {
-        let mut child = Namespace::new_for_uuid();
-        child.set_label(UUID1, "bar".into());
-        child.set_label(UUID2, "baz".into());
+        let mut child1 = Namespace::new_for_uuid();
+        child1.set_label(UUID1, "bar".into());
+        child1.set_label(UUID2, "baz".into());
         let mut root = Namespace::new_for_uuid();
-        root.add_inner(UUID1.into(), child);
+        root.add_inner(UUID1.into(), child1);
         root.add_inner(UUID2.into(), Namespace::new_for_text());
         root.set_label(UUID1, "foo".into());
         root.set_label(UUID2, "textual".into());
 
         let (qual_name, qual_label) = (name([UUID1, UUID2]), label(["foo", "baz"]));
         assert_eq!(root.label(&qual_name), Some(qual_label.clone()));
+        assert_eq!(root.label_string(&qual_name), "foo.baz");
         assert_eq!(root.name_with_label(&qual_label), NameLookup::Unique(qual_name));
 
         let qual_name =
@@ -550,7 +573,9 @@ mod tests {
         assert_eq!(root.label(&qual_name), Some(qual_label.clone()));
         assert_eq!(root.name_with_label(&qual_label), NameLookup::Unique(qual_name));
 
-        assert_eq!(root.label(&name([UUID2, UUID1])), None);
+        let qual_name = name([UUID2, UUID1]);
+        assert_eq!(root.label(&qual_name), None);
+        assert_eq!(root.label_string(&qual_name), format!("textual.{{{UUID1}}}"));
         assert_eq!(root.name_with_label(&label(["bar", "foo"])), NameLookup::None);
 
         let mut ambiguous = Namespace::new_for_uuid();
