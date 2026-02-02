@@ -10,7 +10,6 @@ use std::{collections::HashSet, hash::Hash};
 use derive_more::{Constructor, From};
 use itertools::{Either, Itertools};
 use nonempty::{NonEmpty, nonempty};
-use pretty::RcDoc;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -440,8 +439,8 @@ impl<V: ToDoc, E: ToDoc> Path<V, E> {
     /// Pretty prints the path.
     pub fn to_doc<'a>(&self, sep: &'a str, id: &'a str) -> D<'a> {
         match self {
-            Path::Id(v) => (t(id) + s() + v.to_doc()).parens(),
-            Path::Seq(edges) => D(RcDoc::intersperse(edges.iter().map(|e| e.to_doc().0), t(sep).0)),
+            Path::Id(v) => unop(id, v.to_doc()).parens(),
+            Path::Seq(edges) => intersperse(edges.iter().map(|e| e.to_doc()), t(sep)),
         }
     }
 }

@@ -39,6 +39,11 @@ pub fn hardline<'a>() -> D<'a> {
     D(RcDoc::hardline())
 }
 
+/// Creates a unary operator applied to one argument in [fnotation].
+pub fn unop<'a>(op: &'a str, arg: D<'a>) -> D<'a> {
+    (t(op) + s() + arg).group()
+}
+
 /// Creates a binary operator applied to two arguments.
 pub fn binop<'a>(op: &'a str, l: D<'a>, r: D<'a>) -> D<'a> {
     ((l + s() + t(op)).group() + (s() + r).indented()).group()
@@ -51,9 +56,9 @@ pub fn tuple<'a, I: IntoIterator<Item = D<'a>>>(i: I) -> D<'a> {
         .group()
 }
 
-/// Intersperses documents with hard line breaks.
-pub fn intersperse_hardlines<'a, I: IntoIterator<Item = D<'a>>>(i: I) -> D<'a> {
-    D(RcDoc::intersperse(i.into_iter().map(|d| d.0), RcDoc::hardline()))
+/// Intersperses documents with the given separator.
+pub fn intersperse<'a, I: IntoIterator<Item = D<'a>>>(i: I, sep: D<'a>) -> D<'a> {
+    D(RcDoc::intersperse(i.into_iter().map(|d| d.0), sep.0))
 }
 
 impl<'a> D<'a> {

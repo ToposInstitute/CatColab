@@ -236,7 +236,7 @@ impl DblModelPrinter {
                 + t(" : ")
                 + Model::ob_type_to_doc(&model.ob_generator_type(&name))
         });
-        let ob_section = intersperse_hardlines(ob_entries);
+        let ob_section = intersperse(ob_entries, hardline());
 
         let mor_entries = model.mor_generators().map(|name| {
             t(mor_ns.label_string(&name))
@@ -247,7 +247,7 @@ impl DblModelPrinter {
                 + t(" : ")
                 + Model::mor_type_to_doc(&model.mor_generator_type(&name))
         });
-        let mor_section = intersperse_hardlines(mor_entries);
+        let mor_section = intersperse(mor_entries, hardline());
 
         let result = ob_section + hardline() + mor_section;
         if self.include_summary {
