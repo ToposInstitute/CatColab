@@ -1,0 +1,391 @@
+{
+    "diagram": {
+        "obGenerators": [
+            {
+                "id": "019a5ace-3497-71db-a8f9-c2d02e5e7182",
+                "label": [
+                    "u"
+                ],
+                "obType": {
+                    "tag": "Basic",
+                    "content": "Object"
+                },
+                "over": {
+                    "tag": "Basic",
+                    "content": "0194d398-d0cb-7308-b7e0-eace5b21af24"
+                }
+            },
+            {
+                "id": "019a5ace-4426-77a8-8242-7930b07560fe",
+                "label": [
+                    "du/dt"
+                ],
+                "obType": {
+                    "tag": "Basic",
+                    "content": "Object"
+                },
+                "over": {
+                    "tag": "Basic",
+                    "content": "0194d398-d0cb-7308-b7e0-eace5b21af24"
+                }
+            },
+            {
+                "id": "019a5ace-7078-7799-babf-1b3d8043759f",
+                "label": [
+                    1
+                ],
+                "obType": {
+                    "tag": "Basic",
+                    "content": "Object"
+                },
+                "over": {
+                    "tag": "Basic",
+                    "content": "0194d398-a28e-7433-89f8-563bae6e6875"
+                }
+            },
+            {
+                "id": "019a5ace-a18b-71b3-9aa1-7948b0ad138f",
+                "label": [
+                    2
+                ],
+                "obType": {
+                    "tag": "Basic",
+                    "content": "Object"
+                },
+                "over": {
+                    "tag": "Basic",
+                    "content": "0194d39a-89cf-762b-9d2a-5678b878d6c7"
+                }
+            },
+            {
+                "id": "019a5acf-10cb-7083-84aa-191fa52123ae",
+                "label": [
+                    3
+                ],
+                "obType": {
+                    "tag": "Basic",
+                    "content": "Object"
+                },
+                "over": {
+                    "tag": "Basic",
+                    "content": "0194d398-b3ef-728d-bd88-60b48fd7349a"
+                }
+            }
+        ],
+        "morGenerators": [
+            {
+                "id": "019a5ace-ea37-70a5-ab29-74183295ba2e",
+                "morType": {
+                    "tag": "Basic",
+                    "content": "Nonscalar"
+                },
+                "over": {
+                    "tag": "Basic",
+                    "content": "0194d39c-622d-7599-bc5c-e7e8208d6cdd"
+                },
+                "dom": {
+                    "tag": "Basic",
+                    "content": "019a5ace-3497-71db-a8f9-c2d02e5e7182"
+                },
+                "cod": {
+                    "tag": "Basic",
+                    "content": "019a5ace-4426-77a8-8242-7930b07560fe"
+                }
+            },
+            {
+                "id": "019a5ace-5fd7-708e-813e-a4e9201ee874",
+                "morType": {
+                    "tag": "Basic",
+                    "content": "Nonscalar"
+                },
+                "over": {
+                    "tag": "Basic",
+                    "content": "0194d399-34f3-773c-91b9-857da9c4311f"
+                },
+                "dom": {
+                    "tag": "Basic",
+                    "content": "019a5ace-3497-71db-a8f9-c2d02e5e7182"
+                },
+                "cod": {
+                    "tag": "Basic",
+                    "content": "019a5ace-7078-7799-babf-1b3d8043759f"
+                }
+            },
+            {
+                "id": "019a5ace-9226-73aa-a51a-1b88a752d247",
+                "morType": {
+                    "tag": "Basic",
+                    "content": "Nonscalar"
+                },
+                "over": {
+                    "tag": "Basic",
+                    "content": "0194d39a-6084-7537-aec1-caf560ba416b"
+                },
+                "dom": {
+                    "tag": "Basic",
+                    "content": "019a5ace-7078-7799-babf-1b3d8043759f"
+                },
+                "cod": {
+                    "tag": "Basic",
+                    "content": "019a5ace-a18b-71b3-9aa1-7948b0ad138f"
+                }
+            },
+            {
+                "id": "019a5ace-beb6-71fa-8efa-3585825be090",
+                "morType": {
+                    "tag": "Basic",
+                    "content": "Nonscalar"
+                },
+                "over": {
+                    "tag": "Basic",
+                    "content": "0194d39a-ed25-710f-b53f-89541021281f"
+                },
+                "dom": {
+                    "tag": "Basic",
+                    "content": "019a5ace-a18b-71b3-9aa1-7948b0ad138f"
+                },
+                "cod": {
+                    "tag": "Basic",
+                    "content": "019a5acf-10cb-7083-84aa-191fa52123ae"
+                }
+            },
+            {
+                "id": "019a5acf-193d-720c-96b4-42680fe15ab6",
+                "morType": {
+                    "tag": "Basic",
+                    "content": "Nonscalar"
+                },
+                "over": {
+                    "tag": "Basic",
+                    "content": "0194d39d-d297-77a9-95a2-6ed7105fdca3"
+                },
+                "dom": {
+                    "tag": "Basic",
+                    "content": "019a5acf-10cb-7083-84aa-191fa52123ae"
+                },
+                "cod": {
+                    "tag": "Basic",
+                    "content": "019a5ace-4426-77a8-8242-7930b07560fe"
+                }
+            }
+        ]
+    },
+    "model": {
+        "obGenerators": [
+            {
+                "id": "0194d398-a28e-7433-89f8-563bae6e6875",
+                "label": [
+                    "0-form"
+                ],
+                "obType": {
+                    "tag": "Basic",
+                    "content": "Object"
+                }
+            },
+            {
+                "id": "0194d398-b3ef-728d-bd88-60b48fd7349a",
+                "label": [
+                    "Dual 1-form"
+                ],
+                "obType": {
+                    "tag": "Basic",
+                    "content": "Object"
+                }
+            },
+            {
+                "id": "0194d398-d0cb-7308-b7e0-eace5b21af24",
+                "label": [
+                    "Dual 2-form"
+                ],
+                "obType": {
+                    "tag": "Basic",
+                    "content": "Object"
+                }
+            },
+            {
+                "id": "0194d39a-89cf-762b-9d2a-5678b878d6c7",
+                "label": [
+                    "Primal 1-form"
+                ],
+                "obType": {
+                    "tag": "Basic",
+                    "content": "Object"
+                }
+            }
+        ],
+        "morGenerators": [
+            {
+                "id": "0194d399-34f3-773c-91b9-857da9c4311f",
+                "label": [
+                    " ⋆₀⁻¹"
+                ],
+                "morType": {
+                    "tag": "Basic",
+                    "content": "Nonscalar"
+                },
+                "dom": {
+                    "tag": "Basic",
+                    "content": "0194d398-d0cb-7308-b7e0-eace5b21af24"
+                },
+                "cod": {
+                    "tag": "Basic",
+                    "content": "0194d398-a28e-7433-89f8-563bae6e6875"
+                }
+            },
+            {
+                "id": "0194d399-b2a2-73ff-aece-cb0f26644045",
+                "label": [
+                    "Δ⁻¹"
+                ],
+                "morType": {
+                    "tag": "Basic",
+                    "content": "Nonscalar"
+                },
+                "dom": {
+                    "tag": "Basic",
+                    "content": "0194d398-a28e-7433-89f8-563bae6e6875"
+                },
+                "cod": {
+                    "tag": "Basic",
+                    "content": "0194d398-a28e-7433-89f8-563bae6e6875"
+                }
+            },
+            {
+                "id": "0194d39a-6084-7537-aec1-caf560ba416b",
+                "label": [
+                    "d₀"
+                ],
+                "morType": {
+                    "tag": "Basic",
+                    "content": "Nonscalar"
+                },
+                "dom": {
+                    "tag": "Basic",
+                    "content": "0194d398-a28e-7433-89f8-563bae6e6875"
+                },
+                "cod": {
+                    "tag": "Basic",
+                    "content": "0194d39a-89cf-762b-9d2a-5678b878d6c7"
+                }
+            },
+            {
+                "id": "0194d39a-ed25-710f-b53f-89541021281f",
+                "label": [
+                    "⋆₁"
+                ],
+                "morType": {
+                    "tag": "Basic",
+                    "content": "Nonscalar"
+                },
+                "dom": {
+                    "tag": "Basic",
+                    "content": "0194d39a-89cf-762b-9d2a-5678b878d6c7"
+                },
+                "cod": {
+                    "tag": "Basic",
+                    "content": "0194d398-b3ef-728d-bd88-60b48fd7349a"
+                }
+            },
+            {
+                "id": "0194d39b-587f-7559-a1ff-b6ed58899461",
+                "label": [
+                    "lamb"
+                ],
+                "morType": {
+                    "tag": "Basic",
+                    "content": "Nonscalar"
+                },
+                "dom": {
+                    "tag": "Basic",
+                    "content": "0194d398-b3ef-728d-bd88-60b48fd7349a"
+                },
+                "cod": {
+                    "tag": "Basic",
+                    "content": "0194d398-b3ef-728d-bd88-60b48fd7349a"
+                }
+            },
+            {
+                "id": "0194d39b-a70a-77d5-8e89-66f0e767a9da",
+                "label": [
+                    " ♭♯"
+                ],
+                "morType": {
+                    "tag": "Basic",
+                    "content": "Nonscalar"
+                },
+                "dom": {
+                    "tag": "Basic",
+                    "content": "0194d398-b3ef-728d-bd88-60b48fd7349a"
+                },
+                "cod": {
+                    "tag": "Basic",
+                    "content": "0194d39a-89cf-762b-9d2a-5678b878d6c7"
+                }
+            },
+            {
+                "id": "0194d39d-d297-77a9-95a2-6ed7105fdca3",
+                "label": [
+                    "d̃₁"
+                ],
+                "morType": {
+                    "tag": "Basic",
+                    "content": "Nonscalar"
+                },
+                "dom": {
+                    "tag": "Basic",
+                    "content": "0194d398-b3ef-728d-bd88-60b48fd7349a"
+                },
+                "cod": {
+                    "tag": "Basic",
+                    "content": "0194d398-d0cb-7308-b7e0-eace5b21af24"
+                }
+            },
+            {
+                "id": "0194d39c-622d-7599-bc5c-e7e8208d6cdd",
+                "label": [
+                    "∂ₜ"
+                ],
+                "morType": {
+                    "tag": "Basic",
+                    "content": "Nonscalar"
+                },
+                "dom": {
+                    "tag": "Basic",
+                    "content": "0194d398-d0cb-7308-b7e0-eace5b21af24"
+                },
+                "cod": {
+                    "tag": "Basic",
+                    "content": "0194d398-d0cb-7308-b7e0-eace5b21af24"
+                }
+            },
+            {
+                "id": "0194d39e-5d44-77cd-bc5e-156c5c56ae85",
+                "label": [
+                    "-"
+                ],
+                "morType": {
+                    "tag": "Basic",
+                    "content": "Nonscalar"
+                },
+                "dom": {
+                    "tag": "Basic",
+                    "content": "0194d398-d0cb-7308-b7e0-eace5b21af24"
+                },
+                "cod": {
+                    "tag": "Basic",
+                    "content": "0194d398-d0cb-7308-b7e0-eace5b21af24"
+                }
+            }
+        ]
+    },
+    "domain": "Plane",
+    "mesh": "Rectangle",
+    "initialConditions": {
+        "019a5ace-3497-71db-a8f9-c2d02e5e7182": "Gaussian"
+    },
+    "plotVariables": [
+        "019a5ace-3497-71db-a8f9-c2d02e5e7182"
+    ],
+    "scalars": {},
+    "duration": 10
+}

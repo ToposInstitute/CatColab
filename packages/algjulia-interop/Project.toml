@@ -1,8 +1,8 @@
 name = "CatColabInterop"
 uuid = "9ecda8fb-39ab-46a2-a496-7285fa6368c1"
 license = "MIT"
-version = "0.1.1"
 authors = ["CatColab team"]
+version = "0.1.1"
 
 [deps]
 HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
@@ -14,12 +14,17 @@ StructTypes = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
 [weakdeps]
 ACSets = "227ef7b5-1206-438b-ac65-934d6da304b8"
 Catlab = "134e5e36-593f-5add-ad60-77f754baafbe"
+Decapodes = "679ab3ea-c928-4fe6-8d59-fd451142d391"
+DiagrammaticEquations = "6f00c28b-6bed-4403-80fa-30e0dc12f317"
 
 [extensions]
 CatlabExt = ["Catlab", "ACSets"]
+DecapodesExt = ["Decapodes", "DiagrammaticEquations", "ACSets"]
 
 [compat]
 Catlab = "0.17.2"
+Decapodes = "0.6.5"
+DiagrammaticEquations = "0.2.1"
 HTTP = "1.10.19"
 MLStyle = "0.4.17"
 Oxygen = "1.7.5"

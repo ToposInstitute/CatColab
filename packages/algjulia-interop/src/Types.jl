@@ -3,7 +3,7 @@
 module Types 
 
 export ObType, MorType, DiagramObGenerator, DiagramMorGenerator, ObGenerator, 
-       MorGenerator, Diagram, Model, ModelDiagram
+       MorGenerator, Diagram, Model, ModelDiagram, Analysis
 
 using StructTypes
 
@@ -58,17 +58,46 @@ struct Diagram
 end
 StructTypes.StructType(::Type{Diagram}) = StructTypes.Struct()
 
+function Base.show(io::IOBuffer, d::Diagram)
+    for ob in d.obGenerators
+        println(io, "$(ob.label)")
+    end
+    for mor in d.morGenerators
+        println(io, "$(mor.label)")
+    end
+end
+
 struct Model 
     obGenerators::Vector{ObGenerator}
     morGenerators::Vector{MorGenerator}
 end
 StructTypes.StructType(::Type{Model}) = StructTypes.Struct()
 
+function Base.show(io::IOBuffer, m::Model)
+    for ob in m.obGenerators
+        println(io, "$(ob.label)")
+    end
+    for mor in m.morGenerators
+        println(io, "$(mor.label)")
+    end
+end
 
 struct ModelDiagram 
     model::Model
     diagram::Diagram
 end
 StructTypes.StructType(::Type{ModelDiagram}) = StructTypes.Struct()
+
+function Base.show(io::IOBuffer, md::ModelDiagram)
+    show(io, "$(md.model)")
+    show(io, "$(md.diagram)")
+end
+
+struct Analysis 
+    model::Model
+    diagram::Diagram
+    analysis::Dict{String, Any}
+end
+StructTypes.StructType(::Type{Analysis}) = StructTypes.Struct()
 
 end # module
