@@ -29,7 +29,7 @@ function CorsHandler(handle)
     end
 end
 
-defaults = [:Catlab,:ACSets] # all extensions to date
+defaults = [:Catlab,:ACSets,:DiagrammaticEquations,:Decapodes] # all extensions to date
 
 # Dynamically load packages in command lin eargs
 for pkg in (isempty(ARGS) ? defaults : ARGS )
