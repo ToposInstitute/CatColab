@@ -158,3 +158,5 @@ type SigMonoid := [
   op : Multihom[[X, X], X],
   unit : Multihom[[], X]
 ]
+
+generate SigMonoid
