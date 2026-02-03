@@ -15,8 +15,8 @@ use std::fmt;
 use std::rc::Rc;
 
 use super::prelude::*;
-use crate::dbl::model::{DiscreteDblModel, PrintableDblModel};
-use crate::dbl::theory::{DblTheory, DiscreteDblTheory};
+use crate::dbl::model::PrintableDblModel;
+use crate::dbl::{discrete, modal, theory::DblTheory};
 use crate::one::QualifiedPath;
 use crate::stdlib::theories;
 use crate::zero::{QualifiedName, name};
@@ -45,48 +45,60 @@ impl fmt::Display for Theory {
 #[derive(Clone)]
 pub enum TheoryDef {
     /// A discrete double theory.
-    Discrete(Rc<DiscreteDblTheory>),
-    // A modal double theory.
-    // Modal(Rc<ModalDblTheory>),
+    Discrete(Rc<discrete::DiscreteDblTheory>),
+    /// A modal double theory.
+    Modal(Rc<modal::ModalDblTheory>),
 }
 
 impl TheoryDef {
     /// Smart constructor for [`TheoryDef::Discrete`] case.
-    pub fn discrete(theory: DiscreteDblTheory) -> Self {
+    pub fn discrete(theory: discrete::DiscreteDblTheory) -> Self {
         TheoryDef::Discrete(Rc::new(theory))
+    }
+
+    /// Smart constructor for [`TheoryDef::Modal`] case.
+    pub fn modal(theory: modal::ModalDblTheory) -> Self {
+        TheoryDef::Modal(Rc::new(theory))
     }
 
     /// Gets the basic object type with given name, if it exists.
     pub fn basic_ob_type(&self, name: QualifiedName) -> Option<ObType> {
-        match self {
-            TheoryDef::Discrete(th) => {
-                if th.has_ob_type(&name) {
-                    Some(ObType::Discrete(name))
+        let ob_type = match self {
+            TheoryDef::Discrete(_) => ObType::Discrete(name),
+            TheoryDef::Modal(_) => ObType::Modal(modal::ModeApp::new(name)),
+        };
+        all_the_same!(match self {
+            TheoryDef::[Discrete, Modal](th) => {
+                if th.has_ob_type((&ob_type).try_into().unwrap()) {
+                    Some(ob_type)
                 } else {
                     None
                 }
             }
-        }
+        })
     }
 
     /// Gets the basic morphism type with given name, if it exists.
     pub fn basic_mor_type(&self, name: QualifiedName) -> Option<MorType> {
-        match self {
-            TheoryDef::Discrete(th) => {
-                let mor_type = Path::single(name);
-                if th.has_mor_type(&mor_type) {
-                    Some(MorType::Discrete(mor_type))
+        let mor_type = match self {
+            TheoryDef::Discrete(_) => MorType::Discrete(name.into()),
+            TheoryDef::Modal(_) => MorType::Modal(modal::ModeApp::new(name).into()),
+        };
+        all_the_same!(match self {
+            TheoryDef::[Discrete, Modal](th) => {
+                if th.has_mor_type((&mor_type).try_into().unwrap()) {
+                    Some(mor_type)
                 } else {
                     None
                 }
             }
-        }
+        })
     }
 
     /// Gets the source type of a morphism type.
     pub fn src_type(&self, mor_type: &MorType) -> ObType {
         all_the_same!(match self {
-            TheoryDef::[Discrete](th) => {
+            TheoryDef::[Discrete, Modal](th) => {
                 th.src_type(mor_type.try_into().unwrap()).into()
             }
         })
@@ -95,7 +107,7 @@ impl TheoryDef {
     /// Gets the target type of a morphism type.
     pub fn tgt_type(&self, mor_type: &MorType) -> ObType {
         all_the_same!(match self {
-            TheoryDef::[Discrete](th) => {
+            TheoryDef::[Discrete, Modal](th) => {
                 th.tgt_type(mor_type.try_into().unwrap()).into()
             }
         })
@@ -104,7 +116,7 @@ impl TheoryDef {
     /// Gets the hom (identity) type for an object type.
     pub fn hom_type(&self, ob_type: ObType) -> MorType {
         all_the_same!(match self {
-            TheoryDef::[Discrete](th) => {
+            TheoryDef::[Discrete, Modal](th) => {
                 th.hom_type(ob_type.try_into().unwrap()).into()
             }
         })
@@ -113,7 +125,7 @@ impl TheoryDef {
     /// Composes a pair of morphism types, if they have a composite.
     pub fn compose_types2(&self, mt1: MorType, mt2: MorType) -> Option<MorType> {
         all_the_same!(match self {
-            TheoryDef::[Discrete](th) => {
+            TheoryDef::[Discrete, Modal](th) => {
                 let path = Path::pair(mt1.try_into().unwrap(), mt2.try_into().unwrap());
                 th.compose_types(path).map(|mt| mt.into())
             }
@@ -127,6 +139,8 @@ impl TheoryDef {
 pub enum ObType {
     /// Object type in a discrete theory.
     Discrete(QualifiedName),
+    /// Object type in a modal theory.
+    Modal(modal::ModalObType),
 }
 
 impl fmt::Display for ObType {
@@ -138,7 +152,8 @@ impl fmt::Display for ObType {
 impl ToDoc for ObType {
     fn to_doc<'a>(&self) -> D<'a> {
         match self {
-            ObType::Discrete(name) => DiscreteDblModel::ob_type_to_doc(name),
+            ObType::Discrete(name) => discrete::DiscreteDblModel::ob_type_to_doc(name),
+            ObType::Modal(ob_type) => modal::ModalDblModel::ob_type_to_doc(ob_type),
         }
     }
 }
@@ -149,6 +164,8 @@ impl ToDoc for ObType {
 pub enum MorType {
     /// Morphism type in a discrete theory.
     Discrete(QualifiedPath),
+    /// Morphism type in a model theory.
+    Modal(modal::ModalMorType),
 }
 
 impl fmt::Display for MorType {
@@ -160,7 +177,8 @@ impl fmt::Display for MorType {
 impl ToDoc for MorType {
     fn to_doc<'a>(&self) -> D<'a> {
         match self {
-            MorType::Discrete(path) => DiscreteDblModel::mor_type_to_doc(path),
+            MorType::Discrete(path) => discrete::DiscreteDblModel::mor_type_to_doc(path),
+            MorType::Modal(mor_type) => modal::ModalDblModel::mor_type_to_doc(mor_type),
         }
     }
 }
