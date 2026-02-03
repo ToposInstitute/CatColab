@@ -306,7 +306,7 @@ impl<'a> Elaborator<'a> {
         });
 
         let mut field_ty_vs = Vec::new();
-        let self_var = self.intro(name_seg("self"), label_seg("self"), None).as_neu();
+        let self_var = self.intro(name_seg("self"), label_seg("self"), None).unwrap_neu();
         let c = self.checkpoint();
 
         for cell in pass1.into_iter().chain(pass2.into_iter()) {

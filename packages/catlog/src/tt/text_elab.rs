@@ -446,7 +446,7 @@ impl<'a> Elaborator<'a> {
             Tuple(field_ns) => {
                 let mut field_ty_vs = Vec::<(FieldName, (LabelSegment, TyV))>::new();
                 let mut failed = false;
-                let self_var = elab.intro(name_seg("self"), label_seg("self"), None).as_neu();
+                let self_var = elab.intro(name_seg("self"), label_seg("self"), None).unwrap_neu();
                 let c = elab.checkpoint();
                 for field_n in field_ns.iter() {
                     elab.loc = Some(field_n.loc());
@@ -670,7 +670,7 @@ impl<'a> Elaborator<'a> {
                     elem_stxs.push(tm_s);
                     elem_vals.push(tm_v);
                 }
-                (TmS::list(elem_stxs), TmV::List(elem_vals))
+                (TmS::list(elem_stxs), TmV::list(elem_vals))
             }
             (_, Tuple(_)) => elab.chk_error("tuple expected to be record or object/morphism type"),
             (_, Prim("hole")) => elab.chk_error("explicit hole"),

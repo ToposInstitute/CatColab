@@ -65,7 +65,7 @@ pub struct Def {
 }
 
 impl TopDecl {
-    /// Extract the type for a toplevel-declaration of a type.
+    /// Unwraps the type for a toplevel-declaration of a type, or panics.
     ///
     /// This should only be used after type checking, when we know that a toplevel
     /// variable name does in fact point to a toplevel declaration for a type.
@@ -76,7 +76,7 @@ impl TopDecl {
         }
     }
 
-    /// Extract the term for a toplevel declaration of a term.
+    /// Unwraps the term for a toplevel declaration of a term, or panics.
     ///
     /// This should only be used after type checking, when we know that a toplevel
     /// variable name does in fact point to a toplevel declaration for a term.
@@ -87,7 +87,7 @@ impl TopDecl {
         }
     }
 
-    /// Extract the definition for a toplevel term judgment
+    /// Unwraps the definition for a toplevel term judgment, or panics.
     pub fn unwrap_def(self) -> Def {
         match self {
             TopDecl::Def(d) => d,

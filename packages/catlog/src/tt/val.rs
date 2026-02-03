@@ -205,7 +205,7 @@ pub enum TmV {
     /// We store the type because we need it for eta-expansion.
     Neu(TmN, TyV),
     /// Lists.
-    List(Vec<TmV>),
+    List(Rc<Vec<TmV>>),
     /// Records.
     Cons(Row<TmV>),
     /// The unique element of `Ty0::Unit`.
@@ -217,11 +217,16 @@ pub enum TmV {
 }
 
 impl TmV {
-    /// Coerces self to a neutral
-    pub fn as_neu(&self) -> TmN {
+    /// Smart constructor for [`TmV`], [`TmV::List`] variant.
+    pub fn list(elems: Vec<TmV>) -> Self {
+        TmV::List(Rc::new(elems))
+    }
+
+    /// Unwraps a neutral term, or panics.
+    pub fn unwrap_neu(&self) -> TmN {
         match self {
             TmV::Neu(n, _) => n.clone(),
-            _ => panic!("expected neutral"),
+            _ => panic!("expected term to be a neutral"),
         }
     }
 }

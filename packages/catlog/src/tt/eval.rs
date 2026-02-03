@@ -84,7 +84,7 @@ impl<'a> Evaluator<'a> {
             TmS_::Tt => TmV::Tt,
             TmS_::Id(_) => TmV::Opaque,
             TmS_::Compose(_, _) => TmV::Opaque,
-            TmS_::List(elems) => TmV::List(elems.iter().map(|tm| self.eval_tm(tm)).collect()),
+            TmS_::List(elems) => TmV::list(elems.iter().map(|tm| self.eval_tm(tm)).collect()),
             TmS_::Opaque => TmV::Opaque,
             TmS_::Meta(mv) => TmV::Meta(*mv),
         }
@@ -329,7 +329,7 @@ impl<'a> Evaluator<'a> {
                     panic!("Type of list should be application of list modality");
                 };
                 let ty = TyV::object(ob_type);
-                TmV::List(elems.iter().map(|elem| self.eta(elem, &ty)).collect())
+                TmV::list(elems.iter().map(|elem| self.eta(elem, &ty)).collect())
             }
             TmV::Tt => TmV::Tt,
             TmV::Opaque => TmV::Opaque,

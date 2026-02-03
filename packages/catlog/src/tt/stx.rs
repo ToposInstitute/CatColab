@@ -218,7 +218,7 @@ pub enum TmS_ {
     /// Composite of two morphisms.
     Compose(TmS, TmS),
     /// List of objects or morphisms.
-    List(Vec<TmS>),
+    List(Rc<Vec<TmS>>),
     /// An opaque term.
     ///
     /// This only appears when we quote a value
@@ -280,7 +280,7 @@ impl TmS {
 
     /// Smart constructor for [Tms], [TmS_::List] case.
     pub fn list(elems: Vec<TmS>) -> Self {
-        Self(Rc::new(TmS_::List(elems)))
+        Self(Rc::new(TmS_::List(Rc::new(elems))))
     }
 
     /// An opaque term
