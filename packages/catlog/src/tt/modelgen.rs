@@ -86,13 +86,66 @@ impl Model {
 ///
 /// Precondition: `ty` must be valid in the empty context.
 pub fn generate(toplevel: &Toplevel, theory: &Theory, ty: &TyV) -> (Model, Namespace) {
-    let eval = Evaluator::new(toplevel, Env::Nil, 0);
-    let (elt, eval) = eval.bind_self(ty.clone());
-    let elt = eval.eta_neu(&elt, ty);
-    let mut out = Model::new(&theory.definition);
-    let namespace =
-        extract_to(&eval, &mut out, vec![], &elt, ty).unwrap_or_else(Namespace::new_for_uuid);
-    (out, namespace)
+    let mut generator = ModelGenerator::new(toplevel, theory);
+    let namespace = generator.generate(ty);
+    (generator.output, namespace)
+}
+
+struct ModelGenerator<'a> {
+    eval: Evaluator<'a>,
+    output: Model,
+}
+
+impl<'a> ModelGenerator<'a> {
+    fn new(toplevel: &'a Toplevel, theory: &Theory) -> Self {
+        let eval = Evaluator::new(toplevel, Env::Nil, 0);
+        let output = Model::new(&theory.definition);
+        Self { eval, output }
+    }
+
+    fn generate(&mut self, ty: &TyV) -> Namespace {
+        let elt;
+        (elt, self.eval) = self.eval.bind_self(ty.clone());
+        let elt = self.eval.eta_neu(&elt, ty);
+        self.extract(vec![], &elt, ty).unwrap_or_else(Namespace::new_for_uuid)
+    }
+
+    fn extract(&mut self, prefix: Vec<NameSegment>, val: &TmV, ty: &TyV) -> Option<Namespace> {
+        match &**ty {
+            TyV_::Object(ot) => {
+                self.output.add_ob(prefix.into(), ot.clone());
+                None
+            }
+            TyV_::Morphism(mt, dom, cod) => {
+                self.output.add_mor(prefix.into(), dom, cod, mt.clone())?;
+                None
+            }
+            TyV_::Record(r) => {
+                let mut namespace = Namespace::new_for_uuid();
+                for (name, (label, _)) in r.fields.iter() {
+                    let mut prefix = prefix.clone();
+                    prefix.push(*name);
+                    match name {
+                        NameSegment::Uuid(uuid) => {
+                            namespace.set_label(*uuid, *label);
+                        }
+                        NameSegment::Text(_) => {}
+                    }
+                    if let Some(inner) = self.extract(
+                        prefix,
+                        &self.eval.proj(val, *name, *label),
+                        &self.eval.field_ty(ty, val, *name),
+                    ) {
+                        namespace.add_inner(*name, inner);
+                    };
+                }
+                Some(namespace)
+            }
+            TyV_::Sing(_, _) => None,
+            TyV_::Unit => None,
+            TyV_::Meta(_) => None,
+        }
+    }
 }
 
 // val must be an eta-expanded element of an object type
@@ -107,49 +160,4 @@ fn name_of(val: &TmV) -> Option<QualifiedName> {
     }
     out.reverse();
     Some(out.into())
-}
-
-fn extract_to(
-    eval: &Evaluator,
-    out: &mut Model,
-    prefix: Vec<NameSegment>,
-    val: &TmV,
-    ty: &TyV,
-) -> Option<Namespace> {
-    match &**ty {
-        TyV_::Object(ot) => {
-            out.add_ob(prefix.clone().into(), ot.clone());
-            None
-        }
-        TyV_::Morphism(mt, dom, cod) => {
-            out.add_mor(prefix.clone().into(), dom, cod, mt.clone())?;
-            None
-        }
-        TyV_::Record(r) => {
-            let mut namespace = Namespace::new_for_uuid();
-            for (name, (label, _)) in r.fields.iter() {
-                let mut prefix = prefix.clone();
-                prefix.push(*name);
-                match name {
-                    NameSegment::Uuid(uuid) => {
-                        namespace.set_label(*uuid, *label);
-                    }
-                    NameSegment::Text(_) => {}
-                }
-                if let Some(inner) = extract_to(
-                    eval,
-                    out,
-                    prefix,
-                    &eval.proj(val, *name, *label),
-                    &eval.field_ty(ty, val, *name),
-                ) {
-                    namespace.add_inner(*name, inner);
-                };
-            }
-            Some(namespace)
-        }
-        TyV_::Sing(_, _) => None,
-        TyV_::Unit => None,
-        TyV_::Meta(_) => None,
-    }
 }
