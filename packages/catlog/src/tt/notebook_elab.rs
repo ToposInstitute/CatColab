@@ -351,7 +351,7 @@ mod test {
     use notebook_types::current::ModelDocumentContent;
 
     fn elab_example(theory: &Theory, name: &str, expected: Expect) {
-        let src = fs::read_to_string(format!("examples/{name}.json")).unwrap();
+        let src = fs::read_to_string(format!("examples/tt/notebook/{name}.json")).unwrap();
         let doc: ModelDocumentContent = serde_json::from_str(&src).unwrap();
         let toplevel = Toplevel::new(std_theories());
         let mut elab = Elaborator::new(theory.clone(), &toplevel, ustr(""));

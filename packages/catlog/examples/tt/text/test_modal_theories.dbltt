@@ -1,0 +1,17 @@
+set_theory ThMulticategory
+
+type SigMonoid := [
+  M : Object,
+  op : Multihom[[M, M], M],
+  unit : Multihom[[], M]
+]
+
+generate SigMonoid
+
+type SigRig := [
+   R : Object,
+   Add : SigMonoid & [ .M := R ],
+   Mul : SigMonoid & [ .M := R ]
+]
+
+generate SigRig

@@ -5,7 +5,6 @@ authors = ["Evan Patterson"]
 version = "0.1.0"
 edition = "2024"
 
-
 [features]
 ode = ["dep:ode_solvers", "dep:nalgebra", "dep:rebop"]
 serde = ["dep:serde", "nonempty/serialize", "ustr/serde", "uuid/serde"]
@@ -50,4 +49,4 @@ similar = "2.7.0"
 serde_json = "1.0.145"
 
 [[example]]
-name = "check"
+name = "tt"

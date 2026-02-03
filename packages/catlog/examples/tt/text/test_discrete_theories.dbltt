@@ -1,12 +1,5 @@
 set_theory ThSchema
 
-type u := Unit
-
-type u2 := u
-
-#/ The unique element of Unit
-def t : u := 'tt
-
 type WeightedGraph := [
   V : Entity,
   E : Entity,
@@ -150,13 +143,3 @@ type NegFeedback1 := [
 ]
 
 generate NegFeedback1
-
-set_theory ThMulticategory
-
-type SigMonoid := [
-  X : Object,
-  op : Multihom[[X, X], X],
-  unit : Multihom[[], X]
-]
-
-generate SigMonoid
