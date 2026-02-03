@@ -170,7 +170,7 @@ jobs:
 
       - name: Run dev setup
         run: |
-            docker run --name catcolab-postgres -e POSTGRES_USER=postgres-user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=catcolab -p 5432:5432 -d postgres:15
+            docker run --name catcolab-postgres -e POSTGRES_USER=catcolab -e POSTGRES_PASSWORD=password -e POSTGRES_DB=catcolab -p 5432:5432 -d postgres:15
             cd packages/backend
             cp .env.development .env && cp .env.development ../migrator/.env
             # due to how we are detecting deploy vs dev we need to clear this env variable

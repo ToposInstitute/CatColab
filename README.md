@@ -37,6 +37,7 @@ Each of our major releases is accompanied by a blog post:
 
 - [v0.1: Hummingbird](https://topos.institute/blog/2024-10-02-introducing-catcolab/)
 - [v0.2: Wren](https://topos.institute/blog/2025-02-05-catcolab-0-2-wren/)
+- [v0.3 - v0.4 Robin](https://topos.institute/blog/2026-01-08-catcolab-0-4-robin/)
 
 ## Help and documentation
 
