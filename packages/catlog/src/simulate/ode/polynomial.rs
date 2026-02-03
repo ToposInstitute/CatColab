@@ -103,9 +103,18 @@ where
     {
         self.components
             .iter()
-            .map(|(var, poly)| LatexEquation {
-                lhs: format!("\\dot{{{var}}}"),
-                rhs: poly.to_latex(),
+            .map(|(var, poly)| {
+                let var = var.to_string();
+                let var = if var.chars().count() > 1 {
+                    format!("\\text{{{var}}}")
+                } else {
+                    var
+                };
+                let lhs = format!("\\frac{{\\mathrm{{d}}}}{{\\mathrm{{d}}t}} {var}");
+                LatexEquation {
+                    lhs,
+                    rhs: poly.to_latex(),
+                }
             })
             .collect()
     }
