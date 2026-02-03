@@ -398,11 +398,11 @@ mod tests {
         let sys = StockFlowMassActionAnalysis::default().build_system(&model);
         let expected = vec![
             LatexEquation {
-                lhs: "\\dot{x}".to_string(),
+                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string(),
                 rhs: "(-f) x y".to_string(),
             },
             LatexEquation {
-                lhs: "\\dot{y}".to_string(),
+                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string(),
                 rhs: "f x y".to_string(),
             },
         ];
