@@ -13,7 +13,7 @@ You can find the auto-generated documentation for this Rust crate at [next.catco
     - (E.g. by using Docker)
 
     ```sh
-    docker run --name catcolab-postgres -e POSTGRES_USER=postgres-user \
+    docker run --name catcolab-postgres -e POSTGRES_USER=catcolab \
         -e POSTGRES_PASSWORD=password -e POSTGRES_DB=catcolab -p 5432:5432 -d postgres:15
     ```
 
