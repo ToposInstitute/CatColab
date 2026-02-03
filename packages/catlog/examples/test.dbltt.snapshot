@@ -269,3 +269,13 @@ generate NegFeedback1
 #/ X : Object
 #/ Y : Object
 
+set_theory ThMulticategory
+#/ result: set theory to ThMulticategory
+
+type SigMonoid := [
+  X : Object,
+  op : Multihom[[X, X], X],
+  unit : Multihom[[], X]
+]
+#/ declared: SigMonoid
+

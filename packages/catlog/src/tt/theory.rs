@@ -143,9 +143,24 @@ pub enum ObType {
     Modal(modal::ModalObType),
 }
 
-impl fmt::Display for ObType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.to_doc().group().pretty())
+impl ObType {
+    /// Destructures a modality application, if possible.
+    pub fn mode_app(self) -> Option<(modal::Modality, ObType)> {
+        match self {
+            ObType::Discrete(_) => None,
+            ObType::Modal(ob_type) => {
+                let (maybe_modality, ob_type) = ob_type.pop_app();
+                maybe_modality.map(|modality| (modality, ob_type.into()))
+            }
+        }
+    }
+
+    /// Gets the argument of a list modality application, if the type is one.
+    pub fn list_arg(self) -> Option<ObType> {
+        self.mode_app().and_then(|(modality, ob_type)| match modality {
+            modal::Modality::List(_) => Some(ob_type),
+            _ => None,
+        })
     }
 }
 
@@ -155,6 +170,12 @@ impl ToDoc for ObType {
             ObType::Discrete(name) => discrete::DiscreteDblModel::ob_type_to_doc(name),
             ObType::Modal(ob_type) => modal::ModalDblModel::ob_type_to_doc(ob_type),
         }
+    }
+}
+
+impl fmt::Display for ObType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_doc().group().pretty())
     }
 }
 
@@ -168,12 +189,6 @@ pub enum MorType {
     Modal(modal::ModalMorType),
 }
 
-impl fmt::Display for MorType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.to_doc().group().pretty())
-    }
-}
-
 impl ToDoc for MorType {
     fn to_doc<'a>(&self) -> D<'a> {
         match self {
@@ -183,12 +198,19 @@ impl ToDoc for MorType {
     }
 }
 
+impl fmt::Display for MorType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_doc().group().pretty())
+    }
+}
+
 /// Construct a library of standard theories
 pub fn std_theories() -> HashMap<QualifiedName, Theory> {
     [
         (name("ThSchema"), TheoryDef::discrete(theories::th_schema())),
         (name("ThCategory"), TheoryDef::discrete(theories::th_category())),
         (name("ThSignedCategory"), TheoryDef::discrete(theories::th_signed_category())),
+        (name("ThMulticategory"), TheoryDef::modal(theories::th_multicategory())),
     ]
     .into_iter()
     .map(|(name, def)| (name.clone(), Theory::new(name, def)))

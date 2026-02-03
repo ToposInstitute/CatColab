@@ -153,7 +153,9 @@ impl TyS {
     pub fn meta(mv: MetaVar) -> Self {
         Self(Rc::new(TyS_::Meta(mv)))
     }
+}
 
+impl ToDoc for TyS {
     fn to_doc<'a>(&self) -> D<'a> {
         match &**self {
             TyS_::TopVar(name) => t(format!("{}", name)),
@@ -211,10 +213,12 @@ pub enum TmS_ {
     ///
     /// Note that eta-expansion takes care of elimination for units
     Tt,
-    /// Identity morphism at an object
+    /// Identity morphism at an object.
     Id(TmS),
-    /// Composition of two morphisms
+    /// Composite of two morphisms.
     Compose(TmS, TmS),
+    /// List of objects or morphisms.
+    List(Vec<TmS>),
     /// An opaque term.
     ///
     /// This only appears when we quote a value
@@ -274,6 +278,11 @@ impl TmS {
         Self(Rc::new(TmS_::Compose(f, g)))
     }
 
+    /// Smart constructor for [Tms], [TmS_::List] case.
+    pub fn list(elems: Vec<TmS>) -> Self {
+        Self(Rc::new(TmS_::List(elems)))
+    }
+
     /// An opaque term
     pub fn opaque() -> Self {
         Self(Rc::new(TmS_::Opaque))
@@ -283,7 +292,9 @@ impl TmS {
     pub fn meta(mv: MetaVar) -> Self {
         Self(Rc::new(TmS_::Meta(mv)))
     }
+}
 
+impl ToDoc for TmS {
     fn to_doc<'a>(&self) -> D<'a> {
         match &**self {
             TmS_::TopVar(name) => t(format!("{}", name)),
@@ -297,6 +308,7 @@ impl TmS {
             })),
             TmS_::Id(ob) => (t("@id") + s() + ob.to_doc()).parens(),
             TmS_::Compose(f, g) => binop(t("·"), f.to_doc(), g.to_doc()),
+            TmS_::List(elems) => tuple(elems.iter().map(|elem| elem.to_doc())),
             TmS_::Tt => t("tt"),
             TmS_::Opaque => t("<opaque>"),
             TmS_::Meta(mv) => t(format!("?{}", mv.id)),

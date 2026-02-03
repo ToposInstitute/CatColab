@@ -204,6 +204,8 @@ pub enum TmV {
     ///
     /// We store the type because we need it for eta-expansion.
     Neu(TmN, TyV),
+    /// Lists.
+    List(Vec<TmV>),
     /// Records.
     Cons(Row<TmV>),
     /// The unique element of `Ty0::Unit`.

@@ -84,6 +84,7 @@ impl<'a> Evaluator<'a> {
             TmS_::Tt => TmV::Tt,
             TmS_::Id(_) => TmV::Opaque,
             TmS_::Compose(_, _) => TmV::Opaque,
+            TmS_::List(elems) => TmV::List(elems.iter().map(|tm| self.eval_tm(tm)).collect()),
             TmS_::Opaque => TmV::Opaque,
             TmS_::Meta(mv) => TmV::Meta(*mv),
         }
@@ -202,6 +203,7 @@ impl<'a> Evaluator<'a> {
         match tm {
             TmV::Neu(n, _) => self.quote_neu(n),
             TmV::Cons(fields) => TmS::cons(fields.map(|tm| self.quote_tm(tm))),
+            TmV::List(elems) => TmS::list(elems.iter().map(|tm| self.quote_tm(tm)).collect()),
             TmV::Tt => TmS::tt(),
             TmV::Opaque => TmS::opaque(),
             TmV::Meta(mv) => TmS::meta(*mv),
@@ -319,6 +321,16 @@ impl<'a> Evaluator<'a> {
                     })
                     .collect(),
             ),
+            TmV::List(elems) => {
+                let TyV_::Object(ob_type) = &**ty else {
+                    panic!("Type of list should be object type");
+                };
+                let Some(ob_type) = ob_type.clone().list_arg() else {
+                    panic!("Type of list should be application of list modality");
+                };
+                let ty = TyV::object(ob_type);
+                TmV::List(elems.iter().map(|elem| self.eta(elem, &ty)).collect())
+            }
             TmV::Tt => TmV::Tt,
             TmV::Opaque => TmV::Opaque,
             TmV::Meta(_) => v.clone(),

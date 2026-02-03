@@ -150,3 +150,11 @@ type NegFeedback1 := [
 ]
 
 generate NegFeedback1
+
+set_theory ThMulticategory
+
+type SigMonoid := [
+  X : Object,
+  op : Multihom[[X, X], X],
+  unit : Multihom[[], X]
+]
