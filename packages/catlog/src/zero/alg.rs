@@ -35,7 +35,7 @@ pub trait CommAlg: CommRing + Module<Ring = Self::R> {
 /// In abstract terms, polynomials with coefficients valued in a [commutative
 /// ring](super::rig::CommRing) *R* are the free [commutative algebra](CommAlg)
 /// over *R*.
-#[derive(Clone, PartialEq, Eq, Derivative)]
+#[derive(Clone, PartialEq, Eq, Derivative, Debug)]
 #[derivative(Default(bound = ""))]
 pub struct Polynomial<Var, Coef, Exp>(Combination<Monomial<Var, Exp>, Coef>);
 
