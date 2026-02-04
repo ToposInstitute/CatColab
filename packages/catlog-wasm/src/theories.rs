@@ -9,52 +9,15 @@ use wasm_bindgen::prelude::*;
 
 use catlog::dbl::theory;
 use catlog::one::Path;
-use catlog::stdlib::{analyses, analyses::ode::DirectedTerm, models, theories, theory_morphisms};
-use catlog::zero::{QualifiedName, name};
+use catlog::stdlib::{analyses, models, theories, theory_morphisms};
+use catlog::zero::name;
 
+use super::latex::{
+    latex_mor_names_mass_action, latex_mor_names_unbalanced_mass_action, latex_ob_names_mass_action,
+};
 use super::model_morphism::{MotifOccurrence, MotifsOptions, motifs};
 use super::result::JsResult;
 use super::{analyses::*, model::DblModel, theory::DblTheory};
-
-fn latex_ob_names_mass_action(model: &DblModel) -> impl Fn(&QualifiedName) -> String {
-    |id: &QualifiedName| {
-        let name = model
-            .ob_generator_label(id)
-            .map_or_else(|| id.to_string(), |label| label.to_string());
-
-        if name.chars().count() > 1 {
-            format!("\\text{{{name}}}")
-        } else {
-            name
-        }
-    }
-}
-
-fn latex_mor_names_mass_action(model: &DblModel) -> impl Fn(&QualifiedName) -> String {
-    |id: &QualifiedName| {
-        let name = model
-            .mor_generator_label(id)
-            .map_or_else(|| id.to_string(), |label| label.to_string());
-        format!("r_{{\\text{{{name}}}}}")
-    }
-}
-
-fn latex_mor_names_unbalanced_mass_action(model: &DblModel) -> impl Fn(&DirectedTerm) -> String {
-    |id: &DirectedTerm| match id {
-        DirectedTerm::IncomingFlow(id) => {
-            let name = model
-                .mor_generator_label(id)
-                .map_or_else(|| id.to_string(), |label| label.to_string());
-            format!("r_{{\\text{{prod}},\\,\\text{{{name}}}}}")
-        }
-        DirectedTerm::OutgoingFlow(id) => {
-            let name = model
-                .mor_generator_label(id)
-                .map_or_else(|| id.to_string(), |label| label.to_string());
-            format!("r_{{\\text{{cons}},\\,\\text{{{name}}}}}")
-        }
-    }
-}
 
 /// The empty or initial theory.
 #[wasm_bindgen]
