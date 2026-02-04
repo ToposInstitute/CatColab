@@ -114,11 +114,11 @@ mod tests {
 
         let expected = vec![
             LatexEquation {
-                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{\\text{xxx}}".to_string(),
+                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{xxx}".to_string(),
                 rhs: "(-r_{\\text{fff}}) \\text{xxx} \\text{yyy}".to_string(),
             },
             LatexEquation {
-                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{\\text{yyy}}".to_string(),
+                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{yyy}".to_string(),
                 rhs: "(r_{\\text{fff}}) \\text{xxx} \\text{yyy}".to_string(),
             },
         ];
