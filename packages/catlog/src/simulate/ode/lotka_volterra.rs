@@ -1,5 +1,7 @@
 //! Lotka-Volterra differential equations.
 
+use crate::simulate::ode::NumericalPolynomialSystem;
+use crate::zero::alg::Polynomial;
 use nalgebra::{DMatrix, DVector};
 
 #[cfg(test)]
@@ -22,6 +24,27 @@ impl LotkaVolterraSystem {
     pub fn new(A: DMatrix<f32>, b: DVector<f32>) -> Self {
         Self { interaction_coeffs: A, growth_rates: b }
     }
+
+    /// Converts to a numerical polynomial system.
+    pub fn to_polynomial(self) -> NumericalPolynomialSystem<u8> {
+        NumericalPolynomialSystem {
+            components: self
+                .interaction_coeffs
+                .row_iter()
+                .enumerate()
+                .zip(self.growth_rates.into_iter())
+                .map(|((i, row), rate)| {
+                    Polynomial::<_, f32, _>::generator(i)
+                        * (row
+                            .iter()
+                            .enumerate()
+                            .map(|(j, a)| Polynomial::generator(j) * *a)
+                            .sum::<Polynomial<_, _, _>>()
+                            + *rate)
+                })
+                .collect(),
+        }
+    }
 }
 
 impl ODESystem for LotkaVolterraSystem {
@@ -33,10 +56,10 @@ impl ODESystem for LotkaVolterraSystem {
 }
 
 #[cfg(test)]
-pub(crate) fn create_predator_prey() -> ODEProblem<LotkaVolterraSystem> {
+pub(crate) fn create_predator_prey() -> ODEProblem<NumericalPolynomialSystem<u8>> {
     let A = DMatrix::from_row_slice(2, 2, &[0.0, -1.0, 1.0, 0.0]);
     let b = DVector::from_column_slice(&[2.0, -1.0]);
-    let sys = LotkaVolterraSystem::new(A, b);
+    let sys = LotkaVolterraSystem::new(A, b).to_polynomial();
 
     let x0 = DVector::from_column_slice(&[1.0, 1.0]);
     ODEProblem::new(sys, x0).end_time(10.0)
