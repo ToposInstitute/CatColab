@@ -29,11 +29,12 @@ export type StochasticMassActionSimulator = (
     model: DblModel,
     data: MassActionProblemData,
 ) => ODEResult;
+export type MassActionEquations = (model: DblModel) => ODELatex;
 export type UnbalancedMassActionSimulator = (
     model: DblModel,
     data: UnbalancedMassActionProblemData,
 ) => ODEResultWithEquations;
-export type MassActionEquations = (model: DblModel) => ODELatex;
+export type UnbalancedMassActionEquations = (model: DblModel) => ODELatex;
 
 /** Configuration for a Decapodes analysis of a diagram. */
 export type DecapodesAnalysisContent = {

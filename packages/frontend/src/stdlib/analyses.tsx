@@ -174,37 +174,6 @@ export function massAction(
 
 const MassAction = lazy(() => import("./analyses/mass_action"));
 
-export function unbalancedMassAction(
-    options: Partial<AnalysisOptions> & {
-        simulate: Simulators.UnbalancedMassActionSimulator;
-        stateType?: ObType;
-        transitionType?: MorType;
-    },
-): ModelAnalysisMeta<Simulators.UnbalancedMassActionProblemData> {
-    const {
-        id = "unbalanced-mass-action",
-        name = "Unbalanced mass-action dynamics",
-        description = "Simulate the system using the unbalanced mass-action equations",
-        help = "unbalanced-mass-action",
-        ...otherOptions
-    } = options;
-    return {
-        id,
-        name,
-        description,
-        help,
-        component: (props) => <UnbalancedMassAction title={name} {...otherOptions} {...props} />,
-        initialContent: () => ({
-            consumptionRates: {},
-            productionRates: {},
-            initialValues: {},
-            duration: 10,
-        }),
-    };
-}
-
-const UnbalancedMassAction = lazy(() => import("./analyses/unbalanced_mass_action"));
-
 export function massActionEquations(
     options: Partial<AnalysisOptions> & {
         getEquations: Simulators.MassActionEquations;
@@ -259,6 +228,69 @@ export function stochasticMassAction(
 }
 
 const StochasticMassAction = lazy(() => import("./analyses/stochastic_mass_action"));
+
+export function unbalancedMassAction(
+    options: Partial<AnalysisOptions> & {
+        simulate: Simulators.UnbalancedMassActionSimulator;
+        stateType?: ObType;
+        transitionType?: MorType;
+    },
+): ModelAnalysisMeta<Simulators.UnbalancedMassActionProblemData> {
+    const {
+        id = "unbalanced-mass-action",
+        name = "Unbalanced mass-action dynamics",
+        description = "Simulate the system using the unbalanced mass-action equations",
+        help = "unbalanced-mass-action",
+        ...otherOptions
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => <UnbalancedMassAction title={name} {...otherOptions} {...props} />,
+        initialContent: () => ({
+            consumptionRates: {},
+            productionRates: {},
+            initialValues: {},
+            duration: 10,
+        }),
+    };
+}
+
+const UnbalancedMassAction = lazy(() => import("./analyses/unbalanced_mass_action"));
+
+export function unbalancedMassActionEquations(
+    options: Partial<AnalysisOptions> & {
+        getEquations: Simulators.UnbalancedMassActionEquations;
+    },
+): ModelAnalysisMeta<Record<string, never>> {
+    const {
+        id = "unbalanced-mass-action-equations",
+        name = "Unbalanced mass-action dynamics equations",
+        description = "Display the symbolic unbalanced mass-action dynamics equations",
+        help = "unbalanced-mass-action-equations",
+        getEquations,
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => (
+            <UnbalancedMassActionEquationsDisplay
+                title={name}
+                getEquations={getEquations}
+                {...props}
+            />
+        ),
+        initialContent: () => ({}),
+    };
+}
+
+const UnbalancedMassActionEquationsDisplay = lazy(
+    () => import("./analyses/unbalanced_mass_action_equations"),
+);
 
 export const modelGraph = (
     options: AnalysisOptions,
