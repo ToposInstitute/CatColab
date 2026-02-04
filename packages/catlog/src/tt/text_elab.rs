@@ -316,7 +316,7 @@ impl<'a> Elaborator<'a> {
     }
 
     fn intro(&mut self, name: VarName, label: LabelSegment, ty: Option<TyV>) -> TmV {
-        let v = TmV::Neu(
+        let v = TmV::neu(
             TmN::var(self.ctx.scope.len().into(), name, label),
             ty.clone().unwrap_or(TyV::unit()),
         );
@@ -463,7 +463,7 @@ impl<'a> Elaborator<'a> {
                     field_ty_vs.push((name, (label, ty_v.clone())));
                     elab.ctx.push_scope(name, label, Some(ty_v.clone()));
                     elab.ctx.env =
-                        elab.ctx.env.snoc(TmV::Neu(TmN::proj(self_var.clone(), name, label), ty_v));
+                        elab.ctx.env.snoc(TmV::neu(TmN::proj(self_var.clone(), name, label), ty_v));
                 }
                 if failed {
                     return elab.ty_hole();
@@ -668,7 +668,7 @@ impl<'a> Elaborator<'a> {
                     elab.loc = Some(ob_n.loc());
                     let (tm_s, tm_v) = elab.chk(&elem_ty_v, ob_n);
                     elem_stxs.push(tm_s);
-                    elem_vals.push(tm_v);
+                    elem_vals.push(tm_v.unwrap_ob());
                 }
                 (TmS::list(elem_stxs), TmV::list(elem_vals))
             }

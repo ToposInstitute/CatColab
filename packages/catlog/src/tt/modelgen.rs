@@ -76,10 +76,18 @@ impl Model {
         });
     }
 
-    /// Makes an object from a term.
-    fn make_ob(&self, val: &TmV) -> Option<Ob> {
+    /// Tries to make an object from a term.
+    fn maybe_make_ob(&self, val: &TmV) -> Option<Ob> {
         match val {
-            TmV::Neu(n, _) => {
+            TmV::Ob(ob) => Some(self.make_ob(ob)),
+            _ => None,
+        }
+    }
+
+    /// Makes an object from an object term.
+    fn make_ob(&self, b: &ObTmV) -> Ob {
+        match b {
+            ObTmV::Neu(n, _) => {
                 let mut segments = Vec::new();
                 let mut n = n.clone();
                 while let TmN_::Proj(n1, f, _) = &*n.clone() {
@@ -87,13 +95,11 @@ impl Model {
                     segments.push(*f);
                 }
                 segments.reverse();
-                Some(self.ob_generator(segments.into()))
+                self.ob_generator(segments.into())
             }
-            TmV::List(elems) => {
-                let elems: Option<Vec<_>> = elems.iter().map(|val| self.make_ob(val)).collect();
-                elems.and_then(|elems| self.ob_list(elems))
-            }
-            _ => None,
+            ObTmV::List(elems) => self
+                .ob_list(elems.iter().map(|tm| self.make_ob(tm)).collect())
+                .expect("theory should support lists"),
         }
     }
 
@@ -154,7 +160,8 @@ impl<'a> ModelGenerator<'a> {
                 None
             }
             TyV_::Morphism(mt, dom, cod) => {
-                let (dom, cod) = (self.output.make_ob(dom)?, self.output.make_ob(cod)?);
+                let dom = self.output.maybe_make_ob(dom)?;
+                let cod = self.output.maybe_make_ob(cod)?;
                 self.output.add_mor(prefix.into(), dom, cod, mt.clone());
                 None
             }
