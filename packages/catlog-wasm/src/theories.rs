@@ -401,6 +401,23 @@ impl ThCategorySignedLinks {
         })
     }
 
+    /// Simulates the unbalanced mass-action ODE system derived from a model.
+    #[wasm_bindgen(js_name = "unbalancedMassAction")]
+    pub fn unbalanced_mass_action(
+        &self,
+        model: &DblModel,
+        data: analyses::ode::UnbalancedMassActionProblemData,
+    ) -> Result<ODEResult, String> {
+        let tab_model = model.discrete_tab()?;
+        let analysis = analyses::ode::StockFlowUnbalancedMassActionAnalysis::default();
+        let sys = analysis.build_system(tab_model);
+        let sys_extended_scalars = analyses::ode::extend_unbalanced_mass_action_scalars(sys, &data);
+        let analysis =
+            analyses::ode::into_unbalanced_mass_action_analysis(sys_extended_scalars, data);
+        let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
+        Ok(ODEResult(solution.into()))
+    }
+
     /// Returns the symbolic mass-action equations in LaTeX format.
     #[wasm_bindgen(js_name = "massActionEquations")]
     pub fn mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
