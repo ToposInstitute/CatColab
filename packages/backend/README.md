@@ -49,6 +49,32 @@ To launch the frontend using the local backend:
 cd packages/frontend
 pnpm run dev
 ```
+## Database schema
+
+![Entity-relationship diagram](schema.svg)
+
+https://catcolab.org/analysis/019c28c7-5b0a-7ee3-a83b-6c1d32892047
+
+### permissions
+
+This is how we handle access control.
+
+### storage
+
+This is used for Automerge document storage and is completely independent from the rest of tables.
+
+### refs
+
+These are references to documents, referring to them by their latest snapshot: the `head`. If `deleted_at` is set then this document is soft deleted. We do not hard delete documents in normal usage.
+
+### users
+
+This table refers to our users. We use Firebase so our `id` in this table are Firebase user IDs. We also store a unique username for them when the user sets it.
+
+### snapshots
+
+These are timestamped snapshots of the Automerge document. We current only ever use the latest snapshot.
+
 
 ## Running migrations
 
