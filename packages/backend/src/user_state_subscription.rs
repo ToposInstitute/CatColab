@@ -1,7 +1,10 @@
+use std::collections::HashMap;
+
+use automerge::Automerge;
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use sqlx::postgres::PgListener;
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 use uuid::Uuid;
 
 #[derive(Debug, Deserialize)]
@@ -23,10 +26,11 @@ struct RefsNotificationPayload {
 
 /// Listen for Postgres notifications related to refs and log them.
 ///
-/// This subscription listens for INSERT and UPDATE events on the refs table
-/// and can be used to update user state Automerge documents when documents change.
+/// This subscription listens for INSERT and UPDATE events on the relevant DB tables to
+/// update user state Automerge documents.
 pub async fn run_user_state_subscription(
     db: &sqlx::PgPool,
+    user_states: HashMap<String, Automerge>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let mut listener = PgListener::connect_with(db).await?;
     listener.listen("refs_subscription").await?;
@@ -37,11 +41,19 @@ pub async fn run_user_state_subscription(
         let notification = listener.recv().await?;
         match serde_json::from_str::<RefsNotificationPayload>(notification.payload()) {
             Ok(payload) => {
-                info!(
-                    channel = notification.channel(),
-                    payload = ?payload,
-                    "Refs table event received"
-                );
+                match payload.operation {
+                    Operation::Insert => {}
+                    Operation::Update => {}
+                    Operation::Other => {
+                        warn!(
+                            channel = notification.channel(),
+                            operation = ?payload.operation,
+                            ref_id = ?payload.ref_id,
+                            head = payload.head,
+                            "Ref event with unknown operation"
+                        );
+                    }
+                }
 
                 // TODO: Update relevant user state Automerge documents based on the notification
                 // This will involve:
@@ -49,7 +61,7 @@ pub async fn run_user_state_subscription(
                 // 2. Updating their UserState Automerge documents accordingly
             }
             Err(error) => {
-                warn!(
+                error!(
                     channel = notification.channel(),
                     payload = notification.payload(),
                     %error,

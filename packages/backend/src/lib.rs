@@ -6,3 +6,4 @@ pub mod rpc;
 pub mod storage;
 pub mod user;
 pub mod user_state;
+pub mod user_state_subscription;
