@@ -1,9 +1,9 @@
 //! Commutative algebra and polynomials.
 
-use num_traits::{One, Pow, Zero};
+use num_traits::{One, Pow, Zero, one, zero};
 use std::collections::BTreeMap;
 use std::fmt::Display;
-use std::iter::{Product, Sum};
+use std::iter::{self, Product, Sum};
 use std::ops::{Add, AddAssign, Mul, Neg};
 
 use derivative::Derivative;
@@ -182,6 +182,29 @@ where
 
 // XXX: Lots of boilerplate to delegate the module structure of `Polynomial` to
 // `Combination` because these traits cannot be derived automatically.
+
+impl<Var, Coef, Exp> Sum for Polynomial<Var, Coef, Exp>
+where
+    Var: Ord,
+    Coef: AdditiveMonoid,
+    Exp: Ord,
+{
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(zero(), |acc, x| acc + x)
+    }
+}
+
+impl<Var, Coef, Exp> Add<Coef> for Polynomial<Var, Coef, Exp>
+where
+    Var: Ord,
+    Coef: Add<Output = Coef>,
+    Exp: Ord + Zero,
+{
+    type Output = Polynomial<Var, Coef, Exp>;
+    fn add(self, a: Coef) -> Self::Output {
+        Polynomial(self.0 + iter::once((a, one::<Monomial<_, _>>())).collect())
+    }
+}
 
 impl<Var, Coef, Exp> AddAssign<(Coef, Monomial<Var, Exp>)> for Polynomial<Var, Coef, Exp>
 where
