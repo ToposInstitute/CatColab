@@ -207,8 +207,8 @@ mod tests {
         let model = backward_link(th);
         let sys = StockFlowUnbalancedMassActionAnalysis::default().build_system(&model);
         let expected = expect!([r#"
-            dx = (-OutgoingFlow(f)) x y
-            dy = (IncomingFlow(f)) x y
+            dx = (-Outgoing(f)) x y
+            dy = (Incoming(f)) x y
         "#]);
         expected.assert_eq(&sys.to_string());
     }
@@ -219,8 +219,8 @@ mod tests {
         let model = positive_backward_link(th);
         let sys = StockFlowUnbalancedMassActionAnalysis::default().build_system(&model);
         let expected = expect!([r#"
-            dx = (-OutgoingFlow(f)) x y
-            dy = (IncomingFlow(f)) x y
+            dx = (-Outgoing(f)) x y
+            dy = (Incoming(f)) x y
         "#]);
         expected.assert_eq(&sys.to_string());
     }
@@ -231,8 +231,8 @@ mod tests {
         let model = negative_backward_link(th);
         let sys = StockFlowUnbalancedMassActionAnalysis::default().build_system(&model);
         let expected = expect!([r#"
-            dx = (-OutgoingFlow(f)) x y^{-1}
-            dy = (IncomingFlow(f)) x y^{-1}
+            dx = (-Outgoing(f)) x y^{-1}
+            dy = (Incoming(f)) x y^{-1}
         "#]);
         expected.assert_eq(&sys.to_string());
     }
@@ -243,8 +243,8 @@ mod tests {
     //     let model = catalyzed_reaction(th);
     //     let sys = PetriNetUnbalancedMassActionAnalysis::default().build_system(&model);
     //     let expected = expect!([r#"
-    //         dx = (-OutgoingFlow(f)) c x
-    //         dy = (IncomingFlow(f)) c x
+    //         dx = (-Outgoing(f)) c x
+    //         dy = (Incoming(f)) c x
     //         dc = 0
     //     "#]);
     //     expected.assert_eq(&sys.to_string());
