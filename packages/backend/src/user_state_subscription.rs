@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
 
 use automerge::Automerge;
 use chrono::{DateTime, Utc};
@@ -6,6 +7,9 @@ use serde::Deserialize;
 use sqlx::postgres::PgListener;
 use tracing::{error, info, warn};
 use uuid::Uuid;
+
+/// A thread-safe, shared map of user IDs to their Automerge documents.
+pub type UserStates = Arc<RwLock<HashMap<String, Automerge>>>;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
@@ -30,7 +34,7 @@ struct RefsNotificationPayload {
 /// update user state Automerge documents.
 pub async fn run_user_state_subscription(
     db: &sqlx::PgPool,
-    user_states: HashMap<String, Automerge>,
+    user_states: UserStates,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let mut listener = PgListener::connect_with(db).await?;
     listener.listen("refs_subscription").await?;
@@ -42,8 +46,12 @@ pub async fn run_user_state_subscription(
         match serde_json::from_str::<RefsNotificationPayload>(notification.payload()) {
             Ok(payload) => {
                 match payload.operation {
-                    Operation::Insert => {}
-                    Operation::Update => {}
+                    Operation::Insert => {
+                        // insert into user_states
+                    }
+                    Operation::Update => {
+                        // update user_states
+                    }
                     Operation::Other => {
                         warn!(
                             channel = notification.channel(),

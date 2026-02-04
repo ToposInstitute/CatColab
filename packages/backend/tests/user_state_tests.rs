@@ -4,6 +4,7 @@ mod tests {
     use backend::auth::PermissionLevel;
     use backend::user_state::arbitrary::arbitrary_user_state_with_id;
     use backend::user_state::{UserState, read_user_state_from_db};
+    use serial_test::serial;
     use sqlx::PgPool;
     use test_strategy::proptest;
 
@@ -138,6 +139,7 @@ mod tests {
 
     // Tests that we can write then read any UserState to the DB and get the same UserState back.
     #[proptest(async = "tokio", cases = 32)]
+    #[serial]
     async fn user_state_db_roundtrip(
         #[strategy(arbitrary_user_state_with_id())] user_id_and_state: (String, UserState),
     ) {
@@ -164,5 +166,87 @@ mod tests {
         cleanup(&pool, &user_ids).await;
 
         proptest::prop_assert_eq!(input_state, output_state);
+    }
+
+    /// Tests that run_user_state_subscription correctly updates Automerge documents
+    /// when user states are written to the database.
+    ///
+    /// This test:
+    /// 1. Creates a subscription to the database
+    /// 2. Generates user states and writes them to the database
+    /// 3. Verifies that the Automerge documents are updated to match the database state
+    #[proptest(async = "tokio", cases = 8)]
+    #[serial]
+    async fn run_user_state_subscription_updates_automerge_docs(
+        #[strategy(arbitrary_user_state_with_id())] user_id_and_state: (String, UserState),
+    ) {
+        use backend::user_state::{automerge_to_user_state, user_state_to_automerge};
+        use backend::user_state_subscription::run_user_state_subscription;
+        use std::collections::HashMap;
+        use std::sync::{Arc, RwLock};
+        use std::time::Duration;
+
+        let (user_id, input_state) = user_id_and_state;
+        let pool = get_pool().await;
+
+        // Initialize user states map with an empty Automerge doc for the test user
+        let empty_state = UserState { documents: vec![] };
+        let initial_doc =
+            user_state_to_automerge(&empty_state).expect("Failed to create initial Automerge doc");
+
+        let user_states = Arc::new(RwLock::new(HashMap::new()));
+        user_states
+            .write()
+            .unwrap()
+            .insert(user_id.clone(), initial_doc);
+
+        // Spawn the subscription in a background task
+        let pool_clone = pool.clone();
+        let user_states_clone = user_states.clone();
+        let subscription_handle = tokio::spawn(async move {
+            run_user_state_subscription(&pool_clone, user_states_clone).await
+        });
+
+        // Give the subscription time to start listening
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Write user state to the database - this should trigger notifications
+        write_user_state_to_db(user_id.clone(), &pool, &input_state)
+            .await
+            .expect("Failed to write user state");
+
+        // Give the subscription time to process the notifications
+        tokio::time::sleep(Duration::from_millis(200)).await;
+
+        // Read the Automerge doc state
+        let automerge_state = {
+            let states = user_states.read().unwrap();
+            states
+                .get(&user_id)
+                .map(|doc| automerge_to_user_state(doc).expect("Failed to convert from Automerge"))
+        };
+
+        // Cleanup test data
+        let user_ids: Vec<&str> = std::iter::once(user_id.as_str())
+            .chain(
+                input_state
+                    .documents
+                    .iter()
+                    .filter_map(|d| d.owner.as_ref().map(|o| o.id.as_str())),
+            )
+            .collect();
+        cleanup(&pool, &user_ids).await;
+
+        // Abort the subscription task (it runs in an infinite loop)
+        subscription_handle.abort();
+
+        // The Automerge doc should have been updated to match the input state
+        // This assertion will fail until run_user_state_subscription is fully implemented
+        let automerge_state = automerge_state.expect("User state should exist in Automerge docs");
+        proptest::prop_assert_eq!(
+            input_state,
+            automerge_state,
+            "Automerge doc should be updated to match the database state"
+        );
     }
 }
