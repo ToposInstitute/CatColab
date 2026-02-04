@@ -43,6 +43,13 @@ In this analysis, since the stock-flow diagrams are primitive, flows are determi
 A link $R\to f$ from a stock $R$ to a flow $S\overset{f}{\Rightarrow}T$ modifies the the equation defining $f$ by multiplication by $R$, i.e. without any link, we would have that $f=rS$, but introducing a link $R\to f$ enforces that $f=rSR$ instead.
 </HelpAnalysisById>
 
-<HelpAnalysisById theory={props.theory} analysisId="mass-action-equations">
-This analysis displays the symbolic form of the derived mass-action equations.
+<HelpAnalysisById theory={props.theory} analysisId="mass-action-equations"/>
+
+<HelpAnalysisById theory={props.theory} analysisId="unbalanced-mass-action">
+*Unbalanced* mass-action dynamics can be thought of as mass-action dynamics that do *not* preserve mass: flows instead **consume** quantities at some rate and **produce** quantities at a possibly different rate.
+That is, a flow $S\overset{f}{\Rightarrow}T$ between stocks $S$ and $T$ is interpreted as the equations $\{\dot{S}=-f_\text{cons},\dot{T}=f_{prod}\}$.
+
+Just as for usual mass-action dynamics, since these stock-flow diagrams are primitive, flows are determined by their **consumption** and **production** coefficients, $r_\text{cons}$ and $r_\text{prod}$ respectively.
 </HelpAnalysisById>
+
+<HelpAnalysisById theory={props.theory} analysisId="unbalanced-mass-action-equations"/>
