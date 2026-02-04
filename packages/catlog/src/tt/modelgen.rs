@@ -43,13 +43,19 @@ impl Model {
     }
 
     /// Constructs a list of objects, if allowed.
-    fn ob_list(&self, elems: Vec<Ob>) -> Option<Ob> {
+    fn ob_list(&self, elems: Vec<Ob>, ob_type: &ObType) -> Option<Ob> {
         match self {
             Model::Discrete(_) => None,
-            Model::Modal(_) => Some(Ob::Modal(modal::ModalOb::List(
-                modal::List::Plain, // FIXME: Don't hard code.
-                elems.into_iter().map(|ob| ob.try_into().unwrap()).collect(),
-            ))),
+            Model::Modal(_) => {
+                let ob_type: &modal::ModalObType = ob_type.try_into().unwrap();
+                let Some(modal::Modality::List(list_type)) = ob_type.modalities.last() else {
+                    panic!("Object type should be an application of a list modality");
+                };
+                Some(Ob::Modal(modal::ModalOb::List(
+                    *list_type,
+                    elems.into_iter().map(|ob| ob.try_into().unwrap()).collect(),
+                )))
+            }
         }
     }
 
@@ -77,16 +83,16 @@ impl Model {
     }
 
     /// Tries to make an object from a term.
-    fn maybe_make_ob(&self, val: &TmV) -> Option<Ob> {
+    fn maybe_make_ob(&self, val: &TmV, ob_type: &ObType) -> Option<Ob> {
         match val {
-            TmV::Ob(ob) => Some(self.make_ob(ob)),
+            TmV::Ob(ob) => Some(self.make_ob(ob, ob_type)),
             _ => None,
         }
     }
 
     /// Makes an object from an object term.
-    fn make_ob(&self, b: &ObTmV) -> Ob {
-        match b {
+    fn make_ob(&self, val: &ObTmV, ob_type: &ObType) -> Ob {
+        match val {
             ObTmV::Neu(n, _) => {
                 let mut segments = Vec::new();
                 let mut n = n.clone();
@@ -97,9 +103,11 @@ impl Model {
                 segments.reverse();
                 self.ob_generator(segments.into())
             }
-            ObTmV::List(elems) => self
-                .ob_list(elems.iter().map(|tm| self.make_ob(tm)).collect())
-                .expect("theory should support lists"),
+            ObTmV::List(elems) => {
+                let el_type = ob_type.clone().list_arg().unwrap();
+                self.ob_list(elems.iter().map(|tm| self.make_ob(tm, &el_type)).collect(), ob_type)
+                    .expect("theory should support lists")
+            }
         }
     }
 
@@ -131,19 +139,25 @@ enum Ob {
 pub fn generate(toplevel: &Toplevel, theory: &Theory, ty: &TyV) -> (Model, Namespace) {
     let mut generator = ModelGenerator::new(toplevel, theory);
     let namespace = generator.generate(ty);
-    (generator.output, namespace)
+    (generator.model, namespace)
 }
 
 struct ModelGenerator<'a> {
     eval: Evaluator<'a>,
-    output: Model,
+    theory: TheoryDef,
+    model: Model,
 }
 
 impl<'a> ModelGenerator<'a> {
     fn new(toplevel: &'a Toplevel, theory: &Theory) -> Self {
         let eval = Evaluator::new(toplevel, Env::Nil, 0);
-        let output = Model::new(&theory.definition);
-        Self { eval, output }
+        let theory = theory.definition.clone();
+        let model = Model::new(&theory);
+        Self {
+            eval,
+            theory,
+            model,
+        }
     }
 
     fn generate(&mut self, ty: &TyV) -> Namespace {
@@ -156,13 +170,13 @@ impl<'a> ModelGenerator<'a> {
     fn extract(&mut self, prefix: Vec<NameSegment>, val: &TmV, ty: &TyV) -> Option<Namespace> {
         match &**ty {
             TyV_::Object(ot) => {
-                self.output.add_ob(prefix.into(), ot.clone());
+                self.model.add_ob(prefix.into(), ot.clone());
                 None
             }
             TyV_::Morphism(mt, dom, cod) => {
-                let dom = self.output.maybe_make_ob(dom)?;
-                let cod = self.output.maybe_make_ob(cod)?;
-                self.output.add_mor(prefix.into(), dom, cod, mt.clone());
+                let dom = self.model.maybe_make_ob(dom, &self.theory.src_type(mt))?;
+                let cod = self.model.maybe_make_ob(cod, &self.theory.tgt_type(mt))?;
+                self.model.add_mor(prefix.into(), dom, cod, mt.clone());
                 None
             }
             TyV_::Record(r) => {
