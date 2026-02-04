@@ -316,7 +316,7 @@ impl<'a> Elaborator<'a> {
     }
 
     fn intro(&mut self, name: VarName, label: LabelSegment, ty: Option<TyV>) -> TmV {
-        let v = TmV::Neu(
+        let v = TmV::neu(
             TmN::var(self.ctx.scope.len().into(), name, label),
             ty.clone().unwrap_or(TyV::unit()),
         );
@@ -446,7 +446,7 @@ impl<'a> Elaborator<'a> {
             Tuple(field_ns) => {
                 let mut field_ty_vs = Vec::<(FieldName, (LabelSegment, TyV))>::new();
                 let mut failed = false;
-                let self_var = elab.intro(name_seg("self"), label_seg("self"), None).as_neu();
+                let self_var = elab.intro(name_seg("self"), label_seg("self"), None).unwrap_neu();
                 let c = elab.checkpoint();
                 for field_n in field_ns.iter() {
                     elab.loc = Some(field_n.loc());
@@ -463,7 +463,7 @@ impl<'a> Elaborator<'a> {
                     field_ty_vs.push((name, (label, ty_v.clone())));
                     elab.ctx.push_scope(name, label, Some(ty_v.clone()));
                     elab.ctx.env =
-                        elab.ctx.env.snoc(TmV::Neu(TmN::proj(self_var.clone(), name, label), ty_v));
+                        elab.ctx.env.snoc(TmV::neu(TmN::proj(self_var.clone(), name, label), ty_v));
                 }
                 if failed {
                     return elab.ty_hole();
@@ -623,11 +623,8 @@ impl<'a> Elaborator<'a> {
 
     fn chk(&mut self, ty: &TyV, n: &FNtn) -> (TmS, TmV) {
         let mut elab = self.enter(n.loc());
-        match n.ast0() {
-            Tuple(field_ns) => {
-                let TyV_::Record(r) = &**ty else {
-                    return elab.chk_error("must check record former against record type");
-                };
+        match (&**ty, n.ast0()) {
+            (TyV_::Record(r), Tuple(field_ns)) => {
                 if r.fields.len() != field_ns.len() {
                     return elab.chk_error(format!(
                         "wrong number of fields provided, expected {}, got {}",
@@ -660,7 +657,23 @@ impl<'a> Elaborator<'a> {
                 }
                 (TmS::cons(field_stxs.into()), TmV::Cons(field_vals.into()))
             }
-            Prim("hole") => elab.chk_error("explicit hole"),
+            (TyV_::Object(ob_type), Tuple(ob_ns)) => {
+                let Some(ob_type) = ob_type.clone().list_arg() else {
+                    return elab.chk_error("expected to object type to be a list");
+                };
+                let elem_ty_v = TyV::object(ob_type);
+                let mut elem_stxs = Vec::new();
+                let mut elem_vals = Vec::new();
+                for ob_n in ob_ns {
+                    elab.loc = Some(ob_n.loc());
+                    let (tm_s, tm_v) = elab.chk(&elem_ty_v, ob_n);
+                    elem_stxs.push(tm_s);
+                    elem_vals.push(tm_v.unwrap_ob());
+                }
+                (TmS::list(elem_stxs), TmV::list(elem_vals))
+            }
+            (_, Tuple(_)) => elab.chk_error("tuple expected to be record or object/morphism type"),
+            (_, Prim("hole")) => elab.chk_error("explicit hole"),
             _ => {
                 let (tm_s, tm_v, synthed) = elab.syn(n);
                 let eval = elab.evaluator();

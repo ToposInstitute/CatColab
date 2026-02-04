@@ -81,7 +81,7 @@ impl<'a> Elaborator<'a> {
     }
 
     fn intro(&mut self, name: VarName, label: LabelSegment, ty: Option<TyV>) -> TmV {
-        let v = TmV::Neu(
+        let v = TmV::neu(
             TmN::var(self.ctx.scope.len().into(), name, label),
             ty.clone().unwrap_or(TyV::unit()),
         );
@@ -306,7 +306,7 @@ impl<'a> Elaborator<'a> {
         });
 
         let mut field_ty_vs = Vec::new();
-        let self_var = self.intro(name_seg("self"), label_seg("self"), None).as_neu();
+        let self_var = self.intro(name_seg("self"), label_seg("self"), None).unwrap_neu();
         let c = self.checkpoint();
 
         for cell in pass1.into_iter().chain(pass2.into_iter()) {
@@ -318,7 +318,7 @@ impl<'a> Elaborator<'a> {
             field_ty_vs.push((name, (label, ty_v.clone())));
             self.ctx.scope.push(VarInContext::new(name, label, Some(ty_v.clone())));
             self.ctx.env =
-                self.ctx.env.snoc(TmV::Neu(TmN::proj(self_var.clone(), name, label), ty_v));
+                self.ctx.env.snoc(TmV::neu(TmN::proj(self_var.clone(), name, label), ty_v));
         }
 
         self.reset_to(c);
@@ -351,7 +351,7 @@ mod test {
     use notebook_types::current::ModelDocumentContent;
 
     fn elab_example(theory: &Theory, name: &str, expected: Expect) {
-        let src = fs::read_to_string(format!("examples/{name}.json")).unwrap();
+        let src = fs::read_to_string(format!("examples/tt/notebook/{name}.json")).unwrap();
         let doc: ModelDocumentContent = serde_json::from_str(&src).unwrap();
         let toplevel = Toplevel::new(std_theories());
         let mut elab = Elaborator::new(theory.clone(), &toplevel, ustr(""));

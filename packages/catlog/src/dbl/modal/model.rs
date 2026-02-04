@@ -728,8 +728,8 @@ mod tests {
             S : Object
             I : Object
             R : Object
-            infect : ⨂ [ S, I ] -> ⨂ [ I, I ] : Hom Object
-            recover : ⨂ [ I ] -> ⨂ [ R ] : Hom Object"#]];
+            infect : ⨂ [S, I] -> ⨂ [I, I] : Hom Object
+            recover : ⨂ [I] -> ⨂ [R] : Hom Object"#]];
         expected.assert_eq(&format!("{model}"));
     }
 }

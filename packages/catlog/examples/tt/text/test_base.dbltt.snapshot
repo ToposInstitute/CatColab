@@ -1,0 +1,12 @@
+set_theory ThCategory
+#/ result: set theory to ThCategory
+
+type u := Unit
+#/ declared: u
+
+type u2 := u
+#/ declared: u2
+
+def t : u := 'tt
+#/ declared: t
+

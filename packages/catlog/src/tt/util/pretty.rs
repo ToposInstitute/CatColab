@@ -79,7 +79,7 @@ impl<'a> D<'a> {
 
     /// Surround this document with brackets
     pub fn brackets(self) -> D<'a> {
-        t("[") + (s() + self + s()).indented() + t("]")
+        t("[") + self.indented() + t("]")
     }
 
     /// Use this to print a document

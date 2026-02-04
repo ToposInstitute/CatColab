@@ -299,7 +299,8 @@ impl From<dbl_model::ModalDblModel> for DblModelBox {
 impl From<tt::modelgen::Model> for DblModelBox {
     fn from(value: tt::modelgen::Model) -> Self {
         match value {
-            tt::modelgen::Model::Discrete(model) => DblModelBox::Discrete(Rc::new(model)),
+            tt::modelgen::Model::Discrete(model) => DblModelBox::Discrete(Rc::new(*model)),
+            tt::modelgen::Model::Modal(model) => DblModelBox::Modal(Rc::new(*model)),
         }
     }
 }

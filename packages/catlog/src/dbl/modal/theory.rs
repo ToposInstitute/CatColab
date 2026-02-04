@@ -145,6 +145,12 @@ impl<T> ModeApp<T> {
         self
     }
 
+    /// Pops the outermost application, if there is one.
+    pub fn pop_app(mut self) -> (Option<Modality>, Self) {
+        let modality = self.modalities.pop();
+        (modality, self)
+    }
+
     /// Maps over the argument.
     pub fn map<S, F: FnOnce(T) -> S>(self, f: F) -> ModeApp<S> {
         let ModeApp { arg, modalities } = self;

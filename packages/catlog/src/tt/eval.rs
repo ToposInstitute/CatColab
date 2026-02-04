@@ -84,6 +84,9 @@ impl<'a> Evaluator<'a> {
             TmS_::Tt => TmV::Tt,
             TmS_::Id(_) => TmV::Opaque,
             TmS_::Compose(_, _) => TmV::Opaque,
+            TmS_::List(elems) => {
+                TmV::list(elems.iter().map(|tm| self.eval_tm(tm).unwrap_ob()).collect())
+            }
             TmS_::Opaque => TmV::Opaque,
             TmS_::Meta(mv) => TmV::Meta(*mv),
         }
@@ -92,7 +95,7 @@ impl<'a> Evaluator<'a> {
     /// Compute the projection of a field from a term value
     pub fn proj(&self, tm: &TmV, field_name: FieldName, field_label: LabelSegment) -> TmV {
         match tm {
-            TmV::Neu(n, ty) => TmV::Neu(
+            TmV::Ob(ObTmV::Neu(n, ty)) => TmV::neu(
                 TmN::proj(n.clone(), field_name, field_label),
                 self.field_ty(ty, tm, field_name),
             ),
@@ -120,7 +123,7 @@ impl<'a> Evaluator<'a> {
     /// Bind a new neutral of type `ty`
     pub fn bind_neu(&self, name: VarName, label: LabelSegment, ty: TyV) -> (TmN, Self) {
         let n = TmN::var(self.scope_length.into(), name, label);
-        let v = TmV::Neu(n.clone(), ty);
+        let v = TmV::neu(n.clone(), ty);
         (
             n,
             Self {
@@ -133,7 +136,7 @@ impl<'a> Evaluator<'a> {
 
     /// Bind a variable called "self" to `ty`
     pub fn bind_self(&self, ty: TyV) -> (TmN, Self) {
-        self.bind_neu(name_seg("self"), label_seg("self"), ty)
+        self.bind_neu("self".into(), "self".into(), ty)
     }
 
     /// Produce type syntax from a type value.
@@ -185,7 +188,7 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    /// Produce term syntax from a term neutral.
+    /// Produce term syntax from a neutral term.
     ///
     /// The documentation for [Evaluator::quote_ty] is also applicable here.
     pub fn quote_neu(&self, n: &TmN) -> TmS {
@@ -195,12 +198,20 @@ impl<'a> Evaluator<'a> {
         }
     }
 
+    /// Produce term syntax from an object term.
+    fn quote_ob(&self, tm: &ObTmV) -> TmS {
+        match tm {
+            ObTmV::Neu(n, _) => self.quote_neu(n),
+            ObTmV::List(elems) => TmS::list(elems.iter().map(|ob| self.quote_ob(ob)).collect()),
+        }
+    }
+
     /// Produce term syntax from a term value.
     ///
     /// The documentation for [Evaluator::quote_ty] is also applicable here.
     pub fn quote_tm(&self, tm: &TmV) -> TmS {
         match tm {
-            TmV::Neu(n, _) => self.quote_neu(n),
+            TmV::Ob(ob) => self.quote_ob(ob),
             TmV::Cons(fields) => TmS::cons(fields.map(|tm| self.quote_tm(tm))),
             TmV::Tt => TmS::tt(),
             TmV::Opaque => TmS::opaque(),
@@ -245,7 +256,7 @@ impl<'a> Evaluator<'a> {
 
     /// Check if two types are convertable.
     ///
-    /// Ignores specializations: specializations are handled in [Evaluator::subtype]
+    /// Ignores specializations: specializations are handled in [`Evaluator::subtype`].
     ///
     /// On failure, returns a doc which describes the obstruction to convertability.
     pub fn convertable_ty<'b>(&self, ty1: &TyV, ty2: &TyV) -> Result<(), D<'b>> {
@@ -277,7 +288,7 @@ impl<'a> Evaluator<'a> {
                     self1.convertable_ty(&field_ty1_v, &field_ty2_v)?;
                     let (field_val, self_next) = self.bind_neu(*name, *label, field_ty1_v.clone());
                     self1 = self_next;
-                    fields.insert(*name, (*label, TmV::Neu(field_val, field_ty1_v)));
+                    fields.insert(*name, (*label, TmV::neu(field_val, field_ty1_v)));
                 }
                 Ok(())
             }
@@ -291,7 +302,7 @@ impl<'a> Evaluator<'a> {
     /// Performs eta-expansion of the neutral `n` at type `ty`.
     pub fn eta_neu(&self, n: &TmN, ty: &TyV) -> TmV {
         match &**ty {
-            TyV_::Object(_) => TmV::Neu(n.clone(), ty.clone()),
+            TyV_::Object(_) => TmV::neu(n.clone(), ty.clone()),
             TyV_::Morphism(_, _, _) => TmV::Opaque,
             TyV_::Record(r) => {
                 let mut fields = Row::empty();
@@ -304,14 +315,24 @@ impl<'a> Evaluator<'a> {
             }
             TyV_::Sing(_, x) => x.clone(),
             TyV_::Unit => TmV::Tt,
-            TyV_::Meta(_) => TmV::Neu(n.clone(), ty.clone()),
+            TyV_::Meta(_) => TmV::neu(n.clone(), ty.clone()),
+        }
+    }
+
+    /// Performs eta-expansion of an object term value at type `ty`.
+    fn eta_ob(&self, ob: &ObTmV) -> TmV {
+        match ob {
+            ObTmV::Neu(tm_n, ty_v) => self.eta_neu(tm_n, ty_v),
+            ObTmV::List(elems) => {
+                TmV::list(elems.iter().map(|elem| self.eta_ob(elem).unwrap_ob()).collect())
+            }
         }
     }
 
     /// Performs eta-expansion of the term `n` at type `ty`
     pub fn eta(&self, v: &TmV, ty: &TyV) -> TmV {
         match v {
-            TmV::Neu(tm_n, ty_v) => self.eta_neu(tm_n, ty_v),
+            TmV::Ob(ob) => self.eta_ob(ob),
             TmV::Cons(row) => TmV::Cons(
                 row.iter()
                     .map(|(name, (label, field_v))| {
@@ -329,9 +350,9 @@ impl<'a> Evaluator<'a> {
     ///
     /// On failure, returns a doc which describes the obstruction to convertability.
     ///
-    /// Assumes that the base type of tm1 is convertable with the base type of tm2.
-    /// First attempts to do conversion checking without eta-expansion (strict
-    /// mode), and if that fails, does conversion checking with eta-expansion.
+    /// Assumes that the type of tm1 is convertable with the type of tm2. First
+    /// attempts to do conversion checking without eta-expansion (strict mode),
+    /// and if that fails, does conversion checking with eta-expansion.
     pub fn equal_tm<'b>(&self, tm1: &TmV, tm2: &TmV) -> Result<(), D<'b>> {
         if self.equal_tm_helper(tm1, tm2, true, true).is_err() {
             self.equal_tm_helper(tm1, tm2, false, false)
@@ -348,13 +369,13 @@ impl<'a> Evaluator<'a> {
         strict2: bool,
     ) -> Result<(), D<'b>> {
         match (tm1, tm2) {
-            (TmV::Neu(n1, ty1), _) if !strict1 => {
+            (TmV::Ob(ObTmV::Neu(n1, ty1)), _) if !strict1 => {
                 self.equal_tm_helper(&self.eta_neu(n1, ty1), tm2, true, strict2)
             }
-            (_, TmV::Neu(n2, ty2)) if !strict2 => {
+            (_, TmV::Ob(ObTmV::Neu(n2, ty2))) if !strict2 => {
                 self.equal_tm_helper(tm1, &self.eta_neu(n2, ty2), strict1, true)
             }
-            (TmV::Neu(n1, _), TmV::Neu(n2, _)) => {
+            (TmV::Ob(ObTmV::Neu(n1, _)), TmV::Ob(ObTmV::Neu(n2, _))) => {
                 if n1 == n2 {
                     Ok(())
                 } else {

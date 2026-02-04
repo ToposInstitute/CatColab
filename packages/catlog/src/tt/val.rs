@@ -173,7 +173,7 @@ pub enum TmN_ {
     Proj(TmN, FieldName, LabelSegment),
 }
 
-/// Neutrals for base terms, dereferences to [TmN_].
+/// Neutrals for [terms](TmV), dereferences to [TmN_].
 #[derive(Clone, Deref, PartialEq, Eq)]
 #[deref(forward)]
 pub struct TmN(Rc<TmN_>);
@@ -190,23 +190,44 @@ impl TmN {
     }
 }
 
-/// Values for base terms.
+/// Values for terms of object type.
 ///
-/// Note that this is *not* the value for total terms. So evaluating a `TmS` to
-/// produce a `TmV` and then quoting back will lose information about anything
-/// morphism-related. See [crate::tt] for more information.
-///
-/// It turns out that each of the cases for [TmV] has a single cheaply cloneable
-/// field, so we don't need to bother making a `TmV_`.
+/// These are terms that can be potentially extracted to an object in a model.
+/// That is not possible for a generic [`TmV`]. This way of structuring values
+/// also ensures that it is impossible to construct, say, a list of records;
+/// only lists of objects are allowed.
 #[derive(Clone)]
-pub enum TmV {
+pub enum ObTmV {
     /// Neutrals.
     ///
     /// We store the type because we need it for eta-expansion.
     Neu(TmN, TyV),
+    /// Lists of objects.
+    List(Rc<Vec<ObTmV>>),
+}
+
+impl ObTmV {
+    /// Smart constructor for lists.
+    pub fn list(elems: Vec<ObTmV>) -> Self {
+        ObTmV::List(Rc::new(elems))
+    }
+}
+
+/// Values for terms in the codiscrete mode.
+///
+/// Note that this is *not* the value for a general term. So evaluating a `TmS`
+/// to produce a `TmV` and then quoting back will lose information about
+/// anything morphism-related. See [crate::tt] for more information.
+///
+/// Each of the cases for [TmV] has a single cheaply cloneable field, so we
+/// don't need to bother making an inner type `TmV_`.
+#[derive(Clone)]
+pub enum TmV {
+    /// Object terms.
+    Ob(ObTmV),
     /// Records.
     Cons(Row<TmV>),
-    /// The unique element of `Ty0::Unit`.
+    /// The unique element of the unit type.
     Tt,
     /// An element of a type that is opaque to conversion checking
     Opaque,
@@ -215,11 +236,29 @@ pub enum TmV {
 }
 
 impl TmV {
-    /// Coerces self to a neutral
-    pub fn as_neu(&self) -> TmN {
+    /// Smart constructor for neutrals.
+    pub fn neu(n: TmN, ty: TyV) -> Self {
+        TmV::Ob(ObTmV::Neu(n, ty))
+    }
+
+    /// Smart constructor for lists.
+    pub fn list(elems: Vec<ObTmV>) -> Self {
+        TmV::Ob(ObTmV::list(elems))
+    }
+
+    /// Unwraps an object term, or panics.
+    pub fn unwrap_ob(&self) -> ObTmV {
         match self {
-            TmV::Neu(n, _) => n.clone(),
-            _ => panic!("expected neutral"),
+            TmV::Ob(ob) => ob.clone(),
+            _ => panic!("expected term to be an object"),
+        }
+    }
+
+    /// Unwraps a neutral term, or panics.
+    pub fn unwrap_neu(&self) -> TmN {
+        match self {
+            TmV::Ob(ObTmV::Neu(n, _)) => n.clone(),
+            _ => panic!("expected term to be a neutral"),
         }
     }
 }

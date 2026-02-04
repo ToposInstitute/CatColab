@@ -44,8 +44,6 @@ pub enum TyS_ {
     /// various object types).
     ///
     /// A term of type `Object(ot)` represents an object of object type `ot`.
-    ///
-    /// The base type for `Object(ot)` is `Ty0::Object(ot)`.
     Object(ObType),
 
     /// Type constructor for morphism types.
@@ -55,8 +53,6 @@ pub enum TyS_ {
     ///
     /// A term of type `Morphism(mt, dom, cod)` represents an morphism of morphism
     /// type `mt` from `dom` to `cod`.
-    ///
-    /// The base type for `Morphism(mt, dom, cod)` is Ty0::Unit.
     Morphism(MorType, TmS, TmS),
 
     /// Type constructor for record types.
@@ -65,8 +61,6 @@ pub enum TyS_ {
     ///
     /// A term `x` of type `Record(r)` represents a record where field `f` has type
     /// `eval(env.snoc(eval(env, x)), r.fields1[f])`.
-    ///
-    /// The base type for `Record(r)` is `Ty0::Record(r.fields0)`.
     Record(RecordS),
 
     /// Type constructor for singleton types.
@@ -153,7 +147,9 @@ impl TyS {
     pub fn meta(mv: MetaVar) -> Self {
         Self(Rc::new(TyS_::Meta(mv)))
     }
+}
 
+impl ToDoc for TyS {
     fn to_doc<'a>(&self) -> D<'a> {
         match &**self {
             TyS_::TopVar(name) => t(format!("{}", name)),
@@ -211,10 +207,12 @@ pub enum TmS_ {
     ///
     /// Note that eta-expansion takes care of elimination for units
     Tt,
-    /// Identity morphism at an object
+    /// Identity morphism at an object.
     Id(TmS),
-    /// Composition of two morphisms
+    /// Composite of two morphisms.
     Compose(TmS, TmS),
+    /// List of objects or morphisms.
+    List(Rc<Vec<TmS>>),
     /// An opaque term.
     ///
     /// This only appears when we quote a value
@@ -274,6 +272,11 @@ impl TmS {
         Self(Rc::new(TmS_::Compose(f, g)))
     }
 
+    /// Smart constructor for [TmS], [TmS_::List] case.
+    pub fn list(elems: Vec<TmS>) -> Self {
+        Self(Rc::new(TmS_::List(Rc::new(elems))))
+    }
+
     /// An opaque term
     pub fn opaque() -> Self {
         Self(Rc::new(TmS_::Opaque))
@@ -283,7 +286,9 @@ impl TmS {
     pub fn meta(mv: MetaVar) -> Self {
         Self(Rc::new(TmS_::Meta(mv)))
     }
+}
 
+impl ToDoc for TmS {
     fn to_doc<'a>(&self) -> D<'a> {
         match &**self {
             TmS_::TopVar(name) => t(format!("{}", name)),
@@ -297,6 +302,7 @@ impl TmS {
             })),
             TmS_::Id(ob) => (t("@id") + s() + ob.to_doc()).parens(),
             TmS_::Compose(f, g) => binop(t("·"), f.to_doc(), g.to_doc()),
+            TmS_::List(elems) => tuple(elems.iter().map(|elem| elem.to_doc())),
             TmS_::Tt => t("tt"),
             TmS_::Opaque => t("<opaque>"),
             TmS_::Meta(mv) => t(format!("?{}", mv.id)),

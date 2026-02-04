@@ -217,7 +217,8 @@ pub fn elaborate(src: &str, path: &str, output: &BatchOutput) -> io::Result<bool
 fn snapshot_examples() {
     use similar::{ChangeTag, TextDiff};
     let mut succeeded = true;
-    for f in fs::read_dir("examples").unwrap() {
+    let base_path = std::path::Path::new("examples/tt/text");
+    for f in fs::read_dir(base_path).unwrap() {
         let Ok(f) = f else {
             continue;
         };
@@ -228,7 +229,7 @@ fn snapshot_examples() {
         }
         let output = BatchOutput::Snapshot(RefCell::new(String::new()));
         succeeded = run(f.path().to_str().unwrap(), &output).unwrap() && succeeded;
-        let golden_path = format!("examples/{}.snapshot", fname);
+        let golden_path = base_path.join(format!("{fname}.snapshot"));
         if matches!(std::env::var("UPDATE_SNAPSHOT"), Ok(s) if &s == "1") {
             fs::write(&golden_path, output.result().as_str()).unwrap();
         } else {
@@ -237,7 +238,7 @@ fn snapshot_examples() {
             let result_str = result.as_str();
             if golden != result_str {
                 succeeded = false;
-                println!("failed snapshot test for examples/{fname}:");
+                println!("failed snapshot test for {}:", base_path.join(fname).display());
                 let diff = TextDiff::from_lines(golden.as_str(), result_str);
 
                 for change in diff.iter_all_changes() {
