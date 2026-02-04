@@ -174,6 +174,37 @@ export function massAction(
 
 const MassAction = lazy(() => import("./analyses/mass_action"));
 
+export function unbalancedMassAction(
+    options: Partial<AnalysisOptions> & {
+        simulate: Simulators.UnbalancedMassActionSimulator;
+        stateType?: ObType;
+        transitionType?: MorType;
+    },
+): ModelAnalysisMeta<Simulators.UnbalancedMassActionProblemData> {
+    const {
+        id = "unbalanced-mass-action",
+        name = "Unbalanced mass-action dynamics",
+        description = "Simulate the system using the unbalanced mass-action equations",
+        help = "unbalanced-mass-action",
+        ...otherOptions
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => <UnbalancedMassAction title={name} {...otherOptions} {...props} />,
+        initialContent: () => ({
+            consumptionRates: {},
+            productionRates: {},
+            initialValues: {},
+            duration: 10,
+        }),
+    };
+}
+
+const UnbalancedMassAction = lazy(() => import("./analyses/unbalanced_mass_action"));
+
 export function massActionEquations(
     options: Partial<AnalysisOptions> & {
         getEquations: Simulators.MassActionEquations;
@@ -197,7 +228,6 @@ export function massActionEquations(
         initialContent: () => ({}),
     };
 }
-
 const MassActionEquationsDisplay = lazy(() => import("./analyses/mass_action_equations"));
 
 export function stochasticMassAction(
