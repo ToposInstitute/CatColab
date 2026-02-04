@@ -173,7 +173,7 @@ pub enum TmN_ {
     Proj(TmN, FieldName, LabelSegment),
 }
 
-/// Neutrals for base terms, dereferences to [TmN_].
+/// Neutrals for [terms](TmV), dereferences to [TmN_].
 #[derive(Clone, Deref, PartialEq, Eq)]
 #[deref(forward)]
 pub struct TmN(Rc<TmN_>);
@@ -190,11 +190,11 @@ impl TmN {
     }
 }
 
-/// Values for base terms.
+/// Values for terms in the codiscrete mode.
 ///
-/// Note that this is *not* the value for total terms. So evaluating a `TmS` to
-/// produce a `TmV` and then quoting back will lose information about anything
-/// morphism-related. See [crate::tt] for more information.
+/// Note that this is *not* the value for a general term. So evaluating a `TmS`
+/// to produce a `TmV` and then quoting back will lose information about
+/// anything morphism-related. See [crate::tt] for more information.
 ///
 /// It turns out that each of the cases for [TmV] has a single cheaply cloneable
 /// field, so we don't need to bother making a `TmV_`.

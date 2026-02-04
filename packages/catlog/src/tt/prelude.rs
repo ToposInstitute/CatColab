@@ -1,4 +1,5 @@
-//! Common imports for [crate::tt]
+//! Common imports for [`tt`](crate::tt)
+
 pub use crate::tt::util::*;
 pub use crate::zero::{
     LabelSegment,

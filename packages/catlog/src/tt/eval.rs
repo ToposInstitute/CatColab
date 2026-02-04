@@ -247,7 +247,7 @@ impl<'a> Evaluator<'a> {
 
     /// Check if two types are convertable.
     ///
-    /// Ignores specializations: specializations are handled in [Evaluator::subtype]
+    /// Ignores specializations: specializations are handled in [`Evaluator::subtype`].
     ///
     /// On failure, returns a doc which describes the obstruction to convertability.
     pub fn convertable_ty<'b>(&self, ty1: &TyV, ty2: &TyV) -> Result<(), D<'b>> {
@@ -341,9 +341,9 @@ impl<'a> Evaluator<'a> {
     ///
     /// On failure, returns a doc which describes the obstruction to convertability.
     ///
-    /// Assumes that the base type of tm1 is convertable with the base type of tm2.
-    /// First attempts to do conversion checking without eta-expansion (strict
-    /// mode), and if that fails, does conversion checking with eta-expansion.
+    /// Assumes that the type of tm1 is convertable with the type of tm2. First
+    /// attempts to do conversion checking without eta-expansion (strict mode),
+    /// and if that fails, does conversion checking with eta-expansion.
     pub fn equal_tm<'b>(&self, tm1: &TmV, tm2: &TmV) -> Result<(), D<'b>> {
         if self.equal_tm_helper(tm1, tm2, true, true).is_err() {
             self.equal_tm_helper(tm1, tm2, false, false)

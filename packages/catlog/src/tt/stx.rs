@@ -44,8 +44,6 @@ pub enum TyS_ {
     /// various object types).
     ///
     /// A term of type `Object(ot)` represents an object of object type `ot`.
-    ///
-    /// The base type for `Object(ot)` is `Ty0::Object(ot)`.
     Object(ObType),
 
     /// Type constructor for morphism types.
@@ -55,8 +53,6 @@ pub enum TyS_ {
     ///
     /// A term of type `Morphism(mt, dom, cod)` represents an morphism of morphism
     /// type `mt` from `dom` to `cod`.
-    ///
-    /// The base type for `Morphism(mt, dom, cod)` is Ty0::Unit.
     Morphism(MorType, TmS, TmS),
 
     /// Type constructor for record types.
@@ -65,8 +61,6 @@ pub enum TyS_ {
     ///
     /// A term `x` of type `Record(r)` represents a record where field `f` has type
     /// `eval(env.snoc(eval(env, x)), r.fields1[f])`.
-    ///
-    /// The base type for `Record(r)` is `Ty0::Record(r.fields0)`.
     Record(RecordS),
 
     /// Type constructor for singleton types.
@@ -278,7 +272,7 @@ impl TmS {
         Self(Rc::new(TmS_::Compose(f, g)))
     }
 
-    /// Smart constructor for [Tms], [TmS_::List] case.
+    /// Smart constructor for [TmS], [TmS_::List] case.
     pub fn list(elems: Vec<TmS>) -> Self {
         Self(Rc::new(TmS_::List(Rc::new(elems))))
     }
