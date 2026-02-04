@@ -4,5 +4,4 @@
     "name": "CatColab: for developers",
     "readme": "../CONTRIBUTING.md",
     "projectDocuments": ["fixing-hash-mismatches.md"]
-    // "favicon": "./favicon.png",
 }
