@@ -18,8 +18,8 @@ use tsify::Tsify;
 
 use super::ODEAnalysis;
 use crate::dbl::{
-    model::{DiscreteTabModel, FgDblModel, ModalDblModel, MutDblModel, TabEdge},
-    theory::{ModalMorType, ModalObType, TabMorType, TabObType},
+    model::{DiscreteTabModel, FgDblModel, TabEdge},
+    theory::{TabMorType, TabObType},
 };
 use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
@@ -29,19 +29,19 @@ use crate::zero::{QualifiedName, alg::Polynomial, name, rig::Monomial};
 /// the terminology of "input" and "output", i.e. a flow A=>B gives rise to an
 /// *incoming flow to B* and an *outgoing flow from A*.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
-pub enum DirectedParameter {
+pub enum DirectedTerm {
     /// The parameter corresponds to an incoming flow
-    In(QualifiedName),
+    IncomingFlow(QualifiedName),
 
     /// The parameter corresponds to an outgoing flow
-    Out(QualifiedName),
+    OutgoingFlow(QualifiedName),
 }
 
-impl fmt::Display for DirectedParameter {
+impl fmt::Display for DirectedTerm {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self {
-            DirectedParameter::In(name) => write!(f, "In({})", name),
-            DirectedParameter::Out(name) => write!(f, "Out({})", name),
+            DirectedTerm::IncomingFlow(name) => write!(f, "Incoming({})", name),
+            DirectedTerm::OutgoingFlow(name) => write!(f, "Outgoing({})", name),
         }
     }
 }
@@ -73,64 +73,6 @@ pub struct UnbalancedMassActionProblemData {
 /// Symbolic parameter in mass-action polynomial system.
 type Parameter<Id> = Polynomial<Id, f32, i8>;
 
-/// Mass-action ODE analysis for Petri nets.
-///
-/// This struct implements the object part of the functorial semantics for reaction
-/// networks (aka, Petri nets) due to [Baez & Pollard](crate::refs::ReactionNets).
-pub struct PetriNetUnbalancedMassActionAnalysis {
-    /// Object type for places.
-    pub place_ob_type: ModalObType,
-    /// Morphism type for transitions.
-    pub transition_mor_type: ModalMorType,
-}
-
-impl Default for PetriNetUnbalancedMassActionAnalysis {
-    fn default() -> Self {
-        let ob_type = ModalObType::new(name("Object"));
-        Self {
-            place_ob_type: ob_type.clone(),
-            transition_mor_type: ModalMorType::Zero(ob_type),
-        }
-    }
-}
-
-impl PetriNetUnbalancedMassActionAnalysis {
-    /// Creates a mass-action system with symbolic rate coefficients.
-    pub fn build_system(
-        &self,
-        model: &ModalDblModel,
-    ) -> PolynomialSystem<QualifiedName, Parameter<QualifiedName>, i8> {
-        let mut sys = PolynomialSystem::new();
-        for ob in model.ob_generators_with_type(&self.place_ob_type) {
-            sys.add_term(ob, Polynomial::zero());
-        }
-        for mor in model.mor_generators_with_type(&self.transition_mor_type) {
-            let inputs = model
-                .get_dom(&mor)
-                .and_then(|ob| ob.clone().collect_product(None))
-                .unwrap_or_default();
-            let outputs = model
-                .get_cod(&mor)
-                .and_then(|ob| ob.clone().collect_product(None))
-                .unwrap_or_default();
-
-            let term: Monomial<_, _> =
-                inputs.iter().map(|ob| (ob.clone().unwrap_generator(), 1)).collect();
-            let term: Polynomial<_, _, _> =
-                [(Parameter::generator(mor), term)].into_iter().collect();
-            for input in inputs {
-                sys.add_term(input.unwrap_generator(), -term.clone());
-            }
-            for output in outputs {
-                sys.add_term(output.unwrap_generator(), term.clone());
-            }
-        }
-
-        // Normalize since terms commonly cancel out in mass-action dynamics.
-        sys.normalize()
-    }
-}
-
 /// Mass-action ODE analysis for stock-flow models.
 pub struct StockFlowUnbalancedMassActionAnalysis {
     /// Object type for stocks.
@@ -161,7 +103,7 @@ impl StockFlowUnbalancedMassActionAnalysis {
     pub fn build_system(
         &self,
         model: &DiscreteTabModel,
-    ) -> PolynomialSystem<QualifiedName, Parameter<DirectedParameter>, i8> {
+    ) -> PolynomialSystem<QualifiedName, Parameter<DirectedTerm>, i8> {
         let mut terms: HashMap<QualifiedName, Monomial<QualifiedName, i8>> = model
             .mor_generators_with_type(&self.flow_mor_type)
             .map(|flow| {
@@ -199,13 +141,13 @@ impl StockFlowUnbalancedMassActionAnalysis {
         }
         for (flow, term) in &terms {
             let dom = model.mor_generator_dom(flow).unwrap_basic();
-            let param = Parameter::generator(DirectedParameter::Out(flow.clone()));
+            let param = Parameter::generator(DirectedTerm::OutgoingFlow(flow.clone()));
             let term: Polynomial<_, _, _> = [(param, term.clone())].into_iter().collect();
             sys.add_term(dom, -term);
         }
         for (flow, term) in &terms {
             let cod = model.mor_generator_cod(flow).unwrap_basic();
-            let param = Parameter::generator(DirectedParameter::In(flow.clone()));
+            let param = Parameter::generator(DirectedTerm::IncomingFlow(flow.clone()));
             let term: Polynomial<_, _, _> = [(param, term.clone())].into_iter().collect();
             sys.add_term(cod, term);
         }
@@ -215,15 +157,15 @@ impl StockFlowUnbalancedMassActionAnalysis {
 
 /// Substitutes numerical rate coefficients into a symbolic mass-action system.
 pub fn extend_unbalanced_mass_action_scalars(
-    sys: PolynomialSystem<QualifiedName, Parameter<DirectedParameter>, i8>,
+    sys: PolynomialSystem<QualifiedName, Parameter<DirectedTerm>, i8>,
     data: &UnbalancedMassActionProblemData,
 ) -> PolynomialSystem<QualifiedName, f32, i8> {
     sys.extend_scalars(|poly| {
         poly.eval(|flow| match flow {
-            DirectedParameter::In(name) => {
+            DirectedTerm::IncomingFlow(name) => {
                 data.production_rates.get(name).copied().unwrap_or_default()
             }
-            DirectedParameter::Out(name) => {
+            DirectedTerm::OutgoingFlow(name) => {
                 data.consumption_rates.get(name).copied().unwrap_or_default()
             }
         })
@@ -265,8 +207,8 @@ mod tests {
         let model = backward_link(th);
         let sys = StockFlowUnbalancedMassActionAnalysis::default().build_system(&model);
         let expected = expect!([r#"
-            dx = (-Out(f)) x y
-            dy = (In(f)) x y
+            dx = (-OutgoingFlow(f)) x y
+            dy = (IncomingFlow(f)) x y
         "#]);
         expected.assert_eq(&sys.to_string());
     }
@@ -277,8 +219,8 @@ mod tests {
         let model = positive_backward_link(th);
         let sys = StockFlowUnbalancedMassActionAnalysis::default().build_system(&model);
         let expected = expect!([r#"
-            dx = (-Out(f)) x y
-            dy = (In(f)) x y
+            dx = (-OutgoingFlow(f)) x y
+            dy = (IncomingFlow(f)) x y
         "#]);
         expected.assert_eq(&sys.to_string());
     }
@@ -289,8 +231,8 @@ mod tests {
         let model = negative_backward_link(th);
         let sys = StockFlowUnbalancedMassActionAnalysis::default().build_system(&model);
         let expected = expect!([r#"
-            dx = (-Out(f)) x y^{-1}
-            dy = (In(f)) x y^{-1}
+            dx = (-OutgoingFlow(f)) x y^{-1}
+            dy = (IncomingFlow(f)) x y^{-1}
         "#]);
         expected.assert_eq(&sys.to_string());
     }
@@ -301,8 +243,8 @@ mod tests {
     //     let model = catalyzed_reaction(th);
     //     let sys = PetriNetUnbalancedMassActionAnalysis::default().build_system(&model);
     //     let expected = expect!([r#"
-    //         dx = (-Out(f)) c x
-    //         dy = (In(f)) c x
+    //         dx = (-OutgoingFlow(f)) c x
+    //         dy = (IncomingFlow(f)) c x
     //         dc = 0
     //     "#]);
     //     expected.assert_eq(&sys.to_string());

@@ -338,15 +338,21 @@ impl ThCategoryLinks {
         &self,
         model: &DblModel,
         data: analyses::ode::UnbalancedMassActionProblemData,
-    ) -> Result<ODEResult, String> {
+    ) -> Result<ODEResultWithEquations, String> {
         let tab_model = model.discrete_tab()?;
         let analysis = analyses::ode::StockFlowUnbalancedMassActionAnalysis::default();
         let sys = analysis.build_system(tab_model);
         let sys_extended_scalars = analyses::ode::extend_unbalanced_mass_action_scalars(sys, &data);
+        let latex_equations = sys_extended_scalars
+            .map_variables(replace_ob_names_latex(model))
+            .to_latex_equations();
         let analysis =
             analyses::ode::into_unbalanced_mass_action_analysis(sys_extended_scalars, data);
         let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
-        Ok(ODEResult(solution.into()))
+        Ok(ODEResultWithEquations {
+            solution: solution.into(),
+            latex_equations
+        })
     }
 
     /// Returns the symbolic mass-action equations in LaTeX format.
@@ -407,15 +413,21 @@ impl ThCategorySignedLinks {
         &self,
         model: &DblModel,
         data: analyses::ode::UnbalancedMassActionProblemData,
-    ) -> Result<ODEResult, String> {
+    ) -> Result<ODEResultWithEquations, String> {
         let tab_model = model.discrete_tab()?;
         let analysis = analyses::ode::StockFlowUnbalancedMassActionAnalysis::default();
         let sys = analysis.build_system(tab_model);
         let sys_extended_scalars = analyses::ode::extend_unbalanced_mass_action_scalars(sys, &data);
+        let latex_equations = sys_extended_scalars
+            .map_variables(replace_ob_names_latex(model))
+            .to_latex_equations();
         let analysis =
             analyses::ode::into_unbalanced_mass_action_analysis(sys_extended_scalars, data);
         let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
-        Ok(ODEResult(solution.into()))
+        Ok(ODEResultWithEquations {
+            solution: solution.into(),
+            latex_equations,
+        })
     }
 
     /// Returns the symbolic mass-action equations in LaTeX format.

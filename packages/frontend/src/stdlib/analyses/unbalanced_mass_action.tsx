@@ -4,17 +4,21 @@ import {
     BlockTitle,
     type ColumnSchema,
     createNumericalColumn,
+    ExpandableTable,
     FixedTableEditor,
     Foldable,
+    KatexDisplay,
 } from "catcolab-ui-components";
 import type { MorType, ObType, QualifiedName, UnbalancedMassActionProblemData } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
-import { createModelODEPlot } from "./model_ode_plot";
+import { createModelODEPlotWithEquations } from "./model_ode_plot";
 import type { UnbalancedMassActionSimulator } from "./simulator_types";
 
 import "./simulation.css";
+
+import styles from "./mass_action.module.css";
 
 /** Analyze a model using unbalanced mass-action dynamics. */
 export default function UnbalancedMassAction(
@@ -102,10 +106,13 @@ export default function UnbalancedMassAction(
         }),
     ];
 
-    const plotResult = createModelODEPlot(
+    const result = createModelODEPlotWithEquations(
         () => props.liveModel.validatedModel(),
         (model) => props.simulate(model, props.content),
     );
+
+    const plotResult = () => result()?.plotData;
+    const latexEquations = () => result()?.latexEquations ?? [];
 
     return (
         <div class="simulation">
@@ -116,6 +123,17 @@ export default function UnbalancedMassAction(
                     <FixedTableEditor rows={morGenerators()} schema={morSchema} />
                     <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
+            </Foldable>
+            <Foldable title="Equations" class={styles.equations}>
+                <ExpandableTable
+                    threshold={20}
+                    rows={latexEquations()}
+                    columns={[
+                        { cell: (row) => <KatexDisplay math={row.lhs} /> },
+                        { cell: () => <KatexDisplay math="=" /> },
+                        { cell: (row) => <KatexDisplay math={row.rhs} /> },
+                    ]}
+                />
             </Foldable>
             <ODEResultPlot result={plotResult()} />
         </div>
