@@ -4,7 +4,7 @@
 //! we do not here require that mass be preserved. This allows the construction
 //! of systems of arbitrary polynomial (first-order) ODEs.
 
-use std::{fmt, collections::HashMap};
+use std::{collections::HashMap, fmt};
 
 use indexmap::IndexMap;
 use nalgebra::DVector;
@@ -16,19 +16,21 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
-use super::{ODEAnalysis};
-use crate::{dbl::{
+use super::ODEAnalysis;
+use crate::dbl::{
     model::{DiscreteTabModel, FgDblModel, ModalDblModel, MutDblModel, TabEdge},
-    theory::{ModalMorType, ModalObType, TabMorType, TabObType}
-}};
+    theory::{ModalMorType, ModalObType, TabMorType, TabObType},
+};
 use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
 use crate::zero::{QualifiedName, alg::Polynomial, name, rig::Monomial};
 
-/// The associated direction of a "flow" term
+/// The associated direction of a "flow" term. Note that this is *opposite* from
+/// the terminology of "input" and "output", i.e. a flow A=>B gives rise to an
+/// *incoming flow to B* and an *outgoing flow from A*.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub enum DirectedParameter {
-    /// The parameter corresponds to an incoming flow 
+    /// The parameter corresponds to an incoming flow
     In(QualifiedName),
 
     /// The parameter corresponds to an outgoing flow
@@ -52,8 +54,13 @@ impl fmt::Display for DirectedParameter {
     tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
 )]
 pub struct UnbalancedMassActionProblemData {
-    /// Map from morphism IDs to input/output rate coefficients (nonnegative reals).
-    rates: HashMap<QualifiedName, f32>,
+    /// Map from morphism IDs to consumption rate coefficients (nonnegative reals).
+    #[cfg_attr(feature = "serde", serde(rename = "consumptionRates"))]
+    consumption_rates: HashMap<QualifiedName, f32>,
+
+    /// Map from morphism IDs to production rate coefficients (nonnegative reals).
+    #[cfg_attr(feature = "serde", serde(rename = "productionRates"))]
+    production_rates: HashMap<QualifiedName, f32>,
 
     /// Map from object IDs to initial values (nonnegative reals).
     #[cfg_attr(feature = "serde", serde(rename = "initialValues"))]
@@ -191,13 +198,13 @@ impl StockFlowUnbalancedMassActionAnalysis {
             sys.add_term(ob, Polynomial::zero());
         }
         for (flow, term) in &terms {
-            let dom = model.mor_generator_dom(&flow).unwrap_basic();
+            let dom = model.mor_generator_dom(flow).unwrap_basic();
             let param = Parameter::generator(DirectedParameter::Out(flow.clone()));
             let term: Polynomial<_, _, _> = [(param, term.clone())].into_iter().collect();
             sys.add_term(dom, -term);
         }
         for (flow, term) in &terms {
-            let cod = model.mor_generator_cod(&flow).unwrap_basic();
+            let cod = model.mor_generator_cod(flow).unwrap_basic();
             let param = Parameter::generator(DirectedParameter::In(flow.clone()));
             let term: Polynomial<_, _, _> = [(param, term.clone())].into_iter().collect();
             sys.add_term(cod, term);
@@ -211,12 +218,16 @@ pub fn extend_unbalanced_mass_action_scalars(
     sys: PolynomialSystem<QualifiedName, Parameter<DirectedParameter>, i8>,
     data: &UnbalancedMassActionProblemData,
 ) -> PolynomialSystem<QualifiedName, f32, i8> {
-    sys.extend_scalars(|poly| poly.eval(|flow| {
-        match flow {
-            DirectedParameter::In(name) => data.rates.get(name).copied().unwrap_or_default(),
-            DirectedParameter::Out(name) => data.rates.get(name).copied().unwrap_or_default(),
-        }
-    }))
+    sys.extend_scalars(|poly| {
+        poly.eval(|flow| match flow {
+            DirectedParameter::In(name) => {
+                data.production_rates.get(name).copied().unwrap_or_default()
+            }
+            DirectedParameter::Out(name) => {
+                data.consumption_rates.get(name).copied().unwrap_or_default()
+            }
+        })
+    })
 }
 
 /// Builds the numerical ODE analysis for a mass-action system whose scalars have been substituted.

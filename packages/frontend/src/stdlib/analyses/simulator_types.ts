@@ -7,6 +7,7 @@ import type {
     ODELatex,
     ODEResult,
     ODEResultWithEquations,
+    UnbalancedMassActionProblemData,
 } from "catlog-wasm";
 
 export type {
@@ -14,6 +15,7 @@ export type {
     LinearODEProblemData,
     LotkaVolterraProblemData,
     MassActionProblemData,
+    UnbalancedMassActionProblemData,
 };
 
 export type KuramotoSimulator = (model: DblModel, data: KuramotoProblemData) => ODEResult;
@@ -26,6 +28,10 @@ export type MassActionSimulator = (
 export type StochasticMassActionSimulator = (
     model: DblModel,
     data: MassActionProblemData,
+) => ODEResult;
+export type UnbalancedMassActionSimulator = (
+    model: DblModel,
+    data: UnbalancedMassActionProblemData,
 ) => ODEResult;
 export type MassActionEquations = (model: DblModel) => ODELatex;
 
