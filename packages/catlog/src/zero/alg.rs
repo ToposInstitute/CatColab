@@ -210,7 +210,7 @@ where
 impl<Var, Coef, Exp> Zero for Polynomial<Var, Coef, Exp>
 where
     Var: Ord,
-    Coef: Add<Output = Coef> + Zero,
+    Coef: Zero,
     Exp: Ord,
 {
     fn zero() -> Self {
