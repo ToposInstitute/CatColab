@@ -1,9 +1,10 @@
-//! Elaboration for doublett
+//! Elaboration from plain text for DoubleTT.
 
 use fnotation::*;
 use scopeguard::{ScopeGuard, guard};
 use std::fmt::Write;
 
+use fnotation::{ParseConfig, parser::Prec};
 use tattle::declare_error;
 
 use super::{context::*, eval::*, modelgen::*, prelude::*, stx::*, theory::*, toplevel::*, val::*};
@@ -11,6 +12,18 @@ use crate::{
     dbl::model::DblModelPrinter,
     zero::{QualifiedName, name},
 };
+
+/// Parser config for DoubleTT.
+pub const TT_PARSE_CONFIG: ParseConfig = ParseConfig::new(
+    &[
+        (":", Prec::nonassoc(20)),
+        (":=", Prec::nonassoc(10)),
+        ("&", Prec::lassoc(40)),
+        ("*", Prec::lassoc(60)),
+    ],
+    &[":", ":=", "&", "Unit", "Hom", "*"],
+    &["type", "def", "syn", "chk", "norm", "generate", "set_theory"],
+);
 
 /// The result of elaborating a top-level statement.
 pub enum TopElabResult {
@@ -203,7 +216,7 @@ impl TopElaborator {
                 let theory = self.get_theory(tn.loc)?;
                 let mut elab = self.elaborator(&theory, toplevel);
                 let (_, ty_v) = elab.ty(tn.body);
-                let (model, ns) = generate(toplevel, &theory, &ty_v);
+                let (model, ns) = generate(toplevel, &theory.definition, &ty_v);
                 let printer = DblModelPrinter::new().include_summary(false);
                 let mut out = model.summary(&printer);
                 let body = model.to_doc(&printer, &ns).0.pretty(77).to_string();
@@ -217,7 +230,8 @@ impl TopElaborator {
     }
 }
 
-struct Elaborator<'a> {
+/// Text-based elaborator of types.
+pub struct Elaborator<'a> {
     theory: Theory,
     reporter: Reporter,
     toplevel: &'a Toplevel,
@@ -234,7 +248,8 @@ struct ElaboratorCheckpoint {
 declare_error!(ELAB_ERROR, "elab", "an error during elaboration");
 
 impl<'a> Elaborator<'a> {
-    fn new(theory: Theory, reporter: Reporter, toplevel: &'a Toplevel) -> Self {
+    /// Constructs a new elaborator.
+    pub fn new(theory: Theory, reporter: Reporter, toplevel: &'a Toplevel) -> Self {
         Self {
             theory,
             reporter,
@@ -423,7 +438,8 @@ impl<'a> Elaborator<'a> {
         }
     }
 
-    fn ty(&mut self, n: &FNtn) -> (TyS, TyV) {
+    /// Elaborates a type from notation, returning both syntax and value.
+    pub fn ty(&mut self, n: &FNtn) -> (TyS, TyV) {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
             Var(name) => elab.lookup_ty(name_seg(*name)),
@@ -696,5 +712,27 @@ impl<'a> Elaborator<'a> {
                 (tm_s, tm_v)
             }
         }
+    }
+}
+
+// NOTE: Most tests for the text elaborator are in the `examples` dir.
+#[cfg(test)]
+mod tests {
+    use std::rc::Rc;
+
+    use crate::{stdlib, tt};
+
+    #[test]
+    fn generate_model_from_text() {
+        let th = Rc::new(stdlib::th_signed_category());
+        let source = "[
+            x : Object,
+            loop : Negative[x, x]
+        ]";
+        let maybe_model = tt::modelgen::parse_and_generate(source, &th.clone().into());
+        assert_eq!(
+            maybe_model.and_then(|m| m.as_discrete()),
+            Some(stdlib::models::negative_loop(th))
+        );
     }
 }

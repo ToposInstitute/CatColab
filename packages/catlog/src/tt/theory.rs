@@ -42,7 +42,7 @@ impl fmt::Display for Theory {
 }
 
 /// Definition of a double theory supported by DoubleTT.
-#[derive(Clone)]
+#[derive(Clone, From)]
 pub enum TheoryDef {
     /// A discrete double theory.
     Discrete(Rc<discrete::DiscreteDblTheory>),
