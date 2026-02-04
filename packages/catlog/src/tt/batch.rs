@@ -1,32 +1,18 @@
-//! Batch elaboration for doublett
+//! Batch elaboration for DoubleTT.
+
 use std::cell::{Ref, RefCell, RefMut};
 use std::fmt::Write;
 use std::ops::DerefMut;
 use std::time::{Duration, Instant};
 use std::{fs, io};
 
-use crate::tt::*;
-use crate::zero::NameSegment;
-
-use fnotation::parser::Prec;
-use fnotation::{FNtnTop, ParseConfig};
+use fnotation::FNtnTop;
 use scopeguard::guard;
 use tattle::display::SourceInfo;
 use tattle::{Reporter, declare_error};
-use text_elab::*;
-use theory::std_theories;
-use toplevel::*;
 
-const PARSE_CONFIG: ParseConfig = ParseConfig::new(
-    &[
-        (":", Prec::nonassoc(20)),
-        (":=", Prec::nonassoc(10)),
-        ("&", Prec::lassoc(40)),
-        ("*", Prec::lassoc(60)),
-    ],
-    &[":", ":=", "&", "Unit", "Hom", "*"],
-    &["type", "def", "syn", "chk", "norm", "generate", "set_theory"],
-);
+use super::{text_elab::*, theory::std_theories, toplevel::*};
+use crate::zero::NameSegment;
 
 declare_error!(TOP_ERROR, "top", "an error at the top-level");
 
@@ -158,7 +144,7 @@ pub fn run(path: &str, output: &BatchOutput) -> io::Result<bool> {
     elaborate(&src, path, output)
 }
 
-/// Run the doublett elaborator in batch mode
+/// Run the DoubleTT elaborator in batch mode.
 pub fn elaborate(src: &str, path: &str, output: &BatchOutput) -> io::Result<bool> {
     let reporter = Reporter::new();
     let source_info = SourceInfo::new(Some(path), src);
@@ -167,7 +153,7 @@ pub fn elaborate(src: &str, path: &str, output: &BatchOutput) -> io::Result<bool
         output.report(&reporter, &source_info);
     });
     let mut succeeded = true;
-    let _ = PARSE_CONFIG.with_parsed_top(src, reporter.clone(), |topntns| {
+    let _ = TT_PARSE_CONFIG.with_parsed_top(src, reporter.clone(), |topntns| {
         let mut toplevel = Toplevel::new(std_theories());
         let mut topelab = TopElaborator::new(reporter.clone());
         for topntn in topntns.iter() {

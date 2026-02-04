@@ -344,7 +344,7 @@ mod test {
     use crate::tt::{
         modelgen::generate,
         notebook_elab::Elaborator,
-        theory::{Theory, TheoryDef, std_theories},
+        theory::{Theory, TheoryDef},
         toplevel::Toplevel,
     };
     use crate::zero::name;
@@ -353,10 +353,10 @@ mod test {
     fn elab_example(theory: &Theory, name: &str, expected: Expect) {
         let src = fs::read_to_string(format!("examples/tt/notebook/{name}.json")).unwrap();
         let doc: ModelDocumentContent = serde_json::from_str(&src).unwrap();
-        let toplevel = Toplevel::new(std_theories());
+        let toplevel = Toplevel::new(Default::default());
         let mut elab = Elaborator::new(theory.clone(), &toplevel, ustr(""));
         let (_, ty_v) = elab.notebook(doc.notebook.formal_content());
-        let (model, ns) = generate(&toplevel, theory, &ty_v);
+        let (model, ns) = generate(&toplevel, &theory.definition, &ty_v);
         let mut out = model.to_doc(&DblModelPrinter::new(), &ns).pretty().to_string();
         for error in elab.errors() {
             writeln!(&mut out, "error {:?}", error).unwrap()
@@ -365,7 +365,7 @@ mod test {
     }
 
     #[test]
-    fn examples() {
+    fn discrete_theory() {
         let th_schema = Theory::new(name("ThSchema"), TheoryDef::discrete(th_schema()));
         elab_example(
             &th_schema,

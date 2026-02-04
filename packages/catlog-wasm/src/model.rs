@@ -689,11 +689,11 @@ pub fn elaborate_model(
         let theory = tt::theory::Theory::new(ustr("_").into(), theory_def);
         let ref_id = ustr(&ref_id);
         let mut elab = ElaboratorNext::new(theory.clone(), &instantiated.toplevel, ref_id);
-        let ty = elab.notebook(notebook.0.formal_content());
-        let (model, namespace) = generate(&instantiated.toplevel, &theory, &ty.1);
+        let (ty_s, ty_v) = elab.notebook(notebook.0.formal_content());
+        let (model, namespace) = generate(&instantiated.toplevel, &theory.definition, &ty_v);
         Ok(DblModel {
             model: model.into(),
-            ty: Some(ty),
+            ty: Some((ty_s, ty_v)),
             ob_namespace: namespace.clone(),
             mor_namespace: namespace.clone(),
         })
