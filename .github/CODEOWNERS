@@ -3,5 +3,6 @@
 /infrastructure/ @kasbah @jmoggr
 *.nix @kasbah @jmoggr
 
-# Packages
+# Components and styling
+*.css @kasbah
 /packages/ui-components/ @kasbah
