@@ -45,7 +45,7 @@ export function morLabelOrDefault(id: QualifiedName, model?: DblModel): string |
     }
 
     const label = model.morGeneratorLabel(id);
-    if (label) {
+    if (label?.[label.length - 1]) {
         return label.join(".");
     }
 
@@ -54,7 +54,7 @@ export function morLabelOrDefault(id: QualifiedName, model?: DblModel): string |
         const src = model.obGeneratorLabel(mor.dom.content);
         const tgt = model.obGeneratorLabel(mor.cod.content);
         if (src && tgt) {
-            return `${src.join(".")}→${tgt.join(".")}`;
+            return `${label?.join(".") ?? ""}(${src.join(".")}→${tgt.join(".")})`;
         }
     }
 }
