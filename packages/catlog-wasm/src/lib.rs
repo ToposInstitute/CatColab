@@ -20,6 +20,7 @@ pub mod model_presentation;
 pub mod theory;
 
 pub mod analyses;
+mod latex;
 #[allow(clippy::new_without_default)]
 #[allow(missing_docs)]
 pub mod theories;
