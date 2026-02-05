@@ -166,14 +166,7 @@ mod tests {
 
     #[test]
     fn validate_user_profile() {
-        assert!(
-            UserProfile {
-                username: None,
-                display_name: None
-            }
-            .validate()
-            .is_ok()
-        );
+        assert!(UserProfile { username: None, display_name: None }.validate().is_ok());
 
         assert!(
             UserProfile {

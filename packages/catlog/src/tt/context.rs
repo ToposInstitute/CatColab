@@ -44,10 +44,7 @@ impl Default for Context {
 impl Context {
     /// Create an empty context.
     pub fn new() -> Self {
-        Self {
-            env: Env::Nil,
-            scope: Vec::new(),
-        }
+        Self { env: Env::Nil, scope: Vec::new() }
     }
 
     /// Create a checkpoint from the current state of the context.

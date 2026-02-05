@@ -416,11 +416,7 @@ pub async fn search_ref_stubs(
         })
         .collect();
 
-    Ok(Paginated {
-        total,
-        offset,
-        items,
-    })
+    Ok(Paginated { total, offset, items })
 }
 
 /// Gets ref stubs for children, where a child is defined as any document which

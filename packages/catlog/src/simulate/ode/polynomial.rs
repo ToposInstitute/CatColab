@@ -111,10 +111,7 @@ where
                     var
                 };
                 let lhs = format!("\\frac{{\\mathrm{{d}}}}{{\\mathrm{{d}}t}} {var}");
-                LatexEquation {
-                    lhs,
-                    rhs: poly.to_latex(),
-                }
+                LatexEquation { lhs, rhs: poly.to_latex() }
             })
             .collect()
     }

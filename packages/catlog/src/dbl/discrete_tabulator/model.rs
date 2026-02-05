@@ -108,12 +108,7 @@ impl Graph for DiscreteTabGenerators {
             TabEdge::Basic(e) => {
                 self.morphisms.contains(e) && self.dom.is_set(e) && self.cod.is_set(e)
             }
-            TabEdge::Square {
-                dom,
-                cod,
-                pre,
-                post,
-            } => {
+            TabEdge::Square { dom, cod, pre, post } => {
                 if !(dom.contained_in(self) && cod.contained_in(self)) {
                     return false;
                 }
@@ -371,12 +366,9 @@ impl PrintableDblModel for DiscreteTabModel {
 fn edge_to_doc<'a>(edge: &TabEdge, mor_ns: &Namespace) -> D<'a> {
     match edge {
         TabEdge::Basic(name) => t(mor_ns.label_string(name)),
-        TabEdge::Square {
-            dom: _,
-            cod: _,
-            pre,
-            post,
-        } => tuple([edge_to_doc(pre, mor_ns), edge_to_doc(post, mor_ns)]),
+        TabEdge::Square { dom: _, cod: _, pre, post } => {
+            tuple([edge_to_doc(pre, mor_ns), edge_to_doc(post, mor_ns)])
+        }
     }
 }
 

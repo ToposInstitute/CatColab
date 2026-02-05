@@ -182,11 +182,7 @@ impl<'a> ModelGenerator<'a> {
         let eval = Evaluator::new(toplevel, Env::Nil, 0);
         let theory = theory.clone();
         let model = Model::new(&theory);
-        Self {
-            eval,
-            theory,
-            model,
-        }
+        Self { eval, theory, model }
     }
 
     fn generate(&mut self, ty: &TyV) -> Namespace {

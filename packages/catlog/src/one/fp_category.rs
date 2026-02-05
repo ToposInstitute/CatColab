@@ -413,10 +413,7 @@ impl<V, E> CategoryProgramBuilder<V, E> {
             span!(),
             Box::new(Schedule::Run(
                 span!(),
-                GenericRunConfig {
-                    ruleset: self.sym.axioms,
-                    until: None,
-                },
+                GenericRunConfig { ruleset: self.sym.axioms, until: None },
             )),
         )
     }
@@ -450,30 +447,21 @@ impl<V, E> CategoryProgramBuilder<V, E> {
             Command::Constructor {
                 span: span!(),
                 name: sym.dom,
-                schema: Schema {
-                    input: vec![sym.mor],
-                    output: sym.ob,
-                },
+                schema: Schema { input: vec![sym.mor], output: sym.ob },
                 cost: Some(1),
                 unextractable: false,
             },
             Command::Constructor {
                 span: span!(),
                 name: sym.cod,
-                schema: Schema {
-                    input: vec![sym.mor],
-                    output: sym.ob,
-                },
+                schema: Schema { input: vec![sym.mor], output: sym.ob },
                 cost: Some(1),
                 unextractable: false,
             },
             Command::Constructor {
                 span: span!(),
                 name: sym.id,
-                schema: Schema {
-                    input: vec![sym.ob],
-                    output: sym.mor,
-                },
+                schema: Schema { input: vec![sym.ob], output: sym.mor },
                 cost: Some(1),
                 unextractable: false,
             },

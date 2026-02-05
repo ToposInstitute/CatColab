@@ -33,11 +33,7 @@ impl<'a, T: 'a> BreadthFirstTraversal<'a, T> {
         let tree = root.tree();
         let mut queue = VecDeque::new();
         queue.push_back((root.id(), 1));
-        Self {
-            tree,
-            queue,
-            current_level: 0,
-        }
+        Self { tree, queue, current_level: 0 }
     }
 
     /// Peeks at the next node, if it's at the same level as the previous one.

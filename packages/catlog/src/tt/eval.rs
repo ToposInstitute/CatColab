@@ -35,10 +35,7 @@ impl<'a> Evaluator<'a> {
 
     /// Return a new [Evaluator] with environment `env`
     pub fn with_env(&self, env: Env) -> Self {
-        Self {
-            env,
-            ..self.clone()
-        }
+        Self { env, ..self.clone() }
     }
 
     /// Evaluate type syntax to produce a type value

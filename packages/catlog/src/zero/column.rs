@@ -267,10 +267,7 @@ impl<T> IntoIterator for VecColumn<T> {
     type IntoIter = VecColumnIter<T>;
 
     fn into_iter(self) -> Self::IntoIter {
-        VecColumnIter {
-            vec: self.0,
-            index: 0,
-        }
+        VecColumnIter { vec: self.0, index: 0 }
     }
 }
 

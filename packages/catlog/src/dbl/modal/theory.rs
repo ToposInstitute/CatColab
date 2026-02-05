@@ -117,10 +117,7 @@ pub struct ModeApp<T> {
 impl<T> ModeApp<T> {
     /// Constructs a new term with no modalities applied.
     pub fn new(arg: T) -> Self {
-        Self {
-            arg,
-            modalities: Default::default(),
-        }
+        Self { arg, modalities: Default::default() }
     }
 
     /// Converts from `&ModeApp<T>` to `ModeApp<&T>`.
@@ -154,10 +151,7 @@ impl<T> ModeApp<T> {
     /// Maps over the argument.
     pub fn map<S, F: FnOnce(T) -> S>(self, f: F) -> ModeApp<S> {
         let ModeApp { arg, modalities } = self;
-        ModeApp {
-            arg: f(arg),
-            modalities,
-        }
+        ModeApp { arg: f(arg), modalities }
     }
 
     /// Maps over the argument, flattening nested applications.

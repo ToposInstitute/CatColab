@@ -93,17 +93,14 @@ impl CanElaborate<Mor, TabMor> for Elaborator {
                     path.try_map(|ob| Elaborator.elab(&ob), |mor| Elaborator.elab(&mor))
                 })
                 .map(|path| path.flatten()),
-            Mor::TabulatorSquare {
-                dom,
-                cod,
-                pre,
-                post,
-            } => Ok(Path::single(dbl_model::TabEdge::Square {
-                dom: Box::new(Elaborator.elab(dom.as_ref())?),
-                cod: Box::new(Elaborator.elab(cod.as_ref())?),
-                pre: Box::new(Elaborator.elab(pre.as_ref())?),
-                post: Box::new(Elaborator.elab(post.as_ref())?),
-            })),
+            Mor::TabulatorSquare { dom, cod, pre, post } => {
+                Ok(Path::single(dbl_model::TabEdge::Square {
+                    dom: Box::new(Elaborator.elab(dom.as_ref())?),
+                    cod: Box::new(Elaborator.elab(cod.as_ref())?),
+                    pre: Box::new(Elaborator.elab(pre.as_ref())?),
+                    post: Box::new(Elaborator.elab(post.as_ref())?),
+                }))
+            }
         }
     }
 }
@@ -112,12 +109,7 @@ impl CanElaborate<Mor, TabEdge> for Elaborator {
     fn elab(&self, mor: &Mor) -> Result<TabEdge, String> {
         match mor {
             Mor::Basic(name) => Ok(TabEdge::Basic(QualifiedName::deserialize_str(name)?)),
-            Mor::TabulatorSquare {
-                dom,
-                cod,
-                pre,
-                post,
-            } => Ok(TabEdge::Square {
+            Mor::TabulatorSquare { dom, cod, pre, post } => Ok(TabEdge::Square {
                 dom: Box::new(Elaborator.elab(dom.as_ref())?),
                 cod: Box::new(Elaborator.elab(cod.as_ref())?),
                 pre: Box::new(Elaborator.elab(pre.as_ref())?),
@@ -215,12 +207,7 @@ impl CanQuote<TabEdge, Mor> for Quoter {
     fn quote(&self, ob: &TabEdge) -> Mor {
         match ob {
             TabEdge::Basic(name) => Mor::Basic(name.serialize_string()),
-            TabEdge::Square {
-                dom,
-                cod,
-                pre,
-                post,
-            } => Mor::TabulatorSquare {
+            TabEdge::Square { dom, cod, pre, post } => Mor::TabulatorSquare {
                 dom: Box::new(self.quote(dom.as_ref())),
                 cod: Box::new(self.quote(cod.as_ref())),
                 pre: Box::new(self.quote(pre.as_ref())),
@@ -576,13 +563,7 @@ impl DblModel {
                  Quoter.quote(model.get_cod(&id)?))
             }
         });
-        Some(MorGenerator {
-            id,
-            label,
-            mor_type,
-            dom,
-            cod,
-        })
+        Some(MorGenerator { id, label, mor_type, dom, cod })
     }
 
     /// Constructs a serializable presentation of the model.
