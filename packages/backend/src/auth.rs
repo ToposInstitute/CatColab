@@ -15,7 +15,18 @@ use super::user::UserSummary;
 #[qubit::ts]
 #[cfg_attr(feature = "proptest", derive(Arbitrary))]
 #[derive(
-    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize, sqlx::Type, Reconcile, Hydrate,
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Deserialize,
+    Serialize,
+    sqlx::Type,
+    Reconcile,
+    Hydrate,
 )]
 #[sqlx(type_name = "permission_level", rename_all = "lowercase")]
 pub enum PermissionLevel {

@@ -35,7 +35,8 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
 /// Converts a `UserState` into an Automerge document.
 pub fn user_state_to_automerge(state: &UserState) -> Result<Automerge, AppError> {
     let mut doc = AutoCommit::new();
-    reconcile(&mut doc, state).map_err(|e| AppError::Invalid(format!("Failed to reconcile UserState: {}", e)))?;
+    reconcile(&mut doc, state)
+        .map_err(|e| AppError::Invalid(format!("Failed to reconcile UserState: {}", e)))?;
     // Convert AutoCommit to Automerge by saving and loading
     let bytes = doc.save();
     let automerge_doc = Automerge::load(&bytes)?;
@@ -44,7 +45,8 @@ pub fn user_state_to_automerge(state: &UserState) -> Result<Automerge, AppError>
 
 /// Converts an Automerge document to a `UserState`.
 pub fn automerge_to_user_state(doc: &Automerge) -> Result<UserState, AppError> {
-    let state: UserState = hydrate(doc).map_err(|e| AppError::Invalid(format!("Failed to hydrate UserState: {}", e)))?;
+    let state: UserState = hydrate(doc)
+        .map_err(|e| AppError::Invalid(format!("Failed to hydrate UserState: {}", e)))?;
     Ok(state)
 }
 
@@ -138,11 +140,8 @@ mod tests {
     #[proptest(cases = 16)]
     fn user_state_automerge_roundtrip(input_state: UserState) {
         let doc = user_state_to_automerge(&input_state).expect("Failed to convert to Automerge");
-        let output_state =
-            automerge_to_user_state(&doc).expect("Failed to convert from Automerge");
+        let output_state = automerge_to_user_state(&doc).expect("Failed to convert from Automerge");
 
         proptest::prop_assert_eq!(input_state, output_state);
     }
 }
-
-

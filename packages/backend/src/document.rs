@@ -1,9 +1,9 @@
 //! Procedures to create and manipulate documents.
 
-use autosurgeon::{Hydrate, Reconcile};
 use crate::app::{AppCtx, AppError, AppState, Paginated};
 use crate::automerge_json::{ensure_autosave_listener, populate_automerge_from_json};
 use crate::{auth::PermissionLevel, user::UserSummary};
+use autosurgeon::{Hydrate, Reconcile};
 use chrono::{DateTime, Utc};
 use samod::DocumentId;
 use serde::{Deserialize, Serialize};
@@ -25,9 +25,9 @@ mod datetime_millis {
         prop: autosurgeon::Prop<'_>,
     ) -> Result<DateTime<Utc>, HydrateError> {
         let millis: i64 = autosurgeon::hydrate_prop(doc, obj, prop)?;
-        Utc.timestamp_millis_opt(millis)
-            .single()
-            .ok_or_else(|| HydrateError::unexpected("valid timestamp", "invalid timestamp millis".to_string()))
+        Utc.timestamp_millis_opt(millis).single().ok_or_else(|| {
+            HydrateError::unexpected("valid timestamp", "invalid timestamp millis".to_string())
+        })
     }
 }
 
