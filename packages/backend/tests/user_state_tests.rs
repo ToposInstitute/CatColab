@@ -175,9 +175,8 @@ mod tests {
     /// 1. Creates a subscription to the database
     /// 2. Generates user states and writes them to the database
     /// 3. Verifies that the Automerge documents are updated to match the database state
-    #[proptest(async = "tokio", cases = 8)]
+    #[proptest(async = "tokio", cases = 1024)]
     #[serial]
-    #[ignore]
     async fn run_user_state_subscription_updates_automerge_docs(
         #[strategy(arbitrary_user_state_with_id())] user_id_and_state: (String, UserState),
     ) {
