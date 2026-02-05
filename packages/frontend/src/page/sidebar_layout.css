@@ -39,6 +39,8 @@
 
 .sidebar.open {
     width: 240px;
+    display: flex;
+    flex-direction: column;
 }
 
 .sidebar.open .collapse-button {
@@ -58,6 +60,11 @@
     flex-direction: column;
     margin-left: 8px;
     margin-right: 8px;
+    min-height: 0;
+}
+
+.related-tree {
+    overflow-y: auto;
 }
 
 .sidebar-header {
