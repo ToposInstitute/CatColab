@@ -2,15 +2,15 @@
 use crate::{
     dbl::model::*,
     one::{FgCategory, Path},
-    zero::{QualifiedLabel, QualifiedName, name},
+    zero::{name, QualifiedLabel, QualifiedName},
 };
 use itertools::Itertools;
 use sea_query::SchemaBuilder;
 use sea_query::{
-    ColumnDef, ForeignKey, ForeignKeyCreateStatement, Iden, MysqlQueryBuilder,
-    PostgresQueryBuilder, SqliteQueryBuilder, Table, TableCreateStatement, prepare::Write,
+    prepare::Write, ColumnDef, ForeignKey, ForeignKeyCreateStatement, Iden, MysqlQueryBuilder,
+    PostgresQueryBuilder, SqliteQueryBuilder, Table, TableCreateStatement,
 };
-use sqlformat::{Dialect, format};
+use sqlformat::{format, Dialect};
 use std::{collections::HashMap, fmt};
 
 impl Iden for QualifiedName {
@@ -35,18 +35,18 @@ impl From<QualifiedLabel> for TableCreateStatement {
     }
 }
 
-/// Struct for building a valid SQL DDL
+/// Struct for building a valid SQL DDL.
 pub struct SQLAnalysis {
     backend: SqlBackend,
 }
 
 impl SQLAnalysis {
-    /// Constructs a new SQLAnalysis instance
+    /// Constructs a new SQLAnalysis instance.
     pub fn new(backend: SqlBackend) -> Self {
         Self { backend }
     }
 
-    /// Consumes itself and a discrete double model to produce a SQL string
+    /// Consumes itself and a discrete double model to produce a SQL string.
     pub fn render(
         &self,
         model: &DiscreteDblModel,
@@ -177,18 +177,18 @@ impl SQLAnalysis {
 /// the types implementing that trait are owned by `sea_query`.
 #[derive(Debug, Clone)]
 pub enum SqlBackend {
-    /// The MySQL backend
+    /// The MySQL backend.
     MySQL,
 
-    /// The SQLite3 backend
+    /// The SQLite3 backend.
     SQLite,
 
-    /// The Postgres backend
+    /// The Postgres backend.
     PostgresSQL,
 }
 
 impl SqlBackend {
-    /// Produces a boxed implementation of the SchemaBuilder trait
+    /// Produces a boxed implementation of the SchemaBuilder trait.
     pub fn as_type(&self) -> Box<dyn SchemaBuilder> {
         match self {
             SqlBackend::MySQL => Box::new(MysqlQueryBuilder),
