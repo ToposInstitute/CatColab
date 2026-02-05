@@ -43,6 +43,25 @@ pub struct MassActionProblemData {
     pub duration: f32,
 }
 
+/// Data defining the stochastic mass-action ODE problem
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(
+    feature = "serde-wasm",
+    tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
+)]
+pub struct StochasticMassActionProblemData {
+    /// Map from morphism IDs to rate coefficients (nonnegative reals).
+    rates: HashMap<QualifiedName, f32>,
+
+    /// Map from object IDs to initial values (nonnegative integers).
+    #[cfg_attr(feature = "serde", serde(rename = "initialValues"))]
+    pub initial_values: HashMap<QualifiedName, u8>,
+
+    /// Duration of simulation.
+    pub duration: f32,
+}
+
 /// Stochastic mass-action analysis of a model.
 pub struct StochasticMassActionAnalysis {
     /// Reaction network for the analysis.
@@ -145,7 +164,7 @@ impl PetriNetMassActionAnalysis {
     pub fn build_stochastic_system(
         &self,
         model: &ModalDblModel,
-        data: MassActionProblemData,
+        data: StochasticMassActionProblemData,
     ) -> StochasticMassActionAnalysis {
         let ob_generators: Vec<_> = model.ob_generators_with_type(&self.place_ob_type).collect();
 
@@ -196,7 +215,7 @@ impl PetriNetMassActionAnalysis {
         StochasticMassActionAnalysis {
             problem,
             variable_index,
-            initial_values: data.initial_values,
+            initial_values: data.initial_values.into_iter().map(|(k, v)| (k, v as f32)).collect(),
             duration: data.duration,
         }
     }
@@ -377,12 +396,12 @@ mod tests {
     fn sir_petri_stochastic_dynamics() {
         let th = Rc::new(th_sym_monoidal_category());
         let model = sir_petri(th);
-        let data = MassActionProblemData {
+        let data = StochasticMassActionProblemData {
             rates: HashMap::from_iter([(name("infect"), 1e-5f32), (name("recover"), 1e-2f32)]),
             initial_values: HashMap::from_iter([
-                (name("S"), 1e5f32),
-                (name("I"), 1f32),
-                (name("R"), 0f32),
+                (name("S"), 1e5 as u8),
+                (name("I"), 1),
+                (name("R"), 0),
             ]),
             duration: 10f32,
         };
