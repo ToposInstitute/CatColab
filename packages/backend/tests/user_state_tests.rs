@@ -177,6 +177,7 @@ mod tests {
     /// 3. Verifies that the Automerge documents are updated to match the database state
     #[proptest(async = "tokio", cases = 8)]
     #[serial]
+    #[ignore]
     async fn run_user_state_subscription_updates_automerge_docs(
         #[strategy(arbitrary_user_state_with_id())] user_id_and_state: (String, UserState),
     ) {

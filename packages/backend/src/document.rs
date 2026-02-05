@@ -1,5 +1,6 @@
 //! Procedures to create and manipulate documents.
 
+use autosurgeon::{Hydrate, Reconcile};
 use crate::app::{AppCtx, AppError, AppState, Paginated};
 use crate::automerge_json::{ensure_autosave_listener, populate_automerge_from_json};
 use crate::{auth::PermissionLevel, user::UserSummary};
@@ -8,6 +9,27 @@ use samod::DocumentId;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
+
+/// Module for autosurgeon serialization of `DateTime<Utc>` as milliseconds since Unix epoch.
+mod datetime_millis {
+    use autosurgeon::{HydrateError, ReadDoc, Reconcile, Reconciler};
+    use chrono::{DateTime, TimeZone, Utc};
+
+    pub fn reconcile<R: Reconciler>(dt: &DateTime<Utc>, reconciler: R) -> Result<(), R::Error> {
+        dt.timestamp_millis().reconcile(reconciler)
+    }
+
+    pub fn hydrate<D: ReadDoc>(
+        doc: &D,
+        obj: &automerge::ObjId,
+        prop: autosurgeon::Prop<'_>,
+    ) -> Result<DateTime<Utc>, HydrateError> {
+        let millis: i64 = autosurgeon::hydrate_prop(doc, obj, prop)?;
+        Utc.timestamp_millis_opt(millis)
+            .single()
+            .ok_or_else(|| HydrateError::unexpected("valid timestamp", "invalid timestamp millis".to_string()))
+    }
+}
 
 /// Maximum allowed document size in bytes (5MB).
 const MAX_DOCUMENT_SIZE: usize = 5 * 1024 * 1024;
@@ -256,18 +278,22 @@ pub struct RefContent {
 /// information on a variety of refs without having to load whole refs.
 #[qubit::ts]
 #[cfg_attr(feature = "proptest", derive(Eq, PartialEq))]
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Reconcile, Hydrate)]
 pub struct RefStub {
     pub name: String,
     #[serde(rename = "typeName")]
+    #[autosurgeon(rename = "typeName")]
     pub type_name: String,
     #[serde(rename = "refId")]
+    #[autosurgeon(rename = "refId")]
     pub ref_id: Uuid,
     // permission level that the current user has on this ref
     #[serde(rename = "permissionLevel")]
+    #[autosurgeon(rename = "permissionLevel")]
     pub permission_level: PermissionLevel,
     pub owner: Option<UserSummary>,
     #[serde(rename = "createdAt")]
+    #[autosurgeon(rename = "createdAt", with = "datetime_millis")]
     pub created_at: DateTime<Utc>,
 }
 

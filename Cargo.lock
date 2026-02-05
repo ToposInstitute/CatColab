@@ -209,6 +209,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "autosurgeon"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "87b6547a9a35fbf5e5b1305a56c42196ae2cfb456897f1cab97d4829f1096550"
+dependencies = [
+ "automerge",
+ "autosurgeon-derive",
+ "similar",
+ "thiserror 1.0.69",
+ "uuid",
+]
+
+[[package]]
+name = "autosurgeon-derive"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f99b54090e5aca6915313efcf065f9873c9ca9d39c875cfc956f30523075d49f"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.114",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "axum"
 version = "0.8.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -269,6 +294,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "automerge",
+ "autosurgeon",
  "axum",
  "base64 0.22.1",
  "chrono",
@@ -397,6 +423,17 @@ checksum = "bf88ba1141d185c399bee5288d850d63b8369520c1eafc32a0430b5b6c287bf4"
 dependencies = [
  "sha2 0.10.9",
  "tinyvec",
+]
+
+[[package]]
+name = "bstr"
+version = "1.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "63044e1ae8e69f3b5a92c736ca6269b8d12fa7efe39bf34ddb06d102cf0e2cab"
+dependencies = [
+ "memchr",
+ "regex-automata 0.4.9",
+ "serde",
 ]
 
 [[package]]
@@ -3298,6 +3335,10 @@ name = "similar"
 version = "2.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bbbb5d9659141646ae647b42fe094daf6c6192d1620870b449d9557f748b2daa"
+dependencies = [
+ "bstr",
+ "unicode-segmentation",
+]
 
 [[package]]
 name = "simple_asn1"

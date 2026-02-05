@@ -1,13 +1,13 @@
-use automerge::Automerge;
+use automerge::{AutoCommit, Automerge};
+use autosurgeon::{Hydrate, Reconcile, hydrate, reconcile};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
 use crate::app::AppError;
-use crate::automerge_json::{hydrate_to_json, populate_automerge_from_json};
 use crate::document::{RefQueryParams, RefStub, search_ref_stubs};
 
 #[cfg_attr(feature = "proptest", derive(PartialEq, Eq))]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Reconcile, Hydrate)]
 pub struct UserState {
     pub documents: Vec<RefStub>,
 }
@@ -34,21 +34,17 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
 
 /// Converts a `UserState` into an Automerge document.
 pub fn user_state_to_automerge(state: &UserState) -> Result<Automerge, AppError> {
-    let json_value = serde_json::to_value(state)?;
-
-    let mut doc = Automerge::new();
-    let mut tx = doc.transaction();
-    populate_automerge_from_json(&mut tx, automerge::ROOT, &json_value)?;
-    tx.commit();
-
-    Ok(doc)
+    let mut doc = AutoCommit::new();
+    reconcile(&mut doc, state).map_err(|e| AppError::Invalid(format!("Failed to reconcile UserState: {}", e)))?;
+    // Convert AutoCommit to Automerge by saving and loading
+    let bytes = doc.save();
+    let automerge_doc = Automerge::load(&bytes)?;
+    Ok(automerge_doc)
 }
 
 /// Converts an Automerge document to a `UserState`.
 pub fn automerge_to_user_state(doc: &Automerge) -> Result<UserState, AppError> {
-    let hydrated = doc.hydrate(None);
-    let json_value = hydrate_to_json(&hydrated);
-    let state = serde_json::from_value(json_value)?;
+    let state: UserState = hydrate(doc).map_err(|e| AppError::Invalid(format!("Failed to hydrate UserState: {}", e)))?;
     Ok(state)
 }
 

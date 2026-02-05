@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use autosurgeon::{Hydrate, Reconcile};
 use firebase_auth::{FirebaseAuth, FirebaseUser};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -14,7 +15,7 @@ use super::user::UserSummary;
 #[qubit::ts]
 #[cfg_attr(feature = "proptest", derive(Arbitrary))]
 #[derive(
-    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize, sqlx::Type,
+    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize, sqlx::Type, Reconcile, Hydrate,
 )]
 #[sqlx(type_name = "permission_level", rename_all = "lowercase")]
 pub enum PermissionLevel {

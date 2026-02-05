@@ -1,3 +1,4 @@
+use autosurgeon::{Hydrate, Reconcile};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
@@ -45,10 +46,11 @@ pub async fn user_by_username(
 /// in human-readable form.
 #[qubit::ts]
 #[cfg_attr(feature = "proptest", derive(Arbitrary, Eq, PartialEq))]
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Reconcile, Hydrate)]
 pub struct UserSummary {
     pub id: String,
     pub username: Option<String>,
+    #[autosurgeon(rename = "displayName")]
     #[serde(rename = "displayName")]
     pub display_name: Option<String>,
 }
