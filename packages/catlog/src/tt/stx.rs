@@ -211,8 +211,10 @@ pub enum TmS_ {
     Id(TmS),
     /// Composite of two morphisms.
     Compose(TmS, TmS),
+    /// Application of an object operation in the theory.
+    ObApp(VarName, TmS),
     /// List of objects or morphisms.
-    List(Rc<Vec<TmS>>),
+    List(Vec<TmS>),
     /// An opaque term.
     ///
     /// This only appears when we quote a value
@@ -272,9 +274,14 @@ impl TmS {
         Self(Rc::new(TmS_::Compose(f, g)))
     }
 
+    /// Smart constructor for [TmS], [TmS_::ObApp] case.
+    pub fn ob_app(name: VarName, x: TmS) -> Self {
+        Self(Rc::new(TmS_::ObApp(name, x)))
+    }
+
     /// Smart constructor for [TmS], [TmS_::List] case.
     pub fn list(elems: Vec<TmS>) -> Self {
-        Self(Rc::new(TmS_::List(Rc::new(elems))))
+        Self(Rc::new(TmS_::List(elems)))
     }
 
     /// An opaque term
@@ -302,6 +309,7 @@ impl ToDoc for TmS {
             })),
             TmS_::Id(ob) => (t("@id") + s() + ob.to_doc()).parens(),
             TmS_::Compose(f, g) => binop(t("·"), f.to_doc(), g.to_doc()),
+            TmS_::ObApp(name, x) => unop(t(format!("@{name}")), x.to_doc()),
             TmS_::List(elems) => tuple(elems.iter().map(|elem| elem.to_doc())),
             TmS_::Tt => t("tt"),
             TmS_::Opaque => t("<opaque>"),

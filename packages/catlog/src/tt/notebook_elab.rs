@@ -83,8 +83,8 @@ impl<'a> Elaborator<'a> {
             TmN::var(self.ctx.scope.len().into(), name, label),
             ty.clone().unwrap_or(TyV::unit()),
         );
-        let v = if let Some(ty) = &ty {
-            self.evaluator().eta(&v, ty)
+        let v = if ty.is_some() {
+            self.evaluator().eta(&v, ty.as_ref())
         } else {
             v
         };

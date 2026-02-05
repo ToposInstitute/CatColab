@@ -191,7 +191,8 @@ impl TopElaborator {
                 }
                 let (_, tm_v, ty_v) = elab.syn(n);
                 let eval = elab.evaluator();
-                Some(TopElabResult::Output(format!("{}", eval.quote_tm(&eval.eta(&tm_v, &ty_v)),)))
+                let tm_s = eval.quote_tm(&eval.eta(&tm_v, Some(&ty_v)));
+                Some(TopElabResult::Output(format!("{tm_s}")))
             }
             "chk" => {
                 let theory = self.get_theory(tn.loc)?;
@@ -305,7 +306,7 @@ impl<'a> Elaborator<'a> {
     fn syn_hole(&mut self) -> (TmS, TmV, TyV) {
         let tm_m = self.fresh_meta();
         let ty_m = self.fresh_meta();
-        (TmS::meta(tm_m), TmV::Meta(tm_m), TyV::meta(ty_m))
+        (TmS::meta(tm_m), TmV::meta(tm_m), TyV::meta(ty_m))
     }
 
     fn syn_error(&mut self, msg: impl Into<String>) -> (TmS, TmV, TyV) {
@@ -315,7 +316,7 @@ impl<'a> Elaborator<'a> {
 
     fn chk_hole(&mut self) -> (TmS, TmV) {
         let tm_m = self.fresh_meta();
-        (TmS::meta(tm_m), TmV::Meta(tm_m))
+        (TmS::meta(tm_m), TmV::meta(tm_m))
     }
 
     fn chk_error(&mut self, msg: impl Into<String>) -> (TmS, TmV) {
@@ -332,8 +333,8 @@ impl<'a> Elaborator<'a> {
             TmN::var(self.ctx.scope.len().into(), name, label),
             ty.clone().unwrap_or(TyV::unit()),
         );
-        let v = if let Some(ty) = &ty {
-            self.evaluator().eta(&v, ty)
+        let v = if ty.is_some() {
+            self.evaluator().eta(&v, ty.as_ref())
         } else {
             v
         };
@@ -567,7 +568,18 @@ impl<'a> Elaborator<'a> {
                     return elab.syn_error("can only apply @id to objects");
                 };
                 let mor_type = elab.theory().hom_type(ob_type.clone());
-                (TmS::id(ob_s), TmV::Tt, TyV::morphism(mor_type, ob_v.clone(), ob_v))
+                (TmS::id(ob_s), TmV::tt(), TyV::morphism(mor_type, ob_v.clone(), ob_v))
+            }
+            App1(L(_, Prim(name)), ob_n) => {
+                let name = name_seg(*name);
+                let Some(ob_op) = elab.theory().basic_ob_op([name].into()) else {
+                    let th_name = elab.theory.name.to_string();
+                    return elab.syn_error(format!("operation @{name} not in theory {th_name}"));
+                };
+                let dom = elab.theory().ob_op_dom(&ob_op);
+                let (arg_s, arg_v) = elab.chk(&TyV::object(dom), ob_n);
+                let cod = elab.theory().ob_op_cod(&ob_op);
+                (TmS::ob_app(name, arg_s), TmV::app(name, arg_v), TyV::object(cod))
             }
             App2(L(_, Keyword("*")), f_n, g_n) => {
                 let (f_s, _, f_ty) = elab.syn(f_n);
@@ -596,7 +608,7 @@ impl<'a> Elaborator<'a> {
                 }
                 (
                     TmS::compose(f_s, g_s),
-                    TmV::Tt,
+                    TmV::tt(),
                     TyV::morphism(
                         elab.theory().compose_types2(f_mt.clone(), g_mt.clone()).unwrap(),
                         f_dom.clone(),
@@ -627,7 +639,7 @@ impl<'a> Elaborator<'a> {
                 let eval = elab.evaluator().with_env(env.clone());
                 (TmS::topapp(tv, arg_stxs), eval.eval_tm(&d.body), eval.eval_ty(&d.ret_ty))
             }
-            Tag("tt") => (TmS::tt(), TmV::Tt, TyV::unit()),
+            Tag("tt") => (TmS::tt(), TmV::tt(), TyV::unit()),
             Tuple(_) => elab.syn_error("must check agains a type in order to construct a record"),
             Prim("hole") => elab.syn_error("explicit hole"),
             _ => elab.syn_error("unexpected notation for term"),
@@ -661,14 +673,14 @@ impl<'a> Elaborator<'a> {
                             return elab.chk_error("unexpected notation for field");
                         }
                     };
-                    let v = TmV::Cons(field_vals.clone().into());
+                    let v = TmV::cons(field_vals.clone().into());
                     let field_ty_v =
                         elab.evaluator().with_env(r.env.snoc(v.clone())).eval_ty(field_ty_s);
                     let (tm_s, tm_v) = elab.chk(&field_ty_v, tm_n);
                     field_stxs.insert(*name, (*label, tm_s));
                     field_vals.insert(*name, (*label, tm_v));
                 }
-                (TmS::cons(field_stxs.into()), TmV::Cons(field_vals.into()))
+                (TmS::cons(field_stxs.into()), TmV::cons(field_vals.into()))
             }
             (TyV_::Object(ob_type), Tuple(ob_ns)) => {
                 let Some(ob_type) = ob_type.clone().list_arg() else {
@@ -681,7 +693,7 @@ impl<'a> Elaborator<'a> {
                     elab.loc = Some(ob_n.loc());
                     let (tm_s, tm_v) = elab.chk(&elem_ty_v, ob_n);
                     elem_stxs.push(tm_s);
-                    elem_vals.push(tm_v.unwrap_ob());
+                    elem_vals.push(tm_v);
                 }
                 (TmS::list(elem_stxs), TmV::list(elem_vals))
             }

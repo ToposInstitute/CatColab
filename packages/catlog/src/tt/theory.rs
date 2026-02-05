@@ -15,8 +15,7 @@ use std::fmt;
 use std::rc::Rc;
 
 use super::prelude::*;
-use crate::dbl::model::PrintableDblModel;
-use crate::dbl::{discrete, modal, theory::DblTheory};
+use crate::dbl::{discrete, modal, model::PrintableDblModel, theory::DblTheory};
 use crate::one::QualifiedPath;
 use crate::stdlib::theories;
 use crate::zero::{QualifiedName, name};
@@ -95,6 +94,21 @@ impl TheoryDef {
         })
     }
 
+    /// Gets the basic object operation with given name, if it exists.
+    pub fn basic_ob_op(&self, name: QualifiedName) -> Option<ObOp> {
+        match self {
+            TheoryDef::Discrete(_) => None,
+            TheoryDef::Modal(th) => {
+                let op = modal::ModalObOp::generator(name);
+                if th.has_ob_op(&op) {
+                    Some(ObOp::Modal(op))
+                } else {
+                    None
+                }
+            }
+        }
+    }
+
     /// Gets the source type of a morphism type.
     pub fn src_type(&self, mor_type: &MorType) -> ObType {
         all_the_same!(match self {
@@ -128,6 +142,24 @@ impl TheoryDef {
             TheoryDef::[Discrete, Modal](th) => {
                 let path = Path::pair(mt1.try_into().unwrap(), mt2.try_into().unwrap());
                 th.compose_types(path).map(|mt| mt.into())
+            }
+        })
+    }
+
+    /// Gets the domain of an object operation.
+    pub fn ob_op_dom(&self, ob_op: &ObOp) -> ObType {
+        all_the_same!(match self {
+            TheoryDef::[Discrete, Modal](th) => {
+                th.ob_op_dom(ob_op.try_into().unwrap()).into()
+            }
+        })
+    }
+
+    /// Gets the codomain of an object operation.
+    pub fn ob_op_cod(&self, ob_op: &ObOp) -> ObType {
+        all_the_same!(match self {
+            TheoryDef::[Discrete, Modal](th) => {
+                th.ob_op_cod(ob_op.try_into().unwrap()).into()
             }
         })
     }
@@ -204,6 +236,16 @@ impl fmt::Display for MorType {
     }
 }
 
+/// Object operation in a double theory supported by DoubleTT.
+#[derive(Clone, Debug, TryInto)]
+#[try_into(owned, ref)]
+pub enum ObOp {
+    /// Object operation in a discrete theory: the identity on an object type.
+    Discrete(QualifiedName),
+    /// Object operation in a modal theory.
+    Modal(modal::ModalObOp),
+}
+
 /// Construct a library of standard theories
 pub fn std_theories() -> HashMap<QualifiedName, Theory> {
     [
@@ -211,6 +253,10 @@ pub fn std_theories() -> HashMap<QualifiedName, Theory> {
         (name("ThCategory"), TheoryDef::discrete(theories::th_category())),
         (name("ThSignedCategory"), TheoryDef::discrete(theories::th_signed_category())),
         (name("ThMulticategory"), TheoryDef::modal(theories::th_multicategory())),
+        (
+            name("ThSymMonoidalCategory"),
+            TheoryDef::modal(theories::th_sym_monoidal_category()),
+        ),
     ]
     .into_iter()
     .map(|(name, def)| (name.clone(), Theory::new(name, def)))

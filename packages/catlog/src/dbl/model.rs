@@ -176,9 +176,9 @@ pub trait MutDblModel: FgDblModel {
 /// A pretty-printable model of a double theory.
 ///
 /// One would assume that a printable model should have a printable theory, but
-/// we haven't bothered to implement pretty printing for theories. Thus, for
-/// now, we include the minimal requirements of theory printing---printing
-/// object and morphism types---as extra methods here.
+/// we haven't bothered to implement pretty printing for theories. So, for now,
+/// we include only what we need of theory pretty printer---printing object and
+/// morphism types---as extra methods here.
 ///
 /// TODO: Support pretty printing equations.
 pub trait PrintableDblModel: FgDblModel<ObGen = QualifiedName, MorGen = QualifiedName> {
