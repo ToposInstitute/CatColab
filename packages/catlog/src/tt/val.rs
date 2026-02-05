@@ -190,24 +190,16 @@ impl TmN {
     }
 }
 
-/// Values for terms in the codiscrete mode.
-///
-/// Note that this is *not* the value for a general term. So evaluating a `TmS`
-/// to produce a `TmV` and then quoting back will lose information about
-/// anything morphism-related. See [crate::tt] for more information.
-///
-/// Each of the cases for [TmV] has a single cheaply cloneable field, so we
-/// don't need to bother making an inner type `TmV_`.
-#[derive(Clone)]
-pub enum TmV {
+/// Inner enum for [TmV].
+pub enum TmV_ {
     /// Neutrals.
     ///
     /// We store the type because we need it for eta-expansion.
     Neu(TmN, TyV),
     /// Application of an object operation in the theory.
-    App(VarName, Rc<TmV>),
+    App(VarName, TmV),
     /// Lists of objects.
-    List(Rc<Vec<TmV>>),
+    List(Vec<TmV>),
     /// Records.
     Cons(Row<TmV>),
     /// The unique element of the unit type.
@@ -218,26 +210,55 @@ pub enum TmV {
     Meta(MetaVar),
 }
 
+/// Values for terms in the codiscrete mode, dereferences to [TmV_].
+///
+/// Note that this is *not* the value for a general term. So evaluating a `TmS`
+/// to produce a `TmV` and then quoting back will lose information about
+/// anything morphism-related. See [crate::tt] for more information.
+#[derive(Clone, Deref)]
+#[deref(forward)]
+pub struct TmV(Rc<TmV_>);
+
 impl TmV {
-    /// Smart constructor for neutrals.
+    /// Smart constructor for [TmV], [TmV_::Neu] case.
     pub fn neu(n: TmN, ty: TyV) -> Self {
-        TmV::Neu(n, ty)
+        TmV(Rc::new(TmV_::Neu(n, ty)))
     }
 
-    /// Smart constructor for applications of object operations.
+    /// Smart constructor for [TmV], [TmV_::App] case.
     pub fn app(name: VarName, x: TmV) -> Self {
-        TmV::App(name, Rc::new(x))
+        TmV(Rc::new(TmV_::App(name, x)))
     }
 
-    /// Smart constructor for lists.
+    /// Smart constructor for [TmV], [TmV_::List] case.
     pub fn list(elems: Vec<TmV>) -> Self {
-        TmV::List(Rc::new(elems))
+        TmV(Rc::new(TmV_::List(elems)))
+    }
+
+    /// Smart constructor for [TmV], [TmV_::Cons] case.
+    pub fn cons(fields: Row<TmV>) -> Self {
+        TmV(Rc::new(TmV_::Cons(fields)))
+    }
+
+    /// Smart constructor for [TmV], [TmV_::Tt] case.
+    pub fn tt() -> Self {
+        TmV(Rc::new(TmV_::Tt))
+    }
+
+    /// Smart constructor for [TmV], [TmV_::Opaque] case.
+    pub fn opaque() -> Self {
+        TmV(Rc::new(TmV_::Opaque))
+    }
+
+    /// Smart constructor for [TmV], [TmV_::Meta] case.
+    pub fn meta(mv: MetaVar) -> Self {
+        TmV(Rc::new(TmV_::Meta(mv)))
     }
 
     /// Unwraps a neutral term, or panics.
     pub fn unwrap_neu(&self) -> TmN {
-        match self {
-            TmV::Neu(n, _) => n.clone(),
+        match &**self {
+            TmV_::Neu(n, _) => n.clone(),
             _ => panic!("expected term to be a neutral"),
         }
     }

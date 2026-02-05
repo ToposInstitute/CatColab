@@ -126,7 +126,7 @@
 //! type dependency appears only for morphism types (which depend on a pair of
 //! objects). This means that in the conversion checking apparatus, we don’t
 //! need to keep track of the values of morphisms; we represent any morphism as
-//! [`TmV::Opaque`]. Therefore, we don’t need to worry about equality checking
+//! [`TmV_::Opaque`]. Therefore, we don’t need to worry about equality checking
 //! with respect to any morphism equalities which we might want to impose.
 //!
 //! # Specialization

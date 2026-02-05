@@ -214,7 +214,7 @@ pub enum TmS_ {
     /// Application of an object operation in the theory.
     ObApp(VarName, TmS),
     /// List of objects or morphisms.
-    List(Rc<Vec<TmS>>),
+    List(Vec<TmS>),
     /// An opaque term.
     ///
     /// This only appears when we quote a value
@@ -281,7 +281,7 @@ impl TmS {
 
     /// Smart constructor for [TmS], [TmS_::List] case.
     pub fn list(elems: Vec<TmS>) -> Self {
-        Self(Rc::new(TmS_::List(Rc::new(elems))))
+        Self(Rc::new(TmS_::List(elems)))
     }
 
     /// An opaque term

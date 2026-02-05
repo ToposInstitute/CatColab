@@ -115,8 +115,8 @@ impl Model {
 
     /// Attempts to make an object from a term.
     fn make_ob(&self, val: &TmV, ob_type: &ObType) -> Option<Ob> {
-        match val {
-            TmV::Neu(n, _) => {
+        match &**val {
+            TmV_::Neu(n, _) => {
                 let mut segments = Vec::new();
                 let mut n = n.clone();
                 while let TmN_::Proj(n1, f, _) = &*n.clone() {
@@ -126,8 +126,8 @@ impl Model {
                 segments.reverse();
                 Some(self.ob_generator(segments.into()))
             }
-            TmV::App(name, tm_v) => self.ob_app([*name].into(), tm_v),
-            TmV::List(elems) => {
+            TmV_::App(name, tm_v) => self.ob_app([*name].into(), tm_v),
+            TmV_::List(elems) => {
                 let el_type = ob_type.clone().list_arg().unwrap();
                 let elems: Option<Vec<_>> =
                     elems.iter().map(|tm| self.make_ob(tm, &el_type)).collect();
