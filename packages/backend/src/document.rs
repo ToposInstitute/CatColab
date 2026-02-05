@@ -255,6 +255,7 @@ pub struct RefContent {
 /// A subset of user relevant information about a ref. Used for showing users
 /// information on a variety of refs without having to load whole refs.
 #[qubit::ts]
+#[cfg_attr(feature = "proptest", derive(Eq, PartialEq))]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RefStub {
     pub name: String,
@@ -268,6 +269,42 @@ pub struct RefStub {
     pub owner: Option<UserSummary>,
     #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
+}
+
+#[cfg(feature = "proptest")]
+pub mod arbitrary {
+    use super::*;
+    use chrono::TimeZone;
+    use proptest::{arbitrary::Arbitrary, prelude::*};
+    use proptest_arbitrary_interop::arb;
+
+    impl Arbitrary for RefStub {
+        type Parameters = ();
+        type Strategy = BoxedStrategy<Self>;
+
+        fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+            (
+                any::<String>(),
+                any::<String>(),
+                arb::<Uuid>(),
+                any::<PermissionLevel>(),
+                prop::option::of(any::<UserSummary>()),
+                any::<i64>(),
+            )
+                .prop_map(|(name, type_name, ref_id, permission_level, owner, seconds)| RefStub {
+                    name,
+                    type_name,
+                    ref_id,
+                    permission_level,
+                    owner,
+                    created_at: Utc
+                        .timestamp_opt(seconds, 0)
+                        .single()
+                        .unwrap_or_else(|| Utc.timestamp_opt(0, 0).single().unwrap()),
+                })
+                .boxed()
+        }
+    }
 }
 
 /// Parameters for filtering a search of refs
@@ -290,16 +327,27 @@ pub struct RefQueryParams {
 }
 
 /// Searches for `RefStub`s that the current user has permission to access,
-/// returning lightweight metadata about each matching ref
-pub async fn search_ref_stubs(
+/// returning lightweight metadata about each matching ref.
+///
+/// This is a wrapper around [`search_ref_stubs`]
+pub async fn run_search_ref_stubs(
     ctx: AppCtx,
     search_params: RefQueryParams,
 ) -> Result<Paginated<RefStub>, AppError> {
-    let searcher_id = ctx.user.as_ref().map(|user| user.user_id.clone());
+    let user_id = ctx.user.as_ref().map(|user| user.user_id.clone());
+    search_ref_stubs(user_id, &ctx.state.db, search_params).await
+}
 
+/// Searches for `RefStub`s that the given user has permission to access,
+/// returning lightweight metadata about each matching ref.
+pub async fn search_ref_stubs(
+    user_id: Option<String>,
+    db: &sqlx::PgPool,
+    search_params: RefQueryParams,
+) -> Result<Paginated<RefStub>, AppError> {
     let min_level = search_params.searcher_min_level.unwrap_or(PermissionLevel::Read);
 
-    let limit = search_params.limit.unwrap_or(100);
+    let limit = search_params.limit;
     let offset = search_params.offset.unwrap_or(0);
 
     let results = sqlx::query!(
@@ -383,7 +431,7 @@ pub async fn search_ref_stubs(
         FROM stubs
         CROSS JOIN total;
         "#,
-        searcher_id,
+        user_id,
         search_params.owner_username_query,
         search_params.ref_name_query,
         min_level as PermissionLevel,
@@ -392,7 +440,7 @@ pub async fn search_ref_stubs(
         offset,
         search_params.only_deleted.unwrap_or(false),
     )
-    .fetch_all(&ctx.state.db)
+    .fetch_all(db)
     .await?;
 
     let total = results.first().and_then(|r| r.total_count).unwrap_or(0);
