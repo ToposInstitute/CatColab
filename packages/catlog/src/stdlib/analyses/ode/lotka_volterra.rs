@@ -14,7 +14,7 @@ use tsify::Tsify;
 
 use super::{ODEAnalysis, SignedCoefficientBuilder};
 use crate::dbl::model::DiscreteDblModel;
-use crate::simulate::ode::{LotkaVolterraSystem, NumericalPolynomialSystem, ODEProblem};
+use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, lotka_volterra_system};
 use crate::{one::QualifiedPath, zero::QualifiedName};
 
 /// Data defining a Lotka-Volterra ODE problem for a model.
@@ -64,8 +64,7 @@ impl SignedCoefficientBuilder<QualifiedName, QualifiedPath> {
             .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
         let x0 = DVector::from_iterator(n, initial_values);
 
-        let system = LotkaVolterraSystem::new(matrix, b).to_polynomial();
-        let problem = ODEProblem::new(system, x0).end_time(data.duration);
+        let problem = ODEProblem::new(lotka_volterra_system(matrix, b), x0).end_time(data.duration);
         ODEAnalysis::new(problem, ob_index)
     }
 }
