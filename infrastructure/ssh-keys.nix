@@ -1,0 +1,38 @@
+let
+  allUserKeys = {
+    owen = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIF2sBTuqGoEXRWpBRqTBwZZPDdLGGJ0GQcuX5dfIZKb4 o@red-special";
+    epatters = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAKXx6wMJSeYKCHNmbyR803RQ72uto9uYsHhAPPWNl2D evan@epatters.org";
+    jmoggr = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMiaHaeJ5PQL0mka/lY1yGXIs/bDK85uY1O3mLySnwHd j@jmoggr.com";
+    kasbah = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM1K/FB6dCjo1/xfddi9VoHEGchFo/bcz6v7SC7wAuFQ kaspar@topos";
+    catcolab-next-deployuser = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM7AYg1fZM0zMxb/BuZTSwK4O3ycUIHruApr1tKoO8nJ deployuser@next.catcolab.org";
+  };
+
+  # hostKey comes frome the /etc/ssh/ssh_host_ed25519_key.pub file on each host after the host is first
+  # provisioned
+  hosts = {
+    catcolab = rec {
+      hostKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPyxORhhfO+9F2hQZ3I/EiSpfg+caWpG6c8AuG5u1XtK root@ip-172-31-14-38.us-east-2.compute.internal";
+      userKeys = with allUserKeys; [
+        epatters
+        jmoggr
+        kasbah
+      ];
+      allKeys = [ hostKey ] ++ userKeys;
+    };
+    catcolab-next = rec {
+      hostKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJEyUzs+ymd6YFKnPTi6cfoWuNI/fhBGgcx0YELTzWJI root@ip-172-31-9-115.us-east-2.compute.internal";
+      userKeys = with allUserKeys; [
+        owen
+        epatters
+        jmoggr
+        kasbah
+        catcolab-next-deployuser
+      ];
+      allKeys = [ hostKey ] ++ userKeys;
+    };
+  };
+in
+{
+  inherit hosts;
+  allUserKeys = builtins.attrValues allUserKeys;
+}

@@ -6,6 +6,9 @@
   self,
   ...
 }:
+let
+  keys = import ../../ssh-keys.nix;
+in
 {
   imports = [
     (modulesPath + "/profiles/qemu-guest.nix")
@@ -30,10 +33,7 @@
     environmentFile = /etc/catcolab/catcolab-secrets.env;
     host = {
       enable = true;
-      userKeys = [
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMiaHaeJ5PQL0mka/lY1yGXIs/bDK85uY1O3mLySnwHd j@jmoggr.com"
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM1K/FB6dCjo1/xfddi9VoHEGchFo/bcz6v7SC7wAuFQ kaspar@topos"
-      ];
+      userKeys = keys.allUserKeys;
     };
   };
 
