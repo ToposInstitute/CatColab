@@ -2,6 +2,8 @@
 
 use nalgebra::{DMatrix, DVector};
 
+use crate::{simulate::ode::NumericalPolynomialSystem, zero::alg::Polynomial};
+
 #[cfg(test)]
 use super::ODEProblem;
 use super::ODESystem;
@@ -20,6 +22,22 @@ impl LinearODESystem {
     pub fn new(A: DMatrix<f32>) -> Self {
         Self { coefficients: A }
     }
+
+    /// Converts to a numerical polynomial system.
+    pub fn to_polynomial(self) -> NumericalPolynomialSystem<u8> {
+        NumericalPolynomialSystem {
+            components: self
+                .coefficients
+                .row_iter()
+                .map(|row| {
+                    row.iter()
+                        .enumerate()
+                        .map(|(j, a)| Polynomial::generator(j) * *a)
+                        .sum::<Polynomial<_, _, _>>()
+                })
+                .collect(),
+        }
+    }
 }
 
 impl ODESystem for LinearODESystem {
@@ -30,13 +48,13 @@ impl ODESystem for LinearODESystem {
 }
 
 #[cfg(test)]
-pub(crate) fn create_neg_loops_pos_connector() -> ODEProblem<LinearODESystem> {
+pub(crate) fn create_neg_loops_pos_connector() -> ODEProblem<NumericalPolynomialSystem<u8>> {
     use nalgebra::{dmatrix, dvector};
 
     let A = dmatrix![-0.3,  0.0,  0.0;
                       0.0,  0.0,  0.5;
                       1.0, -2.0,  0.0];
-    let system = LinearODESystem::new(A);
+    let system = LinearODESystem::new(A).to_polynomial();
     let initial = dvector![2.0, 1.0, 1.0];
     ODEProblem::new(system, initial).end_time(10.0)
 }
