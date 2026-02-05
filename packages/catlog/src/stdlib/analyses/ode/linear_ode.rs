@@ -14,7 +14,7 @@ use tsify::Tsify;
 
 use super::{ODEAnalysis, SignedCoefficientBuilder};
 use crate::dbl::model::DiscreteDblModel;
-use crate::simulate::ode::{LinearODESystem, NumericalPolynomialSystem, ODEProblem};
+use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, linear_polynomial_system};
 use crate::{one::QualifiedPath, zero::QualifiedName};
 
 /// Data defining a linear ODE problem for a model.
@@ -56,7 +56,7 @@ impl SignedCoefficientBuilder<QualifiedName, QualifiedPath> {
             .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
         let x0 = DVector::from_iterator(n, initial_values);
 
-        let system = LinearODESystem::new(matrix).to_polynomial();
+        let system = linear_polynomial_system(matrix);
         let problem = ODEProblem::new(system, x0).end_time(data.duration);
         ODEAnalysis::new(problem, ob_index)
     }

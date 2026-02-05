@@ -1,49 +1,27 @@
 //! Constant-coefficient linear first-order differential equations.
 
-use nalgebra::{DMatrix, DVector};
+use nalgebra::DMatrix;
 
 use crate::{simulate::ode::NumericalPolynomialSystem, zero::alg::Polynomial};
 
 #[cfg(test)]
 use super::ODEProblem;
-use super::ODESystem;
 
-/// A (constant-coefficient) linear (first-order) dynamical system.
+/// Construct a (constant-coefficient) linear (first-order) dynamical system.
 ///
 /// A system of linear first-order ODEs with constant coefficients; a semantics for
 /// causal loop diagrams.
-#[derive(Clone, Debug, PartialEq)]
-pub struct LinearODESystem {
-    coefficients: DMatrix<f32>,
-}
-
-impl LinearODESystem {
-    /// Constructs a linear ODE system with the given coefficient matrix.
-    pub fn new(A: DMatrix<f32>) -> Self {
-        Self { coefficients: A }
-    }
-
-    /// Converts to a numerical polynomial system.
-    pub fn to_polynomial(self) -> NumericalPolynomialSystem<u8> {
-        NumericalPolynomialSystem {
-            components: self
-                .coefficients
-                .row_iter()
-                .map(|row| {
-                    row.iter()
-                        .enumerate()
-                        .map(|(j, a)| Polynomial::generator(j) * *a)
-                        .sum::<Polynomial<_, _, _>>()
-                })
-                .collect(),
-        }
-    }
-}
-
-impl ODESystem for LinearODESystem {
-    fn vector_field(&self, dx: &mut DVector<f32>, x: &DVector<f32>, _t: f32) {
-        let A = &self.coefficients;
-        *dx = A * x
+pub fn linear_polynomial_system(coefficients: DMatrix<f32>) -> NumericalPolynomialSystem<u8> {
+    NumericalPolynomialSystem {
+        components: coefficients
+            .row_iter()
+            .map(|row| {
+                row.iter()
+                    .enumerate()
+                    .map(|(j, a)| Polynomial::generator(j) * *a)
+                    .sum::<Polynomial<_, _, _>>()
+            })
+            .collect(),
     }
 }
 
@@ -54,9 +32,8 @@ pub(crate) fn create_neg_loops_pos_connector() -> ODEProblem<NumericalPolynomial
     let A = dmatrix![-0.3,  0.0,  0.0;
                       0.0,  0.0,  0.5;
                       1.0, -2.0,  0.0];
-    let system = LinearODESystem::new(A).to_polynomial();
     let initial = dvector![2.0, 1.0, 1.0];
-    ODEProblem::new(system, initial).end_time(10.0)
+    ODEProblem::new(linear_polynomial_system(A), initial).end_time(10.0)
 }
 
 #[cfg(test)]
