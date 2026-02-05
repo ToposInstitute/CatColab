@@ -4,7 +4,7 @@ use fnotation::*;
 use scopeguard::{ScopeGuard, guard};
 use std::fmt::Write;
 
-use fnotation::{parser::Prec, ParseConfig};
+use fnotation::{ParseConfig, parser::Prec};
 use tattle::declare_error;
 
 use super::{context::*, eval::*, modelgen::*, prelude::*, stx::*, theory::*, toplevel::*, val::*};

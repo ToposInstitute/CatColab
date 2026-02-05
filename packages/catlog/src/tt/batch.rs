@@ -9,7 +9,7 @@ use std::{fs, io};
 use fnotation::FNtnTop;
 use scopeguard::guard;
 use tattle::display::SourceInfo;
-use tattle::{declare_error, Reporter};
+use tattle::{Reporter, declare_error};
 
 use super::{text_elab::*, theory::std_theories, toplevel::*};
 use crate::zero::NameSegment;

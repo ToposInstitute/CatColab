@@ -234,47 +234,21 @@ impl fmt::Display for SqlBackend {
 mod tests {
 
     use super::*;
-    use crate::dbl::theory::DiscreteDblTheory;
-    use crate::stdlib::th_schema;
-    use crate::tt::{
-        batch::PARSE_CONFIG, modelgen::generate, text_elab::Elaborator, toplevel::theory::*,
-    };
-    use crate::zero::Namespace;
+    use crate::{stdlib::th_schema, tt, zero::Namespace};
     use std::rc::Rc;
-    use tattle::Reporter;
-
-    impl DiscreteDblModel {
-        /// Make a model of the theory of schema from a string
-        fn parse(th_: Rc<DiscreteDblTheory>, s: &str) -> DiscreteDblModel {
-            let th = Theory::new("".into(), th_.clone());
-
-            let reporter = Reporter::new();
-            let toplevel = Toplevel::new(std_theories());
-
-            if let Some(model) = PARSE_CONFIG.with_parsed(s, reporter.clone(), |n| {
-                let mut elaborator = Elaborator::new(th.clone(), reporter.clone(), &toplevel);
-                let (_, ty_v) = elaborator.ty(n);
-                let (model, _) = generate(&toplevel, &th, &ty_v);
-                Some(model)
-            }) {
-                model
-            } else {
-                DiscreteDblModel::new(th_)
-            }
-        }
-    }
 
     #[test]
     fn sql() {
-        let model = DiscreteDblModel::parse(
-            Rc::new(th_schema()),
+        let th = Rc::new(th_schema());
+        let model = tt::modelgen::parse_and_generate(
             "[
                 Person : Entity,
                 Dog : Entity,
-                walks : (Id Entity)[Person, Dog],
+                walks : (Hom Entity)[Person, Dog],
                 Hair : AttrType,
-                has : (Attr)[Person, Hair],
+                has : Attr[Person, Hair],
             ]",
+            &th.into(),
         );
 
         let raw_creates = [
@@ -284,13 +258,16 @@ mod tests {
 
         let obns = Namespace::new_for_text();
         let morns = Namespace::new_for_text();
-        let ddl = SQLAnalysis::new(SqlBackend::MySQL).render(
-            &model,
-            |id| obns.label(&id).unwrap_or(QualifiedLabel::single("".into())),
-            |id| morns.label(&id).unwrap_or(QualifiedLabel::single("".into())),
-        );
 
-        // TODO Hash is nondeterministic
-        assert_eq!(ddl, raw_creates.join(";\n\n") + ";");
+        if let Some(m) = &model.and_then(|m| m.as_discrete()) {
+            let ddl = SQLAnalysis::new(SqlBackend::MySQL).render(
+                m,
+                |id| obns.label(id).unwrap_or(QualifiedLabel::single("".into())),
+                |id| morns.label(id).unwrap_or(QualifiedLabel::single("".into())),
+            );
+
+            // TODO Hash is nondeterministic
+            assert_eq!(ddl, raw_creates.join(";\n\n") + ";");
+        }
     }
 }
