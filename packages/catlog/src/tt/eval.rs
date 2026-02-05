@@ -81,10 +81,8 @@ impl<'a> Evaluator<'a> {
             TmS_::Tt => TmV::Tt,
             TmS_::Id(_) => TmV::Opaque,
             TmS_::Compose(_, _) => TmV::Opaque,
-            TmS_::ObApp(name, x) => TmV::app(*name, self.eval_tm(x).unwrap_ob()),
-            TmS_::List(elems) => {
-                TmV::list(elems.iter().map(|tm| self.eval_tm(tm).unwrap_ob()).collect())
-            }
+            TmS_::ObApp(name, x) => TmV::app(*name, self.eval_tm(x)),
+            TmS_::List(elems) => TmV::list(elems.iter().map(|tm| self.eval_tm(tm)).collect()),
             TmS_::Opaque => TmV::Opaque,
             TmS_::Meta(mv) => TmV::Meta(*mv),
         }
@@ -93,7 +91,7 @@ impl<'a> Evaluator<'a> {
     /// Compute the projection of a field from a term value
     pub fn proj(&self, tm: &TmV, field_name: FieldName, field_label: LabelSegment) -> TmV {
         match tm {
-            TmV::Ob(ObTmV::Neu(n, ty)) => TmV::neu(
+            TmV::Neu(n, ty) => TmV::neu(
                 TmN::proj(n.clone(), field_name, field_label),
                 self.field_ty(ty, tm, field_name),
             ),
@@ -196,21 +194,14 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    /// Produce term syntax from an object term.
-    fn quote_ob(&self, tm: &ObTmV) -> TmS {
-        match tm {
-            ObTmV::Neu(n, _) => self.quote_neu(n),
-            ObTmV::App(name, x) => TmS::ob_app(*name, self.quote_ob(x)),
-            ObTmV::List(elems) => TmS::list(elems.iter().map(|ob| self.quote_ob(ob)).collect()),
-        }
-    }
-
     /// Produce term syntax from a term value.
     ///
     /// The documentation for [Evaluator::quote_ty] is also applicable here.
     pub fn quote_tm(&self, tm: &TmV) -> TmS {
         match tm {
-            TmV::Ob(ob) => self.quote_ob(ob),
+            TmV::Neu(n, _) => self.quote_neu(n),
+            TmV::App(name, x) => TmS::ob_app(*name, self.quote_tm(x)),
+            TmV::List(elems) => TmS::list(elems.iter().map(|tm| self.quote_tm(tm)).collect()),
             TmV::Cons(fields) => TmS::cons(fields.map(|tm| self.quote_tm(tm))),
             TmV::Tt => TmS::tt(),
             TmV::Opaque => TmS::opaque(),
@@ -318,28 +309,25 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    /// Performs eta-expansion of an object term value at type `ty`.
-    fn eta_ob(&self, ob: &ObTmV) -> TmV {
-        match ob {
-            ObTmV::Neu(tm_n, ty_v) => self.eta_neu(tm_n, ty_v),
-            ObTmV::App(name, ob) => TmV::app(*name, self.eta_ob(ob).unwrap_ob()),
-            ObTmV::List(elems) => {
-                TmV::list(elems.iter().map(|elem| self.eta_ob(elem).unwrap_ob()).collect())
-            }
-        }
-    }
-
     /// Performs eta-expansion of the term `n` at type `ty`
-    pub fn eta(&self, v: &TmV, ty: &TyV) -> TmV {
+    pub fn eta(&self, v: &TmV, ty: Option<&TyV>) -> TmV {
         match v {
-            TmV::Ob(ob) => self.eta_ob(ob),
-            TmV::Cons(row) => TmV::Cons(
-                row.iter()
-                    .map(|(name, (label, field_v))| {
-                        (*name, (*label, self.eta(field_v, &self.field_ty(ty, v, *name))))
-                    })
-                    .collect(),
-            ),
+            TmV::Neu(tm_n, ty_v) => self.eta_neu(tm_n, ty_v),
+            TmV::App(name, x) => TmV::app(*name, self.eta(x, None)),
+            TmV::List(elems) => TmV::list(elems.iter().map(|elem| self.eta(elem, None)).collect()),
+            TmV::Cons(row) => {
+                if let Some(ty) = ty {
+                    let row = row
+                        .iter()
+                        .map(|(name, (label, field_v))| {
+                            (*name, (*label, self.eta(field_v, Some(&self.field_ty(ty, v, *name)))))
+                        })
+                        .collect();
+                    TmV::Cons(row)
+                } else {
+                    v.clone()
+                }
+            }
             TmV::Tt => TmV::Tt,
             TmV::Opaque => TmV::Opaque,
             TmV::Meta(_) => v.clone(),
@@ -369,13 +357,13 @@ impl<'a> Evaluator<'a> {
         strict2: bool,
     ) -> Result<(), D<'b>> {
         match (tm1, tm2) {
-            (TmV::Ob(ObTmV::Neu(n1, ty1)), _) if !strict1 => {
+            (TmV::Neu(n1, ty1), _) if !strict1 => {
                 self.equal_tm_helper(&self.eta_neu(n1, ty1), tm2, true, strict2)
             }
-            (_, TmV::Ob(ObTmV::Neu(n2, ty2))) if !strict2 => {
+            (_, TmV::Neu(n2, ty2)) if !strict2 => {
                 self.equal_tm_helper(tm1, &self.eta_neu(n2, ty2), strict1, true)
             }
-            (TmV::Ob(ObTmV::Neu(n1, _)), TmV::Ob(ObTmV::Neu(n2, _))) => {
+            (TmV::Neu(n1, _), TmV::Neu(n2, _)) => {
                 if n1 == n2 {
                     Ok(())
                 } else {

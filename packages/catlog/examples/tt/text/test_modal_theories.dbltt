@@ -35,3 +35,9 @@ type SIRV := [
 ]
 
 generate SIRV
+
+#(should_fail)
+type BadOpApp := [
+   X : Object,
+   f : (Hom Object)[@tensor X, X],
+]

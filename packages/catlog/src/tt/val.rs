@@ -190,38 +190,6 @@ impl TmN {
     }
 }
 
-/// Values for terms of object type.
-///
-/// These are terms that can be potentially extracted to an object in a model.
-/// That is not possible for a generic [`TmV`]. This way of structuring values
-/// also ensures that it is impossible to construct, say, a list of records;
-/// only lists of objects are allowed.
-///
-/// TODO: Make `Rc`s uniform using inner enum.
-#[derive(Clone)]
-pub enum ObTmV {
-    /// Neutrals.
-    ///
-    /// We store the type because we need it for eta-expansion.
-    Neu(TmN, TyV),
-    /// Application of an object operation in the theory.
-    App(VarName, Rc<ObTmV>),
-    /// Lists of objects.
-    List(Rc<Vec<ObTmV>>),
-}
-
-impl ObTmV {
-    /// Smart constructor of applications of object operations.
-    pub fn app(name: VarName, x: ObTmV) -> Self {
-        ObTmV::App(name, Rc::new(x))
-    }
-
-    /// Smart constructor for lists.
-    pub fn list(elems: Vec<ObTmV>) -> Self {
-        ObTmV::List(Rc::new(elems))
-    }
-}
-
 /// Values for terms in the codiscrete mode.
 ///
 /// Note that this is *not* the value for a general term. So evaluating a `TmS`
@@ -232,8 +200,14 @@ impl ObTmV {
 /// don't need to bother making an inner type `TmV_`.
 #[derive(Clone)]
 pub enum TmV {
-    /// Object terms.
-    Ob(ObTmV),
+    /// Neutrals.
+    ///
+    /// We store the type because we need it for eta-expansion.
+    Neu(TmN, TyV),
+    /// Application of an object operation in the theory.
+    App(VarName, Rc<TmV>),
+    /// Lists of objects.
+    List(Rc<Vec<TmV>>),
     /// Records.
     Cons(Row<TmV>),
     /// The unique element of the unit type.
@@ -247,31 +221,23 @@ pub enum TmV {
 impl TmV {
     /// Smart constructor for neutrals.
     pub fn neu(n: TmN, ty: TyV) -> Self {
-        TmV::Ob(ObTmV::Neu(n, ty))
+        TmV::Neu(n, ty)
     }
 
     /// Smart constructor for applications of object operations.
-    pub fn app(name: VarName, x: ObTmV) -> Self {
-        TmV::Ob(ObTmV::app(name, x))
+    pub fn app(name: VarName, x: TmV) -> Self {
+        TmV::App(name, Rc::new(x))
     }
 
     /// Smart constructor for lists.
-    pub fn list(elems: Vec<ObTmV>) -> Self {
-        TmV::Ob(ObTmV::list(elems))
-    }
-
-    /// Unwraps an object term, or panics.
-    pub fn unwrap_ob(&self) -> ObTmV {
-        match self {
-            TmV::Ob(ob) => ob.clone(),
-            _ => panic!("expected term to be an object"),
-        }
+    pub fn list(elems: Vec<TmV>) -> Self {
+        TmV::List(Rc::new(elems))
     }
 
     /// Unwraps a neutral term, or panics.
     pub fn unwrap_neu(&self) -> TmN {
         match self {
-            TmV::Ob(ObTmV::Neu(n, _)) => n.clone(),
+            TmV::Neu(n, _) => n.clone(),
             _ => panic!("expected term to be a neutral"),
         }
     }

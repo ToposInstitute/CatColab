@@ -60,13 +60,13 @@ impl Model {
     }
 
     /// Constructs an application of an object operation, if possible.
-    fn ob_app(&self, name: QualifiedName, ob_v: &ObTmV) -> Option<Ob> {
+    fn ob_app(&self, name: QualifiedName, tm_v: &TmV) -> Option<Ob> {
         match self {
             Model::Discrete(_) => None,
             Model::Modal(model) => {
                 let theory = model.theory();
                 let op = modal::ModalObOp::generator(name.clone());
-                let ob = self.make_ob(ob_v, &theory.ob_op_dom(&op).into());
+                let ob = self.make_ob(tm_v, &theory.ob_op_dom(&op).into())?;
                 let ob = ob.try_into().unwrap();
                 Some(Ob::Modal(modal::ModalOb::App(Box::new(ob), name)))
             }
@@ -80,7 +80,7 @@ impl Model {
             Model::Modal(_) => {
                 let ob_type: &modal::ModalObType = ob_type.try_into().unwrap();
                 let Some(modal::Modality::List(list_type)) = ob_type.modalities.last() else {
-                    panic!("Object type should be an application of a list modality");
+                    return None;
                 };
                 Some(Ob::Modal(modal::ModalOb::List(
                     *list_type,
@@ -113,18 +113,10 @@ impl Model {
         });
     }
 
-    /// Tries to make an object from a term.
-    fn maybe_make_ob(&self, val: &TmV, ob_type: &ObType) -> Option<Ob> {
+    /// Attempts to make an object from a term.
+    fn make_ob(&self, val: &TmV, ob_type: &ObType) -> Option<Ob> {
         match val {
-            TmV::Ob(ob) => Some(self.make_ob(ob, ob_type)),
-            _ => None,
-        }
-    }
-
-    /// Makes an object from an object term.
-    fn make_ob(&self, val: &ObTmV, ob_type: &ObType) -> Ob {
-        match val {
-            ObTmV::Neu(n, _) => {
+            TmV::Neu(n, _) => {
                 let mut segments = Vec::new();
                 let mut n = n.clone();
                 while let TmN_::Proj(n1, f, _) = &*n.clone() {
@@ -132,16 +124,16 @@ impl Model {
                     segments.push(*f);
                 }
                 segments.reverse();
-                self.ob_generator(segments.into())
+                Some(self.ob_generator(segments.into()))
             }
-            ObTmV::App(name, ob_v) => {
-                self.ob_app([*name].into(), ob_v).expect("theory should support operations")
-            }
-            ObTmV::List(elems) => {
+            TmV::App(name, tm_v) => self.ob_app([*name].into(), tm_v),
+            TmV::List(elems) => {
                 let el_type = ob_type.clone().list_arg().unwrap();
-                self.ob_list(elems.iter().map(|tm| self.make_ob(tm, &el_type)).collect(), ob_type)
-                    .expect("theory should support lists")
+                let elems: Option<Vec<_>> =
+                    elems.iter().map(|tm| self.make_ob(tm, &el_type)).collect();
+                self.ob_list(elems?, ob_type)
             }
+            _ => None,
         }
     }
 
@@ -217,8 +209,8 @@ impl<'a> ModelGenerator<'a> {
                 None
             }
             TyV_::Morphism(mt, dom, cod) => {
-                let dom = self.model.maybe_make_ob(dom, &self.theory.src_type(mt))?;
-                let cod = self.model.maybe_make_ob(cod, &self.theory.tgt_type(mt))?;
+                let dom = self.model.make_ob(dom, &self.theory.src_type(mt))?;
+                let cod = self.model.make_ob(cod, &self.theory.tgt_type(mt))?;
                 self.model.add_mor(prefix.into(), dom, cod, mt.clone());
                 None
             }

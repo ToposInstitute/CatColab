@@ -66,3 +66,16 @@ generate SIRV
 #/ Unvax.recover : Unvax.I -> Unvax.R : Hom Object
 #/ vaccinate : Unvax.S -> V : Hom Object
 
+#(should_fail)
+type BadOpApp := [
+   X : Object,
+   f : (Hom Object)[@tensor X, X],
+]
+#/ declared: BadOpApp
+#/ expected errors:
+#/ error[elab]: synthesized type Object does not match expected type List.Symmetric Object:
+#/ object types Object and List.Symmetric Object are not equal
+#/ --> examples/tt/text/test_modal_theories.dbltt:42:29
+#/ 42|    f : (Hom Object)[@tensor X, X],
+#/ 42|                             ^
+

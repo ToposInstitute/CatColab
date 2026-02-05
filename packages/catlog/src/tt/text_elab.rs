@@ -191,7 +191,8 @@ impl TopElaborator {
                 }
                 let (_, tm_v, ty_v) = elab.syn(n);
                 let eval = elab.evaluator();
-                Some(TopElabResult::Output(format!("{}", eval.quote_tm(&eval.eta(&tm_v, &ty_v)),)))
+                let tm_s = eval.quote_tm(&eval.eta(&tm_v, Some(&ty_v)));
+                Some(TopElabResult::Output(format!("{tm_s}")))
             }
             "chk" => {
                 let theory = self.get_theory(tn.loc)?;
@@ -332,8 +333,8 @@ impl<'a> Elaborator<'a> {
             TmN::var(self.ctx.scope.len().into(), name, label),
             ty.clone().unwrap_or(TyV::unit()),
         );
-        let v = if let Some(ty) = &ty {
-            self.evaluator().eta(&v, ty)
+        let v = if ty.is_some() {
+            self.evaluator().eta(&v, ty.as_ref())
         } else {
             v
         };
@@ -578,7 +579,7 @@ impl<'a> Elaborator<'a> {
                 let dom = elab.theory().ob_op_dom(&ob_op);
                 let (arg_s, arg_v) = elab.chk(&TyV::object(dom), ob_n);
                 let cod = elab.theory().ob_op_cod(&ob_op);
-                (TmS::ob_app(name, arg_s), TmV::app(name, arg_v.unwrap_ob()), TyV::object(cod))
+                (TmS::ob_app(name, arg_s), TmV::app(name, arg_v), TyV::object(cod))
             }
             App2(L(_, Keyword("*")), f_n, g_n) => {
                 let (f_s, _, f_ty) = elab.syn(f_n);
@@ -692,7 +693,7 @@ impl<'a> Elaborator<'a> {
                     elab.loc = Some(ob_n.loc());
                     let (tm_s, tm_v) = elab.chk(&elem_ty_v, ob_n);
                     elem_stxs.push(tm_s);
-                    elem_vals.push(tm_v.unwrap_ob());
+                    elem_vals.push(tm_v);
                 }
                 (TmS::list(elem_stxs), TmV::list(elem_vals))
             }
