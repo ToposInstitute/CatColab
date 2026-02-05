@@ -1,8 +1,9 @@
 mod rpc_tests {
+    use autosurgeon::hydrate;
     use backend::app::{AppCtx, AppError, AppState};
     use backend::auth::{NewPermissions, PermissionLevel};
     use backend::document;
-    use backend::user_state::{UserState, automerge_to_user_state, user_state_to_automerge};
+    use backend::user_state::UserState;
     use backend::user_state_subscription::run_user_state_subscription;
     use firebase_auth::FirebaseUser;
     use serde_json::json;
@@ -34,6 +35,17 @@ mod rpc_tests {
             active_listeners: Arc::new(RwLock::new(HashSet::new())),
             user_states: Arc::new(RwLock::new(HashMap::new())),
         }
+    }
+
+    /// Helper to read user state from samod using the stored document ID
+    async fn read_user_state_from_samod(state: &AppState, user_id: &str) -> Option<UserState> {
+        let doc_id = {
+            let states = state.user_states.read().await;
+            states.get(user_id).cloned()
+        }?;
+
+        let doc_handle = state.repo.find(doc_id).await.ok()??;
+        doc_handle.with_document(|doc| hydrate(doc).ok())
     }
 
     fn create_test_firebase_user(user_id: &str) -> FirebaseUser {
@@ -111,13 +123,7 @@ mod rpc_tests {
         let user_id = format!("test_user_{}", Uuid::now_v7());
         ensure_user_exists(&pool, &user_id).await.expect("Failed to create user");
 
-        // Initialize the user's state in the shared map
-        let empty_state = UserState { documents: vec![] };
-        let initial_doc =
-            user_state_to_automerge(&empty_state).expect("Failed to create initial doc");
-        state.user_states.write().await.insert(user_id.clone(), initial_doc);
-
-        // Spawn the subscription in a background task
+        // Spawn the subscription in a background task (it will create the doc on first notification)
         let state_clone = state.clone();
         let subscription_handle = tokio::spawn(async move {
             run_user_state_subscription(state_clone).await
@@ -139,23 +145,18 @@ mod rpc_tests {
         tokio::time::sleep(Duration::from_millis(300)).await;
 
         // Check that the user state was updated
-        let automerge_state = {
-            let states = state.user_states.read().await;
-            states
-                .get(&user_id)
-                .map(|doc| automerge_to_user_state(doc).expect("Failed to convert"))
-        };
+        let user_state = read_user_state_from_samod(&state, &user_id).await;
 
         subscription_handle.abort();
 
         // Cleanup
         cleanup_test_data(&pool, &[&user_id], &[ref_id]).await;
 
-        let automerge_state = automerge_state.expect("User state should exist");
-        assert_eq!(automerge_state.documents.len(), 1, "Should have one document");
-        assert_eq!(automerge_state.documents[0].ref_id, ref_id);
-        assert_eq!(automerge_state.documents[0].name, "Test Document");
-        assert_eq!(automerge_state.documents[0].permission_level, PermissionLevel::Own);
+        let user_state = user_state.expect("User state should exist");
+        assert_eq!(user_state.documents.len(), 1, "Should have one document");
+        assert_eq!(user_state.documents[0].ref_id, ref_id);
+        assert_eq!(user_state.documents[0].name, "Test Document");
+        assert_eq!(user_state.documents[0].permission_level, PermissionLevel::Own);
     }
 
     /// Tests that granting permissions to another user triggers their subscription update
@@ -178,12 +179,6 @@ mod rpc_tests {
         };
         let content = create_test_document_content("Shared Document");
         let ref_id = document::new_ref(ctx, content).await.expect("Failed to create ref");
-
-        // Initialize the reader's state in the shared map
-        let empty_state = UserState { documents: vec![] };
-        let initial_doc =
-            user_state_to_automerge(&empty_state).expect("Failed to create initial doc");
-        state.user_states.write().await.insert(reader_id.clone(), initial_doc);
 
         // Spawn the subscription in a background task
         let state_clone = state.clone();
@@ -209,21 +204,16 @@ mod rpc_tests {
         tokio::time::sleep(Duration::from_millis(300)).await;
 
         // Check that the reader's state was updated
-        let automerge_state = {
-            let states = state.user_states.read().await;
-            states
-                .get(&reader_id)
-                .map(|doc| automerge_to_user_state(doc).expect("Failed to convert"))
-        };
+        let user_state = read_user_state_from_samod(&state, &reader_id).await;
 
         subscription_handle.abort();
 
         cleanup_test_data(&pool, &[&owner_id, &reader_id], &[ref_id]).await;
 
-        let automerge_state = automerge_state.expect("User state should exist");
-        assert_eq!(automerge_state.documents.len(), 1, "Reader should see one document");
-        assert_eq!(automerge_state.documents[0].ref_id, ref_id);
-        assert_eq!(automerge_state.documents[0].permission_level, PermissionLevel::Read);
+        let user_state = user_state.expect("User state should exist");
+        assert_eq!(user_state.documents.len(), 1, "Reader should see one document");
+        assert_eq!(user_state.documents[0].ref_id, ref_id);
+        assert_eq!(user_state.documents[0].permission_level, PermissionLevel::Read);
     }
 
     /// Tests that deleting a document triggers subscription update
@@ -235,12 +225,6 @@ mod rpc_tests {
 
         let user_id = format!("test_user_{}", Uuid::now_v7());
         ensure_user_exists(&pool, &user_id).await.expect("Failed to create user");
-
-        // Set up the subscription BEFORE creating the document
-        let empty_state = UserState { documents: vec![] };
-        let initial_doc =
-            user_state_to_automerge(&empty_state).expect("Failed to create initial doc");
-        state.user_states.write().await.insert(user_id.clone(), initial_doc);
 
         // Spawn the subscription in a background task
         let state_clone = state.clone();
@@ -263,12 +247,7 @@ mod rpc_tests {
         tokio::time::sleep(Duration::from_millis(300)).await;
 
         // Verify document exists in user state
-        let state_before = {
-            let states = state.user_states.read().await;
-            states
-                .get(&user_id)
-                .map(|doc| automerge_to_user_state(doc).expect("Failed to convert"))
-        };
+        let state_before = read_user_state_from_samod(&state, &user_id).await;
         assert_eq!(
             state_before.as_ref().map(|s| s.documents.len()),
             Some(1),
@@ -282,21 +261,16 @@ mod rpc_tests {
         tokio::time::sleep(Duration::from_millis(300)).await;
 
         // Check that the document is no longer in user state (soft deleted)
-        let automerge_state = {
-            let states = state.user_states.read().await;
-            states
-                .get(&user_id)
-                .map(|doc| automerge_to_user_state(doc).expect("Failed to convert"))
-        };
+        let user_state = read_user_state_from_samod(&state, &user_id).await;
 
         subscription_handle.abort();
 
         cleanup_test_data(&pool, &[&user_id], &[ref_id]).await;
 
-        let automerge_state = automerge_state.expect("User state should exist");
+        let user_state = user_state.expect("User state should exist");
         // Document should not appear in user state after deletion (since it's soft deleted)
         assert_eq!(
-            automerge_state.documents.len(),
+            user_state.documents.len(),
             0,
             "Should have no documents after soft delete"
         );
@@ -325,15 +299,6 @@ mod rpc_tests {
         let content = create_test_document_content("Multi-user Document");
         let ref_id = document::new_ref(ctx, content).await.expect("Failed to create ref");
 
-        // Initialize both users' states in the shared map
-        let empty_state = UserState { documents: vec![] };
-
-        for user_id in [&user1_id, &user2_id] {
-            let initial_doc =
-                user_state_to_automerge(&empty_state).expect("Failed to create initial doc");
-            state.user_states.write().await.insert(user_id.clone(), initial_doc);
-        }
-
         // Spawn the subscription in a background task
         let state_clone = state.clone();
         let subscription_handle = tokio::spawn(async move {
@@ -358,19 +323,9 @@ mod rpc_tests {
         // Wait for subscriptions to process
         tokio::time::sleep(Duration::from_millis(300)).await;
 
-        // Check both users' states
-        let user1_state = {
-            let states = state.user_states.read().await;
-            states
-                .get(&user1_id)
-                .map(|doc| automerge_to_user_state(doc).expect("Failed to convert"))
-        };
-        let user2_state = {
-            let states = state.user_states.read().await;
-            states
-                .get(&user2_id)
-                .map(|doc| automerge_to_user_state(doc).expect("Failed to convert"))
-        };
+        // Check both users' states using the samod helper
+        let user1_state = read_user_state_from_samod(&state, &user1_id).await;
+        let user2_state = read_user_state_from_samod(&state, &user2_id).await;
 
         subscription_handle.abort();
 
@@ -569,9 +524,9 @@ mod proptest_tests {
     async fn run_user_state_subscription_updates_automerge_docs(
         #[strategy(arbitrary_user_state_with_id())] user_id_and_state: (String, UserState),
     ) {
+        use autosurgeon::hydrate;
         use backend::app::AppState;
         use backend::storage::PostgresStorage;
-        use backend::user_state::{automerge_to_user_state, user_state_to_automerge};
         use backend::user_state_subscription::run_user_state_subscription;
         use std::collections::{HashMap, HashSet};
         use std::sync::Arc;
@@ -596,13 +551,6 @@ mod proptest_tests {
             user_states: Arc::new(RwLock::new(HashMap::new())),
         };
 
-        // Initialize user states map with an empty Automerge doc for the test user
-        let empty_state = UserState { documents: vec![] };
-        let initial_doc =
-            user_state_to_automerge(&empty_state).expect("Failed to create initial Automerge doc");
-
-        state.user_states.write().await.insert(user_id.clone(), initial_doc);
-
         // Spawn the subscription in a background task
         let state_clone = state.clone();
         let subscription_handle = tokio::spawn(async move {
@@ -618,14 +566,23 @@ mod proptest_tests {
             .expect("Failed to write user state");
 
         // Give the subscription time to process the notifications
-        tokio::time::sleep(Duration::from_millis(200)).await;
+        // More time is needed since we may have multiple refs being created
+        tokio::time::sleep(Duration::from_millis(500)).await;
 
-        // Read the Automerge doc state
-        let automerge_state = {
-            let states = state.user_states.read().await;
-            states
-                .get(&user_id)
-                .map(|doc| automerge_to_user_state(doc).expect("Failed to convert from Automerge"))
+        // Read the user state from samod using the stored DocumentId
+        let automerge_state: Option<UserState> = {
+            let doc_id = {
+                let states = state.user_states.read().await;
+                states.get(&user_id).cloned()
+            };
+
+            match doc_id {
+                Some(doc_id) => {
+                    let doc_handle = state.repo.find(doc_id).await.ok().flatten();
+                    doc_handle.and_then(|h| h.with_document(|doc| hydrate(doc).ok()))
+                }
+                None => None,
+            }
         };
 
         // Cleanup test data
@@ -642,13 +599,21 @@ mod proptest_tests {
         // Abort the subscription task (it runs in an infinite loop)
         subscription_handle.abort();
 
-        // The Automerge doc should have been updated to match the input state
-        // This assertion will fail until run_user_state_subscription is fully implemented
-        let automerge_state = automerge_state.expect("User state should exist in Automerge docs");
-        proptest::prop_assert_eq!(
-            input_state,
-            automerge_state,
-            "Automerge doc should be updated to match the database state"
-        );
+        // If input_state has no documents, no notifications are triggered
+        // In this case, we expect no automerge doc to be created
+        if input_state.documents.is_empty() {
+            proptest::prop_assert!(
+                automerge_state.is_none(),
+                "Empty user state should not create automerge doc"
+            );
+        } else {
+            // The Automerge doc should have been updated to match the input state
+            let automerge_state = automerge_state.expect("User state should exist in Automerge docs");
+            proptest::prop_assert_eq!(
+                input_state,
+                automerge_state,
+                "Automerge doc should be updated to match the database state"
+            );
+        }
     }
 }
