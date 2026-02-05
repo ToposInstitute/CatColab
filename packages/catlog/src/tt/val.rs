@@ -196,17 +196,26 @@ impl TmN {
 /// That is not possible for a generic [`TmV`]. This way of structuring values
 /// also ensures that it is impossible to construct, say, a list of records;
 /// only lists of objects are allowed.
+///
+/// TODO: Make `Rc`s uniform using inner enum.
 #[derive(Clone)]
 pub enum ObTmV {
     /// Neutrals.
     ///
     /// We store the type because we need it for eta-expansion.
     Neu(TmN, TyV),
+    /// Application of an object operation in the theory.
+    App(VarName, Rc<ObTmV>),
     /// Lists of objects.
     List(Rc<Vec<ObTmV>>),
 }
 
 impl ObTmV {
+    /// Smart constructor of applications of object operations.
+    pub fn app(name: VarName, x: ObTmV) -> Self {
+        ObTmV::App(name, Rc::new(x))
+    }
+
     /// Smart constructor for lists.
     pub fn list(elems: Vec<ObTmV>) -> Self {
         ObTmV::List(Rc::new(elems))
@@ -239,6 +248,11 @@ impl TmV {
     /// Smart constructor for neutrals.
     pub fn neu(n: TmN, ty: TyV) -> Self {
         TmV::Ob(ObTmV::Neu(n, ty))
+    }
+
+    /// Smart constructor for applications of object operations.
+    pub fn app(name: VarName, x: ObTmV) -> Self {
+        TmV::Ob(ObTmV::app(name, x))
     }
 
     /// Smart constructor for lists.

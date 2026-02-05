@@ -569,6 +569,17 @@ impl<'a> Elaborator<'a> {
                 let mor_type = elab.theory().hom_type(ob_type.clone());
                 (TmS::id(ob_s), TmV::Tt, TyV::morphism(mor_type, ob_v.clone(), ob_v))
             }
+            App1(L(_, Prim(name)), ob_n) => {
+                let name = name_seg(*name);
+                let Some(ob_op) = elab.theory().basic_ob_op([name].into()) else {
+                    let th_name = elab.theory.name.to_string();
+                    return elab.syn_error(format!("operation @{name} not in theory {th_name}"));
+                };
+                let dom = elab.theory().ob_op_dom(&ob_op);
+                let (arg_s, arg_v) = elab.chk(&TyV::object(dom), ob_n);
+                let cod = elab.theory().ob_op_cod(&ob_op);
+                (TmS::ob_app(name, arg_s), TmV::app(name, arg_v.unwrap_ob()), TyV::object(cod))
+            }
             App2(L(_, Keyword("*")), f_n, g_n) => {
                 let (f_s, _, f_ty) = elab.syn(f_n);
                 let (g_s, _, g_ty) = elab.syn(g_n);

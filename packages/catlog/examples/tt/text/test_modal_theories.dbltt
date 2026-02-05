@@ -9,9 +9,29 @@ type SigMonoid := [
 generate SigMonoid
 
 type SigRig := [
-   R : Object,
-   Add : SigMonoid & [ .M := R ],
-   Mul : SigMonoid & [ .M := R ]
+  R : Object,
+  Add : SigMonoid & [ .M := R ],
+  Mul : SigMonoid & [ .M := R ]
 ]
 
 generate SigRig
+
+set_theory ThSymMonoidalCategory
+
+type SIR := [
+  S : Object,
+  I : Object,
+  R : Object,
+  infect : (Hom Object)[@tensor [S, I], @tensor [I, I]],
+  recover : (Hom Object)[I, R]
+]
+
+generate SIR
+
+type SIRV := [
+  Unvax : SIR,
+  V : Object,
+  vaccinate : (Hom Object)[Unvax.S, V]
+]
+
+generate SIRV

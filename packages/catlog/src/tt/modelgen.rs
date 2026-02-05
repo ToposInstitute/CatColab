@@ -6,7 +6,8 @@ use derive_more::TryInto;
 use super::{eval::*, prelude::*, text_elab, theory::*, toplevel::*, val::*};
 use crate::dbl::{
     discrete, modal,
-    model::{DblModelPrinter, MutDblModel},
+    model::{DblModel, DblModelPrinter, MutDblModel},
+    theory::DblTheory,
 };
 use crate::zero::{Namespace, QualifiedName};
 
@@ -55,6 +56,20 @@ impl Model {
         match self {
             Model::Discrete(_) => Ob::Discrete(name),
             Model::Modal(_) => Ob::Modal(modal::ModalOb::Generator(name)),
+        }
+    }
+
+    /// Constructs an application of an object operation, if possible.
+    fn ob_app(&self, name: QualifiedName, ob_v: &ObTmV) -> Option<Ob> {
+        match self {
+            Model::Discrete(_) => None,
+            Model::Modal(model) => {
+                let theory = model.theory();
+                let op = modal::ModalObOp::generator(name.clone());
+                let ob = self.make_ob(ob_v, &theory.ob_op_dom(&op).into());
+                let ob = ob.try_into().unwrap();
+                Some(Ob::Modal(modal::ModalOb::App(Box::new(ob), name)))
+            }
         }
     }
 
@@ -118,6 +133,9 @@ impl Model {
                 }
                 segments.reverse();
                 self.ob_generator(segments.into())
+            }
+            ObTmV::App(name, ob_v) => {
+                self.ob_app([*name].into(), ob_v).expect("theory should support operations")
             }
             ObTmV::List(elems) => {
                 let el_type = ob_type.clone().list_arg().unwrap();

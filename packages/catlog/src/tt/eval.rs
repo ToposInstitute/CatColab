@@ -81,6 +81,7 @@ impl<'a> Evaluator<'a> {
             TmS_::Tt => TmV::Tt,
             TmS_::Id(_) => TmV::Opaque,
             TmS_::Compose(_, _) => TmV::Opaque,
+            TmS_::ObApp(name, x) => TmV::app(*name, self.eval_tm(x).unwrap_ob()),
             TmS_::List(elems) => {
                 TmV::list(elems.iter().map(|tm| self.eval_tm(tm).unwrap_ob()).collect())
             }
@@ -199,6 +200,7 @@ impl<'a> Evaluator<'a> {
     fn quote_ob(&self, tm: &ObTmV) -> TmS {
         match tm {
             ObTmV::Neu(n, _) => self.quote_neu(n),
+            ObTmV::App(name, x) => TmS::ob_app(*name, self.quote_ob(x)),
             ObTmV::List(elems) => TmS::list(elems.iter().map(|ob| self.quote_ob(ob)).collect()),
         }
     }
@@ -320,6 +322,7 @@ impl<'a> Evaluator<'a> {
     fn eta_ob(&self, ob: &ObTmV) -> TmV {
         match ob {
             ObTmV::Neu(tm_n, ty_v) => self.eta_neu(tm_n, ty_v),
+            ObTmV::App(name, ob) => TmV::app(*name, self.eta_ob(ob).unwrap_ob()),
             ObTmV::List(elems) => {
                 TmV::list(elems.iter().map(|elem| self.eta_ob(elem).unwrap_ob()).collect())
             }

@@ -552,7 +552,7 @@ impl PrintableDblModel for ModalDblModel {
                 let op = op.to_string();
                 let op_doc = match UNICODE_OP_LOOKUP.get(op.as_str()) {
                     Some(uni_op) => t(*uni_op),
-                    None => t(op),
+                    None => t(format!("@{op}")),
                 };
                 unop(op_doc, self.ob_to_doc(ob, ob_ns, mor_ns))
             }
@@ -729,7 +729,7 @@ mod tests {
             I : Object
             R : Object
             infect : ⨂ [S, I] -> ⨂ [I, I] : Hom Object
-            recover : ⨂ [I] -> ⨂ [R] : Hom Object"#]];
+            recover : I -> R : Hom Object"#]];
         expected.assert_eq(&format!("{model}"));
     }
 }

@@ -163,12 +163,7 @@ pub fn sir_petri(th: Rc<ModalDblTheory>) -> ModalDblModel {
         ),
         ModalMorType::Zero(ob_type.clone()),
     );
-    model.add_mor(
-        name("recover"),
-        ModalOb::App(ModalOb::List(List::Symmetric, vec![i.into()]).into(), op.clone()),
-        ModalOb::App(ModalOb::List(List::Symmetric, vec![r.into()]).into(), op),
-        ModalMorType::Zero(ob_type),
-    );
+    model.add_mor(name("recover"), i.into(), r.into(), ModalMorType::Zero(ob_type));
     model
 }
 
