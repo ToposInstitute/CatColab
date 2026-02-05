@@ -273,13 +273,13 @@ mod tests {
         // Wait for subscription to process the create notification
         tokio::time::sleep(Duration::from_millis(300)).await;
 
-        // Verify document exists in user state
+        // Verify document exists in user state (check for our specific document, not total count)
         let state_before = read_user_state_from_samod(&state, &user_id).await;
-        assert_eq!(
-            state_before.as_ref().map(|s| s.documents.len()),
-            Some(1),
-            "Should have one document before delete"
-        );
+        let doc_exists_before = state_before
+            .as_ref()
+            .map(|s| s.documents.iter().any(|d| d.ref_id == ref_id))
+            .unwrap_or(false);
+        assert!(doc_exists_before, "Document should exist in user state before delete");
 
         // Delete the document
         document::delete_ref(state.clone(), ref_id).await.expect("Failed to delete ref");
@@ -296,7 +296,77 @@ mod tests {
 
         let user_state = user_state.expect("User state should exist");
         // Document should not appear in user state after deletion (since it's soft deleted)
-        assert_eq!(user_state.documents.len(), 0, "Should have no documents after soft delete");
+        let doc_exists_after = user_state.documents.iter().any(|d| d.ref_id == ref_id);
+        assert!(!doc_exists_after, "Document should not exist in user state after soft delete");
+    }
+
+    /// Tests that restoring a soft-deleted document triggers subscription update
+    #[tokio::test]
+    #[serial]
+    async fn test_restore_ref_triggers_subscription_update() {
+        let pool = get_pool().await;
+        let state = create_test_app_state(pool.clone()).await;
+
+        let user_id = format!("test_user_{}", Uuid::now_v7());
+        ensure_user_exists(&pool, &user_id).await.expect("Failed to create user");
+
+        // Spawn the subscription in a background task
+        let state_clone = state.clone();
+        let subscription_handle =
+            tokio::spawn(async move { run_user_state_subscription(state_clone).await });
+
+        // Give the subscription time to start
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Create a document (subscription should receive the notification)
+        let ctx = AppCtx {
+            state: state.clone(),
+            user: Some(create_test_firebase_user(&user_id)),
+        };
+        let content = create_test_document_content("Document to Restore");
+        let ref_id = document::new_ref(ctx, content).await.expect("Failed to create ref");
+
+        // Wait for subscription to process the create notification
+        tokio::time::sleep(Duration::from_millis(300)).await;
+
+        // Verify document exists in user state
+        let state_after_create = read_user_state_from_samod(&state, &user_id).await;
+        let doc_exists_after_create = state_after_create
+            .as_ref()
+            .map(|s| s.documents.iter().any(|d| d.ref_id == ref_id))
+            .unwrap_or(false);
+        assert!(doc_exists_after_create, "Document should exist after creation");
+
+        // Delete the document
+        document::delete_ref(state.clone(), ref_id).await.expect("Failed to delete ref");
+
+        // Wait for the subscription to process the delete notification
+        tokio::time::sleep(Duration::from_millis(300)).await;
+
+        // Verify document is no longer in user state
+        let state_after_delete = read_user_state_from_samod(&state, &user_id).await;
+        let doc_exists_after_delete = state_after_delete
+            .as_ref()
+            .map(|s| s.documents.iter().any(|d| d.ref_id == ref_id))
+            .unwrap_or(false);
+        assert!(!doc_exists_after_delete, "Document should not exist after deletion");
+
+        // Restore the document
+        document::restore_ref(state.clone(), ref_id).await.expect("Failed to restore ref");
+
+        // Wait for the subscription to process the restore notification
+        tokio::time::sleep(Duration::from_millis(300)).await;
+
+        // Check that the document is back in user state
+        let user_state = read_user_state_from_samod(&state, &user_id).await;
+
+        subscription_handle.abort();
+
+        cleanup_test_data(&pool, &[&user_id], &[ref_id]).await;
+
+        let user_state = user_state.expect("User state should exist");
+        let doc_exists_after_restore = user_state.documents.iter().any(|d| d.ref_id == ref_id);
+        assert!(doc_exists_after_restore, "Document should exist in user state after restoration");
     }
 
     /// Tests that multiple users are notified when permissions change

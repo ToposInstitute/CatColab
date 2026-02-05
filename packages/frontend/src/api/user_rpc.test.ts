@@ -335,20 +335,3 @@ describe("User state Automerge document", async () => {
         assert(doc2, `Document ${refId2} should still exist`);
     });
 });
-
-    // Restore the deleted document
-    unwrap(await rpc.restore_ref.mutate(refId1));
-
-    // TODO: Re-enable once backend deletion sync is fixed
-    test.sequential
-        .skip("should sync document restoration", async () => {
-            await waitFor(
-                () => findDoc(refId1) !== undefined,
-                `Restored document ${refId1} should exist`,
-            );
-            const doc1 = findDoc(refId1);
-            const doc2 = findDoc(refId2);
-            assert(doc1);
-            assert(doc2, `Document ${refId2} should still exist`);
-        });
-});
