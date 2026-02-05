@@ -5,6 +5,7 @@ import {
     type ColumnSchema,
     createNumericalColumn,
     FixedTableEditor,
+    Foldable,
 } from "catcolab-ui-components";
 import type { DblModel, KuramotoProblemData, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
@@ -136,22 +137,20 @@ export default function Kuramoto(
 
     return (
         <div class="simulation">
-            <BlockTitle
-                title={props.title}
-                settingsPane={
-                    <div class="parameters">
-                        <FixedTableEditor
-                            rows={elaboratedModel()?.obGenerators() ?? []}
-                            schema={obSchema()}
-                        />
-                        <FixedTableEditor
-                            rows={elaboratedModel()?.morGenerators() ?? []}
-                            schema={morSchema()}
-                        />
-                        <FixedTableEditor rows={[null]} schema={toplevelSchema} />
-                    </div>
-                }
-            />
+            <BlockTitle title={props.title} />
+            <Foldable title="Parameters" defaultExpanded>
+                <div class="parameters">
+                    <FixedTableEditor
+                        rows={elaboratedModel()?.obGenerators() ?? []}
+                        schema={obSchema()}
+                    />
+                    <FixedTableEditor
+                        rows={elaboratedModel()?.morGenerators() ?? []}
+                        schema={morSchema()}
+                    />
+                    <FixedTableEditor rows={[null]} schema={toplevelSchema} />
+                </div>
+            </Foldable>
             <ODEResultPlot
                 result={plotResult()}
                 yAxis={{

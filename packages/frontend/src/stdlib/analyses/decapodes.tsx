@@ -8,6 +8,7 @@ import {
     createNumericalColumn,
     ErrorAlert,
     FixedTableEditor,
+    Foldable,
     IconButton,
     Warning,
 } from "catcolab-ui-components";
@@ -202,20 +203,15 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
 
     return (
         <div class="simulation">
-            <BlockTitle
-                title="Simulation"
-                actions={RestartOrRerunButton()}
-                settingsPane={
-                    <>
-                        <Show when={options()}>{(options) => DomainConfig(options().domains)}</Show>
-                        <div class="parameters">
-                            <FixedTableEditor rows={variables()} schema={variableSchema} />
-                            <FixedTableEditor rows={scalars()} schema={scalarSchema} />
-                            <FixedTableEditor rows={[null]} schema={toplevelSchema} />
-                        </div>
-                    </>
-                }
-            />
+            <BlockTitle title="Simulation" actions={RestartOrRerunButton()} />
+            <Foldable title="Parameters" defaultExpanded>
+                <Show when={options()}>{(options) => DomainConfig(options().domains)}</Show>
+                <div class="parameters">
+                    <FixedTableEditor rows={variables()} schema={variableSchema} />
+                    <FixedTableEditor rows={scalars()} schema={scalarSchema} />
+                    <FixedTableEditor rows={[null]} schema={toplevelSchema} />
+                </div>
+            </Foldable>
             <Switch>
                 <Match when={kernel.loading || options.loading}>
                     {"Loading the Julia kernel..."}
