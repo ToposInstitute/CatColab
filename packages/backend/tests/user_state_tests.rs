@@ -1,4 +1,4 @@
-mod rpc_tests {
+mod tests {
     use autosurgeon::hydrate;
     use backend::app::{AppCtx, AppError, AppState};
     use backend::auth::{NewPermissions, PermissionLevel};
@@ -125,9 +125,8 @@ mod rpc_tests {
 
         // Spawn the subscription in a background task (it will create the doc on first notification)
         let state_clone = state.clone();
-        let subscription_handle = tokio::spawn(async move {
-            run_user_state_subscription(state_clone).await
-        });
+        let subscription_handle =
+            tokio::spawn(async move { run_user_state_subscription(state_clone).await });
 
         // Give the subscription time to start
         tokio::time::sleep(Duration::from_millis(100)).await;
@@ -182,9 +181,8 @@ mod rpc_tests {
 
         // Spawn the subscription in a background task
         let state_clone = state.clone();
-        let subscription_handle = tokio::spawn(async move {
-            run_user_state_subscription(state_clone).await
-        });
+        let subscription_handle =
+            tokio::spawn(async move { run_user_state_subscription(state_clone).await });
 
         tokio::time::sleep(Duration::from_millis(100)).await;
 
@@ -228,9 +226,8 @@ mod rpc_tests {
 
         // Spawn the subscription in a background task
         let state_clone = state.clone();
-        let subscription_handle = tokio::spawn(async move {
-            run_user_state_subscription(state_clone).await
-        });
+        let subscription_handle =
+            tokio::spawn(async move { run_user_state_subscription(state_clone).await });
 
         // Give the subscription time to start
         tokio::time::sleep(Duration::from_millis(100)).await;
@@ -269,11 +266,7 @@ mod rpc_tests {
 
         let user_state = user_state.expect("User state should exist");
         // Document should not appear in user state after deletion (since it's soft deleted)
-        assert_eq!(
-            user_state.documents.len(),
-            0,
-            "Should have no documents after soft delete"
-        );
+        assert_eq!(user_state.documents.len(), 0, "Should have no documents after soft delete");
     }
 
     /// Tests that multiple users are notified when permissions change
@@ -301,9 +294,8 @@ mod rpc_tests {
 
         // Spawn the subscription in a background task
         let state_clone = state.clone();
-        let subscription_handle = tokio::spawn(async move {
-            run_user_state_subscription(state_clone).await
-        });
+        let subscription_handle =
+            tokio::spawn(async move { run_user_state_subscription(state_clone).await });
 
         tokio::time::sleep(Duration::from_millis(100)).await;
 
@@ -339,6 +331,104 @@ mod rpc_tests {
 
         assert_eq!(user2_state.documents.len(), 1, "User2 should see one document");
         assert_eq!(user2_state.documents[0].permission_level, PermissionLevel::Read);
+    }
+
+    /// Tests that get_or_create_user_state_doc initializes user state from DB
+    #[tokio::test]
+    #[serial]
+    async fn test_get_or_create_user_state_doc_initializes_from_db() {
+        use backend::user_state_subscription::get_or_create_user_state_doc;
+
+        let pool = get_pool().await;
+        let state = create_test_app_state(pool.clone()).await;
+
+        let user_id = format!("test_user_{}", Uuid::now_v7());
+        ensure_user_exists(&pool, &user_id).await.expect("Failed to create user");
+
+        // Create a document for this user (without running the subscription)
+        let ctx = AppCtx {
+            state: state.clone(),
+            user: Some(create_test_firebase_user(&user_id)),
+        };
+        let content = create_test_document_content("Init Test Document");
+        let ref_id = document::new_ref(ctx, content).await.expect("Failed to create ref");
+
+        // Now call get_or_create_user_state_doc - it should read from DB and create the doc
+        let doc_id = get_or_create_user_state_doc(&state, &user_id)
+            .await
+            .expect("Failed to get or create user state doc");
+
+        // Verify the document was created and cached
+        {
+            let states = state.user_states.read().await;
+            assert!(states.contains_key(&user_id), "User state should be cached");
+        }
+
+        // Read the user state from the document
+        let user_state = read_user_state_from_samod(&state, &user_id).await;
+
+        // Cleanup
+        cleanup_test_data(&pool, &[&user_id], &[ref_id]).await;
+
+        let user_state = user_state.expect("User state should exist");
+        assert_eq!(user_state.documents.len(), 1, "Should have one document");
+        assert_eq!(user_state.documents[0].ref_id, ref_id);
+        assert_eq!(user_state.documents[0].name, "Init Test Document");
+    }
+
+    /// Tests that get_or_create_user_state_doc returns empty state for new user
+    #[tokio::test]
+    #[serial]
+    async fn test_get_or_create_user_state_doc_empty_for_new_user() {
+        use backend::user_state_subscription::get_or_create_user_state_doc;
+
+        let pool = get_pool().await;
+        let state = create_test_app_state(pool.clone()).await;
+
+        let user_id = format!("test_user_{}", Uuid::now_v7());
+        ensure_user_exists(&pool, &user_id).await.expect("Failed to create user");
+
+        // Call get_or_create_user_state_doc for user with no documents
+        get_or_create_user_state_doc(&state, &user_id)
+            .await
+            .expect("Failed to get or create user state doc");
+
+        // Read the user state from the document
+        let user_state = read_user_state_from_samod(&state, &user_id).await;
+
+        // Cleanup
+        cleanup_test_data(&pool, &[&user_id], &[]).await;
+
+        let user_state = user_state.expect("User state should exist");
+        assert_eq!(user_state.documents.len(), 0, "Should have no documents");
+    }
+
+    /// Tests that get_or_create_user_state_doc returns cached doc on second call
+    #[tokio::test]
+    #[serial]
+    async fn test_get_or_create_user_state_doc_returns_cached() {
+        use backend::user_state_subscription::get_or_create_user_state_doc;
+
+        let pool = get_pool().await;
+        let state = create_test_app_state(pool.clone()).await;
+
+        let user_id = format!("test_user_{}", Uuid::now_v7());
+        ensure_user_exists(&pool, &user_id).await.expect("Failed to create user");
+
+        // First call creates the document
+        let doc_id1 = get_or_create_user_state_doc(&state, &user_id)
+            .await
+            .expect("Failed to get or create user state doc");
+
+        // Second call should return the same document ID
+        let doc_id2 = get_or_create_user_state_doc(&state, &user_id)
+            .await
+            .expect("Failed to get or create user state doc");
+
+        // Cleanup
+        cleanup_test_data(&pool, &[&user_id], &[]).await;
+
+        assert_eq!(doc_id1, doc_id2, "Should return same document ID on second call");
     }
 }
 
@@ -553,9 +643,8 @@ mod proptest_tests {
 
         // Spawn the subscription in a background task
         let state_clone = state.clone();
-        let subscription_handle = tokio::spawn(async move {
-            run_user_state_subscription(state_clone).await
-        });
+        let subscription_handle =
+            tokio::spawn(async move { run_user_state_subscription(state_clone).await });
 
         // Give the subscription time to start listening
         tokio::time::sleep(Duration::from_millis(100)).await;
@@ -608,7 +697,8 @@ mod proptest_tests {
             );
         } else {
             // The Automerge doc should have been updated to match the input state
-            let automerge_state = automerge_state.expect("User state should exist in Automerge docs");
+            let automerge_state =
+                automerge_state.expect("User state should exist in Automerge docs");
             proptest::prop_assert_eq!(
                 input_state,
                 automerge_state,

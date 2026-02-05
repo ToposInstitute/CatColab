@@ -129,6 +129,33 @@ pub async fn run_user_state_subscription(
     }
 }
 
+/// Gets or creates the user state document for a given user.
+///
+/// This function reads the user's current state from the database and either:
+/// - Returns the existing document ID if already cached
+/// - Creates a new document with the current DB state if not cached
+///
+/// This is useful for initializing a user's state when they first connect,
+/// before any notifications have been received.
+pub async fn get_or_create_user_state_doc(
+    state: &AppState,
+    user_id: &str,
+) -> Result<DocumentId, crate::app::AppError> {
+    // Check if we already have a document for this user
+    {
+        let states = state.user_states.read().await;
+        if let Some(doc_id) = states.get(user_id) {
+            return Ok(doc_id.clone());
+        }
+    }
+
+    // Read current state from database (empty if user has no documents)
+    let user_state = read_user_state_from_db(user_id.to_string(), &state.db).await?;
+
+    // Create the document
+    create_user_state_doc(state, user_id, &user_state).await
+}
+
 /// Creates a new user state document in samod and registers it in the user states map.
 async fn create_user_state_doc(
     state: &AppState,
