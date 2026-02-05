@@ -135,7 +135,19 @@ async fn main() {
             // Notify systemd we're ready
             sd_notify::notify(false, &[sd_notify::NotifyState::Ready]).ok();
 
-            run_web_server(state.clone(), firebase_auth.clone()).await.unwrap();
+            // Run both the web server and user state subscription concurrently.
+            // If either one fails, the server will crash.
+            let web_server = run_web_server(state.clone(), firebase_auth.clone());
+            let subscription = user_state_subscription::run_user_state_subscription(state.clone());
+
+            tokio::select! {
+                result = web_server => {
+                    result.expect("Web server failed");
+                }
+                result = subscription => {
+                    result.expect("User state subscription failed");
+                }
+            }
         }
     }
 }
