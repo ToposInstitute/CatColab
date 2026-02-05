@@ -56,7 +56,7 @@ pub struct StochasticMassActionProblemData {
 
     /// Map from object IDs to initial values (nonnegative integers).
     #[cfg_attr(feature = "serde", serde(rename = "initialValues"))]
-    pub initial_values: HashMap<QualifiedName, u8>,
+    pub initial_values: HashMap<QualifiedName, u32>,
 
     /// Duration of simulation.
     pub duration: f32,
@@ -70,8 +70,8 @@ pub struct StochasticMassActionAnalysis {
     /// Map from object IDs to variable indices.
     pub variable_index: IndexMap<QualifiedName, usize>,
 
-    /// Map from object IDs to initial values.
-    pub initial_values: HashMap<QualifiedName, f32>,
+    /// Map from object IDs to initial values (nonnegative integers).
+    pub initial_values: HashMap<QualifiedName, u32>,
 
     /// Duration of simulation.
     pub duration: f32,
@@ -86,7 +86,7 @@ impl StochasticMassActionAnalysis {
             .keys()
             .map(|id| {
                 let initial = self.initial_values.get(id).copied().unwrap_or_default();
-                (id.clone(), vec![initial])
+                (id.clone(), vec![initial as f32])
             })
             .collect();
         for t in 0..(self.duration as usize) {
@@ -215,7 +215,7 @@ impl PetriNetMassActionAnalysis {
         StochasticMassActionAnalysis {
             problem,
             variable_index,
-            initial_values: data.initial_values.into_iter().map(|(k, v)| (k, v as f32)).collect(),
+            initial_values: data.initial_values,
             duration: data.duration,
         }
     }
@@ -399,7 +399,7 @@ mod tests {
         let data = StochasticMassActionProblemData {
             rates: HashMap::from_iter([(name("infect"), 1e-5f32), (name("recover"), 1e-2f32)]),
             initial_values: HashMap::from_iter([
-                (name("S"), 1e5 as u8),
+                (name("S"), 1e5 as u32),
                 (name("I"), 1),
                 (name("R"), 0),
             ]),
