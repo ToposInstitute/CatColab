@@ -9,9 +9,9 @@ mod rpc_tests {
     use serial_test::serial;
     use sqlx::PgPool;
     use std::collections::{HashMap, HashSet};
-    use std::sync::{Arc, RwLock};
+    use std::sync::Arc;
     use std::time::Duration;
-    use tokio::sync::RwLock as TokioRwLock;
+    use tokio::sync::RwLock;
     use uuid::Uuid;
 
     async fn get_pool() -> PgPool {
@@ -31,7 +31,8 @@ mod rpc_tests {
         AppState {
             db: pool,
             repo,
-            active_listeners: Arc::new(TokioRwLock::new(HashSet::new())),
+            active_listeners: Arc::new(RwLock::new(HashSet::new())),
+            user_states: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -110,17 +111,16 @@ mod rpc_tests {
         let user_id = format!("test_user_{}", Uuid::now_v7());
         ensure_user_exists(&pool, &user_id).await.expect("Failed to create user");
 
-        // Set up the subscription
-        let user_states = Arc::new(RwLock::new(HashMap::new()));
+        // Initialize the user's state in the shared map
         let empty_state = UserState { documents: vec![] };
         let initial_doc =
             user_state_to_automerge(&empty_state).expect("Failed to create initial doc");
-        user_states.write().unwrap().insert(user_id.clone(), initial_doc);
+        state.user_states.write().await.insert(user_id.clone(), initial_doc);
 
-        let pool_clone = pool.clone();
-        let user_states_clone = user_states.clone();
+        // Spawn the subscription in a background task
+        let state_clone = state.clone();
         let subscription_handle = tokio::spawn(async move {
-            run_user_state_subscription(&pool_clone, user_states_clone).await
+            run_user_state_subscription(state_clone).await
         });
 
         // Give the subscription time to start
@@ -140,7 +140,7 @@ mod rpc_tests {
 
         // Check that the user state was updated
         let automerge_state = {
-            let states = user_states.read().unwrap();
+            let states = state.user_states.read().await;
             states
                 .get(&user_id)
                 .map(|doc| automerge_to_user_state(doc).expect("Failed to convert"))
@@ -179,17 +179,16 @@ mod rpc_tests {
         let content = create_test_document_content("Shared Document");
         let ref_id = document::new_ref(ctx, content).await.expect("Failed to create ref");
 
-        // Set up the subscription for the reader
-        let user_states = Arc::new(RwLock::new(HashMap::new()));
+        // Initialize the reader's state in the shared map
         let empty_state = UserState { documents: vec![] };
         let initial_doc =
             user_state_to_automerge(&empty_state).expect("Failed to create initial doc");
-        user_states.write().unwrap().insert(reader_id.clone(), initial_doc);
+        state.user_states.write().await.insert(reader_id.clone(), initial_doc);
 
-        let pool_clone = pool.clone();
-        let user_states_clone = user_states.clone();
+        // Spawn the subscription in a background task
+        let state_clone = state.clone();
         let subscription_handle = tokio::spawn(async move {
-            run_user_state_subscription(&pool_clone, user_states_clone).await
+            run_user_state_subscription(state_clone).await
         });
 
         tokio::time::sleep(Duration::from_millis(100)).await;
@@ -211,7 +210,7 @@ mod rpc_tests {
 
         // Check that the reader's state was updated
         let automerge_state = {
-            let states = user_states.read().unwrap();
+            let states = state.user_states.read().await;
             states
                 .get(&reader_id)
                 .map(|doc| automerge_to_user_state(doc).expect("Failed to convert"))
@@ -238,16 +237,15 @@ mod rpc_tests {
         ensure_user_exists(&pool, &user_id).await.expect("Failed to create user");
 
         // Set up the subscription BEFORE creating the document
-        let user_states = Arc::new(RwLock::new(HashMap::new()));
         let empty_state = UserState { documents: vec![] };
         let initial_doc =
             user_state_to_automerge(&empty_state).expect("Failed to create initial doc");
-        user_states.write().unwrap().insert(user_id.clone(), initial_doc);
+        state.user_states.write().await.insert(user_id.clone(), initial_doc);
 
-        let pool_clone = pool.clone();
-        let user_states_clone = user_states.clone();
+        // Spawn the subscription in a background task
+        let state_clone = state.clone();
         let subscription_handle = tokio::spawn(async move {
-            run_user_state_subscription(&pool_clone, user_states_clone).await
+            run_user_state_subscription(state_clone).await
         });
 
         // Give the subscription time to start
@@ -266,7 +264,7 @@ mod rpc_tests {
 
         // Verify document exists in user state
         let state_before = {
-            let states = user_states.read().unwrap();
+            let states = state.user_states.read().await;
             states
                 .get(&user_id)
                 .map(|doc| automerge_to_user_state(doc).expect("Failed to convert"))
@@ -285,7 +283,7 @@ mod rpc_tests {
 
         // Check that the document is no longer in user state (soft deleted)
         let automerge_state = {
-            let states = user_states.read().unwrap();
+            let states = state.user_states.read().await;
             states
                 .get(&user_id)
                 .map(|doc| automerge_to_user_state(doc).expect("Failed to convert"))
@@ -327,20 +325,19 @@ mod rpc_tests {
         let content = create_test_document_content("Multi-user Document");
         let ref_id = document::new_ref(ctx, content).await.expect("Failed to create ref");
 
-        // Set up subscriptions for both users
-        let user_states = Arc::new(RwLock::new(HashMap::new()));
+        // Initialize both users' states in the shared map
         let empty_state = UserState { documents: vec![] };
 
         for user_id in [&user1_id, &user2_id] {
             let initial_doc =
                 user_state_to_automerge(&empty_state).expect("Failed to create initial doc");
-            user_states.write().unwrap().insert(user_id.clone(), initial_doc);
+            state.user_states.write().await.insert(user_id.clone(), initial_doc);
         }
 
-        let pool_clone = pool.clone();
-        let user_states_clone = user_states.clone();
+        // Spawn the subscription in a background task
+        let state_clone = state.clone();
         let subscription_handle = tokio::spawn(async move {
-            run_user_state_subscription(&pool_clone, user_states_clone).await
+            run_user_state_subscription(state_clone).await
         });
 
         tokio::time::sleep(Duration::from_millis(100)).await;
@@ -363,13 +360,13 @@ mod rpc_tests {
 
         // Check both users' states
         let user1_state = {
-            let states = user_states.read().unwrap();
+            let states = state.user_states.read().await;
             states
                 .get(&user1_id)
                 .map(|doc| automerge_to_user_state(doc).expect("Failed to convert"))
         };
         let user2_state = {
-            let states = user_states.read().unwrap();
+            let states = state.user_states.read().await;
             states
                 .get(&user2_id)
                 .map(|doc| automerge_to_user_state(doc).expect("Failed to convert"))
@@ -572,28 +569,44 @@ mod proptest_tests {
     async fn run_user_state_subscription_updates_automerge_docs(
         #[strategy(arbitrary_user_state_with_id())] user_id_and_state: (String, UserState),
     ) {
+        use backend::app::AppState;
+        use backend::storage::PostgresStorage;
         use backend::user_state::{automerge_to_user_state, user_state_to_automerge};
         use backend::user_state_subscription::run_user_state_subscription;
-        use std::collections::HashMap;
-        use std::sync::{Arc, RwLock};
+        use std::collections::{HashMap, HashSet};
+        use std::sync::Arc;
         use std::time::Duration;
+        use tokio::sync::RwLock;
 
         let (user_id, input_state) = user_id_and_state;
         let pool = get_pool().await;
+
+        // Create AppState
+        let storage = PostgresStorage::new(pool.clone());
+        let repo = samod::Repo::builder(tokio::runtime::Handle::current())
+            .with_storage(storage)
+            .with_announce_policy(|_doc_id, _peer_id| false)
+            .load()
+            .await;
+
+        let state = AppState {
+            db: pool.clone(),
+            repo,
+            active_listeners: Arc::new(RwLock::new(HashSet::new())),
+            user_states: Arc::new(RwLock::new(HashMap::new())),
+        };
 
         // Initialize user states map with an empty Automerge doc for the test user
         let empty_state = UserState { documents: vec![] };
         let initial_doc =
             user_state_to_automerge(&empty_state).expect("Failed to create initial Automerge doc");
 
-        let user_states = Arc::new(RwLock::new(HashMap::new()));
-        user_states.write().unwrap().insert(user_id.clone(), initial_doc);
+        state.user_states.write().await.insert(user_id.clone(), initial_doc);
 
         // Spawn the subscription in a background task
-        let pool_clone = pool.clone();
-        let user_states_clone = user_states.clone();
+        let state_clone = state.clone();
         let subscription_handle = tokio::spawn(async move {
-            run_user_state_subscription(&pool_clone, user_states_clone).await
+            run_user_state_subscription(state_clone).await
         });
 
         // Give the subscription time to start listening
@@ -609,7 +622,7 @@ mod proptest_tests {
 
         // Read the Automerge doc state
         let automerge_state = {
-            let states = user_states.read().unwrap();
+            let states = state.user_states.read().await;
             states
                 .get(&user_id)
                 .map(|doc| automerge_to_user_state(doc).expect("Failed to convert from Automerge"))
