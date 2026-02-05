@@ -32,19 +32,51 @@ impl Operation<Postgres> for MigrationOperation {
     async fn up(&self, conn: &mut PgConnection) -> Result<(), Error> {
         let mut tx = conn.begin().await?;
 
+        // Function to notify affected users when refs change
         sqlx::query(
             r#"
-            CREATE OR REPLACE FUNCTION notify_refs_change() RETURNS trigger AS $$
+            CREATE OR REPLACE FUNCTION notify_user_state_change() RETURNS trigger AS $$
             DECLARE
-                payload JSON;
+                affected_user TEXT;
             BEGIN
-                payload := json_build_object(
-                    'operation', TG_OP,
-                    'ref_id', NEW.id,
-                    'head', NEW.head,
-                    'deleted_at', NEW.deleted_at
-                );
-                PERFORM pg_notify('refs_subscription', payload::text);
+                -- Find all users with permissions on this ref and notify each
+                FOR affected_user IN
+                    SELECT subject FROM permissions WHERE object = NEW.id AND subject IS NOT NULL
+                LOOP
+                    PERFORM pg_notify('user_state_subscription', json_build_object('user_id', affected_user)::text);
+                END LOOP;
+                RETURN NEW;
+            END
+            $$ LANGUAGE plpgsql;
+            "#,
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        // Function to notify affected user when permissions change
+        sqlx::query(
+            r#"
+            CREATE OR REPLACE FUNCTION notify_permissions_change() RETURNS trigger AS $$
+            DECLARE
+                affected_user TEXT;
+            BEGIN
+                -- Handle INSERT and UPDATE
+                IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
+                    IF NEW.subject IS NOT NULL THEN
+                        PERFORM pg_notify('user_state_subscription', json_build_object('user_id', NEW.subject)::text);
+                    END IF;
+                END IF;
+                -- Handle UPDATE where subject changed (also notify old subject)
+                IF TG_OP = 'UPDATE' AND OLD.subject IS NOT NULL AND OLD.subject IS DISTINCT FROM NEW.subject THEN
+                    PERFORM pg_notify('user_state_subscription', json_build_object('user_id', OLD.subject)::text);
+                END IF;
+                -- Handle DELETE
+                IF TG_OP = 'DELETE' THEN
+                    IF OLD.subject IS NOT NULL THEN
+                        PERFORM pg_notify('user_state_subscription', json_build_object('user_id', OLD.subject)::text);
+                    END IF;
+                    RETURN OLD;
+                END IF;
                 RETURN NEW;
             END
             $$ LANGUAGE plpgsql;
@@ -57,11 +89,25 @@ impl Operation<Postgres> for MigrationOperation {
             .execute(&mut *tx)
             .await?;
 
+        sqlx::query(r#"DROP TRIGGER IF EXISTS permissions_notify_trigger ON permissions;"#)
+            .execute(&mut *tx)
+            .await?;
+
         sqlx::query(
             r#"
             CREATE TRIGGER refs_notify_trigger
             AFTER INSERT OR UPDATE ON refs
-            FOR EACH ROW EXECUTE FUNCTION notify_refs_change();
+            FOR EACH ROW EXECUTE FUNCTION notify_user_state_change();
+            "#,
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        sqlx::query(
+            r#"
+            CREATE TRIGGER permissions_notify_trigger
+            AFTER INSERT OR UPDATE OR DELETE ON permissions
+            FOR EACH ROW EXECUTE FUNCTION notify_permissions_change();
             "#,
         )
         .execute(&mut *tx)
@@ -78,7 +124,15 @@ impl Operation<Postgres> for MigrationOperation {
             .execute(&mut *tx)
             .await?;
 
-        sqlx::query(r#"DROP FUNCTION IF EXISTS notify_refs_change;"#)
+        sqlx::query(r#"DROP TRIGGER IF EXISTS permissions_notify_trigger ON permissions;"#)
+            .execute(&mut *tx)
+            .await?;
+
+        sqlx::query(r#"DROP FUNCTION IF EXISTS notify_user_state_change;"#)
+            .execute(&mut *tx)
+            .await?;
+
+        sqlx::query(r#"DROP FUNCTION IF EXISTS notify_permissions_change;"#)
             .execute(&mut *tx)
             .await?;
 
