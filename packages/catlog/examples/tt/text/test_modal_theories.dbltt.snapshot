@@ -49,6 +49,9 @@ generate SIR
 #/ infect : ⨂ [S, I] -> ⨂ [I, I] : Hom Object
 #/ recover : I -> R : Hom Object
 
+syn [P: SIR] (@tensor [P.S, P.I])
+#/ result: @tensor [P.S, P.I] : Object
+
 type SIRV := [
   Unvax : SIR,
   V : Object,
@@ -75,7 +78,7 @@ type BadOpApp := [
 #/ expected errors:
 #/ error[elab]: synthesized type Object does not match expected type List.Symmetric Object:
 #/ object types Object and List.Symmetric Object are not equal
-#/ --> examples/tt/text/test_modal_theories.dbltt:42:29
-#/ 42|    f : (Hom Object)[@tensor X, X],
-#/ 42|                             ^
+#/ --> examples/tt/text/test_modal_theories.dbltt:44:29
+#/ 44|    f : (Hom Object)[@tensor X, X],
+#/ 44|                             ^
 

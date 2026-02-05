@@ -28,6 +28,8 @@ type SIR := [
 
 generate SIR
 
+syn [P: SIR] (@tensor [P.S, P.I])
+
 type SIRV := [
   Unvax : SIR,
   V : Object,
