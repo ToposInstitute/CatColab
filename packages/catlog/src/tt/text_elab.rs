@@ -44,10 +44,7 @@ pub struct TopElaborator {
 impl TopElaborator {
     /// Constructs a context for top-level elaboration.
     pub fn new(reporter: Reporter) -> Self {
-        Self {
-            current_theory: None,
-            reporter,
-        }
+        Self { current_theory: None, reporter }
     }
 
     fn bare_def<'c>(&self, n: &FNtn<'c>) -> Option<(TopVarName, &'c FNtn<'c>)> {

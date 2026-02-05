@@ -67,9 +67,7 @@ impl<'a> Elaborator<'a> {
     }
 
     fn checkpoint(&self) -> ElaboratorCheckpoint {
-        ElaboratorCheckpoint {
-            ctx: self.ctx.checkpoint(),
-        }
+        ElaboratorCheckpoint { ctx: self.ctx.checkpoint() }
     }
 
     fn reset_to(&mut self, c: ElaboratorCheckpoint) {

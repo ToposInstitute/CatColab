@@ -56,11 +56,7 @@ async fn get_doc(ctx: AppCtx, ref_id: Uuid) -> RpcResult<RefDoc> {
             })
         } else if max_level >= Some(PermissionLevel::Read) {
             let binary_data = doc::head_snapshot_binary(ctx.state, ref_id).await?;
-            Ok(RefDoc::Readonly {
-                binary_data,
-                is_deleted,
-                permissions,
-            })
+            Ok(RefDoc::Readonly { binary_data, is_deleted, permissions })
         } else {
             Err(AppError::Forbidden(ref_id))
         }

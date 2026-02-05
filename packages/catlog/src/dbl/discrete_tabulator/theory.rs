@@ -316,10 +316,7 @@ impl VDCWithComposites for DiscreteTabTheory {
     }
 
     fn composite_ext(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Cell> {
-        Some(TabMorOp {
-            dom: path,
-            projections: vec![],
-        })
+        Some(TabMorOp { dom: path, projections: vec![] })
     }
 
     fn through_composite(&self, cell: Self::Cell, range: Range<usize>) -> Option<Self::Cell> {

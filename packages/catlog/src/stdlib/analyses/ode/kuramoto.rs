@@ -150,10 +150,7 @@ impl KuramotoAnalysis {
             ob_ids().map(|id| common.initial_phases.get(id).copied().unwrap_or_default());
         let initial_values = match data {
             KuramotoProblemData::FirstOrder(_) => DVector::from_iterator(n, initial_phases),
-            KuramotoProblemData::SecondOrder {
-                initial_frequencies,
-                ..
-            } => {
+            KuramotoProblemData::SecondOrder { initial_frequencies, .. } => {
                 let initial_frequencies =
                     ob_ids().map(|id| initial_frequencies.get(id).copied().unwrap_or_default());
                 DVector::from_iterator(2 * n, initial_phases.chain(initial_frequencies))

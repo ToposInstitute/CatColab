@@ -183,11 +183,7 @@ pub async fn permissions(ctx: &AppCtx, ref_id: Uuid) -> Result<Permissions, AppE
         );
     }
 
-    Ok(Permissions {
-        anyone,
-        user,
-        users,
-    })
+    Ok(Permissions { anyone, user, users })
 }
 
 /// A new set of permissions to assign to a document.
