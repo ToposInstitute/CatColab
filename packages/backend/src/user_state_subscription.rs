@@ -24,9 +24,9 @@ struct UserStateNotificationPayload {
 /// This subscription listens for changes to refs and permissions tables,
 /// then updates the affected user's Automerge document with their complete state.
 pub async fn run_user_state_subscription(
-    state: AppState,
+    app_state: AppState,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let mut listener = PgListener::connect_with(&state.db).await?;
+    let mut listener = PgListener::connect_with(&app_state.db).await?;
     listener.listen("user_state_subscription").await?;
 
     info!("Subscribed to Postgres notifications on channel 'user_state_subscription'");
@@ -37,32 +37,31 @@ pub async fn run_user_state_subscription(
             Ok(payload) => {
                 let user_id = payload.user_id;
 
-                // Read the complete user state from the database
-                match read_user_state_from_db(user_id.clone(), &state.db).await {
+                match read_user_state_from_db(user_id.clone(), &app_state.db).await {
                     Ok(user_state) => {
                         // Get or create the document for this user
                         let doc_id = {
-                            let states = state.user_states.read().await;
+                            let states = app_state.user_states.read().await;
                             states.get(&user_id).cloned()
                         };
 
                         match doc_id {
                             Some(doc_id) => {
                                 // Update existing document
-                                match state.repo.find(doc_id.clone()).await {
+                                match app_state.repo.find(doc_id.clone()).await {
                                     Ok(Some(doc_handle)) => {
                                         let result = doc_handle.with_document(|doc| {
                                             doc.transact(|tx| {
                                                 reconcile(tx, &user_state).map_err(|e| {
-                                                    automerge::AutomergeError::InvalidObjId(e.to_string())
+                                                    automerge::AutomergeError::InvalidObjId(
+                                                        e.to_string(),
+                                                    )
                                                 })?;
                                                 Ok::<_, automerge::AutomergeError>(())
                                             })
                                         });
                                         match result {
-                                            Ok(_) => {
-                                                info!(user_id = %user_id, doc_id = %doc_id, "Updated user state document");
-                                            }
+                                            Ok(_) => {}
                                             Err(e) => {
                                                 error!(
                                                     user_id = %user_id,
@@ -73,13 +72,11 @@ pub async fn run_user_state_subscription(
                                         }
                                     }
                                     Ok(None) => {
-                                        error!(
-                                            user_id = %user_id,
-                                            doc_id = %doc_id,
-                                            "User state document not found, creating new one"
-                                        );
-                                        // Create a new document since the old one is missing
-                                        if let Err(e) = create_user_state_doc(&state, &user_id, &user_state).await {
+                                        // Create a new document
+                                        if let Err(e) =
+                                            create_user_state_doc(&app_state, &user_id, &user_state)
+                                                .await
+                                        {
                                             error!(
                                                 user_id = %user_id,
                                                 error = %e,
@@ -98,7 +95,9 @@ pub async fn run_user_state_subscription(
                             }
                             None => {
                                 // Create new document for this user
-                                if let Err(e) = create_user_state_doc(&state, &user_id, &user_state).await {
+                                if let Err(e) =
+                                    create_user_state_doc(&app_state, &user_id, &user_state).await
+                                {
                                     error!(
                                         user_id = %user_id,
                                         error = %e,
@@ -164,12 +163,13 @@ async fn create_user_state_doc(
 ) -> Result<DocumentId, crate::app::AppError> {
     let mut doc = automerge::Automerge::new();
     doc.transact(|tx| {
-        reconcile(tx, user_state).map_err(|e| {
-            automerge::AutomergeError::InvalidObjId(e.to_string())
-        })?;
+        reconcile(tx, user_state)
+            .map_err(|e| automerge::AutomergeError::InvalidObjId(e.to_string()))?;
         Ok::<_, automerge::AutomergeError>(())
     })
-    .map_err(|e| crate::app::AppError::Invalid(format!("Failed to reconcile UserState: {:?}", e)))?;
+    .map_err(|e| {
+        crate::app::AppError::Invalid(format!("Failed to reconcile UserState: {:?}", e))
+    })?;
 
     let doc_handle = state.repo.create(doc).await?;
     let doc_id = doc_handle.document_id().clone();
