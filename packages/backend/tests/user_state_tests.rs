@@ -1,6 +1,75 @@
+mod test_helpers {
+    use backend::app::AppError;
+    use sqlx::PgPool;
+    use uuid::Uuid;
+
+    pub async fn get_pool() -> PgPool {
+        let database_url =
+            dotenvy::var("DATABASE_URL").expect("DATABASE_URL must be set for tests");
+        PgPool::connect(&database_url).await.expect("Failed to connect to database")
+    }
+
+    pub async fn ensure_user_exists(pool: &PgPool, user_id: &str) -> Result<(), AppError> {
+        sqlx::query!(
+            r#"
+            INSERT INTO users (id, created, signed_in)
+            VALUES ($1, NOW(), NOW())
+            ON CONFLICT (id) DO NOTHING
+            "#,
+            user_id
+        )
+        .execute(pool)
+        .await?;
+        Ok(())
+    }
+
+    /// Cleans up test data from the database.
+    ///
+    /// Deletes in the correct order to respect foreign key constraints:
+    /// 1. Permissions (references both users and refs)
+    /// 2. Refs (references snapshots via head)
+    /// 3. Snapshots
+    /// 4. Users
+    pub async fn cleanup_test_data(pool: &PgPool, user_ids: &[&str], ref_ids: &[Uuid]) {
+        // Delete permissions first (foreign key constraint on both users and refs)
+        for ref_id in ref_ids {
+            let _ = sqlx::query("DELETE FROM permissions WHERE object = $1")
+                .bind(ref_id)
+                .execute(pool)
+                .await;
+        }
+
+        // Also delete permissions by subject (user_id) for any refs we might have missed
+        let _ = sqlx::query("DELETE FROM permissions WHERE subject = ANY($1)")
+            .bind(user_ids)
+            .execute(pool)
+            .await;
+
+        // Delete refs (this will work because permissions are gone)
+        for ref_id in ref_ids {
+            let _ = sqlx::query("DELETE FROM refs WHERE id = $1").bind(ref_id).execute(pool).await;
+        }
+
+        // Delete snapshots for these refs
+        for ref_id in ref_ids {
+            let _ = sqlx::query("DELETE FROM snapshots WHERE for_ref = $1")
+                .bind(ref_id)
+                .execute(pool)
+                .await;
+        }
+
+        // Delete users
+        let _ = sqlx::query("DELETE FROM users WHERE id = ANY($1)")
+            .bind(user_ids)
+            .execute(pool)
+            .await;
+    }
+}
+
 mod tests {
+    use crate::test_helpers::{cleanup_test_data, ensure_user_exists, get_pool};
     use autosurgeon::hydrate;
-    use backend::app::{AppCtx, AppError, AppState};
+    use backend::app::{AppCtx, AppState};
     use backend::auth::{NewPermissions, PermissionLevel};
     use backend::document;
     use backend::user_state::UserState;
@@ -14,12 +83,6 @@ mod tests {
     use std::time::Duration;
     use tokio::sync::RwLock;
     use uuid::Uuid;
-
-    async fn get_pool() -> PgPool {
-        let database_url =
-            dotenvy::var("DATABASE_URL").expect("DATABASE_URL must be set for tests");
-        PgPool::connect(&database_url).await.expect("Failed to connect to database")
-    }
 
     async fn create_test_app_state(pool: PgPool) -> AppState {
         let storage = backend::storage::PostgresStorage::new(pool.clone());
@@ -64,39 +127,6 @@ mod tests {
             }
         }))
         .expect("Failed to create test FirebaseUser")
-    }
-
-    async fn ensure_user_exists(pool: &PgPool, user_id: &str) -> Result<(), AppError> {
-        sqlx::query!(
-            r#"
-            INSERT INTO users (id, created, signed_in)
-            VALUES ($1, NOW(), NOW())
-            ON CONFLICT (id) DO NOTHING
-            "#,
-            user_id
-        )
-        .execute(pool)
-        .await?;
-        Ok(())
-    }
-
-    async fn cleanup_test_data(pool: &PgPool, user_ids: &[&str], ref_ids: &[Uuid]) {
-        // Delete permissions first (foreign key constraint)
-        for ref_id in ref_ids {
-            let _ = sqlx::query("DELETE FROM permissions WHERE object = $1")
-                .bind(ref_id)
-                .execute(pool)
-                .await;
-        }
-
-        // Delete users
-        let _ = sqlx::query("DELETE FROM users WHERE id = ANY($1)")
-            .bind(user_ids)
-            .execute(pool)
-            .await;
-
-        // Note: refs and snapshots are not deleted here as they may have foreign key constraints
-        // In a real test environment, you'd want a proper cleanup strategy
     }
 
     fn create_test_document_content(name: &str) -> serde_json::Value {
@@ -354,7 +384,7 @@ mod tests {
         let ref_id = document::new_ref(ctx, content).await.expect("Failed to create ref");
 
         // Now call get_or_create_user_state_doc - it should read from DB and create the doc
-        let doc_id = get_or_create_user_state_doc(&state, &user_id)
+        let _doc_id = get_or_create_user_state_doc(&state, &user_id)
             .await
             .expect("Failed to get or create user state doc");
 
@@ -434,6 +464,7 @@ mod tests {
 
 #[cfg(feature = "proptest")]
 mod proptest_tests {
+    use crate::test_helpers::{cleanup_test_data, get_pool};
     use backend::app::AppError;
     use backend::auth::PermissionLevel;
     use backend::user_state::arbitrary::arbitrary_user_state_with_id;
@@ -441,25 +472,7 @@ mod proptest_tests {
     use serial_test::serial;
     use sqlx::PgPool;
     use test_strategy::proptest;
-
-    async fn get_pool() -> PgPool {
-        let database_url =
-            dotenvy::var("DATABASE_URL").expect("DATABASE_URL must be set for tests");
-        PgPool::connect(&database_url).await.expect("Failed to connect to database")
-    }
-
-    async fn cleanup(pool: &PgPool, user_ids: &[&str]) {
-        // TODO: find saner way to setup and cleanup a test db
-        let _ = sqlx::query("DELETE FROM permissions WHERE subject = ANY($1)")
-            .bind(user_ids)
-            .execute(pool)
-            .await;
-
-        let _ = sqlx::query("DELETE FROM users WHERE id = ANY($1)")
-            .bind(user_ids)
-            .execute(pool)
-            .await;
-    }
+    use uuid::Uuid;
 
     /// Writes user state to the database. This is only for testing purposes.
     ///
@@ -597,7 +610,8 @@ mod proptest_tests {
                     .filter_map(|d| d.owner.as_ref().map(|o| o.id.as_str())),
             )
             .collect();
-        cleanup(&pool, &user_ids).await;
+        let ref_ids: Vec<Uuid> = input_state.documents.iter().map(|d| d.ref_id).collect();
+        cleanup_test_data(&pool, &user_ids, &ref_ids).await;
 
         proptest::prop_assert_eq!(input_state, output_state);
     }
@@ -683,7 +697,8 @@ mod proptest_tests {
                     .filter_map(|d| d.owner.as_ref().map(|o| o.id.as_str())),
             )
             .collect();
-        cleanup(&pool, &user_ids).await;
+        let ref_ids: Vec<Uuid> = input_state.documents.iter().map(|d| d.ref_id).collect();
+        cleanup_test_data(&pool, &user_ids, &ref_ids).await;
 
         // Abort the subscription task (it runs in an infinite loop)
         subscription_handle.abort();
