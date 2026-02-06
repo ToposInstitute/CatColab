@@ -212,7 +212,8 @@ pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppErr
 
 /// Soft-deletes a document reference by setting `deleted_at`.
 pub async fn delete_ref(state: AppState, ref_id: Uuid) -> Result<(), AppError> {
-    sqlx::query!(
+    tracing::info!(ref_id = %ref_id, "Soft-deleting ref");
+    let result = sqlx::query!(
         "
         UPDATE refs
         SET deleted_at = NOW()
@@ -222,6 +223,7 @@ pub async fn delete_ref(state: AppState, ref_id: Uuid) -> Result<(), AppError> {
     )
     .execute(&state.db)
     .await?;
+    tracing::info!(ref_id = %ref_id, rows_affected = result.rows_affected(), "Soft-delete completed");
     Ok(())
 }
 
@@ -286,6 +288,7 @@ pub struct RefStub {
     pub type_name: String,
     #[serde(rename = "refId")]
     #[autosurgeon(rename = "refId")]
+    #[key]
     pub ref_id: Uuid,
     // permission level that the current user has on this ref
     #[serde(rename = "permissionLevel")]

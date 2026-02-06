@@ -242,7 +242,10 @@ describe("User state Automerge document", async () => {
 
     // Track the latest state via change events
     let latestState: UserStateDoc | undefined = docHandle.doc();
+    let changeCount = 0;
     docHandle.on("change", ({ doc }) => {
+        changeCount++;
+        console.log(`[change #${changeCount}] doc_count=${doc.documents.length}`);
         latestState = doc;
     });
 
@@ -260,7 +263,9 @@ describe("User state Automerge document", async () => {
     ) => {
         const start = Date.now();
         while (Date.now() - start < timeoutMs) {
-            if (condition()) return;
+            if (condition()) {
+                return;
+            }
             await new Promise((resolve) => setTimeout(resolve, intervalMs));
         }
         assert(condition(), message);
@@ -311,12 +316,21 @@ describe("User state Automerge document", async () => {
 
     // Delete (soft-delete) the first document - this sets deleted_at
     unwrap(await rpc.delete_ref.mutate(refId1));
+    console.log(
+        `[test] Deleted refId1=${refId1}, current doc_count=${latestState?.documents.length}`,
+    );
 
     test.sequential("should sync document deletion", async () => {
-        await waitFor(
-            () => findDoc(refId1) === undefined,
-            `Deleted document ${refId1} should not exist in user state`,
+        console.log(
+            `[test] Starting deletion wait, doc_count=${latestState?.documents.length}, doc1_exists=${findDoc(refId1) !== undefined}`,
         );
+        await waitFor(() => {
+            const exists = findDoc(refId1) !== undefined;
+            if (exists) {
+                console.log(`[poll] doc1 still exists, doc_count=${latestState?.documents.length}`);
+            }
+            return !exists;
+        }, `Deleted document ${refId1} should not exist in user state`);
         const doc2 = findDoc(refId2);
         assert(doc2, `Document ${refId2} should still exist`);
     });

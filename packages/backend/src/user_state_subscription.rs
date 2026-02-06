@@ -33,9 +33,14 @@ pub async fn run_user_state_subscription(
 
     loop {
         let notification = listener.recv().await?;
+        info!(channel = notification.channel(), payload = notification.payload(), "Received Postgres notification");
         match serde_json::from_str::<UserStateNotificationPayload>(notification.payload()) {
             Ok(payload) => {
                 let user_id = payload.user_id;
+
+                // Small delay to ensure the triggering transaction has committed
+                // Using 200ms to give ample time for transaction to commit
+                tokio::time::sleep(std::time::Duration::from_millis(200)).await;
 
                 match read_user_state_from_db(user_id.clone(), &app_state.db).await {
                     Ok(user_state) => {
@@ -50,26 +55,38 @@ pub async fn run_user_state_subscription(
                                 // Update existing document
                                 match app_state.repo.find(doc_id.clone()).await {
                                     Ok(Some(doc_handle)) => {
-                                        let result = doc_handle.with_document(|doc| {
-                                            doc.transact(|tx| {
+                                        let (peers, _) = doc_handle.peers();
+                                        info!(
+                                            user_id = %user_id,
+                                            doc_count = user_state.documents.len(),
+                                            peer_count = peers.len(),
+                                            "Reconciling user state"
+                                        );
+                                        let (heads_before, heads_after) = doc_handle.with_document(|doc| {
+                                            let heads_before = doc.get_heads();
+                                            let result = doc.transact(|tx| {
                                                 reconcile(tx, &user_state).map_err(|e| {
                                                     automerge::AutomergeError::InvalidObjId(
                                                         e.to_string(),
                                                     )
                                                 })?;
                                                 Ok::<_, automerge::AutomergeError>(())
-                                            })
-                                        });
-                                        match result {
-                                            Ok(_) => {}
-                                            Err(e) => {
+                                            });
+                                            let heads_after = doc.get_heads();
+                                            if let Err(e) = result {
                                                 error!(
                                                     user_id = %user_id,
                                                     error = ?e,
                                                     "Failed to reconcile user state"
                                                 );
                                             }
-                                        }
+                                            (heads_before, heads_after)
+                                        });
+                                        info!(
+                                            user_id = %user_id,
+                                            heads_changed = heads_before != heads_after,
+                                            "Reconcile succeeded"
+                                        );
                                     }
                                     Ok(None) => {
                                         // Create a new document
