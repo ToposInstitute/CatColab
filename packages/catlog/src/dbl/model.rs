@@ -306,10 +306,6 @@ pub enum InvalidDblModel {
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 pub enum Feature {
-    /// Modal theories.
-    Modal,
-    /// Tabulator theories.
-    Tabulator,
-    /// Morphism types given by composites of generators.
-    CompositeMorType,
+    /// Morphism type that is not a basic type or a hom type.
+    ComplexMorType,
 }

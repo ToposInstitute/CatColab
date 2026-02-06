@@ -1,4 +1,9 @@
 //! Elaboration for frontend notebooks.
+//!
+//! The notebook elaborator is disjoint from the [text
+//! elaborator](super::text_elab). One reason for this is that error reporting
+//! must be completely different to be well adapted to the notebook interface.
+//! As a first pass, we are associating cell UUIDs with errors.
 
 use std::str::FromStr;
 use uuid::Uuid;
@@ -8,25 +13,6 @@ use notebook_types::current as nb;
 use super::{context::*, eval::*, prelude::*, stx::*, theory::*, toplevel::*, val::*};
 use crate::dbl::model::{Feature, InvalidDblModel};
 use crate::zero::QualifiedName;
-
-// There is some infrastructure that needs to be put into place before
-// notebook elaboration can be fully successful.
-//
-// First of all, we need an error reporting strategy adapted for the
-// notebook interface.
-//
-// As a first pass, we will associate the cell uuid with errors. I think
-// that it makes sense to have an entirely separate file for notebook
-// elaboration, mainly because the error reporting is going to be so
-// different.
-//
-// Another reason for a separate file is that we can handle the caching
-// there. Ideally, actually, the existing `Toplevel` struct should work
-// just fine.
-//
-// It is also desirable to extract a "partial model" from a notebook.
-// I think that this is possible if we simply ignore any cells that have
-// errors, including cells that depend on cells that have errors.
 
 /// The current state of a notebook elaboration session.
 ///
@@ -151,16 +137,25 @@ impl<'a> Elaborator<'a> {
         match n {
             nb::Ob::Basic(name) => {
                 let name = QualifiedName::deserialize_str(name).unwrap();
-                let (tm, val, ty) = self.resolve_name(name.as_slice())?;
-                let ob_type = match &*ty {
-                    TyV_::Object(ob_type) => ob_type.clone(),
-                    _ => {
-                        return None;
-                    }
+                let (stx, val, ty) = self.resolve_name(name.as_slice())?;
+                let TyV_::Object(ob_type) = &*ty else {
+                    return None;
                 };
-                Some((tm, val, ob_type))
+                Some((stx, val, ob_type.clone()))
             }
-            nb::Ob::App { .. } => None,
+            nb::Ob::App { op: nb::ObOp::Basic(name), ob } => {
+                let name = name_seg(*name);
+                let ob_op = self.theory().basic_ob_op([name].into())?;
+
+                let (arg_stx, arg_val, arg_type) = self.ob(ob)?;
+                if arg_type != self.theory().ob_op_dom(&ob_op) {
+                    // FIXME: We should report a type error here, but how?
+                    return None;
+                }
+                let stx = TmS::ob_app(name, arg_stx);
+                let val = TmV::app(name, arg_val);
+                Some((stx, val, self.theory().ob_op_cod(&ob_op)))
+            }
             nb::Ob::List { .. } => None,
             nb::Ob::Tabulated(_) => None,
         }
@@ -182,12 +177,8 @@ impl<'a> Elaborator<'a> {
                 Some(ot) => (self.theory().hom_type(ot.clone()), ot.clone(), ot),
                 None => return self.ty_error(InvalidDblModel::MorType(id)),
             },
-            nb::MorType::Composite(_) => {
-                return self
-                    .ty_error(InvalidDblModel::UnsupportedFeature(Feature::CompositeMorType));
-            }
-            nb::MorType::ModeApp { .. } => {
-                return self.ty_error(InvalidDblModel::UnsupportedFeature(Feature::Modal));
+            _ => {
+                return self.ty_error(InvalidDblModel::UnsupportedFeature(Feature::ComplexMorType));
             }
         };
         let Some((dom_s, dom_v, synthed_dom_ty)) = mor_decl.dom.as_ref().and_then(|ob| self.ob(ob))
