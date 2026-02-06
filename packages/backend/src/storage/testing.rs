@@ -1,7 +1,7 @@
-//! Storage adapter testing utilities
+//! Storage adapter testing utilities.
 //!
-//! rewritten from:
-//! automerge-repo/packages/automerge-repo/src/helpers/tests/storage-adapter-tests.ts
+//! Rewritten from:
+//! `automerge-repo/packages/automerge-repo/src/helpers/tests/storage-adapter-tests.ts`.
 //!
 //! Provides a test suite for any implementation of the `Storage` trait.
 //! Based on the TypeScript `runStorageAdapterTests` from automerge-repo.
@@ -36,24 +36,24 @@ pub fn large_payload() -> Vec<u8> {
     LARGE_PAYLOAD.clone()
 }
 
-/// Trait for storage test fixtures
+/// Trait for storage test fixtures.
 pub trait StorageTestFixture: Sized + Send {
-    /// The storage type being tested
+    /// The storage type being tested.
     type Storage: Storage + Send + Sync + 'static;
 
-    /// Setup the test fixture
+    /// Setup the test fixture.
     fn setup() -> impl std::future::Future<Output = Self> + Send;
 
-    /// Get reference to the storage adapter
+    /// Get reference to the storage adapter.
     fn storage(&self) -> &Self::Storage;
 
-    /// Optional cleanup
+    /// Optional cleanup.
     fn teardown(self) -> impl std::future::Future<Output = ()> + Send {
         async {}
     }
 }
 
-/// Helper to run a single test with setup and teardown
+/// Helper to run a single test with setup and teardown.
 async fn run_test<F, TestFn>(test_fn: TestFn)
 where
     F: StorageTestFixture,
@@ -64,7 +64,7 @@ where
     fixture.teardown().await;
 }
 
-/// Run all storage adapter acceptance tests
+/// Run all storage adapter acceptance tests.
 pub async fn run_storage_adapter_tests<F: StorageTestFixture>() {
     run_test::<F, _>(|a| Box::pin(test_load_should_return_none_if_no_data(a))).await;
     run_test::<F, _>(|a| Box::pin(test_save_and_load_should_return_data_that_was_saved(a))).await;

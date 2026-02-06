@@ -9,7 +9,7 @@ use std::fmt::Write as _;
 use super::{prelude::*, theory::*};
 use crate::zero::LabelSegment;
 
-/// A metavariable
+/// A metavariable.
 ///
 /// Metavariables are emitted on elaboration error or when explicitly
 /// requested with `@hole`.
@@ -36,7 +36,7 @@ pub struct RecordS {
 
 /// Inner enum for [TyS].
 pub enum TyS_ {
-    /// A reference to a top-level declaration
+    /// A reference to a top-level declaration.
     TopVar(TopVarName),
     /// Type constructor for object types.
     ///
@@ -190,9 +190,9 @@ impl fmt::Display for TyS {
 
 /// Inner enum for [TmS].
 pub enum TmS_ {
-    /// A reference to a top-level constant def
+    /// A reference to a top-level constant def.
     TopVar(TopVarName),
-    /// An application of a top-level term judgment to arguments
+    /// An application of a top-level term judgment to arguments.
     TopApp(TopVarName, Vec<TmS>),
     /// Variable syntax.
     ///
@@ -205,7 +205,7 @@ pub enum TmS_ {
     Proj(TmS, FieldName, LabelSegment),
     /// Unit introduction.
     ///
-    /// Note that eta-expansion takes care of elimination for units
+    /// Note that eta-expansion takes care of elimination for units.
     Tt,
     /// Identity morphism at an object.
     Id(TmS),
@@ -217,11 +217,11 @@ pub enum TmS_ {
     List(Vec<TmS>),
     /// An opaque term.
     ///
-    /// This only appears when we quote a value
+    /// This only appears when we quote a value.
     Opaque,
-    /// A metavar
+    /// A metavar.
     ///
-    /// This only appears when we have an error in elaboration
+    /// This only appears when we have an error in elaboration.
     Meta(MetaVar),
 }
 
@@ -284,7 +284,7 @@ impl TmS {
         Self(Rc::new(TmS_::List(elems)))
     }
 
-    /// An opaque term
+    /// An opaque term.
     pub fn opaque() -> Self {
         Self(Rc::new(TmS_::Opaque))
     }

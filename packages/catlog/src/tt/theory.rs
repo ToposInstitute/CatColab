@@ -246,7 +246,7 @@ pub enum ObOp {
     Modal(modal::ModalObOp),
 }
 
-/// Construct a library of standard theories
+/// Construct a library of standard theories.
 pub fn std_theories() -> HashMap<QualifiedName, Theory> {
     [
         (name("ThSchema"), TheoryDef::discrete(theories::th_schema())),

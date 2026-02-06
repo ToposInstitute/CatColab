@@ -21,9 +21,9 @@ pub struct VarInContext {
     pub ty: Option<TyV>,
 }
 
-/// The variable context during elaboration
+/// The variable context during elaboration.
 pub struct Context {
-    /// Stores the value of each of the variables in context
+    /// Stores the value of each of the variables in context.
     pub env: Env,
     /// Stores the names and types of each of the variables in context.
     pub scope: Vec<VarInContext>,
@@ -61,12 +61,12 @@ impl Context {
         self.scope.truncate(c.scope);
     }
 
-    /// Add a new variable to scope (note: does not add it to the environment)
+    /// Add a new variable to scope (note: does not add it to the environment).
     pub fn push_scope(&mut self, name: VarName, label: LabelSegment, ty: Option<TyV>) {
         self.scope.push(VarInContext::new(name, label, ty))
     }
 
-    /// Lookup a variable by name
+    /// Lookup a variable by name.
     pub fn lookup(&self, name: VarName) -> Option<(BwdIdx, LabelSegment, Option<TyV>)> {
         self.scope
             .iter()

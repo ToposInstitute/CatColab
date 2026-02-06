@@ -50,3 +50,6 @@ uuid = { version = "1.10.0", features = ["v7", "serde"] }
 
 [lints.rust]
 missing_docs = "warn"
+
+[lints.clippy]
+doc_paragraphs_missing_punctuation = "warn"

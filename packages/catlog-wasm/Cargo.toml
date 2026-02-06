@@ -31,3 +31,6 @@ wasm-bindgen-test = "0.3.50"
 
 [lints.rust]
 missing_docs = "warn"
+
+[lints.clippy]
+doc_paragraphs_missing_punctuation = "warn"

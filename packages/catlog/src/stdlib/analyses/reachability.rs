@@ -126,7 +126,9 @@ mod tests {
     use crate::zero::name;
     use std::rc::Rc;
 
-    /// The example petri net has the following structure
+    /// The example Petri net has the following structure:
+    ///
+    /// ```text
     ///                      t1 t2  t3   
     /// let i_mat = vec![vec![0, 1, 0],  p1
     ///                  vec![0, 1, 0],  p2
@@ -135,18 +137,21 @@ mod tests {
     /// let o_mat = vec![vec![1, 0, 0],  p1
     ///                  vec![0, 0, 1],  p2
     ///                  vec![0, 1, 0]]; p3
+    /// ```
     ///
-    /// (WARNING: the petri net is drawn incorrectly in Handbook of Model Checking)
+    /// **Warning**: the Petri net is drawn incorrectly in Handbook of Model
+    /// Checking.
     ///
     /// Let the forbidden state be (0,0,2).
     ///
     /// The algorithm terminates in four steps:
     /// [(0,0,2)] -> [(0,0,2),(1,1,1)] -> [(0,0,2),(0,1,1),(2,2,0)]
-    /// -> [(0,0,2),(0,1,1),(0,2,0)]
+    /// -> [(0,0,2),(0,1,1),(0,2,0)].
+    ///
     /// So the three ways one can reach the forbidden state are:
-    /// 1.) starting in the forbidden state (or any superset)
-    /// 2.) having two tokens in p2
-    /// 3.) having one token in each p2 and p3
+    /// 1. starting in the forbidden state (or any superset)
+    /// 2. having two tokens in p2
+    /// 3. having one token in each p2 and p3
     ///
     /// Consider using algorithm from "Minimal Coverability Tree Construction
     /// Made Complete and Efficient" for a more efficient algorithm which allows

@@ -16,11 +16,11 @@ use crate::zero::NameSegment;
 
 declare_error!(TOP_ERROR, "top", "an error at the top-level");
 
-/// An enum to configure the output of batch processing
+/// An enum to configure the output of batch processing.
 pub enum BatchOutput {
-    /// Snapshot mode: save to string
+    /// Snapshot mode: save to string.
     Snapshot(RefCell<String>),
-    /// Interactive mode: print to console
+    /// Interactive mode: print to console.
     Interactive,
 }
 
@@ -122,7 +122,7 @@ impl BatchOutput {
         }
     }
 
-    /// Get the result of a snapshot test
+    /// Get the result of a snapshot test.
     pub fn result<'a>(&'a self) -> Ref<'a, String> {
         match self {
             BatchOutput::Snapshot(out) => out.borrow(),
@@ -131,7 +131,7 @@ impl BatchOutput {
     }
 }
 
-/// Read from path and elaborate
+/// Read from path and elaborate.
 pub fn run(path: &str, output: &BatchOutput) -> io::Result<bool> {
     let src = match fs::read_to_string(path) {
         Ok(s) => s,

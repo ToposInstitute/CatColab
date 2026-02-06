@@ -55,3 +55,6 @@ name = "tt"
 missing_docs = "warn"
 mixed_script_confusables = "allow"
 confusable_idents = "allow"
+
+[lints.clippy]
+doc_paragraphs_missing_punctuation = "warn"

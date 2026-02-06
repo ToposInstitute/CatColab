@@ -66,7 +66,7 @@ impl<'a, T: 'a> std::iter::FusedIterator for BreadthFirstTraversal<'a, T> {}
 
 impl<'a, T: 'a> TreeTraversal<T> for NodeRef<'a, T> {
     /// Uses the built-in traversal algorithm, which is depth-first, though that
-    /// is not documented: <https://github.com/rust-scraper/ego-tree/issues/38>
+    /// is not documented: <https://github.com/rust-scraper/ego-tree/issues/38>.
     fn dfs(&self) -> Descendants<'a, T> {
         self.descendants()
     }

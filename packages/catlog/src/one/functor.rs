@@ -317,7 +317,7 @@ mod tests {
 
     /// Isomorphism b/w the schemas for half-edge graphs and symmetric graphs.
     ///
-    /// Reference: https://blog.algebraicjulia.org/post/2020/09/cset-graphs-2/
+    /// Reference: <https://blog.algebraicjulia.org/post/2020/09/cset-graphs-2/>.
     #[test]
     fn sch_sgraph_to_hgraph() {
         let (sch_hgraph, sch_sgraph) = (sch_hgraph(), sch_sgraph());

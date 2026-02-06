@@ -80,22 +80,22 @@ impl<T> Dtry<T> {
         Dtry(Row::empty())
     }
 
-    /// Returns whether the directory is empty
+    /// Returns whether the directory is empty.
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
-    /// Iterate through the entries of the directory
+    /// Iterate through the entries of the directory.
     pub fn entries(&self) -> impl Iterator<Item = (&FieldName, &(LabelSegment, DtryEntry<T>))> {
         self.0.iter()
     }
 
-    /// Get the entry for `field` if it exists
+    /// Get the entry for `field` if it exists.
     pub fn entry(&self, field: &FieldName) -> Option<&DtryEntry<T>> {
         self.0.get(*field)
     }
 
-    /// Create a singleton directory with just one entry at the given path
+    /// Create a singleton directory with just one entry at the given path.
     pub fn singleton(path: &[(FieldName, LabelSegment)], val: T) -> Self {
         assert!(!path.is_empty());
         let ((field, label), path) = (path[0], &path[1..]);
@@ -105,7 +105,7 @@ impl<T> Dtry<T> {
 
 impl<T: Clone> Dtry<T> {
     /// Produce the list of paths in `self` that refer to files, along with the
-    /// value of the files that they refer to
+    /// value of the files that they refer to.
     pub fn flatten(&self) -> Vec<(QualifiedName, QualifiedLabel, T)> {
         let mut out = Vec::new();
         self.flatten_into(vec![].into(), vec![].into(), &mut out);

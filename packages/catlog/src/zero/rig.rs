@@ -173,7 +173,7 @@ where
     Var: Display,
     Coef: Display + PartialEq + One + Neg<Output = Coef>,
 {
-    /// Convert to a LaTeX string
+    /// Convert to a LaTeX string.
     pub fn to_latex(&self) -> String {
         let is_simple = |s: &str| {
             // Numeric: digits and dots

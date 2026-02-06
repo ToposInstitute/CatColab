@@ -49,7 +49,7 @@ impl<T> Row<T> {
         self.0.is_empty()
     }
 
-    /// Return whether the row contains the given field
+    /// Return whether the row contains the given field.
     pub fn has(&self, field_name: FieldName) -> bool {
         self.0.contains_key(&field_name)
     }
@@ -66,7 +66,7 @@ impl<T> Row<T> {
 }
 
 impl<T: Clone> Row<T> {
-    ///  Insert a new field
+    ///  Insert a new field.
     ///
     /// Uses [Rc::make_mut] to mutate in place if there are no other references to self,
     /// otherwise performs a clone.

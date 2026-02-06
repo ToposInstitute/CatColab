@@ -43,11 +43,11 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Command {
-    /// Run database migrations (proxied to sqlx_migrator)
+    /// Run database migrations (proxied to sqlx_migrator).
     Migrator(MigrationCommand),
-    /// Start the web server (default)
+    /// Start the web server (default).
     Serve,
-    /// Generate TypeScript bindings for the RPC API
+    /// Generate TypeScript bindings for the RPC API.
     GenerateBindings,
 }
 
