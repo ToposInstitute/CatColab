@@ -9,7 +9,7 @@ use samod::DocHandle;
 use serde_json::Value;
 use uuid::Uuid;
 
-/// Insert a JSON value into a map property
+/// Insert a JSON value into a map property.
 fn insert_value_into_map<'a>(
     tx: &mut automerge::transaction::Transaction<'a>,
     parent: &automerge::ObjId,
@@ -51,7 +51,7 @@ fn insert_value_into_map<'a>(
     Ok(())
 }
 
-/// Insert a JSON value into a list at index
+/// Insert a JSON value into a list at index.
 fn insert_value_into_list<'a>(
     tx: &mut automerge::transaction::Transaction<'a>,
     parent: &automerge::ObjId,
@@ -122,7 +122,7 @@ pub(crate) fn populate_automerge_from_json<'a>(
     Ok(())
 }
 
-/// Convert automerge hydrate::Value to serde_json::Value
+/// Convert automerge hydrate::Value to serde_json::Value.
 pub(crate) fn hydrate_to_json(value: &hydrate::Value) -> Value {
     match value {
         hydrate::Value::Scalar(s) => scalar_to_json(s),

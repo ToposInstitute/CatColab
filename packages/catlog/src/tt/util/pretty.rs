@@ -49,7 +49,7 @@ pub fn binop<'a>(op: D<'a>, l: D<'a>, r: D<'a>) -> D<'a> {
     ((l + s() + op).group() + (s() + r).indented()).group()
 }
 
-/// Creates a tuple in [fnotation]: (`[x, y, z, ...]`)
+/// Creates a tuple in [fnotation]: (`[x, y, z, ...]`).
 pub fn tuple<'a, I: IntoIterator<Item = D<'a>>>(i: I) -> D<'a> {
     D(RcDoc::intersperse(i.into_iter().map(|d| d.0.group()), (t(",") + s()).0))
         .brackets()
@@ -62,27 +62,27 @@ pub fn intersperse<'a, I: IntoIterator<Item = D<'a>>>(i: I, sep: D<'a>) -> D<'a>
 }
 
 impl<'a> D<'a> {
-    /// Try to lay out this document as a group; either on one line or uniformly split
+    /// Try to lay out this document as a group; either on one line or uniformly split.
     pub fn group(self) -> D<'a> {
         D(self.0.group())
     }
 
-    /// Surround this document with parentheses
+    /// Surround this document with parentheses.
     pub fn parens(self) -> D<'a> {
         t("(") + self.group() + t(")")
     }
 
-    /// Increase the indentation level
+    /// Increase the indentation level.
     pub fn indented(self) -> Self {
         D(self.0.nest(2))
     }
 
-    /// Surround this document with brackets
+    /// Surround this document with brackets.
     pub fn brackets(self) -> D<'a> {
         t("[") + self.indented() + t("]")
     }
 
-    /// Use this to print a document
+    /// Use this to print a document.
     pub fn pretty(&self) -> impl fmt::Display {
         self.0.pretty(80)
     }

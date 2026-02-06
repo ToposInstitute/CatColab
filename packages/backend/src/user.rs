@@ -142,7 +142,7 @@ impl UserProfile {
 
 /// Is the proposed user name valid?
 ///
-/// A username is **valid** when it
+/// A username is **valid** when it:
 ///
 /// - is nonempty
 /// - comprises ASCII alphanumeric characters, dashes, dots, and underscores

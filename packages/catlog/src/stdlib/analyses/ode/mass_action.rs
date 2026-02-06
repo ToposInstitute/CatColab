@@ -43,7 +43,7 @@ pub struct MassActionProblemData {
     pub duration: f32,
 }
 
-/// Data defining the stochastic mass-action ODE problem
+/// Data defining the stochastic mass-action ODE problem.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(

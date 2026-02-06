@@ -192,7 +192,7 @@ pub trait FgCategory: Category {
     /// In simple cases, `Ob = ObGen`.
     type ObGen: Eq + Clone + Into<Self::Ob>;
 
-    /// Type of a morphism generator
+    /// Type of a morphism generator.
     ///
     /// Often `Mor = Path<Ob, MorGen>`.
     type MorGen: Eq + Clone + Into<Self::Mor>;
@@ -203,10 +203,10 @@ pub trait FgCategory: Category {
     /// Iterates over morphism generators.
     fn mor_generators(&self) -> impl Iterator<Item = Self::MorGen>;
 
-    /// The domain of a morphism generator
+    /// The domain of a morphism generator.
     fn mor_generator_dom(&self, f: &Self::MorGen) -> Self::Ob;
 
-    /// The codomain of a morphism generator
+    /// The codomain of a morphism generator.
     fn mor_generator_cod(&self, f: &Self::MorGen) -> Self::Ob;
 
     /// Iterates over basic objects.

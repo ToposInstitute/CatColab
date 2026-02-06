@@ -45,7 +45,7 @@ struct ElaboratorCheckpoint {
 }
 
 impl<'a> Elaborator<'a> {
-    /// Create a new notebook elaborator
+    /// Create a new notebook elaborator.
     pub fn new(theory: Theory, toplevel: &'a Toplevel, ref_id: Ustr) -> Self {
         Self {
             theory,
@@ -61,7 +61,7 @@ impl<'a> Elaborator<'a> {
         &self.theory.definition
     }
 
-    /// Get all of the errors from elaboration
+    /// Get all of the errors from elaboration.
     pub fn errors(&self) -> &[InvalidDblModel] {
         &self.errors
     }

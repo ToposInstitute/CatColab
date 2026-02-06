@@ -76,7 +76,7 @@ impl NameSegment {
 ///
 /// A qualified name is a sequence of segments that unambiguously names an element
 /// in a set, or a family of sets, or a family of family of sets, and so on. For
-/// example, a qualified name with three segments can be constructed as
+/// example, a qualified name with three segments can be constructed as:
 ///
 /// ```
 /// # use catlog::zero::qualified::*;
@@ -373,7 +373,7 @@ impl QualifiedLabel {
         self.0.iter()
     }
 
-    /// Add another segment onto the end
+    /// Add another segment onto the end.
     pub fn snoc(&self, segment: LabelSegment) -> Self {
         let mut segments = self.0.clone();
         segments.push(segment);

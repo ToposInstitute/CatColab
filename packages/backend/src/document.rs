@@ -270,7 +270,7 @@ pub struct RefStub {
     pub created_at: DateTime<Utc>,
 }
 
-/// Parameters for filtering a search of refs
+/// Parameters for filtering a search of refs.
 #[qubit::ts]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RefQueryParams {
@@ -290,7 +290,7 @@ pub struct RefQueryParams {
 }
 
 /// Searches for `RefStub`s that the current user has permission to access,
-/// returning lightweight metadata about each matching ref
+/// returning lightweight metadata about each matching ref.
 pub async fn search_ref_stubs(
     ctx: AppCtx,
     search_params: RefQueryParams,

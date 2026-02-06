@@ -15,10 +15,10 @@ pub struct AppState {
     /// Connection to the Postgres database.
     pub db: PgPool,
 
-    /// Automerge-repo provider
+    /// Automerge-repo provider.
     pub repo: samod::Repo,
 
-    /// Tracks which ref_ids have active autosave listeners to prevent duplicates
+    /// Tracks which ref_ids have active autosave listeners to prevent duplicates.
     pub active_listeners: Arc<RwLock<HashSet<Uuid>>>,
 }
 
