@@ -271,6 +271,7 @@ impl DblTheory {
     pub fn try_into_tt(&self) -> Option<tt::theory::TheoryDef> {
         match &self.0 {
             DblTheoryBox::Discrete(th) => Some(tt::theory::TheoryDef::Discrete(th.clone())),
+            DblTheoryBox::Modal(th) => Some(tt::theory::TheoryDef::Modal(th.clone())),
             _ => None,
         }
     }
@@ -348,7 +349,7 @@ impl DblTheory {
     /// and then this method can be removed.
     #[wasm_bindgen(js_name = "canInstantiateModels")]
     pub fn can_instantiate_models(&self) -> bool {
-        matches!(&self.0, DblTheoryBox::Discrete(_))
+        !matches!(&self.0, DblTheoryBox::DiscreteTab(_))
     }
 }
 
