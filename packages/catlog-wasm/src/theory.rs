@@ -14,7 +14,10 @@ use catlog::dbl::theory::{
     TabObType,
 };
 use catlog::one::{Path, QualifiedPath, ShortPath};
-use catlog::tt;
+use catlog::tt::{
+    self,
+    notebook_elab::{demote_modality, promote_modality},
+};
 use catlog::zero::{NameSegment, QualifiedName};
 use notebook_types::current::theory::*;
 
@@ -127,18 +130,6 @@ impl CanElaborate<ObOp, ModalObOp> for Elaborator {
     }
 }
 
-pub(crate) fn promote_modality(modality: Modality) -> theory::Modality {
-    match modality {
-        Modality::Discrete => theory::Modality::Discrete(),
-        Modality::Codiscrete => theory::Modality::Codiscrete(),
-        Modality::List => theory::Modality::List(theory::List::Plain),
-        Modality::SymmetricList => theory::Modality::List(theory::List::Symmetric),
-        Modality::CartesianList => theory::Modality::List(theory::List::Cartesian),
-        Modality::CocartesianList => theory::Modality::List(theory::List::Cocartesian),
-        Modality::AdditiveList => theory::Modality::List(theory::List::Additive),
-    }
-}
-
 pub(crate) fn expect_single_name(name: &QualifiedName) -> Ustr {
     match name.only() {
         Some(NameSegment::Text(text)) => text,
@@ -223,20 +214,6 @@ impl CanQuote<ModalMorType, MorType> for Quoter {
                 quoted
             }
         }
-    }
-}
-
-pub(crate) fn demote_modality(modality: theory::Modality) -> Modality {
-    match modality {
-        theory::Modality::Discrete() => Modality::Discrete,
-        theory::Modality::Codiscrete() => Modality::Codiscrete,
-        theory::Modality::List(list_type) => match list_type {
-            theory::List::Plain => Modality::List,
-            theory::List::Symmetric => Modality::SymmetricList,
-            theory::List::Cartesian => Modality::CartesianList,
-            theory::List::Cocartesian => Modality::CocartesianList,
-            theory::List::Additive => Modality::AdditiveList,
-        },
     }
 }
 

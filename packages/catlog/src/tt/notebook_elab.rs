@@ -11,7 +11,10 @@ use uuid::Uuid;
 use notebook_types::current as nb;
 
 use super::{context::*, eval::*, prelude::*, stx::*, theory::*, toplevel::*, val::*};
-use crate::dbl::model::{Feature, InvalidDblModel};
+use crate::dbl::{
+    modal,
+    model::{Feature, InvalidDblModel},
+};
 use crate::zero::QualifiedName;
 
 /// The current state of a notebook elaboration session.
@@ -158,9 +161,11 @@ impl<'a> Elaborator<'a> {
 
     fn ob_chk(&self, n: &nb::Ob, ob_type: &ObType) -> Option<(TmS, TmV)> {
         match n {
-            nb::Ob::List { modality: _, objects: elems } => {
-                // TODO: Check compatibility of modalities.
-                let (_m, ob_type) = ob_type.clone().mode_app()?;
+            nb::Ob::List { modality: nb_modality, objects: elems } => {
+                let (modality, ob_type) = ob_type.clone().mode_app()?;
+                if promote_modality(*nb_modality) != modality {
+                    return None;
+                }
                 let mut elem_stxs = Vec::new();
                 let mut elem_vals = Vec::new();
                 for elem in elems {
@@ -332,6 +337,34 @@ impl<'a> Elaborator<'a> {
         let r_s = RecordS::new(field_tys.clone());
         let r_v = RecordV::new(self.ctx.env.clone(), field_tys, Dtry::empty());
         (TyS::record(r_s), TyV::record(r_v))
+    }
+}
+
+/// Promotes a modality from notebook type to modality for modal theory.
+pub fn promote_modality(modality: nb::Modality) -> modal::Modality {
+    match modality {
+        nb::Modality::Discrete => modal::Modality::Discrete(),
+        nb::Modality::Codiscrete => modal::Modality::Codiscrete(),
+        nb::Modality::List => modal::Modality::List(modal::List::Plain),
+        nb::Modality::SymmetricList => modal::Modality::List(modal::List::Symmetric),
+        nb::Modality::CartesianList => modal::Modality::List(modal::List::Cartesian),
+        nb::Modality::CocartesianList => modal::Modality::List(modal::List::Cocartesian),
+        nb::Modality::AdditiveList => modal::Modality::List(modal::List::Additive),
+    }
+}
+
+/// Demotes a modality to notebook type.
+pub fn demote_modality(modality: modal::Modality) -> nb::Modality {
+    match modality {
+        modal::Modality::Discrete() => nb::Modality::Discrete,
+        modal::Modality::Codiscrete() => nb::Modality::Codiscrete,
+        modal::Modality::List(list_type) => match list_type {
+            modal::List::Plain => nb::Modality::List,
+            modal::List::Symmetric => nb::Modality::SymmetricList,
+            modal::List::Cartesian => nb::Modality::CartesianList,
+            modal::List::Cocartesian => nb::Modality::CocartesianList,
+            modal::List::Additive => nb::Modality::AdditiveList,
+        },
     }
 }
 
