@@ -18,19 +18,10 @@ export default function createPolynomialODETheory(theoryMeta: TheoryMeta): Theor
             },
             {
                 tag: "MorType",
-                morType: {
-                    tag: "Hom",
-                    content: { tag: "Basic", content: "Object" },
-                },
+                morType: { tag: "Basic", content: "Multihom" },
                 name: "Contribution",
                 description: "Contribution term to the system",
                 shortcut: ["C"],
-                domain: {
-                    apply: { tag: "Basic", content: "tensor" },
-                },
-                codomain: {
-                    apply: { tag: "Basic", content: "Object" },
-                },
             },
         ],
         modelAnalyses: [
