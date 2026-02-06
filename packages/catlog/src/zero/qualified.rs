@@ -432,7 +432,15 @@ impl Namespace {
 
     /// Sets the label segment associated with a UUID.
     pub fn set_label(&mut self, uuid: Uuid, label: LabelSegment) {
-        self.uuid_labels.as_mut().expect("Should be a UUID namespace").set(uuid, label);
+        let uuid_labels = self.uuid_labels.as_mut().expect("Should be a UUID namespace");
+        if let LabelSegment::Text(s) = &label
+            && s.is_empty()
+        {
+            // Treat an empty label as no label at all.
+            uuid_labels.unset(&uuid);
+        } else {
+            uuid_labels.set(uuid, label);
+        }
     }
 
     /// Tries to get a human-readable label for a name.
