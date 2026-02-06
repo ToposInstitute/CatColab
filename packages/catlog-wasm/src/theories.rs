@@ -449,6 +449,23 @@ impl ThSymMonoidalCategory {
     }
 }
 
+/// A theory of symmetric multicategories.
+#[wasm_bindgen]
+pub struct ThSymMulticategory(Rc<theory::ModalDblTheory>);
+
+#[wasm_bindgen]
+impl ThSymMulticategory {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Rc::new(theories::th_sym_multicategory()))
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory(self.0.clone().into())
+    }
+}
+
 /// A theory of power systems.
 #[wasm_bindgen]
 pub struct ThPowerSystem(Rc<theory::DiscreteDblTheory>);
