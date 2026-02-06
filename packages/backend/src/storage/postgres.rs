@@ -19,6 +19,7 @@ pub struct PostgresStorage {
 }
 
 impl PostgresStorage {
+    /// Constructs a new PostgreSQL storage adapter.
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }

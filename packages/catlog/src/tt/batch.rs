@@ -122,7 +122,6 @@ impl BatchOutput {
         }
     }
 
-    #[allow(unused)]
     /// Get the result of a snapshot test
     pub fn result<'a>(&'a self) -> Ref<'a, String> {
         match self {

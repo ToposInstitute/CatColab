@@ -50,3 +50,8 @@ serde_json = "1.0.145"
 
 [[example]]
 name = "tt"
+
+[lints.rust]
+missing_docs = "warn"
+mixed_script_confusables = "allow"
+confusable_idents = "allow"
