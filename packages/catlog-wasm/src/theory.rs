@@ -10,8 +10,8 @@ use ustr::Ustr;
 use wasm_bindgen::prelude::*;
 
 use catlog::dbl::theory::{
-    self, DblTheory as _, ModalMorType, ModalObOp, ModalObType, ModalOp, ModeApp, TabMorType,
-    TabObOp, TabObType,
+    self, DblTheory as _, ModalMorType, ModalObOp, ModalObType, ModeApp, TabMorType, TabObOp,
+    TabObType,
 };
 use catlog::one::{Path, QualifiedPath, ShortPath};
 use catlog::tt;
@@ -49,10 +49,7 @@ impl CanElaborate<MorType, QualifiedPath> for Elaborator {
 /// Elaborates into object operation in a discrete double theory.
 impl CanElaborate<ObOp, QualifiedName> for Elaborator {
     fn elab(&self, op: &ObOp) -> Result<QualifiedName, String> {
-        match op {
-            ObOp::Id(ObType::Basic(id)) => Ok((*id).into()),
-            _ => Err(format!("Cannot use operation in discrete double theory: {op:#?}")),
-        }
+        Err(format!("Cannot use operation in discrete double theory: {op:#?}"))
     }
 }
 
@@ -88,10 +85,7 @@ impl CanElaborate<MorType, TabMorType> for Elaborator {
 /// Elaborates into object operation in a discrete tabulator theory.
 impl CanElaborate<ObOp, TabObOp> for Elaborator {
     fn elab(&self, op: &ObOp) -> Result<TabObOp, String> {
-        match op {
-            ObOp::Id(ob_type) => Ok(Path::empty(self.elab(ob_type)?)),
-            _ => Err(format!("Cannot use operation in discrete tabulator theory: {op:#?}")),
-        }
+        Err(format!("Cannot use operation in discrete tabulator theory: {op:#?}"))
     }
 }
 
@@ -128,16 +122,7 @@ impl CanElaborate<MorType, ModalMorType> for Elaborator {
 impl CanElaborate<ObOp, ModalObOp> for Elaborator {
     fn elab(&self, op: &ObOp) -> Result<ModalObOp, String> {
         match op {
-            ObOp::Basic(id) => Ok(ModeApp::new(ModalOp::Generator((*id).into())).into()),
-            ObOp::Id(ob_type) => Ok(Path::empty(self.elab(ob_type)?)),
-            ObOp::Composite(ops) => {
-                let ops: Result<Vec<_>, _> = ops.iter().map(|op| self.elab(op)).collect();
-                Ok(Path::from_vec(ops?).ok_or("Composite should be non-empty")?.flatten())
-            }
-            ObOp::ModeApp { modality, op } => Ok({
-                let op: ModalObOp = self.elab(op.as_ref())?;
-                op.apply(promote_modality(*modality))
-            }),
+            ObOp::Basic(id) => Ok(ModalObOp::generator((*id).into())),
         }
     }
 }
@@ -183,13 +168,6 @@ impl CanQuote<QualifiedPath, MorType> for Quoter {
                 }
             }
         }
-    }
-}
-
-/// Quotes an object operation in a discrete double theory.
-impl CanQuote<QualifiedName, ObOp> for Quoter {
-    fn quote(&self, name: &QualifiedName) -> ObOp {
-        ObOp::Id(ObType::Basic(expect_single_name(name)))
     }
 }
 
