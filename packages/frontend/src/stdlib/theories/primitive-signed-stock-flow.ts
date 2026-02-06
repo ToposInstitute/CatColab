@@ -72,6 +72,20 @@ export default function createPrimitiveSignedStockFlowTheory(theoryMeta: TheoryM
                     return thCategorySignedLinks.massActionEquations(model);
                 },
             }),
+            analyses.unbalancedMassAction({
+                simulate(model, data) {
+                    return thCategorySignedLinks.unbalancedMassAction(model, data);
+                },
+                transitionType: {
+                    tag: "Hom",
+                    content: { tag: "Basic", content: "Object" },
+                },
+            }),
+            analyses.unbalancedMassActionEquations({
+                getEquations(model) {
+                    return thCategorySignedLinks.unbalancedMassActionEquations(model);
+                },
+            }),
         ],
     });
 }

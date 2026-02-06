@@ -53,7 +53,7 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
             }),
             analyses.stochasticMassAction({
                 id: "stochastic-mass-action",
-                name: "Stochastic mass action dynamics",
+                name: "Stochastic mass-action dynamics",
                 description: "Simulate a stochastic system using the law of mass action",
                 help: "stochastic-mass-action",
                 simulate(model, data) {
