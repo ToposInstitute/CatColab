@@ -9,7 +9,6 @@ use std::{collections::HashMap, fmt};
 use indexmap::IndexMap;
 use nalgebra::DVector;
 use num_traits::Zero;
-// use rebop::gillespie;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -198,7 +197,6 @@ mod tests {
     use std::rc::Rc;
 
     use super::*;
-    // use crate::simulate::ode::LatexEquation;
     use crate::stdlib::{models::*, theories::*};
 
     #[test]
@@ -236,35 +234,4 @@ mod tests {
         "#]);
         expected.assert_eq(&sys.to_string());
     }
-
-    // #[test]
-    // fn catalysis_dynamics() {
-    //     let th = Rc::new(th_sym_monoidal_category());
-    //     let model = catalyzed_reaction(th);
-    //     let sys = PetriNetUnbalancedMassActionAnalysis::default().build_system(&model);
-    //     let expected = expect!([r#"
-    //         dx = (-Outgoing(f)) c x
-    //         dy = (Incoming(f)) c x
-    //         dc = 0
-    //     "#]);
-    //     expected.assert_eq(&sys.to_string());
-    // }
-
-    // #[test]
-    // fn to_latex() {
-    //     let th = Rc::new(th_category_links());
-    //     let model = backward_link(th);
-    //     let sys = StockFlowUnbalancedMassActionAnalysis::default().build_system(&model);
-    //     let expected = vec![
-    //         LatexEquation {
-    //             lhs: "\\dot{x}".to_string(),
-    //             rhs: "(-f) x y".to_string(),
-    //         },
-    //         LatexEquation {
-    //             lhs: "\\dot{y}".to_string(),
-    //             rhs: "f x y".to_string(),
-    //         },
-    //     ];
-    //     assert_eq!(expected, sys.to_latex_equations());
-    // }
 }
