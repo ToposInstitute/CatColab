@@ -29,10 +29,10 @@ use crate::zero::{QualifiedName, alg::Polynomial, name, rig::Monomial};
 /// *incoming flow to B* and an *outgoing flow from A*.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub enum DirectedTerm {
-    /// The parameter corresponds to an incoming flow
+    /// The parameter corresponds to an incoming flow.
     IncomingFlow(QualifiedName),
 
-    /// The parameter corresponds to an outgoing flow
+    /// The parameter corresponds to an outgoing flow.
     OutgoingFlow(QualifiedName),
 }
 
