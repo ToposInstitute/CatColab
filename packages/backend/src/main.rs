@@ -1,5 +1,6 @@
-use axum::extract::Request;
+//! Main entry point for the CatColab backend.
 
+use axum::extract::Request;
 use axum::extract::ws::WebSocketUpgrade;
 use axum::middleware::from_fn_with_state;
 use axum::{Router, routing::get};

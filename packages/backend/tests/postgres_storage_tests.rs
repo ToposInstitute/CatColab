@@ -1,3 +1,5 @@
+//! Tests the Postgres storage adapter for Automerge.
+
 use backend::storage::{PostgresStorage, testing};
 use sqlx::PgPool;
 

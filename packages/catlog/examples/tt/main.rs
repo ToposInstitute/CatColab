@@ -1,3 +1,5 @@
+//! Command-line program to run DoubleTT in interactive mode.
+
 use catlog::tt::batch::{self, BatchOutput};
 
 use notify::RecursiveMode;
