@@ -20,7 +20,7 @@ use catlog::one::{Category as _, FgCategory, Path, QualifiedPath};
 use catlog::tt::{
     self,
     modelgen::generate,
-    notebook_elab::Elaborator as ElaboratorNext,
+    notebook_elab::{Elaborator as ElaboratorNext, demote_modality, promote_modality},
     toplevel::{TopDecl, Toplevel, Type},
 };
 use catlog::validate::Validate;
@@ -30,9 +30,7 @@ use notebook_types::current::{path as notebook_path, *};
 use super::model_presentation::*;
 use super::notation::*;
 use super::result::JsResult;
-use super::theory::{
-    DblTheory, DblTheoryBox, demote_modality, expect_single_name, promote_modality,
-};
+use super::theory::{DblTheory, DblTheoryBox, expect_single_name};
 
 /// Elaborates into an object in a model of a discrete double theory.
 impl CanElaborate<Ob, QualifiedName> for Elaborator {

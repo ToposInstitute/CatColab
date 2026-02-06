@@ -1,4 +1,9 @@
 //! Elaboration for frontend notebooks.
+//!
+//! The notebook elaborator is disjoint from the [text
+//! elaborator](super::text_elab). One reason for this is that error reporting
+//! must be completely different to be well adapted to the notebook interface.
+//! As a first pass, we are associating cell UUIDs with errors.
 
 use std::str::FromStr;
 use uuid::Uuid;
@@ -6,27 +11,11 @@ use uuid::Uuid;
 use notebook_types::current as nb;
 
 use super::{context::*, eval::*, prelude::*, stx::*, theory::*, toplevel::*, val::*};
-use crate::dbl::model::{Feature, InvalidDblModel};
+use crate::dbl::{
+    modal,
+    model::{Feature, InvalidDblModel},
+};
 use crate::zero::QualifiedName;
-
-// There is some infrastructure that needs to be put into place before
-// notebook elaboration can be fully successful.
-//
-// First of all, we need an error reporting strategy adapted for the
-// notebook interface.
-//
-// As a first pass, we will associate the cell uuid with errors. I think
-// that it makes sense to have an entirely separate file for notebook
-// elaboration, mainly because the error reporting is going to be so
-// different.
-//
-// Another reason for a separate file is that we can handle the caching
-// there. Ideally, actually, the existing `Toplevel` struct should work
-// just fine.
-//
-// It is also desirable to extract a "partial model" from a notebook.
-// I think that this is possible if we simply ignore any cells that have
-// errors, including cells that depend on cells that have errors.
 
 /// The current state of a notebook elaboration session.
 ///
@@ -147,22 +136,53 @@ impl<'a> Elaborator<'a> {
         }
     }
 
-    fn ob(&mut self, n: &nb::Ob) -> Option<(TmS, TmV, ObType)> {
+    fn ob_syn(&self, n: &nb::Ob) -> Option<(TmS, TmV, ObType)> {
         match n {
             nb::Ob::Basic(name) => {
                 let name = QualifiedName::deserialize_str(name).unwrap();
-                let (tm, val, ty) = self.resolve_name(name.as_slice())?;
-                let ob_type = match &*ty {
-                    TyV_::Object(ob_type) => ob_type.clone(),
-                    _ => {
-                        return None;
-                    }
+                let (stx, val, ty) = self.resolve_name(name.as_slice())?;
+                let TyV_::Object(ob_type) = &*ty else {
+                    return None;
                 };
-                Some((tm, val, ob_type))
+                Some((stx, val, ob_type.clone()))
             }
-            nb::Ob::App { .. } => None,
-            nb::Ob::List { .. } => None,
-            nb::Ob::Tabulated(_) => None,
+            nb::Ob::App { op: nb::ObOp::Basic(name), ob } => {
+                let name = name_seg(*name);
+                let ob_op = self.theory().basic_ob_op([name].into())?;
+                let arg_type = self.theory().ob_op_dom(&ob_op);
+                let (arg_stx, arg_val) = self.ob_chk(ob, &arg_type)?;
+                let stx = TmS::ob_app(name, arg_stx);
+                let val = TmV::app(name, arg_val);
+                Some((stx, val, self.theory().ob_op_cod(&ob_op)))
+            }
+            _ => None,
+        }
+    }
+
+    fn ob_chk(&self, n: &nb::Ob, ob_type: &ObType) -> Option<(TmS, TmV)> {
+        match n {
+            nb::Ob::List { modality: nb_modality, objects: elems } => {
+                let (modality, ob_type) = ob_type.clone().mode_app()?;
+                if promote_modality(*nb_modality) != modality {
+                    return None;
+                }
+                let mut elem_stxs = Vec::new();
+                let mut elem_vals = Vec::new();
+                for elem in elems {
+                    let (tm_s, tm_v) = self.ob_chk(elem.as_ref()?, &ob_type)?;
+                    elem_stxs.push(tm_s);
+                    elem_vals.push(tm_v);
+                }
+                Some((TmS::list(elem_stxs), TmV::list(elem_vals)))
+            }
+            _ => {
+                let (tm_s, tm_v, synthed) = self.ob_syn(n)?;
+                if synthed == *ob_type {
+                    Some((tm_s, tm_v))
+                } else {
+                    None
+                }
+            }
         }
     }
 
@@ -182,26 +202,16 @@ impl<'a> Elaborator<'a> {
                 Some(ot) => (self.theory().hom_type(ot.clone()), ot.clone(), ot),
                 None => return self.ty_error(InvalidDblModel::MorType(id)),
             },
-            nb::MorType::Composite(_) => {
-                return self
-                    .ty_error(InvalidDblModel::UnsupportedFeature(Feature::CompositeMorType));
-            }
-            nb::MorType::ModeApp { .. } => {
-                return self.ty_error(InvalidDblModel::UnsupportedFeature(Feature::Modal));
+            _ => {
+                return self.ty_error(InvalidDblModel::UnsupportedFeature(Feature::ComplexMorType));
             }
         };
-        let Some((dom_s, dom_v, synthed_dom_ty)) = mor_decl.dom.as_ref().and_then(|ob| self.ob(ob))
+        let Some((dom_s, dom_v)) = mor_decl.dom.as_ref().and_then(|ob| self.ob_chk(ob, &dom_ty))
         else {
-            return self.ty_error(InvalidDblModel::Dom(id));
-        };
-        let Some((cod_s, cod_v, synthed_cod_ty)) = mor_decl.cod.as_ref().and_then(|ob| self.ob(ob))
-        else {
-            return self.ty_error(InvalidDblModel::Cod(id));
-        };
-        if synthed_dom_ty != dom_ty {
             return self.ty_error(InvalidDblModel::DomType(id));
         };
-        if synthed_cod_ty != cod_ty {
+        let Some((cod_s, cod_v)) = mor_decl.cod.as_ref().and_then(|ob| self.ob_chk(ob, &cod_ty))
+        else {
             return self.ty_error(InvalidDblModel::CodType(id));
         };
         (
@@ -242,7 +252,7 @@ impl<'a> Elaborator<'a> {
         for specialization in i_decl.specializations.iter() {
             if let (Some(field_id), Some(ob)) = (&specialization.id, &specialization.ob) {
                 let field_name = NameSegment::Uuid(Uuid::from_str(field_id).unwrap());
-                let Some((ob_s, ob_v, ob_type)) = self.ob(ob) else {
+                let Some((ob_s, ob_v, ob_type)) = self.ob_syn(ob) else {
                     continue;
                 };
                 let Some((field_label, field_ty)) = r.fields.get_with_label(field_name) else {
@@ -330,6 +340,34 @@ impl<'a> Elaborator<'a> {
     }
 }
 
+/// Promotes a modality from notebook type to modality for modal theory.
+pub fn promote_modality(modality: nb::Modality) -> modal::Modality {
+    match modality {
+        nb::Modality::Discrete => modal::Modality::Discrete(),
+        nb::Modality::Codiscrete => modal::Modality::Codiscrete(),
+        nb::Modality::List => modal::Modality::List(modal::List::Plain),
+        nb::Modality::SymmetricList => modal::Modality::List(modal::List::Symmetric),
+        nb::Modality::CartesianList => modal::Modality::List(modal::List::Cartesian),
+        nb::Modality::CocartesianList => modal::Modality::List(modal::List::Cocartesian),
+        nb::Modality::AdditiveList => modal::Modality::List(modal::List::Additive),
+    }
+}
+
+/// Demotes a modality to notebook type.
+pub fn demote_modality(modality: modal::Modality) -> nb::Modality {
+    match modality {
+        modal::Modality::Discrete() => nb::Modality::Discrete,
+        modal::Modality::Codiscrete() => nb::Modality::Codiscrete,
+        modal::Modality::List(list_type) => match list_type {
+            modal::List::Plain => nb::Modality::List,
+            modal::List::Symmetric => nb::Modality::SymmetricList,
+            modal::List::Cartesian => nb::Modality::CartesianList,
+            modal::List::Cocartesian => nb::Modality::CocartesianList,
+            modal::List::Additive => nb::Modality::AdditiveList,
+        },
+    }
+}
+
 #[cfg(test)]
 mod test {
     use expect_test::{Expect, expect};
@@ -338,7 +376,7 @@ mod test {
     use ustr::ustr;
 
     use crate::dbl::model::DblModelPrinter;
-    use crate::stdlib::th_schema;
+    use crate::stdlib::{th_schema, th_sym_monoidal_category};
     use crate::tt::{
         modelgen::generate,
         notebook_elab::Elaborator,
@@ -363,11 +401,11 @@ mod test {
     }
 
     #[test]
-    fn discrete_theory() {
+    fn discrete_theories() {
         let th_schema = Theory::new(name("ThSchema"), TheoryDef::discrete(th_schema()));
         elab_example(
             &th_schema,
-            "weighted_graph",
+            "sch_weighted_graph",
             expect![[r#"
                 model generated by 3 objects and 3 morphisms
                 E : Entity
@@ -376,6 +414,22 @@ mod test {
                 weight : E -> Weight : Attr
                 src : E -> V : Hom Entity
                 tgt : E -> V : Hom Entity"#]],
+        );
+    }
+
+    #[test]
+    fn modal_theories() {
+        let th_smc = Theory::new(name("ThSMC"), TheoryDef::modal(th_sym_monoidal_category()));
+        elab_example(
+            &th_smc,
+            "sir_petri",
+            expect![[r#"
+                model generated by 3 objects and 2 morphisms
+                S : Object
+                I : Object
+                R : Object
+                infect : ⨂ [S, I] -> ⨂ [I, I] : Hom Object
+                recover : ⨂ [I] -> ⨂ [R] : Hom Object"#]],
         );
     }
 
