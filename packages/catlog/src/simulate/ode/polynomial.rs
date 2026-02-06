@@ -184,6 +184,7 @@ where
 ///
 /// Such a system is ready for use in numerical solvers: the coefficients are
 /// floating point numbers and the variables are consecutive integer indices.
+#[derive(PartialEq, Debug)]
 pub struct NumericalPolynomialSystem<Exp> {
     /// Components of the vector field.
     pub components: Vec<Polynomial<usize, f32, Exp>>,
