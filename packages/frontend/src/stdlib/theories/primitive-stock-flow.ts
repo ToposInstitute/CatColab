@@ -10,6 +10,7 @@ export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): 
     return new Theory({
         ...theoryMeta,
         theory: thCategoryLinks.theory(),
+        inclusions: ["primitive-signed-stock-flow"],
         onlyFreeModels: true,
         modelTypes: [
             {
