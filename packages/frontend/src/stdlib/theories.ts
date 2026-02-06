@@ -135,3 +135,14 @@ stdTheories.add(
     },
     async () => (await import("./theories/power-system")).default,
 );
+
+stdTheories.add(
+    {
+        id: "hyper-stock-flow",
+        name: "Stock and multi-flow",
+        description: "Stocks and multi-flows, with production and consumption",
+        iconLetters: ["H", "s"],
+        group: "Experimental",
+    },
+    async () => (await import("./theories/hyper-stock-flow")).default,
+);
