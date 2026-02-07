@@ -1,4 +1,5 @@
 import type * as Viz from "@viz-js/viz";
+import type * as Elk from "elkjs";
 
 import type { BaseTypeMeta } from "../theory";
 import type { GraphvizAttributes } from "../visualization";
@@ -29,6 +30,11 @@ export const defaultGraphvizAttributes: GraphvizAttributes = {
     graph: defaultGraphAttributes,
     node: defaultNodeAttributes,
     edge: defaultEdgeAttributes,
+};
+
+/** Default top-level layout options for ELK. */
+export const defaultElkLayoutOptions: Elk.LayoutOptions = {
+    "elk.layered.spacing.baseValue": "20",
 };
 
 /** Whether the label is set in a monospace font. */

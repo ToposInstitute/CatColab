@@ -7,7 +7,7 @@ import {
     type GraphSpec,
     GraphVisualization,
 } from "../../visualization";
-import { defaultGraphvizAttributes } from "../graph_styles";
+import { defaultElkLayoutOptions, defaultGraphvizAttributes } from "../graph_styles";
 
 import "./graph_visualization.css";
 
@@ -51,6 +51,7 @@ export function GraphVisualizationAnalysis(
                         <GraphVisualization
                             graph={graph()}
                             config={props.config}
+                            elkLayoutOptions={defaultElkLayoutOptions}
                             graphvizAttributes={defaultGraphvizAttributes}
                             ref={setSvgRef}
                         />

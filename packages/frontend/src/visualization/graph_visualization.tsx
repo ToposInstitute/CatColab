@@ -1,3 +1,4 @@
+import type * as ELK from "elkjs";
 import { Match, Switch } from "solid-js";
 
 import { graphToElk } from "./elk";
@@ -16,15 +17,21 @@ layout engine, performs the layout, and renders the result as SVG.
 export function GraphVisualization(props: {
     graph: GraphSpec.Graph;
     config: Config;
-    graphvizAttributes?: GraphvizAttributes;
     ref?: SVGRefProp;
+    elkLayoutOptions?: ELK.LayoutOptions;
+    graphvizAttributes?: GraphvizAttributes;
 }) {
     const layout = () => props.config.layout;
+
+    const elkGraph = () => {
+        const layoutOptions = { ...elkOptions(props.config), ...props.elkLayoutOptions };
+        return graphToElk(props.graph, layoutOptions);
+    };
 
     return (
         <Switch>
             <Match when={layout() === "elk"}>
-                <ElkSVG graph={graphToElk(props.graph, elkOptions(props.config))} ref={props.ref} />
+                <ElkSVG graph={elkGraph()} ref={props.ref} />
             </Match>
             <Match when={layout() === "graphviz-directed" || layout() === "graphviz-undirected"}>
                 <GraphvizSVG

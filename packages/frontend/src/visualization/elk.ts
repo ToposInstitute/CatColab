@@ -14,7 +14,7 @@ import type * as GraphSpec from "./graph_spec";
 import { measureText } from "./measure";
 import type { ArrowStyle } from "./types";
 
-/** Elk node with extra styling data attached.
+/** ELK node with extra style data attached.
 
 ELK will ignore this extra data and just pass it through.
  */
@@ -29,7 +29,11 @@ interface StyledElkEdge extends ElkExtendedEdge {
     arrowStyle?: ArrowStyle;
 }
 
-/** Convert a graph specification into an ELK node. */
+/** Convert a graph specification into an ELK node.
+
+List of layout options supported by ELK:
+<https://eclipse.dev/elk/reference/options.html>
+ */
 export function graphToElk(graph: GraphSpec.Graph, layoutOptions?: LayoutOptions): ElkNode {
     const canvas = document.createElement("canvas");
 
@@ -95,7 +99,7 @@ export async function elkLayoutGraph(
 
 /** Parse a graph layout computed by ELK. 
 
-For a description of the ELK coordinate system, see:
+ELK's coordinate system is described at:
 <https://eclipse.dev/elk/documentation/tooldevelopers/graphdatastructure/coordinatesystem.html>.
 */
 export function parseElkLayout(elk: StyledElkNode): GraphLayout.Graph {
