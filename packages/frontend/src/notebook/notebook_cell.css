@@ -53,3 +53,13 @@
     background-color: var(--color-dnd-insert);
     top: -2px;
 }
+
+button.plain {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    border: none;
+    color: darkgray;
+    font-size: 11pt;
+}
