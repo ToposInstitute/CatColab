@@ -2,6 +2,7 @@ import type {
     ELK,
     ElkEdgeSection,
     ElkExtendedEdge,
+    ElkLabel,
     ElkLayoutArguments,
     ElkNode,
     LayoutOptions,
@@ -10,6 +11,8 @@ import invariant from "tiny-invariant";
 
 import type * as GraphLayout from "./graph_layout";
 import type * as GraphSpec from "./graph_spec";
+import { measureText } from "./measure";
+import type { ArrowStyle } from "./types";
 
 /** Elk node with extra styling data attached.
 
@@ -23,28 +26,56 @@ interface StyledElkNode extends ElkNode {
 
 interface StyledElkEdge extends ElkExtendedEdge {
     cssClass?: string;
+    arrowStyle?: ArrowStyle;
 }
 
 /** Convert a graph specification into an ELK node. */
 export function graphToElk(graph: GraphSpec.Graph, layoutOptions?: LayoutOptions): ElkNode {
-    const children: StyledElkNode[] = graph.nodes.map((node) => ({
-        id: node.id,
-        labels: node.label ? [{ text: node.label }] : [],
-        width: node.minimumWidth ?? 50,
-        height: node.minimumHeight ?? 50,
-        cssClass: node.cssClass,
-    }));
+    const canvas = document.createElement("canvas");
 
-    const edges: StyledElkEdge[] = graph.edges.map((edge) => ({
-        id: edge.id,
-        sources: [edge.source],
-        targets: [edge.target],
-        labels: edge.label ? [{ text: edge.label, width: 50 }] : [],
-        cssClass: edge.cssClass,
-    }));
+    const children: StyledElkNode[] = graph.nodes.map((node) => {
+        let width = node.minimumWidth ?? nodePadding;
+        let height = node.minimumHeight ?? nodePadding;
+        if (node.label) {
+            const font = node.isMonospaced ? monospaceFont : defaultFont;
+            const size = measureText(canvas, node.label, font);
+            width = Math.max(width, size.width + 2 * nodePadding);
+            height = Math.max(height, size.height + 2 * nodePadding);
+        }
+        return {
+            id: node.id,
+            labels: node.label ? [{ text: node.label }] : [],
+            width,
+            height,
+            cssClass: node.cssClass,
+        };
+    });
+
+    const edges: StyledElkEdge[] = graph.edges.map((edge) => {
+        let label: ElkLabel | undefined;
+        if (edge.label) {
+            const font = edge.isMonospaced ? monospaceFont : defaultFont;
+            const { width, height } = measureText(canvas, edge.label, font);
+            label = { text: edge.label, width, height };
+        }
+        return {
+            id: edge.id,
+            sources: [edge.source],
+            targets: [edge.target],
+            labels: label ? [label] : [],
+            cssClass: edge.cssClass,
+            arrowStyle: edge.style,
+        };
+    });
 
     return { id: "root", children, edges, layoutOptions };
 }
+
+const nodePadding = 10;
+
+// XXX: How do we properly set these?
+const defaultFont = "1rem sans-serif";
+const monospaceFont = "1rem monospace";
 
 /** Asynchronously import and load ELK. */
 export async function loadElk() {
@@ -117,6 +148,7 @@ export function parseElkLayout(elk: StyledElkNode): GraphLayout.Graph {
             labelPos,
             path: sectionsToPath(sections),
             cssClass: edge.cssClass,
+            style: edge.arrowStyle,
         });
     }
 
