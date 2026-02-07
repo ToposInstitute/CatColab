@@ -1,6 +1,6 @@
 import type { ArrowStyle } from "./types";
 
-/** Graph with a layout.
+/** A graph with a layout.
 
 The coordinate system is that of SVG and HTML canvas, meaning that the origin is
 in the top-left corner.
@@ -20,6 +20,7 @@ export interface Graph {
 }
 
 export interface Node extends GraphElement {
+    /** Identifier of node, unique within graph. */
     id: string;
 
     /** Position of node, with origin at center of node. */
@@ -59,7 +60,7 @@ export interface Edge extends GraphElement {
     /** Path for the edge in SVG path data format. */
     path: string;
 
-    /** Style of edge, according to our own taxonomy. */
+    /** Style of edge. */
     style?: ArrowStyle;
 }
 
