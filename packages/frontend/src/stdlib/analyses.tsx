@@ -41,7 +41,9 @@ export const diagramGraph = (
 
 const DiagramGraph = lazy(() => import("./analyses/diagram_graph"));
 
-export const tabularView = (options: AnalysisOptions): DiagramAnalysisMeta<{}> => ({
+export const tabularView = (
+    options: AnalysisOptions,
+): DiagramAnalysisMeta<Record<string, never>> => ({
     ...options,
     component: (props) => <TabularView title={options.name} {...props} />,
     initialContent: () => ({}),

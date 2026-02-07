@@ -7,7 +7,7 @@ import textStyles from "../text_styles.module.css";
 
 export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
     const thSchema = new ThSchema();
-    let diagramAnalyses: DiagramAnalysisMeta[] = [
+    const diagramAnalyses: DiagramAnalysisMeta[] = [
         analyses.diagramGraph({
             id: "graph",
             name: "Visualization",
