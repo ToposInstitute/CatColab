@@ -14,7 +14,7 @@ export async function elkLayoutGraph(
     elk: ELK,
     graph: ElkNode,
     args?: ElkLayoutArguments,
-): Promise<GraphLayout.Graph<string>> {
+): Promise<GraphLayout.Graph> {
     const result = await elk.layout(graph, args);
     return parseElkLayout(result);
 }
@@ -24,9 +24,9 @@ export async function elkLayoutGraph(
 For a description of the ELK coordinate system, see:
 <https://eclipse.dev/elk/documentation/tooldevelopers/graphdatastructure/coordinatesystem.html>.
 */
-export function parseElkLayout(elk: ElkNode): GraphLayout.Graph<string> {
+export function parseElkLayout(elk: ElkNode): GraphLayout.Graph {
     // Parse nodes from the children of the root ELK node.
-    const nodes: GraphLayout.Node<string>[] = [];
+    const nodes: GraphLayout.Node[] = [];
     for (const child of elk.children ?? []) {
         const width = child.width ?? 0;
         const height = child.height ?? 0;
@@ -44,7 +44,7 @@ export function parseElkLayout(elk: ElkNode): GraphLayout.Graph<string> {
     }
 
     // Parse edges of the root ELK node.
-    const edges: GraphLayout.Edge<string>[] = [];
+    const edges: GraphLayout.Edge[] = [];
     for (const edge of elk.edges ?? []) {
         const source = edge.sources[0];
         const target = edge.targets[0];

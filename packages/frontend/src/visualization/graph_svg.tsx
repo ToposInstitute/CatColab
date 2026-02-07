@@ -10,7 +10,7 @@ import "./graph_svg.css";
 
 /** Draw a graph with a layout using SVG.
  */
-export function GraphSVG<Id>(props: { graph: GraphLayout.Graph<Id>; ref?: SVGRefProp }) {
+export function GraphSVG(props: { graph: GraphLayout.Graph; ref?: SVGRefProp }) {
     const edgeMarkers = () => {
         const markers = new Set<ArrowMarker>();
         for (const edge of props.graph.edges) {
@@ -37,7 +37,7 @@ export function GraphSVG<Id>(props: { graph: GraphLayout.Graph<Id>; ref?: SVGRef
 
 /** Draw a node with a layout using SVG.
  */
-export function NodeSVG<Id>(props: { node: GraphLayout.Node<Id> }) {
+export function NodeSVG(props: { node: GraphLayout.Node }) {
     const {
         node: {
             pos: { x, y },
@@ -60,7 +60,7 @@ export function NodeSVG<Id>(props: { node: GraphLayout.Node<Id> }) {
 
 /** Draw an edge with a layout using SVG.
  */
-export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
+export function EdgeSVG(props: { edge: GraphLayout.Edge }) {
     const {
         edge: { path },
     } = destructure(props, { deep: true });

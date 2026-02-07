@@ -48,7 +48,7 @@ export function vizRenderJSON0(viz: Viz.Viz, graph: Viz.Graph, options?: Viz.Ren
 The predecessor to this code is Evan's defunct package
 [`wiring-diagram-canvas`](https://github.com/epatters/wiring-diagram-canvas/blob/master/src/graphviz.ts).
  */
-export function parseGraphvizJSON(graphviz: GraphvizJSON.Graph): GraphLayout.Graph<string> {
+export function parseGraphvizJSON(graphviz: GraphvizJSON.Graph): GraphLayout.Graph {
     // Parse bounding box and padding.
     //
     // Apparently one corner of the bounding box is always the origin (0,0),
@@ -64,7 +64,7 @@ export function parseGraphvizJSON(graphviz: GraphvizJSON.Graph): GraphLayout.Gra
     const height = Math.max(bb[1] ?? 0, bb[3] ?? 0) + 2 * pad.y;
 
     // Parse nodes of graph, ignoring any subgraphs.
-    const nodes: GraphLayout.Node<string>[] = [];
+    const nodes: GraphLayout.Node[] = [];
     const offset = graphviz._subgraph_cnt;
     const nodeByNumber = (i: number) => nodes[i - offset];
     for (const node of (graphviz.objects?.slice(offset) as GraphvizJSON.Node[]) ?? []) {
@@ -80,7 +80,7 @@ export function parseGraphvizJSON(graphviz: GraphvizJSON.Graph): GraphLayout.Gra
     }
 
     // Parse edge of graph.
-    const edges: GraphLayout.Edge<string>[] = [];
+    const edges: GraphLayout.Edge[] = [];
     for (const edge of graphviz.edges ?? []) {
         if (edge.style === "invis") {
             // Omit invisible edges, used to tweak the layout in Graphviz.

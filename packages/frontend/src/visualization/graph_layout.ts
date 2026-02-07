@@ -5,7 +5,7 @@ import type { ArrowStyle } from "./types";
 The coordinate system is that of SVG and HTML canvas, meaning that the origin is
 in the top-left corner.
  */
-export interface Graph<Id> {
+export interface Graph {
     /** Width of bounding box for graph. */
     width?: number;
 
@@ -13,14 +13,14 @@ export interface Graph<Id> {
     height?: number;
 
     /** Nodes of graph. */
-    nodes: Array<Node<Id>>;
+    nodes: Array<Node>;
 
     /** Edges of graph. */
-    edges: Array<Edge<Id>>;
+    edges: Array<Edge>;
 }
 
-export interface Node<Id> extends GraphElement {
-    id: Id;
+export interface Node extends GraphElement {
+    id: string;
 
     /** Position of node, with origin at center of node. */
     pos: Point;
@@ -35,14 +35,14 @@ export interface Node<Id> extends GraphElement {
     label?: string;
 }
 
-export interface Edge<Id> extends GraphElement {
-    id?: Id;
+export interface Edge extends GraphElement {
+    id?: string;
 
     /** Source node of edge. */
-    source: Id;
+    source: string;
 
     /**  Target node of edge. */
-    target: Id;
+    target: string;
 
     /** Edge label, if any. */
     label?: string;

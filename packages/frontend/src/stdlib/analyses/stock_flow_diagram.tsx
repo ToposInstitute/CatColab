@@ -110,7 +110,7 @@ const stockFlowAttributes: GraphvizAttributes = {
 function StockFlowSVG(props: {
     model: DblModel;
     theory?: Theory;
-    layout?: GraphLayout.Graph<string>;
+    layout?: GraphLayout.Graph;
     ref?: SVGRefProp;
 }) {
     // Path element used only for computation. Not added to the DOM.
