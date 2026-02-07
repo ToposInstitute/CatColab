@@ -40,22 +40,23 @@ function createTable(headers: Array<string>, data: Array<Array<string>>) {
 function createACSetTable(model: DblModel, rawdata: Record<string, string[]>, obId: string) {
     // The primary key of this table is given by `rawdata[obname]`
     const rows: Array<string> = rawdata[obId] || [];
-    const obname: string = model.obGeneratorLabel(obId)?.toString() || "";
+    const obname = model.obGeneratorLabel(obId)?.join(".") || "";
 
-    // Get the homs and attrs with source `obname`
-    const outhoms = model
-        .morGenerators()
-        .filter((m) => obId === model.morPresentation(m)?.dom.content.toString());
+    // Get the homs and attrs with source `obId`
+    const outhoms = model.morGenerators().filter((morId) => {
+        const mor = model.morPresentation(morId);
+        return mor?.dom.tag === "Basic" && mor.dom.content === obId;
+    });
 
     // Convert morgenerators to user-friendly names
     const headers = [obname].concat(
-        outhoms.map((m) => model.morGeneratorLabel(m)?.join(".") ?? ""),
+        outhoms.map((morId) => model.morGeneratorLabel(morId)?.join(".") ?? ""),
     );
 
     // Data for column from indexing rawdata
     const columnardata: Array<Array<string>> = [obId]
         .concat(outhoms)
-        .map((m: string) => rawdata[m as keyof typeof rawdata] || [""]);
+        .map((m) => rawdata[m as keyof typeof rawdata] || [""]);
 
     // Convert columnar data to row data
     const data = Array.from(rows?.keys()).map((colIndex) =>
@@ -81,7 +82,7 @@ Such a visualization makes sense for any discrete double theory and is in
 general restricted to basic objects.
  */
 export default function TabularView(
-    props: DiagramAnalysisProps<{}> & {
+    props: DiagramAnalysisProps<Record<string, never>> & {
         title?: string;
     },
 ) {
