@@ -3,3 +3,4 @@ export * from "./document_picker";
 export * from "./id_input";
 export * from "./json_import";
 export * from "./rich_text_editor";
+export * from "./sql_ui";

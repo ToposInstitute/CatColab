@@ -6,6 +6,8 @@ import * as GraphLayoutConfig from "../visualization/graph_layout_config";
 import type * as Checkers from "./analyses/checker_types";
 import { defaultSchemaERDConfig, type SchemaERDConfig } from "./analyses/schema_erd_config";
 import type * as Simulators from "./analyses/simulator_types";
+import type * as SQLDownloadConfig from "./analyses/sql";
+import { SqlBackend } from "./analyses/sql";
 
 type AnalysisOptions = {
     id: string;
@@ -312,3 +314,16 @@ export const stockFlowDiagram = (
 });
 
 const StockFlowDiagram = lazy(() => import("./analyses/stock_flow_diagram"));
+
+export const renderSql = (
+    options: AnalysisOptions,
+): ModelAnalysisMeta<SQLDownloadConfig.DownloadConfig> => ({
+    ...options,
+    component: SqlSchemaInterface,
+    initialContent: () => ({
+        backend: SqlBackend.MySQL,
+        filename: "schema.sql",
+    }),
+});
+
+const SqlSchemaInterface = lazy(() => import("./analyses/sql"));
