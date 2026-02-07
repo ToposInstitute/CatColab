@@ -69,8 +69,7 @@ export interface GraphElement {
     cssClass?: string;
 }
 
-/** Point in a 2D cartesian coordinate system.
- */
+/** Point in a 2D cartesian coordinate system. */
 export type Point = {
     x: number;
     y: number;

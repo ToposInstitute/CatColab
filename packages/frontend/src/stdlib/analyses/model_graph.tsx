@@ -1,16 +1,9 @@
-import type * as Viz from "@viz-js/viz";
-
 import type { DblModel, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import type { Theory } from "../../theory";
-import {
-    type GraphLayoutConfig,
-    type GraphSpec,
-    type GraphvizAttributes,
-    graphToViz,
-} from "../../visualization";
+import type { GraphLayoutConfig, GraphSpec } from "../../visualization";
 import * as graphStyles from "../graph_styles";
-import { GraphVisualization } from "./graph_visualization";
+import { GraphVisualizationAnalysis } from "./graph_visualization";
 
 /** Visualize a model of a double theory as a graph.
 
@@ -28,12 +21,12 @@ export default function ModelGraph(
         const theory = props.liveModel.theory();
         const model = props.liveModel.elaboratedModel();
         if (theory && model) {
-            return modelToGraphviz(model, theory);
+            return modelToGraph(model, theory);
         }
     };
 
     return (
-        <GraphVisualization
+        <GraphVisualizationAnalysis
             title={props.title}
             graph={graph()}
             config={props.content}
@@ -81,19 +74,4 @@ export function modelToGraph(
     }
 
     return { nodes, edges };
-}
-
-/** Convert a model of a double theory into a Graphviz graph. */
-export function modelToGraphviz(
-    model: DblModel,
-    theory: Theory,
-    attributes?: GraphvizAttributes,
-    obGenerators?: QualifiedName[],
-    morGenerators?: QualifiedName[],
-): Viz.Graph {
-    return graphToViz(modelToGraph(model, theory, obGenerators, morGenerators), {
-        graph: { ...graphStyles.defaultGraphAttributes, ...attributes?.graph },
-        node: { ...graphStyles.defaultNodeAttributes, ...attributes?.node },
-        edge: { ...graphStyles.defaultEdgeAttributes, ...attributes?.edge },
-    });
 }

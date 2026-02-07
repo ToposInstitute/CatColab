@@ -24,8 +24,10 @@ export function graphToViz(graph: GraphSpec.Graph, attrs?: GraphvizAttributes): 
         attributes: {
             id: node.id,
             label: node.label ?? "",
-            class: node.cssClass ?? "",
             fontname: fontname(node.isMonospaced),
+            ...(node.minimumWidth !== undefined && { width: pointsToInches(node.minimumWidth) }),
+            ...(node.minimumHeight !== undefined && { height: pointsToInches(node.minimumHeight) }),
+            ...(node.cssClass !== undefined && { class: node.cssClass }),
         },
     }));
 
@@ -35,8 +37,8 @@ export function graphToViz(graph: GraphSpec.Graph, attrs?: GraphvizAttributes): 
         attributes: {
             id: edge.id,
             label: edge.label ?? "",
-            class: edge.cssClass ?? "",
             fontname: fontname(edge.isMonospaced),
+            ...(edge.cssClass !== undefined && { class: edge.cssClass }),
             arrowstyle: edge.style ?? "default",
         },
     }));
@@ -229,6 +231,7 @@ function parsePoint(s: string): Point {
 
 // 72 points per inch in Graphviz.
 const inchesToPoints = (x: number) => 72 * x;
+const pointsToInches = (x: number) => x / 72;
 
 // XXX: Exact font matching is impossible with Graphviz, but we at least try to
 // give Graphviz a monospaced font if and only if we will render in monospace.

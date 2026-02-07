@@ -5,9 +5,9 @@ import { createMemo, Show } from "solid-js";
 import { BlockTitle, FormGroup, IconButton, InputField } from "catcolab-ui-components";
 import type { MotifOccurrence } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
-import { GraphvizSVG } from "../../visualization";
+import { GraphvizSVG, graphToViz } from "../../visualization";
 import type { MotifFinder, MotifFindingAnalysisContent } from "./checker_types";
-import { modelToGraphviz } from "./model_graph";
+import { modelToGraph } from "./model_graph";
 
 import "./submodel_graphs.css";
 
@@ -63,13 +63,7 @@ export default function SubmodelGraphs(
         const model = props.liveModel.elaboratedModel();
         const submodel = submodels()[index()];
         if (theory && model && submodel) {
-            return modelToGraphviz(
-                model,
-                theory,
-                undefined,
-                submodel.obGenerators,
-                submodel.morGenerators,
-            );
+            return modelToGraph(model, theory, submodel.obGenerators, submodel.morGenerators);
         }
     };
 
@@ -109,7 +103,7 @@ export default function SubmodelGraphs(
             <Show when={activeGraph()}>
                 {(graph) => (
                     <GraphvizSVG
-                        graph={graph()}
+                        graph={graphToViz(graph())}
                         options={{
                             engine: "dot",
                         }}

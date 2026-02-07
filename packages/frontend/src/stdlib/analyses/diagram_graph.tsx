@@ -1,16 +1,9 @@
-import type * as Viz from "@viz-js/viz";
-
 import type { DblModel, DblModelDiagram } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
 import type { Theory } from "../../theory";
-import {
-    type GraphLayoutConfig,
-    type GraphSpec,
-    type GraphvizAttributes,
-    graphToViz,
-} from "../../visualization";
+import type { GraphLayoutConfig, GraphSpec } from "../../visualization";
 import * as graphStyles from "../graph_styles";
-import { GraphVisualization } from "./graph_visualization";
+import { GraphVisualizationAnalysis } from "./graph_visualization";
 
 /** Visualize a diagram in a model as a graph.
 
@@ -27,12 +20,12 @@ export default function DiagramGraph(
         const model = props.liveDiagram.liveModel.elaboratedModel();
         const diagram = props.liveDiagram.elaboratedDiagram();
         if (theory && model && diagram) {
-            return diagramToGraphviz(diagram, model, theory);
+            return diagramToGraph(diagram, model, theory);
         }
     };
 
     return (
-        <GraphVisualization
+        <GraphVisualizationAnalysis
             title={props.title}
             graph={graph()}
             config={props.content}
@@ -85,18 +78,4 @@ export function diagramToGraph(
     }
 
     return { nodes, edges };
-}
-
-/** Convert a diagram in a model into a Graphviz graph. */
-export function diagramToGraphviz(
-    diagram: DblModelDiagram,
-    model: DblModel,
-    theory: Theory,
-    attributes?: GraphvizAttributes,
-): Viz.Graph {
-    return graphToViz(diagramToGraph(diagram, model, theory), {
-        graph: { ...graphStyles.defaultGraphAttributes, ...attributes?.graph },
-        node: { ...graphStyles.defaultNodeAttributes, ...attributes?.node },
-        edge: { ...graphStyles.defaultEdgeAttributes, ...attributes?.edge },
-    });
 }

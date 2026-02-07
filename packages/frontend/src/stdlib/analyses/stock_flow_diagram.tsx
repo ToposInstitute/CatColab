@@ -16,6 +16,7 @@ import {
     GraphLayoutConfig,
     GraphLayoutConfigForm,
     type GraphvizAttributes,
+    graphToViz,
     loadViz,
     NodeSVG,
     perpendicularLabelPosition,
@@ -23,7 +24,7 @@ import {
     vizLayoutGraph,
 } from "../../visualization";
 import svgStyles from "../svg_styles.module.css";
-import { modelToGraphviz } from "./model_graph";
+import { modelToGraph } from "./model_graph";
 import "./graph_visualization.css";
 
 /** Visualize a stock flow diagram. */
@@ -79,11 +80,8 @@ export function StockFlowGraphviz(props: {
     const vizLayout = () => {
         const viz = vizResource();
         if (props.theory && viz) {
-            return vizLayoutGraph(
-                viz,
-                modelToGraphviz(props.model, props.theory, stockFlowAttributes),
-                props.options,
-            );
+            const graph = modelToGraph(props.model, props.theory);
+            return vizLayoutGraph(viz, graphToViz(graph, stockFlowAttributes), props.options);
         }
     };
 

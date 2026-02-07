@@ -24,6 +24,12 @@ export interface Node extends GraphElement {
     engines may take it into account when sizing the node.
     */
     label?: string;
+
+    /** Minimum width of node. */
+    minimumWidth?: number;
+
+    /** Minimum height of node. */
+    minimumHeight?: number;
 }
 
 export interface Edge extends GraphElement {
