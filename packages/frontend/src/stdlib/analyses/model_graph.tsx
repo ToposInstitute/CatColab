@@ -3,7 +3,12 @@ import type * as Viz from "@viz-js/viz";
 import type { DblModel, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import type { Theory } from "../../theory";
-import type { GraphLayoutConfig, GraphvizAttributes } from "../../visualization";
+import {
+    type GraphLayoutConfig,
+    type GraphSpec,
+    type GraphvizAttributes,
+    graphToViz,
+} from "../../visualization";
 import * as graphStyles from "../graph_styles";
 import { GraphVisualization } from "./graph_visualization";
 
@@ -37,30 +42,26 @@ export default function ModelGraph(
     );
 }
 
-/** Convert a model of a double theory into a Graphviz graph. */
-export function modelToGraphviz(
+/** Convert a model of a double theory into a graph. */
+export function modelToGraph(
     model: DblModel,
     theory: Theory,
-    attributes?: GraphvizAttributes,
     obGenerators?: QualifiedName[],
     morGenerators?: QualifiedName[],
-): Viz.Graph {
-    const nodes: Required<Viz.Graph>["nodes"] = [];
+): GraphSpec.Graph {
+    const nodes: GraphSpec.Node[] = [];
     for (const id of obGenerators ?? model.obGenerators()) {
         const ob = model.obPresentation(id);
         const meta = theory.modelObTypeMeta(ob.obType);
         nodes.push({
-            name: id,
-            attributes: {
-                id,
-                label: ob.label?.join(".") ?? "",
-                class: graphStyles.svgNodeCssClasses(meta).join(" "),
-                fontname: graphStyles.graphvizFontname(meta),
-            },
+            id,
+            label: ob.label?.join(".") ?? "",
+            cssClass: graphStyles.svgNodeCssClasses(meta).join(" "),
+            isMonospaced: graphStyles.isMonospaced(meta),
         });
     }
 
-    const edges: Required<Viz.Graph>["edges"] = [];
+    const edges: GraphSpec.Edge[] = [];
     for (const id of morGenerators ?? model.morGenerators()) {
         const mor = model.morPresentation(id);
         if (!(mor && mor.dom.tag === "Basic" && mor.cod.tag === "Basic")) {
@@ -69,25 +70,30 @@ export function modelToGraphviz(
         const meta = theory.modelMorTypeMeta(mor.morType);
         const label = mor.label?.every((seg) => seg !== "") ? mor.label.join(".") : "";
         edges.push({
-            head: mor.cod.content,
-            tail: mor.dom.content,
-            attributes: {
-                id,
-                label,
-                class: graphStyles.svgEdgeCssClasses(meta).join(" "),
-                fontname: graphStyles.graphvizFontname(meta),
-                // Not recognized by Graphviz but will be passed through!
-                arrowstyle: meta?.arrowStyle ?? "default",
-            },
+            id,
+            source: mor.dom.content,
+            target: mor.cod.content,
+            label,
+            style: meta?.arrowStyle ?? "default",
+            cssClass: graphStyles.svgEdgeCssClasses(meta).join(" "),
+            isMonospaced: graphStyles.isMonospaced(meta),
         });
     }
 
-    return {
-        directed: true,
-        nodes,
-        edges,
-        graphAttributes: { ...graphStyles.defaultGraphAttributes, ...attributes?.graph },
-        nodeAttributes: { ...graphStyles.defaultNodeAttributes, ...attributes?.node },
-        edgeAttributes: { ...graphStyles.defaultEdgeAttributes, ...attributes?.edge },
-    };
+    return { nodes, edges };
+}
+
+/** Convert a model of a double theory into a Graphviz graph. */
+export function modelToGraphviz(
+    model: DblModel,
+    theory: Theory,
+    attributes?: GraphvizAttributes,
+    obGenerators?: QualifiedName[],
+    morGenerators?: QualifiedName[],
+): Viz.Graph {
+    return graphToViz(modelToGraph(model, theory, obGenerators, morGenerators), {
+        graph: { ...graphStyles.defaultGraphAttributes, ...attributes?.graph },
+        node: { ...graphStyles.defaultNodeAttributes, ...attributes?.node },
+        edge: { ...graphStyles.defaultEdgeAttributes, ...attributes?.edge },
+    });
 }

@@ -14,7 +14,7 @@ export interface Graph {
     edges: Array<Edge>;
 }
 
-export interface Node {
+export interface Node extends GraphElement {
     /** Identifier of node, unique within graph. */
     id: string;
 
@@ -26,7 +26,10 @@ export interface Node {
     label?: string;
 }
 
-export interface Edge {
+export interface Edge extends GraphElement {
+    /** Identifier of edge, unique within graph. */
+    id: string;
+
     /** Source node of edge. */
     source: string;
 
@@ -38,4 +41,12 @@ export interface Edge {
 
     /** Style of edge. */
     style?: ArrowStyle;
+}
+
+export interface GraphElement {
+    /** CSS class (or classes) to apply to element. */
+    cssClass?: string;
+
+    /** Whether the label is set in a monospace font. */
+    isMonospaced?: boolean;
 }

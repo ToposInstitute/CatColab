@@ -1,7 +1,25 @@
-import type { ELK, ElkEdgeSection, ElkLayoutArguments, ElkNode } from "elkjs";
+import type { ELK, ElkEdgeSection, ElkExtendedEdge, ElkLayoutArguments, ElkNode } from "elkjs";
 import invariant from "tiny-invariant";
 
 import type * as GraphLayout from "./graph_layout";
+import type * as GraphSpec from "./graph_spec";
+
+/** Convert a graph specification into an ELK node. */
+export function graphToElk(graph: GraphSpec.Graph): ElkNode {
+    const children: ElkNode[] = graph.nodes.map((node) => ({
+        id: node.id,
+        labels: node.label ? [{ text: node.label }] : [],
+    }));
+
+    const edges: ElkExtendedEdge[] = graph.edges.map((edge) => ({
+        id: edge.id,
+        sources: [edge.source],
+        targets: [edge.target],
+        labels: edge.label ? [{ text: edge.label }] : [],
+    }));
+
+    return { id: "root", children, edges };
+}
 
 /** Asynchronously import and load ELK. */
 export async function loadElk() {

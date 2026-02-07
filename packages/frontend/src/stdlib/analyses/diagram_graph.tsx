@@ -3,7 +3,12 @@ import type * as Viz from "@viz-js/viz";
 import type { DblModel, DblModelDiagram } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
 import type { Theory } from "../../theory";
-import type { GraphLayoutConfig, GraphvizAttributes } from "../../visualization";
+import {
+    type GraphLayoutConfig,
+    type GraphSpec,
+    type GraphvizAttributes,
+    graphToViz,
+} from "../../visualization";
 import * as graphStyles from "../graph_styles";
 import { GraphVisualization } from "./graph_visualization";
 
@@ -36,14 +41,13 @@ export default function DiagramGraph(
     );
 }
 
-/** Convert a diagram in a model into a Graphviz graph. */
-export function diagramToGraphviz(
+/** Convert a diagram in a model into a graph. */
+export function diagramToGraph(
     diagram: DblModelDiagram,
     model: DblModel,
     theory: Theory,
-    attributes?: GraphvizAttributes,
-): Viz.Graph {
-    const nodes = new Map<string, Required<Viz.Graph>["nodes"][0]>();
+): GraphSpec.Graph {
+    const nodes: GraphSpec.Node[] = [];
     for (const id of diagram.obGenerators()) {
         const ob = diagram.obPresentation(id);
         if (!(ob && ob.over.tag === "Basic")) {
@@ -52,18 +56,15 @@ export function diagramToGraphviz(
         const meta = theory.instanceObTypeMeta(ob.obType);
         const label = ob.label?.join(".");
         const overLabel = model.obGeneratorLabel(ob.over.content)?.join(".");
-        nodes.set(id, {
-            name: id,
-            attributes: {
-                id,
-                label: [label, overLabel].filter((s) => s).join(" : "),
-                class: graphStyles.svgNodeCssClasses(meta).join(" "),
-                fontname: graphStyles.graphvizFontname(meta),
-            },
+        nodes.push({
+            id,
+            label: [label, overLabel].filter((s) => s).join(" : "),
+            cssClass: graphStyles.svgNodeCssClasses(meta).join(" "),
+            isMonospaced: graphStyles.isMonospaced(meta),
         });
     }
 
-    const edges: Required<Viz.Graph>["edges"] = [];
+    const edges: GraphSpec.Edge[] = [];
     for (const id of diagram.morGenerators()) {
         const mor = diagram.morPresentation(id);
         if (
@@ -74,23 +75,28 @@ export function diagramToGraphviz(
         const meta = theory.instanceMorTypeMeta(mor.morType);
         const overLabel = model.morGeneratorLabel(mor.over.content)?.join(".");
         edges.push({
-            head: mor.cod.content,
-            tail: mor.dom.content,
-            attributes: {
-                id,
-                label: overLabel ?? "",
-                class: graphStyles.svgEdgeCssClasses(meta).join(" "),
-                fontname: graphStyles.graphvizFontname(meta),
-            },
+            id,
+            source: mor.dom.content,
+            target: mor.cod.content,
+            label: overLabel ?? "",
+            cssClass: graphStyles.svgEdgeCssClasses(meta).join(" "),
+            isMonospaced: graphStyles.isMonospaced(meta),
         });
     }
 
-    return {
-        directed: true,
-        nodes: Array.from(nodes.values()),
-        edges,
-        graphAttributes: { ...graphStyles.defaultGraphAttributes, ...attributes?.graph },
-        nodeAttributes: { ...graphStyles.defaultNodeAttributes, ...attributes?.node },
-        edgeAttributes: { ...graphStyles.defaultEdgeAttributes, ...attributes?.edge },
-    };
+    return { nodes, edges };
+}
+
+/** Convert a diagram in a model into a Graphviz graph. */
+export function diagramToGraphviz(
+    diagram: DblModelDiagram,
+    model: DblModel,
+    theory: Theory,
+    attributes?: GraphvizAttributes,
+): Viz.Graph {
+    return graphToViz(diagramToGraph(diagram, model, theory), {
+        graph: { ...graphStyles.defaultGraphAttributes, ...attributes?.graph },
+        node: { ...graphStyles.defaultNodeAttributes, ...attributes?.node },
+        edge: { ...graphStyles.defaultEdgeAttributes, ...attributes?.edge },
+    });
 }

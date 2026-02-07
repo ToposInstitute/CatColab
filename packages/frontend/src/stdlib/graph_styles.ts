@@ -23,10 +23,9 @@ export const defaultEdgeAttributes: Required<Viz.Graph>["edgeAttributes"] = {
     sep: "5",
 };
 
-// XXX: Precise font matching seems impossible here but we'll at least give
-// Graphviz a monospace font if and only if we're using one.
-export const graphvizFontname = (meta?: BaseTypeMeta): string =>
-    meta?.textClasses?.includes(textStyles.code) ? "Courier" : "Helvetica";
+/** Whether the label is set in a monospace font. */
+export const isMonospaced = (meta?: BaseTypeMeta): boolean =>
+    meta?.textClasses?.includes(textStyles.code) ?? false;
 
 /** CSS classes applied to a node in an SVG graph. */
 export const svgNodeCssClasses = (meta?: BaseTypeMeta): string[] => [

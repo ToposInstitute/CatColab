@@ -3,6 +3,7 @@ import invariant from "tiny-invariant";
 
 import type * as GraphLayout from "./graph_layout";
 import type { Point } from "./graph_layout";
+import type * as GraphSpec from "./graph_spec";
 import type * as GraphvizJSON from "./graphviz_json";
 import type { ArrowStyle } from "./types";
 
@@ -15,6 +16,40 @@ export type GraphvizAttributes = {
     node?: Viz.Graph["nodeAttributes"];
     edge?: Viz.Graph["edgeAttributes"];
 };
+
+/** Convert a graph specification into a Viz.js graph. */
+export function graphToViz(graph: GraphSpec.Graph, attrs?: GraphvizAttributes): Viz.Graph {
+    const nodes: Viz.Graph["nodes"] = graph.nodes.map((node) => ({
+        name: node.id,
+        attributes: {
+            id: node.id,
+            label: node.label ?? "",
+            class: node.cssClass ?? "",
+            fontname: fontname(node.isMonospaced),
+        },
+    }));
+
+    const edges: Viz.Graph["edges"] = graph.edges.map((edge) => ({
+        tail: edge.source,
+        head: edge.target,
+        attributes: {
+            id: edge.id,
+            label: edge.label ?? "",
+            class: edge.cssClass ?? "",
+            fontname: fontname(edge.isMonospaced),
+            arrowstyle: edge.style ?? "default",
+        },
+    }));
+
+    return {
+        directed: true,
+        graphAttributes: attrs?.graph,
+        nodeAttributes: attrs?.node,
+        edgeAttributes: attrs?.edge,
+        nodes,
+        edges,
+    };
+}
 
 /** Asynchronously import and load Viz.js. */
 export async function loadViz() {
@@ -194,3 +229,7 @@ function parsePoint(s: string): Point {
 
 // 72 points per inch in Graphviz.
 const inchesToPoints = (x: number) => 72 * x;
+
+// XXX: Exact font matching is impossible with Graphviz, but we at least try to
+// give Graphviz a monospaced font if and only if we will render in monospace.
+const fontname = (monospace?: boolean): string => (monospace ? "Courier" : "Helvetica");
