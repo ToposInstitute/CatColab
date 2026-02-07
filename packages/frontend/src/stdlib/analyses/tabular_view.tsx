@@ -90,22 +90,20 @@ export default function TabularView(
         () => {
             const model = props.liveDiagram.liveModel.elaboratedModel();
             const diagram = props.liveDiagram.elaboratedDiagram();
-            if (model === undefined || diagram === undefined) {
-                return undefined;
-            } else {
-                return { model: model, diagram: diagram };
+            if (model && diagram) {
+                return { model, diagram };
             }
         },
 
-        async (modeldiagram) => {
+        async ({ model, diagram }) => {
             const response = await fetch("http://127.0.0.1:8080/acsetcolim", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    model: modeldiagram?.model.presentation(),
-                    diagram: modeldiagram?.diagram.presentation(),
+                    model: model.presentation(),
+                    diagram: diagram.presentation(),
                 }),
             });
 
@@ -113,7 +111,7 @@ export default function TabularView(
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            return { model: modeldiagram.model, data: await response.json() };
+            return { model, data: await response.json() };
         },
     );
     return (
