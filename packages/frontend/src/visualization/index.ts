@@ -5,6 +5,7 @@ These tools are applied visualize models in the `analysis` module.
 @module
  */
 
+export * from "./elk";
 export * from "./export_svg";
 export * from "./export_svg_button";
 export type * as GraphLayout from "./graph_layout";

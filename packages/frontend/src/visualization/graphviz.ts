@@ -19,8 +19,7 @@ export type GraphvizAttributes = {
 /** Asynchronously import and load Viz.js. */
 export async function loadViz() {
     const { instance } = await import("@viz-js/viz");
-    const viz = await instance();
-    return viz;
+    return await instance();
 }
 
 /** Lay out a graph using Graphviz. */
