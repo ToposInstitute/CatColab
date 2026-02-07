@@ -1,6 +1,8 @@
 import type * as Viz from "@viz-js/viz";
+import type * as Elk from "elkjs";
 
 import type { BaseTypeMeta } from "../theory";
+import type { GraphvizAttributes } from "../visualization";
 import textStyles from "./text_styles.module.css";
 
 /** Default graph attributes for Graphviz. */
@@ -10,7 +12,7 @@ export const defaultGraphAttributes: Required<Viz.Graph>["graphAttributes"] = {
 
 /** Default node attributes for Graphviz. */
 export const defaultNodeAttributes: Required<Viz.Graph>["nodeAttributes"] = {
-    // XXX: How to set the font size?
+    // XXX: How to choose the font size?
     fontsize: "20",
     shape: "box",
     width: 0,
@@ -23,10 +25,21 @@ export const defaultEdgeAttributes: Required<Viz.Graph>["edgeAttributes"] = {
     sep: "5",
 };
 
-// XXX: Precise font matching seems impossible here but we'll at least give
-// Graphviz a monospace font if and only if we're using one.
-export const graphvizFontname = (meta?: BaseTypeMeta): string =>
-    meta?.textClasses?.includes(textStyles.code) ? "Courier" : "Helvetica";
+/** Default top-level attributes for Graphviz. */
+export const defaultGraphvizAttributes: GraphvizAttributes = {
+    graph: defaultGraphAttributes,
+    node: defaultNodeAttributes,
+    edge: defaultEdgeAttributes,
+};
+
+/** Default top-level layout options for ELK. */
+export const defaultElkLayoutOptions: Elk.LayoutOptions = {
+    "elk.layered.spacing.baseValue": "20",
+};
+
+/** Whether the label is set in a monospace font. */
+export const isMonospaced = (meta?: BaseTypeMeta): boolean =>
+    meta?.textClasses?.includes(textStyles.code) ?? false;
 
 /** CSS classes applied to a node in an SVG graph. */
 export const svgNodeCssClasses = (meta?: BaseTypeMeta): string[] => [

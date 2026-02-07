@@ -36,7 +36,7 @@ let
 
     pnpmDeps = pkgs.fetchPnpmDeps {
       # see ../../dev-docs/fixing-hash-mismatches.md
-      hash = "sha256-vDrBrhbPCXOeabNqfOAXF3D6vjEHIMC468LRr/77p6g=";
+      hash = "sha256-IANGjncveW0QoLHNE5B5EWws+fxXeudVj1M7CbFpE6Y=";
       pname = name;
       fetcherVersion = 2;
       # Only includes package.json and pnpm-lock.yaml files to ensure consistent hashing in different
