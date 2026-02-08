@@ -1,13 +1,13 @@
-import type * as Viz from "@viz-js/viz";
 import { type ComponentProps, createSignal, Show } from "solid-js";
 
 import { BlockTitle } from "catcolab-ui-components";
 import {
     DownloadSVGButton,
-    GraphLayoutConfig,
     GraphLayoutConfigForm,
-    GraphvizSVG,
+    type GraphSpec,
+    GraphVisualization,
 } from "../../visualization";
+import { defaultElkLayoutOptions, defaultGraphvizAttributes } from "../graph_styles";
 
 import "./graph_visualization.css";
 
@@ -16,9 +16,9 @@ import "./graph_visualization.css";
 Used to visualize, for example, the generating graphs of models and diagrams.
 See `ModelGraph` and `DiagramGraph`.
  */
-export function GraphVisualization(
+export function GraphVisualizationAnalysis(
     props: ComponentProps<typeof GraphLayoutConfigForm> & {
-        graph?: Viz.Graph;
+        graph?: GraphSpec.Graph;
         title?: string;
     },
 ) {
@@ -48,9 +48,11 @@ export function GraphVisualization(
             <div class="graph-visualization">
                 <Show when={props.graph}>
                     {(graph) => (
-                        <GraphvizSVG
+                        <GraphVisualization
                             graph={graph()}
-                            options={GraphLayoutConfig.graphvizOptions(props.config)}
+                            config={props.config}
+                            elkLayoutOptions={defaultElkLayoutOptions}
+                            graphvizAttributes={defaultGraphvizAttributes}
                             ref={setSvgRef}
                         />
                     )}
