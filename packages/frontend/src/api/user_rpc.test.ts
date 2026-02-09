@@ -314,31 +314,27 @@ describe("User state Automerge document", async () => {
         assert.strictEqual(latestState.documents.length, initialCount + 2);
     });
 
-    // Delete (soft-delete) the first document - this sets deleted_at
-    unwrap(await rpc.delete_ref.mutate(refId1));
-    console.log(
-        `[test] Deleted refId1=${refId1}, current doc_count=${latestState?.documents.length}`,
-    );
-
     test.sequential("should sync document deletion", async () => {
-        console.log(
-            `[test] Starting deletion wait, doc_count=${latestState?.documents.length}, doc1_exists=${findDoc(refId1) !== undefined}`,
-        );
+        // Ensure we're signed in as the correct user for this test
+        await signInWithEmailAndPassword(auth, email, password);
+
+        // Delete (soft-delete) the first document - this sets deleted_at
+        unwrap(await rpc.delete_ref.mutate(refId1));
+
         await waitFor(() => {
-            const exists = findDoc(refId1) !== undefined;
-            if (exists) {
-                console.log(`[poll] doc1 still exists, doc_count=${latestState?.documents.length}`);
-            }
-            return !exists;
+            return findDoc(refId1) === undefined;
         }, `Deleted document ${refId1} should not exist in user state`);
         const doc2 = findDoc(refId2);
         assert(doc2, `Document ${refId2} should still exist`);
     });
 
-    // Restore the deleted document - this clears deleted_at
-    unwrap(await rpc.restore_ref.mutate(refId1));
-
     test.sequential("should sync document restoration", async () => {
+        // Ensure we're signed in as the correct user for this test
+        await signInWithEmailAndPassword(auth, email, password);
+
+        // Restore the deleted document - this clears deleted_at
+        unwrap(await rpc.restore_ref.mutate(refId1));
+
         await waitFor(
             () => findDoc(refId1) !== undefined,
             `Restored document ${refId1} should exist in user state`,
