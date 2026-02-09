@@ -11,7 +11,7 @@ import { obClasses } from "./object_cell_editor";
 import { ObInput } from "./object_input";
 import "./morphism_cell_editor.css";
 
-/** Editor for a moprhism declaration cell in a model. */
+/** Editor for a morphism declaration cell in a model. */
 export function MorphismCellEditor(props: {
     morphism: MorDecl;
     modifyMorphism: (f: (decl: MorDecl) => void) => void;
