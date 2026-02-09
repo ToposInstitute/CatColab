@@ -37,9 +37,6 @@ pub async fn run_user_state_subscription(
             Ok(payload) => {
                 let user_id = payload.user_id;
 
-                // Small delay to ensure the triggering transaction has committed
-                tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-
                 match read_user_state_from_db(user_id.clone(), &app_state.db).await {
                     Ok(user_state) => {
                         // Get or create the document for this user
