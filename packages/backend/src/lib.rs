@@ -1,4 +1,4 @@
-//! Reusable components of the backend.
+//! The Backend lib exposed for testing.
 
 /// Top-level application state and error types.
 pub mod app;
