@@ -27,13 +27,13 @@ include notable new features.
   [Automerge](https://automerge.org/) documents is now provided by the Rust
   crate [samod](https://github.com/alexjg/samod) instead of the Node package
   [automerge-repo](https://github.com/automerge/automerge-repo). As a result,
-  100% of the CatColab is now written in Rust.
+  100% of the CatColab backend is now written in Rust.
 
-## [v0.4.3](https://github.com/ToposInstitute/CatColab/releases/tag/v0.4.3) -- 2026-01-13
+## [v0.4.3](https://github.com/ToposInstitute/CatColab/releases/tag/v0.4.3) (2026-01-13)
 
-Two new example models and a bug fix.
+Two new [example models](https://catcolab.org/help/guides/example-models) and a bug fix.
 
-## [v0.4.2](https://github.com/ToposInstitute/CatColab/releases/tag/v0.4.2) -- 2026-01-08
+## [v0.4.2](https://github.com/ToposInstitute/CatColab/releases/tag/v0.4.2) (2026-01-08)
 
 ### Added
 
@@ -50,7 +50,7 @@ Two new example models and a bug fix.
   ([#929](https://github.com/ToposInstitute/CatColab/pull/929))
 - Usability fixes to revamped split pane UI, following its introduction in v0.4
 
-## [v0.4.1](https://github.com/ToposInstitute/CatColab/releases/tag/v0.4.1) -- 2025-12-04
+## [v0.4.1](https://github.com/ToposInstitute/CatColab/releases/tag/v0.4.1) (2025-12-04)
 
 Bug fixes following the v0.4 major release.
 
