@@ -156,7 +156,7 @@ const VeeMarker = (props: { id: string; offset?: number }) => (
         markerHeight="10"
         orient="auto-start-reverse"
     >
-        <path d="M 0 0 L 5 5 L 0 10" />
+        <path d="M 0 2 L 5 5 L 0 8" />
     </marker>
 );
 
