@@ -242,10 +242,7 @@ describe("User state Automerge document", async () => {
 
     // Track the latest state via change events
     let latestState: UserStateDoc | undefined = docHandle.doc();
-    let changeCount = 0;
     docHandle.on("change", ({ doc }) => {
-        changeCount++;
-        console.log(`[change #${changeCount}] doc_count=${doc.documents.length}`);
         latestState = doc;
     });
 
