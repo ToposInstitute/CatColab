@@ -11,7 +11,7 @@ import invariant from "tiny-invariant";
 import { stringify as uuidStringify, v4 } from "uuid";
 import { afterAll, assert, describe, test } from "vitest";
 
-import type { RefStub, UserProfile } from "catcolab-api";
+import type { UserProfile } from "catcolab-api";
 import { createTestDocument, initTestUserAuth } from "../util/test_util.ts";
 import { createRpcClient, unwrap, unwrapErr } from "./rpc.ts";
 
