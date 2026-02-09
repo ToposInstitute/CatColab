@@ -349,7 +349,7 @@ mod tests {
         assert!(th_monoidal_category().validate().is_ok());
         assert!(th_lax_monoidal_category().validate().is_ok());
         assert!(th_multicategory().validate().is_ok());
-        assert!(th_symmetric_multicategory().validate().is_ok());
+        assert!(th_sym_multicategory().validate().is_ok());
         assert!(modal_th_power_system().validate().is_ok());
     }
 
