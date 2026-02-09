@@ -1,3 +1,5 @@
+// The `Reconcile` derive generates a helper enum without docs.
+#![allow(missing_docs)]
 use std::collections::HashMap;
 
 use autosurgeon::{Hydrate, Reconcile};
@@ -30,9 +32,13 @@ use super::user::UserSummary;
 )]
 #[sqlx(type_name = "permission_level", rename_all = "lowercase")]
 pub enum PermissionLevel {
+    /// Read-only access to the document.
     Read,
+    /// Read and write access to the document.
     Write,
+    /// Read, write, and manage access to the document.
     Maintain,
+    /// Full ownership of the document.
     Own,
 }
 
@@ -40,7 +46,9 @@ pub enum PermissionLevel {
 #[qubit::ts]
 #[derive(Clone, Debug, Serialize)]
 pub struct UserPermissions {
+    /// The user who has been granted permissions.
     pub user: UserSummary,
+    /// The level of permission granted to the user.
     pub level: PermissionLevel,
 }
 

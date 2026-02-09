@@ -240,6 +240,7 @@ pub async fn restore_ref(state: AppState, ref_id: Uuid) -> Result<(), AppError> 
     Ok(())
 }
 
+/// Gets the Automerge document ID for the head snapshot of a document ref.
 pub async fn get_doc_id(state: AppState, ref_id: Uuid) -> Result<DocumentId, AppError> {
     let query = sqlx::query!(
         "
@@ -269,8 +270,10 @@ pub async fn get_doc_id(state: AppState, ref_id: Uuid) -> Result<DocumentId, App
 #[qubit::ts]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RefContent {
+    /// The unique identifier of the document ref.
     #[serde(rename = "refId")]
     pub ref_id: Uuid,
+    /// The JSON content of the document.
     pub content: Value,
 }
 
@@ -280,24 +283,30 @@ pub struct RefContent {
 #[cfg_attr(feature = "proptest", derive(Eq, PartialEq))]
 #[derive(Clone, Debug, Serialize, Deserialize, Reconcile, Hydrate)]
 pub struct RefStub {
+    /// Human-readable name of the document.
     pub name: String,
+    /// The type of the document (e.g., theory, model).
     #[serde(rename = "typeName")]
     #[autosurgeon(rename = "typeName")]
     pub type_name: String,
+    /// The unique identifier of the document ref.
     #[serde(rename = "refId")]
     #[autosurgeon(rename = "refId")]
     #[key]
     pub ref_id: Uuid,
-    // permission level that the current user has on this ref
+    /// Permission level that the current user has on this ref.
     #[serde(rename = "permissionLevel")]
     #[autosurgeon(rename = "permissionLevel")]
     pub permission_level: PermissionLevel,
+    /// The owner of the document, if any.
     pub owner: Option<UserSummary>,
+    /// When the document ref was created.
     #[serde(rename = "createdAt")]
     #[autosurgeon(rename = "createdAt", with = "datetime_millis")]
     pub created_at: DateTime<Utc>,
 }
 
+/// Arbitrary instances for property-based testing.
 #[cfg(feature = "proptest")]
 pub mod arbitrary {
     use super::*;
@@ -338,17 +347,24 @@ pub mod arbitrary {
 #[qubit::ts]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RefQueryParams {
+    /// Filter by owner username.
     #[serde(rename = "ownerUsernameQuery")]
     pub owner_username_query: Option<String>,
+    /// Filter by document name (case-insensitive substring match).
     #[serde(rename = "refNameQuery")]
     pub ref_name_query: Option<String>,
+    /// Minimum permission level the searcher must have on the ref.
     #[serde(rename = "searcherMinLevel")]
     pub searcher_min_level: Option<PermissionLevel>,
+    /// Whether to include publicly accessible documents in the results.
     #[serde(rename = "includePublicDocuments")]
     pub include_public_documents: Option<bool>,
+    /// Whether to return only soft-deleted documents.
     #[serde(rename = "onlyDeleted")]
     pub only_deleted: Option<bool>,
+    /// Maximum number of results to return.
     pub limit: Option<i32>,
+    /// Number of results to skip for pagination.
     pub offset: Option<i32>,
     // TODO: add param for document type
 }

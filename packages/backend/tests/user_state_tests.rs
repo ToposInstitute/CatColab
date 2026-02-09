@@ -1,3 +1,5 @@
+//! Integration tests for user state synchronization.
+
 mod test_helpers {
     use backend::app::AppError;
     use sqlx::PgPool;
@@ -100,7 +102,7 @@ mod tests {
         }
     }
 
-    /// Helper to read user state from samod using the stored document ID
+    /// Helper to read user state from samod using the stored document ID.
     async fn read_user_state_from_samod(state: &AppState, user_id: &str) -> Option<UserState> {
         let doc_id = {
             let states = state.user_states.read().await;

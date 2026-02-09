@@ -1,14 +1,15 @@
-use automerge::{AutoCommit, Automerge};
-use autosurgeon::{Hydrate, Reconcile, hydrate, reconcile};
+use autosurgeon::{Hydrate, Reconcile};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
 use crate::app::AppError;
 use crate::document::{RefQueryParams, RefStub, search_ref_stubs};
 
+/// State associated with a user, synchronized via Automerge.
 #[cfg_attr(feature = "proptest", derive(PartialEq, Eq))]
 #[derive(Debug, Clone, Serialize, Deserialize, Reconcile, Hydrate)]
 pub struct UserState {
+    /// The document refs accessible to the user.
     pub documents: Vec<RefStub>,
 }
 
@@ -30,24 +31,7 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
     Ok(UserState { documents: result.items })
 }
 
-/// Converts a `UserState` into an Automerge document.
-pub fn user_state_to_automerge(state: &UserState) -> Result<Automerge, AppError> {
-    let mut doc = AutoCommit::new();
-    reconcile(&mut doc, state)
-        .map_err(|e| AppError::Invalid(format!("Failed to reconcile UserState: {}", e)))?;
-    // Convert AutoCommit to Automerge by saving and loading
-    let bytes = doc.save();
-    let automerge_doc = Automerge::load(&bytes)?;
-    Ok(automerge_doc)
-}
-
-/// Converts an Automerge document to a `UserState`.
-pub fn automerge_to_user_state(doc: &Automerge) -> Result<UserState, AppError> {
-    let state: UserState = hydrate(doc)
-        .map_err(|e| AppError::Invalid(format!("Failed to hydrate UserState: {}", e)))?;
-    Ok(state)
-}
-
+/// Arbitrary instances for property-based testing.
 #[cfg(feature = "proptest")]
 pub mod arbitrary {
     #![allow(dead_code)]
@@ -132,7 +116,28 @@ pub mod arbitrary {
 #[cfg(all(test, feature = "proptest"))]
 mod tests {
     use super::*;
+    use automerge::{AutoCommit, Automerge};
+    use autosurgeon::{hydrate, reconcile};
     use test_strategy::proptest;
+
+    use crate::app::AppError;
+
+    /// Converts a `UserState` into an Automerge document.
+    fn user_state_to_automerge(state: &UserState) -> Result<Automerge, AppError> {
+        let mut doc = AutoCommit::new();
+        reconcile(&mut doc, state)
+            .map_err(|e| AppError::Invalid(format!("Failed to reconcile UserState: {}", e)))?;
+        let bytes = doc.save();
+        let automerge_doc = Automerge::load(&bytes)?;
+        Ok(automerge_doc)
+    }
+
+    /// Converts an Automerge document to a `UserState`.
+    fn automerge_to_user_state(doc: &Automerge) -> Result<UserState, AppError> {
+        let state: UserState = hydrate(doc)
+            .map_err(|e| AppError::Invalid(format!("Failed to hydrate UserState: {}", e)))?;
+        Ok(state)
+    }
 
     /// Tests that converting UserState to Automerge and back yields the same UserState.
     #[proptest(cases = 16)]

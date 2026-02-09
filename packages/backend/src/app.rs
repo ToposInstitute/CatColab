@@ -23,7 +23,7 @@ pub struct AppState {
     /// Tracks which ref_ids have active autosave listeners to prevent duplicates.
     pub active_listeners: Arc<RwLock<HashSet<Uuid>>>,
 
-    /// User state Automerge documents, keyed by user ID
+    /// User state Automerge documents, keyed by user ID.
     pub user_states: UserStates,
 }
 
