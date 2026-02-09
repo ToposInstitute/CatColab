@@ -94,6 +94,16 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
                     <path class="double-inner" d={path()} />
                     <path class="double-marker" marker-end={markerUrl()} d={path()} />
                 </Match>
+                <Match when={props.edge.style === "doubleLess"}>
+                    <path class="double-outer" d={path()} />
+                    <path class="double-inner" d={path()} />
+                    <path class="double-marker" marker-end={markerUrl()} d={path()} />
+                </Match>
+                <Match when={props.edge.style === "doubleMore"}>
+                    <path class="double-outer" d={path()} />
+                    <path class="double-inner" d={path()} />
+                    <path class="double-marker" marker-end={markerUrl()} d={path()} />
+                </Match>
                 <Match when={props.edge.style === "plus"}>
                     {defaultPath()}
                     {tgtLabel("+")}
@@ -201,6 +211,8 @@ export type ArrowMarker = "vee" | "double" | "triangle" | "flat";
 const styleToMarker: Record<ArrowStyle, ArrowMarker | null> = {
     default: "vee",
     double: "double",
+    doubleLess: "double",
+    doubleMore: "double",
     flat: "flat",
     unmarked: null,
     plus: "triangle",

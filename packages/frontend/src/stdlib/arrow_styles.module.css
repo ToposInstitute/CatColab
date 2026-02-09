@@ -106,7 +106,9 @@
     }
 }
 
-.arrow.double {
+.arrow.double,
+.arrow.doubleLess,
+.arrow.doubleMore {
     background: transparent;
     height: 6px;
     border-top: 2px solid var(--color-foreground);

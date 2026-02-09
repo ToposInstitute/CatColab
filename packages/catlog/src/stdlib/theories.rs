@@ -199,16 +199,6 @@ fn th_list_lax_algebra(list: List) -> ModalDblTheory {
     th
 }
 
-/// The theory of a generalized multicategory over a list monad.
-fn th_generalized_multicategory(list: List) -> ModalDblTheory {
-    let mut th = ModalDblTheory::new();
-    th.add_ob_type(name("Object"));
-    let x = ModeApp::new(name("Object"));
-    th.add_mor_type(name("Multihom"), x.clone().apply(Modality::List(list)), x);
-    // TODO: Axioms, which depend on implementing composites and restrictions.
-    th
-}
-
 /// The theory of a (non-symmetric) multicategory.
 pub fn th_multicategory() -> ModalDblTheory {
     th_generalized_multicategory(List::Plain)
@@ -217,6 +207,16 @@ pub fn th_multicategory() -> ModalDblTheory {
 /// The theory of a symmetric multicategory.
 pub fn th_sym_multicategory() -> ModalDblTheory {
     th_generalized_multicategory(List::Symmetric)
+}
+
+/// The theory of a generalized multicategory over a list monad.
+fn th_generalized_multicategory(list: List) -> ModalDblTheory {
+    let mut th = ModalDblTheory::new();
+    th.add_ob_type(name("Object"));
+    let x = ModeApp::new(name("Object"));
+    th.add_mor_type(name("Multihom"), x.clone().apply(Modality::List(list)), x);
+    // TODO: Axioms, which depend on implementing composites and restrictions.
+    th
 }
 
 /// A theory of a power system.

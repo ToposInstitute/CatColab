@@ -5,6 +5,8 @@ declare const styles: {
     readonly arrowWithName: string;
     readonly default: string;
     readonly double: string;
+    readonly doubleLess: string;
+    readonly doubleMore: string;
     readonly flat: string;
     readonly indeterminate: string;
     readonly minus: string;
