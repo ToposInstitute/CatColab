@@ -12,9 +12,6 @@ use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 use catlog::zero::name;
 
-use super::latex::{
-    latex_mor_names_mass_action, latex_mor_names_unbalanced_mass_action, latex_ob_names_mass_action,
-};
 use super::model_morphism::{MotifOccurrence, MotifsOptions, motifs};
 use super::result::JsResult;
 use super::{analyses::*, model::DblModel, theory::DblTheory};
