@@ -27,9 +27,7 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
 
     let result = search_ref_stubs(Some(user_id), db, query_params).await?;
 
-    Ok(UserState {
-        documents: result.items,
-    })
+    Ok(UserState { documents: result.items })
 }
 
 /// Converts a `UserState` into an Automerge document.

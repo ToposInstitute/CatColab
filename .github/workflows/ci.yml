@@ -191,7 +191,7 @@ jobs:
 
       - name: Start PostgreSQL
         run: |
-          docker run --name catcolab-postgres -e POSTGRES_USER=postgres-user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=catcolab -p 5432:5432 -d postgres:15
+          docker run --name catcolab-postgres -e POSTGRES_USER=catcolab -e POSTGRES_PASSWORD=password -e POSTGRES_DB=catcolab -p 5432:5432 -d postgres:15
           # Wait for PostgreSQL to be ready
           for i in {1..30}; do
             if docker exec catcolab-postgres pg_isready -U postgres-user; then

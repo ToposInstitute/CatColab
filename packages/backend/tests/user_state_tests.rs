@@ -219,10 +219,7 @@ mod tests {
         // Grant read permission to the reader
         let mut users = HashMap::new();
         users.insert(reader_id.clone(), PermissionLevel::Read);
-        let new_permissions = NewPermissions {
-            anyone: None,
-            users,
-        };
+        let new_permissions = NewPermissions { anyone: None, users };
 
         backend::auth::set_permissions(&state, ref_id, new_permissions)
             .await
@@ -352,7 +349,9 @@ mod tests {
         assert!(!doc_exists_after_delete, "Document should not exist after deletion");
 
         // Restore the document
-        document::restore_ref(state.clone(), ref_id).await.expect("Failed to restore ref");
+        document::restore_ref(state.clone(), ref_id)
+            .await
+            .expect("Failed to restore ref");
 
         // Wait for the subscription to process the restore notification
         tokio::time::sleep(Duration::from_millis(300)).await;
@@ -366,7 +365,10 @@ mod tests {
 
         let user_state = user_state.expect("User state should exist");
         let doc_exists_after_restore = user_state.documents.iter().any(|d| d.ref_id == ref_id);
-        assert!(doc_exists_after_restore, "Document should exist in user state after restoration");
+        assert!(
+            doc_exists_after_restore,
+            "Document should exist in user state after restoration"
+        );
     }
 
     /// Tests that multiple users are notified when permissions change
@@ -403,10 +405,7 @@ mod tests {
         let mut users = HashMap::new();
         users.insert(user1_id.clone(), PermissionLevel::Write);
         users.insert(user2_id.clone(), PermissionLevel::Read);
-        let new_permissions = NewPermissions {
-            anyone: None,
-            users,
-        };
+        let new_permissions = NewPermissions { anyone: None, users };
 
         backend::auth::set_permissions(&state, ref_id, new_permissions)
             .await
