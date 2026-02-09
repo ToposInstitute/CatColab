@@ -1,7 +1,5 @@
-import type * as Viz from "@viz-js/viz";
-import { type Component, createResource, createSignal, For, Show } from "solid-js";
+import { type Component, For, Show } from "solid-js";
 
-import { BlockTitle } from "catcolab-ui-components";
 import type { DblModel } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import type { Theory } from "../../theory";
@@ -10,87 +8,42 @@ import {
     type ArrowMarker,
     type ArrowStyle,
     arrowMarkerSVG,
-    DownloadSVGButton,
     EdgeSVG,
     type GraphLayout,
-    GraphLayoutConfig,
-    GraphLayoutConfigForm,
+    type GraphLayoutConfig,
     type GraphvizAttributes,
-    graphToViz,
-    loadViz,
     NodeSVG,
     perpendicularLabelPosition,
     type SVGRefProp,
-    vizLayoutGraph,
 } from "../../visualization";
 import svgStyles from "../svg_styles.module.css";
+import { GraphVisualizationAnalysis } from "./graph_visualization";
 import { modelToGraph } from "./model_graph";
+
 import "./graph_visualization.css";
 
 /** Visualize a stock flow diagram. */
 export default function StockFlowDiagram(props: ModelAnalysisProps<GraphLayoutConfig.Config>) {
-    // XXX: Following code is mostly copy-paste from `GraphVisualization`.
-    const [svgRef, setSvgRef] = createSignal<SVGSVGElement>();
-
-    const header = () => (
-        <DownloadSVGButton svg={svgRef()} tooltip="Export the diagram as SVG" size={16} />
-    );
-
-    return (
-        <div class="graph-visualization-container">
-            <BlockTitle
-                title="Visualization"
-                actions={header()}
-                settingsPane={
-                    <GraphLayoutConfigForm
-                        config={props.content}
-                        changeConfig={props.changeContent}
-                    />
-                }
-            />
-            <div class="graph-visualization">
-                <Show when={props.liveModel.elaboratedModel()}>
-                    {(model) => (
-                        <StockFlowGraphviz
-                            model={model()}
-                            theory={props.liveModel.theory()}
-                            options={GraphLayoutConfig.graphvizOptions(props.content)}
-                            ref={setSvgRef}
-                        />
-                    )}
-                </Show>
-            </div>
-        </div>
-    );
-}
-
-/** Visualize a stock flow diagram using Graphviz plus custom layout.
-
-First, Graphviz computes a layout for the stocks and flows. Then we add the
-links from stocks to flows using our own layout heuristics.
- */
-export function StockFlowGraphviz(props: {
-    model: DblModel;
-    theory?: Theory;
-    options?: Viz.RenderOptions;
-    ref?: SVGRefProp;
-}) {
-    const [vizResource] = createResource(loadViz);
-
-    const vizLayout = () => {
-        const viz = vizResource();
-        if (props.theory && viz) {
-            const graph = modelToGraph(props.model, props.theory);
-            return vizLayoutGraph(viz, graphToViz(graph, stockFlowAttributes), props.options);
-        }
+    const graph = () => {
+        const model = props.liveModel.elaboratedModel();
+        const theory = props.liveModel.theory();
+        return model && theory && modelToGraph(model, theory);
     };
 
     return (
-        <StockFlowSVG
-            model={props.model}
-            theory={props.theory}
-            layout={vizLayout()}
-            ref={props.ref}
+        <GraphVisualizationAnalysis
+            graph={graph()}
+            config={props.content}
+            changeConfig={props.changeContent}
+            graphvizAttributes={stockFlowAttributes}
+            renderer={(renderProps) => (
+                <StockFlowSVG
+                    model={props.liveModel.elaboratedModel()}
+                    theory={props.liveModel.theory()}
+                    layout={renderProps.graph}
+                    ref={renderProps.ref}
+                />
+            )}
         />
     );
 }
@@ -106,7 +59,7 @@ const stockFlowAttributes: GraphvizAttributes = {
 };
 
 function StockFlowSVG(props: {
-    model: DblModel;
+    model?: DblModel;
     theory?: Theory;
     layout?: GraphLayout.Graph;
     ref?: SVGRefProp;
@@ -119,8 +72,8 @@ function StockFlowSVG(props: {
         const model = props.model;
         const nodeMap = uniqueIndexArray(props.layout?.nodes ?? [], (node) => node.id);
         const edgeMap = uniqueIndexArray(props.layout?.edges ?? [], (edge) => edge.id);
-        for (const id of model.morGenerators()) {
-            const mor = model.morPresentation(id);
+        for (const id of model?.morGenerators() ?? []) {
+            const mor = model?.morPresentation(id);
             if (
                 !(
                     mor &&

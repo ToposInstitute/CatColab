@@ -1,7 +1,9 @@
 import type { ElkLayoutArguments, ElkNode } from "elkjs";
-import { createResource, Show } from "solid-js";
+import { type Component, createResource, Show } from "solid-js";
+import { Dynamic } from "solid-js/web";
 
 import { elkLayoutGraph, loadElk } from "./elk";
+import type * as GraphLayout from "./graph_layout";
 import { GraphSVG } from "./graph_svg";
 import type { SVGRefProp } from "./types";
 
@@ -9,7 +11,12 @@ import type { SVGRefProp } from "./types";
 
 The layout is performed by ELK and then the rendering is done by SVG.
  */
-export function ElkSVG(props: { graph?: ElkNode; args?: ElkLayoutArguments; ref?: SVGRefProp }) {
+export function ElkSVG(props: {
+    graph?: ElkNode;
+    args?: ElkLayoutArguments;
+    renderer?: Component<{ graph: GraphLayout.Graph; ref?: SVGRefProp }>;
+    ref?: SVGRefProp;
+}) {
     const [elkResource] = createResource(loadElk);
 
     const [graphLayout] = createResource(
@@ -23,6 +30,10 @@ export function ElkSVG(props: { graph?: ElkNode; args?: ElkLayoutArguments; ref?
     );
 
     return (
-        <Show when={graphLayout()}>{(graph) => <GraphSVG graph={graph()} ref={props.ref} />}</Show>
+        <Show when={graphLayout()}>
+            {(graph) => (
+                <Dynamic component={props.renderer ?? GraphSVG} graph={graph()} ref={props.ref} />
+            )}
+        </Show>
     );
 }

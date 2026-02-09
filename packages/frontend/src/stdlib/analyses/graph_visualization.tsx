@@ -11,6 +11,8 @@ import { defaultElkLayoutOptions, defaultGraphvizAttributes } from "../graph_sty
 
 import "./graph_visualization.css";
 
+type GraphVisualizationProps = ComponentProps<typeof GraphVisualization>;
+
 /** Component for a graph visualization analysis.
 
 Used to visualize, for example, the generating graphs of models and diagrams.
@@ -19,6 +21,9 @@ See `ModelGraph` and `DiagramGraph`.
 export function GraphVisualizationAnalysis(
     props: ComponentProps<typeof GraphLayoutConfigForm> & {
         graph?: GraphSpec.Graph;
+        renderer?: GraphVisualizationProps["renderer"];
+        elkLayoutOptions?: GraphVisualizationProps["elkLayoutOptions"];
+        graphvizAttributes?: GraphVisualizationProps["graphvizAttributes"];
         title?: string;
     },
 ) {
@@ -51,8 +56,11 @@ export function GraphVisualizationAnalysis(
                         <GraphVisualization
                             graph={graph()}
                             config={props.config}
-                            elkLayoutOptions={defaultElkLayoutOptions}
-                            graphvizAttributes={defaultGraphvizAttributes}
+                            elkLayoutOptions={props.elkLayoutOptions ?? defaultElkLayoutOptions}
+                            graphvizAttributes={
+                                props.graphvizAttributes ?? defaultGraphvizAttributes
+                            }
+                            renderer={props.renderer}
                             ref={setSvgRef}
                         />
                     )}
