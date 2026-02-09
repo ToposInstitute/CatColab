@@ -59,3 +59,9 @@ proptest-arbitrary-interop = { version = "0.1", optional = true }
 [dev-dependencies]
 test-strategy = "0.4"
 serial_test = "3.3.1"
+
+[lints.rust]
+missing_docs = "warn"
+
+[lints.clippy]
+doc_paragraphs_missing_punctuation = "warn"

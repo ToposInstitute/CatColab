@@ -8,10 +8,10 @@ use derive_more::{Constructor, Deref};
 use super::{prelude::*, stx::*, theory::*};
 use crate::zero::LabelSegment;
 
-/// A way of resolving [BwdIdx] found in [TmS_::Var] to values
+/// A way of resolving [BwdIdx] found in [TmS_::Var] to values.
 pub type Env = Bwd<TmV>;
 
-/// The content of a record type value
+/// The content of a record type value.
 #[derive(Clone, Constructor)]
 pub struct RecordV {
     /// The closed-over environment.
@@ -26,7 +26,7 @@ pub struct RecordV {
 }
 
 impl RecordV {
-    /// Add a specialization a path `path` to type `ty`
+    /// Add a specialization a path `path` to type `ty`.
     ///
     /// Precondition: assumes that this produces a subtype.
     pub fn add_specialization(&self, path: &[(FieldName, LabelSegment)], ty: TyV) -> Self {
@@ -39,7 +39,7 @@ impl RecordV {
         }
     }
 
-    /// Merge in the specializations in `specializations`
+    /// Merge in the specializations in `specializations`.
     ///
     /// Precondition: assumes that this produces a subtype.
     pub fn specialize(&self, specializations: &Dtry<TyV>) -> Self {
@@ -50,7 +50,7 @@ impl RecordV {
     }
 }
 
-/// Merge new specializations with old specializations
+/// Merge new specializations with old specializations.
 pub fn merge_specializations(old: &Dtry<TyV>, new: &Dtry<TyV>) -> Dtry<TyV> {
     let mut result: IndexMap<FieldName, (LabelSegment, DtryEntry<TyV>)> =
         old.entries().map(|(name, e)| (*name, e.clone())).collect();
@@ -68,7 +68,7 @@ pub fn merge_specializations(old: &Dtry<TyV>, new: &Dtry<TyV>) -> Dtry<TyV> {
     result.into()
 }
 
-/// Inner enum for [TyV]
+/// Inner enum for [TyV].
 pub enum TyV_ {
     /// Type constructor for object types, also see [TyS_::Object].
     Object(ObType),
@@ -86,7 +86,7 @@ pub enum TyV_ {
     Sing(TyV, TmV),
     /// Type constructor for unit types, also see [TyS_::Unit].
     Unit,
-    /// A metavariable, also see [TyS_::Meta]
+    /// A metavariable, also see [TyS_::Meta].
     Meta(MetaVar),
 }
 
@@ -143,7 +143,7 @@ impl TyV {
         }
     }
 
-    /// Specializes the field at `path` to `ty`
+    /// Specializes the field at `path` to `ty`.
     ///
     /// Precondition: assumes that this produces a subtype.
     pub fn add_specialization(&self, path: &[(FieldName, LabelSegment)], ty: TyV) -> Self {
@@ -204,9 +204,9 @@ pub enum TmV_ {
     Cons(Row<TmV>),
     /// The unique element of the unit type.
     Tt,
-    /// An element of a type that is opaque to conversion checking
+    /// An element of a type that is opaque to conversion checking.
     Opaque,
-    /// A metavariable
+    /// A metavariable.
     Meta(MetaVar),
 }
 

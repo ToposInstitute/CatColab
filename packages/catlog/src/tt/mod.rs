@@ -160,7 +160,7 @@
 //! /# result: g.g1.V : @sing g.V
 //! ```
 //!
-//! We can also normalize `g.g1.V` in the context of a variable `g: Graph2`
+//! We can also normalize `g.g1.V` in the context of a variable `g: Graph2`:
 //!
 //! ```text
 //! norm [g: Graph2] g.g1.V

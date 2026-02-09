@@ -1,5 +1,6 @@
-use axum::extract::Request;
+//! Main entry point for the CatColab backend.
 
+use axum::extract::Request;
 use axum::extract::ws::WebSocketUpgrade;
 use axum::middleware::from_fn_with_state;
 use axum::{Router, routing::get};
@@ -44,11 +45,11 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Command {
-    /// Run database migrations (proxied to sqlx_migrator)
+    /// Run database migrations (proxied to sqlx_migrator).
     Migrator(MigrationCommand),
-    /// Start the web server (default)
+    /// Start the web server (default).
     Serve,
-    /// Generate TypeScript bindings for the RPC API
+    /// Generate TypeScript bindings for the RPC API.
     GenerateBindings,
 }
 

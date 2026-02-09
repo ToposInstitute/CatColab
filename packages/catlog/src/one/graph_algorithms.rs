@@ -167,7 +167,7 @@ where
 /// Computes a topological sorting for a given graph.
 ///
 /// This toposort algorithm was borrowed from the crate `petgraph`, found
-/// [here](https://github.com/petgraph/petgraph/blob/4d807c19304c02c9dd687c68577f75aefcb98491/src/algo/mod.rs#L204)
+/// [here](https://github.com/petgraph/petgraph/blob/4d807c19304c02c9dd687c68577f75aefcb98491/src/algo/mod.rs#L204).
 pub fn toposort<G>(graph: &G) -> Result<Vec<G::V>, String>
 where
     G: FinGraph,

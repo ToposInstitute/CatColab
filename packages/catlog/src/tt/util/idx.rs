@@ -18,13 +18,13 @@ use derive_more::{Deref, From};
 pub struct FwdIdx(usize);
 
 impl FwdIdx {
-    /// The forward index refering the the next variable in the scope
+    /// The forward index refering the the next variable in the scope.
     pub fn next(&self) -> Self {
         Self(self.0 + 1)
     }
 
     /// Convert into a backward index, assuming that the scope is of
-    /// length `scope_length`
+    /// length `scope_length`.
     pub fn as_bwd(&self, scope_length: usize) -> BwdIdx {
         BwdIdx(scope_length - self.0 - 1)
     }
@@ -35,7 +35,7 @@ impl FwdIdx {
 pub struct BwdIdx(usize);
 
 impl BwdIdx {
-    /// The backwards index refering to the previous variable in the scope
+    /// The backwards index refering to the previous variable in the scope.
     pub fn prev(&self) -> Self {
         Self(self.0 + 1)
     }

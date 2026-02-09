@@ -1,3 +1,4 @@
+//! Reusable components of the backend.
 pub mod app;
 pub mod auth;
 pub mod automerge_json;

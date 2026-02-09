@@ -334,7 +334,7 @@ pub mod arbitrary {
     }
 }
 
-/// Parameters for filtering a search of refs
+/// Parameters for filtering a search of refs.
 #[qubit::ts]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RefQueryParams {
@@ -353,10 +353,7 @@ pub struct RefQueryParams {
     // TODO: add param for document type
 }
 
-/// Searches for `RefStub`s that the current user has permission to access,
-/// returning lightweight metadata about each matching ref.
-///
-/// This is a wrapper around [`search_ref_stubs`]
+/// This is a wrapper around [`search_ref_stubs`].
 pub async fn run_search_ref_stubs(
     ctx: AppCtx,
     search_params: RefQueryParams,

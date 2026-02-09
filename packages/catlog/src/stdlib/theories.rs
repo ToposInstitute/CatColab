@@ -122,7 +122,7 @@ pub fn th_category_links() -> DiscreteTabTheory {
 /// The theory of categories with signed links.
 ///
 /// It can be useful to consider a version of stock and flow diagrams where the
-/// links are labelled with a sign: positive or negative
+/// links are labelled with a sign: positive or negative.
 pub fn th_category_signed_links() -> DiscreteTabTheory {
     let mut th = DiscreteTabTheory::new();
     th.add_ob_type(name("Object"));

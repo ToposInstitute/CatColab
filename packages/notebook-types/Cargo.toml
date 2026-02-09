@@ -18,3 +18,6 @@ tsify = { version = "0.5", features = ["js"] }
 ustr = { version = "1.1.0", features = ["serde"] }
 uuid = { version = "1.18", features = ["serde"] }
 wasm-bindgen = "0.2.106"
+
+[lints.clippy]
+doc_paragraphs_missing_punctuation = "warn"

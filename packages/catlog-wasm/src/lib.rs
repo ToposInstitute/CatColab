@@ -9,8 +9,6 @@
 //! same is true for other structures, such as models of theories and diagrams in
 //! models.
 
-#![warn(missing_docs)]
-
 pub mod notation;
 pub mod result;
 

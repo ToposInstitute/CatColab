@@ -102,7 +102,7 @@ impl TabMorProj {
         }
     }
 
-    /// Target projection
+    /// Target projection.
     fn tgt(self) -> TabObProj {
         match self {
             TabMorProj::Src(m) => TabObProj::Src(m),

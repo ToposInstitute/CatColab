@@ -10,11 +10,14 @@ use ustr::Ustr;
 use wasm_bindgen::prelude::*;
 
 use catlog::dbl::theory::{
-    self, DblTheory as _, ModalMorType, ModalObOp, ModalObType, ModalOp, ModeApp, TabMorType,
-    TabObOp, TabObType,
+    self, DblTheory as _, ModalMorType, ModalObOp, ModalObType, ModeApp, TabMorType, TabObOp,
+    TabObType,
 };
 use catlog::one::{Path, QualifiedPath, ShortPath};
-use catlog::tt;
+use catlog::tt::{
+    self,
+    notebook_elab::{demote_modality, promote_modality},
+};
 use catlog::zero::{NameSegment, QualifiedName};
 use notebook_types::current::theory::*;
 
@@ -49,10 +52,7 @@ impl CanElaborate<MorType, QualifiedPath> for Elaborator {
 /// Elaborates into object operation in a discrete double theory.
 impl CanElaborate<ObOp, QualifiedName> for Elaborator {
     fn elab(&self, op: &ObOp) -> Result<QualifiedName, String> {
-        match op {
-            ObOp::Id(ObType::Basic(id)) => Ok((*id).into()),
-            _ => Err(format!("Cannot use operation in discrete double theory: {op:#?}")),
-        }
+        Err(format!("Cannot use operation in discrete double theory: {op:#?}"))
     }
 }
 
@@ -88,10 +88,7 @@ impl CanElaborate<MorType, TabMorType> for Elaborator {
 /// Elaborates into object operation in a discrete tabulator theory.
 impl CanElaborate<ObOp, TabObOp> for Elaborator {
     fn elab(&self, op: &ObOp) -> Result<TabObOp, String> {
-        match op {
-            ObOp::Id(ob_type) => Ok(Path::empty(self.elab(ob_type)?)),
-            _ => Err(format!("Cannot use operation in discrete tabulator theory: {op:#?}")),
-        }
+        Err(format!("Cannot use operation in discrete tabulator theory: {op:#?}"))
     }
 }
 
@@ -128,29 +125,8 @@ impl CanElaborate<MorType, ModalMorType> for Elaborator {
 impl CanElaborate<ObOp, ModalObOp> for Elaborator {
     fn elab(&self, op: &ObOp) -> Result<ModalObOp, String> {
         match op {
-            ObOp::Basic(id) => Ok(ModeApp::new(ModalOp::Generator((*id).into())).into()),
-            ObOp::Id(ob_type) => Ok(Path::empty(self.elab(ob_type)?)),
-            ObOp::Composite(ops) => {
-                let ops: Result<Vec<_>, _> = ops.iter().map(|op| self.elab(op)).collect();
-                Ok(Path::from_vec(ops?).ok_or("Composite should be non-empty")?.flatten())
-            }
-            ObOp::ModeApp { modality, op } => Ok({
-                let op: ModalObOp = self.elab(op.as_ref())?;
-                op.apply(promote_modality(*modality))
-            }),
+            ObOp::Basic(id) => Ok(ModalObOp::generator((*id).into())),
         }
-    }
-}
-
-pub(crate) fn promote_modality(modality: Modality) -> theory::Modality {
-    match modality {
-        Modality::Discrete => theory::Modality::Discrete(),
-        Modality::Codiscrete => theory::Modality::Codiscrete(),
-        Modality::List => theory::Modality::List(theory::List::Plain),
-        Modality::SymmetricList => theory::Modality::List(theory::List::Symmetric),
-        Modality::CartesianList => theory::Modality::List(theory::List::Cartesian),
-        Modality::CocartesianList => theory::Modality::List(theory::List::Cocartesian),
-        Modality::AdditiveList => theory::Modality::List(theory::List::Additive),
     }
 }
 
@@ -183,13 +159,6 @@ impl CanQuote<QualifiedPath, MorType> for Quoter {
                 }
             }
         }
-    }
-}
-
-/// Quotes an object operation in a discrete double theory.
-impl CanQuote<QualifiedName, ObOp> for Quoter {
-    fn quote(&self, name: &QualifiedName) -> ObOp {
-        ObOp::Id(ObType::Basic(expect_single_name(name)))
     }
 }
 
@@ -248,20 +217,6 @@ impl CanQuote<ModalMorType, MorType> for Quoter {
     }
 }
 
-pub(crate) fn demote_modality(modality: theory::Modality) -> Modality {
-    match modality {
-        theory::Modality::Discrete() => Modality::Discrete,
-        theory::Modality::Codiscrete() => Modality::Codiscrete,
-        theory::Modality::List(list_type) => match list_type {
-            theory::List::Plain => Modality::List,
-            theory::List::Symmetric => Modality::SymmetricList,
-            theory::List::Cartesian => Modality::CartesianList,
-            theory::List::Cocartesian => Modality::CocartesianList,
-            theory::List::Additive => Modality::AdditiveList,
-        },
-    }
-}
-
 /// A box containing a double theory of any kind.
 ///
 /// Ideally the Wasm-bound [`DblTheory`] would just have a type parameter for the
@@ -293,6 +248,7 @@ impl DblTheory {
     pub fn try_into_tt(&self) -> Option<tt::theory::TheoryDef> {
         match &self.0 {
             DblTheoryBox::Discrete(th) => Some(tt::theory::TheoryDef::Discrete(th.clone())),
+            DblTheoryBox::Modal(th) => Some(tt::theory::TheoryDef::Modal(th.clone())),
             _ => None,
         }
     }
@@ -370,7 +326,7 @@ impl DblTheory {
     /// and then this method can be removed.
     #[wasm_bindgen(js_name = "canInstantiateModels")]
     pub fn can_instantiate_models(&self) -> bool {
-        matches!(&self.0, DblTheoryBox::Discrete(_))
+        !matches!(&self.0, DblTheoryBox::DiscreteTab(_))
     }
 }
 

@@ -54,7 +54,7 @@ type AnyLiveDocWithRef = {
 };
 
 // The initial size of the right panel in a split as a percentage of the total available width
-const INITIAL_SPLIT_SIZE = 0.33;
+const INITIAL_SPLIT_SIZE = 0.5;
 
 export default function DocumentPage() {
     const api = useApi();

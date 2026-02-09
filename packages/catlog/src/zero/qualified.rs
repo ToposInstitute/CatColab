@@ -76,7 +76,7 @@ impl NameSegment {
 ///
 /// A qualified name is a sequence of segments that unambiguously names an element
 /// in a set, or a family of sets, or a family of family of sets, and so on. For
-/// example, a qualified name with three segments can be constructed as
+/// example, a qualified name with three segments can be constructed as:
 ///
 /// ```
 /// # use catlog::zero::qualified::*;
@@ -373,7 +373,7 @@ impl QualifiedLabel {
         self.0.iter()
     }
 
-    /// Add another segment onto the end
+    /// Add another segment onto the end.
     pub fn snoc(&self, segment: LabelSegment) -> Self {
         let mut segments = self.0.clone();
         segments.push(segment);
@@ -432,7 +432,15 @@ impl Namespace {
 
     /// Sets the label segment associated with a UUID.
     pub fn set_label(&mut self, uuid: Uuid, label: LabelSegment) {
-        self.uuid_labels.as_mut().expect("Should be a UUID namespace").set(uuid, label);
+        let uuid_labels = self.uuid_labels.as_mut().expect("Should be a UUID namespace");
+        if let LabelSegment::Text(s) = &label
+            && s.is_empty()
+        {
+            // Treat an empty label as no label at all.
+            uuid_labels.unset(&uuid);
+        } else {
+            uuid_labels.set(uuid, label);
+        }
     }
 
     /// Tries to get a human-readable label for a name.

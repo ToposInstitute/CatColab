@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use all_the_same::all_the_same;
-use derive_more::{From, TryInto};
+use derive_more::TryInto;
 use nonempty::NonEmpty;
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
@@ -20,7 +20,7 @@ use catlog::one::{Category as _, FgCategory, Path, QualifiedPath};
 use catlog::tt::{
     self,
     modelgen::generate,
-    notebook_elab::Elaborator as ElaboratorNext,
+    notebook_elab::{Elaborator as ElaboratorNext, demote_modality, promote_modality},
     toplevel::{TopDecl, Toplevel, Type},
 };
 use catlog::validate::Validate;
@@ -30,9 +30,7 @@ use notebook_types::current::{path as notebook_path, *};
 use super::model_presentation::*;
 use super::notation::*;
 use super::result::JsResult;
-use super::theory::{
-    DblTheory, DblTheoryBox, demote_modality, expect_single_name, promote_modality,
-};
+use super::theory::{DblTheory, DblTheoryBox, expect_single_name};
 
 /// Elaborates into an object in a model of a discrete double theory.
 impl CanElaborate<Ob, QualifiedName> for Elaborator {
@@ -256,7 +254,7 @@ impl CanQuote<ModalMor, Mor> for Quoter {
 /// A box containing a model of a double theory of any kind.
 ///
 /// See [`DblTheoryBox`] for motivation.
-#[derive(Clone, From, TryInto)]
+#[derive(Clone, TryInto)]
 #[try_into(ref)]
 pub enum DblModelBox {
     /// A model of a discrete double theory.
@@ -269,25 +267,25 @@ pub enum DblModelBox {
 
 impl From<dbl_model::DiscreteDblModel> for DblModelBox {
     fn from(value: dbl_model::DiscreteDblModel) -> Self {
-        Rc::new(value).into()
+        Self::Discrete(Rc::new(value))
     }
 }
 impl From<dbl_model::DiscreteTabModel> for DblModelBox {
     fn from(value: dbl_model::DiscreteTabModel) -> Self {
-        Rc::new(value).into()
+        Self::DiscreteTab(Rc::new(value))
     }
 }
 impl From<dbl_model::ModalDblModel> for DblModelBox {
     fn from(value: dbl_model::ModalDblModel) -> Self {
-        Rc::new(value).into()
+        Self::Modal(Rc::new(value))
     }
 }
 
 impl From<tt::modelgen::Model> for DblModelBox {
     fn from(value: tt::modelgen::Model) -> Self {
         match value {
-            tt::modelgen::Model::Discrete(model) => DblModelBox::Discrete(Rc::new(*model)),
-            tt::modelgen::Model::Modal(model) => DblModelBox::Modal(Rc::new(*model)),
+            tt::modelgen::Model::Discrete(model) => Self::Discrete(Rc::new(*model)),
+            tt::modelgen::Model::Modal(model) => Self::Modal(Rc::new(*model)),
         }
     }
 }
@@ -322,8 +320,13 @@ pub struct DblModel {
 impl DblModel {
     /// Constructs an empty model of a double theory.
     pub fn new(theory: &DblTheory) -> Self {
+        Self::from_box(DblModelBox::new(theory))
+    }
+
+    /// Constructs from a boxed model.
+    pub fn from_box(model: DblModelBox) -> Self {
         Self {
-            model: DblModelBox::new(theory),
+            model,
             ty: None,
             ob_namespace: Namespace::new_for_uuid(),
             mor_namespace: Namespace::new_for_uuid(),
@@ -783,15 +786,14 @@ pub(crate) mod tests {
         assert_eq!(Result::from(model.validate().0).map_err(|errs| errs.len()), Err(2));
     }
 
-    #[test]
-    fn model_category_links() {
+    pub(crate) fn backward_link(src_name: &str, tgt_name: &str, flow_name: &str) -> DblModel {
         let th = ThCategoryLinks::new().theory();
         let mut model = DblModel::new(&th);
         let [f, x, y, link] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
         assert!(
             model
                 .add_ob(&ObDecl {
-                    name: "x".into(),
+                    name: src_name.into(),
                     id: x,
                     ob_type: ObType::Basic("Object".into())
                 })
@@ -800,7 +802,7 @@ pub(crate) mod tests {
         assert!(
             model
                 .add_ob(&ObDecl {
-                    name: "y".into(),
+                    name: tgt_name.into(),
                     id: y,
                     ob_type: ObType::Basic("Object".into()),
                 })
@@ -809,7 +811,7 @@ pub(crate) mod tests {
         assert!(
             model
                 .add_mor(&MorDecl {
-                    name: "f".into(),
+                    name: flow_name.into(),
                     id: f,
                     mor_type: MorType::Hom(Box::new(ObType::Basic("Object".into()))),
                     dom: Some(Ob::Basic(x.to_string())),
@@ -823,11 +825,17 @@ pub(crate) mod tests {
                     name: "link".into(),
                     id: link,
                     mor_type: MorType::Basic("Link".into()),
-                    dom: Some(Ob::Basic(x.to_string())),
+                    dom: Some(Ob::Basic(y.to_string())),
                     cod: Some(Ob::Tabulated(Mor::Basic(f.to_string()))),
                 })
                 .is_ok()
         );
+        model
+    }
+
+    #[test]
+    fn model_category_links() {
+        let model = backward_link("x", "y", "f");
         assert_eq!(model.ob_generators().len(), 2);
         assert_eq!(model.mor_generators().len(), 2);
         assert_eq!(model.validate().0, JsResult::Ok(()));

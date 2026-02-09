@@ -27,13 +27,13 @@ pub const TT_PARSE_CONFIG: ParseConfig = ParseConfig::new(
 
 /// The result of elaborating a top-level statement.
 pub enum TopElabResult {
-    /// A new declaration
+    /// A new declaration.
     Declaration(TopVarName, TopDecl),
-    /// Output that should be logged
+    /// Output that should be logged.
     Output(String),
 }
 
-/// Context for top-level elaboration
+/// Context for top-level elaboration.
 ///
 /// Top-level elaboration is elaboration of declarations.
 pub struct TopElaborator {
@@ -100,7 +100,7 @@ impl TopElaborator {
         None
     }
 
-    /// Elaborate a single top-level declaration
+    /// Elaborate a single top-level declaration.
     pub fn elab(&mut self, toplevel: &Toplevel, tn: &FNtnTop) -> Option<TopElabResult> {
         match tn.name {
             "set_theory" => match tn.body.ast0() {

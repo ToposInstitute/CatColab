@@ -152,7 +152,7 @@ where
     Coef: Display + PartialEq + One + Neg<Output = Coef>,
     Exp: Display + PartialEq + One,
 {
-    /// Convert to a LaTeX string
+    /// Convert to a LaTeX string.
     pub fn to_latex(&self) -> String {
         self.0.to_latex()
     }

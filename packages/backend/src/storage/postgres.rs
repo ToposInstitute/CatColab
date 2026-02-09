@@ -2,7 +2,7 @@ use samod::storage::{Storage, StorageKey};
 use sqlx::PgPool;
 use std::collections::HashMap;
 
-/// A PostgreSQL-backed storage adapter for samod
+/// A PostgreSQL-backed storage adapter for samod.
 ///
 /// ## Database Schema
 ///
@@ -19,6 +19,7 @@ pub struct PostgresStorage {
 }
 
 impl PostgresStorage {
+    /// Constructs a new PostgreSQL storage adapter.
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }

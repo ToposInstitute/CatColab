@@ -1,4 +1,4 @@
-//! Evaluation, quoting, and conversion/equality checking
+//! Evaluation, quoting, and conversion/equality checking.
 //!
 //! At a high level, this module implements three operations:
 //!
@@ -13,7 +13,7 @@ use crate::{
     zero::LabelSegment,
 };
 
-/// The context used in evaluation, quoting, and conversion checking
+/// The context used in evaluation, quoting, and conversion checking.
 ///
 /// We bundle this all together because conversion checking and quoting
 /// sometimes need to evaluate terms. For instance, quoting a lambda
@@ -33,15 +33,15 @@ impl<'a> Evaluator<'a> {
         RecordV::new(self.env.clone(), r.fields.clone(), Dtry::empty())
     }
 
-    /// Return a new [Evaluator] with environment `env`
+    /// Return a new [Evaluator] with environment `env`.
     pub fn with_env(&self, env: Env) -> Self {
         Self { env, ..self.clone() }
     }
 
-    /// Evaluate type syntax to produce a type value
+    /// Evaluate type syntax to produce a type value.
     ///
     /// Assumes that the type syntax is well-formed and well-scoped with respect
-    /// to self.env
+    /// to self.env.
     pub fn eval_ty(&self, ty: &TyS) -> TyV {
         match &**ty {
             TyS_::TopVar(tv) => self.toplevel.declarations.get(tv).unwrap().clone().unwrap_ty().val,
@@ -61,10 +61,10 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    /// Evaluate term syntax to produce a term value
+    /// Evaluate term syntax to produce a term value.
     ///
     /// Assumes that the term syntax is well-formed and well-scoped with respect
-    /// to self.env
+    /// to self.env.
     pub fn eval_tm(&self, tm: &TmS) -> TmV {
         match &**tm {
             TmS_::TopVar(tv) => {
@@ -88,7 +88,7 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    /// Compute the projection of a field from a term value
+    /// Compute the projection of a field from a term value.
     pub fn proj(&self, tm: &TmV, field_name: FieldName, field_label: LabelSegment) -> TmV {
         match &**tm {
             TmV_::Neu(n, ty) => TmV::neu(
@@ -116,7 +116,7 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    /// Bind a new neutral of type `ty`
+    /// Bind a new neutral of type `ty`.
     pub fn bind_neu(&self, name: VarName, label: LabelSegment, ty: TyV) -> (TmN, Self) {
         let n = TmN::var(self.scope_length.into(), name, label);
         let v = TmV::neu(n.clone(), ty);
@@ -130,7 +130,7 @@ impl<'a> Evaluator<'a> {
         )
     }
 
-    /// Bind a variable called "self" to `ty`
+    /// Bind a variable called "self" to `ty`.
     pub fn bind_self(&self, ty: TyV) -> (TmN, Self) {
         self.bind_neu("self".into(), "self".into(), ty)
     }
@@ -309,7 +309,7 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    /// Performs eta-expansion of the term `n` at type `ty`
+    /// Performs eta-expansion of the term `n` at type `ty`.
     pub fn eta(&self, v: &TmV, ty: Option<&TyV>) -> TmV {
         match &**v {
             TmV_::Neu(tm_n, ty_v) => self.eta_neu(tm_n, ty_v),
@@ -429,7 +429,7 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    /// Try to specialize the record `r` with the subtype `ty` at `path`
+    /// Try to specialize the record `r` with the subtype `ty` at `path`.
     ///
     /// Precondition: `path` is non-empty.
     pub fn try_specialize(
