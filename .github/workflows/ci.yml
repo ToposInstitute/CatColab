@@ -27,8 +27,8 @@ jobs:
           rustup toolchain install ${{ matrix.toolchain }}
           rustup default ${{ matrix.toolchain }}
 
-          cargo build --all-features --verbose
-          cargo test --all-features --verbose
+          cargo check --all-features --verbose
+          cargo test --verbose
 
   rust_formatting:
     name: rust formatting
@@ -210,7 +210,7 @@ jobs:
       - name: Run backend tests
         run: |
           cd packages/backend
-          cargo test -p backend --all-features
+          cargo test --all-features
 
   frontend_tests_with_backend:
     name: frontend tests with backend

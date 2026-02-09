@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [features]
-default = ["proptest"]
+default = []
 proptest = ["dep:proptest", "dep:proptest-derive", "dep:proptest-arbitrary-interop", "uuid/arbitrary"]
 
 [dependencies]
