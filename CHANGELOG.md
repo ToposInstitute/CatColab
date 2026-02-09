@@ -15,15 +15,28 @@ TODO
 
 ## [v0.4.3](https://github.com/ToposInstitute/CatColab/releases/tag/v0.4.3) -- 2026-01-13
 
-TODO
+Two new example models and a bug fix.
 
 ## [v0.4.2](https://github.com/ToposInstitute/CatColab/releases/tag/v0.4.2) -- 2026-01-08
 
-TODO
+### Added
+
+- New logic: stock flow diagrams with signed links
+  ([#905](https://github.com/ToposInstitute/CatColab/pull/905))
+- New analysis: visualization of schemas as entity-relation diagrams
+  ([#918](https://github.com/ToposInstitute/CatColab/pull/918))
+- Meaningful browser titles for all pages in CatColab
+  ([#933](https://github.com/ToposInstitute/CatColab/pull/933))
+
+### Changed
+
+- More clear and consistent UI for analysis settings
+  ([#929](https://github.com/ToposInstitute/CatColab/pull/929))
+- Usability fixes to revamped split pane UI, following its introduction in v0.4
 
 ## [v0.4.1](https://github.com/ToposInstitute/CatColab/releases/tag/v0.4.1) -- 2025-12-04
 
-TODO
+Bug fixes following the v0.4 major release.
 
 ## v0.4 and earlier
 
