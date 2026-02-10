@@ -299,7 +299,7 @@ impl<'a> Evaluator<'a> {
                 for (name, (label, _)) in r.fields.iter() {
                     let ty_v = self.field_ty(ty, &TmV::cons(fields.clone()), *name);
                     let v = self.eta_neu(&TmN::proj(n.clone(), *name, *label), &ty_v);
-                    fields = fields.insert(*name, *label, v);
+                    fields.insert(*name, *label, v);
                 }
                 TmV::cons(fields)
             }

@@ -1,8 +1,11 @@
 //! Rows.
-use crate::{tt::prelude::*, zero::LabelSegment};
+
+use derive_more::From;
 use std::ops::Index;
 
-/// A cheaply cloneable, insertion-ordered map from `FieldName` to `T`.
+use crate::{tt::prelude::*, zero::LabelSegment};
+
+/// An insertion-ordered map from `FieldName` to `T`.
 ///
 /// Also stores a "label" for each entry, which may not be the same as the
 /// FieldName in the case that the FieldName is a UUID.
@@ -11,8 +14,8 @@ use std::ops::Index;
 /// of a row in a database, which is a map from fields to values.
 ///
 /// Create this using the [FromIterator] implementation.
-#[derive(Clone, PartialEq, Eq)]
-pub struct Row<T>(Rc<IndexMap<FieldName, (LabelSegment, T)>>);
+#[derive(Clone, PartialEq, Eq, From)]
+pub struct Row<T>(IndexMap<FieldName, (LabelSegment, T)>);
 
 impl<T> Index<FieldName> for Row<T> {
     type Output = T;
@@ -54,25 +57,19 @@ impl<T> Row<T> {
         self.0.contains_key(&field_name)
     }
 
-    /// Produce the empty row.
+    /// Construct the empty row.
     pub fn empty() -> Self {
-        Self(Rc::new(IndexMap::new()))
+        Self(IndexMap::new())
     }
 
     /// Map a function to produce a new row.
     pub fn map<S>(&self, f: impl Fn(&T) -> S) -> Row<S> {
         self.iter().map(|(name, (label, x))| (*name, (*label, f(x)))).collect()
     }
-}
 
-impl<T: Clone> Row<T> {
     ///  Insert a new field.
-    ///
-    /// Uses [Rc::make_mut] to mutate in place if there are no other references to self,
-    /// otherwise performs a clone.
-    pub fn insert(mut self, field: FieldName, label: LabelSegment, value: T) -> Self {
-        Rc::make_mut(&mut self.0).insert(field, (label, value));
-        self
+    pub fn insert(&mut self, field: FieldName, label: LabelSegment, value: T) {
+        self.0.insert(field, (label, value));
     }
 }
 
@@ -81,12 +78,6 @@ impl<T> FromIterator<(FieldName, (LabelSegment, T))> for Row<T> {
     where
         I: IntoIterator<Item = (FieldName, (LabelSegment, T))>,
     {
-        Row(Rc::new(iter.into_iter().collect()))
-    }
-}
-
-impl<T> From<IndexMap<FieldName, (LabelSegment, T)>> for Row<T> {
-    fn from(value: IndexMap<FieldName, (LabelSegment, T)>) -> Self {
-        Self(Rc::new(value))
+        Row(iter.into_iter().collect())
     }
 }
