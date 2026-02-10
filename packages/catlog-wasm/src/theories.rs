@@ -112,11 +112,11 @@ impl ThSchema {
     }
 
     /// Renders a model into valid SQL
-    #[wasm_bindgen(js_name = "renderSql")]
-    pub fn render_sql(&self, model: &DblModel, backend: &str) -> Result<String, String> {
-        match analyses::sql::SqlBackend::try_from(backend) {
-            Ok(backend) => {
-                let sql_string = analyses::sql::SQLAnalysis::new(backend).render(
+    #[wasm_bindgen(js_name = "renderSQL")]
+    pub fn render_sql(&self, model: &DblModel, backend: &str) -> JsResult<String, String> {
+        analyses::sql::SQLBackend::try_from(backend)
+            .and_then(|backend| {
+                analyses::sql::SQLAnalysis::new(backend).render(
                     model.discrete()?,
                     |id| {
                         model
@@ -128,11 +128,9 @@ impl ThSchema {
                             .mor_generator_label(id)
                             .unwrap_or_else(|| QualifiedLabel::single("".into()))
                     },
-                );
-                Ok(sql_string)
-            }
-            Err(e) => Err(e),
-        }
+                )
+            })
+            .into()
     }
 }
 

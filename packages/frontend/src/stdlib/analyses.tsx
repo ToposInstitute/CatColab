@@ -7,7 +7,7 @@ import type * as Checkers from "./analyses/checker_types";
 import { defaultSchemaERDConfig, type SchemaERDConfig } from "./analyses/schema_erd_config";
 import type * as Simulators from "./analyses/simulator_types";
 import type * as SQLDownloadConfig from "./analyses/sql";
-import { SqlBackend } from "./analyses/sql";
+import { SQLBackend, type SQLRenderer } from "./analyses/sql_types";
 
 type AnalysisOptions = {
     id: string;
@@ -315,15 +315,29 @@ export const stockFlowDiagram = (
 
 const StockFlowDiagram = lazy(() => import("./analyses/stock_flow_diagram"));
 
-export const renderSql = (
-    options: AnalysisOptions,
-): ModelAnalysisMeta<SQLDownloadConfig.DownloadConfig> => ({
-    ...options,
-    component: SqlSchemaInterface,
-    initialContent: () => ({
-        backend: SqlBackend.MySQL,
-        filename: "schema.sql",
-    }),
-});
+export function renderSQL(
+    options: Partial<AnalysisOptions> & {
+        render: SQLRenderer;
+    },
+): ModelAnalysisMeta<SQLDownloadConfig.DownloadConfig> {
+    const {
+        id = "sql",
+        name = "SQL Schema",
+        description = "Produce SQL DML from this schema",
+        help = "sql",
+        render,
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => <SQLSchemaAnalysis render={render} {...props} />,
+        initialContent: () => ({
+            backend: SQLBackend.MySQL,
+            filename: "schema.sql",
+        }),
+    };
+}
 
-const SqlSchemaInterface = lazy(() => import("./analyses/sql"));
+const SQLSchemaAnalysis = lazy(() => import("./analyses/sql"));

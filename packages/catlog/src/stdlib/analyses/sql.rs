@@ -1,48 +1,45 @@
 //! Produces a valid SQL data manipulation script from a model in the theory of schemas.
 use crate::{
     dbl::model::*,
-    one::{FgCategory, Path},
-    zero::{name, QualifiedLabel, QualifiedName},
+    one::{Path, graph::FinGraph, graph_algorithms::toposort},
+    zero::{QualifiedLabel, QualifiedName, label, name},
 };
+use indexmap::IndexMap;
 use itertools::Itertools;
 use sea_query::SchemaBuilder;
 use sea_query::{
-    prepare::Write, ColumnDef, ForeignKey, ForeignKeyCreateStatement, Iden, MysqlQueryBuilder,
-    PostgresQueryBuilder, SqliteQueryBuilder, Table, TableCreateStatement,
+    ColumnDef, ForeignKey, ForeignKeyCreateStatement, Iden, MysqlQueryBuilder,
+    PostgresQueryBuilder, SqliteQueryBuilder, Table, TableCreateStatement, prepare::Write,
 };
-use sqlformat::{format, Dialect};
-use std::{collections::HashMap, fmt};
+use sqlformat::{Dialect, format};
+use std::fmt;
 
 impl Iden for QualifiedName {
     fn unquoted(&self, s: &mut dyn Write) {
-        ToString::to_string(&name(self.clone())).as_str().unquoted(s)
+        Iden::unquoted(&format!("{self}").as_str(), s)
     }
 }
 
 impl Iden for QualifiedLabel {
     fn unquoted(&self, s: &mut dyn Write) {
-        ToString::to_string(&self.clone()).as_str().unquoted(s)
+        Iden::unquoted(&format!("{self}").as_str(), s)
     }
 }
 
-impl From<QualifiedLabel> for TableCreateStatement {
-    fn from(label: QualifiedLabel) -> Self {
-        Table::create()
-            .table(label)
-            .if_not_exists()
-            .col(ColumnDef::new("id").integer().not_null().auto_increment().primary_key())
-            .to_owned()
+impl Iden for &QualifiedLabel {
+    fn unquoted(&self, s: &mut dyn Write) {
+        Iden::unquoted(&format!("{self}").as_str(), s)
     }
 }
 
 /// Struct for building a valid SQL DDL.
 pub struct SQLAnalysis {
-    backend: SqlBackend,
+    backend: SQLBackend,
 }
 
 impl SQLAnalysis {
     /// Constructs a new SQLAnalysis instance.
-    pub fn new(backend: SqlBackend) -> Self {
+    pub fn new(backend: SQLBackend) -> Self {
         Self { backend }
     }
 
@@ -52,33 +49,28 @@ impl SQLAnalysis {
         model: &DiscreteDblModel,
         ob_label: impl Fn(&QualifiedName) -> QualifiedLabel,
         mor_label: impl Fn(&QualifiedName) -> QualifiedLabel,
-    ) -> String {
-        let mut morphisms = model
-            .mor_generators()
-            .filter_map(|mor| Some((model.get_dom(&mor)?.clone(), mor)))
-            .into_group_map();
-
-        for obj in model.objects_with_type(&name("Entity")) {
-            morphisms.entry(obj.clone()).or_insert_with(Vec::new);
-        }
+    ) -> Result<String, String> {
+        let g = model.generating_graph();
+        let t = toposort(g).map_err(|e| format!("Topological sort failed: {}", e))?;
+        let morphisms: IndexMap<&QualifiedName, Vec<QualifiedName>> =
+            IndexMap::from_iter(t.iter().rev().filter_map(|v| {
+                (name("Entity") == model.ob_generator_type(v))
+                    .then_some((v, g.out_edges(v).collect::<Vec<QualifiedName>>()))
+            }));
 
         let tables = self.make_tables(model, morphisms, ob_label, mor_label);
 
-        // convert to string
-        let mut output: Vec<String> = tables
+        let output: String = tables
             .iter()
             .map(|table| match self.backend {
-                SqlBackend::MySQL => table.to_string(MysqlQueryBuilder),
-                SqlBackend::SQLite => table.to_string(SqliteQueryBuilder),
-                SqlBackend::PostgresSQL => table.to_string(PostgresQueryBuilder),
+                SQLBackend::MySQL => table.to_string(MysqlQueryBuilder),
+                SQLBackend::SQLite => table.to_string(SqliteQueryBuilder),
+                SQLBackend::PostgresSQL => table.to_string(PostgresQueryBuilder),
             })
-            .collect();
+            .join(";\n")
+            + ";";
 
-        // to ensure tests pass consistently. However, sea_query should probably allow multiple
-        // tables
-        output.sort();
-        let output = output.join(";\n") + ";";
-
+        // TODO SQL analysis should interface with this
         let formatted_output = format(
             &output,
             &sqlformat::QueryParams::None,
@@ -89,10 +81,11 @@ impl SQLAnalysis {
             },
         );
 
-        match self.backend {
-            SqlBackend::SQLite => ["PRAGMA foreign_keys = ON", &formatted_output].join(";\n\n"),
+        let result = match self.backend {
+            SQLBackend::SQLite => ["PRAGMA foreign_keys = ON", &formatted_output].join(";\n\n"),
             _ => formatted_output,
-        }
+        };
+        Ok(result)
     }
 
     fn fk(
@@ -111,7 +104,7 @@ impl SQLAnalysis {
     fn make_tables(
         &self,
         model: &DiscreteDblModel,
-        morphisms: HashMap<QualifiedName, Vec<QualifiedName>>,
+        morphisms: IndexMap<&QualifiedName, Vec<QualifiedName>>,
         ob_label: impl Fn(&QualifiedName) -> QualifiedLabel,
         mor_label: impl Fn(&QualifiedName) -> QualifiedLabel,
     ) -> Vec<TableCreateStatement> {
@@ -122,7 +115,7 @@ impl SQLAnalysis {
 
                 // the targets for arrows
                 let table_column_defs = mors.iter().fold(
-                    tbl.table(ob_label(&ob)).if_not_exists().col(
+                    tbl.table(ob_label(ob)).if_not_exists().col(
                         ColumnDef::new("id").integer().not_null().auto_increment().primary_key(),
                     ),
                     |acc, mor| {
@@ -132,23 +125,12 @@ impl SQLAnalysis {
                         if model.mor_generator_type(mor) == Path::Id(name("Entity")) {
                             acc.col(ColumnDef::new(mor_name.clone()).integer().not_null())
                         } else {
-                            let tgt_name =
-                                ob_label(&model.get_cod(mor).unwrap_or(&name("")).clone());
-
-                            let mut col_def = ColumnDef::new(mor_name.clone());
-                            col_def.not_null();
-                            match format!("{}", tgt_name.clone()).as_str() {
-                                "Int" => col_def.integer(),
-                                "TinyInt" => col_def.tiny_integer(),
-                                "Bool" => col_def.boolean(),
-                                "Float" => col_def.float(),
-                                "Time" => col_def.timestamp(),
-                                "Date" => col_def.date(),
-                                "DateTime" => col_def.date_time(),
-                                _ => col_def.custom(tgt_name),
-                            };
-
-                            acc.col(col_def)
+                            let tgt =
+                                model.get_cod(mor).map(&ob_label).unwrap_or_else(|| label(""));
+                            let mut col = ColumnDef::new(mor_name);
+                            col.not_null();
+                            add_column_type(&mut col, &tgt);
+                            acc.col(col)
                         }
                     },
                 );
@@ -159,11 +141,9 @@ impl SQLAnalysis {
                         // TABLE AND COLUMN DEFS
                         table_column_defs,
                         |acc, mor| {
-                            let tgt = model.get_cod(mor).unwrap(); // TODO
-                            let src_name = ob_label(&ob);
-                            let tgt_name = ob_label(tgt);
-                            let mor_name = mor_label(mor);
-                            acc.foreign_key(&mut self.fk(src_name, tgt_name, mor_name))
+                            let tgt =
+                                model.get_cod(mor).map(&ob_label).unwrap_or_else(|| label(""));
+                            acc.foreign_key(&mut self.fk(ob_label(ob), tgt, mor_label(mor)))
                         },
                     )
                     .to_owned()
@@ -176,7 +156,7 @@ impl SQLAnalysis {
 /// `SchemaBuilder` trait that is used to render into the correct backend. The `SchemaBuilder` and
 /// the types implementing that trait are owned by `sea_query`.
 #[derive(Debug, Clone)]
-pub enum SqlBackend {
+pub enum SQLBackend {
     /// The MySQL backend.
     MySQL,
 
@@ -187,51 +167,65 @@ pub enum SqlBackend {
     PostgresSQL,
 }
 
-impl SqlBackend {
+impl SQLBackend {
     /// Produces a boxed implementation of the SchemaBuilder trait.
     pub fn as_type(&self) -> Box<dyn SchemaBuilder> {
         match self {
-            SqlBackend::MySQL => Box::new(MysqlQueryBuilder),
-            SqlBackend::SQLite => Box::new(SqliteQueryBuilder),
-            SqlBackend::PostgresSQL => Box::new(PostgresQueryBuilder),
+            SQLBackend::MySQL => Box::new(MysqlQueryBuilder),
+            SQLBackend::SQLite => Box::new(SqliteQueryBuilder),
+            SQLBackend::PostgresSQL => Box::new(PostgresQueryBuilder),
         }
     }
 }
 
-impl From<SqlBackend> for Dialect {
-    fn from(backend: SqlBackend) -> sqlformat::Dialect {
+impl From<SQLBackend> for Dialect {
+    fn from(backend: SQLBackend) -> sqlformat::Dialect {
         match backend {
-            SqlBackend::PostgresSQL => Dialect::PostgreSql,
+            SQLBackend::PostgresSQL => Dialect::PostgreSql,
             _ => Dialect::Generic,
         }
     }
 }
 
-impl TryFrom<&str> for SqlBackend {
+impl TryFrom<&str> for SQLBackend {
     type Error = String;
     fn try_from(backend: &str) -> Result<Self, Self::Error> {
         match backend {
-            "MySQL" => Ok(SqlBackend::MySQL),
-            "SQLite" => Ok(SqlBackend::SQLite),
-            "PostgresSQL" => Ok(SqlBackend::PostgresSQL),
+            "MySQL" => Ok(SQLBackend::MySQL),
+            "SQLite" => Ok(SQLBackend::SQLite),
+            "PostgresSQL" => Ok(SQLBackend::PostgresSQL),
             _ => Err(String::from("Invalid backend")),
         }
     }
 }
 
-impl fmt::Display for SqlBackend {
+impl fmt::Display for SQLBackend {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let string = match self {
-            SqlBackend::MySQL => "MySQL",
-            SqlBackend::SQLite => "SQLite",
-            SqlBackend::PostgresSQL => "PostgresSQL",
+            SQLBackend::MySQL => "MySQL",
+            SQLBackend::SQLite => "SQLite",
+            SQLBackend::PostgresSQL => "PostgresSQL",
         };
         write!(f, "{}", string)
     }
 }
 
+fn add_column_type(col: &mut ColumnDef, name: &QualifiedLabel) {
+    match format!("{}", name).as_str() {
+        "Int" => col.integer(),
+        "TinyInt" => col.tiny_integer(),
+        "Bool" => col.boolean(),
+        "Float" => col.float(),
+        "Time" => col.timestamp(),
+        "Date" => col.date(),
+        "DateTime" => col.date_time(),
+        _ => col.custom(name.clone()),
+    };
+}
+
 #[cfg(test)]
 mod tests {
+    use expect_test::expect;
 
     use super::*;
     use crate::{stdlib::th_schema, tt, zero::Namespace};
@@ -251,23 +245,30 @@ mod tests {
             &th.into(),
         );
 
-        let raw_creates = [
-            "CREATE TABLE IF NOT EXISTS `Dog` (`id` int NOT NULL AUTO_INCREMENT PRIMARY KEY)",
-            "CREATE TABLE IF NOT EXISTS `Person` (\n  `id` int NOT NULL AUTO_INCREMENT PRIMARY KEY,\n  `walks` int NOT NULL,\n  `has` Hair NOT NULL,\n  CONSTRAINT `FK_walks_Person_Dog` FOREIGN KEY (`walks`) REFERENCES `Dog` (`id`)\n)",
-        ];
+        let expected = expect![[
+            r#"CREATE TABLE IF NOT EXISTS `Dog` (`id` int NOT NULL AUTO_INCREMENT PRIMARY KEY);
+
+CREATE TABLE IF NOT EXISTS `Person` (
+  `id` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `walks` int NOT NULL,
+  `has` Hair NOT NULL,
+  CONSTRAINT `FK_walks_Person_Dog` FOREIGN KEY (`walks`) REFERENCES `Dog` (`id`)
+);"#
+        ]];
 
         let obns = Namespace::new_for_text();
         let morns = Namespace::new_for_text();
 
         if let Some(m) = &model.and_then(|m| m.as_discrete()) {
-            let ddl = SQLAnalysis::new(SqlBackend::MySQL).render(
+            let Ok(ddl) = SQLAnalysis::new(SQLBackend::MySQL).render(
                 m,
                 |id| obns.label(id).unwrap_or(QualifiedLabel::single("".into())),
                 |id| morns.label(id).unwrap_or(QualifiedLabel::single("".into())),
-            );
+            ) else {
+                panic!("SQL failed to render");
+            };
 
-            // TODO Hash is nondeterministic
-            assert_eq!(ddl, raw_creates.join(";\n\n") + ";");
+            expected.assert_eq(&ddl);
         }
     }
 }

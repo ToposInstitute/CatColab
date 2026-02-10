@@ -20,7 +20,7 @@ use catlog::one::{Category as _, FgCategory, Path, QualifiedPath};
 use catlog::tt::{
     self,
     modelgen::generate,
-    notebook_elab::{demote_modality, promote_modality, Elaborator as ElaboratorNext},
+    notebook_elab::{Elaborator as ElaboratorNext, demote_modality, promote_modality},
     toplevel::{TopDecl, Toplevel, Type},
 };
 use catlog::validate::Validate;
@@ -30,7 +30,7 @@ use notebook_types::current::{path as notebook_path, *};
 use super::model_presentation::*;
 use super::notation::*;
 use super::result::JsResult;
-use super::theory::{expect_single_name, DblTheory, DblTheoryBox};
+use super::theory::{DblTheory, DblTheoryBox, expect_single_name};
 
 /// Elaborates into an object in a model of a discrete double theory.
 impl CanElaborate<Ob, QualifiedName> for Elaborator {
@@ -707,29 +707,35 @@ pub(crate) mod tests {
     pub(crate) fn sch_walking_attr(th: &DblTheory, ids: [Uuid; 3]) -> DblModel {
         let mut model = DblModel::new(th);
         let [attr, entity, attr_type] = ids;
-        assert!(model
-            .add_ob(&ObDecl {
-                name: "entity".into(),
-                id: entity,
-                ob_type: ObType::Basic("Entity".into())
-            })
-            .is_ok());
-        assert!(model
-            .add_ob(&ObDecl {
-                name: "attr_type".into(),
-                id: attr_type,
-                ob_type: ObType::Basic("AttrType".into())
-            })
-            .is_ok());
-        assert!(model
-            .add_mor(&MorDecl {
-                name: "attr".into(),
-                id: attr,
-                mor_type: MorType::Basic("Attr".into()),
-                dom: Some(Ob::Basic(entity.to_string())),
-                cod: Some(Ob::Basic(attr_type.to_string())),
-            })
-            .is_ok());
+        assert!(
+            model
+                .add_ob(&ObDecl {
+                    name: "entity".into(),
+                    id: entity,
+                    ob_type: ObType::Basic("Entity".into())
+                })
+                .is_ok()
+        );
+        assert!(
+            model
+                .add_ob(&ObDecl {
+                    name: "attr_type".into(),
+                    id: attr_type,
+                    ob_type: ObType::Basic("AttrType".into())
+                })
+                .is_ok()
+        );
+        assert!(
+            model
+                .add_mor(&MorDecl {
+                    name: "attr".into(),
+                    id: attr,
+                    mor_type: MorType::Basic("Attr".into()),
+                    dom: Some(Ob::Basic(entity.to_string())),
+                    cod: Some(Ob::Basic(attr_type.to_string())),
+                })
+                .is_ok()
+        );
         model
     }
 
@@ -766,15 +772,17 @@ pub(crate) mod tests {
         assert_eq!(presentation.mor_generators.len(), 1);
 
         let mut model = DblModel::new(&th);
-        assert!(model
-            .add_mor(&MorDecl {
-                name: "a".into(),
-                id: a_id,
-                mor_type: MorType::Basic("Attr".into()),
-                dom: None,
-                cod: Some(y.clone())
-            })
-            .is_ok());
+        assert!(
+            model
+                .add_mor(&MorDecl {
+                    name: "a".into(),
+                    id: a_id,
+                    mor_type: MorType::Basic("Attr".into()),
+                    dom: None,
+                    cod: Some(y.clone())
+                })
+                .is_ok()
+        );
         assert_eq!(Result::from(model.validate().0).map_err(|errs| errs.len()), Err(2));
     }
 
@@ -782,38 +790,46 @@ pub(crate) mod tests {
         let th = ThCategoryLinks::new().theory();
         let mut model = DblModel::new(&th);
         let [f, x, y, link] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
-        assert!(model
-            .add_ob(&ObDecl {
-                name: src_name.into(),
-                id: x,
-                ob_type: ObType::Basic("Object".into())
-            })
-            .is_ok());
-        assert!(model
-            .add_ob(&ObDecl {
-                name: tgt_name.into(),
-                id: y,
-                ob_type: ObType::Basic("Object".into()),
-            })
-            .is_ok());
-        assert!(model
-            .add_mor(&MorDecl {
-                name: flow_name.into(),
-                id: f,
-                mor_type: MorType::Hom(Box::new(ObType::Basic("Object".into()))),
-                dom: Some(Ob::Basic(x.to_string())),
-                cod: Some(Ob::Basic(y.to_string())),
-            })
-            .is_ok());
-        assert!(model
-            .add_mor(&MorDecl {
-                name: "link".into(),
-                id: link,
-                mor_type: MorType::Basic("Link".into()),
-                dom: Some(Ob::Basic(y.to_string())),
-                cod: Some(Ob::Tabulated(Mor::Basic(f.to_string()))),
-            })
-            .is_ok());
+        assert!(
+            model
+                .add_ob(&ObDecl {
+                    name: src_name.into(),
+                    id: x,
+                    ob_type: ObType::Basic("Object".into())
+                })
+                .is_ok()
+        );
+        assert!(
+            model
+                .add_ob(&ObDecl {
+                    name: tgt_name.into(),
+                    id: y,
+                    ob_type: ObType::Basic("Object".into()),
+                })
+                .is_ok()
+        );
+        assert!(
+            model
+                .add_mor(&MorDecl {
+                    name: flow_name.into(),
+                    id: f,
+                    mor_type: MorType::Hom(Box::new(ObType::Basic("Object".into()))),
+                    dom: Some(Ob::Basic(x.to_string())),
+                    cod: Some(Ob::Basic(y.to_string())),
+                })
+                .is_ok()
+        );
+        assert!(
+            model
+                .add_mor(&MorDecl {
+                    name: "link".into(),
+                    id: link,
+                    mor_type: MorType::Basic("Link".into()),
+                    dom: Some(Ob::Basic(y.to_string())),
+                    cod: Some(Ob::Tabulated(Mor::Basic(f.to_string()))),
+                })
+                .is_ok()
+        );
         model
     }
 
