@@ -27,13 +27,6 @@ impl fmt::Display for MetaVar {
     }
 }
 
-/// Content of record type syntax.
-#[derive(Clone, Constructor)]
-pub struct RecordS {
-    /// The total types of the fields.
-    pub fields: Row<TyS>,
-}
-
 /// Inner enum for [TyS].
 pub enum TyS_ {
     /// A reference to a top-level declaration.
@@ -61,7 +54,7 @@ pub enum TyS_ {
     ///
     /// A term `x` of type `Record(r)` represents a record where field `f` has type
     /// `eval(env.snoc(eval(env, x)), r.fields1[f])`.
-    Record(RecordS),
+    Record(Row<TyS>),
 
     /// Type constructor for singleton types.
     ///
@@ -121,8 +114,8 @@ impl TyS {
     }
 
     /// Smart constructor for [TyS], [TyS_::Record] case.
-    pub fn record(record_s: RecordS) -> Self {
-        Self(Rc::new(TyS_::Record(record_s)))
+    pub fn record(fields: Row<TyS>) -> Self {
+        Self(Rc::new(TyS_::Record(fields)))
     }
 
     /// Smart constructor for [TyS], [TyS_::Sing] case.
@@ -157,7 +150,7 @@ impl ToDoc for TyS {
             TyS_::Morphism(mor_type, dom, cod) => {
                 mor_type.to_doc().parens() + tuple([dom.to_doc(), cod.to_doc()])
             }
-            TyS_::Record(r) => tuple(r.fields.iter().map(|(_, (label, ty))| {
+            TyS_::Record(fields) => tuple(fields.iter().map(|(_, (label, ty))| {
                 binop(t(":"), t(format!("{}", label)).group(), ty.to_doc())
             })),
             TyS_::Sing(_, tm) => t("@sing") + s() + tm.to_doc(),
