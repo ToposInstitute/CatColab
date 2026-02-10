@@ -4,3 +4,6 @@
 pub mod ode;
 
 pub mod reachability;
+
+#[cfg(feature = "sql")]
+pub mod sql;

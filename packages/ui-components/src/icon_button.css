@@ -61,6 +61,8 @@
     background-color: var(--color-tooltip-bg);
     padding: 0.5rem;
     font-size: smaller;
+    max-width: 500px;
+    word-wrap: break-word;
 
     & p:first-child {
         margin-top: 0;
