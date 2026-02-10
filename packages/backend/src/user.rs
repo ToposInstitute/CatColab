@@ -1,5 +1,9 @@
+use autosurgeon::{Hydrate, Reconcile};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+
+#[cfg(feature = "proptest")]
+use proptest_derive::Arbitrary;
 
 use super::app::{AppCtx, AppError, AppState};
 
@@ -41,10 +45,15 @@ pub async fn user_by_username(
 /// The minimal information needed to uniquely identify a user and display the user
 /// in human-readable form.
 #[qubit::ts]
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "proptest", derive(Arbitrary, Eq, PartialEq))]
+#[derive(Clone, Debug, Serialize, Deserialize, Reconcile, Hydrate)]
 pub struct UserSummary {
+    /// Unique identifier for the user.
     pub id: String,
+    /// The user's chosen username, if set.
     pub username: Option<String>,
+    /// The user's display name, if set.
+    #[autosurgeon(rename = "displayName")]
     #[serde(rename = "displayName")]
     pub display_name: Option<String>,
 }
@@ -120,7 +129,9 @@ pub async fn set_active_user_profile(ctx: AppCtx, profile: UserProfile) -> Resul
 #[qubit::ts]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UserProfile {
+    /// The user's chosen username, if set.
     pub username: Option<String>,
+    /// The user's display name, if set.
     #[serde(rename = "displayName")]
     pub display_name: Option<String>,
     // TODO: More fields, such as:

@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                WITH snapshot AS (\n                    INSERT INTO snapshots (for_ref, content, last_updated, doc_id)\n                    VALUES ($1, $2, $3, $4)\n                    RETURNING id\n                )\n                INSERT INTO refs (id, head, created)\n                VALUES ($1, (SELECT id FROM snapshot), $3)\n                ON CONFLICT (id) DO NOTHING\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Jsonb",
+        "Timestamptz",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b678d000cee75831e8997b531aaeafee9ac9591f34d5da0b203df4632bdd0118"
+}

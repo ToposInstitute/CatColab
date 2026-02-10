@@ -3,11 +3,33 @@
 use crate::app::{AppCtx, AppError, AppState, Paginated};
 use crate::automerge_json::{ensure_autosave_listener, populate_automerge_from_json};
 use crate::{auth::PermissionLevel, user::UserSummary};
+use autosurgeon::{Hydrate, Reconcile};
 use chrono::{DateTime, Utc};
 use samod::DocumentId;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
+
+/// Module for autosurgeon serialization of `DateTime<Utc>` as milliseconds since Unix epoch.
+mod datetime_millis {
+    use autosurgeon::{HydrateError, ReadDoc, Reconcile, Reconciler};
+    use chrono::{DateTime, TimeZone, Utc};
+
+    pub fn reconcile<R: Reconciler>(dt: &DateTime<Utc>, reconciler: R) -> Result<(), R::Error> {
+        dt.timestamp_millis().reconcile(reconciler)
+    }
+
+    pub fn hydrate<D: ReadDoc>(
+        doc: &D,
+        obj: &automerge::ObjId,
+        prop: autosurgeon::Prop<'_>,
+    ) -> Result<DateTime<Utc>, HydrateError> {
+        let millis: i64 = autosurgeon::hydrate_prop(doc, obj, prop)?;
+        Utc.timestamp_millis_opt(millis).single().ok_or_else(|| {
+            HydrateError::unexpected("valid timestamp", "invalid timestamp millis".to_string())
+        })
+    }
+}
 
 /// Maximum allowed document size in bytes (5MB).
 const MAX_DOCUMENT_SIZE: usize = 5 * 1024 * 1024;
@@ -218,6 +240,7 @@ pub async fn restore_ref(state: AppState, ref_id: Uuid) -> Result<(), AppError> 
     Ok(())
 }
 
+/// Gets the Automerge document ID for the head snapshot of a document ref.
 pub async fn get_doc_id(state: AppState, ref_id: Uuid) -> Result<DocumentId, AppError> {
     let query = sqlx::query!(
         "
@@ -247,59 +270,124 @@ pub async fn get_doc_id(state: AppState, ref_id: Uuid) -> Result<DocumentId, App
 #[qubit::ts]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RefContent {
+    /// The unique identifier of the document ref.
     #[serde(rename = "refId")]
     pub ref_id: Uuid,
+    /// The JSON content of the document.
     pub content: Value,
 }
 
 /// A subset of user relevant information about a ref. Used for showing users
 /// information on a variety of refs without having to load whole refs.
 #[qubit::ts]
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "proptest", derive(Eq, PartialEq))]
+#[derive(Clone, Debug, Serialize, Deserialize, Reconcile, Hydrate)]
 pub struct RefStub {
+    /// Human-readable name of the document.
     pub name: String,
+    /// The type of the document (e.g., theory, model).
     #[serde(rename = "typeName")]
+    #[autosurgeon(rename = "typeName")]
     pub type_name: String,
+    /// The unique identifier of the document ref.
     #[serde(rename = "refId")]
+    #[autosurgeon(rename = "refId")]
+    #[key]
     pub ref_id: Uuid,
-    // permission level that the current user has on this ref
+    /// Permission level that the current user has on this ref.
     #[serde(rename = "permissionLevel")]
+    #[autosurgeon(rename = "permissionLevel")]
     pub permission_level: PermissionLevel,
+    /// The owner of the document, if any.
     pub owner: Option<UserSummary>,
+    /// When the document ref was created.
     #[serde(rename = "createdAt")]
+    #[autosurgeon(rename = "createdAt", with = "datetime_millis")]
     pub created_at: DateTime<Utc>,
+}
+
+/// Arbitrary instances for property-based testing.
+#[cfg(feature = "proptest")]
+pub mod arbitrary {
+    use super::*;
+    use chrono::TimeZone;
+    use proptest::{arbitrary::Arbitrary, prelude::*};
+    use proptest_arbitrary_interop::arb;
+
+    impl Arbitrary for RefStub {
+        type Parameters = ();
+        type Strategy = BoxedStrategy<Self>;
+
+        fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+            (
+                any::<String>(),
+                any::<String>(),
+                arb::<Uuid>(),
+                any::<PermissionLevel>(),
+                prop::option::of(any::<UserSummary>()),
+                any::<i64>(),
+            )
+                .prop_map(|(name, type_name, ref_id, permission_level, owner, seconds)| RefStub {
+                    name,
+                    type_name,
+                    ref_id,
+                    permission_level,
+                    owner,
+                    created_at: Utc
+                        .timestamp_opt(seconds, 0)
+                        .single()
+                        .unwrap_or_else(|| Utc.timestamp_opt(0, 0).single().unwrap()),
+                })
+                .boxed()
+        }
+    }
 }
 
 /// Parameters for filtering a search of refs.
 #[qubit::ts]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RefQueryParams {
+    /// Filter by owner username.
     #[serde(rename = "ownerUsernameQuery")]
     pub owner_username_query: Option<String>,
+    /// Filter by document name (case-insensitive substring match).
     #[serde(rename = "refNameQuery")]
     pub ref_name_query: Option<String>,
+    /// Minimum permission level the searcher must have on the ref.
     #[serde(rename = "searcherMinLevel")]
     pub searcher_min_level: Option<PermissionLevel>,
+    /// Whether to include publicly accessible documents in the results.
     #[serde(rename = "includePublicDocuments")]
     pub include_public_documents: Option<bool>,
+    /// Whether to return only soft-deleted documents.
     #[serde(rename = "onlyDeleted")]
     pub only_deleted: Option<bool>,
+    /// Maximum number of results to return.
     pub limit: Option<i32>,
+    /// Number of results to skip for pagination.
     pub offset: Option<i32>,
     // TODO: add param for document type
 }
 
-/// Searches for `RefStub`s that the current user has permission to access,
-/// returning lightweight metadata about each matching ref.
-pub async fn search_ref_stubs(
+/// This is a wrapper around [`search_ref_stubs`].
+pub async fn run_search_ref_stubs(
     ctx: AppCtx,
     search_params: RefQueryParams,
 ) -> Result<Paginated<RefStub>, AppError> {
-    let searcher_id = ctx.user.as_ref().map(|user| user.user_id.clone());
+    let user_id = ctx.user.as_ref().map(|user| user.user_id.clone());
+    search_ref_stubs(user_id, &ctx.state.db, search_params).await
+}
 
+/// Searches for `RefStub`s that the given user has permission to access,
+/// returning lightweight metadata about each matching ref.
+pub async fn search_ref_stubs(
+    user_id: Option<String>,
+    db: &sqlx::PgPool,
+    search_params: RefQueryParams,
+) -> Result<Paginated<RefStub>, AppError> {
     let min_level = search_params.searcher_min_level.unwrap_or(PermissionLevel::Read);
 
-    let limit = search_params.limit.unwrap_or(100);
+    let limit = search_params.limit;
     let offset = search_params.offset.unwrap_or(0);
 
     let results = sqlx::query!(
@@ -383,7 +471,7 @@ pub async fn search_ref_stubs(
         FROM stubs
         CROSS JOIN total;
         "#,
-        searcher_id,
+        user_id,
         search_params.owner_username_query,
         search_params.ref_name_query,
         min_level as PermissionLevel,
@@ -392,7 +480,7 @@ pub async fn search_ref_stubs(
         offset,
         search_params.only_deleted.unwrap_or(false),
     )
-    .fetch_all(&ctx.state.db)
+    .fetch_all(db)
     .await?;
 
     let total = results.first().and_then(|r| r.total_count).unwrap_or(0);
