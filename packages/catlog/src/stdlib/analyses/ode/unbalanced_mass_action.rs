@@ -17,8 +17,8 @@ use tsify::Tsify;
 
 use super::ODEAnalysis;
 use crate::dbl::{
-    model::{DiscreteTabModel, FgDblModel, TabEdge},
-    theory::{TabMorType, TabObType},
+    model::{DiscreteTabModel, FgDblModel, ModalDblModel, MutDblModel, TabEdge},
+    theory::{ModalMorType, ModalObType, TabMorType, TabObType},
 };
 use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
@@ -140,16 +140,77 @@ impl StockFlowUnbalancedMassActionAnalysis {
         }
         for (flow, term) in &terms {
             let dom = model.mor_generator_dom(flow).unwrap_basic();
-            let param = Parameter::generator(DirectedTerm::OutgoingFlow(flow.clone()));
-            let term: Polynomial<_, _, _> = [(param, term.clone())].into_iter().collect();
-            sys.add_term(dom, -term);
-        }
-        for (flow, term) in &terms {
             let cod = model.mor_generator_cod(flow).unwrap_basic();
-            let param = Parameter::generator(DirectedTerm::IncomingFlow(flow.clone()));
-            let term: Polynomial<_, _, _> = [(param, term.clone())].into_iter().collect();
-            sys.add_term(cod, term);
+            let dom_param = Parameter::generator(DirectedTerm::OutgoingFlow(flow.clone()));
+            let cod_param = Parameter::generator(DirectedTerm::IncomingFlow(flow.clone()));
+            let dom_term: Polynomial<_, _, _> = [(dom_param, term.clone())].into_iter().collect();
+            let cod_term: Polynomial<_, _, _> = [(cod_param, term.clone())].into_iter().collect();
+            sys.add_term(dom, -dom_term);
+            sys.add_term(cod, cod_term);
         }
+        sys
+    }
+}
+
+/// Unbalanced mass-action ODE analysis for Petri nets.
+pub struct PetriNetUnbalancedMassActionAnalysis {
+    /// Object type for places.
+    pub place_ob_type: ModalObType,
+    /// Morphism type for transitions.
+    pub transition_mor_type: ModalMorType,
+}
+
+impl Default for PetriNetUnbalancedMassActionAnalysis {
+    fn default() -> Self {
+        let ob_type = ModalObType::new(name("Object"));
+        Self {
+            place_ob_type: ob_type.clone(),
+            transition_mor_type: ModalMorType::Zero(ob_type),
+        }
+    }
+}
+
+impl PetriNetUnbalancedMassActionAnalysis {
+    /// Creates an unbalanced mass-action system with symbolic rate coefficients.
+    pub fn build_system(
+        &self,
+        model: &ModalDblModel,
+    ) -> PolynomialSystem<QualifiedName, Parameter<DirectedTerm>, i8> {
+        let mut sys = PolynomialSystem::new();
+        for ob in model.ob_generators_with_type(&self.place_ob_type) {
+            sys.add_term(ob, Polynomial::zero());
+        }
+        for mor in model.mor_generators_with_type(&self.transition_mor_type) {
+            let inputs = model
+                .get_dom(&mor)
+                .and_then(|ob| ob.clone().collect_product(None))
+                .unwrap_or_default();
+            let outputs = model
+                .get_cod(&mor)
+                .and_then(|ob| ob.clone().collect_product(None))
+                .unwrap_or_default();
+
+            let term: Monomial<_, _> =
+                inputs.iter().map(|ob| (ob.clone().unwrap_generator(), 1)).collect();
+            for input in inputs {
+                let input_term: Polynomial<_, _, _> =
+                    [(Parameter::generator(DirectedTerm::OutgoingFlow(mor.clone())), term.clone())]
+                        .into_iter()
+                        .collect();
+                sys.add_term(input.unwrap_generator(), -input_term.clone());
+            }
+            for output in outputs {
+                let output_term: Polynomial<_, _, _> =
+                    [(Parameter::generator(DirectedTerm::IncomingFlow(mor.clone())), term.clone())]
+                        .into_iter()
+                        .collect();
+                sys.add_term(output.unwrap_generator(), output_term.clone());
+            }
+        }
+
+        // TODO: fix normalize()
+        // Normalize since terms commonly cancel out in mass-action dynamics.
+        // sys.normalize()
         sys
     }
 }

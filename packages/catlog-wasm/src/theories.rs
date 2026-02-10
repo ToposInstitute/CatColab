@@ -524,6 +524,44 @@ impl ThSymMonoidalCategory {
         Ok(ODELatex(latex_equations))
     }
 
+    /// Simulates the unbalanced mass-action ODE system derived from a model.
+    #[wasm_bindgen(js_name = "unbalancedMassAction")]
+    pub fn unbalanced_mass_action(
+        &self,
+        model: &DblModel,
+        data: analyses::ode::UnbalancedMassActionProblemData,
+    ) -> Result<ODEResultWithEquations, String> {
+        let modal_model = model.modal()?;
+        let analysis = analyses::ode::PetriNetUnbalancedMassActionAnalysis::default();
+        let sys = analysis.build_system(modal_model.as_ref());
+        let sys_extended_scalars = analyses::ode::extend_unbalanced_mass_action_scalars(sys, &data);
+        let latex_equations = sys_extended_scalars
+            .map_variables(latex_ob_names_mass_action(model))
+            .to_latex_equations();
+        let analysis =
+            analyses::ode::into_unbalanced_mass_action_analysis(sys_extended_scalars, data);
+        let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
+        Ok(ODEResultWithEquations {
+            solution: solution.into(),
+            latex_equations,
+        })
+    }
+
+    /// Returns the symbolic unbalanced mass-action equations in LaTeX format.
+    #[wasm_bindgen(js_name = "unbalancedMassActionEquations")]
+    pub fn unbalanced_mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
+        let analysis = analyses::ode::PetriNetUnbalancedMassActionAnalysis::default();
+        let modal_model = model.modal()?;
+        let sys = analysis.build_system(modal_model.as_ref());
+        let latex_equations = sys
+            .map_variables(latex_ob_names_mass_action(model))
+            .extend_scalars(|param| {
+                param.map_variables(latex_mor_names_unbalanced_mass_action(model))
+            })
+            .to_latex_equations();
+        Ok(ODELatex(latex_equations))
+    }
+
     /// Simulates the stochastic mass-action system derived from a model.
     #[wasm_bindgen(js_name = "stochasticMassAction")]
     pub fn stochastic_mass_action(
