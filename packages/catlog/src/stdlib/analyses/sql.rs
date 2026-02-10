@@ -226,13 +226,13 @@ fn add_column_type(col: &mut ColumnDef, name: &QualifiedLabel) {
 #[cfg(test)]
 mod tests {
     use expect_test::expect;
-
-    use super::*;
-    use crate::{stdlib::th_schema, tt, zero::Namespace};
     use std::rc::Rc;
 
+    use super::*;
+    use crate::{stdlib::th_schema, tt};
+
     #[test]
-    fn sql() {
+    fn sql_schema() {
         let th = Rc::new(th_schema());
         let model = tt::modelgen::parse_and_generate(
             "[
@@ -244,6 +244,7 @@ mod tests {
             ]",
             &th.into(),
         );
+        let model = model.and_then(|m| m.as_discrete()).unwrap();
 
         let expected = expect![[
             r#"CREATE TABLE IF NOT EXISTS `Dog` (`id` int NOT NULL AUTO_INCREMENT PRIMARY KEY);
@@ -255,20 +256,13 @@ CREATE TABLE IF NOT EXISTS `Person` (
   CONSTRAINT `FK_walks_Person_Dog` FOREIGN KEY (`walks`) REFERENCES `Dog` (`id`)
 );"#
         ]];
-
-        let obns = Namespace::new_for_text();
-        let morns = Namespace::new_for_text();
-
-        if let Some(m) = &model.and_then(|m| m.as_discrete()) {
-            let Ok(ddl) = SQLAnalysis::new(SQLBackend::MySQL).render(
-                m,
-                |id| obns.label(id).unwrap_or(QualifiedLabel::single("".into())),
-                |id| morns.label(id).unwrap_or(QualifiedLabel::single("".into())),
-            ) else {
-                panic!("SQL failed to render");
-            };
-
-            expected.assert_eq(&ddl);
-        }
+        let ddl = SQLAnalysis::new(SQLBackend::MySQL)
+            .render(
+                &model,
+                |id| format!("{id}").as_str().into(),
+                |id| format!("{id}").as_str().into(),
+            )
+            .expect("SQL should render");
+        expected.assert_eq(&ddl);
     }
 }
