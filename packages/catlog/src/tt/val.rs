@@ -204,14 +204,12 @@ pub enum TmV_ {
     /// Syntax says morphisms...
     List(Vec<TmV>),
     /// Records.
-    /// What's the difference between Cons and List? Rows are hashmaps?
     Cons(Row<TmV>),
     /// The unique element of the unit type.
     Tt,
     /// The identity morphism of an object.
     Id(TmV),
     /// Composition of morphisms.
-    /// Why is this binary?
     Compose(TmV, TmV),
     /// A metavariable.
     Meta(MetaVar),

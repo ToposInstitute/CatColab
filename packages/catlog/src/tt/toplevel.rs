@@ -17,8 +17,6 @@ pub enum TopDecl {
     /// See [Def].
     Def(Def),
 }
-// Why are toplevel and env different? An env just has some term values, whereas a toplevel can contain type declarations too...
-// How is a DefConst different from a Def with no arguments? I guess it's convenient to evaluate it once and for all, which you can't do with Defs.
 
 /// A toplevel declaration of a type.
 ///

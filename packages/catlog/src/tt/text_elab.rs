@@ -467,7 +467,7 @@ impl<'a> Elaborator<'a> {
                     elab.loc = Some(field_n.loc());
                     let Some((name, label, ty_n)) = (match field_n.ast0() {
                         App2(L(_, Keyword(":")), L(_, Var(name)), ty_n) => {
-                            Some((name_seg(*name), label_seg(*name), ty_n)) // another dupe of name and label?
+                            Some((name_seg(*name), label_seg(*name), ty_n)) 
                         }
                         _ => elab.error("expected fields in the form <name> : <type>"),
                     }) else {
@@ -528,8 +528,8 @@ impl<'a> Elaborator<'a> {
         let name = name_seg(name);
         if let Some((i, _, ty)) = self.ctx.lookup(name) {
             (
-                TmS::var(i, name, label), // Why does this variable get labelled with its name?
-                self.ctx.env.get(*i).unwrap().clone(), // Will this be thunked yet for a morphism variable? I think so, at this point.
+                TmS::var(i, name, label), 
+                self.ctx.env.get(*i).unwrap().clone(), 
                 ty.clone().unwrap(),
             )
         } else if let Some(d) = self.toplevel.lookup(name) {
@@ -548,7 +548,6 @@ impl<'a> Elaborator<'a> {
         match n.ast0() {
             Var(name) => elab.lookup_tm(ustr(name)),
             App1(tm_n, L(_, Field(f))) => {
-                // projection
                 let (tm_s, tm_v, ty_v) = elab.syn(tm_n);
                 let TyV_::Record(r) = &*ty_v else {
                     return elab.syn_error("can only project from record type");
@@ -565,7 +564,6 @@ impl<'a> Elaborator<'a> {
                 )
             }
             App1(L(_, Prim("id")), ob_n) => {
-                // identity morphisms
                 let (ob_s, ob_v, ob_t) = elab.syn(ob_n);
                 let TyV_::Object(ob_type) = &*ob_t else {
                     return elab.syn_error("can only apply @id to objects");
@@ -586,7 +584,6 @@ impl<'a> Elaborator<'a> {
                 (TmS::ob_app(name, arg_s), TmV::app(name, arg_v), TyV::object(cod)) 
             }
             App2(L(_, Keyword("*")), f_n, g_n) => {
-                // composition
                 let (f_s, f_v, f_ty) = elab.syn(f_n);
                 let (g_s, g_v, g_ty) = elab.syn(g_n);
                 let TyV_::Morphism(f_mt, f_dom, f_cod) = &*f_ty else {
@@ -702,7 +699,6 @@ impl<'a> Elaborator<'a> {
                 }
                 (TmS::list(elem_stxs), TmV::list(elem_vals))
             }
-            // I think we don't need to add checking for morphism types but we do for equality type? But I don't really know why.
             (_, Tuple(_)) => elab.chk_error("tuple expected to be record or object/morphism type"),
             (_, Prim("hole")) => elab.chk_error("explicit hole"),
             _ => {
