@@ -67,7 +67,7 @@ pub enum TyS_ {
     ///
     /// Example syntax: `@sing a` (assuming `a` is a term that synthesizes a type).
     ///
-    /// A term `x` of type `Sing(ty, tm)` is a term of `ty` that is convertable with
+    /// A term `x` of type `Sing(ty, tm)` is a term of `ty` that is convertible with
     /// `tm`.
     Sing(TyS, TmS),
 
@@ -86,7 +86,7 @@ pub enum TyS_ {
     ///
     /// Example syntax: `Unit`.
     ///
-    /// All terms of this type are convertable with `tt : Unit`.
+    /// All terms of this type are convertible with `tt : Unit`.
     Unit,
 
     /// A metavar.

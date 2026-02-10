@@ -187,9 +187,9 @@
 //! `Graph & [ .V := V ]` to be a well-formed type.
 //!
 //! Note that some algorithms simply ignore specializations, for instance
-//! [`eval::Evaluator::convertable_ty`]. This is convenient, because it means
+//! [`eval::Evaluator::convertible_ty`]. This is convenient, because it means
 //! that checking whether two types are subtypes can be reduced to checking
-//! whether they are convertable, and then checking whether a generic element of
+//! whether they are convertible, and then checking whether a generic element of
 //! the first type is an element of the second type. This neatly resolves the
 //! difference between `[ x : @sing a ]` and `[ x : Entity ] & [ .x := a ]`,
 //! which are represented differently, but should be semantically the same type.

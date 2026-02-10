@@ -4,7 +4,7 @@
 //!
 //! - `eval : syntax -> value` ([Evaluator::eval_tm], [Evaluator::eval_ty])
 //! - `quote : value -> syntax` ([Evaluator::quote_tm], [Evaluator::quote_neu], [Evaluator::quote_ty])
-//! - `convertable? : value -> value -> bool` ([Evaluator::equal_tm], [Evaluator::element_of], [Evaluator::subtype])
+//! - `convertible? : value -> value -> bool` ([Evaluator::equal_tm], [Evaluator::element_of], [Evaluator::subtype])
 
 use derive_more::Constructor;
 
@@ -79,7 +79,7 @@ impl<'a> Evaluator<'a> {
             TmS_::Cons(fields) => TmV::cons(fields.map(|tm| self.eval_tm(tm))),
             TmS_::Proj(tm, field, label) => self.proj(&self.eval_tm(tm), *field, *label),
             TmS_::Tt => TmV::tt(),
-            TmS_::Id(_) => TmV::opaque(), // FIXME
+            TmS_::Id(_) => TmV::opaque(),         // FIXME
             TmS_::Compose(_, _) => TmV::opaque(), // FIXME
             TmS_::ObApp(name, x) => TmV::app(*name, self.eval_tm(x)),
             TmS_::List(elems) => TmV::list(elems.iter().map(|tm| self.eval_tm(tm)).collect()),
@@ -211,10 +211,10 @@ impl<'a> Evaluator<'a> {
 
     /// Check if `ty1` is a subtype of `ty2`.
     ///
-    /// This is true iff `ty1` is convertable with `ty2`, and an eta-expanded
+    /// This is true iff `ty1` is convertible with `ty2`, and an eta-expanded
     /// neutral of type `ty1` is an element of `ty2`.
     pub fn subtype<'b>(&self, ty1: &TyV, ty2: &TyV) -> Result<(), D<'b>> {
-        self.convertable_ty(ty1, ty2)?;
+        self.convertible_ty(ty1, ty2)?;
         let (n, _) = self.bind_self(ty1.clone());
         let v = self.eta_neu(&n, ty1);
         self.element_of(&v, ty2)
@@ -223,7 +223,7 @@ impl<'a> Evaluator<'a> {
     /// Check if `tm` is an element of `ty`, accounting for specializations
     /// of `ty`.
     ///
-    /// Precondition: the type of `tm` must be convertable with `ty`, and `tm`
+    /// Precondition: the type of `tm` must be convertible with `ty`, and `tm`
     /// is eta-expanded.
     ///
     /// Example: if `a : Entity` and `b : Entity` are neutrals, then `a` is not an
@@ -244,12 +244,12 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    /// Check if two types are convertable.
+    /// Check if two types are convertible.
     ///
     /// Ignores specializations: specializations are handled in [`Evaluator::subtype`].
     ///
     /// On failure, returns a doc which describes the obstruction to convertability.
-    pub fn convertable_ty<'b>(&self, ty1: &TyV, ty2: &TyV) -> Result<(), D<'b>> {
+    pub fn convertible_ty<'b>(&self, ty1: &TyV, ty2: &TyV) -> Result<(), D<'b>> {
         match (&**ty1, &**ty2) {
             (TyV_::Object(ot1), TyV_::Object(ot2)) => {
                 if ot1 == ot2 {
@@ -275,15 +275,15 @@ impl<'a> Evaluator<'a> {
                     let v = TmV::cons(fields.clone().into());
                     let field_ty1_v = self1.with_env(r1.env.snoc(v.clone())).eval_ty(field_ty1_s);
                     let field_ty2_v = self1.with_env(r2.env.snoc(v.clone())).eval_ty(field_ty2_s);
-                    self1.convertable_ty(&field_ty1_v, &field_ty2_v)?;
+                    self1.convertible_ty(&field_ty1_v, &field_ty2_v)?;
                     let (field_val, self_next) = self.bind_neu(*name, *label, field_ty1_v.clone());
                     self1 = self_next;
                     fields.insert(*name, (*label, TmV::neu(field_val, field_ty1_v)));
                 }
                 Ok(())
             }
-            (TyV_::Sing(ty1, _), _) => self.convertable_ty(ty1, ty2),
-            (_, TyV_::Sing(ty2, _)) => self.convertable_ty(ty1, ty2),
+            (TyV_::Sing(ty1, _), _) => self.convertible_ty(ty1, ty2),
+            (_, TyV_::Sing(ty2, _)) => self.convertible_ty(ty1, ty2),
             (TyV_::Unit, TyV_::Unit) => Ok(()),
             _ => Err(t("tried to convert between types of different type constructors")),
         }
@@ -329,7 +329,7 @@ impl<'a> Evaluator<'a> {
                 }
             }
             TmV_::Tt => TmV::tt(),
-            /// Will need more here
+            // Will need more here
             TmV_::Opaque => TmV::opaque(),
             TmV_::Meta(_) => v.clone(),
         }
@@ -339,7 +339,7 @@ impl<'a> Evaluator<'a> {
     ///
     /// On failure, returns a doc which describes the obstruction to convertability.
     ///
-    /// Assumes that the type of tm1 is convertable with the type of tm2. First
+    /// Assumes that the type of tm1 is convertible with the type of tm2. First
     /// attempts to do conversion checking without eta-expansion (strict mode),
     /// and if that fails, does conversion checking with eta-expansion.
     pub fn equal_tm<'b>(&self, tm1: &TmV, tm2: &TmV) -> Result<(), D<'b>> {

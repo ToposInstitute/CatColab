@@ -546,7 +546,8 @@ impl<'a> Elaborator<'a> {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
             Var(name) => elab.lookup_tm(ustr(name)),
-            App1(tm_n, L(_, Field(f))) => { // projection
+            App1(tm_n, L(_, Field(f))) => {
+                // projection
                 let (tm_s, tm_v, ty_v) = elab.syn(tm_n);
                 let TyV_::Record(r) = &*ty_v else {
                     return elab.syn_error("can only project from record type");
@@ -562,7 +563,8 @@ impl<'a> Elaborator<'a> {
                     elab.evaluator().field_ty(&ty_v, &tm_v, f),
                 )
             }
-            App1(L(_, Prim("id")), ob_n) => { // identity morphisms
+            App1(L(_, Prim("id")), ob_n) => {
+                // identity morphisms
                 let (ob_s, ob_v, ob_t) = elab.syn(ob_n);
                 let TyV_::Object(ob_type) = &*ob_t else {
                     return elab.syn_error("can only apply @id to objects");
@@ -570,7 +572,8 @@ impl<'a> Elaborator<'a> {
                 let mor_type = elab.theory().hom_type(ob_type.clone());
                 (TmS::id(ob_s), TmV::tt(), TyV::morphism(mor_type, ob_v.clone(), ob_v)) // FIXME: tt
             }
-            App1(L(_, Prim(name)), ob_n) => { // Object operation
+            App1(L(_, Prim(name)), ob_n) => {
+                // Object operation
                 let name = name_seg(*name);
                 let Some(ob_op) = elab.theory().basic_ob_op([name].into()) else {
                     let th_name = elab.theory.name.to_string();
@@ -581,7 +584,8 @@ impl<'a> Elaborator<'a> {
                 let cod = elab.theory().ob_op_cod(&ob_op);
                 (TmS::ob_app(name, arg_s), TmV::app(name, arg_v), TyV::object(cod)) // check with TmV::app thunks
             }
-            App2(L(_, Keyword("*")), f_n, g_n) => { // composition
+            App2(L(_, Keyword("*")), f_n, g_n) => {
+                // composition
                 let (f_s, _, f_ty) = elab.syn(f_n);
                 let (g_s, _, g_ty) = elab.syn(g_n);
                 let TyV_::Morphism(f_mt, f_dom, f_cod) = &*f_ty else {
@@ -703,7 +707,7 @@ impl<'a> Elaborator<'a> {
             _ => {
                 let (tm_s, tm_v, synthed) = elab.syn(n);
                 let eval = elab.evaluator();
-                if let Err(e) = eval.convertable_ty(&synthed, ty) {
+                if let Err(e) = eval.convertible_ty(&synthed, ty) {
                     return elab.chk_error(format!(
                         "synthesized type {} does not match expected type {}:\n{}",
                         eval.quote_ty(&synthed),
