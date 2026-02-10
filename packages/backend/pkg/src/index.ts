@@ -13,6 +13,107 @@
 
 */
 import type { Query, Mutation, Subscription } from "@qubit-rs/client";
+export type UserSummary = { 
+/**
+ * Unique identifier for the user.
+ */
+id: string, 
+/**
+ * The user's chosen username, if set.
+ */
+username: string | null, 
+/**
+ * The user's display name, if set.
+ */
+displayName: string | null, };
+export type UserProfile = { 
+/**
+ * The user's chosen username, if set.
+ */
+username: string | null, 
+/**
+ * The user's display name, if set.
+ */
+displayName: string | null, };
+export type UsernameStatus = "Available" | "Unavailable" | "Invalid";
+export type RpcResult<T> = { "tag": "Ok", content: T, } | { "tag": "Err", code: number, message: string, };
+export type RefQueryParams = { 
+/**
+ * Filter by owner username.
+ */
+ownerUsernameQuery: string | null, 
+/**
+ * Filter by document name (case-insensitive substring match).
+ */
+refNameQuery: string | null, 
+/**
+ * Minimum permission level the searcher must have on the ref.
+ */
+searcherMinLevel: PermissionLevel | null, 
+/**
+ * Whether to include publicly accessible documents in the results.
+ */
+includePublicDocuments: boolean | null, 
+/**
+ * Whether to return only soft-deleted documents.
+ */
+onlyDeleted: boolean | null, 
+/**
+ * Maximum number of results to return.
+ */
+limit: number | null, 
+/**
+ * Number of results to skip for pagination.
+ */
+offset: number | null, };
+export type RefStub = { 
+/**
+ * Human-readable name of the document.
+ */
+name: string, 
+/**
+ * The type of the document (e.g., theory, model).
+ */
+typeName: string, 
+/**
+ * The unique identifier of the document ref.
+ */
+refId: string, 
+/**
+ * Permission level that the current user has on this ref.
+ */
+permissionLevel: PermissionLevel, 
+/**
+ * The owner of the document, if any.
+ */
+owner: UserSummary | null, 
+/**
+ * When the document ref was created.
+ */
+createdAt: string, };
+export type NewPermissions = { 
+/**
+ * Base permission level for any person, logged in or not.
+ */
+anyone: PermissionLevel | null, 
+/**
+ * Permission levels for users.
+ *
+ * A mapping from user IDs to permission levels.
+ */
+users: { [key in string]?: PermissionLevel }, };
+export type JsonValue = number | string | boolean | Array<JsonValue> | { [key in string]?: JsonValue } | null;
+export type RefDoc = { "tag": "Readonly", binaryData: string, isDeleted: boolean, permissions: Permissions, } | { "tag": "Live", docId: string, isDeleted: boolean, permissions: Permissions, };
+export type PermissionLevel = "Read" | "Write" | "Maintain" | "Own";
+export type UserPermissions = { 
+/**
+ * The user who has been granted permissions.
+ */
+user: UserSummary, 
+/**
+ * The level of permission granted to the user.
+ */
+level: PermissionLevel, };
 export type Paginated<T> = { 
 /**
  * The total number of items matching the query criteria.
@@ -26,7 +127,6 @@ offset: number,
  * The items in the current page.
  */
 items: Array<T>, };
-export type RefDoc = { "tag": "Readonly", binaryData: string, isDeleted: boolean, permissions: Permissions, } | { "tag": "Live", docId: string, isDeleted: boolean, permissions: Permissions, };
 export type Permissions = { 
 /**
  * Base permission level for any person, logged in or not.
@@ -42,24 +142,4 @@ user: PermissionLevel | null,
  * Only owners of the document have access to this information.
  */
 users: Array<UserPermissions> | null, };
-export type PermissionLevel = "Read" | "Write" | "Maintain" | "Own";
-export type JsonValue = number | string | boolean | Array<JsonValue> | { [key in string]?: JsonValue } | null;
-export type UserPermissions = { user: UserSummary, level: PermissionLevel, };
-export type RefQueryParams = { ownerUsernameQuery: string | null, refNameQuery: string | null, searcherMinLevel: PermissionLevel | null, includePublicDocuments: boolean | null, onlyDeleted: boolean | null, limit: number | null, offset: number | null, };
-export type UserProfile = { username: string | null, displayName: string | null, };
-export type RpcResult<T> = { "tag": "Ok", content: T, } | { "tag": "Err", code: number, message: string, };
-export type RefStub = { name: string, typeName: string, refId: string, permissionLevel: PermissionLevel, owner: UserSummary | null, createdAt: string, };
-export type NewPermissions = { 
-/**
- * Base permission level for any person, logged in or not.
- */
-anyone: PermissionLevel | null, 
-/**
- * Permission levels for users.
- *
- * A mapping from user IDs to permission levels.
- */
-users: { [key in string]?: PermissionLevel }, };
-export type UserSummary = { id: string, username: string | null, displayName: string | null, };
-export type UsernameStatus = "Available" | "Unavailable" | "Invalid";
 export type QubitServer = { create_snapshot: Mutation<[ref_id: string], RpcResult<null>>, delete_ref: Mutation<[ref_id: string], RpcResult<null>>, get_active_user_profile: Query<[], RpcResult<UserProfile>>, get_doc: Query<[ref_id: string], RpcResult<RefDoc>>, get_permissions: Query<[ref_id: string], RpcResult<Permissions>>, get_ref_children_stubs: Query<[ref_id: string], RpcResult<Array<RefStub>>>, get_user_state_url: Query<[], RpcResult<string>>, head_snapshot: Query<[ref_id: string], RpcResult<JsonValue>>, new_ref: Mutation<[content: JsonValue], RpcResult<string>>, restore_ref: Mutation<[ref_id: string], RpcResult<null>>, search_ref_stubs: Query<[query_params: RefQueryParams], RpcResult<Paginated<RefStub>>>, set_active_user_profile: Mutation<[user: UserProfile], RpcResult<null>>, set_permissions: Mutation<[ref_id: string, new: NewPermissions], RpcResult<null>>, sign_up_or_sign_in: Mutation<[], RpcResult<null>>, user_by_username: Query<[username: string], RpcResult<UserSummary | null>>, username_status: Query<[username: string], RpcResult<UsernameStatus>>, validate_session: Query<[], RpcResult<null>>, };
