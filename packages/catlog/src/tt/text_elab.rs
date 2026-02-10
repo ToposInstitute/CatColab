@@ -462,12 +462,11 @@ impl<'a> Elaborator<'a> {
                 let mut failed = false;
                 let self_var = elab.intro(name_seg("self"), label_seg("self"), None).unwrap_neu();
                 let c = elab.checkpoint();
-                // for field_n : ty_n, evaluate ty_n and add a neutral "self.field_n" to the context's env
                 for field_n in field_ns.iter() {
                     elab.loc = Some(field_n.loc());
                     let Some((name, label, ty_n)) = (match field_n.ast0() {
                         App2(L(_, Keyword(":")), L(_, Var(name)), ty_n) => {
-                            Some((name_seg(*name), label_seg(*name), ty_n)) 
+                            Some((name_seg(*name), label_seg(*name), ty_n))
                         }
                         _ => elab.error("expected fields in the form <name> : <type>"),
                     }) else {
@@ -528,8 +527,8 @@ impl<'a> Elaborator<'a> {
         let name = name_seg(name);
         if let Some((i, _, ty)) = self.ctx.lookup(name) {
             (
-                TmS::var(i, name, label), 
-                self.ctx.env.get(*i).unwrap().clone(), 
+                TmS::var(i, name, label),
+                self.ctx.env.get(*i).unwrap().clone(),
                 ty.clone().unwrap(),
             )
         } else if let Some(d) = self.toplevel.lookup(name) {
@@ -569,10 +568,13 @@ impl<'a> Elaborator<'a> {
                     return elab.syn_error("can only apply @id to objects");
                 };
                 let mor_type = elab.theory().hom_type(ob_type.clone());
-                (TmS::id(ob_s), TmV::id(ob_v.clone()), TyV::morphism(mor_type, ob_v.clone(), ob_v)) 
+                (
+                    TmS::id(ob_s),
+                    TmV::id(ob_v.clone()),
+                    TyV::morphism(mor_type, ob_v.clone(), ob_v),
+                )
             }
             App1(L(_, Prim(name)), ob_n) => {
-                // Object operation
                 let name = name_seg(*name);
                 let Some(ob_op) = elab.theory().basic_ob_op([name].into()) else {
                     let th_name = elab.theory.name.to_string();
@@ -581,7 +583,7 @@ impl<'a> Elaborator<'a> {
                 let dom = elab.theory().ob_op_dom(&ob_op);
                 let (arg_s, arg_v) = elab.chk(&TyV::object(dom), ob_n);
                 let cod = elab.theory().ob_op_cod(&ob_op);
-                (TmS::ob_app(name, arg_s), TmV::app(name, arg_v), TyV::object(cod)) 
+                (TmS::ob_app(name, arg_s), TmV::app(name, arg_v), TyV::object(cod))
             }
             App2(L(_, Keyword("*")), f_n, g_n) => {
                 let (f_s, f_v, f_ty) = elab.syn(f_n);

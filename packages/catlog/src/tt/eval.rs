@@ -75,7 +75,7 @@ impl<'a> Evaluator<'a> {
                 let def = self.toplevel.declarations.get(tv).unwrap().clone().unwrap_def();
                 self.with_env(env).eval_tm(&def.body)
             }
-            TmS_::Var(i, _, _) => self.env.get(**i).cloned().unwrap(), // Will (probably?) return a neutral
+            TmS_::Var(i, _, _) => self.env.get(**i).cloned().unwrap(),
             TmS_::Cons(fields) => TmV::cons(fields.map(|tm| self.eval_tm(tm))),
             TmS_::Proj(tm, field, label) => self.proj(&self.eval_tm(tm), *field, *label),
             TmS_::Tt => TmV::tt(),
@@ -203,7 +203,7 @@ impl<'a> Evaluator<'a> {
             TmV_::List(elems) => TmS::list(elems.iter().map(|tm| self.quote_tm(tm)).collect()),
             TmV_::Cons(fields) => TmS::cons(fields.map(|tm| self.quote_tm(tm))),
             TmV_::Tt => TmS::tt(),
-            TmV_::Id(x) => TmS::id(self.quote_tm(x)), 
+            TmV_::Id(x) => TmS::id(self.quote_tm(x)),
             TmV_::Compose(f, g) => TmS::compose(self.quote_tm(f), self.quote_tm(g)),
             TmV_::Meta(mv) => TmS::meta(*mv),
         }
@@ -293,7 +293,7 @@ impl<'a> Evaluator<'a> {
     pub fn eta_neu(&self, n: &TmN, ty: &TyV) -> TmV {
         match &**ty {
             TyV_::Object(_) => TmV::neu(n.clone(), ty.clone()),
-            TyV_::Morphism(_, _, _) => TmV::neu(n.clone(),ty.clone()), 
+            TyV_::Morphism(_, _, _) => TmV::neu(n.clone(), ty.clone()),
             TyV_::Record(r) => {
                 let mut fields = Row::empty();
                 for (name, (label, _)) in r.fields.iter() {

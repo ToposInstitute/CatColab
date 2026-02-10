@@ -12,7 +12,6 @@ use crate::zero::LabelSegment;
 pub type Env = Bwd<TmV>;
 
 /// The content of a record type value.
-/// Kind of disturbing that the field types are still syntax...
 #[derive(Clone, Constructor)]
 pub struct RecordV {
     /// The closed-over environment.
@@ -200,8 +199,6 @@ pub enum TmV_ {
     /// Application of an object operation in the theory.
     App(VarName, TmV),
     /// Lists of objects.
-    /// FIXME: needs lists of morphisms too, or are they all the same?
-    /// Syntax says morphisms...
     List(Vec<TmV>),
     /// Records.
     Cons(Row<TmV>),

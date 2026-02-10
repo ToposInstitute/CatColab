@@ -213,7 +213,7 @@ pub enum TmS_ {
     Compose(TmS, TmS),
     /// Application of an object operation in the theory.
     ObApp(VarName, TmS),
-    /// List of objects or morphisms.
+    /// List of objects.
     List(Vec<TmS>),
     /// A metavar.
     ///
@@ -225,7 +225,6 @@ pub enum TmS_ {
 ///
 /// See [crate::tt] for an explanation of what total types are, and for an
 /// explanation of our approach to Rc pointers in abstract syntax trees.
-/// Is this "see" true anymore?
 #[derive(Clone, Deref)]
 #[deref(forward)]
 pub struct TmS(Rc<TmS_>);
