@@ -5,7 +5,6 @@
 //! must be completely different to be well adapted to the notebook interface.
 //! As a first pass, we are associating cell UUIDs with errors.
 
-use std::iter::chain;
 use std::str::FromStr;
 use uuid::Uuid;
 
@@ -302,16 +301,15 @@ impl<'a> Elaborator<'a> {
         &mut self,
         cells: impl Iterator<Item = &'b nb::ModelJudgment>,
     ) -> (TyS, TyV) {
-        // Process the cells in dependency order: object judgments first,
-        // instantiations second, and all other cells after that. This is
-        // important because the UI allows users to reorder cells freely and
-        // that shouldn't affect whether elaboration works.
-        let (ob_judgments, other_cells): (Vec<_>, Vec<_>) =
-            cells.partition(|cell| matches!(cell, nb::ModelJudgment::Object(_)));
-        let (instantiations, other_cells): (Vec<_>, Vec<_>) = other_cells
-            .into_iter()
-            .partition(|cell| matches!(cell, nb::ModelJudgment::Instantiation(_)));
-        let cells = chain(chain(ob_judgments, instantiations), other_cells);
+        // Process the cells in dependency order. This is important because the
+        // UI allows users to reorder cells freely and that shouldn't affect the
+        // result of elaboration.
+        let mut cells: Vec<_> = cells.collect();
+        cells.sort_by_key(|judgment| match judgment {
+            nb::ModelJudgment::Object(_) => 0,
+            nb::ModelJudgment::Instantiation(_) => 1,
+            nb::ModelJudgment::Morphism(_) => 2,
+        });
 
         let mut field_ty_vs = Vec::new();
         let self_var = self.intro(name_seg("self"), label_seg("self"), None).unwrap_neu();
