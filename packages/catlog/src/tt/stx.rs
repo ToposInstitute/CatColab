@@ -215,10 +215,6 @@ pub enum TmS_ {
     ObApp(VarName, TmS),
     /// List of objects or morphisms.
     List(Vec<TmS>),
-    /// An opaque term.
-    ///
-    /// This only appears when we quote a value. Kill?
-    // Opaque,
     /// A metavar.
     ///
     /// This only appears when we have an error in elaboration.
@@ -285,12 +281,6 @@ impl TmS {
         Self(Rc::new(TmS_::List(elems)))
     }
 
-    /// An opaque term.
-    /// Delete?
-    /* pub fn opaque() -> Self {
-        Self(Rc::new(TmS_::Opaque))
-    } */
-
     /// Smart constructor for [TmS], [TmS_::Meta] case.
     pub fn meta(mv: MetaVar) -> Self {
         Self(Rc::new(TmS_::Meta(mv)))
@@ -314,7 +304,6 @@ impl ToDoc for TmS {
             TmS_::ObApp(name, x) => unop(t(format!("@{name}")), x.to_doc()),
             TmS_::List(elems) => tuple(elems.iter().map(|elem| elem.to_doc())),
             TmS_::Tt => t("tt"),
-            // TmS_::Opaque => t("<opaque>"),
             TmS_::Meta(mv) => t(format!("?{}", mv.id)),
         }
     }

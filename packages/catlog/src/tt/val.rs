@@ -208,9 +208,6 @@ pub enum TmV_ {
     Cons(Row<TmV>),
     /// The unique element of the unit type.
     Tt,
-    /// An element of a type that is opaque to conversion checking.
-    /// Kill, I think. No, now I don't, because we use it for checking?
-    // Opaque,
     /// The identity morphism of an object.
     Id(TmV),
     /// Composition of morphisms.
@@ -254,11 +251,6 @@ impl TmV {
     pub fn tt() -> Self {
         TmV(Rc::new(TmV_::Tt))
     }
-
-    /// Smart constructor for [TmV], [TmV_::Opaque] case.
-   /*  pub fn opaque() -> Self {
-        TmV(Rc::new(TmV_::Opaque))
-    } */
 
     /// Smart constructor for [TmV], [TmV_::Id] case.
     pub fn id(x: TmV) -> Self {
