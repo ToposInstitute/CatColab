@@ -23,6 +23,7 @@ import X from "lucide-solid/icons/x";
 import invariant from "tiny-invariant";
 
 import { IconButton, Spinner } from "catcolab-ui-components";
+import { useUserState } from "./user_state_context";
 
 export default function UserDocuments() {
     const appTitle = import.meta.env.VITE_APP_TITLE;
@@ -43,5 +44,6 @@ export default function UserDocuments() {
 }
 
 function DocumentsSearch() {
-    return <></>;
+    const userState = useUserState();
+    return <pre>{JSON.stringify(userState, null, 2)}</pre>;
 }
