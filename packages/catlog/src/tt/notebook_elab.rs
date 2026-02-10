@@ -5,6 +5,7 @@
 //! must be completely different to be well adapted to the notebook interface.
 //! As a first pass, we are associating cell UUIDs with errors.
 
+use std::iter::chain;
 use std::str::FromStr;
 use uuid::Uuid;
 
@@ -301,23 +302,22 @@ impl<'a> Elaborator<'a> {
         &mut self,
         cells: impl Iterator<Item = &'b nb::ModelJudgment>,
     ) -> (TyS, TyV) {
-        // Make two passes to allow morphisms to reference objects that appear
-        // later in the notebook. This is important because the UI allows users
-        // to reorder cells freely, and morphisms should be able to reference
-        // any object regardless of cell order.
-        //
-        // Pass 1: Process all object and instantiation declarations to populate the context.
-        // Pass 2: Process all morphism declarations (which can now resolve any
-        // object reference).
-        let (pass1, pass2): (Vec<_>, Vec<_>) = cells.partition(|cell| {
-            matches!(cell, nb::ModelJudgment::Object(_) | nb::ModelJudgment::Instantiation(_))
-        });
+        // Process the cells in dependency order: object judgments first,
+        // instantiations second, and all other cells after that. This is
+        // important because the UI allows users to reorder cells freely and
+        // that shouldn't affect whether elaboration works.
+        let (ob_judgments, other_cells): (Vec<_>, Vec<_>) =
+            cells.partition(|cell| matches!(cell, nb::ModelJudgment::Object(_)));
+        let (instantiations, other_cells): (Vec<_>, Vec<_>) = other_cells
+            .into_iter()
+            .partition(|cell| matches!(cell, nb::ModelJudgment::Instantiation(_)));
+        let cells = chain(chain(ob_judgments, instantiations), other_cells);
 
         let mut field_ty_vs = Vec::new();
         let self_var = self.intro(name_seg("self"), label_seg("self"), None).unwrap_neu();
         let c = self.checkpoint();
 
-        for cell in pass1.into_iter().chain(pass2.into_iter()) {
+        for cell in cells {
             let (name, label, _, ty_v) = match &cell {
                 nb::ModelJudgment::Object(ob_decl) => self.object_cell(ob_decl),
                 nb::ModelJudgment::Morphism(mor_decl) => self.morphism_cell(mor_decl),
