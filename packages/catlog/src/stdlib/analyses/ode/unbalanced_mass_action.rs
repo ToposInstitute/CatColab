@@ -15,14 +15,11 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
-use super::ODEAnalysis;
-use crate::dbl::{
-    model::{DiscreteTabModel, FgDblModel, ModalDblModel, MutDblModel, TabEdge},
-    theory::{ModalMorType, ModalObType, TabMorType, TabObType},
-};
+use super::{ODEAnalysis, mass_action::*};
+use crate::dbl::model::{DiscreteTabModel, FgDblModel, ModalDblModel};
 use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
-use crate::zero::{QualifiedName, alg::Polynomial, name, rig::Monomial};
+use crate::zero::{QualifiedName, alg::Polynomial, rig::Monomial};
 
 /// The associated direction of a "flow" term. Note that this is *opposite* from
 /// the terminology of "input" and "output", i.e. a flow A=>B gives rise to an
@@ -72,79 +69,25 @@ pub struct UnbalancedMassActionProblemData {
 /// Symbolic parameter in mass-action polynomial system.
 type Parameter<Id> = Polynomial<Id, f32, i8>;
 
-/// Mass-action ODE analysis for stock-flow models.
-pub struct StockFlowUnbalancedMassActionAnalysis {
-    /// Object type for stocks.
-    pub stock_ob_type: TabObType,
-    /// Morphism type for flows between stocks.
-    pub flow_mor_type: TabMorType,
-    /// Morphism type for positive links from stocks to flows.
-    pub pos_link_mor_type: TabMorType,
-    /// Morphism type for negative links from stocks to flows.
-    pub neg_link_mor_type: TabMorType,
-}
-
-impl Default for StockFlowUnbalancedMassActionAnalysis {
-    fn default() -> Self {
-        let stock_ob_type = TabObType::Basic(name("Object"));
-        let flow_mor_type = TabMorType::Hom(Box::new(stock_ob_type.clone()));
-        Self {
-            stock_ob_type,
-            flow_mor_type,
-            pos_link_mor_type: TabMorType::Basic(name("Link")),
-            neg_link_mor_type: TabMorType::Basic(name("NegativeLink")),
-        }
-    }
-}
-
-impl StockFlowUnbalancedMassActionAnalysis {
-    /// Creates a mass-action system with symbolic rate coefficients.
-    pub fn build_system(
+impl StockFlowMassActionAnalysis {
+    /// Creates an unbalanced mass-action system with symbolic rate coefficients.
+    pub fn build_unbalanced_system(
         &self,
         model: &DiscreteTabModel,
     ) -> PolynomialSystem<QualifiedName, Parameter<DirectedTerm>, i8> {
-        let mut terms: HashMap<QualifiedName, Monomial<QualifiedName, i8>> = model
-            .mor_generators_with_type(&self.flow_mor_type)
-            .map(|flow| {
-                let dom = model.mor_generator_dom(&flow).unwrap_basic();
-                (flow, Monomial::generator(dom))
-            })
-            .collect();
-
-        let mut multiply_for_link = |link: QualifiedName, exponent: i8| {
-            let dom = model.mor_generator_dom(&link).unwrap_basic();
-            let path = model.mor_generator_cod(&link).unwrap_tabulated();
-            let Some(TabEdge::Basic(cod)) = path.only() else {
-                panic!("Codomain of link should be basic morphism");
-            };
-            if let Some(term) = terms.get_mut(&cod) {
-                let mon: Monomial<_, i8> = [(dom, exponent)].into_iter().collect();
-                *term = std::mem::take(term) * mon;
-            } else {
-                panic!("Codomain of link does not belong to model");
-            };
-        };
-
-        for link in model.mor_generators_with_type(&self.pos_link_mor_type) {
-            multiply_for_link(link, 1);
-        }
-        for link in model.mor_generators_with_type(&self.neg_link_mor_type) {
-            multiply_for_link(link, -1);
-        }
-
-        let terms: Vec<_> = terms.into_iter().collect();
+        let terms: Vec<_> = self.flow_monomials(model).into_iter().collect();
 
         let mut sys = PolynomialSystem::new();
         for ob in model.ob_generators_with_type(&self.stock_ob_type) {
             sys.add_term(ob, Polynomial::zero());
         }
-        for (flow, term) in &terms {
-            let dom = model.mor_generator_dom(flow).unwrap_basic();
-            let cod = model.mor_generator_cod(flow).unwrap_basic();
+        for (flow, term) in terms {
+            let dom = model.mor_generator_dom(&flow).unwrap_basic();
+            let cod = model.mor_generator_cod(&flow).unwrap_basic();
             let dom_param = Parameter::generator(DirectedTerm::OutgoingFlow(flow.clone()));
-            let cod_param = Parameter::generator(DirectedTerm::IncomingFlow(flow.clone()));
+            let cod_param = Parameter::generator(DirectedTerm::IncomingFlow(flow));
             let dom_term: Polynomial<_, _, _> = [(dom_param, term.clone())].into_iter().collect();
-            let cod_term: Polynomial<_, _, _> = [(cod_param, term.clone())].into_iter().collect();
+            let cod_term: Polynomial<_, _, _> = [(cod_param, term)].into_iter().collect();
             sys.add_term(dom, -dom_term);
             sys.add_term(cod, cod_term);
         }
@@ -152,27 +95,9 @@ impl StockFlowUnbalancedMassActionAnalysis {
     }
 }
 
-/// Unbalanced mass-action ODE analysis for Petri nets.
-pub struct PetriNetUnbalancedMassActionAnalysis {
-    /// Object type for places.
-    pub place_ob_type: ModalObType,
-    /// Morphism type for transitions.
-    pub transition_mor_type: ModalMorType,
-}
-
-impl Default for PetriNetUnbalancedMassActionAnalysis {
-    fn default() -> Self {
-        let ob_type = ModalObType::new(name("Object"));
-        Self {
-            place_ob_type: ob_type.clone(),
-            transition_mor_type: ModalMorType::Zero(ob_type),
-        }
-    }
-}
-
-impl PetriNetUnbalancedMassActionAnalysis {
+impl PetriNetMassActionAnalysis {
     /// Creates an unbalanced mass-action system with symbolic rate coefficients.
-    pub fn build_system(
+    pub fn build_unbalanced_system(
         &self,
         model: &ModalDblModel,
     ) -> PolynomialSystem<QualifiedName, Parameter<DirectedTerm>, i8> {
@@ -181,37 +106,27 @@ impl PetriNetUnbalancedMassActionAnalysis {
             sys.add_term(ob, Polynomial::zero());
         }
         for mor in model.mor_generators_with_type(&self.transition_mor_type) {
-            let inputs = model
-                .get_dom(&mor)
-                .and_then(|ob| ob.clone().collect_product(None))
-                .unwrap_or_default();
-            let outputs = model
-                .get_cod(&mor)
-                .and_then(|ob| ob.clone().collect_product(None))
-                .unwrap_or_default();
+            let (inputs, outputs) = Self::transition_interface(model, &mor);
 
             let term: Monomial<_, _> =
                 inputs.iter().map(|ob| (ob.clone().unwrap_generator(), 1)).collect();
+            let input_term: Polynomial<_, _, _> =
+                [(Parameter::generator(DirectedTerm::OutgoingFlow(mor.clone())), term.clone())]
+                    .into_iter()
+                    .collect();
+            let output_term: Polynomial<_, _, _> =
+                [(Parameter::generator(DirectedTerm::IncomingFlow(mor)), term)]
+                    .into_iter()
+                    .collect();
             for input in inputs {
-                let input_term: Polynomial<_, _, _> =
-                    [(Parameter::generator(DirectedTerm::OutgoingFlow(mor.clone())), term.clone())]
-                        .into_iter()
-                        .collect();
                 sys.add_term(input.unwrap_generator(), -input_term.clone());
             }
             for output in outputs {
-                let output_term: Polynomial<_, _, _> =
-                    [(Parameter::generator(DirectedTerm::IncomingFlow(mor.clone())), term.clone())]
-                        .into_iter()
-                        .collect();
                 sys.add_term(output.unwrap_generator(), output_term.clone());
             }
         }
 
-        // TODO: fix normalize()
-        // Normalize since terms commonly cancel out in mass-action dynamics.
-        // sys.normalize()
-        sys
+        sys.normalize()
     }
 }
 
@@ -264,7 +179,7 @@ mod tests {
     fn backward_link_dynamics() {
         let th = Rc::new(th_category_links());
         let model = backward_link(th);
-        let sys = StockFlowUnbalancedMassActionAnalysis::default().build_system(&model);
+        let sys = StockFlowMassActionAnalysis::default().build_unbalanced_system(&model);
         let expected = expect!([r#"
             dx = (-Outgoing(f)) x y
             dy = (Incoming(f)) x y
@@ -276,7 +191,7 @@ mod tests {
     fn positive_backward_link_dynamics() {
         let th = Rc::new(th_category_signed_links());
         let model = positive_backward_link(th);
-        let sys = StockFlowUnbalancedMassActionAnalysis::default().build_system(&model);
+        let sys = StockFlowMassActionAnalysis::default().build_unbalanced_system(&model);
         let expected = expect!([r#"
             dx = (-Outgoing(f)) x y
             dy = (Incoming(f)) x y
@@ -288,7 +203,7 @@ mod tests {
     fn negative_backward_link_dynamics() {
         let th = Rc::new(th_category_signed_links());
         let model = negative_backward_link(th);
-        let sys = StockFlowUnbalancedMassActionAnalysis::default().build_system(&model);
+        let sys = StockFlowMassActionAnalysis::default().build_unbalanced_system(&model);
         let expected = expect!([r#"
             dx = (-Outgoing(f)) x y^{-1}
             dy = (Incoming(f)) x y^{-1}

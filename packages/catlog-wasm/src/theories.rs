@@ -352,8 +352,8 @@ impl ThCategoryLinks {
         data: analyses::ode::UnbalancedMassActionProblemData,
     ) -> Result<ODEResultWithEquations, String> {
         let tab_model = model.discrete_tab()?;
-        let analysis = analyses::ode::StockFlowUnbalancedMassActionAnalysis::default();
-        let sys = analysis.build_system(tab_model);
+        let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
+        let sys = analysis.build_unbalanced_system(tab_model);
         let sys_extended_scalars = analyses::ode::extend_unbalanced_mass_action_scalars(sys, &data);
         let latex_equations = sys_extended_scalars
             .map_variables(latex_ob_names_mass_action(model))
@@ -370,9 +370,9 @@ impl ThCategoryLinks {
     /// Returns the symbolic unbalanced mass-action equations in LaTeX format.
     #[wasm_bindgen(js_name = "unbalancedMassActionEquations")]
     pub fn unbalanced_mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
-        let analysis = analyses::ode::StockFlowUnbalancedMassActionAnalysis::default();
+        let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
         let tab_model = model.discrete_tab()?;
-        let sys = analysis.build_system(tab_model);
+        let sys = analysis.build_unbalanced_system(tab_model);
         let equations = sys
             .map_variables(latex_ob_names_mass_action(model))
             .extend_scalars(|param| {
@@ -442,8 +442,8 @@ impl ThCategorySignedLinks {
         data: analyses::ode::UnbalancedMassActionProblemData,
     ) -> Result<ODEResultWithEquations, String> {
         let tab_model = model.discrete_tab()?;
-        let analysis = analyses::ode::StockFlowUnbalancedMassActionAnalysis::default();
-        let sys = analysis.build_system(tab_model);
+        let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
+        let sys = analysis.build_unbalanced_system(tab_model);
         let sys_extended_scalars = analyses::ode::extend_unbalanced_mass_action_scalars(sys, &data);
         let latex_equations = sys_extended_scalars
             .map_variables(latex_ob_names_mass_action(model))
@@ -460,9 +460,9 @@ impl ThCategorySignedLinks {
     /// Returns the symbolic unbalanced mass-action equations in LaTeX format.
     #[wasm_bindgen(js_name = "unbalancedMassActionEquations")]
     pub fn unbalanced_mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
-        let analysis = analyses::ode::StockFlowUnbalancedMassActionAnalysis::default();
+        let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
         let tab_model = model.discrete_tab()?;
-        let sys = analysis.build_system(tab_model);
+        let sys = analysis.build_unbalanced_system(tab_model);
         let equations = sys
             .map_variables(latex_ob_names_mass_action(model))
             .extend_scalars(|param| {
@@ -532,8 +532,8 @@ impl ThSymMonoidalCategory {
         data: analyses::ode::UnbalancedMassActionProblemData,
     ) -> Result<ODEResultWithEquations, String> {
         let modal_model = model.modal()?;
-        let analysis = analyses::ode::PetriNetUnbalancedMassActionAnalysis::default();
-        let sys = analysis.build_system(modal_model.as_ref());
+        let analysis = analyses::ode::PetriNetMassActionAnalysis::default();
+        let sys = analysis.build_unbalanced_system(modal_model.as_ref());
         let sys_extended_scalars = analyses::ode::extend_unbalanced_mass_action_scalars(sys, &data);
         let latex_equations = sys_extended_scalars
             .map_variables(latex_ob_names_mass_action(model))
@@ -550,9 +550,9 @@ impl ThSymMonoidalCategory {
     /// Returns the symbolic unbalanced mass-action equations in LaTeX format.
     #[wasm_bindgen(js_name = "unbalancedMassActionEquations")]
     pub fn unbalanced_mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
-        let analysis = analyses::ode::PetriNetUnbalancedMassActionAnalysis::default();
+        let analysis = analyses::ode::PetriNetMassActionAnalysis::default();
         let modal_model = model.modal()?;
-        let sys = analysis.build_system(modal_model.as_ref());
+        let sys = analysis.build_unbalanced_system(modal_model.as_ref());
         let latex_equations = sys
             .map_variables(latex_ob_names_mass_action(model))
             .extend_scalars(|param| {

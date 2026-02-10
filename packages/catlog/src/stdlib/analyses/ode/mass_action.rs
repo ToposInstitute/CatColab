@@ -135,14 +135,7 @@ impl PetriNetMassActionAnalysis {
             sys.add_term(ob, Polynomial::zero());
         }
         for mor in model.mor_generators_with_type(&self.transition_mor_type) {
-            let inputs = model
-                .get_dom(&mor)
-                .and_then(|ob| ob.clone().collect_product(None))
-                .unwrap_or_default();
-            let outputs = model
-                .get_cod(&mor)
-                .and_then(|ob| ob.clone().collect_product(None))
-                .unwrap_or_default();
+            let (inputs, outputs) = Self::transition_interface(model, &mor);
 
             let term: Monomial<_, _> =
                 inputs.iter().map(|ob| (ob.clone().unwrap_generator(), 1)).collect();
@@ -175,14 +168,7 @@ impl PetriNetMassActionAnalysis {
         let mut problem = gillespie::Gillespie::new(initial, false);
 
         for mor in model.mor_generators_with_type(&self.transition_mor_type) {
-            let inputs = model
-                .get_dom(&mor)
-                .and_then(|ob| ob.clone().collect_product(None))
-                .unwrap_or_default();
-            let outputs = model
-                .get_cod(&mor)
-                .and_then(|ob| ob.clone().collect_product(None))
-                .unwrap_or_default();
+            let (inputs, outputs) = Self::transition_interface(model, &mor);
 
             // 1. convert the inputs/outputs to sequences of counts
             let input_vec = ob_generators.iter().map(|id| {
@@ -219,6 +205,22 @@ impl PetriNetMassActionAnalysis {
             duration: data.duration,
         }
     }
+
+    /// Gets the inputs and outputs of a transition.
+    pub(super) fn transition_interface(
+        model: &ModalDblModel,
+        id: &QualifiedName,
+    ) -> (Vec<ModalOb>, Vec<ModalOb>) {
+        let inputs = model
+            .get_dom(id)
+            .and_then(|ob| ob.clone().collect_product(None))
+            .unwrap_or_default();
+        let outputs = model
+            .get_cod(id)
+            .and_then(|ob| ob.clone().collect_product(None))
+            .unwrap_or_default();
+        (inputs, outputs)
+    }
 }
 
 /// Mass-action ODE analysis for stock-flow models.
@@ -252,7 +254,35 @@ impl StockFlowMassActionAnalysis {
         &self,
         model: &DiscreteTabModel,
     ) -> PolynomialSystem<QualifiedName, Parameter<QualifiedName>, i8> {
-        let mut terms: HashMap<QualifiedName, Monomial<QualifiedName, i8>> = model
+        let terms: Vec<_> = self
+            .flow_monomials(model)
+            .into_iter()
+            .map(|(flow, term)| {
+                let param = Parameter::generator(flow.clone());
+                let poly: Polynomial<_, _, _> = [(param, term)].into_iter().collect();
+                (flow, poly)
+            })
+            .collect();
+
+        let mut sys = PolynomialSystem::new();
+        for ob in model.ob_generators_with_type(&self.stock_ob_type) {
+            sys.add_term(ob, Polynomial::zero());
+        }
+        for (flow, term) in terms {
+            let dom = model.mor_generator_dom(&flow).unwrap_basic();
+            let cod = model.mor_generator_cod(&flow).unwrap_basic();
+            sys.add_term(dom, -term.clone());
+            sys.add_term(cod, term);
+        }
+        sys
+    }
+
+    /// Constructs a monomial for each flow in the model.
+    pub(super) fn flow_monomials(
+        &self,
+        model: &DiscreteTabModel,
+    ) -> HashMap<QualifiedName, Monomial<QualifiedName, i8>> {
+        let mut terms: HashMap<_, _> = model
             .mor_generators_with_type(&self.flow_mor_type)
             .map(|flow| {
                 let dom = model.mor_generator_dom(&flow).unwrap_basic();
@@ -281,28 +311,7 @@ impl StockFlowMassActionAnalysis {
             multiply_for_link(link, -1);
         }
 
-        let terms: Vec<_> = terms
-            .into_iter()
-            .map(|(flow, term)| {
-                let param = Parameter::generator(flow.clone());
-                let poly: Polynomial<_, _, _> = [(param, term)].into_iter().collect();
-                (flow, poly)
-            })
-            .collect();
-
-        let mut sys = PolynomialSystem::new();
-        for ob in model.ob_generators_with_type(&self.stock_ob_type) {
-            sys.add_term(ob, Polynomial::zero());
-        }
-        for (flow, term) in terms.iter() {
-            let dom = model.mor_generator_dom(flow).unwrap_basic();
-            sys.add_term(dom, -term.clone());
-        }
-        for (flow, term) in terms {
-            let cod = model.mor_generator_cod(&flow).unwrap_basic();
-            sys.add_term(cod, term);
-        }
-        sys
+        terms
     }
 }
 
