@@ -1,3 +1,5 @@
+import { actions } from "./actions";
+
 export const plugins = [
     {
         type: "patchwork:datatype",
@@ -20,4 +22,5 @@ export const plugins = [
             return renderModelTool;
         },
     },
+    ...actions,
 ];

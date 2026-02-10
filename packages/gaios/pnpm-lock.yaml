@@ -61,6 +61,9 @@ importers:
       uuid:
         specifier: ^11.0.3
         version: 11.1.0
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.3.8
@@ -1119,6 +1122,9 @@ packages:
   yallist@3.1.1:
     resolution: {integrity: sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g==}
 
+  zod@3.25.76:
+    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+
 snapshots:
 
   '@automerge/automerge-repo-keyhive@0.0.0-alpha.71':
@@ -2050,3 +2056,5 @@ snapshots:
   xstate@5.25.0: {}
 
   yallist@3.1.1: {}
+
+  zod@3.25.76: {}
