@@ -2,7 +2,7 @@ import download from "js-file-download";
 import CircleHelp from "lucide-solid/icons/circle-help";
 import Copy from "lucide-solid/icons/copy";
 import Download from "lucide-solid/icons/download";
-import { createSignal, For, Match, Show, Switch } from "solid-js";
+import { For, Match, Show, Switch } from "solid-js";
 
 import { BlockTitle, ErrorAlert, IconButton } from "catcolab-ui-components";
 import type { ModelAnalysisProps } from "../../analysis";
@@ -60,11 +60,10 @@ export default function SQLSchemaAnalysis(
         title: string;
     },
 ) {
-    const [backend, setBackend] = createSignal(SQL.SQLBackend.MySQL);
     const sql_script = () => {
         const model = props.liveModel.elaboratedModel();
         if (model) {
-            return props.render(model, backend());
+            return props.render(model, props.content.backend);
         }
     };
 
@@ -72,11 +71,10 @@ export default function SQLSchemaAnalysis(
         <div>
             <span>Backend: </span>
             <select
-                value={backend() ?? undefined}
+                value={props.content.backend}
                 onInput={(evt) =>
                     props.changeContent((content) => {
-                        setBackend(evt.currentTarget.value as SQL.SQLBackend);
-                        content.backend = backend();
+                        content.backend = evt.currentTarget.value as SQL.SQLBackend;
                     })
                 }
             >
