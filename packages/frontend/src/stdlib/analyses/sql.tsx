@@ -57,6 +57,7 @@ export function SQLHeader(sql: string) {
 export default function SQLSchemaAnalysis(
     props: ModelAnalysisProps<DownloadConfig> & {
         render: SQL.SQLRenderer;
+        title: string;
     },
 ) {
     const [backend, setBackend] = createSignal(SQL.SQLBackend.MySQL);
@@ -95,7 +96,7 @@ export default function SQLSchemaAnalysis(
                             {(sql) => (
                                 <div>
                                     <BlockTitle
-                                        title={"SQL Schema"}
+                                        title={props.title}
                                         actions={SQLHeader(sql())}
                                         settingsPane={BackendConfig()}
                                     />

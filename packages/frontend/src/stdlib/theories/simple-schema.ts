@@ -112,9 +112,6 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
             }),
             analyses.renderSQL({
                 id: "sql",
-                name: "SQL Schema",
-                description: "Produce SQL DML from this schema",
-                help: "sql",
                 render: (model, data) => thSchema.renderSQL(model, data),
             }),
         ],

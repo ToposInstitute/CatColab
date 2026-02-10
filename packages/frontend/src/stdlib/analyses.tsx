@@ -332,7 +332,7 @@ export function renderSQL(
         name,
         description,
         help,
-        component: (props) => <SQLSchemaAnalysis render={render} {...props} />,
+        component: (props) => <SQLSchemaAnalysis title={name} render={render} {...props} />,
         initialContent: () => ({
             backend: SQLBackend.MySQL,
             filename: "schema.sql",
