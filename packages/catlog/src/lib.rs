@@ -27,4 +27,5 @@ pub mod one;
 pub mod simulate;
 pub mod stdlib;
 pub mod tt;
+pub mod wd;
 pub mod zero;

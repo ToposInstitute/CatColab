@@ -1,5 +1,6 @@
 //! Rows.
 
+use derivative::Derivative;
 use derive_more::From;
 use std::ops::Index;
 
@@ -14,7 +15,8 @@ use crate::{tt::prelude::*, zero::LabelSegment};
 /// of a row in a database, which is a map from fields to values.
 ///
 /// Create this using the [FromIterator] implementation.
-#[derive(Clone, PartialEq, Eq, From)]
+#[derive(Clone, Derivative, PartialEq, Eq, From)]
+#[derivative(Default(bound = ""))]
 pub struct Row<T>(IndexMap<FieldName, (LabelSegment, T)>);
 
 impl<T> Index<FieldName> for Row<T> {
@@ -32,6 +34,11 @@ impl<T> Row<T> {
         self.0.get(&name).map(|p| &p.1)
     }
 
+    /// Lookup the field `name` by mutable reference.
+    pub fn get_mut(&mut self, name: FieldName) -> Option<&mut T> {
+        self.0.get_mut(&name).map(|p| &mut p.1)
+    }
+
     /// Lookup the field `name` if it exists, and get its value and label.
     pub fn get_with_label(&self, name: FieldName) -> Option<&(LabelSegment, T)> {
         self.0.get(&name)
@@ -47,7 +54,7 @@ impl<T> Row<T> {
         self.0.len()
     }
 
-    /// Return whether the row is empty (Clippy wants this).
+    /// Return whether the row is empty.
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
