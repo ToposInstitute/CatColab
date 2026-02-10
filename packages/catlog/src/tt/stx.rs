@@ -218,7 +218,7 @@ pub enum TmS_ {
     /// An opaque term.
     ///
     /// This only appears when we quote a value. Kill?
-    Opaque,
+    // Opaque,
     /// A metavar.
     ///
     /// This only appears when we have an error in elaboration.
@@ -287,9 +287,9 @@ impl TmS {
 
     /// An opaque term.
     /// Delete?
-    pub fn opaque() -> Self {
+    /* pub fn opaque() -> Self {
         Self(Rc::new(TmS_::Opaque))
-    }
+    } */
 
     /// Smart constructor for [TmS], [TmS_::Meta] case.
     pub fn meta(mv: MetaVar) -> Self {
@@ -314,7 +314,7 @@ impl ToDoc for TmS {
             TmS_::ObApp(name, x) => unop(t(format!("@{name}")), x.to_doc()),
             TmS_::List(elems) => tuple(elems.iter().map(|elem| elem.to_doc())),
             TmS_::Tt => t("tt"),
-            TmS_::Opaque => t("<opaque>"),
+            // TmS_::Opaque => t("<opaque>"),
             TmS_::Meta(mv) => t(format!("?{}", mv.id)),
         }
     }
