@@ -12,6 +12,7 @@ use crate::zero::LabelSegment;
 pub type Env = Bwd<TmV>;
 
 /// The content of a record type value.
+/// Kind of disturbing that the field types are still syntax...
 #[derive(Clone, Constructor)]
 pub struct RecordV {
     /// The closed-over environment.
@@ -199,15 +200,22 @@ pub enum TmV_ {
     /// Application of an object operation in the theory.
     App(VarName, TmV),
     /// Lists of objects.
+    /// FIXME: needs lists of morphisms too, or are they all the same?
+    /// Syntax says morphisms...
     List(Vec<TmV>),
     /// Records.
+    /// What's the difference between Cons and List? Rows are hashmaps?
     Cons(Row<TmV>),
     /// The unique element of the unit type.
     Tt,
     /// An element of a type that is opaque to conversion checking.
-    /// Kill?
+    /// Kill, I think.
     Opaque,
-    /// We're going to need more TmVs for morphisms.
+    /// The identity morphism of an object.
+    Id(TmV),
+    /// Composition of morphisms.
+    /// Why is this binary?
+    Compose(TmV, TmV),
     /// A metavariable.
     Meta(MetaVar),
 }
@@ -250,6 +258,16 @@ impl TmV {
     /// Smart constructor for [TmV], [TmV_::Opaque] case.
     pub fn opaque() -> Self {
         TmV(Rc::new(TmV_::Opaque))
+    }
+
+    /// Smart constructor for [TmV], [TmV_::Id] case.
+    pub fn id(x: TmV) -> Self {
+        TmV(Rc::new(TmV_::Id(x)))
+    }
+
+    /// Smart constructor for [TmV], [TmV_::Compose] case.
+    pub fn compose(f: TmV, g: TmV) -> Self {
+        TmV(Rc::new(TmV_::Compose(f, g)))
     }
 
     /// Smart constructor for [TmV], [TmV_::Meta] case.

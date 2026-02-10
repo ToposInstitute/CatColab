@@ -19,7 +19,7 @@ use crate::{
 /// sometimes need to evaluate terms. For instance, quoting a lambda
 /// involves evaluating the body of the lambda in the context of a freshly
 /// introduced variable; even though we don't have lambdas, a similar
-/// thing applies to dependent records.
+/// point applies to dependent records.
 #[derive(Constructor, Clone)]
 pub struct Evaluator<'a> {
     toplevel: &'a Toplevel,
@@ -75,12 +75,12 @@ impl<'a> Evaluator<'a> {
                 let def = self.toplevel.declarations.get(tv).unwrap().clone().unwrap_def();
                 self.with_env(env).eval_tm(&def.body)
             }
-            TmS_::Var(i, _, _) => self.env.get(**i).cloned().unwrap(),
+            TmS_::Var(i, _, _) => self.env.get(**i).cloned().unwrap(), // Will (probably?) return a neutral
             TmS_::Cons(fields) => TmV::cons(fields.map(|tm| self.eval_tm(tm))),
             TmS_::Proj(tm, field, label) => self.proj(&self.eval_tm(tm), *field, *label),
             TmS_::Tt => TmV::tt(),
-            TmS_::Id(_) => TmV::opaque(),         // FIXME
-            TmS_::Compose(_, _) => TmV::opaque(), // FIXME
+            TmS_::Id(x) => TmV::id(self.eval_tm(x)),
+            TmS_::Compose(f, g) => TmV::compose(self.eval_tm(f), self.eval_tm(g)),
             TmS_::ObApp(name, x) => TmV::app(*name, self.eval_tm(x)),
             TmS_::List(elems) => TmV::list(elems.iter().map(|tm| self.eval_tm(tm)).collect()),
             TmS_::Opaque => TmV::opaque(),
@@ -204,7 +204,9 @@ impl<'a> Evaluator<'a> {
             TmV_::List(elems) => TmS::list(elems.iter().map(|tm| self.quote_tm(tm)).collect()),
             TmV_::Cons(fields) => TmS::cons(fields.map(|tm| self.quote_tm(tm))),
             TmV_::Tt => TmS::tt(),
-            TmV_::Opaque => TmS::opaque(),
+            TmV_::Opaque => TmS::opaque(), // FIXME: kill?
+            TmV_::Id(x) => TmS::id(self.quote_tm(x)), 
+            TmV_::Compose(f, g) => TmS::compose(self.quote_tm(f), self.quote_tm(g)),
             TmV_::Meta(mv) => TmS::meta(*mv),
         }
     }
@@ -293,7 +295,7 @@ impl<'a> Evaluator<'a> {
     pub fn eta_neu(&self, n: &TmN, ty: &TyV) -> TmV {
         match &**ty {
             TyV_::Object(_) => TmV::neu(n.clone(), ty.clone()),
-            TyV_::Morphism(_, _, _) => TmV::opaque(), // FIXME
+            TyV_::Morphism(_, _, _) => TmV::opaque(), // FIXME: does eta_neu only happen during type-checking?
             TyV_::Record(r) => {
                 let mut fields = Row::empty();
                 for (name, (label, _)) in r.fields.iter() {
@@ -329,8 +331,9 @@ impl<'a> Evaluator<'a> {
                 }
             }
             TmV_::Tt => TmV::tt(),
-            // Will need more here
             TmV_::Opaque => TmV::opaque(),
+            TmV_::Id(x) => TmV::id(self.eta(x, None)),
+            TmV_::Compose(f, g) => TmV::compose(self.eta(f, None), self.eta(g, None)),
             TmV_::Meta(_) => v.clone(),
         }
     }

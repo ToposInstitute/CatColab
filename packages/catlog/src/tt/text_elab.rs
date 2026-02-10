@@ -462,11 +462,12 @@ impl<'a> Elaborator<'a> {
                 let mut failed = false;
                 let self_var = elab.intro(name_seg("self"), label_seg("self"), None).unwrap_neu();
                 let c = elab.checkpoint();
+                // for field_n : ty_n, evaluate ty_n and add a neutral "self.field_n" to the context's env
                 for field_n in field_ns.iter() {
                     elab.loc = Some(field_n.loc());
                     let Some((name, label, ty_n)) = (match field_n.ast0() {
                         App2(L(_, Keyword(":")), L(_, Var(name)), ty_n) => {
-                            Some((name_seg(*name), label_seg(*name), ty_n))
+                            Some((name_seg(*name), label_seg(*name), ty_n)) // another dupe of name and label?
                         }
                         _ => elab.error("expected fields in the form <name> : <type>"),
                     }) else {
@@ -570,7 +571,7 @@ impl<'a> Elaborator<'a> {
                     return elab.syn_error("can only apply @id to objects");
                 };
                 let mor_type = elab.theory().hom_type(ob_type.clone());
-                (TmS::id(ob_s), TmV::tt(), TyV::morphism(mor_type, ob_v.clone(), ob_v)) // FIXME: tt
+                (TmS::id(ob_s), TmV::id(ob_v.clone()), TyV::morphism(mor_type, ob_v.clone(), ob_v)) 
             }
             App1(L(_, Prim(name)), ob_n) => {
                 // Object operation
@@ -582,12 +583,12 @@ impl<'a> Elaborator<'a> {
                 let dom = elab.theory().ob_op_dom(&ob_op);
                 let (arg_s, arg_v) = elab.chk(&TyV::object(dom), ob_n);
                 let cod = elab.theory().ob_op_cod(&ob_op);
-                (TmS::ob_app(name, arg_s), TmV::app(name, arg_v), TyV::object(cod)) // check with TmV::app thunks
+                (TmS::ob_app(name, arg_s), TmV::app(name, arg_v), TyV::object(cod)) 
             }
             App2(L(_, Keyword("*")), f_n, g_n) => {
                 // composition
-                let (f_s, _, f_ty) = elab.syn(f_n);
-                let (g_s, _, g_ty) = elab.syn(g_n);
+                let (f_s, f_v, f_ty) = elab.syn(f_n);
+                let (g_s, g_v, g_ty) = elab.syn(g_n);
                 let TyV_::Morphism(f_mt, f_dom, f_cod) = &*f_ty else {
                     elab.loc = Some(f_n.loc());
                     return elab.syn_error("expected a morphism");
@@ -612,7 +613,7 @@ impl<'a> Elaborator<'a> {
                 }
                 (
                     TmS::compose(f_s, g_s),
-                    TmV::tt(), // FIXME, don't thunk the morphism term value
+                    TmV::compose(f_v, g_v),
                     TyV::morphism(
                         elab.theory().compose_types2(f_mt.clone(), g_mt.clone()).unwrap(),
                         f_dom.clone(),
