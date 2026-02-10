@@ -215,7 +215,7 @@ impl CanQuote<TabEdge, Mor> for Quoter {
     }
 }
 
-/// Quotes an object in a modal of a modal theory.
+/// Quotes an object in a model of a modal theory.
 impl CanQuote<ModalOb, Ob> for Quoter {
     fn quote(&self, ob: &ModalOb) -> Ob {
         match ob {
@@ -555,7 +555,7 @@ impl DblModel {
         ObGenerator { id, label, ob_type }
     }
 
-    /// Gets a morphism generators as it appears in the model's presentation.
+    /// Gets a morphism generator as it appears in the model's presentation.
     #[wasm_bindgen(js_name = "morPresentation")]
     pub fn mor_presentation(&self, id: QualifiedName) -> Option<MorGenerator> {
         let label = self.mor_generator_label(&id);
