@@ -322,7 +322,7 @@ export function renderSQL(
 ): ModelAnalysisMeta<SQLDownloadConfig.DownloadConfig> {
     const {
         id = "sql",
-        name = "SQL Schema",
+        name = "SQL schema",
         description = "Produce SQL DML from this schema",
         help = "sql",
         render,

@@ -2,9 +2,9 @@ import download from "js-file-download";
 import CircleHelp from "lucide-solid/icons/circle-help";
 import Copy from "lucide-solid/icons/copy";
 import Download from "lucide-solid/icons/download";
-import { createSignal, For, Show } from "solid-js";
+import { createSignal, For, Match, Show, Switch } from "solid-js";
 
-import { BlockTitle, IconButton } from "catcolab-ui-components";
+import { BlockTitle, ErrorAlert, IconButton } from "catcolab-ui-components";
 import type { ModelAnalysisProps } from "../../analysis";
 import * as SQL from "./sql_types.ts";
 
@@ -90,8 +90,8 @@ export default function SQLSchemaAnalysis(
         <div>
             <Show when={sql_script()}>
                 {(result) => (
-                    <>
-                        <Show when={result().tag === "Ok" && result().content}>
+                    <Switch>
+                        <Match when={result().tag === "Ok" && result().content}>
                             {(sql) => (
                                 <div>
                                     <BlockTitle
@@ -102,18 +102,14 @@ export default function SQLSchemaAnalysis(
                                     <pre>{sql()}</pre>
                                 </div>
                             )}
-                        </Show>
-                        <Show when={result().tag === "Err"}>
-                            {(_err) => (
-                                <div>
-                                    <pre>
-                                        The model failed to compile into a SQL script. Check for
-                                        cycles in foreign key constraints.
-                                    </pre>
-                                </div>
-                            )}
-                        </Show>
-                    </>
+                        </Match>
+                        <Match when={result().tag === "Err"}>
+                            <ErrorAlert>
+                                <p>{"The model failed to compile into a SQL script."}</p>
+                                <p>{"Check for cycles in foreign key constraints."}</p>
+                            </ErrorAlert>
+                        </Match>
+                    </Switch>
                 )}
             </Show>
         </div>
