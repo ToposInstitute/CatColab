@@ -527,8 +527,8 @@ impl<'a> Elaborator<'a> {
         let name = name_seg(name);
         if let Some((i, _, ty)) = self.ctx.lookup(name) {
             (
-                TmS::var(i, name, label),
-                self.ctx.env.get(*i).unwrap().clone(),
+                TmS::var(i, name, label), // Why does this variable get labelled with its name?
+                self.ctx.env.get(*i).unwrap().clone(), // Will this be thunked yet for a morphism variable? I think so, at this point.
                 ty.clone().unwrap(),
             )
         } else if let Some(d) = self.toplevel.lookup(name) {
@@ -546,7 +546,7 @@ impl<'a> Elaborator<'a> {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
             Var(name) => elab.lookup_tm(ustr(name)),
-            App1(tm_n, L(_, Field(f))) => {
+            App1(tm_n, L(_, Field(f))) => { // projection
                 let (tm_s, tm_v, ty_v) = elab.syn(tm_n);
                 let TyV_::Record(r) = &*ty_v else {
                     return elab.syn_error("can only project from record type");
@@ -562,15 +562,15 @@ impl<'a> Elaborator<'a> {
                     elab.evaluator().field_ty(&ty_v, &tm_v, f),
                 )
             }
-            App1(L(_, Prim("id")), ob_n) => {
+            App1(L(_, Prim("id")), ob_n) => { // identity morphisms
                 let (ob_s, ob_v, ob_t) = elab.syn(ob_n);
                 let TyV_::Object(ob_type) = &*ob_t else {
                     return elab.syn_error("can only apply @id to objects");
                 };
                 let mor_type = elab.theory().hom_type(ob_type.clone());
-                (TmS::id(ob_s), TmV::tt(), TyV::morphism(mor_type, ob_v.clone(), ob_v))
+                (TmS::id(ob_s), TmV::tt(), TyV::morphism(mor_type, ob_v.clone(), ob_v)) // FIXME: tt
             }
-            App1(L(_, Prim(name)), ob_n) => {
+            App1(L(_, Prim(name)), ob_n) => { // Object operation
                 let name = name_seg(*name);
                 let Some(ob_op) = elab.theory().basic_ob_op([name].into()) else {
                     let th_name = elab.theory.name.to_string();
@@ -579,9 +579,9 @@ impl<'a> Elaborator<'a> {
                 let dom = elab.theory().ob_op_dom(&ob_op);
                 let (arg_s, arg_v) = elab.chk(&TyV::object(dom), ob_n);
                 let cod = elab.theory().ob_op_cod(&ob_op);
-                (TmS::ob_app(name, arg_s), TmV::app(name, arg_v), TyV::object(cod))
+                (TmS::ob_app(name, arg_s), TmV::app(name, arg_v), TyV::object(cod)) // check with TmV::app thunks
             }
-            App2(L(_, Keyword("*")), f_n, g_n) => {
+            App2(L(_, Keyword("*")), f_n, g_n) => { // composition
                 let (f_s, _, f_ty) = elab.syn(f_n);
                 let (g_s, _, g_ty) = elab.syn(g_n);
                 let TyV_::Morphism(f_mt, f_dom, f_cod) = &*f_ty else {
@@ -608,7 +608,7 @@ impl<'a> Elaborator<'a> {
                 }
                 (
                     TmS::compose(f_s, g_s),
-                    TmV::tt(),
+                    TmV::tt(), // FIXME, don't thunk the morphism term value
                     TyV::morphism(
                         elab.theory().compose_types2(f_mt.clone(), g_mt.clone()).unwrap(),
                         f_dom.clone(),
@@ -640,7 +640,7 @@ impl<'a> Elaborator<'a> {
                 (TmS::topapp(tv, arg_stxs), eval.eval_tm(&d.body), eval.eval_ty(&d.ret_ty))
             }
             Tag("tt") => (TmS::tt(), TmV::tt(), TyV::unit()),
-            Tuple(_) => elab.syn_error("must check agains a type in order to construct a record"),
+            Tuple(_) => elab.syn_error("must check against a type in order to construct a record"),
             Prim("hole") => elab.syn_error("explicit hole"),
             _ => elab.syn_error("unexpected notation for term"),
         }
@@ -697,6 +697,7 @@ impl<'a> Elaborator<'a> {
                 }
                 (TmS::list(elem_stxs), TmV::list(elem_vals))
             }
+            // I think we don't need to add checking for morphism types but we do for equality type? But I don't really know why.
             (_, Tuple(_)) => elab.chk_error("tuple expected to be record or object/morphism type"),
             (_, Prim("hole")) => elab.chk_error("explicit hole"),
             _ => {

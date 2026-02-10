@@ -79,8 +79,8 @@ impl<'a> Evaluator<'a> {
             TmS_::Cons(fields) => TmV::cons(fields.map(|tm| self.eval_tm(tm))),
             TmS_::Proj(tm, field, label) => self.proj(&self.eval_tm(tm), *field, *label),
             TmS_::Tt => TmV::tt(),
-            TmS_::Id(_) => TmV::opaque(),
-            TmS_::Compose(_, _) => TmV::opaque(),
+            TmS_::Id(_) => TmV::opaque(), // FIXME
+            TmS_::Compose(_, _) => TmV::opaque(), // FIXME
             TmS_::ObApp(name, x) => TmV::app(*name, self.eval_tm(x)),
             TmS_::List(elems) => TmV::list(elems.iter().map(|tm| self.eval_tm(tm)).collect()),
             TmS_::Opaque => TmV::opaque(),
@@ -293,7 +293,7 @@ impl<'a> Evaluator<'a> {
     pub fn eta_neu(&self, n: &TmN, ty: &TyV) -> TmV {
         match &**ty {
             TyV_::Object(_) => TmV::neu(n.clone(), ty.clone()),
-            TyV_::Morphism(_, _, _) => TmV::opaque(),
+            TyV_::Morphism(_, _, _) => TmV::opaque(), // FIXME
             TyV_::Record(r) => {
                 let mut fields = Row::empty();
                 for (name, (label, _)) in r.fields.iter() {
@@ -309,7 +309,7 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    /// Performs eta-expansion of the term `n` at type `ty`.
+    /// Performs eta-expansion of the term `v` at type `ty`.
     pub fn eta(&self, v: &TmV, ty: Option<&TyV>) -> TmV {
         match &**v {
             TmV_::Neu(tm_n, ty_v) => self.eta_neu(tm_n, ty_v),
@@ -329,6 +329,7 @@ impl<'a> Evaluator<'a> {
                 }
             }
             TmV_::Tt => TmV::tt(),
+            /// Will need more here
             TmV_::Opaque => TmV::opaque(),
             TmV_::Meta(_) => v.clone(),
         }

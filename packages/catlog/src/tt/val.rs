@@ -205,7 +205,9 @@ pub enum TmV_ {
     /// The unique element of the unit type.
     Tt,
     /// An element of a type that is opaque to conversion checking.
+    /// Kill?
     Opaque,
+    /// We're going to need more TmVs for morphisms.
     /// A metavariable.
     Meta(MetaVar),
 }

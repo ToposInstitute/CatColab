@@ -217,7 +217,7 @@ pub enum TmS_ {
     List(Vec<TmS>),
     /// An opaque term.
     ///
-    /// This only appears when we quote a value.
+    /// This only appears when we quote a value. Kill?
     Opaque,
     /// A metavar.
     ///
@@ -229,6 +229,7 @@ pub enum TmS_ {
 ///
 /// See [crate::tt] for an explanation of what total types are, and for an
 /// explanation of our approach to Rc pointers in abstract syntax trees.
+/// Is this "see" true anymore?
 #[derive(Clone, Deref)]
 #[deref(forward)]
 pub struct TmS(Rc<TmS_>);
@@ -285,6 +286,7 @@ impl TmS {
     }
 
     /// An opaque term.
+    /// Delete?
     pub fn opaque() -> Self {
         Self(Rc::new(TmS_::Opaque))
     }
