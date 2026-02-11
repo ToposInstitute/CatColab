@@ -332,9 +332,8 @@ impl<'a> Elaborator<'a> {
             .iter()
             .map(|(name, (label, ty_v))| (*name, (*label, self.evaluator().quote_ty(ty_v))))
             .collect();
-        let r_s = RecordS::new(field_tys.clone());
-        let r_v = RecordV::new(self.ctx.env.clone(), field_tys, Dtry::empty());
-        (TyS::record(r_s), TyV::record(r_v))
+        let r_v = RecordV::new(self.ctx.env.clone(), field_tys.clone(), Dtry::empty());
+        (TyS::record(field_tys), TyV::record(r_v))
     }
 }
 

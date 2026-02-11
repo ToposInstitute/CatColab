@@ -3,7 +3,7 @@
 //! See [crate::tt] for what this means.
 
 use bwd::Bwd;
-use derive_more::{Constructor, Deref};
+use derive_more::Deref;
 
 use super::{prelude::*, stx::*, theory::*};
 use crate::zero::LabelSegment;
@@ -12,12 +12,12 @@ use crate::zero::LabelSegment;
 pub type Env = Bwd<TmV>;
 
 /// The content of a record type value.
-#[derive(Clone, Constructor)]
+#[derive(Clone)]
 pub struct RecordV {
     /// The closed-over environment.
     pub env: Env,
     /// The types for the fields.
-    pub fields: Row<TyS>,
+    pub fields: Rc<Row<TyS>>,
     /// Specializations of the fields.
     ///
     /// When we get to actually computing the type of fields, we will look here
@@ -26,6 +26,15 @@ pub struct RecordV {
 }
 
 impl RecordV {
+    /// Construct a record type value.
+    pub fn new(env: Env, fields: Row<TyS>, specializations: Dtry<TyV>) -> Self {
+        Self {
+            env,
+            fields: Rc::new(fields),
+            specializations,
+        }
+    }
+
     /// Add a specialization a path `path` to type `ty`.
     ///
     /// Precondition: assumes that this produces a subtype.
@@ -52,8 +61,7 @@ impl RecordV {
 
 /// Merge new specializations with old specializations.
 pub fn merge_specializations(old: &Dtry<TyV>, new: &Dtry<TyV>) -> Dtry<TyV> {
-    let mut result: IndexMap<FieldName, (LabelSegment, DtryEntry<TyV>)> =
-        old.entries().map(|(name, e)| (*name, e.clone())).collect();
+    let mut result: IndexMap<_, _> = old.entries().map(|(name, e)| (*name, e.clone())).collect();
     for (field, entry) in new.entries() {
         let new_entry = match (old.entry(field), &entry.1) {
             (Option::None, e) => e.clone(),

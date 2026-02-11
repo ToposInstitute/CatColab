@@ -29,8 +29,8 @@ pub struct Evaluator<'a> {
 }
 
 impl<'a> Evaluator<'a> {
-    fn eval_record(&self, r: &RecordS) -> RecordV {
-        RecordV::new(self.env.clone(), r.fields.clone(), Dtry::empty())
+    fn eval_record(&self, fields: &Row<TyS>) -> RecordV {
+        RecordV::new(self.env.clone(), fields.clone(), Dtry::empty())
     }
 
     /// Return a new [Evaluator] with environment `env`.
@@ -152,10 +152,10 @@ impl<'a> Evaluator<'a> {
             }
             TyV_::Record(r) => {
                 let r_eval = self.with_env(r.env.clone()).bind_self(ty.clone()).1;
-                let fields1 = r
+                let fields = r
                     .fields
                     .map(|ty_s| self.bind_self(ty.clone()).1.quote_ty(&r_eval.eval_ty(ty_s)));
-                let record_ty_s = TyS::record(RecordS::new(fields1));
+                let record_ty_s = TyS::record(fields);
                 if r.specializations.is_empty() {
                     record_ty_s
                 } else {
@@ -299,7 +299,7 @@ impl<'a> Evaluator<'a> {
                 for (name, (label, _)) in r.fields.iter() {
                     let ty_v = self.field_ty(ty, &TmV::cons(fields.clone()), *name);
                     let v = self.eta_neu(&TmN::proj(n.clone(), *name, *label), &ty_v);
-                    fields = fields.insert(*name, *label, v);
+                    fields.insert(*name, *label, v);
                 }
                 TmV::cons(fields)
             }
