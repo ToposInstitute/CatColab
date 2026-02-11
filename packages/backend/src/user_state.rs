@@ -20,7 +20,7 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
         owner_username_query: None,
         ref_name_query: None,
         searcher_min_level: None,
-        include_public_documents: Some(true),
+        include_public_documents: Some(false),
         only_deleted: Some(false),
         limit: None,
         offset: None,
