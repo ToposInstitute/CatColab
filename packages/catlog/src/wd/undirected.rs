@@ -1,9 +1,9 @@
 //! Undirected wiring diagrams (UWDs).
 
 use derivative::Derivative;
-use std::hash::Hash;
+use std::{fmt, hash::Hash};
 
-use crate::tt::util::Row;
+use crate::tt::util::{Row, pretty::*};
 use crate::zero::{HashColumn, LabelSegment, Mapping, MutMapping, NameSegment};
 
 /// Ports of a wiring diagram.
@@ -53,7 +53,7 @@ impl<T, J> UWD<T, J> {
 
 impl<T: Clone + Eq, J: Clone + Eq + Hash> UWD<T, J> {
     /// Assigns a port on a box to a junction.
-    pub fn set(&mut self, box_: NameSegment, port: NameSegment, junction: J) {
+    pub fn set_inner(&mut self, box_: NameSegment, port: NameSegment, junction: J) {
         let inner = self.inner.get_mut(box_).unwrap_or_else(|| panic!("No box named {box_}"));
         let ty = inner
             .ports
@@ -76,5 +76,66 @@ impl<T: Clone + Eq, J: Clone + Eq + Hash> UWD<T, J> {
             self.junctions.set(junction.clone(), ty.clone());
         }
         self.outer.mapping.set(port, junction);
+    }
+}
+
+/// Pretty prints a port-to-junction map in the style of a Datalog clause.
+impl<T: fmt::Display, J: fmt::Display + Clone + Eq> ToDoc for PortMap<T, J> {
+    fn to_doc<'a>(&self) -> D<'a> {
+        let args = self.ports.iter().map(|(port_name, (label, ty))| {
+            let arg = binop(t(":"), t(label.to_string()), t(ty.to_string()));
+            let var = match self.mapping.get(port_name) {
+                Some(junction) => t(junction.to_string()),
+                None => t("_"),
+            };
+            binop(t(":="), arg, var)
+        });
+        tuple(args)
+    }
+}
+
+/// Pretty prints a UWD in the style of a Datalog query.
+///
+/// Unlike in typical Datalog syntax, arguments are named and typed.
+impl<T: fmt::Display, J: fmt::Display + Clone + Eq + Hash> ToDoc for UWD<T, J> {
+    fn to_doc<'a>(&self) -> D<'a> {
+        let head = self.outer.to_doc();
+        let clauses = self
+            .inner
+            .iter()
+            .map(|(_, (label, port_map))| unop(t(label.to_string()), port_map.to_doc()));
+        let body = intersperse(clauses, t(",") + s());
+        head + t(" :-") + (s() + body).indented()
+    }
+}
+
+impl<T: fmt::Display, J: fmt::Display + Clone + Eq + Hash> fmt::Display for UWD<T, J> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_doc().pretty())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use expect_test::expect;
+
+    #[test]
+    fn pretty_print() {
+        let mut uwd: UWD<_, _> = UWD::new(Ports::from_iter([("x", "X"), ("z", "Z")]));
+        uwd.add_box("R".into(), "R".into(), Ports::from_iter([("a", "X"), ("b", "Y")]));
+        uwd.add_box("S".into(), "S".into(), Ports::from_iter([("c", "Y"), ("d", "Z")]));
+        uwd.set_inner("R".into(), "a".into(), "u");
+        uwd.set_inner("R".into(), "b".into(), "v");
+        uwd.set_inner("S".into(), "c".into(), "v");
+        uwd.set_inner("S".into(), "d".into(), "w");
+        uwd.set_outer("x".into(), "u");
+        uwd.set_outer("z".into(), "w");
+
+        let expected = expect![[r#"
+            [x : X := u, z : Z := w] :-
+              R [a : X := u, b : Y := v],
+              S [c : Y := v, d : Z := w]"#]];
+        expected.assert_eq(&uwd.to_string());
     }
 }

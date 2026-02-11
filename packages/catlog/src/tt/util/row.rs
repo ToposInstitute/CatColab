@@ -81,10 +81,15 @@ impl<T> Row<T> {
 }
 
 impl<T> FromIterator<(FieldName, (LabelSegment, T))> for Row<T> {
-    fn from_iter<I>(iter: I) -> Self
-    where
-        I: IntoIterator<Item = (FieldName, (LabelSegment, T))>,
-    {
+    fn from_iter<I: IntoIterator<Item = (FieldName, (LabelSegment, T))>>(iter: I) -> Self {
         Row(iter.into_iter().collect())
+    }
+}
+
+impl<S: Clone + Into<Ustr>, T> FromIterator<(S, T)> for Row<T> {
+    fn from_iter<I: IntoIterator<Item = (S, T)>>(iter: I) -> Self {
+        iter.into_iter()
+            .map(|(s, value)| (name_seg(s.clone()), (label_seg(s), value)))
+            .collect()
     }
 }
