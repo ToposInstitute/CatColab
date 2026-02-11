@@ -212,11 +212,7 @@ pub enum TmV_ {
     Meta(MetaVar),
 }
 
-/// Values for terms in the codiscrete mode, dereferences to [TmV_].
-///
-/// Note that this is *not* the value for a general term. So evaluating a `TmS`
-/// to produce a `TmV` and then quoting back will lose information about
-/// anything morphism-related. See [crate::tt] for more information.
+/// Values for terms, dereferences to [TmV_].
 #[derive(Clone, Deref)]
 #[deref(forward)]
 pub struct TmV(Rc<TmV_>);
