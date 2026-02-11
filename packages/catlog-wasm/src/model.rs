@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use all_the_same::all_the_same;
-use derive_more::{From, TryInto};
+use derive_more::TryInto;
 use nonempty::NonEmpty;
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
@@ -20,8 +20,8 @@ use catlog::one::{Category as _, FgCategory, Path, QualifiedPath};
 use catlog::tt::{
     self,
     modelgen::generate,
-    notebook_elab::Elaborator as ElaboratorNext,
-    toplevel::{Theory, TopDecl, Toplevel, Type, std_theories},
+    notebook_elab::{Elaborator as ElaboratorNext, demote_modality, promote_modality},
+    toplevel::{TopDecl, Toplevel, Type},
 };
 use catlog::validate::Validate;
 use catlog::zero::{NameLookup, NameSegment, Namespace, QualifiedLabel, QualifiedName};
@@ -30,9 +30,7 @@ use notebook_types::current::{path as notebook_path, *};
 use super::model_presentation::*;
 use super::notation::*;
 use super::result::JsResult;
-use super::theory::{
-    DblTheory, DblTheoryBox, demote_modality, expect_single_name, promote_modality,
-};
+use super::theory::{DblTheory, DblTheoryBox, expect_single_name};
 
 /// Elaborates into an object in a model of a discrete double theory.
 impl CanElaborate<Ob, QualifiedName> for Elaborator {
@@ -93,17 +91,14 @@ impl CanElaborate<Mor, TabMor> for Elaborator {
                     path.try_map(|ob| Elaborator.elab(&ob), |mor| Elaborator.elab(&mor))
                 })
                 .map(|path| path.flatten()),
-            Mor::TabulatorSquare {
-                dom,
-                cod,
-                pre,
-                post,
-            } => Ok(Path::single(dbl_model::TabEdge::Square {
-                dom: Box::new(Elaborator.elab(dom.as_ref())?),
-                cod: Box::new(Elaborator.elab(cod.as_ref())?),
-                pre: Box::new(Elaborator.elab(pre.as_ref())?),
-                post: Box::new(Elaborator.elab(post.as_ref())?),
-            })),
+            Mor::TabulatorSquare { dom, cod, pre, post } => {
+                Ok(Path::single(dbl_model::TabEdge::Square {
+                    dom: Box::new(Elaborator.elab(dom.as_ref())?),
+                    cod: Box::new(Elaborator.elab(cod.as_ref())?),
+                    pre: Box::new(Elaborator.elab(pre.as_ref())?),
+                    post: Box::new(Elaborator.elab(post.as_ref())?),
+                }))
+            }
         }
     }
 }
@@ -112,12 +107,7 @@ impl CanElaborate<Mor, TabEdge> for Elaborator {
     fn elab(&self, mor: &Mor) -> Result<TabEdge, String> {
         match mor {
             Mor::Basic(name) => Ok(TabEdge::Basic(QualifiedName::deserialize_str(name)?)),
-            Mor::TabulatorSquare {
-                dom,
-                cod,
-                pre,
-                post,
-            } => Ok(TabEdge::Square {
+            Mor::TabulatorSquare { dom, cod, pre, post } => Ok(TabEdge::Square {
                 dom: Box::new(Elaborator.elab(dom.as_ref())?),
                 cod: Box::new(Elaborator.elab(cod.as_ref())?),
                 pre: Box::new(Elaborator.elab(pre.as_ref())?),
@@ -215,12 +205,7 @@ impl CanQuote<TabEdge, Mor> for Quoter {
     fn quote(&self, ob: &TabEdge) -> Mor {
         match ob {
             TabEdge::Basic(name) => Mor::Basic(name.serialize_string()),
-            TabEdge::Square {
-                dom,
-                cod,
-                pre,
-                post,
-            } => Mor::TabulatorSquare {
+            TabEdge::Square { dom, cod, pre, post } => Mor::TabulatorSquare {
                 dom: Box::new(self.quote(dom.as_ref())),
                 cod: Box::new(self.quote(cod.as_ref())),
                 pre: Box::new(self.quote(pre.as_ref())),
@@ -269,7 +254,7 @@ impl CanQuote<ModalMor, Mor> for Quoter {
 /// A box containing a model of a double theory of any kind.
 ///
 /// See [`DblTheoryBox`] for motivation.
-#[derive(Clone, From, TryInto)]
+#[derive(Clone, TryInto)]
 #[try_into(ref)]
 pub enum DblModelBox {
     /// A model of a discrete double theory.
@@ -282,17 +267,26 @@ pub enum DblModelBox {
 
 impl From<dbl_model::DiscreteDblModel> for DblModelBox {
     fn from(value: dbl_model::DiscreteDblModel) -> Self {
-        Rc::new(value).into()
+        Self::Discrete(Rc::new(value))
     }
 }
 impl From<dbl_model::DiscreteTabModel> for DblModelBox {
     fn from(value: dbl_model::DiscreteTabModel) -> Self {
-        Rc::new(value).into()
+        Self::DiscreteTab(Rc::new(value))
     }
 }
 impl From<dbl_model::ModalDblModel> for DblModelBox {
     fn from(value: dbl_model::ModalDblModel) -> Self {
-        Rc::new(value).into()
+        Self::Modal(Rc::new(value))
+    }
+}
+
+impl From<tt::modelgen::Model> for DblModelBox {
+    fn from(value: tt::modelgen::Model) -> Self {
+        match value {
+            tt::modelgen::Model::Discrete(model) => Self::Discrete(Rc::new(*model)),
+            tt::modelgen::Model::Modal(model) => Self::Modal(Rc::new(*model)),
+        }
     }
 }
 
@@ -326,8 +320,13 @@ pub struct DblModel {
 impl DblModel {
     /// Constructs an empty model of a double theory.
     pub fn new(theory: &DblTheory) -> Self {
+        Self::from_box(DblModelBox::new(theory))
+    }
+
+    /// Constructs from a boxed model.
+    pub fn from_box(model: DblModelBox) -> Self {
         Self {
-            model: DblModelBox::new(theory),
+            model,
             ty: None,
             ob_namespace: Namespace::new_for_uuid(),
             mor_namespace: Namespace::new_for_uuid(),
@@ -342,6 +341,15 @@ impl DblModel {
             ob_namespace: self.ob_namespace.clone(),
             mor_namespace: self.mor_namespace.clone(),
         }
+    }
+
+    /// Returns the theory that the model is of.
+    pub fn theory(&self) -> DblTheory {
+        all_the_same!(match &self.model {
+            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+                DblTheory(model.theory().into())
+            }
+        })
     }
 
     /// Tries to get a model of a discrete theory.
@@ -558,13 +566,7 @@ impl DblModel {
                  Quoter.quote(model.get_cod(&id)?))
             }
         });
-        Some(MorGenerator {
-            id,
-            label,
-            mor_type,
-            dom,
-            cod,
-        })
+        Some(MorGenerator { id, label, mor_type, dom, cod })
     }
 
     /// Constructs a serializable presentation of the model.
@@ -628,7 +630,7 @@ impl DblModelMap {
     pub fn new() -> Self {
         DblModelMap {
             models: HashMap::new(),
-            toplevel: Toplevel::new(std_theories()),
+            toplevel: Toplevel::new(tt::theory::std_theories()),
         }
     }
 
@@ -644,13 +646,13 @@ impl DblModelMap {
         let id_ustr = ustr(&id);
         self.models.insert(id, model.clone());
         if let Some((ty_s, ty_v)) = &model.ty {
-            let Ok(theory) = model.discrete().map(|ddm| ddm.theory_rc()) else {
+            let Some(theory) = model.theory().try_into_tt() else {
                 return;
             };
             self.toplevel.declarations.insert(
                 NameSegment::Text(id_ustr),
                 TopDecl::Type(Type::new(
-                    Theory::new(QualifiedName::single(NameSegment::Text(ustr("_"))), theory),
+                    tt::theory::Theory::new(ustr("_").into(), theory),
                     ty_s.clone(),
                     ty_v.clone(),
                 )),
@@ -667,35 +669,31 @@ pub fn elaborate_model(
     theory: &DblTheory,
     ref_id: String,
 ) -> Result<DblModel, String> {
-    match &theory.0 {
-        DblTheoryBox::Discrete(ddt) => {
-            let theory =
-                Theory::new(QualifiedName::single(NameSegment::Text(ustr("_"))), ddt.clone());
-            let ref_id = ustr(&ref_id);
-            let mut elab = ElaboratorNext::new(theory.clone(), &instantiated.toplevel, ref_id);
-            let ty = elab.notebook(notebook.0.formal_content());
-            let (ddm, namespace) = generate(&instantiated.toplevel, &theory, &ty.1);
-            Ok(DblModel {
-                model: DblModelBox::Discrete(Rc::new(ddm)),
-                ty: Some(ty),
-                ob_namespace: namespace.clone(),
-                mor_namespace: namespace.clone(),
-            })
-        }
-        _ => {
-            // legacy elaboration
-            let mut model = DblModel::new(theory);
-            for judgment in notebook.0.formal_content() {
-                match judgment {
-                    ModelJudgment::Object(decl) => model.add_ob(decl)?,
-                    ModelJudgment::Morphism(decl) => model.add_mor(decl)?,
-                    ModelJudgment::Instantiation(_) => {
-                        return Err("Legacy model elaborator does not support instantiation".into());
-                    }
+    if let Some(theory_def) = theory.try_into_tt() {
+        let theory = tt::theory::Theory::new(ustr("_").into(), theory_def);
+        let ref_id = ustr(&ref_id);
+        let mut elab = ElaboratorNext::new(theory.clone(), &instantiated.toplevel, ref_id);
+        let (ty_s, ty_v) = elab.notebook(notebook.0.formal_content());
+        let (model, namespace) = generate(&instantiated.toplevel, &theory.definition, &ty_v);
+        Ok(DblModel {
+            model: model.into(),
+            ty: Some((ty_s, ty_v)),
+            ob_namespace: namespace.clone(),
+            mor_namespace: namespace.clone(),
+        })
+    } else {
+        // Legacy elaboration.
+        let mut model = DblModel::new(theory);
+        for judgment in notebook.0.formal_content() {
+            match judgment {
+                ModelJudgment::Object(decl) => model.add_ob(decl)?,
+                ModelJudgment::Morphism(decl) => model.add_mor(decl)?,
+                ModelJudgment::Instantiation(_) => {
+                    return Err("Legacy model elaborator does not support instantiation".into());
                 }
             }
-            Ok(model)
         }
+        Ok(model)
     }
 }
 
@@ -788,15 +786,14 @@ pub(crate) mod tests {
         assert_eq!(Result::from(model.validate().0).map_err(|errs| errs.len()), Err(2));
     }
 
-    #[test]
-    fn model_category_links() {
+    pub(crate) fn backward_link(src_name: &str, tgt_name: &str, flow_name: &str) -> DblModel {
         let th = ThCategoryLinks::new().theory();
         let mut model = DblModel::new(&th);
         let [f, x, y, link] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
         assert!(
             model
                 .add_ob(&ObDecl {
-                    name: "x".into(),
+                    name: src_name.into(),
                     id: x,
                     ob_type: ObType::Basic("Object".into())
                 })
@@ -805,7 +802,7 @@ pub(crate) mod tests {
         assert!(
             model
                 .add_ob(&ObDecl {
-                    name: "y".into(),
+                    name: tgt_name.into(),
                     id: y,
                     ob_type: ObType::Basic("Object".into()),
                 })
@@ -814,7 +811,7 @@ pub(crate) mod tests {
         assert!(
             model
                 .add_mor(&MorDecl {
-                    name: "f".into(),
+                    name: flow_name.into(),
                     id: f,
                     mor_type: MorType::Hom(Box::new(ObType::Basic("Object".into()))),
                     dom: Some(Ob::Basic(x.to_string())),
@@ -828,11 +825,17 @@ pub(crate) mod tests {
                     name: "link".into(),
                     id: link,
                     mor_type: MorType::Basic("Link".into()),
-                    dom: Some(Ob::Basic(x.to_string())),
+                    dom: Some(Ob::Basic(y.to_string())),
                     cod: Some(Ob::Tabulated(Mor::Basic(f.to_string()))),
                 })
                 .is_ok()
         );
+        model
+    }
+
+    #[test]
+    fn model_category_links() {
+        let model = backward_link("x", "y", "f");
         assert_eq!(model.ob_generators().len(), 2);
         assert_eq!(model.mor_generators().len(), 2);
         assert_eq!(model.validate().0, JsResult::Ok(()));

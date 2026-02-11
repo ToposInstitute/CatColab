@@ -37,7 +37,7 @@
         "@automerge/automerge-repo": "^2.2.0",
         "@automerge/automerge-repo-network-websocket": "^2.2.0",
         "@automerge/automerge-repo-storage-indexeddb": "^2.2.0",
-        "@automerge/prosemirror": "v0.1.0",
+        "@automerge/prosemirror": "v0.2.0-alpha.0",
         "@benrbray/prosemirror-math": "^1.0.0",
         "@corvu/dialog": "^0.2.4",
         "@corvu/popover": "^0.2.0",
@@ -52,6 +52,7 @@
         "@solid-primitives/event-listener": "^2.4.3",
         "@solid-primitives/map": "^0.7.2",
         "@solid-primitives/timer": "^1.4.1",
+        "@solidjs/meta": "^0.29.4",
         "@solidjs/router": "^0.15.3",
         "@viz-js/viz": "^3.15.0",
         "catcolab-api": "link:../backend/pkg",
@@ -59,6 +60,7 @@
         "catlog-wasm": "link:../catlog-wasm/dist/pkg-browser",
         "echarts": "^5.5.1",
         "echarts-solid": "^0.2.0",
+        "elkjs": "^0.11.0",
         "fast-equals": "^5.2.2",
         "fast-json-patch": "^3.1.1",
         "firebase": "^10.14.0",
@@ -102,6 +104,7 @@
         "vite-plugin-solid": "^2.11.10",
         "vite-plugin-wasm": "^3.5.0",
         "vitest": "^4.0.8",
-        "wasm-pack": "^0.13.1"
+        "wasm-pack": "^0.14.0",
+        "web-worker": "^1.5.0"
     }
 }

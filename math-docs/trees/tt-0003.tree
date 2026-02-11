@@ -1,0 +1,239 @@
+\title{Generic rules of DoubleTT}
+\import{macros}
+
+\p{One part of DoubleTT is just a fragment of standard Martin-Löf type theory.
+These generic rules are collected here.}
+
+\subtree{
+\title{Contexts}
+
+\ul{
+
+  \li{\em{Empty context}:
+
+  \prooftree{
+  \infer0{\vdash \cdot\ \context}
+  }
+  }
+
+  \li{\em{Context extension}:
+
+  \prooftree{
+  \hypo{\vdash \Gamma\ \context}
+  \hypo{\Gamma \vdash A\ \type}
+  \infer2{\vdash \Gamma, u: A\ \context}
+  }
+  }
+
+}
+
+\subtree{
+  \title{Variables}
+  \taxon{notation}
+
+  \p{In a departure from standard type-theoretic notation, we use the letters
+  #{u, v, \dots} for variables, reserving the letters #{x, y, \dots} for
+  arbitrary terms of object types.}
+
+}
+}
+
+\subtree{
+\title{Unit type}
+
+\ul{
+
+  \li{\em{Unit type former}:
+
+  \prooftree{
+  \hypo{\Gamma\ \context}
+  \infer1{\Gamma: 1\ \type}
+  }
+  }
+
+  \li{\em{Unit introduction}:
+
+  \prooftree{
+  \hypo{\Gamma\ \context}
+  \infer1{\Gamma \vdash *: 1}
+  }
+  }
+
+  \li{\em{Uniqueness rule}:
+
+  \prooftree{
+  \hypo{\Gamma \vdash x: 1}
+  \infer1{\Gamma \vdash x = *: 1}
+  }
+  }
+
+}
+}
+
+\subtree{
+\title{Record types}
+
+\p{We use letters #{m, n, \dots} for the field names of record, not to be
+confused with variables in contexts.}
+
+\ul{
+  \li{\em{Record type former}:
+
+  \prooftree{
+  \hypo{\Gamma \vdash A\ \type}
+  \hypo{\Gamma, v: A \vdash B\ \type}
+  \infer2{\Gamma \vdash \{A, m: B\}}
+  }
+  }
+
+  \li{\em{Record introduction}:
+
+  \prooftree{
+  \hypo{\Gamma \vdash a: A}
+  \hypo{\Gamma, v: A \vdash B\ \type}
+  \hypo{\Gamma \vdash b: B[a/v]}
+  \infer3{\Gamma \vdash \{a, m=b\}: \{A, m: B\}}
+  }
+  }
+
+  \li{\em{Elimination rules}, \em{restriction} and \em{projection}:
+
+  \prooftree{
+  \hypo{\Gamma \vdash A\ \type}
+  \hypo{\Gamma, v: A \vdash B\ \type}
+  \hypo{\Gamma \vdash r: \{A, m: B\}}
+  \infer3{\Gamma \vdash r|m: A}
+  }
+  \prooftree{
+  \hypo{\Gamma \vdash A\ \type}
+  \hypo{\Gamma, v: A \vdash B\ \type}
+  \hypo{\Gamma \vdash r: \{A, m: B\}}
+  \infer3{\Gamma \vdash r.m: B[(r|m)/v]}
+  }
+
+  For names #{m \neq n}, restrictions and projections can be passed down:
+
+  \prooftree{
+  \hypo{\Gamma \vdash A\ \type}
+  \hypo{\Gamma, v: A \vdash B\ \type}
+  \hypo{\Gamma \vdash r: \{A, m: B\}}
+  \hypo{\Gamma \vdash C\ \type}
+  \hypo{\Gamma \vdash (r|m)|n: C}
+  \infer5{\Gamma \vdash r|n: C}
+  }
+  \prooftree{
+  \hypo{\Gamma \vdash A\ \type}
+  \hypo{\Gamma, v: A \vdash B\ \type}
+  \hypo{\Gamma \vdash r: \{A, m: B\}}
+  \hypo{\Gamma \vdash C\ \type}
+  \hypo{\Gamma \vdash (r|m).n: C}
+  \infer5{\Gamma \vdash r.n: C}
+  }
+  }
+
+  \li{\em{Computation rules} for restriction and projection:
+
+  \prooftree{
+  \hypo{\Gamma \vdash a: A}
+  \hypo{\Gamma, v: A \vdash B\ \type}
+  \hypo{\Gamma \vdash b: B[a/v]}
+  \infer3{\Gamma \vdash \{a, m=b\}|m = a: A}
+  }
+  \prooftree{
+  \hypo{\Gamma \vdash a: A}
+  \hypo{\Gamma, v: A \vdash B\ \type}
+  \hypo{\Gamma \vdash b: B[a/v]}
+  \infer3{\Gamma \vdash \{a, m=b\}.m = b: B[a/v]}
+  }
+
+  And, for names #{m \neq n}:
+
+  \prooftree{
+  \hypo{\Gamma \vdash A\ \type}
+  \hypo{\Gamma, v: A \vdash B\ \type}
+  \hypo{\Gamma \vdash r: \{A, m: B\}}
+  \hypo{\Gamma \vdash C\ \type}
+  \hypo{\Gamma \vdash (r|m)|n: C}
+  \infer5{\Gamma \vdash r|n = (r|m)|n: C}
+  }
+  \prooftree{
+  \hypo{\Gamma \vdash A\ \type}
+  \hypo{\Gamma, v: A \vdash B\ \type}
+  \hypo{\Gamma \vdash r: \{A, m: B\}}
+  \hypo{\Gamma \vdash C\ \type}
+  \hypo{\Gamma \vdash (r|m).n: C}
+  \infer5{\Gamma \vdash r.n = (r|m).n: C}
+  }
+  }
+
+  \li{\em{Uniqueness rule}:
+
+  \prooftree{
+  \hypo{\Gamma \vdash A\ \type}
+  \hypo{\Gamma, v: A \vdash B\ \type}
+  \hypo{\Gamma \vdash r: \{A, m: B\}}
+  \infer3{\Gamma \vdash r = \{r|m, m = r.m\}: \{A, m: B\}}
+  }
+  }
+}
+
+\subtree{
+  \title{Literature on dependent records}
+  \taxon{remark}
+
+  \p{Apart from cosmetic differences, our presentation of record types mostly
+  follows the standard reference ([Pollack 2002](pollack-2002), Section 3.1).
+  The only meaningful difference is that our presentation, unlike Pollack's,
+  includes the uniqueness rule for records, which seems important inasmuch as
+  records are supposed to be iterated #{\Sigma}-types.}
+  
+}
+
+}
+
+\subtree{
+\title{Empty type}
+
+\p{\em{Note}: the empty type can be omitted as it is only needed for the
+[discrete modality](tt-0006).}
+
+\ul{
+
+  \li{\em{Empty type former}:
+
+  \prooftree{
+  \hypo{\Gamma\ \context}
+  \infer1{\Gamma: 0\ \type}
+  }
+  }
+
+  \li{\em{Empty elimination}:
+
+  \prooftree{
+  \hypo{\Gamma \vdash a: 0}
+  \hypo{\Gamma, v: 0 \vdash A\ \type}
+  \infer2{\Gamma \vdash \ind_0(a): A[a/v]}
+  }
+  }
+
+}
+
+\subtree{
+  \title{Uniqueness rules for inductive types}
+  \taxon{Remark}
+
+  \p{
+
+  We follow convention in omitting the \em{uniqueness} rules (#{\eta} rules) for
+  inductive types ([Angiuli & Gratzer](principles-dtt), Section 2.5.5). In the
+  case of the empty type, this rule would be:
+
+  \prooftree{
+  \hypo{\Gamma \vdash b: 0}
+  \hypo{\Gamma, v: 0 \vdash a: A}
+  \infer2{\Gamma \vdash \ind_0(b) = a[b/v]: A[b/v]}
+  }
+
+  }
+}
+}

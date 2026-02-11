@@ -8,6 +8,7 @@ use ref_cast::RefCast;
 
 use crate::dbl::{category::*, graph::ProedgeGraph, tree::DblTree};
 use crate::one::{Graph, Path};
+use crate::tt::util::pretty::*;
 use crate::zero::*;
 
 /// Object type in a discrete tabulator theory.
@@ -30,6 +31,24 @@ pub enum TabMorType {
 
     /// Hom type on an object type.
     Hom(Box<TabObType>),
+}
+
+impl ToDoc for TabObType {
+    fn to_doc<'a>(&self) -> D<'a> {
+        match self {
+            TabObType::Basic(name) => name.to_doc(),
+            TabObType::Tabulator(mor_type) => unop(t("Tab"), mor_type.to_doc()),
+        }
+    }
+}
+
+impl ToDoc for TabMorType {
+    fn to_doc<'a>(&self) -> D<'a> {
+        match self {
+            TabMorType::Basic(name) => name.to_doc(),
+            TabMorType::Hom(ob_type) => unop(t("Hom"), ob_type.to_doc()),
+        }
+    }
 }
 
 /// Projection onto object type in a discrete tabulator theory.
@@ -83,7 +102,7 @@ impl TabMorProj {
         }
     }
 
-    /// Target projection
+    /// Target projection.
     fn tgt(self) -> TabObProj {
         match self {
             TabMorProj::Src(m) => TabObProj::Src(m),
@@ -297,10 +316,7 @@ impl VDCWithComposites for DiscreteTabTheory {
     }
 
     fn composite_ext(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Cell> {
-        Some(TabMorOp {
-            dom: path,
-            projections: vec![],
-        })
+        Some(TabMorOp { dom: path, projections: vec![] })
     }
 
     fn through_composite(&self, cell: Self::Cell, range: Range<usize>) -> Option<Self::Cell> {

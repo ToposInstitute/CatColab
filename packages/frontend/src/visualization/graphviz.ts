@@ -3,6 +3,7 @@ import invariant from "tiny-invariant";
 
 import type * as GraphLayout from "./graph_layout";
 import type { Point } from "./graph_layout";
+import type * as GraphSpec from "./graph_spec";
 import type * as GraphvizJSON from "./graphviz_json";
 import type { ArrowStyle } from "./types";
 
@@ -16,11 +17,46 @@ export type GraphvizAttributes = {
     edge?: Viz.Graph["edgeAttributes"];
 };
 
+/** Convert a graph specification into a Viz.js graph. */
+export function graphToViz(graph: GraphSpec.Graph, attrs?: GraphvizAttributes): Viz.Graph {
+    const nodes: Viz.Graph["nodes"] = graph.nodes.map((node) => ({
+        name: node.id,
+        attributes: {
+            id: node.id,
+            label: node.label ?? "",
+            fontname: fontname(node.isMonospaced),
+            ...(node.minimumWidth !== undefined && { width: pointsToInches(node.minimumWidth) }),
+            ...(node.minimumHeight !== undefined && { height: pointsToInches(node.minimumHeight) }),
+            ...(node.cssClass !== undefined && { class: node.cssClass }),
+        },
+    }));
+
+    const edges: Viz.Graph["edges"] = graph.edges.map((edge) => ({
+        tail: edge.source,
+        head: edge.target,
+        attributes: {
+            id: edge.id,
+            label: edge.label ?? "",
+            fontname: fontname(edge.isMonospaced),
+            ...(edge.cssClass !== undefined && { class: edge.cssClass }),
+            arrowstyle: edge.style ?? "default",
+        },
+    }));
+
+    return {
+        directed: true,
+        graphAttributes: attrs?.graph,
+        nodeAttributes: attrs?.node,
+        edgeAttributes: attrs?.edge,
+        nodes,
+        edges,
+    };
+}
+
 /** Asynchronously import and load Viz.js. */
 export async function loadViz() {
     const { instance } = await import("@viz-js/viz");
-    const viz = await instance();
-    return viz;
+    return await instance();
 }
 
 /** Lay out a graph using Graphviz. */
@@ -49,7 +85,7 @@ export function vizRenderJSON0(viz: Viz.Viz, graph: Viz.Graph, options?: Viz.Ren
 The predecessor to this code is Evan's defunct package
 [`wiring-diagram-canvas`](https://github.com/epatters/wiring-diagram-canvas/blob/master/src/graphviz.ts).
  */
-export function parseGraphvizJSON(graphviz: GraphvizJSON.Graph): GraphLayout.Graph<string> {
+export function parseGraphvizJSON(graphviz: GraphvizJSON.Graph): GraphLayout.Graph {
     // Parse bounding box and padding.
     //
     // Apparently one corner of the bounding box is always the origin (0,0),
@@ -65,7 +101,7 @@ export function parseGraphvizJSON(graphviz: GraphvizJSON.Graph): GraphLayout.Gra
     const height = Math.max(bb[1] ?? 0, bb[3] ?? 0) + 2 * pad.y;
 
     // Parse nodes of graph, ignoring any subgraphs.
-    const nodes: GraphLayout.Node<string>[] = [];
+    const nodes: GraphLayout.Node[] = [];
     const offset = graphviz._subgraph_cnt;
     const nodeByNumber = (i: number) => nodes[i - offset];
     for (const node of (graphviz.objects?.slice(offset) as GraphvizJSON.Node[]) ?? []) {
@@ -81,7 +117,7 @@ export function parseGraphvizJSON(graphviz: GraphvizJSON.Graph): GraphLayout.Gra
     }
 
     // Parse edge of graph.
-    const edges: GraphLayout.Edge<string>[] = [];
+    const edges: GraphLayout.Edge[] = [];
     for (const edge of graphviz.edges ?? []) {
         if (edge.style === "invis") {
             // Omit invisible edges, used to tweak the layout in Graphviz.
@@ -195,3 +231,8 @@ function parsePoint(s: string): Point {
 
 // 72 points per inch in Graphviz.
 const inchesToPoints = (x: number) => 72 * x;
+const pointsToInches = (x: number) => x / 72;
+
+// XXX: Exact font matching is impossible with Graphviz, but we at least try to
+// give Graphviz a monospaced font if and only if we will render in monospace.
+const fontname = (monospace?: boolean): string => (monospace ? "Courier" : "Helvetica");

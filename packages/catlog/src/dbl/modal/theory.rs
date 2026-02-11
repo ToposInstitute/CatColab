@@ -18,6 +18,7 @@
 //! 2-category or monoidal category. Instead, the mode theory is implicit and baked
 //! in at the type level.
 
+use std::fmt;
 use std::hash::Hash;
 use std::iter::repeat_n;
 
@@ -66,21 +67,37 @@ pub enum List {
     /// This modality is a skeletized version of the "finite family", or free finite
     /// [coproduct completion](https://ncatlab.org/nlab/show/free+coproduct+completion),
     /// construction.
-    Coproduct,
+    Cocartesian,
 
     /// Lists of objects and morphisms, allowing reindexing of the domain list.
     ///
     /// This modality is a skeletized version of the free finite product completion.
-    Product,
+    Cartesian,
 
     /// Lists of objects and morphisms, allowing independent reindexing of both
     /// domain and codomain lists.
     ///
     /// This modality is a version of the free finite biproduct completion,
-    /// equivalent to freely enriching in commutative monoids and then applying the
-    /// matrix construction (Mac Lane, Exercise VIII.2.6) on such an enriched
-    /// category.
-    Biproduct,
+    /// equivalent to freely enriching in commutative monoids and then applying
+    /// the matrix construction (Mac Lane, Exercise VIII.2.6).
+    Additive,
+}
+
+impl fmt::Display for Modality {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Modality::List(List::Plain) => write!(f, "List"),
+            Modality::List(list_type) => write!(f, "List.{list_type}"),
+            Modality::Discrete() => write!(f, "Discrete"),
+            Modality::Codiscrete() => write!(f, "Codiscrete"),
+        }
+    }
+}
+
+impl fmt::Display for List {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(self, f)
+    }
 }
 
 /// An application of modalities.
@@ -100,10 +117,7 @@ pub struct ModeApp<T> {
 impl<T> ModeApp<T> {
     /// Constructs a new term with no modalities applied.
     pub fn new(arg: T) -> Self {
-        Self {
-            arg,
-            modalities: Default::default(),
-        }
+        Self { arg, modalities: Default::default() }
     }
 
     /// Converts from `&ModeApp<T>` to `ModeApp<&T>`.
@@ -128,13 +142,16 @@ impl<T> ModeApp<T> {
         self
     }
 
+    /// Pops the outermost application, if there is one.
+    pub fn pop_app(mut self) -> (Option<Modality>, Self) {
+        let modality = self.modalities.pop();
+        (modality, self)
+    }
+
     /// Maps over the argument.
     pub fn map<S, F: FnOnce(T) -> S>(self, f: F) -> ModeApp<S> {
         let ModeApp { arg, modalities } = self;
-        ModeApp {
-            arg: f(arg),
-            modalities,
-        }
+        ModeApp { arg: f(arg), modalities }
     }
 
     /// Maps over the argument, flattening nested applications.

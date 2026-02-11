@@ -67,6 +67,11 @@ export default function createPrimitiveSignedStockFlowTheory(theoryMeta: TheoryM
                     content: { tag: "Basic", content: "Object" },
                 },
             }),
+            analyses.massActionEquations({
+                getEquations(model) {
+                    return thCategorySignedLinks.massActionEquations(model);
+                },
+            }),
         ],
     });
 }

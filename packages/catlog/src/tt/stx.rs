@@ -2,73 +2,23 @@
 //!
 //! See [crate::tt] for what this means.
 
-use ::pretty::RcDoc;
-use derive_more::Constructor;
-
-#[cfg(doc)]
-use crate::dbl::discrete::theory::DiscreteDblTheory;
-use crate::zero::LabelSegment;
-use crate::{tt::prelude::*, zero::QualifiedName};
+use derive_more::{Constructor, Deref};
 use std::fmt;
 use std::fmt::Write as _;
-use std::ops::Deref;
 
-/// Object types are just qualified names, see [DiscreteDblTheory].
-pub type ObjectType = QualifiedName;
-/// Morphism types are paths of qualified names, see [DiscreteDblTheory].
-#[derive(Clone, PartialEq, Eq)]
-pub struct MorphismType(pub Path<QualifiedName, QualifiedName>);
+use super::{prelude::*, theory::*};
+use crate::zero::LabelSegment;
 
-impl fmt::Display for MorphismType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self.0 {
-            Path::Id(ot) => write!(f, "Id {ot}"),
-            Path::Seq(non_empty) => {
-                for (i, segment) in non_empty.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, " · ")?;
-                    }
-                    write!(f, "{segment}")?;
-                }
-                Ok(())
-            }
-        }
-    }
-}
-
-impl MorphismType {
-    fn to_doc<'a>(&self) -> D<'a> {
-        match &self.0 {
-            Path::Id(ot) => (t("Id") + s() + t(format!("{ot}"))).parens(),
-            Path::Seq(non_empty) => {
-                if non_empty.len() == 1 {
-                    t(format!("{}", non_empty[0]))
-                } else {
-                    D(RcDoc::intersperse(non_empty.iter().map(|x| t(format!("{x}")).0), t(" · ").0))
-                        .parens()
-                }
-            }
-        }
-    }
-}
-
-/// A metavariable
+/// A metavariable.
 ///
 /// Metavariables are emitted on elaboration error or when explicitly
 /// requested with `@hole`.
 ///
 /// Metavariables in notebook elaboration are namespaced to the notebook.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Constructor, Clone, Copy, PartialEq, Eq)]
 pub struct MetaVar {
     ref_id: Option<Ustr>,
     id: usize,
-}
-
-impl MetaVar {
-    /// Constructor for metavariables
-    pub fn new(ref_id: Option<Ustr>, id: usize) -> Self {
-        Self { ref_id, id }
-    }
 }
 
 impl fmt::Display for MetaVar {
@@ -77,37 +27,16 @@ impl fmt::Display for MetaVar {
     }
 }
 
-/// Type in the base type theory.
-///
-/// See [crate::tt] for more information about what this means. Note that this
-/// is a simple type, so we don't need syntax and value variants.
-#[derive(Clone, PartialEq, Eq)]
-pub enum Ty0 {
-    /// The type of (objects of a given object type).
-    Object(ObjectType),
-    /// Non-dependent record type.
-    Record(Row<Ty0>),
-    /// Unit type.
-    Unit,
-    /// Meta variable
-    Meta(MetaVar),
-}
-
 /// Content of record type syntax.
 #[derive(Clone, Constructor)]
 pub struct RecordS {
-    /// The base types of the fields.
-    pub fields0: Row<Ty0>,
-    ///  The total types of the fields.
-    ///
-    /// Each of these types is meant to be evaluated in an environment
-    /// where the last element is a value of type `fields0`.
-    pub fields1: Row<TyS>,
+    /// The total types of the fields.
+    pub fields: Row<TyS>,
 }
 
 /// Inner enum for [TyS].
 pub enum TyS_ {
-    /// A reference to a top-level declaration
+    /// A reference to a top-level declaration.
     TopVar(TopVarName),
     /// Type constructor for object types.
     ///
@@ -115,9 +44,7 @@ pub enum TyS_ {
     /// various object types).
     ///
     /// A term of type `Object(ot)` represents an object of object type `ot`.
-    ///
-    /// The base type for `Object(ot)` is `Ty0::Object(ot)`.
-    Object(ObjectType),
+    Object(ObType),
 
     /// Type constructor for morphism types.
     ///
@@ -126,9 +53,7 @@ pub enum TyS_ {
     ///
     /// A term of type `Morphism(mt, dom, cod)` represents an morphism of morphism
     /// type `mt` from `dom` to `cod`.
-    ///
-    /// The base type for `Morphism(mt, dom, cod)` is Ty0::Unit.
-    Morphism(MorphismType, TmS, TmS),
+    Morphism(MorType, TmS, TmS),
 
     /// Type constructor for record types.
     ///
@@ -136,8 +61,6 @@ pub enum TyS_ {
     ///
     /// A term `x` of type `Record(r)` represents a record where field `f` has type
     /// `eval(env.snoc(eval(env, x)), r.fields1[f])`.
-    ///
-    /// The base type for `Record(r)` is `Ty0::Record(r.fields0)`.
     Record(RecordS),
 
     /// Type constructor for singleton types.
@@ -177,16 +100,9 @@ pub enum TyS_ {
 ///
 /// See [crate::tt] for an explanation of what total types are, and for an
 /// explanation of our approach to Rc pointers in abstract syntax trees.
-#[derive(Clone)]
+#[derive(Clone, Deref)]
+#[deref(forward)]
 pub struct TyS(Rc<TyS_>);
-
-impl Deref for TyS {
-    type Target = TyS_;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
 
 impl TyS {
     /// Smart constructor for [TyS], [TyS_::TopVar] case.
@@ -195,12 +111,12 @@ impl TyS {
     }
 
     /// Smart constructor for [TyS], [TyS_::Object] case.
-    pub fn object(object_type: ObjectType) -> Self {
+    pub fn object(object_type: ObType) -> Self {
         Self(Rc::new(TyS_::Object(object_type)))
     }
 
     /// Smart constructor for [TyS], [TyS_::Morphism] case.
-    pub fn morphism(morphism_type: MorphismType, dom: TmS, cod: TmS) -> Self {
+    pub fn morphism(morphism_type: MorType, dom: TmS, cod: TmS) -> Self {
         Self(Rc::new(TyS_::Morphism(morphism_type, dom, cod)))
     }
 
@@ -231,24 +147,26 @@ impl TyS {
     pub fn meta(mv: MetaVar) -> Self {
         Self(Rc::new(TyS_::Meta(mv)))
     }
+}
 
+impl ToDoc for TyS {
     fn to_doc<'a>(&self) -> D<'a> {
         match &**self {
             TyS_::TopVar(name) => t(format!("{}", name)),
-            TyS_::Object(object_type) => t(format!("{}", object_type)),
-            TyS_::Morphism(morphism_type, dom, cod) => {
-                morphism_type.to_doc() + tuple([dom.to_doc(), cod.to_doc()])
+            TyS_::Object(ob_type) => t(format!("{}", ob_type)),
+            TyS_::Morphism(mor_type, dom, cod) => {
+                mor_type.to_doc().parens() + tuple([dom.to_doc(), cod.to_doc()])
             }
-            TyS_::Record(r) => {
-                tuple(r.fields1.iter().map(|(_, (label, ty))| {
-                    binop(":", t(format!("{}", label)).group(), ty.to_doc())
-                }))
-            }
+            TyS_::Record(r) => tuple(r.fields.iter().map(|(_, (label, ty))| {
+                binop(t(":"), t(format!("{}", label)).group(), ty.to_doc())
+            })),
             TyS_::Sing(_, tm) => t("@sing") + s() + tm.to_doc(),
             TyS_::Specialize(ty, d) => binop(
-                "&",
+                t("&"),
                 ty.to_doc(),
-                tuple(d.iter().map(|(name, ty)| binop(":", t(path_to_string(name)), ty.to_doc()))),
+                tuple(
+                    d.iter().map(|(name, ty)| binop(t(":"), t(path_to_string(name)), ty.to_doc())),
+                ),
             ),
             TyS_::Unit => t("Unit"),
             TyS_::Meta(mv) => t(format!("?{}", mv.id)),
@@ -272,9 +190,9 @@ impl fmt::Display for TyS {
 
 /// Inner enum for [TmS].
 pub enum TmS_ {
-    /// A reference to a top-level constant def
+    /// A reference to a top-level constant def.
     TopVar(TopVarName),
-    /// An application of a top-level term judgment to arguments
+    /// An application of a top-level term judgment to arguments.
     TopApp(TopVarName, Vec<TmS>),
     /// Variable syntax.
     ///
@@ -287,19 +205,23 @@ pub enum TmS_ {
     Proj(TmS, FieldName, LabelSegment),
     /// Unit introduction.
     ///
-    /// Note that eta-expansion takes care of elimination for units
+    /// Note that eta-expansion takes care of elimination for units.
     Tt,
-    /// Identity morphism at an object
+    /// Identity morphism at an object.
     Id(TmS),
-    /// Composition of two morphisms
+    /// Composite of two morphisms.
     Compose(TmS, TmS),
+    /// Application of an object operation in the theory.
+    ObApp(VarName, TmS),
+    /// List of objects or morphisms.
+    List(Vec<TmS>),
     /// An opaque term.
     ///
-    /// This only appears when we quote a value
+    /// This only appears when we quote a value.
     Opaque,
-    /// A metavar
+    /// A metavar.
     ///
-    /// This only appears when we have an error in elaboration
+    /// This only appears when we have an error in elaboration.
     Meta(MetaVar),
 }
 
@@ -307,16 +229,9 @@ pub enum TmS_ {
 ///
 /// See [crate::tt] for an explanation of what total types are, and for an
 /// explanation of our approach to Rc pointers in abstract syntax trees.
-#[derive(Clone)]
+#[derive(Clone, Deref)]
+#[deref(forward)]
 pub struct TmS(Rc<TmS_>);
-
-impl Deref for TmS {
-    type Target = TmS_;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
 
 impl TmS {
     /// Smart constructor for [TmS], [TmS_::TopVar] case.
@@ -359,7 +274,17 @@ impl TmS {
         Self(Rc::new(TmS_::Compose(f, g)))
     }
 
-    /// An opaque term
+    /// Smart constructor for [TmS], [TmS_::ObApp] case.
+    pub fn ob_app(name: VarName, x: TmS) -> Self {
+        Self(Rc::new(TmS_::ObApp(name, x)))
+    }
+
+    /// Smart constructor for [TmS], [TmS_::List] case.
+    pub fn list(elems: Vec<TmS>) -> Self {
+        Self(Rc::new(TmS_::List(elems)))
+    }
+
+    /// An opaque term.
     pub fn opaque() -> Self {
         Self(Rc::new(TmS_::Opaque))
     }
@@ -368,7 +293,9 @@ impl TmS {
     pub fn meta(mv: MetaVar) -> Self {
         Self(Rc::new(TmS_::Meta(mv)))
     }
+}
 
+impl ToDoc for TmS {
     fn to_doc<'a>(&self) -> D<'a> {
         match &**self {
             TmS_::TopVar(name) => t(format!("{}", name)),
@@ -377,13 +304,13 @@ impl TmS {
             }
             TmS_::Var(_, _, label) => t(format!("{}", label)),
             TmS_::Proj(tm, _, label) => tm.to_doc() + t(format!(".{}", label)),
-            TmS_::Cons(fields) => {
-                tuple(fields.iter().map(|(_, (label, field))| {
-                    binop(":=", t(format!("{}", label)), field.to_doc())
-                }))
-            }
+            TmS_::Cons(fields) => tuple(fields.iter().map(|(_, (label, field))| {
+                binop(t(":="), t(format!("{}", label)), field.to_doc())
+            })),
             TmS_::Id(ob) => (t("@id") + s() + ob.to_doc()).parens(),
-            TmS_::Compose(f, g) => binop("·", f.to_doc(), g.to_doc()),
+            TmS_::Compose(f, g) => binop(t("·"), f.to_doc(), g.to_doc()),
+            TmS_::ObApp(name, x) => unop(t(format!("@{name}")), x.to_doc()),
+            TmS_::List(elems) => tuple(elems.iter().map(|elem| elem.to_doc())),
             TmS_::Tt => t("tt"),
             TmS_::Opaque => t("<opaque>"),
             TmS_::Meta(mv) => t(format!("?{}", mv.id)),

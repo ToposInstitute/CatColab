@@ -1,0 +1,59 @@
+.expandableTable {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.expandableTableTitle {
+    cursor: pointer;
+}
+
+.expandableTableTitle:hover {
+    text-decoration: underline;
+}
+
+.expandableTableTitle:focus-visible {
+    outline: 2px solid var(--color-button-positive-base);
+    outline-offset: 2px;
+}
+
+.expandableTableTable {
+    border-collapse: collapse;
+    width: fit-content;
+}
+
+.expandableTableTable th,
+.expandableTableTable td {
+    text-align: left;
+    padding-left: 0.7rem;
+}
+
+.expandableTableTable td * {
+    margin: 0;
+}
+
+.expandableTableTable th {
+    font-weight: 600;
+}
+
+.expandableTableToggle {
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    padding: 0.25rem 0;
+    font-size: 0.875rem;
+    text-align: left;
+    font-family: inherit;
+    border-top: 1px solid var(--color-menu-separator);
+    transition: color 0.2s ease;
+}
+
+.expandableTableToggle:hover {
+    text-decoration: underline;
+}
+
+.expandableTableToggle:focus-visible {
+    outline: 2px solid var(--color-button-positive-base);
+    outline-offset: 2px;
+    border-radius: 2px;
+}

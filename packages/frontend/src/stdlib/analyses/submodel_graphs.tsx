@@ -2,12 +2,12 @@ import ChevronLeft from "lucide-solid/icons/chevron-left";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import { createMemo, Show } from "solid-js";
 
-import { Foldable, FormGroup, IconButton, InputField } from "catcolab-ui-components";
+import { BlockTitle, FormGroup, IconButton, InputField } from "catcolab-ui-components";
 import type { MotifOccurrence } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
-import { GraphvizSVG } from "../../visualization";
+import { GraphvizSVG, graphToViz } from "../../visualization";
 import type { MotifFinder, MotifFindingAnalysisContent } from "./checker_types";
-import { modelToGraphviz } from "./model_graph";
+import { modelToGraph } from "./model_graph";
 
 import "./submodel_graphs.css";
 
@@ -63,49 +63,47 @@ export default function SubmodelGraphs(
         const model = props.liveModel.elaboratedModel();
         const submodel = submodels()[index()];
         if (theory && model && submodel) {
-            return modelToGraphviz(
-                model,
-                theory,
-                undefined,
-                submodel.obGenerators,
-                submodel.morGenerators,
-            );
+            return modelToGraph(model, theory, submodel.obGenerators, submodel.morGenerators);
         }
     };
 
     return (
         <div class="submodel-graphs">
-            <Foldable title={props.title} header={indexButtons}>
-                <FormGroup compact>
-                    <InputField
-                        type="checkbox"
-                        label="Limit length of paths"
-                        checked={props.content.maxPathLength != null}
-                        onChange={(evt) =>
-                            props.changeContent((content) => {
-                                content.maxPathLength = evt.currentTarget.checked ? 1 : null;
-                            })
-                        }
-                    />
-                    <Show when={props.content.maxPathLength != null}>
+            <BlockTitle
+                title={props.title}
+                actions={indexButtons}
+                settingsPane={
+                    <FormGroup compact>
                         <InputField
-                            type="number"
-                            min="0"
-                            label="Maximum length of path"
-                            value={props.content.maxPathLength ?? ""}
+                            type="checkbox"
+                            label="Limit length of paths"
+                            checked={props.content.maxPathLength != null}
                             onChange={(evt) =>
                                 props.changeContent((content) => {
-                                    content.maxPathLength = evt.currentTarget.valueAsNumber;
+                                    content.maxPathLength = evt.currentTarget.checked ? 1 : null;
                                 })
                             }
                         />
-                    </Show>
-                </FormGroup>
-            </Foldable>
+                        <Show when={props.content.maxPathLength != null}>
+                            <InputField
+                                type="number"
+                                min="0"
+                                label="Maximum length of path"
+                                value={props.content.maxPathLength ?? ""}
+                                onChange={(evt) =>
+                                    props.changeContent((content) => {
+                                        content.maxPathLength = evt.currentTarget.valueAsNumber;
+                                    })
+                                }
+                            />
+                        </Show>
+                    </FormGroup>
+                }
+            />
             <Show when={activeGraph()}>
                 {(graph) => (
                     <GraphvizSVG
-                        graph={graph()}
+                        graph={graphToViz(graph())}
                         options={{
                             engine: "dot",
                         }}

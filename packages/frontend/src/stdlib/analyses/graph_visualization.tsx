@@ -1,24 +1,29 @@
-import type * as Viz from "@viz-js/viz";
 import { type ComponentProps, createSignal, Show } from "solid-js";
 
-import { Foldable } from "catcolab-ui-components";
+import { BlockTitle } from "catcolab-ui-components";
 import {
     DownloadSVGButton,
-    GraphLayoutConfig,
     GraphLayoutConfigForm,
-    GraphvizSVG,
+    type GraphSpec,
+    GraphVisualization,
 } from "../../visualization";
+import { defaultElkLayoutOptions, defaultGraphvizAttributes } from "../graph_styles";
 
 import "./graph_visualization.css";
+
+type GraphVisualizationProps = ComponentProps<typeof GraphVisualization>;
 
 /** Component for a graph visualization analysis.
 
 Used to visualize, for example, the generating graphs of models and diagrams.
 See `ModelGraph` and `DiagramGraph`.
  */
-export function GraphVisualization(
+export function GraphVisualizationAnalysis(
     props: ComponentProps<typeof GraphLayoutConfigForm> & {
-        graph?: Viz.Graph;
+        graph?: GraphSpec.Graph;
+        renderer?: GraphVisualizationProps["renderer"];
+        elkLayoutOptions?: GraphVisualizationProps["elkLayoutOptions"];
+        graphvizAttributes?: GraphVisualizationProps["graphvizAttributes"];
         title?: string;
     },
 ) {
@@ -35,15 +40,27 @@ export function GraphVisualization(
 
     return (
         <div class="graph-visualization-container">
-            <Foldable title={title()} header={header()}>
-                <GraphLayoutConfigForm config={props.config} changeConfig={props.changeConfig} />
-            </Foldable>
+            <BlockTitle
+                title={title()}
+                actions={header()}
+                settingsPane={
+                    <GraphLayoutConfigForm
+                        config={props.config}
+                        changeConfig={props.changeConfig}
+                    />
+                }
+            />
             <div class="graph-visualization">
                 <Show when={props.graph}>
                     {(graph) => (
-                        <GraphvizSVG
+                        <GraphVisualization
                             graph={graph()}
-                            options={GraphLayoutConfig.graphvizOptions(props.config)}
+                            config={props.config}
+                            elkLayoutOptions={props.elkLayoutOptions ?? defaultElkLayoutOptions}
+                            graphvizAttributes={
+                                props.graphvizAttributes ?? defaultGraphvizAttributes
+                            }
+                            renderer={props.renderer}
                             ref={setSvgRef}
                         />
                     )}

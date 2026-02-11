@@ -79,7 +79,15 @@ with lib;
       text = ''
         echo "Running backupdb script..."
 
-        ${pkgs.util-linux}/bin/runuser -u catcolab -- ${getExe backupdbScript}
+        if ! ${pkgs.systemd}/bin/systemctl is-active postgresql.service >/dev/null 2>&1; then
+          echo "PostgreSQL is not running. Skipping backup."
+          exit 0
+        fi
+
+        echo "PostgreSQL is running, proceeding with backup..."
+        ${pkgs.util-linux}/bin/runuser -u catcolab -- ${pkgs.bash}/bin/bash -c '
+          ${getExe backupdbScript}
+        '
       '';
     };
 

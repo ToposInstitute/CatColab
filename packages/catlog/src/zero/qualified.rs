@@ -1,6 +1,4 @@
 //! Qualified names and labels.
-//!
-//! TODO
 
 use std::fmt::Display;
 use std::{collections::HashMap, hash::Hash};
@@ -16,6 +14,7 @@ use serde::{self, Deserialize, Serialize};
 use tsify::Tsify;
 
 use super::column::{Column, IndexedHashColumn, Mapping, MutMapping};
+use crate::tt::util::pretty::*;
 
 /// A segment in a [qualified name](QualifiedName).
 ///
@@ -77,7 +76,7 @@ impl NameSegment {
 ///
 /// A qualified name is a sequence of segments that unambiguously names an element
 /// in a set, or a family of sets, or a family of family of sets, and so on. For
-/// example, a qualified name with three segments can be constructed as
+/// example, a qualified name with three segments can be constructed as:
 ///
 /// ```
 /// # use catlog::zero::qualified::*;
@@ -145,6 +144,12 @@ impl From<Ustr> for QualifiedName {
 impl From<&str> for QualifiedName {
     fn from(name: &str) -> Self {
         Self::single(name.into())
+    }
+}
+
+impl ToDoc for QualifiedName {
+    fn to_doc<'a>(&self) -> D<'a> {
+        t(format!("{self}"))
     }
 }
 
@@ -341,6 +346,12 @@ impl From<usize> for QualifiedLabel {
     }
 }
 
+impl ToDoc for QualifiedLabel {
+    fn to_doc<'a>(&self) -> D<'a> {
+        t(format!("{self}"))
+    }
+}
+
 impl Display for QualifiedLabel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         fmt_qualified(
@@ -362,7 +373,7 @@ impl QualifiedLabel {
         self.0.iter()
     }
 
-    /// Add another segment onto the end
+    /// Add another segment onto the end.
     pub fn snoc(&self, segment: LabelSegment) -> Self {
         let mut segments = self.0.clone();
         segments.push(segment);
@@ -421,7 +432,15 @@ impl Namespace {
 
     /// Sets the label segment associated with a UUID.
     pub fn set_label(&mut self, uuid: Uuid, label: LabelSegment) {
-        self.uuid_labels.as_mut().expect("Should be a UUID namespace").set(uuid, label);
+        let uuid_labels = self.uuid_labels.as_mut().expect("Should be a UUID namespace");
+        if let LabelSegment::Text(s) = &label
+            && s.is_empty()
+        {
+            // Treat an empty label as no label at all.
+            uuid_labels.unset(&uuid);
+        } else {
+            uuid_labels.set(uuid, label);
+        }
     }
 
     /// Tries to get a human-readable label for a name.
@@ -441,6 +460,28 @@ impl Namespace {
             })
             .collect();
         Some(labels?.into())
+    }
+
+    /// Gets a human-readable string label for a name.
+    ///
+    /// Unlike [`label`](Self::label), this method is infallible: UUIDs without
+    /// a corresponding label are just displayed directly. That makes this
+    /// method suitable for debugging and text dumps but not for situations when
+    /// a user should never see a UUID.
+    pub fn label_string(&self, name: &QualifiedName) -> String {
+        let mut namespace = Some(self);
+        let labels = name.segments().map(|segment| {
+            let label = match segment {
+                NameSegment::Uuid(uuid) => namespace
+                    .and_then(|ns| ns.uuid_labels.as_ref())
+                    .and_then(|ul| ul.apply_to_ref(uuid))
+                    .unwrap_or_else(|| LabelSegment::Text(uuid.braced().to_string().into())),
+                NameSegment::Text(name) => LabelSegment::Text(*name),
+            };
+            namespace = namespace.and_then(|ns| ns.inner.get(segment));
+            label
+        });
+        QualifiedLabel(labels.collect()).to_string()
     }
 
     /// Tries to get a name corresponding to a label.
@@ -520,17 +561,18 @@ mod tests {
 
     #[test]
     fn namespaces() {
-        let mut child = Namespace::new_for_uuid();
-        child.set_label(UUID1, "bar".into());
-        child.set_label(UUID2, "baz".into());
+        let mut child1 = Namespace::new_for_uuid();
+        child1.set_label(UUID1, "bar".into());
+        child1.set_label(UUID2, "baz".into());
         let mut root = Namespace::new_for_uuid();
-        root.add_inner(UUID1.into(), child);
+        root.add_inner(UUID1.into(), child1);
         root.add_inner(UUID2.into(), Namespace::new_for_text());
         root.set_label(UUID1, "foo".into());
         root.set_label(UUID2, "textual".into());
 
         let (qual_name, qual_label) = (name([UUID1, UUID2]), label(["foo", "baz"]));
         assert_eq!(root.label(&qual_name), Some(qual_label.clone()));
+        assert_eq!(root.label_string(&qual_name), "foo.baz");
         assert_eq!(root.name_with_label(&qual_label), NameLookup::Unique(qual_name));
 
         let qual_name =
@@ -539,7 +581,9 @@ mod tests {
         assert_eq!(root.label(&qual_name), Some(qual_label.clone()));
         assert_eq!(root.name_with_label(&qual_label), NameLookup::Unique(qual_name));
 
-        assert_eq!(root.label(&name([UUID2, UUID1])), None);
+        let qual_name = name([UUID2, UUID1]);
+        assert_eq!(root.label(&qual_name), None);
+        assert_eq!(root.label_string(&qual_name), format!("textual.{{{UUID1}}}"));
         assert_eq!(root.name_with_label(&label(["bar", "foo"])), NameLookup::None);
 
         let mut ambiguous = Namespace::new_for_uuid();

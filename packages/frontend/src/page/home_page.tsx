@@ -6,8 +6,8 @@ import ExternalLink from "lucide-solid/icons/external-link";
 import FilePlus from "lucide-solid/icons/file-plus";
 import Files from "lucide-solid/icons/files";
 import Github from "lucide-solid/icons/github";
+import InfoIcon from "lucide-solid/icons/info";
 import LogInIcon from "lucide-solid/icons/log-in";
-import NotebookPen from "lucide-solid/icons/notebook-pen";
 import { useAuth, useFirebaseApp } from "solid-firebase";
 import { createSignal, Match, Show, Switch } from "solid-js";
 
@@ -101,9 +101,9 @@ export default function HomePage() {
                                     <div class="resources-list">
                                         <a href="/help/" class="resource-link">
                                             <span class="resource-icon">
-                                                <NotebookPen />
+                                                <InfoIcon />
                                             </span>
-                                            <span>Help pages</span>
+                                            <span>Help and documentation</span>
                                         </a>
                                         <a href="/help/guides/example-models" class="resource-link">
                                             <span class="resource-icon">

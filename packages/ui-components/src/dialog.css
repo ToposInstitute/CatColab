@@ -8,6 +8,7 @@
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
+    max-width: 80vw;
 
     &.popup {
         padding: 1rem;
@@ -23,6 +24,11 @@
 
 [data-corvu-dialog-label] {
     font-size: larger;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
 }
 
 [data-corvu-dialog-close] {

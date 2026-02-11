@@ -1,21 +1,20 @@
-use axum::extract::Request;
+//! Main entry point for the CatColab backend.
 
-use axum::middleware::{Next, from_fn_with_state};
+use axum::extract::Request;
+use axum::extract::ws::WebSocketUpgrade;
+use axum::middleware::from_fn_with_state;
 use axum::{Router, routing::get};
 use axum::{extract::State, response::IntoResponse};
 use clap::{Parser, Subcommand};
 use firebase_auth::FirebaseAuth;
-use http::StatusCode;
-use socketioxide::SocketIo;
-use socketioxide::layer::SocketIoLayer;
 use sqlx::postgres::PgPoolOptions;
-use sqlx::{PgPool, Postgres};
 use sqlx_migrator::cli::MigrationCommand;
 use sqlx_migrator::migrator::{Migrate, Migrator};
 use sqlx_migrator::{Info, Plan};
+use std::collections::HashSet;
 use std::path::Path;
 use std::sync::Arc;
-use tokio::sync::watch;
+use tokio::sync::RwLock;
 use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
 use tracing::{error, info};
@@ -23,23 +22,15 @@ use tracing_subscriber::filter::{EnvFilter, LevelFilter};
 
 mod app;
 mod auth;
+mod automerge_json;
 mod document;
 mod rpc;
-mod socket;
+mod storage;
 mod user;
-
-use app::AppStatus;
 
 /// Port for the web server providing the RPC API.
 fn web_port() -> String {
     dotenvy::var("PORT").unwrap_or("8000".to_string())
-}
-
-/// Port for internal communication with the Automerge doc server.
-///
-/// This port should *not* be open to the public.
-fn automerge_io_port() -> String {
-    dotenvy::var("AUTOMERGE_IO_PORT").unwrap_or("3000".to_string())
 }
 
 #[derive(Parser, Debug)]
@@ -52,10 +43,12 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Command {
-    /// Run database migrations (proxied to sqlx_migrator)
+    /// Run database migrations (proxied to sqlx_migrator).
     Migrator(MigrationCommand),
-    /// Start the web server (default)
+    /// Start the web server (default).
     Serve,
+    /// Generate TypeScript bindings for the RPC API.
+    GenerateBindings,
 }
 
 #[tokio::main]
@@ -87,14 +80,42 @@ async fn main() {
             return;
         }
 
-        Command::Serve => {
-            let (io_layer, io) = SocketIo::new_layer();
+        Command::GenerateBindings => {
+            use qubit::TypeScript;
 
-            let (status_tx, status_rx) = watch::channel(AppStatus::Starting);
+            let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("pkg")
+                .join("src")
+                .join("index.ts");
+
+            rpc::router()
+                .as_codegen()
+                .write_type(&path, TypeScript::new())
+                .expect("Failed to write TypeScript bindings");
+
+            info!("Successfully generated TypeScript bindings to: {}", path.display());
+            return;
+        }
+
+        Command::Serve => {
+            info!("Applying database migrations...");
+            let mut conn = db.acquire().await.expect("Failed to acquire DB connection");
+            migrator
+                .run(&mut conn, &Plan::apply_all())
+                .await
+                .expect("Failed to run migrations");
+            info!("Migrations complete");
+
+            let repo = samod::Repo::builder(tokio::runtime::Handle::current())
+                .with_storage(storage::PostgresStorage::new(db.clone()))
+                .with_announce_policy(|_doc_id, _peer_id| false)
+                .load()
+                .await;
+
             let state = app::AppState {
-                automerge_io: io,
                 db: db.clone(),
-                app_status: status_rx.clone(),
+                repo,
+                active_listeners: Arc::new(RwLock::new(HashSet::new())),
             };
 
             // We need to wrap FirebaseAuth in an Arc because if it's ever dropped the process which updates it's
@@ -109,51 +130,10 @@ async fn main() {
                 .await,
             );
 
-            socket::setup_automerge_socket(state.clone());
+            // Notify systemd we're ready
+            sd_notify::notify(false, &[sd_notify::NotifyState::Ready]).ok();
 
-            tokio::try_join!(
-                run_migrator_apply(db.clone(), migrator, status_tx.clone()),
-                run_web_server(state.clone(), firebase_auth.clone()),
-                run_automerge_socket(io_layer),
-            )
-            .unwrap();
-        }
-    }
-}
-
-async fn run_migrator_apply(
-    db: PgPool,
-    migrator: Migrator<Postgres>,
-    status_tx: watch::Sender<AppStatus>,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    status_tx.send(AppStatus::Migrating)?;
-    info!("Applying database migrations...");
-
-    let mut conn = db.acquire().await?;
-    migrator.run(&mut conn, &Plan::apply_all()).await.unwrap();
-
-    status_tx.send(AppStatus::Running)?;
-    sd_notify::notify(false, &[sd_notify::NotifyState::Ready])?;
-    info!("Migrations complete");
-
-    Ok(())
-}
-
-async fn app_status_gate(
-    State(status_rx): State<watch::Receiver<AppStatus>>,
-    req: Request,
-    next: Next,
-) -> impl IntoResponse {
-    // Combining the following 2 lines will anger the rust gods
-    let status = status_rx.borrow().clone();
-    match status {
-        AppStatus::Running => next.run(req).await,
-        AppStatus::Failed(reason) => {
-            (StatusCode::INTERNAL_SERVER_ERROR, format!("App failed to start: {reason}"))
-                .into_response()
-        }
-        AppStatus::Starting | AppStatus::Migrating => {
-            (StatusCode::SERVICE_UNAVAILABLE, "Server not ready yet").into_response()
+            run_web_server(state.clone(), firebase_auth.clone()).await.unwrap();
         }
     }
 }
@@ -176,13 +156,17 @@ async fn auth_middleware(
     next.run(req).await
 }
 
-async fn status_handler(State(status_rx): State<watch::Receiver<AppStatus>>) -> String {
-    match status_rx.borrow().clone() {
-        AppStatus::Starting => "Starting".into(),
-        AppStatus::Migrating => "Migrating".into(),
-        AppStatus::Running => "Running".into(),
-        AppStatus::Failed(reason) => format!("Failed: {reason}"),
-    }
+async fn status_handler() -> &'static str {
+    "Running"
+}
+
+async fn websocket_handler(
+    ws: WebSocketUpgrade,
+    State(repo): State<samod::Repo>,
+) -> axum::response::Response {
+    ws.on_upgrade(|socket| async move {
+        repo.accept_axum(socket).expect("Failed to accept WebSocket connection");
+    })
 }
 
 use axum::routing::get_service;
@@ -196,20 +180,24 @@ async fn run_web_server(
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await?;
 
     let rpc_router = rpc::router();
-    let (qubit_service, qubit_handle) = rpc_router.to_service(state.clone());
+    let (qubit_service, qubit_handle) = rpc_router.as_rpc(state.clone()).into_service();
 
     let rpc_with_mw = ServiceBuilder::new()
-        .layer(from_fn_with_state(state.app_status.clone(), app_status_gate))
-        .layer(from_fn_with_state(firebase_auth, auth_middleware))
+        .layer(from_fn_with_state(firebase_auth.clone(), auth_middleware))
         .service(qubit_service);
 
-    // NOTE: Currently nothing is using the /status endpoint. It will likely be used in the future by
-    // tests.
-    let status_router = Router::new()
-        .route("/status", get(status_handler))
-        .with_state(state.app_status.clone());
+    let samod_router = Router::new()
+        .layer(from_fn_with_state(firebase_auth, auth_middleware))
+        .route("/repo-ws", get(websocket_handler))
+        .with_state(state.repo.clone());
 
-    let mut app = Router::new().merge(status_router).nest_service("/rpc", rpc_with_mw);
+    // used by tests to tell when the backend is ready
+    let status_router = Router::new().route("/status", get(status_handler));
+
+    let mut app = Router::new()
+        .merge(status_router)
+        .nest_service("/rpc", rpc_with_mw)
+        .merge(samod_router);
 
     if let Some(spa_dir) = spa_directory() {
         let index = Path::new(&spa_dir).join("index.html");
@@ -217,7 +205,7 @@ async fn run_web_server(
             get_service(ServeDir::new(&spa_dir).not_found_service(ServeFile::new(index)));
 
         info!("Serving frontend from directory: {spa_dir}");
-        app = app.nest_service("/", spa_service);
+        app = app.fallback_service(spa_service);
     } else {
         info!("frontend directory not found; keeping default text route at /");
         app = app.route("/", get(|| async { "Hello! The CatColab server is running" }));
@@ -243,16 +231,6 @@ fn spa_directory() -> Option<String> {
             return Some(candidate);
         }
     }
-    None
-}
 
-async fn run_automerge_socket(
-    io_layer: SocketIoLayer,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let port = automerge_io_port();
-    let listener = tokio::net::TcpListener::bind(format!("localhost:{port}")).await?;
-    let app = Router::new().layer(io_layer);
-    info!("Automerge socket listening at port {port}");
-    axum::serve(listener, app).await?;
-    Ok(())
+    None
 }

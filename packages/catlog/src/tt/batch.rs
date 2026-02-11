@@ -1,39 +1,26 @@
-//! Batch elaboration for doublett
+//! Batch elaboration for DoubleTT.
+
 use std::cell::{Ref, RefCell, RefMut};
 use std::fmt::Write;
 use std::ops::DerefMut;
 use std::time::{Duration, Instant};
 use std::{fs, io};
 
-use crate::tt::*;
-use crate::zero::NameSegment;
-
-use fnotation::parser::Prec;
-use fnotation::{FNtnTop, ParseConfig};
+use fnotation::FNtnTop;
 use scopeguard::guard;
 use tattle::display::SourceInfo;
 use tattle::{Reporter, declare_error};
-use text_elab::*;
-use toplevel::*;
 
-const PARSE_CONFIG: ParseConfig = ParseConfig::new(
-    &[
-        (":", Prec::nonassoc(20)),
-        (":=", Prec::nonassoc(10)),
-        ("&", Prec::lassoc(40)),
-        ("*", Prec::lassoc(60)),
-    ],
-    &[":", ":=", "&", "Unit", "Id", "*"],
-    &["type", "def", "syn", "chk", "norm", "generate", "set_theory"],
-);
+use super::{text_elab::*, theory::std_theories, toplevel::*};
+use crate::zero::NameSegment;
 
 declare_error!(TOP_ERROR, "top", "an error at the top-level");
 
-/// An enum to configure the output of batch processing
+/// An enum to configure the output of batch processing.
 pub enum BatchOutput {
-    /// Snapshot mode: save to string
+    /// Snapshot mode: save to string.
     Snapshot(RefCell<String>),
-    /// Interactive mode: print to console
+    /// Interactive mode: print to console.
     Interactive,
 }
 
@@ -135,8 +122,7 @@ impl BatchOutput {
         }
     }
 
-    #[allow(unused)]
-    /// Get the result of a snapshot test
+    /// Get the result of a snapshot test.
     pub fn result<'a>(&'a self) -> Ref<'a, String> {
         match self {
             BatchOutput::Snapshot(out) => out.borrow(),
@@ -145,7 +131,7 @@ impl BatchOutput {
     }
 }
 
-/// Read from path and elaborate
+/// Read from path and elaborate.
 pub fn run(path: &str, output: &BatchOutput) -> io::Result<bool> {
     let src = match fs::read_to_string(path) {
         Ok(s) => s,
@@ -157,7 +143,7 @@ pub fn run(path: &str, output: &BatchOutput) -> io::Result<bool> {
     elaborate(&src, path, output)
 }
 
-/// Run the doublett elaborator in batch mode
+/// Run the DoubleTT elaborator in batch mode.
 pub fn elaborate(src: &str, path: &str, output: &BatchOutput) -> io::Result<bool> {
     let reporter = Reporter::new();
     let source_info = SourceInfo::new(Some(path), src);
@@ -166,7 +152,7 @@ pub fn elaborate(src: &str, path: &str, output: &BatchOutput) -> io::Result<bool
         output.report(&reporter, &source_info);
     });
     let mut succeeded = true;
-    let _ = PARSE_CONFIG.with_parsed_top(src, reporter.clone(), |topntns| {
+    let _ = TT_PARSE_CONFIG.with_parsed_top(src, reporter.clone(), |topntns| {
         let mut toplevel = Toplevel::new(std_theories());
         let mut topelab = TopElaborator::new(reporter.clone());
         for topntn in topntns.iter() {
@@ -216,7 +202,8 @@ pub fn elaborate(src: &str, path: &str, output: &BatchOutput) -> io::Result<bool
 fn snapshot_examples() {
     use similar::{ChangeTag, TextDiff};
     let mut succeeded = true;
-    for f in fs::read_dir("examples").unwrap() {
+    let base_path = std::path::Path::new("examples/tt/text");
+    for f in fs::read_dir(base_path).unwrap() {
         let Ok(f) = f else {
             continue;
         };
@@ -227,7 +214,7 @@ fn snapshot_examples() {
         }
         let output = BatchOutput::Snapshot(RefCell::new(String::new()));
         succeeded = run(f.path().to_str().unwrap(), &output).unwrap() && succeeded;
-        let golden_path = format!("examples/{}.snapshot", fname);
+        let golden_path = base_path.join(format!("{fname}.snapshot"));
         if matches!(std::env::var("UPDATE_SNAPSHOT"), Ok(s) if &s == "1") {
             fs::write(&golden_path, output.result().as_str()).unwrap();
         } else {
@@ -236,7 +223,7 @@ fn snapshot_examples() {
             let result_str = result.as_str();
             if golden != result_str {
                 succeeded = false;
-                println!("failed snapshot test for examples/{fname}:");
+                println!("failed snapshot test for {}:", base_path.join(fname).display());
                 let diff = TextDiff::from_lines(golden.as_str(), result_str);
 
                 for change in diff.iter_all_changes() {

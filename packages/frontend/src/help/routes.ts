@@ -3,7 +3,7 @@ import { lazy } from "solid-js";
 
 import { stdTheories } from "../stdlib";
 import { lazyMdx } from "../util/mdx";
-import { guidesList } from "./guides";
+import { guidesList } from "./guides_list";
 
 const theoryWithIdFilter = {
     id: (id: string) => stdTheories.has(id),
@@ -16,11 +16,11 @@ const existingGuideFilter = {
 export const helpRoutes: RouteDefinition[] = [
     {
         path: "/",
-        component: lazyMdx(() => import("./overview.mdx")),
+        component: lazyMdx(() => import("./overview.mdx"), "Help and documentation"),
     },
     {
         path: "/credits",
-        component: lazyMdx(() => import("./credits.mdx")),
+        component: lazyMdx(() => import("./credits.mdx"), "Credits"),
     },
     {
         path: "/guides",

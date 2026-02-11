@@ -10,6 +10,7 @@ export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): 
     return new Theory({
         ...theoryMeta,
         theory: thCategoryLinks.theory(),
+        inclusions: ["primitive-signed-stock-flow"],
         onlyFreeModels: true,
         modelTypes: [
             {
@@ -55,6 +56,11 @@ export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): 
                 transitionType: {
                     tag: "Hom",
                     content: { tag: "Basic", content: "Object" },
+                },
+            }),
+            analyses.massActionEquations({
+                getEquations(model) {
+                    return thCategoryLinks.massActionEquations(model);
                 },
             }),
         ],

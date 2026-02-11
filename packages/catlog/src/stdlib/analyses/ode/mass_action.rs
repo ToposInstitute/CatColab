@@ -43,6 +43,25 @@ pub struct MassActionProblemData {
     pub duration: f32,
 }
 
+/// Data defining the stochastic mass-action ODE problem.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(
+    feature = "serde-wasm",
+    tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
+)]
+pub struct StochasticMassActionProblemData {
+    /// Map from morphism IDs to rate coefficients (nonnegative reals).
+    rates: HashMap<QualifiedName, f32>,
+
+    /// Map from object IDs to initial values (nonnegative integers).
+    #[cfg_attr(feature = "serde", serde(rename = "initialValues"))]
+    pub initial_values: HashMap<QualifiedName, u32>,
+
+    /// Duration of simulation.
+    pub duration: f32,
+}
+
 /// Stochastic mass-action analysis of a model.
 pub struct StochasticMassActionAnalysis {
     /// Reaction network for the analysis.
@@ -51,8 +70,8 @@ pub struct StochasticMassActionAnalysis {
     /// Map from object IDs to variable indices.
     pub variable_index: IndexMap<QualifiedName, usize>,
 
-    /// Map from object IDs to initial values.
-    pub initial_values: HashMap<QualifiedName, f32>,
+    /// Map from object IDs to initial values (nonnegative integers).
+    pub initial_values: HashMap<QualifiedName, u32>,
 
     /// Duration of simulation.
     pub duration: f32,
@@ -67,7 +86,7 @@ impl StochasticMassActionAnalysis {
             .keys()
             .map(|id| {
                 let initial = self.initial_values.get(id).copied().unwrap_or_default();
-                (id.clone(), vec![initial])
+                (id.clone(), vec![initial as f32])
             })
             .collect();
         for t in 0..(self.duration as usize) {
@@ -141,20 +160,11 @@ impl PetriNetMassActionAnalysis {
         sys.normalize()
     }
 
-    /// Creates a mass-action system with numerical rate coefficients.
-    pub fn build_numerical_system(
-        &self,
-        model: &ModalDblModel,
-        data: MassActionProblemData,
-    ) -> ODEAnalysis<NumericalPolynomialSystem<i8>> {
-        into_numerical_system(self.build_system(model), data)
-    }
-
     /// Creates a stochastic mass-action system.
     pub fn build_stochastic_system(
         &self,
         model: &ModalDblModel,
-        data: MassActionProblemData,
+        data: StochasticMassActionProblemData,
     ) -> StochasticMassActionAnalysis {
         let ob_generators: Vec<_> = model.ob_generators_with_type(&self.place_ob_type).collect();
 
@@ -294,19 +304,19 @@ impl StockFlowMassActionAnalysis {
         }
         sys
     }
-
-    /// Creates a mass-action system with numerical rate coefficients.
-    pub fn build_numerical_system(
-        &self,
-        model: &DiscreteTabModel,
-        data: MassActionProblemData,
-    ) -> ODEAnalysis<NumericalPolynomialSystem<i8>> {
-        into_numerical_system(self.build_system(model), data)
-    }
 }
 
-fn into_numerical_system(
+/// Substitutes numerical rate coefficients into a symbolic mass-action system.
+pub fn extend_mass_action_scalars(
     sys: PolynomialSystem<QualifiedName, Parameter<QualifiedName>, i8>,
+    data: &MassActionProblemData,
+) -> PolynomialSystem<QualifiedName, f32, i8> {
+    sys.extend_scalars(|poly| poly.eval(|flow| data.rates.get(flow).copied().unwrap_or_default()))
+}
+
+/// Builds the numerical ODE analysis for a mass-action system whose scalars have been substituted.
+pub fn into_mass_action_analysis(
+    sys: PolynomialSystem<QualifiedName, f32, i8>,
     data: MassActionProblemData,
 ) -> ODEAnalysis<NumericalPolynomialSystem<i8>> {
     let ob_index: IndexMap<_, _> =
@@ -318,11 +328,9 @@ fn into_numerical_system(
         .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
     let x0 = DVector::from_iterator(n, initial_values);
 
-    let sys = sys
-        .extend_scalars(|poly| poly.eval(|flow| data.rates.get(flow).copied().unwrap_or_default()))
-        .to_numerical();
+    let num_sys = sys.to_numerical();
+    let problem = ODEProblem::new(num_sys, x0).end_time(data.duration);
 
-    let problem = ODEProblem::new(sys, x0).end_time(data.duration);
     ODEAnalysis::new(problem, ob_index)
 }
 
@@ -332,6 +340,7 @@ mod tests {
     use std::rc::Rc;
 
     use super::*;
+    use crate::simulate::ode::LatexEquation;
     use crate::stdlib::{models::*, theories::*};
 
     #[test]
@@ -340,7 +349,7 @@ mod tests {
         let model = backward_link(th);
         let sys = StockFlowMassActionAnalysis::default().build_system(&model);
         let expected = expect!([r#"
-            dx = ((-1) f) x y
+            dx = (-f) x y
             dy = f x y
         "#]);
         expected.assert_eq(&sys.to_string());
@@ -352,7 +361,7 @@ mod tests {
         let model = positive_backward_link(th);
         let sys = StockFlowMassActionAnalysis::default().build_system(&model);
         let expected = expect!([r#"
-            dx = ((-1) f) x y
+            dx = (-f) x y
             dy = f x y
         "#]);
         expected.assert_eq(&sys.to_string());
@@ -364,7 +373,7 @@ mod tests {
         let model = negative_backward_link(th);
         let sys = StockFlowMassActionAnalysis::default().build_system(&model);
         let expected = expect!([r#"
-            dx = ((-1) f) x y^{-1}
+            dx = (-f) x y^{-1}
             dy = f x y^{-1}
         "#]);
         expected.assert_eq(&sys.to_string());
@@ -376,9 +385,9 @@ mod tests {
         let model = catalyzed_reaction(th);
         let sys = PetriNetMassActionAnalysis::default().build_system(&model);
         let expected = expect!([r#"
-            dc = 0
-            dx = ((-1) f) c x
+            dx = (-f) c x
             dy = f c x
+            dc = 0
         "#]);
         expected.assert_eq(&sys.to_string());
     }
@@ -387,17 +396,35 @@ mod tests {
     fn sir_petri_stochastic_dynamics() {
         let th = Rc::new(th_sym_monoidal_category());
         let model = sir_petri(th);
-        let data = MassActionProblemData {
-            rates: HashMap::from_iter([(name("infection"), 1e-5f32), (name("recovery"), 1e-2f32)]),
+        let data = StochasticMassActionProblemData {
+            rates: HashMap::from_iter([(name("infect"), 1e-5f32), (name("recover"), 1e-2f32)]),
             initial_values: HashMap::from_iter([
-                (name("S"), 1e5f32),
-                (name("I"), 1f32),
-                (name("R"), 0f32),
+                (name("S"), 1e5 as u32),
+                (name("I"), 1),
+                (name("R"), 0),
             ]),
             duration: 10f32,
         };
         let sys = PetriNetMassActionAnalysis::default().build_stochastic_system(&model, data);
         assert_eq!(2, sys.problem.nb_reactions());
         assert_eq!(3, sys.problem.nb_species());
+    }
+
+    #[test]
+    fn to_latex() {
+        let th = Rc::new(th_category_links());
+        let model = backward_link(th);
+        let sys = StockFlowMassActionAnalysis::default().build_system(&model);
+        let expected = vec![
+            LatexEquation {
+                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string(),
+                rhs: "(-f) x y".to_string(),
+            },
+            LatexEquation {
+                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string(),
+                rhs: "f x y".to_string(),
+            },
+        ];
+        assert_eq!(expected, sys.to_latex_equations());
     }
 }

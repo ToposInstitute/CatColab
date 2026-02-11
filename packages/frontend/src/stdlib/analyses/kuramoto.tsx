@@ -1,6 +1,7 @@
 import invariant from "tiny-invariant";
 
 import {
+    BlockTitle,
     type ColumnSchema,
     createNumericalColumn,
     FixedTableEditor,
@@ -136,7 +137,8 @@ export default function Kuramoto(
 
     return (
         <div class="simulation">
-            <Foldable title={props.title}>
+            <BlockTitle title={props.title} />
+            <Foldable title="Parameters" defaultExpanded>
                 <div class="parameters">
                     <FixedTableEditor
                         rows={elaboratedModel()?.obGenerators() ?? []}

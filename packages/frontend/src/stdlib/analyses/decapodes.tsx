@@ -3,6 +3,7 @@ import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import { createMemo, For, Match, Show, Switch } from "solid-js";
 
 import {
+    BlockTitle,
     type ColumnSchema,
     createNumericalColumn,
     ErrorAlert,
@@ -202,7 +203,8 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
 
     return (
         <div class="simulation">
-            <Foldable title="Simulation" header={RestartOrRerunButton()}>
+            <BlockTitle title="Simulation" actions={RestartOrRerunButton()} />
+            <Foldable title="Parameters" defaultExpanded>
                 <Show when={options()}>{(options) => DomainConfig(options().domains)}</Show>
                 <div class="parameters">
                     <FixedTableEditor rows={variables()} schema={variableSchema} />

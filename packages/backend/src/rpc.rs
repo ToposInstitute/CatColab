@@ -4,7 +4,6 @@ use qubit::{Extensions, FromRequestExtensions, Router, RpcError, handler};
 use serde::Serialize;
 use serde_json::Value;
 use tracing::debug;
-use ts_rs::TS;
 use uuid::Uuid;
 
 use crate::app::Paginated;
@@ -49,19 +48,15 @@ async fn get_doc(ctx: AppCtx, ref_id: Uuid) -> RpcResult<RefDoc> {
         let is_deleted = deleted_at.is_some();
 
         if max_level >= Some(PermissionLevel::Write) {
-            let doc_id = doc::doc_id(ctx.state, ref_id).await?;
+            let doc_id = doc::get_doc_id(ctx.state, ref_id).await?;
             Ok(RefDoc::Live {
-                doc_id,
+                doc_id: doc_id.to_string(),
                 is_deleted,
                 permissions,
             })
         } else if max_level >= Some(PermissionLevel::Read) {
             let binary_data = doc::head_snapshot_binary(ctx.state, ref_id).await?;
-            Ok(RefDoc::Readonly {
-                binary_data,
-                is_deleted,
-                permissions,
-            })
+            Ok(RefDoc::Readonly { binary_data, is_deleted, permissions })
         } else {
             Err(AppError::Forbidden(ref_id))
         }
@@ -71,7 +66,8 @@ async fn get_doc(ctx: AppCtx, ref_id: Uuid) -> RpcResult<RefDoc> {
 }
 
 /// Document identified by a ref.
-#[derive(Clone, Debug, Serialize, TS)]
+#[qubit::ts]
+#[derive(Clone, Debug, Serialize)]
 #[serde(tag = "tag")]
 enum RefDoc {
     /// Readonly document, containing binary automerge data (base64 encoded).
@@ -175,13 +171,13 @@ async fn sign_up_or_sign_in(ctx: AppCtx) -> RpcResult<()> {
 }
 
 #[handler(query)]
-async fn user_by_username(ctx: AppCtx, username: &str) -> RpcResult<Option<user::UserSummary>> {
-    user::user_by_username(ctx.state, username).await.into()
+async fn user_by_username(ctx: AppCtx, username: String) -> RpcResult<Option<user::UserSummary>> {
+    user::user_by_username(ctx.state, &username).await.into()
 }
 
 #[handler(query)]
-async fn username_status(ctx: AppCtx, username: &str) -> RpcResult<user::UsernameStatus> {
-    user::username_status(ctx.state, username).await.into()
+async fn username_status(ctx: AppCtx, username: String) -> RpcResult<user::UsernameStatus> {
+    user::username_status(ctx.state, &username).await.into()
 }
 
 #[handler(query)]
@@ -195,7 +191,8 @@ async fn set_active_user_profile(ctx: AppCtx, user: user::UserProfile) -> RpcRes
 }
 
 /// Result returned by an RPC handler.
-#[derive(Debug, Clone, Serialize, TS)]
+#[qubit::ts]
+#[derive(Debug, Clone, Serialize)]
 #[serde(tag = "tag")]
 enum RpcResult<T> {
     Ok { content: T },
@@ -238,16 +235,5 @@ impl FromRequestExtensions<AppState> for AppCtx {
             debug!("Handling request from user: {}", some_user.user_id);
         }
         Ok(AppCtx { state, user })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::path::PathBuf;
-
-    #[test]
-    fn rspc_type_defs() {
-        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("pkg").join("src");
-        super::router().write_bindings_to_dir(dir);
     }
 }

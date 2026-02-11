@@ -15,7 +15,7 @@ We expect to implement the richer semantics in the future.
 
 ### Examples
 
-- [An SEIRV model](https://catcolab.org/model/0195001d-3c7d-7cb3-9019-2f411cfa2663)
+- [An SEIRV model](https://catcolab.org/model/0195001d-3c7d-7cb3-9019-2f411cfa2663/analysis/019b8f9a-8ed8-7a51-8a96-2cba807a892a)
 
 
 ### Further reading
@@ -41,4 +41,8 @@ Flows add linearly, i.e. in an arbitrary stock-flow diagram (without links), the
 In this analysis, since the stock-flow diagrams are primitive, flows are determined their **rate** coefficient $r$, i.e. a flow $S\overset{f}{\Rightarrow}T$ is defined to satisfy $f=rS$.
 
 A link $R\to f$ from a stock $R$ to a flow $S\overset{f}{\Rightarrow}T$ modifies the the equation defining $f$ by multiplication by $R$, i.e. without any link, we would have that $f=rS$, but introducing a link $R\to f$ enforces that $f=rSR$ instead.
+</HelpAnalysisById>
+
+<HelpAnalysisById theory={props.theory} analysisId="mass-action-equations">
+This analysis displays the symbolic form of the derived mass-action equations.
 </HelpAnalysisById>

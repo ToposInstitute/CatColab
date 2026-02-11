@@ -2,15 +2,15 @@ use std::collections::HashMap;
 
 use firebase_auth::{FirebaseAuth, FirebaseUser};
 use serde::{Deserialize, Serialize};
-use ts_rs::TS;
 use uuid::Uuid;
 
 use super::app::{AppCtx, AppError, AppState};
 use super::user::UserSummary;
 
 /// Levels of permission that a user can have on a document.
+#[qubit::ts]
 #[derive(
-    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize, sqlx::Type, TS,
+    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize, sqlx::Type,
 )]
 #[sqlx(type_name = "permission_level", rename_all = "lowercase")]
 pub enum PermissionLevel {
@@ -21,14 +21,16 @@ pub enum PermissionLevel {
 }
 
 /// Permissions of a user on a document.
-#[derive(Clone, Debug, Serialize, TS)]
+#[qubit::ts]
+#[derive(Clone, Debug, Serialize)]
 pub struct UserPermissions {
     pub user: UserSummary,
     pub level: PermissionLevel,
 }
 
 /// Permissions set on a document.
-#[derive(Clone, Debug, Serialize, TS)]
+#[qubit::ts]
+#[derive(Clone, Debug, Serialize)]
 pub struct Permissions {
     /// Base permission level for any person, logged in or not.
     pub anyone: Option<PermissionLevel>,
@@ -49,9 +51,9 @@ impl Permissions {
     }
 }
 
-/// Returns an error if the user_id in the session does not exist in the DB, returns None otherwise
+/// Returns an error if the user_id in the session does not exist in the DB, returns None otherwise.
 ///
-/// Used by the client to gracefully handle stale sessions
+/// Used by the client to gracefully handle stale sessions.
 pub async fn validate_session(ctx: AppCtx) -> Result<(), AppError> {
     let user_id = match ctx.user.as_ref().map(|u| u.user_id.clone()) {
         Some(id) => id,
@@ -181,15 +183,12 @@ pub async fn permissions(ctx: &AppCtx, ref_id: Uuid) -> Result<Permissions, AppE
         );
     }
 
-    Ok(Permissions {
-        anyone,
-        user,
-        users,
-    })
+    Ok(Permissions { anyone, user, users })
 }
 
 /// A new set of permissions to assign to a document.
-#[derive(Debug, Deserialize, TS)]
+#[qubit::ts]
+#[derive(Debug, Deserialize)]
 pub struct NewPermissions {
     /// Base permission level for any person, logged in or not.
     pub anyone: Option<PermissionLevel>,

@@ -1,0 +1,73 @@
+\title{Codiscrete modality}
+\import{macros}
+
+\p{The codiscrete modality is an idempotent monad #{(\dbl{T}, \coDisc, \eta)} on
+the double theory.}
+
+\ul{
+
+  \li{Computation rules for object types:
+
+  \p{\centerfigs{
+  \prooftreeinline{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\vdash \Gamma\ \context}
+  \infer2{\Gamma \vdash \Ob_{\coDisc(X)} = \Ob_X\ \type}
+  }
+  #{\qquad\qquad}
+  \prooftreeinline{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \infer2{\Gamma \vdash \eta_X(x) = x: \Ob_X}
+  }
+  }}
+  \prooftree{
+  \hypo{\dbl{T} \vDash (F: X \to Y)}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \infer2{\Gamma \vdash (\coDisc F)(x) = F(x) : \Ob_Y}
+  }
+  }
+
+  \li{Computation rules for Hom types:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash x, x': \Ob_X}
+  \infer2{\Gamma \vdash \Hom_{\coDisc(X)}(x,x') = 1\ \type}
+  }
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash x, x': \Ob_X}
+  \hypo{\Gamma \vdash f: \Hom_X(x,x')}
+  \infer[dashed]3{\Gamma \vdash \eta_X(f) = *: 1}
+  }
+  \prooftree{
+  \hypo{\dbl{T} \vdash (F: X \to Y)}
+  \hypo{\Gamma \vdash x, x': \Ob_X}
+  \hypo{\Gamma \vdash f: \Hom_X(x,x')}
+  \infer[dashed]3{\Gamma \vdash (\coDisc F)(f) = *: 1}
+  }
+
+  Note that the first judgment makes the other two judgments admissible.
+  }
+
+  \li{Computation rules for morphism types:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash (P: X \proto Y)}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \hypo{\Gamma \vdash y: \Ob_Y}
+  \infer3{\Gamma \vdash (\coDisc P)(x,y) = 1\ \type}
+  }
+  \prooftree{
+  \hypo{\dbl{T} \vDash (P: X \proto Y)}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \hypo{\Gamma \vdash y: \Ob_Y}
+  \hypo{\Gamma \vdash p: P(x, y)}
+  \infer[dashed]4{\Gamma \vdash \eta_P(p) = *: 1}
+  }
+
+  \strong{TODO}: Admissible rule for cell applications
+  }
+
+}

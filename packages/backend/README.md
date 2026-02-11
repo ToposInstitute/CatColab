@@ -13,45 +13,25 @@ You can find the auto-generated documentation for this Rust crate at [next.catco
     - (E.g. by using Docker)
 
     ```sh
-    docker run --name catcolab-postgres -e POSTGRES_USER=postgres-user \
+    docker run --name catcolab-postgres -e POSTGRES_USER=catcolab \
         -e POSTGRES_PASSWORD=password -e POSTGRES_DB=catcolab -p 5432:5432 -d postgres:15
     ```
-
-3. Make sure the required packages are built and installed:
-
-   ```sh
-   cd packages/notebook-types
-   pnpm run build:node
-   cd ../automerge-doc-server
-   pnpm install
-   ```
 
 4. Change to the migrator directory: `cd ../backend`
 5. Copy the .env.development to both folders (`cp .env.development .env && cp .env.development ../migrator/.env`) and update the `DATABASE_URL` variable with
    database username, password, and port. (If you used the above Docker command _as is_ it should already be correct.)
 6. Run the initial database migration: `cargo run -p migrator apply`
+7. Generate the TypeScript bindings for the RPC API: `cargo run generate-bindings`
 7. Build the backend binary: `cargo build`
 8. Run the unit tests: `cargo test`
 
 ## Usage
 
-The CatColab backend consists of two services:
-
-1. the main web server (this package)
-2. the [Automerge document server](../automerge-doc-server).
-
-To run
-the backend locally, launch the two services by running the following commands
-in separate terminals, in any order:
+To run the backend locally, run the following commands:
 
 ```sh
 cd packages/backend
 cargo run
-```
-
-```sh
-cd packages/automerge-doc-server
-pnpm run main
 ```
 
 The backend is now running locally.
@@ -69,6 +49,32 @@ To launch the frontend using the local backend:
 cd packages/frontend
 pnpm run dev
 ```
+## Database schema
+
+![Entity-relationship diagram](schema.svg)
+
+https://catcolab.org/analysis/019c28c7-5b0a-7ee3-a83b-6c1d32892047
+
+### permissions
+
+This is how we handle access control.
+
+### storage
+
+This is used for Automerge document storage and is completely independent from the rest of tables.
+
+### refs
+
+These are references to documents, referring to them by their latest snapshot: the `head`. If `deleted_at` is set then this document is soft deleted. We do not hard delete documents in normal usage.
+
+### users
+
+This table refers to our users. We use Firebase so our `id` in this table are Firebase user IDs. We also store a unique username for them when the user sets it.
+
+### snapshots
+
+These are timestamped snapshots of the Automerge document. We current only ever use the latest snapshot.
+
 
 ## Running migrations
 

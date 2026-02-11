@@ -10,11 +10,34 @@ use wasm_bindgen::prelude::*;
 use catlog::dbl::theory;
 use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
-use catlog::zero::name;
+use catlog::zero::{QualifiedLabel, QualifiedName, name};
 
 use super::model_morphism::{MotifOccurrence, MotifsOptions, motifs};
 use super::result::JsResult;
 use super::{analyses::*, model::DblModel, theory::DblTheory};
+
+fn replace_ob_names_latex(model: &DblModel) -> impl Fn(&QualifiedName) -> String {
+    |id: &QualifiedName| {
+        let name = model
+            .ob_generator_label(id)
+            .map_or_else(|| id.to_string(), |label| label.to_string());
+
+        if name.chars().count() > 1 {
+            format!("\\text{{{name}}}")
+        } else {
+            name
+        }
+    }
+}
+
+fn replace_mor_names_latex(model: &DblModel) -> impl Fn(&QualifiedName) -> String {
+    |id: &QualifiedName| {
+        let name = model
+            .mor_generator_label(id)
+            .map_or_else(|| id.to_string(), |label| label.to_string());
+        format!("r_{{\\text{{{name}}}}}")
+    }
+}
 
 /// The empty or initial theory.
 #[wasm_bindgen]
@@ -86,6 +109,28 @@ impl ThSchema {
             th.clone(),
         );
         Ok(boxed.replace_box(model.into()))
+    }
+
+    /// Renders a model into valid SQL
+    #[wasm_bindgen(js_name = "renderSQL")]
+    pub fn render_sql(&self, model: &DblModel, backend: &str) -> JsResult<String, String> {
+        analyses::sql::SQLBackend::try_from(backend)
+            .and_then(|backend| {
+                analyses::sql::SQLAnalysis::new(backend).render(
+                    model.discrete()?,
+                    |id| {
+                        model
+                            .ob_generator_label(id)
+                            .unwrap_or_else(|| QualifiedLabel::single("".into()))
+                    },
+                    |id| {
+                        model
+                            .mor_generator_label(id)
+                            .unwrap_or_else(|| QualifiedLabel::single("".into()))
+                    },
+                )
+            })
+            .into()
     }
 }
 
@@ -293,14 +338,33 @@ impl ThCategoryLinks {
         &self,
         model: &DblModel,
         data: analyses::ode::MassActionProblemData,
-    ) -> Result<ODEResult, String> {
-        Ok(ODEResult(
-            analyses::ode::StockFlowMassActionAnalysis::default()
-                .build_numerical_system(model.discrete_tab()?, data)
-                .solve_with_defaults()
-                .map_err(|err| format!("{err:?}"))
-                .into(),
-        ))
+    ) -> Result<ODEResultWithEquations, String> {
+        let tab_model = model.discrete_tab()?;
+        let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
+        let sys = analysis.build_system(tab_model);
+        let sys_extended_scalars = analyses::ode::extend_mass_action_scalars(sys, &data);
+        let latex_equations = sys_extended_scalars
+            .map_variables(replace_ob_names_latex(model))
+            .to_latex_equations();
+        let analysis = analyses::ode::into_mass_action_analysis(sys_extended_scalars, data);
+        let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
+        Ok(ODEResultWithEquations {
+            solution: solution.into(),
+            latex_equations,
+        })
+    }
+
+    /// Returns the symbolic mass-action equations in LaTeX format.
+    #[wasm_bindgen(js_name = "massActionEquations")]
+    pub fn mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
+        let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
+        let tab_model = model.discrete_tab()?;
+        let sys = analysis.build_system(tab_model);
+        let equations = sys
+            .map_variables(replace_ob_names_latex(model))
+            .extend_scalars(|param| param.map_variables(replace_mor_names_latex(model)))
+            .to_latex_equations();
+        Ok(ODELatex(equations))
     }
 }
 
@@ -326,14 +390,33 @@ impl ThCategorySignedLinks {
         &self,
         model: &DblModel,
         data: analyses::ode::MassActionProblemData,
-    ) -> Result<ODEResult, String> {
-        Ok(ODEResult(
-            analyses::ode::StockFlowMassActionAnalysis::default()
-                .build_numerical_system(model.discrete_tab()?, data)
-                .solve_with_defaults()
-                .map_err(|err| format!("{err:?}"))
-                .into(),
-        ))
+    ) -> Result<ODEResultWithEquations, String> {
+        let tab_model = model.discrete_tab()?;
+        let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
+        let sys = analysis.build_system(tab_model);
+        let sys_extended_scalars = analyses::ode::extend_mass_action_scalars(sys, &data);
+        let latex_equations = sys_extended_scalars
+            .map_variables(replace_ob_names_latex(model))
+            .to_latex_equations();
+        let analysis = analyses::ode::into_mass_action_analysis(sys_extended_scalars, data);
+        let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
+        Ok(ODEResultWithEquations {
+            solution: solution.into(),
+            latex_equations,
+        })
+    }
+
+    /// Returns the symbolic mass-action equations in LaTeX format.
+    #[wasm_bindgen(js_name = "massActionEquations")]
+    pub fn mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
+        let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
+        let tab_model = model.discrete_tab()?;
+        let sys = analysis.build_system(tab_model);
+        let latex_equations = sys
+            .map_variables(replace_ob_names_latex(model))
+            .extend_scalars(|param| param.map_variables(replace_mor_names_latex(model)))
+            .to_latex_equations();
+        Ok(ODELatex(latex_equations))
     }
 }
 
@@ -359,14 +442,33 @@ impl ThSymMonoidalCategory {
         &self,
         model: &DblModel,
         data: analyses::ode::MassActionProblemData,
-    ) -> Result<ODEResult, String> {
-        Ok(ODEResult(
-            analyses::ode::PetriNetMassActionAnalysis::default()
-                .build_numerical_system(model.modal()?, data)
-                .solve_with_defaults()
-                .map_err(|err| format!("{err:?}"))
-                .into(),
-        ))
+    ) -> Result<ODEResultWithEquations, String> {
+        let modal_model = model.modal()?;
+        let analysis = analyses::ode::PetriNetMassActionAnalysis::default();
+        let sys = analysis.build_system(modal_model.as_ref());
+        let sys_extended_scalars = analyses::ode::extend_mass_action_scalars(sys, &data);
+        let latex_equations = sys_extended_scalars
+            .map_variables(replace_ob_names_latex(model))
+            .to_latex_equations();
+        let analysis = analyses::ode::into_mass_action_analysis(sys_extended_scalars, data);
+        let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
+        Ok(ODEResultWithEquations {
+            solution: solution.into(),
+            latex_equations,
+        })
+    }
+
+    /// Returns the symbolic mass-action equations in LaTeX format.
+    #[wasm_bindgen(js_name = "massActionEquations")]
+    pub fn mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
+        let analysis = analyses::ode::PetriNetMassActionAnalysis::default();
+        let modal_model = model.modal()?;
+        let sys = analysis.build_system(modal_model.as_ref());
+        let latex_equations = sys
+            .map_variables(replace_ob_names_latex(model))
+            .extend_scalars(|param| param.map_variables(replace_mor_names_latex(model)))
+            .to_latex_equations();
+        Ok(ODELatex(latex_equations))
     }
 
     /// Simulates the stochastic mass-action system derived from a model.
@@ -374,7 +476,7 @@ impl ThSymMonoidalCategory {
     pub fn stochastic_mass_action(
         &self,
         model: &DblModel,
-        data: analyses::ode::MassActionProblemData,
+        data: analyses::ode::StochasticMassActionProblemData,
     ) -> Result<ODEResult, String> {
         Ok(ODEResult(JsResult::Ok(
             analyses::ode::PetriNetMassActionAnalysis::default()

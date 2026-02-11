@@ -1,0 +1,62 @@
+.wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
+.trigger {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 0.25rem;
+
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 0.25rem;
+    margin-right: 0.25rem;
+
+    &:hover {
+        background: var(--color-icon-button-utility-hover-bg);
+    }
+}
+
+.settingsPane {
+    display: flex;
+    justify-content: right;
+    align-items: right;
+    margin: 0.5rem;
+}
+
+[data-corvu-disclosure-content] {
+    overflow: hidden;
+}
+
+[data-corvu-disclosure-content][data-collapsed] {
+    animation: collapse 200ms linear;
+}
+
+[data-corvu-disclosure-content][data-expanded] {
+    animation: expand 200ms linear;
+}
+
+@keyframes collapse {
+    0% {
+        height: var(--corvu-disclosure-content-height);
+    }
+
+    100% {
+        height: 0px;
+    }
+}
+
+@keyframes expand {
+    0% {
+        height: 0px;
+    }
+
+    100% {
+        height: var(--corvu-disclosure-content-height);
+    }
+}

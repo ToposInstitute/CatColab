@@ -1,6 +1,7 @@
 /* eslint-disable */
 // @ts-nocheck
-/*    @@@@@@@@@@@@@ & ###############
+/*
+      @@@@@@@@@@@@@ & ###############
    @@@@@@@@@@@@@@ &&& ###############
  @@@@@@@@@@@@@@ &&&&& ###############
 ############### &&&&& ###############
@@ -8,36 +9,57 @@
 ############### &&&&& ###############
 ############### &&&&& @@@@@@@@@@@@@@
 ############### && @@@@@@@@@@@@@@
-############### & @@@@@@@@@@@@@    */
+############### & @@@@@@@@@@@@@
 
-import type { RpcResult } from "./RpcResult.ts";
-import type { JsonValue } from "./serde_json/JsonValue.ts";
-import type { Mutation } from "@qubit-rs/client";
-import type { RefDoc } from "./RefDoc.ts";
-import type { Query } from "@qubit-rs/client";
-import type { Permissions } from "./Permissions.ts";
-import type { PermissionLevel } from "./PermissionLevel.ts";
-import type { NewPermissions } from "./NewPermissions.ts";
-import type { UserSummary } from "./UserSummary.ts";
-import type { UsernameStatus } from "./UsernameStatus.ts";
-import type { UserProfile } from "./UserProfile.ts";
-import type { Paginated } from "./Paginated.ts";
-import type { RefStub } from "./RefStub.ts";
-import type { RefQueryParams } from "./RefQueryParams.ts";
-
-export type { RpcResult } from "./RpcResult.ts";
-export type { JsonValue } from "./serde_json/JsonValue.ts";
-export type { Mutation } from "@qubit-rs/client";
-export type { RefDoc } from "./RefDoc.ts";
-export type { Query } from "@qubit-rs/client";
-export type { Permissions } from "./Permissions.ts";
-export type { PermissionLevel } from "./PermissionLevel.ts";
-export type { NewPermissions } from "./NewPermissions.ts";
-export type { UserSummary } from "./UserSummary.ts";
-export type { UsernameStatus } from "./UsernameStatus.ts";
-export type { UserProfile } from "./UserProfile.ts";
-export type { Paginated } from "./Paginated.ts";
-export type { RefStub } from "./RefStub.ts";
-export type { RefQueryParams } from "./RefQueryParams.ts";
-
-export type QubitServer = { new_ref: Mutation<[content: JsonValue, ], RpcResult<string>>, get_doc: Query<[ref_id: string, ], RpcResult<RefDoc>>, head_snapshot: Query<[ref_id: string, ], RpcResult<JsonValue>>, create_snapshot: Mutation<[ref_id: string, ], RpcResult<null>>, delete_ref: Mutation<[ref_id: string, ], RpcResult<null>>, restore_ref: Mutation<[ref_id: string, ], RpcResult<null>>, get_permissions: Query<[ref_id: string, ], RpcResult<Permissions>>, set_permissions: Mutation<[ref_id: string, new: NewPermissions, ], RpcResult<null>>, validate_session: Query<[], RpcResult<null>>, sign_up_or_sign_in: Mutation<[], RpcResult<null>>, user_by_username: Query<[username: string, ], RpcResult<UserSummary | null>>, username_status: Query<[username: string, ], RpcResult<UsernameStatus>>, get_active_user_profile: Query<[], RpcResult<UserProfile>>, set_active_user_profile: Mutation<[user: UserProfile, ], RpcResult<null>>, search_ref_stubs: Query<[query_params: RefQueryParams, ], RpcResult<Paginated<RefStub>>>, get_ref_children_stubs: Query<[ref_id: string, ], RpcResult<Array<RefStub>>> };
+*/
+import type { Query, Mutation, Subscription } from "@qubit-rs/client";
+export type Permissions = { 
+/**
+ * Base permission level for any person, logged in or not.
+ */
+anyone: PermissionLevel | null, 
+/**
+ * Permission level for the current user.
+ */
+user: PermissionLevel | null, 
+/**
+ * Permission levels for all other users.
+ *
+ * Only owners of the document have access to this information.
+ */
+users: Array<UserPermissions> | null, };
+export type UserPermissions = { user: UserSummary, level: PermissionLevel, };
+export type RefDoc = { "tag": "Readonly", binaryData: string, isDeleted: boolean, permissions: Permissions, } | { "tag": "Live", docId: string, isDeleted: boolean, permissions: Permissions, };
+export type UserProfile = { username: string | null, displayName: string | null, };
+export type JsonValue = number | string | boolean | Array<JsonValue> | { [key in string]?: JsonValue } | null;
+export type RefQueryParams = { ownerUsernameQuery: string | null, refNameQuery: string | null, searcherMinLevel: PermissionLevel | null, includePublicDocuments: boolean | null, onlyDeleted: boolean | null, limit: number | null, offset: number | null, };
+export type RpcResult<T> = { "tag": "Ok", content: T, } | { "tag": "Err", code: number, message: string, };
+export type NewPermissions = { 
+/**
+ * Base permission level for any person, logged in or not.
+ */
+anyone: PermissionLevel | null, 
+/**
+ * Permission levels for users.
+ *
+ * A mapping from user IDs to permission levels.
+ */
+users: { [key in string]?: PermissionLevel }, };
+export type UserSummary = { id: string, username: string | null, displayName: string | null, };
+export type RefStub = { name: string, typeName: string, refId: string, permissionLevel: PermissionLevel, owner: UserSummary | null, createdAt: string, };
+export type Paginated<T> = { 
+/**
+ * The total number of items matching the query criteria.
+ */
+total: number, 
+/**
+ * The number of items skipped.
+ */
+offset: number, 
+/**
+ * The items in the current page.
+ */
+items: Array<T>, };
+export type UsernameStatus = "Available" | "Unavailable" | "Invalid";
+export type PermissionLevel = "Read" | "Write" | "Maintain" | "Own";
+export type QubitServer = { create_snapshot: Mutation<[ref_id: string], RpcResult<null>>, delete_ref: Mutation<[ref_id: string], RpcResult<null>>, get_active_user_profile: Query<[], RpcResult<UserProfile>>, get_doc: Query<[ref_id: string], RpcResult<RefDoc>>, get_permissions: Query<[ref_id: string], RpcResult<Permissions>>, get_ref_children_stubs: Query<[ref_id: string], RpcResult<Array<RefStub>>>, head_snapshot: Query<[ref_id: string], RpcResult<JsonValue>>, new_ref: Mutation<[content: JsonValue], RpcResult<string>>, restore_ref: Mutation<[ref_id: string], RpcResult<null>>, search_ref_stubs: Query<[query_params: RefQueryParams], RpcResult<Paginated<RefStub>>>, set_active_user_profile: Mutation<[user: UserProfile], RpcResult<null>>, set_permissions: Mutation<[ref_id: string, new: NewPermissions], RpcResult<null>>, sign_up_or_sign_in: Mutation<[], RpcResult<null>>, user_by_username: Query<[username: string], RpcResult<UserSummary | null>>, username_status: Query<[username: string], RpcResult<UsernameStatus>>, validate_session: Query<[], RpcResult<null>>, };

@@ -3,13 +3,14 @@ import { type Component, createUniqueId, For, Index, Match, Show, Switch } from 
 import { Dynamic } from "solid-js/web";
 
 import type * as GraphLayout from "./graph_layout";
+import { perpendicularLabelPosition } from "./label_position";
 import type { ArrowStyle, SVGRefProp } from "./types";
 
 import "./graph_svg.css";
 
 /** Draw a graph with a layout using SVG.
  */
-export function GraphSVG<Id>(props: { graph: GraphLayout.Graph<Id>; ref?: SVGRefProp }) {
+export function GraphSVG(props: { graph: GraphLayout.Graph; ref?: SVGRefProp }) {
     const edgeMarkers = () => {
         const markers = new Set<ArrowMarker>();
         for (const edge of props.graph.edges) {
@@ -36,7 +37,7 @@ export function GraphSVG<Id>(props: { graph: GraphLayout.Graph<Id>; ref?: SVGRef
 
 /** Draw a node with a layout using SVG.
  */
-export function NodeSVG<Id>(props: { node: GraphLayout.Node<Id> }) {
+export function NodeSVG(props: { node: GraphLayout.Node }) {
     const {
         node: {
             pos: { x, y },
@@ -59,7 +60,7 @@ export function NodeSVG<Id>(props: { node: GraphLayout.Node<Id> }) {
 
 /** Draw an edge with a layout using SVG.
  */
-export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
+export function EdgeSVG(props: { edge: GraphLayout.Edge }) {
     const {
         edge: { path },
     } = destructure(props, { deep: true });
@@ -77,10 +78,7 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
     const tgtLabel = (text: string) => {
         // Place the target label offset from the target in the direction
         // orthogonal to the vector from the source to the target.
-        const [srcPos, tgtPos] = [props.edge.sourcePos, props.edge.targetPos];
-        const vec = { x: tgtPos.x - srcPos.x, y: tgtPos.y - srcPos.y };
-        const scale = 10 / Math.sqrt(vec.x ** 2 + vec.y ** 2);
-        const pos = { x: tgtPos.x - scale * vec.y, y: tgtPos.y + scale * vec.x };
+        const pos = perpendicularLabelPosition(props.edge.sourcePos, props.edge.targetPos);
         return (
             <text class="label" x={pos.x} y={pos.y} dominant-baseline="middle" text-anchor="middle">
                 {text}
@@ -158,7 +156,7 @@ const VeeMarker = (props: { id: string; offset?: number }) => (
         markerHeight="10"
         orient="auto-start-reverse"
     >
-        <path d="M 0 0 L 5 5 L 0 10" />
+        <path d="M 0 2 L 5 5 L 0 8" />
     </marker>
 );
 

@@ -51,9 +51,6 @@ impl<T> Notebook<T> {
             cell_contents.insert(id, old_cell);
         }
 
-        Notebook {
-            cell_contents,
-            cell_order,
-        }
+        Notebook { cell_contents, cell_order }
     }
 }

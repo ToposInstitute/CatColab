@@ -7,7 +7,7 @@ import { Foldable } from "./foldable";
 import { IconButton } from "./icon_button";
 
 const meta = {
-    title: "Layout/Foldable",
+    title: "Foldable",
     component: Foldable,
 } satisfies Meta<typeof Foldable>;
 

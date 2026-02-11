@@ -6,6 +6,8 @@ import * as GraphLayoutConfig from "../visualization/graph_layout_config";
 import type * as Checkers from "./analyses/checker_types";
 import { defaultSchemaERDConfig, type SchemaERDConfig } from "./analyses/schema_erd_config";
 import type * as Simulators from "./analyses/simulator_types";
+import type * as SQLDownloadConfig from "./analyses/sql";
+import { SQLBackend, type SQLRenderer } from "./analyses/sql_types";
 
 type AnalysisOptions = {
     id: string;
@@ -174,6 +176,62 @@ export function massAction(
 
 const MassAction = lazy(() => import("./analyses/mass_action"));
 
+export function massActionEquations(
+    options: Partial<AnalysisOptions> & {
+        getEquations: Simulators.MassActionEquations;
+    },
+): ModelAnalysisMeta<Record<string, never>> {
+    const {
+        id = "mass-action-equations",
+        name = "Mass-action dynamics equations",
+        description = "Display the symbolic mass-action dynamics equations",
+        help = "mass-action-equations",
+        getEquations,
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => (
+            <MassActionEquationsDisplay title={name} getEquations={getEquations} {...props} />
+        ),
+        initialContent: () => ({}),
+    };
+}
+
+const MassActionEquationsDisplay = lazy(() => import("./analyses/mass_action_equations"));
+
+export function stochasticMassAction(
+    options: Partial<AnalysisOptions> & {
+        simulate: Simulators.StochasticMassActionSimulator;
+        stateType?: ObType;
+        transitionType?: MorType;
+    },
+): ModelAnalysisMeta<Simulators.MassActionProblemData> {
+    const {
+        id = "stochastic-mass-action",
+        name = "Stochastic mass-action dynamics",
+        description = "Simulate the system using stochastic mass-action dynamics",
+        help = "stochastic-mass-action",
+        ...otherOptions
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => <StochasticMassAction title={name} {...otherOptions} {...props} />,
+        initialContent: () => ({
+            rates: {},
+            initialValues: {},
+            duration: 10,
+        }),
+    };
+}
+
+const StochasticMassAction = lazy(() => import("./analyses/stochastic_mass_action"));
+
 export const modelGraph = (
     options: AnalysisOptions,
 ): ModelAnalysisMeta<GraphLayoutConfig.Config> => ({
@@ -256,3 +314,30 @@ export const stockFlowDiagram = (
 });
 
 const StockFlowDiagram = lazy(() => import("./analyses/stock_flow_diagram"));
+
+export function renderSQL(
+    options: Partial<AnalysisOptions> & {
+        render: SQLRenderer;
+    },
+): ModelAnalysisMeta<SQLDownloadConfig.DownloadConfig> {
+    const {
+        id = "sql",
+        name = "SQL schema",
+        description = "Produce SQL DML from this schema",
+        help = "sql",
+        render,
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => <SQLSchemaAnalysis title={name} render={render} {...props} />,
+        initialContent: () => ({
+            backend: SQLBackend.MySQL,
+            filename: "schema.sql",
+        }),
+    };
+}
+
+const SQLSchemaAnalysis = lazy(() => import("./analyses/sql"));

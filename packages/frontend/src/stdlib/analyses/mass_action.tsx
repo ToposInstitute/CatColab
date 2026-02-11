@@ -1,19 +1,24 @@
 import { createMemo } from "solid-js";
 
 import {
+    BlockTitle,
     type ColumnSchema,
     createNumericalColumn,
+    ExpandableTable,
     FixedTableEditor,
     Foldable,
+    KatexDisplay,
 } from "catcolab-ui-components";
-import type { DblModel, MassActionProblemData, MorType, ObType, QualifiedName } from "catlog-wasm";
+import type { MassActionProblemData, MorType, ObType, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
-import { createModelODEPlot } from "./model_ode_plot";
+import { createModelODEPlotWithEquations } from "./model_ode_plot";
 import type { MassActionSimulator } from "./simulator_types";
 
 import "./simulation.css";
+
+import styles from "./mass_action.module.css";
 
 /** Analyze a model using mass-action dynamics. */
 export default function MassAction(
@@ -91,19 +96,34 @@ export default function MassAction(
         }),
     ];
 
-    const plotResult = createModelODEPlot(
+    const result = createModelODEPlotWithEquations(
         () => props.liveModel.validatedModel(),
-        (model: DblModel) => props.simulate(model, props.content),
+        (model) => props.simulate(model, props.content),
     );
+
+    const plotResult = () => result()?.plotData;
+    const latexEquations = () => result()?.latexEquations ?? [];
 
     return (
         <div class="simulation">
-            <Foldable title={props.title}>
+            <BlockTitle title={props.title} />
+            <Foldable title="Parameters" defaultExpanded>
                 <div class="parameters">
                     <FixedTableEditor rows={obGenerators()} schema={obSchema} />
                     <FixedTableEditor rows={morGenerators()} schema={morSchema} />
                     <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
+            </Foldable>
+            <Foldable title="Equations" class={styles.equations}>
+                <ExpandableTable
+                    threshold={20}
+                    rows={latexEquations()}
+                    columns={[
+                        { cell: (row) => <KatexDisplay math={row.lhs} /> },
+                        { cell: () => <KatexDisplay math="=" /> },
+                        { cell: (row) => <KatexDisplay math={row.rhs} /> },
+                    ]}
+                />
             </Foldable>
             <ODEResultPlot result={plotResult()} />
         </div>

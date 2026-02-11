@@ -6,6 +6,9 @@
   self,
   ...
 }:
+let
+  keys = import ../../ssh-keys.nix;
+in
 {
   imports = [
     (modulesPath + "/profiles/qemu-guest.nix")
@@ -27,17 +30,10 @@
       hostname = "";
       serveFrontend = true;
     };
-    automerge = {
-      port = 8010;
-      hostname = "";
-    };
     environmentFile = /etc/catcolab/catcolab-secrets.env;
     host = {
       enable = true;
-      userKeys = [
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMiaHaeJ5PQL0mka/lY1yGXIs/bDK85uY1O3mLySnwHd j@jmoggr.com"
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM1K/FB6dCjo1/xfddi9VoHEGchFo/bcz6v7SC7wAuFQ kaspar@topos"
-      ];
+      userKeys = keys.allUserKeys;
     };
   };
 
@@ -51,7 +47,6 @@
 
   networking.firewall.allowedTCPPorts = [
     config.catcolab.backend.port
-    config.catcolab.automerge.port
     5432
   ];
 
@@ -61,11 +56,6 @@
         from = "host";
         host.port = 8000;
         guest.port = 8000;
-      }
-      {
-        from = "host";
-        host.port = 8010;
-        guest.port = 8010;
       }
       {
         from = "host";

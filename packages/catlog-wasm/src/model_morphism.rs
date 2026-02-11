@@ -44,10 +44,7 @@ impl MotifOccurrence {
                 mor_generators.insert(e);
             }
         }
-        Self {
-            ob_generators,
-            mor_generators,
-        }
+        Self { ob_generators, mor_generators }
     }
 }
 

@@ -1,6 +1,5 @@
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use ts_rs::TS;
 
 use super::app::{AppCtx, AppError, AppState};
 
@@ -41,7 +40,8 @@ pub async fn user_by_username(
 ///
 /// The minimal information needed to uniquely identify a user and display the user
 /// in human-readable form.
-#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[qubit::ts]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UserSummary {
     pub id: String,
     pub username: Option<String>,
@@ -64,7 +64,8 @@ pub async fn username_status(state: AppState, username: &str) -> Result<Username
 }
 
 /// Status of a username.
-#[derive(Clone, Debug, Serialize, TS)]
+#[qubit::ts]
+#[derive(Clone, Debug, Serialize)]
 pub enum UsernameStatus {
     /// The username is valid and available.
     Available,
@@ -116,7 +117,8 @@ pub async fn set_active_user_profile(ctx: AppCtx, profile: UserProfile) -> Resul
 }
 
 /// Data of a user profile.
-#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[qubit::ts]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UserProfile {
     pub username: Option<String>,
     #[serde(rename = "displayName")]
@@ -140,7 +142,7 @@ impl UserProfile {
 
 /// Is the proposed user name valid?
 ///
-/// A username is **valid** when it
+/// A username is **valid** when it:
 ///
 /// - is nonempty
 /// - comprises ASCII alphanumeric characters, dashes, dots, and underscores
@@ -164,14 +166,7 @@ mod tests {
 
     #[test]
     fn validate_user_profile() {
-        assert!(
-            UserProfile {
-                username: None,
-                display_name: None
-            }
-            .validate()
-            .is_ok()
-        );
+        assert!(UserProfile { username: None, display_name: None }.validate().is_ok());
 
         assert!(
             UserProfile {

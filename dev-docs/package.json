@@ -5,7 +5,7 @@
   "version": "0.0.1",
     "type": "module",
   "scripts": {
-    "doc": "cp ../CONTRIBUTING.md ./README.md && typedoc --options typedoc.json"
+    "doc": "typedoc --options typedoc.json"
   },
   "dependencies": {
     "typedoc": "^0.28.8"

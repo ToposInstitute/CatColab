@@ -63,7 +63,7 @@ pub trait VDblCategory {
     /// Type of proarrows (loose morphisms) in the VDC.
     type Pro: Eq + Clone;
 
-    /// Type of cells in the VDC;
+    /// Type of cells in the VDC.
     type Cell: Eq + Clone;
 
     /// Does the object belong to the VDC?

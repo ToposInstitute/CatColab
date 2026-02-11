@@ -196,12 +196,7 @@ impl DblModelDiagram {
                  Quoter.quote(mapping.0.ob_generator_map.get(&id)?))
             }
         });
-        Some(DiagramObGenerator {
-            id,
-            label,
-            ob_type,
-            over,
-        })
+        Some(DiagramObGenerator { id, label, ob_type, over })
     }
 
     /// Gets a morphism generator as it appears in the diagram's presentation.
@@ -216,13 +211,7 @@ impl DblModelDiagram {
                  Quoter.quote(model.get_cod(&id)?))
             }
         });
-        Some(DiagramMorGenerator {
-            id,
-            mor_type,
-            over,
-            dom,
-            cod,
-        })
+        Some(DiagramMorGenerator { id, mor_type, over, dom, cod })
     }
 
     /// Constructs a serializable presentation of the diagram.
