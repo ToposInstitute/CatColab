@@ -29,23 +29,37 @@ export function MorphismCellEditor(props: {
     const domType = createMemo(() => {
         const theory = props.theory.theory;
         const op = morTypeMeta()?.domain?.apply;
+        let result: ReturnType<typeof theory.src>;
         if (op === undefined) {
-            return theory.src(props.morphism.morType);
+            result = theory.src(props.morphism.morType);
         } else {
             // Codomain type for operation should equal source type above.
-            return theory.dom(op);
+            result = theory.dom(op);
         }
+        console.log("[MorphismCellEditor] domType computed", {
+            morType: props.morphism.morType,
+            domainApplyOp: op,
+            result,
+        });
+        return result;
     });
 
     const codType = createMemo(() => {
         const theory = props.theory.theory;
         const op = morTypeMeta()?.codomain?.apply;
+        let result: ReturnType<typeof theory.tgt>;
         if (op === undefined) {
-            return theory.tgt(props.morphism.morType);
+            result = theory.tgt(props.morphism.morType);
         } else {
             // Codomain type for operation should equal target type above.
-            return theory.dom(op);
+            result = theory.dom(op);
         }
+        console.log("[MorphismCellEditor] codType computed", {
+            morType: props.morphism.morType,
+            codomainApplyOp: op,
+            result,
+        });
+        return result;
     });
 
     const domClasses = () => ["morphism-decl-dom", ...obClasses(props.theory, domType())];
@@ -73,6 +87,12 @@ export function MorphismCellEditor(props: {
                     placeholder="..."
                     ob={props.morphism.dom}
                     setOb={(ob) => {
+                        console.log("[MorphismCellEditor] Setting dom", {
+                            morphismId: props.morphism.id,
+                            morphismName: props.morphism.name,
+                            previousDom: props.morphism.dom,
+                            newDom: ob,
+                        });
                         props.modifyMorphism((mor) => {
                             mor.dom = ob;
                         });
@@ -86,6 +106,11 @@ export function MorphismCellEditor(props: {
                     exitForward={() => setActiveInput("cod")}
                     exitRight={() => setActiveInput("name")}
                     hasFocused={() => {
+                        console.log("[MorphismCellEditor] Dom input focused", {
+                            morphismId: props.morphism.id,
+                            morphismName: props.morphism.name,
+                            currentDom: props.morphism.dom,
+                        });
                         setActiveInput("dom");
                         props.actions.hasFocused?.();
                     }}
@@ -125,7 +150,12 @@ export function MorphismCellEditor(props: {
                     placeholder="..."
                     ob={props.morphism.cod}
                     setOb={(ob) => {
-                        console.log("SET OB", ob);
+                        console.log("[MorphismCellEditor] Setting cod", {
+                            morphismId: props.morphism.id,
+                            morphismName: props.morphism.name,
+                            previousCod: props.morphism.cod,
+                            newCod: ob,
+                        });
                         props.modifyMorphism((mor) => {
                             mor.cod = ob;
                         });
@@ -139,6 +169,11 @@ export function MorphismCellEditor(props: {
                     exitForward={props.actions.activateBelow}
                     exitLeft={() => setActiveInput("name")}
                     hasFocused={() => {
+                        console.log("[MorphismCellEditor] Cod input focused", {
+                            morphismId: props.morphism.id,
+                            morphismName: props.morphism.name,
+                            currentCod: props.morphism.cod,
+                        });
                         setActiveInput("cod");
                         props.actions.hasFocused?.();
                     }}

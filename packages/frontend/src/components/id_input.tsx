@@ -74,6 +74,12 @@ export function IdInput(
 
     const handleNewText = (text: string) => {
         const lookup = textToId(text);
+        console.log("[IdInput] handleNewText", {
+            text,
+            lookupTag: lookup.tag,
+            lookupContent: lookup.tag !== "None" ? lookup.content : null,
+            previousId: props.id,
+        });
         if (lookup.tag !== "None") {
             // TODO: Warn the user when the names are not unique.
             props.setId(lookup.content);
@@ -89,6 +95,11 @@ export function IdInput(
         props.completions?.map((id) => ({
             name: idToText(id) ?? "",
             onComplete() {
+                console.log("[IdInput] Completion selected", {
+                    selectedId: id,
+                    selectedLabel: idToText(id),
+                    previousId: props.id,
+                });
                 props.setId(id);
                 updateText(id);
             },
@@ -158,17 +169,28 @@ export function ObIdInput(
             )
             .otherwise(() => null);
 
-    const id = (): Uuid | null => getId(props.ob);
+    const id = (): Uuid | null => {
+        const result = getId(props.ob);
+        console.log("[ObIdInput] ob -> id", {
+            ob: props.ob,
+            resolvedId: result,
+        });
+        return result;
+    };
 
     const setId = (id: Uuid | null) => {
-        props.setOb(
+        const newOb =
             id === null
                 ? null
                 : {
-                      tag: "Basic",
+                      tag: "Basic" as const,
                       content: id,
-                  },
-        );
+                  };
+        console.log("[ObIdInput] setId -> setOb", {
+            id,
+            newOb,
+        });
+        props.setOb(newOb);
     };
 
     return <IdInput id={id()} setId={setId} {...inputProps} />;

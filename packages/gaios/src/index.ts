@@ -13,8 +13,8 @@ export const plugins = [
     },
     {
         type: "patchwork:tool",
-        id: "catcolab-model",
-        name: "CatColab",
+        id: "catcolab-model-kaspar",
+        name: "CatColab Kaspar",
         icon: "Zap",
         supportedDataTypes: ["catcolab-model"],
         async load() {

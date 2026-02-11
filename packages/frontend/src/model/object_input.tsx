@@ -42,25 +42,43 @@ export function ObInput(
     const [props, otherProps] = splitProps(allProps, ["ob", "setOb", "obType", "applyOp"]);
 
     const ob = () => {
-        if (props.applyOp) {
-            return props.ob?.tag === "App" && deepEqual(props.ob.content.op, props.applyOp)
+        const result =
+            props.applyOp &&
+            props.ob?.tag === "App" &&
+            deepEqual(props.ob.content.op, props.applyOp)
                 ? props.ob.content.ob
-                : null;
-        } else {
-            return props.ob;
-        }
+                : props.applyOp
+                  ? null
+                  : props.ob;
+        console.log("[ObInput] Resolved ob value", {
+            rawOb: props.ob,
+            applyOp: props.applyOp,
+            resolvedOb: result,
+            obType: props.obType,
+        });
+        return result;
     };
 
     const setOb = (ob: Ob | null) => {
         if (ob && props.applyOp) {
-            props.setOb({
-                tag: "App",
+            const wrapped = {
+                tag: "App" as const,
                 content: {
                     op: props.applyOp,
                     ob,
                 },
+            };
+            console.log("[ObInput] Setting ob with applyOp", {
+                inputOb: ob,
+                applyOp: props.applyOp,
+                wrappedOb: wrapped,
             });
+            props.setOb(wrapped);
         } else {
+            console.log("[ObInput] Setting ob directly", {
+                ob,
+                obType: props.obType,
+            });
             props.setOb(ob);
         }
     };
@@ -105,14 +123,29 @@ function BasicObInput(allProps: ObInputProps & IdInputOptions) {
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 
-    const completions = (): QualifiedName[] | undefined =>
-        liveModel().elaboratedModel()?.obGeneratorsWithType(props.obType);
+    const completions = (): QualifiedName[] | undefined => {
+        const result =
+            props.obType && liveModel().elaboratedModel()?.obGeneratorsWithType(props.obType);
+        console.log("[BasicObInput] Computed completions", {
+            obType: props.obType,
+            completionCount: result?.length ?? 0,
+            completions: result,
+        });
+        return result;
+    };
 
     return (
         <ObIdInput
             completions={completions()}
             idToLabel={(id) => liveModel().elaboratedModel()?.obGeneratorLabel(id)}
-            labelToId={(label) => liveModel().elaboratedModel()?.obGeneratorWithLabel(label)}
+            labelToId={(label) => {
+                const result = liveModel().elaboratedModel()?.obGeneratorWithLabel(label);
+                console.log("[BasicObInput] labelToId lookup", {
+                    label,
+                    result,
+                });
+                return result;
+            }}
             {...otherProps}
         />
     );
