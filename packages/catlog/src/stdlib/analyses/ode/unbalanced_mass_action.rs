@@ -173,6 +173,7 @@ mod tests {
     use std::rc::Rc;
 
     use super::*;
+    use crate::simulate::ode::LatexEquation;
     use crate::stdlib::{models::*, theories::*};
 
     #[test]
@@ -209,5 +210,37 @@ mod tests {
             dy = (Incoming(f)) x y^{-1}
         "#]);
         expected.assert_eq(&sys.to_string());
+    }
+
+    #[test]
+    fn catalysis_dynamics() {
+        let th = Rc::new(th_sym_monoidal_category());
+        let model = catalyzed_reaction(th);
+        let sys = PetriNetMassActionAnalysis::default().build_unbalanced_system(&model);
+        // Note that the catalyst c is not left unchanged unless f is "balanced"
+        let expected = expect!([r#"
+            dx = (-Outgoing(f)) c x
+            dy = (Incoming(f)) c x
+            dc = (Incoming(f) + -Outgoing(f)) c x
+        "#]);
+        expected.assert_eq(&sys.to_string());
+    }
+
+    #[test]
+    fn to_latex() {
+        let th = Rc::new(th_category_links());
+        let model = backward_link(th);
+        let sys = StockFlowMassActionAnalysis::default().build_unbalanced_system(&model);
+        let expected = vec![
+            LatexEquation {
+                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string(),
+                rhs: "(-Outgoing(f)) x y".to_string(),
+            },
+            LatexEquation {
+                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string(),
+                rhs: "(Incoming(f)) x y".to_string(),
+            },
+        ];
+        assert_eq!(expected, sys.to_latex_equations());
     }
 }
