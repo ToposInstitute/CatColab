@@ -13,13 +13,18 @@ include notable new features.
 
 ### Added
 
-- Support for composing models is extended to Petri nets
+- Composing Petri nets by sharing/identifying places
 - [ELK](https://github.com/kieler/elkjs) is now available as an alternative to
   Graphviz for graph layout in graph visualization analyses
+  ([#1019](https://github.com/ToposInstitute/CatColab/pull/1019))
 - New analysis: display the system of equations for mass-action dynamics in
   mathematical notation
   ([#954](https://github.com/ToposInstitute/CatColab/pull/954))
-- New analysis: unbalanced mass-action semantics (i.e. distinct consumption and production rates) for stock-flow diagrams ([#1000](https://github.com/ToposInstitute/CatColab/pull/1000))
+- New analysis: unbalanced mass-action dynamics (i.e. distinct consumption and
+  production rates) for Petri nets and stock-flow diagrams
+  ([#1000](https://github.com/ToposInstitute/CatColab/pull/1000))
+- New analysis: generate SQL schema definitions from schemas in CatColab
+  ([#843](https://github.com/ToposInstitute/CatColab/pull/843))
 
 ### Changed
 
