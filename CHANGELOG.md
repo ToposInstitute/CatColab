@@ -19,6 +19,7 @@ include notable new features.
 - New analysis: display the system of equations for mass-action dynamics in
   mathematical notation
   ([#954](https://github.com/ToposInstitute/CatColab/pull/954))
+- New analysis: unbalanced mass-action semantics (i.e. distinct consumption and production rates) for stock-flow diagrams ([#1000](https://github.com/ToposInstitute/CatColab/pull/1000))
 
 ### Changed
 

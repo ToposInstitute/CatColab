@@ -51,9 +51,19 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
                     return thSymMonoidalCategory.massActionEquations(model);
                 },
             }),
+            analyses.unbalancedMassAction({
+                simulate(model, data) {
+                    return thSymMonoidalCategory.unbalancedMassAction(model, data);
+                },
+            }),
+            analyses.unbalancedMassActionEquations({
+                getEquations(model) {
+                    return thSymMonoidalCategory.unbalancedMassActionEquations(model);
+                },
+            }),
             analyses.stochasticMassAction({
                 id: "stochastic-mass-action",
-                name: "Stochastic mass action dynamics",
+                name: "Stochastic mass-action dynamics",
                 description: "Simulate a stochastic system using the law of mass action",
                 help: "stochastic-mass-action",
                 simulate(model, data) {
