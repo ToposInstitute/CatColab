@@ -13,9 +13,9 @@ export function UserStateProvider(props: { children: JSX.Element }) {
     onMount(async () => {
         const userStateUrl = unwrap(await api.rpc.get_user_state_url.query());
         const docHandle = (await api.repo.find(userStateUrl as DocumentId)) as DocHandle<UserState>;
-        setUserState(reconcile(JSON.parse(JSON.stringify(docHandle.doc())) as UserState));
+        setUserState(reconcile(docHandle.doc()));
         docHandle.on("change", ({ doc }) => {
-            setUserState(reconcile(JSON.parse(JSON.stringify(doc)) as UserState));
+            setUserState(reconcile(doc));
         });
     });
     return (
