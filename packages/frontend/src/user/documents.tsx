@@ -46,11 +46,19 @@ export default function UserDocuments() {
 function DocumentsSearch() {
     const userState = useUserState();
     createEffect(() => {
-        console.log("userState", userState);
+        console.log("userState", userState.documents);
     });
     return (
-        <ul>
-            <For each={userState.documents}>{(doc) => <li>{doc.name}</li>}</For>
-        </ul>
+        <div style="overflow: scroll">
+            <ul>
+                <For each={userState.documents}>
+                    {(doc) => (
+                        <li>
+                            <div class="doc-name">{doc.name}</div>
+                        </li>
+                    )}
+                </For>
+            </ul>
+        </div>
     );
 }
