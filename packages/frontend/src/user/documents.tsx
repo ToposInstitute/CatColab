@@ -45,5 +45,12 @@ export default function UserDocuments() {
 
 function DocumentsSearch() {
     const userState = useUserState();
-    return <pre>{JSON.stringify(userState, null, 2)}</pre>;
+    createEffect(() => {
+        console.log("userState", userState);
+    });
+    return (
+        <ul>
+            <For each={userState.documents}>{(doc) => <li>{doc.name}</li>}</For>
+        </ul>
+    );
 }

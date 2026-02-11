@@ -1,12 +1,13 @@
 import type { Doc, DocHandle, DocumentId } from "@automerge/automerge-repo";
-import { createSignal, type JSX, onMount } from "solid-js";
+import { type JSX, onMount } from "solid-js";
+import { createStore } from "solid-js/store";
 
 import { useApi } from "../api";
 import { unwrap } from "../api/rpc";
 import { INITIAL_USER_STATE, type UserState, UserStateContext } from "./user_state_context";
 
 export function UserStateProvider(props: { children: JSX.Element }) {
-    const [userState, setUserState] = createSignal<Doc<UserState>>(INITIAL_USER_STATE);
+    const [userState, setUserState] = createStore<Doc<UserState>>(INITIAL_USER_STATE);
     const api = useApi();
 
     onMount(async () => {
@@ -19,6 +20,6 @@ export function UserStateProvider(props: { children: JSX.Element }) {
         });
     });
     return (
-        <UserStateContext.Provider value={userState()}>{props.children}</UserStateContext.Provider>
+        <UserStateContext.Provider value={userState}>{props.children}</UserStateContext.Provider>
     );
 }
