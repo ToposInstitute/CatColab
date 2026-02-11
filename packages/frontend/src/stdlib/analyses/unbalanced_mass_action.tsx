@@ -1,4 +1,4 @@
-import { createMemo } from "solid-js";
+import { createMemo, For } from "solid-js";
 
 import {
     BlockTitle,
@@ -9,7 +9,13 @@ import {
     Foldable,
     KatexDisplay,
 } from "catcolab-ui-components";
-import { collectProduct, type MorType, type ObType, type QualifiedName, type UnbalancedMassActionProblemData } from "catlog-wasm";
+import {
+    collectProduct,
+    type MorType,
+    type ObType,
+    type QualifiedName,
+    type UnbalancedMassActionProblemData,
+} from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
@@ -18,8 +24,9 @@ import type { UnbalancedMassActionSimulator } from "./simulator_types";
 
 import "./simulation.css";
 
-import styles from "./mass_action.module.css";
 import invariant from "tiny-invariant";
+
+import styles from "./mass_action.module.css";
 
 /** Analyze a model using unbalanced mass-action dynamics. */
 export default function UnbalancedMassAction(
@@ -40,49 +47,45 @@ export default function UnbalancedMassAction(
         return props.stateType ? model.obGeneratorsWithType(props.stateType) : model.obGenerators();
     }, []);
 
-    const morGeneratorsDoms = createMemo<QualifiedName[]>(() => {
+    type TransitionInterface = Record<
+        QualifiedName,
+        { inputs: QualifiedName[]; outputs: QualifiedName[] }
+    >;
+
+    const morGeneratorsInterfaces = createMemo<TransitionInterface>(() => {
         const model = elaboratedModel();
         if (!model) {
-            return [];
+            return {};
         }
         const morGenerators = props.transitionType
             ? model.morGeneratorsWithType(props.transitionType)
             : model.morGenerators();
-        
+        var transitionInterface: TransitionInterface = {};
+
         for (const mg of morGenerators) {
             const mor = model.morPresentation(mg);
             if (!mor) {
                 continue;
             }
-            for (const [i, ob] of collectProduct(mor.dom).entries()) {
+            transitionInterface[mg] = {
+                inputs: [],
+                outputs: [],
+            };
+            for (const [_, ob] of collectProduct(mor.dom).entries()) {
                 invariant(ob.tag === "Basic");
-                console.log({
-                    id: `${mg}:dom:${i}`,
-                    source: ob.content,
-                    target: mg,
-                });
+                // TODO: should we have [i, ob] and be worrying about ${i}?
+                transitionInterface[mg].inputs.push(ob.content);
             }
-        }
-        
-        for (const mg of morGenerators) {
-            const mor = model.morPresentation(mg);
-            if (!mor) {
-                continue;
-            }
-            for (const [i, ob] of collectProduct(mor.cod).entries()) {
+            for (const [_, ob] of collectProduct(mor.cod).entries()) {
                 invariant(ob.tag === "Basic");
-                console.log({
-                    id: `${mg}:cod:${i}`,
-                    source: mg,
-                    target: ob.content,
-                });
+                transitionInterface[mg].outputs.push(ob.content);
             }
         }
 
-        return morGenerators;
-    }, []);
+        return transitionInterface;
+    });
 
-    const morGeneratorsCods = createMemo<QualifiedName[]>(() => {
+    const morGeneratorsCodsTEMP = createMemo<QualifiedName[]>(() => {
         const model = elaboratedModel();
         if (!model) {
             return [];
@@ -109,10 +112,11 @@ export default function UnbalancedMassAction(
         }),
     ];
 
-    const morDomsSchema: ColumnSchema<QualifiedName>[] = [
+    const morInputsSchema: ColumnSchema<QualifiedName>[] = [
         {
             contentType: "string",
             header: true,
+            name: "Test",
             content: (id) => morLabelOrDefault(id, elaboratedModel()) ?? "",
         },
         createNumericalColumn({
@@ -125,9 +129,9 @@ export default function UnbalancedMassAction(
                     content.consumptionRates[id] = data;
                 }),
         }),
-    ];
+    ]
 
-    const morCodsSchema: ColumnSchema<QualifiedName>[] = [
+    const morCodsSchemaTEMP: ColumnSchema<QualifiedName>[] = [
         {
             contentType: "string",
             header: true,
@@ -171,9 +175,15 @@ export default function UnbalancedMassAction(
             <Foldable title="Parameters" defaultExpanded>
                 <div class="parameters">
                     <FixedTableEditor rows={obGenerators()} schema={obSchema} />
-                    <FixedTableEditor rows={morGeneratorsDoms()} schema={morDomsSchema} />
-                    <FixedTableEditor rows={morGeneratorsCods()} schema={morCodsSchema} />
-                    <FixedTableEditor rows={[null]} schema={toplevelSchema} />
+                    <For each={Object.keys(morGeneratorsInterfaces())}>
+                        {(mor) => {
+                            const inputs = morGeneratorsInterfaces()?.[mor]?.inputs
+                            if (inputs != undefined) {
+                                return <FixedTableEditor rows={inputs} schema={morInputsSchema} />
+                            }
+                        }}
+                    </For>
+                    <FixedTableEditor rows={morGeneratorsCodsTEMP()} schema={morCodsSchemaTEMP} />
                 </div>
             </Foldable>
             <Foldable title="Equations" class={styles.equations}>
@@ -187,7 +197,12 @@ export default function UnbalancedMassAction(
                     ]}
                 />
             </Foldable>
-            <ODEResultPlot result={plotResult()} />
+            <Foldable title="Simulation">
+                <div class="parameters">
+                    <FixedTableEditor rows={[null]} schema={toplevelSchema} />
+                </div>
+                <ODEResultPlot result={plotResult()} />
+            </Foldable>
         </div>
     );
 }
