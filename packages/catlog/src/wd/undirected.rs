@@ -4,6 +4,7 @@ use derivative::Derivative;
 use std::{fmt, hash::Hash};
 
 use crate::tt::util::{Row, pretty::*};
+use crate::validate::{self, Validate};
 use crate::zero::{HashColumn, LabelSegment, Mapping, MutMapping, NameSegment};
 
 /// Ports of a wiring diagram.
@@ -53,29 +54,80 @@ impl<T, J> UWD<T, J> {
 
 impl<T: Clone + Eq, J: Clone + Eq + Hash> UWD<T, J> {
     /// Assigns a port on a box to a junction.
-    pub fn set_inner(&mut self, box_: NameSegment, port: NameSegment, junction: J) {
-        let inner = self.inner.get_mut(box_).unwrap_or_else(|| panic!("No box named {box_}"));
+    pub fn set_inner(&mut self, box_name: NameSegment, port_name: NameSegment, junction: J) {
+        let inner = self
+            .inner
+            .get_mut(box_name)
+            .unwrap_or_else(|| panic!("No box named {box_name}"));
         let ty = inner
             .ports
-            .get(port)
-            .unwrap_or_else(|| panic!("Box {box_} has no port named {port}"));
+            .get(port_name)
+            .unwrap_or_else(|| panic!("Box {box_name} has no port named {port_name}"));
         if !self.junctions.is_set(&junction) {
             self.junctions.set(junction.clone(), ty.clone());
         }
-        inner.mapping.set(port, junction);
+        inner.mapping.set(port_name, junction);
     }
 
     /// Assigns an outer port to a junction.
-    pub fn set_outer(&mut self, port: NameSegment, junction: J) {
+    pub fn set_outer(&mut self, port_name: NameSegment, junction: J) {
         let ty = self
             .outer
             .ports
-            .get(port)
-            .unwrap_or_else(|| panic!("No outer port named {port}"));
+            .get(port_name)
+            .unwrap_or_else(|| panic!("No outer port named {port_name}"));
         if !self.junctions.is_set(&junction) {
             self.junctions.set(junction.clone(), ty.clone());
         }
-        self.outer.mapping.set(port, junction);
+        self.outer.mapping.set(port_name, junction);
+    }
+}
+
+/// A failure of a UWD to be valid/well-typed.
+pub enum InvalidUWD {
+    /// Outer port is not assigned or assigned to a junction with wrong type.
+    OuterPortType {
+        /// Name of the offending port.
+        port_name: NameSegment,
+    },
+    /// Port of box is not assigned or assigned to a junction with wrong type.
+    InnerPortType {
+        /// Name of the box containing the offending port.
+        box_name: NameSegment,
+        /// Name of the offending port.
+        port_name: NameSegment,
+    },
+}
+
+impl<T: Clone + Eq, J: Clone + Eq + Hash> UWD<T, J> {
+    fn iter_invalid(&self) -> impl Iterator<Item = InvalidUWD> + use<'_, T, J> {
+        let junctions = &self.junctions;
+        let outer_errors = self.outer.ports.iter().filter_map(|(&port_name, (_, ty))| {
+            let valid = self
+                .outer
+                .mapping
+                .get(&port_name)
+                .is_some_and(|j| junctions.get(j).is_some_and(|jty| jty == ty));
+            (!valid).then_some(InvalidUWD::OuterPortType { port_name })
+        });
+        let inner_errors = self.inner.iter().flat_map(move |(&box_name, (_, port_map))| {
+            port_map.ports.iter().filter_map(move |(&port_name, (_, ty))| {
+                let valid = port_map
+                    .mapping
+                    .get(&port_name)
+                    .is_some_and(|j| junctions.get(j).is_some_and(|jty| jty == ty));
+                (!valid).then_some(InvalidUWD::InnerPortType { box_name, port_name })
+            })
+        });
+        outer_errors.chain(inner_errors)
+    }
+}
+
+impl<T: Clone + Eq, J: Clone + Eq + Hash> Validate for UWD<T, J> {
+    type ValidationError = InvalidUWD;
+
+    fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
+        validate::wrap_errors(self.iter_invalid())
     }
 }
 
@@ -120,8 +172,7 @@ mod tests {
     use super::*;
     use expect_test::expect;
 
-    #[test]
-    fn pretty_print() {
+    fn binary_composite_uwd() -> UWD<&'static str, &'static str> {
         let mut uwd: UWD<_, _> = UWD::new(Ports::from_iter([("x", "X"), ("z", "Z")]));
         uwd.add_box("R".into(), "R".into(), Ports::from_iter([("a", "X"), ("b", "Y")]));
         uwd.add_box("S".into(), "S".into(), Ports::from_iter([("c", "Y"), ("d", "Z")]));
@@ -131,11 +182,21 @@ mod tests {
         uwd.set_inner("S".into(), "d".into(), "w");
         uwd.set_outer("x".into(), "u");
         uwd.set_outer("z".into(), "w");
+        uwd
+    }
 
+    #[test]
+    fn pretty_print() {
+        let uwd = binary_composite_uwd();
         let expected = expect![[r#"
             [x : X := u, z : Z := w] :-
               R [a : X := u, b : Y := v],
               S [c : Y := v, d : Z := w]"#]];
         expected.assert_eq(&uwd.to_string());
+    }
+
+    #[test]
+    fn validate() {
+        assert!(binary_composite_uwd().validate().is_ok());
     }
 }
