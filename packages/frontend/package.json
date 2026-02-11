@@ -6,11 +6,6 @@
     "type": "module",
     "pnpm": {
         "overrides": {
-            "@inkandswitch/annotations": "link:../../../patchwork-next/packages/annotations/core",
-            "@inkandswitch/annotations-diff": "link:../../../patchwork-next/packages/annotations/annotation-types/diff",
-            "@inkandswitch/patchwork-refs": "link:../../../patchwork-next/packages/refs",
-            "@inkandswitch/subscribables": "link:../../../patchwork-next/packages/subscribables/core",
-            "@inkandswitch/subscribables-solid": "link:../../../patchwork-next/packages/subscribables/frameworks/solid",
             "@automerge/automerge-repo": "^2.2.0",
             "@automerge/automerge": "^3.1.1"
         }
