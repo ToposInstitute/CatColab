@@ -124,9 +124,7 @@
 //! The implementation of NbE for DoubleTT is simplified compared to a generic
 //! dependent type theory because we need only normalize types for objects---and
 //! type dependency appears only for morphism types (which depend on a pair of
-//! objects). This means that in the conversion checking apparatus, we don’t
-//! need to keep track of the values of morphisms; we represent any morphism as
-//! [`TmV_::Opaque`]. Therefore, we don’t need to worry about equality checking
+//! objects). Therefore, we don’t need to worry about equality checking
 //! with respect to any morphism equalities which we might want to impose.
 //!
 //! # Specialization
@@ -187,9 +185,9 @@
 //! `Graph & [ .V := V ]` to be a well-formed type.
 //!
 //! Note that some algorithms simply ignore specializations, for instance
-//! [`eval::Evaluator::convertable_ty`]. This is convenient, because it means
+//! [`eval::Evaluator::convertible_ty`]. This is convenient, because it means
 //! that checking whether two types are subtypes can be reduced to checking
-//! whether they are convertable, and then checking whether a generic element of
+//! whether they are convertible, and then checking whether a generic element of
 //! the first type is an element of the second type. This neatly resolves the
 //! difference between `[ x : @sing a ]` and `[ x : Entity ] & [ .x := a ]`,
 //! which are represented differently, but should be semantically the same type.

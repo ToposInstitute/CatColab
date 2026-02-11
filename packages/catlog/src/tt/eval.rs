@@ -4,7 +4,7 @@
 //!
 //! - `eval : syntax -> value` ([Evaluator::eval_tm], [Evaluator::eval_ty])
 //! - `quote : value -> syntax` ([Evaluator::quote_tm], [Evaluator::quote_neu], [Evaluator::quote_ty])
-//! - `convertable? : value -> value -> bool` ([Evaluator::equal_tm], [Evaluator::element_of], [Evaluator::subtype])
+//! - `convertible? : value -> value -> bool` ([Evaluator::equal_tm], [Evaluator::element_of], [Evaluator::subtype])
 
 use derive_more::Constructor;
 
@@ -19,7 +19,7 @@ use crate::{
 /// sometimes need to evaluate terms. For instance, quoting a lambda
 /// involves evaluating the body of the lambda in the context of a freshly
 /// introduced variable; even though we don't have lambdas, a similar
-/// thing applies to dependent records.
+/// point applies to dependent records.
 #[derive(Constructor, Clone)]
 pub struct Evaluator<'a> {
     toplevel: &'a Toplevel,
@@ -79,11 +79,10 @@ impl<'a> Evaluator<'a> {
             TmS_::Cons(fields) => TmV::cons(fields.map(|tm| self.eval_tm(tm))),
             TmS_::Proj(tm, field, label) => self.proj(&self.eval_tm(tm), *field, *label),
             TmS_::Tt => TmV::tt(),
-            TmS_::Id(_) => TmV::opaque(),
-            TmS_::Compose(_, _) => TmV::opaque(),
+            TmS_::Id(x) => TmV::id(self.eval_tm(x)),
+            TmS_::Compose(f, g) => TmV::compose(self.eval_tm(f), self.eval_tm(g)),
             TmS_::ObApp(name, x) => TmV::app(*name, self.eval_tm(x)),
             TmS_::List(elems) => TmV::list(elems.iter().map(|tm| self.eval_tm(tm)).collect()),
-            TmS_::Opaque => TmV::opaque(),
             TmS_::Meta(mv) => TmV::meta(*mv),
         }
     }
@@ -204,17 +203,18 @@ impl<'a> Evaluator<'a> {
             TmV_::List(elems) => TmS::list(elems.iter().map(|tm| self.quote_tm(tm)).collect()),
             TmV_::Cons(fields) => TmS::cons(fields.map(|tm| self.quote_tm(tm))),
             TmV_::Tt => TmS::tt(),
-            TmV_::Opaque => TmS::opaque(),
+            TmV_::Id(x) => TmS::id(self.quote_tm(x)),
+            TmV_::Compose(f, g) => TmS::compose(self.quote_tm(f), self.quote_tm(g)),
             TmV_::Meta(mv) => TmS::meta(*mv),
         }
     }
 
     /// Check if `ty1` is a subtype of `ty2`.
     ///
-    /// This is true iff `ty1` is convertable with `ty2`, and an eta-expanded
+    /// This is true iff `ty1` is convertible with `ty2`, and an eta-expanded
     /// neutral of type `ty1` is an element of `ty2`.
     pub fn subtype<'b>(&self, ty1: &TyV, ty2: &TyV) -> Result<(), D<'b>> {
-        self.convertable_ty(ty1, ty2)?;
+        self.convertible_ty(ty1, ty2)?;
         let (n, _) = self.bind_self(ty1.clone());
         let v = self.eta_neu(&n, ty1);
         self.element_of(&v, ty2)
@@ -223,7 +223,7 @@ impl<'a> Evaluator<'a> {
     /// Check if `tm` is an element of `ty`, accounting for specializations
     /// of `ty`.
     ///
-    /// Precondition: the type of `tm` must be convertable with `ty`, and `tm`
+    /// Precondition: the type of `tm` must be convertible with `ty`, and `tm`
     /// is eta-expanded.
     ///
     /// Example: if `a : Entity` and `b : Entity` are neutrals, then `a` is not an
@@ -244,12 +244,12 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    /// Check if two types are convertable.
+    /// Check if two types are convertible.
     ///
     /// Ignores specializations: specializations are handled in [`Evaluator::subtype`].
     ///
     /// On failure, returns a doc which describes the obstruction to convertability.
-    pub fn convertable_ty<'b>(&self, ty1: &TyV, ty2: &TyV) -> Result<(), D<'b>> {
+    pub fn convertible_ty<'b>(&self, ty1: &TyV, ty2: &TyV) -> Result<(), D<'b>> {
         match (&**ty1, &**ty2) {
             (TyV_::Object(ot1), TyV_::Object(ot2)) => {
                 if ot1 == ot2 {
@@ -275,15 +275,15 @@ impl<'a> Evaluator<'a> {
                     let v = TmV::cons(fields.clone().into());
                     let field_ty1_v = self1.with_env(r1.env.snoc(v.clone())).eval_ty(field_ty1_s);
                     let field_ty2_v = self1.with_env(r2.env.snoc(v.clone())).eval_ty(field_ty2_s);
-                    self1.convertable_ty(&field_ty1_v, &field_ty2_v)?;
+                    self1.convertible_ty(&field_ty1_v, &field_ty2_v)?;
                     let (field_val, self_next) = self.bind_neu(*name, *label, field_ty1_v.clone());
                     self1 = self_next;
                     fields.insert(*name, (*label, TmV::neu(field_val, field_ty1_v)));
                 }
                 Ok(())
             }
-            (TyV_::Sing(ty1, _), _) => self.convertable_ty(ty1, ty2),
-            (_, TyV_::Sing(ty2, _)) => self.convertable_ty(ty1, ty2),
+            (TyV_::Sing(ty1, _), _) => self.convertible_ty(ty1, ty2),
+            (_, TyV_::Sing(ty2, _)) => self.convertible_ty(ty1, ty2),
             (TyV_::Unit, TyV_::Unit) => Ok(()),
             _ => Err(t("tried to convert between types of different type constructors")),
         }
@@ -293,7 +293,7 @@ impl<'a> Evaluator<'a> {
     pub fn eta_neu(&self, n: &TmN, ty: &TyV) -> TmV {
         match &**ty {
             TyV_::Object(_) => TmV::neu(n.clone(), ty.clone()),
-            TyV_::Morphism(_, _, _) => TmV::opaque(),
+            TyV_::Morphism(_, _, _) => TmV::neu(n.clone(), ty.clone()),
             TyV_::Record(r) => {
                 let mut fields = Row::empty();
                 for (name, (label, _)) in r.fields.iter() {
@@ -309,7 +309,7 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    /// Performs eta-expansion of the term `n` at type `ty`.
+    /// Performs eta-expansion of the term `v` at type `ty`.
     pub fn eta(&self, v: &TmV, ty: Option<&TyV>) -> TmV {
         match &**v {
             TmV_::Neu(tm_n, ty_v) => self.eta_neu(tm_n, ty_v),
@@ -329,7 +329,8 @@ impl<'a> Evaluator<'a> {
                 }
             }
             TmV_::Tt => TmV::tt(),
-            TmV_::Opaque => TmV::opaque(),
+            TmV_::Id(x) => TmV::id(self.eta(x, None)),
+            TmV_::Compose(f, g) => TmV::compose(self.eta(f, None), self.eta(g, None)),
             TmV_::Meta(_) => v.clone(),
         }
     }
@@ -338,7 +339,7 @@ impl<'a> Evaluator<'a> {
     ///
     /// On failure, returns a doc which describes the obstruction to convertability.
     ///
-    /// Assumes that the type of tm1 is convertable with the type of tm2. First
+    /// Assumes that the type of tm1 is convertible with the type of tm2. First
     /// attempts to do conversion checking without eta-expansion (strict mode),
     /// and if that fails, does conversion checking with eta-expansion.
     pub fn equal_tm<'b>(&self, tm1: &TmV, tm2: &TmV) -> Result<(), D<'b>> {
@@ -381,7 +382,6 @@ impl<'a> Evaluator<'a> {
                 Ok(())
             }
             (TmV_::Tt, TmV_::Tt) => Ok(()),
-            (TmV_::Opaque, TmV_::Opaque) => Ok(()),
             (TmV_::Meta(mv1), TmV_::Meta(mv2)) => {
                 if mv1 == mv2 {
                     Ok(())

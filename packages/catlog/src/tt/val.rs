@@ -204,17 +204,15 @@ pub enum TmV_ {
     Cons(Row<TmV>),
     /// The unique element of the unit type.
     Tt,
-    /// An element of a type that is opaque to conversion checking.
-    Opaque,
+    /// The identity morphism of an object.
+    Id(TmV),
+    /// Composition of morphisms.
+    Compose(TmV, TmV),
     /// A metavariable.
     Meta(MetaVar),
 }
 
-/// Values for terms in the codiscrete mode, dereferences to [TmV_].
-///
-/// Note that this is *not* the value for a general term. So evaluating a `TmS`
-/// to produce a `TmV` and then quoting back will lose information about
-/// anything morphism-related. See [crate::tt] for more information.
+/// Values for terms, dereferences to [TmV_].
 #[derive(Clone, Deref)]
 #[deref(forward)]
 pub struct TmV(Rc<TmV_>);
@@ -245,9 +243,14 @@ impl TmV {
         TmV(Rc::new(TmV_::Tt))
     }
 
-    /// Smart constructor for [TmV], [TmV_::Opaque] case.
-    pub fn opaque() -> Self {
-        TmV(Rc::new(TmV_::Opaque))
+    /// Smart constructor for [TmV], [TmV_::Id] case.
+    pub fn id(x: TmV) -> Self {
+        TmV(Rc::new(TmV_::Id(x)))
+    }
+
+    /// Smart constructor for [TmV], [TmV_::Compose] case.
+    pub fn compose(f: TmV, g: TmV) -> Self {
+        TmV(Rc::new(TmV_::Compose(f, g)))
     }
 
     /// Smart constructor for [TmV], [TmV_::Meta] case.

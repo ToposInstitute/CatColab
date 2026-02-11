@@ -45,7 +45,7 @@ impl Display for NameSegment {
     }
 }
 
-/// Shorthand for constructing a label segment from something that can convert
+/// Shorthand for constructing a name segment from something that can convert
 /// into a Ustr.
 pub fn name_seg(s: impl Into<Ustr>) -> NameSegment {
     NameSegment::Text(s.into())

@@ -67,7 +67,7 @@ pub enum TyS_ {
     ///
     /// Example syntax: `@sing a` (assuming `a` is a term that synthesizes a type).
     ///
-    /// A term `x` of type `Sing(ty, tm)` is a term of `ty` that is convertable with
+    /// A term `x` of type `Sing(ty, tm)` is a term of `ty` that is convertible with
     /// `tm`.
     Sing(TyS, TmS),
 
@@ -86,7 +86,7 @@ pub enum TyS_ {
     ///
     /// Example syntax: `Unit`.
     ///
-    /// All terms of this type are convertable with `tt : Unit`.
+    /// All terms of this type are convertible with `tt : Unit`.
     Unit,
 
     /// A metavar.
@@ -213,12 +213,8 @@ pub enum TmS_ {
     Compose(TmS, TmS),
     /// Application of an object operation in the theory.
     ObApp(VarName, TmS),
-    /// List of objects or morphisms.
+    /// List of objects.
     List(Vec<TmS>),
-    /// An opaque term.
-    ///
-    /// This only appears when we quote a value.
-    Opaque,
     /// A metavar.
     ///
     /// This only appears when we have an error in elaboration.
@@ -284,11 +280,6 @@ impl TmS {
         Self(Rc::new(TmS_::List(elems)))
     }
 
-    /// An opaque term.
-    pub fn opaque() -> Self {
-        Self(Rc::new(TmS_::Opaque))
-    }
-
     /// Smart constructor for [TmS], [TmS_::Meta] case.
     pub fn meta(mv: MetaVar) -> Self {
         Self(Rc::new(TmS_::Meta(mv)))
@@ -312,7 +303,6 @@ impl ToDoc for TmS {
             TmS_::ObApp(name, x) => unop(t(format!("@{name}")), x.to_doc()),
             TmS_::List(elems) => tuple(elems.iter().map(|elem| elem.to_doc())),
             TmS_::Tt => t("tt"),
-            TmS_::Opaque => t("<opaque>"),
             TmS_::Meta(mv) => t(format!("?{}", mv.id)),
         }
     }

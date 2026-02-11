@@ -568,7 +568,11 @@ impl<'a> Elaborator<'a> {
                     return elab.syn_error("can only apply @id to objects");
                 };
                 let mor_type = elab.theory().hom_type(ob_type.clone());
-                (TmS::id(ob_s), TmV::tt(), TyV::morphism(mor_type, ob_v.clone(), ob_v))
+                (
+                    TmS::id(ob_s),
+                    TmV::id(ob_v.clone()),
+                    TyV::morphism(mor_type, ob_v.clone(), ob_v),
+                )
             }
             App1(L(_, Prim(name)), ob_n) => {
                 let name = name_seg(*name);
@@ -582,8 +586,8 @@ impl<'a> Elaborator<'a> {
                 (TmS::ob_app(name, arg_s), TmV::app(name, arg_v), TyV::object(cod))
             }
             App2(L(_, Keyword("*")), f_n, g_n) => {
-                let (f_s, _, f_ty) = elab.syn(f_n);
-                let (g_s, _, g_ty) = elab.syn(g_n);
+                let (f_s, f_v, f_ty) = elab.syn(f_n);
+                let (g_s, g_v, g_ty) = elab.syn(g_n);
                 let TyV_::Morphism(f_mt, f_dom, f_cod) = &*f_ty else {
                     elab.loc = Some(f_n.loc());
                     return elab.syn_error("expected a morphism");
@@ -608,7 +612,7 @@ impl<'a> Elaborator<'a> {
                 }
                 (
                     TmS::compose(f_s, g_s),
-                    TmV::tt(),
+                    TmV::compose(f_v, g_v),
                     TyV::morphism(
                         elab.theory().compose_types2(f_mt.clone(), g_mt.clone()).unwrap(),
                         f_dom.clone(),
@@ -640,7 +644,7 @@ impl<'a> Elaborator<'a> {
                 (TmS::topapp(tv, arg_stxs), eval.eval_tm(&d.body), eval.eval_ty(&d.ret_ty))
             }
             Tag("tt") => (TmS::tt(), TmV::tt(), TyV::unit()),
-            Tuple(_) => elab.syn_error("must check agains a type in order to construct a record"),
+            Tuple(_) => elab.syn_error("must check against a type in order to construct a record"),
             Prim("hole") => elab.syn_error("explicit hole"),
             _ => elab.syn_error("unexpected notation for term"),
         }
@@ -702,7 +706,7 @@ impl<'a> Elaborator<'a> {
             _ => {
                 let (tm_s, tm_v, synthed) = elab.syn(n);
                 let eval = elab.evaluator();
-                if let Err(e) = eval.convertable_ty(&synthed, ty) {
+                if let Err(e) = eval.convertible_ty(&synthed, ty) {
                     return elab.chk_error(format!(
                         "synthesized type {} does not match expected type {}:\n{}",
                         eval.quote_ty(&synthed),
