@@ -9,7 +9,7 @@ import {
     Foldable,
     KatexDisplay,
 } from "catcolab-ui-components";
-import type { MorType, ObType, QualifiedName, UnbalancedMassActionProblemData } from "catlog-wasm";
+import { collectProduct, type MorType, type ObType, type QualifiedName, type UnbalancedMassActionProblemData } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
@@ -19,6 +19,7 @@ import type { UnbalancedMassActionSimulator } from "./simulator_types";
 import "./simulation.css";
 
 import styles from "./mass_action.module.css";
+import invariant from "tiny-invariant";
 
 /** Analyze a model using unbalanced mass-action dynamics. */
 export default function UnbalancedMassAction(
@@ -39,7 +40,49 @@ export default function UnbalancedMassAction(
         return props.stateType ? model.obGeneratorsWithType(props.stateType) : model.obGenerators();
     }, []);
 
-    const morGenerators = createMemo<QualifiedName[]>(() => {
+    const morGeneratorsDoms = createMemo<QualifiedName[]>(() => {
+        const model = elaboratedModel();
+        if (!model) {
+            return [];
+        }
+        const morGenerators = props.transitionType
+            ? model.morGeneratorsWithType(props.transitionType)
+            : model.morGenerators();
+        
+        for (const mg of morGenerators) {
+            const mor = model.morPresentation(mg);
+            if (!mor) {
+                continue;
+            }
+            for (const [i, ob] of collectProduct(mor.dom).entries()) {
+                invariant(ob.tag === "Basic");
+                console.log({
+                    id: `${mg}:dom:${i}`,
+                    source: ob.content,
+                    target: mg,
+                });
+            }
+        }
+        
+        for (const mg of morGenerators) {
+            const mor = model.morPresentation(mg);
+            if (!mor) {
+                continue;
+            }
+            for (const [i, ob] of collectProduct(mor.cod).entries()) {
+                invariant(ob.tag === "Basic");
+                console.log({
+                    id: `${mg}:cod:${i}`,
+                    source: mg,
+                    target: ob.content,
+                });
+            }
+        }
+
+        return morGenerators;
+    }, []);
+
+    const morGeneratorsCods = createMemo<QualifiedName[]>(() => {
         const model = elaboratedModel();
         if (!model) {
             return [];
@@ -66,7 +109,7 @@ export default function UnbalancedMassAction(
         }),
     ];
 
-    const morSchema: ColumnSchema<QualifiedName>[] = [
+    const morDomsSchema: ColumnSchema<QualifiedName>[] = [
         {
             contentType: "string",
             header: true,
@@ -82,6 +125,14 @@ export default function UnbalancedMassAction(
                     content.consumptionRates[id] = data;
                 }),
         }),
+    ];
+
+    const morCodsSchema: ColumnSchema<QualifiedName>[] = [
+        {
+            contentType: "string",
+            header: true,
+            content: (id) => morLabelOrDefault(id, elaboratedModel()) ?? "",
+        },
         createNumericalColumn({
             name: "Production",
             data: (id) => props.content.productionRates[id],
@@ -120,7 +171,8 @@ export default function UnbalancedMassAction(
             <Foldable title="Parameters" defaultExpanded>
                 <div class="parameters">
                     <FixedTableEditor rows={obGenerators()} schema={obSchema} />
-                    <FixedTableEditor rows={morGenerators()} schema={morSchema} />
+                    <FixedTableEditor rows={morGeneratorsDoms()} schema={morDomsSchema} />
+                    <FixedTableEditor rows={morGeneratorsCods()} schema={morCodsSchema} />
                     <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
             </Foldable>
