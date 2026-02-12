@@ -1,4 +1,4 @@
-import { createMemo, For } from "solid-js";
+import { createMemo } from "solid-js";
 
 import {
     BlockTitle,
@@ -60,7 +60,7 @@ export default function UnbalancedMassAction(
         const morGenerators = props.transitionType
             ? model.morGeneratorsWithType(props.transitionType)
             : model.morGenerators();
-        var transitionInterface: TransitionInterface = {};
+        const transitionInterface: TransitionInterface = {};
 
         for (const mg of morGenerators) {
             const mor = model.morPresentation(mg);
@@ -85,15 +85,25 @@ export default function UnbalancedMassAction(
         return transitionInterface;
     });
 
-    const morGeneratorsCodsTEMP = createMemo<QualifiedName[]>(() => {
-        const model = elaboratedModel();
-        if (!model) {
-            return [];
+    const morGeneratorsInputs = createMemo<[QualifiedName, QualifiedName][]>(() => {
+        const morphismInputPairs: [QualifiedName, QualifiedName][] = [];
+        for (const [mor, int] of Object.entries(morGeneratorsInterfaces())) {
+            for (const inp of int.inputs) {
+                morphismInputPairs.push([mor, inp]);
+            }
         }
-        return props.transitionType
-            ? model.morGeneratorsWithType(props.transitionType)
-            : model.morGenerators();
-    }, []);
+        return morphismInputPairs;
+    });
+
+    const morGeneratorsOutputs = createMemo<[QualifiedName, QualifiedName][]>(() => {
+        const morphismOutputPairs: [QualifiedName, QualifiedName][] = [];
+        for (const [mor, int] of Object.entries(morGeneratorsInterfaces())) {
+            for (const outp of int.outputs) {
+                morphismOutputPairs.push([mor, outp]);
+            }
+        }
+        return morphismOutputPairs;
+    });
 
     const obSchema: ColumnSchema<QualifiedName>[] = [
         {
@@ -112,39 +122,48 @@ export default function UnbalancedMassAction(
         }),
     ];
 
-    const morInputsSchema: ColumnSchema<QualifiedName>[] = [
+    const morInputsSchema: ColumnSchema<[QualifiedName, QualifiedName]>[] = [
         {
             contentType: "string",
             header: true,
-            name: "Test",
-            content: (id) => morLabelOrDefault(id, elaboratedModel()) ?? "",
+            content: ([mor, input]) =>
+                (morLabelOrDefault(input, elaboratedModel()) ?? "") +
+                " -> " +
+                "[" +
+                (morLabelOrDefault(mor, elaboratedModel()) ?? "") +
+                "]",
         },
         createNumericalColumn({
             name: "Consumption",
-            data: (id) => props.content.consumptionRates[id],
+            data: ([_, input]) => props.content.consumptionRates[input],
             default: 1,
             validate: (_, data) => data >= 0,
-            setData: (id, data) =>
+            setData: ([_, input], data) =>
                 props.changeContent((content) => {
-                    content.consumptionRates[id] = data;
+                    content.productionRates[input] = data;
                 }),
         }),
-    ]
+    ];
 
-    const morCodsSchemaTEMP: ColumnSchema<QualifiedName>[] = [
+    const morOutputsSchema: ColumnSchema<[QualifiedName, QualifiedName]>[] = [
         {
             contentType: "string",
             header: true,
-            content: (id) => morLabelOrDefault(id, elaboratedModel()) ?? "",
+            content: ([mor, output]) =>
+                "[" +
+                (morLabelOrDefault(mor, elaboratedModel()) ?? "") +
+                "]" +
+                " -> " +
+                (morLabelOrDefault(output, elaboratedModel()) ?? ""),
         },
         createNumericalColumn({
             name: "Production",
-            data: (id) => props.content.productionRates[id],
+            data: ([_, output]) => props.content.productionRates[output],
             default: 1,
             validate: (_, data) => data >= 0,
-            setData: (id, data) =>
+            setData: ([_, output], data) =>
                 props.changeContent((content) => {
-                    content.productionRates[id] = data;
+                    content.productionRates[output] = data;
                 }),
         }),
     ];
@@ -175,15 +194,8 @@ export default function UnbalancedMassAction(
             <Foldable title="Parameters" defaultExpanded>
                 <div class="parameters">
                     <FixedTableEditor rows={obGenerators()} schema={obSchema} />
-                    <For each={Object.keys(morGeneratorsInterfaces())}>
-                        {(mor) => {
-                            const inputs = morGeneratorsInterfaces()?.[mor]?.inputs
-                            if (inputs != undefined) {
-                                return <FixedTableEditor rows={inputs} schema={morInputsSchema} />
-                            }
-                        }}
-                    </For>
-                    <FixedTableEditor rows={morGeneratorsCodsTEMP()} schema={morCodsSchemaTEMP} />
+                    <FixedTableEditor rows={morGeneratorsInputs()} schema={morInputsSchema} />
+                    <FixedTableEditor rows={morGeneratorsOutputs()} schema={morOutputsSchema} />
                 </div>
             </Foldable>
             <Foldable title="Equations" class={styles.equations}>
