@@ -20,7 +20,7 @@ pub fn lotka_volterra_system(
         components: interaction_coeffs
             .row_iter()
             .enumerate()
-            .zip(growth_rates.into_iter())
+            .zip(&growth_rates)
             .map(|((i, row), rate)| {
                 Polynomial::<_, f32, _>::generator(i)
                     * (row
