@@ -2,8 +2,7 @@ use autosurgeon::{Hydrate, Reconcile, Text};
 use sqlx::PgPool;
 
 use crate::app::AppError;
-use crate::document::{RefQueryParams, RefStub, search_ref_stubs};
-use crate::user::UserSummary;
+use crate::auth::PermissionLevel;
 
 /// Autosurgeon serialization of `DateTime<Utc>` as milliseconds since Unix epoch.
 mod datetime_millis {
@@ -26,63 +25,46 @@ mod datetime_millis {
     }
 }
 
+/// User summary for user state synchronization.
+///
+/// This is similar to [`crate::user::UserSummary`] but uses [`Text`] instead of [`String`]
+/// for compatibility with Automerge/Autosurgeon serialization.
 #[cfg_attr(feature = "proptest", derive(Eq, PartialEq))]
 #[derive(Debug, Clone, Reconcile, Hydrate)]
-pub struct UserStateUserSummary {
+pub struct UserSummary {
+    /// Unique identifier for the user.
     #[key]
     pub id: Text,
+    /// The user's chosen username, if set.
     pub username: Option<Text>,
+    /// The user's display name, if set.
     #[autosurgeon(rename = "displayName")]
     pub display_name: Option<Text>,
 }
 
+/// Document reference information for user state synchronization.
+///
+/// Contains lightweight metadata about a document that the user has access to.
 #[cfg_attr(feature = "proptest", derive(Eq, PartialEq))]
 #[derive(Debug, Clone, Reconcile, Hydrate)]
-pub struct UserDocInfo {
+pub struct DocInfo {
+    /// The name of the document.
     pub name: Text,
+    /// The type of the document (e.g., "notebook", "theory").
     #[autosurgeon(rename = "typeName")]
     pub type_name: Text,
+    /// Unique identifier for this document reference.
     #[autosurgeon(rename = "refId")]
     #[key]
     pub ref_id: uuid::Uuid,
+    /// The user's permission level for this document.
     #[autosurgeon(rename = "permissionLevel")]
     pub permission_level: crate::auth::PermissionLevel,
-    pub owner: Option<UserStateUserSummary>,
+    /// The owner of the document, if any.
+    pub owner: Option<UserSummary>,
+    /// When this document was created.
     #[autosurgeon(rename = "createdAt", with = "datetime_millis")]
     pub created_at: chrono::DateTime<chrono::Utc>,
-}
-
-impl From<UserSummary> for UserStateUserSummary {
-    fn from(value: UserSummary) -> Self {
-        Self {
-            id: value.id.into(),
-            username: value.username.map(Text::from),
-            display_name: value.display_name.map(Text::from),
-        }
-    }
-}
-
-impl From<UserStateUserSummary> for UserSummary {
-    fn from(value: UserStateUserSummary) -> Self {
-        Self {
-            id: value.id.as_str().to_string(),
-            username: value.username.map(|u| u.as_str().to_string()),
-            display_name: value.display_name.map(|d| d.as_str().to_string()),
-        }
-    }
-}
-
-impl From<RefStub> for UserDocInfo {
-    fn from(value: RefStub) -> Self {
-        Self {
-            name: value.name.into(),
-            type_name: value.type_name.into(),
-            ref_id: value.ref_id,
-            permission_level: value.permission_level,
-            owner: value.owner.map(UserStateUserSummary::from),
-            created_at: value.created_at,
-        }
-    }
 }
 
 /// State associated with a user, synchronized via Automerge.
@@ -90,27 +72,73 @@ impl From<RefStub> for UserDocInfo {
 #[derive(Debug, Clone, Reconcile, Hydrate)]
 pub struct UserState {
     /// The document refs accessible to the user.
-    pub documents: Vec<UserDocInfo>,
+    pub documents: Vec<DocInfo>,
 }
 
 /// Reads user state from the database.
 pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<UserState, AppError> {
-    // Use search_ref_stubs to get documents the user has access to
-    let query_params = RefQueryParams {
-        owner_username_query: None,
-        ref_name_query: None,
-        searcher_min_level: None,
-        include_public_documents: Some(false),
-        only_deleted: Some(false),
-        limit: None,
-        offset: None,
-    };
+    // Query documents the user has access to, excluding public documents and deleted refs
+    let results = sqlx::query!(
+        r#"
+        WITH
+            filtered_ids AS (
+                SELECT refs.id
+                FROM refs
+                WHERE 
+                    -- filter by minimum permission level (read)
+                    get_max_permission($1, refs.id) >= 'read'::permission_level
+                    -- exclude public-only documents (user must have explicit permission)
+                    AND EXISTS (
+                        SELECT 1
+                        FROM permissions p_searcher
+                        WHERE
+                            p_searcher.object = refs.id
+                            AND p_searcher.subject = $1
+                    )
+                    -- exclude deleted refs
+                    AND refs.deleted_at IS NULL
+            ),
+            stubs AS (
+                SELECT *
+                FROM get_ref_stubs(
+                    $1,
+                    (SELECT array_agg(id) FROM filtered_ids)
+                )
+            )
+        SELECT
+            stubs.ref_id AS "ref_id!",
+            stubs.name,
+            stubs.type_name,
+            stubs.created_at AS "created_at!",
+            stubs.permission_level AS "permission_level!: PermissionLevel",
+            stubs.owner_id,
+            stubs.owner_username,
+            stubs.owner_display_name
+        FROM stubs
+        ORDER BY stubs.created_at DESC;
+        "#,
+        user_id,
+    )
+    .fetch_all(db)
+    .await?;
 
-    let result = search_ref_stubs(Some(user_id), db, query_params).await?;
+    let documents = results
+        .into_iter()
+        .map(|row| DocInfo {
+            ref_id: row.ref_id,
+            name: Text::from(row.name.unwrap_or_else(|| "untitled".to_string())),
+            type_name: Text::from(row.type_name.expect("type_name should never be null")),
+            permission_level: row.permission_level,
+            created_at: row.created_at,
+            owner: row.owner_id.map(|id| UserSummary {
+                id: Text::from(id),
+                username: row.owner_username.map(Text::from),
+                display_name: row.owner_display_name.map(Text::from),
+            }),
+        })
+        .collect();
 
-    Ok(UserState {
-        documents: result.items.into_iter().map(UserDocInfo::from).collect(),
-    })
+    Ok(UserState { documents })
 }
 
 /// Arbitrary instances for property-based testing.
@@ -118,23 +146,19 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
 pub mod arbitrary {
     #![allow(dead_code)]
     use super::*;
-    use autosurgeon::Text;
     use crate::auth::PermissionLevel;
+    use autosurgeon::Text;
     use chrono::{TimeZone, Utc};
     use proptest::{arbitrary::Arbitrary, prelude::*};
     use proptest_arbitrary_interop::arb;
 
-    impl Arbitrary for UserStateUserSummary {
+    impl Arbitrary for UserSummary {
         type Parameters = ();
         type Strategy = BoxedStrategy<Self>;
 
         fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-            (
-                any::<String>(),
-                any::<Option<String>>(),
-                any::<Option<String>>(),
-            )
-                .prop_map(|(id, username, display_name)| UserStateUserSummary {
+            (any::<String>(), any::<Option<String>>(), any::<Option<String>>())
+                .prop_map(|(id, username, display_name)| UserSummary {
                     id: Text::from(id),
                     username: username.map(Text::from),
                     display_name: display_name.map(Text::from),
@@ -143,7 +167,7 @@ pub mod arbitrary {
         }
     }
 
-    impl Arbitrary for UserDocInfo {
+    impl Arbitrary for DocInfo {
         type Parameters = ();
         type Strategy = BoxedStrategy<Self>;
 
@@ -153,54 +177,50 @@ pub mod arbitrary {
                 any::<String>(),
                 arb::<uuid::Uuid>(),
                 any::<PermissionLevel>(),
-                any::<Option<UserStateUserSummary>>(),
+                any::<Option<UserSummary>>(),
                 0i64..253402300799i64,
             )
-                .prop_map(|(name, type_name, ref_id, permission_level, owner, seconds)| {
-                    UserDocInfo {
-                        name: Text::from(name),
-                        type_name: Text::from(type_name),
-                        ref_id,
-                        permission_level,
-                        owner,
-                        created_at: Utc
-                            .timestamp_opt(seconds, 0)
-                            .single()
-                            .expect("valid timestamp"),
-                    }
+                .prop_map(|(name, type_name, ref_id, permission_level, owner, seconds)| DocInfo {
+                    name: Text::from(name),
+                    type_name: Text::from(type_name),
+                    ref_id,
+                    permission_level,
+                    owner,
+                    created_at: Utc.timestamp_opt(seconds, 0).single().expect("valid timestamp"),
                 })
                 .boxed()
         }
     }
 
-    /// Generates a consistent user state ref stub where:
+    /// Generates a consistent user state doc info where:
     /// - If permission_level is Own, the owner matches the user_id parameter
     /// - Otherwise, a separate owner is generated (always different from user)
-    fn ref_stub_with_owner(user_id: String) -> impl Strategy<Value = UserDocInfo> {
+    fn doc_info_with_owner(user_id: String) -> impl Strategy<Value = DocInfo> {
         (
             any::<String>(),          // name
             any::<String>(),          // type_name
             arb::<uuid::Uuid>(),      // ref_id
             any::<PermissionLevel>(), // permission_level
-            any::<UserStateUserSummary>(), // other owner (always present)
+            any::<UserSummary>(),     // other owner (always present)
             0i64..253402300799i64,    // seconds (valid timestamp range)
         )
             .prop_map(
                 move |(name, type_name, ref_id, permission_level, mut other_owner, seconds)| {
                     let owner = if permission_level == PermissionLevel::Own {
-                        UserStateUserSummary {
+                        UserSummary {
                             id: Text::from(user_id.clone()),
                             username: None,
                             display_name: None,
                         }
                     } else {
                         if other_owner.id.as_str() == user_id {
-                            other_owner.id = Text::from(format!("{}_other", other_owner.id.as_str()));
+                            other_owner.id =
+                                Text::from(format!("{}_other", other_owner.id.as_str()));
                         }
                         other_owner
                     };
 
-                    UserDocInfo {
+                    DocInfo {
                         name: Text::from(name),
                         type_name: Text::from(type_name),
                         ref_id,
@@ -221,7 +241,7 @@ pub mod arbitrary {
     pub fn arbitrary_user_state_with_id() -> impl Strategy<Value = (String, UserState)> {
         arb::<uuid::Uuid>().prop_flat_map(|user_uuid| {
             let user_id = format!("test_user_{}", user_uuid);
-            prop::collection::vec(ref_stub_with_owner(user_id.clone()), 0..5).prop_map(
+            prop::collection::vec(doc_info_with_owner(user_id.clone()), 0..5).prop_map(
                 move |mut documents| {
                     // Sort by created_at descending to match default search_ref_stubs ordering
                     documents.sort_by(|a, b| b.created_at.cmp(&a.created_at));
