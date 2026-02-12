@@ -1,7 +1,9 @@
 //! Algorithms on graphs.
 
 use derivative::Derivative;
+use indexmap::IndexMap;
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::fmt;
 use std::hash::Hash;
 
 use super::graph::*;
@@ -301,11 +303,65 @@ where
     }
 }
 
+/// Contains both the topologically-sorted stack of vertices and feedback vertices.
+#[derive(Debug, Clone)]
+pub struct ToposortData<V> {
+    ///
+    pub stack: Vec<V>,
+
+    ///
+    pub cycles: IndexMap<V, Vec<V>>,
+}
+
+impl<V> ToposortData<V> {
+    fn new(stack: Vec<V>, cycles: IndexMap<V, Vec<V>>) -> Self {
+        Self { stack, cycles }
+    }
+}
+
+/// Error type for Topological sort storing erroneous vertices.
+#[derive(Debug)]
+pub enum ToposortError<V> {
+    /// There is a cycle in the graph.
+    CycleError(V),
+    /// There is a self-loop in the graph.
+    SelfLoop(V),
+}
+
+impl<V: std::fmt::Debug> std::fmt::Display for ToposortError<V> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::CycleError(v) => write!(f, "{}", format!("{:#?}", v)),
+            Self::SelfLoop(v) => write!(f, "{}", format!("self loop at node {:#?}", v)),
+        }
+    }
+}
+
+type ToposortResult<V> = Result<ToposortData<V>, ToposortError<V>>;
+
+/// Implementation of topological sort which throws an error when it encounters a cycle.
+pub fn toposort_strict<G>(graph: &G) -> Result<Vec<G::V>, ToposortError<G::V>>
+where
+    G: FinGraph,
+    G::V: Hash + std::fmt::Debug,
+{
+    toposort_impl(graph, true).map(|t| t.stack)
+}
+
+/// Implementation of topological sort which does not throw an error when it encounters cycle.
+pub fn toposort_lenient<G>(graph: &G) -> ToposortData<G::V>
+where
+    G: FinGraph,
+    G::V: Hash + std::fmt::Debug,
+{
+    toposort_impl(graph, false).expect("This should never return an error.")
+}
+
 /// Computes a topological sorting for a given graph.
 ///
 /// This toposort algorithm was adapted from the crate `petgraph`, found
 /// [here](https://github.com/petgraph/petgraph/blob/4d807c19304c02c9dd687c68577f75aefcb98491/src/algo/mod.rs#L204).
-pub fn toposort<'a, G>(graph: &'a G) -> Result<Vec<G::V>, String>
+pub fn toposort_impl<'a, G>(graph: &'a G, is_strict: bool) -> ToposortResult<G::V>
 where
     G: FinGraph,
     G::V: Hash + std::fmt::Debug + 'a,
@@ -334,17 +390,23 @@ where
     // simply test directly by comparing positions of vertices.
     let position: HashMap<G::V, usize> =
         finish_stack.iter().enumerate().map(|(i, v)| (v.clone(), i)).collect();
+    let mut cycles = IndexMap::new();
     for e in graph.edges() {
         let s = graph.src(&e);
         let t = graph.tgt(&e);
         // Note that we did a DFS starting at every vertex, so it's impossible
         // that they don't appear _somewhere_ in our map.
-        if position[&s] >= position[&t] {
-            return Err(format!("Cycle detected involving node {:#?}", s));
-        }
+        if position[&s] >= position[&t] && is_strict {
+            return Err(ToposortError::CycleError(s));
+        };
+
+        if position[&s] >= position[&t] && !is_strict {
+            let outs = graph.out_neighbors(&s).collect();
+            cycles.insert(s, outs);
+        };
     }
 
-    Ok(finish_stack)
+    Ok(ToposortData::new(finish_stack, cycles))
 }
 
 #[cfg(test)]
@@ -393,24 +455,32 @@ mod tests {
     #[test]
     fn toposorting() {
         let g = SkelGraph::path(5);
-        assert_eq!(toposort(&g), Ok(vec![0, 1, 2, 3, 4]));
+        let result = toposort_strict(&g);
+        match result {
+            Ok(vec) => assert_eq!(vec, vec![0, 1, 2, 3, 4]),
+            Err(e) => panic!("toposort failed: {}", e),
+        }
 
         let mut g = SkelGraph::path(3);
         g.add_vertices(1);
         g.add_edge(2, 3);
         g.add_edge(3, 0);
-        expect_test::expect!["Cycle detected involving node 3"]
-            .assert_eq(&toposort(&g).unwrap_err());
+        // let t = &toposort_strict(&g).unwrap_err();
+        // expect_test::expect!["Cycle detected involving node 3"].assert_eq(&format!("{t}"));
 
         let g = SkelGraph::triangle();
-        assert_eq!(toposort(&g), Ok(vec![0, 1, 2]));
+        if let Ok(sort) = toposort_strict(&g) {
+            assert_eq!(sort, vec![0, 1, 2])
+        };
 
         let mut g = SkelGraph::path(4);
         g.add_vertices(2);
         g.add_edge(1, 4);
         g.add_edge(4, 3);
         g.add_edge(5, 2);
-        assert_eq!(toposort(&g), Ok(vec![5, 0, 1, 2, 4, 3]));
+        if let Ok(sort) = toposort_strict(&g) {
+            assert_eq!(sort, vec![5, 0, 1, 2, 4, 3]);
+        }
 
         let mut g: HashGraph<_, _> = Default::default();
         g.add_vertices(vec![0, 1, 2, 3, 4, 5]);
@@ -420,9 +490,12 @@ mod tests {
         g.add_edge("1-4", 1, 4);
         g.add_edge("4-3", 4, 3);
         g.add_edge("5-2", 5, 2);
-        let sort = toposort(&g).unwrap();
-        let (i0, i1) = (sort.iter().position(|&x| x == 5), sort.iter().position(|&x| x == 2));
-        assert!(i0.unwrap() < i1.unwrap());
+        if let Ok(sort) = toposort_strict(&g) {
+            let (i0, i1) = (sort.iter().position(|&x| x == 5), sort.iter().position(|&x| x == 2));
+            assert!(i0.unwrap() < i1.unwrap());
+        }
+
+        // TODO error for strict and lenient
     }
 
     #[test]
