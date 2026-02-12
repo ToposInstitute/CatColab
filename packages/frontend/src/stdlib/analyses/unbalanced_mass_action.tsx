@@ -47,6 +47,8 @@ export default function UnbalancedMassAction(
         return props.stateType ? model.obGeneratorsWithType(props.stateType) : model.obGenerators();
     }, []);
 
+    // Every transition in a Petri net (or flow in a stock-flow) has an interface:
+    // a list of input places, and a list of output places.
     type TransitionInterface = Record<
         QualifiedName,
         { inputs: QualifiedName[]; outputs: QualifiedName[] }
@@ -85,6 +87,8 @@ export default function UnbalancedMassAction(
         return transitionInterface;
     });
 
+    // When we create the parameter table, we need a row for each input to each transition,
+    // i.e. we need a list of pairs (transition, input_place).
     const morGeneratorsInputs = createMemo<[QualifiedName, QualifiedName][]>(() => {
         const morphismInputPairs: [QualifiedName, QualifiedName][] = [];
         for (const [mor, int] of Object.entries(morGeneratorsInterfaces())) {
@@ -95,6 +99,7 @@ export default function UnbalancedMassAction(
         return morphismInputPairs;
     });
 
+    // As for morGeneratorInputs, but now for pairs (transition, output_place).
     const morGeneratorsOutputs = createMemo<[QualifiedName, QualifiedName][]>(() => {
         const morphismOutputPairs: [QualifiedName, QualifiedName][] = [];
         for (const [mor, int] of Object.entries(morGeneratorsInterfaces())) {
@@ -122,6 +127,8 @@ export default function UnbalancedMassAction(
         }),
     ];
 
+    // For now, we simply label the row corresponding to the pair (transition, input_place)
+    // as "input_place -> [transition]".
     const morInputsSchema: ColumnSchema<[QualifiedName, QualifiedName]>[] = [
         {
             contentType: "string",
@@ -134,7 +141,7 @@ export default function UnbalancedMassAction(
                 "]",
         },
         createNumericalColumn({
-            name: "Consumption",
+            name: "Consumption (𝜅)",
             data: ([_, input]) => props.content.consumptionRates[input],
             default: 1,
             validate: (_, data) => data >= 0,
@@ -157,7 +164,7 @@ export default function UnbalancedMassAction(
                 (morLabelOrDefault(output, elaboratedModel()) ?? ""),
         },
         createNumericalColumn({
-            name: "Production",
+            name: "Production (𝜌)",
             data: ([_, output]) => props.content.productionRates[output],
             default: 1,
             validate: (_, data) => data >= 0,
