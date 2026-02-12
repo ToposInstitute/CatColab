@@ -29,6 +29,8 @@ interface StyledElkEdge extends ElkExtendedEdge {
     arrowStyle?: ArrowStyle;
 }
 
+const nodePadding = 10;
+
 /** Convert a graph specification into an ELK node.
 
 List of layout options supported by ELK:
@@ -36,6 +38,13 @@ List of layout options supported by ELK:
  */
 export function graphToElk(graph: GraphSpec.Graph, layoutOptions?: LayoutOptions): ElkNode {
     const canvas = document.createElement("canvas");
+
+    const defaultFont = `1rem ${getComputedStyle(document.documentElement)
+        .getPropertyValue("--main-font")
+        .trim()}`;
+    const monospaceFont = `1rem ${getComputedStyle(document.documentElement)
+        .getPropertyValue("--mono-font")
+        .trim()}`;
 
     const children: StyledElkNode[] = graph.nodes.map((node) => {
         let width = node.minimumWidth ?? nodePadding;
@@ -74,12 +83,6 @@ export function graphToElk(graph: GraphSpec.Graph, layoutOptions?: LayoutOptions
 
     return { id: "root", children, edges, layoutOptions };
 }
-
-const nodePadding = 10;
-
-// XXX: How do we properly set these?
-const defaultFont = "1rem sans-serif";
-const monospaceFont = "1rem monospace";
 
 /** Asynchronously import and load ELK. */
 export async function loadElk() {
