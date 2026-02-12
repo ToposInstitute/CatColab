@@ -375,7 +375,7 @@ mod test {
     use crate::dbl::model::DblModelPrinter;
     use crate::stdlib::{th_schema, th_sym_monoidal_category};
     use crate::tt::{
-        modelgen::Model,
+        model::Model,
         notebook_elab::Elaborator,
         theory::{Theory, TheoryDef},
         toplevel::Toplevel,

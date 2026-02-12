@@ -280,11 +280,11 @@ impl From<dbl_model::ModalDblModel> for DblModelBox {
     }
 }
 
-impl From<tt::modelgen::Model> for DblModelBox {
-    fn from(value: tt::modelgen::Model) -> Self {
+impl From<tt::model::Model> for DblModelBox {
+    fn from(value: tt::model::Model) -> Self {
         match value {
-            tt::modelgen::Model::Discrete(model) => Self::Discrete(Rc::new(*model)),
-            tt::modelgen::Model::Modal(model) => Self::Modal(Rc::new(*model)),
+            tt::model::Model::Discrete(model) => Self::Discrete(Rc::new(*model)),
+            tt::model::Model::Modal(model) => Self::Modal(Rc::new(*model)),
         }
     }
 }
@@ -674,7 +674,7 @@ pub fn elaborate_model(
         let mut elab = ElaboratorNext::new(theory.clone(), &instantiated.toplevel, ref_id);
         let (ty_s, ty_v) = elab.notebook(notebook.0.formal_content());
         let (model, namespace) =
-            tt::modelgen::Model::from_ty(&instantiated.toplevel, &theory.definition, &ty_v);
+            tt::model::Model::from_ty(&instantiated.toplevel, &theory.definition, &ty_v);
         Ok(DblModel {
             model: model.into(),
             ty: Some((ty_s, ty_v)),

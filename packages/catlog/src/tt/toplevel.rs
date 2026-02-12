@@ -97,6 +97,7 @@ impl TopDecl {
 }
 
 /// Storage for toplevel declarations.
+#[derive(Default)]
 pub struct Toplevel {
     /// Library of theories, indexed by name.
     pub theory_library: HashMap<QualifiedName, Theory>,
@@ -105,7 +106,7 @@ pub struct Toplevel {
 }
 
 impl Toplevel {
-    /// Constructor for an empty [Toplevel].
+    /// Constructs an empty [Toplevel].
     pub fn new(theory_library: HashMap<QualifiedName, Theory>) -> Self {
         Toplevel {
             theory_library,

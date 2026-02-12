@@ -7,7 +7,7 @@ use std::fmt::Write;
 use fnotation::{ParseConfig, parser::Prec};
 use tattle::declare_error;
 
-use super::{context::*, eval::*, modelgen::*, prelude::*, stx::*, theory::*, toplevel::*, val::*};
+use super::{context::*, eval::*, model::*, prelude::*, stx::*, theory::*, toplevel::*, val::*};
 use crate::{
     dbl::model::DblModelPrinter,
     zero::{QualifiedName, name},
@@ -741,7 +741,7 @@ mod tests {
             x : Object,
             loop : Negative[x, x]
         ]";
-        let maybe_model = tt::modelgen::Model::from_text(&th.clone().into(), source);
+        let maybe_model = tt::model::Model::from_text(&th.clone().into(), source);
         assert_eq!(
             maybe_model.and_then(|m| m.as_discrete()),
             Some(stdlib::models::negative_loop(th))

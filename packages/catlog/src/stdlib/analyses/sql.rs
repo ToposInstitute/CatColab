@@ -234,7 +234,7 @@ mod tests {
     #[test]
     fn sql_schema() {
         let th = Rc::new(th_schema());
-        let model = tt::modelgen::Model::from_text(
+        let model = tt::model::Model::from_text(
             &th.into(),
             "[
                 Person : Entity,
