@@ -1,10 +1,12 @@
 import download from "js-file-download";
 
-/** Export an `<svg>` element with inlined CSS styles.
+import GoogleFontInliner from "../util/google_font_inliner";
+
+/** Export an `<svg>` element with inlined CSS styles and embedded fonts.
 
 Returns the source of an SVG document.
  */
-export function exportSVG(svg: SVGSVGElement): string {
+export async function exportSVG(svg: SVGSVGElement): Promise<string> {
     const serializer = new XMLSerializer();
     const node = computedStyleToInlineStyle(svg);
     let source = serializer.serializeToString(node);
@@ -17,6 +19,16 @@ export function exportSVG(svg: SVGSVGElement): string {
         source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
     }
 
+    // Embed fonts.
+    const fontCss = await getFontFacesCSS();
+    if (fontCss) {
+        // Insert font-face rules in a <style> element at the beginning of the SVG
+        source = source.replace(
+            /^(<svg[^>]*>)/,
+            `$1\n<style type="text/css">\n${fontCss}\n</style>`,
+        );
+    }
+
     // Add XML header.
     source = `<?xml version="1.0" encoding="utf-8"?>\n${source}`;
 
@@ -25,8 +37,8 @@ export function exportSVG(svg: SVGSVGElement): string {
 
 /** Export and then download an `<svg>` element.
  */
-export function downloadSVG(svg: SVGSVGElement, filename: string) {
-    const source = exportSVG(svg);
+export async function downloadSVG(svg: SVGSVGElement, filename: string) {
+    const source = await exportSVG(svg);
     return download(source, filename, "image/svg+xml");
 }
 
@@ -56,3 +68,41 @@ function recurseComputedStyleToInlineStyle(element: StylableElement, cloned: Sty
 }
 
 type StylableElement = HTMLElement | SVGElement;
+
+/** Extract and embed font-face definitions for main application fonts.
+ *
+ * Reads the --main-font and --mono-font CSS custom properties from :root,
+ * extracts the first font family from each, and embeds them using google_font_inliner.
+ */
+async function getFontFacesCSS(): Promise<string> {
+    const fontStyles: string[] = [];
+
+    const rootStyle = getComputedStyle(document.documentElement);
+    const mainFont = rootStyle.getPropertyValue("--main-font").trim();
+    const monoFont = rootStyle.getPropertyValue("--mono-font").trim();
+
+    const extractFirstFont = (fontFamily: string): string | null => {
+        if (!fontFamily) {
+            return null;
+        }
+        const firstFont = fontFamily.split(",")[0]?.trim();
+        return firstFont ? firstFont.replace(/['"]/g, "") : null;
+    };
+
+    const mainFontName = extractFirstFont(mainFont);
+    const monoFontName = extractFirstFont(monoFont);
+
+    if (mainFontName) {
+        const mainInliner = new GoogleFontInliner(mainFontName);
+        const mainCss = await mainInliner.style();
+        fontStyles.push(mainCss);
+    }
+
+    if (monoFontName && monoFontName !== mainFontName) {
+        const monoInliner = new GoogleFontInliner(monoFontName);
+        const monoCss = await monoInliner.style();
+        fontStyles.push(monoCss);
+    }
+
+    return fontStyles.join("\n\n");
+}
