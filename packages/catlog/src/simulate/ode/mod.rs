@@ -159,12 +159,9 @@ pub(crate) fn textplot_mapped_ode_result<Sys>(
 
 pub mod kuramoto;
 #[allow(non_snake_case)]
-pub mod linear_ode;
-#[allow(non_snake_case)]
 pub mod lotka_volterra;
 pub mod polynomial;
 
 pub use kuramoto::*;
-pub use linear_ode::*;
 pub use lotka_volterra::*;
 pub use polynomial::*;
