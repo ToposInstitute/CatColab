@@ -1,16 +1,147 @@
-use autosurgeon::{Hydrate, Reconcile};
+use autosurgeon::{Hydrate, Reconcile, Text};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
 use crate::app::AppError;
 use crate::document::{RefQueryParams, RefStub, search_ref_stubs};
+use crate::user::UserSummary;
+
+mod text_serde {
+    use autosurgeon::Text;
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    pub fn serialize<S>(text: &Text, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(text.as_str())
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Text, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value = String::deserialize(deserializer)?;
+        Ok(Text::from(value))
+    }
+
+    pub mod option {
+        use autosurgeon::Text;
+        use serde::{Deserialize, Deserializer, Serializer};
+
+        pub fn serialize<S>(value: &Option<Text>, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            match value {
+                Some(text) => serializer.serialize_some(text.as_str()),
+                None => serializer.serialize_none(),
+            }
+        }
+
+        pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<Text>, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let value = Option::<String>::deserialize(deserializer)?;
+            Ok(value.map(Text::from))
+        }
+    }
+}
+
+/// Autosurgeon serialization of `DateTime<Utc>` as milliseconds since Unix epoch.
+mod datetime_millis {
+    use autosurgeon::{HydrateError, ReadDoc, Reconcile, Reconciler};
+    use chrono::{DateTime, TimeZone, Utc};
+
+    pub fn reconcile<R: Reconciler>(dt: &DateTime<Utc>, reconciler: R) -> Result<(), R::Error> {
+        dt.timestamp_millis().reconcile(reconciler)
+    }
+
+    pub fn hydrate<D: ReadDoc>(
+        doc: &D,
+        obj: &automerge::ObjId,
+        prop: autosurgeon::Prop<'_>,
+    ) -> Result<DateTime<Utc>, HydrateError> {
+        let millis: i64 = autosurgeon::hydrate_prop(doc, obj, prop)?;
+        Utc.timestamp_millis_opt(millis).single().ok_or_else(|| {
+            HydrateError::unexpected("valid timestamp", "invalid timestamp millis".to_string())
+        })
+    }
+}
+
+#[cfg_attr(feature = "proptest", derive(Eq, PartialEq))]
+#[derive(Debug, Clone, Serialize, Deserialize, Reconcile, Hydrate)]
+pub struct UserStateUserSummary {
+    #[serde(with = "text_serde")]
+    pub id: Text,
+    #[serde(default, with = "text_serde::option")]
+    pub username: Option<Text>,
+    #[serde(default, rename = "displayName", with = "text_serde::option")]
+    #[autosurgeon(rename = "displayName")]
+    pub display_name: Option<Text>,
+}
+
+#[cfg_attr(feature = "proptest", derive(Eq, PartialEq))]
+#[derive(Debug, Clone, Serialize, Deserialize, Reconcile, Hydrate)]
+pub struct UserStateRefStub {
+    #[serde(with = "text_serde")]
+    pub name: Text,
+    #[serde(rename = "typeName", with = "text_serde")]
+    #[autosurgeon(rename = "typeName")]
+    pub type_name: Text,
+    #[serde(rename = "refId")]
+    #[autosurgeon(rename = "refId")]
+    #[key]
+    pub ref_id: uuid::Uuid,
+    #[serde(rename = "permissionLevel")]
+    #[autosurgeon(rename = "permissionLevel")]
+    pub permission_level: crate::auth::PermissionLevel,
+    pub owner: Option<UserStateUserSummary>,
+    #[serde(rename = "createdAt")]
+    #[autosurgeon(rename = "createdAt", with = "datetime_millis")]
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+impl From<UserSummary> for UserStateUserSummary {
+    fn from(value: UserSummary) -> Self {
+        Self {
+            id: value.id.into(),
+            username: value.username.map(Text::from),
+            display_name: value.display_name.map(Text::from),
+        }
+    }
+}
+
+impl From<UserStateUserSummary> for UserSummary {
+    fn from(value: UserStateUserSummary) -> Self {
+        Self {
+            id: value.id.as_str().to_string(),
+            username: value.username.map(|u| u.as_str().to_string()),
+            display_name: value.display_name.map(|d| d.as_str().to_string()),
+        }
+    }
+}
+
+impl From<RefStub> for UserStateRefStub {
+    fn from(value: RefStub) -> Self {
+        Self {
+            name: value.name.into(),
+            type_name: value.type_name.into(),
+            ref_id: value.ref_id,
+            permission_level: value.permission_level,
+            owner: value.owner.map(UserStateUserSummary::from),
+            created_at: value.created_at,
+        }
+    }
+}
 
 /// State associated with a user, synchronized via Automerge.
 #[cfg_attr(feature = "proptest", derive(PartialEq, Eq))]
 #[derive(Debug, Clone, Serialize, Deserialize, Reconcile, Hydrate)]
 pub struct UserState {
     /// The document refs accessible to the user.
-    pub documents: Vec<RefStub>,
+    pub documents: Vec<UserStateRefStub>,
 }
 
 /// Reads user state from the database.
@@ -28,7 +159,9 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
 
     let result = search_ref_stubs(Some(user_id), db, query_params).await?;
 
-    Ok(UserState { documents: result.items })
+    Ok(UserState {
+        documents: result.items.into_iter().map(UserStateRefStub::from).collect(),
+    })
 }
 
 /// Arbitrary instances for property-based testing.
@@ -42,10 +175,10 @@ pub mod arbitrary {
     use proptest::{arbitrary::Arbitrary, prelude::*};
     use proptest_arbitrary_interop::arb;
 
-    /// Generates a consistent RefStub where:
+    /// Generates a consistent user state ref stub where:
     /// - If permission_level is Own, the owner matches the user_id parameter
     /// - Otherwise, a separate owner is generated (always different from user)
-    fn ref_stub_with_owner(user_id: String) -> impl Strategy<Value = RefStub> {
+    fn ref_stub_with_owner(user_id: String) -> impl Strategy<Value = UserStateRefStub> {
         (
             any::<String>(),          // name
             any::<String>(),          // type_name
@@ -56,28 +189,25 @@ pub mod arbitrary {
         )
             .prop_map(
                 move |(name, type_name, ref_id, permission_level, mut other_owner, seconds)| {
-                    // Determine owner based on permission level
                     let owner = if permission_level == PermissionLevel::Own {
-                        // User is the owner
                         UserSummary {
                             id: user_id.clone(),
                             username: None,
                             display_name: None,
                         }
                     } else {
-                        // Someone else is the owner - ensure they're different from user
                         if other_owner.id == user_id {
                             other_owner.id = format!("{}_other", other_owner.id);
                         }
                         other_owner
                     };
 
-                    RefStub {
-                        name,
-                        type_name,
+                    UserStateRefStub {
+                        name: name.into(),
+                        type_name: type_name.into(),
                         ref_id,
                         permission_level,
-                        owner: Some(owner),
+                        owner: Some(UserStateUserSummary::from(owner)),
                         created_at: Utc
                             .timestamp_opt(seconds, 0)
                             .single()

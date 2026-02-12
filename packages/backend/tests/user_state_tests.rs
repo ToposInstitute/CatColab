@@ -182,7 +182,7 @@ mod integration_tests {
         let user_state = user_state.expect("User state should exist");
         assert_eq!(user_state.documents.len(), 1, "Should have one document");
         assert_eq!(user_state.documents[0].ref_id, ref_id);
-        assert_eq!(user_state.documents[0].name, "Test Document");
+        assert_eq!(user_state.documents[0].name.as_str(), "Test Document");
         assert_eq!(user_state.documents[0].permission_level, PermissionLevel::Own);
     }
 
@@ -470,7 +470,7 @@ mod integration_tests {
         let user_state = user_state.expect("User state should exist");
         assert_eq!(user_state.documents.len(), 1, "Should have one document");
         assert_eq!(user_state.documents[0].ref_id, ref_id);
-        assert_eq!(user_state.documents[0].name, "Init Test Document");
+        assert_eq!(user_state.documents[0].name.as_str(), "Init Test Document");
     }
 
     /// Tests that get_or_create_user_state_doc returns empty state for new user
@@ -569,8 +569,11 @@ mod integration_tests {
             .await?;
 
             for doc in &state.documents {
-                let owner_id =
-                    doc.owner.as_ref().map(|o| o.id.clone()).expect("No owner specified");
+                let owner_id = doc
+                    .owner
+                    .as_ref()
+                    .map(|o| o.id.as_str().to_string())
+                    .expect("No owner specified");
 
                 // Ensure the owner exists in the users table
                 println!("Ensuring owner exists: {owner_id}");
@@ -582,8 +585,8 @@ mod integration_tests {
                     ON CONFLICT (id) DO NOTHING
                     "#,
                         owner_id,
-                        owner.username,
-                        owner.display_name
+                        owner.username.as_ref().map(|u| u.as_str()),
+                        owner.display_name.as_ref().map(|d| d.as_str())
                     )
                     .execute(db)
                     .await?;
@@ -592,8 +595,8 @@ mod integration_tests {
                 // Create the ref and its head snapshot
                 // We use a minimal JSON content since RefStub doesn't contain the full document
                 let content = serde_json::json!({
-                    "name": doc.name,
-                    "type": doc.type_name
+                    "name": doc.name.as_str(),
+                    "type": doc.type_name.as_str()
                 });
 
                 println!("Creating ref: {}", doc.ref_id);
