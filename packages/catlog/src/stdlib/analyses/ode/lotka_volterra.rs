@@ -52,7 +52,9 @@ impl SignedCoefficientBuilder<QualifiedName, QualifiedPath> {
         model: &DiscreteDblModel,
         data: LotkaVolterraProblemData,
     ) -> ODEAnalysis<NumericalPolynomialSystem<u8>> {
-        let (matrix, ob_index) = self.build_matrix(model, &data.interaction_coeffs);
+        let (symbolic_matrix, ob_index) = self.build_matrix(model);
+        let matrix = symbolic_matrix
+            .map(|p| p.eval(|id| data.interaction_coeffs.get(id).copied().unwrap_or_default()));
         let n = ob_index.len();
 
         let growth_rates =
