@@ -65,13 +65,13 @@ pub(crate) fn latex_mor_names_unbalanced_mass_action(
             let name = model
                 .mor_generator_label(id)
                 .map_or_else(|| id.to_string(), |label| label.to_string());
-            format!("r_{{\\text{{prod}},\\,\\text{{{name}}}}}")
+            format!("\\rho_{{\\text{{{name}}}}}")
         }
         DirectedTerm::OutgoingFlow(id) => {
             let name = model
                 .mor_generator_label(id)
                 .map_or_else(|| id.to_string(), |label| label.to_string());
-            format!("r_{{\\text{{cons}},\\,\\text{{{name}}}}}")
+            format!("\\kappa_{{\\text{{{name}}}}}")
         }
     }
 }

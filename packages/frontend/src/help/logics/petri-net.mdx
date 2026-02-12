@@ -54,6 +54,22 @@ However, equations governing transitions are *non-linear*: if a transition $T$ h
 This analysis displays the symbolic form of the derived mass-action equations.
 </HelpAnalysisById>
 
+<HelpAnalysisById theory={props.theory} analysisId="unbalanced-mass-action">
+*Unbalanced* mass-action dynamics can be thought of as mass-action dynamics that do *not* preserve mass: flows instead **consume** quantities at some rate and **produce** quantities at a possibly different rate.
+Furthermore, these rates are determined at the level of *places*, not *transitions*.
+
+That is, a transition $[A,B]\xrightarrow{T}[X,Y]$ is interpreted as the equations
+
+- $\dot{A} = -\kappa_T^A AB$
+- $\dot{B} = -\kappa_T^B AB$
+- $\dot{C} = \rho_T^C AB$
+- $\dot{D} = \rho_T^D AB$
+
+If $\kappa_T^A=\kappa_T^B$ and $\rho_T^C=\rho_T^D$ then this corresponds to the transition having *global* **consumption rate** $\kappa_T$ and **production rate** $\rho_T$; if furthermore $\kappa_T=\rho_T$ then we recover the usual mass-action dynamics.
+</HelpAnalysisById>
+
+<HelpAnalysisById theory={props.theory} analysisId="unbalanced-mass-action-equations"/>
+
 <HelpAnalysisById theory={props.theory} analysisId="stochastic-mass-action">
 This analysis realises the Petri net as a stochastic Petri net (SPN).
 In an SPN, the input (resp. output) arcs of each transition consume (resp. produce) integer numbers of tokens at their respective places. Each transition has a **clock**: a random variable giving the next time it would fire, if it were the next one to fire. When all the clocks are exponential random variates, this gives the stochastic analogue of the *ordinary* differential equation semantics. In this analysis, we take the rate parameter of each exponential clock to be the product of the reactants, potentially multiplied by a reaction constant. The Gillespie method is one way to sample a trajectory from an SPN, which uses the fact that the sum of exponential distributions is also an exponential distribution to first sample the next time any transition fires, and then sample the particular one which fired with probability proportional to the rate parameter of each transition.
