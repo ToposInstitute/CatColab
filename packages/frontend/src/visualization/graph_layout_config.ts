@@ -8,6 +8,12 @@ export type Config = {
 
     /** Primary layout direction, when applicable. */
     direction?: Direction;
+
+    /** Separation parameter for undirected graph layout (Graphviz neato). */
+    sep?: number;
+
+    /** Overlap parameter for undirected graph layout (Graphviz neato). */
+    overlap?: string;
 };
 
 /** Engines supported for graph layout. */
@@ -32,12 +38,17 @@ export const defaultConfig = (): Config => ({
 });
 
 /** Generates a set of Graphviz options from a layout config. */
-export const graphvizOptions = (config: Config): Viz.RenderOptions => ({
-    engine: graphvizEngine(config.layout),
-    graphAttributes: {
-        rankdir: graphvizRankdir(config.direction ?? Direction.Vertical),
-    },
-});
+export const graphvizOptions = (config: Config): Viz.RenderOptions => {
+    const isUndirected = config.layout === Engine.VizUndirected;
+    return {
+        engine: graphvizEngine(config.layout),
+        graphAttributes: {
+            rankdir: graphvizRankdir(config.direction ?? Direction.Vertical),
+            ...(isUndirected && config.sep !== undefined && { sep: config.sep }),
+            ...(isUndirected && config.overlap !== undefined && { overlap: config.overlap }),
+        },
+    };
+};
 
 function graphvizEngine(layout: Engine): Viz.RenderOptions["engine"] {
     switch (layout) {
