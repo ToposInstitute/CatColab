@@ -38,7 +38,7 @@ pub struct UserStateUserSummary {
 
 #[cfg_attr(feature = "proptest", derive(Eq, PartialEq))]
 #[derive(Debug, Clone, Reconcile, Hydrate)]
-pub struct UserStateRefStub {
+pub struct UserDocInfo {
     pub name: Text,
     #[autosurgeon(rename = "typeName")]
     pub type_name: Text,
@@ -72,7 +72,7 @@ impl From<UserStateUserSummary> for UserSummary {
     }
 }
 
-impl From<RefStub> for UserStateRefStub {
+impl From<RefStub> for UserDocInfo {
     fn from(value: RefStub) -> Self {
         Self {
             name: value.name.into(),
@@ -90,7 +90,7 @@ impl From<RefStub> for UserStateRefStub {
 #[derive(Debug, Clone, Reconcile, Hydrate)]
 pub struct UserState {
     /// The document refs accessible to the user.
-    pub documents: Vec<UserStateRefStub>,
+    pub documents: Vec<UserDocInfo>,
 }
 
 /// Reads user state from the database.
@@ -109,7 +109,7 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
     let result = search_ref_stubs(Some(user_id), db, query_params).await?;
 
     Ok(UserState {
-        documents: result.items.into_iter().map(UserStateRefStub::from).collect(),
+        documents: result.items.into_iter().map(UserDocInfo::from).collect(),
     })
 }
 
@@ -118,45 +118,94 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
 pub mod arbitrary {
     #![allow(dead_code)]
     use super::*;
+    use autosurgeon::Text;
     use crate::auth::PermissionLevel;
-    use crate::user::UserSummary;
     use chrono::{TimeZone, Utc};
     use proptest::{arbitrary::Arbitrary, prelude::*};
     use proptest_arbitrary_interop::arb;
 
+    impl Arbitrary for UserStateUserSummary {
+        type Parameters = ();
+        type Strategy = BoxedStrategy<Self>;
+
+        fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+            (
+                any::<String>(),
+                any::<Option<String>>(),
+                any::<Option<String>>(),
+            )
+                .prop_map(|(id, username, display_name)| UserStateUserSummary {
+                    id: Text::from(id),
+                    username: username.map(Text::from),
+                    display_name: display_name.map(Text::from),
+                })
+                .boxed()
+        }
+    }
+
+    impl Arbitrary for UserDocInfo {
+        type Parameters = ();
+        type Strategy = BoxedStrategy<Self>;
+
+        fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+            (
+                any::<String>(),
+                any::<String>(),
+                arb::<uuid::Uuid>(),
+                any::<PermissionLevel>(),
+                any::<Option<UserStateUserSummary>>(),
+                0i64..253402300799i64,
+            )
+                .prop_map(|(name, type_name, ref_id, permission_level, owner, seconds)| {
+                    UserDocInfo {
+                        name: Text::from(name),
+                        type_name: Text::from(type_name),
+                        ref_id,
+                        permission_level,
+                        owner,
+                        created_at: Utc
+                            .timestamp_opt(seconds, 0)
+                            .single()
+                            .expect("valid timestamp"),
+                    }
+                })
+                .boxed()
+        }
+    }
+
     /// Generates a consistent user state ref stub where:
     /// - If permission_level is Own, the owner matches the user_id parameter
     /// - Otherwise, a separate owner is generated (always different from user)
-    fn ref_stub_with_owner(user_id: String) -> impl Strategy<Value = UserStateRefStub> {
+    fn ref_stub_with_owner(user_id: String) -> impl Strategy<Value = UserDocInfo> {
         (
             any::<String>(),          // name
             any::<String>(),          // type_name
             arb::<uuid::Uuid>(),      // ref_id
             any::<PermissionLevel>(), // permission_level
-            any::<UserSummary>(),     // other owner (always present)
+            any::<UserStateUserSummary>(), // other owner (always present)
             0i64..253402300799i64,    // seconds (valid timestamp range)
         )
             .prop_map(
                 move |(name, type_name, ref_id, permission_level, mut other_owner, seconds)| {
                     let owner = if permission_level == PermissionLevel::Own {
-                        UserSummary {
-                            id: user_id.clone(),
+                        UserStateUserSummary {
+                            id: Text::from(user_id.clone()),
                             username: None,
                             display_name: None,
                         }
                     } else {
-                        if other_owner.id == user_id {
-                            other_owner.id = format!("{}_other", other_owner.id);
+                        if other_owner.id.as_str() == user_id {
+                            other_owner.id = Text::from(format!("{}_other", other_owner.id.as_str()));
                         }
                         other_owner
                     };
 
-                    UserStateRefStub {
-                        name: name.into(),
-                        type_name: type_name.into(),
+                    UserDocInfo {
+                        name: Text::from(name),
+                        type_name: Text::from(type_name),
                         ref_id,
                         permission_level,
-                        owner: Some(UserStateUserSummary::from(owner)),
+                        owner: Some(owner),
                         created_at: Utc
                             .timestamp_opt(seconds, 0)
                             .single()
