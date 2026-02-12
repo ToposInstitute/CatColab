@@ -1,53 +1,9 @@
 use autosurgeon::{Hydrate, Reconcile, Text};
-use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
 use crate::app::AppError;
 use crate::document::{RefQueryParams, RefStub, search_ref_stubs};
 use crate::user::UserSummary;
-
-mod text_serde {
-    use autosurgeon::Text;
-    use serde::{Deserialize, Deserializer, Serializer};
-
-    pub fn serialize<S>(text: &Text, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_str(text.as_str())
-    }
-
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<Text, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let value = String::deserialize(deserializer)?;
-        Ok(Text::from(value))
-    }
-
-    pub mod option {
-        use autosurgeon::Text;
-        use serde::{Deserialize, Deserializer, Serializer};
-
-        pub fn serialize<S>(value: &Option<Text>, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
-        {
-            match value {
-                Some(text) => serializer.serialize_some(text.as_str()),
-                None => serializer.serialize_none(),
-            }
-        }
-
-        pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<Text>, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            let value = Option::<String>::deserialize(deserializer)?;
-            Ok(value.map(Text::from))
-        }
-    }
-}
 
 /// Autosurgeon serialization of `DateTime<Utc>` as milliseconds since Unix epoch.
 mod datetime_millis {
@@ -71,34 +27,26 @@ mod datetime_millis {
 }
 
 #[cfg_attr(feature = "proptest", derive(Eq, PartialEq))]
-#[derive(Debug, Clone, Serialize, Deserialize, Reconcile, Hydrate)]
+#[derive(Debug, Clone, Reconcile, Hydrate)]
 pub struct UserStateUserSummary {
-    #[serde(with = "text_serde")]
     pub id: Text,
-    #[serde(default, with = "text_serde::option")]
     pub username: Option<Text>,
-    #[serde(default, rename = "displayName", with = "text_serde::option")]
     #[autosurgeon(rename = "displayName")]
     pub display_name: Option<Text>,
 }
 
 #[cfg_attr(feature = "proptest", derive(Eq, PartialEq))]
-#[derive(Debug, Clone, Serialize, Deserialize, Reconcile, Hydrate)]
+#[derive(Debug, Clone, Reconcile, Hydrate)]
 pub struct UserStateRefStub {
-    #[serde(with = "text_serde")]
     pub name: Text,
-    #[serde(rename = "typeName", with = "text_serde")]
     #[autosurgeon(rename = "typeName")]
     pub type_name: Text,
-    #[serde(rename = "refId")]
     #[autosurgeon(rename = "refId")]
     #[key]
     pub ref_id: uuid::Uuid,
-    #[serde(rename = "permissionLevel")]
     #[autosurgeon(rename = "permissionLevel")]
     pub permission_level: crate::auth::PermissionLevel,
     pub owner: Option<UserStateUserSummary>,
-    #[serde(rename = "createdAt")]
     #[autosurgeon(rename = "createdAt", with = "datetime_millis")]
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
@@ -138,7 +86,7 @@ impl From<RefStub> for UserStateRefStub {
 
 /// State associated with a user, synchronized via Automerge.
 #[cfg_attr(feature = "proptest", derive(PartialEq, Eq))]
-#[derive(Debug, Clone, Serialize, Deserialize, Reconcile, Hydrate)]
+#[derive(Debug, Clone, Reconcile, Hydrate)]
 pub struct UserState {
     /// The document refs accessible to the user.
     pub documents: Vec<UserStateRefStub>,
