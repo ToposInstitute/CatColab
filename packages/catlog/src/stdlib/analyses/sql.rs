@@ -1,7 +1,7 @@
 //! Produces a valid SQL data manipulation script from a model in the theory of schemas.
 use crate::{
     dbl::model::*,
-    one::{Path, graph::FinGraph, graph_algorithms::toposort},
+    one::{Path, graph::FinGraph, graph_algorithms::toposort_lenient},
     zero::{QualifiedLabel, QualifiedName, label, name},
 };
 use indexmap::IndexMap;
@@ -51,7 +51,8 @@ impl SQLAnalysis {
         mor_label: impl Fn(&QualifiedName) -> QualifiedLabel,
     ) -> Result<String, String> {
         let g = model.generating_graph();
-        let t = toposort(g).map_err(|e| format!("Topological sort failed: {}", e))?;
+        // TODO get object name
+        let t = toposort_lenient(g).map_err(|e| format!("Topological sort failed: {}", e))?;
         let morphisms: IndexMap<&QualifiedName, Vec<QualifiedName>> =
             IndexMap::from_iter(t.iter().rev().filter_map(|v| {
                 (name("Entity") == model.ob_generator_type(v))
