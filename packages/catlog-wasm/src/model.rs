@@ -19,7 +19,6 @@ use catlog::dbl::theory::{self as dbl_theory, ModalObOp};
 use catlog::one::{Category as _, FgCategory, Path, QualifiedPath};
 use catlog::tt::{
     self,
-    modelgen::generate,
     notebook_elab::{Elaborator as ElaboratorNext, demote_modality, promote_modality},
     toplevel::{TopDecl, Toplevel, Type},
 };
@@ -679,7 +678,8 @@ pub fn elaborate_model(
         let ref_id = ustr(&ref_id);
         let mut elab = ElaboratorNext::new(theory.clone(), &instantiated.toplevel, ref_id);
         let (ty_s, ty_v) = elab.notebook(notebook.0.formal_content());
-        let (model, namespace) = generate(&instantiated.toplevel, &theory.definition, &ty_v);
+        let (model, namespace) =
+            tt::modelgen::Model::from_ty(&instantiated.toplevel, &theory.definition, &ty_v);
         Ok(DblModel {
             model: model.into(),
             ty: Some((ty_s, ty_v)),

@@ -234,7 +234,8 @@ mod tests {
     #[test]
     fn sql_schema() {
         let th = Rc::new(th_schema());
-        let model = tt::modelgen::parse_and_generate(
+        let model = tt::modelgen::Model::from_text(
+            &th.into(),
             "[
                 Person : Entity,
                 Dog : Entity,
@@ -242,7 +243,6 @@ mod tests {
                 Hair : AttrType,
                 has : Attr[Person, Hair],
             ]",
-            &th.into(),
         );
         let model = model.and_then(|m| m.as_discrete()).unwrap();
 

@@ -29,13 +29,18 @@ pub struct Evaluator<'a> {
 }
 
 impl<'a> Evaluator<'a> {
-    fn eval_record(&self, fields: &Row<TyS>) -> RecordV {
-        RecordV::new(self.env.clone(), fields.clone(), Dtry::empty())
+    /// Constructs a new [Evaluator] with empty environment.
+    pub fn empty(toplevel: &'a Toplevel) -> Self {
+        Self::new(toplevel, Env::Nil, 0)
     }
 
     /// Return a new [Evaluator] with environment `env`.
     pub fn with_env(&self, env: Env) -> Self {
         Self { env, ..self.clone() }
+    }
+
+    fn eval_record(&self, fields: &Row<TyS>) -> RecordV {
+        RecordV::new(self.env.clone(), fields.clone(), Dtry::empty())
     }
 
     /// Evaluate type syntax to produce a type value.
@@ -441,7 +446,9 @@ impl<'a> Evaluator<'a> {
         let (self_var, _) = self.bind_self(ty.clone());
         let self_val = self.eta_neu(&self_var, ty);
         self.can_specialize(ty, &self_val, path, field_ty.clone())?;
-        let TyV_::Record(r) = &**ty else { panic!() };
+        let TyV_::Record(r) = &**ty else {
+            panic!("Input to `try_specialize` should be a record type")
+        };
         Ok(TyV::record(r.add_specialization(path, field_ty)))
     }
 }

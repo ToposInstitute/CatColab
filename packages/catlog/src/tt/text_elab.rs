@@ -214,7 +214,7 @@ impl TopElaborator {
                 let theory = self.get_theory(tn.loc)?;
                 let mut elab = self.elaborator(&theory, toplevel);
                 let (_, ty_v) = elab.ty(tn.body);
-                let (model, ns) = generate(toplevel, &theory.definition, &ty_v);
+                let (model, ns) = Model::from_ty(toplevel, &theory.definition, &ty_v);
                 let printer = DblModelPrinter::new().include_summary(false);
                 let mut out = model.summary(&printer);
                 let body = model.to_doc(&printer, &ns).0.pretty(77).to_string();
@@ -741,7 +741,7 @@ mod tests {
             x : Object,
             loop : Negative[x, x]
         ]";
-        let maybe_model = tt::modelgen::parse_and_generate(source, &th.clone().into());
+        let maybe_model = tt::modelgen::Model::from_text(&th.clone().into(), source);
         assert_eq!(
             maybe_model.and_then(|m| m.as_discrete()),
             Some(stdlib::models::negative_loop(th))

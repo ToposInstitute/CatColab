@@ -3,16 +3,14 @@
 //! In `catlog`, double theories belonging to different double doctrines
 //! (discrete theories, modal theories, etc) are represented using different
 //! data structures. By contrast, there is just one implementation of DoubleTT,
-//! intended to support all the features that we need. To provide a uniform
-//! interface to theories of different doctrine, theories are boxed in an enum
-//! ([`TheoryDef`]). This design is similar to the one taken for catlog's Wasm
-//! bindings (`catlog-wasm`).
+//! intended to support all of the features that we need. To provide a uniform
+//! interface to theories of different doctrines, theories are boxed in an enum
+//! ([`TheoryDef`]). This design is similar to that taken in `catlog-wasm`.
 
 use all_the_same::all_the_same;
 use derivative::Derivative;
 use derive_more::{Constructor, From, TryInto};
-use std::fmt;
-use std::rc::Rc;
+use std::{fmt, rc::Rc};
 
 use super::prelude::*;
 use crate::dbl::{discrete, modal, model::PrintableDblModel, theory::DblTheory};
