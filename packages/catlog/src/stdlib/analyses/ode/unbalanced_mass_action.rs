@@ -24,20 +24,38 @@ use crate::zero::{QualifiedName, alg::Polynomial, rig::Monomial};
 /// The associated direction of a "flow" term. Note that this is *opposite* from
 /// the terminology of "input" and "output", i.e. a flow A=>B gives rise to an
 /// *incoming flow to B* and an *outgoing flow from A*.
+///
+/// To accommodate Petri nets, where transitions can have multiple input/output
+/// arcs, we need to carry around more information: a flow term should describe
+/// not only the transition but also the corresponding input/output place.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub enum DirectedTerm {
-    /// The parameter corresponds to an incoming flow.
-    IncomingFlow(QualifiedName),
+    /// The parameter corresponds to an incoming flow to a specific output.
+    IncomingFlow {
+        /// The transition/flow
+        transition: QualifiedName,
+        /// The output place/stock
+        output: QualifiedName,
+    },
 
-    /// The parameter corresponds to an outgoing flow.
-    OutgoingFlow(QualifiedName),
+    /// The parameter corresponds to an outgoing flow to a specific input.
+    OutgoingFlow {
+        /// The transition/flow
+        transition: QualifiedName,
+        /// The input place/stock
+        input: QualifiedName,
+    },
 }
 
 impl fmt::Display for DirectedTerm {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self {
-            DirectedTerm::IncomingFlow(name) => write!(f, "Incoming({})", name),
-            DirectedTerm::OutgoingFlow(name) => write!(f, "Outgoing({})", name),
+            DirectedTerm::IncomingFlow { transition: tran, output: outp } => {
+                write!(f, "([{}]->{})", tran, outp)
+            }
+            DirectedTerm::OutgoingFlow { transition: tran, input: inp } => {
+                write!(f, "({}->[{}])", inp, tran)
+            }
         }
     }
 }
@@ -50,13 +68,13 @@ impl fmt::Display for DirectedTerm {
     tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
 )]
 pub struct UnbalancedMassActionProblemData {
-    /// Map from morphism IDs to consumption rate coefficients (nonnegative reals).
+    /// Map from morphism IDs to (map from input objects to consumption rate coefficients) (nonnegative reals).
     #[cfg_attr(feature = "serde", serde(rename = "consumptionRates"))]
-    consumption_rates: HashMap<QualifiedName, f32>,
+    consumption_rates: HashMap<QualifiedName, HashMap<QualifiedName, f32>>,
 
-    /// Map from morphism IDs to production rate coefficients (nonnegative reals).
+    /// Map from morphism IDs to (map from output objects to production rate coefficients) (nonnegative reals).
     #[cfg_attr(feature = "serde", serde(rename = "productionRates"))]
-    production_rates: HashMap<QualifiedName, f32>,
+    production_rates: HashMap<QualifiedName, HashMap<QualifiedName, f32>>,
 
     /// Map from object IDs to initial values (nonnegative reals).
     #[cfg_attr(feature = "serde", serde(rename = "initialValues"))]
@@ -84,8 +102,14 @@ impl StockFlowMassActionAnalysis {
         for (flow, term) in terms {
             let dom = model.mor_generator_dom(&flow).unwrap_basic();
             let cod = model.mor_generator_cod(&flow).unwrap_basic();
-            let dom_param = Parameter::generator(DirectedTerm::OutgoingFlow(flow.clone()));
-            let cod_param = Parameter::generator(DirectedTerm::IncomingFlow(flow));
+            let dom_param = Parameter::generator(DirectedTerm::OutgoingFlow {
+                transition: flow.clone(),
+                input: dom.clone(),
+            });
+            let cod_param = Parameter::generator(DirectedTerm::IncomingFlow {
+                transition: flow,
+                output: cod.clone(),
+            });
             let dom_term: Polynomial<_, _, _> = [(dom_param, term.clone())].into_iter().collect();
             let cod_term: Polynomial<_, _, _> = [(cod_param, term)].into_iter().collect();
             sys.add_term(dom, -dom_term);
@@ -107,21 +131,31 @@ impl PetriNetMassActionAnalysis {
         }
         for mor in model.mor_generators_with_type(&self.transition_mor_type) {
             let (inputs, outputs) = Self::transition_interface(model, &mor);
-
             let term: Monomial<_, _> =
                 inputs.iter().map(|ob| (ob.clone().unwrap_generator(), 1)).collect();
-            let input_term: Polynomial<_, _, _> =
-                [(Parameter::generator(DirectedTerm::OutgoingFlow(mor.clone())), term.clone())]
-                    .into_iter()
-                    .collect();
-            let output_term: Polynomial<_, _, _> =
-                [(Parameter::generator(DirectedTerm::IncomingFlow(mor)), term)]
-                    .into_iter()
-                    .collect();
+
             for input in inputs {
+                let input_term: Polynomial<_, _, _> = [(
+                    Parameter::generator(DirectedTerm::OutgoingFlow {
+                        transition: mor.clone(),
+                        input: input.clone().unwrap_generator(),
+                    }),
+                    term.clone(),
+                )]
+                .into_iter()
+                .collect();
                 sys.add_term(input.unwrap_generator(), -input_term.clone());
             }
             for output in outputs {
+                let output_term: Polynomial<_, _, _> = [(
+                    Parameter::generator(DirectedTerm::IncomingFlow {
+                        transition: mor.clone(),
+                        output: output.clone().unwrap_generator(),
+                    }),
+                    term.clone(),
+                )]
+                .into_iter()
+                .collect();
                 sys.add_term(output.unwrap_generator(), output_term.clone());
             }
         }
@@ -137,11 +171,11 @@ pub fn extend_unbalanced_mass_action_scalars(
 ) -> PolynomialSystem<QualifiedName, f32, i8> {
     sys.extend_scalars(|poly| {
         poly.eval(|flow| match flow {
-            DirectedTerm::IncomingFlow(name) => {
-                data.production_rates.get(name).copied().unwrap_or_default()
+            DirectedTerm::IncomingFlow { transition: tran, output: outp } => {
+                data.production_rates.get(tran).cloned().unwrap_or_default().get(outp).copied().unwrap_or_default()
             }
-            DirectedTerm::OutgoingFlow(name) => {
-                data.consumption_rates.get(name).copied().unwrap_or_default()
+            DirectedTerm::OutgoingFlow { transition: tran, input: inp } => {
+                data.consumption_rates.get(tran).cloned().unwrap_or_default().get(inp).copied().unwrap_or_default()
             }
         })
     })
@@ -182,8 +216,8 @@ mod tests {
         let model = backward_link(th);
         let sys = StockFlowMassActionAnalysis::default().build_unbalanced_system(&model);
         let expected = expect!([r#"
-            dx = (-Outgoing(f)) x y
-            dy = (Incoming(f)) x y
+            dx = (-(x->[f])) x y
+            dy = (([f]->y)) x y
         "#]);
         expected.assert_eq(&sys.to_string());
     }
@@ -194,8 +228,8 @@ mod tests {
         let model = positive_backward_link(th);
         let sys = StockFlowMassActionAnalysis::default().build_unbalanced_system(&model);
         let expected = expect!([r#"
-            dx = (-Outgoing(f)) x y
-            dy = (Incoming(f)) x y
+            dx = (-(x->[f])) x y
+            dy = (([f]->y)) x y
         "#]);
         expected.assert_eq(&sys.to_string());
     }
@@ -206,8 +240,8 @@ mod tests {
         let model = negative_backward_link(th);
         let sys = StockFlowMassActionAnalysis::default().build_unbalanced_system(&model);
         let expected = expect!([r#"
-            dx = (-Outgoing(f)) x y^{-1}
-            dy = (Incoming(f)) x y^{-1}
+            dx = (-(x->[f])) x y^{-1}
+            dy = (([f]->y)) x y^{-1}
         "#]);
         expected.assert_eq(&sys.to_string());
     }
@@ -219,9 +253,9 @@ mod tests {
         let sys = PetriNetMassActionAnalysis::default().build_unbalanced_system(&model);
         // Note that the catalyst c is not left unchanged unless f is "balanced"
         let expected = expect!([r#"
-            dx = (-Outgoing(f)) c x
-            dy = (Incoming(f)) c x
-            dc = (Incoming(f) + -Outgoing(f)) c x
+            dx = (-(x->[f])) c x
+            dy = (([f]->y)) c x
+            dc = (([f]->c) + -(c->[f])) c x
         "#]);
         expected.assert_eq(&sys.to_string());
     }
@@ -234,11 +268,11 @@ mod tests {
         let expected = vec![
             LatexEquation {
                 lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string(),
-                rhs: "(-Outgoing(f)) x y".to_string(),
+                rhs: "(-(x->[f])) x y".to_string(),
             },
             LatexEquation {
                 lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string(),
-                rhs: "(Incoming(f)) x y".to_string(),
+                rhs: "(([f]->y)) x y".to_string(),
             },
         ];
         assert_eq!(expected, sys.to_latex_equations());
