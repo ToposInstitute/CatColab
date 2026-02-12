@@ -441,7 +441,9 @@ impl<'a> Evaluator<'a> {
         let (self_var, _) = self.bind_self(ty.clone());
         let self_val = self.eta_neu(&self_var, ty);
         self.can_specialize(ty, &self_val, path, field_ty.clone())?;
-        let TyV_::Record(r) = &**ty else { panic!() };
+        let TyV_::Record(r) = &**ty else {
+            panic!("Input to `try_specialize` should be a record type")
+        };
         Ok(TyV::record(r.add_specialization(path, field_ty)))
     }
 }

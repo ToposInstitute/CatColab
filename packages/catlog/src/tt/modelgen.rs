@@ -35,6 +35,28 @@ impl Model {
         }
     }
 
+    /// Parses and generates a model from plain text.
+    pub fn from_text(th: &TheoryDef, s: &str) -> Option<Self> {
+        let theory = Theory::new("_".into(), th.clone());
+        let reporter = Reporter::new();
+        let toplevel = Toplevel::new(Default::default());
+        text_elab::TT_PARSE_CONFIG.with_parsed(s, reporter.clone(), |fntn| {
+            let mut elaborator = text_elab::Elaborator::new(theory, reporter, &toplevel);
+            let (_, ty_v) = elaborator.ty(fntn);
+            let (model, _) = Self::from_ty(&toplevel, th, &ty_v);
+            Some(model)
+        })
+    }
+
+    /// Generates a model from a type.
+    ///
+    /// Precondition: `ty` must be valid in the empty context.
+    pub fn from_ty(toplevel: &Toplevel, th: &TheoryDef, ty: &TyV) -> (Self, Namespace) {
+        let mut generator = ModelGenerator::new(toplevel, th);
+        let namespace = generator.generate(ty);
+        (generator.model, namespace)
+    }
+
     /// Tries to extract a model of a discrete theory.
     pub fn as_discrete(self) -> Option<discrete::DiscreteDblModel> {
         match self {
@@ -157,28 +179,6 @@ impl Model {
 enum Ob {
     Discrete(QualifiedName),
     Modal(modal::ModalOb),
-}
-
-/// Parses and generates a model from plain text.
-pub fn parse_and_generate(s: &str, th: &TheoryDef) -> Option<Model> {
-    let theory = Theory::new("_".into(), th.clone());
-    let reporter = Reporter::new();
-    let toplevel = Toplevel::new(Default::default());
-    text_elab::TT_PARSE_CONFIG.with_parsed(s, reporter.clone(), |fntn| {
-        let mut elaborator = text_elab::Elaborator::new(theory, reporter, &toplevel);
-        let (_, ty_v) = elaborator.ty(fntn);
-        let (model, _) = generate(&toplevel, th, &ty_v);
-        Some(model)
-    })
-}
-
-/// Generates a model from a type.
-///
-/// Precondition: `ty` must be valid in the empty context.
-pub fn generate(toplevel: &Toplevel, th: &TheoryDef, ty: &TyV) -> (Model, Namespace) {
-    let mut generator = ModelGenerator::new(toplevel, th);
-    let namespace = generator.generate(ty);
-    (generator.model, namespace)
 }
 
 struct ModelGenerator<'a> {
