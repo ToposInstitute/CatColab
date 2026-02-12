@@ -535,7 +535,6 @@ mod integration_tests {
         use backend::auth::PermissionLevel;
         use backend::user_state::arbitrary::arbitrary_user_state_with_id;
         use backend::user_state::{UserState, read_user_state_from_db};
-        use serial_test::serial;
         use sqlx::PgPool;
         use test_strategy::proptest;
         use uuid::Uuid;
@@ -656,34 +655,37 @@ mod integration_tests {
 
         // Tests that we can write then read any UserState to the DB and get the same UserState back.
         #[proptest(async = "tokio", cases = 32)]
-        #[serial]
         async fn user_state_db_roundtrip(
             #[strategy(arbitrary_user_state_with_id())] user_id_and_state: (String, UserState),
         ) {
-            let (user_id, input_state) = user_id_and_state;
-            let pool = get_pool().await;
+            serial_test::local_async_serial_core_with_return(vec![""], None, async {
+                let (user_id, input_state) = user_id_and_state;
+                let pool = get_pool().await;
 
-            write_user_state_to_db(user_id.clone(), &pool, &input_state)
-                .await
-                .expect("Failed to write user state");
+                write_user_state_to_db(user_id.clone(), &pool, &input_state)
+                    .await
+                    .expect("Failed to write user state");
 
-            let output_state = read_user_state_from_db(user_id.clone(), &pool)
-                .await
-                .expect("Failed to read user state");
+                let output_state = read_user_state_from_db(user_id.clone(), &pool)
+                    .await
+                    .expect("Failed to read user state");
 
-            // Cleanup test data
-            let user_ids: Vec<&str> = std::iter::once(user_id.as_str())
-                .chain(
-                    input_state
-                        .documents
-                        .iter()
-                        .filter_map(|d| d.owner.as_ref().map(|o| o.id.as_str())),
-                )
-                .collect();
-            let ref_ids: Vec<Uuid> = input_state.documents.iter().map(|d| d.ref_id).collect();
-            cleanup_test_data(&pool, &user_ids, &ref_ids).await;
+                // Cleanup test data
+                let user_ids: Vec<&str> = std::iter::once(user_id.as_str())
+                    .chain(
+                        input_state
+                            .documents
+                            .iter()
+                            .filter_map(|d| d.owner.as_ref().map(|o| o.id.as_str())),
+                    )
+                    .collect();
+                let ref_ids: Vec<Uuid> = input_state.documents.iter().map(|d| d.ref_id).collect();
+                cleanup_test_data(&pool, &user_ids, &ref_ids).await;
 
-            proptest::prop_assert_eq!(input_state, output_state);
+                proptest::prop_assert_eq!(input_state, output_state);
+                Ok(())
+            })
+            .await?;
         }
 
         /// Tests that run_user_state_subscription correctly updates Automerge documents
@@ -694,102 +696,105 @@ mod integration_tests {
         /// 2. Generates user states and writes them to the database
         /// 3. Verifies that the Automerge documents are updated to match the database state
         #[proptest(async = "tokio", cases = 32)]
-        #[serial]
         async fn run_user_state_subscription_updates_automerge_docs(
             #[strategy(arbitrary_user_state_with_id())] user_id_and_state: (String, UserState),
         ) {
-            use autosurgeon::hydrate;
-            use backend::app::AppState;
-            use backend::storage::PostgresStorage;
-            use backend::user_state_subscription::run_user_state_subscription;
-            use std::collections::{HashMap, HashSet};
-            use std::sync::Arc;
-            use std::time::Duration;
-            use tokio::sync::RwLock;
+            serial_test::local_async_serial_core_with_return(vec![""], None, async {
+                use autosurgeon::hydrate;
+                use backend::app::AppState;
+                use backend::storage::PostgresStorage;
+                use backend::user_state_subscription::run_user_state_subscription;
+                use std::collections::{HashMap, HashSet};
+                use std::sync::Arc;
+                use std::time::Duration;
+                use tokio::sync::RwLock;
 
-            let (user_id, input_state) = user_id_and_state;
-            let pool = get_pool().await;
+                let (user_id, input_state) = user_id_and_state;
+                let pool = get_pool().await;
 
-            // Create AppState
-            let storage = PostgresStorage::new(pool.clone());
-            let repo = samod::Repo::builder(tokio::runtime::Handle::current())
-                .with_storage(storage)
-                .with_announce_policy(|_doc_id, _peer_id| false)
-                .load()
-                .await;
+                // Create AppState
+                let storage = PostgresStorage::new(pool.clone());
+                let repo = samod::Repo::builder(tokio::runtime::Handle::current())
+                    .with_storage(storage)
+                    .with_announce_policy(|_doc_id, _peer_id| false)
+                    .load()
+                    .await;
 
-            let state = AppState {
-                db: pool.clone(),
-                repo,
-                active_listeners: Arc::new(RwLock::new(HashSet::new())),
-                user_states: Arc::new(RwLock::new(HashMap::new())),
-            };
-
-            // Spawn the subscription in a background task
-            let state_clone = state.clone();
-            let subscription_handle =
-                tokio::spawn(async move { run_user_state_subscription(state_clone).await });
-
-            // Give the subscription time to start listening
-            tokio::time::sleep(Duration::from_millis(100)).await;
-
-            // Write user state to the database - this should trigger notifications
-            write_user_state_to_db(user_id.clone(), &pool, &input_state)
-                .await
-                .expect("Failed to write user state");
-
-            // Give the subscription time to process the notifications
-            // More time is needed since we may have multiple refs being created
-            tokio::time::sleep(Duration::from_millis(500)).await;
-
-            // Read the user state from samod using the stored DocumentId
-            let automerge_state: Option<UserState> = {
-                let doc_id = {
-                    let states = state.user_states.read().await;
-                    states.get(&user_id).cloned()
+                let state = AppState {
+                    db: pool.clone(),
+                    repo,
+                    active_listeners: Arc::new(RwLock::new(HashSet::new())),
+                    user_states: Arc::new(RwLock::new(HashMap::new())),
                 };
 
-                match doc_id {
-                    Some(doc_id) => {
-                        let doc_handle = state.repo.find(doc_id).await.ok().flatten();
-                        doc_handle.and_then(|h| h.with_document(|doc| hydrate(doc).ok()))
+                // Spawn the subscription in a background task
+                let state_clone = state.clone();
+                let subscription_handle =
+                    tokio::spawn(async move { run_user_state_subscription(state_clone).await });
+
+                // Give the subscription time to start listening
+                tokio::time::sleep(Duration::from_millis(100)).await;
+
+                // Write user state to the database - this should trigger notifications
+                write_user_state_to_db(user_id.clone(), &pool, &input_state)
+                    .await
+                    .expect("Failed to write user state");
+
+                // Give the subscription time to process the notifications
+                // More time is needed since we may have multiple refs being created
+                tokio::time::sleep(Duration::from_millis(500)).await;
+
+                // Read the user state from samod using the stored DocumentId
+                let automerge_state: Option<UserState> = {
+                    let doc_id = {
+                        let states = state.user_states.read().await;
+                        states.get(&user_id).cloned()
+                    };
+
+                    match doc_id {
+                        Some(doc_id) => {
+                            let doc_handle = state.repo.find(doc_id).await.ok().flatten();
+                            doc_handle.and_then(|h| h.with_document(|doc| hydrate(doc).ok()))
+                        }
+                        None => None,
                     }
-                    None => None,
+                };
+
+                // Cleanup test data
+                let user_ids: Vec<&str> = std::iter::once(user_id.as_str())
+                    .chain(
+                        input_state
+                            .documents
+                            .iter()
+                            .filter_map(|d| d.owner.as_ref().map(|o| o.id.as_str())),
+                    )
+                    .collect();
+                let ref_ids: Vec<Uuid> = input_state.documents.iter().map(|d| d.ref_id).collect();
+                cleanup_test_data(&pool, &user_ids, &ref_ids).await;
+
+                // Abort the subscription task (it runs in an infinite loop)
+                subscription_handle.abort();
+
+                // If input_state has no documents, no notifications are triggered
+                // In this case, we expect no automerge doc to be created
+                if input_state.documents.is_empty() {
+                    proptest::prop_assert!(
+                        automerge_state.is_none(),
+                        "Empty user state should not create automerge doc"
+                    );
+                } else {
+                    // The Automerge doc should have been updated to match the input state
+                    let automerge_state =
+                        automerge_state.expect("User state should exist in Automerge docs");
+                    proptest::prop_assert_eq!(
+                        input_state,
+                        automerge_state,
+                        "Automerge doc should be updated to match the database state"
+                    );
                 }
-            };
-
-            // Cleanup test data
-            let user_ids: Vec<&str> = std::iter::once(user_id.as_str())
-                .chain(
-                    input_state
-                        .documents
-                        .iter()
-                        .filter_map(|d| d.owner.as_ref().map(|o| o.id.as_str())),
-                )
-                .collect();
-            let ref_ids: Vec<Uuid> = input_state.documents.iter().map(|d| d.ref_id).collect();
-            cleanup_test_data(&pool, &user_ids, &ref_ids).await;
-
-            // Abort the subscription task (it runs in an infinite loop)
-            subscription_handle.abort();
-
-            // If input_state has no documents, no notifications are triggered
-            // In this case, we expect no automerge doc to be created
-            if input_state.documents.is_empty() {
-                proptest::prop_assert!(
-                    automerge_state.is_none(),
-                    "Empty user state should not create automerge doc"
-                );
-            } else {
-                // The Automerge doc should have been updated to match the input state
-                let automerge_state =
-                    automerge_state.expect("User state should exist in Automerge docs");
-                proptest::prop_assert_eq!(
-                    input_state,
-                    automerge_state,
-                    "Automerge doc should be updated to match the database state"
-                );
-            }
+                Ok(())
+            })
+            .await?;
         }
     }
 }
