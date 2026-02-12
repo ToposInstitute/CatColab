@@ -61,17 +61,19 @@ pub(crate) fn latex_mor_names_unbalanced_mass_action(
     model: &DblModel,
 ) -> impl Fn(&DirectedTerm) -> String {
     |id: &DirectedTerm| match id {
-        DirectedTerm::IncomingFlow(id) => {
-            let name = model
-                .mor_generator_label(id)
-                .map_or_else(|| id.to_string(), |label| label.to_string());
-            format!("\\rho_{{\\text{{{name}}}}}")
+        DirectedTerm::IncomingFlow { transition: tran, output: outp } => {
+            let transition_name = model
+                .mor_generator_label(tran)
+                .map_or_else(|| tran.to_string(), |label| label.to_string());
+            let output_place_name = model.ob_generator_label(outp).map_or_else(|| outp.to_string(), |label| label.to_string());
+            format!("\\rho_{{\\text{{{transition_name}}}}}^{{{output_place_name}}}")
         }
-        DirectedTerm::OutgoingFlow(id) => {
-            let name = model
-                .mor_generator_label(id)
-                .map_or_else(|| id.to_string(), |label| label.to_string());
-            format!("\\kappa_{{\\text{{{name}}}}}")
+        DirectedTerm::OutgoingFlow { transition: tran, input: inp } => {
+            let transition_name = model
+                .mor_generator_label(tran)
+                .map_or_else(|| tran.to_string(), |label| label.to_string());
+            let input_place_name = model.ob_generator_label(inp).map_or_else(|| inp.to_string(), |label| label.to_string());
+            format!("\\kappa_{{\\text{{{transition_name}}}}}^{{{input_place_name}}}")
         }
     }
 }

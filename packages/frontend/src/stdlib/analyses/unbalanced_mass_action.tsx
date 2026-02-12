@@ -134,7 +134,7 @@ export default function UnbalancedMassAction(
             contentType: "string",
             header: true,
             content: ([mor, input]) =>
-                (morLabelOrDefault(input, elaboratedModel()) ?? "") +
+                (elaboratedModel()?.obGeneratorLabel(input)?.join(".") ?? "") +
                 " -> " +
                 "[" +
                 (morLabelOrDefault(mor, elaboratedModel()) ?? "") +
@@ -142,12 +142,16 @@ export default function UnbalancedMassAction(
         },
         createNumericalColumn({
             name: "Consumption (𝜅)",
-            data: ([_, input]) => props.content.consumptionRates[input],
+            data: ([mor, input]) => (props.content.consumptionRates[mor]?.[input]),
             default: 1,
             validate: (_, data) => data >= 0,
-            setData: ([_, input], data) =>
+            setData: ([mor, input], data) =>
                 props.changeContent((content) => {
-                    content.productionRates[input] = data;
+                    if (content.consumptionRates[mor]) {
+                        content.consumptionRates[mor][input] = data;
+                    } else {
+                        content.consumptionRates[mor] = { [input]: data };
+                    }
                 }),
         }),
     ];
@@ -161,16 +165,20 @@ export default function UnbalancedMassAction(
                 (morLabelOrDefault(mor, elaboratedModel()) ?? "") +
                 "]" +
                 " -> " +
-                (morLabelOrDefault(output, elaboratedModel()) ?? ""),
+                (elaboratedModel()?.obGeneratorLabel(output)?.join(".") ?? ""),
         },
         createNumericalColumn({
             name: "Production (𝜌)",
-            data: ([_, output]) => props.content.productionRates[output],
+            data: ([mor, output]) => props.content.productionRates[mor]?.[output],
             default: 1,
             validate: (_, data) => data >= 0,
-            setData: ([_, output], data) =>
+            setData: ([mor, output], data) =>
                 props.changeContent((content) => {
-                    content.productionRates[output] = data;
+                    if (content.productionRates[mor]) {
+                        content.productionRates[mor][output] = data;
+                    } else {
+                        content.productionRates[mor] = { [output]: data };
+                    }
                 }),
         }),
     ];
