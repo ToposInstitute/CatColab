@@ -29,6 +29,7 @@ mod datetime_millis {
 #[cfg_attr(feature = "proptest", derive(Eq, PartialEq))]
 #[derive(Debug, Clone, Reconcile, Hydrate)]
 pub struct UserStateUserSummary {
+    #[key]
     pub id: Text,
     pub username: Option<Text>,
     #[autosurgeon(rename = "displayName")]
