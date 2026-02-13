@@ -280,7 +280,7 @@ pub struct RefContent {
 /// A subset of user relevant information about a ref. Used for showing users
 /// information on a variety of refs without having to load whole refs.
 #[qubit::ts]
-#[cfg_attr(feature = "proptest", derive(Eq, PartialEq))]
+#[cfg_attr(feature = "property-tests", derive(Eq, PartialEq))]
 #[derive(Clone, Debug, Serialize, Deserialize, Reconcile, Hydrate)]
 pub struct RefStub {
     /// Human-readable name of the document.
@@ -307,7 +307,7 @@ pub struct RefStub {
 }
 
 /// Arbitrary instances for property-based testing.
-#[cfg(feature = "proptest")]
+#[cfg(feature = "property-tests")]
 pub mod arbitrary {
     use super::*;
     use chrono::TimeZone;

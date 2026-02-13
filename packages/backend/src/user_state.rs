@@ -29,7 +29,7 @@ mod datetime_millis {
 ///
 /// This is similar to [`crate::user::UserSummary`] but uses [`Text`] instead of [`String`]
 /// for compatibility with Automerge/Autosurgeon serialization.
-#[cfg_attr(feature = "proptest", derive(Eq, PartialEq))]
+#[cfg_attr(feature = "property-tests", derive(Eq, PartialEq))]
 #[derive(Debug, Clone, Reconcile, Hydrate)]
 pub struct UserSummary {
     /// Unique identifier for the user.
@@ -45,7 +45,7 @@ pub struct UserSummary {
 /// Document reference information for user state synchronization.
 ///
 /// Contains lightweight metadata about a document that the user has access to.
-#[cfg_attr(feature = "proptest", derive(Eq, PartialEq))]
+#[cfg_attr(feature = "property-tests", derive(Eq, PartialEq))]
 #[derive(Debug, Clone, Reconcile, Hydrate)]
 pub struct DocInfo {
     /// The name of the document.
@@ -68,7 +68,7 @@ pub struct DocInfo {
 }
 
 /// State associated with a user, synchronized via Automerge.
-#[cfg_attr(feature = "proptest", derive(PartialEq, Eq))]
+#[cfg_attr(feature = "property-tests", derive(PartialEq, Eq))]
 #[derive(Debug, Clone, Reconcile, Hydrate)]
 pub struct UserState {
     /// The document refs accessible to the user.
@@ -142,7 +142,7 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
 }
 
 /// Arbitrary instances for property-based testing.
-#[cfg(feature = "proptest")]
+#[cfg(feature = "property-tests")]
 pub mod arbitrary {
     #![allow(dead_code)]
     use super::*;
@@ -261,7 +261,7 @@ pub mod arbitrary {
     }
 }
 
-#[cfg(all(test, feature = "proptest"))]
+#[cfg(all(test, feature = "property-tests"))]
 mod tests {
     use super::*;
     use automerge::{AutoCommit, Automerge};

@@ -7,7 +7,7 @@ use firebase_auth::{FirebaseAuth, FirebaseUser};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[cfg(feature = "proptest")]
+#[cfg(feature = "property-tests")]
 use proptest_derive::Arbitrary;
 
 use super::app::{AppCtx, AppError, AppState};
@@ -15,7 +15,7 @@ use super::user::UserSummary;
 
 /// Levels of permission that a user can have on a document.
 #[qubit::ts]
-#[cfg_attr(feature = "proptest", derive(Arbitrary))]
+#[cfg_attr(feature = "property-tests", derive(Arbitrary))]
 #[derive(
     Clone,
     Copy,

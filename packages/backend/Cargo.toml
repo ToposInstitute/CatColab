@@ -5,8 +5,8 @@ edition = "2024"
 
 [features]
 default = []
-# Tests that use proptest and definitions of Arbitrary instances
-proptest = ["dep:proptest", "dep:proptest-derive", "dep:proptest-arbitrary-interop", "uuid/arbitrary"]
+# Tests that use proptest and the definitions of `Arbitrary` instances
+property-tests = ["dep:proptest", "dep:proptest-derive", "dep:proptest-arbitrary-interop", "uuid/arbitrary"]
 # Tests that require a running database
 integration-tests = []
 

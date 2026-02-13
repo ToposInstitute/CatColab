@@ -2,7 +2,7 @@ use autosurgeon::{Hydrate, Reconcile};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "proptest")]
+#[cfg(feature = "property-tests")]
 use proptest_derive::Arbitrary;
 
 use super::app::{AppCtx, AppError, AppState};
@@ -45,7 +45,7 @@ pub async fn user_by_username(
 /// The minimal information needed to uniquely identify a user and display the user
 /// in human-readable form.
 #[qubit::ts]
-#[cfg_attr(feature = "proptest", derive(Arbitrary, Eq, PartialEq))]
+#[cfg_attr(feature = "property-tests", derive(Arbitrary, Eq, PartialEq))]
 #[derive(Clone, Debug, Serialize, Deserialize, Reconcile, Hydrate)]
 pub struct UserSummary {
     /// Unique identifier for the user.

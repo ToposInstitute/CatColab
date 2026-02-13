@@ -528,7 +528,7 @@ mod integration_tests {
         assert_eq!(doc_id1, doc_id2, "Should return same document ID on second call");
     }
 
-    #[cfg(feature = "proptest")]
+    #[cfg(feature = "property-tests")]
     mod proptest_tests {
         use super::*;
         use backend::app::AppError;
