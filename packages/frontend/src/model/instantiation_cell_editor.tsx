@@ -1,7 +1,8 @@
+import Plus from "lucide-solid/icons/plus";
 import { batch, createSignal, Index, Show, splitProps, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { NameInput, type TextInputOptions } from "catcolab-ui-components";
+import { IconButton, NameInput, type TextInputOptions } from "catcolab-ui-components";
 import type { DblModel, InstantiatedModel, Ob, SpecializeModel } from "catlog-wasm";
 import { useApi } from "../api";
 import { DocumentPicker, IdInput } from "../components";
@@ -44,6 +45,14 @@ export function InstantiationCellEditor(props: {
             inst.specializations.unshift({ id: null, ob: null });
         });
         activateIndex(0);
+    };
+
+    const addSpecializationAtEnd = () => {
+        const newIndex = props.instantiation.specializations.length;
+        props.modifyInstantiation((inst) => {
+            inst.specializations.push({ id: null, ob: null });
+        });
+        activateIndex(newIndex);
     };
 
     const exitDownFromTop = () => {
@@ -149,6 +158,11 @@ export function InstantiationCellEditor(props: {
                     )}
                 </Index>
             </ul>
+            <div class="add-specialization-button">
+                <IconButton onClick={addSpecializationAtEnd} tooltip="Add new assignment">
+                    <Plus size={16} />
+                </IconButton>
+            </div>
         </div>
     );
 }
