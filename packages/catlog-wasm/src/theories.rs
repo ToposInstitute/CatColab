@@ -493,7 +493,7 @@ impl ThSymMonoidalCategory {
         let sys = analysis.build_system(
             modal_model.as_ref(),
             analyses::ode::MassConservationType::Unbalanced(
-                analyses::ode::RateGranularity::PerTransition,
+                analyses::ode::RateGranularity::PerPlace,
             ),
         );
         let latex_equations = sys
@@ -503,19 +503,19 @@ impl ThSymMonoidalCategory {
         Ok(ODELatex(latex_equations))
     }
 
-    // /// Simulates the stochastic mass-action system derived from a model.
-    // #[wasm_bindgen(js_name = "stochasticMassAction")]
-    // pub fn stochastic_mass_action(
-    //     &self,
-    //     model: &DblModel,
-    //     data: analyses::ode::StochasticMassActionProblemData,
-    // ) -> Result<ODEResult, String> {
-    //     Ok(ODEResult(JsResult::Ok(
-    //         analyses::ode::PetriNetMassActionAnalysis::default()
-    //             .build_stochastic_system(model.modal()?, data)
-    //             .simulate(),
-    //     )))
-    // }
+    /// Simulates the stochastic mass-action system derived from a model.
+    #[wasm_bindgen(js_name = "stochasticMassAction")]
+    pub fn stochastic_mass_action(
+        &self,
+        model: &DblModel,
+        data: analyses::ode::StochasticMassActionProblemData,
+    ) -> Result<ODEResult, String> {
+        Ok(ODEResult(JsResult::Ok(
+            analyses::ode::PetriNetMassActionAnalysis::default()
+                .build_stochastic_system(model.modal()?, data)
+                .simulate(),
+        )))
+    }
 
     /// Solve the subreachability problem for petri nets.
     #[wasm_bindgen(js_name = "subreachability")]

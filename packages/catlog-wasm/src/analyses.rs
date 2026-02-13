@@ -75,7 +75,7 @@ pub(crate) fn latex_mor_names_mass_action(model: &DblModel) -> impl Fn(&Term) ->
                 let output_place_name = model
                     .ob_generator_label(place)
                     .map_or_else(|| place.to_string(), |label| label.to_string());
-                format!("\\rho_{{\\text{{{transition_name}}}^{{\\text{{{output_place_name}}}}}}}")
+                format!("\\rho_{{\\text{{{transition_name}}}}}^{{\\text{{{output_place_name}}}}}")
             }
             (Direction::OutgoingFlow, RateParameter::PerPlace { transition, place }) => {
                 let transition_name = model
@@ -84,7 +84,7 @@ pub(crate) fn latex_mor_names_mass_action(model: &DblModel) -> impl Fn(&Term) ->
                 let input_place_name = model
                     .ob_generator_label(place)
                     .map_or_else(|| place.to_string(), |label| label.to_string());
-                format!("\\rho_{{\\text{{{transition_name}}}^{{\\text{{{input_place_name}}}}}}}")
+                format!("\\rho_{{\\text{{{transition_name}}}}}^{{\\text{{{input_place_name}}}}}")
             }
         },
     }
