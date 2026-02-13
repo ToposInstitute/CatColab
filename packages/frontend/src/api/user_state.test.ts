@@ -160,4 +160,27 @@ describe("User state Automerge document", async () => {
         assert(doc1);
         assert(doc2, `Document ${refId2} should still exist`);
     });
+
+    test.sequential("should have document name as a proper string type", async () => {
+        const doc1 = findDoc(refId1);
+        assert(doc1, `Document ${refId1} should exist`);
+
+        // Verify that the name is a primitive string, not an Automerge ImmutableString
+        assert.strictEqual(typeof doc1.name, "string", "name should be a primitive string type");
+        assert(
+            Object.prototype.toString.call(doc1.name) === "[object String]",
+            "name should be a native String object",
+        );
+
+        // Verify the constructor is the native String constructor
+        assert.strictEqual(
+            doc1.name.constructor,
+            String,
+            "name constructor should be native String",
+        );
+
+        // Ensure string methods work as expected on a primitive string
+        assert.strictEqual(doc1.name.toUpperCase().constructor, String);
+        assert.strictEqual(doc1.name.substring(0, 4).constructor, String);
+    });
 });
