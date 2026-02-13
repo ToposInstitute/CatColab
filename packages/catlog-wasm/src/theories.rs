@@ -318,7 +318,7 @@ impl ThCategoryLinks {
     ) -> Result<ODEResultWithEquations, String> {
         let tab_model = model.discrete_tab()?;
         let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
-        let sys = analysis.build_system(tab_model);
+        let sys = analysis.build_system(tab_model, data.mass_conservation_type);
         let sys_extended_scalars = analyses::ode::extend_mass_action_scalars(sys, &data);
         let latex_equations = sys_extended_scalars
             .map_variables(latex_ob_names_mass_action(model))
@@ -336,7 +336,7 @@ impl ThCategoryLinks {
     pub fn mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
         let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
         let tab_model = model.discrete_tab()?;
-        let sys = analysis.build_system(tab_model);
+        let sys = analysis.build_system(tab_model, analyses::ode::MassConservationType::Balanced);
         let equations = sys
             .map_variables(latex_ob_names_mass_action(model))
             .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(model)))
@@ -344,40 +344,20 @@ impl ThCategoryLinks {
         Ok(ODELatex(equations))
     }
 
-    /// Simulates the unbalanced mass-action ODE system derived from a model.
-    #[wasm_bindgen(js_name = "unbalancedMassAction")]
-    pub fn unbalanced_mass_action(
-        &self,
-        model: &DblModel,
-        data: analyses::ode::UnbalancedMassActionProblemData,
-    ) -> Result<ODEResultWithEquations, String> {
-        let tab_model = model.discrete_tab()?;
-        let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
-        let sys = analysis.build_unbalanced_system(tab_model);
-        let sys_extended_scalars = analyses::ode::extend_unbalanced_mass_action_scalars(sys, &data);
-        let latex_equations = sys_extended_scalars
-            .map_variables(latex_ob_names_mass_action(model))
-            .to_latex_equations();
-        let analysis =
-            analyses::ode::into_unbalanced_mass_action_analysis(sys_extended_scalars, data);
-        let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
-        Ok(ODEResultWithEquations {
-            solution: solution.into(),
-            latex_equations,
-        })
-    }
-
     /// Returns the symbolic unbalanced mass-action equations in LaTeX format.
     #[wasm_bindgen(js_name = "unbalancedMassActionEquations")]
     pub fn unbalanced_mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
         let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
         let tab_model = model.discrete_tab()?;
-        let sys = analysis.build_unbalanced_system(tab_model);
+        let sys = analysis.build_system(
+            tab_model,
+            analyses::ode::MassConservationType::Unbalanced(
+                analyses::ode::RateGranularity::PerTransition,
+            ),
+        );
         let equations = sys
             .map_variables(latex_ob_names_mass_action(model))
-            .extend_scalars(|param| {
-                param.map_variables(latex_mor_names_unbalanced_mass_action(model))
-            })
+            .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(model)))
             .to_latex_equations();
         Ok(ODELatex(equations))
     }
@@ -408,7 +388,7 @@ impl ThCategorySignedLinks {
     ) -> Result<ODEResultWithEquations, String> {
         let tab_model = model.discrete_tab()?;
         let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
-        let sys = analysis.build_system(tab_model);
+        let sys = analysis.build_system(tab_model, data.mass_conservation_type);
         let sys_extended_scalars = analyses::ode::extend_mass_action_scalars(sys, &data);
         let latex_equations = sys_extended_scalars
             .map_variables(latex_ob_names_mass_action(model))
@@ -426,7 +406,7 @@ impl ThCategorySignedLinks {
     pub fn mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
         let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
         let tab_model = model.discrete_tab()?;
-        let sys = analysis.build_system(tab_model);
+        let sys = analysis.build_system(tab_model, analyses::ode::MassConservationType::Balanced);
         let latex_equations = sys
             .map_variables(latex_ob_names_mass_action(model))
             .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(model)))
@@ -434,40 +414,20 @@ impl ThCategorySignedLinks {
         Ok(ODELatex(latex_equations))
     }
 
-    /// Simulates the unbalanced mass-action ODE system derived from a model.
-    #[wasm_bindgen(js_name = "unbalancedMassAction")]
-    pub fn unbalanced_mass_action(
-        &self,
-        model: &DblModel,
-        data: analyses::ode::UnbalancedMassActionProblemData,
-    ) -> Result<ODEResultWithEquations, String> {
-        let tab_model = model.discrete_tab()?;
-        let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
-        let sys = analysis.build_unbalanced_system(tab_model);
-        let sys_extended_scalars = analyses::ode::extend_unbalanced_mass_action_scalars(sys, &data);
-        let latex_equations = sys_extended_scalars
-            .map_variables(latex_ob_names_mass_action(model))
-            .to_latex_equations();
-        let analysis =
-            analyses::ode::into_unbalanced_mass_action_analysis(sys_extended_scalars, data);
-        let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
-        Ok(ODEResultWithEquations {
-            solution: solution.into(),
-            latex_equations,
-        })
-    }
-
     /// Returns the symbolic unbalanced mass-action equations in LaTeX format.
     #[wasm_bindgen(js_name = "unbalancedMassActionEquations")]
     pub fn unbalanced_mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
         let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
         let tab_model = model.discrete_tab()?;
-        let sys = analysis.build_unbalanced_system(tab_model);
+        let sys = analysis.build_system(
+            tab_model,
+            analyses::ode::MassConservationType::Unbalanced(
+                analyses::ode::RateGranularity::PerTransition,
+            ),
+        );
         let equations = sys
             .map_variables(latex_ob_names_mass_action(model))
-            .extend_scalars(|param| {
-                param.map_variables(latex_mor_names_unbalanced_mass_action(model))
-            })
+            .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(model)))
             .to_latex_equations();
         Ok(ODELatex(equations))
     }
@@ -498,7 +458,7 @@ impl ThSymMonoidalCategory {
     ) -> Result<ODEResultWithEquations, String> {
         let modal_model = model.modal()?;
         let analysis = analyses::ode::PetriNetMassActionAnalysis::default();
-        let sys = analysis.build_system(modal_model.as_ref());
+        let sys = analysis.build_system(modal_model.as_ref(), data.mass_conservation_type);
         let sys_extended_scalars = analyses::ode::extend_mass_action_scalars(sys, &data);
         let latex_equations = sys_extended_scalars
             .map_variables(latex_ob_names_mass_action(model))
@@ -516,7 +476,8 @@ impl ThSymMonoidalCategory {
     pub fn mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
         let analysis = analyses::ode::PetriNetMassActionAnalysis::default();
         let modal_model = model.modal()?;
-        let sys = analysis.build_system(modal_model.as_ref());
+        let sys = analysis
+            .build_system(modal_model.as_ref(), analyses::ode::MassConservationType::Balanced);
         let latex_equations = sys
             .map_variables(latex_ob_names_mass_action(model))
             .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(model)))
@@ -524,57 +485,37 @@ impl ThSymMonoidalCategory {
         Ok(ODELatex(latex_equations))
     }
 
-    /// Simulates the unbalanced mass-action ODE system derived from a model.
-    #[wasm_bindgen(js_name = "unbalancedMassAction")]
-    pub fn unbalanced_mass_action(
-        &self,
-        model: &DblModel,
-        data: analyses::ode::UnbalancedMassActionProblemData,
-    ) -> Result<ODEResultWithEquations, String> {
-        let modal_model = model.modal()?;
-        let analysis = analyses::ode::PetriNetMassActionAnalysis::default();
-        let sys = analysis.build_unbalanced_system(modal_model.as_ref(), data.rate_granularity);
-        let sys_extended_scalars = analyses::ode::extend_unbalanced_mass_action_scalars(sys, &data);
-        let latex_equations = sys_extended_scalars
-            .map_variables(latex_ob_names_mass_action(model))
-            .to_latex_equations();
-        let analysis =
-            analyses::ode::into_unbalanced_mass_action_analysis(sys_extended_scalars, data);
-        let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
-        Ok(ODEResultWithEquations {
-            solution: solution.into(),
-            latex_equations,
-        })
-    }
-
     /// Returns the symbolic unbalanced mass-action equations in LaTeX format.
     #[wasm_bindgen(js_name = "unbalancedMassActionEquations")]
     pub fn unbalanced_mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
         let analysis = analyses::ode::PetriNetMassActionAnalysis::default();
         let modal_model = model.modal()?;
-        let sys = analysis.build_unbalanced_system(modal_model.as_ref());
+        let sys = analysis.build_system(
+            modal_model.as_ref(),
+            analyses::ode::MassConservationType::Unbalanced(
+                analyses::ode::RateGranularity::PerTransition,
+            ),
+        );
         let latex_equations = sys
             .map_variables(latex_ob_names_mass_action(model))
-            .extend_scalars(|param| {
-                param.map_variables(latex_mor_names_unbalanced_mass_action(model))
-            })
+            .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(model)))
             .to_latex_equations();
         Ok(ODELatex(latex_equations))
     }
 
-    /// Simulates the stochastic mass-action system derived from a model.
-    #[wasm_bindgen(js_name = "stochasticMassAction")]
-    pub fn stochastic_mass_action(
-        &self,
-        model: &DblModel,
-        data: analyses::ode::StochasticMassActionProblemData,
-    ) -> Result<ODEResult, String> {
-        Ok(ODEResult(JsResult::Ok(
-            analyses::ode::PetriNetMassActionAnalysis::default()
-                .build_stochastic_system(model.modal()?, data)
-                .simulate(),
-        )))
-    }
+    // /// Simulates the stochastic mass-action system derived from a model.
+    // #[wasm_bindgen(js_name = "stochasticMassAction")]
+    // pub fn stochastic_mass_action(
+    //     &self,
+    //     model: &DblModel,
+    //     data: analyses::ode::StochasticMassActionProblemData,
+    // ) -> Result<ODEResult, String> {
+    //     Ok(ODEResult(JsResult::Ok(
+    //         analyses::ode::PetriNetMassActionAnalysis::default()
+    //             .build_stochastic_system(model.modal()?, data)
+    //             .simulate(),
+    //     )))
+    // }
 
     /// Solve the subreachability problem for petri nets.
     #[wasm_bindgen(js_name = "subreachability")]
