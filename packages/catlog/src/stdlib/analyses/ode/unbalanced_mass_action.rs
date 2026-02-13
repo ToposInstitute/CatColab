@@ -26,7 +26,7 @@ use crate::zero::{QualifiedName, alg::Polynomial, rig::Monomial};
 /// *incoming flow to B* and an *outgoing flow from A*.
 ///
 /// To accommodate Petri nets, where transitions can have multiple input/output
-/// arcs, we need to carry around more information: a flow term should describe
+/// arcs, we need to carry around more information: a flow term could describe
 /// not only the transition but also the corresponding input/output place.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub enum DirectedTerm {
@@ -60,6 +60,18 @@ impl fmt::Display for DirectedTerm {
     }
 }
 
+/// When mass is not necessarily conserved, consumption/production rate parameters
+/// can be set either *per transition* or *per place*.
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Serialize, Deserialize)]
+pub enum RateGranularity {
+    /// Each transition gets assigned a single consumption and single production rate
+    PerTransition,
+
+    /// Each transition gets assigned a consumption rate for each input place and
+    /// a production rate for each output place.
+    PerPlace
+}
+
 /// Data defining an unbalanced mass-action ODE problem for a model.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
@@ -68,6 +80,14 @@ impl fmt::Display for DirectedTerm {
     tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
 )]
 pub struct UnbalancedMassActionProblemData {
+    /// Whether or not mass is conserved.
+    #[cfg_attr(feature = "serde", serde(rename = "massConservation"))]
+    pub mass_conservation: bool,
+
+    /// (If mass is not conserved) whether rate parameters should be per-transition or per-object.
+    #[cfg_attr(feature = "serde", serde(default, rename = "rateGranularity"))]
+    pub rate_granularity: Option<RateGranularity>,
+
     /// Map from morphism IDs to (map from input objects to consumption rate coefficients) (nonnegative reals).
     #[cfg_attr(feature = "serde", serde(rename = "consumptionRates"))]
     consumption_rates: HashMap<QualifiedName, HashMap<QualifiedName, f32>>,
