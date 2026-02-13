@@ -515,7 +515,7 @@ impl ThSymMonoidalCategory {
     ) -> Result<ODEResultWithEquations, String> {
         let modal_model = model.modal()?;
         let analysis = analyses::ode::PetriNetMassActionAnalysis::default();
-        let sys = analysis.build_unbalanced_system(modal_model.as_ref());
+        let sys = analysis.build_unbalanced_system(modal_model.as_ref(), data.rate_granularity);
         let sys_extended_scalars = analyses::ode::extend_unbalanced_mass_action_scalars(sys, &data);
         let latex_equations = sys_extended_scalars
             .map_variables(latex_ob_names_mass_action(model))
