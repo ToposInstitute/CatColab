@@ -1,6 +1,6 @@
 import { lazy } from "solid-js";
 
-import type { MorType, ObType } from "catlog-wasm";
+import type { MorType, ObType, StochasticMassActionProblemData } from "catlog-wasm";
 import type { DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
 import * as GraphLayoutConfig from "../visualization/graph_layout_config";
 import type * as Checkers from "./analyses/checker_types";
@@ -167,7 +167,11 @@ export function massAction(
         help,
         component: (props) => <MassAction title={name} {...otherOptions} {...props} />,
         initialContent: () => ({
-            rates: {},
+            massConservationType: { type: "Balanced" },
+            transitionProductionRates: {},
+            transitionConsumptionRates: {},
+            placeProductionRates: {},
+            placeConsumptionRates: {},
             initialValues: {},
             duration: 10,
         }),
@@ -201,68 +205,6 @@ export function massActionEquations(
 }
 const MassActionEquationsDisplay = lazy(() => import("./analyses/mass_action_equations"));
 
-export function stochasticMassAction(
-    options: Partial<AnalysisOptions> & {
-        simulate: Simulators.StochasticMassActionSimulator;
-        stateType?: ObType;
-        transitionType?: MorType;
-    },
-): ModelAnalysisMeta<Simulators.MassActionProblemData> {
-    const {
-        id = "stochastic-mass-action",
-        name = "Stochastic mass-action dynamics",
-        description = "Simulate the system using stochastic mass-action dynamics",
-        help = "stochastic-mass-action",
-        ...otherOptions
-    } = options;
-    return {
-        id,
-        name,
-        description,
-        help,
-        component: (props) => <StochasticMassAction title={name} {...otherOptions} {...props} />,
-        initialContent: () => ({
-            rates: {},
-            initialValues: {},
-            duration: 10,
-        }),
-    };
-}
-
-const StochasticMassAction = lazy(() => import("./analyses/stochastic_mass_action"));
-
-export function unbalancedMassAction(
-    options: Partial<AnalysisOptions> & {
-        simulate: Simulators.UnbalancedMassActionSimulator;
-        stateType?: ObType;
-        transitionType?: MorType;
-    },
-): ModelAnalysisMeta<Simulators.UnbalancedMassActionProblemData> {
-    const {
-        id = "unbalanced-mass-action",
-        name = "Unbalanced mass-action dynamics",
-        description = "Simulate the system using the unbalanced mass-action equations",
-        help = "unbalanced-mass-action",
-        ...otherOptions
-    } = options;
-    return {
-        id,
-        name,
-        description,
-        help,
-        component: (props) => <UnbalancedMassAction title={name} {...otherOptions} {...props} />,
-        initialContent: () => ({
-            massConservation: true,
-            consumptionRates: {},
-            productionRates: {},
-            initialValues: {},
-            duration: 10,
-        }),
-    };
-}
-
-const UnbalancedMassAction = lazy(() => import("./analyses/unbalanced_mass_action"));
-
 export function unbalancedMassActionEquations(
     options: Partial<AnalysisOptions> & {
         getEquations: Simulators.UnbalancedMassActionEquations;
@@ -294,6 +236,36 @@ export function unbalancedMassActionEquations(
 const UnbalancedMassActionEquationsDisplay = lazy(
     () => import("./analyses/unbalanced_mass_action_equations"),
 );
+
+export function stochasticMassAction(
+    options: Partial<AnalysisOptions> & {
+        simulate: Simulators.StochasticMassActionSimulator;
+        stateType?: ObType;
+        transitionType?: MorType;
+    },
+): ModelAnalysisMeta<StochasticMassActionProblemData> {
+    const {
+        id = "stochastic-mass-action",
+        name = "Stochastic mass-action dynamics",
+        description = "Simulate the system using stochastic mass-action dynamics",
+        help = "stochastic-mass-action",
+        ...otherOptions
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => <StochasticMassAction title={name} {...otherOptions} {...props} />,
+        initialContent: () => ({
+            rates: {},
+            initialValues: {},
+            duration: 10,
+        }),
+    };
+}
+
+const StochasticMassAction = lazy(() => import("./analyses/stochastic_mass_action"));
 
 export const modelGraph = (
     options: AnalysisOptions,
