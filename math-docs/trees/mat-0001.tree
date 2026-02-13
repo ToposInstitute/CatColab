@@ -9,20 +9,20 @@
   theory. It is a specific design goal that the system be usable \em{without}
   any knowledge of such ideas. These docs are for people who want to know about
   the mathematics, perhaps because they want to develop the core package
-  [catlog](/dev/rust/catlog/) or just out of curiosity. At the moment, these
-  pages are from being a self-contained introduction, serving mainly to collect
-  new bits of CatColab-related mathematics as they are created. For proper
-  exposition, see the [published literature](bib-0001).
+  [catlog](/dev/rust/catlog/) or just out of curiosity. These pages are
+  currently far from being a self-contained introduction, serving mainly to
+  collect new bits of CatColab-related mathematics as they are created. For
+  proper exposition, see the [published literature](bib-0001).
 }
 
 \p{
   In mathematical terms, CatColab is an editor for categorical structures and
   their morphisms and higher morphisms. The meta-logical framework organizing
-  these categorical structures is based on [double category
+  these structures is based on [double category
   theory](https://mathoverflow.net/q/476936). More precisely, the
   \strong{domain-specific logics} in CatColab are defined by [double
-  theories](cartesian-double-theories-2024), and the \strong{models} in
-  CatColab are models of double theories.
+  theories](cartesian-double-theories-2024), and the \strong{models} in CatColab
+  are models of double theories.
 }
 
 \p{

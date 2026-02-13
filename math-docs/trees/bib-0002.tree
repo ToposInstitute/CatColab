@@ -1,10 +1,11 @@
 \title{Double category theory}
 \taxon{bibliography}
 
-\p{General double category theory:}
+\p{Double category theory:}
 
 \ul{
-\li{A textbook: [[grandis-2019]]}
+\li{Textbook reference: [[grandis-2019]]}
+\li{Equipments: [[shulman-2008]]}
 }
 
 \p{Double-categorical logic:}
@@ -12,6 +13,7 @@
 \ul{
 \li{[[cartesian-double-theories-2024]]}
 \li{[[double-products-2024]]}
+\li{[[double-instances-2026]]}
 }
 
 \p{Background on categorical logic:}
