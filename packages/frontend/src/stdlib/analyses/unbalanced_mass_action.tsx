@@ -21,6 +21,7 @@ import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
 import { createModelODEPlotWithEquations } from "./model_ode_plot";
 import type { UnbalancedMassActionSimulator } from "./simulator_types";
+import { MassActionConfigForm } from "./mass_action_config_form";
 
 import "./simulation.css";
 
@@ -205,7 +206,15 @@ export default function UnbalancedMassAction(
 
     return (
         <div class="simulation">
-            <BlockTitle title={props.title} />
+            <BlockTitle
+                title={props.title}
+                settingsPane={
+                    <MassActionConfigForm
+                        config={props.content}
+                        changeConfig={props.changeContent}
+                    />
+                }
+            />
             <Foldable title="Parameters" defaultExpanded>
                 <div class="parameters">
                     <FixedTableEditor rows={obGenerators()} schema={obSchema} />

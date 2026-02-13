@@ -252,6 +252,7 @@ export function unbalancedMassAction(
         help,
         component: (props) => <UnbalancedMassAction title={name} {...otherOptions} {...props} />,
         initialContent: () => ({
+            massConservation: true,
             consumptionRates: {},
             productionRates: {},
             initialValues: {},
