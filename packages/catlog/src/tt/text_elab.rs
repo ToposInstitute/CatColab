@@ -544,7 +544,7 @@ impl<'a> Elaborator<'a> {
                 }
                 let eq_ty_s = TyS::id(elab.evaluator().quote_ty(&tm1_ty), tm1_s, tm2_s);
                 let eq_ty_v = TyV::id(tm1_ty, tm1_v, tm2_v);
-                (eq_ty_s, eq_ty_v)
+                (eq_ty_s,eq_ty_v)
             }
             _ => elab.ty_error("unexpected notation for type"),
         }
@@ -813,5 +813,24 @@ mod tests {
 
         let result = Model::from_text(&th, "[x : Entity, f : Hom(Entity)[x,y]");
         assert!(result.is_err_and(|msgs| !msgs.is_empty()));
+    }
+    #[test]
+    /// Check that a commutative square really produces a model with exactly one equation.
+    fn generate_model_with_eqn() {
+        let th = Rc::new(stdlib::th_schema());
+        let source = "[
+            NW : Entity,
+            NE : Entity,
+            SW : Entity,
+            SE : Entity,
+            t : (Hom Entity)[NW,NE],
+            l : (Hom Entity)[NW,SW],
+            r : (Hom Entity)[NE,SE],
+            b : (Hom Entity)[SW, SE],
+            comm : (t * r == l * b)
+        ]";
+        let model = tt::modelgen::parse_and_generate(source, &th.clone().into()).and_then(|m| m.as_discrete()).unwrap();
+        let eqns: Vec<_> = model.category.equations().collect();
+        assert_eq!(eqns.len(), 1);
     }
 }

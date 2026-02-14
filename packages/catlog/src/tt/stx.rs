@@ -166,7 +166,10 @@ impl ToDoc for TyS {
                 binop(t(":"), t(format!("{}", label)).group(), ty.to_doc())
             })),
             TyS_::Sing(_, tm) => t("@sing") + s() + tm.to_doc(),
-            TyS_::Id(_, tm1, tm2) => binop(t("=="), tm1.to_doc(), tm2.to_doc()),
+            TyS_::Id(_, tm1, tm2) => binop(
+                t("=="), 
+                tm1.to_doc(), 
+                tm2.to_doc()),
             TyS_::Specialize(ty, d) => binop(
                 t("&"),
                 ty.to_doc(),
