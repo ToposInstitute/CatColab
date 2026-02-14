@@ -115,7 +115,6 @@ impl Model {
         }
     }
 
-<<<<<<< HEAD
     /// Constructs the identity morphism on an object.
     fn id(&self, ob: Ob) -> Mor {
         all_the_same!(match self {
@@ -134,8 +133,6 @@ impl Model {
         })
     }
 
-=======
->>>>>>> 0157e787 (Commutative square from text through model.)
     /// Adds an object generator to the model.
     fn add_ob(&mut self, name: QualifiedName, ob_type: ObType) {
         all_the_same!(match self {
@@ -161,7 +158,6 @@ impl Model {
 
     /// Adds an equation between two morphisms to the model.
     fn add_equation(&mut self, lhs: Mor, rhs: Mor) {
-<<<<<<< HEAD
         match self {
             Model::Discrete(model) => {
                 model.add_equation(PathEq::new(lhs.try_into().unwrap(), rhs.try_into().unwrap()));
@@ -169,13 +165,6 @@ impl Model {
             Model::Modal(_) => {
                 // Modal models currently do not support equations, so we ignore them.
             }
-=======
-        match (self, lhs, rhs) {
-            (Model::Discrete(model), Mor::Discrete(lhs), Mor::Discrete(rhs)) => {
-                model.add_equation(PathEq::new(lhs, rhs));
-            }
-            _ => {}
->>>>>>> 0157e787 (Commutative square from text through model.)
         }
     }
 
@@ -194,8 +183,6 @@ impl Model {
     }
 }
 
-<<<<<<< HEAD
-=======
 /// Parses and generates a model from plain text.
 pub fn parse_and_generate(s: &str, th: &TheoryDef) -> Option<Model> {
     let theory = Theory::new("_".into(), th.clone());
@@ -218,7 +205,6 @@ pub fn generate(toplevel: &Toplevel, th: &TheoryDef, ty: &TyV) -> (Model, Namesp
     (generator.model, namespace)
 }
 
->>>>>>> 0157e787 (Commutative square from text through model.)
 struct ModelGenerator<'a> {
     eval: Evaluator<'a>,
     theory: TheoryDef<Unital>,
@@ -476,13 +462,8 @@ impl<'a> ModelGenerator<'a> {
                 None
             }
             TyV_::Morphism(mt, dom, cod) => {
-<<<<<<< HEAD
                 let dom = self.make_ob_check_type(dom, &self.theory.src_type(mt))?;
                 let cod = self.make_ob_check_type(cod, &self.theory.tgt_type(mt))?;
-=======
-                let dom = self.make_ob(dom, &self.theory.src_type(mt))?;
-                let cod = self.make_ob(cod, &self.theory.tgt_type(mt))?;
->>>>>>> 0157e787 (Commutative square from text through model.)
                 self.model.add_mor(prefix.into(), dom, cod, mt.clone());
                 None
             }
@@ -507,13 +488,9 @@ impl<'a> ModelGenerator<'a> {
                 let TyV_::Morphism(mt, _, _) = &**mor_ty else {
                     return None;
                 };
-<<<<<<< HEAD
-                if let (Some(lhs), Some(rhs)) = (self.make_mor(lhs, mt), self.make_mor(rhs, mt)) {
-=======
                 if let (Some(lhs), Some(rhs)) =
                     (self.make_mor(lhs, mt), self.make_mor(rhs, mt))
                 {
->>>>>>> 0157e787 (Commutative square from text through model.)
                     self.model.add_equation(lhs, rhs);
                 }
                 None
