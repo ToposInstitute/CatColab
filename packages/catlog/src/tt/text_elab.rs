@@ -544,7 +544,7 @@ impl<'a> Elaborator<'a> {
                 }
                 let eq_ty_s = TyS::id(elab.evaluator().quote_ty(&tm1_ty), tm1_s, tm2_s);
                 let eq_ty_v = TyV::id(tm1_ty, tm1_v, tm2_v);
-                (eq_ty_s,eq_ty_v)
+                (eq_ty_s, eq_ty_v)
             }
             _ => elab.ty_error("unexpected notation for type"),
         }
@@ -829,7 +829,9 @@ mod tests {
             b : (Hom Entity)[SW, SE],
             comm : (t * r == l * b)
         ]";
-        let model = tt::modelgen::parse_and_generate(source, &th.clone().into()).and_then(|m| m.as_discrete()).unwrap();
+        let model = tt::modelgen::parse_and_generate(source, &th.clone().into())
+            .and_then(|m| m.as_discrete())
+            .unwrap();
         let eqns: Vec<_> = model.category.equations().collect();
         assert_eq!(eqns.len(), 1);
     }

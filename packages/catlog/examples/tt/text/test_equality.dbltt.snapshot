@@ -29,3 +29,6 @@ generate CommutativeSquare
 syn [S : CommutativeSquare] S.comm
 #/ result: S.comm : S.t · S.r == S.l · S.b
 
+syn [S : CommutativeSquare] S.comm
+#/ result: S.comm : S.t · S.r == S.l · S.b
+

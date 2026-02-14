@@ -56,7 +56,9 @@ impl<'a> Evaluator<'a> {
             }
             TyS_::Record(r) => TyV::record(self.eval_record(r)),
             TyS_::Sing(ty_s, tm_s) => TyV::sing(self.eval_ty(ty_s), self.eval_tm(tm_s)),
-            TyS_::Id(ty_s, tm_s1, tm_s2) => TyV::id(self.eval_ty(ty_s), self.eval_tm(tm_s1), self.eval_tm(tm_s2)),
+            TyS_::Id(ty_s, tm_s1, tm_s2) => {
+                TyV::id(self.eval_ty(ty_s), self.eval_tm(tm_s1), self.eval_tm(tm_s2))
+            }
             TyS_::Specialize(ty_s, specializations) => {
                 specializations.iter().fold(self.eval_ty(ty_s), |ty_v, (path, s)| {
                     ty_v.add_specialization(path, self.eval_ty(s))
@@ -184,7 +186,9 @@ impl<'a> Evaluator<'a> {
                 }
             }
             TyV_::Sing(ty, tm) => TyS::sing(self.quote_ty(ty), self.quote_tm(tm)),
-            TyV_::Id(ty, tm1, tm2) => TyS::id(self.quote_ty(ty), self.quote_tm(tm1), self.quote_tm(tm2)),
+            TyV_::Id(ty, tm1, tm2) => {
+                TyS::id(self.quote_ty(ty), self.quote_tm(tm1), self.quote_tm(tm2))
+            }
             TyV_::Unit => TyS::unit(),
             TyV_::Meta(mv) => TyS::meta(*mv),
         }

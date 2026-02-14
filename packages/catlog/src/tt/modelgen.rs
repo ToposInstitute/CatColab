@@ -158,14 +158,11 @@ impl Model {
 
     /// Adds an equation between two morphisms to the model.
     fn add_equation(&mut self, lhs: Mor, rhs: Mor) {
-        match self {
-            Model::Discrete(model) => {
-                model.add_equation(PathEq::new(lhs.try_into().unwrap(), rhs.try_into().unwrap()));
-            }
-            Model::Modal(_) => {
-                // Modal models currently do not support equations, so we ignore them.
-            }
+        if let (Model::Discrete(model), Mor::Discrete(lhs), Mor::Discrete(rhs)) = (self, lhs, rhs) {
+            model.add_equation(PathEq::new(lhs, rhs));
         }
+        // Modal models currently do not support equations, so we ignore them.
+        {}
     }
 
     /// Pretty prints a summary of the model.
@@ -444,9 +441,10 @@ impl<'a> ModelGenerator<'a> {
                         Some(Mor::Discrete(concat_paths(pf, pg)))
                     }
                     (Mor::Modal(mf), Mor::Modal(mg)) => {
-                        Some(Mor::Modal(modal::ModalMor::Composite(Box::new(
-                            concat_paths(Path::single(mf), Path::single(mg)),
-                        ))))
+                        Some(Mor::Modal(modal::ModalMor::Composite(Box::new(concat_paths(
+                            Path::single(mf),
+                            Path::single(mg),
+                        )))))
                     }
                     _ => None,
                 }
@@ -488,9 +486,7 @@ impl<'a> ModelGenerator<'a> {
                 let TyV_::Morphism(mt, _, _) = &**mor_ty else {
                     return None;
                 };
-                if let (Some(lhs), Some(rhs)) =
-                    (self.make_mor(lhs, mt), self.make_mor(rhs, mt))
-                {
+                if let (Some(lhs), Some(rhs)) = (self.make_mor(lhs, mt), self.make_mor(rhs, mt)) {
                     self.model.add_equation(lhs, rhs);
                 }
                 None
