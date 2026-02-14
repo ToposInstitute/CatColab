@@ -2,6 +2,14 @@
 \taxon{RFC}
 \author{Evan Patterson}
 \date{2026-02-16}
+\import{macros}
+
+\subtree{
+\title{Summary}
+
+\p{\strong{TODO}}
+  
+}
 
 \subtree{
 \title{Motivation}
@@ -24,13 +32,30 @@ are merely \em{set-theoretic}. One way to tell the difference between
 category-theoretic and set-theoretic models of a fixed theory is that the former
 should be the objects of a (nontrivial) 2-category or double category, whereas
 the latter are the objects only of a category. There are innumerable logical
-systems that can be used to specify set-theoretic models; this is the subject of
-all of traditional universal algebra and mathematical logic.}
+systems that can be used to specify set-theoretic models, this being the main
+subject of universal algebra and mathematical logic for over a century.}
 
 \p{This RFC proposes an approach to set-theoretical models harmonious with
 CatColab's existing category-theoretic models. The basic observation is that
 with surprisingly small changes to the definitions of \em{theory} and
 \em{model}, the formalism of double theories can toggle between
-category-theoretic and set-theoretic models.}
+category-theoretic and set-theoretic models. As a result, we should be able to
+reuse and share significant amounts of functionality throughout CatColab's core
+and frontend. We will see that there are also reasons beyond mere expediency to
+favor this approach.}
+
+}
+
+\subtree{
+\title{Prior art}
+
+\p{My paper with Michael Lambert on [double ologs](double-ologs) shares ideas
+with this proposal and is a useful source of intuition and examples. But there
+are also notable differences: here we envision semantics in \SSet, instead of
+\Rel as in the paper; here we are primarily interested in models given by finite
+presentation, rather explicitly by tabular data as in a database; and at present
+we have no plans to introduce the compact closed structure utilized in the
+paper, which remains poorly understood for weak double categories and is the
+subject of ongoing research.}
 
 }

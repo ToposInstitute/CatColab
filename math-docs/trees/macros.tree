@@ -106,6 +106,7 @@
 \def\dbl[name]{#{\mathbb{\name}}}
 \def\SSet{#{\mathbb{S}\mathsf{et}}}
 \def\Span{#{\mathbb{S}\mathsf{pan}}}
+\def\Rel{#{\mathbb{R}\mathsf{el}}}
 \def\Mod{#{\mathbb{M}}\mathsf{od}}
 
 % Monads
