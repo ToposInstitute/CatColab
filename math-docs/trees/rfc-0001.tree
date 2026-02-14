@@ -1,0 +1,36 @@
+\title{Set-theoretic models of double theories}
+\taxon{RFC}
+\author{Evan Patterson}
+\date{2026-02-16}
+
+\subtree{
+\title{Motivation}
+
+\p{Models in CatColab are categorical structures: every object type in a theory
+specifies a category in models of the theory, every morphism type specifies a
+profunctor, and so on. This design centers \em{category theory in the small}, a
+powerful and underappreciated point of view on modeling. It is the basis of
+CatColab's approaches to motif finding, programming in domain-specific
+languages, flavored Petri nets, and refining models, among other current and
+future capabilities.}
+
+\p{It is also rather opinionated. Not every model in the pre-theoretical sense
+can be usefully seen as a categorical structure. This seems particularly true of
+quantitative formalisms like stock-flow diagrams with arbitrary flow functions
+and dynamical systems described by ODEs.}
+
+\p{Thus, as has long been apparent, CatColab needs an approach to models that
+are merely \em{set-theoretic}. One way to tell the difference between
+category-theoretic and set-theoretic models of a fixed theory is that the former
+should be the objects of a (nontrivial) 2-category or double category, whereas
+the latter are the objects only of a category. There are innumerable logical
+systems that can be used to specify set-theoretic models; this is the subject of
+all of traditional universal algebra and mathematical logic.}
+
+\p{This RFC proposes an approach to set-theoretical models harmonious with
+CatColab's existing category-theoretic models. The basic observation is that
+with surprisingly small changes to the definitions of \em{theory} and
+\em{model}, the formalism of double theories can toggle between
+category-theoretic and set-theoretic models.}
+
+}
