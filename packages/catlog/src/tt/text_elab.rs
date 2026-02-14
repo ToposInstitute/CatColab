@@ -22,7 +22,7 @@ pub const TT_PARSE_CONFIG: ParseConfig = ParseConfig::new(
         ("*", Prec::lassoc(60)),
         ("==", Prec::nonassoc(30)),
     ],
-    &[":", ":=", "&", "Unit", "Hom", "*","=="],
+    &[":", ":=", "&", "Unit", "Hom", "*", "=="],
     &["type", "def", "syn", "chk", "norm", "generate", "set_theory"],
 );
 
@@ -521,7 +521,7 @@ impl<'a> Elaborator<'a> {
             App2(L(_, Keyword("==")), tm1_n, tm2_n) => {
                 let (tm1_s, tm1_v, tm1_ty) = elab.syn(tm1_n);
                 let (tm2_s, tm2_v, tm2_ty) = elab.syn(tm2_n);
-                let TyV_::Morphism(_, _,_) = &*tm1_ty else {
+                let TyV_::Morphism(_, _, _) = &*tm1_ty else {
                     elab.loc = Some(tm1_n.loc());
                     return elab.ty_error("Equality types are only supported for morphisms");
                 };
@@ -536,7 +536,7 @@ impl<'a> Elaborator<'a> {
                 }
                 let eq_ty_s = TyS::id(elab.evaluator().quote_ty(&tm1_ty), tm1_s, tm2_s);
                 let eq_ty_v = TyV::id(tm1_ty, tm1_v, tm2_v);
-                (eq_ty_s,eq_ty_v)
+                (eq_ty_s, eq_ty_v)
             }
             _ => elab.ty_error("unexpected notation for type"),
         }
@@ -562,6 +562,7 @@ impl<'a> Elaborator<'a> {
         }
     }
 
+    /// Elaborates a term from notation, returning syntax, value, and synthesized type.
     fn syn(&mut self, n: &FNtn) -> (TmS, TmV, TyV) {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
@@ -670,6 +671,7 @@ impl<'a> Elaborator<'a> {
         }
     }
 
+    /// Elaborates a term from notation, checking against an expected type, and returning syntax and value.
     fn chk(&mut self, ty: &TyV, n: &FNtn) -> (TmS, TmV) {
         let mut elab = self.enter(n.loc());
         match (&**ty, n.ast0()) {
@@ -783,7 +785,9 @@ mod tests {
             b : (Hom Entity)[SW, SE],
             comm : (t * r == l * b)
         ]";
-        let model = tt::modelgen::parse_and_generate(source, &th.clone().into()).and_then(|m| m.as_discrete()).unwrap();
+        let model = tt::modelgen::parse_and_generate(source, &th.clone().into())
+            .and_then(|m| m.as_discrete())
+            .unwrap();
         let eqns: Vec<_> = model.category.equations().collect();
         assert_eq!(eqns.len(), 1);
     }

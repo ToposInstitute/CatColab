@@ -65,11 +65,11 @@ pub enum TyS_ {
     Sing(TyS, TmS),
 
     /// Type constructor for identity types.
-    /// 
+    ///
     /// Example syntax: `a == b` (assuming `a` and `b` are terms that synthesize the same type).
-    /// 
+    ///
     /// A term `p` of type `a == b` is a proof that `a` and `b` are equal.
-    Id(TyS,TmS, TmS),
+    Id(TyS, TmS, TmS),
 
     /// Type constructor for specialized types.
     ///
@@ -166,10 +166,7 @@ impl ToDoc for TyS {
                 binop(t(":"), t(format!("{}", label)).group(), ty.to_doc())
             })),
             TyS_::Sing(_, tm) => t("@sing") + s() + tm.to_doc(),
-            TyS_::Id(_, tm1, tm2) => binop(
-                t("=="), 
-                tm1.to_doc(), 
-                tm2.to_doc()),
+            TyS_::Id(_, tm1, tm2) => binop(t("=="), tm1.to_doc(), tm2.to_doc()),
             TyS_::Specialize(ty, d) => binop(
                 t("&"),
                 ty.to_doc(),

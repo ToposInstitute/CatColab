@@ -93,7 +93,7 @@ pub enum TyV_ {
     /// Type constructor for singleton types, also see [TyS_::Sing].
     Sing(TyV, TmV),
     /// Type constructor for identity types, also see [TyS_::Id].
-    Id(TyV,TmV, TmV),
+    Id(TyV, TmV, TmV),
     /// Type constructor for unit types, also see [TyS_::Unit].
     Unit,
     /// A metavariable, also see [TyS_::Meta].

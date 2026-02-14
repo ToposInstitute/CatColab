@@ -14,3 +14,4 @@ type CommutativeSquare := [
 
 generate CommutativeSquare
 
+syn [S : CommutativeSquare] S.comm
