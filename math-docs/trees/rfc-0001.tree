@@ -25,24 +25,87 @@ future capabilities.}
 \p{It is also rather opinionated. Not every model in the pre-theoretical sense
 can be usefully seen as a categorical structure. This seems particularly true of
 quantitative formalisms like stock-flow diagrams with arbitrary flow functions
-and dynamical systems described by ODEs.}
+and dynamical systems described by general ODEs.}
 
 \p{Thus, as has long been apparent, CatColab needs an approach to models that
 are merely \em{set-theoretic}. One way to tell the difference between
 category-theoretic and set-theoretic models of a fixed theory is that the former
 should be the objects of a (nontrivial) 2-category or double category, whereas
-the latter are the objects only of a category. There are innumerable logical
-systems that can be used to specify set-theoretic models, this being the main
-subject of universal algebra and mathematical logic for over a century.}
+the latter are the objects of only a category. There are innumerable logical
+systems that can be used to specify set-theoretic models, this being a main
+topic of universal algebra and mathematical logic for a century.}
 
 \p{This RFC proposes an approach to set-theoretical models harmonious with
 CatColab's existing category-theoretic models. The basic observation is that
 with surprisingly small changes to the definitions of \em{theory} and
 \em{model}, the formalism of double theories can toggle between
-category-theoretic and set-theoretic models. As a result, we should be able to
-reuse and share significant amounts of functionality throughout CatColab's core
-and frontend. We will see that there are also reasons beyond mere expediency to
-favor this approach.}
+category-theoretic and set-theoretic models. As a result, we will be able to
+reuse and share significant amounts of functionality across CatColab's core and
+frontend.}
+
+\p{There are reasons beyond expediency of implementation to favor
+double-categorical logic. A key reason, as we will see, is that it enables type
+dependency in what is perhaps its simplest and most constrained form.}
+
+}
+
+\subtree{
+\title{Mathematical specification}
+
+\p{Let us compare how double-categorical logic can be configured for
+category-theoretic and set-theoretical models, starting with most elementary
+double doctrines and gradually introducing features.}
+
+\subtree{
+\title{Minimal structure}    
+
+\p{In the set-theoretic setting, a \define{bare double theory} is a virtual
+double category \dbl{T} and a \define{model} of \dbl{T} is a functor (of VDCs)
+#{\dbl{T} \to \SSet}.}
+
+\p{In the category-theoretic setting, there are several essentially equivalent
+formulations. On one definition, a \define{bare double theory} is a \em{unital}
+VDC \dbl{T} and a \define{model} of \dbl{T} is a functor (of VDCs) #{\dbl{T} \to
+\SSet} or equivalently a \em{normal} functor #{\dbl{T} \to \CCat = \Mod(\SSet)}.
+Alternatively, a \define{bare double theory} is an \em{augmented} VDC \dbl{T}
+and a \define{model} of \dbl{T} is a functor (of augmented VDCs) #{\dbl{T} \to
+\CCat}.}
+
+\p{The difference between the two kinds of theories is thus about loose
+identities, which can either be defined by the universal property of
+[units](cruttwell-shulman-2010) in a VDC or introduced as primitive structure
+(co-nullary cells) in an [augmented VDC](koudenburg-2020). And that is the
+extent of the difference.}
+
+}
+
+\subtree{
+\title{Restrictions}
+
+\p{Type-theoretically, an object in a theory \dbl{T} is a type and a proarrow
+#{P: X \proto Y} is a family of types depending on #{X} and #{Y}. It is then
+natural to ask that the family #{P} can be reindexed along maps (tight
+morphisms) into #{X} and #{Y}. That is precisely what restrictions in a VDC do,
+motivating the following definitions.}
+
+\p{In the set-theoretic setting, a \define{simple double theory} is a VDC
+\dbl{T} with restrictions and a \define{model} of \dbl{T} is a functor #{\dbl{T}
+\to \SSet} that preserves restrictions.}
+
+\p{In the category-theoretic setting, a \define{simple double theory} is a
+virtual equipment \dbl{T} (i.e., a VDC with units and restrictions) and a
+\define{model} of \dbl{T} is a functor (of VDCs) #{\dbl{T} \to \SSet} or
+equivalently a normal functor #{\dbl{T} \to \CCat}, recalling that any functor
+between virtual equipments preserves restrictions ([Cruttwell-Shulman 2010,
+Theorem 7.24](cruttwell-shulman-2010)). Alternatively, a \define{simple double
+theory} is an augmented VDC \dbl{T} with all restrictions and a \define{model}
+of \dbl{T} is a functor (of augmented VDCs) #{\dbl{T} \to \CCat} that preserves
+restrictions.}
+
+\p{As before, the category-theoretic theories differ from the set-theoretic ones
+only in having loose identities built in.}
+
+}
 
 }
 

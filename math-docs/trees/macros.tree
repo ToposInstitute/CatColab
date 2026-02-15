@@ -108,6 +108,8 @@
 \def\Span{#{\mathbb{S}\mathsf{pan}}}
 \def\Rel{#{\mathbb{R}\mathsf{el}}}
 \def\Mod{#{\mathbb{M}}\mathsf{od}}
+\def\CCat{#{\mathbb{C}\mathsf{at}}}
+\def\Prof{#{\mathbb{P}\mathsf{rof}}}
 
 % Monads
 
