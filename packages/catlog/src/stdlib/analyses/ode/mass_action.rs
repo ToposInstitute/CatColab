@@ -31,20 +31,19 @@ use crate::{
     stdlib::analyses::ode::ODESolution,
 };
 
-/// There are three types of mass-action semantics:
+/// There are three types of mass-action semantics, each more expressive than the previous:
 /// - balanced
 /// - unbalanced (rates per transition)
 /// - unbalanced (rates per place)
-/// Each one is strictly more expressive than the last.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(tag = "type", content = "granularity"))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 pub enum MassConservationType {
-    /// Mass is conserved
+    /// Mass is conserved.
     Balanced,
-    /// Mass is not conserved
+    /// Mass is not conserved.
     Unbalanced(RateGranularity),
 }
 
@@ -52,7 +51,6 @@ pub enum MassConservationType {
 /// can be set either *per transition* or *per place*.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde", serde(tag = "type", content = "err"))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 pub enum RateGranularity {

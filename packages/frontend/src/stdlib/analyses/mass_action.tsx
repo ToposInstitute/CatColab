@@ -1,4 +1,4 @@
-import { createMemo, For, JSX } from "solid-js";
+import { createMemo, For, type JSX } from "solid-js";
 
 import {
     BlockTitle,
@@ -26,6 +26,8 @@ import type { MassActionSimulator } from "./simulator_types";
 import "./simulation.css";
 
 import invariant from "tiny-invariant";
+
+import { MassActionConfigForm } from "./mass_action_config_form";
 
 /** Analyze a model using mass-action dynamics. */
 export default function MassAction(
@@ -257,27 +259,27 @@ export default function MassAction(
     // Now we can generate the parameter tables that will actually be rendered.
     const parameterTables = createMemo<JSX.Element[]>(() => {
         switch (props.content.massConservationType.type) {
-        case "Balanced":
-            return [
-                (<FixedTableEditor rows={morGenerators()} schema={morSchema} />)
-            ];
-            break;
-        case "Unbalanced":
-            switch (props.content.massConservationType.granularity.type) {
-            case "PerTransition":
-                return [
-                    (<FixedTableEditor rows={morGenerators()} schema={morInputSchema} />),
-                    (<FixedTableEditor rows={morGenerators()} schema={morOutputSchema} />)
-                ];
-                break;
-            case "PerPlace":
-                return [
-                    (<FixedTableEditor rows={morGeneratorsInputs()} schema={morInputsSchema} />),
-                    (<FixedTableEditor rows={morGeneratorsOutputs()} schema={morOutputsSchema} />)
-                ];
-                break;
-            }
-            break;
+            case "Balanced":
+                return [<FixedTableEditor rows={morGenerators()} schema={morSchema} />];
+            case "Unbalanced":
+                switch (props.content.massConservationType.granularity) {
+                    case "PerTransition":
+                        return [
+                            <FixedTableEditor rows={morGenerators()} schema={morInputSchema} />,
+                            <FixedTableEditor rows={morGenerators()} schema={morOutputSchema} />,
+                        ];
+                    case "PerPlace":
+                        return [
+                            <FixedTableEditor
+                                rows={morGeneratorsInputs()}
+                                schema={morInputsSchema}
+                            />,
+                            <FixedTableEditor
+                                rows={morGeneratorsOutputs()}
+                                schema={morOutputsSchema}
+                            />,
+                        ];
+                }
         }
     });
 
@@ -306,26 +308,17 @@ export default function MassAction(
         <div class="simulation">
             <BlockTitle
                 title={props.title}
-                // TODO: follow the below plan maybe?
-                //
-                // 1. match on MassConservationType to generate the "Parameters" <Foldable>
-                // 2. match on liveModel.theory()?.id to determine which values of MassConservationType
-                //    can actually be chosen in the settings panel
-                // 
-                // 
-                // settingsPane={
-                //     <MassActionConfigForm
-                //         config={props.content}
-                //         changeConfig={props.changeContent}
-                //     />
-                // }
+                settingsPane={
+                    <MassActionConfigForm
+                        config={props.content}
+                        changeConfig={props.changeContent}
+                    />
+                }
             />
             <Foldable title="Parameters" defaultExpanded>
                 <div class="parameters">
                     <FixedTableEditor rows={obGenerators()} schema={obSchema} />
-                    <For each={parameterTables()}>
-                        {(item) => item}
-                    </For>
+                    <For each={parameterTables()}>{(item) => item}</For>
                 </div>
             </Foldable>
             <Foldable title="Equations">
