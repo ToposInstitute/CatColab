@@ -597,81 +597,80 @@ pub fn into_mass_action_analysis(
     ODEAnalysis::new(problem, ob_index)
 }
 
-// TODO: fix all tests
-// #[cfg(test)]
-// mod tests {
-//     use expect_test::expect;
-//     use std::rc::Rc;
+#[cfg(test)]
+mod tests {
+    use expect_test::expect;
+    use std::rc::Rc;
 
-//     use super::*;
-//     use crate::simulate::ode::LatexEquation;
-//     use crate::stdlib::{models::*, theories::*};
+    use super::*;
+    use crate::simulate::ode::LatexEquation;
+    use crate::stdlib::{models::*, theories::*};
 
-//     #[test]
-//     fn backward_link_dynamics() {
-//         let th = Rc::new(th_category_links());
-//         let model = backward_link(th);
-//         let sys = StockFlowMassActionAnalysis::default().build_system(&model);
-//         let expected = expect!([r#"
-//             dx = (-(x->[f])) x y
-//             dy = (([f]->y)) x y
-//         "#]);
-//         expected.assert_eq(&sys.to_string());
-//     }
+    #[test]
+    fn backward_link_dynamics() {
+        let th = Rc::new(th_category_links());
+        let model = backward_link(th);
+        let sys = StockFlowMassActionAnalysis::default().build_system(&model);
+        let expected = expect!([r#"
+            dx = (-(x->[f])) x y
+            dy = (([f]->y)) x y
+        "#]);
+        expected.assert_eq(&sys.to_string());
+    }
 
-//     #[test]
-//     fn positive_backward_link_dynamics() {
-//         let th = Rc::new(th_category_signed_links());
-//         let model = positive_backward_link(th);
-//         let sys = StockFlowMassActionAnalysis::default().build_system(&model);
-//         let expected = expect!([r#"
-//             dx = (-(x->[f])) x y
-//             dy = (([f]->y)) x y
-//         "#]);
-//         expected.assert_eq(&sys.to_string());
-//     }
+    #[test]
+    fn positive_backward_link_dynamics() {
+        let th = Rc::new(th_category_signed_links());
+        let model = positive_backward_link(th);
+        let sys = StockFlowMassActionAnalysis::default().build_system(&model);
+        let expected = expect!([r#"
+            dx = (-(x->[f])) x y
+            dy = (([f]->y)) x y
+        "#]);
+        expected.assert_eq(&sys.to_string());
+    }
 
-//     #[test]
-//     fn negative_backward_link_dynamics() {
-//         let th = Rc::new(th_category_signed_links());
-//         let model = negative_backward_link(th);
-//         let sys = StockFlowMassActionAnalysis::default().build_system(&model);
-//         let expected = expect!([r#"
-//             dx = (-(x->[f])) x y^{-1}
-//             dy = (([f]->y)) x y^{-1}
-//         "#]);
-//         expected.assert_eq(&sys.to_string());
-//     }
+    #[test]
+    fn negative_backward_link_dynamics() {
+        let th = Rc::new(th_category_signed_links());
+        let model = negative_backward_link(th);
+        let sys = StockFlowMassActionAnalysis::default().build_system(&model);
+        let expected = expect!([r#"
+            dx = (-(x->[f])) x y^{-1}
+            dy = (([f]->y)) x y^{-1}
+        "#]);
+        expected.assert_eq(&sys.to_string());
+    }
 
-//     #[test]
-//     fn catalysis_dynamics() {
-//         let th = Rc::new(th_sym_monoidal_category());
-//         let model = catalyzed_reaction(th);
-//         let sys = PetriNetMassActionAnalysis::default().build_system(&model);
-//         // Note that the catalyst c is not left unchanged unless f is "balanced"
-//         let expected = expect!([r#"
-//             dx = (-(x->[f])) c x
-//             dy = (([f]->y)) c x
-//             dc = (([f]->c) + -(c->[f])) c x
-//         "#]);
-//         expected.assert_eq(&sys.to_string());
-//     }
+    #[test]
+    fn catalysis_dynamics() {
+        let th = Rc::new(th_sym_monoidal_category());
+        let model = catalyzed_reaction(th);
+        let sys = PetriNetMassActionAnalysis::default().build_system(&model);
+        // Note that the catalyst c is not left unchanged unless f is "balanced"
+        let expected = expect!([r#"
+            dx = (-(x->[f])) c x
+            dy = (([f]->y)) c x
+            dc = (([f]->c) + -(c->[f])) c x
+        "#]);
+        expected.assert_eq(&sys.to_string());
+    }
 
-//     #[test]
-//     fn to_latex() {
-//         let th = Rc::new(th_category_links());
-//         let model = backward_link(th);
-//         let sys = StockFlowMassActionAnalysis::default().build_system(&model);
-//         let expected = vec![
-//             LatexEquation {
-//                 lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string(),
-//                 rhs: "(-(x->[f])) x y".to_string(),
-//             },
-//             LatexEquation {
-//                 lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string(),
-//                 rhs: "(([f]->y)) x y".to_string(),
-//             },
-//         ];
-//         assert_eq!(expected, sys.to_latex_equations());
-//     }
-// }
+    #[test]
+    fn to_latex() {
+        let th = Rc::new(th_category_links());
+        let model = backward_link(th);
+        let sys = StockFlowMassActionAnalysis::default().build_system(&model);
+        let expected = vec![
+            LatexEquation {
+                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string(),
+                rhs: "(-(x->[f])) x y".to_string(),
+            },
+            LatexEquation {
+                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string(),
+                rhs: "(([f]->y)) x y".to_string(),
+            },
+        ];
+        assert_eq!(expected, sys.to_latex_equations());
+    }
+}

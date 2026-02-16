@@ -109,7 +109,9 @@ export default function MassAction(
             };
             for (const [_, ob] of collectProduct(mor.dom).entries()) {
                 invariant(ob.tag === "Basic");
-                // TODO: should we have [i, ob] and be worrying about ${i}?
+                // For now, our only modal theory of relevance is that of *symmetric*
+                // monoidal categories, so we don't need to iterate over [i, ob], nor
+                // do we need to worry about ${i}.
                 transitionInterface[mg].inputs.push(ob.content);
             }
             for (const [_, ob] of collectProduct(mor.cod).entries()) {

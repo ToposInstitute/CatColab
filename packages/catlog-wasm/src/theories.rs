@@ -4,11 +4,11 @@
 //! methods for theory-specific analyses.
 
 use std::rc::Rc;
-
 use wasm_bindgen::prelude::*;
 
 use catlog::dbl::theory;
 use catlog::one::Path;
+use catlog::stdlib::analyses::ode::MassConservationType;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 use catlog::zero::{QualifiedLabel, name};
 
@@ -16,16 +16,34 @@ use super::model_morphism::{MotifOccurrence, MotifsOptions, motifs};
 use super::result::JsResult;
 use super::{analyses::*, model::DblModel, theory::DblTheory};
 
-// TODO: combine the below functions for tabulated theories with symmetric monoidal
-
 /// Simulates mass-action ODE on tabulated models.
 fn mass_action_tab(
     model: &DblModel,
     data: analyses::ode::MassActionProblemData,
 ) -> Result<ODEResultWithEquations, String> {
-    let tab_model = model.discrete_tab()?;
+    let realised_model = model.discrete_tab()?;
     let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
-    let sys = analysis.build_system(tab_model, analyses::ode::MassConservationType::Balanced);
+    let sys = analysis.build_system(realised_model, data.mass_conservation_type);
+    let sys_extended_scalars = analyses::ode::extend_mass_action_scalars(sys, &data);
+    let latex_equations = sys_extended_scalars
+        .map_variables(latex_ob_names_mass_action(model))
+        .to_latex_equations();
+    let analysis = analyses::ode::into_mass_action_analysis(sys_extended_scalars, data);
+    let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
+    Ok(ODEResultWithEquations {
+        solution: solution.into(),
+        latex_equations,
+    })
+}
+
+/// Simulates mass-action ODE on tabulated models.
+fn mass_action_modal(
+    model: &DblModel,
+    data: analyses::ode::MassActionProblemData,
+) -> Result<ODEResultWithEquations, String> {
+    let realised_model = model.modal()?;
+    let analysis = analyses::ode::PetriNetMassActionAnalysis::default();
+    let sys = analysis.build_system(realised_model, data.mass_conservation_type);
     let sys_extended_scalars = analyses::ode::extend_mass_action_scalars(sys, &data);
     let latex_equations = sys_extended_scalars
         .map_variables(latex_ob_names_mass_action(model))
@@ -39,10 +57,13 @@ fn mass_action_tab(
 }
 
 /// Generates mass-action equations for tabulated models.
-fn mass_action_equations_tab(model: &DblModel) -> Result<ODELatex, String> {
+fn mass_action_equations_tab(
+    model: &DblModel,
+    mass_conservation_type: MassConservationType,
+) -> Result<ODELatex, String> {
+    let realised_model = model.discrete_tab()?;
     let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
-    let tab_model = model.discrete_tab()?;
-    let sys = analysis.build_system(tab_model, analyses::ode::MassConservationType::Balanced);
+    let sys = analysis.build_system(realised_model, mass_conservation_type);
     let equations = sys
         .map_variables(latex_ob_names_mass_action(model))
         .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(model)))
@@ -50,14 +71,14 @@ fn mass_action_equations_tab(model: &DblModel) -> Result<ODELatex, String> {
     Ok(ODELatex(equations))
 }
 
-/// Generates unbalanced mass-action equations for tabulated models.
-fn unbalanced_mass_action_equations_tab(model: &DblModel) -> Result<ODELatex, String> {
+/// Generates mass-action equations for tabulated models.
+fn mass_action_equations_modal(
+    model: &DblModel,
+    mass_conservation_type: MassConservationType,
+) -> Result<ODELatex, String> {
+    let realised_model = model.discrete_tab()?;
     let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
-    let tab_model = model.discrete_tab()?;
-    let sys = analysis.build_system(
-        tab_model,
-        analyses::ode::MassConservationType::Unbalanced(analyses::ode::RateGranularity::PerPlace),
-    );
+    let sys = analysis.build_system(realised_model, mass_conservation_type);
     let equations = sys
         .map_variables(latex_ob_names_mass_action(model))
         .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(model)))
@@ -371,13 +392,18 @@ impl ThCategoryLinks {
     /// Returns the symbolic mass-action equations in LaTeX format.
     #[wasm_bindgen(js_name = "massActionEquations")]
     pub fn mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
-        mass_action_equations_tab(model)
+        mass_action_equations_tab(model, analyses::ode::MassConservationType::Balanced)
     }
 
     /// Returns the symbolic unbalanced mass-action equations in LaTeX format.
     #[wasm_bindgen(js_name = "unbalancedMassActionEquations")]
     pub fn unbalanced_mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
-        unbalanced_mass_action_equations_tab(model)
+        mass_action_equations_tab(
+            model,
+            analyses::ode::MassConservationType::Unbalanced(
+                analyses::ode::RateGranularity::PerTransition,
+            ),
+        )
     }
 }
 
@@ -410,13 +436,18 @@ impl ThCategorySignedLinks {
     /// Returns the symbolic mass-action equations in LaTeX format.
     #[wasm_bindgen(js_name = "massActionEquations")]
     pub fn mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
-        mass_action_equations_tab(model)
+        mass_action_equations_tab(
+            model,
+            analyses::ode::MassConservationType::Unbalanced(
+                analyses::ode::RateGranularity::PerTransition,
+            ),
+        )
     }
 
     /// Returns the symbolic unbalanced mass-action equations in LaTeX format.
     #[wasm_bindgen(js_name = "unbalancedMassActionEquations")]
     pub fn unbalanced_mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
-        unbalanced_mass_action_equations_tab(model)
+        mass_action_equations_tab(model, analyses::ode::MassConservationType::Balanced)
     }
 }
 
@@ -443,51 +474,24 @@ impl ThSymMonoidalCategory {
         model: &DblModel,
         data: analyses::ode::MassActionProblemData,
     ) -> Result<ODEResultWithEquations, String> {
-        let modal_model = model.modal()?;
-        let analysis = analyses::ode::PetriNetMassActionAnalysis::default();
-        let sys = analysis.build_system(modal_model.as_ref(), data.mass_conservation_type);
-        let sys_extended_scalars = analyses::ode::extend_mass_action_scalars(sys, &data);
-        let latex_equations = sys_extended_scalars
-            .map_variables(latex_ob_names_mass_action(model))
-            .to_latex_equations();
-        let analysis = analyses::ode::into_mass_action_analysis(sys_extended_scalars, data);
-        let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
-        Ok(ODEResultWithEquations {
-            solution: solution.into(),
-            latex_equations,
-        })
+        mass_action_modal(model, data)
     }
 
     /// Returns the symbolic mass-action equations in LaTeX format.
     #[wasm_bindgen(js_name = "massActionEquations")]
     pub fn mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
-        let analysis = analyses::ode::PetriNetMassActionAnalysis::default();
-        let modal_model = model.modal()?;
-        let sys = analysis
-            .build_system(modal_model.as_ref(), analyses::ode::MassConservationType::Balanced);
-        let latex_equations = sys
-            .map_variables(latex_ob_names_mass_action(model))
-            .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(model)))
-            .to_latex_equations();
-        Ok(ODELatex(latex_equations))
+        mass_action_equations_modal(model, analyses::ode::MassConservationType::Balanced)
     }
 
     /// Returns the symbolic unbalanced mass-action equations in LaTeX format.
     #[wasm_bindgen(js_name = "unbalancedMassActionEquations")]
     pub fn unbalanced_mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
-        let analysis = analyses::ode::PetriNetMassActionAnalysis::default();
-        let modal_model = model.modal()?;
-        let sys = analysis.build_system(
-            modal_model.as_ref(),
+        mass_action_equations_modal(
+            model,
             analyses::ode::MassConservationType::Unbalanced(
                 analyses::ode::RateGranularity::PerPlace,
             ),
-        );
-        let latex_equations = sys
-            .map_variables(latex_ob_names_mass_action(model))
-            .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(model)))
-            .to_latex_equations();
-        Ok(ODELatex(latex_equations))
+        )
     }
 
     /// Simulates the stochastic mass-action system derived from a model.
