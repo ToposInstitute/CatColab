@@ -53,23 +53,23 @@ dependency in what is perhaps its simplest and most constrained form.}
 \title{Mathematical specification}
 
 \p{Let's compare how to configure double-categorical logic for set-theoretic
-versus category-theoretical models, starting with the minimal structure and
+versus category-theoretic models, starting with the minimal structure and
 gradually introducing features.}
 
 \subtree{
-\title{Minimal structure}    
+\title{Virtual double categories}
 
-\p{In the set-theoretic setting, a \define{bare double theory} is a virtual
+\p{In the set-theoretic setting, a \define{simple double theory} is a virtual
 double category \dbl{T} and a \define{model} of \dbl{T} is a functor (of VDCs)
 #{\dbl{T} \to \SSet}.}
 
 \p{In the category-theoretic setting, there are several essentially equivalent
-formulations. On one definition, a \define{bare double theory} is a \em{unital}
-VDC \dbl{T} and a \define{model} of \dbl{T} is a functor (of VDCs) #{\dbl{T} \to
-\SSet} or equivalently a \em{normal} functor #{\dbl{T} \to \CCat = \Mod(\SSet)}.
-Alternatively, a \define{bare double theory} is an \em{augmented} VDC \dbl{T}
-and a \define{model} of \dbl{T} is a functor (of augmented VDCs) #{\dbl{T} \to
-\CCat}.}
+formulations. On one definition, a \define{simple double theory} is a
+\em{unital} VDC \dbl{T} and a \define{model} of \dbl{T} is a functor (of VDCs)
+#{\dbl{T} \to \SSet} or equivalently a \em{normal} functor #{\dbl{T} \to \CCat =
+\Mod(\SSet)}. Alternatively, a \define{simple double theory} is an
+\em{augmented} VDC \dbl{T} and a \define{model} of \dbl{T} is a functor (of
+augmented VDCs) #{\dbl{T} \to \CCat}.}
 
 \p{The difference between the two kinds of theories is thus about loose
 identities, which can either be defined by the universal property of
@@ -88,38 +88,41 @@ is then natural to ask that the family #{P} be re-indexable along maps (tight
 morphisms) into #{X} and #{Y}. That is precisely what \em{restrictions} in a VDC
 do, motivating the following definitions.}
 
-\p{In the set-theoretic setting, a \define{simple double theory} is a VDC
+\p{In the set-theoretic setting, a \define{fibrant double theory} is a VDC
 \dbl{T} with restrictions and a \define{model} of \dbl{T} is a functor #{\dbl{T}
 \to \SSet} that preserves restrictions.}
 
-\p{In the category-theoretic setting, a \define{simple double theory} is a
+\p{In the category-theoretic setting, a \define{fibrant double theory} is a
 virtual equipment \dbl{T} (i.e., a VDC with units and restrictions) and a
 \define{model} of \dbl{T} is a functor (of VDCs) #{\dbl{T} \to \SSet} or
 equivalently a normal functor #{\dbl{T} \to \CCat}, recalling that any functor
 between virtual equipments preserves restrictions ([Cruttwell-Shulman 2010,
-Theorem 7.24](cruttwell-shulman-2010)). Alternatively, a \define{simple double
+Theorem 7.24](cruttwell-shulman-2010)). Alternatively, a \define{fibrant double
 theory} is an augmented VDC \dbl{T} with all restrictions and a \define{model}
 of \dbl{T} is a functor (of augmented VDCs) #{\dbl{T} \to \CCat} that preserves
 restrictions.}
 
 \p{As before, the category-theoretic theories differ from the set-theoretic ones
-only by building in loose identities.}
+only by requiring some form of loose identities.}
 
 }
 
 \subtree{
 \title{Additional structure}
 
-\p{\strong{TODO}
+\p{A virtual double category with restrictions is the most fundamental structure
+possessed by a double theory. To this may be added further double-categorical
+gadgets, such as:
 
 \ul{
   \li{extensions}
-  \li{finite products}
+  \li{cartesian products}
   \li{other double-categorical limits, such as tabulators}
-  \li{modalities}
+  \li{modalities, such as lists.}
 }
 
-}
+At this stage we will only note that all of these features work equally well in
+the set-theoretic and category-theoretic settings.}
 
 }
 
@@ -242,8 +245,8 @@ contribution to the vector field of the form
 
 ##{\dot x \pluseq k_t \cdot v, \qquad k_t \in \R.}
 
-Having a fixed interpretations of the Lawvere theory \cat{T} and the exogenous
-variables, such a model defines a vector field on the state variables.}
+Once interpretations of the Lawvere theory \cat{T} and the exogenous variables
+are fixed, such a model defines a vector field on the state variables.}
 
 }
 
@@ -262,24 +265,62 @@ by
   \li{a proarrow #{\Term: \Var \proto \State}.}
 }
 }
-}
 
 \p{An f.f.g. model of this theory specifies a parameterized ODE system, where
 each term #{t: \Term(v, x)} contributes to the vector field simply as ##{\dot x
 \pluseq v.} Notice that parameters can now appear arbitrarily in variable
 expressions, not just as linear coefficients.}
 
+}
+
+\p{CatColab currently implements ["primitive stock-flow
+diagrams"](stock-flow-2023), more likely to be called "system structure
+diagrams" by system dynamicists. There are several ways to formulate stock-flow
+diagrams with arbitrary flow functions using the above ideas. Here is one.}
+
 \subtree{
-\title{Stock-flow diagrams with flow functions}
+\title{Stock and flow diagrams}
 \taxon{Example}
+
+\def\Stock{#{\mathrm{Stock}}}
+\def\Flow{#{\mathrm{Flow}}}
+
+\p{Given a Lawvere theory \cat{T}, there is a cartesian double theory presented
+by
+
+\ul{
+  \li{an object \Var along with arrows and equations embedding the Lawvere
+  theory \cat{T} into the tight category of double theory}
+  \li{an object \Stock}
+  \li{an arrow #{\Stock \to \Var}}
+  \li{a proarrow #{\Flow: \Var \proto \Stock \times \Stock}.}
+}
+}
+
+\p{In an f.f.g. model of this theory, a flow #{f: \Flow(v, (u, d))}, where #{u}
+stands for "upstream" and #{d} for "downstream," is intended to be interpreted
+as a pair of contributions to the vector field
+
+##{\dot u \minuseq k_f v, \qquad \dot d \pluseq k_f v,}
+
+where #{k_f \in \R_+} is a free parameter.
+}
+
+}
 
 }
 
 \subtree{
-\title{Undirected wiring diagrams}
-\taxon{Example}
+\title{Implementation strategy}
+
+\p{\strong{TODO}}
 
 }
+
+\subtree{
+\title{Rationale and alternatives}
+
+\p{\strong{TODO}}
 
 }
 

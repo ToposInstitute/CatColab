@@ -59,6 +59,7 @@
 \def\define[name]{\strong{\name}}
 \def\vec[body]{#{\underline{\body}}}
 \def\pluseq{#{\mathrel{+}=}}
+\def\minuseq{#{\mathrel{-}=}}
 
 % Category theory
 
