@@ -171,9 +171,8 @@ For the latter, see the [reg nets](reg-nets-2024) paper.}
 }
 
 \p{We emphasize that in this example, the numerical parameters #{k_t} belong to
-the intended interpretation of the models, not to the models themselves. To
-introduce symbolic parameters \em{within} models, we can expand the double
-theory.}
+the intended interpretation of the models, not to the models themselves. To use
+symbolic parameters \em{within} models, we must expand the theory.}
 
 \subtree{
 \title{Parameterized polynomial ODE systems}
@@ -208,7 +207,7 @@ assigned its own parameter #{k_t}, and there are no other parameters. More
 interestingly, in a finitely presented model of the theory, named parameters can
 be introduced and terms assigned to them, enabling \em{parameter tying} or
 \em{parameter sharing} across terms. Thus, in the intended interpretations,
-these models are generally \em{more} constrained than the previous ones.}
+these models are \em{more} constrained than the previous ones.}
 
 }
 
@@ -226,18 +225,18 @@ special functions like the exponential or sine.}
 \p{Then there is a cartesian double theory presented by
 
 \ul{
-  \li{an object \Var along with arrows and equations that embed the Lavere
+  \li{an object \Var along with arrows and equations embedding the Lawvere
   theory \cat{T} into the tight category of double theory}
   \li{an object \State}
   \li{an arrow #{\State \to \Var}}
-  \li{a proarrow #{\Term: \Var \proto \State}}
+  \li{a proarrow #{\Term: \Var \proto \State}.}
 }
 }
 
 \p{An f.f.g. model of this theory consists of finite sets of \define{state
-variables} and \define{exogenous variables} (the generators of type \Var), an
-embedding of the state variables into variables, and a family of finite sets of
-\define{terms} indexed by pairs comprising a generic variable and a state
+variables} and of \define{exogenous variables} (generators of type \Var), an
+embedding of the state variables into the variables, and a family of finite sets
+of \define{terms}, indexed by pairs comprising a generic variable and a state
 variable. As before, a term #{t: \Term(v, x)} represents an additive
 contribution to the vector field of the form
 
@@ -252,7 +251,23 @@ variables, such a model defines a vector field on the state variables.}
 \title{Parameterized ODE systems}
 \taxon{Example}
 
+\p{Given a Lawvere theory \cat{T}, there is a cartesian double theory presented
+by
+
+\ul{
+  \li{an object \Var along with arrows and equations embedding the Lawvere
+  theory \cat{T} into the tight category of double theory}
+  \li{objects \State and \Param}
+  \li{arrows #{\State \to \Var} and #{\Param \to \Var}}
+  \li{a proarrow #{\Term: \Var \proto \State}.}
 }
+}
+}
+
+\p{An f.f.g. model of this theory specifies a parameterized ODE system, where
+each term #{t: \Term(v, x)} contributes to the vector field simply as ##{\dot x
+\pluseq v.} Notice that parameters can now appear arbitrarily in variable
+expressions, not just as linear coefficients.}
 
 \subtree{
 \title{Stock-flow diagrams with flow functions}
