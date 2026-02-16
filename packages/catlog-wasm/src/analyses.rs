@@ -93,17 +93,23 @@ pub(crate) fn latex_mor_names_mass_action(model: &DblModel) -> impl Fn(&Term) ->
 #[cfg(test)]
 mod tests {
     use catlog::simulate::ode::LatexEquation;
+    use catlog::stdlib::analyses;
     use catlog::stdlib::analyses::ode::StockFlowMassActionAnalysis;
 
     use super::*;
     use crate::model::tests::backward_link;
 
     #[test]
-    fn mass_action_latex_equations() {
+    fn unbalanced_mass_action_latex_equations() {
         let model = backward_link("xxx", "yyy", "fff");
         let tab_model = model.discrete_tab().unwrap();
         let analysis = StockFlowMassActionAnalysis::default();
-        let sys = analysis.build_system(tab_model);
+        let sys = analysis.build_system(
+            tab_model,
+            analyses::ode::MassConservationType::Unbalanced(
+                analyses::ode::RateGranularity::PerTransition,
+            ),
+        );
         let equations = sys
             .map_variables(latex_ob_names_mass_action(&model))
             .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(&model)))
@@ -112,11 +118,11 @@ mod tests {
         let expected = vec![
             LatexEquation {
                 lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{xxx}".to_string(),
-                rhs: "(-r_{\\text{fff}}) \\text{xxx} \\text{yyy}".to_string(),
+                rhs: "(-\\kappa_{\\text{fff}}) \\text{xxx} \\text{yyy}".to_string(),
             },
             LatexEquation {
                 lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{yyy}".to_string(),
-                rhs: "(r_{\\text{fff}}) \\text{xxx} \\text{yyy}".to_string(),
+                rhs: "(\\rho_{\\text{fff}}) \\text{xxx} \\text{yyy}".to_string(),
             },
         ];
         assert_eq!(equations, expected);

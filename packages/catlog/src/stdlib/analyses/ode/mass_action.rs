@@ -604,40 +604,47 @@ mod tests {
 
     use super::*;
     use crate::simulate::ode::LatexEquation;
-    use crate::stdlib::{models::*, theories::*};
+    use crate::stdlib::{analyses, models::*, theories::*};
 
     #[test]
-    fn backward_link_dynamics() {
+    fn balanced_backward_link_dynamics() {
         let th = Rc::new(th_category_links());
         let model = backward_link(th);
-        let sys = StockFlowMassActionAnalysis::default().build_system(&model);
+        let sys = StockFlowMassActionAnalysis::default()
+            .build_system(&model, analyses::ode::MassConservationType::Balanced);
         let expected = expect!([r#"
-            dx = (-(x->[f])) x y
-            dy = (([f]->y)) x y
+            dx = (-f) x y
+            dy = f x y
         "#]);
         expected.assert_eq(&sys.to_string());
     }
 
     #[test]
-    fn positive_backward_link_dynamics() {
+    fn unbalanced_positive_backward_link_dynamics() {
         let th = Rc::new(th_category_signed_links());
         let model = positive_backward_link(th);
-        let sys = StockFlowMassActionAnalysis::default().build_system(&model);
+        let sys = StockFlowMassActionAnalysis::default().build_system(
+            &model,
+            analyses::ode::MassConservationType::Unbalanced(
+                analyses::ode::RateGranularity::PerTransition,
+            ),
+        );
         let expected = expect!([r#"
-            dx = (-(x->[f])) x y
-            dy = (([f]->y)) x y
+            dx = (-Outgoing(f)) x y
+            dy = (Incoming(f)) x y
         "#]);
         expected.assert_eq(&sys.to_string());
     }
 
     #[test]
-    fn negative_backward_link_dynamics() {
+    fn balanced_negative_backward_link_dynamics() {
         let th = Rc::new(th_category_signed_links());
         let model = negative_backward_link(th);
-        let sys = StockFlowMassActionAnalysis::default().build_system(&model);
+        let sys = StockFlowMassActionAnalysis::default()
+            .build_system(&model, analyses::ode::MassConservationType::Balanced);
         let expected = expect!([r#"
-            dx = (-(x->[f])) x y^{-1}
-            dy = (([f]->y)) x y^{-1}
+            dx = (-f) x y^{-1}
+            dy = f x y^{-1}
         "#]);
         expected.assert_eq(&sys.to_string());
     }
@@ -646,8 +653,13 @@ mod tests {
     fn catalysis_dynamics() {
         let th = Rc::new(th_sym_monoidal_category());
         let model = catalyzed_reaction(th);
-        let sys = PetriNetMassActionAnalysis::default().build_system(&model);
-        // Note that the catalyst c is not left unchanged unless f is "balanced"
+        let sys = PetriNetMassActionAnalysis::default().build_system(
+            &model,
+            analyses::ode::MassConservationType::Unbalanced(
+                analyses::ode::RateGranularity::PerPlace,
+            ),
+        );
+        // Note that the catalyst c is not left unchanged unless f is balanced
         let expected = expect!([r#"
             dx = (-(x->[f])) c x
             dy = (([f]->y)) c x
@@ -660,15 +672,20 @@ mod tests {
     fn to_latex() {
         let th = Rc::new(th_category_links());
         let model = backward_link(th);
-        let sys = StockFlowMassActionAnalysis::default().build_system(&model);
+        let sys = StockFlowMassActionAnalysis::default().build_system(
+            &model,
+            analyses::ode::MassConservationType::Unbalanced(
+                analyses::ode::RateGranularity::PerTransition,
+            ),
+        );
         let expected = vec![
             LatexEquation {
                 lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string(),
-                rhs: "(-(x->[f])) x y".to_string(),
+                rhs: "(-Outgoing(f)) x y".to_string(),
             },
             LatexEquation {
                 lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string(),
-                rhs: "(([f]->y)) x y".to_string(),
+                rhs: "(Incoming(f)) x y".to_string(),
             },
         ];
         assert_eq!(expected, sys.to_latex_equations());
