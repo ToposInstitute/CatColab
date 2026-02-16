@@ -52,7 +52,7 @@ pub enum MassConservationType {
 /// can be set either *per transition* or *per place*.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde", serde(tag = "tag", content = "err"))]
+#[cfg_attr(feature = "serde", serde(tag = "type", content = "err"))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 pub enum RateGranularity {
@@ -160,22 +160,27 @@ pub struct MassActionProblemData {
     pub mass_conservation_type: MassConservationType,
 
     /// Map from morphism IDs to consumption rate coefficients (nonnegative reals),
-    /// for the per transition case.
+    /// for the balanced per transition case.
+    #[cfg_attr(feature = "serde", serde(rename = "transitionRates"))]
+    transition_rates: HashMap<QualifiedName, f32>,
+
+    /// Map from morphism IDs to consumption rate coefficients (nonnegative reals),
+    /// for the unbalanced per transition case.
     #[cfg_attr(feature = "serde", serde(rename = "transitionConsumptionRates"))]
     transition_consumption_rates: HashMap<QualifiedName, f32>,
 
     /// Map from morphism IDs to production rate coefficients (nonnegative reals),
-    /// for the per transition case.
+    /// for the unbalanced per transition case.
     #[cfg_attr(feature = "serde", serde(rename = "transitionProductionRates"))]
     transition_production_rates: HashMap<QualifiedName, f32>,
 
     /// Map from morphism IDs to (map from input objects to consumption rate coefficients),
-    /// for the per place case (nonnegative reals).
+    /// for the unbalanced per place case (nonnegative reals).
     #[cfg_attr(feature = "serde", serde(rename = "placeConsumptionRates"))]
     place_consumption_rates: HashMap<QualifiedName, HashMap<QualifiedName, f32>>,
 
     /// Map from morphism IDs to (map from output objects to production rate coefficients),
-    /// for the per place case (nonnegative reals).
+    /// for the unbalanced per place case (nonnegative reals).
     #[cfg_attr(feature = "serde", serde(rename = "placeProductionRates"))]
     place_production_rates: HashMap<QualifiedName, HashMap<QualifiedName, f32>>,
 
@@ -544,7 +549,7 @@ pub fn extend_mass_action_scalars(
     sys.extend_scalars(|poly| {
         poly.eval(|flow| match flow {
             Term::UndirectedTerm { transition } => {
-                data.transition_production_rates.get(transition).cloned().unwrap_or_default()
+                data.transition_rates.get(transition).cloned().unwrap_or_default()
             }
             Term::DirectedTerm { direction, parameter } => match (direction, parameter) {
                 (Direction::IncomingFlow, RateParameter::PerTransition { transition }) => {

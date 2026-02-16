@@ -1,4 +1,4 @@
-import { createMemo } from "solid-js";
+import { createMemo, For, JSX } from "solid-js";
 
 import {
     BlockTitle,
@@ -38,6 +38,9 @@ export default function MassAction(
 ) {
     const elaboratedModel = () => props.liveModel.elaboratedModel();
 
+    // Irrelevant of the value of massConservationType, we only ever need a single
+    // schema for objects: each object needs to be assigned an initial value.
+
     const obGenerators = createMemo<QualifiedName[]>(() => {
         const model = elaboratedModel();
         if (!model) {
@@ -45,98 +48,6 @@ export default function MassAction(
         }
         return props.stateType ? model.obGeneratorsWithType(props.stateType) : model.obGenerators();
     }, []);
-
-
-
-
-
-
-
-
-
-    // TODO: follow the below plan maybe?
-    // 
-    // 1. match on MassConservationType to generate the "Parameters" <Foldable>
-    // 2. match on liveModel.theory()?.id to determine which values of MassConservationType
-    //    can actually be set
-
-
-
-
-
-
-
-
-
-
-
-
-    if (props.liveModel.theory()?.id === "petri-net" ) {
-        // Every transition in a Petri net has an interface: a list of input places
-        // and a list of output places.
-        type TransitionInterface = Record<
-            QualifiedName,
-            { inputs: QualifiedName[]; outputs: QualifiedName[] }
-        >;
-
-        const morGeneratorsInterfaces = createMemo<TransitionInterface>(() => {
-            const model = elaboratedModel();
-            if (!model) {
-                return {};
-            }
-            const morGenerators = props.transitionType
-                ? model.morGeneratorsWithType(props.transitionType)
-                : model.morGenerators();
-            const transitionInterface: TransitionInterface = {};
-
-            for (const mg of morGenerators) {
-                const mor = model.morPresentation(mg);
-                if (!mor) {
-                    continue;
-                }
-                transitionInterface[mg] = {
-                    inputs: [],
-                    outputs: [],
-                };
-                for (const [_, ob] of collectProduct(mor.dom).entries()) {
-                    invariant(ob.tag === "Basic");
-                    // TODO: should we have [i, ob] and be worrying about ${i}?
-                    transitionInterface[mg].inputs.push(ob.content);
-                }
-                for (const [_, ob] of collectProduct(mor.cod).entries()) {
-                    invariant(ob.tag === "Basic");
-                    transitionInterface[mg].outputs.push(ob.content);
-                }
-            }
-
-            return transitionInterface;
-        });
-
-        // When we create the parameter table, we need a row for each input to each transition,
-        // i.e. we need a list of pairs (transition, input_place).
-        const morGeneratorsInputs = createMemo<[QualifiedName, QualifiedName][]>(() => {
-            const morphismInputPairs: [QualifiedName, QualifiedName][] = [];
-            for (const [mor, int] of Object.entries(morGeneratorsInterfaces())) {
-                for (const inp of int.inputs) {
-                    morphismInputPairs.push([mor, inp]);
-                }
-            }
-            return morphismInputPairs;
-        });
-
-        // As for morGeneratorInputs, but now for pairs (transition, output_place).
-        const morGeneratorsOutputs = createMemo<[QualifiedName, QualifiedName][]>(() => {
-            const morphismOutputPairs: [QualifiedName, QualifiedName][] = [];
-            for (const [mor, int] of Object.entries(morGeneratorsInterfaces())) {
-                for (const outp of int.outputs) {
-                    morphismOutputPairs.push([mor, outp]);
-                }
-            }
-            return morphismOutputPairs;
-        });
-
-        // TODO: return a JSX element for the "Parameters" <Foldable>
-    }
 
     const obSchema: ColumnSchema<QualifiedName>[] = [
         {
@@ -155,8 +66,141 @@ export default function MassAction(
         }),
     ];
 
-    // For now, we simply label the row corresponding to the pair (transition, input_place)
-    // as "input_place -> [transition]".
+    // For morphisms, the data that we need now does depend on massConservationType.
+    // We don't simply want to get a list of morphism generators, but instead
+    // account for the entire *interface* of each morphism. In a Petri net, this
+    // consists of a list of input places and a list of output places for each
+    // transition; in a stock-flow diagram, this consists of a singleton list
+    // of input stocks and a singleton list of output stocks for each flow.
+    type TransitionInterface = Record<
+        QualifiedName,
+        { inputs: QualifiedName[]; outputs: QualifiedName[] }
+    >;
+
+    // We start by constructing all the data that we might need, i.e. all the
+    // transition interfaces.
+    const morGenerators = createMemo<QualifiedName[]>(() => {
+        const model = elaboratedModel();
+        if (!model) {
+            return [];
+        }
+        return props.transitionType
+            ? model.morGeneratorsWithType(props.transitionType)
+            : model.morGenerators();
+    });
+
+    const morGeneratorsInterfaces = createMemo<TransitionInterface>(() => {
+        const model = elaboratedModel();
+        if (!model) {
+            return {};
+        }
+        const transitionInterface: TransitionInterface = {};
+
+        for (const mg of morGenerators()) {
+            const mor = model.morPresentation(mg);
+            if (!mor) {
+                continue;
+            }
+            transitionInterface[mg] = {
+                inputs: [],
+                outputs: [],
+            };
+            for (const [_, ob] of collectProduct(mor.dom).entries()) {
+                invariant(ob.tag === "Basic");
+                // TODO: should we have [i, ob] and be worrying about ${i}?
+                transitionInterface[mg].inputs.push(ob.content);
+            }
+            for (const [_, ob] of collectProduct(mor.cod).entries()) {
+                invariant(ob.tag === "Basic");
+                transitionInterface[mg].outputs.push(ob.content);
+            }
+        }
+
+        return transitionInterface;
+    });
+
+    // We also need a helper function to turn our TransitionInterface objects into
+    // lists of pairs: [(transition, input_place)] and [(transition, output_place)].
+    // Again, in the case of stock-flow diagrams (or just certain Petri nets), this
+    // might be a singleton list.
+    const morGeneratorsInputs = createMemo<[QualifiedName, QualifiedName][]>(() => {
+        const morphismInputPairs: [QualifiedName, QualifiedName][] = [];
+        for (const [mor, int] of Object.entries(morGeneratorsInterfaces())) {
+            for (const inp of int.inputs) {
+                morphismInputPairs.push([mor, inp]);
+            }
+        }
+        return morphismInputPairs;
+    });
+    const morGeneratorsOutputs = createMemo<[QualifiedName, QualifiedName][]>(() => {
+        const morphismOutputPairs: [QualifiedName, QualifiedName][] = [];
+        for (const [mor, int] of Object.entries(morGeneratorsInterfaces())) {
+            for (const outp of int.outputs) {
+                morphismOutputPairs.push([mor, outp]);
+            }
+        }
+        return morphismOutputPairs;
+    });
+
+    // The schema that we use for the <FixedTableEditor> JSX element depends on the
+    // value of MassConservationType. We might as well construct all possibilities.
+
+    // Firstly, the case MassConservationType = Balanced
+    const morSchema: ColumnSchema<QualifiedName>[] = [
+        {
+            contentType: "string",
+            header: true,
+            content: (mor) => elaboratedModel()?.obGeneratorLabel(mor)?.join(".") ?? "",
+        },
+        createNumericalColumn({
+            name: "Rate (𝑟)",
+            data: (mor) => props.content.transitionRates[mor],
+            default: 1,
+            validate: (_, data) => data >= 0,
+            setData: (mor, data) =>
+                props.changeContent((content) => {
+                    content.transitionRates[mor] = data;
+                }),
+        }),
+    ];
+
+    // Secondly, the case MassConservationType = Unbalanced(PerTransition)
+    const morInputSchema: ColumnSchema<QualifiedName>[] = [
+        {
+            contentType: "string",
+            header: true,
+            content: (mor) => elaboratedModel()?.obGeneratorLabel(mor)?.join(".") ?? "",
+        },
+        createNumericalColumn({
+            name: "Consumption (𝜅)",
+            data: (mor) => props.content.transitionConsumptionRates[mor],
+            default: 1,
+            validate: (_, data) => data >= 0,
+            setData: (mor, data) =>
+                props.changeContent((content) => {
+                    content.transitionConsumptionRates[mor] = data;
+                }),
+        }),
+    ];
+    const morOutputSchema: ColumnSchema<QualifiedName>[] = [
+        {
+            contentType: "string",
+            header: true,
+            content: (mor) => elaboratedModel()?.obGeneratorLabel(mor)?.join(".") ?? "",
+        },
+        createNumericalColumn({
+            name: "Production (𝜌)",
+            data: (mor) => props.content.transitionProductionRates[mor],
+            default: 1,
+            validate: (_, data) => data >= 0,
+            setData: (mor, data) =>
+                props.changeContent((content) => {
+                    content.transitionProductionRates[mor] = data;
+                }),
+        }),
+    ];
+
+    // Finally, the case MassConservationType = Unbalanced(PerPlace)
     const morInputsSchema: ColumnSchema<[QualifiedName, QualifiedName]>[] = [
         {
             contentType: "string",
@@ -183,7 +227,6 @@ export default function MassAction(
                 }),
         }),
     ];
-
     const morOutputsSchema: ColumnSchema<[QualifiedName, QualifiedName]>[] = [
         {
             contentType: "string",
@@ -211,6 +254,34 @@ export default function MassAction(
         }),
     ];
 
+    // Now we can generate the parameter tables that will actually be rendered.
+    const parameterTables = createMemo<JSX.Element[]>(() => {
+        switch (props.content.massConservationType.type) {
+        case "Balanced":
+            return [
+                (<FixedTableEditor rows={morGenerators()} schema={morSchema} />)
+            ];
+            break;
+        case "Unbalanced":
+            switch (props.content.massConservationType.granularity.type) {
+            case "PerTransition":
+                return [
+                    (<FixedTableEditor rows={morGenerators()} schema={morInputSchema} />),
+                    (<FixedTableEditor rows={morGenerators()} schema={morOutputSchema} />)
+                ];
+                break;
+            case "PerPlace":
+                return [
+                    (<FixedTableEditor rows={morGeneratorsInputs()} schema={morInputsSchema} />),
+                    (<FixedTableEditor rows={morGeneratorsOutputs()} schema={morOutputsSchema} />)
+                ];
+                break;
+            }
+            break;
+        }
+    });
+
+    // Finally, we need the duration, and then we can return everything.
     const toplevelSchema: ColumnSchema<null>[] = [
         createNumericalColumn({
             name: "Duration",
@@ -235,6 +306,13 @@ export default function MassAction(
         <div class="simulation">
             <BlockTitle
                 title={props.title}
+                // TODO: follow the below plan maybe?
+                //
+                // 1. match on MassConservationType to generate the "Parameters" <Foldable>
+                // 2. match on liveModel.theory()?.id to determine which values of MassConservationType
+                //    can actually be chosen in the settings panel
+                // 
+                // 
                 // settingsPane={
                 //     <MassActionConfigForm
                 //         config={props.content}
@@ -245,8 +323,9 @@ export default function MassAction(
             <Foldable title="Parameters" defaultExpanded>
                 <div class="parameters">
                     <FixedTableEditor rows={obGenerators()} schema={obSchema} />
-                    <FixedTableEditor rows={morGeneratorsInputs()} schema={morInputsSchema} />
-                    <FixedTableEditor rows={morGeneratorsOutputs()} schema={morOutputsSchema} />
+                    <For each={parameterTables()}>
+                        {(item) => item}
+                    </For>
                 </div>
             </Foldable>
             <Foldable title="Equations">
