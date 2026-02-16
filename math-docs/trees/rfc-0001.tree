@@ -8,7 +8,7 @@
 \title{Summary}
 
 \p{\strong{TODO}}
-  
+
 }
 
 \subtree{
@@ -301,7 +301,7 @@ by
 stands for "upstream" and #{d} for "downstream," is intended to be interpreted
 as a pair of contributions to the vector field
 
-##{\dot u \minuseq k_f v, \qquad \dot d \pluseq k_f v,}
+##{\dot u \minuseq k_f \cdot v, \qquad \dot d \pluseq k_f \cdot v,}
 
 where #{k_f \in \R_+} is a free parameter.
 }
@@ -311,7 +311,7 @@ where #{k_f \in \R_+} is a free parameter.
 }
 
 \subtree{
-\title{Implementation strategy}
+\title{Implementation}
 
 \p{\strong{TODO}}
 
@@ -320,12 +320,78 @@ where #{k_f \in \R_+} is a free parameter.
 \subtree{
 \title{Rationale and alternatives}
 
-\p{\strong{TODO}}
+\p{As I've noted, there are countless logical systems that could be used to
+specify set-theoretic models, and I have no reason to think this one
+intrinsically privileged. I do however think it has appealing features compared
+to the following possible alternatives.}
+
+\subtree{
+\title{Fibered logics}
+\taxon{alternative}
+
+\p{In his book [[jacobs-1998]], Jacobs takes the stance that "a logic is always
+a logic over a type theory," formalized to mean that a logic is not just a
+category but a \nlab{fibered category}. Inasmuch as an equipment \em{is} a kind
+of fibered category, our approach is more a variant of than an alternative to
+Jacobs', taking the context to be two-sided instead of one-sided. Though tastes
+may vary, two-sided contexts have the merits of fitting well with our existing
+approach to category-theoretic models; being useful in situations where the
+dependent type \em{is} meaningfully directed even if it doesn't compose, as in
+our ODE system examples; and entailing no loss of generality, since the
+one-sided case is recovered as type #{P: 1 \proto X}, a time-honored tradition
+also appealed to in [DOTS](dots-2025).}
+
+}
+
+\subtree{
+\title{Instances}
+\taxon{alternative}
+
+\p{My original vision for "set-theoretic models" in CatColab is that they would
+exist one level lower in the system: as [instances](double-instances-2026) over
+models. Both instances and set-theoretic models of double theories allow types
+and operations; the latter go further by allowing one level of type dependency.
+Insofar as the fibered and indexed views of dependency are mathematically
+equivalent, one could argue that nothing is gained by this move: dependent types
+can be encoded by \nlab{display maps}. However, there is a big difference
+between arrows and proarrows when \em{presenting} models by generators and
+relations. Applications of operations are freely adjoined to the model, whereas
+type parameters must be explicitly declared. This distinction was used in the
+double theory for parameterized polynomial ODE systems, allowing parameters to
+be freely adjoined when not specified while insisting that the monomials on the
+right-hand sides of terms are given explicitly.}
+
+\p{I still expect instances to play an important role in the design of CatColab,
+particularly in CatColab's yet-to-be developed data layer, as a flat data
+representation should better interoperate with traditional relational database
+systems.}
+
+}
+
+\subtree{
+\title{GATs}
+\taxon{alternative}
+
+\p{A key difference between [GATs](gatlab-2024) and set-theoretic models of
+double theories is that the former allow arbitrary levels of type dependency
+while the latter have just one level of type dependency. Having a single level
+strikes me as a useful balance between simple types and full-blown dependent
+types. That said, when double theories are equipped with tabulators, mutually
+recursive construction of proarrows and tabulators allows type dependency at
+arbitrary levels. In this case, the precise relation between GATs and double
+theories is unknown to me.}
+
+}
 
 }
 
 \subtree{
 \title{Prior art}
+
+\p{A number of us at Topos have had pairwise conversations about versions of
+this idea. Tim Hosgood has written up essentially the same approach to
+polynomial ODE systems in the
+[roadmap](https://github.com/ToposInstitute/CatColab-Roadmap/issues/58).}
 
 \p{My paper with Michael Lambert on [double ologs](double-ologs) shares ideas
 with this RFC and is a useful source of intuition and examples. But there are
