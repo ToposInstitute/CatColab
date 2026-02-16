@@ -42,31 +42,42 @@ This analysis shows a ❌ if there does exist any reachable tokening from the gi
 Places are interpreted as quantities that can vary in time ("concentrations"), and the transitions ("reactions") in the model determine equations constraining the time derivatives of the stocks.
 Each place is given an **initial value**.
 
-- A transition $A\xrightarrow{T}B$ between places $A$ and $B$ is interpreted as the equations $\{\dot{A}=-T,\dot{B}=T\}$, i.e. the transition $T$ goes out of $A$ and into $B$.
+Since this is mass-action dynamics, we make the assumption that transitions depend only on their input places; we also make the assumption that transitions are determined by constants (namely their rate coefficients).
+Equations governing transitions are also *non-linear*, depending multiplicatively on their inputs.
 
-- Equations governing places add linearly: in an arbitrary Petri net, the equation governing a place $A$ is $\dot{A}=\sum_{A_\text{in}}T_i - \sum_{A_\text{out}}T_j$, where $A_\text{in}$ (resp. $A_\text{out}$) is the set of all transitions whose target (resp. source) is $A$.
+The rest of the analysis depends on whether **mass conservation** is checked as true or false.
 
-- Transitions are determined by their **rate** coefficient $r$ and take into account only *incoming* arcs: a transition $A\xrightarrow{T}B$ imposes the equation $T=rA$.
-However, equations governing transitions are *non-linear*: if a transition $T$ has two incoming arcs from places $A$ and $A'$, then $T=rAA'$.
+- If **mass conservation** is checked as *true*, a transition $A\xrightarrow{T}B$ between places $A$ and $B$ is interpreted as the equations $\{\dot{A}=-r_TA,\dot{B}=r_TA\}$, i.e. the transition $T$ goes out of $A$ and into $B$. Here, $r_T$ is the **rate coefficient** of the transition.
+
+  A transition $[A,B]\xrightarrow{T}[X,Y]$ gives the equations
+
+  + $\dot{A}=-r_T AB$
+  + $\dot{B}=-r_T AB$
+  + $\dot{X}=r_T AB$
+  + $\dot{Y}=r_T AB$
+
+- If **mass conservation** is checked as *false*, and **rate granularity** is set to *per transition*, then a transition $A\xrightarrow{T}B$ between places $A$ and $B$ is interpreted as the equations $\{\dot{A}=-\kappa_T,\dot{B}=\rho_T\}$. Here $\kappa_T$ and $\rho_T$ are the **consumption** and **production** rate coefficients of the transition.
+
+  A transition $[A,B]\xrightarrow{T}[X,Y]$ gives the equations
+
+  + $\dot{A}=-\kappa_T AB$
+  + $\dot{B}=-\kappa_T AB$
+  + $\dot{X}=\rho_T AB$
+  + $\dot{Y}=\rho_T AB$
+
+- If **mass conservation** is checked as *false*, and **rate granularity** is set to *per place*, then a transition $A\xrightarrow{T}B$ between places $A$ and $B$ is interpreted as the equations $\{\dot{A}=-\kappa_T^A,\dot{B}=\rho_T^B\}$. Here $\kappa_T^A$ and $\rho_T^B$ are the **consumption** and **production** rate coefficients of the objects $A$ and $B$ with respect to the transition $T$.
+
+  A transition $[A,B]\xrightarrow{T}[X,Y]$ gives the equations
+
+  + $\dot{A}=-\kappa_T^A AB$
+  + $\dot{B}=-\kappa_T^B AB$
+  + $\dot{X}=\rho_T^X AB$
+  + $\dot{Y}=\rho_T^Y AB$
+
+In all cases, equations governing places add linearly: in an arbitrary Petri net, the equation governing a place $A$ is $\dot{A}=\sum_{A_\text{in}}T_i - \sum_{A_\text{out}}T_j$, where $A_\text{in}$ (resp. $A_\text{out}$) is the set of all transitions whose target (resp. source) is $A$.
 </HelpAnalysisById>
 
-<HelpAnalysisById theory={props.theory} analysisId="mass-action-equations">
-This analysis displays the symbolic form of the derived mass-action equations.
-</HelpAnalysisById>
-
-<HelpAnalysisById theory={props.theory} analysisId="unbalanced-mass-action">
-*Unbalanced* mass-action dynamics can be thought of as mass-action dynamics that do *not* preserve mass: flows instead **consume** quantities at some rate and **produce** quantities at a possibly different rate.
-Furthermore, these rates are determined at the level of *places*, not *transitions*.
-
-That is, a transition $[A,B]\xrightarrow{T}[X,Y]$ is interpreted as the equations
-
-- $\dot{A} = -\kappa_T^A AB$
-- $\dot{B} = -\kappa_T^B AB$
-- $\dot{C} = \rho_T^C AB$
-- $\dot{D} = \rho_T^D AB$
-
-If $\kappa_T^A=\kappa_T^B$ and $\rho_T^C=\rho_T^D$ then this corresponds to the transition having *global* **consumption rate** $\kappa_T$ and **production rate** $\rho_T$; if furthermore $\kappa_T=\rho_T$ then we recover the usual mass-action dynamics.
-</HelpAnalysisById>
+<HelpAnalysisById theory={props.theory} analysisId="mass-action-equations" />
 
 <HelpAnalysisById theory={props.theory} analysisId="unbalanced-mass-action-equations"/>
 

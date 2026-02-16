@@ -35,21 +35,19 @@ We expect to implement the richer semantics in the future.
 Stocks are interpreted as quantities that can vary in time, and the flows and links in the model determine equations constraining the time derivatives of the stocks.
 Each stock is given an **initial value**.
 
-A flow $S\overset{f}{\Rightarrow}T$ between stocks $S$ and $T$ is interpreted as the equations $\{\dot{S}=-f,\dot{T}=f\}$, i.e. the flow $f$ goes out of $S$ and into $T$.
-Flows add linearly, i.e. in an arbitrary stock-flow diagram (without links), the equation governing a stock $S$ is $\dot{S}=\sum_{S_\text{in}}f_i - \sum_{S_\text{out}}f_j$, where $S_\text{in}$ (resp. $S_\text{out}$) is the set of all flows whose target (resp. source) is $S$.
+Since this is mass-action dynamics, we make the assumption that flows depend only on their input stocks; since our stock-flow diagrams are *primitive*, flows are determined by constants (namely their rate coefficients).
 
-In this analysis, since the stock-flow diagrams are primitive, flows are determined their **rate** coefficient $r$, i.e. a flow $S\overset{f}{\Rightarrow}T$ is defined to satisfy $f=rS$.
+The rest of the analysis depends on whether **mass conservation** is checked as true or false.
 
-A link $R\to f$ from a stock $R$ to a flow $S\overset{f}{\Rightarrow}T$ modifies the the equation defining $f$ by multiplication by $R$, i.e. without any link, we would have that $f=rS$, but introducing a link $R\to f$ enforces that $f=rSR$ instead.
+- If **mass conservation** is checked as *true*, a flow $S\overset{f}{\Rightarrow}T$ between stocks $S$ and $T$ gives the equations $\dot{S}=-r_fS$ and $\dot{T}=r_fS$, i.e. the flow $f$ goes out of $S$ and into $T$. Here, $r_f$ is the **rate coefficient** of the flow.
+
+- If **mass conservation** is checked as *false*, then a flow has distinct **consumption** and **production**, giving the equations $\dot{S}=-\kappa_f$ and $\dot{T}=\rho_f$. Here, $\kappa_f$ and $\rho_f$ are the **consumption** and **production** rate coefficients of the flow.
+
+In both cases, flows add linearly, i.e. in an arbitrary stock-flow diagram (without links), the equation governing a stock $S$ is $\dot{S}=\sum_{S_\text{in}}f_i - \sum_{S_\text{out}}f_j$, where $S_\text{in}$ (resp. $S_\text{out}$) is the set of all flows whose target (resp. source) is $S$.
+
+Also in both cases, a link $R\to f$ from a stock $R$ to a flow $S\overset{f}{\Rightarrow}T$ modifies the the equation defining the flow by multiplication by $R$, i.e. without any link, we would have that $f=rS$, but introducing a link $R\to f$ enforces that $f=rSR$ instead.
 </HelpAnalysisById>
 
 <HelpAnalysisById theory={props.theory} analysisId="mass-action-equations"/>
-
-<HelpAnalysisById theory={props.theory} analysisId="unbalanced-mass-action">
-*Unbalanced* mass-action dynamics can be thought of as mass-action dynamics that do *not* preserve mass: flows instead **consume** quantities at some rate and **produce** quantities at a possibly different rate.
-That is, a flow $S\overset{f}{\Rightarrow}T$ between stocks $S$ and $T$ is interpreted as the equations $\{\dot{S}=-f_\text{cons},\dot{T}=f_{prod}\}$.
-
-Just as for usual mass-action dynamics, since these stock-flow diagrams are primitive, flows are determined by their **consumption** and **production** coefficients, $\kappa$ and $\rho$ respectively.
-</HelpAnalysisById>
 
 <HelpAnalysisById theory={props.theory} analysisId="unbalanced-mass-action-equations"/>
