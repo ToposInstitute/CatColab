@@ -331,8 +331,8 @@ pub enum ToposortError<V> {
 impl<V: std::fmt::Debug> std::fmt::Display for ToposortError<V> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::CycleError(v) => write!(f, "{}", format!("{:#?}", v)),
-            Self::SelfLoop(v) => write!(f, "{}", format!("self loop at node {:#?}", v)),
+            Self::CycleError(v) => write!(f, "{:#?}", v),
+            Self::SelfLoop(v) => write!(f, "self loop at node {:#?}", v),
         }
     }
 }
