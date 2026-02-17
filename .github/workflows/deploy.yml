@@ -210,7 +210,7 @@ jobs:
 
     - name: Deploy to catcolab-next
       run: |
-       nix run github:serokell/deploy-rs -- --skip-checks .#catcolab-next-ci
+       nix run github:serokell/deploy-rs -- --skip-checks .#catcolab-next
 
     - name: Verify deployment
       run: |
