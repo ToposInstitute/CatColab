@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  '@automerge/automerge': ^3.2.4
+
 importers:
 
   .:
@@ -15,8 +18,8 @@ importers:
         specifier: ^1.0.3
         version: 1.0.3
       '@automerge/automerge':
-        specifier: ^3.1.1
-        version: 3.1.1
+        specifier: ^3.2.4
+        version: 3.2.4
       '@automerge/automerge-repo':
         specifier: ^2.2.0
         version: 2.2.0
@@ -238,8 +241,8 @@ packages:
   '@automerge/automerge-repo@2.5.0':
     resolution: {integrity: sha512-bdxuMuKmxw0ZjwQXecrIX1VrHXf445bYCftNJJ5vqgGWVvINB5ZKFYAbtgPIyu1Y0TXQKvc6eqESaDeL+g8MmA==}
 
-  '@automerge/automerge@3.1.1':
-    resolution: {integrity: sha512-x7tZiMBLk4/SKYimVEVl1/wPntT9buGvLOWCey9ZcH8JUsB0dgm49C0S7Ojzgvflcs2hc/YjiXRPcFeFkinIgw==}
+  '@automerge/automerge@3.2.4':
+    resolution: {integrity: sha512-/IAShHSxme5d4ZK0Vs4A0P+tGaR/bSz6KtIJSCIPfwilCxsIqfRHAoNjmsXip6TGouadmbuw3WfLop6cal8pPQ==}
 
   '@automerge/prosemirror@0.2.0-alpha.0':
     resolution: {integrity: sha512-ho0ghRZxpWoVs0RPJV3a1b6AhZeMfXJhmWGAjrftGeg0JuZFJ0kyLol5TnNslLwyKCfBG42cLiciH/9ztSpFKQ==}
@@ -3088,7 +3091,7 @@ snapshots:
 
   '@automerge/automerge-repo@2.2.0':
     dependencies:
-      '@automerge/automerge': 3.1.1
+      '@automerge/automerge': 3.2.4
       bs58check: 3.0.1
       cbor-x: 1.6.0
       debug: 4.4.1
@@ -3101,7 +3104,7 @@ snapshots:
 
   '@automerge/automerge-repo@2.5.0':
     dependencies:
-      '@automerge/automerge': 3.1.1
+      '@automerge/automerge': 3.2.4
       bs58check: 3.0.1
       cbor-x: 1.6.0
       debug: 4.4.3
@@ -3112,11 +3115,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@automerge/automerge@3.1.1': {}
+  '@automerge/automerge@3.2.4': {}
 
   '@automerge/prosemirror@0.2.0-alpha.0':
     dependencies:
-      '@automerge/automerge': 3.1.1
+      '@automerge/automerge': 3.2.4
       ordered-map: 0.1.0
       prosemirror-changeset: 2.3.1
       prosemirror-history: 1.4.1
