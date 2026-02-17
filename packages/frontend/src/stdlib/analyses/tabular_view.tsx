@@ -5,8 +5,36 @@ import type { DblModel } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
 import "./tabular_view.css";
 
-/** Create a table from row-wise data */
-function createTable(headers: Array<string>, data: Array<Array<string>>) {
+/** Given a schema (DblModel of ThSchema), a JSON output `rawdata` from Catlab,
+    and a particular object `obname` in the schema, create an HTML table with
+    the outgoing homs/attributes from that object.
+*/
+function ACSetTable(props: { model: DblModel; rawdata: Record<string, string[]>; obId: string }) {
+    // The primary key of this table is given by `rawdata[obname]`
+    const rows: Array<string> = props.rawdata[props.obId] || [];
+    const obname = props.model.obGeneratorLabel(props.obId)?.join(".") || "";
+
+    // Get the homs and attrs with source `obId`
+    const outhoms = props.model.morGenerators().filter((morId) => {
+        const mor = props.model.morPresentation(morId);
+        return mor?.dom.tag === "Basic" && mor.dom.content === props.obId;
+    });
+
+    // Convert morgenerators to user-friendly names
+    const headers = [obname].concat(
+        outhoms.map((morId) => props.model.morGeneratorLabel(morId)?.join(".") ?? ""),
+    );
+
+    // Data for column from indexing rawdata
+    const columnardata: Array<Array<string>> = [props.obId]
+        .concat(outhoms)
+        .map((m) => props.rawdata[m as keyof typeof props.rawdata] || [""]);
+
+    // Convert columnar data to row data
+    const data = Array.from(rows?.keys()).map((colIndex) =>
+        columnardata.map((row) => row[colIndex] || ""),
+    );
+
     return (
         <table class="tabular-view-table">
             {headers && (
@@ -33,45 +61,14 @@ function createTable(headers: Array<string>, data: Array<Array<string>>) {
     );
 }
 
-/** Given a schema (DblModel of ThSchema), a JSON output `rawdata` from Catlab,
-    and a particular object `obname` in the schema, create an HTML table with
-    the outgoing homs/attributes from that object.
-*/
-function createACSetTable(model: DblModel, rawdata: Record<string, string[]>, obId: string) {
-    // The primary key of this table is given by `rawdata[obname]`
-    const rows: Array<string> = rawdata[obId] || [];
-    const obname = model.obGeneratorLabel(obId)?.join(".") || "";
-
-    // Get the homs and attrs with source `obId`
-    const outhoms = model.morGenerators().filter((morId) => {
-        const mor = model.morPresentation(morId);
-        return mor?.dom.tag === "Basic" && mor.dom.content === obId;
-    });
-
-    // Convert morgenerators to user-friendly names
-    const headers = [obname].concat(
-        outhoms.map((morId) => model.morGeneratorLabel(morId)?.join(".") ?? ""),
-    );
-
-    // Data for column from indexing rawdata
-    const columnardata: Array<Array<string>> = [obId]
-        .concat(outhoms)
-        .map((m) => rawdata[m as keyof typeof rawdata] || [""]);
-
-    // Convert columnar data to row data
-    const data = Array.from(rows?.keys()).map((colIndex) =>
-        columnardata.map((row) => row[colIndex] || ""),
-    );
-
-    return createTable(headers, data);
-}
-
 /** Stack tables on top of each other in a naive way, one per ob/attrtype */
-function createACSet(model: DblModel, rawdata: Record<string, string[]>) {
+function ACSetTableView(props: { model: DblModel; rawdata: Record<string, string[]> }) {
     return (
         <div class="simulation">
             <PanelHeader title="Tabular view" />
-            <For each={model?.obGenerators()}>{(ob) => createACSetTable(model, rawdata, ob)}</For>
+            <For each={props.model?.obGenerators()}>
+                {(ob) => <ACSetTable model={props.model} rawdata={props.rawdata} obId={ob} />}
+            </For>
         </div>
     );
 }
@@ -126,7 +123,7 @@ export default function TabularView(
             <Match when={res()}>
                 {(data) => {
                     const result = data();
-                    return <div>{createACSet(result.model, result.data)}</div>;
+                    return <ACSetTableView model={result.model} rawdata={result.data} />;
                 }}
             </Match>
         </Switch>
