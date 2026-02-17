@@ -2,20 +2,21 @@
 use crate::{
     dbl::model::*,
     one::{
-        graph::FinGraph,
-        graph_algorithms::{toposort_lenient, toposort_strict, ToposortData},
         Path,
+        graph::FinGraph,
+        graph_algorithms::{ToposortData, toposort_lenient, toposort_strict},
     },
-    zero::{name, QualifiedLabel, QualifiedName},
+    zero::{QualifiedLabel, QualifiedName, name},
 };
 use indexmap::IndexMap;
 use itertools::Itertools;
+use nonempty::nonempty;
 use sea_query::SchemaBuilder;
 use sea_query::{
-    prepare::Write, ColumnDef, ForeignKey, ForeignKeyCreateStatement, Iden, MysqlQueryBuilder,
-    PostgresQueryBuilder, SqliteQueryBuilder, Table, TableCreateStatement,
+    ColumnDef, ForeignKey, ForeignKeyCreateStatement, Iden, MysqlQueryBuilder,
+    PostgresQueryBuilder, SqliteQueryBuilder, Table, TableCreateStatement, prepare::Write,
 };
-use sqlformat::{format, Dialect};
+use sqlformat::{Dialect, format};
 use std::fmt;
 
 impl Iden for QualifiedName {
@@ -37,36 +38,74 @@ impl Iden for &QualifiedLabel {
 }
 
 #[derive(Debug, Clone)]
-enum ForeignKeyBehavior {
+enum ColumnBehavior {
     Ordinary { mor: QualifiedName, tgt: QualifiedName },
     Deferrable { mor: QualifiedName, tgt: QualifiedName },
+    Attribute { mor: QualifiedName, tgt: QualifiedName },
 }
 
-impl ForeignKeyBehavior {
+impl ColumnBehavior {
+    // TODO pass model into here
     fn build(
+        model: &DiscreteDblModel,
         cycles: &IndexMap<QualifiedName, Vec<QualifiedName>>,
         src: &QualifiedName,
         mor: QualifiedName,
-        tgt: &QualifiedName,
     ) -> Self {
-        if cycles.contains_key(src) || cycles.contains_key(&tgt.clone()) {
-            ForeignKeyBehavior::Deferrable { mor, tgt: tgt.clone() }
-        } else {
-            ForeignKeyBehavior::Ordinary { mor, tgt: tgt.clone() }
+        let tgt = model.get_cod(&mor).unwrap();
+        match model.mor_generator_type(&mor) {
+            t if t == Path::Seq(nonempty![name("Attr")]) => {
+                ColumnBehavior::Attribute { mor, tgt: tgt.clone() }
+            }
+            _ => {
+                if cycles.contains_key(src) || cycles.contains_key(&tgt.clone()) {
+                    ColumnBehavior::Deferrable { mor, tgt: tgt.clone() }
+                } else {
+                    ColumnBehavior::Ordinary { mor, tgt: tgt.clone() }
+                }
+            }
         }
     }
 
     fn mor(&self) -> &QualifiedName {
         match self {
-            ForeignKeyBehavior::Ordinary { mor, tgt: _ } => mor,
-            ForeignKeyBehavior::Deferrable { mor, tgt: _ } => mor,
+            ColumnBehavior::Ordinary { mor, tgt: _ }
+            | ColumnBehavior::Deferrable { mor, tgt: _ }
+            | ColumnBehavior::Attribute { mor, tgt: _ } => mor,
         }
     }
 
     fn tgt(&self) -> &QualifiedName {
         match self {
-            ForeignKeyBehavior::Ordinary { mor: _, tgt } => tgt,
-            ForeignKeyBehavior::Deferrable { mor: _, tgt } => tgt,
+            ColumnBehavior::Ordinary { mor: _, tgt }
+            | ColumnBehavior::Deferrable { mor: _, tgt }
+            | ColumnBehavior::Attribute { mor: _, tgt } => tgt,
+        }
+    }
+
+    fn render_postgres_fk(
+        &self,
+        src: &QualifiedName,
+        ob_label: impl Fn(&QualifiedName) -> QualifiedLabel,
+        mor_label: impl Fn(&QualifiedName) -> QualifiedLabel,
+    ) -> String {
+        let fk = |src: &QualifiedLabel, mor: &QualifiedLabel, tgt: &QualifiedLabel| -> String {
+            format!(
+                r#"ALTER TABLE {src}
+	ADD CONSTRAINT fk_{mor}_{src}_{tgt}
+	FOREIGN KEY ({mor}) REFERENCES {tgt} (id)"#
+            )
+        };
+        match self {
+            ColumnBehavior::Ordinary { mor, tgt } => {
+                fk(&ob_label(src), &mor_label(mor), &ob_label(tgt)) + ";"
+            }
+            ColumnBehavior::Deferrable { mor, tgt } => {
+                fk(&ob_label(src), &mor_label(mor), &ob_label(tgt))
+                    + "\n"
+                    + r#"DEFERRABLE INITIALLY DEFERRED;"#
+            }
+            ColumnBehavior::Attribute { mor: _, tgt: _ } => "".to_string(), // TODO
         }
     }
 }
@@ -100,7 +139,9 @@ impl SQLAnalysis {
     fn build(
         &self,
         tables: Vec<TableCreateStatement>,
-        morphisms: IndexMap<QualifiedName, Vec<ForeignKeyBehavior>>,
+        morphisms: IndexMap<QualifiedName, Vec<ColumnBehavior>>,
+        ob_label: impl Fn(&QualifiedName) -> QualifiedLabel,
+        mor_label: impl Fn(&QualifiedName) -> QualifiedLabel,
     ) -> String {
         let table_def: String = tables
             .iter()
@@ -116,8 +157,8 @@ impl SQLAnalysis {
             .iter()
             .flat_map(|(ob, mors)| {
                 mors.iter()
-                    .filter(|fkb| matches!(fkb, ForeignKeyBehavior::Deferrable { mor: _, tgt: _ }))
-                    .map(|fkb| self.render_postgres_fk(ob, fkb))
+                    .filter(|fkb| matches!(fkb, ColumnBehavior::Deferrable { mor: _, tgt: _ }))
+                    .map(|fkb| fkb.render_postgres_fk(ob, &ob_label, &mor_label))
                     .collect::<Vec<_>>()
             })
             .join("\n");
@@ -129,7 +170,7 @@ impl SQLAnalysis {
         &self,
         model: &DiscreteDblModel,
         ob_label: impl Fn(&QualifiedName) -> QualifiedLabel,
-    ) -> Result<IndexMap<QualifiedName, Vec<ForeignKeyBehavior>>, String> {
+    ) -> Result<IndexMap<QualifiedName, Vec<ColumnBehavior>>, String> {
         let g = model.generating_graph();
         let toposort: ToposortData<_> = match self.backend {
             SQLBackend::PostgresSQL => {
@@ -148,16 +189,13 @@ impl SQLAnalysis {
 
         let cycles = toposort.cycles;
         // if a morphism is a key in toposort.cycles, then its source and targets are deferrable.
-        let morphisms: IndexMap<QualifiedName, Vec<ForeignKeyBehavior>> =
+        let morphisms: IndexMap<QualifiedName, Vec<ColumnBehavior>> =
             IndexMap::from_iter(toposort.stack.into_iter().rev().filter_map(|v| {
                 (name("Entity") == model.ob_generator_type(&v)).then_some((
                     v.clone(),
                     g.out_edges(&v)
-                        .map(|e| {
-                            let tgt = model.get_cod(&e).unwrap();
-                            ForeignKeyBehavior::build(&cycles, &v, e, tgt)
-                        })
-                        .collect::<Vec<ForeignKeyBehavior>>(),
+                        .map(|e| ColumnBehavior::build(model, &cycles, &v, e))
+                        .collect::<Vec<ColumnBehavior>>(),
                 ))
             }));
         Ok(morphisms)
@@ -170,9 +208,9 @@ impl SQLAnalysis {
         ob_label: impl Fn(&QualifiedName) -> QualifiedLabel,
         mor_label: impl Fn(&QualifiedName) -> QualifiedLabel,
     ) -> Result<String, String> {
-        let morphisms = self.toposort_morphisms(&model, &ob_label); // TODO error safely
-        let tables = self.make_tables(model, morphisms.clone()?, ob_label, mor_label);
-        let output: String = self.build(tables, morphisms?);
+        let morphisms = self.toposort_morphisms(model, &ob_label);
+        let tables = self.make_tables(model, morphisms.clone()?, &ob_label, &mor_label);
+        let output: String = self.build(tables, morphisms?, ob_label, mor_label);
         let formatted_output = self.format(&output);
         let result = match self.backend {
             SQLBackend::SQLite => ["PRAGMA foreign_keys = ON", &formatted_output].join(";\n\n"),
@@ -194,26 +232,10 @@ impl SQLAnalysis {
             .to_owned()
     }
 
-    fn render_postgres_fk(&self, src: &QualifiedName, fkb: &ForeignKeyBehavior) -> String {
-        let fk = |src: &QualifiedName, mor: &QualifiedName, tgt: &QualifiedName| -> String {
-            format!(
-                r#"ALTER TABLE {src}
-	ADD CONSTRAINT fk_{mor}_{src}_{tgt}
-	FOREIGN KEY ({mor}) REFERENCES {tgt} (id)"#
-            )
-        };
-        match fkb {
-            ForeignKeyBehavior::Ordinary { mor, tgt } => fk(src, &mor, &tgt) + ";",
-            ForeignKeyBehavior::Deferrable { mor, tgt } => {
-                fk(src, &mor, &tgt) + "\n" + r#"DEFERRABLE INITIALLY DEFERRED;"#
-            }
-        }
-    }
-
     fn make_tables(
         &self,
         model: &DiscreteDblModel,
-        morphisms: IndexMap<QualifiedName, Vec<ForeignKeyBehavior>>,
+        morphisms: IndexMap<QualifiedName, Vec<ColumnBehavior>>,
         ob_label: impl Fn(&QualifiedName) -> QualifiedLabel,
         mor_label: impl Fn(&QualifiedName) -> QualifiedLabel,
     ) -> Vec<TableCreateStatement> {
@@ -236,7 +258,7 @@ impl SQLAnalysis {
                         } else {
                             let mut col = ColumnDef::new(mor_name);
                             col.not_null();
-                            add_column_type(&mut col, mor.tgt());
+                            add_column_type(&mut col, &ob_label(mor.tgt()));
                             acc.col(col)
                         }
                     },
@@ -246,7 +268,7 @@ impl SQLAnalysis {
                     .filter(|mor| {
                         (model.mor_generator_type(mor.mor()) == Path::Id(name("Entity")))
                             && (if self.backend == SQLBackend::PostgresSQL {
-                                matches!(mor, ForeignKeyBehavior::Ordinary { mor: _, tgt: _ })
+                                matches!(mor, ColumnBehavior::Ordinary { mor: _, tgt: _ })
                             } else {
                                 true
                             })
@@ -327,8 +349,8 @@ impl fmt::Display for SQLBackend {
     }
 }
 
-fn add_column_type(col: &mut ColumnDef, name: &QualifiedName) {
-    match format!("{}", name).as_str() {
+fn add_column_type(col: &mut ColumnDef, label: &QualifiedLabel) {
+    match format!("{label}").as_str() {
         "Int" => col.integer(),
         "TinyInt" => col.tiny_integer(),
         "Bool" => col.boolean(),
@@ -336,7 +358,7 @@ fn add_column_type(col: &mut ColumnDef, name: &QualifiedName) {
         "Time" => col.timestamp(),
         "Date" => col.date(),
         "DateTime" => col.date_time(),
-        _ => col.custom(name.clone()),
+        _ => col.custom(label.clone()),
     };
 }
 
@@ -351,17 +373,16 @@ mod tests {
     #[test]
     fn sql_schema() {
         let th = Rc::new(th_schema());
-        let model = tt::modelgen::Model::from_text(
-            &th.into(),
-            "[
+        let source = "[
                 Person : Entity,
                 Dog : Entity,
                 walks : (Hom Entity)[Person, Dog],
                 Hair : AttrType,
                 has : Attr[Person, Hair],
-            ]",
-        );
-        let model = model.and_then(|m| m.as_discrete()).unwrap();
+            ]";
+        let model = tt::modelgen::Model::from_text(&th.clone().into(), source)
+            .and_then(|m| m.as_discrete())
+            .unwrap();
 
         let expected = expect![[
             r#"CREATE TABLE IF NOT EXISTS `Dog` (`id` int NOT NULL AUTO_INCREMENT PRIMARY KEY);
@@ -386,25 +407,29 @@ CREATE TABLE IF NOT EXISTS `Person` (
     #[test]
     fn sql_cycles() {
         let th = Rc::new(th_schema());
-        let model = tt::modelgen::parse_and_generate(
-            "[
+        let source = "[
                 Refs : Entity,
                 Snapshots : Entity,
                 head : (Hom Entity)[Refs, Snapshots],
-                for_ref: (Hom Entity)[Snapshots, Refs]
-            ]",
-            &th.into(),
-        );
-        let model = model.and_then(|m| m.as_discrete()).unwrap();
+                for_ref: (Hom Entity)[Snapshots, Refs],
+                Timestamp : AttrType,
+                created : Attr[Refs, Timestamp],
+                last_updated: Attr[Snapshots, Timestamp],
+            ]";
+        let model = tt::modelgen::Model::from_text(&th.into(), source)
+            .and_then(|m| m.as_discrete())
+            .unwrap();
 
         let expected = expect![[r#"CREATE TABLE IF NOT EXISTS "Snapshots" (
   "id" serial NOT NULL PRIMARY KEY,
-  "for_ref" integer NOT NULL
+  "for_ref" integer NOT NULL,
+  "last_updated" Timestamp NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS "Refs" (
   "id" serial NOT NULL PRIMARY KEY,
-  "head" integer NOT NULL
+  "head" integer NOT NULL,
+  "created" Timestamp NOT NULL
 );
 
 ALTER TABLE
