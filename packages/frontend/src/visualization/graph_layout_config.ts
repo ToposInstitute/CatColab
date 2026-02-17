@@ -44,8 +44,8 @@ export const graphvizOptions = (config: Config): Viz.RenderOptions => {
         engine: graphvizEngine(config.layout),
         graphAttributes: {
             rankdir: graphvizRankdir(config.direction ?? Direction.Vertical),
-            ...(isUndirected && config.sep !== undefined && { sep: config.sep }),
-            ...(isUndirected && config.overlap !== undefined && { overlap: config.overlap }),
+            ...(isUndirected && { sep: config.sep ?? 1.0 }),
+            ...(isUndirected && { overlap: config.overlap ?? "false" }),
         },
     };
 };

@@ -44,28 +44,31 @@ export function GraphLayoutConfigForm(props: {
                     label="Separation"
                     type="number"
                     min="0"
+                    max="10"
                     step="0.1"
-                    value={props.config.sep ?? ""}
-                    placeholder="default"
+                    value={props.config.sep ?? 1.0}
                     onInput={(evt) => {
                         props.changeConfig((content) => {
                             const value = evt.currentTarget.value;
-                            content.sep = value === "" ? undefined : Number.parseFloat(value);
+                            content.sep = value === "" ? 1.0 : Number.parseFloat(value);
                         });
                     }}
                 />
-                <InputField
+                <SelectField
                     label="Overlap"
-                    type="text"
-                    value={props.config.overlap ?? ""}
-                    placeholder="default"
-                    onInput={(evt) => {
+                    value={props.config.overlap ?? "false"}
+                    onChange={(evt) => {
                         props.changeConfig((content) => {
-                            const value = evt.currentTarget.value.trim();
-                            content.overlap = value === "" ? undefined : value;
+                            content.overlap = evt.currentTarget.value;
                         });
                     }}
-                />
+                >
+                    <option value="false">{"Remove overlaps"}</option>
+                    <option value="scale">{"Scale uniformly"}</option>
+                    <option value="scalexy">{"Scale independently"}</option>
+                    <option value="true">{"Allow overlaps"}</option>
+                    <option value="prism">{"Prism algorithm"}</option>
+                </SelectField>
             </Show>
         </FormGroup>
     );
