@@ -71,6 +71,7 @@ pub mod linear_ode;
 pub mod lotka_volterra;
 pub mod mass_action;
 pub mod signed_coefficients;
+pub mod stochastic_mass_action;
 pub mod unbalanced_mass_action;
 
 pub use kuramoto::*;
@@ -78,4 +79,5 @@ pub use linear_ode::*;
 pub use lotka_volterra::*;
 pub use mass_action::*;
 pub use signed_coefficients::*;
+pub use stochastic_mass_action::*;
 pub use unbalanced_mass_action::*;
