@@ -10,6 +10,7 @@ export type Config = MassActionProblemData;
 export function MassActionConfigForm(props: {
     config: Config;
     changeConfig: (f: (config: Config) => void) => void;
+    enableGranularity: boolean;
 }) {
     const massConservation = () => props.config.massConservationType;
     const massConservationGranularity = () => {
@@ -41,7 +42,7 @@ export function MassActionConfigForm(props: {
                 <option value={"Balanced"}>{"True"}</option>
                 <option value={"Unbalanced"}>{"False"}</option>
             </SelectField>
-            <Show when={massConservation().type === "Unbalanced"}>
+            <Show when={massConservation().type === "Unbalanced" && props.enableGranularity}>
                 <SelectField
                     label="Rate granularity"
                     value={massConservationGranularity() ?? "PerTransition"}
