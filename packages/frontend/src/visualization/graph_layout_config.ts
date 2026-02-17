@@ -13,7 +13,7 @@ export type Config = {
     sep?: number;
 
     /** Overlap parameter for undirected graph layout (Graphviz neato). */
-    overlap?: string;
+    overlap?: Overlap;
 };
 
 /** Engines supported for graph layout. */
@@ -32,6 +32,20 @@ export enum Direction {
     Vertical = "vertical",
 }
 
+/** Overlap removal methods for undirected graph layouts (Graphviz neato). */
+export enum Overlap {
+    /** Remove overlaps (Graphviz default). */
+    False = "false",
+    /** Scale layout uniformly to remove overlaps. */
+    Scale = "scale",
+    /** Scale layout separately in x and y to remove overlaps. */
+    ScaleXY = "scalexy",
+    /** Allow overlaps. */
+    True = "true",
+    /** Prism algorithm for overlap removal. */
+    Prism = "prism",
+}
+
 /** Construct the default graph layout configuration. */
 export const defaultConfig = (): Config => ({
     layout: Engine.VizDirected,
@@ -45,7 +59,7 @@ export const graphvizOptions = (config: Config): Viz.RenderOptions => {
         graphAttributes: {
             rankdir: graphvizRankdir(config.direction ?? Direction.Vertical),
             ...(isUndirected && { sep: config.sep ?? 1.0 }),
-            ...(isUndirected && { overlap: config.overlap ?? "false" }),
+            ...(isUndirected && { overlap: config.overlap ?? Overlap.False }),
         },
     };
 };

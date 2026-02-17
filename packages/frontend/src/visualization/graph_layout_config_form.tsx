@@ -1,7 +1,7 @@
 import { Show } from "solid-js";
 
 import { FormGroup, InputField, SelectField } from "catcolab-ui-components";
-import { type Config, Direction, Engine } from "./graph_layout_config";
+import { type Config, Direction, Engine, Overlap } from "./graph_layout_config";
 
 /** Form to configure a graph layout algorithm. */
 export function GraphLayoutConfigForm(props: {
@@ -56,18 +56,18 @@ export function GraphLayoutConfigForm(props: {
                 />
                 <SelectField
                     label="Overlap"
-                    value={props.config.overlap ?? "false"}
+                    value={props.config.overlap ?? Overlap.False}
                     onChange={(evt) => {
                         props.changeConfig((content) => {
-                            content.overlap = evt.currentTarget.value;
+                            content.overlap = evt.currentTarget.value as Overlap;
                         });
                     }}
                 >
-                    <option value="false">{"Remove overlaps"}</option>
-                    <option value="scale">{"Scale uniformly"}</option>
-                    <option value="scalexy">{"Scale independently"}</option>
-                    <option value="true">{"Allow overlaps"}</option>
-                    <option value="prism">{"Prism algorithm"}</option>
+                    <option value={Overlap.False}>{"Remove overlaps"}</option>
+                    <option value={Overlap.Scale}>{"Scale uniformly"}</option>
+                    <option value={Overlap.ScaleXY}>{"Scale independently"}</option>
+                    <option value={Overlap.True}>{"Allow overlaps"}</option>
+                    <option value={Overlap.Prism}>{"Prism algorithm"}</option>
                 </SelectField>
             </Show>
         </FormGroup>
