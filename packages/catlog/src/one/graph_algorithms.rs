@@ -173,10 +173,10 @@ where
     G: FinGraph,
     G::V: Hash + std::fmt::Debug + Clone,
 {
-    ///
+    /// Stores an array of topologically-sorted vertices.
     pub stack: Vec<G::V>,
 
-    ///
+    /// Stores the feedback vertices with their outneighbors.
     pub cycles: IndexMap<G::V, Vec<G::V>>,
 }
 
@@ -209,8 +209,8 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::CycleError(v) => write!(f, "{}", format!("{:#?}", v)),
-            Self::SelfLoop(v) => write!(f, "{}", format!("self loop at node {:#?}", v)),
+            Self::CycleError(v) => write!(f, "{:#?}", v),
+            Self::SelfLoop(v) => write!(f, "self loop at node {:#?}", v),
         }
     }
 }

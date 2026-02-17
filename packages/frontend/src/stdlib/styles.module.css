@@ -14,3 +14,17 @@
         calc(100% - var(--corner)) calc(100% - var(--corner)),
         linear-gradient(#000 0 0) content-box;
 }
+
+.headerContainer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    flex-direction: row;
+}
+
+.headerContainer > * {
+    flex-shrink: 0;
+}
