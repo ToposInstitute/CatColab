@@ -544,7 +544,7 @@ pub fn extend_mass_action_scalars(
     sys: PolynomialSystem<QualifiedName, Parameter<Term>, i8>,
     data: &MassActionProblemData,
 ) -> PolynomialSystem<QualifiedName, f32, i8> {
-    sys.extend_scalars(|poly| {
+    let sys = sys.extend_scalars(|poly| {
         poly.eval(|flow| match flow {
             Term::UndirectedTerm { transition } => {
                 data.transition_rates.get(transition).cloned().unwrap_or_default()
@@ -574,7 +574,9 @@ pub fn extend_mass_action_scalars(
                     .unwrap_or_default(),
             },
         })
-    })
+    });
+
+    sys.normalize()
 }
 
 /// Builds the numerical ODE analysis for a mass-action system whose scalars have been substituted.
