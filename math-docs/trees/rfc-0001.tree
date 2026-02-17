@@ -7,7 +7,10 @@
 \subtree{
 \title{Summary}
 
-\p{\strong{TODO}}
+\p{Many scientific models, especially quantitative models like systems of ODEs
+and stock-flow diagrams, cannot be usefully seen as categories in the small.
+CatColab therefore needs an approach to models that are merely set-theoretic. We
+propose one that is harmonious with the existing usage of double theories.}
 
 }
 
@@ -19,11 +22,10 @@ specifies a category in models of the theory, every morphism type specifies a
 profunctor, and so on. This design centers \em{category theory in the small}, a
 powerful and underappreciated point of view on modeling. It is the basis of
 CatColab's approaches to motif finding, programming in domain-specific
-languages, flavored Petri nets, and refining models, among other current and
-future capabilities.}
+languages, flavored Petri nets, and refining models.}
 
-\p{It is also rather opinionated. Not every model in the pre-theoretical sense
-can be usefully seen as a categorical structure. This seems particularly true of
+\p{It is also rather opinionated. Not every model in science or engineering can
+be usefully seen as a categorical structure. This seems particularly true of
 quantitative formalisms like stock-flow diagrams with arbitrary flow functions
 and dynamical systems described by general ODEs.}
 
@@ -32,8 +34,8 @@ are merely \em{set-theoretic}. One way to tell the difference between
 category-theoretic and set-theoretic models of a fixed theory is that the former
 should be the objects of a (nontrivial) 2-category or double category, whereas
 the latter are the objects of only a category. There are innumerable logical
-systems that can be used to specify set-theoretic models, this being a main
-topic of universal algebra and mathematical logic for a century.}
+systems that can be used to specify set-theoretic models, this being a focus of
+universal algebra and mathematical logic for a century.}
 
 \p{This RFC proposes an approach to set-theoretical models harmonious with
 CatColab's existing category-theoretic models. The basic observation is that
@@ -44,8 +46,8 @@ reuse and share significant amounts of functionality across CatColab's core and
 frontend.}
 
 \p{There are reasons beyond expediency of implementation to favor
-double-categorical logic. A key reason, as we will see, is that it enables type
-dependency in what is perhaps its simplest and most constrained form.}
+double-categorical logic. A key reason, as we will see, is that it enables a
+simple and constrained form of type dependency.}
 
 }
 
@@ -108,7 +110,7 @@ only by requiring some form of loose identities.}
 }
 
 \subtree{
-\title{Additional structure}
+\title{Further structure}
 
 \p{A virtual double category with restrictions is the most fundamental structure
 possessed by a double theory. To this may be added further double-categorical
@@ -121,8 +123,8 @@ gadgets, such as:
   \li{modalities, such as lists.}
 }
 
-At this stage we will only note that all of these features work equally well in
-the set-theoretic and category-theoretic settings.}
+Here we will only note that all of these features work equally well in the set-
+and category-theoretic settings.}
 
 }
 
@@ -313,7 +315,35 @@ where #{k_f \in \R_+} is a free parameter.
 \subtree{
 \title{Implementation}
 
-\p{\strong{TODO}}
+\p{The close relation between set- and category-theoretic double theories,
+differing only in their handling of loose identities, means that this RFC has an
+easy path to implementation.}
+
+\p{Starting with theories, the most naive implementation could be as simple as
+relaxing the \code{hom_type} method in the \code{DblTheory} trait to return an
+\code{Option<MorType>} instead of a \code{MorType}. This would be pleasingly
+symmetric with \code{compose_types}, which already returns an
+\code{Option<MorType>} as the structure is a VDC in which arbitrary proarrow
+composites may not exist. Concrete types for double theories, such as
+\code{ModalDblTheory}, could then gain a flag determining whether they will
+allow loose identities to be constructed.}
+
+\p{Over time I would expect the data structures for set- and category-theoretic
+theories to diverge slightly, since the unbiased description of cell composites
+should differ between a VDC and a unital/augmented VDC. That, however, is a
+separate project. We already have decent data structures for cell composites in
+a bare VDC. Extending those to give normal forms for cell composites in a unital
+or augmented VDC is an open question about the existing, category-theoretic
+double theories.}
+
+\p{As for models of double theories, the simplest implementation strategy is to
+leave the data structures themselves unchanged, changing only the type checking
+and validation logic. In this design, it would always be possible to construct a
+putative morphism, but such a morphism would fail to validate when the theory
+does not have Hom types.}
+
+\p{Other parts of the CatColab system, such as the DoubleTT elaborator and the
+frontend, should require little or no changes.}
 
 }
 
@@ -329,17 +359,18 @@ to the following possible alternatives.}
 \title{Fibered logics}
 \taxon{alternative}
 
-\p{In his book [[jacobs-1998]], Jacobs takes the stance that "a logic is always
-a logic over a type theory," formalized to mean that a logic is not just a
-category but a \nlab{fibered category}. Inasmuch as an equipment \em{is} a kind
-of fibered category, our approach is more a variant of than an alternative to
-Jacobs', taking the context to be two-sided instead of one-sided. Though tastes
-may vary, two-sided contexts have the merits of fitting well with our existing
-approach to category-theoretic models; being useful in situations where the
-dependent type \em{is} meaningfully directed even if it doesn't compose, as in
-our ODE system examples; and entailing no loss of generality, since the
-one-sided case is recovered as type #{P: 1 \proto X}, a time-honored tradition
-also appealed to in [DOTS](dots-2025).}
+\p{In his monograph [[jacobs-1998]], Jacobs takes the stance that "a logic is
+always a logic over a type theory," formalized to mean that a logic is not just
+a category but a \nlab{fibered category}. Inasmuch as an equipment \em{is} a
+kind of fibered category, our approach is more a variant of than an alternative
+to Jacobs', taking the context to be two-sided instead of one-sided. Though
+tastes may vary, two-sided contexts have the merits of fitting well with our
+existing approach to categorical models; being useful in situations where the
+dependent type \em{is} meaningfully directed even if it doesn't compose, like
+the terms/contributions in our ODE system examples; and entailing no loss of
+generality, since the one-sided case is recovered as types #{P: 1 \proto X}, a
+time-honored tradition in category theory also appealed to in
+[DOTS](dots-2025).}
 
 }
 
@@ -349,17 +380,18 @@ also appealed to in [DOTS](dots-2025).}
 
 \p{My original vision for "set-theoretic models" in CatColab is that they would
 exist one level lower in the system: as [instances](double-instances-2026) over
-models. Both instances and set-theoretic models of double theories allow types
-and operations; the latter go further by allowing one level of type dependency.
-Insofar as the fibered and indexed views of dependency are mathematically
-equivalent, one could argue that nothing is gained by this move: dependent types
-can be encoded by \nlab{display maps}. However, there is a big difference
-between arrows and proarrows when \em{presenting} models by generators and
-relations. Applications of operations are freely adjoined to the model, whereas
-type parameters must be explicitly declared. This distinction was used in the
-double theory for parameterized polynomial ODE systems, allowing parameters to
-be freely adjoined when not specified while insisting that the monomials on the
-right-hand sides of terms are given explicitly.}
+categorical models. Both instances and set-theoretic models of double theories
+allow types and operations; the latter go further by allowing one level of type
+dependency. Insofar as the fibered and indexed views of dependency are
+mathematically equivalent, one could argue that nothing is gained by this move:
+dependent types can be encoded by \nlab{display maps} in an instance. However,
+there is a big difference between arrows and proarrows when \em{presenting}
+models by generators and relations. Applications of operations are freely
+adjoined to the model, whereas type parameters must be explicitly declared. This
+distinction was used in the double theory for parameterized polynomial ODE
+systems, allowing parameters to be freely adjoined when not specified while
+insisting that the monomials on the right-hand sides of terms be given
+explicitly.}
 
 \p{I still expect instances to play an important role in the design of CatColab,
 particularly in CatColab's yet-to-be developed data layer, as a flat data
@@ -372,14 +404,13 @@ systems.}
 \title{GATs}
 \taxon{alternative}
 
-\p{A key difference between [GATs](gatlab-2024) and set-theoretic models of
-double theories is that the former allow arbitrary levels of type dependency
-while the latter have just one level of type dependency. Having a single level
-strikes me as a useful balance between simple types and full-blown dependent
-types. That said, when double theories are equipped with tabulators, mutually
-recursive construction of proarrows and tabulators allows type dependency at
-arbitrary levels. In this case, the precise relation between GATs and double
-theories is unknown to me.}
+\p{A key difference between [GATs](gatlab-2024) and double theories is that the
+former allow arbitrary levels of type dependency while the latter have just one
+level of type dependency. Having a single level strikes me as a useful balance
+between simple types and full-blown dependent types. That said, when double
+theories are equipped with tabulators, mutually recursive construction of
+proarrows and tabulators allows type dependency at arbitrary levels. In this
+case, the precise relation between GATs and double theories is unknown to me.}
 
 }
 
