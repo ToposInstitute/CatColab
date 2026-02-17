@@ -38,7 +38,6 @@ in
     host = {
       enable = true;
       userKeys = keys.hosts.catcolab-next.userKeys;
-      sudoPasswordHash = "$y$j9T$Gvhb3z8dNG2Gzk5STLY2q0$w8hilnb9bC2aNuH8Vx4FpgRzotKpFJeF2oFQ24MGMK8";
       backup = {
         enable = true;
         rcloneConfigFile = config.age.secrets.rcloneConf.path;
