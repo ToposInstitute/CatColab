@@ -180,14 +180,40 @@ jobs:
           state: 'failure'
           deployment-id: ${{ needs.create_deployment.outputs.deployment_id }}
 
-  deploy_backend:
-    name: Deploy backend to AWS
+  create_backend_deployment:
+    name: Create backend GitHub deployment
     runs-on: ubuntu-latest
     if: >
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event != 'pull_request' &&
       github.event.workflow_run.head_branch == 'main'
+    outputs:
+      deployment_id: ${{ steps.create_deployment.outputs.deployment_id }}
+    steps:
+      - name: Create new GitHub deployment
+        id: create_deployment
+        uses: chrnorm/deployment-action@v2
+        with:
+          token: ${{ github.token }}
+          environment: backend-next
+          ref: ${{ github.event.workflow_run.head_branch }}
+          sha: ${{ github.event.workflow_run.head_sha }}
+          auto-inactive: true
+          log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
+      - name: Update deployment status to in_progress
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ github.token }}
+          description: 'Deploying backend to AWS...'
+          state: 'in_progress'
+          log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          deployment-id: ${{ steps.create_deployment.outputs.deployment_id }}
+
+  deploy_backend:
+    name: Deploy backend to AWS
+    runs-on: ubuntu-latest
+    needs: [create_backend_deployment]
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -232,3 +258,30 @@ jobs:
     - name: Rsync the repo to remote host
       run: |
          rsync -az --delete ./ catcolab@backend-next.catcolab.org:~/catcolab
+
+  report_backend_deployment_status:
+    name: Report backend deployment status
+    runs-on: ubuntu-latest
+    needs: [create_backend_deployment, deploy_backend]
+    if: always() && needs.create_backend_deployment.result == 'success'
+    steps:
+      - name: Update deployment status to success
+        if: needs.deploy_backend.result == 'success'
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ github.token }}
+          environment-url: https://backend-next.catcolab.org
+          log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          description: 'Backend deployed to AWS'
+          state: 'success'
+          deployment-id: ${{ needs.create_backend_deployment.outputs.deployment_id }}
+
+      - name: Update deployment status to failure
+        if: needs.deploy_backend.result != 'success'
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ github.token }}
+          log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          description: 'Backend deployment failed'
+          state: 'failure'
+          deployment-id: ${{ needs.create_backend_deployment.outputs.deployment_id }}
