@@ -1,14 +1,14 @@
-use super::model::Mor;
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 use uuid::Uuid;
 
-pub use crate::v1::model_judgment::{InstantiatedModel, MorDecl, ObDecl, SpecializeModel};
+use super::model::Mor;
+pub use crate::v1::diagram_judgment::{DiagramMorDecl, DiagramObDecl};
 
-/// Declares an equation in a model of a double theory.
+/// Declares an equation in a diagram in a model of a double theory.
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi, missing_as_null)]
-pub struct EqnDecl {
+pub struct DiagramEqnDecl {
     /// Human-readable label for equation.
     pub name: String,
 
@@ -22,24 +22,20 @@ pub struct EqnDecl {
     pub rhs: Option<Mor>,
 }
 
-/// A judgment defining part of a model of a double theory.
+/// A judgment defining part of a diagram in a model.
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
 #[serde(tag = "tag")]
 #[tsify(into_wasm_abi, from_wasm_abi)]
-pub enum ModelJudgment {
-    /// Declares a generating object of the model.
+pub enum DiagramJudgment {
+    /// Declares a generating object in the diagram.
     #[serde(rename = "object")]
-    Object(ObDecl),
+    Object(DiagramObDecl),
 
-    /// Declares a generating morphism of the model.
+    /// Declares a generating morphism in the diagram.
     #[serde(rename = "morphism")]
-    Morphism(MorDecl),
+    Morphism(DiagramMorDecl),
 
-    /// Declares an equation between two morphisms in the model.
+    /// Declares an equation between morphisms in the diagram.
     #[serde(rename = "equation")]
-    Equation(EqnDecl),
-
-    /// Instantiates an existing model into this model.
-    #[serde(rename = "instantiation")]
-    Instantiation(InstantiatedModel),
+    Equation(DiagramEqnDecl),
 }

@@ -1,7 +1,7 @@
 {
   "type": "model",
   "name": "Commutative Square",
-  "theory": "ThSchema",
+  "theory": "simple-schema",
   "notebook": {
     "cellContents": {
       "e1b924fb-ecd1-4af4-a372-512d5987261a": {
