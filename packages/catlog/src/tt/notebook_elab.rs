@@ -233,7 +233,7 @@ impl<'a> Elaborator<'a> {
             Some(l) => l,
             None => return self.ty_error(InvalidDblModel::InvalidLink(name)),
         };
-        let notebook_types::v1::LinkType::Instantiation = link.r#type else {
+        let notebook_types::current::LinkType::Instantiation = link.r#type else { 
             return self.ty_error(InvalidDblModel::InvalidLink(name));
         };
         let ref_id = ustr(&link.stable_ref.id);
@@ -309,6 +309,7 @@ impl<'a> Elaborator<'a> {
             nb::ModelJudgment::Object(_) => 0,
             nb::ModelJudgment::Instantiation(_) => 1,
             nb::ModelJudgment::Morphism(_) => 2,
+            nb::ModelJudgment::Equation(_) => 3,
         });
 
         let mut field_ty_vs = Vec::new();
@@ -320,6 +321,7 @@ impl<'a> Elaborator<'a> {
                 nb::ModelJudgment::Object(ob_decl) => self.object_cell(ob_decl),
                 nb::ModelJudgment::Morphism(mor_decl) => self.morphism_cell(mor_decl),
                 nb::ModelJudgment::Instantiation(i_decl) => self.instantiation_cell(i_decl),
+                nb::ModelJudgment::Equation(_) => continue, // TODO
             };
             field_ty_vs.push((name, (label, ty_v.clone())));
             self.ctx.scope.push(VarInContext::new(name, label, Some(ty_v.clone())));
