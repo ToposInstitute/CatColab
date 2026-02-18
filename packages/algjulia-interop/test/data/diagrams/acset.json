@@ -1,0 +1,166 @@
+{
+    "model": {
+        "obGenerators": [
+            {
+                "id": "019a6042-1241-77bd-8055-bfea5c206bc7",
+                "label": [
+                    "X"
+                ],
+                "obType": {
+                    "tag": "Basic",
+                    "content": "Entity"
+                }
+            },
+            {
+                "id": "019a6042-1f1c-745e-bfea-753eeaccedf2",
+                "label": [
+                    "Y"
+                ],
+                "obType": {
+                    "tag": "Basic",
+                    "content": "Entity"
+                }
+            },
+            {
+                "id": "019a60e3-1785-72b9-90d2-84dc8bdddc85",
+                "label": [
+                    "Z"
+                ],
+                "obType": {
+                    "tag": "Basic",
+                    "content": "AttrType"
+                }
+            }
+        ],
+        "morGenerators": [
+            {
+                "id": "019a6042-2872-7654-a9b4-67becc9ef693",
+                "label": [
+                    "f"
+                ],
+                "morType": {
+                    "tag": "Hom",
+                    "content": {
+                        "tag": "Basic",
+                        "content": "Entity"
+                    }
+                },
+                "dom": {
+                    "tag": "Basic",
+                    "content": "019a6042-1241-77bd-8055-bfea5c206bc7"
+                },
+                "cod": {
+                    "tag": "Basic",
+                    "content": "019a6042-1f1c-745e-bfea-753eeaccedf2"
+                }
+            },
+            {
+                "id": "019a60e3-2ccf-74ef-a1e1-1c940564e1ca",
+                "label": [
+                    "g"
+                ],
+                "morType": {
+                    "tag": "Basic",
+                    "content": "Attr"
+                },
+                "dom": {
+                    "tag": "Basic",
+                    "content": "019a6042-1241-77bd-8055-bfea5c206bc7"
+                },
+                "cod": {
+                    "tag": "Basic",
+                    "content": "019a60e3-1785-72b9-90d2-84dc8bdddc85"
+                }
+            }
+        ]
+    },
+    "diagram": {
+        "obGenerators": [
+            {
+                "id": "019a6042-7531-77c7-83db-67018685b551",
+                "label": [
+                    "x"
+                ],
+                "obType": {
+                    "tag": "Basic",
+                    "content": "Entity"
+                },
+                "over": {
+                    "tag": "Basic",
+                    "content": "019a6042-1241-77bd-8055-bfea5c206bc7"
+                }
+            },
+            {
+                "id": "019a6042-88fb-73f5-bd90-9d337485793a",
+                "label": [
+                    "y"
+                ],
+                "obType": {
+                    "tag": "Basic",
+                    "content": "Entity"
+                },
+                "over": {
+                    "tag": "Basic",
+                    "content": "019a6042-1f1c-745e-bfea-753eeaccedf2"
+                }
+            },
+            {
+                "id": "019a60e3-5bdb-745c-acd5-6f341f56833a",
+                "label": [
+                    "z"
+                ],
+                "obType": {
+                    "tag": "Basic",
+                    "content": "AttrType"
+                },
+                "over": {
+                    "tag": "Basic",
+                    "content": "019a60e3-1785-72b9-90d2-84dc8bdddc85"
+                }
+            }
+        ],
+        "morGenerators": [
+            {
+                "id": "019a6042-98ab-7120-80b7-3223fa942e96",
+                "morType": {
+                    "tag": "Hom",
+                    "content": {
+                        "tag": "Basic",
+                        "content": "Entity"
+                    }
+                },
+                "over": {
+                    "tag": "Basic",
+                    "content": "019a6042-2872-7654-a9b4-67becc9ef693"
+                },
+                "dom": {
+                    "tag": "Basic",
+                    "content": "019a6042-7531-77c7-83db-67018685b551"
+                },
+                "cod": {
+                    "tag": "Basic",
+                    "content": "019a6042-88fb-73f5-bd90-9d337485793a"
+                }
+            },
+            {
+                "id": "019a60e3-6dbf-74cf-8bd9-be0d073a4ee8",
+                "morType": {
+                    "tag": "Basic",
+                    "content": "Attr"
+                },
+                "over": {
+                    "tag": "Basic",
+                    "content": "019a60e3-2ccf-74ef-a1e1-1c940564e1ca"
+                },
+                "dom": {
+                    "tag": "Basic",
+                    "content": "019a6042-7531-77c7-83db-67018685b551"
+                },
+                "cod": {
+                    "tag": "Basic",
+                    "content": "019a60e3-5bdb-745c-acd5-6f341f56833a"
+                }
+            }
+        ]
+    }
+}
