@@ -233,7 +233,7 @@ impl<'a> Elaborator<'a> {
             Some(l) => l,
             None => return self.ty_error(InvalidDblModel::InvalidLink(name)),
         };
-        let notebook_types::current::LinkType::Instantiation = link.r#type else { 
+        let notebook_types::current::LinkType::Instantiation = link.r#type else {
             return self.ty_error(InvalidDblModel::InvalidLink(name));
         };
         let ref_id = ustr(&link.stable_ref.id);
