@@ -116,6 +116,8 @@ function judgmentLabel(judgment: DiagramJudgment): string | undefined {
             return theory?.instanceObTypeMeta(judgment.obType)?.name;
         case "morphism":
             return theory?.instanceMorTypeMeta(judgment.morType)?.name;
+        case "equation":
+            return "Equation";
         default:
             judgment satisfies never;
     }
