@@ -1,6 +1,6 @@
 import Loader from "lucide-solid/icons/loader";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
-import { createMemo, For, Match, Show, Switch } from "solid-js";
+import { createMemo, createResource, For, Match, Show, Switch } from "solid-js";
 
 import {
     BlockTitle,
@@ -15,9 +15,7 @@ import {
 import type { ModelDiagramPresentation, ModelPresentation, QualifiedName } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
 import type { LiveDiagramDoc } from "../../diagram";
-import { uniqueIndexArray } from "../../util/indexing";
-import { PDEPlot2D, type PDEPlotData2D } from "../../visualization";
-import { createJuliaKernel, executeAndRetrieve } from "./jupyter";
+import { PDEPlot2D } from "../../visualization";
 import type { DecapodesAnalysisContent } from "./simulator_types";
 
 import "./decapodes.css";
@@ -26,37 +24,13 @@ import "./simulation.css";
 /** Analyze a DEC diagram by performing a simulation using Decapodes.jl. */
 export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisContent>) {
     // Step 1: Start the Julia kernel.
-    const [kernel, restartKernel] = createJuliaKernel({
-        baseUrl: "http://127.0.0.1:8888",
-        token: "",
-    });
+    const [kernel, { refetch: restartKernel }] = createResource(() => undefined);
 
     // Step 2: Run initialization code in the kernel.
-    const startedKernel = () => (kernel.error ? undefined : kernel());
-
-    const [options] = executeAndRetrieve(
-        startedKernel,
-        makeInitCode,
-        (options: SimulationOptions) => ({
-            domains: uniqueIndexArray(options.domains, (domain) => domain.name),
-        }),
-    );
+    const [options] = createResource<SimulationOptions | undefined>(() => undefined);
 
     // Step 3: Run the simulation in the kernel!
-    const initedKernel = () =>
-        kernel.error || options.error || options.loading ? undefined : kernel();
-
-    const [result, rerunSimulation] = executeAndRetrieve(
-        initedKernel,
-        () => {
-            const simulationData = makeSimulationData(props.liveDiagram, props.content);
-            if (!simulationData) {
-                return undefined;
-            }
-            return makeSimulationCode(simulationData);
-        },
-        (data: PDEPlotData2D) => data,
-    );
+    const [result, { refetch: rerunSimulation }] = createResource(() => undefined);
 
     const elaboratedModel = () => props.liveDiagram.liveModel.elaboratedModel();
     const elaboratedDiagram = () => props.liveDiagram.elaboratedDiagram();
@@ -103,7 +77,8 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                 if (!props.content.domain) {
                     return [];
                 }
-                return options()?.domains.get(props.content.domain)?.initialConditions ?? [];
+                //return options()?.domains.get(props.content.domain)?.initialConditions ?? [];
+                return [];
             },
             content: (id) => props.content.initialConditions[id] ?? null,
             setContent: (id, value) =>
@@ -170,7 +145,8 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                             return;
                         }
                         content.domain = domain;
-                        content.mesh = options()?.domains.get(domain)?.meshes[0] ?? null;
+                        //content.mesh = options()?.domains.get(domain)?.meshes[0] ?? null;
+                        content.mesh = null;
                         content.initialConditions = {};
                     })
                 }
@@ -205,7 +181,12 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         <div class="simulation">
             <BlockTitle title="Simulation" actions={RestartOrRerunButton()} />
             <Foldable title="Parameters" defaultExpanded>
-                <Show when={options()}>{(options) => DomainConfig(options().domains)}</Show>
+                <Show when={options()}>
+                    {(_options) => {
+                        //DomainConfig(options().domains)
+                        return DomainConfig(new Map());
+                    }}
+                </Show>
                 <div class="parameters">
                     <FixedTableEditor rows={variables()} schema={variableSchema} />
                     <FixedTableEditor rows={scalars()} schema={scalarSchema} />
@@ -294,39 +275,8 @@ type SimulationData = {
     duration: number;
 };
 
-/** Julia code run after kernel is started. */
-const makeInitCode = () =>
-    `
-    for k in keys(Base.text_colors)
-		Base.text_colors[k] = ""
-	end
-
-    import IJulia
-    import JSON3
-    IJulia.register_jsonmime(MIME"application/json"())
-    using CatColabInterop
-
-    JsonValue(supported_decapodes_geometries())
-    `;
-
-/** Julia code run to perform a simulation. */
-const makeSimulationCode = (data: SimulationData) =>
-    `
-    # needed for returning large amounts of data, should be paired with a similar setting on the jupyter server
-    IJulia.set_max_stdio(1_000_000_000) 
-
-    simulation = DecapodeSimulation(raw"""${JSON.stringify(data)}""");
-    simulator = evalsim(simulation.pode);
-
-    f = simulator(simulation.geometry.dualmesh, simulation.generate, DiagonalHodge());
-
-	result = run(f, simulation, ComponentArray(k=0.5,))
-
-    JSON3.write(stdout, result)
-    `;
-
 /** Create data to send to the Julia kernel. */
-const makeSimulationData = (
+export const makeSimulationData = (
     liveDiagram: LiveDiagramDoc,
     content: DecapodesAnalysisContent,
 ): SimulationData | undefined => {
