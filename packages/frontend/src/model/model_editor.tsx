@@ -143,6 +143,8 @@ function judgmentLabel(judgment: ModelJudgment): string | undefined {
             return theory?.modelMorTypeMeta(judgment.morType)?.name;
         case "instantiation":
             return theory?.name;
+        case "equation":
+            return "Equation";
         default:
             judgment satisfies never;
     }
