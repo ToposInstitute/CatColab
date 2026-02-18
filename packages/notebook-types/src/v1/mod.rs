@@ -6,6 +6,7 @@ pub mod document;
 pub mod notebook;
 
 pub use cell::*;
+pub use diagram_judgment::*;
 pub use document::*;
 pub use model_judgment::*;
 pub use notebook::*;
