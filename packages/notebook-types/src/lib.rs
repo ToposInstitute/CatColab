@@ -123,5 +123,11 @@ mod migration_tests {
         });
     }
 
-    // TODO migrate to v2 test
+    #[test]
+    fn test_v1_examples_migrate_to_current() {
+        test_example_documents::<VersionedDocument, _>("examples/v1", |doc, _| {
+            // ensure it migrates without panic
+            let _ = doc.to_current();
+        });
+    }
 }
