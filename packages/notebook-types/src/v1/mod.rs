@@ -5,15 +5,10 @@ pub use v0::{analysis, api, cell, diagram_judgment, model, model_judgment, path,
 pub mod document;
 pub mod notebook;
 
-pub use analysis::*;
-pub use api::*;
 pub use cell::*;
-pub use diagram_judgment::*;
 pub use document::*;
-pub use model::*;
 pub use model_judgment::*;
 pub use notebook::*;
-pub use theory::*;
 
 #[cfg(test)]
 mod test {
