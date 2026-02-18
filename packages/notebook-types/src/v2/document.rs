@@ -1,3 +1,4 @@
+use crate::current::DiagramJudgment;
 use crate::current::ModelJudgment;
 use crate::current::NotebookCell;
 use crate::v1;
@@ -82,12 +83,41 @@ impl Document {
                 })
             }
 
-            v1::Document::Diagram(old) => Document::Diagram(DiagramDocumentContent {
-                name: old.name,
-                diagram_in: old.diagram_in,
-                notebook: old.notebook,
-                version: "2".to_string(),
-            }),
+            v1::Document::Diagram(old) => {
+                let cell_contents = old
+                    .notebook
+                    .cell_contents
+                    .into_iter()
+                    .map(|(id, cell)| {
+                        let new_cell = match cell {
+                            v1::NotebookCell::RichText { id, content } => {
+                                NotebookCell::RichText { id, content }
+                            }
+                            v1::NotebookCell::Formal { id, content } => NotebookCell::Formal {
+                                id,
+                                content: match content {
+                                    v1::DiagramJudgment::Object(d) => DiagramJudgment::Object(d),
+                                    v1::DiagramJudgment::Morphism(d) => {
+                                        DiagramJudgment::Morphism(d)
+                                    }
+                                },
+                            },
+                            v1::NotebookCell::Stem { id } => NotebookCell::Stem { id },
+                        };
+                        (id, new_cell)
+                    })
+                    .collect();
+
+                Document::Diagram(DiagramDocumentContent {
+                    name: old.name,
+                    diagram_in: old.diagram_in,
+                    notebook: Notebook {
+                        cell_contents,
+                        cell_order: old.notebook.cell_order,
+                    },
+                    version: "2".to_string(),
+                })
+            }
 
             v1::Document::Analysis(old) => Document::Analysis(AnalysisDocumentContent {
                 name: old.name,

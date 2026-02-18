@@ -1,6 +1,7 @@
 use crate::v1;
 
-pub use v1::{analysis, api, cell, diagram_judgment, path, theory};
+pub use v1::{analysis, api, cell, path, theory};
+pub mod diagram_judgment;
 pub mod document;
 pub mod model;
 pub mod model_judgment;
