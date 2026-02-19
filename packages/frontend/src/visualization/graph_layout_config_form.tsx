@@ -40,20 +40,6 @@ export function GraphLayoutConfigForm(props: {
                 </SelectField>
             </Show>
             <Show when={layout() === Engine.VizUndirected}>
-                <InputField
-                    label="Separation"
-                    type="number"
-                    min="0"
-                    max="10"
-                    step="0.1"
-                    value={props.config.sep ?? 1.0}
-                    onInput={(evt) => {
-                        props.changeConfig((content) => {
-                            const value = evt.currentTarget.value;
-                            content.sep = value === "" ? 1.0 : Number.parseFloat(value);
-                        });
-                    }}
-                />
                 <SelectField
                     label="Overlap"
                     value={props.config.overlap ?? Overlap.False}
@@ -69,6 +55,22 @@ export function GraphLayoutConfigForm(props: {
                     <option value={Overlap.True}>{"Allow overlaps"}</option>
                     <option value={Overlap.Prism}>{"Prism algorithm"}</option>
                 </SelectField>
+                <Show when={(props.config.overlap ?? Overlap.False) !== Overlap.True}>
+                    <InputField
+                        label="Separation"
+                        type="number"
+                        min="0"
+                        max="10"
+                        step="0.1"
+                        value={props.config.sep ?? 1.0}
+                        onInput={(evt) => {
+                            props.changeConfig((content) => {
+                                const value = evt.currentTarget.value;
+                                content.sep = value === "" ? 1.0 : Number.parseFloat(value);
+                            });
+                        }}
+                    />
+                </Show>
             </Show>
         </FormGroup>
     );
