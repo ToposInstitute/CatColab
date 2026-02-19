@@ -9,11 +9,19 @@ export type Config = {
     /** Primary layout direction, when applicable. */
     direction?: Direction;
 
-    /** Separation parameter for undirected graph layout (Graphviz neato). */
-    sep?: number;
+    /** Separation margin for undirected graph layout (Graphviz neato), in points.
+     * Can be:
+     * - Single value: "1.0" (uniform margin)
+     * - Point value: "0.5,1.0" (separate X and Y margins)
+     * - Absolute: "+1.0" or "+0.5,1.0" (not scaled by node size)
+     * Default: "0.25"
+     */
+    sep?: string;
 
-    /** Overlap parameter for undirected graph layout (Graphviz neato). */
-    overlap?: Overlap;
+    /** Overlap removal algorithm for undirected graph layout (Graphviz neato).
+     * Default: OverlapRemoval.Prism ("false")
+     */
+    overlap?: OverlapRemoval;
 };
 
 /** Engines supported for graph layout. */
@@ -32,18 +40,18 @@ export enum Direction {
     Vertical = "vertical",
 }
 
-/** Overlap removal methods for undirected graph layouts (Graphviz neato). */
-export enum Overlap {
-    /** Remove overlaps (Graphviz default). */
-    False = "false",
+/** Overlap removal algorithms for undirected graph layouts (Graphviz neato). */
+export enum OverlapRemoval {
+    /** Prism algorithm for overlap removal (via "false" value). */
+    Prism = "false",
     /** Scale layout uniformly to remove overlaps. */
     Scale = "scale",
-    /** Scale layout separately in x and y to remove overlaps. */
+    /** Scale layout separately in X and Y to remove overlaps. */
     ScaleXY = "scalexy",
-    /** Allow overlaps. */
-    True = "true",
-    /** Prism algorithm for overlap removal. */
-    Prism = "prism",
+    /** Ortho-based overlap removal (X then Y). Good for bipartite graphs. */
+    OrthoXY = "orthoxy",
+    /** No overlap removal (fastest, allows overlaps). */
+    None = "true",
 }
 
 /** Construct the default graph layout configuration. */
@@ -58,8 +66,8 @@ export const graphvizOptions = (config: Config): Viz.RenderOptions => {
         engine: graphvizEngine(config.layout),
         graphAttributes: {
             rankdir: graphvizRankdir(config.direction ?? Direction.Vertical),
-            ...(isUndirected && { sep: config.sep ?? 1.0 }),
-            ...(isUndirected && { overlap: config.overlap ?? Overlap.False }),
+            ...(isUndirected && { sep: config.sep ?? "0.25" }),
+            ...(isUndirected && { overlap: config.overlap ?? OverlapRemoval.Prism }),
         },
     };
 };

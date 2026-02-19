@@ -1,7 +1,7 @@
 import { Show } from "solid-js";
 
 import { FormGroup, InputField, SelectField } from "catcolab-ui-components";
-import { type Config, Direction, Engine, Overlap } from "./graph_layout_config";
+import { type Config, Direction, Engine, OverlapRemoval } from "./graph_layout_config";
 
 /** Form to configure a graph layout algorithm. */
 export function GraphLayoutConfigForm(props: {
@@ -42,31 +42,28 @@ export function GraphLayoutConfigForm(props: {
             <Show when={layout() === Engine.VizUndirected}>
                 <SelectField
                     label="Overlap"
-                    value={props.config.overlap ?? Overlap.False}
+                    value={props.config.overlap ?? OverlapRemoval.Prism}
                     onChange={(evt) => {
                         props.changeConfig((content) => {
-                            content.overlap = evt.currentTarget.value as Overlap;
+                            content.overlap = evt.currentTarget.value as OverlapRemoval;
                         });
                     }}
                 >
-                    <option value={Overlap.False}>{"Remove overlaps"}</option>
-                    <option value={Overlap.Scale}>{"Scale uniformly"}</option>
-                    <option value={Overlap.ScaleXY}>{"Scale independently"}</option>
-                    <option value={Overlap.True}>{"Allow overlaps"}</option>
-                    <option value={Overlap.Prism}>{"Prism algorithm"}</option>
+                    <option value={OverlapRemoval.Prism}>{"Prism (default)"}</option>
+                    <option value={OverlapRemoval.Scale}>{"Scale uniformly"}</option>
+                    <option value={OverlapRemoval.ScaleXY}>{"Scale independently"}</option>
+                    <option value={OverlapRemoval.OrthoXY}>{"Orthogonalize"}</option>
+                    <option value={OverlapRemoval.None}>{"No removal"}</option>
                 </SelectField>
-                <Show when={(props.config.overlap ?? Overlap.False) !== Overlap.True}>
+                <Show when={(props.config.overlap ?? OverlapRemoval.Prism) !== OverlapRemoval.None}>
                     <InputField
                         label="Separation"
-                        type="number"
-                        min="0"
-                        max="10"
-                        step="0.1"
-                        value={props.config.sep ?? 1.0}
+                        type="text"
+                        placeholder="0.25"
+                        value={props.config.sep ?? "0.25"}
                         onInput={(evt) => {
                             props.changeConfig((content) => {
-                                const value = evt.currentTarget.value;
-                                content.sep = value === "" ? 1.0 : Number.parseFloat(value);
+                                content.sep = evt.currentTarget.value;
                             });
                         }}
                     />
