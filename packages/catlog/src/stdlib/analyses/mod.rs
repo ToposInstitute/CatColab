@@ -7,3 +7,6 @@ pub mod reachability;
 
 #[cfg(feature = "sql")]
 pub mod sql;
+
+#[cfg(feature = "stochastic")]
+pub mod stochastic;

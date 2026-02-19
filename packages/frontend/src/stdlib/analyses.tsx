@@ -168,7 +168,7 @@ export function massAction(
         component: (props) => <MassAction title={name} {...otherOptions} {...props} />,
         initialContent: () => ({
             massConservationType: { type: "Balanced" },
-            transitionRates: {},
+            rates: {},
             transitionProductionRates: {},
             transitionConsumptionRates: {},
             placeProductionRates: {},

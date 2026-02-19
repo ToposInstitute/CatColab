@@ -7,9 +7,12 @@ use rebop::gillespie;
 use std::collections::HashMap;
 
 use crate::{
-    dbl::{modal::*, model::FgDblModel},
-    stdlib::analyses::ode::{ODESolution, mass_action::PetriNetMassActionAnalysis},
-    zero::QualifiedName,
+    dbl::{
+        modal::*,
+        model::{FgDblModel, MutDblModel},
+    },
+    stdlib::analyses::ode::ODESolution,
+    zero::{QualifiedName, name},
 };
 
 #[cfg(feature = "serde")]
@@ -74,7 +77,41 @@ impl StochasticMassActionAnalysis {
     }
 }
 
-impl PetriNetMassActionAnalysis {
+/// Stochastic mass-action analysis for Petri nets.
+pub struct PetriNetStochasticMassActionAnalysis {
+    /// Object type for places.
+    pub place_ob_type: ModalObType,
+    /// Morphism type for transitions.
+    pub transition_mor_type: ModalMorType,
+}
+
+impl Default for PetriNetStochasticMassActionAnalysis {
+    fn default() -> Self {
+        let ob_type = ModalObType::new(name("Object"));
+        Self {
+            place_ob_type: ob_type.clone(),
+            transition_mor_type: ModalMorType::Zero(ob_type),
+        }
+    }
+}
+
+impl PetriNetStochasticMassActionAnalysis {
+    /// Gets the inputs and outputs of a transition.
+    fn transition_interface(
+        model: &ModalDblModel,
+        id: &QualifiedName,
+    ) -> (Vec<ModalOb>, Vec<ModalOb>) {
+        let inputs = model
+            .get_dom(id)
+            .and_then(|ob| ob.clone().collect_product(None))
+            .unwrap_or_default();
+        let outputs = model
+            .get_cod(id)
+            .and_then(|ob| ob.clone().collect_product(None))
+            .unwrap_or_default();
+        (inputs, outputs)
+    }
+
     /// Creates a stochastic mass-action system.
     pub fn build_stochastic_system(
         &self,
@@ -151,7 +188,8 @@ mod tests {
             ]),
             duration: 10f32,
         };
-        let sys = PetriNetMassActionAnalysis::default().build_stochastic_system(&model, data);
+        let sys =
+            PetriNetStochasticMassActionAnalysis::default().build_stochastic_system(&model, data);
         assert_eq!(2, sys.problem.nb_reactions());
         assert_eq!(3, sys.problem.nb_species());
     }

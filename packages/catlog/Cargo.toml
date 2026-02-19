@@ -6,10 +6,11 @@ version = "0.1.0"
 edition = "2024"
 
 [features]
-ode = ["dep:ode_solvers", "dep:nalgebra", "dep:rebop"]
+ode = ["dep:ode_solvers", "dep:nalgebra"]
 serde = ["dep:serde", "nonempty/serialize", "ustr/serde", "uuid/serde"]
 serde-wasm = ["serde", "dep:wasm-bindgen", "dep:tsify", "dep:instant", "instant/wasm-bindgen"]
 sql = ["dep:sea-query", "dep:sqlformat" ]
+stochastic = ["dep:rebop"]
 
 [dependencies]
 all-the-same = "1.1.0"

@@ -1,4 +1,4 @@
-import { createMemo, For, type JSX } from "solid-js";
+import { createMemo, Match, Switch } from "solid-js";
 
 import {
     BlockTitle,
@@ -19,14 +19,13 @@ import {
 import type { ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
+import { MassActionConfigForm } from "./mass_action_config_form";
 import { createModelODEPlotWithEquations } from "./model_ode_plot";
 import type { MassActionSimulator } from "./simulator_types";
 
 import "./simulation.css";
 
 import invariant from "tiny-invariant";
-
-import { MassActionConfigForm } from "./mass_action_config_form";
 
 /** Analyze a model using mass-action dynamics. */
 export default function MassAction(
@@ -73,7 +72,7 @@ export default function MassAction(
     // consists of a list of input places and a list of output places for each
     // transition; in a stock-flow diagram, this consists of a singleton list
     // of input stocks and a singleton list of output stocks for each flow.
-    type TransitionInterface = Record<
+    type TransitionInterface = Map<
         QualifiedName,
         { inputs: QualifiedName[]; outputs: QualifiedName[] }
     >;
@@ -93,30 +92,25 @@ export default function MassAction(
     const morGeneratorsInterfaces = createMemo<TransitionInterface>(() => {
         const model = elaboratedModel();
         if (!model) {
-            return {};
+            return new Map();
         }
-        const transitionInterface: TransitionInterface = {};
+        const transitionInterface: TransitionInterface = new Map();
 
         for (const mg of morGenerators()) {
             const mor = model.morPresentation(mg);
             if (!mor) {
                 continue;
             }
-            transitionInterface[mg] = {
-                inputs: [],
-                outputs: [],
-            };
-            for (const [_, ob] of collectProduct(mor.dom).entries()) {
+            transitionInterface.set(mg, { inputs: [], outputs: [] });
+            const inputs = collectProduct(mor.dom).map((ob) => {
                 invariant(ob.tag === "Basic");
-                // For now, our only modal theory of relevance is that of *symmetric*
-                // monoidal categories, so we don't need to iterate over [i, ob], nor
-                // do we need to worry about ${i}.
-                transitionInterface[mg].inputs.push(ob.content);
-            }
-            for (const [_, ob] of collectProduct(mor.cod).entries()) {
+                return ob.content;
+            });
+            const outputs = collectProduct(mor.cod).map((ob) => {
                 invariant(ob.tag === "Basic");
-                transitionInterface[mg].outputs.push(ob.content);
-            }
+                return ob.content;
+            });
+            transitionInterface.set(mg, { inputs, outputs });
         }
 
         return transitionInterface;
@@ -128,7 +122,7 @@ export default function MassAction(
     // might be a singleton list.
     const morGeneratorsInputs = createMemo<[QualifiedName, QualifiedName][]>(() => {
         const morphismInputPairs: [QualifiedName, QualifiedName][] = [];
-        for (const [mor, int] of Object.entries(morGeneratorsInterfaces())) {
+        for (const [mor, int] of morGeneratorsInterfaces().entries()) {
             for (const inp of int.inputs) {
                 morphismInputPairs.push([mor, inp]);
             }
@@ -137,7 +131,7 @@ export default function MassAction(
     });
     const morGeneratorsOutputs = createMemo<[QualifiedName, QualifiedName][]>(() => {
         const morphismOutputPairs: [QualifiedName, QualifiedName][] = [];
-        for (const [mor, int] of Object.entries(morGeneratorsInterfaces())) {
+        for (const [mor, int] of morGeneratorsInterfaces().entries()) {
             for (const outp of int.outputs) {
                 morphismOutputPairs.push([mor, outp]);
             }
@@ -153,16 +147,16 @@ export default function MassAction(
         {
             contentType: "string",
             header: true,
-            content: (mor) => elaboratedModel()?.obGeneratorLabel(mor)?.join(".") ?? "",
+            content: (mor) => elaboratedModel()?.morGeneratorLabel(mor)?.join(".") ?? "",
         },
         createNumericalColumn({
             name: "Rate (𝑟)",
-            data: (mor) => props.content.transitionRates[mor],
+            data: (mor) => props.content.rates[mor],
             default: 1,
             validate: (_, data) => data >= 0,
             setData: (mor, data) =>
                 props.changeContent((content) => {
-                    content.transitionRates[mor] = data;
+                    content.rates[mor] = data;
                 }),
         }),
     ];
@@ -172,7 +166,7 @@ export default function MassAction(
         {
             contentType: "string",
             header: true,
-            content: (mor) => elaboratedModel()?.obGeneratorLabel(mor)?.join(".") ?? "",
+            content: (mor) => elaboratedModel()?.morGeneratorLabel(mor)?.join(".") ?? "",
         },
         createNumericalColumn({
             name: "Consumption (𝜅)",
@@ -189,7 +183,7 @@ export default function MassAction(
         {
             contentType: "string",
             header: true,
-            content: (mor) => elaboratedModel()?.obGeneratorLabel(mor)?.join(".") ?? "",
+            content: (mor) => elaboratedModel()?.morGeneratorLabel(mor)?.join(".") ?? "",
         },
         createNumericalColumn({
             name: "Production (𝜌)",
@@ -210,7 +204,7 @@ export default function MassAction(
             header: true,
             content: ([mor, input]) =>
                 (elaboratedModel()?.obGeneratorLabel(input)?.join(".") ?? "") +
-                " -> " +
+                " → " +
                 "[" +
                 (morLabelOrDefault(mor, elaboratedModel()) ?? "") +
                 "]",
@@ -238,7 +232,7 @@ export default function MassAction(
                 "[" +
                 (morLabelOrDefault(mor, elaboratedModel()) ?? "") +
                 "]" +
-                " -> " +
+                " → " +
                 (elaboratedModel()?.obGeneratorLabel(output)?.join(".") ?? ""),
         },
         createNumericalColumn({
@@ -258,31 +252,31 @@ export default function MassAction(
     ];
 
     // Now we can generate the parameter tables that will actually be rendered.
-    const parameterTables = createMemo<JSX.Element[]>(() => {
-        switch (props.content.massConservationType.type) {
-            case "Balanced":
-                return [<FixedTableEditor rows={morGenerators()} schema={morSchema} />];
-            case "Unbalanced":
-                switch (props.content.massConservationType.granularity) {
-                    case "PerTransition":
-                        return [
-                            <FixedTableEditor rows={morGenerators()} schema={morInputSchema} />,
-                            <FixedTableEditor rows={morGenerators()} schema={morOutputSchema} />,
-                        ];
-                    case "PerPlace":
-                        return [
-                            <FixedTableEditor
-                                rows={morGeneratorsInputs()}
-                                schema={morInputsSchema}
-                            />,
-                            <FixedTableEditor
-                                rows={morGeneratorsOutputs()}
-                                schema={morOutputsSchema}
-                            />,
-                        ];
+    const ParameterTables = () => (
+        <Switch>
+            <Match when={props.content.massConservationType.type === "Balanced"}>
+                <FixedTableEditor rows={morGenerators()} schema={morSchema} />
+            </Match>
+            <Match
+                when={
+                    props.content.massConservationType.type === "Unbalanced" &&
+                    props.content.massConservationType.granularity === "PerTransition"
                 }
-        }
-    });
+            >
+                <FixedTableEditor rows={morGenerators()} schema={morInputSchema} />
+                <FixedTableEditor rows={morGenerators()} schema={morOutputSchema} />
+            </Match>
+            <Match
+                when={
+                    props.content.massConservationType.type === "Unbalanced" &&
+                    props.content.massConservationType.granularity === "PerPlace"
+                }
+            >
+                <FixedTableEditor rows={morGeneratorsInputs()} schema={morInputsSchema} />
+                <FixedTableEditor rows={morGeneratorsOutputs()} schema={morOutputsSchema} />
+            </Match>
+        </Switch>
+    );
 
     // Finally, we need the duration, and then we can return everything.
     const toplevelSchema: ColumnSchema<null>[] = [
@@ -325,7 +319,7 @@ export default function MassAction(
             <Foldable title="Parameters" defaultExpanded>
                 <div class="parameters">
                     <FixedTableEditor rows={obGenerators()} schema={obSchema} />
-                    <For each={parameterTables()}>{(item) => item}</For>
+                    <ParameterTables />
                 </div>
             </Foldable>
             <Foldable title="Equations">
