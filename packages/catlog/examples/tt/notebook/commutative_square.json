@@ -1,0 +1,138 @@
+{
+  "type": "model",
+  "name": "Commutative Square",
+  "theory": "simple-schema",
+  "notebook": {
+    "cellContents": {
+      "e1b924fb-ecd1-4af4-a372-512d5987261a": {
+        "tag": "formal",
+        "id": "e1b924fb-ecd1-4af4-a372-512d5987261a",
+        "content": {
+          "tag": "object",
+          "name": "NW",
+          "id": "ad3d0feb-74c0-4384-a93c-5f353a1a216d",
+          "obType": {"tag": "Basic", "content": "Entity"}
+        }
+      },
+      "6e94f4dd-d5af-432d-b5d9-baf2d8fe824c": {
+        "tag": "formal",
+        "id": "6e94f4dd-d5af-432d-b5d9-baf2d8fe824c",
+        "content": {
+          "tag": "object",
+          "name": "NE",
+          "id": "fbc48dea-d991-459e-9b51-06cc7a31e1aa",
+          "obType": {"tag": "Basic", "content": "Entity"}
+        }
+      },
+      "0b4acecb-32ba-4617-a6c0-872d7556125a": {
+        "tag": "formal",
+        "id": "0b4acecb-32ba-4617-a6c0-872d7556125a",
+        "content": {
+          "tag": "object",
+          "name": "SW",
+          "id": "86cda99b-a4c8-4047-87f7-d000a21447e4",
+          "obType": {"tag": "Basic", "content": "Entity"}
+        }
+      },
+      "ec087bad-4f64-4739-ae37-91c08fd0d2a2": {
+        "tag": "formal",
+        "id": "ec087bad-4f64-4739-ae37-91c08fd0d2a2",
+        "content": {
+          "tag": "object",
+          "name": "SE",
+          "id": "9cf07c8c-7825-4407-883c-3567641698f6",
+          "obType": {"tag": "Basic", "content": "Entity"}
+        }
+      },
+      "6cda57a8-a7ec-4094-af8c-3fc087aeb3ef": {
+        "tag": "formal",
+        "id": "6cda57a8-a7ec-4094-af8c-3fc087aeb3ef",
+        "content": {
+          "tag": "morphism",
+          "name": "t",
+          "id": "18afbfa0-0a9c-4417-a766-612dfa7ba93e",
+          "morType": {"tag": "Hom", "content": {"tag": "Basic", "content": "Entity"}},
+          "dom": {"tag": "Basic", "content": "ad3d0feb-74c0-4384-a93c-5f353a1a216d"},
+          "cod": {"tag": "Basic", "content": "fbc48dea-d991-459e-9b51-06cc7a31e1aa"}
+        }
+      },
+      "3eb0ede7-3d32-493a-979b-555d63eb4146": {
+        "tag": "formal",
+        "id": "3eb0ede7-3d32-493a-979b-555d63eb4146",
+        "content": {
+          "tag": "morphism",
+          "name": "l",
+          "id": "14d8be91-b4ed-4019-b901-eb972b1282c7",
+          "morType": {"tag": "Hom", "content": {"tag": "Basic", "content": "Entity"}},
+          "dom": {"tag": "Basic", "content": "ad3d0feb-74c0-4384-a93c-5f353a1a216d"},
+          "cod": {"tag": "Basic", "content": "86cda99b-a4c8-4047-87f7-d000a21447e4"}
+        }
+      },
+      "71283813-ba66-45d0-9375-132f1c1878e7": {
+        "tag": "formal",
+        "id": "71283813-ba66-45d0-9375-132f1c1878e7",
+        "content": {
+          "tag": "morphism",
+          "name": "r",
+          "id": "ac3138a7-4b69-4247-8781-dd70e4b2c326",
+          "morType": {"tag": "Hom", "content": {"tag": "Basic", "content": "Entity"}},
+          "dom": {"tag": "Basic", "content": "fbc48dea-d991-459e-9b51-06cc7a31e1aa"},
+          "cod": {"tag": "Basic", "content": "9cf07c8c-7825-4407-883c-3567641698f6"}
+        }
+      },
+      "40bcaa10-5fc0-485d-83a7-8b061925ff31": {
+        "tag": "formal",
+        "id": "40bcaa10-5fc0-485d-83a7-8b061925ff31",
+        "content": {
+          "tag": "morphism",
+          "name": "b",
+          "id": "de3c7160-6e4f-405b-9263-0e62e802375b",
+          "morType": {"tag": "Hom", "content": {"tag": "Basic", "content": "Entity"}},
+          "dom": {"tag": "Basic", "content": "86cda99b-a4c8-4047-87f7-d000a21447e4"},
+          "cod": {"tag": "Basic", "content": "9cf07c8c-7825-4407-883c-3567641698f6"}
+        }
+      },
+      "2cfffa10-7189-40e5-96e0-ab598e79c43d": {
+        "tag": "formal",
+        "id": "2cfffa10-7189-40e5-96e0-ab598e79c43d",
+        "content": {
+          "tag": "equation",
+          "name": "comm",
+          "id": "5e98ce01-16e9-40ee-9099-327a6fb96197",
+          "lhs": {
+            "tag": "Composite",
+            "content": {
+              "tag": "Seq",
+              "content": [
+                {"tag": "Basic", "content": "18afbfa0-0a9c-4417-a766-612dfa7ba93e"},
+                {"tag": "Basic", "content": "ac3138a7-4b69-4247-8781-dd70e4b2c326"}
+              ]
+            }
+          },
+          "rhs": {
+            "tag": "Composite",
+            "content": {
+              "tag": "Seq",
+              "content": [
+                {"tag": "Basic", "content": "14d8be91-b4ed-4019-b901-eb972b1282c7"},
+                {"tag": "Basic", "content": "de3c7160-6e4f-405b-9263-0e62e802375b"}
+              ]
+            }
+          }
+        }
+      }
+    },
+    "cellOrder": [
+      "e1b924fb-ecd1-4af4-a372-512d5987261a",
+      "6e94f4dd-d5af-432d-b5d9-baf2d8fe824c",
+      "0b4acecb-32ba-4617-a6c0-872d7556125a",
+      "ec087bad-4f64-4739-ae37-91c08fd0d2a2",
+      "6cda57a8-a7ec-4094-af8c-3fc087aeb3ef",
+      "3eb0ede7-3d32-493a-979b-555d63eb4146",
+      "71283813-ba66-45d0-9375-132f1c1878e7",
+      "40bcaa10-5fc0-485d-83a7-8b061925ff31",
+      "2cfffa10-7189-40e5-96e0-ab598e79c43d"
+    ]
+  },
+  "version": "2"
+}

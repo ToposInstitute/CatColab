@@ -15,6 +15,7 @@ pub use document::*;
 pub use model::*;
 pub use model_judgment::*;
 pub use notebook::*;
+pub use path::*;
 pub use theory::*;
 
 #[cfg(test)]
