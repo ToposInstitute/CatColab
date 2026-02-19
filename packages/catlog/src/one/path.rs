@@ -620,6 +620,9 @@ pub enum InvalidPathEq {
     /// Right-hand side of equation is not a valid path in the graph.
     Rhs,
 
+    /// Left- and right-hand sides live in different graphs.
+    Graph,
+
     /// Sources of left- and right-hand sides of path equation are not equal.
     Src,
 

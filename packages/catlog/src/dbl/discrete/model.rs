@@ -59,7 +59,7 @@ impl DiscreteDblModel {
         let category_errors = self.category.iter_invalid().map(|err| match err {
             InvalidFpCategory::Dom(e) => Invalid::Dom(e),
             InvalidFpCategory::Cod(e) => Invalid::Cod(e),
-            InvalidFpCategory::Eq(eq, errs) => Invalid::Eq(eq, errs),
+            InvalidFpCategory::Eqn(eq, errs) => Invalid::Eqn(Some(eq), errs),
         });
         let ob_type_errors = self.category.ob_generators().filter_map(|x| {
             if self.theory.has_ob_type(&self.ob_type(&x)) {

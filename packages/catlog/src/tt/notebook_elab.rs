@@ -5,16 +5,17 @@
 //! must be completely different to be well adapted to the notebook interface.
 //! As a first pass, we are associating cell UUIDs with errors.
 
+use nonempty::NonEmpty;
+use notebook_types::current as nb;
 use std::str::FromStr;
 use uuid::Uuid;
-
-use notebook_types::current as nb;
 
 use super::{context::*, eval::*, prelude::*, stx::*, theory::*, toplevel::*, val::*};
 use crate::dbl::{
     modal,
     model::{Feature, InvalidDblModel},
 };
+use crate::one::InvalidPathEq;
 use crate::zero::QualifiedName;
 
 /// The current state of a notebook elaboration session.
@@ -159,6 +160,55 @@ impl<'a> Elaborator<'a> {
         }
     }
 
+    fn mor_syn(&self, n: &nb::Mor) -> Option<(TmS, TmV, TyV)> {
+        match n {
+            nb::Mor::Basic(name) => {
+                let name = QualifiedName::deserialize_str(name).unwrap();
+                let (stx, val, ty) = self.resolve_name(name.as_slice())?;
+                let TyV_::Morphism(..) = &*ty else {
+                    return None;
+                };
+                Some((stx, val, ty))
+            }
+            nb::Mor::Composite(path) => match path.as_ref() {
+                nb::Path::Id(ob) => {
+                    let (stx, val, ob_type) = self.ob_syn(ob)?;
+                    let mor_type = self.theory().hom_type(ob_type);
+                    Some((stx, val.clone(), TyV::morphism(mor_type, val.clone(), val.clone())))
+                }
+                nb::Path::Seq(ms) => match ms.as_slice() {
+                    [] => None,
+                    [only] => self.mor_syn(only),
+                    [first, rest @ ..] => {
+                        let (stx_first, val_first, type_first) = self.mor_syn(first)?;
+                        let rest = nb::Mor::Composite(Box::new(nb::Path::Seq(rest.to_vec())));
+                        let (stx_rest, val_rest, type_rest) = self.mor_syn(&rest)?;
+                        let TyV_::Morphism(mt_first, dom_first, cod_first) = &*type_first else {
+                            unreachable!()
+                        };
+                        let TyV_::Morphism(mt_rest, dom_rest, cod_rest) = &*type_rest else {
+                            unreachable!()
+                        };
+                        if mt_first != mt_rest {
+                            return None;
+                        }
+                        if self.evaluator().equal_tm(cod_first, dom_rest).is_err() {
+                            return None;
+                        }
+                        let stx = TmS::compose(stx_first, stx_rest);
+                        let val = TmV::compose(val_first, val_rest);
+                        Some((
+                            stx,
+                            val,
+                            TyV::morphism(mt_first.clone(), dom_first.clone(), cod_rest.clone()),
+                        ))
+                    }
+                },
+            },
+            _ => None, // tabulator morphisms tbd
+        }
+    }
+
     fn ob_chk(&self, n: &nb::Ob, ob_type: &ObType) -> Option<(TmS, TmV)> {
         match n {
             nb::Ob::List { modality: nb_modality, objects: elems } => {
@@ -224,6 +274,68 @@ impl<'a> Elaborator<'a> {
         let name = NameSegment::Uuid(mor_decl.id);
         let label = LabelSegment::Text(ustr(&mor_decl.name));
         let (ty_s, ty_v) = self.morphism_cell_ty(mor_decl);
+        (name, label, ty_s, ty_v)
+    }
+
+    fn equation_cell_ty(&mut self, eqn_decl: &nb::EqnDecl) -> (TyS, TyV) {
+        let (lhs_m, rhs_m) = match (&eqn_decl.lhs, &eqn_decl.rhs) {
+            (Some(lhs), Some(rhs)) => (lhs, rhs),
+            _ => {
+                return self
+                    .ty_error(InvalidDblModel::UnsupportedFeature(Feature::PartialEquation));
+            }
+        };
+        let mut errors = Vec::new();
+        let lhs = match self.mor_syn(lhs_m) {
+            Some(synthed) => Some(synthed),
+            None => {
+                errors.push(InvalidPathEq::Lhs);
+                None
+            }
+        };
+        let rhs = match self.mor_syn(rhs_m) {
+            Some(synthed) => Some(synthed),
+            None => {
+                errors.push(InvalidPathEq::Rhs);
+                None
+            }
+        };
+
+        if let (Some((_, _, lhs_ty)), Some((_, _, rhs_ty))) = (&lhs, &rhs) {
+            let TyV_::Morphism(mt_lhs, dom_lhs, cod_lhs) = &**lhs_ty else {
+                unreachable!()
+            };
+            let TyV_::Morphism(mt_rhs, dom_rhs, cod_rhs) = &**rhs_ty else {
+                unreachable!()
+            };
+            if mt_lhs != mt_rhs {
+                errors.push(InvalidPathEq::Graph);
+            } else {
+                if self.evaluator().equal_tm(dom_lhs, dom_rhs).is_err() {
+                    errors.push(InvalidPathEq::Src);
+                }
+                if self.evaluator().equal_tm(cod_lhs, cod_rhs).is_err() {
+                    errors.push(InvalidPathEq::Tgt);
+                }
+            }
+        }
+        match (NonEmpty::from_vec(errors), lhs, rhs) {
+            (None, Some((lhs_s, lhs_v, lhs_ty)), Some((rhs_s, rhs_v, _))) => {
+                let ty_s = TyS::id(self.evaluator().quote_ty(&lhs_ty), lhs_s, rhs_s);
+                let ty_v = TyV::id(lhs_ty, lhs_v, rhs_v);
+                (ty_s, ty_v)
+            }
+            (Some(errors), _, _) => {
+                self.ty_error(InvalidDblModel::Eqn(None, errors)) //The assumption in InvalidDblModel that we should already have the vector of equations built up, so as to give the index in the first argument here, doesn't hold in this case. It would be best in principle not to use InvalidDblModel here before we've begun to build a DblModel...
+            }
+            _ => unreachable!(),
+        }
+    }
+
+    fn equation_cell(&mut self, eqn_decl: &nb::EqnDecl) -> (NameSegment, LabelSegment, TyS, TyV) {
+        let name = NameSegment::Uuid(eqn_decl.id); //Kind of funny that the decl's id produces the cell's name but the decl's name produces the cell's label.
+        let label = LabelSegment::Text(ustr(&eqn_decl.name));
+        let (ty_s, ty_v) = self.equation_cell_ty(eqn_decl);
         (name, label, ty_s, ty_v)
     }
 
@@ -321,7 +433,7 @@ impl<'a> Elaborator<'a> {
                 nb::ModelJudgment::Object(ob_decl) => self.object_cell(ob_decl),
                 nb::ModelJudgment::Morphism(mor_decl) => self.morphism_cell(mor_decl),
                 nb::ModelJudgment::Instantiation(i_decl) => self.instantiation_cell(i_decl),
-                nb::ModelJudgment::Equation(_) => continue, // TODO
+                nb::ModelJudgment::Equation(eqn_decl) => self.equation_cell(eqn_decl),
             };
             field_ty_vs.push((name, (label, ty_v.clone())));
             self.ctx.scope.push(VarInContext::new(name, label, Some(ty_v.clone())));
@@ -385,7 +497,7 @@ mod test {
     use crate::zero::name;
     use notebook_types::current::ModelDocumentContent;
 
-    fn elab_example(theory: &Theory, name: &str, expected: Expect) {
+    fn elab_example(theory: &Theory, name: &str, expected: Expect) -> Model {
         let src = fs::read_to_string(format!("examples/tt/notebook/{name}.json")).unwrap();
         let doc: ModelDocumentContent = serde_json::from_str(&src).unwrap();
         let toplevel = Toplevel::new(Default::default());
@@ -397,6 +509,7 @@ mod test {
             writeln!(&mut out, "error {:?}", error).unwrap()
         }
         expected.assert_eq(&out);
+        model
     }
 
     #[test]
@@ -446,5 +559,29 @@ mod test {
                 B : Entity
                 f : A -> B : Hom Entity"#]],
         );
+    }
+
+    /// Test a notebook with an equation. Note that as of Feb 2026 the equation is not
+    /// actually being printed out.
+    #[test]
+    fn commutative_square() {
+        let th_schema = Theory::new(name("ThSchema"), TheoryDef::discrete(th_schema()));
+        let model = elab_example(
+            &th_schema,
+            "commutative_square",
+            expect![[r#"
+                model generated by 4 objects and 4 morphisms
+                NW : Entity
+                NE : Entity
+                SW : Entity
+                SE : Entity
+                t : NW -> NE : Hom Entity
+                l : NW -> SW : Hom Entity
+                r : NE -> SE : Hom Entity
+                b : SW -> SE : Hom Entity"#]],
+        );
+        let model = model.as_discrete().unwrap();
+        let eqns: Vec<_> = model.category.equations().collect();
+        assert_eq!(eqns.len(), 1);
     }
 }

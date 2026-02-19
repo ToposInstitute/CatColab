@@ -100,7 +100,7 @@ impl Validate for DiscreteDblTheory {
         validate::wrap_errors(self.0.iter_invalid().map(|err| match err {
             InvalidFpCategory::Dom(id) => InvalidDblTheory::SrcType(id),
             InvalidFpCategory::Cod(id) => InvalidDblTheory::TgtType(id),
-            InvalidFpCategory::Eq(eq, errs) => InvalidDblTheory::MorTypeEq(eq, errs),
+            InvalidFpCategory::Eqn(eq, errs) => InvalidDblTheory::MorTypeEq(eq, errs),
         }))
     }
 }

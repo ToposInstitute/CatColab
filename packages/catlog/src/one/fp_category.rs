@@ -184,7 +184,7 @@ where
             InvalidGraph::Tgt(e) => InvalidFpCategory::Cod(e),
         });
         let equation_errors = self.equations.iter().enumerate().filter_map(|(i, eq)| {
-            Some(InvalidFpCategory::Eq(i, eq.validate_in(&self.generators).err()?))
+            Some(InvalidFpCategory::Eqn(i, eq.validate_in(&self.generators).err()?))
         });
         generator_errors.chain(equation_errors)
     }
@@ -273,7 +273,7 @@ pub enum InvalidFpCategory<E> {
 
     /// Path equation with one or more errors.
     #[error("Path equation `{0}` is not valid: `{1:?}`")]
-    Eq(usize, NonEmpty<InvalidPathEq>),
+    Eqn(usize, NonEmpty<InvalidPathEq>),
 }
 
 /// E-graph state for computing with categories in egglog.
