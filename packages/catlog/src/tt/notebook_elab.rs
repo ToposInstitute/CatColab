@@ -205,7 +205,7 @@ impl<'a> Elaborator<'a> {
                     }
                 },
             },
-            _ => None, //tabulator morphisms tbd
+            _ => None, // tabulator morphisms tbd
         }
     }
 
