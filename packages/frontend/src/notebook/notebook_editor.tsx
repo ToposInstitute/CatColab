@@ -338,6 +338,7 @@ export function NotebookEditor<T>(props: {
                                         </Match>
                                         <Match when={cell.tag === "formal"}>
                                             <props.formalCellEditor
+                                                cellId={cell.id}
                                                 content={(cell as FormalCell<T>).content}
                                                 changeContent={(f) =>
                                                     props.changeNotebook((nb) =>

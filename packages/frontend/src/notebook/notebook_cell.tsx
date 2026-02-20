@@ -345,6 +345,7 @@ export function StemCellEditor(
 /** Interface for editors of cells with formal content.
  */
 export type FormalCellEditorProps<T> = CellEditorProps & {
+    cellId: Uuid;
     content: T;
     changeContent: (f: (content: T) => void) => void;
 };
