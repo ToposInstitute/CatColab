@@ -13,7 +13,7 @@ in
 craneLib.buildPackage {
   inherit cargoArtifacts pname version;
 
-  cargoExtraArgs = "-p backend";
+  cargoExtraArgs = "-p backend --config profile.release.opt-level=3";
 
   nativeBuildInputs = [
     pkgs.pkg-config
