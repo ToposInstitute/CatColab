@@ -37,6 +37,45 @@ export default function MassAction(
 ) {
     const elaboratedModel = () => props.liveModel.elaboratedModel();
 
+    // Previous versions of the mass-action analysis used the MassActionProblemData
+    // interface defined as
+    //
+    // {
+    //   rates: Record<QualifiedName, number>;
+    //   initialValues: Record<QualifiedName, number>;
+    //   duration: number;
+    // }
+    //
+    // For backwards compatibility we need to instantiate the additions to this
+    // interface introduced in PR#1045.
+    if (!props.content.massConservationType) {
+        props.changeContent((content) => {
+            content["massConservationType"] = {
+                type: "Balanced",
+            };
+        });
+    }
+    if (!props.content.transitionProductionRates) {
+        props.changeContent((content) => {
+            content["transitionProductionRates"] = {};
+        });
+    }
+    if (!props.content.transitionConsumptionRates) {
+        props.changeContent((content) => {
+            content["transitionConsumptionRates"] = {};
+        });
+    }
+    if (!props.content.placeProductionRates) {
+        props.changeContent((content) => {
+            content["placeProductionRates"] = {};
+        });
+    }
+    if (!props.content.placeConsumptionRates) {
+        props.changeContent((content) => {
+            content["placeConsumptionRates"] = {};
+        });
+    }
+
     // Irrelevant of the value of massConservationType, we only ever need a single
     // schema for objects: each object needs to be assigned an initial value.
 
