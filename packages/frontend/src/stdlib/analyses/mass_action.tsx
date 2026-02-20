@@ -331,7 +331,7 @@ export default function MassAction(
                     ]}
                 />
             </Foldable>
-            <Foldable title="Simulation">
+            <Foldable title="Simulation" defaultExpanded>
                 <div class="parameters">
                     <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
