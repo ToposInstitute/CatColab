@@ -1,6 +1,6 @@
 import { Show } from "solid-js";
 
-import { FormGroup, SelectField } from "catcolab-ui-components";
+import { CheckboxField, FormGroup, SelectField } from "catcolab-ui-components";
 import type { MassActionProblemData, RateGranularity } from "catlog-wasm";
 
 /** Configuration of a mass-action analysis. */
@@ -20,17 +20,17 @@ export function MassActionConfigForm(props: {
     };
 
     return (
-        <FormGroup compact>
-            <SelectField
-                label="Mass conservation"
-                value={massConservation().type}
+        <FormGroup compact style="min-width: 286px">
+            <CheckboxField
+                label="Conserve mass"
+                checked={massConservation().type === "Balanced"}
                 onChange={(evt) => {
                     props.changeConfig((content) => {
-                        if (evt.currentTarget.value === "Balanced") {
+                        if (evt.currentTarget.checked) {
                             content.massConservationType = {
                                 type: "Balanced",
                             };
-                        } else if (evt.currentTarget.value === "Unbalanced") {
+                        } else {
                             content.massConservationType = {
                                 type: "Unbalanced",
                                 granularity: "PerTransition",
@@ -38,10 +38,7 @@ export function MassActionConfigForm(props: {
                         }
                     });
                 }}
-            >
-                <option value={"Balanced"}>{"True"}</option>
-                <option value={"Unbalanced"}>{"False"}</option>
-            </SelectField>
+            />
             <Show when={massConservation().type === "Unbalanced" && props.enableGranularity}>
                 <SelectField
                     label="Rate granularity"

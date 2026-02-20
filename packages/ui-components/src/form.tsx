@@ -3,8 +3,13 @@ import { type ComponentProps, createUniqueId, type JSX, Show, splitProps } from 
 import "./form.css";
 
 /** Group of related fields in a form. */
-export function FormGroup(props: { children: JSX.Element; compact?: boolean }) {
-    return <dl class={props.compact ? "compact-form-group" : "form-group"}>{props.children}</dl>;
+export function FormGroup(props: { compact?: boolean } & ComponentProps<"dl">) {
+    const baseClass = props.compact ? "compact-form-group" : "form-group";
+    return (
+        <dl class={props.class ? `${baseClass} ${props.class}` : baseClass} style={props.style}>
+            {props.children}
+        </dl>
+    );
 }
 
 type InputFieldProps = {
@@ -26,6 +31,26 @@ export function InputField(allProps: InputFieldProps & Omit<ComponentProps<"inpu
             <dd>
                 <input {...inputProps} id={fieldId} />
                 <FieldError error={props.error} />
+            </dd>
+        </>
+    );
+}
+
+/** Checkbox field in a form group. */
+export function CheckboxField(
+    allProps: { label: string | JSX.Element } & Omit<ComponentProps<"input">, "id" | "type">,
+) {
+    const fieldId = createUniqueId();
+
+    const [props, inputProps] = splitProps(allProps, ["label"]);
+
+    return (
+        <>
+            <dt>
+                <label for={fieldId}>{props.label}</label>
+            </dt>
+            <dd>
+                <input {...inputProps} type="checkbox" id={fieldId} />
             </dd>
         </>
     );

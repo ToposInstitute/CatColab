@@ -1,7 +1,14 @@
 import { createSignal } from "solid-js";
 import type { Meta, StoryObj } from "storybook-solidjs-vite";
 
-import { FormGroup, InputField, SelectField, TextAreaField, TextInputField } from "./form";
+import {
+    CheckboxField,
+    FormGroup,
+    InputField,
+    SelectField,
+    TextAreaField,
+    TextInputField,
+} from "./form";
 
 const meta = {
     title: "Forms & Inputs/Form",
@@ -216,6 +223,34 @@ export const MixedInputTypes: Story = {
                     <option value="uk">United Kingdom</option>
                     <option value="ca">Canada</option>
                 </SelectField>
+            </FormGroup>
+        );
+    },
+};
+
+export const Checkbox: Story = {
+    render: () => {
+        const [darkMode, setDarkMode] = createSignal(false);
+        const [notifications, setNotifications] = createSignal(true);
+        const [autoSave, setAutoSave] = createSignal(true);
+
+        return (
+            <FormGroup>
+                <CheckboxField
+                    label="Dark mode"
+                    checked={darkMode()}
+                    onChange={(e) => setDarkMode(e.currentTarget.checked)}
+                />
+                <CheckboxField
+                    label="Enable notifications"
+                    checked={notifications()}
+                    onChange={(e) => setNotifications(e.currentTarget.checked)}
+                />
+                <CheckboxField
+                    label="Auto-save"
+                    checked={autoSave()}
+                    onChange={(e) => setAutoSave(e.currentTarget.checked)}
+                />
             </FormGroup>
         );
     },
