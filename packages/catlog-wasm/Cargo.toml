@@ -34,3 +34,7 @@ missing_docs = "warn"
 
 [lints.clippy]
 doc_paragraphs_missing_punctuation = "warn"
+
+[profile.release]
+# Tell `rustc` to optimize for small code size.
+opt-level = "s"
