@@ -7,11 +7,8 @@ use rebop::gillespie;
 use std::collections::HashMap;
 
 use crate::{
-    dbl::{
-        modal::*,
-        model::{FgDblModel, MutDblModel},
-    },
-    stdlib::analyses::ode::ODESolution,
+    dbl::{modal::*, model::FgDblModel},
+    stdlib::analyses::{ode::ODESolution, petri::transition_interface},
     zero::{QualifiedName, name},
 };
 
@@ -96,22 +93,6 @@ impl Default for PetriNetStochasticMassActionAnalysis {
 }
 
 impl PetriNetStochasticMassActionAnalysis {
-    /// Gets the inputs and outputs of a transition.
-    fn transition_interface(
-        model: &ModalDblModel,
-        id: &QualifiedName,
-    ) -> (Vec<ModalOb>, Vec<ModalOb>) {
-        let inputs = model
-            .get_dom(id)
-            .and_then(|ob| ob.clone().collect_product(None))
-            .unwrap_or_default();
-        let outputs = model
-            .get_cod(id)
-            .and_then(|ob| ob.clone().collect_product(None))
-            .unwrap_or_default();
-        (inputs, outputs)
-    }
-
     /// Creates a stochastic mass-action system.
     pub fn build_stochastic_system(
         &self,
@@ -127,7 +108,7 @@ impl PetriNetStochasticMassActionAnalysis {
         let mut problem = gillespie::Gillespie::new(initial, false);
 
         for mor in model.mor_generators_with_type(&self.transition_mor_type) {
-            let (inputs, outputs) = Self::transition_interface(model, &mor);
+            let (inputs, outputs) = transition_interface(model, &mor);
 
             // 1. convert the inputs/outputs to sequences of counts
             let input_vec = ob_generators.iter().map(|id| {

@@ -18,13 +18,13 @@ use tsify::Tsify;
 
 use super::ODEAnalysis;
 use crate::dbl::{
-    model::{DiscreteTabModel, FgDblModel, ModalDblModel, ModalOb, MutDblModel, TabEdge},
+    model::{DiscreteTabModel, FgDblModel, ModalDblModel, TabEdge},
     theory::{ModalMorType, ModalObType, TabMorType, TabObType},
 };
 use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
-use crate::zero::name;
-use crate::zero::{QualifiedName, alg::Polynomial, rig::Monomial};
+use crate::stdlib::analyses::petri::transition_interface;
+use crate::zero::{QualifiedName, alg::Polynomial, name, rig::Monomial};
 
 /// There are three types of mass-action semantics, each more expressive than the previous:
 /// - balanced
@@ -211,22 +211,6 @@ impl Default for PetriNetMassActionAnalysis {
 }
 
 impl PetriNetMassActionAnalysis {
-    /// Gets the inputs and outputs of a transition.
-    fn transition_interface(
-        model: &ModalDblModel,
-        id: &QualifiedName,
-    ) -> (Vec<ModalOb>, Vec<ModalOb>) {
-        let inputs = model
-            .get_dom(id)
-            .and_then(|ob| ob.clone().collect_product(None))
-            .unwrap_or_default();
-        let outputs = model
-            .get_cod(id)
-            .and_then(|ob| ob.clone().collect_product(None))
-            .unwrap_or_default();
-        (inputs, outputs)
-    }
-
     /// Creates a mass-action system with symbolic rate coefficients.
     pub fn build_system(
         &self,
@@ -238,7 +222,7 @@ impl PetriNetMassActionAnalysis {
             sys.add_term(ob, Polynomial::zero());
         }
         for mor in model.mor_generators_with_type(&self.transition_mor_type) {
-            let (inputs, outputs) = Self::transition_interface(model, &mor);
+            let (inputs, outputs) = transition_interface(model, &mor);
             let term: Monomial<_, _> =
                 inputs.iter().map(|ob| (ob.clone().unwrap_generator(), 1)).collect();
 
