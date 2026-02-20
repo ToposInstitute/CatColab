@@ -1,10 +1,11 @@
-//! Auxiliary structs and LaTeX utilities for data passed to/from analyses.
+//! Auxiliary structs and glue code for data passed to/from analyses.
 
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use super::result::JsResult;
 use catlog::simulate::ode::LatexEquation;
+use catlog::stdlib::analyses;
 use catlog::stdlib::analyses::ode::{Direction, FlowParameter, ODESolution, RateParameter};
 use catlog::zero::QualifiedName;
 
@@ -71,6 +72,76 @@ pub(crate) fn latex_mor_names_mass_action(model: &DblModel) -> impl Fn(&FlowPara
             }
         },
     }
+}
+
+/// Simulates mass-action ODE on tabulated models.
+pub(crate) fn mass_action_tab(
+    model: &DblModel,
+    data: analyses::ode::MassActionProblemData,
+) -> Result<ODEResultWithEquations, String> {
+    let realised_model = model.discrete_tab()?;
+    let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
+    let sys = analysis.build_system(realised_model, data.mass_conservation_type);
+    let sys_extended_scalars = analyses::ode::extend_mass_action_scalars(sys, &data);
+    let latex_equations = sys_extended_scalars
+        .map_variables(latex_ob_names_mass_action(model))
+        .to_latex_equations();
+    let analysis = analyses::ode::into_mass_action_analysis(sys_extended_scalars, data);
+    let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
+    Ok(ODEResultWithEquations {
+        solution: solution.into(),
+        latex_equations,
+    })
+}
+
+/// Simulates mass-action ODE on modal models.
+pub(crate) fn mass_action_modal(
+    model: &DblModel,
+    data: analyses::ode::MassActionProblemData,
+) -> Result<ODEResultWithEquations, String> {
+    let realised_model = model.modal()?;
+    let analysis = analyses::ode::PetriNetMassActionAnalysis::default();
+    let sys = analysis.build_system(realised_model, data.mass_conservation_type);
+    let sys_extended_scalars = analyses::ode::extend_mass_action_scalars(sys, &data);
+    let latex_equations = sys_extended_scalars
+        .map_variables(latex_ob_names_mass_action(model))
+        .to_latex_equations();
+    let analysis = analyses::ode::into_mass_action_analysis(sys_extended_scalars, data);
+    let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
+    Ok(ODEResultWithEquations {
+        solution: solution.into(),
+        latex_equations,
+    })
+}
+
+/// Generates mass-action equations for tabulated models.
+pub(crate) fn mass_action_equations_tab(
+    model: &DblModel,
+    mass_conservation_type: analyses::ode::MassConservationType,
+) -> Result<ODELatex, String> {
+    let realised_model = model.discrete_tab()?;
+    let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
+    let sys = analysis.build_system(realised_model, mass_conservation_type);
+    let equations = sys
+        .map_variables(latex_ob_names_mass_action(model))
+        .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(model)))
+        .to_latex_equations();
+    Ok(ODELatex(equations))
+}
+
+/// Generates mass-action equations for modal models.
+pub(crate) fn mass_action_equations_modal(
+    model: &DblModel,
+    mass_conservation_type: analyses::ode::MassConservationType,
+) -> Result<ODELatex, String> {
+    let realised_model = model.discrete_tab()?;
+    let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
+    let sys = analysis.build_system(realised_model, mass_conservation_type);
+    let equations = sys
+        .map_variables(latex_ob_names_mass_action(model))
+        .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(model)))
+        .to_latex_equations();
+    Ok(ODELatex(equations))
 }
 
 #[cfg(test)]
