@@ -45,7 +45,7 @@ export function AnalysisNotebookEditor(props: { liveAnalysis: LiveAnalysisDoc })
 }
 
 /** Editor for a notebook cell in an analysis notebook. */
-function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
+function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<Record<string, unknown>>>) {
     const liveAnalysis = useContext(LiveAnalysisContext);
     invariant(liveAnalysis, "Live analysis should be provided as context for cell editor");
 
@@ -61,8 +61,8 @@ function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
                     <Dynamic
                         component={analysis().component}
                         liveModel={(liveAnalysis() as LiveModelAnalysisDoc).liveModel}
-                        content={props.content.content}
-                        changeContent={(f: (c: unknown) => void) =>
+                        content={{ ...analysis().initialContent(), ...props.content.content }}
+                        changeContent={(f: (c: Record<string, unknown>) => void) =>
                             props.changeContent((content) => f(content.content))
                         }
                     />
@@ -78,8 +78,8 @@ function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
                     <Dynamic
                         component={analysis().component}
                         liveDiagram={(liveAnalysis() as LiveDiagramAnalysisDoc).liveDiagram}
-                        content={props.content.content}
-                        changeContent={(f: (c: unknown) => void) =>
+                        content={{ ...analysis().initialContent(), ...props.content.content }}
+                        changeContent={(f: (c: Record<string, unknown>) => void) =>
                             props.changeContent((content) => f(content.content))
                         }
                     />
@@ -89,7 +89,9 @@ function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
     );
 }
 
-function analysisCellConstructor<T>(meta: AnalysisMeta<T>): CellConstructor<Analysis<T>> {
+function analysisCellConstructor(
+    meta: AnalysisMeta<unknown>,
+): CellConstructor<Analysis<Record<string, unknown>>> {
     const { id, name, description, initialContent } = meta;
     return {
         name,
@@ -97,7 +99,7 @@ function analysisCellConstructor<T>(meta: AnalysisMeta<T>): CellConstructor<Anal
         construct: () =>
             newFormalCell({
                 id,
-                content: initialContent(),
+                content: initialContent() as Record<string, unknown>,
             }),
     };
 }
