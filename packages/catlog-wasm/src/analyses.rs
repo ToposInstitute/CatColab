@@ -34,10 +34,7 @@ pub struct ODELatex(pub Vec<LatexEquation>);
 /// Creates a closure that formats object names for LaTeX output.
 pub(crate) fn latex_ob_names_mass_action(model: &DblModel) -> impl Fn(&QualifiedName) -> String {
     |id: &QualifiedName| {
-        let name = model
-            .ob_generator_label(id)
-            .map_or_else(|| id.to_string(), |label| label.to_string());
-
+        let name = model.ob_namespace.label_string(id);
         if name.chars().count() > 1 {
             format!("\\text{{{name}}}")
         } else {
@@ -50,39 +47,27 @@ pub(crate) fn latex_ob_names_mass_action(model: &DblModel) -> impl Fn(&Qualified
 pub(crate) fn latex_mor_names_mass_action(model: &DblModel) -> impl Fn(&FlowTerm) -> String {
     |id: &FlowTerm| match id {
         FlowTerm::BalancedFlowTerm { transition } => {
-            let transition_name = model.mor_namespace.label_string(transition);
-            format!("r_{{\\text{{{transition_name}}}}}")
+            let transition_label = model.mor_namespace.label_string(transition);
+            format!("r_{{\\text{{{transition_label}}}}}")
         }
         FlowTerm::UnbalancedFlowTerm { direction, parameter } => match (direction, parameter) {
             (Direction::IncomingFlow, RateParameter::PerTransition { transition }) => {
-                let transition_name = model
-                    .mor_generator_label(transition)
-                    .map_or_else(|| transition.to_string(), |label| label.to_string());
-                format!("\\rho_{{\\text{{{transition_name}}}}}")
+                let transition_label = model.mor_namespace.label_string(transition);
+                format!("\\rho_{{\\text{{{transition_label}}}}}")
             }
             (Direction::OutgoingFlow, RateParameter::PerTransition { transition }) => {
-                let transition_name = model
-                    .mor_generator_label(transition)
-                    .map_or_else(|| transition.to_string(), |label| label.to_string());
-                format!("\\kappa_{{\\text{{{transition_name}}}}}")
+                let transition_label = model.mor_namespace.label_string(transition);
+                format!("\\kappa_{{\\text{{{transition_label}}}}}")
             }
             (Direction::IncomingFlow, RateParameter::PerPlace { transition, place }) => {
-                let transition_name = model
-                    .mor_generator_label(transition)
-                    .map_or_else(|| transition.to_string(), |label| label.to_string());
-                let output_place_name = model
-                    .ob_generator_label(place)
-                    .map_or_else(|| place.to_string(), |label| label.to_string());
-                format!("\\rho_{{\\text{{{transition_name}}}}}^{{\\text{{{output_place_name}}}}}")
+                let transition_label = model.mor_namespace.label_string(transition);
+                let output_place_label = model.ob_namespace.label_string(place);
+                format!("\\rho_{{\\text{{{transition_label}}}}}^{{\\text{{{output_place_label}}}}}")
             }
             (Direction::OutgoingFlow, RateParameter::PerPlace { transition, place }) => {
-                let transition_name = model
-                    .mor_generator_label(transition)
-                    .map_or_else(|| transition.to_string(), |label| label.to_string());
-                let input_place_name = model
-                    .ob_generator_label(place)
-                    .map_or_else(|| place.to_string(), |label| label.to_string());
-                format!("\\rho_{{\\text{{{transition_name}}}}}^{{\\text{{{input_place_name}}}}}")
+                let transition_label = model.mor_namespace.label_string(transition);
+                let input_place_label = model.ob_namespace.label_string(place);
+                format!("\\rho_{{\\text{{{transition_label}}}}}^{{\\text{{{input_place_label}}}}}")
             }
         },
     }
@@ -91,8 +76,7 @@ pub(crate) fn latex_mor_names_mass_action(model: &DblModel) -> impl Fn(&FlowTerm
 #[cfg(test)]
 mod tests {
     use catlog::simulate::ode::LatexEquation;
-    use catlog::stdlib::analyses;
-    use catlog::stdlib::analyses::ode::StockFlowMassActionAnalysis;
+    use catlog::stdlib::analyses::ode;
 
     use super::*;
     use crate::model::tests::backward_link;
@@ -101,12 +85,10 @@ mod tests {
     fn unbalanced_mass_action_latex_equations() {
         let model = backward_link("xxx", "yyy", "fff");
         let tab_model = model.discrete_tab().unwrap();
-        let analysis = StockFlowMassActionAnalysis::default();
+        let analysis = ode::StockFlowMassActionAnalysis::default();
         let sys = analysis.build_system(
             tab_model,
-            analyses::ode::MassConservationType::Unbalanced(
-                analyses::ode::RateGranularity::PerTransition,
-            ),
+            ode::MassConservationType::Unbalanced(ode::RateGranularity::PerTransition),
         );
         let equations = sys
             .map_variables(latex_ob_names_mass_action(&model))

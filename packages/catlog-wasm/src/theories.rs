@@ -8,7 +8,6 @@ use wasm_bindgen::prelude::*;
 
 use catlog::dbl::theory;
 use catlog::one::Path;
-use catlog::stdlib::analyses::ode::MassConservationType;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 use catlog::zero::{QualifiedLabel, name};
 
@@ -59,7 +58,7 @@ fn mass_action_modal(
 /// Generates mass-action equations for tabulated models.
 fn mass_action_equations_tab(
     model: &DblModel,
-    mass_conservation_type: MassConservationType,
+    mass_conservation_type: analyses::ode::MassConservationType,
 ) -> Result<ODELatex, String> {
     let realised_model = model.discrete_tab()?;
     let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
@@ -74,7 +73,7 @@ fn mass_action_equations_tab(
 /// Generates mass-action equations for tabulated models.
 fn mass_action_equations_modal(
     model: &DblModel,
-    mass_conservation_type: MassConservationType,
+    mass_conservation_type: analyses::ode::MassConservationType,
 ) -> Result<ODELatex, String> {
     let realised_model = model.discrete_tab()?;
     let analysis = analyses::ode::StockFlowMassActionAnalysis::default();

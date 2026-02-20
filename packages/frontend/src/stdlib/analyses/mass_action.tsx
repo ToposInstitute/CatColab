@@ -1,4 +1,5 @@
 import { createMemo, Match, Switch } from "solid-js";
+import invariant from "tiny-invariant";
 
 import {
     BlockTitle,
@@ -24,8 +25,6 @@ import { createModelODEPlotWithEquations } from "./model_ode_plot";
 import type { MassActionSimulator } from "./simulator_types";
 
 import "./simulation.css";
-
-import invariant from "tiny-invariant";
 
 /** Analyze a model using mass-action dynamics. */
 export default function MassAction(
@@ -101,7 +100,6 @@ export default function MassAction(
             if (!mor) {
                 continue;
             }
-            transitionInterface.set(mg, { inputs: [], outputs: [] });
             const inputs = collectProduct(mor.dom).map((ob) => {
                 invariant(ob.tag === "Basic");
                 return ob.content;
