@@ -23,10 +23,10 @@ use crate::zero::QualifiedName;
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 pub struct ODESolution {
     /// Values of time variable for the duration of the simulation.
-    time: Vec<f32>,
+    pub(in crate::stdlib::analyses) time: Vec<f32>,
 
     /// Values of state variables for the duration of the simulation.
-    states: HashMap<QualifiedName, Vec<f32>>,
+    pub(in crate::stdlib::analyses) states: HashMap<QualifiedName, Vec<f32>>,
 }
 
 /// Data needed to simulate and interpret an ODE analysis of a model.
@@ -71,11 +71,9 @@ pub mod linear_ode;
 pub mod lotka_volterra;
 pub mod mass_action;
 pub mod signed_coefficients;
-pub mod unbalanced_mass_action;
 
 pub use kuramoto::*;
 pub use linear_ode::*;
 pub use lotka_volterra::*;
 pub use mass_action::*;
 pub use signed_coefficients::*;
-pub use unbalanced_mass_action::*;

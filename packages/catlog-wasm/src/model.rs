@@ -313,8 +313,13 @@ pub struct DblModel {
     #[wasm_bindgen(skip)]
     pub ty: Option<(tt::stx::TyS, tt::val::TyV)>,
 
-    ob_namespace: Namespace,
-    mor_namespace: Namespace,
+    /// The namespace for the objects.
+    #[wasm_bindgen(skip)]
+    pub ob_namespace: Namespace,
+
+    /// The namespace for the morphisms.
+    #[wasm_bindgen(skip)]
+    pub mor_namespace: Namespace,
 }
 
 impl DblModel {

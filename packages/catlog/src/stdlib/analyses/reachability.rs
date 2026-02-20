@@ -5,6 +5,7 @@ use std::collections::HashMap;
 
 use crate::dbl::modal::model::{ModalDblModel, ModalOb};
 use crate::one::category::FgCategory;
+use crate::stdlib::analyses::petri::transition_interface;
 use crate::zero::QualifiedName;
 
 #[cfg(feature = "serde")]
@@ -55,19 +56,15 @@ pub fn subreachability(m: &ModalDblModel, data: ReachabilityProblemData) -> bool
 
     for e in m.mor_generators() {
         let e_idx = *hom_inv.get(&e).unwrap();
-        if let Some(vs) = m.mor_generator_dom(&e).collect_product(None) {
-            for v in vs.iter() {
-                if let ModalOb::Generator(u) = v {
-                    i_mat[*ob_inv.get(u).unwrap()][e_idx] += 1;
-                }
+        let (inputs, outputs) = transition_interface(m, &e);
+        for ob in inputs {
+            if let ModalOb::Generator(u) = ob {
+                i_mat[*ob_inv.get(&u).unwrap()][e_idx] += 1;
             }
         }
-
-        if let Some(vs) = m.mor_generator_cod(&e).collect_product(None) {
-            for v in vs.iter() {
-                if let ModalOb::Generator(u) = v {
-                    o_mat[*ob_inv.get(u).unwrap()][e_idx] += 1;
-                }
+        for ob in outputs {
+            if let ModalOb::Generator(u) = ob {
+                o_mat[*ob_inv.get(&u).unwrap()][e_idx] += 1;
             }
         }
     }

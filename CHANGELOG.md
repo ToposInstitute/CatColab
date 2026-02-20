@@ -22,7 +22,7 @@ include notable new features.
   ([#954](https://github.com/ToposInstitute/CatColab/pull/954))
 - New analysis: unbalanced mass-action dynamics (i.e. distinct consumption and
   production rates) for Petri nets and stock-flow diagrams
-  ([#1000](https://github.com/ToposInstitute/CatColab/pull/1000))
+  ([#1000](https://github.com/ToposInstitute/CatColab/pull/1000), [#1045](https://github.com/ToposInstitute/CatColab/pull/1045))
 - New analysis: generate SQL schema definitions from schemas in CatColab
   ([#843](https://github.com/ToposInstitute/CatColab/pull/843))
 
