@@ -1,11 +1,15 @@
 //! Helper module to build analyses based on signed coefficient matrices.
 
-use std::{collections::HashMap, hash::Hash};
+use std::{fmt::Debug, hash::Hash};
 
 use indexmap::IndexMap;
 use nalgebra::DMatrix;
+use num_traits::Zero;
 
-use crate::dbl::model::FgDblModel;
+use crate::{
+    dbl::model::FgDblModel,
+    zero::{alg::Polynomial, rig::Monomial},
+};
 
 /// Builder for signed coefficient matrices and analyses based on them.
 ///
@@ -16,6 +20,9 @@ pub struct SignedCoefficientBuilder<ObType, MorType> {
     positive_mor_types: Vec<MorType>,
     negative_mor_types: Vec<MorType>,
 }
+
+/// Symbolic parameter in polynomial system.
+pub type Parameter<Id> = Polynomial<Id, f32, u8>;
 
 impl<ObType, MorType> SignedCoefficientBuilder<ObType, MorType> {
     /// Creates a new builder for the given object type.
@@ -39,17 +46,16 @@ impl<ObType, MorType> SignedCoefficientBuilder<ObType, MorType> {
         self
     }
 
-    /// Builds the matrix of coefficients for the given model.
+    /// Builds the matrix of symbolic coefficients for the given model.
     ///
     /// Returns the coefficient matrix along with an ordered map from object
     /// generators to integer indices.
     pub fn build_matrix<Id>(
         &self,
         model: &impl FgDblModel<ObType = ObType, MorType = MorType, Ob = Id, ObGen = Id, MorGen = Id>,
-        coeffs: &HashMap<Id, f32>,
-    ) -> (DMatrix<f32>, IndexMap<Id, usize>)
+    ) -> (DMatrix<Parameter<Id>>, IndexMap<Id, usize>)
     where
-        Id: Eq + Clone + Hash + Ord,
+        Id: Eq + Clone + Hash + Ord + Debug + 'static,
     {
         let ob_index: IndexMap<_, _> = model
             .ob_generators_with_type(&self.var_ob_type)
@@ -58,19 +64,19 @@ impl<ObType, MorType> SignedCoefficientBuilder<ObType, MorType> {
             .collect();
 
         let n = ob_index.len();
-        let mut mat = DMatrix::from_element(n, n, 0.0f32);
+        let mut mat = DMatrix::from_element(n, n, Parameter::<Id>::zero());
         for mor_type in self.positive_mor_types.iter() {
             for mor in model.mor_generators_with_type(mor_type) {
                 let i = *ob_index.get(&model.mor_generator_dom(&mor)).unwrap();
                 let j = *ob_index.get(&model.mor_generator_cod(&mor)).unwrap();
-                mat[(j, i)] += coeffs.get(&mor).copied().unwrap_or_default();
+                mat[(j, i)] += (1.0, Monomial::generator(mor));
             }
         }
         for mor_type in self.negative_mor_types.iter() {
             for mor in model.mor_generators_with_type(mor_type) {
                 let i = *ob_index.get(&model.mor_generator_dom(&mor)).unwrap();
                 let j = *ob_index.get(&model.mor_generator_cod(&mor)).unwrap();
-                mat[(j, i)] -= coeffs.get(&mor).copied().unwrap_or_default();
+                mat[(j, i)] += (-1.0, Monomial::generator(mor));
             }
         }
 
