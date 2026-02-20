@@ -5,7 +5,7 @@ use tsify::Tsify;
 
 use super::result::JsResult;
 use catlog::simulate::ode::LatexEquation;
-use catlog::stdlib::analyses::ode::{Direction, FlowTerm, ODESolution, RateParameter};
+use catlog::stdlib::analyses::ode::{Direction, FlowParameter, ODESolution, RateParameter};
 use catlog::zero::QualifiedName;
 
 use super::model::DblModel;
@@ -44,13 +44,13 @@ pub(crate) fn latex_ob_names_mass_action(model: &DblModel) -> impl Fn(&Qualified
 }
 
 /// Creates a closure that formats morphism names for mass-action LaTeX output.
-pub(crate) fn latex_mor_names_mass_action(model: &DblModel) -> impl Fn(&FlowTerm) -> String {
-    |id: &FlowTerm| match id {
-        FlowTerm::BalancedFlowTerm { transition } => {
+pub(crate) fn latex_mor_names_mass_action(model: &DblModel) -> impl Fn(&FlowParameter) -> String {
+    |id: &FlowParameter| match id {
+        FlowParameter::Balanced { transition } => {
             let transition_label = model.mor_namespace.label_string(transition);
             format!("r_{{\\text{{{transition_label}}}}}")
         }
-        FlowTerm::UnbalancedFlowTerm { direction, parameter } => match (direction, parameter) {
+        FlowParameter::Unbalanced { direction, parameter } => match (direction, parameter) {
             (Direction::IncomingFlow, RateParameter::PerTransition { transition }) => {
                 let transition_label = model.mor_namespace.label_string(transition);
                 format!("\\rho_{{\\text{{{transition_label}}}}}")

@@ -57,17 +57,17 @@ pub enum RateGranularity {
     PerPlace,
 }
 
-/// Terms in the generated polynomial equations are *undirected* in the balanced case
-/// and *directed* in the unbalanced case.
+/// Parameters in the generated polynomial equations are *undirected* in the
+/// balanced case and *directed* in the unbalanced case.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
-pub enum FlowTerm {
+pub enum FlowParameter {
     /// If mass is conserved, we don't need to worry whether a flow is incoming or outgoing.
-    BalancedFlowTerm {
+    Balanced {
         /// Since there is no direction, the rate parameter corresponds to a single transition.
         transition: QualifiedName,
     },
     /// If mass is not conserved, then we need to know whether a flow is incoming or outgoing.
-    UnbalancedFlowTerm {
+    Unbalanced {
         /// The direction of the flow.
         direction: Direction,
         /// The structure of the rate parameter can be either per transition or per place.
@@ -106,31 +106,31 @@ pub enum Direction {
     OutgoingFlow,
 }
 
-impl fmt::Display for FlowTerm {
+impl fmt::Display for FlowParameter {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self {
-            FlowTerm::BalancedFlowTerm { transition: trans } => {
+            FlowParameter::Balanced { transition: trans } => {
                 write!(f, "{}", trans)
             }
-            FlowTerm::UnbalancedFlowTerm {
+            FlowParameter::Unbalanced {
                 direction: Direction::IncomingFlow,
                 parameter: RateParameter::PerTransition { transition: trans },
             } => {
                 write!(f, "Incoming({})", trans)
             }
-            FlowTerm::UnbalancedFlowTerm {
+            FlowParameter::Unbalanced {
                 direction: Direction::IncomingFlow,
                 parameter: RateParameter::PerPlace { transition: trans, place: output },
             } => {
                 write!(f, "([{}]->{})", trans, output)
             }
-            FlowTerm::UnbalancedFlowTerm {
+            FlowParameter::Unbalanced {
                 direction: Direction::OutgoingFlow,
                 parameter: RateParameter::PerTransition { transition: trans },
             } => {
                 write!(f, "Outgoing({})", trans)
             }
-            FlowTerm::UnbalancedFlowTerm {
+            FlowParameter::Unbalanced {
                 direction: Direction::OutgoingFlow,
                 parameter: RateParameter::PerPlace { transition: trans, place: input },
             } => {
@@ -216,7 +216,7 @@ impl PetriNetMassActionAnalysis {
         &self,
         model: &ModalDblModel,
         mass_conservation_type: MassConservationType,
-    ) -> PolynomialSystem<QualifiedName, Parameter<FlowTerm>, i8> {
+    ) -> PolynomialSystem<QualifiedName, Parameter<FlowParameter>, i8> {
         let mut sys = PolynomialSystem::new();
         for ob in model.ob_generators_with_type(&self.place_ob_type) {
             sys.add_term(ob, Polynomial::zero());
@@ -229,7 +229,7 @@ impl PetriNetMassActionAnalysis {
             match mass_conservation_type {
                 MassConservationType::Balanced => {
                     let term: Polynomial<_, _, _> = [(
-                        Parameter::generator(FlowTerm::BalancedFlowTerm { transition: mor }),
+                        Parameter::generator(FlowParameter::Balanced { transition: mor }),
                         term.clone(),
                     )]
                     .into_iter()
@@ -244,7 +244,7 @@ impl PetriNetMassActionAnalysis {
                     for input in inputs {
                         let input_term: Polynomial<_, _, _> = match granularity {
                             RateGranularity::PerTransition => [(
-                                Parameter::generator(FlowTerm::UnbalancedFlowTerm {
+                                Parameter::generator(FlowParameter::Unbalanced {
                                     direction: Direction::OutgoingFlow,
                                     parameter: RateParameter::PerTransition {
                                         transition: mor.clone(),
@@ -253,7 +253,7 @@ impl PetriNetMassActionAnalysis {
                                 term.clone(),
                             )],
                             RateGranularity::PerPlace => [(
-                                Parameter::generator(FlowTerm::UnbalancedFlowTerm {
+                                Parameter::generator(FlowParameter::Unbalanced {
                                     direction: Direction::OutgoingFlow,
                                     parameter: RateParameter::PerPlace {
                                         transition: mor.clone(),
@@ -271,7 +271,7 @@ impl PetriNetMassActionAnalysis {
                     for output in outputs {
                         let output_term: Polynomial<_, _, _> = match granularity {
                             RateGranularity::PerTransition => [(
-                                Parameter::generator(FlowTerm::UnbalancedFlowTerm {
+                                Parameter::generator(FlowParameter::Unbalanced {
                                     direction: Direction::IncomingFlow,
                                     parameter: RateParameter::PerTransition {
                                         transition: mor.clone(),
@@ -280,7 +280,7 @@ impl PetriNetMassActionAnalysis {
                                 term.clone(),
                             )],
                             RateGranularity::PerPlace => [(
-                                Parameter::generator(FlowTerm::UnbalancedFlowTerm {
+                                Parameter::generator(FlowParameter::Unbalanced {
                                     direction: Direction::IncomingFlow,
                                     parameter: RateParameter::PerPlace {
                                         transition: mor.clone(),
@@ -334,7 +334,7 @@ impl StockFlowMassActionAnalysis {
         &self,
         model: &DiscreteTabModel,
         mass_conservation_type: MassConservationType,
-    ) -> PolynomialSystem<QualifiedName, Parameter<FlowTerm>, i8> {
+    ) -> PolynomialSystem<QualifiedName, Parameter<FlowParameter>, i8> {
         let terms: Vec<_> = self.flow_monomials(model).into_iter().collect();
 
         let mut sys = PolynomialSystem::new();
@@ -346,18 +346,17 @@ impl StockFlowMassActionAnalysis {
             let cod = model.mor_generator_cod(&flow).unwrap_basic();
             match mass_conservation_type {
                 MassConservationType::Balanced => {
-                    let param =
-                        Parameter::generator(FlowTerm::BalancedFlowTerm { transition: flow });
+                    let param = Parameter::generator(FlowParameter::Balanced { transition: flow });
                     let term: Polynomial<_, _, _> = [(param, term.clone())].into_iter().collect();
                     sys.add_term(dom, -term.clone());
                     sys.add_term(cod, term);
                 }
                 MassConservationType::Unbalanced(_) => {
-                    let dom_param = Parameter::generator(FlowTerm::UnbalancedFlowTerm {
+                    let dom_param = Parameter::generator(FlowParameter::Unbalanced {
                         direction: Direction::OutgoingFlow,
                         parameter: RateParameter::PerTransition { transition: flow.clone() },
                     });
-                    let cod_param = Parameter::generator(FlowTerm::UnbalancedFlowTerm {
+                    let cod_param = Parameter::generator(FlowParameter::Unbalanced {
                         direction: Direction::IncomingFlow,
                         parameter: RateParameter::PerTransition { transition: flow },
                     });
@@ -412,15 +411,15 @@ impl StockFlowMassActionAnalysis {
 
 /// Substitutes numerical rate coefficients into a symbolic mass-action system.
 pub fn extend_mass_action_scalars(
-    sys: PolynomialSystem<QualifiedName, Parameter<FlowTerm>, i8>,
+    sys: PolynomialSystem<QualifiedName, Parameter<FlowParameter>, i8>,
     data: &MassActionProblemData,
 ) -> PolynomialSystem<QualifiedName, f32, i8> {
     let sys = sys.extend_scalars(|poly| {
         poly.eval(|flow| match flow {
-            FlowTerm::BalancedFlowTerm { transition } => {
+            FlowParameter::Balanced { transition } => {
                 data.transition_rates.get(transition).cloned().unwrap_or_default()
             }
-            FlowTerm::UnbalancedFlowTerm { direction, parameter } => match (direction, parameter) {
+            FlowParameter::Unbalanced { direction, parameter } => match (direction, parameter) {
                 (Direction::IncomingFlow, RateParameter::PerTransition { transition }) => {
                     data.transition_production_rates.get(transition).cloned().unwrap_or_default()
                 }
