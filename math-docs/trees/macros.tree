@@ -58,6 +58,8 @@
 
 \def\define[name]{\strong{\name}}
 \def\vec[body]{#{\underline{\body}}}
+\def\pluseq{#{\mathrel{+}=}}
+\def\minuseq{#{\mathrel{-}=}}
 
 % Category theory
 
@@ -106,7 +108,10 @@
 \def\dbl[name]{#{\mathbb{\name}}}
 \def\SSet{#{\mathbb{S}\mathsf{et}}}
 \def\Span{#{\mathbb{S}\mathsf{pan}}}
+\def\Rel{#{\mathbb{R}\mathsf{el}}}
 \def\Mod{#{\mathbb{M}}\mathsf{od}}
+\def\CCat{#{\mathbb{C}\mathsf{at}}}
+\def\Prof{#{\mathbb{P}\mathsf{rof}}}
 
 % Monads
 

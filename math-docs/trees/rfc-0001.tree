@@ -1,0 +1,555 @@
+\title{Set-theoretic models of double theories}
+\taxon{RFC}
+\author{Evan Patterson}
+\date{2026-02-16}
+\import{macros}
+
+\subtree{
+\title{Summary}
+
+\p{Many scientific models, especially quantitative models like systems of ODEs
+and stock-flow diagrams, cannot be usefully seen as categories in the small.
+CatColab therefore needs an approach to models that are merely set-theoretic. We
+propose one that is harmonious with the existing usage of double theories.}
+
+}
+
+\subtree{
+\title{Motivation}
+
+\p{Models in CatColab are categorical structures: every object type in a theory
+specifies a category in models of the theory, every morphism type specifies a
+profunctor, and so on. This design centers \em{category theory in the small}, a
+powerful and underappreciated point of view on modeling. It is the basis of
+CatColab's approaches to motif finding, programming in domain-specific
+languages, flavored Petri nets, and refining models.}
+
+\p{It is also rather opinionated. Not every model in science or engineering can
+be usefully seen as a categorical structure. This seems particularly true of
+quantitative formalisms like stock-flow diagrams with arbitrary flow functions
+and dynamical systems described by general ODEs.}
+
+\p{Thus, as has long been apparent, CatColab needs an approach to models that
+are merely \em{set-theoretic}. One way to tell the difference between
+category-theoretic and set-theoretic models of a fixed theory is that the former
+should be the objects of a (nontrivial) 2-category or double category, whereas
+the latter are the objects of only a category. There are innumerable logical
+systems that can be used to specify set-theoretic models, this being a focus of
+universal algebra and mathematical logic for a century.}
+
+\p{This RFC proposes an approach to set-theoretical models harmonious with
+CatColab's existing category-theoretic models. The basic observation is that
+with surprisingly small changes to the definitions of \em{theory} and
+\em{model}, the formalism of double theories can toggle between
+category-theoretic and set-theoretic models. As a result, we will be able to
+reuse and share significant amounts of functionality across CatColab's core and
+frontend.}
+
+\p{There are reasons beyond expediency of implementation to favor
+double-categorical logic. A key reason, as we will see, is that it enables a
+simple and constrained form of type dependency.}
+
+}
+
+\subtree{
+\title{Mathematical specification}
+
+\p{Let's compare how to configure double-categorical logic for set-theoretic
+versus category-theoretic models, starting with the minimal structure and
+gradually introducing features.}
+
+\subtree{
+\title{Virtual double categories}
+
+\p{In the set-theoretic setting, a \define{simple double theory} is a virtual
+double category \dbl{T} and a \define{model} of \dbl{T} is a functor (of VDCs)
+#{\dbl{T} \to \SSet}.}
+
+\p{In the category-theoretic setting, there are several essentially equivalent
+formulations. On one definition, a \define{simple double theory} is a
+\em{unital} VDC \dbl{T} and a \define{model} of \dbl{T} is a functor (of VDCs)
+#{\dbl{T} \to \SSet} or equivalently a \em{normal} functor #{\dbl{T} \to \CCat =
+\Mod(\SSet)}. Alternatively, a \define{simple double theory} is an
+\em{augmented} VDC \dbl{T} and a \define{model} of \dbl{T} is a functor (of
+augmented VDCs) #{\dbl{T} \to \CCat}.}
+
+\p{The difference between the two kinds of theories is thus about loose
+identities, which can either be defined by the universal property of
+[units](cruttwell-shulman-2010) in a VDC or introduced as primitive structure
+(co-nullary cells) in an [augmented VDC](koudenburg-2020). And that is the
+extent of the difference.}
+
+}
+
+\subtree{
+\title{Restrictions}
+
+\p{Type-theoretically, an object in a theory \dbl{T} is a type and a proarrow
+#{P: X \proto Y} in \dbl{T} is a family of types depending on #{X} and #{Y}. It
+is then natural to ask that the family #{P} be re-indexable along maps (tight
+morphisms) into #{X} and #{Y}. That is precisely what \em{restrictions} in a VDC
+do, motivating the following definitions.}
+
+\p{In the set-theoretic setting, a \define{fibrant double theory} is a VDC
+\dbl{T} with restrictions and a \define{model} of \dbl{T} is a functor #{\dbl{T}
+\to \SSet} that preserves restrictions.}
+
+\p{In the category-theoretic setting, a \define{fibrant double theory} is a
+virtual equipment \dbl{T} (i.e., a VDC with units and restrictions) and a
+\define{model} of \dbl{T} is a functor (of VDCs) #{\dbl{T} \to \SSet} or
+equivalently a normal functor #{\dbl{T} \to \CCat}, recalling that any functor
+between virtual equipments preserves restrictions ([Cruttwell-Shulman 2010,
+Theorem 7.24](cruttwell-shulman-2010)). Alternatively, a \define{fibrant double
+theory} is an augmented VDC \dbl{T} with all restrictions and a \define{model}
+of \dbl{T} is a functor (of augmented VDCs) #{\dbl{T} \to \CCat} that preserves
+restrictions.}
+
+\p{As before, the category-theoretic theories differ from the set-theoretic ones
+only by requiring some form of loose identities.}
+
+}
+
+\subtree{
+\title{Further structure}
+
+\p{A virtual double category with restrictions is the most fundamental structure
+possessed by a double theory. To this may be added further double-categorical
+gadgets, such as:
+
+\ul{
+  \li{extensions}
+  \li{cartesian products}
+  \li{other double-categorical limits, such as tabulators}
+  \li{modalities, such as lists.}
+}
+
+Here we will only note that all of these features work equally well in the set-
+and category-theoretic settings.}
+
+}
+
+}
+
+\subtree{
+\title{Examples}
+
+\p{Any Lawvere theory can be viewed as a cartesian double theory trivial in the
+loose direction, which is useful but not very interesting in its own right. We
+give a series of examples of set-theoretic double theories that make non-trivial
+use of the double-categorical structure.}
+
+\def\Var{#{\mathrm{Var}}}
+\def\State{#{\mathrm{State}}}
+\def\Param{#{\mathrm{Param}}}
+\def\Term{#{\mathrm{Term}}}
+
+\subtree{
+\title{Polynomial ODE systems}
+\taxon{Example}
+
+\p{Consider the modal double theory freely generated by
+
+\ul{
+  \li{an object \State}
+  \li{a proarrow #{\Term: \List(\State) \proto \State}.}
+}
+}
+
+\p{A finite model of this double theory consists of a finite set of
+\define{state variables} and a family of finite sets of \define{terms} or
+\define{contributions}, indexed by pairs comprising a list of variables and a
+variable. The intended interpretation is that a term
+
+##{t : \Term([x_1, \dots, x_n], x)}
+
+represents an additive contribution to the vector field of the form
+
+##{\dot x \pluseq k_t \cdot x_1 \cdot x_2 \cdots x_n,}
+
+where #{k_t \in \R} is a free parameter. Finite models are thus universal for
+ODE systems defined by polynomial vector fields.}
+
+\p{Crucially, composing such models by identifying variables corresponds to
+composing parameterized polynomial ODE systems in the variable sharing paradigm.
+For the latter, see the [reg nets](reg-nets-2024) paper.}
+
+}
+
+\p{We emphasize that in this example, the numerical parameters #{k_t} belong to
+the intended interpretation of the models, not to the models themselves. To use
+symbolic parameters \em{within} models, we must expand the theory.}
+
+\subtree{
+\title{Parameterized polynomial ODE systems}
+\taxon{Example}
+
+\p{Consider the double theory freely generated by
+
+\ul{
+  \li{an object \State}
+  \li{a proarrow #{\Term: \List(\State) \proto \State}.}
+  \li{a proarrow #{\Param: 1 \proto 1}}
+  \li{a cell
+  \quiver{
+    % https://q.uiver.app/#q=WzAsNCxbMCwwLCJcXG1hdGhybXtMaXN0fShcXG1hdGhybXtTdGF0ZX0pIl0sWzAsMSwiMSJdLFsxLDEsIjEiXSxbMSwwLCJcXG1hdGhybXtTdGF0ZX0iXSxbMSwyLCJcXG1hdGhybXtQYXJhbX0iLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMCwxLCIhIiwyXSxbMywyLCIhIl0sWzAsMywiXFxtYXRocm17VGVybX0iLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbNyw0LCJrIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV1d
+    \begin{tikzcd}
+	{\mathrm{List}(\mathrm{State})} & {\mathrm{State}} \\
+	1 & 1
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{\mathrm{Term}}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-2]
+	\arrow["{!}"', from=1-1, to=2-1]
+	\arrow["{!}", from=1-2, to=2-2]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "{\mathrm{Param}}"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-2]
+	\arrow["k"{description}, draw=none, from=0, to=1]
+    \end{tikzcd}
+  }
+  }
+}
+}
+
+\p{A freely and finitely generated (f.f.g.) model with no generating parameters
+is equivalent to a model of the previous theory: every term #{t} is freely
+assigned its own parameter #{k_t}, and there are no other parameters. More
+interestingly, in a finitely presented model of the theory, named parameters can
+be introduced and terms assigned to them, enabling \em{parameter tying} or
+\em{parameter sharing} across terms. Thus, in the intended interpretations,
+these models are \em{more} constrained than the previous ones.}
+
+}
+
+\p{The foregoing examples admit endless variations. Here is a general device to
+symbolically describe ODE systems outside the polynomial class.}
+
+\subtree{
+\title{ODE systems}
+\taxon{Example}
+
+\p{Let \cat{T} be a Lawvere theory. For instance, \cat{T} could be the theory of
+commutative rings augmented with unary operations that will be interpreted as
+special functions like the exponential or sine.}
+
+\p{Then there is a cartesian double theory presented by
+
+\ul{
+  \li{an object \Var along with arrows and equations embedding the Lawvere
+  theory \cat{T} into the tight category of double theory}
+  \li{an object \State}
+  \li{an arrow #{\State \to \Var}}
+  \li{a proarrow #{\Term: \Var \proto \State}.}
+}
+}
+
+\p{An f.f.g. model of this theory consists of finite sets of \define{state
+variables} and of \define{exogenous variables} (generators of type \Var), an
+embedding of the state variables into the variables, and a family of finite sets
+of \define{terms}, indexed by pairs comprising a generic variable and a state
+variable. As before, a term #{t: \Term(v, x)} represents an additive
+contribution to the vector field of the form
+
+##{\dot x \pluseq k_t \cdot v, \qquad k_t \in \R.}
+
+Once interpretations of the Lawvere theory \cat{T} and the exogenous variables
+are fixed, such a model defines a vector field on the state variables.}
+
+}
+
+\subtree{
+\title{Parameterized ODE systems}
+\taxon{Example}
+
+\p{Given a Lawvere theory \cat{T}, there is a cartesian double theory presented
+by
+
+\ul{
+  \li{an object \Var along with arrows and equations embedding the Lawvere
+  theory \cat{T} into the tight category of double theory}
+  \li{objects \State and \Param}
+  \li{arrows #{\State \to \Var} and #{\Param \to \Var}}
+  \li{a proarrow #{\Term: \Var \proto \State}.}
+}
+}
+
+\p{An f.f.g. model of this theory specifies a parameterized ODE system, where
+each term #{t: \Term(v, x)} contributes to the vector field simply as ##{\dot x
+\pluseq v.} Notice that parameters can now appear arbitrarily in variable
+expressions, not just as linear coefficients.}
+
+}
+
+\p{CatColab currently implements ["primitive stock-flow
+diagrams"](stock-flow-2023), more likely to be called "system structure
+diagrams" by system dynamicists. There are several ways to formulate stock-flow
+diagrams with arbitrary flow functions using the above ideas. Here is one.}
+
+\subtree{
+\title{Stock and flow diagrams}
+\taxon{Example}
+
+\def\Stock{#{\mathrm{Stock}}}
+\def\Flow{#{\mathrm{Flow}}}
+
+\p{Given a Lawvere theory \cat{T}, there is a cartesian double theory presented
+by
+
+\ul{
+  \li{an object \Var along with arrows and equations embedding the Lawvere
+  theory \cat{T} into the tight category of double theory}
+  \li{an object \Stock}
+  \li{an arrow #{\Stock \to \Var}}
+  \li{a proarrow #{\Flow: \Var \proto \Stock \times \Stock}.}
+}
+}
+
+\p{In an f.f.g. model of this theory, a flow #{f: \Flow(v, (u, d))}, where #{u}
+stands for "upstream" and #{d} for "downstream," is intended to be interpreted
+as a pair of contributions to the vector field
+
+##{\dot u \minuseq k_f \cdot v, \qquad \dot d \pluseq k_f \cdot v,}
+
+where #{k_f \in \R_+} is a free parameter.
+}
+
+}
+
+}
+
+\subtree{
+\title{Implementation}
+
+\p{The close relation between set- and category-theoretic double theories,
+differing only in their handling of loose identities, means that this RFC has an
+easy path to implementation.}
+
+\p{Starting with theories, the most naive implementation could be as simple as
+relaxing the \code{hom_type} method in the \code{DblTheory} trait to return an
+\code{Option<MorType>} instead of a \code{MorType}. This would be pleasingly
+symmetric with \code{compose_types}, which already returns an
+\code{Option<MorType>} as the structure is a VDC in which arbitrary proarrow
+composites may not exist. Concrete types for double theories, such as
+\code{ModalDblTheory}, could then gain a flag determining whether they will
+allow loose identities to be constructed.}
+
+\p{Over time I would expect the data structures for set- and category-theoretic
+theories to diverge slightly, since the unbiased description of cell composites
+should differ between a VDC and a unital/augmented VDC. That, however, is a
+separate project. We already have decent data structures for cell composites in
+a bare VDC. Extending those to give normal forms for cell composites in a unital
+or augmented VDC is an open question about the existing, category-theoretic
+double theories.}
+
+\p{As for models of double theories, the simplest implementation strategy is to
+leave the data structures themselves unchanged, changing only the type checking
+and validation logic. In this design, it would always be possible to construct a
+putative morphism, but such a morphism would fail to validate when the theory
+does not have Hom types.}
+
+\p{Other parts of the CatColab system, such as the DoubleTT elaborator and the
+frontend, should require little or no changes.}
+
+}
+
+\subtree{
+\title{Rationale and alternatives}
+
+\p{As I've noted, there are countless logical systems that could be used to
+specify set-theoretic models, and I have no reason to think this one
+intrinsically privileged. I do however think it has appealing features compared
+to the following possible alternatives.}
+
+\subtree{
+\title{Fibered logics}
+\taxon{alternative}
+
+\p{In his monograph [[jacobs-1998]], Jacobs takes the stance that "a logic is
+always a logic over a type theory," formalized to mean that a logic is not just
+a category but a \nlab{fibered category}. Inasmuch as an equipment \em{is} a
+kind of fibered category, our approach is more a variant of than an alternative
+to Jacobs', taking the context to be two-sided instead of one-sided. Though
+tastes may vary, two-sided contexts have the merits of fitting well with our
+existing approach to categorical models; being useful in situations where the
+dependent type \em{is} meaningfully directed even if it doesn't compose, like
+the terms/contributions in our ODE system examples; and entailing no loss of
+generality, since the one-sided case is recovered as types #{P: 1 \proto X}, a
+time-honored tradition in category theory also appealed to in
+[DOTS](dots-2025).}
+
+}
+
+\subtree{
+\title{Instances}
+\taxon{alternative}
+
+\p{My original vision for "set-theoretic models" in CatColab is that they would
+exist one level lower in the system: as [instances](double-instances-2026) over
+categorical models. Both instances and set-theoretic models of double theories
+allow types and operations; the latter go further by allowing one level of type
+dependency. Insofar as the fibered and indexed views of dependency are
+mathematically equivalent, one could argue that nothing is gained by this move:
+dependent types can be encoded by \nlab{display maps} in an instance. However,
+there is a big difference between arrows and proarrows when \em{presenting}
+models by generators and relations. Applications of operations are freely
+adjoined to the model, whereas type parameters must be explicitly declared. This
+distinction was used in the double theory for parameterized polynomial ODE
+systems, allowing parameters to be freely adjoined when not specified while
+insisting that the monomials on the right-hand sides of terms be given
+explicitly.}
+
+\p{I still expect instances to play an important role in the design of CatColab,
+particularly in CatColab's yet-to-be developed data layer, as a flat data
+representation should better interoperate with traditional relational database
+systems.}
+
+}
+
+\subtree{
+\title{GATs}
+\taxon{alternative}
+
+\p{A key difference between [GATs](gatlab-2024) and double theories is that the
+former allow arbitrary levels of type dependency while the latter have just one
+level of type dependency. Having a single level strikes me as a useful balance
+between simple types and full-blown dependent types. That said, when double
+theories are equipped with tabulators, mutually recursive construction of
+proarrows and tabulators allows type dependency at arbitrary levels. In this
+case, the precise relation between GATs and double theories is unknown to me.}
+
+}
+
+}
+
+\subtree{
+\title{Prior art}
+
+\p{A number of us at Topos have had pairwise conversations about versions of
+this idea. Tim Hosgood has written up essentially the same approach to
+polynomial ODE systems in the
+[roadmap](https://github.com/ToposInstitute/CatColab-Roadmap/issues/58).}
+
+\p{My paper with Michael Lambert on [double ologs](double-ologs) shares ideas
+with this RFC and is a useful source of intuition and examples. But there are
+notable differences: here we envision semantics in \SSet, instead of \Rel as in
+the paper, and here we are interested in models given by finite presentation,
+instead of explicitly by tabular data as in a database. We also currently have
+no plans to implement the compact closed structure from the paper, which remains
+poorly understood for weak double categories, let alone for virtual double
+categories, and is the subject of ongoing research. The next section describes a
+situation where the structure of a compact closed double category would be
+useful, however.}
+
+}
+
+\subtree{
+\title{Future possibilities}
+
+\p{Making ODE systems be models of a theory opens the possibility of
+\em{declaratively} implementing ODE semantics for models of other theories, by
+migrating them along morphisms between theories. Just as there are many notions
+of functorial data migration between categorical databases, there will be many
+possible approaches to model migration. There has yet to be any theoretical
+study of migrating models of double theories.}
+
+\p{Here I'll sketch an approach inspired by conversations with David Jaz Myers,
+who was in turn inspired by ideas of Bob Atkey. In outline, to migrate models of
+some theory \dbl{T} into ODEs, one first #{\Sigma}-migrates into a larger theory
+containing both \dbl{T} and the theory of ODEs, then #{\Delta}-migrates into the
+theory of ODEs. The intermediate theory additionally contains "builder"
+operations that will, under #{\Sigma}-migration, freely populate the ODE with
+variables and terms. The technique is illustrated by the following example.}
+
+\subtree{
+\title{Lotka-Volterra ODE semantics for graphs}
+\taxon{example}
+
+\def\thGraph{#{\dbl{T}_\mathrm{Gph}}}
+\def\thODE{#{\dbl{T}_\mathrm{ODE}}}
+\def\thLV{#{\dbl{T}_\mathrm{LV}}}
+
+\p{We construct the [Lotka-Volterra ODE semantics](reg-nets-2024) for graphs by
+a two-stage model migration. For simplicity, we use ordinary graphs rather than
+signed ones. So, let \thGraph be the non-unital double theory of graphs, i.e.,
+the theory freely generated by an object #{V} and a proarrow #{E: V \proto V}.
+Let \thODE be the theory of ODEs described above.}
+
+\p{Present a theory \thLV that combines the theories of graphs and ODEs with
+following additional generators:
+
+\ul{
+  \li{an arrow #{b_\State: V \to \State}, the \define{builder} for state
+  variables}
+  
+  \li{a nullary cell, the \define{builder} for growth/decay terms:
+  \quiver{
+  % https://q.uiver.app/#q=WzAsNCxbMSwwLCJWIl0sWzAsMiwiXFxtYXRocm17VmFyfSJdLFsyLDIsIlxcbWF0aHJte1N0YXRlfSJdLFswLDEsIlxcbWF0aHJte1N0YXRlfSJdLFsxLDIsIlxcbWF0aHJte1Rlcm19IiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzMsMSwiXFxtYXRocm17dmFyfV97XFxtYXRocm17U3RhdGV9fSIsMl0sWzAsMywiYl97XFxtYXRocm17U3RhdGV9fSIsMl0sWzAsMiwiYl97XFxtYXRocm17U3RhdGV9fSJdLFswLDQsIlxcYmV0YV97XFxtYXRocm17Z3Jvd3RofX0iLDEseyJzaG9ydGVuIjp7InRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
+  \begin{tikzcd}
+	& V & \\
+	{\mathrm{State}} \\
+	{\mathrm{Var}} && {\mathrm{State}}
+	\arrow["{b_{\mathrm{State}}}"', from=1-2, to=2-1]
+	\arrow["{b_{\mathrm{State}}}", from=1-2, to=3-3]
+	\arrow["{\mathrm{var}_{\mathrm{State}}}"', from=2-1, to=3-1]
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{\mathrm{Term}}"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-3]
+	\arrow["{\beta_{\mathrm{growth}}}"{description}, draw=none, from=1-2, to=0]
+  \end{tikzcd}
+  }
+  }
+
+  \li{a nullary cell, the \define{builder} for interaction terms:
+  \quiver{
+  % https://q.uiver.app/#q=WzAsNyxbMSwwLCJcXHRvcCBFIl0sWzAsMSwiVl4yIl0sWzAsNCwiXFxtYXRocm17VmFyfSJdLFsyLDQsIlxcbWF0aHJte1N0YXRlfSJdLFsyLDEsIlYiXSxbMCwzLCJcXG1hdGhybXtWYXJ9XjIiXSxbMCwyLCJcXG1hdGhybXtTdGF0ZX1eMiJdLFswLDEsIlxcbGFuZ2xlIFxccGlfMCwgXFxwaV8xIFxccmFuZ2xlIiwyXSxbMiwzLCJcXG1hdGhybXtUZXJtfSIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFswLDQsIlxccGlfMSJdLFs0LDMsImJfe1xcbWF0aHJte1N0YXRlfX0iXSxbMSw2LCJiX3tcXG1hdGhybXtTdGF0ZX19XjIiLDJdLFs2LDUsIlxcbWF0aHJte3Zhcn1fe1xcbWF0aHJte1N0YXRlfX1eMiIsMl0sWzUsMiwiXFxjZG90IiwyXSxbMCw4LCJcXGJldGFfe1xcbWF0aHJte2ludGVyYWN0aW9ufX0iLDEseyJzaG9ydGVuIjp7InRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
+  \begin{tikzcd}
+	& {\top E} & \\
+	{V^2} && V \\
+	{\mathrm{State}^2} \\
+	{\mathrm{Var}^2} \\
+	{\mathrm{Var}} && {\mathrm{State}}
+	\arrow["{\langle \pi_0, \pi_1 \rangle}"', from=1-2, to=2-1]
+	\arrow["{\pi_1}", from=1-2, to=2-3]
+	\arrow["{b_{\mathrm{State}}^2}"', from=2-1, to=3-1]
+	\arrow["{b_{\mathrm{State}}}", from=2-3, to=5-3]
+	\arrow["{\mathrm{var}_{\mathrm{State}}^2}"', from=3-1, to=4-1]
+	\arrow["\cdot"', from=4-1, to=5-1]
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{\mathrm{Term}}"'{inner sep=.8ex}, "\shortmid"{marking}, from=5-1, to=5-3]
+	\arrow["{\beta_{\mathrm{interaction}}}"{description}, draw=none, from=1-2, to=0]
+  \end{tikzcd}
+  }
+  where #{\top E} is the tabulator of #{E}.}
+}
+}
+
+\p{A graph is migrated to an ODE system by pushing forward (#{\Sigma}-migrating)
+along the inclusion #{\thGraph \hookrightarrow \thLV} and then pulling back
+(#{\Delta}-migrating) along the inclusion #{\thODE \hookrightarrow \thLV}.}
+
+\p{This example illustrates the tradeoff between the two-sided contexts in
+double-categorical logic and the one-sided contexts of traditional fibered
+logic. On one hand, it is natural to regard edges as a directed dependent type
+#{E: V \proto V}. On the other hand, there should be no need to use tabulators
+in this example. Rather, the builder for interaction terms should be a
+\em{unary} cell
+
+\quiver{
+% https://q.uiver.app/#q=WzAsNixbMCwwLCJWXjIiXSxbMCwzLCJcXG1hdGhybXtWYXJ9Il0sWzIsMywiXFxtYXRocm17U3RhdGV9Il0sWzIsMCwiViJdLFswLDIsIlxcbWF0aHJte1Zhcn1eMiJdLFswLDEsIlxcbWF0aHJte1N0YXRlfV4yIl0sWzEsMiwiXFxtYXRocm17VGVybX0iLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMywyLCJiX3tcXG1hdGhybXtTdGF0ZX19Il0sWzAsNSwiYl97XFxtYXRocm17U3RhdGV9fV4yIiwyXSxbNSw0LCJcXG1hdGhybXt2YXJ9X3tcXG1hdGhybXtTdGF0ZX19XjIiLDJdLFs0LDEsIlxcY2RvdCIsMl0sWzAsMywiXFxtYXRocm17ZXh0fV97MV9WLFxcRGVsdGFfVn0oRSleXFxzaGFycCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxMSw2LCJcXGJldGFfe1xcbWF0aHJte2ludGVyYWN0aW9ufX0iLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
+\begin{tikzcd}
+	{V^2} && V \\
+	{\mathrm{State}^2} \\
+	{\mathrm{Var}^2} \\
+	{\mathrm{Var}} && {\mathrm{State}}
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{\mathrm{ext}_{1_V,\Delta_V}(E)^\sharp}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-3]
+	\arrow["{b_{\mathrm{State}}^2}"', from=1-1, to=2-1]
+	\arrow["{b_{\mathrm{State}}}", from=1-3, to=4-3]
+	\arrow["{\mathrm{var}_{\mathrm{State}}^2}"', from=2-1, to=3-1]
+	\arrow["\cdot"', from=3-1, to=4-1]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "{\mathrm{Term}}"'{inner sep=.8ex}, "\shortmid"{marking}, from=4-1, to=4-3]
+	\arrow["{\beta_{\mathrm{interaction}}}"{description}, draw=none, from=0, to=1]
+\end{tikzcd}
+}
+
+whose domain is constructed from #{E} as follows. First, one extends #{E: V
+\proto V} on the right along the diagonal #{\Delta_V: V \to V \times V},
+yielding a proarrow #{\mathrm{ext}_{1_V,\Delta_V}(E): V \proto V \times V}.
+Then, one uses the hypothesized compact closed structure to move one copy of
+#{V} from the right side to the left side, yielding a proarrow
+#{\mathrm{ext}_{1_V,\Delta_V}(E)^\sharp: V \times V \proto V} as shown.}
+
+}
+
+}
