@@ -1,23 +1,33 @@
 \title{Double category theory}
 \taxon{bibliography}
 
-\p{Double category theory:}
+\p{Double category theory:
 
 \ul{
-\li{Textbook reference: [[grandis-2019]]}
-\li{Equipments: [[shulman-2008]]}
+  \li{Textbook reference: [[grandis-2019]]}
+  \li{Equipments: [[shulman-2008]]}
+}
 }
 
-\p{Double-categorical logic:}
+\p{Double-categorical logic:
 
 \ul{
-\li{[[cartesian-double-theories-2024]]}
-\li{[[double-products-2024]]}
-\li{[[double-instances-2026]]}
+  \li{[[cartesian-double-theories-2024]]}
+  \li{[[double-products-2024]]}
+  \li{[[double-instances-2026]]}
+}
 }
 
-\p{Background on categorical logic:}
+\p{Background on categorical logic:
 
 \ul{
-\li{[[shulman-2016]]}
+  \li{Treatment of categorical logic using multicategories: [[shulman-2016]]}
+}
+}
+
+\p{Double-categorical systems theory:
+
+\ul{
+  \li{[[dots-2025]]}
+}
 }
