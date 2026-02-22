@@ -5,7 +5,7 @@ use std::{fmt, hash::Hash};
 
 use crate::tt::util::{Row, pretty::*};
 use crate::validate::{self, Validate};
-use crate::zero::{HashColumn, LabelSegment, Mapping, MutMapping, NameSegment};
+use crate::zero::{Column, HashColumn, LabelSegment, Mapping, MutMapping, NameSegment};
 
 /// Ports of a wiring diagram.
 ///
@@ -176,22 +176,61 @@ impl<T: fmt::Display, J: fmt::Display + Clone + Eq> ToDoc for PortMap<T, J> {
     }
 }
 
-/// Pretty prints a UWD in the style of a Datalog query.
-///
-/// Unlike in typical Datalog syntax, arguments are named and typed.
-impl<T: fmt::Display, J: fmt::Display + Clone + Eq + Hash> ToDoc for UWD<T, J> {
-    fn to_doc<'a>(&self) -> D<'a> {
-        let head = self.outer.to_doc();
-        let clauses = self
+/// Pretty-printer for undirected wiring diagrams.
+#[derive(Derivative)]
+#[derivative(Default(new = "true"))]
+pub struct UWDPrinter {
+    #[derivative(Default(value = "true"))]
+    include_summary: bool,
+}
+
+impl UWDPrinter {
+    /// Sets whether to show summary at beginning of UWD printout.
+    pub fn include_summary(mut self, value: bool) -> Self {
+        self.include_summary = value;
+        self
+    }
+
+    /// Generates a summary string for the UWD.
+    pub fn summary<T: Clone + Eq, J: Clone + Eq + Hash>(&self, uwd: &UWD<T, J>) -> String {
+        let n_boxes = uwd.inner.len();
+        let n_junctions = uwd.junctions.len();
+        format!(
+            "UWD with {n_boxes} box{} and {n_junctions} junction{}",
+            if n_boxes != 1 { "es" } else { "" },
+            if n_junctions != 1 { "s" } else { "" },
+        )
+    }
+
+    /// Pretty prints a UWD in the style of a Datalog query.
+    ///
+    /// Unlike in typical Datalog syntax, arguments are named and typed.
+    pub fn doc<'a, T: fmt::Display + Clone + Eq, J: fmt::Display + Clone + Eq + Hash>(
+        &self,
+        uwd: &UWD<T, J>,
+    ) -> D<'a> {
+        let head = uwd.outer.to_doc();
+        let clauses = uwd
             .inner
             .iter()
             .map(|(_, (label, port_map))| unop(t(label.to_string()), port_map.to_doc()));
         let body = intersperse(clauses, t(",") + s());
-        head + t(" :-") + (s() + body).indented()
+        let result = head + t(" :-") + (s() + body).indented();
+        if self.include_summary {
+            t(self.summary(uwd)) + hardline() + result
+        } else {
+            result
+        }
     }
 }
 
-impl<T: fmt::Display, J: fmt::Display + Clone + Eq + Hash> fmt::Display for UWD<T, J> {
+impl<T: fmt::Display + Clone + Eq, J: fmt::Display + Clone + Eq + Hash> ToDoc for UWD<T, J> {
+    fn to_doc<'a>(&self) -> D<'a> {
+        UWDPrinter::new().doc(self)
+    }
+}
+
+impl<T: fmt::Display + Clone + Eq, J: fmt::Display + Clone + Eq + Hash> fmt::Display for UWD<T, J> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.to_doc().pretty())
     }
@@ -219,6 +258,7 @@ mod tests {
     fn pretty_print() {
         let uwd = binary_composite_uwd();
         let expected = expect![[r#"
+            UWD with 2 boxes and 3 junctions
             [x : X := u, z : Z := w] :-
               R [a : X := u, b : Y := v],
               S [c : Y := v, d : Z := w]"#]];
