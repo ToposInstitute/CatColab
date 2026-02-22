@@ -19,7 +19,7 @@ type TwoLevelFoodChain := [
 #/ declared: TwoLevelFoodChain
 
 uwd TwoLevelFoodChain
-#/ result: [] :-
+#/ result: [Grass : Object := Grass, Rabbit : Object := Rabbit, Fox : Object := Fox] :-
 #/   level1 [Prey : Object := Grass, Pred : Object := Rabbit],
 #/   level2 [Prey : Object := Rabbit, Pred : Object := Fox]
 

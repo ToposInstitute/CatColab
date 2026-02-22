@@ -2,7 +2,6 @@
 
 use fnotation::*;
 use scopeguard::{ScopeGuard, guard};
-use std::fmt::Write;
 
 use fnotation::{ParseConfig, parser::Prec};
 use tattle::declare_error;
@@ -219,12 +218,7 @@ impl TopElaborator {
                 let Some(uwd) = record_to_uwd(&ty_v) else {
                     return self.error(tn.loc, "expected a record type");
                 };
-                let body = uwd.to_doc().0.pretty(77).to_string();
-                let mut lines = body.lines();
-                let mut out = lines.next().unwrap_or("").to_string();
-                for line in lines {
-                    write!(&mut out, "\n#/ {line}").unwrap();
-                }
+                let out = uwd.to_doc().0.pretty(77).to_string().replace("\n", "\n#/ ");
                 Some(TopElabResult::Output(out))
             }
             "generate" => {
@@ -232,12 +226,9 @@ impl TopElaborator {
                 let mut elab = self.elaborator(&theory, toplevel);
                 let (_, ty_v) = elab.ty(tn.body);
                 let (model, ns) = Model::from_ty(toplevel, &theory.definition, &ty_v);
-                let printer = DblModelPrinter::new().include_summary(false);
-                let mut out = model.summary(&printer);
-                let body = model.to_doc(&printer, &ns).0.pretty(77).to_string();
-                for line in body.lines() {
-                    write!(&mut out, "\n#/ {line}").unwrap();
-                }
+                let printer = DblModelPrinter::new().include_summary(true);
+                let out = model.to_doc(&printer, &ns).0.pretty(77).to_string();
+                let out = out.trim().replace("\n", "\n#/ ");
                 Some(TopElabResult::Output(out))
             }
             _ => self.error(tn.loc, "unknown toplevel declaration"),

@@ -19,14 +19,15 @@ pub fn record_to_uwd(ty: &TyV) -> Option<UWD<ObType, QualifiedName>> {
 
     let mut uwd = UWD::empty();
 
+    // First pass: add a box for each field whose type is itself a record type.
     for (field_name, (field_label, _)) in record_v.fields.iter() {
         let field_ty = eval.field_ty(ty, &tm_v, *field_name);
         let TyV_::Record(r) = &&*field_ty else {
-            // Only fields that are themselves record contribute inner boxes.
             continue;
         };
         uwd.add_box(*field_name, *field_label);
 
+        // Add a port to the box for each specialization of the record type.
         for (port_name, (port_label, entry)) in r.specializations.entries() {
             let DtryEntry::File(spec_type) = entry else {
                 // Specialization is allowed at arbitrary depth, but only those at
@@ -53,6 +54,20 @@ pub fn record_to_uwd(ty: &TyV) -> Option<UWD<ObType, QualifiedName>> {
             uwd.add_port(*field_name, *port_name, *port_label, ob_type.clone());
             uwd.set(*field_name, *port_name, qual_name);
         }
+    }
+
+    // Second pass: add an outer port for each field that is now a junction.
+    for (field_name, (field_label, _)) in record_v.fields.iter() {
+        let qual_name = QualifiedName::single(*field_name);
+        if !uwd.has_junction(&qual_name) {
+            continue;
+        }
+        let field_ty = eval.field_ty(ty, &tm_v, *field_name);
+        let TyV_::Object(ob_type) = &&*field_ty else {
+            continue;
+        };
+        uwd.add_outer_port(*field_name, *field_label, ob_type.clone());
+        uwd.set_outer(*field_name, qual_name);
     }
 
     Some(uwd)

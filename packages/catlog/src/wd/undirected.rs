@@ -73,9 +73,19 @@ impl<T, J> UWD<T, J> {
         inner.ports.insert(port_name, label, ty);
         Some(())
     }
+
+    /// Adds a port to the outer box.
+    pub fn add_outer_port(&mut self, name: NameSegment, label: LabelSegment, ty: T) {
+        self.outer.ports.insert(name, label, ty);
+    }
 }
 
 impl<T: Clone + Eq, J: Clone + Eq + Hash> UWD<T, J> {
+    /// Returns whether the UWD contains the given junction.
+    pub fn has_junction(&self, junction: &J) -> bool {
+        self.junctions.is_set(junction)
+    }
+
     /// Assigns a port on a box to a junction.
     pub fn set(
         &mut self,
