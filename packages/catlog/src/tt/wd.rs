@@ -1,25 +1,40 @@
-//! Extract wiring diagrams from DoubleTT record types.
+//! Extract wiring diagrams from record types.
 
 use super::{eval::*, theory::*, toplevel::*, util::*, val::*};
 use crate::wd::UWD;
 use crate::zero::QualifiedName;
 
-/// Extracts a UWD from a record type.
+/// Extracts an undirected wiring diagram from a record type.
 ///
-/// Returns `None` when the given type is not a record.
+/// Returns a UWD when the given type is a record; otherwise, returns `None`.
+/// The UWD has a box for each field that is itself of record type.
+///
+/// Because record types do not have an explicit notion of interface (say by
+/// distinguishing "public" and "private" fields), there is ambiguity about how
+/// to choose the interfaces (ports) for outer and inner boxes. Two approaches
+/// are reasonable. In the maximalist approach, *every* field of `Object` type
+/// contributes a port. In the minimalist approach, only those fields used in a
+/// specialization contribute a port. We take the minimalist approach because
+/// the purpose of this feature is to get a visual overview of a composition,
+/// which is best achieved by minimizing clutter.
+///
+/// A deeper problem is that specializations of a nested record type can refer
+/// to fields of arbitrary depth. In this function, any specializations more
+/// than one level deep are ignored. To capture these, one might look for a
+/// "nested UWD" data structure.
 pub fn record_to_uwd(ty: &TyV) -> Option<UWD<ObType, QualifiedName>> {
     let TyV_::Record(record_v) = &**ty else {
         return None;
     };
 
-    let toplevel: Toplevel = Default::default();
+    let toplevel = Toplevel::default();
     let eval = Evaluator::empty(&toplevel);
     let (tm_n, eval) = eval.bind_self(ty.clone());
     let tm_v = eval.eta_neu(&tm_n, ty);
 
     let mut uwd = UWD::empty();
 
-    // First pass: add a box for each field whose type is itself a record type.
+    // First pass: add a box for each field that is itself of record type.
     for (field_name, (field_label, _)) in record_v.fields.iter() {
         let field_ty = eval.field_ty(ty, &tm_v, *field_name);
         let TyV_::Record(r) = &&*field_ty else {
