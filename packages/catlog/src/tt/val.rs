@@ -6,7 +6,7 @@ use bwd::Bwd;
 use derive_more::Deref;
 
 use super::{prelude::*, stx::*, theory::*};
-use crate::zero::LabelSegment;
+use crate::zero::{LabelSegment, QualifiedName};
 
 /// A way of resolving [BwdIdx] found in [TmS_::Var] to values.
 pub type Env = Bwd<TmV>;
@@ -202,6 +202,18 @@ impl TmN {
     /// Smart constructor for [TmN], [TmN_::Proj] case.
     pub fn proj(tm_n: TmN, field_name: FieldName, label: LabelSegment) -> Self {
         TmN(Rc::new(TmN_::Proj(tm_n, field_name, label)))
+    }
+
+    /// Extracts a qualifed name from a series of projections.
+    pub fn to_qualified_name(&self) -> QualifiedName {
+        let mut segments = Vec::new();
+        let mut n = self;
+        while let TmN_::Proj(n1, f, _) = &**n {
+            n = n1;
+            segments.push(*f);
+        }
+        segments.reverse();
+        segments.into()
     }
 }
 

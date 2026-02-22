@@ -113,11 +113,14 @@ impl Model {
 
     /// Adds an equation between two morphisms to the model.
     fn add_equation(&mut self, lhs: Mor, rhs: Mor) {
-        if let (Model::Discrete(model), Mor::Discrete(lhs), Mor::Discrete(rhs)) = (self, lhs, rhs) {
-            model.add_equation(PathEq::new(lhs, rhs));
+        match self {
+            Model::Discrete(model) => {
+                model.add_equation(PathEq::new(lhs.try_into().unwrap(), rhs.try_into().unwrap()));
+            }
+            Model::Modal(_) => {
+                // Modal models currently do not support equations, so we ignore them.
+            }
         }
-        // Modal models currently do not support equations, so we ignore them.
-        {}
     }
 
     /// Pretty prints a summary of the model.
@@ -198,16 +201,7 @@ impl<'a> ModelGenerator<'a> {
     /// Attempts to make an object from a term.
     fn make_ob(&self, val: &TmV, ob_type: &ObType) -> Option<Ob> {
         match &**val {
-            TmV_::Neu(n, _) => {
-                let mut segments = Vec::new();
-                let mut n = n.clone();
-                while let TmN_::Proj(n1, f, _) = &*n.clone() {
-                    n = n1.clone();
-                    segments.push(*f);
-                }
-                segments.reverse();
-                Some(self.ob_generator(segments.into()))
-            }
+            TmV_::Neu(n, _) => Some(self.ob_generator(n.to_qualified_name())),
             TmV_::App(name, tm_v) => self.ob_app([*name].into(), tm_v),
             TmV_::List(elems) => {
                 let el_type = ob_type.clone().list_arg().unwrap();
@@ -223,14 +217,7 @@ impl<'a> ModelGenerator<'a> {
     fn make_mor(&self, val: &TmV, mor_type: &MorType) -> Option<Mor> {
         match &**val {
             TmV_::Neu(n, _) => {
-                let mut segments = Vec::new();
-                let mut n = n.clone();
-                while let TmN_::Proj(n1, f, _) = &*n.clone() {
-                    n = n1.clone();
-                    segments.push(*f);
-                }
-                segments.reverse();
-                let name: QualifiedName = segments.into();
+                let name = n.to_qualified_name();
                 match &self.model {
                     Model::Discrete(_) => Some(Mor::Discrete(Path::single(name))),
                     Model::Modal(_) => Some(Mor::Modal(modal::ModalMor::Generator(name))),
@@ -253,13 +240,10 @@ impl<'a> ModelGenerator<'a> {
                     // already verified that the codomain of f equals the
                     // domain of g.
                     (Mor::Discrete(pf), Mor::Discrete(pg)) => {
-                        Some(Mor::Discrete(concat_paths(pf, pg)))
+                        Some(Mor::Discrete(Path::pair(pf, pg).flatten()))
                     }
                     (Mor::Modal(mf), Mor::Modal(mg)) => {
-                        Some(Mor::Modal(modal::ModalMor::Composite(Box::new(concat_paths(
-                            Path::single(mf),
-                            Path::single(mg),
-                        )))))
+                        Some(Mor::Modal(modal::ModalMor::Composite(Box::new(Path::pair(mf, mg)))))
                     }
                     _ => None,
                 }
@@ -308,22 +292,6 @@ impl<'a> ModelGenerator<'a> {
             }
             TyV_::Unit => None,
             TyV_::Meta(_) => None,
-        }
-    }
-}
-
-/// Concatenates two paths without validation.
-///
-/// This is safe when the type checker has already verified that the paths are
-/// composable (the target of `p` equals the source of `q`).
-fn concat_paths<V, E>(p: Path<V, E>, q: Path<V, E>) -> Path<V, E> {
-    match (p, q) {
-        (path, Path::Id(_)) => path,
-        (Path::Id(_), path) => path,
-        (Path::Seq(mut edges), Path::Seq(mut other_edges)) => {
-            edges.push(other_edges.head);
-            edges.append(&mut other_edges.tail);
-            Path::Seq(edges)
         }
     }
 }
