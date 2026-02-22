@@ -37,8 +37,13 @@ pub struct UWD<T, J> {
 }
 
 impl<T, J> UWD<T, J> {
-    /// Constructs a UWD with the given outer interface.
-    pub fn new(outer_ports: Ports<T>) -> Self {
+    /// Constructs an empty UWD.
+    pub fn empty() -> Self {
+        Self::default()
+    }
+
+    /// Constructs a UWD with the given interface for its outer ports.
+    pub fn with_ports(outer_ports: Ports<T>) -> Self {
         Self {
             outer: PortMap::new(outer_ports),
             inner: Default::default(),
@@ -46,40 +51,55 @@ impl<T, J> UWD<T, J> {
         }
     }
 
+    /// Adds an inner box with empty interface.
+    pub fn add_box(&mut self, name: NameSegment, label: LabelSegment) {
+        self.inner.insert(name, label, PortMap::default())
+    }
+
     /// Adds an inner box with the given interface.
-    pub fn add_box(&mut self, name: NameSegment, label: LabelSegment, ports: Ports<T>) {
+    pub fn add_box_with_ports(&mut self, name: NameSegment, label: LabelSegment, ports: Ports<T>) {
         self.inner.insert(name, label, PortMap::new(ports));
+    }
+
+    /// Adds a port to a box.
+    pub fn add_port(
+        &mut self,
+        box_name: NameSegment,
+        port_name: NameSegment,
+        label: LabelSegment,
+        ty: T,
+    ) -> Option<()> {
+        let inner = self.inner.get_mut(box_name)?;
+        inner.ports.insert(port_name, label, ty);
+        Some(())
     }
 }
 
 impl<T: Clone + Eq, J: Clone + Eq + Hash> UWD<T, J> {
     /// Assigns a port on a box to a junction.
-    pub fn set_inner(&mut self, box_name: NameSegment, port_name: NameSegment, junction: J) {
-        let inner = self
-            .inner
-            .get_mut(box_name)
-            .unwrap_or_else(|| panic!("No box named {box_name}"));
-        let ty = inner
-            .ports
-            .get(port_name)
-            .unwrap_or_else(|| panic!("Box {box_name} has no port named {port_name}"));
+    pub fn set(
+        &mut self,
+        box_name: NameSegment,
+        port_name: NameSegment,
+        junction: J,
+    ) -> Option<()> {
+        let inner = self.inner.get_mut(box_name)?;
+        let ty = inner.ports.get(port_name)?;
         if !self.junctions.is_set(&junction) {
             self.junctions.set(junction.clone(), ty.clone());
         }
         inner.mapping.set(port_name, junction);
+        Some(())
     }
 
     /// Assigns an outer port to a junction.
-    pub fn set_outer(&mut self, port_name: NameSegment, junction: J) {
-        let ty = self
-            .outer
-            .ports
-            .get(port_name)
-            .unwrap_or_else(|| panic!("No outer port named {port_name}"));
+    pub fn set_outer(&mut self, port_name: NameSegment, junction: J) -> Option<()> {
+        let ty = self.outer.ports.get(port_name)?;
         if !self.junctions.is_set(&junction) {
             self.junctions.set(junction.clone(), ty.clone());
         }
         self.outer.mapping.set(port_name, junction);
+        Some(())
     }
 }
 
@@ -173,13 +193,13 @@ mod tests {
     use expect_test::expect;
 
     fn binary_composite_uwd() -> UWD<&'static str, &'static str> {
-        let mut uwd: UWD<_, _> = UWD::new(Ports::from_iter([("x", "X"), ("z", "Z")]));
-        uwd.add_box("R".into(), "R".into(), Ports::from_iter([("a", "X"), ("b", "Y")]));
-        uwd.add_box("S".into(), "S".into(), Ports::from_iter([("c", "Y"), ("d", "Z")]));
-        uwd.set_inner("R".into(), "a".into(), "u");
-        uwd.set_inner("R".into(), "b".into(), "v");
-        uwd.set_inner("S".into(), "c".into(), "v");
-        uwd.set_inner("S".into(), "d".into(), "w");
+        let mut uwd: UWD<_, _> = UWD::with_ports(Ports::from_iter([("x", "X"), ("z", "Z")]));
+        uwd.add_box_with_ports("R".into(), "R".into(), Ports::from_iter([("a", "X"), ("b", "Y")]));
+        uwd.add_box_with_ports("S".into(), "S".into(), Ports::from_iter([("c", "Y"), ("d", "Z")]));
+        uwd.set("R".into(), "a".into(), "u");
+        uwd.set("R".into(), "b".into(), "v");
+        uwd.set("S".into(), "c".into(), "v");
+        uwd.set("S".into(), "d".into(), "w");
         uwd.set_outer("x".into(), "u");
         uwd.set_outer("z".into(), "w");
         uwd

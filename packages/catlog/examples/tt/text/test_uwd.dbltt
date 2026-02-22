@@ -1,0 +1,18 @@
+set_theory ThSignedCategory
+
+type PredPrey := [
+  Pred : Object,
+  Prey : Object,
+  eats : Negative[Pred, Prey],
+  feeds : (Hom Object)[Prey, Pred]
+]
+
+type TwoLevelFoodChain := [
+  Grass : Object,
+  Rabbit : Object,
+  Fox : Object,
+  level1 : PredPrey & [ .Prey := Grass, .Pred := Rabbit ],
+  level2 : PredPrey & [ .Prey := Rabbit, .Pred := Fox ]
+]
+
+uwd TwoLevelFoodChain

@@ -7,7 +7,9 @@ use std::fmt::Write;
 use fnotation::{ParseConfig, parser::Prec};
 use tattle::declare_error;
 
-use super::{context::*, eval::*, modelgen::*, prelude::*, stx::*, theory::*, toplevel::*, val::*};
+use super::{
+    context::*, eval::*, modelgen::*, prelude::*, stx::*, theory::*, toplevel::*, val::*, wd::*,
+};
 use crate::{
     dbl::model::DblModelPrinter,
     zero::{QualifiedName, name},
@@ -22,7 +24,7 @@ pub const TT_PARSE_CONFIG: ParseConfig = ParseConfig::new(
         ("*", Prec::lassoc(60)),
     ],
     &[":", ":=", "&", "Unit", "Hom", "*"],
-    &["type", "def", "syn", "chk", "norm", "generate", "set_theory"],
+    &["type", "def", "syn", "chk", "norm", "generate", "uwd", "set_theory"],
 );
 
 /// The result of elaborating a top-level statement.
@@ -209,6 +211,21 @@ impl TopElaborator {
                 let (_, ty_v) = elab.ty(ty_n);
                 let (tm_s, _) = elab.chk(&ty_v, tm_n);
                 Some(TopElabResult::Output(format!("{tm_s}")))
+            }
+            "uwd" => {
+                let theory = self.get_theory(tn.loc)?;
+                let mut elab = self.elaborator(&theory, toplevel);
+                let (_, ty_v) = elab.ty(tn.body);
+                let Some(uwd) = record_to_uwd(&ty_v) else {
+                    return self.error(tn.loc, "expected a record type");
+                };
+                let body = uwd.to_doc().0.pretty(77).to_string();
+                let mut lines = body.lines();
+                let mut out = lines.next().unwrap_or("").to_string();
+                for line in lines {
+                    write!(&mut out, "\n#/ {line}").unwrap();
+                }
+                Some(TopElabResult::Output(out))
             }
             "generate" => {
                 let theory = self.get_theory(tn.loc)?;

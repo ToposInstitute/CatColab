@@ -204,6 +204,7 @@ pub mod theory;
 pub mod toplevel;
 pub mod util;
 pub mod val;
+pub mod wd;
 
 #[cfg(doc)]
 use stx::*;
