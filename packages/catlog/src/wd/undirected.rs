@@ -81,7 +81,17 @@ impl<T, J> UWD<T, J> {
 }
 
 impl<T: Clone + Eq, J: Clone + Eq + Hash> UWD<T, J> {
-    /// Returns whether the UWD contains the given junction.
+    /// Returns whether UWD contains a box with a specific port.
+    pub fn has_port(&self, box_name: NameSegment, port_name: NameSegment) -> bool {
+        self.inner.get(box_name).is_some_and(|inner| inner.ports.has(port_name))
+    }
+
+    /// Returns whether the UWD contains an outer port.
+    pub fn has_outer_port(&self, port_name: NameSegment) -> bool {
+        self.outer.ports.has(port_name)
+    }
+
+    /// Returns whether the UWD contains a junction.
     pub fn has_junction(&self, junction: &J) -> bool {
         self.junctions.is_set(junction)
     }

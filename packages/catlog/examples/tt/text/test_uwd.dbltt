@@ -16,3 +16,10 @@ type TwoLevelFoodChain := [
 ]
 
 uwd TwoLevelFoodChain
+
+type TwoPredSystem := [
+  main: PredPrey,
+  secondary: PredPrey & [ .Prey := main.Prey ]
+]
+
+uwd TwoPredSystem

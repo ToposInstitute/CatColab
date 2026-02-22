@@ -24,3 +24,15 @@ uwd TwoLevelFoodChain
 #/   level1 [Prey : Object := Grass, Pred : Object := Rabbit],
 #/   level2 [Prey : Object := Rabbit, Pred : Object := Fox]
 
+type TwoPredSystem := [
+  main: PredPrey,
+  secondary: PredPrey & [ .Prey := main.Prey ]
+]
+#/ declared: TwoPredSystem
+
+uwd TwoPredSystem
+#/ result: UWD with 2 boxes and 1 junction
+#/ [] :-
+#/   main [Prey : Object := main.Prey],
+#/   secondary [Prey : Object := main.Prey]
+

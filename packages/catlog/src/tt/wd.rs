@@ -56,18 +56,39 @@ pub fn record_to_uwd(ty: &TyV) -> Option<UWD<ObType, QualifiedName>> {
         }
     }
 
-    // Second pass: add an outer port for each field that is now a junction.
+    // Second pass: add further ports corresponding to fields that now exist as
+    // junctions, due to the first pass.
     for (field_name, (field_label, _)) in record_v.fields.iter() {
-        let qual_name = QualifiedName::single(*field_name);
-        if !uwd.has_junction(&qual_name) {
-            continue;
-        }
         let field_ty = eval.field_ty(ty, &tm_v, *field_name);
-        let TyV_::Object(ob_type) = &&*field_ty else {
-            continue;
-        };
-        uwd.add_outer_port(*field_name, *field_label, ob_type.clone());
-        uwd.set_outer(*field_name, qual_name);
+        match &&*field_ty {
+            // Add outer port for each top-level field that is a junction.
+            TyV_::Object(ob_type) => {
+                let qual_name = QualifiedName::single(*field_name);
+                if uwd.has_junction(&qual_name) {
+                    uwd.add_outer_port(*field_name, *field_label, ob_type.clone());
+                    uwd.set_outer(*field_name, qual_name);
+                }
+            }
+            // Add port to box for each sub-field that is a junction.
+            TyV_::Record(r) => {
+                let tm_v = eval.proj(&tm_v, *field_name, *field_label);
+                for (port_name, (port_label, _)) in r.fields.iter() {
+                    if uwd.has_port(*field_name, *port_name) {
+                        continue;
+                    }
+                    let qual_name: QualifiedName = [*field_name, *port_name].into();
+                    if uwd.has_junction(&qual_name) {
+                        let port_ty = eval.field_ty(&field_ty, &tm_v, *port_name);
+                        let TyV_::Object(ob_type) = &*port_ty else {
+                            continue;
+                        };
+                        uwd.add_port(*field_name, *port_name, *port_label, ob_type.clone());
+                        uwd.set(*field_name, *port_name, qual_name);
+                    }
+                }
+            }
+            _ => {}
+        }
     }
 
     Some(uwd)
