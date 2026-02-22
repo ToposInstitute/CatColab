@@ -5,7 +5,7 @@ use std::{fmt, hash::Hash};
 
 use crate::tt::util::{Row, pretty::*};
 use crate::validate::{self, Validate};
-use crate::zero::{HashColumn, LabelSegment, Mapping, MutMapping, NameSegment};
+use crate::zero::{Column, HashColumn, LabelSegment, Mapping, MutMapping, NameSegment};
 
 /// Ports of a wiring diagram.
 ///
@@ -37,8 +37,13 @@ pub struct UWD<T, J> {
 }
 
 impl<T, J> UWD<T, J> {
-    /// Constructs a UWD with the given outer interface.
-    pub fn new(outer_ports: Ports<T>) -> Self {
+    /// Constructs an empty UWD.
+    pub fn empty() -> Self {
+        Self::default()
+    }
+
+    /// Constructs a UWD with the given interface for its outer ports.
+    pub fn with_ports(outer_ports: Ports<T>) -> Self {
         Self {
             outer: PortMap::new(outer_ports),
             inner: Default::default(),
@@ -46,40 +51,75 @@ impl<T, J> UWD<T, J> {
         }
     }
 
+    /// Adds an inner box with empty interface.
+    pub fn add_box(&mut self, name: NameSegment, label: LabelSegment) {
+        self.inner.insert(name, label, PortMap::default())
+    }
+
     /// Adds an inner box with the given interface.
-    pub fn add_box(&mut self, name: NameSegment, label: LabelSegment, ports: Ports<T>) {
+    pub fn add_box_with_ports(&mut self, name: NameSegment, label: LabelSegment, ports: Ports<T>) {
         self.inner.insert(name, label, PortMap::new(ports));
+    }
+
+    /// Adds a port to a box.
+    pub fn add_port(
+        &mut self,
+        box_name: NameSegment,
+        port_name: NameSegment,
+        label: LabelSegment,
+        ty: T,
+    ) -> Option<()> {
+        let inner = self.inner.get_mut(box_name)?;
+        inner.ports.insert(port_name, label, ty);
+        Some(())
+    }
+
+    /// Adds a port to the outer box.
+    pub fn add_outer_port(&mut self, name: NameSegment, label: LabelSegment, ty: T) {
+        self.outer.ports.insert(name, label, ty);
     }
 }
 
 impl<T: Clone + Eq, J: Clone + Eq + Hash> UWD<T, J> {
+    /// Returns whether UWD contains a box with a specific port.
+    pub fn has_port(&self, box_name: NameSegment, port_name: NameSegment) -> bool {
+        self.inner.get(box_name).is_some_and(|inner| inner.ports.has(port_name))
+    }
+
+    /// Returns whether the UWD contains an outer port.
+    pub fn has_outer_port(&self, port_name: NameSegment) -> bool {
+        self.outer.ports.has(port_name)
+    }
+
+    /// Returns whether the UWD contains a junction.
+    pub fn has_junction(&self, junction: &J) -> bool {
+        self.junctions.is_set(junction)
+    }
+
     /// Assigns a port on a box to a junction.
-    pub fn set_inner(&mut self, box_name: NameSegment, port_name: NameSegment, junction: J) {
-        let inner = self
-            .inner
-            .get_mut(box_name)
-            .unwrap_or_else(|| panic!("No box named {box_name}"));
-        let ty = inner
-            .ports
-            .get(port_name)
-            .unwrap_or_else(|| panic!("Box {box_name} has no port named {port_name}"));
+    pub fn set(
+        &mut self,
+        box_name: NameSegment,
+        port_name: NameSegment,
+        junction: J,
+    ) -> Option<()> {
+        let inner = self.inner.get_mut(box_name)?;
+        let ty = inner.ports.get(port_name)?;
         if !self.junctions.is_set(&junction) {
             self.junctions.set(junction.clone(), ty.clone());
         }
         inner.mapping.set(port_name, junction);
+        Some(())
     }
 
     /// Assigns an outer port to a junction.
-    pub fn set_outer(&mut self, port_name: NameSegment, junction: J) {
-        let ty = self
-            .outer
-            .ports
-            .get(port_name)
-            .unwrap_or_else(|| panic!("No outer port named {port_name}"));
+    pub fn set_outer(&mut self, port_name: NameSegment, junction: J) -> Option<()> {
+        let ty = self.outer.ports.get(port_name)?;
         if !self.junctions.is_set(&junction) {
             self.junctions.set(junction.clone(), ty.clone());
         }
         self.outer.mapping.set(port_name, junction);
+        Some(())
     }
 }
 
@@ -146,22 +186,61 @@ impl<T: fmt::Display, J: fmt::Display + Clone + Eq> ToDoc for PortMap<T, J> {
     }
 }
 
-/// Pretty prints a UWD in the style of a Datalog query.
-///
-/// Unlike in typical Datalog syntax, arguments are named and typed.
-impl<T: fmt::Display, J: fmt::Display + Clone + Eq + Hash> ToDoc for UWD<T, J> {
-    fn to_doc<'a>(&self) -> D<'a> {
-        let head = self.outer.to_doc();
-        let clauses = self
+/// Pretty-printer for undirected wiring diagrams.
+#[derive(Derivative)]
+#[derivative(Default(new = "true"))]
+pub struct UWDPrinter {
+    #[derivative(Default(value = "true"))]
+    include_summary: bool,
+}
+
+impl UWDPrinter {
+    /// Sets whether to show summary at beginning of UWD printout.
+    pub fn include_summary(mut self, value: bool) -> Self {
+        self.include_summary = value;
+        self
+    }
+
+    /// Generates a summary string for the UWD.
+    pub fn summary<T: Clone + Eq, J: Clone + Eq + Hash>(&self, uwd: &UWD<T, J>) -> String {
+        let n_boxes = uwd.inner.len();
+        let n_junctions = uwd.junctions.len();
+        format!(
+            "UWD with {n_boxes} box{} and {n_junctions} junction{}",
+            if n_boxes != 1 { "es" } else { "" },
+            if n_junctions != 1 { "s" } else { "" },
+        )
+    }
+
+    /// Pretty prints a UWD in the style of a Datalog query.
+    ///
+    /// Unlike in typical Datalog syntax, arguments are named and typed.
+    pub fn doc<'a, T: fmt::Display + Clone + Eq, J: fmt::Display + Clone + Eq + Hash>(
+        &self,
+        uwd: &UWD<T, J>,
+    ) -> D<'a> {
+        let head = uwd.outer.to_doc();
+        let clauses = uwd
             .inner
             .iter()
             .map(|(_, (label, port_map))| unop(t(label.to_string()), port_map.to_doc()));
         let body = intersperse(clauses, t(",") + s());
-        head + t(" :-") + (s() + body).indented()
+        let result = head + t(" :-") + (s() + body).indented();
+        if self.include_summary {
+            t(self.summary(uwd)) + hardline() + result
+        } else {
+            result
+        }
     }
 }
 
-impl<T: fmt::Display, J: fmt::Display + Clone + Eq + Hash> fmt::Display for UWD<T, J> {
+impl<T: fmt::Display + Clone + Eq, J: fmt::Display + Clone + Eq + Hash> ToDoc for UWD<T, J> {
+    fn to_doc<'a>(&self) -> D<'a> {
+        UWDPrinter::new().doc(self)
+    }
+}
+
+impl<T: fmt::Display + Clone + Eq, J: fmt::Display + Clone + Eq + Hash> fmt::Display for UWD<T, J> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.to_doc().pretty())
     }
@@ -173,13 +252,13 @@ mod tests {
     use expect_test::expect;
 
     fn binary_composite_uwd() -> UWD<&'static str, &'static str> {
-        let mut uwd: UWD<_, _> = UWD::new(Ports::from_iter([("x", "X"), ("z", "Z")]));
-        uwd.add_box("R".into(), "R".into(), Ports::from_iter([("a", "X"), ("b", "Y")]));
-        uwd.add_box("S".into(), "S".into(), Ports::from_iter([("c", "Y"), ("d", "Z")]));
-        uwd.set_inner("R".into(), "a".into(), "u");
-        uwd.set_inner("R".into(), "b".into(), "v");
-        uwd.set_inner("S".into(), "c".into(), "v");
-        uwd.set_inner("S".into(), "d".into(), "w");
+        let mut uwd: UWD<_, _> = UWD::with_ports(Ports::from_iter([("x", "X"), ("z", "Z")]));
+        uwd.add_box_with_ports("R".into(), "R".into(), Ports::from_iter([("a", "X"), ("b", "Y")]));
+        uwd.add_box_with_ports("S".into(), "S".into(), Ports::from_iter([("c", "Y"), ("d", "Z")]));
+        uwd.set("R".into(), "a".into(), "u");
+        uwd.set("R".into(), "b".into(), "v");
+        uwd.set("S".into(), "c".into(), "v");
+        uwd.set("S".into(), "d".into(), "w");
         uwd.set_outer("x".into(), "u");
         uwd.set_outer("z".into(), "w");
         uwd
@@ -189,6 +268,7 @@ mod tests {
     fn pretty_print() {
         let uwd = binary_composite_uwd();
         let expected = expect![[r#"
+            UWD with 2 boxes and 3 junctions
             [x : X := u, z : Z := w] :-
               R [a : X := u, b : Y := v],
               S [c : Y := v, d : Z := w]"#]];

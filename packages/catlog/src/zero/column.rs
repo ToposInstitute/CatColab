@@ -104,11 +104,16 @@ pub trait Column: Mapping {
 
     /// Computes the preimage of the mapping at a value in the codomain.
     ///
-    /// Depending on whether the implementation maintains a reverse index for the
-    /// mapping, this method will take time linear in the size of the preimage or
-    /// the size of the whole column.
+    /// Depending on whether the implementation maintains a reverse index for
+    /// the mapping, this method will take time linear in either the size of the
+    /// preimage or the size of the whole column.
     fn preimage(&self, y: &Self::Cod) -> impl Iterator<Item = Self::Dom> {
         self.iter().filter(|&(_, z)| *z == *y).map(|(x, _)| x)
+    }
+
+    /// Gets the number of values in the domain on which the column is defined.
+    fn len(&self) -> usize {
+        self.iter().count()
     }
 
     /// Is the mapping not defined anywhere?
@@ -336,6 +341,10 @@ impl<T: Eq + Clone> Column for VecColumn<T> {
         self.0.iter().flatten()
     }
 
+    fn len(&self) -> usize {
+        self.0.iter().filter(|y| y.is_some()).count()
+    }
+
     fn is_empty(&self) -> bool {
         self.0.iter().all(|y| y.is_none())
     }
@@ -442,11 +451,12 @@ where
     fn iter(&self) -> impl Iterator<Item = (K, &V)> {
         self.0.iter().map(|(k, v)| (k.clone(), v))
     }
-
     fn values(&self) -> impl Iterator<Item = &Self::Cod> {
         self.0.values()
     }
-
+    fn len(&self) -> usize {
+        self.0.len()
+    }
     fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
@@ -672,6 +682,9 @@ where
     fn preimage(&self, y: &Cod) -> impl Iterator<Item = Dom> {
         self.index.preimage(y)
     }
+    fn len(&self) -> usize {
+        self.mapping.len()
+    }
     fn is_empty(&self) -> bool {
         self.mapping.is_empty()
     }
@@ -747,6 +760,9 @@ impl Column for SkelIndexedColumn {
     fn preimage(&self, y: &usize) -> impl Iterator<Item = usize> {
         self.0.preimage(y)
     }
+    fn len(&self) -> usize {
+        self.0.len()
+    }
     fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
@@ -820,6 +836,9 @@ impl<T: Eq + Hash + Clone> Column for IndexedVecColumn<T> {
     }
     fn preimage(&self, y: &T) -> impl Iterator<Item = usize> {
         self.0.preimage(y)
+    }
+    fn len(&self) -> usize {
+        self.0.len()
     }
     fn is_empty(&self) -> bool {
         self.0.is_empty()
@@ -907,6 +926,9 @@ where
     fn preimage(&self, y: &V) -> impl Iterator<Item = K> {
         self.0.preimage(y)
     }
+    fn len(&self) -> usize {
+        self.0.len()
+    }
     fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
@@ -927,6 +949,7 @@ mod tests {
     fn vec_column() {
         let mut col = VecColumn::new(vec!["foo", "bar", "baz"]);
         assert!(!col.is_empty());
+        assert_eq!(col.len(), 3);
         assert!(col.is_set(&2));
         assert_eq!(col.apply(2), Some("baz"));
         assert_eq!(col.apply(3), None);
@@ -954,6 +977,7 @@ mod tests {
         col.set('b', "bar");
         col.set('c', "baz");
         assert!(!col.is_empty());
+        assert_eq!(col.len(), 3);
         assert_eq!(col.apply('c'), Some("baz"));
         assert_eq!(col.apply_to_ref(&'c'), Some("baz"));
         assert_eq!(col.get(&'c'), Some(&"baz"));
@@ -988,6 +1012,7 @@ mod tests {
     fn skel_indexed_column() {
         let mut col = SkelIndexedColumn::new(&[1, 3, 5]);
         assert!(!col.is_empty());
+        assert_eq!(col.len(), 3);
         assert!(col.is_set(&2));
         assert_eq!(col.apply(2), Some(5));
         assert_eq!(col.apply_to_ref(&2), Some(5));
@@ -1009,6 +1034,7 @@ mod tests {
     fn indexed_vec_column() {
         let mut col = IndexedVecColumn::new(&["foo", "bar", "baz"]);
         assert!(!col.is_empty());
+        assert_eq!(col.len(), 3);
         assert!(col.is_set(&2));
         assert_eq!(col.apply(2), Some("baz"));
         let preimage: Vec<_> = col.preimage(&"baz").collect();
@@ -1032,6 +1058,7 @@ mod tests {
         col.set('b', "bar");
         col.set('c', "baz");
         assert!(!col.is_empty());
+        assert_eq!(col.len(), 3);
         assert_eq!(col.apply('c'), Some("baz"));
         let preimage: Vec<_> = col.preimage(&"baz").collect();
         assert_eq!(preimage, vec!['c']);

@@ -1,0 +1,38 @@
+set_theory ThSignedCategory
+#/ result: set theory to ThSignedCategory
+
+type PredPrey := [
+  Pred : Object,
+  Prey : Object,
+  eats : Negative[Pred, Prey],
+  feeds : (Hom Object)[Prey, Pred]
+]
+#/ declared: PredPrey
+
+type TwoLevelFoodChain := [
+  Grass : Object,
+  Rabbit : Object,
+  Fox : Object,
+  level1 : PredPrey & [ .Prey := Grass, .Pred := Rabbit ],
+  level2 : PredPrey & [ .Prey := Rabbit, .Pred := Fox ]
+]
+#/ declared: TwoLevelFoodChain
+
+uwd TwoLevelFoodChain
+#/ result: UWD with 2 boxes and 3 junctions
+#/ [Grass : Object := Grass, Rabbit : Object := Rabbit, Fox : Object := Fox] :-
+#/   level1 [Prey : Object := Grass, Pred : Object := Rabbit],
+#/   level2 [Prey : Object := Rabbit, Pred : Object := Fox]
+
+type TwoPredSystem := [
+  main: PredPrey,
+  secondary: PredPrey & [ .Prey := main.Prey ]
+]
+#/ declared: TwoPredSystem
+
+uwd TwoPredSystem
+#/ result: UWD with 2 boxes and 1 junction
+#/ [] :-
+#/   main [Prey : Object := main.Prey],
+#/   secondary [Prey : Object := main.Prey]
+

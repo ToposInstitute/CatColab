@@ -375,7 +375,7 @@ mod test {
     use crate::dbl::model::DblModelPrinter;
     use crate::stdlib::{th_schema, th_sym_monoidal_category};
     use crate::tt::{
-        modelgen::generate,
+        modelgen::Model,
         notebook_elab::Elaborator,
         theory::{Theory, TheoryDef},
         toplevel::Toplevel,
@@ -389,7 +389,7 @@ mod test {
         let toplevel = Toplevel::new(Default::default());
         let mut elab = Elaborator::new(theory.clone(), &toplevel, ustr(""));
         let (_, ty_v) = elab.notebook(doc.notebook.formal_content());
-        let (model, ns) = generate(&toplevel, &theory.definition, &ty_v);
+        let (model, ns) = Model::from_ty(&toplevel, &theory.definition, &ty_v);
         let mut out = model.to_doc(&DblModelPrinter::new(), &ns).pretty().to_string();
         for error in elab.errors() {
             writeln!(&mut out, "error {:?}", error).unwrap()
