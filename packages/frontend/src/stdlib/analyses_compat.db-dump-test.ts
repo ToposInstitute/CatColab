@@ -6,12 +6,23 @@ import { stdTheories } from "./theories";
 
 /** Path to a JSON file containing analysis documents and their referenced models.
  * Set via the ANALYSIS_FIXTURES_PATH environment variable.
- * If not set, the test suite will be skipped.
+ * This path is required — the test will fail if not set.
  */
 const fixturesPath = process.env.ANALYSIS_FIXTURES_PATH;
 
 describe("Database dump backward compatibility", () => {
-    // Load fixtures from the file path (if set)
+    // Fail immediately if fixtures path is not provided
+    test("ANALYSIS_FIXTURES_PATH must be set", () => {
+        if (!fixturesPath) {
+            expect.fail(
+                "ANALYSIS_FIXTURES_PATH environment variable is not set. " +
+                    "This test requires a JSON file with analysis documents and models.",
+            );
+        }
+        expect(fixturesPath).toBeTruthy();
+    });
+
+    // Load fixtures from the file path
     const allData: { analyses?: unknown[]; models?: unknown[] } = fixturesPath
         ? JSON.parse(readFileSync(fixturesPath, "utf-8"))
         : {};
@@ -51,13 +62,12 @@ describe("Database dump backward compatibility", () => {
         }
     }
 
-    // Skip the entire suite if no fixtures are available
-    test.skipIf(!fixturesPath)("fixtures should be loaded", () => {
+    test("fixtures should be loaded", () => {
         expect(analyses.length).toBeGreaterThan(0);
     });
 
     // Report diagram analyses that are excluded from testing.
-    if (fixturesPath && diagramAnalyses.length > 0) {
+    if (diagramAnalyses.length > 0) {
         test(`${diagramAnalyses.length} diagram analyses excluded (diagram testing not yet supported)`, () => {
             // This test passes — it documents that diagram analyses exist but aren't tested.
             // Diagram analyses reference diagram documents, not model documents, and require
@@ -71,7 +81,7 @@ describe("Database dump backward compatibility", () => {
         const doc = modelAnalyses[i] as Record<string, unknown>;
         const docName = (doc.name as string | undefined) ?? "unnamed";
 
-        test.skipIf(!fixturesPath)(`model analysis ${i}: "${docName}"`, async () => {
+        test(`model analysis ${i}: "${docName}"`, async () => {
             // Step 1: Migrate the analysis document
             let migratedAnalysis: Record<string, unknown>;
             try {
