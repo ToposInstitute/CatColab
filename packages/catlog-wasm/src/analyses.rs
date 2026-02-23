@@ -134,8 +134,8 @@ pub(crate) fn mass_action_equations_modal(
     model: &DblModel,
     mass_conservation_type: analyses::ode::MassConservationType,
 ) -> Result<ODELatex, String> {
-    let realised_model = model.discrete_tab()?;
-    let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
+    let realised_model = model.modal()?;
+    let analysis = analyses::ode::PetriNetMassActionAnalysis::default();
     let sys = analysis.build_system(realised_model, mass_conservation_type);
     let equations = sys
         .map_variables(latex_ob_names_mass_action(model))
