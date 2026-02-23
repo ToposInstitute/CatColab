@@ -238,6 +238,10 @@ impl PetriNetMassActionAnalysis {
                     for input in inputs {
                         sys.add_term(input.unwrap_generator(), -term.clone());
                     }
+
+                    for output in outputs {
+                        sys.add_term(output.unwrap_generator(), term.clone());
+                    }
                 }
 
                 MassConservationType::Unbalanced(granularity) => {
