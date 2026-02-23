@@ -58,7 +58,7 @@ export default function StochasticMassAction(
             content: (id) => elaboratedModel()?.obGeneratorLabel(id)?.join(".") ?? "",
         },
         createNumericalColumn({
-            name: "Initial values (positive integers)",
+            name: "Initial value",
             data: (id) => props.content.initialValues[id],
             validate: (_, data) => data >= 0 && Number.isInteger(data),
             setData: (id, data) =>

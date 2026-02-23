@@ -318,6 +318,7 @@ export default function MassAction(
                 <div class="parameters">
                     <FixedTableEditor rows={obGenerators()} schema={obSchema} />
                     <ParameterTables />
+                    <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
             </Foldable>
             <Foldable title="Equations">
@@ -332,9 +333,6 @@ export default function MassAction(
                 />
             </Foldable>
             <Foldable title="Simulation" defaultExpanded>
-                <div class="parameters">
-                    <FixedTableEditor rows={[null]} schema={toplevelSchema} />
-                </div>
                 <ODEResultPlot result={plotResult()} />
             </Foldable>
         </div>
