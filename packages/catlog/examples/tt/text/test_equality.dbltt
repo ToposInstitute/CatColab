@@ -1,0 +1,17 @@
+set_theory ThSchema
+
+type CommutativeSquare := [
+    NW : Entity,
+    NE : Entity,
+    SW : Entity,
+    SE : Entity,
+    t : (Hom Entity)[NW,NE],
+    l : (Hom Entity)[NW,SW],
+    r : (Hom Entity)[NE,SE],
+    b : (Hom Entity)[SW, SE],
+    comm : (t * r == l * b)
+]
+
+generate CommutativeSquare
+
+syn [S : CommutativeSquare] S.comm

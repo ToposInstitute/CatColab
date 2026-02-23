@@ -21,8 +21,9 @@ pub const TT_PARSE_CONFIG: ParseConfig = ParseConfig::new(
         (":=", Prec::nonassoc(10)),
         ("&", Prec::lassoc(40)),
         ("*", Prec::lassoc(60)),
+        ("==", Prec::nonassoc(30)),
     ],
-    &[":", ":=", "&", "Unit", "Hom", "*"],
+    &[":", ":=", "&", "Unit", "Hom", "*", "=="],
     &["type", "def", "syn", "chk", "norm", "generate", "uwd", "set_theory"],
 );
 
@@ -525,6 +526,26 @@ impl<'a> Elaborator<'a> {
                 }
                 (TyS::specialize(ty_s, specializations), ty_v)
             }
+            App2(L(_, Keyword("==")), tm1_n, tm2_n) => {
+                let (tm1_s, tm1_v, tm1_ty) = elab.syn(tm1_n);
+                let (tm2_s, tm2_v, tm2_ty) = elab.syn(tm2_n);
+                let TyV_::Morphism(_, _, _) = &*tm1_ty else {
+                    elab.loc = Some(tm1_n.loc());
+                    return elab.ty_error("Equality types are only supported for morphisms");
+                };
+                if let Err(e) = elab.evaluator().convertible_ty(&tm1_ty, &tm2_ty) {
+                    let eval = elab.evaluator();
+                    return elab.ty_error(format!(
+                        "types {} and {} are not convertible:\n{}",
+                        eval.quote_ty(&tm1_ty),
+                        eval.quote_ty(&tm2_ty),
+                        e.pretty()
+                    ));
+                }
+                let eq_ty_s = TyS::id(elab.evaluator().quote_ty(&tm1_ty), tm1_s, tm2_s);
+                let eq_ty_v = TyV::id(tm1_ty, tm1_v, tm2_v);
+                (eq_ty_s, eq_ty_v)
+            }
             _ => elab.ty_error("unexpected notation for type"),
         }
     }
@@ -549,6 +570,7 @@ impl<'a> Elaborator<'a> {
         }
     }
 
+    /// Elaborates a term from notation, returning syntax, value, and synthesized type.
     fn syn(&mut self, n: &FNtn) -> (TmS, TmV, TyV) {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
@@ -657,6 +679,7 @@ impl<'a> Elaborator<'a> {
         }
     }
 
+    /// Elaborates a term from notation, checking against an expected type, and returning syntax and value.
     fn chk(&mut self, ty: &TyV, n: &FNtn) -> (TmS, TmV) {
         let mut elab = self.enter(n.loc());
         match (&**ty, n.ast0()) {
@@ -749,10 +772,31 @@ mod tests {
             x : Object,
             loop : Negative[x, x]
         ]";
-        let maybe_model = tt::modelgen::Model::from_text(&th.clone().into(), source);
-        assert_eq!(
-            maybe_model.and_then(|m| m.as_discrete()),
-            Some(stdlib::models::negative_loop(th))
-        );
+        let model = tt::modelgen::Model::from_text(&th.clone().into(), source)
+            .and_then(|m| m.as_discrete())
+            .unwrap();
+        assert_eq!(model, stdlib::models::negative_loop(th));
+    }
+
+    /// Check that a commutative square really produces a model with exactly one equation.
+    #[test]
+    fn generate_model_with_eqn() {
+        let th = Rc::new(stdlib::th_schema());
+        let source = "[
+            NW : Entity,
+            NE : Entity,
+            SW : Entity,
+            SE : Entity,
+            t : (Hom Entity)[NW,NE],
+            l : (Hom Entity)[NW,SW],
+            r : (Hom Entity)[NE,SE],
+            b : (Hom Entity)[SW, SE],
+            comm : (t * r == l * b)
+        ]";
+        let model = tt::modelgen::Model::from_text(&th.clone().into(), source)
+            .and_then(|m| m.as_discrete())
+            .unwrap();
+        let eqns: Vec<_> = model.category.equations().collect();
+        assert_eq!(eqns.len(), 1);
     }
 }

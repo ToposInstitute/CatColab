@@ -6,7 +6,7 @@ use bwd::Bwd;
 use derive_more::Deref;
 
 use super::{prelude::*, stx::*, theory::*};
-use crate::zero::LabelSegment;
+use crate::zero::{LabelSegment, QualifiedName};
 
 /// A way of resolving [BwdIdx] found in [TmS_::Var] to values.
 pub type Env = Bwd<TmV>;
@@ -92,6 +92,8 @@ pub enum TyV_ {
     Record(RecordV),
     /// Type constructor for singleton types, also see [TyS_::Sing].
     Sing(TyV, TmV),
+    /// Type constructor for identity types, also see [TyS_::Id].
+    Id(TyV, TmV, TmV),
     /// Type constructor for unit types, also see [TyS_::Unit].
     Unit,
     /// A metavariable, also see [TyS_::Meta].
@@ -122,6 +124,11 @@ impl TyV {
     /// Smart constructor for [TyV], [TyV_::Sing] case.
     pub fn sing(ty_v: TyV, tm_v: TmV) -> Self {
         Self(Rc::new(TyV_::Sing(ty_v, tm_v)))
+    }
+
+    /// Smart constructor for [TyV], [TyV_::Id] case.
+    pub fn id(ty_v: TyV, tm_v1: TmV, tm_v2: TmV) -> Self {
+        Self(Rc::new(TyV_::Id(ty_v, tm_v1, tm_v2)))
     }
 
     /// Compute the specialization of `self` by `specializations`.
@@ -195,6 +202,18 @@ impl TmN {
     /// Smart constructor for [TmN], [TmN_::Proj] case.
     pub fn proj(tm_n: TmN, field_name: FieldName, label: LabelSegment) -> Self {
         TmN(Rc::new(TmN_::Proj(tm_n, field_name, label)))
+    }
+
+    /// Extracts a qualifed name from a series of projections.
+    pub fn to_qualified_name(&self) -> QualifiedName {
+        let mut segments = Vec::new();
+        let mut n = self;
+        while let TmN_::Proj(n1, f, _) = &**n {
+            n = n1;
+            segments.push(*f);
+        }
+        segments.reverse();
+        segments.into()
     }
 }
 

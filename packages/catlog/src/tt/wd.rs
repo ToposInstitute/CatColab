@@ -55,17 +55,7 @@ pub fn record_to_uwd(ty: &TyV) -> Option<UWD<ObType, QualifiedName>> {
             let (TyV_::Object(ob_type), TmV_::Neu(n, _)) = (&**ty, &**tm) else {
                 continue;
             };
-
-            // FIXME: Copied from `make_ob` in `modelgen`.
-            let mut segments = Vec::new();
-            let mut n = n;
-            while let TmN_::Proj(n1, f, _) = &**n {
-                n = n1;
-                segments.push(*f);
-            }
-            segments.reverse();
-            let qual_name = segments.into();
-
+            let qual_name = n.to_qualified_name();
             uwd.add_port(*field_name, *port_name, *port_label, ob_type.clone());
             uwd.set(*field_name, *port_name, qual_name);
         }
