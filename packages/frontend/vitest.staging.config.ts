@@ -10,7 +10,6 @@ export default mergeConfig(
     defineConfig({
         test: {
             include: ["**/*.staging-test.ts"],
-            environment: "node",
         },
     }),
 );
