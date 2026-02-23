@@ -18,7 +18,7 @@
         "doc": "typedoc --entryPointStrategy expand ./src",
         "test": "vitest --mode=development",
         "test:ci": "vitest --mode=development --cache=false --configLoader=runner --run",
-        "test:staging": "vitest --mode=development --config vitest.staging.config.ts --run"
+        "test:db-dump": "vitest --mode=development --config vitest.db-dump.config.ts --run"
     },
     "dependencies": {
         "@atlaskit/pragmatic-drag-and-drop": "^1.3.0",

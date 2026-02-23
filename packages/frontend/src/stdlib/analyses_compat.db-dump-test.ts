@@ -9,7 +9,7 @@ import { migrateDocument, validateAnalysisContent } from "catlog-wasm";
  */
 const fixturesPath = process.env.ANALYSIS_FIXTURES_PATH;
 
-describe("Staging document backward compatibility", () => {
+describe("Database dump backward compatibility", () => {
     // Load fixtures from the file path (if set)
     const allFixtures: unknown[] = fixturesPath
         ? JSON.parse(readFileSync(fixturesPath, "utf-8"))
@@ -18,7 +18,6 @@ describe("Staging document backward compatibility", () => {
     // Filter out corrupted documents that are missing the analysisType field.
     // These are genuinely broken documents that cannot be migrated without
     // manually determining whether they're model or diagram analyses.
-    // There are ~6 such documents in staging as of 2025-02-23.
     const fixtures = allFixtures.filter((doc) => {
         const d = doc as Record<string, unknown>;
         return d.analysisType !== undefined;

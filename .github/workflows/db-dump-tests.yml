@@ -1,4 +1,4 @@
-name: staging-tests
+name: db-dump-tests
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   pull_request:
 
 # This workflow tests backward compatibility by loading all analysis documents
-# from the staging database and validating that they can still be deserialized
+# from a database dump and validating that they can still be deserialized
 # with the current code.
 #
 # It only runs on PRs from the same repository (not forks), because fork PRs
@@ -15,8 +15,8 @@ on:
 # into the staging server.
 
 jobs:
-  staging_document_compatibility:
-    name: staging document compatibility
+  db_dump_compatibility:
+    name: database dump compatibility
     runs-on: ubuntu-latest
     
     # Skip on fork PRs where secrets are unavailable
@@ -68,8 +68,8 @@ jobs:
             catcolab@backend-next.catcolab.org \
             /tmp/analysis-fixtures.json
 
-      - name: Run staging compatibility tests
+      - name: Run database dump compatibility tests
         env:
           ANALYSIS_FIXTURES_PATH: /tmp/analysis-fixtures.json
         run: |
-          pnpm --filter frontend exec vitest --mode=development --config vitest.staging.config.ts --run
+          pnpm --filter frontend exec vitest --mode=development --config vitest.db-dump.config.ts --run
