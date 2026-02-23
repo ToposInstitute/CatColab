@@ -1,12 +1,4 @@
-import {
-    createEffect,
-    createMemo,
-    createSignal,
-    Match,
-    Switch,
-    untrack,
-    useContext,
-} from "solid-js";
+import { Match, Switch, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
@@ -17,9 +9,13 @@ import {
     newFormalCell,
 } from "../notebook";
 import type { AnalysisMeta, DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
-import { assertExhaustive } from "../util/assert_exhaustive";
 import { LiveAnalysisContext } from "./context";
-import type { LiveAnalysisDoc, LiveDiagramAnalysisDoc, LiveModelAnalysisDoc } from "./document";
+import {
+    type LiveAnalysisDoc,
+    type LiveDiagramAnalysisDoc,
+    type LiveModelAnalysisDoc,
+    theoryForLiveAnalysis,
+} from "./document";
 import type { Analysis } from "./types";
 
 /** Notebook editor for analyses of models of double theories.
@@ -30,9 +26,9 @@ export function AnalysisNotebookEditor(props: { liveAnalysis: LiveAnalysisDoc })
     const cellConstructors = () => {
         let meta: ModelAnalysisMeta[] | DiagramAnalysisMeta[] | undefined;
         if (props.liveAnalysis.analysisType === "model") {
-            meta = theoryForAnalysis(props.liveAnalysis)?.modelAnalyses;
+            meta = theoryForLiveAnalysis(props.liveAnalysis)?.modelAnalyses;
         } else if (props.liveAnalysis.analysisType === "diagram") {
-            meta = theoryForAnalysis(props.liveAnalysis)?.diagramAnalyses;
+            meta = theoryForLiveAnalysis(props.liveAnalysis)?.diagramAnalyses;
         }
         return (meta ?? []).map(analysisCellConstructor);
     };
@@ -53,69 +49,41 @@ export function AnalysisNotebookEditor(props: { liveAnalysis: LiveAnalysisDoc })
 }
 
 /** Editor for a notebook cell in an analysis notebook. */
-function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<Record<string, unknown>>>) {
+function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
     const liveAnalysis = useContext(LiveAnalysisContext);
     invariant(liveAnalysis, "Live analysis should be provided as context for cell editor");
 
-    const analysisMeta = createMemo(() => {
-        const theory = theoryForAnalysis(liveAnalysis());
-        const analysisType = liveAnalysis().analysisType;
-        switch (analysisType) {
-            case "model":
-                return theory?.modelAnalysis(props.content.id);
-            case "diagram":
-                return theory?.diagramAnalysis(props.content.id);
-            default:
-                assertExhaustive(analysisType);
-        }
-    });
-
-    const [migratedCellId, setMigratedCellId] = createSignal<string | undefined>();
-    const isMigrated = () => props.cellId === migratedCellId();
-
-    // XXX: This is a half-baked method to migrate the content of an analysis.
-    // It enables new fields to be added to the analysis content. Renaming or
-    // removing existing fields is *not* supported.
-    createEffect(() => {
-        const analysis = analysisMeta();
-        if (!analysis) {
-            return;
-        }
-        const initialContent = analysis.initialContent() as Record<string, unknown>;
-        const content = untrack(() => props.content.content);
-        for (const key in initialContent) {
-            if (!(key in content)) {
-                props.changeContent((content) => {
-                    content.content[key] = initialContent[key];
-                });
-            }
-        }
-        setMigratedCellId(props.cellId);
-    });
-
     return (
         <Switch>
-            <Match when={liveAnalysis().analysisType === "model" && isMigrated() && analysisMeta()}>
+            <Match
+                when={
+                    liveAnalysis().analysisType === "model" &&
+                    theoryForLiveAnalysis(liveAnalysis())?.modelAnalysis(props.content.id)
+                }
+            >
                 {(analysis) => (
                     <Dynamic
                         component={analysis().component}
                         liveModel={(liveAnalysis() as LiveModelAnalysisDoc).liveModel}
                         content={props.content.content}
-                        changeContent={(f: (c: Record<string, unknown>) => void) =>
+                        changeContent={(f: (c: unknown) => void) =>
                             props.changeContent((content) => f(content.content))
                         }
                     />
                 )}
             </Match>
             <Match
-                when={liveAnalysis().analysisType === "diagram" && isMigrated() && analysisMeta()}
+                when={
+                    liveAnalysis().analysisType === "diagram" &&
+                    theoryForLiveAnalysis(liveAnalysis())?.diagramAnalysis(props.content.id)
+                }
             >
                 {(analysis) => (
                     <Dynamic
                         component={analysis().component}
                         liveDiagram={(liveAnalysis() as LiveDiagramAnalysisDoc).liveDiagram}
                         content={props.content.content}
-                        changeContent={(f: (c: Record<string, unknown>) => void) =>
+                        changeContent={(f: (c: unknown) => void) =>
                             props.changeContent((content) => f(content.content))
                         }
                     />
@@ -125,9 +93,7 @@ function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<Record<string,
     );
 }
 
-function analysisCellConstructor(
-    meta: AnalysisMeta<unknown>,
-): CellConstructor<Analysis<Record<string, unknown>>> {
+function analysisCellConstructor<T>(meta: AnalysisMeta<T>): CellConstructor<Analysis<T>> {
     const { id, name, description, initialContent } = meta;
     return {
         name,
@@ -135,18 +101,7 @@ function analysisCellConstructor(
         construct: () =>
             newFormalCell({
                 id,
-                content: initialContent() as Record<string, unknown>,
+                content: initialContent(),
             }),
     };
-}
-
-function theoryForAnalysis(liveAnalysis: LiveAnalysisDoc) {
-    switch (liveAnalysis.analysisType) {
-        case "model":
-            return liveAnalysis.liveModel.theory();
-        case "diagram":
-            return liveAnalysis.liveDiagram.liveModel.theory();
-        default:
-            assertExhaustive(liveAnalysis);
-    }
 }
