@@ -72,4 +72,4 @@ jobs:
         env:
           ANALYSIS_FIXTURES_PATH: /tmp/analysis-fixtures.json
         run: |
-          pnpm --filter frontend run test -- --run src/stdlib/analyses_compat.test.ts
+          pnpm --filter frontend exec vitest --config vitest.staging.config.ts --run

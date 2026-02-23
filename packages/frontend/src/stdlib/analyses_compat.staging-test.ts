@@ -15,14 +15,13 @@ describe("Staging document backward compatibility", () => {
         ? JSON.parse(readFileSync(fixturesPath, "utf-8"))
         : [];
 
-    // Filter out corrupted documents that are missing the version field.
-    // TODO: Migrate these documents in the database. They use a pre-v0
-    // format with "notebook.cells" instead of "notebook.cellOrder/cellContents"
-    // and are missing the "version" field entirely. There are ~6 such documents
-    // in staging as of 2025-02-23.
+    // Filter out corrupted documents that are missing the analysisType field.
+    // These are genuinely broken documents that cannot be migrated without
+    // manually determining whether they're model or diagram analyses.
+    // There are ~6 such documents in staging as of 2025-02-23.
     const fixtures = allFixtures.filter((doc) => {
         const d = doc as Record<string, unknown>;
-        return d.version !== undefined;
+        return d.analysisType !== undefined;
     });
 
     // Skip the entire suite if no fixtures are available
@@ -55,7 +54,7 @@ describe("Staging document backward compatibility", () => {
 
                 // For each formal (analysis) cell, validate its content
                 for (const [cellId, cell] of Object.entries(notebook.cellContents)) {
-                    if (cell.tag === "Formal" && cell.content) {
+                    if (cell.tag === "formal" && cell.content) {
                         const analysis = cell.content;
 
                         // This calls the WASM validateAnalysisContent function,
