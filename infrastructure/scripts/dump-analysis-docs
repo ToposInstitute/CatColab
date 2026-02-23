@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Dumps all analysis documents from a database as a JSON array.
+#
+# Usage: dump-analysis-docs <ssh-target> <output-file>
+# Example: dump-analysis-docs catcolab@backend-next.catcolab.org fixtures.json
+
+set -euo pipefail
+
+SSH_TARGET="${1:?Usage: dump-analysis-docs <ssh-target> <output-file>}"
+OUTPUT_FILE="${2:?Usage: dump-analysis-docs <ssh-target> <output-file>}"
+
+echo "Dumping analysis documents from $SSH_TARGET to $OUTPUT_FILE..." >&2
+
+# Run the query remotely via SSH. The remote script:
+# 1. Extracts DATABASE_URL from the agenix secrets file
+# 2. Queries PostgreSQL to get all non-deleted analysis documents
+# 3. Uses json_agg to return a single JSON array
+ssh "$SSH_TARGET" bash -s > "$OUTPUT_FILE" <<'REMOTE_SCRIPT'
+set -euo pipefail
+
+# Read DATABASE_URL from the agenix-decrypted secrets file
+if [[ ! -f /run/agenix/catcolabSecrets ]]; then
+  echo "Error: /run/agenix/catcolabSecrets not found on remote host" >&2
+  exit 1
+fi
+
+DB_URL=$(grep '^DATABASE_URL=' /run/agenix/catcolabSecrets | cut -d= -f2-)
+
+if [[ -z "$DB_URL" ]]; then
+  echo "Error: DATABASE_URL not found in /run/agenix/catcolabSecrets" >&2
+  exit 1
+fi
+
+# Query the database for all analysis documents
+psql "$DB_URL" -t -A -c "
+  SELECT COALESCE(json_agg(s.content), '[]'::json)
+  FROM snapshots s
+  JOIN refs r ON r.head = s.id
+  WHERE r.deleted_at IS NULL
+    AND s.content->>'type' = 'analysis'
+"
+REMOTE_SCRIPT
+
+echo "Dumped $(jq 'length' "$OUTPUT_FILE") analysis documents to $OUTPUT_FILE" >&2

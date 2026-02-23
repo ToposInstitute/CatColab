@@ -25,6 +25,7 @@ pub mod analyses;
 #[allow(missing_docs)]
 pub mod theories;
 
+use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 
 /// Set panic hook to get better error messages on panics.
@@ -38,4 +39,66 @@ use wasm_bindgen::prelude::*;
 pub fn set_panic_hook() {
     #[cfg(feature = "console_error_panic_hook")]
     console_error_panic_hook::set_once();
+}
+
+/// Validates that analysis content can be deserialized into the correct Rust type.
+///
+/// This function tests the same deserialization path used by analysis functions,
+/// but without requiring a model. It's useful for testing backward compatibility
+/// of analysis content from older documents.
+///
+/// Returns `Ok(())` if the content deserializes successfully, or an error message
+/// describing what went wrong.
+#[wasm_bindgen(js_name = "validateAnalysisContent")]
+pub fn validate_analysis_content(analysis_id: &str, content: JsValue) -> Result<(), String> {
+    match analysis_id {
+        // Rust-validated analysis types (have a Rust struct with serde deserialization)
+        "mass-action" => {
+            catlog::stdlib::analyses::ode::MassActionProblemData::from_js(content)
+                .map_err(|e| format!("mass-action: {e}"))?;
+        }
+        "kuramoto" => {
+            catlog::stdlib::analyses::ode::KuramotoProblemData::from_js(content)
+                .map_err(|e| format!("kuramoto: {e}"))?;
+        }
+        "lotka-volterra" => {
+            catlog::stdlib::analyses::ode::LotkaVolterraProblemData::from_js(content)
+                .map_err(|e| format!("lotka-volterra: {e}"))?;
+        }
+        "linear-ode" => {
+            catlog::stdlib::analyses::ode::LinearODEProblemData::from_js(content)
+                .map_err(|e| format!("linear-ode: {e}"))?;
+        }
+        "stochastic-mass-action" => {
+            catlog::stdlib::analyses::stochastic::StochasticMassActionProblemData::from_js(content)
+                .map_err(|e| format!("stochastic-mass-action: {e}"))?;
+        }
+        "subreachability" => {
+            catlog::stdlib::analyses::reachability::ReachabilityProblemData::from_js(content)
+                .map_err(|e| format!("subreachability: {e}"))?;
+        }
+
+        // Frontend-only analysis types (no Rust struct, content is valid by definition)
+        "decapodes"
+        | "diagram"
+        | "tabularview"
+        | "graph"
+        | "erd"
+        | "mass-action-equations"
+        | "unbalanced-mass-action-equations"
+        | "negative-loops"
+        | "positive-loops"
+        | "delayed-negative-loops"
+        | "delayed-positive-loops"
+        | "sql" => {
+            // No validation needed for frontend-only types
+        }
+
+        // Unknown analysis type — fail the test so new types must be added here
+        unknown => {
+            return Err(format!("unknown analysis type: {unknown}"));
+        }
+    }
+
+    Ok(())
 }

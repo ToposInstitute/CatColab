@@ -1,0 +1,75 @@
+name: staging-tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+# This workflow tests backward compatibility by loading all analysis documents
+# from the staging database and validating that they can still be deserialized
+# with the current code.
+#
+# It only runs on PRs from the same repository (not forks), because fork PRs
+# don't have access to the CATCOLAB_NEXT_DEPLOYUSER_KEY secret needed to SSH
+# into the staging server.
+
+jobs:
+  staging_document_compatibility:
+    name: staging document compatibility
+    runs-on: ubuntu-latest
+    
+    # Skip on fork PRs where secrets are unavailable
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v25
+
+      - name: Configure Cachix
+        uses: cachix/cachix-action@v14
+        with:
+          name: catcolab-jmoggr
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+
+      - name: Build catlog-wasm
+        run: nix build .#catlog-wasm-browser
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Link Nix-built WASM package
+        run: |
+          mkdir -p packages/catlog-wasm/dist/pkg-browser
+          cp -r result/* packages/catlog-wasm/dist/pkg-browser/
+
+      - name: Set up SSH for staging access
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.CATCOLAB_NEXT_DEPLOYUSER_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan backend-next.catcolab.org >> ~/.ssh/known_hosts
+
+      - name: Dump analysis documents from staging
+        run: |
+          infrastructure/scripts/dump-analysis-docs \
+            catcolab@backend-next.catcolab.org \
+            /tmp/analysis-fixtures.json
+
+      - name: Run staging compatibility tests
+        env:
+          ANALYSIS_FIXTURES_PATH: /tmp/analysis-fixtures.json
+        run: |
+          pnpm --filter frontend run test -- --run src/stdlib/analyses_compat.test.ts
