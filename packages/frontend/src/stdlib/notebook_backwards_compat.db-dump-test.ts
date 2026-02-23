@@ -147,14 +147,14 @@ describe("Database dump backward compatibility", () => {
                     continue;
                 }
 
-                if (!analysisSpec.simulate) {
-                    // Analysis type has no simulate function (e.g., visualization-only).
+                if (!analysisSpec.run) {
+                    // Analysis type has no run function (e.g., visualization-only).
                     // These don't deserialize content through WASM, so nothing to test.
                     continue;
                 }
 
                 try {
-                    analysisSpec.simulate(compiledModel, analysisCell.content);
+                    analysisSpec.run(compiledModel, analysisCell.content);
                 } catch (e) {
                     const msg = e instanceof Error ? e.message : String(e);
                     failures.push(`  cell ${cellId} (${analysisId}): ${msg}`);

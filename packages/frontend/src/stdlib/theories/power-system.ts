@@ -54,7 +54,7 @@ export default function createPowerSystemsTheory(theoryMeta: TheoryMeta): Theory
                 help: "visualization",
             }),
             analyses.kuramoto({
-                simulate: (model, data) => thPowerSystem.kuramoto(model, data),
+                run: (model, data) => thPowerSystem.kuramoto(model, data),
                 parameterLabels: {
                     coupling: "Capacity",
                     forcing: "Input power",

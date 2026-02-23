@@ -65,12 +65,10 @@ export default function createRegulatoryNetworkTheory(theoryMeta: TheoryMeta): T
                 },
             }),
             analyses.linearODE({
-                simulate: (model, data) => thSignedCategory.linearODE(model, data),
+                run: (model, data) => thSignedCategory.linearODE(model, data),
             }),
             analyses.lotkaVolterra({
-                simulate(model, data) {
-                    return thSignedCategory.lotkaVolterra(model, data);
-                },
+                run: (model, data) => thSignedCategory.lotkaVolterra(model, data),
             }),
         ],
     });

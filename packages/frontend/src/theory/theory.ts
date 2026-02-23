@@ -293,13 +293,13 @@ export type ModelAnalysisMeta<T = any> = AnalysisMeta<T> & {
     /** Component that renders the analysis. */
     component: ModelAnalysisComponent<T>;
 
-    /** Optional simulate function for testing backward compatibility.
+    /** Optional run function for testing backward compatibility.
 
     When present, this function takes a compiled model and analysis content and
     runs the analysis. It exercises the same WASM deserialization path as the
     component would at runtime.
      */
-    simulate?: (model: DblModel, data: T) => unknown;
+    run?: (model: DblModel, data: T) => unknown;
 };
 
 /** Specifies a diagram analysis with descriptive metadata. */

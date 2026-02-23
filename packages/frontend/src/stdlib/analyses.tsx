@@ -55,7 +55,7 @@ const TabularView = lazy(() => import("./analyses/tabular_view"));
 
 export function kuramoto(
     options: Partial<AnalysisOptions> & {
-        simulate: Simulators.KuramotoSimulator;
+        run: Simulators.KuramotoSimulator;
         parameterLabels?: {
             coupling?: string;
             damping?: string;
@@ -68,17 +68,17 @@ export function kuramoto(
         name = "Kuramoto dynamics",
         description = "Simulate the system using the Kuramoto dynamical model",
         help = "kuramoto",
-        simulate,
+        run,
     } = options;
     return {
         id,
         name,
         description,
         help,
-        simulate,
+        run,
         component: (props) => (
             <Kuramoto
-                simulate={simulate}
+                simulate={run}
                 title={name}
                 couplingLabel={options.parameterLabels?.coupling}
                 dampingLabel={options.parameterLabels?.damping}
@@ -102,7 +102,7 @@ const Kuramoto = lazy(() => import("./analyses/kuramoto"));
 
 export function linearODE(
     options: Partial<AnalysisOptions> & {
-        simulate: Simulators.LinearODESimulator;
+        run: Simulators.LinearODESimulator;
     },
 ): ModelAnalysisMeta<Simulators.LinearODEProblemData> {
     const {
@@ -110,15 +110,15 @@ export function linearODE(
         name = "Linear ODE dynamics",
         description = "Simulate the system using a constant-coefficient linear first-order ODE",
         help = "linear-ode",
-        simulate,
+        run,
     } = options;
     return {
         id,
         name,
         description,
         help,
-        simulate,
-        component: (props) => <LinearODE simulate={simulate} title={name} {...props} />,
+        run,
+        component: (props) => <LinearODE simulate={run} title={name} {...props} />,
         initialContent: () => ({
             coefficients: {},
             initialValues: {},
@@ -131,7 +131,7 @@ const LinearODE = lazy(() => import("./analyses/linear_ode"));
 
 export function lotkaVolterra(
     options: Partial<AnalysisOptions> & {
-        simulate: Simulators.LotkaVolterraSimulator;
+        run: Simulators.LotkaVolterraSimulator;
     },
 ): ModelAnalysisMeta<Simulators.LotkaVolterraProblemData> {
     const {
@@ -139,15 +139,15 @@ export function lotkaVolterra(
         name = "Lotka-Volterra dynamics",
         description = "Simulate the system using a Lotka-Volterra ODE",
         help = "lotka-volterra",
-        simulate,
+        run,
     } = options;
     return {
         id,
         name,
         description,
         help,
-        simulate,
-        component: (props) => <LotkaVolterra simulate={simulate} title={name} {...props} />,
+        run,
+        component: (props) => <LotkaVolterra simulate={run} title={name} {...props} />,
         initialContent: () => ({
             interactionCoefficients: {},
             growthRates: {},
@@ -161,7 +161,7 @@ const LotkaVolterra = lazy(() => import("./analyses/lotka_volterra"));
 
 export function massAction(
     options: Partial<AnalysisOptions> & {
-        simulate: Simulators.MassActionSimulator;
+        run: Simulators.MassActionSimulator;
         stateType?: ObType;
         transitionType?: MorType;
     },
@@ -178,7 +178,7 @@ export function massAction(
         name,
         description,
         help,
-        simulate: otherOptions.simulate,
+        run: otherOptions.run,
         component: (props) => <MassAction title={name} {...otherOptions} {...props} />,
         initialContent: () => ({
             massConservationType: { type: "Balanced" },
@@ -254,7 +254,7 @@ const UnbalancedMassActionEquationsDisplay = lazy(
 
 export function stochasticMassAction(
     options: Partial<AnalysisOptions> & {
-        simulate: Simulators.StochasticMassActionSimulator;
+        run: Simulators.StochasticMassActionSimulator;
         stateType?: ObType;
         transitionType?: MorType;
     },
@@ -271,7 +271,7 @@ export function stochasticMassAction(
         name,
         description,
         help,
-        simulate: otherOptions.simulate,
+        run: otherOptions.run,
         component: (props) => <StochasticMassAction title={name} {...otherOptions} {...props} />,
         initialContent: () => ({
             rates: {},
@@ -349,7 +349,7 @@ export function reachability(
         name,
         description,
         help,
-        simulate: otherOptions.check,
+        run: otherOptions.check,
         component: (props) => <Reachability title={name} {...otherOptions} {...props} />,
         initialContent: () => ({ tokens: {}, forbidden: {} }),
     };
