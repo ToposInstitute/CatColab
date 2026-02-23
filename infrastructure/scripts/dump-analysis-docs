@@ -1,20 +1,27 @@
 #!/usr/bin/env bash
-# Dumps all analysis documents from a database as a JSON array.
+# Dumps all analysis documents and their referenced models from a database as a JSON object.
 #
 # Usage: dump-analysis-docs <ssh-target> <output-file>
 # Example: dump-analysis-docs catcolab@backend-next.catcolab.org fixtures.json
+#
+# Output format:
+# {
+#   "analyses": [...],  // Array of analysis documents
+#   "models": [...]     // Array of model documents referenced by the analyses
+# }
 
 set -euo pipefail
 
 SSH_TARGET="${1:?Usage: dump-analysis-docs <ssh-target> <output-file>}"
 OUTPUT_FILE="${2:?Usage: dump-analysis-docs <ssh-target> <output-file>}"
 
-echo "Dumping analysis documents from $SSH_TARGET to $OUTPUT_FILE..." >&2
+echo "Dumping analysis documents and models from $SSH_TARGET to $OUTPUT_FILE..." >&2
 
 # Run the query remotely via SSH. The remote script:
 # 1. Extracts DATABASE_URL from the agenix secrets file
 # 2. Queries PostgreSQL to get all non-deleted analysis documents
-# 3. Uses json_agg to return a single JSON array
+# 3. Queries PostgreSQL to get all model documents referenced by the analyses
+# 4. Returns a JSON object with both arrays
 ssh "$SSH_TARGET" bash -s > "$OUTPUT_FILE" <<'REMOTE_SCRIPT'
 set -euo pipefail
 
@@ -31,14 +38,36 @@ if [[ -z "$DB_URL" ]]; then
   exit 1
 fi
 
-# Query the database for all analysis documents
+# Query for all analysis documents and their referenced models
 psql "$DB_URL" -t -A -c "
-  SELECT COALESCE(json_agg(s.content), '[]'::json)
-  FROM snapshots s
-  JOIN refs r ON r.head = s.id
-  WHERE r.deleted_at IS NULL
-    AND s.content->>'type' = 'analysis'
+  WITH analysis_docs AS (
+    SELECT s.content
+    FROM snapshots s
+    JOIN refs r ON r.head = s.id
+    WHERE r.deleted_at IS NULL
+      AND s.content->>'type' = 'analysis'
+  ),
+  model_refs AS (
+    SELECT DISTINCT content->'analysisOf'->>'_id' AS model_ref_id
+    FROM analysis_docs
+    WHERE content->>'analysisType' = 'model'
+      AND content->'analysisOf'->>'_id' IS NOT NULL
+  ),
+  model_docs AS (
+    SELECT jsonb_set(s.content, '{_refId}', to_jsonb(r.id::text)) AS content
+    FROM model_refs mr
+    JOIN refs r ON r.id = mr.model_ref_id::uuid
+    JOIN snapshots s ON s.id = r.head
+    WHERE r.deleted_at IS NULL
+      AND s.content->>'type' = 'model'
+  )
+  SELECT json_build_object(
+    'analyses', COALESCE((SELECT json_agg(content) FROM analysis_docs), '[]'::json),
+    'models', COALESCE((SELECT json_agg(content) FROM model_docs), '[]'::json)
+  );
 "
 REMOTE_SCRIPT
 
-echo "Dumped $(jq 'length' "$OUTPUT_FILE") analysis documents to $OUTPUT_FILE" >&2
+ANALYSIS_COUNT=$(jq '.analyses | length' "$OUTPUT_FILE")
+MODEL_COUNT=$(jq '.models | length' "$OUTPUT_FILE")
+echo "Dumped $ANALYSIS_COUNT analysis documents and $MODEL_COUNT model documents to $OUTPUT_FILE" >&2

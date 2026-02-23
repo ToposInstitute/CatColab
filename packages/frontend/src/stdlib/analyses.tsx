@@ -75,6 +75,7 @@ export function kuramoto(
         name,
         description,
         help,
+        simulate,
         component: (props) => (
             <Kuramoto
                 simulate={simulate}
@@ -116,6 +117,7 @@ export function linearODE(
         name,
         description,
         help,
+        simulate,
         component: (props) => <LinearODE simulate={simulate} title={name} {...props} />,
         initialContent: () => ({
             coefficients: {},
@@ -144,6 +146,7 @@ export function lotkaVolterra(
         name,
         description,
         help,
+        simulate,
         component: (props) => <LotkaVolterra simulate={simulate} title={name} {...props} />,
         initialContent: () => ({
             interactionCoefficients: {},
@@ -175,6 +178,7 @@ export function massAction(
         name,
         description,
         help,
+        simulate: otherOptions.simulate,
         component: (props) => <MassAction title={name} {...otherOptions} {...props} />,
         initialContent: () => ({
             massConservationType: { type: "Balanced" },
@@ -267,6 +271,7 @@ export function stochasticMassAction(
         name,
         description,
         help,
+        simulate: otherOptions.simulate,
         component: (props) => <StochasticMassAction title={name} {...otherOptions} {...props} />,
         initialContent: () => ({
             rates: {},
@@ -344,6 +349,7 @@ export function reachability(
         name,
         description,
         help,
+        simulate: otherOptions.check,
         component: (props) => <Reachability title={name} {...otherOptions} {...props} />,
         initialContent: () => ({ tokens: {}, forbidden: {} }),
     };
