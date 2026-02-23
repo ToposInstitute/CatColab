@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Dumps all analysis documents and their referenced models from a database as a JSON object.
 #
-# Usage: dump-analysis-docs <ssh-target> <output-file>
-# Example: dump-analysis-docs catcolab@backend-next.catcolab.org fixtures.json
+# Usage: dump-notebook-fixtures <ssh-target> <output-file>
+# Example: dump-notebook-fixtures catcolab@backend-next.catcolab.org fixtures.json
 #
 # Output format:
 # {
@@ -12,8 +12,8 @@
 
 set -euo pipefail
 
-SSH_TARGET="${1:?Usage: dump-analysis-docs <ssh-target> <output-file>}"
-OUTPUT_FILE="${2:?Usage: dump-analysis-docs <ssh-target> <output-file>}"
+SSH_TARGET="${1:?Usage: dump-notebook-fixtures <ssh-target> <output-file>}"
+OUTPUT_FILE="${2:?Usage: dump-notebook-fixtures <ssh-target> <output-file>}"
 
 echo "Dumping analysis documents and models from $SSH_TARGET to $OUTPUT_FILE..." >&2
 

@@ -62,14 +62,14 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan backend-next.catcolab.org >> ~/.ssh/known_hosts
 
-      - name: Dump analysis documents from staging
+      - name: Dump notebook fixtures from staging
         run: |
-          infrastructure/scripts/dump-analysis-docs \
+          infrastructure/scripts/dump-notebook-fixtures \
             catcolab@backend-next.catcolab.org \
-            /tmp/analysis-fixtures.json
+            /tmp/db-dump-notebook-fixtures.json
 
       - name: Run database dump compatibility tests
         env:
-          ANALYSIS_FIXTURES_PATH: /tmp/analysis-fixtures.json
+          NOTEBOOK_FIXTURES_PATH: /tmp/db-dump-notebook-fixtures.json
         run: |
           pnpm --filter frontend exec vitest --mode=development --config vitest.db-dump.config.ts --run

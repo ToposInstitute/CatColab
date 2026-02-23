@@ -5,17 +5,17 @@ import { DblModelMap, elaborateModel, migrateDocument } from "catlog-wasm";
 import { stdTheories } from "./theories";
 
 /** Path to a JSON file containing analysis documents and their referenced models.
- * Set via the ANALYSIS_FIXTURES_PATH environment variable.
+ * Set via the NOTEBOOK_FIXTURES_PATH environment variable.
  * This path is required — the test will fail if not set.
  */
-const fixturesPath = process.env.ANALYSIS_FIXTURES_PATH;
+const fixturesPath = process.env.NOTEBOOK_FIXTURES_PATH;
 
 describe("Database dump backward compatibility", () => {
     // Fail immediately if fixtures path is not provided
-    test("ANALYSIS_FIXTURES_PATH must be set", () => {
+    test("NOTEBOOK_FIXTURES_PATH must be set", () => {
         if (!fixturesPath) {
             expect.fail(
-                "ANALYSIS_FIXTURES_PATH environment variable is not set. " +
+                "NOTEBOOK_FIXTURES_PATH environment variable is not set. " +
                     "This test requires a JSON file with analysis documents and models.",
             );
         }
