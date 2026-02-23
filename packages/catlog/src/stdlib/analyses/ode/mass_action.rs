@@ -474,8 +474,11 @@ mod tests {
     use crate::simulate::ode::LatexEquation;
     use crate::stdlib::{analyses, models::*, theories::*};
 
+    // Tests for stock-flow diagrams. These all use the backward_link() model,
+    // which has a single flow x==f==>y and a single link y->f.
+
     #[test]
-    fn balanced_backward_link_dynamics() {
+    fn balanced_stock_flow() {
         let th = Rc::new(th_category_links());
         let model = backward_link(th);
         let sys = StockFlowMassActionAnalysis::default()
@@ -488,9 +491,9 @@ mod tests {
     }
 
     #[test]
-    fn unbalanced_positive_backward_link_dynamics() {
-        let th = Rc::new(th_category_signed_links());
-        let model = positive_backward_link(th);
+    fn unbalanced_stock_flow() {
+        let th = Rc::new(th_category_links());
+        let model = backward_link(th);
         let sys = StockFlowMassActionAnalysis::default().build_system(
             &model,
             analyses::ode::MassConservationType::Unbalanced(
@@ -504,8 +507,11 @@ mod tests {
         expected.assert_eq(&sys.to_string());
     }
 
+    // Tests for signed stock-flow diagrams. These all use the negative_backwards_link()
+    // model, which has a single flow x==f=>y and a single negative link y->f.
+
     #[test]
-    fn balanced_negative_backward_link_dynamics() {
+    fn balanced_signed_stock_flow() {
         let th = Rc::new(th_category_signed_links());
         let model = negative_backward_link(th);
         let sys = StockFlowMassActionAnalysis::default()
@@ -518,7 +524,59 @@ mod tests {
     }
 
     #[test]
-    fn catalysis_dynamics() {
+    fn unbalanced_signed_stock_flow() {
+        let th = Rc::new(th_category_signed_links());
+        let model = negative_backward_link(th);
+        let sys = StockFlowMassActionAnalysis::default().build_system(
+            &model,
+            analyses::ode::MassConservationType::Unbalanced(
+                analyses::ode::RateGranularity::PerTransition,
+            ),
+        );
+        let expected = expect!([r#"
+            dx = (-Outgoing(f)) x y^{-1}
+            dy = (Incoming(f)) x y^{-1}
+        "#]);
+        expected.assert_eq(&sys.to_string());
+    }
+
+    // Tests for Petri nets. These all use the catalyzed_reaction() model, which
+    // has a single transition [x,c]-->f-->[y,c].
+
+    #[test]
+    fn balanced_petri() {
+        let th = Rc::new(th_sym_monoidal_category());
+        let model = catalyzed_reaction(th);
+        let sys = PetriNetMassActionAnalysis::default()
+            .build_system(&model, analyses::ode::MassConservationType::Balanced);
+        let expected = expect!([r#"
+            dx = (-f) c x
+            dy = f c x
+            dc = 0
+        "#]);
+        expected.assert_eq(&sys.to_string());
+    }
+
+    #[test]
+    fn unbalanced_petri_per_transition() {
+        let th = Rc::new(th_sym_monoidal_category());
+        let model = catalyzed_reaction(th);
+        let sys = PetriNetMassActionAnalysis::default().build_system(
+            &model,
+            analyses::ode::MassConservationType::Unbalanced(
+                analyses::ode::RateGranularity::PerTransition,
+            ),
+        );
+        let expected = expect!([r#"
+            dx = (-Outgoing(f)) c x
+            dy = (Incoming(f)) c x
+            dc = (Incoming(f) + -Outgoing(f)) c x
+        "#]);
+        expected.assert_eq(&sys.to_string());
+    }
+
+    #[test]
+    fn unbalanced_petri_per_place() {
         let th = Rc::new(th_sym_monoidal_category());
         let model = catalyzed_reaction(th);
         let sys = PetriNetMassActionAnalysis::default().build_system(
@@ -527,7 +585,6 @@ mod tests {
                 analyses::ode::RateGranularity::PerPlace,
             ),
         );
-        // Note that the catalyst c is not left unchanged unless f is balanced
         let expected = expect!([r#"
             dx = (-(x->[f])) c x
             dy = (([f]->y)) c x
@@ -535,6 +592,8 @@ mod tests {
         "#]);
         expected.assert_eq(&sys.to_string());
     }
+
+    // Test for LaTeX.
 
     #[test]
     fn to_latex() {
