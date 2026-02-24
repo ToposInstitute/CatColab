@@ -4,10 +4,11 @@ use crate::{
     one::{
         Path,
         graph::FinGraph,
-        graph_algorithms::{ToposortData, toposort_lenient, toposort_strict},
+        graph_algorithms::{ToposortData, toposort_lenient},
     },
     zero::{QualifiedLabel, QualifiedName, name},
 };
+use derive_more::Constructor;
 use indexmap::IndexMap;
 use itertools::Itertools;
 use nonempty::nonempty;
@@ -37,15 +38,19 @@ impl Iden for &QualifiedLabel {
     }
 }
 
-#[derive(Debug, Clone)]
-enum ColumnBehavior {
+/// Enum for specifying the behavior of a column. For example, an Ordinary column is simply
+/// a foreign key constraint.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ColumnBehavior {
+    /// A foreign key constraint. The target is an entity.
     Ordinary { mor: QualifiedName, tgt: QualifiedName },
+    /// A deferrable key constraint. The target is an entity.
     Deferrable { mor: QualifiedName, tgt: QualifiedName },
+    /// An attribute column. The target is an attribute type.
     Attribute { mor: QualifiedName, tgt: QualifiedName },
 }
 
 impl ColumnBehavior {
-    // TODO pass model into here
     fn build(
         model: &DiscreteDblModel,
         cycles: &IndexMap<QualifiedName, Vec<QualifiedName>>,
@@ -83,6 +88,8 @@ impl ColumnBehavior {
         }
     }
 
+    /// The function creates foreign key constraints for PostgresSQL. Here, deferrable key
+    /// constraints are special.
     fn render_postgres_fk(
         &self,
         src: &QualifiedName,
@@ -91,9 +98,9 @@ impl ColumnBehavior {
     ) -> String {
         let fk = |src: &QualifiedLabel, mor: &QualifiedLabel, tgt: &QualifiedLabel| -> String {
             format!(
-                r#"ALTER TABLE {src}
+                r#"ALTER TABLE "{src}"
 	ADD CONSTRAINT fk_{mor}_{src}_{tgt}
-	FOREIGN KEY ({mor}) REFERENCES {tgt} (id)"#
+	FOREIGN KEY ({mor}) REFERENCES "{tgt}" (id)"#
             )
         };
         match self {
@@ -105,23 +112,77 @@ impl ColumnBehavior {
                     + "\n"
                     + r#"DEFERRABLE INITIALLY DEFERRED;"#
             }
-            ColumnBehavior::Attribute { mor: _, tgt: _ } => "".to_string(), // TODO
+            // this is unreachable, since attributes cannot be foreign keys.
+            ColumnBehavior::Attribute { mor: _, tgt: _ } => "".to_string(),
+        }
+    }
+}
+
+/// Data containing foreign key constraints and their behavior, which are interpreted as
+/// backend-specific attributes.
+#[derive(Clone, Debug)]
+pub struct ForeignKeyConstraints {
+    /// Foreign key constraints for every table.
+    fks: IndexMap<QualifiedName, Vec<ColumnBehavior>>,
+}
+
+impl ForeignKeyConstraints {
+    fn new(model: &DiscreteDblModel) -> Self {
+        let g = model.generating_graph();
+        let toposort: ToposortData<QualifiedName> = toposort_lenient(g);
+        let cycles = toposort.cycles;
+        let fks = IndexMap::from_iter(toposort.stack.into_iter().rev().filter_map(|v| {
+            (name("Entity") == model.ob_generator_type(&v)).then_some((
+                v.clone(),
+                g.out_edges(&v)
+                    .map(|e| ColumnBehavior::build(model, &cycles, &v, e))
+                    .collect::<Vec<ColumnBehavior>>(),
+            ))
+        }));
+        Self { fks }
+    }
+
+    fn any_deferrable(&self) -> bool {
+        self.fks
+            .values()
+            .flatten()
+            .into_iter()
+            .any(|s| matches!(s, ColumnBehavior::Deferrable { mor: _, tgt: _ }))
+    }
+}
+
+/// Error thrown when the SQL Analysis fails.
+#[derive(Clone, Debug, PartialEq)]
+pub enum SQLAnalysisError {
+    /// Its possible that a SQL backend cannot support cyclic foreign key constraints.
+    CyclicForeignKeyError {
+        /// The SQL backend that fails. Of the supported SQL backends, MySQL is the only one which
+        /// does not support cyclic foreign key constraints.
+        backend: SQLBackend,
+        /// The tables which have failing foreign key constraints.
+        cycles: Vec<(QualifiedName, ColumnBehavior)>,
+    },
+}
+
+impl std::fmt::Display for SQLAnalysisError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SQLAnalysisError::CyclicForeignKeyError { backend, cycles } => write!(
+                f,
+                "Cycle detected at tables {:#?}. {backend} cannot support cyclic foreign keys.",
+                cycles
+            ),
         }
     }
 }
 
 /// Struct for building a valid SQL DDL.
+#[derive(Constructor)]
 pub struct SQLAnalysis {
     backend: SQLBackend,
 }
 
 impl SQLAnalysis {
-    /// Constructs a new SQLAnalysis instance.
-    pub fn new(backend: SQLBackend) -> Self {
-        Self { backend }
-    }
-
-    // TODO consume input from analysis
     /// Returns formatted output.
     pub fn format(&self, output: &str) -> String {
         format(
@@ -139,7 +200,7 @@ impl SQLAnalysis {
     fn build(
         &self,
         tables: Vec<TableCreateStatement>,
-        morphisms: IndexMap<QualifiedName, Vec<ColumnBehavior>>,
+        constraints: ForeignKeyConstraints,
         ob_label: impl Fn(&QualifiedName) -> QualifiedLabel,
         mor_label: impl Fn(&QualifiedName) -> QualifiedLabel,
     ) -> String {
@@ -153,52 +214,44 @@ impl SQLAnalysis {
             .join(";\n")
             + ";";
 
-        let deferrable_fks: String = morphisms
+        let deferrable_fks: String = constraints
+            .fks
             .iter()
             .flat_map(|(ob, mors)| {
                 mors.iter()
                     .filter(|fkb| matches!(fkb, ColumnBehavior::Deferrable { mor: _, tgt: _ }))
                     .map(|fkb| fkb.render_postgres_fk(ob, &ob_label, &mor_label))
-                    .collect::<Vec<_>>()
+                    .collect::<Vec<String>>()
             })
             .join("\n");
 
         table_def + &deferrable_fks
     }
 
+    fn validate_toposort(
+        &self,
+        constraints: ForeignKeyConstraints,
+    ) -> Result<ForeignKeyConstraints, SQLAnalysisError> {
+        if self.backend == SQLBackend::MySQL && constraints.any_deferrable() {
+            let cycles = constraints
+                .fks
+                .into_iter()
+                .flat_map(|(k, v)| v.into_iter().map(move |e| (k.clone(), e)))
+                .filter(|(_, e)| matches!(e, ColumnBehavior::Deferrable { mor: _, tgt: _ }))
+                .collect::<Vec<_>>();
+            Err(SQLAnalysisError::CyclicForeignKeyError { backend: self.backend.clone(), cycles })
+        } else {
+            Ok(constraints)
+        }
+    }
+
     fn toposort_morphisms(
         &self,
         model: &DiscreteDblModel,
-        ob_label: impl Fn(&QualifiedName) -> QualifiedLabel,
-    ) -> Result<IndexMap<QualifiedName, Vec<ColumnBehavior>>, String> {
-        let g = model.generating_graph();
-        let toposort: ToposortData<_> = match self.backend {
-            SQLBackend::PostgresSQL => {
-                toposort_lenient(g).map_err(|e| format!("Topological sort failed: {}", e))
-            }
-            _ => toposort_strict(g).map_err(|e| {
-                format!(
-                    "Topological sort failed: {}",
-                    match e {
-                        crate::one::graph_algorithms::ToposortError::CycleError(v) => ob_label(&v),
-                        crate::one::graph_algorithms::ToposortError::SelfLoop(v) => ob_label(&v),
-                    }
-                )
-            }),
-        }?;
-
-        let cycles = toposort.cycles;
+    ) -> Result<ForeignKeyConstraints, SQLAnalysisError> {
         // if a morphism is a key in toposort.cycles, then its source and targets are deferrable.
-        let morphisms: IndexMap<QualifiedName, Vec<ColumnBehavior>> =
-            IndexMap::from_iter(toposort.stack.into_iter().rev().filter_map(|v| {
-                (name("Entity") == model.ob_generator_type(&v)).then_some((
-                    v.clone(),
-                    g.out_edges(&v)
-                        .map(|e| ColumnBehavior::build(model, &cycles, &v, e))
-                        .collect::<Vec<ColumnBehavior>>(),
-                ))
-            }));
-        Ok(morphisms)
+        let constraints = ForeignKeyConstraints::new(model);
+        self.validate_toposort(constraints)
     }
 
     /// Consumes itself and a discrete double model to produce a SQL string.
@@ -207,13 +260,21 @@ impl SQLAnalysis {
         model: &DiscreteDblModel,
         ob_label: impl Fn(&QualifiedName) -> QualifiedLabel,
         mor_label: impl Fn(&QualifiedName) -> QualifiedLabel,
-    ) -> Result<String, String> {
-        let morphisms = self.toposort_morphisms(model, &ob_label);
-        let tables = self.make_tables(model, morphisms.clone()?, &ob_label, &mor_label);
-        let output: String = self.build(tables, morphisms?, ob_label, mor_label);
+    ) -> Result<String, SQLAnalysisError> {
+        let constraints = self.toposort_morphisms(model);
+        let tables = self.make_tables(model, constraints.clone()?, &ob_label, &mor_label);
+        let output: String = self.build(tables, constraints.clone()?, ob_label, mor_label);
         let formatted_output = self.format(&output);
+        // pragmas
         let result = match self.backend {
-            SQLBackend::SQLite => ["PRAGMA foreign_keys = ON", &formatted_output].join(";\n\n"),
+            SQLBackend::SQLite => {
+                let deferrable_pragma = if constraints?.any_deferrable() {
+                    "PRAGMA defer_foreign_keys = ON"
+                } else {
+                    ""
+                };
+                [deferrable_pragma, "PRAGMA foreign_keys = ON", &formatted_output].join(";\n\n")
+            }
             _ => formatted_output,
         };
         Ok(result)
@@ -235,11 +296,12 @@ impl SQLAnalysis {
     fn make_tables(
         &self,
         model: &DiscreteDblModel,
-        morphisms: IndexMap<QualifiedName, Vec<ColumnBehavior>>,
+        constraints: ForeignKeyConstraints,
         ob_label: impl Fn(&QualifiedName) -> QualifiedLabel,
         mor_label: impl Fn(&QualifiedName) -> QualifiedLabel,
     ) -> Vec<TableCreateStatement> {
-        morphisms
+        constraints
+            .fks
             .into_iter()
             .map(|(ob, mors)| {
                 let mut tbl = Table::create();
@@ -277,7 +339,7 @@ impl SQLAnalysis {
                         // TABLE AND COLUMN DEFS
                         table_column_defs,
                         |acc, mor| {
-                            // TODO if there is a cyclic pattern, we want to add deferrable...
+                            // if there is a cyclic pattern, we want to add deferrable...
                             acc.foreign_key(&mut self.fk(
                                 ob_label(&ob),
                                 ob_label(mor.tgt()),
@@ -449,5 +511,48 @@ ADD
             )
             .expect("SQL should render");
         expected.assert_eq(&ddl);
+    }
+
+    #[test]
+    fn sql_mysql_cycles() {
+        let th = Rc::new(th_schema());
+        let source = "[
+                Refs : Entity,
+                Snapshots : Entity,
+                head : (Hom Entity)[Refs, Snapshots],
+                for_ref: (Hom Entity)[Snapshots, Refs],
+                Timestamp : AttrType,
+                created : Attr[Refs, Timestamp],
+                last_updated: Attr[Snapshots, Timestamp],
+            ]";
+        let model = tt::modelgen::Model::from_text(&th.into(), source)
+            .and_then(|m| m.as_discrete())
+            .unwrap();
+
+        let ddl = SQLAnalysis::new(SQLBackend::MySQL).render(
+            &model,
+            |id| format!("{id}").as_str().into(),
+            |id| format!("{id}").as_str().into(),
+        );
+        let e = ddl.unwrap_err();
+        assert_eq!(
+            e,
+            SQLAnalysisError::CyclicForeignKeyError {
+                backend: SQLBackend::MySQL,
+                cycles: vec![
+                    (
+                        name("Snapshots"),
+                        ColumnBehavior::Deferrable { mor: name("for_ref"), tgt: name("Refs") }
+                    ),
+                    (
+                        name("Refs"),
+                        ColumnBehavior::Deferrable {
+                            mor: name("head"),
+                            tgt: name("Snapshots")
+                        }
+                    )
+                ]
+            }
+        );
     }
 }
