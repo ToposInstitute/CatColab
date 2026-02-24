@@ -1,6 +1,7 @@
 //! Algorithms on graphs.
 
 use derivative::Derivative;
+use derive_more::Constructor;
 use indexmap::IndexMap;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt;
@@ -304,19 +305,13 @@ where
 }
 
 /// Contains both the topologically-sorted stack of vertices and feedback vertices.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Constructor)]
 pub struct ToposortData<V> {
     ///
     pub stack: Vec<V>,
 
     ///
     pub cycles: IndexMap<V, Vec<V>>,
-}
-
-impl<V> ToposortData<V> {
-    fn new(stack: Vec<V>, cycles: IndexMap<V, Vec<V>>) -> Self {
-        Self { stack, cycles }
-    }
 }
 
 /// Error type for Topological sort storing erroneous vertices.
@@ -339,7 +334,7 @@ impl<V: std::fmt::Debug> std::fmt::Display for ToposortError<V> {
 
 type ToposortResult<V> = Result<ToposortData<V>, ToposortError<V>>;
 
-/// Implementation of topological sort which throws an error when it encounters a cycle.
+/// Implementation of topological sort which returns an error when it encounters a cycle.
 pub fn toposort_strict<G>(graph: &G) -> Result<Vec<G::V>, ToposortError<G::V>>
 where
     G: FinGraph,
@@ -348,23 +343,23 @@ where
     toposort_impl(graph, true).map(|t| t.stack)
 }
 
-/// Implementation of topological sort which does not throw an error when it encounters cycle.
+/// Implementation of topological sort which does not return an error when it encounters cycle.
 pub fn toposort_lenient<G>(graph: &G) -> ToposortData<G::V>
 where
     G: FinGraph,
     G::V: Hash + std::fmt::Debug,
 {
-    toposort_impl(graph, false).expect("This should never return an error.")
+    toposort_impl(graph, false).expect("This should never returns an error")
 }
 
 /// Computes a topological sorting for a given graph.
 ///
 /// This toposort algorithm was adapted from the crate `petgraph`, found
 /// [here](https://github.com/petgraph/petgraph/blob/4d807c19304c02c9dd687c68577f75aefcb98491/src/algo/mod.rs#L204).
-pub fn toposort_impl<'a, G>(graph: &'a G, is_strict: bool) -> ToposortResult<G::V>
+fn toposort_impl<G>(graph: &G, is_strict: bool) -> ToposortResult<G::V>
 where
     G: FinGraph,
-    G::V: Hash + std::fmt::Debug + 'a,
+    G::V: Hash + std::fmt::Debug,
 {
     let mut finished = HashSet::new();
     let mut finish_stack = Vec::new();
