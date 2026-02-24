@@ -11,11 +11,13 @@ use tsify::Tsify;
 use ustr::ustr;
 use wasm_bindgen::prelude::*;
 
-use catlog::dbl::model::{
-    self as dbl_model, DblModel as _, FgDblModel, InvalidDblModel, ModalMor, ModalOb, MutDblModel,
-    TabEdge, TabMor, TabOb,
+use catlog::dbl::{
+    model::{
+        self as dbl_model, DblModel as _, FgDblModel, InvalidDblModel, ModalMor, ModalOb,
+        MutDblModel, TabEdge, TabMor, TabOb,
+    },
+    theory::{self as dbl_theory, ModalObOp},
 };
-use catlog::dbl::theory::{self as dbl_theory, ModalObOp};
 use catlog::one::{Category as _, FgCategory, Path, QualifiedPath};
 use catlog::tt::{
     self,
@@ -26,10 +28,9 @@ use catlog::validate::Validate;
 use catlog::zero::{NameLookup, NameSegment, Namespace, QualifiedLabel, QualifiedName};
 use notebook_types::current::{path as notebook_path, *};
 
-use super::model_presentation::*;
-use super::notation::*;
 use super::result::JsResult;
 use super::theory::{DblTheory, DblTheoryBox, expect_single_name};
+use super::{model_presentation::*, notation::*, wd::*};
 
 /// Elaborates into an object in a model of a discrete double theory.
 impl CanElaborate<Ob, QualifiedName> for Elaborator {
@@ -596,6 +597,15 @@ impl DblModel {
             DblModelBox::[Discrete, DiscreteTab, Modal](model) => model.validate()
         });
         ModelValidationResult(result.map_err(|errs| errs.into()).into())
+    }
+
+    /// Extracts a composition pattern (UWD) from the model.
+    #[wasm_bindgen(js_name = "compositionPattern")]
+    pub fn composition_pattern(&self) -> Option<UWD> {
+        self.ty
+            .as_ref()
+            .and_then(|(_, ty_v)| tt::wd::record_to_uwd(ty_v))
+            .map(|uwd| serialize_uwd(&uwd))
     }
 }
 

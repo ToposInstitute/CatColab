@@ -35,7 +35,7 @@ scopeguard = "1.2.0"
 serde = { version = "1", features = ["derive"], optional = true }
 tattle = "0.4.3"
 thiserror = "1"
-tsify = { version = "0.5", features = ["js"], optional = true }
+tsify = { version = "0.5.6", features = ["js"], optional = true }
 ustr = "1"
 uuid = { version = "1.18" }
 wasm-bindgen = { version = "0.2.100", optional = true }
