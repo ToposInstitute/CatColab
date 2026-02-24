@@ -9,9 +9,9 @@ use wasm_bindgen::prelude::*;
 use catlog::dbl::theory;
 use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
-use catlog::zero::{QualifiedLabel, name};
+use catlog::zero::{name, QualifiedLabel};
 
-use super::model_morphism::{MotifOccurrence, MotifsOptions, motifs};
+use super::model_morphism::{motifs, MotifOccurrence, MotifsOptions};
 use super::result::JsResult;
 use super::{analyses::*, model::DblModel, theory::DblTheory};
 
@@ -92,19 +92,21 @@ impl ThSchema {
     pub fn render_sql(&self, model: &DblModel, backend: &str) -> JsResult<String, String> {
         analyses::sql::SQLBackend::try_from(backend)
             .and_then(|backend| {
-                analyses::sql::SQLAnalysis::new(backend).render(
-                    model.discrete()?,
-                    |id| {
-                        model
-                            .ob_generator_label(id)
-                            .unwrap_or_else(|| QualifiedLabel::single("".into()))
-                    },
-                    |id| {
-                        model
-                            .mor_generator_label(id)
-                            .unwrap_or_else(|| QualifiedLabel::single("".into()))
-                    },
-                )
+                analyses::sql::SQLAnalysis::new(backend)
+                    .render(
+                        model.discrete()?,
+                        |id| {
+                            model
+                                .ob_generator_label(id)
+                                .unwrap_or_else(|| QualifiedLabel::single("".into()))
+                        },
+                        |id| {
+                            model
+                                .mor_generator_label(id)
+                                .unwrap_or_else(|| QualifiedLabel::single("".into()))
+                        },
+                    )
+                    .map_err(|e| format!("{}", e))
             })
             .into()
     }
