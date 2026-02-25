@@ -12,7 +12,7 @@ integration-tests = []
 
 [dependencies]
 async-trait = "0.1.88"
-autosurgeon = { version = "0.10", features = ["uuid"] }
+autosurgeon = { git = "https://github.com/ToposInstitute/autosurgeon", branch = "kb/fix-option-text", features = ["uuid"] }
 automerge = "0.7.4"
 axum = "0.8.4"
 base64 = "0.22"
