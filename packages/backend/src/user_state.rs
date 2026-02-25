@@ -221,7 +221,7 @@ pub struct UserState {
 
 /// A permission entry as returned from the database JSON aggregation.
 #[derive(Debug, Deserialize)]
-struct DbPermission {
+pub struct DbPermission {
     user_id: Option<String>,
     username: Option<String>,
     display_name: Option<String>,
@@ -229,7 +229,8 @@ struct DbPermission {
 }
 
 impl DbPermission {
-    fn to_doc_permission(&self) -> Option<PermissionInfo> {
+    /// Convert this database permission entry into a [`PermissionInfo`].
+    pub fn to_permission_info(&self) -> Option<PermissionInfo> {
         let level = match self.level.as_str() {
             "read" => PermissionLevel::Read,
             "write" => PermissionLevel::Write,
@@ -316,7 +317,7 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
         .map(|row| {
             let key = row.ref_id.to_string();
             let permissions: Vec<PermissionInfo> =
-                row.permissions.0.iter().filter_map(|p| p.to_doc_permission()).collect();
+                row.permissions.0.iter().filter_map(|p| p.to_permission_info()).collect();
             let info = DocInfo {
                 name: Text::from(row.name.unwrap_or_else(|| "untitled".to_string())),
                 type_name: Text::from(row.type_name.expect("type_name should never be null")),
