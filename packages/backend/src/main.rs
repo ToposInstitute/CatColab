@@ -20,15 +20,7 @@ use tower_http::cors::CorsLayer;
 use tracing::{error, info};
 use tracing_subscriber::filter::{EnvFilter, LevelFilter};
 
-mod app;
-mod auth;
-mod automerge_json;
-mod document;
-mod rpc;
-mod storage;
-mod user;
-mod user_state;
-mod user_state_subscription;
+use backend::{app, auth, rpc, storage, user_state, user_state_subscription};
 
 /// Port for the web server providing the RPC API.
 fn web_port() -> String {
