@@ -207,6 +207,9 @@ pub struct DocInfo {
     #[autosurgeon(rename = "deletedAt", with = "option_datetime_millis")]
     #[ts(type = "number | null")]
     pub deleted_at: Option<chrono::DateTime<chrono::Utc>>,
+    /// The parent document ref ID
+    #[ts(as = "Option<String>")]
+    pub parent: Option<uuid::Uuid>,
 }
 
 /// State associated with a user, synchronized via Automerge.
@@ -281,6 +284,10 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
             snapshots.content->>'type' AS type_name,
             refs.created AS "created_at!",
             refs.deleted_at,
+            (COALESCE(
+                snapshots.content->'diagramIn'->>'_id',
+                snapshots.content->'analysisOf'->>'_id'
+            ))::uuid AS "parent: Option<uuid::Uuid>",
             COALESCE(
                 (SELECT json_agg(json_build_object(
                     'user_id', p.subject,
@@ -324,6 +331,7 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
                 permissions,
                 created_at: row.created_at,
                 deleted_at: row.deleted_at,
+                parent: row.parent.flatten(),
             };
             (key, info)
         })
@@ -465,15 +473,22 @@ pub mod arbitrary {
                 prop::collection::vec(any::<PermissionInfo>(), 0..5),
                 0i64..253402300799i64,
                 proptest::option::of(0i64..253402300799i64),
+                proptest::option::of(arb::<uuid::Uuid>()),
             )
-                .prop_map(|(name, type_name, permissions, seconds, deleted_seconds)| DocInfo {
-                    name: Text::from(name),
-                    type_name: Text::from(type_name),
-                    permissions,
-                    created_at: Utc.timestamp_opt(seconds, 0).single().expect("valid timestamp"),
-                    deleted_at: deleted_seconds
-                        .map(|s| Utc.timestamp_opt(s, 0).single().expect("valid timestamp")),
-                })
+                .prop_map(|(name, type_name, permissions, seconds, deleted_seconds, parent)| {
+                    DocInfo {
+                        name: Text::from(name),
+                        type_name: Text::from(type_name),
+                        permissions,
+                        created_at: Utc
+                            .timestamp_opt(seconds, 0)
+                            .single()
+                            .expect("valid timestamp"),
+                        deleted_at: deleted_seconds
+                            .map(|s| Utc.timestamp_opt(s, 0).single().expect("valid timestamp")),
+                        parent,
+                    },
+                )
                 .boxed()
         }
     }
@@ -548,6 +563,8 @@ pub mod arbitrary {
                             .expect("valid timestamp"),
                         deleted_at: deleted_seconds
                             .map(|s| Utc.timestamp_opt(s, 0).single().expect("valid timestamp")),
+                        // TODO: generate arbitrary parent ref IDs
+                        parent: None,
                     };
                     (key, info)
                 },
