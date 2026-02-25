@@ -11,7 +11,7 @@ use crate::document::RefStub;
 
 use super::app::{AppCtx, AppError, AppState};
 use super::auth::{NewPermissions, PermissionLevel, Permissions};
-use super::user_state_subscription::get_or_create_user_state_doc;
+use super::user_state::get_or_create_user_state_doc;
 use super::{auth, document as doc, user};
 
 /// Create router for RPC API.

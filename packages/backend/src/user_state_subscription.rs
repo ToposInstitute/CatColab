@@ -12,7 +12,9 @@ use tracing::{debug, error, info};
 
 use super::app::{AppError, AppState};
 use crate::auth::PermissionLevel;
-use crate::user_state::{DocInfo, PermissionInfo, UserState, UserSummary, read_user_state_from_db};
+use crate::user_state::{
+    DocInfo, PermissionInfo, UserState, UserSummary, get_or_create_user_state_doc,
+};
 
 /// A thread-safe, shared map of user IDs to their Automerge document IDs.
 pub type UserStates = Arc<RwLock<HashMap<String, DocumentId>>>;
@@ -228,72 +230,6 @@ pub async fn run_user_state_subscription(
             }
         }
     }
-}
-
-/// Gets or creates the user state document for a given user.
-///
-/// This function reads the user's current state from the database and either:
-/// - Returns the existing document ID if already cached
-/// - Creates a new document with the current DB state if not cached
-pub async fn get_or_create_user_state_doc(
-    state: &AppState,
-    user_id: &str,
-) -> Result<DocumentId, crate::app::AppError> {
-    debug!(user_id = %user_id, "Getting or creating user state document");
-
-    // Check if we already have a document for this user
-    {
-        let states = state.user_states.read().await;
-        if let Some(doc_id) = states.get(user_id) {
-            debug!(
-                user_id = %user_id,
-                doc_id = %doc_id,
-                "Found existing user state document"
-            );
-            return Ok(doc_id.clone());
-        }
-    }
-
-    debug!(user_id = %user_id, "No existing document, creating new one");
-
-    let user_state = read_user_state_from_db(user_id.to_string(), &state.db).await?;
-    create_user_state_doc(state, user_id, &user_state).await
-}
-
-/// Creates a new user state document in samod and registers it in the user states map.
-async fn create_user_state_doc(
-    state: &AppState,
-    user_id: &str,
-    user_state: &crate::user_state::UserState,
-) -> Result<DocumentId, crate::app::AppError> {
-    debug!(
-        user_id = %user_id,
-        document_count = user_state.documents.len(),
-        "Creating new user state document"
-    );
-
-    let mut doc = automerge::Automerge::new();
-    doc.transact(|tx| reconcile(tx, user_state))
-        .map_err(|e| AppError::UserStateSync(format!("Failed to reconcile: {:?}", e)))?;
-
-    let doc_handle = state.repo.create(doc).await?;
-    let doc_id = doc_handle.document_id().clone();
-
-    debug!(user_id = %user_id, doc_id = %doc_id, "Document created in repo");
-
-    let mut states = state.user_states.write().await;
-    states.insert(user_id.to_string(), doc_id.clone());
-
-    debug!(
-        user_id = %user_id,
-        doc_id = %doc_id,
-        total_cached_users = states.len(),
-        "Stored document ID in user states map"
-    );
-
-    info!(user_id = %user_id, doc_id = %doc_id, "Created user state document");
-
-    Ok(doc_id)
 }
 
 #[cfg(all(test, feature = "property-tests"))]
