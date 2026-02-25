@@ -48,13 +48,18 @@ impl Operation<Postgres> for MigrationOperation {
                 v_type_name TEXT;
                 v_created_at TIMESTAMPTZ;
                 v_permissions JSON;
+                v_parent UUID;
             BEGIN
-                -- Inline: get name, type, created_at from the ref's head snapshot
+                -- Inline: get name, type, created_at, parent from the ref's head snapshot
                 SELECT
                     snapshots.content->>'name',
                     snapshots.content->>'type',
-                    refs.created
-                INTO v_name, v_type_name, v_created_at
+                    refs.created,
+                    COALESCE(
+                        snapshots.content->'diagramIn'->>'_id',
+                        snapshots.content->'analysisOf'->>'_id'
+                    )::uuid
+                INTO v_name, v_type_name, v_created_at, v_parent
                 FROM refs
                 JOIN snapshots ON snapshots.id = refs.head
                 WHERE refs.id = NEW.id;
@@ -86,7 +91,8 @@ impl Operation<Postgres> for MigrationOperation {
                             'created_at', floor(extract(epoch FROM v_created_at) * 1000)::bigint,
                             'deleted_at', CASE WHEN NEW.deleted_at IS NOT NULL
                                 THEN floor(extract(epoch FROM NEW.deleted_at) * 1000)::bigint
-                                ELSE NULL END
+                                ELSE NULL END,
+                            'parent', v_parent
                         )::text
                     );
                 END LOOP;
@@ -113,6 +119,7 @@ impl Operation<Postgres> for MigrationOperation {
                 v_created_at TIMESTAMPTZ;
                 v_ref_deleted_at TIMESTAMPTZ;
                 v_permissions JSON;
+                v_parent UUID;
             BEGIN
                 -- Handle INSERT and UPDATE: send full DocInfo for the new subject
                 IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
@@ -125,8 +132,12 @@ impl Operation<Postgres> for MigrationOperation {
                             snapshots.content->>'name',
                             snapshots.content->>'type',
                             refs.created,
-                            refs.deleted_at
-                        INTO v_name, v_type_name, v_created_at, v_ref_deleted_at
+                            refs.deleted_at,
+                            COALESCE(
+                                snapshots.content->'diagramIn'->>'_id',
+                                snapshots.content->'analysisOf'->>'_id'
+                            )::uuid
+                        INTO v_name, v_type_name, v_created_at, v_ref_deleted_at, v_parent
                         FROM refs
                         JOIN snapshots ON snapshots.id = refs.head
                         WHERE refs.id = v_ref_id;
@@ -154,7 +165,8 @@ impl Operation<Postgres> for MigrationOperation {
                                 'created_at', floor(extract(epoch FROM v_created_at) * 1000)::bigint,
                                 'deleted_at', CASE WHEN v_ref_deleted_at IS NOT NULL
                                     THEN floor(extract(epoch FROM v_ref_deleted_at) * 1000)::bigint
-                                    ELSE NULL END
+                                    ELSE NULL END,
+                                'parent', v_parent
                             )::text
                         );
                     END IF;
@@ -205,6 +217,7 @@ impl Operation<Postgres> for MigrationOperation {
                 v_created_at TIMESTAMPTZ;
                 v_ref_deleted_at TIMESTAMPTZ;
                 v_permissions JSON;
+                v_parent UUID;
             BEGIN
                 -- Find the ref that has this snapshot as its head
                 SELECT id INTO v_ref_id FROM refs WHERE head = NEW.id;
@@ -217,6 +230,10 @@ impl Operation<Postgres> for MigrationOperation {
                 -- Get metadata from the NEW snapshot content and ref
                 v_name := NEW.content->>'name';
                 v_type_name := NEW.content->>'type';
+                v_parent := COALESCE(
+                    NEW.content->'diagramIn'->>'_id',
+                    NEW.content->'analysisOf'->>'_id'
+                )::uuid;
 
                 SELECT created, deleted_at
                 INTO v_created_at, v_ref_deleted_at
@@ -250,7 +267,8 @@ impl Operation<Postgres> for MigrationOperation {
                             'created_at', floor(extract(epoch FROM v_created_at) * 1000)::bigint,
                             'deleted_at', CASE WHEN v_ref_deleted_at IS NOT NULL
                                 THEN floor(extract(epoch FROM v_ref_deleted_at) * 1000)::bigint
-                                ELSE NULL END
+                                ELSE NULL END,
+                            'parent', v_parent
                         )::text
                     );
                 END LOOP;
