@@ -1,120 +1,92 @@
-.ref-table-outer {
+/* Row height constant — must match ROW_HEIGHT in .tsx files */
+:root {
+    --doc-row-height: 45px;
+}
+
+/* Outer container fills available space */
+.ref-grid-outer {
     width: 100%;
+    max-width: 100%;
     display: flex;
     flex-direction: column;
     flex: 1;
     overflow: hidden;
 }
 
-.ref-table-scroll {
-    overflow: auto;
-    scrollbar-gutter: stable;
+/* Grid layout shared by header and rows */
+.ref-grid-header,
+.ref-grid-row {
+    display: grid;
+    align-items: center;
 }
 
-.ref-table-header > div {
-    overflow: hidden;
-    scrollbar-gutter: stable;
+/* Documents page: 6 columns — Type / Name / Owners / Permission / Created / Actions */
+.documents-page .ref-grid-header,
+.documents-page .ref-grid-row {
+    grid-template-columns:
+        100px
+        2fr
+        120px
+        120px
+        140px
+        50px;
 }
 
-.ref-table {
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed;
-    text-align: left;
+/* Trash page: 6 columns — Actions / Type / Name / Owners / Permission / Created */
+.trash-bin-page .ref-grid-header,
+.trash-bin-page .ref-grid-row {
+    grid-template-columns:
+        50px
+        100px
+        2fr
+        120px
+        120px
+        140px;
 }
 
-.ref-table th,
-.ref-table td {
-    padding: 12px;
+/* Header styling */
+.ref-grid-header {
+    font-weight: bold;
     border-bottom: 1px solid var(--color-gray-550);
+    scrollbar-gutter: stable;
+}
+
+.ref-grid-header > div {
+    padding: 12px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.documents-page .ref-table th:nth-child(1),
-.documents-page .ref-table td:nth-child(1) {
-    width: 10%;
-    min-width: 100px;
+/* Scroll container for virtual list */
+.ref-grid-scroll {
+    overflow: auto;
+    scrollbar-gutter: stable;
+    flex: 1;
 }
 
-.documents-page .ref-table th:nth-child(2),
-.documents-page .ref-table td:nth-child(2) {
-    width: 40%;
-    min-width: 200px;
-}
-
-.documents-page .ref-table th:nth-child(3),
-.documents-page .ref-table td:nth-child(3) {
-    width: 20%;
-    min-width: 100px;
-}
-
-.documents-page .ref-table th:nth-child(4),
-.documents-page .ref-table td:nth-child(4) {
-    width: 15%;
-    min-width: 80px;
-}
-
-.documents-page .ref-table th:nth-child(5),
-.documents-page .ref-table td:nth-child(5) {
-    width: 15%;
-    min-width: 120px;
-}
-
-.documents-page .ref-table th:nth-child(6),
-.documents-page .ref-table td:nth-child(6) {
-    width: 5%;
-    min-width: 50px;
-    text-align: center;
-}
-
-.trash-bin-page .ref-table th:nth-child(1),
-.trash-bin-page .ref-table td:nth-child(1) {
-    width: 5%;
-    min-width: 50px;
-    text-align: center;
-}
-
-.trash-bin-page .ref-table th:nth-child(2),
-.trash-bin-page .ref-table td:nth-child(2) {
-    width: 10%;
-    min-width: 100px;
-}
-
-.trash-bin-page .ref-table th:nth-child(3),
-.trash-bin-page .ref-table td:nth-child(3) {
-    width: 40%;
-    min-width: 200px;
-}
-
-.trash-bin-page .ref-table th:nth-child(4),
-.trash-bin-page .ref-table td:nth-child(4) {
-    width: 20%;
-    min-width: 100px;
-}
-
-.trash-bin-page .ref-table th:nth-child(5),
-.trash-bin-page .ref-table td:nth-child(5) {
-    width: 15%;
-    min-width: 80px;
-}
-
-.trash-bin-page .ref-table th:nth-child(6),
-.trash-bin-page .ref-table td:nth-child(6) {
-    width: 15%;
-    min-width: 120px;
-}
-
-.ref-table-scroll tbody tr {
+/* Row styling */
+.ref-grid-row {
+    height: var(--doc-row-height);
+    box-sizing: border-box;
+    border-bottom: 1px solid var(--color-gray-550);
     transition: background-color 0.2s ease;
-}
-
-.ref-table-scroll tbody tr:hover {
-    background-color: var(--color-hover-bg);
     cursor: pointer;
 }
 
+.ref-grid-row:hover {
+    background-color: var(--color-hover-bg);
+}
+
+/* Cell styling */
+.ref-grid-row > div {
+    padding: 0 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Documents page */
 .documents-page {
     height: 100vh;
     overflow: hidden;
@@ -122,20 +94,22 @@
     flex-direction: column;
 }
 
-.documents-page .page-container {
+.documents-page > .page-container {
     overflow: hidden;
     display: flex;
     flex-direction: column;
     flex: 1;
+    margin: 0 auto;
+    max-width: 1000px;
+    min-width: 1000px;
+    padding-bottom: 0;
 }
 
+/* Search input */
 .search-input {
     box-sizing: border-box;
     margin-top: 0.5em;
     margin-bottom: 0.5em;
-}
-
-.search-input {
     width: 100%;
     padding: 8px;
     border: 1px solid var(--color-gray-550);
@@ -148,11 +122,9 @@
     padding-right: 1em;
 }
 
-.ref-table .spinner {
-    display: block;
-}
-
+/* Action cell (delete/restore button) */
 .delete-cell {
-    /* biome-ignore lint/complexity/noImportantStyles: existing style when upgrading biome */
-    padding: 8px !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
