@@ -3,8 +3,16 @@ name = "backend"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = []
+# Tests that use proptest and the definitions of `Arbitrary` instances
+property-tests = ["dep:proptest", "dep:proptest-arbitrary-interop", "dep:test-strategy", "uuid/arbitrary"]
+# Tests that require a running database
+integration-tests = []
+
 [dependencies]
 async-trait = "0.1.88"
+autosurgeon = { version = "0.10", features = ["uuid"] }
 automerge = "0.7.4"
 axum = "0.8.4"
 base64 = "0.22"
@@ -47,6 +55,10 @@ tower-http = { version = "0.6.1", features = ["cors", "trace", "fs"] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 uuid = { version = "1.10.0", features = ["v7", "serde"] }
+proptest = { version = "1.9.0", optional = true }
+proptest-arbitrary-interop = { version = "0.1", optional = true }
+test-strategy = { version = "0.4", optional = true }
+ts-rs = "11.1.0"
 
 [lints.rust]
 missing_docs = "warn"
