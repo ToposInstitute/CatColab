@@ -10,6 +10,7 @@ mod m20250805230408_fix_automerge_storage;
 mod m20250924133640_add_refs_deleted_at;
 mod m20251006141026_get_ref_stubs;
 mod m20260124120000_add_user_fk_cascade;
+mod m20260225000000_user_state_subscriptions;
 
 pub fn migrations() -> Vec<Box<dyn Migration<Postgres>>> {
     vec_box![
@@ -21,5 +22,6 @@ pub fn migrations() -> Vec<Box<dyn Migration<Postgres>>> {
         m20251006141026_get_ref_stubs::GetRefStubs,
         m20250924133640_add_refs_deleted_at::AddRefsDeletedAt,
         m20260124120000_add_user_fk_cascade::AddUserFkCascade,
+        m20260225000000_user_state_subscriptions::UserStateSubscriptions,
     ]
 }

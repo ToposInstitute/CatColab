@@ -27,8 +27,8 @@ jobs:
           rustup toolchain install ${{ matrix.toolchain }}
           rustup default ${{ matrix.toolchain }}
 
-          cargo build --all-features --verbose
-          cargo test --all-features --verbose
+          cargo check --all-features --verbose
+          cargo test --verbose
 
   rust_formatting:
     name: rust formatting
@@ -176,6 +176,41 @@ jobs:
             # due to how we are detecting deploy vs dev we need to clear this env variable
             unset INVOCATION_ID
             cargo run -p migrator apply
+
+  backend_integration_tests:
+    name: backend integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain from file
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          rustflags: ""
+
+      - name: Start PostgreSQL
+        run: |
+          docker run --name catcolab-postgres -e POSTGRES_USER=catcolab -e POSTGRES_PASSWORD=password -e POSTGRES_DB=catcolab -p 5432:5432 -d postgres:15
+          # Wait for PostgreSQL to be ready
+          for i in {1..30}; do
+            if docker exec catcolab-postgres pg_isready -U postgres-user; then
+              break
+            fi
+            sleep 1
+          done
+
+      - name: Setup environment and run migrations
+        run: |
+          cd packages/backend
+          cp .env.development .env && cp .env.development ../migrator/.env
+          unset INVOCATION_ID
+          cargo run -p migrator apply
+
+      - name: Run backend tests
+        run: |
+          cd packages/backend
+          cargo test --all-features
 
   frontend_tests_with_backend:
     name: frontend tests with backend
