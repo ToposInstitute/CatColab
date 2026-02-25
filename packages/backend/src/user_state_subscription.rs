@@ -30,6 +30,7 @@ enum UserStateNotification {
         permissions: Option<Vec<DbPermission>>,
         created_at: Option<i64>,
         deleted_at: Option<i64>,
+        parent: Option<uuid::Uuid>,
     },
     /// The user's permission on a document was revoked.
     /// The document should be removed from the user's state.
@@ -45,6 +46,7 @@ fn to_doc_info(notif: &UserStateNotification) -> Option<DocInfo> {
             permissions,
             created_at,
             deleted_at,
+            parent,
             ..
         } => {
             let created_at = Utc.timestamp_millis_opt((*created_at)?).single()?;
@@ -62,6 +64,7 @@ fn to_doc_info(notif: &UserStateNotification) -> Option<DocInfo> {
                 permissions: doc_permissions,
                 created_at,
                 deleted_at,
+                parent: *parent,
             })
         }
         _ => None,
