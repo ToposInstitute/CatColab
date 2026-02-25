@@ -10,18 +10,30 @@ You can find the auto-generated documentation for this Rust crate at [next.catco
 
 1. Install Rust, say by using [rustup](https://rustup.rs/)
 2. Install and run PostgreSQL and create a new database named `catcolab`
-    - (E.g. by using Docker)
+    - Using Docker:
 
     ```sh
     docker run --name catcolab-postgres -e POSTGRES_USER=catcolab \
         -e POSTGRES_PASSWORD=password -e POSTGRES_DB=catcolab -p 5432:5432 -d postgres:15
     ```
 
-4. Change to the migrator directory: `cd ../backend`
-5. Copy the .env.development to both folders (`cp .env.development .env && cp .env.development ../migrator/.env`) and update the `DATABASE_URL` variable with
-   database username, password, and port. (If you used the above Docker command _as is_ it should already be correct.)
-6. Run the initial database migration: `cargo run -p migrator apply`
-7. Generate the TypeScript bindings for the RPC API: `cargo run generate-bindings`
+    - Directly in the shell:
+  
+    ```sh
+    createdb -h localhost -p 5432 -U USER_NAME catcolab
+    ```
+
+    (where `USER_NAME` is your system username).
+
+4. Change to the backend directory: `CatColab/packages/backend`
+5. Update the `DATABASE_URL` variable in `.env.development` with database username, password, and port. (If you used the above Docker command _as is_ it should already be correct; if you used `createdb` then you should change `catcolab:password` to just your username).
+6. Copy `.env.development` as `.env` to the `backend` and `migrator` package directories:
+
+    ```sh
+    cp .env.development .env && cp .env.development ../migrator/.env
+    ```
+7. Run the initial database migration: `cargo run -p migrator apply`
+8. Generate the TypeScript bindings for the RPC API: `cargo run generate-bindings`
 7. Build the backend binary: `cargo build`
 8. Run the unit tests: `cargo test`
 
@@ -34,7 +46,7 @@ cd packages/backend
 cargo run
 ```
 
-The backend is now running locally.
+The backend is now running locally; you can run the frontend with `pnpm run dev` from the top-level `CatColab` directory.
 
 To run the integration tests for the RPC API:
 
