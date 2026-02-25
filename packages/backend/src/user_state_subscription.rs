@@ -65,6 +65,8 @@ fn to_doc_info(notif: &UserStateNotification) -> Option<DocInfo> {
                 created_at,
                 deleted_at,
                 parent: *parent,
+                // Children are recomputed after every mutation.
+                children: Vec::new(),
             })
         }
         _ => None,
@@ -77,6 +79,7 @@ fn handle_revoke(doc_handle: &samod::DocHandle, ref_id: &str) -> Result<(), AppE
         let mut user_state: UserState = hydrate(doc).map_err(|e| e.to_string())?;
 
         user_state.documents.remove(ref_id);
+        user_state.recompute_children();
         doc.transact(|tx| reconcile(tx, &user_state)).map_err(|e| format!("{:?}", e))?;
 
         Ok(())
@@ -95,6 +98,7 @@ fn handle_upsert(
         let mut user_state: UserState = hydrate(doc).map_err(|e| e.to_string())?;
 
         user_state.documents.insert(ref_id.to_string(), doc_info);
+        user_state.recompute_children();
         doc.transact(|tx| reconcile(tx, &user_state)).map_err(|e| format!("{:?}", e))?;
 
         Ok(())

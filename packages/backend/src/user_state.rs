@@ -207,9 +207,12 @@ pub struct DocInfo {
     #[autosurgeon(rename = "deletedAt", with = "option_datetime_millis")]
     #[ts(type = "number | null")]
     pub deleted_at: Option<chrono::DateTime<chrono::Utc>>,
-    /// The parent document ref ID
-    #[ts(as = "Option<String>")]
+    /// The parent document ref ID, if this document has a parent.
+    #[ts(type = "Uint8Array | null")]
     pub parent: Option<uuid::Uuid>,
+    /// The ref IDs of child documents.
+    #[ts(type = "Array<Uint8Array>")]
+    pub children: Vec<uuid::Uuid>,
 }
 
 /// State associated with a user, synchronized via Automerge.
@@ -220,6 +223,35 @@ pub struct UserState {
     /// The document refs accessible to the user, keyed by ref UUID string.
     /// We cannot use the Uuid type here because Automerge requires the keys to have a `AsRef<str>` impl.
     pub documents: HashMap<String, DocInfo>,
+}
+
+impl UserState {
+    /// Recomputes the `children` field of every [`DocInfo`] from the `parent` fields.
+    ///
+    /// This should be called whenever the document map is mutated (initial load,
+    /// upsert, or revoke) so that the children vecs stay consistent.
+    pub fn recompute_children(&mut self) {
+        // Clear all existing children vecs.
+        for doc in self.documents.values_mut() {
+            doc.children.clear();
+        }
+
+        // Collect (parent_key, child_uuid) pairs first to avoid borrow conflicts.
+        let pairs: Vec<(String, uuid::Uuid)> = self
+            .documents
+            .iter()
+            .filter_map(|(key, doc)| {
+                let parent_id = doc.parent?;
+                Some((parent_id.to_string(), uuid::Uuid::parse_str(key).ok()?))
+            })
+            .collect();
+
+        for (parent_key, child_uuid) in pairs {
+            if let Some(parent_doc) = self.documents.get_mut(&parent_key) {
+                parent_doc.children.push(child_uuid);
+            }
+        }
+    }
 }
 
 /// A permission entry as returned from the database JSON aggregation.
@@ -332,6 +364,7 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
                 created_at: row.created_at,
                 deleted_at: row.deleted_at,
                 parent: row.parent.flatten(),
+                children: Vec::new(),
             };
             (key, info)
         })
@@ -343,7 +376,9 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
         "User state created successfully"
     );
 
-    Ok(UserState { documents })
+    let mut user_state = UserState { documents };
+    user_state.recompute_children();
+    Ok(user_state)
 }
 
 /// Gets or creates the user state document for a given user.
@@ -487,8 +522,10 @@ pub mod arbitrary {
                         deleted_at: deleted_seconds
                             .map(|s| Utc.timestamp_opt(s, 0).single().expect("valid timestamp")),
                         parent,
-                    },
-                )
+                        // Children are computed, not generated independently.
+                        children: Vec::new(),
+                    }
+                })
                 .boxed()
         }
     }
@@ -565,6 +602,8 @@ pub mod arbitrary {
                             .map(|s| Utc.timestamp_opt(s, 0).single().expect("valid timestamp")),
                         // TODO: generate arbitrary parent ref IDs
                         parent: None,
+                        // Children are computed, not generated independently.
+                        children: Vec::new(),
                     };
                     (key, info)
                 },

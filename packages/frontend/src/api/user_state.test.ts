@@ -9,10 +9,14 @@ import type { DocInfo, UserState } from "catcolab-api/src/user_state";
 import { type FirebaseOptions, initializeApp } from "firebase/app";
 import { deleteUser, getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import invariant from "tiny-invariant";
-import { v4 } from "uuid";
+import { stringify as uuidStringify, v4 } from "uuid";
 import { afterAll, assert, describe, test } from "vitest";
 
-import { createTestDocument, initTestUserAuth } from "../util/test_util.ts";
+import {
+    createChildTestDocument,
+    createTestDocument,
+    initTestUserAuth,
+} from "../util/test_util.ts";
 import { createRpcClient, unwrap } from "./rpc.ts";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
@@ -161,6 +165,46 @@ describe("User state Automerge document", async () => {
             String,
             "name constructor should be native String",
         );
+    });
+
+    // Create a child document linking to refId1 as parent
+    const childName = `Child Document - ${v4()}`;
+    const childRefId: string = unwrap(
+        await rpc.new_ref.mutate(createChildTestDocument(childName, refId1)),
+    );
+
+    test.sequential("should populate parent and children fields", async () => {
+        await waitFor(
+            () => findDoc(childRefId) !== undefined,
+            `Child document ${childRefId} should appear in user state`,
+        );
+
+        const parent = findDoc(refId1);
+        const child = findDoc(childRefId);
+        assert(parent, `Parent document ${refId1} should exist`);
+        assert(child, `Child document ${childRefId} should exist`);
+
+        // Child should point to parent as a UUID bytes value
+        assert(child.parent !== null, "Child should have a parent");
+        assert.strictEqual(
+            uuidStringify(child.parent),
+            refId1,
+            "Child parent should match parent refId",
+        );
+
+        // Parent should list child in its children array
+        await waitFor(
+            () => findDoc(refId1)?.children.some((b) => uuidStringify(b) === childRefId) === true,
+            `Parent document ${refId1} should list child ${childRefId} in children`,
+        );
+
+        const updatedParent = findDoc(refId1);
+        assert(updatedParent, "Parent should still exist");
+        assert(
+            updatedParent.children.some((b) => uuidStringify(b) === childRefId),
+            "Parent children should contain child ref ID",
+        );
+        assert(updatedParent.parent === null, "Parent document should have no parent");
     });
 
     test.sequential("should sync document name change via autosave", async () => {
