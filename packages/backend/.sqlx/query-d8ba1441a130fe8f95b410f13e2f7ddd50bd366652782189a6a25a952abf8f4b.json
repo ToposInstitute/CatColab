@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                    INSERT INTO permissions (subject, object, level)\n                    VALUES ($1, $2, $3)\n                    ON CONFLICT (subject, object) DO UPDATE SET level = $3\n                    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "permission_level",
+            "kind": {
+              "Enum": [
+                "read",
+                "write",
+                "maintain",
+                "own"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d8ba1441a130fe8f95b410f13e2f7ddd50bd366652782189a6a25a952abf8f4b"
+}
