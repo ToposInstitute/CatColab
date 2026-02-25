@@ -1,11 +1,12 @@
 import { useNavigate } from "@solidjs/router";
 import { createMemo, createResource, For, Show, useContext } from "solid-js";
-import invariant from "tiny-invariant";
+import { stringify as uuidStringify } from "uuid";
 
 import { DocumentTypeIcon } from "catcolab-ui-components";
 import type { Document, Link } from "catlog-wasm";
 import { type Api, type LiveDocWithRef, useApi } from "../api";
 import { TheoryLibraryContext } from "../theory";
+import { useUserState } from "../user/user_state_context";
 import { DocumentMenu } from "./document_menu";
 
 export function DocumentSidebar(props: {
@@ -95,36 +96,31 @@ function DocumentsTreeNode(props: {
     refetchSecondaryDoc: () => void;
 }) {
     const api = useApi();
+    const userState = useUserState();
 
-    const [childDocs, { refetch }] = createResource(
-        () => props.doc,
-        async (doc) => {
-            const docRefId = doc.docRef.refId;
-            invariant(docRefId, "Doc must have a valid ref");
+    const childRefIds = createMemo(() => {
+        const docRefId = props.doc.docRef.refId;
+        if (!docRefId) { return []; }
+        const docInfo = userState.documents[docRefId];
+        if (!docInfo) { return []; }
+        return docInfo.children.map((bytes) => uuidStringify(bytes));
+    });
 
-            const results = await api.rpc.get_ref_children_stubs.query(docRefId);
+    const [childDocs, { refetch }] = createResource(childRefIds, async (refIds) => {
+        const childDocs = await Promise.all(refIds.map((refId) => api.getLiveDoc(refId)));
 
-            if (results.tag !== "Ok") {
-                throw new Error("couldn't load child documents!");
-            }
+        function isDocOwnerless(doc: LiveDocWithRef) {
+            return doc.docRef.permissions.anyone === "Own";
+        }
 
-            const childDocs = await Promise.all(
-                results.content.map((childStub) => api.getLiveDoc(childStub.refId)),
-            );
+        const isParentOwnerless = isDocOwnerless(props.doc);
 
-            function isDocOwnerless(doc: LiveDocWithRef) {
-                return doc.docRef.permissions.anyone === "Own";
-            }
-
-            const isParentOwnerless = isDocOwnerless(props.doc);
-
-            // Don't show ownerless children or deleted documents
-            return childDocs.filter(
-                (childDoc) =>
-                    !childDoc.docRef.isDeleted && (isParentOwnerless || !isDocOwnerless(childDoc)),
-            );
-        },
-    );
+        // Don't show ownerless children or deleted documents
+        return childDocs.filter(
+            (childDoc) =>
+                !childDoc.docRef.isDeleted && (isParentOwnerless || !isDocOwnerless(childDoc)),
+        );
+    });
 
     return (
         <>
