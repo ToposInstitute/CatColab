@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use autosurgeon::Text;
-use autosurgeon::{hydrate, reconcile};
+use autosurgeon::{Text, hydrate, reconcile};
 use chrono::{TimeZone, Utc};
 use samod::DocumentId;
 use serde::Deserialize;
@@ -11,22 +10,10 @@ use tokio::sync::RwLock;
 use tracing::{debug, error, info};
 
 use super::app::{AppError, AppState};
-use crate::auth::PermissionLevel;
-use crate::user_state::{
-    DocInfo, PermissionInfo, UserState, UserSummary, get_or_create_user_state_doc,
-};
+use crate::user_state::{DbPermission, DocInfo, UserState, get_or_create_user_state_doc};
 
 /// A thread-safe, shared map of user IDs to their Automerge document IDs.
 pub type UserStates = Arc<RwLock<HashMap<String, DocumentId>>>;
-
-/// A permission entry in a notification from PostgreSQL.
-#[derive(Debug, Deserialize)]
-struct NotificationPermission {
-    user_id: Option<String>,
-    username: Option<String>,
-    display_name: Option<String>,
-    level: String,
-}
 
 /// Notification from PostgreSQL about a user state change.
 #[derive(Debug, Deserialize)]
@@ -40,7 +27,7 @@ enum UserStateNotification {
         ref_id: String,
         name: Option<String>,
         type_name: Option<String>,
-        permissions: Option<Vec<NotificationPermission>>,
+        permissions: Option<Vec<DbPermission>>,
         created_at: Option<i64>,
         deleted_at: Option<i64>,
     },
@@ -48,17 +35,6 @@ enum UserStateNotification {
     /// The document should be removed from the user's state.
     #[serde(rename = "revoke")]
     Revoke { user_id: String, ref_id: String },
-}
-
-/// Parse a lowercase permission level string from PostgreSQL into a `PermissionLevel`.
-fn parse_permission_level(s: &str) -> Option<PermissionLevel> {
-    match s {
-        "read" => Some(PermissionLevel::Read),
-        "write" => Some(PermissionLevel::Write),
-        "maintain" => Some(PermissionLevel::Maintain),
-        "own" => Some(PermissionLevel::Own),
-        _ => None,
-    }
 }
 
 fn to_doc_info(notif: &UserStateNotification) -> Option<DocInfo> {
@@ -75,22 +51,9 @@ fn to_doc_info(notif: &UserStateNotification) -> Option<DocInfo> {
             let deleted_at =
                 deleted_at.as_ref().and_then(|ms| Utc.timestamp_millis_opt(*ms).single());
 
-            let doc_permissions: Vec<PermissionInfo> = permissions
+            let doc_permissions = permissions
                 .as_ref()
-                .map(|perms| {
-                    perms
-                        .iter()
-                        .filter_map(|p| {
-                            let level = parse_permission_level(&p.level)?;
-                            let user = p.user_id.as_ref().map(|id| UserSummary {
-                                id: Text::from(id.clone()),
-                                username: p.username.clone().map(Text::from),
-                                display_name: p.display_name.clone().map(Text::from),
-                            });
-                            Some(PermissionInfo { user, level })
-                        })
-                        .collect()
-                })
+                .map(|perms| perms.iter().filter_map(|p| p.to_permission_info()).collect())
                 .unwrap_or_default();
 
             Some(DocInfo {
