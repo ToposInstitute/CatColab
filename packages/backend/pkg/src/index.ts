@@ -48,44 +48,6 @@ anyone: PermissionLevel | null,
  * A mapping from user IDs to permission levels.
  */
 users: { [key in string]?: PermissionLevel }, };
-export type Paginated<T> = { 
-/**
- * The total number of items matching the query criteria.
- */
-total: number, 
-/**
- * The number of items skipped.
- */
-offset: number, 
-/**
- * The items in the current page.
- */
-items: Array<T>, };
-export type RefStub = { 
-/**
- * Human-readable name of the document.
- */
-name: string, 
-/**
- * The type identifier of the document.
- */
-typeName: string, 
-/**
- * The UUID of the document ref.
- */
-refId: string, 
-/**
- * Permission level that the current user has on this ref.
- */
-permissionLevel: PermissionLevel, 
-/**
- * The owner of the document, if any.
- */
-owner: UserSummary | null, 
-/**
- * When the document was created.
- */
-createdAt: string, };
 export type RefDoc = { "tag": "Readonly", binaryData: string, isDeleted: boolean, permissions: Permissions, } | { "tag": "Live", docId: string, isDeleted: boolean, permissions: Permissions, };
 export type RpcResult<T> = { "tag": "Ok", content: T, } | { "tag": "Err", code: number, message: string, };
 export type UsernameStatus = "Available" | "Unavailable" | "Invalid";
@@ -104,35 +66,6 @@ user: PermissionLevel | null,
  * Only owners of the document have access to this information.
  */
 users: Array<UserPermissions> | null, };
-export type RefQueryParams = { 
-/**
- * Filter by the owner's username.
- */
-ownerUsernameQuery: string | null, 
-/**
- * Filter by the document name.
- */
-refNameQuery: string | null, 
-/**
- * Minimum permission level the searcher must have on returned refs.
- */
-searcherMinLevel: PermissionLevel | null, 
-/**
- * Whether to include publicly readable documents.
- */
-includePublicDocuments: boolean | null, 
-/**
- * Whether to return only soft-deleted documents.
- */
-onlyDeleted: boolean | null, 
-/**
- * Maximum number of results to return.
- */
-limit: number | null, 
-/**
- * Number of results to skip for pagination.
- */
-offset: number | null, };
 export type UserProfile = { 
 /**
  * The user's chosen username.
@@ -142,4 +75,4 @@ username: string | null,
  * The user's chosen display name.
  */
 displayName: string | null, };
-export type QubitServer = { create_snapshot: Mutation<[ref_id: string], RpcResult<null>>, delete_ref: Mutation<[ref_id: string], RpcResult<null>>, get_active_user_profile: Query<[], RpcResult<UserProfile>>, get_doc: Query<[ref_id: string], RpcResult<RefDoc>>, get_permissions: Query<[ref_id: string], RpcResult<Permissions>>, get_ref_children_stubs: Query<[ref_id: string], RpcResult<Array<RefStub>>>, get_user_state_url: Query<[], RpcResult<string>>, head_snapshot: Query<[ref_id: string], RpcResult<JsonValue>>, new_ref: Mutation<[content: JsonValue], RpcResult<string>>, restore_ref: Mutation<[ref_id: string], RpcResult<null>>, search_ref_stubs: Query<[query_params: RefQueryParams], RpcResult<Paginated<RefStub>>>, set_active_user_profile: Mutation<[user: UserProfile], RpcResult<null>>, set_permissions: Mutation<[ref_id: string, new: NewPermissions], RpcResult<null>>, sign_up_or_sign_in: Mutation<[], RpcResult<null>>, user_by_username: Query<[username: string], RpcResult<UserSummary | null>>, username_status: Query<[username: string], RpcResult<UsernameStatus>>, validate_session: Query<[], RpcResult<null>>, };
+export type QubitServer = { create_snapshot: Mutation<[ref_id: string], RpcResult<null>>, delete_ref: Mutation<[ref_id: string], RpcResult<null>>, get_active_user_profile: Query<[], RpcResult<UserProfile>>, get_doc: Query<[ref_id: string], RpcResult<RefDoc>>, get_permissions: Query<[ref_id: string], RpcResult<Permissions>>, get_user_state_url: Query<[], RpcResult<string>>, head_snapshot: Query<[ref_id: string], RpcResult<JsonValue>>, new_ref: Mutation<[content: JsonValue], RpcResult<string>>, restore_ref: Mutation<[ref_id: string], RpcResult<null>>, set_active_user_profile: Mutation<[user: UserProfile], RpcResult<null>>, set_permissions: Mutation<[ref_id: string, new: NewPermissions], RpcResult<null>>, sign_up_or_sign_in: Mutation<[], RpcResult<null>>, user_by_username: Query<[username: string], RpcResult<UserSummary | null>>, username_status: Query<[username: string], RpcResult<UsernameStatus>>, validate_session: Query<[], RpcResult<null>>, };
