@@ -26,7 +26,15 @@ createdAt: number,
 /**
  * When this document was deleted, if applicable.
  */
-deletedAt: number | null, };
+deletedAt: number | null, 
+/**
+ * The parent document ref ID, if this document has a parent.
+ */
+parent: Uint8Array | null, 
+/**
+ * The ref IDs of child documents.
+ */
+children: Array<Uint8Array>, };
 
 /**
  * A single permission entry for a document in user state.
