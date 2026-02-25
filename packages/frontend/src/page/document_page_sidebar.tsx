@@ -110,7 +110,7 @@ function DocumentsTreeNode(props: {
         return docInfo.children.map((bytes) => uuidStringify(bytes));
     });
 
-    const [childDocs, { refetch }] = createResource(childRefIds, async (refIds) => {
+    const [childDocs] = createResource(childRefIds, async (refIds) => {
         // Individual failures are skipped to prevent one corrupt document
         // from crashing the entire sidebar.
         const childDocs = await Promise.all(
@@ -147,7 +147,6 @@ function DocumentsTreeNode(props: {
                 indent={props.indent}
                 primaryDoc={props.primaryDoc}
                 secondaryDoc={props.secondaryDoc}
-                refetchDoc={refetch}
                 refetchPrimaryDoc={props.refetchPrimaryDoc}
                 refetchSecondaryDoc={props.refetchSecondaryDoc}
             />
@@ -172,7 +171,6 @@ function DocumentsTreeLeaf(props: {
     indent: number;
     primaryDoc: LiveDocWithRef;
     secondaryDoc?: LiveDocWithRef;
-    refetchDoc: () => void;
     refetchPrimaryDoc: () => void;
     refetchSecondaryDoc: () => void;
 }) {
@@ -239,7 +237,6 @@ function DocumentsTreeLeaf(props: {
                     liveDoc={props.doc.liveDoc}
                     docRef={props.doc.docRef}
                     onDocCreated={(docType, refId) => {
-                        props.refetchDoc();
                         navigate(`/${createLinkPart(props.doc)}/${docType}/${refId}`);
                     }}
                     onDocDeleted={async () => {
@@ -247,7 +244,6 @@ function DocumentsTreeLeaf(props: {
                         const isPrimaryDeleted = deletedRefId === primaryRefId();
                         const isSecondaryDeleted = deletedRefId === secondaryRefId();
 
-                        props.refetchDoc();
                         props.refetchPrimaryDoc();
                         props.refetchSecondaryDoc();
 
