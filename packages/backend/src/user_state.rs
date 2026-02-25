@@ -103,50 +103,6 @@ mod permission_level_text {
     }
 }
 
-mod text_value {
-    use autosurgeon::reconcile::TextReconciler;
-    use autosurgeon::{HydrateError, ReadDoc, Reconciler, Text};
-
-    pub fn reconcile<R: Reconciler>(value: &Text, mut reconciler: R) -> Result<(), R::Error> {
-        let mut text = reconciler.text()?;
-        text.update(value.as_str())
-    }
-
-    pub fn hydrate<D: ReadDoc>(
-        doc: &D,
-        obj: &automerge::ObjId,
-        prop: autosurgeon::Prop<'_>,
-    ) -> Result<Text, HydrateError> {
-        autosurgeon::hydrate_prop(doc, obj, prop)
-    }
-}
-
-mod option_text_value {
-    use autosurgeon::reconcile::TextReconciler;
-    use autosurgeon::{HydrateError, ReadDoc, Reconcile, Reconciler, Text};
-
-    pub fn reconcile<R: Reconciler>(
-        value: &Option<Text>,
-        mut reconciler: R,
-    ) -> Result<(), R::Error> {
-        match value {
-            Some(text) => {
-                let mut out = reconciler.text()?;
-                out.update(text.as_str())
-            }
-            None => Option::<String>::None.reconcile(reconciler),
-        }
-    }
-
-    pub fn hydrate<D: ReadDoc>(
-        doc: &D,
-        obj: &automerge::ObjId,
-        prop: autosurgeon::Prop<'_>,
-    ) -> Result<Option<Text>, HydrateError> {
-        autosurgeon::hydrate_prop(doc, obj, prop)
-    }
-}
-
 /// User summary for user state synchronization.
 ///
 /// This is similar to [`crate::user::UserSummary`] but uses [`Text`] instead of [`String`]
@@ -156,15 +112,13 @@ mod option_text_value {
 #[ts(rename_all = "camelCase", export_to = "user_state.ts")]
 pub struct UserSummary {
     /// Unique identifier for the user.
-    #[autosurgeon(with = "text_value")]
     #[ts(as = "String")]
     pub id: Text,
     /// The user's chosen username, if set.
-    #[autosurgeon(with = "option_text_value")]
     #[ts(as = "Option<String>")]
     pub username: Option<Text>,
     /// The user's display name, if set.
-    #[autosurgeon(rename = "displayName", with = "option_text_value")]
+    #[autosurgeon(rename = "displayName")]
     #[ts(as = "Option<String>")]
     pub display_name: Option<Text>,
 }
