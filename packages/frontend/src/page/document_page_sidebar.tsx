@@ -100,9 +100,13 @@ function DocumentsTreeNode(props: {
 
     const childRefIds = createMemo(() => {
         const docRefId = props.doc.docRef.refId;
-        if (!docRefId) { return []; }
+        if (!docRefId) {
+            return [];
+        }
         const docInfo = userState.documents[docRefId];
-        if (!docInfo) { return []; }
+        if (!docInfo) {
+            return [];
+        }
         return docInfo.children.map((bytes) => uuidStringify(bytes));
     });
 

@@ -6,9 +6,6 @@ use serde_json::Value;
 use tracing::debug;
 use uuid::Uuid;
 
-use crate::app::Paginated;
-use crate::document::RefStub;
-
 use super::app::{AppCtx, AppError, AppState};
 use super::auth::{NewPermissions, PermissionLevel, Permissions};
 use super::user_state::get_or_create_user_state_doc;
@@ -31,8 +28,6 @@ pub fn router() -> Router<AppState> {
         .handler(username_status)
         .handler(get_active_user_profile)
         .handler(set_active_user_profile)
-        .handler(search_ref_stubs)
-        .handler(get_ref_children_stubs)
         .handler(get_user_state_url)
 }
 
@@ -89,19 +84,6 @@ enum RefDoc {
         is_deleted: bool,
         permissions: Permissions,
     },
-}
-
-#[handler(query)]
-async fn search_ref_stubs(
-    ctx: AppCtx,
-    query_params: doc::RefQueryParams,
-) -> RpcResult<Paginated<doc::RefStub>> {
-    doc::search_ref_stubs(ctx, query_params).await.into()
-}
-
-#[handler(query)]
-async fn get_ref_children_stubs(ctx: AppCtx, ref_id: Uuid) -> RpcResult<Vec<RefStub>> {
-    doc::get_ref_children_stubs(ctx, ref_id).await.into()
 }
 
 #[handler(query)]
