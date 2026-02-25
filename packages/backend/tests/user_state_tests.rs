@@ -776,6 +776,148 @@ mod integration_tests {
         Ok(())
     }
 
+    /// Creates document content for a child document (diagram) that links to a parent ref.
+    fn create_child_document_content(name: &str, parent_ref_id: Uuid) -> serde_json::Value {
+        json!({
+            "version": "1",
+            "type": "diagram",
+            "name": name,
+            "diagramIn": {
+                "_id": parent_ref_id.to_string(),
+                "_version": null,
+                "_server": "test",
+                "type": "diagram-in"
+            },
+            "notebook": {
+                "cellOrder": [],
+                "cellContents": {}
+            }
+        })
+    }
+
+    /// Tests that parent and children fields are populated correctly on initial DB load.
+    #[sqlx::test]
+    async fn parent_child_populated_on_db_load(pool: PgPool) -> sqlx::Result<()> {
+        use backend::user_state::get_or_create_user_state_doc;
+
+        run_migrations(&pool).await?;
+        let state = create_test_app_state(pool.clone()).await;
+
+        let user_id = format!("test_user_{}", Uuid::now_v7());
+        ensure_user_exists(&pool, &user_id).await.expect("Failed to create user");
+
+        let ctx = AppCtx {
+            state: state.clone(),
+            user: Some(create_test_firebase_user(&user_id)),
+        };
+
+        // Create parent document
+        let parent_content = create_test_document_content("Parent Doc");
+        let parent_ref_id = document::new_ref(ctx.clone(), parent_content)
+            .await
+            .expect("Failed to create parent");
+
+        // Create child document linking to parent
+        let child_content = create_child_document_content("Child Doc", parent_ref_id);
+        let child_ref_id =
+            document::new_ref(ctx, child_content).await.expect("Failed to create child");
+
+        // Load user state from DB
+        get_or_create_user_state_doc(&state, &user_id)
+            .await
+            .expect("Failed to get or create user state doc");
+
+        let user_state = read_user_state_from_samod(&state, &user_id)
+            .await
+            .expect("User state should exist");
+
+        assert_eq!(user_state.documents.len(), 2, "Should have two documents");
+
+        let parent_doc = user_state
+            .documents
+            .get(&parent_ref_id.to_string())
+            .expect("Parent doc should exist");
+        let child_doc = user_state
+            .documents
+            .get(&child_ref_id.to_string())
+            .expect("Child doc should exist");
+
+        assert!(parent_doc.parent.is_none(), "Parent doc should have no parent");
+        assert_eq!(
+            parent_doc.children,
+            vec![child_ref_id],
+            "Parent doc should list child in children"
+        );
+
+        assert_eq!(child_doc.parent, Some(parent_ref_id), "Child doc should point to parent");
+        assert!(child_doc.children.is_empty(), "Child doc should have no children");
+
+        Ok(())
+    }
+
+    /// Tests that parent and children fields are kept consistent via subscription updates.
+    #[sqlx::test]
+    async fn parent_child_consistent_after_subscription_update(pool: PgPool) -> sqlx::Result<()> {
+        run_migrations(&pool).await?;
+        let state = create_test_app_state(pool.clone()).await;
+
+        let user_id = format!("test_user_{}", Uuid::now_v7());
+        ensure_user_exists(&pool, &user_id).await.expect("Failed to create user");
+
+        // Spawn the subscription
+        let state_clone = state.clone();
+        let subscription_handle =
+            tokio::spawn(async move { run_user_state_subscription(state_clone).await });
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        let ctx = AppCtx {
+            state: state.clone(),
+            user: Some(create_test_firebase_user(&user_id)),
+        };
+
+        // Create parent document - subscription processes this
+        let parent_content = create_test_document_content("Parent Doc");
+        let parent_ref_id = document::new_ref(ctx.clone(), parent_content)
+            .await
+            .expect("Failed to create parent");
+        tokio::time::sleep(Duration::from_millis(300)).await;
+
+        // Create child document linking to parent - subscription processes this
+        let child_content = create_child_document_content("Child Doc", parent_ref_id);
+        let child_ref_id =
+            document::new_ref(ctx, child_content).await.expect("Failed to create child");
+        tokio::time::sleep(Duration::from_millis(300)).await;
+
+        let user_state = read_user_state_from_samod(&state, &user_id)
+            .await
+            .expect("User state should exist");
+
+        subscription_handle.abort();
+
+        assert_eq!(user_state.documents.len(), 2, "Should have two documents");
+
+        let parent_doc = user_state
+            .documents
+            .get(&parent_ref_id.to_string())
+            .expect("Parent doc should exist");
+        let child_doc = user_state
+            .documents
+            .get(&child_ref_id.to_string())
+            .expect("Child doc should exist");
+
+        assert!(parent_doc.parent.is_none(), "Parent doc should have no parent");
+        assert_eq!(
+            parent_doc.children,
+            vec![child_ref_id],
+            "Parent doc should list child in children"
+        );
+
+        assert_eq!(child_doc.parent, Some(parent_ref_id), "Child doc should point to parent");
+        assert!(child_doc.children.is_empty(), "Child doc should have no children");
+
+        Ok(())
+    }
+
     #[cfg(feature = "property-tests")]
     mod proptest_tests {
         use super::*;
