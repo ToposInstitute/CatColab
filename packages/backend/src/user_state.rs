@@ -368,6 +368,14 @@ pub async fn get_or_create_user_state_doc(
     create_user_state_doc(state, user_id, &user_state).await
 }
 
+/// Converts a `UserState` into an Automerge document.
+pub fn user_state_to_automerge(state: &UserState) -> Result<automerge::Automerge, AppError> {
+    let mut doc = automerge::Automerge::new();
+    doc.transact(|tx| reconcile(tx, state))
+        .map_err(|e| AppError::UserStateSync(format!("Failed to reconcile: {:?}", e)))?;
+    Ok(doc)
+}
+
 /// Creates a new user state document in samod and registers it in the user states map.
 pub async fn create_user_state_doc(
     state: &AppState,
@@ -380,9 +388,7 @@ pub async fn create_user_state_doc(
         "Creating new user state document"
     );
 
-    let mut doc = automerge::Automerge::new();
-    doc.transact(|tx| reconcile(tx, user_state))
-        .map_err(|e| AppError::UserStateSync(format!("Failed to reconcile: {:?}", e)))?;
+    let doc = user_state_to_automerge(user_state)?;
 
     let doc_handle = state.repo.create(doc).await?;
     let doc_id = doc_handle.document_id().clone();
@@ -575,21 +581,11 @@ pub mod arbitrary {
 #[cfg(all(test, feature = "property-tests"))]
 mod tests {
     use super::*;
-    use automerge::{AutoCommit, Automerge};
-    use autosurgeon::{hydrate, reconcile};
+    use automerge::Automerge;
+    use autosurgeon::hydrate;
     use test_strategy::proptest;
 
     use crate::app::AppError;
-
-    /// Converts a `UserState` into an Automerge document.
-    fn user_state_to_automerge(state: &UserState) -> Result<Automerge, AppError> {
-        let mut doc = AutoCommit::new();
-        reconcile(&mut doc, state)
-            .map_err(|e| AppError::Invalid(format!("Failed to reconcile UserState: {}", e)))?;
-        let bytes = doc.save();
-        let automerge_doc = Automerge::load(&bytes)?;
-        Ok(automerge_doc)
-    }
 
     /// Converts an Automerge document to a `UserState`.
     fn automerge_to_user_state(doc: &Automerge) -> Result<UserState, AppError> {
