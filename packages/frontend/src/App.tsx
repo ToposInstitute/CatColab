@@ -18,6 +18,7 @@ import { ErrorBoundaryDialog } from "./page/error_boundary";
 import { PageContainer } from "./page/page_container";
 import { stdTheories } from "./stdlib";
 import { TheoryLibraryContext } from "./theory";
+import { UserStateProvider } from "./user/user_state_provider";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 const repoUrl = import.meta.env.VITE_AUTOMERGE_REPO_URL;
@@ -53,6 +54,7 @@ const Root = (props: RouteSectionProps<unknown>) => {
                 [ApiContext, api],
                 [TheoryLibraryContext, theories],
                 [ModelLibraryContext, models],
+                UserStateProvider,
             ]}
         >
             <FirebaseProvider app={firebaseApp}>
