@@ -110,7 +110,7 @@ function DocumentRow(props: DocumentRowProps) {
         return undefined;
     });
 
-    const parentDescription = createMemo(() => {
+    const parentInfo = createMemo(() => {
         const parentBytes = props.doc.parent;
         if (!parentBytes) {
             return undefined;
@@ -118,13 +118,15 @@ function DocumentRow(props: DocumentRowProps) {
         const parentId = uuidStringify(parentBytes);
         const parentDoc = userState.documents[parentId];
         const parentName = parentDoc?.name || "Untitled";
+        let prefix = "";
         if (props.doc.typeName === "diagram") {
-            return `Diagram in ${parentName}`;
+            prefix = "Diagram in ";
+        } else if (props.doc.typeName === "analysis") {
+            prefix = "Analysis of ";
+        } else {
+            return undefined;
         }
-        if (props.doc.typeName === "analysis") {
-            return `Analysis of ${parentName}`;
-        }
-        return undefined;
+        return { prefix, parentId, parentName, parentType: parentDoc?.typeName };
     });
 
     const handleClick = (e: MouseEvent) => {
@@ -165,8 +167,23 @@ function DocumentRow(props: DocumentRowProps) {
             </div>
             <div class="name-cell">
                 <span>{props.doc.name}</span>
-                <Show when={parentDescription()}>
-                    <span class="parent-description">{parentDescription()}</span>
+                <Show when={parentInfo()}>
+                    {(info) => (
+                        <span class="parent-description">
+                            <span class="parent-prefix">{info().prefix}</span>
+                            <a
+                                href={`/${info().parentType}/${info().parentId}`}
+                                class="parent-link"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/${info().parentType}/${info().parentId}`);
+                                    e.preventDefault();
+                                }}
+                            >
+                                {info().parentName}
+                            </a>
+                        </span>
+                    )}
                 </Show>
             </div>
             <div>{ownerNames}</div>
