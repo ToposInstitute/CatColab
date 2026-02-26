@@ -120,10 +120,20 @@ function DocumentsTreeNode(props: {
         const isParentOwnerless = isDocOwnerless(props.doc);
 
         // Don't show ownerless children or deleted documents
-        return childDocs.filter(
+        const filtered = childDocs.filter(
             (childDoc) =>
                 !childDoc.docRef.isDeleted && (isParentOwnerless || !isDocOwnerless(childDoc)),
         );
+
+        // Sort by createdAt descending (newest first)
+        const docs = userState.documents;
+        filtered.sort((a, b) => {
+            const aInfo = a.docRef.refId ? docs[a.docRef.refId] : undefined;
+            const bInfo = b.docRef.refId ? docs[b.docRef.refId] : undefined;
+            return (bInfo?.createdAt ?? 0) - (aInfo?.createdAt ?? 0);
+        });
+
+        return filtered;
     });
 
     return (
