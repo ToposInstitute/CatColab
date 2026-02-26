@@ -81,15 +81,16 @@ describe("Database dump backward compatibility", () => {
     for (let i = 0; i < modelAnalyses.length; i++) {
         const doc = modelAnalyses[i] as Record<string, unknown>;
         const docName = (doc.name as string | undefined) ?? "unnamed";
+        const docRefId = (doc._refId as string | undefined) ?? "no-ref-id";
 
-        test(`model analysis ${i}: "${docName}"`, async () => {
+        test(`model analysis ${i}: "${docName}" [${docRefId}]`, async () => {
             // Step 1: Migrate the analysis document
             let migratedAnalysis: Record<string, unknown>;
             try {
                 migratedAnalysis = migrateDocument(doc) as Record<string, unknown>;
             } catch (e) {
                 expect.fail(
-                    `migrateDocument failed: ${e instanceof Error ? e.message : String(e)}`,
+                    `analysis: ${docRefId} | migrateDocument failed: ${e instanceof Error ? e.message : String(e)}`,
                 );
             }
 
@@ -97,12 +98,13 @@ describe("Database dump backward compatibility", () => {
             const analysisOf = migratedAnalysis.analysisOf as { _id?: string } | undefined;
             const modelRefId = analysisOf?._id;
             if (!modelRefId) {
-                expect.fail("Analysis is missing analysisOf._id");
+                expect.fail(`analysis: ${docRefId} | Analysis is missing analysisOf._id`);
             }
 
             const migratedModel = modelById.get(modelRefId);
             if (!migratedModel) {
-                expect.fail(`Referenced model ${modelRefId} not found in dump`);
+                // Model may have been deleted while the analysis still references it.
+                return;
             }
 
             // Step 3: Get the theory and compile the model
@@ -149,7 +151,7 @@ describe("Database dump backward compatibility", () => {
                 const analysisSpec = theory.modelAnalysis(analysisId);
                 if (!analysisSpec) {
                     failures.push(
-                        `  cell ${cellId} (${analysisId}): analysis not found in theory ${theoryId}`,
+                        `  cell ${cellId} | analysis: ${analysisId} | theory: ${theoryId} | Analysis not found in theory`,
                     );
                     continue;
                 }
@@ -163,14 +165,19 @@ describe("Database dump backward compatibility", () => {
                 try {
                     analysisSpec.run(compiledModel, analysisCell.content);
                 } catch (e) {
-                    const msg = e instanceof Error ? e.message : String(e);
-                    failures.push(`  cell ${cellId} (${analysisId}): ${msg}`);
+                    let msg = e instanceof Error ? e.message : String(e);
+                    if (msg === "unreachable") {
+                        msg = 'WASM Rust "unreachable" panic';
+                    }
+                    failures.push(
+                        `  cell ${cellId} | analysis: ${analysisId} | theory: ${theoryId} | ${msg}`,
+                    );
                 }
             }
 
             if (failures.length > 0) {
                 expect.fail(
-                    `${failures.length} of ${cellCount} analysis cells failed:\n${failures.join("\n")}`,
+                    `analysis: ${docRefId} | theory: ${theoryId} | ${failures.length} of ${cellCount} cells failed:\n${failures.join("\n")}`,
                 );
             }
         });

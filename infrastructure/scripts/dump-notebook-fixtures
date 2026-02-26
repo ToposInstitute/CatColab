@@ -41,7 +41,7 @@ fi
 # Query for all analysis documents and their referenced models
 psql "$DB_URL" -t -A -c "
   WITH analysis_docs AS (
-    SELECT s.content
+    SELECT jsonb_set(s.content, '{_refId}', to_jsonb(r.id::text)) AS content
     FROM snapshots s
     JOIN refs r ON r.head = s.id
     WHERE r.deleted_at IS NULL
