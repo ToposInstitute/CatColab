@@ -45,33 +45,19 @@ export type PermissionInfo = {
 /**
  * The user this permission applies to, or `None` for the public "anyone" permission.
  */
-user: UserSummary | null, 
+user: UserInfo | null, 
 /**
  * The permission level granted.
  */
 level: PermissionLevel, };
 
 /**
- * State associated with a user, synchronized via Automerge.
- *
- * Documents are stored in a `HashMap` keyed by the ref UUID string. This maps
- * to an Automerge `Map` object, giving O(1) per-entry reconciliation: adding,
- * removing, or updating a single document only touches that entry, rather than
- * running an O(N×M) LCS diff over the entire list.
- */
-export type UserState = { 
-/**
- * The document refs accessible to the user, keyed by ref UUID string.
- */
-documents: { [key in string]?: DocInfo }, };
-
-/**
- * User summary for user state synchronization.
+ * User info for user state synchronization.
  *
  * This is similar to [`crate::user::UserSummary`] but uses [`Text`] instead of [`String`]
  * for compatibility with Automerge/Autosurgeon serialization.
  */
-export type UserSummary = { 
+export type UserInfo = { 
 /**
  * Unique identifier for the user.
  */
@@ -84,3 +70,14 @@ username: string | null,
  * The user's display name, if set.
  */
 displayName: string | null, };
+
+/**
+ * State associated with a user, synchronized via Automerge.
+ *
+ */
+export type UserState = { 
+/**
+ * The document refs accessible to the user, keyed by ref UUID string.
+ * We cannot use the Uuid type here because Automerge requires the keys to have a AsRef<str> impl.
+ */
+documents: { [key in string]?: DocInfo }, };
