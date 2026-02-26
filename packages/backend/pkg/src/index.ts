@@ -13,42 +13,17 @@
 
 */
 import type { Query, Mutation, Subscription } from "@qubit-rs/client";
-export type UserSummary = { 
+export type UserProfile = { 
 /**
- * The Firebase user ID.
- */
-id: string, 
-/**
- * The user's chosen username, if set.
+ * The user's chosen username.
  */
 username: string | null, 
 /**
- * The user's chosen display name, if set.
+ * The user's chosen display name.
  */
 displayName: string | null, };
-export type PermissionLevel = "Read" | "Write" | "Maintain" | "Own";
 export type JsonValue = number | string | boolean | Array<JsonValue> | { [key in string]?: JsonValue } | null;
-export type UserPermissions = { 
-/**
- * The user who has been granted permissions.
- */
-user: UserSummary, 
-/**
- * The level of permission granted to the user.
- */
-level: PermissionLevel, };
-export type NewPermissions = { 
-/**
- * Base permission level for any person, logged in or not.
- */
-anyone: PermissionLevel | null, 
-/**
- * Permission levels for users.
- *
- * A mapping from user IDs to permission levels.
- */
-users: { [key in string]?: PermissionLevel }, };
-export type RefDoc = { "tag": "Readonly", binaryData: string, isDeleted: boolean, permissions: Permissions, } | { "tag": "Live", docId: string, isDeleted: boolean, permissions: Permissions, };
+export type PermissionLevel = "Read" | "Write" | "Maintain" | "Own";
 export type RpcResult<T> = { "tag": "Ok", content: T, } | { "tag": "Err", code: number, message: string, };
 export type UsernameStatus = "Available" | "Unavailable" | "Invalid";
 export type Permissions = { 
@@ -66,13 +41,38 @@ user: PermissionLevel | null,
  * Only owners of the document have access to this information.
  */
 users: Array<UserPermissions> | null, };
-export type UserProfile = { 
+export type UserPermissions = { 
 /**
- * The user's chosen username.
+ * The user who has been granted permissions.
+ */
+user: UserSummary, 
+/**
+ * The level of permission granted to the user.
+ */
+level: PermissionLevel, };
+export type RefDoc = { "tag": "Readonly", binaryData: string, isDeleted: boolean, permissions: Permissions, } | { "tag": "Live", docId: string, isDeleted: boolean, permissions: Permissions, };
+export type UserSummary = { 
+/**
+ * The Firebase user ID.
+ */
+id: string, 
+/**
+ * The user's chosen username, if set.
  */
 username: string | null, 
 /**
- * The user's chosen display name.
+ * The user's chosen display name, if set.
  */
 displayName: string | null, };
+export type NewPermissions = { 
+/**
+ * Base permission level for any person, logged in or not.
+ */
+anyone: PermissionLevel | null, 
+/**
+ * Permission levels for users.
+ *
+ * A mapping from user IDs to permission levels.
+ */
+users: { [key in string]?: PermissionLevel }, };
 export type QubitServer = { create_snapshot: Mutation<[ref_id: string], RpcResult<null>>, delete_ref: Mutation<[ref_id: string], RpcResult<null>>, get_active_user_profile: Query<[], RpcResult<UserProfile>>, get_doc: Query<[ref_id: string], RpcResult<RefDoc>>, get_permissions: Query<[ref_id: string], RpcResult<Permissions>>, get_user_state_url: Query<[], RpcResult<string>>, head_snapshot: Query<[ref_id: string], RpcResult<JsonValue>>, new_ref: Mutation<[content: JsonValue], RpcResult<string>>, restore_ref: Mutation<[ref_id: string], RpcResult<null>>, set_active_user_profile: Mutation<[user: UserProfile], RpcResult<null>>, set_permissions: Mutation<[ref_id: string, new: NewPermissions], RpcResult<null>>, sign_up_or_sign_in: Mutation<[], RpcResult<null>>, user_by_username: Query<[username: string], RpcResult<UserSummary | null>>, username_status: Query<[username: string], RpcResult<UsernameStatus>>, validate_session: Query<[], RpcResult<null>>, };

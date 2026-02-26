@@ -103,14 +103,14 @@ mod permission_level_text {
     }
 }
 
-/// User summary for user state synchronization.
+/// User info for user state synchronization.
 ///
 /// This is similar to [`crate::user::UserSummary`] but uses [`Text`] instead of [`String`]
 /// for compatibility with Automerge/Autosurgeon serialization.
 #[cfg_attr(feature = "property-tests", derive(Eq, PartialEq))]
 #[derive(Debug, Clone, Reconcile, Hydrate, TS)]
 #[ts(rename_all = "camelCase", export_to = "user_state.ts")]
-pub struct UserSummary {
+pub struct UserInfo {
     /// Unique identifier for the user.
     #[ts(as = "String")]
     pub id: Text,
@@ -131,7 +131,7 @@ pub struct UserSummary {
 #[ts(rename_all = "camelCase", export_to = "user_state.ts")]
 pub struct PermissionInfo {
     /// The user this permission applies to, or `None` for the public "anyone" permission.
-    pub user: Option<UserSummary>,
+    pub user: Option<UserInfo>,
     /// The permission level granted.
     #[autosurgeon(with = "permission_level_text")]
     pub level: crate::auth::PermissionLevel,
@@ -227,7 +227,7 @@ impl DbPermission {
             "own" => PermissionLevel::Own,
             _ => return None,
         };
-        let user = self.user_id.as_ref().map(|id| UserSummary {
+        let user = self.user_id.as_ref().map(|id| UserInfo {
             id: Text::from(id.clone()),
             username: self.username.clone().map(Text::from),
             display_name: self.display_name.clone().map(Text::from),
@@ -418,7 +418,7 @@ pub mod arbitrary {
     use proptest::{arbitrary::Arbitrary, prelude::*};
     use proptest_arbitrary_interop::arb;
 
-    impl Arbitrary for UserSummary {
+    impl Arbitrary for UserInfo {
         type Parameters = ();
         type Strategy = BoxedStrategy<Self>;
 
@@ -430,7 +430,7 @@ pub mod arbitrary {
                     // names in practice.
                     let username = username.filter(|s| !s.is_empty());
                     let display_name = display_name.filter(|s| !s.is_empty());
-                    UserSummary {
+                    UserInfo {
                         id: Text::from(format!("test_{uuid}")),
                         username: username.map(Text::from),
                         display_name: display_name.map(Text::from),
@@ -445,7 +445,7 @@ pub mod arbitrary {
         type Strategy = BoxedStrategy<Self>;
 
         fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-            (any::<Option<UserSummary>>(), any::<PermissionLevel>())
+            (any::<Option<UserInfo>>(), any::<PermissionLevel>())
                 .prop_map(|(user, level)| PermissionInfo { user, level })
                 .boxed()
         }
@@ -497,7 +497,7 @@ pub mod arbitrary {
             any::<String>(),                             // type_name
             arb::<uuid::Uuid>(),                         // ref_id (used as map key)
             any::<PermissionLevel>(),                    // user's permission_level
-            any::<UserSummary>(),                        // other owner (always present)
+            any::<UserInfo>(),                           // other owner (always present)
             0i64..253402300799i64,                       // created_at seconds
             proptest::option::of(0i64..253402300799i64), // deleted_at seconds
         )
@@ -516,7 +516,7 @@ pub mod arbitrary {
                     if user_level == PermissionLevel::Own {
                         // User is the owner
                         permissions.push(PermissionInfo {
-                            user: Some(UserSummary {
+                            user: Some(UserInfo {
                                 id: Text::from(user_id.clone()),
                                 username: None,
                                 display_name: None,
@@ -534,7 +534,7 @@ pub mod arbitrary {
                             level: PermissionLevel::Own,
                         });
                         permissions.push(PermissionInfo {
-                            user: Some(UserSummary {
+                            user: Some(UserInfo {
                                 id: Text::from(user_id.clone()),
                                 username: None,
                                 display_name: None,
