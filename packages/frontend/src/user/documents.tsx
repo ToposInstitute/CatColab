@@ -167,8 +167,26 @@ function DocumentRow(props: { doc: DocInfo & { refId: string } }) {
         return undefined;
     });
 
-    const handleClick = () => {
-        navigate(`/${props.doc.typeName}/${props.doc.refId}`);
+    const handleClick = (e: MouseEvent) => {
+        // Left click only
+        if (e.button === 0 && !e.ctrlKey && !e.metaKey) {
+            navigate(`/${props.doc.typeName}/${props.doc.refId}`);
+        }
+    };
+
+    const handleMouseDown = (e: MouseEvent) => {
+        // Prevent default autoscroll on middle click
+        if (e.button === 1) {
+            e.preventDefault();
+        }
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+        // Middle click (button 1) or Ctrl/Cmd+click should open in new tab
+        if (e.button === 1 || (e.button === 0 && (e.ctrlKey || e.metaKey))) {
+            window.open(`/${props.doc.typeName}/${props.doc.refId}`, "_blank");
+            e.stopPropagation();
+        }
     };
 
     const handleDeleteClick = async (e: MouseEvent) => {
@@ -181,7 +199,12 @@ function DocumentRow(props: { doc: DocInfo & { refId: string } }) {
     };
 
     return (
-        <div class="ref-grid-row" onClick={handleClick}>
+        <div
+            class="ref-grid-row"
+            onClick={handleClick}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+        >
             <div>
                 <DocumentTypeIcon
                     documentType={props.doc.typeName as DocumentType}
