@@ -47,6 +47,7 @@ describe("User state Automerge document", async () => {
     assert(isValidDocumentId(userStateUrl));
 
     const docHandle = (await repo.find(userStateUrl as DocumentId)) as DocHandle<UserState>;
+    await docHandle.whenReady();
 
     // Track the latest state via change events
     let latestState = docHandle.doc();
