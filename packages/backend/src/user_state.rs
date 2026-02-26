@@ -180,7 +180,18 @@ pub struct UserState {
     pub documents: HashMap<String, DocInfo>,
 }
 
+impl Default for UserState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UserState {
+    /// Creates a new empty UserState.
+    pub fn new() -> Self {
+        Self { documents: HashMap::new() }
+    }
+
     /// Recomputes the `children` field of every [`DocInfo`] from the `parent` fields.
     ///
     /// This should be called whenever the document map is mutated (initial load,
@@ -388,12 +399,19 @@ pub async fn create_user_state_doc(
         "Creating new user state document"
     );
 
-    let doc = user_state_to_automerge(user_state)?;
-
+    let default_state = UserState::new();
+    let doc = user_state_to_automerge(&default_state)?;
     let doc_handle = state.repo.create(doc).await?;
     let doc_id = doc_handle.document_id().clone();
 
-    debug!(user_id = %user_id, doc_id = %doc_id, "Document created in repo");
+    debug!(user_id = %user_id, doc_id = %doc_id, "Empty document created in repo");
+
+    doc_handle.with_document(|doc| {
+        doc.transact(|tx| reconcile(tx, user_state))
+            .map_err(|e| AppError::UserStateSync(format!("Failed to reconcile: {:?}", e)))
+    })?;
+
+    debug!(user_id = %user_id, doc_id = %doc_id, "Document populated with user state");
 
     let mut states = state.user_states.write().await;
     states.insert(user_id.to_string(), doc_id.clone());
