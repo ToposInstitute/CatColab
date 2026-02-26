@@ -145,6 +145,10 @@
     text-overflow: ellipsis;
 }
 
+.untitled-doc {
+    color: var(--color-gray-800);
+}
+
 .parent-description {
     color: var(--color-gray-800);
     font-size: 0.85em;
