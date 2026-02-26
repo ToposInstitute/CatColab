@@ -120,12 +120,16 @@ mod integration_tests {
     }
 
     fn create_test_document_content(name: &str) -> serde_json::Value {
+        create_model_document_content(name, "test-theory")
+    }
+
+    fn create_model_document_content(name: &str, theory: &str) -> serde_json::Value {
         // Version "1" document structure matching notebook-types v1::Document (model type)
         json!({
             "version": "1",
             "type": "model",
             "name": name,
-            "theory": "test-theory",
+            "theory": theory,
             "notebook": {
                 "cellOrder": [],
                 "cellContents": {}
@@ -171,6 +175,12 @@ mod integration_tests {
         assert_eq!(user_state.documents.len(), 1, "Should have one document");
         let doc = user_state.documents.get(&ref_id.to_string()).expect("Document should exist");
         assert_eq!(doc.name.as_str(), "Test Document");
+        assert_eq!(doc.type_name, "model", "Document type should be 'model'");
+        assert_eq!(
+            doc.theory.as_deref(),
+            Some("test-theory"),
+            "Document theory should be 'test-theory'"
+        );
         assert!(
             doc.permissions.iter().any(|p| p.level == PermissionLevel::Own
                 && p.user.as_ref().map(|u| u.id.as_str()) == Some(&user_id)),
@@ -581,6 +591,94 @@ mod integration_tests {
             doc_after.name.as_str(),
             "Updated Name",
             "Document name should be updated in user state"
+        );
+
+        Ok(())
+    }
+
+    /// Tests that the theory field is populated on initial load and updated via autosave.
+    #[sqlx::test]
+    async fn theory_field_populated_and_updated(pool: PgPool) -> sqlx::Result<()> {
+        run_migrations(&pool).await?;
+        let state = create_test_app_state(pool.clone()).await;
+
+        let user_id = format!("test_user_{}", Uuid::now_v7());
+        ensure_user_exists(&pool, &user_id).await.expect("Failed to create user");
+
+        // Spawn the subscription in a background task
+        let state_clone = state.clone();
+        let subscription_handle =
+            tokio::spawn(async move { run_user_state_subscription(state_clone).await });
+
+        // Give the subscription time to start
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Create a model document with a specific theory
+        let ctx = AppCtx {
+            state: state.clone(),
+            user: Some(create_test_firebase_user(&user_id)),
+        };
+        let content = create_model_document_content("Theory Test", "causal-loop");
+        let ref_id = document::new_ref(ctx.clone(), content).await.expect("Failed to create ref");
+
+        // Wait for subscription to process the create notification
+        tokio::time::sleep(Duration::from_millis(300)).await;
+
+        // Verify theory is set on initial subscription update
+        let state_after_create = read_user_state_from_samod(&state, &user_id).await;
+        let doc = state_after_create
+            .as_ref()
+            .and_then(|s| s.documents.get(&ref_id.to_string()))
+            .expect("Document should exist after creation");
+        assert_eq!(doc.type_name, "model");
+        assert_eq!(
+            doc.theory.as_deref(),
+            Some("causal-loop"),
+            "Theory should be 'causal-loop' after creation"
+        );
+
+        // Create a diagram (no theory field)
+        let diagram_content = create_child_document_content("Test Diagram", ref_id);
+        let diagram_ref_id =
+            document::new_ref(ctx, diagram_content).await.expect("Failed to create diagram");
+
+        // Wait for subscription to process the create notification
+        tokio::time::sleep(Duration::from_millis(300)).await;
+
+        // Verify diagram has no theory
+        let state_after_diagram = read_user_state_from_samod(&state, &user_id).await;
+        let diagram_doc = state_after_diagram
+            .as_ref()
+            .and_then(|s| s.documents.get(&diagram_ref_id.to_string()))
+            .expect("Diagram should exist after creation");
+        assert_eq!(diagram_doc.type_name, "diagram");
+        assert_eq!(diagram_doc.theory, None, "Diagram should have no theory");
+
+        // Update the model document's theory via autosave
+        let updated_content = create_model_document_content("Theory Test", "petri-net");
+        document::autosave(
+            state.clone(),
+            backend::document::RefContent { ref_id, content: updated_content },
+        )
+        .await
+        .expect("Failed to autosave");
+
+        // Wait for the subscription to process
+        tokio::time::sleep(Duration::from_millis(300)).await;
+
+        // Verify theory was updated in user state
+        let state_after_update = read_user_state_from_samod(&state, &user_id).await;
+
+        subscription_handle.abort();
+
+        let doc_after = state_after_update
+            .as_ref()
+            .and_then(|s| s.documents.get(&ref_id.to_string()))
+            .expect("Document should exist after theory change");
+        assert_eq!(
+            doc_after.theory.as_deref(),
+            Some("petri-net"),
+            "Theory should be updated to 'petri-net' after autosave"
         );
 
         Ok(())
@@ -1055,11 +1153,14 @@ mod integration_tests {
                 }
 
                 // Create the ref and its head snapshot
-                // We use a minimal JSON content since RefStub doesn't contain the full document
-                let content = serde_json::json!({
+                // We use a minimal JSON content since DocInfo doesn't contain the full document
+                let mut content = serde_json::json!({
                     "name": doc.name.as_str(),
                     "type": doc.type_name.as_str()
                 });
+                if let Some(theory) = &doc.theory {
+                    content["theory"] = serde_json::Value::String(theory.clone());
+                }
 
                 // Upsert: if the ref already exists (e.g. during proptest shrinking),
                 // update the snapshot content and ref's head pointer.

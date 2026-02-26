@@ -4,8 +4,9 @@ import type { DocInfo } from "catcolab-api/src/user_state";
 import { getAuth } from "firebase/auth";
 import X from "lucide-solid/icons/x";
 import { useFirebaseApp } from "solid-firebase";
-import { createMemo, createSignal, For, useContext } from "solid-js";
+import { createMemo, createSignal, For, Show, useContext } from "solid-js";
 import invariant from "tiny-invariant";
+import { stringify as uuidStringify } from "uuid";
 
 import { type DocumentType, DocumentTypeIcon, IconButton } from "catcolab-ui-components";
 import { BrandedToolbar, PageActionsContext } from "../page";
@@ -130,6 +131,7 @@ function DocumentRow(props: { doc: DocInfo & { refId: string } }) {
     const actions = useContext(PageActionsContext);
     invariant(actions, "Page actions should be provided");
     const theories = useContext(TheoryLibraryContext);
+    const userState = useUserState();
 
     const currentUserId = auth.currentUser?.uid;
     const ownerNames = formatOwners(props.doc.permissions, currentUserId);
@@ -146,6 +148,21 @@ function DocumentRow(props: { doc: DocInfo & { refId: string } }) {
             } catch (_e) {
                 return undefined;
             }
+        }
+        return undefined;
+    });
+
+    const parentDescription = createMemo(() => {
+        const parentBytes = props.doc.parent;
+        if (!parentBytes) return undefined;
+        const parentId = uuidStringify(parentBytes);
+        const parentDoc = userState.documents[parentId];
+        const parentName = parentDoc?.name || "Untitled";
+        if (props.doc.typeName === "diagram") {
+            return `Diagram in ${parentName}`;
+        }
+        if (props.doc.typeName === "analysis") {
+            return `Analysis of ${parentName}`;
         }
         return undefined;
     });
@@ -171,7 +188,12 @@ function DocumentRow(props: { doc: DocInfo & { refId: string } }) {
                     letters={iconLetters()}
                 />
             </div>
-            <div>{props.doc.name}</div>
+            <div class="name-cell">
+                <span>{props.doc.name}</span>
+                <Show when={parentDescription()}>
+                    <span class="parent-description">{parentDescription()}</span>
+                </Show>
+            </div>
             <div>{ownerNames}</div>
             <div>{userPermission}</div>
             <div>

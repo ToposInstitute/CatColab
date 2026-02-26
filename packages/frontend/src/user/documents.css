@@ -129,6 +129,30 @@
     padding-right: 1em;
 }
 
+/* Name cell with optional parent description */
+.name-cell {
+    display: flex;
+    align-items: baseline;
+    min-width: 0;
+}
+
+.name-cell > span:first-child {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.parent-description {
+    color: var(--color-gray-600);
+    font-size: 0.85em;
+    flex-shrink: 1;
+    margin-left: auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-left: 1em;
+}
+
 /* Action cell (delete/restore button) */
 .delete-cell {
     display: flex;
