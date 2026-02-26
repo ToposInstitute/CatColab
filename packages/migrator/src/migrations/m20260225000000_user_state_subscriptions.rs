@@ -220,6 +220,7 @@ impl Operation<Postgres> for MigrationOperation {
                 affected_user TEXT;
                 v_name TEXT;
                 v_type_name TEXT;
+                v_theory TEXT;
                 v_created_at TIMESTAMPTZ;
                 v_ref_deleted_at TIMESTAMPTZ;
                 v_permissions JSON;
@@ -236,6 +237,7 @@ impl Operation<Postgres> for MigrationOperation {
                 -- Get metadata from the NEW snapshot content and ref
                 v_name := NEW.content->>'name';
                 v_type_name := NEW.content->>'type';
+                v_theory := NEW.content->>'theory';
                 v_parent := COALESCE(
                     NEW.content->'diagramIn'->>'_id',
                     NEW.content->'analysisOf'->>'_id'
@@ -269,6 +271,7 @@ impl Operation<Postgres> for MigrationOperation {
                             'ref_id', v_ref_id,
                             'name', v_name,
                             'type_name', v_type_name,
+                            'theory', v_theory,
                             'permissions', v_permissions,
                             'created_at', floor(extract(epoch FROM v_created_at) * 1000)::bigint,
                             'deleted_at', CASE WHEN v_ref_deleted_at IS NOT NULL
