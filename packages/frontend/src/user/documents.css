@@ -20,11 +20,11 @@
     align-items: center;
 }
 
-/* Documents page: 6 columns — Type / Name / Owners / Permission / Created / Actions */
+/* Documents page: 6 columns — Icon / Name / Owners / Permission / Created / Actions */
 .documents-page .ref-grid-header,
 .documents-page .ref-grid-row {
     grid-template-columns:
-        100px
+        40px
         2fr
         120px
         120px
@@ -32,12 +32,12 @@
         50px;
 }
 
-/* Trash page: 6 columns — Actions / Type / Name / Owners / Permission / Created */
+/* Trash page: 6 columns — Actions / Icon / Name / Owners / Permission / Created */
 .trash-bin-page .ref-grid-header,
 .trash-bin-page .ref-grid-row {
     grid-template-columns:
         50px
-        100px
+        40px
         2fr
         120px
         120px
@@ -84,6 +84,13 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+/* Icon cells should not clip or ellipsize */
+.documents-page .ref-grid-row > div:first-child,
+.trash-bin-page .ref-grid-row > div:nth-child(2) {
+    overflow: visible;
+    text-overflow: unset;
 }
 
 /* Documents page */

@@ -4,11 +4,12 @@ import type { DocInfo } from "catcolab-api/src/user_state";
 import { getAuth } from "firebase/auth";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import { useFirebaseApp } from "solid-firebase";
-import { createMemo, createSignal, For } from "solid-js";
+import { createMemo, createSignal, For, useContext } from "solid-js";
 
-import { Dialog, IconButton } from "catcolab-ui-components";
+import { Dialog, type DocumentType, DocumentTypeIcon, IconButton } from "catcolab-ui-components";
 import { useApi } from "../api";
 import { BrandedToolbar } from "../page";
+import { TheoryLibraryContext } from "../theory";
 import { createVirtualList } from "../util/virtual_list";
 import "./documents.css";
 
@@ -87,7 +88,7 @@ function TrashBinSearch() {
             <div class="ref-grid-outer">
                 <div class="ref-grid-header">
                     <div />
-                    <div>Type</div>
+                    <div />
                     <div>Name</div>
                     <div>Owners</div>
                     <div>Permission</div>
@@ -131,6 +132,7 @@ function DeletedDocumentRow(props: { doc: DocInfo & { refId: string } }) {
     const auth = getAuth(firebaseApp);
     const navigate = useNavigate();
     const api = useApi();
+    const theories = useContext(TheoryLibraryContext);
 
     const currentUserId = auth.currentUser?.uid;
     const ownerNames = formatOwners(props.doc.permissions, currentUserId);
@@ -138,6 +140,18 @@ function DeletedDocumentRow(props: { doc: DocInfo & { refId: string } }) {
     const canRestore = props.doc.permissions.some(
         (p) => p.user !== null && p.user.id === currentUserId && p.level === "Own",
     );
+
+    const iconLetters = createMemo(() => {
+        const theoryId = props.doc.theory;
+        if (theoryId && theories) {
+            try {
+                return theories.getMetadata(theoryId).iconLetters;
+            } catch (_e) {
+                return undefined;
+            }
+        }
+        return undefined;
+    });
 
     const [showError, setShowError] = createSignal(false);
     const [errorMessage, setErrorMessage] = createSignal("");
@@ -185,7 +199,12 @@ function DeletedDocumentRow(props: { doc: DocInfo & { refId: string } }) {
                         </IconButton>
                     )}
                 </div>
-                <div>{props.doc.typeName}</div>
+                <div>
+                    <DocumentTypeIcon
+                        documentType={props.doc.typeName as DocumentType}
+                        letters={iconLetters()}
+                    />
+                </div>
                 <div>{props.doc.name}</div>
                 <div>{ownerNames}</div>
                 <div>{userPermission}</div>

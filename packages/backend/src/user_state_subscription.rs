@@ -27,6 +27,7 @@ enum UserStateNotification {
         ref_id: String,
         name: Option<String>,
         type_name: Option<String>,
+        theory: Option<String>,
         permissions: Option<Vec<DbPermission>>,
         created_at: Option<i64>,
         deleted_at: Option<i64>,
@@ -43,6 +44,7 @@ fn to_doc_info(notif: &UserStateNotification) -> Option<DocInfo> {
         UserStateNotification::Upsert {
             name,
             type_name,
+            theory,
             permissions,
             created_at,
             deleted_at,
@@ -60,7 +62,8 @@ fn to_doc_info(notif: &UserStateNotification) -> Option<DocInfo> {
 
             Some(DocInfo {
                 name: Text::from(name.clone().unwrap_or_else(|| "untitled".to_string())),
-                type_name: Text::from(type_name.clone()?),
+                type_name: type_name.clone()?,
+                theory: theory.clone(),
                 permissions: doc_permissions,
                 created_at,
                 deleted_at,
