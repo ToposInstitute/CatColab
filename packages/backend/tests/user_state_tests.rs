@@ -1065,10 +1065,13 @@ mod integration_tests {
 
         tokio::time::sleep(Duration::from_millis(100)).await;
 
-        // Initialize user state for the reader so the subscription has a doc to update
+        // Initialize user state for both users so the subscription has docs to update
         backend::user_state::get_or_create_user_state_doc(&state, &reader_id)
             .await
             .expect("Failed to initialize reader user state");
+        backend::user_state::get_or_create_user_state_doc(&state, &owner_id)
+            .await
+            .expect("Failed to initialize owner user state");
 
         // Verify the reader sees the owner's original display name in permissions
         let state_before = read_user_state_from_samod(&state, &reader_id).await;
@@ -1091,6 +1094,17 @@ mod integration_tests {
             "Owner's display name should be 'Original Name' initially"
         );
 
+        // Verify the owner's own profile has the original display name
+        let owner_state_before = read_user_state_from_samod(&state, &owner_id).await;
+        assert_eq!(
+            owner_state_before
+                .as_ref()
+                .and_then(|s| s.profile.display_name.as_ref())
+                .map(|t| t.as_str()),
+            Some("Original Name"),
+            "Owner's profile should show 'Original Name' initially"
+        );
+
         // Update the owner's display name
         backend::user::set_active_user_profile(
             owner_ctx,
@@ -1105,10 +1119,8 @@ mod integration_tests {
         // Wait for the subscription to process the notification
         tokio::time::sleep(Duration::from_millis(300)).await;
 
-        // Check that the reader's state reflects the updated display name
+        // Check that the reader's state reflects the updated display name in permissions
         let state_after = read_user_state_from_samod(&state, &reader_id).await;
-
-        subscription_handle.abort();
 
         let state_after = state_after.expect("Reader user state should exist");
         let doc_after = state_after
@@ -1127,7 +1139,23 @@ mod integration_tests {
                 .and_then(|u| u.display_name.as_ref())
                 .map(|t| t.as_str()),
             Some("Updated Name"),
-            "Owner's display name should be updated to 'Updated Name'"
+            "Owner's display name should be updated to 'Updated Name' in reader's permissions"
+        );
+
+        // Check that the owner's own profile was updated
+        let owner_state_after = read_user_state_from_samod(&state, &owner_id).await;
+
+        subscription_handle.abort();
+
+        let owner_state_after = owner_state_after.expect("Owner user state should exist");
+        assert_eq!(
+            owner_state_after
+                .profile
+                .display_name
+                .as_ref()
+                .map(|t| t.as_str()),
+            Some("Updated Name"),
+            "Owner's own profile should be updated to 'Updated Name'"
         );
 
         Ok(())
@@ -1236,14 +1264,16 @@ mod integration_tests {
             db: &PgPool,
             state: &UserState,
         ) -> Result<(), AppError> {
-            // Ensure the user exists
+            // Ensure the user exists with their profile info
             sqlx::query!(
                 r#"
-            INSERT INTO users (id, created, signed_in)
-            VALUES ($1, NOW(), NOW())
-            ON CONFLICT (id) DO NOTHING
+            INSERT INTO users (id, created, signed_in, username, display_name)
+            VALUES ($1, NOW(), NOW(), $2, $3)
+            ON CONFLICT (id) DO UPDATE SET username = COALESCE($2, users.username), display_name = $3
             "#,
-                user_id
+                user_id,
+                state.profile.username.as_ref().map(|u| u.as_str()),
+                state.profile.display_name.as_ref().map(|d| d.as_str()),
             )
             .execute(db)
             .await?;

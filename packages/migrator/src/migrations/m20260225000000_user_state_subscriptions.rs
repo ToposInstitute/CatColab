@@ -199,8 +199,10 @@ impl Operation<Postgres> for MigrationOperation {
         .await?;
 
         // Notify affected users when a user's display_name or username changes.
-        // Since the permissions payload includes these fields, every ref the
-        // updated user has a permission on needs to re-notify all its users.
+        // Sends two kinds of notifications:
+        // 1. A profile_update to the user themselves (updates their UserState.profile).
+        // 2. Upsert notifications to all users sharing a document with them
+        //    (updates the permissions payload which includes username/display_name).
         sqlx::query(
             r#"
             CREATE OR REPLACE FUNCTION notify_user_change() RETURNS trigger AS $$
@@ -208,6 +210,16 @@ impl Operation<Postgres> for MigrationOperation {
                 v_ref_id UUID;
                 affected_user TEXT;
             BEGIN
+                -- Notify the user themselves about their profile change
+                PERFORM pg_notify('user_state_subscription',
+                    json_build_object(
+                        'kind', 'profile_update',
+                        'user_id', NEW.id,
+                        'username', NEW.username,
+                        'display_name', NEW.display_name
+                    )::text
+                );
+
                 -- For each ref the updated user has a permission on...
                 FOR v_ref_id IN
                     SELECT object FROM permissions WHERE subject = NEW.id
