@@ -1,4 +1,4 @@
-import { useNavigate } from "@solidjs/router";
+import { A } from "@solidjs/router";
 import type { DocInfo } from "catcolab-api/src/user_state";
 import { getAuth } from "firebase/auth";
 import { useFirebaseApp } from "solid-firebase";
@@ -90,7 +90,6 @@ interface DocumentRowProps {
 function DocumentRow(props: DocumentRowProps) {
     const firebaseApp = useFirebaseApp();
     const auth = getAuth(firebaseApp);
-    const navigate = useNavigate();
     const theories = useContext(TheoryLibraryContext);
     const userState = useUserState();
 
@@ -129,13 +128,6 @@ function DocumentRow(props: DocumentRowProps) {
         return { prefix, parentId, parentName, parentType: parentDoc?.typeName };
     });
 
-    const handleClick = (e: MouseEvent) => {
-        // Left click only
-        if (e.button === 0 && !e.ctrlKey && !e.metaKey) {
-            navigate(`/${props.doc.typeName}/${props.doc.refId}`);
-        }
-    };
-
     const handleMouseDown = (e: MouseEvent) => {
         // Prevent default autoscroll on middle click
         if (e.button === 1) {
@@ -143,20 +135,11 @@ function DocumentRow(props: DocumentRowProps) {
         }
     };
 
-    const handleMouseUp = (e: MouseEvent) => {
-        // Middle click (button 1) or Ctrl/Cmd+click should open in new tab
-        if (e.button === 1 || (e.button === 0 && (e.ctrlKey || e.metaKey))) {
-            window.open(`/${props.doc.typeName}/${props.doc.refId}`, "_blank");
-            e.stopPropagation();
-        }
-    };
-
     return (
-        <div
+        <A
+            href={`/${props.doc.typeName}/${props.doc.refId}`}
             class="ref-grid-row"
-            onClick={handleClick}
             onMouseDown={handleMouseDown}
-            onMouseUp={handleMouseUp}
         >
             {props.actionsPosition === "start" && props.renderActions(props.doc)}
             <div>
@@ -171,17 +154,13 @@ function DocumentRow(props: DocumentRowProps) {
                     {(info) => (
                         <span class="parent-description">
                             <span class="parent-prefix">{info().prefix}</span>
-                            <a
+                            <A
                                 href={`/${info().parentType}/${info().parentId}`}
                                 class="parent-link"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigate(`/${info().parentType}/${info().parentId}`);
-                                    e.preventDefault();
-                                }}
+                                onClick={(e: MouseEvent) => e.stopPropagation()}
                             >
                                 {info().parentName}
-                            </a>
+                            </A>
                         </span>
                     )}
                 </Show>
@@ -196,6 +175,6 @@ function DocumentRow(props: DocumentRowProps) {
                 })}
             </div>
             {props.actionsPosition === "end" && props.renderActions(props.doc)}
-        </div>
+        </A>
     );
 }
