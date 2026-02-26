@@ -38,30 +38,37 @@ describe("User state Automerge document", async () => {
 
     const user = auth.currentUser;
     invariant(user);
-    afterAll(async () => await deleteUser(user));
+
+    const createdRefs: string[] = [];
+    afterAll(async () => {
+        for (const id of createdRefs) {
+            await rpc.delete_ref.mutate(id).catch(() => {});
+        }
+        await deleteUser(user);
+    });
 
     unwrap(await rpc.sign_up_or_sign_in.mutate());
 
-    // Get the user state Automerge document
+    // Get the user state Automerge document.
     const userStateUrl = unwrap(await rpc.get_user_state_url.query());
     assert(isValidDocumentId(userStateUrl));
 
     const docHandle = (await repo.find(userStateUrl as DocumentId)) as DocHandle<UserState>;
     await docHandle.whenReady();
 
-    // Track the latest state via change events
+    // Track the latest state via change events.
     let latestState = docHandle.doc();
     docHandle.on("change", ({ doc }) => {
         latestState = doc;
     });
 
-    // Helper to find a document by refId in the user state
+    // Helper to find a document by refId in the user state.
     const findDoc = (refId: string): DocInfo | undefined => latestState?.documents[refId];
 
-    // Helper to count documents
+    // Helper to count documents.
     const documentCount = (): number => Object.keys(latestState?.documents ?? {}).length;
 
-    // Helper to wait for a condition with polling
+    // Helper to wait for a condition with polling.
     const waitFor = async (
         condition: () => boolean,
         message: string,
@@ -78,128 +85,139 @@ describe("User state Automerge document", async () => {
         assert(condition(), message);
     };
 
-    // Record the initial count of documents (may include public docs from other tests)
-    const initialCount = documentCount();
+    // Helper to create a document and register it for cleanup.
+    const createDoc = async (name: string): Promise<string> => {
+        const refId = unwrap(await rpc.new_ref.mutate(createTestDocument(name)));
+        createdRefs.push(refId);
+        return refId;
+    };
 
-    test.sequential("should have a valid initial state with documents map", () => {
+    // Helper to create a child document and register it for cleanup.
+    const createChildDoc = async (name: string, parentRefId: string): Promise<string> => {
+        const refId = unwrap(await rpc.new_ref.mutate(createChildTestDocument(name, parentRefId)));
+        createdRefs.push(refId);
+        return refId;
+    };
+
+    test("should sync document creation", async () => {
         assert(latestState);
         assert(typeof latestState.documents === "object" && latestState.documents !== null);
-    });
+        const initialCount = documentCount();
 
-    // Create first document
-    const doc1Name = `Test Document 1 - ${v4()}`;
-    const refId1: string = unwrap(await rpc.new_ref.mutate(createTestDocument(doc1Name)));
+        const doc1Name = `Test Document 1 - ${v4()}`;
+        const refId1 = await createDoc(doc1Name);
 
-    test.sequential("should sync first document after creation", async () => {
         await waitFor(
             () => findDoc(refId1) !== undefined,
             `Document ${refId1} should exist in user state`,
         );
-        const doc = findDoc(refId1);
-        assert(doc);
-        assert.strictEqual(doc.name, doc1Name);
+        const doc1 = findDoc(refId1);
+        assert(doc1);
+        assert.strictEqual(doc1.name, doc1Name);
         assert(
-            doc.permissions.some((p) => p.level === "Own"),
+            doc1.permissions.some((p) => p.level === "Own"),
             "Document should have an Own permission",
         );
-    });
 
-    // Create second document
-    const doc2Name = `Test Document 2 - ${v4()}`;
-    const refId2: string = unwrap(await rpc.new_ref.mutate(createTestDocument(doc2Name)));
+        const doc2Name = `Test Document 2 - ${v4()}`;
+        const refId2 = await createDoc(doc2Name);
 
-    test.sequential("should sync second document after creation", async () => {
         await waitFor(
             () => findDoc(refId2) !== undefined,
             `Document ${refId2} should exist in user state`,
         );
-        const doc1 = findDoc(refId1);
+        assert(findDoc(refId1), `Document ${refId1} should still exist`);
         const doc2 = findDoc(refId2);
-        assert(doc1, `Document ${refId1} should still exist`);
         assert(doc2);
         assert.strictEqual(doc2.name, doc2Name);
 
-        // Verify count increased by 2
-        assert(latestState);
         assert.strictEqual(documentCount(), initialCount + 2);
     });
 
-    test.sequential("should sync document deletion", async () => {
-        await signInWithEmailAndPassword(auth, email, password);
+    test("should sync document deletion and restoration", async () => {
+        const name = `Test Delete/Restore - ${v4()}`;
+        const refId = await createDoc(name);
+        await waitFor(
+            () => findDoc(refId) !== undefined,
+            `Document ${refId} should exist in user state`,
+        );
 
-        // Delete (soft-delete) the first document - this sets deleted_at
-        unwrap(await rpc.delete_ref.mutate(refId1));
+        // Soft-delete.
+        await signInWithEmailAndPassword(auth, email, password);
+        unwrap(await rpc.delete_ref.mutate(refId));
 
         await waitFor(() => {
-            const doc = findDoc(refId1);
+            const doc = findDoc(refId);
             return doc !== undefined && doc.deletedAt !== null;
-        }, `Deleted document ${refId1} should have deletedAt set in user state`);
-        const doc2 = findDoc(refId2);
-        assert(doc2, `Document ${refId2} should still exist`);
-        assert(doc2.deletedAt === null, `Document ${refId2} should not be deleted`);
-    });
+        }, `Deleted document ${refId} should have deletedAt set in user state`);
 
-    test.sequential("should sync document restoration", async () => {
-        await signInWithEmailAndPassword(auth, email, password);
-
-        // Restore the deleted document - this clears deleted_at
-        unwrap(await rpc.restore_ref.mutate(refId1));
+        // Restore.
+        unwrap(await rpc.restore_ref.mutate(refId));
 
         await waitFor(() => {
-            const doc = findDoc(refId1);
+            const doc = findDoc(refId);
             return doc !== undefined && doc.deletedAt === null;
-        }, `Restored document ${refId1} should have deletedAt cleared in user state`);
-        const doc1 = findDoc(refId1);
-        const doc2 = findDoc(refId2);
-        assert(doc1);
-        assert(doc1.deletedAt === null, `Document ${refId1} should not be deleted after restore`);
-        assert(doc2, `Document ${refId2} should still exist`);
+        }, `Restored document ${refId} should have deletedAt cleared in user state`);
+        const restored = findDoc(refId);
+        assert(restored);
+        assert(restored.deletedAt === null);
     });
 
-    test.sequential("should have document name as a proper string type", async () => {
-        const doc1 = findDoc(refId1);
-        assert(doc1, `Document ${refId1} should exist`);
+    test("should have document name as a proper string type", async () => {
+        const name = `Test String Type - ${v4()}`;
+        const refId = await createDoc(name);
+        await waitFor(
+            () => findDoc(refId) !== undefined,
+            `Document ${refId} should exist in user state`,
+        );
 
-        // Verify the constructor is the native String constructor
+        const doc = findDoc(refId);
+        assert(doc, `Document ${refId} should exist`);
         assert.strictEqual(
-            doc1.name.constructor,
+            doc.name.constructor,
             String,
             "name constructor should be native String",
         );
     });
 
-    // Create a child document linking to refId1 as parent
-    const childName = `Child Document - ${v4()}`;
-    const childRefId: string = unwrap(
-        await rpc.new_ref.mutate(createChildTestDocument(childName, refId1)),
-    );
+    test("should populate parent and children fields", async () => {
+        const parentName = `Parent Document - ${v4()}`;
+        const parentRefId = await createDoc(parentName);
+        await waitFor(
+            () => findDoc(parentRefId) !== undefined,
+            `Parent document ${parentRefId} should exist in user state`,
+        );
 
-    test.sequential("should populate parent and children fields", async () => {
+        const childName = `Child Document - ${v4()}`;
+        const childRefId = await createChildDoc(childName, parentRefId);
+
         await waitFor(
             () => findDoc(childRefId) !== undefined,
             `Child document ${childRefId} should appear in user state`,
         );
 
-        const parent = findDoc(refId1);
+        const parent = findDoc(parentRefId);
         const child = findDoc(childRefId);
-        assert(parent, `Parent document ${refId1} should exist`);
+        assert(parent, `Parent document ${parentRefId} should exist`);
         assert(child, `Child document ${childRefId} should exist`);
 
-        // Child should point to parent as a UUID bytes value
+        // Child should point to parent as a UUID bytes value.
         assert(child.parent !== null, "Child should have a parent");
         assert.strictEqual(
             uuidStringify(child.parent),
-            refId1,
+            parentRefId,
             "Child parent should match parent refId",
         );
 
-        // Parent should list child in its children array
+        // Parent should list child in its children array.
         await waitFor(
-            () => findDoc(refId1)?.children.some((b) => uuidStringify(b) === childRefId) === true,
-            `Parent document ${refId1} should list child ${childRefId} in children`,
+            () =>
+                findDoc(parentRefId)?.children.some((b) => uuidStringify(b) === childRefId) ===
+                true,
+            `Parent document ${parentRefId} should list child ${childRefId} in children`,
         );
 
-        const updatedParent = findDoc(refId1);
+        const updatedParent = findDoc(parentRefId);
         assert(updatedParent, "Parent should still exist");
         assert(
             updatedParent.children.some((b) => uuidStringify(b) === childRefId),
@@ -208,11 +226,17 @@ describe("User state Automerge document", async () => {
         assert(updatedParent.parent === null, "Parent document should have no parent");
     });
 
-    test.sequential("should sync document name change via autosave", async () => {
+    test("should sync document name change via autosave", async () => {
         await signInWithEmailAndPassword(auth, email, password);
 
-        // Get the live document handle to edit it
-        const refDoc = unwrap(await rpc.get_doc.query(refId1));
+        const name = `Test Autosave - ${v4()}`;
+        const refId = await createDoc(name);
+        await waitFor(
+            () => findDoc(refId) !== undefined,
+            `Document ${refId} should exist in user state`,
+        );
+
+        const refDoc = unwrap(await rpc.get_doc.query(refId));
         assert(refDoc.tag === "Live", "Document should be live");
         assert(isValidDocumentId(refDoc.docId));
 
@@ -221,23 +245,17 @@ describe("User state Automerge document", async () => {
         }>;
         await liveDocHandle.whenReady();
 
-        // Get original name from user state
-        const originalDoc = findDoc(refId1);
-        assert(originalDoc, "Document should exist in user state");
-
-        // Change the document name via Automerge (triggers autosave)
         const newName = `Updated Name - ${v4()}`;
         liveDocHandle.change((doc) => {
             doc.name = newName;
         });
 
-        // Wait for the name change to propagate to user state via autosave notification
         await waitFor(() => {
-            const doc = findDoc(refId1);
+            const doc = findDoc(refId);
             return doc !== undefined && doc.name === newName;
-        }, `Document ${refId1} should have updated name "${newName}" in user state`);
+        }, `Document ${refId} should have updated name "${newName}" in user state`);
 
-        const updatedDoc = findDoc(refId1);
+        const updatedDoc = findDoc(refId);
         assert(updatedDoc, "Document should still exist");
         assert.strictEqual(updatedDoc.name, newName, "Name should be updated");
     });
