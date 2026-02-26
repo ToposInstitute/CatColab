@@ -149,8 +149,9 @@ pub struct DocInfo {
     pub name: Text,
     /// The type of the document (e.g., "notebook", "theory").
     #[autosurgeon(rename = "typeName")]
-    #[ts(as = "String")]
-    pub type_name: Text,
+    pub type_name: String,
+    /// The theory of the document, if it is a model.
+    pub theory: Option<String>,
     /// All permissions on this document (users and public).
     pub permissions: Vec<PermissionInfo>,
     /// When this document was created.
@@ -268,6 +269,7 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
             refs.id AS "ref_id!",
             snapshots.content->>'name' AS name,
             snapshots.content->>'type' AS type_name,
+            snapshots.content->>'theory' AS theory,
             refs.created AS "created_at!",
             refs.deleted_at,
             (COALESCE(
@@ -313,7 +315,8 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
                 row.permissions.0.iter().filter_map(|p| p.to_permission_info()).collect();
             let info = DocInfo {
                 name: Text::from(row.name.unwrap_or_else(|| "untitled".to_string())),
-                type_name: Text::from(row.type_name.expect("type_name should never be null")),
+                type_name: row.type_name.expect("type_name should never be null"),
+                theory: row.theory,
                 permissions,
                 created_at: row.created_at,
                 deleted_at: row.deleted_at,
@@ -459,27 +462,32 @@ pub mod arbitrary {
             (
                 any::<String>(),
                 any::<String>(),
+                proptest::option::of(any::<String>()),
                 prop::collection::vec(any::<PermissionInfo>(), 0..5),
                 0i64..253402300799i64,
                 proptest::option::of(0i64..253402300799i64),
                 proptest::option::of(arb::<uuid::Uuid>()),
             )
-                .prop_map(|(name, type_name, permissions, seconds, deleted_seconds, parent)| {
-                    DocInfo {
-                        name: Text::from(name),
-                        type_name: Text::from(type_name),
-                        permissions,
-                        created_at: Utc
-                            .timestamp_opt(seconds, 0)
-                            .single()
-                            .expect("valid timestamp"),
-                        deleted_at: deleted_seconds
-                            .map(|s| Utc.timestamp_opt(s, 0).single().expect("valid timestamp")),
-                        parent,
-                        // Children are computed, not generated independently.
-                        children: Vec::new(),
-                    }
-                })
+                .prop_map(
+                    |(name, type_name, theory, permissions, seconds, deleted_seconds, parent)| {
+                        DocInfo {
+                            name: Text::from(name),
+                            type_name,
+                            theory,
+                            permissions,
+                            created_at: Utc
+                                .timestamp_opt(seconds, 0)
+                                .single()
+                                .expect("valid timestamp"),
+                            deleted_at: deleted_seconds.map(|s| {
+                                Utc.timestamp_opt(s, 0).single().expect("valid timestamp")
+                            }),
+                            parent,
+                            // Children are computed, not generated independently.
+                            children: Vec::new(),
+                        }
+                    },
+                )
                 .boxed()
         }
     }
@@ -545,7 +553,8 @@ pub mod arbitrary {
                     let key = ref_id.to_string();
                     let info = DocInfo {
                         name: Text::from(name),
-                        type_name: Text::from(type_name),
+                        type_name,
+                        theory: None,
                         permissions,
                         created_at: Utc
                             .timestamp_opt(seconds, 0)

@@ -7,8 +7,9 @@ import { useFirebaseApp } from "solid-firebase";
 import { createMemo, createSignal, For, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { IconButton } from "catcolab-ui-components";
+import { type DocumentType, DocumentTypeIcon, IconButton } from "catcolab-ui-components";
 import { BrandedToolbar, PageActionsContext } from "../page";
+import { TheoryLibraryContext } from "../theory";
 import { createVirtualList } from "../util/virtual_list";
 import "./documents.css";
 
@@ -82,7 +83,7 @@ function DocumentsSearch() {
             <h3>My Documents</h3>
             <div class="ref-grid-outer">
                 <div class="ref-grid-header">
-                    <div>Type</div>
+                    <div />
                     <div>Name</div>
                     <div>Owners</div>
                     <div>Permission</div>
@@ -128,6 +129,7 @@ function DocumentRow(props: { doc: DocInfo & { refId: string } }) {
     const navigate = useNavigate();
     const actions = useContext(PageActionsContext);
     invariant(actions, "Page actions should be provided");
+    const theories = useContext(TheoryLibraryContext);
 
     const currentUserId = auth.currentUser?.uid;
     const ownerNames = formatOwners(props.doc.permissions, currentUserId);
@@ -135,6 +137,18 @@ function DocumentRow(props: { doc: DocInfo & { refId: string } }) {
     const canDelete = props.doc.permissions.some(
         (p) => p.user !== null && p.user.id === currentUserId && p.level === "Own",
     );
+
+    const iconLetters = createMemo(() => {
+        const theoryId = props.doc.theory;
+        if (theoryId && theories) {
+            try {
+                return theories.getMetadata(theoryId).iconLetters;
+            } catch (_e) {
+                return undefined;
+            }
+        }
+        return undefined;
+    });
 
     const handleClick = () => {
         navigate(`/${props.doc.typeName}/${props.doc.refId}`);
@@ -151,7 +165,12 @@ function DocumentRow(props: { doc: DocInfo & { refId: string } }) {
 
     return (
         <div class="ref-grid-row" onClick={handleClick}>
-            <div>{props.doc.typeName}</div>
+            <div>
+                <DocumentTypeIcon
+                    documentType={props.doc.typeName as DocumentType}
+                    letters={iconLetters()}
+                />
+            </div>
             <div>{props.doc.name}</div>
             <div>{ownerNames}</div>
             <div>{userPermission}</div>
