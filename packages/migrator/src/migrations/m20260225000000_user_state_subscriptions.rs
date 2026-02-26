@@ -198,6 +198,36 @@ impl Operation<Postgres> for MigrationOperation {
         .execute(&mut *tx)
         .await?;
 
+        // Notify affected users when a user's display_name or username changes.
+        // Since the permissions payload includes these fields, every ref the
+        // updated user has a permission on needs to re-notify all its users.
+        sqlx::query(
+            r#"
+            CREATE OR REPLACE FUNCTION notify_user_change() RETURNS trigger AS $$
+            DECLARE
+                v_ref_id UUID;
+                affected_user TEXT;
+            BEGIN
+                -- For each ref the updated user has a permission on...
+                FOR v_ref_id IN
+                    SELECT object FROM permissions WHERE subject = NEW.id
+                LOOP
+                    -- ...notify every user who also has a permission on that ref
+                    FOR affected_user IN
+                        SELECT subject FROM permissions
+                        WHERE object = v_ref_id AND subject IS NOT NULL
+                    LOOP
+                        PERFORM notify_user_state_upsert(v_ref_id, affected_user);
+                    END LOOP;
+                END LOOP;
+                RETURN NEW;
+            END
+            $$ LANGUAGE plpgsql;
+            "#,
+        )
+        .execute(&mut *tx)
+        .await?;
+
         sqlx::query(r#"DROP TRIGGER IF EXISTS refs_notify_trigger ON refs;"#)
             .execute(&mut *tx)
             .await?;
@@ -207,6 +237,10 @@ impl Operation<Postgres> for MigrationOperation {
             .await?;
 
         sqlx::query(r#"DROP TRIGGER IF EXISTS snapshots_notify_trigger ON snapshots;"#)
+            .execute(&mut *tx)
+            .await?;
+
+        sqlx::query(r#"DROP TRIGGER IF EXISTS users_notify_trigger ON users;"#)
             .execute(&mut *tx)
             .await?;
 
@@ -240,6 +274,19 @@ impl Operation<Postgres> for MigrationOperation {
         .execute(&mut *tx)
         .await?;
 
+        sqlx::query(
+            r#"
+            CREATE TRIGGER users_notify_trigger
+            AFTER UPDATE OF display_name, username ON users
+            FOR EACH ROW
+            WHEN (OLD.display_name IS DISTINCT FROM NEW.display_name
+               OR OLD.username IS DISTINCT FROM NEW.username)
+            EXECUTE FUNCTION notify_user_change();
+            "#,
+        )
+        .execute(&mut *tx)
+        .await?;
+
         tx.commit().await?;
         Ok(())
     }
@@ -259,6 +306,10 @@ impl Operation<Postgres> for MigrationOperation {
             .execute(&mut *tx)
             .await?;
 
+        sqlx::query(r#"DROP TRIGGER IF EXISTS users_notify_trigger ON users;"#)
+            .execute(&mut *tx)
+            .await?;
+
         sqlx::query(r#"DROP FUNCTION IF EXISTS notify_refs_change;"#)
             .execute(&mut *tx)
             .await?;
@@ -268,6 +319,10 @@ impl Operation<Postgres> for MigrationOperation {
             .await?;
 
         sqlx::query(r#"DROP FUNCTION IF EXISTS notify_snapshot_change;"#)
+            .execute(&mut *tx)
+            .await?;
+
+        sqlx::query(r#"DROP FUNCTION IF EXISTS notify_user_change;"#)
             .execute(&mut *tx)
             .await?;
 
