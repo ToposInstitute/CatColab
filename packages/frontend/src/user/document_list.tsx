@@ -149,7 +149,9 @@ function DocumentRow(props: DocumentRowProps) {
                 />
             </div>
             <div class="name-cell">
-                <span>{props.doc.name}</span>
+                <Show when={props.doc.name} fallback={<span class="untitled-doc">Untitled</span>}>
+                    <span>{props.doc.name}</span>
+                </Show>
                 <Show when={parentInfo()}>
                     {(info) => (
                         <span class="parent-description">
