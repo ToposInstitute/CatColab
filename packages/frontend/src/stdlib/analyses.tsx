@@ -179,7 +179,15 @@ export function massAction(
         description,
         help,
         run: otherOptions.run,
-        component: (props) => <MassAction title={name} {...otherOptions} {...props} />,
+        component: (props) => (
+            <MassAction
+                title={name}
+                simulate={otherOptions.run}
+                stateType={otherOptions.stateType}
+                transitionType={otherOptions.transitionType}
+                {...props}
+            />
+        ),
         initialContent: () => ({
             massConservationType: { type: "Balanced" },
             rates: {},
@@ -272,7 +280,15 @@ export function stochasticMassAction(
         description,
         help,
         run: otherOptions.run,
-        component: (props) => <StochasticMassAction title={name} {...otherOptions} {...props} />,
+        component: (props) => (
+            <StochasticMassAction
+                title={name}
+                simulate={otherOptions.run}
+                stateType={otherOptions.stateType}
+                transitionType={otherOptions.transitionType}
+                {...props}
+            />
+        ),
         initialContent: () => ({
             rates: {},
             initialValues: {},

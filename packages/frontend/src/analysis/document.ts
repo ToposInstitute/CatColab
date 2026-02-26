@@ -13,6 +13,7 @@ import { getLiveDiagram, getLiveDiagramFromRepo, type LiveDiagramDoc } from "../
 import type { LiveModelDoc, ModelLibrary } from "../model";
 import { NotebookUtils, newNotebook } from "../notebook";
 import { assertExhaustive } from "../util/assert_exhaustive";
+import { migrateAnalysisContent } from "./migrate";
 
 /** A document defining an analysis. */
 export type AnalysisDocument = Document & { type: "analysis" };
@@ -158,10 +159,10 @@ export async function getLiveAnalysisFromRepo(
 }
 
 /** Migrate content of formal cells in analysis document.
-
-This is a stop-gap (read: hacky) method to migrate the content of analyses when
-the set of fields changes. It allow new fields to be added. Renaming or removing
-existing fields is *not* supported.
+ *
+ * This is a stop-gap (read: hacky) method to migrate the content of analyses when
+ * the set of fields changes. It allows new fields to be added. Renaming or removing
+ * existing fields is *not* supported.
  */
 function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
     const theory = theoryForLiveAnalysis(liveAnalysis);
@@ -175,23 +176,9 @@ function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
         }
     };
 
-    const doc = liveAnalysis.liveDoc.doc;
-    for (const cell of NotebookUtils.getFormalCells(doc.notebook)) {
-        const meta = getAnalysisMeta(cell.content.id);
-        if (!meta) {
-            continue;
-        }
-        const initialContent = meta.initialContent() as Record<string, unknown>;
-        for (const key in initialContent) {
-            if (!(key in cell.content.content)) {
-                liveAnalysis.liveDoc.changeDoc((doc) => {
-                    NotebookUtils.mutateCellContentById(doc.notebook, cell.id, (content) => {
-                        content.content[key] = initialContent[key];
-                    });
-                });
-            }
-        }
-    }
+    liveAnalysis.liveDoc.changeDoc((doc) => {
+        migrateAnalysisContent(doc.notebook, getAnalysisMeta);
+    });
 }
 
 /** Gets the theory associated with a live analysis. */

@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 
 import { DblModelMap, elaborateModel, migrateDocument } from "catlog-wasm";
+import { migrateAnalysisContent } from "../analysis/migrate";
 import { stdTheories } from "./theories";
 
 /** Path to a JSON file containing analysis documents and their referenced models.
@@ -110,10 +111,16 @@ describe("Database dump backward compatibility", () => {
 
             const instantiated = new DblModelMap();
             const compiledModel = elaborateModel(
-                migratedModel.notebook,
+                migratedModel.notebook as any,
                 instantiated,
                 theory.theory,
                 modelRefId,
+            );
+
+            // Step 3.5: Migrate analysis content — fill in missing fields from defaults.
+            // This uses the same function as the real app (migrateAnalysisContent).
+            migrateAnalysisContent(migratedAnalysis.notebook as any, (analysisId) =>
+                theory.modelAnalysis(analysisId),
             );
 
             // Step 4: Run each analysis cell through the real WASM functions
