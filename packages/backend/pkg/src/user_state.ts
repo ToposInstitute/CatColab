@@ -16,6 +16,10 @@ name: string,
  */
 typeName: string, 
 /**
+ * The theory of the document, if it is a model.
+ */
+theory: string | null, 
+/**
  * All permissions on this document (users and public).
  */
 permissions: Array<PermissionInfo>, 

@@ -46,20 +46,22 @@ impl Operation<Postgres> for MigrationOperation {
                 affected_user TEXT;
                 v_name TEXT;
                 v_type_name TEXT;
+                v_theory TEXT;
                 v_created_at TIMESTAMPTZ;
                 v_permissions JSON;
                 v_parent UUID;
             BEGIN
-                -- Inline: get name, type, created_at, parent from the ref's head snapshot
+                -- Inline: get name, type, theory, created_at, parent from the ref's head snapshot
                 SELECT
                     snapshots.content->>'name',
                     snapshots.content->>'type',
+                    snapshots.content->>'theory',
                     refs.created,
                     COALESCE(
                         snapshots.content->'diagramIn'->>'_id',
                         snapshots.content->'analysisOf'->>'_id'
                     )::uuid
-                INTO v_name, v_type_name, v_created_at, v_parent
+                INTO v_name, v_type_name, v_theory, v_created_at, v_parent
                 FROM refs
                 JOIN snapshots ON snapshots.id = refs.head
                 WHERE refs.id = NEW.id;
@@ -87,6 +89,7 @@ impl Operation<Postgres> for MigrationOperation {
                             'ref_id', NEW.id,
                             'name', v_name,
                             'type_name', v_type_name,
+                            'theory', v_theory,
                             'permissions', v_permissions,
                             'created_at', floor(extract(epoch FROM v_created_at) * 1000)::bigint,
                             'deleted_at', CASE WHEN NEW.deleted_at IS NOT NULL
@@ -116,6 +119,7 @@ impl Operation<Postgres> for MigrationOperation {
                 v_subject TEXT;
                 v_name TEXT;
                 v_type_name TEXT;
+                v_theory TEXT;
                 v_created_at TIMESTAMPTZ;
                 v_ref_deleted_at TIMESTAMPTZ;
                 v_permissions JSON;
@@ -131,13 +135,14 @@ impl Operation<Postgres> for MigrationOperation {
                         SELECT
                             snapshots.content->>'name',
                             snapshots.content->>'type',
+                            snapshots.content->>'theory',
                             refs.created,
                             refs.deleted_at,
                             COALESCE(
                                 snapshots.content->'diagramIn'->>'_id',
                                 snapshots.content->'analysisOf'->>'_id'
                             )::uuid
-                        INTO v_name, v_type_name, v_created_at, v_ref_deleted_at, v_parent
+                        INTO v_name, v_type_name, v_theory, v_created_at, v_ref_deleted_at, v_parent
                         FROM refs
                         JOIN snapshots ON snapshots.id = refs.head
                         WHERE refs.id = v_ref_id;
@@ -161,6 +166,7 @@ impl Operation<Postgres> for MigrationOperation {
                                 'ref_id', v_ref_id,
                                 'name', v_name,
                                 'type_name', v_type_name,
+                                'theory', v_theory,
                                 'permissions', v_permissions,
                                 'created_at', floor(extract(epoch FROM v_created_at) * 1000)::bigint,
                                 'deleted_at', CASE WHEN v_ref_deleted_at IS NOT NULL
