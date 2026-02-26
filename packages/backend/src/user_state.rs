@@ -107,13 +107,12 @@ mod permission_level_text {
 ///
 /// This is similar to [`crate::user::UserSummary`] but uses [`Text`] instead of [`String`]
 /// for compatibility with Automerge/Autosurgeon serialization.
-#[cfg_attr(feature = "property-tests", derive(Eq, PartialEq))]
-#[derive(Debug, Clone, Reconcile, Hydrate, TS)]
+#[derive(Debug, Clone, Eq, PartialEq, Reconcile, Hydrate, TS)]
 #[ts(rename_all = "camelCase", export_to = "user_state.ts")]
 pub struct UserInfo {
     /// Unique identifier for the user.
-    #[ts(as = "String")]
-    pub id: Text,
+    #[key]
+    pub id: String,
     /// The user's chosen username, if set.
     #[ts(as = "Option<String>")]
     pub username: Option<Text>,
@@ -131,6 +130,7 @@ pub struct UserInfo {
 #[ts(rename_all = "camelCase", export_to = "user_state.ts")]
 pub struct PermissionInfo {
     /// The user this permission applies to, or `None` for the public "anyone" permission.
+    #[key]
     pub user: Option<UserInfo>,
     /// The permission level granted.
     #[autosurgeon(with = "permission_level_text")]
@@ -228,7 +228,7 @@ impl DbPermission {
             _ => return None,
         };
         let user = self.user_id.as_ref().map(|id| UserInfo {
-            id: Text::from(id.clone()),
+            id: id.clone(),
             username: self.username.clone().map(Text::from),
             display_name: self.display_name.clone().map(Text::from),
         });
@@ -431,7 +431,7 @@ pub mod arbitrary {
                     let username = username.filter(|s| !s.is_empty());
                     let display_name = display_name.filter(|s| !s.is_empty());
                     UserInfo {
-                        id: Text::from(format!("test_{uuid}")),
+                        id: format!("test_{uuid}"),
                         username: username.map(Text::from),
                         display_name: display_name.map(Text::from),
                     }
@@ -517,7 +517,7 @@ pub mod arbitrary {
                         // User is the owner
                         permissions.push(PermissionInfo {
                             user: Some(UserInfo {
-                                id: Text::from(user_id.clone()),
+                                id: user_id.clone(),
                                 username: None,
                                 display_name: None,
                             }),
@@ -525,9 +525,8 @@ pub mod arbitrary {
                         });
                     } else {
                         // Someone else is the owner, user has a different permission
-                        if other_owner.id.as_str() == user_id {
-                            other_owner.id =
-                                Text::from(format!("{}_other", other_owner.id.as_str()));
+                        if other_owner.id == user_id {
+                            other_owner.id = format!("{}_other", other_owner.id);
                         }
                         permissions.push(PermissionInfo {
                             user: Some(other_owner),
@@ -535,7 +534,7 @@ pub mod arbitrary {
                         });
                         permissions.push(PermissionInfo {
                             user: Some(UserInfo {
-                                id: Text::from(user_id.clone()),
+                                id: user_id.clone(),
                                 username: None,
                                 display_name: None,
                             }),
