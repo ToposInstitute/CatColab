@@ -1016,6 +1016,123 @@ mod integration_tests {
         Ok(())
     }
 
+    /// Tests that updating a user's display_name triggers subscription updates
+    /// for all users who share a document with them.
+    #[sqlx::test]
+    async fn display_name_change_triggers_subscription_update(pool: PgPool) -> sqlx::Result<()> {
+        run_migrations(&pool).await?;
+        let state = create_test_app_state(pool.clone()).await;
+
+        let owner_id = format!("test_owner_{}", Uuid::now_v7());
+        let reader_id = format!("test_reader_{}", Uuid::now_v7());
+
+        ensure_user_exists(&pool, &owner_id).await.expect("Failed to create owner");
+        ensure_user_exists(&pool, &reader_id).await.expect("Failed to create reader");
+
+        let owner_ctx = AppCtx {
+            state: state.clone(),
+            user: Some(create_test_firebase_user(&owner_id)),
+        };
+
+        // Set an initial display name for the owner
+        backend::user::set_active_user_profile(
+            owner_ctx.clone(),
+            backend::user::UserProfile {
+                username: None,
+                display_name: Some("Original Name".into()),
+            },
+        )
+        .await
+        .expect("Failed to set owner profile");
+
+        // Create a document as owner
+        let content = create_test_document_content("Shared Document");
+        let ref_id =
+            document::new_ref(owner_ctx.clone(), content).await.expect("Failed to create ref");
+
+        // Grant read permission to the reader
+        let mut users = HashMap::new();
+        users.insert(reader_id.clone(), PermissionLevel::Read);
+        let new_permissions = NewPermissions { anyone: None, users };
+        backend::auth::set_permissions(&state, ref_id, new_permissions)
+            .await
+            .expect("Failed to set permissions");
+
+        // Spawn the subscription in a background task
+        let state_clone = state.clone();
+        let subscription_handle =
+            tokio::spawn(async move { run_user_state_subscription(state_clone).await });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Initialize user state for the reader so the subscription has a doc to update
+        backend::user_state::get_or_create_user_state_doc(&state, &reader_id)
+            .await
+            .expect("Failed to initialize reader user state");
+
+        // Verify the reader sees the owner's original display name in permissions
+        let state_before = read_user_state_from_samod(&state, &reader_id).await;
+        let doc_before = state_before
+            .as_ref()
+            .and_then(|s| s.documents.get(&ref_id.to_string()))
+            .expect("Document should exist in reader state");
+        let owner_perm_before = doc_before
+            .permissions
+            .iter()
+            .find(|p| p.user.as_ref().map(|u| u.id.as_str()) == Some(&owner_id))
+            .expect("Owner should appear in permissions");
+        assert_eq!(
+            owner_perm_before
+                .user
+                .as_ref()
+                .and_then(|u| u.display_name.as_ref())
+                .map(|t| t.as_str()),
+            Some("Original Name"),
+            "Owner's display name should be 'Original Name' initially"
+        );
+
+        // Update the owner's display name
+        backend::user::set_active_user_profile(
+            owner_ctx,
+            backend::user::UserProfile {
+                username: None,
+                display_name: Some("Updated Name".into()),
+            },
+        )
+        .await
+        .expect("Failed to update owner profile");
+
+        // Wait for the subscription to process the notification
+        tokio::time::sleep(Duration::from_millis(300)).await;
+
+        // Check that the reader's state reflects the updated display name
+        let state_after = read_user_state_from_samod(&state, &reader_id).await;
+
+        subscription_handle.abort();
+
+        let state_after = state_after.expect("Reader user state should exist");
+        let doc_after = state_after
+            .documents
+            .get(&ref_id.to_string())
+            .expect("Document should exist in reader state after update");
+        let owner_perm_after = doc_after
+            .permissions
+            .iter()
+            .find(|p| p.user.as_ref().map(|u| u.id.as_str()) == Some(&owner_id))
+            .expect("Owner should appear in permissions after update");
+        assert_eq!(
+            owner_perm_after
+                .user
+                .as_ref()
+                .and_then(|u| u.display_name.as_ref())
+                .map(|t| t.as_str()),
+            Some("Updated Name"),
+            "Owner's display name should be updated to 'Updated Name'"
+        );
+
+        Ok(())
+    }
+
     #[cfg(feature = "property-tests")]
     mod proptest_tests {
         use super::*;
