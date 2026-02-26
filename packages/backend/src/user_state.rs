@@ -175,21 +175,24 @@ pub struct DocInfo {
 #[derive(Debug, Clone, Reconcile, Hydrate, TS)]
 #[cfg_attr(not(test), ts(export, export_to = "user_state.ts"))]
 pub struct UserState {
+    /// The user's own profile information.
+    pub profile: UserInfo,
     /// The document refs accessible to the user, keyed by ref UUID string.
     /// We cannot use the Uuid type here because Automerge requires the keys to have a `AsRef<str>` impl.
     pub documents: HashMap<String, DocInfo>,
 }
 
-impl Default for UserState {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl UserState {
-    /// Creates a new empty UserState.
-    pub fn new() -> Self {
-        Self { documents: HashMap::new() }
+    /// Creates a new empty UserState for the given user.
+    pub fn new(user_id: &str) -> Self {
+        Self {
+            profile: UserInfo {
+                id: user_id.to_string(),
+                username: None,
+                display_name: None,
+            },
+            documents: HashMap::new(),
+        }
     }
 
     /// Recomputes the `children` field of every [`DocInfo`] from the `parent` fields.
@@ -344,7 +347,28 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
         "User state created successfully"
     );
 
-    let mut user_state = UserState { documents };
+    // Fetch the user's own profile info.
+    let profile_row = sqlx::query!(
+        "SELECT id, username, display_name FROM users WHERE id = $1",
+        user_id,
+    )
+    .fetch_optional(db)
+    .await?;
+
+    let profile = match profile_row {
+        Some(row) => UserInfo {
+            id: row.id,
+            username: row.username.map(Text::from),
+            display_name: row.display_name.map(Text::from),
+        },
+        None => UserInfo {
+            id: user_id,
+            username: None,
+            display_name: None,
+        },
+    };
+
+    let mut user_state = UserState { profile, documents };
     user_state.recompute_children();
     Ok(user_state)
 }
@@ -399,7 +423,7 @@ pub async fn create_user_state_doc(
         "Creating new user state document"
     );
 
-    let default_state = UserState::new();
+    let default_state = UserState::new(user_id);
     let doc = user_state_to_automerge(&default_state)?;
     let doc_handle = state.repo.create(doc).await?;
     let doc_id = doc_handle.document_id().clone();
@@ -593,15 +617,23 @@ pub mod arbitrary {
     /// Generates a (user_id, UserState) pair where the UserState is consistent
     /// with the user_id (i.e., owned documents have the user as owner).
     pub fn arbitrary_user_state_with_id() -> impl Strategy<Value = (String, UserState)> {
-        arb::<uuid::Uuid>().prop_flat_map(|user_uuid| {
-            let user_id = format!("test_user_{}", user_uuid);
-            prop::collection::vec(doc_info_entry_with_permissions(user_id.clone()), 0..5).prop_map(
-                move |entries| {
-                    let documents: HashMap<String, DocInfo> = entries.into_iter().collect();
-                    (user_id.clone(), UserState { documents })
-                },
-            )
-        })
+        (arb::<uuid::Uuid>(), any::<Option<String>>(), any::<Option<String>>()).prop_flat_map(
+            |(user_uuid, username, display_name)| {
+                let user_id = format!("test_user_{}", user_uuid);
+                let username = username.filter(|s| !s.is_empty());
+                let display_name = display_name.filter(|s| !s.is_empty());
+                let profile = UserInfo {
+                    id: user_id.clone(),
+                    username: username.map(Text::from),
+                    display_name: display_name.map(Text::from),
+                };
+                prop::collection::vec(doc_info_entry_with_permissions(user_id.clone()), 0..5)
+                    .prop_map(move |entries| {
+                        let documents: HashMap<String, DocInfo> = entries.into_iter().collect();
+                        (user_id.clone(), UserState { profile: profile.clone(), documents })
+                    })
+            },
+        )
     }
 
     impl Arbitrary for UserState {

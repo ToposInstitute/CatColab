@@ -37,6 +37,13 @@ enum UserStateNotification {
     /// The document should be removed from the user's state.
     #[serde(rename = "revoke")]
     Revoke { user_id: String, ref_id: String },
+    /// The user's own profile (username or display_name) was updated.
+    #[serde(rename = "profile_update")]
+    ProfileUpdate {
+        user_id: String,
+        username: Option<String>,
+        display_name: Option<String>,
+    },
 }
 
 fn to_doc_info(notif: &UserStateNotification) -> Option<DocInfo> {
@@ -102,6 +109,29 @@ fn handle_upsert(
 
         user_state.documents.insert(ref_id.to_string(), doc_info);
         user_state.recompute_children();
+        doc.transact(|tx| reconcile(tx, &user_state)).map_err(|e| format!("{:?}", e))?;
+
+        Ok(())
+    });
+
+    result.map_err(AppError::UserStateSync)
+}
+
+/// Handle a profile update notification by updating the user's profile in their state doc.
+fn handle_profile_update(
+    doc_handle: &samod::DocHandle,
+    user_id: &str,
+    username: Option<String>,
+    display_name: Option<String>,
+) -> Result<(), AppError> {
+    let result: Result<(), String> = doc_handle.with_document(|doc| {
+        let mut user_state: UserState = hydrate(doc).map_err(|e| e.to_string())?;
+
+        user_state.profile = crate::user_state::UserInfo {
+            id: user_id.to_string(),
+            username: username.map(Text::from),
+            display_name: display_name.map(Text::from),
+        };
         doc.transact(|tx| reconcile(tx, &user_state)).map_err(|e| format!("{:?}", e))?;
 
         Ok(())
@@ -192,6 +222,33 @@ pub async fn run_user_state_subscription(
                         );
                     }
                 }
+                UserStateNotification::ProfileUpdate { user_id: uid, username, display_name } => {
+                    debug!(
+                        user_id = %uid,
+                        "Processing user state profile update notification"
+                    );
+
+                    let result = async {
+                        let doc_id = get_or_create_user_state_doc(&app_state, uid).await?;
+                        let doc_handle = app_state.repo.find(doc_id).await?.ok_or(
+                            AppError::UserStateSync("Could not get doc_handle".to_string()),
+                        )?;
+                        handle_profile_update(
+                            &doc_handle,
+                            uid,
+                            username.clone(),
+                            display_name.clone(),
+                        )
+                    }
+                    .await;
+                    if let Err(e) = result {
+                        error!(
+                            user_id = %uid,
+                            error = %e,
+                            "Failed to handle user state profile update"
+                        );
+                    }
+                }
             },
             Err(error) => {
                 error!(
@@ -220,19 +277,27 @@ mod tests {
     async fn user_state_incremental_update_roundtrip(
         #[strategy(arbitrary_user_state_with_id())] user_id_and_state: (String, UserState),
     ) {
-        let (_user_id, input_state) = user_id_and_state;
+        let (user_id, input_state) = user_id_and_state;
         if input_state.documents.is_empty() {
             return Ok(());
         }
 
         let repo = samod::Repo::build_tokio().load().await;
         let mut doc = automerge::Automerge::new();
-        let empty_state = UserState { documents: HashMap::new() };
+        let empty_state = UserState::new(&user_id);
         doc.transact(|tx| autosurgeon::reconcile(tx, &empty_state))
             .map_err(|e| proptest::test_runner::TestCaseError::fail(format!("{:?}", e)))?;
         let doc_handle = repo.create(doc).await.unwrap();
 
-        // Upsert entries one at a time and verify the final state.
+        // Apply profile update, then upsert entries one at a time.
+        handle_profile_update(
+            &doc_handle,
+            &user_id,
+            input_state.profile.username.as_ref().map(|t| t.to_string()),
+            input_state.profile.display_name.as_ref().map(|t| t.to_string()),
+        )
+        .map_err(|e| proptest::test_runner::TestCaseError::fail(e.to_string()))?;
+
         for (ref_id, doc_info) in &input_state.documents {
             handle_upsert(&doc_handle, ref_id, doc_info.clone())
                 .map_err(|e| proptest::test_runner::TestCaseError::fail(e.to_string()))?;

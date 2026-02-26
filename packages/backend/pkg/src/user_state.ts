@@ -77,11 +77,14 @@ displayName: string | null, };
 
 /**
  * State associated with a user, synchronized via Automerge.
- *
  */
 export type UserState = { 
 /**
+ * The user's own profile information.
+ */
+profile: UserInfo, 
+/**
  * The document refs accessible to the user, keyed by ref UUID string.
- * We cannot use the Uuid type here because Automerge requires the keys to have a AsRef<str> impl.
+ * We cannot use the Uuid type here because Automerge requires the keys to have a `AsRef<str>` impl.
  */
 documents: { [key in string]?: DocInfo }, };
