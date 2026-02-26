@@ -32,41 +32,43 @@ impl Operation<Postgres> for MigrationOperation {
     async fn up(&self, conn: &mut PgConnection) -> Result<(), Error> {
         let mut tx = conn.begin().await?;
 
-        // Function to notify affected users when refs change (UPDATE on refs).
-        //
-        // All queries are inlined in PL/pgSQL rather than calling get_ref_stubs
-        // or get_max_permission (which are STABLE SQL functions). PostgreSQL
-        // optimizes STABLE functions with a snapshot from statement start, so
-        // they cannot see rows inserted earlier in the same transaction. PL/pgSQL
-        // code in a trigger sees the current transaction state.
+        // Shared helper: fetches ref metadata, builds permissions JSON, and
+        // sends an 'upsert' notification for a single user. Written in PL/pgSQL
+        // (not declared STABLE) so it sees the current transaction state — this
+        // is important because triggers may fire after rows were inserted
+        // earlier in the same transaction.
         sqlx::query(
             r#"
-            CREATE OR REPLACE FUNCTION notify_refs_change() RETURNS trigger AS $$
+            CREATE OR REPLACE FUNCTION notify_user_state_upsert(
+                p_ref_id UUID,
+                p_user_id TEXT
+            ) RETURNS void AS $$
             DECLARE
-                affected_user TEXT;
                 v_name TEXT;
                 v_type_name TEXT;
                 v_theory TEXT;
                 v_created_at TIMESTAMPTZ;
+                v_ref_deleted_at TIMESTAMPTZ;
                 v_permissions JSON;
                 v_parent UUID;
             BEGIN
-                -- Inline: get name, type, theory, created_at, parent from the ref's head snapshot
+                -- Get ref metadata from head snapshot
                 SELECT
                     snapshots.content->>'name',
                     snapshots.content->>'type',
                     snapshots.content->>'theory',
                     refs.created,
+                    refs.deleted_at,
                     COALESCE(
                         snapshots.content->'diagramIn'->>'_id',
                         snapshots.content->'analysisOf'->>'_id'
                     )::uuid
-                INTO v_name, v_type_name, v_theory, v_created_at, v_parent
+                INTO v_name, v_type_name, v_theory, v_created_at, v_ref_deleted_at, v_parent
                 FROM refs
                 JOIN snapshots ON snapshots.id = refs.head
-                WHERE refs.id = NEW.id;
+                WHERE refs.id = p_ref_id;
 
-                -- Build permissions JSON array for this ref
+                -- Build permissions JSON array
                 SELECT COALESCE(json_agg(json_build_object(
                     'user_id', p.subject,
                     'username', u.username,
@@ -76,28 +78,43 @@ impl Operation<Postgres> for MigrationOperation {
                 INTO v_permissions
                 FROM permissions p
                 LEFT JOIN users u ON u.id = p.subject
-                WHERE p.object = NEW.id;
+                WHERE p.object = p_ref_id;
 
-                -- For each user with a permission on this ref, send a notification.
+                -- Send upsert notification
+                PERFORM pg_notify('user_state_subscription',
+                    json_build_object(
+                        'kind', 'upsert',
+                        'user_id', p_user_id,
+                        'ref_id', p_ref_id,
+                        'name', v_name,
+                        'type_name', v_type_name,
+                        'theory', v_theory,
+                        'permissions', v_permissions,
+                        'created_at', floor(extract(epoch FROM v_created_at) * 1000)::bigint,
+                        'deleted_at', CASE WHEN v_ref_deleted_at IS NOT NULL
+                            THEN floor(extract(epoch FROM v_ref_deleted_at) * 1000)::bigint
+                            ELSE NULL END,
+                        'parent', v_parent
+                    )::text
+                );
+            END
+            $$ LANGUAGE plpgsql;
+            "#,
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        // Notify affected users when refs change (INSERT or UPDATE on refs).
+        sqlx::query(
+            r#"
+            CREATE OR REPLACE FUNCTION notify_refs_change() RETURNS trigger AS $$
+            DECLARE
+                affected_user TEXT;
+            BEGIN
                 FOR affected_user IN
                     SELECT subject FROM permissions WHERE object = NEW.id AND subject IS NOT NULL
                 LOOP
-                    PERFORM pg_notify('user_state_subscription',
-                        json_build_object(
-                            'kind', 'upsert',
-                            'user_id', affected_user,
-                            'ref_id', NEW.id,
-                            'name', v_name,
-                            'type_name', v_type_name,
-                            'theory', v_theory,
-                            'permissions', v_permissions,
-                            'created_at', floor(extract(epoch FROM v_created_at) * 1000)::bigint,
-                            'deleted_at', CASE WHEN NEW.deleted_at IS NOT NULL
-                                THEN floor(extract(epoch FROM NEW.deleted_at) * 1000)::bigint
-                                ELSE NULL END,
-                            'parent', v_parent
-                        )::text
-                    );
+                    PERFORM notify_user_state_upsert(NEW.id, affected_user);
                 END LOOP;
                 RETURN NEW;
             END
@@ -107,74 +124,15 @@ impl Operation<Postgres> for MigrationOperation {
         .execute(&mut *tx)
         .await?;
 
-        // Function to notify affected user when permissions change.
-        //
-        // Queries are inlined for the same reason as notify_refs_change:
-        // STABLE SQL functions cannot see rows from the current transaction.
+        // Notify affected user when permissions change.
         sqlx::query(
             r#"
             CREATE OR REPLACE FUNCTION notify_permissions_change() RETURNS trigger AS $$
-            DECLARE
-                v_ref_id UUID;
-                v_subject TEXT;
-                v_name TEXT;
-                v_type_name TEXT;
-                v_theory TEXT;
-                v_created_at TIMESTAMPTZ;
-                v_ref_deleted_at TIMESTAMPTZ;
-                v_permissions JSON;
-                v_parent UUID;
             BEGIN
-                -- Handle INSERT and UPDATE: send full DocInfo for the new subject
+                -- Handle INSERT and UPDATE: send full upsert for the new subject
                 IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
                     IF NEW.subject IS NOT NULL THEN
-                        v_ref_id := NEW.object;
-                        v_subject := NEW.subject;
-
-                        -- Inline: get ref metadata from head snapshot
-                        SELECT
-                            snapshots.content->>'name',
-                            snapshots.content->>'type',
-                            snapshots.content->>'theory',
-                            refs.created,
-                            refs.deleted_at,
-                            COALESCE(
-                                snapshots.content->'diagramIn'->>'_id',
-                                snapshots.content->'analysisOf'->>'_id'
-                            )::uuid
-                        INTO v_name, v_type_name, v_theory, v_created_at, v_ref_deleted_at, v_parent
-                        FROM refs
-                        JOIN snapshots ON snapshots.id = refs.head
-                        WHERE refs.id = v_ref_id;
-
-                        -- Build permissions JSON array for this ref
-                        SELECT COALESCE(json_agg(json_build_object(
-                            'user_id', p.subject,
-                            'username', u.username,
-                            'display_name', u.display_name,
-                            'level', p.level::text
-                        ) ORDER BY p.level DESC), '[]'::json)
-                        INTO v_permissions
-                        FROM permissions p
-                        LEFT JOIN users u ON u.id = p.subject
-                        WHERE p.object = v_ref_id;
-
-                        PERFORM pg_notify('user_state_subscription',
-                            json_build_object(
-                                'kind', 'upsert',
-                                'user_id', v_subject,
-                                'ref_id', v_ref_id,
-                                'name', v_name,
-                                'type_name', v_type_name,
-                                'theory', v_theory,
-                                'permissions', v_permissions,
-                                'created_at', floor(extract(epoch FROM v_created_at) * 1000)::bigint,
-                                'deleted_at', CASE WHEN v_ref_deleted_at IS NOT NULL
-                                    THEN floor(extract(epoch FROM v_ref_deleted_at) * 1000)::bigint
-                                    ELSE NULL END,
-                                'parent', v_parent
-                            )::text
-                        );
+                        PERFORM notify_user_state_upsert(NEW.object, NEW.subject);
                     END IF;
                 END IF;
 
@@ -210,7 +168,7 @@ impl Operation<Postgres> for MigrationOperation {
         .execute(&mut *tx)
         .await?;
 
-        // Function to notify affected users when snapshots change (UPDATE on snapshots).
+        // Notify affected users when snapshots change (UPDATE on snapshots).
         // This handles autosave operations that update the head snapshot content.
         sqlx::query(
             r#"
@@ -218,13 +176,6 @@ impl Operation<Postgres> for MigrationOperation {
             DECLARE
                 v_ref_id UUID;
                 affected_user TEXT;
-                v_name TEXT;
-                v_type_name TEXT;
-                v_theory TEXT;
-                v_created_at TIMESTAMPTZ;
-                v_ref_deleted_at TIMESTAMPTZ;
-                v_permissions JSON;
-                v_parent UUID;
             BEGIN
                 -- Find the ref that has this snapshot as its head
                 SELECT id INTO v_ref_id FROM refs WHERE head = NEW.id;
@@ -234,52 +185,10 @@ impl Operation<Postgres> for MigrationOperation {
                     RETURN NEW;
                 END IF;
 
-                -- Get metadata from the NEW snapshot content and ref
-                v_name := NEW.content->>'name';
-                v_type_name := NEW.content->>'type';
-                v_theory := NEW.content->>'theory';
-                v_parent := COALESCE(
-                    NEW.content->'diagramIn'->>'_id',
-                    NEW.content->'analysisOf'->>'_id'
-                )::uuid;
-
-                SELECT created, deleted_at
-                INTO v_created_at, v_ref_deleted_at
-                FROM refs
-                WHERE id = v_ref_id;
-
-                -- Build permissions JSON array for this ref (shared by all notifications)
-                SELECT COALESCE(json_agg(json_build_object(
-                    'user_id', p.subject,
-                    'username', u.username,
-                    'display_name', u.display_name,
-                    'level', p.level::text
-                ) ORDER BY p.level DESC), '[]'::json)
-                INTO v_permissions
-                FROM permissions p
-                LEFT JOIN users u ON u.id = p.subject
-                WHERE p.object = v_ref_id;
-
-                -- For each user with a permission on this ref, send a notification
                 FOR affected_user IN
                     SELECT subject FROM permissions WHERE object = v_ref_id AND subject IS NOT NULL
                 LOOP
-                    PERFORM pg_notify('user_state_subscription',
-                        json_build_object(
-                            'kind', 'upsert',
-                            'user_id', affected_user,
-                            'ref_id', v_ref_id,
-                            'name', v_name,
-                            'type_name', v_type_name,
-                            'theory', v_theory,
-                            'permissions', v_permissions,
-                            'created_at', floor(extract(epoch FROM v_created_at) * 1000)::bigint,
-                            'deleted_at', CASE WHEN v_ref_deleted_at IS NOT NULL
-                                THEN floor(extract(epoch FROM v_ref_deleted_at) * 1000)::bigint
-                                ELSE NULL END,
-                            'parent', v_parent
-                        )::text
-                    );
+                    PERFORM notify_user_state_upsert(v_ref_id, affected_user);
                 END LOOP;
                 RETURN NEW;
             END
@@ -359,6 +268,11 @@ impl Operation<Postgres> for MigrationOperation {
             .await?;
 
         sqlx::query(r#"DROP FUNCTION IF EXISTS notify_snapshot_change;"#)
+            .execute(&mut *tx)
+            .await?;
+
+        // Drop the shared helper last since trigger functions depended on it.
+        sqlx::query(r#"DROP FUNCTION IF EXISTS notify_user_state_upsert;"#)
             .execute(&mut *tx)
             .await?;
 
