@@ -1,5 +1,4 @@
 use firebase_auth::FirebaseUser;
-use serde::Serialize;
 use sqlx::PgPool;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -35,20 +34,6 @@ pub struct AppCtx {
 
     /// Authenticated Firebase user, if any.
     pub user: Option<FirebaseUser>,
-}
-
-/// A page of items along with pagination metadata.
-#[qubit::ts]
-#[derive(Clone, Debug, Serialize)]
-pub struct Paginated<T> {
-    /// The total number of items matching the query criteria.
-    pub total: i32,
-
-    /// The number of items skipped.
-    pub offset: i32,
-
-    /// The items in the current page.
-    pub items: Vec<T>,
 }
 
 /// Top-level application error.
