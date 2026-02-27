@@ -120,7 +120,21 @@ function DocumentRow(props: DocumentRowProps) {
         }
         const parentId = uuidStringify(parentBytes);
         const parentDoc = userState.documents[parentId];
-        const parentName = parentDoc?.name || "Untitled";
+
+        // If parent document doesn't exist, show as orphaned
+        if (!parentDoc) {
+            let prefix = "";
+            if (props.doc.typeName === "diagram") {
+                prefix = "Orphaned diagram";
+            } else if (props.doc.typeName === "analysis") {
+                prefix = "Orphaned analysis";
+            } else {
+                return undefined;
+            }
+            return { prefix, parentId: undefined, parentName: undefined, parentType: undefined };
+        }
+
+        const parentName = parentDoc.name || "Untitled";
         let prefix = "";
         if (props.doc.typeName === "diagram") {
             prefix = "Diagram in ";
@@ -129,7 +143,7 @@ function DocumentRow(props: DocumentRowProps) {
         } else {
             return undefined;
         }
-        return { prefix, parentId, parentName, parentType: parentDoc?.typeName };
+        return { prefix, parentId, parentName, parentType: parentDoc.typeName };
     });
 
     return (
@@ -148,14 +162,19 @@ function DocumentRow(props: DocumentRowProps) {
                 <Show when={parentInfo()}>
                     {(info) => (
                         <span class="parent-description">
-                            <span class="parent-prefix">{info().prefix}</span>
-                            <A
-                                href={`/${info().parentType}/${info().parentId}`}
-                                class="parent-link"
-                                onClick={(e) => e.stopPropagation()}
+                            <Show
+                                when={info().parentId && info().parentType}
+                                fallback={<span class="parent-prefix">{info().prefix}</span>}
                             >
-                                {info().parentName}
-                            </A>
+                                <span class="parent-prefix">{info().prefix}</span>
+                                <A
+                                    href={`/${info().parentType}/${info().parentId}`}
+                                    class="parent-link"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    {info().parentName}
+                                </A>
+                            </Show>
                         </span>
                     )}
                 </Show>
