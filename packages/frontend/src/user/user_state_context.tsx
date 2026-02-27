@@ -4,7 +4,7 @@ import invariant from "tiny-invariant";
 
 export const INITIAL_USER_STATE: UserState = {
     profile: { username: null, displayName: null },
-    users: {},
+    knownUsers: {},
     documents: {},
 };
 
@@ -21,7 +21,7 @@ export function useUserState(): UserState {
 export function permissionUserName(
     p: PermissionInfo,
     currentUserId: string | undefined,
-    users: { [key in string]?: UserInfo },
+    known_users: { [key in string]?: UserInfo },
 ): string {
     if (p.user === null) {
         return "anyone";
@@ -29,7 +29,7 @@ export function permissionUserName(
     if (p.user === currentUserId) {
         return "me";
     }
-    const info = users[p.user];
+    const info = known_users[p.user];
     return info?.username ?? info?.displayName ?? "unknown";
 }
 
@@ -37,13 +37,13 @@ export function permissionUserName(
 export function formatOwners(
     permissions: Array<PermissionInfo>,
     currentUserId: string | undefined,
-    users: { [key in string]?: UserInfo },
+    known_users: { [key in string]?: UserInfo },
 ): string {
     const owners = permissions.filter((p) => p.level === "Own");
     if (owners.length === 0) {
         return "none";
     }
-    return owners.map((o) => permissionUserName(o, currentUserId, users)).join(", ");
+    return owners.map((o) => permissionUserName(o, currentUserId, known_users)).join(", ");
 }
 
 /** Get the current user's permission level from the permissions list. */

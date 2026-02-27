@@ -175,7 +175,9 @@ pub struct UserState {
     /// The user's own profile information.
     pub profile: UserInfo,
     /// All users referenced in document permissions, keyed by user ID.
-    pub users: HashMap<String, UserInfo>,
+    #[autosurgeon(rename = "knownUsers")]
+    #[ts(rename = "knownUsers")]
+    pub known_users: HashMap<String, UserInfo>,
     /// The document refs accessible to the user, keyed by ref UUID string.
     /// We cannot use the Uuid type here because Automerge requires the keys to have a `AsRef<str>` impl.
     pub documents: HashMap<String, DocInfo>,
@@ -185,11 +187,8 @@ impl UserState {
     /// Creates a new empty UserState for the given user.
     pub fn new(_user_id: &str) -> Self {
         Self {
-            profile: UserInfo {
-                username: None,
-                display_name: None,
-            },
-            users: HashMap::new(),
+            profile: UserInfo { username: None, display_name: None },
+            known_users: HashMap::new(),
             documents: HashMap::new(),
         }
     }
@@ -359,7 +358,7 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
         .flat_map(|doc| doc.permissions.iter().filter_map(|p| p.user.clone()))
         .collect();
 
-    let users: HashMap<String, UserInfo> = if user_ids.is_empty() {
+    let known_users: HashMap<String, UserInfo> = if user_ids.is_empty() {
         HashMap::new()
     } else {
         let user_rows = sqlx::query!(
@@ -393,29 +392,25 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
     );
 
     // Fetch the user's own profile info.
-    let profile_row =
-        sqlx::query!(
-            r#"
+    let profile_row = sqlx::query!(
+        r#"
         SELECT username, display_name FROM users
         WHERE id = $1
         "#,
-            user_id,
-        )
-            .fetch_optional(db)
-            .await?;
+        user_id,
+    )
+    .fetch_optional(db)
+    .await?;
 
     let profile = match profile_row {
         Some(row) => UserInfo {
             username: row.username.map(Text::from),
             display_name: row.display_name.map(Text::from),
         },
-        None => UserInfo {
-            username: None,
-            display_name: None,
-        },
+        None => UserInfo { username: None, display_name: None },
     };
 
-    let mut user_state = UserState { profile, users, documents };
+    let mut user_state = UserState { profile, known_users, documents };
     user_state.recompute_children();
     Ok(user_state)
 }
@@ -539,7 +534,10 @@ pub mod arbitrary {
         type Strategy = BoxedStrategy<Self>;
 
         fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-            (proptest::option::of(arb::<uuid::Uuid>().prop_map(|u| format!("test_{u}"))), any::<PermissionLevel>())
+            (
+                proptest::option::of(arb::<uuid::Uuid>().prop_map(|u| format!("test_{u}"))),
+                any::<PermissionLevel>(),
+            )
                 .prop_map(|(user, level)| PermissionInfo { user, level })
                 .boxed()
         }
@@ -683,13 +681,20 @@ pub mod arbitrary {
                     0..5,
                 )
                 .prop_map(move |entries| {
-                    let mut users = HashMap::new();
+                    let mut known_users = HashMap::new();
                     let mut documents = HashMap::new();
                     for (key, doc_info, entry_users) in entries {
-                        users.extend(entry_users);
+                        known_users.extend(entry_users);
                         documents.insert(key, doc_info);
                     }
-                    (user_id.clone(), UserState { profile: profile.clone(), users, documents })
+                    (
+                        user_id.clone(),
+                        UserState {
+                            profile: profile.clone(),
+                            known_users,
+                            documents,
+                        },
+                    )
                 })
             },
         )

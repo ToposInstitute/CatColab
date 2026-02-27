@@ -82,7 +82,7 @@ profile: UserInfo,
 /**
  * All users referenced in document permissions, keyed by user ID.
  */
-users: { [key in string]?: UserInfo }, 
+knownUsers: { [key in string]?: UserInfo }, 
 /**
  * The document refs accessible to the user, keyed by ref UUID string.
  * We cannot use the Uuid type here because Automerge requires the keys to have a `AsRef<str>` impl.

@@ -94,8 +94,12 @@ function DocumentRow(props: DocumentRowProps) {
     const userState = useUserState();
 
     const currentUserId = auth.currentUser?.uid;
-    const ownerNames = () => formatOwners(props.doc.permissions, currentUserId, userState.users);
-    const userPermission = () => currentUserPermission(props.doc.permissions, currentUserId);
+    const ownerNames = createMemo(() =>
+        formatOwners(props.doc.permissions, currentUserId, userState.knownUsers),
+    );
+    const userPermission = createMemo(() =>
+        currentUserPermission(props.doc.permissions, currentUserId),
+    );
 
     const iconLetters = createMemo(() => {
         const theoryId = props.doc.theory;

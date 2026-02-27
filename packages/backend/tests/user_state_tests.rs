@@ -187,8 +187,9 @@ mod integration_tests {
             "Document theory should be 'test-theory'"
         );
         assert!(
-            doc.permissions.iter().any(|p| p.level == PermissionLevel::Own
-                && p.user.as_deref() == Some(&user_id)),
+            doc.permissions
+                .iter()
+                .any(|p| p.level == PermissionLevel::Own && p.user.as_deref() == Some(&user_id)),
             "User should have Own permission"
         );
 
@@ -248,8 +249,9 @@ mod integration_tests {
         assert_eq!(user_state.documents.len(), 1, "Reader should see one document");
         let doc = user_state.documents.get(&ref_id.to_string()).expect("Document should exist");
         assert!(
-            doc.permissions.iter().any(|p| p.level == PermissionLevel::Read
-                && p.user.as_deref() == Some(&reader_id)),
+            doc.permissions
+                .iter()
+                .any(|p| p.level == PermissionLevel::Read && p.user.as_deref() == Some(&reader_id)),
             "Reader should have Read permission"
         );
 
@@ -469,16 +471,18 @@ mod integration_tests {
         assert_eq!(user1_state.documents.len(), 1, "User1 should see one document");
         let doc1 = user1_state.documents.get(&ref_id.to_string()).expect("Document should exist");
         assert!(
-            doc1.permissions.iter().any(|p| p.level == PermissionLevel::Write
-                && p.user.as_deref() == Some(&user1_id)),
+            doc1.permissions
+                .iter()
+                .any(|p| p.level == PermissionLevel::Write && p.user.as_deref() == Some(&user1_id)),
             "User1 should have Write permission"
         );
 
         assert_eq!(user2_state.documents.len(), 1, "User2 should see one document");
         let doc2 = user2_state.documents.get(&ref_id.to_string()).expect("Document should exist");
         assert!(
-            doc2.permissions.iter().any(|p| p.level == PermissionLevel::Read
-                && p.user.as_deref() == Some(&user2_id)),
+            doc2.permissions
+                .iter()
+                .any(|p| p.level == PermissionLevel::Read && p.user.as_deref() == Some(&user2_id)),
             "User2 should have Read permission"
         );
 
@@ -1146,7 +1150,7 @@ mod integration_tests {
         let reader_state_before = state_before.as_ref().unwrap();
         assert_eq!(
             reader_state_before
-                .users
+                .known_users
                 .get(&owner_id)
                 .and_then(|u| u.display_name.as_ref())
                 .map(|t| t.as_str()),
@@ -1194,7 +1198,7 @@ mod integration_tests {
             .expect("Owner should appear in permissions after update");
         assert_eq!(
             state_after
-                .users
+                .known_users
                 .get(&owner_id)
                 .and_then(|u| u.display_name.as_ref())
                 .map(|t| t.as_str()),
@@ -1340,7 +1344,7 @@ mod integration_tests {
                 // Ensure all users referenced in permissions exist
                 for perm in &doc.permissions {
                     if let Some(user_id) = &perm.user {
-                        let user_info = state.users.get(user_id);
+                        let user_info = state.known_users.get(user_id);
                         sqlx::query!(
                             r#"
                         INSERT INTO users (id, created, signed_in, username, display_name)
