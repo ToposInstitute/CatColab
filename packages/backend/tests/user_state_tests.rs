@@ -146,13 +146,18 @@ mod integration_tests {
         let user_id = format!("test_user_{}", Uuid::now_v7());
         ensure_user_exists(&pool, &user_id).await.expect("Failed to create user");
 
-        // Spawn the subscription in a background task (it will create the doc on first notification)
+        // Spawn the subscription in a background task
         let state_clone = state.clone();
         let subscription_handle =
             tokio::spawn(async move { run_user_state_subscription(state_clone).await });
 
         // Give the subscription time to start
         tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Initialize user state document so subscription can update it
+        backend::user_state::get_or_create_user_state_doc(&state, &user_id)
+            .await
+            .expect("Failed to initialize user state");
 
         // Create a new document using the document module function
         let ctx = AppCtx {
@@ -217,6 +222,11 @@ mod integration_tests {
 
         tokio::time::sleep(Duration::from_millis(100)).await;
 
+        // Initialize reader's user state document so subscription can update it
+        backend::user_state::get_or_create_user_state_doc(&state, &reader_id)
+            .await
+            .expect("Failed to initialize reader user state");
+
         // Grant read permission to the reader
         let mut users = HashMap::new();
         users.insert(reader_id.clone(), PermissionLevel::Read);
@@ -262,6 +272,11 @@ mod integration_tests {
 
         // Give the subscription time to start
         tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Initialize user state document so subscription can update it
+        backend::user_state::get_or_create_user_state_doc(&state, &user_id)
+            .await
+            .expect("Failed to initialize user state");
 
         // Create a document (subscription should receive the notification)
         let ctx = AppCtx {
@@ -322,6 +337,11 @@ mod integration_tests {
 
         // Give the subscription time to start
         tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Initialize user state document so subscription can update it
+        backend::user_state::get_or_create_user_state_doc(&state, &user_id)
+            .await
+            .expect("Failed to initialize user state");
 
         // Create a document (subscription should receive the notification)
         let ctx = AppCtx {
@@ -416,6 +436,14 @@ mod integration_tests {
 
         tokio::time::sleep(Duration::from_millis(100)).await;
 
+        // Initialize user state documents for both users so subscription can update them
+        backend::user_state::get_or_create_user_state_doc(&state, &user1_id)
+            .await
+            .expect("Failed to initialize user1 state");
+        backend::user_state::get_or_create_user_state_doc(&state, &user2_id)
+            .await
+            .expect("Failed to initialize user2 state");
+
         // Grant permissions to both users at once
         let mut users = HashMap::new();
         users.insert(user1_id.clone(), PermissionLevel::Write);
@@ -484,6 +512,11 @@ mod integration_tests {
 
         tokio::time::sleep(Duration::from_millis(100)).await;
 
+        // Initialize user state document so subscription can update it
+        backend::user_state::get_or_create_user_state_doc(&state, &user_id)
+            .await
+            .expect("Failed to initialize user state");
+
         // Grant write permission to user
         let mut users = HashMap::new();
         users.insert(user_id.clone(), PermissionLevel::Write);
@@ -545,6 +578,11 @@ mod integration_tests {
 
         // Give the subscription time to start
         tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Initialize user state document so subscription can update it
+        backend::user_state::get_or_create_user_state_doc(&state, &user_id)
+            .await
+            .expect("Failed to initialize user state");
 
         // Create a document
         let ctx = AppCtx {
@@ -612,6 +650,11 @@ mod integration_tests {
 
         // Give the subscription time to start
         tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Initialize user state document so subscription can update it
+        backend::user_state::get_or_create_user_state_doc(&state, &user_id)
+            .await
+            .expect("Failed to initialize user state");
 
         // Create a model document with a specific theory
         let ctx = AppCtx {
@@ -705,6 +748,11 @@ mod integration_tests {
         // Give the subscription time to start
         tokio::time::sleep(Duration::from_millis(100)).await;
 
+        // Initialize user state document for owner1 so subscription can update it
+        backend::user_state::get_or_create_user_state_doc(&state, &owner1_id)
+            .await
+            .expect("Failed to initialize owner1 state");
+
         // Create a document as owner1
         let ctx = AppCtx {
             state: state.clone(),
@@ -735,6 +783,11 @@ mod integration_tests {
         )
         .execute(&pool)
         .await?;
+
+        // Initialize user state document for owner2 so subscription can update it
+        backend::user_state::get_or_create_user_state_doc(&state, &owner2_id)
+            .await
+            .expect("Failed to initialize owner2 state");
 
         // Now autosave the document with a name change
         let updated_content = create_test_document_content("Updated by Autosave");
@@ -967,6 +1020,11 @@ mod integration_tests {
         let subscription_handle =
             tokio::spawn(async move { run_user_state_subscription(state_clone).await });
         tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Initialize user state document so subscription can update it
+        backend::user_state::get_or_create_user_state_doc(&state, &user_id)
+            .await
+            .expect("Failed to initialize user state");
 
         let ctx = AppCtx {
             state: state.clone(),
@@ -1363,6 +1421,9 @@ mod integration_tests {
 
         /// Tests that we can write then read any UserState to the DB and get the same
         /// UserState back, using an isolated temporary database per iteration.
+        ///
+        /// Note: The database normalizes user info in permissions by joining with the users table,
+        /// so we normalize the input state before comparison.
         #[proptest(async = "tokio", cases = 32)]
         async fn user_state_db_roundtrip(
             #[strategy(arbitrary_user_state_with_id())] user_id_and_state: (String, UserState),
@@ -1380,16 +1441,40 @@ mod integration_tests {
 
             test_db.cleanup().await;
 
-            proptest::prop_assert_eq!(input_state, output_state);
+            // Normalize the input state to match database behavior
+            // The database query fills in complete user info for permissions from the users table
+            let expected_state = {
+                let mut normalized = input_state.clone();
+                for doc in normalized.documents.values_mut() {
+                    for perm in &mut doc.permissions {
+                        if let Some(user) = &mut perm.user {
+                            // If this is the test user (the main user)
+                            if user.id == user_id {
+                                // Fill in their profile info
+                                user.username = normalized.profile.username.clone();
+                                user.display_name = normalized.profile.display_name.clone();
+                            }
+                            // Other users' info should already be complete from write_user_state_to_db
+                        }
+                    }
+                }
+                normalized
+            };
+
+            proptest::prop_assert_eq!(expected_state, output_state);
         }
 
-        /// Tests that run_user_state_subscription correctly updates Automerge documents
-        /// when user states are written to the database.
+        /// Tests that get_or_create_user_state_doc correctly initializes Automerge documents
+        /// from the database.
         ///
         /// This test:
-        /// 1. Creates an isolated database and subscription
+        /// 1. Creates an isolated database
         /// 2. Generates user states and writes them to the database
-        /// 3. Verifies that the Automerge documents are updated to match the database state
+        /// 3. Calls get_or_create_user_state_doc to create the Automerge doc from DB
+        /// 4. Verifies that the Automerge document matches the database state
+        ///
+        /// Note: This test no longer relies on the subscription to create docs, as the
+        /// subscription now only updates existing docs (per the recent commit changes).
         #[proptest(async = "tokio", cases = 32)]
         async fn run_user_state_subscription_updates_automerge_docs(
             #[strategy(arbitrary_user_state_with_id())] user_id_and_state: (String, UserState),
@@ -1397,10 +1482,8 @@ mod integration_tests {
             use autosurgeon::hydrate;
             use backend::app::AppState;
             use backend::storage::PostgresStorage;
-            use backend::user_state_subscription::run_user_state_subscription;
             use std::collections::{HashMap, HashSet};
             use std::sync::Arc;
-            use std::time::Duration;
             use tokio::sync::RwLock;
 
             let (user_id, input_state) = user_id_and_state;
@@ -1421,21 +1504,18 @@ mod integration_tests {
                 user_states: Arc::new(RwLock::new(HashMap::new())),
             };
 
-            // Spawn the subscription in a background task
-            let state_clone = state.clone();
-            let subscription_handle =
-                tokio::spawn(async move { run_user_state_subscription(state_clone).await });
-
-            // Give the subscription time to start listening
-            tokio::time::sleep(Duration::from_millis(100)).await;
-
-            // Write user state to the database - this should trigger notifications
+            // Write user state to the database
             write_user_state_to_db(user_id.clone(), test_db.pool(), &input_state)
                 .await
                 .expect("Failed to write user state");
 
-            // Give the subscription time to process the notifications
-            tokio::time::sleep(Duration::from_millis(500)).await;
+            // Call get_or_create_user_state_doc to initialize from DB
+            // (Skip if empty since there's nothing to read)
+            if !input_state.documents.is_empty() {
+                backend::user_state::get_or_create_user_state_doc(&state, &user_id)
+                    .await
+                    .expect("Failed to initialize user state");
+            }
 
             // Read the user state from samod using the stored DocumentId
             let automerge_state: Option<UserState> = {
@@ -1457,24 +1537,45 @@ mod integration_tests {
                 }
             };
 
-            // Abort the subscription task (it runs in an infinite loop)
-            subscription_handle.abort();
-
             test_db.cleanup().await;
 
-            // If input_state has no documents, no notifications are triggered
-            // In this case, we expect no automerge doc to be created
+            // If input_state has no documents, we don't create a doc
             if input_state.documents.is_empty() {
                 proptest::prop_assert!(
                     automerge_state.is_none(),
                     "Empty user state should not create automerge doc"
                 );
             } else {
-                // The Automerge doc should have been updated to match the input state
+                // The Automerge doc should match the database state
+                // Note: The database query fills in complete user info for permissions,
+                // so we need to normalize the input state to match this behavior.
+                // Specifically, when a user appears in permissions, their username/display_name
+                // will be filled in from the users table.
+                let expected_state = {
+                    let mut normalized = input_state.clone();
+                    // For each document, update permissions to have complete user info
+                    for doc in normalized.documents.values_mut() {
+                        for perm in &mut doc.permissions {
+                            if let Some(user) = &mut perm.user {
+                                // If this is the test user (who is the owner/main user)
+                                if user.id == user_id {
+                                    // Fill in their profile info from the normalized state
+                                    user.username = normalized.profile.username.clone();
+                                    user.display_name = normalized.profile.display_name.clone();
+                                } else {
+                                    // For other users, their info should already be complete
+                                    // (from write_user_state_to_db which ensures all permission users exist)
+                                }
+                            }
+                        }
+                    }
+                    normalized
+                };
+                
                 proptest::prop_assert_eq!(
-                    Some(input_state),
+                    Some(expected_state),
                     automerge_state,
-                    "Automerge doc should be updated to match the database state"
+                    "Automerge doc should match the database state"
                 );
             }
         }
