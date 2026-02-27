@@ -290,7 +290,7 @@ pub enum InvalidDblModel {
     CodType(QualifiedName),
 
     /// Equation between morphisms has one or more errors.
-    Eq(usize, NonEmpty<InvalidPathEq>),
+    Eqn(Option<usize>, NonEmpty<InvalidPathEq>),
 
     /// Tried to us a feature not yet supported by the elaborator.
     UnsupportedFeature(Feature),
@@ -308,4 +308,6 @@ pub enum InvalidDblModel {
 pub enum Feature {
     /// Morphism type that is not a basic type or a hom type.
     ComplexMorType,
+    /// Equation between one or more undefined morphisms.
+    PartialEquation,
 }
