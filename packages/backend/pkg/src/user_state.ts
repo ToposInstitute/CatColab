@@ -47,9 +47,9 @@ children: Array<Uint8Array>, };
  */
 export type PermissionInfo = { 
 /**
- * The user this permission applies to, or `None` for the public "anyone" permission.
+ * The user ID this permission applies to, or `None` for the public "anyone" permission.
  */
-user: UserInfo | null, 
+user: string | null, 
 /**
  * The permission level granted.
  */
@@ -62,10 +62,6 @@ level: PermissionLevel, };
  * for compatibility with Automerge/Autosurgeon serialization.
  */
 export type UserInfo = { 
-/**
- * Unique identifier for the user.
- */
-id: string, 
 /**
  * The user's chosen username, if set.
  */
@@ -83,6 +79,10 @@ export type UserState = {
  * The user's own profile information.
  */
 profile: UserInfo, 
+/**
+ * All users referenced in document permissions, keyed by user ID.
+ */
+users: { [key in string]?: UserInfo }, 
 /**
  * The document refs accessible to the user, keyed by ref UUID string.
  * We cannot use the Uuid type here because Automerge requires the keys to have a `AsRef<str>` impl.
