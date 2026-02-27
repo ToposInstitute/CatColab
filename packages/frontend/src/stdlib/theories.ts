@@ -116,13 +116,13 @@ stdTheories.add(
 
 stdTheories.add(
     {
-        id: "unary-dec",
+        id: "dec",
         name: "Discrete exterior calculus (DEC)",
         description: "DEC operators on a geometrical space",
         iconLetters: ["D", "c"],
         group: "Experimental",
     },
-    async () => (await import("./theories/unary-dec")).default,
+    async () => (await import("./theories/dec")).default,
 );
 
 stdTheories.add(

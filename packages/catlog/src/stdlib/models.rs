@@ -222,9 +222,6 @@ pub fn dec(th: Rc<ModalDblTheory>) -> ModalDblModel {
     }
 
     model
-    // for (dim, form) in itertools::iproduct(forms.enumerate()) {
-    //     model.add_mor(
-    // }
 }
 
 #[cfg(test)]
