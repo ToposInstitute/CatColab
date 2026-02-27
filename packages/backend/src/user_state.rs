@@ -348,12 +348,10 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
     );
 
     // Fetch the user's own profile info.
-    let profile_row = sqlx::query!(
-        "SELECT id, username, display_name FROM users WHERE id = $1",
-        user_id,
-    )
-    .fetch_optional(db)
-    .await?;
+    let profile_row =
+        sqlx::query!("SELECT id, username, display_name FROM users WHERE id = $1", user_id,)
+            .fetch_optional(db)
+            .await?;
 
     let profile = match profile_row {
         Some(row) => UserInfo {
@@ -373,6 +371,12 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
     Ok(user_state)
 }
 
+/// Gets the user state document ID for a given user.
+pub async fn get_user_state_doc(state: &AppState, user_id: &str) -> Option<DocumentId> {
+    let states = state.user_states.read().await;
+    states.get(user_id).cloned()
+}
+
 /// Gets or creates the user state document for a given user.
 ///
 /// This function reads the user's current state from the database and either:
@@ -385,16 +389,13 @@ pub async fn get_or_create_user_state_doc(
     debug!(user_id = %user_id, "Getting or creating user state document");
 
     // Check if we already have a document for this user
-    {
-        let states = state.user_states.read().await;
-        if let Some(doc_id) = states.get(user_id) {
-            debug!(
-                user_id = %user_id,
-                doc_id = %doc_id,
-                "Found existing user state document"
-            );
-            return Ok(doc_id.clone());
-        }
+    if let Some(doc_id) = get_user_state_doc(state, user_id).await {
+        debug!(
+            user_id = %user_id,
+            doc_id = %doc_id,
+            "Found existing user state document"
+        );
+        return Ok(doc_id);
     }
 
     debug!(user_id = %user_id, "No existing document, creating new one");

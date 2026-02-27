@@ -1047,8 +1047,9 @@ mod integration_tests {
 
         // Create a document as owner
         let content = create_test_document_content("Shared Document");
-        let ref_id =
-            document::new_ref(owner_ctx.clone(), content).await.expect("Failed to create ref");
+        let ref_id = document::new_ref(owner_ctx.clone(), content)
+            .await
+            .expect("Failed to create ref");
 
         // Grant read permission to the reader
         let mut users = HashMap::new();
@@ -1149,11 +1150,7 @@ mod integration_tests {
 
         let owner_state_after = owner_state_after.expect("Owner user state should exist");
         assert_eq!(
-            owner_state_after
-                .profile
-                .display_name
-                .as_ref()
-                .map(|t| t.as_str()),
+            owner_state_after.profile.display_name.as_ref().map(|t| t.as_str()),
             Some("Updated Name"),
             "Owner's own profile should be updated to 'Updated Name'"
         );
