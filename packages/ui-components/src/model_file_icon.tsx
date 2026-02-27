@@ -46,24 +46,30 @@ export function ModelFileIcon(props: LucideProps & ModelFileIconProps) {
             <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" />
             <path d="m14 2v5a1 1 0 0 0 1 1h5" />
             <text
-                x="13.777838"
-                y="18.049967"
-                font-size="12.82px"
-                stroke-width=".641"
-                text-align="end"
+                x="14"
+                y="18"
+                font-size="13px"
+                font-weight="bold"
+                stroke-width="0"
                 text-anchor="end"
+                dominant-baseline="auto"
+                text-rendering="optimizeLegibility"
+                shape-rendering="crispEdges"
                 font-family="'Source Code Pro'"
                 fill={localProps.color ?? defaultAttributes.stroke}
             >
                 {localProps.letters[0]}
             </text>
             <text
-                x="18.3403"
-                y="18.089581"
-                font-size="7.961px"
-                stroke-width=".39806"
-                text-align="end"
+                x="18"
+                y="18"
+                font-size="8px"
+                font-weight="bold"
+                stroke-width="0"
                 text-anchor="end"
+                dominant-baseline="auto"
+                text-rendering="optimizeLegibility"
+                shape-rendering="crispEdges"
                 font-family="'Source Code Pro'"
                 fill={localProps.color ?? defaultAttributes.stroke}
             >
