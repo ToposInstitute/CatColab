@@ -99,6 +99,7 @@ function DeleteButton(props: { doc: DocInfo & { refId: string } }) {
 
     const handleDeleteClick = async (e: MouseEvent) => {
         e.stopPropagation();
+        e.preventDefault();
         await actions.showDeleteDialog({
             refId: props.doc.refId,
             name: props.doc.name,
@@ -107,7 +108,7 @@ function DeleteButton(props: { doc: DocInfo & { refId: string } }) {
     };
 
     return (
-        <div class="delete-cell">
+        <div class="delete-cell" onClick={(e) => e.stopPropagation()}>
             {canDelete && (
                 <IconButton variant="danger" onClick={handleDeleteClick} tooltip="Delete document">
                     <X size={16} />

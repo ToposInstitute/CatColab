@@ -148,6 +148,7 @@ function DocumentRow(props: DocumentRowProps) {
                             <A
                                 href={`/${info().parentType}/${info().parentId}`}
                                 class="parent-link"
+                                onClick={(e) => e.stopPropagation()}
                             >
                                 {info().parentName}
                             </A>

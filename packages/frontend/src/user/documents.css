@@ -47,7 +47,13 @@
 .ref-grid-header {
     font-weight: bold;
     border-bottom: 1px solid var(--color-gray-550);
-    scrollbar-gutter: stable;
+}
+
+/* Adjust for scrollbar in Chromium browsers only */
+@supports selector(::-webkit-scrollbar) {
+    .ref-grid-header {
+        margin-right: 10px;
+    }
 }
 
 .ref-grid-header > div {
@@ -59,9 +65,27 @@
 
 /* Scroll container for virtual list */
 .ref-grid-scroll {
-    overflow: auto;
-    scrollbar-gutter: stable;
+    overflow-y: scroll;
+    overflow-x: hidden;
     flex: 1;
+    scrollbar-width: thin; /* Firefox */
+}
+
+.ref-grid-scroll::-webkit-scrollbar {
+    width: 10px; /* Chrome, Safari, Edge */
+}
+
+.ref-grid-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.ref-grid-scroll::-webkit-scrollbar-thumb {
+    background: var(--color-gray-700);
+    border-radius: 4px;
+}
+
+.ref-grid-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--color-gray-600);
 }
 
 /* Row styling */
@@ -137,6 +161,7 @@
     display: flex;
     align-items: baseline;
     min-width: 0;
+    overflow: hidden;
 }
 
 .name-cell > span:first-child {
@@ -174,4 +199,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
+    z-index: 1;
 }
