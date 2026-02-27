@@ -94,8 +94,8 @@ function DocumentRow(props: DocumentRowProps) {
     const userState = useUserState();
 
     const currentUserId = auth.currentUser?.uid;
-    const ownerNames = formatOwners(props.doc.permissions, currentUserId, userState.users);
-    const userPermission = currentUserPermission(props.doc.permissions, currentUserId);
+    const ownerNames = () => formatOwners(props.doc.permissions, currentUserId, userState.users);
+    const userPermission = () => currentUserPermission(props.doc.permissions, currentUserId);
 
     const iconLetters = createMemo(() => {
         const theoryId = props.doc.theory;
@@ -128,19 +128,8 @@ function DocumentRow(props: DocumentRowProps) {
         return { prefix, parentId, parentName, parentType: parentDoc?.typeName };
     });
 
-    const handleMouseDown = (e: MouseEvent) => {
-        // Prevent default autoscroll on middle click
-        if (e.button === 1) {
-            e.preventDefault();
-        }
-    };
-
     return (
-        <A
-            href={`/${props.doc.typeName}/${props.doc.refId}`}
-            class="ref-grid-row"
-            onMouseDown={handleMouseDown}
-        >
+        <A href={`/${props.doc.typeName}/${props.doc.refId}`} class="ref-grid-row">
             {props.actionsPosition === "start" && props.renderActions(props.doc)}
             <div>
                 <DocumentTypeIcon
@@ -159,7 +148,6 @@ function DocumentRow(props: DocumentRowProps) {
                             <A
                                 href={`/${info().parentType}/${info().parentId}`}
                                 class="parent-link"
-                                onClick={(e: MouseEvent) => e.stopPropagation()}
                             >
                                 {info().parentName}
                             </A>
@@ -167,8 +155,8 @@ function DocumentRow(props: DocumentRowProps) {
                     )}
                 </Show>
             </div>
-            <div>{ownerNames}</div>
-            <div>{userPermission}</div>
+            <div>{ownerNames()}</div>
+            <div>{userPermission()}</div>
             <div>
                 {new Date(props.doc.createdAt).toLocaleDateString("en-US", {
                     year: "numeric",
