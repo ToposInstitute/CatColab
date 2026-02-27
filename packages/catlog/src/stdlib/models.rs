@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use crate::dbl::{model::*, theory::*};
 use crate::one::{Path, QualifiedPath};
-use crate::zero::{QualifiedName, name};
+use crate::zero::{name, QualifiedName};
 
 /// The positive self-loop.
 ///
@@ -165,6 +165,66 @@ pub fn sir_petri(th: Rc<ModalDblTheory>) -> ModalDblModel {
     );
     model.add_mor(name("recover"), i.into(), r.into(), ModalMorType::Zero(ob_type));
     model
+}
+
+pub fn dec(th: Rc<ModalDblTheory>) -> ModalDblModel {
+    let ob_type = ModalObType::new(name("Object"));
+    let mut model = ModalDblModel::new(th);
+    let forms = vec![name("Form0"), name("Form1"), name("Form2")];
+    for form in forms.clone() {
+        model.add_ob(form, ob_type.clone());
+    }
+
+    let dualforms = vec![name("DualForm0"), name("DualForm1"), name("DualForm2")];
+    for form in dualforms.clone() {
+        model.add_ob(form, ob_type.clone());
+    }
+
+    for (dim, form) in forms.clone().into_iter().enumerate() {
+        model.add_mor(
+            name(format!("partial_{dim}").as_str()),
+            ModalOb::Generator(form.clone()),
+            ModalOb::Generator(form.clone()),
+            ModalMorType::Zero(ob_type.clone()),
+        );
+        model.add_mor(
+            name(format!("hodge_{dim}").as_str()),
+            ModalOb::Generator(form.clone()),
+            ModalOb::Generator(dualforms[3 - dim - 1].clone()),
+            ModalMorType::Zero(ob_type.clone()),
+        );
+
+        if dim >= 2 {
+            continue;
+        }
+
+        model.add_mor(
+            name(format!("d_{dim}").as_str()),
+            ModalOb::Generator(form.clone()),
+            ModalOb::Generator(forms[dim + 1].clone()),
+            ModalMorType::Zero(ob_type.clone()),
+        );
+    }
+
+    let mor_type: ModalMorType = ModeApp::new(name("Multihom")).into();
+    for (i, form1) in forms.iter().enumerate() {
+        for (j, form2) in forms.iter().enumerate() {
+            if !(i < j) || (i + j > 2) {
+                continue;
+            }
+            model.add_mor(
+                name(format!("wedge_{}", i + j).as_str()),
+                ModalOb::List(List::Plain, vec![form1.clone().into(), form2.clone().into()]),
+                forms[i + j].clone().into(),
+                mor_type.clone(),
+            );
+        }
+    }
+
+    model
+    // for (dim, form) in itertools::iproduct(forms.enumerate()) {
+    //     model.add_mor(
+    // }
 }
 
 #[cfg(test)]
