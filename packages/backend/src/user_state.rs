@@ -110,9 +110,6 @@ mod permission_level_text {
 #[derive(Debug, Clone, Eq, PartialEq, Reconcile, Hydrate, TS)]
 #[ts(rename_all = "camelCase", export_to = "user_state.ts")]
 pub struct UserInfo {
-    /// Unique identifier for the user.
-    #[key]
-    pub id: String,
     /// The user's chosen username, if set.
     #[ts(as = "Option<String>")]
     pub username: Option<Text>,
@@ -129,9 +126,9 @@ pub struct UserInfo {
 #[derive(Debug, Clone, Reconcile, Hydrate, TS)]
 #[ts(rename_all = "camelCase", export_to = "user_state.ts")]
 pub struct PermissionInfo {
-    /// The user this permission applies to, or `None` for the public "anyone" permission.
+    /// The user ID this permission applies to, or `None` for the public "anyone" permission.
     #[key]
-    pub user: Option<UserInfo>,
+    pub user: Option<String>,
     /// The permission level granted.
     #[autosurgeon(with = "permission_level_text")]
     pub level: crate::auth::PermissionLevel,
@@ -177,6 +174,8 @@ pub struct DocInfo {
 pub struct UserState {
     /// The user's own profile information.
     pub profile: UserInfo,
+    /// All users referenced in document permissions, keyed by user ID.
+    pub users: HashMap<String, UserInfo>,
     /// The document refs accessible to the user, keyed by ref UUID string.
     /// We cannot use the Uuid type here because Automerge requires the keys to have a `AsRef<str>` impl.
     pub documents: HashMap<String, DocInfo>,
@@ -184,13 +183,13 @@ pub struct UserState {
 
 impl UserState {
     /// Creates a new empty UserState for the given user.
-    pub fn new(user_id: &str) -> Self {
+    pub fn new(_user_id: &str) -> Self {
         Self {
             profile: UserInfo {
-                id: user_id.to_string(),
                 username: None,
                 display_name: None,
             },
+            users: HashMap::new(),
             documents: HashMap::new(),
         }
     }
@@ -226,10 +225,10 @@ impl UserState {
 /// A permission entry as returned from the database JSON aggregation.
 #[derive(Debug, Deserialize)]
 pub struct DbPermission {
-    user_id: Option<String>,
-    username: Option<String>,
-    display_name: Option<String>,
-    level: String,
+    /// The user ID, or `None` for the public "anyone" permission.
+    pub user_id: Option<String>,
+    /// The permission level as a string (e.g., "read", "write", "own").
+    pub level: String,
 }
 
 impl DbPermission {
@@ -242,12 +241,27 @@ impl DbPermission {
             "own" => PermissionLevel::Own,
             _ => return None,
         };
-        let user = self.user_id.as_ref().map(|id| UserInfo {
-            id: id.clone(),
+        let user = self.user_id.clone();
+        Some(PermissionInfo { user, level })
+    }
+}
+
+/// A user info entry as returned from database JSON aggregation.
+#[derive(Debug, Deserialize)]
+pub struct DbUserInfo {
+    /// The user's chosen username, if set.
+    pub username: Option<String>,
+    /// The user's display name, if set.
+    pub display_name: Option<String>,
+}
+
+impl DbUserInfo {
+    /// Convert to a [`UserInfo`] for the user state.
+    pub fn to_user_info(&self) -> UserInfo {
+        UserInfo {
             username: self.username.clone().map(Text::from),
             display_name: self.display_name.clone().map(Text::from),
-        });
-        Some(PermissionInfo { user, level })
+        }
     }
 }
 
@@ -293,12 +307,9 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
             COALESCE(
                 (SELECT json_agg(json_build_object(
                     'user_id', p.subject,
-                    'username', u.username,
-                    'display_name', u.display_name,
                     'level', p.level::text
                 ) ORDER BY p.level DESC)
                 FROM permissions p
-                LEFT JOIN users u ON u.id = p.subject
                 WHERE p.object = refs.id
                 ), '[]'::json
             ) AS "permissions!: sqlx::types::Json<Vec<DbPermission>>"
@@ -327,6 +338,7 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
             let key = row.ref_id.to_string();
             let permissions: Vec<PermissionInfo> =
                 row.permissions.0.iter().filter_map(|p| p.to_permission_info()).collect();
+
             let info = DocInfo {
                 name: Text::from(row.name.unwrap_or_else(|| "untitled".to_string())),
                 type_name: row.type_name.expect("type_name should never be null"),
@@ -341,6 +353,39 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
         })
         .collect();
 
+    // Fetch user info for all users referenced in document permissions.
+    let user_ids: Vec<String> = documents
+        .values()
+        .flat_map(|doc| doc.permissions.iter().filter_map(|p| p.user.clone()))
+        .collect();
+
+    let users: HashMap<String, UserInfo> = if user_ids.is_empty() {
+        HashMap::new()
+    } else {
+        let user_rows = sqlx::query!(
+            r#"
+            SELECT id, username, display_name FROM users
+            WHERE id = ANY($1)
+            "#,
+            &user_ids,
+        )
+        .fetch_all(db)
+        .await?;
+
+        user_rows
+            .into_iter()
+            .map(|row| {
+                (
+                    row.id,
+                    UserInfo {
+                        username: row.username.map(Text::from),
+                        display_name: row.display_name.map(Text::from),
+                    },
+                )
+            })
+            .collect()
+    };
+
     debug!(
         user_id = %user_id,
         document_count = documents.len(),
@@ -349,24 +394,28 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
 
     // Fetch the user's own profile info.
     let profile_row =
-        sqlx::query!("SELECT id, username, display_name FROM users WHERE id = $1", user_id,)
+        sqlx::query!(
+            r#"
+        SELECT username, display_name FROM users
+        WHERE id = $1
+        "#,
+            user_id,
+        )
             .fetch_optional(db)
             .await?;
 
     let profile = match profile_row {
         Some(row) => UserInfo {
-            id: row.id,
             username: row.username.map(Text::from),
             display_name: row.display_name.map(Text::from),
         },
         None => UserInfo {
-            id: user_id,
             username: None,
             display_name: None,
         },
     };
 
-    let mut user_state = UserState { profile, documents };
+    let mut user_state = UserState { profile, users, documents };
     user_state.recompute_children();
     Ok(user_state)
 }
@@ -469,15 +518,14 @@ pub mod arbitrary {
         type Strategy = BoxedStrategy<Self>;
 
         fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-            (arb::<uuid::Uuid>(), any::<Option<String>>(), any::<Option<String>>())
-                .prop_map(|(uuid, username, display_name)| {
+            (any::<Option<String>>(), any::<Option<String>>())
+                .prop_map(|(username, display_name)| {
                     // Filter out empty strings: the DB has a unique constraint on
                     // username, and empty strings are not valid usernames/display
                     // names in practice.
                     let username = username.filter(|s| !s.is_empty());
                     let display_name = display_name.filter(|s| !s.is_empty());
                     UserInfo {
-                        id: format!("test_{uuid}"),
                         username: username.map(Text::from),
                         display_name: display_name.map(Text::from),
                     }
@@ -491,7 +539,7 @@ pub mod arbitrary {
         type Strategy = BoxedStrategy<Self>;
 
         fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-            (any::<Option<UserInfo>>(), any::<PermissionLevel>())
+            (proptest::option::of(arb::<uuid::Uuid>().prop_map(|u| format!("test_{u}"))), any::<PermissionLevel>())
                 .prop_map(|(user, level)| PermissionInfo { user, level })
                 .boxed()
         }
@@ -535,20 +583,23 @@ pub mod arbitrary {
         }
     }
 
-    /// Generates a consistent user state doc info entry (key + DocInfo) where:
+    /// Generates a consistent user state doc info entry (key + DocInfo + users map entries) where:
     /// - The user always has a permission on the document
     /// - An owner (with 'Own' permission) is always present
     /// - If the user's level is Own, they are the owner
     /// - Additional permissions may be generated
+    /// - User info in permissions matches the user's profile (as the DB will fill it in)
     fn doc_info_entry_with_permissions(
         user_id: String,
-    ) -> impl Strategy<Value = (String, DocInfo)> {
+        user_profile: UserInfo,
+    ) -> impl Strategy<Value = (String, DocInfo, HashMap<String, UserInfo>)> {
         (
             any::<String>(),                             // name
             any::<String>(),                             // type_name
             arb::<uuid::Uuid>(),                         // ref_id (used as map key)
             any::<PermissionLevel>(),                    // user's permission_level
-            any::<UserInfo>(),                           // other owner (always present)
+            arb::<uuid::Uuid>(),                         // other owner id
+            any::<UserInfo>(),                           // other owner info
             0i64..253402300799i64,                       // created_at seconds
             proptest::option::of(0i64..253402300799i64), // deleted_at seconds
         )
@@ -558,37 +609,36 @@ pub mod arbitrary {
                     type_name,
                     ref_id,
                     user_level,
-                    mut other_owner,
+                    other_owner_uuid,
+                    other_owner_info,
                     seconds,
                     deleted_seconds,
                 )| {
                     let mut permissions = Vec::new();
+                    let mut users = HashMap::new();
 
                     if user_level == PermissionLevel::Own {
-                        // User is the owner
+                        // User is the owner - use their full profile info as the DB will fill it in
                         permissions.push(PermissionInfo {
-                            user: Some(UserInfo {
-                                id: user_id.clone(),
-                                username: None,
-                                display_name: None,
-                            }),
+                            user: Some(user_id.clone()),
                             level: PermissionLevel::Own,
                         });
+                        users.insert(user_id.clone(), user_profile.clone());
                     } else {
                         // Someone else is the owner, user has a different permission
-                        if other_owner.id == user_id {
-                            other_owner.id = format!("{}_other", other_owner.id);
+                        let mut other_id = format!("test_{other_owner_uuid}");
+                        if other_id == user_id {
+                            other_id = format!("{}_other", other_id);
                         }
+                        users.insert(other_id.clone(), other_owner_info);
                         permissions.push(PermissionInfo {
-                            user: Some(other_owner),
+                            user: Some(other_id),
                             level: PermissionLevel::Own,
                         });
+                        // User has non-owner permission - use their full profile info
+                        users.insert(user_id.clone(), user_profile.clone());
                         permissions.push(PermissionInfo {
-                            user: Some(UserInfo {
-                                id: user_id.clone(),
-                                username: None,
-                                display_name: None,
-                            }),
+                            user: Some(user_id.clone()),
                             level: user_level,
                         });
                     }
@@ -610,13 +660,14 @@ pub mod arbitrary {
                         // Children are computed, not generated independently.
                         children: Vec::new(),
                     };
-                    (key, info)
+                    (key, info, users)
                 },
             )
     }
 
     /// Generates a (user_id, UserState) pair where the UserState is consistent
-    /// with the user_id (i.e., owned documents have the user as owner).
+    /// with the user_id (i.e., owned documents have the user as owner, and user
+    /// info in permissions matches the profile as the database will fill it in).
     pub fn arbitrary_user_state_with_id() -> impl Strategy<Value = (String, UserState)> {
         (arb::<uuid::Uuid>(), any::<Option<String>>(), any::<Option<String>>()).prop_flat_map(
             |(user_uuid, username, display_name)| {
@@ -624,15 +675,22 @@ pub mod arbitrary {
                 let username = username.filter(|s| !s.is_empty());
                 let display_name = display_name.filter(|s| !s.is_empty());
                 let profile = UserInfo {
-                    id: user_id.clone(),
                     username: username.map(Text::from),
                     display_name: display_name.map(Text::from),
                 };
-                prop::collection::vec(doc_info_entry_with_permissions(user_id.clone()), 0..5)
-                    .prop_map(move |entries| {
-                        let documents: HashMap<String, DocInfo> = entries.into_iter().collect();
-                        (user_id.clone(), UserState { profile: profile.clone(), documents })
-                    })
+                prop::collection::vec(
+                    doc_info_entry_with_permissions(user_id.clone(), profile.clone()),
+                    0..5,
+                )
+                .prop_map(move |entries| {
+                    let mut users = HashMap::new();
+                    let mut documents = HashMap::new();
+                    for (key, doc_info, entry_users) in entries {
+                        users.extend(entry_users);
+                        documents.insert(key, doc_info);
+                    }
+                    (user_id.clone(), UserState { profile: profile.clone(), users, documents })
+                })
             },
         )
     }

@@ -98,7 +98,7 @@ function RestoreButton(props: { doc: DocInfo & { refId: string } }) {
 
     const currentUserId = auth.currentUser?.uid;
     const canRestore = props.doc.permissions.some(
-        (p) => p.user !== null && p.user.id === currentUserId && p.level === "Own",
+        (p) => p.user !== null && p.user === currentUserId && p.level === "Own",
     );
 
     const [showError, setShowError] = createSignal(false);

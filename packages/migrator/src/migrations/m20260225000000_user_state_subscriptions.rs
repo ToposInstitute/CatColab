@@ -50,6 +50,7 @@ impl Operation<Postgres> for MigrationOperation {
                 v_created_at TIMESTAMPTZ;
                 v_ref_deleted_at TIMESTAMPTZ;
                 v_permissions JSON;
+                v_users JSON;
                 v_parent UUID;
             BEGIN
                 -- Get ref metadata from head snapshot
@@ -68,17 +69,28 @@ impl Operation<Postgres> for MigrationOperation {
                 JOIN snapshots ON snapshots.id = refs.head
                 WHERE refs.id = p_ref_id;
 
-                -- Build permissions JSON array
+                -- Build permissions JSON array (user_id and level only)
                 SELECT COALESCE(json_agg(json_build_object(
                     'user_id', p.subject,
-                    'username', u.username,
-                    'display_name', u.display_name,
                     'level', p.level::text
                 ) ORDER BY p.level DESC), '[]'::json)
                 INTO v_permissions
                 FROM permissions p
-                LEFT JOIN users u ON u.id = p.subject
                 WHERE p.object = p_ref_id;
+
+                -- Build users JSON object (user_id -> {username, display_name})
+                SELECT COALESCE(json_object_agg(
+                    u.id, json_build_object(
+                        'username', u.username,
+                        'display_name', u.display_name
+                    )
+                ), '{}'::json)
+                INTO v_users
+                FROM users u
+                WHERE u.id IN (
+                    SELECT p.subject FROM permissions p
+                    WHERE p.object = p_ref_id AND p.subject IS NOT NULL
+                );
 
                 -- Send upsert notification
                 PERFORM pg_notify('user_state_subscription',
@@ -90,6 +102,7 @@ impl Operation<Postgres> for MigrationOperation {
                         'type_name', v_type_name,
                         'theory', v_theory,
                         'permissions', v_permissions,
+                        'users', v_users,
                         'created_at', floor(extract(epoch FROM v_created_at) * 1000)::bigint,
                         'deleted_at', CASE WHEN v_ref_deleted_at IS NOT NULL
                             THEN floor(extract(epoch FROM v_ref_deleted_at) * 1000)::bigint
@@ -198,19 +211,13 @@ impl Operation<Postgres> for MigrationOperation {
         .execute(&mut *tx)
         .await?;
 
-        // Notify affected users when a user's display_name or username changes.
-        // Sends two kinds of notifications:
-        // 1. A profile_update to the user themselves (updates their UserState.profile).
-        // 2. Upsert notifications to all users sharing a document with them
-        //    (updates the permissions payload which includes username/display_name).
+        // Notify when a user's display_name or username changes.
+        // Sends a single profile_update notification. The Rust handler updates
+        // the user's own profile and the users map in all affected users' state docs.
         sqlx::query(
             r#"
             CREATE OR REPLACE FUNCTION notify_user_change() RETURNS trigger AS $$
-            DECLARE
-                v_ref_id UUID;
-                affected_user TEXT;
             BEGIN
-                -- Notify the user themselves about their profile change
                 PERFORM pg_notify('user_state_subscription',
                     json_build_object(
                         'kind', 'profile_update',
@@ -219,19 +226,6 @@ impl Operation<Postgres> for MigrationOperation {
                         'display_name', NEW.display_name
                     )::text
                 );
-
-                -- For each ref the updated user has a permission on...
-                FOR v_ref_id IN
-                    SELECT object FROM permissions WHERE subject = NEW.id
-                LOOP
-                    -- ...notify every user who also has a permission on that ref
-                    FOR affected_user IN
-                        SELECT subject FROM permissions
-                        WHERE object = v_ref_id AND subject IS NOT NULL
-                    LOOP
-                        PERFORM notify_user_state_upsert(v_ref_id, affected_user);
-                    END LOOP;
-                END LOOP;
                 RETURN NEW;
             END
             $$ LANGUAGE plpgsql;
