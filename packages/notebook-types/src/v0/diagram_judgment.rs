@@ -48,9 +48,8 @@ pub struct DiagramMorDecl {
 }
 
 /// A judgment defining part of a diagram in a model.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "tag")]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum DiagramJudgment {
     /// Declares a generating object in the diagram.
     #[serde(rename = "object")]

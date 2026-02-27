@@ -290,6 +290,9 @@ pub fn elaborate_diagram(
         match judgment {
             DiagramJudgment::Object(decl) => diagram.add_ob(&decl)?,
             DiagramJudgment::Morphism(decl) => diagram.add_mor(&decl)?,
+            DiagramJudgment::Equation(_) => {
+                return Err("Elaboration of equations in diagrams is not yet supported".into());
+            }
         }
     }
     Ok(diagram)

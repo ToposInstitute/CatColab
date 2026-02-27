@@ -3,8 +3,8 @@ use std::fs;
 use std::path::Path;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let input_dir = Path::new("examples/v0");
-    let output_dir = Path::new("examples/v1");
+    let input_dir = Path::new("examples/v1");
+    let output_dir = Path::new("examples/v2");
 
     fs::create_dir_all(output_dir)?;
 
