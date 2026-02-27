@@ -188,7 +188,7 @@ mod integration_tests {
         );
         assert!(
             doc.permissions.iter().any(|p| p.level == PermissionLevel::Own
-                && p.user.as_ref().map(|u| u.id.as_str()) == Some(&user_id)),
+                && p.user.as_deref() == Some(&user_id)),
             "User should have Own permission"
         );
 
@@ -249,7 +249,7 @@ mod integration_tests {
         let doc = user_state.documents.get(&ref_id.to_string()).expect("Document should exist");
         assert!(
             doc.permissions.iter().any(|p| p.level == PermissionLevel::Read
-                && p.user.as_ref().map(|u| u.id.as_str()) == Some(&reader_id)),
+                && p.user.as_deref() == Some(&reader_id)),
             "Reader should have Read permission"
         );
 
@@ -470,7 +470,7 @@ mod integration_tests {
         let doc1 = user1_state.documents.get(&ref_id.to_string()).expect("Document should exist");
         assert!(
             doc1.permissions.iter().any(|p| p.level == PermissionLevel::Write
-                && p.user.as_ref().map(|u| u.id.as_str()) == Some(&user1_id)),
+                && p.user.as_deref() == Some(&user1_id)),
             "User1 should have Write permission"
         );
 
@@ -478,7 +478,7 @@ mod integration_tests {
         let doc2 = user2_state.documents.get(&ref_id.to_string()).expect("Document should exist");
         assert!(
             doc2.permissions.iter().any(|p| p.level == PermissionLevel::Read
-                && p.user.as_ref().map(|u| u.id.as_str()) == Some(&user2_id)),
+                && p.user.as_deref() == Some(&user2_id)),
             "User2 should have Read permission"
         );
 
@@ -770,7 +770,7 @@ mod integration_tests {
         assert!(doc1.is_some(), "Owner1 should see the document");
         assert!(
             doc1.unwrap().permissions.iter().any(|p| p.level == PermissionLevel::Own
-                && p.user.as_ref().map(|u| u.id.as_str()) == Some(owner1_id.as_str())),
+                && p.user.as_deref() == Some(owner1_id.as_str())),
             "Owner1 should have Own permission"
         );
 
@@ -823,12 +823,12 @@ mod integration_tests {
         // Both owners should appear in the permissions array
         assert!(
             doc1_after.permissions.iter().any(|p| p.level == PermissionLevel::Own
-                && p.user.as_ref().map(|u| u.id.as_str()) == Some(owner1_id.as_str())),
+                && p.user.as_deref() == Some(owner1_id.as_str())),
             "Owner1 should have Own permission in doc1's permissions"
         );
         assert!(
             doc2_after.permissions.iter().any(|p| p.level == PermissionLevel::Own
-                && p.user.as_ref().map(|u| u.id.as_str()) == Some(owner2_id.as_str())),
+                && p.user.as_deref() == Some(owner2_id.as_str())),
             "Owner2 should have Own permission in doc2's permissions"
         );
 
@@ -1138,15 +1138,16 @@ mod integration_tests {
             .as_ref()
             .and_then(|s| s.documents.get(&ref_id.to_string()))
             .expect("Document should exist in reader state");
-        let owner_perm_before = doc_before
+        let _owner_perm_before = doc_before
             .permissions
             .iter()
-            .find(|p| p.user.as_ref().map(|u| u.id.as_str()) == Some(&owner_id))
+            .find(|p| p.user.as_deref() == Some(&owner_id))
             .expect("Owner should appear in permissions");
+        let reader_state_before = state_before.as_ref().unwrap();
         assert_eq!(
-            owner_perm_before
-                .user
-                .as_ref()
+            reader_state_before
+                .users
+                .get(&owner_id)
                 .and_then(|u| u.display_name.as_ref())
                 .map(|t| t.as_str()),
             Some("Original Name"),
@@ -1186,19 +1187,19 @@ mod integration_tests {
             .documents
             .get(&ref_id.to_string())
             .expect("Document should exist in reader state after update");
-        let owner_perm_after = doc_after
+        let _owner_perm_after = doc_after
             .permissions
             .iter()
-            .find(|p| p.user.as_ref().map(|u| u.id.as_str()) == Some(&owner_id))
+            .find(|p| p.user.as_deref() == Some(&owner_id))
             .expect("Owner should appear in permissions after update");
         assert_eq!(
-            owner_perm_after
-                .user
-                .as_ref()
+            state_after
+                .users
+                .get(&owner_id)
                 .and_then(|u| u.display_name.as_ref())
                 .map(|t| t.as_str()),
             Some("Updated Name"),
-            "Owner's display name should be updated to 'Updated Name' in reader's permissions"
+            "Owner's display name should be updated to 'Updated Name' in reader's users map"
         );
 
         // Check that the owner's own profile was updated
@@ -1338,16 +1339,17 @@ mod integration_tests {
 
                 // Ensure all users referenced in permissions exist
                 for perm in &doc.permissions {
-                    if let Some(user) = &perm.user {
+                    if let Some(user_id) = &perm.user {
+                        let user_info = state.users.get(user_id);
                         sqlx::query!(
                             r#"
                         INSERT INTO users (id, created, signed_in, username, display_name)
                         VALUES ($1, NOW(), NOW(), $2, $3)
                         ON CONFLICT (id) DO NOTHING
                         "#,
-                            user.id.as_str(),
-                            user.username.as_ref().map(|u| u.as_str()),
-                            user.display_name.as_ref().map(|d| d.as_str())
+                            user_id.as_str(),
+                            user_info.and_then(|u| u.username.as_ref()).map(|u| u.as_str()),
+                            user_info.and_then(|u| u.display_name.as_ref()).map(|d| d.as_str())
                         )
                         .execute(db)
                         .await?;
@@ -1400,7 +1402,7 @@ mod integration_tests {
 
                 // Create all permission entries
                 for perm in &doc.permissions {
-                    let subject = perm.user.as_ref().map(|u| u.id.as_str());
+                    let subject = perm.user.as_deref();
                     sqlx::query!(
                         r#"
                     INSERT INTO permissions (subject, object, level)
@@ -1421,9 +1423,6 @@ mod integration_tests {
 
         /// Tests that we can write then read any UserState to the DB and get the same
         /// UserState back, using an isolated temporary database per iteration.
-        ///
-        /// Note: The database normalizes user info in permissions by joining with the users table,
-        /// so we normalize the input state before comparison.
         #[proptest(async = "tokio", cases = 32)]
         async fn user_state_db_roundtrip(
             #[strategy(arbitrary_user_state_with_id())] user_id_and_state: (String, UserState),
@@ -1441,27 +1440,7 @@ mod integration_tests {
 
             test_db.cleanup().await;
 
-            // Normalize the input state to match database behavior
-            // The database query fills in complete user info for permissions from the users table
-            let expected_state = {
-                let mut normalized = input_state.clone();
-                for doc in normalized.documents.values_mut() {
-                    for perm in &mut doc.permissions {
-                        if let Some(user) = &mut perm.user {
-                            // If this is the test user (the main user)
-                            if user.id == user_id {
-                                // Fill in their profile info
-                                user.username = normalized.profile.username.clone();
-                                user.display_name = normalized.profile.display_name.clone();
-                            }
-                            // Other users' info should already be complete from write_user_state_to_db
-                        }
-                    }
-                }
-                normalized
-            };
-
-            proptest::prop_assert_eq!(expected_state, output_state);
+            proptest::prop_assert_eq!(input_state, output_state);
         }
 
         /// Tests that get_or_create_user_state_doc correctly initializes Automerge documents
@@ -1547,33 +1526,8 @@ mod integration_tests {
                 );
             } else {
                 // The Automerge doc should match the database state
-                // Note: The database query fills in complete user info for permissions,
-                // so we need to normalize the input state to match this behavior.
-                // Specifically, when a user appears in permissions, their username/display_name
-                // will be filled in from the users table.
-                let expected_state = {
-                    let mut normalized = input_state.clone();
-                    // For each document, update permissions to have complete user info
-                    for doc in normalized.documents.values_mut() {
-                        for perm in &mut doc.permissions {
-                            if let Some(user) = &mut perm.user {
-                                // If this is the test user (who is the owner/main user)
-                                if user.id == user_id {
-                                    // Fill in their profile info from the normalized state
-                                    user.username = normalized.profile.username.clone();
-                                    user.display_name = normalized.profile.display_name.clone();
-                                } else {
-                                    // For other users, their info should already be complete
-                                    // (from write_user_state_to_db which ensures all permission users exist)
-                                }
-                            }
-                        }
-                    }
-                    normalized
-                };
-                
                 proptest::prop_assert_eq!(
-                    Some(expected_state),
+                    Some(input_state),
                     automerge_state,
                     "Automerge doc should match the database state"
                 );
