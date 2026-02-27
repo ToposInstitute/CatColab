@@ -94,7 +94,7 @@ function DeleteButton(props: { doc: DocInfo & { refId: string } }) {
 
     const currentUserId = auth.currentUser?.uid;
     const canDelete = props.doc.permissions.some(
-        (p) => p.user !== null && p.user.id === currentUserId && p.level === "Own",
+        (p) => p.user !== null && p.user === currentUserId && p.level === "Own",
     );
 
     const handleDeleteClick = async (e: MouseEvent) => {
