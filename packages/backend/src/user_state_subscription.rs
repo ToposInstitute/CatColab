@@ -10,7 +10,7 @@ use tokio::sync::RwLock;
 use tracing::{debug, error, info};
 
 use super::app::{AppError, AppState};
-use crate::user_state::{DbPermission, DocInfo, UserState, get_or_create_user_state_doc};
+use crate::user_state::{DbPermission, DocInfo, UserState, get_user_state_doc};
 
 /// A thread-safe, shared map of user IDs to their Automerge document IDs.
 pub type UserStates = Arc<RwLock<HashMap<String, DocumentId>>>;
@@ -44,6 +44,16 @@ enum UserStateNotification {
         username: Option<String>,
         display_name: Option<String>,
     },
+}
+
+impl UserStateNotification {
+    fn user_id(&self) -> &str {
+        match self {
+            UserStateNotification::Upsert { user_id, .. }
+            | UserStateNotification::Revoke { user_id, .. }
+            | UserStateNotification::ProfileUpdate { user_id, .. } => user_id,
+        }
+    }
 }
 
 fn to_doc_info(notif: &UserStateNotification) -> Option<DocInfo> {
@@ -161,95 +171,81 @@ pub async fn run_user_state_subscription(
         );
 
         match serde_json::from_str::<UserStateNotification>(notification.payload()) {
-            Ok(notif) => match &notif {
-                UserStateNotification::Upsert { user_id: uid, ref_id: rid, .. } => {
-                    debug!(
-                        user_id = %uid,
-                        ref_id = %rid,
-                        "Processing user state upsert notification"
-                    );
-
-                    let doc_info = to_doc_info(&notif).expect("Invalid upsert notification");
-                    let result = async {
-                        let doc_id = get_or_create_user_state_doc(&app_state, uid).await?;
-                        let doc_handle = app_state.repo.find(doc_id).await?.ok_or(
-                            AppError::UserStateSync("Could not get doc_handle".to_string()),
-                        )?;
-                        handle_upsert(&doc_handle, rid, doc_info)
-                    }
-                    .await;
-                    if let Err(e) = result {
-                        error!(
+            Ok(notif) => {
+                let uid = notif.user_id();
+                let doc_id = get_user_state_doc(&app_state, uid).await;
+                if doc_id.is_none() {
+                    debug!(user_id = %uid, "No cached UserState, nothing to update");
+                    continue;
+                }
+                let doc_id = doc_id.expect("Cached document should exist");
+                let doc_handle = app_state
+                    .repo
+                    .find(doc_id)
+                    .await?
+                    .ok_or(AppError::UserStateSync("Could not get doc_handle".to_string()))?;
+                match &notif {
+                    UserStateNotification::Upsert { user_id: uid, ref_id: rid, .. } => {
+                        debug!(
                             user_id = %uid,
                             ref_id = %rid,
-                            error = %e,
-                            "Failed to handle user state upsert"
+                            "Processing user state upsert notification"
                         );
-                    }
-                }
-                UserStateNotification::Revoke { user_id: uid, ref_id: rid } => {
-                    debug!(
-                        user_id = %uid,
-                        ref_id = %rid,
-                        "Processing user state revocation notification"
-                    );
 
-                    let result = async {
-                        let doc_id = {
-                            let states = app_state.user_states.read().await;
-                            states.get(uid.as_str()).cloned()
-                        };
-                        let Some(doc_id) = doc_id else {
-                            debug!(
+                        let doc_info = to_doc_info(&notif).expect("Invalid upsert notification");
+                        let result = handle_upsert(&doc_handle, rid, doc_info);
+                        if let Err(e) = result {
+                            error!(
                                 user_id = %uid,
                                 ref_id = %rid,
-                                "No cached document, nothing to remove"
+                                error = %e,
+                                "Failed to handle user state upsert"
                             );
-                            return Ok(());
-                        };
-                        let doc_handle = app_state.repo.find(doc_id).await?.ok_or(
-                            AppError::UserStateSync("Could not get doc_handle".to_string()),
-                        )?;
-                        handle_revoke(&doc_handle, rid)
+                        }
                     }
-                    .await;
-                    if let Err(e) = result {
-                        error!(
+                    UserStateNotification::Revoke { user_id: uid, ref_id: rid } => {
+                        debug!(
                             user_id = %uid,
                             ref_id = %rid,
-                            error = %e,
-                            "Failed to handle user state revocation"
+                            "Processing user state revocation notification"
                         );
-                    }
-                }
-                UserStateNotification::ProfileUpdate { user_id: uid, username, display_name } => {
-                    debug!(
-                        user_id = %uid,
-                        "Processing user state profile update notification"
-                    );
 
-                    let result = async {
-                        let doc_id = get_or_create_user_state_doc(&app_state, uid).await?;
-                        let doc_handle = app_state.repo.find(doc_id).await?.ok_or(
-                            AppError::UserStateSync("Could not get doc_handle".to_string()),
-                        )?;
-                        handle_profile_update(
+                        let result = handle_revoke(&doc_handle, rid);
+                        if let Err(e) = result {
+                            error!(
+                                user_id = %uid,
+                                ref_id = %rid,
+                                error = %e,
+                                "Failed to handle user state revocation"
+                            );
+                        }
+                    }
+                    UserStateNotification::ProfileUpdate {
+                        user_id: uid,
+                        username,
+                        display_name,
+                    } => {
+                        debug!(
+                            user_id = %uid,
+                            "Processing user state profile update notification"
+                        );
+
+                        let result = handle_profile_update(
                             &doc_handle,
                             uid,
                             username.clone(),
                             display_name.clone(),
-                        )
-                    }
-                    .await;
-                    if let Err(e) = result {
-                        error!(
-                            user_id = %uid,
-                            error = %e,
-                            "Failed to handle user state profile update"
                         );
+                        if let Err(e) = result {
+                            error!(
+                                user_id = %uid,
+                                error = %e,
+                                "Failed to handle user state profile update"
+                            );
+                        }
                     }
                 }
-            },
+            }
             Err(error) => {
                 error!(
                     channel = notification.channel(),
@@ -293,8 +289,8 @@ mod tests {
         handle_profile_update(
             &doc_handle,
             &user_id,
-            input_state.profile.username.as_ref().map(|t| t.to_string()),
-            input_state.profile.display_name.as_ref().map(|t| t.to_string()),
+            input_state.profile.username.as_ref().map(|t| t.as_str().to_string()),
+            input_state.profile.display_name.as_ref().map(|t| t.as_str().to_string()),
         )
         .map_err(|e| proptest::test_runner::TestCaseError::fail(e.to_string()))?;
 
