@@ -156,8 +156,9 @@ use of the double-categorical structure.}
 }
 
 \p{A finite model of this double theory consists of a finite set of
-\define{state variables} and a family of finite sets of \define{contributions}, indexed by pairs comprising a list of variables and a
-variable. The intended interpretation is that a contribution
+\define{state variables} and a family of finite sets of \define{contributions},
+indexed by pairs comprising a list of variables and a variable. The intended
+interpretation is that a contribution
 
 ##{c : \Contrib([x_1, \dots, x_n], x)}
 
@@ -168,9 +169,9 @@ represents an additive contribution to the vector field of the form
 where #{k_c \in \R} is a free parameter. Finite models are thus universal for
 ODE systems defined by polynomial vector fields.}
 
-\p{Crucially, composing such models by identifying variables corresponds to
-composing parameterized polynomial ODE systems in the variable sharing paradigm.
-For the latter, see the [reg nets](reg-nets-2024) paper.}
+\p{Crucially, composing such models by identifying state variables corresponds
+to composing parameterized polynomial ODE systems in the variable sharing
+paradigm. For the latter, see the [reg nets](reg-nets-2024) paper.}
 
 }
 
@@ -239,9 +240,9 @@ special functions like the exponential or sine.}
 
 \p{An f.f.g. model of this theory consists of finite sets of \define{state
 variables} and of \define{exogenous variables} (generators of type \Term), an
-embedding of the state variables into the variables, and a family of finite sets
-of \define{contributions}, indexed by pairs comprising a generic variable and a state
-variable. As before, a contribution #{c: \Contrib(v, x)} represents an additive
+embedding of the state variables into terms, and a family of finite sets of
+\define{contributions}, indexed by pairs comprising a term and a state variable.
+As before, a contribution #{c: \Contrib(v, x)} represents an additive
 contribution to the vector field of the form
 
 ##{\dot x \pluseq k_c \cdot v, \qquad k_c \in \R.}
@@ -268,9 +269,9 @@ by
 }
 
 \p{An f.f.g. model of this theory specifies a parameterized ODE system, where
-each contribution #{c: \Contrib(v, x)} contributes to the vector field simply as ##{\dot x
-\pluseq v.} Notice that parameters can now appear arbitrarily in variable
-expressions, not just as linear coefficients.}
+each contribution #{c: \Contrib(v, x)} contributes to the vector field simply as
+##{\dot x \pluseq v.} Notice that parameters can now appear arbitrarily in
+terms, not just as linear coefficients.}
 
 }
 
@@ -366,7 +367,7 @@ to Jacobs', taking the context to be two-sided instead of one-sided. Though
 tastes may vary, two-sided contexts have the merits of fitting well with our
 existing approach to categorical models; being useful in situations where the
 dependent type \em{is} meaningfully directed even if it doesn't compose, like
-the terms/contributions in our ODE system examples; and entailing no loss of
+the contributions in our ODE system examples; and entailing no loss of
 generality, since the one-sided case is recovered as types #{P: 1 \proto X}, a
 time-honored tradition in category theory also appealed to in
 [DOTS](dots-2025).}
@@ -389,7 +390,7 @@ models by generators and relations. Applications of operations are freely
 adjoined to the model, whereas type parameters must be explicitly declared. This
 distinction was used in the double theory for parameterized polynomial ODE
 systems, allowing parameters to be freely adjoined when not specified while
-insisting that the monomials on the right-hand sides of terms be given
+insisting that the monomials on the right-hand sides of contributions be given
 explicitly.}
 
 \p{I still expect instances to play an important role in the design of CatColab,
@@ -452,7 +453,8 @@ some theory \dbl{T} into ODEs, one first #{\Sigma}-migrates into a larger theory
 containing both \dbl{T} and the theory of ODEs, then #{\Delta}-migrates into the
 theory of ODEs. The intermediate theory additionally contains "builder"
 operations that will, under #{\Sigma}-migration, freely populate the ODE with
-variables and terms. The technique is illustrated by the following example.}
+variables and contributions. The technique is illustrated by the following
+example.}
 
 \subtree{
 \title{Lotka-Volterra ODE semantics for graphs}
