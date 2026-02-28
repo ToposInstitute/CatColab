@@ -42,7 +42,7 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use super::theory::DblTheory;
-use crate::one::{Category, FgCategory, InvalidPathEq, Path};
+use crate::one::{Category, FgCategory, InvalidPathEq, Path, PathEq};
 use crate::tt::util::pretty::*;
 use crate::zero::{Namespace, QualifiedName};
 
@@ -180,13 +180,27 @@ pub trait MutDblModel: FgDblModel {
 /// we include only what we need of theory pretty printer---printing object and
 /// morphism types---as extra methods here.
 ///
-/// TODO: Support pretty printing equations.
 pub trait PrintableDblModel: FgDblModel<ObGen = QualifiedName, MorGen = QualifiedName> {
     /// Pretty prints an object in the model.
     fn ob_to_doc<'a>(&self, ob: &Self::Ob, ob_ns: &Namespace, mor_ns: &Namespace) -> D<'a>;
 
     /// Pretty prints a morphism in the model.
     fn mor_to_doc<'a>(&self, mor: &Self::Mor, ob_ns: &Namespace, mor_ns: &Namespace) -> D<'a>;
+
+    /// Gets the equations in the model, if any.
+    fn equations(&self) -> Vec<PathEq<Self::Ob, Self::MorGen>> {
+        Vec::new()
+    }
+
+    /// Pretty prints an equation in the model.
+    fn eqn_to_doc<'a>(
+        &self,
+        _eqn: &PathEq<Self::Ob, Self::MorGen>,
+        _ob_ns: &Namespace,
+        _mor_ns: &Namespace,
+    ) -> D<'a> {
+        unreachable!() // Default implementation models have no equations, so won't call this.
+    }
 
     /// Pretty prints an object type in the model's theory.
     fn ob_type_to_doc<'a>(ob_type: &Self::ObType) -> D<'a>;
@@ -250,9 +264,16 @@ impl DblModelPrinter {
                 + t(" : ")
                 + Model::mor_type_to_doc(&model.mor_generator_type(&name))
         });
-        let mor_section = intersperse(mor_entries, hardline());
+        let mor_section = hardline() + intersperse(mor_entries, hardline());
 
-        let result = ob_section + hardline() + mor_section;
+        let eqns = model.equations();
+        let eqn_section = if eqns.is_empty() {
+            t("")
+        } else {
+            let eqn_entries = eqns.iter().map(|eqn| model.eqn_to_doc(eqn, ob_ns, mor_ns));
+            hardline() + intersperse(eqn_entries, hardline())
+        };
+        let result = ob_section + mor_section + eqn_section;
         if self.include_summary {
             t(self.summary(model)) + hardline() + result
         } else {

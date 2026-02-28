@@ -24,6 +24,7 @@ generate CommutativeSquare
 #/ l : NW -> SW : Hom Entity
 #/ r : NE -> SE : Hom Entity
 #/ b : SW -> SE : Hom Entity
+#/ t ⋅ r = l ⋅ b : Hom Entity(NW,SE)
 
 syn [S : CommutativeSquare] S.comm
 #/ result: S.comm : S.t · S.r == S.l · S.b

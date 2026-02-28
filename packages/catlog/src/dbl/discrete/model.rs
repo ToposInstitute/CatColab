@@ -261,6 +261,30 @@ impl PrintableDblModel for DiscreteDblModel {
             Path::Seq(seq) => intersperse(seq.iter().map(|m| m.to_doc()), t(" ⊙ ")),
         }
     }
+
+    fn eqn_to_doc<'a>(
+        &self,
+        eqn: &PathEq<Self::Ob, Self::MorGen>,
+        ob_ns: &Namespace,
+        mor_ns: &Namespace,
+    ) -> D<'a> {
+        let lhs = self.mor_to_doc(&eqn.lhs, ob_ns, mor_ns);
+        let rhs = self.mor_to_doc(&eqn.rhs, ob_ns, mor_ns);
+        let src = self.ob_to_doc(&self.dom(&eqn.lhs), ob_ns, mor_ns);
+        let tgt = self.ob_to_doc(&self.cod(&eqn.lhs), ob_ns, mor_ns);
+        intersperse([lhs, rhs], t(" = "))
+            + t(" : ")
+            + Self::mor_type_to_doc(&self.mor_type(&eqn.lhs))
+            + t("(")
+            + src
+            + t(",")
+            + tgt
+            + t(")")
+    }
+
+    fn equations(&self) -> Vec<PathEq<Self::Ob, Self::MorGen>> {
+        self.category.equations().cloned().collect()
+    }
 }
 
 impl std::fmt::Display for DiscreteDblModel {
