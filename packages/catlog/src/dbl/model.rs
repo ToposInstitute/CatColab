@@ -198,7 +198,7 @@ pub trait PrintableDblModel: FgDblModel<ObGen = QualifiedName, MorGen = Qualifie
         _ob_ns: &Namespace,
         _mor_ns: &Namespace,
     ) -> D<'a> {
-        unreachable!() // Default implementation models have no equations, so won't call this.
+        unreachable!() //Default implementation models have no equations, so won't call this.
     }
 
     /// Pretty prints an object type in the model's theory.
