@@ -257,7 +257,7 @@ impl PrintableDblModel for DiscreteDblModel {
 
     fn mor_type_to_doc<'a>(mor_type: &Self::MorType) -> D<'a> {
         match mor_type {
-            Path::Id(ob_type) => unop(t("Hom"), Self::ob_type_to_doc(ob_type)),
+            Path::Id(ob_type) => t("Hom(") + Self::ob_type_to_doc(ob_type) + t(")"),
             Path::Seq(seq) => intersperse(seq.iter().map(|m| m.to_doc()), t(" ⊙ ")),
         }
     }
