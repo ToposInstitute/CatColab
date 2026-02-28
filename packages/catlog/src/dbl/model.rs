@@ -179,7 +179,6 @@ pub trait MutDblModel: FgDblModel {
 /// we haven't bothered to implement pretty printing for theories. So, for now,
 /// we include only what we need of theory pretty printer---printing object and
 /// morphism types---as extra methods here.
-///
 pub trait PrintableDblModel: FgDblModel<ObGen = QualifiedName, MorGen = QualifiedName> {
     /// Pretty prints an object in the model.
     fn ob_to_doc<'a>(&self, ob: &Self::Ob, ob_ns: &Namespace, mor_ns: &Namespace) -> D<'a>;
