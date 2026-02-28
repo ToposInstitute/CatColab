@@ -718,6 +718,10 @@ mod tests {
         );
         model.add_mor(name("nullary"), ModalOb::List(List::Plain, vec![]), x.clone(), mor_type);
         assert!(model.validate().is_ok());
+
+
+        println!("{model}");
+        dbg!(&model.mor_types);
     }
 
     #[test]

@@ -9,9 +9,9 @@ use wasm_bindgen::prelude::*;
 use catlog::dbl::theory;
 use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
-use catlog::zero::{QualifiedLabel, name};
+use catlog::zero::{name, QualifiedLabel};
 
-use super::model_morphism::{MotifOccurrence, MotifsOptions, motifs};
+use super::model_morphism::{motifs, MotifOccurrence, MotifsOptions};
 use super::result::JsResult;
 use super::{analyses::*, model::DblModel, theory::DblTheory};
 
@@ -482,6 +482,23 @@ impl ThPowerSystem {
                 .map_err(|err| format!("{err:?}"))
                 .into(),
         ))
+    }
+}
+
+/// A theory of the DEC
+#[wasm_bindgen]
+pub struct ThDEC(Rc<theory::ModalDblTheory>);
+
+#[wasm_bindgen]
+impl ThDEC {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Rc::new(theories::th_multicategory())) // TODO symmetric?
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory(self.0.clone().into())
     }
 }
 
