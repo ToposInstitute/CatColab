@@ -6,6 +6,7 @@ use std::ops::{Add, Neg};
 
 use derivative::Derivative;
 use indexmap::IndexMap;
+use itertools::Itertools;
 use nalgebra::DVector;
 use num_traits::{One, Pow, Zero};
 
@@ -109,6 +110,21 @@ where
             })
             .collect()
     }
+
+    /// Converts to a single aligned LaTeX environment.
+    pub fn to_latex_string(&self) -> String
+    where
+        Var: Display,
+        Coef: Display + PartialEq + One + Neg<Output = Coef>,
+        Exp: Display + PartialEq + One,
+    {
+        let equations = self
+            .to_latex_equations()
+            .into_iter()
+            .map(|p| p.lhs + " &= " + &p.rhs)
+            .join("\\\\\n");
+        format!("$$\n\\begin{{align*}}\n{}\n\\end{{align*}}\n$$\n", equations)
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -178,6 +194,7 @@ where
 ///
 /// Such a system is ready for use in numerical solvers: the coefficients are
 /// floating point numbers and the variables are consecutive integer indices.
+#[derive(PartialEq, Debug)]
 pub struct NumericalPolynomialSystem<Exp> {
     /// Components of the vector field.
     pub components: Vec<Polynomial<usize, f32, Exp>>,
