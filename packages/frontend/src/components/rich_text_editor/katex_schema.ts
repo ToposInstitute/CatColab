@@ -1,8 +1,7 @@
 import type { MappedSchemaSpec } from "@automerge/prosemirror";
-import {
-    defaultBlockMathParseRules,
-    defaultInlineMathParseRules,
-} from "@benrbray/prosemirror-math";
+import type { BlockMarker } from "@automerge/prosemirror/dist/types";
+import { defaultBlockMathParseRules } from "@benrbray/prosemirror-math";
+import type { Node } from "prosemirror-model";
 
 export const katexSchema = {
     nodes: {
@@ -10,17 +9,27 @@ export const katexSchema = {
             automerge: {
                 block: "math_inline",
                 isEmbed: true,
+                attrParsers: {
+                    fromProsemirror: (node: Node) => ({ tex: node.attrs.tex || "" }),
+                    fromAutomerge: (block: BlockMarker) => ({
+                        tex: block.attrs.tex?.toString() || "",
+                    }),
+                },
             },
+            attrs: { tex: { default: "" } },
             group: "inline",
-            content: "text*",
             inline: true,
             atom: true,
-            toDOM: () => ["math-inline", { class: "math-node" }, 0],
+            toDOM(node: Node) {
+                return ["math-inline", { class: "math-node", "data-tex": node.attrs.tex }];
+            },
             parseDOM: [
                 {
                     tag: "math-inline",
+                    getAttrs(dom: HTMLElement) {
+                        return { tex: dom.getAttribute("data-tex") || dom.textContent || "" };
+                    },
                 },
-                ...defaultInlineMathParseRules,
             ],
         },
         math_display: {
