@@ -10,7 +10,9 @@ use tokio::sync::RwLock;
 use tracing::{debug, error, info};
 
 use super::app::{AppError, AppState};
-use crate::user_state::{DbPermission, DbUserInfo, DocInfo, UserState, get_user_state_doc};
+use crate::user_state::{
+    DbPermission, DbUserInfo, DocInfo, DocumentType, UserState, get_user_state_doc,
+};
 
 /// A thread-safe, shared map of user IDs to their Automerge document IDs.
 pub type UserStates = Arc<RwLock<HashMap<String, DocumentId>>>;
@@ -26,7 +28,7 @@ enum UserStateNotification {
         user_id: String,
         ref_id: String,
         name: Option<String>,
-        type_name: Option<String>,
+        type_name: Option<DocumentType>,
         theory: Option<String>,
         permissions: Option<Vec<DbPermission>>,
         #[serde(default)]
