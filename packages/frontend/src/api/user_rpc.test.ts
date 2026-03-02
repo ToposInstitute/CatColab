@@ -1,3 +1,4 @@
+import { isValidDocumentId } from "@automerge/automerge-repo";
 import { type FirebaseOptions, initializeApp } from "firebase/app";
 import { deleteUser, getAuth, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import invariant from "tiny-invariant";
@@ -76,6 +77,23 @@ describe("RPC for user profiles", async () => {
     const signInResult = await rpc.sign_up_or_sign_in.mutate();
     test.sequential("should allow sign in when authenticated", () => {
         assert.strictEqual(signInResult.tag, "Ok");
+    });
+
+    const userStateUrl = unwrap(await rpc.get_user_state_url.query());
+    test.sequential("should get a valid automerge document ID for user state", () => {
+        assert(isValidDocumentId(userStateUrl));
+    });
+
+    const userStateUrl2 = unwrap(await rpc.get_user_state_url.query());
+    test.sequential("should get the same user state URL on subsequent calls", () => {
+        assert.strictEqual(userStateUrl2, userStateUrl);
+    });
+
+    await signOut(auth);
+
+    const unauthorizedUserStateResult = await rpc.get_user_state_url.query();
+    test.sequential("should prohibit getting user state URL when unauthenticated", () => {
+        assert.strictEqual(unwrapErr(unauthorizedUserStateResult).code, 401);
     });
 });
 

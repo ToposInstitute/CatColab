@@ -6,11 +6,9 @@ use serde_json::Value;
 use tracing::debug;
 use uuid::Uuid;
 
-use crate::app::Paginated;
-use crate::document::RefStub;
-
 use super::app::{AppCtx, AppError, AppState};
 use super::auth::{NewPermissions, PermissionLevel, Permissions};
+use super::user_state::get_or_create_user_state_doc;
 use super::{auth, document as doc, user};
 
 /// Create router for RPC API.
@@ -30,8 +28,7 @@ pub fn router() -> Router<AppState> {
         .handler(username_status)
         .handler(get_active_user_profile)
         .handler(set_active_user_profile)
-        .handler(search_ref_stubs)
-        .handler(get_ref_children_stubs)
+        .handler(get_user_state_url)
 }
 
 #[handler(mutation)]
@@ -87,19 +84,6 @@ enum RefDoc {
         is_deleted: bool,
         permissions: Permissions,
     },
-}
-
-#[handler(query)]
-async fn search_ref_stubs(
-    ctx: AppCtx,
-    query_params: doc::RefQueryParams,
-) -> RpcResult<Paginated<doc::RefStub>> {
-    doc::search_ref_stubs(ctx, query_params).await.into()
-}
-
-#[handler(query)]
-async fn get_ref_children_stubs(ctx: AppCtx, ref_id: Uuid) -> RpcResult<Vec<RefStub>> {
-    doc::get_ref_children_stubs(ctx, ref_id).await.into()
 }
 
 #[handler(query)]
@@ -188,6 +172,17 @@ async fn get_active_user_profile(ctx: AppCtx) -> RpcResult<user::UserProfile> {
 #[handler(mutation)]
 async fn set_active_user_profile(ctx: AppCtx, user: user::UserProfile) -> RpcResult<()> {
     user::set_active_user_profile(ctx, user).await.into()
+}
+
+#[handler(query)]
+async fn get_user_state_url(ctx: AppCtx) -> RpcResult<String> {
+    async {
+        let user = ctx.user.as_ref().ok_or(AppError::Unauthorized)?;
+        let doc_id = get_or_create_user_state_doc(&ctx.state, &user.user_id).await?;
+        Ok(doc_id.to_string())
+    }
+    .await
+    .into()
 }
 
 /// Result returned by an RPC handler.

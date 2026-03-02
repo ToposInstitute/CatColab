@@ -13,6 +13,19 @@
 
 */
 import type { Query, Mutation, Subscription } from "@qubit-rs/client";
+export type UserProfile = { 
+/**
+ * The user's chosen username.
+ */
+username: string | null, 
+/**
+ * The user's chosen display name.
+ */
+displayName: string | null, };
+export type JsonValue = number | string | boolean | Array<JsonValue> | { [key in string]?: JsonValue } | null;
+export type PermissionLevel = "Read" | "Write" | "Maintain" | "Own";
+export type RpcResult<T> = { "tag": "Ok", content: T, } | { "tag": "Err", code: number, message: string, };
+export type UsernameStatus = "Available" | "Unavailable" | "Invalid";
 export type Permissions = { 
 /**
  * Base permission level for any person, logged in or not.
@@ -28,12 +41,29 @@ user: PermissionLevel | null,
  * Only owners of the document have access to this information.
  */
 users: Array<UserPermissions> | null, };
-export type UserPermissions = { user: UserSummary, level: PermissionLevel, };
+export type UserPermissions = { 
+/**
+ * The user who has been granted permissions.
+ */
+user: UserSummary, 
+/**
+ * The level of permission granted to the user.
+ */
+level: PermissionLevel, };
 export type RefDoc = { "tag": "Readonly", binaryData: string, isDeleted: boolean, permissions: Permissions, } | { "tag": "Live", docId: string, isDeleted: boolean, permissions: Permissions, };
-export type UserProfile = { username: string | null, displayName: string | null, };
-export type JsonValue = number | string | boolean | Array<JsonValue> | { [key in string]?: JsonValue } | null;
-export type RefQueryParams = { ownerUsernameQuery: string | null, refNameQuery: string | null, searcherMinLevel: PermissionLevel | null, includePublicDocuments: boolean | null, onlyDeleted: boolean | null, limit: number | null, offset: number | null, };
-export type RpcResult<T> = { "tag": "Ok", content: T, } | { "tag": "Err", code: number, message: string, };
+export type UserSummary = { 
+/**
+ * The Firebase user ID.
+ */
+id: string, 
+/**
+ * The user's chosen username, if set.
+ */
+username: string | null, 
+/**
+ * The user's chosen display name, if set.
+ */
+displayName: string | null, };
 export type NewPermissions = { 
 /**
  * Base permission level for any person, logged in or not.
@@ -45,21 +75,4 @@ anyone: PermissionLevel | null,
  * A mapping from user IDs to permission levels.
  */
 users: { [key in string]?: PermissionLevel }, };
-export type UserSummary = { id: string, username: string | null, displayName: string | null, };
-export type RefStub = { name: string, typeName: string, refId: string, permissionLevel: PermissionLevel, owner: UserSummary | null, createdAt: string, };
-export type Paginated<T> = { 
-/**
- * The total number of items matching the query criteria.
- */
-total: number, 
-/**
- * The number of items skipped.
- */
-offset: number, 
-/**
- * The items in the current page.
- */
-items: Array<T>, };
-export type UsernameStatus = "Available" | "Unavailable" | "Invalid";
-export type PermissionLevel = "Read" | "Write" | "Maintain" | "Own";
-export type QubitServer = { create_snapshot: Mutation<[ref_id: string], RpcResult<null>>, delete_ref: Mutation<[ref_id: string], RpcResult<null>>, get_active_user_profile: Query<[], RpcResult<UserProfile>>, get_doc: Query<[ref_id: string], RpcResult<RefDoc>>, get_permissions: Query<[ref_id: string], RpcResult<Permissions>>, get_ref_children_stubs: Query<[ref_id: string], RpcResult<Array<RefStub>>>, head_snapshot: Query<[ref_id: string], RpcResult<JsonValue>>, new_ref: Mutation<[content: JsonValue], RpcResult<string>>, restore_ref: Mutation<[ref_id: string], RpcResult<null>>, search_ref_stubs: Query<[query_params: RefQueryParams], RpcResult<Paginated<RefStub>>>, set_active_user_profile: Mutation<[user: UserProfile], RpcResult<null>>, set_permissions: Mutation<[ref_id: string, new: NewPermissions], RpcResult<null>>, sign_up_or_sign_in: Mutation<[], RpcResult<null>>, user_by_username: Query<[username: string], RpcResult<UserSummary | null>>, username_status: Query<[username: string], RpcResult<UsernameStatus>>, validate_session: Query<[], RpcResult<null>>, };
+export type QubitServer = { create_snapshot: Mutation<[ref_id: string], RpcResult<null>>, delete_ref: Mutation<[ref_id: string], RpcResult<null>>, get_active_user_profile: Query<[], RpcResult<UserProfile>>, get_doc: Query<[ref_id: string], RpcResult<RefDoc>>, get_permissions: Query<[ref_id: string], RpcResult<Permissions>>, get_user_state_url: Query<[], RpcResult<string>>, head_snapshot: Query<[ref_id: string], RpcResult<JsonValue>>, new_ref: Mutation<[content: JsonValue], RpcResult<string>>, restore_ref: Mutation<[ref_id: string], RpcResult<null>>, set_active_user_profile: Mutation<[user: UserProfile], RpcResult<null>>, set_permissions: Mutation<[ref_id: string, new: NewPermissions], RpcResult<null>>, sign_up_or_sign_in: Mutation<[], RpcResult<null>>, user_by_username: Query<[username: string], RpcResult<UserSummary | null>>, username_status: Query<[username: string], RpcResult<UsernameStatus>>, validate_session: Query<[], RpcResult<null>>, };
