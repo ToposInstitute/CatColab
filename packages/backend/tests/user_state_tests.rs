@@ -152,7 +152,7 @@ mod integration_tests {
             tokio::spawn(async move { run_user_state_subscription(state_clone).await });
 
         // Give the subscription time to start
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Initialize user state document so subscription can update it
         backend::user_state::get_or_create_user_state_doc(&state, &user_id)
@@ -169,7 +169,7 @@ mod integration_tests {
         let ref_id = document::new_ref(ctx, content).await.expect("Failed to create ref");
 
         // Wait for the subscription to process the notification
-        tokio::time::sleep(Duration::from_millis(300)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Check that the user state was updated
         let user_state = read_user_state_from_samod(&state, &user_id).await;
@@ -221,7 +221,7 @@ mod integration_tests {
         let subscription_handle =
             tokio::spawn(async move { run_user_state_subscription(state_clone).await });
 
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Initialize reader's user state document so subscription can update it
         backend::user_state::get_or_create_user_state_doc(&state, &reader_id)
@@ -238,7 +238,7 @@ mod integration_tests {
             .expect("Failed to set permissions");
 
         // Wait for the subscription to process
-        tokio::time::sleep(Duration::from_millis(300)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Check that the reader's state was updated
         let user_state = read_user_state_from_samod(&state, &reader_id).await;
@@ -273,7 +273,7 @@ mod integration_tests {
             tokio::spawn(async move { run_user_state_subscription(state_clone).await });
 
         // Give the subscription time to start
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Initialize user state document so subscription can update it
         backend::user_state::get_or_create_user_state_doc(&state, &user_id)
@@ -289,7 +289,7 @@ mod integration_tests {
         let ref_id = document::new_ref(ctx, content).await.expect("Failed to create ref");
 
         // Wait for subscription to process the create notification
-        tokio::time::sleep(Duration::from_millis(300)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Verify document exists in user state (check for our specific document, not total count)
         let state_before = read_user_state_from_samod(&state, &user_id).await;
@@ -303,7 +303,7 @@ mod integration_tests {
         document::delete_ref(state.clone(), ref_id).await.expect("Failed to delete ref");
 
         // Wait for the subscription to process the delete notification
-        tokio::time::sleep(Duration::from_millis(300)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Check that the document is still in user state but has deleted_at set
         let user_state = read_user_state_from_samod(&state, &user_id).await;
@@ -338,7 +338,7 @@ mod integration_tests {
             tokio::spawn(async move { run_user_state_subscription(state_clone).await });
 
         // Give the subscription time to start
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Initialize user state document so subscription can update it
         backend::user_state::get_or_create_user_state_doc(&state, &user_id)
@@ -354,7 +354,7 @@ mod integration_tests {
         let ref_id = document::new_ref(ctx, content).await.expect("Failed to create ref");
 
         // Wait for subscription to process the create notification
-        tokio::time::sleep(Duration::from_millis(300)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Verify document exists in user state
         let state_after_create = read_user_state_from_samod(&state, &user_id).await;
@@ -368,7 +368,7 @@ mod integration_tests {
         document::delete_ref(state.clone(), ref_id).await.expect("Failed to delete ref");
 
         // Wait for the subscription to process the delete notification
-        tokio::time::sleep(Duration::from_millis(300)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Verify document still exists but has deleted_at set
         let state_after_delete = read_user_state_from_samod(&state, &user_id).await;
@@ -389,7 +389,7 @@ mod integration_tests {
             .expect("Failed to restore ref");
 
         // Wait for the subscription to process the restore notification
-        tokio::time::sleep(Duration::from_millis(300)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Check that the document is back in user state
         let user_state = read_user_state_from_samod(&state, &user_id).await;
@@ -436,7 +436,7 @@ mod integration_tests {
         let subscription_handle =
             tokio::spawn(async move { run_user_state_subscription(state_clone).await });
 
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Initialize user state documents for both users so subscription can update them
         backend::user_state::get_or_create_user_state_doc(&state, &user1_id)
@@ -457,7 +457,7 @@ mod integration_tests {
             .expect("Failed to set permissions");
 
         // Wait for subscriptions to process
-        tokio::time::sleep(Duration::from_millis(300)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Check both users' states using the samod helper
         let user1_state = read_user_state_from_samod(&state, &user1_id).await;
@@ -514,7 +514,7 @@ mod integration_tests {
         let subscription_handle =
             tokio::spawn(async move { run_user_state_subscription(state_clone).await });
 
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Initialize user state document so subscription can update it
         backend::user_state::get_or_create_user_state_doc(&state, &user_id)
@@ -531,7 +531,7 @@ mod integration_tests {
             .expect("Failed to grant permissions");
 
         // Wait for subscription to process
-        tokio::time::sleep(Duration::from_millis(300)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Verify user has the document
         let user_state_with_doc = read_user_state_from_samod(&state, &user_id).await;
@@ -550,7 +550,7 @@ mod integration_tests {
             .expect("Failed to revoke permissions");
 
         // Wait for subscription to process
-        tokio::time::sleep(Duration::from_millis(300)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Check that document is removed from user's state
         let user_state = read_user_state_from_samod(&state, &user_id).await;
@@ -581,7 +581,7 @@ mod integration_tests {
             tokio::spawn(async move { run_user_state_subscription(state_clone).await });
 
         // Give the subscription time to start
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Initialize user state document so subscription can update it
         backend::user_state::get_or_create_user_state_doc(&state, &user_id)
@@ -597,7 +597,7 @@ mod integration_tests {
         let ref_id = document::new_ref(ctx, content).await.expect("Failed to create ref");
 
         // Wait for subscription to process the create notification
-        tokio::time::sleep(Duration::from_millis(300)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Verify original name
         let state_before = read_user_state_from_samod(&state, &user_id).await;
@@ -617,7 +617,7 @@ mod integration_tests {
         .expect("Failed to autosave");
 
         // Wait to see if subscription processes any notification (it shouldn't)
-        tokio::time::sleep(Duration::from_millis(300)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Verify name was updated in user state
         let state_after = read_user_state_from_samod(&state, &user_id).await;
@@ -653,7 +653,7 @@ mod integration_tests {
             tokio::spawn(async move { run_user_state_subscription(state_clone).await });
 
         // Give the subscription time to start
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Initialize user state document so subscription can update it
         backend::user_state::get_or_create_user_state_doc(&state, &user_id)
@@ -669,7 +669,7 @@ mod integration_tests {
         let ref_id = document::new_ref(ctx.clone(), content).await.expect("Failed to create ref");
 
         // Wait for subscription to process the create notification
-        tokio::time::sleep(Duration::from_millis(300)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Verify theory is set on initial subscription update
         let state_after_create = read_user_state_from_samod(&state, &user_id).await;
@@ -690,7 +690,7 @@ mod integration_tests {
             document::new_ref(ctx, diagram_content).await.expect("Failed to create diagram");
 
         // Wait for subscription to process the create notification
-        tokio::time::sleep(Duration::from_millis(300)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Verify diagram has no theory
         let state_after_diagram = read_user_state_from_samod(&state, &user_id).await;
@@ -711,7 +711,7 @@ mod integration_tests {
         .expect("Failed to autosave");
 
         // Wait for the subscription to process
-        tokio::time::sleep(Duration::from_millis(300)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Verify theory was updated in user state
         let state_after_update = read_user_state_from_samod(&state, &user_id).await;
@@ -750,7 +750,7 @@ mod integration_tests {
             tokio::spawn(async move { run_user_state_subscription(state_clone).await });
 
         // Give the subscription time to start
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Initialize user state document for owner1 so subscription can update it
         backend::user_state::get_or_create_user_state_doc(&state, &owner1_id)
@@ -766,7 +766,7 @@ mod integration_tests {
         let ref_id = document::new_ref(ctx, content).await.expect("Failed to create ref");
 
         // Wait for subscription to process
-        tokio::time::sleep(Duration::from_millis(300)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Verify owner1 sees the document with themselves having Own permission
         let owner1_state = read_user_state_from_samod(&state, &owner1_id).await;
@@ -803,7 +803,7 @@ mod integration_tests {
         .expect("Failed to autosave");
 
         // Wait for subscription to process
-        tokio::time::sleep(Duration::from_millis(300)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Check both owners' user states
         let owner1_state_after = read_user_state_from_samod(&state, &owner1_id).await;
@@ -1023,7 +1023,7 @@ mod integration_tests {
         let state_clone = state.clone();
         let subscription_handle =
             tokio::spawn(async move { run_user_state_subscription(state_clone).await });
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Initialize user state document so subscription can update it
         backend::user_state::get_or_create_user_state_doc(&state, &user_id)
@@ -1040,13 +1040,13 @@ mod integration_tests {
         let parent_ref_id = document::new_ref(ctx.clone(), parent_content)
             .await
             .expect("Failed to create parent");
-        tokio::time::sleep(Duration::from_millis(300)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Create child document linking to parent - subscription processes this
         let child_content = create_child_document_content("Child Doc", parent_ref_id);
         let child_ref_id =
             document::new_ref(ctx, child_content).await.expect("Failed to create child");
-        tokio::time::sleep(Duration::from_millis(300)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         let user_state = read_user_state_from_samod(&state, &user_id)
             .await
@@ -1126,7 +1126,7 @@ mod integration_tests {
         let subscription_handle =
             tokio::spawn(async move { run_user_state_subscription(state_clone).await });
 
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Initialize user state for both users so the subscription has docs to update
         backend::user_state::get_or_create_user_state_doc(&state, &reader_id)
@@ -1181,7 +1181,7 @@ mod integration_tests {
         .expect("Failed to update owner profile");
 
         // Wait for the subscription to process the notification
-        tokio::time::sleep(Duration::from_millis(300)).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Check that the reader's state reflects the updated display name in permissions
         let state_after = read_user_state_from_samod(&state, &reader_id).await;
@@ -1222,7 +1222,7 @@ mod integration_tests {
     }
 
     #[cfg(feature = "property-tests")]
-    mod proptest_tests {
+    mod property_tests {
         use super::*;
         use backend::app::AppError;
         use backend::auth::PermissionLevel;
