@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::fmt;
+use std::str::FromStr;
 
 use autosurgeon::{Hydrate, Reconcile, Text, reconcile};
 use samod::DocumentId;
@@ -9,6 +11,45 @@ use ts_rs::TS;
 
 use crate::app::{AppError, AppState};
 use crate::auth::PermissionLevel;
+
+/// The type of a document.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Reconcile, Hydrate, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export, export_to = "user_state.ts", rename_all = "lowercase")]
+pub enum DocumentType {
+    /// A model document.
+    #[autosurgeon(rename = "model")]
+    Model,
+    /// A diagram document.
+    #[autosurgeon(rename = "diagram")]
+    Diagram,
+    /// An analysis document.
+    #[autosurgeon(rename = "analysis")]
+    Analysis,
+}
+
+impl fmt::Display for DocumentType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DocumentType::Model => write!(f, "model"),
+            DocumentType::Diagram => write!(f, "diagram"),
+            DocumentType::Analysis => write!(f, "analysis"),
+        }
+    }
+}
+
+impl FromStr for DocumentType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "model" => Ok(DocumentType::Model),
+            "diagram" => Ok(DocumentType::Diagram),
+            "analysis" => Ok(DocumentType::Analysis),
+            other => Err(format!("unknown document type: {other}")),
+        }
+    }
+}
 
 /// Autosurgeon serialization of `DateTime<Utc>` as milliseconds since Unix epoch.
 mod datetime_millis {
@@ -144,9 +185,9 @@ pub struct DocInfo {
     /// The name of the document.
     #[ts(as = "String")]
     pub name: Text,
-    /// The type of the document (e.g., "notebook", "theory").
+    /// The type of the document.
     #[autosurgeon(rename = "typeName")]
-    pub type_name: String,
+    pub type_name: DocumentType,
     /// The theory of the document, if it is a model.
     pub theory: Option<String>,
     /// All permissions on this document (users and public).
@@ -340,7 +381,11 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
 
             let info = DocInfo {
                 name: Text::from(row.name.unwrap_or_else(|| "untitled".to_string())),
-                type_name: row.type_name.expect("type_name should never be null"),
+                type_name: row
+                    .type_name
+                    .expect("type_name should never be null")
+                    .parse()
+                    .expect("type_name should be a valid document type"),
                 theory: row.theory,
                 permissions,
                 created_at: row.created_at,
@@ -508,6 +553,20 @@ pub mod arbitrary {
     use proptest::{arbitrary::Arbitrary, prelude::*};
     use proptest_arbitrary_interop::arb;
 
+    impl Arbitrary for DocumentType {
+        type Parameters = ();
+        type Strategy = BoxedStrategy<Self>;
+
+        fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+            prop_oneof![
+                Just(DocumentType::Model),
+                Just(DocumentType::Diagram),
+                Just(DocumentType::Analysis),
+            ]
+            .boxed()
+        }
+    }
+
     impl Arbitrary for UserInfo {
         type Parameters = ();
         type Strategy = BoxedStrategy<Self>;
@@ -550,7 +609,7 @@ pub mod arbitrary {
         fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
             (
                 any::<String>(),
-                any::<String>(),
+                any::<DocumentType>(),
                 proptest::option::of(any::<String>()),
                 prop::collection::vec(any::<PermissionInfo>(), 0..5),
                 0i64..253402300799i64,
@@ -593,7 +652,7 @@ pub mod arbitrary {
     ) -> impl Strategy<Value = (String, DocInfo, HashMap<String, UserInfo>)> {
         (
             any::<String>(),                             // name
-            any::<String>(),                             // type_name
+            any::<DocumentType>(),                       // type_name
             arb::<uuid::Uuid>(),                         // ref_id (used as map key)
             any::<PermissionLevel>(),                    // user's permission_level
             arb::<uuid::Uuid>(),                         // other owner id

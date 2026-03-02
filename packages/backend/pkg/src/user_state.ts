@@ -12,9 +12,9 @@ export type DocInfo = {
  */
 name: string, 
 /**
- * The type of the document (e.g., "notebook", "theory").
+ * The type of the document.
  */
-typeName: string, 
+typeName: DocumentType, 
 /**
  * The theory of the document, if it is a model.
  */
@@ -39,6 +39,11 @@ parent: Uint8Array | null,
  * The ref IDs of child documents.
  */
 children: Array<Uint8Array>, };
+
+/**
+ * The type of a document.
+ */
+export type DocumentType = "model" | "diagram" | "analysis";
 
 /**
  * A single permission entry for a document in user state.
