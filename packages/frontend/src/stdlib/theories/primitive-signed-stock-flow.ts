@@ -59,7 +59,7 @@ export default function createPrimitiveSignedStockFlowTheory(theoryMeta: TheoryM
                 help: "visualization",
             }),
             analyses.massAction({
-                simulate(model, data) {
+                run(model, data) {
                     return thCategorySignedLinks.massAction(model, data);
                 },
                 transitionType: {

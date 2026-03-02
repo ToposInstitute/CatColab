@@ -42,7 +42,7 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
                 help: "visualization",
             }),
             analyses.massAction({
-                simulate(model, data) {
+                run(model, data) {
                     return thSymMonoidalCategory.massAction(model, data);
                 },
             }),
@@ -61,7 +61,7 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
                 name: "Stochastic mass-action dynamics",
                 description: "Simulate a stochastic system using the law of mass action",
                 help: "stochastic-mass-action",
-                simulate(model, data) {
+                run(model, data) {
                     return thSymMonoidalCategory.stochasticMassAction(model, data);
                 },
             }),
