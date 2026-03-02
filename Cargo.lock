@@ -226,7 +226,7 @@ dependencies = [
 [[package]]
 name = "autosurgeon"
 version = "0.10.1"
-source = "git+https://github.com/ToposInstitute/autosurgeon?branch=kb%2Ffix-option-text#519edde0ef8b060dda3a9130a6c5b2f6d25aa220"
+source = "git+https://github.com/automerge/autosurgeon#09ebb00feaa1be3a50cdbc15c926737d68c06a2b"
 dependencies = [
  "automerge",
  "autosurgeon-derive",
@@ -238,7 +238,7 @@ dependencies = [
 [[package]]
 name = "autosurgeon-derive"
 version = "0.10.1"
-source = "git+https://github.com/ToposInstitute/autosurgeon?branch=kb%2Ffix-option-text#519edde0ef8b060dda3a9130a6c5b2f6d25aa220"
+source = "git+https://github.com/automerge/autosurgeon#09ebb00feaa1be3a50cdbc15c926737d68c06a2b"
 dependencies = [
  "proc-macro2",
  "quote",
