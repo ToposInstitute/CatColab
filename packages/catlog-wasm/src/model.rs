@@ -411,6 +411,55 @@ impl DblModel {
         }
         Ok(())
     }
+
+    /// Gets label strings for the domain and codomain of a morphism generator.
+    ///
+    /// Returns `Some((dom_label, cod_label))` when the morphism has a domain
+    /// and codomain whose labels can be resolved from the namespace.
+    pub fn mor_generator_dom_cod_label_strings(
+        &self,
+        id: &QualifiedName,
+    ) -> Option<(String, String)> {
+        match &self.model {
+            DblModelBox::Discrete(model) => {
+                let dom = self.ob_namespace.label_string(model.get_dom(id)?);
+                let cod = self.ob_namespace.label_string(model.get_cod(id)?);
+                Some((dom, cod))
+            }
+            DblModelBox::DiscreteTab(model) => {
+                let dom = model.get_dom(id)?.clone().basic()?;
+                let cod = model.get_cod(id)?.clone().basic()?;
+                Some((self.ob_namespace.label_string(&dom), self.ob_namespace.label_string(&cod)))
+            }
+            DblModelBox::Modal(model) => {
+                let dom = self.modal_ob_label_string(model.get_dom(id)?)?;
+                let cod = self.modal_ob_label_string(model.get_cod(id)?)?;
+                Some((dom, cod))
+            }
+        }
+    }
+
+    /// Gets a label string for a modal object, handling products/tensors.
+    ///
+    /// For a generator like `S`, returns `"S"`. For a product like `tensor([S, I])`, returns
+    /// `"[S, I]"`.
+    fn modal_ob_label_string(&self, ob: &ModalOb) -> Option<String> {
+        let species = ob.clone().collect_product(None)?;
+        let labels: Vec<String> = species
+            .iter()
+            .filter_map(|s| match s {
+                ModalOb::Generator(name) => Some(self.ob_namespace.label_string(name)),
+                _ => None,
+            })
+            .collect();
+        if labels.is_empty() {
+            None
+        } else if labels.len() == 1 {
+            Some(labels.into_iter().next().unwrap())
+        } else {
+            Some(format!("[{}]", labels.join(", ")))
+        }
+    }
 }
 
 #[wasm_bindgen]
