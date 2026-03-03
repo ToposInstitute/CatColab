@@ -121,6 +121,7 @@ async fn main() {
                 db: db.clone(),
                 repo,
                 active_listeners: Arc::new(RwLock::new(HashSet::new())),
+                initialized_user_states: Arc::new(RwLock::new(HashSet::new())),
             };
 
             // We need to wrap FirebaseAuth in an Arc because if it's ever dropped the process which updates it's
