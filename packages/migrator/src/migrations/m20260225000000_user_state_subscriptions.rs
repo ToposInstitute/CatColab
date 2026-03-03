@@ -32,6 +32,17 @@ impl Operation<Postgres> for MigrationOperation {
     async fn up(&self, conn: &mut PgConnection) -> Result<(), Error> {
         let mut tx = conn.begin().await?;
 
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS user_state_urls (
+                user_id TEXT PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+                doc_id TEXT NOT NULL UNIQUE
+            );
+            "#,
+        )
+        .execute(&mut *tx)
+        .await?;
+
         // Shared helper: fetches ref metadata, builds permissions JSON, and
         // sends an 'upsert' notification for a single user. Written in PL/pgSQL
         // (not declared STABLE) so it sees the current transaction state — this
@@ -334,6 +345,10 @@ impl Operation<Postgres> for MigrationOperation {
 
         // Drop the shared helper last since trigger functions depended on it.
         sqlx::query(r#"DROP FUNCTION IF EXISTS notify_user_state_upsert;"#)
+            .execute(&mut *tx)
+            .await?;
+
+        sqlx::query(r#"DROP TABLE IF EXISTS user_state_urls;"#)
             .execute(&mut *tx)
             .await?;
 

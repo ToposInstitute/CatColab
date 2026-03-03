@@ -1,21 +1,16 @@
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::str::FromStr;
 
 use autosurgeon::{Text, hydrate, reconcile};
 use chrono::{TimeZone, Utc};
-use samod::DocumentId;
 use serde::Deserialize;
 use sqlx::postgres::PgListener;
-use tokio::sync::RwLock;
 use tracing::{debug, error, info};
 
 use super::app::{AppError, AppState};
 use crate::user_state::{
     DbPermission, DbUserInfo, DocInfo, DocumentType, UserState, get_user_state_doc,
 };
-
-/// A thread-safe, shared map of user IDs to their Automerge document IDs.
-pub type UserStates = Arc<RwLock<HashMap<String, DocumentId>>>;
 
 /// Notification from PostgreSQL about a user state change.
 #[derive(Debug, Deserialize)]
@@ -182,7 +177,6 @@ async fn handle_profile_update(
     user_id: &str,
     username: Option<String>,
     display_name: Option<String>,
-    user_states: &UserStates,
     app_state: &AppState,
 ) -> Result<(), AppError> {
     let info = crate::user_state::UserInfo {
@@ -190,15 +184,35 @@ async fn handle_profile_update(
         display_name: display_name.map(Text::from),
     };
 
-    let states = user_states.read().await;
+    let rows = sqlx::query_as::<_, (String, String)>(
+        r#"
+        SELECT user_id, doc_id
+        FROM user_state_urls
+        "#,
+    )
+    .fetch_all(&app_state.db)
+    .await?;
 
-    for (state_owner_id, doc_id) in states.iter() {
-        let doc_handle = match app_state.repo.find(doc_id.clone()).await {
+    for (state_owner_id, doc_id_text) in rows {
+        let doc_id = match samod::DocumentId::from_str(&doc_id_text) {
+            Ok(doc_id) => doc_id,
+            Err(e) => {
+                error!(
+                    user_id = %state_owner_id,
+                    doc_id = %doc_id_text,
+                    error = %e,
+                    "Skipping invalid user_state_urls entry"
+                );
+                continue;
+            }
+        };
+
+        let doc_handle = match app_state.repo.find(doc_id).await {
             Ok(Some(handle)) => handle,
             _ => continue,
         };
 
-        let is_self = state_owner_id == user_id;
+        let is_self = state_owner_id.as_str() == user_id;
         if let Err(e) = apply_profile_update(&doc_handle, is_self, user_id, info.clone()) {
             error!(
                 user_id = %state_owner_id,
@@ -244,7 +258,6 @@ pub async fn run_user_state_subscription(
                         uid,
                         username.clone(),
                         display_name.clone(),
-                        &app_state.user_states,
                         &app_state,
                     )
                     .await;
@@ -260,10 +273,10 @@ pub async fn run_user_state_subscription(
                     let uid = notif.user_id();
                     let doc_id = get_user_state_doc(&app_state, uid).await;
                     if doc_id.is_none() {
-                        debug!(user_id = %uid, "No cached UserState, nothing to update");
+                        debug!(user_id = %uid, "No persisted UserState URL, nothing to update");
                         continue;
                     }
-                    let doc_id = doc_id.expect("Cached document should exist");
+                    let doc_id = doc_id.expect("Persisted document ID should exist");
                     let doc_handle =
                         app_state.repo.find(doc_id).await?.ok_or(AppError::UserStateSync(
                             "Could not get doc_handle".to_string(),
