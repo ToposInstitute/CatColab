@@ -47,13 +47,8 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
                 },
             }),
             analyses.massActionEquations({
-                getEquations(model) {
-                    return thSymMonoidalCategory.massActionEquations(model);
-                },
-            }),
-            analyses.unbalancedMassActionEquations({
-                getEquations(model) {
-                    return thSymMonoidalCategory.unbalancedMassActionEquations(model);
+                getEquations(model, data) {
+                    return thSymMonoidalCategory.massActionEquations(model, data);
                 },
             }),
             analyses.stochasticMassAction({

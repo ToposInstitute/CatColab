@@ -114,14 +114,23 @@ pub(crate) fn mass_action_modal(
     })
 }
 
+/// The analysis data for mass-action equations.
+#[derive(Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct MassActionEquationsData {
+    /// The mass-conservation type.
+    #[serde(rename = "massConservationType")]
+    pub mass_conservation_type: analyses::ode::MassConservationType,
+}
+
 /// Generates mass-action equations for tabulated models.
 pub(crate) fn mass_action_equations_tab(
     model: &DblModel,
-    mass_conservation_type: analyses::ode::MassConservationType,
+    data: MassActionEquationsData,
 ) -> Result<ODELatex, String> {
     let realised_model = model.discrete_tab()?;
     let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
-    let sys = analysis.build_system(realised_model, mass_conservation_type);
+    let sys = analysis.build_system(realised_model, data.mass_conservation_type);
     let equations = sys
         .map_variables(latex_ob_names_mass_action(model))
         .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(model)))
@@ -132,11 +141,11 @@ pub(crate) fn mass_action_equations_tab(
 /// Generates mass-action equations for modal models.
 pub(crate) fn mass_action_equations_modal(
     model: &DblModel,
-    mass_conservation_type: analyses::ode::MassConservationType,
+    data: MassActionEquationsData,
 ) -> Result<ODELatex, String> {
     let realised_model = model.modal()?;
     let analysis = analyses::ode::PetriNetMassActionAnalysis::default();
-    let sys = analysis.build_system(realised_model, mass_conservation_type);
+    let sys = analysis.build_system(realised_model, data.mass_conservation_type);
     let equations = sys
         .map_variables(latex_ob_names_mass_action(model))
         .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(model)))
