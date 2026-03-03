@@ -6,8 +6,6 @@ use thiserror::Error;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-use crate::user_state_subscription::UserStates;
-
 /// Top-level application state.
 ///
 /// Cheaply cloneable and intended to be moved around the program.
@@ -21,9 +19,6 @@ pub struct AppState {
 
     /// Tracks which ref_ids have active autosave listeners to prevent duplicates.
     pub active_listeners: Arc<RwLock<HashSet<Uuid>>>,
-
-    /// User state Automerge documents, keyed by user ID.
-    pub user_states: UserStates,
 }
 
 /// Context available to RPC procedures.

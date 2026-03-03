@@ -462,8 +462,19 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
 
 /// Gets the user state document ID for a given user.
 pub async fn get_user_state_doc(state: &AppState, user_id: &str) -> Option<DocumentId> {
-    let states = state.user_states.read().await;
-    states.get(user_id).cloned()
+    let doc_id = sqlx::query_scalar::<_, String>(
+        r#"
+        SELECT doc_id
+        FROM user_state_urls
+        WHERE user_id = $1
+        "#,
+    )
+    .bind(user_id)
+    .fetch_optional(&state.db)
+    .await
+    .ok()??;
+
+    DocumentId::from_str(&doc_id).ok()
 }
 
 /// Gets or creates the user state document for a given user.
@@ -501,7 +512,7 @@ pub fn user_state_to_automerge(state: &UserState) -> Result<automerge::Automerge
     Ok(doc)
 }
 
-/// Creates a new user state document in samod and registers it in the user states map.
+/// Creates a new user state document in samod and persists its URL for the user.
 pub async fn create_user_state_doc(
     state: &AppState,
     user_id: &str,
@@ -527,15 +538,19 @@ pub async fn create_user_state_doc(
 
     debug!(user_id = %user_id, doc_id = %doc_id, "Document populated with user state");
 
-    let mut states = state.user_states.write().await;
-    states.insert(user_id.to_string(), doc_id.clone());
+    sqlx::query(
+        r#"
+        INSERT INTO user_state_urls (user_id, doc_id)
+        VALUES ($1, $2)
+        ON CONFLICT (user_id) DO UPDATE SET doc_id = EXCLUDED.doc_id
+        "#,
+    )
+    .bind(user_id)
+    .bind(doc_id.to_string())
+    .execute(&state.db)
+    .await?;
 
-    debug!(
-        user_id = %user_id,
-        doc_id = %doc_id,
-        total_cached_users = states.len(),
-        "Stored document ID in user states map"
-    );
+    debug!(user_id = %user_id, doc_id = %doc_id, "Stored document ID in user_state_urls");
 
     info!(user_id = %user_id, doc_id = %doc_id, "Created user state document");
 
