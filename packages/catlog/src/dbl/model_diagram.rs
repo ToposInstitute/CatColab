@@ -135,24 +135,24 @@ impl DiscreteDblModelDiagram {
     /// morphism `D(f): D(j0)→D(j1)` in `𝒞`. This adds a *single* element to
     /// the connected component because the following triangle commutes:
     ///
-    ///
-    ///               D(f)
-    ///         D(j0)  → D(j1)
-    ///       D(f)⋅m ↘   ↙ m
-    ///                c
-    ///
+    ///```text
+    ///                D(f)
+    ///           D(j0) -> D(j1)
+    ///         D(f);m ↘   ↙ m
+    ///                  c
+    ///```
     ///
     /// Move 2: there is a morphism `f: j1→j2` in `J`. Therefore there is a
     /// morphism `D(f): D(j1)→D(j2)` in `𝒞`. We then have new `𝒞/c` objects in
     /// our connected component for *every* `m'` in `𝒞` such that the following
     /// diagram in `𝒞` commutes:
     ///
-    ///
+    ///```text
     ///               D(f)
-    ///         D(j1)  → D(j2)
+    ///            D(j1) -> D(j2)
     ///           m  ↘   ↙  m'
     ///                c
-    ///
+    ///```
     ///
     /// We represent elements of `𝒞/c` with a path of generating morphisms in
     /// `𝒞`. There is a possibility of redundant work because multiple paths of
@@ -165,23 +165,28 @@ impl DiscreteDblModelDiagram {
     /// has loops, as it is not possible to fully enumerate all paths of
     /// morphism generators between two objects in `𝒞`. The `len` keyword
     /// prevents us from infinite iteration at the cost of some false negatives.
-    /// 
+    /// It sets the maximum length of the objects in `𝒞/c` that
+    /// we use to iteratively expand the connected component. Likewise, to
+    /// prevent infinite iteration, `ziglen` controls the max length of zigzags.
+    ///
     /// Note this algorithm does not need to look at the object / morphism
     /// *types* in `𝒞`.
     fn zigzag(
         &self,
-        j1: QualifiedName,
-        j2: QualifiedName,
-        src: QualifiedPath,
-        tgt: QualifiedPath,
+        src: (QualifiedName, QualifiedPath),
+        tgt: (QualifiedName, QualifiedPath),
         model: &DiscreteDblModel,
         len: Option<usize>,
+        ziglen: Option<usize>,
     ) -> bool {
+        let (j1, src) = src;
+        let (j2, tgt) = tgt;
         let f = self.0.functor_into(model);
 
         // Our worklist represents the zigzags out of j1 that are in the same
         // connected component. We do not remember which zigzag in J it is, just
-        // its domain object in J and the morphism's image in 𝒞.
+        // its domain object in J and the morphism's image in 𝒞. We also remember
+        // how many steps it took us to get to this element in `𝒞/c`.
         // So, each element in the work list is an object j (which is connected
         // to j1 via *some* sequence of morphisms in J) and a morphism D(j) → c
         // (we do not remember the sequence of morphisms, just the overall
@@ -217,29 +222,35 @@ impl DiscreteDblModelDiagram {
         } else if c != tgt.tgt(g) {
             panic!("Bad input tgt({tgt:?})!={c:?}")
         }
+        // Iterate ziglen many times, or unboundedly if ziglen is none
+        let iter: Box<dyn Iterator<Item = usize>> = match ziglen {
+            None => Box::new(0..),
+            Some(n) => Box::new(0..n + 1),
+        };
 
-        // Process worklist until it is empty. This will terminate because `len`
-        // restricts us to looking at only a finite subset of the morphisms in
-        // 𝒞/c, and there are only a finite number of objects in J, so there are
-        // a finite number of (j, D(j) → c) pairs (which we will never repeat)
-        while let Some((j, m)) = worklist.pop() {
-            // Check if this pair is the tgt we have been trying to reach
-            if model.morphisms_are_equal(m.clone(), tgt.clone()) {
-                return true;
-            } else if len.is_none_or(|n| m.len() < n) {
-                // stop search if m too large
-                // Add to seen cache
+        for _ in iter {
+            let mut next_worklist: Vec<(QualifiedName, QualifiedPath)> = vec![];
+
+            // Process worklist until it is empty, building up next round's worklist
+            while let Some((j, m)) = worklist.pop() {
+                // Check if this pair is the tgt we have been trying to reach
+                if model.morphisms_are_equal(m.clone(), tgt.clone()) {
+                    return true;
+                }
                 seen.insert((j.clone(), m.clone()));
 
                 // Move 1, above. `h: j' → j` in `J`. Then `(j', D(h) ⋅ m)` is
-                // connected via a zig zag to `(j, m)`.
-                for jh in jg.in_edges(&j) {
-                    let new_j: QualifiedName = jg.src(&jh);
-                    let h = f.mor_generator_map().get(&jh).unwrap().clone();
-                    let new_m = h.concat_in(g, m.clone()).unwrap();
-                    let new_tup = (new_j, new_m);
-                    if !seen.contains(&new_tup) {
-                        worklist.push(new_tup);
+                // connected via a zig zag to `(j, m)`. This extends the length
+                // of `m` by 1, so we only do this if `m` is less than max length.
+                if len.is_none_or(|n| m.len() < n) {
+                    for jh in jg.in_edges(&j) {
+                        let new_j: QualifiedName = jg.src(&jh);
+                        let h = f.mor_generator_map().get(&jh).unwrap().clone();
+                        let new_m = h.concat_in(g, m.clone()).unwrap();
+                        let new_tup = (new_j, new_m);
+                        if !seen.contains(&new_tup) {
+                            next_worklist.push(new_tup);
+                        }
                     }
                 }
                 // Move 2, above. `h: j → j'` in `J`. Then `c ← j → D(j')` can be
@@ -251,7 +262,7 @@ impl DiscreteDblModelDiagram {
                     let h = f.mor_generator_map().get(&jh).unwrap();
                     // Look for morphisms `D(j') → c` bounded by max length
                     // minus current length (if there's a bound at all)
-                    for new_m in bounded_simple_paths(g, &h.tgt(g), &c, len.map(|l| l - m.len())) {
+                    for new_m in bounded_simple_paths(g, &h.tgt(g), &c, len) {
                         // check that the triangle commutes
                         if model.morphisms_are_equal(
                             m.clone(),
@@ -259,13 +270,20 @@ impl DiscreteDblModelDiagram {
                         ) {
                             let new_tup = (new_j.clone(), new_m);
                             if !seen.contains(&new_tup) {
-                                worklist.push(new_tup);
+                                next_worklist.push(new_tup);
                             }
                         }
                     }
                 }
             }
+            if next_worklist.is_empty() {
+                return false;
+            }
+            for x in &next_worklist {
+                worklist.push(x.clone());
+            }
         }
+
         false // no zigzag (given `len`-limited exploration of 𝒞/c) exists
     }
 }
@@ -278,14 +296,18 @@ impl<'a> InstanceMorphism<'a> {
     pub fn validate_in(
         &self,
         model: &DiscreteDblModel,
+        len: Option<usize>,
+        ziglen: Option<usize>,
     ) -> Result<(), NonEmpty<InvalidInstanceMorphism>> {
-        validate::wrap_errors(self.iter_invalid_in(model))
+        validate::wrap_errors(self.iter_invalid_in(model, len, ziglen))
     }
 
     /// Iterates over failures of the diagram to be valid in the given model.
     pub fn iter_invalid_in(
         &'a self,
         model: &DiscreteDblModel,
+        len: Option<usize>,
+        ziglen: Option<usize>,
     ) -> impl Iterator<Item = InvalidInstanceMorphism> + 'a {
         let mut errs = vec![];
         if !(self.1.validate_in(model).is_ok() && self.2.validate_in(model).is_ok()) {
@@ -351,7 +373,13 @@ impl<'a> InstanceMorphism<'a> {
                 let (j_2, cod_comp) = self.0.get(j2).unwrap();
                 let comp_h =
                     dom_comp.clone().concat_in(model.generating_graph(), h.clone()).unwrap();
-                if !self.2.zigzag(j_1.clone(), j_2.clone(), comp_h, cod_comp.clone(), model, None) {
+                if !self.2.zigzag(
+                    (j_1.clone(), comp_h),
+                    (j_2.clone(), cod_comp.clone()),
+                    model,
+                    len,
+                    ziglen,
+                ) {
                     errs.push(InvalidInstanceMorphism::UnnaturalComponent(jh))
                 }
             }
@@ -374,6 +402,7 @@ impl<'a> InstanceMorphism<'a> {
         other: &InstanceMorphism,
         model: &DiscreteDblModel,
         len: Option<usize>,
+        ziglen: Option<usize>,
     ) -> bool {
         // No eq method yet.
         if self.1 != other.1 {
@@ -383,7 +412,7 @@ impl<'a> InstanceMorphism<'a> {
         }
         self.0.clone().into_iter().all(|(k, (j1, src))| {
             let (j2, tgt) = other.0.get(&k).unwrap();
-            self.2.zigzag(j1, j2.clone(), src.clone(), tgt.clone(), model, len)
+            self.2.zigzag((j1, src.clone()), (j2.clone(), tgt.clone()), model, len, ziglen)
         })
     }
 }
@@ -572,21 +601,19 @@ mod tests {
         // There is a zig zag from `o10: D(ja1)→a0` to `id(a0): D(ja0)→a0`.
         // via the morphism `jo10: ja1 → ja0`.
         assert!(d1.zigzag(
-            name("ja1"),
-            name("ja0"),
-            name("o10").into(),
-            QualifiedPath::empty(name("a0")),
+            (name("ja1"), name("o10").into()),
+            (name("ja0"), QualifiedPath::empty(name("a0"))),
             &c,
             None,
+            None
         ));
 
         // Zig-zag is symmetric: we could also start with `id(a0): D(ja0)→a0`.
         assert!(d1.zigzag(
-            name("ja0"),
-            name("ja1"),
-            QualifiedPath::empty(name("a0")),
-            name("o10").into(),
+            (name("ja0"), QualifiedPath::empty(name("a0"))),
+            (name("ja1"), name("o10").into()),
             &c,
+            None,
             None
         ));
 
@@ -594,21 +621,19 @@ mod tests {
         // `a21;o10: D'(j12) → a0` to `a00: D'(j10) → a0` via the
         // morphisms `jh01: j10→j11` and `jh21: j12→j11`.
         assert!(d2.zigzag(
-            name("je2"),
-            name("je0"),
-            QualifiedPath::pair(name("a21"), name("o10")),
-            name("a00").into(),
+            (name("je2"), QualifiedPath::pair(name("a21"), name("o10"))),
+            (name("je0"), name("a00").into()),
             &c,
-            None
+            None,
+            Some(2)
         ));
 
-        // We don't find this zig-zag if our max-length is just 1
-        assert!(d2.zigzag(
-            name("je2"),
-            name("je0"),
-            QualifiedPath::pair(name("a21"), name("o10")),
-            name("a00").into(),
+        // We don't find this zig-zag if our max-length of zig-zags is just 1
+        assert!(!d2.zigzag(
+            (name("je2"), QualifiedPath::pair(name("a21"), name("o10"))),
+            (name("je0"), name("a00").into()),
             &c,
+            None,
             Some(1)
         ));
 
@@ -616,11 +641,10 @@ mod tests {
         // remove that, there is no longer a zig-zag.
         let (c, _, d2) = create_diagrams(false);
         assert!(!d2.zigzag(
-            name("je2"),
-            name("je0"),
-            QualifiedPath::pair(name("a21"), name("o10")),
-            name("a00").into(),
+            (name("je2"), QualifiedPath::pair(name("a21"), name("o10"))),
+            (name("je0"), name("a00").into()),
             &c,
+            None,
             None
         ));
     }
@@ -631,7 +655,7 @@ mod tests {
         // A good instance morphism
         assert!(
             mk_ihom(&d1, &d2, vec![("ja1", "je2", vec!["a21"]), ("ja0", "je0", vec!["a00"])],)
-                .validate_in(&c)
+                .validate_in(&c, None, None)
                 .is_ok()
         );
 
@@ -640,26 +664,30 @@ mod tests {
 
         assert!(
             mk_ihom(&d1bad, &d2bad, vec![("ja1", "je2", vec!["a21"]), ("ja0", "je0", vec!["a00"])],)
-                .validate_in(&cbad)
+                .validate_in(&cbad, None, None)
                 == Err(NonEmpty::new(InvalidInstanceMorphism::UnnaturalComponent(
                     name("jo10").into()
                 )))
         );
 
         // Missing a component
-        assert!(mk_ihom(&d1, &d2, vec![("ja1", "je2", vec!["a21"])],).validate_in(&c).is_err());
+        assert!(
+            mk_ihom(&d1, &d2, vec![("ja1", "je2", vec!["a21"])],)
+                .validate_in(&c, None, None)
+                .is_err()
+        );
 
         // Unnatural (bad target)
         assert!(
             mk_ihom(&d1, &d2, vec![("ja1", "je2", vec!["h21"]), ("ja0", "je0", vec!["a00"])],)
-                .validate_in(&c)
+                .validate_in(&c, None, None)
                 .is_err()
         );
 
         // Unnatural (bad src)
         assert!(
             mk_ihom(&d1, &d2, vec![("ja1", "je2", vec!["a21"]), ("ja0", "je0", vec!["a10"])],)
-                .validate_in(&c)
+                .validate_in(&c, None, None)
                 .is_err()
         );
     }
@@ -670,13 +698,14 @@ mod tests {
 
         let im = mk_ihom(&d1, &d2, vec![("ja1", "je2", vec!["a21"]), ("ja0", "je0", vec!["a00"])]);
 
+        // Present the ja0 component differently, but equivalently
         let im2 = mk_ihom(
             &d1,
             &d2,
             vec![("ja1", "je2", vec!["a21"]), ("ja0", "je2", vec!["h21", "a10"])],
         );
-        assert!(im2.validate_in(&c).is_ok());
+        assert!(im2.validate_in(&c, None, None).is_ok());
 
-        assert!(im.equiv(&im2, &c, None));
+        assert!(im.equiv(&im2, &c, None, None));
     }
 }
