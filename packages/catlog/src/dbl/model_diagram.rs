@@ -31,11 +31,10 @@ use crate::one::{
 use crate::validate::{self};
 use crate::zero::{HashColumn, QualifiedName, column::MutMapping};
 
-/** A diagram in a model of a double theory.
-
-This struct owns its data, namely, the domain of the diagram (a model) and the
-model mapping itself.
-*/
+/// A diagram in a model of a double theory.
+///
+/// This struct owns its data, namely, the domain of the diagram (a model) and the
+/// model mapping itself.
 #[derive(Clone, Into, PartialEq)]
 #[into(owned, ref, ref_mut)]
 pub struct DblModelDiagram<Map, Dom>(pub Map, pub Dom);
@@ -135,24 +134,24 @@ impl DiscreteDblModelDiagram {
     /// morphism `D(f): D(j0)→D(j1)` in `𝒞`. This adds a *single* element to
     /// the connected component because the following triangle commutes:
     ///
-    ///```text
+    /// ```text
     ///                D(f)
     ///           D(j0) -> D(j1)
     ///         D(f);m ↘   ↙ m
     ///                  c
-    ///```
+    /// ```
     ///
     /// Move 2: there is a morphism `f: j1→j2` in `J`. Therefore there is a
     /// morphism `D(f): D(j1)→D(j2)` in `𝒞`. We then have new `𝒞/c` objects in
     /// our connected component for *every* `m'` in `𝒞` such that the following
     /// diagram in `𝒞` commutes:
     ///
-    ///```text
+    /// ```text
     ///               D(f)
     ///            D(j1) -> D(j2)
     ///           m  ↘   ↙  m'
     ///                c
-    ///```
+    /// ```
     ///
     /// We represent elements of `𝒞/c` with a path of generating morphisms in
     /// `𝒞`. There is a possibility of redundant work because multiple paths of
@@ -289,10 +288,9 @@ impl DiscreteDblModelDiagram {
 }
 
 impl<'a> InstanceMorphism<'a> {
-    /** Validates that the instance morphism is well-defined.
-
-    Assumes that the dom/codom diagrams are valid. If not, this may panic.
-     */
+    /// Validates that the instance morphism is well-defined.
+    ///
+    /// Assumes that the dom/codom diagrams are valid. If not, this may panic.
     pub fn validate_in(
         &self,
         model: &DiscreteDblModel,
@@ -492,7 +490,7 @@ mod tests {
     /// The letters before names indicate whether something is an entity,
     /// attrtype, hom, or attr.
     ///
-    ///```text
+    /// ```text
     ///    D1(J)  D2(J')
     ///    -----  ------
     ///
@@ -505,18 +503,18 @@ mod tests {
     ///     v  v ✓ | h01
     ///     a0 <- e0
     ///       a00
-    ///```
+    /// ```
     ///
     /// The bottom triangle commutes always, and the input parameter `commutes`
     /// controls whether or not the top square commutes.
     ///
     /// Viewed as tabular instances, D1(J) is:
     ///
-    ///```text
+    /// ```text
     /// | e0 |  | e1 |  | e2 | | a1 | o10 |  |  a0 |  
     /// ======  ======  ====== ============  =======
     ///                        |ja1 | ja0 |  | ja0 |   
-    ///```
+    /// ```
     ///
     /// And `D2(J')` (if both polygons in `C` commute) is the terminal instance:
     ///
@@ -528,7 +526,7 @@ mod tests {
     /// |    a1   |   o10   |     |    a0    |  
     /// =====================     ============
     /// |a21(je2) | a00(je0)|     | a00(je0) |  
-    ///```
+    /// ```
     ///
     /// However, if the top square in `C` does not commute, `D2(J')` becomes:
     ///
@@ -541,7 +539,7 @@ mod tests {
     /// =====================     ================
     /// |a21(je2) | a00(je0)|     |    a00(je0)  |  
     ///                           | o10(a21(je1))|
-    ///```
+    /// ```
     ///
     /// Returns a tuple: `(C,D1,D2)`.
     fn create_diagrams(
