@@ -61,6 +61,7 @@ mod integration_tests {
             db: pool,
             repo,
             active_listeners: Arc::new(RwLock::new(HashSet::new())),
+            initialized_user_states: Arc::new(RwLock::new(HashSet::new())),
         }
     }
 
@@ -969,6 +970,62 @@ mod integration_tests {
         Ok(())
     }
 
+    /// Tests that the first user-state read after restart refreshes from DB.
+    #[sqlx::test]
+    async fn get_or_create_user_state_doc_refreshes_on_first_read_after_restart(
+        pool: PgPool,
+    ) -> sqlx::Result<()> {
+        use backend::user_state::get_or_create_user_state_doc;
+
+        run_migrations(&pool).await?;
+
+        let user_id = format!("test_user_{}", Uuid::now_v7());
+        ensure_user_exists(&pool, &user_id).await.expect("Failed to create user");
+
+        {
+            let state = create_test_app_state(pool.clone()).await;
+
+            get_or_create_user_state_doc(&state, &user_id)
+                .await
+                .expect("Failed to get or create initial user state doc");
+
+            // Create a new ref after the user state doc exists. No subscription is
+            // running in this test, so this update only exists in DB until the next
+            // explicit refresh.
+            let ctx = AppCtx {
+                state: state.clone(),
+                user: Some(create_test_firebase_user(&user_id)),
+            };
+            let content = create_test_document_content("Restart Refresh Document");
+            let _ = document::new_ref(ctx, content).await.expect("Failed to create ref");
+
+            state.repo.stop().await;
+        }
+
+        let restarted_state = create_test_app_state(pool.clone()).await;
+        get_or_create_user_state_doc(&restarted_state, &user_id)
+            .await
+            .expect("Failed to get or create user state doc after restart");
+
+        let user_state = read_user_state_from_samod(&restarted_state, &user_id)
+            .await
+            .expect("User state should exist after restart");
+        assert_eq!(
+            user_state.documents.len(),
+            1,
+            "First read after restart should refresh stale doc contents from DB"
+        );
+        assert!(
+            user_state
+                .documents
+                .values()
+                .any(|doc| doc.name.as_str() == "Restart Refresh Document"),
+            "Ref created while state doc was stale should be present after restart refresh"
+        );
+
+        Ok(())
+    }
+
     /// Creates document content for a child document (diagram) that links to a parent ref.
     fn create_child_document_content(name: &str, parent_ref_id: Uuid) -> serde_json::Value {
         json!({
@@ -1503,7 +1560,7 @@ mod integration_tests {
             use autosurgeon::hydrate;
             use backend::app::AppState;
             use backend::storage::PostgresStorage;
-            use std::collections::{HashMap, HashSet};
+            use std::collections::HashSet;
             use std::sync::Arc;
             use tokio::sync::RwLock;
 
@@ -1522,6 +1579,7 @@ mod integration_tests {
                 db: test_db.pool().clone(),
                 repo,
                 active_listeners: Arc::new(RwLock::new(HashSet::new())),
+                initialized_user_states: Arc::new(RwLock::new(HashSet::new())),
             };
 
             // Write user state to the database

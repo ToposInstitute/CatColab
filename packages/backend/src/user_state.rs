@@ -490,6 +490,30 @@ pub async fn get_or_create_user_state_doc(
 
     // Check if we already have a document for this user
     if let Some(doc_id) = get_user_state_doc(state, user_id).await {
+        let already_initialized = {
+            let initialized = state.initialized_user_states.read().await;
+            initialized.contains(user_id)
+        };
+
+        if !already_initialized {
+            let refreshed = refresh_user_state_doc_from_db(state, user_id, &doc_id).await?;
+            if refreshed {
+                let mut initialized = state.initialized_user_states.write().await;
+                initialized.insert(user_id.to_string());
+            } else {
+                debug!(
+                    user_id = %user_id,
+                    doc_id = %doc_id,
+                    "Persisted user state doc was not found in repo; recreating"
+                );
+                let user_state = read_user_state_from_db(user_id.to_string(), &state.db).await?;
+                let recreated_doc_id = create_user_state_doc(state, user_id, &user_state).await?;
+                let mut initialized = state.initialized_user_states.write().await;
+                initialized.insert(user_id.to_string());
+                return Ok(recreated_doc_id);
+            }
+        }
+
         debug!(
             user_id = %user_id,
             doc_id = %doc_id,
@@ -501,7 +525,35 @@ pub async fn get_or_create_user_state_doc(
     debug!(user_id = %user_id, "No existing document, creating new one");
 
     let user_state = read_user_state_from_db(user_id.to_string(), &state.db).await?;
-    create_user_state_doc(state, user_id, &user_state).await
+    let doc_id = create_user_state_doc(state, user_id, &user_state).await?;
+    let mut initialized = state.initialized_user_states.write().await;
+    initialized.insert(user_id.to_string());
+    Ok(doc_id)
+}
+
+async fn refresh_user_state_doc_from_db(
+    state: &AppState,
+    user_id: &str,
+    doc_id: &DocumentId,
+) -> Result<bool, AppError> {
+    let user_state = read_user_state_from_db(user_id.to_string(), &state.db).await?;
+    let Some(doc_handle) = state.repo.find(doc_id.clone()).await? else {
+        return Ok(false);
+    };
+
+    doc_handle.with_document(|doc| {
+        doc.transact(|tx| reconcile(tx, &user_state))
+            .map_err(|e| AppError::UserStateSync(format!("Failed to reconcile: {:?}", e)))
+    })?;
+
+    debug!(
+        user_id = %user_id,
+        doc_id = %doc_id,
+        document_count = user_state.documents.len(),
+        "Refreshed existing user state document from DB"
+    );
+
+    Ok(true)
 }
 
 /// Converts a `UserState` into an Automerge document.
