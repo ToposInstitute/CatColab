@@ -61,16 +61,12 @@ mod integration_tests {
             db: pool,
             repo,
             active_listeners: Arc::new(RwLock::new(HashSet::new())),
-            user_states: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
     /// Helper to read user state from samod using the stored document ID.
     async fn read_user_state_from_samod(state: &AppState, user_id: &str) -> Option<UserState> {
-        let doc_id = {
-            let states = state.user_states.read().await;
-            states.get(user_id).cloned()
-        };
+        let doc_id = backend::user_state::get_user_state_doc(state, user_id).await;
 
         let doc_id = match doc_id {
             Some(id) => id,
@@ -863,11 +859,19 @@ mod integration_tests {
             .await
             .expect("Failed to get or create user state doc");
 
-        // Verify the document was created and cached
-        {
-            let states = state.user_states.read().await;
-            assert!(states.contains_key(&user_id), "User state should be cached");
-        }
+        // Verify the document URL was persisted
+        let persisted_doc_id = sqlx::query_scalar::<_, String>(
+            r#"
+            SELECT doc_id
+            FROM user_state_urls
+            WHERE user_id = $1
+            "#,
+        )
+        .bind(&user_id)
+        .fetch_optional(&pool)
+        .await?
+        .expect("User state URL should be persisted");
+        assert!(!persisted_doc_id.is_empty(), "Persisted document ID should be non-empty");
 
         // Read the user state from the document
         let user_state = read_user_state_from_samod(&state, &user_id).await;
@@ -1518,7 +1522,6 @@ mod integration_tests {
                 db: test_db.pool().clone(),
                 repo,
                 active_listeners: Arc::new(RwLock::new(HashSet::new())),
-                user_states: Arc::new(RwLock::new(HashMap::new())),
             };
 
             // Write user state to the database
@@ -1536,10 +1539,7 @@ mod integration_tests {
 
             // Read the user state from samod using the stored DocumentId
             let automerge_state: Option<UserState> = {
-                let doc_id = {
-                    let states = state.user_states.read().await;
-                    states.get(&user_id).cloned()
-                };
+                let doc_id = backend::user_state::get_user_state_doc(&state, &user_id).await;
 
                 match doc_id {
                     Some(doc_id) => {
