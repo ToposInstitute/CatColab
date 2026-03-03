@@ -931,6 +931,40 @@ mod integration_tests {
         Ok(())
     }
 
+    /// Tests that user state document ID is stable across app restarts.
+    #[sqlx::test]
+    async fn get_or_create_user_state_doc_persists_across_app_restart(
+        pool: PgPool,
+    ) -> sqlx::Result<()> {
+        use backend::user_state::get_or_create_user_state_doc;
+
+        run_migrations(&pool).await?;
+
+        let user_id = format!("test_user_{}", Uuid::now_v7());
+        ensure_user_exists(&pool, &user_id).await.expect("Failed to create user");
+
+        let doc_id_before_restart = {
+            let state = create_test_app_state(pool.clone()).await;
+            let doc_id = get_or_create_user_state_doc(&state, &user_id)
+                .await
+                .expect("Failed to get or create user state doc before restart");
+            state.repo.stop().await;
+            doc_id
+        };
+
+        let state_after_restart = create_test_app_state(pool.clone()).await;
+        let doc_id_after_restart = get_or_create_user_state_doc(&state_after_restart, &user_id)
+            .await
+            .expect("Failed to get or create user state doc after restart");
+
+        assert_eq!(
+            doc_id_before_restart, doc_id_after_restart,
+            "User state doc ID should remain stable across app restart"
+        );
+
+        Ok(())
+    }
+
     /// Creates document content for a child document (diagram) that links to a parent ref.
     fn create_child_document_content(name: &str, parent_ref_id: Uuid) -> serde_json::Value {
         json!({
