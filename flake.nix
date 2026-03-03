@@ -137,6 +137,8 @@
               python312Packages.requests
               python312Packages.ipykernel
               python3
+              netcat
+              postgresql
             ]
             ++ darwinDeps
             ++ [
