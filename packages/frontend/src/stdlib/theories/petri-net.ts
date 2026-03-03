@@ -42,11 +42,13 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
                 help: "visualization",
             }),
             analyses.massAction({
+                ratesHaveGranularity: true,
                 simulate(model, data) {
                     return thSymMonoidalCategory.massAction(model, data);
                 },
             }),
             analyses.massActionEquations({
+                ratesHaveGranularity: true,
                 getEquations(model, data) {
                     return thSymMonoidalCategory.massActionEquations(model, data);
                 },

@@ -10,20 +10,16 @@ import "./simulation.css";
 /** Display the symbolic mass-action dynamics equations for a model. */
 export default function MassActionEquationsDisplay(
     props: ModelAnalysisProps<MassActionEquationsData> & {
-        getEquations: MassActionEquations;
-        title?: string;
         content: MassActionEquationsData;
+        getEquations: MassActionEquations;
+        ratesHaveGranularity: boolean;
+        title?: string;
     },
 ) {
     const latexEquations = createModelODELatex(
         () => props.liveModel.validatedModel(),
         (model) => props.getEquations(model, props.content),
     );
-
-    // The option to change RateGranularity should only be visible when working
-    // with models in a theory that supports multiple inputs/outputs to morphisms
-    // e.g. Petri nets but not stock-flow.
-    const theoryWithGranularity = () => props.liveModel.theory()?.id === "petri-net";
 
     return (
         <div class="simulation">
@@ -33,7 +29,7 @@ export default function MassActionEquationsDisplay(
                     <MassActionConfigForm
                         config={props.content}
                         changeConfig={props.changeContent}
-                        enableGranularity={theoryWithGranularity()}
+                        enableGranularity={props.ratesHaveGranularity}
                     />
                 }
             />

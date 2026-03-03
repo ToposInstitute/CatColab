@@ -163,6 +163,7 @@ const LotkaVolterra = lazy(() => import("./analyses/lotka_volterra"));
 
 export function massAction(
     options: Partial<AnalysisOptions> & {
+        ratesHaveGranularity: boolean;
         simulate: Simulators.MassActionSimulator;
         stateType?: ObType;
         transitionType?: MorType;
@@ -198,6 +199,7 @@ const MassAction = lazy(() => import("./analyses/mass_action"));
 
 export function massActionEquations(
     options: Partial<AnalysisOptions> & {
+        ratesHaveGranularity: boolean;
         getEquations: Simulators.MassActionEquations;
     },
 ): ModelAnalysisMeta<MassActionEquationsData> {
@@ -206,7 +208,7 @@ export function massActionEquations(
         name = "Mass-action dynamics equations",
         description = "Display the symbolic mass-action dynamics equations",
         help = "mass-action-equations",
-        getEquations,
+        ...otherOptions
     } = options;
     return {
         id,
@@ -214,7 +216,7 @@ export function massActionEquations(
         description,
         help,
         component: (props) => (
-            <MassActionEquationsDisplay title={name} getEquations={getEquations} {...props} />
+            <MassActionEquationsDisplay title={name} {...otherOptions} {...props} />
         ),
         initialContent: () => ({
             massConservationType: { type: "Balanced" },
