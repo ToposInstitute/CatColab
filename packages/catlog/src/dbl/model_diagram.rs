@@ -429,12 +429,12 @@ mod tests {
     use crate::{stdlib, tt};
     use std::rc::Rc;
 
-    /// Helper function: parse a model of `th_schema` from a string
+    /// Helper function: parse a model of `th_schema` from a string.
     fn mk_schema_model(source: Vec<&str>) -> DiscreteDblModel {
         let th = Rc::new(stdlib::th_schema());
         let maybe_model =
             tt::modelgen::Model::from_text(&th.into(), &mut format!("[{}]", source.join(",")));
-        return maybe_model.and_then(|m| m.as_discrete()).unwrap();
+        maybe_model.and_then(|m| m.as_discrete()).unwrap()
     }
 
     /// Helper function: make a DblModelDiagram where the mapping only sends
@@ -452,26 +452,26 @@ mod tests {
         let d = DblModelDiagram(map, mk_schema_model(source));
         assert!(d.1.validate().is_ok());
         assert!(d.validate_in(model).is_ok());
-        return d;
+        d
     }
 
-    /// Helper function: make an instance morphism
+    /// Helper function: make an instance morphism.
     fn mk_ihom<'a>(
         dom: &'a DblModelDiagram<DiscreteDblModelMapping, DiscreteDblModel>,
         cod: &'a DblModelDiagram<DiscreteDblModelMapping, DiscreteDblModel>,
         cs: Vec<(&str, &str, Vec<&str>)>,
     ) -> InstanceMorphism<'a> {
         let mapping = HashColumn::from_iter(cs.into_iter().map(|(a, b, c)| mk_component(a, b, c)));
-        return InstanceMorphism(mapping, dom, cod);
+        InstanceMorphism(mapping, dom, cod)
     }
 
-    /// Helper function: make a component of an instance morphism
+    /// Helper function: make a component of an instance morphism.
     fn mk_component(
         dom_ob: &str,
         cod_ob: &str,
         pth: Vec<&str>,
     ) -> (QualifiedName, (QualifiedName, QualifiedPath)) {
-        let pth_: Vec<_> = pth.into_iter().map(|x| name(x)).collect();
+        let pth_: Vec<_> = pth.into_iter().map(name).collect();
         (
             name(dom_ob),
             (
@@ -486,12 +486,13 @@ mod tests {
         )
     }
 
-    // Defines two diagrams D1 and D2 in the following ThSchema model, C,
-    // which consists in their (disjoint) images, plus two morphisms
-    // connecting them.
-    // The letters before names indicate whether something is an entity,
-    // attrtype, hom, or attr.
-    //
+    /// Defines two diagrams D1 and D2 in the following ThSchema model, C,
+    /// which consists in their (disjoint) images, plus two morphisms
+    /// connecting them.
+    /// The letters before names indicate whether something is an entity,
+    /// attrtype, hom, or attr.
+    ///
+    ///```text
     ///    D1(J)  D2(J')
     ///    -----  ------
     ///
@@ -504,18 +505,22 @@ mod tests {
     ///     v  v ✓ | h01
     ///     a0 <- e0
     ///       a00
+    ///```
     ///
     /// The bottom triangle commutes always, and the input parameter `commutes`
     /// controls whether or not the top square commutes.
     ///
     /// Viewed as tabular instances, D1(J) is:
     ///
+    ///```text
     /// | e0 |  | e1 |  | e2 | | a1 | o10 |  |  a0 |  
     /// ======  ======  ====== ============  =======
     ///                        |ja1 | ja0 |  | ja0 |   
+    ///```
     ///
-    /// And D2(J') (if both polygons in C commute) is the terminal instance:
+    /// And `D2(J')` (if both polygons in `C` commute) is the terminal instance:
     ///
+    /// ```text
     /// | e0  | h01 | a00    |  | e1 |   a10  |  | e2 | h21 |    a21   |        
     /// ======================  ===============  =======================
     /// | je0 | je1 |a00(je0)|  |je1 |a00(je0)|  |je2 | je1 | a21(je2) |          
@@ -523,9 +528,11 @@ mod tests {
     /// |    a1   |   o10   |     |    a0    |  
     /// =====================     ============
     /// |a21(je2) | a00(je0)|     | a00(je0) |  
+    ///```
     ///
-    /// However, if the top square in C does not commute, D2(J') becomes:
+    /// However, if the top square in `C` does not commute, `D2(J')` becomes:
     ///
+    /// ```text
     /// | e0  | h01 | a00    |  | e1 |   a10  |  | e2 | h21 |    a21   |        
     /// ======================  ===============  =======================
     /// | je0 | je1 |a00(je0)|  |je1 |a00(je0)|  |je2 | je1 | a21(je2) |          
@@ -534,8 +541,9 @@ mod tests {
     /// =====================     ================
     /// |a21(je2) | a00(je0)|     |    a00(je0)  |  
     ///                           | o10(a21(je1))|
+    ///```
     ///
-    /// Returns a tuple: (C,D1,D2)
+    /// Returns a tuple: `(C,D1,D2)`.
     fn create_diagrams(
         commutes: bool,
     ) -> (
@@ -591,7 +599,7 @@ mod tests {
             vec![("jh01", "h01"), ("jh21", "h21")],
         );
 
-        return (c, d1, d2);
+        (c, d1, d2)
     }
 
     #[test]
@@ -665,9 +673,7 @@ mod tests {
         assert!(
             mk_ihom(&d1bad, &d2bad, vec![("ja1", "je2", vec!["a21"]), ("ja0", "je0", vec!["a00"])],)
                 .validate_in(&cbad, None, None)
-                == Err(NonEmpty::new(InvalidInstanceMorphism::UnnaturalComponent(
-                    name("jo10").into()
-                )))
+                == Err(NonEmpty::new(InvalidInstanceMorphism::UnnaturalComponent(name("jo10"))))
         );
 
         // Missing a component
