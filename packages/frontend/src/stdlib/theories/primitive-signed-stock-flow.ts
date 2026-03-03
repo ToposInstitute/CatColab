@@ -59,6 +59,7 @@ export default function createPrimitiveSignedStockFlowTheory(theoryMeta: TheoryM
                 help: "visualization",
             }),
             analyses.massAction({
+                ratesHaveGranularity: false,
                 simulate(model, data) {
                     return thCategorySignedLinks.massAction(model, data);
                 },
@@ -68,13 +69,9 @@ export default function createPrimitiveSignedStockFlowTheory(theoryMeta: TheoryM
                 },
             }),
             analyses.massActionEquations({
-                getEquations(model) {
-                    return thCategorySignedLinks.massActionEquations(model);
-                },
-            }),
-            analyses.unbalancedMassActionEquations({
-                getEquations(model) {
-                    return thCategorySignedLinks.unbalancedMassActionEquations(model);
+                ratesHaveGranularity: false,
+                getEquations(model, data) {
+                    return thCategorySignedLinks.massActionEquations(model, data);
                 },
             }),
         ],

@@ -320,19 +320,12 @@ impl ThCategoryLinks {
 
     /// Returns the symbolic mass-action equations in LaTeX format.
     #[wasm_bindgen(js_name = "massActionEquations")]
-    pub fn mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
-        mass_action_equations_tab(model, analyses::ode::MassConservationType::Balanced)
-    }
-
-    /// Returns the symbolic unbalanced mass-action equations in LaTeX format.
-    #[wasm_bindgen(js_name = "unbalancedMassActionEquations")]
-    pub fn unbalanced_mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
-        mass_action_equations_tab(
-            model,
-            analyses::ode::MassConservationType::Unbalanced(
-                analyses::ode::RateGranularity::PerTransition,
-            ),
-        )
+    pub fn mass_action_equations(
+        &self,
+        model: &DblModel,
+        data: MassActionEquationsData,
+    ) -> Result<ODELatex, String> {
+        mass_action_equations_tab(model, data)
     }
 }
 
@@ -364,19 +357,12 @@ impl ThCategorySignedLinks {
 
     /// Returns the symbolic mass-action equations in LaTeX format.
     #[wasm_bindgen(js_name = "massActionEquations")]
-    pub fn mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
-        mass_action_equations_tab(
-            model,
-            analyses::ode::MassConservationType::Unbalanced(
-                analyses::ode::RateGranularity::PerTransition,
-            ),
-        )
-    }
-
-    /// Returns the symbolic unbalanced mass-action equations in LaTeX format.
-    #[wasm_bindgen(js_name = "unbalancedMassActionEquations")]
-    pub fn unbalanced_mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
-        mass_action_equations_tab(model, analyses::ode::MassConservationType::Balanced)
+    pub fn mass_action_equations(
+        &self,
+        model: &DblModel,
+        data: MassActionEquationsData,
+    ) -> Result<ODELatex, String> {
+        mass_action_equations_tab(model, data)
     }
 }
 
@@ -408,19 +394,12 @@ impl ThSymMonoidalCategory {
 
     /// Returns the symbolic mass-action equations in LaTeX format.
     #[wasm_bindgen(js_name = "massActionEquations")]
-    pub fn mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
-        mass_action_equations_modal(model, analyses::ode::MassConservationType::Balanced)
-    }
-
-    /// Returns the symbolic unbalanced mass-action equations in LaTeX format.
-    #[wasm_bindgen(js_name = "unbalancedMassActionEquations")]
-    pub fn unbalanced_mass_action_equations(&self, model: &DblModel) -> Result<ODELatex, String> {
-        mass_action_equations_modal(
-            model,
-            analyses::ode::MassConservationType::Unbalanced(
-                analyses::ode::RateGranularity::PerPlace,
-            ),
-        )
+    pub fn mass_action_equations(
+        &self,
+        model: &DblModel,
+        data: MassActionEquationsData,
+    ) -> Result<ODELatex, String> {
+        mass_action_equations_modal(model, data)
     }
 
     /// Simulates the stochastic mass-action system derived from a model.

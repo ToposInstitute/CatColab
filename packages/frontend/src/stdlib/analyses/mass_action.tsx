@@ -29,10 +29,11 @@ import "./simulation.css";
 /** Analyze a model using mass-action dynamics. */
 export default function MassAction(
     props: ModelAnalysisProps<MassActionProblemData> & {
+        ratesHaveGranularity: boolean;
         simulate: MassActionSimulator;
         stateType?: ObType;
-        transitionType?: MorType;
         title?: string;
+        transitionType?: MorType;
     },
 ) {
     const elaboratedModel = () => props.liveModel.elaboratedModel();
@@ -297,11 +298,6 @@ export default function MassAction(
     const plotResult = () => result()?.plotData;
     const latexEquations = () => result()?.latexEquations ?? [];
 
-    // The option to change RateGranularity should only be visible when working
-    // with models in a theory that supports multiple inputs/outputs to morphisms
-    // e.g. Petri nets but not stock-flow.
-    const theoryWithGranularity = () => props.liveModel.theory()?.id === "petri-net";
-
     return (
         <div class="simulation">
             <BlockTitle
@@ -310,7 +306,7 @@ export default function MassAction(
                     <MassActionConfigForm
                         config={props.content}
                         changeConfig={props.changeContent}
-                        enableGranularity={theoryWithGranularity()}
+                        enableGranularity={props.ratesHaveGranularity}
                     />
                 }
             />
