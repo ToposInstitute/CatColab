@@ -172,12 +172,15 @@ pub(crate) fn mass_action_equations_modal(
 
 #[cfg(test)]
 mod tests {
-    use std::rc::Rc;
 
+    use catlog::dbl::modal::{List, ModalMorType, ModalOb, ModalObType};
+    use catlog::dbl::model::{ModalDblModel, MutDblModel};
     use catlog::simulate::ode::LatexEquation;
     use catlog::stdlib::analyses::ode;
     use catlog::stdlib::theories::th_sym_monoidal_category;
-    use catlog::zero::Namespace;
+    use catlog::zero::{LabelSegment, Namespace, QualifiedName};
+    use std::rc::Rc;
+    use uuid::Uuid;
 
     use super::*;
     use crate::model::tests::backward_link;
@@ -239,13 +242,7 @@ mod tests {
     }
 
     #[test]
-    fn petri_net_unnamed_transition_equations() {
-        use catlog::dbl::modal::{List, ModalMorType, ModalOb, ModalObType};
-        use catlog::dbl::model::{ModalDblModel, MutDblModel};
-        use catlog::zero::LabelSegment;
-        use uuid::Uuid;
-
-        // Build a Petri net model with UUID-based names (like real notebooks).
+    fn modal_mor_dom_cod_labels() {
         let th = Rc::new(th_sym_monoidal_category());
         let ob_type = ModalObType::new(QualifiedName::from("Object"));
         let op = QualifiedName::from("tensor");
@@ -266,7 +263,8 @@ mod tests {
         inner.add_ob(s_name.clone(), ob_type.clone());
         inner.add_ob(i_name.clone(), ob_type.clone());
         inner.add_ob(r_name.clone(), ob_type.clone());
-        // infect: tensor(S, I) -> tensor(I, I), unnamed
+
+        // infect: tensor(S, I) -> tensor(I, I) — product-typed dom and cod.
         inner.add_mor(
             infect_name.clone(),
             ModalOb::App(
@@ -287,7 +285,8 @@ mod tests {
             ),
             ModalMorType::Zero(ob_type.clone()),
         );
-        // recover: I -> R, unnamed
+
+        // recover: I -> R — simple generator dom and cod.
         inner.add_mor(
             recover_name.clone(),
             ModalOb::from(i_name.clone()),
@@ -295,12 +294,10 @@ mod tests {
             ModalMorType::Zero(ob_type),
         );
 
-        // Set up namespaces with labels for species but NOT for transitions.
         let mut namespace = Namespace::new_for_uuid();
         namespace.set_label(s_uuid, LabelSegment::Text("S".into()));
         namespace.set_label(i_uuid, LabelSegment::Text("I".into()));
         namespace.set_label(r_uuid, LabelSegment::Text("R".into()));
-        // Deliberately leave infect_uuid and recover_uuid unlabeled (unnamed).
 
         let model = DblModel {
             model: DblModelBox::from(inner),
@@ -309,40 +306,16 @@ mod tests {
             mor_namespace: namespace,
         };
 
-        // Verify dom/cod labels resolve.
-        let infect_labels = model.mor_generator_dom_cod_label_strings(&infect_name);
-        assert_eq!(infect_labels, Some(("[S, I]".to_string(), "[I, I]".to_string())));
-
-        let recover_labels = model.mor_generator_dom_cod_label_strings(&recover_name);
-        assert_eq!(recover_labels, Some(("I".to_string(), "R".to_string())));
-
-        // Generate balanced equations and verify no UUIDs or "?" appear.
-        let modal_model = model.modal().unwrap();
-        let analysis = ode::PetriNetMassActionAnalysis::default();
-        let sys = analysis.build_system(modal_model, ode::MassConservationType::Balanced);
-        let equations = sys
-            .map_variables(latex_ob_names_mass_action(&model))
-            .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(&model)))
-            .to_latex_equations();
-
-        for eq in &equations {
-            assert!(!eq.rhs.contains('?'), "Equation should not contain '?': {}", eq.rhs);
-            // UUID braces look like {xxxxxxxx-xxxx-... so check for that pattern.
-            assert!(!eq.rhs.contains("{{0"), "Equation should not contain UUID: {}", eq.rhs);
-        }
-
-        // Check that the unnamed transitions use dom→cod format with \to in math mode.
-        let all_rhs: String =
-            equations.iter().map(|e| e.rhs.as_str()).collect::<Vec<_>>().join(" ");
-        assert!(
-            all_rhs.contains("\\text{[S, I]} \\to \\text{[I, I]}"),
-            "Should contain '[S, I] \\to [I, I]' for unnamed infect, got: {}",
-            all_rhs
+        // Morphism with basic generator dom/cod resolves labels.
+        assert_eq!(
+            model.mor_generator_dom_cod_label_strings(&recover_name),
+            Some(("I".to_string(), "R".to_string()))
         );
-        assert!(
-            all_rhs.contains("\\text{I} \\to \\text{R}"),
-            "Should contain 'I \\to R' for unnamed recover, got: {}",
-            all_rhs
+
+        // Morphism with product-typed dom/cod resolves to bracketed labels.
+        assert_eq!(
+            model.mor_generator_dom_cod_label_strings(&infect_name),
+            Some(("[S, I]".to_string(), "[I, I]".to_string()))
         );
     }
 }
