@@ -656,8 +656,9 @@ pub mod arbitrary {
                             .expect("valid timestamp"),
                         deleted_at: deleted_seconds
                             .map(|s| Utc.timestamp_opt(s, 0).single().expect("valid timestamp")),
+                        // We are not yet generating complete relationship trees, just independent
+                        // docs
                         depends_on: Vec::new(),
-                        // Reverse relations are computed, not generated independently.
                         used_by: Vec::new(),
                     }
                 })
@@ -737,8 +738,9 @@ pub mod arbitrary {
                             .expect("valid timestamp"),
                         deleted_at: deleted_seconds
                             .map(|s| Utc.timestamp_opt(s, 0).single().expect("valid timestamp")),
+                        // We are not yet generating complete relationship trees, just independent
+                        // docs
                         depends_on: Vec::new(),
-                        // Reverse relations are computed, not generated independently.
                         used_by: Vec::new(),
                     };
                     (key, info, users)
