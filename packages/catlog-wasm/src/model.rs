@@ -411,6 +411,51 @@ impl DblModel {
         }
         Ok(())
     }
+
+    /// Gets label strings for the domain and codomain of a morphism generator.
+    ///
+    /// Returns `Some((dom_label, cod_label))` when the morphism has a domain
+    /// and codomain whose labels can be resolved from the namespace.
+    pub fn mor_generator_dom_cod_label_strings(
+        &self,
+        id: &QualifiedName,
+    ) -> Option<(String, String)> {
+        let (dom, cod) = all_the_same!(match &self.model {
+            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+                (Quoter.quote(model.get_dom(id)?),
+                 Quoter.quote(model.get_cod(id)?))
+            }
+        });
+        Some((self.ob_label_string(&dom)?, self.ob_label_string(&cod)?))
+    }
+
+    /// Gets a label string for an object.
+    ///
+    /// For a single object returns its label (e.g. `"S"`). For a list of
+    /// objects returns bracketed labels (e.g. `"[S, I]"`).
+    fn ob_label_string(&self, ob: &Ob) -> Option<String> {
+        match ob {
+            Ob::Basic(s) => {
+                let name = QualifiedName::deserialize_str(s).ok()?;
+                Some(self.ob_namespace.label_string(&name))
+            }
+            Ob::App { ob, .. } => {
+                // FIXME: This is incorrect in general. The design issue is that
+                // this pretty printer claims to handles all models, but is
+                // customized to Petri nets as free SMCs where we prefer to omit
+                // the tensor application.
+                self.ob_label_string(ob)
+            }
+            Ob::List { objects, .. } => {
+                let labels: Option<Vec<String>> = objects
+                    .iter()
+                    .map(|ob| ob.as_ref().and_then(|ob| self.ob_label_string(ob)))
+                    .collect();
+                Some(format!("[{}]", labels?.join(", ")))
+            }
+            _ => None,
+        }
+    }
 }
 
 #[wasm_bindgen]
