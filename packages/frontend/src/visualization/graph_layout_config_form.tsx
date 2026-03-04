@@ -1,6 +1,6 @@
 import { Show } from "solid-js";
 
-import { FormGroup, SelectField } from "catcolab-ui-components";
+import { FormGroup, InputField, SelectField } from "catcolab-ui-components";
 import { type Config, Direction, Engine } from "./graph_layout_config";
 
 /** Form to configure a graph layout algorithm. */
@@ -38,6 +38,23 @@ export function GraphLayoutConfigForm(props: {
                     <option value={Direction.Horizontal}>{"Horizontal"}</option>
                     <option value={Direction.Vertical}>{"Vertical"}</option>
                 </SelectField>
+            </Show>
+            <Show when={layout() === Engine.VizUndirected}>
+                <InputField
+                    label="Separation"
+                    type="number"
+                    min={0}
+                    step={0.1}
+                    value={props.config.separation ?? 1.0}
+                    onInput={(evt) => {
+                        const value = evt.currentTarget.valueAsNumber;
+                        if (!Number.isNaN(value)) {
+                            props.changeConfig((content) => {
+                                content.separation = value;
+                            });
+                        }
+                    }}
+                />
             </Show>
         </FormGroup>
     );

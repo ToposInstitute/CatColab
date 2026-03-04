@@ -8,6 +8,9 @@ export type Config = {
 
     /** Primary layout direction, when applicable. */
     direction?: Direction;
+
+    /** Node separation for undirected (neato) layout, in inches. Defaults to 1.0. */
+    separation?: number;
 };
 
 /** Engines supported for graph layout. */
@@ -34,9 +37,10 @@ export const defaultConfig = (): Config => ({
 /** Generates a set of Graphviz options from a layout config. */
 export const graphvizOptions = (config: Config): Viz.RenderOptions => ({
     engine: graphvizEngine(config.layout),
-    graphAttributes: {
-        rankdir: graphvizRankdir(config.direction ?? Direction.Vertical),
-    },
+    graphAttributes:
+        config.layout === Engine.VizUndirected
+            ? { overlap: "prism", sep: `${config.separation ?? 1.0}` }
+            : { rankdir: graphvizRankdir(config.direction ?? Direction.Vertical) },
 });
 
 function graphvizEngine(layout: Engine): Viz.RenderOptions["engine"] {
