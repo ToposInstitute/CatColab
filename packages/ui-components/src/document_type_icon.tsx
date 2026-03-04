@@ -6,7 +6,7 @@ import { Match, Switch } from "solid-js";
 
 import { ModelFileIcon } from "./model_file_icon";
 
-export type DocumentType = "model" | "diagram" | "analysis";
+export type DocumentType = "model" | "diagram" | "analysis" | "unknown";
 
 export function DocumentTypeIcon(props: {
     documentType: DocumentType;

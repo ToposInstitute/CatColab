@@ -5,7 +5,7 @@ import { useFirebaseApp } from "solid-firebase";
 import { createMemo, createSignal, For, type JSX, Show, useContext } from "solid-js";
 import { stringify as uuidStringify } from "uuid";
 
-import { type DocumentType, DocumentTypeIcon } from "catcolab-ui-components";
+import { DocumentTypeIcon } from "catcolab-ui-components";
 import { TheoryLibraryContext } from "../theory";
 import { createVirtualList } from "../util/virtual_list";
 import "./documents.css";
@@ -150,10 +150,7 @@ function DocumentRow(props: DocumentRowProps) {
         <A href={`/${props.doc.typeName}/${props.doc.refId}`} class="ref-grid-row">
             {props.actionsPosition === "start" && props.renderActions(props.doc)}
             <div>
-                <DocumentTypeIcon
-                    documentType={props.doc.typeName as DocumentType}
-                    letters={iconLetters()}
-                />
+                <DocumentTypeIcon documentType={props.doc.typeName} letters={iconLetters()} />
             </div>
             <div class="name-cell">
                 <Show when={props.doc.name} fallback={<span class="untitled-doc">Untitled</span>}>
