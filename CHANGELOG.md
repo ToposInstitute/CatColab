@@ -35,6 +35,13 @@ include notable new features.
   [automerge-repo](https://github.com/automerge/automerge-repo). As a result,
   100% of the CatColab backend is now written in Rust.
 
+### Fixed
+
+- A serious bug related to the rich text editor that could result in document
+  corruption has been fixed
+  [upstream](https://github.com/automerge/automerge/pull/1279)
+  ([#1056](https://github.com/ToposInstitute/CatColab/pull/1056))
+
 ## [v0.4.3](https://github.com/ToposInstitute/CatColab/releases/tag/v0.4.3) (2026-01-13)
 
 Two new [example models](https://catcolab.org/help/guides/example-models) and a bug fix.
