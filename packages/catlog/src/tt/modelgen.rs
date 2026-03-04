@@ -54,7 +54,7 @@ impl Model {
         }
     }
 
-    /// Parses and generates a model from plain text. If there is an error in 
+    /// Parses and generates a model from plain text. If there is an error in
     /// the parsing, `None` is returned.
     pub fn from_text(th: &TheoryDef, s: &str) -> Option<Self> {
         let theory = Theory::new("_".into(), th.clone());
@@ -66,8 +66,8 @@ impl Model {
             if elaborator.reporter.poll().iter().any(|msg| matches!(msg, Error(_))) {
                 None
             } else {
-            let (model, _) = Self::from_ty(&toplevel, th, &ty_v);
-            Some(model)
+                let (model, _) = Self::from_ty(&toplevel, th, &ty_v);
+                Some(model)
             }
         })
     }
