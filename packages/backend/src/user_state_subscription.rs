@@ -9,7 +9,7 @@ use tracing::{debug, error, info};
 
 use super::app::{AppError, AppState};
 use crate::user_state::{
-    DbPermission, DbUserInfo, DocInfo, DocumentType, UserState, get_user_state_doc,
+    DbPermission, DbUserInfo, DocInfo, DocInfoType, UserState, get_user_state_doc,
 };
 
 /// Notification from PostgreSQL about a user state change.
@@ -23,7 +23,7 @@ enum UserStateNotification {
         user_id: String,
         ref_id: String,
         name: Option<String>,
-        type_name: Option<DocumentType>,
+        type_name: Option<DocInfoType>,
         theory: Option<String>,
         permissions: Option<Vec<DbPermission>>,
         #[serde(default)]

@@ -14,7 +14,7 @@ name: string,
 /**
  * The type of the document.
  */
-typeName: DocumentType, 
+typeName: DocInfoType, 
 /**
  * The theory of the document, if it is a model.
  */
@@ -43,7 +43,7 @@ children: Array<Uint8Array>, };
 /**
  * The type of a document.
  */
-export type DocumentType = "model" | "diagram" | "analysis";
+export type DocInfoType = "model" | "diagram" | "analysis" | "unknown";
 
 /**
  * A single permission entry for a document in user state.

@@ -40,7 +40,7 @@ mod integration_tests {
     use backend::app::{AppCtx, AppState};
     use backend::auth::{NewPermissions, PermissionLevel};
     use backend::document;
-    use backend::user_state::{DocumentType, UserState};
+    use backend::user_state::{DocInfoType, UserState};
     use backend::user_state_subscription::run_user_state_subscription;
     use firebase_auth::FirebaseUser;
     use serde_json::json;
@@ -177,7 +177,7 @@ mod integration_tests {
         assert_eq!(user_state.documents.len(), 1, "Should have one document");
         let doc = user_state.documents.get(&ref_id.to_string()).expect("Document should exist");
         assert_eq!(doc.name.as_str(), "Test Document");
-        assert_eq!(doc.type_name, DocumentType::Model, "Document type should be 'model'");
+        assert_eq!(doc.type_name, DocInfoType::Model, "Document type should be 'model'");
         assert_eq!(
             doc.theory.as_deref(),
             Some("test-theory"),
@@ -674,7 +674,7 @@ mod integration_tests {
             .as_ref()
             .and_then(|s| s.documents.get(&ref_id.to_string()))
             .expect("Document should exist after creation");
-        assert_eq!(doc.type_name, DocumentType::Model);
+        assert_eq!(doc.type_name, DocInfoType::Model);
         assert_eq!(
             doc.theory.as_deref(),
             Some("causal-loop"),
@@ -695,7 +695,7 @@ mod integration_tests {
             .as_ref()
             .and_then(|s| s.documents.get(&diagram_ref_id.to_string()))
             .expect("Diagram should exist after creation");
-        assert_eq!(diagram_doc.type_name, DocumentType::Diagram);
+        assert_eq!(diagram_doc.type_name, DocInfoType::Diagram);
         assert_eq!(diagram_doc.theory, None, "Diagram should have no theory");
 
         // Update the model document's theory via autosave
