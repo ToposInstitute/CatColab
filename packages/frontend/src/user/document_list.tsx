@@ -114,11 +114,21 @@ function DocumentRow(props: DocumentRowProps) {
     });
 
     const parentInfo = createMemo(() => {
-        const parentBytes = props.doc.parent;
-        if (!parentBytes) {
+        // Derive the parent ref ID from dependsOn relations.
+        const parentRelType =
+            props.doc.typeName === "diagram"
+                ? "diagram-in"
+                : props.doc.typeName === "analysis"
+                  ? "analysis-of"
+                  : undefined;
+        if (!parentRelType) {
             return undefined;
         }
-        const parentId = uuidStringify(parentBytes);
+        const rel = props.doc.dependsOn.find((r) => r.relationType === parentRelType);
+        if (!rel) {
+            return undefined;
+        }
+        const parentId = uuidStringify(rel.refId as Uint8Array);
         const parentDoc = userState.documents[parentId];
 
         // If parent document doesn't exist, show as orphaned

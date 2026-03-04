@@ -107,7 +107,11 @@ function DocumentsTreeNode(props: {
         if (!docInfo) {
             return [];
         }
-        return docInfo.children.map((bytes) => uuidStringify(bytes));
+        return docInfo.usedBy
+            .filter(
+                (rel) => rel.relationType === "diagram-in" || rel.relationType === "analysis-of",
+            )
+            .map((rel) => uuidStringify(rel.refId as Uint8Array));
     });
 
     const [childDocs] = createResource(childRefIds, async (refIds) => {

@@ -181,7 +181,7 @@ describe("User state Automerge document", async () => {
         );
     });
 
-    test("should populate parent and children fields", async () => {
+    test("should populate relations and derive parent/children", async () => {
         const parentName = `Parent Document - ${v4()}`;
         const parentRefId = await createDoc(parentName);
         await waitFor(
@@ -202,29 +202,32 @@ describe("User state Automerge document", async () => {
         assert(parent, `Parent document ${parentRefId} should exist`);
         assert(child, `Child document ${childRefId} should exist`);
 
-        // Child should point to parent as a UUID bytes value.
-        assert(child.parent !== null, "Child should have a parent");
-        assert.strictEqual(
-            uuidStringify(child.parent),
-            parentRefId,
-            "Child parent should match parent refId",
-        );
+        // Child should include a relation to its parent.
+        // biome-ignore lint/style/noNonNullAssertion : test will fail if relation is missing
+        const dependsOnRefId = uuidStringify(child.dependsOn[0]!.refId as Uint8Array);
+        assert(dependsOnRefId, "Child should have a parent relation");
+        assert.strictEqual(dependsOnRefId, parentRefId, "Child parent should match parent refId");
 
-        // Parent should list child in its children array.
+        // Parent should list child in its usedBy array.
         await waitFor(
             () =>
-                findDoc(parentRefId)?.children.some((b) => uuidStringify(b) === childRefId) ===
-                true,
-            `Parent document ${parentRefId} should list child ${childRefId} in children`,
+                findDoc(parentRefId)?.usedBy.some(
+                    (r) => uuidStringify(r.refId as Uint8Array) === childRefId,
+                ) === true,
+            `Parent document ${parentRefId} should list child ${childRefId} in usedBy`,
         );
 
         const updatedParent = findDoc(parentRefId);
         assert(updatedParent, "Parent should still exist");
-        assert(
-            updatedParent.children.some((b) => uuidStringify(b) === childRefId),
-            "Parent children should contain child ref ID",
+        const usedByEntry = updatedParent.usedBy.find(
+            (r) => uuidStringify(r.refId as Uint8Array) === childRefId,
         );
-        assert(updatedParent.parent === null, "Parent document should have no parent");
+        assert(usedByEntry, "Parent usedBy should contain child ref ID");
+        assert.strictEqual(
+            usedByEntry.relationType,
+            "diagram-in",
+            "usedBy relation type should be diagram-in",
+        );
     });
 
     test("should sync document name change via autosave", async () => {

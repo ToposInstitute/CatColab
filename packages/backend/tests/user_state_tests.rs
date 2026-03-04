@@ -1045,7 +1045,7 @@ mod integration_tests {
         })
     }
 
-    /// Tests that parent and children fields are populated correctly on initial DB load.
+    /// Tests that relation entries are populated correctly on initial DB load.
     #[sqlx::test]
     async fn parent_child_populated_on_db_load(pool: PgPool) -> sqlx::Result<()> {
         use backend::user_state::get_or_create_user_state_doc;
@@ -1092,20 +1092,32 @@ mod integration_tests {
             .get(&child_ref_id.to_string())
             .expect("Child doc should exist");
 
-        assert!(parent_doc.parent.is_none(), "Parent doc should have no parent");
+        assert!(parent_doc.depends_on.is_empty(), "Parent doc should have no outgoing relations");
+        assert_eq!(child_doc.depends_on.len(), 1, "Child doc should have one relation");
         assert_eq!(
-            parent_doc.children,
-            vec![child_ref_id],
-            "Parent doc should list child in children"
+            child_doc.depends_on[0].ref_id, parent_ref_id,
+            "Child relation should target parent ref"
+        );
+        assert_eq!(
+            child_doc.depends_on[0].relation_type, "diagram-in",
+            "Child relation should have diagram-in type"
         );
 
-        assert_eq!(child_doc.parent, Some(parent_ref_id), "Child doc should point to parent");
-        assert!(child_doc.children.is_empty(), "Child doc should have no children");
+        assert_eq!(parent_doc.used_by.len(), 1, "Parent doc should have one used_by entry");
+        assert_eq!(
+            parent_doc.used_by[0].ref_id, child_ref_id,
+            "Parent used_by should reference the child"
+        );
+        assert_eq!(
+            parent_doc.used_by[0].relation_type, "diagram-in",
+            "Parent used_by should have diagram-in type"
+        );
+        assert!(child_doc.used_by.is_empty(), "Child doc should have no used_by entries");
 
         Ok(())
     }
 
-    /// Tests that parent and children fields are kept consistent via subscription updates.
+    /// Tests that relations are kept consistent via subscription updates.
     #[sqlx::test]
     async fn parent_child_consistent_after_subscription_update(pool: PgPool) -> sqlx::Result<()> {
         run_migrations(&pool).await?;
@@ -1160,15 +1172,27 @@ mod integration_tests {
             .get(&child_ref_id.to_string())
             .expect("Child doc should exist");
 
-        assert!(parent_doc.parent.is_none(), "Parent doc should have no parent");
+        assert!(parent_doc.depends_on.is_empty(), "Parent doc should have no outgoing relations");
+        assert_eq!(child_doc.depends_on.len(), 1, "Child doc should have one relation");
         assert_eq!(
-            parent_doc.children,
-            vec![child_ref_id],
-            "Parent doc should list child in children"
+            child_doc.depends_on[0].ref_id, parent_ref_id,
+            "Child relation should target parent ref"
+        );
+        assert_eq!(
+            child_doc.depends_on[0].relation_type, "diagram-in",
+            "Child relation should have diagram-in type"
         );
 
-        assert_eq!(child_doc.parent, Some(parent_ref_id), "Child doc should point to parent");
-        assert!(child_doc.children.is_empty(), "Child doc should have no children");
+        assert_eq!(parent_doc.used_by.len(), 1, "Parent doc should have one used_by entry");
+        assert_eq!(
+            parent_doc.used_by[0].ref_id, child_ref_id,
+            "Parent used_by should reference the child"
+        );
+        assert_eq!(
+            parent_doc.used_by[0].relation_type, "diagram-in",
+            "Parent used_by should have diagram-in type"
+        );
+        assert!(child_doc.used_by.is_empty(), "Child doc should have no used_by entries");
 
         Ok(())
     }
