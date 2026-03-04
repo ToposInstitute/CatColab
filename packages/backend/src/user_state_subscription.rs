@@ -9,7 +9,7 @@ use tracing::{debug, error, info};
 
 use super::app::{AppError, AppState};
 use crate::user_state::{
-    DbPermission, DbUserInfo, DocInfo, DocInfoType, UserState, get_user_state_doc,
+    DbPermission, DbRelation, DbUserInfo, DocInfo, DocInfoType, UserState, get_user_state_doc,
 };
 
 /// Notification from PostgreSQL about a user state change.
@@ -27,10 +27,11 @@ enum UserStateNotification {
         theory: Option<String>,
         permissions: Option<Vec<DbPermission>>,
         #[serde(default)]
+        depends_on: Vec<DbRelation>,
+        #[serde(default)]
         users: Option<HashMap<String, DbUserInfo>>,
         created_at: Option<i64>,
         deleted_at: Option<i64>,
-        parent: Option<uuid::Uuid>,
     },
     /// The user's permission on a document was revoked.
     /// The document should be removed from the user's state.
@@ -67,10 +68,10 @@ fn to_doc_info(
             type_name,
             theory,
             permissions,
+            depends_on,
             users: notif_users,
             created_at,
             deleted_at,
-            parent,
             ..
         } => {
             let created_at = Utc.timestamp_millis_opt((*created_at)?).single()?;
@@ -85,6 +86,7 @@ fn to_doc_info(
                 .as_ref()
                 .map(|perms| perms.iter().filter_map(|p| p.to_permission_info()).collect())
                 .unwrap_or_default();
+            let doc_depends_on = depends_on.iter().filter_map(|r| r.to_relation_info()).collect();
 
             Some((
                 DocInfo {
@@ -92,11 +94,11 @@ fn to_doc_info(
                     type_name: type_name.clone()?,
                     theory: theory.clone(),
                     permissions: doc_permissions,
+                    depends_on: doc_depends_on,
                     created_at,
                     deleted_at,
-                    parent: *parent,
-                    // Children are recomputed after every mutation.
-                    children: Vec::new(),
+                    // Reverse relations are recomputed after every mutation.
+                    used_by: Vec::new(),
                 },
                 known_users,
             ))
@@ -111,7 +113,7 @@ fn handle_revoke(doc_handle: &samod::DocHandle, ref_id: &str) -> Result<(), AppE
         let mut user_state: UserState = hydrate(doc).map_err(|e| e.to_string())?;
 
         user_state.documents.remove(ref_id);
-        user_state.recompute_children();
+        user_state.recompute_used_by();
         doc.transact(|tx| reconcile(tx, &user_state)).map_err(|e| format!("{:?}", e))?;
 
         Ok(())
@@ -132,7 +134,7 @@ fn handle_upsert(
 
         user_state.documents.insert(ref_id.to_string(), doc_info);
         user_state.known_users.extend(new_users);
-        user_state.recompute_children();
+        user_state.recompute_used_by();
         doc.transact(|tx| reconcile(tx, &user_state)).map_err(|e| format!("{:?}", e))?;
 
         Ok(())

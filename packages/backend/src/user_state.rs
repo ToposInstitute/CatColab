@@ -87,6 +87,21 @@ pub struct PermissionInfo {
     pub level: crate::auth::PermissionLevel,
 }
 
+/// A relationship between two documents.
+#[cfg_attr(feature = "property-tests", derive(Eq, PartialEq))]
+#[derive(Debug, Clone, Reconcile, Hydrate, TS)]
+#[ts(rename_all = "camelCase", export_to = "user_state.ts")]
+pub struct RelationInfo {
+    /// The ref ID of the related document.
+    #[autosurgeon(rename = "refId")]
+    #[ts(type = "Uint8Array")]
+    pub ref_id: uuid::Uuid,
+    /// Type of relation to the referenced document.
+    #[autosurgeon(rename = "relationType")]
+    #[ts(rename = "relationType")]
+    pub relation_type: String,
+}
+
 /// Document reference information for user state synchronization.
 ///
 /// Contains lightweight metadata about a document that the user has access to.
@@ -112,12 +127,15 @@ pub struct DocInfo {
     #[autosurgeon(rename = "deletedAt", with = "option_datetime_millis")]
     #[ts(type = "number | null")]
     pub deleted_at: Option<chrono::DateTime<chrono::Utc>>,
-    /// The parent document ref ID, if this document has a parent.
-    #[ts(type = "Uint8Array | null")]
-    pub parent: Option<uuid::Uuid>,
-    /// The ref IDs of child documents.
-    #[ts(type = "Array<Uint8Array>")]
-    pub children: Vec<uuid::Uuid>,
+    /// Outgoing relations from this document to other documents.
+    #[autosurgeon(rename = "dependsOn")]
+    pub depends_on: Vec<RelationInfo>,
+    /// Reverse relations: other documents that depend on this one.
+    ///
+    /// Computed from `depends_on` across all documents. Each entry identifies
+    /// the dependent document and the relation type.
+    #[autosurgeon(rename = "usedBy")]
+    pub used_by: Vec<RelationInfo>,
 }
 
 /// State associated with a user, synchronized via Automerge.
@@ -146,29 +164,38 @@ impl UserState {
         }
     }
 
-    /// Recomputes the `children` field of every [`DocInfo`] from the `parent` fields.
+    /// Recomputes the `used_by` field of every [`DocInfo`] from the `depends_on` fields.
     ///
+    /// A document appears in the `used_by` list of every document it depends on.
     /// This should be called whenever the document map is mutated (initial load,
-    /// upsert, or revoke) so that the children vecs stay consistent.
-    pub fn recompute_children(&mut self) {
-        // Clear all existing children vecs.
+    /// upsert, or revoke) so that the `used_by` vecs stay consistent.
+    pub fn recompute_used_by(&mut self) {
+        // Clear all existing used_by vecs.
         for doc in self.documents.values_mut() {
-            doc.children.clear();
+            doc.used_by.clear();
         }
 
-        // Collect (parent_key, child_uuid) pairs first to avoid borrow conflicts.
-        let pairs: Vec<(String, uuid::Uuid)> = self
+        let pairs: Vec<(String, RelationInfo)> = self
             .documents
             .iter()
-            .filter_map(|(key, doc)| {
-                let parent_id = doc.parent?;
-                Some((parent_id.to_string(), uuid::Uuid::parse_str(key).ok()?))
+            .flat_map(|(key, doc)| {
+                let child_uuid = uuid::Uuid::parse_str(key).ok()?;
+                Some(doc.depends_on.iter().map(move |rel| {
+                    (
+                        rel.ref_id.to_string(),
+                        RelationInfo {
+                            ref_id: child_uuid,
+                            relation_type: rel.relation_type.clone(),
+                        },
+                    )
+                }))
             })
+            .flatten()
             .collect();
 
-        for (parent_key, child_uuid) in pairs {
-            if let Some(parent_doc) = self.documents.get_mut(&parent_key) {
-                parent_doc.children.push(child_uuid);
+        for (target_key, relation) in pairs {
+            if let Some(target_doc) = self.documents.get_mut(&target_key) {
+                target_doc.used_by.push(relation);
             }
         }
     }
@@ -195,6 +222,27 @@ impl DbPermission {
         };
         let user = self.user_id.clone();
         Some(PermissionInfo { user, level })
+    }
+}
+
+/// A document relation entry as returned from database JSON aggregation.
+#[derive(Debug, Deserialize)]
+pub struct DbRelation {
+    /// Related ref ID in UUID string format.
+    pub ref_id: String,
+    /// Type of relation.
+    #[serde(rename = "relationType")]
+    pub relation_type: String,
+}
+
+impl DbRelation {
+    /// Convert this database relation entry into a [`RelationInfo`].
+    pub fn to_relation_info(&self) -> Option<RelationInfo> {
+        let ref_id = uuid::Uuid::parse_str(&self.ref_id).ok()?;
+        Some(RelationInfo {
+            ref_id,
+            relation_type: self.relation_type.clone(),
+        })
     }
 }
 
@@ -252,10 +300,7 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
             snapshots.content->>'theory' AS theory,
             refs.created AS "created_at!",
             refs.deleted_at,
-            (COALESCE(
-                snapshots.content->'diagramIn'->>'_id',
-                snapshots.content->'analysisOf'->>'_id'
-            ))::uuid AS "parent: Option<uuid::Uuid>",
+            extract_snapshot_relations(snapshots.content) AS "depends_on!: sqlx::types::Json<Vec<DbRelation>>",
             COALESCE(
                 (SELECT json_agg(json_build_object(
                     'user_id', p.subject,
@@ -290,6 +335,8 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
             let key = row.ref_id.to_string();
             let permissions: Vec<PermissionInfo> =
                 row.permissions.0.iter().filter_map(|p| p.to_permission_info()).collect();
+            let depends_on: Vec<RelationInfo> =
+                row.depends_on.0.iter().filter_map(|r| r.to_relation_info()).collect();
 
             let info = DocInfo {
                 name: Text::from(row.name.unwrap_or_else(|| "untitled".to_string())),
@@ -303,8 +350,9 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
                 permissions,
                 created_at: row.created_at,
                 deleted_at: row.deleted_at,
-                parent: row.parent.flatten(),
-                children: Vec::new(),
+                depends_on,
+                // Reverse relations are computed after all documents are loaded.
+                used_by: Vec::new(),
             };
             (key, info)
         })
@@ -369,7 +417,7 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
     };
 
     let mut user_state = UserState { profile, known_users, documents };
-    user_state.recompute_children();
+    user_state.recompute_used_by();
     Ok(user_state)
 }
 
@@ -595,28 +643,24 @@ pub mod arbitrary {
                 prop::collection::vec(any::<PermissionInfo>(), 0..5),
                 0i64..253402300799i64,
                 proptest::option::of(0i64..253402300799i64),
-                proptest::option::of(arb::<uuid::Uuid>()),
             )
-                .prop_map(
-                    |(name, type_name, theory, permissions, seconds, deleted_seconds, parent)| {
-                        DocInfo {
-                            name: Text::from(name),
-                            type_name,
-                            theory,
-                            permissions,
-                            created_at: Utc
-                                .timestamp_opt(seconds, 0)
-                                .single()
-                                .expect("valid timestamp"),
-                            deleted_at: deleted_seconds.map(|s| {
-                                Utc.timestamp_opt(s, 0).single().expect("valid timestamp")
-                            }),
-                            parent,
-                            // Children are computed, not generated independently.
-                            children: Vec::new(),
-                        }
-                    },
-                )
+                .prop_map(|(name, type_name, theory, permissions, seconds, deleted_seconds)| {
+                    DocInfo {
+                        name: Text::from(name),
+                        type_name,
+                        theory,
+                        permissions,
+                        created_at: Utc
+                            .timestamp_opt(seconds, 0)
+                            .single()
+                            .expect("valid timestamp"),
+                        deleted_at: deleted_seconds
+                            .map(|s| Utc.timestamp_opt(s, 0).single().expect("valid timestamp")),
+                        depends_on: Vec::new(),
+                        // Reverse relations are computed, not generated independently.
+                        used_by: Vec::new(),
+                    }
+                })
                 .boxed()
         }
     }
@@ -693,10 +737,9 @@ pub mod arbitrary {
                             .expect("valid timestamp"),
                         deleted_at: deleted_seconds
                             .map(|s| Utc.timestamp_opt(s, 0).single().expect("valid timestamp")),
-                        // TODO: generate arbitrary parent ref IDs
-                        parent: None,
-                        // Children are computed, not generated independently.
-                        children: Vec::new(),
+                        depends_on: Vec::new(),
+                        // Reverse relations are computed, not generated independently.
+                        used_by: Vec::new(),
                     };
                     (key, info, users)
                 },

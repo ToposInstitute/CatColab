@@ -32,13 +32,16 @@ createdAt: number,
  */
 deletedAt: number | null, 
 /**
- * The parent document ref ID, if this document has a parent.
+ * Outgoing relations from this document to other documents.
  */
-parent: Uint8Array | null, 
+dependsOn: Array<RelationInfo>, 
 /**
- * The ref IDs of child documents.
+ * Reverse relations: other documents that depend on this one.
+ *
+ * Computed from `depends_on` across all documents. Each entry identifies
+ * the dependent document and the relation type.
  */
-children: Array<Uint8Array>, };
+usedBy: Array<RelationInfo>, };
 
 /**
  * The type of a document.
@@ -59,6 +62,19 @@ user: string | null,
  * The permission level granted.
  */
 level: PermissionLevel, };
+
+/**
+ * A relationship between two documents.
+ */
+export type RelationInfo = { 
+/**
+ * The ref ID of the related document.
+ */
+refId: Uint8Array, 
+/**
+ * Type of relation to the referenced document.
+ */
+relationType: string, };
 
 /**
  * User info for user state synchronization.
