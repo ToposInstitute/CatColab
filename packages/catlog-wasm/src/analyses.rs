@@ -172,19 +172,16 @@ pub(crate) fn mass_action_equations_modal(
 
 #[cfg(test)]
 mod tests {
-
     use catlog::dbl::modal::{List, ModalMorType, ModalOb, ModalObType};
     use catlog::dbl::model::{ModalDblModel, MutDblModel};
     use catlog::simulate::ode::LatexEquation;
-    use catlog::stdlib::analyses::ode;
-    use catlog::stdlib::theories::th_sym_monoidal_category;
+    use catlog::stdlib::{analyses::ode, theories};
     use catlog::zero::{LabelSegment, Namespace, QualifiedName};
     use std::rc::Rc;
     use uuid::Uuid;
 
     use super::*;
-    use crate::model::tests::backward_link;
-    use crate::model::{DblModel, DblModelBox};
+    use crate::model::{DblModel, tests::backward_link};
 
     #[test]
     fn unbalanced_mass_action_latex_equations() {
@@ -243,34 +240,25 @@ mod tests {
 
     #[test]
     fn modal_mor_dom_cod_labels() {
-        let th = Rc::new(th_sym_monoidal_category());
+        let th = Rc::new(theories::th_sym_monoidal_category());
         let ob_type = ModalObType::new(QualifiedName::from("Object"));
         let op = QualifiedName::from("tensor");
 
-        let s_uuid = Uuid::now_v7();
-        let i_uuid = Uuid::now_v7();
-        let r_uuid = Uuid::now_v7();
-        let infect_uuid = Uuid::now_v7();
-        let recover_uuid = Uuid::now_v7();
-
-        let s_name: QualifiedName = s_uuid.into();
-        let i_name: QualifiedName = i_uuid.into();
-        let r_name: QualifiedName = r_uuid.into();
-        let infect_name: QualifiedName = infect_uuid.into();
-        let recover_name: QualifiedName = recover_uuid.into();
+        let [s_id, i_id, r_id] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
+        let [infect_id, recover_id] = [Uuid::now_v7(), Uuid::now_v7()];
 
         let mut inner = ModalDblModel::new(th);
-        inner.add_ob(s_name.clone(), ob_type.clone());
-        inner.add_ob(i_name.clone(), ob_type.clone());
-        inner.add_ob(r_name.clone(), ob_type.clone());
+        inner.add_ob(s_id.into(), ob_type.clone());
+        inner.add_ob(i_id.into(), ob_type.clone());
+        inner.add_ob(r_id.into(), ob_type.clone());
 
         // infect: tensor(S, I) -> tensor(I, I) — product-typed dom and cod.
         inner.add_mor(
-            infect_name.clone(),
+            infect_id.into(),
             ModalOb::App(
                 ModalOb::List(
                     List::Symmetric,
-                    vec![ModalOb::from(s_name.clone()), ModalOb::from(i_name.clone())],
+                    vec![ModalOb::Generator(s_id.into()), ModalOb::Generator(i_id.into())],
                 )
                 .into(),
                 op.clone(),
@@ -278,7 +266,7 @@ mod tests {
             ModalOb::App(
                 ModalOb::List(
                     List::Symmetric,
-                    vec![ModalOb::from(i_name.clone()), ModalOb::from(i_name.clone())],
+                    vec![ModalOb::Generator(i_id.into()), ModalOb::Generator(i_id.into())],
                 )
                 .into(),
                 op.clone(),
@@ -288,33 +276,33 @@ mod tests {
 
         // recover: I -> R — simple generator dom and cod.
         inner.add_mor(
-            recover_name.clone(),
-            ModalOb::from(i_name.clone()),
-            ModalOb::from(r_name.clone()),
+            recover_id.into(),
+            ModalOb::Generator(i_id.into()),
+            ModalOb::Generator(r_id.into()),
             ModalMorType::Zero(ob_type),
         );
 
-        let mut namespace = Namespace::new_for_uuid();
-        namespace.set_label(s_uuid, LabelSegment::Text("S".into()));
-        namespace.set_label(i_uuid, LabelSegment::Text("I".into()));
-        namespace.set_label(r_uuid, LabelSegment::Text("R".into()));
+        let mut ob_namespace = Namespace::new_for_uuid();
+        ob_namespace.set_label(s_id, LabelSegment::Text("S".into()));
+        ob_namespace.set_label(i_id, LabelSegment::Text("I".into()));
+        ob_namespace.set_label(r_id, LabelSegment::Text("R".into()));
 
         let model = DblModel {
-            model: DblModelBox::from(inner),
+            model: inner.into(),
             ty: None,
-            ob_namespace: namespace.clone(),
-            mor_namespace: namespace,
+            ob_namespace,
+            mor_namespace: Namespace::new_for_uuid(),
         };
 
         // Morphism with basic generator dom/cod resolves labels.
         assert_eq!(
-            model.mor_generator_dom_cod_label_strings(&recover_name),
+            model.mor_generator_dom_cod_label_strings(&recover_id.into()),
             Some(("I".to_string(), "R".to_string()))
         );
 
         // Morphism with product-typed dom/cod resolves to bracketed labels.
         assert_eq!(
-            model.mor_generator_dom_cod_label_strings(&infect_name),
+            model.mor_generator_dom_cod_label_strings(&infect_id.into()),
             Some(("[S, I]".to_string(), "[I, I]".to_string()))
         );
     }

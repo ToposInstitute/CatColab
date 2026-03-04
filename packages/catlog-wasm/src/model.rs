@@ -439,19 +439,19 @@ impl DblModel {
                 let name = QualifiedName::deserialize_str(s).ok()?;
                 Some(self.ob_namespace.label_string(&name))
             }
-            Ob::App { ob, .. } => self.ob_label_string(ob),
+            Ob::App { ob, .. } => {
+                // FIXME: This is incorrect in general. The design issue is that
+                // this pretty printer claims to handles all models, but is
+                // customized to Petri nets as free SMCs where we prefer to omit
+                // the tensor application.
+                self.ob_label_string(ob)
+            }
             Ob::List { objects, .. } => {
-                let labels: Vec<String> = objects
+                let labels: Option<Vec<String>> = objects
                     .iter()
-                    .filter_map(|o| o.as_ref().and_then(|o| self.ob_label_string(o)))
+                    .map(|ob| ob.as_ref().and_then(|ob| self.ob_label_string(ob)))
                     .collect();
-                if labels.is_empty() {
-                    None
-                } else if labels.len() == 1 {
-                    Some(labels.into_iter().next().unwrap())
-                } else {
-                    Some(format!("[{}]", labels.join(", ")))
-                }
+                Some(format!("[{}]", labels?.join(", ")))
             }
             _ => None,
         }
