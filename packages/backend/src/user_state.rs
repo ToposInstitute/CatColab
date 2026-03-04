@@ -16,8 +16,9 @@ use crate::autosurgeon_datetime::{datetime_millis, option_datetime_millis};
 /// The type of a document.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Reconcile, Hydrate, TS)]
 #[serde(rename_all = "lowercase")]
-#[ts(export, export_to = "user_state.ts", rename_all = "lowercase")]
-pub enum DocumentType {
+#[ts(export_to = "user_state.ts", rename_all = "lowercase")]
+#[cfg_attr(not(test), ts(export))]
+pub enum DocInfoType {
     /// A model document.
     #[autosurgeon(rename = "model")]
     Model,
@@ -27,27 +28,31 @@ pub enum DocumentType {
     /// An analysis document.
     #[autosurgeon(rename = "analysis")]
     Analysis,
+    /// A document whose type is not recognized by this version of the backend.
+    #[autosurgeon(rename = "unknown")]
+    Unknown,
 }
 
-impl fmt::Display for DocumentType {
+impl fmt::Display for DocInfoType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            DocumentType::Model => write!(f, "model"),
-            DocumentType::Diagram => write!(f, "diagram"),
-            DocumentType::Analysis => write!(f, "analysis"),
+            DocInfoType::Model => write!(f, "model"),
+            DocInfoType::Diagram => write!(f, "diagram"),
+            DocInfoType::Analysis => write!(f, "analysis"),
+            DocInfoType::Unknown => write!(f, "unknown"),
         }
     }
 }
 
-impl FromStr for DocumentType {
+impl FromStr for DocInfoType {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "model" => Ok(DocumentType::Model),
-            "diagram" => Ok(DocumentType::Diagram),
-            "analysis" => Ok(DocumentType::Analysis),
-            other => Err(format!("unknown document type: {other}")),
+            "model" => Ok(DocInfoType::Model),
+            "diagram" => Ok(DocInfoType::Diagram),
+            "analysis" => Ok(DocInfoType::Analysis),
+            _ => Ok(DocInfoType::Unknown),
         }
     }
 }
@@ -94,7 +99,7 @@ pub struct DocInfo {
     pub name: Text,
     /// The type of the document.
     #[autosurgeon(rename = "typeName")]
-    pub type_name: DocumentType,
+    pub type_name: DocInfoType,
     /// The theory of the document, if it is a model.
     pub theory: Option<String>,
     /// All permissions on this document (users and public).
@@ -290,9 +295,10 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
                 name: Text::from(row.name.unwrap_or_else(|| "untitled".to_string())),
                 type_name: row
                     .type_name
-                    .expect("type_name should never be null")
+                    .as_deref()
+                    .unwrap_or("")
                     .parse()
-                    .expect("type_name should be a valid document type"),
+                    .unwrap_or(DocInfoType::Unknown),
                 theory: row.theory,
                 permissions,
                 created_at: row.created_at,
@@ -527,15 +533,16 @@ pub mod arbitrary {
     use proptest::{arbitrary::Arbitrary, prelude::*};
     use proptest_arbitrary_interop::arb;
 
-    impl Arbitrary for DocumentType {
+    impl Arbitrary for DocInfoType {
         type Parameters = ();
         type Strategy = BoxedStrategy<Self>;
 
         fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
             prop_oneof![
-                Just(DocumentType::Model),
-                Just(DocumentType::Diagram),
-                Just(DocumentType::Analysis),
+                Just(DocInfoType::Model),
+                Just(DocInfoType::Diagram),
+                Just(DocInfoType::Analysis),
+                Just(DocInfoType::Unknown),
             ]
             .boxed()
         }
@@ -583,7 +590,7 @@ pub mod arbitrary {
         fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
             (
                 any::<String>(),
-                any::<DocumentType>(),
+                any::<DocInfoType>(),
                 proptest::option::of(any::<String>()),
                 prop::collection::vec(any::<PermissionInfo>(), 0..5),
                 0i64..253402300799i64,
@@ -626,7 +633,7 @@ pub mod arbitrary {
     ) -> impl Strategy<Value = (String, DocInfo, HashMap<String, UserInfo>)> {
         (
             any::<String>(),                             // name
-            any::<DocumentType>(),                       // type_name
+            any::<DocInfoType>(),                        // type_name
             arb::<uuid::Uuid>(),                         // ref_id (used as map key)
             any::<PermissionLevel>(),                    // user's permission_level
             arb::<uuid::Uuid>(),                         // other owner id
