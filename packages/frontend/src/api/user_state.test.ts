@@ -12,6 +12,7 @@ import invariant from "tiny-invariant";
 import { stringify as uuidStringify, v4 } from "uuid";
 import { afterAll, assert, describe, test } from "vitest";
 
+import { normalizeImmutableStrings } from "../util/immutable_string";
 import {
     createChildTestDocument,
     createTestDocument,
@@ -59,7 +60,7 @@ describe("User state Automerge document", async () => {
     // Track the latest state via change events.
     let latestState = docHandle.doc();
     docHandle.on("change", ({ doc }) => {
-        latestState = doc;
+        latestState = normalizeImmutableStrings(doc);
     });
 
     // Helper to find a document by refId in the user state.

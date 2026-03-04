@@ -105,45 +105,6 @@ mod option_datetime_millis {
     }
 }
 
-mod permission_level_text {
-    use autosurgeon::reconcile::TextReconciler;
-    use autosurgeon::{HydrateError, ReadDoc, Reconciler, Text};
-
-    use crate::auth::PermissionLevel;
-
-    pub fn reconcile<R: Reconciler>(
-        level: &PermissionLevel,
-        mut reconciler: R,
-    ) -> Result<(), R::Error> {
-        let value = match level {
-            PermissionLevel::Read => "Read",
-            PermissionLevel::Write => "Write",
-            PermissionLevel::Maintain => "Maintain",
-            PermissionLevel::Own => "Own",
-        };
-        let mut text = reconciler.text()?;
-        text.update(value)
-    }
-
-    pub fn hydrate<D: ReadDoc>(
-        doc: &D,
-        obj: &automerge::ObjId,
-        prop: autosurgeon::Prop<'_>,
-    ) -> Result<PermissionLevel, HydrateError> {
-        let value: Text = autosurgeon::hydrate_prop(doc, obj, prop)?;
-        match value.as_str() {
-            "Read" => Ok(PermissionLevel::Read),
-            "Write" => Ok(PermissionLevel::Write),
-            "Maintain" => Ok(PermissionLevel::Maintain),
-            "Own" => Ok(PermissionLevel::Own),
-            other => Err(HydrateError::unexpected(
-                "\"Read\", \"Write\", \"Maintain\", or \"Own\"",
-                other.to_string(),
-            )),
-        }
-    }
-}
-
 /// User info for user state synchronization.
 ///
 /// This is similar to [`crate::user::UserSummary`] but uses [`Text`] instead of [`String`]
@@ -171,7 +132,6 @@ pub struct PermissionInfo {
     #[key]
     pub user: Option<String>,
     /// The permission level granted.
-    #[autosurgeon(with = "permission_level_text")]
     pub level: crate::auth::PermissionLevel,
 }
 
