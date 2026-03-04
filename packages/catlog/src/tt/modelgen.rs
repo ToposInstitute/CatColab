@@ -2,6 +2,7 @@
 
 use all_the_same::all_the_same;
 use derive_more::{From, TryInto};
+use tattle::reporter::Message::Error;
 
 use super::{eval::*, prelude::*, text_elab, theory::*, toplevel::*, val::*};
 use crate::dbl::{
@@ -53,7 +54,8 @@ impl Model {
         }
     }
 
-    /// Parses and generates a model from plain text.
+    /// Parses and generates a model from plain text. If there is an error in 
+    /// the parsing, `None` is returned.
     pub fn from_text(th: &TheoryDef, s: &str) -> Option<Self> {
         let theory = Theory::new("_".into(), th.clone());
         let reporter = Reporter::new();
@@ -61,8 +63,12 @@ impl Model {
         text_elab::TT_PARSE_CONFIG.with_parsed(s, reporter.clone(), |fntn| {
             let mut elaborator = text_elab::Elaborator::new(theory, reporter, &toplevel);
             let (_, ty_v) = elaborator.ty(fntn);
+            if elaborator.reporter.poll().iter().any(|msg| matches!(msg, Error(_))) {
+                None
+            } else {
             let (model, _) = Self::from_ty(&toplevel, th, &ty_v);
             Some(model)
+            }
         })
     }
 

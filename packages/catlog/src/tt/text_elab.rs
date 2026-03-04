@@ -240,7 +240,8 @@ impl TopElaborator {
 /// Text-based elaborator of types.
 pub struct Elaborator<'a> {
     theory: Theory,
-    reporter: Reporter,
+    /// Reporter used during elaboration.
+    pub reporter: Reporter,
     toplevel: &'a Toplevel,
     loc: Option<Loc>,
     ctx: Context,
@@ -798,5 +799,32 @@ mod tests {
             .unwrap();
         let eqns: Vec<_> = model.category.equations().collect();
         assert_eq!(eqns.len(), 1);
+    }
+
+    /// Check error handling.
+    #[test]
+    fn test_error_object_type() {
+        let th = Rc::new(stdlib::th_schema());
+        assert!(tt::modelgen::Model::from_text(&th.clone().into(), "[x : Entit]").is_none());
+    }
+
+    /// Check error handling.
+    #[test]
+    fn test_error_hom_type() {
+        let th = Rc::new(stdlib::th_schema());
+        assert!(
+            tt::modelgen::Model::from_text(&th.clone().into(), "[x : Entity, f : Hom(Entit)[x,x]")
+                .is_none()
+        );
+    }
+
+    /// Check error handling.
+    #[test]
+    fn test_error_hom_src() {
+        let th = Rc::new(stdlib::th_schema());
+        assert!(
+            tt::modelgen::Model::from_text(&th.clone().into(), "[x : Entity, f : Hom(Entity)[x,y]")
+                .is_none()
+        );
     }
 }
