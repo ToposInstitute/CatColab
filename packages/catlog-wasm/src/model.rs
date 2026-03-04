@@ -420,44 +420,40 @@ impl DblModel {
         &self,
         id: &QualifiedName,
     ) -> Option<(String, String)> {
-        match &self.model {
-            DblModelBox::Discrete(model) => {
-                let dom = self.ob_namespace.label_string(model.get_dom(id)?);
-                let cod = self.ob_namespace.label_string(model.get_cod(id)?);
-                Some((dom, cod))
+        let (dom, cod) = all_the_same!(match &self.model {
+            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+                (Quoter.quote(model.get_dom(id)?),
+                 Quoter.quote(model.get_cod(id)?))
             }
-            DblModelBox::DiscreteTab(model) => {
-                let dom = model.get_dom(id)?.clone().basic()?;
-                let cod = model.get_cod(id)?.clone().basic()?;
-                Some((self.ob_namespace.label_string(&dom), self.ob_namespace.label_string(&cod)))
-            }
-            DblModelBox::Modal(model) => {
-                let dom = self.modal_ob_label_string(model.get_dom(id)?)?;
-                let cod = self.modal_ob_label_string(model.get_cod(id)?)?;
-                Some((dom, cod))
-            }
-        }
+        });
+        Some((self.ob_label_string(&dom)?, self.ob_label_string(&cod)?))
     }
 
-    /// Gets a label string for a modal object, handling products/tensors.
+    /// Gets a label string for an object.
     ///
-    /// For a generator like `S`, returns `"S"`. For a product like `tensor([S, I])`, returns
-    /// `"[S, I]"`.
-    fn modal_ob_label_string(&self, ob: &ModalOb) -> Option<String> {
-        let species = ob.clone().collect_product(None)?;
-        let labels: Vec<String> = species
-            .iter()
-            .filter_map(|s| match s {
-                ModalOb::Generator(name) => Some(self.ob_namespace.label_string(name)),
-                _ => None,
-            })
-            .collect();
-        if labels.is_empty() {
-            None
-        } else if labels.len() == 1 {
-            Some(labels.into_iter().next().unwrap())
-        } else {
-            Some(format!("[{}]", labels.join(", ")))
+    /// For a single object returns its label (e.g. `"S"`). For a list of
+    /// objects returns bracketed labels (e.g. `"[S, I]"`).
+    fn ob_label_string(&self, ob: &Ob) -> Option<String> {
+        match ob {
+            Ob::Basic(s) => {
+                let name = QualifiedName::deserialize_str(s).ok()?;
+                Some(self.ob_namespace.label_string(&name))
+            }
+            Ob::App { ob, .. } => self.ob_label_string(ob),
+            Ob::List { objects, .. } => {
+                let labels: Vec<String> = objects
+                    .iter()
+                    .filter_map(|o| o.as_ref().and_then(|o| self.ob_label_string(o)))
+                    .collect();
+                if labels.is_empty() {
+                    None
+                } else if labels.len() == 1 {
+                    Some(labels.into_iter().next().unwrap())
+                } else {
+                    Some(format!("[{}]", labels.join(", ")))
+                }
+            }
+            _ => None,
         }
     }
 }
