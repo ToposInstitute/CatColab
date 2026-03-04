@@ -10,8 +10,8 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  rust_tests:
-    name: rust tests
+  catlog_tests:
+    name: catlog tests
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -27,8 +27,8 @@ jobs:
           rustup toolchain install ${{ matrix.toolchain }}
           rustup default ${{ matrix.toolchain }}
 
-          cargo check --all-features --verbose
-          cargo test --verbose
+          cargo check -p catlog -p catlog-wasm -p notebook-types --all-features --verbose
+          cargo test -p catlog -p catlog-wasm -p notebook-types --all-features --verbose
 
   rust_formatting:
     name: rust formatting
@@ -171,14 +171,21 @@ jobs:
       - name: Run dev setup
         run: |
             docker run --name catcolab-postgres -e POSTGRES_USER=catcolab -e POSTGRES_PASSWORD=password -e POSTGRES_DB=catcolab -p 5432:5432 -d postgres:15
+            # Wait for PostgreSQL to be ready
+            for i in {1..30}; do
+              if docker exec catcolab-postgres pg_isready -U catcolab; then
+                break
+              fi
+              sleep 1
+            done
             cd packages/backend
             cp .env.development .env && cp .env.development ../migrator/.env
             # due to how we are detecting deploy vs dev we need to clear this env variable
             unset INVOCATION_ID
             cargo run -p migrator apply
 
-  backend_integration_tests:
-    name: backend integration tests
+  backend_tests:
+    name: backend tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -194,7 +201,7 @@ jobs:
           docker run --name catcolab-postgres -e POSTGRES_USER=catcolab -e POSTGRES_PASSWORD=password -e POSTGRES_DB=catcolab -p 5432:5432 -d postgres:15
           # Wait for PostgreSQL to be ready
           for i in {1..30}; do
-            if docker exec catcolab-postgres pg_isready -U postgres-user; then
+            if docker exec catcolab-postgres pg_isready -U catcolab; then
               break
             fi
             sleep 1
@@ -204,13 +211,13 @@ jobs:
         run: |
           cd packages/backend
           cp .env.development .env && cp .env.development ../migrator/.env
+          # due to how we are detecting deploy vs dev we need to clear this env variable
           unset INVOCATION_ID
           cargo run -p migrator apply
 
       - name: Run backend tests
         run: |
-          cd packages/backend
-          cargo test --all-features
+          cargo test -p backend --all-features
 
   frontend_tests_with_backend:
     name: frontend tests with backend
