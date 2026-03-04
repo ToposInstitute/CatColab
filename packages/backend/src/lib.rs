@@ -9,6 +9,9 @@ pub mod auth;
 /// Conversion between Automerge documents and JSON.
 pub mod automerge_json;
 
+/// Autosurgeon utilities for datetime serialization.
+pub mod autosurgeon_datetime;
+
 /// Procedures to create and manipulate documents.
 pub mod document;
 
