@@ -11,6 +11,7 @@ use ts_rs::TS;
 
 use crate::app::{AppError, AppState};
 use crate::auth::PermissionLevel;
+use crate::autosurgeon_datetime::{datetime_millis, option_datetime_millis};
 
 /// The type of a document.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Reconcile, Hydrate, TS)]
@@ -47,60 +48,6 @@ impl FromStr for DocumentType {
             "diagram" => Ok(DocumentType::Diagram),
             "analysis" => Ok(DocumentType::Analysis),
             other => Err(format!("unknown document type: {other}")),
-        }
-    }
-}
-
-/// Autosurgeon serialization of `DateTime<Utc>` as milliseconds since Unix epoch.
-mod datetime_millis {
-    use autosurgeon::{HydrateError, ReadDoc, Reconcile, Reconciler};
-    use chrono::{DateTime, TimeZone, Utc};
-
-    pub fn reconcile<R: Reconciler>(dt: &DateTime<Utc>, reconciler: R) -> Result<(), R::Error> {
-        dt.timestamp_millis().reconcile(reconciler)
-    }
-
-    pub fn hydrate<D: ReadDoc>(
-        doc: &D,
-        obj: &automerge::ObjId,
-        prop: autosurgeon::Prop<'_>,
-    ) -> Result<DateTime<Utc>, HydrateError> {
-        let millis: i64 = autosurgeon::hydrate_prop(doc, obj, prop)?;
-        Utc.timestamp_millis_opt(millis).single().ok_or_else(|| {
-            HydrateError::unexpected("valid timestamp", "invalid timestamp millis".to_string())
-        })
-    }
-}
-
-/// Autosurgeon serialization of `Option<DateTime<Utc>>` as optional milliseconds since Unix epoch.
-mod option_datetime_millis {
-    use autosurgeon::{HydrateError, ReadDoc, Reconcile, Reconciler};
-    use chrono::{DateTime, TimeZone, Utc};
-
-    pub fn reconcile<R: Reconciler>(
-        dt: &Option<DateTime<Utc>>,
-        reconciler: R,
-    ) -> Result<(), R::Error> {
-        dt.map(|dt| dt.timestamp_millis()).reconcile(reconciler)
-    }
-
-    pub fn hydrate<D: ReadDoc>(
-        doc: &D,
-        obj: &automerge::ObjId,
-        prop: autosurgeon::Prop<'_>,
-    ) -> Result<Option<DateTime<Utc>>, HydrateError> {
-        let millis: Option<i64> = autosurgeon::hydrate_prop(doc, obj, prop)?;
-        match millis {
-            Some(millis) => {
-                let dt = Utc.timestamp_millis_opt(millis).single().ok_or_else(|| {
-                    HydrateError::unexpected(
-                        "valid timestamp",
-                        "invalid timestamp millis".to_string(),
-                    )
-                })?;
-                Ok(Some(dt))
-            }
-            None => Ok(None),
         }
     }
 }
