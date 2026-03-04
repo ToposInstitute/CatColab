@@ -43,6 +43,49 @@ impl Operation<Postgres> for MigrationOperation {
         .execute(&mut *tx)
         .await?;
 
+        // Shared helper: extracts document relations from snapshot JSON content.
+        // Given the JSONB content of a snapshot, recursively walks the JSON tree
+        // and returns a JSON array of {ref_id, relationType} objects for every
+        // node that has both `_id` and `type` keys.
+        sqlx::query(
+            r#"
+            CREATE OR REPLACE FUNCTION extract_snapshot_relations(p_content JSONB)
+            RETURNS JSON AS $$
+                WITH RECURSIVE json_nodes(node) AS (
+                    SELECT p_content
+                    UNION ALL
+                    SELECT child.value
+                    FROM json_nodes
+                    CROSS JOIN LATERAL (
+                        SELECT value
+                        FROM jsonb_each(json_nodes.node)
+                        WHERE jsonb_typeof(json_nodes.node) = 'object'
+                        UNION ALL
+                        SELECT value
+                        FROM jsonb_array_elements(json_nodes.node)
+                        WHERE jsonb_typeof(json_nodes.node) = 'array'
+                    ) AS child
+                )
+                SELECT COALESCE(
+                    json_agg(json_build_object('ref_id', relation.ref_id, 'relationType', relation.relation_type)),
+                    '[]'::json
+                )
+                FROM (
+                    SELECT DISTINCT
+                        json_nodes.node->>'_id' AS ref_id,
+                        json_nodes.node->>'type' AS relation_type
+                    FROM json_nodes
+                    WHERE
+                        jsonb_typeof(json_nodes.node) = 'object'
+                        AND json_nodes.node ? '_id'
+                        AND json_nodes.node ? 'type'
+                ) AS relation
+            $$ LANGUAGE sql;
+            "#,
+        )
+        .execute(&mut *tx)
+        .await?;
+
         // Shared helper: fetches ref metadata, builds permissions JSON, and
         // sends an 'upsert' notification for a single user. Written in PL/pgSQL
         // (not declared STABLE) so it sees the current transaction state — this
@@ -62,7 +105,7 @@ impl Operation<Postgres> for MigrationOperation {
                 v_ref_deleted_at TIMESTAMPTZ;
                 v_permissions JSON;
                 v_users JSON;
-                v_parent UUID;
+                v_depends_on JSON;
             BEGIN
                 -- Get ref metadata from head snapshot
                 SELECT
@@ -71,11 +114,8 @@ impl Operation<Postgres> for MigrationOperation {
                     snapshots.content->>'theory',
                     refs.created,
                     refs.deleted_at,
-                    COALESCE(
-                        snapshots.content->'diagramIn'->>'_id',
-                        snapshots.content->'analysisOf'->>'_id'
-                    )::uuid
-                INTO v_name, v_type_name, v_theory, v_created_at, v_ref_deleted_at, v_parent
+                    extract_snapshot_relations(snapshots.content)
+                INTO v_name, v_type_name, v_theory, v_created_at, v_ref_deleted_at, v_depends_on
                 FROM refs
                 JOIN snapshots ON snapshots.id = refs.head
                 WHERE refs.id = p_ref_id;
@@ -118,7 +158,7 @@ impl Operation<Postgres> for MigrationOperation {
                         'deleted_at', CASE WHEN v_ref_deleted_at IS NOT NULL
                             THEN floor(extract(epoch FROM v_ref_deleted_at) * 1000)::bigint
                             ELSE NULL END,
-                        'parent', v_parent
+                        'depends_on', v_depends_on
                     )::text
                 );
             END
@@ -343,8 +383,12 @@ impl Operation<Postgres> for MigrationOperation {
             .execute(&mut *tx)
             .await?;
 
-        // Drop the shared helper last since trigger functions depended on it.
+        // Drop the shared helpers last since trigger functions depended on them.
         sqlx::query(r#"DROP FUNCTION IF EXISTS notify_user_state_upsert;"#)
+            .execute(&mut *tx)
+            .await?;
+
+        sqlx::query(r#"DROP FUNCTION IF EXISTS extract_snapshot_relations;"#)
             .execute(&mut *tx)
             .await?;
 
