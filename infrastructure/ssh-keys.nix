@@ -5,6 +5,7 @@ let
     jmoggr = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMiaHaeJ5PQL0mka/lY1yGXIs/bDK85uY1O3mLySnwHd j@jmoggr.com";
     kasbah = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM1K/FB6dCjo1/xfddi9VoHEGchFo/bcz6v7SC7wAuFQ kaspar@topos";
     catcolab-next-deployuser = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM7AYg1fZM0zMxb/BuZTSwK4O3ycUIHruApr1tKoO8nJ deployuser@next.catcolab.org";
+    catcolab-private-actions-user = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIE5jfvVKRGR2QO3mP1ZKvowpO+BKjeCM8OAO+St+A+GX github.com/ToposInstitute/catcolab-private-actions";
   };
 
   # hostKey comes frome the /etc/ssh/ssh_host_ed25519_key.pub file on each host after the host is first
@@ -16,6 +17,7 @@ let
         epatters
         jmoggr
         kasbah
+        catcolab-private-actions-user
       ];
       allKeys = [ hostKey ] ++ userKeys;
     };
