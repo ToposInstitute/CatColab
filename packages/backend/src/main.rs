@@ -7,6 +7,7 @@ use axum::{Router, routing::get};
 use axum::{extract::State, response::IntoResponse};
 use clap::{Parser, Subcommand};
 use firebase_auth::FirebaseAuth;
+use http::header::AUTHORIZATION;
 use sqlx::postgres::PgPoolOptions;
 use sqlx_migrator::cli::MigrationCommand;
 use sqlx_migrator::migrator::{Migrate, Migrator};
@@ -211,7 +212,7 @@ async fn run_web_server(
         app = app.route("/", get(|| async { "Hello! The CatColab server is running" }));
     }
 
-    app = app.layer(CorsLayer::permissive());
+    app = app.layer(CorsLayer::permissive().allow_headers([AUTHORIZATION]));
 
     info!("Web server listening at port {port}");
 
