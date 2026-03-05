@@ -1,7 +1,7 @@
 import type { Component } from "solid-js";
 
 import type { KbdKey } from "catcolab-ui-components";
-import type { DblModel, DblTheory, MorType, ObOp, ObType } from "catlog-wasm";
+import type { DblModel, DblModelDiagram, DblTheory, MorType, ObOp, ObType } from "catlog-wasm";
 import type { DiagramAnalysisComponent, ModelAnalysisComponent } from "../analysis";
 import type {
     EditorVariantOverrides,
@@ -354,6 +354,14 @@ export type AnalysisMeta<T> = {
 export type ModelAnalysisMeta<T = any> = AnalysisMeta<T> & {
     /** Component that renders the analysis. */
     component: ModelAnalysisComponent<T>;
+
+    /** Optional run function for testing backward compatibility.
+
+    When present, this function takes a compiled model and analysis content and
+    runs the analysis. It exercises the same WASM deserialization path as the
+    component would at runtime.
+     */
+    run?: (model: DblModel, data: T) => unknown;
 };
 
 /** Specifies a diagram analysis with descriptive metadata. */
@@ -361,4 +369,12 @@ export type ModelAnalysisMeta<T = any> = AnalysisMeta<T> & {
 export type DiagramAnalysisMeta<T = any> = AnalysisMeta<T> & {
     /** Component that renders the analysis. */
     component: DiagramAnalysisComponent<T>;
+
+    /** Optional run function for testing backward compatibility.
+
+    When present, this function takes a compiled diagram, its parent model, and
+    analysis content and runs the analysis. It exercises the same WASM
+    deserialization path as the component would at runtime.
+     */
+    run?: (diagram: DblModelDiagram, model: DblModel, data: T) => unknown;
 };
