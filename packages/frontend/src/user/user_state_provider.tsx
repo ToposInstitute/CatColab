@@ -13,8 +13,10 @@ export function UserStateProvider(props: { children: JSX.Element }) {
     const [userState, setUserState] = createStore<UserState>(INITIAL_USER_STATE);
 
     onMount(async () => {
-        const userStateUrl = unwrap(await api.rpc.get_user_state_url.query());
-        const docHandle = (await api.repo.find(userStateUrl as DocumentId)) as DocHandle<UserState>;
+        const userStateDocId = unwrap(await api.rpc.get_user_state_doc_id.query());
+        const docHandle = (await api.repo.find(
+            userStateDocId as DocumentId,
+        )) as DocHandle<UserState>;
         setUserState(reconcile(normalizeImmutableStrings(docHandle.doc())));
         docHandle.on("change", ({ doc }) => {
             setUserState(reconcile(normalizeImmutableStrings(doc)));
