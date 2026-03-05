@@ -25,6 +25,10 @@ export const decapodes = (
     options: AnalysisOptions,
 ): DiagramAnalysisMeta<Simulators.DecapodesAnalysisContent> => ({
     ...options,
+    run: (diagram, model) => ({
+        diagram: diagram.presentation(),
+        model: model.presentation(),
+    }),
     component: (props) => <Decapodes {...props} />,
     initialContent: () => ({
         domain: null,
@@ -42,6 +46,7 @@ export const diagramGraph = (
     options: AnalysisOptions,
 ): DiagramAnalysisMeta<GraphLayoutConfig.Config> => ({
     ...options,
+    run: (diagram) => diagram.presentation(),
     component: (props) => <DiagramGraph title={options.name} {...props} />,
     initialContent: GraphLayoutConfig.defaultConfig,
 });
@@ -52,6 +57,10 @@ export const tabularView = (
     options: AnalysisOptions,
 ): DiagramAnalysisMeta<Record<string, never>> => ({
     ...options,
+    run: (diagram, model) => ({
+        diagram: diagram.presentation(),
+        model: model.presentation(),
+    }),
     component: (props) => <TabularView title={options.name} {...props} />,
     initialContent: () => ({}),
 });
@@ -80,6 +89,7 @@ export function kuramoto(
         name,
         description,
         help,
+        run: simulate,
         component: (props) => (
             <Kuramoto
                 simulate={simulate}
@@ -121,6 +131,7 @@ export function linearODE(
         name,
         description,
         help,
+        run: simulate,
         component: (props) => <LinearODE simulate={simulate} title={name} {...props} />,
         initialContent: () => ({
             coefficients: {},
@@ -149,6 +160,7 @@ export function lotkaVolterra(
         name,
         description,
         help,
+        run: simulate,
         component: (props) => <LotkaVolterra simulate={simulate} title={name} {...props} />,
         initialContent: () => ({
             interactionCoefficients: {},
@@ -174,6 +186,7 @@ export function massAction(
         name = "Mass-action dynamics",
         description = "Simulate the system using the law of mass action",
         help = "mass-action",
+        simulate,
         ...otherOptions
     } = options;
     return {
@@ -181,7 +194,10 @@ export function massAction(
         name,
         description,
         help,
-        component: (props) => <MassAction title={name} {...otherOptions} {...props} />,
+        run: simulate,
+        component: (props) => (
+            <MassAction title={name} simulate={simulate} {...otherOptions} {...props} />
+        ),
         initialContent: () => ({
             massConservationType: { type: "Balanced" },
             rates: {},
@@ -237,6 +253,7 @@ export function stochasticMassAction(
         name = "Stochastic mass-action dynamics",
         description = "Simulate the system using stochastic mass-action dynamics",
         help = "stochastic-mass-action",
+        simulate,
         ...otherOptions
     } = options;
     return {
@@ -244,7 +261,10 @@ export function stochasticMassAction(
         name,
         description,
         help,
-        component: (props) => <StochasticMassAction title={name} {...otherOptions} {...props} />,
+        run: simulate,
+        component: (props) => (
+            <StochasticMassAction title={name} simulate={simulate} {...otherOptions} {...props} />
+        ),
         initialContent: () => ({
             rates: {},
             initialValues: {},
@@ -321,6 +341,7 @@ export function reachability(
         name,
         description,
         help,
+        run: otherOptions.check,
         component: (props) => <Reachability title={name} {...otherOptions} {...props} />,
         initialContent: () => ({ tokens: {}, forbidden: {} }),
     };
