@@ -28,7 +28,7 @@ pub fn router() -> Router<AppState> {
         .handler(username_status)
         .handler(get_active_user_profile)
         .handler(set_active_user_profile)
-        .handler(get_user_state_url)
+        .handler(get_user_state_doc_id)
 }
 
 #[handler(mutation)]
@@ -175,7 +175,7 @@ async fn set_active_user_profile(ctx: AppCtx, user: user::UserProfile) -> RpcRes
 }
 
 #[handler(query)]
-async fn get_user_state_url(ctx: AppCtx) -> RpcResult<String> {
+async fn get_user_state_doc_id(ctx: AppCtx) -> RpcResult<String> {
     async {
         let user = ctx.user.as_ref().ok_or(AppError::Unauthorized)?;
         let doc_id = get_or_create_user_state_doc(&ctx.state, &user.user_id).await?;

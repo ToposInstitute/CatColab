@@ -276,7 +276,7 @@ pub async fn run_user_state_subscription(
                     let uid = notif.user_id();
                     let doc_id = get_user_state_doc(&app_state, uid).await;
                     if doc_id.is_none() {
-                        debug!(user_id = %uid, "No persisted UserState URL, nothing to update");
+                        debug!(user_id = %uid, "No persisted user state doc ID, nothing to update");
                         continue;
                     }
                     let doc_id = doc_id.expect("Persisted document ID should exist");

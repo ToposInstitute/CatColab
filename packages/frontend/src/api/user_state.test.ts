@@ -51,10 +51,10 @@ describe("User state Automerge document", async () => {
     unwrap(await rpc.sign_up_or_sign_in.mutate());
 
     // Get the user state Automerge document.
-    const userStateUrl = unwrap(await rpc.get_user_state_url.query());
-    assert(isValidDocumentId(userStateUrl));
+    const userStateDocId = unwrap(await rpc.get_user_state_doc_id.query());
+    assert(isValidDocumentId(userStateDocId));
 
-    const docHandle = (await repo.find(userStateUrl as DocumentId)) as DocHandle<UserState>;
+    const docHandle = (await repo.find(userStateDocId as DocumentId)) as DocHandle<UserState>;
     await docHandle.whenReady();
 
     // Track the latest state via change events.
