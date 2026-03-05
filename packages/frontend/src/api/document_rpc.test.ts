@@ -100,7 +100,8 @@ describe("RPC for Automerge documents", async () => {
     });
 
     test.sequential("should autosave to the database", { timeout: 1000, retry: 5 }, async () => {
-        const newContent = unwrap(await rpc.head_snapshot.query(refId)) as unknown as Document;
+        const newContent = unwrap(await rpc.head_snapshot.query(refId));
+        assert(newContent !== null && typeof newContent === "object" && "name" in newContent);
         assert.strictEqual(newContent.name, newName);
     });
 });

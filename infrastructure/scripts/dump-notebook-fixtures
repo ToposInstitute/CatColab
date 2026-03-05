@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# Dumps all analysis documents and their referenced models and diagrams from a database as a JSON object.
+#
+# Usage: dump-notebook-fixtures <ssh-target> <output-file>
+# Example: dump-notebook-fixtures catcolab@backend-next.catcolab.org fixtures.json
+#
+# Output format:
+# {
+#   "analyses": [...],  // Array of analysis documents
+#   "models": [...],    // Array of model documents referenced by analyses (directly or via diagrams)
+#   "diagrams": [...]   // Array of diagram documents referenced by diagram analyses
+# }
+
+set -euo pipefail
+
+ssh_target="${1:?Usage: dump-notebook-fixtures <ssh-target> <output-file>}"
+output_file="${2:?Usage: dump-notebook-fixtures <ssh-target> <output-file>}"
+
+echo "Dumping analysis documents, models, and diagrams from $ssh_target to $output_file..." >&2
+
+# Run the query remotely via SSH. The remote script:
+# 1. Extracts DATABASE_URL from the agenix secrets file
+# 2. Queries PostgreSQL to get all non-deleted analysis documents
+# 3. Queries PostgreSQL to get all model documents referenced by model analyses
+# 4. Queries PostgreSQL to get all diagram documents referenced by diagram analyses
+# 5. Queries PostgreSQL to get all model documents referenced by those diagrams
+# 6. Returns a JSON object with all three arrays
+ssh "$ssh_target" bash -s > "$output_file" <<'REMOTE_SCRIPT'
+set -euo pipefail
+
+# Read DATABASE_URL from the agenix-decrypted secrets file
+if [[ ! -f /run/agenix/catcolabSecrets ]]; then
+  echo "Error: /run/agenix/catcolabSecrets not found on remote host" >&2
+  exit 1
+fi
+
+db_url=$(grep '^DATABASE_URL=' /run/agenix/catcolabSecrets | cut -d= -f2-)
+
+if [[ -z "$db_url" ]]; then
+  echo "Error: DATABASE_URL not found in /run/agenix/catcolabSecrets" >&2
+  exit 1
+fi
+
+# Query for all analysis documents and their referenced models and diagrams
+psql "$db_url" -t -A -c "
+  WITH analysis_docs AS (
+    SELECT jsonb_set(s.content, '{_refId}', to_jsonb(r.id::text)) AS content
+    FROM snapshots s
+    JOIN refs r ON r.head = s.id
+    WHERE r.deleted_at IS NULL
+      AND s.content->>'type' = 'analysis'
+  ),
+  -- Model documents referenced directly by model analyses
+  model_analysis_refs AS (
+    SELECT DISTINCT content->'analysisOf'->>'_id' AS model_ref_id
+    FROM analysis_docs
+    WHERE content->>'analysisType' = 'model'
+      AND content->'analysisOf'->>'_id' IS NOT NULL
+  ),
+  -- Diagram documents referenced by diagram analyses
+  diagram_refs AS (
+    SELECT DISTINCT content->'analysisOf'->>'_id' AS diagram_ref_id
+    FROM analysis_docs
+    WHERE content->>'analysisType' = 'diagram'
+      AND content->'analysisOf'->>'_id' IS NOT NULL
+  ),
+  diagram_docs AS (
+    SELECT jsonb_set(s.content, '{_refId}', to_jsonb(r.id::text)) AS content
+    FROM diagram_refs dr
+    JOIN refs r ON r.id = dr.diagram_ref_id::uuid
+    JOIN snapshots s ON s.id = r.head
+    WHERE r.deleted_at IS NULL
+      AND s.content->>'type' = 'diagram'
+  ),
+  -- Model documents referenced by diagrams (via diagramIn._id)
+  diagram_model_refs AS (
+    SELECT DISTINCT content->'diagramIn'->>'_id' AS model_ref_id
+    FROM diagram_docs
+    WHERE content->'diagramIn'->>'_id' IS NOT NULL
+  ),
+  -- All model documents: those referenced by model analyses + those referenced by diagrams
+  all_model_refs AS (
+    SELECT model_ref_id FROM model_analysis_refs
+    UNION
+    SELECT model_ref_id FROM diagram_model_refs
+  ),
+  model_docs AS (
+    SELECT jsonb_set(s.content, '{_refId}', to_jsonb(r.id::text)) AS content
+    FROM all_model_refs mr
+    JOIN refs r ON r.id = mr.model_ref_id::uuid
+    JOIN snapshots s ON s.id = r.head
+    WHERE r.deleted_at IS NULL
+      AND s.content->>'type' = 'model'
+  )
+  SELECT json_build_object(
+    'analyses', COALESCE((SELECT json_agg(content) FROM analysis_docs), '[]'::json),
+    'models', COALESCE((SELECT json_agg(content) FROM model_docs), '[]'::json),
+    'diagrams', COALESCE((SELECT json_agg(content) FROM diagram_docs), '[]'::json)
+  );
+"
+REMOTE_SCRIPT
+
+analysis_count=$(jq '.analyses | length' "$output_file")
+model_count=$(jq '.models | length' "$output_file")
+diagram_count=$(jq '.diagrams | length' "$output_file")
+echo "Dumped $analysis_count analysis documents, $model_count model documents, and $diagram_count diagram documents to $output_file" >&2
