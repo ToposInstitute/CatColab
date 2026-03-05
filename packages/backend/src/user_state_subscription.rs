@@ -188,8 +188,9 @@ async fn handle_profile_update(
 
     let rows = sqlx::query_as::<_, (String, String)>(
         r#"
-        SELECT user_id, doc_id
-        FROM user_state_urls
+        SELECT id, state_doc_id
+        FROM users
+        WHERE state_doc_id IS NOT NULL
         "#,
     )
     .fetch_all(&app_state.db)
@@ -203,7 +204,7 @@ async fn handle_profile_update(
                     user_id = %state_owner_id,
                     doc_id = %doc_id_text,
                     error = %e,
-                    "Skipping invalid user_state_urls entry"
+                    "Skipping invalid state_doc_id entry"
                 );
                 continue;
             }
