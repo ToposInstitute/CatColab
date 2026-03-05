@@ -100,8 +100,6 @@
           darwinDeps =
             if pkgs.stdenv.isDarwin then
               [
-                pkgs.darwin.apple_sdk.frameworks.Security
-                pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
                 pkgs.libiconv
               ]
             else
