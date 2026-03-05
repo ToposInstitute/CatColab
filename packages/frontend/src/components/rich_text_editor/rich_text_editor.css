@@ -177,6 +177,26 @@ blockquote {
     background-color: var(--color-rich-text-selection-bg);
 }
 
+math-inline.math-node {
+    display: inline;
+}
+
+math-inline.math-node.empty-math .math-render::before {
+    content: "(empty)";
+    color: #c44;
+    font-size: 0.85em;
+}
+
+math-inline .math-src .math-input {
+    font-family: "Consolas", "Ubuntu Mono", monospace;
+    font-size: 0.95em;
+    color: rgb(132, 33, 162);
+    border: none;
+    padding: 0;
+    outline: none;
+    min-width: 2em;
+}
+
 .link-editor-popup {
     padding-left: 12px;
     padding-right: 12px;
