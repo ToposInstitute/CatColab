@@ -79,20 +79,20 @@ describe("RPC for user profiles", async () => {
         assert.strictEqual(signInResult.tag, "Ok");
     });
 
-    const userStateUrl = unwrap(await rpc.get_user_state_url.query());
+    const userStateDocId = unwrap(await rpc.get_user_state_doc_id.query());
     test.sequential("should get a valid automerge document ID for user state", () => {
-        assert(isValidDocumentId(userStateUrl));
+        assert(isValidDocumentId(userStateDocId));
     });
 
-    const userStateUrl2 = unwrap(await rpc.get_user_state_url.query());
-    test.sequential("should get the same user state URL on subsequent calls", () => {
-        assert.strictEqual(userStateUrl2, userStateUrl);
+    const userStateDocId2 = unwrap(await rpc.get_user_state_doc_id.query());
+    test.sequential("should get the same user state doc ID on subsequent calls", () => {
+        assert.strictEqual(userStateDocId2, userStateDocId);
     });
 
     await signOut(auth);
 
-    const unauthorizedUserStateResult = await rpc.get_user_state_url.query();
-    test.sequential("should prohibit getting user state URL when unauthenticated", () => {
+    const unauthorizedUserStateResult = await rpc.get_user_state_doc_id.query();
+    test.sequential("should prohibit getting user state doc ID when unauthenticated", () => {
         assert.strictEqual(unwrapErr(unauthorizedUserStateResult).code, 401);
     });
 });
