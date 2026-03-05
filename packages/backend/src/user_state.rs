@@ -425,9 +425,9 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
 pub async fn get_user_state_doc(state: &AppState, user_id: &str) -> Option<DocumentId> {
     let doc_id = sqlx::query_scalar::<_, String>(
         r#"
-        SELECT doc_id
-        FROM user_state_urls
-        WHERE user_id = $1
+        SELECT state_doc_id
+        FROM users
+        WHERE id = $1 AND state_doc_id IS NOT NULL
         "#,
     )
     .bind(user_id)
@@ -553,9 +553,7 @@ pub async fn create_user_state_doc(
 
     sqlx::query(
         r#"
-        INSERT INTO user_state_urls (user_id, doc_id)
-        VALUES ($1, $2)
-        ON CONFLICT (user_id) DO UPDATE SET doc_id = EXCLUDED.doc_id
+        UPDATE users SET state_doc_id = $2 WHERE id = $1
         "#,
     )
     .bind(user_id)
@@ -563,7 +561,7 @@ pub async fn create_user_state_doc(
     .execute(&state.db)
     .await?;
 
-    debug!(user_id = %user_id, doc_id = %doc_id, "Stored document ID in user_state_urls");
+    debug!(user_id = %user_id, doc_id = %doc_id, "Stored state_doc_id on users row");
 
     info!(user_id = %user_id, doc_id = %doc_id, "Created user state document");
 

@@ -34,10 +34,7 @@ impl Operation<Postgres> for MigrationOperation {
 
         sqlx::query(
             r#"
-            CREATE TABLE IF NOT EXISTS user_state_urls (
-                user_id TEXT PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
-                doc_id TEXT NOT NULL UNIQUE
-            );
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS state_doc_id TEXT UNIQUE;
             "#,
         )
         .execute(&mut *tx)
@@ -392,7 +389,7 @@ impl Operation<Postgres> for MigrationOperation {
             .execute(&mut *tx)
             .await?;
 
-        sqlx::query(r#"DROP TABLE IF EXISTS user_state_urls;"#)
+        sqlx::query(r#"ALTER TABLE users DROP COLUMN IF EXISTS state_doc_id;"#)
             .execute(&mut *tx)
             .await?;
 

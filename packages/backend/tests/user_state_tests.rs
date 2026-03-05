@@ -860,18 +860,18 @@ mod integration_tests {
             .await
             .expect("Failed to get or create user state doc");
 
-        // Verify the document URL was persisted
+        // Verify the document ID was persisted
         let persisted_doc_id = sqlx::query_scalar::<_, String>(
             r#"
-            SELECT doc_id
-            FROM user_state_urls
-            WHERE user_id = $1
+            SELECT state_doc_id
+            FROM users
+            WHERE id = $1 AND state_doc_id IS NOT NULL
             "#,
         )
         .bind(&user_id)
         .fetch_optional(&pool)
         .await?
-        .expect("User state URL should be persisted");
+        .expect("User state_doc_id should be persisted");
         assert!(!persisted_doc_id.is_empty(), "Persisted document ID should be non-empty");
 
         // Read the user state from the document
