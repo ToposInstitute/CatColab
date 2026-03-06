@@ -97,7 +97,7 @@ let
       dontPatchShebangs = true;
 
       installPhase = ''
-        # for vitest to work we need to basically recreate the development environment. We acheive this
+        # for vitest to work we need to basically recreate the development environment. We achieve this
         # by setting of up a copy of the packages structure.
         mkdir -p $out/packages
 
@@ -140,14 +140,14 @@ let
             fi
           fi
 
-          if [ $elapsed -ge $timeout ]; then
-            echo "Error: Timeout waiting for server to be available after ''${timeout}s" >&2
-            exit 1
-          fi
-
           sleep 1
           elapsed=$((elapsed + 1))
         done
+
+        if [ "$response" != "Running" ]; then
+          echo "Error: Timeout waiting for server to be available after ''${timeout}s" >&2
+          exit 1
+        fi
 
         npm run test:ci
         EOF
