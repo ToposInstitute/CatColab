@@ -18,12 +18,13 @@ use std::fmt::Debug;
 use std::{collections::HashMap, hash::Hash};
 
 use derivative::Derivative;
-use egglog::ast::{Actions, Command, Expr, RunConfig, Schedule, Schema};
+use egglog::ast::{Command, Expr, RunConfig, Schedule, Schema};
 use egglog::prelude::*;
 use nonempty::NonEmpty;
 use thiserror::Error;
 
 use super::{category::*, graph::*, path::*};
+use crate::egglog_util::EGraphUtils;
 use crate::validate::{self, Validate};
 use crate::zero::QualifiedName;
 
@@ -83,7 +84,7 @@ where
         assert!(self.generators.add_vertex(v.clone()), "Object generator already exists");
         let state = self.state.get_mut();
         let expr = state.ob_generator(v);
-        state.run_action(action!((unquote expr)));
+        state.egraph.run_action(action!((unquote expr))).unwrap();
     }
 
     /// Adds several object generators at once.
@@ -100,13 +101,14 @@ where
             "Morphism generator already exists"
         );
         let state = self.state.get_mut();
-        let [dom, cod] = [state.ob_generator(dom), state.ob_generator(cod)];
+        let (dom, cod) = (state.ob_generator(dom), state.ob_generator(cod));
         let mor = state.mor_generator(e);
-        state.run_actions(actions![
+        let actions = actions![
             (unquote mor.clone())
             (union (unquote dom) (dom (unquote mor.clone())))
             (union (unquote cod) (cod (unquote mor)))
-        ]);
+        ];
+        state.egraph.run_actions(actions).unwrap();
     }
 
     /// Adds a morphism generator without declaring its (co)domain.
@@ -114,7 +116,7 @@ where
         assert!(self.generators.make_edge(e.clone()), "Morphism generator already exists");
         let state = self.state.get_mut();
         let expr = state.mor_generator(e);
-        state.run_action(action!((unquote expr)));
+        state.egraph.run_action(action!((unquote expr))).unwrap();
     }
 
     /// Gets the domain of a morphism generator.
@@ -134,9 +136,9 @@ where
             "Domain of morphism generator should not already be set"
         );
         let state = self.state.get_mut();
-        let mor = state.mor_generator(e);
-        let ob = state.ob_generator(v);
-        state.run_action(action!((union (unquote ob) (dom (unquote mor)))));
+        let (mor, ob) = (state.mor_generator(e), state.ob_generator(v));
+        let action = action!((union (unquote ob) (dom (unquote mor))));
+        state.egraph.run_action(action).unwrap();
     }
 
     /// Sets the codomain of a morphism generator.
@@ -146,16 +148,17 @@ where
             "Codomain of morphism generator should not already be set"
         );
         let state = self.state.get_mut();
-        let mor = state.mor_generator(e);
-        let ob = state.ob_generator(v);
-        state.run_action(action!((union (unquote ob) (cod (unquote mor)))));
+        let (mor, ob) = (state.mor_generator(e), state.ob_generator(v));
+        let action = action!((union (unquote ob) (cod (unquote mor))));
+        state.egraph.run_action(action).unwrap();
     }
 
     /// Adds a path equation to the presentation.
     pub fn add_equation(&mut self, eq: PathEq<V, E>) {
         self.equations.push(eq.clone());
         let (lhs, rhs) = (self.path_expr(eq.lhs), self.path_expr(eq.rhs));
-        self.state.get_mut().run_action(Action::Union(span!(), lhs, rhs));
+        let action = action!((union (unquote lhs) (unquote rhs)));
+        self.state.get_mut().egraph.run_action(action).unwrap();
     }
 
     /// Equates two path in the presentation.
@@ -310,20 +313,9 @@ where
 }
 
 impl<V, E> CategoryEGraph<V, E> {
-    /// Runs a single action on the e-graph.
-    fn run_action(&mut self, action: Action) {
-        self.egraph
-            .run_program(vec![Command::Action(action)])
-            .expect("Unexpected egglog error");
-    }
-
-    /// Runs multiple actions on the e-graph.
-    fn run_actions(&mut self, actions: Actions) {
-        let commands = actions.0.into_iter().map(Command::Action).collect();
-        self.egraph.run_program(commands).expect("Unexpected egglog error");
-    }
-
-    /// Checks whether two expressions are equal after saturating the axioms.
+    /// Checks whether two morphism expressions are equal.
+    ///
+    /// The category axioms are saturated before performing the check.
     fn check_equal(&mut self, lhs: Expr, rhs: Expr) -> bool {
         let schedule = Schedule::Saturate(
             span!(),
@@ -332,16 +324,13 @@ impl<V, E> CategoryEGraph<V, E> {
                 RunConfig { ruleset: "CatAxioms".into(), until: None },
             )),
         );
-        match self.egraph.run_program(vec![
+        let prog = vec![
             Command::Action(action!((unquote lhs.clone()))),
             Command::Action(action!((unquote rhs.clone()))),
             Command::RunSchedule(schedule),
-            Command::Check(span!(), vec![fact!((= (unquote lhs) (unquote rhs)))]),
-        ]) {
-            Ok(_) => true,
-            Err(egglog::Error::CheckError(_, _)) => false,
-            Err(_) => panic!("Unexpected egglog error"),
-        }
+        ];
+        self.egraph.run_program(prog).unwrap();
+        self.egraph.check_equal(lhs, rhs).unwrap()
     }
 }
 

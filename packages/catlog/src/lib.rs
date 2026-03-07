@@ -19,6 +19,7 @@
 #[cfg(doc)]
 pub mod refs;
 
+pub mod egglog_util;
 pub mod validate;
 
 pub mod dbl;
