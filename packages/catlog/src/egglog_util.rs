@@ -2,7 +2,7 @@
 
 use std::fmt::Display;
 
-use egglog::{EGraph, Error, ast::*, span};
+use egglog::{CommandOutput, EGraph, Error, ast::*, span};
 use ref_cast::RefCast;
 
 /// An egglog program.
@@ -42,7 +42,7 @@ impl Program {
     }
 
     /// Runs the program in the given e-graph, consuming the program.
-    pub fn run_in(self, egraph: &mut EGraph) -> Result<Vec<String>, Error> {
+    pub fn run_in(self, egraph: &mut EGraph) -> Result<Vec<CommandOutput>, Error> {
         egraph.run_program(self.0)
     }
 
@@ -61,7 +61,7 @@ impl Program {
 /// Simplified egglog AST node for a rewrite.
 pub struct CommandRewrite {
     /// Rule set to which the rewrite belongs.
-    pub ruleset: Symbol,
+    pub ruleset: String,
     /// Left-hand side of rewrite.
     pub lhs: Expr,
     /// Right-hand side of rewrite.
@@ -86,7 +86,7 @@ impl From<CommandRewrite> for Command {
 /// Simplified egglog AST node for a rule.
 pub struct CommandRule {
     /// Rule set to which the rule belongs.
-    pub ruleset: Symbol,
+    pub ruleset: String,
     /// Head of rule.
     pub head: Vec<Action>,
     /// Body of rule.
@@ -96,12 +96,12 @@ pub struct CommandRule {
 impl From<CommandRule> for Command {
     fn from(rule: CommandRule) -> Self {
         Command::Rule {
-            name: "".into(),
-            ruleset: rule.ruleset,
             rule: Rule {
                 span: span!(),
                 head: Actions::new(rule.head),
                 body: rule.body,
+                name: "".into(),
+                ruleset: rule.ruleset,
             },
         }
     }

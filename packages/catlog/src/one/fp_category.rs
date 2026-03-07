@@ -362,38 +362,38 @@ impl<V, E> CategoryProgramBuilder<V, E> {
     /// Constructs an object generator call for the given internal ID.
     fn ob_generator_with_id(&self, id: usize) -> Expr {
         let id: i64 = id.try_into().expect("Shouldn't have too many object generators");
-        call!(self.sym.ob_gen, vec![lit!(id)])
+        call!(self.sym.ob_gen.clone(), vec![lit!(id)])
     }
 
     /// Constructs a morphism generator call for the given internal ID.
     fn mor_generator_with_id(&self, id: usize) -> Expr {
         let id: i64 = id.try_into().expect("Shouldn't have too many morphism generators");
-        call!(self.sym.mor_gen, vec![lit!(id)])
+        call!(self.sym.mor_gen.clone(), vec![lit!(id)])
     }
 
     /// Constructs a call of the morphism-is-valid predicate.
     pub fn mor_is_valid(&self, mor: Expr) -> Expr {
-        call!(self.sym.mor_is_valid, vec![mor])
+        call!(self.sym.mor_is_valid.clone(), vec![mor])
     }
 
     /// Constructs a domain call.
     pub fn dom(&self, mor: Expr) -> Expr {
-        call!(self.sym.dom, vec![mor])
+        call!(self.sym.dom.clone(), vec![mor])
     }
 
     /// Constructs a codomain call.
     pub fn cod(&self, mor: Expr) -> Expr {
-        call!(self.sym.cod, vec![mor])
+        call!(self.sym.cod.clone(), vec![mor])
     }
 
     /// Constructs an identity call.
     pub fn id(&self, ob: Expr) -> Expr {
-        call!(self.sym.id, vec![ob])
+        call!(self.sym.id.clone(), vec![ob])
     }
 
     /// Constructs a binary composition call.
     pub fn compose2(&self, f: Expr, g: Expr) -> Expr {
-        call!(self.sym.compose, vec![f, g])
+        call!(self.sym.compose.clone(), vec![f, g])
     }
 
     /// Equates two expressions in the category.
@@ -413,7 +413,10 @@ impl<V, E> CategoryProgramBuilder<V, E> {
             span!(),
             Box::new(Schedule::Run(
                 span!(),
-                GenericRunConfig { ruleset: self.sym.axioms, until: None },
+                GenericRunConfig {
+                    ruleset: self.sym.axioms.clone(),
+                    until: None,
+                },
             )),
         )
     }
@@ -425,80 +428,95 @@ impl<V, E> CategoryProgramBuilder<V, E> {
             // Types: objects and morphisms.
             Command::Datatype {
                 span: span!(),
-                name: sym.ob,
+                name: sym.ob.clone(),
                 variants: vec![Variant {
                     span: span!(),
-                    name: sym.ob_gen,
+                    name: sym.ob_gen.clone(),
                     types: vec!["i64".into()],
                     cost: Some(0),
+                    unextractable: false,
                 }],
             },
             Command::Datatype {
                 span: span!(),
-                name: sym.mor,
+                name: sym.mor.clone(),
                 variants: vec![Variant {
                     span: span!(),
-                    name: sym.mor_gen,
+                    name: sym.mor_gen.clone(),
                     types: vec!["i64".into()],
                     cost: Some(0),
+                    unextractable: false,
                 }],
             },
             // Constructors: (co)domain, identity, composition.
             Command::Constructor {
                 span: span!(),
-                name: sym.dom,
-                schema: Schema { input: vec![sym.mor], output: sym.ob },
-                cost: Some(1),
-                unextractable: false,
-            },
-            Command::Constructor {
-                span: span!(),
-                name: sym.cod,
-                schema: Schema { input: vec![sym.mor], output: sym.ob },
-                cost: Some(1),
-                unextractable: false,
-            },
-            Command::Constructor {
-                span: span!(),
-                name: sym.id,
-                schema: Schema { input: vec![sym.ob], output: sym.mor },
-                cost: Some(1),
-                unextractable: false,
-            },
-            Command::Constructor {
-                span: span!(),
-                name: sym.compose,
+                name: sym.dom.clone(),
                 schema: Schema {
-                    input: vec![sym.mor, sym.mor],
-                    output: sym.mor,
+                    input: vec![sym.mor.clone()],
+                    output: sym.ob.clone(),
+                },
+                cost: Some(1),
+                unextractable: false,
+            },
+            Command::Constructor {
+                span: span!(),
+                name: sym.cod.clone(),
+                schema: Schema {
+                    input: vec![sym.mor.clone()],
+                    output: sym.ob.clone(),
+                },
+                cost: Some(1),
+                unextractable: false,
+            },
+            Command::Constructor {
+                span: span!(),
+                name: sym.id.clone(),
+                schema: Schema {
+                    input: vec![sym.ob.clone()],
+                    output: sym.mor.clone(),
+                },
+                cost: Some(1),
+                unextractable: false,
+            },
+            Command::Constructor {
+                span: span!(),
+                name: sym.compose.clone(),
+                schema: Schema {
+                    input: vec![sym.mor.clone(), sym.mor.clone()],
+                    output: sym.mor.clone(),
                 },
                 cost: Some(1),
                 unextractable: false,
             },
             // Rule set: all the axioms for a category.
-            Command::AddRuleset(span!(), sym.axioms),
+            Command::AddRuleset(span!(), sym.axioms.clone()),
             // Predicate: is the morphism well-typed?
             Command::Relation {
                 span: span!(),
-                name: sym.mor_is_valid,
-                inputs: vec![sym.mor],
+                name: sym.mor_is_valid.clone(),
+                inputs: vec![sym.mor.clone()],
             },
             // Rule: every morphism generator is well-typed.
             Command::from(CommandRule {
-                ruleset: sym.axioms,
+                ruleset: sym.axioms.clone(),
                 head: vec![Action::Expr(span!(), self.mor_is_valid(var!("f")))],
-                body: vec![Fact::Eq(span!(), var!("f"), call!(sym.mor_gen, vec![var!("name")]))],
+                body: vec![Fact::Eq(
+                    span!(),
+                    var!("f"),
+                    call!(sym.mor_gen.clone(), vec![var!("name")]),
+                )],
             }),
             // Rule: every identity morphism is well-typed.
             Command::from(CommandRule {
-                ruleset: sym.axioms,
+                ruleset: sym.axioms.clone(),
                 head: vec![Action::Expr(span!(), self.mor_is_valid(var!("f")))],
                 body: vec![Fact::Eq(span!(), var!("f"), self.id(var!("x")))],
             }),
             // Rule: a composite of two morphisms is well-typed if both
             // morphisms are well-typed and their (co)domains are compatible.
             Command::from(CommandRule {
-                ruleset: sym.axioms,
+                ruleset: sym.axioms.clone(),
                 head: vec![Action::Expr(span!(), self.mor_is_valid(var!("fg")))],
                 body: vec![
                     Fact::Eq(span!(), var!("fg"), self.compose2(var!("f"), var!("g"))),
@@ -509,7 +527,7 @@ impl<V, E> CategoryProgramBuilder<V, E> {
             }),
             // Rules: (co)domains of composites and identities.
             Command::from(CommandRule {
-                ruleset: sym.axioms,
+                ruleset: sym.axioms.clone(),
                 head: vec![
                     Action::Union(span!(), self.dom(var!("fg")), self.dom(var!("f"))),
                     Action::Union(span!(), self.cod(var!("fg")), self.cod(var!("g"))),
@@ -520,19 +538,19 @@ impl<V, E> CategoryProgramBuilder<V, E> {
                 ],
             }),
             Command::from(CommandRewrite {
-                ruleset: sym.axioms,
+                ruleset: sym.axioms.clone(),
                 lhs: self.dom(self.id(var!("x"))),
                 rhs: var!("x"),
             }),
             Command::from(CommandRewrite {
-                ruleset: sym.axioms,
+                ruleset: sym.axioms.clone(),
                 lhs: self.cod(self.id(var!("x"))),
                 rhs: var!("x"),
             }),
             // Associativity and unitality axioms, where associativity is a
             // bidirectional rewrite and unitality is unidirectional rewrites.
             Command::from(CommandRule {
-                ruleset: sym.axioms,
+                ruleset: sym.axioms.clone(),
                 head: vec![Action::Union(
                     span!(),
                     var!("fgh"),
@@ -548,7 +566,7 @@ impl<V, E> CategoryProgramBuilder<V, E> {
                 ],
             }),
             Command::from(CommandRule {
-                ruleset: sym.axioms,
+                ruleset: sym.axioms.clone(),
                 head: vec![Action::Union(
                     span!(),
                     var!("fgh"),
@@ -564,12 +582,12 @@ impl<V, E> CategoryProgramBuilder<V, E> {
                 ],
             }),
             Command::from(CommandRewrite {
-                ruleset: sym.axioms,
+                ruleset: sym.axioms.clone(),
                 lhs: self.compose2(var!("f"), self.id(self.cod(var!("f")))),
                 rhs: var!("f"),
             }),
             Command::from(CommandRewrite {
-                ruleset: sym.axioms,
+                ruleset: sym.axioms.clone(),
                 lhs: self.compose2(self.id(self.dom(var!("f"))), var!("f")),
                 rhs: var!("f"),
             }),
@@ -592,16 +610,16 @@ impl<V, E> Default for CategoryProgramBuilder<V, E> {
 
 #[derive(Clone)]
 struct CategorySymbols {
-    ob: Symbol,
-    mor: Symbol,
-    mor_is_valid: Symbol,
-    ob_gen: Symbol,
-    mor_gen: Symbol,
-    dom: Symbol,
-    cod: Symbol,
-    id: Symbol,
-    compose: Symbol,
-    axioms: Symbol,
+    ob: String,
+    mor: String,
+    mor_is_valid: String,
+    ob_gen: String,
+    mor_gen: String,
+    dom: String,
+    cod: String,
+    id: String,
+    compose: String,
+    axioms: String,
 }
 
 impl Default for CategorySymbols {
