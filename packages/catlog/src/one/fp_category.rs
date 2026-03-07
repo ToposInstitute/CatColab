@@ -18,13 +18,12 @@ use std::fmt::Debug;
 use std::{collections::HashMap, hash::Hash};
 
 use derivative::Derivative;
-use egglog::{EGraph, ast::*, span};
+use egglog::ast::{Actions, Command, Expr, RunConfig, Schedule, Schema};
+use egglog::prelude::*;
 use nonempty::NonEmpty;
-use ref_cast::RefCast;
 use thiserror::Error;
 
 use super::{category::*, graph::*, path::*};
-use crate::egglog_util::{CommandRewrite, CommandRule, Program};
 use crate::validate::{self, Validate};
 use crate::zero::QualifiedName;
 
@@ -53,9 +52,7 @@ pub struct FpCategory<V, E> {
     generators: HashGraph<V, E>,
     equations: Vec<PathEq<V, E>>,
     #[derivative(Debug = "ignore", PartialEq = "ignore")]
-    builder: RefCell<CategoryProgramBuilder<V, E>>,
-    #[derivative(Debug = "ignore", PartialEq = "ignore")]
-    egraph: RefCell<EGraph>,
+    state: RefCell<CategoryEGraph<V, E>>,
 }
 
 /// A finitely presented category whose generators have qualified names.
@@ -84,7 +81,9 @@ where
     /// Adds an object generator.
     pub fn add_ob_generator(&mut self, v: V) {
         assert!(self.generators.add_vertex(v.clone()), "Object generator already exists");
-        self.builder.get_mut().add_ob_generator(v);
+        let state = self.state.get_mut();
+        let expr = state.ob_generator(v);
+        state.run_action(action!((unquote expr)));
     }
 
     /// Adds several object generators at once.
@@ -100,14 +99,22 @@ where
             self.generators.add_edge(e.clone(), dom.clone(), cod.clone()),
             "Morphism generator already exists"
         );
-        let (dom, cod) = (self.ob_generator_expr(dom), self.ob_generator_expr(cod));
-        self.builder.get_mut().add_mor_generator(e, dom, cod);
+        let state = self.state.get_mut();
+        let [dom, cod] = [state.ob_generator(dom), state.ob_generator(cod)];
+        let mor = state.mor_generator(e);
+        state.run_actions(actions![
+            (unquote mor.clone())
+            (union (unquote dom) (dom (unquote mor.clone())))
+            (union (unquote cod) (cod (unquote mor)))
+        ]);
     }
 
     /// Adds a morphism generator without declaring its (co)domain.
     pub fn make_mor_generator(&mut self, e: E) {
         assert!(self.generators.make_edge(e.clone()), "Morphism generator already exists");
-        self.builder.get_mut().make_mor_generator(e);
+        let state = self.state.get_mut();
+        let expr = state.mor_generator(e);
+        state.run_action(action!((unquote expr)));
     }
 
     /// Gets the domain of a morphism generator.
@@ -126,8 +133,10 @@ where
             self.generators.set_src(e.clone(), v.clone()).is_none(),
             "Domain of morphism generator should not already be set"
         );
-        let (mor, ob) = (self.mor_generator_expr(e), self.ob_generator_expr(v));
-        self.builder.get_mut().set_dom(mor, ob);
+        let state = self.state.get_mut();
+        let mor = state.mor_generator(e);
+        let ob = state.ob_generator(v);
+        state.run_action(action!((union (unquote ob) (dom (unquote mor)))));
     }
 
     /// Sets the codomain of a morphism generator.
@@ -136,15 +145,17 @@ where
             self.generators.set_tgt(e.clone(), v.clone()).is_none(),
             "Codomain of morphism generator should not already be set"
         );
-        let (mor, ob) = (self.mor_generator_expr(e), self.ob_generator_expr(v));
-        self.builder.get_mut().set_cod(mor, ob);
+        let state = self.state.get_mut();
+        let mor = state.mor_generator(e);
+        let ob = state.ob_generator(v);
+        state.run_action(action!((union (unquote ob) (cod (unquote mor)))));
     }
 
     /// Adds a path equation to the presentation.
     pub fn add_equation(&mut self, eq: PathEq<V, E>) {
         self.equations.push(eq.clone());
         let (lhs, rhs) = (self.path_expr(eq.lhs), self.path_expr(eq.rhs));
-        self.builder.get_mut().equate(lhs, rhs);
+        self.state.get_mut().run_action(Action::Union(span!(), lhs, rhs));
     }
 
     /// Equates two path in the presentation.
@@ -152,20 +163,14 @@ where
         self.add_equation(PathEq::new(lhs, rhs));
     }
 
-    fn ob_generator_expr(&self, v: V) -> Expr {
-        self.builder.borrow_mut().ob_generator(v)
-    }
-    fn mor_generator_expr(&self, e: E) -> Expr {
-        self.builder.borrow_mut().mor_generator(e)
-    }
     fn path_expr(&self, path: Path<V, E>) -> Expr {
         path.map_reduce(
             |v| {
-                let ob = self.ob_generator_expr(v);
-                self.builder.borrow().id(ob)
+                let ob = self.state.borrow_mut().ob_generator(v);
+                expr!((id (unquote ob)))
             },
-            |e| self.mor_generator_expr(e),
-            |f, g| self.builder.borrow().compose2(f, g),
+            |e| self.state.borrow_mut().mor_generator(e),
+            |f, g| expr!((compose (unquote f) (unquote g))),
         )
     }
 
@@ -214,12 +219,7 @@ where
 
     fn morphisms_are_equal(&self, path1: Self::Mor, path2: Self::Mor) -> bool {
         let (lhs, rhs) = (self.path_expr(path1), self.path_expr(path2));
-        self.builder.borrow_mut().check_equal(lhs, rhs);
-        self.builder
-            .borrow_mut()
-            .program()
-            .check_in(&mut self.egraph.borrow_mut())
-            .expect("Unexpected egglog error")
+        self.state.borrow_mut().check_equal(lhs, rhs)
     }
 }
 
@@ -273,370 +273,197 @@ pub enum InvalidFpCategory<E> {
     Eq(usize, NonEmpty<InvalidPathEq>),
 }
 
-/// Program builder for computing with categories in egglog.
+/// E-graph state for computing with categories in egglog.
 ///
-/// Maintains an egglog [`Program`] as well as mappings from vertices and edges in
-/// the category's generating graph to numeric IDs for generator terms in egglog. We
-/// do not assume that vertices or edges can be converted to strings/symbols since
-/// we want to support hierarchical naming, where names are a list of symbols.
+/// Wraps an [`EGraph`] initialized with the theory of categories, along with
+/// mappings from vertices and edges in the category's generating graph to numeric
+/// IDs for generator terms in egglog.
 #[derive(Clone)]
-struct CategoryProgramBuilder<V, E> {
-    prog: Vec<Command>,
-    sym: CategorySymbols,
+struct CategoryEGraph<V, E> {
+    egraph: EGraph,
     ob_generators: HashMap<V, usize>,
     mor_generators: HashMap<E, usize>,
 }
 
-impl<V, E> CategoryProgramBuilder<V, E>
+impl<V, E> CategoryEGraph<V, E>
 where
     V: Eq + Hash,
     E: Eq + Hash,
 {
-    /// Declares an object generator.
-    pub fn add_ob_generator(&mut self, v: V) -> usize {
-        let id = self.ob_generator_id(v);
-        let action = Action::Expr(span!(), self.ob_generator_with_id(id));
-        self.prog.push(Command::Action(action));
-        id
-    }
-
-    /// Declares a morphism generator and sets its domain and codmain.
-    pub fn add_mor_generator(&mut self, e: E, dom: Expr, cod: Expr) -> usize {
-        let id = self.make_mor_generator(e);
-        self.set_dom(self.mor_generator_with_id(id), dom);
-        self.set_cod(self.mor_generator_with_id(id), cod);
-        id
-    }
-
-    /// Declares a morphism generator.
-    pub fn make_mor_generator(&mut self, e: E) -> usize {
-        let id = self.mor_generator_id(e);
-        let action = Action::Expr(span!(), self.mor_generator_with_id(id));
-        self.prog.push(Command::Action(action));
-        id
-    }
-
-    /// Sets the domain of a morphism.
-    pub fn set_dom(&mut self, mor: Expr, ob: Expr) {
-        let dom = self.dom(mor);
-        Program::ref_cast_mut(&mut self.prog).union(dom, ob);
-    }
-
-    /// Sets the codomain of a morphism.
-    pub fn set_cod(&mut self, mor: Expr, ob: Expr) {
-        let cod = self.cod(mor);
-        Program::ref_cast_mut(&mut self.prog).union(cod, ob);
-    }
-
-    /// Constructs an object generator expression for the given vertex.
-    pub fn ob_generator(&mut self, v: V) -> Expr {
-        let id = self.ob_generator_id(v);
-        self.ob_generator_with_id(id)
-    }
-
-    /// Gets or creates the internal ID for a given vertex.
-    pub fn ob_generator_id(&mut self, v: V) -> usize {
+    /// Constructs an object generator expression, assigning an ID if needed.
+    fn ob_generator(&mut self, v: V) -> Expr {
         let n = self.ob_generators.len();
-        *self.ob_generators.entry(v).or_insert(n)
+        let id: i64 = (*self.ob_generators.entry(v).or_insert(n))
+            .try_into()
+            .expect("Shouldn't have too many object generators");
+        expr!((ObGen (unquote exprs::int(id))))
     }
 
-    /// Constructs a morphism generator expression for the given edge.
-    pub fn mor_generator(&mut self, e: E) -> Expr {
-        let id = self.mor_generator_id(e);
-        self.mor_generator_with_id(id)
-    }
-
-    /// Gets or creates the internal ID for a given edge.
-    pub fn mor_generator_id(&mut self, e: E) -> usize {
+    /// Constructs a morphism generator expression, assigning an ID if needed.
+    fn mor_generator(&mut self, e: E) -> Expr {
         let n = self.mor_generators.len();
-        *self.mor_generators.entry(e).or_insert(n)
+        let id: i64 = (*self.mor_generators.entry(e).or_insert(n))
+            .try_into()
+            .expect("Shouldn't have too many morphism generators");
+        expr!((MorGen (unquote exprs::int(id))))
     }
 }
 
-impl<V, E> CategoryProgramBuilder<V, E> {
-    /// Extracts the egglog program, consuming the cached statements.
-    pub fn program(&mut self) -> Program {
-        Program(std::mem::take(&mut self.prog))
+impl<V, E> CategoryEGraph<V, E> {
+    /// Runs a single action on the e-graph.
+    fn run_action(&mut self, action: Action) {
+        self.egraph
+            .run_program(vec![Command::Action(action)])
+            .expect("Unexpected egglog error");
     }
 
-    /// Constructs an object generator call for the given internal ID.
-    fn ob_generator_with_id(&self, id: usize) -> Expr {
-        let id: i64 = id.try_into().expect("Shouldn't have too many object generators");
-        call!(self.sym.ob_gen.clone(), vec![lit!(id)])
+    /// Runs multiple actions on the e-graph.
+    fn run_actions(&mut self, actions: Actions) {
+        let commands = actions.0.into_iter().map(Command::Action).collect();
+        self.egraph.run_program(commands).expect("Unexpected egglog error");
     }
 
-    /// Constructs a morphism generator call for the given internal ID.
-    fn mor_generator_with_id(&self, id: usize) -> Expr {
-        let id: i64 = id.try_into().expect("Shouldn't have too many morphism generators");
-        call!(self.sym.mor_gen.clone(), vec![lit!(id)])
-    }
-
-    /// Constructs a call of the morphism-is-valid predicate.
-    pub fn mor_is_valid(&self, mor: Expr) -> Expr {
-        call!(self.sym.mor_is_valid.clone(), vec![mor])
-    }
-
-    /// Constructs a domain call.
-    pub fn dom(&self, mor: Expr) -> Expr {
-        call!(self.sym.dom.clone(), vec![mor])
-    }
-
-    /// Constructs a codomain call.
-    pub fn cod(&self, mor: Expr) -> Expr {
-        call!(self.sym.cod.clone(), vec![mor])
-    }
-
-    /// Constructs an identity call.
-    pub fn id(&self, ob: Expr) -> Expr {
-        call!(self.sym.id.clone(), vec![ob])
-    }
-
-    /// Constructs a binary composition call.
-    pub fn compose2(&self, f: Expr, g: Expr) -> Expr {
-        call!(self.sym.compose.clone(), vec![f, g])
-    }
-
-    /// Equates two expressions in the category.
-    pub fn equate(&mut self, lhs: Expr, rhs: Expr) {
-        Program::ref_cast_mut(&mut self.prog).union(lhs, rhs);
-    }
-
-    /// Checks whether the expressions are equal.
-    pub fn check_equal(&mut self, lhs: Expr, rhs: Expr) {
-        let schedule = self.schedule();
-        Program::ref_cast_mut(&mut self.prog).check_equal(lhs, rhs, Some(schedule));
-    }
-
-    /// Constructs a schedule to saturate the category axioms.
-    fn schedule(&self) -> Schedule {
-        Schedule::Saturate(
+    /// Checks whether two expressions are equal after saturating the axioms.
+    fn check_equal(&mut self, lhs: Expr, rhs: Expr) -> bool {
+        let schedule = Schedule::Saturate(
             span!(),
             Box::new(Schedule::Run(
                 span!(),
-                GenericRunConfig {
-                    ruleset: self.sym.axioms.clone(),
-                    until: None,
-                },
+                RunConfig { ruleset: "CatAxioms".into(), until: None },
             )),
-        )
-    }
-
-    /// Generates the preamble for the program.
-    fn preamble(&mut self) {
-        let sym = &self.sym;
-        self.prog = vec![
-            // Types: objects and morphisms.
-            Command::Datatype {
-                span: span!(),
-                name: sym.ob.clone(),
-                variants: vec![Variant {
-                    span: span!(),
-                    name: sym.ob_gen.clone(),
-                    types: vec!["i64".into()],
-                    cost: Some(0),
-                    unextractable: false,
-                }],
-            },
-            Command::Datatype {
-                span: span!(),
-                name: sym.mor.clone(),
-                variants: vec![Variant {
-                    span: span!(),
-                    name: sym.mor_gen.clone(),
-                    types: vec!["i64".into()],
-                    cost: Some(0),
-                    unextractable: false,
-                }],
-            },
-            // Constructors: (co)domain, identity, composition.
-            Command::Constructor {
-                span: span!(),
-                name: sym.dom.clone(),
-                schema: Schema {
-                    input: vec![sym.mor.clone()],
-                    output: sym.ob.clone(),
-                },
-                cost: Some(1),
-                unextractable: false,
-            },
-            Command::Constructor {
-                span: span!(),
-                name: sym.cod.clone(),
-                schema: Schema {
-                    input: vec![sym.mor.clone()],
-                    output: sym.ob.clone(),
-                },
-                cost: Some(1),
-                unextractable: false,
-            },
-            Command::Constructor {
-                span: span!(),
-                name: sym.id.clone(),
-                schema: Schema {
-                    input: vec![sym.ob.clone()],
-                    output: sym.mor.clone(),
-                },
-                cost: Some(1),
-                unextractable: false,
-            },
-            Command::Constructor {
-                span: span!(),
-                name: sym.compose.clone(),
-                schema: Schema {
-                    input: vec![sym.mor.clone(), sym.mor.clone()],
-                    output: sym.mor.clone(),
-                },
-                cost: Some(1),
-                unextractable: false,
-            },
-            // Rule set: all the axioms for a category.
-            Command::AddRuleset(span!(), sym.axioms.clone()),
-            // Predicate: is the morphism well-typed?
-            Command::Relation {
-                span: span!(),
-                name: sym.mor_is_valid.clone(),
-                inputs: vec![sym.mor.clone()],
-            },
-            // Rule: every morphism generator is well-typed.
-            Command::from(CommandRule {
-                ruleset: sym.axioms.clone(),
-                head: vec![Action::Expr(span!(), self.mor_is_valid(var!("f")))],
-                body: vec![Fact::Eq(
-                    span!(),
-                    var!("f"),
-                    call!(sym.mor_gen.clone(), vec![var!("name")]),
-                )],
-            }),
-            // Rule: every identity morphism is well-typed.
-            Command::from(CommandRule {
-                ruleset: sym.axioms.clone(),
-                head: vec![Action::Expr(span!(), self.mor_is_valid(var!("f")))],
-                body: vec![Fact::Eq(span!(), var!("f"), self.id(var!("x")))],
-            }),
-            // Rule: a composite of two morphisms is well-typed if both
-            // morphisms are well-typed and their (co)domains are compatible.
-            Command::from(CommandRule {
-                ruleset: sym.axioms.clone(),
-                head: vec![Action::Expr(span!(), self.mor_is_valid(var!("fg")))],
-                body: vec![
-                    Fact::Eq(span!(), var!("fg"), self.compose2(var!("f"), var!("g"))),
-                    Fact::Fact(self.mor_is_valid(var!("f"))),
-                    Fact::Fact(self.mor_is_valid(var!("g"))),
-                    Fact::Eq(span!(), self.cod(var!("f")), self.dom(var!("g"))),
-                ],
-            }),
-            // Rules: (co)domains of composites and identities.
-            Command::from(CommandRule {
-                ruleset: sym.axioms.clone(),
-                head: vec![
-                    Action::Union(span!(), self.dom(var!("fg")), self.dom(var!("f"))),
-                    Action::Union(span!(), self.cod(var!("fg")), self.cod(var!("g"))),
-                ],
-                body: vec![
-                    Fact::Eq(span!(), var!("fg"), self.compose2(var!("f"), var!("g"))),
-                    Fact::Fact(self.mor_is_valid(var!("fg"))),
-                ],
-            }),
-            Command::from(CommandRewrite {
-                ruleset: sym.axioms.clone(),
-                lhs: self.dom(self.id(var!("x"))),
-                rhs: var!("x"),
-            }),
-            Command::from(CommandRewrite {
-                ruleset: sym.axioms.clone(),
-                lhs: self.cod(self.id(var!("x"))),
-                rhs: var!("x"),
-            }),
-            // Associativity and unitality axioms, where associativity is a
-            // bidirectional rewrite and unitality is unidirectional rewrites.
-            Command::from(CommandRule {
-                ruleset: sym.axioms.clone(),
-                head: vec![Action::Union(
-                    span!(),
-                    var!("fgh"),
-                    self.compose2(var!("f"), self.compose2(var!("g"), var!("h"))),
-                )],
-                body: vec![
-                    Fact::Eq(
-                        span!(),
-                        var!("fgh"),
-                        self.compose2(self.compose2(var!("f"), var!("g")), var!("h")),
-                    ),
-                    Fact::Fact(self.mor_is_valid(var!("fgh"))),
-                ],
-            }),
-            Command::from(CommandRule {
-                ruleset: sym.axioms.clone(),
-                head: vec![Action::Union(
-                    span!(),
-                    var!("fgh"),
-                    self.compose2(self.compose2(var!("f"), var!("g")), var!("h")),
-                )],
-                body: vec![
-                    Fact::Eq(
-                        span!(),
-                        var!("fgh"),
-                        self.compose2(var!("f"), self.compose2(var!("g"), var!("h"))),
-                    ),
-                    Fact::Fact(self.mor_is_valid(var!("fgh"))),
-                ],
-            }),
-            Command::from(CommandRewrite {
-                ruleset: sym.axioms.clone(),
-                lhs: self.compose2(var!("f"), self.id(self.cod(var!("f")))),
-                rhs: var!("f"),
-            }),
-            Command::from(CommandRewrite {
-                ruleset: sym.axioms.clone(),
-                lhs: self.compose2(self.id(self.dom(var!("f"))), var!("f")),
-                rhs: var!("f"),
-            }),
-        ]
-    }
-}
-
-impl<V, E> Default for CategoryProgramBuilder<V, E> {
-    fn default() -> Self {
-        let mut result = Self {
-            prog: Default::default(),
-            sym: Default::default(),
-            ob_generators: Default::default(),
-            mor_generators: Default::default(),
-        };
-        result.preamble();
-        result
-    }
-}
-
-#[derive(Clone)]
-struct CategorySymbols {
-    ob: String,
-    mor: String,
-    mor_is_valid: String,
-    ob_gen: String,
-    mor_gen: String,
-    dom: String,
-    cod: String,
-    id: String,
-    compose: String,
-    axioms: String,
-}
-
-impl Default for CategorySymbols {
-    fn default() -> Self {
-        Self {
-            ob: "Ob".into(),
-            mor: "Mor".into(),
-            mor_is_valid: "is_mor_valid".into(),
-            ob_gen: "ObGen".into(),
-            mor_gen: "MorGen".into(),
-            dom: "dom".into(),
-            cod: "cod".into(),
-            id: "id".into(),
-            compose: "compose".into(),
-            axioms: "CatAxioms".into(),
+        );
+        match self.egraph.run_program(vec![
+            Command::Action(action!((unquote lhs.clone()))),
+            Command::Action(action!((unquote rhs.clone()))),
+            Command::RunSchedule(schedule),
+            Command::Check(span!(), vec![fact!((= (unquote lhs) (unquote rhs)))]),
+        ]) {
+            Ok(_) => true,
+            Err(egglog::Error::CheckError(_, _)) => false,
+            Err(_) => panic!("Unexpected egglog error"),
         }
     }
+}
+
+impl<V, E> Default for CategoryEGraph<V, E> {
+    fn default() -> Self {
+        let mut egraph = EGraph::default();
+        init_category_egraph(&mut egraph).expect("Unexpected egglog error");
+        Self {
+            egraph,
+            ob_generators: Default::default(),
+            mor_generators: Default::default(),
+        }
+    }
+}
+
+/// Initializes an e-graph with the theory of categories.
+fn init_category_egraph(egraph: &mut EGraph) -> Result<(), egglog::Error> {
+    // Types: objects and morphisms with generators.
+    datatype!(egraph, (datatype Ob (ObGen i64 :cost 0)));
+    datatype!(egraph, (datatype Mor (MorGen i64 :cost 0) (compose Mor Mor :cost 1)));
+
+    // Additional constructors: (co)domain and identity.
+    for name in ["dom", "cod"] {
+        add_constructor(
+            egraph,
+            name,
+            Schema {
+                input: vec!["Mor".into()],
+                output: "Ob".into(),
+            },
+            Some(1),
+            false,
+        )?;
+    }
+    add_constructor(
+        egraph,
+        "id",
+        Schema {
+            input: vec!["Ob".into()],
+            output: "Mor".into(),
+        },
+        Some(1),
+        false,
+    )?;
+
+    // Predicate: is the morphism well-typed?
+    add_relation(egraph, "is_mor_valid", vec!["Mor".into()])?;
+
+    // Rule set: all the axioms for a category.
+    add_ruleset(egraph, "CatAxioms")?;
+
+    // Rule: every morphism generator is well-typed.
+    rule(egraph, "CatAxioms", facts![(= f (MorGen name))], actions![(is_mor_valid f)])?;
+
+    // Rule: every identity morphism is well-typed.
+    rule(egraph, "CatAxioms", facts![(= f (id x))], actions![(is_mor_valid f)])?;
+
+    // Rule: a composite of two morphisms is well-typed if both
+    // morphisms are well-typed and their (co)domains are compatible.
+    rule(
+        egraph,
+        "CatAxioms",
+        facts![
+            (= fg (compose f g))
+            (is_mor_valid f)
+            (is_mor_valid g)
+            (= (cod f) (dom g))
+        ],
+        actions![(is_mor_valid fg)],
+    )?;
+
+    // Rules: (co)domains of composites and identities.
+    rule(
+        egraph,
+        "CatAxioms",
+        facts![
+            (= fg (compose f g))
+            (is_mor_valid fg)
+        ],
+        actions![
+            (union (dom fg) (dom f))
+            (union (cod fg) (cod g))
+        ],
+    )?;
+    rule(egraph, "CatAxioms", facts![(= lhs (dom (id x)))], actions![(union lhs x)])?;
+    rule(egraph, "CatAxioms", facts![(= lhs (cod (id x)))], actions![(union lhs x)])?;
+
+    // Associativity axioms (bidirectional).
+    rule(
+        egraph,
+        "CatAxioms",
+        facts![
+            (= fgh (compose (compose f g) h))
+            (is_mor_valid fgh)
+        ],
+        actions![(union fgh (compose f (compose g h)))],
+    )?;
+    rule(
+        egraph,
+        "CatAxioms",
+        facts![
+            (= fgh (compose f (compose g h)))
+            (is_mor_valid fgh)
+        ],
+        actions![(union fgh (compose (compose f g) h))],
+    )?;
+
+    // Unitality axioms.
+    rule(
+        egraph,
+        "CatAxioms",
+        facts![(= lhs (compose f (id (cod f))))],
+        actions![(union lhs f)],
+    )?;
+    rule(
+        egraph,
+        "CatAxioms",
+        facts![(= lhs (compose (id (dom f)) f))],
+        actions![(union lhs f)],
+    )?;
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -680,7 +507,6 @@ pub fn sch_hgraph() -> QualifiedFpCategory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use expect_test::expect;
     use nonempty::nonempty;
 
     #[test]
@@ -697,55 +523,5 @@ mod tests {
             Path::Seq(nonempty![name("inv"), name("inv"), name("inv"), name("src")]),
             Path::single(name("tgt"))
         ));
-    }
-
-    #[test]
-    fn egraph_preamble() {
-        let mut builder: CategoryProgramBuilder<char, char> = Default::default();
-        let prog = builder.program();
-
-        let expected = expect![[r#"
-            (datatype Ob (ObGen i64 :cost 0))
-            (datatype Mor (MorGen i64 :cost 0))
-            (constructor dom (Mor) Ob :cost 1)
-            (constructor cod (Mor) Ob :cost 1)
-            (constructor id (Ob) Mor :cost 1)
-            (constructor compose (Mor Mor) Mor :cost 1)
-            (ruleset CatAxioms)
-            (relation is_mor_valid (Mor))
-            (rule ((= f (MorGen name)))
-                  ((is_mor_valid f))
-                    :ruleset CatAxioms )
-            (rule ((= f (id x)))
-                  ((is_mor_valid f))
-                    :ruleset CatAxioms )
-            (rule ((= fg (compose f g))
-                   (is_mor_valid f)
-                   (is_mor_valid g)
-                   (= (cod f) (dom g)))
-                  ((is_mor_valid fg))
-                    :ruleset CatAxioms )
-            (rule ((= fg (compose f g))
-                   (is_mor_valid fg))
-                  ((union (dom fg) (dom f))
-                   (union (cod fg) (cod g)))
-                    :ruleset CatAxioms )
-            (rewrite (dom (id x)) x :ruleset CatAxioms)
-            (rewrite (cod (id x)) x :ruleset CatAxioms)
-            (rule ((= fgh (compose (compose f g) h))
-                   (is_mor_valid fgh))
-                  ((union fgh (compose f (compose g h))))
-                    :ruleset CatAxioms )
-            (rule ((= fgh (compose f (compose g h)))
-                   (is_mor_valid fgh))
-                  ((union fgh (compose (compose f g) h)))
-                    :ruleset CatAxioms )
-            (rewrite (compose f (id (cod f))) f :ruleset CatAxioms)
-            (rewrite (compose (id (dom f)) f) f :ruleset CatAxioms)
-        "#]];
-        expected.assert_eq(&prog.to_string());
-
-        let mut egraph: EGraph = Default::default();
-        assert!(prog.run_in(&mut egraph).is_ok());
     }
 }
