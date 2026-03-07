@@ -16,6 +16,8 @@ nixpkgs.legacyPackages.${linuxSystem}.testers.runNixOSTest {
       {
         imports = [ ../hosts/catcolab-vm ];
 
+        virtualisation.memorySize = 4096;
+
         environment.systemPackages = with pkgs; [
           nodejs_24
           curl
