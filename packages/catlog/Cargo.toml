@@ -18,7 +18,7 @@ bwd = "0.2.1"
 derivative = "2"
 derive_more = { version = "2", features = ["constructor", "deref", "from", "into", "try_into"] }
 duplicate = "2"
-egglog = { version = "1.0.0", default-features = false }
+egglog = { version = "2.0.0", default-features = false }
 ego-tree = "0.10"
 fnotation = "0.10.2"
 indexmap = "2.11.1"
