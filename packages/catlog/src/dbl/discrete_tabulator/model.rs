@@ -358,6 +358,7 @@ impl PrintableDblModel for DiscreteTabModel {
     fn ob_type_to_doc<'a>(ob_type: &Self::ObType) -> D<'a> {
         ob_type.to_doc()
     }
+
     fn mor_type_to_doc<'a>(mor_type: &Self::MorType) -> D<'a> {
         mor_type.to_doc()
     }
