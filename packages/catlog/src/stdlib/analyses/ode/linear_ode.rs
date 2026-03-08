@@ -4,8 +4,11 @@
 //! [`linear_ode_analysis`](SignedCoefficientBuilder::linear_ode_analysis).
 
 use std::collections::HashMap;
+use std::hash::Hash;
+use std::ops::Add;
 
-use nalgebra::DVector;
+use itertools::Itertools;
+use nalgebra::{DMatrix, DVector};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -14,8 +17,11 @@ use tsify::Tsify;
 
 use super::{ODEAnalysis, SignedCoefficientBuilder};
 use crate::dbl::model::DiscreteDblModel;
-use crate::simulate::ode::{LinearODESystem, ODEProblem};
-use crate::{one::QualifiedPath, zero::QualifiedName};
+use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
+use crate::{
+    one::QualifiedPath,
+    zero::{QualifiedName, rig::Monomial},
+};
 
 /// Data defining a linear ODE problem for a model.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -37,6 +43,33 @@ pub struct LinearODEProblemData {
     duration: f32,
 }
 
+/// Construct a linear (first-order) dynamical system;
+/// a semantics for causal loop diagrams.
+pub fn linear_polynomial_system<Var, Coef>(
+    vars: &[Var],
+    coefficients: DMatrix<Coef>,
+) -> PolynomialSystem<Var, Coef, u8>
+where
+    Var: Clone + Hash + Ord,
+    Coef: Clone + Add<Output = Coef>,
+{
+    PolynomialSystem {
+        components: coefficients
+            .row_iter()
+            .zip(vars)
+            .map(|(row, i)| {
+                (
+                    i.clone(),
+                    row.iter()
+                        .zip(vars)
+                        .map(|(a, j)| (a.clone(), Monomial::generator(j.clone())))
+                        .collect(),
+                )
+            })
+            .collect(),
+    }
+}
+
 impl SignedCoefficientBuilder<QualifiedName, QualifiedPath> {
     /// Linear ODE analysis for a model of a double theory.
     ///
@@ -47,8 +80,8 @@ impl SignedCoefficientBuilder<QualifiedName, QualifiedPath> {
         &self,
         model: &DiscreteDblModel,
         data: LinearODEProblemData,
-    ) -> ODEAnalysis<LinearODESystem> {
-        let (matrix, ob_index) = self.build_matrix(model, &data.coefficients);
+    ) -> ODEAnalysis<NumericalPolynomialSystem<u8>> {
+        let (matrix, ob_index) = self.build_matrix(model);
         let n = ob_index.len();
 
         let initial_values = ob_index
@@ -56,23 +89,32 @@ impl SignedCoefficientBuilder<QualifiedName, QualifiedPath> {
             .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
         let x0 = DVector::from_iterator(n, initial_values);
 
-        let system = LinearODESystem::new(matrix);
+        let system = linear_polynomial_system(&ob_index.clone().into_keys().collect_vec(), matrix)
+            .extend_scalars(|poly| {
+                poly.eval(|mor| data.coefficients.get(mor).copied().unwrap_or_default())
+            })
+            .map(|p| p.normalize())
+            .to_numerical();
         let problem = ODEProblem::new(system, x0).end_time(data.duration);
         ODEAnalysis::new(problem, ob_index)
     }
 }
 
 #[cfg(test)]
+#[allow(non_snake_case)]
 mod test {
+    use expect_test::expect;
     use std::rc::Rc;
 
     use super::*;
     use crate::dbl::model::MutDblModel;
+    use crate::simulate::ode::textplot_ode_result;
+    use crate::stdlib;
+    use crate::stdlib::analyses::ode::Parameter;
     use crate::{one::Path, zero::name};
-    use crate::{simulate::ode::linear_ode, stdlib};
+    use nalgebra::{dmatrix, dvector};
 
-    #[test]
-    fn neg_loops_pos_connector() {
+    fn neg_loops_pos_connector_from_theory() -> ODEProblem<NumericalPolynomialSystem<u8>> {
         let th = Rc::new(stdlib::theories::th_signed_category());
 
         let mut test_model = DiscreteDblModel::new(th);
@@ -92,10 +134,98 @@ mod test {
                 .collect(),
             duration: 10.0,
         };
-        let analysis = SignedCoefficientBuilder::new(name("Object"))
+        SignedCoefficientBuilder::new(name("Object"))
             .add_positive(Path::Id(name("Object")))
             .add_negative(Path::single(name("Negative")))
-            .linear_ode_analysis(&test_model, data);
-        assert_eq!(analysis.problem, linear_ode::create_neg_loops_pos_connector());
+            .linear_ode_analysis(&test_model, data)
+            .problem
+    }
+
+    fn neg_loops_pos_connector_from_matrix() -> ODEProblem<NumericalPolynomialSystem<u8>> {
+        ODEProblem::new(matrix_example().to_numerical(), dvector![2.0, 1.0, 1.0]).end_time(10.0)
+    }
+    fn matrix_symb_coeff_example() -> PolynomialSystem<QualifiedName, Parameter<QualifiedName>, u8>
+    {
+        let A = dmatrix!["aa", "ba", "xa";
+                         "ab", "bb", "xb";
+                         "ax", "bx", "xx"]
+        .map(|v| [(1.0, Monomial::generator(QualifiedName::from([v])))].into_iter().collect());
+        linear_polynomial_system(
+            &vec!["A", "B", "X"].into_iter().map(|v| QualifiedName::from([v])).collect_vec(),
+            A,
+        )
+    }
+    fn matrix_example() -> PolynomialSystem<QualifiedName, f32, u8> {
+        let coeffs: HashMap<_, _> = [("aa", -0.3), ("ax", 1.0), ("bx", -2.0), ("xb", 0.5)]
+            .into_iter()
+            .map(|(n, v)| (QualifiedName::from([n]), v))
+            .collect();
+        matrix_symb_coeff_example()
+            .extend_scalars(|coeff| coeff.eval(|v| coeffs.get(v).copied().unwrap_or_default()))
+            .map(|p| p.normalize())
+    }
+
+    #[test]
+    fn matrix_agrees_with_theory() {
+        assert_eq!(neg_loops_pos_connector_from_theory(), neg_loops_pos_connector_from_matrix());
+    }
+
+    #[test]
+    fn linear_solve() {
+        let problem = neg_loops_pos_connector_from_matrix();
+        let result = problem.solve_rk4(0.1).unwrap();
+        let expected = expect![["
+            ⡑⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ 2.0
+            ⠄⠈⠢⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠂⠀⠀⠈⠢⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⡁⠀⠀⣀⠤⠚⠲⣒⢄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⠔⠁⠀⠑⢄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠄⡠⠊⠀⠀⠀⠀⠀⠑⠬⣆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⠃⠀⠀⠀⠀⠈⢆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠚⢄⠀⠀⠀⠀⠀⠀⠀⠀⠈⠳⡤⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⠃⠀⠀⠀⠀⠀⠀⠈⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⡁⠀⠱⡀⠀⠀⠀⠀⠀⠀⠀⠀⠑⡄⠑⠢⢄⡀⠀⠀⠀⠀⠀⠀⠀⢀⠎⠀⠀⠀⠀⠀⠀⠀⠀⢘⡔⠊⠉⠉⠒⢄⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠄⠀⠀⠱⡀⠀⠀⠀⠀⠀⠀⠀⠀⠘⡄⠀⠀⠈⠉⠒⠤⢄⣀⠀⠀⡜⠀⠀⠀⠀⠀⠀⠀⢀⠔⠁⢱⠀⠀⠀⠀⠀⠑⢄⠀⠀⠀⠀⠀⠀⠀
+            ⠂⠀⠀⠀⢣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⡄⠀⠀⠀⠀⠀⠀⠀⠉⢱⠓⠢⠤⢄⣀⡀⠀⡠⠃⠀⠀⠀⢇⠀⠀⠀⠀⠀⠈⢢⠀⠀⠀⠀⠀⠀
+            ⡁⠀⠀⠀⠀⢇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⢄⠀⠀⠀⠀⠀⠀⠀⡇⠀⠀⠀⠀⠀⠈⡝⠉⠑⠒⠒⠢⠼⡤⠤⢄⣀⣀⣀⣀⡱⡀⠀⠀⠀⠀
+            ⡄⢀⠀⡀⢀⠘⡄⢀⠀⡀⢀⠀⡀⢀⠀⡀⢈⢆⡀⢀⠀⡀⢀⡸⡀⢀⠀⡀⢀⢀⡎⢀⠀⡀⢀⠀⡀⢀⢣⡀⢀⠀⡀⢀⠀⡈⢙⡍⡉⢉⠁
+            ⠂⠀⠀⠀⠀⠀⢱⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⢢⠀⠀⠀⢠⠃⠀⠀⠀⠀⡠⠊⠀⠀⠀⠀⠀⠀⠀⠀⠈⡆⠀⠀⠀⠀⠀⠀⠀⠘⢄⠀⠀
+            ⡁⠀⠀⠀⠀⠀⠀⢇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠑⢄⠀⡜⠀⠀⠀⢀⠔⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⠀⠀⠀⠀⠀⠀⠀⠀⠈⢢⠀
+            ⠄⠀⠀⠀⠀⠀⠀⠘⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢱⠣⠤⠤⠒⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠁
+            ⠂⠀⠀⠀⠀⠀⠀⠀⢱⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⡁⠀⠀⠀⠀⠀⠀⠀⠀⢇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡸⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠱⡀⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠄⠀⠀⠀⠀⠀⠀⠀⠀⠘⡄⠀⠀⠀⠀⠀⠀⠀⠀⢠⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢣⠀⠀⠀⠀⠀⠀⠀⠀
+            ⠂⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⡄⠀⠀⠀⠀⠀⠀⢀⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢣⠀⠀⠀⠀⠀⡠⠂
+            ⡁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠱⡀⠀⠀⠀⠀⢀⠎⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠑⢄⠀⢀⡰⠁⠀
+            ⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⢄⡀⠀⡠⠊⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠁⠀⠀⠀
+            ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀ -1.8
+            0.0                                           10.0
+            "]];
+        expected.assert_eq(&textplot_ode_result(&problem, &result));
+    }
+
+    #[test]
+    fn latex_symbolic() {
+        let expected = expect![[r#"
+            $$
+            \begin{align*}
+            \frac{\mathrm{d}}{\mathrm{d}t} A &= aa A + ba B + xa X\\
+            \frac{\mathrm{d}}{\mathrm{d}t} B &= ab A + bb B + xb X\\
+            \frac{\mathrm{d}}{\mathrm{d}t} X &= ax A + bx B + xx X
+            \end{align*}
+            $$
+            "#]];
+        expected.assert_eq(&matrix_symb_coeff_example().to_latex_string());
+    }
+
+    #[test]
+    fn latex_numerical() {
+        let expected = expect![[r#"
+            $$
+            \begin{align*}
+            \frac{\mathrm{d}}{\mathrm{d}t} A &= (-0.3) A\\
+            \frac{\mathrm{d}}{\mathrm{d}t} B &= 0.5 X\\
+            \frac{\mathrm{d}}{\mathrm{d}t} X &= A + (-2) B
+            \end{align*}
+            $$
+            "#]];
+        expected.assert_eq(&matrix_example().to_latex_string());
     }
 }
