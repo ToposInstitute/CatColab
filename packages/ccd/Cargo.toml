@@ -1,0 +1,12 @@
+[package]
+name = "ccd"
+version.workspace = true
+edition.workspace = true
+description = "CatColab developer CLI"
+
+[[bin]]
+name = "ccd"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
