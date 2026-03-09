@@ -11,7 +11,7 @@ use clap::{Parser, Subcommand};
 
 /// CatColab developer CLI.
 #[derive(Parser)]
-#[command(name = "ccd", about = "CatColab developer CLI")]
+#[command(name = "catcom", about = "CatColab developer CLI")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -91,16 +91,16 @@ fn pg_is_ready() -> bool {
 /// Otherwise, initializes a data directory if needed and starts postgres.
 fn ensure_postgres_running() {
     if pg_is_ready() {
-        println!("[ccd] PostgreSQL is already running.");
+        println!("[catcom] PostgreSQL is already running.");
         return;
     }
 
     let pgdata = pgdata_dir();
-    println!("[ccd] PostgreSQL is not running. Using data directory: {}", pgdata.display());
+    println!("[catcom] PostgreSQL is not running. Using data directory: {}", pgdata.display());
 
     // Initialize the data directory if it doesn't exist.
     if !pgdata.join("PG_VERSION").exists() {
-        println!("[ccd] Initializing PostgreSQL data directory...");
+        println!("[catcom] Initializing PostgreSQL data directory...");
         fs::create_dir_all(&pgdata).unwrap_or_else(|e| {
             eprintln!("Error: failed to create pgdata directory: {e}");
             exit(1);
@@ -121,7 +121,7 @@ fn ensure_postgres_running() {
     }
 
     let logfile = pgdata.join("logfile");
-    println!("[ccd] Starting PostgreSQL...");
+    println!("[catcom] Starting PostgreSQL...");
 
     let status = Command::new("pg_ctl")
         .args([
@@ -145,7 +145,7 @@ fn ensure_postgres_running() {
     }
 
     // Wait for postgres to become ready.
-    print!("[ccd] Waiting for PostgreSQL to start");
+    print!("[catcom] Waiting for PostgreSQL to start");
     for _ in 0..50 {
         if pg_is_ready() {
             println!(" ready.");
@@ -162,7 +162,7 @@ fn ensure_postgres_running() {
 
 /// Ensure the `catcolab` user and database exist.
 fn ensure_database_and_user() {
-    println!("[ccd] Ensuring database user and database exist...");
+    println!("[catcom] Ensuring database user and database exist...");
 
     // Create the catcolab user if it doesn't exist.
     // We connect as the current system user to the default `postgres` database.
@@ -197,7 +197,7 @@ fn ensure_database_and_user() {
     let exists = String::from_utf8_lossy(&check.stdout).trim().contains('1');
 
     if !exists {
-        println!("[ccd] Creating database 'catcolab'...");
+        println!("[catcom] Creating database 'catcolab'...");
         let status = Command::new("createdb")
             .args(["-h", "localhost", "-p", "5432", "-O", "catcolab", "catcolab"])
             .status()
@@ -215,7 +215,7 @@ fn ensure_database_and_user() {
     // Ensure the catcolab user owns the database and has schema permissions.
     run_psql("catcolab", "GRANT ALL ON SCHEMA public TO catcolab;");
 
-    println!("[ccd] Database ready.");
+    println!("[catcom] Database ready.");
 }
 
 /// Run a SQL statement via psql against the given database.
@@ -256,7 +256,7 @@ fn ensure_env_files(repo_root: &Path) {
     for target in &targets {
         if !target.exists() {
             println!(
-                "[ccd] Copying .env.development -> {}",
+                "[catcom] Copying .env.development -> {}",
                 target.strip_prefix(repo_root).unwrap_or(target).display()
             );
             fs::copy(&source, target).unwrap_or_else(|e| {
@@ -273,7 +273,7 @@ fn ensure_env_files(repo_root: &Path) {
 
 /// Run database migrations.
 fn run_migrations(repo_root: &Path) {
-    println!("[ccd] Running database migrations...");
+    println!("[catcom] Running database migrations...");
 
     let status = Command::new("cargo")
         .args(["run", "-p", "migrator", "--", "apply"])
@@ -292,7 +292,7 @@ fn run_migrations(repo_root: &Path) {
 
 /// Generate TypeScript bindings for the RPC API.
 fn generate_bindings(repo_root: &Path) {
-    println!("[ccd] Generating TypeScript bindings...");
+    println!("[catcom] Generating TypeScript bindings...");
 
     let status = Command::new("cargo")
         .args(["run", "-p", "backend", "--", "generate-bindings"])
@@ -315,7 +315,7 @@ fn generate_bindings(repo_root: &Path) {
 
 /// Start the backend server, replacing the current process.
 fn start_backend(repo_root: &Path) {
-    println!("[ccd] Starting backend server...");
+    println!("[catcom] Starting backend server...");
 
     #[cfg(unix)]
     {

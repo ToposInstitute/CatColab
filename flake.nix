@@ -109,7 +109,7 @@
             system = "x86_64-linux";
           };
 
-          # Build the ccd dev CLI for this system
+          # Build the catcom dev CLI for this system
           systemCraneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
           systemCargoArtifacts = systemCraneLib.buildDepsOnly {
             src = systemCraneLib.cleanCargoSource ./.;
@@ -117,7 +117,7 @@
             nativeBuildInputs = [ pkgs.pkg-config ];
             buildInputs = [ pkgs.openssl ] ++ darwinDeps;
           };
-          ccd = import ./packages/ccd/default.nix {
+          catcom = import ./packages/catcom/default.nix {
             craneLib = systemCraneLib;
             cargoArtifacts = systemCargoArtifacts;
           };
@@ -127,7 +127,7 @@
           buildInputs =
             with pkgs;
             [
-              ccd
+              catcom
               clippy
               darkhttpd
               esbuild
@@ -231,7 +231,7 @@
             '';
           };
 
-          ccd = import ./packages/ccd/default.nix {
+          catcom = import ./packages/catcom/default.nix {
             inherit craneLib cargoArtifacts;
           };
 
