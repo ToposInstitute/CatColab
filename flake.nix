@@ -114,29 +114,30 @@
           buildInputs =
             with pkgs;
             [
-              darkhttpd
-              lld
-              rustToolchain
-              openssl
-              rust-analyzer
-              rustfmt
               clippy
+              darkhttpd
+              esbuild
+              lld
+              netcat
+              nodejs_24
+              nix
+              openssl
               pkg-config
               pnpm
-              nodejs_24
+              postgresql
+              python3
+              python312Packages.ipykernel
+              python312Packages.jupyter-core
+              python312Packages.jupyter-server
+              python312Packages.requests
+              python312Packages.websocket-client
+              rust-analyzer
+              rustToolchain
+              rustfmt
               sqlx-cli
-              wasm-pack
               vscode-langservers-extracted
               wasm-bindgen-cli
-              esbuild
-              python312Packages.jupyter-server
-              python312Packages.jupyter-core
-              python312Packages.websocket-client
-              python312Packages.requests
-              python312Packages.ipykernel
-              python3
-              netcat
-              postgresql
+              wasm-pack
             ]
             ++ darwinDeps
             ++ [
