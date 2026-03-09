@@ -73,6 +73,15 @@ export class MathInlineView implements NodeView {
             } else if (e.key === "Backspace" && this.input && this.input.value === "") {
                 e.preventDefault();
                 this.deleteNode();
+            } else if (e.key === "ArrowLeft" && this.input?.selectionStart === 0) {
+                e.preventDefault();
+                this.saveAndExitTo("before");
+            } else if (
+                e.key === "ArrowRight" &&
+                this.input?.selectionStart === this.input?.value.length
+            ) {
+                e.preventDefault();
+                this.saveAndExit();
             }
         });
 
@@ -94,6 +103,10 @@ export class MathInlineView implements NodeView {
     }
 
     private saveAndExit() {
+        this.saveAndExitTo("after");
+    }
+
+    private saveAndExitTo(side: "before" | "after") {
         this.saveValue();
         this.editing = false;
         this.renderKatex();
@@ -102,7 +115,8 @@ export class MathInlineView implements NodeView {
 
         const pos = this.getPos();
         if (typeof pos === "number") {
-            const $pos = this.view.state.doc.resolve(pos + this.node.nodeSize);
+            const targetPos = side === "before" ? pos : pos + this.node.nodeSize;
+            const $pos = this.view.state.doc.resolve(targetPos);
             const tr = this.view.state.tr.setSelection(
                 TextSelection.create(this.view.state.doc, $pos.pos),
             );
