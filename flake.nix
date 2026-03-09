@@ -108,12 +108,26 @@
           pkgsUnstable = import inputs.nixpkgsUnstable {
             system = "x86_64-linux";
           };
+
+          # Build the ccd dev CLI for this system
+          systemCraneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
+          systemCargoArtifacts = systemCraneLib.buildDepsOnly {
+            src = systemCraneLib.cleanCargoSource ./.;
+            strictDeps = true;
+            nativeBuildInputs = [ pkgs.pkg-config ];
+            buildInputs = [ pkgs.openssl ] ++ darwinDeps;
+          };
+          ccd = import ./packages/ccd/default.nix {
+            craneLib = systemCraneLib;
+            cargoArtifacts = systemCargoArtifacts;
+          };
         in
         pkgs.mkShell {
           name = "catcolab-devshell";
           buildInputs =
             with pkgs;
             [
+              ccd
               clippy
               darkhttpd
               esbuild
@@ -215,6 +229,10 @@
               mkdir -p $out
               cp -r * $out/
             '';
+          };
+
+          ccd = import ./packages/ccd/default.nix {
+            inherit craneLib cargoArtifacts;
           };
 
           backend = pkgsLinux.callPackage ./packages/backend/default.nix {
