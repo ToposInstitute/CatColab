@@ -85,6 +85,16 @@ export class MathInlineView implements NodeView {
             }
         });
 
+        this.input.addEventListener("blur", () => {
+            if (this.editing) {
+                this.saveValue();
+                this.editing = false;
+                this.renderKatex();
+                this.dom.classList.remove("ProseMirror-selectednode");
+                this.cleanupInput();
+            }
+        });
+
         this.srcEl.innerHTML = "";
         this.srcEl.appendChild(this.input);
         updateWidth();
