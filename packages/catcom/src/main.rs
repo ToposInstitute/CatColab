@@ -3,7 +3,7 @@
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio, exit};
+use std::process::{Child, Command, Stdio, exit};
 use std::thread;
 use std::time::Duration;
 
@@ -19,10 +19,17 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Development commands.
+    /// Start the development environment.
+    ///
+    /// With no subcommand, starts both the backend and frontend.
+    /// With --staging, starts only the frontend against the staging backend.
     Dev {
+        /// Use the staging backend instead of a local one.
+        #[arg(long)]
+        staging: bool,
+
         #[command(subcommand)]
-        command: DevCommands,
+        command: Option<DevCommands>,
     },
 }
 
@@ -34,19 +41,109 @@ enum DevCommands {
     /// are in place, migrations are applied, TypeScript bindings are generated,
     /// and then starts the backend server.
     Backend,
+
+    /// Start the frontend development server.
+    ///
+    /// Runs the Vite dev server for the frontend. By default, the frontend
+    /// expects a local backend on port 8000. Use --staging to connect to the
+    /// staging backend instead.
+    Frontend {
+        /// Use the staging backend instead of a local one.
+        #[arg(long)]
+        staging: bool,
+    },
 }
 
 fn main() {
+    // Default RUST_LOG to show backend debug logs if not already set.
+    // SAFETY: This runs at the start of main before any threads are spawned.
+    if env::var_os("RUST_LOG").is_none() {
+        unsafe { env::set_var("RUST_LOG", "backend=debug") };
+    }
+
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Dev { command } => match command {
-            DevCommands::Backend => dev_backend(),
+        Commands::Dev { staging, command } => match command {
+            Some(DevCommands::Backend) => {
+                if staging {
+                    eprintln!("Error: --staging is not supported with the backend subcommand.");
+                    exit(1);
+                }
+                dev_backend();
+            }
+            Some(DevCommands::Frontend { staging: frontend_staging }) => {
+                dev_frontend(staging || frontend_staging);
+            }
+            None if staging => {
+                dev_frontend(true);
+            }
+            None => {
+                dev_all();
+            }
         },
     }
 }
 
-/// Run the full backend dev setup and start the server.
+/// Start both the backend and frontend for local development.
+///
+/// Both processes run in the foreground with interleaved output.
+/// When either exits, the other is killed.
+fn dev_all() {
+    let repo_root = find_repo_root().unwrap_or_else(|| {
+        eprintln!("Error: could not find repository root (no .git directory found).");
+        exit(1);
+    });
+
+    ensure_postgres_running();
+    ensure_database_and_user();
+    ensure_env_files(&repo_root);
+    run_migrations(&repo_root);
+    generate_bindings(&repo_root);
+
+    println!("[catcom] Starting backend server...");
+    let mut backend_child = Command::new("cargo")
+        .args(["run", "-p", "backend"])
+        .current_dir(&repo_root)
+        .spawn()
+        .unwrap_or_else(|e| {
+            eprintln!("Error: failed to start backend: {e}");
+            exit(1);
+        });
+
+    println!("[catcom] Starting frontend dev server...");
+    let mut frontend_child = Command::new("pnpm")
+        .args(["run", "dev", "--", "--no-clearScreen"])
+        .current_dir(repo_root.join("packages").join("frontend"))
+        .spawn()
+        .unwrap_or_else(|e| {
+            eprintln!("Error: failed to start frontend: {e}");
+            cleanup_child(&mut backend_child);
+            exit(1);
+        });
+
+    // Wait for either process to exit, then clean up the other.
+    loop {
+        if let Some(status) = backend_child.try_wait().unwrap_or(None) {
+            eprintln!("[catcom] Backend exited with status: {status}");
+            cleanup_child(&mut frontend_child);
+            exit(status.code().unwrap_or(1));
+        }
+        if let Some(status) = frontend_child.try_wait().unwrap_or(None) {
+            cleanup_child(&mut backend_child);
+            exit(status.code().unwrap_or(0));
+        }
+        thread::sleep(Duration::from_millis(100));
+    }
+}
+
+/// Kill a child process and wait for it to exit.
+fn cleanup_child(child: &mut Child) {
+    let _ = child.kill();
+    let _ = child.wait();
+}
+
+/// Run the full backend dev setup and start the server (exec, no return).
 fn dev_backend() {
     let repo_root = find_repo_root().unwrap_or_else(|| {
         eprintln!("Error: could not find repository root (no .git directory found).");
@@ -59,6 +156,53 @@ fn dev_backend() {
     run_migrations(&repo_root);
     generate_bindings(&repo_root);
     start_backend(&repo_root);
+}
+
+/// Start the frontend dev server.
+fn dev_frontend(staging: bool) {
+    let repo_root = find_repo_root().unwrap_or_else(|| {
+        eprintln!("Error: could not find repository root (no .git directory found).");
+        exit(1);
+    });
+
+    let frontend_dir = repo_root.join("packages").join("frontend");
+
+    if staging {
+        println!("[catcom] Starting frontend dev server (staging backend)...");
+        run_frontend_exec(&frontend_dir, &["run", "staging"]);
+    } else {
+        println!("[catcom] Starting frontend dev server (local backend)...");
+        run_frontend_exec(&frontend_dir, &["run", "dev"]);
+    }
+}
+
+/// Exec into the frontend pnpm process (replaces the current process).
+fn run_frontend_exec(frontend_dir: &Path, args: &[&str]) {
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+
+        let err = Command::new("pnpm").args(args).current_dir(frontend_dir).exec();
+
+        eprintln!("Error: failed to exec frontend: {err}");
+        exit(1);
+    }
+
+    #[cfg(not(unix))]
+    {
+        let status = Command::new("pnpm")
+            .args(args)
+            .current_dir(frontend_dir)
+            .status()
+            .unwrap_or_else(|e| {
+                eprintln!("Error: failed to start frontend: {e}");
+                exit(1);
+            });
+
+        if !status.success() {
+            exit(status.code().unwrap_or(1));
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
