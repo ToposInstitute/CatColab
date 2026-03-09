@@ -103,7 +103,8 @@
     padding: 3px;
     border: none;
     cursor: pointer;
-    background-color: transparent; /* override default on firefox */
+    background-color: transparent;
+    /* override default on firefox */
     transition:
         background-color 0.2s ease,
         transform 0.2s ease;
@@ -192,9 +193,13 @@ math-inline .math-src .math-input {
     font-size: 0.95em;
     color: rgb(132, 33, 162);
     border: none;
-    padding: 0;
+    /* add a bit more padding to the right to account for cursor width. I think this make the left and
+    right spacing feel more balanced. */
+    padding: 0 calc(0.5ch + 2px) 0 0.5ch;
     outline: none;
-    min-width: 2em;
+    /* keep the cursor visible when the input is empty */
+    min-width: 2px;
+    box-sizing: content-box;
 }
 
 .link-editor-popup {

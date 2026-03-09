@@ -58,7 +58,7 @@ export class MathInlineView implements NodeView {
 
         const updateWidth = () => {
             if (this.input) {
-                this.input.style.width = `${Math.max(2, this.input.value.length + 1)}ch`;
+                this.input.style.width = `${this.input.value.length}ch`;
             }
         };
         this.input.addEventListener("input", updateWidth);
