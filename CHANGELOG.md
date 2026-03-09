@@ -9,7 +9,7 @@ announcement and a blog post. Minor versions are not announced but allow
 features and fixes to be released with greater frequency. Minor versions often
 include notable new features.
 
-## [Unreleased]
+## [v0.5.0](https://github.com/ToposInstitute/CatColab/releases/tag/v0.5.0) (2026-03-09)
 
 ### Added
 
