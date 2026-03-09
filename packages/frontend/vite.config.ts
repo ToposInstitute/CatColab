@@ -25,6 +25,10 @@ export default defineConfig({
         }),
         solid(),
     ],
+    worker: {
+        plugins: () => [wasm()],
+        format: "es",
+    },
     build: {
         chunkSizeWarningLimit: 2000,
         sourcemap: true,

@@ -65,12 +65,8 @@ export default function createCausalLoopTheory(theoryMeta: TheoryMeta): Theory {
                     return thSignedCategory.positiveLoops(model, options);
                 },
             }),
-            analyses.linearODE({
-                simulate: (model, data) => thSignedCategory.linearODE(model, data),
-            }),
-            analyses.lotkaVolterra({
-                simulate: (model, data) => thSignedCategory.lotkaVolterra(model, data),
-            }),
+            analyses.linearODE(),
+            analyses.lotkaVolterra(),
         ],
     });
 }

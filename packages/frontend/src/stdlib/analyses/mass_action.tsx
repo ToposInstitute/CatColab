@@ -22,14 +22,13 @@ import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
 import { MassActionConfigForm } from "./mass_action_config_form";
 import { createModelODEPlotWithEquations } from "./model_ode_plot";
-import type { MassActionSimulator } from "./simulator_types";
 
 import "./simulation.css";
 
 /** Analyze a model using mass-action dynamics. */
 export default function MassAction(
     props: ModelAnalysisProps<MassActionProblemData> & {
-        simulate: MassActionSimulator;
+        analysisId: string;
         stateType?: ObType;
         transitionType?: MorType;
         title?: string;
@@ -290,12 +289,13 @@ export default function MassAction(
     ];
 
     const result = createModelODEPlotWithEquations(
-        () => props.liveModel.validatedModel(),
-        (model) => props.simulate(model, props.content),
+        props.liveModel,
+        props.analysisId,
+        () => props.content,
     );
 
-    const plotResult = () => result()?.plotData;
-    const latexEquations = () => result()?.latexEquations ?? [];
+    const plotResult = () => result.data()?.plotData;
+    const latexEquations = () => result.data()?.latexEquations ?? [];
 
     // The option to change RateGranularity should only be visible when working
     // with models in a theory that supports multiple inputs/outputs to morphisms
@@ -335,7 +335,7 @@ export default function MassAction(
                 <div class="parameters">
                     <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
-                <ODEResultPlot result={plotResult()} />
+                <ODEResultPlot result={plotResult()} loading={result.loading()} />
             </Foldable>
         </div>
     );

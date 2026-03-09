@@ -5,19 +5,18 @@ import {
     FixedTableEditor,
     Foldable,
 } from "catcolab-ui-components";
-import type { DblModel, LotkaVolterraProblemData, QualifiedName } from "catlog-wasm";
+import type { LotkaVolterraProblemData, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
 import { createModelODEPlot } from "./model_ode_plot";
-import type { LotkaVolterraSimulator } from "./simulator_types";
 
 import "./simulation.css";
 
 /** Analyze a model using Lotka-Volterra dynamics. */
 export default function LotkaVolterra(
     props: ModelAnalysisProps<LotkaVolterraProblemData> & {
-        simulate: LotkaVolterraSimulator;
+        analysisId: string;
         title?: string;
     },
 ) {
@@ -78,9 +77,10 @@ export default function LotkaVolterra(
         }),
     ];
 
-    const plotResult = createModelODEPlot(
-        () => props.liveModel.validatedModel(),
-        (model: DblModel) => props.simulate(model, props.content),
+    const { data: plotResult, loading } = createModelODEPlot(
+        props.liveModel,
+        props.analysisId,
+        () => props.content,
     );
 
     return (
@@ -99,7 +99,7 @@ export default function LotkaVolterra(
                     <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
             </Foldable>
-            <ODEResultPlot result={plotResult()} />
+            <ODEResultPlot result={plotResult()} loading={loading()} />
         </div>
     );
 }

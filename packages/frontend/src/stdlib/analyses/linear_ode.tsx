@@ -5,19 +5,18 @@ import {
     FixedTableEditor,
     Foldable,
 } from "catcolab-ui-components";
-import type { DblModel, LinearODEProblemData, QualifiedName } from "catlog-wasm";
+import type { LinearODEProblemData, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
 import { createModelODEPlot } from "./model_ode_plot";
-import type { LinearODESimulator } from "./simulator_types";
 
 import "./simulation.css";
 
 /** Analyze a model using LinearODE dynamics. */
 export default function LinearODE(
     props: ModelAnalysisProps<LinearODEProblemData> & {
-        simulate: LinearODESimulator;
+        analysisId: string;
         title?: string;
     },
 ) {
@@ -70,9 +69,10 @@ export default function LinearODE(
         }),
     ];
 
-    const plotResult = createModelODEPlot(
-        () => props.liveModel.validatedModel(),
-        (model: DblModel) => props.simulate(model, props.content),
+    const { data: plotResult, loading } = createModelODEPlot(
+        props.liveModel,
+        props.analysisId,
+        () => props.content,
     );
 
     return (
@@ -91,7 +91,7 @@ export default function LinearODE(
                     <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
             </Foldable>
-            <ODEResultPlot result={plotResult()} />
+            <ODEResultPlot result={plotResult()} loading={loading()} />
         </div>
     );
 }

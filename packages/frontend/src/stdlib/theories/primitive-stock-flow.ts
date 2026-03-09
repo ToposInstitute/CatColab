@@ -50,9 +50,6 @@ export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): 
                 help: "visualization",
             }),
             analyses.massAction({
-                simulate(model, data) {
-                    return thCategoryLinks.massAction(model, data);
-                },
                 transitionType: {
                     tag: "Hom",
                     content: { tag: "Basic", content: "Object" },
