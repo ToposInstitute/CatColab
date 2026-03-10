@@ -87,7 +87,6 @@ export function ObListEditor(props: ObListEditorProps) {
         });
     };
 
-	console.log("HERE!", liveDiagram());
     const completions = (): QualifiedName[] | undefined =>
         liveDiagram().elaboratedDiagram()?.obGeneratorsWithType(modeAppType().content.obType);
 
@@ -129,7 +128,9 @@ export function ObListEditor(props: ObListEditorProps) {
                                 });
                             }}
                             placeholder={props.placeholder}
-                            idToLabel={(id) => liveDiagram().elaboratedDiagram()?.obGeneratorLabel(id)}
+                            idToLabel={(id) =>
+                                liveDiagram().elaboratedDiagram()?.obGeneratorLabel(id)
+                            }
                             labelToId={(label) =>
                                 liveDiagram().elaboratedDiagram()?.obGeneratorWithLabel(label)
                             }
