@@ -188,8 +188,9 @@ impl<'a> ModelGenerator<'a> {
         }
     }
 
-    /// Constructs an application of an object operation, if the theory is modal, along with
-    /// the expected object type of the result.
+    /// Constructs an application of an object operation, if the theory is modal. 
+    /// 
+    /// Returns the constructed object along with the expected object type of the result.
     fn ob_app(&self, name: &NameSegment, tm_v: &TmV) -> Option<(Ob, ObType)> {
         let name: QualifiedName = [*name].into();
         match &self.model {
@@ -198,7 +199,7 @@ impl<'a> ModelGenerator<'a> {
                 let theory = model.theory();
                 let op = modal::ModalObOp::generator(name.clone());
                 let ot: ObType = theory.ob_op_cod(&op).into();
-                let ob = self.make_ob(tm_v, &theory.ob_op_dom(&op).into())?;
+                let ob = self.make_ob_check_type(tm_v, &theory.ob_op_dom(&op).into())?;
                 let ob = ob.try_into().unwrap();
                 Some((Ob::Modal(modal::ModalOb::App(Box::new(ob), name)), ot))
             }
@@ -222,9 +223,10 @@ impl<'a> ModelGenerator<'a> {
         }
     }
 
-    /// Attempts to make an object of a model from a term,
-    /// synthesizing the appropriate type.
-    fn synth_ob(&self, val: &TmV) -> Option<(Ob, ObType)> {
+    /// Attempts to make an object of a model from a term.
+    /// 
+    /// Returns the object together with the appropriate type.
+    fn make_ob_synth_type(&self, val: &TmV) -> Option<(Ob, ObType)> {
         match &**val {
             TmV_::Neu(n, ty_v) => {
                 let TyV_::Object(ob_type) = &**ty_v else {
@@ -242,25 +244,28 @@ impl<'a> ModelGenerator<'a> {
         }
     }
 
-    /// Attempts to make an object of a model from a term, checking that the term constructs an object
-    /// of the given type.
-    fn make_ob(&self, val: &TmV, ob_type: &ObType) -> Option<Ob> {
+    /// Attempts to make an object of a model from a term.
+    /// 
+    /// Also checks that the term constructs an object of the given type, returning only the object if successful.
+    fn make_ob_check_type(&self, val: &TmV, ob_type: &ObType) -> Option<Ob> {
         match &**val {
             // ob_type checked recursively.
             TmV_::List(elems) => {
                 let el_type = ob_type.clone().list_arg()?;
                 let elems: Option<Vec<_>> =
-                    elems.iter().map(|tm| self.make_ob(tm, &el_type)).collect();
+                    elems.iter().map(|tm| self.make_ob_check_type(tm, &el_type)).collect();
                 self.ob_list(elems?, ob_type)
             }
             _ => {
-                let (ob, ot) = self.synth_ob(val)?;
+                let (ob, ot) = self.make_ob_synth_type(val)?;
                 (ot == *ob_type).then_some(ob)
             }
         }
     }
 
-    /// Attempts to make a morphism of a model, together with its morphism type, from a term.
+    /// Attempts to make a morphism of a model from a term.
+    /// 
+    /// Also returns the expected morphism type of the result.
     fn synth_mor(&self, val: &TmV) -> Option<(Mor, MorType)> {
         match &**val {
             TmV_::Neu(n, ty_v) => {
@@ -271,7 +276,7 @@ impl<'a> ModelGenerator<'a> {
                 Some((self.mor_generator(name), mor_type.clone()))
             }
             TmV_::Id(x) => {
-                let (dom, dom_type) = self.synth_ob(x)?;
+                let (dom, dom_type) = self.make_ob_synth_type(x)?;
                 let mor_type = self.theory.hom_type(dom_type);
                 Some((self.model.id(dom), mor_type))
             }
@@ -285,6 +290,7 @@ impl<'a> ModelGenerator<'a> {
     }
 
     /// Attempts to make a morphism from a term of the given morphism type.
+    /// 
     /// At this time, all morphism constructors allow for type synthesis, but
     /// eventually this will change.
     fn make_mor(&self, val: &TmV, mor_type: &MorType) -> Option<Mor> {
@@ -299,8 +305,8 @@ impl<'a> ModelGenerator<'a> {
                 None
             }
             TyV_::Morphism(mt, dom, cod) => {
-                let dom = self.make_ob(dom, &self.theory.src_type(mt))?;
-                let cod = self.make_ob(cod, &self.theory.tgt_type(mt))?;
+                let dom = self.make_ob_check_type(dom, &self.theory.src_type(mt))?;
+                let cod = self.make_ob_check_type(cod, &self.theory.tgt_type(mt))?;
                 self.model.add_mor(prefix.into(), dom, cod, mt.clone());
                 None
             }
