@@ -1,13 +1,12 @@
 //! Morphism between models of a modal double theory.
 
-use crate::dbl::discrete::{DblModelMorphism, DiscreteDblModel};
+use crate::dbl::discrete::DblModelMorphism;
 use crate::dbl::modal::{ModalDblModel, ModalMor, ModalOb};
-use crate::dbl::model::{DblModel, FgDblModel, MutDblModel};
+use crate::dbl::model::DblModel;
 use crate::dbl::model_morphism::InvalidDblModelMorphism;
-use crate::one::category::{Category, FgCategory};
-use crate::one::{FpFunctorData, InvalidFpFunctor, QualifiedPath};
-use crate::validate;
-use crate::zero::{HashColumn, Mapping, MutMapping, QualifiedName};
+use crate::one::{FpFunctorData, InvalidFpFunctor};
+use crate::validate::{self, Validate};
+use crate::zero::{HashColumn, MutMapping, QualifiedName};
 
 use nonempty::NonEmpty;
 
@@ -50,9 +49,9 @@ impl<'a> ModalDblModelMorphism<'a> {
         &self,
     ) -> impl Iterator<Item = InvalidDblModelMorphism<QualifiedName, QualifiedName>> + 'a + use<'a>
     {
-        vec![].into_iter()
-        // let DblModelMorphism(ModalDblModelMapping(mapping), dom, cod) = *self;
-        // dbg!(&cod);
+        // vec![].into_iter()
+        let DblModelMorphism(ModalDblModelMapping(mapping), dom, cod) = *self;
+        dbg!(&cod.theory());
         // let category_errors: Vec<_> = mapping
         //     .functor_into(&cod.category) // TODO
         //     .iter_invalid_on(&dom.category)
@@ -74,7 +73,8 @@ impl<'a> ModalDblModelMorphism<'a> {
         //         None
         //     }
         // });
-        // let th_cat = cod.theory();
+        let th_cat = cod.theory();
+        dbg!(th_cat);
         // let mor_type_errors = dom.mor_generators().filter_map(move |f| {
         //     if let Some(g) = mapping.mor_generator_map.get(&f)
         //         && cod.has_mor(g)
@@ -85,6 +85,15 @@ impl<'a> ModalDblModelMorphism<'a> {
         //         None
         //     }
         // });
+        vec![].into_iter()
         // category_errors.into_iter().chain(ob_type_errors).chain(mor_type_errors)
+    }
+}
+
+impl Validate for ModalDblModelMorphism<'_> {
+    type ValidationError = InvalidDblModelMorphism<QualifiedName, QualifiedName>;
+
+    fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
+        validate::wrap_errors(self.iter_invalid())
     }
 }
