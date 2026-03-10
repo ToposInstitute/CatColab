@@ -217,6 +217,10 @@
             '';
           };
 
+          catcom = import ./packages/catcom/default.nix {
+            inherit craneLib cargoArtifacts;
+          };
+
           backend = pkgsLinux.callPackage ./packages/backend/default.nix {
             inherit craneLib cargoArtifacts;
             pkgs = pkgsLinux;

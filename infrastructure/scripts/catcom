@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# CatColab dev CLI — compiled on demand via cargo.
+exec cargo run -p catcom -- "$@"
