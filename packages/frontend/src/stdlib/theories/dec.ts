@@ -1,8 +1,17 @@
 import { ThDEC } from "catlog-wasm";
-import { Theory, type TheoryMeta } from "../../theory";
+import { type DiagramAnalysisMeta, Theory, type TheoryMeta } from "../../theory";
+import * as analyses from "../analyses";
 
 export default function createThDECTheory(theoryMeta: TheoryMeta): Theory {
     const thDEC = new ThDEC();
+    const diagramAnalyses: DiagramAnalysisMeta[] = [
+        analyses.modalDiagramGraph({
+            id: "graph",
+            name: "Visualization",
+            description: "Visualize the instance as a graph",
+            help: "visualization",
+        }),
+    ];
 
     return new Theory({
         ...theoryMeta,
@@ -24,12 +33,6 @@ export default function createThDECTheory(theoryMeta: TheoryMeta): Theory {
                 name: "Operation",
                 description: "Event causing change of state",
                 shortcut: ["M"],
-                // domain: {
-                //     apply: { tag: "Basic", content: "tensor" },
-                // },
-                // codomain: {
-                //     apply: { tag: "Basic", content: "tensor" },
-                // },
             },
         ],
         instanceOfName: "Diagrams in",
@@ -50,8 +53,8 @@ export default function createThDECTheory(theoryMeta: TheoryMeta): Theory {
                 name: "Operation",
                 description: "Event causing change of state",
                 shortcut: ["M"],
-                
             },
         ],
+        diagramAnalyses: diagramAnalyses,
     });
 }

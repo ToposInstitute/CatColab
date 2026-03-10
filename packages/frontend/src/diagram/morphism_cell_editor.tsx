@@ -1,6 +1,5 @@
 import { useContext } from "solid-js";
 import invariant from "tiny-invariant";
-import { v7 } from "uuid";
 
 import { type FocusHandle, useChildFocus } from "catcolab-ui-components";
 import type { DiagramMorDecl } from "catlog-wasm";
