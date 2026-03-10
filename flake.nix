@@ -116,7 +116,6 @@
           buildInputs =
             with pkgs;
             [
-              clippy
               darkhttpd
               esbuild
               lld
@@ -133,7 +132,6 @@
               python312Packages.jupyter-server
               python312Packages.requests
               python312Packages.websocket-client
-              rust-analyzer
               rustToolchain
               nightlyRustfmt
               sqlx-cli
