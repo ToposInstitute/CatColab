@@ -108,9 +108,11 @@
           pkgsUnstable = import inputs.nixpkgsUnstable {
             system = "x86_64-linux";
           };
+          nightlyRustfmt = inputs.fenix.packages.${system}.latest.rustfmt;
         in
         pkgs.mkShell {
           name = "catcolab-devshell";
+          RUSTFMT = "${nightlyRustfmt}/bin/rustfmt";
           buildInputs =
             with pkgs;
             [
@@ -133,7 +135,7 @@
               python312Packages.websocket-client
               rust-analyzer
               rustToolchain
-              rustfmt
+              nightlyRustfmt
               sqlx-cli
               vscode-langservers-extracted
               wasm-bindgen-cli
