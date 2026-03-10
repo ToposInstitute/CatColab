@@ -4,21 +4,23 @@
 use tsify::declare;
 
 // TODO use super
-use crate::dbl::discrete::DblModelMorphism;
-use crate::dbl::modal::ModalDblModelMapping;
-use crate::dbl::model::InvalidDblModel;
-use crate::dbl::model::ModalDblModel;
-use crate::dbl::model::MutDblModel;
-use crate::dbl::model_diagram::*;
-use crate::dbl::model_morphism::InvalidDblModelMorphism;
+use crate::dbl::{
+    discrete::DblModelMorphism,
+    modal::{ModalDblModelMapping, ModalOb},
+    model::{InvalidDblModel, ModalDblModel, MutDblModel},
+    model_diagram::*,
+    model_morphism::InvalidDblModelMorphism,
+};
 use crate::one::{category::Category, graph::GraphMapping};
 use crate::validate;
 use crate::zero::QualifiedName;
-use nonempty::NonEmpty;
 
 use itertools::Either;
+use nonempty::NonEmpty;
 
-/// A diagram i a model of a modal double theoruy.
+// use itertools::Either;
+
+/// A diagram is a model of a modal double theoruy.
 pub type ModalDblModelDiagram = DblModelDiagram<ModalDblModelMapping, ModalDblModel>;
 
 /// A failure to be valid in a diagram in a model of a discrete double theory.
@@ -42,13 +44,14 @@ impl ModalDblModelDiagram {
         &'a self,
         model: &'a ModalDblModel,
     ) -> impl Iterator<Item = InvalidModalDblModelDiagram> + 'a {
-        // let mut dom_errs = self.1.iter_invalid().peekable();
+        let mut dom_errs = self.1.iter_invalid().peekable();
         // if dom_errs.peek().is_some() {
         //     Either::Left(dom_errs.map(InvalidDblModelDiagram::Dom))
         // } else {
-        //     let morphism = DblModelMorphism(&self.0, &self.1, model);
-        //     Either::Right(morphism.iter_invalid().map(InvalidDblModelDiagram::Map))
-        // }
+        let morphism = DblModelMorphism(&self.0, &self.1, model);
+        let _ = morphism.iter_invalid();
+        // Either::Right(morphism.iter_invalid().map(InvalidDblModelDiagram::Map))
+        // };
         vec![].into_iter()
     }
 
@@ -99,7 +102,7 @@ mod tests {
         domain.add_ob(name("u"), ob_type.clone());
         domain.add_ob(name("dot-u"), ob_type.clone());
         let mut f: ModalDblModelMapping = Default::default();
-        let form0 = ModalObType::new(name("Form0"));
+        let form0 = ModalOb::Generator(name("Form0"));
         f.assign_ob(name("u"), form0.clone());
         f.assign_ob(name("dot-u"), form0);
 

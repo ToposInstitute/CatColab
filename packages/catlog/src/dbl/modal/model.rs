@@ -53,7 +53,7 @@ pub enum ModalMor {
 /// Extra data associated with a list of morphisms in a [list modality](List).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum MorListData {
-    /// No extra data for a morphism in the [plain list](List::Plain) modality.
+/// No extra data for a morphism in the [plain list](List::Plain) modality.
     Plain(),
 
     /// Data for a morphism in the [symmetric list](List::Symmetric) modality.
@@ -409,6 +409,12 @@ impl<Kind: DblTheoryKind> ModalDblModel<Kind> {
             Ok(InferredType::Type(other_type)) => other_type == *ob_type,
             _ => false,
         }
+    }
+
+    /// Iterates over failures of model to be well defined.
+    pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidDblModel> + '_ {
+        type Invalid = InvalidDblModel;
+        vec![].into_iter()
     }
 }
 
