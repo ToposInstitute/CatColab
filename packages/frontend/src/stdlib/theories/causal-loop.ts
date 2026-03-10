@@ -47,6 +47,7 @@ export default function createCausalLoopTheory(theoryMeta: TheoryMeta): Theory {
                 description: "Visualize the causal loop diagram",
                 help: "visualization",
             }),
+            analyses.compositionPattern(),
             analyses.motifFinding({
                 id: "negative-loops",
                 name: "Balancing loops",

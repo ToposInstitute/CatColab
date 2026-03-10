@@ -53,6 +53,7 @@ export default function createPowerSystemsTheory(theoryMeta: TheoryMeta): Theory
                 description: "Visualize the power system as a network",
                 help: "visualization",
             }),
+            analyses.compositionPattern(),
             analyses.kuramoto({
                 simulate: (model, data) => thPowerSystem.kuramoto(model, data),
                 parameterLabels: {
