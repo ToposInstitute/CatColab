@@ -69,6 +69,7 @@ export default function createUnaryDECTheory(theoryMeta: TheoryMeta): Theory {
                 description: "Visualize the operations as a graph",
                 help: "visualization",
             }),
+            analyses.compositionPattern(),
         ],
         diagramAnalyses: [
             analyses.diagramGraph({

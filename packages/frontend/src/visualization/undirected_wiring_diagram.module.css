@@ -1,0 +1,41 @@
+.root {
+    display: block;
+    margin: auto;
+    overflow: visible;
+}
+
+.outer {
+    fill: none;
+    stroke: var(--color-foreground);
+    stroke-width: 1.5;
+    stroke-dasharray: 6 3;
+}
+
+.box rect {
+    fill: none;
+    stroke: var(--color-foreground);
+    stroke-width: 1.5;
+}
+
+.boxLabel {
+    fill: var(--color-foreground);
+}
+
+.port rect {
+    fill: var(--color-foreground);
+}
+
+.portLabel {
+    fill: var(--color-foreground);
+    font-size: 1rem;
+}
+
+.wireEdge {
+    fill: none;
+    stroke: var(--color-foreground);
+    stroke-width: 1.5;
+}
+
+.junction {
+    fill: var(--color-foreground);
+}

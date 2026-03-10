@@ -122,6 +122,7 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
                 description: "Visualize the schema as a graph",
                 help: "visualization",
             }),
+            analyses.compositionPattern(),
             analyses.schemaERD({
                 id: "erd",
                 name: "Entity-relationship diagram",
