@@ -120,9 +120,6 @@ function createWorkerSimulation<T>(
 ): { data: Accessor<T | undefined>; loading: Accessor<boolean> } {
     const DEBOUNCE_MS = 150;
 
-    const theoryId = liveModel.liveDoc.doc.theory;
-    const refId = liveModel.liveDoc.docHandle.documentId;
-
     const [data, setData] = createSignal<T | undefined>(undefined);
     const [loading, setLoading] = createSignal(false);
 
@@ -133,13 +130,21 @@ function createWorkerSimulation<T>(
         validatedModel: liveModel.validatedModel(),
         params: params(),
         notebook: liveModel.liveDoc.doc.notebook,
+        theoryId: liveModel.liveDoc.doc.theory,
+        refId: liveModel.liveDoc.docHandle.documentId,
     }));
 
     createEffect(
         on(inputSignal, (input) => {
             clearTimeout(debounceTimer);
 
-            const { validatedModel, params: currentParams, notebook: currentNotebook } = input;
+            const {
+                validatedModel,
+                params: currentParams,
+                notebook: currentNotebook,
+                theoryId: currentTheoryId,
+                refId: currentRefId,
+            } = input;
 
             if (!validatedModel || validatedModel.tag !== "Valid" || !currentNotebook) {
                 setData(undefined);
@@ -155,10 +160,10 @@ function createWorkerSimulation<T>(
 
                 const request: SimulationRequest = {
                     requestId,
-                    theoryId,
+                    theoryId: currentTheoryId,
                     analysisId,
                     notebook: JSON.parse(JSON.stringify(currentNotebook)),
-                    refId,
+                    refId: currentRefId,
                     params: JSON.parse(JSON.stringify(currentParams)),
                 };
 
