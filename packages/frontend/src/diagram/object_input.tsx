@@ -4,11 +4,10 @@ import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
 import type { TextInputOptions } from "catcolab-ui-components";
-import type { Ob, ObType, QualifiedName, ObOp } from "catlog-wasm";
+import type { Ob, ObOp, ObType, QualifiedName } from "catlog-wasm";
 import { type IdInputOptions, ObIdInput } from "../components";
 import { LiveDiagramContext } from "./context";
 import { ObListEditor } from "./object_list_editor";
-
 
 /** Props passed to any object input component. */
 export type ObInputProps = {
