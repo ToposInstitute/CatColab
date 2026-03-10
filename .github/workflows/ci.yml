@@ -45,7 +45,7 @@ jobs:
 
       - name: Check formatting
         run: |
-          cargo fmt --check -- --config=normalize_comments=true
+          cargo fmt --check
 
   rust_lints:
     name: rust lints
