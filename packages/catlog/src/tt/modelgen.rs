@@ -188,8 +188,8 @@ impl<'a> ModelGenerator<'a> {
         }
     }
 
-    /// Constructs an application of an object operation, if the theory is modal. 
-    /// 
+    /// Constructs an application of an object operation, if the theory is modal.
+    ///
     /// Returns the constructed object along with the expected object type of the result.
     fn ob_app(&self, name: &NameSegment, tm_v: &TmV) -> Option<(Ob, ObType)> {
         let name: QualifiedName = [*name].into();
@@ -224,7 +224,7 @@ impl<'a> ModelGenerator<'a> {
     }
 
     /// Attempts to make an object of a model from a term.
-    /// 
+    ///
     /// Returns the object together with the appropriate type.
     fn make_ob_synth_type(&self, val: &TmV) -> Option<(Ob, ObType)> {
         match &**val {
@@ -245,7 +245,7 @@ impl<'a> ModelGenerator<'a> {
     }
 
     /// Attempts to make an object of a model from a term.
-    /// 
+    ///
     /// Also checks that the term constructs an object of the given type, returning only the object if successful.
     fn make_ob_check_type(&self, val: &TmV, ob_type: &ObType) -> Option<Ob> {
         match &**val {
@@ -264,7 +264,7 @@ impl<'a> ModelGenerator<'a> {
     }
 
     /// Attempts to make a morphism of a model from a term.
-    /// 
+    ///
     /// Also returns the expected morphism type of the result.
     fn synth_mor(&self, val: &TmV) -> Option<(Mor, MorType)> {
         match &**val {
@@ -290,7 +290,7 @@ impl<'a> ModelGenerator<'a> {
     }
 
     /// Attempts to make a morphism from a term of the given morphism type.
-    /// 
+    ///
     /// At this time, all morphism constructors allow for type synthesis, but
     /// eventually this will change.
     fn make_mor(&self, val: &TmV, mor_type: &MorType) -> Option<Mor> {
