@@ -9,9 +9,9 @@ import type {
 } from "elkjs";
 import invariant from "tiny-invariant";
 
+import { getMainFont, getMonoFont, measureText } from "./font_utils";
 import type * as GraphLayout from "./graph_layout";
 import type * as GraphSpec from "./graph_spec";
-import { measureText } from "./measure";
 import type { ArrowStyle } from "./types";
 
 /** ELK node with extra style data attached.
@@ -38,13 +38,8 @@ List of layout options supported by ELK:
  */
 export function graphToElk(graph: GraphSpec.Graph, layoutOptions?: LayoutOptions): ElkNode {
     const canvas = document.createElement("canvas");
-
-    const defaultFont = `1rem ${getComputedStyle(document.documentElement)
-        .getPropertyValue("--main-font")
-        .trim()}`;
-    const monospaceFont = `1rem ${getComputedStyle(document.documentElement)
-        .getPropertyValue("--mono-font")
-        .trim()}`;
+    const defaultFont = getMainFont();
+    const monospaceFont = getMonoFont();
 
     const children: StyledElkNode[] = graph.nodes.map((node) => {
         let width = node.minimumWidth ?? nodePadding;
@@ -164,15 +159,23 @@ export function parseElkLayout(elk: StyledElkNode): GraphLayout.Graph {
     return { width, height, nodes, edges };
 }
 
-/** Convert ELK edge sections to an SVG path. */
-function sectionsToPath(sections: ElkEdgeSection[]): string {
+/** Convert ELK edge sections to an SVG path.
+
+Optionally applies an offset to all coordinates, useful for hierarchical
+layouts where edges are relative to a parent node.
+ */
+export function sectionsToPath(sections: ElkEdgeSection[], offsetX = 0, offsetY = 0): string {
     const stmts: Array<string | number> = [];
     for (const section of sections) {
-        stmts.push(stmts.length === 0 ? "M" : "L", section.startPoint.x, section.startPoint.y);
+        stmts.push(
+            stmts.length === 0 ? "M" : "L",
+            offsetX + section.startPoint.x,
+            offsetY + section.startPoint.y,
+        );
         for (const bp of section.bendPoints ?? []) {
-            stmts.push("L", bp.x, bp.y);
+            stmts.push("L", offsetX + bp.x, offsetY + bp.y);
         }
-        stmts.push("L", section.endPoint.x, section.endPoint.y);
+        stmts.push("L", offsetX + section.endPoint.x, offsetY + section.endPoint.y);
     }
     return stmts.join(" ");
 }

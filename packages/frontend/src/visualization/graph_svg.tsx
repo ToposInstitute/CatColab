@@ -1,5 +1,14 @@
 import { destructure } from "@solid-primitives/destructure";
-import { type Component, createUniqueId, For, Index, Match, Show, Switch } from "solid-js";
+import {
+    type Component,
+    createUniqueId,
+    For,
+    Index,
+    Match,
+    type ParentProps,
+    Show,
+    Switch,
+} from "solid-js";
 import { Dynamic } from "solid-js/web";
 
 import type * as GraphLayout from "./graph_layout";
@@ -35,6 +44,42 @@ export function GraphSVG(props: { graph: GraphLayout.Graph; ref?: SVGRefProp }) 
     );
 }
 
+/** Draw a labeled rectangle with optional children, positioned by top-left corner.
+
+A reusable SVG primitive for rendering boxes with centered labels.
+Used by `NodeSVG` for graph nodes and available for other visualizations
+like UWD boxes.
+ */
+export function LabeledRect(
+    props: ParentProps<{
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        label?: string;
+        class?: string;
+        labelClass?: string;
+    }>,
+) {
+    return (
+        <g class={props.class}>
+            <rect x={props.x} y={props.y} width={props.width} height={props.height} />
+            <Show when={props.label}>
+                <text
+                    class={props.labelClass ?? "label"}
+                    x={props.x + props.width / 2}
+                    y={props.y + props.height / 2}
+                    dominant-baseline="middle"
+                    text-anchor="middle"
+                >
+                    {props.label}
+                </text>
+            </Show>
+            {props.children}
+        </g>
+    );
+}
+
 /** Draw a node with a layout using SVG.
  */
 export function NodeSVG(props: { node: GraphLayout.Node }) {
@@ -47,14 +92,14 @@ export function NodeSVG(props: { node: GraphLayout.Node }) {
     } = destructure(props, { deep: true });
 
     return (
-        <g class={props.node.cssClass ?? "node"}>
-            <rect x={x() - width() / 2} y={y() - height() / 2} width={width()} height={height()} />
-            <Show when={props.node.label}>
-                <text class="label" x={x()} y={y()} dominant-baseline="middle" text-anchor="middle">
-                    {props.node.label}
-                </text>
-            </Show>
-        </g>
+        <LabeledRect
+            x={x() - width() / 2}
+            y={y() - height() / 2}
+            width={width()}
+            height={height()}
+            label={props.node.label}
+            class={props.node.cssClass ?? "node"}
+        />
     );
 }
 

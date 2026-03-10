@@ -1,8 +1,8 @@
-import type { ElkLayoutArguments, ElkNode } from "elkjs";
-import { type Component, createResource, Show } from "solid-js";
+import type { ELK, ElkLayoutArguments, ElkNode } from "elkjs";
+import { type Accessor, type Component, createResource, type JSX, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
-import { elkLayoutGraph, loadElk } from "./elk";
+import { loadElk, parseElkLayout } from "./elk";
 import type * as GraphLayout from "./graph_layout";
 import { GraphSVG } from "./graph_svg";
 import type { SVGRefProp } from "./types";
@@ -17,23 +17,38 @@ export function ElkSVG(props: {
     renderer?: Component<{ graph: GraphLayout.Graph; ref?: SVGRefProp }>;
     ref?: SVGRefProp;
 }) {
-    const [elkResource] = createResource(loadElk);
-
-    const [graphLayout] = createResource(
-        () => {
-            const elk = elkResource();
-            if (elk && props.graph) {
-                return [elk, props.graph] as const;
-            }
-        },
-        ([elk, graph]) => elkLayoutGraph(elk, graph, props.args),
-    );
-
     return (
-        <Show when={graphLayout()}>
+        <ElkLayout graph={props.graph} args={props.args} elkToLayout={parseElkLayout}>
             {(graph) => (
                 <Dynamic component={props.renderer ?? GraphSVG} graph={graph()} ref={props.ref} />
             )}
-        </Show>
+        </ElkLayout>
     );
+}
+
+/** Run an ELK layout and render the result.
+ */
+export function ElkLayout<T>(props: {
+    graph?: ElkNode;
+    args?: ElkLayoutArguments;
+    elkToLayout: (e: ElkNode) => T;
+    children: (layout: Accessor<T>) => JSX.Element;
+}) {
+    const [elkResource] = createResource(loadElk);
+
+    const [layout] = createResource(
+        () => {
+            const elk = elkResource();
+            const graph = props.graph;
+            if (elk && graph) {
+                return [elk, graph] as const;
+            }
+        },
+        async ([elk, graph]: readonly [ELK, ElkNode]): Promise<T> => {
+            const elkNode = await elk.layout(graph, props.args);
+            return props.elkToLayout(elkNode);
+        },
+    );
+
+    return <Show when={layout()}>{(l) => props.children(l)}</Show>;
 }
