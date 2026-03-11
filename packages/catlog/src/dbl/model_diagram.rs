@@ -208,7 +208,7 @@ impl DiscreteDblModelDiagram {
         // This is the distinguished object in 𝒞 that we care about. We are
         // only interested in 𝒞/c for the purposes of determining whether `src`
         // and `tgt` are mutually reachable.
-        let c = src.tgt(g);
+        let c = model.cod(&src);
 
         let dj1 = f.ob_generator_map().get(&j1).unwrap();
         let dj2 = f.ob_generator_map().get(&j2).unwrap();

@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 echo "Open http://localhost:8080/index.xml ..."
 echo ""
-python3 -m http.server -d output 8080
+npx browser-sync start --server output --files "output/**/*.xml" --port 8080 --no-open
