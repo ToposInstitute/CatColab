@@ -253,6 +253,11 @@
             checkMode = true;
           };
 
+          generated-bindings-check = pkgsLinux.callPackage ./infrastructure/generated-bindings-check.nix {
+            inherit craneLib cargoArtifacts;
+            pkgs = pkgsLinux;
+          };
+
           # VMs built with `nixos-rebuild build-vm` (like `nix build
           # .#nixosConfigurations.catcolab-vm.config.system.build.vm`) are not the same
           # as "traditional" VMs, which causes deploy-rs to fail when deploying to them.
