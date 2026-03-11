@@ -45,7 +45,11 @@ enum DevCommands {
     /// This is the default when no subcommand is specified.
     /// Both processes run in the foreground with interleaved output unless --staging is specified.
     /// When either exits (or a shutdown signal is received), the other is killed.
-    All,
+    All {
+        /// Use the staging backend instead of a local one.
+        #[arg(short = 's', long)]
+        staging: bool,
+    },
 
     /// Start the backend development environment.
     ///
@@ -77,10 +81,10 @@ fn main() {
 
     match cli.command {
         Commands::Dev { staging, command } => match command {
-            Some(DevCommands::All) if staging => {
+            Some(DevCommands::All { staging: all_staging }) if staging || all_staging => {
                 dev_frontend(true);
             }
-            Some(DevCommands::All) => {
+            Some(DevCommands::All { .. }) => {
                 dev_all();
             }
             Some(DevCommands::Backend) => {
