@@ -1,6 +1,5 @@
 //! CatColab developer CLI.
 
-use std::env as std_env;
 use std::process::exit;
 
 mod backend;
@@ -71,12 +70,6 @@ enum DevCommands {
 }
 
 fn main() {
-    // Default RUST_LOG to show backend debug logs if not already set.
-    // SAFETY: This runs at the start of main before any threads are spawned.
-    if std_env::var_os("RUST_LOG").is_none() {
-        unsafe { std_env::set_var("RUST_LOG", "backend=debug") };
-    }
-
     let cli = Cli::parse();
 
     match cli.command {

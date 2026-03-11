@@ -28,9 +28,9 @@ impl PgConfig {
     }
 }
 
-pub(crate) fn pg_config_from_env() -> PgConfig {
-    let url = env::var("DATABASE_URL").unwrap_or_else(|_| {
-        eprintln!("Error: DATABASE_URL is not set. Make sure .env.development exists.");
+pub(crate) fn pg_config_from_env_file(path: &Path) -> PgConfig {
+    let url = read_env_var_from_file(path, "DATABASE_URL").unwrap_or_else(|| {
+        eprintln!("Error: DATABASE_URL is not set in {}.", path.display());
         exit(1);
     });
 

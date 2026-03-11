@@ -1,4 +1,3 @@
-use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::exit;
@@ -79,23 +78,22 @@ pub(crate) fn ensure_env_files(repo_root: &Path, source: &Path, targets: &[PathB
     }
 }
 
-pub(crate) fn load_env_file(path: &Path) {
+pub(crate) fn read_env_pairs_or_exit(path: &Path) -> Vec<(String, String)> {
     let contents = fs::read_to_string(path).unwrap_or_else(|e| {
         eprintln!("Error: failed to read {}: {e}", path.display());
         exit(1);
     });
 
+    let mut vars = Vec::new();
     for line in contents.lines() {
         let line = line.trim();
         if line.is_empty() || line.starts_with('#') {
             continue;
         }
         if let Some((key, value)) = line.split_once('=') {
-            let key = key.trim();
-            let value = value.trim();
-            if env::var_os(key).is_none() {
-                unsafe { env::set_var(key, value) };
-            }
+            vars.push((key.trim().to_string(), value.trim().to_string()));
         }
     }
+
+    vars
 }
