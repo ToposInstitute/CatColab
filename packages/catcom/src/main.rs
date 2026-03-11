@@ -24,20 +24,29 @@ struct Cli {
 enum Commands {
     /// Start the development environment.
     ///
-    /// With no subcommand, starts both the backend and frontend.
+    /// With no subcommand, defaults to `all`.
     /// With --staging, starts only the frontend against the staging backend.
+    #[command(override_usage = "catcom dev [COMMAND] [OPTIONS]")]
     Dev {
-        /// Use the staging backend instead of a local one.
-        #[arg(long)]
-        staging: bool,
-
         #[command(subcommand)]
         command: Option<DevCommands>,
+
+        /// Use the staging backend instead of a local one.
+        #[arg(short = 's', long)]
+        staging: bool,
     },
 }
 
 #[derive(Subcommand)]
 enum DevCommands {
+    /// Default when no subcommand is specified: start both the backend and frontend unless
+    /// overridden by --staging (then only the frontend).
+    ///
+    /// This is the default when no subcommand is specified.
+    /// Both processes run in the foreground with interleaved output unless --staging is specified.
+    /// When either exits (or a shutdown signal is received), the other is killed.
+    All,
+
     /// Start the backend development environment.
     ///
     /// Ensures PostgreSQL is running, the database and user exist, .env files
@@ -52,7 +61,7 @@ enum DevCommands {
     /// staging backend instead.
     Frontend {
         /// Use the staging backend instead of a local one.
-        #[arg(long)]
+        #[arg(short = 's', long)]
         staging: bool,
     },
 }
@@ -68,6 +77,12 @@ fn main() {
 
     match cli.command {
         Commands::Dev { staging, command } => match command {
+            Some(DevCommands::All) if staging => {
+                dev_frontend(true);
+            }
+            Some(DevCommands::All) => {
+                dev_all();
+            }
             Some(DevCommands::Backend) => {
                 if staging {
                     eprintln!("Error: --staging is not supported with the backend subcommand.");
