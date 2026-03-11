@@ -1,10 +1,7 @@
 //! CatColab developer CLI.
 
 use std::env as std_env;
-use std::process::{Child, exit};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::thread;
-use std::time::Duration;
+use std::process::exit;
 
 mod backend;
 mod db;
@@ -12,10 +9,6 @@ mod env;
 mod frontend;
 mod process_management;
 mod repo_root;
-
-/// Global flag set by the SIGINT/SIGTERM handler to signal that catcom should
-/// shut down its child processes and exit.
-static SHUTDOWN: AtomicBool = AtomicBool::new(false);
 
 use clap::{Parser, Subcommand};
 
@@ -99,27 +92,6 @@ fn main() {
 // Top-level dev commands
 // ---------------------------------------------------------------------------
 
-/// Install signal handlers so that Ctrl-C (SIGINT) and SIGTERM set the
-/// `SHUTDOWN` flag instead of killing catcom immediately. This lets the poll
-/// loop clean up child process groups before exiting.
-#[cfg(unix)]
-fn install_signal_handlers() {
-    unsafe {
-        libc::signal(libc::SIGINT, signal_handler as *const () as libc::sighandler_t);
-        libc::signal(libc::SIGTERM, signal_handler as *const () as libc::sighandler_t);
-    }
-}
-
-#[cfg(unix)]
-extern "C" fn signal_handler(_sig: libc::c_int) {
-    SHUTDOWN.store(true, Ordering::SeqCst);
-}
-
-#[cfg(not(unix))]
-fn install_signal_handlers() {
-    // On non-Unix platforms we rely on the default Ctrl-C behavior.
-}
-
 /// Start both the backend and frontend for local development.
 ///
 /// Both processes run in the foreground with interleaved output.
@@ -130,30 +102,12 @@ fn dev_all() {
     backend::setup_backend(&repo_root);
     frontend::setup_frontend(&repo_root);
 
-    install_signal_handlers();
+    process_management::install_signal_handlers();
 
     let mut backend = backend::spawn_backend(&repo_root);
     let mut frontend = frontend::spawn_frontend(&repo_root, false, false);
 
-    // Wait for either process to exit, then clean up the other.
-    loop {
-        if SHUTDOWN.load(Ordering::SeqCst) {
-            eprintln!("\n[catcom] Shutting down...");
-            cleanup_child(&mut backend);
-            cleanup_child(&mut frontend);
-            exit(130); // 128 + SIGINT
-        }
-        if let Some(status) = backend.try_wait().unwrap_or(None) {
-            eprintln!("[catcom] Backend exited with status: {status}");
-            cleanup_child(&mut frontend);
-            exit(status.code().unwrap_or(1));
-        }
-        if let Some(status) = frontend.try_wait().unwrap_or(None) {
-            cleanup_child(&mut backend);
-            exit(status.code().unwrap_or(0));
-        }
-        thread::sleep(Duration::from_millis(100));
-    }
+    process_management::wait_for_child_pair_or_shutdown(&mut backend, &mut frontend)
 }
 
 /// Run the full backend dev setup and exec into the server.
@@ -170,40 +124,4 @@ fn dev_frontend(staging: bool) {
 
     frontend::setup_frontend(&repo_root);
     frontend::exec_frontend(&repo_root, staging);
-}
-
-/// Kill a child process and its entire process group, then wait for it to exit.
-///
-/// On Unix, sends SIGTERM to the process group first, waits up to 2 seconds for
-/// a clean shutdown, then sends SIGKILL if the process is still alive.
-fn cleanup_child(child: &mut Child) {
-    #[cfg(unix)]
-    {
-        let pid = child.id() as i32;
-
-        // Send SIGTERM to the entire process group.
-        unsafe {
-            libc::kill(-pid, libc::SIGTERM);
-        }
-
-        // Give the process up to 2 seconds to exit gracefully.
-        for _ in 0..20 {
-            match child.try_wait() {
-                Ok(Some(_)) => return,
-                _ => thread::sleep(Duration::from_millis(100)),
-            }
-        }
-
-        // Still alive — force kill the process group.
-        unsafe {
-            libc::kill(-pid, libc::SIGKILL);
-        }
-    }
-
-    #[cfg(not(unix))]
-    {
-        let _ = child.kill();
-    }
-
-    let _ = child.wait();
 }

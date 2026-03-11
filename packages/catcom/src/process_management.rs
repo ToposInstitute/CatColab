@@ -1,4 +1,9 @@
 use std::process::{Child, Command, ExitStatus, Output, exit};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::thread;
+use std::time::Duration;
+
+static SHUTDOWN: AtomicBool = AtomicBool::new(false);
 
 pub(crate) fn set_process_group(cmd: &mut Command) {
     #[cfg(unix)]
@@ -65,4 +70,72 @@ pub(crate) fn exec_or_exit(
         let status = status_or_exit(cmd, start_error_context);
         exit(status.code().unwrap_or(fallback_code));
     }
+}
+
+pub(crate) fn install_signal_handlers() {
+    #[cfg(unix)]
+    unsafe {
+        libc::signal(libc::SIGINT, signal_handler as *const () as libc::sighandler_t);
+        libc::signal(libc::SIGTERM, signal_handler as *const () as libc::sighandler_t);
+    }
+
+    #[cfg(not(unix))]
+    {
+        // On non-Unix platforms we rely on the default Ctrl-C behavior.
+    }
+}
+
+#[cfg(unix)]
+extern "C" fn signal_handler(_sig: libc::c_int) {
+    SHUTDOWN.store(true, Ordering::SeqCst);
+}
+
+pub(crate) fn wait_for_child_pair_or_shutdown(backend: &mut Child, frontend: &mut Child) -> ! {
+    loop {
+        if SHUTDOWN.load(Ordering::SeqCst) {
+            eprintln!("\n[catcom] Shutting down...");
+            cleanup_child(backend);
+            cleanup_child(frontend);
+            exit(130);
+        }
+        if let Some(status) = backend.try_wait().unwrap_or(None) {
+            eprintln!("[catcom] Backend exited with status: {status}");
+            cleanup_child(frontend);
+            exit(status.code().unwrap_or(1));
+        }
+        if let Some(status) = frontend.try_wait().unwrap_or(None) {
+            cleanup_child(backend);
+            exit(status.code().unwrap_or(0));
+        }
+        thread::sleep(Duration::from_millis(100));
+    }
+}
+
+fn cleanup_child(child: &mut Child) {
+    #[cfg(unix)]
+    {
+        let pid = child.id() as i32;
+
+        unsafe {
+            libc::kill(-pid, libc::SIGTERM);
+        }
+
+        for _ in 0..20 {
+            match child.try_wait() {
+                Ok(Some(_)) => return,
+                _ => thread::sleep(Duration::from_millis(100)),
+            }
+        }
+
+        unsafe {
+            libc::kill(-pid, libc::SIGKILL);
+        }
+    }
+
+    #[cfg(not(unix))]
+    {
+        let _ = child.kill();
+    }
+
+    let _ = child.wait();
 }
