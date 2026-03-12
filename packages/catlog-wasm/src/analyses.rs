@@ -85,7 +85,7 @@ pub(crate) fn latex_mor_names_mass_action(model: &DblModel) -> impl Fn(&FlowPara
             (Direction::OutgoingFlow, RateParameter::PerPlace { transition, place }) => {
                 let sub = transition_subscript(transition);
                 let input_place_label = model.ob_namespace.label_string(place);
-                format!("\\rho_{{{sub}}}^{{\\text{{{input_place_label}}}}}")
+                format!("\\kappa_{{{sub}}}^{{\\text{{{input_place_label}}}}}")
             }
         },
     }
