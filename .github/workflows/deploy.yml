@@ -86,7 +86,7 @@ jobs:
           mv frontend_docs site/dev/frontend
           mv ui-components site/dev/ui-components
           mv math-docs site/math
-          mv rfcs site/rfc
+          mv rfc site/rfc
           echo '/dev/rust /dev/rust/catlog' >> site/_redirects
           echo '/dev/core /dev/rust/catlog' >> site/_redirects
           echo '/dev/backend /dev/rust/backend' >> site/_redirects

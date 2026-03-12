@@ -254,7 +254,7 @@ jobs:
           name: math-docs
           path: math-docs/output
 
-  build_rfcs:
+  build_rfc:
     name: Build RFCs
     runs-on: ubuntu-latest
     steps:
@@ -273,13 +273,13 @@ jobs:
       - name: Render Quarto project
         uses: quarto-dev/quarto-actions/render@v2
         with:
-          path: rfcs
+          path: rfc
 
       - name: Upload RFCs
         uses: actions/upload-artifact@v4
         with:
-          name: rfcs
-          path: rfcs/_site
+          name: rfc
+          path: rfc/_site
 
   build_ui_components:
     name: Build ui-components Storybook
