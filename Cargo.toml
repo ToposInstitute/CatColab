@@ -29,3 +29,6 @@ opt-level = "s"
 # However there may be no practical downside to leaving this on even if that issue is resolved.
 [profile.dev.package."*"]
 opt-level = 3
+
+[patch.crates-io]
+automerge = { git = "https://github.com/automerge/automerge" }

@@ -13,7 +13,7 @@ integration-tests = []
 [dependencies]
 async-trait = "0.1.88"
 autosurgeon = { git = "https://github.com/automerge/autosurgeon", features = ["uuid"] }
-automerge = "0.7.4"
+automerge = { git = "https://github.com/automerge/automerge" }
 axum = "0.8.4"
 base64 = "0.22"
 chrono = { version = "0.4.40", features = ["serde"] }
