@@ -271,7 +271,7 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
 
     let query_start = std::time::Instant::now();
 
-    // Query documents the user has access to, excluding public documents.
+    // Query all documents the user has access to, including public documents.
     // Deleted refs are included with their deleted_at timestamp so the
     // frontend can filter them into a trash view.
     // All permissions for each document are returned as a JSON array.
@@ -284,14 +284,6 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
                 WHERE
                     -- filter by minimum permission level (read)
                     get_max_permission($1, refs.id) >= 'read'::permission_level
-                    -- exclude public-only documents (user must have explicit permission)
-                    AND EXISTS (
-                        SELECT 1
-                        FROM permissions p_searcher
-                        WHERE
-                            p_searcher.object = refs.id
-                            AND p_searcher.subject = $1
-                    )
             )
         SELECT
             refs.id AS "ref_id!",

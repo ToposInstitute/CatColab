@@ -33,23 +33,35 @@ export default function UserDocuments() {
 }
 
 function DocumentsSearch() {
+    const firebaseApp = useFirebaseApp();
+    const auth = getAuth(firebaseApp);
     const userState = useUserState();
     const [searchQuery, setSearchQuery] = createSignal("");
     const actions = useContext(PageActionsContext);
     invariant(actions, "Page actions should be provided");
 
+    const currentUserId = auth.currentUser?.uid;
+
     const documents = createMemo(() => {
         const query = searchQuery().trim().toLowerCase();
-        return (Object.entries(userState.documents) as [string, DocInfo][])
-            .filter(([, doc]) => doc.deletedAt === null)
-            .map(([refId, doc]) => ({ refId, ...doc }))
-            .filter((doc) => {
-                if (query === "") {
-                    return true;
-                }
-                return doc.name.toLowerCase().includes(query);
-            })
-            .sort((a, b) => b.createdAt - a.createdAt);
+        return (
+            (Object.entries(userState.documents) as [string, DocInfo][])
+                .filter(([, doc]) => doc.deletedAt === null)
+                // Exclude public-only documents (user must have an explicit permission)
+                .filter(
+                    ([, doc]) =>
+                        currentUserId !== undefined &&
+                        doc.permissions.some((p) => p.user === currentUserId),
+                )
+                .map(([refId, doc]) => ({ refId, ...doc }))
+                .filter((doc) => {
+                    if (query === "") {
+                        return true;
+                    }
+                    return doc.name.toLowerCase().includes(query);
+                })
+                .sort((a, b) => b.createdAt - a.createdAt)
+        );
     });
 
     const renderActions = (doc: DocInfo & { refId: string }) => {
