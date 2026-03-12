@@ -3,17 +3,27 @@ project:
 
 website:
   title: "CatColab RFCs"
+  # Navigation
   sidebar:
     style: "docked"
     contents:
       - index.md
       - auto: "*.md"
+  # GitHub links
   repo-url: https://github.com/ToposInstitute/CatColab
   repo-subdir: rfcs
   repo-actions: [source, issue]
 
 format:
   html:
+    # General styling
+    mainfont: Baskerville
+    monofont: JetBrains Mono
+    theme:
+      light: flatly
+      dark: darkly
+    respect-user-color-scheme: true
+    # RFC rendering
     html-math-method: katex
     toc: true
     toc-depth: 4
