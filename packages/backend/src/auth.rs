@@ -1,5 +1,3 @@
-// The `Reconcile` derive generates a helper enum without docs.
-#![allow(missing_docs)]
 use std::collections::HashMap;
 
 use autosurgeon::{Hydrate, Reconcile};

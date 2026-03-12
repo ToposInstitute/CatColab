@@ -12,8 +12,8 @@ integration-tests = []
 
 [dependencies]
 async-trait = "0.1.88"
-autosurgeon = { git = "https://github.com/automerge/autosurgeon", features = ["uuid"] }
-automerge = "0.7.4"
+autosurgeon = { git = "https://github.com/automerge/autosurgeon", features = ["uuid"] , branch="batch-insertion" }
+automerge = { git = "https://github.com/automerge/automerge", branch="batch-insertion" }
 axum = "0.8.4"
 base64 = "0.22"
 chrono = { version = "0.4.40", features = ["serde"] }
