@@ -5,9 +5,9 @@ import invariant from "tiny-invariant";
  * Returns a font specification string suitable for Canvas 2D context.
  */
 export function getMainFont(): string {
-    return `1rem ${getComputedStyle(document.documentElement)
-        .getPropertyValue("--main-font")
-        .trim()}`;
+    const style = getComputedStyle(document.documentElement);
+    const rootFontSize = parseFloat(style.fontSize);
+    return `${rootFontSize}px ${style.getPropertyValue("--main-font")}`;
 }
 
 /** Get the monospace font string for text measurement.
@@ -15,9 +15,9 @@ export function getMainFont(): string {
  * Returns a font specification string suitable for Canvas 2D context.
  */
 export function getMonoFont(): string {
-    return `1rem ${getComputedStyle(document.documentElement)
-        .getPropertyValue("--mono-font")
-        .trim()}`;
+    const style = getComputedStyle(document.documentElement);
+    const rootFontSize = parseFloat(style.fontSize);
+    return `${rootFontSize}px ${style.getPropertyValue("--mono-font")}`;
 }
 
 /** Measures the bounding box of text to be rendered in SVG.
