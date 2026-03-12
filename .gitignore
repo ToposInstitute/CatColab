@@ -112,3 +112,7 @@ CHANGELOG.html
 
 # VSCode
 .vscode/*
+
+# Quarto previews
+rfcs/.gitignore
+rfcs/_site

@@ -3,9 +3,18 @@ project:
 
 website:
   title: "CatColab RFCs"
+  sidebar:
+    style: "docked"
+    contents:
+      - index.md
+      - auto: "*.md"
+  repo-url: https://github.com/ToposInstitute/CatColab
+  repo-subdir: rfcs
+  repo-actions: [source, issue]
 
 format:
   html:
     html-math-method: katex
     toc: true
     number-sections: true
+    date-format: YYYY-MM-DD
