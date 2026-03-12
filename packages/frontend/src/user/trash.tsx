@@ -34,25 +34,37 @@ export default function TrashBin() {
 }
 
 function TrashBinSearch() {
+    const firebaseApp = useFirebaseApp();
+    const auth = getAuth(firebaseApp);
     const userState = useUserState();
     const [searchQuery, setSearchQuery] = createSignal("");
 
+    const currentUserId = auth.currentUser?.uid;
+
     const documents = createMemo(() => {
         const query = searchQuery().trim().toLowerCase();
-        return (Object.entries(userState.documents) as [string, DocInfo][])
-            .filter(([, doc]) => doc.deletedAt !== null)
-            .map(([refId, doc]) => ({ refId, ...doc }))
-            .filter((doc) => {
-                if (query === "") {
-                    return true;
-                }
-                return doc.name.toLowerCase().includes(query);
-            })
-            .sort((a, b) => {
-                const aDeletedAt = a.deletedAt ?? 0;
-                const bDeletedAt = b.deletedAt ?? 0;
-                return bDeletedAt - aDeletedAt;
-            });
+        return (
+            (Object.entries(userState.documents) as [string, DocInfo][])
+                .filter(([, doc]) => doc.deletedAt !== null)
+                // Exclude public-only documents (user must have an explicit permission)
+                .filter(
+                    ([, doc]) =>
+                        currentUserId !== undefined &&
+                        doc.permissions.some((p) => p.user === currentUserId),
+                )
+                .map(([refId, doc]) => ({ refId, ...doc }))
+                .filter((doc) => {
+                    if (query === "") {
+                        return true;
+                    }
+                    return doc.name.toLowerCase().includes(query);
+                })
+                .sort((a, b) => {
+                    const aDeletedAt = a.deletedAt ?? 0;
+                    const bDeletedAt = b.deletedAt ?? 0;
+                    return bDeletedAt - aDeletedAt;
+                })
+        );
     });
 
     const renderActions = (doc: DocInfo & { refId: string }) => {

@@ -166,17 +166,31 @@ impl Operation<Postgres> for MigrationOperation {
         .await?;
 
         // Notify affected users when refs change (INSERT or UPDATE on refs).
+        // Notifies users with explicit permissions, plus all users with state
+        // docs if the ref is publicly accessible.
         sqlx::query(
             r#"
             CREATE OR REPLACE FUNCTION notify_refs_change() RETURNS trigger AS $$
             DECLARE
                 affected_user TEXT;
             BEGIN
-                FOR affected_user IN
-                    SELECT subject FROM permissions WHERE object = NEW.id AND subject IS NOT NULL
-                LOOP
-                    PERFORM notify_user_state_upsert(NEW.id, affected_user);
-                END LOOP;
+                -- If public, notify all users with state docs (superset of
+                -- users with explicit permissions).
+                IF EXISTS (SELECT 1 FROM permissions WHERE object = NEW.id AND subject IS NULL) THEN
+                    FOR affected_user IN
+                        SELECT id FROM users WHERE state_doc_id IS NOT NULL
+                    LOOP
+                        PERFORM notify_user_state_upsert(NEW.id, affected_user);
+                    END LOOP;
+                ELSE
+                    -- Not public: notify only users with explicit permissions
+                    FOR affected_user IN
+                        SELECT subject FROM permissions WHERE object = NEW.id AND subject IS NOT NULL
+                    LOOP
+                        PERFORM notify_user_state_upsert(NEW.id, affected_user);
+                    END LOOP;
+                END IF;
+
                 RETURN NEW;
             END
             $$ LANGUAGE plpgsql;
@@ -186,14 +200,28 @@ impl Operation<Postgres> for MigrationOperation {
         .await?;
 
         // Notify affected user when permissions change.
+        // When a public permission (subject IS NULL) is added, all users with
+        // state docs are notified. Revoking public permissions is not currently
+        // supported by the application API, so we don't handle that case.
         sqlx::query(
             r#"
             CREATE OR REPLACE FUNCTION notify_permissions_change() RETURNS trigger AS $$
+            DECLARE
+                affected_user TEXT;
             BEGIN
                 -- Handle INSERT and UPDATE: send full upsert for the new subject
                 IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
                     IF NEW.subject IS NOT NULL THEN
                         PERFORM notify_user_state_upsert(NEW.object, NEW.subject);
+                    ELSE
+                        -- Public permission added: notify all users with state
+                        -- docs (includes users with explicit permissions, since
+                        -- they also need to see the updated permissions list).
+                        FOR affected_user IN
+                            SELECT id FROM users WHERE state_doc_id IS NOT NULL
+                        LOOP
+                            PERFORM notify_user_state_upsert(NEW.object, affected_user);
+                        END LOOP;
                     END IF;
                 END IF;
 
@@ -231,6 +259,7 @@ impl Operation<Postgres> for MigrationOperation {
 
         // Notify affected users when snapshots change (UPDATE on snapshots).
         // This handles autosave operations that update the head snapshot content.
+        // Also notifies all users with state docs if the ref is publicly accessible.
         sqlx::query(
             r#"
             CREATE OR REPLACE FUNCTION notify_snapshot_change() RETURNS trigger AS $$
@@ -246,11 +275,23 @@ impl Operation<Postgres> for MigrationOperation {
                     RETURN NEW;
                 END IF;
 
-                FOR affected_user IN
-                    SELECT subject FROM permissions WHERE object = v_ref_id AND subject IS NOT NULL
-                LOOP
-                    PERFORM notify_user_state_upsert(v_ref_id, affected_user);
-                END LOOP;
+                -- If public, notify all users with state docs (superset of
+                -- users with explicit permissions).
+                IF EXISTS (SELECT 1 FROM permissions WHERE object = v_ref_id AND subject IS NULL) THEN
+                    FOR affected_user IN
+                        SELECT id FROM users WHERE state_doc_id IS NOT NULL
+                    LOOP
+                        PERFORM notify_user_state_upsert(v_ref_id, affected_user);
+                    END LOOP;
+                ELSE
+                    -- Not public: notify only users with explicit permissions
+                    FOR affected_user IN
+                        SELECT subject FROM permissions WHERE object = v_ref_id AND subject IS NOT NULL
+                    LOOP
+                        PERFORM notify_user_state_upsert(v_ref_id, affected_user);
+                    END LOOP;
+                END IF;
+
                 RETURN NEW;
             END
             $$ LANGUAGE plpgsql;
