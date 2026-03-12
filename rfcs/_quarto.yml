@@ -16,5 +16,7 @@ format:
   html:
     html-math-method: katex
     toc: true
+    toc-depth: 4
+    toc-expand: true
     number-sections: true
     date-format: YYYY-MM-DD
