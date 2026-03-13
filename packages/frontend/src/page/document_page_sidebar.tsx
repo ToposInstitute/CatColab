@@ -108,8 +108,18 @@ function DocumentsTreeNode(props: {
                 throw new Error("couldn't load child documents!");
             }
 
+            // Pre-filter: resolve doc refs to check deleted status before
+            // loading full documents
+            const docRefs = await Promise.all(
+                results.content.map(async (childStub) => ({
+                    stub: childStub,
+                    ref: await api.getDocRef(childStub.refId),
+                })),
+            );
+            const activeStubs = docRefs.filter(({ ref }) => !ref.isDeleted).map(({ stub }) => stub);
+
             const childDocs = await Promise.all(
-                results.content.map((childStub) => api.getLiveDoc(childStub.refId)),
+                activeStubs.map((childStub) => api.getLiveDoc(childStub.refId)),
             );
 
             function isDocOwnerless(doc: LiveDocWithRef) {
@@ -118,11 +128,8 @@ function DocumentsTreeNode(props: {
 
             const isParentOwnerless = isDocOwnerless(props.doc);
 
-            // Don't show ownerless children or deleted documents
-            return childDocs.filter(
-                (childDoc) =>
-                    !childDoc.docRef.isDeleted && (isParentOwnerless || !isDocOwnerless(childDoc)),
-            );
+            // Don't show ownerless children
+            return childDocs.filter((childDoc) => isParentOwnerless || !isDocOwnerless(childDoc));
         },
     );
 
