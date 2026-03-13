@@ -41,7 +41,6 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
                 description: "Visualize the Petri net",
                 help: "visualization",
             }),
-            analyses.compositionPattern(),
             analyses.massAction({
                 ratesHaveGranularity: true,
                 simulate(model, data) {

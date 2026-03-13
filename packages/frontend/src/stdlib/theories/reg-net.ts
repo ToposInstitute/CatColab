@@ -46,7 +46,6 @@ export default function createRegulatoryNetworkTheory(theoryMeta: TheoryMeta): T
                 description: "Visualize the regulatory network",
                 help: "visualization",
             }),
-            analyses.compositionPattern(),
             analyses.motifFinding({
                 id: "positive-loops",
                 name: "Positive feedback",

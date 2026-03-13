@@ -63,7 +63,6 @@ export default function createOlogTheory(theoryMeta: TheoryMeta): Theory {
                 description: "Visualize the olog as a graph",
                 help: "visualization",
             }),
-            analyses.compositionPattern(),
         ],
         diagramAnalyses: [
             analyses.diagramGraph({

@@ -8,7 +8,8 @@ import {
     NotebookEditor,
     newFormalCell,
 } from "../notebook";
-import type { AnalysisMeta, DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
+import { compositionPattern } from "../stdlib/analyses";
+import type { AnalysisMeta, ModelAnalysisMeta, Theory } from "../theory";
 import { LiveAnalysisContext } from "./context";
 import {
     type LiveAnalysisDoc,
@@ -24,13 +25,16 @@ export function AnalysisNotebookEditor(props: { liveAnalysis: LiveAnalysisDoc })
     const liveDoc = () => props.liveAnalysis.liveDoc;
 
     const cellConstructors = () => {
-        let meta: ModelAnalysisMeta[] | DiagramAnalysisMeta[] | undefined;
-        if (props.liveAnalysis.analysisType === "model") {
-            meta = theoryForLiveAnalysis(props.liveAnalysis)?.modelAnalyses;
-        } else if (props.liveAnalysis.analysisType === "diagram") {
-            meta = theoryForLiveAnalysis(props.liveAnalysis)?.diagramAnalyses;
+        const theory = theoryForLiveAnalysis(props.liveAnalysis);
+        if (!theory) {
+            return [];
         }
-        return (meta ?? []).map(analysisCellConstructor);
+        if (props.liveAnalysis.analysisType === "model") {
+            return analysisCellConstructors(theory);
+        } else if (props.liveAnalysis.analysisType === "diagram") {
+            return (theory.diagramAnalyses ?? []).map(analysisCellConstructor);
+        }
+        return [];
     };
 
     return (
@@ -58,7 +62,7 @@ function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
             <Match
                 when={
                     liveAnalysis().analysisType === "model" &&
-                    theoryForLiveAnalysis(liveAnalysis())?.modelAnalysis(props.content.id)
+                    findModelAnalysis(theoryForLiveAnalysis(liveAnalysis()), props.content.id)
                 }
             >
                 {(analysis) => (
@@ -90,6 +94,27 @@ function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
                 )}
             </Match>
         </Switch>
+    );
+}
+
+function analysisCellConstructors(theory: Theory): CellConstructor<Analysis<unknown>>[] {
+    const constructors: CellConstructor<Analysis<unknown>>[] = [];
+    if (theory.theory.canInstantiateModels() && !theory.modelAnalysis("composition-pattern")) {
+        constructors.push(analysisCellConstructor(compositionPattern()));
+    }
+    for (const meta of theory.modelAnalyses) {
+        constructors.push(analysisCellConstructor(meta));
+    }
+    return constructors;
+}
+
+/** Look up a model analysis by ID, including auto-injected ones. */
+function findModelAnalysis(theory: Theory | undefined, id: string): ModelAnalysisMeta | undefined {
+    return (
+        theory?.modelAnalysis(id) ??
+        (id === "composition-pattern" && theory?.theory.canInstantiateModels()
+            ? compositionPattern()
+            : undefined)
     );
 }
 

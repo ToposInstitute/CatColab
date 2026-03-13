@@ -4,7 +4,8 @@ import { createResource, For, type JSXElement, lazy, Show, useContext } from "so
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
-import { type Theory, TheoryLibraryContext } from "../theory";
+import { compositionPattern } from "../stdlib/analyses";
+import { type ModelAnalysisMeta, type Theory, TheoryLibraryContext } from "../theory";
 
 /** Help page for a theory in the standard library. */
 export default function LogicHelpPage() {
@@ -34,6 +35,15 @@ export default function LogicHelpPage() {
     );
 }
 
+/** Get all model analyses for a theory, including auto-injected ones. */
+function modelAnalyses(theory: Theory): ModelAnalysisMeta[] {
+    const analyses = [...theory.modelAnalyses];
+    if (theory.theory.canInstantiateModels() && !theory.modelAnalysis("composition-pattern")) {
+        analyses.push(compositionPattern());
+    }
+    return analyses;
+}
+
 function LogicHelpDetail(props: { theory: Theory }) {
     const [content] = createResource(
         () => props.theory.id,
@@ -56,40 +66,45 @@ function LogicHelpDetail(props: { theory: Theory }) {
             <p>
                 <i>{props.theory.description}</i>
             </p>
-            <Show when={props.theory.modelTypes.length + props.theory.modelAnalyses.length > 0}>
-                <div class="help-summary-lists">
-                    <Show when={props.theory.modelTypes.length > 0}>
-                        <div>
-                            <h3>Definitions</h3>
-                            <dl>
-                                <For each={props.theory.modelTypes}>
-                                    {(typeMeta) => (
-                                        <>
-                                            <dt>{typeMeta.name}</dt>
-                                            <dd>{typeMeta.description}</dd>
-                                        </>
-                                    )}
-                                </For>
-                            </dl>
+            {(() => {
+                const analyses = modelAnalyses(props.theory);
+                return (
+                    <Show when={props.theory.modelTypes.length + analyses.length > 0}>
+                        <div class="help-summary-lists">
+                            <Show when={props.theory.modelTypes.length > 0}>
+                                <div>
+                                    <h3>Definitions</h3>
+                                    <dl>
+                                        <For each={props.theory.modelTypes}>
+                                            {(typeMeta) => (
+                                                <>
+                                                    <dt>{typeMeta.name}</dt>
+                                                    <dd>{typeMeta.description}</dd>
+                                                </>
+                                            )}
+                                        </For>
+                                    </dl>
+                                </div>
+                            </Show>
+                            <Show when={analyses.length > 0}>
+                                <div>
+                                    <h3>Analyses</h3>
+                                    <dl>
+                                        <For each={analyses}>
+                                            {(typeMeta) => (
+                                                <>
+                                                    <dt>{typeMeta.name}</dt>
+                                                    <dd>{typeMeta.description}</dd>
+                                                </>
+                                            )}
+                                        </For>
+                                    </dl>
+                                </div>
+                            </Show>
                         </div>
                     </Show>
-                    <Show when={props.theory.modelAnalyses.length > 0}>
-                        <div>
-                            <h3>Analyses</h3>
-                            <dl>
-                                <For each={props.theory.modelAnalyses}>
-                                    {(typeMeta) => (
-                                        <>
-                                            <dt>{typeMeta.name}</dt>
-                                            <dd>{typeMeta.description}</dd>
-                                        </>
-                                    )}
-                                </For>
-                            </dl>
-                        </div>
-                    </Show>
-                </div>
-            </Show>
+                );
+            })()}
             <Show when={content()}>
                 {(module) => <Dynamic component={module().default} theory={props.theory} />}
             </Show>
@@ -105,7 +120,11 @@ export type HelpAnalysisProps = {
 
 /** Documentation for an analysis of a theory. */
 export function HelpAnalysisById(props: HelpAnalysisProps) {
-    const analysis = () => props.theory.modelAnalyses.find((a) => a.id === props.analysisId);
+    const analysis = () =>
+        props.theory.modelAnalysis(props.analysisId) ??
+        (props.analysisId === "composition-pattern" && props.theory.theory.canInstantiateModels()
+            ? compositionPattern()
+            : undefined);
 
     return (
         <Show when={analysis()}>
