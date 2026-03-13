@@ -1,0 +1,16 @@
+[package]
+name = "catcom"
+version.workspace = true
+edition.workspace = true
+description = "CatColab developer CLI"
+
+[[bin]]
+name = "catcom"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
