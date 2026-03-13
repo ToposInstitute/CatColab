@@ -1,0 +1,163 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+source "$(dirname "${BASH_SOURCE[0]}")/db-utils-lib.sh"
+
+STAGING_SSH_PID=""
+STAGING_LOCAL_PGPORT="5434"
+
+PROD_SSH_PID=""
+PROD_LOCAL_PGPORT="5433"
+
+function print_help {
+  echo "Usage: $0 [options]"
+  echo ""
+  echo "Hard delete the known-corrupt analysis refs and their related data"
+  echo "(permissions, refs, snapshots, storage blobs) using temp tables."
+  echo ""
+  echo "Options:"
+  echo "  -t, --target <target>  Target: production (default), staging, local, vm"
+  echo "  -n, --dry-run          Execute in a transaction then ROLLBACK"
+  echo "  -y, --yes              Skip interactive confirmation"
+  echo "  -h, --help             Print this help message"
+}
+
+function main {
+  local target="production"
+  local dry_run=false
+  local auto_yes=false
+
+  while [[ ${1-} ]]; do
+    case "$1" in
+      "-t" | "--target")
+        shift
+        target="$1"
+        ;;
+      "-n" | "--dry-run")
+        dry_run=true
+        ;;
+      "-y" | "--yes")
+        auto_yes=true
+        ;;
+      "-h" | "--help")
+        print_help
+        exit 0
+        ;;
+      *)
+        echo "Unknown argument: $1"
+        echo ""
+        print_help
+        exit 1
+        ;;
+    esac
+    shift
+  done
+
+  case "$target" in
+    local|vm|staging|production)
+      ;;
+    *)
+      echo "Unknown target: $target"
+      echo ""
+      print_help
+      exit 1
+      ;;
+  esac
+
+  load_target_env "$target"
+
+  local finalize_sql="COMMIT;"
+  if [[ "$dry_run" == "true" ]]; then
+    finalize_sql="ROLLBACK;"
+  fi
+
+  if [[ "$auto_yes" != "true" ]]; then
+    echo "Target: $target"
+    if [[ "$dry_run" == "true" ]]; then
+      echo "Mode: DRY RUN (ROLLBACK)"
+    else
+      echo "Mode: LIVE DELETE (COMMIT)"
+    fi
+    read -n1 -r -p "Continue? [y/N] " yn
+    echo ""
+    if [[ $yn != [yY] ]]; then
+      echo "Aborted."
+      exit 1
+    fi
+  fi
+
+  psql -v ON_ERROR_STOP=1 <<SQL
+BEGIN;
+
+CREATE TEMP TABLE tmp_target_refs (
+  ref_id uuid PRIMARY KEY
+) ON COMMIT DROP;
+
+INSERT INTO tmp_target_refs (ref_id) VALUES
+  ('0194d7c0-dc0c-77e1-8c1f-946e427f9ea2'::uuid),
+  ('01951a71-590f-78c1-839c-8173baba54d5'::uuid),
+  ('0195253d-1528-7801-b96f-f3994bf1c010'::uuid),
+  ('01956bbe-2d60-7163-8214-6a812a027740'::uuid),
+  ('01959e32-aa1d-7302-bb97-a03e71a10959'::uuid),
+  ('019696ed-f4f7-7a71-884a-371ec10588e2'::uuid),
+  ('0196ad6c-7f54-7c02-b5f0-193199400d74'::uuid),
+  ('01970f04-7619-7a10-8917-330ed4266840'::uuid),
+  ('01977df3-8c98-7140-ad2d-bff32ce0326e'::uuid),
+  ('0197c57f-489f-76c0-a19b-63dc15cae0e8'::uuid),
+  ('019873ab-f9d8-7852-818e-849b6dda65f5'::uuid),
+  ('01990aff-a9dd-7c80-a351-e3236d1a7f90'::uuid),
+  ('019975b2-4fe2-7d31-b9a0-caff06ed55d9'::uuid),
+  ('0199d863-4756-7443-81c7-f1c9c893f0c8'::uuid),
+  ('019a08af-9d66-7280-98e4-626458d0c6a9'::uuid),
+  ('019a0d77-2890-7800-8b94-70f972a737a2'::uuid),
+  ('019a3c69-cf19-7412-a5f8-08958b68b98c'::uuid),
+  ('019b1343-d299-7381-8438-0f2192ea8b91'::uuid),
+  ('019b1348-b568-7750-8f17-0571706ed97c'::uuid),
+  ('019b93e9-8791-7c43-85da-e9298c64eba1'::uuid);
+
+CREATE TEMP TABLE tmp_target_doc_ids (
+  doc_id text PRIMARY KEY
+) ON COMMIT DROP;
+
+INSERT INTO tmp_target_doc_ids (doc_id)
+SELECT DISTINCT s.doc_id
+FROM refs r
+JOIN snapshots s ON s.id = r.head
+JOIN tmp_target_refs t ON t.ref_id = r.id;
+
+SELECT
+  (SELECT count(*) FROM tmp_target_refs) AS target_refs,
+  (SELECT count(*) FROM tmp_target_doc_ids) AS target_doc_ids,
+  (SELECT count(*) FROM permissions p JOIN tmp_target_refs t ON t.ref_id = p.object) AS permissions_rows,
+  (SELECT count(*) FROM refs r JOIN tmp_target_refs t ON t.ref_id = r.id) AS refs_rows,
+  (SELECT count(*) FROM snapshots s JOIN tmp_target_refs t ON t.ref_id = s.for_ref) AS snapshots_rows,
+  (SELECT count(*) FROM storage st JOIN tmp_target_doc_ids d ON d.doc_id = st.key[1]) AS storage_rows;
+
+DELETE FROM permissions p
+USING tmp_target_refs t
+WHERE p.object = t.ref_id;
+
+DELETE FROM refs r
+USING tmp_target_refs t
+WHERE r.id = t.ref_id;
+
+DELETE FROM snapshots s
+USING tmp_target_refs t
+WHERE s.for_ref = t.ref_id;
+
+DELETE FROM storage st
+USING tmp_target_doc_ids d
+WHERE st.key[1] = d.doc_id;
+
+$finalize_sql
+SQL
+
+  if [[ "$dry_run" == "true" ]]; then
+    echo "Dry run complete (rolled back)."
+  else
+    echo "Hard delete complete (committed)."
+  fi
+}
+
+main "$@"
