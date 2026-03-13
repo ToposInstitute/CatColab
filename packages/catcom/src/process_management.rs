@@ -13,18 +13,6 @@ pub(crate) fn set_process_group(cmd: &mut Command) {
     }
 }
 
-pub(crate) fn apply_env_defaults(cmd: &mut Command, vars: &[(String, String)]) {
-    for (key, value) in vars {
-        set_default_var_if_unset(cmd, key, value);
-    }
-}
-
-pub(crate) fn set_default_var_if_unset(cmd: &mut Command, key: &str, value: &str) {
-    if std::env::var_os(key).is_none() {
-        cmd.env(key, value);
-    }
-}
-
 pub(crate) fn spawn_or_exit(mut cmd: Command, error_context: &str) -> Child {
     cmd.spawn().unwrap_or_else(|e| {
         eprintln!("Error: {error_context}: {e}");
