@@ -108,8 +108,41 @@ function DocumentsTreeNode(props: {
                 throw new Error("couldn't load child documents!");
             }
 
+            // Pre-filter: resolve doc refs to check deleted status before
+            // loading full documents. Individual failures are skipped to
+            // prevent one corrupt document from crashing the entire sidebar.
+            const docRefs = await Promise.all(
+                results.content.map(async (childStub) => {
+                    try {
+                        return {
+                            stub: childStub,
+                            ref: await api.getDocRef(childStub.refId),
+                        };
+                    } catch (e) {
+                        console.warn(`Failed to load doc ref ${childStub.refId}:`, e);
+                        return null;
+                    }
+                }),
+            );
+            const nonDeletedStubs = docRefs
+                .filter(
+                    (entry): entry is NonNullable<typeof entry> =>
+                        entry !== null && !entry.ref.isDeleted,
+                )
+                .map(({ stub }) => stub);
+
             const childDocs = await Promise.all(
-                results.content.map((childStub) => api.getLiveDoc(childStub.refId)),
+                nonDeletedStubs.map(async (childStub) => {
+                    try {
+                        return await api.getLiveDoc(childStub.refId);
+                    } catch (e) {
+                        console.warn(`Failed to load document ${childStub.refId}:`, e);
+                        return null;
+                    }
+                }),
+            );
+            const loadedChildDocs = childDocs.filter(
+                (doc): doc is NonNullable<typeof doc> => doc !== null,
             );
 
             function isDocOwnerless(doc: LiveDocWithRef) {
@@ -118,10 +151,9 @@ function DocumentsTreeNode(props: {
 
             const isParentOwnerless = isDocOwnerless(props.doc);
 
-            // Don't show ownerless children or deleted documents
-            return childDocs.filter(
-                (childDoc) =>
-                    !childDoc.docRef.isDeleted && (isParentOwnerless || !isDocOwnerless(childDoc)),
+            // Don't show ownerless children
+            return loadedChildDocs.filter(
+                (childDoc) => isParentOwnerless || !isDocOwnerless(childDoc),
             );
         },
     );
