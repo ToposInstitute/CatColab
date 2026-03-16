@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
-use autosurgeon::{Text, hydrate, reconcile};
+use autosurgeon::{Text, hydrate};
 use chrono::{TimeZone, Utc};
 use serde::Deserialize;
 use sqlx::postgres::PgListener;
@@ -10,6 +10,7 @@ use tracing::{debug, error, info};
 use super::app::{AppError, AppState};
 use crate::user_state::{
     DbPermission, DbRelation, DbUserInfo, DocInfo, DocInfoType, UserState, get_user_state_doc,
+    reconcile_user_state,
 };
 
 /// Notification from PostgreSQL about a user state change.
@@ -109,17 +110,14 @@ fn to_doc_info(
 
 /// Handle a revoke notification by removing the document from the user's state.
 fn handle_revoke(doc_handle: &samod::DocHandle, ref_id: &str) -> Result<(), AppError> {
-    let result: Result<(), String> = doc_handle.with_document(|doc| {
-        let mut user_state: UserState = hydrate(doc).map_err(|e| e.to_string())?;
+    doc_handle.with_document(|doc| {
+        let mut user_state: UserState =
+            hydrate(doc).map_err(|e| AppError::UserStateSync(e.to_string()))?;
 
         user_state.documents.remove(ref_id);
         user_state.recompute_used_by();
-        doc.transact(|tx| reconcile(tx, &user_state)).map_err(|e| format!("{:?}", e))?;
-
-        Ok(())
-    });
-
-    result.map_err(AppError::UserStateSync)
+        reconcile_user_state(doc, &user_state)
+    })
 }
 
 /// Handle an upsert notification by updating or creating the user's document.
@@ -129,18 +127,15 @@ fn handle_upsert(
     doc_info: DocInfo,
     new_users: HashMap<String, crate::user_state::UserInfo>,
 ) -> Result<(), AppError> {
-    let result: Result<(), String> = doc_handle.with_document(|doc| {
-        let mut user_state: UserState = hydrate(doc).map_err(|e| e.to_string())?;
+    doc_handle.with_document(|doc| {
+        let mut user_state: UserState =
+            hydrate(doc).map_err(|e| AppError::UserStateSync(e.to_string()))?;
 
         user_state.documents.insert(ref_id.to_string(), doc_info);
         user_state.known_users.extend(new_users);
         user_state.recompute_used_by();
-        doc.transact(|tx| reconcile(tx, &user_state)).map_err(|e| format!("{:?}", e))?;
-
-        Ok(())
-    });
-
-    result.map_err(AppError::UserStateSync)
+        reconcile_user_state(doc, &user_state)
+    })
 }
 
 /// Update a single user state doc with new user info.
@@ -153,8 +148,9 @@ fn apply_profile_update(
     updated_user_id: &str,
     info: crate::user_state::UserInfo,
 ) -> Result<(), AppError> {
-    let result: Result<(), String> = doc_handle.with_document(|doc| {
-        let mut user_state: UserState = hydrate(doc).map_err(|e| e.to_string())?;
+    doc_handle.with_document(|doc| {
+        let mut user_state: UserState =
+            hydrate(doc).map_err(|e| AppError::UserStateSync(e.to_string()))?;
 
         if is_self {
             user_state.profile = info;
@@ -164,11 +160,8 @@ fn apply_profile_update(
             return Ok(());
         }
 
-        doc.transact(|tx| reconcile(tx, &user_state)).map_err(|e| format!("{:?}", e))?;
-        Ok(())
-    });
-
-    result.map_err(AppError::UserStateSync)
+        reconcile_user_state(doc, &user_state)
+    })
 }
 
 /// Handle a profile update notification.
