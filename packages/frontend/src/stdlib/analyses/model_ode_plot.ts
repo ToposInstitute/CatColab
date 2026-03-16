@@ -1,4 +1,5 @@
 import { type Accessor, createEffect, createMemo, createSignal, on, onCleanup } from "solid-js";
+import { unwrap } from "solid-js/store";
 
 import type { DblModel, JsResult, LatexEquation, ModelNotebook, ODELatex } from "catlog-wasm";
 import type { LiveModelDoc, ValidatedModel } from "../../model";
@@ -134,9 +135,9 @@ function createWorkerSimulation<T>(
             requestId,
             theoryId: liveModel.liveDoc.doc.theory,
             analysisId,
-            notebook: JSON.parse(JSON.stringify(currentNotebook)),
+            notebook: unwrap(currentNotebook),
             refId: liveModel.liveDoc.docHandle.documentId,
-            params: JSON.parse(JSON.stringify(currentParams)),
+            params: unwrap(currentParams),
         };
 
         postToWorker(request)
