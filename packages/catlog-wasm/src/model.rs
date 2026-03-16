@@ -13,7 +13,7 @@ use wasm_bindgen::prelude::*;
 
 use catlog::dbl::{
     model::{
-        self as dbl_model, DblModel as _, FgDblModel, InvalidDblModel, ModalMor, ModalOb,
+        self as dbl_model, DblModel as _, FpDblModel, InvalidDblModel, ModalMor, ModalOb,
         MutDblModel, TabEdge, TabMor, TabOb,
     },
     theory::{self as dbl_theory, ModalObOp},

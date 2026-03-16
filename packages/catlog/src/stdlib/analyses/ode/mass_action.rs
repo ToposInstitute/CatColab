@@ -18,7 +18,7 @@ use tsify::Tsify;
 
 use super::ODEAnalysis;
 use crate::dbl::{
-    model::{DiscreteTabModel, FgDblModel, ModalDblModel, TabEdge},
+    model::{DiscreteTabModel, FpDblModel, ModalDblModel, TabEdge},
     theory::{ModalMorType, ModalObType, TabMorType, TabObType},
 };
 use crate::one::FgCategory;

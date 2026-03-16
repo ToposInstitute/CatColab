@@ -150,7 +150,7 @@ pub struct DiscreteTabModel {
     #[derivative(PartialEq(compare_with = "Rc::ptr_eq"))]
     theory: Rc<DiscreteTabTheory>,
     generators: DiscreteTabGenerators,
-    // TODO: Equations
+    equations: [(); 0], // TODO: Equations yet implemented
     ob_types: IndexedHashColumn<QualifiedName, TabObType>,
     mor_types: IndexedHashColumn<QualifiedName, TabMorType>,
 }
@@ -161,6 +161,7 @@ impl DiscreteTabModel {
         Self {
             theory,
             generators: Default::default(),
+            equations: Default::default(),
             ob_types: Default::default(),
             mor_types: Default::default(),
         }
@@ -296,7 +297,7 @@ impl DblModel for DiscreteTabModel {
     }
 }
 
-impl FgDblModel for DiscreteTabModel {
+impl FpDblModel for DiscreteTabModel {
     fn ob_generator_type(&self, ob: &Self::ObGen) -> Self::ObType {
         self.ob_types.apply_to_ref(ob).expect("Object should have type")
     }
@@ -312,6 +313,10 @@ impl FgDblModel for DiscreteTabModel {
         mortype: &Self::MorType,
     ) -> impl Iterator<Item = Self::MorGen> {
         self.mor_types.preimage(mortype)
+    }
+
+    fn equations(&self) -> impl Iterator<Item = (Self::Mor, Self::Mor)> {
+        self.equations.iter().map(|()| unreachable!())
     }
 }
 

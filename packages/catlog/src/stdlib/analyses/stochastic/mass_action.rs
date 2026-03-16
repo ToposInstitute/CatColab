@@ -7,7 +7,7 @@ use rebop::gillespie;
 use std::collections::HashMap;
 
 use crate::{
-    dbl::{modal::*, model::FgDblModel},
+    dbl::{modal::*, model::FpDblModel},
     stdlib::analyses::{ode::ODESolution, petri::transition_interface},
     zero::{QualifiedName, name},
 };

@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 
-use catlog::dbl::model::{DblModel as _, DiscreteDblModel, FgDblModel, MutDblModel};
+use catlog::dbl::model::{DblModel as _, DiscreteDblModel, FpDblModel, MutDblModel};
 use catlog::dbl::model_diagram as diagram;
 use catlog::dbl::model_morphism::DiscreteDblModelMapping;
 use catlog::one::FgCategory;

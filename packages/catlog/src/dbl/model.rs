@@ -42,7 +42,7 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use super::theory::DblTheory;
-use crate::one::{Category, FgCategory, InvalidPathEq, Path, PathEq};
+use crate::one::{Category, FgCategory, InvalidPathEq, Path};
 use crate::tt::util::pretty::*;
 use crate::zero::{Namespace, QualifiedName};
 
@@ -113,8 +113,8 @@ pub trait DblModel: Category {
     fn mor_act(&self, path: Path<Self::Ob, Self::Mor>, α: &Self::MorOp) -> Self::Mor;
 }
 
-/// A finitely generated model of a double theory.
-pub trait FgDblModel: DblModel + FgCategory {
+/// A finitely presented model of a double theory.
+pub trait FpDblModel: DblModel + FgCategory {
     /// Type of an object generator.
     fn ob_generator_type(&self, ob: &Self::ObGen) -> Self::ObType;
 
@@ -143,10 +143,13 @@ pub trait FgDblModel: DblModel + FgCategory {
     fn morphisms_with_type(&self, mortype: &Self::MorType) -> impl Iterator<Item = Self::Mor> {
         self.mor_generators_with_type(mortype).map(|mor_gen| mor_gen.into())
     }
+
+    /// Iterates over equations between morphisms.
+    fn equations(&self) -> impl Iterator<Item = (Self::Mor, Self::Mor)>;
 }
 
 /// A mutable, finitely generated model of a double theory.
-pub trait MutDblModel: FgDblModel {
+pub trait MutDblModel: FpDblModel {
     /// Adds an object generator to the model.
     fn add_ob(&mut self, x: Self::ObGen, ob_type: Self::ObType);
 
@@ -179,27 +182,12 @@ pub trait MutDblModel: FgDblModel {
 /// we haven't bothered to implement pretty printing for theories. So, for now,
 /// we include only what we need of theory pretty printer---printing object and
 /// morphism types---as extra methods here.
-pub trait PrintableDblModel: FgDblModel<ObGen = QualifiedName, MorGen = QualifiedName> {
+pub trait PrintableDblModel: FpDblModel<ObGen = QualifiedName, MorGen = QualifiedName> {
     /// Pretty prints an object in the model.
     fn ob_to_doc<'a>(&self, ob: &Self::Ob, ob_ns: &Namespace, mor_ns: &Namespace) -> D<'a>;
 
     /// Pretty prints a morphism in the model.
     fn mor_to_doc<'a>(&self, mor: &Self::Mor, ob_ns: &Namespace, mor_ns: &Namespace) -> D<'a>;
-
-    /// Gets the equations in the model, if any.
-    fn equations(&self) -> Vec<PathEq<Self::Ob, Self::MorGen>> {
-        Vec::new()
-    }
-
-    /// Pretty prints an equation in the model.
-    fn eqn_to_doc<'a>(
-        &self,
-        _eqn: &PathEq<Self::Ob, Self::MorGen>,
-        _ob_ns: &Namespace,
-        _mor_ns: &Namespace,
-    ) -> D<'a> {
-        unreachable!() //Default implementation models have no equations, so won't call this.
-    }
 
     /// Pretty prints an object type in the model's theory.
     fn ob_type_to_doc<'a>(ob_type: &Self::ObType) -> D<'a>;
@@ -252,7 +240,6 @@ impl DblModelPrinter {
                 + t(" : ")
                 + Model::ob_type_to_doc(&model.ob_generator_type(&name))
         });
-        let ob_section = intersperse(ob_entries, hardline());
 
         let mor_entries = model.mor_generators().map(|name| {
             t(mor_ns.label_string(&name))
@@ -263,16 +250,18 @@ impl DblModelPrinter {
                 + t(" : ")
                 + Model::mor_type_to_doc(&model.mor_generator_type(&name))
         });
-        let mor_section = hardline() + intersperse(mor_entries, hardline());
 
-        let eqns = model.equations();
-        let eqn_section = if eqns.is_empty() {
-            t("")
-        } else {
-            let eqn_entries = eqns.iter().map(|eqn| model.eqn_to_doc(eqn, ob_ns, mor_ns));
-            hardline() + intersperse(eqn_entries, hardline())
-        };
-        let result = ob_section + mor_section + eqn_section;
+        let eqn_entries = model.equations().map(|(lhs, rhs)| {
+            let mor_type = Model::mor_type_to_doc(&model.mor_type(&lhs));
+            let src = model.ob_to_doc(&model.dom(&lhs), ob_ns, mor_ns);
+            let tgt = model.ob_to_doc(&model.cod(&lhs), ob_ns, mor_ns);
+            let lhs = model.mor_to_doc(&lhs, ob_ns, mor_ns);
+            let rhs = model.mor_to_doc(&rhs, ob_ns, mor_ns);
+            lhs + t(" = ") + rhs + t(" : ") + mor_type.parens() + tuple([src, tgt])
+        });
+
+        let entries = ob_entries.chain(mor_entries).chain(eqn_entries);
+        let result = intersperse(entries, hardline());
         if self.include_summary {
             t(self.summary(model)) + hardline() + result
         } else {

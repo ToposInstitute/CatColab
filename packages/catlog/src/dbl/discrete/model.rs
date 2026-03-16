@@ -193,7 +193,7 @@ impl DblModel for DiscreteDblModel {
     }
 }
 
-impl FgDblModel for DiscreteDblModel {
+impl FpDblModel for DiscreteDblModel {
     fn ob_generator_type(&self, ob: &Self::ObGen) -> Self::ObType {
         self.ob_types.apply_to_ref(ob).expect("Object should have type")
     }
@@ -206,6 +206,10 @@ impl FgDblModel for DiscreteDblModel {
     }
     fn mor_generators_with_type(&self, typ: &Self::MorType) -> impl Iterator<Item = Self::MorGen> {
         self.mor_types.preimage(typ)
+    }
+
+    fn equations(&self) -> impl Iterator<Item = (Self::Mor, Self::Mor)> {
+        self.category.equations().map(|PathEq { lhs, rhs }| (lhs.clone(), rhs.clone()))
     }
 }
 
@@ -260,27 +264,6 @@ impl PrintableDblModel for DiscreteDblModel {
             Path::Id(ob_type) => unop(t("Hom"), Self::ob_type_to_doc(ob_type)),
             Path::Seq(seq) => intersperse(seq.iter().map(|m| m.to_doc()), t(" ⊙ ")),
         }
-    }
-
-    fn eqn_to_doc<'a>(
-        &self,
-        eqn: &PathEq<Self::Ob, Self::MorGen>,
-        ob_ns: &Namespace,
-        mor_ns: &Namespace,
-    ) -> D<'a> {
-        let lhs = self.mor_to_doc(&eqn.lhs, ob_ns, mor_ns);
-        let rhs = self.mor_to_doc(&eqn.rhs, ob_ns, mor_ns);
-        let src = self.ob_to_doc(&self.dom(&eqn.lhs), ob_ns, mor_ns);
-        let tgt = self.ob_to_doc(&self.cod(&eqn.lhs), ob_ns, mor_ns);
-        lhs + t(" = ")
-            + rhs
-            + t(" : ")
-            + Self::mor_type_to_doc(&self.mor_type(&eqn.lhs)).parens()
-            + tuple([src, tgt])
-    }
-
-    fn equations(&self) -> Vec<PathEq<Self::Ob, Self::MorGen>> {
-        self.category.equations().cloned().collect()
     }
 }
 
