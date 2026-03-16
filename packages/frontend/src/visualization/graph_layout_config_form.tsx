@@ -23,9 +23,19 @@ export function GraphLayoutConfigForm(props: {
             >
                 <option value={Engine.VizDirected}>{"Graphviz (directed)"}</option>
                 <option value={Engine.VizUndirected}>{"Graphviz (undirected)"}</option>
-                <option value={Engine.Elk}>{"ELK"}</option>
+                <option value={Engine.Elk}>{"ELK (layered)"}</option>
+                <option value={Engine.ElkLayeredMinBends}>{"ELK (layered, min bends)"}</option>
+                <option value={Engine.ElkForce}>{"ELK (force)"}</option>
+                <option value={Engine.ElkStress}>{"ELK (stress)"}</option>
             </SelectField>
-            <Show when={layout() === Engine.VizDirected || layout() === Engine.Elk}>
+            <Show
+                when={
+                    layout() === Engine.VizDirected ||
+                    layout() === Engine.Elk ||
+                    layout() === Engine.ElkLayeredMinBends
+                }
+            >
+                {" "}
                 <SelectField
                     label="Direction"
                     value={props.config.direction ?? Direction.Vertical}

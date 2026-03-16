@@ -164,15 +164,90 @@ export function parseElkLayout(elk: StyledElkNode): GraphLayout.Graph {
     return { width, height, nodes, edges };
 }
 
+/** Point with x and y coordinates. */
+interface Point {
+    x: number;
+    y: number;
+}
+
 /** Convert ELK edge sections to an SVG path. */
 function sectionsToPath(sections: ElkEdgeSection[]): string {
-    const stmts: Array<string | number> = [];
+    // Collect all points from all sections.
+    const points: Point[] = [];
     for (const section of sections) {
-        stmts.push(stmts.length === 0 ? "M" : "L", section.startPoint.x, section.startPoint.y);
+        points.push(section.startPoint);
         for (const bp of section.bendPoints ?? []) {
-            stmts.push("L", bp.x, bp.y);
+            points.push(bp);
         }
-        stmts.push("L", section.endPoint.x, section.endPoint.y);
+        points.push(section.endPoint);
+    }
+
+    // Simplify the path by removing unnecessary bends.
+    const simplified = simplifyPath(points);
+
+    // Build SVG path string.
+    const stmts: Array<string | number> = [];
+    for (const pt of simplified) {
+        stmts.push(stmts.length === 0 ? "M" : "L", pt.x, pt.y);
     }
     return stmts.join(" ");
+}
+
+/** Remove unnecessary bends from a path.
+
+ELK produces near-orthogonal paths with small (~1px) deviations from
+horizontal or vertical due to floating-point rounding. This function snaps
+nearly-aligned coordinates to make segments exactly orthogonal, then removes
+any resulting collinear points.
+ */
+function simplifyPath(points: Point[], threshold = 1.5): Point[] {
+    if (points.length <= 2) {
+        return points;
+    }
+
+    // Snap nearly-aligned coordinates between consecutive points.
+    const snapped = snapCoordinates(points, threshold);
+
+    // Remove collinear points (now that segments are exactly orthogonal).
+    return removeCollinear(snapped);
+}
+
+/** Snap coordinates that are nearly equal between consecutive points.
+
+If two consecutive points have X (or Y) values within the threshold, snap the
+later point's coordinate to match the earlier one. This turns near-horizontal
+segments into exactly horizontal ones (and likewise for vertical).
+ */
+function snapCoordinates(points: Point[], threshold: number): Point[] {
+    const result: Point[] = [points[0]!];
+    for (let i = 1; i < points.length; i++) {
+        const prev = result[result.length - 1]!;
+        const curr = points[i]!;
+        result.push({
+            x: Math.abs(curr.x - prev.x) <= threshold ? prev.x : curr.x,
+            y: Math.abs(curr.y - prev.y) <= threshold ? prev.y : curr.y,
+        });
+    }
+    return result;
+}
+
+/** Remove points that are collinear with their neighbors. */
+function removeCollinear(points: Point[]): Point[] {
+    if (points.length <= 2) {
+        return points;
+    }
+    const result: Point[] = [points[0]!];
+    for (let i = 1; i < points.length - 1; i++) {
+        const prev = result[result.length - 1]!;
+        const curr = points[i]!;
+        const next = points[i + 1]!;
+        // Skip if all three are on the same horizontal or vertical line.
+        const sameX = prev.x === curr.x && curr.x === next.x;
+        const sameY = prev.y === curr.y && curr.y === next.y;
+        if (!sameX && !sameY) {
+            result.push(curr);
+        }
+    }
+    result.push(points[points.length - 1]!);
+    return result;
 }

@@ -32,7 +32,14 @@ export function GraphVisualization(props: {
 
     return (
         <Switch>
-            <Match when={layout() === "elk"}>
+            <Match
+                when={
+                    layout() === "elk" ||
+                    layout() === "elk-layered-min-bends" ||
+                    layout() === "elk-force" ||
+                    layout() === "elk-stress"
+                }
+            >
                 <ElkSVG graph={elkGraph()} renderer={props.renderer} ref={props.ref} />
             </Match>
             <Match when={layout() === "graphviz-directed" || layout() === "graphviz-undirected"}>

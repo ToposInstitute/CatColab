@@ -19,8 +19,14 @@ export enum Engine {
     VizDirected = "graphviz-directed",
     /** Graphviz with undirected layout (program: `neato`). */
     VizUndirected = "graphviz-undirected",
-    /** ELK, a directed layout. */
+    /** ELK with layered layout algorithm. */
     Elk = "elk",
+    /** ELK with layered layout algorithm, minimizing bends. */
+    ElkLayeredMinBends = "elk-layered-min-bends",
+    /** ELK with force-directed layout algorithm. */
+    ElkForce = "elk-force",
+    /** ELK with stress-minimization layout algorithm. */
+    ElkStress = "elk-stress",
 }
 
 /** Layout direction for graph layouts with a primary/preferred direction. */
@@ -66,9 +72,32 @@ const graphvizRankdir = (direction: Direction) => {
 };
 
 /** Generates a set of ELK layout options from a layout config. */
-export const elkOptions = (config: Config): Elk.LayoutOptions => ({
-    "elk.direction": elkDirection(config.direction ?? Direction.Vertical),
-});
+export const elkOptions = (config: Config): Elk.LayoutOptions => {
+    if (config.layout === Engine.ElkForce) {
+        return {
+            "elk.algorithm": "org.eclipse.elk.force",
+        };
+    }
+    if (config.layout === Engine.ElkStress) {
+        return {
+            "elk.algorithm": "org.eclipse.elk.stress",
+        };
+    }
+    const direction = elkDirection(config.direction ?? Direction.Vertical);
+    if (config.layout === Engine.ElkLayeredMinBends) {
+        return {
+            "elk.direction": direction,
+            "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
+            "elk.layered.nodePlacement.bk.fixedAlignment": "BALANCED",
+            "elk.layered.crossingMinimization.greedySwitch.type": "TWO_SIDED",
+            "elk.layered.edgeRouting.splines.mode": "CONSERVATIVE",
+            "elk.layered.thoroughness": "100",
+        };
+    }
+    return {
+        "elk.direction": direction,
+    };
+};
 
 const elkDirection = (direction: Direction) => {
     switch (direction) {
