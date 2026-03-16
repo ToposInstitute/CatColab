@@ -12,6 +12,37 @@ import "./documents.css";
 
 import { currentUserPermission, formatOwners, useUserState } from "./user_state_context";
 
+/** Filter, search, and sort documents from user state. */
+export function filterDocuments(
+    documents: Record<string, DocInfo>,
+    opts: {
+        currentUserId: string | undefined;
+        query: string;
+        deleted: boolean;
+    },
+): (DocInfo & { refId: string })[] {
+    return (Object.entries(documents) as [string, DocInfo][])
+        .filter(([, doc]) => (opts.deleted ? doc.deletedAt !== null : doc.deletedAt === null))
+        .filter(
+            ([, doc]) =>
+                opts.currentUserId !== undefined &&
+                doc.permissions.some((p) => p.user === opts.currentUserId),
+        )
+        .map(([refId, doc]) => ({ refId, ...doc }))
+        .filter((doc) => {
+            if (opts.query === "") {
+                return true;
+            }
+            return doc.name.toLowerCase().includes(opts.query);
+        })
+        .sort((a, b) => {
+            if (opts.deleted) {
+                return (b.deletedAt ?? 0) - (a.deletedAt ?? 0);
+            }
+            return b.createdAt - a.createdAt;
+        });
+}
+
 /** Fixed row height in pixels — must match --doc-row-height in CSS. */
 const ROW_HEIGHT = 45;
 
