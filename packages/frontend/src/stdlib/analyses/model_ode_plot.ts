@@ -1,7 +1,8 @@
 import { type Accessor, createEffect, createMemo, createSignal, on, onCleanup } from "solid-js";
 
-import type { DblModel, JsResult, LatexEquation, ODELatex } from "catlog-wasm";
+import type { DblModel, JsResult, LatexEquation, ModelNotebook, ODELatex } from "catlog-wasm";
 import type { LiveModelDoc, ValidatedModel } from "../../model";
+import { debounce } from "../../util/debounce";
 import type { ODEPlotData, StateVarData } from "../../visualization";
 import type {
     SerializedODESolution,
@@ -127,7 +128,47 @@ function createWorkerSimulation<T>(
     const [loading, setLoading] = createSignal(false);
 
     let latestRequestId = 0;
-    let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const sendRequest = debounce((currentParams: unknown, currentNotebook: ModelNotebook) => {
+        const requestId = ++requestIdCounter;
+        latestRequestId = requestId;
+
+        const request: SimulationRequest = {
+            requestId,
+            theoryId,
+            analysisId,
+            notebook: JSON.parse(JSON.stringify(currentNotebook)),
+            refId,
+            params: JSON.parse(JSON.stringify(currentParams)),
+        };
+
+        postToWorker(request)
+            .then((response) => {
+                if (requestId !== latestRequestId) {
+                    return;
+                }
+
+                setLoading(false);
+
+                if (response.tag === "Ok") {
+                    const model = liveModel.validatedModel();
+                    if (model?.tag === "Valid") {
+                        setData(() => mapOk(response, model.model));
+                    } else {
+                        setData(undefined);
+                    }
+                } else {
+                    setData(() => mapErr(response.error));
+                }
+            })
+            .catch((err) => {
+                if (requestId !== latestRequestId) {
+                    return;
+                }
+                setLoading(false);
+                setData(() => mapErr(String(err)));
+            });
+    }, DEBOUNCE_MS);
 
     const inputSignal = createMemo(() => ({
         validatedModel: liveModel.validatedModel(),
@@ -137,7 +178,7 @@ function createWorkerSimulation<T>(
 
     createEffect(
         on(inputSignal, (input) => {
-            clearTimeout(debounceTimer);
+            sendRequest.cancel();
 
             const { validatedModel, params: currentParams, notebook: currentNotebook } = input;
 
@@ -148,52 +189,12 @@ function createWorkerSimulation<T>(
             }
 
             setLoading(true);
-
-            debounceTimer = setTimeout(() => {
-                const requestId = ++requestIdCounter;
-                latestRequestId = requestId;
-
-                const request: SimulationRequest = {
-                    requestId,
-                    theoryId,
-                    analysisId,
-                    notebook: JSON.parse(JSON.stringify(currentNotebook)),
-                    refId,
-                    params: JSON.parse(JSON.stringify(currentParams)),
-                };
-
-                postToWorker(request)
-                    .then((response) => {
-                        if (requestId !== latestRequestId) {
-                            return;
-                        }
-
-                        setLoading(false);
-
-                        if (response.tag === "Ok") {
-                            const model = liveModel.validatedModel();
-                            if (model?.tag === "Valid") {
-                                setData(() => mapOk(response, model.model));
-                            } else {
-                                setData(undefined);
-                            }
-                        } else {
-                            setData(() => mapErr(response.error));
-                        }
-                    })
-                    .catch((err) => {
-                        if (requestId !== latestRequestId) {
-                            return;
-                        }
-                        setLoading(false);
-                        setData(() => mapErr(String(err)));
-                    });
-            }, DEBOUNCE_MS);
+            sendRequest(currentParams, currentNotebook);
         }),
     );
 
     onCleanup(() => {
-        clearTimeout(debounceTimer);
+        sendRequest.cancel();
     });
 
     return { data, loading };

@@ -23,6 +23,7 @@ import X from "lucide-solid/icons/x";
 import invariant from "tiny-invariant";
 
 import { IconButton, Spinner } from "catcolab-ui-components";
+import { debounce } from "../util/debounce";
 
 export default function UserDocuments() {
     const appTitle = import.meta.env.VITE_APP_TITLE;
@@ -50,10 +51,9 @@ function DocumentsSearch() {
     const [page, setPage] = createSignal(0);
     const pageSize = 15;
 
-    let debounceTimer: ReturnType<typeof setTimeout>;
+    const setDebouncedQueryDebounced = debounce((value: string) => setDebouncedQuery(value), 300);
     const updateQuery = (value: string) => {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => setDebouncedQuery(value), 300);
+        setDebouncedQueryDebounced(value);
         setSearchQuery(value);
         setPage(0);
     };

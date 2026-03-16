@@ -11,6 +11,7 @@ import { rpcResourceErr, rpcResourceOk, useApi } from "../api";
 import { BrandedToolbar } from "../page";
 import "./documents.css";
 
+import { debounce } from "../util/debounce";
 import { LoginGate } from "./login";
 
 export default function TrashBin() {
@@ -39,10 +40,9 @@ function TrashBinSearch() {
     const [page, setPage] = createSignal(0);
     const pageSize = 15;
 
-    let debounceTimer: ReturnType<typeof setTimeout>;
+    const setDebouncedQueryDebounced = debounce((value: string) => setDebouncedQuery(value), 300);
     const updateQuery = (value: string) => {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => setDebouncedQuery(value), 300);
+        setDebouncedQueryDebounced(value);
         setSearchQuery(value);
         setPage(0);
     };
