@@ -1,0 +1,28 @@
+name: deploy staging
+
+on:
+  workflow_run:
+    workflows: ["ci"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  deployments: write
+
+jobs:
+  deploy:
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event != 'pull_request' &&
+      github.event.workflow_run.head_branch == 'main'
+    uses: ./.github/workflows/deploy-target.yml
+    with:
+      environment: backend-next
+      environment_url: https://backend-next.catcolab.org
+      deploy_node: catcolab-next
+      hostname: backend-next.catcolab.org
+      ref: ${{ github.event.workflow_run.head_branch }}
+      sha: ${{ github.event.workflow_run.head_sha }}
+    secrets:
+      CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      DEPLOY_SSH_KEY: ${{ secrets.CATCOLAB_NEXT_DEPLOYUSER_KEY }}

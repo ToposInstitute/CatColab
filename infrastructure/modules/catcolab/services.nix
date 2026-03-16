@@ -9,6 +9,7 @@ let
   cfg = config.catcolab;
 
   frontendPkg = self.packages.${pkgs.system}.frontend;
+  sitePkg = mode: self.packages.${pkgs.system}."site-${mode}";
   backendPkg = self.packages.${pkgs.system}.backend;
 
   backendPortStr = builtins.toString cfg.backend.port;
@@ -58,6 +59,12 @@ with lib;
         description = "Hostname for the backend reverse proxy.";
       };
       serveFrontend = lib.mkEnableOption "serving the frontend.";
+      serveSite = lib.mkEnableOption "serving the full site (frontend + docs). Requires serveFrontend.";
+      siteMode = mkOption {
+        type = types.str;
+        default = "staging";
+        description = "Vite build mode for the site (development, staging, production)";
+      };
     };
     environmentFile = mkOption {
       type = types.path;
@@ -122,7 +129,9 @@ with lib;
 
       environment = lib.mkMerge [
         { PORT = backendPortStr; }
-        (lib.mkIf cfg.backend.serveFrontend { SPA_DIR = "${frontendPkg}"; })
+        (lib.mkIf cfg.backend.serveFrontend {
+          SPA_DIR = if cfg.backend.serveSite then "${sitePkg cfg.backend.siteMode}" else "${frontendPkg}";
+        })
       ];
 
       serviceConfig = {

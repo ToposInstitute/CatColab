@@ -18,7 +18,7 @@ the external source changed unexpectedly.
 
 #### pnpm Dependencies
 
-This only applies to the `frontend` package.
+This applies to the `frontend`, `dev-docs`, and `ui-components-storybook` packages.
 
 The following error occurs when a dependency has changed but the Nix hash has not:
 ```
@@ -34,11 +34,13 @@ In this case you can follow the instructions given below the error message:
 > 3. Copy the 'got: sha256-' value back into the pnpmDeps.hash field
 ```
 
-The hash is located in `packages/frontend/default.nix` within the `pkgs.fetchPnpmDeps` block.
-You can search for the text "hash" to find it quickly.
+The hash is located in the `pkgs.fetchPnpmDeps` block within each package's `default.nix`:
+- `packages/frontend/default.nix` (build with `nix build .#frontend`)
+- `dev-docs/default.nix` (build with `nix build .#dev-docs`)
+- `packages/ui-components/default.nix` (build with `nix build .#ui-components-storybook`)
 
-The frontend package can be built by running the command `nix build .#frontend` in the repository root.
-This will build the minimum needed to print the hash mismatch described in the instructions.
+You can search for the text "hash" to find it quickly. Building any of these packages will print
+the hash mismatch with the correct value to use.
 
 
 #### Other Dependencies

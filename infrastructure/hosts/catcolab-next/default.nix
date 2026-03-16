@@ -33,6 +33,9 @@ in
     backend = {
       port = 8000;
       hostname = "backend-next.catcolab.org";
+      serveFrontend = true;
+      serveSite = true;
+      siteMode = "staging";
     };
     environmentFile = config.age.secrets.catcolabSecrets.path;
     host = {

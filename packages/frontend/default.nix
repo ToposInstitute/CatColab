@@ -2,6 +2,7 @@
   pkgs,
   self,
   lib,
+  mode ? "development",
   ...
 }:
 let
@@ -71,8 +72,7 @@ let
         cp -r ${self.packages.x86_64-linux.catlog-wasm-browser}/* packages/catlog-wasm/dist/pkg-browser/
 
         cd packages/frontend
-        # Build with development mode to use .env.development configuration
-        npm run build:nix -- --mode development
+        npm run build:nix -- --mode ${mode}
         cd -
       '';
 
@@ -165,7 +165,27 @@ let
       meta.mainProgram = "${name}-tests";
     }
   );
+  docs = pkgs.stdenv.mkDerivation (
+    commonAttrs
+    // {
+      pname = "${name}-docs";
+
+      buildPhase = ''
+        mkdir -p packages/catlog-wasm/dist/pkg-browser
+        cp -r ${self.packages.x86_64-linux.catlog-wasm-browser}/* packages/catlog-wasm/dist/pkg-browser/
+
+        cd packages/frontend
+        npx typedoc --entryPointStrategy expand ./src
+        cd -
+      '';
+
+      installPhase = ''
+        mkdir -p $out
+        cp -r packages/frontend/docs/* $out/
+      '';
+    }
+  );
 in
 {
-  inherit package tests;
+  inherit package tests docs;
 }

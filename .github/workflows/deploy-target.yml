@@ -1,0 +1,155 @@
+name: deploy target
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: GitHub deployment environment name
+        required: true
+        type: string
+      environment_url:
+        description: URL for deployment status
+        required: true
+        type: string
+      deploy_node:
+        description: deploy-rs node name
+        required: true
+        type: string
+      hostname:
+        description: SSH hostname
+        required: true
+        type: string
+      ssh_user:
+        description: SSH user for deploy and verify
+        required: false
+        type: string
+        default: catcolab
+      ref:
+        description: Git ref for the deployment
+        required: true
+        type: string
+      sha:
+        description: Git SHA for the deployment
+        required: true
+        type: string
+    secrets:
+      CACHIX_AUTH_TOKEN:
+        required: true
+      DEPLOY_SSH_KEY:
+        required: true
+
+# Permissions are inherited from the caller workflow.
+
+jobs:
+  create_deployment:
+    name: Create GitHub deployment
+    runs-on: ubuntu-latest
+    outputs:
+      deployment_id: ${{ steps.create_deployment.outputs.deployment_id }}
+    steps:
+      - name: Create new GitHub deployment
+        id: create_deployment
+        uses: chrnorm/deployment-action@v2
+        with:
+          token: ${{ github.token }}
+          environment: ${{ inputs.environment }}
+          ref: ${{ inputs.ref }}
+          sha: ${{ inputs.sha }}
+          auto-inactive: true
+          log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Update deployment status to in_progress
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ github.token }}
+          description: 'Deploying to ${{ inputs.hostname }}...'
+          state: 'in_progress'
+          log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          deployment-id: ${{ steps.create_deployment.outputs.deployment_id }}
+
+  deploy:
+    name: Deploy to ${{ inputs.hostname }}
+    runs-on: ubuntu-latest
+    needs: [create_deployment]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.sha }}
+
+    - name: Install Nix
+      uses: cachix/install-nix-action@v25
+
+    - name: Configure Cachix
+      uses: cachix/cachix-action@v14
+      with:
+        name: catcolab-jmoggr
+        authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+
+    - name: Set the SSH key for deployment
+      env:
+        DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        DEPLOY_HOSTNAME: ${{ inputs.hostname }}
+      run: |
+        mkdir -p ~/.ssh
+        echo "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
+        ssh-keyscan "$DEPLOY_HOSTNAME" >> ~/.ssh/known_hosts
+
+    - name: Deploy to ${{ inputs.deploy_node }}
+      env:
+        DEPLOY_NODE: ${{ inputs.deploy_node }}
+      run: |
+       nix run github:serokell/deploy-rs -- --skip-checks ".#$DEPLOY_NODE"
+
+    - name: Verify deployment
+      env:
+        DEPLOY_NODE: ${{ inputs.deploy_node }}
+        SSH_USER: ${{ inputs.ssh_user }}
+        DEPLOY_HOSTNAME: ${{ inputs.hostname }}
+      run: |
+        EXPECTED=$(nix eval --raw ".#nixosConfigurations.$DEPLOY_NODE.config.system.build.toplevel")
+        ACTUAL=$(ssh "$SSH_USER@$DEPLOY_HOSTNAME" "readlink -f /run/current-system")
+
+        if [[ "$ACTUAL" != "$EXPECTED" ]]; then
+          echo "ERROR: Deployment verification failed, the server is not running the expected nix profile"
+          echo "Expected: $EXPECTED"
+          echo "Actual:   $ACTUAL"
+          exit 1
+        fi
+
+        echo "Deployment verified: $ACTUAL"
+
+    - name: Rsync the repo to remote host
+      env:
+        SSH_USER: ${{ inputs.ssh_user }}
+        DEPLOY_HOSTNAME: ${{ inputs.hostname }}
+      run: |
+         rsync -az --delete ./ "$SSH_USER@$DEPLOY_HOSTNAME:~/catcolab"
+
+  report_status:
+    name: Report deployment status
+    runs-on: ubuntu-latest
+    needs: [create_deployment, deploy]
+    if: always() && needs.create_deployment.result == 'success'
+    steps:
+      - name: Update deployment status to success
+        if: needs.deploy.result == 'success'
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ github.token }}
+          environment-url: ${{ inputs.environment_url }}
+          log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          description: 'Deployed to ${{ inputs.hostname }}'
+          state: 'success'
+          deployment-id: ${{ needs.create_deployment.outputs.deployment_id }}
+
+      - name: Update deployment status to failure
+        if: needs.deploy.result != 'success'
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ github.token }}
+          log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          description: 'Deployment to ${{ inputs.hostname }} failed'
+          state: 'failure'
+          deployment-id: ${{ needs.create_deployment.outputs.deployment_id }}
