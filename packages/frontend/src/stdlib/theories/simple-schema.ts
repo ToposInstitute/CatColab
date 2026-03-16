@@ -16,11 +16,11 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
         }),
     ];
 
-    if (import.meta.env.DEV) {
+    if (import.meta.env.MODE !== "production") {
         diagramAnalyses.push(
             analyses.tabularView({
                 id: "tabularview",
-                name: "Tabular Visualization",
+                name: "Table view",
                 description: "Visualize the instance as a table",
                 help: "tabularview",
             }),

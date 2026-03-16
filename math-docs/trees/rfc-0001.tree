@@ -138,10 +138,10 @@ loose direction, which is useful but not very interesting in its own right. We
 give a series of examples of set-theoretic double theories that make non-trivial
 use of the double-categorical structure.}
 
-\def\Var{#{\mathrm{Var}}}
+\def\Term{#{\mathrm{Term}}}
 \def\State{#{\mathrm{State}}}
 \def\Param{#{\mathrm{Param}}}
-\def\Term{#{\mathrm{Term}}}
+\def\Contrib{#{\mathrm{Contrib}}}
 
 \subtree{
 \title{Polynomial ODE systems}
@@ -151,31 +151,31 @@ use of the double-categorical structure.}
 
 \ul{
   \li{an object \State}
-  \li{a proarrow #{\Term: \List(\State) \proto \State}.}
+  \li{a proarrow #{\Contrib: \List(\State) \proto \State}.}
 }
 }
 
 \p{A finite model of this double theory consists of a finite set of
-\define{state variables} and a family of finite sets of \define{terms} or
-\define{contributions}, indexed by pairs comprising a list of variables and a
-variable. The intended interpretation is that a term
+\define{state variables} and a family of finite sets of \define{contributions},
+indexed by pairs comprising a list of variables and a variable. The intended
+interpretation is that a contribution
 
-##{t : \Term([x_1, \dots, x_n], x)}
+##{c : \Contrib([x_1, \dots, x_n], x)}
 
 represents an additive contribution to the vector field of the form
 
-##{\dot x \pluseq k_t \cdot x_1 \cdot x_2 \cdots x_n,}
+##{\dot x \pluseq k_c \cdot x_1 \cdot x_2 \cdots x_n,}
 
-where #{k_t \in \R} is a free parameter. Finite models are thus universal for
+where #{k_c \in \R} is a free parameter. Finite models are thus universal for
 ODE systems defined by polynomial vector fields.}
 
-\p{Crucially, composing such models by identifying variables corresponds to
-composing parameterized polynomial ODE systems in the variable sharing paradigm.
-For the latter, see the [reg nets](reg-nets-2024) paper.}
+\p{Crucially, composing such models by identifying state variables corresponds
+to composing parameterized polynomial ODE systems in the variable sharing
+paradigm. For the latter, see the [reg nets](reg-nets-2024) paper.}
 
 }
 
-\p{We emphasize that in this example, the numerical parameters #{k_t} belong to
+\p{We emphasize that in this example, the numerical parameters #{k_c} belong to
 the intended interpretation of the models, not to the models themselves. To use
 symbolic parameters \em{within} models, we must expand the theory.}
 
@@ -187,11 +187,11 @@ symbolic parameters \em{within} models, we must expand the theory.}
 
 \ul{
   \li{an object \State}
-  \li{a proarrow #{\Term: \List(\State) \proto \State}.}
+  \li{a proarrow #{\Contrib: \List(\State) \proto \State}.}
   \li{a proarrow #{\Param: 1 \proto 1}}
   \li{a cell
   \quiver{
-    % https://q.uiver.app/#q=WzAsNCxbMCwwLCJcXG1hdGhybXtMaXN0fShcXG1hdGhybXtTdGF0ZX0pIl0sWzAsMSwiMSJdLFsxLDEsIjEiXSxbMSwwLCJcXG1hdGhybXtTdGF0ZX0iXSxbMSwyLCJcXG1hdGhybXtQYXJhbX0iLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMCwxLCIhIiwyXSxbMywyLCIhIl0sWzAsMywiXFxtYXRocm17VGVybX0iLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbNyw0LCJrIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV1d
+    % https://q.uiver.app/#q=WzAsNCxbMCwwLCJcXG1hdGhybXtMaXN0fShcXG1hdGhybXtTdGF0ZX0pIl0sWzAsMSwiMSJdLFsxLDEsIjEiXSxbMSwwLCJcXG1hdGhybXtTdGF0ZX0iXSxbMSwyLCJcXG1hdGhybXtQYXJhbX0iLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMCwxLCIhIiwyXSxbMywyLCIhIl0sWzAsMywiXFxtYXRocm17Q29udHJpYn0iLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbNyw0LCJrIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV1d
     \begin{tikzcd}
 	{\mathrm{List}(\mathrm{State})} & {\mathrm{State}} \\
 	1 & 1
@@ -207,11 +207,11 @@ symbolic parameters \em{within} models, we must expand the theory.}
 }
 
 \p{A freely and finitely generated (f.f.g.) model with no generating parameters
-is equivalent to a model of the previous theory: every term #{t} is freely
-assigned its own parameter #{k_t}, and there are no other parameters. More
+is equivalent to a model of the previous theory: every contribution #{c} is freely
+assigned its own parameter #{k_c}, and there are no other parameters. More
 interestingly, in a finitely presented model of the theory, named parameters can
-be introduced and terms assigned to them, enabling \em{parameter tying} or
-\em{parameter sharing} across terms. Thus, in the intended interpretations,
+be introduced and contributions assigned to them, enabling \em{parameter tying} or
+\em{parameter sharing} across contributions. Thus, in the intended interpretations,
 these models are \em{more} constrained than the previous ones.}
 
 }
@@ -230,22 +230,22 @@ special functions like the exponential or sine.}
 \p{Then there is a cartesian double theory presented by
 
 \ul{
-  \li{an object \Var along with arrows and equations embedding the Lawvere
-  theory \cat{T} into the tight category of double theory}
+  \li{an object \Term along with arrows and equations embedding the Lawvere
+  theory \cat{T} into the tight category of the double theory}
   \li{an object \State}
-  \li{an arrow #{\State \to \Var}}
-  \li{a proarrow #{\Term: \Var \proto \State}.}
+  \li{an arrow #{\State \to \Term}}
+  \li{a proarrow #{\Contrib: \Term \proto \State}.}
 }
 }
 
 \p{An f.f.g. model of this theory consists of finite sets of \define{state
-variables} and of \define{exogenous variables} (generators of type \Var), an
-embedding of the state variables into the variables, and a family of finite sets
-of \define{terms}, indexed by pairs comprising a generic variable and a state
-variable. As before, a term #{t: \Term(v, x)} represents an additive
+variables} and of \define{exogenous variables} (generators of type \Term), an
+embedding of the state variables into terms, and a family of finite sets of
+\define{contributions}, indexed by pairs comprising a term and a state variable.
+As before, a contribution #{c: \Contrib(v, x)} represents an additive
 contribution to the vector field of the form
 
-##{\dot x \pluseq k_t \cdot v, \qquad k_t \in \R.}
+##{\dot x \pluseq k_c \cdot v, \qquad k_c \in \R.}
 
 Once interpretations of the Lawvere theory \cat{T} and the exogenous variables
 are fixed, such a model defines a vector field on the state variables.}
@@ -260,18 +260,18 @@ are fixed, such a model defines a vector field on the state variables.}
 by
 
 \ul{
-  \li{an object \Var along with arrows and equations embedding the Lawvere
+  \li{an object \Term along with arrows and equations embedding the Lawvere
   theory \cat{T} into the tight category of double theory}
   \li{objects \State and \Param}
-  \li{arrows #{\State \to \Var} and #{\Param \to \Var}}
-  \li{a proarrow #{\Term: \Var \proto \State}.}
+  \li{arrows #{\State \to \Term} and #{\Param \to \Term}}
+  \li{a proarrow #{\Contrib: \Term \proto \State}.}
 }
 }
 
 \p{An f.f.g. model of this theory specifies a parameterized ODE system, where
-each term #{t: \Term(v, x)} contributes to the vector field simply as ##{\dot x
-\pluseq v.} Notice that parameters can now appear arbitrarily in variable
-expressions, not just as linear coefficients.}
+each contribution #{c: \Contrib(v, x)} contributes to the vector field simply as
+##{\dot x \pluseq v.} Notice that parameters can now appear arbitrarily in
+terms, not just as linear coefficients.}
 
 }
 
@@ -291,11 +291,11 @@ diagrams with arbitrary flow functions using the above ideas. Here is one.}
 by
 
 \ul{
-  \li{an object \Var along with arrows and equations embedding the Lawvere
+  \li{an object \Term along with arrows and equations embedding the Lawvere
   theory \cat{T} into the tight category of double theory}
   \li{an object \Stock}
-  \li{an arrow #{\Stock \to \Var}}
-  \li{a proarrow #{\Flow: \Var \proto \Stock \times \Stock}.}
+  \li{an arrow #{\Stock \to \Term}}
+  \li{a proarrow #{\Flow: \Term \proto \Stock \times \Stock}.}
 }
 }
 
@@ -367,7 +367,7 @@ to Jacobs', taking the context to be two-sided instead of one-sided. Though
 tastes may vary, two-sided contexts have the merits of fitting well with our
 existing approach to categorical models; being useful in situations where the
 dependent type \em{is} meaningfully directed even if it doesn't compose, like
-the terms/contributions in our ODE system examples; and entailing no loss of
+the contributions in our ODE system examples; and entailing no loss of
 generality, since the one-sided case is recovered as types #{P: 1 \proto X}, a
 time-honored tradition in category theory also appealed to in
 [DOTS](dots-2025).}
@@ -390,7 +390,7 @@ models by generators and relations. Applications of operations are freely
 adjoined to the model, whereas type parameters must be explicitly declared. This
 distinction was used in the double theory for parameterized polynomial ODE
 systems, allowing parameters to be freely adjoined when not specified while
-insisting that the monomials on the right-hand sides of terms be given
+insisting that the monomials on the right-hand sides of contributions be given
 explicitly.}
 
 \p{I still expect instances to play an important role in the design of CatColab,
@@ -453,7 +453,8 @@ some theory \dbl{T} into ODEs, one first #{\Sigma}-migrates into a larger theory
 containing both \dbl{T} and the theory of ODEs, then #{\Delta}-migrates into the
 theory of ODEs. The intermediate theory additionally contains "builder"
 operations that will, under #{\Sigma}-migration, freely populate the ODE with
-variables and terms. The technique is illustrated by the following example.}
+variables and contributions. The technique is illustrated by the following
+example.}
 
 \subtree{
 \title{Lotka-Volterra ODE semantics for graphs}
@@ -478,38 +479,38 @@ following additional generators:
   
   \li{a nullary cell, the \define{builder} for growth/decay terms:
   \quiver{
-  % https://q.uiver.app/#q=WzAsNCxbMSwwLCJWIl0sWzAsMiwiXFxtYXRocm17VmFyfSJdLFsyLDIsIlxcbWF0aHJte1N0YXRlfSJdLFswLDEsIlxcbWF0aHJte1N0YXRlfSJdLFsxLDIsIlxcbWF0aHJte1Rlcm19IiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzMsMSwiXFxtYXRocm17dmFyfV97XFxtYXRocm17U3RhdGV9fSIsMl0sWzAsMywiYl97XFxtYXRocm17U3RhdGV9fSIsMl0sWzAsMiwiYl97XFxtYXRocm17U3RhdGV9fSJdLFswLDQsIlxcYmV0YV97XFxtYXRocm17Z3Jvd3RofX0iLDEseyJzaG9ydGVuIjp7InRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
-  \begin{tikzcd}
-	& V & \\
-	{\mathrm{State}} \\
-	{\mathrm{Var}} && {\mathrm{State}}
-	\arrow["{b_{\mathrm{State}}}"', from=1-2, to=2-1]
-	\arrow["{b_{\mathrm{State}}}", from=1-2, to=3-3]
-	\arrow["{\mathrm{var}_{\mathrm{State}}}"', from=2-1, to=3-1]
-	\arrow[""{name=0, anchor=center, inner sep=0}, "{\mathrm{Term}}"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-3]
-	\arrow["{\beta_{\mathrm{growth}}}"{description}, draw=none, from=1-2, to=0]
-  \end{tikzcd}
+  % https://q.uiver.app/#q=WzAsNCxbMSwwLCJWIl0sWzAsMiwiXFxtYXRocm17VGVybX0iXSxbMiwyLCJcXG1hdGhybXtTdGF0ZX0iXSxbMCwxLCJcXG1hdGhybXtTdGF0ZX0iXSxbMSwyLCJcXG1hdGhybXtDb250cmlifSIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFszLDEsIlxcbWF0aHJte3Rlcm19X3tcXG1hdGhybXtTdGF0ZX19IiwyXSxbMCwzLCJiX3tcXG1hdGhybXtTdGF0ZX19IiwyXSxbMCwyLCJiX3tcXG1hdGhybXtTdGF0ZX19Il0sWzAsNCwiXFxiZXRhX3tcXG1hdGhybXtncm93dGh9fSIsMSx7InNob3J0ZW4iOnsidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dXQ==
+\begin{tikzcd}
+  & V & \\
+  {\mathrm{State}} \\
+  {\mathrm{Term}} && {\mathrm{State}}
+  \arrow["{b_{\mathrm{State}}}"', from=1-2, to=2-1]
+  \arrow["{b_{\mathrm{State}}}", from=1-2, to=3-3]
+  \arrow["{\mathrm{term}_{\mathrm{State}}}"', from=2-1, to=3-1]
+  \arrow[""{name=0, anchor=center, inner sep=0}, "{\mathrm{Contrib}}"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-3]
+  \arrow["{\beta_{\mathrm{growth}}}"{description}, draw=none, from=1-2, to=0]
+\end{tikzcd}
   }
   }
 
   \li{a nullary cell, the \define{builder} for interaction terms:
   \quiver{
-  % https://q.uiver.app/#q=WzAsNyxbMSwwLCJcXHRvcCBFIl0sWzAsMSwiVl4yIl0sWzAsNCwiXFxtYXRocm17VmFyfSJdLFsyLDQsIlxcbWF0aHJte1N0YXRlfSJdLFsyLDEsIlYiXSxbMCwzLCJcXG1hdGhybXtWYXJ9XjIiXSxbMCwyLCJcXG1hdGhybXtTdGF0ZX1eMiJdLFswLDEsIlxcbGFuZ2xlIFxccGlfMCwgXFxwaV8xIFxccmFuZ2xlIiwyXSxbMiwzLCJcXG1hdGhybXtUZXJtfSIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFswLDQsIlxccGlfMSJdLFs0LDMsImJfe1xcbWF0aHJte1N0YXRlfX0iXSxbMSw2LCJiX3tcXG1hdGhybXtTdGF0ZX19XjIiLDJdLFs2LDUsIlxcbWF0aHJte3Zhcn1fe1xcbWF0aHJte1N0YXRlfX1eMiIsMl0sWzUsMiwiXFxjZG90IiwyXSxbMCw4LCJcXGJldGFfe1xcbWF0aHJte2ludGVyYWN0aW9ufX0iLDEseyJzaG9ydGVuIjp7InRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
-  \begin{tikzcd}
-	& {\top E} & \\
-	{V^2} && V \\
-	{\mathrm{State}^2} \\
-	{\mathrm{Var}^2} \\
-	{\mathrm{Var}} && {\mathrm{State}}
-	\arrow["{\langle \pi_0, \pi_1 \rangle}"', from=1-2, to=2-1]
-	\arrow["{\pi_1}", from=1-2, to=2-3]
-	\arrow["{b_{\mathrm{State}}^2}"', from=2-1, to=3-1]
-	\arrow["{b_{\mathrm{State}}}", from=2-3, to=5-3]
-	\arrow["{\mathrm{var}_{\mathrm{State}}^2}"', from=3-1, to=4-1]
-	\arrow["\cdot"', from=4-1, to=5-1]
-	\arrow[""{name=0, anchor=center, inner sep=0}, "{\mathrm{Term}}"'{inner sep=.8ex}, "\shortmid"{marking}, from=5-1, to=5-3]
-	\arrow["{\beta_{\mathrm{interaction}}}"{description}, draw=none, from=1-2, to=0]
-  \end{tikzcd}
+  % https://q.uiver.app/#q=WzAsNyxbMSwwLCJcXHRvcCBFIl0sWzAsMSwiVl4yIl0sWzAsNCwiXFxtYXRocm17VGVybX0iXSxbMiw0LCJcXG1hdGhybXtTdGF0ZX0iXSxbMiwxLCJWIl0sWzAsMywiXFxtYXRocm17VGVybX1eMiJdLFswLDIsIlxcbWF0aHJte1N0YXRlfV4yIl0sWzAsMSwiXFxsYW5nbGUgXFxwaV8wLCBcXHBpXzEgXFxyYW5nbGUiLDJdLFsyLDMsIlxcbWF0aHJte0NvbnRyaWJ9IiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzAsNCwiXFxwaV8xIl0sWzQsMywiYl97XFxtYXRocm17U3RhdGV9fSJdLFsxLDYsImJfe1xcbWF0aHJte1N0YXRlfX1eMiIsMl0sWzYsNSwiXFxtYXRocm17dGVybX1fe1xcbWF0aHJte1N0YXRlfX1eMiIsMl0sWzUsMiwiXFxjZG90IiwyXSxbMCw4LCJcXGJldGFfe1xcbWF0aHJte2ludGVyYWN0aW9ufX0iLDEseyJzaG9ydGVuIjp7InRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
+\begin{tikzcd}
+  & {\top E} & \\
+  {V^2} && V \\
+  {\mathrm{State}^2} \\
+  {\mathrm{Term}^2} \\
+  {\mathrm{Term}} && {\mathrm{State}}
+  \arrow["{\langle \pi_0, \pi_1 \rangle}"', from=1-2, to=2-1]
+  \arrow["{\pi_1}", from=1-2, to=2-3]
+  \arrow["{b_{\mathrm{State}}^2}"', from=2-1, to=3-1]
+  \arrow["{b_{\mathrm{State}}}", from=2-3, to=5-3]
+  \arrow["{\mathrm{term}_{\mathrm{State}}^2}"', from=3-1, to=4-1]
+  \arrow["\cdot"', from=4-1, to=5-1]
+  \arrow[""{name=0, anchor=center, inner sep=0}, "{\mathrm{Contrib}}"'{inner sep=.8ex}, "\shortmid"{marking}, from=5-1, to=5-3]
+  \arrow["{\beta_{\mathrm{interaction}}}"{description}, draw=none, from=1-2, to=0]
+\end{tikzcd}
   }
   where #{\top E} is the tabulator of #{E}.}
 }
@@ -527,19 +528,19 @@ in this example. Rather, the builder for interaction terms should be a
 \em{unary} cell
 
 \quiver{
-% https://q.uiver.app/#q=WzAsNixbMCwwLCJWXjIiXSxbMCwzLCJcXG1hdGhybXtWYXJ9Il0sWzIsMywiXFxtYXRocm17U3RhdGV9Il0sWzIsMCwiViJdLFswLDIsIlxcbWF0aHJte1Zhcn1eMiJdLFswLDEsIlxcbWF0aHJte1N0YXRlfV4yIl0sWzEsMiwiXFxtYXRocm17VGVybX0iLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMywyLCJiX3tcXG1hdGhybXtTdGF0ZX19Il0sWzAsNSwiYl97XFxtYXRocm17U3RhdGV9fV4yIiwyXSxbNSw0LCJcXG1hdGhybXt2YXJ9X3tcXG1hdGhybXtTdGF0ZX19XjIiLDJdLFs0LDEsIlxcY2RvdCIsMl0sWzAsMywiXFxtYXRocm17ZXh0fV97MV9WLFxcRGVsdGFfVn0oRSleXFxzaGFycCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxMSw2LCJcXGJldGFfe1xcbWF0aHJte2ludGVyYWN0aW9ufX0iLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
+% https://q.uiver.app/#q=WzAsNixbMCwwLCJWXjIiXSxbMCwzLCJcXG1hdGhybXtUZXJtfSJdLFsyLDMsIlxcbWF0aHJte1N0YXRlfSJdLFsyLDAsIlYiXSxbMCwyLCJcXG1hdGhybXtUZXJtfV4yIl0sWzAsMSwiXFxtYXRocm17U3RhdGV9XjIiXSxbMSwyLCJcXG1hdGhybXtDb250cmlifSIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFszLDIsImJfe1xcbWF0aHJte1N0YXRlfX0iXSxbMCw1LCJiX3tcXG1hdGhybXtTdGF0ZX19XjIiLDJdLFs1LDQsIlxcbWF0aHJte3Rlcm19X3tcXG1hdGhybXtTdGF0ZX19XjIiLDJdLFs0LDEsIlxcY2RvdCIsMl0sWzAsMywiXFxtYXRocm17ZXh0fV97MV9WLFxcRGVsdGFfVn0oRSleXFxzaGFycCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxMSw2LCJcXGJldGFfe1xcbWF0aHJte2ludGVyYWN0aW9ufX0iLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
 \begin{tikzcd}
-	{V^2} && V \\
-	{\mathrm{State}^2} \\
-	{\mathrm{Var}^2} \\
-	{\mathrm{Var}} && {\mathrm{State}}
-	\arrow[""{name=0, anchor=center, inner sep=0}, "{\mathrm{ext}_{1_V,\Delta_V}(E)^\sharp}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-3]
-	\arrow["{b_{\mathrm{State}}^2}"', from=1-1, to=2-1]
-	\arrow["{b_{\mathrm{State}}}", from=1-3, to=4-3]
-	\arrow["{\mathrm{var}_{\mathrm{State}}^2}"', from=2-1, to=3-1]
-	\arrow["\cdot"', from=3-1, to=4-1]
-	\arrow[""{name=1, anchor=center, inner sep=0}, "{\mathrm{Term}}"'{inner sep=.8ex}, "\shortmid"{marking}, from=4-1, to=4-3]
-	\arrow["{\beta_{\mathrm{interaction}}}"{description}, draw=none, from=0, to=1]
+  {V^2} && V \\
+  {\mathrm{State}^2} \\
+  {\mathrm{Term}^2} \\
+  {\mathrm{Term}} && {\mathrm{State}}
+  \arrow[""{name=0, anchor=center, inner sep=0}, "{\mathrm{ext}_{1_V,\Delta_V}(E)^\sharp}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-3]
+  \arrow["{b_{\mathrm{State}}^2}"', from=1-1, to=2-1]
+  \arrow["{b_{\mathrm{State}}}", from=1-3, to=4-3]
+  \arrow["{\mathrm{term}_{\mathrm{State}}^2}"', from=2-1, to=3-1]
+  \arrow["\cdot"', from=3-1, to=4-1]
+  \arrow[""{name=1, anchor=center, inner sep=0}, "{\mathrm{Contrib}}"'{inner sep=.8ex}, "\shortmid"{marking}, from=4-1, to=4-3]
+  \arrow["{\beta_{\mathrm{interaction}}}"{description}, draw=none, from=0, to=1]
 \end{tikzcd}
 }
 

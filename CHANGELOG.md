@@ -9,7 +9,7 @@ announcement and a blog post. Minor versions are not announced but allow
 features and fixes to be released with greater frequency. Minor versions often
 include notable new features.
 
-## [Unreleased]
+## [v0.5.0](https://github.com/ToposInstitute/CatColab/releases/tag/v0.5.0) (2026-03-09)
 
 ### Added
 
@@ -34,6 +34,13 @@ include notable new features.
   crate [samod](https://github.com/alexjg/samod) instead of the Node package
   [automerge-repo](https://github.com/automerge/automerge-repo). As a result,
   100% of the CatColab backend is now written in Rust.
+
+### Fixed
+
+- A serious bug related to the rich text editor that could result in document
+  corruption has been fixed
+  [upstream](https://github.com/automerge/automerge/pull/1279)
+  ([#1056](https://github.com/ToposInstitute/CatColab/pull/1056))
 
 ## [v0.4.3](https://github.com/ToposInstitute/CatColab/releases/tag/v0.4.3) (2026-01-13)
 

@@ -1,10 +1,10 @@
 import { Show } from "solid-js";
 
 import { CheckboxField, FormGroup, SelectField } from "catcolab-ui-components";
-import type { MassActionProblemData, RateGranularity } from "catlog-wasm";
+import type { MassActionEquationsData, MassActionProblemData, RateGranularity } from "catlog-wasm";
 
 /** Configuration of a mass-action analysis. */
-export type Config = MassActionProblemData;
+export type Config = MassActionProblemData | MassActionEquationsData;
 
 /** Form to configure a mass-action analysis. */
 export function MassActionConfigForm(props: {
@@ -13,11 +13,10 @@ export function MassActionConfigForm(props: {
     enableGranularity: boolean;
 }) {
     const massConservation = () => props.config.massConservationType;
-    const massConservationGranularity = () => {
+    const massConservationGranularity = () =>
         props.config.massConservationType.type === "Unbalanced"
             ? props.config.massConservationType.granularity
             : undefined;
-    };
 
     return (
         <FormGroup compact style="min-width: 286px">

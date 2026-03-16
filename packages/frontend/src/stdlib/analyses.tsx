@@ -1,6 +1,11 @@
 import { lazy } from "solid-js";
 
-import type { MorType, ObType, StochasticMassActionProblemData } from "catlog-wasm";
+import type {
+    MassActionEquationsData,
+    MorType,
+    ObType,
+    StochasticMassActionProblemData,
+} from "catlog-wasm";
 import type { DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
 import * as GraphLayoutConfig from "../visualization/graph_layout_config";
 import type * as Checkers from "./analyses/checker_types";
@@ -12,7 +17,6 @@ import type {
     LotkaVolterraProblemData,
     MassActionEquations,
     MassActionProblemData,
-    UnbalancedMassActionEquations,
 } from "./analyses/simulator_types";
 import type * as SQLDownloadConfig from "./analyses/sql";
 import { SQLBackend, type SQLRenderer } from "./analyses/sql_types";
@@ -158,9 +162,10 @@ const LotkaVolterra = lazy(() => import("./analyses/lotka_volterra"));
 
 export function massAction(
     options: Partial<AnalysisOptions> & {
+        ratesHaveGranularity: boolean;
         stateType?: ObType;
         transitionType?: MorType;
-    } = {},
+    },
 ): ModelAnalysisMeta<MassActionProblemData> {
     const {
         id = "mass-action",
@@ -194,15 +199,16 @@ const MassAction = lazy(() => import("./analyses/mass_action"));
 
 export function massActionEquations(
     options: Partial<AnalysisOptions> & {
+        ratesHaveGranularity: boolean;
         getEquations: MassActionEquations;
     },
-): ModelAnalysisMeta<Record<string, never>> {
+): ModelAnalysisMeta<MassActionEquationsData> {
     const {
         id = "mass-action-equations",
         name = "Mass-action dynamics equations",
         description = "Display the symbolic mass-action dynamics equations",
         help = "mass-action-equations",
-        getEquations,
+        ...otherOptions
     } = options;
     return {
         id,
@@ -210,44 +216,14 @@ export function massActionEquations(
         description,
         help,
         component: (props) => (
-            <MassActionEquationsDisplay title={name} getEquations={getEquations} {...props} />
+            <MassActionEquationsDisplay title={name} {...otherOptions} {...props} />
         ),
-        initialContent: () => ({}),
+        initialContent: () => ({
+            massConservationType: { type: "Balanced" },
+        }),
     };
 }
 const MassActionEquationsDisplay = lazy(() => import("./analyses/mass_action_equations"));
-
-export function unbalancedMassActionEquations(
-    options: Partial<AnalysisOptions> & {
-        getEquations: UnbalancedMassActionEquations;
-    },
-): ModelAnalysisMeta<Record<string, never>> {
-    const {
-        id = "unbalanced-mass-action-equations",
-        name = "Unbalanced mass-action dynamics equations",
-        description = "Display the symbolic unbalanced mass-action dynamics equations",
-        help = "unbalanced-mass-action-equations",
-        getEquations,
-    } = options;
-    return {
-        id,
-        name,
-        description,
-        help,
-        component: (props) => (
-            <UnbalancedMassActionEquationsDisplay
-                title={name}
-                getEquations={getEquations}
-                {...props}
-            />
-        ),
-        initialContent: () => ({}),
-    };
-}
-
-const UnbalancedMassActionEquationsDisplay = lazy(
-    () => import("./analyses/unbalanced_mass_action_equations"),
-);
 
 export function stochasticMassAction(
     options: Partial<AnalysisOptions> & {

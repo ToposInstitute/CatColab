@@ -3,6 +3,7 @@ import type {
     KuramotoProblemData,
     LinearODEProblemData,
     LotkaVolterraProblemData,
+    MassActionEquationsData,
     MassActionProblemData,
     ODELatex,
 } from "catlog-wasm";
@@ -14,8 +15,7 @@ export type {
     MassActionProblemData,
 };
 
-export type MassActionEquations = (model: DblModel) => ODELatex;
-export type UnbalancedMassActionEquations = (model: DblModel) => ODELatex;
+export type MassActionEquations = (model: DblModel, data: MassActionEquationsData) => ODELatex;
 
 /** Configuration for a Decapodes analysis of a diagram. */
 export type DecapodesAnalysisContent = {

@@ -22,6 +22,11 @@ use crate::tt::util::pretty::*;
 /// a [UUID](Uuid), or a meaningful, operator-generated name, represented as an
 /// interned string.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, From)]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(
+    feature = "serde-wasm",
+    tsify(into_wasm_abi, from_wasm_abi, type = "string")
+)]
 pub enum NameSegment {
     /// A universally unique identifier (UUID).
     Uuid(Uuid),
@@ -49,6 +54,45 @@ impl Display for NameSegment {
 /// into a Ustr.
 pub fn name_seg(s: impl Into<Ustr>) -> NameSegment {
     NameSegment::Text(s.into())
+}
+
+#[cfg(feature = "serde")]
+impl Serialize for NameSegment {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.serialize_string().as_str())
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> Deserialize<'de> for NameSegment {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_str(NameSegmentVisitor)
+    }
+}
+
+#[cfg(feature = "serde")]
+struct NameSegmentVisitor;
+
+#[cfg(feature = "serde")]
+impl<'de> serde::de::Visitor<'de> for NameSegmentVisitor {
+    type Value = NameSegment;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(formatter, "a name segment as a string")
+    }
+
+    fn visit_str<E>(self, input: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        NameSegment::deserialize_str(input).map_err(E::custom)
+    }
 }
 
 impl NameSegment {
@@ -101,10 +145,11 @@ impl NameSegment {
 /// serialization format.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, From)]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
-#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
-pub struct QualifiedName(
-    #[cfg_attr(feature = "serde-wasm", tsify(type = "string"))] Vec<NameSegment>,
-);
+#[cfg_attr(
+    feature = "serde-wasm",
+    tsify(into_wasm_abi, from_wasm_abi, type = "string")
+)]
+pub struct QualifiedName(Vec<NameSegment>);
 
 /// Helper function to construct a qualified name.
 pub fn name(x: impl Into<QualifiedName>) -> QualifiedName {

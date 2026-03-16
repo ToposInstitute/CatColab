@@ -118,7 +118,7 @@ jobs:
     needs: [create_deployment, deploy]
     if: always() && github.event.workflow_run.event == 'pull_request' && needs.create_deployment.result == 'success'
     steps:
-      - name: Invalidate old successful deployments
+      - name: Delete old deployments
         if: needs.deploy.result == 'success'
         uses: actions/github-script@v7
         with:
@@ -136,26 +136,24 @@ jobs:
             
             for (const deployment of deployments) {
               if (deployment.id !== currentDeploymentId) {
-                // Get the latest status for this deployment
-                const { data: statuses } = await github.rest.repos.listDeploymentStatuses({
+                console.log(`Deleting old deployment ${deployment.id}`);
+                
+                // A deployment must be marked inactive before it can be deleted
+                await github.rest.repos.createDeploymentStatus({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  deployment_id: deployment.id,
+                  state: 'inactive',
+                  description: 'Superseded by newer deployment'
+                });
+                
+                await github.rest.repos.deleteDeployment({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   deployment_id: deployment.id
                 });
                 
-                // Only invalidate if the latest status was 'success'
-                if (statuses.length > 0 && statuses[0].state === 'success') {
-                  console.log(`Invalidating successful deployment ${deployment.id}`);
-                  await github.rest.repos.createDeploymentStatus({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    deployment_id: deployment.id,
-                    state: 'inactive',
-                    description: 'Superseded by newer deployment'
-                  });
-                } else {
-                  console.log(`Skipping deployment ${deployment.id} (not successful)`);
-                }
+                console.log(`Deleted deployment ${deployment.id}`);
               }
             }
 

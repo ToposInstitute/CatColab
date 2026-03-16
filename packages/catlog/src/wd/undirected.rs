@@ -51,12 +51,37 @@ impl<T, J> UWD<T, J> {
         }
     }
 
-    /// Adds an inner box with empty interface.
+    /// Iterates over the diagram's boxes along with their ports.
+    pub fn boxes(&self) -> impl Iterator<Item = (&NameSegment, &LabelSegment, &Ports<T>)> {
+        self.inner.iter().map(|(name, (label, pm))| (name, label, &pm.ports))
+    }
+
+    /// Gets the diagram's outer ports.
+    pub fn outer_ports(&self) -> &Ports<T> {
+        &self.outer.ports
+    }
+
+    /// Returns whether the diagram contains a box.
+    pub fn has_box(&self, box_name: NameSegment) -> bool {
+        self.outer.ports.has(box_name)
+    }
+
+    /// Returns whether the diagram contains a box with a specific port.
+    pub fn has_port(&self, box_name: NameSegment, port_name: NameSegment) -> bool {
+        self.inner.get(box_name).is_some_and(|inner| inner.ports.has(port_name))
+    }
+
+    /// Returns whether the diagram contains an outer port.
+    pub fn has_outer_port(&self, port_name: NameSegment) -> bool {
+        self.outer.ports.has(port_name)
+    }
+
+    /// Adds a box with empty interface.
     pub fn add_box(&mut self, name: NameSegment, label: LabelSegment) {
         self.inner.insert(name, label, PortMap::default())
     }
 
-    /// Adds an inner box with the given interface.
+    /// Adds a box with the given interface.
     pub fn add_box_with_ports(&mut self, name: NameSegment, label: LabelSegment, ports: Ports<T>) {
         self.inner.insert(name, label, PortMap::new(ports));
     }
@@ -81,19 +106,24 @@ impl<T, J> UWD<T, J> {
 }
 
 impl<T: Clone + Eq, J: Clone + Eq + Hash> UWD<T, J> {
-    /// Returns whether UWD contains a box with a specific port.
-    pub fn has_port(&self, box_name: NameSegment, port_name: NameSegment) -> bool {
-        self.inner.get(box_name).is_some_and(|inner| inner.ports.has(port_name))
+    /// Iterates over the diagram's junctions.
+    pub fn junctions(&self) -> impl Iterator<Item = J> {
+        self.junctions.iter().map(|(j, _)| j)
     }
 
-    /// Returns whether the UWD contains an outer port.
-    pub fn has_outer_port(&self, port_name: NameSegment) -> bool {
-        self.outer.ports.has(port_name)
-    }
-
-    /// Returns whether the UWD contains a junction.
+    /// Returns whether the diagram contains a junction.
     pub fn has_junction(&self, junction: &J) -> bool {
         self.junctions.is_set(junction)
+    }
+
+    /// Gets the junction assigned to a port on a box, if any.
+    pub fn get(&self, box_name: NameSegment, port_name: NameSegment) -> Option<&J> {
+        self.inner.get(box_name).and_then(|inner| inner.mapping.get(&port_name))
+    }
+
+    /// Gets the junction assigned to an outer port, if any.
+    pub fn get_outer(&self, port_name: NameSegment) -> Option<&J> {
+        self.outer.mapping.get(&port_name)
     }
 
     /// Assigns a port on a box to a junction.

@@ -18,6 +18,7 @@ pub mod model_diagram_presentation;
 pub mod model_morphism;
 pub mod model_presentation;
 pub mod theory;
+pub mod wd;
 
 pub mod analyses;
 #[allow(clippy::new_without_default)]

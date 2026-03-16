@@ -59,13 +59,30 @@ async fn main() {
 
     tracing_subscriber::fmt().with_env_filter(env_filter).init();
 
+    let cli = Cli::parse();
+
+    if let Some(Command::GenerateBindings) = cli.command {
+        use qubit::TypeScript;
+
+        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("pkg")
+            .join("src")
+            .join("index.ts");
+
+        rpc::router()
+            .as_codegen()
+            .write_type(&path, TypeScript::new())
+            .expect("Failed to write TypeScript bindings");
+
+        info!("Successfully generated TypeScript bindings to: {}", path.display());
+        return;
+    }
+
     let db = PgPoolOptions::new()
         .max_connections(10)
         .connect(&dotenvy::var("DATABASE_URL").expect("`DATABASE_URL` should be set"))
         .await
         .expect("Failed to connect to database");
-
-    let cli = Cli::parse();
 
     let mut migrator = Migrator::default();
     migrator
@@ -80,22 +97,7 @@ async fn main() {
             return;
         }
 
-        Command::GenerateBindings => {
-            use qubit::TypeScript;
-
-            let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join("pkg")
-                .join("src")
-                .join("index.ts");
-
-            rpc::router()
-                .as_codegen()
-                .write_type(&path, TypeScript::new())
-                .expect("Failed to write TypeScript bindings");
-
-            info!("Successfully generated TypeScript bindings to: {}", path.display());
-            return;
-        }
+        Command::GenerateBindings => unreachable!(),
 
         Command::Serve => {
             info!("Applying database migrations...");
@@ -211,7 +213,7 @@ async fn run_web_server(
         app = app.route("/", get(|| async { "Hello! The CatColab server is running" }));
     }
 
-    app = app.layer(CorsLayer::permissive());
+    app = app.layer(CorsLayer::very_permissive());
 
     info!("Web server listening at port {port}");
 

@@ -100,8 +100,6 @@
           darwinDeps =
             if pkgs.stdenv.isDarwin then
               [
-                pkgs.darwin.apple_sdk.frameworks.Security
-                pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
                 pkgs.libiconv
               ]
             else
@@ -110,33 +108,36 @@
           pkgsUnstable = import inputs.nixpkgsUnstable {
             system = "x86_64-linux";
           };
+          nightlyRustfmt = inputs.fenix.packages.${system}.latest.rustfmt;
         in
         pkgs.mkShell {
           name = "catcolab-devshell";
+          RUSTFMT = "${nightlyRustfmt}/bin/rustfmt";
           buildInputs =
             with pkgs;
             [
               darkhttpd
+              esbuild
               lld
-              rustToolchain
+              netcat
+              nodejs_24
+              nix
               openssl
-              rust-analyzer
-              rustfmt
-              clippy
               pkg-config
               pnpm
-              nodejs_24
+              postgresql
+              python3
+              python312Packages.ipykernel
+              python312Packages.jupyter-core
+              python312Packages.jupyter-server
+              python312Packages.requests
+              python312Packages.websocket-client
+              rustToolchain
+              nightlyRustfmt
               sqlx-cli
-              wasm-pack
               vscode-langservers-extracted
               wasm-bindgen-cli
-              esbuild
-              python312Packages.jupyter-server
-              python312Packages.jupyter-core
-              python312Packages.websocket-client
-              python312Packages.requests
-              python312Packages.ipykernel
-              python3
+              wasm-pack
             ]
             ++ darwinDeps
             ++ [
@@ -250,6 +251,11 @@
             inherit craneLib cargoArtifacts;
             pkgs = pkgsLinux;
             checkMode = true;
+          };
+
+          generated-bindings-check = pkgsLinux.callPackage ./infrastructure/generated-bindings-check.nix {
+            inherit craneLib cargoArtifacts;
+            pkgs = pkgsLinux;
           };
 
           # VMs built with `nixos-rebuild build-vm` (like `nix build

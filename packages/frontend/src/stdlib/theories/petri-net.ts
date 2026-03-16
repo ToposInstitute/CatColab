@@ -41,15 +41,13 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
                 description: "Visualize the Petri net",
                 help: "visualization",
             }),
-            analyses.massAction(),
-            analyses.massActionEquations({
-                getEquations(model) {
-                    return thSymMonoidalCategory.massActionEquations(model);
-                },
+            analyses.massAction({
+                ratesHaveGranularity: true,
             }),
-            analyses.unbalancedMassActionEquations({
-                getEquations(model) {
-                    return thSymMonoidalCategory.unbalancedMassActionEquations(model);
+            analyses.massActionEquations({
+                ratesHaveGranularity: true,
+                getEquations(model, data) {
+                    return thSymMonoidalCategory.massActionEquations(model, data);
                 },
             }),
             analyses.stochasticMassAction({
