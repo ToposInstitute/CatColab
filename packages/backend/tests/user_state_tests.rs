@@ -61,7 +61,7 @@ mod integration_tests {
             db: pool,
             repo,
             active_listeners: Arc::new(RwLock::new(HashSet::new())),
-            initialized_user_states: Arc::new(RwLock::new(HashSet::new())),
+            initialized_user_states: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -1584,7 +1584,7 @@ mod integration_tests {
             use autosurgeon::hydrate;
             use backend::app::AppState;
             use backend::storage::PostgresStorage;
-            use std::collections::HashSet;
+            use std::collections::{HashMap, HashSet};
             use std::sync::Arc;
             use tokio::sync::RwLock;
 
@@ -1603,7 +1603,7 @@ mod integration_tests {
                 db: test_db.pool().clone(),
                 repo,
                 active_listeners: Arc::new(RwLock::new(HashSet::new())),
-                initialized_user_states: Arc::new(RwLock::new(HashSet::new())),
+                initialized_user_states: Arc::new(RwLock::new(HashMap::new())),
             };
 
             // Write user state to the database

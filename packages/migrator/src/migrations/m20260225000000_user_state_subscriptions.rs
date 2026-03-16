@@ -257,49 +257,6 @@ impl Operation<Postgres> for MigrationOperation {
         .execute(&mut *tx)
         .await?;
 
-        // Notify affected users when snapshots change (UPDATE on snapshots).
-        // This handles autosave operations that update the head snapshot content.
-        // Also notifies all users with state docs if the ref is publicly accessible.
-        sqlx::query(
-            r#"
-            CREATE OR REPLACE FUNCTION notify_snapshot_change() RETURNS trigger AS $$
-            DECLARE
-                v_ref_id UUID;
-                affected_user TEXT;
-            BEGIN
-                -- Find the ref that has this snapshot as its head
-                SELECT id INTO v_ref_id FROM refs WHERE head = NEW.id;
-
-                -- If no ref uses this as head, nothing to do
-                IF v_ref_id IS NULL THEN
-                    RETURN NEW;
-                END IF;
-
-                -- If public, notify all users with state docs (superset of
-                -- users with explicit permissions).
-                IF EXISTS (SELECT 1 FROM permissions WHERE object = v_ref_id AND subject IS NULL) THEN
-                    FOR affected_user IN
-                        SELECT id FROM users WHERE state_doc_id IS NOT NULL
-                    LOOP
-                        PERFORM notify_user_state_upsert(v_ref_id, affected_user);
-                    END LOOP;
-                ELSE
-                    -- Not public: notify only users with explicit permissions
-                    FOR affected_user IN
-                        SELECT subject FROM permissions WHERE object = v_ref_id AND subject IS NOT NULL
-                    LOOP
-                        PERFORM notify_user_state_upsert(v_ref_id, affected_user);
-                    END LOOP;
-                END IF;
-
-                RETURN NEW;
-            END
-            $$ LANGUAGE plpgsql;
-            "#,
-        )
-        .execute(&mut *tx)
-        .await?;
-
         // Notify when a user's display_name or username changes.
         // Sends a single profile_update notification. The Rust handler updates
         // the user's own profile and the users map in all affected users' state docs.
@@ -331,10 +288,6 @@ impl Operation<Postgres> for MigrationOperation {
             .execute(&mut *tx)
             .await?;
 
-        sqlx::query(r#"DROP TRIGGER IF EXISTS snapshots_notify_trigger ON snapshots;"#)
-            .execute(&mut *tx)
-            .await?;
-
         sqlx::query(r#"DROP TRIGGER IF EXISTS users_notify_trigger ON users;"#)
             .execute(&mut *tx)
             .await?;
@@ -354,16 +307,6 @@ impl Operation<Postgres> for MigrationOperation {
             CREATE TRIGGER permissions_notify_trigger
             AFTER INSERT OR UPDATE OR DELETE ON permissions
             FOR EACH ROW EXECUTE FUNCTION notify_permissions_change();
-            "#,
-        )
-        .execute(&mut *tx)
-        .await?;
-
-        sqlx::query(
-            r#"
-            CREATE TRIGGER snapshots_notify_trigger
-            AFTER UPDATE ON snapshots
-            FOR EACH ROW EXECUTE FUNCTION notify_snapshot_change();
             "#,
         )
         .execute(&mut *tx)
@@ -397,10 +340,6 @@ impl Operation<Postgres> for MigrationOperation {
             .execute(&mut *tx)
             .await?;
 
-        sqlx::query(r#"DROP TRIGGER IF EXISTS snapshots_notify_trigger ON snapshots;"#)
-            .execute(&mut *tx)
-            .await?;
-
         sqlx::query(r#"DROP TRIGGER IF EXISTS users_notify_trigger ON users;"#)
             .execute(&mut *tx)
             .await?;
@@ -410,10 +349,6 @@ impl Operation<Postgres> for MigrationOperation {
             .await?;
 
         sqlx::query(r#"DROP FUNCTION IF EXISTS notify_permissions_change;"#)
-            .execute(&mut *tx)
-            .await?;
-
-        sqlx::query(r#"DROP FUNCTION IF EXISTS notify_snapshot_change;"#)
             .execute(&mut *tx)
             .await?;
 

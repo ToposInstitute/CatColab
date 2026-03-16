@@ -2,6 +2,9 @@
 
 use crate::app::{AppCtx, AppError, AppState};
 use crate::automerge_json::{ensure_autosave_listener, populate_automerge_from_json};
+use crate::user_state::{
+    DEFAULT_DOC_NAME, DocInfoType, extract_relations_from_json, update_doc_info_from_snapshot,
+};
 use chrono::{DateTime, Utc};
 use samod::DocumentId;
 use serde::{Deserialize, Serialize};
@@ -131,7 +134,8 @@ pub async fn ref_deleted_at(
     Ok(query.fetch_one(&state.db).await?.deleted_at)
 }
 
-/// Saves the document by overwriting the snapshot at the current head.
+/// Saves the document by overwriting the snapshot at the current head,
+/// then pushes snapshot-derived fields to all initialized user state docs.
 pub async fn autosave(state: AppState, data: RefContent) -> Result<(), AppError> {
     let RefContent { ref_id, content } = data;
     sqlx::query!(
@@ -145,6 +149,49 @@ pub async fn autosave(state: AppState, data: RefContent) -> Result<(), AppError>
     )
     .execute(&state.db)
     .await?;
+
+    // Update user state docs directly from the content we already have.
+    let name = content
+        .get("name")
+        .and_then(|v| v.as_str())
+        .unwrap_or(DEFAULT_DOC_NAME)
+        .to_string();
+    let type_name = content
+        .get("type")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .parse()
+        .unwrap_or(DocInfoType::Unknown);
+    let theory = content.get("theory").and_then(|v| v.as_str()).map(|s| s.to_string());
+    let relations = extract_relations_from_json(&content);
+    let ref_id_str = ref_id.to_string();
+
+    let user_doc_ids: Vec<(String, samod::DocumentId)> = {
+        let initialized = state.initialized_user_states.read().await;
+        initialized.iter().map(|(uid, did)| (uid.clone(), did.clone())).collect()
+    };
+
+    for (user_id, doc_id) in user_doc_ids {
+        let user_doc_handle = match state.repo.find(doc_id).await {
+            Ok(Some(h)) => h,
+            _ => continue,
+        };
+        if let Err(e) = update_doc_info_from_snapshot(
+            &user_doc_handle,
+            &ref_id_str,
+            name.as_str(),
+            type_name.clone(),
+            theory.as_deref(),
+            relations.clone(),
+        ) {
+            tracing::error!(
+                %user_id,
+                %ref_id,
+                error = %e,
+                "Failed to update user state from autosave"
+            );
+        }
+    }
 
     Ok(())
 }
