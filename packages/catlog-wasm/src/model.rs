@@ -751,6 +751,9 @@ pub fn elaborate_model(
                 ModelJudgment::Instantiation(_) => {
                     return Err("Legacy model elaborator does not support instantiation".into());
                 }
+                ModelJudgment::Equation(_) => {
+                    return Err("Legacy model elaborator does not support equations".into());
+                }
             }
         }
         Ok(model)
