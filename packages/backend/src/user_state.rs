@@ -13,6 +13,16 @@ use crate::app::{AppError, AppState};
 use crate::auth::PermissionLevel;
 use crate::autosurgeon_datetime::{datetime_millis, option_datetime_millis};
 
+/// Reconcile a `UserState` into an Automerge document, returning an `AppError` on failure.
+pub(crate) fn reconcile_user_state(
+    doc: &mut automerge::Automerge,
+    state: &UserState,
+) -> Result<(), AppError> {
+    doc.transact(|tx| reconcile(tx, state))
+        .map_err(|e| AppError::UserStateSync(format!("Failed to reconcile: {:?}", e)))?;
+    Ok(())
+}
+
 /// The type of a document.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Reconcile, Hydrate, TS)]
 #[serde(rename_all = "lowercase")]
@@ -494,10 +504,7 @@ async fn refresh_user_state_doc_from_db(
         return Ok(false);
     };
 
-    doc_handle.with_document(|doc| {
-        doc.transact(|tx| reconcile(tx, &user_state))
-            .map_err(|e| AppError::UserStateSync(format!("Failed to reconcile: {:?}", e)))
-    })?;
+    doc_handle.with_document(|doc| reconcile_user_state(doc, &user_state))?;
 
     debug!(
         user_id = %user_id,
@@ -512,8 +519,7 @@ async fn refresh_user_state_doc_from_db(
 /// Converts a `UserState` into an Automerge document.
 pub fn user_state_to_automerge(state: &UserState) -> Result<automerge::Automerge, AppError> {
     let mut doc = automerge::Automerge::new();
-    doc.transact(|tx| reconcile(tx, state))
-        .map_err(|e| AppError::UserStateSync(format!("Failed to reconcile: {:?}", e)))?;
+    reconcile_user_state(&mut doc, state)?;
     Ok(doc)
 }
 
@@ -536,10 +542,7 @@ pub async fn create_user_state_doc(
 
     debug!(user_id = %user_id, doc_id = %doc_id, "Empty document created in repo");
 
-    doc_handle.with_document(|doc| {
-        doc.transact(|tx| reconcile(tx, user_state))
-            .map_err(|e| AppError::UserStateSync(format!("Failed to reconcile: {:?}", e)))
-    })?;
+    doc_handle.with_document(|doc| reconcile_user_state(doc, user_state))?;
 
     debug!(user_id = %user_id, doc_id = %doc_id, "Document populated with user state");
 

@@ -14,7 +14,7 @@ import { currentUserPermission, formatOwners, useUserState } from "./user_state_
 
 /** Filter, search, and sort documents from user state. */
 export function filterDocuments(
-    documents: Record<string, DocInfo>,
+    documents: Partial<Record<string, DocInfo>>,
     opts: {
         currentUserId: string | undefined;
         query: string;
