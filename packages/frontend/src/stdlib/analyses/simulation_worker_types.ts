@@ -1,10 +1,11 @@
 import type { LatexEquation, ModelNotebook } from "catlog-wasm";
+import type { AnalysisId } from "./simulation_config";
 
 /** Request sent from the main thread to the simulation worker. */
 export type SimulationRequest = {
     requestId: number;
     theoryId: string;
-    analysisId: string;
+    analysisId: AnalysisId;
     notebook: ModelNotebook;
     refId: string;
     params: unknown;

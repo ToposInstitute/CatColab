@@ -22,13 +22,14 @@ import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
 import { MassActionConfigForm } from "./mass_action_config_form";
 import { createModelODEPlotWithEquations } from "./model_ode_plot";
+import type { AnalysisId } from "./simulation_config";
 
 import "./simulation.css";
 
 /** Analyze a model using mass-action dynamics. */
 export default function MassAction(
     props: ModelAnalysisProps<MassActionProblemData> & {
-        analysisId: string;
+        analysisId: AnalysisId;
         ratesHaveGranularity: boolean;
         stateType?: ObType;
         title?: string;

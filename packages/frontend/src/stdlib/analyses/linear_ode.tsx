@@ -10,13 +10,14 @@ import type { ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
 import { createModelODEPlot } from "./model_ode_plot";
+import type { AnalysisId } from "./simulation_config";
 
 import "./simulation.css";
 
 /** Analyze a model using LinearODE dynamics. */
 export default function LinearODE(
     props: ModelAnalysisProps<LinearODEProblemData> & {
-        analysisId: string;
+        analysisId: AnalysisId;
         title?: string;
     },
 ) {

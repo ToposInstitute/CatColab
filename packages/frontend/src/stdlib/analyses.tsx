@@ -10,6 +10,7 @@ import type { DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
 import * as GraphLayoutConfig from "../visualization/graph_layout_config";
 import type * as Checkers from "./analyses/checker_types";
 import { defaultSchemaERDConfig, type SchemaERDConfig } from "./analyses/schema_erd_config";
+import type { AnalysisId } from "./analyses/simulation_config";
 import type {
     DecapodesAnalysisContent,
     KuramotoProblemData,
@@ -27,6 +28,8 @@ type AnalysisOptions = {
     description?: string;
     help?: string;
 };
+
+type SimulationAnalysisOptions = Omit<Partial<AnalysisOptions>, "id"> & { id: AnalysisId };
 
 export const decapodes = (
     options: AnalysisOptions,
@@ -66,7 +69,7 @@ export const tabularView = (
 const TabularView = lazy(() => import("./analyses/tabular_view"));
 
 export function kuramoto(
-    options: Partial<AnalysisOptions> & {
+    options: SimulationAnalysisOptions & {
         parameterLabels?: {
             coupling?: string;
             damping?: string;
@@ -75,7 +78,7 @@ export function kuramoto(
     },
 ): ModelAnalysisMeta<KuramotoProblemData> {
     const {
-        id = "kuramoto",
+        id,
         name = "Kuramoto dynamics",
         description = "Simulate the system using the Kuramoto dynamical model",
         help = "kuramoto",
@@ -110,10 +113,10 @@ export function kuramoto(
 const Kuramoto = lazy(() => import("./analyses/kuramoto"));
 
 export function linearODE(
-    options: Partial<AnalysisOptions> = {},
+    options: SimulationAnalysisOptions,
 ): ModelAnalysisMeta<LinearODEProblemData> {
     const {
-        id = "linear-ode",
+        id,
         name = "Linear ODE dynamics",
         description = "Simulate the system using a constant-coefficient linear first-order ODE",
         help = "linear-ode",
@@ -135,10 +138,10 @@ export function linearODE(
 const LinearODE = lazy(() => import("./analyses/linear_ode"));
 
 export function lotkaVolterra(
-    options: Partial<AnalysisOptions> = {},
+    options: SimulationAnalysisOptions,
 ): ModelAnalysisMeta<LotkaVolterraProblemData> {
     const {
-        id = "lotka-volterra",
+        id,
         name = "Lotka-Volterra dynamics",
         description = "Simulate the system using a Lotka-Volterra ODE",
         help = "lotka-volterra",
@@ -161,14 +164,14 @@ export function lotkaVolterra(
 const LotkaVolterra = lazy(() => import("./analyses/lotka_volterra"));
 
 export function massAction(
-    options: Partial<AnalysisOptions> & {
+    options: SimulationAnalysisOptions & {
         ratesHaveGranularity: boolean;
         stateType?: ObType;
         transitionType?: MorType;
     },
 ): ModelAnalysisMeta<MassActionProblemData> {
     const {
-        id = "mass-action",
+        id,
         name = "Mass-action dynamics",
         description = "Simulate the system using the law of mass action",
         help = "mass-action",
@@ -226,13 +229,13 @@ export function massActionEquations(
 const MassActionEquationsDisplay = lazy(() => import("./analyses/mass_action_equations"));
 
 export function stochasticMassAction(
-    options: Partial<AnalysisOptions> & {
+    options: SimulationAnalysisOptions & {
         stateType?: ObType;
         transitionType?: MorType;
-    } = {},
+    },
 ): ModelAnalysisMeta<StochasticMassActionProblemData> {
     const {
-        id = "stochastic-mass-action",
+        id,
         name = "Stochastic mass-action dynamics",
         description = "Simulate the system using stochastic mass-action dynamics",
         help = "stochastic-mass-action",

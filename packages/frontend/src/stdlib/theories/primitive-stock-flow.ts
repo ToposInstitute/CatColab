@@ -50,6 +50,7 @@ export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): 
                 help: "visualization",
             }),
             analyses.massAction({
+                id: "mass-action",
                 ratesHaveGranularity: false,
                 transitionType: {
                     tag: "Hom",

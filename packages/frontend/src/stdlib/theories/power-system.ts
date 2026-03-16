@@ -54,6 +54,7 @@ export default function createPowerSystemsTheory(theoryMeta: TheoryMeta): Theory
                 help: "visualization",
             }),
             analyses.kuramoto({
+                id: "kuramoto",
                 parameterLabels: {
                     coupling: "Capacity",
                     forcing: "Input power",
