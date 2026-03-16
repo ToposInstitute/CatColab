@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use super::{ODEAnalysis, ODEProblem};
-use crate::dbl::model::{DiscreteDblModel, FgDblModel};
+use crate::dbl::model::{DiscreteDblModel, FpDblModel};
 use crate::one::{FgCategory, QualifiedPath};
 use crate::simulate::ode::{KuramotoOrder, KuramotoSystem};
 use crate::zero::QualifiedName;

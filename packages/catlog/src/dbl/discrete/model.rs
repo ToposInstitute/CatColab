@@ -193,7 +193,7 @@ impl DblModel for DiscreteDblModel {
     }
 }
 
-impl FgDblModel for DiscreteDblModel {
+impl FpDblModel for DiscreteDblModel {
     fn ob_generator_type(&self, ob: &Self::ObGen) -> Self::ObType {
         self.ob_types.apply_to_ref(ob).expect("Object should have type")
     }
@@ -206,6 +206,10 @@ impl FgDblModel for DiscreteDblModel {
     }
     fn mor_generators_with_type(&self, typ: &Self::MorType) -> impl Iterator<Item = Self::MorGen> {
         self.mor_types.preimage(typ)
+    }
+
+    fn equations(&self) -> impl Iterator<Item = (Self::Mor, Self::Mor)> {
+        self.category.equations().map(|PathEq { lhs, rhs }| (lhs.clone(), rhs.clone()))
     }
 }
 

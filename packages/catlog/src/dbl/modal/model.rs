@@ -77,7 +77,7 @@ pub struct ModalDblModel {
     theory: Rc<ModalDblTheory>,
     ob_generators: HashFinSet<QualifiedName>,
     mor_generators: ComputadTop<ModalOb, QualifiedName>,
-    // TODO: Equations
+    equations: [(); 0], // TODO: Equations not implemented
     ob_types: HashColumn<QualifiedName, ModalObType>,
     mor_types: HashColumn<QualifiedName, ModalMorType>,
 }
@@ -89,6 +89,7 @@ impl ModalDblModel {
             theory,
             ob_generators: Default::default(),
             mor_generators: Default::default(),
+            equations: Default::default(),
             ob_types: Default::default(),
             mor_types: Default::default(),
         }
@@ -236,7 +237,7 @@ impl DblModel for ModalDblModel {
     }
 }
 
-impl FgDblModel for ModalDblModel {
+impl FpDblModel for ModalDblModel {
     fn ob_generator_type(&self, id: &Self::ObGen) -> Self::ObType {
         self.ob_types.apply_to_ref(id).expect("Object should have object type")
     }
@@ -248,6 +249,9 @@ impl FgDblModel for ModalDblModel {
     }
     fn mor_generators_with_type(&self, typ: &Self::MorType) -> impl Iterator<Item = Self::MorGen> {
         self.mor_types.preimage(typ)
+    }
+    fn equations(&self) -> impl Iterator<Item = (Self::Mor, Self::Mor)> {
+        self.equations.iter().map(|()| unreachable!())
     }
 }
 
