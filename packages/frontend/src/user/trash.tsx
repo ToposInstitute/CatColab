@@ -11,7 +11,7 @@ import { useApi } from "../api";
 import { BrandedToolbar } from "../page";
 import "./documents.css";
 
-import { DocumentList } from "./document_list";
+import { DocumentList, filterDocuments } from "./document_list";
 import { LoginGate } from "./login";
 import { useUserState } from "./user_state_context";
 
@@ -41,31 +41,13 @@ function TrashBinSearch() {
 
     const currentUserId = auth.currentUser?.uid;
 
-    const documents = createMemo(() => {
-        const query = searchQuery().trim().toLowerCase();
-        return (
-            (Object.entries(userState.documents) as [string, DocInfo][])
-                .filter(([, doc]) => doc.deletedAt !== null)
-                // Exclude public-only documents (user must have an explicit permission)
-                .filter(
-                    ([, doc]) =>
-                        currentUserId !== undefined &&
-                        doc.permissions.some((p) => p.user === currentUserId),
-                )
-                .map(([refId, doc]) => ({ refId, ...doc }))
-                .filter((doc) => {
-                    if (query === "") {
-                        return true;
-                    }
-                    return doc.name.toLowerCase().includes(query);
-                })
-                .sort((a, b) => {
-                    const aDeletedAt = a.deletedAt ?? 0;
-                    const bDeletedAt = b.deletedAt ?? 0;
-                    return bDeletedAt - aDeletedAt;
-                })
-        );
-    });
+    const documents = createMemo(() =>
+        filterDocuments(userState.documents, {
+            currentUserId,
+            query: searchQuery().trim().toLowerCase(),
+            deleted: true,
+        }),
+    );
 
     const renderActions = (doc: DocInfo & { refId: string }) => {
         return <RestoreButton doc={doc} />;
