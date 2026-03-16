@@ -121,9 +121,6 @@ function createWorkerSimulation<T>(
 ): { data: Accessor<T | undefined>; loading: Accessor<boolean> } {
     const DEBOUNCE_MS = 150;
 
-    const theoryId = liveModel.liveDoc.doc.theory;
-    const refId = liveModel.liveDoc.docHandle.documentId;
-
     const [data, setData] = createSignal<T | undefined>(undefined);
     const [loading, setLoading] = createSignal(false);
 
@@ -135,10 +132,10 @@ function createWorkerSimulation<T>(
 
         const request: SimulationRequest = {
             requestId,
-            theoryId,
+            theoryId: liveModel.liveDoc.doc.theory,
             analysisId,
             notebook: JSON.parse(JSON.stringify(currentNotebook)),
-            refId,
+            refId: liveModel.liveDoc.docHandle.documentId,
             params: JSON.parse(JSON.stringify(currentParams)),
         };
 
