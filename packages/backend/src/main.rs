@@ -11,7 +11,7 @@ use sqlx::postgres::PgPoolOptions;
 use sqlx_migrator::cli::MigrationCommand;
 use sqlx_migrator::migrator::{Migrate, Migrator};
 use sqlx_migrator::{Info, Plan};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -116,7 +116,7 @@ async fn main() {
                 db: db.clone(),
                 repo,
                 active_listeners: Arc::new(RwLock::new(HashSet::new())),
-                initialized_user_states: Arc::new(RwLock::new(HashSet::new())),
+                initialized_user_states: Arc::new(RwLock::new(HashMap::new())),
             };
 
             // We need to wrap FirebaseAuth in an Arc because if it's ever dropped the process which updates it's

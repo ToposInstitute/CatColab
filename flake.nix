@@ -66,8 +66,7 @@
         };
 
       rustToolchainFor =
-        system:
-        inputs.fenix.packages.${system}.fromToolchainFile {
+        system: fenix.packages.${system}.fromToolchainFile {
           file = ./rust-toolchain.toml;
           sha256 = "sha256-vra6TkHITpwRyA5oBKAHSX0Mi6CBDNQD+ryPSpxFsfg=";
         };

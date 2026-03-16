@@ -94,7 +94,7 @@ fn insert_value_into_list<'a>(
 }
 
 /// Populate an automerge document from a JSON value.
-pub(crate) fn populate_automerge_from_json<'a>(
+pub fn populate_automerge_from_json<'a>(
     tx: &mut automerge::transaction::Transaction<'a>,
     obj_id: automerge::ObjId,
     value: &Value,
@@ -123,7 +123,7 @@ pub(crate) fn populate_automerge_from_json<'a>(
 }
 
 /// Convert automerge hydrate::Value to serde_json::Value.
-pub(crate) fn hydrate_to_json(value: &hydrate::Value) -> Value {
+pub fn hydrate_to_json(value: &hydrate::Value) -> Value {
     match value {
         hydrate::Value::Scalar(s) => scalar_to_json(s),
         hydrate::Value::Map(m) => {
@@ -167,7 +167,7 @@ fn scalar_to_json(s: &automerge::ScalarValue) -> Value {
 }
 
 /// Spawns a background task that listens for document changes and triggers autosave.
-pub(crate) async fn ensure_autosave_listener(state: AppState, ref_id: Uuid, doc_handle: DocHandle) {
+pub async fn ensure_autosave_listener(state: AppState, ref_id: Uuid, doc_handle: DocHandle) {
     let listeners = state.active_listeners.read().await;
     if listeners.contains(&ref_id) {
         return;

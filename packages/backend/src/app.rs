@@ -1,6 +1,7 @@
 use firebase_auth::FirebaseUser;
+use samod::DocumentId;
 use sqlx::PgPool;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::sync::RwLock;
@@ -20,8 +21,9 @@ pub struct AppState {
     /// Tracks which ref_ids have active autosave listeners to prevent duplicates.
     pub active_listeners: Arc<RwLock<HashSet<Uuid>>>,
 
-    /// Tracks user IDs whose state docs were refreshed from DB in this process.
-    pub initialized_user_states: Arc<RwLock<HashSet<String>>>,
+    /// Tracks user IDs whose state docs were refreshed from DB in this process,
+    /// mapped to their Automerge document IDs.
+    pub initialized_user_states: Arc<RwLock<HashMap<String, DocumentId>>>,
 }
 
 /// Context available to RPC procedures.

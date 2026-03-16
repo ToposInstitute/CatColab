@@ -13,8 +13,11 @@ use crate::app::{AppError, AppState};
 use crate::auth::PermissionLevel;
 use crate::autosurgeon_datetime::{datetime_millis, option_datetime_millis};
 
+/// Default name for documents without a name.
+pub const DEFAULT_DOC_NAME: &str = "untitled";
+
 /// Reconcile a `UserState` into an Automerge document, returning an `AppError` on failure.
-pub(crate) fn reconcile_user_state(
+pub fn reconcile_user_state(
     doc: &mut automerge::Automerge,
     state: &UserState,
 ) -> Result<(), AppError> {
@@ -275,6 +278,44 @@ impl DbUserInfo {
     }
 }
 
+/// Extracts document relations from a JSON content tree.
+///
+/// Replicates the SQL `extract_snapshot_relations` function: recursively walks
+/// the JSON tree and collects objects that have both `_id` and `type` keys,
+/// returning them as `RelationInfo` entries.
+pub fn extract_relations_from_json(value: &serde_json::Value) -> Vec<RelationInfo> {
+    let mut relations = Vec::new();
+    collect_relations(value, &mut relations);
+
+    // Deduplicate by (ref_id, relation_type), matching the SQL DISTINCT.
+    relations.sort_by(|a, b| a.ref_id.cmp(&b.ref_id).then(a.relation_type.cmp(&b.relation_type)));
+    relations.dedup_by(|a, b| a.ref_id == b.ref_id && a.relation_type == b.relation_type);
+
+    relations
+}
+
+fn collect_relations(value: &serde_json::Value, out: &mut Vec<RelationInfo>) {
+    match value {
+        serde_json::Value::Object(map) => {
+            if let (Some(serde_json::Value::String(id)), Some(serde_json::Value::String(ty))) =
+                (map.get("_id"), map.get("type"))
+                && let Ok(ref_id) = uuid::Uuid::parse_str(id)
+            {
+                out.push(RelationInfo { ref_id, relation_type: ty.clone() });
+            }
+            for child in map.values() {
+                collect_relations(child, out);
+            }
+        }
+        serde_json::Value::Array(arr) => {
+            for child in arr {
+                collect_relations(child, out);
+            }
+        }
+        _ => {}
+    }
+}
+
 /// Reads user state from the database.
 pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<UserState, AppError> {
     debug!(user_id = %user_id, "Reading user state from database");
@@ -302,7 +343,7 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
             snapshots.content->>'theory' AS theory,
             refs.created AS "created_at!",
             refs.deleted_at,
-            extract_snapshot_relations(snapshots.content) AS "depends_on!: sqlx::types::Json<Vec<DbRelation>>",
+            snapshots.content AS "content!",
             COALESCE(
                 (SELECT json_agg(json_build_object(
                     'user_id', p.subject,
@@ -337,11 +378,10 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
             let key = row.ref_id.to_string();
             let permissions: Vec<PermissionInfo> =
                 row.permissions.0.iter().filter_map(|p| p.to_permission_info()).collect();
-            let depends_on: Vec<RelationInfo> =
-                row.depends_on.0.iter().filter_map(|r| r.to_relation_info()).collect();
+            let depends_on = extract_relations_from_json(&row.content);
 
             let info = DocInfo {
-                name: Text::from(row.name.unwrap_or_else(|| "untitled".to_string())),
+                name: Text::from(row.name.unwrap_or_else(|| DEFAULT_DOC_NAME.to_string())),
                 type_name: row
                     .type_name
                     .as_deref()
@@ -455,14 +495,14 @@ pub async fn get_or_create_user_state_doc(
     if let Some(doc_id) = get_user_state_doc(state, user_id).await {
         let already_initialized = {
             let initialized = state.initialized_user_states.read().await;
-            initialized.contains(user_id)
+            initialized.contains_key(user_id)
         };
 
         if !already_initialized {
             let refreshed = refresh_user_state_doc_from_db(state, user_id, &doc_id).await?;
             if refreshed {
                 let mut initialized = state.initialized_user_states.write().await;
-                initialized.insert(user_id.to_string());
+                initialized.insert(user_id.to_string(), doc_id.clone());
             } else {
                 debug!(
                     user_id = %user_id,
@@ -472,7 +512,7 @@ pub async fn get_or_create_user_state_doc(
                 let user_state = read_user_state_from_db(user_id.to_string(), &state.db).await?;
                 let recreated_doc_id = create_user_state_doc(state, user_id, &user_state).await?;
                 let mut initialized = state.initialized_user_states.write().await;
-                initialized.insert(user_id.to_string());
+                initialized.insert(user_id.to_string(), recreated_doc_id.clone());
                 return Ok(recreated_doc_id);
             }
         }
@@ -490,7 +530,7 @@ pub async fn get_or_create_user_state_doc(
     let user_state = read_user_state_from_db(user_id.to_string(), &state.db).await?;
     let doc_id = create_user_state_doc(state, user_id, &user_state).await?;
     let mut initialized = state.initialized_user_states.write().await;
-    initialized.insert(user_id.to_string());
+    initialized.insert(user_id.to_string(), doc_id.clone());
     Ok(doc_id)
 }
 
@@ -561,6 +601,42 @@ pub async fn create_user_state_doc(
     info!(user_id = %user_id, doc_id = %doc_id, "Created user state document");
 
     Ok(doc_id)
+}
+
+/// Updates only snapshot-derived fields on an existing `DocInfo` entry.
+///
+/// Called after autosave, which only writes snapshot content. This is a partial
+/// update because autosave cannot change permissions, timestamps, or user data —
+/// those fields are handled by their own DB triggers (`notify_permissions_change`,
+/// `notify_refs_change`, `notify_user_change`).
+///
+/// Returns `Ok(false)` if the `ref_id` isn't in the user's documents (user
+/// doesn't have access), `Ok(true)` if the update was applied.
+pub fn update_doc_info_from_snapshot(
+    doc_handle: &samod::DocHandle,
+    ref_id: &str,
+    name: &str,
+    type_name: DocInfoType,
+    theory: Option<&str>,
+    depends_on: Vec<RelationInfo>,
+) -> Result<bool, AppError> {
+    doc_handle.with_document(|doc| {
+        let mut user_state: UserState =
+            autosurgeon::hydrate(doc).map_err(|e| AppError::UserStateSync(e.to_string()))?;
+
+        let Some(doc_info) = user_state.documents.get_mut(ref_id) else {
+            return Ok(false);
+        };
+
+        doc_info.name = autosurgeon::Text::from(name);
+        doc_info.type_name = type_name;
+        doc_info.theory = theory.map(|s| s.to_string());
+        doc_info.depends_on = depends_on;
+
+        user_state.recompute_used_by();
+        reconcile_user_state(doc, &user_state)?;
+        Ok(true)
+    })
 }
 
 /// Arbitrary instances for property-based testing.
@@ -785,6 +861,77 @@ pub mod arbitrary {
         fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
             arbitrary_user_state_with_id().prop_map(|(_, state)| state).boxed()
         }
+    }
+}
+
+#[cfg(test)]
+mod unit_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn extract_relations_from_nested_json() {
+        let content = json!({
+            "name": "My Model",
+            "type": "model",
+            "theory": "th_signed_category",
+            "content": {
+                "cells": [
+                    {
+                        "tag": "ob",
+                        "content": {
+                            "obType": {
+                                "_id": "019532d2-d6a3-7c7e-93c6-6c43419e4233",
+                                "type": "model"
+                            }
+                        }
+                    },
+                    {
+                        "tag": "morphism",
+                        "content": {
+                            "morType": {
+                                "_id": "019532d2-d6a3-7c7e-93c6-6c43419e4234",
+                                "type": "diagram"
+                            }
+                        }
+                    }
+                ]
+            }
+        });
+
+        let mut relations = extract_relations_from_json(&content);
+        relations.sort_by(|a, b| a.ref_id.cmp(&b.ref_id));
+
+        assert_eq!(relations.len(), 2);
+        assert_eq!(
+            relations[0].ref_id,
+            uuid::Uuid::parse_str("019532d2-d6a3-7c7e-93c6-6c43419e4233").unwrap()
+        );
+        assert_eq!(relations[0].relation_type, "model");
+        assert_eq!(
+            relations[1].ref_id,
+            uuid::Uuid::parse_str("019532d2-d6a3-7c7e-93c6-6c43419e4234").unwrap()
+        );
+        assert_eq!(relations[1].relation_type, "diagram");
+    }
+
+    #[test]
+    fn extract_relations_deduplicates() {
+        let content = json!({
+            "a": { "_id": "019532d2-d6a3-7c7e-93c6-6c43419e4233", "type": "model" },
+            "b": { "_id": "019532d2-d6a3-7c7e-93c6-6c43419e4233", "type": "model" }
+        });
+
+        let relations = extract_relations_from_json(&content);
+        assert_eq!(relations.len(), 1);
+    }
+
+    #[test]
+    fn extract_relations_empty_document() {
+        let content = json!({ "name": "Empty", "type": "model" });
+        // The top-level object has "type" but no "_id", so no relations.
+        let relations = extract_relations_from_json(&content);
+        assert!(relations.is_empty());
     }
 }
 

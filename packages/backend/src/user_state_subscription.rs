@@ -9,8 +9,8 @@ use tracing::{debug, error, info};
 
 use super::app::{AppError, AppState};
 use crate::user_state::{
-    DbPermission, DbRelation, DbUserInfo, DocInfo, DocInfoType, UserState, get_user_state_doc,
-    reconcile_user_state,
+    DEFAULT_DOC_NAME, DbPermission, DbRelation, DbUserInfo, DocInfo, DocInfoType, UserState,
+    get_user_state_doc, reconcile_user_state,
 };
 
 /// Notification from PostgreSQL about a user state change.
@@ -91,7 +91,7 @@ fn to_doc_info(
 
             Some((
                 DocInfo {
-                    name: Text::from(name.clone().unwrap_or_else(|| "untitled".to_string())),
+                    name: Text::from(name.clone().unwrap_or_else(|| DEFAULT_DOC_NAME.to_string())),
                     type_name: type_name.clone()?,
                     theory: theory.clone(),
                     permissions: doc_permissions,
