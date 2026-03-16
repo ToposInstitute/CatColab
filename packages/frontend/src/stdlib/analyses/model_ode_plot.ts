@@ -249,8 +249,6 @@ export function createModelODEPlotWithEquations(
 }
 
 /** Reactively compute the symbolic ODE equations for a model in LaTeX.
-
-This stays on the main thread as it is typically fast.
  */
 export function createModelODELatex(
     validatedModel: Accessor<ValidatedModel | undefined>,
