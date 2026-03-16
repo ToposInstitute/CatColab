@@ -5,6 +5,7 @@ import type { DblModel, JsResult, LatexEquation, ModelNotebook, ODELatex } from 
 import type { LiveModelDoc, ValidatedModel } from "../../model";
 import { debounce } from "../../util/debounce";
 import type { ODEPlotData, StateVarData } from "../../visualization";
+import type { AnalysisId } from "./simulation_config";
 import type {
     SerializedODESolution,
     SimulationRequest,
@@ -115,7 +116,7 @@ function serializedSolutionToPlotData(
 /** Internal helper that both `createModelODEPlot` and `createModelODEPlotWithEquations` delegate to. */
 function createWorkerSimulation<T>(
     liveModel: LiveModelDoc,
-    analysisId: string,
+    analysisId: AnalysisId,
     params: Accessor<unknown>,
     mapOk: (response: SimulationResponse & { tag: "Ok" }, model: DblModel) => T,
     mapErr: (error: string) => T,
@@ -206,7 +207,7 @@ rapid parameter changes.
  */
 export function createModelODEPlot(
     liveModel: LiveModelDoc,
-    analysisId: string,
+    analysisId: AnalysisId,
     params: Accessor<unknown>,
 ): ODEPlotResult {
     return createWorkerSimulation<JsResult<ODEPlotData, string>>(
@@ -227,7 +228,7 @@ Returns both plot data and LaTeX equations.
  */
 export function createModelODEPlotWithEquations(
     liveModel: LiveModelDoc,
-    analysisId: string,
+    analysisId: AnalysisId,
     params: Accessor<unknown>,
 ): ODEPlotResultWithEquations {
     return createWorkerSimulation<ODEPlotDataWithEquations>(

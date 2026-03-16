@@ -42,6 +42,7 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
                 help: "visualization",
             }),
             analyses.massAction({
+                id: "mass-action",
                 ratesHaveGranularity: true,
             }),
             analyses.massActionEquations({

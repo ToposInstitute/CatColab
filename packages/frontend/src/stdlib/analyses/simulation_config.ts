@@ -28,7 +28,7 @@ export const theoryClassCtors: Record<string, () => object> = {
 };
 
 /** Analysis ID -> dispatch function. Independent of theory. */
-export const analysisDispatches: Record<string, AnalysisDispatch> = {
+export const analysisDispatches = {
     "mass-action": (th, model, params) => ({
         hasEquations: true,
         result: th.massAction(model, params),
@@ -49,4 +49,7 @@ export const analysisDispatches: Record<string, AnalysisDispatch> = {
         hasEquations: false,
         result: th.kuramoto(model, params),
     }),
-};
+} satisfies Record<string, AnalysisDispatch>;
+
+/** Union type of all valid simulation analysis IDs. */
+export type AnalysisId = keyof typeof analysisDispatches;

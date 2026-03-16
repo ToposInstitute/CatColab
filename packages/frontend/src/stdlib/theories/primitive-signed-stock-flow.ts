@@ -59,6 +59,7 @@ export default function createPrimitiveSignedStockFlowTheory(theoryMeta: TheoryM
                 help: "visualization",
             }),
             analyses.massAction({
+                id: "mass-action",
                 ratesHaveGranularity: false,
                 transitionType: {
                     tag: "Hom",

@@ -12,13 +12,14 @@ import type { ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
 import { createModelODEPlot } from "./model_ode_plot";
+import type { AnalysisId } from "./simulation_config";
 
 import "./simulation.css";
 
 /** Analyze a model using stochastic mass-action dynamics. */
 export default function StochasticMassAction(
     props: ModelAnalysisProps<StochasticMassActionProblemData> & {
-        analysisId: string;
+        analysisId: AnalysisId;
         stateType?: ObType;
         transitionType?: MorType;
         title?: string;

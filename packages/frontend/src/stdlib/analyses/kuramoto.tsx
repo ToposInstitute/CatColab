@@ -12,13 +12,14 @@ import type { ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
 import { createModelODEPlot } from "./model_ode_plot";
+import type { AnalysisId } from "./simulation_config";
 
 import "./simulation.css";
 
 /** Analyse a model using first- or second-order Kuramoto dynamics. */
 export default function Kuramoto(
     props: ModelAnalysisProps<KuramotoProblemData> & {
-        analysisId: string;
+        analysisId: AnalysisId;
         title?: string;
         couplingLabel?: string;
         dampingLabel?: string;
