@@ -17,8 +17,8 @@ website:
 format:
   html:
     # General styling
-    mainfont: Baskerville
-    monofont: JetBrains Mono
+    # mainfont: Baskerville
+    # monofont: JetBrains Mono
     theme:
       light: flatly
       dark: darkly

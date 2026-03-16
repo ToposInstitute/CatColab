@@ -1,3 +1,6 @@
+<!-- Arrows -->
+\newcommand{\proto}{\mathrel{\mkern3mu\vcenter{\hbox{$\shortmid$}}\mkern-10mu{\to}}}
+
 <!-- Categories in the small -->
 \newcommand{\dbl}[1]{\mathbb{#1}}
 \newcommand{\cat}[1]{\mathcal{#1}}
