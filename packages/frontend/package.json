@@ -7,9 +7,9 @@
     "scripts": {
         "build:wasm": "npm --prefix ../catlog-wasm run build:browser",
         "build:bindings": "cargo run -p backend -- generate-bindings",
-        "build:deps": "npm run build:wasm && npm run build:bindings",
+        "build:tcm": "tcm -p 'src/**/*.module.css' . && npm run format",
+        "build:deps": "npm run build:wasm && npm run build:bindings && npm run build:tcm",
         "build": "tsc -b && vite build --sourcemap true",
-        "compile": "tcm -p 'src/**/*.module.css' . && tsc -b",
         "preview": "vite preview",
         "format": "biome format --write",
         "lint": "biome lint --write && biome check --write",
