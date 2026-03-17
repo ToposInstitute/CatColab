@@ -1,4 +1,4 @@
-import Loader from "lucide-solid/icons/loader";
+// import Loader from "lucide-solid/icons/loader";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import { createMemo, createResource, For, Match, Show, Switch } from "solid-js";
 
@@ -15,7 +15,7 @@ import {
 import type { ModelDiagramPresentation, ModelPresentation, QualifiedName } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
 import type { LiveDiagramDoc } from "../../diagram";
-import { PDEPlot2D } from "../../visualization";
+// import { PDEPlot2D } from "../../visualization";
 import type { DecapodesAnalysisContent } from "./simulator_types";
 
 import "./decapodes.css";
@@ -23,17 +23,8 @@ import "./simulation.css";
 
 /** Analyze a DEC diagram by performing a simulation using Decapodes.jl. */
 export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisContent>) {
-    // Step 1: Start the Julia kernel.
-    const [kernel, { refetch: restartKernel }] = createResource(() => undefined);
-
-    // Step 2: Run initialization code in the kernel.
-    const [options] = createResource<SimulationOptions | undefined>(() => undefined);
-
-    // Step 3: Run the simulation in the kernel!
-    const [result, { refetch: rerunSimulation }] = createResource(() => undefined);
-
-    const elaboratedModel = () => props.liveDiagram.liveModel.elaboratedModel();
-    const elaboratedDiagram = () => props.liveDiagram.elaboratedDiagram();
+    const elaboratedModel = props.liveDiagram.liveModel.elaboratedModel;
+    const elaboratedDiagram = props.liveDiagram.elaboratedDiagram;
 
     const scalars = createMemo<QualifiedName[]>(
         () =>
@@ -112,20 +103,11 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         }),
     ];
 
+    // TODO return rerun sim
     const RestartOrRerunButton = () => (
         <Switch>
-            <Match when={kernel.loading || options.loading || result.loading}>
-                <IconButton>
-                    <Loader size={16} />
-                </IconButton>
-            </Match>
-            <Match when={kernel.error || options.error}>
-                <IconButton onClick={restartKernel} tooltip="Restart the Julia kernel">
-                    <RotateCcw size={16} />
-                </IconButton>
-            </Match>
             <Match when={true}>
-                <IconButton onClick={rerunSimulation} tooltip="Re-run the simulation">
+                <IconButton tooltip="Re-run the simulation">
                     <RotateCcw size={16} />
                 </IconButton>
             </Match>
@@ -176,11 +158,42 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         </div>
     );
 
+    const [res] = createResource(
+        () => {
+            const model = props.liveDiagram.liveModel.elaboratedModel();
+            const diagram = props.liveDiagram.elaboratedDiagram();
+            if (model && diagram) {
+                return { model, diagram };
+            }
+        },
+
+        // TODO pass in
+        async ({ model, diagram }) => {
+            const response = await fetch("http://127.0.0.1:8080/decapodes", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    model: model.presentation(),
+                    diagram: diagram.presentation(),
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            return { model, data: await response.json() };
+        },
+    );
+
+    // TODO return `options()` to Show when
     return (
         <div class="simulation">
             <BlockTitle title="Simulation" actions={RestartOrRerunButton()} />
             <Foldable title="Parameters" defaultExpanded>
-                <Show when={options()}>
+                <Show when={true}>
                     {(_options) => {
                         //DomainConfig(options().domains)
                         return DomainConfig(new Map());
@@ -192,30 +205,14 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                     <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
             </Foldable>
+
             <Switch>
-                <Match when={kernel.loading || options.loading}>
-                    {"Loading the Julia kernel..."}
-                </Match>
-                <Match when={kernel.error}>
+                <Match when={res.loading}>{"Loading Julia resource..."}</Match>
+                <Match when={res.error}>
                     {(error) => (
                         <Warning title="Failed to start a Julia kernel">
                             <pre>{error().message}</pre>
                         </Warning>
-                    )}
-                </Match>
-                <Match when={options.error}>
-                    {(error) => (
-                        <Warning title="Failed to initialize the Julia kernel">
-                            <pre>{error().message}</pre>
-                        </Warning>
-                    )}
-                </Match>
-                <Match when={result.loading}>{"Running the simulation..."}</Match>
-                <Match when={result.error}>
-                    {(error) => (
-                        <ErrorAlert title="Simulation error">
-                            <pre>{error().message}</pre>
-                        </ErrorAlert>
                     )}
                 </Match>
                 <Match when={props.liveDiagram.validatedDiagram()?.tag !== "Valid"}>
@@ -223,17 +220,23 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                         {"Cannot run the simulation because the diagram is invalid"}
                     </ErrorAlert>
                 </Match>
-                <Match when={result()}>{(data) => <PDEPlot2D data={data()} />}</Match>
+                <Match when={res()}>
+                    {(data) => {
+                        console.log(data());
+                        return <span>"!"</span>;
+                    }}
+                </Match>
             </Switch>
         </div>
+        // TODO return PDEPlot2D
     );
 }
 
 /** Options supported by Decapodes, defined by the Julia service. */
-type SimulationOptions = {
-    /** Geometric domains supported by Decapodes. */
-    domains: Domain[];
-};
+// type SimulationOptions = {
+//     /** Geometric domains supported by Decapodes. */
+//     domains: Domain[];
+// };
 
 /** A geometric domain and its allow discretizations. */
 type Domain = {

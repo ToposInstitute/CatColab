@@ -91,13 +91,13 @@ mod tests {
     use crate::zero::name;
     use std::rc::Rc;
 
+    // TODO: use text parser
     #[test]
     fn test_diagram() {
         let th = Rc::new(th_multicategory());
         let model = dec(th.clone());
 
         let mut domain = ModalDblModel::new(th.clone());
-        // TODO replace second arg w ob_type...
         let ob_type = ModalObType::new(name("Object"));
         domain.add_ob(name("u"), ob_type.clone());
         domain.add_ob(name("dot-u"), ob_type.clone());
