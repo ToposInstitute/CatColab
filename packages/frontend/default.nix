@@ -77,7 +77,7 @@ let
 
         cd packages/frontend
         # Build with development mode to use .env.development configuration
-        npm run build:nix -- --mode development
+        npm run build -- --mode development
         cd -
       '';
 

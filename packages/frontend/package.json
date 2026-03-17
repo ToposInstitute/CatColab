@@ -8,7 +8,7 @@
         "build:wasm": "npm --prefix ../catlog-wasm run build:browser",
         "build:bindings": "cargo run -p backend -- generate-bindings",
         "build:deps": "npm run build:wasm && npm run build:bindings",
-        "build:nix": "tsc -b && vite build --sourcemap true",
+        "build": "tsc -b && vite build --sourcemap true",
         "compile": "tcm -p 'src/**/*.module.css' . && tsc -b",
         "preview": "vite preview",
         "format": "biome format --write",
@@ -18,8 +18,7 @@
         "test": "vitest --mode=development",
         "test:ci": "vitest --mode=development --cache=false --configLoader=runner --run",
         "dev": "npm run build:deps && vite --host",
-        "staging": "npm run build:deps && vite --mode staging",
-        "build": "npm run build:deps && npm run build:nix"
+        "staging": "npm run build:deps && vite --mode staging"
     },
     "dependencies": {
         "@atlaskit/pragmatic-drag-and-drop": "^1.3.0",
