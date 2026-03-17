@@ -8,10 +8,13 @@ import App from "./App";
 import "catcolab-ui-components/global.css";
 import "katex/dist/katex.min.css";
 
+// bust cache for debuggin
 // Set panic hook for nice tracebacks from Rust core.
 catlog.set_panic_hook();
 
 const root = document.getElementById("root");
+
+console.log("here");
 
 // biome-ignore lint/style/noNonNullAssertion: we know that root exists
 render(() => <App />, root!);

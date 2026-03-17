@@ -45,7 +45,7 @@ jobs:
           deployment-id: ${{ steps.create_deployment.outputs.deployment_id }}
 
   deploy:
-    name: Deploy to Netlify
+    name: Debug Deploy to Netlify
     runs-on: ubuntu-latest
     if: >
       github.event.workflow_run.conclusion == 'success' &&
@@ -76,10 +76,10 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ github.token }}
 
-      - name: Consolidate and deploy to Staging
-        if: github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'pull_request'
+      - name: Debug Consolidate and deploy to Staging
         id: netlify_deploy
         run: |
+          cat packages/frontend/.env.staging
           mv app site/
           mv dev-docs site/dev
           mv rust_docs site/dev/rust
