@@ -14,10 +14,6 @@
       url = "github:ipetkov/crane";
     };
 
-    nixpkgsUnstable = {
-      url = "github:NixOS/nixpkgs/nixos-unstable";
-    };
-
     nixos-generators.url = "github:nix-community/nixos-generators";
   };
 
@@ -105,9 +101,6 @@
             else
               [ ];
 
-          pkgsUnstable = import inputs.nixpkgsUnstable {
-            system = "x86_64-linux";
-          };
           nightlyRustfmt = inputs.fenix.packages.${system}.latest.rustfmt;
         in
         pkgs.mkShell {
@@ -143,7 +136,7 @@
             ++ [
               inputs.agenix.packages.${system}.agenix
               inputs.deploy-rs.packages.${system}.default
-              pkgsUnstable.biome
+              (import ./infrastructure/biome.nix { inherit pkgs system; })
             ];
 
           # macOS-specific environment variables for OpenSSL and pkg-config
