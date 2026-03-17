@@ -9,10 +9,6 @@ import type {
 import type { DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
 import * as GraphLayoutConfig from "../visualization/graph_layout_config";
 import type * as Checkers from "./analyses/checker_types";
-import {
-    type CompositionPatternConfig,
-    defaultCompositionPatternConfig,
-} from "./analyses/composition_pattern_config";
 import { defaultSchemaERDConfig, type SchemaERDConfig } from "./analyses/schema_erd_config";
 import type * as Simulators from "./analyses/simulator_types";
 import type * as SQLDownloadConfig from "./analyses/sql";
@@ -268,20 +264,6 @@ export const modelGraph = (
 });
 
 const ModelGraph = lazy(() => import("./analyses/model_graph"));
-
-export const compositionPattern = (
-    options?: Partial<AnalysisOptions>,
-): ModelAnalysisMeta<CompositionPatternConfig> => ({
-    id: "composition-pattern",
-    name: "Composition pattern",
-    help: "composition-pattern",
-    ...options,
-    component: (props) => <CompositionPattern {...props} />,
-    initialContent: defaultCompositionPatternConfig,
-    description: "Visualize the composition pattern of the model as an undirected wiring diagram",
-});
-
-const CompositionPattern = lazy(() => import("./analyses/composition_pattern"));
 
 export const schemaERD = (options: AnalysisOptions): ModelAnalysisMeta<SchemaERDConfig> => ({
     ...options,

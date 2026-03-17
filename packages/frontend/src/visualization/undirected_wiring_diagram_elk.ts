@@ -103,11 +103,9 @@ export function uwdToElk(uwd: UWD | undefined): ElkNode {
 
     // Build a map from junction name to its outer port ID.
     const junctionOuterPort = new Map<string, string>();
-    if (uwd) {
-        for (const port of uwd.outerPorts) {
-            if (port.junction != null) {
-                junctionOuterPort.set(port.junction, outerPortId(port.name));
-            }
+    for (const port of uwd?.outerPorts ?? []) {
+        if (port.junction != null) {
+            junctionOuterPort.set(port.junction, outerPortId(port.name));
         }
     }
 
@@ -116,19 +114,16 @@ export function uwdToElk(uwd: UWD | undefined): ElkNode {
     // merged along common segments.
     const edges: ElkExtendedEdge[] = [];
     let edgeIndex = 0;
-
-    if (uwd) {
-        for (const box of uwd.boxes) {
-            for (const port of box.ports) {
-                const outerPort =
-                    port.junction != null ? junctionOuterPort.get(port.junction) : undefined;
-                if (outerPort) {
-                    edges.push({
-                        id: `wire-${edgeIndex++}`,
-                        sources: [outerPort],
-                        targets: [boxPortId(box.name, port.name)],
-                    });
-                }
+    for (const box of uwd?.boxes ?? []) {
+        for (const port of box.ports) {
+            const outerPort =
+                port.junction != null ? junctionOuterPort.get(port.junction) : undefined;
+            if (outerPort) {
+                edges.push({
+                    id: `wire-${edgeIndex++}`,
+                    sources: [outerPort],
+                    targets: [boxPortId(box.name, port.name)],
+                });
             }
         }
     }

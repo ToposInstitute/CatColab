@@ -1,4 +1,4 @@
-import { Theory } from "./theory";
+import { type ModelAnalysisMeta, Theory } from "./theory";
 
 /** Frontend metadata for a double theory.
 
@@ -31,6 +31,19 @@ export type TheoryMeta = {
 
 type TheoryConstructor = (meta: TheoryMeta) => Theory;
 
+/** A generic analysis of a model.
+
+Most model analyses make sense only for specific theories. These are the
+exceptional ones that potentially apply to models of any theory.
+ */
+type GenericModelAnalysis = {
+    /** Constructor of analysis metadata. */
+    construct: () => ModelAnalysisMeta;
+
+    /** Condition under which the analysis applies (default: always). */
+    when?: (theory: Theory) => boolean;
+};
+
 /** Library of double theories configured for the frontend.
 
 Theories are lazy loaded.
@@ -45,9 +58,12 @@ export class TheoryLibrary {
     /** ID of the default theory for new models. */
     private defaultTheoryId: string | undefined;
 
+    private genericModelAnalyses: Array<GenericModelAnalysis>;
+
     constructor() {
         this.metaMap = new Map();
         this.theoryMap = new Map();
+        this.genericModelAnalyses = [];
     }
 
     /** Add a theory to the library. */
@@ -79,18 +95,24 @@ export class TheoryLibrary {
     A theory is instantiated and cached the first time it is retrieved.
      */
     async get(id: string): Promise<Theory> {
+        // Attempt to retrieve cached theory.
         const meta = this.metaMap.get(id);
         const theoryOrCons = this.theoryMap.get(id);
         if (meta === undefined || theoryOrCons === undefined) {
             throw new Error(`No theory with ID ${id}`);
         } else if (theoryOrCons instanceof Theory) {
             return theoryOrCons;
-        } else {
-            const construct = await theoryOrCons();
-            const theory = construct(meta);
-            this.theoryMap.set(id, theory);
-            return theory;
         }
+        // If that fails, construct and cache it.
+        const construct = await theoryOrCons();
+        const theory = construct(meta);
+        for (const info of this.genericModelAnalyses) {
+            if (info.when?.(theory) ?? true) {
+                theory.addModelAnalysis(info.construct());
+            }
+        }
+        this.theoryMap.set(id, theory);
+        return theory;
     }
 
     /** Gets metadata for a theory by ID. */
@@ -129,5 +151,13 @@ export class TheoryLibrary {
             grouped.set(groupName, group);
         }
         return grouped;
+    }
+
+    /** Adds a generic model analysis to the library.
+
+    Such an analysis will be automatically added to models of any applicable theory.
+     */
+    addGenericModelAnalysis(meta: GenericModelAnalysis) {
+        this.genericModelAnalyses.push(meta);
     }
 }

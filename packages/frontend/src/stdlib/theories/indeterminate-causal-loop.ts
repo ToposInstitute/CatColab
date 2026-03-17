@@ -55,7 +55,6 @@ export default function createIndeterminateCausalLoopTheory(theoryMeta: TheoryMe
                 description: "Visualize the causal loop diagram",
                 help: "visualization",
             }),
-            analyses.compositionPattern(),
         ],
     });
 }
