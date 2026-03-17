@@ -172,6 +172,15 @@ export class Theory {
         return this.modelAnalysisMap.get(id);
     }
 
+    /** Adds a model analysis to the theory. */
+    addModelAnalysis(meta: ModelAnalysisMeta) {
+        const { id } = meta;
+        if (this.modelAnalysisMap.has(id)) {
+            throw new Error(`Model analysis with ID ${id} already defined`);
+        }
+        this.modelAnalysisMap.set(id, meta);
+    }
+
     /** List of analyses defined for diagrams. */
     get diagramAnalyses(): Array<DiagramAnalysisMeta> {
         return Array.from(this.diagramAnalysisMap.values());

@@ -5,14 +5,63 @@ import type {
     ElkLabel,
     ElkLayoutArguments,
     ElkNode,
+    ElkPort,
     LayoutOptions,
 } from "elkjs";
 import invariant from "tiny-invariant";
 
+import { getMainFont, getMonoFont, measureText } from "./font_utils";
 import type * as GraphLayout from "./graph_layout";
 import type * as GraphSpec from "./graph_spec";
-import { measureText } from "./measure";
 import type { ArrowStyle } from "./types";
+
+/** Layout of a hierarchical ELK graph with an outer boundary, child boxes,
+and edges.
+ */
+export interface ElkHierarchicalLayout {
+    /** Width of the bounding box. */
+    width: number;
+
+    /** Height of the bounding box. */
+    height: number;
+
+    /** The outer boundary of the diagram. */
+    outer: ElkBoxLayout;
+
+    /** Laid-out boxes inside the diagram. */
+    boxes: ElkBoxLayout[];
+
+    /** Laid-out edges with paths and junction points. */
+    wireEdges: ElkEdgeLayout[];
+}
+
+/** Layout of a box (node with ports) in an ELK graph. */
+export interface ElkBoxLayout {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    label?: string;
+    ports: ElkPortLayout[];
+}
+
+/** Layout of a port in an ELK graph. */
+export interface ElkPortLayout {
+    x: number;
+    y: number;
+    label: string;
+    labelX: number;
+    labelY: number;
+}
+
+/** Layout of an edge with junction points in an ELK graph. */
+export interface ElkEdgeLayout {
+    path: string;
+    junctionPoints: { x: number; y: number }[];
+}
+
+/** Default size for ports in ELK layouts. */
+export const portSize = 8;
 
 /** ELK node with extra style data attached.
 
@@ -38,13 +87,8 @@ List of layout options supported by ELK:
  */
 export function graphToElk(graph: GraphSpec.Graph, layoutOptions?: LayoutOptions): ElkNode {
     const canvas = document.createElement("canvas");
-
-    const defaultFont = `1rem ${getComputedStyle(document.documentElement)
-        .getPropertyValue("--main-font")
-        .trim()}`;
-    const monospaceFont = `1rem ${getComputedStyle(document.documentElement)
-        .getPropertyValue("--mono-font")
-        .trim()}`;
+    const defaultFont = getMainFont();
+    const monospaceFont = getMonoFont();
 
     const children: StyledElkNode[] = graph.nodes.map((node) => {
         let width = node.minimumWidth ?? nodePadding;
@@ -164,15 +208,37 @@ export function parseElkLayout(elk: StyledElkNode): GraphLayout.Graph {
     return { width, height, nodes, edges };
 }
 
-/** Convert ELK edge sections to an SVG path. */
-function sectionsToPath(sections: ElkEdgeSection[]): string {
+/** Convert ELK edge sections to an SVG path.
+
+Optionally applies an offset to all coordinates, useful for hierarchical
+layouts where edges are relative to a parent node.
+ */
+export function sectionsToPath(sections: ElkEdgeSection[], offsetX = 0, offsetY = 0): string {
     const stmts: Array<string | number> = [];
     for (const section of sections) {
-        stmts.push(stmts.length === 0 ? "M" : "L", section.startPoint.x, section.startPoint.y);
+        stmts.push(
+            stmts.length === 0 ? "M" : "L",
+            offsetX + section.startPoint.x,
+            offsetY + section.startPoint.y,
+        );
         for (const bp of section.bendPoints ?? []) {
-            stmts.push("L", bp.x, bp.y);
+            stmts.push("L", offsetX + bp.x, offsetY + bp.y);
         }
-        stmts.push("L", section.endPoint.x, section.endPoint.y);
+        stmts.push("L", offsetX + section.endPoint.x, offsetY + section.endPoint.y);
     }
     return stmts.join(" ");
+}
+
+/** Parse the layout of an ELK port relative to a parent offset. */
+export function parseElkPortLayout(port: ElkPort, parentX: number, parentY: number): ElkPortLayout {
+    const portLabel = port.labels?.[0];
+    const px = parentX + (port.x ?? 0);
+    const py = parentY + (port.y ?? 0);
+    return {
+        x: px + (port.width ?? 0) / 2,
+        y: py + (port.height ?? 0) / 2,
+        label: portLabel?.text ?? "",
+        labelX: px + (portLabel?.x ?? 0),
+        labelY: py + (portLabel?.y ?? 0) + (portLabel?.height ?? 0) / 2,
+    };
 }
