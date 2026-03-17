@@ -114,6 +114,7 @@ jobs:
         if: (github.event_name == 'push' || github.event_name == 'pull_request') && steps.cache-frontend-build.outputs.cache-hit != 'true'
         run: |
           pnpm install
+          pnpm --filter ./packages/frontend run build:deps
           # Uses env from packages/frontend/.env.staging
           pnpm --filter ./packages/frontend run build -- --mode staging
 

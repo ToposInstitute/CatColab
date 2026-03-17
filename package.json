@@ -4,7 +4,7 @@
     "description": "The catcolab monorepo",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
-        "build": "pnpm --filter ./packages/frontend run build",
+        "build:deps": "pnpm --filter ./packages/frontend run build:deps",
         "dev": "pnpm --filter ./packages/frontend run dev"
     },
     "repository": {

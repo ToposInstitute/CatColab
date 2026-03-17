@@ -198,16 +198,9 @@
       # node ./result/main.cjs
       packages = {
         x86_64-linux = {
-          catcolabApi = pkgsLinux.stdenv.mkDerivation {
-            pname = "catcolab-api";
-            version = "0.1.0";
-
-            src = ./packages/backend/pkg;
-
-            installPhase = ''
-              mkdir -p $out
-              cp -r * $out/
-            '';
+          catcolabApi = pkgsLinux.callPackage ./infrastructure/catcolab-api.nix {
+            inherit craneLib cargoArtifacts;
+            pkgs = pkgsLinux;
           };
 
           backend = pkgsLinux.callPackage ./packages/backend/default.nix {
@@ -244,11 +237,6 @@
             inherit craneLib cargoArtifacts;
             pkgs = pkgsLinux;
             checkMode = true;
-          };
-
-          generated-bindings-check = pkgsLinux.callPackage ./infrastructure/generated-bindings-check.nix {
-            inherit craneLib cargoArtifacts;
-            pkgs = pkgsLinux;
           };
 
           # VMs built with `nixos-rebuild build-vm` (like `nix build

@@ -71,9 +71,13 @@ let
         mkdir -p packages/catlog-wasm/dist/pkg-browser
         cp -r ${self.packages.x86_64-linux.catlog-wasm-browser}/* packages/catlog-wasm/dist/pkg-browser/
 
+        # Set up generated API bindings
+        mkdir -p packages/backend/pkg/src
+        cp ${self.packages.x86_64-linux.catcolabApi}/src/index.ts packages/backend/pkg/src/index.ts
+
         cd packages/frontend
         # Build with development mode to use .env.development configuration
-        npm run build:nix -- --mode development
+        npm run build -- --mode development
         cd -
       '';
 
@@ -104,6 +108,10 @@ let
 
         mkdir -p $out/packages/catlog-wasm/dist/pkg-browser
         cp -r ${self.packages.x86_64-linux.catlog-wasm-browser}/* $out/packages/catlog-wasm/dist/pkg-browser/
+
+        # Bindings must be copied into source tree BEFORE the cp below copies backend to $out
+        mkdir -p packages/backend/pkg/src
+        cp ${self.packages.x86_64-linux.catcolabApi}/src/index.ts packages/backend/pkg/src/index.ts
 
         cp -r packages/backend $out/packages/
         cp -r packages/frontend $out/packages/
