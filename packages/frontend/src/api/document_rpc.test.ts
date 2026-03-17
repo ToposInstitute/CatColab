@@ -20,8 +20,7 @@ const repo = new Repo({
     network: [new BrowserWebSocketClientAdapter(repoUrl)],
 });
 
-// XXX: Proper shutdown requires Automerge v2.
-//afterAll(() => repo.shutdown());
+afterAll(() => repo.shutdown());
 
 describe("RPC for Automerge documents", async () => {
     const content = createTestDocument("My model");
