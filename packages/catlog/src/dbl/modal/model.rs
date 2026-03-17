@@ -52,7 +52,7 @@ pub enum ModalMor {
 /// Extra data associated with a list of morphisms in a [list modality](List).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum MorListData {
-/// No extra data for a morphism in the [plain list](List::Plain) modality.
+    /// No extra data for a morphism in the [plain list](List::Plain) modality.
     Plain(),
 
     /// Data for a morphism in the [symmetric list](List::Symmetric) modality.
@@ -728,7 +728,6 @@ mod tests {
         );
         model.add_mor(name("nullary"), ModalOb::List(List::Plain, vec![]), x.clone(), mor_type);
         assert!(model.validate().is_ok());
-
 
         println!("{model}");
         dbg!(&model.mor_types);

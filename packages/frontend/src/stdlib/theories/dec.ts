@@ -11,6 +11,11 @@ export default function createThDECTheory(theoryMeta: TheoryMeta): Theory {
             description: "Visualize the instance as a graph",
             help: "visualization",
         }),
+        analyses.decapodes({
+            id: "decapodes",
+            name: "Simulation",
+            description: "Simulate the PDE using Decapodes",
+        }),
     ];
 
     return new Theory({
