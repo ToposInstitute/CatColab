@@ -10,6 +10,7 @@
         "build:tcm": "tcm -p 'src/**/*.module.css' . && npm run format",
         "build:deps": "npm run build:wasm && npm run build:bindings && npm run build:tcm",
         "build": "tsc -b && vite build --sourcemap true",
+        "build:staging": "tsc -b && vite build --sourcemap true --mode staging",
         "preview": "vite preview",
         "format": "biome format --write",
         "check": "npm run build:deps && npm run lint && tsc",
