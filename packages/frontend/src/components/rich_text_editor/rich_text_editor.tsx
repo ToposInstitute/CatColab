@@ -6,6 +6,7 @@ import {
     mathPlugin,
     mathSerializer,
     REGEX_BLOCK_MATH_DOLLARS,
+    REGEX_INLINE_MATH_DOLLARS,
 } from "@benrbray/prosemirror-math";
 import {
     baseKeymap,
@@ -16,7 +17,7 @@ import {
     setBlockType,
     toggleMark,
 } from "prosemirror-commands";
-import { inputRules } from "prosemirror-inputrules";
+import { InputRule, inputRules } from "prosemirror-inputrules";
 import { keymap } from "prosemirror-keymap";
 import { splitListItem } from "prosemirror-schema-list";
 import { type Command, EditorState, type Plugin, type Transaction } from "prosemirror-state";
@@ -32,11 +33,13 @@ import {
     increaseListIndet,
     insertLinkCmd,
     insertMathDisplayCmd,
+    insertMathInlineCmd,
     toggleBulletList,
     toggleOrderedList,
     turnSelectionIntoBlockquote,
 } from "./commands";
 import { getLinkFromHouseEvent, linkEditorPlugin } from "./link_editor";
+import { MathInlineView } from "./math_inline_view";
 import { type CustomSchema, proseMirrorAutomergeInit } from "./schema";
 import { activeHeading, initPlaceholderPlugin, isMarkActive } from "./utils";
 
@@ -56,6 +59,7 @@ import ListOrdered from "lucide-solid/icons/list-ordered";
 import Outdent from "lucide-solid/icons/outdent";
 import Sigma from "lucide-solid/icons/sigma";
 import TextQuote from "lucide-solid/icons/text-quote";
+import Variable from "lucide-solid/icons/variable";
 
 /** Optional props for `RichTextEditor` component.
  */
@@ -110,6 +114,7 @@ export const RichTextEditor = (
         onDecreaseIndent: null,
         onHeadingClicked: null,
         onMathClicked: null,
+        onMathInlineClicked: null,
         onHideMenubar: null,
     });
 
@@ -141,6 +146,17 @@ export const RichTextEditor = (
             schema.nodes.math_display,
         );
 
+        const inlineMathInputRule = new InputRule(
+            REGEX_INLINE_MATH_DOLLARS,
+            (state, match, start, end) => {
+                return state.tr.replaceRangeWith(
+                    start,
+                    end,
+                    schema.nodes.math_inline.create({ tex: match[1] }),
+                );
+            },
+        );
+
         const plugins: Plugin[] = [
             keymap(richTextEditorKeymap(schema, props)),
             keymap(baseKeymap),
@@ -148,12 +164,15 @@ export const RichTextEditor = (
             automergePlugin,
             linkEditorPlugin,
             mathPlugin,
-            inputRules({ rules: [blockMathInputRule] }),
+            inputRules({ rules: [inlineMathInputRule, blockMathInputRule] }),
         ];
 
         const state = EditorState.create({ schema, plugins, doc: pmDoc });
         const view = new EditorView(editorRoot, {
             state,
+            nodeViews: {
+                math_inline: (node, view, getPos) => new MathInlineView(node, view, getPos),
+            },
             dispatchTransaction: (tx: Transaction) => {
                 // XXX: It appears that automerge-prosemirror can dispatch
                 // transactions even after the view has been destroyed.
@@ -252,6 +271,7 @@ export const RichTextEditor = (
                 }
             },
             onMathClicked: () => insertMathDisplayCmd(view.state, view.dispatch),
+            onMathInlineClicked: () => insertMathInlineCmd(view.state, view.dispatch, view),
             onHideMenubar: () => {
                 // Keep editor focused, just hide the menubar
                 setMenuActive(false);
@@ -340,6 +360,7 @@ type MenuControls = {
     onDecreaseIndent: (() => void) | null;
     onHeadingClicked: ((level: number) => void) | null;
     onMathClicked: (() => void) | null;
+    onMathInlineClicked: (() => void) | null;
     onHideMenubar: (() => void) | null;
 };
 
@@ -378,9 +399,12 @@ export function MenuBar(
                 <TooltipButton callback={props.onLinkClicked} tooltip="Add Link">
                     <Link />
                 </TooltipButton>
+                <TooltipButton callback={props.onMathInlineClicked} tooltip="Inline math">
+                    <Variable />
+                </TooltipButton>
                 <TooltipButton
                     callback={props.onMathClicked}
-                    tooltip="KaTeX block (shortcut: Mod+m)"
+                    tooltip="Math block (shortcut: Mod+m)"
                 >
                     <Sigma />
                 </TooltipButton>

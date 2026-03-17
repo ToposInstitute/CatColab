@@ -103,7 +103,8 @@
     padding: 3px;
     border: none;
     cursor: pointer;
-    background-color: transparent; /* override default on firefox */
+    background-color: transparent;
+    /* override default on firefox */
     transition:
         background-color 0.2s ease,
         transform 0.2s ease;
@@ -175,6 +176,30 @@ blockquote {
 
 .is-selected {
     background-color: var(--color-rich-text-selection-bg);
+}
+
+math-inline.math-node {
+    display: inline;
+}
+
+math-inline.math-node.empty-math .math-render::before {
+    content: "(empty)";
+    color: #c44;
+    font-size: 0.85em;
+}
+
+math-inline .math-src .math-input {
+    font-family: "Consolas", "Ubuntu Mono", monospace;
+    font-size: 0.95em;
+    color: rgb(132, 33, 162);
+    border: none;
+    /* add a bit more padding to the right to account for cursor width. I think this make the left and
+    right spacing feel more balanced. */
+    padding: 0 calc(0.5ch + 2px) 0 0.5ch;
+    outline: none;
+    /* keep the cursor visible when the input is empty */
+    min-width: 2px;
+    box-sizing: content-box;
 }
 
 .link-editor-popup {
