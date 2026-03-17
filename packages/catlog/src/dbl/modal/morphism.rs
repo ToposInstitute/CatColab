@@ -51,7 +51,6 @@ impl<'a> ModalDblModelMorphism<'a> {
     {
         // vec![].into_iter()
         let DblModelMorphism(ModalDblModelMapping(mapping), dom, cod) = *self;
-        dbg!(&cod.theory());
         // let category_errors: Vec<_> = mapping
         //     .functor_into(&cod.category) // TODO
         //     .iter_invalid_on(&dom.category)

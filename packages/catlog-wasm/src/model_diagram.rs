@@ -9,6 +9,7 @@ use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 
 use catcolab_document_types::current::*;
+use catlog::dbl::modal::ModalDblModelMapping;
 use catlog::dbl::model::{DblModel as _, DiscreteDblModel, FpDblModel, ModalDblModel, MutDblModel};
 use catlog::dbl::model_diagram as diagram;
 use catlog::dbl::model_morphism::DiscreteDblModelMapping;
