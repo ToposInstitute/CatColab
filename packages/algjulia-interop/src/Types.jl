@@ -3,7 +3,7 @@
 module Types 
 
 export ObType, MorType, DiagramObGenerator, DiagramMorGenerator, ObGenerator, 
-       MorGenerator, Diagram, Model, ModelDiagram
+       MorGenerator, Diagram, Model, ModelDiagram, Analysis
 
 using StructTypes
 
@@ -13,11 +13,45 @@ struct ObType
 end
 StructTypes.StructType(::Type{ObType}) = StructTypes.Struct()
 
+# function Base.show(io::IO, ob::ObType; name=String)
+#     if !isnothing(name)
+#         print(io, "$name")
+#     else
+#         print(io, "$(ob.content)")
+#     end
+# end
+
 struct MorType 
     tag::String 
     content::Union{String,ObType}
 end
 StructTypes.StructType(::Type{MorType}) = StructTypes.Struct()
+
+# function Base.show(io::IO, mor::MorType; name=String)
+#     if !isnothing(name)
+#         print(io, "$name")
+#     else
+#         print(io, "$(mor.content)")
+#     end
+# end
+
+struct Modality
+    modality::String
+    objects::Vector{ObType}
+end
+StructTypes.StructType(::Type{Modality}) = StructTypes.Struct()
+
+# function Base.show(io::IO, l::Modality)
+#     if l.modality == "List"
+#         if length(l.objects) == 1
+#             print(io, "$(only(l.objects))")
+#         else
+#             print(io, "$([l.objects...])")
+#         end
+#     else
+#         print(io, "$((l.modality, l.objects))")
+#     end
+# end
 
 struct DiagramObGenerator 
     id::String
@@ -27,12 +61,27 @@ struct DiagramObGenerator
 end 
 StructTypes.StructType(::Type{DiagramObGenerator}) = StructTypes.Struct()
 
+struct BasicOrModalityOb
+    tag::String # if tag == "List"
+    content::Union{String, Modality}
+end
+StructTypes.StructType(::Type{BasicOrModalityOb}) = StructTypes.Struct()
+
+# function Base.show(io::IO, b::BasicOrModalityOb)
+#     if b.content isa Modality
+#         print(io, b.content)
+#     else ## TODO
+#         print(io, b.content)
+#     end
+# end
+
 struct DiagramMorGenerator
     id::String
+    label::Union{String, Nothing}
     morType::MorType
     over::ObType
-    dom::ObType
-    cod::ObType
+    dom::BasicOrModalityOb
+    cod::BasicOrModalityOb
 end
 StructTypes.StructType(::Type{DiagramMorGenerator}) = StructTypes.Struct()
 
@@ -43,14 +92,22 @@ struct ObGenerator
 end 
 StructTypes.StructType(::Type{ObGenerator}) = StructTypes.Struct()
 
+# function Base.show(io::IO, ob::ObGenerator)
+#     print(io, "$(ob.label)")
+# end
+
 struct MorGenerator
     id::String
     label::Vector{String}
     morType::MorType
-    dom::ObType
+    dom::BasicOrModalityOb
     cod::ObType
 end
 StructTypes.StructType(::Type{MorGenerator}) = StructTypes.Struct()
+
+# function Base.show(io::IO, mor::MorGenerator)
+#     print(io, "$(mor.label): $(mor.dom) --> $(mor.cod)")
+# end
 
 struct Diagram 
     obGenerators::Vector{DiagramObGenerator}
@@ -58,17 +115,61 @@ struct Diagram
 end
 StructTypes.StructType(::Type{Diagram}) = StructTypes.Struct()
 
+# function Base.show(io::IO, d::Diagram)
+#     for ob in d.obGenerators
+#         print(io, "$(ob.label)")
+#     end
+#     for mor in d.morGenerators
+#         print(io, "$(mor.label)")
+#     end
+# end
+
+# function Base.show(io::IO, d::Diagram)
+#     for ob in d.obGenerators
+#         println(io, "$(ob.label)")
+#     end
+#     for mor in d.morGenerators
+#         label = isnothing(mor.label) ? "" : join(mor.label, ".")
+#         println(io, "$label: $(mor.dom) --> $(mor.cod)")
+#     end
+# end
+
 struct Model 
     obGenerators::Vector{ObGenerator}
     morGenerators::Vector{MorGenerator}
 end
 StructTypes.StructType(::Type{Model}) = StructTypes.Struct()
 
+# function Base.show(io::IO, m::Model)
+#     for ob in m.obGenerators
+#         println(io, "$ob")
+#     end
+#     for mor in m.morGenerators
+#         println(io, "$mor: $(mor.dom) --> $(mor.cod)")
+#     end
+# end
 
 struct ModelDiagram 
     model::Model
     diagram::Diagram
 end
 StructTypes.StructType(::Type{ModelDiagram}) = StructTypes.Struct()
+
+# function Base.show(io::IO, md::ModelDiagram)
+#     show(io, "$(md.model)")
+#     show(io, "$(md.diagram)")
+# end
+
+struct Analysis 
+    model::Model
+    diagram::Diagram
+    analysis::Union{Dict{String, Any}, Nothing}
+end
+StructTypes.StructType(::Type{Analysis}) = StructTypes.Struct()
+
+# function Base.show(io::IO, a::Analysis)
+#     println(io, "$(a.model)")
+#     println(io, "$(a.diagram)")
+# end
 
 end # module
