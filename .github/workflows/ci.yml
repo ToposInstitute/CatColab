@@ -150,25 +150,6 @@ jobs:
     - name: Build the NixOS system for catcolab-next
       run: nix build .#nixosConfigurations.catcolab-next.config.system.build.toplevel
 
-  check_generated_bindings:
-    name: check generated bindings
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Nix
-        uses: cachix/install-nix-action@v25
-
-      - name: Configure Cachix
-        uses: cachix/cachix-action@v14
-        with:
-          name: catcolab-jmoggr
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-
-      - name: Check generated bindings
-        run: nix build .#generated-bindings-check
-
   backend_dev_setup:
     name: backend dev setup
     runs-on: ubuntu-latest

@@ -30,13 +30,12 @@ CatColab is written in a mix of [Rust](https://www.rust-lang.org/) and
 "Most" development will likely only require changes to the **core** (`catlog`) and the **frontend** (`frontend`) (and thus also the **bindings** in `catlog-wasm`). For this, you can simply follow the instructions in the [`frontend` docs](https://next.catcolab.org/dev/frontend/), replacing `$MODE` by `staging`, i.e. running
 
 ```
-pnpm run build
 pnpm run dev --mode staging
 ```
 
 to view any changes made.
 
-If you are getting a `Cannot find module @... or its corresponding type declarations.` error from `pnpm run build` then you should try running
+If you are getting a `Cannot find module @... or its corresponding type declarations.` error then you should try running
 
 ```
 pnpm install

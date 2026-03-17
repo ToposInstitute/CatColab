@@ -10,12 +10,10 @@ Install Rust and [pnpm](https://pnpm.io/), then run
 ```sh
 cd packages/frontend
 pnpm install
-pnpm run build
+pnpm run build:deps
 ```
 
-This command compiles the Rust dependencies to WebAssembly and then builds the
-`frontend` bundle.
-
+This installs all the deps and compiles our local repo Rust dependencies to WebAssembly.
 
 ## Usage
 

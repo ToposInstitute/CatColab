@@ -69,6 +69,11 @@ async fn main() {
             .join("src")
             .join("index.ts");
 
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)
+                .expect("Failed to create directory for TypeScript bindings");
+        }
+
         rpc::router()
             .as_codegen()
             .write_type(&path, TypeScript::new())
