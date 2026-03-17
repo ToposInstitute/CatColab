@@ -38,4 +38,5 @@ pkgs.stdenv.mkDerivation {
     cp $src $out/bin/biome
     chmod +x $out/bin/biome
   '';
+  meta.mainProgram = "biome";
 }

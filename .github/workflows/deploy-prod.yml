@@ -1,0 +1,22 @@
+name: deploy prod
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  deployments: write
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy-target.yml
+    with:
+      environment: backend
+      environment_url: https://catcolab.org
+      deploy_node: catcolab
+      hostname: backend.catcolab.org
+      ref: ${{ github.ref }}
+      sha: ${{ github.sha }}
+    secrets:
+      CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      DEPLOY_SSH_KEY: ${{ secrets.CATCOLAB_PROD_DEPLOYUSER_KEY }}

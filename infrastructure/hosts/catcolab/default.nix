@@ -31,6 +31,9 @@ in
     backend = {
       port = 8000;
       hostname = "backend.catcolab.org";
+      serveFrontend = true;
+      serveSite = true;
+      siteMode = "production";
     };
     environmentFile = config.age.secrets.catcolabSecrets.path;
     host = {

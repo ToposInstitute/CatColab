@@ -1,6 +1,0 @@
-[build]
-publish = "dist/"
-command = "rustup toolchain install stable && rustup target add wasm32-unknown-unknown && npm run build"
-
-[build.environment]
-RUST_VERSION = "1.81.0"
