@@ -11,8 +11,9 @@ import {
 import { type Api, type DocRef, findAndMigrate, type LiveDoc, makeLiveDoc } from "../api";
 import { getLiveDiagram, getLiveDiagramFromRepo, type LiveDiagramDoc } from "../diagram";
 import type { LiveModelDoc, ModelLibrary } from "../model";
-import { NotebookUtils, newNotebook } from "../notebook";
+import { newNotebook } from "../notebook";
 import { assertExhaustive } from "../util/assert_exhaustive";
+import { migrateAnalysis } from "./migrate";
 
 /** A document defining an analysis. */
 export type AnalysisDocument = Document & { type: "analysis" };
@@ -114,7 +115,12 @@ export async function getLiveAnalysis(
         throw new Error(`Unknown analysis type: ${doc.analysisType}`);
     }
 
-    migrateAnalysis(liveAnalysis);
+    const theory = theoryForLiveAnalysis(liveAnalysis);
+    if (theory) {
+        liveAnalysis.liveDoc.changeDoc((doc) => {
+            migrateAnalysis(doc.notebook, theory, liveAnalysis.analysisType);
+        });
+    }
     return { liveAnalysis, docRef };
 }
 
@@ -153,45 +159,13 @@ export async function getLiveAnalysisFromRepo(
         throw new Error(`Unknown analysis type: ${doc.analysisType}`);
     }
 
-    migrateAnalysis(liveAnalysis);
-    return liveAnalysis;
-}
-
-/** Migrate content of formal cells in analysis document.
-
-This is a stop-gap (read: hacky) method to migrate the content of analyses when
-the set of fields changes. It allow new fields to be added. Renaming or removing
-existing fields is *not* supported.
- */
-function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
     const theory = theoryForLiveAnalysis(liveAnalysis);
-
-    const getAnalysisMeta = (analysisId: string) => {
-        switch (liveAnalysis.analysisType) {
-            case "model":
-                return theory?.modelAnalysis(analysisId);
-            case "diagram":
-                return theory?.diagramAnalysis(analysisId);
-        }
-    };
-
-    const doc = liveAnalysis.liveDoc.doc;
-    for (const cell of NotebookUtils.getFormalCells(doc.notebook)) {
-        const meta = getAnalysisMeta(cell.content.id);
-        if (!meta) {
-            continue;
-        }
-        const initialContent = meta.initialContent() as Record<string, unknown>;
-        for (const key in initialContent) {
-            if (!(key in cell.content.content)) {
-                liveAnalysis.liveDoc.changeDoc((doc) => {
-                    NotebookUtils.mutateCellContentById(doc.notebook, cell.id, (content) => {
-                        content.content[key] = initialContent[key];
-                    });
-                });
-            }
-        }
+    if (theory) {
+        liveAnalysis.liveDoc.changeDoc((doc) => {
+            migrateAnalysis(doc.notebook, theory, liveAnalysis.analysisType);
+        });
     }
+    return liveAnalysis;
 }
 
 /** Gets the theory associated with a live analysis. */
