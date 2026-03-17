@@ -13,9 +13,13 @@ include notable new features.
 
 ### Added
 
+- Rich text editor now supports inline math based on KaTeX
+  ([#1087](https://github.com/ToposInstitute/CatColab/pull/1087)), in addition
+  to display math
 - New analysis: visualize composition pattern of instantiated models as an
   undirected wiring diagram
-  ([#1117](https://github.com/ToposInstitute/CatColab/pull/1117/))
+  ([#1069](https://github.com/ToposInstitute/CatColab/pull/1069),
+  [#1117](https://github.com/ToposInstitute/CatColab/pull/1117/))
 
 ## [v0.5.0](https://github.com/ToposInstitute/CatColab/releases/tag/v0.5.0) (2026-03-09)
 
