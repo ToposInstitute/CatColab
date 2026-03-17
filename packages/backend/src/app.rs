@@ -20,6 +20,12 @@ pub struct AppState {
 
     /// Tracks which ref_ids have active autosave listeners to prevent duplicates.
     pub active_listeners: Arc<RwLock<HashSet<Uuid>>>,
+
+    /// HTTP client for outgoing requests (e.g., Julia proxy).
+    pub http_client: reqwest::Client,
+
+    /// Base URL for the Julia compute service, if configured.
+    pub julia_url: Option<String>,
 }
 
 /// Context available to RPC procedures.

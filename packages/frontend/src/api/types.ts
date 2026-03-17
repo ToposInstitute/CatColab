@@ -9,10 +9,13 @@ import type { Permissions } from "catcolab-api";
 import type { Document, Link, LinkType, StableRef, Uuid } from "catlog-wasm";
 import type { InterfaceToType } from "../util/types";
 import { type DocRef, findAndMigrate, type LiveDocWithRef, makeLiveDoc } from "./document";
-import { createRpcClient, type RpcClient } from "./rpc";
+import { createFetchWithAuth, createRpcClient, type RpcClient } from "./rpc";
 
 /** Bundle of everything needed to interact with the CatColab backend. */
 export class Api {
+    /** Full URL for the CatColab backend server. */
+    readonly serverUrl: string;
+
     /** Host part of the URL for the CatColab backend server. */
     readonly serverHost: string;
 
@@ -24,6 +27,8 @@ export class Api {
 
     /** Automerge repo with no networking, used for read-only documents. */
     private readonly localRepo: Repo;
+
+    private readonly fetchWithAuth: typeof fetch;
 
     /** Mapping from document ref ID to Automerge document ID.
 
@@ -40,9 +45,11 @@ export class Api {
         repoUrl: string;
         firebaseApp: FirebaseApp;
     }) {
+        this.serverUrl = props.serverUrl;
         this.serverHost = new URL(props.serverUrl).host;
 
-        this.rpc = createRpcClient(props.serverUrl, props.firebaseApp);
+        this.fetchWithAuth = createFetchWithAuth(props.firebaseApp);
+        this.rpc = createRpcClient(props.serverUrl, this.fetchWithAuth);
 
         this.repo = new Repo({
             storage: new IndexedDBStorageAdapter("catcolab"),
@@ -51,6 +58,11 @@ export class Api {
         this.localRepo = new Repo();
 
         this.docCache = new Map();
+    }
+
+    /** Make an authenticated fetch to a backend endpoint. */
+    async fetch(path: string, init?: RequestInit): Promise<Response> {
+        return this.fetchWithAuth(`${this.serverUrl}${path}`, init);
     }
 
     /** Get a live document with backend ref for the given document ref.

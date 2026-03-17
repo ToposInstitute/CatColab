@@ -6,7 +6,7 @@ use axum::middleware::from_fn_with_state;
 use axum::{Router, routing::get};
 use axum::{extract::State, response::IntoResponse};
 use clap::{Parser, Subcommand};
-use firebase_auth::FirebaseAuth;
+use firebase_auth::{FirebaseAuth, FirebaseUser}; // FirebaseUser used by julia_proxy_handler
 use sqlx::postgres::PgPoolOptions;
 use sqlx_migrator::cli::MigrationCommand;
 use sqlx_migrator::migrator::{Migrate, Migrator};
@@ -114,10 +114,23 @@ async fn main() {
                 .load()
                 .await;
 
+            let http_client = reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(120))
+                .build()
+                .expect("Failed to build HTTP client");
+            let julia_url = dotenvy::var("JULIA_URL").ok();
+            if let Some(ref url) = julia_url {
+                info!("Julia compute server configured at: {url}");
+            } else {
+                info!("Julia compute server not configured (JULIA_URL not set)");
+            }
+
             let state = app::AppState {
                 db: db.clone(),
                 repo,
                 active_listeners: Arc::new(RwLock::new(HashSet::new())),
+                http_client,
+                julia_url,
             };
 
             // We need to wrap FirebaseAuth in an Arc because if it's ever dropped the process which updates it's
@@ -171,6 +184,76 @@ async fn websocket_handler(
     })
 }
 
+/// Maximum request body size for Julia proxy requests (100 MB).
+const JULIA_PROXY_MAX_BODY: usize = 100 * 1024 * 1024;
+
+async fn julia_proxy_handler(
+    State(state): State<app::AppState>,
+    user: Option<axum::Extension<FirebaseUser>>,
+    axum::extract::Path(path): axum::extract::Path<String>,
+    body: axum::body::Bytes,
+) -> impl IntoResponse {
+    if user.is_none() {
+        return (axum::http::StatusCode::UNAUTHORIZED, "Authentication required").into_response();
+    }
+
+    let julia_url = match &state.julia_url {
+        Some(url) => url,
+        None => {
+            return (
+                axum::http::StatusCode::SERVICE_UNAVAILABLE,
+                "Julia compute service is not configured",
+            )
+                .into_response();
+        }
+    };
+
+    if body.len() > JULIA_PROXY_MAX_BODY {
+        return (axum::http::StatusCode::PAYLOAD_TOO_LARGE, "Request body too large")
+            .into_response();
+    }
+
+    let url = format!("{julia_url}/{path}");
+    let result = state
+        .http_client
+        .post(&url)
+        .header("Content-Type", "application/json")
+        .body(body)
+        .send()
+        .await;
+
+    match result {
+        Ok(resp) => {
+            let status = axum::http::StatusCode::from_u16(resp.status().as_u16())
+                .unwrap_or(axum::http::StatusCode::BAD_GATEWAY);
+            let content_type = resp.headers().get("content-type").cloned();
+            match resp.bytes().await {
+                Ok(body) => {
+                    let mut response = (status, body).into_response();
+                    if let Some(ct) = content_type {
+                        response.headers_mut().insert("content-type", ct);
+                    }
+                    response
+                }
+                Err(_) => (
+                    axum::http::StatusCode::BAD_GATEWAY,
+                    "Failed to read response from Julia service",
+                )
+                    .into_response(),
+            }
+        }
+        Err(err) => {
+            if err.is_timeout() {
+                (axum::http::StatusCode::GATEWAY_TIMEOUT, "Julia service timed out").into_response()
+            } else {
+                error!("Julia proxy error: {err}");
+                (axum::http::StatusCode::BAD_GATEWAY, "Failed to connect to Julia service")
+                    .into_response()
+            }
+        }
+    }
+}
+
 use axum::routing::get_service;
 use tower_http::services::{ServeDir, ServeFile};
 
@@ -189,9 +272,14 @@ async fn run_web_server(
         .service(qubit_service);
 
     let samod_router = Router::new()
-        .layer(from_fn_with_state(firebase_auth, auth_middleware))
+        .layer(from_fn_with_state(firebase_auth.clone(), auth_middleware))
         .route("/repo-ws", get(websocket_handler))
         .with_state(state.repo.clone());
+
+    let julia_router = Router::new()
+        .route("/julia/{*path}", axum::routing::post(julia_proxy_handler))
+        .layer(from_fn_with_state(firebase_auth, auth_middleware))
+        .with_state(state.clone());
 
     // used by tests to tell when the backend is ready
     let status_router = Router::new().route("/status", get(status_handler));
@@ -199,7 +287,8 @@ async fn run_web_server(
     let mut app = Router::new()
         .merge(status_router)
         .nest_service("/rpc", rpc_with_mw)
-        .merge(samod_router);
+        .merge(samod_router)
+        .merge(julia_router);
 
     if let Some(spa_dir) = spa_directory() {
         let index = Path::new(&spa_dir).join("index.html");

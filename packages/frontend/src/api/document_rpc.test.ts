@@ -7,14 +7,14 @@ import { afterAll, assert, describe, test } from "vitest";
 
 import type { Document } from "catlog-wasm";
 import { createTestDocument, initTestUserAuth } from "../util/test_util.ts";
-import { createRpcClient, unwrap, unwrapErr } from "./rpc.ts";
+import { createFetchWithAuth, createRpcClient, unwrap, unwrapErr } from "./rpc.ts";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 const repoUrl = import.meta.env.VITE_AUTOMERGE_REPO_URL;
 const firebaseOptions = JSON.parse(import.meta.env.VITE_FIREBASE_OPTIONS) as FirebaseOptions;
 
 const firebaseApp = initializeApp(firebaseOptions);
-const rpc = createRpcClient(serverUrl, firebaseApp);
+const rpc = createRpcClient(serverUrl, createFetchWithAuth(firebaseApp));
 
 const repo = new Repo({
     network: [new BrowserWebSocketClientAdapter(repoUrl)],

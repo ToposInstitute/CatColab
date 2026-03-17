@@ -3,6 +3,7 @@ import { createResource, For, Match, Switch } from "solid-js";
 import { PanelHeader, Spinner } from "catcolab-ui-components";
 import type { DblModel } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
+import { useApi } from "../../api";
 import "./tabular_view.css";
 
 /** Given a schema (DblModel of ThSchema), a JSON output `rawdata` from Catlab,
@@ -83,6 +84,8 @@ export default function TabularView(
         title?: string;
     },
 ) {
+    const api = useApi();
+
     const [res] = createResource(
         () => {
             const model = props.liveDiagram.liveModel.elaboratedModel();
@@ -93,7 +96,7 @@ export default function TabularView(
         },
 
         async ({ model, diagram }) => {
-            const response = await fetch("http://127.0.0.1:8080/acsetcolim", {
+            const response = await api.fetch("/julia/acsetcolim", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
