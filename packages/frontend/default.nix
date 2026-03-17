@@ -76,6 +76,8 @@ let
         cp ${self.packages.x86_64-linux.catcolabApi}/src/index.ts packages/backend/pkg/src/index.ts
 
         cd packages/frontend
+        # Generate CSS module type declarations
+        npm run build:tcm
         # Build with development mode to use .env.development configuration
         npm run build -- --mode development
         cd -

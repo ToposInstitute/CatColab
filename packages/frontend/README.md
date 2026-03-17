@@ -13,7 +13,7 @@ pnpm install
 pnpm run build:deps
 ```
 
-This installs all the deps and compiles our local repo Rust dependencies to WebAssembly.
+This installs all the deps, and compiles and generates our local repo dependencies.
 
 ## Usage
 
