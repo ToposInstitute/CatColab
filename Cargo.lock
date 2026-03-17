@@ -2802,8 +2802,7 @@ dependencies = [
 [[package]]
 name = "qubit-macros"
 version = "1.0.0-beta.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "890f7050dbff17d8586487f305a261cd08f8535de5771f76dec47357936e444d"
+source = "git+https://github.com/ToposInstitute/qubit?branch=kb%2Fts-rs-12#ff1964970d738d542499d62b3d19dc8adf87dd88"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -5165,3 +5164,18 @@ dependencies = [
  "quote",
  "syn 2.0.101",
 ]
+
+[[patch.unused]]
+name = "qubit"
+version = "1.0.0-beta.1"
+source = "git+https://github.com/ToposInstitute/qubit?branch=kb%2Fts-rs-12#ff1964970d738d542499d62b3d19dc8adf87dd88"
+
+[[patch.unused]]
+name = "ts-rs"
+version = "12.0.1"
+source = "git+https://github.com/ToposInstitute/ts-rs?branch=kb%2Forder-by-ts-name#423301428595b233825e6538ab3e85d6b6de7c82"
+
+[[patch.unused]]
+name = "ts-rs-macros"
+version = "12.0.1"
+source = "git+https://github.com/ToposInstitute/ts-rs?branch=kb%2Forder-by-ts-name#423301428595b233825e6538ab3e85d6b6de7c82"

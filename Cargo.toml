@@ -20,6 +20,12 @@ edition = "2024"
 [workspace.metadata.crane]
 name = "my-workspace"
 
+[patch.crates-io]
+ts-rs = { git = "https://github.com/ToposInstitute/ts-rs", branch = "kb/order-by-ts-name" }
+ts-rs-macros = { git = "https://github.com/ToposInstitute/ts-rs", branch = "kb/order-by-ts-name" }
+qubit = { git = "https://github.com/ToposInstitute/qubit", branch = "kb/ts-rs-12" }
+qubit-macros = { git = "https://github.com/ToposInstitute/qubit", branch = "kb/ts-rs-12" }
+
 [profile.release]
 # Tell `rustc` to optimize for small code size.
 opt-level = "s"
