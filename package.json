@@ -23,5 +23,5 @@
         "tsx": "^4.16.5",
         "typedoc": "^0.26.5"
     },
-    "packageManager": "pnpm@9.12.3"
+    "packageManager": "pnpm@10.32.1"
 }
