@@ -240,8 +240,7 @@ impl TopElaborator {
 /// Text-based elaborator of types.
 pub struct Elaborator<'a> {
     theory: Theory,
-    /// Reporter used during elaboration.
-    pub reporter: Reporter,
+    reporter: Reporter,
     toplevel: &'a Toplevel,
     loc: Option<Loc>,
     ctx: Context,
@@ -764,7 +763,8 @@ impl<'a> Elaborator<'a> {
 mod tests {
     use std::rc::Rc;
 
-    use crate::{stdlib, tt};
+    use crate::stdlib;
+    use crate::tt::{modelgen::Model, theory::TheoryDef};
 
     #[test]
     fn generate_model_from_text() {
@@ -773,7 +773,8 @@ mod tests {
             x : Object,
             loop : Negative[x, x]
         ]";
-        let model = tt::modelgen::Model::from_text(&th.clone().into(), source)
+        let model = Model::from_text(&th.clone().into(), source)
+            .ok()
             .and_then(|m| m.as_discrete())
             .unwrap();
         assert_eq!(model, stdlib::models::negative_loop(th));
@@ -782,7 +783,7 @@ mod tests {
     /// Check that a commutative square really produces a model with exactly one equation.
     #[test]
     fn generate_model_with_eqn() {
-        let th = Rc::new(stdlib::th_schema());
+        let th: TheoryDef = Rc::new(stdlib::th_schema()).into();
         let source = "[
             NW : Entity,
             NE : Entity,
@@ -794,37 +795,23 @@ mod tests {
             b : (Hom Entity)[SW, SE],
             comm : (t * r == l * b)
         ]";
-        let model = tt::modelgen::Model::from_text(&th.clone().into(), source)
-            .and_then(|m| m.as_discrete())
-            .unwrap();
+        let model = Model::from_text(&th, source).ok().and_then(|m| m.as_discrete()).unwrap();
         let eqns: Vec<_> = model.category.equations().collect();
         assert_eq!(eqns.len(), 1);
     }
 
-    /// Check error handling.
+    /// Check error reporting when parsing a model from text.
     #[test]
     fn test_error_object_type() {
-        let th = Rc::new(stdlib::th_schema());
-        assert!(tt::modelgen::Model::from_text(&th.clone().into(), "[x : Entit]").is_none());
-    }
+        let th: TheoryDef = Rc::new(stdlib::th_schema()).into();
 
-    /// Check error handling.
-    #[test]
-    fn test_error_hom_type() {
-        let th = Rc::new(stdlib::th_schema());
-        assert!(
-            tt::modelgen::Model::from_text(&th.clone().into(), "[x : Entity, f : Hom(Entit)[x,x]")
-                .is_none()
-        );
-    }
+        let result = Model::from_text(&th, "[ : Entit]");
+        assert!(result.is_err_and(|msgs| !msgs.is_empty()));
 
-    /// Check error handling.
-    #[test]
-    fn test_error_hom_src() {
-        let th = Rc::new(stdlib::th_schema());
-        assert!(
-            tt::modelgen::Model::from_text(&th.clone().into(), "[x : Entity, f : Hom(Entity)[x,y]")
-                .is_none()
-        );
+        let result = Model::from_text(&th, "[x : Entity, f : Hom(Entit)[x,x]");
+        assert!(result.is_err_and(|msgs| !msgs.is_empty()));
+
+        let result = Model::from_text(&th, "[x : Entity, f : Hom(Entity)[x,y]");
+        assert!(result.is_err_and(|msgs| !msgs.is_empty()));
     }
 }
