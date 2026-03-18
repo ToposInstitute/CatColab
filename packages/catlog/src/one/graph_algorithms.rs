@@ -164,6 +164,91 @@ where
     result
 }
 
+/// An enum which parameterises the traversal direction for the depth first
+/// traversal function.
+pub enum TraversalDirection {
+    /// Visit out_neighbors for each vertex.
+    Outward,
+    /// Visit in_neighbors for each vertex.
+    Inward,
+}
+
+/// Perform a depth-first traversal of a graph with optional callbacks.
+///
+/// This function traverses the graph starting from the given vertex, using the
+/// provided `discovered` set to track visited vertices. The traversal direction
+/// (with respect to edge orientation) can be specified, see the
+/// TraversalDirection enum.
+///
+/// The `on_discover` callback is invoked when a vertex is first discovered during the
+/// traversal, while the `on_complete` callback is invoked when backtracking from a vertex
+/// after processing all its in-/out-bound neighbors.
+///
+/// # Usage
+///
+/// For a standalone DFS, set `discovered` to an empty set and provide an
+/// `on_discover` callback that collects vertices:
+///
+/// ```rust,ignore
+/// let mut discovered = HashSet::new();
+/// let mut stack = Vec::new();
+/// let mut dfs_order = Vec::new();
+/// depth_first_traversal_with_callbacks(
+///     graph,
+///     start_vertex,
+///     &mut discovered,
+///     TraversalDirection::Outward,
+///     None::<fn(G::V)>,
+///     Some(|v| dfs_order.push(v)),
+/// )?;
+/// // dfs_order now contains vertices in DFS discovery order
+/// ```
+///
+/// `discovered` may be persisted across calls to prevent visiting nodes.
+pub fn depth_first_traversal<G: FinGraph, F1, F2>(
+    graph: &G,
+    start_vertex: G::V,
+    discovered: &mut HashSet<G::V>,
+    traversal_direction: TraversalDirection,
+    mut on_complete: Option<F1>,
+    mut on_discover: Option<F2>,
+) -> Result<(), String>
+where
+    G::V: Hash + std::fmt::Debug,
+    F1: FnMut(G::V),
+    F2: FnMut(G::V),
+{
+    let mut stack = Vec::new();
+    stack.push(start_vertex);
+
+    while let Some(nx) = stack.last().cloned() {
+        if discovered.insert(nx.clone()) {
+            if let Some(ref mut callback) = on_discover {
+                callback(nx.clone());
+            }
+            let successors: Vec<_> = match traversal_direction {
+                TraversalDirection::Outward => graph.out_neighbors(&nx).collect(),
+                TraversalDirection::Inward => graph.in_neighbors(&nx).collect(),
+            };
+            for succ in successors {
+                if succ == nx {
+                    return Err(format!("Self loop at node {:#?}", nx));
+                }
+                if !discovered.contains(&succ) {
+                    stack.push(succ);
+                }
+            }
+        } else {
+            stack.pop();
+            if let Some(ref mut callback) = on_complete {
+                callback(nx.clone());
+            }
+        }
+    }
+
+    Ok(())
+}
+
 /// Computes a topological sorting for a given graph.
 ///
 /// This toposort algorithm was borrowed from the crate `petgraph`, found
@@ -176,56 +261,46 @@ where
     let mut discovered = HashSet::new();
     let mut finished = HashSet::new();
     let mut finish_stack = Vec::new();
-    let mut stack = Vec::new();
 
     for v in graph.vertices() {
         if discovered.contains(&v) {
             continue;
         }
-        stack.push(v);
-        while let Some(nx) = stack.last().cloned() {
-            if discovered.insert(nx.clone()) {
-                for succ in graph.out_neighbors(&nx) {
-                    if succ == nx {
-                        return Err(format!("Self loop at node {:#?}", nx).to_owned());
-                    }
-                    if !discovered.contains(&succ) {
-                        stack.push(succ);
-                    }
-                }
-            } else {
-                stack.pop();
+        depth_first_traversal(
+            graph,
+            v,
+            &mut discovered,
+            TraversalDirection::Outward,
+            Some(|nx: G::V| {
                 if finished.insert(nx.clone()) {
                     finish_stack.push(nx);
                 }
-            }
-        }
+            }),
+            None::<fn(G::V)>,
+        )?;
     }
     finish_stack.reverse();
 
     discovered.clear();
     for i in finish_stack.iter() {
-        stack.clear();
-        stack.push(i.clone());
-        let mut rev_dfs_next = || {
-            while let Some(node) = stack.pop() {
-                if discovered.insert(node.clone()) {
-                    for succ in graph.in_neighbors(&node) {
-                        if !discovered.contains(&succ) {
-                            stack.push(succ);
-                        }
-                    }
-                    return Some(node);
+        let mut first_node: Option<G::V> = None;
+        let mut cycle_node: Option<G::V> = None;
+        depth_first_traversal(
+            graph,
+            i.clone(),
+            &mut discovered,
+            TraversalDirection::Inward,
+            None::<fn(G::V)>,
+            Some(|nx: G::V| {
+                if first_node.is_none() {
+                    first_node = Some(nx);
+                } else if cycle_node.is_none() {
+                    cycle_node = Some(nx);
                 }
-            }
-            None
-        };
-        let mut cycle = false;
-        while let Some(j) = rev_dfs_next() {
-            if cycle {
-                return Err(format!("Cycle detected involving node {:#?}", j).to_owned());
-            }
-            cycle = true;
+            }),
+        )?;
+        if let Some(cycle_node) = cycle_node {
+            return Err(format!("Cycle detected involving node {:#?}", cycle_node).to_owned());
         }
     }
 
@@ -329,5 +404,63 @@ mod tests {
 
         let g = SkelGraph::cycle(1);
         assert_eq!(spec_order_all(&g), vec![Vertex(0), Edge(0)]);
+    }
+
+    #[test]
+    fn dfs_with_callbacks() {
+        // Test 1: Simple acyclic graph (path of length 3: 0 -> 1 -> 2)
+        let g = SkelGraph::path(3);
+        let mut discovered_order = Vec::new();
+        let mut completed_order = Vec::new();
+        let mut discovered = HashSet::new();
+        depth_first_traversal(
+            &g,
+            0,
+            &mut discovered,
+            TraversalDirection::Outward,
+            Some(|v| completed_order.push(v)),
+            Some(|v| discovered_order.push(v)),
+        )
+        .unwrap();
+        // Discover in DFS order from 0: discover 0, then 1, then 2
+        assert_eq!(discovered_order, vec![0, 1, 2]);
+        // Complete in reverse order: finish 2, then 1, then 0
+        assert_eq!(completed_order, vec![2, 1, 0]);
+
+        // Test 2: Graph with branching (triangle: 0 -> 1 -> 2, 0 -> 2)
+        let g = SkelGraph::triangle();
+        let mut discovered_order = Vec::new();
+        let mut completed_order = Vec::new();
+        let mut discovered = HashSet::new();
+        depth_first_traversal(
+            &g,
+            0,
+            &mut discovered,
+            TraversalDirection::Outward,
+            Some(|v| completed_order.push(v)),
+            Some(|v| discovered_order.push(v)),
+        )
+        .unwrap();
+        // Discover all three vertices
+        assert_eq!(discovered_order.len(), 3);
+        assert_eq!(discovered_order.iter().collect::<HashSet<_>>(), [0, 1, 2].iter().collect());
+        // Vertex 0 should complete last (it's the root)
+        assert_eq!(completed_order.last(), Some(&0));
+
+        // Test 3: Self-loop detection
+        let mut g: HashGraph<usize, &str> = Default::default();
+        g.add_vertices(vec![0, 1]);
+        g.add_edge("self", 0, 0);
+        let mut discovered = HashSet::new();
+        let result = depth_first_traversal(
+            &g,
+            0,
+            &mut discovered,
+            TraversalDirection::Outward,
+            None::<fn(usize)>,
+            None::<fn(usize)>,
+        );
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Self loop"));
     }
 }
