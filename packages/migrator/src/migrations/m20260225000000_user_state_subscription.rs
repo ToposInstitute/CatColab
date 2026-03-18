@@ -4,16 +4,16 @@ use sqlx_migrator::Operation;
 use sqlx_migrator::error::Error;
 use sqlx_migrator::vec_box;
 
-pub(crate) struct UserStateSubscriptions;
+pub(crate) struct UserStateSubscription;
 
 #[async_trait::async_trait]
-impl Migration<Postgres> for UserStateSubscriptions {
+impl Migration<Postgres> for UserStateSubscription {
     fn app(&self) -> &str {
         "backend"
     }
 
     fn name(&self) -> &str {
-        "m20260130120000_user_state_subscriptions"
+        "m20260130120000_user_state_subscription"
     }
 
     fn parents(&self) -> Vec<Box<dyn Migration<Postgres>>> {
