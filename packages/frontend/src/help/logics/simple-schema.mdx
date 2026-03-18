@@ -85,8 +85,8 @@ In other words, the set corresponding to an attribute type starts as empty and n
 <HelpAnalysisById theory={props.theory} analysisId="diagram"/>
 <HelpAnalysisById theory={props.theory} analysisId="erd"/>
 
-<HelpAnalysisById theory={props.theory} analysisId="sql"/>
-This analysis uses the [sea_query](https://docs.rs/sea-query/latest/sea_query/) crate to convert discrete double models into valid SQL. Following the correspondence above, schema entities are interpreted as tables, mappings are interpreted as foreign key relations between tables, attribute types are interpreted as column types, and **attributes** as columns.
+<HelpAnalysisById theory={props.theory} analysisId="sql">
+This analysis uses the [`sea_query`](https://docs.rs/sea-query/latest/sea_query/) crate to convert discrete double models into valid SQL. Following the correspondence above, schema entities are interpreted as tables, mappings are interpreted as foreign key relations between tables, attribute types are interpreted as column types, and **attributes** as columns.
 
 There are several caveats:
 
@@ -166,3 +166,4 @@ corresponds to a database schema:
 </table>
 </div>
 </div>
+</HelpAnalysisById>
