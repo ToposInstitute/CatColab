@@ -30,9 +30,7 @@ function ACSetTable(props: { model: DblModel; rawdata: Record<string, string[]>;
 
     // Data for column from indexing rawdata
     const columnardata = () =>
-        ([props.obId] as string[])
-            .concat(outhoms())
-            .map((m) => props.rawdata[m as keyof typeof props.rawdata] || [""]);
+        ([props.obId] as string[]).concat(outhoms()).map((m) => props.rawdata[m] || [""]);
 
     // Convert columnar data to row data
     const data = () =>

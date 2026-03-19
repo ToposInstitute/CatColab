@@ -3,7 +3,7 @@
     "categories": {
         "correctness": "error",
         "suspicious": "warn",
-        "perf": "warn"
+        "perf": "warn",
     },
     "plugins": ["typescript", "unicorn", "oxc", "import", "vitest"],
     "ignorePatterns": ["**/dist", "**/docs", "**/catlog-wasm", "**/storybook-static"],
@@ -13,12 +13,11 @@
         "import/no-unassigned-import": [
             "warn",
             {
-                "allow": ["**/*.css"]
-            }
+                "allow": ["**/*.css"],
+            },
         ],
         // SolidJS idioms like <Show when={x()}>{(x) => ...}</Show> intentionally
-        // shadow signals with narrowed callback parameters. 58 violations, mostly
-        // idiomatic patterns.
+        // shadow signals with narrowed callback parameters.
         "no-shadow": "off",
         // Too many legitimate uses of type assertions in the codebase (e.g.,
         // narrowing Automerge values, wasm interop types).
@@ -59,11 +58,7 @@
         "typescript/restrict-template-expressions": "off",
         // Same tsgo resolution issue as no-redundant-type-constituents: Automerge
         // BlockMarker attributes are typed as unknown but are strings at runtime.
-        // The 4 genuine object-type violations overlap with
-        // restrict-template-expressions.
         "typescript/no-base-to-string": "off",
-        // TODO: investigate. Currently disabled without detailed triage.
-        "typescript/no-unnecessary-type-assertion": "off",
         // All 3 violations are static method references (e.g.,
         // `ThCategory.toSchema`) which don't use `this`. The rule can't
         // distinguish static methods from instance methods — known limitation.
@@ -83,16 +78,16 @@
         "no-console": [
             "warn",
             {
-                "allow": ["warn", "error", "info", "debug"]
-            }
+                "allow": ["warn", "error", "info", "debug"],
+            },
         ],
         // Ternary-as-statement (`condition ? doA() : doB()`) is idiomatic in
         // this codebase for concise branching in callbacks.
         "no-unused-expressions": [
             "warn",
             {
-                "allowTernary": true
-            }
+                "allowTernary": true,
+            },
         ],
         // Allow underscore-prefixed names for intentionally unused bindings
         // (e.g., `_e` in catch blocks, `_unused` destructured fields).
@@ -101,8 +96,8 @@
             {
                 "varsIgnorePattern": "^_",
                 "argsIgnorePattern": "^_",
-                "caughtErrorsIgnorePattern": "^_"
-            }
-        ]
-    }
+                "caughtErrorsIgnorePattern": "^_",
+            },
+        ],
+    },
 }

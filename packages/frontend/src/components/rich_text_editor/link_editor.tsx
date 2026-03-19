@@ -222,7 +222,7 @@ export class LinkEditorView {
         this.linkEditorState = linkEditorState;
         this.setLinkEditorState = setLinkEditorState;
 
-        const container = (this.view.dom.parentElement ?? this.view.dom) as HTMLElement;
+        const container = this.view.dom.parentElement ?? this.view.dom;
         container.appendChild(this.dom);
 
         // Emulate hover functionality by checking if the mouse is on a link
