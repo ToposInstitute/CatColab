@@ -88,8 +88,9 @@ pub struct EqnDecl {
 }
 
 /// A judgment defining part of a model of a double theory.
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Tsify)]
 #[serde(tag = "tag")]
+#[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum ModelJudgment {
     /// Declares a generating object of the model.
     #[serde(rename = "object")]
