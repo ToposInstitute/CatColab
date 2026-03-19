@@ -7,25 +7,18 @@ import {
     FixedTableEditor,
     Foldable,
 } from "catcolab-ui-components";
-import type {
-    DblModel,
-    MorType,
-    ObType,
-    QualifiedName,
-    StochasticMassActionProblemData,
-} from "catlog-wasm";
+import type { MorType, ObType, QualifiedName, StochasticMassActionProblemData } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
 import { createModelODEPlot } from "./model_ode_plot";
-import type { StochasticMassActionSimulator } from "./simulator_types";
 
 import "./simulation.css";
 
 /** Analyze a model using stochastic mass-action dynamics. */
 export default function StochasticMassAction(
     props: ModelAnalysisProps<StochasticMassActionProblemData> & {
-        simulate: StochasticMassActionSimulator;
+        analysisId: string;
         stateType?: ObType;
         transitionType?: MorType;
         title?: string;
@@ -98,9 +91,10 @@ export default function StochasticMassAction(
         }),
     ];
 
-    const plotResult = createModelODEPlot(
-        () => props.liveModel.validatedModel(),
-        (model: DblModel) => props.simulate(model, props.content),
+    const { data: plotResult, loading } = createModelODEPlot(
+        props.liveModel,
+        props.analysisId,
+        () => props.content,
     );
 
     return (
@@ -113,7 +107,7 @@ export default function StochasticMassAction(
                     <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
             </Foldable>
-            <ODEResultPlot result={plotResult()} />
+            <ODEResultPlot result={plotResult()} loading={loading()} />
         </div>
     );
 }

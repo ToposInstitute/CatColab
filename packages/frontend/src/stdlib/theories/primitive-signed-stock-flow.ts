@@ -60,9 +60,6 @@ export default function createPrimitiveSignedStockFlowTheory(theoryMeta: TheoryM
             }),
             analyses.massAction({
                 ratesHaveGranularity: false,
-                simulate(model, data) {
-                    return thCategorySignedLinks.massAction(model, data);
-                },
                 transitionType: {
                     tag: "Hom",
                     content: { tag: "Basic", content: "Object" },

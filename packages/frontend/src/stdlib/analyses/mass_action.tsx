@@ -22,15 +22,14 @@ import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
 import { MassActionConfigForm } from "./mass_action_config_form";
 import { createModelODEPlotWithEquations } from "./model_ode_plot";
-import type { MassActionSimulator } from "./simulator_types";
 
 import "./simulation.css";
 
 /** Analyze a model using mass-action dynamics. */
 export default function MassAction(
     props: ModelAnalysisProps<MassActionProblemData> & {
+        analysisId: string;
         ratesHaveGranularity: boolean;
-        simulate: MassActionSimulator;
         stateType?: ObType;
         title?: string;
         transitionType?: MorType;
@@ -291,12 +290,13 @@ export default function MassAction(
     ];
 
     const result = createModelODEPlotWithEquations(
-        () => props.liveModel.validatedModel(),
-        (model) => props.simulate(model, props.content),
+        props.liveModel,
+        props.analysisId,
+        () => props.content,
     );
 
-    const plotResult = () => result()?.plotData;
-    const latexEquations = () => result()?.latexEquations ?? [];
+    const plotResult = () => result.data()?.plotData;
+    const latexEquations = () => result.data()?.latexEquations ?? [];
 
     return (
         <div class="simulation">
@@ -329,7 +329,10 @@ export default function MassAction(
                 />
             </Foldable>
             <Foldable title="Simulation" defaultExpanded>
-                <ODEResultPlot result={plotResult()} />
+                <div class="parameters">
+                    <FixedTableEditor rows={[null]} schema={toplevelSchema} />
+                </div>
+                <ODEResultPlot result={plotResult()} loading={result.loading()} />
             </Foldable>
         </div>
     );

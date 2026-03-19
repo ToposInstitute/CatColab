@@ -7,19 +7,18 @@ import {
     FixedTableEditor,
     Foldable,
 } from "catcolab-ui-components";
-import type { DblModel, KuramotoProblemData, QualifiedName } from "catlog-wasm";
+import type { KuramotoProblemData, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
 import { createModelODEPlot } from "./model_ode_plot";
-import type { KuramotoSimulator } from "./simulator_types";
 
 import "./simulation.css";
 
 /** Analyse a model using first- or second-order Kuramoto dynamics. */
 export default function Kuramoto(
     props: ModelAnalysisProps<KuramotoProblemData> & {
-        simulate: KuramotoSimulator;
+        analysisId: string;
         title?: string;
         couplingLabel?: string;
         dampingLabel?: string;
@@ -130,9 +129,10 @@ export default function Kuramoto(
         }),
     ];
 
-    const plotResult = createModelODEPlot(
-        () => props.liveModel.validatedModel(),
-        (model: DblModel) => props.simulate(model, props.content),
+    const { data: plotResult, loading } = createModelODEPlot(
+        props.liveModel,
+        props.analysisId,
+        () => props.content,
     );
 
     return (
@@ -153,6 +153,7 @@ export default function Kuramoto(
             </Foldable>
             <ODEResultPlot
                 result={plotResult()}
+                loading={loading()}
                 yAxis={{
                     type: "value",
                     min: -Math.PI,

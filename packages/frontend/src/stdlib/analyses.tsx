@@ -10,7 +10,14 @@ import type { DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
 import * as GraphLayoutConfig from "../visualization/graph_layout_config";
 import type * as Checkers from "./analyses/checker_types";
 import { defaultSchemaERDConfig, type SchemaERDConfig } from "./analyses/schema_erd_config";
-import type * as Simulators from "./analyses/simulator_types";
+import type {
+    DecapodesAnalysisContent,
+    KuramotoProblemData,
+    LinearODEProblemData,
+    LotkaVolterraProblemData,
+    MassActionEquations,
+    MassActionProblemData,
+} from "./analyses/simulator_types";
 import type * as SQLDownloadConfig from "./analyses/sql";
 import { SQLBackend, type SQLRenderer } from "./analyses/sql_types";
 
@@ -23,7 +30,7 @@ type AnalysisOptions = {
 
 export const decapodes = (
     options: AnalysisOptions,
-): DiagramAnalysisMeta<Simulators.DecapodesAnalysisContent> => ({
+): DiagramAnalysisMeta<DecapodesAnalysisContent> => ({
     ...options,
     component: (props) => <Decapodes {...props} />,
     initialContent: () => ({
@@ -60,20 +67,18 @@ const TabularView = lazy(() => import("./analyses/tabular_view"));
 
 export function kuramoto(
     options: Partial<AnalysisOptions> & {
-        simulate: Simulators.KuramotoSimulator;
         parameterLabels?: {
             coupling?: string;
             damping?: string;
             forcing?: string;
         };
     },
-): ModelAnalysisMeta<Simulators.KuramotoProblemData> {
+): ModelAnalysisMeta<KuramotoProblemData> {
     const {
         id = "kuramoto",
         name = "Kuramoto dynamics",
         description = "Simulate the system using the Kuramoto dynamical model",
         help = "kuramoto",
-        simulate,
     } = options;
     return {
         id,
@@ -82,7 +87,7 @@ export function kuramoto(
         help,
         component: (props) => (
             <Kuramoto
-                simulate={simulate}
+                analysisId={id}
                 title={name}
                 couplingLabel={options.parameterLabels?.coupling}
                 dampingLabel={options.parameterLabels?.damping}
@@ -105,23 +110,20 @@ export function kuramoto(
 const Kuramoto = lazy(() => import("./analyses/kuramoto"));
 
 export function linearODE(
-    options: Partial<AnalysisOptions> & {
-        simulate: Simulators.LinearODESimulator;
-    },
-): ModelAnalysisMeta<Simulators.LinearODEProblemData> {
+    options: Partial<AnalysisOptions> = {},
+): ModelAnalysisMeta<LinearODEProblemData> {
     const {
         id = "linear-ode",
         name = "Linear ODE dynamics",
         description = "Simulate the system using a constant-coefficient linear first-order ODE",
         help = "linear-ode",
-        simulate,
     } = options;
     return {
         id,
         name,
         description,
         help,
-        component: (props) => <LinearODE simulate={simulate} title={name} {...props} />,
+        component: (props) => <LinearODE analysisId={id} title={name} {...props} />,
         initialContent: () => ({
             coefficients: {},
             initialValues: {},
@@ -133,23 +135,20 @@ export function linearODE(
 const LinearODE = lazy(() => import("./analyses/linear_ode"));
 
 export function lotkaVolterra(
-    options: Partial<AnalysisOptions> & {
-        simulate: Simulators.LotkaVolterraSimulator;
-    },
-): ModelAnalysisMeta<Simulators.LotkaVolterraProblemData> {
+    options: Partial<AnalysisOptions> = {},
+): ModelAnalysisMeta<LotkaVolterraProblemData> {
     const {
         id = "lotka-volterra",
         name = "Lotka-Volterra dynamics",
         description = "Simulate the system using a Lotka-Volterra ODE",
         help = "lotka-volterra",
-        simulate,
     } = options;
     return {
         id,
         name,
         description,
         help,
-        component: (props) => <LotkaVolterra simulate={simulate} title={name} {...props} />,
+        component: (props) => <LotkaVolterra analysisId={id} title={name} {...props} />,
         initialContent: () => ({
             interactionCoefficients: {},
             growthRates: {},
@@ -164,11 +163,10 @@ const LotkaVolterra = lazy(() => import("./analyses/lotka_volterra"));
 export function massAction(
     options: Partial<AnalysisOptions> & {
         ratesHaveGranularity: boolean;
-        simulate: Simulators.MassActionSimulator;
         stateType?: ObType;
         transitionType?: MorType;
     },
-): ModelAnalysisMeta<Simulators.MassActionProblemData> {
+): ModelAnalysisMeta<MassActionProblemData> {
     const {
         id = "mass-action",
         name = "Mass-action dynamics",
@@ -181,7 +179,9 @@ export function massAction(
         name,
         description,
         help,
-        component: (props) => <MassAction title={name} {...otherOptions} {...props} />,
+        component: (props) => (
+            <MassAction analysisId={id} title={name} {...otherOptions} {...props} />
+        ),
         initialContent: () => ({
             massConservationType: { type: "Balanced" },
             rates: {},
@@ -200,7 +200,7 @@ const MassAction = lazy(() => import("./analyses/mass_action"));
 export function massActionEquations(
     options: Partial<AnalysisOptions> & {
         ratesHaveGranularity: boolean;
-        getEquations: Simulators.MassActionEquations;
+        getEquations: MassActionEquations;
     },
 ): ModelAnalysisMeta<MassActionEquationsData> {
     const {
@@ -227,10 +227,9 @@ const MassActionEquationsDisplay = lazy(() => import("./analyses/mass_action_equ
 
 export function stochasticMassAction(
     options: Partial<AnalysisOptions> & {
-        simulate: Simulators.StochasticMassActionSimulator;
         stateType?: ObType;
         transitionType?: MorType;
-    },
+    } = {},
 ): ModelAnalysisMeta<StochasticMassActionProblemData> {
     const {
         id = "stochastic-mass-action",
@@ -244,7 +243,9 @@ export function stochasticMassAction(
         name,
         description,
         help,
-        component: (props) => <StochasticMassAction title={name} {...otherOptions} {...props} />,
+        component: (props) => (
+            <StochasticMassAction analysisId={id} title={name} {...otherOptions} {...props} />
+        ),
         initialContent: () => ({
             rates: {},
             initialValues: {},

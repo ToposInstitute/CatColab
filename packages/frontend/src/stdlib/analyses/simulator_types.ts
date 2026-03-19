@@ -6,9 +6,6 @@ import type {
     MassActionEquationsData,
     MassActionProblemData,
     ODELatex,
-    ODEResult,
-    ODEResultWithEquations,
-    StochasticMassActionProblemData,
 } from "catlog-wasm";
 
 export type {
@@ -18,17 +15,6 @@ export type {
     MassActionProblemData,
 };
 
-export type KuramotoSimulator = (model: DblModel, data: KuramotoProblemData) => ODEResult;
-export type LinearODESimulator = (model: DblModel, data: LinearODEProblemData) => ODEResult;
-export type LotkaVolterraSimulator = (model: DblModel, data: LotkaVolterraProblemData) => ODEResult;
-export type MassActionSimulator = (
-    model: DblModel,
-    data: MassActionProblemData,
-) => ODEResultWithEquations;
-export type StochasticMassActionSimulator = (
-    model: DblModel,
-    data: StochasticMassActionProblemData,
-) => ODEResult;
 export type MassActionEquations = (model: DblModel, data: MassActionEquationsData) => ODELatex;
 
 /** Configuration for a Decapodes analysis of a diagram. */

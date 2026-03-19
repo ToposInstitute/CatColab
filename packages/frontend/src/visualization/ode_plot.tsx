@@ -27,19 +27,27 @@ type ODEPlotOptions = {
 /** Display the results from an ODE simulation.
 
 Plots the output data if the simulation was successful and shows an error
-message otherwise.
+message otherwise. Shows a loading indicator when a simulation is in progress.
  */
 export function ODEResultPlot(
     allProps: {
         result?: JsResult<ODEPlotData, string>;
+        loading?: boolean;
     } & ODEPlotOptions,
 ) {
-    const [props, options] = splitProps(allProps, ["result"]);
+    const [props, options] = splitProps(allProps, ["result", "loading"]);
 
     return (
         <Switch>
+            <Match when={props.loading && !props.result}>
+                <div class="plot loading-placeholder">Computing...</div>
+            </Match>
             <Match when={props.result?.tag === "Ok" && props.result.content}>
-                {(data) => <ODEPlot data={data()} {...options} />}
+                {(data) => (
+                    <div style={{ opacity: props.loading ? "0.5" : "1" }}>
+                        <ODEPlot data={data()} {...options} />
+                    </div>
+                )}
             </Match>
             <Match when={props.result?.tag === "Err" && props.result.content}>
                 {(err) => <ErrorAlert title="Integration error">{err()}</ErrorAlert>}

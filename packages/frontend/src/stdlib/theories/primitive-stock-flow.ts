@@ -51,9 +51,6 @@ export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): 
             }),
             analyses.massAction({
                 ratesHaveGranularity: false,
-                simulate(model, data) {
-                    return thCategoryLinks.massAction(model, data);
-                },
                 transitionType: {
                     tag: "Hom",
                     content: { tag: "Basic", content: "Object" },
