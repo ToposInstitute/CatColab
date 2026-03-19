@@ -56,7 +56,6 @@ async function getDocumentChain(options: {
     const documentChain: LiveDocWithRef[] = [firstDoc];
 
     while (true) {
-        // biome-ignore lint/style/noNonNullAssertion: the array initializer guarantees that there will always be at least one item in the array
         const parentRefId = getParentRefId(documentChain[0]!.liveDoc.doc);
         if (!parentRefId) {
             break;

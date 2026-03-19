@@ -183,10 +183,7 @@ export const basicSchema = {
                     tag: "ol",
                     getAttrs(dom: HTMLElement) {
                         return {
-                            order: dom.hasAttribute("start")
-                                ? // biome-ignore lint/style/noNonNullAssertion: it was this way in the prosemirror example
-                                  +dom.getAttribute("start")!
-                                : 1,
+                            order: dom.hasAttribute("start") ? +dom.getAttribute("start")! : 1,
                         };
                     },
                 },

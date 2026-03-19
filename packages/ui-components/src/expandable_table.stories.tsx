@@ -32,7 +32,6 @@ const meta = {
                 type: {
                     summary: "(remainingCount: number) => string",
                 },
-                // biome-ignore lint/suspicious/noTemplateCurlyInString: it's needed here
                 defaultValue: { summary: "(count) => `${count} more rows...`" },
             },
         },
@@ -202,8 +201,14 @@ const sampleEquations: Equation[] = [
         expression:
             "((-1) \\cdot r_{\\text{infect}}) \\cdot I \\cdot S + r_{\\text{wane}} \\cdot R",
     },
-    { variable: "X", expression: "(\\alpha) \\cdot X + ((-1) \\cdot \\beta) \\cdot X \\cdot Y" },
-    { variable: "Y", expression: "(\\gamma) \\cdot X \\cdot Y + ((-1) \\cdot \\delta) \\cdot Y" },
+    {
+        variable: "X",
+        expression: "(\\alpha) \\cdot X + ((-1) \\cdot \\beta) \\cdot X \\cdot Y",
+    },
+    {
+        variable: "Y",
+        expression: "(\\gamma) \\cdot X \\cdot Y + ((-1) \\cdot \\delta) \\cdot Y",
+    },
 ];
 
 export const WithKatex: Story = {
@@ -237,12 +242,48 @@ type User = {
 };
 
 const sampleUsers: User[] = [
-    { id: 1, name: "Alice Johnson", email: "alice@example.com", role: "Admin", status: "active" },
-    { id: 2, name: "Bob Smith", email: "bob@example.com", role: "User", status: "active" },
-    { id: 3, name: "Carol White", email: "carol@example.com", role: "User", status: "inactive" },
-    { id: 4, name: "David Brown", email: "david@example.com", role: "Moderator", status: "active" },
-    { id: 5, name: "Eve Davis", email: "eve@example.com", role: "User", status: "active" },
-    { id: 6, name: "Frank Miller", email: "frank@example.com", role: "User", status: "inactive" },
+    {
+        id: 1,
+        name: "Alice Johnson",
+        email: "alice@example.com",
+        role: "Admin",
+        status: "active",
+    },
+    {
+        id: 2,
+        name: "Bob Smith",
+        email: "bob@example.com",
+        role: "User",
+        status: "active",
+    },
+    {
+        id: 3,
+        name: "Carol White",
+        email: "carol@example.com",
+        role: "User",
+        status: "inactive",
+    },
+    {
+        id: 4,
+        name: "David Brown",
+        email: "david@example.com",
+        role: "Moderator",
+        status: "active",
+    },
+    {
+        id: 5,
+        name: "Eve Davis",
+        email: "eve@example.com",
+        role: "User",
+        status: "active",
+    },
+    {
+        id: 6,
+        name: "Frank Miller",
+        email: "frank@example.com",
+        role: "User",
+        status: "inactive",
+    },
 ];
 
 export const StyledCells: Story = {

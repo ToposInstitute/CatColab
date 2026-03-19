@@ -8,9 +8,9 @@
         "./*": "./src/*"
     },
     "scripts": {
-        "format": "oxfmt",
-        "lint": "oxfmt && oxlint --fix",
-        "ci": "oxfmt --check && tsc --noEmit && oxlint --deny-warnings",
+        "format": "oxfmt .",
+        "lint": "oxfmt . && oxlint --fix",
+        "ci": "oxfmt --check . && tsc --noEmit && oxlint --deny-warnings",
         "dev": "storybook dev -p 6006 --no-version-updates --no-open",
         "build": "NODE_ENV=production storybook build",
         "test": "vitest --project=storybook"

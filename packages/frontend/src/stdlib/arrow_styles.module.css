@@ -19,7 +19,6 @@
     border-radius: 3px;
 }
 
-/* biome-ignore lint/suspicious/noEmptyBlock: need style for typechecking. */
 .arrow.unmarked {
 }
 
