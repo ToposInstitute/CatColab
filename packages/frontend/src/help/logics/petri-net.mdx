@@ -1,5 +1,5 @@
 import { A } from "@solidjs/router";
-import { HelpAnalysisById } from "../logic_help_detail"
+import { HelpAnalysisById } from "../logic_help_detail";
 
 ## Description
 
@@ -10,11 +10,9 @@ One way of understanding Petri nets is through their **token semantics**.
 We place a number of "tokens" in each place and then check all the transitions to see if all their input places have a token: if so, then we can "fire" the transition, moving the tokens from the input places to the output places; if not, then nothing happens.
 In many classical references the token semantics are built directly in to the definition of Petri nets (often called a **marking** or **tokening**), but an unmarked Petri net is already itself a useful formal gadget, analogous to how can be useful to consider an ordinary differential equation without giving its initial conditions.
 
-
 ### Examples
 
-- [L. lactis glycolysis pathway](https://catcolab.org/model/019bb3e0-0cf3-7290-8ec8-2ee9e3b420a6/analysis/019bb3e2-1880-7fe3-8759-2172a8d074d4), from Eberhard O. Voit's *Systems Biology: A Very Short Introduction* (2020).
-
+- [L. lactis glycolysis pathway](https://catcolab.org/model/019bb3e0-0cf3-7290-8ec8-2ee9e3b420a6/analysis/019bb3e2-1880-7fe3-8759-2172a8d074d4), from Eberhard O. Voit's _Systems Biology: A Very Short Introduction_ (2020).
 
 ### Further reading
 
@@ -23,19 +21,19 @@ In many classical references the token semantics are built directly in to the de
 - Series of blog posts by John Baez on Petri nets, all listed
   [here](https://johncarlosbaez.wordpress.com/?s=petri)
 
-
 ## Instances and analyses
 
 ### Analyses
 
-<HelpAnalysisById theory={props.theory} analysisId="diagram"/>
+<HelpAnalysisById theory={props.theory} analysisId="diagram" />
 
 <HelpAnalysisById theory={props.theory} analysisId="subreachability">
 A **tokening** of a Petri net assigns some number of tokens to each place. A transition can **fire** by removing a token from each of its inputs and adding a token to each of its outputs. Given an initial tokening, we are concerned with all of the possible tokenings that can be arrived at via some sequence of transitions firing. This is usually infinite. Sometimes we care about a particular tokening as "forbidden": we care about confirming that no sequence of transitions firing could ever reach state for which includes the forbidden state.
 
 This analysis shows a ❌ if there does exist any reachable tokening from the given initial one which is greater or equal to the given forbidden one, and shows a ✅ otherwise.
 
-*Note:* we are *not* checking that the forbidden state is reached exactly, just whether *some* state which is strictly larger than the forbidden state can be reached.
+_Note:_ we are _not_ checking that the forbidden state is reached exactly, just whether _some_ state which is strictly larger than the forbidden state can be reached.
+
 </HelpAnalysisById>
 
 <HelpAnalysisById theory={props.theory} analysisId="mass-action">
@@ -43,43 +41,41 @@ Places are interpreted as quantities that can vary in time ("concentrations"), a
 Each place is given an **initial value**.
 
 Since this is mass-action dynamics, we make the assumption that transitions depend only on their input places; we also make the assumption that transitions are determined by constants (namely their rate coefficients).
-Equations governing transitions are also *non-linear*, depending multiplicatively on their inputs.
+Equations governing transitions are also _non-linear_, depending multiplicatively on their inputs.
 
 The rest of the analysis depends on whether **mass conservation** is checked as true or false.
 
-- If **mass conservation** is checked as *true*, a transition $A\xrightarrow{T}B$ between places $A$ and $B$ is interpreted as the equations $\{\dot{A}=-r_TA,\dot{B}=r_TA\}$, i.e. the transition $T$ goes out of $A$ and into $B$. Here, $r_T$ is the **rate coefficient** of the transition.
+- If **mass conservation** is checked as _true_, a transition $A\xrightarrow{T}B$ between places $A$ and $B$ is interpreted as the equations $\{\dot{A}=-r_TA,\dot{B}=r_TA\}$, i.e. the transition $T$ goes out of $A$ and into $B$. Here, $r_T$ is the **rate coefficient** of the transition.
 
-  A transition $[A,B]\xrightarrow{T}[X,Y]$ gives the equations
+    A transition $[A,B]\xrightarrow{T}[X,Y]$ gives the equations
+    - $\dot{A}=-r_T AB$
+    - $\dot{B}=-r_T AB$
+    - $\dot{X}=r_T AB$
+    - $\dot{Y}=r_T AB$
 
-  + $\dot{A}=-r_T AB$
-  + $\dot{B}=-r_T AB$
-  + $\dot{X}=r_T AB$
-  + $\dot{Y}=r_T AB$
+- If **mass conservation** is checked as _false_, and **rate granularity** is set to _per transition_, then a transition $A\xrightarrow{T}B$ between places $A$ and $B$ is interpreted as the equations $\{\dot{A}=-\kappa_T,\dot{B}=\rho_T\}$. Here $\kappa_T$ and $\rho_T$ are the **consumption** and **production** rate coefficients of the transition.
 
-- If **mass conservation** is checked as *false*, and **rate granularity** is set to *per transition*, then a transition $A\xrightarrow{T}B$ between places $A$ and $B$ is interpreted as the equations $\{\dot{A}=-\kappa_T,\dot{B}=\rho_T\}$. Here $\kappa_T$ and $\rho_T$ are the **consumption** and **production** rate coefficients of the transition.
+    A transition $[A,B]\xrightarrow{T}[X,Y]$ gives the equations
+    - $\dot{A}=-\kappa_T AB$
+    - $\dot{B}=-\kappa_T AB$
+    - $\dot{X}=\rho_T AB$
+    - $\dot{Y}=\rho_T AB$
 
-  A transition $[A,B]\xrightarrow{T}[X,Y]$ gives the equations
+- If **mass conservation** is checked as _false_, and **rate granularity** is set to _per place_, then a transition $A\xrightarrow{T}B$ between places $A$ and $B$ is interpreted as the equations $\{\dot{A}=-\kappa_T^A,\dot{B}=\rho_T^B\}$. Here $\kappa_T^A$ and $\rho_T^B$ are the **consumption** and **production** rate coefficients of the objects $A$ and $B$ with respect to the transition $T$.
 
-  + $\dot{A}=-\kappa_T AB$
-  + $\dot{B}=-\kappa_T AB$
-  + $\dot{X}=\rho_T AB$
-  + $\dot{Y}=\rho_T AB$
-
-- If **mass conservation** is checked as *false*, and **rate granularity** is set to *per place*, then a transition $A\xrightarrow{T}B$ between places $A$ and $B$ is interpreted as the equations $\{\dot{A}=-\kappa_T^A,\dot{B}=\rho_T^B\}$. Here $\kappa_T^A$ and $\rho_T^B$ are the **consumption** and **production** rate coefficients of the objects $A$ and $B$ with respect to the transition $T$.
-
-  A transition $[A,B]\xrightarrow{T}[X,Y]$ gives the equations
-
-  + $\dot{A}=-\kappa_T^A AB$
-  + $\dot{B}=-\kappa_T^B AB$
-  + $\dot{X}=\rho_T^X AB$
-  + $\dot{Y}=\rho_T^Y AB$
+    A transition $[A,B]\xrightarrow{T}[X,Y]$ gives the equations
+    - $\dot{A}=-\kappa_T^A AB$
+    - $\dot{B}=-\kappa_T^B AB$
+    - $\dot{X}=\rho_T^X AB$
+    - $\dot{Y}=\rho_T^Y AB$
 
 In all cases, equations governing places add linearly: in an arbitrary Petri net, the equation governing a place $A$ is $\dot{A}=\sum_{A_\text{in}}T_i - \sum_{A_\text{out}}T_j$, where $A_\text{in}$ (resp. $A_\text{out}$) is the set of all transitions whose target (resp. source) is $A$.
+
 </HelpAnalysisById>
 
 <HelpAnalysisById theory={props.theory} analysisId="mass-action-equations" />
 
-<HelpAnalysisById theory={props.theory} analysisId="unbalanced-mass-action-equations"/>
+<HelpAnalysisById theory={props.theory} analysisId="unbalanced-mass-action-equations" />
 
 <HelpAnalysisById theory={props.theory} analysisId="stochastic-mass-action">
 This analysis realises the Petri net as a stochastic Petri net (SPN).
@@ -100,5 +96,6 @@ $[\mathrm{I}]\xrightarrow{\text{death}}[\phantom{I}]$
 
 In this case, a death is interpreted as only decrementing the infected population. The empty list (a valid term in the model) has a valid interpretation in the analysis.
 
-We use the Gillespie algorithm implemented in the [`Armavica/rebop`](https://github.com/Armavica/rebop) package. This process was first popularized by Gillespie in ["A General Method for Numerically Simulating the Stochastic Time Evolution of Coupled Chemical Reactions"](https://doi.org/10.1016/0021-9991(76)90041-3).
+We use the Gillespie algorithm implemented in the [`Armavica/rebop`](https://github.com/Armavica/rebop) package. This process was first popularized by Gillespie in ["A General Method for Numerically Simulating the Stochastic Time Evolution of Coupled Chemical Reactions"](<https://doi.org/10.1016/0021-9991(76)90041-3>).
+
 </HelpAnalysisById>

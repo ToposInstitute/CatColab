@@ -9,9 +9,9 @@ import type { RefStub } from "catcolab-api";
 import { Dialog, IconButton, Spinner } from "catcolab-ui-components";
 import { rpcResourceErr, rpcResourceOk, useApi } from "../api";
 import { BrandedToolbar } from "../page";
-import "./documents.css";
-
 import { LoginGate } from "./login";
+
+import "./documents.css";
 
 export default function TrashBin() {
     const appTitle = import.meta.env.VITE_APP_TITLE;

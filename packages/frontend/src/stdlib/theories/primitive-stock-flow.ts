@@ -1,6 +1,7 @@
 import { ThCategoryLinks } from "catlog-wasm";
 import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
+
 import styles from "../styles.module.css";
 import svgStyles from "../svg_styles.module.css";
 

@@ -3,6 +3,7 @@ import { createResource, For, Match, Switch } from "solid-js";
 import { PanelHeader, Spinner } from "catcolab-ui-components";
 import type { DblModel } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
+
 import "./tabular_view.css";
 
 /** Given a schema (DblModel of ThSchema), a JSON output `rawdata` from Catlab,

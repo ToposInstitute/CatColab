@@ -30,13 +30,14 @@ where `$MODE` is replaced with one of the following:
 - `development`: assumes that the [backend](../backend/) is running locally (the
   default if `--mode` is omitted)
 - `production`: uses the production deployment of CatColab at `catcolab.org`
-  (*not* recommended)
+  (_not_ recommended)
 
 ## Troubleshooting
 
 ### Nix Hash Mismatches
 
-If this package fails to build in Nix with the error: 
+If this package fails to build in Nix with the error:
+
 ```
 > ERROR: pnpm failed to install dependencies
 ```

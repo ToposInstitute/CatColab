@@ -136,7 +136,6 @@
             ++ [
               inputs.agenix.packages.${system}.agenix
               inputs.deploy-rs.packages.${system}.default
-              (import ./infrastructure/biome.nix { inherit pkgs system; })
             ];
 
           # macOS-specific environment variables for OpenSSL and pkg-config

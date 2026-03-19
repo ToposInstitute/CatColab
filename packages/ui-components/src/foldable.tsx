@@ -4,7 +4,6 @@ import ChevronRight from "lucide-solid/icons/chevron-right";
 import { type ComponentProps, createSignal, type JSX, Show, splitProps } from "solid-js";
 
 import "./panel.css";
-
 import styles from "./foldable.module.css";
 
 /** A component whose contents can be expanded or folded.

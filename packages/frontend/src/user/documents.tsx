@@ -1,5 +1,7 @@
 import { Title } from "@solidjs/meta";
+import { useNavigate } from "@solidjs/router";
 import { getAuth } from "firebase/auth";
+import X from "lucide-solid/icons/x";
 import { useFirebaseApp } from "solid-firebase";
 import {
     createEffect,
@@ -11,18 +13,15 @@ import {
     Switch,
     useContext,
 } from "solid-js";
+import invariant from "tiny-invariant";
 
 import type { RefStub } from "catcolab-api";
+import { IconButton, Spinner } from "catcolab-ui-components";
 import { rpcResourceErr, rpcResourceOk, useApi } from "../api";
 import { BrandedToolbar, PageActionsContext } from "../page";
 import { LoginGate } from "./login";
+
 import "./documents.css";
-
-import { useNavigate } from "@solidjs/router";
-import X from "lucide-solid/icons/x";
-import invariant from "tiny-invariant";
-
-import { IconButton, Spinner } from "catcolab-ui-components";
 
 export default function UserDocuments() {
     const appTitle = import.meta.env.VITE_APP_TITLE;

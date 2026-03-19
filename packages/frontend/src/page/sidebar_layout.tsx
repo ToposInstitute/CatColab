@@ -1,12 +1,11 @@
-import { createSignal, type JSX } from "solid-js";
-
-import "./sidebar_layout.css";
-
 import ChevronsLeft from "lucide-solid/icons/chevrons-left";
 import MenuIcon from "lucide-solid/icons/menu";
+import { createSignal, type JSX } from "solid-js";
 
 import { IconButton } from "catcolab-ui-components";
 import { AppMenu, ImportMenuItem, NewModelItem } from "./menubar";
+
+import "./sidebar_layout.css";
 
 export function SidebarLayout(props: {
     children?: JSX.Element;
