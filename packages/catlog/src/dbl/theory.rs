@@ -67,24 +67,90 @@
 //! - [Patterson, 2024](crate::refs::DblProducts),
 //!   Section 10: Finite-product double theories
 
+use std::fmt;
+
 use nonempty::NonEmpty;
 
-use super::{category::*, graph::InvalidVDblGraph, tree::*};
-use crate::one::{InvalidPathEq, Path, tree::OpenTree};
+use super::graph::InvalidVDblGraph;
+use super::tree::DblTree;
+use crate::one::{InvalidPathEq, Path};
 use crate::zero::QualifiedName;
 
 pub use super::discrete::theory::*;
 pub use super::discrete_tabulator::theory::*;
 pub use super::modal::theory::*;
 
+/// The kind of a double theory, determining whether hom types are guaranteed.
+///
+/// This trait uses a generic associated type ([`Wrap`](DblTheoryKind::Wrap)) to
+/// control the return type of [`DblTheory::hom_type`] and
+/// [`DblTheory::hom_op`]. For [`Categorical`] theories, `Wrap<T>` is just `T`
+/// (hom types always exist). For [`SetTheoretic`] theories, `Wrap<T>` is
+/// `Option<T>` (hom types may not exist).
+pub trait DblTheoryKind: fmt::Debug {
+    /// Wraps a type to reflect whether values are guaranteed to exist.
+    ///
+    /// For [`Categorical`], this is the identity (`T`).
+    /// For [`SetTheoretic`], this is `Option<T>`.
+    type Wrap<T>;
+
+    /// Converts a wrapped value into an `Option`, for code generic over the kind.
+    fn into_option<T>(wrapped: Self::Wrap<T>) -> Option<T>;
+
+    /// Wraps a value that is known to exist.
+    fn pure<T>(value: T) -> Self::Wrap<T>;
+}
+
+/// Categorical double theories guarantee that every object type has a hom type.
+///
+/// Models of a categorical theory assign *categories* (not just sets) to each
+/// object type: the hom type provides the morphisms.
+#[derive(Debug)]
+pub struct Categorical;
+
+impl DblTheoryKind for Categorical {
+    type Wrap<T> = T;
+
+    fn into_option<T>(wrapped: T) -> Option<T> {
+        Some(wrapped)
+    }
+
+    fn pure<T>(value: T) -> T {
+        value
+    }
+}
+
+/// Set-theoretic double theories make no guarantee that hom types exist.
+///
+/// The [`hom_type`](DblTheory::hom_type) method may return `None` for some or
+/// all object types.
+#[derive(Debug)]
+pub struct SetTheoretic;
+
+impl DblTheoryKind for SetTheoretic {
+    type Wrap<T> = Option<T>;
+
+    fn into_option<T>(wrapped: Option<T>) -> Option<T> {
+        wrapped
+    }
+
+    fn pure<T>(value: T) -> Option<T> {
+        Some(value)
+    }
+}
+
 /// A double theory.
 ///
-/// A double theory is "just" a virtual double category (VDC) assumed to have units.
-/// Reflecting this, this trait has a blanket implementation for any
-/// [`VDblCategory`]. It is not recommended to implement this trait directly.
+/// A double theory is a [virtual double category](super::category) viewed as
+/// specifying a categorical structure. The associated type [`Kind`](DblTheory::Kind)
+/// determines whether hom types are guaranteed to exist ([`Categorical`]) or not
+/// ([`SetTheoretic`]).
 ///
 /// See the [module-level docs](super::theory) for background on the terminology.
 pub trait DblTheory {
+    /// The kind of the theory: [`Categorical`] or [`SetTheoretic`].
+    type Kind: DblTheoryKind;
+
     /// Rust type of object types in the theory.
     ///
     /// Viewing the double theory as a virtual double category, this is the type of
@@ -152,10 +218,10 @@ pub trait DblTheory {
     ///
     /// Viewing the double theory as a virtual double category, this is the unit
     /// proarrow on an object.
-    fn hom_type(&self, x: Self::ObType) -> Self::MorType {
-        self.compose_types(Path::Id(x))
-            .expect("A double theory should have a hom type for each object type")
-    }
+    ///
+    /// For [`Categorical`] theories, this returns `Self::MorType` directly.
+    /// For [`SetTheoretic`] theories, this returns `Option<Self::MorType>`.
+    fn hom_type(&self, x: Self::ObType) -> <Self::Kind as DblTheoryKind>::Wrap<Self::MorType>;
 
     /// Compose a sequence of operations on objects.
     fn compose_ob_ops(&self, path: Path<Self::ObType, Self::ObOp>) -> Self::ObOp;
@@ -172,7 +238,10 @@ pub trait DblTheory {
     ///
     /// Viewing the double theory as a virtual double category, this is the unit
     /// cell on an arrow.
-    fn hom_op(&self, f: Self::ObOp) -> Self::MorOp;
+    ///
+    /// For [`Categorical`] theories, this returns `Self::MorOp` directly.
+    /// For [`SetTheoretic`] theories, this returns `Option<Self::MorOp>`.
+    fn hom_op(&self, f: Self::ObOp) -> <Self::Kind as DblTheoryKind>::Wrap<Self::MorOp>;
 
     /// Compose operations on morphisms.
     fn compose_mor_ops(&self, tree: DblTree<Self::ObOp, Self::MorType, Self::MorOp>)
@@ -187,83 +256,146 @@ pub trait DblTheory {
     }
 }
 
-impl<VDC: VDCWithComposites> DblTheory for VDC {
-    type ObType = VDC::Ob;
-    type MorType = VDC::Pro;
-    type ObOp = VDC::Arr;
-    type MorOp = VDC::Cell;
+/// Implements [`DblTheory`] for a type that implements [`VDCWithComposites`].
+///
+/// The `kind` argument must be either `Categorical` or `SetTheoretic`:
+///
+/// - `Categorical`: `hom_type`/`hom_op` return the value directly and panic if
+///   the unit does not exist.
+/// - `SetTheoretic`: `hom_type`/`hom_op` return `Option`.
+macro_rules! impl_dbl_theory {
+    ($ty:ty, Categorical) => {
+        $crate::dbl::theory::impl_dbl_theory!(@hom_helper $ty);
+        impl $crate::dbl::theory::DblTheory for $ty {
 
-    fn has_ob_type(&self, x: &Self::ObType) -> bool {
-        self.has_ob(x)
-    }
-    fn has_mor_type(&self, m: &Self::MorType) -> bool {
-        self.has_proarrow(m)
-    }
-    fn has_ob_op(&self, f: &Self::ObOp) -> bool {
-        self.has_arrow(f)
-    }
-    fn has_mor_op(&self, α: &Self::MorOp) -> bool {
-        self.has_cell(α)
-    }
+            type Kind = $crate::dbl::theory::Categorical;
 
-    fn src_type(&self, m: &Self::MorType) -> Self::ObType {
-        self.src(m)
-    }
-    fn tgt_type(&self, m: &Self::MorType) -> Self::ObType {
-        self.tgt(m)
-    }
-    fn ob_op_dom(&self, f: &Self::ObOp) -> Self::ObType {
-        self.dom(f)
-    }
-    fn ob_op_cod(&self, f: &Self::ObOp) -> Self::ObType {
-        self.cod(f)
-    }
+            $crate::dbl::theory::impl_dbl_theory!(@shared);
 
-    fn src_op(&self, α: &Self::MorOp) -> Self::ObOp {
-        self.cell_src(α)
-    }
-    fn tgt_op(&self, α: &Self::MorOp) -> Self::ObOp {
-        self.cell_tgt(α)
-    }
-    fn mor_op_dom(&self, α: &Self::MorOp) -> Path<Self::ObType, Self::MorType> {
-        self.cell_dom(α)
-    }
-    fn mor_op_cod(&self, α: &Self::MorOp) -> Self::MorType {
-        self.cell_cod(α)
-    }
+            fn hom_type(&self, x: Self::ObType) -> Self::MorType {
+                $crate::dbl::category::VDCWithComposites::unit(self, x)
+                    .expect("Categorical double theory should have all hom types")
+            }
+            fn hom_op(&self, f: Self::ObOp) -> Self::MorOp {
+                self._vdc_hom_op(f)
+                    .expect("Categorical double theory should have all hom ops")
+            }
+        }
+    };
+    ($ty:ty, SetTheoretic) => {
+        $crate::dbl::theory::impl_dbl_theory!(@hom_helper $ty);
+        impl $crate::dbl::theory::DblTheory for $ty {
 
-    fn compose_types(&self, path: Path<Self::ObType, Self::MorType>) -> Option<Self::MorType> {
-        self.composite(path)
-    }
-    fn hom_type(&self, x: Self::ObType) -> Self::MorType {
-        self.unit(x).expect("A double theory should have all hom types")
-    }
-    fn hom_op(&self, f: Self::ObOp) -> Self::MorOp {
-        let y = self.cod(&f);
-        let y_ext = self.unit_ext(y).expect("Codomain of arrow should have hom type");
-        let cell = self.compose_cells(DblTree(
-            OpenTree::linear(vec![DblNode::Spine(f), DblNode::Cell(y_ext)]).unwrap(),
-        ));
-        self.through_unit(cell, 0).expect("Domain of arrow should have hom type")
-    }
+            type Kind = $crate::dbl::theory::SetTheoretic;
 
-    fn compose_ob_ops(&self, path: Path<Self::ObType, Self::ObOp>) -> Self::ObOp {
-        self.compose(path)
-    }
-    fn id_ob_op(&self, x: Self::ObType) -> Self::ObOp {
-        self.id(x)
-    }
+            $crate::dbl::theory::impl_dbl_theory!(@shared);
 
-    fn compose_mor_ops(
-        &self,
-        tree: DblTree<Self::ObOp, Self::MorType, Self::MorOp>,
-    ) -> Self::MorOp {
-        self.compose_cells(tree)
-    }
-    fn id_mor_op(&self, m: Self::MorType) -> Self::MorOp {
-        self.id_cell(m)
-    }
+            fn hom_type(&self, x: Self::ObType) -> Option<Self::MorType> {
+                $crate::dbl::category::VDCWithComposites::unit(self, x)
+            }
+            fn hom_op(&self, f: Self::ObOp) -> Option<Self::MorOp> {
+                self._vdc_hom_op(f)
+            }
+        }
+    };
+    // Private hom_helper helper for computing hom_op.
+    (@hom_helper $ty:ty) => {
+        impl $ty {
+            fn _vdc_hom_op(
+                &self,
+                f: <$ty as $crate::dbl::category::VDblCategory>::Arr,
+            ) -> Option<<$ty as $crate::dbl::category::VDblCategory>::Cell> {
+                use $crate::dbl::category::{VDblCategory, VDCWithComposites};
+                let y = self.cod(&f);
+                let y_ext = self.unit_ext(y)?;
+                let cell = self.compose_cells($crate::dbl::tree::DblTree(
+                    $crate::one::tree::OpenTree::linear(vec![
+                        $crate::dbl::tree::DblNode::Spine(f),
+                        $crate::dbl::tree::DblNode::Cell(y_ext),
+                    ]).unwrap(),
+                ));
+                self.through_unit(cell, 0)
+            }
+        }
+    };
+    // Shared associated types and methods delegating to VDblCategory/VDCWithComposites.
+    (@shared) => {
+        type ObType = <Self as $crate::dbl::category::VDblCategory>::Ob;
+        type MorType = <Self as $crate::dbl::category::VDblCategory>::Pro;
+        type ObOp = <Self as $crate::dbl::category::VDblCategory>::Arr;
+        type MorOp = <Self as $crate::dbl::category::VDblCategory>::Cell;
+
+        fn has_ob_type(&self, x: &Self::ObType) -> bool {
+            $crate::dbl::category::VDblCategory::has_ob(self, x)
+        }
+        fn has_mor_type(&self, m: &Self::MorType) -> bool {
+            $crate::dbl::category::VDblCategory::has_proarrow(self, m)
+        }
+        fn has_ob_op(&self, f: &Self::ObOp) -> bool {
+            $crate::dbl::category::VDblCategory::has_arrow(self, f)
+        }
+        fn has_mor_op(&self, α: &Self::MorOp) -> bool {
+            $crate::dbl::category::VDblCategory::has_cell(self, α)
+        }
+
+        fn src_type(&self, m: &Self::MorType) -> Self::ObType {
+            $crate::dbl::category::VDblCategory::src(self, m)
+        }
+        fn tgt_type(&self, m: &Self::MorType) -> Self::ObType {
+            $crate::dbl::category::VDblCategory::tgt(self, m)
+        }
+        fn ob_op_dom(&self, f: &Self::ObOp) -> Self::ObType {
+            $crate::dbl::category::VDblCategory::dom(self, f)
+        }
+        fn ob_op_cod(&self, f: &Self::ObOp) -> Self::ObType {
+            $crate::dbl::category::VDblCategory::cod(self, f)
+        }
+
+        fn src_op(&self, α: &Self::MorOp) -> Self::ObOp {
+            $crate::dbl::category::VDblCategory::cell_src(self, α)
+        }
+        fn tgt_op(&self, α: &Self::MorOp) -> Self::ObOp {
+            $crate::dbl::category::VDblCategory::cell_tgt(self, α)
+        }
+        fn mor_op_dom(
+            &self, α: &Self::MorOp,
+        ) -> $crate::one::Path<Self::ObType, Self::MorType> {
+            $crate::dbl::category::VDblCategory::cell_dom(self, α)
+        }
+        fn mor_op_cod(&self, α: &Self::MorOp) -> Self::MorType {
+            $crate::dbl::category::VDblCategory::cell_cod(self, α)
+        }
+
+        fn compose_types(
+            &self,
+            path: $crate::one::Path<Self::ObType, Self::MorType>,
+        ) -> Option<Self::MorType> {
+            $crate::dbl::category::VDCWithComposites::composite(self, path)
+        }
+
+        fn compose_ob_ops(
+            &self,
+            path: $crate::one::Path<Self::ObType, Self::ObOp>,
+        ) -> Self::ObOp {
+            $crate::dbl::category::VDblCategory::compose(self, path)
+        }
+        fn id_ob_op(&self, x: Self::ObType) -> Self::ObOp {
+            $crate::dbl::category::VDblCategory::id(self, x)
+        }
+
+        fn compose_mor_ops(
+            &self,
+            tree: $crate::dbl::tree::DblTree<Self::ObOp, Self::MorType, Self::MorOp>,
+        ) -> Self::MorOp {
+            $crate::dbl::category::VDblCategory::compose_cells(self, tree)
+        }
+        fn id_mor_op(&self, m: Self::MorType) -> Self::MorOp {
+            $crate::dbl::category::VDblCategory::id_cell(self, m)
+        }
+    };
 }
+
+pub(crate) use impl_dbl_theory;
 
 /// A failure of a double theory to be well defined.
 #[derive(Debug, PartialEq, Eq)]
