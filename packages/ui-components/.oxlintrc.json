@@ -1,0 +1,38 @@
+{
+    "$schema": "../../node_modules/oxlint/configuration_schema.json",
+    "extends": ["../../.oxlintrc.json"],
+    "options": {
+        "typeAware": true
+    },
+    "jsPlugins": ["eslint-plugin-solid"],
+    "rules": {
+        "solid/reactivity": "off",
+        "solid/no-destructure": "warn",
+        "solid/jsx-no-undef": "error",
+        "solid/components-return-once": "warn",
+        "solid/no-react-specific-props": "warn",
+        "solid/prefer-for": "warn",
+        "solid/self-closing-comp": "warn",
+        "solid/no-innerhtml": "warn",
+        "solid/event-handlers": "warn",
+        "solid/imports": "warn",
+        "solid/jsx-no-duplicate-props": "error",
+        "solid/jsx-no-script-url": "error",
+        "solid/no-unknown-namespaces": "warn",
+        "solid/no-react-deps": "warn",
+        "solid/style-prop": "warn"
+    },
+    "overrides": [
+        {
+            "files": ["**/*.tsx"],
+            "rules": {
+                "solid/reactivity": [
+                    "warn",
+                    {
+                        "customReactiveFunctions": ["mergeProps"]
+                    }
+                ]
+            }
+        }
+    ]
+}
