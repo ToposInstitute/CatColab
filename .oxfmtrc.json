@@ -1,39 +1,35 @@
 {
-	"$schema": "./node_modules/oxfmt/configuration_schema.json",
-	"useTabs": false,
-	"tabWidth": 4,
-	"printWidth": 100,
-	"trailingComma": "all",
-	"semi": true,
+    "$schema": "./node_modules/oxfmt/configuration_schema.json",
+    "useTabs": false,
+    "tabWidth": 4,
+    "printWidth": 100,
+    "trailingComma": "all",
+    "semi": true,
 
-	"sortImports": {
-		"newlinesBetween": false,
-		"customGroups": [
-			{
-				"groupName": "workspace",
-				"elementNamePattern": [
-					"catcolab-ui-components",
-					"catcolab-api",
-					"catlog-wasm"
-				]
-			}
-		],
-		"groups": [
-			["type-builtin", "value-builtin"],
-			["type-external", "value-external"],
-			{ "newlinesBetween": true },
-			"workspace",
-			[
-				"type-parent",
-				"value-parent",
-				"type-sibling",
-				"value-sibling",
-				"type-index",
-				"value-index"
-			],
-			{ "newlinesBetween": true },
-			["side_effect_style", "side_effect", "style"],
-			"unknown"
-		]
-	}
+    "sortImports": {
+        "newlinesBetween": false,
+        "customGroups": [
+            {
+                "groupName": "workspace",
+                "elementNamePattern": ["catcolab-ui-components", "catcolab-api", "catlog-wasm"],
+            },
+        ],
+        "groups": [
+            ["type-builtin", "value-builtin"],
+            ["type-external", "value-external"],
+            { "newlinesBetween": true },
+            "workspace",
+            [
+                "type-parent",
+                "value-parent",
+                "type-sibling",
+                "value-sibling",
+                "type-index",
+                "value-index",
+            ],
+            { "newlinesBetween": true },
+            ["side_effect_style", "side_effect", "style"],
+            "unknown",
+        ],
+    },
 }

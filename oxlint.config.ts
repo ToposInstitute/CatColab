@@ -1,21 +1,17 @@
-{
-    "$schema": "./node_modules/oxlint/configuration_schema.json",
-    "categories": {
-        "correctness": "error",
-        "suspicious": "warn",
-        "perf": "warn",
+import { defineConfig } from "oxlint";
+
+export default defineConfig({
+    categories: {
+        correctness: "error",
+        suspicious: "warn",
+        perf: "warn",
     },
-    "plugins": ["typescript", "unicorn", "oxc", "import", "vitest"],
-    "ignorePatterns": ["**/dist", "**/docs", "**/catlog-wasm", "**/storybook-static"],
-    "rules": {
+    plugins: ["typescript", "unicorn", "oxc", "import", "vitest"],
+    ignorePatterns: ["**/dist", "**/docs", "**/catlog-wasm", "**/storybook-static"],
+    rules: {
         // Allow bare `import "./foo.css"` — CSS imports are side-effect-only
         // by nature. Flag bare JS/TS imports as they're likely unused.
-        "import/no-unassigned-import": [
-            "warn",
-            {
-                "allow": ["**/*.css"],
-            },
-        ],
+        "import/no-unassigned-import": ["warn", { allow: ["**/*.css"] }],
         // SolidJS idioms like <Show when={x()}>{(x) => ...}</Show> intentionally
         // shadow signals with narrowed callback parameters.
         "no-shadow": "off",
@@ -65,7 +61,7 @@
         "typescript/unbound-method": "off",
         "typescript/no-explicit-any": "warn",
         // Rules that we had from biome that are not there by default in oxlint.
-        "curly": "warn",
+        curly: "warn",
         "no-var": "error",
         "prefer-const": "warn",
         "no-self-compare": "warn",
@@ -73,31 +69,21 @@
         "prefer-exponentiation-operator": "warn",
         "unicorn/no-array-for-each": "warn",
         // Allow `== null` / `!= null` to check for both null and undefined.
-        "eqeqeq": ["warn", "smart"],
+        eqeqeq: ["warn", "smart"],
         // Only flag console.log; allow console.warn/error for error handling.
-        "no-console": [
-            "warn",
-            {
-                "allow": ["warn", "error", "info", "debug"],
-            },
-        ],
+        "no-console": ["warn", { allow: ["warn", "error", "info", "debug"] }],
         // Ternary-as-statement (`condition ? doA() : doB()`) is idiomatic in
         // this codebase for concise branching in callbacks.
-        "no-unused-expressions": [
-            "warn",
-            {
-                "allowTernary": true,
-            },
-        ],
+        "no-unused-expressions": ["warn", { allowTernary: true }],
         // Allow underscore-prefixed names for intentionally unused bindings
         // (e.g., `_e` in catch blocks, `_unused` destructured fields).
         "no-unused-vars": [
             "warn",
             {
-                "varsIgnorePattern": "^_",
-                "argsIgnorePattern": "^_",
-                "caughtErrorsIgnorePattern": "^_",
+                varsIgnorePattern: "^_",
+                argsIgnorePattern: "^_",
+                caughtErrorsIgnorePattern: "^_",
             },
         ],
     },
-}
+});

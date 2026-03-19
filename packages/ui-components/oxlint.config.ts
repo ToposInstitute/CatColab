@@ -1,11 +1,15 @@
-{
-    "$schema": "../../node_modules/oxlint/configuration_schema.json",
-    "extends": ["../../.oxlintrc.json"],
-    "options": {
-        "typeAware": true
+import { defineConfig } from "oxlint";
+
+import baseConfig from "../../oxlint.config.ts";
+
+export default defineConfig({
+    ...baseConfig,
+    options: {
+        typeAware: true,
     },
-    "jsPlugins": ["eslint-plugin-solid"],
-    "rules": {
+    jsPlugins: ["eslint-plugin-solid"],
+    rules: {
+        ...baseConfig.rules,
         "solid/reactivity": "off",
         "solid/no-destructure": "warn",
         "solid/jsx-no-undef": "error",
@@ -20,19 +24,19 @@
         "solid/jsx-no-script-url": "error",
         "solid/no-unknown-namespaces": "warn",
         "solid/no-react-deps": "warn",
-        "solid/style-prop": "warn"
+        "solid/style-prop": "warn",
     },
-    "overrides": [
+    overrides: [
         {
-            "files": ["**/*.tsx"],
-            "rules": {
+            files: ["**/*.tsx"],
+            rules: {
                 "solid/reactivity": [
                     "warn",
                     {
-                        "customReactiveFunctions": ["mergeProps", "makeEventListener", "makeTimer"]
-                    }
-                ]
-            }
-        }
-    ]
-}
+                        customReactiveFunctions: ["mergeProps"],
+                    },
+                ],
+            },
+        },
+    ],
+});

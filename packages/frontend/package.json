@@ -14,7 +14,7 @@
         "preview": "vite preview",
         "format": "oxfmt .",
         "check": "npm run build:deps && npm run lint && tsc",
-        "lint": "oxfmt . && oxlint --fix",
+        "lint": "oxlint --fix && oxfmt .",
         "ci": "oxlint --deny-warnings && oxfmt --check .",
         "doc": "typedoc --entryPointStrategy expand ./src",
         "test": "vitest --mode=development",

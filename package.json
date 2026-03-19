@@ -1,6 +1,7 @@
 {
     "name": "catcolab-monorepo",
     "version": "0.0.1",
+    "private": true,
     "description": "The catcolab monorepo",
     "homepage": "https://next.catcolab.org",
     "bugs": {
@@ -12,6 +13,7 @@
         "type": "git",
         "url": "git+https://github.com/ToposInstitute/CatColab.git"
     },
+    "type": "module",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
         "build:deps": "pnpm --filter ./packages/frontend run build:deps",
