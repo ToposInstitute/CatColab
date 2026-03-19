@@ -171,17 +171,17 @@ impl<'a> Elaborator<'a> {
                 Some((stx, val, ty))
             }
             nb::Mor::Composite(path) => match path.as_ref() {
-                nb::Path::Id(ob) => {
+                nb::path::Path::Id(ob) => {
                     let (stx, val, ob_type) = self.ob_syn(ob)?;
                     let mor_type = self.theory().hom_type(ob_type);
                     Some((stx, val.clone(), TyV::morphism(mor_type, val.clone(), val.clone())))
                 }
-                nb::Path::Seq(ms) => match ms.as_slice() {
+                nb::path::Path::Seq(ms) => match ms.as_slice() {
                     [] => None,
                     [only] => self.mor_syn(only),
                     [first, rest @ ..] => {
                         let (stx_first, val_first, type_first) = self.mor_syn(first)?;
-                        let rest = nb::Mor::Composite(Box::new(nb::Path::Seq(rest.to_vec())));
+                        let rest = nb::Mor::Composite(Box::new(nb::path::Path::Seq(rest.to_vec())));
                         let (stx_rest, val_rest, type_rest) = self.mor_syn(&rest)?;
                         let TyV_::Morphism(mt_first, dom_first, cod_first) = &*type_first else {
                             unreachable!()
@@ -561,8 +561,7 @@ mod test {
         );
     }
 
-    /// Test a notebook with an equation. Note that as of Feb 2026 the equation is not
-    /// actually being printed out.
+    /// Test a notebook with an equation.
     #[test]
     fn commutative_square() {
         let th_schema = Theory::new(name("ThSchema"), TheoryDef::discrete(th_schema()));
@@ -578,7 +577,8 @@ mod test {
                 t : NW -> NE : Hom Entity
                 l : NW -> SW : Hom Entity
                 r : NE -> SE : Hom Entity
-                b : SW -> SE : Hom Entity"#]],
+                b : SW -> SE : Hom Entity
+                t ⋅ r = l ⋅ b : (Hom Entity)[NW, SE]"#]],
         );
         let model = model.as_discrete().unwrap();
         let eqns: Vec<_> = model.category.equations().collect();
