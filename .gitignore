@@ -114,5 +114,7 @@ CHANGELOG.html
 .vscode/*
 
 # Quarto previews
-rfcs/.gitignore
-rfcs/_site
+rfc/.gitignore
+rfc/_site
+rfc/.svg-cache
+rfc/_svgs

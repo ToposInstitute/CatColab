@@ -12,3 +12,4 @@
 \newcommand{\SSet}{\dbl{S}\Cat{et}}
 \newcommand{\CCat}{\dbl{C}\Cat{at}}
 \newcommand{\Mod}{\dbl{M}\Cat{od}}
+\newcommand{\Rel}{\dbl{R}\Cat{el}}
