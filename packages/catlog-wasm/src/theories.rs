@@ -464,6 +464,23 @@ impl ThPowerSystem {
     }
 }
 
+/// A theory of the DEC
+#[wasm_bindgen]
+pub struct ThDEC(Rc<theory::ModalDblTheory>);
+
+#[wasm_bindgen]
+impl ThDEC {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Rc::new(theories::th_multicategory())) // TODO symmetric?
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory(self.0.clone().into())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

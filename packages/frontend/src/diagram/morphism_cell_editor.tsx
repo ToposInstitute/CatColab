@@ -1,6 +1,5 @@
 import { createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
-import { v7 } from "uuid";
 
 import type { DiagramMorDecl } from "catlog-wasm";
 import { BasicMorInput } from "../model/morphism_input";
@@ -8,7 +7,7 @@ import type { CellActions } from "../notebook";
 import arrowStyles from "../stdlib/arrow_styles.module.css";
 import type { Theory } from "../theory";
 import { LiveDiagramContext } from "./context";
-import { BasicObInput } from "./object_input";
+import { ObInput } from "./object_input";
 import "./morphism_cell_editor.css";
 
 /** Editor for a morphism declaration cell in a diagram in a model. */
@@ -42,7 +41,7 @@ export function DiagramMorphismCellEditor(props: {
 
     return (
         <div class="formal-judgment diagram-morphism-decl">
-            <BasicObInput
+            <ObInput
                 placeholder="..."
                 ob={props.decl.dom}
                 setOb={(ob) => {
@@ -51,7 +50,6 @@ export function DiagramMorphismCellEditor(props: {
                     });
                 }}
                 obType={domType()}
-                generateId={v7}
                 isInvalid={domInvalid()}
                 isActive={props.isActive && activeInput() === "dom"}
                 deleteForward={() => setActiveInput("mor")}
@@ -93,7 +91,7 @@ export function DiagramMorphismCellEditor(props: {
                     <div class={[arrowStyles.arrow, arrowStyles.default].join(" ")} />
                 </div>
             </div>
-            <BasicObInput
+            <ObInput
                 placeholder="..."
                 ob={props.decl.cod}
                 setOb={(ob) => {
@@ -102,7 +100,6 @@ export function DiagramMorphismCellEditor(props: {
                     });
                 }}
                 obType={codType()}
-                generateId={v7}
                 isInvalid={codInvalid()}
                 isActive={props.isActive && activeInput() === "cod"}
                 deleteBackward={() => setActiveInput("mor")}

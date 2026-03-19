@@ -903,4 +903,98 @@ pub(crate) mod tests {
         assert_eq!(model.mor_generators().len(), 2);
         assert_eq!(model.validate().0, JsResult::Ok(()));
     }
+
+    pub(crate) fn dec_heat_eq(th: &DblTheory, ids: [Uuid; 3]) -> DblModel {
+        let mut model = DblModel::new(th);
+        let [form0, op1dot, op1laplace] = ids;
+        let ob_type = ObType::Basic("Object".into());
+        assert!(
+            model
+                .add_ob(&ObDecl {
+                    name: "Form0".into(),
+                    id: form0,
+                    ob_type: ob_type.clone()
+                })
+                .is_ok()
+        );
+        assert!(
+            model
+                .add_mor(&MorDecl {
+                    name: "Dot".into(),
+                    id: op1dot,
+                    mor_type: MorType::Basic("Form0".into()),
+                    dom: Some(Ob::Basic(form0.to_string())),
+                    cod: Some(Ob::Basic(form0.to_string()))
+                })
+                .is_ok()
+        );
+        assert!(
+            model
+                .add_mor(&MorDecl {
+                    name: "Laplace".into(),
+                    id: op1laplace,
+                    mor_type: MorType::Basic("Form0".into()),
+                    dom: Some(Ob::Basic(form0.to_string())),
+                    cod: Some(Ob::Basic(form0.to_string()))
+                })
+                .is_ok()
+        );
+        model
+    }
+
+    pub(crate) fn dec_wedge(th: &DblTheory, ids: [Uuid; 4]) -> DblModel {
+        let mut model = DblModel::new(th);
+        let [form0, form1, op1d, op2wedge] = ids;
+        let ob_type = ObType::Basic("Object".into());
+        assert!(
+            model
+                .add_ob(&ObDecl {
+                    name: "Form0".into(),
+                    id: form0,
+                    ob_type: ob_type.clone()
+                })
+                .is_ok()
+        );
+        assert!(
+            model
+                .add_ob(&ObDecl {
+                    name: "Form1".into(),
+                    id: form1,
+                    ob_type: ob_type.clone()
+                })
+                .is_ok()
+        );
+        assert!(
+            model
+                .add_mor(&MorDecl {
+                    name: "d".into(),
+                    id: op1d,
+                    mor_type: MorType::Basic("Multihom".into()),
+                    dom: Some(Ob::List {
+                        modality: Modality::List,
+                        objects: vec![Some(Ob::Basic(form0.to_string()))]
+                    }),
+                    cod: Some(Ob::Basic(form1.to_string()))
+                })
+                .is_ok()
+        );
+        assert!(
+            model
+                .add_mor(&MorDecl {
+                    name: "wedge".into(),
+                    id: op2wedge,
+                    mor_type: MorType::Basic("Multihom".into()),
+                    dom: Some(Ob::List {
+                        modality: Modality::List,
+                        objects: vec![
+                            Some(Ob::Basic(form0.to_string())),
+                            Some(Ob::Basic(form1.to_string()))
+                        ]
+                    }),
+                    cod: Some(Ob::Basic(form1.to_string()))
+                })
+                .is_ok()
+        );
+        model
+    }
 }
