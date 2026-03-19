@@ -45,6 +45,8 @@ type PermissionsState = Partial<Omit<Permissions, "users">> & {
     }> | null;
 };
 
+const copyCurrentUrlToClipboard = () => navigator.clipboard.writeText(window.location.href);
+
 /** Form to configure permissions on a document.
  */
 export function PermissionsForm(props: { refId: string; onComplete?: () => void }) {
@@ -113,8 +115,6 @@ export function PermissionsForm(props: { refId: string; onComplete?: () => void 
         await updatePermissions();
         props.onComplete?.();
     };
-
-    const copyToClipboard = () => navigator.clipboard.writeText(window.location.href);
 
     // Bypass standard form submission so that pressing Enter does not submit.
     return (
@@ -207,7 +207,7 @@ export function PermissionsForm(props: { refId: string; onComplete?: () => void 
             </Show>
             <Show when={!showAddUser()}>
                 <div class="permissions-button-container">
-                    <Button type="button" variant="utility" onClick={copyToClipboard}>
+                    <Button type="button" variant="utility" onClick={copyCurrentUrlToClipboard}>
                         <Link2 />
                         Copy link
                     </Button>

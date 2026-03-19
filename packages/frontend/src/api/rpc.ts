@@ -26,12 +26,11 @@ export function createRpcClient(serverUrl: string, firebaseApp?: FirebaseApp) {
         await authInitialized;
         if (currentUser) {
             const token = await currentUser.getIdToken();
+            const headers = new Headers(init?.headers);
+            headers.set("Authorization", `Bearer ${token}`);
             init = {
                 ...init,
-                headers: {
-                    ...init?.headers,
-                    Authorization: `Bearer ${token}`,
-                },
+                headers,
             };
         }
         return await fetch(input, init);

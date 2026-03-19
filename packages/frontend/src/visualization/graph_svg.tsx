@@ -154,7 +154,7 @@ export function EdgeSVG(props: { edge: GraphLayout.Edge }) {
                 <Match when={props.edge.style === "plusCaesura"}>
                     {defaultPath()}
                     {tgtLabel("+")}
-                    <text style="dominant-baseline: central;">
+                    <text style={{ "dominant-baseline": "central" }}>
                         <textPath href={`#${pathId()}`} startOffset="40%">
                             {"‖"}
                         </textPath>
@@ -163,7 +163,7 @@ export function EdgeSVG(props: { edge: GraphLayout.Edge }) {
                 <Match when={props.edge.style === "minusCaesura"}>
                     {defaultPath()}
                     {tgtLabel("-")}
-                    <text style="dominant-baseline: central;">
+                    <text style={{ "dominant-baseline": "central" }}>
                         <textPath href={`#${pathId()}`} startOffset="40%">
                             {"‖"}
                         </textPath>

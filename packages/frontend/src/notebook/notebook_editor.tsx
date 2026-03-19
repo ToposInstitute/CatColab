@@ -281,11 +281,13 @@ export function NotebookEditor<T>(props: {
                                 setActiveCell(index);
                             },
                             moveUp() {
+                                // oxlint-disable-next-line solid/reactivity -- event handler
                                 props.changeNotebook((nb) => {
                                     NotebookUtils.moveCellUp(nb, i());
                                 });
                             },
                             moveDown() {
+                                // oxlint-disable-next-line solid/reactivity -- event handler
                                 props.changeNotebook((nb) => {
                                     NotebookUtils.moveCellDown(nb, i());
                                 });
@@ -299,8 +301,10 @@ export function NotebookEditor<T>(props: {
                         invariant(cell, `Failed to find contents for cell '${cellId}'`);
 
                         if (cell.tag !== "rich-text") {
+                            // oxlint-disable-next-line solid/reactivity -- event handler
                             cellActions.duplicate = () => {
                                 const index = i();
+                                // oxlint-disable-next-line solid/reactivity -- event handler
                                 props.changeNotebook((nb) => {
                                     NotebookUtils.duplicateCellAtIndex(
                                         nb,

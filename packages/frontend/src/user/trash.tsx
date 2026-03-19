@@ -198,17 +198,17 @@ function RefStubRow(props: { stub: RefStub; onRestore: () => void }) {
     const navigate = useNavigate();
     const api = useApi();
 
-    const owner = props.stub.owner;
-    const hasOwner = owner !== null;
-    const isOwner = hasOwner && auth.currentUser?.uid === owner?.id;
-    const ownerName = hasOwner ? (isOwner ? "me" : owner?.username) : "public";
-    const canRestore = props.stub.permissionLevel === "Own";
+    const owner = () => props.stub.owner;
+    const hasOwner = () => owner() !== null;
+    const isOwner = () => hasOwner() && auth.currentUser?.uid === owner()?.id;
+    const ownerName = () => (hasOwner() ? (isOwner() ? "me" : owner()?.username) : "public");
+    const canRestore = () => props.stub.permissionLevel === "Own";
 
     const [showError, setShowError] = createSignal(false);
     const [errorMessage, setErrorMessage] = createSignal("");
 
     const handleRestore = async () => {
-        if (!canRestore) {
+        if (!canRestore()) {
             return;
         }
 
@@ -233,14 +233,14 @@ function RefStubRow(props: { stub: RefStub; onRestore: () => void }) {
 
     const handleRestoreClick = (e: MouseEvent) => {
         e.stopPropagation();
-        handleRestore();
+        void handleRestore();
     };
 
     return (
         <>
             <tr class="ref-stub-row restore-row" onClick={handleClick} title="View document">
                 <td class="delete-cell">
-                    {canRestore && (
+                    {canRestore() && (
                         <IconButton
                             variant="positive"
                             onClick={handleRestoreClick}
@@ -253,7 +253,7 @@ function RefStubRow(props: { stub: RefStub; onRestore: () => void }) {
                 </td>
                 <td>{props.stub.typeName}</td>
                 <td>{props.stub.name}</td>
-                <td>{ownerName}</td>
+                <td>{ownerName()}</td>
                 <td>{props.stub.permissionLevel}</td>
                 <td>
                     {new Date(props.stub.createdAt).toLocaleDateString("en-US", {

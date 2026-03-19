@@ -29,15 +29,15 @@ type ObListEditorProps = ObInputProps &
     };
 
 /** Edits a list of objects of given type. */
-export function ObListEditor(props: ObListEditorProps) {
-    props = mergeProps(
+export function ObListEditor(originalProps: ObListEditorProps) {
+    const props = mergeProps(
         {
             insertKey: ",",
             startDelimiter: <div class="default-delimiter">{"["}</div>,
             endDelimiter: <div class="default-delimiter">{"]"}</div>,
             separator: () => <div class="default-separator">{","}</div>,
         },
-        props,
+        originalProps,
     );
 
     const liveModel = useContext(LiveModelContext);

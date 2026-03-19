@@ -152,7 +152,9 @@ export function doIfEmpty(callback: (dispatch: (tr: Transaction) => void) => voi
         if (hasContent(state)) {
             return false;
         }
-        dispatch && callback(dispatch);
+        if (dispatch) {
+            callback(dispatch);
+        }
         return true;
     };
 }
@@ -172,7 +174,9 @@ export function doIfAtTop(callback: (dispatch: (tr: Transaction) => void) => voi
         ) {
             return false;
         }
-        dispatch && callback(dispatch);
+        if (dispatch) {
+            callback(dispatch);
+        }
         return true;
     };
 }
@@ -192,7 +196,9 @@ export function doIfAtBottom(callback: (dispatch: (tr: Transaction) => void) => 
         ) {
             return false;
         }
-        dispatch && callback(dispatch);
+        if (dispatch) {
+            callback(dispatch);
+        }
         return true;
     };
 }

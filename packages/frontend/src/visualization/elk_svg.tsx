@@ -44,6 +44,7 @@ export function ElkLayout<T>(props: {
                 return [elk, graph] as const;
             }
         },
+        // oxlint-disable-next-line solid/reactivity -- createResource fetcher
         async ([elk, graph]: readonly [ELK, ElkNode]): Promise<T> => {
             const elkNode = await elk.layout(graph, props.args);
             return props.elkToLayout(elkNode);

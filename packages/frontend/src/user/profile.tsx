@@ -50,7 +50,7 @@ export function UserProfileForm() {
             username: values.username ? values.username : null,
             displayName: values.displayName ? values.displayName : null,
         });
-        refetchProfile();
+        void refetchProfile();
     };
 
     const validateUsername = async (value?: string | null) => {

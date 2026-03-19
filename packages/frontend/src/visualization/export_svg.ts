@@ -74,20 +74,20 @@ type StylableElement = HTMLElement | SVGElement;
  * Reads the --main-font and --mono-font CSS custom properties from :root,
  * extracts the first font family from each, and embeds them using google_font_inliner.
  */
+function extractFirstFont(fontFamily: string): string | null {
+    if (!fontFamily) {
+        return null;
+    }
+    const firstFont = fontFamily.split(",")[0]?.trim();
+    return firstFont ? firstFont.replace(/['"]/g, "") : null;
+}
+
 async function getFontFacesCSS(): Promise<string> {
     const fontStyles: string[] = [];
 
     const rootStyle = getComputedStyle(document.documentElement);
     const mainFont = rootStyle.getPropertyValue("--main-font").trim();
     const monoFont = rootStyle.getPropertyValue("--mono-font").trim();
-
-    const extractFirstFont = (fontFamily: string): string | null => {
-        if (!fontFamily) {
-            return null;
-        }
-        const firstFont = fontFamily.split(",")[0]?.trim();
-        return firstFont ? firstFont.replace(/['"]/g, "") : null;
-    };
 
     const mainFontName = extractFirstFont(mainFont);
     const monoFontName = extractFirstFont(monoFont);

@@ -218,11 +218,11 @@ function RefStubRow(props: { stub: RefStub; onDelete: () => void }) {
     const actions = useContext(PageActionsContext);
     invariant(actions, "Page actions should be provided");
 
-    const owner = props.stub.owner;
-    const hasOwner = owner !== null;
-    const isOwner = hasOwner && auth.currentUser?.uid === owner?.id;
-    const ownerName = hasOwner ? (isOwner ? "me" : owner?.username) : "public";
-    const canDelete = props.stub.permissionLevel === "Own";
+    const owner = () => props.stub.owner;
+    const hasOwner = () => owner() !== null;
+    const isOwner = () => hasOwner() && auth.currentUser?.uid === owner()?.id;
+    const ownerName = () => (hasOwner() ? (isOwner() ? "me" : owner()?.username) : "public");
+    const canDelete = () => props.stub.permissionLevel === "Own";
 
     const handleClick = () => {
         navigate(`/${props.stub.typeName}/${props.stub.refId}`);
@@ -244,7 +244,7 @@ function RefStubRow(props: { stub: RefStub; onDelete: () => void }) {
         <tr class="ref-stub-row" onClick={handleClick}>
             <td>{props.stub.typeName}</td>
             <td>{props.stub.name}</td>
-            <td>{ownerName}</td>
+            <td>{ownerName()}</td>
             <td>{props.stub.permissionLevel}</td>
             <td>
                 {new Date(props.stub.createdAt).toLocaleDateString("en-US", {
@@ -254,7 +254,7 @@ function RefStubRow(props: { stub: RefStub; onDelete: () => void }) {
                 })}
             </td>
             <td class="delete-cell">
-                {canDelete && (
+                {canDelete() && (
                     <IconButton
                         variant="danger"
                         onClick={handleDeleteClick}

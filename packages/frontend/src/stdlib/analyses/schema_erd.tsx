@@ -82,6 +82,7 @@ export default function SchemaERD(props: ModelAnalysisProps<SchemaERDConfig>) {
                 }
             />
             <div class="graph-visualization">
+                {/* oxlint-disable-next-line solid/no-innerhtml -- SVG from trusted Graphviz output */}
                 <Show when={svgString()}>{(svg) => <div innerHTML={svg()} />}</Show>
             </div>
         </div>

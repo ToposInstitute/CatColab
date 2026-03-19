@@ -19,7 +19,7 @@ export function MassActionConfigForm(props: {
             : undefined;
 
     return (
-        <FormGroup compact style="min-width: 286px">
+        <FormGroup compact style={{ "min-width": "286px" }}>
             <CheckboxField
                 label="Conserve mass"
                 checked={massConservation().type === "Balanced"}

@@ -8,6 +8,10 @@ import { type Api, type LiveDocWithRef, useApi } from "../api";
 import { TheoryLibraryContext } from "../theory";
 import { DocumentMenu } from "./document_menu";
 
+function isDocOwnerless(doc: LiveDocWithRef) {
+    return doc.docRef.permissions.anyone === "Own";
+}
+
 export function DocumentSidebar(props: {
     primaryDoc?: LiveDocWithRef;
     secondaryDoc?: LiveDocWithRef;
@@ -98,6 +102,7 @@ function DocumentsTreeNode(props: {
 
     const [childDocs, { refetch }] = createResource(
         () => props.doc,
+        // oxlint-disable-next-line solid/reactivity -- createResource fetcher
         async (doc) => {
             const docRefId = doc.docRef.refId;
             invariant(docRefId, "Doc must have a valid ref");
@@ -144,10 +149,6 @@ function DocumentsTreeNode(props: {
             const loadedChildDocs = childDocs.filter(
                 (doc): doc is NonNullable<typeof doc> => doc !== null,
             );
-
-            function isDocOwnerless(doc: LiveDocWithRef) {
-                return doc.docRef.permissions.anyone === "Own";
-            }
 
             const isParentOwnerless = isDocOwnerless(props.doc);
 
@@ -260,6 +261,7 @@ function DocumentsTreeLeaf(props: {
                         props.refetchDoc();
                         navigate(`/${createLinkPart(props.doc)}/${docType}/${refId}`);
                     }}
+                    // oxlint-disable-next-line solid/reactivity -- event handler prop
                     onDocDeleted={async () => {
                         const deletedRefId = props.doc.docRef.refId;
                         const isPrimaryDeleted = deletedRefId === primaryRefId();

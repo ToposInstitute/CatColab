@@ -380,7 +380,7 @@ export function DocumentPane(props: {
                                 variant="utility"
                                 onClick={(e) => {
                                     e.preventDefault();
-                                    handleRestore();
+                                    void handleRestore();
                                 }}
                             >
                                 <RotateCcw size={16} /> Restore it

@@ -16,7 +16,7 @@ interface JsonImportProps {
  * File size is currently limited to 5MB.
  *
  */
-export const JsonImport = ({ onImport, validate }: JsonImportProps) => {
+export const JsonImport = (props: JsonImportProps) => {
     const [error, setError] = createSignal<string | null>(null);
     const [importValue, setImportValue] = createSignal("");
 
@@ -29,8 +29,8 @@ export const JsonImport = ({ onImport, validate }: JsonImportProps) => {
             const data = JSON.parse(jsonString);
 
             // Run custom validation if provided
-            if (validate) {
-                const validationResult = validate(data);
+            if (props.validate) {
+                const validationResult = props.validate(data);
                 if (typeof validationResult === "string") {
                     setError(validationResult);
                     return;
@@ -39,7 +39,7 @@ export const JsonImport = ({ onImport, validate }: JsonImportProps) => {
 
             // Clear any previous errors and import
             setError(null);
-            onImport(data);
+            props.onImport(data);
             setImportValue(""); // Clear paste area after successful import
         } catch (e) {
             handleError(e);

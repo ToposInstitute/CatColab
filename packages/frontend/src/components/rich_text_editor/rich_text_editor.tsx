@@ -130,7 +130,7 @@ export const RichTextEditor = (
         // NOTE: Make the effect depend on the given ID to ensure that this
         // component updates when the Automerge handle and path both stay the
         // same but the path refers to a different object in the document.
-        props.id;
+        void props.id;
 
         if (!isReady()) {
             return;
@@ -378,8 +378,8 @@ export function MenuBar(
             id="menubar"
             class="menubar"
             ref={props.ref}
-            onFocusIn={props.onFocusIn}
-            onFocusOut={props.onFocusOut}
+            onFocusIn={() => props.onFocusIn?.()}
+            onFocusOut={() => props.onFocusOut?.()}
         >
             <div class="menubar-left">
                 <TooltipButton
@@ -468,8 +468,7 @@ function TooltipButton(props: {
                 <button
                     // required to prevent focus loss on firefox
                     onMouseDown={(e) => e.preventDefault()}
-                    // biome-ignore lint/style/noNonNullAssertion: Show guarantees that callback is non-null
-                    onClick={props.callback!}
+                    onClick={() => props.callback?.()}
                     classList={{ active: props.isActive }}
                 >
                     {props.children}

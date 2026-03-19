@@ -116,7 +116,6 @@ export function NotebookCell(props: {
     const [isGutterVisible, setGutterVisible] = createSignal(false);
     const showGutter = () => setGutterVisible(true);
     const hideGutter = () => setGutterVisible(false);
-    const visibility = (isVisible: boolean) => (isVisible ? "visible" : "hidden");
 
     const [isMenuOpen, setMenuOpen] = createSignal(false);
     const openMenu = () => setMenuOpen(true);
@@ -236,7 +235,7 @@ export function NotebookCell(props: {
             <div class="cell-gutter">
                 <IconButton
                     onClick={props.actions.createBelow}
-                    style={{ visibility: visibility(isGutterVisible()) }}
+                    style={{ visibility: isGutterVisible() ? "visible" : "hidden" }}
                     tooltip="Create a new cell below this one"
                 >
                     <Plus />
@@ -252,7 +251,10 @@ export function NotebookCell(props: {
                     <Popover.Anchor as="span">
                         <IconButton
                             onClick={openMenu}
-                            style={{ visibility: visibility(isGutterVisible() || isMenuOpen()) }}
+                            style={{
+                                visibility:
+                                    isGutterVisible() || isMenuOpen() ? "visible" : "hidden",
+                            }}
                             tooltip="Drag to move cell or click to open menu"
                             ref={handleRef}
                         >

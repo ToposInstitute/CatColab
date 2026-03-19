@@ -23,7 +23,7 @@ const serverUrl = import.meta.env.VITE_SERVER_URL;
 const repoUrl = import.meta.env.VITE_AUTOMERGE_REPO_URL;
 const firebaseOptions = JSON.parse(import.meta.env.VITE_FIREBASE_OPTIONS) as FirebaseOptions;
 
-const Root = (props: RouteSectionProps<unknown>) => {
+const Root = (props: RouteSectionProps) => {
     invariant(serverUrl, "Must set environment variable VITE_SERVER_URL");
     invariant(repoUrl, "Must set environment variable VITE_AUTOMERGE_REPO_URL");
 
@@ -31,6 +31,7 @@ const Root = (props: RouteSectionProps<unknown>) => {
     const api = new Api({ serverUrl, repoUrl, firebaseApp });
 
     const [isSessionInvalid] = createResource(
+        // oxlint-disable-next-line solid/reactivity -- createResource fetcher
         async () => {
             const result = await api.rpc.validate_session.query();
             if (result.tag === "Err") {
@@ -141,8 +142,8 @@ const routes: RouteDefinition[] = [
     },
     {
         path: "/dev/*",
-        component: (props) => {
-            const url = `https://next.catcolab.org${props.location.pathname}`;
+        component: (route) => {
+            const url = `https://next.catcolab.org${route.location.pathname}`;
             window.location.replace(url);
             return null;
         },

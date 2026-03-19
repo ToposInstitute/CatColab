@@ -7,7 +7,7 @@
 // https://apache.github.io/echarts-handbook/en/basics/import/
 import * as echarts from "echarts";
 
-echarts;
+void echarts;
 
 import { EChartsAutoSize } from "echarts-solid";
 
