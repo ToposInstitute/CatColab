@@ -76,6 +76,8 @@
 \def\xfrom[label]{#{\xleftarrow{\label}}}
 \def\To{#{\Rightarrow}}
 \def\hetto{#{\dashrightarrow}}
+\def\lim{#{\operatorname{lim}}}
+\def\colim{#{\operatorname{colim}}}
 
 % Categories
 
