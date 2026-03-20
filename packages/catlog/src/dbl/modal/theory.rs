@@ -644,6 +644,8 @@ impl VDCWithComposites for ModalDblTheory {
     }
 }
 
+crate::dbl::theory::impl_dbl_theory!(ModalDblTheory, Unital);
+
 impl Validate for ModalDblTheory {
     type ValidationError = InvalidDblTheory;
 

@@ -93,6 +93,8 @@ impl VDCWithComposites for DiscreteDblTheory {
     }
 }
 
+crate::dbl::theory::impl_dbl_theory!(DiscreteDblTheory, Unital);
+
 impl Validate for DiscreteDblTheory {
     type ValidationError = InvalidDblTheory;
 
