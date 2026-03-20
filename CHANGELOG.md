@@ -21,6 +21,12 @@ include notable new features.
   ([#1069](https://github.com/ToposInstitute/CatColab/pull/1069),
   [#1117](https://github.com/ToposInstitute/CatColab/pull/1117/))
 
+### Changed
+
+- For developers: switched from Biome to [Oxc](https://oxc.rs/) for TypeScript
+  formatting and linting
+  ([#1146](https://github.com/ToposInstitute/CatColab/pull/1146))
+
 ## [v0.5.0](https://github.com/ToposInstitute/CatColab/releases/tag/v0.5.0) (2026-03-09)
 
 ### Added
