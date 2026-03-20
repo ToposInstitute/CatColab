@@ -84,14 +84,14 @@ pub use super::modal::theory::*;
 ///
 /// This trait uses a generic associated type ([`Wrap`](DblTheoryKind::Wrap)) to
 /// control the return type of [`DblTheory::hom_type`] and
-/// [`DblTheory::hom_op`]. For [`Categorical`] theories, `Wrap<T>` is just `T`
-/// (hom types always exist). For [`SetTheoretic`] theories, `Wrap<T>` is
+/// [`DblTheory::hom_op`]. For [`Unital`] theories, `Wrap<T>` is just `T`
+/// (hom types always exist). For [`NonUnital`] theories, `Wrap<T>` is
 /// `Option<T>` (hom types may not exist).
 pub trait DblTheoryKind: fmt::Debug {
     /// Wraps a type to reflect whether values are guaranteed to exist.
     ///
-    /// For [`Categorical`], this is the identity (`T`).
-    /// For [`SetTheoretic`], this is `Option<T>`.
+    /// For [`Unital`], this is the identity (`T`).
+    /// For [`NonUnital`], this is `Option<T>`.
     type Wrap<T>;
 
     /// Converts a wrapped value into an `Option`, for code generic over the kind.
@@ -101,14 +101,14 @@ pub trait DblTheoryKind: fmt::Debug {
     fn pure<T>(value: T) -> Self::Wrap<T>;
 }
 
-/// Categorical double theories guarantee that every object type has a hom type.
+/// Unital double theories guarantee that every object type has a hom type.
 ///
 /// Models of a categorical theory assign *categories* (not just sets) to each
 /// object type: the hom type provides the morphisms.
 #[derive(Debug)]
-pub struct Categorical;
+pub struct Unital;
 
-impl DblTheoryKind for Categorical {
+impl DblTheoryKind for Unital {
     type Wrap<T> = T;
 
     fn into_option<T>(wrapped: T) -> Option<T> {
@@ -125,9 +125,9 @@ impl DblTheoryKind for Categorical {
 /// The [`hom_type`](DblTheory::hom_type) method may return `None` for some or
 /// all object types.
 #[derive(Debug)]
-pub struct SetTheoretic;
+pub struct NonUnital;
 
-impl DblTheoryKind for SetTheoretic {
+impl DblTheoryKind for NonUnital {
     type Wrap<T> = Option<T>;
 
     fn into_option<T>(wrapped: Option<T>) -> Option<T> {
@@ -143,12 +143,12 @@ impl DblTheoryKind for SetTheoretic {
 ///
 /// A double theory is a [virtual double category](super::category) viewed as
 /// specifying a categorical structure. The associated type [`Kind`](DblTheory::Kind)
-/// determines whether hom types are guaranteed to exist ([`Categorical`]) or not
-/// ([`SetTheoretic`]).
+/// determines whether hom types are guaranteed to exist ([`Unital`]) or not
+/// ([`NonUnital`]).
 ///
 /// See the [module-level docs](super::theory) for background on the terminology.
 pub trait DblTheory {
-    /// The kind of the theory: [`Categorical`] or [`SetTheoretic`].
+    /// The kind of the theory: [`Unital`] or [`NonUnital`].
     type Kind: DblTheoryKind;
 
     /// Rust type of object types in the theory.
@@ -219,8 +219,8 @@ pub trait DblTheory {
     /// Viewing the double theory as a virtual double category, this is the unit
     /// proarrow on an object.
     ///
-    /// For [`Categorical`] theories, this returns `Self::MorType` directly.
-    /// For [`SetTheoretic`] theories, this returns `Option<Self::MorType>`.
+    /// For [`Unital`] theories, this returns `Self::MorType` directly.
+    /// For [`NonUnital`] theories, this returns `Option<Self::MorType>`.
     fn hom_type(&self, x: Self::ObType) -> <Self::Kind as DblTheoryKind>::Wrap<Self::MorType>;
 
     /// Compose a sequence of operations on objects.
@@ -239,8 +239,8 @@ pub trait DblTheory {
     /// Viewing the double theory as a virtual double category, this is the unit
     /// cell on an arrow.
     ///
-    /// For [`Categorical`] theories, this returns `Self::MorOp` directly.
-    /// For [`SetTheoretic`] theories, this returns `Option<Self::MorOp>`.
+    /// For [`Unital`] theories, this returns `Self::MorOp` directly.
+    /// For [`NonUnital`] theories, this returns `Option<Self::MorOp>`.
     fn hom_op(&self, f: Self::ObOp) -> <Self::Kind as DblTheoryKind>::Wrap<Self::MorOp>;
 
     /// Compose operations on morphisms.
@@ -258,35 +258,33 @@ pub trait DblTheory {
 
 /// Implements [`DblTheory`] for a type that implements [`VDCWithComposites`].
 ///
-/// The `kind` argument must be either `Categorical` or `SetTheoretic`:
+/// The `kind` argument must be either `Unital` or `NonUnital`:
 ///
-/// - `Categorical`: `hom_type`/`hom_op` return the value directly and panic if
+/// - `Unital`: `hom_type`/`hom_op` return the value directly and panic if
 ///   the unit does not exist.
-/// - `SetTheoretic`: `hom_type`/`hom_op` return `Option`.
+/// - `NonUnital`: `hom_type`/`hom_op` return `Option`.
 macro_rules! impl_dbl_theory {
-    ($ty:ty, Categorical) => {
-        $crate::dbl::theory::impl_dbl_theory!(@hom_helper $ty);
+    ($ty:ty, Unital) => {
         impl $crate::dbl::theory::DblTheory for $ty {
 
-            type Kind = $crate::dbl::theory::Categorical;
+            type Kind = $crate::dbl::theory::Unital;
 
             $crate::dbl::theory::impl_dbl_theory!(@shared);
 
             fn hom_type(&self, x: Self::ObType) -> Self::MorType {
                 $crate::dbl::category::VDCWithComposites::unit(self, x)
-                    .expect("Categorical double theory should have all hom types")
+                    .expect("Unital double theory should have all hom types")
             }
             fn hom_op(&self, f: Self::ObOp) -> Self::MorOp {
-                self._vdc_hom_op(f)
-                    .expect("Categorical double theory should have all hom ops")
+                $crate::dbl::category::VDCWithComposites::unit_arrow(self, f)
+                    .expect("Unital double theory should have all hom ops")
             }
         }
     };
-    ($ty:ty, SetTheoretic) => {
-        $crate::dbl::theory::impl_dbl_theory!(@hom_helper $ty);
+    ($ty:ty, NonUnital) => {
         impl $crate::dbl::theory::DblTheory for $ty {
 
-            type Kind = $crate::dbl::theory::SetTheoretic;
+            type Kind = $crate::dbl::theory::NonUnital;
 
             $crate::dbl::theory::impl_dbl_theory!(@shared);
 
@@ -294,27 +292,7 @@ macro_rules! impl_dbl_theory {
                 $crate::dbl::category::VDCWithComposites::unit(self, x)
             }
             fn hom_op(&self, f: Self::ObOp) -> Option<Self::MorOp> {
-                self._vdc_hom_op(f)
-            }
-        }
-    };
-    // Private hom_helper helper for computing hom_op.
-    (@hom_helper $ty:ty) => {
-        impl $ty {
-            fn _vdc_hom_op(
-                &self,
-                f: <$ty as $crate::dbl::category::VDblCategory>::Arr,
-            ) -> Option<<$ty as $crate::dbl::category::VDblCategory>::Cell> {
-                use $crate::dbl::category::{VDblCategory, VDCWithComposites};
-                let y = self.cod(&f);
-                let y_ext = self.unit_ext(y)?;
-                let cell = self.compose_cells($crate::dbl::tree::DblTree(
-                    $crate::one::tree::OpenTree::linear(vec![
-                        $crate::dbl::tree::DblNode::Spine(f),
-                        $crate::dbl::tree::DblNode::Cell(y_ext),
-                    ]).unwrap(),
-                ));
-                self.through_unit(cell, 0)
+                $crate::dbl::category::VDCWithComposites::unit_arrow(self, f)
             }
         }
     };
