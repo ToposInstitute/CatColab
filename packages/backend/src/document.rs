@@ -3,7 +3,10 @@
 use crate::app::{AppCtx, AppError, AppState};
 use crate::automerge_json::{ensure_autosave_listener, populate_automerge_from_json};
 use crate::user_state::{
-    DEFAULT_DOC_NAME, DocInfoType, extract_relations_from_json, update_doc_info_from_snapshot,
+    DEFAULT_DOC_NAME, DocInfo, DocInfoType, PermissionInfo, extract_relations_from_json,
+};
+use crate::user_state_updates::{
+    insert_new_doc, set_deleted_at_for_affected_users, update_doc_info_from_snapshot,
 };
 use chrono::{DateTime, Utc};
 use samod::DocumentId;
@@ -84,6 +87,29 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
     txn.commit().await?;
 
     ensure_autosave_listener(ctx.state.clone(), ref_id, doc_handle).await;
+
+    let doc_info = DocInfo {
+        name: autosurgeon::Text::from(
+            content.get("name").and_then(|v| v.as_str()).unwrap_or(DEFAULT_DOC_NAME),
+        ),
+        type_name: content
+            .get("type")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .parse()
+            .unwrap_or(DocInfoType::Unknown),
+        theory: content.get("theory").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        permissions: vec![PermissionInfo {
+            user: user_id,
+            level: crate::auth::PermissionLevel::Own,
+        }],
+        created_at: chrono::Utc::now(),
+        deleted_at: None,
+        depends_on: extract_relations_from_json(&content),
+        used_by: Vec::new(),
+    };
+
+    insert_new_doc(&ctx.state, ref_id, doc_info).await;
 
     Ok(ref_id)
 }
@@ -246,6 +272,13 @@ pub async fn delete_ref(state: AppState, ref_id: Uuid) -> Result<(), AppError> {
     )
     .execute(&state.db)
     .await?;
+
+    if let Err(e) =
+        set_deleted_at_for_affected_users(&state, ref_id, Some(chrono::Utc::now())).await
+    {
+        tracing::error!(%ref_id, error = %e, "Failed to update user state after delete_ref");
+    }
+
     Ok(())
 }
 
@@ -261,6 +294,11 @@ pub async fn restore_ref(state: AppState, ref_id: Uuid) -> Result<(), AppError> 
     )
     .execute(&state.db)
     .await?;
+
+    if let Err(e) = set_deleted_at_for_affected_users(&state, ref_id, None).await {
+        tracing::error!(%ref_id, error = %e, "Failed to update user state after restore_ref");
+    }
+
     Ok(())
 }
 

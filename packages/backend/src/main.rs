@@ -20,7 +20,7 @@ use tower_http::cors::CorsLayer;
 use tracing::{error, info};
 use tracing_subscriber::filter::{EnvFilter, LevelFilter};
 
-use backend::{app, auth, rpc, storage, user_state, user_state_subscription};
+use backend::{app, auth, rpc, storage, user_state};
 
 /// Port for the web server providing the RPC API.
 fn web_port() -> String {
@@ -136,20 +136,10 @@ async fn main() {
                 .await,
             );
 
-            let web_server = run_web_server(state.clone(), firebase_auth.clone());
-            let subscription = user_state_subscription::run_user_state_subscription(state.clone());
-
             // Notify systemd we're ready
             sd_notify::notify(false, &[sd_notify::NotifyState::Ready]).ok();
 
-            tokio::select! {
-                result = web_server => {
-                    result.expect("Web server failed");
-                }
-                result = subscription => {
-                    result.expect("User state subscription failed");
-                }
-            }
+            run_web_server(state.clone(), firebase_auth.clone()).await.unwrap();
         }
     }
 }
