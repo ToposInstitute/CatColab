@@ -299,13 +299,49 @@ pub enum InvalidDblModel {
     CodType(QualifiedName),
 
     /// Equation between morphisms has one or more errors.
-    Eqn(Option<usize>, NonEmpty<InvalidPathEq>),
+    ///
+    /// FIXME: should not really be an Option, fix after issue 1017 is resolved..
+    Eqn(Option<usize>, NonEmpty<InvalidModelEqn>),
 
     /// Tried to us a feature not yet supported by the elaborator.
     UnsupportedFeature(Feature),
 
     /// No link provided for instantiation cell, or wrong type of link.
     InvalidLink(QualifiedName),
+}
+
+/// A failure of an equation in a model of a double theory to be well defined.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(tag = "tag", content = "content"))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
+pub enum InvalidModelEqn {
+    /// Sources of sides of equation don't coincide.
+    Src,
+
+    /// Targets of sides of equation don't coincide.
+    Tgt,
+
+    /// Left-hand side of equation fails to synthesize.
+    Lhs,
+
+    /// Right-hand side of equation fails to synthesize.
+    Rhs,
+
+    /// Sides of equation are not evevn in the same morphism type.
+    MorType,
+}
+
+impl From<InvalidPathEq> for InvalidModelEqn {
+    fn from(err: InvalidPathEq) -> Self {
+        match err {
+            InvalidPathEq::Lhs => InvalidModelEqn::Lhs,
+            InvalidPathEq::Rhs => InvalidModelEqn::Rhs,
+            InvalidPathEq::Src => InvalidModelEqn::Src,
+            InvalidPathEq::Tgt => InvalidModelEqn::Tgt,
+        }
+    }
 }
 
 /// Various features that the new elaboration does not yet support.

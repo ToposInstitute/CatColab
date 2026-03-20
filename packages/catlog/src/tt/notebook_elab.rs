@@ -13,9 +13,8 @@ use uuid::Uuid;
 use super::{context::*, eval::*, prelude::*, stx::*, theory::*, toplevel::*, val::*};
 use crate::dbl::{
     modal,
-    model::{Feature, InvalidDblModel},
+    model::{Feature, InvalidDblModel, InvalidModelEqn},
 };
-use crate::one::InvalidPathEq;
 use crate::zero::QualifiedName;
 
 /// The current state of a notebook elaboration session.
@@ -289,14 +288,14 @@ impl<'a> Elaborator<'a> {
         let lhs = match self.mor_syn(lhs_m) {
             Some(synthed) => Some(synthed),
             None => {
-                errors.push(InvalidPathEq::Lhs);
+                errors.push(InvalidModelEqn::Lhs);
                 None
             }
         };
         let rhs = match self.mor_syn(rhs_m) {
             Some(synthed) => Some(synthed),
             None => {
-                errors.push(InvalidPathEq::Rhs);
+                errors.push(InvalidModelEqn::Rhs);
                 None
             }
         };
@@ -309,13 +308,13 @@ impl<'a> Elaborator<'a> {
                 unreachable!()
             };
             if mt_lhs != mt_rhs {
-                errors.push(InvalidPathEq::Graph);
+                errors.push(InvalidModelEqn::MorType);
             } else {
                 if self.evaluator().equal_tm(dom_lhs, dom_rhs).is_err() {
-                    errors.push(InvalidPathEq::Src);
+                    errors.push(InvalidModelEqn::Src);
                 }
                 if self.evaluator().equal_tm(cod_lhs, cod_rhs).is_err() {
-                    errors.push(InvalidPathEq::Tgt);
+                    errors.push(InvalidModelEqn::Tgt);
                 }
             }
         }
@@ -326,14 +325,20 @@ impl<'a> Elaborator<'a> {
                 (ty_s, ty_v)
             }
             (Some(errors), _, _) => {
-                self.ty_error(InvalidDblModel::Eqn(None, errors)) //The assumption in InvalidDblModel that we should already have the vector of equations built up, so as to give the index in the first argument here, doesn't hold in this case. It would be best in principle not to use InvalidDblModel here before we've begun to build a DblModel...
+                // FIXME: The assumption in InvalidDblModel that we should already have the vector of equations
+                // built up, so as to give the index in the first argument here, doesn't hold in this case.
+                // It would be best not to use InvalidDblModel here before we've begun
+                // to build a DblModel.
+                self.ty_error(InvalidDblModel::Eqn(None, errors))
             }
             _ => unreachable!(),
         }
     }
 
     fn equation_cell(&mut self, eqn_decl: &nb::EqnDecl) -> (NameSegment, LabelSegment, TyS, TyV) {
-        let name = NameSegment::Uuid(eqn_decl.id); //Kind of funny that the decl's id produces the cell's name but the decl's name produces the cell's label.
+        // Kind of funny that the decl's id produces the cell's name
+        // but the decl's name produces the cell's label.
+        let name = NameSegment::Uuid(eqn_decl.id);
         let label = LabelSegment::Text(ustr(&eqn_decl.name));
         let (ty_s, ty_v) = self.equation_cell_ty(eqn_decl);
         (name, label, ty_s, ty_v)
