@@ -11,7 +11,7 @@ use sqlx::postgres::PgPoolOptions;
 use sqlx_migrator::cli::MigrationCommand;
 use sqlx_migrator::migrator::{Migrate, Migrator};
 use sqlx_migrator::{Info, Plan};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -20,13 +20,7 @@ use tower_http::cors::CorsLayer;
 use tracing::{error, info};
 use tracing_subscriber::filter::{EnvFilter, LevelFilter};
 
-mod app;
-mod auth;
-mod automerge_json;
-mod document;
-mod rpc;
-mod storage;
-mod user;
+use backend::{app, auth, rpc, storage, user_state, user_state_subscription};
 
 /// Port for the web server providing the RPC API.
 fn web_port() -> String {
@@ -63,23 +57,27 @@ async fn main() {
 
     if let Some(Command::GenerateBindings) = cli.command {
         use qubit::TypeScript;
+        use ts_rs::TS;
 
-        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("pkg")
-            .join("src")
-            .join("index.ts");
+        let pkg_src_path =
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("pkg").join("src");
 
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)
-                .expect("Failed to create directory for TypeScript bindings");
-        }
+        std::fs::create_dir_all(&pkg_src_path)
+            .expect("Failed to create directory for TypeScript bindings");
+
+        let index_path = pkg_src_path.join("index.ts");
 
         rpc::router()
             .as_codegen()
-            .write_type(&path, TypeScript::new())
+            .write_type(&index_path, TypeScript::new())
             .expect("Failed to write TypeScript bindings");
 
-        info!("Successfully generated TypeScript bindings to: {}", path.display());
+        info!("Successfully generated qubit TypeScript bindings to: {}", index_path.display());
+
+        user_state::UserState::export_all_to(&pkg_src_path)
+            .expect("Failed to export ts-rs bindings");
+        info!("Successfully exported ts-rs TypeScript bindings to: {}", pkg_src_path.display());
+
         return;
     }
 
@@ -123,6 +121,7 @@ async fn main() {
                 db: db.clone(),
                 repo,
                 active_listeners: Arc::new(RwLock::new(HashSet::new())),
+                initialized_user_states: Arc::new(RwLock::new(HashMap::new())),
             };
 
             // We need to wrap FirebaseAuth in an Arc because if it's ever dropped the process which updates it's
@@ -137,10 +136,20 @@ async fn main() {
                 .await,
             );
 
+            let web_server = run_web_server(state.clone(), firebase_auth.clone());
+            let subscription = user_state_subscription::run_user_state_subscription(state.clone());
+
             // Notify systemd we're ready
             sd_notify::notify(false, &[sd_notify::NotifyState::Ready]).ok();
 
-            run_web_server(state.clone(), firebase_auth.clone()).await.unwrap();
+            tokio::select! {
+                result = web_server => {
+                    result.expect("Web server failed");
+                }
+                result = subscription => {
+                    result.expect("User state subscription failed");
+                }
+            }
         }
     }
 }
