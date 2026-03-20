@@ -41,7 +41,6 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                 tag: "Hom",
                 content: { tag: "Basic", content: "Object" },
             }) ?? [],
-        [],
     );
 
     const variables = (): QualifiedName[] => elaboratedDiagram()?.obGenerators() ?? [];

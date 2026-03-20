@@ -1,4 +1,4 @@
-import { type DocHandle, isValidDocumentId, Repo } from "@automerge/automerge-repo";
+import { isValidDocumentId, Repo } from "@automerge/automerge-repo";
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 import { type FirebaseOptions, initializeApp } from "firebase/app";
 import { deleteUser, getAuth, signOut } from "firebase/auth";
@@ -87,7 +87,7 @@ describe("RPC for Automerge documents", async () => {
     if (!isValidDocumentId(refDoc.docId)) {
         return;
     }
-    const docHandle = (await repo.find(refDoc.docId)) as DocHandle<Document>;
+    const docHandle = await repo.find<Document>(refDoc.docId);
     const doc = docHandle.doc();
 
     test.sequential("should get the original document data", () => {

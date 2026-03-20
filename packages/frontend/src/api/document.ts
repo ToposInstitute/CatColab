@@ -136,7 +136,7 @@ export function useDocHandleReady(getHandle: () => DocHandle<unknown>): Accessor
     createEffect(() => {
         setIsReady(false);
 
-        getHandle()
+        void getHandle()
             .whenReady()
             .then(() => {
                 setIsReady(true);

@@ -44,10 +44,8 @@ const Brand = () => (
 
 If no theory is set, it navigates instead to the list of all theories.
  */
-export function TheoryHelpButton(props: { meta: TheoryMeta }) {
-    const navigate = useNavigate();
-
-    const tooltip = (meta: TheoryMeta) => (
+function theoryHelpTooltip(meta: TheoryMeta) {
+    return (
         <>
             <p>
                 {"You are using the logic: "}
@@ -56,11 +54,15 @@ export function TheoryHelpButton(props: { meta: TheoryMeta }) {
             <p>{"Click to learn more about this logic"}</p>
         </>
     );
+}
+
+export function TheoryHelpButton(props: { meta: TheoryMeta }) {
+    const navigate = useNavigate();
 
     return (
         <IconButton
             onClick={() => navigate(`/help/logics/${props.meta.id}`)}
-            tooltip={tooltip(props.meta)}
+            tooltip={theoryHelpTooltip(props.meta)}
         >
             <CircleHelp />
         </IconButton>

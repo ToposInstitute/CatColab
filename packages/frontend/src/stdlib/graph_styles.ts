@@ -3,6 +3,7 @@ import type * as Elk from "elkjs";
 
 import type { BaseTypeMeta } from "../theory";
 import type { GraphvizAttributes } from "../visualization";
+
 import textStyles from "./text_styles.module.css";
 
 /** Default graph attributes for Graphviz. */

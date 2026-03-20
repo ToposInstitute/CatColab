@@ -76,7 +76,7 @@ export function TheorySelector(props: TheorySelectorProps) {
                                         name="theory"
                                         id={meta.id}
                                         value={meta.id}
-                                        onchange={(evt) => props.setTheory(evt.target.value)}
+                                        onChange={(evt) => props.setTheory(evt.target.value)}
                                     />
                                     <label for={meta.id}>
                                         <div class="name">{meta.name}</div>

@@ -27,7 +27,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Summary: Story = {
-    render: () => <div style={{ display: "flex", gap: "8px", "align-items": "center" }}></div>,
+    render: () => <div style={{ display: "flex", gap: "8px", "align-items": "center" }} />,
     tags: ["!autodocs", "!dev"],
 };
 

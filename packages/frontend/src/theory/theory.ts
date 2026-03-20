@@ -297,14 +297,14 @@ export type AnalysisMeta<T> = {
 };
 
 /** Specifies a model analysis with descriptive metadata. */
-// biome-ignore lint/suspicious/noExplicitAny: content type is data dependent.
+// oxlint-disable-next-line typescript/no-explicit-any -- content type is data dependent
 export type ModelAnalysisMeta<T = any> = AnalysisMeta<T> & {
     /** Component that renders the analysis. */
     component: ModelAnalysisComponent<T>;
 };
 
 /** Specifies a diagram analysis with descriptive metadata. */
-// biome-ignore lint/suspicious/noExplicitAny: content type is data dependent.
+// oxlint-disable-next-line typescript/no-explicit-any -- content type is data dependent
 export type DiagramAnalysisMeta<T = any> = AnalysisMeta<T> & {
     /** Component that renders the analysis. */
     component: DiagramAnalysisComponent<T>;

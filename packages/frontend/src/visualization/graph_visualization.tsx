@@ -4,7 +4,7 @@ import { type Component, Match, Switch } from "solid-js";
 import { graphToElk } from "./elk";
 import { ElkSVG } from "./elk_svg";
 import type * as GraphLayout from "./graph_layout";
-import { type Config, elkOptions, graphvizOptions } from "./graph_layout_config";
+import { type Config, Engine, elkOptions, graphvizOptions } from "./graph_layout_config";
 import type * as GraphSpec from "./graph_spec";
 import { type GraphvizAttributes, graphToViz } from "./graphviz";
 import { GraphvizSVG } from "./graphviz_svg";
@@ -32,10 +32,10 @@ export function GraphVisualization(props: {
 
     return (
         <Switch>
-            <Match when={layout() === "elk"}>
+            <Match when={layout() === Engine.Elk}>
                 <ElkSVG graph={elkGraph()} renderer={props.renderer} ref={props.ref} />
             </Match>
-            <Match when={layout() === "graphviz-directed" || layout() === "graphviz-undirected"}>
+            <Match when={layout() === Engine.VizDirected || layout() === Engine.VizUndirected}>
                 <GraphvizSVG
                     graph={graphToViz(props.graph, props.graphvizAttributes)}
                     options={graphvizOptions(props.config)}

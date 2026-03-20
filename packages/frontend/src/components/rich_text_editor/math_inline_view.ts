@@ -18,7 +18,7 @@ export class MathInlineView implements NodeView {
         this.view = view;
         this.getPos = getPos;
 
-        this.dom = document.createElement("math-inline") as HTMLElement;
+        this.dom = document.createElement("math-inline");
         this.dom.classList.add("math-node");
 
         this.renderEl = document.createElement("span");
@@ -37,7 +37,10 @@ export class MathInlineView implements NodeView {
         this.renderEl.innerHTML = "";
         if (tex) {
             try {
-                katex.render(tex, this.renderEl, { displayMode: false, throwOnError: false });
+                katex.render(tex, this.renderEl, {
+                    displayMode: false,
+                    throwOnError: false,
+                });
             } catch {
                 this.renderEl.textContent = tex;
             }

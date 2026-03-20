@@ -32,7 +32,6 @@ const meta = {
                 type: {
                     summary: "(remainingCount: number) => string",
                 },
-                // biome-ignore lint/suspicious/noTemplateCurlyInString: it's needed here
                 defaultValue: { summary: "(count) => `${count} more...`" },
             },
         },

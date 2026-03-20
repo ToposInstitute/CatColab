@@ -1,0 +1,89 @@
+import { defineConfig } from "oxlint";
+
+export default defineConfig({
+    categories: {
+        correctness: "error",
+        suspicious: "warn",
+        perf: "warn",
+    },
+    plugins: ["typescript", "unicorn", "oxc", "import", "vitest"],
+    ignorePatterns: ["**/dist", "**/docs", "**/catlog-wasm", "**/storybook-static"],
+    rules: {
+        // Allow bare `import "./foo.css"` — CSS imports are side-effect-only
+        // by nature. Flag bare JS/TS imports as they're likely unused.
+        "import/no-unassigned-import": ["warn", { allow: ["**/*.css"] }],
+        // SolidJS idioms like <Show when={x()}>{(x) => ...}</Show> intentionally
+        // shadow signals with narrowed callback parameters.
+        "no-shadow": "off",
+        // Too many legitimate uses of type assertions in the codebase (e.g.,
+        // narrowing Automerge values, wasm interop types).
+        "typescript/no-unsafe-type-assertion": "off",
+        // SolidJS ref pattern: `let ref!: HTMLElement` is assigned by Solid's
+        // JSX `ref={}` attribute at render time. The linter can't see this.
+        "no-unassigned-vars": "off",
+        // Project uses Vitest, not Jest. The `correctness` category enables
+        // these Jest rules by default, but they produce false positives on
+        // Vitest test files (e.g., async describe callbacks, assertion patterns).
+        "jest/expect-expect": "off",
+        "jest/no-conditional-expect": "off",
+        "jest/no-disabled-tests": "off",
+        "jest/no-export": "off",
+        "jest/no-focused-tests": "off",
+        "jest/no-standalone-expect": "off",
+        "jest/require-to-throw-message": "off",
+        "jest/valid-describe-callback": "off",
+        "jest/valid-expect": "off",
+        "jest/valid-title": "off",
+        // Flags correct usage patterns like `katex.render()` and
+        // `Popover.useDialogContext()` where the default export is used as
+        // a namespace.
+        "import/no-named-as-default-member": "off",
+        // All 6 violations are intentionally sequential loops where each
+        // iteration depends on the previous result (e.g., walking a document
+        // parent chain, sequential model loading).
+        "no-await-in-loop": "off",
+        // Type-aware linting via tsgo can't fully resolve types from the
+        // catcolab-api package (RpcResult, PermissionLevel resolve to `any`),
+        // causing false positives on valid union types like
+        // `RpcResult<A> | undefined`.
+        "typescript/no-redundant-type-constituents": "off",
+        // 18 violations: mix of `${error}` in catch blocks (unknown type),
+        // exhaustive-switch `never` branches, and object types in error messages.
+        // No `allowUnknown` option available to suppress the catch-block pattern.
+        // Revisit when oxlint adds more granular configuration.
+        "typescript/restrict-template-expressions": "off",
+        // Same tsgo resolution issue as no-redundant-type-constituents: Automerge
+        // BlockMarker attributes are typed as unknown but are strings at runtime.
+        "typescript/no-base-to-string": "off",
+        // All 3 violations are static method references (e.g.,
+        // `ThCategory.toSchema`) which don't use `this`. The rule can't
+        // distinguish static methods from instance methods — known limitation.
+        "typescript/unbound-method": "off",
+        "typescript/no-explicit-any": "warn",
+        // Rules that we had from biome that are not there by default in oxlint.
+        curly: "warn",
+        "no-var": "error",
+        "prefer-const": "warn",
+        "no-self-compare": "warn",
+        "no-case-declarations": "warn",
+        "prefer-exponentiation-operator": "warn",
+        "unicorn/no-array-for-each": "warn",
+        // Allow `== null` / `!= null` to check for both null and undefined.
+        eqeqeq: ["warn", "smart"],
+        // Only flag console.log; allow console.warn/error for error handling.
+        "no-console": ["warn", { allow: ["warn", "error", "info", "debug"] }],
+        // Ternary-as-statement (`condition ? doA() : doB()`) is idiomatic in
+        // this codebase for concise branching in callbacks.
+        "no-unused-expressions": ["warn", { allowTernary: true }],
+        // Allow underscore-prefixed names for intentionally unused bindings
+        // (e.g., `_e` in catch blocks, `_unused` destructured fields).
+        "no-unused-vars": [
+            "warn",
+            {
+                varsIgnorePattern: "^_",
+                argsIgnorePattern: "^_",
+                caughtErrorsIgnorePattern: "^_",
+            },
+        ],
+    },
+});

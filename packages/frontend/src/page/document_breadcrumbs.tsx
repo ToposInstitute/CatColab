@@ -3,6 +3,7 @@ import { createResource, For, Show } from "solid-js";
 import type { Document } from "catlog-wasm";
 import { type LiveDoc, type LiveDocWithRef, useApi } from "../api";
 import { assertExhaustive } from "../util/assert_exhaustive";
+
 import "./document_breadcrumbs.css";
 
 export function DocumentBreadcrumbs(props: { liveDoc: LiveDoc; docRefId: string }) {
@@ -45,17 +46,16 @@ export function getParentRefId(document: Document): string | null {
     }
 }
 
-async function getDocumentChain(props: {
+async function getDocumentChain(options: {
     liveDoc: LiveDoc;
     docRefId: string;
 }): Promise<LiveDocWithRef[]> {
     const api = useApi();
     // We need to fetch the full document to get proper permissions
-    const firstDoc = await api.getLiveDoc(props.docRefId);
+    const firstDoc = await api.getLiveDoc(options.docRefId);
     const documentChain: LiveDocWithRef[] = [firstDoc];
 
     while (true) {
-        // biome-ignore lint/style/noNonNullAssertion: the array initializer guarantees that there will always be at least one item in the array
         const parentRefId = getParentRefId(documentChain[0]!.liveDoc.doc);
         if (!parentRefId) {
             break;

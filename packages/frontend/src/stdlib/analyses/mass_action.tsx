@@ -47,7 +47,7 @@ export default function MassAction(
             return [];
         }
         return props.stateType ? model.obGeneratorsWithType(props.stateType) : model.obGenerators();
-    }, []);
+    });
 
     const obSchema: ColumnSchema<QualifiedName>[] = [
         {

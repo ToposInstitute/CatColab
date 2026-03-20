@@ -22,6 +22,7 @@ import { InlineInput } from "./inline_input";
 import { ResizableHandle } from "./resizable";
 import { Spinner } from "./spinner";
 import { WarningBanner } from "./warning_banner";
+
 import "./colors.css";
 
 interface ColorSwatchProps {
