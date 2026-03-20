@@ -24,9 +24,8 @@ name = "my-workspace"
 # Tell `rustc` to optimize for small code size.
 opt-level = "s"
 
-# Optimize dependencies in development.
-# This is mainly for automerge: https://github.com/automerge/automerge/issues/1159#issuecomment-3951484849
-# However there may be no practical downside to leaving this on even if that issue is resolved.
+# Use optimizations and remove debug assertions as otherwise automerge is
+# extremely slow in debug mode.
 [profile.dev.package."*"]
 opt-level = 3
 debug-assertions = false
