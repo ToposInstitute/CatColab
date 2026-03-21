@@ -19,8 +19,7 @@ describing models of \dbl{T}.}
 
 \p{Of the following modalities on the double theory, the [codiscrete
 modality](tt-0007) is particularly important as it makes admissible a
-[truncation modality](tt-0009) on the type theory itself. By contrast, the
-[discrete modality](tt-0006) is work in progress and not included below.}
+[truncation modality](tt-0009) on the type theory itself.}
 
 \transclude{tt-0007}
 \transclude{tt-0008}
