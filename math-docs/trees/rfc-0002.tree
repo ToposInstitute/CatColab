@@ -1,13 +1,49 @@
 \title{DoubleTT}
+\taxon{RFC}
+\author{Evan Patterson (after Owen Lynch)}
+\date{2026-01-07}
 \import{macros}
 
-\p{DoubleTT is a type theory for models of double theories. To be more precise,
-DoubleTT is a family of type theories parameterized by double theories: for each
-double theory \dbl{T}, there is a type theory #{\mathsf{DoubleTT}(\dbl{T})}
-describing models of \dbl{T}.}
+\subtree{
+\title{Summary}
+
+\p{DoubleTT is a type theory for specifying models of double theories. It
+combines standard judgments and rules of dependent type theory, such as record
+types, with specialized rules for double-categorical models, such as type
+constructors for objects and morphisms. A key design requirement is to enable
+composing models (of a fixed theory) by identifying objects, an instance of the
+"variable sharing" paradigm of composition. To do so, DoubleTT uses the
+type-theoretic concepts of record types and singleton types, along with a
+normalization-by-evaluation algorithm.}
 
 \subtree{
-\title{Double theories for type theory}
+\taxon{Remark}
+\title{Status of this document}
+
+\p{An RFC, being a kind of specification, is normally written \em{before} its
+implementation. This RFC is unusual in that DoubleTT was implemented (by Owen
+Lynch) before the RFC was written; the document was written (by Evan Patterson)
+as a way to understand the implementation so that it could be extended by
+others. As documentation, it is not really accurate. It does not describe
+everything in the original implementation, while also specifying features
+(lists, operations) not present in the original implementation. In that sense,
+it \em{is} in the spirit of an RFC: it represents a design at a particular point
+in time, as understood by a particular person.}
+
+}
+
+}
+
+\subtree{
+\title{Mathematical specification}
+
+\p{We have said that DoubleTT is a type theory for models of double theories. To
+be more precise, DoubleTT is a family of type theories parameterized by double
+theories: for each double theory \dbl{T}, there is a type theory
+#{\mathsf{DoubleTT}(\dbl{T})} describing models of \dbl{T}.}
+
+\subtree{
+\title{Background: Double theories for type theory}
 
 \p{For the purpose of parameterizing DoubleTT, we reformulate double theories to
 be as syntactical as possible. That means preferring extra \em{primitive}
@@ -667,6 +703,8 @@ contexts, types, and terms, with the following definitions as base cases:
 \prooftree{
 \hypo{\dbl{T} \vDash X\ \ob}
 \infer[dashed]1{\bigcirc [x: \Ob_X,\  y: \Ob_X,\ f: \Hom_X(x,y)] = [x: \Ob_X,\ y: \Ob_X,\ f: 1]}
+}
+
 }
 
 }
