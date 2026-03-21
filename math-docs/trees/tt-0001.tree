@@ -6,23 +6,669 @@ DoubleTT is a family of type theories parameterized by double theories: for each
 double theory \dbl{T}, there is a type theory #{\mathsf{DoubleTT}(\dbl{T})}
 describing models of \dbl{T}.}
 
-\transclude{tt-0004}
+\subtree{
+\title{Double theories for type theory}
 
-\transclude{tt-0002}
+\p{For the purpose of parameterizing DoubleTT, we reformulate double theories to
+be as syntactical as possible. That means preferring extra \em{primitive}
+structure over equipping a simpler base structure with algebraic operations or
+universal properties. The same spirit is taken in Shulman's [\em{Categorical
+logic from a categorical point of view}](shulman-2016), where [generalized
+multicategories](dct-000F) are preferred over cartesian categories or monoidal
+categories as the categorical semantics of simple type theories.}
 
-\transclude{tt-0003}
+\p{Here we adopt not just \nlab{virtual double categories} (VDCs) but even
+Koudenburg's [\em{augmented VDCs}](koudenburg-2020) as an alternative to unital
+VDCs. Units in a VDC are elegantly but indirectly defined by a universal
+property. In an augmented VDC, much of the complexity of units is sidestepped by
+adding co-nullary cells as primitive structure.}
 
-\transclude{tt-0005}
+\subtree{
+\title{Simple double theory}
+\taxon{definition}
+
+\p{A \define{simple double theory} is an augmented virtual double category with
+all restrictions, i.e., having both unary and nullary restrictions.}
+
+}
+
+\subtree{
+\title{Model of simple double theory}
+\taxon{definition}
+
+\p{Let \dbl{S} be a virtual double category with restrictions. A \define{model}
+of a simple double theory \dbl{T} in \dbl{S} is a functor (of augmented virtual
+double categories) #{M: \dbl{T} \to \Mod(\dbl{S})} that preserves restrictions.}
+  
+}
+
+\p{The definition of a model makes sense because:
+
+\ul{
+  
+  \li{For any VDC \dbl{S}, the module construction #{\Mod(\dbl{S})} is a unital
+  VDC ([Cruttwell-Shulman 2010](cruttwell-shulman-2010), Proposition 5.5), hence
+  admits the structure of an augmented VDC ([Koudenburg 2020](koudenburg-2020),
+  Example 2.2).}
+
+  \li{For any VDC \dbl{S} with restrictions, #{\Mod(\dbl{S})} also has
+  restrictions ([Cruttwell-Shulman 2010](cruttwell-shulman-2010), Proposition
+  7.4).}
+  
+}
+
+When the semantics is not specified, we assume it is #{\dbl{S} = \SSet}.
+  
+}
+
+}
+
+\subtree{
+\title{Judgments of DoubleTT}
+
+\p{
+
+DoubleTT has the four standard sorts (meta types) of dependent type theory:
+
+\ol{
+
+  \li{\em{Context}: the judgment ##{\vdash \Gamma\ \context} asserts that
+  #{\Gamma} is a context.}
+
+  \li{\em{Substitution}: presupposing #{\vdash \Delta\ \context} and #{\vdash
+  \Gamma\ \context}, the judgment ##{\Delta \vdash \gamma: \Gamma} asserts that
+  #{\gamma} is a substitution from context #{\Delta} to #{\Gamma}.}
+
+  \li{\em{Type}: presupposing #{\vdash \Gamma\ \context}, the judgment ##{\Gamma
+  \vdash A\ \type} asserts that #{A} is a type in context #{\Gamma}.}
+
+  \li{\em{Term}: presupposing #{\vdash \Gamma\ \context} and
+  #{\Gamma \vdash A\ \type}, the judgment ##{\Gamma \vdash a: A} asserts that
+  #{a} is a term of type #{A} in context #{\Gamma}.}
+
+}
+
+In addition, there are judgments of equality between substitutions, between
+types, and between terms. Thus, DoubleTT has the sorts and judgments of a
+standard dependent type theory (see, e.g., [Angiuli & Gratzer](principles-dtt)).
+
+}
+
+\subtree{
+\title{Alternative judgment structures}
+\taxon{Remark}
+
+\p{Another approach to DoubleTT is to introduce a base sort for object types,
+denoted #{\vdash A\ \type_0} or #{\vdash A\ \ob\,\type}, along with a coercion
+to the general sort for types:
+
+\prooftree{
+\hypo{\Gamma\ \context}
+\hypo{\vdash A\ \type_0}
+\infer2{\Gamma \vdash A\ \type}
+}
+
+This approach has the virtue of making explicit that object types in DoubleTT do
+not depend on contexts, i.e., object types are the types of a \em{simple type
+theory}. However, we find that we can achieve much the same benefit by working
+in a standard dependent type theory that includes a \em{codiscrete modality}.
+
+}
+
+}
+
+}
+
+\subtree{
+\title{Generic rules of DoubleTT}
+
+\p{One part of DoubleTT is just a fragment of standard Martin-Löf type theory.
+These generic rules are collected here.}
+
+\subtree{
+\title{Contexts}
+
+\ul{
+
+  \li{\em{Empty context}:
+
+  \prooftree{
+  \infer0{\vdash \cdot\ \context}
+  }
+  }
+
+  \li{\em{Context extension}:
+
+  \prooftree{
+  \hypo{\vdash \Gamma\ \context}
+  \hypo{\Gamma \vdash A\ \type}
+  \infer2{\vdash \Gamma, u: A\ \context}
+  }
+  }
+
+}
+
+\subtree{
+  \title{Variables}
+  \taxon{notation}
+
+  \p{In a departure from standard type-theoretic notation, we use the letters
+  #{u, v, \dots} for variables, reserving the letters #{x, y, \dots} for
+  arbitrary terms of object types.}
+
+}
+}
+
+\subtree{
+\title{Unit type}
+
+\ul{
+
+  \li{\em{Unit type former}:
+
+  \prooftree{
+  \hypo{\Gamma\ \context}
+  \infer1{\Gamma: 1\ \type}
+  }
+  }
+
+  \li{\em{Unit introduction}:
+
+  \prooftree{
+  \hypo{\Gamma\ \context}
+  \infer1{\Gamma \vdash *: 1}
+  }
+  }
+
+  \li{\em{Uniqueness rule}:
+
+  \prooftree{
+  \hypo{\Gamma \vdash x: 1}
+  \infer1{\Gamma \vdash x = *: 1}
+  }
+  }
+
+}
+}
+
+\subtree{
+\title{Record types}
+
+\p{We use letters #{m, n, \dots} for the field names of record, not to be
+confused with variables in contexts.}
+
+\ul{
+  \li{\em{Record type former}:
+
+  \prooftree{
+  \hypo{\Gamma \vdash A\ \type}
+  \hypo{\Gamma, v: A \vdash B\ \type}
+  \infer2{\Gamma \vdash \{A, m: B\}}
+  }
+  }
+
+  \li{\em{Record introduction}:
+
+  \prooftree{
+  \hypo{\Gamma \vdash a: A}
+  \hypo{\Gamma, v: A \vdash B\ \type}
+  \hypo{\Gamma \vdash b: B[a/v]}
+  \infer3{\Gamma \vdash \{a, m=b\}: \{A, m: B\}}
+  }
+  }
+
+  \li{\em{Elimination rules}, \em{restriction} and \em{projection}:
+
+  \prooftree{
+  \hypo{\Gamma \vdash A\ \type}
+  \hypo{\Gamma, v: A \vdash B\ \type}
+  \hypo{\Gamma \vdash r: \{A, m: B\}}
+  \infer3{\Gamma \vdash r|m: A}
+  }
+  \prooftree{
+  \hypo{\Gamma \vdash A\ \type}
+  \hypo{\Gamma, v: A \vdash B\ \type}
+  \hypo{\Gamma \vdash r: \{A, m: B\}}
+  \infer3{\Gamma \vdash r.m: B[(r|m)/v]}
+  }
+
+  For names #{m \neq n}, restrictions and projections can be passed down:
+
+  \prooftree{
+  \hypo{\Gamma \vdash A\ \type}
+  \hypo{\Gamma, v: A \vdash B\ \type}
+  \hypo{\Gamma \vdash r: \{A, m: B\}}
+  \hypo{\Gamma \vdash C\ \type}
+  \hypo{\Gamma \vdash (r|m)|n: C}
+  \infer5{\Gamma \vdash r|n: C}
+  }
+  \prooftree{
+  \hypo{\Gamma \vdash A\ \type}
+  \hypo{\Gamma, v: A \vdash B\ \type}
+  \hypo{\Gamma \vdash r: \{A, m: B\}}
+  \hypo{\Gamma \vdash C\ \type}
+  \hypo{\Gamma \vdash (r|m).n: C}
+  \infer5{\Gamma \vdash r.n: C}
+  }
+  }
+
+  \li{\em{Computation rules} for restriction and projection:
+
+  \prooftree{
+  \hypo{\Gamma \vdash a: A}
+  \hypo{\Gamma, v: A \vdash B\ \type}
+  \hypo{\Gamma \vdash b: B[a/v]}
+  \infer3{\Gamma \vdash \{a, m=b\}|m = a: A}
+  }
+  \prooftree{
+  \hypo{\Gamma \vdash a: A}
+  \hypo{\Gamma, v: A \vdash B\ \type}
+  \hypo{\Gamma \vdash b: B[a/v]}
+  \infer3{\Gamma \vdash \{a, m=b\}.m = b: B[a/v]}
+  }
+
+  And, for names #{m \neq n}:
+
+  \prooftree{
+  \hypo{\Gamma \vdash A\ \type}
+  \hypo{\Gamma, v: A \vdash B\ \type}
+  \hypo{\Gamma \vdash r: \{A, m: B\}}
+  \hypo{\Gamma \vdash C\ \type}
+  \hypo{\Gamma \vdash (r|m)|n: C}
+  \infer5{\Gamma \vdash r|n = (r|m)|n: C}
+  }
+  \prooftree{
+  \hypo{\Gamma \vdash A\ \type}
+  \hypo{\Gamma, v: A \vdash B\ \type}
+  \hypo{\Gamma \vdash r: \{A, m: B\}}
+  \hypo{\Gamma \vdash C\ \type}
+  \hypo{\Gamma \vdash (r|m).n: C}
+  \infer5{\Gamma \vdash r.n = (r|m).n: C}
+  }
+  }
+
+  \li{\em{Uniqueness rule}:
+
+  \prooftree{
+  \hypo{\Gamma \vdash A\ \type}
+  \hypo{\Gamma, v: A \vdash B\ \type}
+  \hypo{\Gamma \vdash r: \{A, m: B\}}
+  \infer3{\Gamma \vdash r = \{r|m, m = r.m\}: \{A, m: B\}}
+  }
+  }
+}
+
+\subtree{
+  \title{Literature on dependent records}
+  \taxon{remark}
+
+  \p{Apart from cosmetic differences, our presentation of record types mostly
+  follows the standard reference ([Pollack 2002](pollack-2002), Section 3.1).
+  The only meaningful difference is that our presentation, unlike Pollack's,
+  includes the uniqueness rule for records, which seems important inasmuch as
+  records are supposed to be iterated #{\Sigma}-types.}
+  
+}
+
+}
+
+}
+
+\subtree{
+\title{Special rules of DoubleTT}
+
+\p{The following rules are specific to DoubleTT.}
+
+\subtree{
+\title{Object types}
+
+\ul{
+
+  \li{\em{Object type former}: For each object in the double theory, there is an
+  object type:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\vdash \Gamma\ \context}
+  \infer2{\Gamma \vdash \Ob_X\ \type}
+  }
+  }
+
+  \li{\em{Functor application}:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash (F: X \to Y)}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \infer2{\Gamma \vdash F(x): \Ob_Y}
+  }
+  }
+
+}
+}
+
+\subtree{
+\title{Hom types}
+
+\ul{
+  
+  \li{\em{Hom type former}: For each object in the double theory, there is a
+  family of Hom types, parameterized by pairs of object terms:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \hypo{\Gamma \vdash x': \Ob_X}
+  \infer3{\Gamma \vdash \Hom_X(x,x')\ \type}
+  }
+  }
+
+  \li{\em{Functor application}:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash (F: X \to Y)}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \hypo{\Gamma \vdash x': \Ob_X}
+  \hypo{\Gamma \vdash f: \Hom_X(x,x')}
+  \infer4{\Gamma \vdash F(f): \Hom_Y(F(x), F(x'))}
+  }
+  }
+
+  \li{\em{Identity}:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \infer2{\Gamma \vdash 1_x: \Hom_X(x,x)}
+  }
+  }
+
+  \li{\em{Composition}:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash x,x',x'': \Ob_X}
+  \hypo{\Gamma \vdash f: \Hom_X(x,x')}
+  \hypo{\Gamma \vdash g: \Hom_X(x',x'')}
+  \infer4{\Gamma \vdash f \cdot g: \Hom_X(x,x'')}
+  }
+  }
+
+}
+}
+
+\subtree{
+\title{Morphism types}
+
+\ul{
+
+  \li{\em{Morphism type former}: For each proarrow in the double theory, there
+  is a family of morphism types, parameterized by pairs of object terms:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash (P: X \proto Y)}
+  \hypo{\Gamma \vdash x: X}
+  \hypo{\Gamma \vdash y: Y}
+  \infer3{\Gamma \vdash P(x,y)\ \type}
+  }
+  }
+
+  \li{\em{Pre-composition}:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash (P: X \proto Y)}
+  \hypo{\Gamma \vdash x, x': \Ob_X}
+  \hypo{\Gamma \vdash y: \Ob_Y}
+  \hypo{\Gamma \vdash p: P(x,y)}
+  \hypo{\Gamma \vdash f: \Hom_X(x',x)}
+  \infer5{\Gamma \vdash f \cdot p: P(x',y)}
+  }
+  }
+
+  \li{\em{Post-composition}:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash (P: X \proto Y)}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \hypo{\Gamma \vdash y, y': \Ob_Y}
+  \hypo{\Gamma \vdash p: P(x,y)}
+  \hypo{\Gamma \vdash g: \Hom_Y(y,y')}
+  \infer5{\Gamma \vdash p \cdot g: P(x,y')}
+  }
+  }
+
+}
+}
+
+}
 
 \subtree{
 \title{Modalities in DoubleTT}
 
-\p{Of the following modalities on the double theory, the [codiscrete
-modality](tt-0007) is particularly important as it makes admissible a
-[truncation modality](tt-0009) on the type theory itself.}
+\p{Of the following modalities on the double theory, the codiscrete modality
+is particularly important as it makes admissible a truncation modality
+on the type theory itself.}
 
-\transclude{tt-0007}
-\transclude{tt-0008}
+\subtree{
+\title{Codiscrete modality}
+
+\p{The codiscrete modality is an idempotent monad #{(\dbl{T}, \coDisc, \eta)} on
+the double theory.}
+
+\ul{
+
+  \li{Computation rules for object types:
+
+  \p{\centerfigs{
+  \prooftreeinline{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\vdash \Gamma\ \context}
+  \infer2{\Gamma \vdash \Ob_{\coDisc(X)} = \Ob_X\ \type}
+  }
+  #{\qquad\qquad}
+  \prooftreeinline{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \infer2{\Gamma \vdash \eta_X(x) = x: \Ob_X}
+  }
+  }}
+  \prooftree{
+  \hypo{\dbl{T} \vDash (F: X \to Y)}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \infer2{\Gamma \vdash (\coDisc F)(x) = F(x) : \Ob_Y}
+  }
+  }
+
+  \li{Computation rules for Hom types:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash x, x': \Ob_X}
+  \infer2{\Gamma \vdash \Hom_{\coDisc(X)}(x,x') = 1\ \type}
+  }
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash x, x': \Ob_X}
+  \hypo{\Gamma \vdash f: \Hom_X(x,x')}
+  \infer[dashed]3{\Gamma \vdash \eta_X(f) = *: 1}
+  }
+  \prooftree{
+  \hypo{\dbl{T} \vdash (F: X \to Y)}
+  \hypo{\Gamma \vdash x, x': \Ob_X}
+  \hypo{\Gamma \vdash f: \Hom_X(x,x')}
+  \infer[dashed]3{\Gamma \vdash (\coDisc F)(f) = *: 1}
+  }
+
+  Note that the first judgment makes the other two judgments admissible.
+  }
+
+  \li{Computation rules for morphism types:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash (P: X \proto Y)}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \hypo{\Gamma \vdash y: \Ob_Y}
+  \infer3{\Gamma \vdash (\coDisc P)(x,y) = 1\ \type}
+  }
+  \prooftree{
+  \hypo{\dbl{T} \vDash (P: X \proto Y)}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \hypo{\Gamma \vdash y: \Ob_Y}
+  \hypo{\Gamma \vdash p: P(x, y)}
+  \infer[dashed]4{\Gamma \vdash \eta_P(p) = *: 1}
+  }
+
+  \strong{TODO}: Admissible rule for cell applications
+  }
+
 }
 
-\transclude{tt-0009}
+}
+
+\subtree{
+\title{List modality}
+
+\p{The list modality is a monad #{(\dbl{T}, \List, \mu, \eta)} on the double
+theory. We use the standard description of lists as an inductive data type,
+except that we write #{[]} for #{\mathtt{nil}} and #{[x, \vec{x}]} for
+#{\mathtt{cons}(x, \vec{x})}.}
+
+\ul{
+  \li{Introduction rules for object types:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma\ \context}
+  \infer2{\Gamma \vdash []: \Ob_{\List X}}
+  }
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash \vec{x}: \Ob_{\List X}}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \infer3{\Gamma \vdash [x,\vec{x}]: \Ob_{\List X}}
+  }
+  }
+
+  \li{Introduction rules for Hom types:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma\ \context}
+  \infer2{\Gamma \vdash []: \Hom_{\List{X}}([], [])}
+  }
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash \vec{x}, \vec{x}': \Ob_{\List X}}
+  \infer[no rule]1{\Gamma \vdash \vec{f}: \Hom_{\List X}(\vec{x},\vec{x}')}
+  \hypo{\Gamma \vdash x, x': \Ob_X}
+  \infer[no rule]1{\Gamma \vdash f: \Hom_X(x,x')}
+  \infer3{\Gamma \vdash [f,\vec{f}]: \Hom_{\List X}([x,\vec{x}], [x',\vec{x}'])}
+  }
+  }
+
+  \li{Introduction rules for morphism types:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash (P: X \proto Y)}
+  \hypo{\Gamma\ \context}
+  \infer2{\Gamma \vdash []: (\List P)([], [])}
+  }
+  \prooftree{
+  \hypo{\dbl{T} \vDash (P: X \proto Y)}
+  \hypo{\Gamma \vdash \vec{x}: \Ob_{\List X}}
+  \hypo{\Gamma \vdash \vec{y}: \Ob_{\List Y}}
+  \infer[no rule]2{\Gamma \vdash \vec{p}: (\List P)(\vec{x},\vec{y})}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \hypo{\Gamma \vdash y: \Ob_X}
+  \infer[no rule]2{\Gamma \vdash p: \Hom_X(x,y)}
+  \infer3{\Gamma \vdash [p,\vec{p}]: (\List P)([x,\vec{x}], [y,\vec{y}])}
+  }
+  }
+}
+
+}
+
+}
+
+\subtree{
+\title{Truncation modality on DoubleTT}
+
+\p{The codiscrete modality \em{in} DoubleTT induces an admissible modality
+\em{on} DoubleTT: a meta-level operation that truncates a type generically
+involving both object and morphism types to one involving only object types.
+This is useful for type checking because the object part of DoubleTT is a simple
+type theory, hence types and terms can be normalized using standard
+normalization-by-evaluation algorithms.}
+
+\p{The idea behind this meta-level modality, denoted #{\bigcirc}, is to apply
+the codiscrete functor to types, apply the unit of the codiscrete monad to
+terms, and then apply the computation rules for the codiscrete modality to
+normalize the result.}
+
+\p{To be more precise, we define #{\bigcirc} by structural induction on
+contexts, types, and terms, with the following definitions as base cases:
+
+\ul{
+  \li{on object types and terms:
+
+  \p{\centerfigs{
+  \prooftreeinline{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\vdash \Gamma\ \context}
+  \infer2{\Gamma \vdash \bigcirc \Ob_X := \Ob_{\coDisc(X)}\ \type}
+  }
+  #{\qquad\qquad}
+  \prooftreeinline{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \infer2{\Gamma \vdash \bigcirc x := \eta_X(x): \bigcirc \Ob_X}
+  }
+  }}
+  }
+
+  \li{on Hom types and terms:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash x, x': \Ob_X}
+  \infer2{\Gamma \vdash \bigcirc \Hom_X(x,x') := \Hom_{\coDisc(X)}(\bigcirc x, \bigcirc x')\ \type}
+  }
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash X\ \ob}
+  \hypo{\Gamma \vdash x, x': \Ob_X}
+  \hypo{\Gamma \vdash f: \Hom_X(x, x')}
+  \infer3{\Gamma \vdash \bigcirc f := \eta_X(f): \bigcirc \Hom_X(x,x')}
+  }
+  }
+
+  \li{on morphism types and terms:
+
+  \prooftree{
+  \hypo{\dbl{T} \vDash (P: X \proto Y)}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \hypo{\Gamma \vdash y: \Ob_Y}
+  \infer3{\Gamma \vdash \bigcirc P(x,y) := (\coDisc P)(\bigcirc x, \bigcirc y)\ \type}
+  }
+  \prooftree{
+  \hypo{\dbl{T} \vDash (P: X \proto Y)}
+  \hypo{\Gamma \vdash x: \Ob_X}
+  \hypo{\Gamma \vdash y: \Ob_Y}
+  \hypo{\Gamma \vdash p: P(x,y)}
+  \infer4{\Gamma \vdash \bigcirc p := \eta_P(p): \bigcirc P(x,y)}
+  }
+  }
+
+}
+
+}
+
+\p{For example, on a context, we can compute
+
+\prooftree{
+\hypo{\dbl{T} \vDash X\ \ob}
+\infer[dashed]1{\bigcirc [x: \Ob_X,\  y: \Ob_X,\ f: \Hom_X(x,y)] = [x: \Ob_X,\ y: \Ob_X,\ f: 1]}
+}
+
+}
+
+}
