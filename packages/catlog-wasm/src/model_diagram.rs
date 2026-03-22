@@ -13,7 +13,8 @@ use catlog::dbl::modal::ModalDblModelMapping;
 use catlog::dbl::model::{DblModel as _, DiscreteDblModel, FpDblModel, ModalDblModel, MutDblModel};
 use catlog::dbl::model_diagram as diagram;
 use catlog::dbl::model_morphism::DiscreteDblModelMapping;
-use catlog::one::FgCategory;
+use catlog::dbl::theory::{DblTheory as DblT, Unital};
+use catlog::one::{Category, FgCategory};
 use catlog::zero::{MutMapping, NameLookup, NameSegment, Namespace, QualifiedLabel, QualifiedName};
 
 use super::model::DblModel;
@@ -28,7 +29,8 @@ pub enum DblModelDiagramBox {
     /// A diagram in a model of a discrete double theory.
     Discrete(diagram::DblModelDiagram<DiscreteDblModelMapping, DiscreteDblModel>),
     /// A diagram in a model of a modal double theory.
-    Modal(diagram::DblModelDiagram<ModalDblModelMapping, ModalDblModel>),
+    /// TODO moar kind fixing
+    Modal(diagram::DblModelDiagram<ModalDblModelMapping, ModalDblModel<Unital>>),
 }
 
 /// Wasm binding for a diagram in a model of a double theory.
@@ -49,7 +51,7 @@ impl DblModelDiagram {
                 let model = DiscreteDblModel::new(theory.clone());
                 diagram::DblModelDiagram(mapping, model).into()
             }
-            DblTheoryBox::Modal(theory) => {
+            DblTheoryBox::ModalUnital(theory) => {
                 let mapping = Default::default();
                 let model = ModalDblModel::new(theory.clone());
                 diagram::DblModelDiagram(mapping, model).into()
@@ -92,22 +94,49 @@ impl DblModelDiagram {
 
     /// Adds a morphism to the diagram.
     pub fn add_mor(&mut self, decl: &DiagramMorDecl) -> Result<(), String> {
-        all_the_same!(match &mut self.diagram {
-            DblModelDiagramBox::[Discrete, Modal](diagram) => {
+        match &mut self.diagram {
+            DblModelDiagramBox::Discrete(diagram) => {
+                // let (mapping, model) = diagram.into();
+                // let mor_type = Elaborator.elab(&decl.mor_type)?;
+                // model.make_mor(decl.id.into(), mor_type.into());
+                // if let Some(dom) = decl.dom.as_ref().map(|ob| Elaborator.elab(ob)).transpose()? {
+                //     model.set_dom(decl.id.into(), dom);
+                // }
+                // if let Some(cod) = decl.cod.as_ref().map(|ob| Elaborator.elab(ob)).transpose()? {
+                //     model.set_cod(decl.id.into(), cod);
+                // }
+                // if let Some(over) =
+                //     decl.over.as_ref().map(|mor| Elaborator.elab(mor)).transpose()?
+                // {
+                //     mapping.assign_mor(decl.id.into(), over);
+                // }
+            }
+            DblModelDiagramBox::Modal(diagram) => {
                 let (mapping, model) = diagram.into();
-                let mor_type = Elaborator.elab(&decl.mor_type)?;
-                model.make_mor(decl.id.into(), mor_type);
+                let mor_type: catlog::one::ShortPath<
+                    catlog::dbl::modal::ModeApp<QualifiedName>,
+                    _,
+                > = Elaborator.elab(&decl.mor_type)?;
+                model.make_mor(decl.id.into(), mor_type.clone());
                 if let Some(dom) = decl.dom.as_ref().map(|ob| Elaborator.elab(ob)).transpose()? {
                     model.set_dom(decl.id.into(), dom);
                 }
                 if let Some(cod) = decl.cod.as_ref().map(|ob| Elaborator.elab(ob)).transpose()? {
+                    if !model.has_ob(&cod) {
+                        let ob_type = model.theory().tgt_type(&mor_type);
+                        if let Some(name) = cod.clone().generator() {
+                            model.add_ob(name, ob_type);
+                        }
+                    }
                     model.set_cod(decl.id.into(), cod);
                 }
-                if let Some(over) = decl.over.as_ref().map(|mor| Elaborator.elab(mor)).transpose()? {
+                if let Some(over) =
+                    decl.over.as_ref().map(|mor| Elaborator.elab(mor)).transpose()?
+                {
                     mapping.assign_mor(decl.id.into(), over);
                 }
             }
-        });
+        };
         if decl.name.is_empty() {
             Ok(())
         } else {

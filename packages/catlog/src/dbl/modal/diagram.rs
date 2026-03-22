@@ -10,6 +10,7 @@ use crate::dbl::{
     model::{InvalidDblModel, ModalDblModel, MutDblModel},
     model_diagram::*,
     model_morphism::InvalidDblModelMorphism,
+    theory::Unital,
 };
 use crate::one::{category::Category, graph::GraphMapping};
 use crate::validate;
@@ -21,7 +22,7 @@ use nonempty::NonEmpty;
 // use itertools::Either;
 
 /// A diagram is a model of a modal double theoruy.
-pub type ModalDblModelDiagram = DblModelDiagram<ModalDblModelMapping, ModalDblModel>;
+pub type ModalDblModelDiagram = DblModelDiagram<ModalDblModelMapping, ModalDblModel<Unital>>;
 
 /// A failure to be valid in a diagram in a model of a discrete double theory.
 #[cfg_attr(feature = "serde-wasm", declare)]
@@ -34,7 +35,7 @@ impl ModalDblModelDiagram {
     /// Assumes that the model is valid. If it is not, this function may panic.
     pub fn validate_in(
         &self,
-        model: &ModalDblModel,
+        model: &ModalDblModel<Unital>,
     ) -> Result<(), NonEmpty<InvalidModalDblModelDiagram>> {
         validate::wrap_errors(self.iter_invalid_in(model))
     }
@@ -42,7 +43,7 @@ impl ModalDblModelDiagram {
     /// Iterates over failures of the diagram to be valid in the given model.
     pub fn iter_invalid_in<'a>(
         &'a self,
-        model: &'a ModalDblModel,
+        model: &'a ModalDblModel<Unital>,
     ) -> impl Iterator<Item = InvalidModalDblModelDiagram> + 'a {
         let mut dom_errs = self.1.iter_invalid().peekable();
         // if dom_errs.peek().is_some() {
@@ -58,7 +59,7 @@ impl ModalDblModelDiagram {
     /// Infer missing data in the diagram from the model, where possible.
     ///
     /// Assumes that the model is valid.
-    pub fn infer_missing_from(&mut self, model: &ModalDblModel) {
+    pub fn infer_missing_from(&mut self, model: &ModalDblModel<Unital>) {
         let (mapping, domain) = self.into();
         // domain.infer_missing();
         // TODO is_vertex_assigned is expected QualifiedName but we git it ModalOb
@@ -85,6 +86,7 @@ mod tests {
     use crate::dbl::modal::{ModalDblModel, ModalMorType, ModalObType};
     use crate::dbl::model::MutDblModel;
     use crate::dbl::model_diagram::DblModelDiagram;
+    use crate::dbl::theory::Unital;
     use crate::stdlib::dec;
     use crate::stdlib::th_multicategory;
     use crate::validate::Validate;
