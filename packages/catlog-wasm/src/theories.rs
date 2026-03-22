@@ -505,7 +505,7 @@ impl ThPowerSystem {
 
 /// A theory of the DEC
 #[wasm_bindgen]
-pub struct ThDEC(Rc<theory::ModalDblTheory>);
+pub struct ThDEC(Rc<theory::ModalDblTheory<Unital>>);
 
 #[wasm_bindgen]
 impl ThDEC {

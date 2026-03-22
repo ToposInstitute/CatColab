@@ -1,7 +1,7 @@
 module TestDecapodes
 
 using CatColabInterop
-using DiagrammaticEquations, Decapodes, ACSets, CombinatorialSpaces, ComponentArrays, StaticArrays, LinearAlgebra, Distributions
+using DiagrammaticEquations, Decapodes, ACSets, CombinatorialSpaces, ComponentArrays, StaticArrays, LinearAlgebra, Distributions, OrdinaryDiffEq
 
 using HTTP, Test, Oxygen, JSON3
 

@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use crate::dbl::{model::*, theory::*};
 use crate::one::{Path, QualifiedPath};
-use crate::zero::{QualifiedName, name};
+use crate::zero::{name, QualifiedName};
 
 /// The positive self-loop.
 ///
@@ -167,7 +167,6 @@ pub fn sir_petri(th: Rc<ModalDblTheory<Unital>>) -> ModalDblModel<Unital> {
     model
 }
 
-<<<<<<< HEAD
 /// An example of Lotka–Volterra dynamics viewed as a non-unital theory for a symmetric multicategory.
 pub fn lotka_volterra_dynamics(th: Rc<ModalDblTheory<NonUnital>>) -> ModalDblModel<NonUnital> {
     let ob_type = ModalObType::new(name("State"));
@@ -234,10 +233,9 @@ pub fn lotka_volterra_dynamics(th: Rc<ModalDblTheory<NonUnital>>) -> ModalDblMod
     );
 
     model
-
 }
 
-pub fn dec(th: Rc<ModalDblTheory>) -> ModalDblModel {
+pub fn dec(th: Rc<ModalDblTheory<Unital>>) -> ModalDblModel<Unital> {
     let ob_type = ModalObType::new(name("Object"));
     let mut model = ModalDblModel::new(th);
     let forms = vec![name("Form0"), name("Form1"), name("Form2")];

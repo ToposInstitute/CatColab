@@ -12,6 +12,7 @@ use catlog::dbl::modal::ModalDblModelMapping;
 use catlog::dbl::model::{DblModel as _, DiscreteDblModel, FpDblModel, ModalDblModel, MutDblModel};
 use catlog::dbl::model_diagram as diagram;
 use catlog::dbl::model_morphism::DiscreteDblModelMapping;
+use catlog::dbl::theory::Unital;
 use catlog::one::FgCategory;
 use catlog::zero::{MutMapping, NameLookup, NameSegment, Namespace, QualifiedLabel, QualifiedName};
 use notebook_types::current::*;
@@ -28,7 +29,8 @@ pub enum DblModelDiagramBox {
     /// A diagram in a model of a discrete double theory.
     Discrete(diagram::DblModelDiagram<DiscreteDblModelMapping, DiscreteDblModel>),
     /// A diagram in a model of a modal double theory.
-    Modal(diagram::DblModelDiagram<ModalDblModelMapping, ModalDblModel>),
+    /// TODO moar kind fixing
+    Modal(diagram::DblModelDiagram<ModalDblModelMapping, ModalDblModel<Unital>>),
 }
 
 /// Wasm binding for a diagram in a model of a double theory.
@@ -49,7 +51,7 @@ impl DblModelDiagram {
                 let model = DiscreteDblModel::new(theory.clone());
                 diagram::DblModelDiagram(mapping, model).into()
             }
-            DblTheoryBox::Modal(theory) => {
+            DblTheoryBox::ModalUnital(theory) => {
                 let mapping = Default::default();
                 let model = ModalDblModel::new(theory.clone());
                 diagram::DblModelDiagram(mapping, model).into()
@@ -331,40 +333,34 @@ mod tests {
 
         let mut diagram = DblModelDiagram::new(&th);
         let [x, y, var] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
-        assert!(
-            diagram
-                .add_ob(&DiagramObDecl {
-                    name: "var".into(),
-                    id: var,
-                    ob_type: ObType::Basic("AttrType".into()),
-                    over: Some(Ob::Basic(attr_type.to_string()))
-                })
-                .is_ok()
-        );
+        assert!(diagram
+            .add_ob(&DiagramObDecl {
+                name: "var".into(),
+                id: var,
+                ob_type: ObType::Basic("AttrType".into()),
+                over: Some(Ob::Basic(attr_type.to_string()))
+            })
+            .is_ok());
         let [a, b] = [Uuid::now_v7(), Uuid::now_v7()];
         for (name, indiv, f) in [("x", x, a), ("y", y, b)] {
-            assert!(
-                diagram
-                    .add_ob(&DiagramObDecl {
-                        name: name.into(),
-                        id: indiv,
-                        ob_type: ObType::Basic("Entity".into()),
-                        over: Some(Ob::Basic(entity.to_string())),
-                    })
-                    .is_ok()
-            );
-            assert!(
-                diagram
-                    .add_mor(&DiagramMorDecl {
-                        name: "".into(),
-                        id: f,
-                        mor_type: MorType::Basic("Attr".into()),
-                        dom: Some(Ob::Basic(indiv.to_string())),
-                        cod: Some(Ob::Basic(var.to_string())),
-                        over: Some(Mor::Basic(attr.to_string())),
-                    })
-                    .is_ok()
-            );
+            assert!(diagram
+                .add_ob(&DiagramObDecl {
+                    name: name.into(),
+                    id: indiv,
+                    ob_type: ObType::Basic("Entity".into()),
+                    over: Some(Ob::Basic(entity.to_string())),
+                })
+                .is_ok());
+            assert!(diagram
+                .add_mor(&DiagramMorDecl {
+                    name: "".into(),
+                    id: f,
+                    mor_type: MorType::Basic("Attr".into()),
+                    dom: Some(Ob::Basic(indiv.to_string())),
+                    cod: Some(Ob::Basic(var.to_string())),
+                    over: Some(Mor::Basic(attr.to_string())),
+                })
+                .is_ok());
         }
         assert_eq!(diagram.ob_generator_label(&var.into()), Some("var".into()));
         assert_eq!(diagram.ob_generator_with_label(&"var".into()), NameLookup::Unique(var.into()));
@@ -386,40 +382,34 @@ mod tests {
         let mut diagram = DblModelDiagram::new(&th);
         let [u, udot, dot, lapl] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
 
-        assert!(
-            diagram
-                .add_ob(&DiagramObDecl {
-                    name: "u".into(),
-                    id: u,
-                    ob_type: ObType::Basic("Form0".into()).into(),
-                    over: Some(Ob::Basic(form0.to_string()))
-                })
-                .is_ok()
-        );
+        assert!(diagram
+            .add_ob(&DiagramObDecl {
+                name: "u".into(),
+                id: u,
+                ob_type: ObType::Basic("Form0".into()).into(),
+                over: Some(Ob::Basic(form0.to_string()))
+            })
+            .is_ok());
 
-        assert!(
-            diagram
-                .add_ob(&DiagramObDecl {
-                    name: "udot".into(),
-                    id: udot,
-                    ob_type: ObType::Basic("Form0".into()).into(),
-                    over: Some(Ob::Basic(form0.to_string()))
-                })
-                .is_ok()
-        );
+        assert!(diagram
+            .add_ob(&DiagramObDecl {
+                name: "udot".into(),
+                id: udot,
+                ob_type: ObType::Basic("Form0".into()).into(),
+                over: Some(Ob::Basic(form0.to_string()))
+            })
+            .is_ok());
 
-        assert!(
-            diagram
-                .add_mor(&DiagramMorDecl {
-                    name: "".into(),
-                    id: dot,
-                    mor_type: MorType::Basic("Form0".into()),
-                    dom: Some(Ob::Basic(u.to_string())),
-                    cod: Some(Ob::Basic(udot.to_string())),
-                    over: Some(Mor::Basic(op1dot.to_string())),
-                })
-                .is_ok()
-        );
+        assert!(diagram
+            .add_mor(&DiagramMorDecl {
+                name: "".into(),
+                id: dot,
+                mor_type: MorType::Basic("Form0".into()),
+                dom: Some(Ob::Basic(u.to_string())),
+                cod: Some(Ob::Basic(udot.to_string())),
+                over: Some(Mor::Basic(op1dot.to_string())),
+            })
+            .is_ok());
     }
 
     #[test]
@@ -441,102 +431,85 @@ mod tests {
             Uuid::now_v7(),
         ];
 
-        assert!(
-            diagram
-                .add_ob(&DiagramObDecl {
-                    name: "u".into(),
-                    id: u0,
-                    ob_type: ObType::Basic("Form0".into()).into(),
-                    over: Some(Ob::Basic(form0.to_string())),
-                })
-                .is_ok()
-        );
+        assert!(diagram
+            .add_ob(&DiagramObDecl {
+                name: "u".into(),
+                id: u0,
+                ob_type: ObType::Basic("Form0".into()).into(),
+                over: Some(Ob::Basic(form0.to_string())),
+            })
+            .is_ok());
 
-        assert!(
-            diagram
-                .add_ob(&DiagramObDecl {
-                    name: "v0".into(),
-                    id: v0,
-                    ob_type: ObType::Basic("Form0".into()).into(),
-                    over: Some(Ob::Basic(form0.to_string())),
-                })
-                .is_ok()
-        );
+        assert!(diagram
+            .add_ob(&DiagramObDecl {
+                name: "v0".into(),
+                id: v0,
+                ob_type: ObType::Basic("Form0".into()).into(),
+                over: Some(Ob::Basic(form0.to_string())),
+            })
+            .is_ok());
 
-        assert!(
-            diagram
-                .add_ob(&DiagramObDecl {
-                    name: "v1".into(),
-                    id: v0,
-                    ob_type: ObType::Basic("Form1".into()).into(),
-                    over: Some(Ob::Basic(form1.to_string())),
-                })
-                .is_ok()
-        );
+        assert!(diagram
+            .add_ob(&DiagramObDecl {
+                name: "v1".into(),
+                id: v0,
+                ob_type: ObType::Basic("Form1".into()).into(),
+                over: Some(Ob::Basic(form1.to_string())),
+            })
+            .is_ok());
 
-        assert!(
-            diagram
-                .add_ob(&DiagramObDecl {
-                    name: "result".into(),
-                    id: result,
-                    ob_type: ObType::Basic("Form1".into()).into(),
-                    over: Some(Ob::Basic(form1.to_string())),
-                })
-                .is_ok()
-        );
+        assert!(diagram
+            .add_ob(&DiagramObDecl {
+                name: "result".into(),
+                id: result,
+                ob_type: ObType::Basic("Form1".into()).into(),
+                over: Some(Ob::Basic(form1.to_string())),
+            })
+            .is_ok());
 
-        assert!(
-            diagram
-                .add_mor(&DiagramMorDecl {
-                    name: "".into(),
-                    id: op1d,
-                    mor_type: MorType::Basic("Multihom".into()),
-                    dom: Some(Ob::List {
-                        modality: Modality::List,
-                        objects: vec![Some(Ob::Basic(form0.to_string()))]
-                    }),
-                    cod: Some(Ob::Basic(result.to_string())),
-                    over: Some(Mor::Basic(op1d.to_string())),
-                })
-                .is_ok()
-        );
+        assert!(diagram
+            .add_mor(&DiagramMorDecl {
+                name: "".into(),
+                id: op1d,
+                mor_type: MorType::Basic("Multihom".into()),
+                dom: Some(Ob::List {
+                    modality: Modality::List,
+                    objects: vec![Some(Ob::Basic(form0.to_string()))]
+                }),
+                cod: Some(Ob::Basic(result.to_string())),
+                over: Some(Mor::Basic(op1d.to_string())),
+            })
+            .is_ok());
 
-        assert!(
-            diagram
-                .add_mor(&DiagramMorDecl {
-                    name: "".into(),
-                    id: wedge00,
-                    mor_type: MorType::Basic("Multihom".into()),
-                    dom: Some(Ob::List {
-                        modality: Modality::List,
-                        objects: vec![
-                            Some(Ob::Basic(u0.to_string())),
-                            Some(Ob::Basic(u0.to_string()))
-                        ]
-                    }),
-                    cod: Some(Ob::Basic(wedge00result.to_string())),
-                    over: Some(Mor::Basic(op2wedge.to_string())),
-                })
-                .is_ok()
-        );
+        assert!(diagram
+            .add_mor(&DiagramMorDecl {
+                name: "".into(),
+                id: wedge00,
+                mor_type: MorType::Basic("Multihom".into()),
+                dom: Some(Ob::List {
+                    modality: Modality::List,
+                    objects: vec![Some(Ob::Basic(u0.to_string())), Some(Ob::Basic(u0.to_string()))]
+                }),
+                cod: Some(Ob::Basic(wedge00result.to_string())),
+                over: Some(Mor::Basic(op2wedge.to_string())),
+            })
+            .is_ok());
 
-        assert!(
-            diagram
-                .add_mor(&DiagramMorDecl {
-                    name: "".into(),
-                    id: wedge01,
-                    mor_type: MorType::Basic("Multihom".into()),
-                    dom: Some(Ob::List {
-                        modality: Modality::List,
-                        objects: vec![
-                            Some(Ob::Basic(wedge00result.to_string())),
-                            Some(Ob::Basic(v1.to_string()))
-                        ]
-                    }),
-                    cod: Some(Ob::Basic(result.to_string())),
-                    over: Some(Mor::Basic(op2wedge.to_string())),
-                })
-                .is_ok()
-        );
+        assert!(diagram
+            .add_mor(&DiagramMorDecl {
+                name: "".into(),
+                id: wedge01,
+                mor_type: MorType::Basic("Multihom".into()),
+                dom: Some(Ob::List {
+                    modality: Modality::List,
+                    objects: vec![
+                        Some(Ob::Basic(wedge00result.to_string())),
+                        Some(Ob::Basic(v1.to_string()))
+                    ]
+                }),
+                cod: Some(Ob::Basic(result.to_string())),
+                over: Some(Mor::Basic(op2wedge.to_string())),
+            })
+            .is_ok());
     }
 }

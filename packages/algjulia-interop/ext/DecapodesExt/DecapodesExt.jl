@@ -134,7 +134,7 @@ struct DecapodesSystem
     duration::Int
     generate::Any
     scalars::Dict{Symbol, Any}
-    plotVariables::Dict{String, Bool}
+    plotVariables::Dict{String, Any}
     uuiddict::Dict{Symbol, String}
 end
 
@@ -181,7 +181,7 @@ function DecapodesSystem(a::Types.Analysis; hodge=GeometricHodge())
     symb2uuid = Dict([ v => k for (k, v) in pairs(uuid2symb)])
     
     # return the system
-    return DecapodesSystem(pode, geometry, u0, duration, sys_generate, Dict(), Dict(), symb2uuid) 
+    return DecapodesSystem(pode, geometry, u0, duration, sys_generate, Dict(), plotVariables, symb2uuid) 
 end
 
 # SIMULATION
@@ -206,9 +206,44 @@ end
 
 """ for the variables in a system, associate them to their state values over the duration of the simulation """
 function variables_state(soln::ODESolution, system::DecapodesSystem)
-    plottedVars = [ k for (k, v) in system.plotVariables if v == true ]
+    # plottedVars = [ k for (k, v) in system.plotVariables if v == true ] # TODO we just pass a list of variables that we're plotting
     uuid2symb = Dict([ v => k for (k, v) in system.uuiddict]) # TODO why reverse again?
-    Dict([ String(uuid2symb[var]) => state_entire_sim(soln, system, uuid2symb[var]) for var ∈ plottedVars ])
+    Dict([ String(uuid2symb[var]) => state_entire_sim(soln, system, uuid2symb[var]) for var ∈ system.plotVariables ])
+end
+
+
+""" given a simulation, a domain, and a variable, gets the state values over the duration of a simulation. 
+Called by `variables_state`[@ref] """
+state_entire_sim(soln::ODESolution, system::DecapodesSystem, var::Symbol) = [state_at_time(soln, system, var, i) for i in 1:length(soln.t)]
+
+# TODO type `points`
+function state_at_time(soln::ODESolution, system::DecapodesSystem, plotvar::Symbol, t::Int)
+    @match system.geometry.domain begin
+        # TODO check time indexing here
+        domain::Rectangle => state_at_time(soln, domain, plotvar, t) 
+        domain::Sphere => state_at_time(soln, domain, plotvar, t, points(system)) 
+        _ => throw(ImplError("state_at_time function for domain $domain"))
+    end
+end
+
+function state_at_time(soln::ODESolution, domain::Rectangle, var::Symbol, t::Int)
+    (x, y) = indexing_bounds(domain)
+    [SVector(i, j, getproperty(soln.u[t], var)[(x+1)*(i-1) + j]) for i in 1:x+1, j in 1:y+1]
+end
+
+# TODO just separated this from the SimResult function and added type parameters, but need to generalize
+function grid(pt3::Point3, grid_size::Vector{Int})
+    pt2 = [(pt3[1]+1)/2, (pt3[2]+1)/2]
+    [round(Int, pt2[1]*grid_size[1]), round(Int, pt2[2]*grid_size[2])]
+end
+
+function state_at_time(soln::ODESolution, domain::Sphere, var::Symbol, t::Int, points)
+    l , _ = indexing_bounds(domain) # TODO this is hardcoded to return 100, 100
+    northern_indices = filter(i -> points[i][3] > 0, keys(points)) 
+    map(northern_indices) do n
+        i, j = grid(points[n], [l, l]) # TODO
+        SVector(i, j, getproperty(soln.u[t], var)[n])
+    end
 end
 
 function endpoint(::Val{:Decapodes})
@@ -219,6 +254,12 @@ function endpoint(::Val{:Decapodes})
         f = Base.invokelatest(simulator, system.geometry.dualmesh, system.generate, DiagonalHodge())
         soln = run_sim(f, system.init, system.duration, ComponentArray(k=0.5,))
         SimulationResult(soln, system)
+    end
+end
+
+function endpoint(::Val{:DecapodesOptions})
+    @get "/decapodes-options" function (req::HTTP.Request)
+        supported_decapodes_geometries()
     end
 end
 

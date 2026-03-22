@@ -38,8 +38,10 @@ end
 GaussianIC(r::Rectangle) = GaussianIC(r, GaussianData(r))
 TaylorVortexIC(d::Sphere) = TaylorVortexIC(d, TaylorVortexData())
 
-function initial_conditions(ic_specs::AbstractDict, geometry::Geometry, uuid2symb::Dict{String, Symbol})
-    dict = Dict([uuid2symb[string(uuid)] => ic_specs[string(uuid)] for uuid ∈ keys(ic_specs)]...)
+# raw ics
+function initial_conditions(ic_specs::Dict{String, Any}, geometry::Geometry, uuid2symb::Dict{String, Symbol})
+    dict = Dict(uuid2symb[string(uuid)] => associate("Gaussian", geometry) for uuid ∈ keys(uuid2symb))
+    # dict = Dict([uuid2symb[string(uuid)] => ic_specs[string(uuid)] for uuid ∈ keys(ic_specs)]...)
     initial_conditions(dict, geometry) # the resulting sim will only have (C,) as initial conditions
 end
 
@@ -65,7 +67,7 @@ export initial_conditions
 """ associates the values in a dictionary to their initial condition flags, and passes the output to initial_conditions
 """
 function initial_conditions(ics::Dict{Symbol, String}, geometry::Geometry) 
-    ic_dict = Dict([var => associate(ics[var], geometry) for var in keys(ics)]...)
+    ic_dict = Dict(var => associate(ics[var], geometry) for var in keys(ics))
     # Now we have a mapping between variables and their initial condition specs.
     initial_conditions(ic_dict, geometry)
 end
@@ -84,9 +86,7 @@ function initial_conditions(ics::GaussianIC, geometry::Geometry)
     return c
 end
 
-function vort_ring(ics::TaylorVortexIC, geometry::Geometry)
-    vort_ring(ics.d, ics.ξ.lat, ics.ξ.vortices, ics.ξ.p, geometry.dualmesh, taylor_vortex)
-end
+vort_ring(ics::TaylorVortexIC, geometry::Geometry) = vort_ring(ics.d, ics.ξ.lat, ics.ξ.vortices, ics.ξ.p, geometry.dualmesh, taylor_vortex)
 
 function initial_conditions(ics::TaylorVortexIC, geometry::Geometry)
     # TODO prefer not to load `s0` here but che sara sara

@@ -1,6 +1,10 @@
+import { lazy } from "solid-js";
 import { ThDEC } from "catlog-wasm";
 import { type DiagramAnalysisMeta, Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
+
+const ObjectCellEditor = lazy(() => import("../../model/object_cell_editor"));
+const MorphismCellEditor = lazy(() => import("../../model/morphism_cell_editor"));
 
 export default function createThDECTheory(theoryMeta: TheoryMeta): Theory {
     const thDEC = new ThDEC();
@@ -25,7 +29,8 @@ export default function createThDECTheory(theoryMeta: TheoryMeta): Theory {
             {
                 tag: "ObType",
                 obType: { tag: "Basic", content: "Object" },
-                name: "Form",
+                editor: ObjectCellEditor,
+				name: "Form",
                 description: "State of the system",
                 shortcut: ["O"],
             },
@@ -35,7 +40,8 @@ export default function createThDECTheory(theoryMeta: TheoryMeta): Theory {
                     tag: "Basic",
                     content: "Multihom",
                 },
-                name: "Operation",
+                editor: MorphismCellEditor, 
+				name: "Operation",
                 description: "Event causing change of state",
                 shortcut: ["M"],
             },
