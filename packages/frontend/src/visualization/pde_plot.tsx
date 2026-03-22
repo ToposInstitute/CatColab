@@ -29,12 +29,13 @@ export function PDEPlot2D(props: { data: PDEPlotData2D }) {
     const min = (x: number, y: number) => Math.min(x, y);
     const max = (x: number, y: number) => Math.max(x, y);
 
+    console.log(props.data);
     const firstState = (): StateVarAtTime[] => {
         // FIXME: Shouldn't just take the first one!
-        const keys = Object.keys(props.data.state);
+        const keys = Object.keys(props.data.data.state);
         invariant(keys.length === 1);
         const key = keys[0];
-        const state = key && props.data.state[key];
+        const state = key && props.data.data.state[key];
         invariant(state);
         return state;
     };
@@ -53,9 +54,10 @@ export function PDEPlot2D(props: { data: PDEPlotData2D }) {
     const [timeIndex, setTimeIndex] = createSignal(0);
 
     // Animate the heat map by varying the time index to display.
+    console.log(props.data.data);
     makeTimer(
         () => {
-            const timeLength = props.data.time.length;
+            const timeLength = props.data.data.time.length;
             setTimeIndex((timeIndex() + 5) % timeLength);
         },
         10,

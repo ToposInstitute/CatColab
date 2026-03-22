@@ -1,6 +1,6 @@
-// import Loader from "lucide-solid/icons/loader";
+import Loader from "lucide-solid/icons/loader";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
-import { createMemo, createResource, For, Match, Show, Switch } from "solid-js";
+import { createMemo, createResource, createEffect, For, Match, Show, Switch } from "solid-js";
 
 import {
     BlockTitle,
@@ -14,8 +14,9 @@ import {
 } from "catcolab-ui-components";
 import type { ModelDiagramPresentation, ModelPresentation, QualifiedName } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
+import { uniqueIndexArray } from "../../util/indexing";
 import type { LiveDiagramDoc } from "../../diagram";
-// import { PDEPlot2D } from "../../visualization";
+import { PDEPlot2D } from "../../visualization";
 import type { DecapodesAnalysisContent } from "./simulator_types";
 
 import "./decapodes.css";
@@ -34,6 +35,43 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
             }) ?? [],
         [],
     );
+
+    const [options] = createResource(async () => {
+        const response = await fetch("http://127.0.0.1:8080/decapodes-options");
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        return {
+            domains: uniqueIndexArray(data.domains, (domain) => domain.name),
+        };
+    });
+
+	// TODO verify
+	createEffect(() => {
+    const opts = options();
+    const domain = props.content.domain;
+    
+    if (opts && domain) {
+        const domainConfig = opts.domains.get(domain);
+        const defaultCondition = domainConfig?.initialConditions[0];
+        
+        if (defaultCondition) {
+            props.changeContent((content) => {
+                // Only set defaults for variables that don't already have a condition
+                variables().forEach((varId) => {
+                    if (!content.initialConditions[varId]) {
+                        content.initialConditions[varId] = defaultCondition;
+                    }
+                });
+            });
+        }
+    }
+});
+
 
     const variables = (): QualifiedName[] => elaboratedDiagram()?.obGenerators() ?? [];
 
@@ -68,8 +106,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                 if (!props.content.domain) {
                     return [];
                 }
-                //return options()?.domains.get(props.content.domain)?.initialConditions ?? [];
-                return [];
+                return options()?.domains.get(props.content.domain)?.initialConditions ?? [];
             },
             content: (id) => props.content.initialConditions[id] ?? null,
             setContent: (id, value) =>
@@ -104,17 +141,6 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         }),
     ];
 
-    // TODO return rerun sim
-    const RestartOrRerunButton = () => (
-        <Switch>
-            <Match when={true}>
-                <IconButton tooltip="Re-run the simulation">
-                    <RotateCcw size={16} />
-                </IconButton>
-            </Match>
-        </Switch>
-    );
-
     const DomainConfig = (domains: Map<string, Domain>) => (
         <div class="decapodes-domain">
             <span>Domain:</span>
@@ -127,8 +153,8 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                             return;
                         }
                         content.domain = domain;
-                        //content.mesh = options()?.domains.get(domain)?.meshes[0] ?? null;
-                        content.mesh = null;
+                        content.mesh = options()?.domains.get(domain)?.meshes[0] ?? null;
+                        // content.mesh = null;
                         content.initialConditions = {};
                     })
                 }
@@ -159,17 +185,24 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         </div>
     );
 
-    const [res] = createResource(
+    const [res, { refetch }] = createResource(
         () => {
             const model = props.liveDiagram.liveModel.elaboratedModel();
             const diagram = props.liveDiagram.elaboratedDiagram();
-            if (model && diagram) {
+			const opts = options();
+            if (model && diagram && opts) {
                 return { model, diagram };
             }
         },
 
-        // TODO pass in
         async ({ model, diagram }) => {
+            const { domain, mesh, initialConditions, plotVariables, _scalars, duration } =
+                props.content;
+            if (domain === null || mesh === null || !Object.values(plotVariables).some((x) => x)) {
+                return undefined;
+            }
+
+			console.log(props.content);
             const response = await fetch("http://127.0.0.1:8080/decapodes", {
                 method: "POST",
                 headers: {
@@ -178,6 +211,16 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                 body: JSON.stringify({
                     model: model.presentation(),
                     diagram: diagram.presentation(),
+                    analysis: {
+                        duration,
+                        plotVariables: Object.keys(props.content.plotVariables).filter(
+                            (v) => props.content.plotVariables[v],
+                        ),
+                        domain,
+                        mesh,
+                        initialConditions: { ...initialConditions },
+                        scalars: {},
+                    },
                 }),
             });
 
@@ -189,17 +232,27 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         },
     );
 
+	const RestartOrRerunButton = () => (
+    <Switch>
+        <Match when={res.loading}>
+            <IconButton>
+                <Loader size={16} />
+            </IconButton>
+        </Match>
+        <Match when={true}>
+            <IconButton onClick={() => refetch()} tooltip="Re-run the simulation">
+                <RotateCcw size={16} />
+            </IconButton>
+        </Match>
+    </Switch>
+);
+
     // TODO return `options()` to Show when
     return (
         <div class="simulation">
             <BlockTitle title="Simulation" actions={RestartOrRerunButton()} />
             <Foldable title="Parameters" defaultExpanded>
-                <Show when={true}>
-                    {(_options) => {
-                        //DomainConfig(options().domains)
-                        return DomainConfig(new Map());
-                    }}
-                </Show>
+                <Show when={options()}>{(opts) => DomainConfig(opts().domains)}</Show>
                 <div class="parameters">
                     <FixedTableEditor rows={variables()} schema={variableSchema} />
                     <FixedTableEditor rows={scalars()} schema={scalarSchema} />
@@ -221,23 +274,17 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                         {"Cannot run the simulation because the diagram is invalid"}
                     </ErrorAlert>
                 </Match>
-                <Match when={res()}>
-                    {(data) => {
-                        console.log(data());
-                        return <span>"!"</span>;
-                    }}
-                </Match>
+                <Match when={res()}>{(data) => <PDEPlot2D data={data()} />}</Match>
             </Switch>
         </div>
-        // TODO return PDEPlot2D
     );
 }
 
 /** Options supported by Decapodes, defined by the Julia service. */
-// type SimulationOptions = {
-//     /** Geometric domains supported by Decapodes. */
-//     domains: Domain[];
-// };
+type SimulationOptions = {
+    /** Geometric domains supported by Decapodes. */
+    domains: Domain[];
+};
 
 /** A geometric domain and its allow discretizations. */
 type Domain = {
