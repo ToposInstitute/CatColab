@@ -4,6 +4,7 @@ use crate::dbl::discrete::DblModelMorphism;
 use crate::dbl::modal::{ModalDblModel, ModalMor, ModalOb};
 use crate::dbl::model::DblModel;
 use crate::dbl::model_morphism::InvalidDblModelMorphism;
+use crate::dbl::theory::Unital;
 use crate::one::{FpFunctorData, InvalidFpFunctor};
 use crate::validate::{self, Validate};
 use crate::zero::{HashColumn, MutMapping, QualifiedName};
@@ -40,8 +41,9 @@ impl ModalDblModelMapping {
 }
 
 /// A morphism between models of a modal double theory.
+/// TODO kinds are fixed
 pub type ModalDblModelMorphism<'a> =
-    DblModelMorphism<'a, ModalDblModelMapping, ModalDblModel, ModalDblModel>;
+    DblModelMorphism<'a, ModalDblModelMapping, ModalDblModel<Unital>, ModalDblModel<Unital>>;
 
 impl<'a> ModalDblModelMorphism<'a> {
     /// Iterates over failures of the mapping to be a model morphism.

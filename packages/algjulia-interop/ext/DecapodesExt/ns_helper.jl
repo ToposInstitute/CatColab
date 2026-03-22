@@ -20,7 +20,8 @@ Find n equispaced points at the given latitude.
 function ring_centers(lat, n, radius=1.0)
   ϕs = range(0.0, 2π; length=n+1)[1:n]
   map(ϕs) do ϕ
-    v_sph = Spherical(radius, lat, ϕ)
+    # XXX not defined
+    v_sph = CoordRefSystems.Spherical(radius, lat, ϕ)
     v_crt = convert(Cartesian, v_sph)
     Point3D(v_crt.x.val, v_crt.y.val, v_crt.z.val)
   end
