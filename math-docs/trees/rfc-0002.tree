@@ -8,25 +8,25 @@
 \title{Summary}
 
 \p{DoubleTT is a type theory for specifying models of double theories. It
-combines standard judgments and rules of dependent type theory, such as record
-types, with specialized rules for double-categorical models, such as type
-constructors for object and morphism types. A key design objective is to enable
-composing models by identifying their objects, an instance of the "variable
-sharing" paradigm of composition. To perform such compositions, DoubleTT uses
-the type-theoretic concepts of record types and singleton types, along with a
-normalization-by-evaluation algorithm.}
+combines standard judgments and rules of dependent type theory, such as
+dependent records, with specialized rules for double-categorical models, such as
+type constructors for object and morphism types. A key design objective is to
+enable composing models by identifying their objects, an instance of the
+"variable sharing" paradigm of composition. To perform such compositions,
+DoubleTT uses the type-theoretic concepts of record types and singleton types,
+along with a normalization-by-evaluation algorithm.}
 
 \subtree{
 \taxon{Remark}
 \title{History of this document}
 
-\p{Being a kind of specification, an RFC is normally written \em{before} its
+\p{An RFC, being a specification, is normally written \em{before} its
 implementation. This RFC is unusual in that it was written (by Evan Patterson)
 after DoubleTT had already been implemented (by Owen Lynch). The purpose of
 writing the RFC was to understand the implementation well enough for it to be
 extended by the author and others. As documentation, it is not really accurate.
-It does not describe everything in the original implementation, while also
-specifying new features (lists, operations) not present in the original
+It does not describe everything in the original implementation, while also it
+specifies new features (lists, operations) not present in the original
 implementation. In that sense, it \em{is} in the spirit of an RFC, representing
 a design at a particular point in time, as understood by a particular person.}
 
@@ -60,11 +60,12 @@ languages. It also admits a powerful and flexible extension through the
 tools like \code{egg} and \code{egglog}.}
 
 \p{A union-find is a data structure for storing and manipulating equivalence
-classes. No element of an equivalence class is privileged; any representative
-will do as well as any other. While rarely given a second thought in
+classes. No element of an equivalence class is privileged; any representative of
+the class will do as well as any other. While rarely given a second thought in
 mathematics, this feature is a nuisance in implementation, as the only way to
-display an element is by giving it some name, but an equivalence class offers no
-guidance on which name to choose.}
+display an element is by giving it some name, yet an equivalence class offers no
+guidance on which name to choose. Most symmetric would be to display \em{all}
+the names, but that would also be confusing and verbose.}
 
 \p{DoubleTT sidesteps this problem by not explicitly constructing equivalence
 classes at all. Instead, it uses nested record types along with singleton types
@@ -73,8 +74,8 @@ form). In a typical usage, the user wanting to instantiate two models, while
 sharing a variable between them, creates a new variable in the top-level record
 type and then, via singleton types, specializes both variables in the
 instantiated models to be equal to the new variable. This hierarchical
-construction breaks the symmetry: the name of the top-level variable is the
-canonical name.}
+construction of a colimit breaks the symmetry: the name of the top-level
+variable is the canonical name.}
 
 \p{In CatColab, we envision users building complex models by recursively
 composing simpler models. Thus, we must manage not just colimits, but colimits
@@ -89,9 +90,9 @@ CatColab, complementing the structure editor based on interactive notebooks. To
 be more precise, DoubleTT encompasses both formats. It has both a text
 elaborator and notebook elaborator, converting notation (plain text or a
 notebook) into a common intermediate representation (syntax). A single evaluator
-then converts syntax into values. This design is in keeping with "semantics
-first" philosophy of CatColab, in which surface syntax is secondary to
-categorical semantics.}
+then converts syntax type and terms into value types and terms, respectively.
+This design is in keeping with the "semantics first" philosophy of CatColab,
+making surface syntax secondary to categorical semantics.}
 
 }
 
@@ -188,29 +189,6 @@ DoubleTT has the four standard sorts (meta types) of dependent type theory:
 In addition, there are judgments of equality between substitutions, between
 types, and between terms. Thus, DoubleTT has the sorts and judgments of a
 standard dependent type theory (see, e.g., [Angiuli & Gratzer](principles-dtt)).
-
-}
-
-\subtree{
-\title{Alternative judgment structures}
-\taxon{Remark}
-
-\p{Another approach to DoubleTT is to introduce a base sort for object types,
-denoted #{\vdash A\ \type_0} or #{\vdash A\ \ob\,\type}, along with a coercion
-to the general sort for types:
-
-\prooftree{
-\hypo{\Gamma\ \context}
-\hypo{\vdash A\ \type_0}
-\infer2{\Gamma \vdash A\ \type}
-}
-
-This approach has the virtue of making explicit that object types in DoubleTT do
-not depend on contexts, i.e., object types are the types of a \em{simple type
-theory}. However, we find that we can achieve much the same benefit by working
-in a standard dependent type theory that includes a \em{codiscrete modality}.
-
-}
 
 }
 
@@ -767,6 +745,87 @@ contexts, types, and terms, with the following definitions as base cases:
 }
 
 }
+
+}
+
+}
+
+\subtree{
+\title{Examples}
+
+\p{For numerous examples of DoubleTT in both the plain text and notebook
+formats, see the
+[\code{examples}](https://github.com/ToposInstitute/CatColab/tree/13fa7edf9cbb95a691889b9f37e3dc4cf68444e5/packages/catlog/examples/tt)
+folder in the CatColab repository.}
+
+}
+
+\subtree{
+\title{Rationale and alternatives}
+
+\subtree{
+\taxon{Alternative}
+\title{Two-level type theory}
+
+\p{We have seen that DoubleTT uses the standard sorts and judgments of dependent
+type theory. Another approach would be to introduce a base sort for object
+types, denoted #{\vdash A\ \type_0} or #{\vdash A\ \ob\,\type}, along with a
+coercion to the general sort for types:
+
+\prooftree{
+\hypo{\Gamma\ \context}
+\hypo{\vdash A\ \type_0}
+\infer2{\Gamma \vdash A\ \type}
+}
+
+This approach, a kind of \em{two-level type theory}, has the virtue of making
+explicit that object types in DoubleTT do not depend on contexts, i.e., object
+types are the types of a \em{simple type theory}. However, we find that we can
+achieve much the same benefit by working in a standard dependent type theory
+that admits a truncation modality.}
+
+\p{DoubleTT was originally conceived by Owen as a two-level type theory. This
+vision was reflected in early documentation (removed in commit
+[\code{ccbaf75}](https://github.com/ToposInstitute/CatColab/commit/ccbaf75eb8376299842c36d0aec6797027000f71))
+that described DoubleTT as the internal language of a fibration, but did not
+survive contact with implementation.}
+
+}
+
+}
+
+\subtree{
+\title{Prior art}
+
+\subtree{
+\title{Dependent type theory}
+
+\p{As noted above, about half of DoubleTT is "just" concepts judiciously
+selected from dependent type theory. DoubleTT also uses a fairly standard
+normalization-by-evaluation (NbE) algorithm. For an excellent modern
+presentation of dependent type theory, emphasizing mathematics over
+implementation, see the book [[principles-dtt]].}
+
+}
+
+\subtree{
+\title{Module systems}
+
+\p{Another major source of inspiration for DoubleTT are module systems, as found
+in Standard ML and other programming languages in the ML family. DoubleTT is
+effectively a module system implementing both signatures (here models of double
+theories) and "functors" (not described above, but here functors for real, being
+morphisms of models). The use of record types and singleton types to formalize
+module systems is also precedented. For a slightly dated but still useful survey
+of module systems, see Chapter 1 of the PhD thesis [[dreyer-2005]].}
+
+\p{Interestingly, the contrast between methods of computing colimits mentioned
+in the Motivation has its counterpart in the history of \em{type sharing} in the
+Standard ML module system. The SML '90 spec realizes type sharing through
+\code{sharing type} clauses that treat identified types completely
+symmetrically, like in an equivalence class. In SML '97, this approach was
+largely replaced in favor of asymmetric type sharing based on \code{where type}
+clauses, similar to the approach taken in DoubleTT.}
 
 }
 
