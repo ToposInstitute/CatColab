@@ -10,27 +10,88 @@
 \p{DoubleTT is a type theory for specifying models of double theories. It
 combines standard judgments and rules of dependent type theory, such as record
 types, with specialized rules for double-categorical models, such as type
-constructors for objects and morphisms. A key design requirement is to enable
-composing models (of a fixed theory) by identifying objects, an instance of the
-"variable sharing" paradigm of composition. To do so, DoubleTT uses the
-type-theoretic concepts of record types and singleton types, along with a
+constructors for object and morphism types. A key design objective is to enable
+composing models by identifying their objects, an instance of the "variable
+sharing" paradigm of composition. To perform such compositions, DoubleTT uses
+the type-theoretic concepts of record types and singleton types, along with a
 normalization-by-evaluation algorithm.}
 
 \subtree{
 \taxon{Remark}
-\title{Status of this document}
+\title{History of this document}
 
-\p{An RFC, being a kind of specification, is normally written \em{before} its
-implementation. This RFC is unusual in that DoubleTT was implemented (by Owen
-Lynch) before the RFC was written; the document was written (by Evan Patterson)
-as a way to understand the implementation so that it could be extended by
-others. As documentation, it is not really accurate. It does not describe
-everything in the original implementation, while also specifying features
-(lists, operations) not present in the original implementation. In that sense,
-it \em{is} in the spirit of an RFC: it represents a design at a particular point
-in time, as understood by a particular person.}
+\p{Being a kind of specification, an RFC is normally written \em{before} its
+implementation. This RFC is unusual in that it was written (by Evan Patterson)
+after DoubleTT had already been implemented (by Owen Lynch). The purpose of
+writing the RFC was to understand the implementation well enough for it to be
+extended by the author and others. As documentation, it is not really accurate.
+It does not describe everything in the original implementation, while also
+specifying new features (lists, operations) not present in the original
+implementation. In that sense, it \em{is} in the spirit of an RFC, representing
+a design at a particular point in time, as understood by a particular person.}
 
 }
+
+}
+
+\subtree{
+\title{Motivation}
+
+\p{Composing open systems is at the heart of applied category theory. Of the
+known paradigms of composition, most fundamental is \em{variable sharing},
+formalized by the category-theoretic concept of colimit. DoubleTT is the first
+design for composing systems to be implemented in CatColab. It enables models of
+a fixed double theory to be composed by identifying their objects, following the
+variable sharing paradigm.}
+
+\p{When implemented on a computer, composition in the variable sharing paradigm
+ultimately reduces to computing colimits of finite sets. The design space for
+doing that is larger than one might think, as there are many ways to represent
+finite sets and compute colimits of them.}
+
+\p{The most obvious strategy represents a finite set using the
+[union-find](https://en.wikipedia.org/wiki/Disjoint-set_data_structure) data
+structure and computes coequalizers using the union operation. This technique
+has been widely used in [Catlab.jl](https://github.com/AlgebraicJulia/Catlab.jl)
+and AlgebraicJulia. It has the advantage of being easy to implement, as the
+union-find data structure is simple and readily available in most programming
+languages. It also admits a powerful and flexible extension through the
+[e-graph](https://en.wikipedia.org/wiki/E-graph) data structure, implemented in
+tools like \code{egg} and \code{egglog}.}
+
+\p{A union-find is a data structure for storing and manipulating equivalence
+classes. No element of an equivalence class is privileged; any representative
+will do as well as any other. While rarely given a second thought in
+mathematics, this feature is a nuisance in implementation, as the only way to
+display an element is by giving it some name, but an equivalence class offers no
+guidance on which name to choose.}
+
+\p{DoubleTT sidesteps this problem by not explicitly constructing equivalence
+classes at all. Instead, it uses nested record types along with singleton types
+to ensure that, by construction, every element has a canonical name (normal
+form). In a typical usage, the user wanting to instantiate two models, while
+sharing a variable between them, creates a new variable in the top-level record
+type and then, via singleton types, specializes both variables in the
+instantiated models to be equal to the new variable. This hierarchical
+construction breaks the symmetry: the name of the top-level variable is the
+canonical name.}
+
+\p{In CatColab, we envision users building complex models by recursively
+composing simpler models. Thus, we must manage not just colimits, but colimits
+of colimits and so on. In AlgebraicJulia, we wrote procedures to compute
+colimits of diagrams of arbitrary shape, but relied on the host programming
+language, Julia, to orchestrate sequences of composition operations. No such
+escape hatch is available in CatColab. The hierarchical approach to composition
+in DoubleTT means that such recursive composition has first-class status.}
+
+\p{Finally, DoubleTT provides the first purely text-based interface to models in
+CatColab, complementing the structure editor based on interactive notebooks. To
+be more precise, DoubleTT encompasses both formats. It has both a text
+elaborator and notebook elaborator, converting notation (plain text or a
+notebook) into a common intermediate representation (syntax). A single evaluator
+then converts syntax into values. This design is in keeping with "semantics
+first" philosophy of CatColab, in which surface syntax is secondary to
+categorical semantics.}
 
 }
 
