@@ -198,6 +198,7 @@ export function TextInput(allProps: TextInputProps) {
                 options.exitDown();
             }
         } else if (options.autofill && evt.code === "Space" && evt.ctrlKey) {
+			console.log("pressed!", options);
             options.autofill();
         } else if (evt.key === "Enter" && !evt.shiftKey) {
             if (isCompletionsOpen() && remaining.length > 0) {

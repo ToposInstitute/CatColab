@@ -9,7 +9,7 @@ const mesh_names = Dict(
 
 """ Mapping from supported domains to initial/boundary conditions. """
 const initial_condition_names = Dict(
-    :Plane => [:Gaussian],
+    :Plane => [:Constant, :Gaussian],
     :Sphere => [:TaylorVortex, :SixVortex],
 )
 
@@ -32,6 +32,7 @@ abstract type Domain end
 
 # meshes associated with Planes
 @data Planar <: Domain begin
+    Constant
     Rectangle(max_x::Int, max_y::Int, dx::Float64, dy::Float64)
     Periodic # TODO
 end

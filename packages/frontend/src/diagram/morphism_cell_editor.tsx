@@ -1,5 +1,6 @@
 import { useContext } from "solid-js";
 import invariant from "tiny-invariant";
+import { v7 } from "uuid";
 
 import { type FocusHandle, useChildFocus } from "catcolab-ui-components";
 import type { DiagramMorDecl } from "catlog-wasm";
@@ -10,7 +11,6 @@ import { LiveDiagramContext } from "./context";
 import { BasicObInput, ObInput } from "./object_input";
 
 import arrowStyles from "../stdlib/arrow_styles.module.css";
-
 import "./morphism_cell_editor.css";
 
 /** Editor for a morphism declaration cell in a diagram in a model. */
@@ -43,11 +43,13 @@ export function DiagramMorphismCellEditor(props: {
     const codInvalid = (): boolean =>
         errors().some((err) => err.err.tag === "Cod" || err.err.tag === "CodType");
 
+    console.log(codType());
     return (
         <div class="formal-judgment diagram-morphism-decl">
             <ObInput
                 placeholder="..."
                 ob={props.decl.dom}
+                generateId={v7}
                 setOb={(ob) => {
                     props.modifyDecl((decl) => {
                         decl.dom = ob;
@@ -90,8 +92,10 @@ export function DiagramMorphismCellEditor(props: {
             <ObInput
                 placeholder="..."
                 ob={props.decl.cod}
+                generateId={v7}
                 setOb={(ob) => {
                     props.modifyDecl((decl) => {
+                        console.log(decl.cod, ob);
                         decl.cod = ob;
                     });
                 }}

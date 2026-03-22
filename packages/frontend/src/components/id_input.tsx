@@ -126,7 +126,13 @@ export function IdInput(
         return null;
     };
 
-    const setNewId = () => props.generateId && props.setId(props.generateId());
+    const setNewId = () => {
+        if (props.generateId) {
+            const newId = props.generateId();
+            props.setId(newId);
+        }
+    };
+    // const setNewId = () => props.generateId && props.setId(props.generateId());
 
     const labelType = (id: Uuid | null): "named" | "anonymous" | "undefined" => {
         if (id == null) {
