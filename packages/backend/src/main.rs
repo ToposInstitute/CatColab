@@ -2,7 +2,7 @@
 
 use axum::extract::Request;
 use axum::extract::ws::WebSocketUpgrade;
-use axum::middleware::from_fn_with_state;
+use axum::middleware::{from_fn, from_fn_with_state};
 use axum::{Router, routing::get};
 use axum::{extract::State, response::IntoResponse};
 use clap::{Parser, Subcommand};
@@ -167,6 +167,18 @@ async fn status_handler() -> &'static str {
     "Running"
 }
 
+async fn version_header_middleware(
+    req: Request<axum::body::Body>,
+    next: axum::middleware::Next,
+) -> impl IntoResponse {
+    let mut response = next.run(req).await;
+    response.headers_mut().insert(
+        http::header::HeaderName::from_static("git-hash"),
+        http::HeaderValue::from_static(env!("GIT_HASH")),
+    );
+    response
+}
+
 async fn websocket_handler(
     ws: WebSocketUpgrade,
     State(repo): State<samod::Repo>,
@@ -190,6 +202,7 @@ async fn run_web_server(
     let (qubit_service, qubit_handle) = rpc_router.as_rpc(state.clone()).into_service();
 
     let rpc_with_mw = ServiceBuilder::new()
+        .layer(from_fn(version_header_middleware))
         .layer(from_fn_with_state(firebase_auth.clone(), auth_middleware))
         .service(qubit_service);
 
@@ -218,7 +231,10 @@ async fn run_web_server(
         app = app.route("/", get(|| async { "Hello! The CatColab server is running" }));
     }
 
-    app = app.layer(CorsLayer::very_permissive());
+    app = app.layer(
+        CorsLayer::very_permissive()
+            .expose_headers([http::header::HeaderName::from_static("git-hash")]),
+    );
 
     info!("Web server listening at port {port}");
 

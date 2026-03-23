@@ -9,8 +9,14 @@ import type { QubitServer, RpcResult } from "catcolab-api";
 export type RpcClient = QubitServer;
 
 /** Create the RPC client for communicating with the backend. */
-export function createRpcClient(serverUrl: string, firebaseApp?: FirebaseApp) {
+export function createRpcClient(
+    serverUrl: string,
+    firebaseApp?: FirebaseApp,
+    onVersionChange?: () => void,
+) {
     let currentUser: User | null = null;
+    let serverVersion: string | null = null;
+
     const authInitialized = new Promise<null>((resolve) => {
         if (firebaseApp) {
             getAuth(firebaseApp).onAuthStateChanged((user) => {
@@ -33,7 +39,18 @@ export function createRpcClient(serverUrl: string, firebaseApp?: FirebaseApp) {
                 headers,
             };
         }
-        return await fetch(input, init);
+        const response = await fetch(input, init);
+
+        const gitHash = response.headers.get("git-hash");
+        if (gitHash && gitHash !== "dev") {
+            if (serverVersion === null) {
+                serverVersion = gitHash;
+            } else if (gitHash !== serverVersion) {
+                onVersionChange?.();
+            }
+        }
+
+        return response;
     };
     const transport = http(`${serverUrl}/rpc`, {
         fetch: fetchWithAuth,

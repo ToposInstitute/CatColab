@@ -2,6 +2,7 @@
   craneLib,
   cargoArtifacts,
   pkgs,
+  gitHash,
 }:
 let
   crate = craneLib.crateNameFromCargoToml {
@@ -12,6 +13,8 @@ let
 in
 craneLib.buildPackage {
   inherit cargoArtifacts pname version;
+
+  GIT_HASH = gitHash;
 
   cargoExtraArgs = "-p backend --config profile.release.opt-level=3";
 
