@@ -31,6 +31,7 @@ export function ModelNotebookEditor(props: { liveModel: LiveModelDoc }) {
         return theory ? modelCellConstructors(theory) : [];
     };
 
+    // oxlint-disable solid/reactivity -- Context.Provider value getter is reactive
     return (
         <LiveModelContext.Provider value={() => props.liveModel}>
             <NotebookEditor

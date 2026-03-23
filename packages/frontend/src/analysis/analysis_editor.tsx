@@ -33,6 +33,7 @@ export function AnalysisNotebookEditor(props: { liveAnalysis: LiveAnalysisDoc })
         return (meta ?? []).map(analysisCellConstructor);
     };
 
+    // oxlint-disable solid/reactivity -- Context.Provider value getter is reactive
     return (
         <LiveAnalysisContext.Provider value={() => props.liveAnalysis}>
             <NotebookEditor

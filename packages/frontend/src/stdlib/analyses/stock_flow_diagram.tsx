@@ -16,10 +16,10 @@ import {
     perpendicularLabelPosition,
     type SVGRefProp,
 } from "../../visualization";
-import svgStyles from "../svg_styles.module.css";
 import { GraphVisualizationAnalysis } from "./graph_visualization";
 import { modelToGraph } from "./model_graph";
 
+import svgStyles from "../svg_styles.module.css";
 import "./graph_visualization.css";
 
 /** Visualize a stock flow diagram. */

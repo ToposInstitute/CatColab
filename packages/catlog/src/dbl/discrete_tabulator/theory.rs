@@ -329,6 +329,8 @@ impl VDCWithComposites for DiscreteTabTheory {
     }
 }
 
+crate::dbl::theory::impl_dbl_theory!(DiscreteTabTheory, Unital);
+
 #[cfg(test)]
 mod tests {
     use super::*;

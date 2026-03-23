@@ -35,11 +35,7 @@ export class Api {
      */
     private readonly docCache: Map<Uuid, DocCacheEntry>;
 
-    constructor(props: {
-        serverUrl: string;
-        repoUrl: string;
-        firebaseApp: FirebaseApp;
-    }) {
+    constructor(props: { serverUrl: string; repoUrl: string; firebaseApp: FirebaseApp }) {
         this.serverHost = new URL(props.serverUrl).host;
 
         this.rpc = createRpcClient(props.serverUrl, props.firebaseApp);

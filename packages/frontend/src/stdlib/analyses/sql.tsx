@@ -31,7 +31,14 @@ const tooltip = () => (
 
 export function SQLHeader(sql: string) {
     return (
-        <div style="display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
+        <div
+            style={{
+                display: "flex",
+                "align-items": "center",
+                "justify-content": "flex-end",
+                gap: "4px",
+            }}
+        >
             <IconButton
                 onClick={() => copyToClipboard(sql)}
                 disabled={false}

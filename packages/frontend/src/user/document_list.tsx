@@ -8,9 +8,9 @@ import { stringify as uuidStringify } from "uuid";
 import { DocumentTypeIcon } from "catcolab-ui-components";
 import { TheoryLibraryContext } from "../theory";
 import { createVirtualList } from "../util/virtual_list";
-import "./documents.css";
-
 import { currentUserPermission, formatOwners, useUserState } from "./user_state_context";
+
+import "./documents.css";
 
 /** Filter, search, and sort documents from user state. */
 export function filterDocuments(
@@ -28,14 +28,14 @@ export function filterDocuments(
                 opts.currentUserId !== undefined &&
                 doc.permissions.some((p) => p.user === opts.currentUserId),
         )
-        .map(([refId, doc]) => ({ refId, ...doc }))
+        .map(([refId, doc]) => Object.assign({ refId }, doc))
         .filter((doc) => {
             if (opts.query === "") {
                 return true;
             }
             return doc.name.toLowerCase().includes(opts.query);
         })
-        .sort((a, b) => {
+        .toSorted((a, b) => {
             if (opts.deleted) {
                 return (b.deletedAt ?? 0) - (a.deletedAt ?? 0);
             }
@@ -57,7 +57,7 @@ export function DocumentList(props: DocumentListProps) {
     const [scrollHeight, setScrollHeight] = createSignal(400);
 
     const [virtualList, onScroll] = createVirtualList({
-        items: props.documents,
+        items: () => props.documents(),
         rootHeight: scrollHeight,
         rowHeight: () => ROW_HEIGHT,
         overscanCount: 5,
@@ -159,7 +159,7 @@ function DocumentRow(props: DocumentRowProps) {
         if (!rel) {
             return undefined;
         }
-        const parentId = uuidStringify(rel.refId as Uint8Array);
+        const parentId = uuidStringify(rel.refId);
         const parentDoc = userState.documents[parentId];
 
         // If parent document doesn't exist, show as orphaned

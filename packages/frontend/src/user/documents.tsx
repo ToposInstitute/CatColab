@@ -8,11 +8,11 @@ import invariant from "tiny-invariant";
 
 import { IconButton } from "catcolab-ui-components";
 import { BrandedToolbar, PageActionsContext } from "../page";
-import "./documents.css";
-
 import { DocumentList, filterDocuments } from "./document_list";
 import { LoginGate } from "./login";
 import { useUserState } from "./user_state_context";
+
+import "./documents.css";
 
 export default function UserDocuments() {
     const appTitle = import.meta.env.VITE_APP_TITLE;
@@ -50,10 +50,6 @@ function DocumentsSearch() {
         }),
     );
 
-    const renderActions = (doc: DocInfo & { refId: string }) => {
-        return <DeleteButton doc={doc} />;
-    };
-
     const gridColumns = (
         <>
             <div />
@@ -77,7 +73,7 @@ function DocumentsSearch() {
             <h3>My Documents</h3>
             <DocumentList
                 documents={documents}
-                renderActions={renderActions}
+                renderActions={(doc) => <DeleteButton doc={doc} />}
                 gridColumns={gridColumns}
             />
         </>
@@ -91,8 +87,10 @@ function DeleteButton(props: { doc: DocInfo & { refId: string } }) {
     invariant(actions, "Page actions should be provided");
 
     const currentUserId = auth.currentUser?.uid;
-    const canDelete = props.doc.permissions.some(
-        (p) => p.user !== null && p.user === currentUserId && p.level === "Own",
+    const canDelete = createMemo(() =>
+        props.doc.permissions.some(
+            (p) => p.user !== null && p.user === currentUserId && p.level === "Own",
+        ),
     );
 
     const handleDeleteClick = async (e: MouseEvent) => {
@@ -107,7 +105,7 @@ function DeleteButton(props: { doc: DocInfo & { refId: string } }) {
 
     return (
         <div class="delete-cell" onClick={(e) => e.stopPropagation()}>
-            {canDelete && (
+            {canDelete() && (
                 <IconButton variant="danger" onClick={handleDeleteClick} tooltip="Delete document">
                     <X size={16} />
                 </IconButton>

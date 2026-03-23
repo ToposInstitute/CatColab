@@ -3,6 +3,7 @@ import { createResource, For, Match, Switch } from "solid-js";
 import { PanelHeader, Spinner } from "catcolab-ui-components";
 import type { DblModel } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
+
 import "./tabular_view.css";
 
 /** Given a schema (DblModel of ThSchema), a JSON output `rawdata` from Catlab,
@@ -11,43 +12,45 @@ import "./tabular_view.css";
 */
 function ACSetTable(props: { model: DblModel; rawdata: Record<string, string[]>; obId: string }) {
     // The primary key of this table is given by `rawdata[obname]`
-    const rows: Array<string> = props.rawdata[props.obId] || [];
-    const obname = props.model.obGeneratorLabel(props.obId)?.join(".") || "";
+    const rows = () => props.rawdata[props.obId] || [];
+    const obname = () => props.model.obGeneratorLabel(props.obId)?.join(".") || "";
 
     // Get the homs and attrs with source `obId`
-    const outhoms = props.model.morGenerators().filter((morId) => {
-        const mor = props.model.morPresentation(morId);
-        return mor?.dom.tag === "Basic" && mor.dom.content === props.obId;
-    });
+    const outhoms = () =>
+        props.model.morGenerators().filter((morId) => {
+            const mor = props.model.morPresentation(morId);
+            return mor?.dom.tag === "Basic" && mor.dom.content === props.obId;
+        });
 
     // Convert morgenerators to user-friendly names
-    const headers = [obname].concat(
-        outhoms.map((morId) => props.model.morGeneratorLabel(morId)?.join(".") ?? ""),
-    );
+    const headers = () =>
+        [obname()].concat(
+            outhoms().map((morId) => props.model.morGeneratorLabel(morId)?.join(".") ?? ""),
+        );
 
     // Data for column from indexing rawdata
-    const columnardata: Array<Array<string>> = [props.obId]
-        .concat(outhoms)
-        .map((m) => props.rawdata[m as keyof typeof props.rawdata] || [""]);
+    const columnardata = () =>
+        ([props.obId] as string[]).concat(outhoms()).map((m) => props.rawdata[m] || [""]);
 
     // Convert columnar data to row data
-    const data = Array.from(rows?.keys()).map((colIndex) =>
-        columnardata.map((row) => row[colIndex] || ""),
-    );
+    const data = () =>
+        Array.from(rows()?.keys()).map((colIndex) =>
+            columnardata().map((row) => row[colIndex] || ""),
+        );
 
     return (
         <table class="tabular-view-table">
-            {headers && (
+            {headers() && (
                 <thead>
                     <tr>
-                        <For each={headers}>
+                        <For each={headers()}>
                             {(header) => <th class="tabular-view-table">{header}</th>}
                         </For>
                     </tr>
                 </thead>
             )}
             <tbody>
-                <For each={data}>
+                <For each={data()}>
                     {(row) => (
                         <tr>
                             <For each={row}>

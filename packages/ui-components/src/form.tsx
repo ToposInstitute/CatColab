@@ -4,9 +4,9 @@ import "./form.css";
 
 /** Group of related fields in a form. */
 export function FormGroup(props: { compact?: boolean } & ComponentProps<"dl">) {
-    const baseClass = props.compact ? "compact-form-group" : "form-group";
+    const baseClass = () => (props.compact ? "compact-form-group" : "form-group");
     return (
-        <dl class={props.class ? `${baseClass} ${props.class}` : baseClass} style={props.style}>
+        <dl class={props.class ? `${baseClass()} ${props.class}` : baseClass()} style={props.style}>
             {props.children}
         </dl>
     );
@@ -89,7 +89,9 @@ export function SelectField(
                     id={fieldId}
                     value={selectProps.value}
                     disabled={selectProps.disabled}
+                    // oxlint-disable-next-line solid/reactivity -- splitProps preserves reactivity
                     onChange={selectProps.onChange}
+                    // oxlint-disable-next-line solid/reactivity -- splitProps preserves reactivity
                     onInput={selectProps.onInput}
                 >
                     {props.children}

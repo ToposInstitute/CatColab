@@ -1,8 +1,8 @@
 {
     "name": "frontend",
+    "version": "0.1.0",
     "private": true,
     "license": "MIT",
-    "version": "0.1.0",
     "type": "module",
     "scripts": {
         "build:wasm": "npm --prefix ../catlog-wasm run build:browser",
@@ -12,10 +12,10 @@
         "build": "tsc -b && vite build --sourcemap true",
         "build:staging": "tsc -b && vite build --sourcemap true --mode staging",
         "preview": "vite preview",
-        "format": "biome format --write",
+        "format": "oxfmt .",
         "check": "npm run build:deps && npm run lint && tsc",
-        "lint": "biome check --write",
-        "ci": "biome ci",
+        "lint": "oxlint --fix && oxfmt .",
+        "ci": "oxlint --deny-warnings && oxfmt --check .",
         "doc": "typedoc --entryPointStrategy expand ./src",
         "test": "vitest --mode=development",
         "test:ci": "vitest --mode=development --cache=false --configLoader=runner --run",
@@ -74,11 +74,11 @@
         "uuid": "^13.0.0"
     },
     "devDependencies": {
-        "@biomejs/biome": "^2.3.8",
         "@mdx-js/mdx": "^2.3.0",
         "@types/html-escaper": "^3.0.4",
         "@types/mdx": "^2.0.13",
         "@types/node": "^24.0.0",
+        "eslint-plugin-solid": "^0.14.5",
         "rehype-katex": "^7.0.1",
         "rehype-raw": "^7.0.0",
         "remark-math": "^6.0.0",

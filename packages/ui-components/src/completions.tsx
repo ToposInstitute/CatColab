@@ -58,7 +58,9 @@ export function Completions(props: {
 
     const selectPresumptive = () => {
         const completion = remainingCompletions()[presumptive()];
-        completion && select(completion);
+        if (completion) {
+            select(completion);
+        }
     };
 
     const select = (completion: Completion) => {

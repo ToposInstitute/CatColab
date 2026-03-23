@@ -13,5 +13,4 @@ catlog.set_panic_hook();
 
 const root = document.getElementById("root");
 
-// biome-ignore lint/style/noNonNullAssertion: we know that root exists
 render(() => <App />, root!);

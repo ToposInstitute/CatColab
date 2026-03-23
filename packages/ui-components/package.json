@@ -8,9 +8,9 @@
         "./*": "./src/*"
     },
     "scripts": {
-        "format": "biome format --write",
-        "lint": "biome lint --write && biome check --write",
-        "ci": "biome ci && tsc --noEmit",
+        "format": "oxfmt .",
+        "lint": "oxfmt . && oxlint --fix",
+        "ci": "oxfmt --check . && tsc --noEmit && oxlint --deny-warnings",
         "dev": "storybook dev -p 6006 --no-version-updates --no-open",
         "build": "NODE_ENV=production storybook build",
         "test": "vitest --project=storybook"
@@ -28,7 +28,6 @@
         "solid-js": "^1.9.10"
     },
     "devDependencies": {
-        "@biomejs/biome": "^2.3.8",
         "@chromatic-com/storybook": "^4.1.2",
         "@storybook/addon-a11y": "^10.0.2",
         "@storybook/addon-docs": "^10.0.2",
@@ -41,6 +40,7 @@
         "@vitest/browser": "^4.0.8",
         "@vitest/browser-playwright": "^4.0.8",
         "@vitest/coverage-v8": "^4.0.8",
+        "eslint-plugin-solid": "^0.14.5",
         "playwright": "^1.56.1",
         "storybook": "^10.0.2",
         "storybook-solidjs-vite": "^10.0.5",

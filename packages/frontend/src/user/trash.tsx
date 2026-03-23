@@ -9,11 +9,11 @@ import { createMemo, createSignal } from "solid-js";
 import { Dialog, IconButton } from "catcolab-ui-components";
 import { useApi } from "../api";
 import { BrandedToolbar } from "../page";
-import "./documents.css";
-
 import { DocumentList, filterDocuments } from "./document_list";
 import { LoginGate } from "./login";
 import { useUserState } from "./user_state_context";
+
+import "./documents.css";
 
 export default function TrashBin() {
     const appTitle = import.meta.env.VITE_APP_TITLE;
@@ -49,10 +49,6 @@ function TrashBinSearch() {
         }),
     );
 
-    const renderActions = (doc: DocInfo & { refId: string }) => {
-        return <RestoreButton doc={doc} />;
-    };
-
     const gridColumns = (
         <>
             <div />
@@ -76,7 +72,7 @@ function TrashBinSearch() {
             <h3>Trash</h3>
             <DocumentList
                 documents={documents}
-                renderActions={renderActions}
+                renderActions={(doc) => <RestoreButton doc={doc} />}
                 gridColumns={gridColumns}
                 actionsPosition="start"
             />
@@ -91,15 +87,17 @@ function RestoreButton(props: { doc: DocInfo & { refId: string } }) {
     const api = useApi();
 
     const currentUserId = auth.currentUser?.uid;
-    const canRestore = props.doc.permissions.some(
-        (p) => p.user !== null && p.user === currentUserId && p.level === "Own",
+    const canRestore = createMemo(() =>
+        props.doc.permissions.some(
+            (p) => p.user !== null && p.user === currentUserId && p.level === "Own",
+        ),
     );
 
     const [showError, setShowError] = createSignal(false);
     const [errorMessage, setErrorMessage] = createSignal("");
 
     const handleRestore = async () => {
-        if (!canRestore) {
+        if (!canRestore()) {
             return;
         }
 
@@ -119,13 +117,13 @@ function RestoreButton(props: { doc: DocInfo & { refId: string } }) {
 
     const handleRestoreClick = (e: MouseEvent) => {
         e.stopPropagation();
-        handleRestore();
+        void handleRestore();
     };
 
     return (
         <>
             <div class="delete-cell">
-                {canRestore && (
+                {canRestore() && (
                     <IconButton
                         variant="positive"
                         onClick={handleRestoreClick}

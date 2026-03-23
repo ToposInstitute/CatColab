@@ -39,7 +39,7 @@ export default function StochasticMassAction(
             return [];
         }
         return props.stateType ? model.obGeneratorsWithType(props.stateType) : model.obGenerators();
-    }, []);
+    });
 
     const morGenerators = createMemo<QualifiedName[]>(() => {
         const model = elaboratedModel();
@@ -49,7 +49,7 @@ export default function StochasticMassAction(
         return props.transitionType
             ? model.morGeneratorsWithType(props.transitionType)
             : model.morGenerators();
-    }, []);
+    });
 
     const obSchema: ColumnSchema<QualifiedName>[] = [
         {

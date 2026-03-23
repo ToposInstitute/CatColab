@@ -111,9 +111,10 @@ function DocumentsTreeNode(props: {
             .filter(
                 (rel) => rel.relationType === "diagram-in" || rel.relationType === "analysis-of",
             )
-            .map((rel) => uuidStringify(rel.refId as Uint8Array));
+            .map((rel) => uuidStringify(rel.refId));
     });
 
+    // oxlint-disable-next-line solid/reactivity -- createResource fetcher
     const [childDocs] = createResource(childRefIds, async (refIds) => {
         // Individual failures are skipped to prevent one corrupt document
         // from crashing the entire sidebar.
@@ -131,16 +132,13 @@ function DocumentsTreeNode(props: {
             (doc): doc is NonNullable<typeof doc> => doc !== null,
         );
 
-        function isDocOwnerless(doc: LiveDocWithRef) {
-            return doc.docRef.permissions.anyone === "Own";
-        }
-
-        const isParentOwnerless = isDocOwnerless(props.doc);
+        const isParentOwnerless = props.doc.docRef.permissions.anyone === "Own";
 
         // Don't show ownerless children or deleted documents
         const filtered = loadedChildDocs.filter(
             (childDoc) =>
-                !childDoc.docRef.isDeleted && (isParentOwnerless || !isDocOwnerless(childDoc)),
+                !childDoc.docRef.isDeleted &&
+                (isParentOwnerless || childDoc.docRef.permissions.anyone !== "Own"),
         );
 
         // Sort by createdAt descending (newest first)
@@ -253,24 +251,25 @@ function DocumentsTreeLeaf(props: {
                     onDocCreated={(docType, refId) => {
                         navigate(`/${createLinkPart(props.doc)}/${docType}/${refId}`);
                     }}
-                    onDocDeleted={async () => {
+                    onDocDeleted={() => {
                         const deletedRefId = props.doc.docRef.refId;
                         const isPrimaryDeleted = deletedRefId === primaryRefId();
                         const isSecondaryDeleted = deletedRefId === secondaryRefId();
+                        const doc = props.doc;
 
                         props.refetchPrimaryDoc();
                         props.refetchSecondaryDoc();
 
                         // Navigate away if the deleted document is currently being viewed
                         if (isPrimaryDeleted || isSecondaryDeleted) {
-                            const parentDoc = await getDocParent(props.doc.liveDoc.doc, api);
-
-                            if (!parentDoc) {
-                                // This is a root document: navigate to documents list
-                                navigate("/documents");
-                            } else {
-                                navigate(`/${createLinkPart(parentDoc)}`);
-                            }
+                            void getDocParent(doc.liveDoc.doc, api).then((parentDoc) => {
+                                if (!parentDoc) {
+                                    // This is a root document: navigate to documents list
+                                    navigate("/documents");
+                                } else {
+                                    navigate(`/${createLinkPart(parentDoc)}`);
+                                }
+                            });
                         }
                     }}
                 />

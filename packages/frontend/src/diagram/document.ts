@@ -75,9 +75,8 @@ export function enlivenDiagramDocument(
 ): LiveDiagramDoc {
     const { doc } = liveDoc;
 
-    const formalJudgments = createMemo<Array<DiagramJudgment>>(
-        () => NotebookUtils.getFormalContent(doc.notebook),
-        [],
+    const formalJudgments = createMemo<Array<DiagramJudgment>>(() =>
+        NotebookUtils.getFormalContent(doc.notebook),
     );
 
     const elaboratedDiagram = (): DblModelDiagram | undefined => {

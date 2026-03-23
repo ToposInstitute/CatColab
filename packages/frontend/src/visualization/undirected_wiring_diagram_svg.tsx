@@ -11,6 +11,7 @@ import {
     portSize,
     type SVGRefProp,
 } from ".";
+
 import styles from "./undirected_wiring_diagram.module.css";
 
 const portHalf = portSize / 2;

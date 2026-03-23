@@ -27,7 +27,7 @@ function GuidesHelp(props: { guides: Guide[] }) {
                     {(guide, _) => (
                         <>
                             <dt>
-                                <A href={`${guide.id}`}>{guide.title}</A>
+                                <A href={guide.id}>{guide.title}</A>
                             </dt>
                             <dd>{guide.description}</dd>
                         </>

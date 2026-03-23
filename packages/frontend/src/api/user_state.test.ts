@@ -1,9 +1,4 @@
-import {
-    type DocHandle,
-    type DocumentId,
-    isValidDocumentId,
-    Repo,
-} from "@automerge/automerge-repo";
+import { type DocHandle, isValidDocumentId, Repo } from "@automerge/automerge-repo";
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 import type { DocInfo, UserState } from "catcolab-api/src/user_state";
 import { type FirebaseOptions, initializeApp } from "firebase/app";
@@ -54,7 +49,7 @@ describe("User state Automerge document", async () => {
     const userStateDocId = unwrap(await rpc.get_user_state_doc_id.query());
     assert(isValidDocumentId(userStateDocId));
 
-    const docHandle = (await repo.find(userStateDocId as DocumentId)) as DocHandle<UserState>;
+    const docHandle: DocHandle<UserState> = await repo.find(userStateDocId);
     await docHandle.whenReady();
 
     // Track the latest state via change events.
@@ -204,24 +199,21 @@ describe("User state Automerge document", async () => {
 
         // Child should include a relation to its parent.
         // biome-ignore lint/style/noNonNullAssertion : test will fail if relation is missing
-        const dependsOnRefId = uuidStringify(child.dependsOn[0]!.refId as Uint8Array);
+        const dependsOnRefId = uuidStringify(child.dependsOn[0]!.refId);
         assert(dependsOnRefId, "Child should have a parent relation");
         assert.strictEqual(dependsOnRefId, parentRefId, "Child parent should match parent refId");
 
         // Parent should list child in its usedBy array.
         await waitFor(
             () =>
-                findDoc(parentRefId)?.usedBy.some(
-                    (r) => uuidStringify(r.refId as Uint8Array) === childRefId,
-                ) === true,
+                findDoc(parentRefId)?.usedBy.some((r) => uuidStringify(r.refId) === childRefId) ===
+                true,
             `Parent document ${parentRefId} should list child ${childRefId} in usedBy`,
         );
 
         const updatedParent = findDoc(parentRefId);
         assert(updatedParent, "Parent should still exist");
-        const usedByEntry = updatedParent.usedBy.find(
-            (r) => uuidStringify(r.refId as Uint8Array) === childRefId,
-        );
+        const usedByEntry = updatedParent.usedBy.find((r) => uuidStringify(r.refId) === childRefId);
         assert(usedByEntry, "Parent usedBy should contain child ref ID");
         assert.strictEqual(
             usedByEntry.relationType,
@@ -244,9 +236,7 @@ describe("User state Automerge document", async () => {
         assert(refDoc.tag === "Live", "Document should be live");
         assert(isValidDocumentId(refDoc.docId));
 
-        const liveDocHandle = (await repo.find(refDoc.docId as DocumentId)) as DocHandle<{
-            name: string;
-        }>;
+        const liveDocHandle: DocHandle<{ name: string }> = await repo.find(refDoc.docId);
         await liveDocHandle.whenReady();
 
         const newName = `Updated Name - ${v4()}`;

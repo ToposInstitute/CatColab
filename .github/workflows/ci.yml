@@ -126,8 +126,15 @@ jobs:
         run: |
           pnpm install
 
+      - name: Install Rust toolchain from file
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          # Don't override flags in cargo config files.
+          rustflags: ""
+
       - name: Format/linting/import sorting
         run: |
+          pnpm --filter "./packages/*" run build:deps
           pnpm --filter "./packages/*" run ci
 
   build_nixos_system:
@@ -162,11 +169,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-
-      - name: Setup wasm-pack
-        uses: jetli/wasm-pack-action@v0.4.0
-        with:
-          version: 'v0.13.1'
 
       - name: Run dev setup
         run: |
@@ -241,4 +243,3 @@ jobs:
     - name: Run frontend tests with VM
       run: |
         nix build .#checks.x86_64-linux.frontendTests -L --no-sandbox
-

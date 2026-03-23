@@ -1,10 +1,10 @@
 import { A } from "@solidjs/router";
 import { Warning, Note } from "catcolab-ui-components/alert";
-import { HelpAnalysisById } from "../logic_help_detail"
+import { HelpAnalysisById } from "../logic_help_detail";
 
 ## Description
 
-A categorical **database schema**, or **schema** for short, is a representation of the *structure*, or *shape*, of a database.
+A categorical **database schema**, or **schema** for short, is a representation of the _structure_, or _shape_, of a database.
 Once the shape has been defined, an instance of the model will be an actual database of that shape.
 
 Schemas are expressed in a diagrammatic language, with boxes and arrows.
@@ -19,84 +19,83 @@ and three kinds of arrows (each of them possibly many-to-one):
 - **Attributes**, from entities to attribute types
 - **Operations**, from attribute types to attribute types.
 
-What this data actually "means" can be explained in terms of what it corresponds to in an *instance* of the schema (see below, under *Instances and analyses*).
+What this data actually "means" can be explained in terms of what it corresponds to in an _instance_ of the schema (see below, under _Instances and analyses_).
 
 <Note>
 CatColab currently only supports **single-input** operations, so many familiar examples (such as sums and averages) are not directly representable.
 
 Note that consistency constraints on the schema are also not yet supported, though they can be added informally in rich text cells.
-</Note>
 
+</Note>
 
 ### Further reading
 
-- Evan Patterson, Owen Lynch, James Fairbanks, "Categorical Data Structures for Technical Computing", *Compositionality* **4** (2022). [arXiv:2106.04703v5](https://arxiv.org/abs/2106.04703v5) [DOI:10.32408/compositionality-4-5](
-https://doi.org/10.32408/compositionality-4-5)
-- Brendan Fong, David I. Spivak, "Databases: Categories, Functors, and Universal Constructions" in *An Invitation to Applied Category Theory* (2019). [arXiv:1803.05316](https://arxiv.org/abs/1803.05316) [DOI:10.1017/9781108668804](
-    https://doi.org/10.1017/9781108668804)
+- Evan Patterson, Owen Lynch, James Fairbanks, "Categorical Data Structures for Technical Computing", _Compositionality_ **4** (2022). [arXiv:2106.04703v5](https://arxiv.org/abs/2106.04703v5) [DOI:10.32408/compositionality-4-5](https://doi.org/10.32408/compositionality-4-5)
+- Brendan Fong, David I. Spivak, "Databases: Categories, Functors, and Universal Constructions" in _An Invitation to Applied Category Theory_ (2019). [arXiv:1803.05316](https://arxiv.org/abs/1803.05316) [DOI:10.1017/9781108668804](https://doi.org/10.1017/9781108668804)
 - Wikipedia: [Database Schema](https://en.wikipedia.org/wiki/Database_schema)
-
 
 ## Instances and analyses
 
 ### Instances
 
-Graphical instances of schemas are called **acsets** in applied category theory lingo, but can also be thought of as being precisely *databases*.
+Graphical instances of schemas are called **acsets** in applied category theory lingo, but can also be thought of as being precisely _databases_.
 
 <table>
-  <thead>
-    <tr>
-      <th>Schema (database shape)</th>
-      <th>Instance (database)</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>entity</td>
-      <td>table</td>
-    </tr>
-    <tr>
-      <td>mapping</td>
-      <td>foreign key</td>
-    </tr>
-    <tr>
-      <td>attributes</td>
-      <td>columns</td>
-    </tr>
-    <tr>
-      <td>attribute type</td>
-      <td>attribute column constraints</td>
-    </tr>
-    <tr>
-      <td>operation</td>
-      <td>data operations</td>
-    </tr>
-  </tbody>
+    <thead>
+        <tr>
+            <th>Schema (database shape)</th>
+            <th>Instance (database)</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>entity</td>
+            <td>table</td>
+        </tr>
+        <tr>
+            <td>mapping</td>
+            <td>foreign key</td>
+        </tr>
+        <tr>
+            <td>attributes</td>
+            <td>columns</td>
+        </tr>
+        <tr>
+            <td>attribute type</td>
+            <td>attribute column constraints</td>
+        </tr>
+        <tr>
+            <td>operation</td>
+            <td>data operations</td>
+        </tr>
+    </tbody>
 </table>
 
 <Warning>
-The implementation of schema instances currently in CatColab are not quite acsets, since typing maps (that define the specific sets in which attribute types can have values) are not supported.
-In other words, the set corresponding to an attribute type starts as empty and new elements are added to it whenever a new attribute variable is given.
+    The implementation of schema instances currently in CatColab are not quite acsets, since typing
+    maps (that define the specific sets in which attribute types can have values) are not supported.
+    In other words, the set corresponding to an attribute type starts as empty and new elements are
+    added to it whenever a new attribute variable is given.
 </Warning>
-
 
 ### Analyses
 
-<HelpAnalysisById theory={props.theory} analysisId="diagram"/>
-<HelpAnalysisById theory={props.theory} analysisId="erd"/>
+<HelpAnalysisById theory={props.theory} analysisId="diagram" />
+<HelpAnalysisById theory={props.theory} analysisId="erd" />
 
 <HelpAnalysisById theory={props.theory} analysisId="sql">
 This analysis uses the [`sea_query`](https://docs.rs/sea-query/latest/sea_query/) crate to convert discrete double models into valid SQL. Following the correspondence above, schema entities are interpreted as tables, mappings are interpreted as foreign key relations between tables, attribute types are interpreted as column types, and **attributes** as columns.
 
 There are several caveats:
 
-* Models are interpreted only into three SQL backends: MySQL, SQLite, and PostgresSQL
-* Only the `CREATE TABLES` fragment of SQL is supported
-* Operations between attributes are not supported
+- Models are interpreted only into three SQL backends: MySQL, SQLite, and PostgresSQL
+- Only the `CREATE TABLES` fragment of SQL is supported
+- Operations between attributes are not supported
 
 #### Example
 
 For example, the following model in Schema
+
 ```
 Person : Entity
 Dog : Entity
@@ -108,6 +107,7 @@ Dog -name-> Name
 Person -age-> Int
 Dog -age-> Int
 ```
+
 corresponds to a database schema:
 
 <div style={{ display: 'flex', gap: '2rem' }}>

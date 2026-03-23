@@ -48,7 +48,8 @@ use std::ops::Range;
 
 use super::graph::{EdgeGraph, VDblGraph};
 use super::tree::DblTree;
-use crate::one::{Category, Path};
+use crate::dbl::DblNode;
+use crate::one::{Category, Path, tree};
 
 /// A virtual double category (VDC).
 ///
@@ -203,6 +204,20 @@ pub trait VDCWithComposites: VDblCategory {
     /// [`unit_ext`](Self::unit_ext).
     fn unit(&self, x: Self::Ob) -> Option<Self::Pro> {
         self.unit_ext(x).map(|α| self.cell_cod(&α))
+    }
+
+    /// Constructs the unit cell on an arrow, if there is one.
+    ///
+    /// The default implementation constructs the unit cell for an arrow by
+    /// using the unit extension (if it exists) on the codomain to form a cell
+    /// with the original arrow and factorising that cell through the unit.
+    fn unit_arrow(&self, f: Self::Arr) -> Option<Self::Cell> {
+        let y = self.cod(&f);
+        let y_ext = self.unit_ext(y)?;
+        let cell = self.compose_cells(DblTree(
+            tree::OpenTree::linear(vec![DblNode::Spine(f), DblNode::Cell(y_ext)]).unwrap(),
+        ));
+        self.through_unit(cell, 0)
     }
 
     /// Factorizes a cell through a composite of proarrows.

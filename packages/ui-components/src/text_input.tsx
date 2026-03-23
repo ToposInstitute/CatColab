@@ -2,7 +2,7 @@ import Popover from "@corvu/popover";
 import { focus } from "@solid-primitives/active-element";
 import { type ComponentProps, createEffect, createSignal, type JSX, splitProps } from "solid-js";
 
-focus;
+void focus;
 
 import { type Completion, Completions, type CompletionsRef } from "./completions";
 import { assertTypelevel } from "./util/types";
@@ -111,7 +111,7 @@ const TEXT_INPUT_OPTIONS = [
     "exitRight",
 ] as const satisfies Array<keyof Required<TextInputOptions>>;
 
-assertTypelevel<
+void assertTypelevel<
     keyof Required<TextInputOptions> extends (typeof TEXT_INPUT_OPTIONS)[number] ? true : false
 >;
 
@@ -211,9 +211,12 @@ export function TextInput(allProps: TextInputProps) {
                     ref={ref}
                     value={props.text}
                     use:focus={(isFocused) => {
-                        isFocused && options.hasFocused?.();
-                        (!isFocused || options.showCompletionsOnFocus) &&
+                        if (isFocused) {
+                            options.hasFocused?.();
+                        }
+                        if (!isFocused || options.showCompletionsOnFocus) {
                             setCompletionsOpen(isFocused);
+                        }
                     }}
                     onInput={(evt) => {
                         props.setText(evt.target.value);

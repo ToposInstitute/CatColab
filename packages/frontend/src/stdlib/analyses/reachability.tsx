@@ -21,10 +21,7 @@ export default function Reachability(
 ) {
     const elaboratedModel = () => props.liveModel.elaboratedModel();
 
-    const obGenerators = createMemo<QualifiedName[]>(
-        () => elaboratedModel()?.obGenerators() ?? [],
-        [],
-    );
+    const obGenerators = createMemo<QualifiedName[]>(() => elaboratedModel()?.obGenerators() ?? []);
 
     const obSchema: ColumnSchema<QualifiedName>[] = [
         {

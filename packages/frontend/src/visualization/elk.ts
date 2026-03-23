@@ -144,7 +144,7 @@ export async function elkLayoutGraph(
     return parseElkLayout(result);
 }
 
-/** Parse a graph layout computed by ELK. 
+/** Parse a graph layout computed by ELK.
 
 ELK's coordinate system is described at:
 <https://eclipse.dev/elk/documentation/tooldevelopers/graphdatastructure/coordinatesystem.html>.
