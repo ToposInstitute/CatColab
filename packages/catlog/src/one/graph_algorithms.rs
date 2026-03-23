@@ -307,10 +307,10 @@ where
 /// Contains both the topologically-sorted stack of vertices and feedback vertices.
 #[derive(Debug, Clone, Constructor)]
 pub struct ToposortData<V> {
-    ///
+    /// Stores an array of topologically-sorted vertices.
     pub stack: Vec<V>,
 
-    ///
+    /// Stores the feedback vertices with their outneighbors.
     pub cycles: IndexMap<V, Vec<V>>,
 }
 
@@ -489,8 +489,6 @@ mod tests {
             let (i0, i1) = (sort.iter().position(|&x| x == 5), sort.iter().position(|&x| x == 2));
             assert!(i0.unwrap() < i1.unwrap());
         }
-
-        // TODO error for strict and lenient
     }
 
     #[test]

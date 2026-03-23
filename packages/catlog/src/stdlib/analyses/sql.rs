@@ -2,11 +2,11 @@
 use crate::{
     dbl::model::*,
     one::{
-        graph::FinGraph,
-        graph_algorithms::{toposort_lenient, toposort_strict, ToposortData},
         Path,
+        graph::FinGraph,
+        graph_algorithms::{ToposortData, toposort_lenient},
     },
-    zero::{name, QualifiedLabel, QualifiedName},
+    zero::{QualifiedLabel, QualifiedName, name},
 };
 use derive_more::Constructor;
 use indexmap::IndexMap;
@@ -14,10 +14,10 @@ use itertools::Itertools;
 use nonempty::nonempty;
 use sea_query::SchemaBuilder;
 use sea_query::{
-    prepare::Write, ColumnDef, ForeignKey, ForeignKeyCreateStatement, Iden, MysqlQueryBuilder,
-    PostgresQueryBuilder, SqliteQueryBuilder, Table, TableCreateStatement,
+    ColumnDef, ForeignKey, ForeignKeyCreateStatement, Iden, MysqlQueryBuilder,
+    PostgresQueryBuilder, SqliteQueryBuilder, Table, TableCreateStatement, prepare::Write,
 };
-use sqlformat::{format, Dialect};
+use sqlformat::{Dialect, format};
 use std::fmt;
 
 impl Iden for QualifiedName {
@@ -43,11 +43,26 @@ impl Iden for &QualifiedLabel {
 #[derive(Debug, Clone, PartialEq)]
 pub enum ColumnBehavior {
     /// A foreign key constraint. The target is an entity.
-    Ordinary { mor: QualifiedName, tgt: QualifiedName },
+    Ordinary {
+        /// The name of the morphism.
+        mor: QualifiedName,
+        /// The name of the target entity.
+        tgt: QualifiedName,
+    },
     /// A deferrable key constraint. The target is an entity.
-    Deferrable { mor: QualifiedName, tgt: QualifiedName },
+    Deferrable {
+        /// The name of the morphism.
+        mor: QualifiedName,
+        /// The name of the target entity.
+        tgt: QualifiedName,
+    },
     /// An attribute column. The target is an attribute type.
-    Attribute { mor: QualifiedName, tgt: QualifiedName },
+    Attribute {
+        /// The name of the morphism.
+        mor: QualifiedName,
+        /// The name of the target attribute.
+        tgt: QualifiedName,
+    },
 }
 
 impl ColumnBehavior {
@@ -214,6 +229,7 @@ impl SQLAnalysis {
             .join(";\n")
             + ";";
 
+        // for PostgresSQL only
         let deferrable_fks: String = constraints
             .fks
             .iter()
@@ -232,7 +248,10 @@ impl SQLAnalysis {
         &self,
         constraints: ForeignKeyConstraints,
     ) -> Result<ForeignKeyConstraints, SQLAnalysisError> {
-        if self.backend == SQLBackend::MySQL && constraints.any_deferrable() {
+        // TODO: punting fixing SQLite cycles for now
+        if (self.backend == SQLBackend::MySQL || self.backend == SQLBackend::SQLite)
+            && constraints.any_deferrable()
+        {
             let cycles = constraints
                 .fks
                 .into_iter()
@@ -266,18 +285,10 @@ impl SQLAnalysis {
         let output: String = self.build(tables, constraints.clone()?, ob_label, mor_label);
         let formatted_output = self.format(&output);
         // pragmas
-        let result = match self.backend {
-            SQLBackend::SQLite => {
-                let deferrable_pragma = if constraints?.any_deferrable() {
-                    "PRAGMA defer_foreign_keys = ON"
-                } else {
-                    ""
-                };
-                [deferrable_pragma, "PRAGMA foreign_keys = ON", &formatted_output].join(";\n\n")
-            }
-            _ => formatted_output,
-        };
-        Ok(result)
+        match self.backend {
+            SQLBackend::SQLite => Ok(["PRAGMA foreign_keys = ON", &formatted_output].join(";\n\n")),
+            _ => Ok(formatted_output),
+        }
     }
 
     fn fk(
@@ -468,7 +479,7 @@ CREATE TABLE IF NOT EXISTS `Person` (
     }
 
     #[test]
-    fn sql_cycles() {
+    fn sql_postgres_cycles() {
         let th = Rc::new(th_schema());
         let source = "[
                 Refs : Entity,
