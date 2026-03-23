@@ -25,7 +25,6 @@
 .settingsPane {
     display: flex;
     justify-content: right;
-    align-items: right;
     margin: 0.5rem;
 }
 

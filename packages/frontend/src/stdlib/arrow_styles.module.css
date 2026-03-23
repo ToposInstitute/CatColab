@@ -19,6 +19,7 @@
     border-radius: 3px;
 }
 
+/* stylelint-disable-next-line block-no-empty -- needed for CSS modules type generation */
 .arrow.unmarked {
 }
 
