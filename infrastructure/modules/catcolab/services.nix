@@ -185,16 +185,29 @@ with lib;
         StateDirectory = lib.removePrefix "/var/lib/" juliaDepotPath;
         ExecStartPre = "${juliaFhsPkg}/bin/julia-interop --project=${juliaProjectPath} -e 'using Pkg; Pkg.instantiate()'";
         ExecStart = "${juliaFhsPkg}/bin/julia-interop --project=${juliaProjectPath} --threads auto ${juliaProjectPath}/scripts/endpoint.jl Catlab";
+        # Security hardening. The following are incompatible and excluded:
+        # - MemoryDenyWriteExecute: Julia's JIT and PCRE regex JIT need W^X memory.
+        # - ProtectProc/ProcSubset: bwrap reads /proc/sys/kernel/overflowuid.
+        # - RestrictNamespaces: bwrap needs user namespaces.
+        # - PrivateDevices: breaks bwrap device access.
         NoNewPrivileges = true;
-        ProtectSystem = "full";
+        ProtectSystem = "strict";
         ProtectHome = true;
         PrivateTmp = true;
         ProtectKernelTunables = true;
         ProtectKernelModules = true;
+        ProtectKernelLogs = true;
         ProtectControlGroups = true;
+        ProtectClock = true;
+        ProtectHostname = true;
         RestrictSUIDSGID = true;
-        LockPersonality = true;
         RestrictRealtime = true;
+        RestrictAddressFamilies = [ "AF_INET" "AF_INET6" "AF_UNIX" ];
+        LockPersonality = true;
+        RemoveIPC = true;
+        SystemCallArchitectures = "native";
+        CapabilityBoundingSet = "";
+        UMask = "0077";
         ReadWritePaths = juliaDepotPath;
       };
     };
