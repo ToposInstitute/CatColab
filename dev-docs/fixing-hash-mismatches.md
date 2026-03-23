@@ -6,19 +6,26 @@ title: "Fixing hash mismatches in Nix"
 
 #### pnpm Dependencies in the Frontend
 
-This only applies to the `frontend` package.
+This only applies to the `frontend` package. The pnpm hash is located in `packages/frontend/default.nix`
+within the `pkgs.fetchPnpmDeps` block.
 
-The following error occurs when a dependency has changed but the Nix hash has not:
+When a pnpm dependency has changed but the Nix hash has not, running `nix build .#frontend` will fail
+with a hash mismatch that looks like this:
 ```
-> ERR_PNPM_NO_OFFLINE_TARBALL  A package is missing from the store but cannot download it in offline mode. The missing package may be downloaded from https://registry.npmjs.org/@automerge/prosemirror/-/prosemirror-0.2.0-alpha.0.tgz.
+error: hash mismatch in fixed-output derivation '/nix/store/4wpp80j18vvm232ii1ajl2kqnbfgvzq2-frontend-pnpm-deps.drv':
+         specified: sha256-vuBwhtNTTRbpgPZS+AQDybASYM9rwWYG8l0bscVQUso=
+            got:    sha256-sxczRF8IsYqQzmAAv+IiFeWJygqHCVnSk8fEuy5d1JM=
+```
+
+This can be fixed by replacing the `specified` hash in `packages/frontend/default.nix` with the `got` hash.
+
+You may also see a pnpm-specific error like this:
+```
+> ERR_PNPM_NO_OFFLINE_TARBALL  A package is missing from the store but cannot download it in offline mode.
 > ERROR: pnpm failed to install dependencies
 ```
 
-In this case you can follow the instructions:
-
-1. Set pnpmDeps.hash in packages/frontend/defaultnix to "" (empty string)
-2. Build the derivation by running `nix build .#frontend` and wait for it to fail with a hash mismatch
-3. Copy the 'got: sha256-' value back into the pnpmDeps.hash field
+This will be accompanied by the hash mismatch above and can be fixed the same way.
 
 
 #### Other Dependencies
