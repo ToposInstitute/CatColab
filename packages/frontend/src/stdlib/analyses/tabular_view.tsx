@@ -99,7 +99,8 @@ export default function TabularView(
         },
 
         async ({ model, diagram }) => {
-            const response = await api.fetch("/julia/acsetcolim", {
+            const juliaUrl = import.meta.env.VITE_JULIA_URL;
+            const reqBody = {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -108,7 +109,10 @@ export default function TabularView(
                     model: model.presentation(),
                     diagram: diagram.presentation(),
                 }),
-            });
+            };
+            const response = juliaUrl
+                ? await fetch(`${juliaUrl}/acsetcolim`, reqBody)
+                : await api.fetch("/julia/acsetcolim", reqBody);
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
