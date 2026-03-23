@@ -133,9 +133,6 @@
     box-sizing: border-box;
     margin-top: 0.5em;
     margin-bottom: 0.5em;
-}
-
-.search-input {
     width: 100%;
     padding: 8px;
     border: 1px solid var(--color-gray-550);
@@ -153,5 +150,6 @@
 }
 
 .delete-cell {
+    /* stylelint-disable-next-line declaration-no-important */
     padding: 8px !important;
 }

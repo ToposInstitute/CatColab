@@ -130,6 +130,32 @@
     box-sizing: border-box;
     position: relative;
 
+    .document-name {
+        flex: 1;
+        overflow: hidden;
+        text-wrap-mode: nowrap;
+        text-overflow: ellipsis;
+        padding-left: 5px;
+    }
+
+    .document-actions {
+        position: absolute;
+        right: 0;
+        visibility: hidden;
+        display: flex;
+        align-items: center;
+        padding: 2px;
+        border-radius: 6px;
+
+        &:hover {
+            .icon-button {
+                background-color: var(--color-hover-bg-strong);
+            }
+
+            background-color: var(--color-hover-bg-strong);
+        }
+    }
+
     &:hover {
         background: var(--color-hover-bg);
         cursor: pointer;
@@ -145,36 +171,6 @@
 
         &:hover {
             background: var(--color-hover-bg-dark);
-        }
-    }
-
-    .document-name {
-        flex: 1;
-        overflow: hidden;
-        text-wrap-mode: nowrap;
-        text-overflow: ellipsis;
-        padding-left: 5px;
-    }
-
-    .document-actions {
-        position: absolute;
-        right: 0;
-        visibility: hidden;
-        align-items: center;
-
-        & {
-            display: flex;
-            align-items: center;
-            padding: 2px;
-            border-radius: 6px;
-
-            &:hover {
-                .icon-button {
-                    background-color: var(--color-hover-bg-strong);
-                }
-
-                background-color: var(--color-hover-bg-strong);
-            }
         }
     }
 }

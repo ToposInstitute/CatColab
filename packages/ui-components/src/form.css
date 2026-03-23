@@ -49,6 +49,7 @@ form .error {
         grid-column-start: 1;
     }
 
+    /* stylelint-disable-next-line no-descending-specificity -- different parent context from .form-group dd */
     & dd {
         grid-column-start: 2;
         margin-left: 0;
