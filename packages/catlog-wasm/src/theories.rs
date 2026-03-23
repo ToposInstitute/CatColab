@@ -9,9 +9,9 @@ use wasm_bindgen::prelude::*;
 use catlog::dbl::theory;
 use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
-use catlog::zero::{name, QualifiedLabel};
+use catlog::zero::{QualifiedLabel, name};
 
-use super::model_morphism::{motifs, MotifOccurrence, MotifsOptions};
+use super::model_morphism::{MotifOccurrence, MotifsOptions, motifs};
 use super::result::JsResult;
 use super::{analyses::*, model::DblModel, theory::DblTheory};
 

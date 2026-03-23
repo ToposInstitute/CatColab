@@ -3,7 +3,7 @@ use crate::{
     dbl::model::*,
     one::{
         graph::FinGraph,
-        graph_algorithms::{toposort_lenient, toposort_strict, ToposortData},
+        graph_algorithms::{toposort_lenient, ToposortData},
         Path,
     },
     zero::{name, QualifiedLabel, QualifiedName},
@@ -43,11 +43,26 @@ impl Iden for &QualifiedLabel {
 #[derive(Debug, Clone, PartialEq)]
 pub enum ColumnBehavior {
     /// A foreign key constraint. The target is an entity.
-    Ordinary { mor: QualifiedName, tgt: QualifiedName },
+    Ordinary {
+        /// The name of the morphism.
+        mor: QualifiedName,
+        /// The name of the target entity.
+        tgt: QualifiedName,
+    },
     /// A deferrable key constraint. The target is an entity.
-    Deferrable { mor: QualifiedName, tgt: QualifiedName },
+    Deferrable {
+        /// The name of the morphism.
+        mor: QualifiedName,
+        /// The name of the target entity.
+        tgt: QualifiedName,
+    },
     /// An attribute column. The target is an attribute type.
-    Attribute { mor: QualifiedName, tgt: QualifiedName },
+    Attribute {
+        /// The name of the morphism.
+        mor: QualifiedName,
+        /// The name of the target attribute.
+        tgt: QualifiedName,
+    },
 }
 
 impl ColumnBehavior {
@@ -214,6 +229,7 @@ impl SQLAnalysis {
             .join(";\n")
             + ";";
 
+        // for PostgresSQL only
         let deferrable_fks: String = constraints
             .fks
             .iter()
@@ -232,7 +248,10 @@ impl SQLAnalysis {
         &self,
         constraints: ForeignKeyConstraints,
     ) -> Result<ForeignKeyConstraints, SQLAnalysisError> {
-        if self.backend == SQLBackend::MySQL && constraints.any_deferrable() {
+        // TODO: punting fixing SQLite cycles for now
+        if (self.backend == SQLBackend::MySQL || self.backend == SQLBackend::SQLite)
+            && constraints.any_deferrable()
+        {
             let cycles = constraints
                 .fks
                 .into_iter()
@@ -266,18 +285,10 @@ impl SQLAnalysis {
         let output: String = self.build(tables, constraints.clone()?, ob_label, mor_label);
         let formatted_output = self.format(&output);
         // pragmas
-        let result = match self.backend {
-            SQLBackend::SQLite => {
-                let deferrable_pragma = if constraints?.any_deferrable() {
-                    "PRAGMA defer_foreign_keys = ON"
-                } else {
-                    ""
-                };
-                [deferrable_pragma, "PRAGMA foreign_keys = ON", &formatted_output].join(";\n\n")
-            }
-            _ => formatted_output,
-        };
-        Ok(result)
+        match self.backend {
+            SQLBackend::SQLite => Ok(["PRAGMA foreign_keys = ON", &formatted_output].join(";\n\n")),
+            _ => Ok(formatted_output),
+        }
     }
 
     fn fk(
@@ -468,7 +479,7 @@ CREATE TABLE IF NOT EXISTS `Person` (
     }
 
     #[test]
-    fn sql_cycles() {
+    fn sql_postgres_cycles() {
         let th = Rc::new(th_schema());
         let source = "[
                 Refs : Entity,
@@ -514,6 +525,53 @@ ADD
             .expect("SQL should render");
         expected.assert_eq(&ddl);
     }
+
+    // #[test]
+    // fn sql_sqlite_cycles() {
+    //     let th = Rc::new(th_schema());
+    //     let source = "[
+    //             Refs : Entity,
+    //             Snapshots : Entity,
+    //             head : (Hom Entity)[Refs, Snapshots],
+    //             for_ref: (Hom Entity)[Snapshots, Refs],
+    //             Timestamp : AttrType,
+    //             created : Attr[Refs, Timestamp],
+    //             last_updated: Attr[Snapshots, Timestamp],
+    //         ]";
+    //     let model = tt::modelgen::Model::from_text(&th.into(), source)
+    //         .and_then(|m| m.as_discrete())
+    //         .unwrap();
+
+    //     let expected = expect![[r#"CREATE TABLE IF NOT EXISTS "Snapshots" (
+    // "id" serial NOT NULL PRIMARY KEY,
+    // "for_ref" integer NOT NULL,
+    // "last_updated" Timestamp NOT NULL
+    // );
+
+    // CREATE TABLE IF NOT EXISTS "Refs" (
+    // "id" serial NOT NULL PRIMARY KEY,
+    // "head" integer NOT NULL,
+    // "created" Timestamp NOT NULL
+    // );
+
+    // ALTER TABLE
+    // Snapshots
+    // ADD
+    // CONSTRAINT fk_for_ref_Snapshots_Refs FOREIGN KEY (for_ref) REFERENCES Refs (id) DEFERRABLE INITIALLY DEFERRED;
+
+    // ALTER TABLE
+    // Refs
+    // ADD
+    // CONSTRAINT fk_head_Refs_Snapshots FOREIGN KEY (head) REFERENCES Snapshots (id) DEFERRABLE INITIALLY DEFERRED;"#]];
+    //     let ddl = SQLAnalysis::new(SQLBackend::SQLite)
+    //         .render(
+    //             &model,
+    //             |id| format!("{id}").as_str().into(),
+    //             |id| format!("{id}").as_str().into(),
+    //         )
+    //         .expect("SQL should render");
+    //     expected.assert_eq(&ddl);
+    // }
 
     #[test]
     fn sql_mysql_cycles() {
