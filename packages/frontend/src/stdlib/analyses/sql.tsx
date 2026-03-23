@@ -2,6 +2,7 @@ import download from "js-file-download";
 import CircleHelp from "lucide-solid/icons/circle-help";
 import Copy from "lucide-solid/icons/copy";
 import Download from "lucide-solid/icons/download";
+import { Highlight, Language } from "solid-highlight";
 import { For, Match, Show, Switch } from "solid-js";
 
 import { BlockTitle, ErrorAlert, IconButton } from "catcolab-ui-components";
@@ -9,6 +10,10 @@ import type { ModelAnalysisProps } from "../../analysis";
 import * as SQL from "./sql_types.ts";
 
 import styles from "../styles.module.css";
+// eslint-disable-next-line import/no-unassigned-import
+import "prismjs/components/prism-sql";
+// eslint-disable-next-line import/no-unassigned-import
+import "prismjs/themes/prism.min.css";
 
 const copyToClipboard = (text: string) => navigator.clipboard.writeText(text);
 
@@ -100,7 +105,11 @@ export default function SQLSchemaAnalysis(
                                         actions={SQLHeader(sql())}
                                         settingsPane={BackendConfig()}
                                     />
-                                    <pre>{sql()}</pre>
+                                    <div class={styles.sql}>
+                                        <Highlight language={Language.SQL} class={styles.sql}>
+                                            {sql()}
+                                        </Highlight>
+                                    </div>
                                 </div>
                             )}
                         </Match>

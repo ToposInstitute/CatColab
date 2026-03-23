@@ -2,11 +2,11 @@
 use crate::{
     dbl::model::*,
     one::{
-        graph::FinGraph,
-        graph_algorithms::{toposort_lenient, ToposortData},
         Path,
+        graph::FinGraph,
+        graph_algorithms::{ToposortData, toposort_lenient},
     },
-    zero::{name, QualifiedLabel, QualifiedName},
+    zero::{QualifiedLabel, QualifiedName, name},
 };
 use derive_more::Constructor;
 use indexmap::IndexMap;
@@ -14,10 +14,10 @@ use itertools::Itertools;
 use nonempty::nonempty;
 use sea_query::SchemaBuilder;
 use sea_query::{
-    prepare::Write, ColumnDef, ForeignKey, ForeignKeyCreateStatement, Iden, MysqlQueryBuilder,
-    PostgresQueryBuilder, SqliteQueryBuilder, Table, TableCreateStatement,
+    ColumnDef, ForeignKey, ForeignKeyCreateStatement, Iden, MysqlQueryBuilder,
+    PostgresQueryBuilder, SqliteQueryBuilder, Table, TableCreateStatement, prepare::Write,
 };
-use sqlformat::{format, Dialect};
+use sqlformat::{Dialect, format};
 use std::fmt;
 
 impl Iden for QualifiedName {

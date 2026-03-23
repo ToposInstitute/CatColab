@@ -24,3 +24,12 @@
     white-space: nowrap;
     flex-direction: row;
 }
+
+.sql :global(pre) {
+    border-radius: 9px;
+}
+
+:global(pre.language-sql code) {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
