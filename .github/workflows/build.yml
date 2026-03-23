@@ -254,6 +254,33 @@ jobs:
           name: math-docs
           path: math-docs/output
 
+  build_rfc:
+    name: Build RFCs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository Checkout
+        uses: actions/checkout@v4
+        with:
+          # Need full history for `git log` for cache key
+          fetch-depth: 0
+
+      - name: Set up Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+        with:
+            version: 1.8.26
+            # tinytex: true
+
+      - name: Render Quarto project
+        uses: quarto-dev/quarto-actions/render@v2
+        with:
+          path: rfc
+
+      - name: Upload RFCs
+        uses: actions/upload-artifact@v4
+        with:
+          name: rfc
+          path: rfc/_site
+
   build_ui_components:
     name: Build ui-components Storybook
     runs-on: ubuntu-latest
