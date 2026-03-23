@@ -470,12 +470,11 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
 
 /// Gets the user state document ID for a given user from the database.
 pub async fn get_user_state_doc(state: &AppState, user_id: &str) -> Option<DocumentId> {
-    let (doc_id_str,): (String,) =
-        sqlx::query_as("SELECT state_doc_id FROM users WHERE id = $1 AND state_doc_id IS NOT NULL")
-            .bind(user_id)
-            .fetch_optional(&state.db)
-            .await
-            .ok()??;
+    let (doc_id_str,): (String,) = sqlx::query_as("SELECT state_doc_id FROM users WHERE id = $1")
+        .bind(user_id)
+        .fetch_optional(&state.db)
+        .await
+        .ok()??;
 
     DocumentId::from_str(&doc_id_str).ok()
 }
@@ -509,52 +508,53 @@ pub fn user_state_to_automerge(state: &UserState) -> Result<automerge::Automerge
     Ok(doc)
 }
 
-/// Initializes a user state document.
+/// Initializes a user state document by loading it into the samod repo and
+/// reconciling the current DB state into it.
 pub async fn initialize_user_state_doc(
     state: &AppState,
     user_id: &str,
     user_state: &UserState,
 ) -> Result<DocumentId, AppError> {
-    let persisted_doc_id: Option<(String,)> =
-        sqlx::query_as("SELECT state_doc_id FROM users WHERE id = $1 AND state_doc_id IS NOT NULL")
-            .bind(user_id)
-            .fetch_optional(&state.db)
-            .await?;
+    let (doc_id_str,): (String,) = sqlx::query_as("SELECT state_doc_id FROM users WHERE id = $1")
+        .bind(user_id)
+        .fetch_one(&state.db)
+        .await?;
 
-    // If we have a persisted ID, try to find the doc in the repo and re-use it.
-    if let Some((doc_id_str,)) = &persisted_doc_id
-        && let Ok(doc_id) = DocumentId::from_str(doc_id_str)
-    {
-        if let Ok(Some(doc_handle)) = state.repo.find(doc_id.clone()).await {
-            doc_handle.with_document(|doc| reconcile_user_state(doc, user_state))?;
-            debug!(
-                user_id = %user_id,
-                doc_id = %doc_id,
-                "Reconciled existing user state document from DB"
-            );
-            return Ok(doc_id);
-        }
+    let doc_id = DocumentId::from_str(&doc_id_str)
+        .map_err(|e| AppError::Invalid(format!("Invalid state_doc_id: {e}")))?;
+
+    // Try to find the doc in the repo (it may already be loaded).
+    if let Ok(Some(doc_handle)) = state.repo.find(doc_id.clone()).await {
+        doc_handle.with_document(|doc| reconcile_user_state(doc, user_state))?;
         debug!(
             user_id = %user_id,
-            doc_id = %doc_id_str,
-            "Persisted state_doc_id not found in repo; creating new document"
+            doc_id = %doc_id,
+            "Reconciled existing user state document"
         );
+        return Ok(doc_id);
     }
 
-    // No existing doc — create a fresh one.
+    // Doc not in repo (e.g. after server restart) — create a fresh one and
+    // update the persisted ID.
+    debug!(
+        user_id = %user_id,
+        doc_id = %doc_id_str,
+        "state_doc_id not found in repo; creating new document"
+    );
+
     let doc = user_state_to_automerge(user_state)?;
     let doc_handle = state.repo.create(doc).await?;
-    let doc_id = doc_handle.document_id();
+    let new_doc_id = doc_handle.document_id();
 
     sqlx::query("UPDATE users SET state_doc_id = $2 WHERE id = $1")
         .bind(user_id)
-        .bind(doc_id.to_string())
+        .bind(new_doc_id.to_string())
         .execute(&state.db)
         .await?;
 
-    info!(user_id = %user_id, doc_id = %doc_id, "Initialized user state document");
+    info!(user_id = %user_id, doc_id = %new_doc_id, "Re-initialized user state document");
 
-    Ok(doc_id.clone())
+    Ok(new_doc_id.clone())
 }
 
 /// Arbitrary instances for property-based testing.

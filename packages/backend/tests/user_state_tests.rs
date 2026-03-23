@@ -26,14 +26,13 @@ mod integration_tests {
     }
 
     pub async fn ensure_user_exists(pool: &PgPool, user_id: &str) -> Result<(), AppError> {
-        sqlx::query!(
-            r#"
-            INSERT INTO users (id, created, signed_in)
-            VALUES ($1, NOW(), NOW())
-            ON CONFLICT (id) DO NOTHING
-            "#,
-            user_id
+        sqlx::query(
+            "INSERT INTO users (id, created, signed_in, state_doc_id)
+             VALUES ($1, NOW(), NOW(), $2)
+             ON CONFLICT (id) DO NOTHING",
         )
+        .bind(user_id)
+        .bind(Uuid::new_v4().to_string())
         .execute(pool)
         .await?;
         Ok(())
@@ -974,16 +973,15 @@ mod integration_tests {
             db: &PgPool,
             state: &UserState,
         ) -> Result<(), AppError> {
-            sqlx::query!(
-                r#"
-                INSERT INTO users (id, created, signed_in, username, display_name)
-                VALUES ($1, NOW(), NOW(), $2, $3)
-                ON CONFLICT (id) DO UPDATE SET username = COALESCE($2, users.username), display_name = $3
-                "#,
-                user_id,
-                state.profile.username.as_ref().map(|u| u.as_str()),
-                state.profile.display_name.as_ref().map(|d| d.as_str()),
+            sqlx::query(
+                "INSERT INTO users (id, created, signed_in, state_doc_id, username, display_name)
+                 VALUES ($1, NOW(), NOW(), $2, $3, $4)
+                 ON CONFLICT (id) DO UPDATE SET username = COALESCE($3, users.username), display_name = $4",
             )
+            .bind(&user_id)
+            .bind(Uuid::new_v4().to_string())
+            .bind(state.profile.username.as_ref().map(|u| u.as_str()))
+            .bind(state.profile.display_name.as_ref().map(|d| d.as_str()))
             .execute(db)
             .await?;
 
@@ -993,16 +991,15 @@ mod integration_tests {
                 for perm in &doc.permissions {
                     if let Some(user_id) = &perm.user {
                         let user_info = state.known_users.get(user_id);
-                        sqlx::query!(
-                            r#"
-                            INSERT INTO users (id, created, signed_in, username, display_name)
-                            VALUES ($1, NOW(), NOW(), $2, $3)
-                            ON CONFLICT (id) DO NOTHING
-                            "#,
-                            user_id.as_str(),
-                            user_info.and_then(|u| u.username.as_ref()).map(|u| u.as_str()),
-                            user_info.and_then(|u| u.display_name.as_ref()).map(|d| d.as_str())
+                        sqlx::query(
+                            "INSERT INTO users (id, created, signed_in, state_doc_id, username, display_name)
+                             VALUES ($1, NOW(), NOW(), $2, $3, $4)
+                             ON CONFLICT (id) DO NOTHING",
                         )
+                        .bind(user_id.as_str())
+                        .bind(Uuid::new_v4().to_string())
+                        .bind(user_info.and_then(|u| u.username.as_ref()).map(|u| u.as_str()))
+                        .bind(user_info.and_then(|u| u.display_name.as_ref()).map(|d| d.as_str()))
                         .execute(db)
                         .await?;
                     }

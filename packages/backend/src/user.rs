@@ -9,16 +9,27 @@ pub async fn sign_up_or_sign_in(ctx: AppCtx) -> Result<(), AppError> {
     let Some(user) = ctx.user else {
         return Err(AppError::Unauthorized);
     };
-    let query = sqlx::query!(
-        "
-        INSERT INTO users(id, created, signed_in)
-        VALUES ($1, NOW(), NOW())
-        ON CONFLICT (id) DO UPDATE
-        SET signed_in = EXCLUDED.signed_in
-        ",
-        user.user_id,
-    );
-    query.execute(&ctx.state.db).await?;
+
+    let result = sqlx::query("UPDATE users SET signed_in = NOW() WHERE id = $1")
+        .bind(&user.user_id)
+        .execute(&ctx.state.db)
+        .await?;
+
+    if result.rows_affected() == 0 {
+        let doc = automerge::Automerge::new();
+        let doc_handle = ctx.state.repo.create(doc).await?;
+        let doc_id = doc_handle.document_id().to_string();
+
+        sqlx::query(
+            "INSERT INTO users(id, created, signed_in, state_doc_id)
+             VALUES ($1, NOW(), NOW(), $2)",
+        )
+        .bind(&user.user_id)
+        .bind(&doc_id)
+        .execute(&ctx.state.db)
+        .await?;
+    }
+
     Ok(())
 }
 
