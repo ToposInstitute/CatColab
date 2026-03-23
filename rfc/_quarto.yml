@@ -17,8 +17,6 @@ website:
 format:
   html:
     # General styling
-    # mainfont: Baskerville
-    # monofont: JetBrains Mono
     theme:
       light: [flatly, custom.scss]
       dark: [darkly, custom.scss]
@@ -26,7 +24,7 @@ format:
     # RFC rendering
     html-math-method: katex
     toc: true
-    toc-depth: 4
+    toc-depth: 5
     toc-expand: true
     number-sections: true
     date-format: YYYY-MM-DD
