@@ -6,8 +6,9 @@ import { For, Match, Show, Switch } from "solid-js";
 
 import { BlockTitle, ErrorAlert, IconButton } from "catcolab-ui-components";
 import type { ModelAnalysisProps } from "../../analysis";
-import styles from "../styles.module.css";
 import * as SQL from "./sql_types.ts";
+
+import styles from "../styles.module.css";
 
 const copyToClipboard = (text: string) => navigator.clipboard.writeText(text);
 
