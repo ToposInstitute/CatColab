@@ -2336,8 +2336,10 @@ name = "migrator"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "automerge",
  "clap",
  "dotenvy",
+ "samod",
  "sqlx",
  "sqlx_migrator",
  "tokio",

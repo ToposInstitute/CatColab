@@ -1,8 +1,10 @@
-use sqlx::{PgConnection, Postgres};
+use sqlx::{PgConnection, PgPool, Postgres};
 use sqlx_migrator::Migration;
 use sqlx_migrator::Operation;
 use sqlx_migrator::error::Error;
 use sqlx_migrator::vec_box;
+
+use crate::storage::PostgresStorage;
 
 pub(crate) struct AddUserStateDocId;
 
@@ -23,6 +25,10 @@ impl Migration<Postgres> for AddUserStateDocId {
     fn operations(&self) -> Vec<Box<dyn Operation<Postgres>>> {
         vec_box![AddStateDocIdColumn]
     }
+
+    fn is_atomic(&self) -> bool {
+        false
+    }
 }
 
 struct AddStateDocIdColumn;
@@ -30,13 +36,72 @@ struct AddStateDocIdColumn;
 #[async_trait::async_trait]
 impl Operation<Postgres> for AddStateDocIdColumn {
     async fn up(&self, conn: &mut PgConnection) -> Result<(), Error> {
+        // Step 1: Add column as nullable.
         sqlx::query(
             r#"
             ALTER TABLE users ADD COLUMN IF NOT EXISTS state_doc_id TEXT UNIQUE;
             "#,
         )
-        .execute(conn)
+        .execute(&mut *conn)
         .await?;
+
+        // Step 2: Create a separate PgPool for samod (which requires a pool, not a connection).
+        let database_url = dotenvy::var("DATABASE_URL").map_err(|e| {
+            let err: Box<dyn std::error::Error + Send + Sync> =
+                format!("DATABASE_URL not set: {e}").into();
+            err
+        })?;
+        let pool = PgPool::connect(&database_url).await?;
+
+        // Step 3: Create a samod Repo backed by Postgres.
+        let repo: samod::Repo = samod::Repo::build_tokio()
+            .with_storage(PostgresStorage::new(pool.clone()))
+            .load()
+            .await;
+
+        // Step 4: Find all users that don't yet have a state_doc_id.
+        let users: Vec<(String,)> =
+            sqlx::query_as("SELECT id FROM users WHERE state_doc_id IS NULL")
+                .fetch_all(&pool)
+                .await?;
+
+        tracing::info!(
+            count = users.len(),
+            "Creating user state documents for existing users"
+        );
+
+        // Step 5: For each user, create an empty Automerge doc and set state_doc_id.
+        for (user_id,) in &users {
+            let doc = automerge::Automerge::new();
+            let doc_handle = repo.create(doc).await.map_err(|e| {
+                let err: Box<dyn std::error::Error + Send + Sync> = Box::new(e);
+                err
+            })?;
+            let doc_id = doc_handle.document_id().to_string();
+
+            sqlx::query("UPDATE users SET state_doc_id = $2 WHERE id = $1")
+                .bind(user_id)
+                .bind(&doc_id)
+                .execute(&pool)
+                .await?;
+
+            tracing::info!(user_id = %user_id, doc_id = %doc_id, "Created user state document");
+        }
+
+        // Step 6: Stop the repo to flush all pending storage writes.
+        repo.stop().await;
+
+        // Step 7: Set the column to NOT NULL now that every user has a value.
+        sqlx::query(
+            r#"
+            ALTER TABLE users ALTER COLUMN state_doc_id SET NOT NULL;
+            "#,
+        )
+        .execute(&pool)
+        .await?;
+
+        pool.close().await;
+
         Ok(())
     }
 

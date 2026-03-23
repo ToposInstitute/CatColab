@@ -4,6 +4,7 @@ use sqlx_migrator::cli::MigrationCommand;
 use sqlx_migrator::migrator::Migrator;
 
 mod migrations;
+mod storage;
 
 #[tokio::main]
 async fn main() {
