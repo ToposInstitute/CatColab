@@ -62,6 +62,18 @@
     color: var(--color-gray-800);
 }
 
+.home-nav-button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    background: var(--color-topos-primary);
+    border: none;
+    border-radius: 5px;
+    font-family: var(--main-font);
+    font-size: 18px;
+    color: var(--color-background);
+    cursor: pointer;
+}
+
 .quick-actions {
     display: flex;
     gap: 15px;
@@ -117,6 +129,7 @@
     align-items: center;
 }
 
+/* stylelint-disable-next-line no-descending-specificity -- different element from .quick-actions .home-nav-button .lucide */
 .external-link-icon .lucide {
     width: 14px;
     height: 14px;
@@ -145,14 +158,14 @@
     transform: translateY(-2px);
 }
 
-.resource-link:first-child .resource-icon {
-    position: relative;
-    top: 4px;
-}
-
 .resource-icon {
     margin-right: 12px;
     font-size: 20px;
+}
+
+.resource-link:first-child .resource-icon {
+    position: relative;
+    top: 4px;
 }
 
 .resource-link:not(:last-child) .resource-icon {
@@ -191,18 +204,6 @@
     justify-content: flex-start;
 }
 
-.home-nav-button {
-    margin-top: 20px;
-    padding: 10px 20px;
-    background: var(--color-topos-primary);
-    border: none;
-    border-radius: 5px;
-    font-family: var(--main-font);
-    font-size: 18px;
-    color: var(--color-background);
-    cursor: pointer;
-}
-
 .home-nav-button.get-started {
     border: 1px solid var(--color-background);
     border-radius: 5px;
@@ -227,6 +228,7 @@
     background-color: var(--color-topos-primary-hover);
 }
 
+/* stylelint-disable-next-line no-descending-specificity -- :disabled and :hover:not(:disabled) are mutually exclusive */
 .home-nav-button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
