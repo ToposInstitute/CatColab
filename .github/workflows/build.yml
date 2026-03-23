@@ -125,6 +125,16 @@ jobs:
           # Uses env from packages/frontend/.env.production
           pnpm --filter ./packages/frontend run build
 
+      - name: Upload source maps to Sentry
+        if: github.event_name == 'release' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+        run: |
+          pnpm dlx @sentry/cli sourcemaps upload \
+            --org topos-institute \
+            --project catcolab \
+            packages/frontend/dist
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+
       - name: Report cache status
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then
