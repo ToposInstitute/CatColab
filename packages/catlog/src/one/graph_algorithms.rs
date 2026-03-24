@@ -326,8 +326,8 @@ pub enum ToposortError<V> {
 impl<V: std::fmt::Debug> std::fmt::Display for ToposortError<V> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::CycleError(v) => write!(f, "{:#?}", v),
-            Self::SelfLoop(v) => write!(f, "self loop at node {:#?}", v),
+            Self::CycleError(v) => write!(f, "Cycle detected involving node {:#?}", v),
+            Self::SelfLoop(v) => write!(f, "Self loop at node {:#?}", v),
         }
     }
 }
@@ -391,13 +391,13 @@ where
         let t = graph.tgt(&e);
         // Note that we did a DFS starting at every vertex, so it's impossible
         // that they don't appear _somewhere_ in our map.
-        if position[&s] >= position[&t] && is_strict {
-            return Err(ToposortError::CycleError(s));
-        };
-
-        if position[&s] >= position[&t] && !is_strict {
-            let outs = graph.out_neighbors(&s).collect();
-            cycles.insert(s, outs);
+        if position[&s] >= position[&t] {
+            if is_strict {
+                return Err(ToposortError::CycleError(s));
+            } else {
+                let outs = graph.out_neighbors(&s).collect();
+                cycles.insert(s, outs);
+            };
         };
     }
 
@@ -460,8 +460,8 @@ mod tests {
         g.add_vertices(1);
         g.add_edge(2, 3);
         g.add_edge(3, 0);
-        // let t = &toposort_strict(&g).unwrap_err();
-        // expect_test::expect!["Cycle detected involving node 3"].assert_eq(&format!("{t}"));
+        let t = &toposort_strict(&g).unwrap_err();
+        expect_test::expect!["Cycle detected involving node 3"].assert_eq(&format!("{t}"));
 
         let g = SkelGraph::triangle();
         if let Ok(sort) = toposort_strict(&g) {
@@ -489,8 +489,6 @@ mod tests {
             let (i0, i1) = (sort.iter().position(|&x| x == 5), sort.iter().position(|&x| x == 2));
             assert!(i0.unwrap() < i1.unwrap());
         }
-
-        // TODO error for strict and lenient
     }
 
     #[test]
