@@ -122,6 +122,7 @@ jobs:
         if: github.event_name == 'release'
         run: |
           pnpm install
+          pnpm --filter ./packages/frontend run build:deps
           # Uses env from packages/frontend/.env.production
           pnpm --filter ./packages/frontend run build
 
