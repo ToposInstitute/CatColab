@@ -264,23 +264,49 @@ jobs:
           # Need full history for `git log` for cache key
           fetch-depth: 0
 
+      - name: Compute cache key
+        id: cache-key
+        run: |
+          hash=$(git log -1 --format="%H" -- rfc)
+          echo "git-hash=${hash}" >> $GITHUB_OUTPUT
+          echo "RFC hash: ${hash}"
+
+      - name: Cache RFC build
+        id: cache-rfc
+        uses: actions/cache@v4
+        with:
+          path: rfc/_site
+          key: rfc-build-${{ steps.cache-key.outputs.git-hash }}
+
       - name: Set up Quarto
+        if: steps.cache-rfc.outputs.cache-hit != 'true'
         uses: quarto-dev/quarto-actions/setup@v2
         with:
             version: 1.8.26
 
       - name: Setup TinyTeX
+        if: steps.cache-rfc.outputs.cache-hit != 'true'
         uses: r-lib/actions/setup-tinytex@v2
 
       - name: Install TeX Packages
+        if: steps.cache-rfc.outputs.cache-hit != 'true'
         run: |
           tlmgr update --self
           tlmgr install dvisvgm standalone pgf tikz-cd amsmath quiver spath3 ebproof luatex85
 
       - name: Render Quarto project
+        if: steps.cache-rfc.outputs.cache-hit != 'true'
         uses: quarto-dev/quarto-actions/render@v2
         with:
           path: rfc
+
+      - name: Report cache status
+        run: |
+          if [ "${{ steps.cache-rfc.outputs.cache-hit }}" = "true" ]; then
+            echo "✅ RFCs restored from cache"
+          else
+            echo "🔨 RFCs built and cached"
+          fi
 
       - name: Upload RFCs
         uses: actions/upload-artifact@v4
