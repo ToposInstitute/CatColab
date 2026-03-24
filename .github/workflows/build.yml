@@ -268,7 +268,14 @@ jobs:
         uses: quarto-dev/quarto-actions/setup@v2
         with:
             version: 1.8.26
-            # tinytex: true
+
+      - name: Setup TinyTeX
+        uses: r-lib/actions/setup-tinytex@v2
+
+      - name: Install TeX Packages
+        run: |
+          tlmgr update --self
+          tlmgr install dvisvgm standalone pgf tikz-cd amsmath quiver spath3 ebproof luatex85
 
       - name: Render Quarto project
         uses: quarto-dev/quarto-actions/render@v2
