@@ -169,7 +169,7 @@ pub struct UserState {
 
 impl UserState {
     /// Creates a new empty UserState for the given user.
-    pub fn new(_user_id: &str) -> Self {
+    pub fn new() -> Self {
         Self {
             profile: UserInfo { username: None, display_name: None },
             known_users: HashMap::new(),
@@ -211,6 +211,12 @@ impl UserState {
                 target_doc.used_by.push(relation);
             }
         }
+    }
+}
+
+impl Default for UserState {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -280,14 +286,13 @@ impl DbUserInfo {
 
 /// Extracts document relations from a JSON content tree.
 ///
-/// Replicates the SQL `extract_snapshot_relations` function: recursively walks
-/// the JSON tree and collects objects that have both `_id` and `type` keys,
+/// Recursively walks the JSON tree and collects objects that have both `_id` and `type` keys,
 /// returning them as `RelationInfo` entries.
 pub fn extract_relations_from_json(value: &serde_json::Value) -> Vec<RelationInfo> {
     let mut relations = Vec::new();
     collect_relations(value, &mut relations);
 
-    // Deduplicate by (ref_id, relation_type), matching the SQL DISTINCT.
+    // Deduplicate by (ref_id, relation_type)
     relations.sort_by(|a, b| a.ref_id.cmp(&b.ref_id).then(a.relation_type.cmp(&b.relation_type)));
     relations.dedup_by(|a, b| a.ref_id == b.ref_id && a.relation_type == b.relation_type);
 
@@ -463,97 +468,38 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
     Ok(user_state)
 }
 
-/// Gets the user state document ID for a given user.
+/// Gets the user state document ID for a given user from the database.
 pub async fn get_user_state_doc(state: &AppState, user_id: &str) -> Option<DocumentId> {
-    let doc_id = sqlx::query_scalar::<_, String>(
-        r#"
-        SELECT state_doc_id
-        FROM users
-        WHERE id = $1 AND state_doc_id IS NOT NULL
-        "#,
-    )
-    .bind(user_id)
-    .fetch_optional(&state.db)
-    .await
-    .ok()??;
+    let (doc_id_str,): (String,) =
+        sqlx::query_as("SELECT state_doc_id FROM users WHERE id = $1 AND state_doc_id IS NOT NULL")
+            .bind(user_id)
+            .fetch_optional(&state.db)
+            .await
+            .ok()??;
 
-    DocumentId::from_str(&doc_id).ok()
+    DocumentId::from_str(&doc_id_str).ok()
 }
 
 /// Gets or creates the user state document for a given user.
-///
-/// This function reads the user's current state from the database and either:
-/// - Returns the existing document ID if already cached
-/// - Creates a new document with the current DB state if not cached
 pub async fn get_or_create_user_state_doc(
     state: &AppState,
     user_id: &str,
 ) -> Result<DocumentId, AppError> {
     debug!(user_id = %user_id, "Getting or creating user state document");
 
-    // Check if we already have a document for this user
-    if let Some(doc_id) = get_user_state_doc(state, user_id).await {
-        let already_initialized = {
-            let initialized = state.initialized_user_states.read().await;
-            initialized.contains_key(user_id)
-        };
-
-        if !already_initialized {
-            let refreshed = refresh_user_state_doc_from_db(state, user_id, &doc_id).await?;
-            if refreshed {
-                let mut initialized = state.initialized_user_states.write().await;
-                initialized.insert(user_id.to_string(), doc_id.clone());
-            } else {
-                debug!(
-                    user_id = %user_id,
-                    doc_id = %doc_id,
-                    "Persisted user state doc was not found in repo; recreating"
-                );
-                let user_state = read_user_state_from_db(user_id.to_string(), &state.db).await?;
-                let recreated_doc_id = create_user_state_doc(state, user_id, &user_state).await?;
-                let mut initialized = state.initialized_user_states.write().await;
-                initialized.insert(user_id.to_string(), recreated_doc_id.clone());
-                return Ok(recreated_doc_id);
-            }
+    {
+        let initialized = state.initialized_user_states.read().await;
+        if let Some(doc_id) = initialized.get(user_id) {
+            return Ok(doc_id.clone());
         }
-
-        debug!(
-            user_id = %user_id,
-            doc_id = %doc_id,
-            "Found existing user state document"
-        );
-        return Ok(doc_id);
     }
 
-    debug!(user_id = %user_id, "No existing document, creating new one");
-
     let user_state = read_user_state_from_db(user_id.to_string(), &state.db).await?;
-    let doc_id = create_user_state_doc(state, user_id, &user_state).await?;
+    let doc_id = initialize_user_state_doc(state, user_id, &user_state).await?;
+
     let mut initialized = state.initialized_user_states.write().await;
     initialized.insert(user_id.to_string(), doc_id.clone());
     Ok(doc_id)
-}
-
-async fn refresh_user_state_doc_from_db(
-    state: &AppState,
-    user_id: &str,
-    doc_id: &DocumentId,
-) -> Result<bool, AppError> {
-    let user_state = read_user_state_from_db(user_id.to_string(), &state.db).await?;
-    let Some(doc_handle) = state.repo.find(doc_id.clone()).await? else {
-        return Ok(false);
-    };
-
-    doc_handle.with_document(|doc| reconcile_user_state(doc, &user_state))?;
-
-    debug!(
-        user_id = %user_id,
-        doc_id = %doc_id,
-        document_count = user_state.documents.len(),
-        "Refreshed existing user state document from DB"
-    );
-
-    Ok(true)
 }
 
 /// Converts a `UserState` into an Automerge document.
@@ -563,80 +509,52 @@ pub fn user_state_to_automerge(state: &UserState) -> Result<automerge::Automerge
     Ok(doc)
 }
 
-/// Creates a new user state document in samod and persists its URL for the user.
-pub async fn create_user_state_doc(
+/// Initializes a user state document.
+pub async fn initialize_user_state_doc(
     state: &AppState,
     user_id: &str,
     user_state: &UserState,
 ) -> Result<DocumentId, AppError> {
-    debug!(
-        user_id = %user_id,
-        document_count = user_state.documents.len(),
-        "Creating new user state document"
-    );
+    let persisted_doc_id: Option<(String,)> =
+        sqlx::query_as("SELECT state_doc_id FROM users WHERE id = $1 AND state_doc_id IS NOT NULL")
+            .bind(user_id)
+            .fetch_optional(&state.db)
+            .await?;
 
-    let default_state = UserState::new(user_id);
-    let doc = user_state_to_automerge(&default_state)?;
+    // If we have a persisted ID, try to find the doc in the repo and re-use it.
+    if let Some((doc_id_str,)) = &persisted_doc_id
+        && let Ok(doc_id) = DocumentId::from_str(doc_id_str)
+    {
+        if let Ok(Some(doc_handle)) = state.repo.find(doc_id.clone()).await {
+            doc_handle.with_document(|doc| reconcile_user_state(doc, user_state))?;
+            debug!(
+                user_id = %user_id,
+                doc_id = %doc_id,
+                "Reconciled existing user state document from DB"
+            );
+            return Ok(doc_id);
+        }
+        debug!(
+            user_id = %user_id,
+            doc_id = %doc_id_str,
+            "Persisted state_doc_id not found in repo; creating new document"
+        );
+    }
+
+    // No existing doc — create a fresh one.
+    let doc = user_state_to_automerge(user_state)?;
     let doc_handle = state.repo.create(doc).await?;
-    let doc_id = doc_handle.document_id().clone();
+    let doc_id = doc_handle.document_id();
 
-    debug!(user_id = %user_id, doc_id = %doc_id, "Empty document created in repo");
+    sqlx::query("UPDATE users SET state_doc_id = $2 WHERE id = $1")
+        .bind(user_id)
+        .bind(doc_id.to_string())
+        .execute(&state.db)
+        .await?;
 
-    doc_handle.with_document(|doc| reconcile_user_state(doc, user_state))?;
+    info!(user_id = %user_id, doc_id = %doc_id, "Initialized user state document");
 
-    debug!(user_id = %user_id, doc_id = %doc_id, "Document populated with user state");
-
-    sqlx::query(
-        r#"
-        UPDATE users SET state_doc_id = $2 WHERE id = $1
-        "#,
-    )
-    .bind(user_id)
-    .bind(doc_id.to_string())
-    .execute(&state.db)
-    .await?;
-
-    debug!(user_id = %user_id, doc_id = %doc_id, "Stored state_doc_id on users row");
-
-    info!(user_id = %user_id, doc_id = %doc_id, "Created user state document");
-
-    Ok(doc_id)
-}
-
-/// Updates only snapshot-derived fields on an existing `DocInfo` entry.
-///
-/// Called after autosave, which only writes snapshot content. This is a partial
-/// update because autosave cannot change permissions, timestamps, or user data —
-/// those fields are handled by their own DB triggers (`notify_permissions_change`,
-/// `notify_refs_change`, `notify_user_change`).
-///
-/// Returns `Ok(false)` if the `ref_id` isn't in the user's documents (user
-/// doesn't have access), `Ok(true)` if the update was applied.
-pub fn update_doc_info_from_snapshot(
-    doc_handle: &samod::DocHandle,
-    ref_id: &str,
-    name: &str,
-    type_name: DocInfoType,
-    theory: Option<&str>,
-    depends_on: Vec<RelationInfo>,
-) -> Result<bool, AppError> {
-    doc_handle.with_document(|doc| {
-        let mut user_state: UserState =
-            autosurgeon::hydrate(doc).map_err(|e| AppError::UserStateSync(e.to_string()))?;
-
-        let Some(doc_info) = user_state.documents.get_mut(ref_id) else {
-            return Ok(false);
-        };
-
-        doc_info.name = autosurgeon::Text::from(name);
-        doc_info.type_name = type_name;
-        doc_info.theory = theory.map(|s| s.to_string());
-        doc_info.depends_on = depends_on;
-
-        user_state.recompute_used_by();
-        reconcile_user_state(doc, &user_state)?;
-        Ok(true)
-    })
+    Ok(doc_id.clone())
 }
 
 /// Arbitrary instances for property-based testing.
@@ -938,14 +856,13 @@ mod unit_tests {
 #[cfg(all(test, feature = "property-tests"))]
 mod tests {
     use super::*;
-    use automerge::Automerge;
     use autosurgeon::hydrate;
     use test_strategy::proptest;
 
     use crate::app::AppError;
 
     /// Converts an Automerge document to a `UserState`.
-    fn automerge_to_user_state(doc: &Automerge) -> Result<UserState, AppError> {
+    fn automerge_to_user_state(doc: &automerge::Automerge) -> Result<UserState, AppError> {
         let state: UserState = hydrate(doc)
             .map_err(|e| AppError::Invalid(format!("Failed to hydrate UserState: {}", e)))?;
         Ok(state)
