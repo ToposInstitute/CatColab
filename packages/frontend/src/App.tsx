@@ -149,14 +149,6 @@ const routes: RouteDefinition[] = [
         },
     },
     {
-        path: "/math/*",
-        component: (route) => {
-            const url = `https://next.catcolab.org${route.location.pathname}`;
-            window.location.replace(url);
-            return null;
-        },
-    },
-    {
         path: "/rfc/*",
         component: (route) => {
             const url = `https://next.catcolab.org${route.location.pathname}`;

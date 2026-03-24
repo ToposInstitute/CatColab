@@ -1,0 +1,39 @@
+{
+    "extends": ["stylelint-config-standard"],
+    "rules": {
+        "declaration-no-important": true,
+
+        "selector-class-pattern": null,
+        "keyframes-name-pattern": null,
+
+
+        "selector-pseudo-class-no-unknown": [
+            true,
+            { "ignorePseudoClasses": ["global"] }
+        ],
+
+        "declaration-empty-line-before": null,
+        "rule-empty-line-before": null,
+        "comment-empty-line-before": null,
+        "custom-property-empty-line-before": null,
+        "comment-whitespace-inside": null,
+
+        "color-function-notation": null,
+        "color-function-alias-notation": null,
+        "alpha-value-notation": null,
+        "hue-degree-notation": null,
+        "color-hex-length": null,
+        "length-zero-no-unit": null,
+        "shorthand-property-no-redundant-values": null,
+        "declaration-block-no-redundant-longhand-properties": null,
+        "block-no-redundant-nested-style-rules": null,
+        "font-family-name-quotes": null,
+        "media-feature-range-notation": null,
+        "selector-pseudo-element-colon-notation": null,
+        "value-keyword-case": null,
+        "import-notation": null,
+        "property-no-vendor-prefix": null,
+        "property-no-deprecated": null
+    },
+    "ignoreFiles": ["**/math-docs/**", "**/dist/**", "**/node_modules/**"]
+}

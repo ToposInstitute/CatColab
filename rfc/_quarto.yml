@@ -28,6 +28,7 @@ format:
     toc-expand: true
     number-sections: true
     date-format: YYYY-MM-DD
+    csl: chicago-author-date.csl
 
 filters:
   - filters.lua
