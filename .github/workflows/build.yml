@@ -268,7 +268,7 @@ jobs:
         uses: quarto-dev/quarto-actions/setup@v2
         with:
             version: 1.8.26
-            # tinytex: true
+            tinytex: true
 
       - name: Render Quarto project
         uses: quarto-dev/quarto-actions/render@v2
