@@ -12,7 +12,6 @@ use crate::user_state_updates::{
 };
 use chrono::{DateTime, Utc};
 use samod::DocumentId;
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
@@ -330,24 +329,6 @@ pub async fn get_doc_id(state: AppState, ref_id: Uuid) -> Result<DocumentId, App
         .parse()
         .map_err(|_| AppError::Invalid("Invalid document ID".to_string()))?;
 
-    let doc_handle = state
-        .repo
-        .find(doc_id.clone())
-        .await?
-        .ok_or_else(|| AppError::Invalid("Document not found".to_string()))?;
-
-    ensure_autosave_listener(state, ref_id, doc_handle).await;
-
     Ok(doc_id)
 }
 
-/// A document ref along with its content.
-#[qubit::ts]
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RefContent {
-    /// The UUID of the document ref.
-    #[serde(rename = "refId")]
-    pub ref_id: Uuid,
-    /// The JSON content of the document.
-    pub content: Value,
-}
