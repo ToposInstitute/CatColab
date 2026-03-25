@@ -10,9 +10,9 @@ import type { ModelAnalysisProps } from "../../analysis";
 import * as SQL from "./sql_types.ts";
 
 import styles from "../styles.module.css";
-// eslint-disable-next-line import/no-unassigned-import
+// oxlint-disable-next-line import/no-unassigned-import
 import "prismjs/components/prism-sql";
-// eslint-disable-next-line import/no-unassigned-import
+// oxlint-disable-next-line import/no-unassigned-import
 import "prismjs/themes/prism.min.css";
 
 const copyToClipboard = (text: string) => navigator.clipboard.writeText(text);
