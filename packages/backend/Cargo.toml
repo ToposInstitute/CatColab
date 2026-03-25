@@ -12,8 +12,8 @@ integration-tests = []
 
 [dependencies]
 async-trait = "0.1.88"
-autosurgeon = { git = "https://github.com/automerge/autosurgeon", features = ["uuid"] , branch="batch-insertion" }
-automerge = { git = "https://github.com/automerge/automerge", branch="batch-insertion" }
+autosurgeon = { features = ["uuid"], version = "0.11.0" }
+automerge = { version = "0.8.0" }
 axum = "0.8.4"
 base64 = "0.22"
 chrono = { version = "0.4.40", features = ["serde"] }
@@ -32,10 +32,8 @@ notebook-types = { version = "0.1.0", path = "../notebook-types" }
 qubit = { version = "1.0.0-beta.0", features = ["ts-serde-json", "ts-uuid", "ts-chrono"] }
 rand = "0.8"
 regex = "1.11.1"
-samod = { git = "https://github.com/alexjg/samod", features = [
-  "tokio",
-  "axum",
-] }
+# tungstenite in features due to https://github.com/alexjg/samod/issues/92
+samod = { features = ["tokio", "axum", "tungstenite"], version = "0.9.0" }
 sd-notify = "0.4.5"
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0.128"

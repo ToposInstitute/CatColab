@@ -117,6 +117,11 @@ async fn main() {
                 .load()
                 .await;
 
+            let port = web_port();
+            let ws_listener_url = samod::Url::parse(&format!("ws://0.0.0.0:{port}/repo-ws"))
+                .expect("valid WebSocket listener URL for samod");
+            let repo_acceptor = repo.make_acceptor(ws_listener_url).expect("samod make_acceptor");
+
             let state = app::AppState {
                 db: db.clone(),
                 repo,
@@ -139,7 +144,9 @@ async fn main() {
             // Notify systemd we're ready
             sd_notify::notify(false, &[sd_notify::NotifyState::Ready]).ok();
 
-            run_web_server(state.clone(), firebase_auth.clone()).await.unwrap();
+            run_web_server(state.clone(), repo_acceptor, firebase_auth.clone())
+                .await
+                .unwrap();
         }
     }
 }
@@ -168,10 +175,10 @@ async fn status_handler() -> &'static str {
 
 async fn websocket_handler(
     ws: WebSocketUpgrade,
-    State(repo): State<samod::Repo>,
+    State(acceptor): State<samod::AcceptorHandle>,
 ) -> axum::response::Response {
     ws.on_upgrade(|socket| async move {
-        repo.accept_axum(socket).expect("Failed to accept WebSocket connection");
+        acceptor.accept_axum(socket).expect("Failed to accept WebSocket connection");
     })
 }
 
@@ -180,6 +187,7 @@ use tower_http::services::{ServeDir, ServeFile};
 
 async fn run_web_server(
     state: app::AppState,
+    repo_acceptor: samod::AcceptorHandle,
     firebase_auth: Arc<FirebaseAuth>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let port = web_port();
@@ -195,7 +203,7 @@ async fn run_web_server(
     let samod_router = Router::new()
         .layer(from_fn_with_state(firebase_auth, auth_middleware))
         .route("/repo-ws", get(websocket_handler))
-        .with_state(state.repo.clone());
+        .with_state(repo_acceptor);
 
     // used by tests to tell when the backend is ready
     let status_router = Router::new().route("/status", get(status_handler));
