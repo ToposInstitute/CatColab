@@ -46,6 +46,8 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
     let doc_handle = ctx.state.repo.create(automerge_doc).await?;
 
     let doc_id = doc_handle.document_id().to_string();
+    let heads: Vec<String> =
+        doc_handle.with_document(|doc| doc.get_heads().iter().map(|h| h.to_string()).collect());
 
     // If the automerge-repo document is created but the db transaction doesn't complete, then the
     // document will be orphaned. The only negative consequence of that is additional space used, but
@@ -57,17 +59,16 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
     sqlx::query!(
         "
         WITH snapshot AS (
-            INSERT INTO snapshots(for_ref, content, last_updated, doc_id)
+            INSERT INTO snapshots(for_ref, content, last_updated, heads)
             VALUES ($1, $2, NOW(), $3)
             RETURNING id
         )
-        INSERT INTO refs(id, head, created)
-        VALUES ($1, (SELECT id FROM snapshot), NOW())
+        INSERT INTO refs(id, head, created, doc_id)
+        VALUES ($1, (SELECT id FROM snapshot), NOW(), $4)
         ",
         ref_id,
-        // Use the JSON provided by automerge as the authoritative content
-        // serde_json::to_value(doc_content),
         content,
+        &heads,
         doc_id,
     )
     .execute(&mut *txn)
@@ -162,16 +163,21 @@ pub async fn ref_deleted_at(
 
 /// Saves the document by overwriting the snapshot at the current head,
 /// then pushes snapshot-derived fields to all initialized user state docs.
-pub async fn autosave(state: AppState, data: RefContent) -> Result<(), AppError> {
-    let RefContent { ref_id, content } = data;
+pub async fn autosave(
+    state: AppState,
+    ref_id: Uuid,
+    content: Value,
+    heads: &[String],
+) -> Result<(), AppError> {
     sqlx::query!(
         "
         UPDATE snapshots
-        SET content = $2, last_updated = NOW()
+        SET content = $2, heads = $3, last_updated = NOW()
         WHERE id = (SELECT head FROM refs WHERE id = $1)
         ",
         ref_id,
-        content
+        content,
+        heads,
     )
     .execute(&state.db)
     .await?;
@@ -234,15 +240,15 @@ pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppErr
         .await?
         .ok_or_else(|| AppError::Invalid("Document not found".to_string()))?;
 
-    let cloned_doc = doc_handle.with_document(|doc| doc.clone());
-    let cloned_handle = state.repo.create(cloned_doc).await?;
+    let heads: Vec<String> =
+        doc_handle.with_document(|doc| doc.get_heads().iter().map(|h| h.to_string()).collect());
 
     let doc_content = head_snapshot(state.clone(), ref_id).await?;
 
     sqlx::query!(
         "
         WITH snapshot AS (
-            INSERT INTO snapshots(for_ref, content, last_updated, doc_id)
+            INSERT INTO snapshots(for_ref, content, last_updated, heads)
             VALUES ($1, $2, NOW(), $3)
             RETURNING id
         )
@@ -252,7 +258,7 @@ pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppErr
         ",
         ref_id,
         doc_content,
-        cloned_handle.document_id().to_string(),
+        &heads,
     )
     .execute(&state.db)
     .await?;
@@ -302,12 +308,11 @@ pub async fn restore_ref(state: AppState, ref_id: Uuid) -> Result<(), AppError> 
     Ok(())
 }
 
-/// Gets the Automerge document ID for the head snapshot of a ref.
+/// Gets the Automerge document ID for a ref.
 pub async fn get_doc_id(state: AppState, ref_id: Uuid) -> Result<DocumentId, AppError> {
     let query = sqlx::query!(
         "
-        SELECT doc_id FROM snapshots
-        WHERE id = (SELECT head FROM refs WHERE id = $1)
+        SELECT doc_id FROM refs WHERE id = $1
         ",
         ref_id
     );

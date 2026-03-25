@@ -424,12 +424,9 @@ mod integration_tests {
         assert_eq!(before.documents[&ref_id.to_string()].name.as_str(), "Original Name");
 
         let updated = create_test_document_content("Updated Name");
-        document::autosave(
-            state.clone(),
-            backend::document::RefContent { ref_id, content: updated },
-        )
-        .await
-        .expect("Failed to autosave");
+        document::autosave(state.clone(), ref_id, updated, &[])
+            .await
+            .expect("Failed to autosave");
 
         let after = read_user_state_from_samod(&state, &user_id).await.unwrap();
         assert_eq!(after.documents[&ref_id.to_string()].name.as_str(), "Updated Name");
@@ -475,12 +472,9 @@ mod integration_tests {
 
         // Update theory via autosave
         let updated = create_model_document_content("Theory Test", "petri-net");
-        document::autosave(
-            state.clone(),
-            backend::document::RefContent { ref_id, content: updated },
-        )
-        .await
-        .expect("Failed to autosave");
+        document::autosave(state.clone(), ref_id, updated, &[])
+            .await
+            .expect("Failed to autosave");
 
         let s = read_user_state_from_samod(&state, &user_id).await.unwrap();
         assert_eq!(s.documents[&ref_id.to_string()].theory.as_deref(), Some("petri-net"));
@@ -525,12 +519,9 @@ mod integration_tests {
             .expect("Failed to initialize owner2 state");
 
         let updated = create_test_document_content("Updated by Autosave");
-        document::autosave(
-            state.clone(),
-            backend::document::RefContent { ref_id, content: updated },
-        )
-        .await
-        .expect("Failed to autosave");
+        document::autosave(state.clone(), ref_id, updated, &[])
+            .await
+            .expect("Failed to autosave");
 
         let s1 = read_user_state_from_samod(&state, &owner1_id).await.unwrap();
         let s2 = read_user_state_from_samod(&state, &owner2_id).await.unwrap();
@@ -1019,17 +1010,18 @@ mod integration_tests {
                 sqlx::query!(
                     r#"
                     WITH snapshot AS (
-                        INSERT INTO snapshots (for_ref, content, last_updated, doc_id)
+                        INSERT INTO snapshots (for_ref, content, last_updated, heads)
                         VALUES ($1, $2, $3, $4)
                         RETURNING id
                     )
-                    INSERT INTO refs (id, head, created)
-                    VALUES ($1, (SELECT id FROM snapshot), $3)
+                    INSERT INTO refs (id, head, created, doc_id)
+                    VALUES ($1, (SELECT id FROM snapshot), $3, $5)
                     ON CONFLICT (id) DO UPDATE SET head = (SELECT id FROM snapshot)
                     "#,
                     ref_id,
                     content,
                     doc.created_at,
+                    &[] as &[String],
                     format!("test_fake_automerge_doc_{ref_id}")
                 )
                 .execute(db)

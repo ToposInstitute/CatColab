@@ -1,7 +1,7 @@
 //! Utilities for converting between JSON values and Automerge documents.
 
 use crate::app::AppState;
-use crate::document::{RefContent, autosave};
+use crate::document::autosave;
 use automerge::hydrate;
 use automerge::transaction::Transactable;
 use futures_util::stream::StreamExt;
@@ -185,12 +185,15 @@ pub async fn ensure_autosave_listener(state: AppState, ref_id: Uuid, doc_handle:
             let mut changes = doc_handle.changes();
 
             while (changes.next().await).is_some() {
-                let cloned_doc = doc_handle.with_document(|doc| doc.clone());
-                let hydrated = cloned_doc.hydrate(None);
-                let content = hydrate_to_json(&hydrated);
+                let (content, heads) = doc_handle.with_document(|doc| {
+                    let hydrated = doc.hydrate(None);
+                    let content = hydrate_to_json(&hydrated);
+                    let heads: Vec<String> =
+                        doc.get_heads().iter().map(|h| h.to_string()).collect();
+                    (content, heads)
+                });
 
-                let data = RefContent { ref_id, content };
-                if let Err(e) = autosave(state.clone(), data).await {
+                if let Err(e) = autosave(state.clone(), ref_id, content, &heads).await {
                     tracing::error!("Autosave failed for ref {}: {:?}", ref_id, e);
                 }
             }

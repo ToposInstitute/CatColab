@@ -11,6 +11,7 @@ mod m20250924133640_add_refs_deleted_at;
 mod m20251006141026_get_ref_stubs;
 mod m20260124120000_add_user_fk_cascade;
 mod m20260320000000_add_user_state_doc_id;
+mod m20260325000000_snapshot_heads;
 
 pub fn migrations() -> Vec<Box<dyn Migration<Postgres>>> {
     vec_box![
@@ -23,5 +24,6 @@ pub fn migrations() -> Vec<Box<dyn Migration<Postgres>>> {
         m20250924133640_add_refs_deleted_at::AddRefsDeletedAt,
         m20260124120000_add_user_fk_cascade::AddUserFkCascade,
         m20260320000000_add_user_state_doc_id::AddUserStateDocId,
+        m20260325000000_snapshot_heads::SnapshotHeads,
     ]
 }
