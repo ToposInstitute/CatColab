@@ -34,16 +34,11 @@ export default function TrashBin() {
 }
 
 function TrashBinSearch() {
-    const firebaseApp = useFirebaseApp();
-    const auth = getAuth(firebaseApp);
     const userState = useUserState();
     const [searchQuery, setSearchQuery] = createSignal("");
 
-    const currentUserId = auth.currentUser?.uid;
-
     const documents = createMemo(() =>
         filterDocuments(userState.documents, {
-            currentUserId,
             query: searchQuery().trim().toLowerCase(),
             deleted: true,
         }),

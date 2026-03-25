@@ -16,18 +16,12 @@ import "./documents.css";
 export function filterDocuments(
     documents: Partial<Record<string, DocInfo>>,
     opts: {
-        currentUserId: string | undefined;
         query: string;
         deleted: boolean;
     },
 ): (DocInfo & { refId: string })[] {
     return (Object.entries(documents) as [string, DocInfo][])
         .filter(([, doc]) => (opts.deleted ? doc.deletedAt !== null : doc.deletedAt === null))
-        .filter(
-            ([, doc]) =>
-                opts.currentUserId !== undefined &&
-                doc.permissions.some((p) => p.user === opts.currentUserId),
-        )
         .map(([refId, doc]) => Object.assign({ refId }, doc))
         .filter((doc) => {
             if (opts.query === "") {

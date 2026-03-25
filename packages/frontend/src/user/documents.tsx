@@ -33,18 +33,13 @@ export default function UserDocuments() {
 }
 
 function DocumentsSearch() {
-    const firebaseApp = useFirebaseApp();
-    const auth = getAuth(firebaseApp);
     const userState = useUserState();
     const [searchQuery, setSearchQuery] = createSignal("");
     const actions = useContext(PageActionsContext);
     invariant(actions, "Page actions should be provided");
 
-    const currentUserId = auth.currentUser?.uid;
-
     const documents = createMemo(() =>
         filterDocuments(userState.documents, {
-            currentUserId,
             query: searchQuery().trim().toLowerCase(),
             deleted: false,
         }),
