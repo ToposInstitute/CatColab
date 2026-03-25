@@ -167,6 +167,34 @@ pub fn sir_petri(th: Rc<ModalDblTheory<Unital>>) -> ModalDblModel<Unital> {
     model
 }
 
+/// Lotka Volterra dynamcis viewed as a non-unital theory for a symmetric multicategory.
+pub fn lotka_volterra_dynamics(th: Rc<ModalDblTheory<NonUnital>>) -> ModalDblModel<NonUnital> {
+    let ob_type = ModalObType::new(name("Object"));
+    let mor_type = ModeApp::new(name("Multihom")).into();
+
+    let mut model = ModalDblModel::new(th);
+    let (a, b) = (name("A"), name("B"));
+
+    model.add_ob(a.clone(), ob_type.clone());
+    model.add_ob(b.clone(), ob_type.clone());
+    // this should correspond to
+    // dB/dt = kAB+gB
+    model.add_mor(
+        name("growth"),
+        b.clone().into(),
+        b.clone().into(),
+        ModalMorType::Zero(ob_type.clone()),
+    );
+    model.add_mor(
+        name("interaction"),
+        ModalOb::List(List::Symmetric, vec![a.clone().into(), b.clone().into()]),
+        b.clone().into(),
+        mor_type,
+    );
+
+    model
+}
+
 #[cfg(test)]
 mod tests {
     use super::super::theories::*;
@@ -215,5 +243,11 @@ mod tests {
         let th = Rc::new(th_sym_monoidal_category());
         assert!(catalyzed_reaction(th.clone()).validate().is_ok());
         assert!(sir_petri(th).validate().is_ok());
+    }
+
+    #[test]
+    fn symmetric_multi_cats() {
+        let th = Rc::new(th_sym_multicategory());
+        assert!(lotka_volterra_dynamics(th.clone()).validate().is_ok());
     }
 }
