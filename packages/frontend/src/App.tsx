@@ -28,7 +28,13 @@ const Root = (props: RouteSectionProps) => {
     invariant(repoUrl, "Must set environment variable VITE_AUTOMERGE_REPO_URL");
 
     const firebaseApp = initializeApp(firebaseOptions);
-    const api = new Api({ serverUrl, repoUrl, firebaseApp });
+    const [isVersionMismatch, setVersionMismatch] = createSignal(false);
+    const api = new Api({
+        serverUrl,
+        repoUrl,
+        firebaseApp,
+        onVersionChange: () => setVersionMismatch(true),
+    });
 
     const [isSessionInvalid] = createResource(
         // oxlint-disable-next-line solid/reactivity -- createResource fetcher
@@ -65,6 +71,9 @@ const Root = (props: RouteSectionProps) => {
                     <Show when={isSessionInvalid()}>
                         <SessionExpiredModal />
                     </Show>
+                    <Show when={isVersionMismatch()}>
+                        <VersionMismatchModal />
+                    </Show>
                 </MetaProvider>
             </FirebaseProvider>
         </MultiProvider>
@@ -93,6 +102,25 @@ export function SessionExpiredModal() {
                     <p>Your session is no longer valid. Please reload the page to continue.</p>
                     <Button variant="positive" onClick={handleReload} disabled={reloading()}>
                         {reloading() ? "Reloading..." : "Reload Page"}
+                    </Button>
+                </Content>
+            </Portal>
+        </Dialog>
+    );
+}
+
+function VersionMismatchModal() {
+    return (
+        <Dialog initialOpen={true}>
+            <Portal>
+                <Content class="popup">
+                    <h3>New Version Available</h3>
+                    <p>
+                        The server has been updated. Please reload the page to get the latest
+                        version.
+                    </p>
+                    <Button variant="positive" onClick={() => location.reload()}>
+                        Reload Page
                     </Button>
                 </Content>
             </Portal>

@@ -205,6 +205,7 @@
           backend = pkgsLinux.callPackage ./packages/backend/default.nix {
             inherit craneLib cargoArtifacts;
             pkgs = pkgsLinux;
+            gitHash = self.rev or "dev";
           };
 
           migrator = pkgsLinux.callPackage ./packages/migrator/default.nix {
