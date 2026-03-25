@@ -74,7 +74,10 @@ impl MorListData {
 
 /// A model of a modal double theory.
 #[derive(Clone)]
-pub struct ModalDblModel<Kind> {
+pub struct ModalDblModel<Kind>
+where
+    Kind: DblTheoryKind,
+{
     theory: Rc<ModalDblTheory<Kind>>,
     ob_generators: HashFinSet<QualifiedName>,
     mor_generators: ComputadTop<ModalOb, QualifiedName>,
@@ -104,9 +107,19 @@ impl<Kind: DblTheoryKind> ModalDblModel<Kind> {
 
 #[derive(RefCast)]
 #[repr(transparent)]
-struct ModalDblModelObs<Kind>(ModalDblModel<Kind>);
+struct ModalDblModelObs<Kind>(ModalDblModel<Kind>)
+where
+    Kind: DblTheoryKind;
 
-impl<Kind: DblTheoryKind> Set for ModalDblModelObs<Kind> {
+impl<Kind: DblTheoryKind> Set for ModalDblModelObs<Kind>
+where
+    ModalDblTheory<Kind>: DblTheory<
+            ObType = ModalObType,
+            MorType = ModalMorType,
+            ObOp = ModalObOp,
+            MorOp = ModalMorOp,
+        >,
+{
     type Elem = ModalOb;
 
     fn contains(&self, ob: &Self::Elem) -> bool {
@@ -121,7 +134,15 @@ impl<Kind: DblTheoryKind> Set for ModalDblModelObs<Kind> {
     }
 }
 
-impl<Kind: DblTheoryKind> Category for ModalDblModel<Kind> {
+impl<Kind: DblTheoryKind> Category for ModalDblModel<Kind>
+where
+    ModalDblTheory<Kind>: DblTheory<
+            ObType = ModalObType,
+            MorType = ModalMorType,
+            ObOp = ModalObOp,
+            MorOp = ModalMorOp,
+        >,
+{
     type Ob = ModalOb;
     type Mor = ModalMor;
 
@@ -185,7 +206,15 @@ impl<Kind: DblTheoryKind> Category for ModalDblModel<Kind> {
     }
 }
 
-impl<Kind: DblTheoryKind> FgCategory for ModalDblModel<Kind> {
+impl<Kind: DblTheoryKind> FgCategory for ModalDblModel<Kind>
+where
+    ModalDblTheory<Kind>: DblTheory<
+            ObType = ModalObType,
+            MorType = ModalMorType,
+            ObOp = ModalObOp,
+            MorOp = ModalMorOp,
+        >,
+{
     type ObGen = QualifiedName;
     type MorGen = QualifiedName;
 
@@ -203,7 +232,15 @@ impl<Kind: DblTheoryKind> FgCategory for ModalDblModel<Kind> {
     }
 }
 
-impl<Kind: DblTheoryKind> DblModel for ModalDblModel<Kind> {
+impl<Kind: DblTheoryKind> DblModel for ModalDblModel<Kind>
+where
+    ModalDblTheory<Kind>: DblTheory<
+            ObType = ModalObType,
+            MorType = ModalMorType,
+            ObOp = ModalObOp,
+            MorOp = ModalMorOp,
+        >,
+{
     type ObType = ModalObType;
     type MorType = ModalMorType;
     type ObOp = ModalObOp;
@@ -238,7 +275,15 @@ impl<Kind: DblTheoryKind> DblModel for ModalDblModel<Kind> {
     }
 }
 
-impl<Kind: DblTheoryKind> FpDblModel for ModalDblModel<Kind> {
+impl<Kind: DblTheoryKind> FpDblModel for ModalDblModel<Kind>
+where
+    ModalDblTheory<Kind>: DblTheory<
+            ObType = ModalObType,
+            MorType = ModalMorType,
+            ObOp = ModalObOp,
+            MorOp = ModalMorOp,
+        >,
+{
     fn ob_generator_type(&self, id: &Self::ObGen) -> Self::ObType {
         self.ob_types.apply_to_ref(id).expect("Object should have object type")
     }
@@ -256,7 +301,15 @@ impl<Kind: DblTheoryKind> FpDblModel for ModalDblModel<Kind> {
     }
 }
 
-impl<Kind: DblTheoryKind> MutDblModel for ModalDblModel<Kind> {
+impl<Kind: DblTheoryKind> MutDblModel for ModalDblModel<Kind>
+where
+    ModalDblTheory<Kind>: DblTheory<
+            ObType = ModalObType,
+            MorType = ModalMorType,
+            ObOp = ModalObOp,
+            MorOp = ModalMorOp,
+        >,
+{
     fn add_ob(&mut self, x: Self::ObGen, ob_type: Self::ObType) {
         self.ob_types.set(x.clone(), ob_type);
         self.ob_generators.insert(x);
@@ -284,7 +337,15 @@ impl<Kind: DblTheoryKind> MutDblModel for ModalDblModel<Kind> {
     }
 }
 
-impl<Kind: DblTheoryKind> Validate for ModalDblModel<Kind> {
+impl<Kind: DblTheoryKind> Validate for ModalDblModel<Kind>
+where
+    ModalDblTheory<Kind>: DblTheory<
+            ObType = ModalObType,
+            MorType = ModalMorType,
+            ObOp = ModalObOp,
+            MorOp = ModalMorOp,
+        >,
+{
     type ValidationError = InvalidDblModel;
 
     fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
@@ -350,7 +411,15 @@ impl<T> From<InferredType<T>> for Option<T> {
     }
 }
 
-impl<Kind: DblTheoryKind> ModalDblModel<Kind> {
+impl<Kind: DblTheoryKind> ModalDblModel<Kind>
+where
+    ModalDblTheory<Kind>: DblTheory<
+            ObType = ModalObType,
+            MorType = ModalMorType,
+            ObOp = ModalObOp,
+            MorOp = ModalMorOp,
+        >,
+{
     /// Tries to infer the type of an object in the model.
     fn infer_ob_type(&self, ob: &ModalOb) -> Result<InferredType<ModalObType>, String> {
         match ob {
@@ -549,7 +618,15 @@ impl ModalMor {
     }
 }
 
-impl<Kind: DblTheoryKind> PrintableDblModel for ModalDblModel<Kind> {
+impl<Kind: DblTheoryKind> PrintableDblModel for ModalDblModel<Kind>
+where
+    ModalDblTheory<Kind>: DblTheory<
+            ObType = ModalObType,
+            MorType = ModalMorType,
+            ObOp = ModalObOp,
+            MorOp = ModalMorOp,
+        >,
+{
     fn ob_to_doc<'a>(&self, ob: &Self::Ob, ob_ns: &Namespace, mor_ns: &Namespace) -> D<'a> {
         match ob {
             ModalOb::Generator(name) => t(ob_ns.label_string(name)),
@@ -588,7 +665,15 @@ fn modal_type_to_doc<'a>(app: &ModalType) -> D<'a> {
     doc
 }
 
-impl<Kind: DblTheoryKind> std::fmt::Display for ModalDblModel<Kind> {
+impl<Kind: DblTheoryKind> std::fmt::Display for ModalDblModel<Kind>
+where
+    ModalDblTheory<Kind>: DblTheory<
+            ObType = ModalObType,
+            MorType = ModalMorType,
+            ObOp = ModalObOp,
+            MorOp = ModalMorOp,
+        >,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", DblModelPrinter::new().doc(self).pretty())
     }

@@ -21,7 +21,6 @@
 use std::fmt;
 use std::hash::Hash;
 use std::iter::repeat_n;
-use std::marker::PhantomData;
 
 use derivative::Derivative;
 use derive_more::From;
@@ -29,7 +28,7 @@ use indexmap::IndexMap;
 use ref_cast::RefCast;
 
 use crate::dbl::computad::{AVDCComputad, AVDCComputadTop};
-use crate::dbl::theory::{DblTheoryKind, InvalidDblTheory};
+use crate::dbl::theory::{DblTheoryKind, InvalidDblTheory, NonUnital, Unital};
 use crate::dbl::{DblTree, InvalidVDblGraph, VDCWithComposites, VDblCategory, VDblGraph};
 use crate::one::computad::{Computad, ComputadTop};
 use crate::validate::{self, Validate};
@@ -258,8 +257,11 @@ pub type ModalMorOp = DblTree<ModalObOp, ModalMorType, ModalNode>;
 /// A modal double theory.
 #[derive(Debug, Derivative)]
 #[derivative(Default(new = "true"))]
-pub struct ModalDblTheory<Kind> {
-    _kind: PhantomData<Kind>,
+pub struct ModalDblTheory<Kind>
+where
+    Kind: DblTheoryKind,
+{
+    _kind: Kind,
     ob_generators: HashFinSet<QualifiedName>,
     arr_generators: ComputadTop<ModalObType, QualifiedName>,
     pro_generators: ComputadTop<ModalObType, QualifiedName>,
@@ -272,7 +274,9 @@ pub struct ModalDblTheory<Kind> {
 /// Set of object types in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-pub(super) struct ModalObTypes<Kind>(ModalDblTheory<Kind>);
+pub(super) struct ModalObTypes<Kind>(ModalDblTheory<Kind>)
+where
+    Kind: DblTheoryKind;
 
 impl<Kind: DblTheoryKind> Set for ModalObTypes<Kind> {
     type Elem = ModalObType;
@@ -285,7 +289,9 @@ impl<Kind: DblTheoryKind> Set for ModalObTypes<Kind> {
 /// Graph of object types and *basic* morphism types in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-struct ModalProedgeGraph<Kind>(ModalDblTheory<Kind>);
+struct ModalProedgeGraph<Kind>(ModalDblTheory<Kind>)
+where
+    Kind: DblTheoryKind;
 
 impl<Kind: DblTheoryKind> Graph for ModalProedgeGraph<Kind> {
     type V = ModalObType;
@@ -308,7 +314,9 @@ impl<Kind: DblTheoryKind> Graph for ModalProedgeGraph<Kind> {
 /// Graph of object/morphism types in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-pub(super) struct ModalMorTypeGraph<Kind>(ModalDblTheory<Kind>);
+pub(super) struct ModalMorTypeGraph<Kind>(ModalDblTheory<Kind>)
+where
+    Kind: DblTheoryKind;
 
 impl<Kind: DblTheoryKind> Graph for ModalMorTypeGraph<Kind> {
     type V = ModalObType;
@@ -337,7 +345,9 @@ impl<Kind: DblTheoryKind> ReflexiveGraph for ModalMorTypeGraph<Kind> {
 /// Graph of object types and *basic* object operations in a modal theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-struct ModalEdgeGraph<Kind>(ModalDblTheory<Kind>);
+struct ModalEdgeGraph<Kind>(ModalDblTheory<Kind>)
+where
+    Kind: DblTheoryKind;
 
 impl<Kind: DblTheoryKind> Graph for ModalEdgeGraph<Kind> {
     type V = ModalObType;
@@ -371,7 +381,9 @@ impl<Kind: DblTheoryKind> Graph for ModalEdgeGraph<Kind> {
 /// Category of object types/operations in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-pub(super) struct ModalOneTheory<Kind>(ModalDblTheory<Kind>);
+pub(super) struct ModalOneTheory<Kind>(ModalDblTheory<Kind>)
+where
+    Kind: DblTheoryKind;
 
 impl<Kind: DblTheoryKind> Category for ModalOneTheory<Kind> {
     type Ob = ModalObType;
@@ -397,7 +409,9 @@ impl<Kind: DblTheoryKind> Category for ModalOneTheory<Kind> {
 /// Virtual double graph of *basic* cells in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-struct ModalVDblGraph<Kind>(ModalDblTheory<Kind>);
+struct ModalVDblGraph<Kind>(ModalDblTheory<Kind>)
+where
+    Kind: DblTheoryKind;
 
 type ModalVDblComputad<'a, Kind> = AVDCComputad<
     'a,
@@ -646,7 +660,8 @@ impl<Kind: DblTheoryKind> VDCWithComposites for ModalDblTheory<Kind> {
     }
 }
 
-crate::dbl::theory::impl_dbl_theory!(ModalDblTheory<Kind>);
+crate::dbl::theory::impl_dbl_theory!(ModalDblTheory<Unital>, Unital);
+crate::dbl::theory::impl_dbl_theory!(ModalDblTheory<NonUnital>, NonUnital);
 
 impl<Kind: DblTheoryKind> Validate for ModalDblTheory<Kind> {
     type ValidationError = InvalidDblTheory;
