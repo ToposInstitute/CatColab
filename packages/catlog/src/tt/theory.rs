@@ -13,6 +13,7 @@ use derive_more::{Constructor, From, TryInto};
 use std::{fmt, rc::Rc};
 
 use super::prelude::*;
+use crate::dbl::theory::{DblTheoryKind, Unital};
 use crate::dbl::{discrete, modal, model::PrintableDblModel, theory::DblTheory};
 use crate::one::QualifiedPath;
 use crate::stdlib::theories;
@@ -29,7 +30,7 @@ pub struct Theory {
     pub name: QualifiedName,
     /// The definition of the theory.
     #[derivative(PartialEq = "ignore")]
-    pub definition: TheoryDef,
+    pub definition: TheoryDef<Unital>,
 }
 
 impl fmt::Display for Theory {
@@ -40,21 +41,24 @@ impl fmt::Display for Theory {
 
 /// Definition of a double theory supported by DoubleTT.
 #[derive(Clone, From)]
-pub enum TheoryDef {
+pub enum TheoryDef<Kind>
+where
+    Kind: DblTheoryKind,
+{
     /// A discrete double theory.
     Discrete(Rc<discrete::DiscreteDblTheory>),
     /// A modal double theory.
-    Modal(Rc<modal::ModalDblTheory>),
+    Modal(Rc<modal::ModalDblTheory<Kind>>),
 }
 
-impl TheoryDef {
+impl TheoryDef<Unital> {
     /// Smart constructor for [`TheoryDef::Discrete`] case.
     pub fn discrete(theory: discrete::DiscreteDblTheory) -> Self {
         TheoryDef::Discrete(Rc::new(theory))
     }
 
     /// Smart constructor for [`TheoryDef::Modal`] case.
-    pub fn modal(theory: modal::ModalDblTheory) -> Self {
+    pub fn modal(theory: modal::ModalDblTheory<Unital>) -> Self {
         TheoryDef::Modal(Rc::new(theory))
     }
 
@@ -198,7 +202,7 @@ impl ToDoc for ObType {
     fn to_doc<'a>(&self) -> D<'a> {
         match self {
             ObType::Discrete(name) => discrete::DiscreteDblModel::ob_type_to_doc(name),
-            ObType::Modal(ob_type) => modal::ModalDblModel::ob_type_to_doc(ob_type),
+            ObType::Modal(ob_type) => modal::ModalDblModel::<Unital>::ob_type_to_doc(ob_type),
         }
     }
 }
@@ -223,7 +227,7 @@ impl ToDoc for MorType {
     fn to_doc<'a>(&self) -> D<'a> {
         match self {
             MorType::Discrete(path) => discrete::DiscreteDblModel::mor_type_to_doc(path),
-            MorType::Modal(mor_type) => modal::ModalDblModel::mor_type_to_doc(mor_type),
+            MorType::Modal(mor_type) => modal::ModalDblModel::<Unital>::mor_type_to_doc(mor_type),
         }
     }
 }

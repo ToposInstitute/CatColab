@@ -28,7 +28,7 @@ use indexmap::IndexMap;
 use ref_cast::RefCast;
 
 use crate::dbl::computad::{AVDCComputad, AVDCComputadTop};
-use crate::dbl::theory::InvalidDblTheory;
+use crate::dbl::theory::{DblTheoryKind, InvalidDblTheory, NonUnital, Unital};
 use crate::dbl::{DblTree, InvalidVDblGraph, VDCWithComposites, VDblCategory, VDblGraph};
 use crate::one::computad::{Computad, ComputadTop};
 use crate::validate::{self, Validate};
@@ -257,7 +257,11 @@ pub type ModalMorOp = DblTree<ModalObOp, ModalMorType, ModalNode>;
 /// A modal double theory.
 #[derive(Debug, Derivative)]
 #[derivative(Default(new = "true"))]
-pub struct ModalDblTheory {
+pub struct ModalDblTheory<Kind>
+where
+    Kind: DblTheoryKind,
+{
+    _kind: Kind,
     ob_generators: HashFinSet<QualifiedName>,
     arr_generators: ComputadTop<ModalObType, QualifiedName>,
     pro_generators: ComputadTop<ModalObType, QualifiedName>,
@@ -270,9 +274,11 @@ pub struct ModalDblTheory {
 /// Set of object types in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-pub(super) struct ModalObTypes(ModalDblTheory);
+pub(super) struct ModalObTypes<Kind>(ModalDblTheory<Kind>)
+where
+    Kind: DblTheoryKind;
 
-impl Set for ModalObTypes {
+impl<Kind: DblTheoryKind> Set for ModalObTypes<Kind> {
     type Elem = ModalObType;
 
     fn contains(&self, ob: &Self::Elem) -> bool {
@@ -283,9 +289,11 @@ impl Set for ModalObTypes {
 /// Graph of object types and *basic* morphism types in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-struct ModalProedgeGraph(ModalDblTheory);
+struct ModalProedgeGraph<Kind>(ModalDblTheory<Kind>)
+where
+    Kind: DblTheoryKind;
 
-impl Graph for ModalProedgeGraph {
+impl<Kind: DblTheoryKind> Graph for ModalProedgeGraph<Kind> {
     type V = ModalObType;
     type E = ModalType;
 
@@ -306,9 +314,11 @@ impl Graph for ModalProedgeGraph {
 /// Graph of object/morphism types in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-pub(super) struct ModalMorTypeGraph(ModalDblTheory);
+pub(super) struct ModalMorTypeGraph<Kind>(ModalDblTheory<Kind>)
+where
+    Kind: DblTheoryKind;
 
-impl Graph for ModalMorTypeGraph {
+impl<Kind: DblTheoryKind> Graph for ModalMorTypeGraph<Kind> {
     type V = ModalObType;
     type E = ModalMorType;
 
@@ -326,7 +336,7 @@ impl Graph for ModalMorTypeGraph {
     }
 }
 
-impl ReflexiveGraph for ModalMorTypeGraph {
+impl<Kind: DblTheoryKind> ReflexiveGraph for ModalMorTypeGraph<Kind> {
     fn refl(&self, x: Self::V) -> Self::E {
         ShortPath::Zero(x)
     }
@@ -335,9 +345,11 @@ impl ReflexiveGraph for ModalMorTypeGraph {
 /// Graph of object types and *basic* object operations in a modal theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-struct ModalEdgeGraph(ModalDblTheory);
+struct ModalEdgeGraph<Kind>(ModalDblTheory<Kind>)
+where
+    Kind: DblTheoryKind;
 
-impl Graph for ModalEdgeGraph {
+impl<Kind: DblTheoryKind> Graph for ModalEdgeGraph<Kind> {
     type V = ModalObType;
     type E = ModeApp<ModalOp>;
 
@@ -369,9 +381,11 @@ impl Graph for ModalEdgeGraph {
 /// Category of object types/operations in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-pub(super) struct ModalOneTheory(ModalDblTheory);
+pub(super) struct ModalOneTheory<Kind>(ModalDblTheory<Kind>)
+where
+    Kind: DblTheoryKind;
 
-impl Category for ModalOneTheory {
+impl<Kind: DblTheoryKind> Category for ModalOneTheory<Kind> {
     type Ob = ModalObType;
     type Mor = ModalObOp;
 
@@ -395,20 +409,22 @@ impl Category for ModalOneTheory {
 /// Virtual double graph of *basic* cells in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-struct ModalVDblGraph(ModalDblTheory);
+struct ModalVDblGraph<Kind>(ModalDblTheory<Kind>)
+where
+    Kind: DblTheoryKind;
 
-type ModalVDblComputad<'a> = AVDCComputad<
+type ModalVDblComputad<'a, Kind> = AVDCComputad<
     'a,
     ModalObType,
     ModalObOp,
     ModalMorType,
-    ModalObTypes,
-    UnderlyingGraph<ModalOneTheory>,
-    ModalMorTypeGraph,
+    ModalObTypes<Kind>,
+    UnderlyingGraph<ModalOneTheory<Kind>>,
+    ModalMorTypeGraph<Kind>,
     QualifiedName,
 >;
 
-impl Validate for ModalVDblGraph {
+impl<Kind: DblTheoryKind> Validate for ModalVDblGraph<Kind> {
     type ValidationError = InvalidVDblGraph<QualifiedName, QualifiedName, QualifiedName>;
 
     fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
@@ -429,7 +445,7 @@ impl Validate for ModalVDblGraph {
     }
 }
 
-impl VDblGraph for ModalVDblGraph {
+impl<Kind: DblTheoryKind> VDblGraph for ModalVDblGraph<Kind> {
     type V = ModalObType;
     type E = ModalObOp;
     type ProE = ModalMorType;
@@ -556,7 +572,7 @@ impl VDblGraph for ModalVDblGraph {
     }
 }
 
-impl VDblCategory for ModalDblTheory {
+impl<Kind: DblTheoryKind> VDblCategory for ModalDblTheory<Kind> {
     type Ob = ModalObType;
     type Arr = ModalObOp;
     type Pro = ModalMorType;
@@ -612,7 +628,7 @@ impl VDblCategory for ModalDblTheory {
     }
 }
 
-impl VDCWithComposites for ModalDblTheory {
+impl<Kind: DblTheoryKind> VDCWithComposites for ModalDblTheory<Kind> {
     fn composite_ext(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Cell> {
         if self.composite(path.clone()).is_some() {
             let graph = ModalVDblGraph::ref_cast(self);
@@ -644,9 +660,10 @@ impl VDCWithComposites for ModalDblTheory {
     }
 }
 
-crate::dbl::theory::impl_dbl_theory!(ModalDblTheory, Unital);
+crate::dbl::theory::impl_dbl_theory!(ModalDblTheory<Unital>, Unital);
+crate::dbl::theory::impl_dbl_theory!(ModalDblTheory<NonUnital>, NonUnital);
 
-impl Validate for ModalDblTheory {
+impl<Kind: DblTheoryKind> Validate for ModalDblTheory<Kind> {
     type ValidationError = InvalidDblTheory;
 
     fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
@@ -675,19 +692,23 @@ impl Validate for ModalDblTheory {
     }
 }
 
-impl ModalDblTheory {
+impl<Kind: DblTheoryKind> ModalDblTheory<Kind> {
     /// Gets the computad generating the proarrows of the theory.
-    pub(super) fn loose_computad(&self) -> Computad<'_, ModalObType, ModalObTypes, QualifiedName> {
+    pub(super) fn loose_computad(
+        &self,
+    ) -> Computad<'_, ModalObType, ModalObTypes<Kind>, QualifiedName> {
         Computad::new(ModalObTypes::ref_cast(self), &self.pro_generators)
     }
 
     /// Gets the computad generating the arrows of the theory.
-    pub(super) fn tight_computad(&self) -> Computad<'_, ModalObType, ModalObTypes, QualifiedName> {
+    pub(super) fn tight_computad(
+        &self,
+    ) -> Computad<'_, ModalObType, ModalObTypes<Kind>, QualifiedName> {
         Computad::new(ModalObTypes::ref_cast(self), &self.arr_generators)
     }
 
     /// Gets the double computad generating the theory.
-    pub(super) fn dbl_computad(&self) -> ModalVDblComputad<'_> {
+    pub(super) fn dbl_computad(&self) -> ModalVDblComputad<'_, Kind> {
         AVDCComputad::new(
             ModalObTypes::ref_cast(self),
             UnderlyingGraph::ref_cast(ModalOneTheory::ref_cast(self)),

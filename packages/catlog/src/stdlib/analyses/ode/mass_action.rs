@@ -19,7 +19,7 @@ use tsify::Tsify;
 use super::ODEAnalysis;
 use crate::dbl::{
     model::{DiscreteTabModel, FpDblModel, ModalDblModel, TabEdge},
-    theory::{ModalMorType, ModalObType, TabMorType, TabObType},
+    theory::{ModalMorType, ModalObType, TabMorType, TabObType, Unital},
 };
 use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
@@ -214,7 +214,7 @@ impl PetriNetMassActionAnalysis {
     /// Creates a mass-action system with symbolic rate coefficients.
     pub fn build_system(
         &self,
-        model: &ModalDblModel,
+        model: &ModalDblModel<Unital>,
         mass_conservation_type: MassConservationType,
     ) -> PolynomialSystem<QualifiedName, Parameter<FlowParameter>, i8> {
         let mut sys = PolynomialSystem::new();

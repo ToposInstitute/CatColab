@@ -105,7 +105,7 @@ pub trait DblTheoryKind: fmt::Debug {
 ///
 /// Models of a categorical theory assign *categories* (not just sets) to each
 /// object type: the hom type provides the morphisms.
-#[derive(Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Unital;
 
 impl DblTheoryKind for Unital {
@@ -124,7 +124,7 @@ impl DblTheoryKind for Unital {
 ///
 /// The [`hom_type`](DblTheory::hom_type) method may return `None` for some or
 /// all object types.
-#[derive(Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct NonUnital;
 
 impl DblTheoryKind for NonUnital {
