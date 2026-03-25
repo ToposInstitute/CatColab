@@ -3,10 +3,12 @@
 use crate::app::{AppCtx, AppError, AppState};
 use crate::automerge_json::{ensure_autosave_listener, populate_automerge_from_json};
 use crate::user_state::{
-    DEFAULT_DOC_NAME, DocInfo, DocInfoType, PermissionInfo, extract_relations_from_json,
+    DEFAULT_DOC_NAME, DocInfo, DocInfoType, HistoryEntry, PermissionInfo,
+    extract_relations_from_json,
 };
 use crate::user_state_updates::{
-    insert_new_doc, set_deleted_at_for_affected_users, update_doc_info_from_snapshot,
+    insert_new_doc, push_history_for_affected_users, set_deleted_at_for_affected_users,
+    update_doc_info_from_snapshot,
 };
 use chrono::{DateTime, Utc};
 use samod::DocumentId;
@@ -108,6 +110,7 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
         deleted_at: None,
         depends_on: extract_relations_from_json(&content),
         used_by: Vec::new(),
+        history: Vec::new(),
     };
 
     insert_new_doc(&ctx.state, ref_id, doc_info).await;
@@ -262,6 +265,11 @@ pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppErr
     )
     .execute(&state.db)
     .await?;
+
+    let entry = HistoryEntry { heads, created_at: Utc::now() };
+    if let Err(e) = push_history_for_affected_users(&state, ref_id, entry).await {
+        tracing::error!(%ref_id, error = %e, "Failed to push history entry after create_snapshot");
+    }
 
     Ok(())
 }

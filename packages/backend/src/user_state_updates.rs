@@ -10,8 +10,8 @@ use tracing::error;
 
 use crate::app::{AppError, AppState};
 use crate::user_state::{
-    DEFAULT_DOC_NAME, DbPermission, DocInfo, DocInfoType, PermissionInfo, RelationInfo, UserInfo,
-    UserState, extract_relations_from_json, reconcile_user_state,
+    DEFAULT_DOC_NAME, DbPermission, DocInfo, DocInfoType, HistoryEntry, PermissionInfo,
+    RelationInfo, UserInfo, UserState, extract_relations_from_json, reconcile_user_state,
 };
 
 // ---------------------------------------------------------------------------
@@ -223,6 +223,61 @@ pub async fn set_deleted_at_for_affected_users(
     Ok(())
 }
 
+/// Push a history entry onto an existing document's `history` vec.
+///
+/// Returns `Ok(false)` if the document isn't in the user's state (no-op),
+/// `Ok(true)` if the entry was appended.
+pub fn push_history_entry(
+    doc_handle: &samod::DocHandle,
+    ref_id: &str,
+    entry: HistoryEntry,
+) -> Result<bool, AppError> {
+    doc_handle.with_document(|doc| {
+        let mut user_state: UserState =
+            autosurgeon::hydrate(doc).map_err(|e| AppError::UserStateSync(e.to_string()))?;
+
+        let Some(doc_info) = user_state.documents.get_mut(ref_id) else {
+            return Ok(false);
+        };
+
+        doc_info.history.push(entry);
+        reconcile_user_state(doc, &user_state)?;
+        Ok(true)
+    })
+}
+
+/// Push a history entry for every initialized user's state doc that contains the ref.
+pub async fn push_history_for_affected_users(
+    state: &AppState,
+    ref_id: uuid::Uuid,
+    entry: HistoryEntry,
+) -> Result<(), AppError> {
+    let ref_id_str = ref_id.to_string();
+
+    let user_doc_ids: Vec<(String, samod::DocumentId)> = {
+        let initialized = state.initialized_user_states.read().await;
+        initialized.iter().map(|(uid, did)| (uid.clone(), did.clone())).collect()
+    };
+
+    for (user_id, doc_id) in user_doc_ids {
+        let doc_handle = match state.repo.find(doc_id).await {
+            Ok(Some(h)) => h,
+            _ => continue,
+        };
+
+        if let Err(e) = push_history_entry(&doc_handle, &ref_id_str, entry.clone()) {
+            error!(
+                %user_id,
+                %ref_id,
+                error = %e,
+                "Failed to push history entry in user state"
+            );
+        }
+    }
+
+    Ok(())
+}
+
 /// Patch only the `permissions` field (and merge `known_users`) on an existing
 /// document entry (inner, testable).
 fn patch_permissions_on_doc(
@@ -336,6 +391,7 @@ pub async fn build_doc_info_from_db(
         deleted_at,
         depends_on,
         used_by: Vec::new(),
+        history: Vec::new(),
     };
 
     // Collect user IDs with explicit permissions.
@@ -579,6 +635,7 @@ mod unit_tests {
             deleted_at: None,
             depends_on: Vec::new(),
             used_by: Vec::new(),
+            history: Vec::new(),
         }
     }
 

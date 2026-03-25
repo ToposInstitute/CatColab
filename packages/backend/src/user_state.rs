@@ -115,6 +115,19 @@ pub struct RelationInfo {
     pub relation_type: String,
 }
 
+/// A snapshot entry in a document's history.
+#[cfg_attr(feature = "property-tests", derive(Eq, PartialEq))]
+#[derive(Debug, Clone, Reconcile, Hydrate, TS)]
+#[ts(rename_all = "camelCase", export_to = "user_state.ts")]
+pub struct HistoryEntry {
+    /// The Automerge change hashes identifying this snapshot's state.
+    pub heads: Vec<String>,
+    /// When this snapshot was created.
+    #[autosurgeon(rename = "createdAt", with = "datetime_millis")]
+    #[ts(type = "number")]
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
 /// Document reference information for user state synchronization.
 ///
 /// Contains lightweight metadata about a document that the user has access to.
@@ -149,6 +162,8 @@ pub struct DocInfo {
     /// the dependent document and the relation type.
     #[autosurgeon(rename = "usedBy")]
     pub used_by: Vec<RelationInfo>,
+    /// Manual snapshot history for this document.
+    pub history: Vec<HistoryEntry>,
 }
 
 /// State associated with a user, synchronized via Automerge.
@@ -400,6 +415,7 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
                 depends_on,
                 // Reverse relations are computed after all documents are loaded.
                 used_by: Vec::new(),
+                history: Vec::new(),
             };
             (key, info)
         })
@@ -647,6 +663,7 @@ pub mod arbitrary {
                         // docs
                         depends_on: Vec::new(),
                         used_by: Vec::new(),
+                        history: Vec::new(),
                     }
                 })
                 .boxed()
@@ -729,6 +746,7 @@ pub mod arbitrary {
                         // docs
                         depends_on: Vec::new(),
                         used_by: Vec::new(),
+                        history: Vec::new(),
                     };
                     (key, info, users)
                 },
