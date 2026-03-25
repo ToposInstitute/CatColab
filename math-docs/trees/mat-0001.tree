@@ -70,13 +70,3 @@ have a systems interpretation:}
 }
 
 \transclude{dbl-0001}
-
-\subtree{
-\title{Requests for comment}
-
-\ol{
-  \li{[[rfc-0001]]}
-  \li{[[rfc-0002]]}
-}
-
-}

@@ -82,6 +82,7 @@
 
     /* Links */
 
+    /* stylelint-disable-next-line no-descending-specificity -- general content link style, navigation links above have higher specificity */
     & a {
         color: var(--color-topos-secondary);
         text-decoration: underline;
@@ -100,6 +101,7 @@
     & dt {
         font-weight: 600;
 
+        /* stylelint-disable-next-line no-descending-specificity -- different context from navigation title link */
         & > a {
             text-decoration: none;
         }
@@ -155,6 +157,7 @@
         border: 1px solid var(--color-help-border);
         border-radius: 2px;
 
+        /* stylelint-disable-next-line no-descending-specificity -- different context from .help-summary-lists h3 */
         h3 {
             margin: 0;
             font-size: 1.2em;

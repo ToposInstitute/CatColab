@@ -1,0 +1,47 @@
+\documentclass[dvisvgm,tikz]{standalone}
+\usepackage{amsmath,amssymb}
+\usepackage{quiver}
+\usepackage{ebproof}
+
+% WARNING: the macros here are (currently) manually copied from _macros.qmd
+
+\renewcommand{\vec}[1]{\underline{#1}}
+
+% Category theory
+\newcommand{\Ob}{\operatorname{Ob}}
+\newcommand{\Hom}{\operatorname{Hom}}
+\newcommand{\dom}{\operatorname{dom}}
+\newcommand{\cod}{\operatorname{cod}}
+\newcommand{\id}{\operatorname{id}}
+\newcommand{\op}{\mathrm{op}}
+
+% Categories
+\newcommand{\cat}[1]{\mathsf{#1}}
+
+% Double categories
+\newcommand{\dbl}[1]{\mathbb{#1}}
+\newcommand{\SSet}{\mathbb{S}\mathsf{et}}
+\newcommand{\CCat}{\mathbb{C}\mathsf{at}}
+\newcommand{\Rel}{\mathbb{R}\mathsf{el}}
+\newcommand{\Span}{\mathbb{S}\mathsf{pan}}
+\newcommand{\Prof}{\mathbb{P}\mathsf{rof}}
+\newcommand{\Mod}{\mathbb{M}\mathsf{od}}
+
+% Arrows
+\newcommand{\proto}{\mathrel{\mkern3mu\vcenter{\hbox{$\shortmid$}}\mkern-10mu{\to}}}
+\newcommand{\xproto}[1]{\overset{#1}{\proto}}
+\newcommand{\proTo}{\mathrel{\mkern3mu\vcenter{\hbox{$\shortmid$}}\mkern-10mu{\Rightarrow}}}
+
+% Monads
+\newcommand{\List}{\mathrm{List}}
+\newcommand{\Disc}{\mathop{\mathrm{Disc}}}
+\newcommand{\coDisc}{\mathop{\mathrm{coDisc}}}
+
+% Type theory
+\newcommand{\ob}{\mathsf{ob}}
+\newcommand{\context}{\mathsf{cx}}
+\newcommand{\type}{\mathsf{ty}}
+
+\begin{document}
+@CONTENT
+\end{document}

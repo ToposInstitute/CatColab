@@ -17,36 +17,33 @@
 .ref-grid-header {
     display: grid;
     align-items: center;
+    font-weight: bold;
+    border-bottom: 1px solid var(--color-gray-550);
+}
+
+/* Row styling */
+.ref-grid-row {
+    height: var(--doc-row-height);
+    box-sizing: border-box;
+    border-bottom: 1px solid var(--color-gray-550);
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+    color: inherit;
+    text-decoration: none;
+    display: grid;
+    align-items: center;
 }
 
 /* Documents page: 6 columns — Icon / Name / Owners / Permission / Created / Actions */
 .documents-page .ref-grid-header,
 .documents-page .ref-grid-row {
-    grid-template-columns:
-        40px
-        2fr
-        120px
-        120px
-        140px
-        50px;
+    grid-template-columns: 40px 2fr 120px 120px 140px 50px;
 }
 
 /* Trash page: 6 columns — Actions / Icon / Name / Owners / Permission / Created */
 .trash-bin-page .ref-grid-header,
 .trash-bin-page .ref-grid-row {
-    grid-template-columns:
-        50px
-        40px
-        2fr
-        120px
-        120px
-        140px;
-}
-
-/* Header styling */
-.ref-grid-header {
-    font-weight: bold;
-    border-bottom: 1px solid var(--color-gray-550);
+    grid-template-columns: 50px 40px 2fr 120px 120px 140px;
 }
 
 /* Adjust for scrollbar in Chromium browsers only */
@@ -68,11 +65,13 @@
     overflow-y: scroll;
     overflow-x: hidden;
     flex: 1;
-    scrollbar-width: thin; /* Firefox */
+    scrollbar-width: thin;
+    /* Firefox */
 }
 
 .ref-grid-scroll::-webkit-scrollbar {
-    width: 10px; /* Chrome, Safari, Edge */
+    width: 10px;
+    /* Chrome, Safari, Edge */
 }
 
 .ref-grid-scroll::-webkit-scrollbar-track {
@@ -86,19 +85,6 @@
 
 .ref-grid-scroll::-webkit-scrollbar-thumb:hover {
     background: var(--color-gray-600);
-}
-
-/* Row styling */
-.ref-grid-row {
-    height: var(--doc-row-height);
-    box-sizing: border-box;
-    border-bottom: 1px solid var(--color-gray-550);
-    transition: background-color 0.2s ease;
-    cursor: pointer;
-    color: inherit;
-    text-decoration: none;
-    display: grid;
-    align-items: center;
 }
 
 .ref-grid-row:hover {
@@ -201,4 +187,9 @@
     justify-content: center;
     position: relative;
     z-index: 1;
+
+    .delete-cell {
+        /* stylelint-disable-next-line declaration-no-important */
+        padding: 8px !important;
+    }
 }
