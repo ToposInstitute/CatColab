@@ -27,5 +27,5 @@ pub mod user;
 /// User state synchronized via Automerge.
 pub mod user_state;
 
-/// Direct user-state mutation helpers called from RPC handlers.
+/// User-state update helpers called from RPC handlers.
 pub mod user_state_updates;

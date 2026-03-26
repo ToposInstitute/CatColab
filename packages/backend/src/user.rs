@@ -2,7 +2,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use super::app::{AppCtx, AppError, AppState};
-use crate::user_state_updates::propagate_profile_update;
+use crate::user_state_updates::update_profile_for_users;
 
 /// Notify the backend that a user has signed up or signed in.
 pub async fn sign_up_or_sign_in(ctx: AppCtx) -> Result<(), AppError> {
@@ -118,22 +118,12 @@ pub async fn set_active_user_profile(ctx: AppCtx, profile: UserProfile) -> Resul
     );
     query.execute(&ctx.state.db).await?;
 
-    // Read back the effective username (COALESCE may have kept the old value).
-    let effective = sqlx::query_as::<_, (Option<String>, Option<String>)>(
-        "SELECT username, display_name FROM users WHERE id = $1",
-    )
-    .bind(&user.user_id)
-    .fetch_one(&ctx.state.db)
-    .await?;
-
-    // Propagate to all initialized user state docs.
-    if let Err(e) =
-        propagate_profile_update(&ctx.state, &user.user_id, effective.0, effective.1).await
-    {
+    // Update user state for the user and all peers who share documents with them.
+    if let Err(e) = update_profile_for_users(&ctx.state, &user.user_id).await {
         tracing::error!(
             user_id = %user.user_id,
             error = %e,
-            "Failed to propagate profile update to user state docs"
+            "Failed to update user states after profile update"
         );
     }
 
