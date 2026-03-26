@@ -1,4 +1,3 @@
-\renewcommand{\cal}[1]{\mathcal{#1}}
 \renewcommand{\vec}[1]{\underline{#1}}
 
 <!-- Category theory -->
@@ -11,6 +10,7 @@
 
 <!-- Categories -->
 \newcommand{\cat}[1]{\mathsf{#1}}
+\newcommand{\Set}{\cat{Set}}
 
 <!-- Double categories -->
 \newcommand{\dbl}[1]{\mathbb{#1}}
@@ -23,7 +23,8 @@
 
 <!-- Arrows -->
 \newcommand{\xto}[1]{\xrightarrow{#1}}
-\newcommand{\proto}{\mathrel{\mkern3mu\vcenter{\hbox{$\shortmid$}}\mkern-10mu{\to}}}
+\newcommand{\from}{\leftarrow}
+\newcommand{\proto}{\nrightarrow}
 \newcommand{\xproto}[1]{\overset{#1}{\proto}}
 \newcommand{\proTo}{\mathrel{\mkern3mu\vcenter{\hbox{$\shortmid$}}\mkern-10mu{\Rightarrow}}}
 
