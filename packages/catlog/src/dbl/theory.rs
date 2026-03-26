@@ -94,11 +94,11 @@ pub trait DblTheoryKind: fmt::Debug {
     /// For [`NonUnital`], this is `Option<T>`.
     type Wrap<T>;
 
-    /// Converts a wrapped value into an `Option`, for code generic over the kind.
-    fn into_option<T>(wrapped: Self::Wrap<T>) -> Option<T>;
-
-    /// Wraps a value that is known to exist.
-    fn pure<T>(value: T) -> Self::Wrap<T>;
+    /// Converts from an `Option` into a wrapped value.
+    ///
+    /// For [`Unital`], this unwraps with the given message.
+    /// For [`NonUnital`], this is the identity.
+    fn from_option<T>(opt: Option<T>, msg: &str) -> Self::Wrap<T>;
 }
 
 /// Unital double theories guarantee that every object type has a hom type.
@@ -111,12 +111,8 @@ pub struct Unital;
 impl DblTheoryKind for Unital {
     type Wrap<T> = T;
 
-    fn into_option<T>(wrapped: T) -> Option<T> {
-        Some(wrapped)
-    }
-
-    fn pure<T>(value: T) -> T {
-        value
+    fn from_option<T>(opt: Option<T>, msg: &str) -> T {
+        opt.expect(msg)
     }
 }
 
@@ -130,12 +126,8 @@ pub struct NonUnital;
 impl DblTheoryKind for NonUnital {
     type Wrap<T> = Option<T>;
 
-    fn into_option<T>(wrapped: Option<T>) -> Option<T> {
-        wrapped
-    }
-
-    fn pure<T>(value: T) -> Option<T> {
-        Some(value)
+    fn from_option<T>(opt: Option<T>, _msg: &str) -> Option<T> {
+        opt
     }
 }
 
@@ -258,46 +250,28 @@ pub trait DblTheory {
 
 /// Implements [`DblTheory`] for a type that implements [`VDCWithComposites`].
 ///
-/// The `kind` argument must be either `Unital` or `NonUnital`:
+/// Two forms are supported:
 ///
-/// - `Unital`: `hom_type`/`hom_op` return the value directly and panic if
-///   the unit does not exist.
-/// - `NonUnital`: `hom_type`/`hom_op` return `Option`.
+/// - `impl_dbl_theory!(Type, Kind)`: for a concrete kind (`Unital` or `NonUnital`).
+/// - `impl_dbl_theory!(Type<Kind>)`: for a type generic over `Kind: DblTheoryKind`,
+///   producing a single generic impl. This avoids the need for redundant `where`
+///   clauses in downstream code.
 macro_rules! impl_dbl_theory {
-    ($ty:ty, Unital) => {
+    ($ty:ty, $kind:ty) => {
         impl $crate::dbl::theory::DblTheory for $ty {
-
-            type Kind = $crate::dbl::theory::Unital;
-
-            $crate::dbl::theory::impl_dbl_theory!(@shared);
-
-            fn hom_type(&self, x: Self::ObType) -> Self::MorType {
-                $crate::dbl::category::VDCWithComposites::unit(self, x)
-                    .expect("Unital double theory should have all hom types")
-            }
-            fn hom_op(&self, f: Self::ObOp) -> Self::MorOp {
-                $crate::dbl::category::VDCWithComposites::unit_arrow(self, f)
-                    .expect("Unital double theory should have all hom ops")
-            }
+            type Kind = $kind;
+            $crate::dbl::theory::impl_dbl_theory!(@body);
         }
     };
-    ($ty:ty, NonUnital) => {
-        impl $crate::dbl::theory::DblTheory for $ty {
-
-            type Kind = $crate::dbl::theory::NonUnital;
-
-            $crate::dbl::theory::impl_dbl_theory!(@shared);
-
-            fn hom_type(&self, x: Self::ObType) -> Option<Self::MorType> {
-                $crate::dbl::category::VDCWithComposites::unit(self, x)
-            }
-            fn hom_op(&self, f: Self::ObOp) -> Option<Self::MorOp> {
-                $crate::dbl::category::VDCWithComposites::unit_arrow(self, f)
-            }
+    ($ty:ident < $kind:ident >) => {
+        impl<$kind: $crate::dbl::theory::DblTheoryKind> $crate::dbl::theory::DblTheory
+            for $ty<$kind>
+        {
+            type Kind = $kind;
+            $crate::dbl::theory::impl_dbl_theory!(@body);
         }
     };
-    // Shared associated types and methods delegating to VDblCategory/VDCWithComposites.
-    (@shared) => {
+    (@body) => {
         type ObType = <Self as $crate::dbl::category::VDblCategory>::Ob;
         type MorType = <Self as $crate::dbl::category::VDblCategory>::Pro;
         type ObOp = <Self as $crate::dbl::category::VDblCategory>::Arr;
@@ -349,6 +323,25 @@ macro_rules! impl_dbl_theory {
             path: $crate::one::Path<Self::ObType, Self::MorType>,
         ) -> Option<Self::MorType> {
             $crate::dbl::category::VDCWithComposites::composite(self, path)
+        }
+
+        fn hom_type(
+            &self,
+            x: Self::ObType,
+        ) -> <Self::Kind as $crate::dbl::theory::DblTheoryKind>::Wrap<Self::MorType> {
+            <Self::Kind as $crate::dbl::theory::DblTheoryKind>::from_option(
+                $crate::dbl::category::VDCWithComposites::unit(self, x),
+                "Unital double theory should have all hom types",
+            )
+        }
+        fn hom_op(
+            &self,
+            f: Self::ObOp,
+        ) -> <Self::Kind as $crate::dbl::theory::DblTheoryKind>::Wrap<Self::MorOp> {
+            <Self::Kind as $crate::dbl::theory::DblTheoryKind>::from_option(
+                $crate::dbl::category::VDCWithComposites::unit_arrow(self, f),
+                "Unital double theory should have all hom ops",
+            )
         }
 
         fn compose_ob_ops(

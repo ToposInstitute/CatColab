@@ -28,7 +28,7 @@ use indexmap::IndexMap;
 use ref_cast::RefCast;
 
 use crate::dbl::computad::{AVDCComputad, AVDCComputadTop};
-use crate::dbl::theory::{DblTheoryKind, InvalidDblTheory, NonUnital, Unital};
+use crate::dbl::theory::{DblTheoryKind, InvalidDblTheory};
 use crate::dbl::{DblTree, InvalidVDblGraph, VDCWithComposites, VDblCategory, VDblGraph};
 use crate::one::computad::{Computad, ComputadTop};
 use crate::validate::{self, Validate};
@@ -660,8 +660,7 @@ impl<Kind: DblTheoryKind> VDCWithComposites for ModalDblTheory<Kind> {
     }
 }
 
-crate::dbl::theory::impl_dbl_theory!(ModalDblTheory<Unital>, Unital);
-crate::dbl::theory::impl_dbl_theory!(ModalDblTheory<NonUnital>, NonUnital);
+crate::dbl::theory::impl_dbl_theory!(ModalDblTheory<Kind>);
 
 impl<Kind: DblTheoryKind> Validate for ModalDblTheory<Kind> {
     type ValidationError = InvalidDblTheory;
