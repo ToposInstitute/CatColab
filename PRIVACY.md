@@ -21,7 +21,7 @@ We do **not** directly collect or store any routine information (such as IP addr
 
 ## Cookies
 
-We do **not** directly set any cookies.
+We do **not** set **any** cookies as Firebase uses JWTs for authentication.
 
 
 ## Third-party tools
