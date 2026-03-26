@@ -1,7 +1,6 @@
+# RFCs
 _site
 _svgs
-
+.gitignore
+.svg-cache
 /.quarto/
-**/*.quarto_ipynb
-
-.auctex-auto
