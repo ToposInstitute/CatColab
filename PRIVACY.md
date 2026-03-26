@@ -10,7 +10,7 @@ If you have any questions or concerns regarding this privacy policy, then please
 Notebooks created in CatColab are stored unencrypted on our database, which means that some members of the development team are theoretically able to view their contents.
 However, this is not something that we do.
 
-There is a private CI action that periodically checks that all notebooks on the production database are valid (i.e. contain no breaking errors), which leaks certain high-level data such as titles of notebooks, but not usernames.
+There is a private CI action that periodically checks that all notebooks on the production database are valid (i.e. contain no breaking errors), which could potentially leak certain metadata such as titles of notebooks and usernames.
 However, this data is viewable only by the core senior development team.
 
 
