@@ -162,6 +162,8 @@ jobs:
       - name: Update deployment status to success
         if: needs.deploy.result == 'success'
         uses: chrnorm/deployment-status@v2
+        # The deployment may have already been deleted by another run so we need to be ok with errors
+        continue-on-error: true
         with:
           token: ${{ github.token }}
           environment-url: ${{ needs.deploy.outputs.deploy_url }}
@@ -173,6 +175,8 @@ jobs:
       - name: Update deployment status to failure
         if: needs.deploy.result != 'success'
         uses: chrnorm/deployment-status@v2
+        # The deployment may have already been deleted by another run so we need to be ok with errors
+        continue-on-error: true
         with:
           token: ${{ github.token }}
           log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
