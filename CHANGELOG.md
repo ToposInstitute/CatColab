@@ -41,6 +41,9 @@ include notable new features.
 
 ## [v0.5.0](https://github.com/ToposInstitute/CatColab/releases/tag/v0.5.0) (2026-03-09)
 
+Blog post: [CatColab v0.5:
+Sandpiper](https://topos.institute/blog/2026-03-23-catcolab-0-5-sandpiper/)
+
 ### Added
 
 - Composing Petri nets by sharing/identifying places
