@@ -46,3 +46,5 @@ A version history is maintained in the [`CHANGELOG`](CHANGELOG.md).
 
 CatColab is dual-licensed under the MIT license and the Apache License (Version
 2.0). You may use the source code of CatColab under the terms of either license.
+
+You can find a copy of our privacy policy in [`PRIVACY`](PRIVACY.md)
