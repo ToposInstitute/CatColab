@@ -10,6 +10,7 @@
 
 <!-- Categories -->
 \newcommand{\cat}[1]{\mathsf{#1}}
+\newcommand{\Set}{\cat{Set}}
 
 <!-- Double categories -->
 \newcommand{\dbl}[1]{\mathbb{#1}}
@@ -21,6 +22,7 @@
 \newcommand{\Mod}{\mathbb{M}\mathsf{od}}
 
 <!-- Arrows -->
+\newcommand{\from}{\leftarrow}
 \newcommand{\proto}{\mathrel{\mkern3mu\vcenter{\hbox{$\shortmid$}}\mkern-10mu{\to}}}
 \newcommand{\xproto}[1]{\overset{#1}{\proto}}
 \newcommand{\proTo}{\mathrel{\mkern3mu\vcenter{\hbox{$\shortmid$}}\mkern-10mu{\Rightarrow}}}
