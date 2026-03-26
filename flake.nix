@@ -217,6 +217,8 @@
             pkgs = pkgsLinux;
           };
 
+          julia-fhs = (pkgsLinux.callPackage ./infrastructure/julia.nix { }).julia-fhs;
+
           frontend =
             (pkgsLinux.callPackage ./packages/frontend/default.nix {
               inherit inputs rustToolchainLinux self;
