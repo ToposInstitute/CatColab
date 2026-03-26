@@ -10,7 +10,7 @@ use test_strategy::Arbitrary;
 
 use super::app::{AppCtx, AppError, AppState};
 use super::user::UserSummary;
-use crate::user_state_updates::update_permissions_for_affected_users;
+use crate::user_state_updates::update_ref_for_users;
 
 /// Levels of permission that a user can have on a document.
 #[qubit::ts]
@@ -231,14 +231,15 @@ pub async fn set_permissions(
     ref_id: Uuid,
     new: NewPermissions,
 ) -> Result<(), AppError> {
-    // Snapshot old non-owner subjects before the transaction so we can detect revocations.
-    let old_subject_rows = sqlx::query_as::<_, (Option<String>,)>(
-        "SELECT subject FROM permissions WHERE object = $1 AND level < 'own'",
-    )
-    .bind(ref_id)
-    .fetch_all(&state.db)
-    .await?;
-    let old_subjects: Vec<Option<String>> = old_subject_rows.into_iter().map(|r| r.0).collect();
+    // Snapshot old permission holders before the transaction so we can update
+    // both old and new holders after the commit.
+    let old_holders: Vec<String> =
+        sqlx::query_scalar::<_, String>(
+            "SELECT DISTINCT subject FROM permissions WHERE object = $1 AND subject IS NOT NULL AND level < 'own'",
+        )
+        .bind(ref_id)
+        .fetch_all(&state.db)
+        .await?;
 
     let mut levels: Vec<_> = new.users.values().cloned().collect();
     let mut subjects: Vec<_> = new.users.into_keys().map(Some).collect();
@@ -275,10 +276,8 @@ pub async fn set_permissions(
 
     transaction.commit().await?;
 
-    if let Err(e) =
-        update_permissions_for_affected_users(state, ref_id, &subjects, &levels, old_subjects).await
-    {
-        tracing::error!(%ref_id, error = %e, "Failed to update user state after permission change");
+    if let Err(e) = update_ref_for_users(state, ref_id, old_holders).await {
+        tracing::error!(%ref_id, error = %e, "Failed to update user states after permission change");
     }
 
     Ok(())

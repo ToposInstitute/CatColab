@@ -244,46 +244,6 @@ impl DbPermission {
     }
 }
 
-/// A document relation entry as returned from database JSON aggregation.
-#[derive(Debug, Deserialize)]
-pub struct DbRelation {
-    /// Related ref ID in UUID string format.
-    pub ref_id: String,
-    /// Type of relation.
-    #[serde(rename = "relationType")]
-    pub relation_type: String,
-}
-
-impl DbRelation {
-    /// Convert this database relation entry into a [`RelationInfo`].
-    pub fn to_relation_info(&self) -> Option<RelationInfo> {
-        let ref_id = uuid::Uuid::parse_str(&self.ref_id).ok()?;
-        Some(RelationInfo {
-            ref_id,
-            relation_type: self.relation_type.clone(),
-        })
-    }
-}
-
-/// A user info entry as returned from database JSON aggregation.
-#[derive(Debug, Deserialize)]
-pub struct DbUserInfo {
-    /// The user's chosen username, if set.
-    pub username: Option<String>,
-    /// The user's display name, if set.
-    pub display_name: Option<String>,
-}
-
-impl DbUserInfo {
-    /// Convert to a [`UserInfo`] for the user state.
-    pub fn to_user_info(&self) -> UserInfo {
-        UserInfo {
-            username: self.username.clone().map(Text::from),
-            display_name: self.display_name.clone().map(Text::from),
-        }
-    }
-}
-
 /// Extracts document relations from a JSON content tree.
 ///
 /// Recursively walks the JSON tree and collects objects that have both `_id` and `type` keys,
@@ -445,12 +405,6 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
             })
             .collect()
     };
-
-    debug!(
-        user_id = %user_id,
-        document_count = documents.len(),
-        "User state created successfully"
-    );
 
     // Fetch the user's own profile info.
     let profile_row = sqlx::query!(

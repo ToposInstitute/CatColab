@@ -2,12 +2,7 @@
 
 use crate::app::{AppCtx, AppError, AppState};
 use crate::automerge_json::{ensure_autosave_listener, populate_automerge_from_json};
-use crate::user_state::{
-    DEFAULT_DOC_NAME, DocInfo, DocInfoType, PermissionInfo, extract_relations_from_json,
-};
-use crate::user_state_updates::{
-    insert_new_doc, set_deleted_at_for_affected_users, update_doc_info_from_snapshot,
-};
+use crate::user_state_updates::{update_ref_for_users, update_user_state};
 use chrono::{DateTime, Utc};
 use samod::DocumentId;
 use serde::{Deserialize, Serialize};
@@ -88,28 +83,13 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
 
     ensure_autosave_listener(ctx.state.clone(), ref_id, doc_handle).await;
 
-    let doc_info = DocInfo {
-        name: autosurgeon::Text::from(
-            content.get("name").and_then(|v| v.as_str()).unwrap_or(DEFAULT_DOC_NAME),
-        ),
-        type_name: content
-            .get("type")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .parse()
-            .unwrap_or(DocInfoType::Unknown),
-        theory: content.get("theory").and_then(|v| v.as_str()).map(|s| s.to_string()),
-        permissions: vec![PermissionInfo {
-            user: user_id,
-            level: crate::auth::PermissionLevel::Own,
-        }],
-        created_at: chrono::Utc::now(),
-        deleted_at: None,
-        depends_on: extract_relations_from_json(&content),
-        used_by: Vec::new(),
-    };
-
-    insert_new_doc(&ctx.state, ref_id, doc_info).await;
+    // Update the creating user's state from the database.
+    if let Some(ref uid) = user_id
+        && let Err(e) = update_user_state(&ctx.state, uid).await
+    {
+        tracing::error!(%ref_id, user_id = %uid, error = %e,
+            "Failed to update user state after new_ref");
+    }
 
     Ok(ref_id)
 }
@@ -161,7 +141,7 @@ pub async fn ref_deleted_at(
 }
 
 /// Saves the document by overwriting the snapshot at the current head,
-/// then pushes snapshot-derived fields to all initialized user state docs.
+/// then updates user state for all affected users.
 pub async fn autosave(state: AppState, data: RefContent) -> Result<(), AppError> {
     let RefContent { ref_id, content } = data;
     sqlx::query!(
@@ -176,47 +156,8 @@ pub async fn autosave(state: AppState, data: RefContent) -> Result<(), AppError>
     .execute(&state.db)
     .await?;
 
-    // Update user state docs directly from the content we already have.
-    let name = content
-        .get("name")
-        .and_then(|v| v.as_str())
-        .unwrap_or(DEFAULT_DOC_NAME)
-        .to_string();
-    let type_name = content
-        .get("type")
-        .and_then(|v| v.as_str())
-        .unwrap_or("")
-        .parse()
-        .unwrap_or(DocInfoType::Unknown);
-    let theory = content.get("theory").and_then(|v| v.as_str()).map(|s| s.to_string());
-    let relations = extract_relations_from_json(&content);
-    let ref_id_str = ref_id.to_string();
-
-    let user_doc_ids: Vec<(String, samod::DocumentId)> = {
-        let initialized = state.initialized_user_states.read().await;
-        initialized.iter().map(|(uid, did)| (uid.clone(), did.clone())).collect()
-    };
-
-    for (user_id, doc_id) in user_doc_ids {
-        let user_doc_handle = match state.repo.find(doc_id).await {
-            Ok(Some(h)) => h,
-            _ => continue,
-        };
-        if let Err(e) = update_doc_info_from_snapshot(
-            &user_doc_handle,
-            &ref_id_str,
-            name.as_str(),
-            type_name.clone(),
-            theory.as_deref(),
-            relations.clone(),
-        ) {
-            tracing::error!(
-                %user_id,
-                %ref_id,
-                error = %e,
-                "Failed to update user state from autosave"
-            );
-        }
+    if let Err(e) = update_ref_for_users(&state, ref_id, vec![]).await {
+        tracing::error!(%ref_id, error = %e, "Failed to update user states after autosave");
     }
 
     Ok(())
@@ -273,10 +214,8 @@ pub async fn delete_ref(state: AppState, ref_id: Uuid) -> Result<(), AppError> {
     .execute(&state.db)
     .await?;
 
-    if let Err(e) =
-        set_deleted_at_for_affected_users(&state, ref_id, Some(chrono::Utc::now())).await
-    {
-        tracing::error!(%ref_id, error = %e, "Failed to update user state after delete_ref");
+    if let Err(e) = update_ref_for_users(&state, ref_id, vec![]).await {
+        tracing::error!(%ref_id, error = %e, "Failed to update user states after delete_ref");
     }
 
     Ok(())
@@ -295,8 +234,8 @@ pub async fn restore_ref(state: AppState, ref_id: Uuid) -> Result<(), AppError> 
     .execute(&state.db)
     .await?;
 
-    if let Err(e) = set_deleted_at_for_affected_users(&state, ref_id, None).await {
-        tracing::error!(%ref_id, error = %e, "Failed to update user state after restore_ref");
+    if let Err(e) = update_ref_for_users(&state, ref_id, vec![]).await {
+        tracing::error!(%ref_id, error = %e, "Failed to update user states after restore_ref");
     }
 
     Ok(())
