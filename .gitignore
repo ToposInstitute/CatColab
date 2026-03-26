@@ -113,7 +113,7 @@ CHANGELOG.html
 # VSCode
 .vscode/*
 
-# RFCs
+# RFC
+
 rfc/_site
 rfc/_svgs
-rfc/.gitignore
