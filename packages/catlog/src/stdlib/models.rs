@@ -178,15 +178,23 @@ pub fn lotka_volterra_dynamics(th: Rc<ModalDblTheory<NonUnital>>) -> ModalDblMod
     model.add_ob(a.clone(), ob_type.clone());
     model.add_ob(b.clone(), ob_type.clone());
     // this should correspond to
-    // dB/dt = kAB+gB
+    // dA/dt += g_A A
+    // dB/dt += g_B B
+    // dB/dt += k_AB AB
     model.add_mor(
-        name("growth"),
+        name("A_growth"),
+        a.clone().into(),
+        a.clone().into(),
+        ModalMorType::Zero(ob_type.clone()),
+    );
+    model.add_mor(
+        name("B_growth"),
         b.clone().into(),
         b.clone().into(),
         ModalMorType::Zero(ob_type.clone()),
     );
     model.add_mor(
-        name("interaction"),
+        name("AB_interaction"),
         ModalOb::List(List::Symmetric, vec![a.clone().into(), b.clone().into()]),
         b.clone().into(),
         mor_type,
