@@ -1,8 +1,8 @@
 use std::collections::HashMap;
-use std::fmt;
 use std::str::FromStr;
 
 use autosurgeon::{Hydrate, Reconcile, Text, reconcile};
+pub use notebook_types::current::DocumentType;
 use samod::DocumentId;
 use serde::Deserialize;
 use sqlx::PgPool;
@@ -24,50 +24,6 @@ pub fn reconcile_user_state(
     doc.transact(|tx| reconcile(tx, state))
         .map_err(|e| AppError::UserStateSync(format!("Failed to reconcile: {:?}", e)))?;
     Ok(())
-}
-
-/// The type of a document.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Reconcile, Hydrate, TS)]
-#[serde(rename_all = "lowercase")]
-#[ts(export_to = "user_state.ts", rename_all = "lowercase")]
-#[cfg_attr(not(test), ts(export))]
-pub enum DocInfoType {
-    /// A model document.
-    #[autosurgeon(rename = "model")]
-    Model,
-    /// A diagram document.
-    #[autosurgeon(rename = "diagram")]
-    Diagram,
-    /// An analysis document.
-    #[autosurgeon(rename = "analysis")]
-    Analysis,
-    /// A document whose type is not recognized by this version of the backend.
-    #[autosurgeon(rename = "unknown")]
-    Unknown,
-}
-
-impl fmt::Display for DocInfoType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            DocInfoType::Model => write!(f, "model"),
-            DocInfoType::Diagram => write!(f, "diagram"),
-            DocInfoType::Analysis => write!(f, "analysis"),
-            DocInfoType::Unknown => write!(f, "unknown"),
-        }
-    }
-}
-
-impl FromStr for DocInfoType {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "model" => Ok(DocInfoType::Model),
-            "diagram" => Ok(DocInfoType::Diagram),
-            "analysis" => Ok(DocInfoType::Analysis),
-            _ => Ok(DocInfoType::Unknown),
-        }
-    }
 }
 
 /// User info for user state synchronization.
@@ -127,7 +83,7 @@ pub struct DocInfo {
     pub name: Text,
     /// The type of the document.
     #[autosurgeon(rename = "typeName")]
-    pub type_name: DocInfoType,
+    pub type_name: DocumentType,
     /// The theory of the document, if it is a model.
     pub theory: Option<String>,
     /// All permissions on this document (users and public).
@@ -345,33 +301,32 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
         "Successfully fetched user documents from database"
     );
 
-    let documents: HashMap<String, DocInfo> = results
-        .into_iter()
-        .map(|row| {
-            let key = row.ref_id.to_string();
-            let permissions: Vec<PermissionInfo> =
-                row.permissions.0.iter().filter_map(|p| p.to_permission_info()).collect();
-            let depends_on = extract_relations_from_json(&row.content);
+    let mut documents: HashMap<String, DocInfo> = HashMap::new();
+    for row in results {
+        let key = row.ref_id.to_string();
+        let type_str = row
+            .type_name
+            .as_deref()
+            .ok_or_else(|| AppError::Invalid(format!("Document {key} has no type")))?;
+        let type_name: DocumentType = type_str.parse().map_err(|_| {
+            AppError::Invalid(format!("Document {key} has unknown type: {type_str}"))
+        })?;
+        let permissions: Vec<PermissionInfo> =
+            row.permissions.0.iter().filter_map(|p| p.to_permission_info()).collect();
+        let depends_on = extract_relations_from_json(&row.content);
 
-            let info = DocInfo {
-                name: Text::from(row.name.unwrap_or_else(|| DEFAULT_DOC_NAME.to_string())),
-                type_name: row
-                    .type_name
-                    .as_deref()
-                    .unwrap_or("")
-                    .parse()
-                    .unwrap_or(DocInfoType::Unknown),
-                theory: row.theory,
-                permissions,
-                created_at: row.created_at,
-                deleted_at: row.deleted_at,
-                depends_on,
-                // Reverse relations are computed after all documents are loaded.
-                used_by: Vec::new(),
-            };
-            (key, info)
-        })
-        .collect();
+        let info = DocInfo {
+            name: Text::from(row.name.unwrap_or_else(|| DEFAULT_DOC_NAME.to_string())),
+            type_name,
+            theory: row.theory,
+            permissions,
+            created_at: row.created_at,
+            deleted_at: row.deleted_at,
+            depends_on,
+            used_by: Vec::new(),
+        };
+        documents.insert(key, info);
+    }
 
     // Fetch user info for all users referenced in document permissions.
     let user_ids: Vec<String> = documents
@@ -530,19 +485,14 @@ pub mod arbitrary {
     use proptest::{arbitrary::Arbitrary, prelude::*};
     use proptest_arbitrary_interop::arb;
 
-    impl Arbitrary for DocInfoType {
-        type Parameters = ();
-        type Strategy = BoxedStrategy<Self>;
-
-        fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-            prop_oneof![
-                Just(DocInfoType::Model),
-                Just(DocInfoType::Diagram),
-                Just(DocInfoType::Analysis),
-                Just(DocInfoType::Unknown),
-            ]
-            .boxed()
-        }
+    /// Strategy that generates an arbitrary [`DocumentType`].
+    pub fn arb_document_type() -> BoxedStrategy<DocumentType> {
+        proptest::sample::select(&[
+            DocumentType::Model,
+            DocumentType::Diagram,
+            DocumentType::Analysis,
+        ])
+        .boxed()
     }
 
     impl Arbitrary for UserInfo {
@@ -587,7 +537,7 @@ pub mod arbitrary {
         fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
             (
                 any::<String>(),
-                any::<DocInfoType>(),
+                arb_document_type(),
                 proptest::option::of(any::<String>()),
                 prop::collection::vec(any::<PermissionInfo>(), 0..5),
                 0i64..253402300799i64,
@@ -627,7 +577,7 @@ pub mod arbitrary {
     ) -> impl Strategy<Value = (String, DocInfo, HashMap<String, UserInfo>)> {
         (
             any::<String>(),                             // name
-            any::<DocInfoType>(),                        // type_name
+            arb_document_type(),                         // type_name
             arb::<uuid::Uuid>(),                         // ref_id (used as map key)
             any::<PermissionLevel>(),                    // user's permission_level
             arb::<uuid::Uuid>(),                         // other owner id

@@ -2505,9 +2505,12 @@ dependencies = [
 name = "notebook-types"
 version = "0.1.0"
 dependencies = [
+ "automerge",
+ "autosurgeon",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",
+ "ts-rs",
  "tsify",
  "ustr",
  "uuid",

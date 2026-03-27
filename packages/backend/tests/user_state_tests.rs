@@ -43,7 +43,7 @@ mod integration_tests {
     use backend::app::{AppCtx, AppState};
     use backend::auth::{NewPermissions, PermissionLevel};
     use backend::document;
-    use backend::user_state::{DocInfoType, UserState};
+    use backend::user_state::{DocumentType, UserState};
     use firebase_auth::FirebaseUser;
     use serde_json::json;
     use std::collections::{HashMap, HashSet};
@@ -162,7 +162,7 @@ mod integration_tests {
         assert_eq!(user_state.documents.len(), 1, "Should have one document");
         let doc = user_state.documents.get(&ref_id.to_string()).expect("Document should exist");
         assert_eq!(doc.name.as_str(), "Test Document");
-        assert_eq!(doc.type_name, DocInfoType::Model);
+        assert_eq!(doc.type_name, DocumentType::Model);
         assert_eq!(doc.theory.as_deref(), Some("test-theory"));
         assert!(
             doc.permissions
@@ -461,7 +461,7 @@ mod integration_tests {
 
         let s = read_user_state_from_samod(&state, &user_id).await.unwrap();
         let doc = &s.documents[&ref_id.to_string()];
-        assert_eq!(doc.type_name, DocInfoType::Model);
+        assert_eq!(doc.type_name, DocumentType::Model);
         assert_eq!(doc.theory.as_deref(), Some("causal-loop"));
 
         // Diagram (no theory)
@@ -470,7 +470,7 @@ mod integration_tests {
             document::new_ref(ctx, diagram_content).await.expect("Failed to create diagram");
 
         let s = read_user_state_from_samod(&state, &user_id).await.unwrap();
-        assert_eq!(s.documents[&diagram_id.to_string()].type_name, DocInfoType::Diagram);
+        assert_eq!(s.documents[&diagram_id.to_string()].type_name, DocumentType::Diagram);
         assert_eq!(s.documents[&diagram_id.to_string()].theory, None);
 
         // Update theory via autosave
@@ -1010,7 +1010,7 @@ mod integration_tests {
 
                 let mut content = serde_json::json!({
                     "name": doc.name.as_str(),
-                    "type": doc.type_name.to_string()
+                    "type": serde_json::to_value(&doc.type_name).unwrap()
                 });
                 if let Some(theory) = &doc.theory {
                     content["theory"] = serde_json::Value::String(theory.clone());
