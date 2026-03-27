@@ -467,6 +467,7 @@ pub fn promote_modality(modality: nb::Modality) -> modal::Modality {
         nb::Modality::CartesianList => modal::Modality::List(modal::List::Cartesian),
         nb::Modality::CocartesianList => modal::Modality::List(modal::List::Cocartesian),
         nb::Modality::AdditiveList => modal::Modality::List(modal::List::Additive),
+        nb::Modality::Maybe => modal::Modality::Maybe(),
     }
 }
 
@@ -482,6 +483,7 @@ pub fn demote_modality(modality: modal::Modality) -> nb::Modality {
             modal::List::Cocartesian => nb::Modality::CocartesianList,
             modal::List::Additive => nb::Modality::AdditiveList,
         },
+        modal::Modality::Maybe() => nb::Modality::Maybe,
     }
 }
 

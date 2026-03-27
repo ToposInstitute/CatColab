@@ -20,6 +20,9 @@ pub enum Ob {
         objects: Vec<Option<Ob>>,
     },
 
+    /// Optional object in the maybe modality.
+    Maybe(Option<Box<Ob>>),
+
     /// Morphism viewed as an object of a tabulator.
     Tabulated(Mor),
 }
