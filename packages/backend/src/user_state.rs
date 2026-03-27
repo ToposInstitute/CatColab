@@ -10,7 +10,6 @@ use tracing::{debug, info};
 use ts_rs::TS;
 
 use crate::app::{AppError, AppState};
-use crate::auth::PermissionLevel;
 use crate::autosurgeon_datetime::{datetime_millis, option_datetime_millis};
 
 /// Default name for documents without a name.
@@ -36,7 +35,7 @@ pub struct UserInfo {
 ///
 /// Represents one user's (or the public "anyone") permission level on a document.
 #[cfg_attr(feature = "property-tests", derive(Eq, PartialEq))]
-#[derive(Debug, Clone, Reconcile, Hydrate, TS)]
+#[derive(Debug, Clone, Deserialize, Reconcile, Hydrate, TS)]
 #[ts(rename_all = "camelCase", export_to = "user_state.ts")]
 pub struct PermissionInfo {
     /// The user ID this permission applies to, or `None` for the public "anyone" permission.
@@ -173,30 +172,6 @@ impl Default for UserState {
     }
 }
 
-/// A permission entry as returned from the database JSON aggregation.
-#[derive(Debug, Deserialize)]
-pub struct DbPermission {
-    /// The user ID, or `None` for the public "anyone" permission.
-    pub user_id: Option<String>,
-    /// The permission level as a string (e.g., "read", "write", "own").
-    pub level: String,
-}
-
-impl DbPermission {
-    /// Convert this database permission entry into a [`PermissionInfo`].
-    pub fn to_permission_info(&self) -> Option<PermissionInfo> {
-        let level = match self.level.as_str() {
-            "read" => PermissionLevel::Read,
-            "write" => PermissionLevel::Write,
-            "maintain" => PermissionLevel::Maintain,
-            "own" => PermissionLevel::Own,
-            _ => return None,
-        };
-        let user = self.user_id.clone();
-        Some(PermissionInfo { user, level })
-    }
-}
-
 /// Extracts document relations from a JSON content tree.
 ///
 /// Recursively walks the JSON tree and collects objects that have both `_id` and `type` keys,
@@ -272,13 +247,13 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
             snapshots.content AS "content!",
             COALESCE(
                 (SELECT json_agg(json_build_object(
-                    'user_id', p.subject,
-                    'level', p.level::text
+                    'user', p.subject,
+                    'level', INITCAP(p.level::text)
                 ) ORDER BY p.level DESC)
                 FROM permissions p
                 WHERE p.object = refs.id
                 ), '[]'::json
-            ) AS "permissions!: sqlx::types::Json<Vec<DbPermission>>"
+            ) AS "permissions!: sqlx::types::Json<Vec<PermissionInfo>>"
         FROM filtered_ids
         JOIN refs ON refs.id = filtered_ids.id
         JOIN snapshots ON snapshots.id = refs.head
@@ -308,8 +283,7 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
         let type_name: DocumentType = type_str.parse().map_err(|_| {
             AppError::Invalid(format!("Document {key} has unknown type: {type_str}"))
         })?;
-        let permissions: Vec<PermissionInfo> =
-            row.permissions.0.iter().filter_map(|p| p.to_permission_info()).collect();
+        let permissions: Vec<PermissionInfo> = row.permissions.0;
         let depends_on = extract_relations_from_json(&row.content);
 
         let info = DocInfo {
