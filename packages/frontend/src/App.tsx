@@ -50,15 +50,15 @@ const Root = (props: RouteSectionProps) => {
     const models = createModelLibraryWithApi(api, theories);
 
     return (
-        <MultiProvider
-            values={[
-                [ApiContext, api],
-                [TheoryLibraryContext, theories],
-                [ModelLibraryContext, models],
-                UserStateProvider,
-            ]}
-        >
-            <FirebaseProvider app={firebaseApp}>
+        <FirebaseProvider app={firebaseApp}>
+            <MultiProvider
+                values={[
+                    [ApiContext, api],
+                    [TheoryLibraryContext, theories],
+                    [ModelLibraryContext, models],
+                    UserStateProvider,
+                ]}
+            >
                 <MetaProvider>
                     <Title>{import.meta.env.VITE_APP_TITLE}</Title>
                     <ErrorBoundary fallback={(err) => <ErrorBoundaryDialog error={err} />}>
@@ -68,8 +68,8 @@ const Root = (props: RouteSectionProps) => {
                         <SessionExpiredModal />
                     </Show>
                 </MetaProvider>
-            </FirebaseProvider>
-        </MultiProvider>
+            </MultiProvider>
+        </FirebaseProvider>
     );
 };
 
