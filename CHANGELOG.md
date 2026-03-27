@@ -13,13 +13,19 @@ include notable new features.
 
 ### Added
 
-- The backend now provides a compute service for
+- New service: the backend now provides a compute service for
   [Julia](https://julialang.org/) and
   [AlgebraicJulia](https://www.algebraicjulia.org/)
   ([#1132](https://github.com/ToposInstitute/CatColab/pull/1132))
 - New analysis: table view for instances of a schema
   ([#835](https://github.com/ToposInstitute/CatColab/pull/835)), based on the
   new Julia service
+
+### Changed
+
+- Backend re-architecture: Automerge meta-documents are now created by the
+  backend to maintain user state, such as the user's list of documents
+  ([#976](https://github.com/ToposInstitute/CatColab/pull/976))
 
 ## [v0.5.1](https://github.com/ToposInstitute/CatColab/releases/tag/v0.5.1) & [v0.5.2](https://github.com/ToposInstitute/CatColab/releases/tag/v0.5.2) (2026-03-24)
 
