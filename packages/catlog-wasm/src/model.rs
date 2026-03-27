@@ -135,6 +135,10 @@ impl CanElaborate<Ob, ModalOb> for Elaborator {
                     objects.iter().filter_map(|ob| ob.as_ref().map(|ob| self.elab(ob))).collect();
                 Ok(ModalOb::List(list_type, objects?))
             }
+            Ob::Maybe(inner) => {
+                let inner = inner.as_ref().map(|ob| self.elab(ob.as_ref())).transpose()?;
+                Ok(ModalOb::Maybe(inner.map(Box::new)))
+            }
             _ => Err(format!("Cannot use object with modal theory: {ob:#?}")),
         }
     }
@@ -228,6 +232,9 @@ impl CanQuote<ModalOb, Ob> for Quoter {
                 modality: demote_modality(dbl_theory::Modality::List(*list_type)),
                 objects: objects.iter().map(|ob| Some(self.quote(ob))).collect(),
             },
+            ModalOb::Maybe(inner) => {
+                Ob::Maybe(inner.as_ref().map(|ob| Box::new(self.quote(ob.as_ref()))))
+            }
         }
     }
 }
@@ -453,6 +460,10 @@ impl DblModel {
                     .collect();
                 Some(format!("[{}]", labels?.join(", ")))
             }
+            Ob::Maybe(inner) => match inner {
+                Some(ob) => Some(format!("Some({})", self.ob_label_string(ob)?)),
+                None => Some("None".into()),
+            },
             _ => None,
         }
     }

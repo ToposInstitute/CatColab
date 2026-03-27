@@ -65,4 +65,5 @@ pub enum Modality {
     CocartesianList,
     CartesianList,
     AdditiveList,
+    Maybe,
 }

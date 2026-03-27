@@ -155,8 +155,8 @@ pub fn th_sym_monoidal_category() -> ModalDblTheory<Unital> {
 ///
 /// This is a modal double theory, parametric over which variant of the double list
 /// monad is used.
-fn th_list_algebra(list: List) -> ModalDblTheory<Unital> {
-    let m = Modality::List(list);
+fn th_list_algebra(list_type: List) -> ModalDblTheory<Unital> {
+    let m = Modality::List(list_type);
 
     let mut th = ModalDblTheory::new();
     th.add_ob_type(name("Object"));
@@ -166,18 +166,21 @@ fn th_list_algebra(list: List) -> ModalDblTheory<Unital> {
 
     th.equate_ob_ops(
         Path::pair(a.clone().apply(m), a.clone()),
-        Path::pair(ModeApp::new(ModalOp::Concat(list, 2, x.clone())), a.clone()),
+        Path::pair(
+            ModeApp::new(ModalOp::Concat { list_type, power: 2, on_type: x.clone() }),
+            a.clone(),
+        ),
     );
     th.equate_ob_ops(
         Path::empty(x.clone()),
-        Path::pair(ModeApp::new(ModalOp::Concat(list, 0, x)), a),
+        Path::pair(ModeApp::new(ModalOp::Concat { list_type, power: 0, on_type: x }), a),
     );
     th
 }
 
 /// The theory of a lax algebra over a list monad.
-fn th_list_lax_algebra(list: List) -> ModalDblTheory<Unital> {
-    let m = Modality::List(list);
+fn th_list_lax_algebra(list_type: List) -> ModalDblTheory<Unital> {
+    let m = Modality::List(list_type);
 
     let mut th = ModalDblTheory::new();
     th.add_ob_type(name("Object"));
@@ -188,12 +191,15 @@ fn th_list_lax_algebra(list: List) -> ModalDblTheory<Unital> {
     th.add_special_mor_op(
         name("Associator"),
         Path::pair(a.clone().apply(m), a.clone()),
-        Path::pair(ModeApp::new(ModalOp::Concat(list, 2, x.clone())), a.clone()),
+        Path::pair(
+            ModeApp::new(ModalOp::Concat { list_type, power: 2, on_type: x.clone() }),
+            a.clone(),
+        ),
     );
     th.add_special_mor_op(
         name("Unitor"),
         Path::empty(x.clone()),
-        Path::pair(ModeApp::new(ModalOp::Concat(list, 0, x)), a),
+        Path::pair(ModeApp::new(ModalOp::Concat { list_type, power: 0, on_type: x }), a),
     );
     // TODO: Coherence equations
     th
@@ -216,6 +222,20 @@ fn th_generalized_multicategory<Kind: DblTheoryKind>(list: List) -> ModalDblTheo
     let x = ModeApp::new(name("Object"));
     th.add_mor_type(name("Multihom"), x.clone().apply(Modality::List(list)), x);
     // TODO: Axioms, which depend on implementing composites and restrictions.
+    th
+}
+
+/// The theory of database schemas with nullable attributes.
+///
+/// This is a mild generalisation of [th_schema] obtained by introducing the "Maybe" modality.
+pub fn th_schema_maybe() -> ModalDblTheory<NonUnital> {
+    let mut th = ModalDblTheory::new();
+    let (entity, attr) = (name("Entity"), name("AttrType"));
+    let (m_entity, m_attr) = (ModeApp::new(entity.clone()), ModeApp::new(attr.clone()));
+    th.add_ob_type(entity.clone());
+    th.add_ob_type(attr.clone());
+    th.add_mor_type(name("Attr"), m_entity.clone(), m_attr.clone());
+    th.add_mor_type(name("MaybeAttr"), m_entity, m_attr.apply(Modality::Maybe()));
     th
 }
 
@@ -351,6 +371,7 @@ mod tests {
         assert!(th_multicategory().validate().is_ok());
         assert!(th_sym_multicategory().validate().is_ok());
         assert!(modal_th_power_system().validate().is_ok());
+        assert!(th_schema_maybe().validate().is_ok());
     }
 
     #[test]
