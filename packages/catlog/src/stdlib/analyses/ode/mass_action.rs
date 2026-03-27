@@ -187,7 +187,16 @@ pub struct MassActionProblemData {
 }
 
 /// Symbolic parameter in mass-action polynomial system.
-type Parameter<Id> = Polynomial<Id, f32, i8>;
+pub type Parameter<Id> = Polynomial<Id, f32, i8>;
+
+/// The mass-action analysis is currently implemented for Petri nets and stock-flow
+/// diagrams, and we can avoid some code reduplication by making this explicit.
+pub enum MassActionAnalysisLogic {
+    /// The modal theory of Petri nets.
+    PetriNet,
+    /// The discrete tabulator theory of stock-flow diagrams.
+    StockFlow,
+}
 
 /// Mass-action ODE analysis for Petri nets.
 ///
