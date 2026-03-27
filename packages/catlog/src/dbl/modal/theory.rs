@@ -258,10 +258,7 @@ pub type ModalMorOp = DblTree<ModalObOp, ModalMorType, ModalNode>;
 /// A modal double theory.
 #[derive(Debug, Derivative)]
 #[derivative(Default(new = "true"))]
-pub struct ModalDblTheory<Kind>
-where
-    Kind: DblTheoryKind,
-{
+pub struct ModalDblTheory<Kind> {
     _kind: PhantomData<Kind>,
     ob_generators: HashFinSet<QualifiedName>,
     arr_generators: ComputadTop<ModalObType, QualifiedName>,
@@ -275,9 +272,7 @@ where
 /// Set of object types in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-pub(super) struct ModalObTypes<Kind>(ModalDblTheory<Kind>)
-where
-    Kind: DblTheoryKind;
+pub(super) struct ModalObTypes<Kind>(ModalDblTheory<Kind>);
 
 impl<Kind: DblTheoryKind> Set for ModalObTypes<Kind> {
     type Elem = ModalObType;
@@ -290,9 +285,7 @@ impl<Kind: DblTheoryKind> Set for ModalObTypes<Kind> {
 /// Graph of object types and *basic* morphism types in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-struct ModalProedgeGraph<Kind>(ModalDblTheory<Kind>)
-where
-    Kind: DblTheoryKind;
+struct ModalProedgeGraph<Kind>(ModalDblTheory<Kind>);
 
 impl<Kind: DblTheoryKind> Graph for ModalProedgeGraph<Kind> {
     type V = ModalObType;
@@ -315,9 +308,7 @@ impl<Kind: DblTheoryKind> Graph for ModalProedgeGraph<Kind> {
 /// Graph of object/morphism types in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-pub(super) struct ModalMorTypeGraph<Kind>(ModalDblTheory<Kind>)
-where
-    Kind: DblTheoryKind;
+pub(super) struct ModalMorTypeGraph<Kind>(ModalDblTheory<Kind>);
 
 impl<Kind: DblTheoryKind> Graph for ModalMorTypeGraph<Kind> {
     type V = ModalObType;
@@ -346,9 +337,7 @@ impl<Kind: DblTheoryKind> ReflexiveGraph for ModalMorTypeGraph<Kind> {
 /// Graph of object types and *basic* object operations in a modal theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-struct ModalEdgeGraph<Kind>(ModalDblTheory<Kind>)
-where
-    Kind: DblTheoryKind;
+struct ModalEdgeGraph<Kind>(ModalDblTheory<Kind>);
 
 impl<Kind: DblTheoryKind> Graph for ModalEdgeGraph<Kind> {
     type V = ModalObType;
@@ -382,9 +371,7 @@ impl<Kind: DblTheoryKind> Graph for ModalEdgeGraph<Kind> {
 /// Category of object types/operations in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-pub(super) struct ModalOneTheory<Kind>(ModalDblTheory<Kind>)
-where
-    Kind: DblTheoryKind;
+pub(super) struct ModalOneTheory<Kind>(ModalDblTheory<Kind>);
 
 impl<Kind: DblTheoryKind> Category for ModalOneTheory<Kind> {
     type Ob = ModalObType;
@@ -410,9 +397,7 @@ impl<Kind: DblTheoryKind> Category for ModalOneTheory<Kind> {
 /// Virtual double graph of *basic* cells in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-struct ModalVDblGraph<Kind>(ModalDblTheory<Kind>)
-where
-    Kind: DblTheoryKind;
+struct ModalVDblGraph<Kind>(ModalDblTheory<Kind>);
 
 type ModalVDblComputad<'a, Kind> = AVDCComputad<
     'a,
