@@ -4,9 +4,8 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use super::result::JsResult;
-use catlog::simulate::ode::LatexEquation;
-use catlog::stdlib::analyses;
-use catlog::stdlib::analyses::ode::{Direction, FlowParameter, ODESolution, RateParameter};
+use catlog::simulate::ode::{LatexEquation, PolynomialSystem};
+use catlog::stdlib::analyses::ode;
 use catlog::zero::QualifiedName;
 
 use super::model::DblModel;
@@ -14,14 +13,14 @@ use super::model::DblModel;
 /// The result of an ODE analysis, containing the solution when successful.
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct ODEResult(pub JsResult<ODESolution, String>);
+pub struct ODEResult(pub JsResult<ode::ODESolution, String>);
 
 /// The result of an ODE analysis including equations in LaTex with substitutions.
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct ODEResultWithEquations {
     /// The result of the simulation.
-    pub solution: JsResult<ODESolution, String>,
+    pub solution: JsResult<ode::ODESolution, String>,
     /// The equations in LaTeX format with parameters substituted.
     #[serde(rename = "latexEquations")]
     pub latex_equations: Vec<LatexEquation>,
@@ -48,7 +47,9 @@ pub(crate) fn latex_ob_names_mass_action(model: &DblModel) -> impl Fn(&Qualified
 ///
 /// When a morphism has a label, it is used directly. When unnamed, the label
 /// falls back to the domain→codomain format (e.g., `X \to Y`).
-pub(crate) fn latex_mor_names_mass_action(model: &DblModel) -> impl Fn(&FlowParameter) -> String {
+pub(crate) fn latex_mor_names_mass_action(
+    model: &DblModel,
+) -> impl Fn(&ode::FlowParameter) -> String {
     // Returns a LaTeX fragment for a transition, suitable for use as a subscript.
     // Named morphisms produce `\text{name}`, unnamed ones produce
     // `\text{dom} \to \text{cod}` so that `\to` is in math mode.
@@ -63,26 +64,26 @@ pub(crate) fn latex_mor_names_mass_action(model: &DblModel) -> impl Fn(&FlowPara
         }
     };
 
-    move |id: &FlowParameter| match id {
-        FlowParameter::Balanced { transition } => {
+    move |id: &ode::FlowParameter| match id {
+        ode::FlowParameter::Balanced { transition } => {
             let sub = transition_subscript(transition);
             format!("r_{{{sub}}}")
         }
-        FlowParameter::Unbalanced { direction, parameter } => match (direction, parameter) {
-            (Direction::IncomingFlow, RateParameter::PerTransition { transition }) => {
+        ode::FlowParameter::Unbalanced { direction, parameter } => match (direction, parameter) {
+            (ode::Direction::IncomingFlow, ode::RateParameter::PerTransition { transition }) => {
                 let sub = transition_subscript(transition);
                 format!("\\rho_{{{sub}}}")
             }
-            (Direction::OutgoingFlow, RateParameter::PerTransition { transition }) => {
+            (ode::Direction::OutgoingFlow, ode::RateParameter::PerTransition { transition }) => {
                 let sub = transition_subscript(transition);
                 format!("\\kappa_{{{sub}}}")
             }
-            (Direction::IncomingFlow, RateParameter::PerPlace { transition, place }) => {
+            (ode::Direction::IncomingFlow, ode::RateParameter::PerPlace { transition, place }) => {
                 let sub = transition_subscript(transition);
                 let output_place_label = model.ob_namespace.label_string(place);
                 format!("\\rho_{{{sub}}}^{{\\text{{{output_place_label}}}}}")
             }
-            (Direction::OutgoingFlow, RateParameter::PerPlace { transition, place }) => {
+            (ode::Direction::OutgoingFlow, ode::RateParameter::PerPlace { transition, place }) => {
                 let sub = transition_subscript(transition);
                 let input_place_label = model.ob_namespace.label_string(place);
                 format!("\\kappa_{{{sub}}}^{{\\text{{{input_place_label}}}}}")
@@ -91,39 +92,37 @@ pub(crate) fn latex_mor_names_mass_action(model: &DblModel) -> impl Fn(&FlowPara
     }
 }
 
-/// Simulates mass-action ODE on tabulated models.
-pub(crate) fn mass_action_tab(
+fn mass_action_system(
     model: &DblModel,
-    data: analyses::ode::MassActionProblemData,
-) -> Result<ODEResultWithEquations, String> {
-    let realised_model = model.discrete_tab()?;
-    let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
-    let sys = analysis.build_system(realised_model, data.mass_conservation_type);
-    let sys_extended_scalars = analyses::ode::extend_mass_action_scalars(sys, &data);
-    let latex_equations = sys_extended_scalars
-        .map_variables(latex_ob_names_mass_action(model))
-        .to_latex_equations();
-    let analysis = analyses::ode::into_mass_action_analysis(sys_extended_scalars, data);
-    let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
-    Ok(ODEResultWithEquations {
-        solution: solution.into(),
-        latex_equations,
-    })
+    mass_conservation_type: ode::MassConservationType,
+    logic: ode::MassActionAnalysisLogic,
+) -> Result<PolynomialSystem<QualifiedName, ode::Parameter<ode::FlowParameter>, i8>, String> {
+    match logic {
+        ode::MassActionAnalysisLogic::PetriNet => {
+            let realised_model = model.modal()?;
+            let analysis = ode::PetriNetMassActionAnalysis::default();
+            Ok(analysis.build_system(realised_model, mass_conservation_type))
+        }
+        ode::MassActionAnalysisLogic::StockFlow => {
+            let realised_model = model.discrete_tab()?;
+            let analysis = ode::StockFlowMassActionAnalysis::default();
+            Ok(analysis.build_system(realised_model, mass_conservation_type))
+        }
+    }
 }
 
-/// Simulates mass-action ODE on modal models.
-pub(crate) fn mass_action_modal(
+/// Simulates mass-action ODEs.
+pub(crate) fn mass_action_simulation(
     model: &DblModel,
-    data: analyses::ode::MassActionProblemData,
+    data: ode::MassActionProblemData,
+    logic: ode::MassActionAnalysisLogic,
 ) -> Result<ODEResultWithEquations, String> {
-    let realised_model = model.modal()?;
-    let analysis = analyses::ode::PetriNetMassActionAnalysis::default();
-    let sys = analysis.build_system(realised_model, data.mass_conservation_type);
-    let sys_extended_scalars = analyses::ode::extend_mass_action_scalars(sys, &data);
+    let sys = mass_action_system(model, data.mass_conservation_type, logic);
+    let sys_extended_scalars = ode::extend_mass_action_scalars(sys?, &data);
     let latex_equations = sys_extended_scalars
         .map_variables(latex_ob_names_mass_action(model))
         .to_latex_equations();
-    let analysis = analyses::ode::into_mass_action_analysis(sys_extended_scalars, data);
+    let analysis = ode::into_mass_action_analysis(sys_extended_scalars, data);
     let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
     Ok(ODEResultWithEquations {
         solution: solution.into(),
@@ -137,33 +136,17 @@ pub(crate) fn mass_action_modal(
 pub struct MassActionEquationsData {
     /// The mass-conservation type.
     #[serde(rename = "massConservationType")]
-    pub mass_conservation_type: analyses::ode::MassConservationType,
+    pub mass_conservation_type: ode::MassConservationType,
 }
 
-/// Generates mass-action equations for tabulated models.
-pub(crate) fn mass_action_equations_tab(
+/// Generates mass-action equations for the equations.
+pub(crate) fn mass_action_equations(
     model: &DblModel,
     data: MassActionEquationsData,
+    logic: ode::MassActionAnalysisLogic,
 ) -> Result<ODELatex, String> {
-    let realised_model = model.discrete_tab()?;
-    let analysis = analyses::ode::StockFlowMassActionAnalysis::default();
-    let sys = analysis.build_system(realised_model, data.mass_conservation_type);
-    let equations = sys
-        .map_variables(latex_ob_names_mass_action(model))
-        .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(model)))
-        .to_latex_equations();
-    Ok(ODELatex(equations))
-}
-
-/// Generates mass-action equations for modal models.
-pub(crate) fn mass_action_equations_modal(
-    model: &DblModel,
-    data: MassActionEquationsData,
-) -> Result<ODELatex, String> {
-    let realised_model = model.modal()?;
-    let analysis = analyses::ode::PetriNetMassActionAnalysis::default();
-    let sys = analysis.build_system(realised_model, data.mass_conservation_type);
-    let equations = sys
+    let sys = mass_action_system(model, data.mass_conservation_type, logic);
+    let equations = sys?
         .map_variables(latex_ob_names_mass_action(model))
         .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(model)))
         .to_latex_equations();
