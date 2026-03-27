@@ -1,8 +1,8 @@
-import { ImmutableString } from "@automerge/automerge";
+import { isImmutableString } from "@automerge/automerge";
 
 /** Recursively convert any automerge `ImmutableString` values to native strings. */
 export function normalizeImmutableStrings<T>(value: T): T {
-    if (value instanceof ImmutableString) {
+    if (isImmutableString(value)) {
         return value.toString() as unknown as T;
     }
     if (Array.isArray(value)) {
