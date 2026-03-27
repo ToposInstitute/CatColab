@@ -11,6 +11,7 @@ use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 use catlog::zero::{QualifiedLabel, name};
 
+use super::latex::LatexEquations;
 use super::model_morphism::{MotifOccurrence, MotifsOptions, motifs};
 use super::result::JsResult;
 use super::{analyses::*, model::DblModel, theory::DblTheory};
@@ -324,7 +325,7 @@ impl ThCategoryLinks {
         &self,
         model: &DblModel,
         data: MassActionEquationsData,
-    ) -> Result<ODELatex, String> {
+    ) -> Result<LatexEquations, String> {
         mass_action_equations(model, data, analyses::ode::MassActionAnalysisLogic::StockFlow)
     }
 }
@@ -361,7 +362,7 @@ impl ThCategorySignedLinks {
         &self,
         model: &DblModel,
         data: MassActionEquationsData,
-    ) -> Result<ODELatex, String> {
+    ) -> Result<LatexEquations, String> {
         mass_action_equations(model, data, analyses::ode::MassActionAnalysisLogic::StockFlow)
     }
 }
@@ -398,7 +399,7 @@ impl ThSymMonoidalCategory {
         &self,
         model: &DblModel,
         data: MassActionEquationsData,
-    ) -> Result<ODELatex, String> {
+    ) -> Result<LatexEquations, String> {
         mass_action_equations(model, data, analyses::ode::MassActionAnalysisLogic::PetriNet)
     }
 
