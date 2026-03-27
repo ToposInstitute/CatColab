@@ -82,12 +82,23 @@ pub use super::modal::theory::*;
 
 /// The kind of a double theory, determining whether hom types are guaranteed.
 ///
+/// Sealed trait machinery for [`DblTheoryKind`]: prevents external implementors.
+mod private {
+    pub trait Sealed {}
+    impl Sealed for super::Unital {}
+    impl Sealed for super::NonUnital {}
+}
+
 /// This trait uses a generic associated type ([`Wrap`](DblTheoryKind::Wrap)) to
 /// control the return type of [`DblTheory::hom_type`] and
 /// [`DblTheory::hom_op`]. For [`Unital`] theories, `Wrap<T>` is just `T`
 /// (hom types always exist). For [`NonUnital`] theories, `Wrap<T>` is
 /// `Option<T>` (hom types may not exist).
-pub trait DblTheoryKind: fmt::Debug {
+///
+/// This trait is [sealed] and cannot be implemented outside this crate.
+///
+/// [sealed]: https://rust-lang.github.io/api-guidelines/future-proofing.html#sealed-traits-protect-against-downstream-implementations-c-sealed
+pub trait DblTheoryKind: fmt::Debug + private::Sealed {
     /// Wraps a type to reflect whether values are guaranteed to exist.
     ///
     /// For [`Unital`], this is the identity (`T`).
@@ -254,8 +265,7 @@ pub trait DblTheory {
 ///
 /// - `impl_dbl_theory!(Type, Kind)`: for a concrete kind (`Unital` or `NonUnital`).
 /// - `impl_dbl_theory!(Type<Kind>)`: for a type generic over `Kind: DblTheoryKind`,
-///   producing a single generic impl. This avoids the need for redundant `where`
-///   clauses in downstream code.
+///   producing a single generic impl.
 macro_rules! impl_dbl_theory {
     ($ty:ty, $kind:ty) => {
         impl $crate::dbl::theory::DblTheory for $ty {
@@ -350,18 +360,11 @@ macro_rules! impl_dbl_theory {
         ) -> Self::ObOp {
             $crate::dbl::category::VDblCategory::compose(self, path)
         }
-        fn id_ob_op(&self, x: Self::ObType) -> Self::ObOp {
-            $crate::dbl::category::VDblCategory::id(self, x)
-        }
-
         fn compose_mor_ops(
             &self,
             tree: $crate::dbl::tree::DblTree<Self::ObOp, Self::MorType, Self::MorOp>,
         ) -> Self::MorOp {
             $crate::dbl::category::VDblCategory::compose_cells(self, tree)
-        }
-        fn id_mor_op(&self, m: Self::MorType) -> Self::MorOp {
-            $crate::dbl::category::VDblCategory::id_cell(self, m)
         }
     };
 }
