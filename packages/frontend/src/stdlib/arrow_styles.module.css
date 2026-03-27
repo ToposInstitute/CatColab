@@ -106,6 +106,35 @@
     }
 }
 
+.arrow.dashed {
+    background: transparent;
+    height: 2px;
+    border-top: 2px dashed var(--color-foreground);
+    border-radius: 0;
+
+    &:before,
+    &:after {
+        content: "";
+        background: var(--color-foreground);
+        position: absolute;
+        height: 2px;
+        width: 10px;
+        border-radius: 3px;
+    }
+
+    &:before {
+        right: -1px;
+        bottom: -3px;
+        transform: rotate(-45deg);
+    }
+
+    &:after {
+        right: -1px;
+        top: -3px;
+        transform: rotate(45deg);
+    }
+}
+
 .arrow.double {
     background: transparent;
     height: 6px;

@@ -42,6 +42,9 @@ pub enum Modality {
     #[from]
     List(List),
 
+    /// Maybe modality, the familiar monad.
+    Maybe(),
+
     /// Discrete modality, an idempotent comonad.
     Discrete(),
 
@@ -89,6 +92,7 @@ impl fmt::Display for Modality {
         match self {
             Modality::List(List::Plain) => write!(f, "List"),
             Modality::List(list_type) => write!(f, "List.{list_type}"),
+            Modality::Maybe() => write!(f, "Maybe"),
             Modality::Discrete() => write!(f, "Discrete"),
             Modality::Codiscrete() => write!(f, "Codiscrete"),
         }
@@ -179,9 +183,30 @@ pub enum ModalOp {
 
     /// List concentation.
     ///
-    /// This is a component of the monad multiplication for a [list](List) modality.
-    /// It is given in unbiased style, where the second argument is the arity.
-    Concat(List, usize, ModalObType),
+    /// This is a component of the monad multiplication for a [list](List)
+    /// modality. It is given in unbiased style, where the second argument is
+    /// the power.
+    Concat {
+        /// Which variant of the list monad.
+        list_type: List,
+        /// Nesting depth of the list monad.
+        power: usize,
+        /// Base object type being flattened.
+        on_type: ModalObType,
+    },
+
+    /// Maybe short-circuiting.
+    ///
+    /// This is a component of the monad multiplication for a
+    /// [maybe](Modality::Maybe) modality. We give the unbiased presentation
+    /// here, where the unit appears for power 0 and the traditional binary
+    /// multiplication appears for power 2.
+    Maybe {
+        /// Nesting depth of the maybe monad.
+        power: usize,
+        /// Base object type being flattened.
+        on_type: ModalObType,
+    },
 }
 
 /// An object type in a modal double theory.
@@ -215,8 +240,8 @@ impl ModalObOp {
     }
 
     /// Constructs a concatenation operation for a list modality.
-    pub fn concat(list: List, arity: usize, ob_type: ModalObType) -> Self {
-        ModeApp::new(ModalOp::Concat(list, arity, ob_type)).into()
+    pub fn concat(list_type: List, power: usize, ob_type: ModalObType) -> Self {
+        ModeApp::new(ModalOp::Concat { list_type, power, on_type: ob_type }).into()
     }
 
     /// Applies a modality.
@@ -349,21 +374,28 @@ impl<Kind: DblTheoryKind> Graph for ModalEdgeGraph<Kind> {
     fn has_edge(&self, edge: &Self::E) -> bool {
         match &edge.arg {
             ModalOp::Generator(e) => self.0.tight_computad().has_edge(e),
-            ModalOp::Concat(_, _, ob) => self.0.tight_computad().has_vertex(ob),
+            ModalOp::Concat { on_type, .. } => self.0.tight_computad().has_vertex(on_type),
+            ModalOp::Maybe { on_type, .. } => self.0.tight_computad().has_vertex(on_type),
         }
     }
     fn src(&self, edge: &Self::E) -> Self::V {
         edge.as_ref().flat_map(|arg| match arg {
             ModalOp::Generator(e) => self.0.tight_computad().src(e),
-            ModalOp::Concat(list, n, ob) => {
-                ob.clone().apply_all(repeat_n(Modality::List(*list), *n))
+            ModalOp::Concat { list_type, power, on_type } => {
+                on_type.clone().apply_all(repeat_n(Modality::List(*list_type), *power))
+            }
+            ModalOp::Maybe { power, on_type } => {
+                on_type.clone().apply_all(repeat_n(Modality::Maybe(), *power))
             }
         })
     }
     fn tgt(&self, edge: &Self::E) -> Self::V {
         edge.as_ref().flat_map(|arg| match arg {
             ModalOp::Generator(e) => self.0.tight_computad().tgt(e),
-            ModalOp::Concat(list, _, ob) => ob.clone().apply(Modality::List(*list)),
+            ModalOp::Concat { list_type, on_type, .. } => {
+                on_type.clone().apply(Modality::List(*list_type))
+            }
+            ModalOp::Maybe { on_type, .. } => on_type.clone().apply(Modality::Maybe()),
         })
     }
 }
@@ -450,7 +482,12 @@ impl<Kind: DblTheoryKind> VDblGraph for ModalVDblGraph<Kind> {
         match node {
             ModalNode::Basic(app) => match &app.arg {
                 ModalOp::Generator(sq) => self.0.dbl_computad().has_square(sq),
-                ModalOp::Concat(_, _, p) => ModalProedgeGraph::ref_cast(&self.0).has_edge(p),
+                ModalOp::Concat { on_type, .. } => {
+                    ModalProedgeGraph::ref_cast(&self.0).has_edge(on_type)
+                }
+                ModalOp::Maybe { on_type, .. } => {
+                    ModalProedgeGraph::ref_cast(&self.0).has_edge(on_type)
+                }
             },
             ModalNode::Unit(f) => ModalEdgeGraph::ref_cast(&self.0).has_edge(f),
             ModalNode::Composite(path) => {
@@ -482,8 +519,14 @@ impl<Kind: DblTheoryKind> VDblGraph for ModalVDblGraph<Kind> {
                 let ModeApp { arg, modalities } = app;
                 let dom = match &arg {
                     ModalOp::Generator(sq) => self.0.dbl_computad().square_dom(sq),
-                    ModalOp::Concat(list, n, p) => {
-                        let ob_type = p.clone().apply_all(repeat_n(Modality::List(*list), *n));
+                    ModalOp::Concat { list_type, power, on_type } => {
+                        let ob_type =
+                            on_type.clone().apply_all(repeat_n(Modality::List(*list_type), *power));
+                        ShortPath::One(ob_type).into()
+                    }
+                    ModalOp::Maybe { power, on_type } => {
+                        let ob_type =
+                            on_type.clone().apply_all(repeat_n(Modality::Maybe(), *power));
                         ShortPath::One(ob_type).into()
                     }
                 };
@@ -500,7 +543,12 @@ impl<Kind: DblTheoryKind> VDblGraph for ModalVDblGraph<Kind> {
             ModalNode::Basic(app) => {
                 let cod = match &app.arg {
                     ModalOp::Generator(sq) => self.0.dbl_computad().square_cod(sq),
-                    ModalOp::Concat(list, _, p) => p.clone().apply(Modality::List(*list)).into(),
+                    ModalOp::Concat { list_type, on_type, .. } => {
+                        on_type.clone().apply(Modality::List(*list_type)).into()
+                    }
+                    ModalOp::Maybe { on_type, .. } => {
+                        on_type.clone().apply(Modality::Maybe()).into()
+                    }
                 };
                 cod.apply_all(app.modalities.clone())
             }
@@ -515,9 +563,22 @@ impl<Kind: DblTheoryKind> VDblGraph for ModalVDblGraph<Kind> {
             ModalNode::Basic(app) => {
                 let src = match &app.arg {
                     ModalOp::Generator(sq) => self.0.dbl_computad().square_src(sq),
-                    ModalOp::Concat(list, n, p) => {
+                    ModalOp::Concat { list_type, power, on_type } => {
                         let graph = ModalProedgeGraph::ref_cast(&self.0);
-                        ModeApp::new(ModalOp::Concat(*list, *n, graph.src(p))).into()
+                        ModeApp::new(ModalOp::Concat {
+                            list_type: *list_type,
+                            power: *power,
+                            on_type: graph.src(on_type),
+                        })
+                        .into()
+                    }
+                    ModalOp::Maybe { power, on_type } => {
+                        let graph = ModalProedgeGraph::ref_cast(&self.0);
+                        ModeApp::new(ModalOp::Maybe {
+                            power: *power,
+                            on_type: graph.src(on_type),
+                        })
+                        .into()
                     }
                 };
                 src.apply_all(app.modalities.clone())
@@ -533,9 +594,22 @@ impl<Kind: DblTheoryKind> VDblGraph for ModalVDblGraph<Kind> {
             ModalNode::Basic(app) => {
                 let tgt = match &app.arg {
                     ModalOp::Generator(sq) => self.0.dbl_computad().square_tgt(sq),
-                    ModalOp::Concat(list, n, p) => {
+                    ModalOp::Concat { list_type, power, on_type } => {
                         let graph = ModalProedgeGraph::ref_cast(&self.0);
-                        ModeApp::new(ModalOp::Concat(*list, *n, graph.tgt(p))).into()
+                        ModeApp::new(ModalOp::Concat {
+                            list_type: *list_type,
+                            power: *power,
+                            on_type: graph.tgt(on_type),
+                        })
+                        .into()
+                    }
+                    ModalOp::Maybe { power, on_type } => {
+                        let graph = ModalProedgeGraph::ref_cast(&self.0);
+                        ModeApp::new(ModalOp::Maybe {
+                            power: *power,
+                            on_type: graph.tgt(on_type),
+                        })
+                        .into()
                     }
                 };
                 tgt.apply_all(app.modalities.clone())
@@ -550,7 +624,8 @@ impl<Kind: DblTheoryKind> VDblGraph for ModalVDblGraph<Kind> {
         match node {
             ModalNode::Basic(app) => match &app.arg {
                 ModalOp::Generator(sq) => self.0.dbl_computad().arity(sq),
-                ModalOp::Concat(_, _, _) => 1,
+                ModalOp::Concat { .. } => 1,
+                ModalOp::Maybe { .. } => 1,
             },
             ModalNode::Unit(_) => 1,
             ModalNode::Composite(path) => path.len(),

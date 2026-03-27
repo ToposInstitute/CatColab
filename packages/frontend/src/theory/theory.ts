@@ -137,9 +137,22 @@ export class Theory {
         return this.inclusions.concat(this.pushforwards.map((m) => m.target));
     }
 
-    /** Get metadata for an object type as used in models. */
+    /** Get metadata for an object type as used in models.
+
+    Modalities like Maybe, Discrete, and Codiscrete are stripped before lookup
+    since the metadata (CSS classes, etc.) is determined by the base type.
+    */
     modelObTypeMeta(typ: ObType): ModelObTypeMeta | undefined {
-        return this.modelObTypeMap.get(typ);
+        let t = typ;
+        while (
+            t.tag === "ModeApp" &&
+            (t.content.modality === "Discrete" ||
+                t.content.modality === "Codiscrete" ||
+                t.content.modality === "Maybe")
+        ) {
+            t = t.content.obType;
+        }
+        return this.modelObTypeMap.get(t);
     }
 
     /** Get metadata for a morphism type as used in models. */

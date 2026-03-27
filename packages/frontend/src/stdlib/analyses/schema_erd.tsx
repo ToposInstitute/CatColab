@@ -5,21 +5,32 @@ import Download from "lucide-solid/icons/download";
 import { createResource, Show } from "solid-js";
 
 import { BlockTitle, FormGroup, IconButton, SelectField } from "catcolab-ui-components";
-import type { DblModel, MorType, ObType } from "catlog-wasm";
+import type { DblModel, MorType, Ob, ObType } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { loadViz } from "../../visualization";
 import { Direction, type SchemaERDConfig } from "./schema_erd_config";
+
+/** Types that the ERD should query from the model. */
+export type SchemaERDTypes = {
+    entityType: ObType;
+    attrTypes: MorType[];
+    nullableAttrTypes: MorType[];
+    relationTypes: MorType[];
+    nullableRelationTypes: MorType[];
+};
 
 /** Visualize a schema as an Entity-Relationship Diagram.
 
 This visualization is specifically designed for schemas (models of the simple-schema
 theory) and displays entities as tables with their attributes listed inside.
 */
-export default function SchemaERD(props: ModelAnalysisProps<SchemaERDConfig>) {
+export default function SchemaERD(
+    props: ModelAnalysisProps<SchemaERDConfig> & { types: SchemaERDTypes },
+) {
     const graph = () => {
         const model = props.liveModel.elaboratedModel();
         if (model) {
-            return schemaToERD(model);
+            return schemaToERD(model, props.types);
         }
     };
 
@@ -89,41 +100,54 @@ export default function SchemaERD(props: ModelAnalysisProps<SchemaERDConfig>) {
     );
 }
 
-/** Convert a schema model into an ERD-style Graphviz graph using HTML-like labels. */
-export function schemaToERD(model: DblModel): Viz.Graph {
-    const entityType: ObType = { tag: "Basic", content: "Entity" };
-    const attrType: MorType = { tag: "Basic", content: "Attr" };
+/** Unwrap a Maybe-wrapped ob to get the inner ob. */
+function unwrapOb(ob: Ob): Ob {
+    if (ob.tag === "Maybe") {
+        return unwrapOb(ob.content);
+    }
+    return ob;
+}
 
-    const entities = model.obGeneratorsWithType(entityType);
+/** Convert a schema model into an ERD-style Graphviz graph using HTML-like labels. */
+export function schemaToERD(model: DblModel, types: SchemaERDTypes): Viz.Graph {
+    const entities = model.obGeneratorsWithType(types.entityType);
     const nodes: Required<Viz.Graph>["nodes"] = [];
+
+    const nullableAttrSet = new Set(types.nullableAttrTypes.map((t) => JSON.stringify(t)));
+    const nullableRelSet = new Set(types.nullableRelationTypes.map((t) => JSON.stringify(t)));
 
     // Collect all mappings to know which entities they point to
     const mappingsByEntity = new Map<
         string,
-        Array<{ id: string; name: string; targetEntity: string }>
+        Array<{ id: string; name: string; targetEntity: string; nullable: boolean }>
     >();
-    const mappingType: MorType = { tag: "Hom", content: entityType };
-    for (const morId of model.morGeneratorsWithType(mappingType)) {
-        const mor = model.morPresentation(morId);
-        if (
-            mor &&
-            mor.dom.tag === "Basic" &&
-            mor.cod.tag === "Basic" &&
-            entities.includes(mor.dom.content) &&
-            entities.includes(mor.cod.content)
-        ) {
-            const mappingName = mor.label?.join(".") ?? "";
-            const sourceEntity = mor.dom.content;
-            const targetEntity = mor.cod.content;
+    for (const relType of [...types.relationTypes, ...types.nullableRelationTypes]) {
+        const nullable = nullableRelSet.has(JSON.stringify(relType));
+        for (const morId of model.morGeneratorsWithType(relType)) {
+            const mor = model.morPresentation(morId);
+            const dom = mor?.dom ? unwrapOb(mor.dom) : undefined;
+            const cod = mor?.cod ? unwrapOb(mor.cod) : undefined;
+            if (
+                mor &&
+                dom?.tag === "Basic" &&
+                cod?.tag === "Basic" &&
+                entities.includes(dom.content) &&
+                entities.includes(cod.content)
+            ) {
+                const mappingName = mor.label?.join(".") ?? "";
+                const sourceEntity = dom.content;
+                const targetEntity = cod.content;
 
-            if (!mappingsByEntity.has(sourceEntity)) {
-                mappingsByEntity.set(sourceEntity, []);
+                if (!mappingsByEntity.has(sourceEntity)) {
+                    mappingsByEntity.set(sourceEntity, []);
+                }
+                mappingsByEntity.get(sourceEntity)?.push({
+                    id: morId,
+                    name: mappingName,
+                    targetEntity,
+                    nullable,
+                });
             }
-            mappingsByEntity.get(sourceEntity)?.push({
-                id: morId,
-                name: mappingName,
-                targetEntity,
-            });
         }
     }
 
@@ -131,18 +155,20 @@ export function schemaToERD(model: DblModel): Viz.Graph {
     for (const entityId of entities) {
         const entity = model.obPresentation(entityId);
 
-        const attributes: Array<{ name: string; type: string }> = [];
-        for (const morId of model.morGeneratorsWithType(attrType)) {
-            const mor = model.morPresentation(morId);
-            if (mor && mor.dom.tag === "Basic" && mor.cod.tag === "Basic") {
-                const domainMatch = mor.dom.content === entityId;
-
-                if (domainMatch) {
-                    const attrName = mor.label?.join(".") ?? "";
-                    const attrTypeId = mor.cod.content;
-                    const attrTypeOb = model.obPresentation(attrTypeId);
-                    const attrTypeName = attrTypeOb?.label?.join(".") ?? "";
-                    attributes.push({ name: attrName, type: attrTypeName });
+        const attributes: Array<{ name: string; type: string; nullable: boolean }> = [];
+        for (const attrType of [...types.attrTypes, ...types.nullableAttrTypes]) {
+            const nullable = nullableAttrSet.has(JSON.stringify(attrType));
+            for (const morId of model.morGeneratorsWithType(attrType)) {
+                const mor = model.morPresentation(morId);
+                const dom = mor?.dom ? unwrapOb(mor.dom) : undefined;
+                const cod = mor?.cod ? unwrapOb(mor.cod) : undefined;
+                if (mor && dom?.tag === "Basic" && cod?.tag === "Basic") {
+                    if (dom.content === entityId) {
+                        const attrName = mor.label?.join(".") ?? "";
+                        const attrTypeOb = model.obPresentation(cod.content);
+                        const attrTypeName = attrTypeOb?.label?.join(".") ?? "";
+                        attributes.push({ name: attrName, type: attrTypeName, nullable });
+                    }
                 }
             }
         }
@@ -168,7 +194,8 @@ export function schemaToERD(model: DblModel): Viz.Graph {
         } else {
             for (const attr of attributes) {
                 const name = escapeHtml(attr.name);
-                const label = escapeHtml(attr.type);
+                const nullableSuffix = attr.nullable ? "?" : "";
+                const label = escapeHtml(attr.type) + nullableSuffix;
                 const paddingName = computePadding(name);
                 const paddingLabel = computePadding(label);
                 tableRows += `
@@ -183,7 +210,7 @@ export function schemaToERD(model: DblModel): Viz.Graph {
                     model.obPresentation(mapping.targetEntity).label?.join(".") ||
                     mapping.targetEntity;
                 label = escapeHtml(label);
-                label = `→ ${label}`;
+                label = `→ ${label}${mapping.nullable ? "?" : ""}`;
                 const paddingLabel = computePadding(label);
                 const name = escapeHtml(mapping.name);
                 const paddingName = computePadding(name);
@@ -222,8 +249,9 @@ export function schemaToERD(model: DblModel): Viz.Graph {
                     id: mapping.id,
                     tailport: `${mapping.id}:w`,
                     arrowhead: "none",
-                    arrowtail: "crow",
+                    arrowtail: mapping.nullable ? "crowodot" : "crow",
                     dir: "both",
+                    style: "solid",
                 },
             });
         }

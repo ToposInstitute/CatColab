@@ -45,6 +45,17 @@ stdTheories.add(
 
 stdTheories.add(
     {
+        id: "simple-schema-maybe",
+        name: "Schema with nullables",
+        description: "Schema for a categorical database with nullable attributes and relations",
+        iconLetters: ["S", "?"],
+        group: "Knowledge and Data",
+    },
+    async () => (await import("./theories/simple-schema-maybe")).default,
+);
+
+stdTheories.add(
+    {
         id: "petri-net",
         name: "Petri net",
         description: "Place/transition networks",

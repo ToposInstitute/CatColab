@@ -1,4 +1,4 @@
-import { ThSchema } from "catlog-wasm";
+import { ThSchemaMaybe } from "catlog-wasm";
 import { type DiagramAnalysisMeta, Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
 
@@ -6,8 +6,8 @@ import styles from "../styles.module.css";
 import svgStyles from "../svg_styles.module.css";
 import textStyles from "../text_styles.module.css";
 
-export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
-    const thSchema = new ThSchema();
+export default function createSchemaMaybeTheory(theoryMeta: TheoryMeta): Theory {
+    const thSchemaMaybe = new ThSchemaMaybe();
     const diagramAnalyses: DiagramAnalysisMeta[] = [
         analyses.diagramGraph({
             id: "graph",
@@ -24,13 +24,7 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
     ];
     return new Theory({
         ...theoryMeta,
-        theory: thSchema.theory(),
-        pushforwards: [
-            {
-                target: "simple-olog",
-                migrate: ThSchema.toCategory,
-            },
-        ],
+        theory: thSchemaMaybe.theory(),
         modelTypes: [
             {
                 tag: "ObType",
@@ -44,13 +38,19 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
             },
             {
                 tag: "MorType",
-                morType: {
-                    tag: "Hom",
-                    content: { tag: "Basic", content: "Entity" },
-                },
-                name: "Mapping",
+                morType: { tag: "Basic", content: "Rel" },
+                name: "Relation",
                 description: "Many-to-one relation between entities",
-                shortcut: ["M"],
+                shortcut: ["R"],
+                textClasses: [textStyles.code],
+            },
+            {
+                tag: "MorType",
+                morType: { tag: "Basic", content: "MaybeRel" },
+                name: "Nullable relation",
+                description: "Optional many-to-one relation between entities",
+                shortcut: ["N"],
+                arrowStyle: "dashed",
                 textClasses: [textStyles.code],
             },
             {
@@ -62,53 +62,20 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
                 textClasses: [textStyles.code],
             },
             {
+                tag: "MorType",
+                morType: { tag: "Basic", content: "MaybeAttr" },
+                name: "Nullable attribute",
+                description: "Optional data attribute of an entity",
+                shortcut: ["M"],
+                arrowStyle: "dashed",
+                textClasses: [textStyles.code],
+            },
+            {
                 tag: "ObType",
                 obType: { tag: "Basic", content: "AttrType" },
                 name: "Attribute type",
                 description: "Data type for an attribute",
                 textClasses: [textStyles.code],
-            },
-            {
-                tag: "MorType",
-                morType: {
-                    tag: "Hom",
-                    content: { tag: "Basic", content: "AttrType" },
-                },
-                name: "Operation",
-                description: "Operation on data types for attributes",
-                textClasses: [textStyles.code],
-            },
-        ],
-        instanceTypes: [
-            {
-                tag: "ObType",
-                obType: { tag: "Basic", content: "Entity" },
-                name: "Individual",
-                description: "Individual entity of a certain type",
-                shortcut: ["I"],
-            },
-            {
-                tag: "MorType",
-                morType: {
-                    tag: "Hom",
-                    content: { tag: "Basic", content: "Entity" },
-                },
-                name: "Maps to",
-                description: "One individual mapped to another",
-                shortcut: ["M"],
-            },
-            {
-                tag: "MorType",
-                morType: { tag: "Basic", content: "Attr" },
-                name: "Attribute",
-                description: "Data attribute of an individual",
-                shortcut: ["A"],
-            },
-            {
-                tag: "ObType",
-                obType: { tag: "Basic", content: "AttrType" },
-                name: "Attribute variable",
-                description: "Variable that can be bound to attribute values",
             },
         ],
         modelAnalyses: [
@@ -126,14 +93,14 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
                 types: {
                     entityType: { tag: "Basic", content: "Entity" },
                     attrTypes: [{ tag: "Basic", content: "Attr" }],
-                    nullableAttrTypes: [],
-                    relationTypes: [{ tag: "Hom", content: { tag: "Basic", content: "Entity" } }],
-                    nullableRelationTypes: [],
+                    nullableAttrTypes: [{ tag: "Basic", content: "MaybeAttr" }],
+                    relationTypes: [{ tag: "Basic", content: "Rel" }],
+                    nullableRelationTypes: [{ tag: "Basic", content: "MaybeRel" }],
                 },
             }),
             analyses.renderSQL({
                 id: "sql",
-                render: (model, data) => thSchema.renderSQL(model, data),
+                render: (model, data) => thSchemaMaybe.renderSQL(model, data),
             }),
         ],
         diagramAnalyses: diagramAnalyses,

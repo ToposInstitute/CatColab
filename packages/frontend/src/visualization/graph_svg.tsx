@@ -173,6 +173,14 @@ export function EdgeSVG(props: { edge: GraphLayout.Edge }) {
                     {defaultPath()}
                     {tgtLabel("∝")}
                 </Match>
+                <Match when={props.edge.style === "dashed"}>
+                    <path
+                        id={pathId()}
+                        marker-end={markerUrl()}
+                        d={path()}
+                        stroke-dasharray="6 3"
+                    />
+                </Match>
             </Switch>
             <Show when={props.edge.label}>
                 <text
@@ -254,6 +262,7 @@ const styleToMarker: Record<ArrowStyle, ArrowMarker | null> = {
     plusCaesura: "triangle",
     minusCaesura: "triangle",
     scalar: "triangle",
+    dashed: "vee",
 };
 
 /** SVG markers for arrow heads.

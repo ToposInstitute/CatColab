@@ -9,6 +9,7 @@ import type {
 import type { DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
 import * as GraphLayoutConfig from "../visualization/graph_layout_config";
 import type * as Checkers from "./analyses/checker_types";
+import type { SchemaERDTypes } from "./analyses/schema_erd";
 import { defaultSchemaERDConfig, type SchemaERDConfig } from "./analyses/schema_erd_config";
 import type * as Simulators from "./analyses/simulator_types";
 import type * as SQLDownloadConfig from "./analyses/sql";
@@ -265,9 +266,11 @@ export const modelGraph = (
 
 const ModelGraph = lazy(() => import("./analyses/model_graph"));
 
-export const schemaERD = (options: AnalysisOptions): ModelAnalysisMeta<SchemaERDConfig> => ({
+export const schemaERD = (
+    options: AnalysisOptions & { types: SchemaERDTypes },
+): ModelAnalysisMeta<SchemaERDConfig> => ({
     ...options,
-    component: (props) => <SchemaERD {...props} />,
+    component: (props) => <SchemaERD types={options.types} {...props} />,
     initialContent: defaultSchemaERDConfig,
 });
 

@@ -135,6 +135,7 @@ impl CanElaborate<Ob, ModalOb> for Elaborator {
                     objects.iter().filter_map(|ob| ob.as_ref().map(|ob| self.elab(ob))).collect();
                 Ok(ModalOb::List(list_type, objects?))
             }
+            Ob::Maybe(inner) => Ok(ModalOb::Maybe(Box::new(self.elab(inner.as_ref())?))),
             _ => Err(format!("Cannot use object with modal theory: {ob:#?}")),
         }
     }
@@ -228,6 +229,7 @@ impl CanQuote<ModalOb, Ob> for Quoter {
                 modality: demote_modality(dbl_theory::Modality::List(*list_type)),
                 objects: objects.iter().map(|ob| Some(self.quote(ob))).collect(),
             },
+            ModalOb::Maybe(inner) => Ob::Maybe(Box::new(self.quote(inner.as_ref()))),
         }
     }
 }
@@ -282,6 +284,7 @@ impl From<dbl_model::ModalDblModel<Unital>> for DblModelBox {
         Self::ModalUnital(Rc::new(value))
     }
 }
+
 impl From<dbl_model::ModalDblModel<NonUnital>> for DblModelBox {
     fn from(value: dbl_model::ModalDblModel<NonUnital>) -> Self {
         Self::ModalNonUnital(Rc::new(value))
@@ -382,12 +385,16 @@ impl DblModel {
 
     /// Tries to get a model of a unital modal theory.
     pub fn modal_unital(&self) -> Result<&Rc<dbl_model::ModalDblModel<Unital>>, String> {
-        (&self.model).try_into().map_err(|_| "Model should be of a modal theory".into())
+        (&self.model)
+            .try_into()
+            .map_err(|_| "Model should be of a unital modal theory".into())
     }
 
     /// Tries to get a model of a non-unital modal theory.
-    pub fn modal_nonunital(&self) -> Result<&Rc<dbl_model::ModalDblModel<NonUnital>>, String> {
-        (&self.model).try_into().map_err(|_| "Model should be of a modal theory".into())
+    pub fn modal_non_unital(&self) -> Result<&Rc<dbl_model::ModalDblModel<NonUnital>>, String> {
+        (&self.model)
+            .try_into()
+            .map_err(|_| "Model should be of a non-unital modal theory".into())
     }
 
     /// Adds an object to the model.
@@ -467,6 +474,7 @@ impl DblModel {
                     .collect();
                 Some(format!("[{}]", labels?.join(", ")))
             }
+            Ob::Maybe(inner) => Some(format!("Maybe({})", self.ob_label_string(inner)?)),
             _ => None,
         }
     }
@@ -742,7 +750,16 @@ pub fn elaborate_model(
     theory: &DblTheory,
     ref_id: String,
 ) -> Result<DblModel, String> {
-    if let Some(theory_def) = theory.try_into_tt() {
+    // TODO: Remove this hack once DoubleTT notebook elaboration supports
+    // `Ob::Maybe` for non-unital modal theories (e.g. `th_schema_maybe`).
+    // For now, force ModalNonUnital through the legacy elaborator to preserve
+    // nullable behavior in analyses (ERD/SQL/etc.).
+    let maybe_theory_def = match &theory.0 {
+        DblTheoryBox::ModalNonUnital(_) => None,
+        _ => theory.try_into_tt(),
+    };
+
+    if let Some(theory_def) = maybe_theory_def {
         let theory = tt::theory::Theory::new(ustr("_").into(), theory_def);
         let ref_id = ustr(&ref_id);
         let mut elab = ElaboratorNext::new(theory.clone(), &instantiated.toplevel, ref_id);

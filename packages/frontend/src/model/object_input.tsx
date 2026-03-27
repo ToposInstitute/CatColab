@@ -93,9 +93,37 @@ function obEditorForType(obType: ObType): Component<ObInputProps> {
             case "AdditiveList": {
                 return ObListEditor;
             }
+            case "Maybe":
+                return ObMaybeEditor;
         }
     }
     throw new Error(`No editor for object of type: ${obType}`);
+}
+
+/** Edit an object in the Maybe modality.
+
+Unwraps the type for the inner editor (completions, metadata) and wraps/unwraps
+the Ob in Maybe, mirroring how ObListEditor handles list modalities.
+ */
+function ObMaybeEditor(props: ObInputProps) {
+    const innerType = () => {
+        if (props.obType.tag !== "ModeApp") {
+            throw new Error("Expected ModeApp");
+        }
+        return props.obType.content.obType;
+    };
+    const ob = (): Ob | null => (props.ob?.tag === "Maybe" ? props.ob.content : (props.ob ?? null));
+    const setOb = (ob: Ob | null) =>
+        ob === null ? props.setOb(null) : props.setOb({ tag: "Maybe", content: ob });
+
+    return (
+        <Dynamic
+            component={obEditorForType(innerType())}
+            ob={ob()}
+            setOb={setOb}
+            obType={innerType()}
+        />
+    );
 }
 
 /** Input a basic object via its human-readable name. */

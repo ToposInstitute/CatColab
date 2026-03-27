@@ -28,6 +28,9 @@ pub enum ModalOb {
 
     /// List of objects in a [list modality](List).
     List(List, Vec<Self>),
+
+    /// Object in the [maybe modality](Modality::Maybe).
+    Maybe(Box<Self>),
 }
 
 /// Morphism is a model of a modal double theory.
@@ -48,6 +51,9 @@ pub enum ModalMor {
 
     /// List of morphisms.
     List(MorListData, Vec<Self>),
+
+    /// Morphism in the [maybe modality](Modality::Maybe).
+    Maybe(Box<Self>),
 }
 
 /// Extra data associated with a list of morphisms in a [list modality](List).
@@ -96,15 +102,16 @@ impl<Kind: DblTheoryKind> ModalDblModel<Kind> {
         }
     }
 
-    /// Gets the computing generating the morphisms of the model.
-    fn computad(&self) -> Computad<'_, ModalOb, ModalDblModelObs<Kind>, QualifiedName> {
+    /// Gets the computad generating the morphisms of the model.
+    pub fn computad(&self) -> Computad<'_, ModalOb, ModalDblModelObs<Kind>, QualifiedName> {
         Computad::new(ModalDblModelObs::ref_cast(self), &self.mor_generators)
     }
 }
 
+/// The set of objects in a modal double model, viewed as a [`Set`].
 #[derive(RefCast)]
 #[repr(transparent)]
-struct ModalDblModelObs<Kind>(ModalDblModel<Kind>);
+pub struct ModalDblModelObs<Kind: DblTheoryKind>(ModalDblModel<Kind>);
 
 impl<Kind: DblTheoryKind> Set for ModalDblModelObs<Kind> {
     type Elem = ModalOb;
@@ -117,6 +124,7 @@ impl<Kind: DblTheoryKind> Set for ModalDblModelObs<Kind> {
                     && self.0.ob_has_type(x, &self.0.theory.tight_computad().src(op_id))
             }
             ModalOb::List(_, xs) => xs.iter().all(|x| self.contains(x)),
+            ModalOb::Maybe(inner) => self.contains(inner),
         }
     }
 }
@@ -139,6 +147,7 @@ impl<Kind: DblTheoryKind> Category for ModalDblModel<Kind> {
             ModalMor::List(MorListData::Symmetric(sigma), fs) => {
                 sigma.is_permutation(fs.len()) && fs.iter().all(|f| self.has_mor(f))
             }
+            ModalMor::Maybe(inner) => self.has_mor(inner),
         }
     }
 
@@ -156,6 +165,7 @@ impl<Kind: DblTheoryKind> Category for ModalDblModel<Kind> {
             ModalMor::List(data, fs) => {
                 ModalOb::List(data.list_type(), fs.iter().map(|f| self.dom(f)).collect())
             }
+            ModalMor::Maybe(inner) => ModalOb::Maybe(Box::new(self.dom(inner))),
         }
     }
 
@@ -176,6 +186,7 @@ impl<Kind: DblTheoryKind> Category for ModalDblModel<Kind> {
             ModalMor::List(MorListData::Symmetric(sigma), fs) => {
                 ModalOb::List(List::Symmetric, sigma.values().map(|j| self.cod(&fs[*j])).collect())
             }
+            ModalMor::Maybe(inner) => ModalOb::Maybe(Box::new(self.cod(inner))),
         }
     }
 
@@ -369,6 +380,10 @@ impl<Kind: DblTheoryKind> ModalDblModel<Kind> {
                     Err(None) => Ok(InferredType::Unknown),
                 }
             }
+            ModalOb::Maybe(inner) => match self.infer_ob_type(inner)? {
+                InferredType::Type(ob_type) => Ok(ob_type.apply(Modality::Maybe()).into()),
+                InferredType::Unknown => Ok(InferredType::Unknown),
+            },
         }
     }
 
@@ -394,6 +409,10 @@ impl<Kind: DblTheoryKind> ModalDblModel<Kind> {
                     Err(None) => Ok(InferredType::Unknown),
                 }
             }
+            ModalMor::Maybe(inner) => match self.infer_mor_type(inner)? {
+                InferredType::Type(mor_type) => Ok(mor_type.apply(Modality::Maybe()).into()),
+                InferredType::Unknown => Ok(InferredType::Unknown),
+            },
         }
     }
 
@@ -433,6 +452,13 @@ impl ModeApp<ModalOp> {
                     Err(format!("Object should be a list of type {list_type:?}"))
                 }
             }
+            Some(Modality::Maybe()) => {
+                if let ModalOb::Maybe(inner) = ob {
+                    Ok(ModalOb::Maybe(Box::new(self.ob_act(*inner)?)))
+                } else {
+                    Err("Object should be a Maybe".into())
+                }
+            }
             Some(Modality::Discrete()) | Some(Modality::Codiscrete()) | None => self.arg.ob_act(ob),
         }
     }
@@ -450,6 +476,13 @@ impl ModeApp<ModalOp> {
                     Err(format!("Morphism should be a list of type {list_type:?}"))
                 }
             }
+            Some(Modality::Maybe()) => {
+                if let ModalMor::Maybe(inner) = mor {
+                    Ok(ModalMor::Maybe(Box::new(self.mor_act(*inner, is_unit)?)))
+                } else {
+                    Err("Morphism should be a Maybe".into())
+                }
+            }
             Some(modality) => panic!("Modality {modality:?} is not implemented"),
             None => self.arg.mor_act(mor, is_unit),
         }
@@ -460,9 +493,10 @@ impl ModalOp {
     fn ob_act(self, ob: ModalOb) -> Result<ModalOb, String> {
         match self {
             ModalOp::Generator(id) => Ok(ModalOb::App(Box::new(ob), id)),
-            ModalOp::Concat(list_type, n, _) => {
-                Ok(ModalOb::List(list_type, ob.flatten_list(list_type, n)?))
+            ModalOp::Concat { list_type, power, .. } => {
+                Ok(ModalOb::List(list_type, ob.flatten_list(list_type, power)?))
             }
+            ModalOp::Maybe { power, .. } => Ok(ModalOb::Maybe(Box::new(ob.unwrap_maybe(power)?))),
         }
     }
 
@@ -473,10 +507,11 @@ impl ModalOp {
             } else {
                 ModalMor::App(Box::new(mor.into()), id)
             }),
-            ModalOp::Concat(list_type, n, _) => match list_type {
-                List::Plain => Ok(ModalMor::List(MorListData::Plain(), mor.flatten_list(n)?)),
+            ModalOp::Concat { list_type, power, .. } => match list_type {
+                List::Plain => Ok(ModalMor::List(MorListData::Plain(), mor.flatten_list(power)?)),
                 _ => panic!("Flattening of functions is not implemented"),
             },
+            ModalOp::Maybe { power, .. } => Ok(ModalMor::Maybe(Box::new(mor.unwrap_maybe(power)?))),
         }
     }
 }
@@ -528,6 +563,18 @@ impl ModalOb {
             Err(format!("Object should be a list of type {list_type:?}"))
         }
     }
+
+    /// Unwrap `depth` layers of `Maybe(...)` from an object.
+    fn unwrap_maybe(self, depth: usize) -> Result<Self, String> {
+        let mut ob = self;
+        for _ in 0..depth {
+            match ob {
+                ModalOb::Maybe(inner) => ob = *inner,
+                _ => return Err("Object should be a Maybe".into()),
+            }
+        }
+        Ok(ob)
+    }
 }
 
 impl ModalMor {
@@ -547,6 +594,18 @@ impl ModalMor {
             Err(format!("Morphism should be a list of type {:?}", List::Plain))
         }
     }
+
+    /// Unwrap `depth` layers of `Maybe(...)` from a morphism.
+    fn unwrap_maybe(self, depth: usize) -> Result<Self, String> {
+        let mut mor = self;
+        for _ in 0..depth {
+            match mor {
+                ModalMor::Maybe(inner) => mor = *inner,
+                _ => return Err("Morphism should be a Maybe".into()),
+            }
+        }
+        Ok(mor)
+    }
 }
 
 impl<Kind: DblTheoryKind> PrintableDblModel for ModalDblModel<Kind> {
@@ -562,6 +621,7 @@ impl<Kind: DblTheoryKind> PrintableDblModel for ModalDblModel<Kind> {
                 unop(op_doc, self.ob_to_doc(ob, ob_ns, mor_ns))
             }
             ModalOb::List(_, obs) => tuple(obs.iter().map(|ob| self.ob_to_doc(ob, ob_ns, mor_ns))),
+            ModalOb::Maybe(inner) => unop(t("Maybe"), self.ob_to_doc(inner, ob_ns, mor_ns)),
         }
     }
 

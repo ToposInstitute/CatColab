@@ -6,7 +6,7 @@
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 
-use catlog::dbl::theory::{self as theory, Unital};
+use catlog::dbl::theory::{self as theory, NonUnital, Unital};
 use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 use catlog::zero::{QualifiedLabel, name};
@@ -59,6 +59,59 @@ impl ThCategory {
             th.clone(),
         );
         Ok(boxed.replace_box(model.into()))
+    }
+}
+
+/// The theory of database schemas with nullable attributes and relations.
+#[wasm_bindgen]
+pub struct ThSchemaMaybe(Rc<theory::ModalDblTheory<NonUnital>>);
+
+#[wasm_bindgen]
+impl ThSchemaMaybe {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Rc::new(theories::th_schema_maybe()))
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory(self.0.clone().into())
+    }
+
+    /// Sigma migrates a schema to a category.
+    #[wasm_bindgen(js_name = "toCategory")]
+    pub fn to_category(boxed: &DblModel, th_category: &DblTheory) -> Result<DblModel, String> {
+        let (th, mut model) = (th_category.discrete()?, boxed.discrete()?.as_ref().clone());
+        model.push_forward(
+            &theory_morphisms::th_schema_to_category().functor_into(&th.0),
+            th.clone(),
+        );
+        Ok(boxed.replace_box(model.into()))
+    }
+
+    /// Renders a model into valid SQL
+    #[wasm_bindgen(js_name = "renderSQL")]
+    pub fn render_sql(&self, model: &DblModel, backend: &str) -> JsResult<String, String> {
+        analyses::sql::SQLBackend::try_from(backend)
+            .and_then(|backend| {
+                let entity_type =
+                    catlog::dbl::modal::theory::ModeApp::new(catlog::zero::name("Entity"));
+                analyses::sql::SQLAnalysis::new(backend).render_modal(
+                    model.modal_non_unital()?,
+                    &entity_type,
+                    |id| {
+                        model
+                            .ob_generator_label(id)
+                            .unwrap_or_else(|| QualifiedLabel::single("".into()))
+                    },
+                    |id| {
+                        model
+                            .mor_generator_label(id)
+                            .unwrap_or_else(|| QualifiedLabel::single("".into()))
+                    },
+                )
+            })
+            .into()
     }
 }
 
@@ -425,7 +478,7 @@ impl ThSymMonoidalCategory {
         model: &DblModel,
         data: analyses::reachability::ReachabilityProblemData,
     ) -> Result<bool, String> {
-        let model = model.modal_unital().map_err(|_| "Model should be of a modal theory")?;
+        let model = model.modal_unital().map_err(|_| "Model should be of a unital modal theory")?;
         Ok(analyses::reachability::subreachability(model, data))
     }
 }
