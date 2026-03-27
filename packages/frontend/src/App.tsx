@@ -18,6 +18,7 @@ import { ErrorBoundaryDialog } from "./page/error_boundary";
 import { PageContainer } from "./page/page_container";
 import { stdTheories } from "./stdlib";
 import { TheoryLibraryContext } from "./theory";
+import { UserStateProvider } from "./user/user_state_provider";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 const repoUrl = import.meta.env.VITE_AUTOMERGE_REPO_URL;
@@ -49,14 +50,15 @@ const Root = (props: RouteSectionProps) => {
     const models = createModelLibraryWithApi(api, theories);
 
     return (
-        <MultiProvider
-            values={[
-                [ApiContext, api],
-                [TheoryLibraryContext, theories],
-                [ModelLibraryContext, models],
-            ]}
-        >
-            <FirebaseProvider app={firebaseApp}>
+        <FirebaseProvider app={firebaseApp}>
+            <MultiProvider
+                values={[
+                    [ApiContext, api],
+                    [TheoryLibraryContext, theories],
+                    [ModelLibraryContext, models],
+                    UserStateProvider,
+                ]}
+            >
                 <MetaProvider>
                     <Title>{import.meta.env.VITE_APP_TITLE}</Title>
                     <ErrorBoundary fallback={(err) => <ErrorBoundaryDialog error={err} />}>
@@ -66,8 +68,8 @@ const Root = (props: RouteSectionProps) => {
                         <SessionExpiredModal />
                     </Show>
                 </MetaProvider>
-            </FirebaseProvider>
-        </MultiProvider>
+            </MultiProvider>
+        </FirebaseProvider>
     );
 };
 

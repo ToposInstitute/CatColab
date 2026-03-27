@@ -4,6 +4,8 @@ use super::diagram_judgment::DiagramJudgment;
 use super::model_judgment::ModelJudgment;
 use super::notebook::Notebook;
 
+use std::str::FromStr;
+
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
@@ -41,6 +43,40 @@ pub struct AnalysisDocumentContent {
     #[serde(rename = "analysisOf")]
     pub analysis_of: Link,
     pub notebook: Notebook<Analysis>,
+}
+
+/// The type/kind of a document, without any associated content.
+#[derive(PartialEq, Eq, Debug, Clone, Copy, Serialize, Deserialize, Tsify)]
+#[cfg_attr(
+    feature = "backend",
+    derive(autosurgeon::Reconcile, autosurgeon::Hydrate, ts_rs::TS)
+)]
+#[cfg_attr(
+    feature = "backend",
+    ts(export, export_to = "user_state.ts", rename_all = "lowercase")
+)]
+#[serde(rename_all = "lowercase")]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub enum DocumentType {
+    #[cfg_attr(feature = "backend", autosurgeon(rename = "model"))]
+    Model,
+    #[cfg_attr(feature = "backend", autosurgeon(rename = "diagram"))]
+    Diagram,
+    #[cfg_attr(feature = "backend", autosurgeon(rename = "analysis"))]
+    Analysis,
+}
+
+impl FromStr for DocumentType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "model" => Ok(DocumentType::Model),
+            "diagram" => Ok(DocumentType::Diagram),
+            "analysis" => Ok(DocumentType::Analysis),
+            other => Err(format!("unknown document type: {other}")),
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]

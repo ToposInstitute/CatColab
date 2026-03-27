@@ -1,5 +1,6 @@
 use crate::v0;
 use crate::v0::AnalysisType;
+pub use crate::v0::document::DocumentType;
 
 use super::analysis::Analysis;
 use super::api::Link;
