@@ -21,6 +21,7 @@
 use std::fmt;
 use std::hash::Hash;
 use std::iter::repeat_n;
+use std::marker::PhantomData;
 
 use derivative::Derivative;
 use derive_more::From;
@@ -261,7 +262,7 @@ pub struct ModalDblTheory<Kind>
 where
     Kind: DblTheoryKind,
 {
-    _kind: Kind,
+    _kind: PhantomData<Kind>,
     ob_generators: HashFinSet<QualifiedName>,
     arr_generators: ComputadTop<ModalObType, QualifiedName>,
     pro_generators: ComputadTop<ModalObType, QualifiedName>,
