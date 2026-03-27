@@ -213,8 +213,6 @@ fn collect_relations(value: &serde_json::Value, out: &mut Vec<RelationInfo>) {
 pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<UserState, AppError> {
     debug!(user_id = %user_id, "Reading user state from database");
 
-    let query_start = std::time::Instant::now();
-
     // Query documents the user has access to, excluding public documents.
     // Deleted refs are included with their deleted_at timestamp so the
     // frontend can filter them into a trash view.
@@ -263,15 +261,6 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
     )
     .fetch_all(db)
     .await?;
-
-    let query_duration = query_start.elapsed();
-
-    debug!(
-        user_id = %user_id,
-        document_count = results.len(),
-        query_duration_ms = query_duration.as_millis(),
-        "Successfully fetched user documents from database"
-    );
 
     let mut documents: HashMap<String, DocInfo> = HashMap::new();
     for row in results {
