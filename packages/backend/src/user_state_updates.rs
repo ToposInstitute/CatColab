@@ -1,7 +1,7 @@
 //! User-state update helpers called from RPC handlers after mutations.
 
 use crate::app::{AppError, AppState};
-use crate::user_state::{read_user_state_from_db, reconcile_user_state};
+use crate::user_state::read_user_state_from_db;
 
 /// Re-read the full user state from the database and reconcile it into the
 /// user's Automerge doc.
@@ -30,7 +30,7 @@ pub async fn update_user_state(state: &AppState, user_id: &str) -> Result<(), Ap
             AppError::UserStateSync("User state doc not found in repo".to_string())
         })?;
 
-    doc_handle.with_document(|doc| reconcile_user_state(doc, &user_state))?;
+    doc_handle.with_document(|doc| user_state.reconcile_into(doc))?;
 
     Ok(())
 }

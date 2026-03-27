@@ -16,16 +16,6 @@ use crate::autosurgeon_datetime::{datetime_millis, option_datetime_millis};
 /// Default name for documents without a name.
 pub const DEFAULT_DOC_NAME: &str = "untitled";
 
-/// Reconcile a `UserState` into an Automerge document, returning an `AppError` on failure.
-pub fn reconcile_user_state(
-    doc: &mut automerge::Automerge,
-    state: &UserState,
-) -> Result<(), AppError> {
-    doc.transact(|tx| reconcile(tx, state))
-        .map_err(|e| AppError::UserStateSync(format!("Failed to reconcile: {:?}", e)))?;
-    Ok(())
-}
-
 /// User info for user state synchronization.
 ///
 /// This is similar to [`crate::user::UserSummary`] but uses [`Text`] instead of [`String`]
@@ -124,6 +114,13 @@ pub struct UserState {
 }
 
 impl UserState {
+    /// Reconcile this `UserState` into an Automerge document, returning an `AppError` on failure.
+    pub fn reconcile_into(&self, doc: &mut automerge::Automerge) -> Result<(), AppError> {
+        doc.transact(|tx| reconcile(tx, self))
+            .map_err(|e| AppError::UserStateSync(format!("Failed to reconcile: {:?}", e)))?;
+        Ok(())
+    }
+
     /// Creates a new empty UserState for the given user.
     pub fn new() -> Self {
         Self {
@@ -422,7 +419,7 @@ pub async fn get_or_create_user_state_doc(
 /// Converts a `UserState` into an Automerge document.
 pub fn user_state_to_automerge(state: &UserState) -> Result<automerge::Automerge, AppError> {
     let mut doc = automerge::Automerge::new();
-    reconcile_user_state(&mut doc, state)?;
+    state.reconcile_into(&mut doc)?;
     Ok(doc)
 }
 
@@ -443,7 +440,7 @@ pub async fn initialize_user_state_doc(
         && let Ok(doc_id) = DocumentId::from_str(doc_id_str)
     {
         if let Ok(Some(doc_handle)) = state.repo.find(doc_id.clone()).await {
-            doc_handle.with_document(|doc| reconcile_user_state(doc, user_state))?;
+            doc_handle.with_document(|doc| user_state.reconcile_into(doc))?;
             debug!(
                 user_id = %user_id,
                 doc_id = %doc_id,
