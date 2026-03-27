@@ -1,11 +1,9 @@
 import { type Accessor, createMemo, createSignal } from "solid-js";
 
 /**
- * A reactive virtual list utility.
+ * A reactive virtual list utility for lazily rendering large lists as items
+ * come into view.
  *
- * Unlike `@solid-primitives/virtual`'s `createVirtualList`, this properly
- * tracks all accessor inputs (items, rootHeight, rowHeight) inside a memo so
- * the computed output updates when any of them change.
  */
 export function createVirtualList<T>(config: {
     items: Accessor<readonly T[]>;
