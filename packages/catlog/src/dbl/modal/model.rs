@@ -10,6 +10,7 @@ use itertools::Itertools;
 use ref_cast::RefCast;
 
 use super::theory::*;
+use crate::dbl::theory::DblTheoryKind;
 use crate::dbl::{graph::VDblGraph, model::*, theory::DblTheory};
 use crate::tt::util::pretty::*;
 use crate::validate::{self, Validate};
@@ -73,8 +74,8 @@ impl MorListData {
 
 /// A model of a modal double theory.
 #[derive(Clone)]
-pub struct ModalDblModel {
-    theory: Rc<ModalDblTheory>,
+pub struct ModalDblModel<Kind> {
+    theory: Rc<ModalDblTheory<Kind>>,
     ob_generators: HashFinSet<QualifiedName>,
     mor_generators: ComputadTop<ModalOb, QualifiedName>,
     equations: [(); 0], // TODO: Equations not implemented
@@ -82,9 +83,9 @@ pub struct ModalDblModel {
     mor_types: HashColumn<QualifiedName, ModalMorType>,
 }
 
-impl ModalDblModel {
+impl<Kind: DblTheoryKind> ModalDblModel<Kind> {
     /// Creates an empty model of the given theory.
-    pub fn new(theory: Rc<ModalDblTheory>) -> Self {
+    pub fn new(theory: Rc<ModalDblTheory<Kind>>) -> Self {
         Self {
             theory,
             ob_generators: Default::default(),
@@ -96,16 +97,16 @@ impl ModalDblModel {
     }
 
     /// Gets the computing generating the morphisms of the model.
-    fn computad(&self) -> Computad<'_, ModalOb, ModalDblModelObs, QualifiedName> {
+    fn computad(&self) -> Computad<'_, ModalOb, ModalDblModelObs<Kind>, QualifiedName> {
         Computad::new(ModalDblModelObs::ref_cast(self), &self.mor_generators)
     }
 }
 
 #[derive(RefCast)]
 #[repr(transparent)]
-struct ModalDblModelObs(ModalDblModel);
+struct ModalDblModelObs<Kind>(ModalDblModel<Kind>);
 
-impl Set for ModalDblModelObs {
+impl<Kind: DblTheoryKind> Set for ModalDblModelObs<Kind> {
     type Elem = ModalOb;
 
     fn contains(&self, ob: &Self::Elem) -> bool {
@@ -120,7 +121,7 @@ impl Set for ModalDblModelObs {
     }
 }
 
-impl Category for ModalDblModel {
+impl<Kind: DblTheoryKind> Category for ModalDblModel<Kind> {
     type Ob = ModalOb;
     type Mor = ModalMor;
 
@@ -184,7 +185,7 @@ impl Category for ModalDblModel {
     }
 }
 
-impl FgCategory for ModalDblModel {
+impl<Kind: DblTheoryKind> FgCategory for ModalDblModel<Kind> {
     type ObGen = QualifiedName;
     type MorGen = QualifiedName;
 
@@ -202,12 +203,12 @@ impl FgCategory for ModalDblModel {
     }
 }
 
-impl DblModel for ModalDblModel {
+impl<Kind: DblTheoryKind> DblModel for ModalDblModel<Kind> {
     type ObType = ModalObType;
     type MorType = ModalMorType;
     type ObOp = ModalObOp;
     type MorOp = ModalMorOp;
-    type Theory = ModalDblTheory;
+    type Theory = ModalDblTheory<Kind>;
 
     fn theory(&self) -> Rc<Self::Theory> {
         self.theory.clone()
@@ -237,7 +238,7 @@ impl DblModel for ModalDblModel {
     }
 }
 
-impl FpDblModel for ModalDblModel {
+impl<Kind: DblTheoryKind> FpDblModel for ModalDblModel<Kind> {
     fn ob_generator_type(&self, id: &Self::ObGen) -> Self::ObType {
         self.ob_types.apply_to_ref(id).expect("Object should have object type")
     }
@@ -255,7 +256,7 @@ impl FpDblModel for ModalDblModel {
     }
 }
 
-impl MutDblModel for ModalDblModel {
+impl<Kind: DblTheoryKind> MutDblModel for ModalDblModel<Kind> {
     fn add_ob(&mut self, x: Self::ObGen, ob_type: Self::ObType) {
         self.ob_types.set(x.clone(), ob_type);
         self.ob_generators.insert(x);
@@ -283,7 +284,7 @@ impl MutDblModel for ModalDblModel {
     }
 }
 
-impl Validate for ModalDblModel {
+impl<Kind: DblTheoryKind> Validate for ModalDblModel<Kind> {
     type ValidationError = InvalidDblModel;
 
     fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
@@ -349,7 +350,7 @@ impl<T> From<InferredType<T>> for Option<T> {
     }
 }
 
-impl ModalDblModel {
+impl<Kind: DblTheoryKind> ModalDblModel<Kind> {
     /// Tries to infer the type of an object in the model.
     fn infer_ob_type(&self, ob: &ModalOb) -> Result<InferredType<ModalObType>, String> {
         match ob {
@@ -548,7 +549,7 @@ impl ModalMor {
     }
 }
 
-impl PrintableDblModel for ModalDblModel {
+impl<Kind: DblTheoryKind> PrintableDblModel for ModalDblModel<Kind> {
     fn ob_to_doc<'a>(&self, ob: &Self::Ob, ob_ns: &Namespace, mor_ns: &Namespace) -> D<'a> {
         match ob {
             ModalOb::Generator(name) => t(ob_ns.label_string(name)),
@@ -587,7 +588,7 @@ fn modal_type_to_doc<'a>(app: &ModalType) -> D<'a> {
     doc
 }
 
-impl std::fmt::Display for ModalDblModel {
+impl<Kind: DblTheoryKind> std::fmt::Display for ModalDblModel<Kind> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", DblModelPrinter::new().doc(self).pretty())
     }

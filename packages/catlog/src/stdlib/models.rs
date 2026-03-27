@@ -127,7 +127,7 @@ fn backward_link_of_type(th: Rc<DiscreteTabTheory>, link_type: TabMorType) -> Di
 /// A reaction involving three species, one playing the role of a catalyst.
 ///
 /// A free symmetric monoidal category, viewed as a reaction network.
-pub fn catalyzed_reaction(th: Rc<ModalDblTheory>) -> ModalDblModel {
+pub fn catalyzed_reaction(th: Rc<ModalDblTheory<Unital>>) -> ModalDblModel<Unital> {
     let (ob_type, op) = (ModalObType::new(name("Object")), name("tensor"));
     let mut model = ModalDblModel::new(th);
     model.add_ob(name("x"), ob_type.clone());
@@ -144,7 +144,7 @@ pub fn catalyzed_reaction(th: Rc<ModalDblTheory>) -> ModalDblModel {
 }
 
 /// The SIR model viewed as a reaction network.
-pub fn sir_petri(th: Rc<ModalDblTheory>) -> ModalDblModel {
+pub fn sir_petri(th: Rc<ModalDblTheory<Unital>>) -> ModalDblModel<Unital> {
     let (ob_type, op) = (ModalObType::new(name("Object")), name("tensor"));
     let mut model = ModalDblModel::new(th);
     let (s, i, r) = (name("S"), name("I"), name("R"));

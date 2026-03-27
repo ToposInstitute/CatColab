@@ -137,17 +137,17 @@ pub fn th_category_signed_links() -> DiscreteTabTheory {
 }
 
 /// The theory of strict monoidal categories.
-pub fn th_monoidal_category() -> ModalDblTheory {
+pub fn th_monoidal_category() -> ModalDblTheory<Unital> {
     th_list_algebra(List::Plain)
 }
 
 /// The theory of lax monoidal categories.
-pub fn th_lax_monoidal_category() -> ModalDblTheory {
+pub fn th_lax_monoidal_category() -> ModalDblTheory<Unital> {
     th_list_lax_algebra(List::Plain)
 }
 
 /// The theory of strict symmetric monoidal categories.
-pub fn th_sym_monoidal_category() -> ModalDblTheory {
+pub fn th_sym_monoidal_category() -> ModalDblTheory<Unital> {
     th_list_algebra(List::Symmetric)
 }
 
@@ -155,7 +155,7 @@ pub fn th_sym_monoidal_category() -> ModalDblTheory {
 ///
 /// This is a modal double theory, parametric over which variant of the double list
 /// monad is used.
-fn th_list_algebra(list: List) -> ModalDblTheory {
+fn th_list_algebra(list: List) -> ModalDblTheory<Unital> {
     let m = Modality::List(list);
 
     let mut th = ModalDblTheory::new();
@@ -176,7 +176,7 @@ fn th_list_algebra(list: List) -> ModalDblTheory {
 }
 
 /// The theory of a lax algebra over a list monad.
-fn th_list_lax_algebra(list: List) -> ModalDblTheory {
+fn th_list_lax_algebra(list: List) -> ModalDblTheory<Unital> {
     let m = Modality::List(list);
 
     let mut th = ModalDblTheory::new();
@@ -200,12 +200,12 @@ fn th_list_lax_algebra(list: List) -> ModalDblTheory {
 }
 
 /// The theory of a (non-symmetric) multicategory.
-pub fn th_multicategory() -> ModalDblTheory {
+pub fn th_multicategory() -> ModalDblTheory<Unital> {
     th_generalized_multicategory(List::Plain)
 }
 
 /// The theory of a generalized multicategory over a list monad.
-fn th_generalized_multicategory(list: List) -> ModalDblTheory {
+fn th_generalized_multicategory(list: List) -> ModalDblTheory<Unital> {
     let mut th = ModalDblTheory::new();
     th.add_ob_type(name("Object"));
     let x = ModeApp::new(name("Object"));
@@ -285,7 +285,7 @@ pub fn th_power_system() -> DiscreteDblTheory {
 // Not yet using a modal theory since instantiation is currently only supported in
 // models of discrete theories.
 #[allow(dead_code)]
-fn modal_th_power_system() -> ModalDblTheory {
+fn modal_th_power_system() -> ModalDblTheory<Unital> {
     let mut th = ModalDblTheory::new();
 
     // Object type for buses, whose hom type is the morphism type for lines.
