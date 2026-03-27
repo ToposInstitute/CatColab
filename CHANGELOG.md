@@ -9,6 +9,18 @@ announcement and a blog post. Minor versions are not announced but allow
 features and fixes to be released with greater frequency. Minor versions often
 include notable new features.
 
+## [Unreleased]
+
+### Added
+
+- The backend now provides a compute service for
+  [Julia](https://julialang.org/) and
+  [AlgebraicJulia](https://www.algebraicjulia.org/)
+  ([#1132](https://github.com/ToposInstitute/CatColab/pull/1132))
+- New analysis: table view for instances of a schema
+  ([#835](https://github.com/ToposInstitute/CatColab/pull/835)), based on the
+  new Julia service
+
 ## [v0.5.1](https://github.com/ToposInstitute/CatColab/releases/tag/v0.5.1) & [v0.5.2](https://github.com/ToposInstitute/CatColab/releases/tag/v0.5.2) (2026-03-24)
 
 ### Added
@@ -28,6 +40,9 @@ include notable new features.
   ([#1146](https://github.com/ToposInstitute/CatColab/pull/1146))
 
 ## [v0.5.0](https://github.com/ToposInstitute/CatColab/releases/tag/v0.5.0) (2026-03-09)
+
+Blog post: [CatColab v0.5:
+Sandpiper](https://topos.institute/blog/2026-03-23-catcolab-0-5-sandpiper/)
 
 ### Added
 

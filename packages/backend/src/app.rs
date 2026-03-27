@@ -24,6 +24,12 @@ pub struct AppState {
     /// Tracks user IDs whose state docs were refreshed from DB in this process,
     /// mapped to their Automerge document IDs.
     pub initialized_user_states: Arc<RwLock<HashMap<String, DocumentId>>>,
+
+    /// HTTP client for outgoing requests (e.g., Julia proxy).
+    pub http_client: reqwest::Client,
+
+    /// Base URL for the Julia compute service, if configured.
+    pub julia_url: Option<String>,
 }
 
 /// Context available to RPC procedures.

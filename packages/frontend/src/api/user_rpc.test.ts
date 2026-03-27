@@ -7,13 +7,13 @@ import { afterAll, assert, describe, test } from "vitest";
 
 import type { UserProfile } from "catcolab-api";
 import { createTestDocument, initTestUserAuth } from "../util/test_util.ts";
-import { createRpcClient, unwrap, unwrapErr } from "./rpc.ts";
+import { createFetchWithAuth, createRpcClient, unwrap, unwrapErr } from "./rpc.ts";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 const firebaseOptions = JSON.parse(import.meta.env.VITE_FIREBASE_OPTIONS) as FirebaseOptions;
 
 const firebaseApp = initializeApp(firebaseOptions);
-const rpc = createRpcClient(serverUrl, firebaseApp);
+const rpc = createRpcClient(serverUrl, createFetchWithAuth(firebaseApp));
 
 describe("RPC for user profiles", async () => {
     const auth = getAuth(firebaseApp);

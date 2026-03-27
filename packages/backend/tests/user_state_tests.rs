@@ -63,6 +63,8 @@ mod integration_tests {
             repo,
             active_listeners: Arc::new(RwLock::new(HashSet::new())),
             initialized_user_states: Arc::new(RwLock::new(HashMap::new())),
+            http_client: reqwest::Client::new(),
+            julia_url: None,
         }
     }
 
@@ -1010,7 +1012,7 @@ mod integration_tests {
 
                 let mut content = serde_json::json!({
                     "name": doc.name.as_str(),
-                    "type": serde_json::to_value(&doc.type_name).unwrap()
+                    "type": serde_json::to_value(doc.type_name).unwrap()
                 });
                 if let Some(theory) = &doc.theory {
                     content["theory"] = serde_json::Value::String(theory.clone());
@@ -1116,6 +1118,8 @@ mod integration_tests {
                 repo,
                 active_listeners: Arc::new(RwLock::new(HashSet::new())),
                 initialized_user_states: Arc::new(RwLock::new(HashMap::new())),
+                http_client: reqwest::Client::new(),
+                julia_url: None,
             };
 
             write_user_state_to_db(user_id.clone(), test_db.pool(), &input_state)
