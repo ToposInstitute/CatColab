@@ -19,6 +19,7 @@
         "doc": "typedoc --entryPointStrategy expand ./src",
         "test": "vitest --mode=development",
         "test:ci": "vitest --mode=development --cache=false --configLoader=runner --run",
+        "test:db-dump": "vitest --mode=development --config vitest.db-dump.config.ts --run",
         "dev": "npm run build:deps && vite --host",
         "staging": "npm run build:deps && vite --mode staging"
     },
