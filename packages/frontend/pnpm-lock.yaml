@@ -116,6 +116,9 @@ importers:
       lucide-solid:
         specifier: ^0.471.0
         version: 0.471.0(solid-js@1.9.10)
+      prismjs:
+        specifier: ^1.30.0
+        version: 1.30.0
       prosemirror-commands:
         specifier: ^1.7.1
         version: 1.7.1
@@ -143,6 +146,9 @@ importers:
       solid-firebase:
         specifier: ^0.3.0
         version: 0.3.0(firebase@10.14.0)(solid-js@1.9.10)
+      solid-highlight:
+        specifier: ^0.1.26
+        version: 0.1.26(prismjs@1.30.0)(solid-js@1.9.10)
       solid-js:
         specifier: ^1.9.10
         version: 1.9.10
@@ -2515,6 +2521,10 @@ packages:
     resolution: {integrity: sha512-Pdlw/oPxN+aXdmM9R00JVC9WVFoCLTKJvDVLgmJ+qAffBMxsV85l/Lu7sNx4zSzPyoL2euImuEwHhOXdEgNFZQ==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
 
+  prismjs@1.30.0:
+    resolution: {integrity: sha512-DEvV2ZF2r2/63V+tK8hQvrR2ZGn10srHbXviTlcv7Kpzw8jWiNTqbVgjO3IY8RxrrOUF8VPMQQFysYYYv0YZxw==}
+    engines: {node: '>=6'}
+
   property-information@6.5.0:
     resolution: {integrity: sha512-PgTgs/BlvHxOu8QuEN7wi5A0OmXaBcHpmCSTehcs6Uuu9IkDIEo13Hy7n898RHfrQ49vKCoGeWZSaAK01nwVig==}
 
@@ -2704,6 +2714,13 @@ packages:
     resolution: {integrity: sha512-HbyCCfyytaOUJcKzAI3iRBincqCErUHA2J680nP9TftNbHsk0vVAmOd702iNlvNMORcu0XlV2mdZnGxkKg1ITA==}
     peerDependencies:
       solid-js: ^1.8
+
+  solid-highlight@0.1.26:
+    resolution: {integrity: sha512-Iw1mi3vE+YCBBBU/+HHc5y8VNULaGXUX4OK2c9TbzegOGCitzW0uNIvb0s3S0KoVv7Uma/KadWHNFXkwZCwPgQ==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      prismjs: ^1.29.0
+      solid-js: ^1.8.0
 
   solid-js@1.9.10:
     resolution: {integrity: sha512-Coz956cos/EPDlhs6+jsdTxKuJDPT7B5SVIWgABwROyxjY7Xbr8wkzD68Et+NxnV7DLJ3nJdAC2r9InuV/4Jew==}
@@ -6155,6 +6172,8 @@ snapshots:
       ansi-styles: 5.2.0
       react-is: 18.3.1
 
+  prismjs@1.30.0: {}
+
   property-information@6.5.0: {}
 
   property-information@7.1.0: {}
@@ -6442,6 +6461,11 @@ snapshots:
   solid-focus-trap@0.1.8(solid-js@1.9.10):
     dependencies:
       '@corvu/utils': 0.4.2(solid-js@1.9.10)
+      solid-js: 1.9.10
+
+  solid-highlight@0.1.26(prismjs@1.30.0)(solid-js@1.9.10):
+    dependencies:
+      prismjs: 1.30.0
       solid-js: 1.9.10
 
   solid-js@1.9.10:
