@@ -178,8 +178,8 @@ pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppErr
     sqlx::query(
         "
         WITH snapshot AS (
-            INSERT INTO snapshots(for_ref, content, created_at, heads)
-            VALUES ($1, $2, NOW(), $4)
+            INSERT INTO snapshots(for_ref, content, created_at, heads, parent)
+            VALUES ($1, $2, NOW(), $4, (SELECT current_snapshot FROM refs WHERE id = $1))
             RETURNING id
         )
         UPDATE refs

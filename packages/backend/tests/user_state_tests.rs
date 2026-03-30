@@ -1051,6 +1051,7 @@ mod integration_tests {
                     doc.current_snapshot = sid;
                     doc.snapshots = vec![backend::user_state::SnapshotInfo {
                         id: sid,
+                        parent: None,
                         created_at,
                         heads: vec![fake_heads_hex.clone()],
                     }];

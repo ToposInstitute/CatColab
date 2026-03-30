@@ -68,6 +68,8 @@ pub struct RelationInfo {
 pub struct SnapshotInfo {
     /// The database ID of this snapshot.
     pub id: i32,
+    /// The parent snapshot this was derived from, or `None` for the root snapshot.
+    pub parent: Option<i32>,
     /// When this snapshot was created.
     #[autosurgeon(rename = "createdAt", with = "datetime_millis")]
     #[ts(type = "number")]
@@ -277,6 +279,7 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
             COALESCE(
                 (SELECT json_agg(json_build_object(
                     'id', s.id,
+                    'parent', s.parent,
                     'createdAt', s.created_at,
                     'heads', (SELECT array_agg(encode(h, 'hex')) FROM unnest(s.heads) AS h)
                 ) ORDER BY s.id ASC)

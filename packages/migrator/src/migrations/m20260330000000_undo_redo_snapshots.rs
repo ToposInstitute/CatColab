@@ -31,7 +31,8 @@ impl Migration<Postgres> for UndoRedoSnapshots {
             RenameSnapshotTimestamp,
             PopulateHeads,
             DropDocIdFromSnapshots,
-            RenameHeadAndDropGetRefStubs
+            RenameHeadAndDropGetRefStubs,
+            AddParentToSnapshots
         ]
     }
 
@@ -367,6 +368,26 @@ impl Operation<Postgres> for RenameHeadAndDropGetRefStubs {
         .await?;
 
         tx.commit().await?;
+        Ok(())
+    }
+}
+
+/// Step 6: Add nullable `parent` column to `snapshots` (FK to `snapshots.id`).
+struct AddParentToSnapshots;
+
+#[async_trait::async_trait]
+impl Operation<Postgres> for AddParentToSnapshots {
+    async fn up(&self, conn: &mut PgConnection) -> Result<(), Error> {
+        sqlx::query("ALTER TABLE snapshots ADD COLUMN parent INT REFERENCES snapshots(id)")
+            .execute(conn)
+            .await?;
+        Ok(())
+    }
+
+    async fn down(&self, conn: &mut PgConnection) -> Result<(), Error> {
+        sqlx::query("ALTER TABLE snapshots DROP COLUMN IF EXISTS parent")
+            .execute(conn)
+            .await?;
         Ok(())
     }
 }
