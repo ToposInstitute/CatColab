@@ -173,26 +173,21 @@ pub fn lotka_volterra_dynamics(th: Rc<ModalDblTheory<NonUnital>>) -> ModalDblMod
     let mor_type = ModeApp::new(name("Multihom")).into();
 
     let mut model = ModalDblModel::new(th);
-    let (a, b) = (name("A"), name("B"));
+    let (x, a, b) = (name("X"), name("A"), name("B"));
 
+    model.add_ob(x.clone(), ob_type.clone());
     model.add_ob(a.clone(), ob_type.clone());
     model.add_ob(b.clone(), ob_type.clone());
-    // this should correspond to
-    // dA/dt += g_A A
-    // dB/dt += g_B B
+    // The growth term, for the image of a vertex. This should correspond to
+    // dX/dt += g_X X
+    model.add_mor(
+        name("X_growth"),
+        x.clone().into(),
+        x.clone().into(),
+        ModalMorType::Zero(ob_type.clone()),
+    );
+    // The interaction term, for the image of an arrow. This should correspond to
     // dB/dt += k_AB AB
-    model.add_mor(
-        name("A_growth"),
-        a.clone().into(),
-        a.clone().into(),
-        ModalMorType::Zero(ob_type.clone()),
-    );
-    model.add_mor(
-        name("B_growth"),
-        b.clone().into(),
-        b.clone().into(),
-        ModalMorType::Zero(ob_type.clone()),
-    );
     model.add_mor(
         name("AB_interaction"),
         ModalOb::List(List::Symmetric, vec![a.clone().into(), b.clone().into()]),
