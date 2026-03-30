@@ -60,6 +60,22 @@ pub struct RelationInfo {
     pub relation_type: String,
 }
 
+/// Lightweight snapshot metadata for user state synchronization.
+#[cfg_attr(feature = "property-tests", derive(Eq, PartialEq))]
+#[derive(Debug, Clone, Deserialize, Reconcile, Hydrate, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(rename_all = "camelCase", export_to = "user_state.ts")]
+pub struct SnapshotInfo {
+    /// The database ID of this snapshot.
+    pub id: i32,
+    /// When this snapshot was created.
+    #[autosurgeon(rename = "createdAt", with = "datetime_millis")]
+    #[ts(type = "number")]
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    /// Automerge change hashes identifying this snapshot's document state, hex-encoded.
+    pub heads: Vec<String>,
+}
+
 /// Document reference information for user state synchronization.
 ///
 /// Contains lightweight metadata about a document that the user has access to.
@@ -85,6 +101,11 @@ pub struct DocInfo {
     #[autosurgeon(rename = "deletedAt", with = "option_datetime_millis")]
     #[ts(type = "number | null")]
     pub deleted_at: Option<chrono::DateTime<chrono::Utc>>,
+    /// The database ID of the current (active) snapshot.
+    #[autosurgeon(rename = "currentSnapshot")]
+    pub current_snapshot: i32,
+    /// All snapshots for this document, ordered by creation time.
+    pub snapshots: Vec<SnapshotInfo>,
     /// Outgoing relations from this document to other documents.
     #[autosurgeon(rename = "dependsOn")]
     pub depends_on: Vec<RelationInfo>,
@@ -243,6 +264,7 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
             refs.created AS "created_at!",
             refs.deleted_at,
             snapshots.content AS "content!",
+            refs.current_snapshot AS "current_snapshot!",
             COALESCE(
                 (SELECT json_agg(json_build_object(
                     'user', p.subject,
@@ -251,7 +273,17 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
                 FROM permissions p
                 WHERE p.object = refs.id
                 ), '[]'::json
-            ) AS "permissions!: sqlx::types::Json<Vec<PermissionInfo>>"
+            ) AS "permissions!: sqlx::types::Json<Vec<PermissionInfo>>",
+            COALESCE(
+                (SELECT json_agg(json_build_object(
+                    'id', s.id,
+                    'createdAt', s.created_at,
+                    'heads', (SELECT array_agg(encode(h, 'hex')) FROM unnest(s.heads) AS h)
+                ) ORDER BY s.id ASC)
+                FROM snapshots s
+                WHERE s.for_ref = refs.id
+                ), '[]'::json
+            ) AS "snapshots!: sqlx::types::Json<Vec<SnapshotInfo>>"
         FROM filtered_ids
         JOIN refs ON refs.id = filtered_ids.id
         JOIN snapshots ON snapshots.id = refs.current_snapshot
@@ -282,6 +314,8 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
             permissions,
             created_at: row.created_at,
             deleted_at: row.deleted_at,
+            current_snapshot: row.current_snapshot,
+            snapshots: row.snapshots.0,
             depends_on,
             used_by: Vec::new(),
         };
@@ -515,8 +549,8 @@ pub mod arbitrary {
                             .expect("valid timestamp"),
                         deleted_at: deleted_seconds
                             .map(|s| Utc.timestamp_opt(s, 0).single().expect("valid timestamp")),
-                        // We are not yet generating complete relationship trees, just independent
-                        // docs
+                        current_snapshot: 1,
+                        snapshots: Vec::new(),
                         depends_on: Vec::new(),
                         used_by: Vec::new(),
                     }
@@ -603,8 +637,8 @@ pub mod arbitrary {
                             .expect("valid timestamp"),
                         deleted_at: deleted_seconds
                             .map(|s| Utc.timestamp_opt(s, 0).single().expect("valid timestamp")),
-                        // We are not yet generating complete relationship trees, just independent
-                        // docs
+                        current_snapshot: 1,
+                        snapshots: Vec::new(),
                         depends_on: Vec::new(),
                         used_by: Vec::new(),
                     };
