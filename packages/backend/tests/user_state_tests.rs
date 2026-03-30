@@ -1049,12 +1049,14 @@ mod integration_tests {
             for (ref_id_str, doc) in result.documents.iter_mut() {
                 if let Some(&(sid, created_at)) = snapshot_ids.get(ref_id_str) {
                     doc.current_snapshot = sid;
-                    doc.snapshots = vec![backend::user_state::SnapshotInfo {
-                        id: sid,
-                        parent: None,
-                        created_at,
-                        heads: vec![fake_heads_hex.clone()],
-                    }];
+                    doc.snapshots = HashMap::from([(
+                        sid.to_string(),
+                        backend::user_state::SnapshotInfo {
+                            parent: None,
+                            created_at,
+                            heads: vec![fake_heads_hex.clone()],
+                        },
+                    )]);
                 }
             }
             Ok(result)
