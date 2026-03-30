@@ -266,8 +266,9 @@ describe("User state Automerge document", async () => {
 
         const initialDoc = findDoc(refId);
         assert(initialDoc, "Document should exist");
-        assert.strictEqual(initialDoc.snapshots.length, 1, "Should start with one snapshot");
-        const originalSnapshotId = initialDoc.snapshots[0]!.id;
+        const snapshotIds = Object.keys(initialDoc.snapshots);
+        assert.strictEqual(snapshotIds.length, 1, "Should start with one snapshot");
+        const originalSnapshotId = Number(snapshotIds[0]);
         assert.strictEqual(
             initialDoc.currentSnapshot,
             originalSnapshotId,
@@ -288,7 +289,7 @@ describe("User state Automerge document", async () => {
 
         await waitFor(() => {
             const doc = findDoc(refId);
-            return doc !== undefined && doc.snapshots.length >= 2;
+            return doc !== undefined && Object.keys(doc.snapshots).length >= 2;
         }, `Document ${refId} should have a second snapshot after autosave`);
 
         const afterAutosave = findDoc(refId);
@@ -297,7 +298,7 @@ describe("User state Automerge document", async () => {
             afterAutosave.currentSnapshot !== originalSnapshotId,
             "currentSnapshot should have changed after autosave",
         );
-        assert.strictEqual(afterAutosave.snapshots.length, 2, "Should have two snapshots");
+        assert.strictEqual(Object.keys(afterAutosave.snapshots).length, 2, "Should have two snapshots");
 
         unwrap(await rpc.set_current_snapshot.mutate(refId, originalSnapshotId));
 
@@ -314,7 +315,7 @@ describe("User state Automerge document", async () => {
             "currentSnapshot should be back to the original",
         );
         assert.strictEqual(
-            reverted.snapshots.length,
+            Object.keys(reverted.snapshots).length,
             2,
             "Both snapshots should still be present",
         );

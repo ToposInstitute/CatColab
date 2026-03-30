@@ -66,8 +66,6 @@ pub struct RelationInfo {
 #[serde(rename_all = "camelCase")]
 #[ts(rename_all = "camelCase", export_to = "user_state.ts")]
 pub struct SnapshotInfo {
-    /// The database ID of this snapshot.
-    pub id: i32,
     /// The parent snapshot this was derived from, or `None` for the root snapshot.
     pub parent: Option<i32>,
     /// When this snapshot was created.
@@ -106,8 +104,8 @@ pub struct DocInfo {
     /// The database ID of the current (active) snapshot.
     #[autosurgeon(rename = "currentSnapshot")]
     pub current_snapshot: i32,
-    /// All snapshots for this document, ordered by creation time.
-    pub snapshots: Vec<SnapshotInfo>,
+    /// All snapshots for this document, keyed by stringified snapshot ID.
+    pub snapshots: HashMap<String, SnapshotInfo>,
     /// Outgoing relations from this document to other documents.
     #[autosurgeon(rename = "dependsOn")]
     pub depends_on: Vec<RelationInfo>,
@@ -277,16 +275,18 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
                 ), '[]'::json
             ) AS "permissions!: sqlx::types::Json<Vec<PermissionInfo>>",
             COALESCE(
-                (SELECT json_agg(json_build_object(
-                    'id', s.id,
-                    'parent', s.parent,
-                    'createdAt', s.created_at,
-                    'heads', (SELECT array_agg(encode(h, 'hex')) FROM unnest(s.heads) AS h)
-                ) ORDER BY s.id ASC)
+                (SELECT json_object_agg(
+                    s.id::text,
+                    json_build_object(
+                        'parent', s.parent,
+                        'createdAt', s.created_at,
+                        'heads', (SELECT array_agg(encode(h, 'hex')) FROM unnest(s.heads) AS h)
+                    )
+                )
                 FROM snapshots s
                 WHERE s.for_ref = refs.id
-                ), '[]'::json
-            ) AS "snapshots!: sqlx::types::Json<Vec<SnapshotInfo>>"
+                ), '{}'::json
+            ) AS "snapshots!: sqlx::types::Json<HashMap<String, SnapshotInfo>>"
         FROM filtered_ids
         JOIN refs ON refs.id = filtered_ids.id
         JOIN snapshots ON snapshots.id = refs.current_snapshot
@@ -553,7 +553,9 @@ pub mod arbitrary {
                         deleted_at: deleted_seconds
                             .map(|s| Utc.timestamp_opt(s, 0).single().expect("valid timestamp")),
                         current_snapshot: 1,
-                        snapshots: Vec::new(),
+                        snapshots: HashMap::new(),
+                        // We are not yet generating complete relationship trees, just independent
+                        // docs
                         depends_on: Vec::new(),
                         used_by: Vec::new(),
                     }
@@ -635,7 +637,9 @@ pub mod arbitrary {
                         deleted_at: deleted_seconds
                             .map(|s| Utc.timestamp_opt(s, 0).single().expect("valid timestamp")),
                         current_snapshot: 1,
-                        snapshots: Vec::new(),
+                        snapshots: HashMap::new(),
+                        // We are not yet generating complete relationship trees, just independent
+                        // docs
                         depends_on: Vec::new(),
                         used_by: Vec::new(),
                     };
