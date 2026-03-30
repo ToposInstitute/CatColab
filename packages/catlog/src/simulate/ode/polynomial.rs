@@ -6,7 +6,6 @@ use std::ops::{Add, Neg};
 
 use derivative::Derivative;
 use indexmap::IndexMap;
-use itertools::Itertools;
 use nalgebra::DVector;
 use num_traits::{One, Pow, Zero};
 
@@ -110,21 +109,6 @@ where
             })
             .collect()
     }
-
-    /// Converts to a single aligned LaTeX environment.
-    pub fn to_latex_string(&self) -> String
-    where
-        Var: Display,
-        Coef: Display + PartialEq + One + Neg<Output = Coef>,
-        Exp: Display + PartialEq + One,
-    {
-        let equations = self
-            .to_latex_equations()
-            .into_iter()
-            .map(|p| p.lhs + " &= " + &p.rhs)
-            .join("\\\\\n");
-        format!("$$\n\\begin{{align*}}\n{}\n\\end{{align*}}\n$$\n", equations)
-    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -194,7 +178,6 @@ where
 ///
 /// Such a system is ready for use in numerical solvers: the coefficients are
 /// floating point numbers and the variables are consecutive integer indices.
-#[derive(PartialEq, Debug)]
 pub struct NumericalPolynomialSystem<Exp> {
     /// Components of the vector field.
     pub components: Vec<Polynomial<usize, f32, Exp>>,
@@ -209,6 +192,21 @@ where
         for i in 0..dx.len() {
             dx[i] = self.components[i].eval(|var| x[*var])
         }
+    }
+}
+
+impl<Exp> Display for NumericalPolynomialSystem<Exp>
+where
+    Exp: Clone + Ord + Add<Output = Exp> + One + Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let var_name = |i: usize| format!("x{i}");
+        for (var, component) in self.components.iter().enumerate() {
+            let var = var_name(var);
+            let component = component.map_variables(|i| var_name(*i));
+            writeln!(f, "d{var} = {component}")?;
+        }
+        Ok(())
     }
 }
 

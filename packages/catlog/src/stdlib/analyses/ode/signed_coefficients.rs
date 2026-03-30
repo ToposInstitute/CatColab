@@ -1,14 +1,13 @@
 //! Helper module to build analyses based on signed coefficient matrices.
 
-use std::{fmt::Debug, hash::Hash};
-
 use indexmap::IndexMap;
 use nalgebra::DMatrix;
-use num_traits::Zero;
+use num_traits::zero;
 
+use super::Parameter;
 use crate::{
     dbl::model::FpDblModel,
-    zero::{alg::Polynomial, rig::Monomial},
+    zero::{QualifiedName, rig::Monomial},
 };
 
 /// Builder for signed coefficient matrices and analyses based on them.
@@ -20,9 +19,6 @@ pub struct SignedCoefficientBuilder<ObType, MorType> {
     positive_mor_types: Vec<MorType>,
     negative_mor_types: Vec<MorType>,
 }
-
-/// Symbolic parameter in polynomial system.
-pub type Parameter<Id> = Polynomial<Id, f32, u8>;
 
 impl<ObType, MorType> SignedCoefficientBuilder<ObType, MorType> {
     /// Creates a new builder for the given object type.
@@ -50,13 +46,16 @@ impl<ObType, MorType> SignedCoefficientBuilder<ObType, MorType> {
     ///
     /// Returns the coefficient matrix along with an ordered map from object
     /// generators to integer indices.
-    pub fn build_matrix<Id>(
+    pub fn build_matrix(
         &self,
-        model: &impl FpDblModel<ObType = ObType, MorType = MorType, Ob = Id, ObGen = Id, MorGen = Id>,
-    ) -> (DMatrix<Parameter<Id>>, IndexMap<Id, usize>)
-    where
-        Id: Eq + Clone + Hash + Ord + Debug + 'static,
-    {
+        model: &impl FpDblModel<
+            ObType = ObType,
+            MorType = MorType,
+            Ob = QualifiedName,
+            ObGen = QualifiedName,
+            MorGen = QualifiedName,
+        >,
+    ) -> (DMatrix<Parameter<QualifiedName>>, IndexMap<QualifiedName, usize>) {
         let ob_index: IndexMap<_, _> = model
             .ob_generators_with_type(&self.var_ob_type)
             .enumerate()
@@ -64,7 +63,7 @@ impl<ObType, MorType> SignedCoefficientBuilder<ObType, MorType> {
             .collect();
 
         let n = ob_index.len();
-        let mut mat = DMatrix::from_element(n, n, Parameter::<Id>::zero());
+        let mut mat = DMatrix::from_element(n, n, zero());
         for mor_type in self.positive_mor_types.iter() {
             for mor in model.mor_generators_with_type(mor_type) {
                 let i = *ob_index.get(&model.mor_generator_dom(&mor)).unwrap();
