@@ -2,11 +2,10 @@
 
 use crate::app::{AppCtx, AppError, AppState};
 use crate::autosave::ensure_autosave_listener;
-use notebook_types::automerge_json::populate_automerge_from_json;
+use notebook_types::automerge_json::{hydrate_to_json, populate_automerge_from_json};
 use crate::user_state_updates::{update_ref_for_users, update_user_state};
 use chrono::{DateTime, Utc};
 use samod::DocumentId;
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
@@ -144,49 +143,37 @@ pub async fn ref_deleted_at(
     Ok(query.fetch_one(&state.db).await?.deleted_at)
 }
 
-/// Saves the document by overwriting the snapshot at the current head,
-/// then updates user state for all affected users.
-pub async fn autosave(state: AppState, data: RefContent) -> Result<(), AppError> {
-    let RefContent { ref_id, content, heads } = data;
-    sqlx::query!(
-        "
-        UPDATE snapshots
-        SET content = $2, last_updated = NOW(), heads = $3
-        WHERE id = (SELECT current_snapshot FROM refs WHERE id = $1)
-        ",
-        ref_id,
-        content,
-        &heads,
-    )
-    .execute(&state.db)
-    .await?;
-
-    if let Err(e) = update_ref_for_users(&state, ref_id, vec![]).await {
-        tracing::error!(%ref_id, error = %e, "Failed to update user states after autosave");
-    }
-
-    Ok(())
-}
-
 /// Saves the document by replacing the head with a new snapshot.
 ///
 /// The snapshot at the previous head is *not* deleted.
 pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppError> {
-    let doc_id = get_doc_id(state.clone(), ref_id).await?;
+    let query = sqlx::query!(
+        "
+        SELECT doc_id FROM refs WHERE id = $1
+        ",
+        ref_id
+    );
 
-    let doc_handle = state
-        .repo
-        .find(doc_id)
-        .await?
-        .ok_or_else(|| AppError::Invalid("Document not found".to_string()))?;
+    let doc_id = query.fetch_one(&state.db).await?.doc_id;
+    let doc_id: samod::DocumentId = doc_id
+        .parse()
+        .map_err(|_| AppError::Invalid("Invalid document ID".to_string()))?;
 
-    let (cloned_doc, heads) = doc_handle.with_document(|doc| {
-        let heads: Vec<Vec<u8>> = doc.get_heads().iter().map(|h| h.0.to_vec()).collect();
-        (doc.clone(), heads)
-    });
+    let (cloned_doc, heads, doc_content) = {
+        let doc_handle = state
+            .repo
+            .find(doc_id)
+            .await?
+            .ok_or_else(|| AppError::Invalid("Document not found".to_string()))?;
+
+        doc_handle.with_document(|doc| {
+            let heads: Vec<Vec<u8>> = doc.get_heads().iter().map(|h| h.0.to_vec()).collect();
+            let hydrated = doc.hydrate(None);
+            let doc_content = hydrate_to_json(&hydrated);
+            (doc.clone(), heads, doc_content)
+        })
+    };
     let cloned_handle = state.repo.create(cloned_doc).await?;
-
-    let doc_content = head_snapshot(state.clone(), ref_id).await?;
 
     sqlx::query!(
         "
@@ -206,6 +193,10 @@ pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppErr
     )
     .execute(&state.db)
     .await?;
+
+    if let Err(e) = update_ref_for_users(&state, ref_id, vec![]).await {
+        tracing::error!(%ref_id, error = %e, "Failed to update user states after create_snapshot");
+    }
 
     Ok(())
 }
@@ -264,27 +255,5 @@ pub async fn get_doc_id(state: AppState, ref_id: Uuid) -> Result<DocumentId, App
         .parse()
         .map_err(|_| AppError::Invalid("Invalid document ID".to_string()))?;
 
-    let doc_handle = state
-        .repo
-        .find(doc_id.clone())
-        .await?
-        .ok_or_else(|| AppError::Invalid("Document not found".to_string()))?;
-
-    ensure_autosave_listener(state, ref_id, doc_handle).await;
-
     Ok(doc_id)
-}
-
-/// A document ref along with its content.
-#[qubit::ts]
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RefContent {
-    /// The UUID of the document ref.
-    #[serde(rename = "refId")]
-    pub ref_id: Uuid,
-    /// The JSON content of the document.
-    pub content: Value,
-    /// Automerge heads (raw change hash bytes) at the time of this snapshot.
-    #[serde(skip)]
-    pub heads: Vec<Vec<u8>>,
 }
