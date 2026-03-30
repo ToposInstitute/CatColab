@@ -426,12 +426,22 @@ mod integration_tests {
         assert_eq!(before.documents[&ref_id.to_string()].name.as_str(), "Original Name");
 
         let updated = create_test_document_content("Updated Name");
-        document::autosave(
-            state.clone(),
-            backend::document::RefContent { ref_id, content: updated, heads: vec![] },
+        let fake_heads: Vec<Vec<u8>> = vec![vec![0u8; 32]];
+        sqlx::query!(
+            r#"
+            UPDATE snapshots
+            SET content = $2, last_updated = NOW(), heads = $3
+            WHERE id = (SELECT current_snapshot FROM refs WHERE id = $1)
+            "#,
+            ref_id,
+            updated,
+            &fake_heads,
         )
-        .await
-        .expect("Failed to autosave");
+        .execute(&pool)
+        .await?;
+        backend::user_state_updates::update_ref_for_users(&state, ref_id, vec![])
+            .await
+            .expect("Failed to propagate user state update");
 
         let after = read_user_state_from_samod(&state, &user_id).await.unwrap();
         assert_eq!(after.documents[&ref_id.to_string()].name.as_str(), "Updated Name");
@@ -475,14 +485,24 @@ mod integration_tests {
         assert_eq!(s.documents[&diagram_id.to_string()].type_name, DocumentType::Diagram);
         assert_eq!(s.documents[&diagram_id.to_string()].theory, None);
 
-        // Update theory via autosave
+        // Update theory and propagate user state
         let updated = create_model_document_content("Theory Test", "petri-net");
-        document::autosave(
-            state.clone(),
-            backend::document::RefContent { ref_id, content: updated, heads: vec![] },
+        let fake_heads: Vec<Vec<u8>> = vec![vec![0u8; 32]];
+        sqlx::query!(
+            r#"
+            UPDATE snapshots
+            SET content = $2, last_updated = NOW(), heads = $3
+            WHERE id = (SELECT current_snapshot FROM refs WHERE id = $1)
+            "#,
+            ref_id,
+            updated,
+            &fake_heads,
         )
-        .await
-        .expect("Failed to autosave");
+        .execute(&pool)
+        .await?;
+        backend::user_state_updates::update_ref_for_users(&state, ref_id, vec![])
+            .await
+            .expect("Failed to propagate user state update");
 
         let s = read_user_state_from_samod(&state, &user_id).await.unwrap();
         assert_eq!(s.documents[&ref_id.to_string()].theory.as_deref(), Some("petri-net"));
@@ -527,12 +547,22 @@ mod integration_tests {
             .expect("Failed to initialize owner2 state");
 
         let updated = create_test_document_content("Updated by Autosave");
-        document::autosave(
-            state.clone(),
-            backend::document::RefContent { ref_id, content: updated, heads: vec![] },
+        let fake_heads: Vec<Vec<u8>> = vec![vec![0u8; 32]];
+        sqlx::query!(
+            r#"
+            UPDATE snapshots
+            SET content = $2, last_updated = NOW(), heads = $3
+            WHERE id = (SELECT current_snapshot FROM refs WHERE id = $1)
+            "#,
+            ref_id,
+            updated,
+            &fake_heads,
         )
-        .await
-        .expect("Failed to autosave");
+        .execute(&pool)
+        .await?;
+        backend::user_state_updates::update_ref_for_users(&state, ref_id, vec![])
+            .await
+            .expect("Failed to propagate user state update");
 
         let s1 = read_user_state_from_samod(&state, &owner1_id).await.unwrap();
         let s2 = read_user_state_from_samod(&state, &owner2_id).await.unwrap();
