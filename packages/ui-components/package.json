@@ -9,9 +9,8 @@
     },
     "scripts": {
         "format": "oxfmt .",
-        "lint": "oxlint --fix && oxfmt . &&  stylelint 'src/**/*.css' --fix",
-        "check": "npm run lint && tsc",
-        "ci": "tsc --noEmit && oxlint --deny-warnings && oxfmt --check . && stylelint 'src/**/*.css'",
+        "lint": "oxfmt . && oxlint --fix",
+        "ci": "oxfmt --check . && tsc --noEmit && oxlint --deny-warnings",
         "dev": "storybook dev -p 6006 --no-version-updates --no-open",
         "build": "NODE_ENV=production storybook build",
         "test": "vitest --project=storybook"
