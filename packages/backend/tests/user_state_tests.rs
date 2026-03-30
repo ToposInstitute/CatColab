@@ -428,7 +428,7 @@ mod integration_tests {
         let updated = create_test_document_content("Updated Name");
         document::autosave(
             state.clone(),
-            backend::document::RefContent { ref_id, content: updated },
+            backend::document::RefContent { ref_id, content: updated, heads: vec![] },
         )
         .await
         .expect("Failed to autosave");
@@ -479,7 +479,7 @@ mod integration_tests {
         let updated = create_model_document_content("Theory Test", "petri-net");
         document::autosave(
             state.clone(),
-            backend::document::RefContent { ref_id, content: updated },
+            backend::document::RefContent { ref_id, content: updated, heads: vec![] },
         )
         .await
         .expect("Failed to autosave");
@@ -529,7 +529,7 @@ mod integration_tests {
         let updated = create_test_document_content("Updated by Autosave");
         document::autosave(
             state.clone(),
-            backend::document::RefContent { ref_id, content: updated },
+            backend::document::RefContent { ref_id, content: updated, heads: vec![] },
         )
         .await
         .expect("Failed to autosave");
@@ -1018,21 +1018,24 @@ mod integration_tests {
                     content["theory"] = serde_json::Value::String(theory.clone());
                 }
 
+                // Use a fake heads value (32 zero bytes) for test data.
+                let fake_heads: Vec<Vec<u8>> = vec![vec![0u8; 32]];
                 sqlx::query!(
                     r#"
                     WITH snapshot AS (
-                        INSERT INTO snapshots (for_ref, content, last_updated, doc_id)
-                        VALUES ($1, $2, $3, $4)
+                        INSERT INTO snapshots (for_ref, content, last_updated, heads)
+                        VALUES ($1, $2, $3, $5)
                         RETURNING id
                     )
-                    INSERT INTO refs (id, head, created)
-                    VALUES ($1, (SELECT id FROM snapshot), $3)
-                    ON CONFLICT (id) DO UPDATE SET head = (SELECT id FROM snapshot)
+                    INSERT INTO refs (id, current_snapshot, created, doc_id)
+                    VALUES ($1, (SELECT id FROM snapshot), $3, $4)
+                    ON CONFLICT (id) DO UPDATE SET current_snapshot = (SELECT id FROM snapshot)
                     "#,
                     ref_id,
                     content,
                     doc.created_at,
-                    format!("test_fake_automerge_doc_{ref_id}")
+                    format!("test_fake_automerge_doc_{ref_id}"),
+                    &fake_heads,
                 )
                 .execute(db)
                 .await?;
