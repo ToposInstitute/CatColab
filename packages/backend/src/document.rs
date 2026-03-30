@@ -201,29 +201,66 @@ pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppErr
     Ok(())
 }
 
-/// Sets the current snapshot for a ref.
+/// Sets the current snapshot for a ref by applying the snapshot's state to the
+/// live Automerge document.
 ///
-/// The snapshot must belong to the given ref. The live Automerge document is
-/// unchanged since it retains the full history; only the database pointer
-/// is updated.
+/// The document is updated in-place: the target snapshot's state is read from
+/// the Automerge history via its stored heads, then applied as new operations
+/// (delete all root keys + repopulate). The `doc_id` is unchanged so connected
+/// clients receive the update via normal Automerge sync.
 pub async fn set_current_snapshot(
     state: AppState,
     ref_id: Uuid,
     snapshot_id: i32,
 ) -> Result<(), AppError> {
-    let rows_affected = sqlx::query!(
-        "UPDATE refs SET current_snapshot = $2 WHERE id = $1
-         AND EXISTS (SELECT 1 FROM snapshots WHERE id = $2 AND for_ref = $1)",
+    use automerge::ReadDoc as _;
+    use automerge::transaction::Transactable as _;
+
+    let snapshot = sqlx::query!(
+        "SELECT heads FROM snapshots WHERE id = $1 AND for_ref = $2",
+        snapshot_id,
+        ref_id,
+    )
+    .fetch_optional(&state.db)
+    .await?
+    .ok_or_else(|| AppError::Invalid("Snapshot not found for this ref".to_string()))?;
+
+    let target_heads: Vec<automerge::ChangeHash> = snapshot
+        .heads
+        .iter()
+        .map(|h| automerge::ChangeHash(h.as_slice().try_into().expect("invalid change hash")))
+        .collect();
+
+    let doc_id = get_doc_id(state.clone(), ref_id).await?;
+    let doc_handle = state
+        .repo
+        .find(doc_id)
+        .await?
+        .ok_or_else(|| AppError::Invalid("Document not found".to_string()))?;
+
+    doc_handle.with_document(|doc| -> Result<(), AppError> {
+        let target_state = hydrate_to_json(&doc.hydrate(Some(&target_heads)));
+
+        doc.transact::<_, _, automerge::AutomergeError>(|tx| {
+            let keys: Vec<String> = tx.keys(automerge::ROOT).collect();
+            for key in &keys {
+                tx.delete(automerge::ROOT, key.as_str())?;
+            }
+            populate_automerge_from_json(tx, automerge::ROOT, &target_state)?;
+            Ok(())
+        })
+        .map_err(|e| AppError::Invalid(format!("Failed to update document: {e:?}")))?;
+
+        Ok(())
+    })?;
+
+    sqlx::query!(
+        "UPDATE refs SET current_snapshot = $2 WHERE id = $1",
         ref_id,
         snapshot_id,
     )
     .execute(&state.db)
-    .await?
-    .rows_affected();
-
-    if rows_affected == 0 {
-        return Err(AppError::Invalid("Snapshot not found for this ref".to_string()));
-    }
+    .await?;
 
     if let Err(e) = update_ref_for_users(&state, ref_id, vec![]).await {
         tracing::error!(%ref_id, error = %e, "Failed to update user states after set_current_snapshot");
