@@ -361,16 +361,16 @@ mod integration_tests {
 
         let updated = create_test_document_content("Updated Name");
         let fake_heads: Vec<Vec<u8>> = vec![vec![0u8; 32]];
-        sqlx::query!(
+        sqlx::query(
             r#"
             UPDATE snapshots
-            SET content = $2, last_updated = NOW(), heads = $3
+            SET content = $2, created_at = NOW(), heads = $3
             WHERE id = (SELECT current_snapshot FROM refs WHERE id = $1)
             "#,
-            ref_id,
-            updated,
-            &fake_heads,
         )
+        .bind(ref_id)
+        .bind(updated)
+        .bind(&fake_heads)
         .execute(&pool)
         .await?;
         backend::user_state_updates::update_ref_for_users(&state, ref_id, vec![])
@@ -422,16 +422,16 @@ mod integration_tests {
         // Update theory and propagate user state
         let updated = create_model_document_content("Theory Test", "petri-net");
         let fake_heads: Vec<Vec<u8>> = vec![vec![0u8; 32]];
-        sqlx::query!(
+        sqlx::query(
             r#"
             UPDATE snapshots
-            SET content = $2, last_updated = NOW(), heads = $3
+            SET content = $2, created_at = NOW(), heads = $3
             WHERE id = (SELECT current_snapshot FROM refs WHERE id = $1)
             "#,
-            ref_id,
-            updated,
-            &fake_heads,
         )
+        .bind(ref_id)
+        .bind(updated)
+        .bind(&fake_heads)
         .execute(&pool)
         .await?;
         backend::user_state_updates::update_ref_for_users(&state, ref_id, vec![])
@@ -482,16 +482,16 @@ mod integration_tests {
 
         let updated = create_test_document_content("Updated by Autosave");
         let fake_heads: Vec<Vec<u8>> = vec![vec![0u8; 32]];
-        sqlx::query!(
+        sqlx::query(
             r#"
             UPDATE snapshots
-            SET content = $2, last_updated = NOW(), heads = $3
+            SET content = $2, created_at = NOW(), heads = $3
             WHERE id = (SELECT current_snapshot FROM refs WHERE id = $1)
             "#,
-            ref_id,
-            updated,
-            &fake_heads,
         )
+        .bind(ref_id)
+        .bind(updated)
+        .bind(&fake_heads)
         .execute(&pool)
         .await?;
         backend::user_state_updates::update_ref_for_users(&state, ref_id, vec![])
@@ -984,10 +984,10 @@ mod integration_tests {
 
                 // Use a fake heads value (32 zero bytes) for test data.
                 let fake_heads: Vec<Vec<u8>> = vec![vec![0u8; 32]];
-                sqlx::query!(
+                sqlx::query(
                     r#"
                     WITH snapshot AS (
-                        INSERT INTO snapshots (for_ref, content, last_updated, heads)
+                        INSERT INTO snapshots (for_ref, content, created_at, heads)
                         VALUES ($1, $2, $3, $5)
                         RETURNING id
                     )
@@ -995,12 +995,12 @@ mod integration_tests {
                     VALUES ($1, (SELECT id FROM snapshot), $3, $4)
                     ON CONFLICT (id) DO UPDATE SET current_snapshot = (SELECT id FROM snapshot)
                     "#,
-                    ref_id,
-                    content,
-                    doc.created_at,
-                    format!("test_fake_automerge_doc_{ref_id}"),
-                    &fake_heads,
                 )
+                .bind(ref_id)
+                .bind(content)
+                .bind(doc.created_at)
+                .bind(format!("test_fake_automerge_doc_{ref_id}"))
+                .bind(&fake_heads)
                 .execute(db)
                 .await?;
 

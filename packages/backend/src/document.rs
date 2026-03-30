@@ -51,23 +51,23 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
     let mut txn = ctx.state.db.begin().await?;
 
     let user_id = ctx.user.map(|user| user.user_id);
-    sqlx::query!(
+    sqlx::query(
         "
         WITH snapshot AS (
-            INSERT INTO snapshots(for_ref, content, last_updated, heads)
+            INSERT INTO snapshots(for_ref, content, created_at, heads)
             VALUES ($1, $2, NOW(), $4)
-            RETURNING id
+        RETURNING id
         )
         INSERT INTO refs(id, current_snapshot, created, doc_id)
         VALUES ($1, (SELECT id FROM snapshot), NOW(), $3)
         ",
-        ref_id,
-        // Use the JSON provided by automerge as the authoritative content
-        // serde_json::to_value(doc_content),
-        content,
-        doc_id,
-        &heads,
     )
+    .bind(ref_id)
+    // Use the JSON provided by automerge as the authoritative content
+    // serde_json::to_value(doc_content),
+    .bind(content)
+    .bind(doc_id)
+    .bind(&heads)
     .execute(&mut *txn)
     .await?;
 
@@ -175,10 +175,10 @@ pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppErr
     };
     let cloned_handle = state.repo.create(cloned_doc).await?;
 
-    sqlx::query!(
+    sqlx::query(
         "
         WITH snapshot AS (
-            INSERT INTO snapshots(for_ref, content, last_updated, heads)
+            INSERT INTO snapshots(for_ref, content, created_at, heads)
             VALUES ($1, $2, NOW(), $4)
             RETURNING id
         )
@@ -186,11 +186,11 @@ pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppErr
         SET current_snapshot = (SELECT id FROM snapshot), doc_id = $3
         WHERE id = $1
         ",
-        ref_id,
-        doc_content,
-        cloned_handle.document_id().to_string(),
-        &heads,
     )
+    .bind(ref_id)
+    .bind(doc_content)
+    .bind(cloned_handle.document_id().to_string())
+    .bind(&heads)
     .execute(&state.db)
     .await?;
 
