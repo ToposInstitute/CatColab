@@ -254,7 +254,7 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
             ) AS "permissions!: sqlx::types::Json<Vec<PermissionInfo>>"
         FROM filtered_ids
         JOIN refs ON refs.id = filtered_ids.id
-        JOIN snapshots ON snapshots.id = refs.head
+        JOIN snapshots ON snapshots.id = refs.current_snapshot
         ORDER BY refs.created DESC;
         "#,
         user_id,

@@ -1,7 +1,8 @@
 //! Procedures to create and manipulate documents.
 
 use crate::app::{AppCtx, AppError, AppState};
-use crate::automerge_json::{ensure_autosave_listener, populate_automerge_from_json};
+use crate::autosave::ensure_autosave_listener;
+use notebook_types::automerge_json::populate_automerge_from_json;
 use crate::user_state_updates::{update_ref_for_users, update_user_state};
 use chrono::{DateTime, Utc};
 use samod::DocumentId;
@@ -41,6 +42,8 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
     let doc_handle = ctx.state.repo.create(automerge_doc).await?;
 
     let doc_id = doc_handle.document_id().to_string();
+    let heads: Vec<Vec<u8>> =
+        doc_handle.with_document(|doc| doc.get_heads().iter().map(|h| h.0.to_vec()).collect());
 
     // If the automerge-repo document is created but the db transaction doesn't complete, then the
     // document will be orphaned. The only negative consequence of that is additional space used, but
@@ -52,18 +55,19 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
     sqlx::query!(
         "
         WITH snapshot AS (
-            INSERT INTO snapshots(for_ref, content, last_updated, doc_id)
-            VALUES ($1, $2, NOW(), $3)
+            INSERT INTO snapshots(for_ref, content, last_updated, heads)
+            VALUES ($1, $2, NOW(), $4)
             RETURNING id
         )
-        INSERT INTO refs(id, head, created)
-        VALUES ($1, (SELECT id FROM snapshot), NOW())
+        INSERT INTO refs(id, current_snapshot, created, doc_id)
+        VALUES ($1, (SELECT id FROM snapshot), NOW(), $3)
         ",
         ref_id,
         // Use the JSON provided by automerge as the authoritative content
         // serde_json::to_value(doc_content),
         content,
         doc_id,
+        &heads,
     )
     .execute(&mut *txn)
     .await?;
@@ -99,7 +103,7 @@ pub async fn head_snapshot(state: AppState, ref_id: Uuid) -> Result<Value, AppEr
     let query = sqlx::query!(
         "
         SELECT content FROM snapshots
-        WHERE id = (SELECT head FROM refs WHERE id = $1)
+        WHERE id = (SELECT current_snapshot FROM refs WHERE id = $1)
         ",
         ref_id
     );
@@ -143,15 +147,16 @@ pub async fn ref_deleted_at(
 /// Saves the document by overwriting the snapshot at the current head,
 /// then updates user state for all affected users.
 pub async fn autosave(state: AppState, data: RefContent) -> Result<(), AppError> {
-    let RefContent { ref_id, content } = data;
+    let RefContent { ref_id, content, heads } = data;
     sqlx::query!(
         "
         UPDATE snapshots
-        SET content = $2, last_updated = NOW()
-        WHERE id = (SELECT head FROM refs WHERE id = $1)
+        SET content = $2, last_updated = NOW(), heads = $3
+        WHERE id = (SELECT current_snapshot FROM refs WHERE id = $1)
         ",
         ref_id,
-        content
+        content,
+        &heads,
     )
     .execute(&state.db)
     .await?;
@@ -175,7 +180,10 @@ pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppErr
         .await?
         .ok_or_else(|| AppError::Invalid("Document not found".to_string()))?;
 
-    let cloned_doc = doc_handle.with_document(|doc| doc.clone());
+    let (cloned_doc, heads) = doc_handle.with_document(|doc| {
+        let heads: Vec<Vec<u8>> = doc.get_heads().iter().map(|h| h.0.to_vec()).collect();
+        (doc.clone(), heads)
+    });
     let cloned_handle = state.repo.create(cloned_doc).await?;
 
     let doc_content = head_snapshot(state.clone(), ref_id).await?;
@@ -183,17 +191,18 @@ pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppErr
     sqlx::query!(
         "
         WITH snapshot AS (
-            INSERT INTO snapshots(for_ref, content, last_updated, doc_id)
-            VALUES ($1, $2, NOW(), $3)
+            INSERT INTO snapshots(for_ref, content, last_updated, heads)
+            VALUES ($1, $2, NOW(), $4)
             RETURNING id
         )
         UPDATE refs
-        SET head = (SELECT id FROM snapshot)
+        SET current_snapshot = (SELECT id FROM snapshot), doc_id = $3
         WHERE id = $1
         ",
         ref_id,
         doc_content,
         cloned_handle.document_id().to_string(),
+        &heads,
     )
     .execute(&state.db)
     .await?;
@@ -245,8 +254,7 @@ pub async fn restore_ref(state: AppState, ref_id: Uuid) -> Result<(), AppError> 
 pub async fn get_doc_id(state: AppState, ref_id: Uuid) -> Result<DocumentId, AppError> {
     let query = sqlx::query!(
         "
-        SELECT doc_id FROM snapshots
-        WHERE id = (SELECT head FROM refs WHERE id = $1)
+        SELECT doc_id FROM refs WHERE id = $1
         ",
         ref_id
     );
@@ -276,4 +284,7 @@ pub struct RefContent {
     pub ref_id: Uuid,
     /// The JSON content of the document.
     pub content: Value,
+    /// Automerge heads (raw change hash bytes) at the time of this snapshot.
+    #[serde(skip)]
+    pub heads: Vec<Vec<u8>>,
 }

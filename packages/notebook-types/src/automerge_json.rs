@@ -1,13 +1,8 @@
 //! Utilities for converting between JSON values and Automerge documents.
 
-use crate::app::AppState;
-use crate::document::{RefContent, autosave};
 use automerge::hydrate;
 use automerge::transaction::Transactable;
-use futures_util::stream::StreamExt;
-use samod::DocHandle;
 use serde_json::Value;
-use uuid::Uuid;
 
 /// Insert a JSON value into a map property.
 fn insert_value_into_map<'a>(
@@ -164,39 +159,4 @@ fn scalar_to_json(s: &automerge::ScalarValue) -> Value {
             ),
         ])),
     }
-}
-
-/// Spawns a background task that listens for document changes and triggers autosave.
-pub async fn ensure_autosave_listener(state: AppState, ref_id: Uuid, doc_handle: DocHandle) {
-    let listeners = state.active_listeners.read().await;
-    if listeners.contains(&ref_id) {
-        return;
-    }
-
-    // Explicitly drop the read lock before acquiring write lock
-    drop(listeners);
-
-    let mut listeners = state.active_listeners.write().await;
-    listeners.insert(ref_id);
-
-    tokio::spawn({
-        let state = state.clone();
-        async move {
-            let mut changes = doc_handle.changes();
-
-            while (changes.next().await).is_some() {
-                let cloned_doc = doc_handle.with_document(|doc| doc.clone());
-                let hydrated = cloned_doc.hydrate(None);
-                let content = hydrate_to_json(&hydrated);
-
-                let data = RefContent { ref_id, content };
-                if let Err(e) = autosave(state.clone(), data).await {
-                    tracing::error!("Autosave failed for ref {}: {:?}", ref_id, e);
-                }
-            }
-
-            state.active_listeners.write().await.remove(&ref_id);
-            tracing::error!("Autosave listener stopped for ref {}", ref_id);
-        }
-    });
 }
