@@ -28,6 +28,7 @@ impl Migration<Postgres> for UndoRedoSnapshots {
         vec_box![
             MoveDocIdToRefs,
             AddHeadsToSnapshots,
+            RenameSnapshotTimestamp,
             PopulateHeads,
             DropDocIdFromSnapshots,
             RenameHeadAndDropGetRefStubs
@@ -85,6 +86,26 @@ impl Operation<Postgres> for AddHeadsToSnapshots {
 
     async fn down(&self, conn: &mut PgConnection) -> Result<(), Error> {
         sqlx::query("ALTER TABLE snapshots DROP COLUMN IF EXISTS heads")
+            .execute(conn)
+            .await?;
+        Ok(())
+    }
+}
+
+/// Step 2.5: Rename `snapshots.last_updated` to `snapshots.created_at`.
+struct RenameSnapshotTimestamp;
+
+#[async_trait::async_trait]
+impl Operation<Postgres> for RenameSnapshotTimestamp {
+    async fn up(&self, conn: &mut PgConnection) -> Result<(), Error> {
+        sqlx::query("ALTER TABLE snapshots RENAME COLUMN last_updated TO created_at")
+            .execute(conn)
+            .await?;
+        Ok(())
+    }
+
+    async fn down(&self, conn: &mut PgConnection) -> Result<(), Error> {
+        sqlx::query("ALTER TABLE snapshots RENAME COLUMN created_at TO last_updated")
             .execute(conn)
             .await?;
         Ok(())

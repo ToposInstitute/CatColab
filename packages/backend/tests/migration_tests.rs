@@ -175,6 +175,32 @@ mod integration_tests {
         assert_eq!(count, 0);
     }
 
+    #[sqlx::test]
+    async fn test_migration_renames_last_updated_to_created_at(pool: PgPool) {
+        run_migrations(&pool).await;
+
+        let created_at_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*)
+             FROM information_schema.columns
+             WHERE table_name = 'snapshots' AND column_name = 'created_at'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+
+        let last_updated_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*)
+             FROM information_schema.columns
+             WHERE table_name = 'snapshots' AND column_name = 'last_updated'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+
+        assert_eq!(created_at_count, 1, "created_at should exist after migration");
+        assert_eq!(last_updated_count, 0, "last_updated should not exist after migration");
+    }
+
     // ── Data migration tests ──
 
     #[sqlx::test]
@@ -345,6 +371,25 @@ mod integration_tests {
         .await
         .unwrap();
         assert_eq!(count, 1, "doc_id should be restored on snapshots");
+
+        // created_at should be reverted back to last_updated.
+        let created_at_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM information_schema.columns
+             WHERE table_name = 'snapshots' AND column_name = 'created_at'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(created_at_count, 0, "created_at should be gone after rollback");
+
+        let last_updated_count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM information_schema.columns
+             WHERE table_name = 'snapshots' AND column_name = 'last_updated'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(last_updated_count, 1, "last_updated should be restored after rollback");
 
         // doc_id on snapshots should be repopulated and non-empty.
         let snapshot_doc_id: String = sqlx::query_scalar(
