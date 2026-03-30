@@ -6,6 +6,9 @@ use wasm_bindgen::prelude::*;
 mod v0;
 pub mod v1;
 
+#[cfg(feature = "backend")]
+pub mod automerge_json;
+
 #[cfg(test)]
 mod test_utils;
 
