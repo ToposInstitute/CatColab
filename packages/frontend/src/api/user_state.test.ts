@@ -253,4 +253,70 @@ describe("User state Automerge document", async () => {
         assert(updatedDoc, "Document should still exist");
         assert.strictEqual(updatedDoc.name, newName, "Name should be updated");
     });
+
+    test("should switch current snapshot via set_current_snapshot", async () => {
+        await signInWithEmailAndPassword(auth, email, password);
+
+        const name = `Test Snapshot Switch - ${v4()}`;
+        const refId = await createDoc(name);
+        await waitFor(
+            () => findDoc(refId) !== undefined,
+            `Document ${refId} should exist in user state`,
+        );
+
+        const initialDoc = findDoc(refId);
+        assert(initialDoc, "Document should exist");
+        assert.strictEqual(initialDoc.snapshots.length, 1, "Should start with one snapshot");
+        const originalSnapshotId = initialDoc.snapshots[0]!.id;
+        assert.strictEqual(
+            initialDoc.currentSnapshot,
+            originalSnapshotId,
+            "currentSnapshot should equal the first snapshot id",
+        );
+
+        const refDoc = unwrap(await rpc.get_doc.query(refId));
+        assert(refDoc.tag === "Live", "Document should be live");
+        assert(isValidDocumentId(refDoc.docId));
+
+        const liveDocHandle: DocHandle<{ name: string }> = await repo.find(refDoc.docId);
+        await liveDocHandle.whenReady();
+
+        const newName = `Snapshot V2 - ${v4()}`;
+        liveDocHandle.change((doc) => {
+            doc.name = newName;
+        });
+
+        await waitFor(() => {
+            const doc = findDoc(refId);
+            return doc !== undefined && doc.snapshots.length >= 2;
+        }, `Document ${refId} should have a second snapshot after autosave`);
+
+        const afterAutosave = findDoc(refId);
+        assert(afterAutosave, "Document should exist after autosave");
+        assert(
+            afterAutosave.currentSnapshot !== originalSnapshotId,
+            "currentSnapshot should have changed after autosave",
+        );
+        assert.strictEqual(afterAutosave.snapshots.length, 2, "Should have two snapshots");
+
+        unwrap(await rpc.set_current_snapshot.mutate(refId, originalSnapshotId));
+
+        await waitFor(() => {
+            const doc = findDoc(refId);
+            return doc !== undefined && doc.currentSnapshot === originalSnapshotId;
+        }, `Document ${refId} should revert currentSnapshot to the original`);
+
+        const reverted = findDoc(refId);
+        assert(reverted, "Document should still exist after revert");
+        assert.strictEqual(
+            reverted.currentSnapshot,
+            originalSnapshotId,
+            "currentSnapshot should be back to the original",
+        );
+        assert.strictEqual(
+            reverted.snapshots.length,
+            2,
+            "Both snapshots should still be present",
+        );
+    });
 });
