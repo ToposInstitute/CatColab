@@ -201,6 +201,37 @@ pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppErr
     Ok(())
 }
 
+/// Sets the current snapshot for a ref.
+///
+/// The snapshot must belong to the given ref. The live Automerge document is
+/// unchanged since it retains the full history; only the database pointer
+/// is updated.
+pub async fn set_current_snapshot(
+    state: AppState,
+    ref_id: Uuid,
+    snapshot_id: i32,
+) -> Result<(), AppError> {
+    let rows_affected = sqlx::query!(
+        "UPDATE refs SET current_snapshot = $2 WHERE id = $1
+         AND EXISTS (SELECT 1 FROM snapshots WHERE id = $2 AND for_ref = $1)",
+        ref_id,
+        snapshot_id,
+    )
+    .execute(&state.db)
+    .await?
+    .rows_affected();
+
+    if rows_affected == 0 {
+        return Err(AppError::Invalid("Snapshot not found for this ref".to_string()));
+    }
+
+    if let Err(e) = update_ref_for_users(&state, ref_id, vec![]).await {
+        tracing::error!(%ref_id, error = %e, "Failed to update user states after set_current_snapshot");
+    }
+
+    Ok(())
+}
+
 /// Soft-deletes a document reference by setting `deleted_at`.
 pub async fn delete_ref(state: AppState, ref_id: Uuid) -> Result<(), AppError> {
     sqlx::query!(
