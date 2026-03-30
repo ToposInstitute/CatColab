@@ -4,69 +4,24 @@
 //! RPC-level user state update path (document CRUD, permission changes,
 //! profile updates → Automerge user state doc).
 #[cfg(feature = "integration-tests")]
+mod common;
+
+#[cfg(feature = "integration-tests")]
 mod integration_tests {
-
-    use backend::app::AppError;
+    use crate::common::test_utils::{
+        create_test_app_state, create_test_document_content, create_test_firebase_user,
+        ensure_user_exists, run_migrations,
+    };
     use sqlx::PgPool;
-    use sqlx_migrator::migrator::{Migrate, Migrator};
-    use sqlx_migrator::{Info, Plan};
     use uuid::Uuid;
-
-    /// Run migrations on a test database pool.
-    async fn run_migrations(pool: &PgPool) -> Result<(), sqlx::Error> {
-        let mut conn = pool.acquire().await?;
-        let mut migrator = Migrator::<sqlx::Postgres>::default();
-        migrator
-            .add_migrations(migrator::migrations())
-            .expect("Failed to load migrations");
-
-        let plan = Plan::apply_all();
-        migrator.run(&mut *conn, &plan).await.expect("Failed to run migrations");
-        Ok(())
-    }
-
-    pub async fn ensure_user_exists(pool: &PgPool, user_id: &str) -> Result<(), AppError> {
-        sqlx::query!(
-            r#"
-            INSERT INTO users (id, created, signed_in)
-            VALUES ($1, NOW(), NOW())
-            ON CONFLICT (id) DO NOTHING
-            "#,
-            user_id
-        )
-        .execute(pool)
-        .await?;
-        Ok(())
-    }
 
     use autosurgeon::hydrate;
     use backend::app::{AppCtx, AppState};
     use backend::auth::{NewPermissions, PermissionLevel};
     use backend::document;
     use backend::user_state::{DocumentType, UserState};
-    use firebase_auth::FirebaseUser;
     use serde_json::json;
-    use std::collections::{HashMap, HashSet};
-    use std::sync::Arc;
-    use tokio::sync::RwLock;
-
-    async fn create_test_app_state(pool: PgPool) -> AppState {
-        let storage = backend::storage::PostgresStorage::new(pool.clone());
-        let repo = samod::Repo::builder(tokio::runtime::Handle::current())
-            .with_storage(storage)
-            .with_announce_policy(|_doc_id, _peer_id| false)
-            .load()
-            .await;
-
-        AppState {
-            db: pool,
-            repo,
-            active_listeners: Arc::new(RwLock::new(HashSet::new())),
-            initialized_user_states: Arc::new(RwLock::new(HashMap::new())),
-            http_client: reqwest::Client::new(),
-            julia_url: None,
-        }
-    }
+    use std::collections::HashMap;
 
     /// Helper to read user state from samod using the stored document ID.
     async fn read_user_state_from_samod(state: &AppState, user_id: &str) -> Option<UserState> {
@@ -79,27 +34,6 @@ mod integration_tests {
         };
 
         doc_handle.with_document(|doc| hydrate(doc)).ok()
-    }
-
-    fn create_test_firebase_user(user_id: &str) -> FirebaseUser {
-        serde_json::from_value(json!({
-            "iss": "test",
-            "aud": "test",
-            "sub": user_id,
-            "iat": 0,
-            "exp": u64::MAX,
-            "auth_time": 0,
-            "user_id": user_id,
-            "firebase": {
-                "sign_in_provider": "test",
-                "identities": {}
-            }
-        }))
-        .expect("Failed to create test FirebaseUser")
-    }
-
-    fn create_test_document_content(name: &str) -> serde_json::Value {
-        create_model_document_content(name, "test-theory")
     }
 
     fn create_model_document_content(name: &str, theory: &str) -> serde_json::Value {
