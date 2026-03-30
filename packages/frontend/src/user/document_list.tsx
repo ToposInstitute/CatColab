@@ -5,9 +5,8 @@ import { useFirebaseApp } from "solid-firebase";
 import { createMemo, createSignal, For, type JSX, Show, useContext } from "solid-js";
 import { stringify as uuidStringify } from "uuid";
 
-import { DocumentTypeIcon } from "catcolab-ui-components";
+import { createVirtualList, DocumentTypeIcon } from "catcolab-ui-components";
 import { TheoryLibraryContext } from "../theory";
-import { createVirtualList } from "../util/virtual_list";
 import { currentUserPermission, formatOwners, useUserState } from "./user_state_context";
 
 import "./documents.css";
