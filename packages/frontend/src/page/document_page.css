@@ -18,6 +18,25 @@
     }
 }
 
+.document-pane-layout {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    min-height: 0;
+}
+
+.document-pane-content {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+}
+
+.history-sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    border-left: 1px solid var(--color-gray-400);
+}
+
 .resizeable-panels {
     flex: 1;
     overflow-y: hidden;
