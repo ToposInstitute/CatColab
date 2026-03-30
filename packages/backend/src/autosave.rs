@@ -1,11 +1,14 @@
 //! Autosave listener that persists Automerge document changes to the database.
 
+use std::time::Duration;
+
 use crate::app::AppState;
-use crate::document::{RefContent, autosave};
+use crate::document::create_snapshot;
 use futures_util::stream::StreamExt;
-use notebook_types::automerge_json::hydrate_to_json;
 use samod::DocHandle;
 use uuid::Uuid;
+
+const SNAPSHOT_DEBOUNCE_MS: u64 = 500;
 
 /// Spawns a background task that listens for document changes and triggers autosave.
 pub async fn ensure_autosave_listener(state: AppState, ref_id: Uuid, doc_handle: DocHandle) {
@@ -24,19 +27,21 @@ pub async fn ensure_autosave_listener(state: AppState, ref_id: Uuid, doc_handle:
         let state = state.clone();
         async move {
             let mut changes = doc_handle.changes();
+            let mut snapshot_handle: Option<tokio::task::JoinHandle<()>> = None;
 
             while (changes.next().await).is_some() {
-                let (hydrated, heads) = doc_handle.with_document(|doc| {
-                    let heads: Vec<Vec<u8>> =
-                        doc.get_heads().iter().map(|h| h.0.to_vec()).collect();
-                    (doc.hydrate(None), heads)
-                });
-                let content = hydrate_to_json(&hydrated);
-
-                let data = RefContent { ref_id, content, heads };
-                if let Err(e) = autosave(state.clone(), data).await {
-                    tracing::error!("Autosave failed for ref {}: {:?}", ref_id, e);
+                if let Some(handle) = snapshot_handle.take() {
+                    handle.abort();
                 }
+                snapshot_handle = Some(tokio::spawn({
+                    let state = state.clone();
+                    async move {
+                        tokio::time::sleep(Duration::from_millis(SNAPSHOT_DEBOUNCE_MS)).await;
+                        if let Err(e) = create_snapshot(state, ref_id).await {
+                            tracing::error!("Snapshot failed for ref {}: {:?}", ref_id, e);
+                        }
+                    }
+                }));
             }
 
             state.active_listeners.write().await.remove(&ref_id);

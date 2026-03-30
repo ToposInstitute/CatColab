@@ -7,6 +7,7 @@ use tracing::debug;
 use uuid::Uuid;
 
 use super::app::{AppCtx, AppError, AppState};
+use super::autosave::ensure_autosave_listener;
 use super::auth::{NewPermissions, PermissionLevel, Permissions};
 use super::user_state::get_or_create_user_state_doc;
 use super::{auth, document as doc, user};
@@ -45,7 +46,14 @@ async fn get_doc(ctx: AppCtx, ref_id: Uuid) -> RpcResult<RefDoc> {
         let is_deleted = deleted_at.is_some();
 
         if max_level >= Some(PermissionLevel::Write) {
-            let doc_id = doc::get_doc_id(ctx.state, ref_id).await?;
+            let doc_id = doc::get_doc_id(ctx.state.clone(), ref_id).await?;
+            let doc_handle = ctx
+                .state
+                .repo
+                .find(doc_id.clone())
+                .await?
+                .ok_or_else(|| AppError::Invalid("Document not found".to_string()))?;
+            ensure_autosave_listener(ctx.state.clone(), ref_id, doc_handle).await;
             Ok(RefDoc::Live {
                 doc_id: doc_id.to_string(),
                 is_deleted,
