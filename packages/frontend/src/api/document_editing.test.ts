@@ -1,3 +1,4 @@
+import { next as Automerge } from "@automerge/automerge";
 import { type DocHandle, isValidDocumentId, Repo } from "@automerge/automerge-repo";
 import { BrowserWebSocketClientAdapter } from "@automerge/automerge-repo-network-websocket";
 import type { DocInfo, UserState } from "catcolab-api/src/user_state";
@@ -640,6 +641,105 @@ describe("Document editing, snapshots, and undo/redo", async () => {
                 2,
                 "Snapshot count should still be 2 — revert must not create a spurious snapshot",
             );
+        },
+    );
+
+    // ---------------------------------------------------------------
+    // Test 12: Rich text marks are preserved through snapshot navigation
+    // ---------------------------------------------------------------
+    test.sequential(
+        "should preserve rich text marks when navigating to a historical snapshot",
+        { timeout: 15000 },
+        async () => {
+            await signInWithEmailAndPassword(auth, email, password);
+
+            const name = `Rich Text Marks - ${v4()}`;
+            const refId = await createDoc(name);
+
+            await waitFor(
+                () => findDoc(refId) !== undefined,
+                `Document ${refId} should appear in user state`,
+            );
+
+            const initialDoc = findDoc(refId);
+            assert(initialDoc);
+
+            const refDoc = unwrap(await rpc.get_doc.query(refId));
+            assert(refDoc.tag === "Live");
+            assert(isValidDocumentId(refDoc.docId));
+            const handle: DocHandle<ModelDocument> = await repo.find(refDoc.docId);
+            await handle.whenReady();
+
+            const cellId = v4();
+
+            handle.change((doc) => {
+                doc.notebook.cellOrder.push(cellId);
+                doc.notebook.cellContents[cellId] = {
+                    tag: "rich-text",
+                    id: cellId,
+                    content: "",
+                } as any;
+                Automerge.splice(
+                    doc,
+                    ["notebook", "cellContents", cellId, "content"],
+                    0,
+                    0,
+                    "Hello bold world",
+                );
+                Automerge.mark(
+                    doc,
+                    ["notebook", "cellContents", cellId, "content"],
+                    { start: 6, end: 10, expand: "after" },
+                    "bold",
+                    true,
+                );
+            });
+
+            const textPath = ["notebook", "cellContents", cellId, "content"] as const;
+            const marksBeforeSnapshot = Automerge.marks(handle.doc(), textPath as any);
+            assert.strictEqual(marksBeforeSnapshot.length, 1, "Should have one bold mark");
+            assert.strictEqual(marksBeforeSnapshot[0]!.name, "bold");
+            assert.strictEqual(marksBeforeSnapshot[0]!.start, 6);
+            assert.strictEqual(marksBeforeSnapshot[0]!.end, 10);
+
+            await waitFor(() => {
+                const doc = findDoc(refId);
+                return doc !== undefined && Object.keys(doc.snapshots).length >= 2;
+            }, "Should have two snapshots after autosave");
+
+            const afterEdit = findDoc(refId);
+            assert(afterEdit);
+            const markedSnapshotId = afterEdit.currentSnapshot;
+
+            handle.change((doc) => {
+                doc.name = `Rich Text Edited - ${v4()}`;
+            });
+
+            await waitFor(() => {
+                const doc = findDoc(refId);
+                return doc !== undefined && Object.keys(doc.snapshots).length >= 3;
+            }, "Should have three snapshots after second edit");
+
+            // Navigate back to the snapshot that had marks.
+            unwrap(await rpc.set_current_snapshot.mutate(refId, markedSnapshotId));
+
+            await waitFor(
+                () => handle.doc().name === name,
+                `Should revert to original name "${name}" but is "${handle.doc().name}"`,
+            );
+
+            // The critical assertion: marks must survive the round-trip through
+            // hydrate_to_json → populate_automerge_from_json.
+            const marksAfterRevert = Automerge.marks(handle.doc(), textPath as any);
+            assert.strictEqual(
+                marksAfterRevert.length,
+                1,
+                `Bold mark should be preserved after snapshot navigation, ` +
+                    `but got ${JSON.stringify(marksAfterRevert)}`,
+            );
+            assert.strictEqual(marksAfterRevert[0]!.name, "bold");
+            assert.strictEqual(marksAfterRevert[0]!.start, 6);
+            assert.strictEqual(marksAfterRevert[0]!.end, 10);
         },
     );
 });
