@@ -192,4 +192,85 @@ function InteractiveStory(props: { initialHead: string }) {
 
 export const Default: Story = {
     render: () => <InteractiveStory initialHead="10" />,
+    tags: ["!autodocs", "!dev"],
+};
+
+// ---------------------------------------------------------------------------
+// Static stories showing how various time ranges render.
+// ---------------------------------------------------------------------------
+
+const MINUTE = 60 * 1000;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+
+function staticItems(offsets: { label: string; ago: number }[]): HistoryItem[] {
+    const now = Date.now();
+    return offsets.map((o, i) => ({
+        id: `${i}`,
+        createdAt: now - o.ago,
+        active: i === 0,
+    }));
+}
+
+function StaticStory(props: { items: HistoryItem[] }) {
+    return (
+        <div
+            style={{
+                display: "flex",
+                "flex-direction": "column",
+                height: "500px",
+                "max-width": "280px",
+                border: "1px solid #ddd",
+                "border-radius": "4px",
+            }}
+        >
+            <HistoryNavigator
+                items={props.items}
+                canUndo={false}
+                canRedo={false}
+                onUndo={() => {}}
+                onRedo={() => {}}
+                onSelect={() => {}}
+            />
+        </div>
+    );
+}
+
+/** Entries spanning minutes, hours, days, months, and previous years. */
+export const MixedTimeRanges: Story = {
+    render: () => (
+        <StaticStory
+            items={staticItems([
+                { label: "just now", ago: 10 * 1000 },
+                { label: "5 min ago", ago: 5 * MINUTE },
+                { label: "30 min ago", ago: 30 * MINUTE },
+                { label: "1 hour 15 min ago", ago: HOUR + 15 * MINUTE },
+                { label: "3 hours ago", ago: 3 * HOUR },
+                { label: "yesterday", ago: DAY + 2 * HOUR },
+                { label: "3 days ago", ago: 3 * DAY },
+                { label: "2 weeks ago", ago: 14 * DAY },
+                { label: "3 months ago", ago: 90 * DAY },
+            ])}
+        />
+    ),
+};
+
+/** Many snapshots in one minute (~90 min ago) to exercise duplicate-minute ~2, ~3 suffixes. */
+export const ManyChangesOneHourThirtyAgo: Story = {
+    render: () => {
+        const now = Date.now();
+        const target = now - (90 * MINUTE + 15 * 1000);
+        const minuteStart = Math.floor(target / 60_000) * 60_000;
+        const n = 10;
+        const items: HistoryItem[] = [];
+        for (let i = 0; i < n; i++) {
+            const offsetInMinute = (n - i) * 5000;
+            items.push({
+                id: String(i),
+                createdAt: minuteStart + offsetInMinute,
+                active: i === 0,
+            });
+        }
+        return <StaticStory items={items} />;
+    },
 };
