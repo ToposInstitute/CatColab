@@ -212,7 +212,11 @@ function staticItems(offsets: { label: string; ago: number }[]): HistoryItem[] {
     }));
 }
 
-function StaticStory(props: { items: HistoryItem[] }) {
+function StaticStory(props: {
+    items: HistoryItem[];
+    undoTooltip?: string;
+    redoTooltip?: string;
+}) {
     return (
         <div
             style={{
@@ -231,6 +235,8 @@ function StaticStory(props: { items: HistoryItem[] }) {
                 onUndo={() => {}}
                 onRedo={() => {}}
                 onSelect={() => {}}
+                undoTooltip={props.undoTooltip}
+                redoTooltip={props.redoTooltip}
             />
         </div>
     );
@@ -251,6 +257,21 @@ export const MixedTimeRanges: Story = {
                 { label: "2 weeks ago", ago: 14 * DAY },
                 { label: "3 months ago", ago: 90 * DAY },
             ])}
+        />
+    ),
+};
+
+/** Custom tooltips showing keyboard shortcuts on the undo/redo buttons. */
+export const WithShortcutTooltips: Story = {
+    render: () => (
+        <StaticStory
+            items={staticItems([
+                { label: "just now", ago: 10 * 1000 },
+                { label: "5 min ago", ago: 5 * MINUTE },
+                { label: "30 min ago", ago: 30 * MINUTE },
+            ])}
+            undoTooltip="Undo (Ctrl+Z)"
+            redoTooltip="Redo (Ctrl+Shift+Z)"
         />
     ),
 };
