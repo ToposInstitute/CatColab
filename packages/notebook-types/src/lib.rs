@@ -9,6 +9,9 @@ pub mod v1;
 #[cfg(feature = "backend")]
 pub mod automerge_json;
 
+#[cfg(feature = "backend")]
+pub mod automerge_util;
+
 #[cfg(test)]
 mod test_utils;
 
