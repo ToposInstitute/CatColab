@@ -19,15 +19,17 @@ export default function createPolynomialODETheory(theoryMeta: TheoryMeta): Theor
             {
                 tag: "MorType",
                 morType: {
-                    tag: "Hom",
-                    content: { tag: "Basic", content: "Object" },
+                    tag: "ModeApp",
+                    content: {
+                        modality: "SymmetricList",
+                        morType: { tag: "Basic", content: "Multihom" },
+                    },
                 },
                 name: "Contribution",
                 description: "Monomial contribution to the system of ODEs",
                 shortcut: ["C"],
             },
         ],
-        modelAnalyses: [
-        ],
+        modelAnalyses: [],
     });
 }
