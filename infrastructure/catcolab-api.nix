@@ -39,6 +39,6 @@ craneLib.mkCargoDerivation {
 
   installPhaseCommand = ''
     mkdir -p $out/src
-    cp packages/backend/pkg/src/index.ts $out/src/index.ts
+    cp -r packages/backend/pkg/src $out/
   '';
 }

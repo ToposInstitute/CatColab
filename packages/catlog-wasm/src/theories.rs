@@ -6,7 +6,7 @@
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 
-use catlog::dbl::theory;
+use catlog::dbl::theory::{self as theory, Unital};
 use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 use catlog::zero::{QualifiedLabel, name};
@@ -370,7 +370,7 @@ impl ThCategorySignedLinks {
 
 /// The theory of strict symmetric monoidal categories.
 #[wasm_bindgen]
-pub struct ThSymMonoidalCategory(Rc<theory::ModalDblTheory>);
+pub struct ThSymMonoidalCategory(Rc<theory::ModalDblTheory<Unital>>);
 
 #[wasm_bindgen]
 impl ThSymMonoidalCategory {

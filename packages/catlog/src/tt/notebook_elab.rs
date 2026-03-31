@@ -14,6 +14,7 @@ use super::{context::*, eval::*, prelude::*, stx::*, theory::*, toplevel::*, val
 use crate::dbl::{
     modal,
     model::{Feature, InvalidDblModel, InvalidModelEqn},
+    theory::Unital,
 };
 use crate::zero::QualifiedName;
 
@@ -46,7 +47,7 @@ impl<'a> Elaborator<'a> {
         }
     }
 
-    fn theory(&self) -> &TheoryDef {
+    fn theory(&self) -> &TheoryDef<Unital> {
         &self.theory.definition
     }
 

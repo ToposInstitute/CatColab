@@ -11,7 +11,7 @@ use sqlx::postgres::PgPoolOptions;
 use sqlx_migrator::cli::MigrationCommand;
 use sqlx_migrator::migrator::{Migrate, Migrator};
 use sqlx_migrator::{Info, Plan};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -20,13 +20,7 @@ use tower_http::cors::CorsLayer;
 use tracing::{error, info};
 use tracing_subscriber::filter::{EnvFilter, LevelFilter};
 
-mod app;
-mod auth;
-mod automerge_json;
-mod document;
-mod rpc;
-mod storage;
-mod user;
+use backend::{app, auth, rpc, storage, user_state};
 
 /// Port for the web server providing the RPC API.
 fn web_port() -> String {
@@ -63,23 +57,27 @@ async fn main() {
 
     if let Some(Command::GenerateBindings) = cli.command {
         use qubit::TypeScript;
+        use ts_rs::TS;
 
-        let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("pkg")
-            .join("src")
-            .join("index.ts");
+        let pkg_src_path =
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("pkg").join("src");
 
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)
-                .expect("Failed to create directory for TypeScript bindings");
-        }
+        std::fs::create_dir_all(&pkg_src_path)
+            .expect("Failed to create directory for TypeScript bindings");
+
+        let index_path = pkg_src_path.join("index.ts");
 
         rpc::router()
             .as_codegen()
-            .write_type(&path, TypeScript::new())
+            .write_type(&index_path, TypeScript::new())
             .expect("Failed to write TypeScript bindings");
 
-        info!("Successfully generated TypeScript bindings to: {}", path.display());
+        info!("Successfully generated qubit TypeScript bindings to: {}", index_path.display());
+
+        user_state::UserState::export_all_to(&pkg_src_path)
+            .expect("Failed to export ts-rs bindings");
+        info!("Successfully exported ts-rs TypeScript bindings to: {}", pkg_src_path.display());
+
         return;
     }
 
@@ -119,6 +117,11 @@ async fn main() {
                 .load()
                 .await;
 
+            let port = web_port();
+            let ws_listener_url = samod::Url::parse(&format!("ws://0.0.0.0:{port}/repo-ws"))
+                .expect("valid WebSocket listener URL for samod");
+            let repo_acceptor = repo.make_acceptor(ws_listener_url).expect("samod make_acceptor");
+
             let http_client = reqwest::Client::builder()
                 .timeout(std::time::Duration::from_secs(120))
                 .build()
@@ -134,6 +137,7 @@ async fn main() {
                 db: db.clone(),
                 repo,
                 active_listeners: Arc::new(RwLock::new(HashSet::new())),
+                initialized_user_states: Arc::new(RwLock::new(HashMap::new())),
                 http_client,
                 julia_url,
             };
@@ -153,7 +157,9 @@ async fn main() {
             // Notify systemd we're ready
             sd_notify::notify(false, &[sd_notify::NotifyState::Ready]).ok();
 
-            run_web_server(state.clone(), firebase_auth.clone()).await.unwrap();
+            run_web_server(state.clone(), repo_acceptor, firebase_auth.clone())
+                .await
+                .unwrap();
         }
     }
 }
@@ -182,10 +188,10 @@ async fn status_handler() -> &'static str {
 
 async fn websocket_handler(
     ws: WebSocketUpgrade,
-    State(repo): State<samod::Repo>,
+    State(acceptor): State<samod::AcceptorHandle>,
 ) -> axum::response::Response {
     ws.on_upgrade(|socket| async move {
-        repo.accept_axum(socket).expect("Failed to accept WebSocket connection");
+        acceptor.accept_axum(socket).expect("Failed to accept WebSocket connection");
     })
 }
 
@@ -264,6 +270,7 @@ use tower_http::services::{ServeDir, ServeFile};
 
 async fn run_web_server(
     state: app::AppState,
+    repo_acceptor: samod::AcceptorHandle,
     firebase_auth: Arc<FirebaseAuth>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let port = web_port();
@@ -279,7 +286,7 @@ async fn run_web_server(
     let samod_router = Router::new()
         .layer(from_fn_with_state(firebase_auth.clone(), auth_middleware))
         .route("/repo-ws", get(websocket_handler))
-        .with_state(state.repo.clone());
+        .with_state(repo_acceptor);
 
     let julia_router = Router::new()
         .route("/julia/{*path}", axum::routing::post(julia_proxy_handler))

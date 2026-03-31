@@ -195,6 +195,21 @@ where
     }
 }
 
+impl<Exp> Display for NumericalPolynomialSystem<Exp>
+where
+    Exp: Clone + Ord + Add<Output = Exp> + One + Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let var_name = |i: usize| format!("x{i}");
+        for (var, component) in self.components.iter().enumerate() {
+            let var = var_name(var);
+            let component = component.map_variables(|i| var_name(*i));
+            writeln!(f, "d{var} = {component}")?;
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use expect_test::expect;

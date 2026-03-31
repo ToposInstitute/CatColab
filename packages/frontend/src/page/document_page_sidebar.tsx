@@ -1,16 +1,13 @@
 import { useNavigate } from "@solidjs/router";
 import { createMemo, createResource, For, Show, useContext } from "solid-js";
-import invariant from "tiny-invariant";
+import { stringify as uuidStringify } from "uuid";
 
 import { DocumentTypeIcon } from "catcolab-ui-components";
 import type { Document, Link } from "catlog-wasm";
 import { type Api, type LiveDocWithRef, useApi } from "../api";
 import { TheoryLibraryContext } from "../theory";
+import { useUserState } from "../user/user_state_context";
 import { DocumentMenu } from "./document_menu";
-
-function isDocOwnerless(doc: LiveDocWithRef) {
-    return doc.docRef.permissions.anyone === "Own";
-}
 
 export function DocumentSidebar(props: {
     primaryDoc?: LiveDocWithRef;
@@ -99,65 +96,61 @@ function DocumentsTreeNode(props: {
     refetchSecondaryDoc: () => void;
 }) {
     const api = useApi();
+    const userState = useUserState();
 
-    const [childDocs, { refetch }] = createResource(
-        () => props.doc,
-        // oxlint-disable-next-line solid/reactivity -- createResource fetcher
-        async (doc) => {
-            const docRefId = doc.docRef.refId;
-            invariant(docRefId, "Doc must have a valid ref");
+    const childRefIds = createMemo(() => {
+        const docRefId = props.doc.docRef.refId;
+        if (!docRefId) {
+            return [];
+        }
+        const docInfo = userState.documents[docRefId];
+        if (!docInfo) {
+            return [];
+        }
+        return docInfo.usedBy
+            .filter(
+                (rel) => rel.relationType === "diagram-in" || rel.relationType === "analysis-of",
+            )
+            .map((rel) => uuidStringify(rel.refId));
+    });
 
-            const results = await api.rpc.get_ref_children_stubs.query(docRefId);
+    // oxlint-disable-next-line solid/reactivity -- createResource fetcher
+    const [childDocs] = createResource(childRefIds, async (refIds) => {
+        // Individual failures are skipped to prevent one corrupt document
+        // from crashing the entire sidebar.
+        const childDocs = await Promise.all(
+            refIds.map(async (refId) => {
+                try {
+                    return await api.getLiveDoc(refId);
+                } catch (e) {
+                    console.warn(`Failed to load document ${refId}:`, e);
+                    return null;
+                }
+            }),
+        );
+        const loadedChildDocs = childDocs.filter(
+            (doc): doc is NonNullable<typeof doc> => doc !== null,
+        );
 
-            if (results.tag !== "Ok") {
-                throw new Error("couldn't load child documents!");
-            }
+        const isParentOwnerless = props.doc.docRef.permissions.anyone === "Own";
 
-            // Pre-filter: resolve doc refs to check deleted status before
-            // loading full documents. Individual failures are skipped to
-            // prevent one corrupt document from crashing the entire sidebar.
-            const docRefs = await Promise.all(
-                results.content.map(async (childStub) => {
-                    try {
-                        return {
-                            stub: childStub,
-                            ref: await api.getDocRef(childStub.refId),
-                        };
-                    } catch (e) {
-                        console.warn(`Failed to load doc ref ${childStub.refId}:`, e);
-                        return null;
-                    }
-                }),
-            );
-            const nonDeletedStubs = docRefs
-                .filter(
-                    (entry): entry is NonNullable<typeof entry> =>
-                        entry !== null && !entry.ref.isDeleted,
-                )
-                .map(({ stub }) => stub);
+        // Don't show ownerless children or deleted documents
+        const filtered = loadedChildDocs.filter(
+            (childDoc) =>
+                !childDoc.docRef.isDeleted &&
+                (isParentOwnerless || childDoc.docRef.permissions.anyone !== "Own"),
+        );
 
-            const childDocs = await Promise.all(
-                nonDeletedStubs.map(async (childStub) => {
-                    try {
-                        return await api.getLiveDoc(childStub.refId);
-                    } catch (e) {
-                        console.warn(`Failed to load document ${childStub.refId}:`, e);
-                        return null;
-                    }
-                }),
-            );
-            const loadedChildDocs = childDocs.filter(
-                (doc): doc is NonNullable<typeof doc> => doc !== null,
-            );
+        // Sort by createdAt descending (newest first)
+        const docs = userState.documents;
+        filtered.sort((a, b) => {
+            const aInfo = a.docRef.refId ? docs[a.docRef.refId] : undefined;
+            const bInfo = b.docRef.refId ? docs[b.docRef.refId] : undefined;
+            return (bInfo?.createdAt ?? 0) - (aInfo?.createdAt ?? 0);
+        });
 
-            const isParentOwnerless = isDocOwnerless(props.doc);
-
-            // Don't show ownerless children
-            return loadedChildDocs.filter(
-                (childDoc) => isParentOwnerless || !isDocOwnerless(childDoc),
-            );
-        },
-    );
+        return filtered;
+    });
 
     return (
         <>
@@ -166,7 +159,6 @@ function DocumentsTreeNode(props: {
                 indent={props.indent}
                 primaryDoc={props.primaryDoc}
                 secondaryDoc={props.secondaryDoc}
-                refetchDoc={refetch}
                 refetchPrimaryDoc={props.refetchPrimaryDoc}
                 refetchSecondaryDoc={props.refetchSecondaryDoc}
             />
@@ -191,7 +183,6 @@ function DocumentsTreeLeaf(props: {
     indent: number;
     primaryDoc: LiveDocWithRef;
     secondaryDoc?: LiveDocWithRef;
-    refetchDoc: () => void;
     refetchPrimaryDoc: () => void;
     refetchSecondaryDoc: () => void;
 }) {
@@ -258,29 +249,27 @@ function DocumentsTreeLeaf(props: {
                     liveDoc={props.doc.liveDoc}
                     docRef={props.doc.docRef}
                     onDocCreated={(docType, refId) => {
-                        props.refetchDoc();
                         navigate(`/${createLinkPart(props.doc)}/${docType}/${refId}`);
                     }}
-                    // oxlint-disable-next-line solid/reactivity -- event handler prop
-                    onDocDeleted={async () => {
+                    onDocDeleted={() => {
                         const deletedRefId = props.doc.docRef.refId;
                         const isPrimaryDeleted = deletedRefId === primaryRefId();
                         const isSecondaryDeleted = deletedRefId === secondaryRefId();
+                        const doc = props.doc;
 
-                        props.refetchDoc();
                         props.refetchPrimaryDoc();
                         props.refetchSecondaryDoc();
 
                         // Navigate away if the deleted document is currently being viewed
                         if (isPrimaryDeleted || isSecondaryDeleted) {
-                            const parentDoc = await getDocParent(props.doc.liveDoc.doc, api);
-
-                            if (!parentDoc) {
-                                // This is a root document: navigate to documents list
-                                navigate("/documents");
-                            } else {
-                                navigate(`/${createLinkPart(parentDoc)}`);
-                            }
+                            void getDocParent(doc.liveDoc.doc, api).then((parentDoc) => {
+                                if (!parentDoc) {
+                                    // This is a root document: navigate to documents list
+                                    navigate("/documents");
+                                } else {
+                                    navigate(`/${createLinkPart(parentDoc)}`);
+                                }
+                            });
                         }
                     }}
                 />

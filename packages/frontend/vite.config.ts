@@ -4,9 +4,9 @@ import { fileURLToPath } from "node:url";
 import mdx from "@mdx-js/rollup";
 import rehypeKatex from "rehype-katex";
 import remarkMath from "remark-math";
-import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
 import wasm from "vite-plugin-wasm";
+import { defineConfig } from "vitest/config";
 
 // __dirname is not available in ES modules. The test:ci script uses --configLoader=runner
 // (required for readonly (Nix) environments), which runs Vite in ESM mode.
@@ -32,6 +32,11 @@ export default defineConfig({
     },
     resolve: {
         dedupe: getCommonDependencies(),
+    },
+    test: {
+        // Run test files sequentially to prevent cross-test contamination via
+        // the server's shared user state.
+        fileParallelism: false,
     },
     server: {
         proxy: {

@@ -11,7 +11,7 @@ use wasm_bindgen::prelude::*;
 
 use catlog::dbl::theory::{
     self, DblTheory as _, ModalMorType, ModalObOp, ModalObType, ModeApp, TabMorType, TabObOp,
-    TabObType,
+    TabObType, Unital,
 };
 use catlog::one::{Path, QualifiedPath, ShortPath};
 use catlog::tt::{
@@ -231,7 +231,7 @@ pub enum DblTheoryBox {
     /// A discrete tabulator theory.
     DiscreteTab(Rc<theory::DiscreteTabTheory>),
     /// A modal double theory.
-    Modal(Rc<theory::ModalDblTheory>),
+    Modal(Rc<theory::ModalDblTheory<Unital>>),
 }
 
 /// Wasm binding for a double theory.
@@ -245,7 +245,7 @@ impl DblTheory {
     }
 
     /// Tries to convert into a theory usable by DoubleTT.
-    pub fn try_into_tt(&self) -> Option<tt::theory::TheoryDef> {
+    pub fn try_into_tt(&self) -> Option<tt::theory::TheoryDef<Unital>> {
         match &self.0 {
             DblTheoryBox::Discrete(th) => Some(tt::theory::TheoryDef::Discrete(th.clone())),
             DblTheoryBox::Modal(th) => Some(tt::theory::TheoryDef::Modal(th.clone())),

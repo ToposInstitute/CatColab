@@ -10,7 +10,7 @@ use super::{
     context::*, eval::*, modelgen::*, prelude::*, stx::*, theory::*, toplevel::*, val::*, wd::*,
 };
 use crate::{
-    dbl::model::DblModelPrinter,
+    dbl::{model::DblModelPrinter, theory::Unital},
     zero::{QualifiedName, name},
 };
 
@@ -267,7 +267,7 @@ impl<'a> Elaborator<'a> {
         }
     }
 
-    fn theory(&self) -> &TheoryDef {
+    fn theory(&self) -> &TheoryDef<Unital> {
         &self.theory.definition
     }
 
@@ -764,7 +764,7 @@ mod tests {
     use std::rc::Rc;
 
     use crate::stdlib;
-    use crate::tt::{modelgen::Model, theory::TheoryDef};
+    use crate::tt::modelgen::Model;
 
     #[test]
     fn generate_model_from_text() {
@@ -783,7 +783,7 @@ mod tests {
     /// Check that a commutative square really produces a model with exactly one equation.
     #[test]
     fn generate_model_with_eqn() {
-        let th: TheoryDef = Rc::new(stdlib::th_schema()).into();
+        let th = Rc::new(stdlib::th_schema()).into();
         let source = "[
             NW : Entity,
             NE : Entity,
@@ -803,7 +803,7 @@ mod tests {
     /// Check error reporting when parsing a model from text.
     #[test]
     fn test_error_object_type() {
-        let th: TheoryDef = Rc::new(stdlib::th_schema()).into();
+        let th = Rc::new(stdlib::th_schema()).into();
 
         let result = Model::from_text(&th, "[ : Entit]");
         assert!(result.is_err_and(|msgs| !msgs.is_empty()));

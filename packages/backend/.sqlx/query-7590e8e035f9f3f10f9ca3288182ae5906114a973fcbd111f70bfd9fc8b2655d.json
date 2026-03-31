@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        WITH\n            filtered_ids AS (\n                SELECT refs.id\n                FROM refs\n                WHERE\n                    -- filter by minimum permission level (read)\n                    get_max_permission($1, refs.id) >= 'read'::permission_level\n                    -- exclude public-only documents (user must have explicit permission)\n                    AND EXISTS (\n                        SELECT 1\n                        FROM permissions p_searcher\n                        WHERE\n                            p_searcher.object = refs.id\n                            AND p_searcher.subject = $1\n                    )\n            )\n        SELECT\n            refs.id AS \"ref_id!\",\n            snapshots.content->>'name' AS name,\n            snapshots.content->>'type' AS type_name,\n            snapshots.content->>'theory' AS theory,\n            refs.created AS \"created_at!\",\n            refs.deleted_at,\n            snapshots.content AS \"content!\",\n            COALESCE(\n                (SELECT json_agg(json_build_object(\n                    'user', p.subject,\n                    'level', INITCAP(p.level::text)\n                ) ORDER BY p.level DESC)\n                FROM permissions p\n                WHERE p.object = refs.id\n                ), '[]'::json\n            ) AS \"permissions!: sqlx::types::Json<Vec<PermissionInfo>>\"\n        FROM filtered_ids\n        JOIN refs ON refs.id = filtered_ids.id\n        JOIN snapshots ON snapshots.id = refs.head\n        ORDER BY refs.created DESC;\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "ref_id!",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "type_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "theory",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "created_at!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "deleted_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 6,
+        "name": "content!",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 7,
+        "name": "permissions!: sqlx::types::Json<Vec<PermissionInfo>>",
+        "type_info": "Json"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null,
+      null,
+      false,
+      true,
+      false,
+      null
+    ]
+  },
+  "hash": "7590e8e035f9f3f10f9ca3288182ae5906114a973fcbd111f70bfd9fc8b2655d"
+}

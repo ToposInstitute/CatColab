@@ -16,7 +16,7 @@ use catlog::dbl::{
         self as dbl_model, DblModel as _, FpDblModel, InvalidDblModel, ModalMor, ModalOb,
         MutDblModel, TabEdge, TabMor, TabOb,
     },
-    theory::{self as dbl_theory, ModalObOp},
+    theory::{self as dbl_theory, ModalObOp, Unital},
 };
 use catlog::one::{Category as _, FgCategory, Path, QualifiedPath};
 use catlog::tt::{
@@ -262,7 +262,7 @@ pub enum DblModelBox {
     /// A model of a discrete tabulator theory.
     DiscreteTab(Rc<dbl_model::DiscreteTabModel>),
     /// A model of a modal double theory.
-    Modal(Rc<dbl_model::ModalDblModel>),
+    Modal(Rc<dbl_model::ModalDblModel<Unital>>),
 }
 
 impl From<dbl_model::DiscreteDblModel> for DblModelBox {
@@ -275,8 +275,8 @@ impl From<dbl_model::DiscreteTabModel> for DblModelBox {
         Self::DiscreteTab(Rc::new(value))
     }
 }
-impl From<dbl_model::ModalDblModel> for DblModelBox {
-    fn from(value: dbl_model::ModalDblModel) -> Self {
+impl From<dbl_model::ModalDblModel<Unital>> for DblModelBox {
+    fn from(value: dbl_model::ModalDblModel<Unital>) -> Self {
         Self::Modal(Rc::new(value))
     }
 }
@@ -372,7 +372,7 @@ impl DblModel {
     }
 
     /// Tries to get a model of a modal theory.
-    pub fn modal(&self) -> Result<&Rc<dbl_model::ModalDblModel>, String> {
+    pub fn modal(&self) -> Result<&Rc<dbl_model::ModalDblModel<Unital>>, String> {
         (&self.model).try_into().map_err(|_| "Model should be of a modal theory".into())
     }
 
