@@ -10,8 +10,8 @@ use catlog::dbl::theory::{self as theory, Unital};
 use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 use catlog::zero::{QualifiedLabel, name};
+use catlog::latex::LatexEquations;
 
-use super::latex::LatexEquations;
 use super::model_morphism::{MotifOccurrence, MotifsOptions, motifs};
 use super::result::JsResult;
 use super::theories::MassActionAnalysisLogic;

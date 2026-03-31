@@ -1,18 +1,9 @@
 //! Auxiliary structs and glue code for any LaTeX code being passed through analyses.
 
-use serde::{Deserialize, Serialize};
-use tsify::Tsify;
-
-use catlog::simulate::ode::LatexEquation;
 use catlog::stdlib::analyses::ode;
 use catlog::zero::QualifiedName;
 
 use super::model::DblModel;
-
-/// Symbolic equations in LaTeX format.
-#[derive(Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct LatexEquations(pub Vec<LatexEquation>);
 
 /// Creates a closure that formats object names for LaTeX output.
 pub(crate) fn latex_ob_names_mass_action(model: &DblModel) -> impl Fn(&QualifiedName) -> String {
@@ -79,7 +70,7 @@ pub(crate) fn latex_mor_names_mass_action(
 mod tests {
     use catlog::dbl::modal::{List, ModalMorType, ModalOb, ModalObType};
     use catlog::dbl::model::{ModalDblModel, MutDblModel};
-    use catlog::simulate::ode::LatexEquation;
+    use catlog::latex::LatexEquation;
     use catlog::stdlib::{analyses::ode, theories};
     use catlog::zero::{LabelSegment, Namespace, QualifiedName};
     use std::rc::Rc;

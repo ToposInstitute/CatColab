@@ -22,6 +22,8 @@ use std::ops::{Add, AddAssign, Mul, MulAssign, Neg};
 use derivative::Derivative;
 use duplicate::duplicate_item;
 
+use crate::latex::{Latex, ToLatex};
+
 /// A commutative monoid, written additively.
 pub trait AdditiveMonoid: Add<Output = Self> + Zero {}
 
@@ -168,13 +170,51 @@ where
     }
 }
 
-impl<Var, Coef> Combination<Var, Coef>
+/// Constructs a combination from a list of terms (coefficient-variable pairs).
+impl<Var, Coef> FromIterator<(Coef, Var)> for Combination<Var, Coef>
+where
+    Var: Ord,
+    Coef: Add<Output = Coef>,
+{
+    fn from_iter<T: IntoIterator<Item = (Coef, Var)>>(iter: T) -> Self {
+        let mut combination = Combination::default();
+        for rhs in iter {
+            combination += rhs;
+        }
+        combination
+    }
+}
+
+/// Iterates over the terms (coefficient-variable pairs) of the combination.
+impl<Var, Coef> IntoIterator for Combination<Var, Coef> {
+    type Item = (Coef, Var);
+    type IntoIter = std::iter::Map<btree_map::IntoIter<Var, Coef>, fn((Var, Coef)) -> (Coef, Var)>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter().map(|(var, coef)| (coef, var))
+    }
+}
+
+impl<'a, Var, Coef> IntoIterator for &'a Combination<Var, Coef> {
+    type Item = (&'a Coef, &'a Var);
+    type IntoIter = std::iter::Map<
+        btree_map::Iter<'a, Var, Coef>,
+        fn((&'a Var, &'a Coef)) -> (&'a Coef, &'a Var),
+    >;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter().map(|(var, coef)| (coef, var))
+    }
+}
+
+/// Print the combination using LaTeX.
+impl<Var, Coef> ToLatex for Combination<Var, Coef>
 where
     Var: Display,
     Coef: Display + PartialEq + One + Neg<Output = Coef>,
 {
     /// Convert to a LaTeX string.
-    pub fn to_latex(&self) -> String {
+    fn to_latex(&self) -> Latex {
         let is_simple = |s: &str| {
             // Numeric: digits and dots
             if s.chars().all(|c| c.is_ascii_digit() || c == '.') {
@@ -220,44 +260,7 @@ where
             output.push_str(&fmt_scalar_mul(coef, var));
         }
 
-        output
-    }
-}
-
-/// Constructs a combination from a list of terms (coefficient-variable pairs).
-impl<Var, Coef> FromIterator<(Coef, Var)> for Combination<Var, Coef>
-where
-    Var: Ord,
-    Coef: Add<Output = Coef>,
-{
-    fn from_iter<T: IntoIterator<Item = (Coef, Var)>>(iter: T) -> Self {
-        let mut combination = Combination::default();
-        for rhs in iter {
-            combination += rhs;
-        }
-        combination
-    }
-}
-
-/// Iterates over the terms (coefficient-variable pairs) of the combination.
-impl<Var, Coef> IntoIterator for Combination<Var, Coef> {
-    type Item = (Coef, Var);
-    type IntoIter = std::iter::Map<btree_map::IntoIter<Var, Coef>, fn((Var, Coef)) -> (Coef, Var)>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter().map(|(var, coef)| (coef, var))
-    }
-}
-
-impl<'a, Var, Coef> IntoIterator for &'a Combination<Var, Coef> {
-    type Item = (&'a Coef, &'a Var);
-    type IntoIter = std::iter::Map<
-        btree_map::Iter<'a, Var, Coef>,
-        fn((&'a Var, &'a Coef)) -> (&'a Coef, &'a Var),
-    >;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.iter().map(|(var, coef)| (coef, var))
+        Latex(output)
     }
 }
 
@@ -271,7 +274,7 @@ where
     Coef: Display + PartialEq + One + Neg<Output = Coef>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_latex())
+        write!(f, "{:?}", self.to_latex())
     }
 }
 

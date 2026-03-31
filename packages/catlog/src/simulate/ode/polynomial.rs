@@ -9,14 +9,10 @@ use indexmap::IndexMap;
 use nalgebra::DVector;
 use num_traits::{One, Pow, Zero};
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-#[cfg(feature = "serde-wasm")]
-use tsify::Tsify;
-
 #[cfg(test)]
 use super::ODEProblem;
 use super::ODESystem;
+use crate::latex::{Latex, LatexEquation, LatexEquations, ToLatex};
 use crate::zero::alg::Polynomial;
 
 /// A system of polynomial differential equations.
@@ -95,32 +91,22 @@ where
     }
 
     /// Converts to equations as LaTeX strings.
-    pub fn to_latex_equations(&self) -> Vec<LatexEquation>
+    pub fn to_latex_equations(&self) -> LatexEquations
     where
         Var: Display,
         Coef: Display + PartialEq + One + Neg<Output = Coef>,
         Exp: Display + PartialEq + One,
     {
-        self.components
-            .iter()
-            .map(|(var, poly)| LatexEquation {
-                lhs: format!("\\frac{{\\mathrm{{d}}}}{{\\mathrm{{d}}t}} {var}"),
-                rhs: poly.to_latex(),
-            })
-            .collect()
+        LatexEquations(
+            self.components
+                .iter()
+                .map(|(var, poly)| LatexEquation {
+                    lhs: Latex(format!("\\frac{{\\mathrm{{d}}}}{{\\mathrm{{d}}t}} {var}")),
+                    rhs: poly.to_latex(),
+                })
+                .collect()
+        )
     }
-}
-
-#[derive(Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
-#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
-/// An equation in LaTeX format with a left-hand side and a right-hand side.
-pub struct LatexEquation {
-    /// The left-hand side of the equation.
-    pub lhs: String,
-    /// The right-hand side of the equation.
-    pub rhs: String,
 }
 
 impl<Var, Exp> PolynomialSystem<Var, f32, Exp>

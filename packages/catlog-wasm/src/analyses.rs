@@ -3,11 +3,12 @@
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
+use catlog::latex::LatexEquations;
 use catlog::simulate::ode::PolynomialSystem;
 use catlog::stdlib::analyses::ode;
 use catlog::zero::QualifiedName;
 
-use super::latex::{LatexEquations, latex_mor_names_mass_action, latex_ob_names_mass_action};
+use super::latex::{latex_mor_names_mass_action, latex_ob_names_mass_action};
 use super::model::DblModel;
 use super::result::JsResult;
 
@@ -71,7 +72,7 @@ pub(crate) fn mass_action_simulation(
     let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
     Ok(ODEResultWithEquations {
         solution: ODEResult(solution.into()),
-        latex_equations: LatexEquations(latex_equations),
+        latex_equations: latex_equations,
     })
 }
 
@@ -95,5 +96,5 @@ pub(crate) fn mass_action_equations(
         .map_variables(latex_ob_names_mass_action(model))
         .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(model)))
         .to_latex_equations();
-    Ok(LatexEquations(equations))
+    Ok(equations)
 }
