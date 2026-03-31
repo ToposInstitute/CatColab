@@ -20,6 +20,10 @@ export type HistoryNavigatorProps = {
     onUndo: () => void;
     onRedo: () => void;
     onSelect: (id: string) => void;
+    /** Tooltip for the undo button. Defaults to "Undo". */
+    undoTooltip?: string;
+    /** Tooltip for the redo button. Defaults to "Redo". */
+    redoTooltip?: string;
 };
 
 function formatRelativeTime(ms: number, now: number): string {
@@ -151,10 +155,10 @@ export function HistoryNavigator(props: HistoryNavigatorProps) {
     return (
         <div class={styles.panel}>
             <div class={styles.toolbar}>
-                <IconButton onClick={props.onUndo} disabled={!props.canUndo} tooltip="Undo">
+                <IconButton onClick={props.onUndo} disabled={!props.canUndo} tooltip={props.undoTooltip ?? "Undo"}>
                     <Undo2 size={24} />
                 </IconButton>
-                <IconButton onClick={props.onRedo} disabled={!props.canRedo} tooltip="Redo">
+                <IconButton onClick={props.onRedo} disabled={!props.canRedo} tooltip={props.redoTooltip ?? "Redo"}>
                     <Redo2 size={24} />
                 </IconButton>
             </div>
