@@ -1114,6 +1114,7 @@ mod integration_tests {
                 initialized_user_states: Arc::new(RwLock::new(HashMap::new())),
                 http_client: reqwest::Client::new(),
                 julia_url: None,
+                suppress_autosave: Arc::new(RwLock::new(HashSet::new())),
             };
 
             let expected_state =

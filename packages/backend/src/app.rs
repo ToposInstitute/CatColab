@@ -21,6 +21,9 @@ pub struct AppState {
     /// Tracks which ref_ids have active autosave listeners to prevent duplicates.
     pub active_listeners: Arc<RwLock<HashSet<Uuid>>>,
 
+    /// Ref IDs whose next autosave should be skipped (e.g., during snapshot navigation).
+    pub suppress_autosave: Arc<RwLock<HashSet<Uuid>>>,
+
     /// Tracks user IDs whose state docs were refreshed from DB in this process,
     /// mapped to their Automerge document IDs.
     pub initialized_user_states: Arc<RwLock<HashMap<String, DocumentId>>>,
