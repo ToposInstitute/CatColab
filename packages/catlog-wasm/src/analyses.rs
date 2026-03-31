@@ -27,19 +27,28 @@ pub struct ODEResultWithEquations {
     pub latex_equations: LatexEquations,
 }
 
+/// The mass-action analysis is currently implemented for Petri nets and stock-flow
+/// diagrams, and we can avoid some code reduplication by making this explicit.
+pub enum MassActionAnalysisLogic {
+    /// The modal theory of Petri nets.
+    PetriNet,
+    /// The discrete tabulator theory of stock-flow diagrams.
+    StockFlow,
+}
+
 /// Generates the PolynomialSystem for mass-action dynamics.
 fn mass_action_system(
     model: &DblModel,
     mass_conservation_type: ode::MassConservationType,
-    logic: ode::MassActionAnalysisLogic,
+    logic: MassActionAnalysisLogic,
 ) -> Result<PolynomialSystem<QualifiedName, ode::Parameter<ode::FlowParameter>, i8>, String> {
     match logic {
-        ode::MassActionAnalysisLogic::PetriNet => {
+        MassActionAnalysisLogic::PetriNet => {
             let realised_model = model.modal()?;
             let analysis = ode::PetriNetMassActionAnalysis::default();
             Ok(analysis.build_system(realised_model, mass_conservation_type))
         }
-        ode::MassActionAnalysisLogic::StockFlow => {
+        MassActionAnalysisLogic::StockFlow => {
             let realised_model = model.discrete_tab()?;
             let analysis = ode::StockFlowMassActionAnalysis::default();
             Ok(analysis.build_system(realised_model, mass_conservation_type))
@@ -51,7 +60,7 @@ fn mass_action_system(
 pub(crate) fn mass_action_simulation(
     model: &DblModel,
     data: ode::MassActionProblemData,
-    logic: ode::MassActionAnalysisLogic,
+    logic: MassActionAnalysisLogic,
 ) -> Result<ODEResultWithEquations, String> {
     let sys = mass_action_system(model, data.mass_conservation_type, logic);
     let sys_extended_scalars = ode::extend_mass_action_scalars(sys?, &data);
@@ -79,7 +88,7 @@ pub struct MassActionEquationsData {
 pub(crate) fn mass_action_equations(
     model: &DblModel,
     data: MassActionEquationsData,
-    logic: ode::MassActionAnalysisLogic,
+    logic: MassActionAnalysisLogic,
 ) -> Result<LatexEquations, String> {
     let sys = mass_action_system(model, data.mass_conservation_type, logic);
     let equations = sys?
