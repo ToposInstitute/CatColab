@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
-use super::ODEAnalysis;
+use super::{ODEAnalysis, Parameter};
 use crate::dbl::{
     model::{DiscreteTabModel, FpDblModel, ModalDblModel, TabEdge},
     theory::{ModalMorType, ModalObType, TabMorType, TabObType, Unital},
@@ -185,9 +185,6 @@ pub struct MassActionProblemData {
     /// Duration of simulation.
     pub duration: f32,
 }
-
-/// Symbolic parameter in mass-action polynomial system.
-type Parameter<Id> = Polynomial<Id, f32, i8>;
 
 /// Mass-action ODE analysis for Petri nets.
 ///

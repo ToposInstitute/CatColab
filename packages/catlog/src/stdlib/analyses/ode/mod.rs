@@ -15,8 +15,8 @@ use tsify::Tsify;
 use crate::simulate::ode::{ODEProblem, ODESystem};
 use crate::zero::{QualifiedName, alg::Polynomial};
 
-/// Symbolic parameter in polynomial system.
-pub type Parameter<Id> = Polynomial<Id, f32, u8>;
+/// Symbolic parameter in a polynomial system.
+pub type Parameter<Id> = Polynomial<Id, f32, i8>;
 
 /// Solution to an ODE problem.
 #[derive(Clone, Derivative)]
