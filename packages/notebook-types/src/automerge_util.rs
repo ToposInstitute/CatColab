@@ -154,3 +154,224 @@ fn insert_value_into_list_from_doc<'a>(
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::automerge_json::{hydrate_to_json, populate_automerge_from_json};
+    use automerge::{Automerge, ObjType, ReadDoc};
+    use serde_json::json;
+
+    /// Helper: create doc populated from JSON.
+    fn doc_from_json(value: &serde_json::Value) -> Automerge {
+        let mut doc = Automerge::new();
+        doc.transact(|tx| {
+            populate_automerge_from_json(tx, automerge::ROOT, value).unwrap();
+            Ok::<_, automerge::AutomergeError>(())
+        })
+        .unwrap();
+        doc
+    }
+
+    /// Helper: read the current doc state back as JSON.
+    fn doc_to_json(doc: &Automerge) -> serde_json::Value {
+        let value = doc.hydrate(None);
+        hydrate_to_json(&value)
+    }
+
+    #[test]
+    fn copy_restores_scalar_fields() {
+        let mut doc = doc_from_json(&json!({
+            "name": "alice",
+            "age": 30,
+            "active": true
+        }));
+        let heads_v1 = doc.get_heads();
+
+        // Mutate the doc to a different state.
+        doc.transact(|tx| {
+            let name_id = tx.put_object(automerge::ROOT, "name", ObjType::Text)?;
+            tx.splice_text(&name_id, 0, 0, "bob")?;
+            tx.put(automerge::ROOT, "age", 99_i64)?;
+            tx.put(automerge::ROOT, "active", false)?;
+            Ok::<_, automerge::AutomergeError>(())
+        })
+        .unwrap();
+
+        // Restore to v1.
+        doc.transact(|tx| {
+            copy_doc_at_heads(tx, &heads_v1)?;
+            Ok::<_, automerge::AutomergeError>(())
+        })
+        .unwrap();
+
+        let result = doc_to_json(&doc);
+        assert_eq!(result["name"], "alice");
+        assert_eq!(result["age"], 30);
+        assert_eq!(result["active"], true);
+    }
+
+    #[test]
+    fn copy_restores_nested_maps() {
+        let mut doc = doc_from_json(&json!({
+            "config": {
+                "theme": "dark",
+                "settings": {
+                    "fontSize": 14
+                }
+            }
+        }));
+        let heads_v1 = doc.get_heads();
+
+        // Overwrite with different nested structure.
+        doc.transact(|tx| {
+            tx.delete(automerge::ROOT, "config")?;
+            let config = tx.put_object(automerge::ROOT, "config", ObjType::Map)?;
+            let theme = tx.put_object(&config, "theme", ObjType::Text)?;
+            tx.splice_text(&theme, 0, 0, "light")?;
+            Ok::<_, automerge::AutomergeError>(())
+        })
+        .unwrap();
+
+        doc.transact(|tx| {
+            copy_doc_at_heads(tx, &heads_v1)?;
+            Ok::<_, automerge::AutomergeError>(())
+        })
+        .unwrap();
+
+        let result = doc_to_json(&doc);
+        assert_eq!(result["config"]["theme"], "dark");
+        assert_eq!(result["config"]["settings"]["fontSize"], 14);
+    }
+
+    #[test]
+    fn copy_restores_lists() {
+        let mut doc = doc_from_json(&json!({
+            "items": ["a", "b", "c"]
+        }));
+        let heads_v1 = doc.get_heads();
+
+        // Replace with different list.
+        doc.transact(|tx| {
+            tx.delete(automerge::ROOT, "items")?;
+            let list = tx.put_object(automerge::ROOT, "items", ObjType::List)?;
+            let x = tx.insert_object(&list, 0, ObjType::Text)?;
+            tx.splice_text(&x, 0, 0, "x")?;
+            Ok::<_, automerge::AutomergeError>(())
+        })
+        .unwrap();
+
+        doc.transact(|tx| {
+            copy_doc_at_heads(tx, &heads_v1)?;
+            Ok::<_, automerge::AutomergeError>(())
+        })
+        .unwrap();
+
+        let result = doc_to_json(&doc);
+        let items: Vec<&str> = result["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_str().unwrap())
+            .collect();
+        assert_eq!(items, vec!["a", "b", "c"]);
+    }
+
+    #[test]
+    fn copy_removes_keys_not_in_target() {
+        let mut doc = doc_from_json(&json!({
+            "keep": "yes"
+        }));
+        let heads_v1 = doc.get_heads();
+
+        // Add extra keys.
+        doc.transact(|tx| {
+            let extra = tx.put_object(automerge::ROOT, "extra", ObjType::Text)?;
+            tx.splice_text(&extra, 0, 0, "should be gone")?;
+            tx.put(automerge::ROOT, "another", 42_i64)?;
+            Ok::<_, automerge::AutomergeError>(())
+        })
+        .unwrap();
+
+        doc.transact(|tx| {
+            copy_doc_at_heads(tx, &heads_v1)?;
+            Ok::<_, automerge::AutomergeError>(())
+        })
+        .unwrap();
+
+        let result = doc_to_json(&doc);
+        assert_eq!(result["keep"], "yes");
+        assert!(result.get("extra").is_none());
+        assert!(result.get("another").is_none());
+    }
+
+    #[test]
+    fn copy_preserves_rich_text_marks() {
+        let mut doc = Automerge::new();
+
+        // Create text with a bold mark.
+        doc.transact(|tx| {
+            let text_id = tx.put_object(automerge::ROOT, "content", ObjType::Text)?;
+            tx.splice_text(&text_id, 0, 0, "hello world")?;
+            tx.mark(
+                &text_id,
+                automerge::marks::Mark::new("bold".into(), true, 0, 5),
+                automerge::marks::ExpandMark::After,
+            )?;
+            Ok::<_, automerge::AutomergeError>(())
+        })
+        .unwrap();
+        let heads_with_mark = doc.get_heads();
+
+        // Overwrite with plain text.
+        doc.transact(|tx| {
+            tx.delete(automerge::ROOT, "content")?;
+            let text_id = tx.put_object(automerge::ROOT, "content", ObjType::Text)?;
+            tx.splice_text(&text_id, 0, 0, "replaced")?;
+            Ok::<_, automerge::AutomergeError>(())
+        })
+        .unwrap();
+
+        // Restore.
+        doc.transact(|tx| {
+            copy_doc_at_heads(tx, &heads_with_mark)?;
+            Ok::<_, automerge::AutomergeError>(())
+        })
+        .unwrap();
+
+        // Verify text content.
+        let result = doc_to_json(&doc);
+        assert_eq!(result["content"], "hello world");
+
+        // Verify mark was preserved.
+        let (_, content_id) = doc.get(automerge::ROOT, "content").unwrap().unwrap();
+        let marks = doc.marks(&content_id).unwrap();
+        assert!(!marks.is_empty(), "bold mark should be preserved");
+        assert_eq!(marks[0].name(), "bold");
+        assert_eq!(marks[0].start, 0);
+        assert_eq!(marks[0].end, 5);
+    }
+
+    #[test]
+    fn copy_works_on_empty_doc() {
+        let mut doc = Automerge::new();
+        let heads_empty = doc.get_heads();
+
+        // Add some data.
+        doc.transact(|tx| {
+            tx.put(automerge::ROOT, "key", 1_i64)?;
+            Ok::<_, automerge::AutomergeError>(())
+        })
+        .unwrap();
+
+        // Restore to empty.
+        doc.transact(|tx| {
+            copy_doc_at_heads(tx, &heads_empty)?;
+            Ok::<_, automerge::AutomergeError>(())
+        })
+        .unwrap();
+
+        let keys: Vec<String> = doc.keys(automerge::ROOT).collect();
+        assert!(keys.is_empty());
+    }
+}
