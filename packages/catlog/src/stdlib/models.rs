@@ -170,7 +170,7 @@ pub fn sir_petri(th: Rc<ModalDblTheory<Unital>>) -> ModalDblModel<Unital> {
 /// An example of Lotka–Volterra dynamics viewed as a non-unital theory for a symmetric multicategory.
 pub fn lotka_volterra_dynamics(th: Rc<ModalDblTheory<NonUnital>>) -> ModalDblModel<NonUnital> {
     let ob_type = ModalObType::new(name("Object"));
-    let mor_type = ModeApp::new(name("Multihom")).into();
+    let mor_type: ModalMorType = ModeApp::new(name("Multihom")).into();
 
     let mut model = ModalDblModel::new(th);
     // We're going to build a two-level predator-prey model, but where (in absence of signed
@@ -211,19 +211,19 @@ pub fn lotka_volterra_dynamics(th: Rc<ModalDblTheory<NonUnital>>) -> ModalDblMod
         name("AB_interaction"),
         ModalOb::List(List::Symmetric, vec![a.clone().into(), b.clone().into()]),
         b.clone().into(),
-        mor_type,
+        mor_type.clone(),
     );
     model.add_mor(
         name("BA_interaction"),
         ModalOb::List(List::Symmetric, vec![a.clone().into(), b.clone().into()]),
         a.clone().into(),
-        mor_type,
+        mor_type.clone(),
     );
     model.add_mor(
         name("BC_interaction"),
         ModalOb::List(List::Symmetric, vec![b.clone().into(), c.clone().into()]),
         c.clone().into(),
-        mor_type,
+        mor_type.clone(),
     );
     model.add_mor(
         name("CB_interaction"),
