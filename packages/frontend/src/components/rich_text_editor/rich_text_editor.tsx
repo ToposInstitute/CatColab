@@ -492,9 +492,13 @@ function TooltipButton(props: {
 
 /** True when `candidate` is a prefix of (or equal to) `target`. */
 function isPathPrefixOf(candidate: Prop[], target: Prop[]): boolean {
-    if (candidate.length > target.length) return false;
+    if (candidate.length > target.length) {
+        return false;
+    }
     for (let i = 0; i < candidate.length; i++) {
-        if (candidate[i] !== target[i]) return false;
+        if (candidate[i] !== target[i]) {
+            return false;
+        }
     }
     return true;
 }
@@ -506,8 +510,6 @@ function isPathPrefixOf(candidate: Prop[], target: Prop[]): boolean {
  */
 function hasStructuralReplacement(patches: Patch[], textPath: Prop[]): boolean {
     return patches.some(
-        (p) =>
-            (p.action === "put" || p.action === "del") &&
-            isPathPrefixOf(p.path, textPath),
+        (p) => (p.action === "put" || p.action === "del") && isPathPrefixOf(p.path, textPath),
     );
 }

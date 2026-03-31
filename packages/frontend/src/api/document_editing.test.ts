@@ -56,7 +56,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
             await rpc.delete_ref.mutate(id).catch(() => {});
         }
         await deleteUser(user);
-        repo.shutdown();
+        void repo.shutdown();
     });
 
     unwrap(await rpc.sign_up_or_sign_in.mutate());
@@ -223,113 +223,107 @@ describe("Document editing, snapshots, and undo/redo", async () => {
     // ---------------------------------------------------------------
     // Test 5: set_current_snapshot reverts the live document content
     // ---------------------------------------------------------------
-    test.sequential(
-        "should revert live document content when navigating to an older snapshot",
-        async () => {
-            await signInWithEmailAndPassword(auth, email, password);
+    test.sequential("should revert live document content when navigating to an older snapshot", async () => {
+        await signInWithEmailAndPassword(auth, email, password);
 
-            const originalName = `Revert Original - ${v4()}`;
-            const refId = await createDoc(originalName);
+        const originalName = `Revert Original - ${v4()}`;
+        const refId = await createDoc(originalName);
 
-            await waitFor(
-                () => findDoc(refId) !== undefined,
-                `Document ${refId} should appear in user state`,
-            );
+        await waitFor(
+            () => findDoc(refId) !== undefined,
+            `Document ${refId} should appear in user state`,
+        );
 
-            const initialDoc = findDoc(refId);
-            assert(initialDoc);
-            const originalSnapshotId = Number(Object.keys(initialDoc.snapshots)[0]!);
+        const initialDoc = findDoc(refId);
+        assert(initialDoc);
+        const originalSnapshotId = Number(Object.keys(initialDoc.snapshots)[0]!);
 
-            const handle = await getLiveHandle(refId);
-            assert.strictEqual(handle.doc().name, originalName);
+        const handle = await getLiveHandle(refId);
+        assert.strictEqual(handle.doc().name, originalName);
 
-            const editedName = `Revert Edited - ${v4()}`;
-            handle.change((doc) => {
-                doc.name = editedName;
-            });
-            assert.strictEqual(handle.doc().name, editedName);
+        const editedName = `Revert Edited - ${v4()}`;
+        handle.change((doc) => {
+            doc.name = editedName;
+        });
+        assert.strictEqual(handle.doc().name, editedName);
 
-            await waitFor(() => {
-                const doc = findDoc(refId);
-                return doc !== undefined && Object.keys(doc.snapshots).length >= 2;
-            }, "Should have two snapshots after autosave");
+        await waitFor(() => {
+            const doc = findDoc(refId);
+            return doc !== undefined && Object.keys(doc.snapshots).length >= 2;
+        }, "Should have two snapshots after autosave");
 
-            // Navigate back to the original snapshot.
-            unwrap(await rpc.set_current_snapshot.mutate(refId, originalSnapshotId));
+        // Navigate back to the original snapshot.
+        unwrap(await rpc.set_current_snapshot.mutate(refId, originalSnapshotId));
 
-            // The live Automerge document should revert to the original content.
-            await waitFor(
-                () => handle.doc().name === originalName,
-                `Live document name should revert to "${originalName}" but is "${handle.doc().name}"`,
-            );
+        // The live Automerge document should revert to the original content.
+        await waitFor(
+            () => handle.doc().name === originalName,
+            `Live document name should revert to "${originalName}" but is "${handle.doc().name}"`,
+        );
 
-            assert.strictEqual(
-                handle.doc().name,
-                originalName,
-                "Live document should have original name after reverting",
-            );
-        },
-    );
+        assert.strictEqual(
+            handle.doc().name,
+            originalName,
+            "Live document should have original name after reverting",
+        );
+    });
 
     // ---------------------------------------------------------------
     // Test 6: set_current_snapshot updates the database snapshot content
     // ---------------------------------------------------------------
-    test.sequential(
-        "should update head_snapshot content after navigating to an older snapshot",
-        async () => {
-            await signInWithEmailAndPassword(auth, email, password);
+    test.sequential("should update head_snapshot content after navigating to an older snapshot", async () => {
+        await signInWithEmailAndPassword(auth, email, password);
 
-            const originalName = `DB Revert Original - ${v4()}`;
-            const refId = await createDoc(originalName);
+        const originalName = `DB Revert Original - ${v4()}`;
+        const refId = await createDoc(originalName);
 
-            await waitFor(
-                () => findDoc(refId) !== undefined,
-                `Document ${refId} should appear in user state`,
-            );
+        await waitFor(
+            () => findDoc(refId) !== undefined,
+            `Document ${refId} should appear in user state`,
+        );
 
-            const initialDoc = findDoc(refId);
-            assert(initialDoc);
-            const originalSnapshotId = Number(Object.keys(initialDoc.snapshots)[0]!);
+        const initialDoc = findDoc(refId);
+        assert(initialDoc);
+        const originalSnapshotId = Number(Object.keys(initialDoc.snapshots)[0]!);
 
-            const handle = await getLiveHandle(refId);
+        const handle = await getLiveHandle(refId);
 
-            const editedName = `DB Revert Edited - ${v4()}`;
-            handle.change((doc) => {
-                doc.name = editedName;
-            });
+        const editedName = `DB Revert Edited - ${v4()}`;
+        handle.change((doc) => {
+            doc.name = editedName;
+        });
 
-            await waitFor(() => {
-                const doc = findDoc(refId);
-                return doc !== undefined && Object.keys(doc.snapshots).length >= 2;
-            }, "Should have two snapshots after autosave");
+        await waitFor(() => {
+            const doc = findDoc(refId);
+            return doc !== undefined && Object.keys(doc.snapshots).length >= 2;
+        }, "Should have two snapshots after autosave");
 
-            // Verify the head_snapshot shows the edited version.
-            const editedContent = unwrap(await rpc.head_snapshot.query(refId)) as Record<
-                string,
-                unknown
-            >;
-            assert.strictEqual(editedContent.name, editedName, "head_snapshot should show edited name");
+        // Verify the head_snapshot shows the edited version.
+        const editedContent = unwrap(await rpc.head_snapshot.query(refId)) as Record<
+            string,
+            unknown
+        >;
+        assert.strictEqual(editedContent.name, editedName, "head_snapshot should show edited name");
 
-            // Navigate back to original.
-            unwrap(await rpc.set_current_snapshot.mutate(refId, originalSnapshotId));
+        // Navigate back to original.
+        unwrap(await rpc.set_current_snapshot.mutate(refId, originalSnapshotId));
 
-            // The head_snapshot should now point to the original snapshot's content.
-            await waitFor(() => {
-                const doc = findDoc(refId);
-                return doc !== undefined && doc.currentSnapshot === originalSnapshotId;
-            }, "currentSnapshot should point to original");
+        // The head_snapshot should now point to the original snapshot's content.
+        await waitFor(() => {
+            const doc = findDoc(refId);
+            return doc !== undefined && doc.currentSnapshot === originalSnapshotId;
+        }, "currentSnapshot should point to original");
 
-            const revertedContent = unwrap(await rpc.head_snapshot.query(refId)) as Record<
-                string,
-                unknown
-            >;
-            assert.strictEqual(
-                revertedContent.name,
-                originalName,
-                "head_snapshot should show original name after revert",
-            );
-        },
-    );
+        const revertedContent = unwrap(await rpc.head_snapshot.query(refId)) as Record<
+            string,
+            unknown
+        >;
+        assert.strictEqual(
+            revertedContent.name,
+            originalName,
+            "head_snapshot should show original name after revert",
+        );
+    });
 
     // ---------------------------------------------------------------
     // Test 7: Multiple edits → multiple snapshots → navigate history
@@ -520,67 +514,65 @@ describe("Document editing, snapshots, and undo/redo", async () => {
     // ---------------------------------------------------------------
     // Test 10: Content beyond just name is preserved during revert
     // ---------------------------------------------------------------
-    test.sequential(
-        "should preserve full document structure when reverting snapshots",
-        async () => {
-            await signInWithEmailAndPassword(auth, email, password);
+    test.sequential("should preserve full document structure when reverting snapshots", async () => {
+        await signInWithEmailAndPassword(auth, email, password);
 
-            const name = `Structure Test - ${v4()}`;
-            const refId = await createDoc(name);
+        const name = `Structure Test - ${v4()}`;
+        const refId = await createDoc(name);
 
-            await waitFor(
-                () => findDoc(refId) !== undefined,
-                `Document ${refId} should appear in user state`,
-            );
+        await waitFor(
+            () => findDoc(refId) !== undefined,
+            `Document ${refId} should appear in user state`,
+        );
 
-            const initialDoc = findDoc(refId);
-            assert(initialDoc);
-            const originalSnapshotId = Number(Object.keys(initialDoc.snapshots)[0]!);
+        const initialDoc = findDoc(refId);
+        assert(initialDoc);
+        const originalSnapshotId = Number(Object.keys(initialDoc.snapshots)[0]!);
 
-            const refDoc = unwrap(await rpc.get_doc.query(refId));
-            assert(refDoc.tag === "Live");
-            assert(isValidDocumentId(refDoc.docId));
-            const handle: DocHandle<ModelDocument> = await repo.find(refDoc.docId);
-            await handle.whenReady();
+        const refDoc = unwrap(await rpc.get_doc.query(refId));
+        assert(refDoc.tag === "Live");
+        assert(isValidDocumentId(refDoc.docId));
+        const handle: DocHandle<ModelDocument> = await repo.find(refDoc.docId);
+        await handle.whenReady();
 
-            const doc = handle.doc();
-            assert.strictEqual(doc.type, "model", "Document type should be model");
-            assert.strictEqual(doc.theory, "empty", "Document theory should be empty");
-            assert.deepStrictEqual(doc.notebook.cellOrder, [], "Cell order should be empty");
+        const doc = handle.doc();
+        assert.strictEqual(doc.type, "model", "Document type should be model");
+        assert.strictEqual(doc.theory, "empty", "Document theory should be empty");
+        assert.deepStrictEqual(doc.notebook.cellOrder, [], "Cell order should be empty");
 
-            handle.change((doc) => {
-                doc.name = `Structure Edited - ${v4()}`;
-                doc.theory = "causal-loop";
-                doc.notebook.cellOrder = ["cell1"];
-                doc.notebook.cellContents.cell1 = {
-                    tag: "rich-text",
-                    content: "Hello world",
-                } as any;
-            });
+        handle.change((doc) => {
+            doc.name = `Structure Edited - ${v4()}`;
+            doc.theory = "causal-loop";
+            doc.notebook.cellOrder = ["cell1"];
+            doc.notebook.cellContents.cell1 = {
+                tag: "rich-text",
+                id: "cell1",
+                content: "Hello world",
+            };
+        });
 
-            await waitFor(() => {
-                const doc = findDoc(refId);
-                return doc !== undefined && Object.keys(doc.snapshots).length >= 2;
-            }, "Should have two snapshots after edit");
+        await waitFor(() => {
+            const doc = findDoc(refId);
+            return doc !== undefined && Object.keys(doc.snapshots).length >= 2;
+        }, "Should have two snapshots after edit");
 
-            // Revert to original
-            unwrap(await rpc.set_current_snapshot.mutate(refId, originalSnapshotId));
+        // Revert to original
+        unwrap(await rpc.set_current_snapshot.mutate(refId, originalSnapshotId));
 
-            await waitFor(
-                () => handle.doc().theory === "empty",
-                `Theory should revert to "empty" but is "${handle.doc().theory}"`,
-            );
+        await waitFor(
+            () => handle.doc().theory === "empty",
+            `Theory should revert to "empty" but is "${handle.doc().theory}"`,
+        );
 
-            const reverted = handle.doc();
-            assert.strictEqual(reverted.name, name, "Name should revert");
-            assert.strictEqual(reverted.theory, "empty", "Theory should revert to empty");
-            assert.deepStrictEqual(
-                reverted.notebook.cellOrder,
-                [],
-                "Cell order should revert to empty",
-            );
-        },
-    );
+        const reverted = handle.doc();
+        assert.strictEqual(reverted.name, name, "Name should revert");
+        assert.strictEqual(reverted.theory, "empty", "Theory should revert to empty");
+        assert.deepStrictEqual(
+            reverted.notebook.cellOrder,
+            [],
+            "Cell order should revert to empty",
+        );
+    });
 
     // ---------------------------------------------------------------
     // Test 11: set_current_snapshot should NOT create a spurious snapshot
@@ -678,7 +670,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
                     tag: "rich-text",
                     id: cellId,
                     content: "",
-                } as any;
+                };
                 Automerge.splice(
                     doc,
                     ["notebook", "cellContents", cellId, "content"],
@@ -695,8 +687,8 @@ describe("Document editing, snapshots, and undo/redo", async () => {
                 );
             });
 
-            const textPath = ["notebook", "cellContents", cellId, "content"] as const;
-            const marksBeforeSnapshot = Automerge.marks(handle.doc(), textPath as any);
+            const textPath = ["notebook", "cellContents", cellId, "content"];
+            const marksBeforeSnapshot = Automerge.marks(handle.doc(), textPath);
             assert.strictEqual(marksBeforeSnapshot.length, 1, "Should have one bold mark");
             assert.strictEqual(marksBeforeSnapshot[0]!.name, "bold");
             assert.strictEqual(marksBeforeSnapshot[0]!.start, 6);
@@ -730,7 +722,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
 
             // The critical assertion: marks must survive the round-trip through
             // hydrate_to_json → populate_automerge_from_json.
-            const marksAfterRevert = Automerge.marks(handle.doc(), textPath as any);
+            const marksAfterRevert = Automerge.marks(handle.doc(), textPath);
             assert.strictEqual(
                 marksAfterRevert.length,
                 1,
@@ -775,7 +767,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
                     tag: "rich-text",
                     id: cellA,
                     content: "",
-                } as any;
+                };
                 Automerge.splice(
                     doc,
                     ["notebook", "cellContents", cellA, "content"],
@@ -789,7 +781,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
                     tag: "rich-text",
                     id: cellB,
                     content: "",
-                } as any;
+                };
                 Automerge.splice(
                     doc,
                     ["notebook", "cellContents", cellB, "content"],
@@ -799,10 +791,10 @@ describe("Document editing, snapshots, and undo/redo", async () => {
                 );
             });
 
-            const contentOf = (cellId: string) =>
-                (handle.doc().notebook.cellContents[cellId] as any)?.content as
-                    | string
-                    | undefined;
+            const contentOf = (cellId: string) => {
+                const cell = handle.doc().notebook.cellContents[cellId];
+                return cell?.tag === "rich-text" ? cell.content : undefined;
+            };
 
             assert.strictEqual(contentOf(cellA), "Alpha content");
             assert.strictEqual(contentOf(cellB), "Beta content");
@@ -874,8 +866,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
             assert.strictEqual(
                 contentOf(cellB),
                 "Beta content",
-                `After redo, cell B must keep its own content, ` +
-                    `but got "${contentOf(cellB)}"`,
+                `After redo, cell B must keep its own content, but got "${contentOf(cellB)}"`,
             );
         },
     );
@@ -915,25 +906,21 @@ describe("Document editing, snapshots, and undo/redo", async () => {
                     tag: "rich-text",
                     id: cellId,
                     content: "",
-                } as any;
+                };
                 Automerge.splitBlock(doc, contentPath, 0, {
                     type: "paragraph",
                 });
                 Automerge.splice(doc, contentPath, 1, 0, "hello 1");
             });
 
-            const spansBefore = Automerge.spans(handle.doc(), contentPath as any);
+            const spansBefore = Automerge.spans(handle.doc(), contentPath);
             assert.strictEqual(spansBefore.length, 2, "Should have block + text span");
             assert.strictEqual(
                 spansBefore[0]!.type,
                 "block",
                 "First span should be a block marker",
             );
-            assert.strictEqual(
-                spansBefore[1]!.type,
-                "text",
-                "Second span should be text",
-            );
+            assert.strictEqual(spansBefore[1]!.type, "text", "Second span should be text");
             assert.strictEqual(spansBefore[1]!.value, "hello 1");
 
             await waitFor(() => {
@@ -957,14 +944,11 @@ describe("Document editing, snapshots, and undo/redo", async () => {
 
             // Undo: navigate back to the snapshot with the block marker.
             unwrap(await rpc.set_current_snapshot.mutate(refId, withBlockSnapshotId));
-            await waitFor(
-                () => handle.doc().name === name,
-                `Should revert to original name`,
-            );
+            await waitFor(() => handle.doc().name === name, `Should revert to original name`);
 
             // The critical check: spans must still be structural, not
             // literal U+FFFC characters in the text.
-            const spansAfter = Automerge.spans(handle.doc(), contentPath as any);
+            const spansAfter = Automerge.spans(handle.doc(), contentPath);
             assert.strictEqual(
                 spansAfter.length,
                 2,
