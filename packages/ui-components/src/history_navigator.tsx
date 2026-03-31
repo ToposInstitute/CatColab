@@ -3,8 +3,9 @@ import Undo2 from "lucide-solid/icons/undo-2";
 import { For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 
 import { IconButton } from "./icon_button";
-import styles from "./history_navigator.module.css";
 import { createVirtualList } from "./virtual_list";
+
+import styles from "./history_navigator.module.css";
 
 export type HistoryItem = {
     id: string;
@@ -33,8 +34,12 @@ function formatRelativeTime(ms: number, now: number): string {
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
 
-    if (minutes < 1) return "just now";
-    if (minutes < 60) return `${minutes} min ago`;
+    if (minutes < 1) {
+        return "just now";
+    }
+    if (minutes < 60) {
+        return `${minutes} min ago`;
+    }
     if (minutes < 120) {
         const remainMin = minutes % 60;
         return remainMin === 0 ? "1 hour ago" : `1 hour ${remainMin} min ago`;
@@ -43,8 +48,12 @@ function formatRelativeTime(ms: number, now: number): string {
         const hourLabel = hours === 1 ? "hour" : "hours";
         return `${hours} ${hourLabel} ago`;
     }
-    if (days === 1) return "yesterday";
-    if (days < 7) return `${days} days ago`;
+    if (days === 1) {
+        return "yesterday";
+    }
+    if (days < 7) {
+        return `${days} days ago`;
+    }
 
     const d = new Date(ms);
     return d.toLocaleDateString(undefined, {
@@ -88,7 +97,10 @@ export function HistoryNavigator(props: HistoryNavigatorProps) {
         const indexPerMinute = new Map<number, number>();
         const suffixByIndex = new Map<number, string>();
         for (let i = raw.length - 1; i >= 0; i--) {
-            const item = raw[i]!;
+            const item = raw[i];
+            if (!item) {
+                continue;
+            }
             const total = countPerMinute.get(item.minuteKey) ?? 1;
             if (total > 1) {
                 const idx = (indexPerMinute.get(item.minuteKey) ?? 0) + 1;
@@ -111,7 +123,9 @@ export function HistoryNavigator(props: HistoryNavigatorProps) {
     const activeIndex = createMemo(() => {
         const items = displayItems();
         for (let i = 0; i < items.length; i++) {
-            if (items[i]?.active) return i;
+            if (items[i]?.active) {
+                return i;
+            }
         }
         return -1;
     });
@@ -138,7 +152,9 @@ export function HistoryNavigator(props: HistoryNavigatorProps) {
     createEffect(() => {
         const idx = activeIndex();
         const el = scrollContainerEl;
-        if (!el || idx < 0) return;
+        if (!el || idx < 0) {
+            return;
+        }
 
         const rowTop = idx * ROW_HEIGHT;
         const rowBottom = rowTop + ROW_HEIGHT;
@@ -155,10 +171,18 @@ export function HistoryNavigator(props: HistoryNavigatorProps) {
     return (
         <div class={styles.panel}>
             <div class={styles.toolbar}>
-                <IconButton onClick={props.onUndo} disabled={!props.canUndo} tooltip={props.undoTooltip ?? "Undo"}>
+                <IconButton
+                    onClick={props.onUndo}
+                    disabled={!props.canUndo}
+                    tooltip={props.undoTooltip ?? "Undo"}
+                >
                     <Undo2 size={24} />
                 </IconButton>
-                <IconButton onClick={props.onRedo} disabled={!props.canRedo} tooltip={props.redoTooltip ?? "Redo"}>
+                <IconButton
+                    onClick={props.onRedo}
+                    disabled={!props.canRedo}
+                    tooltip={props.redoTooltip ?? "Redo"}
+                >
                     <Redo2 size={24} />
                 </IconButton>
             </div>

@@ -92,7 +92,7 @@ function buildFullChain(head: string, history: Record<string, HistoryEntry>): st
     let current: string | null = head;
     while (current != null && history[current] != null) {
         backwards.push(current);
-        current = history[current]!.parent ?? null;
+        current = history[current].parent ?? null;
     }
     backwards.reverse();
 
@@ -112,7 +112,7 @@ function chainToItems(
 ): HistoryItem[] {
     const items: HistoryItem[] = [];
     for (let i = chain.length - 1; i >= 0; i--) {
-        const id = chain[i]!;
+        const id = chain[i];
         const e = history[id];
         if (e) {
             items.push({ id, createdAt: e.createdAt, active: id === head });
@@ -136,12 +136,16 @@ function InteractiveStory(props: { initialHead: string }) {
     const onUndo = () => {
         const idx = currentIndex();
         const prev = chain()[idx - 1];
-        if (idx > 0 && prev != null) setHead(prev);
+        if (idx > 0 && prev != null) {
+            setHead(prev);
+        }
     };
 
     const onRedo = () => {
         const child = newestChild(head(), history());
-        if (child != null) setHead(child);
+        if (child != null) {
+            setHead(child);
+        }
     };
 
     const simulateChange = () => {
@@ -212,11 +216,7 @@ function staticItems(offsets: { label: string; ago: number }[]): HistoryItem[] {
     }));
 }
 
-function StaticStory(props: {
-    items: HistoryItem[];
-    undoTooltip?: string;
-    redoTooltip?: string;
-}) {
+function StaticStory(props: { items: HistoryItem[]; undoTooltip?: string; redoTooltip?: string }) {
     return (
         <div
             style={{
