@@ -2,9 +2,9 @@
 
 use crate::app::{AppCtx, AppError, AppState};
 use crate::autosave::ensure_autosave_listener;
-use notebook_types::automerge_json::{hydrate_to_json, populate_automerge_from_json};
 use crate::user_state_updates::{update_ref_for_users, update_user_state};
 use chrono::{DateTime, Utc};
+use notebook_types::automerge_json::{hydrate_to_json, populate_automerge_from_json};
 use samod::DocumentId;
 use serde_json::Value;
 use uuid::Uuid;
@@ -222,35 +222,43 @@ pub async fn set_current_snapshot(
         .await?
         .ok_or_else(|| AppError::Invalid("Document not found".to_string()))?;
 
-    doc_handle.with_document(|doc| -> Result<(), AppError> {
-        let target_state = hydrate_to_json(&doc.hydrate(Some(&target_heads)));
+    state.suppress_autosave.write().await.insert(ref_id);
 
-        doc.transact::<_, _, automerge::AutomergeError>(|tx| {
-            let keys: Vec<String> = tx.keys(automerge::ROOT).collect();
-            for key in &keys {
-                tx.delete(automerge::ROOT, key.as_str())?;
-            }
-            populate_automerge_from_json(tx, automerge::ROOT, &target_state)?;
+    let result: Result<(), AppError> = async {
+        doc_handle.with_document(|doc| -> Result<(), AppError> {
+            let target_state = hydrate_to_json(&doc.hydrate(Some(&target_heads)));
+
+            doc.transact::<_, _, automerge::AutomergeError>(|tx| {
+                let keys: Vec<String> = tx.keys(automerge::ROOT).collect();
+                for key in &keys {
+                    tx.delete(automerge::ROOT, key.as_str())?;
+                }
+                populate_automerge_from_json(tx, automerge::ROOT, &target_state)?;
+                Ok(())
+            })
+            .map_err(|e| AppError::Invalid(format!("Failed to update document: {e:?}")))?;
+
             Ok(())
-        })
-        .map_err(|e| AppError::Invalid(format!("Failed to update document: {e:?}")))?;
+        })?;
+
+        sqlx::query!(
+            "UPDATE refs SET current_snapshot = $2 WHERE id = $1",
+            ref_id,
+            snapshot_id,
+        )
+        .execute(&state.db)
+        .await?;
+
+        if let Err(e) = update_ref_for_users(&state, ref_id, vec![]).await {
+            tracing::error!(%ref_id, error = %e, "Failed to update user states after set_current_snapshot");
+        }
 
         Ok(())
-    })?;
-
-    sqlx::query!(
-        "UPDATE refs SET current_snapshot = $2 WHERE id = $1",
-        ref_id,
-        snapshot_id,
-    )
-    .execute(&state.db)
-    .await?;
-
-    if let Err(e) = update_ref_for_users(&state, ref_id, vec![]).await {
-        tracing::error!(%ref_id, error = %e, "Failed to update user states after set_current_snapshot");
     }
+    .await;
 
-    Ok(())
+    state.suppress_autosave.write().await.remove(&ref_id);
+    result
 }
 
 /// Soft-deletes a document reference by setting `deleted_at`.

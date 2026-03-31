@@ -580,4 +580,66 @@ describe("Document editing, snapshots, and undo/redo", async () => {
             );
         },
     );
+
+    // ---------------------------------------------------------------
+    // Test 11: set_current_snapshot should NOT create a spurious snapshot
+    // ---------------------------------------------------------------
+    test.sequential(
+        "should not create extra snapshots when navigating to a historical snapshot",
+        { timeout: 15000 },
+        async () => {
+            await signInWithEmailAndPassword(auth, email, password);
+
+            const name = `No Spurious Snapshot - ${v4()}`;
+            const refId = await createDoc(name);
+
+            await waitFor(
+                () => findDoc(refId) !== undefined,
+                `Document ${refId} should appear in user state`,
+            );
+
+            const initialDoc = findDoc(refId);
+            assert(initialDoc);
+            const originalSnapshotId = Number(Object.keys(initialDoc.snapshots)[0]!);
+
+            const handle = await getLiveHandle(refId);
+
+            const editedName = `Spurious Edited - ${v4()}`;
+            handle.change((doc) => {
+                doc.name = editedName;
+            });
+
+            await waitFor(() => {
+                const doc = findDoc(refId);
+                return doc !== undefined && Object.keys(doc.snapshots).length >= 2;
+            }, "Should have two snapshots after autosave");
+
+            const beforeRevert = findDoc(refId);
+            assert(beforeRevert);
+            assert.strictEqual(
+                Object.keys(beforeRevert.snapshots).length,
+                2,
+                "Should have exactly two snapshots before revert",
+            );
+
+            unwrap(await rpc.set_current_snapshot.mutate(refId, originalSnapshotId));
+
+            await waitFor(
+                () => handle.doc().name === name,
+                `Live document name should revert to "${name}"`,
+            );
+
+            // Wait well past the autosave debounce (500ms) to ensure no
+            // spurious snapshot is created by the revert's document change.
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+
+            const afterRevert = findDoc(refId);
+            assert(afterRevert);
+            assert.strictEqual(
+                Object.keys(afterRevert.snapshots).length,
+                2,
+                "Snapshot count should still be 2 — revert must not create a spurious snapshot",
+            );
+        },
+    );
 });
