@@ -1,8 +1,7 @@
+import type { SnapshotInfo } from "catcolab-api/src/user_state";
 import { type Accessor, createMemo } from "solid-js";
 
 import type { HistoryItem } from "catcolab-ui-components";
-import type { SnapshotInfo } from "catcolab-api/src/user_state";
-
 import { useApi } from "../api";
 import { useUserState } from "../user/user_state_context";
 
@@ -103,12 +102,16 @@ export function useSnapshotHistory(refId: Accessor<string>): SnapshotHistory {
     const onUndo = () => {
         const idx = currentIndex();
         const prev = chain()[idx - 1];
-        if (idx > 0 && prev != null) navigate(prev);
+        if (idx > 0 && prev != null) {
+            navigate(prev);
+        }
     };
 
     const onRedo = () => {
         const child = newestChild(head(), snapshots());
-        if (child != null) navigate(child);
+        if (child != null) {
+            navigate(child);
+        }
     };
 
     return { items, canUndo, canRedo, onUndo, onRedo, navigate };
