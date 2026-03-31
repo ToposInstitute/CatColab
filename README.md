@@ -41,6 +41,7 @@ A version history is maintained in the [`CHANGELOG`](CHANGELOG.md).
 | General user | [catcolab.org/help](https://catcolab.org/help) |
 | Software developer | [next.catcolab.org/dev](https://next.catcolab.org/dev) |
 | Mathematician | [next.catcolab.org/math](https://next.catcolab.org/math) |
+| Researcher/developer | [next.catcolab.org/rfc](https://next.catcolab.org/rfc) |
 
 ## License
 
