@@ -75,10 +75,7 @@ function makeInitialHistory(): Record<string, HistoryEntry> {
     return Object.fromEntries(initialEntries);
 }
 
-function newestChild(
-    snapshotId: string,
-    history: Record<string, HistoryEntry>,
-): string | null {
+function newestChild(snapshotId: string, history: Record<string, HistoryEntry>): string | null {
     let best: string | null = null;
     let bestTime = -Infinity;
     for (const [id, e] of Object.entries(history)) {
@@ -108,7 +105,11 @@ function buildFullChain(head: string, history: Record<string, HistoryEntry>): st
     return backwards;
 }
 
-function chainToItems(chain: string[], head: string, history: Record<string, HistoryEntry>): HistoryItem[] {
+function chainToItems(
+    chain: string[],
+    head: string,
+    history: Record<string, HistoryEntry>,
+): HistoryItem[] {
     const items: HistoryItem[] = [];
     for (let i = chain.length - 1; i >= 0; i--) {
         const id = chain[i]!;

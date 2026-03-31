@@ -5,6 +5,7 @@ import ChevronsRight from "lucide-solid/icons/chevrons-right";
 import History from "lucide-solid/icons/history";
 import Maximize2 from "lucide-solid/icons/maximize-2";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
+import { makeEventListener } from "@solid-primitives/event-listener";
 import {
     createEffect,
     createMemo,
@@ -40,6 +41,7 @@ import { PermissionsButton } from "../user";
 import { assertExhaustive } from "../util/assert_exhaustive";
 import { DocumentSidebar } from "./document_page_sidebar";
 import { HistorySidebar } from "./history_sidebar";
+import { useSnapshotHistory } from "./use_snapshot_history";
 
 import "./document_page.css";
 
@@ -399,6 +401,27 @@ export function DocumentPane(props: {
 
     const canRestore = () => props.docRef.permissions.user === "Own";
 
+    const history = useSnapshotHistory(() => props.docRef.refId);
+
+    makeEventListener(window, "keydown", (evt) => {
+        const mod = evt.metaKey || evt.ctrlKey;
+        if (!mod || evt.altKey) return;
+
+        if (evt.key === "z" || evt.key === "Z") {
+            if (evt.shiftKey) {
+                if (history.canRedo()) {
+                    evt.preventDefault();
+                    history.onRedo();
+                }
+            } else {
+                if (history.canUndo()) {
+                    evt.preventDefault();
+                    history.onUndo();
+                }
+            }
+        }
+    });
+
     return (
         <div class="document-pane-layout">
             <div class="document-pane-content">
@@ -470,7 +493,7 @@ export function DocumentPane(props: {
             </div>
             <Show when={props.historySidebarOpen && props.docRef.refId}>
                 <div class="history-sidebar">
-                    <HistorySidebar refId={props.docRef.refId} />
+                    <HistorySidebar refId={props.docRef.refId} history={history} />
                 </div>
             </Show>
         </div>
