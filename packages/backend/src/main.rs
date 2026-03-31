@@ -137,6 +137,7 @@ async fn main() {
                 db: db.clone(),
                 repo,
                 active_listeners: Arc::new(RwLock::new(HashSet::new())),
+                suppress_autosave: Arc::new(RwLock::new(HashSet::new())),
                 initialized_user_states: Arc::new(RwLock::new(HashMap::new())),
                 http_client,
                 julia_url,
