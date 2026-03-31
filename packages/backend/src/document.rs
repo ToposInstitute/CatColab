@@ -143,53 +143,37 @@ pub async fn ref_deleted_at(
     Ok(query.fetch_one(&state.db).await?.deleted_at)
 }
 
-/// Saves the document by replacing the head with a new snapshot.
-///
-/// The snapshot at the previous head is *not* deleted.
+/// Saves the document by creating a new snapshot and setting the current_snapshot to it.
 pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppError> {
-    let query = sqlx::query!(
-        "
-        SELECT doc_id FROM refs WHERE id = $1
-        ",
-        ref_id
-    );
+    let doc_id = get_doc_id(state.clone(), ref_id).await?;
 
-    let doc_id = query.fetch_one(&state.db).await?.doc_id;
-    let doc_id: samod::DocumentId = doc_id
-        .parse()
-        .map_err(|_| AppError::Invalid("Invalid document ID".to_string()))?;
+    let doc_handle = state
+        .repo
+        .find(doc_id)
+        .await?
+        .ok_or_else(|| AppError::Invalid("Document not found".to_string()))?;
 
-    let (cloned_doc, heads, doc_content) = {
-        let doc_handle = state
-            .repo
-            .find(doc_id)
-            .await?
-            .ok_or_else(|| AppError::Invalid("Document not found".to_string()))?;
-
-        doc_handle.with_document(|doc| {
-            let heads: Vec<Vec<u8>> = doc.get_heads().iter().map(|h| h.0.to_vec()).collect();
-            let hydrated = doc.hydrate(None);
-            let doc_content = hydrate_to_json(&hydrated);
-            (doc.clone(), heads, doc_content)
-        })
-    };
-    let cloned_handle = state.repo.create(cloned_doc).await?;
+    let (heads, doc_content) = doc_handle.with_document(|doc| {
+        let heads: Vec<Vec<u8>> = doc.get_heads().iter().map(|h| h.0.to_vec()).collect();
+        let hydrated = doc.hydrate(None);
+        let doc_content = hydrate_to_json(&hydrated);
+        (heads, doc_content)
+    });
 
     sqlx::query(
         "
         WITH snapshot AS (
             INSERT INTO snapshots(for_ref, content, created_at, heads, parent)
-            VALUES ($1, $2, NOW(), $4, (SELECT current_snapshot FROM refs WHERE id = $1))
+            VALUES ($1, $2, NOW(), $3, (SELECT current_snapshot FROM refs WHERE id = $1))
             RETURNING id
         )
         UPDATE refs
-        SET current_snapshot = (SELECT id FROM snapshot), doc_id = $3
+        SET current_snapshot = (SELECT id FROM snapshot)
         WHERE id = $1
         ",
     )
     .bind(ref_id)
     .bind(doc_content)
-    .bind(cloned_handle.document_id().to_string())
     .bind(&heads)
     .execute(&state.db)
     .await?;
