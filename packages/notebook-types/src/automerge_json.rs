@@ -184,6 +184,21 @@ fn collect_children_list(
         .collect()
 }
 
+fn copy_text_spans<'a>(
+    tx: &mut automerge::transaction::Transaction<'a>,
+    new_id: &automerge::ObjId,
+    source_id: &automerge::ObjId,
+    heads: &[automerge::ChangeHash],
+) -> Result<(), automerge::AutomergeError> {
+    use automerge::ReadDoc;
+    let spans: Vec<automerge::Span> = tx.spans_at(source_id, heads)?.collect();
+    tx.update_spans(
+        new_id,
+        automerge::marks::UpdateSpansConfig::default(),
+        spans,
+    )
+}
+
 fn put_value_into_map<'a>(
     tx: &mut automerge::transaction::Transaction<'a>,
     parent: &automerge::ObjId,
@@ -192,17 +207,12 @@ fn put_value_into_map<'a>(
     source_id: &automerge::ObjId,
     heads: &[automerge::ChangeHash],
 ) -> Result<(), automerge::AutomergeError> {
-    use automerge::{ObjType, ReadDoc};
+    use automerge::ObjType;
 
     match value {
         automerge::Value::Object(ObjType::Text) => {
-            let text = tx.text_at(source_id, heads)?;
-            let marks = tx.marks_at(source_id, heads)?;
             let new_id = tx.put_object(parent, key, ObjType::Text)?;
-            tx.splice_text(&new_id, 0, 0, &text)?;
-            for mark in marks {
-                tx.mark(&new_id, mark, automerge::marks::ExpandMark::After)?;
-            }
+            copy_text_spans(tx, &new_id, source_id, heads)?;
         }
         automerge::Value::Object(ObjType::Map) => {
             let new_id = tx.put_object(parent, key, ObjType::Map)?;
@@ -236,17 +246,12 @@ fn insert_value_into_list_from_doc<'a>(
     source_id: &automerge::ObjId,
     heads: &[automerge::ChangeHash],
 ) -> Result<(), automerge::AutomergeError> {
-    use automerge::{ObjType, ReadDoc};
+    use automerge::ObjType;
 
     match value {
         automerge::Value::Object(ObjType::Text) => {
-            let text = tx.text_at(source_id, heads)?;
-            let marks = tx.marks_at(source_id, heads)?;
             let new_id = tx.insert_object(parent, index, ObjType::Text)?;
-            tx.splice_text(&new_id, 0, 0, &text)?;
-            for mark in marks {
-                tx.mark(&new_id, mark, automerge::marks::ExpandMark::After)?;
-            }
+            copy_text_spans(tx, &new_id, source_id, heads)?;
         }
         automerge::Value::Object(ObjType::Map) => {
             let new_id = tx.insert_object(parent, index, ObjType::Map)?;

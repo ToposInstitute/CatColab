@@ -742,4 +742,248 @@ describe("Document editing, snapshots, and undo/redo", async () => {
             assert.strictEqual(marksAfterRevert[0]!.end, 10);
         },
     );
+
+    // ---------------------------------------------------------------
+    // Test 13: Redo does not bleed rich text content across cells
+    // ---------------------------------------------------------------
+    test.sequential(
+        "should not copy rich text content to other cells on redo",
+        { timeout: 20000 },
+        async () => {
+            await signInWithEmailAndPassword(auth, email, password);
+
+            const name = `Multi Cell Redo - ${v4()}`;
+            const refId = await createDoc(name);
+
+            await waitFor(
+                () => findDoc(refId) !== undefined,
+                `Document ${refId} should appear in user state`,
+            );
+
+            const refDoc = unwrap(await rpc.get_doc.query(refId));
+            assert(refDoc.tag === "Live");
+            assert(isValidDocumentId(refDoc.docId));
+            const handle: DocHandle<ModelDocument> = await repo.find(refDoc.docId);
+            await handle.whenReady();
+
+            const cellA = v4();
+            const cellB = v4();
+
+            handle.change((doc) => {
+                doc.notebook.cellOrder.push(cellA);
+                doc.notebook.cellContents[cellA] = {
+                    tag: "rich-text",
+                    id: cellA,
+                    content: "",
+                } as any;
+                Automerge.splice(
+                    doc,
+                    ["notebook", "cellContents", cellA, "content"],
+                    0,
+                    0,
+                    "Alpha content",
+                );
+
+                doc.notebook.cellOrder.push(cellB);
+                doc.notebook.cellContents[cellB] = {
+                    tag: "rich-text",
+                    id: cellB,
+                    content: "",
+                } as any;
+                Automerge.splice(
+                    doc,
+                    ["notebook", "cellContents", cellB, "content"],
+                    0,
+                    0,
+                    "Beta content",
+                );
+            });
+
+            const contentOf = (cellId: string) =>
+                (handle.doc().notebook.cellContents[cellId] as any)?.content as
+                    | string
+                    | undefined;
+
+            assert.strictEqual(contentOf(cellA), "Alpha content");
+            assert.strictEqual(contentOf(cellB), "Beta content");
+
+            // Wait for autosave → snapshot 2 (both cells present).
+            await waitFor(() => {
+                const doc = findDoc(refId);
+                return doc !== undefined && Object.keys(doc.snapshots).length >= 2;
+            }, "Should have two snapshots after adding cells");
+
+            const afterCells = findDoc(refId);
+            assert(afterCells);
+            const twoCellSnapshotId = afterCells.currentSnapshot;
+
+            // Edit only cell A.
+            handle.change((doc) => {
+                Automerge.splice(
+                    doc,
+                    ["notebook", "cellContents", cellA, "content"],
+                    0,
+                    13,
+                    "Alpha edited!",
+                );
+            });
+
+            assert.strictEqual(contentOf(cellA), "Alpha edited!");
+            assert.strictEqual(contentOf(cellB), "Beta content");
+
+            // Wait for autosave → snapshot 3.
+            await waitFor(() => {
+                const doc = findDoc(refId);
+                return doc !== undefined && Object.keys(doc.snapshots).length >= 3;
+            }, "Should have three snapshots after editing cell A");
+
+            const afterEdit = findDoc(refId);
+            assert(afterEdit);
+            const editedSnapshotId = afterEdit.currentSnapshot;
+
+            // Undo: navigate back to snapshot 2 (before cell A edit).
+            unwrap(await rpc.set_current_snapshot.mutate(refId, twoCellSnapshotId));
+            await waitFor(
+                () => contentOf(cellA) === "Alpha content",
+                "Undo should revert cell A to original",
+            );
+
+            assert.strictEqual(
+                contentOf(cellA),
+                "Alpha content",
+                "After undo, cell A should have original content",
+            );
+            assert.strictEqual(
+                contentOf(cellB),
+                "Beta content",
+                "After undo, cell B should still have its own content",
+            );
+
+            // Redo: navigate forward to snapshot 3 (cell A edited).
+            unwrap(await rpc.set_current_snapshot.mutate(refId, editedSnapshotId));
+            await waitFor(
+                () => contentOf(cellA) === "Alpha edited!",
+                "Redo should restore cell A edit",
+            );
+
+            assert.strictEqual(
+                contentOf(cellA),
+                "Alpha edited!",
+                "After redo, cell A should have edited content",
+            );
+            assert.strictEqual(
+                contentOf(cellB),
+                "Beta content",
+                `After redo, cell B must keep its own content, ` +
+                    `but got "${contentOf(cellB)}"`,
+            );
+        },
+    );
+
+    // ---------------------------------------------------------------
+    // Test 14: Block markers survive snapshot navigation (no U+FFFC leak)
+    // ---------------------------------------------------------------
+    test.sequential(
+        "should preserve block markers as structural elements after undo",
+        { timeout: 15000 },
+        async () => {
+            await signInWithEmailAndPassword(auth, email, password);
+
+            const name = `Block Markers - ${v4()}`;
+            const refId = await createDoc(name);
+
+            await waitFor(
+                () => findDoc(refId) !== undefined,
+                `Document ${refId} should appear in user state`,
+            );
+
+            const initialDoc = findDoc(refId);
+            assert(initialDoc);
+
+            const refDoc = unwrap(await rpc.get_doc.query(refId));
+            assert(refDoc.tag === "Live");
+            assert(isValidDocumentId(refDoc.docId));
+            const handle: DocHandle<ModelDocument> = await repo.find(refDoc.docId);
+            await handle.whenReady();
+
+            const cellId = v4();
+            const contentPath = ["notebook", "cellContents", cellId, "content"];
+
+            handle.change((doc) => {
+                doc.notebook.cellOrder.push(cellId);
+                doc.notebook.cellContents[cellId] = {
+                    tag: "rich-text",
+                    id: cellId,
+                    content: "",
+                } as any;
+                Automerge.splitBlock(doc, contentPath, 0, {
+                    type: "paragraph",
+                });
+                Automerge.splice(doc, contentPath, 1, 0, "hello 1");
+            });
+
+            const spansBefore = Automerge.spans(handle.doc(), contentPath as any);
+            assert.strictEqual(spansBefore.length, 2, "Should have block + text span");
+            assert.strictEqual(
+                spansBefore[0]!.type,
+                "block",
+                "First span should be a block marker",
+            );
+            assert.strictEqual(
+                spansBefore[1]!.type,
+                "text",
+                "Second span should be text",
+            );
+            assert.strictEqual(spansBefore[1]!.value, "hello 1");
+
+            await waitFor(() => {
+                const doc = findDoc(refId);
+                return doc !== undefined && Object.keys(doc.snapshots).length >= 2;
+            }, "Should have two snapshots after adding cell with block marker");
+
+            const afterEdit = findDoc(refId);
+            assert(afterEdit);
+            const withBlockSnapshotId = afterEdit.currentSnapshot;
+
+            // Make another edit to create a third snapshot.
+            handle.change((doc) => {
+                doc.name = `Block Markers Edited - ${v4()}`;
+            });
+
+            await waitFor(() => {
+                const doc = findDoc(refId);
+                return doc !== undefined && Object.keys(doc.snapshots).length >= 3;
+            }, "Should have three snapshots");
+
+            // Undo: navigate back to the snapshot with the block marker.
+            unwrap(await rpc.set_current_snapshot.mutate(refId, withBlockSnapshotId));
+            await waitFor(
+                () => handle.doc().name === name,
+                `Should revert to original name`,
+            );
+
+            // The critical check: spans must still be structural, not
+            // literal U+FFFC characters in the text.
+            const spansAfter = Automerge.spans(handle.doc(), contentPath as any);
+            assert.strictEqual(
+                spansAfter.length,
+                2,
+                `Should still have 2 spans (block + text) after undo, ` +
+                    `but got ${JSON.stringify(spansAfter)}`,
+            );
+            assert.strictEqual(
+                spansAfter[0]!.type,
+                "block",
+                `First span should be a block marker after undo, ` +
+                    `but got ${JSON.stringify(spansAfter[0])}`,
+            );
+            assert.strictEqual(spansAfter[1]!.type, "text");
+            assert.strictEqual(
+                spansAfter[1]!.value,
+                "hello 1",
+                `Text should be 'hello 1' without U+FFFC chars, ` +
+                    `but got ${JSON.stringify(spansAfter[1]!.value)}`,
+            );
+        },
+    );
 });
