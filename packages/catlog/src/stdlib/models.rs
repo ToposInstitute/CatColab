@@ -167,30 +167,67 @@ pub fn sir_petri(th: Rc<ModalDblTheory<Unital>>) -> ModalDblModel<Unital> {
     model
 }
 
-/// Lotka Volterra dynamcis viewed as a non-unital theory for a symmetric multicategory.
+/// An example of Lotka–Volterra dynamics viewed as a non-unital theory for a symmetric multicategory.
 pub fn lotka_volterra_dynamics(th: Rc<ModalDblTheory<NonUnital>>) -> ModalDblModel<NonUnital> {
     let ob_type = ModalObType::new(name("Object"));
     let mor_type = ModeApp::new(name("Multihom")).into();
 
     let mut model = ModalDblModel::new(th);
-    let (x, a, b) = (name("X"), name("A"), name("B"));
+    // We're going to build a two-level predator-prey model, but where (in absence of signed
+    // arrows) all interactions have positive coefficients.
+    let (a, b, c) = (name("A"), name("B"), name("C"));
 
-    model.add_ob(x.clone(), ob_type.clone());
     model.add_ob(a.clone(), ob_type.clone());
     model.add_ob(b.clone(), ob_type.clone());
-    // The growth term, for the image of a vertex. This should correspond to
-    // dX/dt += g_X X
+    model.add_ob(c.clone(), ob_type.clone());
+    // The growth terms, corresponding to
+    // dA/dt += g_A A
+    // dB/dt += g_B B
+    // dC/dt += g_C C
     model.add_mor(
-        name("X_growth"),
-        x.clone().into(),
-        x.clone().into(),
+        name("A_growth"),
+        a.clone().into(),
+        a.clone().into(),
         ModalMorType::Zero(ob_type.clone()),
     );
-    // The interaction term, for the image of an arrow. This should correspond to
+    model.add_mor(
+        name("B_growth"),
+        b.clone().into(),
+        b.clone().into(),
+        ModalMorType::Zero(ob_type.clone()),
+    );
+    model.add_mor(
+        name("C_growth"),
+        c.clone().into(),
+        c.clone().into(),
+        ModalMorType::Zero(ob_type.clone()),
+    );
+    // The interaction terms, corresponding to
     // dB/dt += k_AB AB
+    // dA/dt += k_BA AB
+    // dC/dt += k_BC BC
+    // dB/dt += k_CB BC
     model.add_mor(
         name("AB_interaction"),
         ModalOb::List(List::Symmetric, vec![a.clone().into(), b.clone().into()]),
+        b.clone().into(),
+        mor_type,
+    );
+    model.add_mor(
+        name("BA_interaction"),
+        ModalOb::List(List::Symmetric, vec![a.clone().into(), b.clone().into()]),
+        a.clone().into(),
+        mor_type,
+    );
+    model.add_mor(
+        name("BC_interaction"),
+        ModalOb::List(List::Symmetric, vec![b.clone().into(), c.clone().into()]),
+        c.clone().into(),
+        mor_type,
+    );
+    model.add_mor(
+        name("CB_interaction"),
+        ModalOb::List(List::Symmetric, vec![b.clone().into(), c.clone().into()]),
         b.clone().into(),
         mor_type,
     );
