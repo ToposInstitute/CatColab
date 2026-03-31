@@ -1009,10 +1009,7 @@ mod integration_tests {
                 .fetch_one(db)
                 .await?;
 
-                snapshot_ids.insert(
-                    ref_id_str.clone(),
-                    (snapshot_id, doc.created_at),
-                );
+                snapshot_ids.insert(ref_id_str.clone(), (snapshot_id, doc.created_at));
 
                 if let Some(deleted_at) = doc.deleted_at {
                     sqlx::query!(

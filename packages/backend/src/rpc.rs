@@ -7,8 +7,8 @@ use tracing::debug;
 use uuid::Uuid;
 
 use super::app::{AppCtx, AppError, AppState};
-use super::autosave::ensure_autosave_listener;
 use super::auth::{NewPermissions, PermissionLevel, Permissions};
+use super::autosave::ensure_autosave_listener;
 use super::user_state::get_or_create_user_state_doc;
 use super::{auth, document as doc, user};
 
