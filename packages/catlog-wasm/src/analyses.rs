@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
-use catlog::latex::LatexEquations;
+use catlog::latex::{LatexEquations, ToLatexEquations};
 use catlog::simulate::ode::PolynomialSystem;
 use catlog::stdlib::analyses::ode;
 use catlog::zero::QualifiedName;

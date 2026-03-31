@@ -475,7 +475,7 @@ mod tests {
     use std::rc::Rc;
 
     use super::*;
-    use crate::latex::{Latex, LatexEquation, LatexEquations};
+    use crate::latex::{Latex, LatexEquation, LatexEquations, ToLatexEquations};
     use crate::stdlib::{analyses, models::*, theories::*};
 
     // Tests for stock-flow diagrams. These all use the backward_link() model,

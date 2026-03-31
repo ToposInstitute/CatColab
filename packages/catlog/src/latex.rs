@@ -23,6 +23,12 @@ impl fmt::Display for Latex {
     }
 }
 
+/// An object that can be rendered to LaTeX.
+pub trait ToLatex {
+    /// Convert the object to its LaTeX representation.
+    fn to_latex(&self) -> Latex;
+}
+
 #[derive(Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 /// An equation in LaTeX format with a left-hand side and a right-hand side.
@@ -38,12 +44,12 @@ pub struct LatexEquation {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct LatexEquations(pub Vec<LatexEquation>);
 
-/// An object that can be rendered to LaTeX.
-pub trait ToLatex {
-    /// Convert the object to its LaTeX representation.
-    fn to_latex(&self) -> Latex;
+/// An object that can be rendered to a collection of LaTeX equations (of the form
+/// `lhs = rhs`).
+pub trait ToLatexEquations  {
+    /// Convert the object to the LaTeX equations.
+    fn to_latex_equations(&self) -> LatexEquations;
 }
-
 
 // TODO: a trait that says "you must tell me how to format objects and morphisms"
 //       i.e. something that
@@ -52,3 +58,12 @@ pub trait ToLatex {
 //          latex_mor_names_mass_action
 //       which should be implemented on PolynomialSystem (?) by each analysis (??)
 //       ... look at how these two functions are used
+// 
+// PolynomialSystem<QualifiedName, Parameter<T>, i8> -> LatexEquations
+// 
+// note that it would suffice to give
+//      DblModel -> QualifiedName -> Latex
+// and
+//      DblModel -> Parameter<T> -> Latex
+// ... right? and (I think...) the latter is induced by any
+//      DblModel -> T -> Latex
