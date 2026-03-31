@@ -3,12 +3,14 @@
 
 # julia --project=my_alg_julia_env --threads 4 endpoint.jl Catlab AlgebraicPetri
 
-# Where my_alg_julia_env is a Julia environment with CatColabInterop, Oxygen, 
+# Where my_alg_julia_env is a Julia environment with CatColabInterop, Oxygen,
 # HTTP, and any AlgJulia dependencies.
 
 using CatColabInterop
 using Oxygen
 using HTTP
+
+const port = parse(Int, get(ENV, "JULIA_PORT", "8080"))
 
 const CORS_HEADERS = [
     "Access-Control-Allow-Origin" => "*",
@@ -32,7 +34,7 @@ end
 defaults = [:Catlab,:ACSets] # all extensions to date
 
 # Dynamically load packages in command lin eargs
-for pkg in (isempty(ARGS) ? defaults : ARGS )
+for pkg in (isempty(ARGS) ? defaults : Symbol.(ARGS) )
   @info "using $pkg"
   @eval using $pkg
 end
@@ -47,4 +49,4 @@ for m in methods(CatColabInterop.endpoint)
   invoke(fntype.instance, Tuple{argtypes...}, Val(name))
 end
 
-serve(middleware=[CorsHandler])
+serveparallel(; port=port, middleware=[CorsHandler], access_log=nothing)

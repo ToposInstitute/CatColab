@@ -1,11 +1,11 @@
 import type {
     DblModel,
     KuramotoProblemData,
+    LatexEquations,
     LinearODEProblemData,
     LotkaVolterraProblemData,
     MassActionEquationsData,
     MassActionProblemData,
-    ODELatex,
     ODEResult,
     ODEResultWithEquations,
     StochasticMassActionProblemData,
@@ -29,7 +29,10 @@ export type StochasticMassActionSimulator = (
     model: DblModel,
     data: StochasticMassActionProblemData,
 ) => ODEResult;
-export type MassActionEquations = (model: DblModel, data: MassActionEquationsData) => ODELatex;
+export type MassActionEquations = (
+    model: DblModel,
+    data: MassActionEquationsData,
+) => LatexEquations;
 
 /** Configuration for a Decapodes analysis of a diagram. */
 export type DecapodesAnalysisContent = {

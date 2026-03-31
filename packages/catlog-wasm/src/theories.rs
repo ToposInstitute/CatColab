@@ -11,8 +11,10 @@ use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 use catlog::zero::{QualifiedLabel, name};
 
+use super::latex::LatexEquations;
 use super::model_morphism::{MotifOccurrence, MotifsOptions, motifs};
 use super::result::JsResult;
+use super::theories::MassActionAnalysisLogic;
 use super::{analyses::*, model::DblModel, theory::DblTheory};
 
 /// The empty or initial theory.
@@ -315,7 +317,7 @@ impl ThCategoryLinks {
         model: &DblModel,
         data: analyses::ode::MassActionProblemData,
     ) -> Result<ODEResultWithEquations, String> {
-        mass_action_tab(model, data)
+        mass_action_simulation(model, data, MassActionAnalysisLogic::StockFlow)
     }
 
     /// Returns the symbolic mass-action equations in LaTeX format.
@@ -324,8 +326,8 @@ impl ThCategoryLinks {
         &self,
         model: &DblModel,
         data: MassActionEquationsData,
-    ) -> Result<ODELatex, String> {
-        mass_action_equations_tab(model, data)
+    ) -> Result<LatexEquations, String> {
+        mass_action_equations(model, data, MassActionAnalysisLogic::StockFlow)
     }
 }
 
@@ -352,7 +354,7 @@ impl ThCategorySignedLinks {
         model: &DblModel,
         data: analyses::ode::MassActionProblemData,
     ) -> Result<ODEResultWithEquations, String> {
-        mass_action_tab(model, data)
+        mass_action_simulation(model, data, MassActionAnalysisLogic::StockFlow)
     }
 
     /// Returns the symbolic mass-action equations in LaTeX format.
@@ -361,8 +363,8 @@ impl ThCategorySignedLinks {
         &self,
         model: &DblModel,
         data: MassActionEquationsData,
-    ) -> Result<ODELatex, String> {
-        mass_action_equations_tab(model, data)
+    ) -> Result<LatexEquations, String> {
+        mass_action_equations(model, data, MassActionAnalysisLogic::StockFlow)
     }
 }
 
@@ -389,7 +391,7 @@ impl ThSymMonoidalCategory {
         model: &DblModel,
         data: analyses::ode::MassActionProblemData,
     ) -> Result<ODEResultWithEquations, String> {
-        mass_action_modal(model, data)
+        mass_action_simulation(model, data, MassActionAnalysisLogic::PetriNet)
     }
 
     /// Returns the symbolic mass-action equations in LaTeX format.
@@ -398,8 +400,8 @@ impl ThSymMonoidalCategory {
         &self,
         model: &DblModel,
         data: MassActionEquationsData,
-    ) -> Result<ODELatex, String> {
-        mass_action_equations_modal(model, data)
+    ) -> Result<LatexEquations, String> {
+        mass_action_equations(model, data, MassActionAnalysisLogic::PetriNet)
     }
 
     /// Simulates the stochastic mass-action system derived from a model.

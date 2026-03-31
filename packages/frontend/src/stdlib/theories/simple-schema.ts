@@ -15,18 +15,13 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
             description: "Visualize the instance as a graph",
             help: "visualization",
         }),
+        analyses.tabularView({
+            id: "tabularview",
+            name: "Table view",
+            description: "Visualize the instance as a table",
+            help: "tabularview",
+        }),
     ];
-
-    if (import.meta.env.MODE !== "production") {
-        diagramAnalyses.push(
-            analyses.tabularView({
-                id: "tabularview",
-                name: "Table view",
-                description: "Visualize the instance as a table",
-                help: "tabularview",
-            }),
-        );
-    }
     return new Theory({
         ...theoryMeta,
         theory: thSchema.theory(),
