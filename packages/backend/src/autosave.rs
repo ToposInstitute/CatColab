@@ -30,6 +30,12 @@ pub async fn ensure_autosave_listener(state: AppState, ref_id: Uuid, doc_handle:
             let mut snapshot_handle: Option<tokio::task::JoinHandle<()>> = None;
 
             while (changes.next().await).is_some() {
+                if state.suppress_autosave.read().await.contains(&ref_id) {
+                    if let Some(handle) = snapshot_handle.take() {
+                        handle.abort();
+                    }
+                    continue;
+                }
                 if let Some(handle) = snapshot_handle.take() {
                     handle.abort();
                 }
