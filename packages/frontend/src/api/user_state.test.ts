@@ -298,7 +298,11 @@ describe("User state Automerge document", async () => {
             afterAutosave.currentSnapshot !== originalSnapshotId,
             "currentSnapshot should have changed after autosave",
         );
-        assert.strictEqual(Object.keys(afterAutosave.snapshots).length, 2, "Should have two snapshots");
+        assert.strictEqual(
+            Object.keys(afterAutosave.snapshots).length,
+            2,
+            "Should have two snapshots",
+        );
 
         unwrap(await rpc.set_current_snapshot.mutate(refId, originalSnapshotId));
 

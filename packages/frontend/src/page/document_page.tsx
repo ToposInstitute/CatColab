@@ -1,11 +1,11 @@
 import Resizable, { type ContextValue } from "@corvu/resizable";
+import { makeEventListener } from "@solid-primitives/event-listener";
 import { Title } from "@solidjs/meta";
 import { useNavigate, useParams } from "@solidjs/router";
 import ChevronsRight from "lucide-solid/icons/chevrons-right";
 import History from "lucide-solid/icons/history";
 import Maximize2 from "lucide-solid/icons/maximize-2";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
-import { makeEventListener } from "@solid-primitives/event-listener";
 import {
     createEffect,
     createMemo,
@@ -236,7 +236,10 @@ function SplitPaneToolbar(props: {
                     class="primary-permissions-toolbar toolbar"
                     style={{ left: `${(primaryPanelSize() ?? 0) * 100}%` }}
                 >
-                    <IconButton onClick={props.togglePrimaryHistorySidebar} tooltip="Toggle history">
+                    <IconButton
+                        onClick={props.togglePrimaryHistorySidebar}
+                        tooltip="Toggle history"
+                    >
                         <History size={20} />
                     </IconButton>
                     <PermissionsButton liveDoc={props.doc.liveDoc} docRef={props.docRef} />
@@ -405,7 +408,9 @@ export function DocumentPane(props: {
 
     makeEventListener(window, "keydown", (evt) => {
         const mod = evt.metaKey || evt.ctrlKey;
-        if (!mod || evt.altKey) return;
+        if (!mod || evt.altKey) {
+            return;
+        }
 
         if (evt.key === "z" || evt.key === "Z") {
             if (evt.shiftKey) {
@@ -479,9 +484,7 @@ export function DocumentPane(props: {
                             {(liveModel) => <ModelNotebookEditor liveModel={liveModel()} />}
                         </Match>
                         <Match when={props.doc.type === "diagram" && props.doc}>
-                            {(liveDiagram) => (
-                                <DiagramNotebookEditor liveDiagram={liveDiagram()} />
-                            )}
+                            {(liveDiagram) => <DiagramNotebookEditor liveDiagram={liveDiagram()} />}
                         </Match>
                         <Match when={props.doc.type === "analysis" && props.doc}>
                             {(liveAnalysis) => (
