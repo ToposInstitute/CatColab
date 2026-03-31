@@ -8,6 +8,8 @@ use std::ops::{Add, AddAssign, Mul, Neg};
 
 use derivative::Derivative;
 
+use crate::latex::{Latex, ToLatex};
+
 use super::rig::*;
 
 /// A commutative algebra over a commutative ring.
@@ -146,18 +148,6 @@ where
     }
 }
 
-impl<Var, Coef, Exp> Polynomial<Var, Coef, Exp>
-where
-    Var: Display,
-    Coef: Display + PartialEq + One + Neg<Output = Coef>,
-    Exp: Display + PartialEq + One,
-{
-    /// Convert to a LaTeX string.
-    pub fn to_latex(&self) -> String {
-        self.0.to_latex()
-    }
-}
-
 impl<Var, Coef, Exp> FromIterator<(Coef, Monomial<Var, Exp>)> for Polynomial<Var, Coef, Exp>
 where
     Var: Ord,
@@ -169,6 +159,22 @@ where
     }
 }
 
+/// Print the combination using LaTeX.
+impl<Var, Coef, Exp> ToLatex for Polynomial<Var, Coef, Exp>
+where
+    Var: Display,
+    Coef: Display + PartialEq + One + Neg<Output = Coef>,
+    Exp: Display + PartialEq + One,
+{
+    fn to_latex(&self) -> Latex {
+        self.0.to_latex()
+    }
+}
+
+/// Print the combination using ASCII.
+///
+/// Intended for debugging/testing. It currently just uses the LaTeX format since we are not yet
+/// using any LaTeX-specific characters there.
 impl<Var, Coef, Exp> Display for Polynomial<Var, Coef, Exp>
 where
     Var: Display,
@@ -176,7 +182,7 @@ where
     Exp: Display + PartialEq + One,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_latex())
+        write!(f, "{:?}", self.to_latex())
     }
 }
 

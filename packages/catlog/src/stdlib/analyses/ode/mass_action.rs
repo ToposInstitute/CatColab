@@ -187,7 +187,7 @@ pub struct MassActionProblemData {
 }
 
 /// Symbolic parameter in mass-action polynomial system.
-type Parameter<Id> = Polynomial<Id, f32, i8>;
+pub type Parameter<Id> = Polynomial<Id, f32, i8>;
 
 /// Mass-action ODE analysis for Petri nets.
 ///
@@ -475,7 +475,7 @@ mod tests {
     use std::rc::Rc;
 
     use super::*;
-    use crate::simulate::ode::LatexEquation;
+    use crate::latex::{Latex, LatexEquation, LatexEquations, ToLatexEquations};
     use crate::stdlib::{analyses, models::*, theories::*};
 
     // Tests for stock-flow diagrams. These all use the backward_link() model,
@@ -609,16 +609,16 @@ mod tests {
                 analyses::ode::RateGranularity::PerTransition,
             ),
         );
-        let expected = vec![
+        let expected = LatexEquations(vec![
             LatexEquation {
-                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string(),
-                rhs: "(-Outgoing(f)) x y".to_string(),
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string()),
+                rhs: Latex("(-Outgoing(f)) x y".to_string()),
             },
             LatexEquation {
-                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string(),
-                rhs: "(Incoming(f)) x y".to_string(),
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string()),
+                rhs: Latex("(Incoming(f)) x y".to_string()),
             },
-        ];
+        ]);
         assert_eq!(expected, sys.to_latex_equations());
     }
 }
