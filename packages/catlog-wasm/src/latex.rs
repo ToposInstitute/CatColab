@@ -1,9 +1,22 @@
 //! Auxiliary structs and glue code for any LaTeX code being passed through analyses.
 
+use crate::latex::ode::Parameter;
+use catlog::latex::Latex;
 use catlog::stdlib::analyses::ode;
 use catlog::zero::QualifiedName;
 
 use super::model::DblModel;
+
+/// Certain analyses will have an opinion on how to (re)name the variables and
+/// coefficients of a polynomial when rendering it as a LaTeX expression. For example,
+/// the interaction coefficients in Lotka–Volterra tend to be called `k_{AB}`, whereas
+/// in mass-action they are `r_{AB}`. Note that this requires the model itself as input.
+pub trait RenderPolynomial {
+    /// How to render the variable names.
+    fn render_variable(&self, model: DblModel) -> impl Fn(&QualifiedName) -> Latex;
+    /// How to render the coefficient names.
+    fn render_coefficient<Coef>(&self, model: DblModel) -> impl Fn(&Coef) -> Latex;
+}
 
 /// Creates a closure that formats object names for LaTeX output.
 pub(crate) fn latex_ob_names_mass_action(model: &DblModel) -> impl Fn(&QualifiedName) -> String {

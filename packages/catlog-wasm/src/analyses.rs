@@ -3,10 +3,12 @@
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
-use catlog::latex::{LatexEquations, ToLatexEquations};
+use catlog::latex::{Latex, LatexEquations, ToLatexEquations};
 use catlog::simulate::ode::PolynomialSystem;
-use catlog::stdlib::analyses::ode;
+use catlog::stdlib::analyses::ode::{self, Parameter};
 use catlog::zero::QualifiedName;
+
+use crate::latex::RenderPolynomial;
 
 use super::latex::{latex_mor_names_mass_action, latex_ob_names_mass_action};
 use super::model::DblModel;
@@ -35,6 +37,71 @@ pub enum MassActionAnalysisLogic {
     PetriNet,
     /// The discrete tabulator theory of stock-flow diagrams.
     StockFlow,
+}
+
+/// The analysis data for mass-action equations.
+#[derive(Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct MassActionEquationsData {
+    /// The mass-conservation type.
+    #[serde(rename = "massConservationType")]
+    pub mass_conservation_type: ode::MassConservationType,
+}
+
+impl RenderPolynomial for MassActionEquationsData {
+    fn render_variable(&self, model: DblModel) -> impl Fn(&QualifiedName) -> Latex {
+        move |id: &QualifiedName| {
+            let name = model.ob_namespace.label_string(id);
+            if name.chars().count() > 1 {
+                Latex("\\text{{{name}}}".to_string())
+            } else {
+                Latex(name)
+            }
+        }
+    }
+    
+    fn render_coefficient<Coef>(&self, model: DblModel) -> impl Fn(Coef) -> Latex {
+        // Returns a LaTeX fragment for a transition, suitable for use as a subscript.
+        // Named morphisms produce `\text{name}`, unnamed ones produce
+        // `\text{dom} \to \text{cod}` so that `\to` is in math mode.
+        let transition_subscript = |transition: &QualifiedName| -> String {
+            if let Some(label) = model.mor_namespace.label(transition) {
+                format!("\\text{{{label}}}")
+            } else {
+                let (dom, cod) = model
+                    .mor_generator_dom_cod_label_strings(transition)
+                    .expect("Morphism in equation system should have domain and codomain");
+                format!("\\text{{{dom}}} \\to \\text{{{cod}}}")
+            }
+        };
+
+        move |id: &ode::FlowParameter| match id {
+            ode::FlowParameter::Balanced { transition } => {
+                let sub = transition_subscript(transition);
+                format!("r_{{{sub}}}")
+            }
+            ode::FlowParameter::Unbalanced { direction, parameter } => match (direction, parameter) {
+                (ode::Direction::IncomingFlow, ode::RateParameter::PerTransition { transition }) => {
+                    let sub = transition_subscript(transition);
+                    format!("\\rho_{{{sub}}}")
+                }
+                (ode::Direction::OutgoingFlow, ode::RateParameter::PerTransition { transition }) => {
+                    let sub = transition_subscript(transition);
+                    format!("\\kappa_{{{sub}}}")
+                }
+                (ode::Direction::IncomingFlow, ode::RateParameter::PerPlace { transition, place }) => {
+                    let sub = transition_subscript(transition);
+                    let output_place_label = model.ob_namespace.label_string(place);
+                    format!("\\rho_{{{sub}}}^{{\\text{{{output_place_label}}}}}")
+                }
+                (ode::Direction::OutgoingFlow, ode::RateParameter::PerPlace { transition, place }) => {
+                    let sub = transition_subscript(transition);
+                    let input_place_label = model.ob_namespace.label_string(place);
+                    format!("\\kappa_{{{sub}}}^{{\\text{{{input_place_label}}}}}")
+                }
+            },
+        }
+    }
 }
 
 /// Generates the PolynomialSystem for mass-action dynamics.
@@ -76,15 +143,6 @@ pub(crate) fn mass_action_simulation(
     })
 }
 
-/// The analysis data for mass-action equations.
-#[derive(Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct MassActionEquationsData {
-    /// The mass-conservation type.
-    #[serde(rename = "massConservationType")]
-    pub mass_conservation_type: ode::MassConservationType,
-}
-
 /// Generates mass-action equations for the equations.
 pub(crate) fn mass_action_equations(
     model: &DblModel,
@@ -93,8 +151,8 @@ pub(crate) fn mass_action_equations(
 ) -> Result<LatexEquations, String> {
     let sys = mass_action_system(model, data.mass_conservation_type, logic);
     let equations = sys?
-        .map_variables(latex_ob_names_mass_action(model))
-        .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(model)))
+        .map_variables(data.render_variable(model))
+        .extend_scalars(|param| param.map_variables(data.render_coefficient(model)))
         .to_latex_equations();
     Ok(equations)
 }

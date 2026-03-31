@@ -46,24 +46,7 @@ pub struct LatexEquations(pub Vec<LatexEquation>);
 
 /// An object that can be rendered to a collection of LaTeX equations (of the form
 /// `lhs = rhs`).
-pub trait ToLatexEquations  {
+pub trait ToLatexEquations {
     /// Convert the object to the LaTeX equations.
     fn to_latex_equations(&self) -> LatexEquations;
 }
-
-// TODO: a trait that says "you must tell me how to format objects and morphisms"
-//       i.e. something that
-//          latex_ob_names_mass_action
-//       and
-//          latex_mor_names_mass_action
-//       which should be implemented on PolynomialSystem (?) by each analysis (??)
-//       ... look at how these two functions are used
-// 
-// PolynomialSystem<QualifiedName, Parameter<T>, i8> -> LatexEquations
-// 
-// note that it would suffice to give
-//      DblModel -> QualifiedName -> Latex
-// and
-//      DblModel -> Parameter<T> -> Latex
-// ... right? and (I think...) the latter is induced by any
-//      DblModel -> T -> Latex
