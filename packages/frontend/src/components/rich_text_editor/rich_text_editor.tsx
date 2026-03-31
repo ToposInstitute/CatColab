@@ -1,5 +1,5 @@
-import type { Prop } from "@automerge/automerge";
-import type { DocHandle } from "@automerge/automerge-repo";
+import type { Patch, Prop } from "@automerge/automerge";
+import type { DocHandle, DocHandleChangePayload } from "@automerge/automerge-repo";
 import {
     makeBlockMathInputRule,
     mathBackspaceCmd,
@@ -125,11 +125,14 @@ export const RichTextEditor = (
     const [headingLevel, setHeadingLevel] = createSignal<number | null>(null);
     const isReady = useDocHandleReady(() => props.handle);
 
+    const [reinitTrigger, setReinitTrigger] = createSignal(0);
+
     createEffect(() => {
         // NOTE: Make the effect depend on the given ID to ensure that this
         // component updates when the Automerge handle and path both stay the
         // same but the path refers to a different object in the document.
         void props.id;
+        void reinitTrigger();
 
         if (!isReady()) {
             return;
@@ -277,7 +280,17 @@ export const RichTextEditor = (
             },
         });
 
-        onCleanup(() => view.destroy());
+        const onRemoteChange = ({ patches }: DocHandleChangePayload<unknown>) => {
+            if (hasStructuralReplacement(patches, props.path)) {
+                setReinitTrigger((c) => c + 1);
+            }
+        };
+        props.handle.on("change", onRemoteChange);
+
+        onCleanup(() => {
+            props.handle.off("change", onRemoteChange);
+            view.destroy();
+        });
     });
 
     return (
@@ -474,5 +487,27 @@ function TooltipButton(props: {
                 </button>
             </div>
         </Show>
+    );
+}
+
+/** True when `candidate` is a prefix of (or equal to) `target`. */
+function isPathPrefixOf(candidate: Prop[], target: Prop[]): boolean {
+    if (candidate.length > target.length) return false;
+    for (let i = 0; i < candidate.length; i++) {
+        if (candidate[i] !== target[i]) return false;
+    }
+    return true;
+}
+
+/**
+ * Detect patches that indicate structural replacement of the text object or
+ * one of its ancestors. `@automerge/prosemirror`'s `gatherPatches` skips these,
+ * leaving the ProseMirror document out of sync with the Automerge state.
+ */
+function hasStructuralReplacement(patches: Patch[], textPath: Prop[]): boolean {
+    return patches.some(
+        (p) =>
+            (p.action === "put" || p.action === "del") &&
+            isPathPrefixOf(p.path, textPath),
     );
 }
