@@ -364,31 +364,3 @@ export function renderSQL(
 }
 
 const SQLSchemaAnalysis = lazy(() => import("./analyses/sql"));
-
-// export function polynomialODEEquations(
-//     options: Partial<AnalysisOptions> & {
-//         ratesHaveGranularity: boolean;
-//         getEquations: Simulators.MassActionEquations;
-//     },
-// ): ModelAnalysisMeta<MassActionEquationsData> {
-//     const {
-//         id = "mass-action-equations",
-//         name = "Mass-action dynamics equations",
-//         description = "Display the symbolic mass-action dynamics equations",
-//         help = "mass-action-equations",
-//         ...otherOptions
-//     } = options;
-//     return {
-//         id,
-//         name,
-//         description,
-//         help,
-//         component: (props) => (
-//             <PolynomialODEEquationsDisplay title={name} {...otherOptions} {...props} />
-//         ),
-//         initialContent: () => ({
-//             massConservationType: { type: "Balanced" },
-//         }),
-//     };
-// }
-// const PolynomialODEEquationsDisplay = lazy(() => import("./analyses/polynomial_ode_equations"));

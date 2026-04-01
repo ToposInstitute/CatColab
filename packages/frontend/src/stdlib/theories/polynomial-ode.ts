@@ -25,13 +25,6 @@ export default function createPolynomialODETheory(theoryMeta: TheoryMeta): Theor
                 shortcut: ["C"],
             },
         ],
-        modelAnalyses: [
-            // analyses.polynomialODEEquations({
-            //     ratesHaveGranularity: true,
-            //     getEquations(model, data) {
-            //         return thSymMulticategory.polynomialODEEquations(model, data);
-            //     },
-            // }),
-        ],
+        modelAnalyses: [],
     });
 }

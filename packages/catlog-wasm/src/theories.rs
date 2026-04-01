@@ -445,16 +445,6 @@ impl ThSymMulticategory {
     pub fn theory(&self) -> DblTheory {
         DblTheory(self.0.clone().into())
     }
-
-    // /// Returns the symbolic equations in LaTeX format.
-    // #[wasm_bindgen(js_name = "polynomialODEEquations")]
-    // pub fn polynomial_ode_equations(
-    //     &self,
-    //     model: &DblModel,
-    //     data: PolynomialODEProblemData,
-    // ) -> Result<LatexEquations, String> {
-    //     polynomial_ode_equations(model, data)
-    // }
 }
 
 /// A theory of power systems.
