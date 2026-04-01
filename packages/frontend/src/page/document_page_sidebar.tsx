@@ -196,8 +196,8 @@ function DocumentsTreeLeaf(props: {
 
     const iconLetters = createMemo(() => {
         const doc = props.doc.liveDoc.doc;
-        const theoryId = doc.type === "model" ? doc.theory : undefined;
-        if (theoryId && theories && props.doc.liveDoc.doc.type === "model") {
+        if (doc.type === "model" && theories) {
+            const theoryId = doc.editorVariant ?? doc.theory;
             try {
                 const theoryMeta = theories.getMetadata(theoryId);
                 return theoryMeta.iconLetters;

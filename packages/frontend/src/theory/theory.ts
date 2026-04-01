@@ -1,9 +1,39 @@
 import type { KbdKey } from "catcolab-ui-components";
 import type { DblModel, DblTheory, MorType, ObOp, ObType } from "catlog-wasm";
 import type { DiagramAnalysisComponent, ModelAnalysisComponent } from "../analysis";
+import type { EditorVariantOverrides } from "../model/editors";
 import { uniqueIndexArray } from "../util/indexing";
 import type { ArrowStyle } from "../visualization";
 import { MorTypeMap, ObTypeMap } from "./types";
+
+/** Display metadata for an editor variant of a theory.
+
+An editor variant shares the same underlying double theory but uses different
+editor components for some types (e.g., a string diagram editor for morphisms).
+ */
+export type EditorVariantMeta = {
+    /** Unique identifier of the editor variant. */
+    id: string;
+
+    /** Human-readable name for the editor variant. */
+    name: string;
+
+    /** Short description of the editor variant. */
+    description: string;
+
+    /** Two-letter icon abbreviation for the editor variant. */
+    iconLetters?: [string, string];
+
+    /** Group to which the editor variant belongs. */
+    group?: string;
+
+    /** Editor component overrides for this editor variant.
+
+    Specifies which editor components replace the defaults for particular types.
+    Components can be wrapped with SolidJS `lazy()` to defer loading.
+     */
+    editorOverrides?: EditorVariantOverrides;
+};
 
 /** A double theory configured for the frontend.
 
@@ -64,6 +94,13 @@ export class Theory {
     /** List of pushforward (covariant) migrations out of this theory. */
     readonly pushforwards: ModelMigration[];
 
+    /** Editor variants of this theory.
+
+    Each editor variant appears as a separate selectable option in the theory
+    picker but shares the same underlying theory — only the editors differ.
+     */
+    readonly editorVariants: EditorVariantMeta[];
+
     private readonly modelObTypeMap: ObTypeMap<ModelObTypeMeta>;
     private readonly modelMorTypeMap: MorTypeMap<ModelMorTypeMeta>;
     private readonly instanceObTypeMap: ObTypeMap<InstanceObTypeMeta>;
@@ -83,6 +120,7 @@ export class Theory {
         description: string;
         inclusions?: string[];
         pushforwards?: ModelMigration[];
+        editorVariants?: EditorVariantMeta[];
         modelTypes?: ModelTypeMeta[];
         modelAnalyses?: ModelAnalysisMeta[];
         onlyFreeModels?: boolean;
@@ -98,6 +136,9 @@ export class Theory {
         // Migrations.
         this.inclusions = props.inclusions ?? [];
         this.pushforwards = props.pushforwards ?? [];
+
+        // Editor variants.
+        this.editorVariants = props.editorVariants ?? [];
 
         // Models.
         this.name = props.name;
