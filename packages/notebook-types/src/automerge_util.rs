@@ -158,26 +158,9 @@ fn insert_value_into_list_from_doc<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::automerge_json::{hydrate_to_json, populate_automerge_from_json};
+    use crate::common_test::{doc_from_json, doc_to_json};
     use automerge::{Automerge, ObjType, ReadDoc};
     use serde_json::json;
-
-    /// Helper: create doc populated from JSON.
-    fn doc_from_json(value: &serde_json::Value) -> Automerge {
-        let mut doc = Automerge::new();
-        doc.transact(|tx| {
-            populate_automerge_from_json(tx, automerge::ROOT, value).unwrap();
-            Ok::<_, automerge::AutomergeError>(())
-        })
-        .unwrap();
-        doc
-    }
-
-    /// Helper: read the current doc state back as JSON.
-    fn doc_to_json(doc: &Automerge) -> serde_json::Value {
-        let value = doc.hydrate(None);
-        hydrate_to_json(&value)
-    }
 
     #[test]
     fn copy_restores_scalar_fields() {
@@ -373,5 +356,72 @@ mod tests {
 
         let keys: Vec<String> = doc.keys(automerge::ROOT).collect();
         assert!(keys.is_empty());
+    }
+}
+
+#[cfg(all(test, feature = "property-tests"))]
+mod property_tests {
+    use super::*;
+    use crate::common_test::{doc_from_json, doc_to_json};
+    use crate::v1::notebook::ModelNotebook;
+    use automerge::ReadDoc;
+    use test_strategy::proptest;
+
+    /// After mutating a doc and then restoring via `copy_doc_at_heads`, the
+    /// JSON representation matches the original.
+    #[proptest(cases = 64)]
+    fn copy_doc_at_heads_restores_model_notebook(notebook: ModelNotebook) {
+        let json = serde_json::to_value(&notebook.0).expect("serialize to JSON");
+        let mut doc = doc_from_json(&json);
+        let original_heads = doc.get_heads();
+
+        // Mutate: clear all keys from root.
+        doc.transact(|tx| {
+            let keys: Vec<String> = tx.keys(automerge::ROOT).collect();
+            for key in keys {
+                tx.delete(automerge::ROOT, key.as_str())?;
+            }
+            Ok::<_, automerge::AutomergeError>(())
+        })
+        .unwrap();
+
+        // Restore to original heads.
+        doc.transact(|tx| {
+            copy_doc_at_heads(tx, &original_heads)?;
+            Ok::<_, automerge::AutomergeError>(())
+        })
+        .unwrap();
+
+        let result = doc_to_json(&doc);
+        proptest::prop_assert_eq!(json, result);
+    }
+
+    /// Restoring to empty heads after populating yields an empty document.
+    #[proptest(cases = 64)]
+    fn copy_doc_at_heads_restores_to_empty(notebook: ModelNotebook) {
+        let json = serde_json::to_value(&notebook.0).expect("serialize to JSON");
+        let mut doc = automerge::Automerge::new();
+        let empty_heads = doc.get_heads();
+
+        // Populate the doc.
+        doc.transact(|tx| {
+            crate::automerge_json::populate_automerge_from_json(tx, automerge::ROOT, &json)
+                .unwrap();
+            Ok::<_, automerge::AutomergeError>(())
+        })
+        .unwrap();
+
+        // Restore to empty.
+        doc.transact(|tx| {
+            copy_doc_at_heads(tx, &empty_heads)?;
+            Ok::<_, automerge::AutomergeError>(())
+        })
+        .unwrap();
+
+        let keys: Vec<String> = doc.keys(automerge::ROOT).collect();
+        proptest::prop_assert!(
+            keys.is_empty(),
+            "doc should be empty after restoring to empty heads"
+        );
     }
 }
