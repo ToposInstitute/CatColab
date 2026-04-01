@@ -2678,9 +2678,11 @@ version = "0.1.0"
 dependencies = [
  "automerge",
  "autosurgeon",
+ "proptest",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",
+ "test-strategy",
  "ts-rs",
  "tsify",
  "ustr",

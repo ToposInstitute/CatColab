@@ -15,6 +15,9 @@ pub mod automerge_util;
 #[cfg(test)]
 mod test_utils;
 
+#[cfg(all(test, feature = "backend"))]
+pub(crate) mod common_test;
+
 pub mod current {
     // this should always track the latest version, and is the only version
     // that is exported from notebook-types
