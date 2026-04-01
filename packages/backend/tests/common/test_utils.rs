@@ -4,7 +4,7 @@ use serde_json::json;
 use sqlx::PgPool;
 use sqlx_migrator::migrator::{Migrate, Migrator};
 use sqlx_migrator::{Info, Plan};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -45,11 +45,10 @@ pub async fn create_test_app_state(pool: PgPool) -> AppState {
     AppState {
         db: pool,
         repo,
-        active_listeners: Arc::new(RwLock::new(HashSet::new())),
+        ref_actors: Arc::new(RwLock::new(HashMap::new())),
         initialized_user_states: Arc::new(RwLock::new(HashMap::new())),
         http_client: reqwest::Client::new(),
         julia_url: None,
-        modifying_current_snapshot: Arc::new(RwLock::new(HashMap::new())),
     }
 }
 
