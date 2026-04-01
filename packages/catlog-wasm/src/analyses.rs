@@ -27,6 +27,26 @@ pub struct ODEResultWithEquations {
     pub latex_equations: LatexEquations,
 }
 
+// /// Generates the PolynomialSystem for the systems of polynomial ODEs.
+// fn polynomial_ode_system(
+//     model: &DblModel
+// ) -> Result<PolynomialSystem<QualifiedName, ode::Parameter<QualifiedName>, i8>, String> {
+//     let realised_model = model.modal()?;
+//     let analysis = ode::PolynomialODEAnalysis::default();
+//     OK(analysis.build_system(realised_model))
+// }
+
+// /// Generates equations for the system of polynomial ODEs.
+// pub(crate) fn polynomial_ode_equations(
+//     model: &DblModel,
+//     data: ode::PolynomialODEProblemData,
+// ) -> Result<LatexEquations, String> {
+//     let sys = polynomial_ode_system(model);
+//     let equations = sys?
+//         .to_latex_equations();
+//     Ok(LatexEquations(equations))
+// }
+
 /// The mass-action analysis is currently implemented for Petri nets and stock-flow
 /// diagrams, and we can avoid some code reduplication by making this explicit.
 pub enum MassActionAnalysisLogic {
@@ -84,7 +104,7 @@ pub struct MassActionEquationsData {
     pub mass_conservation_type: ode::MassConservationType,
 }
 
-/// Generates mass-action equations for the equations.
+/// Generates mass-action equations for the system.
 pub(crate) fn mass_action_equations(
     model: &DblModel,
     data: MassActionEquationsData,

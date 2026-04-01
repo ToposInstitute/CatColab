@@ -1,5 +1,6 @@
 import { ThSymMulticategory } from "catlog-wasm";
 import { Theory, type TheoryMeta } from "../../theory";
+// import * as analyses from "../analyses";
 
 export default function createPolynomialODETheory(theoryMeta: TheoryMeta): Theory {
     const thSymMulticategory = new ThSymMulticategory();
@@ -18,18 +19,19 @@ export default function createPolynomialODETheory(theoryMeta: TheoryMeta): Theor
             },
             {
                 tag: "MorType",
-                morType: {
-                    tag: "ModeApp",
-                    content: {
-                        modality: "SymmetricList",
-                        morType: { tag: "Basic", content: "Multihom" },
-                    },
-                },
+                morType: { tag: "Basic", content: "Multihom" },
                 name: "Contribution",
                 description: "Monomial contribution to the system of ODEs",
                 shortcut: ["C"],
             },
         ],
-        modelAnalyses: [],
+        modelAnalyses: [
+            // analyses.polynomialODEEquations({
+            //     ratesHaveGranularity: true,
+            //     getEquations(model, data) {
+            //         return thSymMulticategory.polynomialODEEquations(model, data);
+            //     },
+            // }),
+        ],
     });
 }
