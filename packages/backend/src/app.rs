@@ -4,7 +4,7 @@ use sqlx::PgPool;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use thiserror::Error;
-use tokio::sync::RwLock;
+use tokio::sync::{Mutex, RwLock};
 use uuid::Uuid;
 
 /// Top-level application state.
@@ -21,8 +21,12 @@ pub struct AppState {
     /// Tracks which ref_ids have active autosave listeners to prevent duplicates.
     pub active_listeners: Arc<RwLock<HashSet<Uuid>>>,
 
-    /// Ref IDs whose next autosave should be skipped (e.g., during snapshot navigation).
-    pub suppress_autosave: Arc<RwLock<HashSet<Uuid>>>,
+    /// Per-ref mutex guarding modifications to `current_snapshot`.
+    ///
+    /// Both autosave (`create_snapshot`) and `set_current_snapshot` need to
+    /// coordinate: `set_current_snapshot` acquires the lock and waits,
+    /// while autosave uses `try_lock` and silently skips when the lock is held.
+    pub modifying_current_snapshot: Arc<RwLock<HashMap<Uuid, Arc<Mutex<()>>>>>,
 
     /// Tracks user IDs whose state docs were refreshed from DB in this process,
     /// mapped to their Automerge document IDs.
@@ -33,6 +37,22 @@ pub struct AppState {
 
     /// Base URL for the Julia compute service, if configured.
     pub julia_url: Option<String>,
+}
+
+impl AppState {
+    /// Get or create the per-ref mutex for `current_snapshot` modifications.
+    pub async fn snapshot_lock(&self, ref_id: Uuid) -> Arc<Mutex<()>> {
+        // Fast path: read lock.
+        {
+            let locks = self.modifying_current_snapshot.read().await;
+            if let Some(lock) = locks.get(&ref_id) {
+                return lock.clone();
+            }
+        }
+        // Slow path: write lock to insert.
+        let mut locks = self.modifying_current_snapshot.write().await;
+        locks.entry(ref_id).or_insert_with(|| Arc::new(Mutex::new(()))).clone()
+    }
 }
 
 /// Context available to RPC procedures.
