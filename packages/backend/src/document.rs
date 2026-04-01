@@ -1,7 +1,7 @@
 //! Procedures to create and manipulate documents.
 
 use crate::app::{AppCtx, AppError, AppState};
-use crate::autosave::ensure_autosave_listener;
+use crate::ref_actor::ensure_ref_actor;
 use crate::user_state_updates::{update_ref_for_users, update_user_state};
 use chrono::{DateTime, Utc};
 use notebook_types::automerge_json::{hydrate_to_json, populate_automerge_from_json};
@@ -85,7 +85,7 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
 
     txn.commit().await?;
 
-    ensure_autosave_listener(ctx.state.clone(), ref_id, doc_handle).await;
+    ensure_ref_actor(ctx.state.clone(), ref_id, doc_handle).await;
 
     // Update the creating user's state from the database.
     if let Some(ref uid) = user_id
@@ -186,17 +186,20 @@ pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppErr
     Ok(())
 }
 
-/// Sets the current snapshot for a ref by applying the snapshot's state to the
-/// live Automerge document.
+/// Navigate a live Automerge document to a different snapshot's state.
 ///
 /// The document is updated in-place: the target snapshot's state is read from
 /// the Automerge history via its stored heads, then applied as new operations
 /// (delete all root keys + repopulate). The `doc_id` is unchanged so connected
 /// clients receive the update via normal Automerge sync.
-pub async fn set_current_snapshot(
-    state: AppState,
+///
+/// The caller is responsible for suppressing autosave (the snapshot actor does
+/// this via its `skip_changes` counter).
+pub async fn navigate_to_snapshot(
+    state: &AppState,
     ref_id: Uuid,
     snapshot_id: i32,
+    doc_handle: &samod::DocHandle,
 ) -> Result<(), AppError> {
     let snapshot = sqlx::query!(
         "SELECT heads FROM snapshots WHERE id = $1 AND for_ref = $2",
@@ -213,18 +216,6 @@ pub async fn set_current_snapshot(
         .map(|h| automerge::ChangeHash(h.as_slice().try_into().expect("invalid change hash")))
         .collect();
 
-    let doc_id = get_doc_id(state.clone(), ref_id).await?;
-    let doc_handle = state
-        .repo
-        .find(doc_id)
-        .await?
-        .ok_or_else(|| AppError::Invalid("Document not found".to_string()))?;
-
-    // Acquire the per-ref lock. This waits if autosave currently holds it, and while held,
-    // autosave will not be able to acquire it and will skip changes
-    let lock = state.snapshot_lock(ref_id).await;
-    let _guard = lock.lock().await;
-
     doc_handle.with_document(|doc| -> Result<(), AppError> {
         doc.transact::<_, _, automerge::AutomergeError>(|tx| {
             copy_doc_at_heads(tx, &target_heads)?;
@@ -239,8 +230,8 @@ pub async fn set_current_snapshot(
         .execute(&state.db)
         .await?;
 
-    if let Err(e) = update_ref_for_users(&state, ref_id, vec![]).await {
-        tracing::error!(%ref_id, error = %e, "Failed to update user states after set_current_snapshot");
+    if let Err(e) = update_ref_for_users(state, ref_id, vec![]).await {
+        tracing::error!(%ref_id, error = %e, "Failed to update user states after navigate_to_snapshot");
     }
 
     Ok(())

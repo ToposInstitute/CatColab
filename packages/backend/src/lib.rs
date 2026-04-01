@@ -6,8 +6,8 @@ pub mod app;
 /// Authentication and authorization for document refs.
 pub mod auth;
 
-/// Autosave listener for document changes.
-pub mod autosave;
+/// Per-ref actor for autosave, navigation, and lifecycle operations.
+pub mod ref_actor;
 
 /// Autosurgeon utilities for datetime serialization.
 pub mod autosurgeon_datetime;

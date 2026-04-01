@@ -1,11 +1,29 @@
 use firebase_auth::FirebaseUser;
 use samod::DocumentId;
 use sqlx::PgPool;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
 use thiserror::Error;
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::{RwLock, mpsc, oneshot};
 use uuid::Uuid;
+
+/// Reply channel type used by all ref actor messages.
+pub type RefReply = oneshot::Sender<Result<(), AppError>>;
+
+/// Message sent to the ref actor for a document ref.
+pub enum RefMsg {
+    /// Request an immediate snapshot (manual save / RPC call).
+    CreateSnapshot,
+    /// Set the current snapshot for the document ref.
+    SetCurrentSnapshot {
+        /// The target snapshot to set as current.
+        snapshot_id: i32,
+    },
+    /// Soft-delete the document ref.
+    Delete,
+    /// Restore a soft-deleted document ref.
+    Restore,
+}
 
 /// Top-level application state.
 ///
@@ -18,15 +36,8 @@ pub struct AppState {
     /// Automerge-repo provider.
     pub repo: samod::Repo,
 
-    /// Tracks which ref_ids have active autosave listeners to prevent duplicates.
-    pub active_listeners: Arc<RwLock<HashSet<Uuid>>>,
-
-    /// Per-ref mutex guarding modifications to `current_snapshot`.
-    ///
-    /// Both autosave (`create_snapshot`) and `set_current_snapshot` need to
-    /// coordinate: `set_current_snapshot` acquires the lock and waits,
-    /// while autosave uses `try_lock` and silently skips when the lock is held.
-    pub modifying_current_snapshot: Arc<RwLock<HashMap<Uuid, Arc<Mutex<()>>>>>,
+    /// Channel senders for per-ref actors that coordinate document mutations.
+    pub ref_actors: Arc<RwLock<HashMap<Uuid, mpsc::Sender<(RefMsg, RefReply)>>>>,
 
     /// Tracks user IDs whose state docs were refreshed from DB in this process,
     /// mapped to their Automerge document IDs.
@@ -37,22 +48,6 @@ pub struct AppState {
 
     /// Base URL for the Julia compute service, if configured.
     pub julia_url: Option<String>,
-}
-
-impl AppState {
-    /// Get or create the per-ref mutex for `current_snapshot` modifications.
-    pub async fn snapshot_lock(&self, ref_id: Uuid) -> Arc<Mutex<()>> {
-        // Fast path: read lock.
-        {
-            let locks = self.modifying_current_snapshot.read().await;
-            if let Some(lock) = locks.get(&ref_id) {
-                return lock.clone();
-            }
-        }
-        // Slow path: write lock to insert.
-        let mut locks = self.modifying_current_snapshot.write().await;
-        locks.entry(ref_id).or_insert_with(|| Arc::new(Mutex::new(()))).clone()
-    }
 }
 
 /// Context available to RPC procedures.

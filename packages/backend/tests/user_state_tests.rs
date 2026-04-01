@@ -1090,7 +1090,7 @@ mod integration_tests {
             use autosurgeon::hydrate;
             use backend::app::AppState;
             use backend::storage::PostgresStorage;
-            use std::collections::{HashMap, HashSet};
+            use std::collections::HashMap;
             use std::sync::Arc;
             use tokio::sync::RwLock;
 
@@ -1107,11 +1107,10 @@ mod integration_tests {
             let state = AppState {
                 db: test_db.pool().clone(),
                 repo,
-                active_listeners: Arc::new(RwLock::new(HashSet::new())),
+                ref_actors: Arc::new(RwLock::new(HashMap::new())),
                 initialized_user_states: Arc::new(RwLock::new(HashMap::new())),
                 http_client: reqwest::Client::new(),
                 julia_url: None,
-                modifying_current_snapshot: Arc::new(RwLock::new(HashMap::new())),
             };
 
             let expected_state =
