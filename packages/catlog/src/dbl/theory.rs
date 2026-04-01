@@ -67,7 +67,8 @@
 //! - [Patterson, 2024](crate::refs::DblProducts),
 //!   Section 10: Finite-product double theories
 
-use std::fmt;
+use std::collections::HashSet;
+use std::hash::Hash;
 
 use nonempty::NonEmpty;
 
@@ -98,18 +99,31 @@ mod private {
 /// This trait is [sealed] and cannot be implemented outside this crate.
 ///
 /// [sealed]: https://rust-lang.github.io/api-guidelines/future-proofing.html#sealed-traits-protect-against-downstream-implementations-c-sealed
-pub trait DblTheoryKind: fmt::Debug + private::Sealed {
+pub trait DblTheoryKind: private::Sealed {
     /// Wraps a type to reflect whether values are guaranteed to exist.
     ///
     /// For [`Unital`], this is the identity (`T`).
     /// For [`NonUnital`], this is `Option<T>`.
     type Wrap<T>;
 
+    /// State tracking which object types have unit proarrows.
+    ///
+    /// For [`Unital`], this is `()` (all object types have units).
+    /// For [`NonUnital`], this is `HashSet<X>` (only explicitly
+    /// registered object types have units).
+    type TypesWithUnits<X>: Default;
+
     /// Converts from an `Option` into a wrapped value.
     ///
     /// For [`Unital`], this unwraps with the given message.
     /// For [`NonUnital`], this is the identity.
     fn from_option<T>(opt: Option<T>, msg: &str) -> Self::Wrap<T>;
+
+    /// Does the given object type have a unit proarrow?
+    ///
+    /// For [`Unital`], this always returns `true`.
+    /// For [`NonUnital`], this checks the provided set of unitful types.
+    fn has_unit<Ob: Eq + Hash>(unitful_types: &Self::TypesWithUnits<Ob>, ob: &Ob) -> bool;
 }
 
 /// Unital double theories guarantee that every object type has a hom type.
@@ -121,9 +135,14 @@ pub struct Unital;
 
 impl DblTheoryKind for Unital {
     type Wrap<T> = T;
+    type TypesWithUnits<X> = ();
 
     fn from_option<T>(opt: Option<T>, msg: &str) -> T {
         opt.expect(msg)
+    }
+
+    fn has_unit<Ob: Eq + Hash>(_unitful_types: &(), _ob: &Ob) -> bool {
+        true
     }
 }
 
@@ -136,9 +155,14 @@ pub struct NonUnital;
 
 impl DblTheoryKind for NonUnital {
     type Wrap<T> = Option<T>;
+    type TypesWithUnits<X> = HashSet<X>;
 
     fn from_option<T>(opt: Option<T>, _msg: &str) -> Option<T> {
         opt
+    }
+
+    fn has_unit<Ob: Eq + Hash>(unitful_types: &HashSet<Ob>, ob: &Ob) -> bool {
+        unitful_types.contains(ob)
     }
 }
 

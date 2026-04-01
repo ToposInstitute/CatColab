@@ -29,7 +29,7 @@ use indexmap::IndexMap;
 use ref_cast::RefCast;
 
 use crate::dbl::computad::{AVDCComputad, AVDCComputadTop};
-use crate::dbl::theory::{DblTheoryKind, InvalidDblTheory};
+use crate::dbl::theory::{DblTheoryKind, InvalidDblTheory, NonUnital};
 use crate::dbl::{DblTree, InvalidVDblGraph, VDCWithComposites, VDblCategory, VDblGraph};
 use crate::one::computad::{Computad, ComputadTop};
 use crate::validate::{self, Validate};
@@ -258,7 +258,7 @@ pub type ModalMorOp = DblTree<ModalObOp, ModalMorType, ModalNode>;
 /// A modal double theory.
 #[derive(Debug, Derivative)]
 #[derivative(Default(new = "true"))]
-pub struct ModalDblTheory<Kind> {
+pub struct ModalDblTheory<Kind: DblTheoryKind> {
     _kind: PhantomData<Kind>,
     ob_generators: HashFinSet<QualifiedName>,
     arr_generators: ComputadTop<ModalObType, QualifiedName>,
@@ -266,13 +266,14 @@ pub struct ModalDblTheory<Kind> {
     cell_generators: AVDCComputadTop<ModalObType, ModalObOp, ModalMorType, QualifiedName>,
     arr_equations: Vec<PathEq<ModalObType, ModeApp<ModalOp>>>,
     pro_composites: IndexMap<(ModalType, ModalType), ModalMorType>,
+    _unitful_types: Kind::TypesWithUnits<ModalObType>,
     // TODO: Cell equations
 }
 
 /// Set of object types in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-pub(super) struct ModalObTypes<Kind>(ModalDblTheory<Kind>);
+pub(super) struct ModalObTypes<Kind: DblTheoryKind>(ModalDblTheory<Kind>);
 
 impl<Kind: DblTheoryKind> Set for ModalObTypes<Kind> {
     type Elem = ModalObType;
@@ -285,7 +286,7 @@ impl<Kind: DblTheoryKind> Set for ModalObTypes<Kind> {
 /// Graph of object types and *basic* morphism types in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-struct ModalProedgeGraph<Kind>(ModalDblTheory<Kind>);
+struct ModalProedgeGraph<Kind: DblTheoryKind>(ModalDblTheory<Kind>);
 
 impl<Kind: DblTheoryKind> Graph for ModalProedgeGraph<Kind> {
     type V = ModalObType;
@@ -308,7 +309,7 @@ impl<Kind: DblTheoryKind> Graph for ModalProedgeGraph<Kind> {
 /// Graph of object/morphism types in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-pub(super) struct ModalMorTypeGraph<Kind>(ModalDblTheory<Kind>);
+pub(super) struct ModalMorTypeGraph<Kind: DblTheoryKind>(ModalDblTheory<Kind>);
 
 impl<Kind: DblTheoryKind> Graph for ModalMorTypeGraph<Kind> {
     type V = ModalObType;
@@ -337,7 +338,7 @@ impl<Kind: DblTheoryKind> ReflexiveGraph for ModalMorTypeGraph<Kind> {
 /// Graph of object types and *basic* object operations in a modal theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-struct ModalEdgeGraph<Kind>(ModalDblTheory<Kind>);
+struct ModalEdgeGraph<Kind: DblTheoryKind>(ModalDblTheory<Kind>);
 
 impl<Kind: DblTheoryKind> Graph for ModalEdgeGraph<Kind> {
     type V = ModalObType;
@@ -371,7 +372,7 @@ impl<Kind: DblTheoryKind> Graph for ModalEdgeGraph<Kind> {
 /// Category of object types/operations in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-pub(super) struct ModalOneTheory<Kind>(ModalDblTheory<Kind>);
+pub(super) struct ModalOneTheory<Kind: DblTheoryKind>(ModalDblTheory<Kind>);
 
 impl<Kind: DblTheoryKind> Category for ModalOneTheory<Kind> {
     type Ob = ModalObType;
@@ -397,7 +398,7 @@ impl<Kind: DblTheoryKind> Category for ModalOneTheory<Kind> {
 /// Virtual double graph of *basic* cells in a modal double theory.
 #[derive(RefCast)]
 #[repr(transparent)]
-struct ModalVDblGraph<Kind>(ModalDblTheory<Kind>);
+struct ModalVDblGraph<Kind: DblTheoryKind>(ModalDblTheory<Kind>);
 
 type ModalVDblComputad<'a, Kind> = AVDCComputad<
     'a,
@@ -626,7 +627,13 @@ impl<Kind: DblTheoryKind> VDCWithComposites for ModalDblTheory<Kind> {
 
     fn composite(&self, path: Path<Self::Ob, Self::Pro>) -> Option<Self::Pro> {
         match path {
-            Path::Id(x) => Some(ShortPath::Zero(x)),
+            Path::Id(x) => {
+                if Kind::has_unit(&self._unitful_types, &x) {
+                    Some(ShortPath::Zero(x))
+                } else {
+                    None
+                }
+            }
             Path::Seq(ms) => {
                 if ms.len() == 1 {
                     Some(ms.head)
@@ -756,5 +763,15 @@ impl<Kind: DblTheoryKind> ModalDblTheory<Kind> {
     /// Set composite of two basic morphism types.
     pub fn set_composite(&mut self, fst: ModalType, snd: ModalType, composite: ModalMorType) {
         self.pro_composites.insert((fst, snd), composite);
+    }
+}
+
+impl ModalDblTheory<NonUnital> {
+    /// Adds a unit proarrow for an object type in a non-unital theory.
+    ///
+    /// In a non-unital theory, object types do not automatically have unit
+    /// proarrows (hom types). This method explicitly grants one.
+    pub fn add_unit(&mut self, ob_type: ModalObType) {
+        self._unitful_types.insert(ob_type);
     }
 }

@@ -74,7 +74,7 @@ impl MorListData {
 
 /// A model of a modal double theory.
 #[derive(Clone)]
-pub struct ModalDblModel<Kind> {
+pub struct ModalDblModel<Kind: DblTheoryKind> {
     theory: Rc<ModalDblTheory<Kind>>,
     ob_generators: HashFinSet<QualifiedName>,
     mor_generators: ComputadTop<ModalOb, QualifiedName>,
@@ -104,7 +104,7 @@ impl<Kind: DblTheoryKind> ModalDblModel<Kind> {
 
 #[derive(RefCast)]
 #[repr(transparent)]
-struct ModalDblModelObs<Kind>(ModalDblModel<Kind>);
+struct ModalDblModelObs<Kind: DblTheoryKind>(ModalDblModel<Kind>);
 
 impl<Kind: DblTheoryKind> Set for ModalDblModelObs<Kind> {
     type Elem = ModalOb;
