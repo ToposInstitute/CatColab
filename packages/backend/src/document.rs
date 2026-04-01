@@ -220,37 +220,30 @@ pub async fn set_current_snapshot(
         .await?
         .ok_or_else(|| AppError::Invalid("Document not found".to_string()))?;
 
-    state.suppress_autosave.write().await.insert(ref_id);
+    // Acquire the per-ref lock. This waits if autosave currently holds it, and while held,
+    // autosave will not be able to acquire it and will skip changes
+    let lock = state.snapshot_lock(ref_id).await;
+    let _guard = lock.lock().await;
 
-    let result: Result<(), AppError> = async {
-        doc_handle.with_document(|doc| -> Result<(), AppError> {
-            doc.transact::<_, _, automerge::AutomergeError>(|tx| {
-                copy_doc_at_heads(tx, &target_heads)?;
-                Ok(())
-            })
-            .map_err(|e| AppError::Invalid(format!("Failed to update document: {e:?}")))?;
-
+    doc_handle.with_document(|doc| -> Result<(), AppError> {
+        doc.transact::<_, _, automerge::AutomergeError>(|tx| {
+            copy_doc_at_heads(tx, &target_heads)?;
             Ok(())
-        })?;
+        })
+        .map_err(|e| AppError::Invalid(format!("Failed to update document: {e:?}")))?;
 
-        sqlx::query!(
-            "UPDATE refs SET current_snapshot = $2 WHERE id = $1",
-            ref_id,
-            snapshot_id,
-        )
+        Ok(())
+    })?;
+
+    sqlx::query!("UPDATE refs SET current_snapshot = $2 WHERE id = $1", ref_id, snapshot_id,)
         .execute(&state.db)
         .await?;
 
-        if let Err(e) = update_ref_for_users(&state, ref_id, vec![]).await {
-            tracing::error!(%ref_id, error = %e, "Failed to update user states after set_current_snapshot");
-        }
-
-        Ok(())
+    if let Err(e) = update_ref_for_users(&state, ref_id, vec![]).await {
+        tracing::error!(%ref_id, error = %e, "Failed to update user states after set_current_snapshot");
     }
-    .await;
 
-    state.suppress_autosave.write().await.remove(&ref_id);
-    result
+    Ok(())
 }
 
 /// Soft-deletes a document reference by setting `deleted_at`.
