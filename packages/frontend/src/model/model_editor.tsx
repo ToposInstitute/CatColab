@@ -1,4 +1,5 @@
 import { Match, Switch, useContext } from "solid-js";
+import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
 import type { InstantiatedModel, ModelJudgment, MorDecl, ObDecl } from "catlog-wasm";
@@ -58,28 +59,42 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
     return (
         <Switch>
             <Match when={props.content.tag === "object" && liveModel().theory()}>
-                {(theory) => (
-                    <ObjectCellEditor
-                        object={props.content as ObDecl}
-                        modifyObject={(f) => props.changeContent((content) => f(content as ObDecl))}
-                        isActive={props.isActive}
-                        actions={props.actions}
-                        theory={theory()}
-                    />
-                )}
+                {(theory) => {
+                    const obDecl = () => props.content as ObDecl;
+                    const editor = () =>
+                        theory().modelObTypeMeta(obDecl().obType)?.editor ?? ObjectCellEditor;
+                    return (
+                        <Dynamic
+                            component={editor()}
+                            object={obDecl()}
+                            modifyObject={(f: (decl: ObDecl) => void) =>
+                                props.changeContent((content) => f(content as ObDecl))
+                            }
+                            isActive={props.isActive}
+                            actions={props.actions}
+                            theory={theory()}
+                        />
+                    );
+                }}
             </Match>
             <Match when={props.content.tag === "morphism" && liveModel().theory()}>
-                {(theory) => (
-                    <MorphismCellEditor
-                        morphism={props.content as MorDecl}
-                        modifyMorphism={(f) =>
-                            props.changeContent((content) => f(content as MorDecl))
-                        }
-                        isActive={props.isActive}
-                        actions={props.actions}
-                        theory={theory()}
-                    />
-                )}
+                {(theory) => {
+                    const morDecl = () => props.content as MorDecl;
+                    const editor = () =>
+                        theory().modelMorTypeMeta(morDecl().morType)?.editor ?? MorphismCellEditor;
+                    return (
+                        <Dynamic
+                            component={editor()}
+                            morphism={morDecl()}
+                            modifyMorphism={(f: (decl: MorDecl) => void) =>
+                                props.changeContent((content) => f(content as MorDecl))
+                            }
+                            isActive={props.isActive}
+                            actions={props.actions}
+                            theory={theory()}
+                        />
+                    );
+                }}
             </Match>
             <Match when={props.content.tag === "instantiation"}>
                 <InstantiationCellEditor

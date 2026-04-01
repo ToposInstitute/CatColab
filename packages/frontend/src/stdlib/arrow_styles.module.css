@@ -146,3 +146,27 @@
     bottom: -6px;
     right: 0;
 }
+
+.arrow.reversed {
+    &:before,
+    &:after {
+        content: "";
+        background: var(--color-foreground);
+        position: absolute;
+        height: 2px;
+        width: 10px;
+        border-radius: 3px;
+    }
+
+    &:before {
+        left: -1px;
+        bottom: -3px;
+        transform: rotate(45deg);
+    }
+
+    &:after {
+        left: -1px;
+        top: -3px;
+        transform: rotate(-45deg);
+    }
+}

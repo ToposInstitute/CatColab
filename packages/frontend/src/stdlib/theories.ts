@@ -34,6 +34,17 @@ stdTheories.add(
 
 stdTheories.add(
     {
+        id: "simple-olog-reversed",
+        name: "Olog (reverse arrows)",
+        description: "Ontology log with reversed arrow direction in the editor",
+        iconLetters: ["O", "r"],
+        group: "Knowledge and Data",
+    },
+    async () => (await import("./theories/simple-olog-reversed")).default,
+);
+
+stdTheories.add(
+    {
         id: "simple-schema",
         name: "Schema",
         description: "Schema for a categorical database",

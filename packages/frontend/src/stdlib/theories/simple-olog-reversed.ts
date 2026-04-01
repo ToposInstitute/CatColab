@@ -1,3 +1,4 @@
+import { lazy } from "solid-js";
 import { ThCategory } from "catlog-wasm";
 import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
@@ -5,13 +6,17 @@ import * as analyses from "../analyses";
 import styles from "../styles.module.css";
 import svgStyles from "../svg_styles.module.css";
 
-export default function createOlogTheory(theoryMeta: TheoryMeta): Theory {
+const ReversedMorphismCellEditor = lazy(
+    () => import("../../model/reversed_morphism_cell_editor"),
+);
+
+export default function createOlogReversedTheory(theoryMeta: TheoryMeta): Theory {
     const thCategory = new ThCategory();
 
     return new Theory({
         ...theoryMeta,
         theory: thCategory.theory(),
-        inclusions: ["simple-olog-reversed"],
+        inclusions: ["simple-olog"],
         pushforwards: [
             {
                 target: "simple-schema",
@@ -37,6 +42,7 @@ export default function createOlogTheory(theoryMeta: TheoryMeta): Theory {
                 name: "Aspect",
                 description: "Aspect or property of a type",
                 shortcut: ["M"],
+                editor: ReversedMorphismCellEditor,
             },
         ],
         instanceTypes: [

@@ -30,6 +30,10 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
                 target: "simple-olog",
                 migrate: ThSchema.toCategory,
             },
+            {
+                target: "simple-olog-reversed",
+                migrate: ThSchema.toCategory,
+            },
         ],
         modelTypes: [
             {

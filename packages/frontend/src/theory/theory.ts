@@ -1,6 +1,8 @@
 import type { KbdKey } from "catcolab-ui-components";
-import type { DblModel, DblTheory, MorType, ObOp, ObType } from "catlog-wasm";
+import type { DblModel, DblTheory, MorDecl, MorType, ObDecl, ObOp, ObType } from "catlog-wasm";
+import type { Component } from "solid-js";
 import type { DiagramAnalysisComponent, ModelAnalysisComponent } from "../analysis";
+import type { CellActions } from "../notebook";
 import { uniqueIndexArray } from "../util/indexing";
 import type { ArrowStyle } from "../visualization";
 import { MorTypeMap, ObTypeMap } from "./types";
@@ -218,10 +220,35 @@ export type ModelTypeMeta =
     | ({ tag: "ObType" } & ModelObTypeMeta)
     | ({ tag: "MorType" } & ModelMorTypeMeta);
 
+/** Props for a custom object cell editor component. */
+export type ObjectEditorProps = {
+    object: ObDecl;
+    modifyObject: (f: (decl: ObDecl) => void) => void;
+    isActive: boolean;
+    actions: CellActions;
+    theory: Theory;
+};
+
+/** Props for a custom morphism cell editor component. */
+export type MorphismEditorProps = {
+    morphism: MorDecl;
+    modifyMorphism: (f: (decl: MorDecl) => void) => void;
+    isActive: boolean;
+    actions: CellActions;
+    theory: Theory;
+};
+
 /** Metadata for an object type as used in models. */
 export type ModelObTypeMeta = BaseTypeMeta & {
     /** Object type in the underlying double theory. */
     obType: ObType;
+
+    /** Custom editor component for objects of this type.
+
+    When set, this component is used instead of the default object editor.
+    It must accept the same props interface as the default editor.
+     */
+    editor?: Component<ObjectEditorProps>;
 };
 
 /** Metadata for a morphism type as used in models. */
@@ -244,6 +271,13 @@ export type ModelMorTypeMeta = BaseTypeMeta & {
 
     /** Metadata for codomain of morphism of this type. */
     codomain?: MorDomainMeta;
+
+    /** Custom editor component for morphisms of this type.
+
+    When set, this component is used instead of the default morphism editor.
+    It must accept the same props interface as the default editor.
+     */
+    editor?: Component<MorphismEditorProps>;
 };
 
 /** Metadata controlling the domain or codomain of a morphism. */
