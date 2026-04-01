@@ -6,9 +6,9 @@ use serde_json::Value;
 use tracing::debug;
 use uuid::Uuid;
 
-use super::app::{AppCtx, AppError, AppState};
+use super::app::{AppCtx, AppError, AppState, RefMsg};
 use super::auth::{NewPermissions, PermissionLevel, Permissions};
-use super::autosave::ensure_autosave_listener;
+use super::ref_actor::{ensure_ref_actor, send_to_actor};
 use super::user_state::get_or_create_user_state_doc;
 use super::{auth, document as doc, user};
 
@@ -54,7 +54,7 @@ async fn get_doc(ctx: AppCtx, ref_id: Uuid) -> RpcResult<RefDoc> {
                 .find(doc_id.clone())
                 .await?
                 .ok_or_else(|| AppError::Invalid("Document not found".to_string()))?;
-            ensure_autosave_listener(ctx.state.clone(), ref_id, doc_handle).await;
+            ensure_ref_actor(ctx.state.clone(), ref_id, doc_handle).await;
             Ok(RefDoc::Live {
                 doc_id: doc_id.to_string(),
                 is_deleted,
@@ -109,7 +109,7 @@ async fn head_snapshot(ctx: AppCtx, ref_id: Uuid) -> RpcResult<Value> {
 async fn create_snapshot(ctx: AppCtx, ref_id: Uuid) -> RpcResult<()> {
     async {
         auth::authorize(&ctx, ref_id, PermissionLevel::Write).await?;
-        doc::create_snapshot(ctx.state, ref_id).await
+        send_to_actor(&ctx.state, ref_id, RefMsg::CreateSnapshot).await
     }
     .await
     .into()
@@ -119,7 +119,7 @@ async fn create_snapshot(ctx: AppCtx, ref_id: Uuid) -> RpcResult<()> {
 async fn set_current_snapshot(ctx: AppCtx, ref_id: Uuid, snapshot_id: i32) -> RpcResult<()> {
     async {
         auth::authorize(&ctx, ref_id, PermissionLevel::Write).await?;
-        doc::set_current_snapshot(ctx.state, ref_id, snapshot_id).await
+        send_to_actor(&ctx.state, ref_id, RefMsg::SetCurrentSnapshot { snapshot_id }).await
     }
     .await
     .into()
@@ -129,7 +129,7 @@ async fn set_current_snapshot(ctx: AppCtx, ref_id: Uuid, snapshot_id: i32) -> Rp
 async fn delete_ref(ctx: AppCtx, ref_id: Uuid) -> RpcResult<()> {
     async {
         auth::authorize(&ctx, ref_id, PermissionLevel::Own).await?;
-        doc::delete_ref(ctx.state, ref_id).await
+        send_to_actor(&ctx.state, ref_id, RefMsg::Delete).await
     }
     .await
     .into()
@@ -139,7 +139,7 @@ async fn delete_ref(ctx: AppCtx, ref_id: Uuid) -> RpcResult<()> {
 async fn restore_ref(ctx: AppCtx, ref_id: Uuid) -> RpcResult<()> {
     async {
         auth::authorize(&ctx, ref_id, PermissionLevel::Own).await?;
-        doc::restore_ref(ctx.state, ref_id).await
+        send_to_actor(&ctx.state, ref_id, RefMsg::Restore).await
     }
     .await
     .into()
