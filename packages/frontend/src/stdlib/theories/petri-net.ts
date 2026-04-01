@@ -1,3 +1,5 @@
+import { lazy } from "solid-js";
+
 import { ThSymMonoidalCategory } from "catlog-wasm";
 import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
@@ -9,6 +11,26 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
         ...theoryMeta,
         theory: thSymMonoidalCategory.theory(),
         onlyFreeModels: true,
+        editorVariants: [
+            {
+                id: "editor-variant-petri-net-string-diagram",
+                name: "Petri net (string diagram transitions)",
+                description: "Petri net with a string diagram style transition editor",
+                editorOverrides: {
+                    morEditors: [
+                        {
+                            morType: {
+                                tag: "Hom" as const,
+                                content: { tag: "Basic" as const, content: "Object" },
+                            },
+                            editor: lazy(
+                                () => import("../../model/string_diagram_morphism_cell_editor"),
+                            ),
+                        },
+                    ],
+                },
+            },
+        ],
         modelTypes: [
             {
                 tag: "ObType",

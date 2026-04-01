@@ -1,4 +1,6 @@
-import { type ModelAnalysisMeta, Theory } from "./theory";
+import type { EditorVariantOverrides } from "../model/editors";
+import { type EditorVariantMeta, type ModelAnalysisMeta, Theory } from "./theory";
+export type { EditorVariantMeta, EditorVariantOverrides };
 
 /** Frontend metadata for a double theory.
 
@@ -49,11 +51,28 @@ type GenericModelAnalysis = {
 Theories are lazy loaded.
  */
 export class TheoryLibrary {
-    /** Map from theory ID to metadata about the theory. */
+    /** Map from theory ID to metadata about the theory.
+
+    Contains entries only for base theories, not editor variants. Use
+    `getMetadata()` to look up display metadata for either kind.
+     */
     private readonly metaMap: Map<string, TheoryMeta>;
 
-    /** Map from theory ID to the theory itself or the constructor for it. */
+    /** Map from theory ID to the theory itself or the constructor for it.
+
+    Only contains entries for base theories, not editor variants. Editor
+    variants are derived from their base theory on demand.
+     */
     private readonly theoryMap: Map<string, Theory | (() => Promise<TheoryConstructor>)>;
+
+    /** Map from editor variant ID to its metadata and base theory ID. */
+    private readonly editorVariantMetaMap: Map<
+        string,
+        { editorVariant: EditorVariantMeta; baseId: string }
+    >;
+
+    /** Map from base theory ID to the IDs of its editor variants. */
+    private readonly baseToEditorVariants: Map<string, string[]>;
 
     /** ID of the default theory for new models. */
     private defaultTheoryId: string | undefined;
@@ -63,6 +82,8 @@ export class TheoryLibrary {
     constructor() {
         this.metaMap = new Map();
         this.theoryMap = new Map();
+        this.editorVariantMetaMap = new Map();
+        this.baseToEditorVariants = new Map();
         this.genericModelAnalyses = [];
     }
 
@@ -85,17 +106,24 @@ export class TheoryLibrary {
         }
     }
 
-    /** Is there a theory with the given ID? */
+    /** Is there a theory or editor variant with the given ID? */
     has(id: string): boolean {
-        return this.metaMap.has(id);
+        return this.metaMap.has(id) || this.editorVariantMetaMap.has(id);
     }
 
     /** Get a theory by ID.
 
     A theory is instantiated and cached the first time it is retrieved.
+    If the ID is an editor variant, the base theory is returned instead.
      */
     async get(id: string): Promise<Theory> {
-        // Attempt to retrieve cached theory.
+        // If this is an editor variant, resolve to the base theory.
+        const editorVariantEntry = this.editorVariantMetaMap.get(id);
+        if (editorVariantEntry !== undefined) {
+            return this.get(editorVariantEntry.baseId);
+        }
+
+        // Attempt to retrieve cached base theory.
         const meta = this.metaMap.get(id);
         const theoryOrCons = this.theoryMap.get(id);
         if (meta === undefined || theoryOrCons === undefined) {
@@ -111,17 +139,78 @@ export class TheoryLibrary {
                 theory.addModelAnalysis(info.construct());
             }
         }
+
+        // Register editor variants defined on the theory.
+        const editorVariantIds: string[] = [];
+        for (const editorVariant of theory.editorVariants) {
+            if (this.editorVariantMetaMap.has(editorVariant.id)) {
+                throw new Error(`Editor variant with ID ${editorVariant.id} already defined`);
+            }
+            this.editorVariantMetaMap.set(editorVariant.id, {
+                editorVariant,
+                baseId: id,
+            });
+            editorVariantIds.push(editorVariant.id);
+        }
+        if (editorVariantIds.length > 0) {
+            this.baseToEditorVariants.set(id, editorVariantIds);
+        }
+
         this.theoryMap.set(id, theory);
         return theory;
     }
 
-    /** Gets metadata for a theory by ID. */
+    /** Gets display metadata for a theory or editor variant by ID. */
     getMetadata(id: string): TheoryMeta {
         const meta = this.metaMap.get(id);
-        if (meta === undefined) {
-            throw new Error(`No theory with ID ${id}`);
+        if (meta !== undefined) {
+            return meta;
         }
-        return meta;
+
+        const entry = this.editorVariantMetaMap.get(id);
+        if (entry !== undefined) {
+            const baseMeta = this.metaMap.get(entry.baseId);
+            if (baseMeta === undefined) {
+                throw new Error(`Base theory ${entry.baseId} not found for editor variant ${id}`);
+            }
+            const ev = entry.editorVariant;
+            return {
+                id: ev.id,
+                name: ev.name,
+                description: ev.description,
+                iconLetters: ev.iconLetters ?? baseMeta.iconLetters,
+                group: ev.group ?? baseMeta.group,
+            };
+        }
+
+        throw new Error(`No theory with ID ${id}`);
+    }
+
+    /** Gets the base theory ID for an editor variant, if the given ID is an editor variant. */
+    getBaseTheoryId(id: string): string | undefined {
+        return this.editorVariantMetaMap.get(id)?.baseId;
+    }
+
+    /** Whether the given ID is an editor variant of another theory. */
+    isEditorVariant(id: string): boolean {
+        return this.editorVariantMetaMap.has(id);
+    }
+
+    /** Gets the IDs of all editor variants of the given theory.
+
+    Returns an empty array if the theory has no editor variants.
+     */
+    getEditorVariantIds(id: string): string[] {
+        return this.baseToEditorVariants.get(id) ?? [];
+    }
+
+    /** Gets the editor overrides for an editor variant.
+
+    Returns `undefined` if the ID is not an editor variant or if the variant
+    has no overrides.
+     */
+    getEditorOverrides(id: string): EditorVariantOverrides | undefined {
+        return this.editorVariantMetaMap.get(id)?.editorVariant.editorOverrides;
     }
 
     /** Gets metadata for the default theory for new models.
@@ -135,14 +224,31 @@ export class TheoryLibrary {
         return this.getMetadata(this.defaultTheoryId);
     }
 
-    /** Gets metadata for all available theories. */
-    allMetadata(): IterableIterator<TheoryMeta> {
-        return this.metaMap.values();
+    /** Gets metadata for all available theories.
+
+    By default, only base theories are returned. Pass
+    `includeEditorVariants: true` to also include editor variants.
+     */
+    *allMetadata(options?: { includeEditorVariants?: boolean }): IterableIterator<TheoryMeta> {
+        yield* this.metaMap.values();
+        if (options?.includeEditorVariants) {
+            for (const id of this.editorVariantMetaMap.keys()) {
+                yield this.getMetadata(id);
+            }
+        }
     }
 
-    /** Gets metadata for theories clustered by group. */
-    groupedMetadata(ids?: string[]): Map<string, TheoryMeta[]> {
-        const theories = ids?.map((id) => this.getMetadata(id)) ?? this.allMetadata();
+    /** Gets metadata for theories clustered by group.
+
+    When `ids` is provided, exactly those theories (or editor variants) are
+    included. Otherwise, all base theories are returned, optionally including
+    editor variants via `options.includeEditorVariants`.
+     */
+    groupedMetadata(
+        ids?: string[],
+        options?: { includeEditorVariants?: boolean },
+    ): Map<string, TheoryMeta[]> {
+        const theories = ids?.map((id) => this.getMetadata(id)) ?? this.allMetadata(options);
         const grouped = new Map<string, TheoryMeta[]>();
         for (const theory of theories) {
             const groupName = theory.group ?? "Other";
