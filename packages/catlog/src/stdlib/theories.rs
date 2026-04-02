@@ -204,6 +204,20 @@ pub fn th_multicategory() -> ModalDblTheory<Unital> {
     th_generalized_multicategory(List::Plain)
 }
 
+/// The theory of a non-unital symmetric multicategory.
+pub fn th_sym_multicategory() -> ModalDblTheory<Unital> {
+    th_generalized_multicategory(List::Symmetric)
+}
+
+/// The theory of simple polynomial ODE systems.
+pub fn th_polynomial_ode_system() -> ModalDblTheory<NonUnital> {
+    let mut th = ModalDblTheory::new();
+    th.add_ob_type(name("State"));
+    let x = ModeApp::new(name("State"));
+    th.add_mor_type(name("Contrib"), x.clone().apply(Modality::List(List::Symmetric)), x);
+    th
+}
+
 /// The theory of a generalized multicategory over a list monad.
 fn th_generalized_multicategory(list: List) -> ModalDblTheory<Unital> {
     let mut th = ModalDblTheory::new();
@@ -344,7 +358,9 @@ mod tests {
         assert!(th_monoidal_category().validate().is_ok());
         assert!(th_lax_monoidal_category().validate().is_ok());
         assert!(th_multicategory().validate().is_ok());
+        assert!(th_sym_multicategory().validate().is_ok());
         assert!(modal_th_power_system().validate().is_ok());
+        assert!(th_polynomial_ode_system().validate().is_ok());
     }
 
     #[test]
