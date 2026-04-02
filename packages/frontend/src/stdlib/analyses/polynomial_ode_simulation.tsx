@@ -66,7 +66,6 @@ export default function PolynomialODESimulation(
         createNumericalColumn({
             name: "Initial value",
             data: (id) => props.content.initialValues[id],
-            // validate: (_, data) => data >= 0,
             setData: (id, data) =>
                 props.changeContent((content) => {
                     content.initialValues[id] = data;
@@ -88,7 +87,6 @@ export default function PolynomialODESimulation(
             name: "Coefficient (𝜆)",
             data: (mor) => props.content.coefficients[mor],
             default: 1,
-            validate: (_, data) => data >= 0,
             setData: (mor, data) =>
                 props.changeContent((content) => {
                     content.coefficients[mor] = data;
