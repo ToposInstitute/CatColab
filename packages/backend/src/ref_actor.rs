@@ -76,10 +76,10 @@ async fn run_ref_actor(
                         deadline = None;
                         document::create_snapshot(state.clone(), ref_id).await
                     }
-                    RefMsg::SetCurrentSnapshot { snapshot_id } => {
+                    RefMsg::LoadSnapshot { snapshot_id } => {
                         deadline = None;
                         skip_changes += 1;
-                        document::navigate_to_snapshot(
+                        document::load_snapshot(
                             &state, ref_id, snapshot_id, &doc_handle,
                         ).await
                     }

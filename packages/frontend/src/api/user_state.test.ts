@@ -254,7 +254,7 @@ describe("User state Automerge document", async () => {
         assert.strictEqual(updatedDoc.name, newName, "Name should be updated");
     });
 
-    test("should switch current snapshot via set_current_snapshot", async () => {
+    test("should switch current snapshot via load_snapshot", async () => {
         await signInWithEmailAndPassword(auth, email, password);
 
         const name = `Test Snapshot Switch - ${v4()}`;
@@ -304,7 +304,7 @@ describe("User state Automerge document", async () => {
             "Should have two snapshots",
         );
 
-        unwrap(await rpc.set_current_snapshot.mutate(refId, originalSnapshotId));
+        unwrap(await rpc.load_snapshot.mutate(refId, originalSnapshotId));
 
         await waitFor(() => {
             const doc = findDoc(refId);

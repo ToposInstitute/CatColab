@@ -18,7 +18,7 @@ pub enum RefMsg {
     /// Request an immediate snapshot (manual save / RPC call).
     CreateSnapshot,
     /// Set the current snapshot for the document ref.
-    SetCurrentSnapshot {
+    LoadSnapshot {
         /// The target snapshot to set as current.
         snapshot_id: i32,
     },
