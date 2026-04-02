@@ -82,8 +82,19 @@ export function HistoryNavigator(props: HistoryNavigatorProps) {
     const timer = setInterval(() => setNow(Date.now()), 30_000);
     onCleanup(() => clearInterval(timer));
 
+    // Optimistic selection: when the user clicks a row, we immediately show
+    // the dot there before the parent has had a chance to update `items`.
+    const [optimisticId, setOptimisticId] = createSignal<string | null>(null);
+
+    // Clear optimistic override whenever the upstream active item changes.
+    createEffect(() => {
+        void props.items.find((it) => it.active)?.id;
+        setOptimisticId(null);
+    });
+
     const displayItems = createMemo(() => {
         const currentNow = now();
+        const pending = optimisticId();
         const raw = props.items.map((item) => ({
             ...item,
             minuteKey: Math.floor(item.createdAt / 60_000),
@@ -111,13 +122,16 @@ export function HistoryNavigator(props: HistoryNavigatorProps) {
             }
         }
 
-        return raw.map((item, i) => ({
-            id: item.id,
-            active: item.active,
-            timestamp: formatRelativeTime(item.createdAt, currentNow),
-            exactTimestamp: formatExactTimestamp(item.createdAt),
-            suffix: suffixByIndex.get(i) ?? null,
-        }));
+        return raw.map((item, i) => {
+            const isActive = pending != null ? item.id === pending : item.active;
+            return {
+                id: item.id,
+                active: isActive,
+                timestamp: formatRelativeTime(item.createdAt, currentNow),
+                exactTimestamp: formatExactTimestamp(item.createdAt),
+                suffix: suffixByIndex.get(i) ?? null,
+            };
+        });
     });
 
     const activeIndex = createMemo(() => {
@@ -172,14 +186,30 @@ export function HistoryNavigator(props: HistoryNavigatorProps) {
         <div class={styles.panel}>
             <div class={styles.toolbar}>
                 <IconButton
-                    onClick={props.onUndo}
+                    onClick={() => {
+                        const idx = activeIndex();
+                        const items = displayItems();
+                        const next = items[idx + 1];
+                        if (next) {
+                            setOptimisticId(next.id);
+                        }
+                        props.onUndo();
+                    }}
                     disabled={!props.canUndo}
                     tooltip={props.undoTooltip ?? "Undo"}
                 >
                     <Undo2 size={24} />
                 </IconButton>
                 <IconButton
-                    onClick={props.onRedo}
+                    onClick={() => {
+                        const idx = activeIndex();
+                        const items = displayItems();
+                        const prev = items[idx - 1];
+                        if (prev) {
+                            setOptimisticId(prev.id);
+                        }
+                        props.onRedo();
+                    }}
                     disabled={!props.canRedo}
                     tooltip={props.redoTooltip ?? "Redo"}
                 >
@@ -207,7 +237,10 @@ export function HistoryNavigator(props: HistoryNavigatorProps) {
                                     type="button"
                                     class={styles.row}
                                     style={{ height: `${ROW_HEIGHT}px` }}
-                                    onClick={() => props.onSelect(item.id)}
+                                    onClick={() => {
+                                        setOptimisticId(item.id);
+                                        props.onSelect(item.id);
+                                    }}
                                 >
                                     <span class={styles.dotSlot} aria-hidden="true">
                                         <Show when={item.active}>
