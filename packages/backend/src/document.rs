@@ -173,7 +173,7 @@ pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppErr
     Ok(())
 }
 
-/// Navigate a live Automerge document to a different snapshot's state.
+/// Set a live Automerge document to a different snapshot's state.
 ///
 /// The document is updated in-place: the target snapshot's state is read from
 /// the Automerge history via its stored heads, then applied as new operations
@@ -182,7 +182,7 @@ pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppErr
 ///
 /// The caller is responsible for suppressing autosave (the snapshot actor does
 /// this via its `skip_changes` counter).
-pub async fn navigate_to_snapshot(
+pub async fn load_snapshot(
     state: &AppState,
     ref_id: Uuid,
     snapshot_id: i32,
@@ -218,7 +218,7 @@ pub async fn navigate_to_snapshot(
         .await?;
 
     if let Err(e) = update_ref_for_users(state, ref_id, vec![]).await {
-        tracing::error!(%ref_id, error = %e, "Failed to update user states after navigate_to_snapshot");
+        tracing::error!(%ref_id, error = %e, "Failed to update user states after load_snapshot");
     }
 
     Ok(())

@@ -95,7 +95,7 @@ export function useSnapshotHistory(refId: Accessor<string>): SnapshotHistory {
     const navigate = (snapshotId: string) => {
         const id = Number.parseInt(snapshotId, 10);
         if (!Number.isNaN(id)) {
-            void api.rpc.set_current_snapshot.mutate(refId(), id);
+            void api.rpc.load_snapshot.mutate(refId(), id);
         }
     };
 

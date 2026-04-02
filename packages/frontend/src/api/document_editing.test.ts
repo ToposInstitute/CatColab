@@ -221,7 +221,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
     });
 
     // ---------------------------------------------------------------
-    // Test 5: set_current_snapshot reverts the live document content
+    // Test 5: load_snapshot reverts the live document content
     // ---------------------------------------------------------------
     test.sequential("should revert live document content when navigating to an older snapshot", async () => {
         await signInWithEmailAndPassword(auth, email, password);
@@ -253,7 +253,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
         }, "Should have two snapshots after autosave");
 
         // Navigate back to the original snapshot.
-        unwrap(await rpc.set_current_snapshot.mutate(refId, originalSnapshotId));
+        unwrap(await rpc.load_snapshot.mutate(refId, originalSnapshotId));
 
         // The live Automerge document should revert to the original content.
         await waitFor(
@@ -269,7 +269,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
     });
 
     // ---------------------------------------------------------------
-    // Test 6: set_current_snapshot updates the database snapshot content
+    // Test 6: load_snapshot updates the database snapshot content
     // ---------------------------------------------------------------
     test.sequential("should update document content after navigating to an older snapshot", async () => {
         await signInWithEmailAndPassword(auth, email, password);
@@ -302,7 +302,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
         assert.strictEqual(handle.doc()?.name, editedName, "live doc should show edited name");
 
         // Navigate back to original.
-        unwrap(await rpc.set_current_snapshot.mutate(refId, originalSnapshotId));
+        unwrap(await rpc.load_snapshot.mutate(refId, originalSnapshotId));
 
         // The current snapshot should now point to the original.
         await waitFor(() => {
@@ -375,7 +375,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
         assert(snapshot3Id !== snapshot2Id);
 
         // Navigate back to V1
-        unwrap(await rpc.set_current_snapshot.mutate(refId, snapshot1Id));
+        unwrap(await rpc.load_snapshot.mutate(refId, snapshot1Id));
 
         await waitFor(
             () => handle.doc().name === name1,
@@ -384,7 +384,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
         assert.strictEqual(handle.doc().name, name1);
 
         // Navigate forward to V2
-        unwrap(await rpc.set_current_snapshot.mutate(refId, snapshot2Id));
+        unwrap(await rpc.load_snapshot.mutate(refId, snapshot2Id));
 
         await waitFor(
             () => handle.doc().name === name2,
@@ -393,7 +393,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
         assert.strictEqual(handle.doc().name, name2);
 
         // Navigate forward to V3
-        unwrap(await rpc.set_current_snapshot.mutate(refId, snapshot3Id));
+        unwrap(await rpc.load_snapshot.mutate(refId, snapshot3Id));
 
         await waitFor(
             () => handle.doc().name === name3,
@@ -437,7 +437,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
         const snapshot2Id = after.currentSnapshot;
 
         // Undo: navigate to parent (snapshot 1)
-        unwrap(await rpc.set_current_snapshot.mutate(refId, snapshot1Id));
+        unwrap(await rpc.load_snapshot.mutate(refId, snapshot1Id));
 
         await waitFor(
             () => handle.doc().name === name1,
@@ -446,7 +446,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
         assert.strictEqual(handle.doc().name, name1, "After undo, name should be V1");
 
         // Redo: navigate back to child (snapshot 2)
-        unwrap(await rpc.set_current_snapshot.mutate(refId, snapshot2Id));
+        unwrap(await rpc.load_snapshot.mutate(refId, snapshot2Id));
 
         await waitFor(
             () => handle.doc().name === name2,
@@ -486,7 +486,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
         }, "Should have two snapshots");
 
         // Undo to V1
-        unwrap(await rpc.set_current_snapshot.mutate(refId, snapshot1Id));
+        unwrap(await rpc.load_snapshot.mutate(refId, snapshot1Id));
 
         await waitFor(
             () => handle.doc().name === name1,
@@ -554,7 +554,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
         }, "Should have two snapshots after edit");
 
         // Revert to original
-        unwrap(await rpc.set_current_snapshot.mutate(refId, originalSnapshotId));
+        unwrap(await rpc.load_snapshot.mutate(refId, originalSnapshotId));
 
         await waitFor(
             () => handle.doc().theory === "empty",
@@ -572,7 +572,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
     });
 
     // ---------------------------------------------------------------
-    // Test 11: set_current_snapshot should NOT create a spurious snapshot
+    // Test 11: load_snapshot should NOT create a spurious snapshot
     // ---------------------------------------------------------------
     test.sequential(
         "should not create extra snapshots when navigating to a historical snapshot",
@@ -612,7 +612,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
                 "Should have exactly two snapshots before revert",
             );
 
-            unwrap(await rpc.set_current_snapshot.mutate(refId, originalSnapshotId));
+            unwrap(await rpc.load_snapshot.mutate(refId, originalSnapshotId));
 
             await waitFor(
                 () => handle.doc().name === name,
@@ -710,7 +710,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
             }, "Should have three snapshots after second edit");
 
             // Navigate back to the snapshot that had marks.
-            unwrap(await rpc.set_current_snapshot.mutate(refId, markedSnapshotId));
+            unwrap(await rpc.load_snapshot.mutate(refId, markedSnapshotId));
 
             await waitFor(
                 () => handle.doc().name === name,
@@ -831,7 +831,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
             const editedSnapshotId = afterEdit.currentSnapshot;
 
             // Undo: navigate back to snapshot 2 (before cell A edit).
-            unwrap(await rpc.set_current_snapshot.mutate(refId, twoCellSnapshotId));
+            unwrap(await rpc.load_snapshot.mutate(refId, twoCellSnapshotId));
             await waitFor(
                 () => contentOf(cellA) === "Alpha content",
                 "Undo should revert cell A to original",
@@ -849,7 +849,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
             );
 
             // Redo: navigate forward to snapshot 3 (cell A edited).
-            unwrap(await rpc.set_current_snapshot.mutate(refId, editedSnapshotId));
+            unwrap(await rpc.load_snapshot.mutate(refId, editedSnapshotId));
             await waitFor(
                 () => contentOf(cellA) === "Alpha edited!",
                 "Redo should restore cell A edit",
@@ -940,7 +940,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
             }, "Should have three snapshots");
 
             // Undo: navigate back to the snapshot with the block marker.
-            unwrap(await rpc.set_current_snapshot.mutate(refId, withBlockSnapshotId));
+            unwrap(await rpc.load_snapshot.mutate(refId, withBlockSnapshotId));
             await waitFor(() => handle.doc().name === name, `Should revert to original name`);
 
             // The critical check: spans must still be structural, not

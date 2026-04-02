@@ -18,7 +18,7 @@ pub fn router() -> Router<AppState> {
         .handler(new_ref)
         .handler(get_doc)
         .handler(create_snapshot)
-        .handler(set_current_snapshot)
+        .handler(load_snapshot)
         .handler(delete_ref)
         .handler(restore_ref)
         .handler(get_permissions)
@@ -105,10 +105,10 @@ async fn create_snapshot(ctx: AppCtx, ref_id: Uuid) -> RpcResult<()> {
 }
 
 #[handler(mutation)]
-async fn set_current_snapshot(ctx: AppCtx, ref_id: Uuid, snapshot_id: i32) -> RpcResult<()> {
+async fn load_snapshot(ctx: AppCtx, ref_id: Uuid, snapshot_id: i32) -> RpcResult<()> {
     async {
         auth::authorize(&ctx, ref_id, PermissionLevel::Write).await?;
-        send_to_actor(&ctx.state, ref_id, RefMsg::SetCurrentSnapshot { snapshot_id }).await
+        send_to_actor(&ctx.state, ref_id, RefMsg::LoadSnapshot { snapshot_id }).await
     }
     .await
     .into()
