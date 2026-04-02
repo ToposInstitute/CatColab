@@ -1,4 +1,5 @@
 import Resizable, { type ContextValue } from "@corvu/resizable";
+import { makeEventListener } from "@solid-primitives/event-listener";
 import { Title } from "@solidjs/meta";
 import { useNavigate, useParams } from "@solidjs/router";
 import ChevronsRight from "lucide-solid/icons/chevrons-right";
@@ -404,6 +405,27 @@ export function DocumentPane(props: {
     const canRestore = () => props.docRef.permissions.user === "Own";
 
     const history = useSnapshotHistory(() => props.docRef.refId);
+
+    makeEventListener(window, "keydown", (evt) => {
+        const mod = evt.metaKey || evt.ctrlKey;
+        if (!mod || evt.altKey) {
+            return;
+        }
+
+        if (evt.key === "z" || evt.key === "Z") {
+            if (evt.shiftKey) {
+                if (history.canRedo()) {
+                    evt.preventDefault();
+                    history.onRedo();
+                }
+            } else {
+                if (history.canUndo()) {
+                    evt.preventDefault();
+                    history.onUndo();
+                }
+            }
+        }
+    });
 
     return (
         <div class="document-pane-layout">
