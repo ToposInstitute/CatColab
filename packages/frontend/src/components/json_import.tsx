@@ -6,7 +6,7 @@ import type { Document } from "catlog-wasm";
 import "./json_import.css";
 
 interface JsonImportProps {
-    onImport: (data: Document) => void;
+    onImport: (data: Document) => void | Promise<void>;
     validate?: (data: Document) => boolean | string;
 }
 
@@ -24,7 +24,7 @@ export const JsonImport = (props: JsonImportProps) => {
         setError(e instanceof Error ? e.message : "Unknown error occurred");
     };
 
-    const validateAndImport = (jsonString: string) => {
+    const validateAndImport = async (jsonString: string) => {
         try {
             const data = JSON.parse(jsonString);
 
@@ -39,7 +39,7 @@ export const JsonImport = (props: JsonImportProps) => {
 
             // Clear any previous errors and import
             setError(null);
-            props.onImport(data);
+            await props.onImport(data);
             setImportValue(""); // Clear paste area after successful import
         } catch (e) {
             handleError(e);
@@ -68,7 +68,7 @@ export const JsonImport = (props: JsonImportProps) => {
         }
 
         const text = await file.text();
-        validateAndImport(text);
+        void validateAndImport(text);
 
         // Reset file input
         input.value = "";
@@ -80,7 +80,7 @@ export const JsonImport = (props: JsonImportProps) => {
             setError("Please enter some JSON");
             return;
         }
-        validateAndImport(importValue());
+        void validateAndImport(importValue());
     };
 
     const handleInput: JSX.EventHandler<HTMLTextAreaElement, Event> = (event) => {
