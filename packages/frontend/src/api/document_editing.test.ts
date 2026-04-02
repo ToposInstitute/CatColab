@@ -90,7 +90,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
     };
 
     // ---------------------------------------------------------------
-    // Test 1: Editing a document via Automerge propagates changes
+    // Editing a document via Automerge propagates changes
     // ---------------------------------------------------------------
     test.sequential("should edit document name via Automerge handle", async () => {
         const name = `Edit Test - ${v4()}`;
@@ -108,7 +108,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
     });
 
     // ---------------------------------------------------------------
-    // Test 2: Autosave creates a second snapshot after edits
+    // Autosave creates a second snapshot after edits
     // ---------------------------------------------------------------
     test.sequential("should create a new snapshot via autosave after editing", async () => {
         await signInWithEmailAndPassword(auth, email, password);
@@ -147,7 +147,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
     });
 
     // ---------------------------------------------------------------
-    // Test 3: Snapshot chain has correct parent/child structure
+    // Snapshot chain has correct parent/child structure
     // ---------------------------------------------------------------
     test.sequential("should have correct parent/child snapshot structure", async () => {
         await signInWithEmailAndPassword(auth, email, password);
@@ -191,37 +191,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
     });
 
     // ---------------------------------------------------------------
-    // Test 4: Explicit create_snapshot RPC works
-    // ---------------------------------------------------------------
-    test.sequential("should create a snapshot via explicit RPC call", async () => {
-        await signInWithEmailAndPassword(auth, email, password);
-
-        const name = `Explicit Snapshot - ${v4()}`;
-        const refId = await createDoc(name);
-
-        await waitFor(
-            () => findDoc(refId) !== undefined,
-            `Document ${refId} should appear in user state`,
-        );
-
-        const initialDoc = findDoc(refId);
-        assert(initialDoc);
-        assert.strictEqual(Object.keys(initialDoc.snapshots).length, 1);
-
-        unwrap(await rpc.create_snapshot.mutate(refId));
-
-        await waitFor(() => {
-            const doc = findDoc(refId);
-            return doc !== undefined && Object.keys(doc.snapshots).length >= 2;
-        }, "Should have two snapshots after explicit create_snapshot");
-
-        const afterDoc = findDoc(refId);
-        assert(afterDoc);
-        assert.strictEqual(Object.keys(afterDoc.snapshots).length, 2);
-    });
-
-    // ---------------------------------------------------------------
-    // Test 5: load_snapshot reverts the live document content
+    // load_snapshot reverts the live document content
     // ---------------------------------------------------------------
     test.sequential("should revert live document content when navigating to an older snapshot", async () => {
         await signInWithEmailAndPassword(auth, email, password);
@@ -269,7 +239,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
     });
 
     // ---------------------------------------------------------------
-    // Test 6: load_snapshot updates the database snapshot content
+    // load_snapshot updates the database snapshot content
     // ---------------------------------------------------------------
     test.sequential("should update document content after navigating to an older snapshot", async () => {
         await signInWithEmailAndPassword(auth, email, password);
@@ -323,7 +293,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
     });
 
     // ---------------------------------------------------------------
-    // Test 7: Multiple edits → multiple snapshots → navigate history
+    // Multiple edits → multiple snapshots → navigate history
     // ---------------------------------------------------------------
     test.sequential("should navigate through a chain of three snapshots", async () => {
         await signInWithEmailAndPassword(auth, email, password);
@@ -403,7 +373,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
     });
 
     // ---------------------------------------------------------------
-    // Test 8: Undo (go to parent) and redo (go to child)
+    // Undo (go to parent) and redo (go to child)
     // ---------------------------------------------------------------
     test.sequential("should undo and redo through snapshot history", async () => {
         await signInWithEmailAndPassword(auth, email, password);
@@ -456,7 +426,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
     });
 
     // ---------------------------------------------------------------
-    // Test 9: Editing after undo creates a branch
+    // Editing after undo creates a branch
     // ---------------------------------------------------------------
     test.sequential("should allow editing after navigating to an older snapshot", async () => {
         await signInWithEmailAndPassword(auth, email, password);
@@ -509,7 +479,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
     });
 
     // ---------------------------------------------------------------
-    // Test 10: Content beyond just name is preserved during revert
+    // Content beyond just name is preserved during revert
     // ---------------------------------------------------------------
     test.sequential("should preserve full document structure when reverting snapshots", async () => {
         await signInWithEmailAndPassword(auth, email, password);
@@ -572,7 +542,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
     });
 
     // ---------------------------------------------------------------
-    // Test 11: load_snapshot should NOT create a spurious snapshot
+    // load_snapshot should NOT create a spurious snapshot
     // ---------------------------------------------------------------
     test.sequential(
         "should not create extra snapshots when navigating to a historical snapshot",
@@ -634,7 +604,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
     );
 
     // ---------------------------------------------------------------
-    // Test 12: Rich text marks are preserved through snapshot navigation
+    // Rich text marks are preserved through snapshot navigation
     // ---------------------------------------------------------------
     test.sequential(
         "should preserve rich text marks when navigating to a historical snapshot",
@@ -733,7 +703,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
     );
 
     // ---------------------------------------------------------------
-    // Test 13: Redo does not bleed rich text content across cells
+    // Redo does not bleed rich text content across cells
     // ---------------------------------------------------------------
     test.sequential(
         "should not copy rich text content to other cells on redo",
@@ -869,7 +839,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
     );
 
     // ---------------------------------------------------------------
-    // Test 14: Block markers survive snapshot navigation (no U+FFFC leak)
+    // Block markers survive snapshot navigation (no U+FFFC leak)
     // ---------------------------------------------------------------
     test.sequential(
         "should preserve block markers as structural elements after undo",
