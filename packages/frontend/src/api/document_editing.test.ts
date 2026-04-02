@@ -271,7 +271,7 @@ describe("Document editing, snapshots, and undo/redo", async () => {
     // ---------------------------------------------------------------
     // Test 6: set_current_snapshot updates the database snapshot content
     // ---------------------------------------------------------------
-    test.sequential("should update head_snapshot content after navigating to an older snapshot", async () => {
+    test.sequential("should update document content after navigating to an older snapshot", async () => {
         await signInWithEmailAndPassword(auth, email, password);
 
         const originalName = `DB Revert Original - ${v4()}`;
@@ -298,30 +298,27 @@ describe("Document editing, snapshots, and undo/redo", async () => {
             return doc !== undefined && Object.keys(doc.snapshots).length >= 2;
         }, "Should have two snapshots after autosave");
 
-        // Verify the head_snapshot shows the edited version.
-        const editedContent = unwrap(await rpc.head_snapshot.query(refId)) as Record<
-            string,
-            unknown
-        >;
-        assert.strictEqual(editedContent.name, editedName, "head_snapshot should show edited name");
+        // Verify the live document shows the edited version.
+        assert.strictEqual(handle.doc()?.name, editedName, "live doc should show edited name");
 
         // Navigate back to original.
         unwrap(await rpc.set_current_snapshot.mutate(refId, originalSnapshotId));
 
-        // The head_snapshot should now point to the original snapshot's content.
+        // The current snapshot should now point to the original.
         await waitFor(() => {
             const doc = findDoc(refId);
             return doc !== undefined && doc.currentSnapshot === originalSnapshotId;
         }, "currentSnapshot should point to original");
 
-        const revertedContent = unwrap(await rpc.head_snapshot.query(refId)) as Record<
-            string,
-            unknown
-        >;
+        // The live document should be reverted to the original content.
+        await waitFor(
+            () => handle.doc()?.name === originalName,
+            "live doc should show original name after revert",
+        );
         assert.strictEqual(
-            revertedContent.name,
+            handle.doc()?.name,
             originalName,
-            "head_snapshot should show original name after revert",
+            "live doc should show original name after revert",
         );
     });
 

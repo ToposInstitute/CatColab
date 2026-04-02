@@ -17,7 +17,6 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .handler(new_ref)
         .handler(get_doc)
-        .handler(head_snapshot)
         .handler(create_snapshot)
         .handler(set_current_snapshot)
         .handler(delete_ref)
@@ -93,16 +92,6 @@ enum RefDoc {
         is_deleted: bool,
         permissions: Permissions,
     },
-}
-
-#[handler(query)]
-async fn head_snapshot(ctx: AppCtx, ref_id: Uuid) -> RpcResult<Value> {
-    async {
-        auth::authorize(&ctx, ref_id, PermissionLevel::Read).await?;
-        doc::head_snapshot(ctx.state, ref_id).await
-    }
-    .await
-    .into()
 }
 
 #[handler(mutation)]
