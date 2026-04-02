@@ -76,9 +76,7 @@ impl PolynomialODEAnalysis {
 
         // Create a monomial for each morphism.
         for mor in model.mor_generators_with_type(&self.contribution_mor_type) {
-            let input = model
-                .get_dom(&mor)
-                .unwrap();
+            let input = model.get_dom(&mor).unwrap();
             let inputs: &Vec<ModalOb> = match input {
                 ModalOb::List(List::Symmetric, v) => v,
                 _ => &Vec::new(),
@@ -124,7 +122,10 @@ mod tests {
     use std::rc::Rc;
 
     use super::*;
-    use crate::{simulate::ode::LatexEquation, stdlib::{models::*, theories::*}};
+    use crate::{
+        simulate::ode::LatexEquation,
+        stdlib::{models::*, theories::*},
+    };
 
     // (Unsigned) Lotka–Volterra dynamics on a two-level model.
     #[test]

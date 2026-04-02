@@ -390,6 +390,13 @@ impl DblModel {
         (&self.model).try_into().map_err(|_| "Model should be of a modal theory".into())
     }
 
+    /// Tries to get a non-unital model of a modal theory.
+    // FIXME: this should not be a whole new function, but I'm confused about how to do this
+    // without dependent types
+    pub fn modal_non_unital(&self) -> Result<&Rc<dbl_model::ModalDblModel<NonUnital>>, String> {
+        (&self.model).try_into().map_err(|_| "Model should be of a modal theory".into())
+    }
+
     /// Adds an object to the model.
     pub fn add_ob(&mut self, decl: &ObDecl) -> Result<(), String> {
         all_the_same!(match &mut self.model {

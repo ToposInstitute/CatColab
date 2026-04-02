@@ -4,6 +4,7 @@ import type {
     MassActionEquationsData,
     MorType,
     ObType,
+    PolynomialODEEquationsData,
     StochasticMassActionProblemData,
 } from "catlog-wasm";
 import type { DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
@@ -364,3 +365,30 @@ export function renderSQL(
 }
 
 const SQLSchemaAnalysis = lazy(() => import("./analyses/sql"));
+
+export function polynomialODEEquations(
+    options: Partial<AnalysisOptions> & {
+        getEquations: Simulators.PolynomialODEEquations;
+    },
+): ModelAnalysisMeta<PolynomialODEEquationsData> {
+    const {
+        id = "polynomial-ode-equations",
+        name = "Polynomial ODE equations",
+        description = "Display the symbolic equations",
+        help = "polynomial-ode-equations",
+        ...otherOptions
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => (
+            <PolynomialODEEquationsDisplay title={name} {...otherOptions} {...props} />
+        ),
+        initialContent: () => ({
+            trivialData: true,
+        }),
+    };
+}
+const PolynomialODEEquationsDisplay = lazy(() => import("./analyses/polynomial_ode_equations"));
