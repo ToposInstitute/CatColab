@@ -98,19 +98,6 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
     Ok(ref_id)
 }
 
-/// Gets the content of the head snapshot for a document ref.
-pub async fn head_snapshot(state: AppState, ref_id: Uuid) -> Result<Value, AppError> {
-    let query = sqlx::query!(
-        "
-        SELECT content FROM snapshots
-        WHERE id = (SELECT current_snapshot FROM refs WHERE id = $1)
-        ",
-        ref_id
-    );
-
-    Ok(query.fetch_one(&state.db).await?.content)
-}
-
 /// Gets the binary automerge data for a document ref.
 pub async fn head_snapshot_binary(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
     let doc_id = get_doc_id(state.clone(), ref_id).await?;
