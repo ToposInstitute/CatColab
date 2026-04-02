@@ -1,7 +1,6 @@
 //! ODE analysis of models of the logic of systems of polynomial ODEs.
 use std::collections::HashMap;
 
-use clap::builder::NonEmptyStringValueParser;
 use indexmap::IndexMap;
 use nalgebra::DVector;
 use num_traits::Zero;
@@ -12,12 +11,12 @@ use tsify::Tsify;
 
 use crate::{
     dbl::{
-        modal::{ModalMorType, ModalObType, ModeApp},
-        model::{FpDblModel, ModalDblModel, MutDblModel},
+        modal::{List, ModalMorType, ModalObType, ModeApp},
+        model::{FpDblModel, ModalDblModel, ModalOb, MutDblModel},
         theory::NonUnital,
     },
     simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem},
-    zero::{alg::Polynomial, name, rig::Monomial, QualifiedName},
+    zero::{QualifiedName, alg::Polynomial, name, rig::Monomial},
 };
 
 use super::{ODEAnalysis, Parameter};
@@ -77,20 +76,14 @@ impl PolynomialODEAnalysis {
 
         // Create a monomial for each morphism.
         for mor in model.mor_generators_with_type(&self.contribution_mor_type) {
-            // TODO: collect_product() is wrong here, we know we're getting
-            //          ModalOb::List(List::Symmetric, vec![...])
-            //       i.e. **not**
-            //          ModalOb::App(ModalOb::List(List::Symmetric, vec![...]))
-            // see line 660 of catlog/src/dbl/modal/model.rs
-            let inputs = model
+            let input = model
                 .get_dom(&mor)
-                .and_then(|ob| ob.clone().collect_product(None))
-                .unwrap_or_default();
-            // TODO: only a single output
-            let outputs = model
-                .get_cod(&mor)
-                .and_then(|ob| ob.clone().collect_product(None))
-                .unwrap_or_default();
+                .unwrap();
+            let inputs: &Vec<ModalOb> = match input {
+                ModalOb::List(List::Symmetric, v) => v,
+                _ => &Vec::new(),
+            };
+            let output = model.get_cod(&mor).unwrap();
             let term: Monomial<_, _> =
                 inputs.iter().map(|ob| (ob.clone().unwrap_generator(), 1)).collect();
 
@@ -98,9 +91,7 @@ impl PolynomialODEAnalysis {
                 [(Parameter::generator(mor), term.clone())].into_iter().collect();
 
             // TODO: only a single output
-            for output in outputs {
-                sys.add_term(output.clone().unwrap_generator(), term.clone());
-            }
+            sys.add_term(output.clone().unwrap_generator(), term.clone());
         }
 
         sys.normalize()
@@ -133,7 +124,7 @@ mod tests {
     use std::rc::Rc;
 
     use super::*;
-    use crate::stdlib::{models::*, theories::*};
+    use crate::{simulate::ode::LatexEquation, stdlib::{models::*, theories::*}};
 
     // (Unsigned) Lotka–Volterra dynamics on a two-level model.
     #[test]
@@ -142,33 +133,33 @@ mod tests {
         let model = lotka_volterra_dynamics(th);
         let sys = PolynomialODEAnalysis::default().build_system(&model);
         let expected = expect!([r#"
-            dA = A_growth A + BA_interaction AB
-            dB = B_growth B + AB_interaction AB + CB_interaction BC
-            dC = C_growth C + BC_interaction BC
+            dA = (A_growth) A + (BA_interaction) A B
+            dB = (AB_interaction) A B + (B_growth) B + (CB_interaction) B C
+            dC = (BC_interaction) B C + (C_growth) C
         "#]);
         expected.assert_eq(&sys.to_string());
     }
 
-    // // (Unsigned) Lotka–Volterra dynamics on a two-level model with LaTeX.
-    // #[test]
-    // fn lotka_volterra_equations_latex() {
-    //     let th = Rc::new(th_sym_multicategory());
-    //     let model = lotka_volterra_dynamics(th);
-    //     let sys = PolynomialODEAnalysis::default().build_system(&model);
-    //     let expected = vec![
-    //         LatexEquation {
-    //             lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} A".to_string(),
-    //             rhs: "A_growth A + BA_interaction AB".to_string(),
-    //         },
-    //         LatexEquation {
-    //             lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} B".to_string(),
-    //             rhs: "B_growth B + AB_interaction AB + CB interaction BC".to_string(),
-    //         },
-    //         LatexEquation {
-    //             lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} C".to_string(),
-    //             rhs: "C_growth C + BC_interaction BC".to_string(),
-    //         },
-    //     ];
-    //     assert_eq!(expected, sys.to_latex_equations());
-    // }
+    // (Unsigned) Lotka–Volterra dynamics on a two-level model with LaTeX.
+    #[test]
+    fn lotka_volterra_equations_latex() {
+        let th = Rc::new(th_sym_multicategory());
+        let model = lotka_volterra_dynamics(th);
+        let sys = PolynomialODEAnalysis::default().build_system(&model);
+        let expected = vec![
+            LatexEquation {
+                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} A".to_string(),
+                rhs: "(A_growth) A + (BA_interaction) A B".to_string(),
+            },
+            LatexEquation {
+                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} B".to_string(),
+                rhs: "(AB_interaction) A B + (B_growth) B + (CB_interaction) B C".to_string(),
+            },
+            LatexEquation {
+                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} C".to_string(),
+                rhs: "(BC_interaction) B C + (C_growth) C".to_string(),
+            },
+        ];
+        assert_eq!(expected, sys.to_latex_equations());
+    }
 }
