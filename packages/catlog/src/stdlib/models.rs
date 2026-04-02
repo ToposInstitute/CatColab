@@ -286,7 +286,7 @@ mod tests {
     }
 
     #[test]
-    fn symmetric_multi_cats() {
+    fn polynomial_ode_systems() {
         let th = Rc::new(th_polynomial_ode_system());
         assert!(lotka_volterra_dynamics(th.clone()).validate().is_ok());
     }

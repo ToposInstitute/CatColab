@@ -204,7 +204,7 @@ pub fn th_multicategory() -> ModalDblTheory<Unital> {
     th_generalized_multicategory(List::Plain)
 }
 
-/// The theory of a non-unital symmetric multicategory.
+/// The theory of a symmetric multicategory.
 pub fn th_sym_multicategory() -> ModalDblTheory<Unital> {
     th_generalized_multicategory(List::Symmetric)
 }
