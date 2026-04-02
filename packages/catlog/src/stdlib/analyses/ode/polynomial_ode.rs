@@ -30,7 +30,6 @@ use super::{ODEAnalysis, Parameter};
 )]
 pub struct PolynomialODEProblemData {
     /// Map from morphism IDs to coefficients (nonnegative reals).
-    #[cfg_attr(feature = "serde", serde(rename = "coefficients"))]
     coefficients: HashMap<QualifiedName, f32>,
 
     /// Map from object IDs to initial values (nonnegative reals).
@@ -94,6 +93,18 @@ impl PolynomialODEAnalysis {
 
         sys.normalize()
     }
+}
+
+/// Substitutes numerical rate coefficients into a symbolic mass-action system.
+pub fn extend_polynomial_ode_scalars(
+    sys: PolynomialSystem<QualifiedName, Parameter<QualifiedName>, i8>,
+    data: &PolynomialODEProblemData,
+) -> PolynomialSystem<QualifiedName, f32, i8> {
+    let sys = sys.extend_scalars(|poly| {
+        poly.eval(|mor| data.coefficients.get(mor).cloned().unwrap_or_default())
+    });
+
+    sys.normalize()
 }
 
 /// Builds the numerical ODE analysis for a system of polynomial ODEs whose scalars have been substituted.

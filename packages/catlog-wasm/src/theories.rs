@@ -446,6 +446,16 @@ impl ThSymMulticategory {
         DblTheory(self.0.clone().into())
     }
 
+    /// Simulates the ODE system derived from a model.
+    #[wasm_bindgen(js_name = "polynomialODESimulation")]
+    pub fn polynomial_ode_simulation(
+        &self,
+        model: &DblModel,
+        data: analyses::ode::PolynomialODEProblemData,
+    ) -> Result<ODEResultWithEquations, String> {
+        polynomial_ode_simulation(model, data)
+    }
+
     /// Returns the symbolic equations in LaTeX format.
     #[wasm_bindgen(js_name = "polynomialODEEquations")]
     pub fn polynomial_ode_equations(

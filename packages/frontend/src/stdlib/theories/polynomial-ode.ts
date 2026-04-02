@@ -31,6 +31,11 @@ export default function createPolynomialODETheory(theoryMeta: TheoryMeta): Theor
                     return thSymMulticategory.polynomialODEEquations(model, data);
                 },
             }),
+            analyses.polynomialODESimulation({
+                simulate(model, data) {
+                    return thSymMulticategory.polynomialODESimulation(model, data);
+                },
+            }),
         ],
     });
 }

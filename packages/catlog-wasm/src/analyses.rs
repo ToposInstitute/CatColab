@@ -38,7 +38,6 @@ pub struct PolynomialODEEquationsData {
 /// Generates the PolynomialSystem for the systems of polynomial ODEs.
 fn polynomial_ode_system(
     model: &DblModel,
-    _data: PolynomialODEEquationsData,
 ) -> Result<PolynomialSystem<QualifiedName, ode::Parameter<QualifiedName>, i8>, String> {
     let realised_model = model.modal_non_unital()?;
     let analysis = ode::PolynomialODEAnalysis::default();
@@ -48,14 +47,31 @@ fn polynomial_ode_system(
 /// Generates equations for the system of polynomial ODEs.
 pub(crate) fn polynomial_ode_equations(
     model: &DblModel,
-    data: PolynomialODEEquationsData,
+    _data: PolynomialODEEquationsData,
 ) -> Result<LatexEquations, String> {
-    let sys = polynomial_ode_system(model, data);
+    let sys = polynomial_ode_system(model);
     let equations = sys?
         .map_variables(latex_ob_names(model))
         .extend_scalars(|param| param.map_variables(latex_mor_names(model)))
         .to_latex_equations();
     Ok(LatexEquations(equations))
+}
+
+/// Simulates mass-action ODEs.
+pub(crate) fn polynomial_ode_simulation(
+    model: &DblModel,
+    data: ode::PolynomialODEProblemData,
+) -> Result<ODEResultWithEquations, String> {
+    let sys = polynomial_ode_system(model);
+    let sys_extended_scalars = ode::extend_polynomial_ode_scalars(sys?, &data);
+    let latex_equations =
+        sys_extended_scalars.map_variables(latex_ob_names(model)).to_latex_equations();
+    let analysis = ode::polynomial_ode_analysis(sys_extended_scalars, data);
+    let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
+    Ok(ODEResultWithEquations {
+        solution: ODEResult(solution.into()),
+        latex_equations: LatexEquations(latex_equations),
+    })
 }
 
 /// The mass-action analysis is currently implemented for Petri nets and stock-flow
@@ -87,24 +103,6 @@ fn mass_action_system(
     }
 }
 
-/// Simulates mass-action ODEs.
-pub(crate) fn mass_action_simulation(
-    model: &DblModel,
-    data: ode::MassActionProblemData,
-    logic: MassActionAnalysisLogic,
-) -> Result<ODEResultWithEquations, String> {
-    let sys = mass_action_system(model, data.mass_conservation_type, logic);
-    let sys_extended_scalars = ode::extend_mass_action_scalars(sys?, &data);
-    let latex_equations =
-        sys_extended_scalars.map_variables(latex_ob_names(model)).to_latex_equations();
-    let analysis = ode::into_mass_action_analysis(sys_extended_scalars, data);
-    let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
-    Ok(ODEResultWithEquations {
-        solution: ODEResult(solution.into()),
-        latex_equations: LatexEquations(latex_equations),
-    })
-}
-
 /// The analysis data for mass-action equations.
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
@@ -126,4 +124,22 @@ pub(crate) fn mass_action_equations(
         .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(model)))
         .to_latex_equations();
     Ok(LatexEquations(equations))
+}
+
+/// Simulates mass-action ODEs.
+pub(crate) fn mass_action_simulation(
+    model: &DblModel,
+    data: ode::MassActionProblemData,
+    logic: MassActionAnalysisLogic,
+) -> Result<ODEResultWithEquations, String> {
+    let sys = mass_action_system(model, data.mass_conservation_type, logic);
+    let sys_extended_scalars = ode::extend_mass_action_scalars(sys?, &data);
+    let latex_equations =
+        sys_extended_scalars.map_variables(latex_ob_names(model)).to_latex_equations();
+    let analysis = ode::into_mass_action_analysis(sys_extended_scalars, data);
+    let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
+    Ok(ODEResultWithEquations {
+        solution: ODEResult(solution.into()),
+        latex_equations: LatexEquations(latex_equations),
+    })
 }

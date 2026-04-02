@@ -9,6 +9,7 @@ import type {
     ODEResult,
     ODEResultWithEquations,
     PolynomialODEEquationsData,
+    PolynomialODEProblemData,
     StochasticMassActionProblemData,
 } from "catlog-wasm";
 
@@ -17,7 +18,7 @@ export type {
     LinearODEProblemData,
     LotkaVolterraProblemData,
     MassActionProblemData,
-    PolynomialODEEquationsData,
+    PolynomialODEProblemData,
 };
 
 export type KuramotoSimulator = (model: DblModel, data: KuramotoProblemData) => ODEResult;
@@ -35,6 +36,10 @@ export type MassActionEquations = (
     model: DblModel,
     data: MassActionEquationsData,
 ) => LatexEquations;
+export type PolynomialODESimulator = (
+    model: DblModel,
+    data: PolynomialODEProblemData,
+) => ODEResultWithEquations;
 export type PolynomialODEEquations = (
     model: DblModel,
     data: PolynomialODEEquationsData,
