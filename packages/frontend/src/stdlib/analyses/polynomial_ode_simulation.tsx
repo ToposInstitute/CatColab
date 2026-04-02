@@ -40,7 +40,9 @@ export default function PolynomialODESimulation(
         if (!model) {
             return [];
         }
-        return props.variableType ? model.obGeneratorsWithType(props.variableType) : model.obGenerators();
+        return props.variableType
+            ? model.obGeneratorsWithType(props.variableType)
+            : model.obGenerators();
     });
 
     // Each contribution needs to be assigned a coefficient, so we need the list of
@@ -117,9 +119,7 @@ export default function PolynomialODESimulation(
 
     return (
         <div class="simulation">
-            <BlockTitle
-                title={props.title}
-            />
+            <BlockTitle title={props.title} />
             <Foldable title="Parameters" defaultExpanded>
                 <div class="parameters">
                     <FixedTableEditor rows={obGenerators()} schema={obSchema} />
