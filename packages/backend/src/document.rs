@@ -99,7 +99,7 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
 }
 
 /// Gets the binary automerge data for a document ref.
-pub async fn head_snapshot_binary(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
+pub async fn get_doc_binary_data(state: AppState, ref_id: Uuid) -> Result<String, AppError> {
     let doc_id = get_doc_id(state.clone(), ref_id).await?;
 
     let doc_handle = state
