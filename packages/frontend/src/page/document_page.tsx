@@ -221,7 +221,11 @@ function SplitPaneToolbar(props: {
             <DocumentBreadcrumbs liveDoc={props.doc.liveDoc} docRefId={props.docRef.refId} />
             <span class="filler" />
             <Show when={!secondaryPanelSize()}>
-                <IconButton onClick={props.togglePrimaryHistorySidebar} tooltip="Toggle history">
+                <IconButton
+                    onClick={props.togglePrimaryHistorySidebar}
+                    onMouseDown={(e: MouseEvent) => e.preventDefault()}
+                    tooltip="Toggle history"
+                >
                     <History size={20} />
                 </IconButton>
                 <PermissionsButton liveDoc={props.doc.liveDoc} docRef={props.docRef} />
@@ -233,6 +237,7 @@ function SplitPaneToolbar(props: {
                 >
                     <IconButton
                         onClick={props.togglePrimaryHistorySidebar}
+                        onMouseDown={(e: MouseEvent) => e.preventDefault()}
                         tooltip="Toggle history"
                     >
                         <History size={20} />
@@ -288,7 +293,11 @@ function SecondaryToolbar(props: {
             >
                 {(secondary) => (
                     <div class="secondary-permissions-toolbar toolbar">
-                        <IconButton onClick={props.toggleHistorySidebar} tooltip="Toggle history">
+                        <IconButton
+                            onClick={props.toggleHistorySidebar}
+                            onMouseDown={(e: MouseEvent) => e.preventDefault()}
+                            tooltip="Toggle history"
+                        >
                             <History size={20} />
                         </IconButton>
                         <PermissionsButton
@@ -401,6 +410,14 @@ export function DocumentPane(props: {
 
     const history = useSnapshotHistory(() => props.docRef.refId);
 
+    let paneRef: HTMLDivElement | undefined;
+
+    createEffect(() => {
+        if (props.historySidebarOpen) {
+            paneRef?.focus();
+        }
+    });
+
     const onKeyDown = (evt: KeyboardEvent) => {
         const mod = evt.metaKey || evt.ctrlKey;
         if (!mod || evt.altKey) {
@@ -425,7 +442,7 @@ export function DocumentPane(props: {
     // oxlint-disable solid/reactivity -- Context.Provider value getter is reactive
     return (
         <DocRefIdContext.Provider value={() => props.docRef.refId}>
-            <div class="document-pane-layout" tabIndex={-1} onKeyDown={onKeyDown}>
+            <div class="document-pane-layout" ref={paneRef} tabIndex={-1} onKeyDown={onKeyDown}>
                 <div class="document-pane-content">
                     <Show when={isDeleted()}>
                         <WarningBanner
@@ -485,7 +502,13 @@ export function DocumentPane(props: {
                     </div>
                 </div>
                 <Show when={props.historySidebarOpen && props.docRef.refId}>
-                    <div class="history-sidebar">
+                    <div
+                        class="history-sidebar"
+                        onMouseDown={(e: MouseEvent) => {
+                            e.preventDefault();
+                            paneRef?.focus();
+                        }}
+                    >
                         <HistorySidebar history={history} />
                     </div>
                 </Show>
