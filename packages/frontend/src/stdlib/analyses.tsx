@@ -392,3 +392,33 @@ export function polynomialODEEquations(
     };
 }
 const PolynomialODEEquationsDisplay = lazy(() => import("./analyses/polynomial_ode_equations"));
+
+export function polynomialODESimulation(
+    options: Partial<AnalysisOptions> & {
+        simulate: Simulators.PolynomialODESimulator;
+        stateType?: ObType;
+        transitionType?: MorType;
+    },
+): ModelAnalysisMeta<Simulators.PolynomialODEProblemData> {
+    const {
+        id = "polynomial-ode-simulation",
+        name = "Polynomial ODE simulation",
+        description = "Simulate the system",
+        help = "polynomial-ode-simulation",
+        ...otherOptions
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => <PolynomialODESimulation title={name} {...otherOptions} {...props} />,
+        initialContent: () => ({
+            coefficients: {},
+            initialValues: {},
+            duration: 10,
+        }),
+    };
+}
+
+const PolynomialODESimulation = lazy(() => import("./analyses/polynomial_ode_simulation"));
