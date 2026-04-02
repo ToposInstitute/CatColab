@@ -23,6 +23,7 @@
     flex-direction: row;
     height: 100%;
     min-height: 0;
+    outline: none;
 }
 
 .document-pane-content {
