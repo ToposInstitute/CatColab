@@ -1,5 +1,4 @@
 import { useNavigate } from "@solidjs/router";
-import invariant from "tiny-invariant";
 
 import type { Document } from "catlog-wasm";
 import { useApi } from "../api";
@@ -14,35 +13,31 @@ export function ImportDocument(props: { onComplete?: () => void }) {
     const navigate = useNavigate();
 
     const handleImport = async (data: Document) => {
-        if (isFromPetrinaut(data)) {
-            try {
-                data = convertFromPetrinaut(data);
-            } catch {
-                throw new Error("Petrinaut file detected but the JSON appears invalid");
-            }
-        }
-        invariant(
-            isImportableDocument(data),
-            "Only models and diagrams are importable at this time",
-        );
-
         const newRef = await api.createDoc(data);
         navigate(`/${data.type}/${newRef}`);
 
         props.onComplete?.();
     };
 
-    // Placeholder, not doing more than typechecking does for now but
-    // will eventually validate against json schema
-    const validateJson = (data: Document) => {
-        if (isFromPetrinaut(data)) {
-            return true;
+    const parseDoc = (inputString: string): Document | Error => {
+        let doc: Document;
+        try {
+            doc = JSON.parse(inputString);
+        } catch {
+            return Error("Invalid JSON");
         }
-        if (!isImportableDocument(data)) {
-            return "Only models and diagrams are importable at this time";
+        if (isFromPetrinaut(doc)) {
+            try {
+                return convertFromPetrinaut(doc);
+            } catch {
+                return Error("Petrinaut file detected but the JSON appears invalid");
+            }
         }
-        return true;
+        if (!isImportableDocument(doc)) {
+            return Error("Only models and diagrams are importable at this time");
+        }
+        return doc;
     };
 
-    return <JsonImport onImport={handleImport} validate={validateJson} />;
+    return <JsonImport onImport={handleImport} parse={parseDoc} />;
 }
