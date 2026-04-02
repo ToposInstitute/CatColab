@@ -1,5 +1,4 @@
 import Resizable, { type ContextValue } from "@corvu/resizable";
-import { makeEventListener } from "@solid-primitives/event-listener";
 import { Title } from "@solidjs/meta";
 import { useNavigate, useParams } from "@solidjs/router";
 import ChevronsRight from "lucide-solid/icons/chevrons-right";
@@ -402,7 +401,7 @@ export function DocumentPane(props: {
 
     const history = useSnapshotHistory(() => props.docRef.refId);
 
-    makeEventListener(window, "keydown", (evt) => {
+    const onKeyDown = (evt: KeyboardEvent) => {
         const mod = evt.metaKey || evt.ctrlKey;
         if (!mod || evt.altKey) {
             return;
@@ -421,12 +420,12 @@ export function DocumentPane(props: {
                 }
             }
         }
-    });
+    };
 
     // oxlint-disable solid/reactivity -- Context.Provider value getter is reactive
     return (
         <DocRefIdContext.Provider value={() => props.docRef.refId}>
-            <div class="document-pane-layout">
+            <div class="document-pane-layout" tabIndex={-1} onKeyDown={onKeyDown}>
                 <div class="document-pane-content">
                     <Show when={isDeleted()}>
                         <WarningBanner
