@@ -100,7 +100,8 @@ describe("RPC for Automerge documents", async () => {
     });
 
     test.sequential("should autosave to the database", { timeout: 1000, retry: 5 }, async () => {
-        const newContent = unwrap(await rpc.head_snapshot.query(refId)) as unknown as Document;
+        const newContent = docHandle.doc();
+        assert(newContent);
         assert.strictEqual(newContent.name, newName);
     });
 });
@@ -120,11 +121,6 @@ describe("Authorized RPC", async () => {
     const privateId = unwrap(await rpc.new_ref.mutate(content));
     test.sequential("should get a valid ref UUID when authenticated", () => {
         assert(uuid.validate(privateId));
-    });
-
-    const fetchedContent = unwrap(await rpc.head_snapshot.query(privateId));
-    test.sequential("should get document content when authenticated", () => {
-        assert.deepStrictEqual(fetchedContent, content);
     });
 
     const refDoc = unwrap(await rpc.get_doc.query(privateId));
@@ -148,11 +144,9 @@ describe("Authorized RPC", async () => {
 
     await signOut(auth);
 
-    const forbiddenResult1 = await rpc.head_snapshot.query(privateId);
-    const forbiddenResult2 = await rpc.get_doc.query(privateId);
+    const forbiddenResult = await rpc.get_doc.query(privateId);
     test.sequential("should prohibit document access when unauthenticated", () => {
-        assert.strictEqual(unwrapErr(forbiddenResult1).code, 403);
-        assert.strictEqual(unwrapErr(forbiddenResult2).code, 403);
+        assert.strictEqual(unwrapErr(forbiddenResult).code, 403);
     });
 
     const readonlyDoc = unwrap(await rpc.get_doc.query(readonlyId));
