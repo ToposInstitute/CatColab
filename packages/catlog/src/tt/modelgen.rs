@@ -56,6 +56,7 @@ impl Model {
             TheoryDef::ModalNonUnital(theory) => {
                 Model::ModalNonUnital(Box::new(modal::ModalDblModel::new(theory.clone())))
             }
+            TheoryDef::DiscTab(_) => todo!("model generation for discrete tabulator theories"),
         }
     }
 
