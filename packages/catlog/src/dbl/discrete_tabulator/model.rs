@@ -12,7 +12,7 @@ use crate::validate::{self, Validate};
 use crate::{one::*, zero::*};
 
 /// Object in a model of a discrete tabulator theory.
-#[derive(Clone, PartialEq, Eq, From)]
+#[derive(Clone, PartialEq, Debug, Eq, From)]
 pub enum TabOb {
     /// Basic or generating object.
     #[from]
@@ -53,7 +53,7 @@ impl TabOb {
 /// "Edge" in a model of a discrete tabulator theory.
 ///
 /// Morphisms of these two forms generate all the morphisms in the model.
-#[derive(Clone, PartialEq, Eq, From)]
+#[derive(Clone, PartialEq, Debug, Eq, From)]
 pub enum TabEdge {
     /// Basic morphism between any two objects.
     #[from]
