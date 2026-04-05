@@ -41,7 +41,7 @@ export function DiagramNotebookEditor(props: { liveDiagram: LiveDiagramDoc }) {
                     liveDoc().changeDoc((doc) => f(doc.notebook));
                 }}
                 formalCellEditor={DiagramCellEditor}
-                cellConstructors={cellConstructors()}
+                cellConstructors={cellConstructors}
                 cellLabel={judgmentLabel}
                 duplicateCell={duplicateDiagramJudgment}
             />
