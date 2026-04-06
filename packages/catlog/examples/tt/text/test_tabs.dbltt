@@ -1,0 +1,13 @@
+set_theory ThCategoryLinks
+
+type SIR := [
+    S : Object,
+    I : Object,
+    R : Object, 
+    si : (Hom Object)[S,I],
+    ir : (Hom Object)[I,R],
+    isi : Link[I,@tab si],
+    rir : Link[R,@tab ir]
+]
+
+generate SIR

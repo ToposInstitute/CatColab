@@ -7,8 +7,8 @@ use tattle::reporter::Message;
 use super::{eval::*, prelude::*, text_elab, theory::*, toplevel::*, val::*};
 use crate::dbl::{
     discrete, modal, discrete_tabulator,
-    model::{DblModel, DblModelPrinter, MutDblModel},
-    theory::{DblTheory, DblTheoryKind, NonUnital, Unital},
+    model::{DblModel, DblModelPrinter, MutDblModel, TabOb},
+    theory::{DblTheory, TabObType, DblTheoryKind, NonUnital, Unital},
 };
 use crate::one::{
     Category,
@@ -290,7 +290,17 @@ impl<'a> ModelGenerator<'a> {
                 Some((ob, ob_type.clone()))
             }
             TmV_::App(name, tm_v) => self.ob_app(name, tm_v),
-            _ => None,
+            TmV_::Tab(mor_tm_v) => {
+                let (mor, mor_type) = self.synth_mor(mor_tm_v)?;
+                let ob_type = match &self.model {
+                    Model::DiscTab(_) => ObType::DiscTab(TabObType::Tabulator(Box::new(
+                        mor_type.try_into().unwrap(),
+                    ))),
+                    _ => return None,
+                };
+                Some((Ob::DiscTab(TabOb::Tabulated(Box::new(mor.try_into().unwrap()))), ob_type))
+            }
+            _ => None, // TODO: These fallthroughs make adding variants harder. Consider or-paterns.
         }
     }
 

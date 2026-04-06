@@ -14,7 +14,7 @@ use std::{fmt, rc::Rc};
 
 use super::prelude::*;
 use crate::dbl::{
-    discrete, modal,
+    discrete, modal, discrete_tabulator,
     model::PrintableDblModel,
     theory::{DblTheory, DblTheoryKind, NonUnital, Unital},
 };
@@ -264,7 +264,9 @@ impl ToDoc for MorType {
     fn to_doc<'a>(&self) -> D<'a> {
         match self {
             MorType::Discrete(path) => discrete::DiscreteDblModel::mor_type_to_doc(path),
-            MorType::DiscTab(mor_type) => discrete_tabulator::DiscreteTabModel::mor_type_to_doc(mor_type),
+            MorType::DiscTab(mor_type) => {
+                discrete_tabulator::DiscreteTabModel::mor_type_to_doc(mor_type)
+            }
             MorType::Modal(mor_type) => modal::ModalDblModel::mor_type_to_doc(mor_type),
         }
     }

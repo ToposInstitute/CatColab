@@ -294,6 +294,7 @@ impl From<tt::modelgen::Model> for DblModelBox {
             tt::modelgen::Model::Discrete(model) => Self::Discrete(Rc::new(*model)),
             tt::modelgen::Model::ModalUnital(model) => Self::ModalUnital(Rc::new(*model)),
             tt::modelgen::Model::ModalNonUnital(model) => Self::ModalNonUnital(Rc::new(*model)),
+            tt::modelgen::Model::DiscTab(_) => todo!("wasm support for discrete tabulator models"),
         }
     }
 }

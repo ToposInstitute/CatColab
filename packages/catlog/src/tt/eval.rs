@@ -88,6 +88,7 @@ impl<'a> Evaluator<'a> {
             TmS_::Proj(tm, field, label) => self.proj(&self.eval_tm(tm), *field, *label),
             TmS_::Tt => TmV::tt(),
             TmS_::Id(x) => TmV::id(self.eval_tm(x)),
+            TmS_::Tab(mor) => TmV::tab(self.eval_tm(mor)),
             TmS_::Compose(f, g) => TmV::compose(self.eval_tm(f), self.eval_tm(g)),
             TmS_::ObApp(name, x) => TmV::app(*name, self.eval_tm(x)),
             TmS_::List(elems) => TmV::list(elems.iter().map(|tm| self.eval_tm(tm)).collect()),
@@ -215,6 +216,7 @@ impl<'a> Evaluator<'a> {
             TmV_::Cons(fields) => TmS::cons(fields.map(|tm| self.quote_tm(tm))),
             TmV_::Tt => TmS::tt(),
             TmV_::Id(x) => TmS::id(self.quote_tm(x)),
+            TmV_::Tab(mor) => TmS::tab(self.quote_tm(mor)),
             TmV_::Compose(f, g) => TmS::compose(self.quote_tm(f), self.quote_tm(g)),
             TmV_::Meta(mv) => TmS::meta(*mv),
         }
@@ -337,12 +339,15 @@ impl<'a> Evaluator<'a> {
                         })
                         .collect();
                     TmV::cons(row)
-                } else {
+                }
+                // Is this right? Couldn't a cons be nested below top-level and so not get expanded right?
+                else {
                     v.clone()
                 }
             }
             TmV_::Tt => TmV::tt(),
             TmV_::Id(x) => TmV::id(self.eta(x, None)),
+            TmV_::Tab(mor) => TmV::tab(self.eta(mor, None)),
             TmV_::Compose(f, g) => TmV::compose(self.eta(f, None), self.eta(g, None)),
             TmV_::Meta(_) => v.clone(),
         }
