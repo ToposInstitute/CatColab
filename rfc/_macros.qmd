@@ -1,3 +1,4 @@
+\renewcommand{\cal}[1]{\mathcal{#1}}
 \renewcommand{\vec}[1]{\underline{#1}}
 
 <!-- Category theory -->
@@ -32,6 +33,5 @@
 \newcommand{\coDisc}{\mathop{\mathrm{coDisc}}}
 
 <!-- Type theory -->
-\newcommand{\ob}{\mathsf{ob}}
 \newcommand{\context}{\mathsf{cx}}
 \newcommand{\type}{\mathsf{ty}}
