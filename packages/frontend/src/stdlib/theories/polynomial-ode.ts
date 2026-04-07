@@ -12,14 +12,14 @@ export default function createPolynomialODETheory(theoryMeta: TheoryMeta): Theor
         modelTypes: [
             {
                 tag: "ObType",
-                obType: { tag: "Basic", content: "Object" },
+                obType: { tag: "Basic", content: "State" },
                 name: "Variable",
                 description: "Variable in ring of polynomials",
                 shortcut: ["V"],
             },
             {
                 tag: "MorType",
-                morType: { tag: "Basic", content: "Multihom" },
+                morType: { tag: "Basic", content: "Contrib" },
                 name: "Contribution",
                 description: "Monomial contribution to the system of ODEs",
                 shortcut: ["C"],
