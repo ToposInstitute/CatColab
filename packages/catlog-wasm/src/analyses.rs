@@ -39,7 +39,7 @@ pub struct PolynomialODEEquationsData {
 fn polynomial_ode_system(
     model: &DblModel,
 ) -> Result<PolynomialSystem<QualifiedName, ode::Parameter<QualifiedName>, i8>, String> {
-    let realised_model = model.modal_non_unital()?;
+    let realised_model = model.modal_nonunital()?;
     let analysis = ode::PolynomialODEAnalysis::default();
     Ok(analysis.build_system(realised_model))
 }

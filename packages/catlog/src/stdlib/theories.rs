@@ -214,7 +214,7 @@ pub fn th_polynomial_ode_system() -> ModalDblTheory<NonUnital> {
     let mut th = ModalDblTheory::new();
     th.add_ob_type(name("State"));
     let x = ModeApp::new(name("State"));
-    th.add_mor_type(name("Contrib"), x.clone().apply(Modality::List(List::Symmetric)), x);
+    th.add_mor_type(name("Contribution"), x.clone().apply(Modality::List(List::Symmetric)), x);
     th
 }
 
