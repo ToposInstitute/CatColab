@@ -171,6 +171,24 @@ stdTheories.add(
         description: "Systems of polynomial ordinary differential equations",
         iconLetters: ["P", "o"],
         group: "Experimental",
+        editorVariants: [
+            {
+                id: "editor-variant-ode",
+                name: "good ode",
+                description: "gooder ode",
+                editorOverrides: {
+                    morEditors: [
+                        {
+                            morType: {
+                                tag: "Basic" as const,
+                                content: "Contribution" as const,
+                            },
+                            editor: lazy(() => import("../model/monomial_cell_editor")),
+                        },
+                    ],
+                },
+            },
+        ],
     },
     async () => (await import("./theories/polynomial-ode")).default,
 );
