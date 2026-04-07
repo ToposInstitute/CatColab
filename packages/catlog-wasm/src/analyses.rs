@@ -44,7 +44,7 @@ fn mass_action_system(
 ) -> Result<PolynomialSystem<QualifiedName, ode::Parameter<ode::FlowParameter>, i8>, String> {
     match logic {
         MassActionAnalysisLogic::PetriNet => {
-            let realised_model = model.modal()?;
+            let realised_model = model.modal_unital()?;
             let analysis = ode::PetriNetMassActionAnalysis::default();
             Ok(analysis.build_system(realised_model, mass_conservation_type))
         }
