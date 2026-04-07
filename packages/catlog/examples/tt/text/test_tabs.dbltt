@@ -11,3 +11,20 @@ type SIR := [
 ]
 
 generate SIR
+
+type WalkingLink := [
+    x : Object,
+    y : Object, 
+    z : Object,
+    f : (Hom Object)[x,y],
+    l : Link[z,@tab f]
+]
+
+type SI := [
+    S : Object,
+    I : Object,
+    si : (Hom Object)[S,I],
+    isi : WalkingLink & [.x := S, .y := I, .z := I, .f := si]
+]
+
+generate SI
