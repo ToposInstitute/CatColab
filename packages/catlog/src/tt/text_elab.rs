@@ -603,6 +603,21 @@ impl<'a> Elaborator<'a> {
                     TyV::morphism(mor_type, ob_v.clone(), ob_v),
                 )
             }
+            App1(L(_, Prim("tab")), mor_n) => {
+                let (mor_s, mor_v, mor_t) = elab.syn(mor_n);
+                let TyV_::Morphism(mor_type, _dom, _cod) = &*mor_t else {
+                    return elab.syn_error("can only apply @tab to morphisms");
+                };
+                let TheoryDef::DiscTab(th) = &elab.theory.definition else {
+                    return elab.syn_error("@tab is only available in discrete tabulator theories");
+                };
+                let ob_type = ObType::DiscTab(th.tabulator(mor_type.clone().try_into().unwrap()));
+                (
+                    TmS::tab(mor_s),
+                    TmV::tab(mor_v),
+                    TyV::object(ob_type),
+                )
+            }
             App1(L(_, Prim(name)), ob_n) => {
                 let name = name_seg(*name);
                 let Some(ob_op) = elab.theory().basic_ob_op([name].into()) else {
@@ -780,26 +795,6 @@ mod tests {
         assert_eq!(model, stdlib::models::negative_loop(th));
     }
 
-    /// Check that a commutative square really produces a model with exactly one equation.
-    #[test]
-    fn generate_model_with_eqn() {
-        let th = Rc::new(stdlib::th_schema()).into();
-        let source = "[
-            NW : Entity,
-            NE : Entity,
-            SW : Entity,
-            SE : Entity,
-            t : (Hom Entity)[NW,NE],
-            l : (Hom Entity)[NW,SW],
-            r : (Hom Entity)[NE,SE],
-            b : (Hom Entity)[SW, SE],
-            comm : (t * r == l * b)
-        ]";
-        let model = Model::from_text(&th, source).ok().and_then(|m| m.as_discrete()).unwrap();
-        let eqns: Vec<_> = model.category.equations().collect();
-        assert_eq!(eqns.len(), 1);
-    }
-
     /// Check error reporting when parsing a model from text.
     #[test]
     fn test_error_object_type() {
@@ -829,7 +824,7 @@ mod tests {
             b : (Hom Entity)[SW, SE],
             comm : (t * r == l * b)
         ]";
-        let model = tt::modelgen::parse_and_generate(source, &th.clone().into())
+        let model = crate::tt::modelgen::parse_and_generate(source, &th.clone().into())
             .and_then(|m| m.as_discrete())
             .unwrap();
         let eqns: Vec<_> = model.category.equations().collect();

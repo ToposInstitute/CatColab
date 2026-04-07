@@ -219,6 +219,8 @@ pub enum TmS_ {
     Compose(TmS, TmS),
     /// Application of an object operation in the theory.
     ObApp(VarName, TmS),
+    /// Tabulation of a morphism into an object.
+    Tab(TmS),
     /// List of objects.
     List(Vec<TmS>),
     /// A metavar.
@@ -281,6 +283,11 @@ impl TmS {
         Self(Rc::new(TmS_::ObApp(name, x)))
     }
 
+    /// Smart constructor for [TmS], [TmS_::Tab] case.
+    pub fn tab(mor: TmS) -> Self {
+        Self(Rc::new(TmS_::Tab(mor)))
+    }
+
     /// Smart constructor for [TmS], [TmS_::List] case.
     pub fn list(elems: Vec<TmS>) -> Self {
         Self(Rc::new(TmS_::List(elems)))
@@ -307,6 +314,7 @@ impl ToDoc for TmS {
             TmS_::Id(ob) => (t("@id") + s() + ob.to_doc()).parens(),
             TmS_::Compose(f, g) => binop(t("·"), f.to_doc(), g.to_doc()),
             TmS_::ObApp(name, x) => unop(t(format!("@{name}")), x.to_doc()),
+            TmS_::Tab(mor) => unop(t("@tab"), mor.to_doc()),
             TmS_::List(elems) => tuple(elems.iter().map(|elem| elem.to_doc())),
             TmS_::Tt => t("tt"),
             TmS_::Meta(mv) => t(format!("?{}", mv.id)),

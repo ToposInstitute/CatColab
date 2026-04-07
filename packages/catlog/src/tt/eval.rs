@@ -90,6 +90,7 @@ impl<'a> Evaluator<'a> {
             TmS_::Id(x) => TmV::id(self.eval_tm(x)),
             TmS_::Compose(f, g) => TmV::compose(self.eval_tm(f), self.eval_tm(g)),
             TmS_::ObApp(name, x) => TmV::app(*name, self.eval_tm(x)),
+            TmS_::Tab(mor) => TmV::tab(self.eval_tm(mor)),
             TmS_::List(elems) => TmV::list(elems.iter().map(|tm| self.eval_tm(tm)).collect()),
             TmS_::Meta(mv) => TmV::meta(*mv),
         }
@@ -216,6 +217,7 @@ impl<'a> Evaluator<'a> {
             TmV_::Tt => TmS::tt(),
             TmV_::Id(x) => TmS::id(self.quote_tm(x)),
             TmV_::Compose(f, g) => TmS::compose(self.quote_tm(f), self.quote_tm(g)),
+            TmV_::Tab(mor) => TmS::tab(self.quote_tm(mor)),
             TmV_::Meta(mv) => TmS::meta(*mv),
         }
     }
@@ -344,6 +346,7 @@ impl<'a> Evaluator<'a> {
             TmV_::Tt => TmV::tt(),
             TmV_::Id(x) => TmV::id(self.eta(x, None)),
             TmV_::Compose(f, g) => TmV::compose(self.eta(f, None), self.eta(g, None)),
+            TmV_::Tab(mor) => TmV::tab(self.eta(mor, None)),
             TmV_::Meta(_) => v.clone(),
         }
     }
@@ -395,6 +398,16 @@ impl<'a> Evaluator<'a> {
                 Ok(())
             }
             (TmV_::Tt, TmV_::Tt) => Ok(()),
+            (TmV_::Id(x1), TmV_::Id(x2)) => {
+                self.equal_tm_helper(x1, x2, strict1, strict2)
+            }
+            (TmV_::Compose(f1, g1), TmV_::Compose(f2, g2)) => {
+                self.equal_tm_helper(f1, f2, strict1, strict2)?;
+                self.equal_tm_helper(g1, g2, strict1, strict2)
+            }
+            (TmV_::Tab(m1), TmV_::Tab(m2)) => {
+                self.equal_tm_helper(m1, m2, strict1, strict2)
+            }
             (TmV_::Meta(mv1), TmV_::Meta(mv2)) => {
                 if mv1 == mv2 {
                     Ok(())
