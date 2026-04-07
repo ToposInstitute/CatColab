@@ -12,6 +12,19 @@ type SIR := [
 
 generate SIR
 
+type Endo := [
+    A : Object,
+    f : (Hom Object)[A,A],
+]
+
+generate Endo
+
+#(should_fail)
+type LinkFlows := [
+    E : Endo,
+    l : Link[@tab E.f,@tab E.f]
+]
+
 type WalkingLink := [
     x : Object,
     y : Object, 
@@ -23,8 +36,41 @@ type WalkingLink := [
 type SI := [
     S : Object,
     I : Object,
-    si : (Hom Object)[S,I],
-    isi : WalkingLink & [.x := S, .y := I, .z := I, .f := si]
+    isi : WalkingLink & [.x := S, .y := I, .z := I]
 ]
 
 generate SI
+
+chk [sf : SI] (sf.isi.l : Link[sf.I,@tab sf.isi.f])
+
+chk [sf : SI] (sf.isi : WalkingLink)
+
+chk [sf : SI] (sf.isi : WalkingLink & [ .x := sf.S])
+
+#(should_fail)
+chk [sf : SI] (sf.isi : WalkingLink & [.x := sf.I])
+
+def act_on_link[d : SI] : Link[d.S,@tab d.isi.f] := d.isi.f * d.isi.l
+
+type Triangle := [
+    x : Object,
+    y : Object,
+    z : Object,
+    f : (Hom Object)[x,y],
+    g : (Hom Object)[y,z],
+    l : Link[z, @tab (f * g)]
+]
+
+def delete_y[T : Triangle] : SI := [
+    S := T.x,
+    I := T.z,
+    isi := [
+        x := T.x,
+        y := T.z,
+        z := T.z,
+        f := T.f * T.g,
+        l := T.l
+    ]
+]
+
+syn [T : Triangle] delete_y[T].isi.l

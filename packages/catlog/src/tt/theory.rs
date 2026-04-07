@@ -237,7 +237,7 @@ impl ToDoc for ObType {
         match self {
             ObType::Discrete(name) => discrete::DiscreteDblModel::ob_type_to_doc(name),
             ObType::DiscTab(name) => discrete_tabulator::DiscreteTabModel::ob_type_to_doc(name),
-            ObType::Modal(ob_type) => modal::ModalDblModel::ob_type_to_doc(ob_type),
+            ObType::Modal(ob_type) => modal::ModalDblModel::<Unital>::ob_type_to_doc(ob_type),
         }
     }
 }
@@ -267,7 +267,7 @@ impl ToDoc for MorType {
             MorType::DiscTab(mor_type) => {
                 discrete_tabulator::DiscreteTabModel::mor_type_to_doc(mor_type)
             }
-            MorType::Modal(mor_type) => modal::ModalDblModel::mor_type_to_doc(mor_type),
+            MorType::Modal(mor_type) => modal::ModalDblModel::<Unital>::mor_type_to_doc(mor_type),
         }
     }
 }

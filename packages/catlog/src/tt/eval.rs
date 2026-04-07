@@ -262,7 +262,7 @@ impl<'a> Evaluator<'a> {
     ///
     /// Ignores specializations: specializations are handled in [`Evaluator::subtype`].
     ///
-    /// On failure, returns a doc which describes the obstruction to convertability.
+    /// On failure, returns a doc which describes the obstruction to convertibility.
     pub fn convertible_ty<'b>(&self, ty1: &TyV, ty2: &TyV) -> Result<(), D<'b>> {
         match (&**ty1, &**ty2) {
             (TyV_::Object(ot1), TyV_::Object(ot2)) => {
@@ -355,7 +355,7 @@ impl<'a> Evaluator<'a> {
 
     /// Check if two terms are definitionally equal.
     ///
-    /// On failure, returns a doc which describes the obstruction to convertability.
+    /// On failure, returns a doc which describes the obstruction to convertibility.
     ///
     /// Assumes that the type of tm1 is convertible with the type of tm2. First
     /// attempts to do conversion checking without eta-expansion (strict mode),
@@ -407,6 +407,15 @@ impl<'a> Evaluator<'a> {
                     Err(t(format!("Holes {} and {} are not equal.", mv1, mv2)))
                 }
             }
+            (TmV_::Id(x1), TmV_::Id(x2)) => self.equal_tm_helper(x1, x2, strict1, strict2),
+            (TmV_::Compose(f1, g1), TmV_::Compose(f2, g2)) => {
+                self.equal_tm_helper(f1, f2, strict1, strict2)?;
+                self.equal_tm_helper(g1, g2, strict1, strict2)
+            }
+            (TmV_::Tab(mor1), TmV_::Tab(mor2)) => {
+                self.equal_tm_helper(mor1, mor2, strict1, strict2)
+            }
+            // This fallthrough is dangerous for adding variants.
             _ => Err(t(format!(
                 "failed to match terms {} and {}",
                 self.quote_tm(tm1),
