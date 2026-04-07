@@ -1,12 +1,6 @@
 import { v7 } from "uuid";
 
-import {
-    currentVersion,
-    type Document,
-    type ModelJudgment,
-    type Ob,
-} from "catlog-wasm";
-
+import { currentVersion, type Document, type ModelJudgment, type Ob } from "catlog-wasm";
 import { newNotebook, NotebookUtils } from "../notebook/types";
 
 /** Detects a Petrinaut-exported JSON file. */
