@@ -1,5 +1,5 @@
 import { deepEqual } from "fast-equals";
-import { Index, createMemo, createSignal, useContext } from "solid-js";
+import { Index, createEffect, createMemo, createSignal, untrack, useContext } from "solid-js";
 import { unwrap } from "solid-js/store";
 import invariant from "tiny-invariant";
 
@@ -56,6 +56,8 @@ function WireColumn(props: {
     deleteWire: (index: number) => void;
     activateWire: (index: number) => void;
     activateName: () => void;
+    /** Called when the displayed text of a wire input changes. */
+    onTextChange?: (index: number, text: string) => void;
     /** Called when tabbing backward from the first wire. */
     exitFirstBackward: (() => void) | undefined;
     /** Called when tabbing forward from the last wire. */
@@ -69,6 +71,7 @@ function WireColumn(props: {
         <ObIdInput
             ob={ob()}
             setOb={(newOb) => props.updateOb(i, newOb)}
+            onTextChange={(text) => props.onTextChange?.(i, text)}
             placeholder="..."
             completions={props.completions}
             idToLabel={(id) => liveModel().elaboratedModel()?.obGeneratorLabel(id)}
@@ -156,7 +159,11 @@ export default function StringDiagramMorphismCellEditor(props: MorphismEditorPro
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 
-    const [active, setActive] = createSignal<ActiveInput>({ zone: "name" });
+    const [active, setActive] = createSignal<ActiveInput | null>({ zone: "name" });
+
+    // Track which wire indices have non-empty text (including incomplete input).
+    const domInputTexts = new Map<number, string>();
+    const codInputTexts = new Map<number, string>();
 
     const morTypeMeta = () => props.theory.modelMorTypeMeta(props.morphism.morType);
     const domApplyOp = () => morTypeMeta()?.domain?.apply;
@@ -225,6 +232,26 @@ export default function StringDiagramMorphismCellEditor(props: MorphismEditorPro
         setActive({ zone: "cod", index: i });
     };
 
+    /** Reset active input and clean up null placeholders that have no user-entered text. */
+    const deactivate = () => {
+        setActive(null);
+        const dom = domObs().filter((ob, i) => ob !== null || (domInputTexts.get(i) ?? "") !== "");
+        if (dom.length !== domObs().length) {
+            setDomObs(dom);
+        }
+        const cod = codObs().filter((ob, i) => ob !== null || (codInputTexts.get(i) ?? "") !== "");
+        if (cod.length !== codObs().length) {
+            setCodObs(cod);
+        }
+    };
+
+    // Clean up when the cell becomes inactive.
+    createEffect(() => {
+        if (!props.isActive) {
+            untrack(() => deactivate());
+        }
+    });
+
     const completions = () => liveModel().elaboratedModel()?.obGeneratorsWithType(elementObType());
 
     const errors = () => {
@@ -244,8 +271,9 @@ export default function StringDiagramMorphismCellEditor(props: MorphismEditorPro
                 completions={completions()}
                 isActive={(i) => {
                     const a = active();
-                    return props.isActive && a.zone === "dom" && a.index === i;
+                    return props.isActive && a?.zone === "dom" && a.index === i;
                 }}
+                onTextChange={(i, text) => domInputTexts.set(i, text)}
                 insertWire={insertDom}
                 updateOb={(i, ob) =>
                     updateDomObs((objects) => {
@@ -274,7 +302,7 @@ export default function StringDiagramMorphismCellEditor(props: MorphismEditorPro
                             mor.name = name;
                         });
                     }}
-                    isActive={props.isActive && active().zone === "name"}
+                    isActive={props.isActive && active()?.zone === "name"}
                     deleteBackward={props.actions.deleteBackward}
                     deleteForward={props.actions.deleteForward}
                     exitBackward={props.actions.activateAbove}
@@ -314,8 +342,9 @@ export default function StringDiagramMorphismCellEditor(props: MorphismEditorPro
                 completions={completions()}
                 isActive={(i) => {
                     const a = active();
-                    return props.isActive && a.zone === "cod" && a.index === i;
+                    return props.isActive && a?.zone === "cod" && a.index === i;
                 }}
+                onTextChange={(i, text) => codInputTexts.set(i, text)}
                 insertWire={insertCod}
                 updateOb={(i, ob) =>
                     updateCodObs((objects) => {
