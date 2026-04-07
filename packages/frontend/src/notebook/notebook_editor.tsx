@@ -97,33 +97,6 @@ export function NotebookEditor<T>(props: {
     let shiftEnterAnchorRef!: HTMLDivElement;
 
     // Set up commands and their keyboard shortcuts.
-    const addAfterActiveCell = (cell: Cell<T>) => {
-        const [i, n] = [activeCell(), props.notebook.cellOrder.length];
-        const cellIndex = i != null ? Math.min(i + 1, n) : n;
-        props.changeNotebook((nb) => {
-            Nb.insertCellAtIndex(nb, cell, cellIndex);
-        });
-        setActiveCell(cellIndex);
-    };
-
-    const addOrReplaceActiveCell = (cell: Cell<T>) => {
-        const cellIndex = activeCell() ?? -1;
-        const existingCell =
-            cellIndex >= 0 ? Nb.tryGetCellByIndex(props.notebook, cellIndex) : null;
-        if (existingCell?.tag === "stem") {
-            replaceCellWith(cellIndex, cell);
-        } else {
-            addAfterActiveCell(cell);
-        }
-    };
-
-    const appendCell = (cell: Cell<T>) => {
-        props.changeNotebook((nb) => {
-            Nb.appendCell(nb, cell);
-        });
-        setActiveCell(Nb.numCells(props.notebook) - 1);
-    };
-
     const insertCommands = (): Completion[] =>
         cellConstructors().map((cc) => {
             const { name, description, shortcut } = cc;
@@ -131,7 +104,15 @@ export function NotebookEditor<T>(props: {
                 name,
                 description,
                 shortcut: shortcut && [cellShortcutModifier, ...shortcut],
-                onComplete: () => addOrReplaceActiveCell(cc.construct()),
+                onComplete: () => {
+                    const [i, n] = [activeCell(), props.notebook.cellOrder.length];
+                    const cellIndex = i != null ? Math.min(i + 1, n) : n;
+                    props.changeNotebook((nb) => {
+                        Nb.insertCellAtIndex(nb, cc.construct(), cellIndex);
+                    });
+                    // Defer so the popover fully closes before we focus the new cell.
+                    requestAnimationFrame(() => setActiveCell(cellIndex));
+                },
             };
         });
 
@@ -180,9 +161,10 @@ export function NotebookEditor<T>(props: {
                 onComplete: () => {
                     const index = i + 1;
                     props.changeNotebook((nb) => {
-                        NotebookUtils.insertCellAtIndex(nb, cc.construct(), index);
+                        Nb.insertCellAtIndex(nb, cc.construct(), index);
                     });
-                    setActiveCell(index);
+                    // Defer so the popover fully closes before we focus the new cell.
+                    requestAnimationFrame(() => setActiveCell(index));
                 },
             };
         });
@@ -195,7 +177,15 @@ export function NotebookEditor<T>(props: {
                 name,
                 description,
                 shortcut: shortcut && [cellShortcutModifier, ...shortcut],
-                onComplete: () => appendCell(cc.construct()),
+                onComplete: () => {
+                    props.changeNotebook((nb) => {
+                        Nb.appendCell(nb, cc.construct());
+                    });
+                    // Defer so the popover fully closes before we focus the new cell.
+                    requestAnimationFrame(() => {
+                        setActiveCell(Nb.numCells(props.notebook) - 1);
+                    });
+                },
             };
         });
 
@@ -443,6 +433,7 @@ export function NotebookEditor<T>(props: {
                 onOpenChange={setShiftEnterPopoverOpen}
                 placement="bottom-start"
                 floatingOptions={{ flip: true }}
+                restoreFocus={false}
             >
                 <Popover.Anchor>
                     <div
@@ -493,6 +484,7 @@ export function CellTypePopover(props: {
             onOpenChange={setIsOpen}
             placement="bottom-start"
             floatingOptions={{ flip: true }}
+            restoreFocus={false}
         >
             <Popover.Anchor as="span">
                 <IconButton
