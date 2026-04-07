@@ -28,6 +28,10 @@ function buildFullChain(
     return backwards;
 }
 
+/** Find the most recently created direct child of the given snapshot.
+
+Tiebreaking on equal `createdAt` is nondeterministic, but the ref actor's sequential processing of
+messages should guarantee that snapshots are not created in parallel/simultaneously.*/
 function newestChild(
     snapshotId: string,
     snapshots: { [key: string]: SnapshotInfo | undefined },

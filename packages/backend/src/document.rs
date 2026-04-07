@@ -188,34 +188,41 @@ pub async fn load_snapshot(
     snapshot_id: i32,
     doc_handle: &samod::DocHandle,
 ) -> Result<(), AppError> {
+    // Use a transaction to ensure that current_snapshot pointer and the automerge doc stay in sync
+    let mut db_tx = state.db.begin().await?;
+
     let snapshot = sqlx::query!(
         "SELECT heads FROM snapshots WHERE id = $1 AND for_ref = $2",
         snapshot_id,
         ref_id,
     )
-    .fetch_optional(&state.db)
+    .fetch_optional(&mut *db_tx)
     .await?
     .ok_or_else(|| AppError::Invalid("Snapshot not found for this ref".to_string()))?;
 
     let target_heads: Vec<automerge::ChangeHash> = snapshot
         .heads
         .iter()
-        .map(|h| automerge::ChangeHash(h.as_slice().try_into().expect("invalid change hash")))
-        .collect();
-
-    doc_handle.with_document(|doc| -> Result<(), AppError> {
-        doc.transact::<_, _, automerge::AutomergeError>(|tx| {
-            copy_doc_at_heads(tx, &target_heads)?;
-            Ok(())
+        .map(|h: &Vec<u8>| {
+            h.as_slice()
+                .try_into()
+                .map(automerge::ChangeHash)
+                .map_err(|_| AppError::Invalid("invalid change hash in snapshot".to_string()))
         })
-        .map_err(|e| AppError::Invalid(format!("Failed to update document: {e:?}")))?;
-
-        Ok(())
-    })?;
+        .collect::<Result<_, _>>()?;
 
     sqlx::query!("UPDATE refs SET current_snapshot = $2 WHERE id = $1", ref_id, snapshot_id,)
-        .execute(&state.db)
+        .execute(&mut *db_tx)
         .await?;
+
+    doc_handle.with_document(|doc| {
+        doc.transact::<_, _, automerge::AutomergeError>(|tx| {
+            Ok(copy_doc_at_heads(tx, &target_heads)?)
+        })
+        .map_err(|e| AppError::Invalid(format!("Failed to update document: {e:?}")))
+    })?;
+
+    db_tx.commit().await?;
 
     if let Err(e) = update_ref_for_users(state, ref_id, vec![]).await {
         tracing::error!(%ref_id, error = %e, "Failed to update user states after load_snapshot");
