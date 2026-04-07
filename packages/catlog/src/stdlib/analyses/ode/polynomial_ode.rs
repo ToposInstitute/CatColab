@@ -54,8 +54,8 @@ pub struct PolynomialODEAnalysis {
 impl Default for PolynomialODEAnalysis {
     fn default() -> Self {
         Self {
-            variable_ob_type: ModalObType::new(name("Object")),
-            contribution_mor_type: ModeApp::new(name("Multihom")).into(),
+            variable_ob_type: ModalObType::new(name("State")),
+            contribution_mor_type: ModeApp::new(name("Contrib")).into(),
         }
     }
 }
@@ -141,7 +141,7 @@ mod tests {
     // (Unsigned) Lotka–Volterra dynamics on a two-level model.
     #[test]
     fn lotka_volterra_equations() {
-        let th = Rc::new(th_sym_multicategory());
+        let th = Rc::new(th_polynomial_ode_system());
         let model = lotka_volterra_dynamics(th);
         let sys = PolynomialODEAnalysis::default().build_system(&model);
         let expected = expect!([r#"
@@ -155,7 +155,7 @@ mod tests {
     // (Unsigned) Lotka–Volterra dynamics on a two-level model with LaTeX.
     #[test]
     fn lotka_volterra_equations_latex() {
-        let th = Rc::new(th_sym_multicategory());
+        let th = Rc::new(th_polynomial_ode_system());
         let model = lotka_volterra_dynamics(th);
         let sys = PolynomialODEAnalysis::default().build_system(&model);
         let expected = vec![

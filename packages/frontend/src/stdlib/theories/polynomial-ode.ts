@@ -1,13 +1,13 @@
-import { ThSymMulticategory } from "catlog-wasm";
+import { ThPolynomialODE } from "catlog-wasm";
 import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
 
 export default function createPolynomialODETheory(theoryMeta: TheoryMeta): Theory {
-    const thSymMulticategory = new ThSymMulticategory();
+    const thPolynomialODE = new ThPolynomialODE();
 
     return new Theory({
         ...theoryMeta,
-        theory: thSymMulticategory.theory(),
+        theory: thPolynomialODE.theory(),
         onlyFreeModels: true,
         modelTypes: [
             {
@@ -28,12 +28,12 @@ export default function createPolynomialODETheory(theoryMeta: TheoryMeta): Theor
         modelAnalyses: [
             analyses.polynomialODEEquations({
                 getEquations(model, data) {
-                    return thSymMulticategory.polynomialODEEquations(model, data);
+                    return thPolynomialODE.polynomialODEEquations(model, data);
                 },
             }),
             analyses.polynomialODESimulation({
                 simulate(model, data) {
-                    return thSymMulticategory.polynomialODESimulation(model, data);
+                    return thPolynomialODE.polynomialODESimulation(model, data);
                 },
             }),
         ],
