@@ -3,7 +3,7 @@ import { useNavigate } from "@solidjs/router";
 import type { Document } from "catlog-wasm";
 import { useApi } from "../api";
 import { JsonImport } from "../components";
-import { convertFromPetrinaut, isFromPetrinaut } from "./import_from_petrinaut";
+import { convertFromPetrinaut, isFromPetrinaut } from "../model/import_from_petrinaut";
 
 const isImportableDocument = (doc: Document) => doc.type === "model" || doc.type === "diagram";
 

@@ -4,12 +4,13 @@ import {
     currentVersion,
     type Document,
     type ModelJudgment,
-    type NotebookCell,
     type Ob,
 } from "catlog-wasm";
 
+import { newNotebook, NotebookUtils } from "../notebook/types";
+
 /** Detects a Petrinaut-exported JSON file. */
-export function isFromPetrinaut(data: unknown): boolean {
+export function isFromPetrinaut(data: unknown): data is PetrinautFile {
     if (typeof data !== "object" || data === null) {
         return false;
     }
@@ -57,21 +58,19 @@ function tensorOb(contentIds: string[]): Ob {
 }
 
 /** Converts a Petrinaut-exported JSON file to a CatCoLab petri-net model document. */
-export function convertFromPetrinaut(data: unknown): Document {
-    const { title, places, transitions } = data as PetrinautFile;
+export function convertFromPetrinaut(data: PetrinautFile): Document {
+    const { title, places, transitions } = data;
 
     const placeIds = new Map<string, { cellId: string; contentId: string }>();
     for (const place of places) {
         placeIds.set(place.id, { cellId: v7(), contentId: v7() });
     }
 
-    const cellOrder: string[] = [];
-    const cellContents: Record<string, NotebookCell<ModelJudgment>> = {};
+    const notebook = newNotebook<ModelJudgment>();
 
     for (const place of places) {
         const { cellId, contentId } = placeIds.get(place.id)!;
-        cellOrder.push(cellId);
-        cellContents[cellId] = {
+        NotebookUtils.appendCell(notebook, {
             id: cellId,
             tag: "formal",
             content: {
@@ -80,7 +79,7 @@ export function convertFromPetrinaut(data: unknown): Document {
                 name: place.name,
                 obType: { tag: "Basic" as const, content: "Object" },
             },
-        };
+        });
     }
 
     for (const transition of transitions) {
@@ -92,8 +91,7 @@ export function convertFromPetrinaut(data: unknown): Document {
         const codContentIds = transition.outputArcs.map(
             (arc) => placeIds.get(arc.placeId)!.contentId,
         );
-        cellOrder.push(cellId);
-        cellContents[cellId] = {
+        NotebookUtils.appendCell(notebook, {
             id: cellId,
             tag: "formal",
             content: {
@@ -107,7 +105,7 @@ export function convertFromPetrinaut(data: unknown): Document {
                 dom: tensorOb(domContentIds),
                 cod: tensorOb(codContentIds),
             },
-        };
+        });
     }
 
     return {
@@ -115,6 +113,6 @@ export function convertFromPetrinaut(data: unknown): Document {
         theory: "petri-net",
         name: title,
         version: currentVersion(),
-        notebook: { cellOrder, cellContents },
+        notebook,
     };
 }
