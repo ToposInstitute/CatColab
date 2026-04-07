@@ -1,3 +1,5 @@
+import { lazy } from "solid-js";
+
 import { TheoryLibrary } from "../theory";
 import { compositionPattern } from "./generic_analyses";
 
@@ -50,6 +52,26 @@ stdTheories.add(
         description: "Place/transition networks",
         iconLetters: ["P", "n"],
         group: "Systems",
+        editorVariants: [
+            {
+                id: "editor-variant-petri-net-string-diagram",
+                name: "Petri net (string diagram transitions)",
+                description: "Petri net with a string diagram style transition editor",
+                editorOverrides: {
+                    morEditors: [
+                        {
+                            morType: {
+                                tag: "Hom" as const,
+                                content: { tag: "Basic" as const, content: "Object" },
+                            },
+                            editor: lazy(
+                                () => import("../model/string_diagram_morphism_cell_editor"),
+                            ),
+                        },
+                    ],
+                },
+            },
+        ],
     },
     async () => (await import("./theories/petri-net")).default,
 );

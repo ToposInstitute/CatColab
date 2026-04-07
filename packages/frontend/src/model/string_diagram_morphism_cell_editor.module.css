@@ -1,0 +1,81 @@
+.morphism {
+    --add-wire-height: 1.2em;
+
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 0;
+}
+
+.wires {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    min-width: 3em;
+
+    &.left {
+        align-items: flex-end;
+    }
+
+    &.right {
+        align-items: flex-start;
+    }
+}
+
+.wire {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0;
+}
+
+.wireLine {
+    width: 1.5ex;
+    height: 0;
+    border-top: 2px solid var(--color-foreground);
+    flex-shrink: 0;
+}
+
+.box {
+    border: 2px solid var(--color-foreground);
+    border-radius: 2px;
+    padding: 0.3em 0.6em;
+    min-width: 4em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-background);
+
+    & input {
+        text-align: center;
+    }
+}
+
+.addWire {
+    cursor: pointer;
+    opacity: 0;
+    height: var(--add-wire-height);
+    pointer-events: none;
+    transition: opacity 0.15s;
+}
+
+.addWireButton {
+    font-size: 0.85em;
+    user-select: none;
+}
+
+/* stylelint-disable no-descending-specificity -- intentional override on interactive states */
+.morphism:hover,
+.morphism:focus-within {
+    & .addWire {
+        opacity: 0.3;
+        pointer-events: auto;
+
+        &:hover {
+            opacity: 0.7;
+        }
+    }
+}
+
+/* stylelint-enable no-descending-specificity */

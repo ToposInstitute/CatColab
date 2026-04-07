@@ -16,6 +16,12 @@ use tsify::Tsify;
 pub struct ModelDocumentContent {
     pub name: String,
     pub theory: String,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "editorVariant"
+    )]
+    pub editor_variant: Option<String>,
     pub notebook: Notebook<super::model_judgment::ModelJudgment>,
     pub version: String,
 }
@@ -60,6 +66,7 @@ impl Document {
             v0::Document::Model(old) => Document::Model(ModelDocumentContent {
                 name: old.name,
                 theory: old.theory,
+                editor_variant: None,
                 notebook: Notebook::migrate_from_v0(old.notebook),
                 version: "1".to_string(),
             }),
