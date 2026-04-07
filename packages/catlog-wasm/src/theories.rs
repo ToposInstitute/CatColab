@@ -432,13 +432,13 @@ impl ThSymMonoidalCategory {
 
 /// A theory of systems of polynomial ODEs
 #[wasm_bindgen]
-pub struct ThSymMulticategory(Rc<theory::ModalDblTheory<NonUnital>>);
+pub struct ThPolynomialODE(Rc<theory::ModalDblTheory<NonUnital>>);
 
 #[wasm_bindgen]
-impl ThSymMulticategory {
+impl ThPolynomialODE {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        Self(Rc::new(theories::th_sym_multicategory()))
+        Self(Rc::new(theories::th_polynomial_ode_system()))
     }
 
     #[wasm_bindgen]
