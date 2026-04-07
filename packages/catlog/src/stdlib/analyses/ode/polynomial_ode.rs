@@ -55,7 +55,7 @@ impl Default for PolynomialODEAnalysis {
     fn default() -> Self {
         Self {
             variable_ob_type: ModalObType::new(name("State")),
-            contribution_mor_type: ModeApp::new(name("Contrib")).into(),
+            contribution_mor_type: ModeApp::new(name("Contribution")).into(),
         }
     }
 }

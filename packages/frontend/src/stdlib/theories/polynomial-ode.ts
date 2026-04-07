@@ -19,7 +19,7 @@ export default function createPolynomialODETheory(theoryMeta: TheoryMeta): Theor
             },
             {
                 tag: "MorType",
-                morType: { tag: "Basic", content: "Contrib" },
+                morType: { tag: "Basic", content: "Contribution" },
                 name: "Contribution",
                 description: "Monomial contribution to the system of ODEs",
                 shortcut: ["C"],
