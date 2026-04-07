@@ -253,7 +253,8 @@ impl DblTheory {
             DblTheoryBox::ModalUnital(th) => Some(tt::theory::TheoryDef::ModalUnital(th.clone())),
             DblTheoryBox::ModalNonUnital(th) => {
                 Some(tt::theory::TheoryDef::ModalNonUnital(th.clone()))
-            }
+            },
+            DblTheoryBox::DiscreteTab(th) => Some(tt::theory::TheoryDef::DiscTab(th.clone())),
             _ => None,
         }
     }
@@ -331,7 +332,7 @@ impl DblTheory {
     /// and then this method can be removed.
     #[wasm_bindgen(js_name = "canInstantiateModels")]
     pub fn can_instantiate_models(&self) -> bool {
-        !matches!(&self.0, DblTheoryBox::DiscreteTab(_))
+        true
     }
 }
 
