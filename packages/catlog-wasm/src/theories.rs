@@ -413,7 +413,7 @@ impl ThSymMonoidalCategory {
     ) -> Result<ODEResult, String> {
         Ok(ODEResult(JsResult::Ok(
             analyses::stochastic::PetriNetStochasticMassActionAnalysis::default()
-                .build_stochastic_system(model.modal()?, data)
+                .build_stochastic_system(model.modal_unital()?, data)
                 .simulate(),
         )))
     }
@@ -425,7 +425,7 @@ impl ThSymMonoidalCategory {
         model: &DblModel,
         data: analyses::reachability::ReachabilityProblemData,
     ) -> Result<bool, String> {
-        let model = model.modal().map_err(|_| "Model should be of a modal theory")?;
+        let model = model.modal_unital().map_err(|_| "Model should be of a modal theory")?;
         Ok(analyses::reachability::subreachability(model, data))
     }
 }
