@@ -19,6 +19,7 @@ import { createEffect, createSignal, type JSX, onCleanup, Show } from "solid-js"
 import { type Completion, Completions, IconButton, InlineInput } from "catcolab-ui-components";
 import type { Uuid } from "catlog-wasm";
 import { RichTextEditor } from "../components";
+import { CellTypePopover } from "./notebook_editor";
 
 import "./notebook_cell.css";
 
@@ -107,6 +108,7 @@ export function NotebookCell(props: {
     actions: CellActions;
     children: JSX.Element;
     tag?: string;
+    createCompletions?: Completion[];
     currentDropTarget: string | null;
     setCurrentDropTarget: (cellId: string | null) => void;
 }) {
@@ -233,13 +235,13 @@ export function NotebookCell(props: {
             ref={rootRef}
         >
             <div class="cell-gutter">
-                <IconButton
-                    onClick={props.actions.createBelow}
-                    style={{ visibility: isGutterVisible() ? "visible" : "hidden" }}
+                <CellTypePopover
+                    completions={props.createCompletions ?? []}
                     tooltip="Create a new cell below this one"
+                    showButton={isGutterVisible()}
                 >
                     <Plus />
-                </IconButton>
+                </CellTypePopover>
                 <Popover
                     open={isMenuOpen()}
                     onOpenChange={setMenuOpen}
