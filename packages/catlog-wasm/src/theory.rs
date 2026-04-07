@@ -247,10 +247,13 @@ impl DblTheory {
     }
 
     /// Tries to convert into a theory usable by DoubleTT.
-    pub fn try_into_tt(&self) -> Option<tt::theory::TheoryDef<Unital>> {
+    pub fn try_into_tt(&self) -> Option<tt::theory::TheoryDef> {
         match &self.0 {
             DblTheoryBox::Discrete(th) => Some(tt::theory::TheoryDef::Discrete(th.clone())),
-            DblTheoryBox::ModalUnital(th) => Some(tt::theory::TheoryDef::Modal(th.clone())),
+            DblTheoryBox::ModalUnital(th) => Some(tt::theory::TheoryDef::ModalUnital(th.clone())),
+            DblTheoryBox::ModalNonUnital(th) => {
+                Some(tt::theory::TheoryDef::ModalNonUnital(th.clone()))
+            }
             _ => None,
         }
     }

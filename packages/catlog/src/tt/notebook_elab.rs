@@ -14,7 +14,6 @@ use super::{context::*, eval::*, prelude::*, stx::*, theory::*, toplevel::*, val
 use crate::dbl::{
     modal,
     model::{Feature, InvalidDblModel, InvalidModelEqn},
-    theory::Unital,
 };
 use crate::zero::QualifiedName;
 
@@ -47,7 +46,7 @@ impl<'a> Elaborator<'a> {
         }
     }
 
-    fn theory(&self) -> &TheoryDef<Unital> {
+    fn theory(&self) -> &TheoryDef {
         &self.theory.definition
     }
 
@@ -173,7 +172,7 @@ impl<'a> Elaborator<'a> {
             nb::Mor::Composite(path) => match path.as_ref() {
                 nb::path::Path::Id(ob) => {
                     let (stx, val, ob_type) = self.ob_syn(ob)?;
-                    let mor_type = self.theory().hom_type(ob_type);
+                    let mor_type = self.theory().hom_type(ob_type)?;
                     Some((stx, val.clone(), TyV::morphism(mor_type, val.clone(), val.clone())))
                 }
                 nb::path::Path::Seq(ms) => match ms.as_slice() {
@@ -249,7 +248,10 @@ impl<'a> Elaborator<'a> {
                 }
             }
             nb::MorType::Hom(ob_type) => match self.ob_type(ob_type.as_ref()) {
-                Some(ot) => (self.theory().hom_type(ot.clone()), ot.clone(), ot),
+                Some(ot) => match self.theory().hom_type(ot.clone()) {
+                    Some(mt) => (mt, ot.clone(), ot),
+                    None => return self.ty_error(InvalidDblModel::MorType(id)),
+                },
                 None => return self.ty_error(InvalidDblModel::MorType(id)),
             },
             _ => {

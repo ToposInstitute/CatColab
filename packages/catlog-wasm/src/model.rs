@@ -292,7 +292,8 @@ impl From<tt::modelgen::Model> for DblModelBox {
     fn from(value: tt::modelgen::Model) -> Self {
         match value {
             tt::modelgen::Model::Discrete(model) => Self::Discrete(Rc::new(*model)),
-            tt::modelgen::Model::Modal(model) => Self::ModalUnital(Rc::new(*model)),
+            tt::modelgen::Model::ModalUnital(model) => Self::ModalUnital(Rc::new(*model)),
+            tt::modelgen::Model::ModalNonUnital(model) => Self::ModalNonUnital(Rc::new(*model)),
         }
     }
 }
