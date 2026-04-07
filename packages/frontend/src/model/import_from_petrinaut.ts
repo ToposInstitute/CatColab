@@ -1,6 +1,6 @@
 import { v7 } from "uuid";
 
-import { currentVersion, type Document, type ModelJudgment, type Ob } from "catlog-wasm";
+import { migrateDocument, type Document, type ModelJudgment, type Ob } from "catlog-wasm";
 import { newNotebook, NotebookUtils } from "../notebook/types";
 
 /** Detects a Petrinaut-exported JSON file. */
@@ -102,11 +102,11 @@ export function convertFromPetrinaut(data: PetrinautFile): Document {
         });
     }
 
-    return {
+    return migrateDocument({
         type: "model",
         theory: "petri-net",
         name: title,
-        version: currentVersion(),
+        version: "1",
         notebook,
-    };
+    });
 }
