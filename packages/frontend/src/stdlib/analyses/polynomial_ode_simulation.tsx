@@ -57,6 +57,7 @@ export default function PolynomialODESimulation(
             : model.morGenerators();
     });
 
+    // The table for assigning initial values to each object.
     const obSchema: ColumnSchema<QualifiedName>[] = [
         {
             contentType: "string",
@@ -73,10 +74,7 @@ export default function PolynomialODESimulation(
         }),
     ];
 
-    // The schema that we use for the <FixedTableEditor> JSX element depends on the
-    // value of MassConservationType. We might as well construct all possibilities.
-
-    // Firstly, the case MassConservationType = Balanced
+    // The table for assigning coefficient values to each morphism.
     const morSchema: ColumnSchema<QualifiedName>[] = [
         {
             contentType: "string",
@@ -94,7 +92,7 @@ export default function PolynomialODESimulation(
         }),
     ];
 
-    // Finally, we need the duration, and then we can return everything.
+    // Finally, the table for the duration of the simulation.
     const toplevelSchema: ColumnSchema<null>[] = [
         createNumericalColumn({
             name: "Duration",
