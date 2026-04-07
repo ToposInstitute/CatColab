@@ -27,6 +27,8 @@ export type IdInputOptions = {
     labelToId?: (label: QualifiedLabel) => NameLookup | undefined;
     isInvalid?: boolean;
     completions?: Uuid[];
+    /** Called when the displayed text changes. */
+    onTextChange?: (text: string) => void;
 } & Omit<InlineInputOptions, "completions" | "status">;
 
 /** Input a UUID by specifying its human-readable name.
@@ -47,6 +49,7 @@ export function IdInput(
         "idToLabel",
         "labelToId",
         "isInvalid",
+        "onTextChange",
     ]);
 
     const idToLabel = (id: QualifiedName): QualifiedLabel | undefined => props.idToLabel?.(id);
@@ -71,6 +74,8 @@ export function IdInput(
     };
 
     createEffect(() => updateText(props.id));
+
+    createEffect(() => props.onTextChange?.(text()));
 
     const handleNewText = (text: string) => {
         const lookup = textToId(text);

@@ -227,7 +227,17 @@ export function NotebookEditor<T>(props: {
     });
 
     return (
-        <div class="notebook">
+        <div
+            class="notebook"
+            onFocusOut={(evt) => {
+                const container = evt.currentTarget;
+                setTimeout(() => {
+                    if (!container.contains(document.activeElement)) {
+                        setActiveCell(null);
+                    }
+                }, 0);
+            }}
+        >
             <Show when={props.notebook.cellOrder.length === 0}>
                 <div class="notebook-cell-placeholder">
                     <IconButton onClick={() => appendCell(newStemCell())}>
