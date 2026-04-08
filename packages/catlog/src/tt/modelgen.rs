@@ -6,9 +6,9 @@ use tattle::reporter::Message;
 
 use super::{eval::*, prelude::*, text_elab, theory::*, toplevel::*, val::*};
 use crate::dbl::{
-    discrete, modal, discrete_tabulator,
+    discrete, discrete_tabulator, modal,
     model::{DblModel, DblModelPrinter, MutDblModel, TabOb},
-    theory::{DblTheory, TabObType, DblTheoryKind, NonUnital, Unital},
+    theory::{DblTheory, DblTheoryKind, NonUnital, TabObType, Unital},
 };
 use crate::one::{
     Category,
@@ -173,7 +173,6 @@ impl Model {
             Model::DiscTab(_) => {
                 // Discrete tabulator models currently do not support equations, so we ignore them.
             }
-            }
         }
     }
 
@@ -190,6 +189,7 @@ impl Model {
             Model::[Discrete, DiscTab, ModalUnital, ModalNonUnital](model) => printer.namespaced_doc(model.as_ref(), ns, ns)
         })
     }
+}
 
 struct ModelGenerator<'a> {
     eval: Evaluator<'a>,
@@ -219,7 +219,6 @@ impl<'a> ModelGenerator<'a> {
             Model::ModalUnital(_) | Model::ModalNonUnital(_) => {
                 Mor::Modal(modal::ModalMor::Generator(name))
             }
-            Model::DiscTab(_) => Mor::DiscTab(name.into()),
             Model::DiscTab(_) => Mor::DiscTab(name.into()),
         }
     }
@@ -284,7 +283,6 @@ impl<'a> ModelGenerator<'a> {
                     Model::ModalUnital(_) | Model::ModalNonUnital(_) => {
                         Ob::Modal(modal::ModalOb::Generator(name))
                     }
-                    Model::Modal(_) => Ob::Modal(modal::ModalOb::Generator(name)),
                     Model::DiscTab(_) => Ob::DiscTab(name.into()),
                 };
                 Some((ob, ob_type.clone()))

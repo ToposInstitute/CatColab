@@ -14,7 +14,7 @@ use std::{fmt, rc::Rc};
 
 use super::prelude::*;
 use crate::dbl::{
-    discrete, modal, discrete_tabulator,
+    discrete, discrete_tabulator, modal,
     model::PrintableDblModel,
     theory::{DblTheory, DblTheoryKind, NonUnital, Unital},
 };
@@ -53,7 +53,6 @@ pub enum TheoryDef {
     ModalNonUnital(Rc<modal::ModalDblTheory<NonUnital>>),
     /// A discrete tabulator theory.
     DiscTab(Rc<discrete_tabulator::DiscreteTabTheory>),
-
 }
 
 impl TheoryDef {
@@ -87,7 +86,7 @@ impl TheoryDef {
             }
         };
         all_the_same!(match self {
-            TheoryDef::[Discrete, ModalUnital, ModalNonUnital](th) => {
+            TheoryDef::[Discrete, DiscTab, ModalUnital, ModalNonUnital](th) => {
                 if th.has_ob_type((&ob_type).try_into().unwrap()) {
                     Some(ob_type)
                 } else {
@@ -107,7 +106,7 @@ impl TheoryDef {
             }
         };
         all_the_same!(match self {
-            TheoryDef::[Discrete, ModalUnital, ModalNonUnital](th) => {
+            TheoryDef::[Discrete, DiscTab, ModalUnital, ModalNonUnital](th) => {
                 if th.has_mor_type((&mor_type).try_into().unwrap()) {
                     Some(mor_type)
                 } else {
@@ -297,10 +296,10 @@ pub fn std_theories() -> HashMap<QualifiedName, Theory> {
         (name("ThCategory"), TheoryDef::discrete(theories::th_category())),
         (name("ThSignedCategory"), TheoryDef::discrete(theories::th_signed_category())),
         (name("ThCategoryLinks"), TheoryDef::disc_tab(theories::th_category_links())),
-        (name("ThMulticategory"), TheoryDef::modal(theories::th_multicategory())),
+        (name("ThMulticategory"), TheoryDef::modal_unital(theories::th_multicategory())),
         (
             name("ThSymMonoidalCategory"),
-            TheoryDef::modal(theories::th_sym_monoidal_category()),
+            TheoryDef::modal_unital(theories::th_sym_monoidal_category()),
         ),
     ]
     .into_iter()

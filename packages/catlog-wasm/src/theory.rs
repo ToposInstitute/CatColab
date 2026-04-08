@@ -253,9 +253,8 @@ impl DblTheory {
             DblTheoryBox::ModalUnital(th) => Some(tt::theory::TheoryDef::ModalUnital(th.clone())),
             DblTheoryBox::ModalNonUnital(th) => {
                 Some(tt::theory::TheoryDef::ModalNonUnital(th.clone()))
-            },
+            }
             DblTheoryBox::DiscreteTab(th) => Some(tt::theory::TheoryDef::DiscTab(th.clone())),
-            _ => None,
         }
     }
 }

@@ -549,7 +549,8 @@ mod test {
 
     #[test]
     fn modal_theories() {
-        let th_smc = Theory::new(name("ThSMC"), TheoryDef::modal(th_sym_monoidal_category()));
+        let th_smc =
+            Theory::new(name("ThSMC"), TheoryDef::modal_unital(th_sym_monoidal_category()));
         elab_example(
             &th_smc,
             "sir_petri",
