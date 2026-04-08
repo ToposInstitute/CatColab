@@ -1,8 +1,11 @@
+import { lazy } from "solid-js";
+
 import { ThCategoryWithScalars } from "catlog-wasm";
-import { MorphismCellEditor } from "../../model/morphism_cell_editor";
-import { ObjectCellEditor } from "../../model/object_cell_editor";
 import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
+
+const ObjectCellEditor = lazy(() => import("../../model/object_cell_editor"));
+const MorphismCellEditor = lazy(() => import("../../model/morphism_cell_editor"));
 
 export default function createUnaryDECTheory(theoryMeta: TheoryMeta): Theory {
     const thCategoryWithScalars = new ThCategoryWithScalars();
