@@ -75,6 +75,17 @@ export function IdInput(
 
     createEffect(() => updateText(props.id));
 
+    // Re-check if we can match an id when the elaborated model changes
+    createEffect(() => {
+        const currentText = text();
+        if (currentText !== "" && !isComplete()) {
+            const lookup = textToId(currentText);
+            if (lookup.tag !== "None") {
+                props.setId(lookup.content);
+            }
+        }
+    });
+
     createEffect(() => props.onTextChange?.(text()));
 
     const handleNewText = (text: string) => {
