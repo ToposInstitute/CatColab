@@ -186,17 +186,17 @@ mod tests {
                 X : State,
                 Y : State,
                 A : State,
-                f : Contrib[[X, Y, Y], A],
-                g : Contrib[[X, X], Y],
-                h : Contrib[[A], X]
+                f : Contribution[[X, Y, Y], A],
+                g : Contribution[[X, X], Y],
+                h : Contribution[[A], X],
             ]",
         );
-        let model = model.ok().and_then(|m| m.as_modal_non_unital()).unwrap();
+        let model = model.unwrap().as_modal_non_unital().unwrap();
         let sys = PolynomialODEAnalysis::default().build_system(&model);
         let expected = expect!([r#"
-            dX = (h) A
-            dY = (g) X^2
-            dA = (f) X Y^2
+            dX = h A
+            dY = g X^2
+            dA = f X Y^2
         "#]);
         expected.assert_eq(&sys.to_string());
     }
