@@ -10,7 +10,7 @@ use super::{
     context::*, eval::*, modelgen::*, prelude::*, stx::*, theory::*, toplevel::*, val::*, wd::*,
 };
 use crate::{
-    dbl::{model::DblModelPrinter, theory::Unital},
+    dbl::model::DblModelPrinter,
     zero::{QualifiedName, name},
 };
 
@@ -267,7 +267,7 @@ impl<'a> Elaborator<'a> {
         }
     }
 
-    fn theory(&self) -> &TheoryDef<Unital> {
+    fn theory(&self) -> &TheoryDef {
         &self.theory.definition
     }
 
@@ -395,7 +395,11 @@ impl<'a> Elaborator<'a> {
             App1(L(_, Keyword("Hom")), L(_, Var(name))) => {
                 let qname = QualifiedName::single(name_seg(*name));
                 if let Some(ob_type) = theory.basic_ob_type(qname) {
-                    Some((theory.hom_type(ob_type.clone()), ob_type.clone(), ob_type))
+                    if let Some(hom_type) = theory.hom_type(ob_type.clone()) {
+                        Some((hom_type, ob_type.clone(), ob_type))
+                    } else {
+                        elab.error(format!("object type {name} does not have hom type"))
+                    }
                 } else {
                     elab.error(format!("no such object type {name}"))
                 }
@@ -596,7 +600,9 @@ impl<'a> Elaborator<'a> {
                 let TyV_::Object(ob_type) = &*ob_t else {
                     return elab.syn_error("can only apply @id to objects");
                 };
-                let mor_type = elab.theory().hom_type(ob_type.clone());
+                let Some(mor_type) = elab.theory().hom_type(ob_type.clone()) else {
+                    return elab.syn_error("object type does not have a hom type");
+                };
                 (
                     TmS::id(ob_s),
                     TmV::id(ob_v.clone()),
