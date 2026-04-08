@@ -20,6 +20,10 @@ include notable new features.
 - New analysis: table view for instances of a schema
   ([#835](https://github.com/ToposInstitute/CatColab/pull/835)), based on the
   new Julia service
+- Experimental: Petri nets created in
+  [Petrinaut](https://www.npmjs.com/package/@hashintel/petrinaut) and exported
+  as JSON can be imported into CatColab
+  ([#1187](https://github.com/ToposInstitute/CatColab/pull/1187))
 
 ### Changed
 
