@@ -244,7 +244,7 @@ mod tests {
                 has : Attr[Person, Hair],
             ]",
         );
-        let model = model.ok().and_then(|m| m.as_discrete()).unwrap();
+        let model = model.unwrap().as_discrete().unwrap();
 
         let expected = expect![[
             r#"CREATE TABLE IF NOT EXISTS `Dog` (`id` int NOT NULL AUTO_INCREMENT PRIMARY KEY);

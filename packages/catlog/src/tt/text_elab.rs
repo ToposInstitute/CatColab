@@ -767,6 +767,7 @@ impl<'a> Elaborator<'a> {
 // NOTE: Most tests for the text elaborator are in the `examples` dir.
 #[cfg(test)]
 mod tests {
+    use expect_test::expect;
     use std::rc::Rc;
 
     use crate::stdlib;
@@ -779,10 +780,8 @@ mod tests {
             x : Object,
             loop : Negative[x, x]
         ]";
-        let model = Model::from_text(&th.clone().into(), source)
-            .ok()
-            .and_then(|m| m.as_discrete())
-            .unwrap();
+        let model = Model::from_text(&th.clone().into(), source).unwrap();
+        let model = model.as_discrete().unwrap();
         assert_eq!(model, stdlib::models::negative_loop(th));
     }
 
@@ -801,23 +800,45 @@ mod tests {
             b : (Hom Entity)[SW, SE],
             comm : (t * r == l * b)
         ]";
-        let model = Model::from_text(&th, source).ok().and_then(|m| m.as_discrete()).unwrap();
+        let model = Model::from_text(&th, source).unwrap().as_discrete().unwrap();
         let eqns: Vec<_> = model.category.equations().collect();
         assert_eq!(eqns.len(), 1);
     }
 
-    /// Check error reporting when parsing a model from text.
     #[test]
-    fn test_error_object_type() {
+    fn text_error_reporting() {
         let th = Rc::new(stdlib::th_schema()).into();
 
         let result = Model::from_text(&th, "[ : Entit]");
-        assert!(result.is_err_and(|msgs| !msgs.is_empty()));
+        let expected = expect![[r#"
+            error[elab]: expected fields in the form <name> : <type>
+            --> <none>:1:3
+            1| [ : Entit]
+            1|   ^^^^^^^
+        "#]];
+        expected.assert_eq(&result.err().unwrap());
 
-        let result = Model::from_text(&th, "[x : Entity, f : Hom(Entit)[x,x]");
-        assert!(result.is_err_and(|msgs| !msgs.is_empty()));
+        let result = Model::from_text(&th, "[x : Entity, f : Hom(Entit)[x,x]]");
+        let expected = expect![[r#"
+            error[elab]: no such object type Entit
+            --> <none>:1:18
+            1| [x : Entity, f : Hom(Entit)[x,x]]
+            1|                  ^^^^^^^^^^
+        "#]];
+        expected.assert_eq(&result.err().unwrap());
 
-        let result = Model::from_text(&th, "[x : Entity, f : Hom(Entity)[x,y]");
-        assert!(result.is_err_and(|msgs| !msgs.is_empty()));
+        let result = Model::from_text(&th, "[x : Entity, f : Hom(Entity)[x,y]]");
+        let expected = expect![[r#"
+            error[elab]: no such variable y
+            --> <none>:1:32
+            1| [x : Entity, f : Hom(Entity)[x,y]]
+            1|                                ^
+            error[elab]: synthesized type ?1 does not match expected type Entity:
+            tried to convert between types of different type constructors
+            --> <none>:1:32
+            1| [x : Entity, f : Hom(Entity)[x,y]]
+            1|                                ^
+        "#]];
+        expected.assert_eq(&result.err().unwrap());
     }
 }
