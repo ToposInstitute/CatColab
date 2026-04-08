@@ -136,6 +136,7 @@ mod tests {
     use crate::{
         simulate::ode::LatexEquation,
         stdlib::{models::*, theories::*},
+        tt,
     };
 
     // (Unsigned) Lotka–Volterra dynamics on a two-level model.
@@ -173,5 +174,30 @@ mod tests {
             },
         ];
         assert_eq!(expected, sys.to_latex_equations());
+    }
+
+    // DoubleTT elaboration from text.
+    #[test]
+    fn ode_system_from_text() {
+        let th = Rc::new(th_polynomial_ode_system());
+        let model = tt::modelgen::Model::from_text(
+            &th.into(),
+            "[
+                X : State,
+                Y : State,
+                A : State,
+                f : Contrib[[X, Y, Y], A],
+                g : Contrib[[X, X], Y],
+                h : Contrib[[A], X]
+            ]",
+        );
+        let model = model.ok().and_then(|m| m.as_modal_non_unital()).unwrap();
+        let sys = PolynomialODEAnalysis::default().build_system(&model);
+        let expected = expect!([r#"
+            dX = (h) A
+            dY = (g) X^2
+            dA = (f) X Y^2
+        "#]);
+        expected.assert_eq(&sys.to_string());
     }
 }
