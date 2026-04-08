@@ -1,6 +1,11 @@
+import { lazy } from "solid-js";
+
 import { ThPolynomialODE } from "catlog-wasm";
 import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
+
+const ObjectCellEditor = lazy(() => import("../../model/object_cell_editor"));
+const MorphismCellEditor = lazy(() => import("../../model/morphism_cell_editor"));
 
 export default function createPolynomialODETheory(theoryMeta: TheoryMeta): Theory {
     const thPolynomialODE = new ThPolynomialODE();
@@ -13,6 +18,7 @@ export default function createPolynomialODETheory(theoryMeta: TheoryMeta): Theor
             {
                 tag: "ObType",
                 obType: { tag: "Basic", content: "State" },
+                editor: ObjectCellEditor,
                 name: "Variable",
                 description: "State variable in ODE system",
                 shortcut: ["V"],
@@ -20,6 +26,7 @@ export default function createPolynomialODETheory(theoryMeta: TheoryMeta): Theor
             {
                 tag: "MorType",
                 morType: { tag: "Basic", content: "Contribution" },
+                editor: MorphismCellEditor,
                 name: "Contribution",
                 description: "Monomial contribution to ODE system",
                 shortcut: ["C"],
