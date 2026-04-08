@@ -541,7 +541,7 @@ pub mod arbitrary {
             arb::<uuid::Uuid>(),                         // ref_id (used as map key)
             any::<PermissionLevel>(),                    // user's permission_level
             arb::<uuid::Uuid>(),                         // other owner id
-            any::<UserInfo>(),                           // other owner info
+            any::<Option<String>>(),                     // other owner display_name
             0i64..253402300799i64,                       // created_at seconds
             proptest::option::of(0i64..253402300799i64), // deleted_at seconds
         )
@@ -552,7 +552,7 @@ pub mod arbitrary {
                     ref_id,
                     user_level,
                     other_owner_uuid,
-                    other_owner_info,
+                    other_owner_display_name,
                     seconds,
                     deleted_seconds,
                 )| {
@@ -572,6 +572,12 @@ pub mod arbitrary {
                         if other_id == user_id {
                             other_id = format!("{}_other", other_id);
                         }
+                        let other_owner_info = UserInfo {
+                            username: Some(Text::from(format!("owner_{other_owner_uuid}"))),
+                            display_name: other_owner_display_name
+                                .filter(|s| !s.is_empty())
+                                .map(Text::from),
+                        };
                         users.insert(other_id.clone(), other_owner_info);
                         permissions.push(PermissionInfo {
                             user: Some(other_id),
