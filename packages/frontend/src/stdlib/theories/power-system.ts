@@ -1,4 +1,6 @@
 import { ThPowerSystem } from "catlog-wasm";
+import { MorphismCellEditor } from "../../model/morphism_cell_editor";
+import { ObjectCellEditor } from "../../model/object_cell_editor";
 import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
 
@@ -13,6 +15,7 @@ export default function createPowerSystemsTheory(theoryMeta: TheoryMeta): Theory
             {
                 tag: "ObType",
                 obType: { tag: "Basic", content: "Bus" },
+                editor: ObjectCellEditor,
                 name: "Bus",
                 description: "Node in the power system",
                 shortcut: ["B"],
@@ -23,6 +26,7 @@ export default function createPowerSystemsTheory(theoryMeta: TheoryMeta): Theory
                     tag: "Hom",
                     content: { tag: "Basic", content: "Bus" },
                 },
+                editor: MorphismCellEditor,
                 name: "Line",
                 description: "Passive line between buses",
                 arrowStyle: "unmarked",
@@ -32,6 +36,7 @@ export default function createPowerSystemsTheory(theoryMeta: TheoryMeta): Theory
             {
                 tag: "MorType",
                 morType: { tag: "Basic", content: "Passive" },
+                editor: MorphismCellEditor,
                 name: "Transformer",
                 description: "Passive line allowing a change of voltage",
                 arrowStyle: "unmarked",
@@ -40,6 +45,7 @@ export default function createPowerSystemsTheory(theoryMeta: TheoryMeta): Theory
             {
                 tag: "MorType",
                 morType: { tag: "Basic", content: "Branch" },
+                editor: MorphismCellEditor,
                 name: "Link",
                 description: "Controllable flow between buses",
                 arrowStyle: "unmarked",

@@ -1,4 +1,6 @@
 import { ThCategoryLinks } from "catlog-wasm";
+import { MorphismCellEditor } from "../../model/morphism_cell_editor";
+import { ObjectCellEditor } from "../../model/object_cell_editor";
 import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
 
@@ -17,6 +19,7 @@ export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): 
             {
                 tag: "ObType",
                 obType: { tag: "Basic", content: "Object" },
+                editor: ObjectCellEditor,
                 name: "Stock",
                 description: "Thing with an amount",
                 shortcut: ["S"],
@@ -29,6 +32,7 @@ export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): 
                     tag: "Hom",
                     content: { tag: "Basic", content: "Object" },
                 },
+                editor: MorphismCellEditor,
                 name: "Flow",
                 description: "Flow from one stock to another",
                 shortcut: ["F"],
@@ -37,6 +41,7 @@ export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): 
             {
                 tag: "MorType",
                 morType: { tag: "Basic", content: "Link" },
+                editor: MorphismCellEditor,
                 name: "Link",
                 description: "Influence of a stock on a flow",
                 preferUnnamed: true,

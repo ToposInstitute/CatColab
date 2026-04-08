@@ -1,4 +1,6 @@
 import { ThCategory } from "catlog-wasm";
+import { MorphismCellEditor } from "../../model/morphism_cell_editor";
+import { ObjectCellEditor } from "../../model/object_cell_editor";
 import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
 
@@ -21,6 +23,7 @@ export default function createOlogTheory(theoryMeta: TheoryMeta): Theory {
             {
                 tag: "ObType",
                 obType: { tag: "Basic", content: "Object" },
+                editor: ObjectCellEditor,
                 name: "Type",
                 description: "Type or class of things",
                 shortcut: ["O"],
@@ -33,6 +36,7 @@ export default function createOlogTheory(theoryMeta: TheoryMeta): Theory {
                     tag: "Hom",
                     content: { tag: "Basic", content: "Object" },
                 },
+                editor: MorphismCellEditor,
                 name: "Aspect",
                 description: "Aspect or property of a type",
                 shortcut: ["M"],

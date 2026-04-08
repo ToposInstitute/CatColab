@@ -1,4 +1,6 @@
 import { ThCategoryWithScalars } from "catlog-wasm";
+import { MorphismCellEditor } from "../../model/morphism_cell_editor";
+import { ObjectCellEditor } from "../../model/object_cell_editor";
 import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
 
@@ -12,6 +14,7 @@ export default function createUnaryDECTheory(theoryMeta: TheoryMeta): Theory {
             {
                 tag: "ObType",
                 obType: { tag: "Basic", content: "Object" },
+                editor: ObjectCellEditor,
                 name: "Form type",
                 shortcut: ["F"],
                 description: "A type of differential form on the space",
@@ -19,6 +22,7 @@ export default function createUnaryDECTheory(theoryMeta: TheoryMeta): Theory {
             {
                 tag: "MorType",
                 morType: { tag: "Basic", content: "Nonscalar" },
+                editor: MorphismCellEditor,
                 name: "Operator",
                 shortcut: ["D"],
                 description: "A differential operator",
@@ -29,6 +33,7 @@ export default function createUnaryDECTheory(theoryMeta: TheoryMeta): Theory {
                     tag: "Hom",
                     content: { tag: "Basic", content: "Object" },
                 },
+                editor: MorphismCellEditor,
                 name: "Scalar",
                 arrowStyle: "scalar",
                 shortcut: ["S"],
