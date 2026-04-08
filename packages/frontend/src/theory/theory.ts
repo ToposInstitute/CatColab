@@ -1,7 +1,13 @@
+import type { Component } from "solid-js";
+
 import type { KbdKey } from "catcolab-ui-components";
 import type { DblModel, DblTheory, MorType, ObOp, ObType } from "catlog-wasm";
 import type { DiagramAnalysisComponent, ModelAnalysisComponent } from "../analysis";
-import type { EditorVariantOverrides } from "../model/editors";
+import type {
+    EditorVariantOverrides,
+    MorphismEditorProps,
+    ObjectEditorProps,
+} from "../model/editors";
 import { uniqueIndexArray } from "../util/indexing";
 import type { ArrowStyle } from "../visualization";
 import { MorTypeMap, ObTypeMap } from "./types";
@@ -263,12 +269,18 @@ export type ModelTypeMeta =
 export type ModelObTypeMeta = BaseTypeMeta & {
     /** Object type in the underlying double theory. */
     obType: ObType;
+
+    /** Editor component for objects of this type. */
+    editor: Component<ObjectEditorProps>;
 };
 
 /** Metadata for a morphism type as used in models. */
 export type ModelMorTypeMeta = BaseTypeMeta & {
     /** Morphism type in the underlying double theory. */
     morType: MorType;
+
+    /** Editor component for morphisms of this type. */
+    editor: Component<MorphismEditorProps>;
 
     /** Style of arrow to use for morphisms of this type. */
     arrowStyle?: ArrowStyle;

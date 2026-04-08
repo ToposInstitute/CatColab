@@ -1,4 +1,6 @@
 import { ThNullableSignedCategory } from "catlog-wasm";
+import { MorphismCellEditor } from "../../model/morphism_cell_editor";
+import { ObjectCellEditor } from "../../model/object_cell_editor";
 import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
 
@@ -13,6 +15,7 @@ export default function createIndeterminateCausalLoopTheory(theoryMeta: TheoryMe
             {
                 tag: "ObType",
                 obType: { tag: "Basic", content: "Object" },
+                editor: ObjectCellEditor,
                 name: "Variable",
                 shortcut: ["V"],
                 description: "Variable quantity",
@@ -23,6 +26,7 @@ export default function createIndeterminateCausalLoopTheory(theoryMeta: TheoryMe
                     tag: "Hom",
                     content: { tag: "Basic", content: "Object" },
                 },
+                editor: MorphismCellEditor,
                 name: "Positive link",
                 description: "Variables change in the same direction",
                 shortcut: ["P"],
@@ -32,6 +36,7 @@ export default function createIndeterminateCausalLoopTheory(theoryMeta: TheoryMe
             {
                 tag: "MorType",
                 morType: { tag: "Basic", content: "Negative" },
+                editor: MorphismCellEditor,
                 name: "Negative link",
                 shortcut: ["N"],
                 description: "Variables change in the opposite direction",
@@ -41,6 +46,7 @@ export default function createIndeterminateCausalLoopTheory(theoryMeta: TheoryMe
             {
                 tag: "MorType",
                 morType: { tag: "Basic", content: "Zero" },
+                editor: MorphismCellEditor,
                 name: "Indeterminate link",
                 description: "The direction that variables change is indeterminate",
                 shortcut: ["Z"],

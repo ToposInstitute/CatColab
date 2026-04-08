@@ -1,6 +1,8 @@
 import { lazy } from "solid-js";
 
 import { ThSymMonoidalCategory } from "catlog-wasm";
+import { MorphismCellEditor } from "../../model/morphism_cell_editor";
+import { ObjectCellEditor } from "../../model/object_cell_editor";
 import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
 
@@ -35,6 +37,7 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
             {
                 tag: "ObType",
                 obType: { tag: "Basic", content: "Object" },
+                editor: ObjectCellEditor,
                 name: "Place",
                 description: "State of the system",
                 shortcut: ["O"],
@@ -45,6 +48,7 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
                     tag: "Hom",
                     content: { tag: "Basic", content: "Object" },
                 },
+                editor: MorphismCellEditor,
                 name: "Transition",
                 description: "Event causing change of state",
                 shortcut: ["M"],

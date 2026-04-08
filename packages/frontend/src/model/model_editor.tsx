@@ -14,8 +14,6 @@ import { TheoryLibraryContext, type ModelTypeMeta, type Theory } from "../theory
 import { LiveModelContext } from "./context";
 import type { LiveModelDoc } from "./document";
 import { InstantiationCellEditor } from "./instantiation_cell_editor";
-import { MorphismCellEditor } from "./morphism_cell_editor";
-import { ObjectCellEditor } from "./object_cell_editor";
 import {
     duplicateModelJudgment,
     newInstantiatedModel,
@@ -72,7 +70,8 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
                         const override = editorOverrides()?.obEditors?.find((o) =>
                             deepEqual(o.obType, obDecl().obType),
                         );
-                        return override?.editor ?? ObjectCellEditor;
+                        const defaultEditor = theory().modelObTypeMeta(obDecl().obType)?.editor;
+                        return override?.editor ?? defaultEditor;
                     };
                     return (
                         <Dynamic
@@ -95,7 +94,8 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
                         const override = editorOverrides()?.morEditors?.find((o) =>
                             deepEqual(o.morType, morDecl().morType),
                         );
-                        return override?.editor ?? MorphismCellEditor;
+                        const defaultEditor = theory().modelMorTypeMeta(morDecl().morType)?.editor;
+                        return override?.editor ?? defaultEditor;
                     };
                     return (
                         <Dynamic
