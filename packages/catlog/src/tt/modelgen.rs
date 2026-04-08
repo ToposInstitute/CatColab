@@ -2,7 +2,7 @@
 
 use all_the_same::all_the_same;
 use derive_more::{From, TryInto};
-use tattle::reporter::Message;
+use tattle::display::SourceInfo;
 
 use super::{eval::*, prelude::*, text_elab, theory::*, toplevel::*, val::*};
 use crate::dbl::{
@@ -61,8 +61,8 @@ impl Model {
 
     /// Parses and generates a model from plain text.
     ///
-    /// If there is an error in parsing, returns a list of error messages.
-    pub fn from_text(th: &TheoryDef, s: &str) -> Result<Self, Vec<Message>> {
+    /// If there is an error in parsing, an error message is returned.
+    pub fn from_text(th: &TheoryDef, s: &str) -> Result<Self, String> {
         let theory = Theory::new("_".into(), th.clone());
         let reporter = Reporter::new();
         let toplevel: Toplevel = Default::default();
@@ -76,7 +76,8 @@ impl Model {
             let (model, _) = Self::from_ty(&toplevel, th, &ty_v);
             Ok(model)
         } else {
-            Err(reporter.poll())
+            let source_info = SourceInfo::new(None, s);
+            Err(source_info.extract_report_to_string(reporter))
         }
     }
 
