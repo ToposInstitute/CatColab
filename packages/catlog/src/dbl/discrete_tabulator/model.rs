@@ -349,7 +349,7 @@ impl PrintableDblModel for DiscreteTabModel {
     fn ob_to_doc<'a>(&self, ob: &Self::Ob, ob_ns: &Namespace, mor_ns: &Namespace) -> D<'a> {
         match ob {
             TabOb::Basic(name) => t(ob_ns.label_string(name)),
-            // This makes printing a bit ambiguous, should wrap in a tab(...)
+            // TODO: This makes printing a bit ambiguous, should wrap in a tab(...)
             TabOb::Tabulated(mor) => self.mor_to_doc(mor, ob_ns, mor_ns),
         }
     }

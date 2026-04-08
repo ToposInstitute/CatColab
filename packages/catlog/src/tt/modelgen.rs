@@ -300,7 +300,7 @@ impl<'a> ModelGenerator<'a> {
                 };
                 Some((Ob::DiscTab(TabOb::Tabulated(Box::new(mor.try_into().unwrap()))), ob_type))
             }
-            _ => None, // TODO: These fallthroughs make adding variants harder. Consider or-paterns.
+            _ => None,
         }
     }
 

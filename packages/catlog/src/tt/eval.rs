@@ -415,7 +415,6 @@ impl<'a> Evaluator<'a> {
             (TmV_::Tab(mor1), TmV_::Tab(mor2)) => {
                 self.equal_tm_helper(mor1, mor2, strict1, strict2)
             }
-            // This fallthrough is dangerous for adding variants.
             _ => Err(t(format!(
                 "failed to match terms {} and {}",
                 self.quote_tm(tm1),
