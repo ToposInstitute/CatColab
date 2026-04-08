@@ -226,14 +226,7 @@ jobs:
         if: steps.cache-math-docs.outputs.cache-hit != 'true'
         run: |
           tlmgr update --self
-          tlmgr install dvisvgm
-          tlmgr install standalone
-          tlmgr install pgf
-          tlmgr install tikz-cd
-          tlmgr install amsmath
-          tlmgr install quiver
-          tlmgr install spath3
-          tlmgr install ebproof
+          tlmgr install dvisvgm standalone preview pgf tikz-cd amsmath quiver spath3 ebproof
 
       - name: Build mathematical docs
         if: steps.cache-math-docs.outputs.cache-hit != 'true'
@@ -293,7 +286,7 @@ jobs:
         if: steps.cache-rfc.outputs.cache-hit != 'true'
         run: |
           tlmgr update --self
-          tlmgr install dvisvgm standalone pgf tikz-cd amsmath quiver spath3 ebproof luatex85
+          tlmgr install dvisvgm standalone preview pgf tikz-cd amsmath quiver spath3 ebproof luatex85
 
       - name: Render Quarto project
         if: steps.cache-rfc.outputs.cache-hit != 'true'
