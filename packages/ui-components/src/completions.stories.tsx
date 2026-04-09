@@ -131,8 +131,34 @@ export const WithFiltering: Story = {
     },
 };
 
+export const WithNameClass: Story = {
+    render: () => {
+        const completions = [
+            { name: "My Document", description: "Last edited: 2 hours ago" },
+            {
+                name: "Untitled",
+                nameClass: "dimmed",
+                description: "Last edited: yesterday",
+            },
+            { name: "Another Document", description: "Last edited: 3 days ago" },
+        ];
+        return (
+            <>
+                <style>{".dimmed { color: gray; }"}</style>
+                <Completions completions={completions} />
+            </>
+        );
+    },
+};
+
 export const Empty: Story = {
     render: () => {
         return <Completions completions={[]} />;
+    },
+};
+
+export const CustomEmptyText: Story = {
+    render: () => {
+        return <Completions completions={[]} emptyText="No results" />;
     },
 };

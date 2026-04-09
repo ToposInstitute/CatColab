@@ -1,3 +1,5 @@
+import { useParams } from "@solidjs/router";
+import type { DocInfo } from "catcolab-api/src/user_state";
 import { batch, createSignal, Index, Show, splitProps, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
@@ -6,7 +8,7 @@ import type { DblModel, InstantiatedModel, Ob, SpecializeModel } from "catlog-wa
 import { useApi } from "../api";
 import { DocumentPicker, IdInput } from "../components";
 import type { CellActions } from "../notebook";
-import { ModelLibraryContext } from "./context";
+import { LiveModelContext, ModelLibraryContext } from "./context";
 import { ObInput } from "./object_input";
 
 import "./instantiation_cell_editor.css";
@@ -19,6 +21,22 @@ export function InstantiationCellEditor(props: {
     actions: CellActions;
 }) {
     const api = useApi();
+    const params = useParams();
+    const liveModel = useContext(LiveModelContext);
+
+    const filterCompletions = (refId: string, doc: DocInfo) => {
+        if (doc.typeName !== "model") {
+            return false;
+        }
+        if (params.ref && refId === params.ref) {
+            return false;
+        }
+        const theory = liveModel?.().liveDoc.doc.theory;
+        if (theory && doc.theory !== theory) {
+            return false;
+        }
+        return true;
+    };
 
     const refId = () => props.instantiation.model?._id;
     const setRefId = (refId: string | null) => {
@@ -85,6 +103,7 @@ export function InstantiationCellEditor(props: {
                         setRefId(refId);
                         insertSpecializationAtTop();
                     }}
+                    filterCompletions={filterCompletions}
                     placeholder="..."
                     deleteBackward={() => setActiveComponent("name")}
                     exitUp={props.actions.activateAbove}

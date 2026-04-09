@@ -28,6 +28,12 @@ export type TextInputOptions = TextInputActions & {
     /** Whether to show possible auto-completions when focus is gained. */
     showCompletionsOnFocus?: boolean;
 
+    /** Extra CSS class to apply to the completions popup. */
+    popupClass?: string;
+
+    /** Text shown when no completions match. Defaults to "No completions". */
+    completionsEmptyText?: string;
+
     /** Called to intercept `keydown` events.`
 
     Return `true` to intercept the event and prevent normal processing.
@@ -98,6 +104,8 @@ const TEXT_INPUT_OPTIONS = [
     "hasFocused",
     "completions",
     "showCompletionsOnFocus",
+    "popupClass",
+    "completionsEmptyText",
     "interceptKeyDown",
     "autofill",
     "createBelow",
@@ -180,7 +188,7 @@ export function TextInput(allProps: TextInputProps) {
         } else if (options.autofill && evt.code === "Space" && evt.ctrlKey) {
             options.autofill();
         } else if (evt.key === "Enter" && !evt.shiftKey) {
-            if (isCompletionsOpen()) {
+            if (isCompletionsOpen() && remaining.length > 0) {
                 completionsRef()?.selectPresumptive();
             } else if (options.createBelow) {
                 options.createBelow();
@@ -227,10 +235,11 @@ export function TextInput(allProps: TextInputProps) {
                 />
             </Popover.Anchor>
             <Popover.Portal>
-                <Popover.Content class="popup">
+                <Popover.Content class={`popup ${options.popupClass ?? ""}`}>
                     <Completions
                         completions={options.completions ?? []}
                         text={props.text}
+                        emptyText={options.completionsEmptyText}
                         ref={setCompletionsRef}
                         onComplete={() => setCompletionsOpen(false)}
                     />
