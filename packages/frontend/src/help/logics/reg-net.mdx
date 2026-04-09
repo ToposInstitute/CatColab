@@ -42,8 +42,9 @@ This theory is technically isomorphic to that of <A href="../causal-loop">causal
 </HelpAnalysisById>
 
 <HelpAnalysisById theory={props.theory} analysisId="lotka-volterra">
-    A promotion $A\to B$ is interpreted as the equation $\dot{B}=(kA+g)B$ for some non-negative
-    constant $k$ (the *interaction coefficient*) and constant $g$ (the *growth rate*); an inhibition
-    $A\dashv B$ is interpreted as $\dot{B}=-(kA+g)B$. Multiple incoming arrows are interpreted
-    additively, so e.g. $A\to B\vdash C$ is interpreted as $\dot{B}=(kA - \ell C + g)B$.
+    Every species $A$ has a *growth rate* $g$, corresponding to the equation $\dot{A}\overset{+}{=}gA$.
+    A promotion $A\to B$ is interpreted as the equation $\dot{B}\overset{+}{=}kAB$ for some non-negative
+    constant $k$ (the *interaction coefficient*); an inhibition
+    $A\dashv B$ is interpreted as $\dot{B}\overset{-}{=}kAB$. Multiple incoming arrows are interpreted
+    additively, so e.g. $A\to B\vdash C$ is interpreted as $\dot{B}\overset{+}{=}(kA - \ell C)B$.
 </HelpAnalysisById>

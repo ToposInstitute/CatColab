@@ -141,3 +141,14 @@ stdTheories.add(
     },
     async () => (await import("./theories/power-system")).default,
 );
+
+stdTheories.add(
+    {
+        id: "polynomial-ode",
+        name: "Polynomial ODEs",
+        description: "Systems of polynomial ordinary differential equations",
+        iconLetters: ["P", "o"],
+        group: "Experimental",
+    },
+    async () => (await import("./theories/polynomial-ode")).default,
+);

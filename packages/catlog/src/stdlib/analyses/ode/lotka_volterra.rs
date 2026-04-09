@@ -156,7 +156,7 @@ mod test {
     }
 
     #[test]
-    fn predatory_prey_symbolic() {
+    fn predator_prey_symbolic() {
         let th = Rc::new(stdlib::theories::th_signed_category());
         let neg_feedback = stdlib::models::negative_feedback(th);
         let (sys, _) = builder().lotka_volterra_system(&neg_feedback);
