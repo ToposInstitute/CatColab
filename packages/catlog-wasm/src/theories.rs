@@ -6,7 +6,7 @@
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 
-use catlog::dbl::theory::{self as theory, Unital};
+use catlog::dbl::theory::{self as theory, NonUnital, Unital};
 use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 use catlog::zero::{QualifiedLabel, name};
@@ -413,7 +413,7 @@ impl ThSymMonoidalCategory {
     ) -> Result<ODEResult, String> {
         Ok(ODEResult(JsResult::Ok(
             analyses::stochastic::PetriNetStochasticMassActionAnalysis::default()
-                .build_stochastic_system(model.modal()?, data)
+                .build_stochastic_system(model.modal_unital()?, data)
                 .simulate(),
         )))
     }
@@ -425,8 +425,45 @@ impl ThSymMonoidalCategory {
         model: &DblModel,
         data: analyses::reachability::ReachabilityProblemData,
     ) -> Result<bool, String> {
-        let model = model.modal().map_err(|_| "Model should be of a modal theory")?;
+        let model = model.modal_unital().map_err(|_| "Model should be of a modal theory")?;
         Ok(analyses::reachability::subreachability(model, data))
+    }
+}
+
+/// A theory of systems of polynomial ODEs
+#[wasm_bindgen]
+pub struct ThPolynomialODE(Rc<theory::ModalDblTheory<NonUnital>>);
+
+#[wasm_bindgen]
+impl ThPolynomialODE {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Rc::new(theories::th_polynomial_ode_system()))
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory(self.0.clone().into())
+    }
+
+    /// Simulates the ODE system derived from a model.
+    #[wasm_bindgen(js_name = "polynomialODESimulation")]
+    pub fn polynomial_ode_simulation(
+        &self,
+        model: &DblModel,
+        data: analyses::ode::PolynomialODEProblemData,
+    ) -> Result<ODEResultWithEquations, String> {
+        polynomial_ode_simulation(model, data)
+    }
+
+    /// Returns the symbolic equations in LaTeX format.
+    #[wasm_bindgen(js_name = "polynomialODEEquations")]
+    pub fn polynomial_ode_equations(
+        &self,
+        model: &DblModel,
+        data: PolynomialODEEquationsData,
+    ) -> Result<LatexEquations, String> {
+        polynomial_ode_equations(model, data)
     }
 }
 

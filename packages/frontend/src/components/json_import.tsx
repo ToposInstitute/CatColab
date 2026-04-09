@@ -6,8 +6,8 @@ import type { Document } from "catlog-wasm";
 import "./json_import.css";
 
 interface JsonImportProps {
-    onImport: (data: Document) => void;
-    validate?: (data: Document) => boolean | string;
+    onImport: (doc: Document) => void;
+    parse: (jsonString: string) => Document | Error;
 }
 
 /**
@@ -20,30 +20,16 @@ export const JsonImport = (props: JsonImportProps) => {
     const [error, setError] = createSignal<string | null>(null);
     const [importValue, setImportValue] = createSignal("");
 
-    const handleError = (e: unknown) => {
-        setError(e instanceof Error ? e.message : "Unknown error occurred");
-    };
-
-    const validateAndImport = (jsonString: string) => {
-        try {
-            const data = JSON.parse(jsonString);
-
-            // Run custom validation if provided
-            if (props.validate) {
-                const validationResult = props.validate(data);
-                if (typeof validationResult === "string") {
-                    setError(validationResult);
-                    return;
-                }
-            }
-
-            // Clear any previous errors and import
-            setError(null);
-            props.onImport(data);
-            setImportValue(""); // Clear paste area after successful import
-        } catch (e) {
-            handleError(e);
+    const parseAndImport = async (jsonString: string) => {
+        const result = props.parse(jsonString);
+        if (result instanceof Error) {
+            setError(result.message);
+            return;
         }
+        // Clear any previous errors and import
+        setError(null);
+        props.onImport(result);
+        setImportValue(""); // Clear paste area after successful import
     };
 
     // Handle file upload
@@ -68,7 +54,7 @@ export const JsonImport = (props: JsonImportProps) => {
         }
 
         const text = await file.text();
-        validateAndImport(text);
+        void parseAndImport(text);
 
         // Reset file input
         input.value = "";
@@ -80,7 +66,7 @@ export const JsonImport = (props: JsonImportProps) => {
             setError("Please enter some JSON");
             return;
         }
-        validateAndImport(importValue());
+        void parseAndImport(importValue());
     };
 
     const handleInput: JSX.EventHandler<HTMLTextAreaElement, Event> = (event) => {

@@ -233,6 +233,8 @@ pub enum TmV_ {
     Tt,
     /// The identity morphism of an object.
     Id(TmV),
+    /// The tabulation of a morphism.
+    Tab(TmV),
     /// Composition of morphisms.
     Compose(TmV, TmV),
     /// A metavariable.
@@ -273,6 +275,11 @@ impl TmV {
     /// Smart constructor for [TmV], [TmV_::Id] case.
     pub fn id(x: TmV) -> Self {
         TmV(Rc::new(TmV_::Id(x)))
+    }
+
+    /// Smart constructor for [TmV], [TmV_::Tab] case.
+    pub fn tab(mor: TmV) -> Self {
+        TmV(Rc::new(TmV_::Tab(mor)))
     }
 
     /// Smart constructor for [TmV], [TmV_::Compose] case.

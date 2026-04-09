@@ -6,7 +6,6 @@ export const stdTheories = new TheoryLibrary();
 
 stdTheories.addGenericModelAnalysis({
     construct: compositionPattern,
-    when: (theory) => theory.theory.canInstantiateModels(),
 });
 
 stdTheories.add(
@@ -140,4 +139,15 @@ stdTheories.add(
         group: "Experimental",
     },
     async () => (await import("./theories/power-system")).default,
+);
+
+stdTheories.add(
+    {
+        id: "polynomial-ode",
+        name: "Polynomial ODEs",
+        description: "Systems of polynomial ordinary differential equations",
+        iconLetters: ["P", "o"],
+        group: "Experimental",
+    },
+    async () => (await import("./theories/polynomial-ode")).default,
 );

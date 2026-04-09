@@ -15,7 +15,7 @@ use super::model::DblModel;
 pub struct LatexEquations(pub Vec<LatexEquation>);
 
 /// Creates a closure that formats object names for LaTeX output.
-pub(crate) fn latex_ob_names_mass_action(model: &DblModel) -> impl Fn(&QualifiedName) -> String {
+pub(crate) fn latex_ob_names(model: &DblModel) -> impl Fn(&QualifiedName) -> String {
     |id: &QualifiedName| {
         let name = model.ob_namespace.label_string(id);
         if name.chars().count() > 1 {
@@ -23,6 +23,31 @@ pub(crate) fn latex_ob_names_mass_action(model: &DblModel) -> impl Fn(&Qualified
         } else {
             name
         }
+    }
+}
+
+/// Creates a closure that formats morphism names for mass-action LaTeX output.
+///
+/// When a morphism has a label, it is used directly. When unnamed, the label
+/// falls back to the domain→codomain format (e.g., `X \to Y`).
+pub(crate) fn latex_mor_names(model: &DblModel) -> impl Fn(&QualifiedName) -> String {
+    // Returns a LaTeX fragment for a morphism, suitable for use as a subscript.
+    // Named morphisms produce `\text{name}`, unnamed ones produce
+    // `\text{dom} \to \text{cod}` so that `\to` is in math mode.
+    let morphism_subscript = |morphism: &QualifiedName| -> String {
+        if let Some(label) = model.mor_namespace.label(morphism) {
+            format!("\\text{{{label}}}")
+        } else {
+            let (dom, cod) = model
+                .mor_generator_dom_cod_label_strings(morphism)
+                .expect("Morphism in equation system should have domain and codomain");
+            format!("\\text{{{dom}}} \\to \\text{{{cod}}}")
+        }
+    };
+
+    move |id: &QualifiedName| {
+        let sub = morphism_subscript(id);
+        format!("\\lambda_{{{sub}}}")
     }
 }
 
@@ -98,7 +123,7 @@ mod tests {
             ode::MassConservationType::Unbalanced(ode::RateGranularity::PerTransition),
         );
         let equations = sys
-            .map_variables(latex_ob_names_mass_action(&model))
+            .map_variables(latex_ob_names(&model))
             .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(&model)))
             .to_latex_equations();
 
@@ -125,7 +150,7 @@ mod tests {
             ode::MassConservationType::Unbalanced(ode::RateGranularity::PerTransition),
         );
         let equations = sys
-            .map_variables(latex_ob_names_mass_action(&model))
+            .map_variables(latex_ob_names(&model))
             .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(&model)))
             .to_latex_equations();
 

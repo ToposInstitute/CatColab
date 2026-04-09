@@ -1,0 +1,75 @@
+set_theory ThCategoryLinks
+
+type SIR := [
+    S : Object,
+    I : Object,
+    R : Object, 
+    inf : (Hom Object)[S,I],
+    rec : (Hom Object)[I,R],
+    _ : Link[I,@tab inf]
+]
+
+generate SIR
+
+type Endo := [
+    A : Object,
+    f : (Hom Object)[A,A],
+]
+
+generate Endo
+
+#(should_fail)
+type LinkFlows := [
+    E : Endo,
+    l : Link[@tab E.f,@tab E.f]
+]
+
+type WalkingLink := [
+    x : Object,
+    y : Object, 
+    z : Object,
+    f : (Hom Object)[x,y],
+    l : Link[z,@tab f]
+]
+
+type SI := [
+    S : Object,
+    I : Object,
+    inf : WalkingLink & [.x := S, .y := I, .z := I]
+]
+
+generate SI
+
+chk [sf : SI] (sf.inf.l : Link[sf.I,@tab sf.inf.f])
+
+chk [sf : SI] (sf.inf : WalkingLink)
+
+chk [sf : SI] (sf.inf : WalkingLink & [ .x := sf.S])
+
+#(should_fail)
+chk [sf : SI] (sf.inf : WalkingLink & [.x := sf.I])
+
+def act_on_link[d : SI] : Link[d.S,@tab d.inf.f] := d.inf.f * d.inf.l
+
+type Triangle := [
+    x : Object,
+    y : Object,
+    z : Object,
+    f : (Hom Object)[x,y],
+    g : (Hom Object)[y,z],
+    l : Link[z, @tab (f * g)]
+]
+
+def delete_y[T : Triangle] : SI := [
+    S := T.x,
+    I := T.z,
+    inf := [
+        x := T.x,
+        y := T.z,
+        z := T.z,
+        f := T.f * T.g,
+        l := T.l
+    ]
+]
+
+syn [T : Triangle] delete_y[T].inf.l

@@ -329,7 +329,7 @@ pub enum InvalidModelEqn {
     /// Right-hand side of equation fails to synthesize.
     Rhs,
 
-    /// Sides of equation are not evevn in the same morphism type.
+    /// Sides of equation are not even in the same morphism type.
     MorType,
 }
 
