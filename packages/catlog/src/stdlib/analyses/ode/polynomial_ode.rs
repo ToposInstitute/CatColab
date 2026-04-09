@@ -11,7 +11,7 @@ use tsify::Tsify;
 
 use crate::{
     dbl::{
-        modal::{List, ModalMorType, ModalObType, ModeApp},
+        modal::{ModalMorType, ModalObType, ModeApp},
         model::{FpDblModel, ModalDblModel, ModalOb, MutDblModel},
         theory::NonUnital,
     },
@@ -75,20 +75,18 @@ impl PolynomialODEAnalysis {
 
         // Create a monomial for each morphism.
         for mor in model.mor_generators_with_type(&self.contribution_mor_type) {
-            let input = model.get_dom(&mor).unwrap();
-            let inputs: &Vec<ModalOb> = match input {
-                ModalOb::List(List::Symmetric, v) => v,
-                _ => &Vec::new(),
+            let (Some(ModalOb::List(_, inputs)), Some(output)) =
+                (model.get_dom(&mor), model.get_cod(&mor))
+            else {
+                continue;
             };
-            let output = model.get_cod(&mor).unwrap();
-            let term: Monomial<_, _> =
-                inputs.iter().map(|ob| (ob.clone().unwrap_generator(), 1)).collect();
 
+            let term: Monomial<_, _> =
+                inputs.iter().cloned().map(|ob| (ob.unwrap_generator(), 1)).collect();
             let term: Polynomial<_, _, _> =
                 [(Parameter::generator(mor), term.clone())].into_iter().collect();
 
-            // TODO: only a single output
-            sys.add_term(output.clone().unwrap_generator(), term.clone());
+            sys.add_term(output.clone().unwrap_generator(), term);
         }
 
         sys.normalize()
