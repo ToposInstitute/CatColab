@@ -4,10 +4,9 @@ type SIR := [
     S : Object,
     I : Object,
     R : Object, 
-    si : (Hom Object)[S,I],
-    ir : (Hom Object)[I,R],
-    isi : Link[I,@tab si],
-    rir : Link[R,@tab ir]
+    inf : (Hom Object)[S,I],
+    rec : (Hom Object)[I,R],
+    _ : Link[I,@tab inf]
 ]
 
 generate SIR
@@ -36,21 +35,21 @@ type WalkingLink := [
 type SI := [
     S : Object,
     I : Object,
-    isi : WalkingLink & [.x := S, .y := I, .z := I]
+    inf : WalkingLink & [.x := S, .y := I, .z := I]
 ]
 
 generate SI
 
-chk [sf : SI] (sf.isi.l : Link[sf.I,@tab sf.isi.f])
+chk [sf : SI] (sf.inf.l : Link[sf.I,@tab sf.inf.f])
 
-chk [sf : SI] (sf.isi : WalkingLink)
+chk [sf : SI] (sf.inf : WalkingLink)
 
-chk [sf : SI] (sf.isi : WalkingLink & [ .x := sf.S])
+chk [sf : SI] (sf.inf : WalkingLink & [ .x := sf.S])
 
 #(should_fail)
-chk [sf : SI] (sf.isi : WalkingLink & [.x := sf.I])
+chk [sf : SI] (sf.inf : WalkingLink & [.x := sf.I])
 
-def act_on_link[d : SI] : Link[d.S,@tab d.isi.f] := d.isi.f * d.isi.l
+def act_on_link[d : SI] : Link[d.S,@tab d.inf.f] := d.inf.f * d.inf.l
 
 type Triangle := [
     x : Object,
@@ -64,7 +63,7 @@ type Triangle := [
 def delete_y[T : Triangle] : SI := [
     S := T.x,
     I := T.z,
-    isi := [
+    inf := [
         x := T.x,
         y := T.z,
         z := T.z,
@@ -73,4 +72,4 @@ def delete_y[T : Triangle] : SI := [
     ]
 ]
 
-syn [T : Triangle] delete_y[T].isi.l
+syn [T : Triangle] delete_y[T].inf.l
