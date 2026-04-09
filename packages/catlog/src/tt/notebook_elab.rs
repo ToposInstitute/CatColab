@@ -12,7 +12,7 @@ use uuid::Uuid;
 
 use super::{context::*, eval::*, prelude::*, stx::*, theory::*, toplevel::*, val::*};
 use crate::dbl::{
-    discrete_tabulator, modal,
+    modal,
     model::{Feature, InvalidDblModel, InvalidModelEqn},
 };
 use crate::zero::QualifiedName;
@@ -160,9 +160,7 @@ impl<'a> Elaborator<'a> {
                 let TyV_::Morphism(mt, _, _) = &*mor_ty else {
                     return None;
                 };
-                let ob_type = ObType::DiscreteTab(discrete_tabulator::TabObType::Tabulator(
-                    Box::new(mt.clone().try_into().ok()?),
-                ));
+                let ob_type = self.theory().tabulator(mt.clone())?;
                 Some((TmS::tab(mor_stx), TmV::tab(mor_val), ob_type))
             }
             _ => None,

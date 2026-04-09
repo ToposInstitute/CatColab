@@ -179,6 +179,15 @@ impl TheoryDef {
         })
     }
 
+    /// Gets the tabulator of a morphism type, if it exists.
+    pub fn tabulator(&self, mor_type: MorType) -> Option<ObType> {
+        match self {
+            TheoryDef::Discrete(_) => None,
+            TheoryDef::DiscreteTab(th) => Some(th.tabulator(mor_type.try_into().unwrap()).into()),
+            TheoryDef::ModalUnital(_) | TheoryDef::ModalNonUnital(_) => None,
+        }
+    }
+
     /// Gets the domain of an object operation.
     pub fn ob_op_dom(&self, ob_op: &ObOp) -> ObType {
         all_the_same!(match self {

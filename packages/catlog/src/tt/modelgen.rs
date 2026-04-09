@@ -7,8 +7,8 @@ use tattle::reporter::Message;
 use super::{eval::*, prelude::*, text_elab, theory::*, toplevel::*, val::*};
 use crate::dbl::{
     discrete, discrete_tabulator, modal,
-    model::{DblModel, DblModelPrinter, MutDblModel, TabOb},
-    theory::{DblTheory, DblTheoryKind, NonUnital, TabObType, Unital},
+    model::{DblModel, DblModelPrinter, MutDblModel},
+    theory::{DblTheory, DblTheoryKind, NonUnital, Unital},
 };
 use crate::one::{
     Category,
@@ -138,6 +138,15 @@ impl Model {
         })
     }
 
+    /// Tabulates a morphism, if possible.
+    fn tabulated(&self, mor: Mor) -> Option<Ob> {
+        match self {
+            Model::Discrete(_) => None,
+            Model::DiscreteTab(model) => Some(model.tabulated(mor.try_into().unwrap()).into()),
+            Model::ModalUnital(_) | Model::ModalNonUnital(_) => None,
+        }
+    }
+
     /// Adds an object generator to the model.
     fn add_ob(&mut self, name: QualifiedName, ob_type: ObType) {
         all_the_same!(match self {
@@ -167,11 +176,11 @@ impl Model {
             Model::Discrete(model) => {
                 model.add_equation(PathEq::new(lhs.try_into().unwrap(), rhs.try_into().unwrap()));
             }
-            Model::ModalUnital(_) | Model::ModalNonUnital(_) => {
-                // Modal models currently do not support equations, so we ignore them.
-            }
             Model::DiscreteTab(_) => {
                 // Discrete tabulator models currently do not support equations, so we ignore them.
+            }
+            Model::ModalUnital(_) | Model::ModalNonUnital(_) => {
+                // Modal models currently do not support equations, so we ignore them.
             }
         }
     }
@@ -288,16 +297,7 @@ impl<'a> ModelGenerator<'a> {
             TmV_::App(name, tm_v) => self.ob_app(name, tm_v),
             TmV_::Tab(mor_tm_v) => {
                 let (mor, mor_type) = self.synth_mor(mor_tm_v)?;
-                let ob_type = match &self.model {
-                    Model::DiscreteTab(_) => ObType::DiscreteTab(TabObType::Tabulator(Box::new(
-                        mor_type.try_into().unwrap(),
-                    ))),
-                    _ => return None,
-                };
-                Some((
-                    Ob::DiscreteTab(TabOb::Tabulated(Box::new(mor.try_into().unwrap()))),
-                    ob_type,
-                ))
+                Some((self.model.tabulated(mor)?, self.theory.tabulator(mor_type)?))
             }
             _ => None,
         }

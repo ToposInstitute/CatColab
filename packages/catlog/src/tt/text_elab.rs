@@ -614,11 +614,10 @@ impl<'a> Elaborator<'a> {
                 let TyV_::Morphism(mor_type, _, _) = &*mor_t else {
                     return elab.syn_error("can only apply @tab to morphisms");
                 };
-                let TheoryDef::DiscreteTab(th) = &elab.theory.definition else {
-                    return elab.syn_error("@tab is only available in discrete tabulator theories");
+                let Some(ob_type) = elab.theory().tabulator(mor_type.clone()) else {
+                    return elab.syn_error("theory does not have tabulators");
                 };
-                let ob_type = th.tabulator(mor_type.clone().try_into().unwrap());
-                (TmS::tab(mor_s), TmV::tab(mor_v.clone()), TyV::object(ob_type.clone().into()))
+                (TmS::tab(mor_s), TmV::tab(mor_v.clone()), TyV::object(ob_type))
             }
             App1(L(_, Prim(name)), ob_n) => {
                 let name = name_seg(*name);
