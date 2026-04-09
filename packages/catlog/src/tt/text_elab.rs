@@ -614,7 +614,7 @@ impl<'a> Elaborator<'a> {
                 let TyV_::Morphism(mor_type, _, _) = &*mor_t else {
                     return elab.syn_error("can only apply @tab to morphisms");
                 };
-                let TheoryDef::DiscTab(th) = &elab.theory.definition else {
+                let TheoryDef::DiscreteTab(th) = &elab.theory.definition else {
                     return elab.syn_error("@tab is only available in discrete tabulator theories");
                 };
                 let ob_type = th.tabulator(mor_type.clone().try_into().unwrap());

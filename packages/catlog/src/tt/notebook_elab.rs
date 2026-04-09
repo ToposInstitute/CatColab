@@ -160,9 +160,9 @@ impl<'a> Elaborator<'a> {
                 let TyV_::Morphism(mt, _, _) = &*mor_ty else {
                     return None;
                 };
-                let ob_type = ObType::DiscTab(discrete_tabulator::TabObType::Tabulator(Box::new(
-                    mt.clone().try_into().ok()?,
-                )));
+                let ob_type = ObType::DiscreteTab(discrete_tabulator::TabObType::Tabulator(
+                    Box::new(mt.clone().try_into().ok()?),
+                ));
                 Some((TmS::tab(mor_stx), TmV::tab(mor_val), ob_type))
             }
             _ => None,
