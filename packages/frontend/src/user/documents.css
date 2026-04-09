@@ -34,16 +34,16 @@
     align-items: center;
 }
 
-/* Documents page: 6 columns — Icon / Name / Owners / Permission / Created / Actions */
+/* Documents page: 7 columns — Icon / Name / Owners / Permission / Created / Last edited / Actions */
 .documents-page .ref-grid-header,
 .documents-page .ref-grid-row {
-    grid-template-columns: 40px 2fr 120px 120px 140px 50px;
+    grid-template-columns: 40px 2fr 120px 120px 140px 140px 50px;
 }
 
-/* Trash page: 6 columns — Actions / Icon / Name / Owners / Permission / Created */
+/* Trash page: 7 columns — Actions / Icon / Name / Owners / Permission / Created / Last edited */
 .trash-bin-page .ref-grid-header,
 .trash-bin-page .ref-grid-row {
-    grid-template-columns: 50px 40px 2fr 120px 120px 140px;
+    grid-template-columns: 50px 40px 2fr 120px 120px 140px 140px;
 }
 
 /* Adjust for scrollbar in Chromium browsers only */

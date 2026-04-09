@@ -18,6 +18,7 @@ export * from "./katex_display";
 export * from "./model_file_icon";
 export * from "./name_input";
 export * from "./panel";
+export * from "./relative_time";
 export * from "./resizable";
 export * from "./spinner";
 export * from "./text_input";

@@ -8,16 +8,16 @@ use uuid::Uuid;
 
 use crate::storage::PostgresStorage;
 
-pub(crate) struct UndoRedoSnapshots;
+pub(crate) struct SnapshotHistory;
 
 #[async_trait::async_trait]
-impl Migration<Postgres> for UndoRedoSnapshots {
+impl Migration<Postgres> for SnapshotHistory {
     fn app(&self) -> &str {
         "backend"
     }
 
     fn name(&self) -> &str {
-        "m20260330000000_undo_redo_snapshots"
+        "m20260414000000_snapshot_history"
     }
 
     fn parents(&self) -> Vec<Box<dyn Migration<Postgres>>> {
@@ -32,7 +32,8 @@ impl Migration<Postgres> for UndoRedoSnapshots {
             PopulateHeads,
             DropDocIdFromSnapshots,
             RenameHeadAndDropGetRefStubs,
-            AddParentToSnapshots
+            AddParentToSnapshots,
+            AddCurrentSnapshotUpdatedAt
         ]
     }
 
@@ -386,6 +387,42 @@ impl Operation<Postgres> for AddParentToSnapshots {
 
     async fn down(&self, conn: &mut PgConnection) -> Result<(), Error> {
         sqlx::query("ALTER TABLE snapshots DROP COLUMN IF EXISTS parent")
+            .execute(conn)
+            .await?;
+        Ok(())
+    }
+}
+
+/// Step 7: Add `current_snapshot_updated_at` to `refs`, tracking when the
+/// current snapshot pointer was last changed (snapshot created or undo/redo).
+struct AddCurrentSnapshotUpdatedAt;
+
+#[async_trait::async_trait]
+impl Operation<Postgres> for AddCurrentSnapshotUpdatedAt {
+    async fn up(&self, conn: &mut PgConnection) -> Result<(), Error> {
+        let mut tx = conn.begin().await?;
+
+        sqlx::query("ALTER TABLE refs ADD COLUMN current_snapshot_updated_at TIMESTAMPTZ")
+            .execute(&mut *tx)
+            .await?;
+
+        sqlx::query(
+            "UPDATE refs SET current_snapshot_updated_at = \
+             (SELECT created_at FROM snapshots WHERE id = refs.current_snapshot)",
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        sqlx::query("ALTER TABLE refs ALTER COLUMN current_snapshot_updated_at SET NOT NULL")
+            .execute(&mut *tx)
+            .await?;
+
+        tx.commit().await?;
+        Ok(())
+    }
+
+    async fn down(&self, conn: &mut PgConnection) -> Result<(), Error> {
+        sqlx::query("ALTER TABLE refs DROP COLUMN IF EXISTS current_snapshot_updated_at")
             .execute(conn)
             .await?;
         Ok(())

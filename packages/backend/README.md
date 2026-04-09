@@ -65,7 +65,7 @@ pnpm run dev
 
 ![Entity-relationship diagram](schema.svg)
 
-https://catcolab.org/analysis/019c28c7-5b0a-7ee3-a83b-6c1d32892047
+https://catcolab.org/analysis/019d7230-d368-7352-b20e-38a72fc3af9b
 
 ### permissions
 

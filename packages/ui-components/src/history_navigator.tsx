@@ -3,6 +3,7 @@ import Undo2 from "lucide-solid/icons/undo-2";
 import { For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 
 import { IconButton } from "./icon_button";
+import { formatExactTimestamp, formatRelativeTime } from "./relative_time";
 import { createVirtualList } from "./virtual_list";
 
 import styles from "./history_navigator.module.css";
@@ -26,53 +27,6 @@ export type HistoryNavigatorProps = {
     /** Tooltip for the redo button. Defaults to "Redo". */
     redoTooltip?: string;
 };
-
-function formatRelativeTime(ms: number, now: number): string {
-    const diffMs = now - ms;
-    const seconds = Math.floor(diffMs / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-
-    if (minutes < 1) {
-        return "just now";
-    }
-    if (minutes < 60) {
-        return `${minutes} min ago`;
-    }
-    if (minutes < 120) {
-        const remainMin = minutes % 60;
-        return remainMin === 0 ? "1 hour ago" : `1 hour ${remainMin} min ago`;
-    }
-    if (hours < 24) {
-        const hourLabel = hours === 1 ? "hour" : "hours";
-        return `${hours} ${hourLabel} ago`;
-    }
-    if (days === 1) {
-        return "yesterday";
-    }
-    if (days < 7) {
-        return `${days} days ago`;
-    }
-
-    const d = new Date(ms);
-    return d.toLocaleDateString(undefined, {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-    });
-}
-
-function formatExactTimestamp(ms: number): string {
-    const d = new Date(ms);
-    return d.toLocaleString(undefined, {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-    });
-}
 
 const ROW_HEIGHT = 44;
 
