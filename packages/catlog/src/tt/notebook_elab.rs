@@ -155,6 +155,14 @@ impl<'a> Elaborator<'a> {
                 let val = TmV::app(name, arg_val);
                 Some((stx, val, self.theory().ob_op_cod(&ob_op)))
             }
+            nb::Ob::Tabulated(mor) => {
+                let (mor_stx, mor_val, mor_ty) = self.mor_syn(mor)?;
+                let TyV_::Morphism(mt, _, _) = &*mor_ty else {
+                    return None;
+                };
+                let ob_type = self.theory().tabulator(mt.clone())?;
+                Some((TmS::tab(mor_stx), TmV::tab(mor_val), ob_type))
+            }
             _ => None,
         }
     }
@@ -539,7 +547,8 @@ mod test {
 
     #[test]
     fn modal_theories() {
-        let th_smc = Theory::new(name("ThSMC"), TheoryDef::modal(th_sym_monoidal_category()));
+        let th_smc =
+            Theory::new(name("ThSMC"), TheoryDef::modal_unital(th_sym_monoidal_category()));
         elab_example(
             &th_smc,
             "sir_petri",

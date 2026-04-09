@@ -13,6 +13,9 @@ include notable new features.
 
 ### Added
 
+- Composing stock and flow diagrams by sharing/identifying stocks
+  ([#1196](https://github.com/ToposInstitute/CatColab/pull/1196)). Composing
+  models is now supported for *all* logics.
 - New service: the backend now provides a compute service for
   [Julia](https://julialang.org/) and
   [AlgebraicJulia](https://www.algebraicjulia.org/)

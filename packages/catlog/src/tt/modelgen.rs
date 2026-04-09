@@ -6,7 +6,7 @@ use tattle::display::SourceInfo;
 
 use super::{eval::*, prelude::*, text_elab, theory::*, toplevel::*, val::*};
 use crate::dbl::{
-    discrete, modal,
+    discrete, discrete_tabulator, modal,
     model::{DblModel, DblModelPrinter, MutDblModel},
     theory::{DblTheory, DblTheoryKind, NonUnital, Unital},
 };
@@ -23,6 +23,8 @@ use crate::zero::{Namespace, QualifiedName};
 pub enum Model {
     /// A model of a discrete double theory.
     Discrete(Box<discrete::DiscreteDblModel>),
+    /// A model of a discrete tabulator theory.
+    DiscreteTab(Box<discrete_tabulator::DiscreteTabModel>),
     /// A model of a unital modal double theory.
     ModalUnital(Box<modal::ModalDblModel<Unital>>),
     /// A model of a non-unital modal double theory.
@@ -33,6 +35,7 @@ pub enum Model {
 #[derive(Debug, From, TryInto)]
 enum Ob {
     Discrete(QualifiedName),
+    DiscreteTab(discrete_tabulator::TabOb),
     Modal(modal::ModalOb),
 }
 
@@ -40,6 +43,7 @@ enum Ob {
 #[derive(Debug, From, TryInto)]
 enum Mor {
     Discrete(Path<QualifiedName, QualifiedName>),
+    DiscreteTab(discrete_tabulator::TabMor),
     Modal(modal::ModalMor),
 }
 
@@ -50,6 +54,9 @@ impl Model {
             TheoryDef::Discrete(theory) => {
                 Model::Discrete(Box::new(discrete::DiscreteDblModel::new(theory.clone())))
             }
+            TheoryDef::DiscreteTab(theory) => Model::DiscreteTab(Box::new(
+                discrete_tabulator::DiscreteTabModel::new(theory.clone()),
+            )),
             TheoryDef::ModalUnital(theory) => {
                 Model::ModalUnital(Box::new(modal::ModalDblModel::new(theory.clone())))
             }
@@ -117,7 +124,7 @@ impl Model {
     /// Constructs the identity morphism on an object.
     fn id(&self, ob: Ob) -> Mor {
         all_the_same!(match self {
-            Model::[Discrete, ModalUnital, ModalNonUnital](model) => {
+            Model::[Discrete, ModalUnital, DiscreteTab, ModalNonUnital](model) => {
                 model.id(ob.try_into().unwrap()).into()
             }
         })
@@ -126,16 +133,25 @@ impl Model {
     /// Composes a pair of morphisms.
     fn compose2(&self, mor1: Mor, mor2: Mor) -> Mor {
         all_the_same!(match self {
-            Model::[Discrete, ModalUnital, ModalNonUnital](model) => {
+            Model::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](model) => {
                 model.compose2(mor1.try_into().unwrap(), mor2.try_into().unwrap()).into()
             }
         })
     }
 
+    /// Tabulates a morphism, if possible.
+    fn tabulated(&self, mor: Mor) -> Option<Ob> {
+        match self {
+            Model::Discrete(_) => None,
+            Model::DiscreteTab(model) => Some(model.tabulated(mor.try_into().unwrap()).into()),
+            Model::ModalUnital(_) | Model::ModalNonUnital(_) => None,
+        }
+    }
+
     /// Adds an object generator to the model.
     fn add_ob(&mut self, name: QualifiedName, ob_type: ObType) {
         all_the_same!(match self {
-            Model::[Discrete, ModalUnital, ModalNonUnital](model) => {
+            Model::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](model) => {
                 model.add_ob(name, ob_type.try_into().unwrap())
             }
         });
@@ -144,7 +160,7 @@ impl Model {
     /// Adds a morphism generator to the model.
     fn add_mor(&mut self, name: QualifiedName, dom: Ob, cod: Ob, mor_type: MorType) {
         all_the_same!(match self {
-            Model::[Discrete, ModalUnital, ModalNonUnital](model) => {
+            Model::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](model) => {
                 model.add_mor(
                     name,
                     dom.try_into().unwrap(),
@@ -161,6 +177,9 @@ impl Model {
             Model::Discrete(model) => {
                 model.add_equation(PathEq::new(lhs.try_into().unwrap(), rhs.try_into().unwrap()));
             }
+            Model::DiscreteTab(_) => {
+                // Discrete tabulator models currently do not support equations, so we ignore them.
+            }
             Model::ModalUnital(_) | Model::ModalNonUnital(_) => {
                 // Modal models currently do not support equations, so we ignore them.
             }
@@ -170,14 +189,14 @@ impl Model {
     /// Pretty prints a summary of the model.
     pub fn summary(&self, printer: &DblModelPrinter) -> String {
         all_the_same!(match self {
-            Model::[Discrete, ModalUnital, ModalNonUnital](model) => printer.summary(model.as_ref())
+            Model::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](model) => printer.summary(model.as_ref())
         })
     }
 
     /// Pretty prints the model in the given namespace.
     pub fn to_doc<'a>(&self, printer: &DblModelPrinter, ns: &Namespace) -> D<'a> {
         all_the_same!(match self {
-            Model::[Discrete, ModalUnital, ModalNonUnital](model) => printer.namespaced_doc(model.as_ref(), ns, ns)
+            Model::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](model) => printer.namespaced_doc(model.as_ref(), ns, ns)
         })
     }
 }
@@ -207,6 +226,7 @@ impl<'a> ModelGenerator<'a> {
     fn mor_generator(&self, name: QualifiedName) -> Mor {
         match &self.model {
             Model::Discrete(_) => Mor::Discrete(Path::single(name)),
+            Model::DiscreteTab(_) => Mor::DiscreteTab(name.into()),
             Model::ModalUnital(_) | Model::ModalNonUnital(_) => {
                 Mor::Modal(modal::ModalMor::Generator(name))
             }
@@ -219,7 +239,7 @@ impl<'a> ModelGenerator<'a> {
     fn ob_app(&self, name: &NameSegment, tm_v: &TmV) -> Option<(Ob, ObType)> {
         let name: QualifiedName = [*name].into();
         match &self.model {
-            Model::Discrete(_) => None,
+            Model::Discrete(_) | Model::DiscreteTab(_) => None,
             Model::ModalUnital(model) => self.op_app_modal(model, name, tm_v),
             Model::ModalNonUnital(model) => self.op_app_modal(model, name, tm_v),
         }
@@ -242,7 +262,7 @@ impl<'a> ModelGenerator<'a> {
     /// Constructs a list of objects, if allowed.
     fn ob_list(&self, elems: Vec<Ob>, ob_type: &ObType) -> Option<Ob> {
         match &self.model {
-            Model::Discrete(_) => None,
+            Model::Discrete(_) | Model::DiscreteTab(_) => None,
             Model::ModalUnital(_) | Model::ModalNonUnital(_) => {
                 let ob_type: &modal::ModalObType = ob_type.try_into().unwrap();
                 let Some(modal::Modality::List(list_type)) = ob_type.modalities.last() else {
@@ -268,6 +288,7 @@ impl<'a> ModelGenerator<'a> {
                 let name = n.to_qualified_name();
                 let ob = match &self.model {
                     Model::Discrete(_) => Ob::Discrete(name),
+                    Model::DiscreteTab(_) => Ob::DiscreteTab(name.into()),
                     Model::ModalUnital(_) | Model::ModalNonUnital(_) => {
                         Ob::Modal(modal::ModalOb::Generator(name))
                     }
@@ -275,6 +296,10 @@ impl<'a> ModelGenerator<'a> {
                 Some((ob, ob_type.clone()))
             }
             TmV_::App(name, tm_v) => self.ob_app(name, tm_v),
+            TmV_::Tab(mor_tm_v) => {
+                let (mor, mor_type) = self.synth_mor(mor_tm_v)?;
+                Some((self.model.tabulated(mor)?, self.theory.tabulator(mor_type)?))
+            }
             _ => None,
         }
     }

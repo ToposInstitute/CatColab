@@ -97,16 +97,14 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
 
 function modelCellConstructors(theory: Theory): CellConstructor<ModelJudgment>[] {
     const constructors: CellConstructor<ModelJudgment>[] = [];
-    if (theory.theory.canInstantiateModels()) {
-        constructors.push({
-            name: "Instantiate",
-            description: "Instantiate an existing model into this one",
-            shortcut: ["I"],
-            construct() {
-                return newFormalCell(newInstantiatedModel());
-            },
-        });
-    }
+    constructors.push({
+        name: "Instantiate",
+        description: "Instantiate an existing model into this one",
+        shortcut: ["I"],
+        construct() {
+            return newFormalCell(newInstantiatedModel());
+        },
+    });
     for (const meta of theory.modelTypes ?? []) {
         constructors.push(modelCellConstructor(meta));
     }

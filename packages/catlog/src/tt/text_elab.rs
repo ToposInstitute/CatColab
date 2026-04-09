@@ -609,6 +609,16 @@ impl<'a> Elaborator<'a> {
                     TyV::morphism(mor_type, ob_v.clone(), ob_v),
                 )
             }
+            App1(L(_, Prim("tab")), mor_n) => {
+                let (mor_s, mor_v, mor_t) = elab.syn(mor_n);
+                let TyV_::Morphism(mor_type, _, _) = &*mor_t else {
+                    return elab.syn_error("can only apply @tab to morphisms");
+                };
+                let Some(ob_type) = elab.theory().tabulator(mor_type.clone()) else {
+                    return elab.syn_error("theory does not have tabulators");
+                };
+                (TmS::tab(mor_s), TmV::tab(mor_v.clone()), TyV::object(ob_type))
+            }
             App1(L(_, Prim(name)), ob_n) => {
                 let name = name_seg(*name);
                 let Some(ob_op) = elab.theory().basic_ob_op([name].into()) else {

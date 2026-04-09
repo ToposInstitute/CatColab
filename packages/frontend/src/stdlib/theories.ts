@@ -6,7 +6,6 @@ export const stdTheories = new TheoryLibrary();
 
 stdTheories.addGenericModelAnalysis({
     construct: compositionPattern,
-    when: (theory) => theory.theory.canInstantiateModels(),
 });
 
 stdTheories.add(

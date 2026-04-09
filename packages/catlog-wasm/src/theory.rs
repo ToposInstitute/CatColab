@@ -250,11 +250,11 @@ impl DblTheory {
     pub fn try_into_tt(&self) -> Option<tt::theory::TheoryDef> {
         match &self.0 {
             DblTheoryBox::Discrete(th) => Some(tt::theory::TheoryDef::Discrete(th.clone())),
+            DblTheoryBox::DiscreteTab(th) => Some(tt::theory::TheoryDef::DiscreteTab(th.clone())),
             DblTheoryBox::ModalUnital(th) => Some(tt::theory::TheoryDef::ModalUnital(th.clone())),
             DblTheoryBox::ModalNonUnital(th) => {
                 Some(tt::theory::TheoryDef::ModalNonUnital(th.clone()))
             }
-            _ => None,
         }
     }
 }
@@ -323,15 +323,6 @@ impl DblTheory {
                 Ok(Quoter.quote(&th.ob_op_cod(&op)))
             }
         })
-    }
-
-    /// Does the theory support instantiating models in other models?
-    ///
-    /// Eventually instantiation should be supported for every double doctrine
-    /// and then this method can be removed.
-    #[wasm_bindgen(js_name = "canInstantiateModels")]
-    pub fn can_instantiate_models(&self) -> bool {
-        !matches!(&self.0, DblTheoryBox::DiscreteTab(_))
     }
 }
 
