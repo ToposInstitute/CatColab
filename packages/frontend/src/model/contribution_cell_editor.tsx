@@ -10,7 +10,7 @@ import { unwrapApp, wrapApp } from "./ob_operations";
 import { obClasses } from "./object_cell_editor";
 import { ObInput } from "./object_input";
 
-import "./contribution_cell_editor.css";
+import styles from "./contribution_cell_editor.module.css";
 
 /** Editor for a contribution declaration cell in a model. */
 export default function ContributionCellEditor(props: MorphismEditorProps) {
@@ -72,7 +72,7 @@ export default function ContributionCellEditor(props: MorphismEditorProps) {
     };
 
     return (
-        <div class="formal-judgment morphism-decl">
+        <div class={`formal-judgment ${styles["morphism-decl"]}`}>
             <div class={nameClasses().join(" ")}>
                 <NameInput
                     placeholder={morTypeMeta()?.preferUnnamed ? undefined : "Unnamed"}
@@ -97,11 +97,11 @@ export default function ContributionCellEditor(props: MorphismEditorProps) {
                     }}
                 />
             </div>
-            <div class="morphism-decl-name-separator">:</div>
-            <div class="morphism-decl-cod-prefix">
-                <div class="fraction">
-                    <div class="fraction-numerator">d</div>
-                    <div class="fraction-denominator">dt</div>
+            <div class={styles["morphism-decl-name-separator"]}>:</div>
+            <div class={styles["morphism-decl-cod-prefix"]}>
+                <div class={styles["fraction"]}>
+                    <div>d</div>
+                    <div class={styles["fraction-denominator"]}>dt</div>
                 </div>
             </div>
             <div class={codClasses().join(" ")}>
@@ -127,8 +127,8 @@ export default function ContributionCellEditor(props: MorphismEditorProps) {
                     }}
                 />
             </div>
-            <div class="morphism-decl-arrow-replacement">+=</div>
-            <div class="morphism-decl-dom-prefix">𝜆&nbsp;&middot;</div>
+            <div class={styles["morphism-decl-arrow-replacement"]}>+=</div>
+            <div class={styles["morphism-decl-dom-prefix"]}>𝜆&nbsp;&middot;</div>
             <div class={domClasses().join(" ")}>
                 <ContributionMonomialEditor
                     placeholder="..."
