@@ -3,7 +3,7 @@ import { unwrap } from "solid-js/store";
 import invariant from "tiny-invariant";
 
 import { NameInput } from "catcolab-ui-components";
-import type { Modality, Ob, ObOp, QualifiedName } from "catlog-wasm";
+import type { Ob, ObOp, ObType, QualifiedName } from "catlog-wasm";
 import { ObIdInput } from "../components";
 import { LiveModelContext } from "./context";
 import type { MorphismEditorProps } from "./editors";
@@ -135,20 +135,28 @@ export default function StringDiagramMorphismCellEditor(props: MorphismEditorPro
     const codApplyOp = () => morTypeMeta()?.codomain?.apply;
 
     /** Rebuild a domain/codomain Ob from a list of objects. */
-    const makeObList = (objects: Array<Ob | null>, applyOp: ObOp | undefined): Ob | null => {
-        if (!applyOp) {
+    const makeObList = (
+        objects: Array<Ob | null>,
+        obType: ObType | undefined,
+        applyOp: ObOp | undefined,
+    ): Ob | null => {
+        if (!applyOp || !obType || obType.tag !== "ModeApp") {
             return null;
         }
-        const domObjType = props.theory.theory.dom(applyOp);
-        const modality: Modality =
-            domObjType?.tag === "ModeApp" ? domObjType.content.modality : "SymmetricList";
-        return wrapApp(buildObList(modality, objects), applyOp);
+        return wrapApp(buildObList(obType.content.modality, objects), applyOp);
     };
 
     const domType = createMemo(() => {
         const op = domApplyOp();
         return op === undefined
             ? props.theory.theory.src(props.morphism.morType)
+            : props.theory.theory.dom(op);
+    });
+
+    const codType = createMemo(() => {
+        const op = codApplyOp();
+        return op === undefined
+            ? props.theory.theory.tgt(props.morphism.morType)
             : props.theory.theory.dom(op);
     });
 
@@ -168,14 +176,14 @@ export default function StringDiagramMorphismCellEditor(props: MorphismEditorPro
     };
 
     const setDomObs = (objects: Array<Ob | null>) => {
-        const ob = makeObList(objects, domApplyOp());
+        const ob = makeObList(objects, domType(), domApplyOp());
         props.modifyMorphism((mor) => {
             mor.dom = ob;
         });
     };
 
     const setCodObs = (objects: Array<Ob | null>) => {
-        const ob = makeObList(objects, codApplyOp());
+        const ob = makeObList(objects, codType(), codApplyOp());
         props.modifyMorphism((mor) => {
             mor.cod = ob;
         });
