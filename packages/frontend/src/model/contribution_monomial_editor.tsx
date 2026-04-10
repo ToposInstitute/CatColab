@@ -134,18 +134,19 @@ export function ContributionMonomialEditor(originalProps: ContributionMonomialEd
                         evt.preventDefault();
                     }}
                 >
-                    <Show when={runs().length > 0} fallback={<span class={styles.emptyMonomial} />}>
-                        <For each={runs()}>
-                            {(run) => (
-                                <span>
-                                    {obLabel(run.ob) ?? "?"}
-                                    <Show when={run.count > 1}>
-                                        <sup class={styles.exponent}>{run.count}</sup>
-                                    </Show>
-                                </span>
-                            )}
-                        </For>
-                    </Show>
+                    <Index each={runs()} fallback={<span class={styles.emptyMonomial} />}>
+                        {(run, index) => (
+                            <span>
+                                {obLabel(run().ob) ?? "?"}
+                                <Show when={run().count > 1}>
+                                    <sup class={styles.exponent}>{run().count}</sup>
+                                </Show>
+                                <Show when={index < runs().length - 1}>
+                                    <span class={styles.productSeparator}>&middot;</span>
+                                </Show>
+                            </span>
+                        )}
+                    </Index>
                 </div>
             }
         >

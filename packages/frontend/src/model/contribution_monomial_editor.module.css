@@ -35,10 +35,14 @@
 
 .exponent {
     font-size: 0.75em;
-    line-height: 1;
+    line-height: 0.5ex;
 }
 
 .emptyMonomial {
     display: inline-block;
     width: 0.5ex;
+}
+
+.productSeparator {
+    padding: 0.25ex;
 }
