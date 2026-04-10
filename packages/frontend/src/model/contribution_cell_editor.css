@@ -2,14 +2,28 @@
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 0.5ex;
+    gap: 0.25ex;
 }
 
 .morphism-decl-name-separator {
     color: var(--color-gray-800);
-    padding: 0 0.5ex;
+    padding-left: 0.75ex;
+    padding-right: 1.25ex;
 }
 
 .morphism-decl-arrow-replacement {
     color: var(--color-gray-800);
+}
+
+.morphism-decl-cod-prefix {
+    font-size: 0.9rem;
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+
+    .fraction-numerator{
+        border-bottom: 1px solid black;
+    }
+    .fraction-denominator {
+    }
 }

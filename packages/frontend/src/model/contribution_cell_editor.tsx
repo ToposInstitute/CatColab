@@ -83,6 +83,10 @@ export default function ContributionCellEditor(props: MorphismEditorProps) {
                 />
             </div>
             <div class="morphism-decl-name-separator">:</div>
+            <div class="morphism-decl-cod-prefix">
+                <div class="fraction-numerator">d</div>
+                <div class="fraction-denominator">dt</div>
+            </div>
             <div class={codClasses().join(" ")}>
                 <ObInput
                     placeholder="..."
