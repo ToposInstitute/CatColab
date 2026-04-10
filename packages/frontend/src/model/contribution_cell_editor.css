@@ -1,0 +1,15 @@
+.morphism-decl {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5ex;
+}
+
+.morphism-decl-name-separator {
+    color: var(--color-gray-800);
+    padding: 0 0.5ex;
+}
+
+.morphism-decl-arrow-replacement {
+    color: var(--color-gray-800);
+}
