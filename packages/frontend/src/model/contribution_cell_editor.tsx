@@ -99,8 +99,10 @@ export default function ContributionCellEditor(props: MorphismEditorProps) {
             </div>
             <div class="morphism-decl-name-separator">:</div>
             <div class="morphism-decl-cod-prefix">
-                <div class="fraction-numerator">d</div>
-                <div class="fraction-denominator">dt</div>
+                <div class="fraction">
+                    <div class="fraction-numerator">d</div>
+                    <div class="fraction-denominator">dt</div>
+                </div>
             </div>
             <div class={codClasses().join(" ")}>
                 <ObInput
@@ -126,6 +128,7 @@ export default function ContributionCellEditor(props: MorphismEditorProps) {
                 />
             </div>
             <div class="morphism-decl-arrow-replacement">+=</div>
+            <div class="morphism-decl-dom-prefix">𝜆&nbsp;&middot;</div>
             <div class={domClasses().join(" ")}>
                 <ContributionMonomialEditor
                     placeholder="..."
