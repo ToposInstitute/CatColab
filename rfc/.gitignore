@@ -1,0 +1,7 @@
+_site
+_svgs
+
+/.quarto/
+**/*.quarto_ipynb
+
+.auctex-auto
