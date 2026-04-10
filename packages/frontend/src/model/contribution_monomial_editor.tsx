@@ -59,7 +59,7 @@ export function ContributionMonomialEditor(props: ContributionMonomialEditorProp
 
     return (
         <Show
-            when={props.isActive}
+            when={props.isActive || obList().some((ob) => ob === null)}
             fallback={
                 <div
                     class={`${styles.monomial} ${styles.collapsed}`}
