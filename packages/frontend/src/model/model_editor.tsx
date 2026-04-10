@@ -1,4 +1,3 @@
-import { deepEqual } from "fast-equals";
 import { Match, Switch, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
@@ -68,12 +67,8 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
             <Match when={props.content.tag === "object" && liveModel().theory()}>
                 {(theory) => {
                     const obDecl = () => props.content as ObDecl;
-                    const editor = () => {
-                        const override = editorOverrides()?.obEditors?.find((o) =>
-                            deepEqual(o.obType, obDecl().obType),
-                        );
-                        return override?.editor ?? ObjectCellEditor;
-                    };
+                    const editor = () =>
+                        editorOverrides()?.obEditors?.get(obDecl().obType) ?? ObjectCellEditor;
                     return (
                         <Dynamic
                             component={editor()}
@@ -91,12 +86,8 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
             <Match when={props.content.tag === "morphism" && liveModel().theory()}>
                 {(theory) => {
                     const morDecl = () => props.content as MorDecl;
-                    const editor = () => {
-                        const override = editorOverrides()?.morEditors?.find((o) =>
-                            deepEqual(o.morType, morDecl().morType),
-                        );
-                        return override?.editor ?? MorphismCellEditor;
-                    };
+                    const editor = () =>
+                        editorOverrides()?.morEditors?.get(morDecl().morType) ?? MorphismCellEditor;
                     return (
                         <Dynamic
                             component={editor()}

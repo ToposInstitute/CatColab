@@ -5,9 +5,14 @@ export class ObTypeMap<V> {
     private readonly index: ObTypeIndex;
     private readonly values: Array<V>;
 
-    constructor() {
+    constructor(entries?: Iterable<[ObType, V]>) {
         this.index = new ObTypeIndex();
         this.values = [];
+        if (entries) {
+            for (const [key, value] of entries) {
+                this.set(key, value);
+            }
+        }
     }
 
     get(obType: ObType): V | undefined {
@@ -31,9 +36,14 @@ export class MorTypeMap<V> {
     private readonly index: MorTypeIndex;
     private readonly values: Array<V>;
 
-    constructor() {
+    constructor(entries?: Iterable<[MorType, V]>) {
         this.index = new MorTypeIndex();
         this.values = [];
+        if (entries) {
+            for (const [key, value] of entries) {
+                this.set(key, value);
+            }
+        }
     }
 
     get(morType: MorType): V | undefined {

@@ -2,6 +2,7 @@ import { lazy } from "solid-js";
 
 import { ThSymMonoidalCategory } from "catlog-wasm";
 import { Theory, type TheoryMeta } from "../../theory";
+import { MorTypeMap } from "../../theory/types";
 import * as analyses from "../analyses";
 
 export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
@@ -17,17 +18,17 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
                 name: "Petri net (string diagram transitions)",
                 description: "Petri net with a string diagram style transition editor",
                 editorOverrides: {
-                    morEditors: [
-                        {
-                            morType: {
+                    morEditors: new MorTypeMap([
+                        [
+                            {
                                 tag: "Hom" as const,
                                 content: { tag: "Basic" as const, content: "Object" },
                             },
-                            editor: lazy(
+                            lazy(
                                 () => import("../../model/string_diagram_morphism_cell_editor"),
                             ),
-                        },
-                    ],
+                        ],
+                    ]),
                 },
             },
         ],

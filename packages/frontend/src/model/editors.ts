@@ -1,8 +1,9 @@
 import type { Component } from "solid-js";
 
-import type { MorDecl, MorType, ObDecl, ObType } from "catlog-wasm";
+import type { MorDecl, ObDecl } from "catlog-wasm";
 import type { CellActions } from "../notebook";
 import type { Theory } from "../theory";
+import type { MorTypeMap, ObTypeMap } from "../theory/types";
 
 /** Editor overrides for an editor variant of a theory.
 
@@ -10,8 +11,8 @@ Specifies which editor components should replace the defaults for particular
 object or morphism types.
  */
 export type EditorVariantOverrides = {
-    obEditors?: Array<{ obType: ObType; editor: Component<ObjectEditorProps> }>;
-    morEditors?: Array<{ morType: MorType; editor: Component<MorphismEditorProps> }>;
+    obEditors?: ObTypeMap<Component<ObjectEditorProps>>;
+    morEditors?: MorTypeMap<Component<MorphismEditorProps>>;
 };
 
 /** Props for an object cell editor component in a model. */
