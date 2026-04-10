@@ -1,0 +1,92 @@
+digraph rust_types {
+  rankdir=LR;
+  node [style=filled, fillcolor="#ffffff", fontname="Helvetica"];
+  edge [fontname="Helvetica", fontsize=10];
+
+  subgraph cluster_legend {
+    label="Legend";
+    color="#d8d2a8";
+    style="rounded";
+    fillcolor="#fffde7";
+
+    lk_struct [label="struct", shape=box];
+    lk_enum [label="enum", shape=component, fillcolor="#e8f5e9", color="#5b8a5e"];
+    lk_trait [label="trait", shape=hexagon, fillcolor="#eef6ff", color="#6d8fb3"];
+    lk_type [label="type", shape=ellipse, fillcolor="#f3e5f5", color="#8e6b99"];
+    lk_type -> lk_trait [style=invis];
+    lk_struct -> lk_enum [style=invis];
+
+    ea0 [shape=circle, style=dotted, label="", width=0.15, fixedsize=true]; eb0 [shape=circle, style=dotted, label="", width=0.15, fixedsize=true];
+    ea0 -> eb0 [label="self type", color="darkgreen"];
+    ea1 [shape=circle, style=dotted, label="", width=0.15, fixedsize=true]; eb1 [shape=circle, style=dotted, label="", width=0.15, fixedsize=true];
+    ea1 -> eb1 [label="implements", color="darkblue"];
+    ea2 [shape=circle, style=dotted, label="", width=0.15, fixedsize=true]; eb2 [shape=circle, style=dotted, label="", width=0.15, fixedsize=true];
+    ea2 -> eb2 [label="generic over", color="darkred"];
+    ea3 [shape=circle, style=dotted, label="", width=0.15, fixedsize=true]; eb3 [shape=circle, style=dotted, label="", width=0.15, fixedsize=true];
+    ea3 -> eb3 [label="gives a", color="darkorange"];
+    ea4 [shape=circle, style=dotted, label="", width=0.15, fixedsize=true]; eb4 [shape=circle, style=dotted, label="", width=0.15, fixedsize=true];
+    ea4 -> eb4 [label="uses"];
+    ea5 [shape=circle, style=dotted, label="", width=0.15, fixedsize=true]; eb5 [shape=circle, style=dotted, label="", width=0.15, fixedsize=true];
+    ea5 -> eb5 [label="supertrait", color="pink"];
+    ea6 [shape=circle, style=dotted, label="", width=0.15, fixedsize=true]; eb6 [shape=circle, style=dotted, label="", width=0.15, fixedsize=true];
+    ea6 -> eb6 [label="converts", color="darkcyan"];
+  }
+
+  "AVDCComputad" [label="AVDCComputad", shape=box];
+  "AVDCComputadTop" [label="AVDCComputadTop", shape=box];
+  "DiscreteDblTheory" [label="DiscreteDblTheory", shape=box];
+  "FreeVDblCategory" [label="FreeVDblCategory", shape=box];
+  "ModalDblTheory" [label="ModalDblTheory", shape=box];
+  "ModalOneTheory" [label="ModalOneTheory", shape=box];
+  "NonUnital" [label="NonUnital", shape=box];
+  "UnderlyingCategory" [label="UnderlyingCategory", shape=box];
+  "Unital" [label="Unital", shape=box];
+  "WalkingCategory" [label="WalkingCategory", shape=box];
+  "DblTheory" [label="DblTheory", shape=hexagon, fillcolor="#eef6ff", color="#6d8fb3"];
+  "DblTheoryKind" [label="DblTheoryKind", shape=hexagon, fillcolor="#eef6ff", color="#6d8fb3"];
+  "VDCWithComposites" [label="VDCWithComposites", shape=hexagon, fillcolor="#eef6ff", color="#6d8fb3"];
+  "VDblCategory" [label="VDblCategory", shape=hexagon, fillcolor="#eef6ff", color="#6d8fb3"];
+  "ModalType" [label="ModalType", shape=ellipse, fillcolor="#f3e5f5", color="#8e6b99"];
+  "ModalVDblComputad" [label="ModalVDblComputad", shape=ellipse, fillcolor="#f3e5f5", color="#8e6b99"];
+  impl_0 [label="impl", shape=diamond, fillcolor="#fff3e0", color="#d08b2d"];
+  "UnderlyingCategory" -> impl_0 [color="darkgreen"];
+  "VDblCategory" -> impl_0 [color="darkred"];
+  impl_0 -> "Category" [color="darkblue"];
+  "FreeVDblCategory" -> "VDblCategory" [color="darkblue"];
+  "WalkingCategory" -> "VDblCategory" [color="darkblue"];
+  "WalkingCategory" -> "VDCWithComposites" [color="darkblue"];
+  "DiscreteDblTheory" -> "VDblCategory" [color="darkblue"];
+  "DiscreteDblTheory" -> "VDCWithComposites" [color="darkblue"];
+  "DiscreteDblTheory" -> "DblTheory" [color="darkblue"];
+  impl_77 [label="impl", shape=diamond, fillcolor="#fff3e0", color="#d08b2d"];
+  "ModalOneTheory" -> impl_77 [color="darkgreen"];
+  "DblTheoryKind" -> impl_77 [color="darkred"];
+  impl_77 -> "Category" [color="darkblue"];
+  impl_80 [label="impl", shape=diamond, fillcolor="#fff3e0", color="#d08b2d"];
+  "ModalDblTheory" -> impl_80 [color="darkgreen"];
+  "DblTheoryKind" -> impl_80 [color="darkred"];
+  impl_80 -> "VDblCategory" [color="darkblue"];
+  impl_81 [label="impl", shape=diamond, fillcolor="#fff3e0", color="#d08b2d"];
+  "ModalDblTheory" -> impl_81 [color="darkgreen"];
+  "DblTheoryKind" -> impl_81 [color="darkred"];
+  impl_81 -> "VDCWithComposites" [color="darkblue"];
+  "ModalDblTheory" -> "DblTheory" [color="darkblue"];
+  "Unital" -> "DblTheoryKind" [color="darkblue"];
+  "NonUnital" -> "DblTheoryKind" [color="darkblue"];
+  "AVDCComputadTop" -> "Path" [color="darkorange"];
+  "AVDCComputadTop" -> "ShortPath" [color="darkorange"];
+  "AVDCComputad" -> "AVDCComputadTop" [color="darkorange"];
+  "DiscreteDblTheory" -> "QualifiedFpCategory" [color="darkorange"];
+  "ModalDblTheory" -> "ComputadTop" [color="darkorange"];
+  "ModalDblTheory" -> "AVDCComputadTop" [color="darkorange"];
+  "ModalDblTheory" -> "ModalType" [color="darkorange"];
+  "ModalOneTheory" -> "ModalDblTheory" [color="darkorange"];
+  "ModalVDblComputad" -> "AVDCComputad" [color="darkorange"];
+  "ModalVDblComputad" -> "ModalOneTheory" [color="darkorange"];
+  "VDCWithComposites" -> "VDblCategory" [color="pink"];
+  "Category" [label="Category\n(external)", shape=hexagon, fillcolor="#eef6ff", color="#6d8fb3", style="filled,dashed"];
+  "ComputadTop" [label="ComputadTop\n(external)", shape=box, style="filled,dashed"];
+  "Path" [label="Path\n(external)", shape=box, style="filled,dashed"];
+  "QualifiedFpCategory" [label="QualifiedFpCategory\n(external)", shape=box, style="filled,dashed"];
+  "ShortPath" [label="ShortPath\n(external)", shape=box, style="filled,dashed"];
+}
