@@ -58,72 +58,55 @@ export async function createModel(
     return api.createDoc(init);
 }
 
-/** Migrate a model document to a different theory, or switch its editor variant.
+/** Switch the editor variant of a model document.
+
+This is a purely frontend operation that changes which editor components are
+used for the model's cells without altering the underlying theory or data.
  */
-export async function switchTheoryOrEditor(
+export function switchEditorVariant(liveModel: LiveModelDoc, editorVariant: string | undefined) {
+    const { changeDoc } = liveModel.liveDoc;
+    changeDoc((doc) => {
+        if (editorVariant) {
+            doc.editorVariant = editorVariant;
+        } else {
+            delete doc.editorVariant;
+        }
+    });
+}
+
+/** Migrate a model document from one theory to another. */
+export async function migrateModelDocument(
     liveModel: LiveModelDoc,
-    editorOrModelId: string,
+    targetTheoryId: string,
     theories: TheoryLibrary,
 ) {
     const { doc, changeDoc } = liveModel.liveDoc;
-
-    let targetBaseId: string = editorOrModelId;
-    let targetEditorVariant: string | undefined;
-    const isEditor = theories.isEditorVariant(editorOrModelId);
-    if (isEditor) {
-        const base = theories.getBaseTheoryId(editorOrModelId);
-        invariant(base !== undefined, "Editor variant must have a base theory");
-        targetBaseId = base;
-        targetEditorVariant = editorOrModelId;
-    }
-
-    // If only the editor variant is changing (same base theory), just flip the field.
-    if (targetBaseId === doc.theory) {
-        changeDoc((doc) => {
-            if (targetEditorVariant) {
-                doc.editorVariant = targetEditorVariant;
-            } else {
-                delete doc.editorVariant;
-            }
-        });
-        return;
-    }
-
-    // Real theory migration below.
-    const targetTheory = await theories.get(targetBaseId);
+    const targetTheory = await theories.get(targetTheoryId);
     const theory = liveModel.theory();
     let model = liveModel.elaboratedModel();
     invariant(theory && model); // FIXME: Should fail gracefully.
 
     // Trivial migration.
-    if (!NotebookUtils.hasFormalCells(doc.notebook) || theory.inclusions.includes(targetBaseId)) {
+    if (!NotebookUtils.hasFormalCells(doc.notebook) || theory.inclusions.includes(targetTheoryId)) {
         changeDoc((doc) => {
-            doc.theory = targetBaseId;
-            if (targetEditorVariant) {
-                doc.editorVariant = targetEditorVariant;
-            } else {
-                delete doc.editorVariant;
-            }
+            doc.theory = targetTheoryId;
+            delete doc.editorVariant;
         });
         return;
     }
 
     // Pushforward migration.
-    const migration = theory.pushforwards.find((m) => m.target === targetBaseId);
+    const migration = theory.pushforwards.find((m) => m.target === targetTheoryId);
     if (!migration) {
-        throw new Error(`No migration defined from ${theory.id} to ${targetBaseId}`);
+        throw new Error(`No migration defined from ${theory.id} to ${targetTheoryId}`);
     }
     // TODO: We need a general method to propagate changes from catlog models to
     // notebooks. This stop-gap solution only works because pushforward
     // migration doesn't have to create/delete cells, only update types.
     model = migration.migrate(model, targetTheory.theory);
     changeDoc((doc) => {
-        doc.theory = targetBaseId;
-        if (targetEditorVariant) {
-            doc.editorVariant = targetEditorVariant;
-        } else {
-            delete doc.editorVariant;
-        }
+        doc.theory = targetTheoryId;
+        delete doc.editorVariant;
         for (const judgment of NotebookUtils.getFormalContent(doc.notebook)) {
             if (judgment.tag === "object") {
                 judgment.obType = model.obType({

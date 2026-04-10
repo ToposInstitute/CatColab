@@ -1,7 +1,7 @@
 import { NotebookUtils } from "../notebook";
 import { stdTheories } from "../stdlib";
 import { TheorySelectorDialog } from "../theory/theory_selector";
-import { type LiveModelDoc, switchTheoryOrEditor } from "./document";
+import { type LiveModelDoc, migrateModelDocument, switchEditorVariant } from "./document";
 
 /** Widget in the top right corner of a model document pane.
  */
@@ -23,12 +23,23 @@ export function ModelInfo(props: { liveModel: LiveModelDoc }) {
         }
     };
 
+    const setTheoryOrEditor = (id: string) => {
+        if (stdTheories.isEditorVariant(id)) {
+            switchEditorVariant(props.liveModel, id);
+        } else if (id === liveDoc().doc.theory) {
+            // Selecting the base theory clears any active editor variant.
+            switchEditorVariant(props.liveModel, undefined);
+        } else {
+            void migrateModelDocument(props.liveModel, id, stdTheories);
+        }
+    };
+
     return (
         <TheorySelectorDialog
             theoryMeta={stdTheories.getMetadata(
                 liveDoc().doc.editorVariant ?? liveDoc().doc.theory,
             )}
-            setTheory={(id) => switchTheoryOrEditor(props.liveModel, id, stdTheories)}
+            setTheory={setTheoryOrEditor}
             theories={selectableTheories()}
         />
     );
