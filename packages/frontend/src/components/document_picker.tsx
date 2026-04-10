@@ -258,6 +258,12 @@ function DocSearchInput(
                 showCompletionsOnFocus={true}
                 popupClass="document-picker-completions"
                 completionsEmptyText="No results"
+                hasBlurred={() => {
+                    const text = inputText();
+                    if (tryParseRefId(text) !== null) {
+                        onSubmit(text);
+                    }
+                }}
                 interceptKeyDown={(evt) => {
                     if (evt.key === "Escape" && props.onCancel) {
                         props.onCancel();

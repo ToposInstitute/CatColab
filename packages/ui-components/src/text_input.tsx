@@ -22,6 +22,9 @@ export type TextInputOptions = TextInputActions & {
     /** Called when component has received focus. */
     hasFocused?: () => void;
 
+    /** Called when component has lost focus. */
+    hasBlurred?: () => void;
+
     /** List of possible auto-completions. */
     completions?: Completion[];
 
@@ -102,6 +105,7 @@ type TextInputActions = {
 const TEXT_INPUT_OPTIONS = [
     "isActive",
     "hasFocused",
+    "hasBlurred",
     "completions",
     "showCompletionsOnFocus",
     "popupClass",
@@ -221,6 +225,8 @@ export function TextInput(allProps: TextInputProps) {
                     use:focus={(isFocused) => {
                         if (isFocused) {
                             options.hasFocused?.();
+                        } else {
+                            options.hasBlurred?.();
                         }
                         if (!isFocused || options.showCompletionsOnFocus) {
                             setCompletionsOpen(isFocused);
