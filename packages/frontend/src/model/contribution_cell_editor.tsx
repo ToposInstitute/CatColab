@@ -2,8 +2,11 @@ import { createMemo, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { NameInput } from "catcolab-ui-components";
+import type { Ob } from "catlog-wasm";
 import { LiveModelContext } from "./context";
+import { ContributionMonomialEditor } from "./contribution_monomial_editor";
 import type { MorphismEditorProps } from "./editors";
+import { unwrapApp, wrapApp } from "./ob_operations";
 import { obClasses } from "./object_cell_editor";
 import { ObInput } from "./object_input";
 
@@ -43,10 +46,7 @@ export default function ContributionCellEditor(props: MorphismEditorProps) {
     const domClasses = () => ["morphism-decl-dom", ...obClasses(props.theory, domType())];
     const codClasses = () => ["morphism-decl-cod", ...obClasses(props.theory, codType())];
 
-    const nameClasses = () => [
-        "morphism-decl-name",
-        ...(morTypeMeta()?.textClasses ?? []),
-    ];
+    const nameClasses = () => ["morphism-decl-name", ...(morTypeMeta()?.textClasses ?? [])];
 
     const errors = () => {
         const validated = liveModel().validatedModel();
@@ -54,6 +54,21 @@ export default function ContributionCellEditor(props: MorphismEditorProps) {
             return [];
         }
         return validated.errors.filter((err) => err.content === props.morphism.id);
+    };
+
+    const domApplyOp = () => morTypeMeta()?.domain?.apply;
+
+    const domOb = () => {
+        const op = domApplyOp();
+        return op ? unwrapApp(props.morphism.dom, op) : props.morphism.dom;
+    };
+
+    const setDomOb = (ob: Ob | null) => {
+        const op = domApplyOp();
+        const wrapped = ob && op ? wrapApp(ob, op) : ob;
+        props.modifyMorphism((mor) => {
+            mor.dom = wrapped;
+        });
     };
 
     return (
@@ -112,16 +127,11 @@ export default function ContributionCellEditor(props: MorphismEditorProps) {
             </div>
             <div class="morphism-decl-arrow-replacement">+=</div>
             <div class={domClasses().join(" ")}>
-                <ObInput
+                <ContributionMonomialEditor
                     placeholder="..."
-                    ob={props.morphism.dom}
-                    setOb={(ob) => {
-                        props.modifyMorphism((mor) => {
-                            mor.dom = ob;
-                        });
-                    }}
+                    ob={domOb()}
+                    setOb={setDomOb}
                     obType={domType()}
-                    applyOp={morTypeMeta()?.domain?.apply}
                     isInvalid={errors().some((err) => err.tag === "Dom" || err.tag === "DomType")}
                     isActive={props.isActive && activeInput() === "dom"}
                     deleteBackward={() => setActiveInput("name")}
