@@ -1,25 +1,14 @@
 import { deepEqual } from "fast-equals";
-import {
-    batch,
-    createEffect,
-    createSignal,
-    For,
-    Index,
-    type JSX,
-    mergeProps,
-    Show,
-    untrack,
-    useContext,
-} from "solid-js";
+import { Index, Show, useContext } from "solid-js";
+import type { JSX } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { TextInputOptions } from "catcolab-ui-components";
-import type { Ob, QualifiedName } from "catlog-wasm";
-import { ObIdInput } from "../components";
-import { deepCopyJSON } from "../util/deepcopy";
+import type { Ob } from "catlog-wasm";
 import { LiveModelContext } from "./context";
-import { buildObList, extractObList } from "./ob_operations";
+import { extractObList } from "./ob_operations";
 import type { ObInputProps } from "./object_input";
+import { ObListEditor } from "./object_list_editor";
 
 import styles from "./contribution_monomial_editor.module.css";
 
@@ -52,66 +41,11 @@ function countObjects(objects: Array<Ob | null>): RunEntry[] {
 }
 
 /** Edits a list of objects, displaying repeated objects with superscript counts when not editing. */
-export function ContributionMonomialEditor(originalProps: ContributionMonomialEditorProps) {
-    const props = mergeProps(
-        {
-            insertKey: ",",
-            startDelimiter: <div class={styles.delimiter}>{"["}</div>,
-            endDelimiter: <div class={styles.delimiter}>{"]"}</div>,
-            separator: () => <div class={styles.separator}>{","}</div>,
-        },
-        originalProps,
-    );
-
+export function ContributionMonomialEditor(props: ContributionMonomialEditorProps) {
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 
-    const [activeIndex, setActiveIndex] = createSignal<number>(0);
-
-    const modeAppType = () => {
-        if (props.obType.tag !== "ModeApp") {
-            throw new Error(`Object type should be a list modality, received: ${props.obType}`);
-        }
-        return props.obType;
-    };
-
     const obList = (): Array<Ob | null> => extractObList(props.ob);
-
-    const setObList = (objects: Array<Ob | null>) => {
-        props.setOb(buildObList(modeAppType().content.modality, objects));
-    };
-
-    const updateObList = (f: (objects: Array<Ob | null>) => void) => {
-        const objects = deepCopyJSON(obList());
-        f(objects);
-        setObList(objects);
-    };
-
-    const insertNewOb = (i: number) => {
-        batch(() => {
-            updateObList((objects) => {
-                objects.splice(i, 0, null);
-            });
-            setActiveIndex(i);
-        });
-    };
-
-    const completions = (): QualifiedName[] | undefined =>
-        liveModel().elaboratedModel()?.obGeneratorsWithType(modeAppType().content.obType);
-
-    // Make the default value the empty list, rather than null.
-    createEffect(() => {
-        if (!props.ob) {
-            setObList([]);
-        }
-    });
-
-    // Insert into new object into empty list when focus is gained.
-    createEffect(() => {
-        if (props.isActive && untrack(obList).length === 0) {
-            insertNewOb(0);
-        }
-    });
 
     const runs = () => countObjects(obList());
 
@@ -150,96 +84,27 @@ export function ContributionMonomialEditor(originalProps: ContributionMonomialEd
                 </div>
             }
         >
-            <ul
-                class={styles.monomial}
-                onMouseDown={(evt) => {
-                    if (obList().length === 0) {
-                        insertNewOb(0);
-                        props.hasFocused?.();
-                        evt.preventDefault();
-                    }
-                }}
-            >
-                {props.startDelimiter}
-                <Index each={obList()} fallback={<input class={styles.emptyInput} />}>
-                    {(ob, i) => (
-                        <li>
-                            <Show when={i > 0 && props.separator}>{(sep) => sep()(i)}</Show>
-                            <ObIdInput
-                                ob={ob()}
-                                setOb={(ob) => {
-                                    updateObList((objects) => {
-                                        objects[i] = ob;
-                                    });
-                                }}
-                                placeholder={props.placeholder}
-                                idToLabel={(id) =>
-                                    liveModel().elaboratedModel()?.obGeneratorLabel(id)
-                                }
-                                labelToId={(label) =>
-                                    liveModel().elaboratedModel()?.obGeneratorWithLabel(label)
-                                }
-                                completions={completions()}
-                                isActive={props.isActive && activeIndex() === i}
-                                deleteBackward={() =>
-                                    batch(() => {
-                                        updateObList((objects) => {
-                                            objects.splice(i, 1);
-                                        });
-                                        if (i === 0) {
-                                            props.deleteBackward?.();
-                                        } else {
-                                            setActiveIndex(i - 1);
-                                        }
-                                    })
-                                }
-                                deleteForward={() => {
-                                    batch(() => {
-                                        updateObList((objects) => {
-                                            objects.splice(i, 1);
-                                        });
-                                        if (i === 0) {
-                                            props.deleteForward?.();
-                                        }
-                                    });
-                                }}
-                                exitBackward={() => props.exitBackward?.()}
-                                exitForward={() => props.exitForward?.()}
-                                exitLeft={() => {
-                                    if (i === 0) {
-                                        props.exitLeft?.();
-                                    } else {
-                                        setActiveIndex(i - 1);
-                                    }
-                                }}
-                                exitRight={() => {
-                                    if (i === obList().length - 1) {
-                                        props.exitRight?.();
-                                    } else {
-                                        setActiveIndex(i + 1);
-                                    }
-                                }}
-                                interceptKeyDown={(evt) => {
-                                    if (evt.key === props.insertKey) {
-                                        insertNewOb(i + 1);
-                                        return true;
-                                    } else if (evt.key === "Home" && !evt.shiftKey) {
-                                        setActiveIndex(0);
-                                    } else if (evt.key === "End" && !evt.shiftKey) {
-                                        setActiveIndex(obList().length - 1);
-                                    }
-                                    return false;
-                                }}
-                                hasFocused={() => {
-                                    setActiveIndex(i);
-                                    props.hasFocused?.();
-                                }}
-                            />
-                        </li>
-                    )}
-                </Index>
-                {props.endDelimiter}
-            </ul>
+            <div class={styles.monomial}>
+                <ObListEditor
+                    ob={props.ob}
+                    setOb={props.setOb}
+                    obType={props.obType}
+                    placeholder={props.placeholder}
+                    isInvalid={props.isInvalid}
+                    isActive={props.isActive}
+                    deleteBackward={props.deleteBackward}
+                    deleteForward={props.deleteForward}
+                    exitBackward={props.exitBackward}
+                    exitForward={props.exitForward}
+                    exitLeft={props.exitLeft}
+                    exitRight={props.exitRight}
+                    hasFocused={props.hasFocused}
+                    insertKey={props.insertKey ?? ","}
+                    startDelimiter={<div class={styles.delimiter}>{"["}</div>}
+                    endDelimiter={<div class={styles.delimiter}>{"]"}</div>}
+                    separator={() => <div class={styles.separator}>{","}</div>}
+                />
+            </div>
         </Show>
     );
 }

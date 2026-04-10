@@ -23,9 +23,7 @@
     flex-direction: column;
     text-align: center;
 
-    .fraction-numerator{
+    .fraction-numerator {
         border-bottom: 1px solid black;
-    }
-    .fraction-denominator {
     }
 }

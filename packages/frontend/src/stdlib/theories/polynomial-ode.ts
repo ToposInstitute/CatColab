@@ -1,9 +1,9 @@
 import { lazy } from "solid-js";
 
 import { ThPolynomialODE } from "catlog-wasm";
+import ContributionCellEditor from "../../model/contribution_cell_editor";
 import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
-import ContributionCellEditor from "../../model/contribution_cell_editor";
 
 const ObjectCellEditor = lazy(() => import("../../model/object_cell_editor"));
 
