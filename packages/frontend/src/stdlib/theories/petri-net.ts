@@ -24,9 +24,7 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
                                 tag: "Hom" as const,
                                 content: { tag: "Basic" as const, content: "Object" },
                             },
-                            lazy(
-                                () => import("../../model/string_diagram_morphism_cell_editor"),
-                            ),
+                            lazy(() => import("../../model/string_diagram_morphism_cell_editor")),
                         ],
                     ]),
                 },

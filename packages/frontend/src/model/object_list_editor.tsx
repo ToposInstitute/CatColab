@@ -16,6 +16,7 @@ import type { Ob, QualifiedName } from "catlog-wasm";
 import { ObIdInput } from "../components";
 import { deepCopyJSON } from "../util/deepcopy";
 import { LiveModelContext } from "./context";
+import { buildObList, extractObList } from "./ob_operations";
 import type { ObInputProps } from "./object_input";
 
 import "./object_list_editor.css";
@@ -52,24 +53,10 @@ export function ObListEditor(originalProps: ObListEditorProps) {
         return props.obType;
     };
 
-    const obList = (): Array<Ob | null> => {
-        if (!props.ob) {
-            return [];
-        }
-        if (props.ob.tag !== "List") {
-            throw new Error(`Object should be a list, received: ${props.ob}`);
-        }
-        return props.ob.content.objects;
-    };
+    const obList = (): Array<Ob | null> => extractObList(props.ob);
 
     const setObList = (objects: Array<Ob | null>) => {
-        props.setOb({
-            tag: "List",
-            content: {
-                modality: modeAppType().content.modality,
-                objects,
-            },
-        });
+        props.setOb(buildObList(modeAppType().content.modality, objects));
     };
 
     const updateObList = (f: (objects: Array<Ob | null>) => void) => {

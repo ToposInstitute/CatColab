@@ -1,4 +1,3 @@
-import { deepEqual } from "fast-equals";
 import { Index, createMemo, createSignal, useContext } from "solid-js";
 import { unwrap } from "solid-js/store";
 import invariant from "tiny-invariant";
@@ -8,6 +7,7 @@ import type { Modality, Ob, ObOp, QualifiedName } from "catlog-wasm";
 import { ObIdInput } from "../components";
 import { LiveModelContext } from "./context";
 import type { MorphismEditorProps } from "./editors";
+import { buildObList, extractObList, unwrapApp, wrapApp } from "./ob_operations";
 
 import styles from "./string_diagram_morphism_cell_editor.module.css";
 
@@ -15,34 +15,6 @@ type ActiveInput =
     | { zone: "name" }
     | { zone: "dom"; index: number }
     | { zone: "cod"; index: number };
-
-/** Unwrap `App(op, ob)` to get the inner `ob`. */
-function unwrapApp(ob: Ob | null, applyOp: ObOp | undefined): Ob | null {
-    if (!ob || !applyOp) {
-        return ob;
-    }
-    if (ob.tag === "App" && deepEqual(ob.content.op, applyOp)) {
-        return ob.content.ob;
-    }
-    return null;
-}
-
-/** Wrap an `ob` with `App(op, ob)`. */
-function wrapApp(ob: Ob | null, applyOp: ObOp | undefined): Ob | null {
-    if (!ob || !applyOp) {
-        return ob;
-    }
-    return { tag: "App", content: { op: applyOp, ob } };
-}
-
-/** Extract the list of objects from a domain/codomain `Ob`. */
-function getObList(ob: Ob | null, applyOp: ObOp | undefined): Array<Ob | null> {
-    const inner = unwrapApp(ob, applyOp);
-    if (inner?.tag === "List") {
-        return inner.content.objects;
-    }
-    return [];
-}
 
 /** A column of wire inputs, used for both domain (left) and codomain (right). */
 function WireColumn(props: {
@@ -170,7 +142,7 @@ export default function StringDiagramMorphismCellEditor(props: MorphismEditorPro
         const domObjType = props.theory.theory.dom(applyOp);
         const modality: Modality =
             domObjType?.tag === "ModeApp" ? domObjType.content.modality : "SymmetricList";
-        return wrapApp({ tag: "List", content: { modality, objects } }, applyOp);
+        return wrapApp(buildObList(modality, objects), applyOp);
     };
 
     const domType = createMemo(() => {
@@ -186,8 +158,14 @@ export default function StringDiagramMorphismCellEditor(props: MorphismEditorPro
         return dt?.tag === "ModeApp" ? dt.content.obType : dt;
     });
 
-    const domObs = () => getObList(props.morphism.dom, domApplyOp());
-    const codObs = () => getObList(props.morphism.cod, codApplyOp());
+    const domObs = () => {
+        const op = domApplyOp();
+        return extractObList(op ? unwrapApp(props.morphism.dom, op) : props.morphism.dom);
+    };
+    const codObs = () => {
+        const op = codApplyOp();
+        return extractObList(op ? unwrapApp(props.morphism.cod, op) : props.morphism.cod);
+    };
 
     const setDomObs = (objects: Array<Ob | null>) => {
         const ob = makeObList(objects, domApplyOp());
