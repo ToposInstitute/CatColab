@@ -13,8 +13,6 @@ import { TheoryLibraryContext, type ModelTypeMeta, type Theory } from "../theory
 import { LiveModelContext } from "./context";
 import type { LiveModelDoc } from "./document";
 import { InstantiationCellEditor } from "./instantiation_cell_editor";
-import { MorphismCellEditor } from "./morphism_cell_editor";
-import { ObjectCellEditor } from "./object_cell_editor";
 import {
     duplicateModelJudgment,
     newInstantiatedModel,
@@ -68,7 +66,8 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
                 {(theory) => {
                     const obDecl = () => props.content as ObDecl;
                     const editor = () =>
-                        editorOverrides()?.obEditors?.get(obDecl().obType) ?? ObjectCellEditor;
+                        editorOverrides()?.obEditors?.get(obDecl().obType) ??
+                        theory().modelObTypeMeta(obDecl().obType)?.editor;
                     return (
                         <Dynamic
                             component={editor()}
@@ -87,7 +86,8 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
                 {(theory) => {
                     const morDecl = () => props.content as MorDecl;
                     const editor = () =>
-                        editorOverrides()?.morEditors?.get(morDecl().morType) ?? MorphismCellEditor;
+                        editorOverrides()?.morEditors?.get(morDecl().morType) ??
+                        theory().modelMorTypeMeta(morDecl().morType)?.editor;
                     return (
                         <Dynamic
                             component={editor()}

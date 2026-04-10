@@ -1,6 +1,11 @@
+import { lazy } from "solid-js";
+
 import { ThSchema } from "catlog-wasm";
 import { type DiagramAnalysisMeta, Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
+
+const ObjectCellEditor = lazy(() => import("../../model/object_cell_editor"));
+const MorphismCellEditor = lazy(() => import("../../model/morphism_cell_editor"));
 
 import styles from "../styles.module.css";
 import svgStyles from "../svg_styles.module.css";
@@ -35,6 +40,7 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
             {
                 tag: "ObType",
                 obType: { tag: "Basic", content: "Entity" },
+                editor: ObjectCellEditor,
                 name: "Entity",
                 description: "Type of entity or thing",
                 shortcut: ["O"],
@@ -48,6 +54,7 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
                     tag: "Hom",
                     content: { tag: "Basic", content: "Entity" },
                 },
+                editor: MorphismCellEditor,
                 name: "Mapping",
                 description: "Many-to-one relation between entities",
                 shortcut: ["M"],
@@ -56,6 +63,7 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
             {
                 tag: "MorType",
                 morType: { tag: "Basic", content: "Attr" },
+                editor: MorphismCellEditor,
                 name: "Attribute",
                 description: "Data attribute of an entity",
                 shortcut: ["A"],
@@ -64,6 +72,7 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
             {
                 tag: "ObType",
                 obType: { tag: "Basic", content: "AttrType" },
+                editor: ObjectCellEditor,
                 name: "Attribute type",
                 description: "Data type for an attribute",
                 textClasses: [textStyles.code],
@@ -74,6 +83,7 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
                     tag: "Hom",
                     content: { tag: "Basic", content: "AttrType" },
                 },
+                editor: MorphismCellEditor,
                 name: "Operation",
                 description: "Operation on data types for attributes",
                 textClasses: [textStyles.code],

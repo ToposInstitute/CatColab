@@ -6,7 +6,7 @@ import type { ObjectEditorProps } from "./editors";
 import "./object_cell_editor.css";
 
 /** Editor for an object declaration cell in a model. */
-export function ObjectCellEditor(props: ObjectEditorProps) {
+export default function ObjectCellEditor(props: ObjectEditorProps) {
     const cssClasses = () => [
         "formal-judgment",
         "object-decl",

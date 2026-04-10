@@ -11,7 +11,7 @@ import arrowStyles from "../stdlib/arrow_styles.module.css";
 import "./morphism_cell_editor.css";
 
 /** Editor for a morphism declaration cell in a model. */
-export function MorphismCellEditor(props: MorphismEditorProps) {
+export default function MorphismCellEditor(props: MorphismEditorProps) {
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 
