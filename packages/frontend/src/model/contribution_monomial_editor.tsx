@@ -68,10 +68,10 @@ export function ContributionMonomialEditor(props: ContributionMonomialEditorProp
                         evt.preventDefault();
                     }}
                 >
-                    <Index each={runs()} fallback={<span class={styles.emptyMonomial} />}>
+                    <Index each={runs()} fallback={<span class={styles.emptyMonomial}>...</span>}>
                         {(run, index) => (
                             <span>
-                                {obLabel(run().ob) ?? "?"}
+                                {obLabel(run().ob) ?? "..."}
                                 <Show when={run().count > 1}>
                                     <sup class={styles.exponent}>{run().count}</sup>
                                 </Show>

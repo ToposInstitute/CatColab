@@ -23,8 +23,7 @@
 }
 
 .emptyMonomial {
-    display: inline-block;
-    width: 0.5ex;
+    color: var(--color-text-placeholder);
 }
 
 .productSeparator {
