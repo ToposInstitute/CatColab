@@ -8,6 +8,7 @@ import type { DblModel, InstantiatedModel, Ob, SpecializeModel } from "catlog-wa
 import { useApi } from "../api";
 import { DocumentPicker, IdInput } from "../components";
 import type { CellActions } from "../notebook";
+import { useUserState } from "../user/user_state_context";
 import { LiveModelContext, ModelLibraryContext } from "./context";
 import { ObInput } from "./object_input";
 
@@ -23,6 +24,7 @@ export function InstantiationCellEditor(props: {
     const api = useApi();
     const params = useParams();
     const liveModel = useContext(LiveModelContext);
+    const userState = useUserState();
 
     const filterCompletions = (refId: string, doc: DocInfo) => {
         if (doc.typeName !== "model") {
@@ -42,6 +44,13 @@ export function InstantiationCellEditor(props: {
     const setRefId = (refId: string | null) => {
         props.modifyInstantiation((inst) => {
             inst.model = refId ? api.makeUnversionedLink(refId, "instantiation") : null;
+            // Auto-fill the name from the selected model's title when unnamed.
+            if (refId && !inst.name) {
+                const docName = userState.documents[refId]?.name;
+                if (docName) {
+                    inst.name = docName;
+                }
+            }
         });
     };
 
