@@ -11,11 +11,14 @@ import type { ValidatedModel } from "./model_library";
 export type ModelDocument = Document & { type: "model" };
 
 /** Create an empty model document. */
-export const newModelDocument = (theory: string, editorVariant?: string): ModelDocument => ({
+export const newModelDocument = (args: {
+    theory: string;
+    editorVariant?: string;
+}): ModelDocument => ({
     name: "",
     type: "model",
-    theory,
-    ...(editorVariant ? { editorVariant } : {}),
+    theory: args.theory,
+    ...(args.editorVariant ? { editorVariant: args.editorVariant } : {}),
     notebook: newNotebook<ModelJudgment>(),
     version: currentVersion(),
 });
@@ -51,7 +54,7 @@ export async function createModel(
 ): Promise<string> {
     let init: ModelDocument;
     if (typeof initOrTheoryId === "string") {
-        init = newModelDocument(initOrTheoryId);
+        init = newModelDocument({ theory: initOrTheoryId });
     } else {
         init = initOrTheoryId;
     }
