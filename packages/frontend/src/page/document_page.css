@@ -10,12 +10,35 @@
     }
 
     & .info {
+        display: flex;
+        align-items: center;
+        gap: 4px;
         font-size: var(--h4-font-size);
     }
 
     & .lucide {
         color: var(--color-gray-800);
     }
+}
+
+.settings-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.settings-title {
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.settings-option {
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+    cursor: pointer;
+    font-size: 1rem;
+    white-space: nowrap;
 }
 
 .resizeable-panels {

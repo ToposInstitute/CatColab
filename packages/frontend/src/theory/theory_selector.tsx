@@ -59,9 +59,7 @@ export function TheorySelector(props: TheorySelectorProps) {
     invariant(theories, "Library of theories should be provided as context");
 
     const groupedTheories = createMemo(() =>
-        Array.from(
-            theories.groupedMetadata(props.theories, { includeEditorVariants: true }).entries(),
-        ),
+        Array.from(theories.groupedMetadata(props.theories).entries()),
     );
 
     return (

@@ -12,24 +12,28 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
         ...theoryMeta,
         theory: thSymMonoidalCategory.theory(),
         onlyFreeModels: true,
-        editorVariants: [
-            {
-                id: "editor-variant-petri-net-string-diagram",
-                name: "Petri net (string diagram transitions)",
-                description: "Petri net with a string diagram style transition editor",
-                editorOverrides: {
-                    morEditors: new MorTypeMap([
-                        [
-                            {
-                                tag: "Hom" as const,
-                                content: { tag: "Basic" as const, content: "Object" },
-                            },
-                            lazy(() => import("../../model/string_diagram_morphism_cell_editor")),
-                        ],
-                    ]),
+        editorVariants: {
+            defaultLabel: "List transitions",
+            variants: [
+                {
+                    id: "editor-variant-petri-net-string-diagram",
+                    label: "String diagram transitions",
+                    editorOverrides: {
+                        morEditors: new MorTypeMap([
+                            [
+                                {
+                                    tag: "Hom" as const,
+                                    content: { tag: "Basic" as const, content: "Object" },
+                                },
+                                lazy(
+                                    () => import("../../model/string_diagram_morphism_cell_editor"),
+                                ),
+                            ],
+                        ]),
+                    },
                 },
-            },
-        ],
+            ],
+        },
         modelTypes: [
             {
                 tag: "ObType",

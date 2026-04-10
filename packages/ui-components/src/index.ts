@@ -1,5 +1,6 @@
 export * from "./alert";
 export * from "./block_title";
+export * from "./settings_disclosure";
 export * from "./button";
 export * from "./completions";
 export * from "./dialog";

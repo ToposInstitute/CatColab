@@ -6,26 +6,27 @@ import { uniqueIndexArray } from "../util/indexing";
 import type { ArrowStyle } from "../visualization";
 import { MorTypeMap, ObTypeMap } from "./types";
 
-/** Display metadata for an editor variant of a theory.
+/** Editor variants for a theory.
 
-An editor variant shares the same underlying double theory but uses different
-editor components for some types (e.g., a string diagram editor for morphisms).
+A theory can offer alternative editor components for some of its types (e.g., a
+string diagram editor for morphisms). This type groups the default label with the
+list of available variants.
  */
-export type EditorVariantMeta = {
+export type EditorVariants = {
+    /** Label for the default (non-variant) option in the settings radio group. */
+    defaultLabel: string;
+
+    /** Available editor variants. */
+    variants: EditorVariant[];
+};
+
+/** A single editor variant of a theory. */
+export type EditorVariant = {
     /** Unique identifier of the editor variant. */
     id: string;
 
-    /** Human-readable name for the editor variant. */
-    name: string;
-
-    /** Short description of the editor variant. */
-    description: string;
-
-    /** Two-letter icon abbreviation for the editor variant. */
-    iconLetters?: [string, string];
-
-    /** Group to which the editor variant belongs. */
-    group?: string;
+    /** Label for this variant in the settings radio group. */
+    label: string;
 
     /** Editor component overrides for this editor variant.
 
@@ -96,10 +97,9 @@ export class Theory {
 
     /** Editor variants of this theory.
 
-    Each editor variant appears as a separate selectable option in the theory
-    picker but shares the same underlying theory — only the editors differ.
+    When defined, the theory offers alternative editor components for some types.
      */
-    readonly editorVariants: EditorVariantMeta[];
+    readonly editorVariants?: EditorVariants;
 
     private readonly modelObTypeMap: ObTypeMap<ModelObTypeMeta>;
     private readonly modelMorTypeMap: MorTypeMap<ModelMorTypeMeta>;
@@ -120,7 +120,7 @@ export class Theory {
         description: string;
         inclusions?: string[];
         pushforwards?: ModelMigration[];
-        editorVariants?: EditorVariantMeta[];
+        editorVariants?: EditorVariants;
         modelTypes?: ModelTypeMeta[];
         modelAnalyses?: ModelAnalysisMeta[];
         onlyFreeModels?: boolean;
@@ -138,7 +138,7 @@ export class Theory {
         this.pushforwards = props.pushforwards ?? [];
 
         // Editor variants.
-        this.editorVariants = props.editorVariants ?? [];
+        this.editorVariants = props.editorVariants;
 
         // Models.
         this.name = props.name;

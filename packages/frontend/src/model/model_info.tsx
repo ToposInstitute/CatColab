@@ -1,46 +1,72 @@
+import { For } from "solid-js";
+
 import { NotebookUtils } from "../notebook";
+import { DocumentHead } from "../page/document_head";
 import { stdTheories } from "../stdlib";
 import { TheorySelectorDialog } from "../theory/theory_selector";
 import { type LiveModelDoc, migrateModelDocument, switchEditorVariant } from "./document";
 
-/** Widget in the top right corner of a model document pane.
+/** Document head for a model, including title, theory selector, and editor
+variant settings.
  */
-export function ModelInfo(props: { liveModel: LiveModelDoc }) {
+export function ModelDocumentHead(props: { liveModel: LiveModelDoc }) {
     const liveDoc = () => props.liveModel.liveDoc;
 
     const selectableTheories = () => {
         if (NotebookUtils.hasFormalCells(liveDoc().doc.notebook)) {
-            const theory = props.liveModel.theory();
-            if (!theory) {
-                return [];
-            }
-            const baseId = liveDoc().doc.theory;
-            const editorVariantIds = stdTheories.getEditorVariantIds(baseId);
-            return [baseId, ...editorVariantIds, ...theory.migrationTargets];
+            return props.liveModel.theory()?.migrationTargets ?? [];
         } else {
             // If the model has no formal cells, allow any theory to be selected.
             return undefined;
         }
     };
 
-    const setTheoryOrEditor = (id: string) => {
-        if (stdTheories.isEditorVariant(id)) {
-            switchEditorVariant(props.liveModel, id);
-        } else if (id === liveDoc().doc.theory) {
-            // Selecting the base theory clears any active editor variant.
-            switchEditorVariant(props.liveModel, undefined);
-        } else {
-            void migrateModelDocument(props.liveModel, id, stdTheories);
+    const editorVariants = () => props.liveModel.theory()?.editorVariants;
+
+    const settingsPane = () => {
+        const ev = editorVariants();
+        if (!ev || ev.variants.length === 0) {
+            return undefined;
         }
+        const currentVariant = liveDoc().doc.editorVariant;
+        return (
+            <div class="settings-group">
+                <div class="settings-title">Editor variants</div>
+                <label class="settings-option">
+                    <input
+                        type="radio"
+                        name="editor-variant"
+                        value=""
+                        checked={!ev.variants.some((v) => v.id === currentVariant)}
+                        onChange={() => switchEditorVariant(props.liveModel, undefined)}
+                    />
+                    {ev.defaultLabel}
+                </label>
+                <For each={ev.variants}>
+                    {(variant) => (
+                        <label class="settings-option">
+                            <input
+                                type="radio"
+                                name="editor-variant"
+                                value={variant.id}
+                                checked={currentVariant === variant.id}
+                                onChange={() => switchEditorVariant(props.liveModel, variant.id)}
+                            />
+                            {variant.label}
+                        </label>
+                    )}
+                </For>
+            </div>
+        );
     };
 
     return (
-        <TheorySelectorDialog
-            theoryMeta={stdTheories.getMetadata(
-                liveDoc().doc.editorVariant ?? liveDoc().doc.theory,
-            )}
-            setTheory={setTheoryOrEditor}
-            theories={selectableTheories()}
-        />
+        <DocumentHead liveDoc={liveDoc()} settingsPane={settingsPane()} iconSize={24}>
+            <TheorySelectorDialog
+                theoryMeta={stdTheories.getMetadata(liveDoc().doc.theory)}
+                setTheory={(id) => void migrateModelDocument(props.liveModel, id, stdTheories)}
+                theories={selectableTheories()}
+            />
+        </DocumentHead>
     );
 }

@@ -1,10 +1,9 @@
 import { A, useNavigate } from "@solidjs/router";
 import CircleHelp from "lucide-solid/icons/circle-help";
-import { type JSX, useContext } from "solid-js";
-import invariant from "tiny-invariant";
+import type { JSX } from "solid-js";
 
 import { IconButton } from "catcolab-ui-components";
-import { TheoryLibraryContext, type TheoryMeta } from "../theory";
+import type { TheoryMeta } from "../theory";
 import { DefaultAppMenu } from "./menubar";
 
 import "./toolbar.css";
@@ -59,14 +58,10 @@ function theoryHelpTooltip(meta: TheoryMeta) {
 
 export function TheoryHelpButton(props: { meta: TheoryMeta }) {
     const navigate = useNavigate();
-    const theories = useContext(TheoryLibraryContext);
-    invariant(theories, "Library of theories must be provided as context");
-
-    const helpId = () => theories.getBaseTheoryId(props.meta.id) ?? props.meta.id;
 
     return (
         <IconButton
-            onClick={() => navigate(`/help/logics/${helpId()}`)}
+            onClick={() => navigate(`/help/logics/${props.meta.id}`)}
             tooltip={theoryHelpTooltip(props.meta)}
         >
             <CircleHelp />
