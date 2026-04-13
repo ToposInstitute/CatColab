@@ -1,18 +1,15 @@
 import { HistoryNavigator } from "catcolab-ui-components";
-import { type SnapshotHistory, useSnapshotHistory } from "./use_snapshot_history";
+import type { SnapshotHistory } from "./use_snapshot_history";
 
-export function HistorySidebar(props: { refId: string; history?: SnapshotHistory }) {
-    const ownHistory = useSnapshotHistory(() => props.refId);
-    const history = () => props.history ?? ownHistory;
-
+export function HistorySidebar(props: { history: SnapshotHistory }) {
     return (
         <HistoryNavigator
-            items={history().items()}
-            canUndo={history().canUndo()}
-            canRedo={history().canRedo()}
-            onUndo={history().onUndo}
-            onRedo={history().onRedo}
-            onSelect={history().navigate}
+            items={props.history.items()}
+            canUndo={props.history.canUndo()}
+            canRedo={props.history.canRedo()}
+            onUndo={props.history.onUndo}
+            onRedo={props.history.onRedo}
+            onSelect={props.history.navigate}
             undoTooltip="Undo"
             redoTooltip="Redo"
         />
