@@ -16,6 +16,7 @@ import type { Ob, QualifiedName } from "catlog-wasm";
 import { ObIdInput } from "../components";
 import { deepCopyJSON } from "../util/deepcopy";
 import { LiveModelContext } from "./context";
+import { buildObList, extractObList } from "./ob_operations";
 import type { ObInputProps } from "./object_input";
 
 import "./object_list_editor.css";
@@ -45,6 +46,9 @@ export function ObListEditor(originalProps: ObListEditorProps) {
 
     const [activeIndex, setActiveIndex] = createSignal<number>(0);
 
+    // Track which indices have non-empty text (including incomplete input).
+    const inputTexts = new Map<number, string>();
+
     const modeAppType = () => {
         if (props.obType.tag !== "ModeApp") {
             throw new Error(`Object type should be a list modality, received: ${props.obType}`);
@@ -52,24 +56,10 @@ export function ObListEditor(originalProps: ObListEditorProps) {
         return props.obType;
     };
 
-    const obList = (): Array<Ob | null> => {
-        if (!props.ob) {
-            return [];
-        }
-        if (props.ob.tag !== "List") {
-            throw new Error(`Object should be a list, received: ${props.ob}`);
-        }
-        return props.ob.content.objects;
-    };
+    const obList = (): Array<Ob | null> => extractObList(props.ob);
 
     const setObList = (objects: Array<Ob | null>) => {
-        props.setOb({
-            tag: "List",
-            content: {
-                modality: modeAppType().content.modality,
-                objects,
-            },
-        });
+        props.setOb(buildObList(modeAppType().content.modality, objects));
     };
 
     const updateObList = (f: (objects: Array<Ob | null>) => void) => {
@@ -104,6 +94,21 @@ export function ObListEditor(originalProps: ObListEditorProps) {
         }
     });
 
+    /** Clean up null placeholders that have no user-entered text. */
+    const deactivate = () => {
+        const objects = obList().filter((ob, i) => ob !== null || (inputTexts.get(i) ?? "") !== "");
+        if (objects.length !== obList().length) {
+            setObList(objects);
+        }
+    };
+
+    // Clean up when the component becomes inactive.
+    createEffect(() => {
+        if (!props.isActive) {
+            untrack(() => deactivate());
+        }
+    });
+
     return (
         <ul
             class="object-list"
@@ -127,6 +132,7 @@ export function ObListEditor(originalProps: ObListEditorProps) {
                                     objects[i] = ob;
                                 });
                             }}
+                            onTextChange={(text) => inputTexts.set(i, text)}
                             placeholder={props.placeholder}
                             idToLabel={(id) => liveModel().elaboratedModel()?.obGeneratorLabel(id)}
                             labelToId={(label) =>

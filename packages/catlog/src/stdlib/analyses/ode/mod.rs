@@ -73,10 +73,12 @@ pub mod kuramoto;
 pub mod linear_ode;
 pub mod lotka_volterra;
 pub mod mass_action;
+pub mod polynomial_ode;
 pub mod signed_coefficients;
 
 pub use kuramoto::*;
 pub use linear_ode::*;
 pub use lotka_volterra::*;
 pub use mass_action::*;
+pub use polynomial_ode::*;
 pub use signed_coefficients::*;

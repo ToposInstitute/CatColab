@@ -53,7 +53,7 @@ pub struct AnalysisDocumentContent {
 )]
 #[cfg_attr(
     feature = "backend",
-    ts(export, export_to = "user_state.ts", rename_all = "lowercase")
+    ts(export_to = "user_state.ts", rename_all = "lowercase")
 )]
 #[serde(rename_all = "lowercase")]
 #[tsify(into_wasm_abi, from_wasm_abi)]

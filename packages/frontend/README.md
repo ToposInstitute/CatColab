@@ -10,10 +10,7 @@ Install Rust and [pnpm](https://pnpm.io/), then run
 ```sh
 cd packages/frontend
 pnpm install
-pnpm run build:deps
 ```
-
-This installs all the deps, and compiles and generates our local repo dependencies.
 
 ## Usage
 
@@ -31,6 +28,9 @@ where `$MODE` is replaced with one of the following:
   default if `--mode` is omitted)
 - `production`: uses the production deployment of CatColab at `catcolab.org`
   (_not_ recommended)
+
+Running the command above builds the Wasm and other local dependencies (by
+running `pnpm run build:deps`) before launching the Vite preview server.
 
 ## Troubleshooting
 

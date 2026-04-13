@@ -10,8 +10,8 @@ use ustr::Ustr;
 use wasm_bindgen::prelude::*;
 
 use catlog::dbl::theory::{
-    self, DblTheory as _, ModalMorType, ModalObOp, ModalObType, ModeApp, TabMorType, TabObOp,
-    TabObType, Unital,
+    self, DblTheory as _, ModalMorType, ModalObOp, ModalObType, ModeApp, NonUnital, TabMorType,
+    TabObOp, TabObType, Unital,
 };
 use catlog::one::{Path, QualifiedPath, ShortPath};
 use catlog::tt::{
@@ -230,8 +230,10 @@ pub enum DblTheoryBox {
     Discrete(Rc<theory::DiscreteDblTheory>),
     /// A discrete tabulator theory.
     DiscreteTab(Rc<theory::DiscreteTabTheory>),
-    /// A modal double theory.
-    Modal(Rc<theory::ModalDblTheory<Unital>>),
+    /// A modal unital double theory.
+    ModalUnital(Rc<theory::ModalDblTheory<Unital>>),
+    /// A modal non-unital double theory.
+    ModalNonUnital(Rc<theory::ModalDblTheory<NonUnital>>),
 }
 
 /// Wasm binding for a double theory.
@@ -245,11 +247,14 @@ impl DblTheory {
     }
 
     /// Tries to convert into a theory usable by DoubleTT.
-    pub fn try_into_tt(&self) -> Option<tt::theory::TheoryDef<Unital>> {
+    pub fn try_into_tt(&self) -> Option<tt::theory::TheoryDef> {
         match &self.0 {
             DblTheoryBox::Discrete(th) => Some(tt::theory::TheoryDef::Discrete(th.clone())),
-            DblTheoryBox::Modal(th) => Some(tt::theory::TheoryDef::Modal(th.clone())),
-            _ => None,
+            DblTheoryBox::DiscreteTab(th) => Some(tt::theory::TheoryDef::DiscreteTab(th.clone())),
+            DblTheoryBox::ModalUnital(th) => Some(tt::theory::TheoryDef::ModalUnital(th.clone())),
+            DblTheoryBox::ModalNonUnital(th) => {
+                Some(tt::theory::TheoryDef::ModalNonUnital(th.clone()))
+            }
         }
     }
 }
@@ -260,7 +265,7 @@ impl DblTheory {
     #[wasm_bindgen(js_name = "hasObType")]
     pub fn has_ob_type(&self, ob_type: ObType) -> Result<bool, String> {
         all_the_same!(match &self.0 {
-            DblTheoryBox::[Discrete, DiscreteTab, Modal](th) => {
+            DblTheoryBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](th) => {
                 Ok(th.has_ob_type(&Elaborator.elab(&ob_type)?))
             }
         })
@@ -270,7 +275,7 @@ impl DblTheory {
     #[wasm_bindgen(js_name = "hasMorType")]
     pub fn has_mor_type(&self, mor_type: MorType) -> Result<bool, String> {
         all_the_same!(match &self.0 {
-            DblTheoryBox::[Discrete, DiscreteTab, Modal](th) => {
+            DblTheoryBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](th) => {
                 Ok(th.has_mor_type(&Elaborator.elab(&mor_type)?))
             }
         })
@@ -280,7 +285,7 @@ impl DblTheory {
     #[wasm_bindgen]
     pub fn src(&self, mor_type: MorType) -> Result<ObType, String> {
         all_the_same!(match &self.0 {
-            DblTheoryBox::[Discrete, DiscreteTab, Modal](th) => {
+            DblTheoryBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](th) => {
                 let mor_type = Elaborator.elab(&mor_type)?;
                 Ok(Quoter.quote(&th.src_type(&mor_type)))
             }
@@ -291,7 +296,7 @@ impl DblTheory {
     #[wasm_bindgen]
     pub fn tgt(&self, mor_type: MorType) -> Result<ObType, String> {
         all_the_same!(match &self.0 {
-            DblTheoryBox::[Discrete, DiscreteTab, Modal](th) => {
+            DblTheoryBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](th) => {
                 let mor_type = Elaborator.elab(&mor_type)?;
                 Ok(Quoter.quote(&th.tgt_type(&mor_type)))
             }
@@ -302,7 +307,7 @@ impl DblTheory {
     #[wasm_bindgen]
     pub fn dom(&self, op: ObOp) -> Result<ObType, String> {
         all_the_same!(match &self.0 {
-            DblTheoryBox::[Discrete, DiscreteTab, Modal](th) => {
+            DblTheoryBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](th) => {
                 let op = Elaborator.elab(&op)?;
                 Ok(Quoter.quote(&th.ob_op_dom(&op)))
             }
@@ -313,20 +318,11 @@ impl DblTheory {
     #[wasm_bindgen]
     pub fn cod(&self, op: ObOp) -> Result<ObType, String> {
         all_the_same!(match &self.0 {
-            DblTheoryBox::[Discrete, DiscreteTab, Modal](th) => {
+            DblTheoryBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](th) => {
                 let op = Elaborator.elab(&op)?;
                 Ok(Quoter.quote(&th.ob_op_cod(&op)))
             }
         })
-    }
-
-    /// Does the theory support instantiating models in other models?
-    ///
-    /// Eventually instantiation should be supported for every double doctrine
-    /// and then this method can be removed.
-    #[wasm_bindgen(js_name = "canInstantiateModels")]
-    pub fn can_instantiate_models(&self) -> bool {
-        !matches!(&self.0, DblTheoryBox::DiscreteTab(_))
     }
 }
 

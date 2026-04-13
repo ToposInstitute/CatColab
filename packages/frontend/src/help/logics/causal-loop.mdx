@@ -35,11 +35,12 @@ Variables can "encourage" or "discourage" each other, determined by the sign (po
 </HelpAnalysisById>
 
 <HelpAnalysisById theory={props.theory} analysisId="linear-ode">
-An arrow $A\xrightarrow{\pm}B$ is interpreted as the equation $\dot{B}=\pm k A$ for some non-negative constant $k$.
-Multiple incoming arrows are interpreted additively, so e.g. $A\xrightarrow{+}B\xleftarrow{-}C$ is interpreted as $\dot{B}=kA-\ell C$.
+    An arrow $A\xrightarrow{\pm}B$ is interpreted as the equation $\dot{B}=\pm k A$ for some non-negative constant $k$.
+    Multiple incoming arrows are interpreted additively, so e.g. $A\xrightarrow{+}B\xleftarrow{-}C$ is interpreted as $\dot{B}=kA-\ell C$.
 </HelpAnalysisById>
 
 <HelpAnalysisById theory={props.theory} analysisId="lotka-volterra">
-An arrow $A\xrightarrow{\pm}B$ is interpreted as the equation $\dot{B}=\pm (kA + g)B$ for some non-negative constant $k$ (the *interaction coefficient*) and constant $g$ (the *growth rate*).
-Multiple incoming arrows are interpreted additively, so e.g. $A\xrightarrow{+}B\xleftarrow{-}C$ is interpreted as $\dot{B}=(kA - \ell C + g)B$.
+    Every variable $A$ has a *growth rate* $g$, corresponding to the equation $\dot{A}\overset{+}{=}gA$.
+    An arrow $A\xrightarrow{\pm}B$ is interpreted as the equation $\dot{B}\overset{+}{=}\pm kAB$ for some non-negative constant $k$ (the *interaction coefficient*).
+    Multiple incoming arrows are interpreted additively, so e.g. $A\xrightarrow{+}B\xleftarrow{-}C$ is interpreted as $\dot{B}\overset{+}{=}(kA - \ell C)B$.
 </HelpAnalysisById>

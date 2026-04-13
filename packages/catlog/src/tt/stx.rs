@@ -215,6 +215,8 @@ pub enum TmS_ {
     Tt,
     /// Identity morphism at an object.
     Id(TmS),
+    /// Tabulation of a morphism.
+    Tab(TmS),
     /// Composite of two morphisms.
     Compose(TmS, TmS),
     /// Application of an object operation in the theory.
@@ -271,6 +273,11 @@ impl TmS {
         Self(Rc::new(TmS_::Id(ob)))
     }
 
+    /// Smart constructor for [TmS], [TmS_::Tab] case.
+    pub fn tab(mor: TmS) -> Self {
+        Self(Rc::new(TmS_::Tab(mor)))
+    }
+
     /// Smart constructor for [TmS], [TmS_::Compose] case.
     pub fn compose(f: TmS, g: TmS) -> Self {
         Self(Rc::new(TmS_::Compose(f, g)))
@@ -305,6 +312,7 @@ impl ToDoc for TmS {
                 binop(t(":="), t(format!("{}", label)), field.to_doc())
             })),
             TmS_::Id(ob) => (t("@id") + s() + ob.to_doc()).parens(),
+            TmS_::Tab(mor) => (t("@tab") + s() + mor.to_doc()).parens(),
             TmS_::Compose(f, g) => binop(t("·"), f.to_doc(), g.to_doc()),
             TmS_::ObApp(name, x) => unop(t(format!("@{name}")), x.to_doc()),
             TmS_::List(elems) => tuple(elems.iter().map(|elem| elem.to_doc())),

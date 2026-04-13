@@ -12,7 +12,7 @@ use crate::validate::{self, Validate};
 use crate::{one::*, zero::*};
 
 /// Object in a model of a discrete tabulator theory.
-#[derive(Clone, PartialEq, Eq, From)]
+#[derive(Clone, PartialEq, Debug, Eq, From)]
 pub enum TabOb {
     /// Basic or generating object.
     #[from]
@@ -53,7 +53,7 @@ impl TabOb {
 /// "Edge" in a model of a discrete tabulator theory.
 ///
 /// Morphisms of these two forms generate all the morphisms in the model.
-#[derive(Clone, PartialEq, Eq, From)]
+#[derive(Clone, PartialEq, Debug, Eq, From)]
 pub enum TabEdge {
     /// Basic morphism between any two objects.
     #[from]
@@ -349,6 +349,7 @@ impl PrintableDblModel for DiscreteTabModel {
     fn ob_to_doc<'a>(&self, ob: &Self::Ob, ob_ns: &Namespace, mor_ns: &Namespace) -> D<'a> {
         match ob {
             TabOb::Basic(name) => t(ob_ns.label_string(name)),
+            // TODO: This makes printing a bit ambiguous, should wrap in a tab(...)
             TabOb::Tabulated(mor) => self.mor_to_doc(mor, ob_ns, mor_ns),
         }
     }

@@ -16,13 +16,7 @@ import {
 } from "solid-js";
 import invariant from "tiny-invariant";
 
-import {
-    Button,
-    IconButton,
-    InlineInput,
-    ResizableHandle,
-    WarningBanner,
-} from "catcolab-ui-components";
+import { Button, IconButton, ResizableHandle, WarningBanner } from "catcolab-ui-components";
 import { getLiveAnalysis, type LiveAnalysisDoc } from "../analysis";
 import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
 import { AnalysisInfo } from "../analysis/analysis_info";
@@ -32,8 +26,9 @@ import { DiagramNotebookEditor } from "../diagram/diagram_editor";
 import { DiagramInfo } from "../diagram/diagram_info";
 import { type LiveModelDoc, type ModelLibrary, ModelLibraryContext } from "../model";
 import { ModelNotebookEditor } from "../model/model_editor";
-import { ModelInfo } from "../model/model_info";
+import { ModelDocumentHead } from "../model/model_info";
 import { DocumentBreadcrumbs, DocumentLoadingScreen } from "../page";
+import { DocumentHead } from "../page/document_head";
 import { SidebarLayout } from "../page/sidebar_layout";
 import { PermissionsButton } from "../user";
 import { assertExhaustive } from "../util/assert_exhaustive";
@@ -392,32 +387,25 @@ export function DocumentPane(props: {
                 </WarningBanner>
             </Show>
             <div class="notebook-container">
-                <div class="document-head">
-                    <div class="title">
-                        <InlineInput
-                            text={props.doc.liveDoc.doc.name}
-                            setText={(text) => {
-                                props.doc.liveDoc.changeDoc((doc) => {
-                                    doc.name = text;
-                                });
-                            }}
-                            placeholder="Untitled"
-                        />
-                    </div>
-                    <div class="info">
-                        <Switch>
-                            <Match when={props.doc.type === "model" && props.doc}>
-                                {(liveModel) => <ModelInfo liveModel={liveModel()} />}
-                            </Match>
-                            <Match when={props.doc.type === "diagram" && props.doc}>
-                                {(liveDiagram) => <DiagramInfo liveDiagram={liveDiagram()} />}
-                            </Match>
-                            <Match when={props.doc.type === "analysis" && props.doc}>
-                                {(liveAnalysis) => <AnalysisInfo liveAnalysis={liveAnalysis()} />}
-                            </Match>
-                        </Switch>
-                    </div>
-                </div>
+                <Switch>
+                    <Match when={props.doc.type === "model" && props.doc}>
+                        {(liveModel) => <ModelDocumentHead liveModel={liveModel()} />}
+                    </Match>
+                    <Match when={props.doc.type === "diagram" && props.doc}>
+                        {(liveDiagram) => (
+                            <DocumentHead liveDoc={liveDiagram().liveDoc}>
+                                <DiagramInfo liveDiagram={liveDiagram()} />
+                            </DocumentHead>
+                        )}
+                    </Match>
+                    <Match when={props.doc.type === "analysis" && props.doc}>
+                        {(liveAnalysis) => (
+                            <DocumentHead liveDoc={liveAnalysis().liveDoc}>
+                                <AnalysisInfo liveAnalysis={liveAnalysis()} />
+                            </DocumentHead>
+                        )}
+                    </Match>
+                </Switch>
                 <Switch>
                     <Match when={props.doc.type === "model" && props.doc}>
                         {(liveModel) => <ModelNotebookEditor liveModel={liveModel()} />}

@@ -16,7 +16,7 @@ use catlog::dbl::{
         self as dbl_model, DblModel as _, FpDblModel, InvalidDblModel, ModalMor, ModalOb,
         MutDblModel, TabEdge, TabMor, TabOb,
     },
-    theory::{self as dbl_theory, ModalObOp, Unital},
+    theory::{self as dbl_theory, ModalObOp, NonUnital, Unital},
 };
 use catlog::one::{Category as _, FgCategory, Path, QualifiedPath};
 use catlog::tt::{
@@ -261,8 +261,10 @@ pub enum DblModelBox {
     Discrete(Rc<dbl_model::DiscreteDblModel>),
     /// A model of a discrete tabulator theory.
     DiscreteTab(Rc<dbl_model::DiscreteTabModel>),
-    /// A model of a modal double theory.
-    Modal(Rc<dbl_model::ModalDblModel<Unital>>),
+    /// A model of a unital modal double theory.
+    ModalUnital(Rc<dbl_model::ModalDblModel<Unital>>),
+    /// A model of a non-unital modal double theory.
+    ModalNonUnital(Rc<dbl_model::ModalDblModel<NonUnital>>),
 }
 
 impl From<dbl_model::DiscreteDblModel> for DblModelBox {
@@ -277,7 +279,12 @@ impl From<dbl_model::DiscreteTabModel> for DblModelBox {
 }
 impl From<dbl_model::ModalDblModel<Unital>> for DblModelBox {
     fn from(value: dbl_model::ModalDblModel<Unital>) -> Self {
-        Self::Modal(Rc::new(value))
+        Self::ModalUnital(Rc::new(value))
+    }
+}
+impl From<dbl_model::ModalDblModel<NonUnital>> for DblModelBox {
+    fn from(value: dbl_model::ModalDblModel<NonUnital>) -> Self {
+        Self::ModalNonUnital(Rc::new(value))
     }
 }
 
@@ -285,7 +292,9 @@ impl From<tt::modelgen::Model> for DblModelBox {
     fn from(value: tt::modelgen::Model) -> Self {
         match value {
             tt::modelgen::Model::Discrete(model) => Self::Discrete(Rc::new(*model)),
-            tt::modelgen::Model::Modal(model) => Self::Modal(Rc::new(*model)),
+            tt::modelgen::Model::DiscreteTab(model) => Self::DiscreteTab(Rc::new(*model)),
+            tt::modelgen::Model::ModalUnital(model) => Self::ModalUnital(Rc::new(*model)),
+            tt::modelgen::Model::ModalNonUnital(model) => Self::ModalNonUnital(Rc::new(*model)),
         }
     }
 }
@@ -296,7 +305,8 @@ impl DblModelBox {
         match &theory.0 {
             DblTheoryBox::Discrete(th) => dbl_model::DiscreteDblModel::new(th.clone()).into(),
             DblTheoryBox::DiscreteTab(th) => dbl_model::DiscreteTabModel::new(th.clone()).into(),
-            DblTheoryBox::Modal(th) => dbl_model::ModalDblModel::new(th.clone()).into(),
+            DblTheoryBox::ModalUnital(th) => dbl_model::ModalDblModel::new(th.clone()).into(),
+            DblTheoryBox::ModalNonUnital(th) => dbl_model::ModalDblModel::new(th.clone()).into(),
         }
     }
 }
@@ -351,7 +361,7 @@ impl DblModel {
     /// Returns the theory that the model is of.
     pub fn theory(&self) -> DblTheory {
         all_the_same!(match &self.model {
-            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+            DblModelBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](model) => {
                 DblTheory(model.theory().into())
             }
         })
@@ -371,15 +381,20 @@ impl DblModel {
             .map_err(|_| "Model should be of a discrete tabulator theory".into())
     }
 
-    /// Tries to get a model of a modal theory.
-    pub fn modal(&self) -> Result<&Rc<dbl_model::ModalDblModel<Unital>>, String> {
+    /// Tries to get a model of a unital modal theory.
+    pub fn modal_unital(&self) -> Result<&Rc<dbl_model::ModalDblModel<Unital>>, String> {
+        (&self.model).try_into().map_err(|_| "Model should be of a modal theory".into())
+    }
+
+    /// Tries to get a model of a non-unital modal theory.
+    pub fn modal_nonunital(&self) -> Result<&Rc<dbl_model::ModalDblModel<NonUnital>>, String> {
         (&self.model).try_into().map_err(|_| "Model should be of a modal theory".into())
     }
 
     /// Adds an object to the model.
     pub fn add_ob(&mut self, decl: &ObDecl) -> Result<(), String> {
         all_the_same!(match &mut self.model {
-            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+            DblModelBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](model) => {
                 let model = Rc::make_mut(model);
                 let ob_type = Elaborator.elab(&decl.ob_type)?;
                 model.add_ob(decl.id.into(), ob_type);
@@ -394,7 +409,7 @@ impl DblModel {
     /// Adds a morphism to the model.
     pub fn add_mor(&mut self, decl: &MorDecl) -> Result<(), String> {
         all_the_same!(match &mut self.model {
-            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+            DblModelBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](model) => {
                 let model = Rc::make_mut(model);
                 let mor_type = Elaborator.elab(&decl.mor_type)?;
                 model.make_mor(decl.id.into(), mor_type);
@@ -421,7 +436,7 @@ impl DblModel {
         id: &QualifiedName,
     ) -> Option<(String, String)> {
         let (dom, cod) = all_the_same!(match &self.model {
-            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+            DblModelBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](model) => {
                 (Quoter.quote(model.get_dom(id)?),
                  Quoter.quote(model.get_cod(id)?))
             }
@@ -464,7 +479,7 @@ impl DblModel {
     #[wasm_bindgen(js_name = "hasOb")]
     pub fn has_ob(&self, ob: Ob) -> Result<bool, String> {
         all_the_same!(match &self.model {
-            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+            DblModelBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](model) => {
                 let ob = Elaborator.elab(&ob)?;
                 Ok(model.has_ob(&ob))
             }
@@ -475,7 +490,7 @@ impl DblModel {
     #[wasm_bindgen(js_name = "hasMor")]
     pub fn has_mor(&self, mor: Mor) -> Result<bool, String> {
         all_the_same!(match &self.model {
-            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+            DblModelBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](model) => {
                 let mor = Elaborator.elab(&mor)?;
                 Ok(model.has_mor(&mor))
             }
@@ -486,7 +501,7 @@ impl DblModel {
     #[wasm_bindgen]
     pub fn dom(&self, mor: Mor) -> Result<Ob, String> {
         all_the_same!(match &self.model {
-            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+            DblModelBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](model) => {
                 let mor = Elaborator.elab(&mor)?;
                 Ok(Quoter.quote(&model.dom(&mor)))
             }
@@ -497,7 +512,7 @@ impl DblModel {
     #[wasm_bindgen]
     pub fn cod(&self, mor: Mor) -> Result<Ob, String> {
         all_the_same!(match &self.model {
-            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+            DblModelBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](model) => {
                 let mor = Elaborator.elab(&mor)?;
                 Ok(Quoter.quote(&model.cod(&mor)))
             }
@@ -508,7 +523,7 @@ impl DblModel {
     #[wasm_bindgen(js_name = "obType")]
     pub fn ob_type(&self, ob: Ob) -> Result<ObType, String> {
         all_the_same!(match &self.model {
-            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+            DblModelBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](model) => {
                 Ok(Quoter.quote(&model.ob_type(&Elaborator.elab(&ob)?)))
             }
         })
@@ -518,7 +533,7 @@ impl DblModel {
     #[wasm_bindgen(js_name = "morType")]
     pub fn mor_type(&self, mor: Mor) -> Result<MorType, String> {
         all_the_same!(match &self.model {
-            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+            DblModelBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](model) => {
                 Ok(Quoter.quote(&model.mor_type(&Elaborator.elab(&mor)?)))
             }
         })
@@ -528,7 +543,7 @@ impl DblModel {
     #[wasm_bindgen(js_name = "obGenerators")]
     pub fn ob_generators(&self) -> Vec<QualifiedName> {
         all_the_same!(match &self.model {
-            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+            DblModelBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](model) => {
                 model.ob_generators().collect()
             }
         })
@@ -538,7 +553,7 @@ impl DblModel {
     #[wasm_bindgen(js_name = "morGenerators")]
     pub fn mor_generators(&self) -> Vec<QualifiedName> {
         all_the_same!(match &self.model {
-            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+            DblModelBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](model) => {
                 model.mor_generators().collect()
             }
         })
@@ -548,7 +563,7 @@ impl DblModel {
     #[wasm_bindgen(js_name = "obGeneratorsWithType")]
     pub fn ob_generators_with_type(&self, ob_type: ObType) -> Result<Vec<QualifiedName>, String> {
         all_the_same!(match &self.model {
-            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+            DblModelBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](model) => {
                 let ob_type = Elaborator.elab(&ob_type)?;
                 Ok(model.ob_generators_with_type(&ob_type).collect())
             }
@@ -562,7 +577,7 @@ impl DblModel {
         mor_type: MorType,
     ) -> Result<Vec<QualifiedName>, String> {
         all_the_same!(match &self.model {
-            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+            DblModelBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](model) => {
                 let mor_type = Elaborator.elab(&mor_type)?;
                 Ok(model.mor_generators_with_type(&mor_type).collect())
             }
@@ -598,7 +613,7 @@ impl DblModel {
     pub fn ob_presentation(&self, id: QualifiedName) -> ObGenerator {
         let label = self.ob_generator_label(&id);
         let ob_type = all_the_same!(match &self.model {
-            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+            DblModelBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](model) => {
                 Quoter.quote(&model.ob_generator_type(&id))
             }
         });
@@ -610,7 +625,7 @@ impl DblModel {
     pub fn mor_presentation(&self, id: QualifiedName) -> Option<MorGenerator> {
         let label = self.mor_generator_label(&id);
         let (mor_type, dom, cod) = all_the_same!(match &self.model {
-            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+            DblModelBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](model) => {
                 (Quoter.quote(&model.mor_generator_type(&id)),
                  Quoter.quote(model.get_dom(&id)?),
                  Quoter.quote(model.get_cod(&id)?))
@@ -623,7 +638,7 @@ impl DblModel {
     #[wasm_bindgen]
     pub fn presentation(&self) -> ModelPresentation {
         all_the_same!(match &self.model {
-            DblModelBox::[Discrete, DiscreteTab, Modal](model) => {
+            DblModelBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](model) => {
                 ModelPresentation {
                     ob_generators: {
                         model.ob_generators().map(|id| self.ob_presentation(id)).collect()
@@ -639,7 +654,7 @@ impl DblModel {
     /// Validates the model, returning any validation failures.
     pub fn validate(&self) -> ModelValidationResult {
         let result = all_the_same!(match &self.model {
-            DblModelBox::[Discrete, DiscreteTab, Modal](model) => model.validate()
+            DblModelBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](model) => model.validate()
         });
         ModelValidationResult(result.map_err(|errs| errs.into()).into())
     }

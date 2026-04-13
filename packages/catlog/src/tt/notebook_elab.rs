@@ -14,7 +14,6 @@ use super::{context::*, eval::*, prelude::*, stx::*, theory::*, toplevel::*, val
 use crate::dbl::{
     modal,
     model::{Feature, InvalidDblModel, InvalidModelEqn},
-    theory::Unital,
 };
 use crate::zero::QualifiedName;
 
@@ -47,7 +46,7 @@ impl<'a> Elaborator<'a> {
         }
     }
 
-    fn theory(&self) -> &TheoryDef<Unital> {
+    fn theory(&self) -> &TheoryDef {
         &self.theory.definition
     }
 
@@ -156,6 +155,14 @@ impl<'a> Elaborator<'a> {
                 let val = TmV::app(name, arg_val);
                 Some((stx, val, self.theory().ob_op_cod(&ob_op)))
             }
+            nb::Ob::Tabulated(mor) => {
+                let (mor_stx, mor_val, mor_ty) = self.mor_syn(mor)?;
+                let TyV_::Morphism(mt, _, _) = &*mor_ty else {
+                    return None;
+                };
+                let ob_type = self.theory().tabulator(mt.clone())?;
+                Some((TmS::tab(mor_stx), TmV::tab(mor_val), ob_type))
+            }
             _ => None,
         }
     }
@@ -173,7 +180,7 @@ impl<'a> Elaborator<'a> {
             nb::Mor::Composite(path) => match path.as_ref() {
                 nb::path::Path::Id(ob) => {
                     let (stx, val, ob_type) = self.ob_syn(ob)?;
-                    let mor_type = self.theory().hom_type(ob_type);
+                    let mor_type = self.theory().hom_type(ob_type)?;
                     Some((stx, val.clone(), TyV::morphism(mor_type, val.clone(), val.clone())))
                 }
                 nb::path::Path::Seq(ms) => match ms.as_slice() {
@@ -249,7 +256,10 @@ impl<'a> Elaborator<'a> {
                 }
             }
             nb::MorType::Hom(ob_type) => match self.ob_type(ob_type.as_ref()) {
-                Some(ot) => (self.theory().hom_type(ot.clone()), ot.clone(), ot),
+                Some(ot) => match self.theory().hom_type(ot.clone()) {
+                    Some(mt) => (mt, ot.clone(), ot),
+                    None => return self.ty_error(InvalidDblModel::MorType(id)),
+                },
                 None => return self.ty_error(InvalidDblModel::MorType(id)),
             },
             _ => {
@@ -537,7 +547,8 @@ mod test {
 
     #[test]
     fn modal_theories() {
-        let th_smc = Theory::new(name("ThSMC"), TheoryDef::modal(th_sym_monoidal_category()));
+        let th_smc =
+            Theory::new(name("ThSMC"), TheoryDef::modal_unital(th_sym_monoidal_category()));
         elab_example(
             &th_smc,
             "sir_petri",

@@ -4,6 +4,7 @@ import type {
     MassActionEquationsData,
     MorType,
     ObType,
+    PolynomialODEEquationsData,
     StochasticMassActionProblemData,
 } from "catlog-wasm";
 import type { DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
@@ -364,3 +365,60 @@ export function renderSQL(
 }
 
 const SQLSchemaAnalysis = lazy(() => import("./analyses/sql"));
+
+export function polynomialODEEquations(
+    options: Partial<AnalysisOptions> & {
+        getEquations: Simulators.PolynomialODEEquations;
+    },
+): ModelAnalysisMeta<PolynomialODEEquationsData> {
+    const {
+        id = "polynomial-ode-equations",
+        name = "Polynomial ODE equations",
+        description = "Display the symbolic equations",
+        help = "polynomial-ode-equations",
+        ...otherOptions
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => (
+            <PolynomialODEEquationsDisplay title={name} {...otherOptions} {...props} />
+        ),
+        initialContent: () => ({
+            trivialData: true,
+        }),
+    };
+}
+const PolynomialODEEquationsDisplay = lazy(() => import("./analyses/polynomial_ode_equations"));
+
+export function polynomialODESimulation(
+    options: Partial<AnalysisOptions> & {
+        simulate: Simulators.PolynomialODESimulator;
+        stateType?: ObType;
+        transitionType?: MorType;
+    },
+): ModelAnalysisMeta<Simulators.PolynomialODEProblemData> {
+    const {
+        id = "polynomial-ode-simulation",
+        name = "Polynomial ODE simulation",
+        description = "Simulate the system",
+        help = "polynomial-ode-simulation",
+        ...otherOptions
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => <PolynomialODESimulation title={name} {...otherOptions} {...props} />,
+        initialContent: () => ({
+            coefficients: {},
+            initialValues: {},
+            duration: 10,
+        }),
+    };
+}
+
+const PolynomialODESimulation = lazy(() => import("./analyses/polynomial_ode_simulation"));

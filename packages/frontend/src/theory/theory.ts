@@ -1,9 +1,46 @@
+import type { Component } from "solid-js";
+
 import type { KbdKey } from "catcolab-ui-components";
 import type { DblModel, DblTheory, MorType, ObOp, ObType } from "catlog-wasm";
 import type { DiagramAnalysisComponent, ModelAnalysisComponent } from "../analysis";
+import type {
+    EditorVariantOverrides,
+    MorphismEditorProps,
+    ObjectEditorProps,
+} from "../model/editors";
 import { uniqueIndexArray } from "../util/indexing";
 import type { ArrowStyle } from "../visualization";
 import { MorTypeMap, ObTypeMap } from "./types";
+
+/** Editor variants for a theory.
+
+A theory can offer alternative editor components for some of its types (e.g., a
+string diagram editor for morphisms). This type groups the default label with the
+list of available variants.
+ */
+export type EditorVariants = {
+    /** Label for the default (non-variant) option in the settings radio group. */
+    defaultLabel: string;
+
+    /** Available editor variants. */
+    variants: EditorVariant[];
+};
+
+/** A single editor variant of a theory. */
+export type EditorVariant = {
+    /** Unique identifier of the editor variant. */
+    id: string;
+
+    /** Label for this variant in the settings radio group. */
+    label: string;
+
+    /** Editor component overrides for this editor variant.
+
+    Specifies which editor components replace the defaults for particular types.
+    Components can be wrapped with SolidJS `lazy()` to defer loading.
+     */
+    editorOverrides?: EditorVariantOverrides;
+};
 
 /** A double theory configured for the frontend.
 
@@ -64,6 +101,12 @@ export class Theory {
     /** List of pushforward (covariant) migrations out of this theory. */
     readonly pushforwards: ModelMigration[];
 
+    /** Editor variants of this theory.
+
+    When defined, the theory offers alternative editor components for some types.
+     */
+    readonly editorVariants?: EditorVariants;
+
     private readonly modelObTypeMap: ObTypeMap<ModelObTypeMeta>;
     private readonly modelMorTypeMap: MorTypeMap<ModelMorTypeMeta>;
     private readonly instanceObTypeMap: ObTypeMap<InstanceObTypeMeta>;
@@ -83,6 +126,7 @@ export class Theory {
         description: string;
         inclusions?: string[];
         pushforwards?: ModelMigration[];
+        editorVariants?: EditorVariants;
         modelTypes?: ModelTypeMeta[];
         modelAnalyses?: ModelAnalysisMeta[];
         onlyFreeModels?: boolean;
@@ -98,6 +142,9 @@ export class Theory {
         // Migrations.
         this.inclusions = props.inclusions ?? [];
         this.pushforwards = props.pushforwards ?? [];
+
+        // Editor variants.
+        this.editorVariants = props.editorVariants;
 
         // Models.
         this.name = props.name;
@@ -222,12 +269,18 @@ export type ModelTypeMeta =
 export type ModelObTypeMeta = BaseTypeMeta & {
     /** Object type in the underlying double theory. */
     obType: ObType;
+
+    /** Editor component for objects of this type. */
+    editor: Component<ObjectEditorProps>;
 };
 
 /** Metadata for a morphism type as used in models. */
 export type ModelMorTypeMeta = BaseTypeMeta & {
     /** Morphism type in the underlying double theory. */
     morType: MorType;
+
+    /** Editor component for morphisms of this type. */
+    editor: Component<MorphismEditorProps>;
 
     /** Style of arrow to use for morphisms of this type. */
     arrowStyle?: ArrowStyle;

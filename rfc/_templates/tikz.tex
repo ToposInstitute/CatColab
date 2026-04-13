@@ -1,11 +1,13 @@
-\documentclass[dvisvgm,tikz]{standalone}
+\documentclass[dvisvgm,preview]{standalone}
 \usepackage{amsmath,amssymb}
 \usepackage{quiver}
 \usepackage{ebproof}
 
 % WARNING: the macros here are (currently) manually copied from _macros.qmd
 
+\renewcommand{\cal}[1]{\mathcal{#1}}
 \renewcommand{\vec}[1]{\underline{#1}}
+\newcommand{\vecvec}[1]{\underline{\underline{#1}}}
 
 % Category theory
 \newcommand{\Ob}{\operatorname{Ob}}
@@ -28,6 +30,7 @@
 \newcommand{\Mod}{\mathbb{M}\mathsf{od}}
 
 % Arrows
+\newcommand{\xto}[1]{\xrightarrow{#1}}
 \newcommand{\proto}{\mathrel{\mkern3mu\vcenter{\hbox{$\shortmid$}}\mkern-10mu{\to}}}
 \newcommand{\xproto}[1]{\overset{#1}{\proto}}
 \newcommand{\proTo}{\mathrel{\mkern3mu\vcenter{\hbox{$\shortmid$}}\mkern-10mu{\Rightarrow}}}
@@ -38,7 +41,6 @@
 \newcommand{\coDisc}{\mathop{\mathrm{coDisc}}}
 
 % Type theory
-\newcommand{\ob}{\mathsf{ob}}
 \newcommand{\context}{\mathsf{cx}}
 \newcommand{\type}{\mathsf{ty}}
 

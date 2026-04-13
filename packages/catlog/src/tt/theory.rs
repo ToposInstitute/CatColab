@@ -13,8 +13,11 @@ use derive_more::{Constructor, From, TryInto};
 use std::{fmt, rc::Rc};
 
 use super::prelude::*;
-use crate::dbl::theory::{DblTheoryKind, Unital};
-use crate::dbl::{discrete, modal, model::PrintableDblModel, theory::DblTheory};
+use crate::dbl::{
+    discrete, discrete_tabulator, modal,
+    model::PrintableDblModel,
+    theory::{DblTheory, DblTheoryKind, NonUnital, Unital},
+};
 use crate::one::QualifiedPath;
 use crate::stdlib::theories;
 use crate::zero::{QualifiedName, name};
@@ -30,7 +33,7 @@ pub struct Theory {
     pub name: QualifiedName,
     /// The definition of the theory.
     #[derivative(PartialEq = "ignore")]
-    pub definition: TheoryDef<Unital>,
+    pub definition: TheoryDef,
 }
 
 impl fmt::Display for Theory {
@@ -41,35 +44,49 @@ impl fmt::Display for Theory {
 
 /// Definition of a double theory supported by DoubleTT.
 #[derive(Clone, From)]
-pub enum TheoryDef<Kind>
-where
-    Kind: DblTheoryKind,
-{
+pub enum TheoryDef {
     /// A discrete double theory.
     Discrete(Rc<discrete::DiscreteDblTheory>),
-    /// A modal double theory.
-    Modal(Rc<modal::ModalDblTheory<Kind>>),
+    /// A discrete tabulator theory.
+    DiscreteTab(Rc<discrete_tabulator::DiscreteTabTheory>),
+    /// A unital modal double theory.
+    ModalUnital(Rc<modal::ModalDblTheory<Unital>>),
+    /// A non-unital modal double theory.
+    ModalNonUnital(Rc<modal::ModalDblTheory<NonUnital>>),
 }
 
-impl TheoryDef<Unital> {
+impl TheoryDef {
     /// Smart constructor for [`TheoryDef::Discrete`] case.
     pub fn discrete(theory: discrete::DiscreteDblTheory) -> Self {
         TheoryDef::Discrete(Rc::new(theory))
     }
 
-    /// Smart constructor for [`TheoryDef::Modal`] case.
-    pub fn modal(theory: modal::ModalDblTheory<Unital>) -> Self {
-        TheoryDef::Modal(Rc::new(theory))
+    /// Smart constructor for [`TheoryDef::DiscreteTab`] case.
+    pub fn discrete_tab(theory: discrete_tabulator::DiscreteTabTheory) -> Self {
+        TheoryDef::DiscreteTab(Rc::new(theory))
+    }
+
+    /// Smart constructor for [`TheoryDef::ModalUnital`] case.
+    pub fn modal_unital(theory: modal::ModalDblTheory<Unital>) -> Self {
+        TheoryDef::ModalUnital(Rc::new(theory))
+    }
+
+    /// Smart constructor for [`TheoryDef::ModalNonUnital`] case.
+    pub fn modal_non_unital(theory: modal::ModalDblTheory<NonUnital>) -> Self {
+        TheoryDef::ModalNonUnital(Rc::new(theory))
     }
 
     /// Gets the basic object type with given name, if it exists.
     pub fn basic_ob_type(&self, name: QualifiedName) -> Option<ObType> {
         let ob_type = match self {
             TheoryDef::Discrete(_) => ObType::Discrete(name),
-            TheoryDef::Modal(_) => ObType::Modal(modal::ModeApp::new(name)),
+            TheoryDef::DiscreteTab(_) => ObType::DiscreteTab(name.into()),
+            TheoryDef::ModalUnital(_) | TheoryDef::ModalNonUnital(_) => {
+                ObType::Modal(modal::ModeApp::new(name))
+            }
         };
         all_the_same!(match self {
-            TheoryDef::[Discrete, Modal](th) => {
+            TheoryDef::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](th) => {
                 if th.has_ob_type((&ob_type).try_into().unwrap()) {
                     Some(ob_type)
                 } else {
@@ -83,10 +100,15 @@ impl TheoryDef<Unital> {
     pub fn basic_mor_type(&self, name: QualifiedName) -> Option<MorType> {
         let mor_type = match self {
             TheoryDef::Discrete(_) => MorType::Discrete(name.into()),
-            TheoryDef::Modal(_) => MorType::Modal(modal::ModeApp::new(name).into()),
+            TheoryDef::DiscreteTab(_) => {
+                MorType::DiscreteTab(discrete_tabulator::TabMorType::Basic(name))
+            }
+            TheoryDef::ModalUnital(_) | TheoryDef::ModalNonUnital(_) => {
+                MorType::Modal(modal::ModeApp::new(name).into())
+            }
         };
         all_the_same!(match self {
-            TheoryDef::[Discrete, Modal](th) => {
+            TheoryDef::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](th) => {
                 if th.has_mor_type((&mor_type).try_into().unwrap()) {
                     Some(mor_type)
                 } else {
@@ -99,22 +121,28 @@ impl TheoryDef<Unital> {
     /// Gets the basic object operation with given name, if it exists.
     pub fn basic_ob_op(&self, name: QualifiedName) -> Option<ObOp> {
         match self {
-            TheoryDef::Discrete(_) => None,
-            TheoryDef::Modal(th) => {
-                let op = modal::ModalObOp::generator(name);
-                if th.has_ob_op(&op) {
-                    Some(ObOp::Modal(op))
-                } else {
-                    None
-                }
-            }
+            TheoryDef::Discrete(_) | TheoryDef::DiscreteTab(_) => None,
+            TheoryDef::ModalUnital(th) => Self::basic_ob_op_modal(th, name),
+            TheoryDef::ModalNonUnital(th) => Self::basic_ob_op_modal(th, name),
+        }
+    }
+
+    fn basic_ob_op_modal<Kind: DblTheoryKind>(
+        th: &modal::ModalDblTheory<Kind>,
+        name: QualifiedName,
+    ) -> Option<ObOp> {
+        let op = modal::ModalObOp::generator(name);
+        if th.has_ob_op(&op) {
+            Some(ObOp::Modal(op))
+        } else {
+            None
         }
     }
 
     /// Gets the source type of a morphism type.
     pub fn src_type(&self, mor_type: &MorType) -> ObType {
         all_the_same!(match self {
-            TheoryDef::[Discrete, Modal](th) => {
+            TheoryDef::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](th) => {
                 th.src_type(mor_type.try_into().unwrap()).into()
             }
         })
@@ -123,35 +151,47 @@ impl TheoryDef<Unital> {
     /// Gets the target type of a morphism type.
     pub fn tgt_type(&self, mor_type: &MorType) -> ObType {
         all_the_same!(match self {
-            TheoryDef::[Discrete, Modal](th) => {
+            TheoryDef::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](th) => {
                 th.tgt_type(mor_type.try_into().unwrap()).into()
             }
         })
     }
 
-    /// Gets the hom (identity) type for an object type.
-    pub fn hom_type(&self, ob_type: ObType) -> MorType {
-        all_the_same!(match self {
-            TheoryDef::[Discrete, Modal](th) => {
-                th.hom_type(ob_type.try_into().unwrap()).into()
+    /// Gets the hom (identity) type for an object type, if it exists.
+    pub fn hom_type(&self, ob_type: ObType) -> Option<MorType> {
+        match self {
+            TheoryDef::Discrete(th) => Some(th.hom_type(ob_type.try_into().unwrap()).into()),
+            TheoryDef::DiscreteTab(th) => Some(th.hom_type(ob_type.try_into().unwrap()).into()),
+            TheoryDef::ModalUnital(th) => Some(th.hom_type(ob_type.try_into().unwrap()).into()),
+            TheoryDef::ModalNonUnital(th) => {
+                th.hom_type(ob_type.try_into().unwrap()).map(|mt| mt.into())
             }
-        })
+        }
     }
 
     /// Composes a pair of morphism types, if they have a composite.
     pub fn compose_types2(&self, mt1: MorType, mt2: MorType) -> Option<MorType> {
         all_the_same!(match self {
-            TheoryDef::[Discrete, Modal](th) => {
+            TheoryDef::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](th) => {
                 let path = Path::pair(mt1.try_into().unwrap(), mt2.try_into().unwrap());
                 th.compose_types(path).map(|mt| mt.into())
             }
         })
     }
 
+    /// Gets the tabulator of a morphism type, if it exists.
+    pub fn tabulator(&self, mor_type: MorType) -> Option<ObType> {
+        match self {
+            TheoryDef::Discrete(_) => None,
+            TheoryDef::DiscreteTab(th) => Some(th.tabulator(mor_type.try_into().unwrap()).into()),
+            TheoryDef::ModalUnital(_) | TheoryDef::ModalNonUnital(_) => None,
+        }
+    }
+
     /// Gets the domain of an object operation.
     pub fn ob_op_dom(&self, ob_op: &ObOp) -> ObType {
         all_the_same!(match self {
-            TheoryDef::[Discrete, Modal](th) => {
+            TheoryDef::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](th) => {
                 th.ob_op_dom(ob_op.try_into().unwrap()).into()
             }
         })
@@ -160,7 +200,7 @@ impl TheoryDef<Unital> {
     /// Gets the codomain of an object operation.
     pub fn ob_op_cod(&self, ob_op: &ObOp) -> ObType {
         all_the_same!(match self {
-            TheoryDef::[Discrete, Modal](th) => {
+            TheoryDef::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](th) => {
                 th.ob_op_cod(ob_op.try_into().unwrap()).into()
             }
         })
@@ -173,6 +213,8 @@ impl TheoryDef<Unital> {
 pub enum ObType {
     /// Object type in a discrete theory.
     Discrete(QualifiedName),
+    /// Object type in a discrete tabulator theory.
+    DiscreteTab(discrete_tabulator::TabObType),
     /// Object type in a modal theory.
     Modal(modal::ModalObType),
 }
@@ -181,7 +223,7 @@ impl ObType {
     /// Destructures a modality application, if possible.
     pub fn mode_app(self) -> Option<(modal::Modality, ObType)> {
         match self {
-            ObType::Discrete(_) => None,
+            ObType::Discrete(_) | ObType::DiscreteTab(_) => None,
             ObType::Modal(ob_type) => {
                 let (maybe_modality, ob_type) = ob_type.pop_app();
                 maybe_modality.map(|modality| (modality, ob_type.into()))
@@ -202,6 +244,7 @@ impl ToDoc for ObType {
     fn to_doc<'a>(&self) -> D<'a> {
         match self {
             ObType::Discrete(name) => discrete::DiscreteDblModel::ob_type_to_doc(name),
+            ObType::DiscreteTab(name) => discrete_tabulator::DiscreteTabModel::ob_type_to_doc(name),
             ObType::Modal(ob_type) => modal::ModalDblModel::<Unital>::ob_type_to_doc(ob_type),
         }
     }
@@ -219,7 +262,9 @@ impl fmt::Display for ObType {
 pub enum MorType {
     /// Morphism type in a discrete theory.
     Discrete(QualifiedPath),
-    /// Morphism type in a model theory.
+    /// Morphism type in a discrete tabulator theory.
+    DiscreteTab(discrete_tabulator::TabMorType),
+    /// Morphism type in a modal theory.
     Modal(modal::ModalMorType),
 }
 
@@ -227,6 +272,9 @@ impl ToDoc for MorType {
     fn to_doc<'a>(&self) -> D<'a> {
         match self {
             MorType::Discrete(path) => discrete::DiscreteDblModel::mor_type_to_doc(path),
+            MorType::DiscreteTab(mor_type) => {
+                discrete_tabulator::DiscreteTabModel::mor_type_to_doc(mor_type)
+            }
             MorType::Modal(mor_type) => modal::ModalDblModel::<Unital>::mor_type_to_doc(mor_type),
         }
     }
@@ -244,6 +292,8 @@ impl fmt::Display for MorType {
 pub enum ObOp {
     /// Object operation in a discrete theory: the identity on an object type.
     Discrete(QualifiedName),
+    /// Object operation in a discrete tabulator theory.
+    DiscreteTab(discrete_tabulator::TabObOp),
     /// Object operation in a modal theory.
     Modal(modal::ModalObOp),
 }
@@ -254,10 +304,11 @@ pub fn std_theories() -> HashMap<QualifiedName, Theory> {
         (name("ThSchema"), TheoryDef::discrete(theories::th_schema())),
         (name("ThCategory"), TheoryDef::discrete(theories::th_category())),
         (name("ThSignedCategory"), TheoryDef::discrete(theories::th_signed_category())),
-        (name("ThMulticategory"), TheoryDef::modal(theories::th_multicategory())),
+        (name("ThCategoryLinks"), TheoryDef::discrete_tab(theories::th_category_links())),
+        (name("ThMulticategory"), TheoryDef::modal_unital(theories::th_multicategory())),
         (
             name("ThSymMonoidalCategory"),
-            TheoryDef::modal(theories::th_sym_monoidal_category()),
+            TheoryDef::modal_unital(theories::th_sym_monoidal_category()),
         ),
     ]
     .into_iter()

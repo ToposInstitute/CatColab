@@ -2,10 +2,8 @@ import { createMemo, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { NameInput } from "catcolab-ui-components";
-import type { MorDecl } from "catlog-wasm";
-import type { CellActions } from "../notebook";
-import type { Theory } from "../theory";
 import { LiveModelContext } from "./context";
+import type { MorphismEditorProps } from "./editors";
 import { obClasses } from "./object_cell_editor";
 import { ObInput } from "./object_input";
 
@@ -13,13 +11,7 @@ import arrowStyles from "../stdlib/arrow_styles.module.css";
 import "./morphism_cell_editor.css";
 
 /** Editor for a morphism declaration cell in a model. */
-export function MorphismCellEditor(props: {
-    morphism: MorDecl;
-    modifyMorphism: (f: (decl: MorDecl) => void) => void;
-    isActive: boolean;
-    actions: CellActions;
-    theory: Theory;
-}) {
+export default function MorphismCellEditor(props: MorphismEditorProps) {
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 
