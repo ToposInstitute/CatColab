@@ -340,6 +340,12 @@ function richTextEditorKeymap(schema: CustomSchema, props: RichTextEditorOptions
     bindings["Mod-i"] = toggleMark(schema.marks.em);
     bindings["Mod-l"] = insertLinkCmd;
     bindings["Mod-m"] = insertMathDisplayCmd;
+
+    // Block browser native undo/redo to prevent contenteditable undo from
+    // desynchronizing ProseMirror state with the DOM.
+    bindings["Mod-z"] = () => true;
+    bindings["Mod-y"] = () => true;
+    bindings["Mod-Shift-z"] = () => true;
     bindings["Backspace"] = chainCommands(
         deleteSelection,
         mathBackspaceCmd,
