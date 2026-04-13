@@ -26,17 +26,36 @@ pub async fn ensure_ref_actor(state: AppState, ref_id: Uuid, doc_handle: DocHand
     tokio::spawn(run_ref_actor(state, ref_id, doc_handle, rx));
 }
 
-/// Send a message to the ref actor for `ref_id`.
-///
-/// Returns an error if no actor is running.
-pub async fn send_to_actor(state: &AppState, ref_id: Uuid, msg: RefMsg) -> Result<(), AppError> {
-    let tx = state
+/// Gets the sender for the ref actor, starting one on demand if needed.
+async fn get_or_start_actor(
+    state: &AppState,
+    ref_id: Uuid,
+) -> Result<mpsc::Sender<(RefMsg, RefReply)>, AppError> {
+    if let Some(tx) = state.ref_actors.read().await.get(&ref_id).cloned() {
+        return Ok(tx);
+    }
+
+    let doc_id = document::get_doc_id(state.clone(), ref_id).await?;
+    let doc_handle = state
+        .repo
+        .find(doc_id)
+        .await?
+        .ok_or_else(|| AppError::Invalid("Document not found".to_string()))?;
+
+    ensure_ref_actor(state.clone(), ref_id, doc_handle).await;
+
+    state
         .ref_actors
         .read()
         .await
         .get(&ref_id)
         .cloned()
-        .ok_or_else(|| AppError::Invalid(format!("No ref actor running for {ref_id}")))?;
+        .ok_or_else(|| AppError::Invalid(format!("Failed to start ref actor for {ref_id}")))
+}
+
+/// Send a message to the ref actor for `ref_id`, starting one if needed.
+pub async fn send_to_actor(state: &AppState, ref_id: Uuid, msg: RefMsg) -> Result<(), AppError> {
+    let tx = get_or_start_actor(state, ref_id).await?;
 
     let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
 
