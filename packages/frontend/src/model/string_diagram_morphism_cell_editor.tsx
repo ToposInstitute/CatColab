@@ -185,14 +185,14 @@ export default function StringDiagramMorphismCellEditor(props: MorphismEditorPro
     const setDomObs = (objects: Array<Ob | null>) => {
         const ob = makeObList(objects, domType(), domApplyOp());
         props.modifyMorphism((mor) => {
-            mor.dom = ob;
+            mor.dom = structuredClone(unwrap(ob));
         });
     };
 
     const setCodObs = (objects: Array<Ob | null>) => {
         const ob = makeObList(objects, codType(), codApplyOp());
         props.modifyMorphism((mor) => {
-            mor.cod = ob;
+            mor.cod = structuredClone(unwrap(ob));
         });
     };
 
