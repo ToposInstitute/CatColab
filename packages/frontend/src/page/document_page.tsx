@@ -460,7 +460,7 @@ export function DocumentPane(props: {
             </div>
             <Show when={props.historySidebarOpen && props.docRef.refId}>
                 <div class="history-sidebar">
-                    <HistorySidebar refId={props.docRef.refId} history={history} />
+                    <HistorySidebar history={history} />
                 </div>
             </Show>
         </div>
