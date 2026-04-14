@@ -2537,13 +2537,18 @@ name = "migrator"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "automerge",
  "clap",
  "dotenvy",
+ "notebook-types",
+ "samod",
+ "serde_json",
  "sqlx",
  "sqlx_migrator",
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]
@@ -2673,9 +2678,11 @@ version = "0.1.0"
 dependencies = [
  "automerge",
  "autosurgeon",
+ "proptest",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",
+ "test-strategy",
  "ts-rs",
  "tsify",
  "ustr",

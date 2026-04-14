@@ -48,7 +48,7 @@ pub struct Link {
 }
 
 /// Type of link between documents.
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum LinkType {
     #[serde(rename = "analysis-of")]
@@ -59,4 +59,47 @@ pub enum LinkType {
 
     #[serde(rename = "instantiation")]
     Instantiation,
+}
+
+/// Arbitrary instances for property-based testing.
+#[cfg(feature = "property-tests")]
+pub(crate) mod arbitrary {
+    use super::*;
+    use proptest::prelude::*;
+
+    impl Arbitrary for LinkType {
+        type Parameters = ();
+        type Strategy = BoxedStrategy<Self>;
+
+        fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
+            proptest::sample::select(&[
+                LinkType::AnalysisOf,
+                LinkType::DiagramIn,
+                LinkType::Instantiation,
+            ])
+            .boxed()
+        }
+    }
+
+    impl Arbitrary for StableRef {
+        type Parameters = ();
+        type Strategy = BoxedStrategy<Self>;
+
+        fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
+            (any::<String>(), proptest::option::of(any::<String>()), any::<String>())
+                .prop_map(|(id, version, server)| StableRef { id, version, server })
+                .boxed()
+        }
+    }
+
+    impl Arbitrary for Link {
+        type Parameters = ();
+        type Strategy = BoxedStrategy<Self>;
+
+        fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
+            (any::<StableRef>(), any::<LinkType>())
+                .prop_map(|(stable_ref, r#type)| Link { stable_ref, r#type })
+                .boxed()
+        }
+    }
 }

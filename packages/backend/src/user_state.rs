@@ -60,6 +60,22 @@ pub struct RelationInfo {
     pub relation_type: String,
 }
 
+/// Lightweight snapshot metadata for user state synchronization.
+#[cfg_attr(feature = "property-tests", derive(Eq, PartialEq))]
+#[derive(Debug, Clone, Deserialize, Reconcile, Hydrate, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(rename_all = "camelCase", export_to = "user_state.ts")]
+pub struct SnapshotInfo {
+    /// The parent snapshot this was derived from, or `None` for the root snapshot.
+    pub parent: Option<i32>,
+    /// When this snapshot was created.
+    #[autosurgeon(rename = "createdAt", with = "datetime_millis")]
+    #[ts(type = "number")]
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    /// Automerge change hashes identifying this snapshot's document state, hex-encoded.
+    pub heads: Vec<String>,
+}
+
 /// Document reference information for user state synchronization.
 ///
 /// Contains lightweight metadata about a document that the user has access to.
@@ -85,6 +101,15 @@ pub struct DocInfo {
     #[autosurgeon(rename = "deletedAt", with = "option_datetime_millis")]
     #[ts(type = "number | null")]
     pub deleted_at: Option<chrono::DateTime<chrono::Utc>>,
+    /// When the current snapshot pointer was last changed (snapshot created or undo/redo).
+    #[autosurgeon(rename = "currentSnapshotUpdatedAt", with = "datetime_millis")]
+    #[ts(type = "number")]
+    pub current_snapshot_updated_at: chrono::DateTime<chrono::Utc>,
+    /// The database ID of the current (active) snapshot.
+    #[autosurgeon(rename = "currentSnapshot")]
+    pub current_snapshot: i32,
+    /// All snapshots for this document, keyed by stringified snapshot ID.
+    pub snapshots: HashMap<String, SnapshotInfo>,
     /// Outgoing relations from this document to other documents.
     #[autosurgeon(rename = "dependsOn")]
     pub depends_on: Vec<RelationInfo>,
@@ -242,7 +267,9 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
             snapshots.content->>'theory' AS theory,
             refs.created AS "created_at!",
             refs.deleted_at,
+            refs.current_snapshot_updated_at AS "current_snapshot_updated_at!",
             snapshots.content AS "content!",
+            refs.current_snapshot AS "current_snapshot!",
             COALESCE(
                 (SELECT json_agg(json_build_object(
                     'user', p.subject,
@@ -251,10 +278,23 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
                 FROM permissions p
                 WHERE p.object = refs.id
                 ), '[]'::json
-            ) AS "permissions!: sqlx::types::Json<Vec<PermissionInfo>>"
+            ) AS "permissions!: sqlx::types::Json<Vec<PermissionInfo>>",
+            COALESCE(
+                (SELECT json_object_agg(
+                    s.id::text,
+                    json_build_object(
+                        'parent', s.parent,
+                        'createdAt', s.created_at,
+                        'heads', (SELECT array_agg(encode(h, 'hex')) FROM unnest(s.heads) AS h)
+                    )
+                )
+                FROM snapshots s
+                WHERE s.for_ref = refs.id
+                ), '{}'::json
+            ) AS "snapshots!: sqlx::types::Json<HashMap<String, SnapshotInfo>>"
         FROM filtered_ids
         JOIN refs ON refs.id = filtered_ids.id
-        JOIN snapshots ON snapshots.id = refs.head
+        JOIN snapshots ON snapshots.id = refs.current_snapshot
         ORDER BY refs.created DESC;
         "#,
         user_id,
@@ -282,6 +322,9 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
             permissions,
             created_at: row.created_at,
             deleted_at: row.deleted_at,
+            current_snapshot_updated_at: row.current_snapshot_updated_at,
+            current_snapshot: row.current_snapshot,
+            snapshots: row.snapshots.0,
             depends_on,
             used_by: Vec::new(),
         };
@@ -502,25 +545,41 @@ pub mod arbitrary {
                 prop::collection::vec(any::<PermissionInfo>(), 0..5),
                 0i64..253402300799i64,
                 proptest::option::of(0i64..253402300799i64),
+                0i64..253402300799i64,
             )
-                .prop_map(|(name, type_name, theory, permissions, seconds, deleted_seconds)| {
-                    DocInfo {
-                        name: Text::from(name),
+                .prop_map(
+                    |(
+                        name,
                         type_name,
                         theory,
                         permissions,
-                        created_at: Utc
-                            .timestamp_opt(seconds, 0)
-                            .single()
-                            .expect("valid timestamp"),
-                        deleted_at: deleted_seconds
-                            .map(|s| Utc.timestamp_opt(s, 0).single().expect("valid timestamp")),
-                        // We are not yet generating complete relationship trees, just independent
-                        // docs
-                        depends_on: Vec::new(),
-                        used_by: Vec::new(),
-                    }
-                })
+                        seconds,
+                        deleted_seconds,
+                        updated_seconds,
+                    )| {
+                        DocInfo {
+                            name: Text::from(name),
+                            type_name,
+                            theory,
+                            permissions,
+                            created_at: Utc
+                                .timestamp_opt(seconds, 0)
+                                .single()
+                                .expect("valid timestamp"),
+                            deleted_at: deleted_seconds.map(|s| {
+                                Utc.timestamp_opt(s, 0).single().expect("valid timestamp")
+                            }),
+                            current_snapshot_updated_at: Utc
+                                .timestamp_opt(updated_seconds, 0)
+                                .single()
+                                .expect("valid timestamp"),
+                            current_snapshot: 1,
+                            snapshots: HashMap::new(),
+                            depends_on: Vec::new(),
+                            used_by: Vec::new(),
+                        }
+                    },
+                )
                 .boxed()
         }
     }
@@ -544,6 +603,7 @@ pub mod arbitrary {
             any::<Option<String>>(),                     // other owner display_name
             0i64..253402300799i64,                       // created_at seconds
             proptest::option::of(0i64..253402300799i64), // deleted_at seconds
+            0i64..253402300799i64,                       // current_snapshot_updated_at seconds
         )
             .prop_map(
                 move |(
@@ -555,6 +615,7 @@ pub mod arbitrary {
                     other_owner_display_name,
                     seconds,
                     deleted_seconds,
+                    updated_seconds,
                 )| {
                     let mut permissions = Vec::new();
                     let mut users = HashMap::new();
@@ -603,6 +664,12 @@ pub mod arbitrary {
                             .expect("valid timestamp"),
                         deleted_at: deleted_seconds
                             .map(|s| Utc.timestamp_opt(s, 0).single().expect("valid timestamp")),
+                        current_snapshot_updated_at: Utc
+                            .timestamp_opt(updated_seconds, 0)
+                            .single()
+                            .expect("valid timestamp"),
+                        current_snapshot: 1,
+                        snapshots: HashMap::new(),
                         // We are not yet generating complete relationship trees, just independent
                         // docs
                         depends_on: Vec::new(),

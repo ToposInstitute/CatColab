@@ -11,7 +11,7 @@ use sqlx::postgres::PgPoolOptions;
 use sqlx_migrator::cli::MigrationCommand;
 use sqlx_migrator::migrator::{Migrate, Migrator};
 use sqlx_migrator::{Info, Plan};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -136,7 +136,7 @@ async fn main() {
             let state = app::AppState {
                 db: db.clone(),
                 repo,
-                active_listeners: Arc::new(RwLock::new(HashSet::new())),
+                ref_actors: Arc::new(RwLock::new(HashMap::new())),
                 initialized_user_states: Arc::new(RwLock::new(HashMap::new())),
                 http_client,
                 julia_url,

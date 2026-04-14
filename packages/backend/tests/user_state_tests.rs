@@ -4,69 +4,24 @@
 //! RPC-level user state update path (document CRUD, permission changes,
 //! profile updates → Automerge user state doc).
 #[cfg(feature = "integration-tests")]
+mod common;
+
+#[cfg(feature = "integration-tests")]
 mod integration_tests {
-
-    use backend::app::AppError;
+    use crate::common::test_utils::{
+        create_test_app_state, create_test_document_content, create_test_firebase_user,
+        ensure_user_exists, run_migrations,
+    };
     use sqlx::PgPool;
-    use sqlx_migrator::migrator::{Migrate, Migrator};
-    use sqlx_migrator::{Info, Plan};
     use uuid::Uuid;
-
-    /// Run migrations on a test database pool.
-    async fn run_migrations(pool: &PgPool) -> Result<(), sqlx::Error> {
-        let mut conn = pool.acquire().await?;
-        let mut migrator = Migrator::<sqlx::Postgres>::default();
-        migrator
-            .add_migrations(migrator::migrations())
-            .expect("Failed to load migrations");
-
-        let plan = Plan::apply_all();
-        migrator.run(&mut *conn, &plan).await.expect("Failed to run migrations");
-        Ok(())
-    }
-
-    pub async fn ensure_user_exists(pool: &PgPool, user_id: &str) -> Result<(), AppError> {
-        sqlx::query!(
-            r#"
-            INSERT INTO users (id, created, signed_in)
-            VALUES ($1, NOW(), NOW())
-            ON CONFLICT (id) DO NOTHING
-            "#,
-            user_id
-        )
-        .execute(pool)
-        .await?;
-        Ok(())
-    }
 
     use autosurgeon::hydrate;
     use backend::app::{AppCtx, AppState};
     use backend::auth::{NewPermissions, PermissionLevel};
     use backend::document;
     use backend::user_state::{DocumentType, UserState};
-    use firebase_auth::FirebaseUser;
     use serde_json::json;
-    use std::collections::{HashMap, HashSet};
-    use std::sync::Arc;
-    use tokio::sync::RwLock;
-
-    async fn create_test_app_state(pool: PgPool) -> AppState {
-        let storage = backend::storage::PostgresStorage::new(pool.clone());
-        let repo = samod::Repo::builder(tokio::runtime::Handle::current())
-            .with_storage(storage)
-            .with_announce_policy(|_doc_id, _peer_id| false)
-            .load()
-            .await;
-
-        AppState {
-            db: pool,
-            repo,
-            active_listeners: Arc::new(RwLock::new(HashSet::new())),
-            initialized_user_states: Arc::new(RwLock::new(HashMap::new())),
-            http_client: reqwest::Client::new(),
-            julia_url: None,
-        }
-    }
+    use std::collections::HashMap;
 
     /// Helper to read user state from samod using the stored document ID.
     async fn read_user_state_from_samod(state: &AppState, user_id: &str) -> Option<UserState> {
@@ -79,27 +34,6 @@ mod integration_tests {
         };
 
         doc_handle.with_document(|doc| hydrate(doc)).ok()
-    }
-
-    fn create_test_firebase_user(user_id: &str) -> FirebaseUser {
-        serde_json::from_value(json!({
-            "iss": "test",
-            "aud": "test",
-            "sub": user_id,
-            "iat": 0,
-            "exp": u64::MAX,
-            "auth_time": 0,
-            "user_id": user_id,
-            "firebase": {
-                "sign_in_provider": "test",
-                "identities": {}
-            }
-        }))
-        .expect("Failed to create test FirebaseUser")
-    }
-
-    fn create_test_document_content(name: &str) -> serde_json::Value {
-        create_model_document_content(name, "test-theory")
     }
 
     fn create_model_document_content(name: &str, theory: &str) -> serde_json::Value {
@@ -426,12 +360,22 @@ mod integration_tests {
         assert_eq!(before.documents[&ref_id.to_string()].name.as_str(), "Original Name");
 
         let updated = create_test_document_content("Updated Name");
-        document::autosave(
-            state.clone(),
-            backend::document::RefContent { ref_id, content: updated },
+        let fake_heads: Vec<Vec<u8>> = vec![vec![0u8; 32]];
+        sqlx::query(
+            r#"
+            UPDATE snapshots
+            SET content = $2, created_at = NOW(), heads = $3
+            WHERE id = (SELECT current_snapshot FROM refs WHERE id = $1)
+            "#,
         )
-        .await
-        .expect("Failed to autosave");
+        .bind(ref_id)
+        .bind(updated)
+        .bind(&fake_heads)
+        .execute(&pool)
+        .await?;
+        backend::user_state_updates::update_ref_for_users(&state, ref_id, vec![])
+            .await
+            .expect("Failed to propagate user state update");
 
         let after = read_user_state_from_samod(&state, &user_id).await.unwrap();
         assert_eq!(after.documents[&ref_id.to_string()].name.as_str(), "Updated Name");
@@ -475,14 +419,24 @@ mod integration_tests {
         assert_eq!(s.documents[&diagram_id.to_string()].type_name, DocumentType::Diagram);
         assert_eq!(s.documents[&diagram_id.to_string()].theory, None);
 
-        // Update theory via autosave
+        // Update theory and propagate user state
         let updated = create_model_document_content("Theory Test", "petri-net");
-        document::autosave(
-            state.clone(),
-            backend::document::RefContent { ref_id, content: updated },
+        let fake_heads: Vec<Vec<u8>> = vec![vec![0u8; 32]];
+        sqlx::query(
+            r#"
+            UPDATE snapshots
+            SET content = $2, created_at = NOW(), heads = $3
+            WHERE id = (SELECT current_snapshot FROM refs WHERE id = $1)
+            "#,
         )
-        .await
-        .expect("Failed to autosave");
+        .bind(ref_id)
+        .bind(updated)
+        .bind(&fake_heads)
+        .execute(&pool)
+        .await?;
+        backend::user_state_updates::update_ref_for_users(&state, ref_id, vec![])
+            .await
+            .expect("Failed to propagate user state update");
 
         let s = read_user_state_from_samod(&state, &user_id).await.unwrap();
         assert_eq!(s.documents[&ref_id.to_string()].theory.as_deref(), Some("petri-net"));
@@ -527,12 +481,22 @@ mod integration_tests {
             .expect("Failed to initialize owner2 state");
 
         let updated = create_test_document_content("Updated by Autosave");
-        document::autosave(
-            state.clone(),
-            backend::document::RefContent { ref_id, content: updated },
+        let fake_heads: Vec<Vec<u8>> = vec![vec![0u8; 32]];
+        sqlx::query(
+            r#"
+            UPDATE snapshots
+            SET content = $2, created_at = NOW(), heads = $3
+            WHERE id = (SELECT current_snapshot FROM refs WHERE id = $1)
+            "#,
         )
-        .await
-        .expect("Failed to autosave");
+        .bind(ref_id)
+        .bind(updated)
+        .bind(&fake_heads)
+        .execute(&pool)
+        .await?;
+        backend::user_state_updates::update_ref_for_users(&state, ref_id, vec![])
+            .await
+            .expect("Failed to propagate user state update");
 
         let s1 = read_user_state_from_samod(&state, &owner1_id).await.unwrap();
         let s2 = read_user_state_from_samod(&state, &owner2_id).await.unwrap();
@@ -971,11 +935,14 @@ mod integration_tests {
         }
 
         /// Write a `UserState` to the database (test helper).
+        ///
+        /// Returns a copy of the state with `current_snapshot` and `snapshots`
+        /// populated from the database (since those are generated by the DB).
         async fn write_user_state_to_db(
             user_id: String,
             db: &PgPool,
             state: &UserState,
-        ) -> Result<(), AppError> {
+        ) -> Result<UserState, AppError> {
             sqlx::query!(
                 r#"
                 INSERT INTO users (id, created, signed_in, username, display_name)
@@ -988,6 +955,8 @@ mod integration_tests {
             )
             .execute(db)
             .await?;
+
+            let mut snapshot_ids = HashMap::new();
 
             for (ref_id_str, doc) in &state.documents {
                 let ref_id: Uuid = ref_id_str.parse().expect("Invalid UUID key");
@@ -1018,24 +987,31 @@ mod integration_tests {
                     content["theory"] = serde_json::Value::String(theory.clone());
                 }
 
-                sqlx::query!(
+                let fake_heads: Vec<Vec<u8>> = vec![vec![0u8; 32]];
+                let snapshot_id: i32 = sqlx::query_scalar(
                     r#"
                     WITH snapshot AS (
-                        INSERT INTO snapshots (for_ref, content, last_updated, doc_id)
-                        VALUES ($1, $2, $3, $4)
+                        INSERT INTO snapshots (for_ref, content, created_at, heads)
+                        VALUES ($1, $2, $3, $5)
                         RETURNING id
                     )
-                    INSERT INTO refs (id, head, created)
-                    VALUES ($1, (SELECT id FROM snapshot), $3)
-                    ON CONFLICT (id) DO UPDATE SET head = (SELECT id FROM snapshot)
+                    INSERT INTO refs (id, current_snapshot, created, doc_id, current_snapshot_updated_at)
+                    VALUES ($1, (SELECT id FROM snapshot), $3, $4, $6)
+                    ON CONFLICT (id) DO UPDATE SET current_snapshot = (SELECT id FROM snapshot),
+                        current_snapshot_updated_at = $6
+                    RETURNING current_snapshot
                     "#,
-                    ref_id,
-                    content,
-                    doc.created_at,
-                    format!("test_fake_automerge_doc_{ref_id}")
                 )
-                .execute(db)
+                .bind(ref_id)
+                .bind(content)
+                .bind(doc.created_at)
+                .bind(format!("test_fake_automerge_doc_{ref_id}"))
+                .bind(&fake_heads)
+                .bind(doc.current_snapshot_updated_at)
+                .fetch_one(db)
                 .await?;
+
+                snapshot_ids.insert(ref_id_str.clone(), (snapshot_id, doc.created_at));
 
                 if let Some(deleted_at) = doc.deleted_at {
                     sqlx::query!(
@@ -1066,7 +1042,23 @@ mod integration_tests {
                 }
             }
 
-            Ok(())
+            let mut result = state.clone();
+            let fake_heads_hex =
+                "0000000000000000000000000000000000000000000000000000000000000000".to_string();
+            for (ref_id_str, doc) in result.documents.iter_mut() {
+                if let Some(&(sid, created_at)) = snapshot_ids.get(ref_id_str) {
+                    doc.current_snapshot = sid;
+                    doc.snapshots = HashMap::from([(
+                        sid.to_string(),
+                        backend::user_state::SnapshotInfo {
+                            parent: None,
+                            created_at,
+                            heads: vec![fake_heads_hex.clone()],
+                        },
+                    )]);
+                }
+            }
+            Ok(result)
         }
 
         /// Write→read roundtrip through the database.
@@ -1077,9 +1069,10 @@ mod integration_tests {
             let (user_id, input_state) = user_id_and_state;
             let test_db = TestDb::new().await;
 
-            write_user_state_to_db(user_id.clone(), test_db.pool(), &input_state)
-                .await
-                .expect("Failed to write user state");
+            let expected_state =
+                write_user_state_to_db(user_id.clone(), test_db.pool(), &input_state)
+                    .await
+                    .expect("Failed to write user state");
 
             let output_state = read_user_state_from_db(user_id.clone(), test_db.pool())
                 .await
@@ -1087,7 +1080,7 @@ mod integration_tests {
 
             test_db.cleanup().await;
 
-            proptest::prop_assert_eq!(input_state, output_state);
+            proptest::prop_assert_eq!(expected_state, output_state);
         }
 
         /// `get_or_create_user_state_doc` should initialize the Automerge doc
@@ -1099,7 +1092,7 @@ mod integration_tests {
             use autosurgeon::hydrate;
             use backend::app::AppState;
             use backend::storage::PostgresStorage;
-            use std::collections::{HashMap, HashSet};
+            use std::collections::HashMap;
             use std::sync::Arc;
             use tokio::sync::RwLock;
 
@@ -1116,17 +1109,18 @@ mod integration_tests {
             let state = AppState {
                 db: test_db.pool().clone(),
                 repo,
-                active_listeners: Arc::new(RwLock::new(HashSet::new())),
+                ref_actors: Arc::new(RwLock::new(HashMap::new())),
                 initialized_user_states: Arc::new(RwLock::new(HashMap::new())),
                 http_client: reqwest::Client::new(),
                 julia_url: None,
             };
 
-            write_user_state_to_db(user_id.clone(), test_db.pool(), &input_state)
-                .await
-                .expect("Failed to write user state");
+            let expected_state =
+                write_user_state_to_db(user_id.clone(), test_db.pool(), &input_state)
+                    .await
+                    .expect("Failed to write user state");
 
-            if !input_state.documents.is_empty() {
+            if !expected_state.documents.is_empty() {
                 backend::user_state::get_or_create_user_state_doc(&state, &user_id)
                     .await
                     .expect("Failed to initialize user state");
@@ -1145,10 +1139,10 @@ mod integration_tests {
 
             test_db.cleanup().await;
 
-            if input_state.documents.is_empty() {
+            if expected_state.documents.is_empty() {
                 proptest::prop_assert!(automerge_state.is_none());
             } else {
-                proptest::prop_assert_eq!(Some(input_state), automerge_state);
+                proptest::prop_assert_eq!(Some(expected_state), automerge_state);
             }
         }
     }

@@ -52,6 +52,7 @@ function DocumentsSearch() {
             <div>Owners</div>
             <div>Permission</div>
             <div>Created</div>
+            <div>Last edited</div>
             <div />
         </>
     );

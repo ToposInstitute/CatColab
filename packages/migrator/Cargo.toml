@@ -13,8 +13,12 @@ path = "src/lib.rs"
 
 [dependencies]
 async-trait = "0.1.88"
+automerge = "0.8.0"
 clap = { version = "4.5.44", features = ["derive"] }
 dotenvy = "0.15.7"
+notebook-types = { version = "0.1.0", path = "../notebook-types", features = ["backend"] }
+samod = { version = "0.9.0", features = ["tokio"] }
+serde_json = "1.0"
 sqlx = { version = "0.8.2", features = [
   "runtime-tokio",
   "tls-rustls",
@@ -27,3 +31,4 @@ sqlx_migrator = { version = "0.17.0", features = ["postgres"] }
 tokio = { version = "1.40.0", features = ["full"] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+uuid = "1"

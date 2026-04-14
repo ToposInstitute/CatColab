@@ -6,8 +6,9 @@ use serde_json::Value;
 use tracing::debug;
 use uuid::Uuid;
 
-use super::app::{AppCtx, AppError, AppState};
+use super::app::{AppCtx, AppError, AppState, RefMsg};
 use super::auth::{NewPermissions, PermissionLevel, Permissions};
+use super::ref_actor::{ensure_ref_actor, send_to_actor};
 use super::user_state::get_or_create_user_state_doc;
 use super::{auth, document as doc, user};
 
@@ -16,8 +17,7 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .handler(new_ref)
         .handler(get_doc)
-        .handler(head_snapshot)
-        .handler(create_snapshot)
+        .handler(load_snapshot)
         .handler(delete_ref)
         .handler(restore_ref)
         .handler(get_permissions)
@@ -45,14 +45,19 @@ async fn get_doc(ctx: AppCtx, ref_id: Uuid) -> RpcResult<RefDoc> {
         let is_deleted = deleted_at.is_some();
 
         if max_level >= Some(PermissionLevel::Write) {
-            let doc_id = doc::get_doc_id(ctx.state, ref_id).await?;
+            let doc_id = doc::get_doc_id(ctx.state.clone(), ref_id).await?;
+            let doc_handle =
+                ctx.state.repo.find(doc_id.clone()).await?.ok_or_else(|| {
+                    AppError::NotFound(format!("document {doc_id} for ref {ref_id}"))
+                })?;
+            ensure_ref_actor(ctx.state.clone(), ref_id, doc_handle).await;
             Ok(RefDoc::Live {
                 doc_id: doc_id.to_string(),
                 is_deleted,
                 permissions,
             })
         } else if max_level >= Some(PermissionLevel::Read) {
-            let binary_data = doc::head_snapshot_binary(ctx.state, ref_id).await?;
+            let binary_data = doc::get_doc_binary_data(ctx.state, ref_id).await?;
             Ok(RefDoc::Readonly { binary_data, is_deleted, permissions })
         } else {
             Err(AppError::Forbidden(ref_id))
@@ -86,21 +91,11 @@ enum RefDoc {
     },
 }
 
-#[handler(query)]
-async fn head_snapshot(ctx: AppCtx, ref_id: Uuid) -> RpcResult<Value> {
-    async {
-        auth::authorize(&ctx, ref_id, PermissionLevel::Read).await?;
-        doc::head_snapshot(ctx.state, ref_id).await
-    }
-    .await
-    .into()
-}
-
 #[handler(mutation)]
-async fn create_snapshot(ctx: AppCtx, ref_id: Uuid) -> RpcResult<()> {
+async fn load_snapshot(ctx: AppCtx, ref_id: Uuid, snapshot_id: i32) -> RpcResult<()> {
     async {
         auth::authorize(&ctx, ref_id, PermissionLevel::Write).await?;
-        doc::create_snapshot(ctx.state, ref_id).await
+        send_to_actor(&ctx.state, ref_id, RefMsg::LoadSnapshot { snapshot_id }).await
     }
     .await
     .into()
@@ -110,7 +105,7 @@ async fn create_snapshot(ctx: AppCtx, ref_id: Uuid) -> RpcResult<()> {
 async fn delete_ref(ctx: AppCtx, ref_id: Uuid) -> RpcResult<()> {
     async {
         auth::authorize(&ctx, ref_id, PermissionLevel::Own).await?;
-        doc::delete_ref(ctx.state, ref_id).await
+        send_to_actor(&ctx.state, ref_id, RefMsg::Delete).await
     }
     .await
     .into()
@@ -120,7 +115,7 @@ async fn delete_ref(ctx: AppCtx, ref_id: Uuid) -> RpcResult<()> {
 async fn restore_ref(ctx: AppCtx, ref_id: Uuid) -> RpcResult<()> {
     async {
         auth::authorize(&ctx, ref_id, PermissionLevel::Own).await?;
-        doc::restore_ref(ctx.state, ref_id).await
+        send_to_actor(&ctx.state, ref_id, RefMsg::Restore).await
     }
     .await
     .into()
@@ -200,7 +195,7 @@ impl<T> From<AppError> for RpcResult<T> {
             AppError::Invalid(_) => StatusCode::BAD_REQUEST,
             AppError::Unauthorized => StatusCode::UNAUTHORIZED,
             AppError::Forbidden(_) => StatusCode::FORBIDDEN,
-            AppError::Db(sqlx::Error::RowNotFound) => StatusCode::NOT_FOUND,
+            AppError::NotFound(_) | AppError::Db(sqlx::Error::RowNotFound) => StatusCode::NOT_FOUND,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         };
         RpcResult::Err {

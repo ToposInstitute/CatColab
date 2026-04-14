@@ -5,9 +5,8 @@ import { useFirebaseApp } from "solid-firebase";
 import { createMemo, createSignal, For, type JSX, Show, useContext } from "solid-js";
 import { stringify as uuidStringify } from "uuid";
 
-import { DocumentTypeIcon } from "catcolab-ui-components";
+import { RelativeTime, createVirtualList, DocumentTypeIcon } from "catcolab-ui-components";
 import { TheoryLibraryContext } from "../theory";
-import { createVirtualList } from "../util/virtual_list";
 import { currentUserPermission, formatOwners, useUserState } from "./user_state_context";
 
 import "./documents.css";
@@ -33,7 +32,7 @@ export function filterDocuments(
             if (opts.deleted) {
                 return (b.deletedAt ?? 0) - (a.deletedAt ?? 0);
             }
-            return b.createdAt - a.createdAt;
+            return b.currentSnapshotUpdatedAt - a.currentSnapshotUpdatedAt;
         });
 }
 
@@ -214,11 +213,10 @@ function DocumentRow(props: DocumentRowProps) {
             <div>{ownerNames()}</div>
             <div>{userPermission()}</div>
             <div>
-                {new Date(props.doc.createdAt).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                })}
+                <RelativeTime timestamp={props.doc.createdAt} />
+            </div>
+            <div>
+                <RelativeTime timestamp={props.doc.currentSnapshotUpdatedAt} />
             </div>
             {props.actionsPosition === "end" && props.renderActions(props.doc)}
         </A>

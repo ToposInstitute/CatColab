@@ -6,8 +6,8 @@ pub mod app;
 /// Authentication and authorization for document refs.
 pub mod auth;
 
-/// Conversion between Automerge documents and JSON.
-pub mod automerge_json;
+/// Per-ref actor for autosave, navigation, and lifecycle operations.
+pub mod ref_actor;
 
 /// Autosurgeon utilities for datetime serialization.
 pub mod autosurgeon_datetime;
