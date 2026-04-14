@@ -1,3 +1,4 @@
+import type { Component } from "solid-js";
 import { createMemo, createSignal, Show, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
@@ -10,11 +11,24 @@ import { unwrapApp, wrapApp } from "./ob_operations";
 import { obClasses } from "./object_cell_editor";
 import { ObInput } from "./object_input";
 
-import arrowStyles from "../stdlib/arrow_styles.module.css";
 import styles from "./contribution_cell_editor.module.css";
 
+/** The sign of a contribution: positive or negative. */
+export type ContributionSign = "plus" | "minus";
+
+/** Creates a contribution editor component with the given sign. */
+export function createContributionEditor({
+    sign,
+}: {
+    sign: ContributionSign;
+}): Component<MorphismEditorProps> {
+    return (props: MorphismEditorProps) => <ContributionCellEditor {...props} sign={sign} />;
+}
+
 /** Editor for a contribution declaration cell in a model. */
-export default function ContributionCellEditor(props: MorphismEditorProps) {
+export default function ContributionCellEditor(
+    props: MorphismEditorProps & { sign: ContributionSign },
+) {
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 
@@ -48,8 +62,6 @@ export default function ContributionCellEditor(props: MorphismEditorProps) {
     const codClasses = () => ["morphism-decl-cod", ...obClasses(props.theory, codType())];
 
     const nameClasses = () => ["morphism-decl-name", ...(morTypeMeta()?.textClasses ?? [])];
-
-    const contributionSign = () => arrowStyles[morTypeMeta()?.arrowStyle ?? "plus"];
 
     const errors = () => {
         const validated = liveModel().validatedModel();
@@ -130,9 +142,9 @@ export default function ContributionCellEditor(props: MorphismEditorProps) {
                     }}
                 />
             </div>
-            <div class={[styles["morphism-decl-arrow-replacement"], contributionSign()].join(" ")}>
-                <Show when={contributionSign().includes("plus")}>+</Show>
-                <Show when={contributionSign().includes("minus")}>-</Show>=
+            <div class={styles["morphism-decl-arrow-replacement"]}>
+                <Show when={props.sign === "plus"}>+</Show>
+                <Show when={props.sign === "minus"}>-</Show>=
             </div>
             <div class={styles["morphism-decl-dom-prefix"]}>𝜆&nbsp;&middot;</div>
             <div class={domClasses().join(" ")}>

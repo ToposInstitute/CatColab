@@ -5,7 +5,11 @@ import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
 
 const ObjectCellEditor = lazy(() => import("../../model/object_cell_editor"));
-const ContributionCellEditor = lazy(() => import("../../model/contribution_cell_editor"));
+const ContributionCellEditor = lazy(() =>
+    import("../../model/contribution_cell_editor").then((m) => ({
+        default: m.createContributionEditor({ sign: "plus" }),
+    })),
+);
 
 export default function createPolynomialODETheory(theoryMeta: TheoryMeta): Theory {
     const thPolynomialODE = new ThPolynomialODE();
@@ -30,7 +34,6 @@ export default function createPolynomialODETheory(theoryMeta: TheoryMeta): Theor
                 name: "Contribution",
                 description: "Monomial contribution to ODE system",
                 shortcut: ["C"],
-                arrowStyle: "plus",
             },
         ],
         modelAnalyses: [

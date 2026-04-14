@@ -5,7 +5,16 @@ import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
 
 const ObjectCellEditor = lazy(() => import("../../model/object_cell_editor"));
-const ContributionCellEditor = lazy(() => import("../../model/contribution_cell_editor"));
+const PositiveContributionEditor = lazy(() =>
+    import("../../model/contribution_cell_editor").then((m) => ({
+        default: m.createContributionEditor({ sign: "plus" }),
+    })),
+);
+const NegativeContributionEditor = lazy(() =>
+    import("../../model/contribution_cell_editor").then((m) => ({
+        default: m.createContributionEditor({ sign: "minus" }),
+    })),
+);
 
 export default function createSignedPolynomialODETheory(theoryMeta: TheoryMeta): Theory {
     const thSignedPolynomialODE = new ThSignedPolynomialODE();
@@ -26,20 +35,18 @@ export default function createSignedPolynomialODETheory(theoryMeta: TheoryMeta):
             {
                 tag: "MorType",
                 morType: { tag: "Basic", content: "Contribution" },
-                editor: ContributionCellEditor,
+                editor: PositiveContributionEditor,
                 name: "Positive contribution",
                 description: "Additive monomial contribution to the system of ODEs",
                 shortcut: ["C"],
-                arrowStyle: "plus",
             },
             {
                 tag: "MorType",
                 morType: { tag: "Basic", content: "NegativeContribution" },
-                editor: ContributionCellEditor,
+                editor: NegativeContributionEditor,
                 name: "Negative contribution",
                 description: "Subtractive monomial contribution to the system of ODEs",
                 shortcut: ["N"],
-                arrowStyle: "minus",
             },
         ],
         modelAnalyses: [
