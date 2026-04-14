@@ -93,6 +93,9 @@ export function NotebookEditor<T>(props: {
 
     // Popover state for Shift-Enter cell type selection.
     const [shiftEnterPopoverOpen, setShiftEnterPopoverOpen] = createSignal(false);
+    // The active cell index captured at the moment Shift-Enter is pressed, so
+    // that the popover inserts below the correct cell even after focus moves.
+    const [shiftEnterCellIndex, setShiftEnterCellIndex] = createSignal<number | null>(null);
     let shiftEnterAnchorRef!: HTMLDivElement;
 
     // Set up commands and their keyboard shortcuts.
@@ -194,7 +197,8 @@ export function NotebookEditor<T>(props: {
         }
         if (keyEventHasModifier(evt, cellShortcutModifier)) {
             for (const command of insertCommands()) {
-                if (command.shortcut && evt.key.toUpperCase() === command.shortcut[0]) {
+                const key = command.shortcut?.at(-1);
+                if (key && evt.key.toUpperCase() === key) {
                     command.onComplete?.();
                     return evt.preventDefault();
                 }
@@ -213,6 +217,7 @@ export function NotebookEditor<T>(props: {
                 shiftEnterAnchorRef.style.left = `${rect.left}px`;
                 shiftEnterAnchorRef.style.top = `${rect.bottom}px`;
             }
+            setShiftEnterCellIndex(activeCell());
             setShiftEnterPopoverOpen(true);
             return evt.preventDefault();
         }
@@ -441,7 +446,11 @@ export function NotebookEditor<T>(props: {
                 <Popover.Portal>
                     <Popover.Content class="popup">
                         <Completions
-                            completions={insertCommands()}
+                            completions={
+                                shiftEnterCellIndex() != null
+                                    ? createBelowCommands(shiftEnterCellIndex()!)
+                                    : appendCommands()
+                            }
                             onComplete={() => setShiftEnterPopoverOpen(false)}
                         />
                     </Popover.Content>
