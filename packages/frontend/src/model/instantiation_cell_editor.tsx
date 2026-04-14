@@ -1,4 +1,3 @@
-import { useParams } from "@solidjs/router";
 import type { DocInfo } from "catcolab-api/src/user_state";
 import { batch, createSignal, Index, Show, splitProps, useContext } from "solid-js";
 import invariant from "tiny-invariant";
@@ -8,6 +7,7 @@ import type { DblModel, InstantiatedModel, Ob, SpecializeModel } from "catlog-wa
 import { useApi } from "../api";
 import { DocumentPicker, IdInput } from "../components";
 import type { CellActions } from "../notebook";
+import { DocRefIdContext } from "../page/context";
 import { useUserState } from "../user/user_state_context";
 import { LiveModelContext, ModelLibraryContext } from "./context";
 import { ObInput } from "./object_input";
@@ -22,7 +22,7 @@ export function InstantiationCellEditor(props: {
     actions: CellActions;
 }) {
     const api = useApi();
-    const params = useParams();
+    const docRefId = useContext(DocRefIdContext);
     const liveModel = useContext(LiveModelContext);
     const userState = useUserState();
 
@@ -30,7 +30,7 @@ export function InstantiationCellEditor(props: {
         if (doc.typeName !== "model") {
             return false;
         }
-        if (params.ref && refId === params.ref) {
+        if (docRefId && refId === docRefId()) {
             return false;
         }
         const theory = liveModel?.().liveDoc.doc.theory;

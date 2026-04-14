@@ -33,6 +33,7 @@ import { DocumentHead } from "../page/document_head";
 import { SidebarLayout } from "../page/sidebar_layout";
 import { PermissionsButton } from "../user";
 import { assertExhaustive } from "../util/assert_exhaustive";
+import { DocRefIdContext } from "./context";
 import { DocumentSidebar } from "./document_page_sidebar";
 import { HistorySidebar } from "./history_sidebar";
 import { useSnapshotHistory } from "./use_snapshot_history";
@@ -400,70 +401,75 @@ export function DocumentPane(props: {
 
     const history = useSnapshotHistory(() => props.docRef.refId);
 
+    // oxlint-disable solid/reactivity -- Context.Provider value getter is reactive
     return (
-        <div class="document-pane-layout">
-            <div class="document-pane-content">
-                <Show when={isDeleted()}>
-                    <WarningBanner
-                        actions={
-                            <Show when={canRestore()}>
-                                <Button
-                                    variant="utility"
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        void handleRestore();
-                                    }}
-                                >
-                                    <RotateCcw size={16} /> Restore it
-                                </Button>
-                            </Show>
-                        }
-                    >
-                        This {props.doc.type} has been deleted and will not be listed in your
-                        documents.
-                    </WarningBanner>
+        <DocRefIdContext.Provider value={() => props.docRef.refId}>
+            <div class="document-pane-layout">
+                <div class="document-pane-content">
+                    <Show when={isDeleted()}>
+                        <WarningBanner
+                            actions={
+                                <Show when={canRestore()}>
+                                    <Button
+                                        variant="utility"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            void handleRestore();
+                                        }}
+                                    >
+                                        <RotateCcw size={16} /> Restore it
+                                    </Button>
+                                </Show>
+                            }
+                        >
+                            This {props.doc.type} has been deleted and will not be listed in your
+                            documents.
+                        </WarningBanner>
+                    </Show>
+                    <div class="notebook-container">
+                        <Switch>
+                            <Match when={props.doc.type === "model" && props.doc}>
+                                {(liveModel) => <ModelDocumentHead liveModel={liveModel()} />}
+                            </Match>
+                            <Match when={props.doc.type === "diagram" && props.doc}>
+                                {(liveDiagram) => (
+                                    <DocumentHead liveDoc={liveDiagram().liveDoc}>
+                                        <DiagramInfo liveDiagram={liveDiagram()} />
+                                    </DocumentHead>
+                                )}
+                            </Match>
+                            <Match when={props.doc.type === "analysis" && props.doc}>
+                                {(liveAnalysis) => (
+                                    <DocumentHead liveDoc={liveAnalysis().liveDoc}>
+                                        <AnalysisInfo liveAnalysis={liveAnalysis()} />
+                                    </DocumentHead>
+                                )}
+                            </Match>
+                        </Switch>
+                        <Switch>
+                            <Match when={props.doc.type === "model" && props.doc}>
+                                {(liveModel) => <ModelNotebookEditor liveModel={liveModel()} />}
+                            </Match>
+                            <Match when={props.doc.type === "diagram" && props.doc}>
+                                {(liveDiagram) => (
+                                    <DiagramNotebookEditor liveDiagram={liveDiagram()} />
+                                )}
+                            </Match>
+                            <Match when={props.doc.type === "analysis" && props.doc}>
+                                {(liveAnalysis) => (
+                                    <AnalysisNotebookEditor liveAnalysis={liveAnalysis()} />
+                                )}
+                            </Match>
+                        </Switch>
+                    </div>
+                </div>
+                <Show when={props.historySidebarOpen && props.docRef.refId}>
+                    <div class="history-sidebar">
+                        <HistorySidebar history={history} />
+                    </div>
                 </Show>
-                <div class="notebook-container">
-                    <Switch>
-                        <Match when={props.doc.type === "model" && props.doc}>
-                            {(liveModel) => <ModelDocumentHead liveModel={liveModel()} />}
-                        </Match>
-                        <Match when={props.doc.type === "diagram" && props.doc}>
-                            {(liveDiagram) => (
-                                <DocumentHead liveDoc={liveDiagram().liveDoc}>
-                                    <DiagramInfo liveDiagram={liveDiagram()} />
-                                </DocumentHead>
-                            )}
-                        </Match>
-                        <Match when={props.doc.type === "analysis" && props.doc}>
-                            {(liveAnalysis) => (
-                                <DocumentHead liveDoc={liveAnalysis().liveDoc}>
-                                    <AnalysisInfo liveAnalysis={liveAnalysis()} />
-                                </DocumentHead>
-                            )}
-                        </Match>
-                    </Switch>
-                    <Switch>
-                        <Match when={props.doc.type === "model" && props.doc}>
-                            {(liveModel) => <ModelNotebookEditor liveModel={liveModel()} />}
-                        </Match>
-                        <Match when={props.doc.type === "diagram" && props.doc}>
-                            {(liveDiagram) => <DiagramNotebookEditor liveDiagram={liveDiagram()} />}
-                        </Match>
-                        <Match when={props.doc.type === "analysis" && props.doc}>
-                            {(liveAnalysis) => (
-                                <AnalysisNotebookEditor liveAnalysis={liveAnalysis()} />
-                            )}
-                        </Match>
-                    </Switch>
-                </div>
             </div>
-            <Show when={props.historySidebarOpen && props.docRef.refId}>
-                <div class="history-sidebar">
-                    <HistorySidebar history={history} />
-                </div>
-            </Show>
-        </div>
+        </DocRefIdContext.Provider>
     );
 }
 
