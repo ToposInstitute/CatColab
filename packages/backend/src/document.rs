@@ -198,7 +198,7 @@ pub async fn load_snapshot(
     )
     .fetch_optional(&mut *db_tx)
     .await?
-    .ok_or_else(|| AppError::Invalid("Snapshot not found for this ref".to_string()))?;
+    .ok_or_else(|| AppError::NotFound(format!("snapshot {snapshot_id} for ref {ref_id}")))?;
 
     let target_heads: Vec<automerge::ChangeHash> = snapshot
         .heads
@@ -217,7 +217,8 @@ pub async fn load_snapshot(
 
     doc_handle.with_document(|doc| {
         doc.transact::<_, _, automerge::AutomergeError>(|tx| copy_doc_at_heads(tx, &target_heads))
-            .map_err(|e| AppError::Invalid(format!("Failed to update document: {e:?}")))
+            .map_err(|e| AppError::Automerge(e.error))?;
+        Ok::<(), AppError>(())
     })?;
 
     db_tx.commit().await?;

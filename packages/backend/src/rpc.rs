@@ -46,12 +46,10 @@ async fn get_doc(ctx: AppCtx, ref_id: Uuid) -> RpcResult<RefDoc> {
 
         if max_level >= Some(PermissionLevel::Write) {
             let doc_id = doc::get_doc_id(ctx.state.clone(), ref_id).await?;
-            let doc_handle = ctx
-                .state
-                .repo
-                .find(doc_id.clone())
-                .await?
-                .ok_or_else(|| AppError::Invalid("Document not found".to_string()))?;
+            let doc_handle =
+                ctx.state.repo.find(doc_id.clone()).await?.ok_or_else(|| {
+                    AppError::NotFound(format!("document {doc_id} for ref {ref_id}"))
+                })?;
             ensure_ref_actor(ctx.state.clone(), ref_id, doc_handle).await;
             Ok(RefDoc::Live {
                 doc_id: doc_id.to_string(),
@@ -197,7 +195,7 @@ impl<T> From<AppError> for RpcResult<T> {
             AppError::Invalid(_) => StatusCode::BAD_REQUEST,
             AppError::Unauthorized => StatusCode::UNAUTHORIZED,
             AppError::Forbidden(_) => StatusCode::FORBIDDEN,
-            AppError::Db(sqlx::Error::RowNotFound) => StatusCode::NOT_FOUND,
+            AppError::NotFound(_) | AppError::Db(sqlx::Error::RowNotFound) => StatusCode::NOT_FOUND,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         };
         RpcResult::Err {

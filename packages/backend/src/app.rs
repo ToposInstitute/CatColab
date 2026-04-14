@@ -70,6 +70,10 @@ pub enum AppError {
     #[error("SQL database error: {0}")]
     Db(#[from] sqlx::Error),
 
+    /// Resource not found.
+    #[error("Not found: {0}")]
+    NotFound(String),
+
     /// Error from the Automerge Repo.
     #[error("AutomergeRepo error: {0}")]
     AutomergeRepo(#[from] samod::Stopped),
