@@ -91,12 +91,14 @@ export function NotebookEditor<T>(props: {
     const [activeCell, setActiveCell] = createSignal<number | null>(null);
     const [currentDropTarget, setCurrentDropTarget] = createSignal<string | null>(null);
 
-    // Popover state for Shift-Enter cell type selection.
-    const [shiftEnterPopoverOpen, setShiftEnterPopoverOpen] = createSignal(false);
+    // Popup state for Shift-Enter cell type selection.
+    const [shiftEnterPopupOpen, setShiftEnterPopupOpen] = createSignal(false);
     // The active cell index captured at the moment Shift-Enter is pressed, so
-    // that the popover inserts below the correct cell even after focus moves.
+    // that the popup inserts below the correct cell even after focus moves.
     const [shiftEnterCellIndex, setShiftEnterCellIndex] = createSignal<number | null>(null);
-    let shiftEnterAnchorRef!: HTMLDivElement;
+    // Position of the shift-enter popup, stored as signals.
+    const [popupLeft, setPopupLeft] = createSignal(0);
+    const [popupTop, setPopupTop] = createSignal(0);
 
     // Set up commands and their keyboard shortcuts.
     const insertCommands = (): Completion[] =>
@@ -208,18 +210,32 @@ export function NotebookEditor<T>(props: {
             (evt.shiftKey && evt.key === "Enter") ||
             (keyEventHasModifier(evt, cellShortcutModifier) && evt.key === "Enter")
         ) {
-            // Position the anchor near the focused element (the active cell).
-            const focused = document.activeElement as HTMLElement | null;
-            const cellEl = focused?.closest(".cell");
+            // Capture the active cell *before* focus changes.
+            const cellIndex = activeCell();
+            setShiftEnterCellIndex(cellIndex);
+
+            // Position the popup at the bottom edge of the active cell.
+            const cellEls = document.querySelectorAll(".notebook-cells .cell");
+            const cellEl = cellIndex != null ? cellEls[cellIndex] : cellEls[cellEls.length - 1];
             if (cellEl) {
                 const rect = cellEl.getBoundingClientRect();
-                shiftEnterAnchorRef.style.position = "fixed";
-                shiftEnterAnchorRef.style.left = `${rect.left}px`;
-                shiftEnterAnchorRef.style.top = `${rect.bottom}px`;
+                setPopupLeft(rect.left);
+                setPopupTop(rect.bottom);
             }
-            setShiftEnterCellIndex(activeCell());
-            setShiftEnterPopoverOpen(true);
+            setShiftEnterPopupOpen(true);
             return evt.preventDefault();
+        }
+        if (evt.key === "Escape" && shiftEnterPopupOpen()) {
+            setShiftEnterPopupOpen(false);
+            return evt.preventDefault();
+        }
+    });
+
+    // Close the shift-enter popup when clicking outside it.
+    let shiftEnterPopupRef: HTMLDivElement | undefined;
+    makeEventListener(window, "pointerdown", (evt) => {
+        if (shiftEnterPopupOpen() && !shiftEnterPopupRef?.contains(evt.target as Node)) {
+            setShiftEnterPopupOpen(false);
         }
     });
 
@@ -425,37 +441,27 @@ export function NotebookEditor<T>(props: {
                     }}
                 </For>
             </ul>
-            <Popover
-                open={shiftEnterPopoverOpen()}
-                onOpenChange={setShiftEnterPopoverOpen}
-                placement="bottom-start"
-                floatingOptions={{ flip: true }}
-                restoreFocus={false}
-            >
-                <Popover.Anchor>
-                    <div
-                        ref={shiftEnterAnchorRef}
-                        style={{
-                            position: "fixed",
-                            width: "1px",
-                            height: "1px",
-                            "pointer-events": "none",
-                        }}
+            <Show when={shiftEnterPopupOpen()}>
+                <div
+                    ref={shiftEnterPopupRef}
+                    class="popup"
+                    style={{
+                        position: "fixed",
+                        left: `${popupLeft()}px`,
+                        top: `${popupTop()}px`,
+                        "z-index": 1000,
+                    }}
+                >
+                    <Completions
+                        completions={
+                            shiftEnterCellIndex() != null
+                                ? createBelowCommands(shiftEnterCellIndex()!)
+                                : appendCommands()
+                        }
+                        onComplete={() => setShiftEnterPopupOpen(false)}
                     />
-                </Popover.Anchor>
-                <Popover.Portal>
-                    <Popover.Content class="popup">
-                        <Completions
-                            completions={
-                                shiftEnterCellIndex() != null
-                                    ? createBelowCommands(shiftEnterCellIndex()!)
-                                    : appendCommands()
-                            }
-                            onComplete={() => setShiftEnterPopoverOpen(false)}
-                        />
-                    </Popover.Content>
-                </Popover.Portal>
-            </Popover>
+                </div>
+            </Show>
             <Show when={props.notebook.cellOrder.length > 0}>
                 <div class="notebook-cell-placeholder">
                     <CellTypePopover completions={appendCommands()} tooltip="Create a new cell">
