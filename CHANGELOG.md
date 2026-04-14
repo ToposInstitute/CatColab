@@ -26,8 +26,10 @@ include notable new features.
   [AlgebraicJulia](https://www.algebraicjulia.org/)
   ([#1132](https://github.com/ToposInstitute/CatColab/pull/1132))
 - New analysis: table view for instances of a schema
-  ([#835](https://github.com/ToposInstitute/CatColab/pull/835)), computed using
-  the Julia service
+  ([#835](https://github.com/ToposInstitute/CatColab/pull/835)), based on the
+  new Julia service
+- New logic: systems of (signed and unsigned) polynomial ODEs
+  ([#1176](https://github.com/ToposInstitute/CatColab/pull/1176) and [#1194](https://github.com/ToposInstitute/CatColab/pull/1194))
 - Experimental: Petri nets created in
   [Petrinaut](https://www.npmjs.com/package/@hashintel/petrinaut) and exported
   as JSON can be imported into CatColab

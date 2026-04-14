@@ -1,18 +1,18 @@
 import { lazy } from "solid-js";
 
-import { ThPolynomialODE } from "catlog-wasm";
+import { ThSignedPolynomialODE } from "catlog-wasm";
 import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
 
 const ObjectCellEditor = lazy(() => import("../../model/object_cell_editor"));
 const ContributionCellEditor = lazy(() => import("../../model/contribution_cell_editor"));
 
-export default function createPolynomialODETheory(theoryMeta: TheoryMeta): Theory {
-    const thPolynomialODE = new ThPolynomialODE();
+export default function createSignedPolynomialODETheory(theoryMeta: TheoryMeta): Theory {
+    const thSignedPolynomialODE = new ThSignedPolynomialODE();
 
     return new Theory({
         ...theoryMeta,
-        theory: thPolynomialODE.theory(),
+        theory: thSignedPolynomialODE.theory(),
         onlyFreeModels: true,
         modelTypes: [
             {
@@ -20,29 +20,38 @@ export default function createPolynomialODETheory(theoryMeta: TheoryMeta): Theor
                 obType: { tag: "Basic", content: "State" },
                 editor: ObjectCellEditor,
                 name: "Variable",
-                description: "State variable in ODE system",
+                description: "Variable in ring of polynomials",
                 shortcut: ["V"],
             },
             {
                 tag: "MorType",
                 morType: { tag: "Basic", content: "Contribution" },
                 editor: ContributionCellEditor,
-                name: "Contribution",
-                description: "Monomial contribution to ODE system",
+                name: "Positive contribution",
+                description: "Additive monomial contribution to the system of ODEs",
                 shortcut: ["C"],
                 arrowStyle: "plus",
+            },
+            {
+                tag: "MorType",
+                morType: { tag: "Basic", content: "NegativeContribution" },
+                editor: ContributionCellEditor,
+                name: "Negative contribution",
+                description: "Subtractive monomial contribution to the system of ODEs",
+                shortcut: ["N"],
+                arrowStyle: "minus",
             },
         ],
         modelAnalyses: [
             analyses.polynomialODEEquations({
                 getEquations(model, data) {
-                    return thPolynomialODE.polynomialODEEquations(model, data);
+                    return thSignedPolynomialODE.polynomialODEEquations(model, data);
                 },
             }),
             analyses.polynomialODESimulation({
-                signedContributions: false,
+                signedContributions: true,
                 simulate(model, data) {
-                    return thPolynomialODE.polynomialODESimulation(model, data);
+                    return thSignedPolynomialODE.polynomialODESimulation(model, data);
                 },
             }),
         ],

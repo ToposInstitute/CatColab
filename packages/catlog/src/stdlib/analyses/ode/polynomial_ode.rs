@@ -47,15 +47,18 @@ pub struct PolynomialODEProblemData {
 pub struct PolynomialODEAnalysis {
     /// Object type for variables.
     pub variable_ob_type: ModalObType,
-    /// Morphism type for contributions.
-    pub contribution_mor_type: ModalMorType,
+    /// Morphism type for positive contributions.
+    pub positive_contribution_mor_type: ModalMorType,
+    /// Morphism type for negative contributions.
+    pub negative_contribution_mor_type: ModalMorType,
 }
 
 impl Default for PolynomialODEAnalysis {
     fn default() -> Self {
         Self {
             variable_ob_type: ModalObType::new(name("State")),
-            contribution_mor_type: ModeApp::new(name("Contribution")).into(),
+            positive_contribution_mor_type: ModeApp::new(name("Contribution")).into(),
+            negative_contribution_mor_type: ModeApp::new(name("NegativeContribution")).into(),
         }
     }
 }
@@ -73,8 +76,10 @@ impl PolynomialODEAnalysis {
             sys.add_term(ob, Polynomial::zero());
         }
 
-        // Create a monomial for each morphism.
-        for mor in model.mor_generators_with_type(&self.contribution_mor_type) {
+        // TODO: reduce the duplication below
+
+        // Add a positive monomial for each positive morphism.
+        for mor in model.mor_generators_with_type(&self.positive_contribution_mor_type) {
             let (Some(ModalOb::List(_, inputs)), Some(output)) =
                 (model.get_dom(&mor), model.get_cod(&mor))
             else {
@@ -87,6 +92,22 @@ impl PolynomialODEAnalysis {
                 [(Parameter::generator(mor), term.clone())].into_iter().collect();
 
             sys.add_term(output.clone().unwrap_generator(), term);
+        }
+
+        // Add a negative monomial for each negative morphism.
+        for mor in model.mor_generators_with_type(&self.negative_contribution_mor_type) {
+            let (Some(ModalOb::List(_, inputs)), Some(output)) =
+                (model.get_dom(&mor), model.get_cod(&mor))
+            else {
+                continue;
+            };
+
+            let term: Monomial<_, _> =
+                inputs.iter().cloned().map(|ob| (ob.unwrap_generator(), 1)).collect();
+            let term: Polynomial<_, _, _> =
+                [(Parameter::generator(mor), term.clone())].into_iter().collect();
+
+            sys.add_term(output.clone().unwrap_generator(), -term);
         }
 
         sys.normalize()

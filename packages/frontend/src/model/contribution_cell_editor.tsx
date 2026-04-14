@@ -1,4 +1,4 @@
-import { createMemo, createSignal, useContext } from "solid-js";
+import { createMemo, createSignal, Show, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { NameInput } from "catcolab-ui-components";
@@ -10,6 +10,7 @@ import { unwrapApp, wrapApp } from "./ob_operations";
 import { obClasses } from "./object_cell_editor";
 import { ObInput } from "./object_input";
 
+import arrowStyles from "../stdlib/arrow_styles.module.css";
 import styles from "./contribution_cell_editor.module.css";
 
 /** Editor for a contribution declaration cell in a model. */
@@ -47,6 +48,8 @@ export default function ContributionCellEditor(props: MorphismEditorProps) {
     const codClasses = () => ["morphism-decl-cod", ...obClasses(props.theory, codType())];
 
     const nameClasses = () => ["morphism-decl-name", ...(morTypeMeta()?.textClasses ?? [])];
+
+    const contributionSign = () => arrowStyles[morTypeMeta()?.arrowStyle ?? "plus"];
 
     const errors = () => {
         const validated = liveModel().validatedModel();
@@ -127,7 +130,10 @@ export default function ContributionCellEditor(props: MorphismEditorProps) {
                     }}
                 />
             </div>
-            <div class={styles["morphism-decl-arrow-replacement"]}>+=</div>
+            <div class={[styles["morphism-decl-arrow-replacement"], contributionSign()].join(" ")}>
+                <Show when={contributionSign().includes("plus")}>+</Show>
+                <Show when={contributionSign().includes("minus")}>-</Show>=
+            </div>
             <div class={styles["morphism-decl-dom-prefix"]}>𝜆&nbsp;&middot;</div>
             <div class={domClasses().join(" ")}>
                 <ContributionMonomialEditor

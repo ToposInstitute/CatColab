@@ -395,6 +395,7 @@ const PolynomialODEEquationsDisplay = lazy(() => import("./analyses/polynomial_o
 
 export function polynomialODESimulation(
     options: Partial<AnalysisOptions> & {
+        signedContributions: boolean;
         simulate: Simulators.PolynomialODESimulator;
         stateType?: ObType;
         transitionType?: MorType;

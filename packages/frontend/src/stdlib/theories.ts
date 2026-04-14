@@ -146,8 +146,19 @@ stdTheories.add(
         id: "polynomial-ode",
         name: "Polynomial ODEs",
         description: "Systems of polynomial ordinary differential equations",
-        iconLetters: ["P", "o"],
+        iconLetters: ["P", "O"],
         group: "Experimental",
     },
     async () => (await import("./theories/polynomial-ode")).default,
+);
+
+stdTheories.add(
+    {
+        id: "signed-polynomial-ode",
+        name: "Signed polynomial ODEs",
+        description: "Systems of polynomial ordinary differential equations with signs",
+        iconLetters: ["S", "O"],
+        group: "Experimental",
+    },
+    async () => (await import("./theories/signed-polynomial-ode")).default,
 );
