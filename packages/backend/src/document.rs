@@ -59,8 +59,8 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
             VALUES ($1, $2, NOW(), $4)
         RETURNING id
         )
-        INSERT INTO refs(id, current_snapshot, created, doc_id)
-        VALUES ($1, (SELECT id FROM snapshot), NOW(), $3)
+        INSERT INTO refs(id, current_snapshot, created, doc_id, current_snapshot_updated_at)
+        VALUES ($1, (SELECT id FROM snapshot), NOW(), $3, NOW())
         ",
     )
     .bind(ref_id)
@@ -156,7 +156,8 @@ pub async fn create_snapshot(state: AppState, ref_id: Uuid) -> Result<(), AppErr
             RETURNING id
         )
         UPDATE refs
-        SET current_snapshot = (SELECT id FROM snapshot)
+        SET current_snapshot = (SELECT id FROM snapshot),
+            current_snapshot_updated_at = NOW()
         WHERE id = $1
         ",
     )
@@ -211,9 +212,13 @@ pub async fn load_snapshot(
         })
         .collect::<Result<_, _>>()?;
 
-    sqlx::query!("UPDATE refs SET current_snapshot = $2 WHERE id = $1", ref_id, snapshot_id,)
-        .execute(&mut *db_tx)
-        .await?;
+    sqlx::query!(
+        "UPDATE refs SET current_snapshot = $2, current_snapshot_updated_at = NOW() WHERE id = $1",
+        ref_id,
+        snapshot_id,
+    )
+    .execute(&mut *db_tx)
+    .await?;
 
     doc_handle.with_document(|doc| {
         doc.transact::<_, _, automerge::AutomergeError>(|tx| copy_doc_at_heads(tx, &target_heads))

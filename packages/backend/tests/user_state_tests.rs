@@ -995,9 +995,10 @@ mod integration_tests {
                         VALUES ($1, $2, $3, $5)
                         RETURNING id
                     )
-                    INSERT INTO refs (id, current_snapshot, created, doc_id)
-                    VALUES ($1, (SELECT id FROM snapshot), $3, $4)
-                    ON CONFLICT (id) DO UPDATE SET current_snapshot = (SELECT id FROM snapshot)
+                    INSERT INTO refs (id, current_snapshot, created, doc_id, current_snapshot_updated_at)
+                    VALUES ($1, (SELECT id FROM snapshot), $3, $4, $6)
+                    ON CONFLICT (id) DO UPDATE SET current_snapshot = (SELECT id FROM snapshot),
+                        current_snapshot_updated_at = $6
                     RETURNING current_snapshot
                     "#,
                 )
@@ -1006,6 +1007,7 @@ mod integration_tests {
                 .bind(doc.created_at)
                 .bind(format!("test_fake_automerge_doc_{ref_id}"))
                 .bind(&fake_heads)
+                .bind(doc.current_snapshot_updated_at)
                 .fetch_one(db)
                 .await?;
 

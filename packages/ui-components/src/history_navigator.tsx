@@ -1,8 +1,9 @@
 import Redo2 from "lucide-solid/icons/redo-2";
 import Undo2 from "lucide-solid/icons/undo-2";
-import { For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
+import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
 
 import { IconButton } from "./icon_button";
+import { RelativeTime } from "./relative_time";
 import { createVirtualList } from "./virtual_list";
 
 import styles from "./history_navigator.module.css";
@@ -27,61 +28,10 @@ export type HistoryNavigatorProps = {
     redoTooltip?: string;
 };
 
-function formatRelativeTime(ms: number, now: number): string {
-    const diffMs = now - ms;
-    const seconds = Math.floor(diffMs / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-
-    if (minutes < 1) {
-        return "just now";
-    }
-    if (minutes < 60) {
-        return `${minutes} min ago`;
-    }
-    if (minutes < 120) {
-        const remainMin = minutes % 60;
-        return remainMin === 0 ? "1 hour ago" : `1 hour ${remainMin} min ago`;
-    }
-    if (hours < 24) {
-        const hourLabel = hours === 1 ? "hour" : "hours";
-        return `${hours} ${hourLabel} ago`;
-    }
-    if (days === 1) {
-        return "yesterday";
-    }
-    if (days < 7) {
-        return `${days} days ago`;
-    }
-
-    const d = new Date(ms);
-    return d.toLocaleDateString(undefined, {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-    });
-}
-
-function formatExactTimestamp(ms: number): string {
-    const d = new Date(ms);
-    return d.toLocaleString(undefined, {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-    });
-}
-
 const ROW_HEIGHT = 44;
 
 /** Panel for navigating document snapshot history with undo/redo and a scrollable list. */
 export function HistoryNavigator(props: HistoryNavigatorProps) {
-    const [now, setNow] = createSignal(Date.now());
-    const timer = setInterval(() => setNow(Date.now()), 30_000);
-    onCleanup(() => clearInterval(timer));
-
     // Optimistic selection: when the user clicks a row, we immediately show
     // the dot there before the parent has had a chance to update `items`.
     const [optimisticId, setOptimisticId] = createSignal<string | null>(null);
@@ -93,7 +43,6 @@ export function HistoryNavigator(props: HistoryNavigatorProps) {
     });
 
     const displayItems = createMemo(() => {
-        const currentNow = now();
         const pending = optimisticId();
         const raw = props.items.map((item) => ({
             ...item,
@@ -127,8 +76,7 @@ export function HistoryNavigator(props: HistoryNavigatorProps) {
             return {
                 id: item.id,
                 active: isActive,
-                timestamp: formatRelativeTime(item.createdAt, currentNow),
-                exactTimestamp: formatExactTimestamp(item.createdAt),
+                createdAt: item.createdAt,
                 suffix: suffixByIndex.get(i) ?? null,
             };
         });
@@ -247,8 +195,10 @@ export function HistoryNavigator(props: HistoryNavigatorProps) {
                                             <span class={styles.selectionDot} />
                                         </Show>
                                     </span>
-                                    <span class={styles.timeCell} title={item.exactTimestamp}>
-                                        <span class={styles.timestamp}>{item.timestamp}</span>
+                                    <span class={styles.timeCell}>
+                                        <span class={styles.timestamp}>
+                                            <RelativeTime timestamp={item.createdAt} />
+                                        </span>
                                         <Show when={item.suffix}>
                                             <span class={styles.suffix}>{item.suffix}</span>
                                         </Show>
