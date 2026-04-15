@@ -168,62 +168,6 @@ where
     }
 }
 
-impl<Var, Coef> Combination<Var, Coef>
-where
-    Var: Display,
-    Coef: Display + PartialEq + One + Neg<Output = Coef>,
-{
-    /// Convert to a LaTeX string.
-    pub fn to_latex(&self) -> String {
-        let is_simple = |s: &str| {
-            // Numeric: digits and dots
-            if s.chars().all(|c| c.is_ascii_digit() || c == '.') {
-                return true;
-            }
-            // Alphabetic identifier
-            if s.chars().all(|c| c.is_alphabetic()) {
-                return true;
-            }
-            // Braced identifier like {uuid} or {name}
-            if s.starts_with('{') && s.ends_with('}') && s.matches('{').count() == 1 {
-                return true;
-            }
-            false
-        };
-
-        let fmt_scalar_mul = |coef: &Coef, var: &Var| -> String {
-            if coef.is_one() {
-                format!("{var}")
-            } else if *coef == Coef::one().neg() {
-                format!("-{var}")
-            } else {
-                let coef_str = coef.to_string();
-                if is_simple(&coef_str) {
-                    format!("{coef_str} {var}")
-                } else {
-                    format!("({coef_str}) {var}")
-                }
-            }
-        };
-
-        let mut pairs = self.0.iter();
-        let mut output = String::new();
-
-        if let Some((var, coef)) = pairs.next() {
-            output.push_str(&fmt_scalar_mul(coef, var));
-        } else {
-            output.push('0');
-        }
-
-        for (var, coef) in pairs {
-            output.push_str(" + ");
-            output.push_str(&fmt_scalar_mul(coef, var));
-        }
-
-        output
-    }
-}
-
 /// Constructs a combination from a list of terms (coefficient-variable pairs).
 impl<Var, Coef> FromIterator<(Coef, Var)> for Combination<Var, Coef>
 where
@@ -261,17 +205,54 @@ impl<'a, Var, Coef> IntoIterator for &'a Combination<Var, Coef> {
     }
 }
 
-/// Print the combination using ASCII.
-///
-/// Intended for debugging/testing. It currently just uses the LaTeX format since we are not yet
-/// using any LaTeX-specific characters there.
 impl<Var, Coef> Display for Combination<Var, Coef>
 where
     Var: Display,
     Coef: Display + PartialEq + One + Neg<Output = Coef>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_latex())
+        let is_simple = |s: &str| {
+            // Numeric: digits and dots
+            if s.chars().all(|c| c.is_ascii_digit() || c == '.') {
+                return true;
+            }
+            // Alphabetic identifier
+            if s.chars().all(|c| c.is_alphabetic()) {
+                return true;
+            }
+            // Braced identifier like {uuid} or {name}
+            if s.starts_with('{') && s.ends_with('}') && s.matches('{').count() == 1 {
+                return true;
+            }
+            false
+        };
+
+        let fmt_scalar_mul = |f: &mut std::fmt::Formatter<'_>, coef: &Coef, var: &Var| {
+            if coef.is_one() {
+                write!(f, "{var}")
+            } else if *coef == Coef::one().neg() {
+                write!(f, "-{var}")
+            } else {
+                let coef_str = coef.to_string();
+                if is_simple(&coef_str) {
+                    write!(f, "{coef_str} {var}")
+                } else {
+                    write!(f, "({coef_str}) {var}")
+                }
+            }
+        };
+
+        let mut pairs = self.0.iter();
+        if let Some((var, coef)) = pairs.next() {
+            fmt_scalar_mul(f, coef, var)?;
+        } else {
+            write!(f, "0")?;
+        }
+        for (var, coef) in pairs {
+            write!(f, " + ")?;
+            fmt_scalar_mul(f, coef, var)?;
+        }
+        Ok(())
     }
 }
 
@@ -530,16 +511,47 @@ where
             }
             Ok(())
         };
-        if let Some((var, exp)) = pairs.next() {
-            fmt_power(f, var, exp)?;
-        } else {
-            write!(f, "1")?;
-        }
+        let Some((var, exp)) = pairs.next() else {
+            return write!(f, "1");
+        };
+        fmt_power(f, var, exp)?;
         for (var, exp) in pairs {
             write!(f, " ")?;
             fmt_power(f, var, exp)?;
         }
         Ok(())
+    }
+}
+
+impl<Var, Exp> Monomial<Var, Exp>
+where
+    Var: Display,
+    Exp: Display + PartialEq + One,
+{
+    /// Convert to a LaTeX string, separating variables with `\cdot`.
+    pub fn to_latex(&self) -> String {
+        let fmt_power = |var: &Var, exp: &Exp| {
+            if exp.is_one() {
+                format!("{var}")
+            } else {
+                let exp = exp.to_string();
+                if exp.len() == 1 {
+                    format!("{var}^{exp}")
+                } else {
+                    format!("{var}^{{{exp}}}")
+                }
+            }
+        };
+        let mut pairs = self.0.iter();
+        let Some((var, exp)) = pairs.next() else {
+            return "1".to_string();
+        };
+        let mut output = fmt_power(var, exp);
+        for (var, exp) in pairs {
+            output.push_str(" \\cdot ");
+            output.push_str(&fmt_power(var, exp));
+        }
+        output
     }
 }
 
@@ -663,12 +675,17 @@ mod tests {
         assert_eq!(vars, vec!['x', 'y']);
         assert_eq!(monomial.map_variables(|_| 'x').to_string(), "x^3");
 
-        assert_eq!(Monomial::<char, u32>::one().to_string(), "1");
+        let monomial: Monomial<char, u32> = Monomial::one();
+        assert_eq!(monomial.to_string(), "1");
+        assert_eq!(monomial.to_latex(), "1");
 
         let monomial: Monomial<_, u32> = [('x', 1), ('y', 0), ('x', 2)].into_iter().collect();
         assert_eq!(monomial.normalize().to_string(), "x^3");
 
         let monomial: Monomial<_, i32> = [('x', -1), ('y', -2), ('x', 2)].into_iter().collect();
         assert_eq!(monomial.normalize().to_string(), "x y^{-2}");
+
+        let monomial: Monomial<_, i32> = [('x', 1), ('y', 2), ('z', -1)].into_iter().collect();
+        assert_eq!(monomial.to_latex(), "x \\cdot y^2 \\cdot z^{-1}");
     }
 }

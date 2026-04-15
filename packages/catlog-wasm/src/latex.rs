@@ -130,11 +130,11 @@ mod tests {
         let expected = vec![
             LatexEquation {
                 lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{xxx}".to_string(),
-                rhs: "(-\\kappa_{\\text{fff}}) \\text{xxx} \\text{yyy}".to_string(),
+                rhs: "-\\kappa_{\\text{fff}} \\cdot \\text{xxx} \\cdot \\text{yyy}".to_string(),
             },
             LatexEquation {
                 lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{yyy}".to_string(),
-                rhs: "(\\rho_{\\text{fff}}) \\text{xxx} \\text{yyy}".to_string(),
+                rhs: "\\rho_{\\text{fff}} \\cdot \\text{xxx} \\cdot \\text{yyy}".to_string(),
             },
         ];
         assert_eq!(equations, expected);
@@ -157,12 +157,14 @@ mod tests {
         let expected = vec![
             LatexEquation {
                 lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{xxx}".to_string(),
-                rhs: "(-\\kappa_{\\text{xxx} \\to \\text{yyy}}) \\text{xxx} \\text{yyy}"
-                    .to_string(),
+                rhs:
+                    "-\\kappa_{\\text{xxx} \\to \\text{yyy}} \\cdot \\text{xxx} \\cdot \\text{yyy}"
+                        .to_string(),
             },
             LatexEquation {
                 lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{yyy}".to_string(),
-                rhs: "(\\rho_{\\text{xxx} \\to \\text{yyy}}) \\text{xxx} \\text{yyy}".to_string(),
+                rhs: "\\rho_{\\text{xxx} \\to \\text{yyy}} \\cdot \\text{xxx} \\cdot \\text{yyy}"
+                    .to_string(),
             },
         ];
         assert_eq!(equations, expected);
