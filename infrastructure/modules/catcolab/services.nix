@@ -151,7 +151,7 @@ with lib;
 
       serviceConfig = {
         User = "catcolab";
-        Type = "simple";
+        Type = "notify";
         Restart = "on-failure";
         ExecStart = lib.getExe backendPkg;
         EnvironmentFile = cfg.environmentFile;

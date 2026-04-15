@@ -124,54 +124,75 @@ struct PopulateHeads;
 #[async_trait::async_trait]
 impl Operation<Postgres> for PopulateHeads {
     async fn up(&self, conn: &mut PgConnection) -> Result<(), Error> {
+        const BATCH_SIZE: i64 = 50;
+
         let pool = pool_for_current_database(conn).await?;
 
-        let repo: samod::Repo = samod::Repo::build_tokio()
-            .with_storage(PostgresStorage::new(pool.clone()))
-            .load()
-            .await;
+        let mut total_processed: u64 = 0;
 
-        // Fetch all snapshots that need heads populated.
-        let rows =
-            sqlx::query("SELECT id, for_ref, doc_id, content FROM snapshots WHERE heads IS NULL")
-                .fetch_all(&pool)
-                .await?;
+        loop {
+            let rows = sqlx::query(
+                "SELECT id, for_ref, doc_id, content FROM snapshots \
+                 WHERE heads IS NULL ORDER BY id LIMIT $1",
+            )
+            .bind(BATCH_SIZE)
+            .fetch_all(&pool)
+            .await?;
 
-        for row in &rows {
-            let snapshot_id: i32 = row.get("id");
-            let ref_id: Uuid = row.get("for_ref");
-            let doc_id_str: &str = row.get("doc_id");
-            let content: serde_json::Value = row.get("content");
+            if rows.is_empty() {
+                break;
+            }
 
-            // Try to load the Automerge document via samod.
-            let heads = match load_heads_via_samod(&repo, doc_id_str).await {
-                Some(heads) => heads,
-                None => {
-                    // Fallback: create an Automerge doc from JSON content
-                    // and add it to the repo so it's persisted in storage.
-                    // Update refs.doc_id to point to the newly created document.
-                    let (heads, new_doc_id) = create_doc_in_repo(&repo, &content).await?;
+            let batch_len = rows.len();
 
-                    sqlx::query("UPDATE refs SET doc_id = $1 WHERE id = $2")
-                        .bind(&new_doc_id)
-                        .bind(ref_id)
-                        .execute(&pool)
-                        .await?;
+            // Fresh repo per batch so Automerge docs are released between batches.
+            let repo: samod::Repo = samod::Repo::build_tokio()
+                .with_storage(PostgresStorage::new(pool.clone()))
+                .load()
+                .await;
 
-                    heads
-                }
-            };
+            for row in &rows {
+                let snapshot_id: i32 = row.get("id");
+                let ref_id: Uuid = row.get("for_ref");
+                let doc_id_str: &str = row.get("doc_id");
+                let content: serde_json::Value = row.get("content");
 
-            let heads_bytes: Vec<Vec<u8>> = heads.iter().map(|h| h.0.to_vec()).collect();
+                // Try to load the Automerge document via samod.
+                let heads = match load_heads_via_samod(&repo, doc_id_str).await {
+                    Some(heads) => heads,
+                    None => {
+                        // Fallback: create an Automerge doc from JSON content
+                        // and add it to the repo so it's persisted in storage.
+                        // Update refs.doc_id to point to the newly created document.
+                        let (heads, new_doc_id) = create_doc_in_repo(&repo, &content).await?;
 
-            sqlx::query("UPDATE snapshots SET heads = $1 WHERE id = $2")
-                .bind(&heads_bytes)
-                .bind(snapshot_id)
-                .execute(&pool)
-                .await?;
+                        sqlx::query("UPDATE refs SET doc_id = $1 WHERE id = $2")
+                            .bind(&new_doc_id)
+                            .bind(ref_id)
+                            .execute(&pool)
+                            .await?;
+
+                        heads
+                    }
+                };
+
+                let heads_bytes: Vec<Vec<u8>> = heads.iter().map(|h| h.0.to_vec()).collect();
+
+                sqlx::query("UPDATE snapshots SET heads = $1 WHERE id = $2")
+                    .bind(&heads_bytes)
+                    .bind(snapshot_id)
+                    .execute(&pool)
+                    .await?;
+            }
+
+            // Flush pending writes and release all Automerge documents.
+            repo.stop().await;
+
+            total_processed += batch_len as u64;
+            tracing::info!(
+                "PopulateHeads: processed batch of {batch_len} snapshots ({total_processed} total)"
+            );
         }
-
-        repo.stop().await;
 
         // Now make the column NOT NULL.
         sqlx::query("ALTER TABLE snapshots ALTER COLUMN heads SET NOT NULL")

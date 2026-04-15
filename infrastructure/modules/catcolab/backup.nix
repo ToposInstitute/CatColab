@@ -81,13 +81,10 @@ with lib;
 
         if ! ${pkgs.systemd}/bin/systemctl is-active postgresql.service >/dev/null 2>&1; then
           echo "PostgreSQL is not running. Skipping backup."
-          exit 0
+        elif ! ${pkgs.util-linux}/bin/runuser -u catcolab -- ${pkgs.bash}/bin/bash -c '${getExe backupdbScript}'; then
+          echo "Backup failed! Aborting activation."
+          false
         fi
-
-        echo "PostgreSQL is running, proceeding with backup..."
-        ${pkgs.util-linux}/bin/runuser -u catcolab -- ${pkgs.bash}/bin/bash -c '
-          ${getExe backupdbScript}
-        '
       '';
     };
 
