@@ -50,6 +50,7 @@ function WireColumn(props: {
             labelToId={(label) => liveModel().elaboratedModel()?.obGeneratorWithLabel(label)}
             isInvalid={props.isInvalid}
             isActive={props.isActive(i)}
+            createBelow={() => props.insertWire(i + 1)}
             deleteBackward={() => {
                 props.deleteWire(i);
                 if (props.obs.length === 0) {
