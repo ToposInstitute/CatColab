@@ -38,7 +38,7 @@ impl Migration<Postgres> for SnapshotHistory {
     }
 
     fn is_atomic(&self) -> bool {
-        false
+        true
     }
 }
 
@@ -126,6 +126,8 @@ impl Operation<Postgres> for PopulateHeads {
     async fn up(&self, conn: &mut PgConnection) -> Result<(), Error> {
         const BATCH_SIZE: i64 = 50;
 
+        // The pool is used only for samod's storage access. All direct SQL access/changes goes through
+        // `conn` so they are included the migration transaction.
         let pool = pool_for_current_database(conn).await?;
 
         let mut total_processed: u64 = 0;
@@ -136,7 +138,7 @@ impl Operation<Postgres> for PopulateHeads {
                  WHERE heads IS NULL ORDER BY id LIMIT $1",
             )
             .bind(BATCH_SIZE)
-            .fetch_all(&pool)
+            .fetch_all(&mut *conn)
             .await?;
 
             if rows.is_empty() {
@@ -164,12 +166,14 @@ impl Operation<Postgres> for PopulateHeads {
                         // Fallback: create an Automerge doc from JSON content
                         // and add it to the repo so it's persisted in storage.
                         // Update refs.doc_id to point to the newly created document.
+                        //
+                        // If the migration fails these new docs will still exist, but orphaned.
                         let (heads, new_doc_id) = create_doc_in_repo(&repo, &content).await?;
 
                         sqlx::query("UPDATE refs SET doc_id = $1 WHERE id = $2")
                             .bind(&new_doc_id)
                             .bind(ref_id)
-                            .execute(&pool)
+                            .execute(&mut *conn)
                             .await?;
 
                         heads
@@ -181,7 +185,7 @@ impl Operation<Postgres> for PopulateHeads {
                 sqlx::query("UPDATE snapshots SET heads = $1 WHERE id = $2")
                     .bind(&heads_bytes)
                     .bind(snapshot_id)
-                    .execute(&pool)
+                    .execute(&mut *conn)
                     .await?;
             }
 
@@ -196,7 +200,7 @@ impl Operation<Postgres> for PopulateHeads {
 
         // Now make the column NOT NULL.
         sqlx::query("ALTER TABLE snapshots ALTER COLUMN heads SET NOT NULL")
-            .execute(&pool)
+            .execute(&mut *conn)
             .await?;
 
         pool.close().await;
