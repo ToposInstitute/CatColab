@@ -609,11 +609,11 @@ mod tests {
         let expected = vec![
             LatexEquation {
                 lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string(),
-                rhs: "(-Outgoing(f)) x y".to_string(),
+                rhs: "-Outgoing(f) \\cdot x \\cdot y".to_string(),
             },
             LatexEquation {
                 lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string(),
-                rhs: "(Incoming(f)) x y".to_string(),
+                rhs: "Incoming(f) \\cdot x \\cdot y".to_string(),
             },
         ];
         assert_eq!(expected, sys.to_latex_equations());

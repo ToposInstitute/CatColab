@@ -160,15 +160,16 @@ mod tests {
         let expected = vec![
             LatexEquation {
                 lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} A".to_string(),
-                rhs: "(A_growth) A + (BA_interaction) A B".to_string(),
+                rhs: "A_growth \\cdot A + BA_interaction \\cdot A \\cdot B".to_string(),
             },
             LatexEquation {
                 lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} B".to_string(),
-                rhs: "(AB_interaction) A B + (B_growth) B + (CB_interaction) B C".to_string(),
+                rhs: "AB_interaction \\cdot A \\cdot B + B_growth \\cdot B + CB_interaction \\cdot B \\cdot C"
+                    .to_string(),
             },
             LatexEquation {
                 lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} C".to_string(),
-                rhs: "(BC_interaction) B C + (C_growth) C".to_string(),
+                rhs: "BC_interaction \\cdot B \\cdot C + C_growth \\cdot C".to_string(),
             },
         ];
         assert_eq!(expected, sys.to_latex_equations());

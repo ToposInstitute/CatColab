@@ -152,9 +152,29 @@ where
     Coef: Display + PartialEq + One + Neg<Output = Coef>,
     Exp: Display + PartialEq + One,
 {
-    /// Convert to a LaTeX string.
+    /// Convert to a LaTeX string, formatting each monomial via [`Monomial::to_latex`].
     pub fn to_latex(&self) -> String {
-        self.0.to_latex()
+        let fmt_term = |coef: &Coef, monomial: &Monomial<Var, Exp>| -> String {
+            let mono_str = monomial.to_latex();
+            if coef.is_one() {
+                mono_str
+            } else if *coef == Coef::one().neg() {
+                format!("-{mono_str}")
+            } else {
+                format!("{coef} \\cdot {mono_str}")
+            }
+        };
+
+        let mut terms = (&self.0).into_iter();
+        let Some((coef, monomial)) = terms.next() else {
+            return "0".to_string();
+        };
+        let mut output = fmt_term(coef, monomial);
+        for (coef, monomial) in terms {
+            output.push_str(" + ");
+            output.push_str(&fmt_term(coef, monomial));
+        }
+        output
     }
 }
 
@@ -176,7 +196,7 @@ where
     Exp: Display + PartialEq + One,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_latex())
+        write!(f, "{}", self.0)
     }
 }
 
