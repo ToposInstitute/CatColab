@@ -153,6 +153,7 @@ with lib;
         User = "catcolab";
         Type = "notify";
         Restart = "on-failure";
+        TimeoutStartSec = "600s";
         ExecStart = lib.getExe backendPkg;
         EnvironmentFile = cfg.environmentFile;
       };
@@ -202,7 +203,11 @@ with lib;
         ProtectHostname = true;
         RestrictSUIDSGID = true;
         RestrictRealtime = true;
-        RestrictAddressFamilies = [ "AF_INET" "AF_INET6" "AF_UNIX" ];
+        RestrictAddressFamilies = [
+          "AF_INET"
+          "AF_INET6"
+          "AF_UNIX"
+        ];
         LockPersonality = true;
         RemoveIPC = true;
         SystemCallArchitectures = "native";
