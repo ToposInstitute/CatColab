@@ -3,7 +3,7 @@ use http::StatusCode;
 use qubit::{Extensions, FromRequestExtensions, Router, RpcError, handler};
 use serde::Serialize;
 use serde_json::Value;
-use tracing::debug;
+use tracing::{debug, error, warn};
 use uuid::Uuid;
 
 use super::app::{AppCtx, AppError, AppState, RefMsg};
@@ -191,12 +191,25 @@ enum RpcResult<T> {
 
 impl<T> From<AppError> for RpcResult<T> {
     fn from(error: AppError) -> Self {
-        let code = match error {
-            AppError::Invalid(_) => StatusCode::BAD_REQUEST,
+        let code = match &error {
+            AppError::Invalid(msg) => {
+                warn!(msg, "rpc: invalid request");
+                StatusCode::BAD_REQUEST
+            }
             AppError::Unauthorized => StatusCode::UNAUTHORIZED,
             AppError::Forbidden(_) => StatusCode::FORBIDDEN,
-            AppError::NotFound(_) | AppError::Db(sqlx::Error::RowNotFound) => StatusCode::NOT_FOUND,
-            _ => StatusCode::INTERNAL_SERVER_ERROR,
+            AppError::NotFound(msg) => {
+                warn!(msg, "rpc: not found");
+                StatusCode::NOT_FOUND
+            }
+            AppError::Db(sqlx::Error::RowNotFound) => {
+                warn!("rpc: not found (row not found)");
+                StatusCode::NOT_FOUND
+            }
+            _ => {
+                error!(%error, "rpc: internal server error");
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
         };
         RpcResult::Err {
             code: code.as_u16(),
