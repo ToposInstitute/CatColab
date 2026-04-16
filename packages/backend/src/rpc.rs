@@ -191,30 +191,24 @@ enum RpcResult<T> {
 
 impl<T> From<AppError> for RpcResult<T> {
     fn from(error: AppError) -> Self {
-        let code = match &error {
-            AppError::Invalid(msg) => {
-                warn!(msg, "rpc: invalid request");
-                StatusCode::BAD_REQUEST
-            }
+        let code = match error {
+            AppError::Invalid(_) => StatusCode::BAD_REQUEST,
             AppError::Unauthorized => StatusCode::UNAUTHORIZED,
             AppError::Forbidden(_) => StatusCode::FORBIDDEN,
-            AppError::NotFound(msg) => {
-                warn!(msg, "rpc: not found");
-                StatusCode::NOT_FOUND
-            }
-            AppError::Db(sqlx::Error::RowNotFound) => {
-                warn!("rpc: not found (row not found)");
-                StatusCode::NOT_FOUND
-            }
-            _ => {
-                error!(%error, "rpc: internal server error");
-                StatusCode::INTERNAL_SERVER_ERROR
-            }
+            AppError::NotFound(_) | AppError::Db(sqlx::Error::RowNotFound) => StatusCode::NOT_FOUND,
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
         };
-        RpcResult::Err {
-            code: code.as_u16(),
-            message: error.to_string(),
+        let message = error.to_string();
+        match code {
+            StatusCode::BAD_REQUEST | StatusCode::NOT_FOUND => {
+                warn!(message, "RPC: client error");
+            }
+            StatusCode::INTERNAL_SERVER_ERROR => {
+                error!(message, "RPC: internal error");
+            }
+            _ => {}
         }
+        RpcResult::Err { code: code.as_u16(), message }
     }
 }
 
