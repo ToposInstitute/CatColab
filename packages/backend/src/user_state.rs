@@ -6,7 +6,7 @@ pub use notebook_types::current::DocumentType;
 use samod::DocumentId;
 use serde::Deserialize;
 use sqlx::PgPool;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 use ts_rs::TS;
 
 use crate::app::{AppError, AppState};
@@ -305,13 +305,20 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
     let mut documents: HashMap<String, DocInfo> = HashMap::new();
     for row in results {
         let key = row.ref_id.to_string();
-        let type_str = row
-            .type_name
-            .as_deref()
-            .ok_or_else(|| AppError::Invalid(format!("Document {key} has no type")))?;
-        let type_name: DocumentType = type_str.parse().map_err(|_| {
-            AppError::Invalid(format!("Document {key} has unknown type: {type_str}"))
-        })?;
+        let type_str = match row.type_name.as_deref() {
+            Some(t) => t,
+            None => {
+                warn!(ref_id = %key, "Skipping document with no type");
+                continue;
+            }
+        };
+        let type_name: DocumentType = match type_str.parse() {
+            Ok(t) => t,
+            Err(_) => {
+                warn!(ref_id = %key, type_name = %type_str, "Skipping document with unknown type");
+                continue;
+            }
+        };
         let permissions: Vec<PermissionInfo> = row.permissions.0;
         let depends_on = extract_relations_from_json(&row.content);
 
