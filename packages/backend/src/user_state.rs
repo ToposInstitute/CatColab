@@ -305,34 +305,24 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
     let mut documents: HashMap<String, DocInfo> = HashMap::new();
     for row in results {
         let key = row.ref_id.to_string();
-        let type_str = match row.type_name.as_deref() {
-            Some(t) => t,
-            None => {
-                warn!(ref_id = %key, "Skipping document with no type");
-                continue;
-            }
+        let Some(type_str) = row.type_name.as_deref() else {
+            warn!(ref_id = %key, "Skipping document with no type");
+            continue;
         };
-        let type_name: DocumentType = match type_str.parse() {
-            Ok(t) => t,
-            Err(_) => {
-                warn!(ref_id = %key, type_name = %type_str, "Skipping document with unknown type");
-                continue;
-            }
+        let Ok(type_name) = type_str.parse::<DocumentType>() else {
+            warn!(ref_id = %key, type_name = %type_str, "Skipping document with unknown type");
+            continue;
         };
-        let permissions: Vec<PermissionInfo> = match serde_json::from_value(row.permissions.0) {
-            Ok(p) => p,
-            Err(e) => {
-                error!(ref_id = %key, error = %e, "Skipping document with invalid permissions JSON");
-                continue;
-            }
+        let Ok(permissions) = serde_json::from_value::<Vec<PermissionInfo>>(row.permissions.0)
+        else {
+            error!(ref_id = %key, "Skipping document with invalid permissions JSON");
+            continue;
         };
-        let snapshots: HashMap<String, SnapshotInfo> = match serde_json::from_value(row.snapshots.0)
-        {
-            Ok(s) => s,
-            Err(e) => {
-                error!(ref_id = %key, error = %e, "Skipping document with invalid snapshots JSON");
-                continue;
-            }
+        let Ok(snapshots) =
+            serde_json::from_value::<HashMap<String, SnapshotInfo>>(row.snapshots.0)
+        else {
+            error!(ref_id = %key, "Skipping document with invalid snapshots JSON");
+            continue;
         };
         let depends_on = extract_relations_from_json(&row.content);
 
