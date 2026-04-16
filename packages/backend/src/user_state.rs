@@ -6,7 +6,7 @@ pub use notebook_types::current::DocumentType;
 use samod::DocumentId;
 use serde::Deserialize;
 use sqlx::PgPool;
-use tracing::{debug, info};
+use tracing::{debug, error, info, warn};
 use ts_rs::TS;
 
 use crate::app::{AppError, AppState};
@@ -278,7 +278,7 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
                 FROM permissions p
                 WHERE p.object = refs.id
                 ), '[]'::json
-            ) AS "permissions!: sqlx::types::Json<Vec<PermissionInfo>>",
+            ) AS "permissions!: sqlx::types::Json<serde_json::Value>",
             COALESCE(
                 (SELECT json_object_agg(
                     s.id::text,
@@ -291,7 +291,7 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
                 FROM snapshots s
                 WHERE s.for_ref = refs.id
                 ), '{}'::json
-            ) AS "snapshots!: sqlx::types::Json<HashMap<String, SnapshotInfo>>"
+            ) AS "snapshots!: sqlx::types::Json<serde_json::Value>"
         FROM filtered_ids
         JOIN refs ON refs.id = filtered_ids.id
         JOIN snapshots ON snapshots.id = refs.current_snapshot
@@ -305,14 +305,25 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
     let mut documents: HashMap<String, DocInfo> = HashMap::new();
     for row in results {
         let key = row.ref_id.to_string();
-        let type_str = row
-            .type_name
-            .as_deref()
-            .ok_or_else(|| AppError::Invalid(format!("Document {key} has no type")))?;
-        let type_name: DocumentType = type_str.parse().map_err(|_| {
-            AppError::Invalid(format!("Document {key} has unknown type: {type_str}"))
-        })?;
-        let permissions: Vec<PermissionInfo> = row.permissions.0;
+        let Some(type_str) = row.type_name.as_deref() else {
+            warn!(ref_id = %key, "Skipping document with no type");
+            continue;
+        };
+        let Ok(type_name) = type_str.parse::<DocumentType>() else {
+            warn!(ref_id = %key, type_name = %type_str, "Skipping document with unknown type");
+            continue;
+        };
+        let Ok(permissions) = serde_json::from_value::<Vec<PermissionInfo>>(row.permissions.0)
+        else {
+            error!(ref_id = %key, "Skipping document with invalid permissions JSON");
+            continue;
+        };
+        let Ok(snapshots) =
+            serde_json::from_value::<HashMap<String, SnapshotInfo>>(row.snapshots.0)
+        else {
+            error!(ref_id = %key, "Skipping document with invalid snapshots JSON");
+            continue;
+        };
         let depends_on = extract_relations_from_json(&row.content);
 
         let info = DocInfo {
@@ -324,7 +335,7 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
             deleted_at: row.deleted_at,
             current_snapshot_updated_at: row.current_snapshot_updated_at,
             current_snapshot: row.current_snapshot,
-            snapshots: row.snapshots.0,
+            snapshots,
             depends_on,
             used_by: Vec::new(),
         };
