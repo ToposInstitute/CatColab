@@ -6,7 +6,7 @@ pub use notebook_types::current::DocumentType;
 use samod::DocumentId;
 use serde::Deserialize;
 use sqlx::PgPool;
-use tracing::{debug, info, warn};
+use tracing::{debug, error, info, warn};
 use ts_rs::TS;
 
 use crate::app::{AppError, AppState};
@@ -278,7 +278,7 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
                 FROM permissions p
                 WHERE p.object = refs.id
                 ), '[]'::json
-            ) AS "permissions!: sqlx::types::Json<Vec<PermissionInfo>>",
+            ) AS "permissions!: sqlx::types::Json<serde_json::Value>",
             COALESCE(
                 (SELECT json_object_agg(
                     s.id::text,
@@ -291,7 +291,7 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
                 FROM snapshots s
                 WHERE s.for_ref = refs.id
                 ), '{}'::json
-            ) AS "snapshots!: sqlx::types::Json<HashMap<String, SnapshotInfo>>"
+            ) AS "snapshots!: sqlx::types::Json<serde_json::Value>"
         FROM filtered_ids
         JOIN refs ON refs.id = filtered_ids.id
         JOIN snapshots ON snapshots.id = refs.current_snapshot
@@ -319,7 +319,21 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
                 continue;
             }
         };
-        let permissions: Vec<PermissionInfo> = row.permissions.0;
+        let permissions: Vec<PermissionInfo> = match serde_json::from_value(row.permissions.0) {
+            Ok(p) => p,
+            Err(e) => {
+                error!(ref_id = %key, error = %e, "Skipping document with invalid permissions JSON");
+                continue;
+            }
+        };
+        let snapshots: HashMap<String, SnapshotInfo> = match serde_json::from_value(row.snapshots.0)
+        {
+            Ok(s) => s,
+            Err(e) => {
+                error!(ref_id = %key, error = %e, "Skipping document with invalid snapshots JSON");
+                continue;
+            }
+        };
         let depends_on = extract_relations_from_json(&row.content);
 
         let info = DocInfo {
@@ -331,7 +345,7 @@ pub async fn read_user_state_from_db(user_id: String, db: &PgPool) -> Result<Use
             deleted_at: row.deleted_at,
             current_snapshot_updated_at: row.current_snapshot_updated_at,
             current_snapshot: row.current_snapshot,
-            snapshots: row.snapshots.0,
+            snapshots,
             depends_on,
             used_by: Vec::new(),
         };
