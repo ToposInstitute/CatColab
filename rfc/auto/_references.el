@@ -16,7 +16,6 @@
     "lynch-et-al-2024"
     "pollack-2002"
     "shulman-2016"
-    "hohc"
-    "clingman-2022"))
+    "hohc"))
  '(or :bibtex :latex))
 
