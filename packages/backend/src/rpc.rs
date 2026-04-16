@@ -3,7 +3,7 @@ use http::StatusCode;
 use qubit::{Extensions, FromRequestExtensions, Router, RpcError, handler};
 use serde::Serialize;
 use serde_json::Value;
-use tracing::debug;
+use tracing::{debug, error, warn};
 use uuid::Uuid;
 
 use super::app::{AppCtx, AppError, AppState, RefMsg};
@@ -198,10 +198,17 @@ impl<T> From<AppError> for RpcResult<T> {
             AppError::NotFound(_) | AppError::Db(sqlx::Error::RowNotFound) => StatusCode::NOT_FOUND,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         };
-        RpcResult::Err {
-            code: code.as_u16(),
-            message: error.to_string(),
+        let message = error.to_string();
+        match code {
+            StatusCode::BAD_REQUEST | StatusCode::NOT_FOUND => {
+                warn!(message, "RPC: client error");
+            }
+            StatusCode::INTERNAL_SERVER_ERROR => {
+                error!(message, "RPC: internal error");
+            }
+            _ => {}
         }
+        RpcResult::Err { code: code.as_u16(), message }
     }
 }
 
