@@ -144,9 +144,9 @@ mod tests {
         let model = lotka_volterra_dynamics(th);
         let sys = PolynomialODEAnalysis::default().build_system(&model);
         let expected = expect!([r#"
-            dA = (A_growth) A + (BA_interaction) A B
-            dB = (AB_interaction) A B + (B_growth) B + (CB_interaction) B C
-            dC = (BC_interaction) B C + (C_growth) C
+            dA = A_growth A + BA_interaction A B
+            dB = AB_interaction A B + B_growth B + CB_interaction B C
+            dC = BC_interaction B C + C_growth C
         "#]);
         expected.assert_eq(&sys.to_string());
     }
