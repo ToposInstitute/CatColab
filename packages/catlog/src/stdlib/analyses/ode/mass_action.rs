@@ -571,7 +571,7 @@ mod tests {
         let expected = expect!([r#"
             dx = (-Outgoing(f)) c x
             dy = (Incoming(f)) c x
-            dc = (Incoming(f) + -Outgoing(f)) c x
+            dc = (Incoming(f) - Outgoing(f)) c x
         "#]);
         expected.assert_eq(&sys.to_string());
     }
@@ -589,7 +589,7 @@ mod tests {
         let expected = expect!([r#"
             dx = (-(x->[f])) c x
             dy = (([f]->y)) c x
-            dc = (([f]->c) + -(c->[f])) c x
+            dc = (([f]->c) - (c->[f])) c x
         "#]);
         expected.assert_eq(&sys.to_string());
     }

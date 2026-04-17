@@ -1,5 +1,6 @@
 //! Commutative algebra and polynomials.
 
+use itertools::Itertools;
 use num_traits::{One, Pow, Zero, one, zero};
 use std::collections::BTreeMap;
 use std::fmt::Display;
@@ -149,7 +150,7 @@ where
 impl<Var, Coef, Exp> Polynomial<Var, Coef, Exp>
 where
     Var: Display,
-    Coef: Display + PartialEq + One + Neg<Output = Coef>,
+    Coef: Display + DisplayCoef + Clone + PartialEq + One + Neg<Output = Coef>,
     Exp: Display + PartialEq + One,
 {
     /// Convert to a LaTeX string, formatting each monomial via [`Monomial::to_latex`].
@@ -171,8 +172,13 @@ where
         };
         let mut output = fmt_term(coef, monomial);
         for (coef, monomial) in terms {
-            output.push_str(" + ");
-            output.push_str(&fmt_term(coef, monomial));
+            if coef.has_negative_sign() {
+                output.push_str(" - ");
+                output.push_str(&fmt_term(&coef.clone().neg(), monomial));
+            } else {
+                output.push_str(" + ");
+                output.push_str(&fmt_term(coef, monomial));
+            }
         }
         output
     }
@@ -191,12 +197,25 @@ where
 
 impl<Var, Coef, Exp> Display for Polynomial<Var, Coef, Exp>
 where
-    Var: Display,
-    Coef: Display + PartialEq + One + Neg<Output = Coef>,
-    Exp: Display + PartialEq + One,
+    Combination<Monomial<Var, Exp>, Coef>: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+impl<Var, Coef, Exp> DisplayCoef for Polynomial<Var, Coef, Exp>
+where
+    Var: Ord,
+    Coef: DisplayCoef,
+    Exp: Ord,
+{
+    fn has_negative_sign(&self) -> bool {
+        if let Some(((coef, _),)) = (&self.0).into_iter().collect_tuple() {
+            coef.has_negative_sign()
+        } else {
+            false
+        }
     }
 }
 
@@ -459,6 +478,6 @@ mod tests {
         assert_eq!(p.to_string(), "2 x y + x^2 + y^2");
 
         let p = (x() + y()) * (x() + y().neg());
-        assert_eq!(p.normalize().to_string(), "x^2 + -y^2");
+        assert_eq!(p.normalize().to_string(), "x^2 - y^2");
     }
 }
