@@ -230,8 +230,8 @@ mod tests {
         ];
         let sys: PolynomialSystem<_, _, _> = terms.into_iter().collect();
         let expected = expect![[r#"
-            dS = (-β) I S
-            dI = (-γ) I + β I S
+            dS = -β I S
+            dI = -γ I + β I S
             dR = γ I
         "#]];
         expected.assert_eq(&sys.to_string());

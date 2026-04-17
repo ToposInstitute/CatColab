@@ -17,7 +17,7 @@ use num_traits::{One, Pow, Signed, Zero};
 use std::collections::{BTreeMap, btree_map};
 use std::fmt::Display;
 use std::iter::{Product, Sum};
-use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub};
+use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use derivative::Derivative;
 use duplicate::duplicate_item;
@@ -95,11 +95,17 @@ pub trait DisplayCoef {
     /// expression `-k` has a negative sign, but may or may not denote a
     /// negative number, depending on whether `k` itself takes a positive value.
     fn has_negative_sign(&self) -> bool;
+
+    /// Does the coefficient need to be parenthesized when displayed?
+    fn needs_parentheses(&self) -> bool;
 }
 
 #[duplicate_item(T; [u32]; [u64]; [usize])]
 impl DisplayCoef for T {
     fn has_negative_sign(&self) -> bool {
+        false
+    }
+    fn needs_parentheses(&self) -> bool {
         false
     }
 }
@@ -108,6 +114,9 @@ impl DisplayCoef for T {
 impl DisplayCoef for T {
     fn has_negative_sign(&self) -> bool {
         self.is_negative()
+    }
+    fn needs_parentheses(&self) -> bool {
+        false
     }
 }
 
@@ -138,6 +147,16 @@ where
         Coef: One,
     {
         Combination([(var, Coef::one())].into_iter().collect())
+    }
+
+    /// Number of variables appearing in the combination.
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    /// Is the combination empty, i.e., equal to zero?
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 
     /// Iterates over the variables used in the combination.
@@ -236,34 +255,15 @@ where
     Coef: Display + DisplayCoef + Clone + PartialEq + One + Neg<Output = Coef>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let is_simple = |s: &str| {
-            // Numeric: digits and dots
-            if s.chars().all(|c| c.is_ascii_digit() || c == '.') {
-                return true;
-            }
-            // Alphabetic identifier
-            if s.chars().all(|c| c.is_alphabetic()) {
-                return true;
-            }
-            // Braced identifier like {uuid} or {name}
-            if s.starts_with('{') && s.ends_with('}') && s.matches('{').count() == 1 {
-                return true;
-            }
-            false
-        };
-
         let fmt_scalar_mul = |f: &mut std::fmt::Formatter<'_>, coef: &Coef, var: &Var| {
             if coef.is_one() {
                 write!(f, "{var}")
             } else if *coef == Coef::one().neg() {
                 write!(f, "-{var}")
+            } else if coef.needs_parentheses() {
+                write!(f, "({coef}) {var}")
             } else {
-                let coef_str = coef.to_string();
-                if is_simple(&coef_str) {
-                    write!(f, "{coef_str} {var}")
-                } else {
-                    write!(f, "({coef_str}) {var}")
-                }
+                write!(f, "{coef} {var}")
             }
         };
 
@@ -394,6 +394,16 @@ where
     }
 }
 
+impl<Var, Coef> SubAssign for Combination<Var, Coef>
+where
+    Var: Ord,
+    Coef: Default + Add<Output = Coef> + Neg<Output = Coef> + Zero,
+{
+    fn sub_assign(&mut self, rhs: Self) {
+        *self += -rhs;
+    }
+}
+
 impl<Var, Coef> Sub for Combination<Var, Coef>
 where
     Var: Ord,
@@ -401,8 +411,9 @@ where
 {
     type Output = Self;
 
-    fn sub(self, rhs: Self) -> Self::Output {
-        self + (-rhs)
+    fn sub(mut self, rhs: Self) -> Self::Output {
+        self -= rhs;
+        self
     }
 }
 
@@ -452,6 +463,16 @@ where
         Exp: One,
     {
         Monomial([(var, Exp::one())].into_iter().collect())
+    }
+
+    /// Number of variables appearing in the monomial.
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    /// Is the monomial empty, i.e., equal to one?
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 
     /// Iterates over the variables used in the monomial.

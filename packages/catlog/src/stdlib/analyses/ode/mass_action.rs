@@ -485,7 +485,7 @@ mod tests {
         let sys = StockFlowMassActionAnalysis::default()
             .build_system(&model, analyses::ode::MassConservationType::Balanced);
         let expected = expect!([r#"
-            dx = (-f) x y
+            dx = -f x y
             dy = f x y
         "#]);
         expected.assert_eq(&sys.to_string());
@@ -502,8 +502,8 @@ mod tests {
             ),
         );
         let expected = expect!([r#"
-            dx = (-Outgoing(f)) x y
-            dy = (Incoming(f)) x y
+            dx = -Outgoing(f) x y
+            dy = Incoming(f) x y
         "#]);
         expected.assert_eq(&sys.to_string());
     }
@@ -518,7 +518,7 @@ mod tests {
         let sys = StockFlowMassActionAnalysis::default()
             .build_system(&model, analyses::ode::MassConservationType::Balanced);
         let expected = expect!([r#"
-            dx = (-f) x y^{-1}
+            dx = -f x y^{-1}
             dy = f x y^{-1}
         "#]);
         expected.assert_eq(&sys.to_string());
@@ -535,8 +535,8 @@ mod tests {
             ),
         );
         let expected = expect!([r#"
-            dx = (-Outgoing(f)) x y^{-1}
-            dy = (Incoming(f)) x y^{-1}
+            dx = -Outgoing(f) x y^{-1}
+            dy = Incoming(f) x y^{-1}
         "#]);
         expected.assert_eq(&sys.to_string());
     }
@@ -551,7 +551,7 @@ mod tests {
         let sys = PetriNetMassActionAnalysis::default()
             .build_system(&model, analyses::ode::MassConservationType::Balanced);
         let expected = expect!([r#"
-            dx = (-f) c x
+            dx = -f c x
             dy = f c x
             dc = 0
         "#]);
@@ -569,8 +569,8 @@ mod tests {
             ),
         );
         let expected = expect!([r#"
-            dx = (-Outgoing(f)) c x
-            dy = (Incoming(f)) c x
+            dx = -Outgoing(f) c x
+            dy = Incoming(f) c x
             dc = (Incoming(f) - Outgoing(f)) c x
         "#]);
         expected.assert_eq(&sys.to_string());
@@ -587,8 +587,8 @@ mod tests {
             ),
         );
         let expected = expect!([r#"
-            dx = (-(x->[f])) c x
-            dy = (([f]->y)) c x
+            dx = -(x->[f]) c x
+            dy = ([f]->y) c x
             dc = (([f]->c) - (c->[f])) c x
         "#]);
         expected.assert_eq(&sys.to_string());

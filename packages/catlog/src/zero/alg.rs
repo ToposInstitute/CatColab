@@ -156,13 +156,15 @@ where
     /// Convert to a LaTeX string, formatting each monomial via [`Monomial::to_latex`].
     pub fn to_latex(&self) -> String {
         let fmt_term = |coef: &Coef, monomial: &Monomial<Var, Exp>| -> String {
-            let mono_str = monomial.to_latex();
+            let monomial = monomial.to_latex();
             if coef.is_one() {
-                mono_str
+                monomial
             } else if *coef == Coef::one().neg() {
-                format!("-{mono_str}")
+                format!("-{monomial}")
+            } else if coef.needs_parentheses() {
+                format!("({coef}) \\cdot {monomial}")
             } else {
-                format!("{coef} \\cdot {mono_str}")
+                format!("{coef} \\cdot {monomial}")
             }
         };
 
@@ -216,6 +218,10 @@ where
         } else {
             false
         }
+    }
+
+    fn needs_parentheses(&self) -> bool {
+        self.0.len() != 1
     }
 }
 

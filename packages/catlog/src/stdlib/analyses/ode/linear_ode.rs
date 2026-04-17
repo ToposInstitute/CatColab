@@ -136,7 +136,7 @@ mod test {
         let neg_feedback = stdlib::models::negative_feedback(th);
         let (sys, _) = builder().linear_ode_system(&neg_feedback);
         let expected = expect![[r#"
-            dx = (-negative) y
+            dx = -negative y
             dy = positive x
         "#]];
         expected.assert_eq(&sys.to_string());
