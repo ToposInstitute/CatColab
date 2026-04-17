@@ -13,11 +13,11 @@
 //! [linear combinations](Combination) and [monomials](Monomial). These are actually
 //! the same data structure, but with different notation!
 
-use num_traits::{One, Pow, Zero};
+use num_traits::{One, Pow, Signed, Zero};
 use std::collections::{BTreeMap, btree_map};
 use std::fmt::Display;
 use std::iter::{Product, Sum};
-use std::ops::{Add, AddAssign, Mul, MulAssign, Neg};
+use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub};
 
 use derivative::Derivative;
 use duplicate::duplicate_item;
@@ -84,6 +84,31 @@ pub trait RigModule: AdditiveMonoid + Mul<Self::Rig, Output = Self> {
 pub trait Module: RigModule<Rig = Self::Ring> + AbGroup {
     /// Base ring for the module.
     type Ring: CommRing;
+}
+
+/// A coefficent that can be displayed in a linear combination.
+pub trait DisplayCoef {
+    /// Does coefficent have a negative sign?
+    ///
+    /// In contrast to the `is_negative` method of [`num_traits::Signed`], this
+    /// is about *syntax* rather than denotion. For example, the symbolic
+    /// expression `-k` has a negative sign, but may or may not denote a
+    /// negative number, depending on whether `k` itself takes a positive value.
+    fn has_negative_sign(&self) -> bool;
+}
+
+#[duplicate_item(T; [u32]; [u64]; [usize])]
+impl DisplayCoef for T {
+    fn has_negative_sign(&self) -> bool {
+        false
+    }
+}
+
+#[duplicate_item(T; [f32]; [f64]; [i32]; [i64])]
+impl DisplayCoef for T {
+    fn has_negative_sign(&self) -> bool {
+        self.is_negative()
+    }
 }
 
 /// A formal linear combination.
@@ -208,7 +233,7 @@ impl<'a, Var, Coef> IntoIterator for &'a Combination<Var, Coef> {
 impl<Var, Coef> Display for Combination<Var, Coef>
 where
     Var: Display,
-    Coef: Display + PartialEq + One + Neg<Output = Coef>,
+    Coef: Display + DisplayCoef + Clone + PartialEq + One + Neg<Output = Coef>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let is_simple = |s: &str| {
@@ -249,8 +274,13 @@ where
             write!(f, "0")?;
         }
         for (var, coef) in pairs {
-            write!(f, " + ")?;
-            fmt_scalar_mul(f, coef, var)?;
+            if coef.has_negative_sign() {
+                write!(f, " - ")?;
+                fmt_scalar_mul(f, &coef.clone().neg(), var)?;
+            } else {
+                write!(f, " + ")?;
+                fmt_scalar_mul(f, coef, var)?;
+            }
         }
         Ok(())
     }
@@ -361,6 +391,18 @@ where
             *coef = std::mem::take(coef).neg();
         }
         self
+    }
+}
+
+impl<Var, Coef> Sub for Combination<Var, Coef>
+where
+    Var: Ord,
+    Coef: Default + Add<Output = Coef> + Neg<Output = Coef> + Zero,
+{
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        self + (-rhs)
     }
 }
 
@@ -649,6 +691,9 @@ mod tests {
         assert_eq!(combination.eval_with_order([5, 1]), 13);
         let vars: Vec<_> = combination.variables().cloned().collect();
         assert_eq!(vars, vec!['x', 'y']);
+
+        let combination = x() * 2 - y() * 3;
+        assert_eq!(combination.to_string(), "2 x - 3 y");
 
         assert_eq!(Combination::<char, i32>::zero().to_string(), "0");
 

@@ -162,7 +162,7 @@ mod test {
         let (sys, _) = builder().lotka_volterra_system(&neg_feedback);
         let sys = sys.extend_scalars(|coef| coef.map_variables(|name| format!("Param({name})")));
         let expected = expect!([r#"
-            dx = (Param(x)) x + (-Param(negative)) x y
+            dx = (Param(x)) x - (Param(negative)) x y
             dy = (Param(positive)) x y + (Param(y)) y
         "#]);
         expected.assert_eq(&sys.to_string());
@@ -184,8 +184,8 @@ mod test {
 
         let sys = builder().lotka_volterra_analysis(&neg_feedback, data).problem.system;
         let expected = expect!([r#"
-            dx0 = 2 x0 + -x0 x1
-            dx1 = x0 x1 + -x1
+            dx0 = 2 x0 - x0 x1
+            dx1 = x0 x1 - x1
         "#]);
         expected.assert_eq(&sys.to_string());
     }
