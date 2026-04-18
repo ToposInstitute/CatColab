@@ -19,6 +19,8 @@ include notable new features.
 - New logic: systems of polynomial ODEs
   ([#1176](https://github.com/ToposInstitute/CatColab/pull/1176),
   [#1211](https://github.com/ToposInstitute/CatColab/pull/1211))
+- The history of a document is now viewable, and a document can be reverted to a
+  previous state ([#1175](https://github.com/ToposInstitute/CatColab/pull/1175))
 - New service: the backend now provides a compute service for
   [Julia](https://julialang.org/) and
   [AlgebraicJulia](https://www.algebraicjulia.org/)
