@@ -74,10 +74,11 @@ intuitively required axioms superfluous.}
   \end{tikzcd}
   }
   }
-  The image of this cell in \dbl{S} is the composition operation of the
-  generalized multicategory; conversely, by the universal property of
-  restriction, #{\gamma} uniquely determines the composition cell on the
-  right-hand side.}
+
+  The image of this cell in \dbl{S} defines the composition operation of the
+  multicategory; conversely, by the universal property of restriction, choosing
+  the multicategory's composition operation uniquely determines the image of the
+  composition cell on the right-hand side.}
 
   \p{Next, the image of the unit cell #{\theta}, along with the functorality
   axiom, furnishes a natural transformation
