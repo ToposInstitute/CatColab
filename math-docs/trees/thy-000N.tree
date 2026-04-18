@@ -82,7 +82,7 @@ and satisfying the cell equations:
   }
   }
 
-  \li{\em{Compatbility of left action}:
+  \li{\em{Compatibility of left action}:
   \centerfigs{
   \quiverinline{
   % https://q.uiver.app/#q=WzAsMTAsWzAsMCwiVHgiXSxbMSwwLCJUeCJdLFsyLDAsIngiXSxbMCwzLCJUeCJdLFsyLDMsIngiXSxbMCwxLCJUXjIgeCJdLFsxLDEsIlR4Il0sWzIsMSwieCJdLFswLDIsIlReMiB4Il0sWzIsMiwieCJdLFswLDEsIlxcaWRfe1R4fSIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxLDIsInAiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMCw1LCJUXFxldGFfeCIsMl0sWzUsNiwiVHAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMSw2LCIiLDEseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs2LDcsInAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMiw3XSxbMyw0LCJwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzgsOSwiKFxcbXVfeClfISBcXG9kb3QgcCIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFs4LDMsIlxcbXVfeCIsMl0sWzksNCwiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNyw5LCIiLDEseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs1LDgsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzEwLDEzLCJUXFx0aGV0YSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxMSwxNSwiMV9wIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzE4LDE3LCJcXHRleHR7cmVzfSIsMSx7ImxhYmVsX3Bvc2l0aW9uIjo2MCwic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzYsMTgsIlxcdGV4dHtjb21wfSIsMSx7ImxhYmVsX3Bvc2l0aW9uIjo0MCwic2hvcnRlbiI6eyJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV1d
@@ -218,5 +218,23 @@ and satisfying the cell equations:
   }
 
 }
+
+}
+
+\subtree{
+  \title{Interpretation of the axioms}
+  \taxon{remark}
+
+  \p{This theory might also be called the "theory of #{T}-promonads" as it
+  analogous to the [theory of promonads](thy-0004) except that the monad #{T}
+  acts on the source of proarrow #{p}. The axioms on composition, functorality,
+  and compatibility of the left and right actions correspond to the four axioms
+  of the theory of promonads, although we have used the right action axiom to
+  express the functorality axiom more tersely. The remaining two axioms, on
+  associativity, uniquely extend the right action from #{Tp} (hence from #{p})
+  and enable another way to decompose a length-three composite of
+  multimorphisms. In fact, if one forces #{T} to be the identity monad, then the
+  theory of promonads is recovered, noting that the two associativity axioms
+  trivialize.}
 
 }

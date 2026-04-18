@@ -3,11 +3,15 @@
 \import{macros}
 
 \p{Depending on the choice of monad, a \nlab{generalized multicategory} could be
-a [multicategory](dct-000A), symmetric multicategory, cartesian multicategory,
-or something more exotic. Our axiomatization of these doctrines via a modal
-double theory is reminiscent of [Cruttwell-Shulman's](cruttwell-shulman-2010)
-definition but bypasses the complicated construction of the "horizontal Kleisli
-virtual double category" of a monad on a virtual double category.}
+a [multicategory](dct-000A), a symmetric multicategory, a cartesian
+multicategory, or something more exotic. Our axiomatization of these doctrines
+as a modal double theory is reminiscent of
+[Cruttwell-Shulman's](cruttwell-shulman-2010) definition but bypasses the
+complicated construction of the "horizontal Kleisli virtual double category" of
+a monad on a virtual double category.}
+
+\p{The generalized multicategories axiomatized here are "normalized," in
+Cruttwell-Shulman's jargon, but see also the [unnormalized notion](dct-000N).}
 
 \transclude{thy-000F}
 
@@ -16,8 +20,11 @@ virtual double category" of a monad on a virtual double category.}
   \taxon{proposition}
 
   \p{A model of the modal theory #{(\dbl{T}, T)} of generalized multicategories
-  in a virtual equipment #{(\dbl{S}, S)} carrying a virtual double monad is
-  precisely a normalized #{S}-multicategory. In particular, a model...
+  in #{(\dbl{S}, S)}, where \dbl{S} is a virtual equipment and #{S: \dbl{S} \to
+  \dbl{S}} is a monad in VDCs, is precisely a \em{normalized}
+  #{S}-multicategory.}
+
+  \p{In particular, a model...
   \ul{
     \li{...in #{(\SSet, \List)} is exactly a multicategory}
     \li{...in #{(\SSet, \ListSym)} is exactly a symmetric multicategory}
@@ -26,9 +33,9 @@ virtual double category" of a monad on a virtual double category.}
   }
 
   \proof{
-  \p{A model consists, first of all, of a category object \cat{X} in \dbl{S} and
-  a profunctor #{P: S(\cat{X}) \proto \cat{X}}. By the first axiom, we can
-  define a cell #{\gamma} in \dbl{T} as:
+  \p{A model consists, first of all, of a category object #{X} in \dbl{S} and a
+  profunctor #{P: S(X) \proto X}. By the composition axiom, we can define a cell
+  #{\gamma} in \dbl{T} as:
   \centerfigs{
   \quiverinline{
   % https://q.uiver.app/#q=WzAsNSxbMCwwLCJUXjIgeCJdLFsxLDAsIlR4Il0sWzIsMCwieCJdLFswLDEsIlR4Il0sWzIsMSwieCJdLFsxLDIsInAiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMCwxLCJUcCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFswLDMsIlxcbXVfeCIsMl0sWzIsNCwiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMyw0LCJwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzEsOSwiXFxnYW1tYSIsMSx7ImxhYmVsX3Bvc2l0aW9uIjo0MCwic2hvcnRlbiI6eyJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV1d
@@ -64,14 +71,13 @@ virtual double category" of a monad on a virtual double category.}
   }
   }
   The image of this cell in \dbl{S} is the composition operation of the
-  generalized multicategory; turning this around, by the universal property of
+  generalized multicategory; conversely, by the universal property of
   restriction, #{\gamma} uniquely determines the composition cell on the
   right-hand side.}
 
-  \p{The two normalization axioms make the category \cat{X} be isomorphic to the
+  \p{The two normalization axioms make the category #{X} be isomorphic to the
   category of \em{unary} multimorphisms in the multicategory. Hence the category
-  \cat{X} contains no extra data; cf. [Cruttwell-Shulman,
-  §8](cruttwell-shulman-2010).}
+  #{X} contains no extra data; cf. [Cruttwell-Shulman, §8](cruttwell-shulman-2010).}
 
   \p{Most complicated is the associativity law. Using the associativity of
   composites, the assumption that #{T} preserves composites, and the third
