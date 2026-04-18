@@ -20,7 +20,7 @@
 % Figures
 
 \def\quiverinline[body]{
-  \tex{\usepackage{quiver,amsopn,amssymb}}{\body}
+  \tex{\usepackage{quiver,amsmath,amssymb}}{\body}
 }
 
 \def\quiver[body]{\<html:center>{\quiverinline{\body}}}

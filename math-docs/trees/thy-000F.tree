@@ -18,10 +18,10 @@ having the composites:
   \li{\em{Normalization (i)}: The unit #{\id_x} is equal to the restriction
   #{p(\eta_x,1_x) = (\eta_x)_! \odot p}.}
   \li{\em{Associativity (i)}: The composite #{T^2 p \odot (\mu_x)_!} exists and
-  equals the restriction #{(Tp)(\mu_{Tx},1_x) = (\mu_{Tx})_! \odot Tp}.}
+  equals the restriction #{(Tp)(\mu_{Tx},1_{Tx}) = (\mu_{Tx})_! \odot Tp}.}
 }
 
-and subject to the cell equations:
+and satisfying the cell equations:
 
 \ul{
   \li{\em{Normalization (ii)}:

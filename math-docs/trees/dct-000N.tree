@@ -1,0 +1,22 @@
+\title{Unnormalized multicategories}
+\taxon{doctrine}
+\import{macros}
+
+\p{In the Cruttwell-Shulman framework for [generalized
+multicategories](dct-000F), the main definition, that of a \em{#{T}-monoid} for
+a monad #{T} on a virtual double category ([CS10](cruttwell-shulman-2010),
+Definition 4.3), often contains "extra" data, namely a category with an
+identity-on-objects functor into multicategory's unary morphisms. While it has
+found applications ([Baez-Dolan 1998](baez-dolan-1998), [Cheng
+2004](cheng-2004)), this extra is usually unwanted. It can be removed by
+"normalization," leading to Cruttwell-Shulman's preferred definition of a
+"generalized multicategory" as a \em{normalized #{T}-monoid}
+([CS10](cruttwell-shulman-2010), Definition 8.19).}
+
+\p{We agree that generalized multicategories should be normalized by default.
+Axiomatizing unnormalized multicategories in double-categorical logic is
+instructive, however, because the analogy to [promonads](dct-0004) becomes
+clearer and there no coincidences making certain intuitively required axioms
+superfluous.}
+
+\transclude{thy-000N}
