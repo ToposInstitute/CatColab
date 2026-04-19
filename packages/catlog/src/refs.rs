@@ -23,9 +23,10 @@ pub const CartDblTheories: () = ();
 
 /// Reference: Products in double categories, revisited.
 ///
-/// Evan Patterson, 2024: Products in double categories, revisited.
+/// Evan Patterson, 2026: Products in double categories, revisited.
 ///
 /// - [arXiv:2401.08990](https://arxiv.org/abs/2401.08990)
+/// - [TAC](http://www.tac.mta.ca/tac/volumes/45/16/45-16abs.html)
 pub const DblProducts: () = ();
 
 /// Reference: Yoneda theory for double categories.

@@ -8,7 +8,7 @@ definition](https://ncatlab.org/toddtrimble/published/multisorted+Lawvere+theori
 
 \transclude{dbl-0009}
 
-\p{Just as a [finite-product double theory](double-products-2024) is a
+\p{Just as a [finite-product double theory](double-products-2026) is a
 categorification of a finite-product theory, so should a "double Lawvere theory"
 be a categorification of a Lawvere theory. Since we think of a double theory as
 having both object types (its objects) and morphism types (its proarrows), a

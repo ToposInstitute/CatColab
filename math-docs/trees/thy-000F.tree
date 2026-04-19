@@ -210,10 +210,10 @@ and satisfying the cell equations:
   composition. Taken together, they can be read as saying that the cell
   component #{\mu_p} of the monad multiplication, when transformed by sliding
   arrows into proarrows via companions (cf. [Patterson
-  2026](patterson-transposing-2026), Equation 2.1), is a composition
-  (opcartesian) cell. Note that so constraining the monad on the theory does
-  \em{not} constrain the monad on the semantics; it only determines the image of
-  a composition cell in models of the theory. \em{Open question}: Should such
-  laws belong to the definition of a modal virtual double theory?}
+  2026](double-transposing-2026), Equation 2.1), is a composition (opcartesian)
+  cell. Note that so constraining the monad on the theory does \em{not}
+  constrain the monad on the semantics; it only determines the image of a
+  composition cell in models of the theory. \em{Open question}: Should such laws
+  belong to the definition of a modal virtual double theory?}
 
 }

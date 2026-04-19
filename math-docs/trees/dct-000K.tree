@@ -5,9 +5,9 @@
 \p{Strictly speaking, graded categories are not a doctrine but a family of
 doctrines. For each monoidal category \catV, there is a doctrine of
 #{\catV}-graded categories. See the blog post [Patterson
-2025](graded-categories-2025) and references therein. Note that here we depart
-from that post and the literature by making the grading in \catV covariant
-rather than contravariant.}
+2025](graded-categories-post-2025) and references therein. Note that here we
+depart from that post and the literature by making the grading in \catV
+covariant rather than contravariant.}
 
 \transclude{thy-000K}
 

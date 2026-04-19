@@ -11,4 +11,4 @@ than two levels.}
 \transclude{thy-0004}
 
 \p{A model of this theory is precisely a promonad. For a proof, see the blog
-post [Patterson 2024](promonads-are-algebras-2024).}
+post [Patterson 2024](promonads-post-2024).}
