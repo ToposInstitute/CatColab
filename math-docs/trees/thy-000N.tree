@@ -222,7 +222,7 @@ and satisfying the cell equations:
 }
 
 \subtree{
-  \title{Interpretation of the axioms}
+  \title{Comparison with the theory of promonads}
   \taxon{remark}
 
   \p{This theory might also be called the "theory of #{T}-promonads" as it
@@ -234,7 +234,6 @@ and satisfying the cell equations:
   associativity, uniquely extend the right action from #{Tp} (hence from #{p})
   and enable another way to decompose a length-three composite of
   multimorphisms. In fact, if one forces #{T} to be the identity monad, then the
-  theory of promonads is recovered, noting that the two associativity axioms
-  trivialize.}
+  two associativity axioms trivialize and the theory of promonads is recovered.}
 
 }

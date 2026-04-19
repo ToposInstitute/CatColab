@@ -167,10 +167,11 @@ and satisfying the cell equations:
   \title{Interpretation of the axioms}
   \taxon{remark}
 
-  \p{The axioms of the theory of generalized multicategories might seem opaque
-  at first glance but the three axioms on composites are intuitively just
-  transposes of familiar laws. The first two are transposes of the monad algebra
-  laws, which we might write informally as commutative diagrams:
+  \p{The axioms of this theory might seem opaque at first glance, but the three
+  axioms on composites are intuitively just transposes of familiar laws. The
+  first two are transposes of the monad algebra laws, which we might write
+  informally as commutative diagrams:
+
   \quiver{
   % https://q.uiver.app/#q=WzAsNyxbMCwwLCJUXjIgeCJdLFsxLDAsIlR4Il0sWzEsMSwieCJdLFswLDEsIlR4Il0sWzMsMCwieCJdLFs0LDEsIngiXSxbNCwwLCJUeCJdLFswLDEsIlRwIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzEsMiwicCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFswLDMsIihcXG11X3gpXyEiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMywyLCJwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzQsNSwiXFxtYXRocm17aWR9X3giLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbNiw1LCJwIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzQsNiwiKFxcZXRhX3gpXyEiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XV0=
   \begin{tikzcd}
@@ -185,8 +186,10 @@ and satisfying the cell equations:
 	\arrow["p"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-2]
   \end{tikzcd}
   }
-  The third axiom on composites is the naturality square for the transposed
-  monad multiplication at #{p}:
+
+  Similarly, the third axiom on composites can be informally pictured as the
+  naturality square for the transposed monad multiplication at #{p}:
+
   \quiver{
   % https://q.uiver.app/#q=WzAsNCxbMCwwLCJUXjMgeCJdLFsxLDAsIlReMiB4Il0sWzEsMSwiVHgiXSxbMCwxLCJUXjIgeCJdLFswLDEsIlReMiBwIiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzEsMiwiKFxcbXVfeClfISIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFswLDMsIihcXG11X3tUeH0pXyEiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMywyLCJUcCIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dXQ==
   \begin{tikzcd}
@@ -198,8 +201,19 @@ and satisfying the cell equations:
 	\arrow["Tp"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-2]
   \end{tikzcd}
   }
-  The equational axioms then ensure that the theory's "extra" composition cells
-  are uniquely determined by the multicategory's composition operation.
-  }
-  
+
+  The three equational axioms then ensure that any "extra" composition cells are
+  uniquely determined by the multicategory's composition operation.}
+
+  \p{The two axioms labeled "associativity" are somewhat mysterious. As the name
+  suggests, they are used in proving that the multicategory has associative
+  composition. Taken together, they can be read as saying that the cell
+  component #{\mu_p} of the monad multiplication, when transformed by sliding
+  arrows into proarrows via companions (cf. [Patterson
+  2026](patterson-transposing-2026), Equation 2.1), is a composition
+  (opcartesian) cell. Note that so constraining the monad on the theory does
+  \em{not} constrain the monad on the semantics; it only determines the image of
+  a composition cell in models of the theory. \em{Open question}: Should such
+  laws belong to the definition of a modal virtual double theory?}
+
 }
