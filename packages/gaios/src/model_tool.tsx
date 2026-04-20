@@ -33,6 +33,8 @@ export function renderModelTool(handle: DocHandle<ModelDoc>, element: any) {
         document.adoptedStyleSheets.push(sheet);
     }
 
+    console.log("hi");
+
     return render(
         () => (
             <div style="padding: 52px; height: 100%; overflow: scroll;">

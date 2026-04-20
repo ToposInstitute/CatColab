@@ -20,6 +20,7 @@ export default defineConfig({
 
     build: {
         minify: false,
+        sourcemap: "inline",
         rollupOptions: {
             external: [
                 "@automerge/automerge",
