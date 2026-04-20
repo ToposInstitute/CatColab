@@ -55,6 +55,28 @@ stdTheories.add(
 
 stdTheories.add(
     {
+        id: "polynomial-ode",
+        name: "Polynomial ODEs",
+        description: "Systems of polynomial ordinary differential equations",
+        iconLetters: ["O", " "],
+        group: "Systems",
+    },
+    async () => (await import("./theories/polynomial-ode")).default,
+);
+
+stdTheories.add(
+    {
+        id: "signed-polynomial-ode",
+        name: "Signed polynomial ODEs",
+        description: "Systems of polynomial ODEs with signed coefficients",
+        iconLetters: ["O", "s"],
+        group: "Systems",
+    },
+    async () => (await import("./theories/signed-polynomial-ode")).default,
+);
+
+stdTheories.add(
+    {
         id: "causal-loop",
         name: "Causal loop diagram",
         description: "Positive and negative causal relationships",
@@ -139,15 +161,4 @@ stdTheories.add(
         group: "Experimental",
     },
     async () => (await import("./theories/power-system")).default,
-);
-
-stdTheories.add(
-    {
-        id: "polynomial-ode",
-        name: "Polynomial ODEs",
-        description: "Systems of polynomial ordinary differential equations",
-        iconLetters: ["P", "o"],
-        group: "Experimental",
-    },
-    async () => (await import("./theories/polynomial-ode")).default,
 );

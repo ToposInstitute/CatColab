@@ -218,6 +218,24 @@ pub fn th_polynomial_ode_system() -> ModalDblTheory<NonUnital> {
     th
 }
 
+/// The theory of simple signed polynomial ODE systems.
+pub fn th_signed_polynomial_ode_system() -> ModalDblTheory<NonUnital> {
+    let mut th = ModalDblTheory::new();
+    th.add_ob_type(name("State"));
+    let x = ModeApp::new(name("State"));
+    th.add_mor_type(
+        name("Contribution"),
+        x.clone().apply(Modality::List(List::Symmetric)),
+        x.clone(),
+    );
+    th.add_mor_type(
+        name("NegativeContribution"),
+        x.clone().apply(Modality::List(List::Symmetric)),
+        x,
+    );
+    th
+}
+
 /// The theory of a generalized multicategory over a list monad.
 fn th_generalized_multicategory(list: List) -> ModalDblTheory<Unital> {
     let mut th = ModalDblTheory::new();

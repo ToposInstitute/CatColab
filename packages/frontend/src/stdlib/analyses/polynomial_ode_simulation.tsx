@@ -25,6 +25,7 @@ import "./simulation.css";
 /** Analyze a model using mass-action dynamics. */
 export default function PolynomialODESimulation(
     props: ModelAnalysisProps<PolynomialODEProblemData> & {
+        signedContributions: boolean;
         simulate: PolynomialODESimulator;
         variableType?: ObType;
         title?: string;
@@ -74,6 +75,14 @@ export default function PolynomialODESimulation(
         }),
     ];
 
+    function validateSign(): ((row: string, data: number) => boolean) | undefined {
+        if (props.signedContributions) {
+            return (_: string, data: number) => data >= 0;
+        } else {
+            return undefined;
+        }
+    }
+
     // The table for assigning coefficient values to each morphism.
     const morSchema: ColumnSchema<QualifiedName>[] = [
         {
@@ -84,6 +93,7 @@ export default function PolynomialODESimulation(
         createNumericalColumn({
             name: "Coefficient (𝜆)",
             data: (mor) => props.content.coefficients[mor],
+            validate: validateSign(),
             default: 1,
             setData: (mor, data) =>
                 props.changeContent((content) => {

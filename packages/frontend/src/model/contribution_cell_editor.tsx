@@ -1,4 +1,4 @@
-import { createMemo, createSignal, useContext } from "solid-js";
+import { createMemo, createSignal, useContext, Switch, Match } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { NameInput } from "catcolab-ui-components";
@@ -12,8 +12,23 @@ import { ObInput } from "./object_input";
 
 import styles from "./contribution_cell_editor.module.css";
 
+/** The sign of a contribution: positive or negative. */
+export type ContributionSign = "plus" | "minus";
+
+/** Editor for a positive contribution declaration in a model. */
+export const PositiveContributionCellEditor = (props: MorphismEditorProps) => (
+    <ContributionCellEditor {...props} sign="plus" />
+);
+
+/** Editor for a negative contribution declaration in a model. */
+export const NegativeContributionCellEditor = (props: MorphismEditorProps) => (
+    <ContributionCellEditor {...props} sign="minus" />
+);
+
 /** Editor for a contribution declaration cell in a model. */
-export default function ContributionCellEditor(props: MorphismEditorProps) {
+export default function ContributionCellEditor(
+    props: MorphismEditorProps & { sign?: ContributionSign },
+) {
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 
@@ -127,7 +142,13 @@ export default function ContributionCellEditor(props: MorphismEditorProps) {
                     }}
                 />
             </div>
-            <div class={styles["morphism-decl-arrow-replacement"]}>+=</div>
+            <div class={styles["morphism-decl-arrow-replacement"]}>
+                <Switch fallback="+">
+                    <Match when={props.sign === "plus"}>{"+"}</Match>
+                    <Match when={props.sign === "minus"}>{"-"}</Match>
+                </Switch>
+                {"="}
+            </div>
             <div class={styles["morphism-decl-dom-prefix"]}>𝜆&nbsp;&middot;</div>
             <div class={domClasses().join(" ")}>
                 <ContributionMonomialEditor

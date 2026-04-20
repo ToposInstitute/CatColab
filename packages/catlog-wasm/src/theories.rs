@@ -467,6 +467,43 @@ impl ThPolynomialODE {
     }
 }
 
+/// A theory of systems of signed polynomial ODEs
+#[wasm_bindgen]
+pub struct ThSignedPolynomialODE(Rc<theory::ModalDblTheory<NonUnital>>);
+
+#[wasm_bindgen]
+impl ThSignedPolynomialODE {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Rc::new(theories::th_signed_polynomial_ode_system()))
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory(self.0.clone().into())
+    }
+
+    /// Simulates the ODE system derived from a model.
+    #[wasm_bindgen(js_name = "polynomialODESimulation")]
+    pub fn polynomial_ode_simulation(
+        &self,
+        model: &DblModel,
+        data: analyses::ode::PolynomialODEProblemData,
+    ) -> Result<ODEResultWithEquations, String> {
+        polynomial_ode_simulation(model, data)
+    }
+
+    /// Returns the symbolic equations in LaTeX format.
+    #[wasm_bindgen(js_name = "polynomialODEEquations")]
+    pub fn polynomial_ode_equations(
+        &self,
+        model: &DblModel,
+        data: PolynomialODEEquationsData,
+    ) -> Result<LatexEquations, String> {
+        polynomial_ode_equations(model, data)
+    }
+}
+
 /// A theory of power systems.
 #[wasm_bindgen]
 pub struct ThPowerSystem(Rc<theory::DiscreteDblTheory>);

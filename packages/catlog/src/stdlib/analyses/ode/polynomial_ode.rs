@@ -47,15 +47,18 @@ pub struct PolynomialODEProblemData {
 pub struct PolynomialODEAnalysis {
     /// Object type for variables.
     pub variable_ob_type: ModalObType,
-    /// Morphism type for contributions.
-    pub contribution_mor_type: ModalMorType,
+    /// Morphism type for positive contributions.
+    pub positive_contribution_mor_type: ModalMorType,
+    /// Morphism type for negative contributions.
+    pub negative_contribution_mor_type: ModalMorType,
 }
 
 impl Default for PolynomialODEAnalysis {
     fn default() -> Self {
         Self {
             variable_ob_type: ModalObType::new(name("State")),
-            contribution_mor_type: ModeApp::new(name("Contribution")).into(),
+            positive_contribution_mor_type: ModeApp::new(name("Contribution")).into(),
+            negative_contribution_mor_type: ModeApp::new(name("NegativeContribution")).into(),
         }
     }
 }
@@ -73,12 +76,11 @@ impl PolynomialODEAnalysis {
             sys.add_term(ob, Polynomial::zero());
         }
 
-        // Create a monomial for each morphism.
-        for mor in model.mor_generators_with_type(&self.contribution_mor_type) {
+        let make_term = |mor: QualifiedName| {
             let (Some(ModalOb::List(_, inputs)), Some(output)) =
                 (model.get_dom(&mor), model.get_cod(&mor))
             else {
-                continue;
+                return None;
             };
 
             let term: Monomial<_, _> =
@@ -86,7 +88,21 @@ impl PolynomialODEAnalysis {
             let term: Polynomial<_, _, _> =
                 [(Parameter::generator(mor), term.clone())].into_iter().collect();
 
-            sys.add_term(output.clone().unwrap_generator(), term);
+            Some((output.clone().unwrap_generator(), term))
+        };
+
+        // Add a monomial with positive sign for each positive contribution.
+        for mor in model.mor_generators_with_type(&self.positive_contribution_mor_type) {
+            if let Some((var, term)) = make_term(mor) {
+                sys.add_term(var, term);
+            }
+        }
+
+        // Add a monomial with negative sign for each negative contribution.
+        for mor in model.mor_generators_with_type(&self.negative_contribution_mor_type) {
+            if let Some((var, term)) = make_term(mor) {
+                sys.add_term(var, -term);
+            }
         }
 
         sys.normalize()
