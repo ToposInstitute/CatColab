@@ -33,7 +33,7 @@ export function renderModelTool(handle: DocHandle<ModelDoc>, element: any) {
         document.adoptedStyleSheets.push(sheet);
     }
 
-    console.log("hi");
+    console.log("Hello from CatColab");
 
     return render(
         () => (

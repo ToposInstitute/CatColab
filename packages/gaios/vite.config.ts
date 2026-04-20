@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
-import topLevelAwait from "vite-plugin-top-level-await";
 import wasm from "vite-plugin-wasm";
 import cssInjectedByJsPlugin from "vite-plugin-css-injected-by-js";
 import solid from "vite-plugin-solid";
@@ -12,7 +11,7 @@ const __dirname = dirname(__filename);
 
 export default defineConfig({
     base: "./",
-    plugins: [topLevelAwait(), wasm(), solid(), cssInjectedByJsPlugin()],
+    plugins: [wasm(), solid(), cssInjectedByJsPlugin()],
 
     resolve: {
         dedupe: getCommonDependencies(),
@@ -21,6 +20,7 @@ export default defineConfig({
     build: {
         minify: false,
         sourcemap: "inline",
+        target: "esnext",
         rollupOptions: {
             external: [
                 "@automerge/automerge",

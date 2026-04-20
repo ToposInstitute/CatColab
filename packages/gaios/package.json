@@ -39,7 +39,6 @@
         "vite": "^5.3.4",
         "vite-plugin-css-injected-by-js": "^3.5.2",
         "vite-plugin-solid": "^2.10.2",
-        "vite-plugin-top-level-await": "^1.4.2",
         "vite-plugin-wasm": "^3.3.0"
     }
 }
