@@ -1,0 +1,15 @@
+\title{Representable multicategories}
+\taxon{doctrine}
+\import{macros}
+
+\p{Abstracting the universal property of the tensor product of vector spaces, a
+\em{tensor product} of a list of objects #{x_1, \dots, x_n} in a multicategory
+is an object #{x_1 \otimes \cdots \otimes x_n} along with a universal
+multimorphism #{(x_1, \dots, x_n) \to x_1 \odot \cdots \odot x_n}. A
+\nlab{representable multicategory} is a multicategory in which every list of
+objects admits a tensor product.}
+
+\p{Abstracting still further, representability can be defined for any
+[generalized multicategory](dct-000F).}
+
+\transclude{thy-000O}

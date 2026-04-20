@@ -1,0 +1,51 @@
+\title{Representable multicategories}
+\taxon{theory}
+\import{macros}
+
+\p{The theory of \define{representable (generalized) multicategories} extends
+the [theory of generalized multicategories](thy-000F) with
+
+\ul{
+\li{an arrow #{a: Tx \to x}}
+\li{a nullary cell
+\quiver{
+% https://q.uiver.app/#q=WzAsMyxbMSwwLCJUeCJdLFswLDEsIlR4Il0sWzIsMSwieCJdLFswLDIsImEiXSxbMCwxLCIiLDIseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxLDIsInAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMCw1LCJcXGNoaSIsMSx7InNob3J0ZW4iOnsidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dXQ==
+\begin{tikzcd}
+	& Tx & \\
+	Tx && x
+	\arrow[equals, from=1-2, to=2-1]
+	\arrow["a", from=1-2, to=2-3]
+	\arrow[""{name=0, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-3]
+	\arrow["\chi"{description}, draw=none, from=1-2, to=0]
+\end{tikzcd}
+}}
+
+such that the composite cell
+
+\quiver{
+% https://q.uiver.app/#q=WzAsNyxbMiwwLCJUXjIgeCJdLFswLDEsIlReMiB4Il0sWzIsMSwiVHgiXSxbMywwLCJ4Il0sWzMsMSwieCJdLFswLDIsIlReMiB4Il0sWzMsMiwieCJdLFswLDIsIlRhIiwxXSxbMCwxLCIiLDIseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxLDIsIlRwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzAsMywicChUYSwgMV94KSIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsyLDQsInAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMyw0LCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs0LDYsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzEsNSwiIiwxLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNSw2LCJwKFxcbXVfeCwxX3gpIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzAsOSwiVFxcY2hpIiwxLHsic2hvcnRlbiI6eyJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzEwLDExLCJcXHRleHR7cmVzfSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsyLDE1LCJcXHRleHR7Y29tcH0iLDEseyJsYWJlbF9wb3NpdGlvbiI6NDAsInNob3J0ZW4iOnsidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dXQ==
+\begin{tikzcd}
+	&& {T^2 x} & x \\
+	{T^2 x} && Tx & x \\
+	{T^2 x} &&& x
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{p(Ta, 1_x)}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-3, to=1-4]
+	\arrow[equals, from=1-3, to=2-1]
+	\arrow["Ta"{description}, from=1-3, to=2-3]
+	\arrow[equals, from=1-4, to=2-4]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "Tp"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-3]
+	\arrow[equals, from=2-1, to=3-1]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-3, to=2-4]
+	\arrow[equals, from=2-4, to=3-4]
+	\arrow[""{name=3, anchor=center, inner sep=0}, "{p(\mu_x,1_x)}"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-4]
+	\arrow["{T\chi}"{description}, draw=none, from=1-3, to=1]
+	\arrow["{\text{res}}"{description}, draw=none, from=0, to=2]
+	\arrow["{\text{comp}}"{description, pos=0.4}, draw=none, from=2-3, to=3]
+\end{tikzcd}
+}
+
+is invertible (that is, there is a globular generating cell #{p(\mu_x,1_x) \To
+p(Ta, 1_x)} mutually inverse to the globular cell above).
+
+}
+
+}
