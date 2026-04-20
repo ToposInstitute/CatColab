@@ -1,6 +1,6 @@
 import Loader from "lucide-solid/icons/loader";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
-import { createMemo, createResource, For, Match, Show, Switch } from "solid-js";
+import { createMemo, createResource, createEffect, For, Match, Show, Switch } from "solid-js";
 
 import {
     BlockTitle,
@@ -14,6 +14,7 @@ import {
 } from "catcolab-ui-components";
 import type { ModelDiagramPresentation, ModelPresentation, QualifiedName } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
+import { uniqueIndexArray } from "../../util/indexing";
 import type { LiveDiagramDoc } from "../../diagram";
 import { PDEPlot2D } from "../../visualization";
 import type { DecapodesAnalysisContent } from "./simulator_types";
@@ -23,17 +24,8 @@ import "./simulation.css";
 
 /** Analyze a DEC diagram by performing a simulation using Decapodes.jl. */
 export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisContent>) {
-    // Step 1: Start the Julia kernel.
-    const [kernel, { refetch: restartKernel }] = createResource(() => undefined);
-
-    // Step 2: Run initialization code in the kernel.
-    const [options] = createResource<SimulationOptions | undefined>(() => undefined);
-
-    // Step 3: Run the simulation in the kernel!
-    const [result, { refetch: rerunSimulation }] = createResource(() => undefined);
-
-    const elaboratedModel = () => props.liveDiagram.liveModel.elaboratedModel();
-    const elaboratedDiagram = () => props.liveDiagram.elaboratedDiagram();
+    const elaboratedModel = props.liveDiagram.liveModel.elaboratedModel;
+    const elaboratedDiagram = props.liveDiagram.elaboratedDiagram;
 
     const scalars = createMemo<QualifiedName[]>(
         () =>
@@ -42,6 +34,43 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                 content: { tag: "Basic", content: "Object" },
             }) ?? [],
     );
+
+    const [options] = createResource(async () => {
+        const response = await fetch("http://127.0.0.1:8080/decapodes-options");
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        return {
+            domains: uniqueIndexArray(data.domains, (domain) => domain.name),
+        };
+    });
+
+	// TODO verify
+	createEffect(() => {
+    const opts = options();
+    const domain = props.content.domain;
+    
+    if (opts && domain) {
+        const domainConfig = opts.domains.get(domain);
+        const defaultCondition = domainConfig?.initialConditions[0];
+        
+        if (defaultCondition) {
+            props.changeContent((content) => {
+                // Only set defaults for variables that don't already have a condition
+                variables().forEach((varId) => {
+                    if (!content.initialConditions[varId]) {
+                        content.initialConditions[varId] = defaultCondition;
+                    }
+                });
+            });
+        }
+    }
+});
+
 
     const variables = (): QualifiedName[] => elaboratedDiagram()?.obGenerators() ?? [];
 
@@ -76,8 +105,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                 if (!props.content.domain) {
                     return [];
                 }
-                //return options()?.domains.get(props.content.domain)?.initialConditions ?? [];
-                return [];
+                return options()?.domains.get(props.content.domain)?.initialConditions ?? [];
             },
             content: (id) => props.content.initialConditions[id] ?? null,
             setContent: (id, value) =>
@@ -112,26 +140,6 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         }),
     ];
 
-    const RestartOrRerunButton = () => (
-        <Switch>
-            <Match when={kernel.loading || options.loading || result.loading}>
-                <IconButton>
-                    <Loader size={16} />
-                </IconButton>
-            </Match>
-            <Match when={kernel.error || options.error}>
-                <IconButton onClick={restartKernel} tooltip="Restart the Julia kernel">
-                    <RotateCcw size={16} />
-                </IconButton>
-            </Match>
-            <Match when={true}>
-                <IconButton onClick={rerunSimulation} tooltip="Re-run the simulation">
-                    <RotateCcw size={16} />
-                </IconButton>
-            </Match>
-        </Switch>
-    );
-
     const DomainConfig = (domains: Map<string, Domain>) => (
         <div class="decapodes-domain">
             <span>Domain:</span>
@@ -144,8 +152,8 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                             return;
                         }
                         content.domain = domain;
-                        //content.mesh = options()?.domains.get(domain)?.meshes[0] ?? null;
-                        content.mesh = null;
+                        content.mesh = options()?.domains.get(domain)?.meshes[0] ?? null;
+                        // content.mesh = null;
                         content.initialConditions = {};
                     })
                 }
@@ -176,46 +184,88 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         </div>
     );
 
+    const [res, { refetch }] = createResource(
+        () => {
+            const model = props.liveDiagram.liveModel.elaboratedModel();
+            const diagram = props.liveDiagram.elaboratedDiagram();
+			const opts = options();
+            if (model && diagram && opts) {
+                return { model, diagram };
+            }
+        },
+
+        async ({ model, diagram }) => {
+            const { domain, mesh, initialConditions, plotVariables, _scalars, duration } =
+                props.content;
+            if (domain === null || mesh === null || !Object.values(plotVariables).some((x) => x)) {
+                return undefined;
+            }
+
+			console.log(props.content);
+            const response = await fetch("http://127.0.0.1:8080/decapodes", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    model: model.presentation(),
+                    diagram: diagram.presentation(),
+                    analysis: {
+                        duration,
+                        plotVariables: Object.keys(props.content.plotVariables).filter(
+                            (v) => props.content.plotVariables[v],
+                        ),
+                        domain,
+                        mesh,
+                        initialConditions: { ...initialConditions },
+                        scalars: {},
+                    },
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            return { model, data: await response.json() };
+        },
+    );
+
+	const RestartOrRerunButton = () => (
+    <Switch>
+        <Match when={res.loading}>
+            <IconButton>
+                <Loader size={16} />
+            </IconButton>
+        </Match>
+        <Match when={true}>
+            <IconButton onClick={() => refetch()} tooltip="Re-run the simulation">
+                <RotateCcw size={16} />
+            </IconButton>
+        </Match>
+    </Switch>
+);
+
+    // TODO return `options()` to Show when
     return (
         <div class="simulation">
             <BlockTitle title="Simulation" actions={RestartOrRerunButton()} />
             <Foldable title="Parameters" defaultExpanded>
-                <Show when={options()}>
-                    {(_options) => {
-                        //DomainConfig(options().domains)
-                        return DomainConfig(new Map());
-                    }}
-                </Show>
+                <Show when={options()}>{(opts) => DomainConfig(opts().domains)}</Show>
                 <div class="parameters">
                     <FixedTableEditor rows={variables()} schema={variableSchema} />
                     <FixedTableEditor rows={scalars()} schema={scalarSchema} />
                     <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
             </Foldable>
+
             <Switch>
-                <Match when={kernel.loading || options.loading}>
-                    {"Loading the Julia kernel..."}
-                </Match>
-                <Match when={kernel.error}>
+                <Match when={res.loading}>{"Loading Julia resource..."}</Match>
+                <Match when={res.error}>
                     {(error) => (
                         <Warning title="Failed to start a Julia kernel">
                             <pre>{error().message}</pre>
                         </Warning>
-                    )}
-                </Match>
-                <Match when={options.error}>
-                    {(error) => (
-                        <Warning title="Failed to initialize the Julia kernel">
-                            <pre>{error().message}</pre>
-                        </Warning>
-                    )}
-                </Match>
-                <Match when={result.loading}>{"Running the simulation..."}</Match>
-                <Match when={result.error}>
-                    {(error) => (
-                        <ErrorAlert title="Simulation error">
-                            <pre>{error().message}</pre>
-                        </ErrorAlert>
                     )}
                 </Match>
                 <Match when={props.liveDiagram.validatedDiagram()?.tag !== "Valid"}>
@@ -223,7 +273,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                         {"Cannot run the simulation because the diagram is invalid"}
                     </ErrorAlert>
                 </Match>
-                <Match when={result()}>{(data) => <PDEPlot2D data={data()} />}</Match>
+                <Match when={res()}>{(data) => <PDEPlot2D data={data()} />}</Match>
             </Switch>
         </div>
     );

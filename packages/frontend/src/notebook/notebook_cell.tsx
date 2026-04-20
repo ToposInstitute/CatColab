@@ -169,7 +169,7 @@ export function NotebookCell(props: {
                     if (nativeSetDragImage) {
                         // Clone the cell content for the drag preview
                         const cellContent = rootRef.querySelector(".cell-content");
-                        if (cellContent) {
+						if (cellContent) {
                             const preview = cellContent.cloneNode(true) as HTMLElement;
                             preview.style.width = `${cellContent.clientWidth}px`;
                             preview.style.opacity = "0.8";
