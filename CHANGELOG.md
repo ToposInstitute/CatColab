@@ -16,9 +16,10 @@ include notable new features.
 - Composing stock and flow diagrams by sharing/identifying stocks
   ([#1196](https://github.com/ToposInstitute/CatColab/pull/1196)). Composing
   models is now supported for *all* logics.
-- New logic: systems of polynomial ODEs
-  ([#1176](https://github.com/ToposInstitute/CatColab/pull/1176),
-  [#1211](https://github.com/ToposInstitute/CatColab/pull/1211))
+- New logics: systems of polynomial ODEs, in which the coefficients have
+  arbitrary sign ([#1176](https://github.com/ToposInstitute/CatColab/pull/1176),
+  [#1211](https://github.com/ToposInstitute/CatColab/pull/1211)) or fixed sign
+  ([#1194](https://github.com/ToposInstitute/CatColab/pull/1194))
 - The history of a document is now viewable, and a document can be reverted to a
   previous state ([#1175](https://github.com/ToposInstitute/CatColab/pull/1175))
 - New service: the backend now provides a compute service for
@@ -28,8 +29,6 @@ include notable new features.
 - New analysis: table view for instances of a schema
   ([#835](https://github.com/ToposInstitute/CatColab/pull/835)), based on the
   new Julia service
-- New logic: systems of (signed and unsigned) polynomial ODEs
-  ([#1176](https://github.com/ToposInstitute/CatColab/pull/1176) and [#1194](https://github.com/ToposInstitute/CatColab/pull/1194))
 - Experimental: Petri nets created in
   [Petrinaut](https://www.npmjs.com/package/@hashintel/petrinaut) and exported
   as JSON can be imported into CatColab

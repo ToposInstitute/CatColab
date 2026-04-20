@@ -7,12 +7,12 @@ import * as analyses from "../analyses";
 const ObjectCellEditor = lazy(() => import("../../model/object_cell_editor"));
 const PositiveContributionEditor = lazy(() =>
     import("../../model/contribution_cell_editor").then((m) => ({
-        default: m.createContributionEditor({ sign: "plus" }),
+        default: m.PositiveContributionCellEditor,
     })),
 );
 const NegativeContributionEditor = lazy(() =>
     import("../../model/contribution_cell_editor").then((m) => ({
-        default: m.createContributionEditor({ sign: "minus" }),
+        default: m.NegativeContributionCellEditor,
     })),
 );
 
@@ -38,7 +38,7 @@ export default function createSignedPolynomialODETheory(theoryMeta: TheoryMeta):
                 editor: PositiveContributionEditor,
                 name: "Positive contribution",
                 description: "Additive monomial contribution to the system of ODEs",
-                shortcut: ["C"],
+                shortcut: ["P"],
             },
             {
                 tag: "MorType",
