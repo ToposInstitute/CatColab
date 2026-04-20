@@ -1,16 +1,36 @@
-import type { AutomergeUrl, DocHandle, Repo } from "@automerge/automerge-repo";
+import type { AutomergeUrl, DocHandle } from "@automerge/automerge-repo";
 import { createResource, Switch, Match } from "solid-js";
+import { render } from "solid-js/web";
 
-import { createModelLibraryWithRepo } from "../../frontend/src/model";
+import {
+    createModelLibraryWithRepo,
+    ModelLibraryContext,
+    type ModelLibrary,
+} from "../../frontend/src/model";
 import { ModelNotebookEditor } from "../../frontend/src/model/model_editor";
+import { ModelDocumentHead } from "../../frontend/src/model/model_info";
 import { stdTheories } from "../../frontend/src/stdlib";
 import { TheoryLibraryContext } from "../../frontend/src/theory";
 import type { ModelDoc } from "./model_datatype";
-import { render } from "solid-js/web";
 import styles from "../../ui-components/src/global.css?inline";
 
-export function renderModelTool(handle: DocHandle<ModelDoc>, element: any) {
-    const modelLibrary = createModelLibraryWithRepo(element.repo, stdTheories);
+// `element` carries a `Repo` from the patchwork host, whose automerge-repo
+// version differs from the one the frontend package was built against. Typed
+// loosely here to avoid the version-skew type clash; structurally identical.
+type ToolElement = HTMLElement & { repo: unknown };
+
+export function renderModelTool(handle: DocHandle<ModelDoc>, element: ToolElement) {
+    // Cast: `createModelLibraryWithRepo` returns `ModelLibrary<AnyDocumentId>`,
+    // but the context is typed as `ModelLibrary<string>`. `AnyDocumentId` is a
+    // branded string, so the narrowing is safe here. The `repo` is also cast
+    // through `unknown` because gaios and frontend resolve different pinned
+    // versions of @automerge/automerge-repo; the types clash but the runtime
+    // shapes are compatible.
+    const modelLibrary = createModelLibraryWithRepo(
+        // biome-ignore lint/suspicious/noExplicitAny: version-skew workaround
+        element.repo as any,
+        stdTheories,
+    ) as unknown as ModelLibrary<string>;
 
     const [liveModel] = createResource(
         () => handle.url,
@@ -51,7 +71,10 @@ export function renderModelTool(handle: DocHandle<ModelDoc>, element: any) {
                     <Match when={liveModel()}>
                         {(liveModel) => (
                             <TheoryLibraryContext.Provider value={stdTheories}>
-                                <ModelNotebookEditor liveModel={liveModel()} />
+                                <ModelLibraryContext.Provider value={modelLibrary}>
+                                    <ModelDocumentHead liveModel={liveModel()} />
+                                    <ModelNotebookEditor liveModel={liveModel()} />
+                                </ModelLibraryContext.Provider>
                             </TheoryLibraryContext.Provider>
                         )}
                     </Match>

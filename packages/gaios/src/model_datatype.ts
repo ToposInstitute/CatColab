@@ -21,7 +21,7 @@ const getTitle = (doc: ModelDoc) => {
 
 export const init = (doc: ModelDoc) => {
     doc.name = "CatColab Model";
-    doc.theory = "simple-olog";
+    doc.theory = "empty";
     doc.type = "model";
     doc.notebook = {
         cells: [],
