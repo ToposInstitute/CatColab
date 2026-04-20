@@ -58,7 +58,9 @@ export function InstantiationCellEditor(props: {
     invariant(models);
     const instantiated = models.useElaboratedModel(refId);
 
-    const [activeComponent, setActiveComponent] = createSignal<InstantiationCellComponent>("name");
+    const [activeComponent, setActiveComponent] = createSignal<InstantiationCellComponent>(
+        refId() == null ? "model" : "name",
+    );
     const [activeIndex, setActiveIndex] = createSignal(0);
     const activateIndex = (index: number) =>
         batch(() => {

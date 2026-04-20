@@ -1,6 +1,7 @@
 import { getReorderDestinationIndex } from "@atlaskit/pragmatic-drag-and-drop-hitbox/util/get-reorder-destination-index";
 import { monitorForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import type { DocHandle, Prop } from "@automerge/automerge-repo";
+import Popover from "@corvu/popover";
 import { makeEventListener } from "@solid-primitives/event-listener";
 import ListPlus from "lucide-solid/icons/list-plus";
 import {
@@ -8,6 +9,7 @@ import {
     createEffect,
     createSignal,
     For,
+    type JSX,
     Match,
     onCleanup,
     Show,
@@ -17,6 +19,7 @@ import invariant from "tiny-invariant";
 
 import {
     type Completion,
+    Completions,
     IconButton,
     type KbdKey,
     keyEventHasModifier,
@@ -32,7 +35,7 @@ import {
     RichTextCellEditor,
     StemCellEditor,
 } from "./notebook_cell";
-import { type FormalCell, NotebookUtils, newRichTextCell, newStemCell } from "./types";
+import { type FormalCell, NotebookUtils, newRichTextCell } from "./types";
 
 import "./notebook_editor.css";
 
@@ -88,42 +91,32 @@ export function NotebookEditor<T>(props: {
     const [activeCell, setActiveCell] = createSignal<number | null>(null);
     const [currentDropTarget, setCurrentDropTarget] = createSignal<string | null>(null);
 
+    // Popup state for Shift-Enter cell type selection.
+    const [shiftEnterPopupOpen, setShiftEnterPopupOpen] = createSignal(false);
+    // The active cell index captured at the moment Shift-Enter is pressed, so
+    // that the popup inserts below the correct cell even after focus moves.
+    const [shiftEnterCellIndex, setShiftEnterCellIndex] = createSignal<number | null>(null);
+    // Position of the shift-enter popup, stored as signals.
+    const [popupLeft, setPopupLeft] = createSignal(0);
+    const [popupTop, setPopupTop] = createSignal(0);
+
     // Set up commands and their keyboard shortcuts.
-    const addAfterActiveCell = (cell: Cell<T>) => {
-        const [i, n] = [activeCell(), props.notebook.cellOrder.length];
-        const cellIndex = i != null ? Math.min(i + 1, n) : n;
-        props.changeNotebook((nb) => {
-            NotebookUtils.insertCellAtIndex(nb, cell, cellIndex);
-        });
-        setActiveCell(cellIndex);
-    };
-
-    const addOrReplaceActiveCell = (cell: Cell<T>) => {
-        const cellIndex = activeCell() ?? -1;
-        const existingCell =
-            cellIndex >= 0 ? NotebookUtils.tryGetCellByIndex(props.notebook, cellIndex) : null;
-        if (existingCell?.tag === "stem") {
-            replaceCellWith(cellIndex, cell);
-        } else {
-            addAfterActiveCell(cell);
-        }
-    };
-
-    const appendCell = (cell: Cell<T>) => {
-        props.changeNotebook((nb) => {
-            NotebookUtils.appendCell(nb, cell);
-        });
-        setActiveCell(NotebookUtils.numCells(props.notebook) - 1);
-    };
-
     const insertCommands = (): Completion[] =>
         cellConstructors().map((cc) => {
             const { name, description, shortcut } = cc;
             return {
                 name,
                 description,
-                shortcut,
-                onComplete: () => addOrReplaceActiveCell(cc.construct()),
+                shortcut: shortcut && [cellShortcutModifier, ...shortcut],
+                onComplete: () => {
+                    const [i, n] = [activeCell(), props.notebook.cellOrder.length];
+                    const cellIndex = i != null ? Math.min(i + 1, n) : n;
+                    props.changeNotebook((nb) => {
+                        NotebookUtils.insertCellAtIndex(nb, cc.construct(), cellIndex);
+                    });
+                    // Defer so the popover fully closes before we focus the new cell.
+                    requestAnimationFrame(() => setActiveCell(cellIndex));
+                },
             };
         });
 
@@ -161,21 +154,88 @@ export function NotebookEditor<T>(props: {
             };
         });
 
+    /** Completions for creating a new cell below position `i`. */
+    const createBelowCommands = (i: number): Completion[] =>
+        cellConstructors().map((cc) => {
+            const { name, description, shortcut } = cc;
+            return {
+                name,
+                description,
+                shortcut: shortcut && [cellShortcutModifier, ...shortcut],
+                onComplete: () => {
+                    const index = i + 1;
+                    props.changeNotebook((nb) => {
+                        NotebookUtils.insertCellAtIndex(nb, cc.construct(), index);
+                    });
+                    // Defer so the popover fully closes before we focus the new cell.
+                    requestAnimationFrame(() => setActiveCell(index));
+                },
+            };
+        });
+
+    /** Completions for appending a new cell at the end. */
+    const appendCommands = (): Completion[] =>
+        cellConstructors().map((cc) => {
+            const { name, description, shortcut } = cc;
+            return {
+                name,
+                description,
+                shortcut: shortcut && [cellShortcutModifier, ...shortcut],
+                onComplete: () => {
+                    props.changeNotebook((nb) => {
+                        NotebookUtils.appendCell(nb, cc.construct());
+                    });
+                    // Defer so the popover fully closes before we focus the new cell.
+                    requestAnimationFrame(() => {
+                        setActiveCell(NotebookUtils.numCells(props.notebook) - 1);
+                    });
+                },
+            };
+        });
+
     makeEventListener(window, "keydown", (evt) => {
         if (props.noShortcuts) {
             return;
         }
         if (keyEventHasModifier(evt, cellShortcutModifier)) {
             for (const command of insertCommands()) {
-                if (command.shortcut && evt.key.toUpperCase() === command.shortcut[0]) {
+                const key = command.shortcut?.at(-1);
+                if (key && evt.key.toUpperCase() === key) {
                     command.onComplete?.();
                     return evt.preventDefault();
                 }
             }
         }
-        if (evt.shiftKey && evt.key === "Enter") {
-            addAfterActiveCell(newStemCell());
+        if (
+            (evt.shiftKey && evt.key === "Enter") ||
+            (keyEventHasModifier(evt, cellShortcutModifier) && evt.key === "Enter")
+        ) {
+            // Capture the active cell *before* focus changes.
+            const cellIndex = activeCell();
+            setShiftEnterCellIndex(cellIndex);
+
+            // Position the popup at the bottom edge of the active cell.
+            const cellEls = document.querySelectorAll(".notebook-cells .cell");
+            const cellEl = cellIndex != null ? cellEls[cellIndex] : cellEls[cellEls.length - 1];
+            if (cellEl) {
+                const rect = cellEl.getBoundingClientRect();
+                setPopupLeft(rect.left);
+                setPopupTop(rect.bottom);
+            }
+            setShiftEnterPopupOpen(true);
             return evt.preventDefault();
+        }
+        if (evt.key === "Escape" && shiftEnterPopupOpen()) {
+            setShiftEnterPopupOpen(false);
+            return evt.preventDefault();
+        }
+    });
+
+    // Close the shift-enter popup when clicking outside it.
+    let shiftEnterPopupRef: HTMLDivElement | undefined;
+    makeEventListener(window, "pointerdown", (evt) => {
+        if (shiftEnterPopupOpen() && !shiftEnterPopupRef?.contains(evt.target as Node)) {
+            setShiftEnterPopupOpen(false);
         }
     });
 
@@ -240,9 +300,9 @@ export function NotebookEditor<T>(props: {
         >
             <Show when={props.notebook.cellOrder.length === 0}>
                 <div class="notebook-cell-placeholder">
-                    <IconButton onClick={() => appendCell(newStemCell())}>
+                    <CellTypePopover completions={appendCommands()}>
                         <ListPlus />
-                    </IconButton>
+                    </CellTypePopover>
                     <span>Click button or press Shift-Enter to create a cell</span>
                 </div>
             </Show>
@@ -337,6 +397,7 @@ export function NotebookEditor<T>(props: {
                                             ? props.cellLabel?.(cell.content)
                                             : undefined
                                     }
+                                    createCompletions={createBelowCommands(i())}
                                     currentDropTarget={currentDropTarget()}
                                     setCurrentDropTarget={setCurrentDropTarget}
                                 >
@@ -380,17 +441,78 @@ export function NotebookEditor<T>(props: {
                     }}
                 </For>
             </ul>
-            <Show when={NotebookUtils.getCells(props.notebook).some((cell) => cell.tag !== "stem")}>
+            <Show when={shiftEnterPopupOpen()}>
+                <div
+                    ref={shiftEnterPopupRef}
+                    class="popup"
+                    style={{
+                        position: "fixed",
+                        left: `${popupLeft()}px`,
+                        top: `${popupTop()}px`,
+                        "z-index": 1000,
+                    }}
+                >
+                    <Completions
+                        completions={
+                            shiftEnterCellIndex() != null
+                                ? createBelowCommands(shiftEnterCellIndex()!)
+                                : appendCommands()
+                        }
+                        onComplete={() => setShiftEnterPopupOpen(false)}
+                    />
+                </div>
+            </Show>
+            <Show when={props.notebook.cellOrder.length > 0}>
                 <div class="notebook-cell-placeholder">
-                    <IconButton
-                        onClick={() => appendCell(newStemCell())}
-                        tooltip="Create a new cell"
-                    >
+                    <CellTypePopover completions={appendCommands()} tooltip="Create a new cell">
                         <ListPlus />
-                    </IconButton>
+                    </CellTypePopover>
                 </div>
             </Show>
         </div>
+    );
+}
+
+/** A button that opens a popover with cell type completions.
+ */
+export function CellTypePopover(props: {
+    completions: Completion[];
+    tooltip?: string;
+    /** Whether the button is visible. Defaults to `true`. The button always
+        remains visible while the popover is open. */
+    showButton?: boolean;
+    children: JSX.Element;
+}) {
+    const [isOpen, setIsOpen] = createSignal(false);
+
+    return (
+        <Popover
+            open={isOpen()}
+            onOpenChange={setIsOpen}
+            placement="bottom-start"
+            floatingOptions={{ flip: true }}
+            restoreFocus={false}
+        >
+            <Popover.Anchor as="span">
+                <IconButton
+                    onClick={() => setIsOpen(true)}
+                    tooltip={props.tooltip}
+                    style={{
+                        visibility: (props.showButton ?? true) || isOpen() ? "visible" : "hidden",
+                    }}
+                >
+                    {props.children}
+                </IconButton>
+            </Popover.Anchor>
+            <Popover.Portal>
+                <Popover.Content class="popup">
+                    <Completions
+                        completions={props.completions}
+                        onComplete={() => setIsOpen(false)}
+                    />
+                </Popover.Content>
+            </Popover.Portal>
+        </Popover>
     );
 }
 
