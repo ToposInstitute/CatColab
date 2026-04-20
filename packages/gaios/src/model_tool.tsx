@@ -26,21 +26,12 @@ export function renderModelTool(handle: DocHandle<ModelDoc>, element: any) {
         }
     );
 
-    const shadowRoot = element.attachShadow({ mode: "open" });
-
-    // hack: vite currently injects styles into the head of the document
-    // because of the shadow dom we no longer get these styles
-    // for now we just copy them into the shadow root
-    for (const node of document.querySelectorAll(
-        "style,link[rel='stylesheet']"
-    )) {
-        shadowRoot.append(node.cloneNode(true));
-    }
-
     const sheet = new CSSStyleSheet();
     sheet.replaceSync(styles as string);
-    shadowRoot.adoptedStyleSheets ??= [];
-    shadowRoot.adoptedStyleSheets.push(sheet);
+    document.adoptedStyleSheets ??= [];
+    if (!document.adoptedStyleSheets.includes(sheet)) {
+        document.adoptedStyleSheets.push(sheet);
+    }
 
     return render(
         () => (
@@ -65,6 +56,6 @@ export function renderModelTool(handle: DocHandle<ModelDoc>, element: any) {
                 </Switch>
             </div>
         ),
-        shadowRoot
+        element,
     );
 }
