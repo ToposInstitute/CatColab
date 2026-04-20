@@ -76,14 +76,11 @@ impl PolynomialODEAnalysis {
             sys.add_term(ob, Polynomial::zero());
         }
 
-        // TODO: reduce the duplication below
-
-        // Add a positive monomial for each positive morphism.
-        for mor in model.mor_generators_with_type(&self.positive_contribution_mor_type) {
+        let make_term = |mor: QualifiedName| {
             let (Some(ModalOb::List(_, inputs)), Some(output)) =
                 (model.get_dom(&mor), model.get_cod(&mor))
             else {
-                continue;
+                return None;
             };
 
             let term: Monomial<_, _> =
@@ -91,23 +88,21 @@ impl PolynomialODEAnalysis {
             let term: Polynomial<_, _, _> =
                 [(Parameter::generator(mor), term.clone())].into_iter().collect();
 
-            sys.add_term(output.clone().unwrap_generator(), term);
+            Some((output.clone().unwrap_generator(), term))
+        };
+
+        // Add a monomial with positive sign for each positive contribution.
+        for mor in model.mor_generators_with_type(&self.positive_contribution_mor_type) {
+            if let Some((var, term)) = make_term(mor) {
+                sys.add_term(var, term);
+            }
         }
 
-        // Add a negative monomial for each negative morphism.
+        // Add a monomial with negative sign for each negative contribution.
         for mor in model.mor_generators_with_type(&self.negative_contribution_mor_type) {
-            let (Some(ModalOb::List(_, inputs)), Some(output)) =
-                (model.get_dom(&mor), model.get_cod(&mor))
-            else {
-                continue;
-            };
-
-            let term: Monomial<_, _> =
-                inputs.iter().cloned().map(|ob| (ob.unwrap_generator(), 1)).collect();
-            let term: Polynomial<_, _, _> =
-                [(Parameter::generator(mor), term.clone())].into_iter().collect();
-
-            sys.add_term(output.clone().unwrap_generator(), -term);
+            if let Some((var, term)) = make_term(mor) {
+                sys.add_term(var, -term);
+            }
         }
 
         sys.normalize()
