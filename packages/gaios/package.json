@@ -2,6 +2,8 @@
     "name": "frontend-gaios",
     "version": "0.0.1",
     "description": "version of catcolab that can run in GAIOS",
+    "keywords": [],
+    "author": "Ink & Switch",
     "type": "module",
     "main": "src/index.ts",
     "exports": {
@@ -14,8 +16,6 @@
         "lint": "biome lint --write && biome check --write",
         "watch": "nodemon --watch src -e js,tsx,ts,tsx,css,json --exec 'pnpm build && pnpm push'"
     },
-    "keywords": [],
-    "author": "Ink & Switch",
     "dependencies": {
         "@automerge/automerge": "^3.1.1",
         "@automerge/automerge-repo": "^2.2.0",
@@ -34,6 +34,7 @@
         "@vitejs/plugin-react": "^4.3.1",
         "autoprefixer": "^10.4.20",
         "nodemon": "^3.1.9",
+        "pushwork": "^1.1.8",
         "typescript": "^5.2.2",
         "vite": "^5.3.4",
         "vite-plugin-css-injected-by-js": "^3.5.2",
