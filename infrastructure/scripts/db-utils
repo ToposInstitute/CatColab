@@ -301,7 +301,8 @@ function run_vm_start() {
     -enable-kvm -cpu host -smp 2 -m 2048 \
     -drive file=./catcolab-vm.qcow2,if=virtio,format=qcow2 \
     -device virtio-net-pci,netdev=net0 \
-    -netdev user,id=net0,hostfwd=tcp::2221-:22,hostfwd=tcp::5433-:5432,hostfwd=tcp::8000-:8000,hostfwd=tcp::8010-:8010
+    -netdev user,id=net0,hostfwd=tcp::2221-:22,hostfwd=tcp::5433-:5432,hostfwd=tcp::8000-:8000,hostfwd=tcp::8010-:8010 \
+    -nographic
 }
 
 # Entry point

@@ -10,12 +10,7 @@ Install Rust and [pnpm](https://pnpm.io/), then run
 ```sh
 cd packages/frontend
 pnpm install
-pnpm run build
 ```
-
-This command compiles the Rust dependencies to WebAssembly and then builds the
-`frontend` bundle.
-
 
 ## Usage
 
@@ -32,4 +27,20 @@ where `$MODE` is replaced with one of the following:
 - `development`: assumes that the [backend](../backend/) is running locally (the
   default if `--mode` is omitted)
 - `production`: uses the production deployment of CatColab at `catcolab.org`
-  (*not* recommended)
+  (_not_ recommended)
+
+Running the command above builds the Wasm and other local dependencies (by
+running `pnpm run build:deps`) before launching the Vite preview server.
+
+## Troubleshooting
+
+### Nix Hash Mismatches
+
+If this package fails to build in Nix with the error:
+
+```
+> ERROR: pnpm failed to install dependencies
+```
+
+Refer to the "pnpm Dependencies" section in [Fixing Hash Mismatches in
+Nix](../../dev-docs/fixing-hash-mismatches.md).

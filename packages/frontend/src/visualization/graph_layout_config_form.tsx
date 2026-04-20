@@ -1,6 +1,6 @@
 import { Show } from "solid-js";
 
-import { FormGroup, SelectField } from "../components";
+import { FormGroup, InputField, SelectField } from "catcolab-ui-components";
 import { type Config, Direction, Engine } from "./graph_layout_config";
 
 /** Form to configure a graph layout algorithm. */
@@ -8,21 +8,24 @@ export function GraphLayoutConfigForm(props: {
     config: Config;
     changeConfig: (f: (config: Config) => void) => void;
 }) {
+    const layout = () => props.config.layout;
+
     return (
         <FormGroup compact>
             <SelectField
                 label="Layout"
-                value={props.config.layout}
+                value={layout()}
                 onChange={(evt) => {
                     props.changeConfig((content) => {
                         content.layout = evt.currentTarget.value as Engine;
                     });
                 }}
             >
-                <option value={Engine.VizDirected}>{"Directed"}</option>
-                <option value={Engine.VizUndirected}>{"Undirected"}</option>
+                <option value={Engine.VizDirected}>{"Graphviz (directed)"}</option>
+                <option value={Engine.VizUndirected}>{"Graphviz (undirected)"}</option>
+                <option value={Engine.Elk}>{"ELK"}</option>
             </SelectField>
-            <Show when={props.config.layout === Engine.VizDirected}>
+            <Show when={layout() === Engine.VizDirected || layout() === Engine.Elk}>
                 <SelectField
                     label="Direction"
                     value={props.config.direction ?? Direction.Vertical}
@@ -35,6 +38,23 @@ export function GraphLayoutConfigForm(props: {
                     <option value={Direction.Horizontal}>{"Horizontal"}</option>
                     <option value={Direction.Vertical}>{"Vertical"}</option>
                 </SelectField>
+            </Show>
+            <Show when={layout() === Engine.VizUndirected}>
+                <InputField
+                    label="Separation"
+                    type="number"
+                    min={0}
+                    step={0.1}
+                    value={props.config.separation ?? 1.0}
+                    onInput={(evt) => {
+                        const value = evt.currentTarget.valueAsNumber;
+                        if (!Number.isNaN(value)) {
+                            props.changeConfig((content) => {
+                                content.separation = value;
+                            });
+                        }
+                    }}
+                />
             </Show>
         </FormGroup>
     );

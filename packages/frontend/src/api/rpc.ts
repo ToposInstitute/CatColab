@@ -1,15 +1,15 @@
-import { http, build_client } from "@qubit-rs/client";
+import { build_client, http } from "@qubit-rs/client";
 import type { FirebaseApp } from "firebase/app";
-import { type User, getAuth } from "firebase/auth";
+import { getAuth, type User } from "firebase/auth";
+import type { Accessor } from "solid-js";
 
 import type { QubitServer, RpcResult } from "catcolab-api";
-import type { Accessor } from "solid-js";
 
 /** RPC client for communicating with the CatColab backend. */
 export type RpcClient = QubitServer;
 
-/** Create the RPC client for communicating with the backend. */
-export function createRpcClient(serverUrl: string, firebaseApp?: FirebaseApp) {
+/** Create a fetch function that automatically attaches Firebase auth tokens. */
+export function createFetchWithAuth(firebaseApp?: FirebaseApp): typeof fetch {
     let currentUser: User | null = null;
     const authInitialized = new Promise<null>((resolve) => {
         if (firebaseApp) {
@@ -22,22 +22,25 @@ export function createRpcClient(serverUrl: string, firebaseApp?: FirebaseApp) {
         }
     });
 
-    const fetchWithAuth: typeof fetch = async (input, init?) => {
+    return async (input, init?) => {
         await authInitialized;
         if (currentUser) {
             const token = await currentUser.getIdToken();
+            const headers = new Headers(init?.headers);
+            headers.set("Authorization", `Bearer ${token}`);
             init = {
                 ...init,
-                headers: {
-                    ...init?.headers,
-                    Authorization: `Bearer ${token}`,
-                },
+                headers,
             };
         }
         return await fetch(input, init);
     };
+}
+
+/** Create the RPC client for communicating with the backend. */
+export function createRpcClient(serverUrl: string, fetchFn: typeof fetch) {
     const transport = http(`${serverUrl}/rpc`, {
-        fetch: fetchWithAuth,
+        fetch: fetchFn,
     });
     return build_client<QubitServer>(transport);
 }

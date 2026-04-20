@@ -1,26 +1,20 @@
 import { A, useNavigate } from "@solidjs/router";
+import CircleHelp from "lucide-solid/icons/circle-help";
 import type { JSX } from "solid-js";
 
-import { IconButton } from "../components";
+import { IconButton } from "catcolab-ui-components";
 import type { TheoryMeta } from "../theory";
 import { DefaultAppMenu } from "./menubar";
-
-import CircleHelp from "lucide-solid/icons/circle-help";
 
 import "./toolbar.css";
 
 /** Toolbar component. */
-export function Toolbar(props: {
-    children?: JSX.Element;
-    class?: string;
-}) {
+export function Toolbar(props: { children?: JSX.Element; class?: string }) {
     return <div class={`toolbar ${props.class ?? ""}`}>{props.children}</div>;
 }
 
 /** Toolbar with default application menu. */
-export function DefaultToolbar(props: {
-    children?: JSX.Element;
-}) {
+export function DefaultToolbar(props: { children?: JSX.Element }) {
     return (
         <Toolbar>
             <DefaultAppMenu />
@@ -50,12 +44,8 @@ const Brand = () => (
 
 If no theory is set, it navigates instead to the list of all theories.
  */
-export function TheoryHelpButton(props: {
-    meta: TheoryMeta;
-}) {
-    const navigate = useNavigate();
-
-    const tooltip = (meta: TheoryMeta) => (
+function theoryHelpTooltip(meta: TheoryMeta) {
+    return (
         <>
             <p>
                 {"You are using the logic: "}
@@ -64,11 +54,15 @@ export function TheoryHelpButton(props: {
             <p>{"Click to learn more about this logic"}</p>
         </>
     );
+}
+
+export function TheoryHelpButton(props: { meta: TheoryMeta }) {
+    const navigate = useNavigate();
 
     return (
         <IconButton
             onClick={() => navigate(`/help/logics/${props.meta.id}`)}
-            tooltip={tooltip(props.meta)}
+            tooltip={theoryHelpTooltip(props.meta)}
         >
             <CircleHelp />
         </IconButton>

@@ -4,7 +4,9 @@ use itertools::Itertools;
 use std::collections::HashMap;
 
 use crate::dbl::modal::model::{ModalDblModel, ModalOb};
+use crate::dbl::theory::Unital;
 use crate::one::category::FgCategory;
+use crate::stdlib::analyses::petri::transition_interface;
 use crate::zero::QualifiedName;
 
 #[cfg(feature = "serde")]
@@ -31,7 +33,7 @@ pub struct ReachabilityProblemData {
 /// The "Region Algebra for Petri Nets" algorithm from Ch 31 of
 /// ([Clarke et al 2018](crate::refs::HandbookModelChecking)):
 /// "Symbolic Model Checking in Non Boolean Domains".
-pub fn subreachability(m: &ModalDblModel, data: ReachabilityProblemData) -> bool {
+pub fn subreachability(m: &ModalDblModel<Unital>, data: ReachabilityProblemData) -> bool {
     // Convert model into a pair of matrices
     //--------------------------------------
 
@@ -55,19 +57,15 @@ pub fn subreachability(m: &ModalDblModel, data: ReachabilityProblemData) -> bool
 
     for e in m.mor_generators() {
         let e_idx = *hom_inv.get(&e).unwrap();
-        if let Some(vs) = m.mor_generator_dom(&e).collect_product(None) {
-            for v in vs.iter() {
-                if let ModalOb::Generator(u) = v {
-                    i_mat[*ob_inv.get(u).unwrap()][e_idx] += 1;
-                }
+        let (inputs, outputs) = transition_interface(m, &e);
+        for ob in inputs {
+            if let ModalOb::Generator(u) = ob {
+                i_mat[*ob_inv.get(&u).unwrap()][e_idx] += 1;
             }
         }
-
-        if let Some(vs) = m.mor_generator_cod(&e).collect_product(None) {
-            for v in vs.iter() {
-                if let ModalOb::Generator(u) = v {
-                    o_mat[*ob_inv.get(u).unwrap()][e_idx] += 1;
-                }
+        for ob in outputs {
+            if let ModalOb::Generator(u) = ob {
+                o_mat[*ob_inv.get(&u).unwrap()][e_idx] += 1;
             }
         }
     }
@@ -126,7 +124,9 @@ mod tests {
     use crate::zero::name;
     use std::rc::Rc;
 
-    /// The example petri net has the following structure
+    /// The example Petri net has the following structure:
+    ///
+    /// ```text
     ///                      t1 t2  t3   
     /// let i_mat = vec![vec![0, 1, 0],  p1
     ///                  vec![0, 1, 0],  p2
@@ -135,18 +135,21 @@ mod tests {
     /// let o_mat = vec![vec![1, 0, 0],  p1
     ///                  vec![0, 0, 1],  p2
     ///                  vec![0, 1, 0]]; p3
+    /// ```
     ///
-    /// (WARNING: the petri net is drawn incorrectly in Handbook of Model Checking)
+    /// **Warning**: the Petri net is drawn incorrectly in Handbook of Model
+    /// Checking.
     ///
     /// Let the forbidden state be (0,0,2).
     ///
     /// The algorithm terminates in four steps:
     /// [(0,0,2)] -> [(0,0,2),(1,1,1)] -> [(0,0,2),(0,1,1),(2,2,0)]
-    /// -> [(0,0,2),(0,1,1),(0,2,0)]
+    /// -> [(0,0,2),(0,1,1),(0,2,0)].
+    ///
     /// So the three ways one can reach the forbidden state are:
-    /// 1.) starting in the forbidden state (or any superset)
-    /// 2.) having two tokens in p2
-    /// 3.) having one token in each p2 and p3
+    /// 1. starting in the forbidden state (or any superset)
+    /// 2. having two tokens in p2
+    /// 3. having one token in each p2 and p3
     ///
     /// Consider using algorithm from "Minimal Coverability Tree Construction
     /// Made Complete and Efficient" for a more efficient algorithm which allows
@@ -186,7 +189,7 @@ mod tests {
         );
 
         // Test starting configurations, see if (0,0,2) is reachable subtokening
-        fn test_input(m: &ModalDblModel, x1: i32, x2: i32, x3: i32, expect: bool) {
+        fn test_input(m: &ModalDblModel<Unital>, x1: i32, x2: i32, x3: i32, expect: bool) {
             let (p1, p2, p3) = (name("p1"), name("p2"), name("p3"));
             let forbidden = HashMap::from_iter([(p1.clone(), 0), (p2.clone(), 0), (p3.clone(), 2)]);
 

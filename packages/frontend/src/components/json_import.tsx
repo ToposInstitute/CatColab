@@ -1,13 +1,13 @@
-import { type JSX, createSignal } from "solid-js";
+import { createSignal, type JSX } from "solid-js";
 
+import { Button, FormGroup, InputField, TextAreaField } from "catcolab-ui-components";
 import type { Document } from "catlog-wasm";
-import { FormGroup, InputField, TextAreaField } from "./form";
 
 import "./json_import.css";
 
 interface JsonImportProps {
-    onImport: (data: Document) => void;
-    validate?: (data: Document) => boolean | string;
+    onImport: (doc: Document) => void;
+    parse: (jsonString: string) => Document | Error;
 }
 
 /**
@@ -16,34 +16,20 @@ interface JsonImportProps {
  * File size is currently limited to 5MB.
  *
  */
-export const JsonImport = ({ onImport, validate }: JsonImportProps) => {
+export const JsonImport = (props: JsonImportProps) => {
     const [error, setError] = createSignal<string | null>(null);
     const [importValue, setImportValue] = createSignal("");
 
-    const handleError = (e: unknown) => {
-        setError(e instanceof Error ? e.message : "Unknown error occurred");
-    };
-
-    const validateAndImport = (jsonString: string) => {
-        try {
-            const data = JSON.parse(jsonString);
-
-            // Run custom validation if provided
-            if (validate) {
-                const validationResult = validate(data);
-                if (typeof validationResult === "string") {
-                    setError(validationResult);
-                    return;
-                }
-            }
-
-            // Clear any previous errors and import
-            setError(null);
-            onImport(data);
-            setImportValue(""); // Clear paste area after successful import
-        } catch (e) {
-            handleError(e);
+    const parseAndImport = async (jsonString: string) => {
+        const result = props.parse(jsonString);
+        if (result instanceof Error) {
+            setError(result.message);
+            return;
         }
+        // Clear any previous errors and import
+        setError(null);
+        props.onImport(result);
+        setImportValue(""); // Clear paste area after successful import
     };
 
     // Handle file upload
@@ -51,7 +37,9 @@ export const JsonImport = ({ onImport, validate }: JsonImportProps) => {
         const input = event.currentTarget;
 
         const file = input.files?.[0];
-        if (!file) return;
+        if (!file) {
+            return;
+        }
 
         // Validate file type
         if (file.type !== "application/json" && !file.name.endsWith(".json")) {
@@ -66,7 +54,7 @@ export const JsonImport = ({ onImport, validate }: JsonImportProps) => {
         }
 
         const text = await file.text();
-        validateAndImport(text);
+        void parseAndImport(text);
 
         // Reset file input
         input.value = "";
@@ -78,7 +66,7 @@ export const JsonImport = ({ onImport, validate }: JsonImportProps) => {
             setError("Please enter some JSON");
             return;
         }
-        validateAndImport(importValue());
+        void parseAndImport(importValue());
     };
 
     const handleInput: JSX.EventHandler<HTMLTextAreaElement, Event> = (event) => {
@@ -105,9 +93,9 @@ export const JsonImport = ({ onImport, validate }: JsonImportProps) => {
                     onPaste={handleInput}
                     placeholder="Paste your JSON here..."
                 />
-                <button type="button" class="ok" onClick={handleTextareaSubmit}>
+                <Button type="button" variant="positive" onClick={handleTextareaSubmit}>
                     Import pasted JSON
-                </button>
+                </Button>
             </FormGroup>
 
             {/* Error display */}

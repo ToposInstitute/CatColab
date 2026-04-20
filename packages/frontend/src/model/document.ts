@@ -1,7 +1,7 @@
 import type { Accessor } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { type DblModel, type Document, type ModelJudgment, currentVersion } from "catlog-wasm";
+import { currentVersion, type DblModel, type Document, type ModelJudgment } from "catlog-wasm";
 import type { Api, LiveDoc } from "../api";
 import { NotebookUtils, newNotebook } from "../notebook/types";
 import type { Theory, TheoryLibrary } from "../theory";
@@ -11,10 +11,14 @@ import type { ValidatedModel } from "./model_library";
 export type ModelDocument = Document & { type: "model" };
 
 /** Create an empty model document. */
-export const newModelDocument = (theory: string): ModelDocument => ({
+export const newModelDocument = (args: {
+    theory: string;
+    editorVariant?: string;
+}): ModelDocument => ({
     name: "",
     type: "model",
-    theory,
+    theory: args.theory,
+    ...(args.editorVariant ? { editorVariant: args.editorVariant } : {}),
     notebook: newNotebook<ModelJudgment>(),
     version: currentVersion(),
 });
@@ -23,7 +27,7 @@ export const newModelDocument = (theory: string): ModelDocument => ({
 
 Contains a live document for the model, plus various memos of derived data.
  */
-export type LiveModelDocument = {
+export type LiveModelDoc = {
     /** Tag for use in tagged unions of document types. */
     type: "model";
 
@@ -50,16 +54,32 @@ export async function createModel(
 ): Promise<string> {
     let init: ModelDocument;
     if (typeof initOrTheoryId === "string") {
-        init = newModelDocument(initOrTheoryId);
+        init = newModelDocument({ theory: initOrTheoryId });
     } else {
         init = initOrTheoryId;
     }
     return api.createDoc(init);
 }
 
+/** Switch the editor variant of a model document.
+
+This is a purely frontend operation that changes which editor components are
+used for the model's cells without altering the underlying theory or data.
+ */
+export function switchEditorVariant(liveModel: LiveModelDoc, editorVariant: string | undefined) {
+    const { changeDoc } = liveModel.liveDoc;
+    changeDoc((doc) => {
+        if (editorVariant) {
+            doc.editorVariant = editorVariant;
+        } else {
+            delete doc.editorVariant;
+        }
+    });
+}
+
 /** Migrate a model document from one theory to another. */
 export async function migrateModelDocument(
-    liveModel: LiveModelDocument,
+    liveModel: LiveModelDoc,
     targetTheoryId: string,
     theories: TheoryLibrary,
 ) {
@@ -73,6 +93,7 @@ export async function migrateModelDocument(
     if (!NotebookUtils.hasFormalCells(doc.notebook) || theory.inclusions.includes(targetTheoryId)) {
         changeDoc((doc) => {
             doc.theory = targetTheoryId;
+            delete doc.editorVariant;
         });
         return;
     }
@@ -88,6 +109,7 @@ export async function migrateModelDocument(
     model = migration.migrate(model, targetTheory.theory);
     changeDoc((doc) => {
         doc.theory = targetTheoryId;
+        delete doc.editorVariant;
         for (const judgment of NotebookUtils.getFormalContent(doc.notebook)) {
             if (judgment.tag === "object") {
                 judgment.obType = model.obType({

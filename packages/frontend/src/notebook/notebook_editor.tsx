@@ -5,26 +5,32 @@ import { makeEventListener } from "@solid-primitives/event-listener";
 import ListPlus from "lucide-solid/icons/list-plus";
 import {
     type Component,
-    For,
-    Match,
-    Show,
-    Switch,
     createEffect,
     createSignal,
+    For,
+    Match,
     onCleanup,
+    Show,
+    Switch,
 } from "solid-js";
 import invariant from "tiny-invariant";
 
+import {
+    type Completion,
+    IconButton,
+    type KbdKey,
+    keyEventHasModifier,
+    type ModifierKey,
+} from "catcolab-ui-components";
 import type { Cell, Notebook } from "catlog-wasm";
-import { type Completion, IconButton } from "../components";
-import { type KbdKey, type ModifierKey, keyEventHasModifier } from "../util/keyboard";
 import {
     type CellActions,
+    type CellDragData,
     type FormalCellEditorProps,
+    isCellDragData,
     NotebookCell,
     RichTextCellEditor,
     StemCellEditor,
-    isCellDragData,
 } from "./notebook_cell";
 import { type FormalCell, NotebookUtils, newRichTextCell, newStemCell } from "./types";
 
@@ -185,16 +191,24 @@ export function NotebookEditor<T>(props: {
                 );
             },
             onDrop({ location, source }) {
-                const target = location.current.dropTargets[0];
-                if (!(target && isCellDragData(source.data) && isCellDragData(target.data))) {
+                const target =
+                    location.current.dropTargets[0] ??
+                    (currentDropTarget() ? { data: { cellId: currentDropTarget() } } : null);
+                if (!(target && isCellDragData(source.data))) {
                     setCurrentDropTarget(null);
                     return;
                 }
-                const [sourceId, targetId] = [source.data.cellId, target.data.cellId];
+                const targetData = target.data as CellDragData;
+                if (!targetData.cellId) {
+                    setCurrentDropTarget(null);
+                    return;
+                }
+                const [sourceId, targetId] = [source.data.cellId, targetData.cellId];
                 const nb = props.notebook;
-                const sourceIndex = nb.cellOrder.findIndex((cellId) => cellId === sourceId);
-                const targetIndex = nb.cellOrder.findIndex((cellId) => cellId === targetId);
+                const sourceIndex = nb.cellOrder.indexOf(sourceId);
+                const targetIndex = nb.cellOrder.indexOf(targetId);
                 if (sourceIndex < 0 || targetIndex < 0) {
+                    setCurrentDropTarget(null);
                     return;
                 }
                 const finalIndex = getReorderDestinationIndex({
@@ -213,9 +227,19 @@ export function NotebookEditor<T>(props: {
     });
 
     return (
-        <div class="notebook">
+        <div
+            class="notebook"
+            onFocusOut={(evt) => {
+                const container = evt.currentTarget;
+                setTimeout(() => {
+                    if (!container.contains(document.activeElement)) {
+                        setActiveCell(null);
+                    }
+                }, 0);
+            }}
+        >
             <Show when={props.notebook.cellOrder.length === 0}>
-                <div class="notebook-empty placeholder">
+                <div class="notebook-cell-placeholder">
                     <IconButton onClick={() => appendCell(newStemCell())}>
                         <ListPlus />
                     </IconButton>
@@ -267,11 +291,13 @@ export function NotebookEditor<T>(props: {
                                 setActiveCell(index);
                             },
                             moveUp() {
+                                // oxlint-disable-next-line solid/reactivity -- event handler
                                 props.changeNotebook((nb) => {
                                     NotebookUtils.moveCellUp(nb, i());
                                 });
                             },
                             moveDown() {
+                                // oxlint-disable-next-line solid/reactivity -- event handler
                                 props.changeNotebook((nb) => {
                                     NotebookUtils.moveCellDown(nb, i());
                                 });
@@ -285,8 +311,10 @@ export function NotebookEditor<T>(props: {
                         invariant(cell, `Failed to find contents for cell '${cellId}'`);
 
                         if (cell.tag !== "rich-text") {
+                            // oxlint-disable-next-line solid/reactivity -- event handler
                             cellActions.duplicate = () => {
                                 const index = i();
+                                // oxlint-disable-next-line solid/reactivity -- event handler
                                 props.changeNotebook((nb) => {
                                     NotebookUtils.duplicateCellAtIndex(
                                         nb,
@@ -352,12 +380,8 @@ export function NotebookEditor<T>(props: {
                     }}
                 </For>
             </ul>
-            <Show
-                when={props.notebook.cellOrder.some(
-                    (cellId) => props.notebook.cellContents[cellId]?.tag !== "stem",
-                )}
-            >
-                <div class="placeholder">
+            <Show when={NotebookUtils.getCells(props.notebook).some((cell) => cell.tag !== "stem")}>
+                <div class="notebook-cell-placeholder">
                     <IconButton
                         onClick={() => appendCell(newStemCell())}
                         tooltip="Create a new cell"

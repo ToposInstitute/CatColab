@@ -13,17 +13,15 @@
     padding: 0;
 }
 
-.notebook-empty {
+.notebook-cell-placeholder {
     display: flex;
     flex-direction: row;
     align-items: center;
     column-gap: 0.5ex;
     margin: 1rem 0;
-}
 
-.notebook .placeholder {
-    color: darkgray;
+    color: var(--color-gray-600);
     & .lucide {
-        color: darkgray;
+        color: var(--color-gray-600);
     }
 }

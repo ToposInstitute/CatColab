@@ -1,45 +1,30 @@
-use axum::extract::Request;
+//! Main entry point for the CatColab backend.
 
-use axum::middleware::{Next, from_fn_with_state};
+use axum::extract::Request;
+use axum::extract::ws::WebSocketUpgrade;
+use axum::middleware::from_fn_with_state;
 use axum::{Router, routing::get};
 use axum::{extract::State, response::IntoResponse};
 use clap::{Parser, Subcommand};
-use firebase_auth::FirebaseAuth;
-use http::StatusCode;
-use socketioxide::SocketIo;
-use socketioxide::layer::SocketIoLayer;
+use firebase_auth::{FirebaseAuth, FirebaseUser}; // FirebaseUser used by julia_proxy_handler
 use sqlx::postgres::PgPoolOptions;
-use sqlx::{PgPool, Postgres};
 use sqlx_migrator::cli::MigrationCommand;
 use sqlx_migrator::migrator::{Migrate, Migrator};
 use sqlx_migrator::{Info, Plan};
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
-use tokio::sync::watch;
+use tokio::sync::RwLock;
 use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
 use tracing::{error, info};
 use tracing_subscriber::filter::{EnvFilter, LevelFilter};
 
-mod app;
-mod auth;
-mod document;
-mod rpc;
-mod socket;
-mod user;
-
-use app::AppStatus;
+use backend::{app, auth, rpc, storage, user_state};
 
 /// Port for the web server providing the RPC API.
 fn web_port() -> String {
     dotenvy::var("PORT").unwrap_or("8000".to_string())
-}
-
-/// Port for internal communication with the Automerge doc server.
-///
-/// This port should *not* be open to the public.
-fn automerge_io_port() -> String {
-    dotenvy::var("AUTOMERGE_IO_PORT").unwrap_or("3000".to_string())
 }
 
 #[derive(Parser, Debug)]
@@ -52,10 +37,12 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Command {
-    /// Run database migrations (proxied to sqlx_migrator)
+    /// Run database migrations (proxied to sqlx_migrator).
     Migrator(MigrationCommand),
-    /// Start the web server (default)
+    /// Start the web server (default).
     Serve,
+    /// Generate TypeScript bindings for the RPC API.
+    GenerateBindings,
 }
 
 #[tokio::main]
@@ -66,13 +53,39 @@ async fn main() {
 
     tracing_subscriber::fmt().with_env_filter(env_filter).init();
 
+    let cli = Cli::parse();
+
+    if let Some(Command::GenerateBindings) = cli.command {
+        use qubit::TypeScript;
+        use ts_rs::TS;
+
+        let pkg_src_path =
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("pkg").join("src");
+
+        std::fs::create_dir_all(&pkg_src_path)
+            .expect("Failed to create directory for TypeScript bindings");
+
+        let index_path = pkg_src_path.join("index.ts");
+
+        rpc::router()
+            .as_codegen()
+            .write_type(&index_path, TypeScript::new())
+            .expect("Failed to write TypeScript bindings");
+
+        info!("Successfully generated qubit TypeScript bindings to: {}", index_path.display());
+
+        user_state::UserState::export_all_to(&pkg_src_path)
+            .expect("Failed to export ts-rs bindings");
+        info!("Successfully exported ts-rs TypeScript bindings to: {}", pkg_src_path.display());
+
+        return;
+    }
+
     let db = PgPoolOptions::new()
         .max_connections(10)
         .connect(&dotenvy::var("DATABASE_URL").expect("`DATABASE_URL` should be set"))
         .await
         .expect("Failed to connect to database");
-
-    let cli = Cli::parse();
 
     let mut migrator = Migrator::default();
     migrator
@@ -87,14 +100,46 @@ async fn main() {
             return;
         }
 
-        Command::Serve => {
-            let (io_layer, io) = SocketIo::new_layer();
+        Command::GenerateBindings => unreachable!(),
 
-            let (status_tx, status_rx) = watch::channel(AppStatus::Starting);
+        Command::Serve => {
+            info!("Applying database migrations...");
+            let mut conn = db.acquire().await.expect("Failed to acquire DB connection");
+            migrator
+                .run(&mut conn, &Plan::apply_all())
+                .await
+                .expect("Failed to run migrations");
+            info!("Migrations complete");
+
+            let repo = samod::Repo::builder(tokio::runtime::Handle::current())
+                .with_storage(storage::PostgresStorage::new(db.clone()))
+                .with_announce_policy(|_doc_id, _peer_id| false)
+                .load()
+                .await;
+
+            let port = web_port();
+            let ws_listener_url = samod::Url::parse(&format!("ws://0.0.0.0:{port}/repo-ws"))
+                .expect("valid WebSocket listener URL for samod");
+            let repo_acceptor = repo.make_acceptor(ws_listener_url).expect("samod make_acceptor");
+
+            let http_client = reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(120))
+                .build()
+                .expect("Failed to build HTTP client");
+            let julia_url = dotenvy::var("JULIA_URL").ok();
+            if let Some(ref url) = julia_url {
+                info!("Julia compute server configured at: {url}");
+            } else {
+                info!("Julia compute server not configured (JULIA_URL not set)");
+            }
+
             let state = app::AppState {
-                automerge_io: io,
                 db: db.clone(),
-                app_status: status_rx.clone(),
+                repo,
+                ref_actors: Arc::new(RwLock::new(HashMap::new())),
+                initialized_user_states: Arc::new(RwLock::new(HashMap::new())),
+                http_client,
+                julia_url,
             };
 
             // We need to wrap FirebaseAuth in an Arc because if it's ever dropped the process which updates it's
@@ -109,51 +154,12 @@ async fn main() {
                 .await,
             );
 
-            socket::setup_automerge_socket(state.clone());
+            // Notify systemd we're ready
+            sd_notify::notify(false, &[sd_notify::NotifyState::Ready]).ok();
 
-            tokio::try_join!(
-                run_migrator_apply(db.clone(), migrator, status_tx.clone()),
-                run_web_server(state.clone(), firebase_auth.clone()),
-                run_automerge_socket(io_layer),
-            )
-            .unwrap();
-        }
-    }
-}
-
-async fn run_migrator_apply(
-    db: PgPool,
-    migrator: Migrator<Postgres>,
-    status_tx: watch::Sender<AppStatus>,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    status_tx.send(AppStatus::Migrating)?;
-    info!("Applying database migrations...");
-
-    let mut conn = db.acquire().await?;
-    migrator.run(&mut conn, &Plan::apply_all()).await.unwrap();
-
-    status_tx.send(AppStatus::Running)?;
-    sd_notify::notify(false, &[sd_notify::NotifyState::Ready])?;
-    info!("Migrations complete");
-
-    Ok(())
-}
-
-async fn app_status_gate(
-    State(status_rx): State<watch::Receiver<AppStatus>>,
-    req: Request,
-    next: Next,
-) -> impl IntoResponse {
-    // Combining the following 2 lines will anger the rust gods
-    let status = status_rx.borrow().clone();
-    match status {
-        AppStatus::Running => next.run(req).await,
-        AppStatus::Failed(reason) => {
-            (StatusCode::INTERNAL_SERVER_ERROR, format!("App failed to start: {reason}"))
-                .into_response()
-        }
-        AppStatus::Starting | AppStatus::Migrating => {
-            (StatusCode::SERVICE_UNAVAILABLE, "Server not ready yet").into_response()
+            run_web_server(state.clone(), repo_acceptor, firebase_auth.clone())
+                .await
+                .unwrap();
         }
     }
 }
@@ -176,12 +182,86 @@ async fn auth_middleware(
     next.run(req).await
 }
 
-async fn status_handler(State(status_rx): State<watch::Receiver<AppStatus>>) -> String {
-    match status_rx.borrow().clone() {
-        AppStatus::Starting => "Starting".into(),
-        AppStatus::Migrating => "Migrating".into(),
-        AppStatus::Running => "Running".into(),
-        AppStatus::Failed(reason) => format!("Failed: {reason}"),
+async fn status_handler() -> &'static str {
+    "Running"
+}
+
+async fn websocket_handler(
+    ws: WebSocketUpgrade,
+    State(acceptor): State<samod::AcceptorHandle>,
+) -> axum::response::Response {
+    ws.on_upgrade(|socket| async move {
+        acceptor.accept_axum(socket).expect("Failed to accept WebSocket connection");
+    })
+}
+
+/// Maximum request body size for Julia proxy requests (100 MB).
+const JULIA_PROXY_MAX_BODY: usize = 100 * 1024 * 1024;
+
+async fn julia_proxy_handler(
+    State(state): State<app::AppState>,
+    user: Option<axum::Extension<FirebaseUser>>,
+    axum::extract::Path(path): axum::extract::Path<String>,
+    body: axum::body::Bytes,
+) -> impl IntoResponse {
+    if user.is_none() {
+        return (axum::http::StatusCode::UNAUTHORIZED, "Authentication required").into_response();
+    }
+
+    let julia_url = match &state.julia_url {
+        Some(url) => url,
+        None => {
+            return (
+                axum::http::StatusCode::SERVICE_UNAVAILABLE,
+                "Julia compute service is not configured",
+            )
+                .into_response();
+        }
+    };
+
+    if body.len() > JULIA_PROXY_MAX_BODY {
+        return (axum::http::StatusCode::PAYLOAD_TOO_LARGE, "Request body too large")
+            .into_response();
+    }
+
+    let url = format!("{julia_url}/{path}");
+    let result = state
+        .http_client
+        .post(&url)
+        .header("Content-Type", "application/json")
+        .body(body)
+        .send()
+        .await;
+
+    match result {
+        Ok(resp) => {
+            let status = axum::http::StatusCode::from_u16(resp.status().as_u16())
+                .unwrap_or(axum::http::StatusCode::BAD_GATEWAY);
+            let content_type = resp.headers().get("content-type").cloned();
+            match resp.bytes().await {
+                Ok(body) => {
+                    let mut response = (status, body).into_response();
+                    if let Some(ct) = content_type {
+                        response.headers_mut().insert("content-type", ct);
+                    }
+                    response
+                }
+                Err(_) => (
+                    axum::http::StatusCode::BAD_GATEWAY,
+                    "Failed to read response from Julia service",
+                )
+                    .into_response(),
+            }
+        }
+        Err(err) => {
+            if err.is_timeout() {
+                (axum::http::StatusCode::GATEWAY_TIMEOUT, "Julia service timed out").into_response()
+            } else {
+                error!("Julia proxy error: {err}");
+                (axum::http::StatusCode::BAD_GATEWAY, "Failed to connect to Julia service")
+                    .into_response()
+            }
+        }
     }
 }
 
@@ -190,26 +270,37 @@ use tower_http::services::{ServeDir, ServeFile};
 
 async fn run_web_server(
     state: app::AppState,
+    repo_acceptor: samod::AcceptorHandle,
     firebase_auth: Arc<FirebaseAuth>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let port = web_port();
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await?;
 
     let rpc_router = rpc::router();
-    let (qubit_service, qubit_handle) = rpc_router.to_service(state.clone());
+    let (qubit_service, qubit_handle) = rpc_router.as_rpc(state.clone()).into_service();
 
     let rpc_with_mw = ServiceBuilder::new()
-        .layer(from_fn_with_state(state.app_status.clone(), app_status_gate))
-        .layer(from_fn_with_state(firebase_auth, auth_middleware))
+        .layer(from_fn_with_state(firebase_auth.clone(), auth_middleware))
         .service(qubit_service);
 
-    // NOTE: Currently nothing is using the /status endpoint. It will likely be used in the future by
-    // tests.
-    let status_router = Router::new()
-        .route("/status", get(status_handler))
-        .with_state(state.app_status.clone());
+    let samod_router = Router::new()
+        .layer(from_fn_with_state(firebase_auth.clone(), auth_middleware))
+        .route("/repo-ws", get(websocket_handler))
+        .with_state(repo_acceptor);
 
-    let mut app = Router::new().merge(status_router).nest_service("/rpc", rpc_with_mw);
+    let julia_router = Router::new()
+        .route("/julia/{*path}", axum::routing::post(julia_proxy_handler))
+        .layer(from_fn_with_state(firebase_auth, auth_middleware))
+        .with_state(state.clone());
+
+    // used by tests to tell when the backend is ready
+    let status_router = Router::new().route("/status", get(status_handler));
+
+    let mut app = Router::new()
+        .merge(status_router)
+        .nest_service("/rpc", rpc_with_mw)
+        .merge(samod_router)
+        .merge(julia_router);
 
     if let Some(spa_dir) = spa_directory() {
         let index = Path::new(&spa_dir).join("index.html");
@@ -217,13 +308,13 @@ async fn run_web_server(
             get_service(ServeDir::new(&spa_dir).not_found_service(ServeFile::new(index)));
 
         info!("Serving frontend from directory: {spa_dir}");
-        app = app.nest_service("/", spa_service);
+        app = app.fallback_service(spa_service);
     } else {
         info!("frontend directory not found; keeping default text route at /");
         app = app.route("/", get(|| async { "Hello! The CatColab server is running" }));
     }
 
-    app = app.layer(CorsLayer::permissive());
+    app = app.layer(CorsLayer::very_permissive());
 
     info!("Web server listening at port {port}");
 
@@ -243,16 +334,6 @@ fn spa_directory() -> Option<String> {
             return Some(candidate);
         }
     }
-    None
-}
 
-async fn run_automerge_socket(
-    io_layer: SocketIoLayer,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let port = automerge_io_port();
-    let listener = tokio::net::TcpListener::bind(format!("localhost:{port}")).await?;
-    let app = Router::new().layer(io_layer);
-    info!("Automerge socket listening at port {port}");
-    axum::serve(listener, app).await?;
-    Ok(())
+    None
 }

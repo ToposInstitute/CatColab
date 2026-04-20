@@ -4,21 +4,28 @@
 //! [`linear_ode_analysis`](SignedCoefficientBuilder::linear_ode_analysis).
 
 use std::collections::HashMap;
+use std::hash::Hash;
+use std::ops::Add;
 
-use nalgebra::DVector;
+use indexmap::IndexMap;
+use itertools::Itertools;
+use nalgebra::{DMatrix, DVector};
+use num_traits::Zero;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
-use super::{ODEAnalysis, SignedCoefficientBuilder};
-use crate::dbl::model::DiscreteDblModel;
-use crate::simulate::ode::{LinearODESystem, ODEProblem};
-use crate::{one::QualifiedPath, zero::QualifiedName};
+use super::{ODEAnalysis, Parameter, SignedCoefficientBuilder};
+use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
+use crate::{
+    dbl::model::DiscreteDblModel,
+    one::QualifiedPath,
+    zero::{QualifiedName, rig::Monomial},
+};
 
 /// Data defining a linear ODE problem for a model.
-#[derive(Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(
@@ -38,6 +45,34 @@ pub struct LinearODEProblemData {
     duration: f32,
 }
 
+/// Construct a linear (first-order) dynamical system;
+/// a semantics for causal loop diagrams.
+pub fn linear_polynomial_system<Var, Coef>(
+    vars: &[Var],
+    coefficients: DMatrix<Coef>,
+) -> PolynomialSystem<Var, Coef, u8>
+where
+    Var: Clone + Hash + Ord,
+    Coef: Clone + Add<Output = Coef> + Zero,
+{
+    let system = PolynomialSystem {
+        components: coefficients
+            .row_iter()
+            .zip(vars)
+            .map(|(row, i)| {
+                (
+                    i.clone(),
+                    row.iter()
+                        .zip(vars)
+                        .map(|(a, j)| (a.clone(), Monomial::generator(j.clone())))
+                        .collect(),
+                )
+            })
+            .collect(),
+    };
+    system.normalize()
+}
+
 impl SignedCoefficientBuilder<QualifiedName, QualifiedPath> {
     /// Linear ODE analysis for a model of a double theory.
     ///
@@ -48,8 +83,8 @@ impl SignedCoefficientBuilder<QualifiedName, QualifiedPath> {
         &self,
         model: &DiscreteDblModel,
         data: LinearODEProblemData,
-    ) -> ODEAnalysis<LinearODESystem> {
-        let (matrix, ob_index) = self.build_matrix(model, &data.coefficients);
+    ) -> ODEAnalysis<NumericalPolynomialSystem<u8>> {
+        let (system, ob_index) = self.linear_ode_system(model);
         let n = ob_index.len();
 
         let initial_values = ob_index
@@ -57,46 +92,72 @@ impl SignedCoefficientBuilder<QualifiedName, QualifiedPath> {
             .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
         let x0 = DVector::from_iterator(n, initial_values);
 
-        let system = LinearODESystem::new(matrix);
+        let system = system
+            .extend_scalars(|poly| {
+                poly.eval(|id| data.coefficients.get(id).copied().unwrap_or_default())
+            })
+            .to_numerical();
         let problem = ODEProblem::new(system, x0).end_time(data.duration);
         ODEAnalysis::new(problem, ob_index)
+    }
+
+    /// Linear ODE system for a model of a double theory.
+    pub fn linear_ode_system(
+        &self,
+        model: &DiscreteDblModel,
+    ) -> (
+        PolynomialSystem<QualifiedName, Parameter<QualifiedName>, u8>,
+        IndexMap<QualifiedName, usize>,
+    ) {
+        let (matrix, ob_index) = self.build_matrix(model);
+        let system = linear_polynomial_system(&ob_index.keys().cloned().collect_vec(), matrix);
+        (system, ob_index)
     }
 }
 
 #[cfg(test)]
 mod test {
+    use expect_test::expect;
     use std::rc::Rc;
 
     use super::*;
-    use crate::dbl::model::MutDblModel;
+    use crate::stdlib;
     use crate::{one::Path, zero::name};
-    use crate::{simulate::ode::linear_ode, stdlib};
 
-    #[test]
-    fn neg_loops_pos_connector() {
-        let th = Rc::new(stdlib::theories::th_signed_category());
-
-        let mut test_model = DiscreteDblModel::new(th);
-        test_model.add_ob(name("A"), name("Object"));
-        test_model.add_ob(name("B"), name("Object"));
-        test_model.add_ob(name("X"), name("Object"));
-        let (aa, ax, bx, xb) = (name("aa"), name("ax"), name("bx"), name("xb"));
-        test_model.add_mor(aa.clone(), name("A"), name("A"), name("Negative").into());
-        test_model.add_mor(ax.clone(), name("A"), name("X"), Path::Id(name("Object")));
-        test_model.add_mor(bx.clone(), name("B"), name("X"), name("Negative").into());
-        test_model.add_mor(xb.clone(), name("X"), name("B"), Path::Id(name("Object")));
-
-        let data = LinearODEProblemData {
-            coefficients: [(aa, 0.3), (ax, 1.0), (bx, 2.0), (xb, 0.5)].into_iter().collect(),
-            initial_values: [(name("A"), 2.0), (name("B"), 1.0), (name("X"), 1.0)]
-                .into_iter()
-                .collect(),
-            duration: 10.0,
-        };
-        let analysis = SignedCoefficientBuilder::new(name("Object"))
+    fn builder() -> SignedCoefficientBuilder<QualifiedName, QualifiedPath> {
+        SignedCoefficientBuilder::new(name("Object"))
             .add_positive(Path::Id(name("Object")))
             .add_negative(Path::single(name("Negative")))
-            .linear_ode_analysis(&test_model, data);
-        assert_eq!(analysis.problem, linear_ode::create_neg_loops_pos_connector());
+    }
+
+    #[test]
+    fn negative_feedback_symbolic() {
+        let th = Rc::new(stdlib::theories::th_signed_category());
+        let neg_feedback = stdlib::models::negative_feedback(th);
+        let (sys, _) = builder().linear_ode_system(&neg_feedback);
+        let expected = expect![[r#"
+            dx = -negative y
+            dy = positive x
+        "#]];
+        expected.assert_eq(&sys.to_string());
+    }
+
+    #[test]
+    fn negative_feedback_numerical() {
+        let th = Rc::new(stdlib::theories::th_signed_category());
+        let neg_feedback = stdlib::models::negative_feedback(th);
+
+        let data = LinearODEProblemData {
+            coefficients: [(name("positive"), 2.0), (name("negative"), 1.0)].into_iter().collect(),
+            initial_values: [(name("x"), 1.0), (name("y"), 1.0)].into_iter().collect(),
+            duration: 10.0,
+        };
+
+        let sys = builder().linear_ode_analysis(&neg_feedback, data).problem.system;
+        let expected = expect![[r#"
+            dx0 = -x1
+            dx1 = 2 x0
+        "#]];
+        expected.assert_eq(&sys.to_string());
     }
 }

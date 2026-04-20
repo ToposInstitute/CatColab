@@ -1,10 +1,10 @@
+import { Title } from "@solidjs/meta";
 import { useParams } from "@solidjs/router";
-import { For, type JSXElement, Show, createResource, lazy, useContext } from "solid-js";
+import { createResource, For, type JSXElement, lazy, Show, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
 import { type Theory, TheoryLibraryContext } from "../theory";
-import LogicHelpNotFound from "./logics/logic-help-not-found.mdx";
 
 /** Help page for a theory in the standard library. */
 export default function LogicHelpPage() {
@@ -18,19 +18,34 @@ export default function LogicHelpPage() {
         (theoryId) => theories.get(theoryId),
     );
 
-    return <Show when={theory()}>{(theory) => <LogicHelpDetail theory={theory()} />}</Show>;
+    const appTitle = import.meta.env.VITE_APP_TITLE;
+
+    return (
+        <Show when={theory()}>
+            {(theory) => (
+                <>
+                    <Title>
+                        {theory().name} - {appTitle}
+                    </Title>
+                    <LogicHelpDetail theory={theory()} />
+                </>
+            )}
+        </Show>
+    );
 }
 
-function LogicHelpDetail(props: {
-    theory: Theory;
-}) {
-    const Content = lazy(async () => {
-        try {
-            return await import(`./logics/${props.theory.id}.mdx`);
-        } catch {
-            return { default: LogicHelpNotFound };
-        }
-    });
+function LogicHelpDetail(props: { theory: Theory }) {
+    const [content] = createResource(
+        () => props.theory.id,
+        async (theoryId) => {
+            try {
+                return await import(`./logics/${theoryId}.mdx`);
+            } catch {
+                const fallback = await import("./logics/logic-help-not-found.mdx");
+                return fallback;
+            }
+        },
+    );
 
     return (
         <>
@@ -75,7 +90,9 @@ function LogicHelpDetail(props: {
                     </Show>
                 </div>
             </Show>
-            <Content theory={props.theory} />
+            <Show when={content()}>
+                {(module) => <Dynamic component={module().default} theory={props.theory} />}
+            </Show>
         </>
     );
 }

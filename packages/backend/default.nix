@@ -1,5 +1,4 @@
 {
-  self,
   craneLib,
   cargoArtifacts,
   pkgs,
@@ -14,7 +13,7 @@ in
 craneLib.buildPackage {
   inherit cargoArtifacts pname version;
 
-  cargoExtraArgs = "-p backend";
+  cargoExtraArgs = "-p backend --config profile.release.opt-level=3";
 
   nativeBuildInputs = [
     pkgs.pkg-config
@@ -37,14 +36,6 @@ craneLib.buildPackage {
     ];
   };
 
-  propagatedBuildInputs = [
-    self.packages.x86_64-linux.automerge
-  ];
-
-  postFixup = ''
-    wrapProgram $out/bin/${pname} \
-      --prefix PATH : ${pkgs.lib.makeBinPath [ self.packages.x86_64-linux.automerge ]}
-  '';
   meta = {
     mainProgram = pname;
   };

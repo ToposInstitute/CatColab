@@ -1,0 +1,44 @@
+.trigger {
+    background: none;
+    border: none;
+    cursor: pointer;
+    outline: none;
+    font: inherit;
+    padding: 0;
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+
+    & .lucide {
+        color: var(--color-gray-600);
+    }
+}
+
+.content {
+    overflow: hidden;
+}
+.content[data-collapsed] {
+    animation: collapse 200ms linear;
+}
+.content[data-expanded] {
+    animation: expand 200ms linear;
+}
+
+@keyframes collapse {
+    0% {
+        height: var(--corvu-disclosure-content-height);
+    }
+    100% {
+        height: 0px;
+    }
+}
+
+@keyframes expand {
+    0% {
+        height: 0px;
+    }
+    100% {
+        height: var(--corvu-disclosure-content-height);
+    }
+}

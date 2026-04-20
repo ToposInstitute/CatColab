@@ -10,10 +10,14 @@ use ustr::Ustr;
 use wasm_bindgen::prelude::*;
 
 use catlog::dbl::theory::{
-    self, DblTheory as _, ModalMorType, ModalObOp, ModalObType, ModalOp, ModeApp, TabMorType,
-    TabObOp, TabObType,
+    self, DblTheory as _, ModalMorType, ModalObOp, ModalObType, ModeApp, NonUnital, TabMorType,
+    TabObOp, TabObType, Unital,
 };
 use catlog::one::{Path, QualifiedPath, ShortPath};
+use catlog::tt::{
+    self,
+    notebook_elab::{demote_modality, promote_modality},
+};
 use catlog::zero::{NameSegment, QualifiedName};
 use notebook_types::current::theory::*;
 
@@ -48,10 +52,7 @@ impl CanElaborate<MorType, QualifiedPath> for Elaborator {
 /// Elaborates into object operation in a discrete double theory.
 impl CanElaborate<ObOp, QualifiedName> for Elaborator {
     fn elab(&self, op: &ObOp) -> Result<QualifiedName, String> {
-        match op {
-            ObOp::Id(ObType::Basic(id)) => Ok((*id).into()),
-            _ => Err(format!("Cannot use operation in discrete double theory: {op:#?}")),
-        }
+        Err(format!("Cannot use operation in discrete double theory: {op:#?}"))
     }
 }
 
@@ -87,10 +88,7 @@ impl CanElaborate<MorType, TabMorType> for Elaborator {
 /// Elaborates into object operation in a discrete tabulator theory.
 impl CanElaborate<ObOp, TabObOp> for Elaborator {
     fn elab(&self, op: &ObOp) -> Result<TabObOp, String> {
-        match op {
-            ObOp::Id(ob_type) => Ok(Path::empty(self.elab(ob_type)?)),
-            _ => Err(format!("Cannot use operation in discrete tabulator theory: {op:#?}")),
-        }
+        Err(format!("Cannot use operation in discrete tabulator theory: {op:#?}"))
     }
 }
 
@@ -127,29 +125,8 @@ impl CanElaborate<MorType, ModalMorType> for Elaborator {
 impl CanElaborate<ObOp, ModalObOp> for Elaborator {
     fn elab(&self, op: &ObOp) -> Result<ModalObOp, String> {
         match op {
-            ObOp::Basic(id) => Ok(ModeApp::new(ModalOp::Generator((*id).into())).into()),
-            ObOp::Id(ob_type) => Ok(Path::empty(self.elab(ob_type)?)),
-            ObOp::Composite(ops) => {
-                let ops: Result<Vec<_>, _> = ops.iter().map(|op| self.elab(op)).collect();
-                Ok(Path::from_vec(ops?).ok_or("Composite should be non-empty")?.flatten())
-            }
-            ObOp::ModeApp { modality, op } => Ok({
-                let op: ModalObOp = self.elab(op.as_ref())?;
-                op.apply(promote_modality(*modality))
-            }),
+            ObOp::Basic(id) => Ok(ModalObOp::generator((*id).into())),
         }
-    }
-}
-
-pub(crate) fn promote_modality(modality: Modality) -> theory::Modality {
-    match modality {
-        Modality::Discrete => theory::Modality::Discrete(),
-        Modality::Codiscrete => theory::Modality::Codiscrete(),
-        Modality::List => theory::Modality::List(theory::List::Plain),
-        Modality::SymmetricList => theory::Modality::List(theory::List::Symmetric),
-        Modality::ProductList => theory::Modality::List(theory::List::Product),
-        Modality::CoproductList => theory::Modality::List(theory::List::Coproduct),
-        Modality::BiproductList => theory::Modality::List(theory::List::Biproduct),
     }
 }
 
@@ -182,13 +159,6 @@ impl CanQuote<QualifiedPath, MorType> for Quoter {
                 }
             }
         }
-    }
-}
-
-/// Quotes an object operation in a discrete double theory.
-impl CanQuote<QualifiedName, ObOp> for Quoter {
-    fn quote(&self, name: &QualifiedName) -> ObOp {
-        ObOp::Id(ObType::Basic(expect_single_name(name)))
     }
 }
 
@@ -247,20 +217,6 @@ impl CanQuote<ModalMorType, MorType> for Quoter {
     }
 }
 
-pub(crate) fn demote_modality(modality: theory::Modality) -> Modality {
-    match modality {
-        theory::Modality::Discrete() => Modality::Discrete,
-        theory::Modality::Codiscrete() => Modality::Codiscrete,
-        theory::Modality::List(list_type) => match list_type {
-            theory::List::Plain => Modality::List,
-            theory::List::Symmetric => Modality::SymmetricList,
-            theory::List::Product => Modality::ProductList,
-            theory::List::Coproduct => Modality::CoproductList,
-            theory::List::Biproduct => Modality::BiproductList,
-        },
-    }
-}
-
 /// A box containing a double theory of any kind.
 ///
 /// Ideally the Wasm-bound [`DblTheory`] would just have a type parameter for the
@@ -274,8 +230,10 @@ pub enum DblTheoryBox {
     Discrete(Rc<theory::DiscreteDblTheory>),
     /// A discrete tabulator theory.
     DiscreteTab(Rc<theory::DiscreteTabTheory>),
-    /// A modal double theory.
-    Modal(Rc<theory::ModalDblTheory>),
+    /// A modal unital double theory.
+    ModalUnital(Rc<theory::ModalDblTheory<Unital>>),
+    /// A modal non-unital double theory.
+    ModalNonUnital(Rc<theory::ModalDblTheory<NonUnital>>),
 }
 
 /// Wasm binding for a double theory.
@@ -287,15 +245,47 @@ impl DblTheory {
     pub fn discrete(&self) -> Result<&Rc<theory::DiscreteDblTheory>, String> {
         (&self.0).try_into().map_err(|_| "Theory should be discrete".into())
     }
+
+    /// Tries to convert into a theory usable by DoubleTT.
+    pub fn try_into_tt(&self) -> Option<tt::theory::TheoryDef> {
+        match &self.0 {
+            DblTheoryBox::Discrete(th) => Some(tt::theory::TheoryDef::Discrete(th.clone())),
+            DblTheoryBox::DiscreteTab(th) => Some(tt::theory::TheoryDef::DiscreteTab(th.clone())),
+            DblTheoryBox::ModalUnital(th) => Some(tt::theory::TheoryDef::ModalUnital(th.clone())),
+            DblTheoryBox::ModalNonUnital(th) => {
+                Some(tt::theory::TheoryDef::ModalNonUnital(th.clone()))
+            }
+        }
+    }
 }
 
 #[wasm_bindgen]
 impl DblTheory {
+    /// Returns whether the theory contains the object type.
+    #[wasm_bindgen(js_name = "hasObType")]
+    pub fn has_ob_type(&self, ob_type: ObType) -> Result<bool, String> {
+        all_the_same!(match &self.0 {
+            DblTheoryBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](th) => {
+                Ok(th.has_ob_type(&Elaborator.elab(&ob_type)?))
+            }
+        })
+    }
+
+    /// Returns whether the theory contains the morphism type.
+    #[wasm_bindgen(js_name = "hasMorType")]
+    pub fn has_mor_type(&self, mor_type: MorType) -> Result<bool, String> {
+        all_the_same!(match &self.0 {
+            DblTheoryBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](th) => {
+                Ok(th.has_mor_type(&Elaborator.elab(&mor_type)?))
+            }
+        })
+    }
+
     /// Gets the source of a morphism type.
     #[wasm_bindgen]
     pub fn src(&self, mor_type: MorType) -> Result<ObType, String> {
         all_the_same!(match &self.0 {
-            DblTheoryBox::[Discrete, DiscreteTab, Modal](th) => {
+            DblTheoryBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](th) => {
                 let mor_type = Elaborator.elab(&mor_type)?;
                 Ok(Quoter.quote(&th.src_type(&mor_type)))
             }
@@ -306,7 +296,7 @@ impl DblTheory {
     #[wasm_bindgen]
     pub fn tgt(&self, mor_type: MorType) -> Result<ObType, String> {
         all_the_same!(match &self.0 {
-            DblTheoryBox::[Discrete, DiscreteTab, Modal](th) => {
+            DblTheoryBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](th) => {
                 let mor_type = Elaborator.elab(&mor_type)?;
                 Ok(Quoter.quote(&th.tgt_type(&mor_type)))
             }
@@ -317,7 +307,7 @@ impl DblTheory {
     #[wasm_bindgen]
     pub fn dom(&self, op: ObOp) -> Result<ObType, String> {
         all_the_same!(match &self.0 {
-            DblTheoryBox::[Discrete, DiscreteTab, Modal](th) => {
+            DblTheoryBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](th) => {
                 let op = Elaborator.elab(&op)?;
                 Ok(Quoter.quote(&th.ob_op_dom(&op)))
             }
@@ -328,7 +318,7 @@ impl DblTheory {
     #[wasm_bindgen]
     pub fn cod(&self, op: ObOp) -> Result<ObType, String> {
         all_the_same!(match &self.0 {
-            DblTheoryBox::[Discrete, DiscreteTab, Modal](th) => {
+            DblTheoryBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](th) => {
                 let op = Elaborator.elab(&op)?;
                 Ok(Quoter.quote(&th.ob_op_cod(&op)))
             }

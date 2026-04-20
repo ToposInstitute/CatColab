@@ -10,10 +10,12 @@ let
 
   frontendPkg = self.packages.${pkgs.system}.frontend;
   backendPkg = self.packages.${pkgs.system}.backend;
-  automergePkg = self.packages.${pkgs.system}.automerge;
 
   backendPortStr = builtins.toString cfg.backend.port;
-  automergePortStr = builtins.toString cfg.automerge.port;
+
+  juliaFhsPkg = self.packages.${pkgs.system}.julia-fhs;
+  juliaProjectPath = "${self}/packages/algjulia-interop";
+  juliaDepotPath = "/var/lib/catcolab/julia-depot";
 
   # idempotent script for intializing the catcolab database
   databaseSetupScript = pkgs.writeShellScriptBin "database-setup" ''
@@ -43,6 +45,12 @@ with lib;
   options.catcolab = {
     enable = lib.mkEnableOption "Catcolab services";
 
+    enableCaddy = mkOption {
+      type = types.bool;
+      default = true;
+      description = "Enable Caddy reverse proxy for the backend and automerge services.";
+    };
+
     backend = {
       port = mkOption {
         type = types.port;
@@ -55,17 +63,19 @@ with lib;
       };
       serveFrontend = lib.mkEnableOption "serving the frontend.";
     };
-    automerge = {
+    julia = {
+      enable = mkOption {
+        type = types.bool;
+        default = false;
+        description = "Enable the Julia compute service.";
+      };
       port = mkOption {
         type = types.port;
-        default = 8010;
-        description = "Port for the automerge service.";
-      };
-      hostname = mkOption {
-        type = types.str;
-        description = "Hostname for the automerge reverse proxy.";
+        default = 8080;
+        description = "Port for the Julia compute service.";
       };
     };
+
     environmentFile = mkOption {
       type = types.path;
       description = ''
@@ -90,14 +100,13 @@ with lib;
       groups.catcolab = { };
     };
 
-    networking.firewall.allowedTCPPorts = [
+    networking.firewall.allowedTCPPorts = lib.mkIf cfg.enableCaddy [
       80
       443
     ];
 
     environment.systemPackages = [
       backendPkg
-      automergePkg
       databaseSetupScript
     ];
 
@@ -122,55 +131,98 @@ with lib;
       after = [
         "database-setup.service"
         "network-online.target"
+      ]
+      ++ lib.optionals cfg.julia.enable [
+        "julia-interop.service"
       ];
       wants = [
         "database-setup.service"
         "network-online.target"
+      ]
+      ++ lib.optionals cfg.julia.enable [
+        "julia-interop.service"
       ];
 
       environment = lib.mkMerge [
         { PORT = backendPortStr; }
         (lib.mkIf cfg.backend.serveFrontend { SPA_DIR = "${frontendPkg}"; })
+        (lib.mkIf cfg.julia.enable { JULIA_URL = "http://127.0.0.1:${builtins.toString cfg.julia.port}"; })
       ];
 
       serviceConfig = {
         User = "catcolab";
         Type = "notify";
         Restart = "on-failure";
+        TimeoutStartSec = "600s";
         ExecStart = lib.getExe backendPkg;
         EnvironmentFile = cfg.environmentFile;
       };
     };
 
-    systemd.services.automerge = {
-      enable = true;
+    systemd.services.julia-interop = lib.mkIf cfg.julia.enable {
+      description = "CatColab Julia compute service";
       wantedBy = [ "multi-user.target" ];
+      after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
 
       environment = {
-        PORT = automergePortStr;
+        JULIA_PORT = builtins.toString cfg.julia.port;
+        JULIA_DEPOT_PATH = juliaDepotPath;
+        # Redirect HOME away from /home/catcolab, which is inaccessible under
+        # ProtectHome=true. Without this, Julia's terminfo lookup crashes with
+        # EACCES when it tries to stat("~/.terminfo").
+        HOME = juliaDepotPath;
       };
 
       serviceConfig = {
-        EnvironmentFile = cfg.environmentFile;
         User = "catcolab";
-        ExecStart = lib.getExe automergePkg;
         Type = "simple";
         Restart = "on-failure";
+        RestartSec = "10s";
+        TimeoutStartSec = "600s";
+        CPUQuota = "200%";
+        MemoryMax = "4G";
+        MemoryHigh = "3G";
+        StateDirectory = lib.removePrefix "/var/lib/" juliaDepotPath;
+        ExecStartPre = "${juliaFhsPkg}/bin/julia-interop --project=${juliaProjectPath} -e 'using Pkg; Pkg.instantiate()'";
+        ExecStart = "${juliaFhsPkg}/bin/julia-interop --project=${juliaProjectPath} --threads auto ${juliaProjectPath}/scripts/endpoint.jl Catlab";
+        # Security hardening. The following are incompatible and excluded:
+        # - MemoryDenyWriteExecute: Julia's JIT and PCRE regex JIT need W^X memory.
+        # - ProtectProc/ProcSubset: bwrap reads /proc/sys/kernel/overflowuid.
+        # - RestrictNamespaces: bwrap needs user namespaces.
+        # - PrivateDevices: breaks bwrap device access.
+        NoNewPrivileges = true;
+        ProtectSystem = "strict";
+        ProtectHome = true;
+        PrivateTmp = true;
+        ProtectKernelTunables = true;
+        ProtectKernelModules = true;
+        ProtectKernelLogs = true;
+        ProtectControlGroups = true;
+        ProtectClock = true;
+        ProtectHostname = true;
+        RestrictSUIDSGID = true;
+        RestrictRealtime = true;
+        RestrictAddressFamilies = [
+          "AF_INET"
+          "AF_INET6"
+          "AF_UNIX"
+        ];
+        LockPersonality = true;
+        RemoveIPC = true;
+        SystemCallArchitectures = "native";
+        CapabilityBoundingSet = "";
+        UMask = "0077";
+        ReadWritePaths = juliaDepotPath;
       };
     };
 
-    services.caddy = {
+    services.caddy = lib.mkIf cfg.enableCaddy {
       enable = true;
       virtualHosts = {
         "${cfg.backend.hostname}" = {
           extraConfig = ''
             reverse_proxy :${backendPortStr}
-          '';
-        };
-
-        "${cfg.automerge.hostname}" = {
-          extraConfig = ''
-            reverse_proxy :${automergePortStr}
           '';
         };
       };

@@ -4,21 +4,28 @@
 //! [`lotka_volterra_analysis`](SignedCoefficientBuilder::lotka_volterra_analysis).
 
 use std::collections::HashMap;
+use std::hash::Hash;
+use std::ops::Add;
 
-use nalgebra::DVector;
+use indexmap::IndexMap;
+use itertools::Itertools;
+use nalgebra::{DMatrix, DVector, Scalar};
+use num_traits::{One, Zero};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
-use super::{ODEAnalysis, SignedCoefficientBuilder};
-use crate::dbl::model::DiscreteDblModel;
-use crate::simulate::ode::{LotkaVolterraSystem, ODEProblem};
-use crate::{one::QualifiedPath, zero::QualifiedName};
+use super::{ODEAnalysis, Parameter, SignedCoefficientBuilder};
+use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
+use crate::{
+    dbl::model::DiscreteDblModel,
+    one::QualifiedPath,
+    zero::{QualifiedName, alg::Polynomial, rig::Monomial},
+};
 
 /// Data defining a Lotka-Volterra ODE problem for a model.
-#[derive(Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(
@@ -42,6 +49,42 @@ pub struct LotkaVolterraProblemData {
     duration: f32,
 }
 
+/// Construct a Lotka-Volterra dynamical system.
+///
+/// A system of ODEs that is affine in its *logarithmic* derivative. These are
+/// sometimes called the "generalized Lotka-Volterra equations." For more, see
+/// [Wikipedia](https://en.wikipedia.org/wiki/Generalized_Lotka%E2%80%93Volterra_equation).
+pub fn lotka_volterra_system<Var, Coef>(
+    vars: &[Var],
+    interaction_coeffs: DMatrix<Coef>,
+    growth_rates: DVector<Coef>,
+) -> PolynomialSystem<Var, Coef, u8>
+where
+    Var: Clone + Hash + Ord,
+    Coef: Clone + Add<Output = Coef> + One + Scalar + Zero,
+{
+    let system = PolynomialSystem {
+        components: interaction_coeffs
+            .row_iter()
+            .zip(vars)
+            .zip(&growth_rates)
+            .map(|((row, i), r)| {
+                (
+                    i.clone(),
+                    Polynomial::<_, Coef, _>::generator(i.clone())
+                        * (row
+                            .iter()
+                            .zip(vars)
+                            .map(|(a, j)| (a.clone(), Monomial::generator(j.clone())))
+                            .collect::<Polynomial<_, _, _>>()
+                            + r.clone()),
+                )
+            })
+            .collect(),
+    };
+    system.normalize()
+}
+
 impl SignedCoefficientBuilder<QualifiedName, QualifiedPath> {
     /// Lotka-Volterra ODE analysis for a model of a double theory.
     ///
@@ -52,35 +95,81 @@ impl SignedCoefficientBuilder<QualifiedName, QualifiedPath> {
         &self,
         model: &DiscreteDblModel,
         data: LotkaVolterraProblemData,
-    ) -> ODEAnalysis<LotkaVolterraSystem> {
-        let (matrix, ob_index) = self.build_matrix(model, &data.interaction_coeffs);
+    ) -> ODEAnalysis<NumericalPolynomialSystem<u8>> {
+        let (system, ob_index) = self.lotka_volterra_system(model);
         let n = ob_index.len();
-
-        let growth_rates =
-            ob_index.keys().map(|ob| data.growth_rates.get(ob).copied().unwrap_or_default());
-        let b = DVector::from_iterator(n, growth_rates);
 
         let initial_values = ob_index
             .keys()
             .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
         let x0 = DVector::from_iterator(n, initial_values);
 
-        let system = LotkaVolterraSystem::new(matrix, b);
+        let system = system
+            .extend_scalars(|poly| {
+                poly.eval(|id| {
+                    data.interaction_coeffs
+                        .get(id)
+                        .or(data.growth_rates.get(id))
+                        .copied()
+                        .unwrap_or_default()
+                })
+            })
+            .to_numerical();
         let problem = ODEProblem::new(system, x0).end_time(data.duration);
         ODEAnalysis::new(problem, ob_index)
+    }
+
+    /// Lotka-Volterra ODE system for an model of a double theory.
+    pub fn lotka_volterra_system(
+        &self,
+        model: &DiscreteDblModel,
+    ) -> (
+        PolynomialSystem<QualifiedName, Parameter<QualifiedName>, u8>,
+        IndexMap<QualifiedName, usize>,
+    ) {
+        let (matrix, ob_index) = self.build_matrix(model);
+        let n = ob_index.len();
+
+        let growth_rate_params = ob_index
+            .keys()
+            .map(|ob| [(1.0, Monomial::generator(ob.clone()))].into_iter().collect());
+        let b = DVector::from_iterator(n, growth_rate_params);
+
+        let system = lotka_volterra_system(&ob_index.keys().cloned().collect_vec(), matrix, b);
+        (system, ob_index)
     }
 }
 
 #[cfg(test)]
 mod test {
+    use expect_test::expect;
     use std::rc::Rc;
 
     use super::*;
+    use crate::stdlib;
     use crate::{one::Path, zero::name};
-    use crate::{simulate::ode::lotka_volterra, stdlib};
+
+    fn builder() -> SignedCoefficientBuilder<QualifiedName, QualifiedPath> {
+        SignedCoefficientBuilder::new(name("Object"))
+            .add_positive(Path::Id(name("Object")))
+            .add_negative(Path::single(name("Negative")))
+    }
 
     #[test]
-    fn predator_prey() {
+    fn predator_prey_symbolic() {
+        let th = Rc::new(stdlib::theories::th_signed_category());
+        let neg_feedback = stdlib::models::negative_feedback(th);
+        let (sys, _) = builder().lotka_volterra_system(&neg_feedback);
+        let sys = sys.extend_scalars(|coef| coef.map_variables(|name| format!("Param({name})")));
+        let expected = expect!([r#"
+            dx = Param(x) x - Param(negative) x y
+            dy = Param(positive) x y + Param(y) y
+        "#]);
+        expected.assert_eq(&sys.to_string());
+    }
+
+    #[test]
+    fn predator_prey_numerical() {
         let th = Rc::new(stdlib::theories::th_signed_category());
         let neg_feedback = stdlib::models::negative_feedback(th);
 
@@ -92,10 +181,12 @@ mod test {
             initial_values: [(name("x"), 1.0), (name("y"), 1.0)].into_iter().collect(),
             duration: 10.0,
         };
-        let analysis = SignedCoefficientBuilder::new(name("Object"))
-            .add_positive(Path::Id(name("Object")))
-            .add_negative(Path::single(name("Negative")))
-            .lotka_volterra_analysis(&neg_feedback, data);
-        assert_eq!(analysis.problem, lotka_volterra::create_predator_prey());
+
+        let sys = builder().lotka_volterra_analysis(&neg_feedback, data).problem.system;
+        let expected = expect!([r#"
+            dx0 = 2 x0 - x0 x1
+            dx1 = x0 x1 - x1
+        "#]);
+        expected.assert_eq(&sys.to_string());
     }
 }

@@ -1,16 +1,18 @@
 //! Models of modal double theories.
 
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::rc::Rc;
+use std::sync::LazyLock;
 
 use derive_more::From;
 use itertools::Itertools;
 use ref_cast::RefCast;
 
 use super::theory::*;
-use crate::dbl::graph::VDblGraph;
-use crate::dbl::model::{DblModel, FgDblModel, InvalidDblModel, MutDblModel};
-use crate::dbl::theory::DblTheory;
+use crate::dbl::theory::DblTheoryKind;
+use crate::dbl::{graph::VDblGraph, model::*, theory::DblTheory};
+use crate::tt::util::pretty::*;
 use crate::validate::{self, Validate};
 use crate::{one::computad::*, one::*, zero::*};
 
@@ -72,38 +74,39 @@ impl MorListData {
 
 /// A model of a modal double theory.
 #[derive(Clone)]
-pub struct ModalDblModel {
-    theory: Rc<ModalDblTheory>,
+pub struct ModalDblModel<Kind> {
+    theory: Rc<ModalDblTheory<Kind>>,
     ob_generators: HashFinSet<QualifiedName>,
     mor_generators: ComputadTop<ModalOb, QualifiedName>,
-    // TODO: Equations
+    equations: [(); 0], // TODO: Equations not implemented
     ob_types: HashColumn<QualifiedName, ModalObType>,
     mor_types: HashColumn<QualifiedName, ModalMorType>,
 }
 
-impl ModalDblModel {
+impl<Kind: DblTheoryKind> ModalDblModel<Kind> {
     /// Creates an empty model of the given theory.
-    pub fn new(theory: Rc<ModalDblTheory>) -> Self {
+    pub fn new(theory: Rc<ModalDblTheory<Kind>>) -> Self {
         Self {
             theory,
             ob_generators: Default::default(),
             mor_generators: Default::default(),
+            equations: Default::default(),
             ob_types: Default::default(),
             mor_types: Default::default(),
         }
     }
 
     /// Gets the computing generating the morphisms of the model.
-    fn computad(&self) -> Computad<'_, ModalOb, ModalDblModelObs, QualifiedName> {
+    fn computad(&self) -> Computad<'_, ModalOb, ModalDblModelObs<Kind>, QualifiedName> {
         Computad::new(ModalDblModelObs::ref_cast(self), &self.mor_generators)
     }
 }
 
 #[derive(RefCast)]
 #[repr(transparent)]
-struct ModalDblModelObs(ModalDblModel);
+struct ModalDblModelObs<Kind>(ModalDblModel<Kind>);
 
-impl Set for ModalDblModelObs {
+impl<Kind: DblTheoryKind> Set for ModalDblModelObs<Kind> {
     type Elem = ModalOb;
 
     fn contains(&self, ob: &Self::Elem) -> bool {
@@ -118,7 +121,7 @@ impl Set for ModalDblModelObs {
     }
 }
 
-impl Category for ModalDblModel {
+impl<Kind: DblTheoryKind> Category for ModalDblModel<Kind> {
     type Ob = ModalOb;
     type Mor = ModalMor;
 
@@ -182,7 +185,7 @@ impl Category for ModalDblModel {
     }
 }
 
-impl FgCategory for ModalDblModel {
+impl<Kind: DblTheoryKind> FgCategory for ModalDblModel<Kind> {
     type ObGen = QualifiedName;
     type MorGen = QualifiedName;
 
@@ -200,15 +203,15 @@ impl FgCategory for ModalDblModel {
     }
 }
 
-impl DblModel for ModalDblModel {
+impl<Kind: DblTheoryKind> DblModel for ModalDblModel<Kind> {
     type ObType = ModalObType;
     type MorType = ModalMorType;
     type ObOp = ModalObOp;
     type MorOp = ModalMorOp;
-    type Theory = ModalDblTheory;
+    type Theory = ModalDblTheory<Kind>;
 
-    fn theory(&self) -> &Self::Theory {
-        &self.theory
+    fn theory(&self) -> Rc<Self::Theory> {
+        self.theory.clone()
     }
 
     fn ob_type(&self, ob: &Self::Ob) -> Self::ObType {
@@ -235,7 +238,7 @@ impl DblModel for ModalDblModel {
     }
 }
 
-impl FgDblModel for ModalDblModel {
+impl<Kind: DblTheoryKind> FpDblModel for ModalDblModel<Kind> {
     fn ob_generator_type(&self, id: &Self::ObGen) -> Self::ObType {
         self.ob_types.apply_to_ref(id).expect("Object should have object type")
     }
@@ -248,9 +251,12 @@ impl FgDblModel for ModalDblModel {
     fn mor_generators_with_type(&self, typ: &Self::MorType) -> impl Iterator<Item = Self::MorGen> {
         self.mor_types.preimage(typ)
     }
+    fn equations(&self) -> impl Iterator<Item = (Self::Mor, Self::Mor)> {
+        self.equations.iter().map(|()| unreachable!())
+    }
 }
 
-impl MutDblModel for ModalDblModel {
+impl<Kind: DblTheoryKind> MutDblModel for ModalDblModel<Kind> {
     fn add_ob(&mut self, x: Self::ObGen, ob_type: Self::ObType) {
         self.ob_types.set(x.clone(), ob_type);
         self.ob_generators.insert(x);
@@ -278,7 +284,7 @@ impl MutDblModel for ModalDblModel {
     }
 }
 
-impl Validate for ModalDblModel {
+impl<Kind: DblTheoryKind> Validate for ModalDblModel<Kind> {
     type ValidationError = InvalidDblModel;
 
     fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
@@ -344,7 +350,7 @@ impl<T> From<InferredType<T>> for Option<T> {
     }
 }
 
-impl ModalDblModel {
+impl<Kind: DblTheoryKind> ModalDblModel<Kind> {
     /// Tries to infer the type of an object in the model.
     fn infer_ob_type(&self, ob: &ModalOb) -> Result<InferredType<ModalObType>, String> {
         match ob {
@@ -543,11 +549,62 @@ impl ModalMor {
     }
 }
 
+impl<Kind: DblTheoryKind> PrintableDblModel for ModalDblModel<Kind> {
+    fn ob_to_doc<'a>(&self, ob: &Self::Ob, ob_ns: &Namespace, mor_ns: &Namespace) -> D<'a> {
+        match ob {
+            ModalOb::Generator(name) => t(ob_ns.label_string(name)),
+            ModalOb::App(ob, op) => {
+                let op = op.to_string();
+                let op_doc = match UNICODE_OP_LOOKUP.get(op.as_str()) {
+                    Some(uni_op) => t(*uni_op),
+                    None => t(format!("@{op}")),
+                };
+                unop(op_doc, self.ob_to_doc(ob, ob_ns, mor_ns))
+            }
+            ModalOb::List(_, obs) => tuple(obs.iter().map(|ob| self.ob_to_doc(ob, ob_ns, mor_ns))),
+        }
+    }
+
+    fn mor_to_doc<'a>(&self, _mor: &Self::Mor, _ob_ns: &Namespace, _mor_ns: &Namespace) -> D<'a> {
+        todo!("Pretty printing morphisms in models of modal theories")
+    }
+
+    fn ob_type_to_doc<'a>(ob_type: &Self::ObType) -> D<'a> {
+        modal_type_to_doc(ob_type)
+    }
+    fn mor_type_to_doc<'a>(mor_type: &Self::MorType) -> D<'a> {
+        match mor_type {
+            ShortPath::Zero(ob_type) => unop(t("Hom"), Self::ob_type_to_doc(ob_type)),
+            ShortPath::One(app) => modal_type_to_doc(app),
+        }
+    }
+}
+
+fn modal_type_to_doc<'a>(app: &ModalType) -> D<'a> {
+    let mut doc = app.arg.to_doc();
+    for mode in app.modalities.iter() {
+        doc = unop(t(mode.to_string()), doc);
+    }
+    doc
+}
+
+impl<Kind: DblTheoryKind> std::fmt::Display for ModalDblModel<Kind> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", DblModelPrinter::new().doc(self).pretty())
+    }
+}
+
+// XXX: This doesn't really belong here but it makes my pretty print look good.
+static UNICODE_OP_LOOKUP: LazyLock<HashMap<&str, &str>> =
+    LazyLock::new(|| HashMap::from([("tensor", "⨂"), ("cotensor", "⨁")]));
+
 #[cfg(test)]
 mod tests {
+    use expect_test::expect;
+
     use super::*;
     use crate::dbl::theory::DblTheory;
-    use crate::stdlib::theories::*;
+    use crate::stdlib::{models::*, theories::*};
     use crate::zero::name;
     use crate::{dbl::tree::DblNode, one::tree::OpenTree};
 
@@ -666,5 +723,18 @@ mod tests {
         );
         model.add_mor(name("nullary"), ModalOb::List(List::Plain, vec![]), x.clone(), mor_type);
         assert!(model.validate().is_ok());
+    }
+
+    #[test]
+    fn pretty_print() {
+        let model = sir_petri(Rc::new(th_sym_monoidal_category()));
+        let expected = expect![[r#"
+            model generated by 3 objects and 2 morphisms
+            S : Object
+            I : Object
+            R : Object
+            infect : ⨂ [S, I] -> ⨂ [I, I] : Hom Object
+            recover : I -> R : Hom Object"#]];
+        expected.assert_eq(&format!("{model}"));
     }
 }

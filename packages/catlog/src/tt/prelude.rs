@@ -1,4 +1,5 @@
-//! Common imports for [crate::tt]
+//! Common imports for [`tt`](crate::tt).
+
 pub use crate::tt::util::*;
 pub use crate::zero::{
     LabelSegment,
@@ -11,9 +12,9 @@ pub use std::rc::Rc;
 pub use tattle::{Loc, Reporter};
 pub use ustr::{Ustr, ustr};
 
-/// The type of local variable names
+/// The type of local variable names.
 pub type VarName = NameSegment;
-/// The type of global variable names
+/// The type of global variable names.
 pub type TopVarName = NameSegment;
-/// The type of field names in record types
+/// The type of field names in record types.
 pub type FieldName = NameSegment;

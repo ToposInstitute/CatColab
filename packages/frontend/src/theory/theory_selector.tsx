@@ -1,6 +1,6 @@
 import Dialog from "@corvu/dialog";
 import { useLocation } from "@solidjs/router";
-import { For, createMemo, createSignal, useContext } from "solid-js";
+import { createMemo, createSignal, For, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { TheoryHelpButton } from "../page/toolbar";
@@ -76,7 +76,7 @@ export function TheorySelector(props: TheorySelectorProps) {
                                         name="theory"
                                         id={meta.id}
                                         value={meta.id}
-                                        onchange={(evt) => props.setTheory(evt.target.value)}
+                                        onChange={(evt) => props.setTheory(evt.target.value)}
                                     />
                                     <label for={meta.id}>
                                         <div class="name">{meta.name}</div>

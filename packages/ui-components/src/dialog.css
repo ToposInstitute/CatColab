@@ -1,0 +1,38 @@
+[data-corvu-dialog-overlay] {
+    position: fixed;
+    inset: 0px;
+}
+
+[data-corvu-dialog-content] {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 80vw;
+
+    &.popup {
+        padding: 1rem;
+    }
+
+    & .title-bar {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        padding-bottom: 0.5rem;
+    }
+}
+
+[data-corvu-dialog-label] {
+    font-size: larger;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+}
+
+[data-corvu-dialog-close] {
+    & .lucide {
+        color: var(--color-text-secondary);
+    }
+}

@@ -9,17 +9,19 @@
 //! same is true for other structures, such as models of theories and diagrams in
 //! models.
 
-#![warn(missing_docs)]
-
 pub mod notation;
 pub mod result;
 
 pub mod model;
 pub mod model_diagram;
+pub mod model_diagram_presentation;
 pub mod model_morphism;
+pub mod model_presentation;
 pub mod theory;
+pub mod wd;
 
 pub mod analyses;
+pub mod latex;
 #[allow(clippy::new_without_default)]
 #[allow(missing_docs)]
 pub mod theories;

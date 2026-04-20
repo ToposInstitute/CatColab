@@ -1,26 +1,18 @@
 import { createMemo, createSignal, useContext } from "solid-js";
+import { unwrap } from "solid-js/store";
 import invariant from "tiny-invariant";
 
-import { NameInput } from "../components";
-import type { CellActions } from "../notebook";
-import type { Theory } from "../theory";
+import { NameInput } from "catcolab-ui-components";
 import { LiveModelContext } from "./context";
+import type { MorphismEditorProps } from "./editors";
 import { obClasses } from "./object_cell_editor";
 import { ObInput } from "./object_input";
-import type { MorphismDecl } from "./types";
 
 import arrowStyles from "../stdlib/arrow_styles.module.css";
 import "./morphism_cell_editor.css";
 
-/** Editor for a moprhism declaration cell in a model.
- */
-export function MorphismCellEditor(props: {
-    morphism: MorphismDecl;
-    modifyMorphism: (f: (decl: MorphismDecl) => void) => void;
-    isActive: boolean;
-    actions: CellActions;
-    theory: Theory;
-}) {
+/** Editor for a morphism declaration cell in a model. */
+export default function MorphismCellEditor(props: MorphismEditorProps) {
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 
@@ -76,7 +68,7 @@ export function MorphismCellEditor(props: {
                     ob={props.morphism.dom}
                     setOb={(ob) => {
                         props.modifyMorphism((mor) => {
-                            mor.dom = ob;
+                            mor.dom = structuredClone(unwrap(ob));
                         });
                     }}
                     obType={domType()}
@@ -128,7 +120,7 @@ export function MorphismCellEditor(props: {
                     ob={props.morphism.cod}
                     setOb={(ob) => {
                         props.modifyMorphism((mor) => {
-                            mor.cod = ob;
+                            mor.cod = structuredClone(unwrap(ob));
                         });
                     }}
                     obType={codType()}

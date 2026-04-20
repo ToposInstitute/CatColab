@@ -1,8 +1,9 @@
+import { Title } from "@solidjs/meta";
 import { useParams } from "@solidjs/router";
-import { lazy } from "solid-js";
+import { createResource, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
-import { guidesList } from "./guides";
+import { guidesList } from "./guides_list";
 
 /** Help page of a guide */
 export default function GuideHelpPage() {
@@ -11,24 +12,34 @@ export default function GuideHelpPage() {
 }
 
 /** Contents of the guide page */
-export function GuideHelp(props: {
-    id?: string;
-}) {
+export function GuideHelp(props: { id?: string }) {
+    const appTitle = import.meta.env.VITE_APP_TITLE;
     // Note that guide should never be undefined, due to existingGuideFilter
     // in routes.ts
-    const guide = guidesList.find((item) => item.id === props.id);
+    const guide = () => guidesList.find((item) => item.id === props.id);
+
+    const [content] = createResource(
+        () => props.id,
+        async (guideId) => {
+            if (!guideId) {
+                return null;
+            }
+            return await import(`./guide/${guideId}.mdx`);
+        },
+    );
 
     return (
         <>
+            <Title>
+                {guide()?.title ?? ""} - {appTitle}
+            </Title>
             <h1>
-                <a href="/help/guides/">Guides</a> / {guide?.title}
+                <a href="/help/guides/">Guides</a> / {guide()?.title}
             </h1>
             <p>
-                <i>{guide?.description}</i>
+                <i>{guide()?.description}</i>
             </p>
-            <Dynamic component={helpGuideContent(props.id)} />
+            <Show when={content()}>{(module) => <Dynamic component={module().default} />}</Show>
         </>
     );
 }
-
-const helpGuideContent = (id?: string) => lazy(() => import(`./guide/${id}.mdx`));

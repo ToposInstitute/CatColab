@@ -30,7 +30,7 @@ pub enum MorType {
     /// Basic or generating morphism type.
     Basic(Ustr),
 
-    /// Hom type or unit on an object type.
+    /// Hom type on an object type.
     Hom(Box<ObType>),
 
     /// Composite of morphism types.
@@ -52,15 +52,6 @@ pub enum MorType {
 pub enum ObOp {
     /// Basic or generating object operation.
     Basic(Ustr),
-
-    /// Identity operation on an object type.
-    Id(ObType),
-
-    /// Composite of object operations.
-    Composite(Vec<ObOp>),
-
-    /// Modality applied to an object operation.
-    ModeApp { modality: Modality, op: Box<ObOp> },
 }
 
 /// Modality available in a modal double theory.
@@ -71,7 +62,103 @@ pub enum Modality {
     Codiscrete,
     List,
     SymmetricList,
-    CoproductList,
-    ProductList,
-    BiproductList,
+    CocartesianList,
+    CartesianList,
+    AdditiveList,
+}
+
+/// Arbitrary instances for property-based testing.
+#[cfg(feature = "property-tests")]
+pub(crate) mod arbitrary {
+    use super::*;
+    use proptest::prelude::*;
+    use ustr::Ustr;
+
+    /// Strategy for generating an arbitrary `Ustr`.
+    pub fn arb_ustr() -> BoxedStrategy<Ustr> {
+        "[a-zA-Z_][a-zA-Z0-9_]{0,8}".prop_map(|s| Ustr::from(&s)).boxed()
+    }
+
+    impl Arbitrary for Modality {
+        type Parameters = ();
+        type Strategy = BoxedStrategy<Self>;
+
+        fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
+            proptest::sample::select(&[
+                Modality::Discrete,
+                Modality::Codiscrete,
+                Modality::List,
+                Modality::SymmetricList,
+                Modality::CocartesianList,
+                Modality::CartesianList,
+                Modality::AdditiveList,
+            ])
+            .boxed()
+        }
+    }
+
+    impl Arbitrary for ObOp {
+        type Parameters = ();
+        type Strategy = BoxedStrategy<Self>;
+
+        fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
+            arb_ustr().prop_map(ObOp::Basic).boxed()
+        }
+    }
+
+    /// Strategy for an `ObType` bounded by recursion depth.
+    pub fn arb_ob_type(depth: u32) -> BoxedStrategy<ObType> {
+        let leaf = arb_ustr().prop_map(ObType::Basic);
+        if depth == 0 {
+            return leaf.boxed();
+        }
+        prop_oneof![
+            3 => leaf,
+            1 => arb_mor_type(depth - 1).prop_map(|m| ObType::Tabulator(Box::new(m))),
+            1 => (any::<Modality>(), arb_ob_type(depth - 1))
+                .prop_map(|(modality, ob_type)| ObType::ModeApp {
+                    modality,
+                    ob_type: Box::new(ob_type),
+                }),
+        ]
+        .boxed()
+    }
+
+    /// Strategy for a `MorType` bounded by recursion depth.
+    pub fn arb_mor_type(depth: u32) -> BoxedStrategy<MorType> {
+        let leaf = arb_ustr().prop_map(MorType::Basic);
+        if depth == 0 {
+            return leaf.boxed();
+        }
+        prop_oneof![
+            3 => leaf,
+            1 => arb_ob_type(depth - 1).prop_map(|o| MorType::Hom(Box::new(o))),
+            1 => prop::collection::vec(arb_mor_type(depth - 1), 0..3)
+                .prop_map(MorType::Composite),
+            1 => (any::<Modality>(), arb_mor_type(depth - 1))
+                .prop_map(|(modality, mor_type)| MorType::ModeApp {
+                    modality,
+                    mor_type: Box::new(mor_type),
+                }),
+        ]
+        .boxed()
+    }
+
+    impl Arbitrary for ObType {
+        type Parameters = ();
+        type Strategy = BoxedStrategy<Self>;
+
+        fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
+            arb_ob_type(2).boxed()
+        }
+    }
+
+    impl Arbitrary for MorType {
+        type Parameters = ();
+        type Strategy = BoxedStrategy<Self>;
+
+        fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
+            arb_mor_type(2).boxed()
+        }
+    }
 }

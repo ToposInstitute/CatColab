@@ -1,26 +1,28 @@
 import {
-    Index,
-    type JSX,
-    Show,
     batch,
     createEffect,
     createSignal,
+    Index,
+    type JSX,
     mergeProps,
+    Show,
     untrack,
     useContext,
 } from "solid-js";
 import invariant from "tiny-invariant";
 
+import type { TextInputOptions } from "catcolab-ui-components";
 import type { Ob, QualifiedName } from "catlog-wasm";
-import { type InputOptions, ObIdInput } from "../components";
+import { ObIdInput } from "../components";
 import { deepCopyJSON } from "../util/deepcopy";
 import { LiveModelContext } from "./context";
+import { buildObList, extractObList } from "./ob_operations";
 import type { ObInputProps } from "./object_input";
 
 import "./object_list_editor.css";
 
 type ObListEditorProps = ObInputProps &
-    InputOptions & {
+    TextInputOptions & {
         insertKey?: string;
         startDelimiter?: JSX.Element | string;
         endDelimiter?: JSX.Element | string;
@@ -28,21 +30,24 @@ type ObListEditorProps = ObInputProps &
     };
 
 /** Edits a list of objects of given type. */
-export function ObListEditor(props: ObListEditorProps) {
-    props = mergeProps(
+export function ObListEditor(originalProps: ObListEditorProps) {
+    const props = mergeProps(
         {
             insertKey: ",",
             startDelimiter: <div class="default-delimiter">{"["}</div>,
             endDelimiter: <div class="default-delimiter">{"]"}</div>,
             separator: () => <div class="default-separator">{","}</div>,
         },
-        props,
+        originalProps,
     );
 
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 
     const [activeIndex, setActiveIndex] = createSignal<number>(0);
+
+    // Track which indices have non-empty text (including incomplete input).
+    const inputTexts = new Map<number, string>();
 
     const modeAppType = () => {
         if (props.obType.tag !== "ModeApp") {
@@ -51,24 +56,10 @@ export function ObListEditor(props: ObListEditorProps) {
         return props.obType;
     };
 
-    const obList = (): Array<Ob | null> => {
-        if (!props.ob) {
-            return [];
-        }
-        if (props.ob.tag !== "List") {
-            throw new Error(`Object should be a list, received: ${props.ob}`);
-        }
-        return props.ob.content.objects;
-    };
+    const obList = (): Array<Ob | null> => extractObList(props.ob);
 
     const setObList = (objects: Array<Ob | null>) => {
-        props.setOb({
-            tag: "List",
-            content: {
-                modality: modeAppType().content.modality,
-                objects,
-            },
-        });
+        props.setOb(buildObList(modeAppType().content.modality, objects));
     };
 
     const updateObList = (f: (objects: Array<Ob | null>) => void) => {
@@ -103,6 +94,21 @@ export function ObListEditor(props: ObListEditorProps) {
         }
     });
 
+    /** Clean up null placeholders that have no user-entered text. */
+    const deactivate = () => {
+        const objects = obList().filter((ob, i) => ob !== null || (inputTexts.get(i) ?? "") !== "");
+        if (objects.length !== obList().length) {
+            setObList(objects);
+        }
+    };
+
+    // Clean up when the component becomes inactive.
+    createEffect(() => {
+        if (!props.isActive) {
+            untrack(() => deactivate());
+        }
+    });
+
     return (
         <ul
             class="object-list"
@@ -126,6 +132,7 @@ export function ObListEditor(props: ObListEditorProps) {
                                     objects[i] = ob;
                                 });
                             }}
+                            onTextChange={(text) => inputTexts.set(i, text)}
                             placeholder={props.placeholder}
                             idToLabel={(id) => liveModel().elaboratedModel()?.obGeneratorLabel(id)}
                             labelToId={(label) =>

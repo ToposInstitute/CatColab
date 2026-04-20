@@ -1,32 +1,41 @@
-//! Elaboration for doublett
-use crate::{
-    dbl::{
-        category::VDblCategory,
-        theory::{DblTheory, DiscreteDblTheory},
-    },
-    zero::name,
-};
-use fnotation::*;
-use nonempty::nonempty;
-use scopeguard::{ScopeGuard, guard};
-use std::fmt::Write;
+//! Elaboration from plain text for DoubleTT.
 
+use fnotation::*;
+use scopeguard::{ScopeGuard, guard};
+
+use fnotation::{ParseConfig, parser::Prec};
 use tattle::declare_error;
 
-use crate::{
-    tt::{context::*, eval::*, modelgen::*, prelude::*, stx::*, toplevel::*, val::*},
-    zero::QualifiedName,
+use super::{
+    context::*, eval::*, modelgen::*, prelude::*, stx::*, theory::*, toplevel::*, val::*, wd::*,
 };
+use crate::{
+    dbl::model::DblModelPrinter,
+    zero::{QualifiedName, name},
+};
+
+/// Parser config for DoubleTT.
+pub const TT_PARSE_CONFIG: ParseConfig = ParseConfig::new(
+    &[
+        (":", Prec::nonassoc(20)),
+        (":=", Prec::nonassoc(10)),
+        ("&", Prec::lassoc(40)),
+        ("*", Prec::lassoc(60)),
+        ("==", Prec::nonassoc(30)),
+    ],
+    &[":", ":=", "&", "Unit", "Hom", "*", "=="],
+    &["type", "def", "syn", "chk", "norm", "generate", "uwd", "set_theory"],
+);
 
 /// The result of elaborating a top-level statement.
 pub enum TopElabResult {
-    /// A new declaration
+    /// A new declaration.
     Declaration(TopVarName, TopDecl),
-    /// Output that should be logged
+    /// Output that should be logged.
     Output(String),
 }
 
-/// Context for top-level elaboration
+/// Context for top-level elaboration.
 ///
 /// Top-level elaboration is elaboration of declarations.
 pub struct TopElaborator {
@@ -35,12 +44,9 @@ pub struct TopElaborator {
 }
 
 impl TopElaborator {
-    /// Constructor
+    /// Constructs a context for top-level elaboration.
     pub fn new(reporter: Reporter) -> Self {
-        Self {
-            current_theory: None,
-            reporter,
-        }
+        Self { current_theory: None, reporter }
     }
 
     fn bare_def<'c>(&self, n: &FNtn<'c>) -> Option<(TopVarName, &'c FNtn<'c>)> {
@@ -96,7 +102,7 @@ impl TopElaborator {
         None
     }
 
-    /// Elaborate a single top-level declaration
+    /// Elaborate a single top-level declaration.
     pub fn elab(&mut self, toplevel: &Toplevel, tn: &FNtnTop) -> Option<TopElabResult> {
         match tn.name {
             "set_theory" => match tn.body.ast0() {
@@ -117,7 +123,7 @@ impl TopElaborator {
                         "unknown syntax for type declaration, expected <name> := <type>",
                     )
                 })?;
-                let (ty_s, ty_v) = self.elaborator(&theory, toplevel).ty(ty_n)?;
+                let (ty_s, ty_v) = self.elaborator(&theory, toplevel).ty(ty_n);
                 Some(TopElabResult::Declaration(
                     name,
                     TopDecl::Type(Type::new(theory.clone(), ty_s, ty_v)),
@@ -140,8 +146,8 @@ impl TopElaborator {
                             args_stx.insert(name, (label, ty_s));
                             elab.intro(name, label, Some(ty_v));
                         }
-                        let (ret_ty_s, ret_ty_v) = elab.ty(ty_n)?;
-                        let (body_s, _) = elab.chk(&ret_ty_v, tm_n)?;
+                        let (ret_ty_s, ret_ty_v) = elab.ty(ty_n);
+                        let (body_s, _) = elab.chk(&ret_ty_v, tm_n);
                         Some(TopElabResult::Declaration(
                             name,
                             TopDecl::Def(Def::new(
@@ -154,8 +160,8 @@ impl TopElaborator {
                     }
                     None => {
                         let mut elab = self.elaborator(&theory, toplevel);
-                        let (_, ty_v) = elab.ty(ty_n)?;
-                        let (tm_s, tm_v) = elab.chk(&ty_v, tm_n)?;
+                        let (_, ty_v) = elab.ty(ty_n);
+                        let (tm_s, tm_v) = elab.chk(&ty_v, tm_n);
                         Some(TopElabResult::Declaration(
                             name,
                             TopDecl::DefConst(DefConst::new(theory.clone(), tm_s, tm_v, ty_v)),
@@ -171,7 +177,7 @@ impl TopElaborator {
                     let (name, label, _, ty_v) = elab.binding(ctx_n)?;
                     elab.intro(name, label, Some(ty_v));
                 }
-                let (tm_s, _, ty_v) = elab.syn(n)?;
+                let (tm_s, _, ty_v) = elab.syn(n);
                 Some(TopElabResult::Output(format!(
                     "{tm_s} : {}",
                     elab.evaluator().quote_ty(&ty_v)
@@ -185,9 +191,10 @@ impl TopElaborator {
                     let (name, label, _, ty_v) = elab.binding(ctx_n)?;
                     elab.intro(name, label, Some(ty_v));
                 }
-                let (_, tm_v, ty_v) = elab.syn(n)?;
+                let (_, tm_v, ty_v) = elab.syn(n);
                 let eval = elab.evaluator();
-                Some(TopElabResult::Output(format!("{}", eval.quote_tm(&eval.eta(&tm_v, &ty_v)),)))
+                let tm_s = eval.quote_tm(&eval.eta(&tm_v, Some(&ty_v)));
+                Some(TopElabResult::Output(format!("{tm_s}")))
             }
             "chk" => {
                 let theory = self.get_theory(tn.loc)?;
@@ -201,18 +208,28 @@ impl TopElaborator {
                     App2(L(_, Keyword(":")), tm_n, ty_n) => (tm_n, ty_n),
                     _ => return elab.error("expected <expr> : <type>"),
                 };
-                let (_, ty_v) = elab.ty(ty_n)?;
-                let (tm_s, _) = elab.chk(&ty_v, tm_n)?;
+                let (_, ty_v) = elab.ty(ty_n);
+                let (tm_s, _) = elab.chk(&ty_v, tm_n);
                 Some(TopElabResult::Output(format!("{tm_s}")))
+            }
+            "uwd" => {
+                let theory = self.get_theory(tn.loc)?;
+                let mut elab = self.elaborator(&theory, toplevel);
+                let (_, ty_v) = elab.ty(tn.body);
+                let Some(uwd) = record_to_uwd(&ty_v) else {
+                    return self.error(tn.loc, "expected a record type");
+                };
+                let out = uwd.to_doc().0.pretty(77).to_string().replace("\n", "\n#/ ");
+                Some(TopElabResult::Output(out))
             }
             "generate" => {
                 let theory = self.get_theory(tn.loc)?;
                 let mut elab = self.elaborator(&theory, toplevel);
-                let (_, ty_v) = elab.ty(tn.body)?;
-                let (model, name_translation) = generate(toplevel, &theory, &ty_v);
-                let mut out = String::new();
-                writeln!(&mut out).unwrap();
-                model_output("#/ ", &mut out, &model, &name_translation).unwrap();
+                let (_, ty_v) = elab.ty(tn.body);
+                let (model, ns) = Model::from_ty(toplevel, &theory.definition, &ty_v);
+                let printer = DblModelPrinter::new().include_summary(true);
+                let out = model.to_doc(&printer, &ns).0.pretty(77).to_string();
+                let out = out.trim().replace("\n", "\n#/ ");
                 Some(TopElabResult::Output(out))
             }
             _ => self.error(tn.loc, "unknown toplevel declaration"),
@@ -220,12 +237,14 @@ impl TopElaborator {
     }
 }
 
-struct Elaborator<'a> {
+/// Text-based elaborator of types.
+pub struct Elaborator<'a> {
     theory: Theory,
     reporter: Reporter,
     toplevel: &'a Toplevel,
     loc: Option<Loc>,
     ctx: Context,
+    next_meta: usize,
 }
 
 struct ElaboratorCheckpoint {
@@ -236,17 +255,19 @@ struct ElaboratorCheckpoint {
 declare_error!(ELAB_ERROR, "elab", "an error during elaboration");
 
 impl<'a> Elaborator<'a> {
-    fn new(theory: Theory, reporter: Reporter, toplevel: &'a Toplevel) -> Self {
+    /// Constructs a new elaborator.
+    pub fn new(theory: Theory, reporter: Reporter, toplevel: &'a Toplevel) -> Self {
         Self {
             theory,
             reporter,
             toplevel,
             loc: None,
             ctx: Context::new(),
+            next_meta: 0,
         }
     }
 
-    fn dbl_theory(&self) -> &DiscreteDblTheory {
+    fn theory(&self) -> &TheoryDef {
         &self.theory.definition
     }
 
@@ -270,9 +291,46 @@ impl<'a> Elaborator<'a> {
         })
     }
 
+    fn fresh_meta(&mut self) -> MetaVar {
+        let i = self.next_meta;
+        self.next_meta += 1;
+        MetaVar::new(None, i)
+    }
+
     fn error<T>(&self, msg: impl Into<String>) -> Option<T> {
         self.reporter.error_option_loc(self.loc, ELAB_ERROR, msg.into());
         None
+    }
+
+    fn ty_hole(&mut self) -> (TyS, TyV) {
+        let ty_m = self.fresh_meta();
+        (TyS::meta(ty_m), TyV::meta(ty_m))
+    }
+
+    fn ty_error(&mut self, msg: impl Into<String>) -> (TyS, TyV) {
+        self.reporter.error_option_loc(self.loc, ELAB_ERROR, msg.into());
+        self.ty_hole()
+    }
+
+    fn syn_hole(&mut self) -> (TmS, TmV, TyV) {
+        let tm_m = self.fresh_meta();
+        let ty_m = self.fresh_meta();
+        (TmS::meta(tm_m), TmV::meta(tm_m), TyV::meta(ty_m))
+    }
+
+    fn syn_error(&mut self, msg: impl Into<String>) -> (TmS, TmV, TyV) {
+        self.reporter.error_option_loc(self.loc, ELAB_ERROR, msg.into());
+        self.syn_hole()
+    }
+
+    fn chk_hole(&mut self) -> (TmS, TmV) {
+        let tm_m = self.fresh_meta();
+        (TmS::meta(tm_m), TmV::meta(tm_m))
+    }
+
+    fn chk_error(&mut self, msg: impl Into<String>) -> (TmS, TmV) {
+        self.reporter.error_option_loc(self.loc, ELAB_ERROR, msg.into());
+        self.chk_hole()
     }
 
     fn evaluator(&self) -> Evaluator<'a> {
@@ -280,12 +338,12 @@ impl<'a> Elaborator<'a> {
     }
 
     fn intro(&mut self, name: VarName, label: LabelSegment, ty: Option<TyV>) -> TmV {
-        let v = TmV::Neu(
+        let v = TmV::neu(
             TmN::var(self.ctx.scope.len().into(), name, label),
             ty.clone().unwrap_or(TyV::unit()),
         );
-        let v = if let Some(ty) = &ty {
-            self.evaluator().eta(&v, ty)
+        let v = if ty.is_some() {
+            self.evaluator().eta(&v, ty.as_ref())
         } else {
             v
         };
@@ -298,57 +356,60 @@ impl<'a> Elaborator<'a> {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
             App2(L(_, Keyword(":")), L(_, Var(name)), ty_n) => {
-                let (ty_s, ty_v) = elab.ty(ty_n)?;
+                let (ty_s, ty_v) = elab.ty(ty_n);
                 Some((name_seg(*name), label_seg(*name), ty_s, ty_v))
             }
             _ => elab.error("unexpected notation for binding"),
         }
     }
 
-    fn lookup_ty(&self, name: VarName) -> Option<(TyS, TyV)> {
+    fn lookup_ty(&mut self, name: VarName) -> (TyS, TyV) {
         let qname = QualifiedName::single(name);
-        if self.dbl_theory().has_ob(&qname) {
-            Some((TyS::object(qname.clone()), TyV::object(qname)))
+        if let Some(ob_type) = self.theory().basic_ob_type(qname) {
+            (TyS::object(ob_type.clone()), TyV::object(ob_type))
         } else if let Some(d) = self.toplevel.declarations.get(&name) {
             match d {
                 TopDecl::Type(t) => {
                     if t.theory == self.theory {
-                        Some((TyS::topvar(name), t.val.clone()))
+                        (TyS::topvar(name), t.val.clone())
                     } else {
-                        self.error(format!(
+                        self.ty_error(format!(
                             "{name} refers to a type in theory {}, expected a type in theory {}",
                             t.theory, self.theory
                         ))
                     }
                 }
                 TopDecl::Def(_) | TopDecl::DefConst(_) => {
-                    self.error(format!("{name} refers to a term not a type"))
+                    self.ty_error(format!("{name} refers to a term not a type"))
                 }
             }
         } else {
-            self.error(format!("no such type {name} defined"))
+            self.ty_error(format!("no such type {name} defined"))
         }
     }
 
-    fn morphism_ty(&mut self, n: &FNtn) -> Option<(MorphismType, ObjectType, ObjectType)> {
+    fn morphism_ty(&mut self, n: &FNtn) -> Option<(MorType, ObType, ObType)> {
         let elab = self.enter(n.loc());
+        let theory = elab.theory();
         match n.ast0() {
-            App1(L(_, Keyword("Id")), L(_, Var(name))) => {
+            App1(L(_, Keyword("Hom")), L(_, Var(name))) => {
                 let qname = QualifiedName::single(name_seg(*name));
-                if elab.dbl_theory().has_ob(&qname) {
-                    Some((MorphismType(Path::Id(qname.clone())), qname.clone(), qname))
+                if let Some(ob_type) = theory.basic_ob_type(qname) {
+                    if let Some(hom_type) = theory.hom_type(ob_type.clone()) {
+                        Some((hom_type, ob_type.clone(), ob_type))
+                    } else {
+                        elab.error(format!("object type {name} does not have hom type"))
+                    }
                 } else {
                     elab.error(format!("no such object type {name}"))
                 }
             }
             Var(name) => {
                 let qname = QualifiedName::single(name_seg(*name));
-                let mt = Path::single(qname);
-                let theory = elab.dbl_theory();
-                if theory.has_proarrow(&mt) {
-                    let dom = theory.src(&mt);
-                    let cod = theory.tgt(&mt);
-                    Some((MorphismType(mt), dom, cod))
+                if let Some(mor_type) = theory.basic_mor_type(qname) {
+                    let dom = theory.src_type(&mor_type);
+                    let cod = theory.tgt_type(&mor_type);
+                    Some((mor_type, dom, cod))
                 } else {
                     elab.error(format!("no such morphism type {name}"))
                 }
@@ -376,44 +437,43 @@ impl<'a> Elaborator<'a> {
         match n.ast0() {
             App2(L(_, Keyword(":")), p_n, ty_n) => {
                 let p = elab.path(p_n)?;
-                let (ty_s, ty_v) = elab.ty(ty_n)?;
+                let (ty_s, ty_v) = elab.ty(ty_n);
                 Some((p, ty_s, ty_v))
             }
             App2(L(_, Keyword(":=")), p_n, tm_n) => {
                 let p = elab.path(p_n)?;
-                let (tm_s, tm_v, ty_v) = elab.syn(tm_n)?;
+                let (tm_s, tm_v, ty_v) = elab.syn(tm_n);
                 Some((p, TyS::sing(elab.evaluator().quote_ty(&ty_v), tm_s), TyV::sing(ty_v, tm_v)))
             }
             _ => elab.error("unexpected notation for specialization"),
         }
     }
 
-    fn ty(&mut self, n: &FNtn) -> Option<(TyS, TyV)> {
+    /// Elaborates a type from notation, returning both syntax and value.
+    pub fn ty(&mut self, n: &FNtn) -> (TyS, TyV) {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
             Var(name) => elab.lookup_ty(name_seg(*name)),
-            Keyword("Unit") => Some((TyS::unit(), TyV::unit())),
+            Keyword("Unit") => (TyS::unit(), TyV::unit()),
             App1(L(_, Prim("sing")), tm_n) => {
-                let (tm_s, tm_v, ty_v) = elab.syn(tm_n)?;
-                Some((TyS::sing(elab.evaluator().quote_ty(&ty_v), tm_s), TyV::sing(ty_v, tm_v)))
+                let (tm_s, tm_v, ty_v) = elab.syn(tm_n);
+                (TyS::sing(elab.evaluator().quote_ty(&ty_v), tm_s), TyV::sing(ty_v, tm_v))
             }
             App1(mt_n, L(_, Tuple(domcod_n))) => {
-                if domcod_n.len() != 2 {
-                    return elab.error("expected two arguments for morphism type");
-                }
-                let (mt, dom_ty, cod_ty) = elab.morphism_ty(mt_n)?;
-                let (dom_s, dom_v) = elab.chk(&TyV::object(dom_ty.clone()), domcod_n[0])?;
-                let (cod_s, cod_v) = elab.chk(&TyV::object(cod_ty.clone()), domcod_n[1])?;
-                Some((
-                    TyS::morphism(mt.clone(), dom_s, cod_s),
-                    TyV::morphism(mt.clone(), dom_v, cod_v),
-                ))
+                let [dom_n, cod_n] = domcod_n.as_slice() else {
+                    return elab.ty_error("expected two arguments for morphism type");
+                };
+                let Some((mt, dom_ty, cod_ty)) = elab.morphism_ty(mt_n) else {
+                    return elab.ty_hole();
+                };
+                let (dom_s, dom_v) = elab.chk(&TyV::object(dom_ty.clone()), dom_n);
+                let (cod_s, cod_v) = elab.chk(&TyV::object(cod_ty.clone()), cod_n);
+                (TyS::morphism(mt.clone(), dom_s, cod_s), TyV::morphism(mt.clone(), dom_v, cod_v))
             }
             Tuple(field_ns) => {
-                let mut field_ty0s = Vec::<(FieldName, (LabelSegment, Ty0))>::new();
                 let mut field_ty_vs = Vec::<(FieldName, (LabelSegment, TyV))>::new();
                 let mut failed = false;
-                let self_var = elab.intro(name_seg("self"), label_seg("self"), None).as_neu();
+                let self_var = elab.intro(name_seg("self"), label_seg("self"), None).unwrap_neu();
                 let c = elab.checkpoint();
                 for field_n in field_ns.iter() {
                     elab.loc = Some(field_n.loc());
@@ -423,35 +483,28 @@ impl<'a> Elaborator<'a> {
                         }
                         _ => elab.error("expected fields in the form <name> : <type>"),
                     }) else {
-                        println!("failed");
                         failed = true;
                         continue;
                     };
-                    let Some((_, ty_v)) = elab.ty(ty_n) else {
-                        failed = true;
-                        continue;
-                    };
-                    field_ty0s.push((name, (label, ty_v.ty0())));
+                    let (_, ty_v) = elab.ty(ty_n);
                     field_ty_vs.push((name, (label, ty_v.clone())));
                     elab.ctx.push_scope(name, label, Some(ty_v.clone()));
                     elab.ctx.env =
-                        elab.ctx.env.snoc(TmV::Neu(TmN::proj(self_var.clone(), name, label), ty_v));
+                        elab.ctx.env.snoc(TmV::neu(TmN::proj(self_var.clone(), name, label), ty_v));
                 }
                 if failed {
-                    return None;
+                    return elab.ty_hole();
                 }
                 elab.reset_to(c);
                 let field_tys: Row<_> = field_ty_vs
                     .iter()
                     .map(|(name, (label, ty_v))| (*name, (*label, elab.evaluator().quote_ty(ty_v))))
                     .collect();
-                let field_ty0s: Row<_> = field_ty0s.into_iter().collect();
-                let r_s = RecordS::new(field_ty0s.clone(), field_tys.clone());
-                let r_v = RecordV::new(field_ty0s, elab.ctx.env.clone(), field_tys, Dtry::empty());
-                Some((TyS::record(r_s), TyV::record(r_v)))
+                let r_v = RecordV::new(elab.ctx.env.clone(), field_tys.clone(), Dtry::empty());
+                (TyS::record(field_tys), TyV::record(r_v))
             }
             App2(L(_, Keyword("&")), ty_n, L(_, Tuple(specialization_ns))) => {
-                let (ty_s, mut ty_v) = elab.ty(ty_n)?;
+                let (ty_s, mut ty_v) = elab.ty(ty_n);
                 let mut specializations = Vec::new();
                 // Approach:
                 //
@@ -461,119 +514,166 @@ impl<'a> Elaborator<'a> {
                 // 2. Iteratively apply try_specialize to each specialization in turn.
                 for specialization_n in specialization_ns.iter() {
                     elab.loc = Some(specialization_n.loc());
-                    let (path, sty_s, sty_v) = elab.specialization(specialization_n)?;
+                    let Some((path, sty_s, sty_v)) = elab.specialization(specialization_n) else {
+                        return elab.ty_hole();
+                    };
                     match elab.evaluator().try_specialize(&ty_v, &path, sty_v) {
                         Ok(specialized) => {
                             ty_v = specialized;
                             specializations.push((path, sty_s));
                         }
                         Err(s) => {
-                            return elab.error(format!("Failed to specialize:\n... because {s}"));
+                            return elab
+                                .ty_error(format!("Failed to specialize:\n... because {s}"));
                         }
                     }
                 }
-                Some((TyS::specialize(ty_s, specializations), ty_v))
+                (TyS::specialize(ty_s, specializations), ty_v)
             }
-            _ => elab.error("unexpected notation for type"),
+            App2(L(_, Keyword("==")), tm1_n, tm2_n) => {
+                let (tm1_s, tm1_v, tm1_ty) = elab.syn(tm1_n);
+                let (tm2_s, tm2_v, tm2_ty) = elab.syn(tm2_n);
+                let TyV_::Morphism(_, _, _) = &*tm1_ty else {
+                    elab.loc = Some(tm1_n.loc());
+                    return elab.ty_error("Equality types are only supported for morphisms");
+                };
+                if let Err(e) = elab.evaluator().convertible_ty(&tm1_ty, &tm2_ty) {
+                    let eval = elab.evaluator();
+                    return elab.ty_error(format!(
+                        "types {} and {} are not convertible:\n{}",
+                        eval.quote_ty(&tm1_ty),
+                        eval.quote_ty(&tm2_ty),
+                        e.pretty()
+                    ));
+                }
+                let eq_ty_s = TyS::id(elab.evaluator().quote_ty(&tm1_ty), tm1_s, tm2_s);
+                let eq_ty_v = TyV::id(tm1_ty, tm1_v, tm2_v);
+                (eq_ty_s, eq_ty_v)
+            }
+            _ => elab.ty_error("unexpected notation for type"),
         }
     }
 
-    fn lookup_tm(&mut self, name: Ustr) -> Option<(TmS, TmV, TyV)> {
+    fn lookup_tm(&mut self, name: Ustr) -> (TmS, TmV, TyV) {
         let label = label_seg(name);
         let name = name_seg(name);
         if let Some((i, _, ty)) = self.ctx.lookup(name) {
-            Some((
+            (
                 TmS::var(i, name, label),
                 self.ctx.env.get(*i).unwrap().clone(),
                 ty.clone().unwrap(),
-            ))
+            )
         } else if let Some(d) = self.toplevel.lookup(name) {
             match d {
-                TopDecl::Type(_) => self.error(format!("{name} refers type, not term")),
-                TopDecl::DefConst(d) => Some((TmS::topvar(name), d.val.clone(), d.ty.clone())),
-                TopDecl::Def(_) => self.error(format!("{name} must be applied to arguments")),
+                TopDecl::Type(_) => self.syn_error(format!("{name} refers type, not term")),
+                TopDecl::DefConst(d) => (TmS::topvar(name), d.val.clone(), d.ty.clone()),
+                TopDecl::Def(_) => self.syn_error(format!("{name} must be applied to arguments")),
             }
         } else {
-            self.error(format!("no such variable {name}"))
+            self.syn_error(format!("no such variable {name}"))
         }
     }
 
-    fn syn(&mut self, n: &FNtn) -> Option<(TmS, TmV, TyV)> {
+    /// Elaborates a term from notation, returning syntax, value, and synthesized type.
+    fn syn(&mut self, n: &FNtn) -> (TmS, TmV, TyV) {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
             Var(name) => elab.lookup_tm(ustr(name)),
             App1(tm_n, L(_, Field(f))) => {
-                let (tm_s, tm_v, ty_v) = elab.syn(tm_n)?;
+                let (tm_s, tm_v, ty_v) = elab.syn(tm_n);
                 let TyV_::Record(r) = &*ty_v else {
-                    return elab.error("can only project from record type");
+                    return elab.syn_error("can only project from record type");
                 };
                 let label = label_seg(*f);
                 let f = name_seg(*f);
-                if !r.fields1.has(f) {
-                    return elab.error(format!("no such field {f}"));
+                if !r.fields.has(f) {
+                    return elab.syn_error(format!("no such field {f}"));
                 }
-                Some((
+                (
                     TmS::proj(tm_s, f, label),
                     elab.evaluator().proj(&tm_v, f, label),
                     elab.evaluator().field_ty(&ty_v, &tm_v, f),
-                ))
+                )
             }
             App1(L(_, Prim("id")), ob_n) => {
-                let (ob_s, ob_v, ob_t) = elab.syn(ob_n)?;
-                let TyV_::Object(ot) = &*ob_t else {
-                    return elab.error("can only apply @id to objects");
+                let (ob_s, ob_v, ob_t) = elab.syn(ob_n);
+                let TyV_::Object(ob_type) = &*ob_t else {
+                    return elab.syn_error("can only apply @id to objects");
                 };
-                Some((
+                let Some(mor_type) = elab.theory().hom_type(ob_type.clone()) else {
+                    return elab.syn_error("object type does not have a hom type");
+                };
+                (
                     TmS::id(ob_s),
-                    TmV::Tt,
-                    TyV::morphism(MorphismType(Path::Id(ot.clone())), ob_v.clone(), ob_v),
-                ))
+                    TmV::id(ob_v.clone()),
+                    TyV::morphism(mor_type, ob_v.clone(), ob_v),
+                )
+            }
+            App1(L(_, Prim("tab")), mor_n) => {
+                let (mor_s, mor_v, mor_t) = elab.syn(mor_n);
+                let TyV_::Morphism(mor_type, _, _) = &*mor_t else {
+                    return elab.syn_error("can only apply @tab to morphisms");
+                };
+                let Some(ob_type) = elab.theory().tabulator(mor_type.clone()) else {
+                    return elab.syn_error("theory does not have tabulators");
+                };
+                (TmS::tab(mor_s), TmV::tab(mor_v.clone()), TyV::object(ob_type))
+            }
+            App1(L(_, Prim(name)), ob_n) => {
+                let name = name_seg(*name);
+                let Some(ob_op) = elab.theory().basic_ob_op([name].into()) else {
+                    let th_name = elab.theory.name.to_string();
+                    return elab.syn_error(format!("operation @{name} not in theory {th_name}"));
+                };
+                let dom = elab.theory().ob_op_dom(&ob_op);
+                let (arg_s, arg_v) = elab.chk(&TyV::object(dom), ob_n);
+                let cod = elab.theory().ob_op_cod(&ob_op);
+                (TmS::ob_app(name, arg_s), TmV::app(name, arg_v), TyV::object(cod))
             }
             App2(L(_, Keyword("*")), f_n, g_n) => {
-                let (f_s, _, f_ty) = elab.syn(f_n)?;
-                let (g_s, _, g_ty) = elab.syn(g_n)?;
+                let (f_s, f_v, f_ty) = elab.syn(f_n);
+                let (g_s, g_v, g_ty) = elab.syn(g_n);
                 let TyV_::Morphism(f_mt, f_dom, f_cod) = &*f_ty else {
                     elab.loc = Some(f_n.loc());
-                    return elab.error("expected a morphism");
+                    return elab.syn_error("expected a morphism");
                 };
                 let TyV_::Morphism(g_mt, g_dom, g_cod) = &*g_ty else {
                     elab.loc = Some(g_n.loc());
-                    return elab.error("expected a morphism");
+                    return elab.syn_error("expected a morphism");
                 };
-                if elab.dbl_theory().tgt(&f_mt.0) != elab.dbl_theory().src(&g_mt.0) {
-                    return elab.error("incompatible morphism types");
+                let theory = elab.theory();
+                if theory.tgt_type(f_mt) != theory.src_type(g_mt) {
+                    return elab.syn_error("incompatible morphism types");
                 }
                 if let Err(s) = elab.evaluator().equal_tm(f_cod, g_dom) {
-                    return elab.error(format!(
+                    let f_cod_s = elab.evaluator().quote_tm(f_cod);
+                    let g_dom_s = elab.evaluator().quote_tm(g_dom);
+                    return elab.syn_error(format!(
                         "codomain {} and domain {} not equal:\n...because {}",
-                        elab.evaluator().quote_tm(f_cod),
-                        elab.evaluator().quote_tm(g_dom),
-                        s.pretty()
+                        f_cod_s,
+                        g_dom_s,
+                        s.pretty(),
                     ));
                 }
-                Some((
+                (
                     TmS::compose(f_s, g_s),
-                    TmV::Tt,
+                    TmV::compose(f_v, g_v),
                     TyV::morphism(
-                        MorphismType(
-                            elab.dbl_theory()
-                                .compose_types(Path::Seq(nonempty![f_mt.0.clone(), g_mt.0.clone()]))
-                                .unwrap(),
-                        ),
+                        elab.theory().compose_types2(f_mt.clone(), g_mt.clone()).unwrap(),
                         f_dom.clone(),
                         g_cod.clone(),
                     ),
-                ))
+                )
             }
             App1(L(_, Var(tv)), L(_, Tuple(args_n))) => {
                 let tv = name_seg(*tv);
                 let Some(TopDecl::Def(d)) = elab.toplevel.lookup(tv) else {
-                    return elab.error(format!("no such toplevel def {tv}"));
+                    return elab.syn_error(format!("no such toplevel def {tv}"));
                 };
                 let mut arg_stxs = Vec::new();
                 let mut env = Env::nil();
                 if args_n.len() != d.args.len() {
-                    return elab.error(format!(
+                    return elab.syn_error(format!(
                         "wrong number of args for {tv}, expected {}, got {}",
                         d.args.len(),
                         args_n.len()
@@ -581,64 +681,79 @@ impl<'a> Elaborator<'a> {
                 }
                 for (arg_n, (_, (_, arg_ty_s))) in args_n.iter().zip(d.args.iter()) {
                     let arg_ty_v = elab.evaluator().with_env(env.clone()).eval_ty(arg_ty_s);
-                    let (arg_s, arg_v) = elab.chk(&arg_ty_v, arg_n)?;
+                    let (arg_s, arg_v) = elab.chk(&arg_ty_v, arg_n);
                     arg_stxs.push(arg_s);
                     env = env.snoc(arg_v);
                 }
                 let eval = elab.evaluator().with_env(env.clone());
-                Some((TmS::topapp(tv, arg_stxs), eval.eval_tm(&d.body), eval.eval_ty(&d.ret_ty)))
+                (TmS::topapp(tv, arg_stxs), eval.eval_tm(&d.body), eval.eval_ty(&d.ret_ty))
             }
-            Tag("tt") => Some((TmS::tt(), TmV::Tt, TyV::unit())),
-            Tuple(_) => elab.error("must check agains a type in order to construct a record"),
-            _ => elab.error("unexpected notation for term"),
+            Tag("tt") => (TmS::tt(), TmV::tt(), TyV::unit()),
+            Tuple(_) => elab.syn_error("must check against a type in order to construct a record"),
+            Prim("hole") => elab.syn_error("explicit hole"),
+            _ => elab.syn_error("unexpected notation for term"),
         }
     }
 
-    fn chk(&mut self, ty: &TyV, n: &FNtn) -> Option<(TmS, TmV)> {
+    /// Elaborates a term from notation, checking against an expected type, and returning syntax and value.
+    fn chk(&mut self, ty: &TyV, n: &FNtn) -> (TmS, TmV) {
         let mut elab = self.enter(n.loc());
-        match n.ast0() {
-            Tuple(field_ns) => {
-                let TyV_::Record(r) = &**ty else {
-                    return elab.error("must check record former against record type");
-                };
-                if r.fields1.len() != field_ns.len() {
-                    return elab.error(format!(
+        match (&**ty, n.ast0()) {
+            (TyV_::Record(r), Tuple(field_ns)) => {
+                if r.fields.len() != field_ns.len() {
+                    return elab.chk_error(format!(
                         "wrong number of fields provided, expected {}, got {}",
-                        r.fields1.len(),
-                        r.fields0.len(),
+                        r.fields.len(),
+                        field_ns.len(),
                     ));
                 }
                 let mut field_stxs = IndexMap::new();
                 let mut field_vals = IndexMap::new();
-                for (field_n, (name, (label, field_ty_s))) in field_ns.iter().zip(r.fields1.iter())
-                {
+                for (field_n, (name, (label, field_ty_s))) in field_ns.iter().zip(r.fields.iter()) {
                     elab.loc = Some(field_n.loc());
                     let tm_n = match field_n.ast0() {
                         App2(L(_, Keyword(":=")), L(_, Var(given_name)), field_val_n) => {
                             if name_seg(*given_name) == *name {
                                 field_val_n
                             } else {
-                                return elab.error(format!("unexpected field {given_name}"));
+                                return elab.chk_error(format!("unexpected field {given_name}"));
                             }
                         }
                         _ => {
-                            return elab.error("unexpected notation for field");
+                            return elab.chk_error("unexpected notation for field");
                         }
                     };
-                    let v = TmV::Cons(field_vals.clone().into());
+                    let v = TmV::cons(field_vals.clone().into());
                     let field_ty_v =
                         elab.evaluator().with_env(r.env.snoc(v.clone())).eval_ty(field_ty_s);
-                    let (tm_s, tm_v) = elab.chk(&field_ty_v, tm_n)?;
+                    let (tm_s, tm_v) = elab.chk(&field_ty_v, tm_n);
                     field_stxs.insert(*name, (*label, tm_s));
                     field_vals.insert(*name, (*label, tm_v));
                 }
-                Some((TmS::cons(field_stxs.into()), TmV::Cons(field_vals.into())))
+                (TmS::cons(field_stxs.into()), TmV::cons(field_vals.into()))
             }
+            (TyV_::Object(ob_type), Tuple(ob_ns)) => {
+                let Some(ob_type) = ob_type.clone().list_arg() else {
+                    return elab.chk_error("expected to object type to be a list");
+                };
+                let elem_ty_v = TyV::object(ob_type);
+                let mut elem_stxs = Vec::new();
+                let mut elem_vals = Vec::new();
+                for ob_n in ob_ns {
+                    elab.loc = Some(ob_n.loc());
+                    let (tm_s, tm_v) = elab.chk(&elem_ty_v, ob_n);
+                    elem_stxs.push(tm_s);
+                    elem_vals.push(tm_v);
+                }
+                (TmS::list(elem_stxs), TmV::list(elem_vals))
+            }
+            (_, Tuple(_)) => elab.chk_error("tuple expected to be record or object/morphism type"),
+            (_, Prim("hole")) => elab.chk_error("explicit hole"),
             _ => {
-                let (tm_s, tm_v, synthed) = elab.syn(n)?;
+                let (tm_s, tm_v, synthed) = elab.syn(n);
                 let eval = elab.evaluator();
-                if let Err(e) = eval.convertable_ty(&synthed, ty) {
-                    return elab.error(format!(
+                if let Err(e) = eval.convertible_ty(&synthed, ty) {
+                    return elab.chk_error(format!(
                         "synthesized type {} does not match expected type {}:\n{}",
                         eval.quote_ty(&synthed),
                         eval.quote_ty(ty),
@@ -646,15 +761,94 @@ impl<'a> Elaborator<'a> {
                     ));
                 }
                 if let Err(e) = eval.element_of(&tm_v, ty) {
-                    return elab.error(format!(
+                    return elab.chk_error(format!(
                         "evaluated term {} is not an element of specialized type {}:\n{}",
                         eval.quote_tm(&tm_v),
                         eval.quote_ty(ty),
                         e.pretty()
                     ));
                 }
-                Some((tm_s, tm_v))
+                (tm_s, tm_v)
             }
         }
+    }
+}
+
+// NOTE: Most tests for the text elaborator are in the `examples` dir.
+#[cfg(test)]
+mod tests {
+    use expect_test::expect;
+    use std::rc::Rc;
+
+    use crate::stdlib;
+    use crate::tt::modelgen::Model;
+
+    #[test]
+    fn generate_model_from_text() {
+        let th = Rc::new(stdlib::th_signed_category());
+        let source = "[
+            x : Object,
+            loop : Negative[x, x]
+        ]";
+        let model = Model::from_text(&th.clone().into(), source).unwrap();
+        let model = model.as_discrete().unwrap();
+        assert_eq!(model, stdlib::models::negative_loop(th));
+    }
+
+    /// Check that a commutative square really produces a model with exactly one equation.
+    #[test]
+    fn generate_model_with_eqn() {
+        let th = Rc::new(stdlib::th_schema()).into();
+        let source = "[
+            NW : Entity,
+            NE : Entity,
+            SW : Entity,
+            SE : Entity,
+            t : (Hom Entity)[NW,NE],
+            l : (Hom Entity)[NW,SW],
+            r : (Hom Entity)[NE,SE],
+            b : (Hom Entity)[SW, SE],
+            comm : (t * r == l * b)
+        ]";
+        let model = Model::from_text(&th, source).unwrap().as_discrete().unwrap();
+        let eqns: Vec<_> = model.category.equations().collect();
+        assert_eq!(eqns.len(), 1);
+    }
+
+    #[test]
+    fn text_error_reporting() {
+        let th = Rc::new(stdlib::th_schema()).into();
+
+        let result = Model::from_text(&th, "[ : Entit]");
+        let expected = expect![[r#"
+            error[elab]: expected fields in the form <name> : <type>
+            --> <none>:1:3
+            1| [ : Entit]
+            1|   ^^^^^^^
+        "#]];
+        expected.assert_eq(&result.err().unwrap());
+
+        let result = Model::from_text(&th, "[x : Entity, f : Hom(Entit)[x,x]]");
+        let expected = expect![[r#"
+            error[elab]: no such object type Entit
+            --> <none>:1:18
+            1| [x : Entity, f : Hom(Entit)[x,x]]
+            1|                  ^^^^^^^^^^
+        "#]];
+        expected.assert_eq(&result.err().unwrap());
+
+        let result = Model::from_text(&th, "[x : Entity, f : Hom(Entity)[x,y]]");
+        let expected = expect![[r#"
+            error[elab]: no such variable y
+            --> <none>:1:32
+            1| [x : Entity, f : Hom(Entity)[x,y]]
+            1|                                ^
+            error[elab]: synthesized type ?1 does not match expected type Entity:
+            tried to convert between types of different type constructors
+            --> <none>:1:32
+            1| [x : Entity, f : Hom(Entity)[x,y]]
+            1|                                ^
+        "#]];
+        expected.assert_eq(&result.err().unwrap());
     }
 }

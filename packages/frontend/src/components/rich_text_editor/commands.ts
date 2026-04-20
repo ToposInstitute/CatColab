@@ -1,6 +1,7 @@
 import { chainCommands, wrapIn } from "prosemirror-commands";
 import { liftListItem, sinkListItem, wrapInList } from "prosemirror-schema-list";
 import { type Command, NodeSelection, type Transaction } from "prosemirror-state";
+
 import type { CustomSchema } from "./schema";
 import { hasContent } from "./utils";
 
@@ -61,19 +62,16 @@ export const insertLinkCmd: Command = (state, dispatch) => {
     return true;
 };
 
-// Currently does not work due to bug in the automerge-prosemirror plugin. (It also might not work in
-// general, but it theoretically should)
-// copied from: https://github.com/benrbray/prosemirror-math/blob/master/lib/commands/insert-math-cmd.ts
 export const insertMathInlineCmd: Command = (state, dispatch) => {
     const schema = state.schema as CustomSchema;
     const { $from } = state.selection;
     const index = $from.index();
-    if (!$from.parent.canReplaceWith(index, index, schema.nodes.math_display)) {
+    if (!$from.parent.canReplaceWith(index, index, schema.nodes.math_inline)) {
         return false;
     }
 
     if (dispatch) {
-        const mathNode = schema.nodes.math_display.create({}, null);
+        const mathNode = schema.nodes.math_inline.create({ tex: "" });
 
         let tr = state.tr.replaceSelectionWith(mathNode);
         tr = tr.setSelection(NodeSelection.create(tr.doc, $from.pos));
@@ -154,7 +152,9 @@ export function doIfEmpty(callback: (dispatch: (tr: Transaction) => void) => voi
         if (hasContent(state)) {
             return false;
         }
-        dispatch && callback(dispatch);
+        if (dispatch) {
+            callback(dispatch);
+        }
         return true;
     };
 }
@@ -174,7 +174,9 @@ export function doIfAtTop(callback: (dispatch: (tr: Transaction) => void) => voi
         ) {
             return false;
         }
-        dispatch && callback(dispatch);
+        if (dispatch) {
+            callback(dispatch);
+        }
         return true;
     };
 }
@@ -194,7 +196,9 @@ export function doIfAtBottom(callback: (dispatch: (tr: Transaction) => void) => 
         ) {
             return false;
         }
-        dispatch && callback(dispatch);
+        if (dispatch) {
+            callback(dispatch);
+        }
         return true;
     };
 }

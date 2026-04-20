@@ -16,7 +16,7 @@ type DiscreteDblTheoryMap = FpFunctorData<
 /// schema, yielding a schema with no attributes or attribute types.
 pub fn th_category_to_schema() -> DiscreteDblTheoryMap {
     FpFunctorData::new(
-        HashColumn::new([(name("Object"), name("Entity"))].into()),
+        HashColumn::from_iter([(name("Object"), name("Entity"))]),
         HashColumn::default(),
     )
 }
@@ -27,10 +27,11 @@ pub fn th_category_to_schema() -> DiscreteDblTheoryMap {
 /// attribute types, turning both into objects in a category.
 pub fn th_schema_to_category() -> DiscreteDblTheoryMap {
     FpFunctorData::new(
-        HashColumn::new(
-            [(name("Entity"), name("Object")), (name("AttrType"), name("Object"))].into(),
-        ),
-        HashColumn::new([(name("Attr"), Path::Id(name("Object")))].into()),
+        HashColumn::from_iter([
+            (name("Entity"), name("Object")),
+            (name("AttrType"), name("Object")),
+        ]),
+        HashColumn::from_iter([(name("Attr"), Path::Id(name("Object")))]),
     )
 }
 
@@ -39,17 +40,14 @@ pub fn th_schema_to_category() -> DiscreteDblTheoryMap {
 /// Sigma migration along this map forgets about the delays.
 pub fn th_delayable_signed_category_to_signed_category() -> DiscreteDblTheoryMap {
     FpFunctorData::new(
-        HashColumn::new([(name("Object"), name("Object"))].into()),
-        HashColumn::new(
-            [
-                (name("Negative"), name("Negative").into()),
-                (name("Slow"), Path::Id(name("Object"))),
-                // TODO: Shouldn't have to define on these superfluous generators.
-                (name("PositiveSlow"), Path::Id(name("Object"))),
-                (name("NegativeSlow"), name("Negative").into()),
-            ]
-            .into(),
-        ),
+        HashColumn::from_iter([(name("Object"), name("Object"))]),
+        HashColumn::from_iter([
+            (name("Negative"), name("Negative").into()),
+            (name("Slow"), Path::Id(name("Object"))),
+            // TODO: Shouldn't have to define on these superfluous generators.
+            (name("PositiveSlow"), Path::Id(name("Object"))),
+            (name("NegativeSlow"), name("Negative").into()),
+        ]),
     )
 }
 

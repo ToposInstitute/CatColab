@@ -1,6 +1,11 @@
+import { lazy } from "solid-js";
+
 import { ThCategoryLinks } from "catlog-wasm";
 import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
+
+const ObjectCellEditor = lazy(() => import("../../model/object_cell_editor"));
+const MorphismCellEditor = lazy(() => import("../../model/morphism_cell_editor"));
 
 import styles from "../styles.module.css";
 import svgStyles from "../svg_styles.module.css";
@@ -11,11 +16,13 @@ export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): 
     return new Theory({
         ...theoryMeta,
         theory: thCategoryLinks.theory(),
+        inclusions: ["primitive-signed-stock-flow"],
         onlyFreeModels: true,
         modelTypes: [
             {
                 tag: "ObType",
                 obType: { tag: "Basic", content: "Object" },
+                editor: ObjectCellEditor,
                 name: "Stock",
                 description: "Thing with an amount",
                 shortcut: ["S"],
@@ -28,6 +35,7 @@ export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): 
                     tag: "Hom",
                     content: { tag: "Basic", content: "Object" },
                 },
+                editor: MorphismCellEditor,
                 name: "Flow",
                 description: "Flow from one stock to another",
                 shortcut: ["F"],
@@ -36,6 +44,7 @@ export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): 
             {
                 tag: "MorType",
                 morType: { tag: "Basic", content: "Link" },
+                editor: MorphismCellEditor,
                 name: "Link",
                 description: "Influence of a stock on a flow",
                 preferUnnamed: true,
@@ -50,11 +59,19 @@ export default function createPrimitiveStockFlowTheory(theoryMeta: TheoryMeta): 
                 help: "visualization",
             }),
             analyses.massAction({
+                ratesHaveGranularity: false,
                 simulate(model, data) {
                     return thCategoryLinks.massAction(model, data);
                 },
-                isTransition(morType) {
-                    return morType.tag === "Hom";
+                transitionType: {
+                    tag: "Hom",
+                    content: { tag: "Basic", content: "Object" },
+                },
+            }),
+            analyses.massActionEquations({
+                ratesHaveGranularity: false,
+                getEquations(model, data) {
+                    return thCategoryLinks.massActionEquations(model, data);
                 },
             }),
         ],

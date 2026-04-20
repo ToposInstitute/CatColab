@@ -1,5 +1,5 @@
 import { type ChangeFn, Repo } from "@automerge/automerge-repo";
-import { assert, afterAll, describe, test } from "vitest";
+import { afterAll, assert, describe, test } from "vitest";
 
 import { DblModel } from "catlog-wasm";
 import { NotebookUtils, newFormalCell, newRichTextCell } from "../notebook/types";
@@ -16,7 +16,7 @@ const models = ModelLibrary.withRepo(repo, stdTheories);
 afterAll(() => models.destroy());
 
 describe("Model in library", async () => {
-    const modelDoc = newModelDocument("empty");
+    const modelDoc = newModelDocument({ theory: "empty" });
     const docHandle = repo.create(modelDoc);
 
     const getEntry = await models.getElaboratedModel(docHandle.documentId);
@@ -85,7 +85,7 @@ describe("Model in library", async () => {
         assert.strictEqual(generation(), 3);
     });
 
-    const anotherModelDoc = newModelDocument("causal-loop");
+    const anotherModelDoc = newModelDocument({ theory: "causal-loop" });
     NotebookUtils.appendCell(
         anotherModelDoc.notebook,
         newFormalCell(newObjectDecl({ tag: "Basic", content: "Object" })),
@@ -107,7 +107,7 @@ describe("Model in library", async () => {
         assert.strictEqual(models.size, 2);
     });
 
-    const cyclicModel = newModelDocument("empty");
+    const cyclicModel = newModelDocument({ theory: "empty" });
     const cyclicModelHandle = repo.create(cyclicModel);
     cyclicModelHandle.change((doc) => {
         NotebookUtils.appendCell(

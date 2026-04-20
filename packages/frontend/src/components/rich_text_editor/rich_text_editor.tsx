@@ -1,12 +1,25 @@
-import type { Prop } from "@automerge/automerge";
-import type { DocHandle } from "@automerge/automerge-repo";
+import type { Patch, Prop } from "@automerge/automerge";
+import type { DocHandle, DocHandleChangePayload } from "@automerge/automerge-repo";
 import {
-    REGEX_BLOCK_MATH_DOLLARS,
     makeBlockMathInputRule,
     mathBackspaceCmd,
     mathPlugin,
     mathSerializer,
+    REGEX_BLOCK_MATH_DOLLARS,
+    REGEX_INLINE_MATH_DOLLARS,
 } from "@benrbray/prosemirror-math";
+import Bold from "lucide-solid/icons/bold";
+import ChevronDown from "lucide-solid/icons/chevron-down";
+import ChevronUp from "lucide-solid/icons/chevron-up";
+import Indent from "lucide-solid/icons/indent";
+import Italic from "lucide-solid/icons/italic";
+import Link from "lucide-solid/icons/link";
+import List from "lucide-solid/icons/list";
+import ListOrdered from "lucide-solid/icons/list-ordered";
+import Outdent from "lucide-solid/icons/outdent";
+import Sigma from "lucide-solid/icons/sigma";
+import TextQuote from "lucide-solid/icons/text-quote";
+import Variable from "lucide-solid/icons/variable";
 import {
     baseKeymap,
     chainCommands,
@@ -16,12 +29,12 @@ import {
     setBlockType,
     toggleMark,
 } from "prosemirror-commands";
-import { inputRules } from "prosemirror-inputrules";
+import { InputRule, inputRules } from "prosemirror-inputrules";
 import { keymap } from "prosemirror-keymap";
 import { splitListItem } from "prosemirror-schema-list";
 import { type Command, EditorState, type Plugin, type Transaction } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
-import { type JSX, Show, createEffect, createSignal, onCleanup } from "solid-js";
+import { createEffect, createSignal, type JSX, onCleanup, Show } from "solid-js";
 
 import { useDocHandleReady } from "../../api/document";
 import {
@@ -32,11 +45,13 @@ import {
     increaseListIndet,
     insertLinkCmd,
     insertMathDisplayCmd,
+    insertMathInlineCmd,
     toggleBulletList,
     toggleOrderedList,
     turnSelectionIntoBlockquote,
 } from "./commands";
 import { getLinkFromHouseEvent, linkEditorPlugin } from "./link_editor";
+import { MathInlineView } from "./math_inline_view";
 import { type CustomSchema, proseMirrorAutomergeInit } from "./schema";
 import { activeHeading, initPlaceholderPlugin, isMarkActive } from "./utils";
 
@@ -44,16 +59,6 @@ import "katex/dist/katex.min.css";
 import "@benrbray/prosemirror-math/dist/prosemirror-math.css";
 import "prosemirror-view/style/prosemirror.css";
 import "./rich_text_editor.css";
-
-import Bold from "lucide-solid/icons/bold";
-import Indent from "lucide-solid/icons/indent";
-import Italic from "lucide-solid/icons/italic";
-import Link from "lucide-solid/icons/link";
-import List from "lucide-solid/icons/list";
-import ListOrdered from "lucide-solid/icons/list-ordered";
-import Outdent from "lucide-solid/icons/outdent";
-import Sigma from "lucide-solid/icons/sigma";
-import TextQuote from "lucide-solid/icons/text-quote";
 
 /** Optional props for `RichTextEditor` component.
  */
@@ -90,7 +95,8 @@ export const RichTextEditor = (
     } & RichTextEditorOptions,
 ) => {
     let editorRoot!: HTMLDivElement;
-    let menuRoot!: HTMLDivElement;
+    let menuRoot!: HTMLDivElement | undefined;
+    let reopenButtonRoot!: HTMLDivElement | undefined;
 
     // flags for determining if the menu bar is visible
     const [isEditorFocused, setEditorFocused] = createSignal(false);
@@ -107,6 +113,8 @@ export const RichTextEditor = (
         onDecreaseIndent: null,
         onHeadingClicked: null,
         onMathClicked: null,
+        onMathInlineClicked: null,
+        onHideMenubar: null,
     });
 
     const [markStates, setMarkStates] = createSignal<MarkStates>({
@@ -117,11 +125,14 @@ export const RichTextEditor = (
     const [headingLevel, setHeadingLevel] = createSignal<number | null>(null);
     const isReady = useDocHandleReady(() => props.handle);
 
+    const [reinitTrigger, setReinitTrigger] = createSignal(0);
+
     createEffect(() => {
         // NOTE: Make the effect depend on the given ID to ensure that this
         // component updates when the Automerge handle and path both stay the
         // same but the path refers to a different object in the document.
-        props.id;
+        void props.id;
+        void reinitTrigger();
 
         if (!isReady()) {
             return;
@@ -137,6 +148,17 @@ export const RichTextEditor = (
             schema.nodes.math_display,
         );
 
+        const inlineMathInputRule = new InputRule(
+            REGEX_INLINE_MATH_DOLLARS,
+            (state, match, start, end) => {
+                return state.tr.replaceRangeWith(
+                    start,
+                    end,
+                    schema.nodes.math_inline.create({ tex: match[1] }),
+                );
+            },
+        );
+
         const plugins: Plugin[] = [
             keymap(richTextEditorKeymap(schema, props)),
             keymap(baseKeymap),
@@ -144,12 +166,15 @@ export const RichTextEditor = (
             automergePlugin,
             linkEditorPlugin,
             mathPlugin,
-            inputRules({ rules: [blockMathInputRule] }),
+            inputRules({ rules: [inlineMathInputRule, blockMathInputRule] }),
         ];
 
         const state = EditorState.create({ schema, plugins, doc: pmDoc });
         const view = new EditorView(editorRoot, {
             state,
+            nodeViews: {
+                math_inline: (node, view, getPos) => new MathInlineView(node, view, getPos),
+            },
             dispatchTransaction: (tx: Transaction) => {
                 // XXX: It appears that automerge-prosemirror can dispatch
                 // transactions even after the view has been destroyed.
@@ -191,13 +216,17 @@ export const RichTextEditor = (
                 },
                 focus: () => {
                     setEditorFocused(true);
+                    setMenuActive(true);
                     props.onFocus?.();
                     return false;
                 },
                 focusout: (view, event) => {
                     const relatedTarget = event.relatedTarget as Node | null;
-                    // Ignore focus shifts into the menu bar
-                    if (relatedTarget && menuRoot.contains(relatedTarget)) {
+                    // Ignore focus shifts into the menu bar and reopen button
+                    if (
+                        (relatedTarget && menuRoot?.contains(relatedTarget)) ||
+                        (relatedTarget && reopenButtonRoot?.contains(relatedTarget))
+                    ) {
                         // prevent the editor from losing focus and clearing the selection.
                         view.focus();
                         return true;
@@ -244,21 +273,51 @@ export const RichTextEditor = (
                 }
             },
             onMathClicked: () => insertMathDisplayCmd(view.state, view.dispatch),
+            onMathInlineClicked: () => insertMathInlineCmd(view.state, view.dispatch, view),
+            onHideMenubar: () => {
+                // Keep editor focused, just hide the menubar
+                setMenuActive(false);
+            },
         });
 
-        onCleanup(() => view.destroy());
+        const onRemoteChange = ({ patches }: DocHandleChangePayload<unknown>) => {
+            if (hasStructuralReplacement(patches, props.path)) {
+                setReinitTrigger((c) => c + 1);
+            }
+        };
+        props.handle.on("change", onRemoteChange);
+
+        onCleanup(() => {
+            props.handle.off("change", onRemoteChange);
+            view.destroy();
+        });
     });
 
     return (
-        <div class={`rich-text-editor ${isEditorFocused() || isMenuActive() ? "focussed" : ""}`}>
-            <Show when={isEditorFocused() || isMenuActive()}>
-                <div
-                    ref={menuRoot}
-                    onFocusIn={() => setMenuActive(true)}
-                    onFocusOut={() => setMenuActive(false)}
+        <div class={`rich-text-editor ${isEditorFocused() ? "focussed" : ""}`}>
+            <Show when={isEditorFocused()}>
+                <Show
+                    when={isMenuActive()}
+                    fallback={
+                        <div ref={reopenButtonRoot} class="menubar-reopen-button-wrapper">
+                            <TooltipButton
+                                callback={() => setMenuActive(true)}
+                                tooltip="Show menubar"
+                            >
+                                <ChevronUp />
+                            </TooltipButton>
+                        </div>
+                    }
                 >
-                    <MenuBar {...menuControls()} {...markStates()} headingLevel={headingLevel()} />
-                </div>
+                    <MenuBar
+                        {...menuControls()}
+                        {...markStates()}
+                        headingLevel={headingLevel()}
+                        ref={menuRoot}
+                        onFocusIn={() => setMenuActive(true)}
+                        onFocusOut={() => setMenuActive(false)}
+                    />
+                </Show>
             </Show>
             <div ref={editorRoot} />
         </div>
@@ -281,6 +340,12 @@ function richTextEditorKeymap(schema: CustomSchema, props: RichTextEditorOptions
     bindings["Mod-i"] = toggleMark(schema.marks.em);
     bindings["Mod-l"] = insertLinkCmd;
     bindings["Mod-m"] = insertMathDisplayCmd;
+
+    // Block browser native undo/redo to prevent contenteditable undo from
+    // desynchronizing ProseMirror state with the DOM.
+    bindings["Mod-z"] = () => true;
+    bindings["Mod-y"] = () => true;
+    bindings["Mod-Shift-z"] = () => true;
     bindings["Backspace"] = chainCommands(
         deleteSelection,
         mathBackspaceCmd,
@@ -313,69 +378,98 @@ type MenuControls = {
     onDecreaseIndent: (() => void) | null;
     onHeadingClicked: ((level: number) => void) | null;
     onMathClicked: (() => void) | null;
+    onMathInlineClicked: (() => void) | null;
+    onHideMenubar: (() => void) | null;
 };
 
-export function MenuBar(props: MenuControls & MarkStates & { headingLevel: number | null }) {
+export function MenuBar(
+    props: MenuControls &
+        MarkStates & {
+            headingLevel: number | null;
+            ref?: HTMLDivElement;
+            onFocusIn?: () => void;
+            onFocusOut?: () => void;
+        },
+) {
     return (
-        <div id="menubar" class="menubar">
-            <TooltipButton
-                callback={props.onBoldClicked}
-                isActive={props.isBoldActive}
-                tooltip="Bold (shortcut: Mod+b)"
-            >
-                <Bold />
-            </TooltipButton>
-            <TooltipButton
-                callback={props.onItalicClicked}
-                isActive={props.isEmActive}
-                tooltip="Italics (shortcut: Mod+i)"
-            >
-                <Italic />
-            </TooltipButton>
-            <TooltipButton callback={props.onLinkClicked} tooltip="Add Link">
-                <Link />
-            </TooltipButton>
-            <TooltipButton callback={props.onMathClicked} tooltip="KaTeX block (shortcut: Mod+m)">
-                <Sigma />
-            </TooltipButton>
-
-            <TooltipButton callback={props.onBlockQuoteClicked} tooltip="Blockquote">
-                <TextQuote />
-            </TooltipButton>
-
-            <TooltipButton callback={props.onToggleOrderedList} tooltip="Ordered list">
-                <ListOrdered />
-            </TooltipButton>
-
-            <TooltipButton callback={props.onToggleBulletList} tooltip="Bullet list">
-                <List />
-            </TooltipButton>
-
-            <TooltipButton callback={props.onIncreaseIndent} tooltip="Indent">
-                <Indent />
-            </TooltipButton>
-
-            <TooltipButton callback={props.onDecreaseIndent} tooltip="Outdent">
-                <Outdent />
-            </TooltipButton>
-
-            <Show when={props.onHeadingClicked}>
-                <select
-                    value={props.headingLevel ?? 0}
-                    onInput={(e) => {
-                        const lvl = Number((e.currentTarget as HTMLSelectElement).value);
-                        props.onHeadingClicked?.(lvl);
-                    }}
+        <div
+            id="menubar"
+            class="menubar"
+            ref={props.ref}
+            onFocusIn={() => props.onFocusIn?.()}
+            onFocusOut={() => props.onFocusOut?.()}
+        >
+            <div class="menubar-left">
+                <TooltipButton
+                    callback={props.onBoldClicked}
+                    isActive={props.isBoldActive}
+                    tooltip="Bold (shortcut: Mod+b)"
                 >
-                    <option value={0}>Paragraph</option>
-                    <option value={1}>Heading 1</option>
-                    <option value={2}>Heading 2</option>
-                    <option value={3}>Heading 3</option>
-                    <option value={4}>Heading 4</option>
-                    <option value={5}>Heading 5</option>
-                    <option value={6}>Heading 6</option>
-                </select>
-            </Show>
+                    <Bold />
+                </TooltipButton>
+                <TooltipButton
+                    callback={props.onItalicClicked}
+                    isActive={props.isEmActive}
+                    tooltip="Italics (shortcut: Mod+i)"
+                >
+                    <Italic />
+                </TooltipButton>
+                <TooltipButton callback={props.onLinkClicked} tooltip="Add Link">
+                    <Link />
+                </TooltipButton>
+                <TooltipButton callback={props.onMathInlineClicked} tooltip="Inline math">
+                    <Variable />
+                </TooltipButton>
+                <TooltipButton
+                    callback={props.onMathClicked}
+                    tooltip="Math block (shortcut: Mod+m)"
+                >
+                    <Sigma />
+                </TooltipButton>
+
+                <TooltipButton callback={props.onBlockQuoteClicked} tooltip="Blockquote">
+                    <TextQuote />
+                </TooltipButton>
+
+                <TooltipButton callback={props.onToggleOrderedList} tooltip="Ordered list">
+                    <ListOrdered />
+                </TooltipButton>
+
+                <TooltipButton callback={props.onToggleBulletList} tooltip="Bullet list">
+                    <List />
+                </TooltipButton>
+
+                <TooltipButton callback={props.onIncreaseIndent} tooltip="Indent">
+                    <Indent />
+                </TooltipButton>
+
+                <TooltipButton callback={props.onDecreaseIndent} tooltip="Outdent">
+                    <Outdent />
+                </TooltipButton>
+
+                <Show when={props.onHeadingClicked}>
+                    <select
+                        value={props.headingLevel ?? 0}
+                        onInput={(e) => {
+                            const lvl = Number((e.currentTarget as HTMLSelectElement).value);
+                            props.onHeadingClicked?.(lvl);
+                        }}
+                    >
+                        <option value={0}>Paragraph</option>
+                        <option value={1}>Heading 1</option>
+                        <option value={2}>Heading 2</option>
+                        <option value={3}>Heading 3</option>
+                        <option value={4}>Heading 4</option>
+                        <option value={5}>Heading 5</option>
+                        <option value={6}>Heading 6</option>
+                    </select>
+                </Show>
+            </div>
+            <div class="menubar-right">
+                <TooltipButton callback={props.onHideMenubar} tooltip="Hide menubar">
+                    <ChevronDown />
+                </TooltipButton>
+            </div>
         </div>
     );
 }
@@ -392,13 +486,36 @@ function TooltipButton(props: {
                 <button
                     // required to prevent focus loss on firefox
                     onMouseDown={(e) => e.preventDefault()}
-                    // biome-ignore lint/style/noNonNullAssertion: Show guarantees that callback is non-null
-                    onClick={props.callback!}
+                    onClick={() => props.callback?.()}
                     classList={{ active: props.isActive }}
                 >
                     {props.children}
                 </button>
             </div>
         </Show>
+    );
+}
+
+/** True when `candidate` is a prefix of (or equal to) `target`. */
+function isPathPrefixOf(candidate: Prop[], target: Prop[]): boolean {
+    if (candidate.length > target.length) {
+        return false;
+    }
+    for (let i = 0; i < candidate.length; i++) {
+        if (candidate[i] !== target[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * Detect patches that indicate structural replacement of the text object or
+ * one of its ancestors. `@automerge/prosemirror`'s `gatherPatches` skips these,
+ * leaving the ProseMirror document out of sync with the Automerge state.
+ */
+function hasStructuralReplacement(patches: Patch[], textPath: Prop[]): boolean {
+    return patches.some(
+        (p) => (p.action === "put" || p.action === "del") && isPathPrefixOf(p.path, textPath),
     );
 }

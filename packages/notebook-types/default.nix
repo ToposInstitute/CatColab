@@ -34,12 +34,18 @@ craneLib.buildPackage {
   # run wasm-pack instead of the default cargo
   buildPhase = ''
     cd packages/notebook-types
-    # WTF: engage maximum cargo cult. I have no idea wasm-pack needs $HOME set, that is wild.
-    # https://github.com/NixOS/nixpkgs/blob/b5d0681604d2acd74818561bd2f5585bfad7087d/pkgs/by-name/te/tetrio-desktop/tetrio-plus.nix#L66C7-L66C24
-    # https://discourse.nixos.org/t/help-packaging-mipsy-wasm-pack-error/51876
+    # Run the wasm-pack command. wasm-pack will expect to find version of wasm-bindgen-cli in the
+    # environment that must matches the version wasm-bindgen used in the Cargo.toml. The wasm-bindgen-cli
+    # in the nix environment is defined an overlay in flake.nix.
     #
-    # This just runs the wasm-pack command, it's a bit abstracted but it guarantees that we use the same
-    # call to wasm-pack in dev and prod
+    # If the versions do not match there will be a build error when building with nix:
+    # Error: Not able to find or install a local wasm-bindgen.
+    #
+    # With RUST_LOG=debug set there should be a log like indicating the exact problem:
+    # Checking installed `wasm-bindgen` version == expected version: 0.2.105 == 0.2.106
+    # 
+    # wasm-pack needs a writeable $HOME
+    # https://github.com/ipetkov/crane/issues/362
     HOME=$(mktemp -d) npm run build:node
   '';
 

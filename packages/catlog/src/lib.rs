@@ -16,11 +16,6 @@
 //! sufficiently useful in their own right, they may be spun off into their own
 //! crates.
 
-// Unicode identifiers.
-#![allow(mixed_script_confusables)]
-#![allow(confusable_idents)]
-#![warn(missing_docs)]
-
 #[cfg(doc)]
 pub mod refs;
 
@@ -32,4 +27,5 @@ pub mod one;
 pub mod simulate;
 pub mod stdlib;
 pub mod tt;
+pub mod wd;
 pub mod zero;

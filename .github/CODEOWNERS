@@ -1,0 +1,8 @@
+# Build and CI infrastructure
+/.github/workflows/ @kasbah @jmoggr
+/infrastructure/ @kasbah @jmoggr
+*.nix @kasbah @jmoggr
+
+# Components and styling
+*.css @kasbah
+/packages/ui-components/ @kasbah

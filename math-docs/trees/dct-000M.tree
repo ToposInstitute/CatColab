@@ -1,0 +1,26 @@
+\title{Cartesian categories}
+\taxon{doctrine}
+\import{macros}
+
+\p{For us, a \define{cartesian category} is a category with a choice of finite products.}
+
+\p{There are many ways to axiomatize cartesian categories by a double theory.
+[Lambert & Patterson 2024](cartesian-double-theories-2024) give several
+cartesian double theories whose models are cartesian categories. A model of the
+[theory of generalized monoidal categories](thy-0005) in the semantics #{(\SSet,
+\ListCart)} is a cartesian (monoidal) category, by Fox's theorem. Yet another
+theory axiomatizing cartesian categories is:}
+
+\transclude{thy-000M}
+
+\subtree{
+  \taxon{proposition}
+
+  \p{A model of the theory above in #{(\SSet,\ListCart)} is precisely a cartesian category.}
+
+  \proof{A model of the theory is a category #{\cat{C}} along with a right
+  adjoint to the inclusion #{\eta_{\cat{C}}: \cat{C} \to
+  \operatorname{FinFam}^*(\cat{C})}. That is one characterization of a cartesian
+  category.}
+
+}

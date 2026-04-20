@@ -1,11 +1,11 @@
 import type { ArrowStyle } from "./types";
 
-/** Graph with a layout.
+/** A graph with a layout.
 
 The coordinate system is that of SVG and HTML canvas, meaning that the origin is
 in the top-left corner.
  */
-export interface Graph<Id> {
+export interface Graph {
     /** Width of bounding box for graph. */
     width?: number;
 
@@ -13,14 +13,15 @@ export interface Graph<Id> {
     height?: number;
 
     /** Nodes of graph. */
-    nodes: Array<Node<Id>>;
+    nodes: Array<Node>;
 
     /** Edges of graph. */
-    edges: Array<Edge<Id>>;
+    edges: Array<Edge>;
 }
 
-export interface Node<Id> extends GraphElement {
-    id: Id;
+export interface Node extends GraphElement {
+    /** Identifier of node, unique within graph. */
+    id: string;
 
     /** Position of node, with origin at center of node. */
     pos: Point;
@@ -35,14 +36,14 @@ export interface Node<Id> extends GraphElement {
     label?: string;
 }
 
-export interface Edge<Id> extends GraphElement {
-    id?: Id;
+export interface Edge extends GraphElement {
+    id?: string;
 
     /** Source node of edge. */
-    source: Id;
+    source: string;
 
     /**  Target node of edge. */
-    target: Id;
+    target: string;
 
     /** Edge label, if any. */
     label?: string;
@@ -59,7 +60,7 @@ export interface Edge<Id> extends GraphElement {
     /** Path for the edge in SVG path data format. */
     path: string;
 
-    /** Style of edge, according to our own taxonomy. */
+    /** Style of edge. */
     style?: ArrowStyle;
 }
 
@@ -68,8 +69,7 @@ export interface GraphElement {
     cssClass?: string;
 }
 
-/** Point in a 2D cartesian coordinate system.
- */
+/** Point in a 2D cartesian coordinate system. */
 export type Point = {
     x: number;
     y: number;

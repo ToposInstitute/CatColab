@@ -1,9 +1,10 @@
 //! ODE analyses of models.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
 use derivative::Derivative;
 use derive_more::Constructor;
+use indexmap::IndexMap;
 use ode_solvers::dop_shared::IntegrationError;
 
 #[cfg(feature = "serde")]
@@ -12,7 +13,10 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use crate::simulate::ode::{ODEProblem, ODESystem};
-use crate::zero::QualifiedName;
+use crate::zero::{QualifiedName, alg::Polynomial};
+
+/// Symbolic parameter in a polynomial system.
+pub type Parameter<Id> = Polynomial<Id, f32, i8>;
 
 /// Solution to an ODE problem.
 #[derive(Clone, Derivative)]
@@ -22,10 +26,10 @@ use crate::zero::QualifiedName;
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 pub struct ODESolution {
     /// Values of time variable for the duration of the simulation.
-    time: Vec<f32>,
+    pub(in crate::stdlib::analyses) time: Vec<f32>,
 
     /// Values of state variables for the duration of the simulation.
-    states: HashMap<QualifiedName, Vec<f32>>,
+    pub(in crate::stdlib::analyses) states: HashMap<QualifiedName, Vec<f32>>,
 }
 
 /// Data needed to simulate and interpret an ODE analysis of a model.
@@ -35,7 +39,7 @@ pub struct ODEAnalysis<Sys> {
     pub problem: ODEProblem<Sys>,
 
     /// Map from IDs in model (usually object IDs) to variable indices.
-    pub variable_index: BTreeMap<QualifiedName, usize>,
+    pub variable_index: IndexMap<QualifiedName, usize>,
 }
 
 impl<Sys> ODEAnalysis<Sys> {
@@ -65,12 +69,16 @@ impl<Sys> ODEAnalysis<Sys> {
     }
 }
 
+pub mod kuramoto;
 pub mod linear_ode;
 pub mod lotka_volterra;
 pub mod mass_action;
+pub mod polynomial_ode;
 pub mod signed_coefficients;
 
+pub use kuramoto::*;
 pub use linear_ode::*;
 pub use lotka_volterra::*;
 pub use mass_action::*;
+pub use polynomial_ode::*;
 pub use signed_coefficients::*;

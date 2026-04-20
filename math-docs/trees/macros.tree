@@ -9,22 +9,31 @@
 \def\tr[body]{\<html:tr>{\body}}
 \def\td[body]{\<html:td>{\body}}
 
-\def\nlab[article]{\<html:span>[class]{nlab}{[\article](https://ncatlab.org/nlab/show/\article)}}
-\def\wikipedia[article]{\<html:span>[class]{wikipedia}{[\article](https://en.wikipedia.org/wiki/\article)}}
+\def\nlab[article]{
+  \<html:span>[class]{nlab}{[\article](https://ncatlab.org/nlab/show/\article)}
+}
+
+\def\wikipedia[article]{
+  \<html:span>[class]{wikipedia}{[\article](https://en.wikipedia.org/wiki/\article)}
+}
 
 % Figures
 
 \def\quiverinline[body]{
-  \tex{\usepackage{quiver,amsopn,amssymb}}{\body}
+  \tex{\usepackage{quiver,amsmath,amssymb}}{\body}
 }
 
 \def\quiver[body]{\<html:center>{\quiverinline{\body}}}
 
-\def\centerfigs[body]{
-    \<html:div>[class]{centerfigs}{\body}
+\def\prooftreeinline[body]{
+  \tex{\usepackage{ebproof,amsopn,amssymb}}{\begin{prooftree}\body\end{prooftree}}
 }
 
-% Theorems
+\def\prooftree[body]{\p{\<html:center>{\prooftreeinline{\body}}}}
+
+\def\centerfigs[body]{\<html:div>[class]{centerfigs}{\body}}
+
+% Theorems and proofs
 
 \def\definition[head][body]{
   \subtree{\title{\head} \taxon{definition} \body}
@@ -38,16 +47,19 @@
   \subtree{\title{\head} \taxon{example} \body}
 }
 
-% General mathematics
-
-\def\define[name]{\strong{\name}}
-
 \def\proof[body]{
   \subtree{
     \taxon{proof}
     \body
   }
 }
+
+% General mathematics
+
+\def\define[name]{\strong{\name}}
+\def\vec[body]{#{\underline{\body}}}
+\def\pluseq{#{\mathrel{+}=}}
+\def\minuseq{#{\mathrel{-}=}}
 
 % Category theory
 
@@ -57,28 +69,31 @@
 \def\cod{#{\operatorname{cod}}}
 \def\id{#{\operatorname{id}}}
 \def\op{#{\mathrm{op}}}
+\def\Copy{#{\operatorname{copy}}}
+\def\Delete{#{\operatorname{del}}}
 
 \def\xto[label]{#{\xrightarrow{\label}}}
 \def\xfrom[label]{#{\xleftarrow{\label}}}
 \def\To{#{\Rightarrow}}
 \def\hetto{#{\dashrightarrow}}
 
+% Categories
+
 \def\cat[name]{#{\mathsf{\name}}}
+\def\catV{#{\mathcal{V}}}
 \def\Set{#{\mathsf{Set}}}
-\def\Fam{#{\mathsf{Fam}}}
-\def\FinFam{#{\mathsf{FinFam}}}
-
-\def\func[name]{#{\mathrm{\name}}}
-\def\List{#{\func{List}}}
-% There is a mystery error if you try to name this \fun
-
-\def\Disc{#{\mathop{\mathrm{Disc}}}}
+\def\Stoch{#{\mathsf{Stoch}}}
 
 % 2-category theory
 
 \def\twocat[name]{#{\mathbf{\name}}}
+
+% 2-categories
+
 \def\Cat{\twocat{Cat}}
 \def\Dbl{\twocat{Dbl}}
+\def\DblColax{#{\twocat{Dbl}_{\mathrm{clx}}}}
+\def\Vdc{\twocat{VDC}}
 
 % Double category theory
 
@@ -88,6 +103,34 @@
 
 \def\tabulator[ob]{#{\top\ob}}
 
+% Double categories
+
 \def\dbl[name]{#{\mathbb{\name}}}
+\def\SSet{#{\mathbb{S}\mathsf{et}}}
 \def\Span{#{\mathbb{S}\mathsf{pan}}}
+\def\Rel{#{\mathbb{R}\mathsf{el}}}
 \def\Mod{#{\mathbb{M}}\mathsf{od}}
+\def\CCat{#{\mathbb{C}\mathsf{at}}}
+\def\Prof{#{\mathbb{P}\mathsf{rof}}}
+
+% Monads
+
+\def\Fam{#{\mathrm{Fam}}}
+\def\FinFam{#{\mathrm{FinFam}}}
+
+\def\List{#{\mathrm{List}}}
+\def\ListSym{#{\mathrm{List}_{\id,\mathrm{bij}}}}
+\def\ListCart{#{\mathrm{List}_{\mathrm{fun},\id}}}
+\def\ListSemicart{#{\mathrm{List}_{\mathrm{inj},\id}}}
+\def\ListRelevance{#{\mathrm{List}_{\mathrm{surj},\id}}}
+\def\ListCocart{#{\mathrm{List}_{\id,\mathrm{fun}}}}
+
+\def\Disc{#{\mathop{\mathrm{Disc}}}}
+\def\coDisc{#{\mathop{\mathrm{coDisc}}}}
+
+% DoubleTT
+
+\def\ob{#{\mathsf{ob}}}
+\def\ind{#{\mathsf{ind}}}
+\def\context{#{\mathsf{cx}}}
+\def\type{#{\mathsf{ty}}}

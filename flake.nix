@@ -2,7 +2,7 @@
   description = "configurations for deploying catcolab";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
     agenix.url = "github:ryantm/agenix";
     deploy-rs.url = "github:serokell/deploy-rs";
     fenix = {
@@ -12,13 +12,6 @@
 
     crane = {
       url = "github:ipetkov/crane";
-    };
-
-    nixpkgsUnstable = {
-      # TODO: this should be changed from 'master' to 'nixos-unstable' when the
-      # pnpm.fetchDeps.fetcherVersion option lands in nixos-unstable (it's not clear how long that will
-      # be)
-      url = "github:NixOS/nixpkgs/master";
     };
 
     nixos-generators.url = "github:nix-community/nixos-generators";
@@ -49,13 +42,29 @@
         import nixpkgs {
           inherit system;
           config.allowUnfree = true;
+          overlays = [
+            # Override wasm-bindgen-cli to match version used in Cargo.lock
+            (final: prev: {
+              wasm-bindgen-cli = prev.buildWasmBindgenCli rec {
+                src = prev.fetchCrate {
+                  pname = "wasm-bindgen-cli";
+                  version = "0.2.106";
+                  hash = "sha256-M6WuGl7EruNopHZbqBpucu4RWz44/MSdv6f0zkYw+44=";
+                };
+                cargoDeps = prev.rustPlatform.fetchCargoVendor {
+                  inherit src;
+                  inherit (src) pname version;
+                  hash = "sha256-ElDatyOwdKwHg3bNH/1pcxKI7LXkhsotlDPQjiLHBwA=";
+                };
+              };
+            })
+          ];
         };
 
       rustToolchainFor =
-        system:
-        inputs.fenix.packages.${system}.fromToolchainFile {
+        system: fenix.packages.${system}.fromToolchainFile {
           file = ./rust-toolchain.toml;
-          sha256 = "sha256-2eWc3xVTKqg5wKSHGwt1XoM/kUBC6y3MWfKg74Zn+fY=";
+          sha256 = "sha256-vra6TkHITpwRyA5oBKAHSX0Mi6CBDNQD+ryPSpxFsfg=";
         };
 
       pkgsLinux = nixpkgsFor linuxSystem;
@@ -86,41 +95,41 @@
           darwinDeps =
             if pkgs.stdenv.isDarwin then
               [
-                pkgs.darwin.apple_sdk.frameworks.Security
-                pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
                 pkgs.libiconv
               ]
             else
               [ ];
 
+          nightlyRustfmt = inputs.fenix.packages.${system}.latest.rustfmt;
         in
         pkgs.mkShell {
           name = "catcolab-devshell";
+          RUSTFMT = "${nightlyRustfmt}/bin/rustfmt";
           buildInputs =
             with pkgs;
             [
               darkhttpd
+              esbuild
               lld
-              rustToolchain
-              openssl
-              rust-analyzer
-              rustfmt
-              clippy
-              pkg-config
-              pnpm_9
+              netcat
               nodejs_24
+              nix
+              openssl
+              pkg-config
+              pnpm
+              postgresql
+              python3
+              python312Packages.ipykernel
+              python312Packages.jupyter-core
+              python312Packages.jupyter-server
+              python312Packages.requests
+              python312Packages.websocket-client
+              rustToolchain
+              nightlyRustfmt
               sqlx-cli
-              biome
-              wasm-pack
               vscode-langservers-extracted
               wasm-bindgen-cli
-              esbuild
-              python312Packages.jupyter-server
-              python312Packages.jupyter-core
-              python312Packages.websocket-client
-              python312Packages.requests
-              python312Packages.ipykernel
-              python3
+              wasm-pack
             ]
             ++ darwinDeps
             ++ [
@@ -187,29 +196,17 @@
       # node ./result/main.cjs
       packages = {
         x86_64-linux = {
-          catcolabApi = pkgsLinux.stdenv.mkDerivation {
-            pname = "catcolab-api";
-            version = "0.1.0";
-
-            src = ./packages/backend/pkg;
-
-            installPhase = ''
-              mkdir -p $out
-              cp -r * $out/
-            '';
-          };
-
-          backend = pkgsLinux.callPackage ./packages/backend/default.nix {
-            inherit craneLib cargoArtifacts self;
-            pkgs = pkgsLinux;
-          };
-
-          migrator = pkgsLinux.callPackage ./packages/migrator/default.nix {
+          catcolabApi = pkgsLinux.callPackage ./infrastructure/catcolab-api.nix {
             inherit craneLib cargoArtifacts;
             pkgs = pkgsLinux;
           };
 
-          notebook-types-node = pkgsLinux.callPackage ./packages/notebook-types/default.nix {
+          backend = pkgsLinux.callPackage ./packages/backend/default.nix {
+            inherit craneLib cargoArtifacts;
+            pkgs = pkgsLinux;
+          };
+
+          migrator = pkgsLinux.callPackage ./packages/migrator/default.nix {
             inherit craneLib cargoArtifacts;
             pkgs = pkgsLinux;
           };
@@ -219,12 +216,27 @@
             pkgs = pkgsLinux;
           };
 
-          automerge = pkgsLinux.callPackage ./packages/automerge-doc-server/default.nix {
-            inherit inputs rustToolchainLinux self;
+          julia-fhs = (pkgsLinux.callPackage ./infrastructure/julia.nix { }).julia-fhs;
+
+          frontend =
+            (pkgsLinux.callPackage ./packages/frontend/default.nix {
+              inherit inputs rustToolchainLinux self;
+            }).package;
+
+          frontend-tests =
+            (pkgsLinux.callPackage ./packages/frontend/default.nix {
+              inherit inputs rustToolchainLinux self;
+            }).tests;
+
+          rust-docs = pkgsLinux.callPackage ./infrastructure/rust-docs.nix {
+            inherit craneLib cargoArtifacts;
+            pkgs = pkgsLinux;
           };
 
-          frontend = pkgsLinux.callPackage ./packages/frontend/default.nix {
-            inherit inputs rustToolchainLinux self;
+          rust-docs-check = pkgsLinux.callPackage ./infrastructure/rust-docs.nix {
+            inherit craneLib cargoArtifacts;
+            pkgs = pkgsLinux;
+            checkMode = true;
           };
 
           # VMs built with `nixos-rebuild build-vm` (like `nix build
@@ -303,9 +315,8 @@
         catcolab = {
           hostname = "backend.catcolab.org";
           profiles.system = {
-            # TODO: can be changed to catcolab after the next deploy (the host needs to first update the
-            # permissions of the catcolab user)
-            sshUser = "root";
+            sshUser = "catcolab";
+            user = "root";
             path = deploy-rs.lib.${linuxSystem}.activate.nixos self.nixosConfigurations.catcolab;
           };
         };
@@ -332,16 +343,14 @@
         };
       };
 
-      # Temporarily disabled until more meaningful tests are developed. Keeping the frontend dependecies
-      # up to date is currently not worth the hassle.
-      # checks.x86_64-linux.integrationTests = import ./infrastructure/tests/integration.nix {
-      #   inherit
-      #     nixpkgs
-      #     inputs
-      #     self
-      #     linuxSystem
-      #     ;
-      #   rustToolchain = rustToolchainLinux;
-      # };
+      checks.x86_64-linux.frontendTests = import ./infrastructure/tests/frontend.nix {
+        inherit
+          nixpkgs
+          inputs
+          self
+          linuxSystem
+          ;
+        rustToolchain = rustToolchainLinux;
+      };
     };
 }

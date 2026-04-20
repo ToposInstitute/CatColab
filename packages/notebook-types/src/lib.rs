@@ -6,8 +6,17 @@ use wasm_bindgen::prelude::*;
 mod v0;
 pub mod v1;
 
+#[cfg(feature = "backend")]
+pub mod automerge_json;
+
+#[cfg(feature = "backend")]
+pub mod automerge_util;
+
 #[cfg(test)]
 mod test_utils;
+
+#[cfg(all(test, feature = "backend"))]
+pub(crate) mod common_test;
 
 pub mod current {
     // this should always track the latest version, and is the only version

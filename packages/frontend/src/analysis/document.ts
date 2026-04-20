@@ -3,15 +3,16 @@ import type { AnyDocumentId, Repo } from "@automerge/automerge-repo";
 import {
     type Analysis,
     type AnalysisType,
+    currentVersion,
     type Document,
     type StableRef,
     type Uuid,
-    currentVersion,
 } from "catlog-wasm";
-import { type Api, type LiveDoc, findAndMigrate, makeLiveDoc } from "../api";
-import { type LiveDiagramDocument, getLiveDiagram, getLiveDiagramFromRepo } from "../diagram";
-import type { LiveModelDocument, ModelLibrary } from "../model";
-import { newNotebook } from "../notebook";
+import { type Api, type DocRef, findAndMigrate, type LiveDoc, makeLiveDoc } from "../api";
+import { getLiveDiagram, getLiveDiagramFromRepo, type LiveDiagramDoc } from "../diagram";
+import type { LiveModelDoc, ModelLibrary } from "../model";
+import { NotebookUtils, newNotebook } from "../notebook";
+import { assertExhaustive } from "../util/assert_exhaustive";
 
 /** A document defining an analysis. */
 export type AnalysisDocument = Document & { type: "analysis" };
@@ -38,7 +39,7 @@ export const newAnalysisDocument = (
     version: currentVersion(),
 });
 
-type BaseLiveAnalysisDocument = {
+type BaseLiveAnalysisDoc = {
     /** Tag for use in tagged unions of document types. */
     type: "analysis";
 
@@ -47,29 +48,29 @@ type BaseLiveAnalysisDocument = {
 };
 
 /** A model analysis document "live" for editing. */
-export type LiveModelAnalysisDocument = BaseLiveAnalysisDocument & {
+export type LiveModelAnalysisDoc = BaseLiveAnalysisDoc & {
     analysisType: "model";
 
     /** Live document defining the analysis. */
     liveDoc: LiveDoc<ModelAnalysisDocument>;
 
     /** Live model that the analysis is of. */
-    liveModel: LiveModelDocument;
+    liveModel: LiveModelDoc;
 };
 
 /** A diagram analysis document "live" for editing. */
-export type LiveDiagramAnalysisDocument = BaseLiveAnalysisDocument & {
+export type LiveDiagramAnalysisDoc = BaseLiveAnalysisDoc & {
     analysisType: "diagram";
 
     /** Live document defining the analysis. */
     liveDoc: LiveDoc<DiagramAnalysisDocument>;
 
     /** Live diagram that the analysis is of. */
-    liveDiagram: LiveDiagramDocument;
+    liveDiagram: LiveDiagramDoc;
 };
 
 /** An analysis document "live" for editing. */
-export type LiveAnalysisDocument = LiveModelAnalysisDocument | LiveDiagramAnalysisDocument;
+export type LiveAnalysisDoc = LiveModelAnalysisDoc | LiveDiagramAnalysisDoc;
 
 /** Create a new, empty analysis in the backend. */
 export async function createAnalysis(api: Api, analysisType: AnalysisType, analysisOf: StableRef) {
@@ -77,34 +78,44 @@ export async function createAnalysis(api: Api, analysisType: AnalysisType, analy
     return api.createDoc(init);
 }
 
+export type LiveAnalysisDocWithRef = {
+    liveAnalysis: LiveAnalysisDoc;
+    docRef: DocRef;
+};
+
 /** Retrieve an analysis and make it "live" for editing. */
 export async function getLiveAnalysis(
     refId: Uuid,
     api: Api,
     models: ModelLibrary<Uuid>,
-): Promise<LiveAnalysisDocument> {
-    const liveDoc = await api.getLiveDoc<AnalysisDocument>(refId, "analysis");
+): Promise<LiveAnalysisDocWithRef> {
+    const { liveDoc, docRef } = await api.getLiveDoc<AnalysisDocument>(refId, "analysis");
     const { doc } = liveDoc;
 
+    let liveAnalysis: LiveAnalysisDoc;
     // XXX: TypeScript cannot narrow types in nested tagged unions.
     if (doc.analysisType === "model") {
         const liveModel = await models.getLiveModel(doc.analysisOf._id);
-        return {
+        liveAnalysis = {
             type: "analysis",
             analysisType: "model",
             liveDoc: liveDoc as LiveDoc<ModelAnalysisDocument>,
             liveModel,
         };
     } else if (doc.analysisType === "diagram") {
-        const liveDiagram = await getLiveDiagram(doc.analysisOf._id, api, models);
-        return {
+        const { liveDiagram } = await getLiveDiagram(doc.analysisOf._id, api, models);
+        liveAnalysis = {
             type: "analysis",
             analysisType: "diagram",
             liveDoc: liveDoc as LiveDoc<DiagramAnalysisDocument>,
             liveDiagram,
         };
+    } else {
+        throw new Error(`Unknown analysis type: ${doc.analysisType}`);
     }
-    throw new Error(`Unknown analysis type: ${doc.analysisType}`);
+
+    migrateAnalysis(liveAnalysis);
+    return { liveAnalysis, docRef };
 }
 
 /** Get an analysis from an Automerge repo and make it "live" for editing.
@@ -115,15 +126,16 @@ export async function getLiveAnalysisFromRepo(
     docId: AnyDocumentId,
     repo: Repo,
     models: ModelLibrary<AnyDocumentId>,
-): Promise<LiveAnalysisDocument> {
-    const docHandle = await findAndMigrate<AnalysisDocument>(repo, docId, "analysis");
-    const liveDoc = makeLiveDoc(docHandle);
+): Promise<LiveAnalysisDoc> {
+    const docHandle = await findAndMigrate(repo, docId);
+    const liveDoc = makeLiveDoc<AnalysisDocument>(docHandle, "analysis");
     const { doc } = liveDoc;
 
+    let liveAnalysis: LiveAnalysisDoc;
     const parentId = doc.analysisOf._id as AnyDocumentId;
     if (doc.analysisType === "model") {
         const liveModel = await models.getLiveModel(parentId);
-        return {
+        liveAnalysis = {
             type: "analysis",
             analysisType: "model",
             liveDoc: liveDoc as LiveDoc<ModelAnalysisDocument>,
@@ -131,12 +143,65 @@ export async function getLiveAnalysisFromRepo(
         };
     } else if (doc.analysisType === "diagram") {
         const liveDiagram = await getLiveDiagramFromRepo(parentId, repo, models);
-        return {
+        liveAnalysis = {
             type: "analysis",
             analysisType: "diagram",
             liveDoc: liveDoc as LiveDoc<DiagramAnalysisDocument>,
             liveDiagram,
         };
+    } else {
+        throw new Error(`Unknown analysis type: ${doc.analysisType}`);
     }
-    throw new Error(`Unknown analysis type: ${doc.analysisType}`);
+
+    migrateAnalysis(liveAnalysis);
+    return liveAnalysis;
+}
+
+/** Migrate content of formal cells in analysis document.
+
+This is a stop-gap (read: hacky) method to migrate the content of analyses when
+the set of fields changes. It allow new fields to be added. Renaming or removing
+existing fields is *not* supported.
+ */
+function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
+    const theory = theoryForLiveAnalysis(liveAnalysis);
+
+    const getAnalysisMeta = (analysisId: string) => {
+        switch (liveAnalysis.analysisType) {
+            case "model":
+                return theory?.modelAnalysis(analysisId);
+            case "diagram":
+                return theory?.diagramAnalysis(analysisId);
+        }
+    };
+
+    const doc = liveAnalysis.liveDoc.doc;
+    for (const cell of NotebookUtils.getFormalCells(doc.notebook)) {
+        const meta = getAnalysisMeta(cell.content.id);
+        if (!meta) {
+            continue;
+        }
+        const initialContent = meta.initialContent() as Record<string, unknown>;
+        for (const key in initialContent) {
+            if (!(key in cell.content.content)) {
+                liveAnalysis.liveDoc.changeDoc((doc) => {
+                    NotebookUtils.mutateCellContentById(doc.notebook, cell.id, (content) => {
+                        content.content[key] = initialContent[key];
+                    });
+                });
+            }
+        }
+    }
+}
+
+/** Gets the theory associated with a live analysis. */
+export function theoryForLiveAnalysis(liveAnalysis: LiveAnalysisDoc) {
+    switch (liveAnalysis.analysisType) {
+        case "model":
+            return liveAnalysis.liveModel.theory();
+        case "diagram":
+            return liveAnalysis.liveDiagram.liveModel.theory();
+        default:
+            assertExhaustive(liveAnalysis);
+    }
 }

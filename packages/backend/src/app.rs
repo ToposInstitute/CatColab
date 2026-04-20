@@ -1,11 +1,32 @@
 use firebase_auth::FirebaseUser;
-use serde::Serialize;
-use socketioxide::SocketIo;
+use samod::DocumentId;
 use sqlx::PgPool;
+use std::collections::HashMap;
+use std::sync::Arc;
 use thiserror::Error;
-use tokio::sync::watch;
-use ts_rs::TS;
+use tokio::sync::{RwLock, mpsc, oneshot};
 use uuid::Uuid;
+
+/// Reply channel type used by all ref actor messages.
+pub type RefReply = oneshot::Sender<Result<(), AppError>>;
+
+/// Type alias for the ref actors channel map.
+pub type RefActorsMap = Arc<RwLock<HashMap<Uuid, mpsc::Sender<(RefMsg, RefReply)>>>>;
+
+/// Message sent to the ref actor for a document ref.
+pub enum RefMsg {
+    /// Request an immediate snapshot (manual save / RPC call).
+    CreateSnapshot,
+    /// Set the current snapshot for the document ref.
+    LoadSnapshot {
+        /// The target snapshot to set as current.
+        snapshot_id: i32,
+    },
+    /// Soft-delete the document ref.
+    Delete,
+    /// Restore a soft-deleted document ref.
+    Restore,
+}
 
 /// Top-level application state.
 ///
@@ -15,19 +36,21 @@ pub struct AppState {
     /// Connection to the Postgres database.
     pub db: PgPool,
 
-    /// Socket for communicating with Automerge document server.
-    pub automerge_io: SocketIo,
+    /// Automerge-repo provider.
+    pub repo: samod::Repo,
 
-    pub app_status: watch::Receiver<AppStatus>,
-}
+    /// Channel senders for per-ref actors that coordinate document mutations.
+    pub ref_actors: RefActorsMap,
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum AppStatus {
-    Starting,
-    Migrating,
-    Running,
-    #[allow(dead_code)]
-    Failed(String),
+    /// Tracks user IDs whose state docs were refreshed from DB in this process,
+    /// mapped to their Automerge document IDs.
+    pub initialized_user_states: Arc<RwLock<HashMap<String, DocumentId>>>,
+
+    /// HTTP client for outgoing requests (e.g., Julia proxy).
+    pub http_client: reqwest::Client,
+
+    /// Base URL for the Julia compute service, if configured.
+    pub julia_url: Option<String>,
 }
 
 /// Context available to RPC procedures.
@@ -40,19 +63,6 @@ pub struct AppCtx {
     pub user: Option<FirebaseUser>,
 }
 
-/// A page of items along with pagination metadata.
-#[derive(Clone, Debug, Serialize, TS)]
-pub struct Paginated<T> {
-    /// The total number of items matching the query criteria.
-    pub total: i32,
-
-    /// The number of items skipped.
-    pub offset: i32,
-
-    /// The items in the current page.
-    pub items: Vec<T>,
-}
-
 /// Top-level application error.
 #[derive(Error, Debug)]
 pub enum AppError {
@@ -60,9 +70,25 @@ pub enum AppError {
     #[error("SQL database error: {0}")]
     Db(#[from] sqlx::Error),
 
-    /// Error from the socket communicating with the Automerge document server.
-    #[error("Error receiving acknowledgment from socket: {0}")]
-    Ack(#[from] socketioxide::AckError<()>),
+    /// Resource not found.
+    #[error("Not found: {0}")]
+    NotFound(String),
+
+    /// Error from the Automerge Repo.
+    #[error("AutomergeRepo error: {0}")]
+    AutomergeRepo(#[from] samod::Stopped),
+
+    /// Error from Automerge operations.
+    #[error("Automerge error: {0}")]
+    Automerge(#[from] automerge::AutomergeError),
+
+    /// Error with user state sync.
+    #[error("UserStateSync error: {0}")]
+    UserStateSync(String),
+
+    /// Error from JSON serialization.
+    #[error("JSON serialization error: {0}")]
+    Json(#[from] serde_json::Error),
 
     /// Client made request with invalid data.
     #[error("Request with invalid data: {0}")]
@@ -71,10 +97,6 @@ pub enum AppError {
     /// Client has not authenticated using Firebase auth.
     #[error("Authentication credentials were not provided")]
     Unauthorized,
-
-    /// Something went wrong in a socket call to the automerge server
-    #[error("Automerge server error: {0}")]
-    AutomergeServer(String),
 
     /// Client does not have permission to perform the requested action on the
     /// document ref.

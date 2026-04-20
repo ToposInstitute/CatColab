@@ -6,13 +6,16 @@ import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
 import type { Permissions } from "catcolab-api";
-import type { Document, Link, StableRef, Uuid } from "catlog-wasm";
+import type { Document, Link, LinkType, StableRef, Uuid } from "catlog-wasm";
 import type { InterfaceToType } from "../util/types";
-import { type LiveDoc, findAndMigrate, makeLiveDoc } from "./document";
-import { type RpcClient, createRpcClient } from "./rpc";
+import { type DocRef, findAndMigrate, type LiveDocWithRef, makeLiveDoc } from "./document";
+import { createFetchWithAuth, createRpcClient, type RpcClient } from "./rpc";
 
 /** Bundle of everything needed to interact with the CatColab backend. */
 export class Api {
+    /** Full URL for the CatColab backend server. */
+    readonly serverUrl: string;
+
     /** Host part of the URL for the CatColab backend server. */
     readonly serverHost: string;
 
@@ -25,6 +28,8 @@ export class Api {
     /** Automerge repo with no networking, used for read-only documents. */
     private readonly localRepo: Repo;
 
+    private readonly fetchWithAuth: typeof fetch;
+
     /** Mapping from document ref ID to Automerge document ID.
 
     This is the simplest and safest form of caching that we can do. It is
@@ -35,14 +40,12 @@ export class Api {
      */
     private readonly docCache: Map<Uuid, DocCacheEntry>;
 
-    constructor(props: {
-        serverUrl: string;
-        repoUrl: string;
-        firebaseApp: FirebaseApp;
-    }) {
+    constructor(props: { serverUrl: string; repoUrl: string; firebaseApp: FirebaseApp }) {
+        this.serverUrl = props.serverUrl;
         this.serverHost = new URL(props.serverUrl).host;
 
-        this.rpc = createRpcClient(props.serverUrl, props.firebaseApp);
+        this.fetchWithAuth = createFetchWithAuth(props.firebaseApp);
+        this.rpc = createRpcClient(props.serverUrl, this.fetchWithAuth);
 
         this.repo = new Repo({
             storage: new IndexedDBStorageAdapter("catcolab"),
@@ -53,7 +56,12 @@ export class Api {
         this.docCache = new Map();
     }
 
-    /** Get a live document for the given document ref.
+    /** Make an authenticated fetch to a backend endpoint. */
+    async fetch(path: string, init?: RequestInit): Promise<Response> {
+        return this.fetchWithAuth(`${this.serverUrl}${path}`, init);
+    }
+
+    /** Get a live document with backend ref for the given document ref.
 
     When the user has write permissions, changes to the document will be
     propagated by Automerge to the backend and to other clients. When the user
@@ -64,41 +72,31 @@ export class Api {
     async getLiveDoc<Doc extends Document>(
         refId: Uuid,
         docType?: Doc["type"],
-    ): Promise<LiveDoc<Doc>> {
-        const docHandle = await this.getDocHandle<Doc>(refId, docType);
-        const permissions = await this.getPermissions(refId);
-        const isDeleted = await this.isDocumentDeleted(refId);
-        return makeLiveDoc(docHandle, {
-            refId,
-            permissions,
-            isDeleted,
-        });
-    }
-
-    async getLiveDocFromLink<Doc extends Document>(link: Link): Promise<LiveDoc<Doc>> {
-        return this.getLiveDoc(link._id);
+    ): Promise<LiveDocWithRef<Doc>> {
+        const docHandle = await this.getDocHandle(refId);
+        const docRef = await this.getDocRef(refId);
+        const liveDoc = makeLiveDoc<Doc>(docHandle, docType);
+        return {
+            liveDoc,
+            docRef,
+        };
     }
 
     /** Gets an Automerge document handle for the given document ref. */
-    async getDocHandle<Doc extends Document>(
-        refId: Uuid,
-        docType?: Doc["type"],
-    ): Promise<DocHandle<Doc>> {
+    async getDocHandle(refId: Uuid): Promise<DocHandle<Document>> {
         const { docId, localOnly } = await this.getDocCacheEntry(refId);
         const repo = localOnly ? this.localRepo : this.repo;
-        return await findAndMigrate<Doc>(repo, docId, docType);
+        return await findAndMigrate(repo, docId);
     }
 
-    /** Get permissions for the given document ref. */
-    async getPermissions(refId: Uuid): Promise<Permissions> {
-        const { permissions } = await this.getDocCacheEntry(refId);
-        return permissions;
-    }
-
-    /** Check if the document has been deleted. */
-    async isDocumentDeleted(refId: Uuid): Promise<boolean> {
-        const { isDeleted } = await this.getDocCacheEntry(refId);
-        return isDeleted;
+    /** Get a document reference from its id */
+    async getDocRef(refId: Uuid): Promise<DocRef> {
+        const { permissions, isDeleted } = await this.getDocCacheEntry(refId);
+        return {
+            refId,
+            permissions,
+            isDeleted,
+        };
     }
 
     /** Clear cached entry for a document ref. */
@@ -129,7 +127,15 @@ export class Api {
         if (isLive) {
             docId = refDoc.docId as DocumentId;
         } else {
-            const docHandle = this.localRepo.create(refDoc.content);
+            const binaryString = atob(refDoc.binaryData);
+            // TODO: In the future we should be able go directly from base64 to a Uint8Array
+            // const binaryData = new Uint8Array.fromBase64(binaryString);
+            const binaryData = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                binaryData[i] = binaryString.charCodeAt(i);
+            }
+
+            const docHandle = this.localRepo.import(binaryData);
             docId = docHandle.documentId;
         }
         const isDeleted = refDoc.isDeleted;
@@ -167,12 +173,20 @@ export class Api {
         return result.content;
     }
 
-    /** Create a stable reference to a document ref, without a version. */
+    /** Create a stable reference to a document, without a version. */
     makeUnversionedRef(refId: Uuid): StableRef {
         return {
             _id: refId,
             _version: null,
             _server: this.serverHost,
+        };
+    }
+
+    /** Create a link to a document, without a version. */
+    makeUnversionedLink(refId: Uuid, linkType: LinkType): Link {
+        return {
+            ...this.makeUnversionedRef(refId),
+            type: linkType,
         };
     }
 }

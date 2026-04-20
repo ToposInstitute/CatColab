@@ -1,8 +1,10 @@
+# 9 days, in minutes
+minimumReleaseAge: 12960
 packages:
-    - "dev-docs"
-    - "packages/automerge-doc-server"
-    - "packages/backend/pkg"
-    - "packages/frontend"
-    - "packages/notebook-types"
-    - "packages/patchwork"
-    - "packages/gaios"
+  - "dev-docs"
+  - "packages/backend/pkg"
+  - "packages/frontend"
+  - "packages/notebook-types"
+  - "packages/patchwork"
+  - "packages/ui-components"
+  - "packages/gaios"

@@ -1,22 +1,32 @@
 import { destructure } from "@solid-primitives/destructure";
-import { type Component, For, Index, Match, Show, Switch, createUniqueId } from "solid-js";
+import {
+    type Component,
+    createUniqueId,
+    For,
+    Index,
+    Match,
+    type ParentProps,
+    Show,
+    Switch,
+} from "solid-js";
 import { Dynamic } from "solid-js/web";
 
 import type * as GraphLayout from "./graph_layout";
+import { perpendicularLabelPosition } from "./label_position";
 import type { ArrowStyle, SVGRefProp } from "./types";
 
 import "./graph_svg.css";
 
 /** Draw a graph with a layout using SVG.
  */
-export function GraphSVG<Id>(props: {
-    graph: GraphLayout.Graph<Id>;
-    ref?: SVGRefProp;
-}) {
+export function GraphSVG(props: { graph: GraphLayout.Graph; ref?: SVGRefProp }) {
     const edgeMarkers = () => {
         const markers = new Set<ArrowMarker>();
         for (const edge of props.graph.edges) {
-            markers.add(styleToMarker[edge.style ?? "default"]);
+            const marker = styleToMarker[edge.style ?? "default"];
+            if (marker) {
+                markers.add(marker);
+            }
         }
         return Array.from(markers);
     };
@@ -34,9 +44,45 @@ export function GraphSVG<Id>(props: {
     );
 }
 
+/** Draw a labeled rectangle with optional children, positioned by top-left corner.
+
+A reusable SVG primitive for rendering boxes with centered labels.
+Used by `NodeSVG` for graph nodes and available for other visualizations
+like UWD boxes.
+ */
+export function LabeledRect(
+    props: ParentProps<{
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        label?: string;
+        class?: string;
+        labelClass?: string;
+    }>,
+) {
+    return (
+        <g class={props.class}>
+            <rect x={props.x} y={props.y} width={props.width} height={props.height} />
+            <Show when={props.label}>
+                <text
+                    class={props.labelClass ?? "label"}
+                    x={props.x + props.width / 2}
+                    y={props.y + props.height / 2}
+                    dominant-baseline="middle"
+                    text-anchor="middle"
+                >
+                    {props.label}
+                </text>
+            </Show>
+            {props.children}
+        </g>
+    );
+}
+
 /** Draw a node with a layout using SVG.
  */
-export function NodeSVG<Id>(props: { node: GraphLayout.Node<Id> }) {
+export function NodeSVG(props: { node: GraphLayout.Node }) {
     const {
         node: {
             pos: { x, y },
@@ -46,20 +92,20 @@ export function NodeSVG<Id>(props: { node: GraphLayout.Node<Id> }) {
     } = destructure(props, { deep: true });
 
     return (
-        <g class={`node ${props.node.cssClass ?? ""}`}>
-            <rect x={x() - width() / 2} y={y() - height() / 2} width={width()} height={height()} />
-            <Show when={props.node.label}>
-                <text class="label" x={x()} y={y()} dominant-baseline="middle" text-anchor="middle">
-                    {props.node.label}
-                </text>
-            </Show>
-        </g>
+        <LabeledRect
+            x={x() - width() / 2}
+            y={y() - height() / 2}
+            width={width()}
+            height={height()}
+            label={props.node.label}
+            class={props.node.cssClass ?? "node"}
+        />
     );
 }
 
 /** Draw an edge with a layout using SVG.
  */
-export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
+export function EdgeSVG(props: { edge: GraphLayout.Edge }) {
     const {
         edge: { path },
     } = destructure(props, { deep: true });
@@ -77,10 +123,7 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
     const tgtLabel = (text: string) => {
         // Place the target label offset from the target in the direction
         // orthogonal to the vector from the source to the target.
-        const [srcPos, tgtPos] = [props.edge.sourcePos, props.edge.targetPos];
-        const vec = { x: tgtPos.x - srcPos.x, y: tgtPos.y - srcPos.y };
-        const scale = 10 / Math.sqrt(vec.x ** 2 + vec.y ** 2);
-        const pos = { x: tgtPos.x - scale * vec.y, y: tgtPos.y + scale * vec.x };
+        const pos = perpendicularLabelPosition(props.edge.sourcePos, props.edge.targetPos);
         return (
             <text class="label" x={pos.x} y={pos.y} dominant-baseline="middle" text-anchor="middle">
                 {text}
@@ -89,7 +132,7 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
     };
 
     return (
-        <g class={`edge ${props.edge.cssClass ?? ""}`}>
+        <g class={props.edge.cssClass ?? "edge"}>
             <Switch fallback={defaultPath()}>
                 <Match when={props.edge.style === "double"}>
                     <path class="double-outer" d={path()} />
@@ -111,7 +154,7 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
                 <Match when={props.edge.style === "plusCaesura"}>
                     {defaultPath()}
                     {tgtLabel("+")}
-                    <text style="dominant-baseline: central;">
+                    <text style={{ "dominant-baseline": "central" }}>
                         <textPath href={`#${pathId()}`} startOffset="40%">
                             {"‖"}
                         </textPath>
@@ -120,7 +163,7 @@ export function EdgeSVG<Id>(props: { edge: GraphLayout.Edge<Id> }) {
                 <Match when={props.edge.style === "minusCaesura"}>
                     {defaultPath()}
                     {tgtLabel("-")}
-                    <text style="dominant-baseline: central;">
+                    <text style={{ "dominant-baseline": "central" }}>
                         <textPath href={`#${pathId()}`} startOffset="40%">
                             {"‖"}
                         </textPath>
@@ -158,7 +201,7 @@ const VeeMarker = (props: { id: string; offset?: number }) => (
         markerHeight="10"
         orient="auto-start-reverse"
     >
-        <path d="M 0 0 L 5 5 L 0 10" />
+        <path d="M 0 2 L 5 5 L 0 8" />
     </marker>
 );
 
@@ -200,10 +243,11 @@ const FlatMarker = (props: { id: string }) => (
  */
 export type ArrowMarker = "vee" | "double" | "triangle" | "flat";
 
-const styleToMarker: Record<ArrowStyle, ArrowMarker> = {
+const styleToMarker: Record<ArrowStyle, ArrowMarker | null> = {
     default: "vee",
     double: "double",
     flat: "flat",
+    unmarked: null,
     plus: "triangle",
     minus: "triangle",
     indeterminate: "triangle",

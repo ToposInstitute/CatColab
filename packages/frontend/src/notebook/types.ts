@@ -49,10 +49,12 @@ export namespace NotebookUtils {
         return notebook.cellOrder.map((cellId) => getCellById(notebook, cellId));
     }
 
+    export function getFormalCells<T>(notebook: Notebook<T>): Array<Cell<T> & { tag: "formal" }> {
+        return getCells(notebook).filter((cell) => cell.tag === "formal");
+    }
+
     export function getFormalContent<T>(notebook: Notebook<T>): Array<T> {
-        return getCells(notebook)
-            .filter((cell) => cell.tag === "formal")
-            .map((cell) => cell.content);
+        return getFormalCells(notebook).map((cell) => cell.content);
     }
 
     export function getCellById<T>(notebook: Notebook<T>, cellId: string): NotebookCell<T> {

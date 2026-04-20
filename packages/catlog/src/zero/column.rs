@@ -5,7 +5,7 @@ use std::hash::Hash;
 use std::marker::PhantomData;
 
 use derivative::Derivative;
-use derive_more::{Constructor, From};
+use indexmap::IndexMap;
 use nonempty::NonEmpty;
 use thiserror::Error;
 
@@ -104,11 +104,16 @@ pub trait Column: Mapping {
 
     /// Computes the preimage of the mapping at a value in the codomain.
     ///
-    /// Depending on whether the implementation maintains a reverse index for the
-    /// mapping, this method will take time linear in the size of the preimage or
-    /// the size of the whole column.
+    /// Depending on whether the implementation maintains a reverse index for
+    /// the mapping, this method will take time linear in either the size of the
+    /// preimage or the size of the whole column.
     fn preimage(&self, y: &Self::Cod) -> impl Iterator<Item = Self::Dom> {
         self.iter().filter(|&(_, z)| *z == *y).map(|(x, _)| x)
+    }
+
+    /// Gets the number of values in the domain on which the column is defined.
+    fn len(&self) -> usize {
+        self.iter().count()
     }
 
     /// Is the mapping not defined anywhere?
@@ -267,10 +272,7 @@ impl<T> IntoIterator for VecColumn<T> {
     type IntoIter = VecColumnIter<T>;
 
     fn into_iter(self) -> Self::IntoIter {
-        VecColumnIter {
-            vec: self.0,
-            index: 0,
-        }
+        VecColumnIter { vec: self.0, index: 0 }
     }
 }
 
@@ -339,6 +341,10 @@ impl<T: Eq + Clone> Column for VecColumn<T> {
         self.0.iter().flatten()
     }
 
+    fn len(&self) -> usize {
+        self.0.iter().filter(|y| y.is_some()).count()
+    }
+
     fn is_empty(&self) -> bool {
         self.0.iter().all(|y| y.is_none())
     }
@@ -374,15 +380,19 @@ impl SkelColumn {
 }
 
 /// An unindexed column backed by a hash map.
-#[derive(Clone, Debug, Derivative, Constructor, From)]
+///
+/// A stable order is guaranteed when iterating over the preimage of an element.
+/// Currently, this is achieved (in the unindexed case) by using an [`IndexMap`]
+/// rather than a `HashMap` for the underlying data structure.
+#[derive(Clone, Debug, Derivative)]
 #[derivative(PartialEq(bound = "K: Eq + Hash, V: PartialEq"))]
 #[derivative(Eq(bound = "K: Eq + Hash, V: Eq"))]
 #[derivative(Default(bound = ""))]
-pub struct HashColumn<K, V>(HashMap<K, V>);
+pub struct HashColumn<K, V>(IndexMap<K, V>);
 
 impl<K, V> IntoIterator for HashColumn<K, V> {
     type Item = (K, V);
-    type IntoIter = std::collections::hash_map::IntoIter<K, V>;
+    type IntoIter = indexmap::map::IntoIter<K, V>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
@@ -394,7 +404,7 @@ where
     K: Eq + Hash,
 {
     fn from_iter<Iter: IntoIterator<Item = (K, V)>>(iter: Iter) -> Self {
-        HashColumn(HashMap::from_iter(iter))
+        HashColumn(IndexMap::from_iter(iter))
     }
 }
 
@@ -429,7 +439,7 @@ where
         self.0.insert(x, y)
     }
     fn unset(&mut self, x: &K) -> Option<V> {
-        self.0.remove(x)
+        self.0.swap_remove(x)
     }
 }
 
@@ -441,11 +451,12 @@ where
     fn iter(&self) -> impl Iterator<Item = (K, &V)> {
         self.0.iter().map(|(k, v)| (k.clone(), v))
     }
-
     fn values(&self) -> impl Iterator<Item = &Self::Cod> {
         self.0.values()
     }
-
+    fn len(&self) -> usize {
+        self.0.len()
+    }
     fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
@@ -639,15 +650,16 @@ where
     }
 
     fn set(&mut self, x: Dom, y: Cod) -> Option<Cod> {
-        let old = self.unset(&x);
+        if let Some(y_prev) = self.mapping.get(&x) {
+            self.index.remove(&x, y_prev);
+        }
         self.index.insert(x.clone(), &y);
-        self.mapping.set(x, y);
-        old
+        self.mapping.set(x, y)
     }
 
     fn unset(&mut self, x: &Dom) -> Option<Cod> {
         let old = self.mapping.unset(x);
-        if let Some(ref y) = old {
+        if let Some(y) = &old {
             self.index.remove(x, y);
         }
         old
@@ -669,6 +681,9 @@ where
     }
     fn preimage(&self, y: &Cod) -> impl Iterator<Item = Dom> {
         self.index.preimage(y)
+    }
+    fn len(&self) -> usize {
+        self.mapping.len()
     }
     fn is_empty(&self) -> bool {
         self.mapping.is_empty()
@@ -745,6 +760,9 @@ impl Column for SkelIndexedColumn {
     fn preimage(&self, y: &usize) -> impl Iterator<Item = usize> {
         self.0.preimage(y)
     }
+    fn len(&self) -> usize {
+        self.0.len()
+    }
     fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
@@ -818,6 +836,9 @@ impl<T: Eq + Hash + Clone> Column for IndexedVecColumn<T> {
     }
     fn preimage(&self, y: &T) -> impl Iterator<Item = usize> {
         self.0.preimage(y)
+    }
+    fn len(&self) -> usize {
+        self.0.len()
     }
     fn is_empty(&self) -> bool {
         self.0.is_empty()
@@ -905,6 +926,9 @@ where
     fn preimage(&self, y: &V) -> impl Iterator<Item = K> {
         self.0.preimage(y)
     }
+    fn len(&self) -> usize {
+        self.0.len()
+    }
     fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
@@ -925,6 +949,7 @@ mod tests {
     fn vec_column() {
         let mut col = VecColumn::new(vec!["foo", "bar", "baz"]);
         assert!(!col.is_empty());
+        assert_eq!(col.len(), 3);
         assert!(col.is_set(&2));
         assert_eq!(col.apply(2), Some("baz"));
         assert_eq!(col.apply(3), None);
@@ -952,6 +977,7 @@ mod tests {
         col.set('b', "bar");
         col.set('c', "baz");
         assert!(!col.is_empty());
+        assert_eq!(col.len(), 3);
         assert_eq!(col.apply('c'), Some("baz"));
         assert_eq!(col.apply_to_ref(&'c'), Some("baz"));
         assert_eq!(col.get(&'c'), Some(&"baz"));
@@ -986,6 +1012,7 @@ mod tests {
     fn skel_indexed_column() {
         let mut col = SkelIndexedColumn::new(&[1, 3, 5]);
         assert!(!col.is_empty());
+        assert_eq!(col.len(), 3);
         assert!(col.is_set(&2));
         assert_eq!(col.apply(2), Some(5));
         assert_eq!(col.apply_to_ref(&2), Some(5));
@@ -1007,6 +1034,7 @@ mod tests {
     fn indexed_vec_column() {
         let mut col = IndexedVecColumn::new(&["foo", "bar", "baz"]);
         assert!(!col.is_empty());
+        assert_eq!(col.len(), 3);
         assert!(col.is_set(&2));
         assert_eq!(col.apply(2), Some("baz"));
         let preimage: Vec<_> = col.preimage(&"baz").collect();
@@ -1030,6 +1058,7 @@ mod tests {
         col.set('b', "bar");
         col.set('c', "baz");
         assert!(!col.is_empty());
+        assert_eq!(col.len(), 3);
         assert_eq!(col.apply('c'), Some("baz"));
         let preimage: Vec<_> = col.preimage(&"baz").collect();
         assert_eq!(preimage, vec!['c']);

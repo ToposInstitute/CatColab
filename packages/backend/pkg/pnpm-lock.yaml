@@ -9,24 +9,24 @@ importers:
   .:
     dependencies:
       '@qubit-rs/client':
-        specifier: ^0.4.4
-        version: 0.4.4
+        specifier: ^0.4.5
+        version: 0.4.5
       typescript:
-        specifier: ^5.6.3
-        version: 5.6.3
+        specifier: ^5.6.2
+        version: 5.6.2
 
 packages:
 
-  '@qubit-rs/client@0.4.4':
-    resolution: {integrity: sha512-AdaF25aGRU4YkYYxxARH3eYlezzHhGECTFGZ5/zEc9y+iPxdIaaWf4/m8uEtdbzjMEsGaA4vVVd1kuriK6sDzQ==}
+  '@qubit-rs/client@0.4.5':
+    resolution: {integrity: sha512-L7pBAUs1sPWCkuoRq7rdwqXy1+iLOmOVhADxj+QoNY24yu4J1aiTUSlJJllK9rXRxfvkjRNEPSeUE5H+U3ncug==}
 
-  typescript@5.6.3:
-    resolution: {integrity: sha512-hjcS1mhfuyi4WW8IWtjP7brDrG2cuDZukyrYrSauoXGNgx0S7zceP07adYkJycEr56BOUTNPzbInooiN3fn1qw==}
+  typescript@5.6.2:
+    resolution: {integrity: sha512-NW8ByodCSNCwZeghjN3o+JX5OFH0Ojg6sadjEKY4huZ52TqbJTJnDo5+Tw98lSy63NZvi4n+ez5m2u5d4PkZyw==}
     engines: {node: '>=14.17'}
     hasBin: true
 
 snapshots:
 
-  '@qubit-rs/client@0.4.4': {}
+  '@qubit-rs/client@0.4.5': {}
 
-  typescript@5.6.3: {}
+  typescript@5.6.2: {}

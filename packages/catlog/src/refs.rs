@@ -23,9 +23,10 @@ pub const CartDblTheories: () = ();
 
 /// Reference: Products in double categories, revisited.
 ///
-/// Evan Patterson, 2024: Products in double categories, revisited.
+/// Evan Patterson, 2026: Products in double categories, revisited.
 ///
 /// - [arXiv:2401.08990](https://arxiv.org/abs/2401.08990)
+/// - [TAC](http://www.tac.mta.ca/tac/volumes/45/16/45-16abs.html)
 pub const DblProducts: () = ();
 
 /// Reference: Yoneda theory for double categories.
@@ -138,3 +139,13 @@ pub const KockGraphs: () = ();
 ///
 /// - [DOI:10.1007/978-3-319-10575-8](https://doi.org/10.1007/978-3-319-10575-8)
 pub const HandbookModelChecking: () = ();
+
+/// Reference: Impact of topology on nonlinear dynamical network stability.
+///
+///
+/// J. Nitzbon et al, 2017: Deciphering the imprint of topology on nonlinear
+/// dynamical network stability.
+///
+/// - [DOI:10.1088/1367-2630/aa6321](https://doi.org/10.1088/1367-2630/aa6321)
+/// - [arXiv:1612.03654](https://arxiv.org/abs/1612.03654)
+pub const NitzbonNetworkStability: () = ();

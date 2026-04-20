@@ -1,5 +1,5 @@
 import { A } from "@solidjs/router";
-import { HelpAnalysisById } from "../logic_help_detail"
+import { HelpAnalysisById } from "../logic_help_detail";
 
 ## Description
 
@@ -8,40 +8,43 @@ The interactions are either **promoting** ($A\to B$) or **inhibiting** ($A\dashv
 
 This theory is technically isomorphic to that of <A href="../causal-loop">causal loop diagrams</A>, even though the two are presented in different ways.
 
-
 ### Examples
 
-- The classic Lotka-Volterra [model](https://catcolab.org/model/0196b22f-b9b3-7841-a841-54fbc192148b) of foxes and rabbits, together with an ODE semantics.
-
+- The classic Lotka-Volterra [model](https://catcolab.org/model/019aff65-26d5-7e41-8bf7-7c7035d71b35/analysis/019aff71-cf17-7e21-bdb5-2cd31d7002ba) of foxes and rabbits, together with an ODE semantics.
 
 ### Further reading
 
 - Wikipedia: [Gene regulatory network](https://en.wikipedia.org/wiki/Gene_regulatory_network)
 - Rebekah Aduddell, James Fairbanks, Amit Kumar, Pablo S. Ocal, Evan Patterson, Brandon T. Shapiro, "A compositional account of motifs, mechanisms, and dynamics in biochemical regulatory networks" (2024). [arXiv:2301.01445](https://arxiv.org/abs/2301.01445) [DOI:10.32408/compositionality-6-2](https://doi.org/10.32408/compositionality-6-2)
 
-
 ## Instances and analyses
 
 ### Analyses
 
-<HelpAnalysisById theory={props.theory} analysisId="diagram"/>
+<HelpAnalysisById theory={props.theory} analysisId="diagram" />
 
 <HelpAnalysisById theory={props.theory} analysisId="negative-loops">
-Negative feedback loops are composites of paths within the diagram that start and finish at the same point, and whose overall sign (given by multiplying all the signs of each constituent path) is positive.
-Negative feedback loops tend to be stabilising.
+    Negative feedback loops are composites of paths within the diagram that start and finish at the
+    same point, and whose overall sign (given by multiplying all the signs of each constituent path)
+    is positive. Negative feedback loops tend to be stabilising.
 </HelpAnalysisById>
 
 <HelpAnalysisById theory={props.theory} analysisId="positive-loops">
-Positive feedback loops are composites of paths within the diagram that start and finish at the same point, and whose overall sign (given by multiplying all the signs of each constituent path) is positive.
-Positive feedback loops tend to produce unstable behavior.
+    Positive feedback loops are composites of paths within the diagram that start and finish at the
+    same point, and whose overall sign (given by multiplying all the signs of each constituent path)
+    is positive. Positive feedback loops tend to produce unstable behavior.
 </HelpAnalysisById>
 
 <HelpAnalysisById theory={props.theory} analysisId="linear-ode">
-A promotion $A\to B$ is interpreted as the equation $\dot{B}=k A$ for some non-negative constant $k$; an inhibition $A\dashv B$ is interpreted as $\dot{B}=-k A$.
-Multiple incoming arrows are interpreted additively, so e.g. $A\to B\vdash C$ is interpreted as $\dot{B}=kA-\ell C$.
+    A promotion $A\to B$ is interpreted as the equation $\dot{B}=k A$ for some non-negative constant
+    $k$; an inhibition $A\dashv B$ is interpreted as $\dot{B}=-k A$. Multiple incoming arrows are
+    interpreted additively, so e.g. $A\to B\vdash C$ is interpreted as $\dot{B}=kA-\ell C$.
 </HelpAnalysisById>
 
 <HelpAnalysisById theory={props.theory} analysisId="lotka-volterra">
-A promotion $A\to B$ is interpreted as the equation $\dot{B}=(kA+g)B$ for some non-negative constant $k$ (the *interaction coefficient*) and constant $g$ (the *growth rate*); an inhibition $A\dashv B$ is interpreted as $\dot{B}=-(kA+g)B$.
-Multiple incoming arrows are interpreted additively, so e.g. $A\to B\vdash C$ is interpreted as $\dot{B}=(kA - \ell C + g)B$.
+    Every species $A$ has a *growth rate* $g$, corresponding to the equation $\dot{A}\overset{+}{=}gA$.
+    A promotion $A\to B$ is interpreted as the equation $\dot{B}\overset{+}{=}kAB$ for some non-negative
+    constant $k$ (the *interaction coefficient*); an inhibition
+    $A\dashv B$ is interpreted as $\dot{B}\overset{-}{=}kAB$. Multiple incoming arrows are interpreted
+    additively, so e.g. $A\to B\vdash C$ is interpreted as $\dot{B}\overset{+}{=}(kA - \ell C)B$.
 </HelpAnalysisById>

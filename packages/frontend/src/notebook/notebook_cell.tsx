@@ -4,26 +4,21 @@ import {
     draggable,
     dropTargetForElements,
 } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
+import { preventUnhandled } from "@atlaskit/pragmatic-drag-and-drop/prevent-unhandled";
 import type { DocHandle, Prop } from "@automerge/automerge-repo";
 import Popover from "@corvu/popover";
-import type { EditorView } from "prosemirror-view";
-import { type JSX, Show, createEffect, createSignal, onCleanup } from "solid-js";
-
-import type { Uuid } from "catlog-wasm";
-import {
-    type Completion,
-    Completions,
-    IconButton,
-    InlineInput,
-    RichTextEditor,
-} from "../components";
-
 import ArrowDown from "lucide-solid/icons/arrow-down";
 import ArrowUp from "lucide-solid/icons/arrow-up";
 import Copy from "lucide-solid/icons/copy";
 import GripVertical from "lucide-solid/icons/grip-vertical";
 import Plus from "lucide-solid/icons/plus";
 import Trash2 from "lucide-solid/icons/trash-2";
+import type { EditorView } from "prosemirror-view";
+import { createEffect, createSignal, type JSX, onCleanup, Show } from "solid-js";
+
+import { type Completion, Completions, IconButton, InlineInput } from "catcolab-ui-components";
+import type { Uuid } from "catlog-wasm";
+import { RichTextEditor } from "../components";
 
 import "./notebook_cell.css";
 
@@ -121,7 +116,6 @@ export function NotebookCell(props: {
     const [isGutterVisible, setGutterVisible] = createSignal(false);
     const showGutter = () => setGutterVisible(true);
     const hideGutter = () => setGutterVisible(false);
-    const visibility = (isVisible: boolean) => (isVisible ? "visible" : "hidden");
 
     const [isMenuOpen, setMenuOpen] = createSignal(false);
     const openMenu = () => setMenuOpen(true);
@@ -156,6 +150,7 @@ export function NotebookCell(props: {
 
     const [closestEdge, setClosestEdge] = createSignal<ClosestEdge>(null);
     const [dropTarget, setDropTarget] = createSignal(false);
+    const [isDragging, setIsDragging] = createSignal(false);
 
     const isActiveDropTarget = () => props.currentDropTarget === props.cellId;
     createEffect(() => {
@@ -170,14 +165,37 @@ export function NotebookCell(props: {
             draggable({
                 element: handleRef,
                 getInitialData: () => createCellDragData(props.cellId, props.index),
+                onGenerateDragPreview({ nativeSetDragImage }) {
+                    if (nativeSetDragImage) {
+                        // Clone the cell content for the drag preview
+                        const cellContent = rootRef.querySelector(".cell-content");
+                        if (cellContent) {
+                            const preview = cellContent.cloneNode(true) as HTMLElement;
+                            preview.style.width = `${cellContent.clientWidth}px`;
+                            preview.style.opacity = "0.8";
+                            preview.style.pointerEvents = "none";
+                            document.body.appendChild(preview);
+                            nativeSetDragImage(preview, 0, 0);
+
+                            setTimeout(() => {
+                                preview.remove();
+                            }, 0);
+                        }
+                    }
+                },
+                onDragStart() {
+                    setIsDragging(true);
+                    preventUnhandled.start();
+                },
+                onDrop() {
+                    setIsDragging(false);
+                    preventUnhandled.stop();
+                },
             }),
             dropTargetForElements({
                 element: rootRef,
                 canDrop({ source }) {
                     // TODO: Reject if cell belongs to a different notebook.
-                    if (source.data.cellId === props.cellId) {
-                        return false;
-                    }
                     return isCellDragData(source.data);
                 },
                 getData({ input }) {
@@ -191,15 +209,11 @@ export function NotebookCell(props: {
                 onDragEnter(args) {
                     const sourceIndex = args.source.data.index as number;
                     const targetIndex = args.self.data.index as number;
-                    if (sourceIndex === targetIndex) {
-                        setClosestEdge(null);
-                        setDropTarget(false);
-                    } else {
-                        props.setCurrentDropTarget(props.cellId);
-                        const edge = sourceIndex < targetIndex ? "bottom" : "top";
-                        setClosestEdge(edge);
-                        setDropTarget(true);
-                    }
+
+                    props.setCurrentDropTarget(props.cellId);
+                    const edge = sourceIndex < targetIndex ? "bottom" : "top";
+                    setClosestEdge(edge);
+                    setDropTarget(true);
                 },
                 onDrop() {
                     setDropTarget(false);
@@ -211,11 +225,17 @@ export function NotebookCell(props: {
     });
 
     return (
-        <div class="cell" onMouseEnter={showGutter} onMouseLeave={hideGutter} ref={rootRef}>
+        <div
+            class="cell"
+            classList={{ "cell-dragging": isDragging() }}
+            onMouseEnter={showGutter}
+            onMouseLeave={hideGutter}
+            ref={rootRef}
+        >
             <div class="cell-gutter">
                 <IconButton
                     onClick={props.actions.createBelow}
-                    style={{ visibility: visibility(isGutterVisible()) }}
+                    style={{ visibility: isGutterVisible() ? "visible" : "hidden" }}
                     tooltip="Create a new cell below this one"
                 >
                     <Plus />
@@ -231,7 +251,10 @@ export function NotebookCell(props: {
                     <Popover.Anchor as="span">
                         <IconButton
                             onClick={openMenu}
-                            style={{ visibility: visibility(isGutterVisible() || isMenuOpen()) }}
+                            style={{
+                                visibility:
+                                    isGutterVisible() || isMenuOpen() ? "visible" : "hidden",
+                            }}
                             tooltip="Drag to move cell or click to open menu"
                             ref={handleRef}
                         >

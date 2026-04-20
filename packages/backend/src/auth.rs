@@ -1,34 +1,59 @@
 use std::collections::HashMap;
 
+use autosurgeon::{Hydrate, Reconcile};
 use firebase_auth::{FirebaseAuth, FirebaseUser};
 use serde::{Deserialize, Serialize};
-use ts_rs::TS;
 use uuid::Uuid;
+
+#[cfg(feature = "property-tests")]
+use test_strategy::Arbitrary;
 
 use super::app::{AppCtx, AppError, AppState};
 use super::user::UserSummary;
+use crate::user_state_updates::update_ref_for_users;
 
 /// Levels of permission that a user can have on a document.
+#[qubit::ts]
+#[cfg_attr(feature = "property-tests", derive(Arbitrary))]
 #[derive(
-    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize, sqlx::Type, TS,
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Deserialize,
+    Serialize,
+    sqlx::Type,
+    Reconcile,
+    Hydrate,
 )]
 #[sqlx(type_name = "permission_level", rename_all = "lowercase")]
 pub enum PermissionLevel {
+    /// Read-only access to the document.
     Read,
+    /// Read and write access to the document.
     Write,
+    /// Read, write, and manage access to the document.
     Maintain,
+    /// Full ownership of the document.
     Own,
 }
 
 /// Permissions of a user on a document.
-#[derive(Clone, Debug, Serialize, TS)]
+#[qubit::ts]
+#[derive(Clone, Debug, Serialize)]
 pub struct UserPermissions {
+    /// The user who has been granted permissions.
     pub user: UserSummary,
+    /// The level of permission granted to the user.
     pub level: PermissionLevel,
 }
 
 /// Permissions set on a document.
-#[derive(Clone, Debug, Serialize, TS)]
+#[qubit::ts]
+#[derive(Clone, Debug, Serialize)]
 pub struct Permissions {
     /// Base permission level for any person, logged in or not.
     pub anyone: Option<PermissionLevel>,
@@ -49,9 +74,9 @@ impl Permissions {
     }
 }
 
-/// Returns an error if the user_id in the session does not exist in the DB, returns None otherwise
+/// Returns an error if the user_id in the session does not exist in the DB, returns None otherwise.
 ///
-/// Used by the client to gracefully handle stale sessions
+/// Used by the client to gracefully handle stale sessions.
 pub async fn validate_session(ctx: AppCtx) -> Result<(), AppError> {
     let user_id = match ctx.user.as_ref().map(|u| u.user_id.clone()) {
         Some(id) => id,
@@ -181,15 +206,12 @@ pub async fn permissions(ctx: &AppCtx, ref_id: Uuid) -> Result<Permissions, AppE
         );
     }
 
-    Ok(Permissions {
-        anyone,
-        user,
-        users,
-    })
+    Ok(Permissions { anyone, user, users })
 }
 
 /// A new set of permissions to assign to a document.
-#[derive(Debug, Deserialize, TS)]
+#[qubit::ts]
+#[derive(Debug, Deserialize)]
 pub struct NewPermissions {
     /// Base permission level for any person, logged in or not.
     pub anyone: Option<PermissionLevel>,
@@ -209,6 +231,16 @@ pub async fn set_permissions(
     ref_id: Uuid,
     new: NewPermissions,
 ) -> Result<(), AppError> {
+    // Snapshot old permission holders before the transaction so we can update
+    // both old and new holders after the commit.
+    let old_holders: Vec<String> =
+        sqlx::query_scalar::<_, String>(
+            "SELECT DISTINCT subject FROM permissions WHERE object = $1 AND subject IS NOT NULL AND level < 'own'",
+        )
+        .bind(ref_id)
+        .fetch_all(&state.db)
+        .await?;
+
     let mut levels: Vec<_> = new.users.values().cloned().collect();
     let mut subjects: Vec<_> = new.users.into_keys().map(Some).collect();
     if let Some(anyone) = new.anyone {
@@ -243,6 +275,11 @@ pub async fn set_permissions(
     insert_query.execute(&mut *transaction).await?;
 
     transaction.commit().await?;
+
+    if let Err(e) = update_ref_for_users(state, ref_id, old_holders).await {
+        tracing::error!(%ref_id, error = %e, "Failed to update user states after permission change");
+    }
+
     Ok(())
 }
 

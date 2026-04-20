@@ -6,14 +6,14 @@
         justify-content: space-between;
         align-items: baseline;
         margin-bottom: 2em;
-        border-bottom: 1px solid black;
+        border-bottom: 1px solid var(--color-foreground);
 
         & > .help-navigation-title {
             font-size: 1.2em;
 
             & > a {
                 text-decoration: none;
-                color: black;
+                color: var(--color-foreground);
             }
         }
 
@@ -29,16 +29,17 @@
 
             & > li.help-navigation-link a {
                 text-decoration: none;
-                color: var(--topos-secondary);
+                color: var(--color-topos-secondary);
                 font-weight: 600;
                 padding: 0.3em 0.5em;
-                /*border: 1px solid var(--topos-secondary);*/
                 border-radius: 2px;
 
                 &:hover {
-                    background-color: var(--topos-secondary);
-                    color: white;
-                    transition: color .15s ease-in-out, background-color .15s ease-in-out;
+                    background-color: var(--color-topos-secondary);
+                    color: var(--color-background);
+                    transition:
+                        color 0.15s ease-in-out,
+                        background-color 0.15s ease-in-out;
                 }
             }
         }
@@ -66,7 +67,7 @@
     & h2 {
         font-size: 1.65em;
         margin: 1.25em 0 0.5em 0;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+        border-bottom: 1px solid var(--color-help-border);
     }
 
     & h3 {
@@ -81,13 +82,13 @@
 
     /* Links */
 
+    /* stylelint-disable-next-line no-descending-specificity -- general content link style, navigation links above have higher specificity */
     & a {
-        color: var(--topos-secondary);
+        color: var(--color-topos-secondary);
         text-decoration: underline;
 
         &:hover {
-            /*color: color-mix( in oklab, var(--topos-secondary) 80%, black);*/
-            color: var(--topos-primary);
+            color: var(--color-topos-primary);
         }
     }
 
@@ -100,6 +101,7 @@
     & dt {
         font-weight: 600;
 
+        /* stylelint-disable-next-line no-descending-specificity -- different context from navigation title link */
         & > a {
             text-decoration: none;
         }
@@ -125,12 +127,12 @@
         }
 
         th {
-            background-color: gray;
-            color: white;
+            background-color: var(--color-gray-750);
+            color: var(--color-background);
         }
 
         tr:nth-child(even) {
-            background-color: #f2f2f2;
+            background-color: var(--color-gray-125);
         }
     }
 
@@ -152,16 +154,17 @@
     .help-analysis-pane {
         margin-bottom: 1.5em;
         padding: 1em;
-        border: 1px solid rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--color-help-border);
         border-radius: 2px;
 
+        /* stylelint-disable-next-line no-descending-specificity -- different context from .help-summary-lists h3 */
         h3 {
             margin: 0;
             font-size: 1.2em;
         }
 
         h4 {
-            border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid var(--color-help-border);
         }
 
         .help-analysis-pane-description {

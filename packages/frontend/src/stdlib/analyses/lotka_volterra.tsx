@@ -1,11 +1,12 @@
-import type { DblModel, LotkaVolterraProblemData, QualifiedName } from "catlog-wasm";
-import type { ModelAnalysisProps } from "../../analysis";
 import {
+    BlockTitle,
     type ColumnSchema,
+    createNumericalColumn,
     FixedTableEditor,
     Foldable,
-    createNumericalColumn,
-} from "../../components";
+} from "catcolab-ui-components";
+import type { DblModel, LotkaVolterraProblemData, QualifiedName } from "catlog-wasm";
+import type { ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
 import { createModelODEPlot } from "./model_ode_plot";
@@ -51,7 +52,7 @@ export default function LotkaVolterra(
         {
             contentType: "string",
             header: true,
-            content: (id) => morLabelOrDefault(id, elaboratedModel()),
+            content: (id) => morLabelOrDefault(id, elaboratedModel()) ?? "",
         },
         createNumericalColumn({
             name: "Interaction",
@@ -78,13 +79,14 @@ export default function LotkaVolterra(
     ];
 
     const plotResult = createModelODEPlot(
-        () => props.liveModel,
+        () => props.liveModel.validatedModel(),
         (model: DblModel) => props.simulate(model, props.content),
     );
 
     return (
         <div class="simulation">
-            <Foldable title={props.title}>
+            <BlockTitle title={props.title} />
+            <Foldable title="Parameters" defaultExpanded>
                 <div class="parameters">
                     <FixedTableEditor
                         rows={elaboratedModel()?.obGenerators() ?? []}

@@ -3,15 +3,13 @@ use http::StatusCode;
 use qubit::{Extensions, FromRequestExtensions, Router, RpcError, handler};
 use serde::Serialize;
 use serde_json::Value;
-use tracing::debug;
-use ts_rs::TS;
+use tracing::{debug, error, warn};
 use uuid::Uuid;
 
-use crate::app::Paginated;
-use crate::document::RefStub;
-
-use super::app::{AppCtx, AppError, AppState};
+use super::app::{AppCtx, AppError, AppState, RefMsg};
 use super::auth::{NewPermissions, PermissionLevel, Permissions};
+use super::ref_actor::{ensure_ref_actor, send_to_actor};
+use super::user_state::get_or_create_user_state_doc;
 use super::{auth, document as doc, user};
 
 /// Create router for RPC API.
@@ -19,9 +17,9 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .handler(new_ref)
         .handler(get_doc)
-        .handler(head_snapshot)
-        .handler(create_snapshot)
+        .handler(load_snapshot)
         .handler(delete_ref)
+        .handler(restore_ref)
         .handler(get_permissions)
         .handler(set_permissions)
         .handler(validate_session)
@@ -30,8 +28,7 @@ pub fn router() -> Router<AppState> {
         .handler(username_status)
         .handler(get_active_user_profile)
         .handler(set_active_user_profile)
-        .handler(search_ref_stubs)
-        .handler(get_ref_children_stubs)
+        .handler(get_user_state_doc_id)
 }
 
 #[handler(mutation)]
@@ -41,40 +38,44 @@ async fn new_ref(ctx: AppCtx, content: Value) -> RpcResult<Uuid> {
 
 #[handler(query)]
 async fn get_doc(ctx: AppCtx, ref_id: Uuid) -> RpcResult<RefDoc> {
-    _get_doc(ctx, ref_id).await.into()
-}
-async fn _get_doc(ctx: AppCtx, ref_id: Uuid) -> Result<RefDoc, AppError> {
-    let permissions = auth::permissions(&ctx, ref_id).await?;
-    let max_level = permissions.max_level();
-    let deleted_at = doc::ref_deleted_at(ctx.state.clone(), ref_id).await?;
-    let is_deleted = deleted_at.is_some();
+    async {
+        let permissions = auth::permissions(&ctx, ref_id).await?;
+        let max_level = permissions.max_level();
+        let deleted_at = doc::ref_deleted_at(ctx.state.clone(), ref_id).await?;
+        let is_deleted = deleted_at.is_some();
 
-    if max_level >= Some(PermissionLevel::Write) {
-        let doc_id = doc::doc_id(ctx.state, ref_id).await?;
-        Ok(RefDoc::Live {
-            doc_id,
-            is_deleted,
-            permissions,
-        })
-    } else if max_level >= Some(PermissionLevel::Read) {
-        let content = doc::head_snapshot(ctx.state, ref_id).await?;
-        Ok(RefDoc::Readonly {
-            content,
-            is_deleted,
-            permissions,
-        })
-    } else {
-        Err(AppError::Forbidden(ref_id))
+        if max_level >= Some(PermissionLevel::Write) {
+            let doc_id = doc::get_doc_id(ctx.state.clone(), ref_id).await?;
+            let doc_handle =
+                ctx.state.repo.find(doc_id.clone()).await?.ok_or_else(|| {
+                    AppError::NotFound(format!("document {doc_id} for ref {ref_id}"))
+                })?;
+            ensure_ref_actor(ctx.state.clone(), ref_id, doc_handle).await;
+            Ok(RefDoc::Live {
+                doc_id: doc_id.to_string(),
+                is_deleted,
+                permissions,
+            })
+        } else if max_level >= Some(PermissionLevel::Read) {
+            let binary_data = doc::get_doc_binary_data(ctx.state, ref_id).await?;
+            Ok(RefDoc::Readonly { binary_data, is_deleted, permissions })
+        } else {
+            Err(AppError::Forbidden(ref_id))
+        }
     }
+    .await
+    .into()
 }
 
 /// Document identified by a ref.
-#[derive(Clone, Debug, Serialize, TS)]
+#[qubit::ts]
+#[derive(Clone, Debug, Serialize)]
 #[serde(tag = "tag")]
 enum RefDoc {
-    /// Readonly document, containing content at the current head.
+    /// Readonly document, containing binary automerge data (base64 encoded).
     Readonly {
-        content: Value,
+        #[serde(rename = "binaryData")]
+        binary_data: String,
         #[serde(rename = "isDeleted")]
         is_deleted: bool,
         permissions: Permissions,
@@ -90,33 +91,11 @@ enum RefDoc {
     },
 }
 
-#[handler(query)]
-async fn search_ref_stubs(
-    ctx: AppCtx,
-    query_params: doc::RefQueryParams,
-) -> RpcResult<Paginated<doc::RefStub>> {
-    doc::search_ref_stubs(ctx, query_params).await.into()
-}
-
-#[handler(query)]
-async fn get_ref_children_stubs(ctx: AppCtx, ref_id: Uuid) -> RpcResult<Vec<RefStub>> {
-    doc::get_ref_children_stubs(ctx, ref_id).await.into()
-}
-
-#[handler(query)]
-async fn head_snapshot(ctx: AppCtx, ref_id: Uuid) -> RpcResult<Value> {
-    _head_snapshot(ctx, ref_id).await.into()
-}
-async fn _head_snapshot(ctx: AppCtx, ref_id: Uuid) -> Result<Value, AppError> {
-    auth::authorize(&ctx, ref_id, PermissionLevel::Read).await?;
-    doc::head_snapshot(ctx.state, ref_id).await
-}
-
 #[handler(mutation)]
-async fn create_snapshot(ctx: AppCtx, ref_id: Uuid) -> RpcResult<()> {
+async fn load_snapshot(ctx: AppCtx, ref_id: Uuid, snapshot_id: i32) -> RpcResult<()> {
     async {
         auth::authorize(&ctx, ref_id, PermissionLevel::Write).await?;
-        doc::create_snapshot(ctx.state, ref_id).await
+        send_to_actor(&ctx.state, ref_id, RefMsg::LoadSnapshot { snapshot_id }).await
     }
     .await
     .into()
@@ -126,7 +105,17 @@ async fn create_snapshot(ctx: AppCtx, ref_id: Uuid) -> RpcResult<()> {
 async fn delete_ref(ctx: AppCtx, ref_id: Uuid) -> RpcResult<()> {
     async {
         auth::authorize(&ctx, ref_id, PermissionLevel::Own).await?;
-        doc::delete_ref(ctx.state, ref_id).await
+        send_to_actor(&ctx.state, ref_id, RefMsg::Delete).await
+    }
+    .await
+    .into()
+}
+
+#[handler(mutation)]
+async fn restore_ref(ctx: AppCtx, ref_id: Uuid) -> RpcResult<()> {
+    async {
+        auth::authorize(&ctx, ref_id, PermissionLevel::Own).await?;
+        send_to_actor(&ctx.state, ref_id, RefMsg::Restore).await
     }
     .await
     .into()
@@ -139,14 +128,15 @@ async fn get_permissions(ctx: AppCtx, ref_id: Uuid) -> RpcResult<Permissions> {
 
 #[handler(mutation)]
 async fn set_permissions(ctx: AppCtx, ref_id: Uuid, new: NewPermissions) -> RpcResult<()> {
-    _set_permissions(ctx, ref_id, new).await.into()
-}
-async fn _set_permissions(ctx: AppCtx, ref_id: Uuid, new: NewPermissions) -> Result<(), AppError> {
-    if ctx.user.is_none() {
-        return Err(AppError::Unauthorized);
+    async {
+        if ctx.user.is_none() {
+            return Err(AppError::Unauthorized);
+        }
+        auth::authorize(&ctx, ref_id, PermissionLevel::Own).await?;
+        auth::set_permissions(&ctx.state, ref_id, new).await
     }
-    auth::authorize(&ctx, ref_id, PermissionLevel::Own).await?;
-    auth::set_permissions(&ctx.state, ref_id, new).await
+    .await
+    .into()
 }
 
 #[handler(query)]
@@ -160,13 +150,13 @@ async fn sign_up_or_sign_in(ctx: AppCtx) -> RpcResult<()> {
 }
 
 #[handler(query)]
-async fn user_by_username(ctx: AppCtx, username: &str) -> RpcResult<Option<user::UserSummary>> {
-    user::user_by_username(ctx.state, username).await.into()
+async fn user_by_username(ctx: AppCtx, username: String) -> RpcResult<Option<user::UserSummary>> {
+    user::user_by_username(ctx.state, &username).await.into()
 }
 
 #[handler(query)]
-async fn username_status(ctx: AppCtx, username: &str) -> RpcResult<user::UsernameStatus> {
-    user::username_status(ctx.state, username).await.into()
+async fn username_status(ctx: AppCtx, username: String) -> RpcResult<user::UsernameStatus> {
+    user::username_status(ctx.state, &username).await.into()
 }
 
 #[handler(query)]
@@ -179,8 +169,20 @@ async fn set_active_user_profile(ctx: AppCtx, user: user::UserProfile) -> RpcRes
     user::set_active_user_profile(ctx, user).await.into()
 }
 
+#[handler(query)]
+async fn get_user_state_doc_id(ctx: AppCtx) -> RpcResult<String> {
+    async {
+        let user = ctx.user.as_ref().ok_or(AppError::Unauthorized)?;
+        let doc_id = get_or_create_user_state_doc(&ctx.state, &user.user_id).await?;
+        Ok(doc_id.to_string())
+    }
+    .await
+    .into()
+}
+
 /// Result returned by an RPC handler.
-#[derive(Debug, Clone, Serialize, TS)]
+#[qubit::ts]
+#[derive(Debug, Clone, Serialize)]
 #[serde(tag = "tag")]
 enum RpcResult<T> {
     Ok { content: T },
@@ -193,13 +195,20 @@ impl<T> From<AppError> for RpcResult<T> {
             AppError::Invalid(_) => StatusCode::BAD_REQUEST,
             AppError::Unauthorized => StatusCode::UNAUTHORIZED,
             AppError::Forbidden(_) => StatusCode::FORBIDDEN,
-            AppError::Db(sqlx::Error::RowNotFound) => StatusCode::NOT_FOUND,
+            AppError::NotFound(_) | AppError::Db(sqlx::Error::RowNotFound) => StatusCode::NOT_FOUND,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         };
-        RpcResult::Err {
-            code: code.as_u16(),
-            message: error.to_string(),
+        let message = error.to_string();
+        match code {
+            StatusCode::BAD_REQUEST | StatusCode::NOT_FOUND => {
+                warn!(message, "RPC: client error");
+            }
+            StatusCode::INTERNAL_SERVER_ERROR => {
+                error!(message, "RPC: internal error");
+            }
+            _ => {}
         }
+        RpcResult::Err { code: code.as_u16(), message }
     }
 }
 
@@ -223,16 +232,5 @@ impl FromRequestExtensions<AppState> for AppCtx {
             debug!("Handling request from user: {}", some_user.user_id);
         }
         Ok(AppCtx { state, user })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::path::PathBuf;
-
-    #[test]
-    fn rspc_type_defs() {
-        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("pkg").join("src");
-        super::router().write_bindings_to_dir(dir);
     }
 }

@@ -28,4 +28,30 @@ describe("Standard library of theories", () => {
             assert(theory.migrationTargets.every((id) => theories.has(id)));
         }
     });
+
+    test.sequential("types bound for models should exist in theory", async () => {
+        for (const meta of theories.allMetadata()) {
+            const theory = await theories.get(meta.id);
+            for (const meta of theory.modelTypes) {
+                if (meta.tag === "MorType") {
+                    assert(theory.theory.hasMorType(meta.morType));
+                } else {
+                    assert(theory.theory.hasObType(meta.obType));
+                }
+            }
+        }
+    });
+
+    test.sequential("types bound for instances should exist in theory", async () => {
+        for (const meta of theories.allMetadata()) {
+            const theory = await theories.get(meta.id);
+            for (const meta of theory.instanceTypes) {
+                if (meta.tag === "MorType") {
+                    assert(theory.theory.hasMorType(meta.morType));
+                } else {
+                    assert(theory.theory.hasObType(meta.obType));
+                }
+            }
+        }
+    });
 });

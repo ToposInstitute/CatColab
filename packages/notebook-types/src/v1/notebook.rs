@@ -24,6 +24,60 @@ pub struct ModelNotebook(pub Notebook<super::model_judgment::ModelJudgment>);
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct DiagramNotebook(pub Notebook<super::diagram_judgment::DiagramJudgment>);
 
+/// Arbitrary instances for property-based testing.
+#[cfg(feature = "property-tests")]
+pub(crate) mod arbitrary {
+    use super::*;
+    use crate::v0::cell::arbitrary::arb_notebook_cell;
+    use proptest::prelude::*;
+
+    fn arb_uuid() -> BoxedStrategy<Uuid> {
+        any::<u128>().prop_map(Uuid::from_u128).boxed()
+    }
+
+    /// Strategy for a `Notebook<T>` given a strategy for `T`.
+    ///
+    /// Generates a consistent notebook where `cell_order` contains exactly
+    /// the keys in `cell_contents`.
+    pub fn arb_notebook<T: std::fmt::Debug + 'static>(
+        arb_t: impl Strategy<Value = T> + Clone + 'static,
+    ) -> BoxedStrategy<Notebook<T>> {
+        prop::collection::vec((arb_uuid(), arb_notebook_cell(arb_t)), 0..6)
+            .prop_map(|entries| {
+                let mut cell_contents = HashMap::new();
+                let mut cell_order = Vec::new();
+                for (id, cell) in entries {
+                    // Replace the cell's internal id with the map key for
+                    // consistency, matching how real notebooks work.
+                    let cell = match cell {
+                        NotebookCell::RichText { content, .. } => {
+                            NotebookCell::RichText { id, content }
+                        }
+                        NotebookCell::Formal { content, .. } => {
+                            NotebookCell::Formal { id, content }
+                        }
+                        NotebookCell::Stem { .. } => NotebookCell::Stem { id },
+                    };
+                    cell_contents.insert(id, cell);
+                    cell_order.push(id);
+                }
+                Notebook { cell_contents, cell_order }
+            })
+            .boxed()
+    }
+
+    impl Arbitrary for ModelNotebook {
+        type Parameters = ();
+        type Strategy = BoxedStrategy<Self>;
+
+        fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
+            arb_notebook(any::<super::super::model_judgment::ModelJudgment>())
+                .prop_map(ModelNotebook)
+                .boxed()
+        }
+    }
+}
+
 impl<T> Notebook<T> {
     pub fn cells(&self) -> impl Iterator<Item = &NotebookCell<T>> {
         self.cell_order.iter().filter_map(|id| self.cell_contents.get(id))
@@ -51,9 +105,6 @@ impl<T> Notebook<T> {
             cell_contents.insert(id, old_cell);
         }
 
-        Notebook {
-            cell_contents,
-            cell_order,
-        }
+        Notebook { cell_contents, cell_order }
     }
 }

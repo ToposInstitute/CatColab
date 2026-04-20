@@ -8,33 +8,32 @@ import {
     NotebookEditor,
     newFormalCell,
 } from "../notebook";
-import type { AnalysisMeta } from "../theory";
-import { assertExhaustive } from "../util/assert_exhaustive";
+import type { AnalysisMeta, DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
 import { LiveAnalysisContext } from "./context";
-import type {
-    LiveAnalysisDocument,
-    LiveDiagramAnalysisDocument,
-    LiveModelAnalysisDocument,
+import {
+    type LiveAnalysisDoc,
+    type LiveDiagramAnalysisDoc,
+    type LiveModelAnalysisDoc,
+    theoryForLiveAnalysis,
 } from "./document";
 import type { Analysis } from "./types";
 
 /** Notebook editor for analyses of models of double theories.
  */
-export function AnalysisNotebookEditor(props: {
-    liveAnalysis: LiveAnalysisDocument;
-}) {
+export function AnalysisNotebookEditor(props: { liveAnalysis: LiveAnalysisDoc }) {
     const liveDoc = () => props.liveAnalysis.liveDoc;
 
     const cellConstructors = () => {
-        let meta = undefined;
+        let meta: ModelAnalysisMeta[] | DiagramAnalysisMeta[] | undefined;
         if (props.liveAnalysis.analysisType === "model") {
-            meta = theoryForAnalysis(props.liveAnalysis)?.modelAnalyses;
+            meta = theoryForLiveAnalysis(props.liveAnalysis)?.modelAnalyses;
         } else if (props.liveAnalysis.analysisType === "diagram") {
-            meta = theoryForAnalysis(props.liveAnalysis)?.diagramAnalyses;
+            meta = theoryForLiveAnalysis(props.liveAnalysis)?.diagramAnalyses;
         }
         return (meta ?? []).map(analysisCellConstructor);
     };
 
+    // oxlint-disable solid/reactivity -- Context.Provider value getter is reactive
     return (
         <LiveAnalysisContext.Provider value={() => props.liveAnalysis}>
             <NotebookEditor
@@ -60,13 +59,13 @@ function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
             <Match
                 when={
                     liveAnalysis().analysisType === "model" &&
-                    theoryForAnalysis(liveAnalysis())?.modelAnalysis(props.content.id)
+                    theoryForLiveAnalysis(liveAnalysis())?.modelAnalysis(props.content.id)
                 }
             >
                 {(analysis) => (
                     <Dynamic
                         component={analysis().component}
-                        liveModel={(liveAnalysis() as LiveModelAnalysisDocument).liveModel}
+                        liveModel={(liveAnalysis() as LiveModelAnalysisDoc).liveModel}
                         content={props.content.content}
                         changeContent={(f: (c: unknown) => void) =>
                             props.changeContent((content) => f(content.content))
@@ -77,13 +76,13 @@ function AnalysisCellEditor(props: FormalCellEditorProps<Analysis<unknown>>) {
             <Match
                 when={
                     liveAnalysis().analysisType === "diagram" &&
-                    theoryForAnalysis(liveAnalysis())?.diagramAnalysis(props.content.id)
+                    theoryForLiveAnalysis(liveAnalysis())?.diagramAnalysis(props.content.id)
                 }
             >
                 {(analysis) => (
                     <Dynamic
                         component={analysis().component}
-                        liveDiagram={(liveAnalysis() as LiveDiagramAnalysisDocument).liveDiagram}
+                        liveDiagram={(liveAnalysis() as LiveDiagramAnalysisDoc).liveDiagram}
                         content={props.content.content}
                         changeContent={(f: (c: unknown) => void) =>
                             props.changeContent((content) => f(content.content))
@@ -106,15 +105,4 @@ function analysisCellConstructor<T>(meta: AnalysisMeta<T>): CellConstructor<Anal
                 content: initialContent(),
             }),
     };
-}
-
-function theoryForAnalysis(liveAnalysis: LiveAnalysisDocument) {
-    switch (liveAnalysis.analysisType) {
-        case "model":
-            return liveAnalysis.liveModel.theory();
-        case "diagram":
-            return liveAnalysis.liveDiagram.liveModel.theory();
-        default:
-            assertExhaustive(liveAnalysis);
-    }
 }

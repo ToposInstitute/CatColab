@@ -1,8 +1,8 @@
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use ts_rs::TS;
 
 use super::app::{AppCtx, AppError, AppState};
+use crate::user_state_updates::update_profile_for_users;
 
 /// Notify the backend that a user has signed up or signed in.
 pub async fn sign_up_or_sign_in(ctx: AppCtx) -> Result<(), AppError> {
@@ -41,10 +41,14 @@ pub async fn user_by_username(
 ///
 /// The minimal information needed to uniquely identify a user and display the user
 /// in human-readable form.
-#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[qubit::ts]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UserSummary {
+    /// The Firebase user ID.
     pub id: String,
+    /// The user's chosen username, if set.
     pub username: Option<String>,
+    /// The user's chosen display name, if set.
     #[serde(rename = "displayName")]
     pub display_name: Option<String>,
 }
@@ -64,7 +68,8 @@ pub async fn username_status(state: AppState, username: &str) -> Result<Username
 }
 
 /// Status of a username.
-#[derive(Clone, Debug, Serialize, TS)]
+#[qubit::ts]
+#[derive(Clone, Debug, Serialize)]
 pub enum UsernameStatus {
     /// The username is valid and available.
     Available,
@@ -112,13 +117,26 @@ pub async fn set_active_user_profile(ctx: AppCtx, profile: UserProfile) -> Resul
         profile.display_name,
     );
     query.execute(&ctx.state.db).await?;
+
+    // Update user state for the user and all peers who share documents with them.
+    if let Err(e) = update_profile_for_users(&ctx.state, &user.user_id).await {
+        tracing::error!(
+            user_id = %user.user_id,
+            error = %e,
+            "Failed to update user states after profile update"
+        );
+    }
+
     Ok(())
 }
 
 /// Data of a user profile.
-#[derive(Clone, Debug, Serialize, Deserialize, TS)]
+#[qubit::ts]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UserProfile {
+    /// The user's chosen username.
     pub username: Option<String>,
+    /// The user's chosen display name.
     #[serde(rename = "displayName")]
     pub display_name: Option<String>,
     // TODO: More fields, such as:
@@ -140,7 +158,7 @@ impl UserProfile {
 
 /// Is the proposed user name valid?
 ///
-/// A username is **valid** when it
+/// A username is **valid** when it:
 ///
 /// - is nonempty
 /// - comprises ASCII alphanumeric characters, dashes, dots, and underscores
@@ -164,14 +182,7 @@ mod tests {
 
     #[test]
     fn validate_user_profile() {
-        assert!(
-            UserProfile {
-                username: None,
-                display_name: None
-            }
-            .validate()
-            .is_ok()
-        );
+        assert!(UserProfile { username: None, display_name: None }.validate().is_ok());
 
         assert!(
             UserProfile {

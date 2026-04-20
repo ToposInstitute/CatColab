@@ -3,29 +3,21 @@
 //! See [crate::tt] for what this means.
 
 use bwd::Bwd;
-use derive_more::Constructor;
-use std::ops::Deref;
+use derive_more::Deref;
 
-use crate::{
-    tt::{prelude::*, stx::*},
-    zero::LabelSegment,
-};
+use super::{prelude::*, stx::*, theory::*};
+use crate::zero::{LabelSegment, QualifiedName};
 
-/// A way of resolving [BwdIdx] found in [TmS_::Var] to values
+/// A way of resolving [BwdIdx] found in [TmS_::Var] to values.
 pub type Env = Bwd<TmV>;
 
-/// The content of a record type value
-#[derive(Clone, Constructor)]
+/// The content of a record type value.
+#[derive(Clone)]
 pub struct RecordV {
-    /// The base type.
-    pub fields0: Row<Ty0>,
     /// The closed-over environment.
     pub env: Env,
-    /// The total types for the fields.
-    ///
-    /// These are ready to be evaluated in `env.snoc(x)` where `x` is a value of
-    /// type `Ty0::Record(fields0)`.
-    pub fields1: Row<TyS>,
+    /// The types for the fields.
+    pub fields: Rc<Row<TyS>>,
     /// Specializations of the fields.
     ///
     /// When we get to actually computing the type of fields, we will look here
@@ -34,7 +26,16 @@ pub struct RecordV {
 }
 
 impl RecordV {
-    /// Add a specialization a path `path` to type `ty`
+    /// Construct a record type value.
+    pub fn new(env: Env, fields: Row<TyS>, specializations: Dtry<TyV>) -> Self {
+        Self {
+            env,
+            fields: Rc::new(fields),
+            specializations,
+        }
+    }
+
+    /// Add a specialization a path `path` to type `ty`.
     ///
     /// Precondition: assumes that this produces a subtype.
     pub fn add_specialization(&self, path: &[(FieldName, LabelSegment)], ty: TyV) -> Self {
@@ -47,7 +48,7 @@ impl RecordV {
         }
     }
 
-    /// Merge in the specializations in `specializations`
+    /// Merge in the specializations in `specializations`.
     ///
     /// Precondition: assumes that this produces a subtype.
     pub fn specialize(&self, specializations: &Dtry<TyV>) -> Self {
@@ -58,10 +59,9 @@ impl RecordV {
     }
 }
 
-/// Merge new specializations with old specializations
+/// Merge new specializations with old specializations.
 pub fn merge_specializations(old: &Dtry<TyV>, new: &Dtry<TyV>) -> Dtry<TyV> {
-    let mut result: IndexMap<FieldName, (LabelSegment, DtryEntry<TyV>)> =
-        old.entries().map(|(name, e)| (*name, e.clone())).collect();
+    let mut result: IndexMap<_, _> = old.entries().map(|(name, e)| (*name, e.clone())).collect();
     for (field, entry) in new.entries() {
         let new_entry = match (old.entry(field), &entry.1) {
             (Option::None, e) => e.clone(),
@@ -76,12 +76,12 @@ pub fn merge_specializations(old: &Dtry<TyV>, new: &Dtry<TyV>) -> Dtry<TyV> {
     result.into()
 }
 
-/// Inner enum for [TyV]
+/// Inner enum for [TyV].
 pub enum TyV_ {
     /// Type constructor for object types, also see [TyS_::Object].
-    Object(ObjectType),
+    Object(ObType),
     /// Type constructor for morphism types, also see [TyS_::Morphism].
-    Morphism(MorphismType, TmV, TmV),
+    Morphism(MorType, TmV, TmV),
     /// Type constructor for specialized record types.
     ///
     /// This is the target of both [TyS_::Specialize] and [TyS_::Record].
@@ -92,30 +92,27 @@ pub enum TyV_ {
     Record(RecordV),
     /// Type constructor for singleton types, also see [TyS_::Sing].
     Sing(TyV, TmV),
+    /// Type constructor for identity types, also see [TyS_::Id].
+    Id(TyV, TmV, TmV),
     /// Type constructor for unit types, also see [TyS_::Unit].
     Unit,
+    /// A metavariable, also see [TyS_::Meta].
+    Meta(MetaVar),
 }
 
 /// Value for total types, dereferences to [TyV_].
-#[derive(Clone)]
+#[derive(Clone, Deref)]
+#[deref(forward)]
 pub struct TyV(Rc<TyV_>);
-
-impl Deref for TyV {
-    type Target = TyV_;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
 
 impl TyV {
     /// Smart constructor for [TyV], [TyV_::Object] case.
-    pub fn object(object_type: ObjectType) -> Self {
+    pub fn object(object_type: ObType) -> Self {
         Self(Rc::new(TyV_::Object(object_type)))
     }
 
     /// Smart constructor for [TyV], [TyV_::Morphism] case.
-    pub fn morphism(morphism_type: MorphismType, dom: TmV, cod: TmV) -> Self {
+    pub fn morphism(morphism_type: MorType, dom: TmV, cod: TmV) -> Self {
         Self(Rc::new(TyV_::Morphism(morphism_type, dom, cod)))
     }
 
@@ -127,6 +124,11 @@ impl TyV {
     /// Smart constructor for [TyV], [TyV_::Sing] case.
     pub fn sing(ty_v: TyV, tm_v: TmV) -> Self {
         Self(Rc::new(TyV_::Sing(ty_v, tm_v)))
+    }
+
+    /// Smart constructor for [TyV], [TyV_::Id] case.
+    pub fn id(ty_v: TyV, tm_v1: TmV, tm_v2: TmV) -> Self {
+        Self(Rc::new(TyV_::Id(ty_v, tm_v1, tm_v2)))
     }
 
     /// Compute the specialization of `self` by `specializations`.
@@ -156,7 +158,7 @@ impl TyV {
         }
     }
 
-    /// Specializes the field at `path` to `ty`
+    /// Specializes the field at `path` to `ty`.
     ///
     /// Precondition: assumes that this produces a subtype.
     pub fn add_specialization(&self, path: &[(FieldName, LabelSegment)], ty: TyV) -> Self {
@@ -171,15 +173,9 @@ impl TyV {
         Self(Rc::new(TyV_::Unit))
     }
 
-    /// The base type
-    pub fn ty0(&self) -> Ty0 {
-        match &**self {
-            TyV_::Object(qname) => Ty0::Object(qname.clone()),
-            TyV_::Morphism(_, _, _) => Ty0::Unit,
-            TyV_::Record(record_v) => Ty0::Record(record_v.fields0.clone()),
-            TyV_::Sing(ty_v, _) => ty_v.ty0(),
-            TyV_::Unit => Ty0::Unit,
-        }
+    /// Smart constructor for [TyV], [TyV_::Meta] case.
+    pub fn meta(mv: MetaVar) -> Self {
+        Self(Rc::new(TyV_::Meta(mv)))
     }
 }
 
@@ -192,17 +188,10 @@ pub enum TmN_ {
     Proj(TmN, FieldName, LabelSegment),
 }
 
-/// Neutrals for base terms, dereferences to [TmN_].
-#[derive(Clone, PartialEq, Eq)]
+/// Neutrals for [terms](TmV), dereferences to [TmN_].
+#[derive(Clone, Deref, PartialEq, Eq)]
+#[deref(forward)]
 pub struct TmN(Rc<TmN_>);
-
-impl Deref for TmN {
-    type Target = TmN_;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
 
 impl TmN {
     /// Smart constructor for [TmN], [TmN_::Var] case.
@@ -214,36 +203,100 @@ impl TmN {
     pub fn proj(tm_n: TmN, field_name: FieldName, label: LabelSegment) -> Self {
         TmN(Rc::new(TmN_::Proj(tm_n, field_name, label)))
     }
+
+    /// Extracts a qualifed name from a series of projections.
+    pub fn to_qualified_name(&self) -> QualifiedName {
+        let mut segments = Vec::new();
+        let mut n = self;
+        while let TmN_::Proj(n1, f, _) = &**n {
+            n = n1;
+            segments.push(*f);
+        }
+        segments.reverse();
+        segments.into()
+    }
 }
 
-/// Values for base terms.
-///
-/// Note that this is *not* the value for total terms. So evaluating a `TmS` to
-/// produce a `TmV` and then quoting back will lose information about anything
-/// morphism-related. See [crate::tt] for more information.
-///
-/// It turns out that each of the cases for [TmV] has a single cheaply cloneable
-/// field, so we don't need to bother making a `TmV_`.
-#[derive(Clone)]
-pub enum TmV {
+/// Inner enum for [TmV].
+pub enum TmV_ {
     /// Neutrals.
     ///
     /// We store the type because we need it for eta-expansion.
     Neu(TmN, TyV),
+    /// Application of an object operation in the theory.
+    App(VarName, TmV),
+    /// Lists of objects.
+    List(Vec<TmV>),
     /// Records.
     Cons(Row<TmV>),
-    /// The unique element of `Ty0::Unit`.
+    /// The unique element of the unit type.
     Tt,
-    /// An element of a type that is opaque to conversion checking
-    Opaque,
+    /// The identity morphism of an object.
+    Id(TmV),
+    /// The tabulation of a morphism.
+    Tab(TmV),
+    /// Composition of morphisms.
+    Compose(TmV, TmV),
+    /// A metavariable.
+    Meta(MetaVar),
 }
 
+/// Values for terms, dereferences to [TmV_].
+#[derive(Clone, Deref)]
+#[deref(forward)]
+pub struct TmV(Rc<TmV_>);
+
 impl TmV {
-    /// Coerces self to a neutral
-    pub fn as_neu(&self) -> TmN {
-        match self {
-            TmV::Neu(n, _) => n.clone(),
-            _ => panic!("expected neutral"),
+    /// Smart constructor for [TmV], [TmV_::Neu] case.
+    pub fn neu(n: TmN, ty: TyV) -> Self {
+        TmV(Rc::new(TmV_::Neu(n, ty)))
+    }
+
+    /// Smart constructor for [TmV], [TmV_::App] case.
+    pub fn app(name: VarName, x: TmV) -> Self {
+        TmV(Rc::new(TmV_::App(name, x)))
+    }
+
+    /// Smart constructor for [TmV], [TmV_::List] case.
+    pub fn list(elems: Vec<TmV>) -> Self {
+        TmV(Rc::new(TmV_::List(elems)))
+    }
+
+    /// Smart constructor for [TmV], [TmV_::Cons] case.
+    pub fn cons(fields: Row<TmV>) -> Self {
+        TmV(Rc::new(TmV_::Cons(fields)))
+    }
+
+    /// Smart constructor for [TmV], [TmV_::Tt] case.
+    pub fn tt() -> Self {
+        TmV(Rc::new(TmV_::Tt))
+    }
+
+    /// Smart constructor for [TmV], [TmV_::Id] case.
+    pub fn id(x: TmV) -> Self {
+        TmV(Rc::new(TmV_::Id(x)))
+    }
+
+    /// Smart constructor for [TmV], [TmV_::Tab] case.
+    pub fn tab(mor: TmV) -> Self {
+        TmV(Rc::new(TmV_::Tab(mor)))
+    }
+
+    /// Smart constructor for [TmV], [TmV_::Compose] case.
+    pub fn compose(f: TmV, g: TmV) -> Self {
+        TmV(Rc::new(TmV_::Compose(f, g)))
+    }
+
+    /// Smart constructor for [TmV], [TmV_::Meta] case.
+    pub fn meta(mv: MetaVar) -> Self {
+        TmV(Rc::new(TmV_::Meta(mv)))
+    }
+
+    /// Unwraps a neutral term, or panics.
+    pub fn unwrap_neu(&self) -> TmN {
+        match &**self {
+            TmV_::Neu(n, _) => n.clone(),
+            _ => panic!("expected term to be a neutral"),
         }
     }
 }

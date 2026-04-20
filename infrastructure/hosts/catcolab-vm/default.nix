@@ -1,9 +1,14 @@
 {
+  pkgs,
   config,
   lib,
   modulesPath,
+  self,
   ...
 }:
+let
+  keys = import ../../ssh-keys.nix;
+in
 {
   imports = [
     (modulesPath + "/profiles/qemu-guest.nix")
@@ -19,21 +24,16 @@
 
   catcolab = {
     enable = true;
+    enableCaddy = false;
     backend = {
       port = 8000;
-      hostname = "backend-next.catcolab.org";
+      hostname = "";
       serveFrontend = true;
-    };
-    automerge = {
-      port = 8010;
-      hostname = "automerge-next.catcolab.org";
     };
     environmentFile = /etc/catcolab/catcolab-secrets.env;
     host = {
       enable = true;
-      userKeys = [
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMiaHaeJ5PQL0mka/lY1yGXIs/bDK85uY1O3mLySnwHd j@jmoggr.com"
-      ];
+      userKeys = keys.allUserKeys;
     };
   };
 
@@ -47,12 +47,31 @@
 
   networking.firewall.allowedTCPPorts = [
     config.catcolab.backend.port
-    config.catcolab.automerge.port
     5432
+  ];
+
+  virtualisation.vmVariant = {
+    virtualisation.forwardPorts = [
+      {
+        from = "host";
+        host.port = 8000;
+        guest.port = 8000;
+      }
+      {
+        from = "host";
+        host.port = 2221;
+        guest.port = 22;
+      }
+    ];
+  };
+
+  environment.systemPackages = [
+    self.packages.${pkgs.system}.frontend-tests
   ];
 
   # This matches the default root device that is created by nixos-generators
   fileSystems."/".device = "/dev/disk/by-label/nixos";
+
   virtualisation.diskSize = 20 * 1024;
   services.qemuGuest.enable = true;
   # needed for deploy-rs to works
@@ -60,6 +79,7 @@
     enable = true;
     device = "/dev/vda";
   };
+
   services.getty.autologinUser = "catcolab";
 
   networking.hostName = "catcolab-vm";

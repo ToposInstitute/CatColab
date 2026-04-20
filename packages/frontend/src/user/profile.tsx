@@ -1,42 +1,44 @@
-import { type SubmitHandler, createForm, reset } from "@modular-forms/solid";
-import { createEffect, createResource } from "solid-js";
-import invariant from "tiny-invariant";
+import { createForm, reset, type SubmitHandler } from "@modular-forms/solid";
+import { Title } from "@solidjs/meta";
+import { createEffect } from "solid-js";
 
 import type { UserProfile } from "catcolab-api";
+import { Button, FormGroup, TextInputField } from "catcolab-ui-components";
 import { useApi } from "../api";
-import { FormGroup, TextInputField } from "../components";
 import { BrandedToolbar } from "../page";
 import { LoginGate } from "./login";
+import { useUserState } from "./user_state_context";
 
 /** Page to configure user profile. */
 export default function UserProfilePage() {
+    const appTitle = import.meta.env.VITE_APP_TITLE;
+
     return (
-        <div class="growable-container">
-            <BrandedToolbar />
-            <div class="page-container">
-                <LoginGate>
-                    <h2>Public profile</h2>
-                    <UserProfileForm />
-                </LoginGate>
+        <>
+            <Title>Profile - {appTitle}</Title>
+            <div class="growable-container">
+                <BrandedToolbar />
+                <div class="page-container">
+                    <LoginGate>
+                        <h2>Public profile</h2>
+                        <UserProfileForm />
+                    </LoginGate>
+                </div>
             </div>
-        </div>
+        </>
     );
 }
 
 /** Form to configure user proifle. */
 export function UserProfileForm() {
     const api = useApi();
-
-    const [currentProfile, { refetch: refetchProfile }] = createResource(async () => {
-        const result = await api.rpc.get_active_user_profile.query();
-        invariant(result.tag === "Ok");
-        return result.content;
-    });
+    const userState = useUserState();
 
     const [form, { Form, Field }] = createForm<UserProfile>();
 
     createEffect(() => {
-        reset(form, { initialValues: currentProfile() });
+        const { username, displayName } = userState.profile;
+        reset(form, { initialValues: { username, displayName } });
     });
 
     const onSubmit: SubmitHandler<UserProfile> = async (values) => {
@@ -44,11 +46,10 @@ export function UserProfileForm() {
             username: values.username ? values.username : null,
             displayName: values.displayName ? values.displayName : null,
         });
-        refetchProfile();
     };
 
     const validateUsername = async (value?: string | null) => {
-        const currentName = currentProfile()?.username;
+        const currentName = userState.profile.username;
         if (value == null || value === currentName) {
             return "";
         }
@@ -57,7 +58,9 @@ export function UserProfileForm() {
         }
 
         const result = await api.rpc.username_status.query(value);
-        invariant(result.tag === "Ok");
+        if (result.tag !== "Ok") {
+            return "Unable to validate username.";
+        }
 
         if (result.content === "Unavailable") {
             return "Username is already taken. Please try another one.";
@@ -92,7 +95,9 @@ export function UserProfileForm() {
                     )}
                 </Field>
             </FormGroup>
-            <button type="submit">Update profile</button>
+            <Button type="submit" variant="positive">
+                Update profile
+            </Button>
         </Form>
     );
 }

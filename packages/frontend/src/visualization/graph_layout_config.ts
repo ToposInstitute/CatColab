@@ -1,4 +1,5 @@
 import type * as Viz from "@viz-js/viz";
+import type * as Elk from "elkjs";
 
 /** Configuration of a graph layout algorithm supported by CatColab. */
 export type Config = {
@@ -7,16 +8,19 @@ export type Config = {
 
     /** Primary layout direction, when applicable. */
     direction?: Direction;
+
+    /** Node separation for undirected (neato) layout, in inches. Defaults to 1.0. */
+    separation?: number;
 };
 
-/** Engines supported for graph layout.
-
-At this time we support only programs from Graphviz. In the future we may
-support other tools.
- */
+/** Engines supported for graph layout. */
 export enum Engine {
+    /** Graphviz with directed layout (program: `dot`). */
     VizDirected = "graphviz-directed",
+    /** Graphviz with undirected layout (program: `neato`). */
     VizUndirected = "graphviz-undirected",
+    /** ELK, a directed layout. */
+    Elk = "elk",
 }
 
 /** Layout direction for graph layouts with a primary/preferred direction. */
@@ -30,11 +34,13 @@ export const defaultConfig = (): Config => ({
     layout: Engine.VizDirected,
 });
 
+/** Generates a set of Graphviz options from a layout config. */
 export const graphvizOptions = (config: Config): Viz.RenderOptions => ({
     engine: graphvizEngine(config.layout),
-    graphAttributes: {
-        rankdir: graphvizRankdir(config.direction ?? Direction.Vertical),
-    },
+    graphAttributes:
+        config.layout === Engine.VizUndirected
+            ? { overlap: "prism", sep: `${config.separation ?? 1.0}` }
+            : { rankdir: graphvizRankdir(config.direction ?? Direction.Vertical) },
 });
 
 function graphvizEngine(layout: Engine): Viz.RenderOptions["engine"] {
@@ -54,6 +60,22 @@ const graphvizRankdir = (direction: Direction) => {
             return "LR";
         case Direction.Vertical:
             return "TB";
+        default:
+            throw new Error(`Unknown layout direction: ${direction}`);
+    }
+};
+
+/** Generates a set of ELK layout options from a layout config. */
+export const elkOptions = (config: Config): Elk.LayoutOptions => ({
+    "elk.direction": elkDirection(config.direction ?? Direction.Vertical),
+});
+
+const elkDirection = (direction: Direction) => {
+    switch (direction) {
+        case Direction.Horizontal:
+            return "RIGHT";
+        case Direction.Vertical:
+            return "DOWN";
         default:
             throw new Error(`Unknown layout direction: ${direction}`);
     }

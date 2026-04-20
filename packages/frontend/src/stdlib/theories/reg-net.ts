@@ -1,6 +1,11 @@
+import { lazy } from "solid-js";
+
 import { ThSignedCategory } from "catlog-wasm";
 import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
+
+const ObjectCellEditor = lazy(() => import("../../model/object_cell_editor"));
+const MorphismCellEditor = lazy(() => import("../../model/morphism_cell_editor"));
 
 export default function createRegulatoryNetworkTheory(theoryMeta: TheoryMeta): Theory {
     const thSignedCategory = new ThSignedCategory();
@@ -14,6 +19,7 @@ export default function createRegulatoryNetworkTheory(theoryMeta: TheoryMeta): T
             {
                 tag: "ObType",
                 obType: { tag: "Basic", content: "Object" },
+                editor: ObjectCellEditor,
                 name: "Species",
                 shortcut: ["S"],
                 description: "Biochemical species in the network",
@@ -24,6 +30,7 @@ export default function createRegulatoryNetworkTheory(theoryMeta: TheoryMeta): T
                     tag: "Hom",
                     content: { tag: "Basic", content: "Object" },
                 },
+                editor: MorphismCellEditor,
                 name: "Promotion",
                 shortcut: ["P"],
                 description: "Positive interaction: activates or promotes",
@@ -32,8 +39,9 @@ export default function createRegulatoryNetworkTheory(theoryMeta: TheoryMeta): T
             {
                 tag: "MorType",
                 morType: { tag: "Basic", content: "Negative" },
+                editor: MorphismCellEditor,
                 name: "Inhibition",
-                shortcut: ["I"],
+                shortcut: ["N"],
                 description: "Negative interaction: represses or inhibits",
                 arrowStyle: "flat",
                 preferUnnamed: true,

@@ -1,18 +1,19 @@
+import { isValidDocumentId } from "@automerge/automerge-repo";
 import { type FirebaseOptions, initializeApp } from "firebase/app";
 import { deleteUser, getAuth, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import invariant from "tiny-invariant";
 import { v4 } from "uuid";
-import { assert, afterAll, describe, test } from "vitest";
+import { afterAll, assert, describe, test } from "vitest";
 
 import type { UserProfile } from "catcolab-api";
 import { createTestDocument, initTestUserAuth } from "../util/test_util.ts";
-import { createRpcClient, unwrap, unwrapErr } from "./rpc.ts";
+import { createFetchWithAuth, createRpcClient, unwrap, unwrapErr } from "./rpc.ts";
 
 const serverUrl = import.meta.env.VITE_SERVER_URL;
 const firebaseOptions = JSON.parse(import.meta.env.VITE_FIREBASE_OPTIONS) as FirebaseOptions;
 
 const firebaseApp = initializeApp(firebaseOptions);
-const rpc = createRpcClient(serverUrl, firebaseApp);
+const rpc = createRpcClient(serverUrl, createFetchWithAuth(firebaseApp));
 
 describe("RPC for user profiles", async () => {
     const auth = getAuth(firebaseApp);
@@ -76,6 +77,23 @@ describe("RPC for user profiles", async () => {
     const signInResult = await rpc.sign_up_or_sign_in.mutate();
     test.sequential("should allow sign in when authenticated", () => {
         assert.strictEqual(signInResult.tag, "Ok");
+    });
+
+    const userStateDocId = unwrap(await rpc.get_user_state_doc_id.query());
+    test.sequential("should get a valid automerge document ID for user state", () => {
+        assert(isValidDocumentId(userStateDocId));
+    });
+
+    const userStateDocId2 = unwrap(await rpc.get_user_state_doc_id.query());
+    test.sequential("should get the same user state doc ID on subsequent calls", () => {
+        assert.strictEqual(userStateDocId2, userStateDocId);
+    });
+
+    await signOut(auth);
+
+    const unauthorizedUserStateResult = await rpc.get_user_state_doc_id.query();
+    test.sequential("should prohibit getting user state doc ID when unauthenticated", () => {
+        assert.strictEqual(unwrapErr(unauthorizedUserStateResult).code, 401);
     });
 });
 

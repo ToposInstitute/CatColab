@@ -1,154 +1,57 @@
 name: deploy
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-  release:
-    types: [published]
+  workflow_run:
+    workflows: ["build"]
+    types:
+      - completed
 
 env:
-  BRANCH_NAME: ${{ github.ref_name }}
+  BRANCH_NAME: ${{ github.event.workflow_run.head_branch }}
 
 permissions:
-  pull-requests: write
+  deployments: write
 
 jobs:
-  build_dev_docs:
-    name: Build developer docs
+  create_deployment:
+    name: Create GitHub deployment
     runs-on: ubuntu-latest
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.head_repository.full_name == 'ToposInstitute/CatColab'
+    outputs:
+      deployment_id: ${{ steps.create_deployment.outputs.deployment_id }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup NodeJS
-        uses: actions/setup-node@v4
+      - name: Create new GitHub deployment
+        id: create_deployment
+        uses: chrnorm/deployment-action@v2
         with:
-          node-version: 20
-          cache: "pnpm"
+          token: ${{ github.token }}
+          environment: netlify-preview
+          ref: ${{ github.event.workflow_run.head_branch }}
+          sha: ${{ github.event.workflow_run.head_sha }}
+          transient-environment: true
+          auto-inactive: true
+          log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-      - name: Build developer docs
-        run: |
-          pnpm install
-          pnpm --filter ./dev-docs run doc
-
-      - name: Upload developer docs
-        uses: actions/upload-artifact@v4
+      - name: Update deployment status to in_progress
+        uses: chrnorm/deployment-status@v2
         with:
-          name: dev-docs
-          path: dev-docs/output
-
-  build_frontend:
-    name: Build frontend
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup NodeJS
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: "pnpm"
-
-      - name: Install Rust toolchain from file
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          # Don't override flags in cargo config files.
-          rustflags: ""
-
-      - name: Build for Staging
-        if: github.event_name == 'push' || github.event_name == 'pull_request'
-        run: |
-          pnpm install
-          pnpm --filter ./packages/frontend run build -- --mode staging
-
-      - name: Build for Production
-        if: github.event_name == 'release'
-        run: |
-          pnpm install
-          pnpm --filter ./packages/frontend run build
-
-      - name: Upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: app
-          path: packages/frontend/dist
-
-      - name: Build frontend docs
-        run: |
-          pnpm --filter ./packages/frontend run doc
-
-      - name: Upload frontend docs
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend_docs
-          path: packages/frontend/docs
-
-  build_rust_docs:
-    name: Build Rust docs
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain from file
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-
-      - name: Build Rust docs
-        run: |
-          cargo doc --all-features --no-deps --workspace --exclude "migrator"
-
-      - name: Upload Rust docs
-        uses: actions/upload-artifact@v4
-        with:
-          name: rust_docs
-          path: target/doc
-
-  build_math-docs:
-    name: Build mathematical docs
-    runs-on: ubuntu-latest
-    steps:
-      - name: Repository Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup TinyTeX
-        uses: r-lib/actions/setup-tinytex@v2
-
-      - name: Install TeX Packages
-        run: |
-          tlmgr update --self
-          tlmgr install dvisvgm
-          tlmgr install standalone
-          tlmgr install pgf
-          tlmgr install tikz-cd
-          tlmgr install amsmath
-          tlmgr install quiver
-          tlmgr install spath3
-
-      - name: Build mathematical docs
-        run: |
-          cd math-docs
-          ./forester build
-
-      - name: Upload mathematical docs
-        uses: actions/upload-artifact@v4
-        with:
-          name: math-docs
-          path: math-docs/output
+          token: ${{ github.token }}
+          description: 'Building and deploying...'
+          state: 'in_progress'
+          log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          deployment-id: ${{ steps.create_deployment.outputs.deployment_id }}
 
   deploy:
     name: Deploy to Netlify
     runs-on: ubuntu-latest
-    needs: [build_dev_docs, build_frontend, build_rust_docs, build_math-docs]
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == 'ToposInstitute/CatColab'
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      (github.event.workflow_run.event != 'pull_request' || github.event.workflow_run.head_repository.full_name == 'ToposInstitute/CatColab')
+    outputs:
+      deploy_url: ${{ steps.url_preview.outputs.NETLIFY_PREVIEW_URL }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -159,7 +62,7 @@ jobs:
       - name: Setup NodeJS
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: "pnpm"
 
       - name: Install Netlify
@@ -169,29 +72,35 @@ jobs:
 
       - name: Download artifacts
         uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
 
       - name: Consolidate and deploy to Staging
-        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        if: github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'pull_request'
         id: netlify_deploy
         run: |
           mv app site/
           mv dev-docs site/dev
           mv rust_docs site/dev/rust
           mv frontend_docs site/dev/frontend
+          mv ui-components site/dev/ui-components
           mv math-docs site/math
+          mv rfc site/rfc
           echo '/dev/rust /dev/rust/catlog' >> site/_redirects
           echo '/dev/core /dev/rust/catlog' >> site/_redirects
+          echo '/dev/backend /dev/rust/backend' >> site/_redirects
           echo '/dev/catcolab_backend /dev/rust/backend' >> site/_redirects
           echo '/math /math/index.xml' >> site/_redirects
           echo '/maths /math/index.xml' >> site/_redirects
           echo '/* /index.html 200' >> site/_redirects
           cd .netlify-env
-          prod_flag=""
-          if [ "$BRANCH_NAME" = "main" ]; then prod_flag="--prod"; fi
-          npx netlify deploy --dir ../site --site ${{ secrets.NETLIFY_SITE_ID }} --auth ${{ secrets.NETLIFY_API_TOKEN }} $prod_flag --json > ../deploy_output.json
+          branch_flag=""
+          if [ "$BRANCH_NAME" = "main" ]; then branch_flag="--prod"; else branch_flag="--alias='branch-$BRANCH_NAME'"; fi
+          npx netlify deploy --dir ../site --site ${{ secrets.NETLIFY_SITE_ID }} --auth ${{ secrets.NETLIFY_API_TOKEN }} $branch_flag --json > ../deploy_output.json
 
       - name: Consolidate and deploy to Production
-        if: github.event_name == 'release'
+        if: github.event.workflow_run.event == 'release'
         run: |
           mv app site/
           echo '/* /index.html 200' >> site/_redirects
@@ -200,31 +109,121 @@ jobs:
 
       - name: Generate URL preview
         id: url_preview
-        if: env.BRANCH_NAME != 'main' && (github.event_name == 'push' || github.event_name == 'pull_request')
+        if: env.BRANCH_NAME != 'main' && (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'pull_request')
         run: |
           NETLIFY_PREVIEW_URL=$(jq -r '.deploy_url' deploy_output.json)
           echo "NETLIFY_PREVIEW_URL=$NETLIFY_PREVIEW_URL" >> "$GITHUB_OUTPUT"
 
-      - name: Comment URL preview on PR
-        uses: mshick/add-pr-comment@v2
-        if: env.BRANCH_NAME != 'main' && (github.event_name == 'push' || github.event_name == 'pull_request')
+  report_deployment_status:
+    name: Report deployment status
+    runs-on: ubuntu-latest
+    needs: [create_deployment, deploy]
+    if: always() && github.event.workflow_run.event == 'pull_request' && needs.create_deployment.result == 'success'
+    steps:
+      - name: Delete old deployments
+        if: needs.deploy.result == 'success'
+        uses: actions/github-script@v7
         with:
-          message: |
-            Preview url: ${{ steps.url_preview.outputs.NETLIFY_PREVIEW_URL }}
+          script: |
+            const { data: deployments } = await github.rest.repos.listDeployments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: '${{ github.event.workflow_run.head_branch }}',
+              environment: 'netlify-preview'
+            });
+            
+            console.log(`Found ${deployments.length} existing deployment(s)`);
+            
+            const currentDeploymentId = parseInt('${{ needs.create_deployment.outputs.deployment_id }}');
+            
+            for (const deployment of deployments) {
+              if (deployment.id !== currentDeploymentId) {
+                console.log(`Deleting old deployment ${deployment.id}`);
+                
+                // A deployment must be marked inactive before it can be deleted
+                await github.rest.repos.createDeploymentStatus({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  deployment_id: deployment.id,
+                  state: 'inactive',
+                  description: 'Superseded by newer deployment'
+                });
+                
+                await github.rest.repos.deleteDeployment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  deployment_id: deployment.id
+                });
+                
+                console.log(`Deleted deployment ${deployment.id}`);
+              }
+            }
+
+      - name: Update deployment status to success
+        if: needs.deploy.result == 'success'
+        uses: chrnorm/deployment-status@v2
+        # The deployment may have already been deleted by another run so we need to be ok with errors
+        continue-on-error: true
+        with:
+          token: ${{ github.token }}
+          environment-url: ${{ needs.deploy.outputs.deploy_url }}
+          log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          description: 'Netlify preview deployment'
+          state: 'success'
+          deployment-id: ${{ needs.create_deployment.outputs.deployment_id }}
+
+      - name: Update deployment status to failure
+        if: needs.deploy.result != 'success'
+        uses: chrnorm/deployment-status@v2
+        # The deployment may have already been deleted by another run so we need to be ok with errors
+        continue-on-error: true
+        with:
+          token: ${{ github.token }}
+          log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          description: 'Deployment failed'
+          state: 'failure'
+          deployment-id: ${{ needs.create_deployment.outputs.deployment_id }}
+
+  create_backend_deployment:
+    name: Create backend GitHub deployment
+    runs-on: ubuntu-latest
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event != 'pull_request' &&
+      github.event.workflow_run.head_branch == 'main'
+    outputs:
+      deployment_id: ${{ steps.create_deployment.outputs.deployment_id }}
+    steps:
+      - name: Create new GitHub deployment
+        id: create_deployment
+        uses: chrnorm/deployment-action@v2
+        with:
+          token: ${{ github.token }}
+          environment: backend-next
+          ref: ${{ github.event.workflow_run.head_branch }}
+          sha: ${{ github.event.workflow_run.head_sha }}
+          auto-inactive: true
+          log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Update deployment status to in_progress
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ github.token }}
+          description: 'Deploying backend to AWS...'
+          state: 'in_progress'
+          log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          deployment-id: ${{ steps.create_deployment.outputs.deployment_id }}
 
   deploy_backend:
     name: Deploy backend to AWS
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' && github.ref_name == 'main'
-
+    needs: [create_backend_deployment]
     steps:
     - name: Checkout
       uses: actions/checkout@v4
     
     - name: Install Nix
       uses: cachix/install-nix-action@v25
-      with:
-        nix_path: nixpkgs=channel:25.05
 
     - name: Configure Cachix
       uses: cachix/cachix-action@v14
@@ -241,7 +240,21 @@ jobs:
 
     - name: Deploy to catcolab-next
       run: |
-       nix run github:serokell/deploy-rs .#catcolab-next
+       nix run github:serokell/deploy-rs -- --skip-checks .#catcolab-next
+
+    - name: Verify deployment
+      run: |
+        EXPECTED=$(nix eval --raw .#nixosConfigurations.catcolab-next.config.system.build.toplevel)
+        ACTUAL=$(ssh catcolab@backend-next.catcolab.org "readlink -f /run/current-system")
+
+        if [[ "$ACTUAL" != "$EXPECTED" ]]; then
+          echo "ERROR: Deployment verification failed, the server is not running the expected nix profile"
+          echo "Expected: $EXPECTED"
+          echo "Actual:   $ACTUAL"
+          exit 1
+        fi
+
+        echo "Deployment verified: $ACTUAL"
 
     # Ensure that a copy of the deployed repository is on the machine that it was deployed to. This is
     # a nice-to-have which enables checking the configuration of the currently deployed system and could
@@ -249,3 +262,30 @@ jobs:
     - name: Rsync the repo to remote host
       run: |
          rsync -az --delete ./ catcolab@backend-next.catcolab.org:~/catcolab
+
+  report_backend_deployment_status:
+    name: Report backend deployment status
+    runs-on: ubuntu-latest
+    needs: [create_backend_deployment, deploy_backend]
+    if: always() && needs.create_backend_deployment.result == 'success'
+    steps:
+      - name: Update deployment status to success
+        if: needs.deploy_backend.result == 'success'
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ github.token }}
+          environment-url: https://backend-next.catcolab.org
+          log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          description: 'Backend deployed to AWS'
+          state: 'success'
+          deployment-id: ${{ needs.create_backend_deployment.outputs.deployment_id }}
+
+      - name: Update deployment status to failure
+        if: needs.deploy_backend.result != 'success'
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ github.token }}
+          log-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          description: 'Backend deployment failed'
+          state: 'failure'
+          deployment-id: ${{ needs.create_backend_deployment.outputs.deployment_id }}

@@ -1,0 +1,14 @@
+.resizable-handle {
+    background: none;
+    border: none;
+    border-radius: 6px;
+    padding: 3px;
+
+    &.active {
+        background: var(--color-gray-750);
+    }
+
+    &:hover {
+        background: var(--color-gray-750);
+    }
+}

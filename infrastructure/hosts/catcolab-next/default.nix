@@ -5,10 +5,7 @@
   ...
 }:
 let
-  owen = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIF2sBTuqGoEXRWpBRqTBwZZPDdLGGJ0GQcuX5dfIZKb4 o@red-special";
-  epatters = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAKXx6wMJSeYKCHNmbyR803RQ72uto9uYsHhAPPWNl2D evan@epatters.org";
-  jmoggr = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMiaHaeJ5PQL0mka/lY1yGXIs/bDK85uY1O3mLySnwHd j@jmoggr.com";
-  catcolab-next-deployuser = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM7AYg1fZM0zMxb/BuZTSwK4O3ycUIHruApr1tKoO8nJ deployuser@next.catcolab.org";
+  keys = import ../../ssh-keys.nix;
 in
 {
   imports = [
@@ -37,19 +34,11 @@ in
       port = 8000;
       hostname = "backend-next.catcolab.org";
     };
-    automerge = {
-      port = 8010;
-      hostname = "automerge-next.catcolab.org";
-    };
+    julia.enable = true;
     environmentFile = config.age.secrets.catcolabSecrets.path;
     host = {
       enable = true;
-      userKeys = [
-        owen
-        epatters
-        jmoggr
-        catcolab-next-deployuser
-      ];
+      userKeys = keys.hosts.catcolab-next.userKeys;
       backup = {
         enable = true;
         rcloneConfigFile = config.age.secrets.rcloneConf.path;

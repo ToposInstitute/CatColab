@@ -1,12 +1,13 @@
-import { deepEqual } from "fast-equals";
 import { type Component, splitProps, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
-import { P, match } from "ts-pattern";
+import { match, P } from "ts-pattern";
 
+import type { TextInputOptions } from "catcolab-ui-components";
 import type { MorType, Ob, ObOp, ObType, QualifiedName, Uuid } from "catlog-wasm";
-import { IdInput, type IdInputOptions, type InputOptions, ObIdInput } from "../components";
+import { IdInput, type IdInputOptions, ObIdInput } from "../components";
 import { LiveModelContext } from "./context";
+import { unwrapApp, wrapApp } from "./ob_operations";
 import { ObListEditor } from "./object_list_editor";
 
 /** Props passed to any object input component. */
@@ -33,36 +34,17 @@ export type ObInputProps = {
 /** Input an object that already exists in a model. */
 export function ObInput(
     allProps: ObInputProps &
-        InputOptions & {
+        TextInputOptions & {
             /** Operation to apply to the object afterwards, if any. */
             applyOp?: ObOp;
         },
 ) {
     const [props, otherProps] = splitProps(allProps, ["ob", "setOb", "obType", "applyOp"]);
 
-    const ob = () => {
-        if (props.applyOp) {
-            return props.ob?.tag === "App" && deepEqual(props.ob.content.op, props.applyOp)
-                ? props.ob.content.ob
-                : null;
-        } else {
-            return props.ob;
-        }
-    };
+    const ob = () => (props.applyOp ? unwrapApp(props.ob, props.applyOp) : props.ob);
 
-    const setOb = (ob: Ob | null) => {
-        if (ob && props.applyOp) {
-            props.setOb({
-                tag: "App",
-                content: {
-                    op: props.applyOp,
-                    ob,
-                },
-            });
-        } else {
-            props.setOb(ob);
-        }
-    };
+    const setOb = (ob: Ob | null) =>
+        props.setOb(ob && props.applyOp ? wrapApp(ob, props.applyOp) : ob);
 
     return (
         <Dynamic
@@ -87,9 +69,9 @@ function obEditorForType(obType: ObType): Component<ObInputProps> {
                 return obEditorForType(obType.content.obType);
             case "List":
             case "SymmetricList":
-            case "CoproductList":
-            case "ProductList":
-            case "BiproductList": {
+            case "CocartesianList":
+            case "CartesianList":
+            case "AdditiveList": {
                 return ObListEditor;
             }
         }
@@ -97,8 +79,7 @@ function obEditorForType(obType: ObType): Component<ObInputProps> {
     throw new Error(`No editor for object of type: ${obType}`);
 }
 
-/** Input a basic object via its human-readable name.
- */
+/** Input a basic object via its human-readable name. */
 function BasicObInput(allProps: ObInputProps & IdInputOptions) {
     const [props, otherProps] = splitProps(allProps, ["obType"]);
 

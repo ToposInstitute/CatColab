@@ -1,0 +1,8 @@
+set_theory ThCategory
+
+type u := Unit
+
+type u2 := u
+
+#/ The unique element of Unit
+def t : u := 'tt

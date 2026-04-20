@@ -1,6 +1,7 @@
 //! Commutative algebra and polynomials.
 
-use num_traits::{One, Pow, Zero};
+use itertools::Itertools;
+use num_traits::{One, Pow, Zero, one, zero};
 use std::collections::BTreeMap;
 use std::fmt::Display;
 use std::iter::{Product, Sum};
@@ -35,7 +36,7 @@ pub trait CommAlg: CommRing + Module<Ring = Self::R> {
 /// In abstract terms, polynomials with coefficients valued in a [commutative
 /// ring](super::rig::CommRing) *R* are the free [commutative algebra](CommAlg)
 /// over *R*.
-#[derive(Clone, PartialEq, Eq, Derivative)]
+#[derive(Clone, PartialEq, Eq, Derivative, Debug)]
 #[derivative(Default(bound = ""))]
 pub struct Polynomial<Var, Coef, Exp>(Combination<Monomial<Var, Exp>, Coef>);
 
@@ -146,6 +147,45 @@ where
     }
 }
 
+impl<Var, Coef, Exp> Polynomial<Var, Coef, Exp>
+where
+    Var: Display,
+    Coef: Display + DisplayCoef + Clone + PartialEq + One + Neg<Output = Coef>,
+    Exp: Display + PartialEq + One,
+{
+    /// Convert to a LaTeX string, formatting each monomial via [`Monomial::to_latex`].
+    pub fn to_latex(&self) -> String {
+        let fmt_term = |coef: &Coef, monomial: &Monomial<Var, Exp>| -> String {
+            let monomial = monomial.to_latex();
+            if coef.is_one() {
+                monomial
+            } else if *coef == Coef::one().neg() {
+                format!("-{monomial}")
+            } else if coef.needs_parentheses() {
+                format!("({coef}) \\cdot {monomial}")
+            } else {
+                format!("{coef} \\cdot {monomial}")
+            }
+        };
+
+        let mut terms = (&self.0).into_iter();
+        let Some((coef, monomial)) = terms.next() else {
+            return "0".to_string();
+        };
+        let mut output = fmt_term(coef, monomial);
+        for (coef, monomial) in terms {
+            if coef.has_negative_sign() {
+                output.push_str(" - ");
+                output.push_str(&fmt_term(&coef.clone().neg(), monomial));
+            } else {
+                output.push_str(" + ");
+                output.push_str(&fmt_term(coef, monomial));
+            }
+        }
+        output
+    }
+}
+
 impl<Var, Coef, Exp> FromIterator<(Coef, Monomial<Var, Exp>)> for Polynomial<Var, Coef, Exp>
 where
     Var: Ord,
@@ -159,17 +199,45 @@ where
 
 impl<Var, Coef, Exp> Display for Polynomial<Var, Coef, Exp>
 where
-    Var: Display,
-    Coef: Display + PartialEq + One,
-    Exp: Display + PartialEq + One,
+    Combination<Monomial<Var, Exp>, Coef>: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
+        write!(f, "{}", self.0)
+    }
+}
+
+impl<Var, Coef, Exp> DisplayCoef for Polynomial<Var, Coef, Exp>
+where
+    Var: Ord,
+    Coef: DisplayCoef,
+    Exp: Ord,
+{
+    fn has_negative_sign(&self) -> bool {
+        if let Some(((coef, _),)) = (&self.0).into_iter().collect_tuple() {
+            coef.has_negative_sign()
+        } else {
+            false
+        }
+    }
+
+    fn needs_parentheses(&self) -> bool {
+        self.0.len() != 1
     }
 }
 
 // XXX: Lots of boilerplate to delegate the module structure of `Polynomial` to
 // `Combination` because these traits cannot be derived automatically.
+
+impl<Var, Coef, Exp> Sum for Polynomial<Var, Coef, Exp>
+where
+    Var: Ord,
+    Coef: AdditiveMonoid,
+    Exp: Ord,
+{
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(zero(), |acc, x| acc + x)
+    }
+}
 
 impl<Var, Coef, Exp> AddAssign<(Coef, Monomial<Var, Exp>)> for Polynomial<Var, Coef, Exp>
 where
@@ -195,10 +263,23 @@ where
     }
 }
 
+impl<Var, Coef, Exp> Add<Coef> for Polynomial<Var, Coef, Exp>
+where
+    Var: Ord,
+    Coef: Add<Output = Coef>,
+    Exp: Ord + Zero,
+{
+    type Output = Polynomial<Var, Coef, Exp>;
+    fn add(mut self, a: Coef) -> Self::Output {
+        self += (a, one());
+        self
+    }
+}
+
 impl<Var, Coef, Exp> Zero for Polynomial<Var, Coef, Exp>
 where
     Var: Ord,
-    Coef: Add<Output = Coef> + Zero,
+    Coef: Zero,
     Exp: Ord,
 {
     fn zero() -> Self {
@@ -403,6 +484,6 @@ mod tests {
         assert_eq!(p.to_string(), "2 x y + x^2 + y^2");
 
         let p = (x() + y()) * (x() + y().neg());
-        assert_eq!(p.normalize().to_string(), "x^2 + (-1) y^2");
+        assert_eq!(p.normalize().to_string(), "x^2 - y^2");
     }
 }

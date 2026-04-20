@@ -7,11 +7,12 @@ use derive_more::From;
 
 use super::theory::*;
 use crate::dbl::{category::*, model::*, theory::DblTheory};
+use crate::tt::util::pretty::*;
 use crate::validate::{self, Validate};
 use crate::{one::*, zero::*};
 
 /// Object in a model of a discrete tabulator theory.
-#[derive(Clone, PartialEq, Eq, From)]
+#[derive(Clone, PartialEq, Debug, Eq, From)]
 pub enum TabOb {
     /// Basic or generating object.
     #[from]
@@ -52,7 +53,7 @@ impl TabOb {
 /// "Edge" in a model of a discrete tabulator theory.
 ///
 /// Morphisms of these two forms generate all the morphisms in the model.
-#[derive(Clone, PartialEq, Eq, From)]
+#[derive(Clone, PartialEq, Debug, Eq, From)]
 pub enum TabEdge {
     /// Basic morphism between any two objects.
     #[from]
@@ -107,12 +108,7 @@ impl Graph for DiscreteTabGenerators {
             TabEdge::Basic(e) => {
                 self.morphisms.contains(e) && self.dom.is_set(e) && self.cod.is_set(e)
             }
-            TabEdge::Square {
-                dom,
-                cod,
-                pre,
-                post,
-            } => {
+            TabEdge::Square { dom, cod, pre, post } => {
                 if !(dom.contained_in(self) && cod.contained_in(self)) {
                     return false;
                 }
@@ -154,7 +150,7 @@ pub struct DiscreteTabModel {
     #[derivative(PartialEq(compare_with = "Rc::ptr_eq"))]
     theory: Rc<DiscreteTabTheory>,
     generators: DiscreteTabGenerators,
-    // TODO: Equations
+    equations: [(); 0], // TODO: Equations yet implemented
     ob_types: IndexedHashColumn<QualifiedName, TabObType>,
     mor_types: IndexedHashColumn<QualifiedName, TabMorType>,
 }
@@ -165,6 +161,7 @@ impl DiscreteTabModel {
         Self {
             theory,
             generators: Default::default(),
+            equations: Default::default(),
             ob_types: Default::default(),
             mor_types: Default::default(),
         }
@@ -266,8 +263,8 @@ impl DblModel for DiscreteTabModel {
     type MorOp = TabMorOp;
     type Theory = DiscreteTabTheory;
 
-    fn theory(&self) -> &Self::Theory {
-        &self.theory
+    fn theory(&self) -> Rc<Self::Theory> {
+        self.theory.clone()
     }
 
     fn ob_type(&self, ob: &Self::Ob) -> Self::ObType {
@@ -300,7 +297,7 @@ impl DblModel for DiscreteTabModel {
     }
 }
 
-impl FgDblModel for DiscreteTabModel {
+impl FpDblModel for DiscreteTabModel {
     fn ob_generator_type(&self, ob: &Self::ObGen) -> Self::ObType {
         self.ob_types.apply_to_ref(ob).expect("Object should have type")
     }
@@ -316,6 +313,10 @@ impl FgDblModel for DiscreteTabModel {
         mortype: &Self::MorType,
     ) -> impl Iterator<Item = Self::MorGen> {
         self.mor_types.preimage(mortype)
+    }
+
+    fn equations(&self) -> impl Iterator<Item = (Self::Mor, Self::Mor)> {
+        self.equations.iter().map(|()| unreachable!())
     }
 }
 
@@ -344,6 +345,46 @@ impl MutDblModel for DiscreteTabModel {
     }
 }
 
+impl PrintableDblModel for DiscreteTabModel {
+    fn ob_to_doc<'a>(&self, ob: &Self::Ob, ob_ns: &Namespace, mor_ns: &Namespace) -> D<'a> {
+        match ob {
+            TabOb::Basic(name) => t(ob_ns.label_string(name)),
+            // TODO: This makes printing a bit ambiguous, should wrap in a tab(...)
+            TabOb::Tabulated(mor) => self.mor_to_doc(mor, ob_ns, mor_ns),
+        }
+    }
+
+    fn mor_to_doc<'a>(&self, mor: &Self::Mor, ob_ns: &Namespace, mor_ns: &Namespace) -> D<'a> {
+        match mor {
+            Path::Id(ob) => unop(t("Id"), self.ob_to_doc(ob, ob_ns, mor_ns)),
+            Path::Seq(edges) => intersperse(edges.iter().map(|e| edge_to_doc(e, mor_ns)), t(" ⋅ ")),
+        }
+    }
+
+    fn ob_type_to_doc<'a>(ob_type: &Self::ObType) -> D<'a> {
+        ob_type.to_doc()
+    }
+
+    fn mor_type_to_doc<'a>(mor_type: &Self::MorType) -> D<'a> {
+        mor_type.to_doc()
+    }
+}
+
+fn edge_to_doc<'a>(edge: &TabEdge, mor_ns: &Namespace) -> D<'a> {
+    match edge {
+        TabEdge::Basic(name) => t(mor_ns.label_string(name)),
+        TabEdge::Square { dom: _, cod: _, pre, post } => {
+            tuple([edge_to_doc(pre, mor_ns), edge_to_doc(post, mor_ns)])
+        }
+    }
+}
+
+impl std::fmt::Display for DiscreteTabModel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", DblModelPrinter::new().doc(self).pretty())
+    }
+}
+
 impl Validate for DiscreteTabModel {
     type ValidationError = InvalidDblModel;
 
@@ -354,10 +395,14 @@ impl Validate for DiscreteTabModel {
 
 #[cfg(test)]
 mod tests {
+    use expect_test::expect;
     use nonempty::nonempty;
 
     use super::*;
-    use crate::{stdlib::theories::*, zero::name};
+    use crate::{
+        stdlib::{models::*, theories::*},
+        zero::name,
+    };
 
     #[test]
     fn validate() {
@@ -366,5 +411,17 @@ mod tests {
         model.add_ob(name("x"), name("Object").into());
         model.add_mor(name("f"), name("x").into(), name("x").into(), name("Link").into());
         assert_eq!(model.validate(), Err(nonempty![InvalidDblModel::CodType(name("f"))]));
+    }
+
+    #[test]
+    fn pretty_print() {
+        let model = backward_link(Rc::new(th_category_links()));
+        let expected = expect![[r#"
+            model generated by 2 objects and 2 morphisms
+            x : Object
+            y : Object
+            f : x -> y : Hom Object
+            link : y -> f : Link"#]];
+        expected.assert_eq(&format!("{model}"));
     }
 }

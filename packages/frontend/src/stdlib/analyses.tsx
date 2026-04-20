@@ -1,10 +1,19 @@
 import { lazy } from "solid-js";
 
-import type { MorType, ObType } from "catlog-wasm";
+import type {
+    MassActionEquationsData,
+    MorType,
+    ObType,
+    PolynomialODEEquationsData,
+    StochasticMassActionProblemData,
+} from "catlog-wasm";
 import type { DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
 import * as GraphLayoutConfig from "../visualization/graph_layout_config";
 import type * as Checkers from "./analyses/checker_types";
+import { defaultSchemaERDConfig, type SchemaERDConfig } from "./analyses/schema_erd_config";
 import type * as Simulators from "./analyses/simulator_types";
+import type * as SQLDownloadConfig from "./analyses/sql";
+import { SQLBackend, type SQLRenderer } from "./analyses/sql_types";
 
 type AnalysisOptions = {
     id: string;
@@ -39,6 +48,62 @@ export const diagramGraph = (
 });
 
 const DiagramGraph = lazy(() => import("./analyses/diagram_graph"));
+
+export const tabularView = (
+    options: AnalysisOptions,
+): DiagramAnalysisMeta<Record<string, never>> => ({
+    ...options,
+    component: (props) => <TabularView title={options.name} {...props} />,
+    initialContent: () => ({}),
+});
+
+const TabularView = lazy(() => import("./analyses/tabular_view"));
+
+export function kuramoto(
+    options: Partial<AnalysisOptions> & {
+        simulate: Simulators.KuramotoSimulator;
+        parameterLabels?: {
+            coupling?: string;
+            damping?: string;
+            forcing?: string;
+        };
+    },
+): ModelAnalysisMeta<Simulators.KuramotoProblemData> {
+    const {
+        id = "kuramoto",
+        name = "Kuramoto dynamics",
+        description = "Simulate the system using the Kuramoto dynamical model",
+        help = "kuramoto",
+        simulate,
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => (
+            <Kuramoto
+                simulate={simulate}
+                title={name}
+                couplingLabel={options.parameterLabels?.coupling}
+                dampingLabel={options.parameterLabels?.damping}
+                forcingLabel={options.parameterLabels?.forcing}
+                {...props}
+            />
+        ),
+        initialContent: () => ({
+            order: "second",
+            couplingCoefficients: {},
+            dampingCoefficients: {},
+            forcingParameters: {},
+            initialPhases: {},
+            initialFrequencies: {},
+            duration: 10,
+        }),
+    };
+}
+
+const Kuramoto = lazy(() => import("./analyses/kuramoto"));
 
 export function linearODE(
     options: Partial<AnalysisOptions> & {
@@ -99,9 +164,10 @@ const LotkaVolterra = lazy(() => import("./analyses/lotka_volterra"));
 
 export function massAction(
     options: Partial<AnalysisOptions> & {
+        ratesHaveGranularity: boolean;
         simulate: Simulators.MassActionSimulator;
-        isState?: (obType: ObType) => boolean;
-        isTransition?: (morType: MorType) => boolean;
+        stateType?: ObType;
+        transitionType?: MorType;
     },
 ): ModelAnalysisMeta<Simulators.MassActionProblemData> {
     const {
@@ -118,7 +184,12 @@ export function massAction(
         help,
         component: (props) => <MassAction title={name} {...otherOptions} {...props} />,
         initialContent: () => ({
+            massConservationType: { type: "Balanced" },
             rates: {},
+            transitionProductionRates: {},
+            transitionConsumptionRates: {},
+            placeProductionRates: {},
+            placeConsumptionRates: {},
             initialValues: {},
             duration: 10,
         }),
@@ -126,6 +197,64 @@ export function massAction(
 }
 
 const MassAction = lazy(() => import("./analyses/mass_action"));
+
+export function massActionEquations(
+    options: Partial<AnalysisOptions> & {
+        ratesHaveGranularity: boolean;
+        getEquations: Simulators.MassActionEquations;
+    },
+): ModelAnalysisMeta<MassActionEquationsData> {
+    const {
+        id = "mass-action-equations",
+        name = "Mass-action dynamics equations",
+        description = "Display the symbolic mass-action dynamics equations",
+        help = "mass-action-equations",
+        ...otherOptions
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => (
+            <MassActionEquationsDisplay title={name} {...otherOptions} {...props} />
+        ),
+        initialContent: () => ({
+            massConservationType: { type: "Balanced" },
+        }),
+    };
+}
+const MassActionEquationsDisplay = lazy(() => import("./analyses/mass_action_equations"));
+
+export function stochasticMassAction(
+    options: Partial<AnalysisOptions> & {
+        simulate: Simulators.StochasticMassActionSimulator;
+        stateType?: ObType;
+        transitionType?: MorType;
+    },
+): ModelAnalysisMeta<StochasticMassActionProblemData> {
+    const {
+        id = "stochastic-mass-action",
+        name = "Stochastic mass-action dynamics",
+        description = "Simulate the system using stochastic mass-action dynamics",
+        help = "stochastic-mass-action",
+        ...otherOptions
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => <StochasticMassAction title={name} {...otherOptions} {...props} />,
+        initialContent: () => ({
+            rates: {},
+            initialValues: {},
+            duration: 10,
+        }),
+    };
+}
+
+const StochasticMassAction = lazy(() => import("./analyses/stochastic_mass_action"));
 
 export const modelGraph = (
     options: AnalysisOptions,
@@ -136,6 +265,14 @@ export const modelGraph = (
 });
 
 const ModelGraph = lazy(() => import("./analyses/model_graph"));
+
+export const schemaERD = (options: AnalysisOptions): ModelAnalysisMeta<SchemaERDConfig> => ({
+    ...options,
+    component: (props) => <SchemaERD {...props} />,
+    initialContent: defaultSchemaERDConfig,
+});
+
+const SchemaERD = lazy(() => import("./analyses/schema_erd"));
 
 export function motifFinding(
     options: AnalysisOptions & {
@@ -201,3 +338,88 @@ export const stockFlowDiagram = (
 });
 
 const StockFlowDiagram = lazy(() => import("./analyses/stock_flow_diagram"));
+
+export function renderSQL(
+    options: Partial<AnalysisOptions> & {
+        render: SQLRenderer;
+    },
+): ModelAnalysisMeta<SQLDownloadConfig.DownloadConfig> {
+    const {
+        id = "sql",
+        name = "SQL schema",
+        description = "Produce SQL DML from this schema",
+        help = "sql",
+        render,
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => <SQLSchemaAnalysis title={name} render={render} {...props} />,
+        initialContent: () => ({
+            backend: SQLBackend.MySQL,
+            filename: "schema.sql",
+        }),
+    };
+}
+
+const SQLSchemaAnalysis = lazy(() => import("./analyses/sql"));
+
+export function polynomialODEEquations(
+    options: Partial<AnalysisOptions> & {
+        getEquations: Simulators.PolynomialODEEquations;
+    },
+): ModelAnalysisMeta<PolynomialODEEquationsData> {
+    const {
+        id = "polynomial-ode-equations",
+        name = "Polynomial ODE equations",
+        description = "Display the symbolic equations",
+        help = "polynomial-ode-equations",
+        ...otherOptions
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => (
+            <PolynomialODEEquationsDisplay title={name} {...otherOptions} {...props} />
+        ),
+        initialContent: () => ({
+            trivialData: true,
+        }),
+    };
+}
+const PolynomialODEEquationsDisplay = lazy(() => import("./analyses/polynomial_ode_equations"));
+
+export function polynomialODESimulation(
+    options: Partial<AnalysisOptions> & {
+        signedContributions: boolean;
+        simulate: Simulators.PolynomialODESimulator;
+        stateType?: ObType;
+        transitionType?: MorType;
+    },
+): ModelAnalysisMeta<Simulators.PolynomialODEProblemData> {
+    const {
+        id = "polynomial-ode-simulation",
+        name = "Polynomial ODE simulation",
+        description = "Simulate the system",
+        help = "polynomial-ode-simulation",
+        ...otherOptions
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => <PolynomialODESimulation title={name} {...otherOptions} {...props} />,
+        initialContent: () => ({
+            coefficients: {},
+            initialValues: {},
+            duration: 10,
+        }),
+    };
+}
+
+const PolynomialODESimulation = lazy(() => import("./analyses/polynomial_ode_simulation"));

@@ -23,14 +23,12 @@ export type PDEPlotData2D = {
 /** The data of a state variable at a given time. */
 type StateVarAtTime = Array<[xIndex: number, yIndex: number, value: number]>;
 
-/** Display the output data from a 2D PDE simulation. */
-export function PDEPlot2D(props: {
-    data: PDEPlotData2D;
-}) {
-    // XXX: JavaScript is not stable under eta-equivalence.
-    const min = (x: number, y: number) => Math.min(x, y);
-    const max = (x: number, y: number) => Math.max(x, y);
+// XXX: JavaScript is not stable under eta-equivalence.
+const min = (x: number, y: number) => Math.min(x, y);
+const max = (x: number, y: number) => Math.max(x, y);
 
+/** Display the output data from a 2D PDE simulation. */
+export function PDEPlot2D(props: { data: PDEPlotData2D }) {
     const firstState = (): StateVarAtTime[] => {
         // FIXME: Shouldn't just take the first one!
         const keys = Object.keys(props.data.state);

@@ -1,20 +1,3 @@
-.warning-banner {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    background-color: var(--warning-bg, #fff3cd);
-    border: 1px solid var(--warning-border, #ffc107);
-    color: var(--warning-text, #856404);
-    padding: 0.75rem 1rem;
-    margin-bottom: 1rem;
-    border-radius: 0.25rem;
-    font-size: 1rem;
-}
-
-.warning-banner > .lucide-icon {
-    min-width: 20px;
-}
-
 .document-head {
     display: flex;
     flex-direction: row;
@@ -27,12 +10,54 @@
     }
 
     & .info {
+        display: flex;
+        align-items: center;
+        gap: 4px;
         font-size: var(--h4-font-size);
     }
 
     & .lucide {
-        color: var(--link-color);
+        color: var(--color-gray-800);
     }
+}
+
+.settings-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.settings-title {
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.settings-option {
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+    cursor: pointer;
+    font-size: 1rem;
+    white-space: nowrap;
+}
+
+.document-pane-layout {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    min-height: 0;
+}
+
+.document-pane-content {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+}
+
+.history-sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    border-left: 1px solid var(--color-gray-400);
 }
 
 .resizeable-panels {

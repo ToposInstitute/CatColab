@@ -1,6 +1,11 @@
+import { lazy } from "solid-js";
+
 import { ThSchema } from "catlog-wasm";
-import { Theory, type TheoryMeta } from "../../theory";
+import { type DiagramAnalysisMeta, Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
+
+const ObjectCellEditor = lazy(() => import("../../model/object_cell_editor"));
+const MorphismCellEditor = lazy(() => import("../../model/morphism_cell_editor"));
 
 import styles from "../styles.module.css";
 import svgStyles from "../svg_styles.module.css";
@@ -8,7 +13,20 @@ import textStyles from "../text_styles.module.css";
 
 export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
     const thSchema = new ThSchema();
-
+    const diagramAnalyses: DiagramAnalysisMeta[] = [
+        analyses.diagramGraph({
+            id: "graph",
+            name: "Visualization",
+            description: "Visualize the instance as a graph",
+            help: "visualization",
+        }),
+        analyses.tabularView({
+            id: "tabularview",
+            name: "Table view",
+            description: "Visualize the instance as a table",
+            help: "tabularview",
+        }),
+    ];
     return new Theory({
         ...theoryMeta,
         theory: thSchema.theory(),
@@ -22,6 +40,7 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
             {
                 tag: "ObType",
                 obType: { tag: "Basic", content: "Entity" },
+                editor: ObjectCellEditor,
                 name: "Entity",
                 description: "Type of entity or thing",
                 shortcut: ["O"],
@@ -35,6 +54,7 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
                     tag: "Hom",
                     content: { tag: "Basic", content: "Entity" },
                 },
+                editor: MorphismCellEditor,
                 name: "Mapping",
                 description: "Many-to-one relation between entities",
                 shortcut: ["M"],
@@ -43,6 +63,7 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
             {
                 tag: "MorType",
                 morType: { tag: "Basic", content: "Attr" },
+                editor: MorphismCellEditor,
                 name: "Attribute",
                 description: "Data attribute of an entity",
                 shortcut: ["A"],
@@ -51,6 +72,7 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
             {
                 tag: "ObType",
                 obType: { tag: "Basic", content: "AttrType" },
+                editor: ObjectCellEditor,
                 name: "Attribute type",
                 description: "Data type for an attribute",
                 textClasses: [textStyles.code],
@@ -61,6 +83,7 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
                     tag: "Hom",
                     content: { tag: "Basic", content: "AttrType" },
                 },
+                editor: MorphismCellEditor,
                 name: "Operation",
                 description: "Operation on data types for attributes",
                 textClasses: [textStyles.code],
@@ -105,14 +128,17 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
                 description: "Visualize the schema as a graph",
                 help: "visualization",
             }),
-        ],
-        diagramAnalyses: [
-            analyses.diagramGraph({
-                id: "graph",
-                name: "Visualization",
-                description: "Visualize the instance as a graph",
-                help: "visualization",
+            analyses.schemaERD({
+                id: "erd",
+                name: "Entity-relationship diagram",
+                description: "Visualize the schema as an entity-relationship diagram",
+                help: "schema-erd",
+            }),
+            analyses.renderSQL({
+                id: "sql",
+                render: (model, data) => thSchema.renderSQL(model, data),
             }),
         ],
+        diagramAnalyses: diagramAnalyses,
     });
 }

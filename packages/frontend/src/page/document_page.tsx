@@ -1,39 +1,59 @@
 import Resizable, { type ContextValue } from "@corvu/resizable";
+import { Title } from "@solidjs/meta";
 import { useNavigate, useParams } from "@solidjs/router";
 import ChevronsRight from "lucide-solid/icons/chevrons-right";
+import History from "lucide-solid/icons/history";
 import Maximize2 from "lucide-solid/icons/maximize-2";
-import TriangleAlert from "lucide-solid/icons/triangle-alert";
+import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import {
+    createEffect,
+    createMemo,
+    createResource,
+    createSignal,
     Match,
     Show,
     Switch,
-    createEffect,
-    createResource,
-    createSignal,
     useContext,
 } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { type LiveAnalysisDocument, getLiveAnalysis } from "../analysis";
+import { Button, IconButton, ResizableHandle, WarningBanner } from "catcolab-ui-components";
+import { getLiveAnalysis, type LiveAnalysisDoc } from "../analysis";
 import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
 import { AnalysisInfo } from "../analysis/analysis_info";
-import { type Api, type DocumentType, useApi } from "../api";
-import { IconButton, InlineInput, ResizableHandle } from "../components";
-import { type LiveDiagramDocument, getLiveDiagram } from "../diagram";
+import { type Api, type DocRef, type DocumentType, useApi } from "../api";
+import { getLiveDiagram, type LiveDiagramDoc } from "../diagram";
 import { DiagramNotebookEditor } from "../diagram/diagram_editor";
 import { DiagramInfo } from "../diagram/diagram_info";
-import { type LiveModelDocument, type ModelLibrary, ModelLibraryContext } from "../model";
+import { type LiveModelDoc, type ModelLibrary, ModelLibraryContext } from "../model";
 import { ModelNotebookEditor } from "../model/model_editor";
-import { ModelInfo } from "../model/model_info";
+import { ModelDocumentHead } from "../model/model_info";
 import { DocumentBreadcrumbs, DocumentLoadingScreen } from "../page";
+import { DocumentHead } from "../page/document_head";
 import { SidebarLayout } from "../page/sidebar_layout";
 import { PermissionsButton } from "../user";
 import { assertExhaustive } from "../util/assert_exhaustive";
+import { DocRefIdContext } from "./context";
 import { DocumentSidebar } from "./document_page_sidebar";
+import { HistorySidebar } from "./history_sidebar";
+import { useSnapshotHistory } from "./use_snapshot_history";
 
 import "./document_page.css";
 
-type AnyLiveDocument = LiveModelDocument | LiveDiagramDocument | LiveAnalysisDocument;
+type AnyLiveDoc = LiveModelDoc | LiveDiagramDoc | LiveAnalysisDoc;
+
+/** A Live*Document bundled with its backend DocRef.
+ *
+ * This type is used in UI contexts where we need both the live document
+ * and its backend metadata.
+ */
+type AnyLiveDocWithRef = {
+    liveDoc: AnyLiveDoc;
+    docRef: DocRef;
+};
+
+// The initial size of the right panel in a split as a percentage of the total available width
+const INITIAL_SPLIT_SIZE = 0.5;
 
 export default function DocumentPage() {
     const api = useApi();
@@ -51,26 +71,35 @@ export default function DocumentPage() {
         }
     });
 
-    const [primaryLiveDocument] = createResource(
+    const [primaryLiveDoc, { refetch: refetchPrimaryDoc }] = createResource(
         () => params.ref,
         (refId) => getLiveDocument(refId, api, models, params.kind as DocumentType),
     );
 
-    const [secondaryLiveDocument] = createResource(
+    const [secondaryLiveDoc, { refetch: refetchSecondaryDoc }] = createResource(
         () => {
-            if (!params.subkind || !params.subref) {
-                return;
-            }
-
-            // Prevent the fetcher from running right before the redirect runs for matching primary and secondary refs
-            if (params.subref === params.ref) {
-                return;
-            }
-
-            return [params.subkind, params.subref] as const;
+            // Always return an object so fetcher runs and can clear the resource
+            return {
+                kind: params.subkind || null,
+                ref: params.subref || null,
+                primaryRef: params.ref,
+            };
         },
-        ([refKind, refId]) => getLiveDocument(refId, api, models, refKind as DocumentType),
+        async (source) => {
+            // Return undefined to clear resource when there's no secondary in URL
+            if (!source.kind || !source.ref) {
+                return undefined;
+            }
+
+            // Prevent fetching right before redirect for matching refs (maximizing)
+            if (source.ref === source.primaryRef) {
+                return undefined;
+            }
+
+            return getLiveDocument(source.ref, api, models, source.kind as DocumentType);
+        },
     );
+
     const closeSidePanel = () => {
         navigate(`/${params.kind}/${params.ref}`);
     };
@@ -79,104 +108,193 @@ export default function DocumentPage() {
         navigate(`/${params.subkind}/${params.subref}`);
     };
 
+    const [primaryHistoryOpen, setPrimaryHistoryOpen] = createSignal(false);
+    const togglePrimaryHistorySidebar = () => setPrimaryHistoryOpen((v) => !v);
+    const [secondaryHistoryOpen, setSecondaryHistoryOpen] = createSignal(false);
+    const toggleSecondaryHistorySidebar = () => setSecondaryHistoryOpen((v) => !v);
+
     const [resizableContext, setResizableContext] = createSignal<ContextValue>();
     createEffect(() => {
         const context = resizableContext();
         if (isSidePanelOpen()) {
+            // expand the second panel
             context?.expand(1);
-            context?.resize(1, 0.33);
         } else {
+            // collapse the second panel
             context?.collapse(1);
+            // Set the first panel to be the full size
             context?.resize(0, 1);
         }
     });
 
-    return (
-        <Show when={primaryLiveDocument()} fallback={<DocumentLoadingScreen />}>
-            {(liveDocument) => (
-                <SidebarLayout
-                    toolbarContents={
-                        <SplitPaneToolbar
-                            document={liveDocument()}
-                            panelSizes={resizableContext()?.sizes()}
-                            maximizeSidePanel={maximizeSidePanel}
-                            closeSidePanel={closeSidePanel}
-                        />
-                    }
-                    sidebarContents={
-                        <DocumentSidebar
-                            primaryLiveDoc={liveDocument().liveDoc}
-                            secondaryLiveDoc={secondaryLiveDocument()?.liveDoc}
-                        />
-                    }
-                >
-                    <Resizable class="resizeable-panels">
-                        {() => {
-                            const context = Resizable.useContext();
-                            setResizableContext(context);
+    const documentTitle = createMemo(() => {
+        const primaryDoc = primaryLiveDoc();
+        const appTitle = import.meta.env.VITE_APP_TITLE;
+        if (!primaryDoc) {
+            return appTitle;
+        }
 
-                            return (
-                                <>
-                                    <Resizable.Panel
-                                        class="content-panel"
-                                        initialSize={1}
-                                        minSize={0.25}
-                                    >
-                                        <DocumentPane document={liveDocument()} />
-                                    </Resizable.Panel>
-                                    <Show when={isSidePanelOpen()}>
-                                        <ResizableHandle class="resizeable-handle" />
-                                        <Resizable.Panel
-                                            class="content-panel"
-                                            minSize={0.25}
-                                            onCollapse={closeSidePanel}
-                                        >
-                                            <Show when={secondaryLiveDocument()}>
-                                                {(secondaryLiveModel) => (
-                                                    <>
-                                                        <DocumentPane
-                                                            document={secondaryLiveModel()}
-                                                        />
-                                                    </>
-                                                )}
-                                            </Show>
-                                        </Resizable.Panel>
-                                    </Show>
-                                </>
-                            );
-                        }}
-                    </Resizable>
-                </SidebarLayout>
-            )}
-        </Show>
+        const primaryDocName = primaryDoc.liveDoc.liveDoc.doc.name || "Untitled";
+        const secondaryDoc = secondaryLiveDoc();
+
+        if (secondaryDoc) {
+            const secondaryDocName = secondaryDoc.liveDoc.liveDoc.doc.name || "Untitled";
+            return `${primaryDocName} | ${secondaryDocName} - ${appTitle}`;
+        }
+        return `${primaryDocName} - ${appTitle}`;
+    });
+
+    return (
+        <>
+            <Title>{documentTitle()}</Title>
+            <Show when={primaryLiveDoc()} fallback={<DocumentLoadingScreen />}>
+                {(docWithRef) => (
+                    <SidebarLayout
+                        toolbarContents={
+                            <SplitPaneToolbar
+                                doc={docWithRef().liveDoc}
+                                docRef={docWithRef().docRef}
+                                secondaryDoc={secondaryLiveDoc()?.liveDoc}
+                                secondaryDocRef={secondaryLiveDoc()?.docRef}
+                                panelSizes={resizableContext()?.sizes()}
+                                maximizeSidePanel={maximizeSidePanel}
+                                closeSidePanel={closeSidePanel}
+                                togglePrimaryHistorySidebar={togglePrimaryHistorySidebar}
+                                toggleSecondaryHistorySidebar={toggleSecondaryHistorySidebar}
+                            />
+                        }
+                        sidebarContents={
+                            <DocumentSidebar
+                                primaryDoc={{
+                                    liveDoc: docWithRef().liveDoc.liveDoc,
+                                    docRef: docWithRef().docRef,
+                                }}
+                                secondaryDoc={(() => {
+                                    const secondary = secondaryLiveDoc();
+                                    return secondary
+                                        ? {
+                                              liveDoc: secondary.liveDoc.liveDoc,
+                                              docRef: secondary.docRef,
+                                          }
+                                        : undefined;
+                                })()}
+                                refetchPrimaryDoc={refetchPrimaryDoc}
+                                refetchSecondaryDoc={refetchSecondaryDoc}
+                            />
+                        }
+                    >
+                        <ResizablePanels
+                            primaryDoc={docWithRef().liveDoc}
+                            primaryDocRef={docWithRef().docRef}
+                            secondaryDoc={secondaryLiveDoc()}
+                            isSidePanelOpen={isSidePanelOpen()}
+                            closeSidePanel={closeSidePanel}
+                            refetchPrimaryDoc={refetchPrimaryDoc}
+                            refetchSecondaryDoc={refetchSecondaryDoc}
+                            setResizableContext={setResizableContext}
+                            primaryHistoryOpen={primaryHistoryOpen()}
+                            secondaryHistoryOpen={secondaryHistoryOpen()}
+                        />
+                    </SidebarLayout>
+                )}
+            </Show>
+        </>
     );
 }
 
 function SplitPaneToolbar(props: {
-    document: AnyLiveDocument;
+    doc: AnyLiveDoc;
+    docRef: DocRef;
+    secondaryDoc: AnyLiveDoc | undefined;
+    secondaryDocRef: DocRef | undefined;
     panelSizes: number[] | undefined;
     closeSidePanel: () => void;
     maximizeSidePanel: () => void;
+    togglePrimaryHistorySidebar: () => void;
+    toggleSecondaryHistorySidebar: () => void;
 }) {
     const secondaryPanelSize = () => props.panelSizes?.[1];
+    const primaryPanelSize = () => props.panelSizes?.[0];
 
     return (
         <>
-            <DocumentBreadcrumbs liveDoc={props.document.liveDoc} />
+            <DocumentBreadcrumbs liveDoc={props.doc.liveDoc} docRefId={props.docRef.refId} />
             <span class="filler" />
-            <PermissionsButton liveDoc={props.document.liveDoc} />
+            <Show when={!secondaryPanelSize()}>
+                <IconButton onClick={props.togglePrimaryHistorySidebar} tooltip="Toggle history">
+                    <History size={20} />
+                </IconButton>
+                <PermissionsButton liveDoc={props.doc.liveDoc} docRef={props.docRef} />
+            </Show>
+            <Show when={secondaryPanelSize()}>
+                <div
+                    class="primary-permissions-toolbar toolbar"
+                    style={{ left: `${(primaryPanelSize() ?? 0) * 100}%` }}
+                >
+                    <IconButton
+                        onClick={props.togglePrimaryHistorySidebar}
+                        tooltip="Toggle history"
+                    >
+                        <History size={20} />
+                    </IconButton>
+                    <PermissionsButton liveDoc={props.doc.liveDoc} docRef={props.docRef} />
+                </div>
+            </Show>
             <Show when={secondaryPanelSize()}>
                 {(panelSize) => (
-                    <div
-                        class="secondary-toolbar toolbar"
-                        style={{ left: `${(1 - panelSize()) * 100}%` }}
-                    >
-                        <IconButton onClick={props.closeSidePanel} tooltip="Close">
-                            <ChevronsRight />
+                    <SecondaryToolbar
+                        panelSize={panelSize()}
+                        secondaryDoc={props.secondaryDoc}
+                        secondaryDocRef={props.secondaryDocRef}
+                        closeSidePanel={props.closeSidePanel}
+                        maximizeSidePanel={props.maximizeSidePanel}
+                        toggleHistorySidebar={props.toggleSecondaryHistorySidebar}
+                    />
+                )}
+            </Show>
+        </>
+    );
+}
+
+function SecondaryToolbar(props: {
+    panelSize: number;
+    secondaryDoc: AnyLiveDoc | undefined;
+    secondaryDocRef: DocRef | undefined;
+    closeSidePanel: () => void;
+    maximizeSidePanel: () => void;
+    toggleHistorySidebar: () => void;
+}) {
+    return (
+        <>
+            <div
+                class="secondary-toolbar toolbar"
+                style={{ left: `${(1 - props.panelSize) * 100}%` }}
+            >
+                <IconButton onClick={props.closeSidePanel} tooltip="Close">
+                    <ChevronsRight />
+                </IconButton>
+                <IconButton onClick={props.maximizeSidePanel} tooltip="Open in full page">
+                    <Maximize2 />
+                </IconButton>
+            </div>
+            <Show
+                when={
+                    props.secondaryDoc &&
+                    props.secondaryDocRef && {
+                        doc: props.secondaryDoc,
+                        docRef: props.secondaryDocRef,
+                    }
+                }
+            >
+                {(secondary) => (
+                    <div class="secondary-permissions-toolbar toolbar">
+                        <IconButton onClick={props.toggleHistorySidebar} tooltip="Toggle history">
+                            <History size={20} />
                         </IconButton>
-                        <IconButton onClick={props.maximizeSidePanel} tooltip="Open in full page">
-                            <Maximize2 />
-                        </IconButton>
+                        <PermissionsButton
+                            liveDoc={secondary().doc.liveDoc}
+                            docRef={secondary().docRef}
+                        />
                     </div>
                 )}
             </Show>
@@ -184,59 +302,174 @@ function SplitPaneToolbar(props: {
     );
 }
 
-export function DocumentPane(props: { document: AnyLiveDocument }) {
-    const isDeleted = () => props.document.liveDoc.docRef?.isDeleted ?? false;
+function ResizablePanels(props: {
+    primaryDoc: AnyLiveDoc;
+    primaryDocRef: DocRef;
+    secondaryDoc: AnyLiveDocWithRef | undefined;
+    isSidePanelOpen: boolean;
+    closeSidePanel: () => void;
+    refetchPrimaryDoc: () => void;
+    refetchSecondaryDoc: () => void;
+    setResizableContext: (context: ContextValue) => void;
+    primaryHistoryOpen: boolean;
+    secondaryHistoryOpen: boolean;
+}) {
     return (
-        <>
-            <Show when={isDeleted()}>
-                <div class="warning-banner">
-                    <TriangleAlert size={20} />
-                    <span>
-                        Warning: This {props.document.type} has been deleted. The last snapshot
-                        before deletion is still visible below.
-                    </span>
-                </div>
-            </Show>
-            <div class="notebook-container">
-                <div class="document-head">
-                    <div class="title">
-                        <InlineInput
-                            text={props.document.liveDoc.doc.name}
-                            setText={(text) => {
-                                props.document.liveDoc.changeDoc((doc) => {
-                                    doc.name = text;
-                                });
-                            }}
-                            placeholder="Untitled"
-                        />
-                    </div>
-                    <div class="info">
+        <Resizable class="resizeable-panels">
+            {() => {
+                const context = Resizable.useContext();
+                props.setResizableContext(context);
+
+                return (
+                    <>
+                        <Resizable.Panel class="content-panel" initialSize={1} minSize={0.25}>
+                            <DocumentPane
+                                doc={props.primaryDoc}
+                                docRef={props.primaryDocRef}
+                                refetchPrimaryDoc={props.refetchPrimaryDoc}
+                                refetchSecondaryDoc={props.refetchSecondaryDoc}
+                                historySidebarOpen={props.primaryHistoryOpen}
+                            />
+                        </Resizable.Panel>
+                        <Show when={props.isSidePanelOpen}>
+                            <ResizableHandle class="resizeable-handle" />
+                            <Resizable.Panel
+                                class="content-panel"
+                                initialSize={INITIAL_SPLIT_SIZE}
+                                minSize={0.25}
+                                onCollapse={props.closeSidePanel}
+                            >
+                                <Show when={props.secondaryDoc}>
+                                    {(secondaryLiveDocWithRef) => (
+                                        <DocumentPane
+                                            doc={secondaryLiveDocWithRef().liveDoc}
+                                            docRef={secondaryLiveDocWithRef().docRef}
+                                            refetchPrimaryDoc={props.refetchPrimaryDoc}
+                                            refetchSecondaryDoc={props.refetchSecondaryDoc}
+                                            historySidebarOpen={props.secondaryHistoryOpen}
+                                        />
+                                    )}
+                                </Show>
+                            </Resizable.Panel>
+                        </Show>
+                    </>
+                );
+            }}
+        </Resizable>
+    );
+}
+
+export function DocumentPane(props: {
+    doc: AnyLiveDoc;
+    docRef: DocRef;
+    refetchPrimaryDoc: () => void;
+    refetchSecondaryDoc: () => void;
+    historySidebarOpen: boolean;
+}) {
+    const api = useApi();
+    const [isDeleted, setIsDeleted] = createSignal(false);
+
+    createEffect(() => {
+        setIsDeleted(props.docRef.isDeleted);
+    });
+
+    const handleRestore = async () => {
+        const refId = props.docRef.refId;
+
+        if (!refId) {
+            return;
+        }
+
+        // optimistic restore
+        setIsDeleted(false);
+
+        try {
+            const result = await api.rpc.restore_ref.mutate(refId);
+            if (result.tag === "Ok") {
+                api.clearCachedDoc(refId);
+                props.refetchPrimaryDoc();
+                props.refetchSecondaryDoc();
+            } else {
+                console.error(`Failed to restore document: ${result.message}`);
+            }
+        } catch (error) {
+            console.error(`Error restoring document: ${error}`);
+        }
+    };
+
+    const canRestore = () => props.docRef.permissions.user === "Own";
+
+    const history = useSnapshotHistory(() => props.docRef.refId);
+
+    // oxlint-disable solid/reactivity -- Context.Provider value getter is reactive
+    return (
+        <DocRefIdContext.Provider value={() => props.docRef.refId}>
+            <div class="document-pane-layout">
+                <div class="document-pane-content">
+                    <Show when={isDeleted()}>
+                        <WarningBanner
+                            actions={
+                                <Show when={canRestore()}>
+                                    <Button
+                                        variant="utility"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            void handleRestore();
+                                        }}
+                                    >
+                                        <RotateCcw size={16} /> Restore it
+                                    </Button>
+                                </Show>
+                            }
+                        >
+                            This {props.doc.type} has been deleted and will not be listed in your
+                            documents.
+                        </WarningBanner>
+                    </Show>
+                    <div class="notebook-container">
                         <Switch>
-                            <Match when={props.document.type === "model" && props.document}>
-                                {(liveModel) => <ModelInfo liveModel={liveModel()} />}
+                            <Match when={props.doc.type === "model" && props.doc}>
+                                {(liveModel) => <ModelDocumentHead liveModel={liveModel()} />}
                             </Match>
-                            <Match when={props.document.type === "diagram" && props.document}>
-                                {(liveDiagram) => <DiagramInfo liveDiagram={liveDiagram()} />}
+                            <Match when={props.doc.type === "diagram" && props.doc}>
+                                {(liveDiagram) => (
+                                    <DocumentHead liveDoc={liveDiagram().liveDoc}>
+                                        <DiagramInfo liveDiagram={liveDiagram()} />
+                                    </DocumentHead>
+                                )}
                             </Match>
-                            <Match when={props.document.type === "analysis" && props.document}>
-                                {(liveAnalysis) => <AnalysisInfo liveAnalysis={liveAnalysis()} />}
+                            <Match when={props.doc.type === "analysis" && props.doc}>
+                                {(liveAnalysis) => (
+                                    <DocumentHead liveDoc={liveAnalysis().liveDoc}>
+                                        <AnalysisInfo liveAnalysis={liveAnalysis()} />
+                                    </DocumentHead>
+                                )}
+                            </Match>
+                        </Switch>
+                        <Switch>
+                            <Match when={props.doc.type === "model" && props.doc}>
+                                {(liveModel) => <ModelNotebookEditor liveModel={liveModel()} />}
+                            </Match>
+                            <Match when={props.doc.type === "diagram" && props.doc}>
+                                {(liveDiagram) => (
+                                    <DiagramNotebookEditor liveDiagram={liveDiagram()} />
+                                )}
+                            </Match>
+                            <Match when={props.doc.type === "analysis" && props.doc}>
+                                {(liveAnalysis) => (
+                                    <AnalysisNotebookEditor liveAnalysis={liveAnalysis()} />
+                                )}
                             </Match>
                         </Switch>
                     </div>
                 </div>
-                <Switch>
-                    <Match when={props.document.type === "model" && props.document}>
-                        {(liveModel) => <ModelNotebookEditor liveModel={liveModel()} />}
-                    </Match>
-                    <Match when={props.document.type === "diagram" && props.document}>
-                        {(liveDiagram) => <DiagramNotebookEditor liveDiagram={liveDiagram()} />}
-                    </Match>
-                    <Match when={props.document.type === "analysis" && props.document}>
-                        {(liveAnalysis) => <AnalysisNotebookEditor liveAnalysis={liveAnalysis()} />}
-                    </Match>
-                </Switch>
+                <Show when={props.historySidebarOpen && props.docRef.refId}>
+                    <div class="history-sidebar">
+                        <HistorySidebar history={history} />
+                    </div>
+                </Show>
             </div>
-        </>
+        </DocRefIdContext.Provider>
     );
 }
 
@@ -245,14 +478,21 @@ async function getLiveDocument(
     api: Api,
     models: ModelLibrary<string>,
     documentType: DocumentType,
-): Promise<AnyLiveDocument> {
+): Promise<AnyLiveDocWithRef> {
     switch (documentType) {
-        case "model":
-            return models.getLiveModel(refId);
-        case "diagram":
-            return getLiveDiagram(refId, api, models);
-        case "analysis":
-            return getLiveAnalysis(refId, api, models);
+        case "model": {
+            const docRef = await api.getDocRef(refId);
+            const liveDoc = await models.getLiveModel(refId);
+            return { liveDoc, docRef };
+        }
+        case "diagram": {
+            const { liveDiagram, docRef } = await getLiveDiagram(refId, api, models);
+            return { liveDoc: liveDiagram, docRef };
+        }
+        case "analysis": {
+            const { liveAnalysis, docRef } = await getLiveAnalysis(refId, api, models);
+            return { liveDoc: liveAnalysis, docRef };
+        }
         default:
             assertExhaustive(documentType);
     }

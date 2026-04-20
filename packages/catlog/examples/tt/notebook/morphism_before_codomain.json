@@ -1,0 +1,47 @@
+{
+    "name": "Morphism before codomain",
+    "notebook": {
+        "cellContents": {
+            "019c008e-5651-721a-a450-01e58279719e": {
+                "tag": "formal",
+                "id": "019c008e-5651-721a-a450-01e58279719e",
+                "content": {
+                    "tag": "object",
+                    "id": "019c008e-5651-721a-a44f-fde164b3f2f6",
+                    "name": "A",
+                    "obType": { "tag": "Basic", "content": "Entity" }
+                }
+            },
+            "019c008e-7500-757c-93c3-5477478708ea": {
+                "tag": "formal",
+                "id": "019c008e-7500-757c-93c3-5477478708ea",
+                "content": {
+                    "tag": "object",
+                    "id": "019c008e-7500-757c-93c3-536c940c2bf0",
+                    "name": "B",
+                    "obType": { "tag": "Basic", "content": "Entity" }
+                }
+            },
+            "019c008e-b4fe-75ab-b722-791a4a3a1ff6": {
+                "tag": "formal",
+                "id": "019c008e-b4fe-75ab-b722-791a4a3a1ff6",
+                "content": {
+                    "tag": "morphism",
+                    "id": "019c008e-b4fe-75ab-b722-7638f8f5d41a",
+                    "name": "f",
+                    "morType": { "tag": "Hom", "content": { "tag": "Basic", "content": "Entity" } },
+                    "dom": { "tag": "Basic", "content": "019c008e-5651-721a-a44f-fde164b3f2f6" },
+                    "cod": { "tag": "Basic", "content": "019c008e-7500-757c-93c3-536c940c2bf0" }
+                }
+            }
+        },
+        "cellOrder": [
+            "019c008e-5651-721a-a450-01e58279719e",
+            "019c008e-b4fe-75ab-b722-791a4a3a1ff6",
+            "019c008e-7500-757c-93c3-5477478708ea"
+        ]
+    },
+    "theory": "simple-schema",
+    "type": "model",
+    "version": "1"
+}

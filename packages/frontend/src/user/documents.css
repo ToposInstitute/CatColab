@@ -1,83 +1,112 @@
-.ref-table-outer {
+/* Row height constant — must match ROW_HEIGHT in .tsx files */
+:root {
+    --doc-row-height: 45px;
+}
+
+/* Outer container fills available space */
+.ref-grid-outer {
     width: 100%;
+    max-width: 100%;
     display: flex;
     flex-direction: column;
     flex: 1;
     overflow: hidden;
 }
 
-.ref-table-scroll {
-    overflow: auto;
-    scrollbar-gutter: stable;
+/* Grid layout shared by header and rows */
+.ref-grid-header {
+    display: grid;
+    align-items: center;
+    font-weight: bold;
+    border-bottom: 1px solid var(--color-gray-550);
 }
 
-.ref-table-header > div {
-    overflow: hidden;
-    scrollbar-gutter: stable;
+/* Row styling */
+.ref-grid-row {
+    height: var(--doc-row-height);
+    box-sizing: border-box;
+    border-bottom: 1px solid var(--color-gray-550);
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+    color: inherit;
+    text-decoration: none;
+    display: grid;
+    align-items: center;
 }
 
-.ref-table {
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed;
-    text-align: left;
+/* Documents page: 7 columns — Icon / Name / Owners / Permission / Created / Last edited / Actions */
+.documents-page .ref-grid-header,
+.documents-page .ref-grid-row {
+    grid-template-columns: 40px 2fr 120px 120px 165px 165px 50px;
 }
 
-.ref-table th,
-.ref-table td {
+/* Trash page: 7 columns — Actions / Icon / Name / Owners / Permission / Created / Last edited */
+.trash-bin-page .ref-grid-header,
+.trash-bin-page .ref-grid-row {
+    grid-template-columns: 50px 40px 2fr 120px 120px 165px 165px;
+}
+
+/* Adjust for scrollbar in Chromium browsers only */
+@supports selector(::-webkit-scrollbar) {
+    .ref-grid-header {
+        margin-right: 10px;
+    }
+}
+
+.ref-grid-header > div {
     padding: 12px;
-    border-bottom: 1px solid #ccc;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.ref-table th:nth-child(1),
-.ref-table td:nth-child(1) {
-    width: 10%;
-    min-width: 100px;
+/* Scroll container for virtual list */
+.ref-grid-scroll {
+    overflow-y: scroll;
+    overflow-x: hidden;
+    flex: 1;
+    scrollbar-width: thin;
+    /* Firefox */
 }
 
-.ref-table th:nth-child(2),
-.ref-table td:nth-child(2) {
-    width: 40%;
-    min-width: 200px;
+.ref-grid-scroll::-webkit-scrollbar {
+    width: 10px;
+    /* Chrome, Safari, Edge */
 }
 
-.ref-table th:nth-child(3),
-.ref-table td:nth-child(3) {
-    width: 20%;
-    min-width: 100px;
+.ref-grid-scroll::-webkit-scrollbar-track {
+    background: transparent;
 }
 
-.ref-table th:nth-child(4),
-.ref-table td:nth-child(4) {
-    width: 15%;
-    min-width: 80px;
+.ref-grid-scroll::-webkit-scrollbar-thumb {
+    background: var(--color-gray-700);
+    border-radius: 4px;
 }
 
-.ref-table th:nth-child(5),
-.ref-table td:nth-child(5) {
-    width: 15%;
-    min-width: 120px;
+.ref-grid-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--color-gray-600);
 }
 
-.ref-table th:nth-child(6),
-.ref-table td:nth-child(6) {
-    width: 5%;
-    min-width: 50px;
-    text-align: center;
+.ref-grid-row:hover {
+    background-color: var(--color-hover-bg);
 }
 
-.ref-table-scroll tbody tr {
-    transition: background-color 0.2s ease;
+/* Cell styling */
+.ref-grid-row > div {
+    padding: 0 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.ref-table-scroll tbody tr:hover {
-    background-color: #f0f0f0;
-    cursor: pointer;
+/* Icon cells should not clip or ellipsize */
+.documents-page .ref-grid-row > div:first-child,
+.trash-bin-page .ref-grid-row > div:nth-child(2) {
+    overflow: visible;
+    text-overflow: unset;
 }
 
+/* Documents page */
 .documents-page {
     height: 100vh;
     overflow: hidden;
@@ -85,23 +114,25 @@
     flex-direction: column;
 }
 
-.documents-page .page-container {
+.documents-page > .page-container {
     overflow: hidden;
     display: flex;
     flex-direction: column;
     flex: 1;
+    margin: 0 auto;
+    max-width: 1000px;
+    min-width: 1000px;
+    padding-bottom: 0;
 }
 
+/* Search input */
 .search-input {
     box-sizing: border-box;
     margin-top: 0.5em;
     margin-bottom: 0.5em;
-}
-
-.search-input {
     width: 100%;
     padding: 8px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--color-gray-550);
     border-radius: 4px;
     font-size: 16px;
 }
@@ -111,32 +142,54 @@
     padding-right: 1em;
 }
 
-.ref-table .spinner {
-    display: block;
+/* Name cell with optional parent description */
+.name-cell {
+    display: flex;
+    align-items: baseline;
+    min-width: 0;
+    overflow: hidden;
 }
 
+.name-cell > span:first-child {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.untitled-doc {
+    color: var(--color-gray-800);
+}
+
+.parent-description {
+    color: var(--color-gray-800);
+    font-size: 0.85em;
+    flex-shrink: 1;
+    margin-left: auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-left: 1em;
+}
+
+.parent-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.parent-link:hover {
+    text-decoration: underline;
+}
+
+/* Action cell (delete/restore button) */
 .delete-cell {
-    padding: 8px !important;
-}
-
-.delete-button {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: center;
-    padding: 4px;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: background-color 0.2s ease;
-    color: #666;
-}
+    position: relative;
+    z-index: 1;
 
-.delete-button:hover {
-    background-color: #fee;
-    color: #c00;
-}
-
-.delete-button:active {
-    background-color: #fdd;
+    .delete-cell {
+        /* stylelint-disable-next-line declaration-no-important */
+        padding: 8px !important;
+    }
 }

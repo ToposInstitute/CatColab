@@ -1,0 +1,50 @@
+.expandableList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.expandableListTitle {
+    cursor: pointer;
+}
+
+.expandableListTitle:hover {
+    text-decoration: underline;
+}
+
+.expandableListTitle:focus-visible {
+    outline: 2px solid var(--color-button-positive-base);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+.expandableListItems {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.expandableListToggle {
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    padding: 0.25rem 0;
+    font-size: 0.875rem;
+    text-align: left;
+    font-family: inherit;
+    border-top: 1px solid var(--color-menu-separator);
+    transition: color 0.2s ease;
+}
+
+.expandableListToggle:hover {
+    text-decoration: underline;
+}
+
+.expandableListToggle:focus-visible {
+    outline: 2px solid var(--color-button-positive-base);
+    outline-offset: 2px;
+    border-radius: 2px;
+}

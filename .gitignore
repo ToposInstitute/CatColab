@@ -105,3 +105,10 @@ result
 
 # vm image
 catcolab-vm.qcow2
+
+# Markdown previews
+README.html
+CHANGELOG.html
+
+# VSCode
+.vscode/*

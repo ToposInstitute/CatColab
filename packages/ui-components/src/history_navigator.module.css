@@ -1,0 +1,81 @@
+.panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    font-size: 1rem;
+    color: var(--color-foreground);
+    user-select: none;
+}
+
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /* Match .row: left padding + .dotSlot + .row gap so icons line up with .timestamp */
+    padding: 10px 12px 10px calc(12px + 1.25rem + 10px);
+    border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
+}
+
+.toolbar :global(.icon-button) {
+    padding: 8px;
+    border-radius: 8px;
+}
+
+.scrollContainer {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 0 12px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+}
+
+.row:hover {
+    background: var(--color-icon-button-utility-hover-bg);
+}
+
+.dotSlot {
+    flex-shrink: 0;
+    width: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.selectionDot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--color-alert-question);
+}
+
+.timeCell {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: nowrap;
+    gap: 0.2em;
+    min-width: 0;
+}
+
+.timestamp {
+    white-space: nowrap;
+}
+
+.suffix {
+    margin-left: 0;
+    color: var(--color-foreground-secondary, #888);
+    font-size: 0.85em;
+    white-space: nowrap;
+}

@@ -3,9 +3,19 @@ name = "backend"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = []
+# Tests that use proptest and the definitions of `Arbitrary` instances
+property-tests = ["dep:proptest", "dep:proptest-arbitrary-interop", "dep:test-strategy", "uuid/arbitrary"]
+# Tests that require a running database
+integration-tests = []
+
 [dependencies]
 async-trait = "0.1.88"
-axum = "0.7.7"
+autosurgeon = { features = ["uuid"], version = "0.11.0" }
+automerge = { version = "0.8.0" }
+axum = "0.8.4"
+base64 = "0.22"
 chrono = { version = "0.4.40", features = ["serde"] }
 clap = "4.5.44"
 dotenvy = "0.15.7"
@@ -13,17 +23,21 @@ migrator = { version = "0.1.0", path = "../migrator" }
 firebase-auth = { version = "0.5.1", default-features = false, features = [
   "rustls",
 ] }
+futures-util = "0.3"
 http = "1.1.0"
 hyper = { version = "1.4.1", features = ["server"] }
 jsonrpsee = "0.24.6"
 jsonrpsee-server = "0.24.6"
-notebook-types = { version = "0.1.0", path = "../notebook-types" }
-qubit = "0.10.2"
+notebook-types = { version = "0.1.0", path = "../notebook-types", features = ["backend"] }
+qubit = { version = "1.0.0-beta.0", features = ["ts-serde-json", "ts-uuid", "ts-chrono"] }
+rand = "0.8"
 regex = "1.11.1"
+reqwest = "0.13"
+# tungstenite in features due to https://github.com/alexjg/samod/issues/92
+samod = { features = ["tokio", "axum", "tungstenite"], version = "0.9.0" }
 sd-notify = "0.4.5"
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0.128"
-socketioxide = { version = "0.14.1", features = ["tracing"] }
 sqlx = { version = "0.8.2", features = [
   "runtime-tokio",
   "tls-rustls",
@@ -35,13 +49,18 @@ sqlx = { version = "0.8.2", features = [
 sqlx_migrator = { version = "0.17.0", features = ["postgres"] }
 thiserror = "1.0.64"
 tokio = { version = "1.40.0", features = ["full"] }
-tower = { version = "0.5.1", features = ["util"] }
+tower = { version = "0.5.2", features = ["util"] }
 tower-http = { version = "0.6.1", features = ["cors", "trace", "fs"] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
-ts-rs = { version = "10.1.0", features = [
-  "serde-json-impl",
-  "uuid-impl",
-  "chrono-impl",
-] }
 uuid = { version = "1.10.0", features = ["v7", "serde"] }
+proptest = { version = "1.9.0", optional = true }
+proptest-arbitrary-interop = { version = "0.1", optional = true }
+test-strategy = { version = "0.4", optional = true }
+ts-rs = "11.1.0"
+
+[lints.rust]
+missing_docs = "warn"
+
+[lints.clippy]
+doc_paragraphs_missing_punctuation = "warn"

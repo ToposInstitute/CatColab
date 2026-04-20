@@ -1,13 +1,13 @@
-import { Match, Switch, createMemo } from "solid-js";
+import { createMemo, Match, Switch } from "solid-js";
 
-import type { QualifiedName, ReachabilityProblemData } from "catlog-wasm";
-import type { ModelAnalysisProps } from "../../analysis";
 import {
     type ColumnSchema,
+    createNumericalColumn,
     FixedTableEditor,
     PanelHeader,
-    createNumericalColumn,
-} from "../../components";
+} from "catcolab-ui-components";
+import type { QualifiedName, ReachabilityProblemData } from "catlog-wasm";
+import type { ModelAnalysisProps } from "../../analysis";
 import type { ReachabilityChecker } from "./checker_types";
 
 import "./simulation.css";
@@ -21,10 +21,7 @@ export default function Reachability(
 ) {
     const elaboratedModel = () => props.liveModel.elaboratedModel();
 
-    const obGenerators = createMemo<QualifiedName[]>(
-        () => elaboratedModel()?.obGenerators() ?? [],
-        [],
-    );
+    const obGenerators = createMemo<QualifiedName[]>(() => elaboratedModel()?.obGenerators() ?? []);
 
     const obSchema: ColumnSchema<QualifiedName>[] = [
         {

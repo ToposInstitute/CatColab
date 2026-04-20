@@ -14,7 +14,7 @@ use crate::zero::QualifiedName;
 ///
 /// A **discrete double theory** is a double theory with no nontrivial operations on
 /// either object or morphism types. Viewed as a double category, such a theory is
-/// indeed **discrete**, which can equivalently be defined as
+/// indeed **discrete**, which can equivalently be defined as:
 ///
 /// - a discrete object in the 2-category of double categories
 /// - a double category whose underlying categories are both discrete categories
@@ -93,6 +93,8 @@ impl VDCWithComposites for DiscreteDblTheory {
     }
 }
 
+crate::dbl::theory::impl_dbl_theory!(DiscreteDblTheory, crate::dbl::theory::Unital);
+
 impl Validate for DiscreteDblTheory {
     type ValidationError = InvalidDblTheory;
 
@@ -100,7 +102,7 @@ impl Validate for DiscreteDblTheory {
         validate::wrap_errors(self.0.iter_invalid().map(|err| match err {
             InvalidFpCategory::Dom(id) => InvalidDblTheory::SrcType(id),
             InvalidFpCategory::Cod(id) => InvalidDblTheory::TgtType(id),
-            InvalidFpCategory::Eq(eq, errs) => InvalidDblTheory::MorTypeEq(eq, errs),
+            InvalidFpCategory::Eqn(eq, errs) => InvalidDblTheory::MorTypeEq(eq, errs),
         }))
     }
 }
