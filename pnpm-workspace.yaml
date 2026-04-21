@@ -5,6 +5,5 @@ packages:
   - "packages/backend/pkg"
   - "packages/frontend"
   - "packages/notebook-types"
-  - "packages/patchwork"
   - "packages/ui-components"
   - "packages/gaios"
