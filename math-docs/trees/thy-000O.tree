@@ -49,3 +49,18 @@ p(Ta, 1_x)} mutually inverse to the globular cell above).
 }
 
 }
+
+\subtree{
+\title{Comparison with literature}
+\taxon{Remark}
+
+\p{This double theory abstracts, nearly directly, the standard definition of
+representability for an ordinary multicategory ([Shulman 2016](shulman-2016),
+Definition 2.2.3). In their framework for generalized multicategories,
+Cruttwell-Shulman define representability differently
+([CS10](cruttwell-shulman-2010), Section 9) so as to make it a straightforward
+theorem that representable generalized multicategories are equivalent to
+[generalized monoidal categories](dct-0005) (pseudo #{T}-algebras). I have not
+investigated whether these definitions are equivalent.}
+
+}
