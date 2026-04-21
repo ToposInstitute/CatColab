@@ -1,4 +1,4 @@
-import type { AutomergeUrl, DocHandle } from "@automerge/automerge-repo";
+import type { DocHandle } from "@automerge/automerge-repo";
 import { createResource, Switch, Match } from "solid-js";
 import { render } from "solid-js/web";
 
@@ -12,6 +12,7 @@ import { ModelDocumentHead } from "../../frontend/src/model/model_info";
 import { stdTheories } from "../../frontend/src/stdlib";
 import { TheoryLibraryContext } from "../../frontend/src/theory";
 import type { ModelDoc } from "./model_datatype";
+
 import styles from "../../ui-components/src/global.css?inline";
 
 // `element` carries a `Repo` from the patchwork host, whose automerge-repo
@@ -27,7 +28,7 @@ export function renderModelTool(handle: DocHandle<ModelDoc>, element: ToolElemen
     // versions of @automerge/automerge-repo; the types clash but the runtime
     // shapes are compatible.
     const modelLibrary = createModelLibraryWithRepo(
-        // biome-ignore lint/suspicious/noExplicitAny: version-skew workaround
+        // oxlint-disable-next-line typescript/no-explicit-any -- version-skew workaround
         element.repo as any,
         stdTheories,
     ) as unknown as ModelLibrary<string>;
@@ -36,36 +37,36 @@ export function renderModelTool(handle: DocHandle<ModelDoc>, element: ToolElemen
         () => handle.url,
         async (docUrl) => {
             try {
-                return await modelLibrary.getLiveModel(docUrl as AutomergeUrl);
+                return await modelLibrary.getLiveModel(docUrl);
             } catch (error) {
                 console.error("=== Model Loading Failed ===");
                 console.error("Error:", error);
                 console.error("Stack:", (error as Error).stack);
                 throw error;
             }
-        }
+        },
     );
 
     const sheet = new CSSStyleSheet();
-    sheet.replaceSync(styles as string);
+    sheet.replaceSync(styles);
     document.adoptedStyleSheets ??= [];
     if (!document.adoptedStyleSheets.includes(sheet)) {
         document.adoptedStyleSheets.push(sheet);
     }
 
+    // oxlint-disable-next-line no-console -- intentional startup diagnostic
     console.log("Hello from CatColab");
 
     return render(
         () => (
-            <div style="padding: 52px; height: 100%; overflow: scroll;">
+            <div style={{ padding: "52px", height: "100%", overflow: "scroll" }}>
                 <Switch>
                     <Match when={liveModel.loading}>
                         <div>⏳ Loading model...</div>
                     </Match>
                     <Match when={liveModel.error}>
                         <div>
-                            ❌ Error loading model:{" "}
-                            {liveModel.error?.message || "Unknown error"}
+                            ❌ Error loading model: {liveModel.error?.message || "Unknown error"}
                         </div>
                     </Match>
                     <Match when={liveModel()}>

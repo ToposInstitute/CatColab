@@ -2,9 +2,9 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
-import wasm from "vite-plugin-wasm";
 import cssInjectedByJsPlugin from "vite-plugin-css-injected-by-js";
 import solid from "vite-plugin-solid";
+import wasm from "vite-plugin-wasm";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -61,7 +61,9 @@ function getCommonDependencies(): string[] {
 
     // @ts-expect-error: intersection method does exist on Set in our
     // vite.config target i.e. NodeJS
-    const commonDeps = gaiosDeps.intersection(frontendDeps).union(gaiosDeps.intersection(uiComponentsDeps));
+    const commonDeps = gaiosDeps
+        .intersection(frontendDeps)
+        .union(gaiosDeps.intersection(uiComponentsDeps));
 
     return Array.from(commonDeps);
 }
