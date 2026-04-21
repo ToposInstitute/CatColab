@@ -2,12 +2,8 @@ import { Match, Switch, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
-import {
-    type CellConstructor,
-    type FormalCellEditorProps,
-    NotebookEditor,
-    newFormalCell,
-} from "../notebook";
+import { Nb } from "document-types";
+import { type CellConstructor, type FormalCellEditorProps, NotebookEditor } from "../notebook";
 import type { AnalysisMeta, DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
 import { LiveAnalysisContext } from "./context";
 import {
@@ -100,7 +96,7 @@ function analysisCellConstructor<T>(meta: AnalysisMeta<T>): CellConstructor<Anal
         name,
         description,
         construct: () =>
-            newFormalCell({
+            Nb.newFormalCell({
                 id,
                 content: initialContent(),
             }),

@@ -21,8 +21,8 @@ import {
     type ModelValidationResult,
     type Uuid,
 } from "catlog-wasm";
+import { Nb } from "document-types";
 import { type Api, findAndMigrate, type LiveDoc, makeLiveDoc } from "../api";
-import { NotebookUtils } from "../notebook/types";
 import type { Theory, TheoryLibrary } from "../theory";
 import type { LiveModelDoc, ModelDocument } from "./document";
 
@@ -265,7 +265,7 @@ export class ModelLibrary<RefId> {
         theory: DblTheory,
     ): Promise<ValidatedModel> {
         const instantiated = new DblModelMap();
-        for (const cell of NotebookUtils.getFormalContent(notebook)) {
+        for (const cell of Nb.getFormalContent(notebook)) {
             if (!(cell.tag === "instantiation" && cell.model)) {
                 continue;
             }

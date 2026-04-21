@@ -3,12 +3,8 @@ import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
 import type { InstantiatedModel, ModelJudgment, MorDecl, ObDecl } from "catlog-wasm";
-import {
-    type CellConstructor,
-    type FormalCellEditorProps,
-    NotebookEditor,
-    newFormalCell,
-} from "../notebook";
+import { Nb } from "document-types";
+import { type CellConstructor, type FormalCellEditorProps, NotebookEditor } from "../notebook";
 import { TheoryLibraryContext, type ModelTypeMeta, type Theory } from "../theory";
 import { LiveModelContext } from "./context";
 import type { LiveModelDoc } from "./document";
@@ -123,7 +119,7 @@ function modelCellConstructors(theory: Theory): CellConstructor<ModelJudgment>[]
         description: "Instantiate an existing model into this one",
         shortcut: ["I"],
         construct() {
-            return newFormalCell(newInstantiatedModel());
+            return Nb.newFormalCell(newInstantiatedModel());
         },
     });
     for (const meta of theory.modelTypes ?? []) {
@@ -141,9 +137,9 @@ function modelCellConstructor(meta: ModelTypeMeta): CellConstructor<ModelJudgmen
         construct() {
             switch (tag) {
                 case "ObType":
-                    return newFormalCell(newObjectDecl(meta.obType));
+                    return Nb.newFormalCell(newObjectDecl(meta.obType));
                 case "MorType":
-                    return newFormalCell(newMorphismDecl(meta.morType));
+                    return Nb.newFormalCell(newMorphismDecl(meta.morType));
                 default:
                     throw tag satisfies never;
             }

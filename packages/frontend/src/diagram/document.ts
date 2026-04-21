@@ -10,9 +10,9 @@ import type {
     Uuid,
 } from "catlog-wasm";
 import { currentVersion, elaborateDiagram } from "catlog-wasm";
+import { Nb } from "document-types";
 import { type Api, type DocRef, findAndMigrate, type LiveDoc, makeLiveDoc } from "../api";
 import type { LiveModelDoc, ModelLibrary } from "../model";
-import { NotebookUtils, newNotebook } from "../notebook";
 
 /** A document defining a diagram in a model. */
 export type DiagramDocument = Document & { type: "diagram" };
@@ -25,7 +25,7 @@ export const newDiagramDocument = (modelRef: StableRef): DiagramDocument => ({
         ...modelRef,
         type: "diagram-in",
     },
-    notebook: newNotebook<DiagramJudgment>(),
+    notebook: Nb.newNotebook<DiagramJudgment>(),
     version: currentVersion(),
 });
 
@@ -76,7 +76,7 @@ export function enlivenDiagramDocument(
     const { doc } = liveDoc;
 
     const formalJudgments = createMemo<Array<DiagramJudgment>>(() =>
-        NotebookUtils.getFormalContent(doc.notebook),
+        Nb.getFormalContent(doc.notebook),
     );
 
     const elaboratedDiagram = (): DblModelDiagram | undefined => {

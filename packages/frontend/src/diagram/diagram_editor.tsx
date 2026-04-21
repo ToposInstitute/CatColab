@@ -3,13 +3,9 @@ import { Match, Switch, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import type { DiagramJudgment, DiagramMorDecl, DiagramObDecl } from "catlog-wasm";
+import { Nb } from "document-types";
 import { LiveModelContext } from "../model";
-import {
-    type CellConstructor,
-    type FormalCellEditorProps,
-    NotebookEditor,
-    newFormalCell,
-} from "../notebook";
+import { type CellConstructor, type FormalCellEditorProps, NotebookEditor } from "../notebook";
 import type { InstanceTypeMeta } from "../theory";
 import { LiveDiagramContext } from "./context";
 import type { LiveDiagramDoc } from "./document";
@@ -96,9 +92,9 @@ function diagramCellConstructor(meta: InstanceTypeMeta): CellConstructor<Diagram
         construct() {
             switch (tag) {
                 case "ObType":
-                    return newFormalCell(newDiagramObjectDecl(meta.obType));
+                    return Nb.newFormalCell(newDiagramObjectDecl(meta.obType));
                 case "MorType":
-                    return newFormalCell(newDiagramMorphismDecl(meta.morType));
+                    return Nb.newFormalCell(newDiagramMorphismDecl(meta.morType));
                 default:
                     throw tag satisfies never;
             }

@@ -1,7 +1,7 @@
 import { v7 } from "uuid";
 
 import { migrateDocument, type Document, type ModelJudgment, type Ob } from "catlog-wasm";
-import { newNotebook, NotebookUtils } from "../notebook/types";
+import { Nb } from "document-types";
 
 /** Detects a Petrinaut-exported JSON file. */
 export function isFromPetrinaut(data: unknown): data is PetrinautFile {
@@ -60,11 +60,11 @@ export function convertFromPetrinaut(data: PetrinautFile): Document {
         placeIds.set(place.id, { cellId: v7(), contentId: v7() });
     }
 
-    const notebook = newNotebook<ModelJudgment>();
+    const notebook = Nb.newNotebook<ModelJudgment>();
 
     for (const place of places) {
         const { cellId, contentId } = placeIds.get(place.id)!;
-        NotebookUtils.appendCell(notebook, {
+        Nb.appendCell(notebook, {
             id: cellId,
             tag: "formal",
             content: {
@@ -85,7 +85,7 @@ export function convertFromPetrinaut(data: PetrinautFile): Document {
         const codContentIds = transition.outputArcs.map(
             (arc) => placeIds.get(arc.placeId)!.contentId,
         );
-        NotebookUtils.appendCell(notebook, {
+        Nb.appendCell(notebook, {
             id: cellId,
             tag: "formal",
             content: {

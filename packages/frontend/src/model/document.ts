@@ -2,8 +2,8 @@ import type { Accessor } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { currentVersion, type DblModel, type Document, type ModelJudgment } from "catlog-wasm";
+import { Nb } from "document-types";
 import type { Api, LiveDoc } from "../api";
-import { NotebookUtils, newNotebook } from "../notebook/types";
 import type { Theory, TheoryLibrary } from "../theory";
 import type { ValidatedModel } from "./model_library";
 
@@ -19,7 +19,7 @@ export const newModelDocument = (args: {
     type: "model",
     theory: args.theory,
     ...(args.editorVariant ? { editorVariant: args.editorVariant } : {}),
-    notebook: newNotebook<ModelJudgment>(),
+    notebook: Nb.newNotebook<ModelJudgment>(),
     version: currentVersion(),
 });
 
@@ -90,7 +90,7 @@ export async function migrateModelDocument(
     invariant(theory && model); // FIXME: Should fail gracefully.
 
     // Trivial migration.
-    if (!NotebookUtils.hasFormalCells(doc.notebook) || theory.inclusions.includes(targetTheoryId)) {
+    if (!Nb.hasFormalCells(doc.notebook) || theory.inclusions.includes(targetTheoryId)) {
         changeDoc((doc) => {
             doc.theory = targetTheoryId;
             delete doc.editorVariant;
@@ -110,7 +110,7 @@ export async function migrateModelDocument(
     changeDoc((doc) => {
         doc.theory = targetTheoryId;
         delete doc.editorVariant;
-        for (const judgment of NotebookUtils.getFormalContent(doc.notebook)) {
+        for (const judgment of Nb.getFormalContent(doc.notebook)) {
             if (judgment.tag === "object") {
                 judgment.obType = model.obType({
                     tag: "Basic",

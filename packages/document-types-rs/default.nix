@@ -27,7 +27,6 @@ craneLib.buildPackage {
       ../../Cargo.toml
       ../../Cargo.lock
       (craneLib.fileset.commonCargoSources ./.)
-      ./package.json
     ];
   };
 
@@ -46,7 +45,7 @@ craneLib.buildPackage {
     # 
     # wasm-pack needs a writeable $HOME
     # https://github.com/ipetkov/crane/issues/362
-    HOME=$(mktemp -d) npm run build:node
+    HOME=$(mktemp -d) wasm-pack build ./. --target nodejs -d ./dist/pkg-node
   '';
 
   installPhase = ''

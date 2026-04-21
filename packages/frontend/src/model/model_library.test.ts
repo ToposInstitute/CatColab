@@ -2,7 +2,7 @@ import { type ChangeFn, Repo } from "@automerge/automerge-repo";
 import { afterAll, assert, describe, test } from "vitest";
 
 import { DblModel } from "catlog-wasm";
-import { NotebookUtils, newFormalCell, newRichTextCell } from "../notebook/types";
+import { Nb } from "document-types";
 import { stdTheories } from "../stdlib";
 import { Theory } from "../theory";
 import { type ModelDocument, newModelDocument } from "./document";
@@ -65,11 +65,11 @@ describe("Model in library", async () => {
 
     test.sequential("should re-elaborate when notebook cells are added", async () => {
         await changeDoc((doc) => {
-            NotebookUtils.appendCell(
+            Nb.appendCell(
                 doc.notebook,
-                newFormalCell(newObjectDecl({ tag: "Basic", content: "Object" })),
+                Nb.newFormalCell(newObjectDecl({ tag: "Basic", content: "Object" })),
             );
-            NotebookUtils.appendCell(doc.notebook, newRichTextCell());
+            Nb.appendCell(doc.notebook, Nb.newRichTextCell());
         });
         assert.strictEqual(generation(), 3);
         assert.strictEqual(status(), "Valid");
@@ -77,7 +77,7 @@ describe("Model in library", async () => {
 
     test.sequential("should NOT re-elaborate when rich text is edited", async () => {
         await changeDoc((doc) => {
-            const cellId = NotebookUtils.getCellIdByIndex(docHandle.doc().notebook, 1);
+            const cellId = Nb.getCellIdByIndex(docHandle.doc().notebook, 1);
             const cell = doc.notebook.cellContents[cellId];
             assert(cell?.tag === "rich-text");
             cell.content = "Some text";
@@ -86,9 +86,9 @@ describe("Model in library", async () => {
     });
 
     const anotherModelDoc = newModelDocument({ theory: "causal-loop" });
-    NotebookUtils.appendCell(
+    Nb.appendCell(
         anotherModelDoc.notebook,
-        newFormalCell(newObjectDecl({ tag: "Basic", content: "Object" })),
+        Nb.newFormalCell(newObjectDecl({ tag: "Basic", content: "Object" })),
     );
     const anotherDocHandle = repo.create(modelDoc);
 
@@ -100,7 +100,7 @@ describe("Model in library", async () => {
             type: "instantiation",
         });
         await changeDoc((doc) => {
-            NotebookUtils.appendCell(doc.notebook, newFormalCell(inst));
+            Nb.appendCell(doc.notebook, Nb.newFormalCell(inst));
         });
         assert.strictEqual(generation(), 4);
         assert.strictEqual(status(), "Valid");
@@ -110,9 +110,9 @@ describe("Model in library", async () => {
     const cyclicModel = newModelDocument({ theory: "empty" });
     const cyclicModelHandle = repo.create(cyclicModel);
     cyclicModelHandle.change((doc) => {
-        NotebookUtils.appendCell(
+        Nb.appendCell(
             doc.notebook,
-            newFormalCell(
+            Nb.newFormalCell(
                 newInstantiatedModel({
                     _id: cyclicModelHandle.documentId,
                     _version: null,

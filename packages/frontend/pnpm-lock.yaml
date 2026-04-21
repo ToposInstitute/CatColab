@@ -86,6 +86,9 @@ importers:
       catlog-wasm:
         specifier: link:../catlog-wasm/dist/pkg-browser
         version: link:../catlog-wasm/dist/pkg-browser
+      document-types:
+        specifier: link:../document-types-ts
+        version: link:../document-types-ts
       echarts:
         specifier: ^5.5.1
         version: 5.5.1
