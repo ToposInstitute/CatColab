@@ -74,13 +74,13 @@ export async function findAndMigrate(
     const docHandle = await repo.find<Document>(docId);
 
     // Perform any migrations on the document.
-    // XXX: copied from automerge-doc-server/src/server.ts:
     const docBefore = docHandle.doc();
-    // @ts-expect-error: WIP
-    delete docBefore["@patchwork"];
     const docAfter = migrateDocument(docBefore);
     if (docBefore.version !== docAfter.version) {
-        const patches = jsonpatch.compare(docBefore, docAfter);
+        const patches = jsonpatch
+            .compare(docBefore, docAfter)
+            // XXX: Ignore metadata added by Patchwork/GAIOS.
+            .filter((patch) => !patch.path.startsWith("/@patchwork"));
         docHandle.change((doc: unknown) => {
             jsonpatch.applyPatch(doc, patches);
         });
