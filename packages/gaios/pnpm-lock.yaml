@@ -9,14 +9,14 @@ importers:
   .:
     dependencies:
       '@automerge/automerge':
-        specifier: ^3.1.1
-        version: 3.1.1
+        specifier: ^3.2.5
+        version: 3.2.5
       '@automerge/automerge-repo':
-        specifier: ^2.2.0
-        version: 2.2.0
+        specifier: ^2.5.5
+        version: 2.5.5
       '@automerge/automerge-repo-react-hooks':
-        specifier: ^2.2.0
-        version: 2.2.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        specifier: ^2.5.5
+        version: 2.5.5(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@patchwork/context':
         specifier: github:inkandswitch/context
         version: https://codeload.github.com/inkandswitch/context/tar.gz/1c0f40b779d719dd5f4c92e47bdc94406600f8f0
@@ -82,8 +82,8 @@ packages:
   '@automerge/automerge-repo-network-websocket@2.5.5':
     resolution: {integrity: sha512-pwHNXTsTTfofU3X/wtFa9L3lWfAJBI7v1+3EKgFDgEodUJo9FPDH0hcy4HUsQiDrQPADO7FP9fVOQSXVm8n5VA==}
 
-  '@automerge/automerge-repo-react-hooks@2.2.0':
-    resolution: {integrity: sha512-zHP44jXSCmV1DyyKdTKgv8nz7yrdCT7VFXs/QrF3YRhE/3czhhvbXo2zahGvOoM+jryH0eJxHTrJ7jMEtt/Ung==}
+  '@automerge/automerge-repo-react-hooks@2.5.5':
+    resolution: {integrity: sha512-ATkQAqdmRCyQ1AM/MiEaFzzW1TSDjpOsUuXWOi3yGjgm4CI8bAM8gHasrFJ9rVCI8NTy8RPVqwMqc/yTUPp7mA==}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
       react-dom: ^18.0.0 || ^19.0.0
@@ -94,20 +94,8 @@ packages:
   '@automerge/automerge-repo-storage-nodefs@2.5.5':
     resolution: {integrity: sha512-mdGU5CI/04dAV9UnqW9ImKqtilJXCcga3h/yQtw24SDB6HSMXRl3S748FYFF+dc37bFyUgAcaAXQqavCN8siJw==}
 
-  '@automerge/automerge-repo@2.2.0':
-    resolution: {integrity: sha512-/4cAxnUDPykqdSMJJiJvPlR2VY0JHJnvEoM7fO8qVXwQors34S0VkJEScXRJZExcVhWGhFTwCTWvUbb6hhWQIQ==}
-
-  '@automerge/automerge-repo@2.3.1':
-    resolution: {integrity: sha512-ZQ6jdwSsdjAiQoT+1vAvmMRcXaxtMv4PH298x9VSVPD5o5N0nNUweE2HuAsNNrXleZ/apfG2vH8uYentSQQFvQ==}
-
   '@automerge/automerge-repo@2.5.5':
     resolution: {integrity: sha512-A7vrMvIx5axW3smczZStONaZsksFSjKK8e0Th0u+oEV3aMsylaExpDvjRE2ZIZotJT30+l3tCUlge/n/XGK25Q==}
-
-  '@automerge/automerge@3.1.1':
-    resolution: {integrity: sha512-x7tZiMBLk4/SKYimVEVl1/wPntT9buGvLOWCey9ZcH8JUsB0dgm49C0S7Ojzgvflcs2hc/YjiXRPcFeFkinIgw==}
-
-  '@automerge/automerge@3.1.2':
-    resolution: {integrity: sha512-rAZRLAMrboBJGMmZXPOfYiwkmHXho6RjhUOIrlmf+Buukt/DN1oee8kHfpI3U4etetvGgqf5JaFVbydQpKT/Vg==}
 
   '@automerge/automerge@3.2.5':
     resolution: {integrity: sha512-tCdaGDTLaRzBJV+Q9zMyyEH/vUFkBNh21jpwlpcEYV7gs5r63xh9UFa1N3yNJ5ZzmiLBD42TIBeqK+g54sLp0w==}
@@ -1677,10 +1665,10 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  '@automerge/automerge-repo-react-hooks@2.2.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+  '@automerge/automerge-repo-react-hooks@2.5.5(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
-      '@automerge/automerge': 3.1.1
-      '@automerge/automerge-repo': 2.2.0
+      '@automerge/automerge': 3.2.5
+      '@automerge/automerge-repo': 2.5.5
       eventemitter3: 5.0.1
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
@@ -1701,48 +1689,18 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@automerge/automerge-repo@2.2.0':
-    dependencies:
-      '@automerge/automerge': 3.1.1
-      bs58check: 3.0.1
-      cbor-x: 1.6.0
-      debug: 4.4.0(supports-color@5.5.0)
-      eventemitter3: 5.0.1
-      fast-sha256: 1.3.0
-      uuid: 9.0.1
-      xstate: 5.19.2
-    transitivePeerDependencies:
-      - supports-color
-
-  '@automerge/automerge-repo@2.3.1':
-    dependencies:
-      '@automerge/automerge': 3.1.2
-      bs58check: 3.0.1
-      cbor-x: 1.6.0
-      debug: 4.4.0(supports-color@5.5.0)
-      eventemitter3: 5.0.1
-      fast-sha256: 1.3.0
-      uuid: 9.0.1
-      xstate: 5.19.2
-    transitivePeerDependencies:
-      - supports-color
-
   '@automerge/automerge-repo@2.5.5':
     dependencies:
       '@automerge/automerge': 3.2.5
       bs58check: 3.0.1
       cbor-x: 1.6.0
-      debug: 4.4.0(supports-color@5.5.0)
+      debug: 4.4.3
       eventemitter3: 5.0.1
       fast-sha256: 1.3.0
       uuid: 9.0.1
       xstate: 5.19.2
     transitivePeerDependencies:
       - supports-color
-
-  '@automerge/automerge@3.1.1': {}
-
-  '@automerge/automerge@3.1.2': {}
 
   '@automerge/automerge@3.2.5': {}
 
@@ -1968,7 +1926,7 @@ snapshots:
   '@eslint/config-array@0.21.2':
     dependencies:
       '@eslint/object-schema': 2.1.7
-      debug: 4.4.0(supports-color@5.5.0)
+      debug: 4.4.3
       minimatch: 3.1.5
     transitivePeerDependencies:
       - supports-color
@@ -1984,7 +1942,7 @@ snapshots:
   '@eslint/eslintrc@3.3.5':
     dependencies:
       ajv: 6.14.0
-      debug: 4.4.0(supports-color@5.5.0)
+      debug: 4.4.3
       espree: 10.4.0
       globals: 14.0.0
       ignore: 5.3.2
@@ -2045,8 +2003,8 @@ snapshots:
 
   '@patchwork/context@https://codeload.github.com/inkandswitch/context/tar.gz/1c0f40b779d719dd5f4c92e47bdc94406600f8f0':
     dependencies:
-      '@automerge/automerge': 3.1.2
-      '@automerge/automerge-repo': 2.3.1
+      '@automerge/automerge': 3.2.5
+      '@automerge/automerge-repo': 2.5.5
       react: 18.3.1
     transitivePeerDependencies:
       - supports-color
@@ -2489,7 +2447,7 @@ snapshots:
       ajv: 6.14.0
       chalk: 4.1.2
       cross-spawn: 7.0.6
-      debug: 4.4.0(supports-color@5.5.0)
+      debug: 4.4.3
       escape-string-regexp: 4.0.0
       eslint-scope: 8.4.0
       eslint-visitor-keys: 4.2.1

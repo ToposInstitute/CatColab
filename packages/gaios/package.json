@@ -20,9 +20,9 @@
         "watch": "nodemon --watch src -e js,tsx,ts,tsx,css,json --exec 'pnpm build && pnpm push'"
     },
     "dependencies": {
-        "@automerge/automerge": "^3.1.1",
-        "@automerge/automerge-repo": "^2.2.0",
-        "@automerge/automerge-repo-react-hooks": "^2.2.0",
+        "@automerge/automerge": "^3.2.5",
+        "@automerge/automerge-repo": "^2.5.5",
+        "@automerge/automerge-repo-react-hooks": "^2.5.5",
         "@patchwork/context": "github:inkandswitch/context",
         "catlog-wasm": "link:../catlog-wasm/dist/pkg-browser",
         "react": "^18.3.1",

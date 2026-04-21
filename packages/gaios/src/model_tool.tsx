@@ -1,4 +1,4 @@
-import type { DocHandle } from "@automerge/automerge-repo";
+import type { DocHandle, Repo } from "@automerge/automerge-repo";
 import { createResource, Switch, Match } from "solid-js";
 import { render } from "solid-js/web";
 
@@ -15,23 +15,13 @@ import type { ModelDoc } from "./model_datatype";
 
 import "../../ui-components/src/global.css";
 
-// `element` carries a `Repo` from the patchwork host, whose automerge-repo
-// version differs from the one the frontend package was built against. Typed
-// loosely here to avoid the version-skew type clash; structurally identical.
-type ToolElement = HTMLElement & { repo: unknown };
+type ToolElement = HTMLElement & { repo: Repo };
 
 export function renderModelTool(handle: DocHandle<ModelDoc>, element: ToolElement) {
-    // Cast: `createModelLibraryWithRepo` returns `ModelLibrary<AnyDocumentId>`,
-    // but the context is typed as `ModelLibrary<string>`. `AnyDocumentId` is a
-    // branded string, so the narrowing is safe here. The `repo` is also cast
-    // through `unknown` because gaios and frontend resolve different pinned
-    // versions of @automerge/automerge-repo; the types clash but the runtime
-    // shapes are compatible.
     const modelLibrary = createModelLibraryWithRepo(
-        // oxlint-disable-next-line typescript/no-explicit-any -- version-skew workaround
-        element.repo as any,
+        element.repo,
         stdTheories,
-    ) as unknown as ModelLibrary<string>;
+    ) as ModelLibrary<string>;
 
     const [liveModel] = createResource(
         () => handle.url,
