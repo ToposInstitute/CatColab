@@ -13,7 +13,7 @@ import { stdTheories } from "../../frontend/src/stdlib";
 import { TheoryLibraryContext } from "../../frontend/src/theory";
 import type { ModelDoc } from "./model_datatype";
 
-import styles from "../../ui-components/src/global.css?inline";
+import "../../ui-components/src/global.css";
 
 // `element` carries a `Repo` from the patchwork host, whose automerge-repo
 // version differs from the one the frontend package was built against. Typed
@@ -46,16 +46,6 @@ export function renderModelTool(handle: DocHandle<ModelDoc>, element: ToolElemen
             }
         },
     );
-
-    const sheet = new CSSStyleSheet();
-    sheet.replaceSync(styles);
-    document.adoptedStyleSheets ??= [];
-    if (!document.adoptedStyleSheets.includes(sheet)) {
-        document.adoptedStyleSheets.push(sheet);
-    }
-
-    // oxlint-disable-next-line no-console -- intentional startup diagnostic
-    console.log("Hello from CatColab");
 
     return render(
         () => (
