@@ -1,31 +1,19 @@
-import type { Cell } from "catlog-wasm";
+import type { Document } from "catlog-wasm";
+import { newModelDocument } from "../../frontend/src/model";
+
+export type ModelDoc = Document & { type: "model" };
 
 // SCHEMA
 
-export type ModelDoc = {
-    name: string;
-    theory: string;
-    type: string;
-    notebook: {
-        cells: Cell<unknown>[];
-    };
+export const init = (doc: ModelDoc) => {
+    Object.assign(doc, newModelDocument({ theory: "empty" }));
+    doc.name = "New model";
 };
+
+const getTitle = (doc: ModelDoc) => doc.name;
 
 const setTitle = (doc: ModelDoc, title: string) => {
     doc.name = title;
-};
-
-const getTitle = (doc: ModelDoc) => {
-    return doc.name || "CatColab Model";
-};
-
-export const init = (doc: ModelDoc) => {
-    doc.name = "CatColab Model";
-    doc.theory = "empty";
-    doc.type = "model";
-    doc.notebook = {
-        cells: [],
-    };
 };
 
 export const dataType = {
