@@ -13,3 +13,44 @@ objects admits a tensor product.}
 [generalized multicategory](dct-000F).}
 
 \transclude{thy-000O}
+
+\subtree{
+\title{Models of the theory of representable multicategories}
+\taxon{proposition}
+
+\p{A model of the modal theory #{(\dbl{T}, T)} of representable multicategories in...
+
+\ul{
+  \li{...in #{(\SSet, \List)} is exactly a representable multicategory}
+  \li{...in #{(\SSet, \ListSym)} is exactly a representable symmetric multicategory}
+  \li{...in #{(\SSet, \ListCart)} is exactly a representable cartesian multicategory.}
+}
+}
+
+\proof{
+
+Consider the case of ordinary multicategories; the others are similar. A model
+consists of a multicategory with underlying profunctor #{P: \List X \proto X}, a
+functor #{\otimes: \List X \to X}, and a family of multimorphisms
+
+##{
+\chi_{x_1,\dots,x_n}: [x_1, \dots, x_n] \to x_1 \otimes \cdots \otimes x_n,
+\qquad
+[x_1, \dots, x_n] \in \List X,
+}
+
+natural in lists of morphisms of #{X}, with the universal property that for
+every list #{[\vec{x}_1, \dots \vec{x}_k]} of lists of objects, precomposition
+with #{[\chi_{\vec{x}_1}, \dots, \chi_{\vec{x}_k}]} gives a bijection
+
+##{
+P(\otimes \vec{x}_1, \dots, \otimes \vec{x}_k; y)
+\xto{\cong}
+P(x_{1,1}, \dots, x_{k,n_k}; y).
+}
+
+This is equivalent to the standard definition of a representable multicategory.
+
+}
+
+}

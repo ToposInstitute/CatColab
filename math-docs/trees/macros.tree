@@ -118,12 +118,12 @@
 \def\Fam{#{\mathrm{Fam}}}
 \def\FinFam{#{\mathrm{FinFam}}}
 
-\def\List{#{\mathrm{List}}}
-\def\ListSym{#{\mathrm{List}_{\id,\mathrm{bij}}}}
-\def\ListCart{#{\mathrm{List}_{\mathrm{fun},\id}}}
-\def\ListSemicart{#{\mathrm{List}_{\mathrm{inj},\id}}}
-\def\ListRelevance{#{\mathrm{List}_{\mathrm{surj},\id}}}
-\def\ListCocart{#{\mathrm{List}_{\id,\mathrm{fun}}}}
+\def\List{#{\mathop{\mathrm{List}}}}
+\def\ListSym{#{\mathop{\mathrm{List}_{\mathrm{bij},\id}}}}
+\def\ListCart{#{\mathop{\mathrm{List}_{\mathrm{fun},\id}}}}
+\def\ListSemicart{#{\mathop{\mathrm{List}_{\mathrm{inj},\id}}}}
+\def\ListRelevance{#{\mathop{\mathrm{List}_{\mathrm{surj},\id}}}}
+\def\ListCocart{#{\mathop{mathrm{List}_{\id,\mathrm{fun}}}}}
 
 \def\Disc{#{\mathop{\mathrm{Disc}}}}
 \def\coDisc{#{\mathop{\mathrm{coDisc}}}}
