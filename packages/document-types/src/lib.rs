@@ -20,7 +20,7 @@ pub(crate) mod common_test;
 
 pub mod current {
     // this should always track the latest version, and is the only version
-    // that is exported from notebook-types
+    // that is exported from document-types
     pub use crate::v1::*;
 }
 

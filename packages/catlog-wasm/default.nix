@@ -28,7 +28,7 @@ craneLib.buildPackage {
       ../../Cargo.lock
       (craneLib.fileset.commonCargoSources ./.)
       (craneLib.fileset.commonCargoSources ../catlog)
-      (craneLib.fileset.commonCargoSources ../notebook-types)
+      (craneLib.fileset.commonCargoSources ../document-types)
       ./package.json
     ];
   };

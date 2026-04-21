@@ -28,7 +28,7 @@ http = "1.1.0"
 hyper = { version = "1.4.1", features = ["server"] }
 jsonrpsee = "0.24.6"
 jsonrpsee-server = "0.24.6"
-notebook-types = { version = "0.1.0", path = "../notebook-types", features = ["backend"] }
+document-types = { version = "0.1.0", path = "../document-types", features = ["backend"] }
 qubit = { version = "1.0.0-beta.0", features = ["ts-serde-json", "ts-uuid", "ts-chrono"] }
 rand = "0.8"
 regex = "1.11.1"

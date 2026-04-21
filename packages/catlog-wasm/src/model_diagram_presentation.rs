@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use catlog::zero::{QualifiedLabel, QualifiedName};
-use notebook_types::current::{Mor, MorType, Ob, ObType};
+use document_types::current::{Mor, MorType, Ob, ObType};
 
 /// Presentation of a free diagram in a model.
 #[derive(Serialize, Deserialize, Tsify)]

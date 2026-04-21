@@ -5,8 +5,8 @@
 //! must be completely different to be well adapted to the notebook interface.
 //! As a first pass, we are associating cell UUIDs with errors.
 
+use document_types::current as nb;
 use nonempty::NonEmpty;
-use notebook_types::current as nb;
 use std::str::FromStr;
 use uuid::Uuid;
 
@@ -361,7 +361,7 @@ impl<'a> Elaborator<'a> {
             Some(l) => l,
             None => return self.ty_error(InvalidDblModel::InvalidLink(name)),
         };
-        let notebook_types::current::LinkType::Instantiation = link.r#type else {
+        let document_types::current::LinkType::Instantiation = link.r#type else {
             return self.ty_error(InvalidDblModel::InvalidLink(name));
         };
         let ref_id = ustr(&link.stable_ref.id);
@@ -511,7 +511,7 @@ mod test {
         toplevel::Toplevel,
     };
     use crate::zero::name;
-    use notebook_types::current::ModelDocumentContent;
+    use document_types::current::ModelDocumentContent;
 
     fn elab_example(theory: &Theory, name: &str, expected: Expect) -> Model {
         let src = fs::read_to_string(format!("examples/tt/notebook/{name}.json")).unwrap();

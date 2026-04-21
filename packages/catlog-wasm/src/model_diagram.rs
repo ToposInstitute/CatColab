@@ -13,7 +13,7 @@ use catlog::dbl::model_diagram as diagram;
 use catlog::dbl::model_morphism::DiscreteDblModelMapping;
 use catlog::one::FgCategory;
 use catlog::zero::{MutMapping, NameLookup, NameSegment, Namespace, QualifiedLabel, QualifiedName};
-use notebook_types::current::*;
+use document_types::current::*;
 
 use super::model::DblModel;
 use super::model_diagram_presentation::*;
