@@ -21,7 +21,7 @@ let
         ../../pnpm-lock.yaml
         ../../packages/frontend
         ../../packages/ui-components
-        ../../packages/notebook-types
+        ../../packages/document-types
         ../../packages/backend/pkg
       ];
     };
@@ -52,8 +52,8 @@ let
           ../../packages/frontend/pnpm-lock.yaml
           ../../packages/ui-components/package.json
           ../../packages/ui-components/pnpm-lock.yaml
-          ../../packages/notebook-types/package.json
-          ../../packages/notebook-types/pnpm-lock.yaml
+          ../../packages/document-types/package.json
+          ../../packages/document-types/pnpm-lock.yaml
           ../../packages/backend/pkg/package.json
           ../../packages/backend/pkg/pnpm-lock.yaml
         ];
@@ -118,7 +118,7 @@ let
         cp -r packages/backend $out/packages/
         cp -r packages/frontend $out/packages/
         cp -r packages/ui-components $out/packages/
-        cp -r packages/notebook-types $out/packages/
+        cp -r packages/document-types $out/packages/
 
         mkdir -p $out/bin
         # Wrapper script to load environment variables and wait for backend to become available

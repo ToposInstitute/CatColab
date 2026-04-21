@@ -1,4 +1,4 @@
-use notebook_types::VersionedDocument;
+use document_types::VersionedDocument;
 use std::fs;
 use std::path::Path;
 

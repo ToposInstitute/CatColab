@@ -19,7 +19,7 @@ use catlog::tt::{
     notebook_elab::{demote_modality, promote_modality},
 };
 use catlog::zero::{NameSegment, QualifiedName};
-use notebook_types::current::theory::*;
+use document_types::current::theory::*;
 
 use super::notation::*;
 

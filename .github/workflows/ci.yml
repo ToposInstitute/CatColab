@@ -27,8 +27,8 @@ jobs:
           rustup toolchain install ${{ matrix.toolchain }}
           rustup default ${{ matrix.toolchain }}
 
-          cargo check -p catlog -p catlog-wasm -p notebook-types --all-features --verbose
-          cargo test -p catlog -p catlog-wasm -p notebook-types --all-features --verbose
+          cargo check -p catlog -p catlog-wasm -p document-types --all-features --verbose
+          cargo test -p catlog -p catlog-wasm -p document-types --all-features --verbose
 
   rust_formatting:
     name: rust formatting

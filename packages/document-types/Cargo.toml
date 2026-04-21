@@ -1,5 +1,5 @@
 [package]
-name = "notebook-types"
+name = "document-types"
 version = "0.1.0"
 edition = "2024"
 

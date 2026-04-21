@@ -336,6 +336,7 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "clap",
+ "document-types",
  "dotenvy",
  "firebase-auth",
  "futures-util",
@@ -344,7 +345,6 @@ dependencies = [
  "jsonrpsee 0.24.9",
  "jsonrpsee-server 0.24.9",
  "migrator",
- "notebook-types",
  "proptest",
  "proptest-arbitrary-interop",
  "qubit",
@@ -518,6 +518,7 @@ dependencies = [
  "clap",
  "derivative",
  "derive_more",
+ "document-types",
  "duplicate",
  "egglog",
  "ego-tree",
@@ -527,7 +528,6 @@ dependencies = [
  "itertools",
  "nalgebra",
  "nonempty",
- "notebook-types",
  "notify",
  "notify-debouncer-full",
  "num-traits",
@@ -558,11 +558,11 @@ dependencies = [
  "catlog",
  "console_error_panic_hook",
  "derive_more",
+ "document-types",
  "getrandom 0.2.16",
  "getrandom 0.3.3",
  "js-sys",
  "nonempty",
- "notebook-types",
  "serde",
  "tsify",
  "ustr",
@@ -1033,6 +1033,24 @@ name = "dissimilar"
 version = "1.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8975ffdaa0ef3661bfe02dbdcc06c9f829dfafe6a3c474de366a8d5e44276921"
+
+[[package]]
+name = "document-types"
+version = "0.1.0"
+dependencies = [
+ "automerge",
+ "autosurgeon",
+ "proptest",
+ "serde",
+ "serde-wasm-bindgen",
+ "serde_json",
+ "test-strategy",
+ "ts-rs",
+ "tsify",
+ "ustr",
+ "uuid",
+ "wasm-bindgen",
+]
 
 [[package]]
 name = "dotenvy"
@@ -2539,8 +2557,8 @@ dependencies = [
  "async-trait",
  "automerge",
  "clap",
+ "document-types",
  "dotenvy",
- "notebook-types",
  "samod",
  "serde_json",
  "sqlx",
@@ -2670,24 +2688,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9737e026353e5cd0736f98eddae28665118eb6f6600902a7f50db585621fecb6"
 dependencies = [
  "serde",
-]
-
-[[package]]
-name = "notebook-types"
-version = "0.1.0"
-dependencies = [
- "automerge",
- "autosurgeon",
- "proptest",
- "serde",
- "serde-wasm-bindgen",
- "serde_json",
- "test-strategy",
- "ts-rs",
- "tsify",
- "ustr",
- "uuid",
- "wasm-bindgen",
 ]
 
 [[package]]

@@ -4,6 +4,6 @@ packages:
   - "dev-docs"
   - "packages/backend/pkg"
   - "packages/frontend"
-  - "packages/notebook-types"
+  - "packages/document-types"
   - "packages/ui-components"
   - "packages/gaios"

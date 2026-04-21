@@ -26,7 +26,7 @@ use catlog::tt::{
 };
 use catlog::validate::Validate;
 use catlog::zero::{NameLookup, NameSegment, Namespace, QualifiedLabel, QualifiedName};
-use notebook_types::current::{path as notebook_path, *};
+use document_types::current::{path as notebook_path, *};
 
 use super::result::JsResult;
 use super::theory::{DblTheory, DblTheoryBox, expect_single_name};
