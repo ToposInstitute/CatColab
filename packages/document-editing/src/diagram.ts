@@ -10,8 +10,8 @@ import type {
     Ob,
     ObType,
     StableRef,
-} from "document-types";
-import { currentVersion } from "document-types";
+} from "catcolab-document-types";
+import { currentVersion } from "catcolab-document-types";
 
 /** A document defining a diagram in a model. */
 export type DiagramDocument = Document & { type: "diagram" };

@@ -21,7 +21,7 @@ let
         ../../pnpm-lock.yaml
         ../../packages/frontend
         ../../packages/ui-components
-        ../../packages/document-types-ts
+        ../../packages/document-editing
         ../../packages/backend/pkg
       ];
     };
@@ -52,8 +52,8 @@ let
           ../../packages/frontend/pnpm-lock.yaml
           ../../packages/ui-components/package.json
           ../../packages/ui-components/pnpm-lock.yaml
-          ../../packages/document-types-ts/package.json
-          ../../packages/document-types-ts/pnpm-lock.yaml
+          ../../packages/document-editing/package.json
+          ../../packages/document-editing/pnpm-lock.yaml
           ../../packages/backend/pkg/package.json
           ../../packages/backend/pkg/pnpm-lock.yaml
         ];
@@ -72,9 +72,9 @@ let
         cp -r ${self.packages.x86_64-linux.catlog-wasm-browser}/* packages/catlog-wasm/dist/pkg-browser/
 
         # Set up document-types wasm output and build the TS package
-        mkdir -p packages/document-types-rs/pkg
-        cp -r ${self.packages.x86_64-linux.document-types-wasm}/* packages/document-types-rs/pkg/
-        (cd packages/document-types-ts && npx tsc)
+        mkdir -p packages/document-types/pkg
+        cp -r ${self.packages.x86_64-linux.document-types-wasm}/* packages/document-types/pkg/
+        (cd packages/document-editing && npx tsc)
 
         # Set up generated API bindings
         mkdir -p packages/backend/pkg/src
@@ -117,9 +117,9 @@ let
         cp -r ${self.packages.x86_64-linux.catlog-wasm-browser}/* $out/packages/catlog-wasm/dist/pkg-browser/
 
         # Set up document-types wasm output and build the TS package before copying to $out
-        mkdir -p packages/document-types-rs/pkg
-        cp -r ${self.packages.x86_64-linux.document-types-wasm}/* packages/document-types-rs/pkg/
-        (cd packages/document-types-ts && npx tsc)
+        mkdir -p packages/document-types/pkg
+        cp -r ${self.packages.x86_64-linux.document-types-wasm}/* packages/document-types/pkg/
+        (cd packages/document-editing && npx tsc)
 
         # Bindings must be copied into source tree BEFORE the cp below copies backend to $out
         mkdir -p packages/backend/pkg/src
@@ -128,9 +128,9 @@ let
         cp -r packages/backend $out/packages/
         cp -r packages/frontend $out/packages/
         cp -r packages/ui-components $out/packages/
-        cp -r packages/document-types-ts $out/packages/
-        mkdir -p $out/packages/document-types-rs
-        cp -r packages/document-types-rs/pkg $out/packages/document-types-rs/
+        cp -r packages/document-editing $out/packages/
+        mkdir -p $out/packages/document-types
+        cp -r packages/document-types/pkg $out/packages/document-types/
 
         mkdir -p $out/bin
         # Wrapper script to load environment variables and wait for backend to become available

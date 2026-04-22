@@ -11,6 +11,7 @@ import { type Accessor, createResource, onCleanup } from "solid-js";
 import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
+import { Nb, type ModelDocument } from "catcolab-document-editing";
 import {
     type DblModel,
     DblModelMap,
@@ -21,7 +22,6 @@ import {
     type ModelValidationResult,
     type Uuid,
 } from "catlog-wasm";
-import { Nb, type ModelDocument } from "document-types-ts";
 import { type Api, findAndMigrate, type LiveDoc, makeLiveDoc } from "../api";
 import type { Theory, TheoryLibrary } from "../theory";
 import type { LiveModelDoc } from "./document";

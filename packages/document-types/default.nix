@@ -8,7 +8,7 @@ craneLib.buildPackage {
   inherit (craneLib.crateNameFromCargoToml { cargoToml = ./Cargo.toml; }) version pname;
   doCheck = false;
 
-  cargoExtraArgs = "-p document-types";
+  cargoExtraArgs = "-p catcolab-document-types";
 
   nativeBuildInputs = [
     pkgs.wasm-pack
@@ -32,7 +32,7 @@ craneLib.buildPackage {
 
   # run wasm-pack instead of the default cargo
   buildPhase = ''
-    cd packages/document-types-rs
+    cd packages/document-types
     # Run the wasm-pack command. wasm-pack will expect to find version of wasm-bindgen-cli in the
     # environment that must matches the version wasm-bindgen used in the Cargo.toml. The wasm-bindgen-cli
     # in the nix environment is defined an overlay in flake.nix.

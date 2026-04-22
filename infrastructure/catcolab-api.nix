@@ -24,7 +24,7 @@ craneLib.mkCargoDerivation {
       ../Cargo.lock
       (craneLib.fileset.commonCargoSources ../packages/backend)
       (craneLib.fileset.commonCargoSources ../packages/migrator)
-      (craneLib.fileset.commonCargoSources ../packages/document-types-rs)
+      (craneLib.fileset.commonCargoSources ../packages/document-types)
       ../packages/backend/.sqlx
     ];
   };

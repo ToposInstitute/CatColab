@@ -1,15 +1,15 @@
 //! Serialization of elaborated models.
 //!
 //! In contrast to a [model
-//! notebook](document_types::current::ModelDocumentContent), which is mere
+//! notebook](catcolab_document_types::current::ModelDocumentContent), which is mere
 //! *notation*, these data types serialize a fully *elaborated* model. The
 //! serialization is as a presentation in terms of generators and relations.
 
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
+use catcolab_document_types::current::{MorType, Ob, ObType};
 use catlog::zero::{QualifiedLabel, QualifiedName};
-use document_types::current::{MorType, Ob, ObType};
 
 /// Presentation of a model of a double theory.
 ///

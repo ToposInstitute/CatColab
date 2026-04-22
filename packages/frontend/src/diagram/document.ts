@@ -1,13 +1,13 @@
 import type { AnyDocumentId, Repo } from "@automerge/automerge-repo";
 import { type Accessor, createMemo } from "solid-js";
 
+import type { DiagramDocument, DiagramJudgment, StableRef, Uuid } from "catcolab-document-editing";
+import { Diagram, Nb } from "catcolab-document-editing";
 import {
     type DblModelDiagram,
     elaborateDiagram,
     type ModelDiagramValidationResult,
 } from "catlog-wasm";
-import type { DiagramDocument, DiagramJudgment, StableRef, Uuid } from "document-types-ts";
-import { Diagram, Nb } from "document-types-ts";
 import { type Api, type DocRef, findAndMigrate, type LiveDoc, makeLiveDoc } from "../api";
 import type { LiveModelDoc, ModelLibrary } from "../model";
 

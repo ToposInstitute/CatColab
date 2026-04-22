@@ -19,7 +19,7 @@ getrandom_v03 = { package = "getrandom", version = "0.3", features = ["wasm_js"]
 getrandom_v02 = { package = "getrandom", version = "0.2", features = ["js"] }
 js-sys = "0.3.77"
 nonempty = { version = "0.12", features = ["serialize"] }
-document-types = { version = "0.1.0", path = "../document-types-rs" }
+catcolab-document-types = { version = "0.1.0", path = "../document-types" }
 serde = { version = "1", features = ["derive"] }
 tsify = { version = "0.5.6", features = ["js"] }
 ustr = "1"

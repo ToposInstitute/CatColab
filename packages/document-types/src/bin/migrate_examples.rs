@@ -1,4 +1,4 @@
-use document_types::VersionedDocument;
+use catcolab_document_types::VersionedDocument;
 use std::fs;
 use std::path::Path;
 

@@ -260,7 +260,7 @@ async fn create_doc_in_repo(
     repo: &samod::Repo,
     content: &serde_json::Value,
 ) -> Result<(Vec<automerge::ChangeHash>, String), Error> {
-    use document_types::automerge_json::populate_automerge_from_json;
+    use catcolab_document_types::automerge_json::populate_automerge_from_json;
 
     let mut doc = automerge::Automerge::new();
     doc.transact(|tx| {

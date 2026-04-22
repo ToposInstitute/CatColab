@@ -9,6 +9,7 @@ use ustr::Ustr;
 
 use wasm_bindgen::prelude::*;
 
+use catcolab_document_types::current::theory::*;
 use catlog::dbl::theory::{
     self, DblTheory as _, ModalMorType, ModalObOp, ModalObType, ModeApp, NonUnital, TabMorType,
     TabObOp, TabObType, Unital,
@@ -19,7 +20,6 @@ use catlog::tt::{
     notebook_elab::{demote_modality, promote_modality},
 };
 use catlog::zero::{NameSegment, QualifiedName};
-use document_types::current::theory::*;
 
 use super::notation::*;
 

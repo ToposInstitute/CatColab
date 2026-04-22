@@ -1,6 +1,6 @@
 import { For } from "solid-js";
 
-import { Nb } from "document-types-ts";
+import { Nb } from "catcolab-document-editing";
 import { DocumentHead } from "../page/document_head";
 import { stdTheories } from "../stdlib";
 import { TheorySelectorDialog } from "../theory/theory_selector";

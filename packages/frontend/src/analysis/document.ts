@@ -1,5 +1,6 @@
 import type { AnyDocumentId, Repo } from "@automerge/automerge-repo";
 
+import { Nb } from "catcolab-document-editing";
 import {
     type Analysis,
     type AnalysisType,
@@ -8,7 +9,6 @@ import {
     type StableRef,
     type Uuid,
 } from "catlog-wasm";
-import { Nb } from "document-types-ts";
 import { type Api, type DocRef, findAndMigrate, type LiveDoc, makeLiveDoc } from "../api";
 import { getLiveDiagram, getLiveDiagramFromRepo, type LiveDiagramDoc } from "../diagram";
 import type { LiveModelDoc, ModelLibrary } from "../model";

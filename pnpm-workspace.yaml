@@ -4,6 +4,6 @@ packages:
   - "dev-docs"
   - "packages/backend/pkg"
   - "packages/frontend"
-  - "packages/document-types-ts"
+  - "packages/document-editing"
   - "packages/ui-components"
   - "packages/gaios"

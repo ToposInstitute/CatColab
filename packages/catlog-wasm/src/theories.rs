@@ -543,7 +543,7 @@ impl ThPowerSystem {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use document_types::current::theory::*;
+    use catcolab_document_types::current::theory::*;
     use ustr::ustr;
 
     #[test]

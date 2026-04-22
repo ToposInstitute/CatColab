@@ -1,4 +1,4 @@
-export * from "document-types";
+export * from "catcolab-document-types";
 
 export type { DiagramDocument } from "./diagram";
 export type { ModelDocument } from "./model";

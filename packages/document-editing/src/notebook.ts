@@ -2,7 +2,7 @@ import invariant from "tiny-invariant";
 import { v7 } from "uuid";
 
 import { deepCopyJSON } from "./deepcopy";
-import type { Cell, Notebook } from "./rs_document_types";
+import type { Cell, Notebook } from "catcolab-document-types";
 
 /** A cell containing custom data, usually a formal object. */
 export type FormalCell<T> = Cell<T> & { tag: "formal" };

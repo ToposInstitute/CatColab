@@ -15,6 +15,7 @@ import {
 } from "solid-js";
 import invariant from "tiny-invariant";
 
+import { Nb, type FormalCell, type Cell, type Notebook } from "catcolab-document-editing";
 import {
     type Completion,
     IconButton,
@@ -22,7 +23,6 @@ import {
     keyEventHasModifier,
     type ModifierKey,
 } from "catcolab-ui-components";
-import { Nb, type FormalCell, type Cell, type Notebook } from "document-types-ts";
 import {
     type CellActions,
     type CellDragData,
@@ -347,7 +347,7 @@ export function NotebookEditor<T>(props: {
                                         </Match>
                                         <Match when={cell.tag === "formal"}>
                                             <props.formalCellEditor
-                                                content={(cell as FormalCell<T>).content}
+                                                content={cell.content}
                                                 changeContent={(f) =>
                                                     props.changeNotebook((nb) =>
                                                         Nb.mutateCellContentById(nb, cell.id, f),
