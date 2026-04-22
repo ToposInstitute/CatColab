@@ -216,6 +216,11 @@
             pkgs = pkgsLinux;
           };
 
+          document-types-node = pkgsLinux.callPackage ./packages/document-types-rs/default.nix {
+            inherit craneLib cargoArtifacts;
+            pkgs = pkgsLinux;
+          };
+
           julia-fhs = (pkgsLinux.callPackage ./infrastructure/julia.nix { }).julia-fhs;
 
           frontend =
