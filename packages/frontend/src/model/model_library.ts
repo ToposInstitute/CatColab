@@ -11,7 +11,7 @@ import { type Accessor, createResource, onCleanup } from "solid-js";
 import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
-import { Nb, type ModelDocument } from "catcolab-document-editing";
+import { Nb, type ModelDocument } from "catcolab-document-methods";
 import {
     type DblModel,
     DblModelMap,

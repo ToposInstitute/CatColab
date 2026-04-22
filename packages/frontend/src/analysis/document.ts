@@ -1,6 +1,6 @@
 import type { AnyDocumentId, Repo } from "@automerge/automerge-repo";
 
-import { Nb } from "catcolab-document-editing";
+import { Nb } from "catcolab-document-methods";
 import {
     type Analysis,
     type AnalysisType,

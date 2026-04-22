@@ -1,8 +1,8 @@
 import type { AnyDocumentId, Repo } from "@automerge/automerge-repo";
 import { type Accessor, createMemo } from "solid-js";
 
-import type { DiagramDocument } from "catcolab-document-editing";
-import { Diagram, Nb } from "catcolab-document-editing";
+import type { DiagramDocument } from "catcolab-document-methods";
+import { Diagram, Nb } from "catcolab-document-methods";
 import type { DiagramJudgment, StableRef, Uuid } from "catcolab-document-types";
 import {
     type DblModelDiagram,

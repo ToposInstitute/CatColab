@@ -21,7 +21,7 @@ let
         ../../pnpm-lock.yaml
         ../../packages/frontend
         ../../packages/ui-components
-        ../../packages/document-editing
+        ../../packages/document-methods
         ../../packages/backend/pkg
       ];
     };
@@ -52,8 +52,8 @@ let
           ../../packages/frontend/pnpm-lock.yaml
           ../../packages/ui-components/package.json
           ../../packages/ui-components/pnpm-lock.yaml
-          ../../packages/document-editing/package.json
-          ../../packages/document-editing/pnpm-lock.yaml
+          ../../packages/document-methods/package.json
+          ../../packages/document-methods/pnpm-lock.yaml
           ../../packages/backend/pkg/package.json
           ../../packages/backend/pkg/pnpm-lock.yaml
         ];
@@ -126,7 +126,7 @@ let
         cp -r packages/backend $out/packages/
         cp -r packages/frontend $out/packages/
         cp -r packages/ui-components $out/packages/
-        cp -r packages/document-editing $out/packages/
+        cp -r packages/document-methods $out/packages/
         mkdir -p $out/packages/document-types
         cp -r packages/document-types/pkg $out/packages/document-types/
 

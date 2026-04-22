@@ -15,7 +15,7 @@ import {
 } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { Nb } from "catcolab-document-editing";
+import { Nb } from "catcolab-document-methods";
 import type { Cell, Notebook } from "catcolab-document-types";
 import {
     type Completion,

@@ -1,6 +1,6 @@
 import { v7 } from "uuid";
 
-import { Nb } from "catcolab-document-editing";
+import { Nb } from "catcolab-document-methods";
 import { migrateDocument, type Document, type ModelJudgment, type Ob } from "catlog-wasm";
 
 /** Detects a Petrinaut-exported JSON file. */

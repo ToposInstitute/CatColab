@@ -80,9 +80,9 @@ importers:
       catcolab-api:
         specifier: link:../backend/pkg
         version: link:../backend/pkg
-      catcolab-document-editing:
-        specifier: link:../document-editing
-        version: link:../document-editing
+      catcolab-document-methods:
+        specifier: link:../document-methods
+        version: link:../document-methods
       catcolab-document-types:
         specifier: link:../document-types/pkg
         version: link:../document-types/pkg

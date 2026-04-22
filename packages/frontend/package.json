@@ -5,7 +5,7 @@
     "license": "MIT",
     "type": "module",
     "scripts": {
-        "build:doc-types": "pnpm --prefix ../document-types run build",
+        "build:doc-types": "pnpm --prefix ../document-methods run build:wasm",
         "build:wasm": "pnpm --prefix ../catlog-wasm run build:browser",
         "build:bindings": "cargo run -p backend -- generate-bindings",
         "build:tcm": "tcm -p 'src/**/*.module.css' .",
@@ -48,7 +48,7 @@
         "@solidjs/router": "^0.15.3",
         "@viz-js/viz": "^3.15.0",
         "catcolab-api": "link:../backend/pkg",
-        "catcolab-document-editing": "link:../document-editing",
+        "catcolab-document-methods": "link:../document-methods",
         "catcolab-document-types": "link:../document-types/pkg",
         "catcolab-ui-components": "link:../ui-components",
         "catlog-wasm": "link:../catlog-wasm/dist/pkg-browser",

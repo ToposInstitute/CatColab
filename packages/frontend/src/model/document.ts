@@ -1,7 +1,7 @@
 import type { Accessor } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { Nb, Model, type ModelDocument } from "catcolab-document-editing";
+import { Nb, Model, type ModelDocument } from "catcolab-document-methods";
 import { type DblModel } from "catlog-wasm";
 import type { Api, LiveDoc } from "../api";
 import type { Theory, TheoryLibrary } from "../theory";

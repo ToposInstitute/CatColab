@@ -1,7 +1,7 @@
 import { type ChangeFn, Repo } from "@automerge/automerge-repo";
 import { afterAll, assert, describe, test } from "vitest";
 
-import { Model, Nb, type ModelDocument } from "catcolab-document-editing";
+import { Model, Nb, type ModelDocument } from "catcolab-document-methods";
 import { DblModel } from "catlog-wasm";
 import { stdTheories } from "../stdlib";
 import { Theory } from "../theory";

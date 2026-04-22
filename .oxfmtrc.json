@@ -11,7 +11,7 @@
         "customGroups": [
             {
                 "groupName": "workspace",
-                "elementNamePattern": ["catcolab-ui-components", "catcolab-api", "catlog-wasm", "catcolab-document-types", "catcolab-document-editing"],
+                "elementNamePattern": ["catcolab-ui-components", "catcolab-api", "catlog-wasm", "catcolab-document-types", "catcolab-document-methods"],
             },
         ],
         "groups": [
