@@ -1,1 +1,1 @@
-export * from "../dist/pkg/document_types";
+export * from "document-types";

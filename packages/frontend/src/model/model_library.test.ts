@@ -2,7 +2,7 @@ import { type ChangeFn, Repo } from "@automerge/automerge-repo";
 import { afterAll, assert, describe, test } from "vitest";
 
 import { DblModel } from "catlog-wasm";
-import { Model, Nb, type ModelDocument } from "document-types";
+import { Model, Nb, type ModelDocument } from "document-types-ts";
 import { stdTheories } from "../stdlib";
 import { Theory } from "../theory";
 import { ModelLibrary } from "./model_library";

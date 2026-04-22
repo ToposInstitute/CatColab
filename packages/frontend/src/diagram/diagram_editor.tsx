@@ -2,8 +2,8 @@ import { MultiProvider } from "@solid-primitives/context";
 import { Match, Switch, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { DiagramJudgment, DiagramMorDecl, DiagramObDecl } from "document-types";
-import { Diagram, Nb } from "document-types";
+import type { DiagramJudgment, DiagramMorDecl, DiagramObDecl } from "document-types-ts";
+import { Diagram, Nb } from "document-types-ts";
 import { LiveModelContext } from "../model";
 import { type CellConstructor, type FormalCellEditorProps, NotebookEditor } from "../notebook";
 import type { InstanceTypeMeta } from "../theory";

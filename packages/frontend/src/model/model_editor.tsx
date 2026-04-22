@@ -2,8 +2,8 @@ import { Match, Switch, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
-import type { InstantiatedModel, ModelJudgment, MorDecl, ObDecl } from "document-types";
-import { Model, Nb } from "document-types";
+import type { InstantiatedModel, ModelJudgment, MorDecl, ObDecl } from "document-types-ts";
+import { Model, Nb } from "document-types-ts";
 import { type CellConstructor, type FormalCellEditorProps, NotebookEditor } from "../notebook";
 import { TheoryLibraryContext, type ModelTypeMeta, type Theory } from "../theory";
 import { LiveModelContext } from "./context";

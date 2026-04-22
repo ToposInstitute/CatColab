@@ -2,7 +2,7 @@ import { Match, Switch, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
-import { Nb } from "document-types";
+import { Nb } from "document-types-ts";
 import { type CellConstructor, type FormalCellEditorProps, NotebookEditor } from "../notebook";
 import type { AnalysisMeta, DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
 import { LiveAnalysisContext } from "./context";

@@ -22,7 +22,7 @@ import {
     keyEventHasModifier,
     type ModifierKey,
 } from "catcolab-ui-components";
-import { Nb, type FormalCell, type Cell, type Notebook } from "document-types";
+import { Nb, type FormalCell, type Cell, type Notebook } from "document-types-ts";
 import {
     type CellActions,
     type CellDragData,

@@ -2,7 +2,7 @@ import type { Accessor } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { type DblModel } from "catlog-wasm";
-import { Nb, Model, type ModelDocument } from "document-types";
+import { Nb, Model, type ModelDocument } from "document-types-ts";
 import type { Api, LiveDoc } from "../api";
 import type { Theory, TheoryLibrary } from "../theory";
 import type { ValidatedModel } from "./model_library";

@@ -1,5 +1,5 @@
 {
-    "name": "document-types",
+    "name": "document-types-ts",
     "version": "0.1.0",
     "private": true,
     "license": "MIT",
@@ -7,15 +7,16 @@
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "scripts": {
-        "build:wasm": "wasm-pack build ../document-types-rs -d ../document-types-ts/dist/pkg",
+        "build:wasm": "wasm-pack build ../document-types-rs",
         "build:deps": "pnpm run build:wasm",
-        "build": "pnpm run build:wasm && tsc",
+        "build": "pnpm run build:deps",
         "format": "oxfmt .",
         "lint": "oxlint --fix && oxfmt .",
         "check": "pnpm build:deps && tsc && pnpm run lint",
         "ci": "tsc && oxlint --deny-warnings && oxfmt --check ."
     },
     "dependencies": {
+        "document-types": "link:../document-types-rs/pkg",
         "tiny-invariant": "^1.3.3",
         "uuid": "^13.0.0"
     },
