@@ -10,10 +10,9 @@
     },
     "scripts": {
         "build:wasm": "wasm-pack build ../document-types",
-        "build:deps": "pnpm run build:wasm",
         "format": "oxfmt .",
         "lint": "oxlint --fix && oxfmt .",
-        "check": "pnpm build:deps && tsc && pnpm run lint",
+        "check": "pnpm run build:wasm && tsc && pnpm run lint",
         "ci": "tsc && oxlint --deny-warnings && oxfmt --check ."
     },
     "dependencies": {
