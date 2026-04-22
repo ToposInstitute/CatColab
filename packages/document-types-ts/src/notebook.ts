@@ -2,7 +2,7 @@ import invariant from "tiny-invariant";
 import { v7 } from "uuid";
 
 import { deepCopyJSON } from "./deepcopy";
-import type { Cell, Notebook, NotebookCell } from "./rs_document_types";
+import type { Cell, Notebook } from "./rs_document_types";
 
 /** A cell containing custom data, usually a formal object. */
 export type FormalCell<T> = Cell<T> & { tag: "formal" };
@@ -55,7 +55,7 @@ export function getFormalContent<T>(notebook: Notebook<T>): Array<T> {
     return getFormalCells(notebook).map((cell) => cell.content);
 }
 
-export function getCellById<T>(notebook: Notebook<T>, cellId: string): NotebookCell<T> {
+export function getCellById<T>(notebook: Notebook<T>, cellId: string): Cell<T> {
     const cell = notebook.cellContents[cellId];
     invariant(cell, () => `Failed to find notebook cell contents for cell '${cellId}'`);
     return cell;
@@ -67,7 +67,7 @@ export function getCellIdByIndex<T>(notebook: Notebook<T>, index: number): strin
     return cellId;
 }
 
-export function getCellByIndex<T>(notebook: Notebook<T>, index: number): NotebookCell<T> {
+export function getCellByIndex<T>(notebook: Notebook<T>, index: number): Cell<T> {
     const cellId = getCellIdByIndex(notebook, index);
     return getCellById(notebook, cellId);
 }
