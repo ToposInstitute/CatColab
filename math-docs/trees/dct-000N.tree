@@ -5,13 +5,13 @@
 \p{In the Cruttwell-Shulman framework for [generalized
 multicategories](dct-000F), the main definition, that of a \em{#{T}-monoid} for
 a monad #{T} on a virtual double category ([CS10](cruttwell-shulman-2010),
-Definition 4.3), often products not just a multicategory, but additionally a
-category equipped with an identity-on-objects functor into the multicategory's
-underlying category of unary morphisms. While it has found a few applications
-([Baez-Dolan 1998](baez-dolan-1998), [Cheng 2004](cheng-2004)), this extra data
-is usually unwanted. It can be removed by "normalization," leading to
-Cruttwell-Shulman's preferred definition of a "generalized multicategory" as a
-\em{normalized #{T}-monoid} ([CS10](cruttwell-shulman-2010), Definition 8.19).}
+Definition 4.3), often produces not just a multicategory, but also a category
+equipped with an identity-on-objects functor into the multicategory's underlying
+category of unary morphisms. While it has found a few applications ([Baez-Dolan
+1998](baez-dolan-1998), [Cheng 2004](cheng-2004)), this extra data is usually
+unwanted. It can be removed by "normalization," leading to Cruttwell-Shulman's
+preferred definition of a "generalized multicategory" as a \em{normalized
+#{T}-monoid} ([CS10](cruttwell-shulman-2010), Definition 8.19).}
 
 \p{We also take generalized multicategories to be normalized by default. It is
 instructive, however, to axiomatize unnormalized multicategories in
@@ -31,8 +31,8 @@ intuitively required axioms superfluous.}
 
   \p{In particular, a model in #{(\SSet, \List)} consists of a category, a
   multicategory, and an identity-on-objects functor from the category into the
-  multicategory's underlying category of unary morphisms. Similar statements for
-  #{(\SSet, \ListSym)} and symmetric multicategories, and for #{(\SSet,
+  multicategory's underlying category of unary morphisms. Similar statements
+  hold for #{(\SSet, \ListSym)} and symmetric multicategories, and for #{(\SSet,
   \ListCart)} and cartesian multicategories.}
 
   \proof{

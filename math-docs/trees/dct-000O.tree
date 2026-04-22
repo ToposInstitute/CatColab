@@ -1,0 +1,56 @@
+\title{Representable multicategories}
+\taxon{doctrine}
+\import{macros}
+
+\p{Abstracting the universal property of the tensor product of vector spaces, a
+\em{tensor product} of a list of objects #{x_1, \dots, x_n} in a multicategory
+is an object #{x_1 \otimes \cdots \otimes x_n} along with a universal
+multimorphism #{(x_1, \dots, x_n) \to x_1 \odot \cdots \odot x_n}. A
+\nlab{representable multicategory} is a multicategory in which every list of
+objects admits a tensor product.}
+
+\p{Abstracting still further, representability can be defined for any
+[generalized multicategory](dct-000F).}
+
+\transclude{thy-000O}
+
+\subtree{
+\title{Models of the theory of representable multicategories}
+\taxon{proposition}
+
+\p{A model of the modal theory #{(\dbl{T}, T)} of representable multicategories
+in #{(\SSet,\List)} is precisely a representable multicategory along with a
+choice of tensor products under which the unary product is the identity. Similar
+statements hold for #{(\SSet, \ListSym)} and symmetric multicategories, and for
+#{(\SSet, \ListCart)} and cartesian multicategories.}
+
+\proof{
+
+Consider the case of ordinary multicategories; the others are similar. A model
+consists of a multicategory with underlying profunctor #{P: \List X \proto X}, a
+functor #{\otimes: \List X \to X}, and a family of multimorphisms
+
+##{
+\chi_{[x_1,\dots,x_n]}: [x_1, \dots, x_n] \to x_1 \otimes \cdots \otimes x_n,
+\qquad
+[x_1, \dots, x_n] \in \List X,
+}
+
+natural in lists of morphisms of #{X}, with the universal property that for
+every list #{[\vec{x}_1, \dots \vec{x}_k]} of lists of objects, precomposition
+with #{[\chi_{\vec{x}_1}, \dots, \chi_{\vec{x}_k}]} gives a bijection
+
+##{
+P(\otimes \vec{x}_1, \dots, \otimes \vec{x}_k; y)
+\xto{\cong}
+P(x_{1,1}, \dots, x_{k,n_k}; y).
+}
+
+Moreover, for each object #{x} in #{X}, we have #{\otimes [x] = x} and
+#{\chi_{[x]}: [x] \to x} is the identity morphism. Thus, the standard definition
+of representability is recovered by applying the universal property when all but
+one of the lists #{\vec{x}_i} are singletons.
+
+}
+
+}
