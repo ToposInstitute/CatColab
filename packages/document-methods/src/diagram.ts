@@ -1,7 +1,5 @@
 import { v7 } from "uuid";
 
-import { deepCopyJSON } from "./deepcopy";
-import { newNotebook } from "./notebook";
 import type {
     Document,
     DiagramJudgment,
@@ -12,6 +10,8 @@ import type {
     StableRef,
 } from "catcolab-document-types";
 import { currentVersion } from "catcolab-document-types";
+import { deepCopyJSON } from "./deepcopy";
+import { newNotebook } from "./notebook";
 
 /** A document defining a diagram in a model. */
 export type DiagramDocument = Document & { type: "diagram" };

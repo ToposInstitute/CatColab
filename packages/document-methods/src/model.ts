@@ -1,9 +1,9 @@
 import { v7 } from "uuid";
 
-import { deepCopyJSON } from "./deepcopy";
-import { newNotebook } from "./notebook";
 import type { Document, Link, ModelJudgment, MorType, ObType } from "catcolab-document-types";
 import { currentVersion } from "catcolab-document-types";
+import { deepCopyJSON } from "./deepcopy";
+import { newNotebook } from "./notebook";
 
 /** A document defining a model. */
 export type ModelDocument = Document & { type: "model" };
