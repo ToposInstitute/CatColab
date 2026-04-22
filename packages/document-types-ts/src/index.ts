@@ -1,4 +1,4 @@
-export * from "./rs_document_types";
+export * from "document-types";
 
 export type { DiagramDocument } from "./diagram";
 export type { ModelDocument } from "./model";

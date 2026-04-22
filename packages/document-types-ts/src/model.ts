@@ -2,8 +2,8 @@ import { v7 } from "uuid";
 
 import { deepCopyJSON } from "./deepcopy";
 import { newNotebook } from "./notebook";
-import type { Document, Link, ModelJudgment, MorType, ObType } from "./rs_document_types";
-import { currentVersion } from "./rs_document_types";
+import type { Document, Link, ModelJudgment, MorType, ObType } from "document-types";
+import { currentVersion } from "document-types";
 
 /** A document defining a model. */
 export type ModelDocument = Document & { type: "model" };

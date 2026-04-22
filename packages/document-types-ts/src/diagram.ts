@@ -10,8 +10,8 @@ import type {
     Ob,
     ObType,
     StableRef,
-} from "./rs_document_types";
-import { currentVersion } from "./rs_document_types";
+} from "document-types";
+import { currentVersion } from "document-types";
 
 /** A document defining a diagram in a model. */
 export type DiagramDocument = Document & { type: "diagram" };
