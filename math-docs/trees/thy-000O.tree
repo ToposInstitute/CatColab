@@ -2,8 +2,11 @@
 \taxon{theory}
 \import{macros}
 
-\p{The theory of \define{representable (generalized) multicategories} extends
-the [theory of generalized multicategories](thy-000F) with
+\p{The theory can be defined for generalized multicategories in both the
+[normalized](dct-000F) and [unnormalized](dct-000N) cases.}
+
+\p{The \define{theory of representable unnormalized multicategories} extends the
+[theory of unnormalized multicategories](thy-000N) with the generators
 
 \ul{
   \li{an arrow #{a: Tx \to x}}
@@ -20,8 +23,51 @@ the [theory of generalized multicategories](thy-000F) with
   \end{tikzcd}
   }
 }
+}
 
-such that the composite cell
+and the follwing relations:
+
+\ul{
+
+\li{\em{Unitality}: #{a \circ \eta_x = 1_x}}
+
+\li{\em{Compatibility with unit cell}:
+\centerfigs{
+\quiverinline{
+% https://q.uiver.app/#q=WzAsNCxbMSwxLCJUeCJdLFswLDIsIlR4Il0sWzIsMiwieCJdLFsxLDAsIngiXSxbMCwyLCJhIl0sWzAsMSwiIiwyLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMSwyLCJwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzMsMCwiXFxldGFfeCIsMl0sWzAsNiwiXFxjaGkiLDEseyJzaG9ydGVuIjp7InRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
+\begin{tikzcd}
+	& x & \\
+	& Tx \\
+	Tx && x
+	\arrow["{\eta_x}"', from=1-2, to=2-2]
+	\arrow[equals, from=2-2, to=3-1]
+	\arrow["a", from=2-2, to=3-3]
+	\arrow[""{name=0, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-3]
+	\arrow["\chi"{description}, draw=none, from=2-2, to=0]
+\end{tikzcd}
+}
+#{\qquad=\qquad}
+\quiverinline{
+% https://q.uiver.app/#q=WzAsNSxbMCwyLCJUeCJdLFsyLDIsIngiXSxbMCwxLCJ4Il0sWzIsMSwieCJdLFsxLDAsIngiXSxbMCwxLCJwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzIsMCwiXFxldGFfeCIsMl0sWzIsMywiXFxtYXRocm17aWR9X3giLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMywxLCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs0LDIsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzQsMywiIiwxLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNyw1LCJcXHRoZXRhIiwxLHsibGFiZWxfcG9zaXRpb24iOjYwLCJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNCw3LCJcXHRleHR7Y29tcH0iLDEseyJzaG9ydGVuIjp7InRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
+\begin{tikzcd}
+	& x & \\
+	x && x \\
+	Tx && x
+	\arrow[equals, from=1-2, to=2-1]
+	\arrow[equals, from=1-2, to=2-3]
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{\mathrm{id}_x}"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-3]
+	\arrow["{\eta_x}"', from=2-1, to=3-1]
+	\arrow[equals, from=2-3, to=3-3]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-3]
+	\arrow["{\text{comp}}"{description}, draw=none, from=1-2, to=0]
+	\arrow["\theta"{description, pos=0.6}, draw=none, from=0, to=1]
+\end{tikzcd}
+}
+}
+
+}
+
+\li{\em{Universal property}: the composite cell
 
 \quiver{
 % https://q.uiver.app/#q=WzAsNyxbMiwwLCJUXjIgeCJdLFswLDEsIlReMiB4Il0sWzIsMSwiVHgiXSxbMywwLCJ4Il0sWzMsMSwieCJdLFswLDIsIlReMiB4Il0sWzMsMiwieCJdLFswLDIsIlRhIiwxXSxbMCwxLCIiLDIseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxLDIsIlRwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzAsMywicChUYSwgMV94KSIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsyLDQsInAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMyw0LCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs0LDYsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzEsNSwiIiwxLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNSw2LCJwKFxcbXVfeCwxX3gpIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzAsOSwiVFxcY2hpIiwxLHsic2hvcnRlbiI6eyJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzEwLDExLCJcXHRleHR7cmVzfSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsyLDE1LCJcXHRleHR7Y29tcH0iLDEseyJsYWJlbF9wb3NpdGlvbiI6NDAsInNob3J0ZW4iOnsidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dXQ==
@@ -45,23 +91,27 @@ such that the composite cell
 }
 
 is invertible (that is, there is a globular generating cell #{p(\mu_x,1_x) \To
-p(Ta, 1_x)} mutually inverse to the globular cell above).
+p(Ta, 1_x)} mutually inverse to the globular cell above).}
 
 }
 
 }
+
+\p{The \define{theory of representable (normalized) multicategories} is similar,
+except that it extends the [theory of (normalized) multicategories](thy-000F)
+and the cell #{\theta} is replaced with a restriction cell.}
 
 \subtree{
 \title{Comparison with literature}
 \taxon{Remark}
 
-\p{This double theory abstracts, nearly directly, the standard definition of
-representability for an ordinary multicategory (e.g., [Shulman
+\p{This double theory abstracts, with only minor variations, the standard
+definition of representability for an ordinary multicategory (e.g., [Shulman
 2016](shulman-2016), Definition 2.2.3). In their framework for generalized
 multicategories, Cruttwell-Shulman define representability differently
 ([CS10](cruttwell-shulman-2010), Section 9) so as to make it a straightforward
 theorem that representable generalized multicategories are equivalent to
 [generalized monoidal categories](dct-0005) (pseudo #{T}-algebras). I have not
-investigated whether these definitions are equivalent.}
+investigated the relationship between these two definitions.}
 
 }
