@@ -8,7 +8,8 @@ import invariant from "tiny-invariant";
 import { v4 } from "uuid";
 import { afterAll, assert, describe, test } from "vitest";
 
-import type { Document, ModelDocument } from "catcolab-document-editing";
+import type { ModelDocument } from "catcolab-document-editing";
+import type { Document } from "catcolab-document-types";
 import { normalizeImmutableStrings } from "../util/immutable_string";
 import { createTestDocument, initTestUserAuth } from "../util/test_util.ts";
 import { createFetchWithAuth, createRpcClient, unwrap } from "./rpc.ts";

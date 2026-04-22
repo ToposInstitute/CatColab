@@ -49,6 +49,7 @@
         "@viz-js/viz": "^3.15.0",
         "catcolab-api": "link:../backend/pkg",
         "catcolab-document-editing": "link:../document-editing",
+        "catcolab-document-types": "link:../document-types/pkg",
         "catcolab-ui-components": "link:../ui-components",
         "catlog-wasm": "link:../catlog-wasm/dist/pkg-browser",
         "echarts": "^5.5.1",

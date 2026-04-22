@@ -16,7 +16,7 @@ import Trash2 from "lucide-solid/icons/trash-2";
 import type { EditorView } from "prosemirror-view";
 import { createEffect, createSignal, type JSX, onCleanup, Show } from "solid-js";
 
-import type { Uuid } from "catcolab-document-editing";
+import type { Uuid } from "catcolab-document-types";
 import { type Completion, Completions, IconButton, InlineInput } from "catcolab-ui-components";
 import { RichTextEditor } from "../components";
 

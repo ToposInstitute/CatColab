@@ -1,5 +1,3 @@
-export * from "catcolab-document-types";
-
 export type { DiagramDocument } from "./diagram";
 export type { ModelDocument } from "./model";
 export type { FormalCell, RichTextCell, StemCell } from "./notebook";

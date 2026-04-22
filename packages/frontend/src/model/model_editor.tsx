@@ -2,8 +2,8 @@ import { Match, Switch, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
-import type { InstantiatedModel, ModelJudgment, MorDecl, ObDecl } from "catcolab-document-editing";
 import { Model, Nb } from "catcolab-document-editing";
+import type { InstantiatedModel, ModelJudgment, MorDecl, ObDecl } from "catcolab-document-types";
 import { type CellConstructor, type FormalCellEditorProps, NotebookEditor } from "../notebook";
 import { TheoryLibraryContext, type ModelTypeMeta, type Theory } from "../theory";
 import { LiveModelContext } from "./context";

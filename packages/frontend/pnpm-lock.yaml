@@ -80,15 +80,18 @@ importers:
       catcolab-api:
         specifier: link:../backend/pkg
         version: link:../backend/pkg
+      catcolab-document-editing:
+        specifier: link:../document-editing
+        version: link:../document-editing
+      catcolab-document-types:
+        specifier: link:../document-types/pkg
+        version: link:../document-types/pkg
       catcolab-ui-components:
         specifier: link:../ui-components
         version: link:../ui-components
       catlog-wasm:
         specifier: link:../catlog-wasm/dist/pkg-browser
         version: link:../catlog-wasm/dist/pkg-browser
-      catcolab-document-editing:
-        specifier: link:../document-editing
-        version: link:../document-editing
       echarts:
         specifier: ^5.5.1
         version: 5.5.1
