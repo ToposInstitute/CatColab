@@ -72,8 +72,8 @@ let
         cp -r ${self.packages.x86_64-linux.catlog-wasm-browser}/* packages/catlog-wasm/dist/pkg-browser/
 
         # Set up document-types wasm output and build the TS package
-        mkdir -p packages/document-types-ts/dist/pkg-node
-        cp -r ${self.packages.x86_64-linux.document-types-node}/* packages/document-types-ts/dist/pkg-node/
+        mkdir -p packages/document-types-ts/dist/pkg
+        cp -r ${self.packages.x86_64-linux.document-types-wasm}/* packages/document-types-ts/dist/pkg/
         (cd packages/document-types-ts && npx tsc)
 
         # Set up generated API bindings
@@ -117,8 +117,8 @@ let
         cp -r ${self.packages.x86_64-linux.catlog-wasm-browser}/* $out/packages/catlog-wasm/dist/pkg-browser/
 
         # Set up document-types wasm output and build the TS package before copying to $out
-        mkdir -p packages/document-types-ts/dist/pkg-node
-        cp -r ${self.packages.x86_64-linux.document-types-node}/* packages/document-types-ts/dist/pkg-node/
+        mkdir -p packages/document-types-ts/dist/pkg
+        cp -r ${self.packages.x86_64-linux.document-types-wasm}/* packages/document-types-ts/dist/pkg/
         (cd packages/document-types-ts && npx tsc)
 
         # Bindings must be copied into source tree BEFORE the cp below copies backend to $out

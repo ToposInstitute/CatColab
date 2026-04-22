@@ -216,7 +216,7 @@
             pkgs = pkgsLinux;
           };
 
-          document-types-node = pkgsLinux.callPackage ./packages/document-types-rs/default.nix {
+          document-types-wasm = pkgsLinux.callPackage ./packages/document-types-rs/default.nix {
             inherit craneLib cargoArtifacts;
             pkgs = pkgsLinux;
           };

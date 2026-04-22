@@ -45,12 +45,12 @@ craneLib.buildPackage {
     # 
     # wasm-pack needs a writeable $HOME
     # https://github.com/ipetkov/crane/issues/362
-    HOME=$(mktemp -d) wasm-pack build ./. --target nodejs -d ./dist/pkg-node
+    HOME=$(mktemp -d) wasm-pack build ./. -d ./dist/pkg
   '';
 
   installPhase = ''
     mkdir -p $out
-    cp -r dist/pkg-node/* $out/
+    cp -r dist/pkg/* $out/
     ls $out/
   '';
 }
