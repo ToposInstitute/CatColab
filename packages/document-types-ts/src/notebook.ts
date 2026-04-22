@@ -1,7 +1,21 @@
 import invariant from "tiny-invariant";
 import { v7 } from "uuid";
 
-import type { Cell, Notebook, NotebookCell, FormalCell, RichTextCell, StemCell } from "./types";
+import { deepCopyJSON } from "./deepcopy";
+import type { Cell, Notebook, NotebookCell } from "./rs_document_types";
+
+/** A cell containing custom data, usually a formal object. */
+export type FormalCell<T> = Cell<T> & { tag: "formal" };
+
+/** A cell containing rich text. */
+export type RichTextCell = Cell<unknown> & { tag: "rich-text" };
+
+/** A stem cell is a placeholder which will be converted into another cell.
+
+Stem cells are created when the user opens the "new cell" menu and are destroyed
+and replaced when a type for the new cell is selected.
+ */
+export type StemCell = Cell<unknown> & { tag: "stem" };
 
 /** Creates an empty notebook. */
 export const newNotebook = <T>(): Notebook<T> => ({
@@ -125,11 +139,6 @@ export function hasFormalCells<T>(notebook: Notebook<T>): boolean {
 
 export function numCells<T>(notebook: Notebook<T>): number {
     return notebook.cellOrder.length;
-}
-
-// FIXME: This shouldn't be here.
-function deepCopyJSON(value: unknown) {
-    return JSON.parse(JSON.stringify(value));
 }
 
 function duplicateCell<T>(cell: Cell<T>, duplicateFn?: (cellContent: T) => T): Cell<T> {

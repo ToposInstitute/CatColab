@@ -1,27 +1,11 @@
 import type { Accessor } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { currentVersion, type DblModel, type Document, type ModelJudgment } from "catlog-wasm";
-import { Nb } from "document-types";
+import { type DblModel } from "catlog-wasm";
+import { Nb, Model, type ModelDocument } from "document-types";
 import type { Api, LiveDoc } from "../api";
 import type { Theory, TheoryLibrary } from "../theory";
 import type { ValidatedModel } from "./model_library";
-
-/** A document defining a model. */
-export type ModelDocument = Document & { type: "model" };
-
-/** Create an empty model document. */
-export const newModelDocument = (args: {
-    theory: string;
-    editorVariant?: string;
-}): ModelDocument => ({
-    name: "",
-    type: "model",
-    theory: args.theory,
-    ...(args.editorVariant ? { editorVariant: args.editorVariant } : {}),
-    notebook: Nb.newNotebook<ModelJudgment>(),
-    version: currentVersion(),
-});
 
 /** A model document "live" for editing.
 
@@ -54,7 +38,7 @@ export async function createModel(
 ): Promise<string> {
     let init: ModelDocument;
     if (typeof initOrTheoryId === "string") {
-        init = newModelDocument({ theory: initOrTheoryId });
+        init = Model.newModelDocument({ theory: initOrTheoryId });
     } else {
         init = initOrTheoryId;
     }

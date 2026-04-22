@@ -21,10 +21,10 @@ import {
     type ModelValidationResult,
     type Uuid,
 } from "catlog-wasm";
-import { Nb } from "document-types";
+import { Nb, type ModelDocument } from "document-types";
 import { type Api, findAndMigrate, type LiveDoc, makeLiveDoc } from "../api";
 import type { Theory, TheoryLibrary } from "../theory";
-import type { LiveModelDoc, ModelDocument } from "./document";
+import type { LiveModelDoc } from "./document";
 
 /** An elaborated model along with its validation status. */
 export type ValidatedModel =

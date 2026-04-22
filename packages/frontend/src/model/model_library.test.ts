@@ -2,12 +2,10 @@ import { type ChangeFn, Repo } from "@automerge/automerge-repo";
 import { afterAll, assert, describe, test } from "vitest";
 
 import { DblModel } from "catlog-wasm";
-import { Nb } from "document-types";
+import { Model, Nb, type ModelDocument } from "document-types";
 import { stdTheories } from "../stdlib";
 import { Theory } from "../theory";
-import { type ModelDocument, newModelDocument } from "./document";
 import { ModelLibrary } from "./model_library";
-import { newInstantiatedModel, newObjectDecl } from "./types";
 
 // Dummy Automerge repo with no networking or storage.
 const repo = new Repo();
@@ -16,7 +14,7 @@ const models = ModelLibrary.withRepo(repo, stdTheories);
 afterAll(() => models.destroy());
 
 describe("Model in library", async () => {
-    const modelDoc = newModelDocument({ theory: "empty" });
+    const modelDoc = Model.newModelDocument({ theory: "empty" });
     const docHandle = repo.create(modelDoc);
 
     const getEntry = await models.getElaboratedModel(docHandle.documentId);
@@ -67,7 +65,7 @@ describe("Model in library", async () => {
         await changeDoc((doc) => {
             Nb.appendCell(
                 doc.notebook,
-                Nb.newFormalCell(newObjectDecl({ tag: "Basic", content: "Object" })),
+                Nb.newFormalCell(Model.newObjectDecl({ tag: "Basic", content: "Object" })),
             );
             Nb.appendCell(doc.notebook, Nb.newRichTextCell());
         });
@@ -85,15 +83,15 @@ describe("Model in library", async () => {
         assert.strictEqual(generation(), 3);
     });
 
-    const anotherModelDoc = newModelDocument({ theory: "causal-loop" });
+    const anotherModelDoc = Model.newModelDocument({ theory: "causal-loop" });
     Nb.appendCell(
         anotherModelDoc.notebook,
-        Nb.newFormalCell(newObjectDecl({ tag: "Basic", content: "Object" })),
+        Nb.newFormalCell(Model.newObjectDecl({ tag: "Basic", content: "Object" })),
     );
     const anotherDocHandle = repo.create(modelDoc);
 
     test.sequential("should automatically include instantiated models", async () => {
-        const inst = newInstantiatedModel({
+        const inst = Model.newInstantiatedModel({
             _id: anotherDocHandle.documentId,
             _version: null,
             _server: "",
@@ -107,13 +105,13 @@ describe("Model in library", async () => {
         assert.strictEqual(models.size, 2);
     });
 
-    const cyclicModel = newModelDocument({ theory: "empty" });
+    const cyclicModel = Model.newModelDocument({ theory: "empty" });
     const cyclicModelHandle = repo.create(cyclicModel);
     cyclicModelHandle.change((doc) => {
         Nb.appendCell(
             doc.notebook,
             Nb.newFormalCell(
-                newInstantiatedModel({
+                Model.newInstantiatedModel({
                     _id: cyclicModelHandle.documentId,
                     _version: null,
                     _server: "",
