@@ -71,10 +71,9 @@ let
         mkdir -p packages/catlog-wasm/dist/pkg-browser
         cp -r ${self.packages.x86_64-linux.catlog-wasm-browser}/* packages/catlog-wasm/dist/pkg-browser/
 
-        # Set up document-types wasm output and build the TS package
+        # Set up document-types wasm output
         mkdir -p packages/document-types/pkg
         cp -r ${self.packages.x86_64-linux.document-types-wasm}/* packages/document-types/pkg/
-        (cd packages/document-editing && npx tsc)
 
         # Set up generated API bindings
         mkdir -p packages/backend/pkg/src
@@ -116,10 +115,9 @@ let
         mkdir -p $out/packages/catlog-wasm/dist/pkg-browser
         cp -r ${self.packages.x86_64-linux.catlog-wasm-browser}/* $out/packages/catlog-wasm/dist/pkg-browser/
 
-        # Set up document-types wasm output and build the TS package before copying to $out
+        # Set up document-types wasm output before copying to $out
         mkdir -p packages/document-types/pkg
         cp -r ${self.packages.x86_64-linux.document-types-wasm}/* packages/document-types/pkg/
-        (cd packages/document-editing && npx tsc)
 
         # Bindings must be copied into source tree BEFORE the cp below copies backend to $out
         mkdir -p packages/backend/pkg/src

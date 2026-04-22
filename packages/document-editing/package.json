@@ -4,6 +4,10 @@
     "private": true,
     "license": "MIT",
     "type": "module",
+    "exports": {
+        ".": "./src/index.ts",
+        "./*": "./src/*"
+    },
     "scripts": {
         "build:wasm": "wasm-pack build ../document-types",
         "build:deps": "pnpm run build:wasm",

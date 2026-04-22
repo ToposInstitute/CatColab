@@ -7,10 +7,7 @@
 
         "moduleResolution": "bundler",
         "isolatedModules": true,
-
-        "declaration": true,
-        "outDir": "dist",
-        "rootDir": "src",
+        "noEmit": true,
 
         "strict": true,
         "noUnusedLocals": true,
