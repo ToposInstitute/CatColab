@@ -15,7 +15,7 @@ import {
 } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { Nb, type FormalCell, type Cell, type Notebook } from "catcolab-document-editing";
+import { Nb, type Cell, type Notebook } from "catcolab-document-editing";
 import {
     type Completion,
     IconButton,
@@ -345,17 +345,23 @@ export function NotebookEditor<T>(props: {
                                                 actions={cellActions}
                                             />
                                         </Match>
-                                        <Match when={cell.tag === "formal"}>
-                                            <props.formalCellEditor
-                                                content={cell.content}
-                                                changeContent={(f) =>
-                                                    props.changeNotebook((nb) =>
-                                                        Nb.mutateCellContentById(nb, cell.id, f),
-                                                    )
-                                                }
-                                                isActive={isActive()}
-                                                actions={cellActions}
-                                            />
+                                        <Match when={cell.tag === "formal" ? cell : undefined}>
+                                            {(formalCell) => (
+                                                <props.formalCellEditor
+                                                    content={formalCell().content}
+                                                    changeContent={(f) =>
+                                                        props.changeNotebook((nb) =>
+                                                            Nb.mutateCellContentById(
+                                                                nb,
+                                                                cell.id,
+                                                                f,
+                                                            ),
+                                                        )
+                                                    }
+                                                    isActive={isActive()}
+                                                    actions={cellActions}
+                                                />
+                                            )}
                                         </Match>
                                         <Match when={cell.tag === "stem"}>
                                             <StemCellEditor
