@@ -20,6 +20,9 @@ importers:
       '@patchwork/context':
         specifier: github:inkandswitch/context
         version: https://codeload.github.com/inkandswitch/context/tar.gz/1c0f40b779d719dd5f4c92e47bdc94406600f8f0
+      catcolab-document-methods:
+        specifier: link:../document-methods
+        version: link:../document-methods
       catlog-wasm:
         specifier: link:../catlog-wasm/dist/pkg-browser
         version: link:../catlog-wasm/dist/pkg-browser
