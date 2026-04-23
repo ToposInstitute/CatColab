@@ -3,12 +3,19 @@
 \import{macros}
 
 \p{A \nlab{promonad} is a monad in the bicategory of profunctors. Its interest
-lies in being equivalent to an identity-on-objects functor, used to model
-categorical structures with two kinds of morphisms, where one can be cast to the
-other. Promonads can be iterated to capture hierarchies of morphisms with more
-than two levels.}
+lies in being equivalent to a pair of categories with an identity-on-objects
+functor from one to the other. Thus, a promonad is a categorical structure with
+two kinds of morphisms, where one can be cast to the other. Promonads can be
+iterated to capture hierarchies of morphisms with more than two levels.}
 
 \transclude{thy-0004}
 
-\p{A model of this theory is precisely a promonad. For a proof, see the blog
-post [Patterson 2024](promonads-post-2024).}
+\subtree{
+\title{Models of the theory of promonads}
+\taxon{proposition}
+
+\p{A model of this theory is precisely a promonad.}
+
+\proof{See the blog post [Patterson 2024](promonads-post-2024).}
+
+}
