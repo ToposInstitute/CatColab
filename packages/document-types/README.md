@@ -1,6 +1,12 @@
-# Document Types
+# CatColab document types
 
-This package defines all versions of document types that we have used in CatColab.
+This package defines the document types that we use in CatColab, as well as all
+previous versions of those types. The document types are used in both Rust and
+TypeScript. However, the *source of truth for document types is the Rust code*.
+We define the data types in Rust and export them to TypeScript using `serde` and
+[`tsify`](https://github.com/madonoharu/tsify).
+
+## Document versions
 
 We start with `v0`, which is meant to be fully compatible with the JSON types that were stored in Automerge when they were defined in Javascript. This is the last version which does not declare its version number. Each successive version will be stored alongside a version number, and a migration function from the previous version.
 
