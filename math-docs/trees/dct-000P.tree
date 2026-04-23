@@ -1,0 +1,11 @@
+\title{Unnormalized PROs}
+\taxon{doctrine}
+\import{macros}
+
+\p{Analogous to an [unnormalized multicategory](dct-000N), an
+\define{unnormalized PRO} consists of a category, a (multisorted)
+[PRO](dct-000E), and an identity-on-objects functor from the category to the
+PRO's underlying category of single-input, single-output morphisms. Unnormalized
+PROPs and Lawvere theories are defined similarly.}
+
+\transclude{thy-000P}
