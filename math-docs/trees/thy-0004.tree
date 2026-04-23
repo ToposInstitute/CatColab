@@ -18,7 +18,11 @@ subject to the equations
 }
 }
 
-\p{In other words, the unitality axioms are:
+\subtree{
+\title{Remarks on the axioms}
+\taxon{remark}
+
+\p{In graphical terms, the two unitality axioms are:
 
 \centerfigs{
 \quiverinline{
@@ -131,4 +135,5 @@ subject to the equations
 }
 }
 
+}
 }
