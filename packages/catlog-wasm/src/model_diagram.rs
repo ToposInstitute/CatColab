@@ -8,12 +8,12 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 
+use catcolab_document_types::current::*;
 use catlog::dbl::model::{DblModel as _, DiscreteDblModel, FpDblModel, MutDblModel};
 use catlog::dbl::model_diagram as diagram;
 use catlog::dbl::model_morphism::DiscreteDblModelMapping;
 use catlog::one::FgCategory;
 use catlog::zero::{MutMapping, NameLookup, NameSegment, Namespace, QualifiedLabel, QualifiedName};
-use document_types::current::*;
 
 use super::model::DblModel;
 use super::model_diagram_presentation::*;

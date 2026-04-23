@@ -1,6 +1,6 @@
 import { For } from "solid-js";
 
-import { NotebookUtils } from "../notebook";
+import { Nb } from "catcolab-document-methods";
 import { DocumentHead } from "../page/document_head";
 import { stdTheories } from "../stdlib";
 import { TheorySelectorDialog } from "../theory/theory_selector";
@@ -13,7 +13,7 @@ export function ModelDocumentHead(props: { liveModel: LiveModelDoc }) {
     const liveDoc = () => props.liveModel.liveDoc;
 
     const selectableTheories = () => {
-        if (NotebookUtils.hasFormalCells(liveDoc().doc.notebook)) {
+        if (Nb.hasFormalCells(liveDoc().doc.notebook)) {
             return props.liveModel.theory()?.migrationTargets ?? [];
         } else {
             // If the model has no formal cells, allow any theory to be selected.

@@ -11,6 +11,7 @@ use tsify::Tsify;
 use ustr::ustr;
 use wasm_bindgen::prelude::*;
 
+use catcolab_document_types::current::{path as notebook_path, *};
 use catlog::dbl::{
     model::{
         self as dbl_model, DblModel as _, FpDblModel, InvalidDblModel, ModalMor, ModalOb,
@@ -26,7 +27,6 @@ use catlog::tt::{
 };
 use catlog::validate::Validate;
 use catlog::zero::{NameLookup, NameSegment, Namespace, QualifiedLabel, QualifiedName};
-use document_types::current::{path as notebook_path, *};
 
 use super::result::JsResult;
 use super::theory::{DblTheory, DblTheoryBox, expect_single_name};

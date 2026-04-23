@@ -24,6 +24,7 @@
         "@automerge/automerge-repo": "^2.5.5",
         "@automerge/automerge-repo-react-hooks": "^2.5.5",
         "@patchwork/context": "github:inkandswitch/context",
+        "catcolab-document-methods": "link:../document-methods",
         "catlog-wasm": "link:../catlog-wasm/dist/pkg-browser",
         "react": "^18.3.1",
         "react-dom": "^18.3.1",

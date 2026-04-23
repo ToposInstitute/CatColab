@@ -1,7 +1,25 @@
 import { v7 } from "uuid";
 
-import type { DblModel, Link, ModelJudgment, MorType, ObType, QualifiedName } from "catlog-wasm";
-import { deepCopyJSON } from "../util/deepcopy";
+import type { Document, Link, ModelJudgment, MorType, ObType } from "catcolab-document-types";
+import { currentVersion } from "catcolab-document-types";
+import { deepCopyJSON } from "./deepcopy";
+import { newNotebook } from "./notebook";
+
+/** A document defining a model. */
+export type ModelDocument = Document & { type: "model" };
+
+/** Create an empty model document. */
+export const newModelDocument = (args: {
+    theory: string;
+    editorVariant?: string;
+}): ModelDocument => ({
+    name: "",
+    type: "model",
+    theory: args.theory,
+    ...(args.editorVariant ? { editorVariant: args.editorVariant } : {}),
+    notebook: newNotebook<ModelJudgment>(),
+    version: currentVersion(),
+});
 
 /** Create a new object declaration with the given object type. */
 export const newObjectDecl = (obType: ObType): ModelJudgment & { tag: "object" } => ({
@@ -37,24 +55,3 @@ export const duplicateModelJudgment = (jgmt: ModelJudgment): ModelJudgment => ({
     ...deepCopyJSON(jgmt),
     id: v7(),
 });
-
-/** Get the label of a morphism if it exists, otherwise a label of the form "src->tgt" */
-export function morLabelOrDefault(id: QualifiedName, model?: DblModel): string | undefined {
-    if (!model) {
-        return;
-    }
-
-    const label = model.morGeneratorLabel(id);
-    if (label) {
-        return label.join(".");
-    }
-
-    const mor = model.morPresentation(id);
-    if (mor && mor.dom.tag === "Basic" && mor.cod.tag === "Basic") {
-        const src = model.obGeneratorLabel(mor.dom.content);
-        const tgt = model.obGeneratorLabel(mor.cod.content);
-        if (src && tgt) {
-            return `${src.join(".")}→${tgt.join(".")}`;
-        }
-    }
-}

@@ -21,7 +21,7 @@ let
         ../../pnpm-lock.yaml
         ../../packages/frontend
         ../../packages/ui-components
-        ../../packages/document-types
+        ../../packages/document-methods
         ../../packages/backend/pkg
       ];
     };
@@ -36,7 +36,7 @@ let
 
     pnpmDeps = pkgs.fetchPnpmDeps {
       # see ../../dev-docs/fixing-hash-mismatches.md
-      hash = "sha256-eZtd8phyIIf2kvQRElgW5/yqDD11MwCXwdB8FNegB5E=";
+      hash = "sha256-n/0a/wK2mLkGvKWSBs/8zdfgF+dxMmPz3Ir1k30Qw9s=";
 
       pname = name;
       fetcherVersion = 2;
@@ -52,8 +52,8 @@ let
           ../../packages/frontend/pnpm-lock.yaml
           ../../packages/ui-components/package.json
           ../../packages/ui-components/pnpm-lock.yaml
-          ../../packages/document-types/package.json
-          ../../packages/document-types/pnpm-lock.yaml
+          ../../packages/document-methods/package.json
+          ../../packages/document-methods/pnpm-lock.yaml
           ../../packages/backend/pkg/package.json
           ../../packages/backend/pkg/pnpm-lock.yaml
         ];
@@ -70,6 +70,10 @@ let
         # Set up catlog-wasm before TypeScript build needs it
         mkdir -p packages/catlog-wasm/dist/pkg-browser
         cp -r ${self.packages.x86_64-linux.catlog-wasm-browser}/* packages/catlog-wasm/dist/pkg-browser/
+
+        # Set up document-types wasm output
+        mkdir -p packages/document-types/pkg
+        cp -r ${self.packages.x86_64-linux.document-types-wasm}/* packages/document-types/pkg/
 
         # Set up generated API bindings
         mkdir -p packages/backend/pkg/src
@@ -111,6 +115,10 @@ let
         mkdir -p $out/packages/catlog-wasm/dist/pkg-browser
         cp -r ${self.packages.x86_64-linux.catlog-wasm-browser}/* $out/packages/catlog-wasm/dist/pkg-browser/
 
+        # Set up document-types wasm output before copying to $out
+        mkdir -p packages/document-types/pkg
+        cp -r ${self.packages.x86_64-linux.document-types-wasm}/* packages/document-types/pkg/
+
         # Bindings must be copied into source tree BEFORE the cp below copies backend to $out
         mkdir -p packages/backend/pkg/src
         cp -r ${self.packages.x86_64-linux.catcolabApi}/src packages/backend/pkg/
@@ -118,7 +126,9 @@ let
         cp -r packages/backend $out/packages/
         cp -r packages/frontend $out/packages/
         cp -r packages/ui-components $out/packages/
-        cp -r packages/document-types $out/packages/
+        cp -r packages/document-methods $out/packages/
+        mkdir -p $out/packages/document-types
+        cp -r packages/document-types/pkg $out/packages/document-types/
 
         mkdir -p $out/bin
         # Wrapper script to load environment variables and wait for backend to become available

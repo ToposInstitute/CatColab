@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 use autosurgeon::{Hydrate, Reconcile, Text, reconcile};
-pub use document_types::current::DocumentType;
+pub use catcolab_document_types::current::DocumentType;
 use samod::DocumentId;
 use serde::Deserialize;
 use sqlx::PgPool;

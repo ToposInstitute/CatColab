@@ -2,20 +2,15 @@ import { MultiProvider } from "@solid-primitives/context";
 import { Match, Switch, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { DiagramJudgment, DiagramMorDecl, DiagramObDecl } from "catlog-wasm";
+import { Diagram, Nb } from "catcolab-document-methods";
+import type { DiagramJudgment, DiagramMorDecl, DiagramObDecl } from "catcolab-document-types";
 import { LiveModelContext } from "../model";
-import {
-    type CellConstructor,
-    type FormalCellEditorProps,
-    NotebookEditor,
-    newFormalCell,
-} from "../notebook";
+import { type CellConstructor, type FormalCellEditorProps, NotebookEditor } from "../notebook";
 import type { InstanceTypeMeta } from "../theory";
 import { LiveDiagramContext } from "./context";
 import type { LiveDiagramDoc } from "./document";
 import { DiagramMorphismCellEditor } from "./morphism_cell_editor";
 import { DiagramObjectCellEditor } from "./object_cell_editor";
-import { duplicateDiagramJudgment, newDiagramMorphismDecl, newDiagramObjectDecl } from "./types";
 
 /** Notebook editor for a diagram in a model.
  */
@@ -43,7 +38,7 @@ export function DiagramNotebookEditor(props: { liveDiagram: LiveDiagramDoc }) {
                 formalCellEditor={DiagramCellEditor}
                 cellConstructors={cellConstructors()}
                 cellLabel={judgmentLabel}
-                duplicateCell={duplicateDiagramJudgment}
+                duplicateCell={Diagram.duplicateDiagramJudgment}
             />
         </MultiProvider>
     );
@@ -96,9 +91,9 @@ function diagramCellConstructor(meta: InstanceTypeMeta): CellConstructor<Diagram
         construct() {
             switch (tag) {
                 case "ObType":
-                    return newFormalCell(newDiagramObjectDecl(meta.obType));
+                    return Nb.newFormalCell(Diagram.newDiagramObjectDecl(meta.obType));
                 case "MorType":
-                    return newFormalCell(newDiagramMorphismDecl(meta.morType));
+                    return Nb.newFormalCell(Diagram.newDiagramMorphismDecl(meta.morType));
                 default:
                     throw tag satisfies never;
             }

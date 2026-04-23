@@ -38,7 +38,7 @@ tsify = { version = "0.5.6", features = ["js"], optional = true }
 ustr = "1"
 uuid = { version = "1.18" }
 wasm-bindgen = { version = "0.2.100", optional = true }
-document-types = { version = "0.1.0", path = "../document-types" }
+catcolab-document-types = { version = "0.1.0", path = "../document-types" }
 sea-query = { version = "0.32.7", optional = true }
 sqlformat = { version = "0.5.0", optional = true }
 

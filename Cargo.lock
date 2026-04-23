@@ -334,9 +334,9 @@ dependencies = [
  "autosurgeon",
  "axum",
  "base64 0.22.1",
+ "catcolab-document-types",
  "chrono",
  "clap",
- "document-types",
  "dotenvy",
  "firebase-auth",
  "futures-util",
@@ -510,15 +510,33 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "37b2a672a2cb129a2e41c10b1224bb368f9f37a2b16b612598138befd7b37eb5"
 
 [[package]]
+name = "catcolab-document-types"
+version = "0.1.0"
+dependencies = [
+ "automerge",
+ "autosurgeon",
+ "proptest",
+ "serde",
+ "serde-wasm-bindgen",
+ "serde_json",
+ "test-strategy",
+ "ts-rs",
+ "tsify",
+ "ustr",
+ "uuid",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "catlog"
 version = "0.1.0"
 dependencies = [
  "all-the-same",
  "bwd",
+ "catcolab-document-types",
  "clap",
  "derivative",
  "derive_more",
- "document-types",
  "duplicate",
  "egglog",
  "ego-tree",
@@ -555,10 +573,10 @@ name = "catlog-wasm"
 version = "0.1.0"
 dependencies = [
  "all-the-same",
+ "catcolab-document-types",
  "catlog",
  "console_error_panic_hook",
  "derive_more",
- "document-types",
  "getrandom 0.2.16",
  "getrandom 0.3.3",
  "js-sys",
@@ -1033,24 +1051,6 @@ name = "dissimilar"
 version = "1.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8975ffdaa0ef3661bfe02dbdcc06c9f829dfafe6a3c474de366a8d5e44276921"
-
-[[package]]
-name = "document-types"
-version = "0.1.0"
-dependencies = [
- "automerge",
- "autosurgeon",
- "proptest",
- "serde",
- "serde-wasm-bindgen",
- "serde_json",
- "test-strategy",
- "ts-rs",
- "tsify",
- "ustr",
- "uuid",
- "wasm-bindgen",
-]
 
 [[package]]
 name = "dotenvy"
@@ -2556,8 +2556,8 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "automerge",
+ "catcolab-document-types",
  "clap",
- "document-types",
  "dotenvy",
  "samod",
  "serde_json",

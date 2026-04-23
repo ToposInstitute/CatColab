@@ -1,33 +1,16 @@
 import type { AnyDocumentId, Repo } from "@automerge/automerge-repo";
 import { type Accessor, createMemo } from "solid-js";
 
-import type {
-    DblModelDiagram,
-    DiagramJudgment,
-    Document,
-    ModelDiagramValidationResult,
-    StableRef,
-    Uuid,
+import type { DiagramDocument } from "catcolab-document-methods";
+import { Diagram, Nb } from "catcolab-document-methods";
+import type { DiagramJudgment, StableRef, Uuid } from "catcolab-document-types";
+import {
+    type DblModelDiagram,
+    elaborateDiagram,
+    type ModelDiagramValidationResult,
 } from "catlog-wasm";
-import { currentVersion, elaborateDiagram } from "catlog-wasm";
 import { type Api, type DocRef, findAndMigrate, type LiveDoc, makeLiveDoc } from "../api";
 import type { LiveModelDoc, ModelLibrary } from "../model";
-import { NotebookUtils, newNotebook } from "../notebook";
-
-/** A document defining a diagram in a model. */
-export type DiagramDocument = Document & { type: "diagram" };
-
-/** Create an empty diagram of a model. */
-export const newDiagramDocument = (modelRef: StableRef): DiagramDocument => ({
-    name: "",
-    type: "diagram",
-    diagramIn: {
-        ...modelRef,
-        type: "diagram-in",
-    },
-    notebook: newNotebook<DiagramJudgment>(),
-    version: currentVersion(),
-});
 
 /** A diagram document "live" for editing. */
 export type LiveDiagramDoc = {
@@ -76,7 +59,7 @@ export function enlivenDiagramDocument(
     const { doc } = liveDoc;
 
     const formalJudgments = createMemo<Array<DiagramJudgment>>(() =>
-        NotebookUtils.getFormalContent(doc.notebook),
+        Nb.getFormalContent(doc.notebook),
     );
 
     const elaboratedDiagram = (): DblModelDiagram | undefined => {
@@ -125,7 +108,7 @@ export function enlivenDiagramDocument(
 
 /** Create a new, empty diagram in the backend. */
 export function createDiagram(api: Api, inModel: StableRef): Promise<string> {
-    const init = newDiagramDocument(inModel);
+    const init = Diagram.newDiagramDocument(inModel);
     return api.createDoc(init);
 }
 

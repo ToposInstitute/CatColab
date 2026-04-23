@@ -8,7 +8,7 @@ craneLib.buildPackage {
   inherit (craneLib.crateNameFromCargoToml { cargoToml = ./Cargo.toml; }) version pname;
   doCheck = false;
 
-  cargoExtraArgs = "-p document-types";
+  cargoExtraArgs = "-p catcolab-document-types";
 
   nativeBuildInputs = [
     pkgs.wasm-pack
@@ -27,7 +27,6 @@ craneLib.buildPackage {
       ../../Cargo.toml
       ../../Cargo.lock
       (craneLib.fileset.commonCargoSources ./.)
-      ./package.json
     ];
   };
 
@@ -46,12 +45,12 @@ craneLib.buildPackage {
     # 
     # wasm-pack needs a writeable $HOME
     # https://github.com/ipetkov/crane/issues/362
-    HOME=$(mktemp -d) npm run build:node
+    HOME=$(mktemp -d) wasm-pack build ./. -d ./pkg
   '';
 
   installPhase = ''
     mkdir -p $out
-    cp -r dist/pkg-node/* $out/
+    cp -r pkg/* $out/
     ls $out/
   '';
 }

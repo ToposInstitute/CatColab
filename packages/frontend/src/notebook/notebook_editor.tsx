@@ -15,6 +15,8 @@ import {
 } from "solid-js";
 import invariant from "tiny-invariant";
 
+import { Nb } from "catcolab-document-methods";
+import type { Cell, Notebook } from "catcolab-document-types";
 import {
     type Completion,
     IconButton,
@@ -22,7 +24,6 @@ import {
     keyEventHasModifier,
     type ModifierKey,
 } from "catcolab-ui-components";
-import type { Cell, Notebook } from "catlog-wasm";
 import {
     type CellActions,
     type CellDragData,
@@ -32,7 +33,6 @@ import {
     RichTextCellEditor,
     StemCellEditor,
 } from "./notebook_cell";
-import { type FormalCell, NotebookUtils, newRichTextCell, newStemCell } from "./types";
 
 import "./notebook_editor.css";
 
@@ -93,7 +93,7 @@ export function NotebookEditor<T>(props: {
         const [i, n] = [activeCell(), props.notebook.cellOrder.length];
         const cellIndex = i != null ? Math.min(i + 1, n) : n;
         props.changeNotebook((nb) => {
-            NotebookUtils.insertCellAtIndex(nb, cell, cellIndex);
+            Nb.insertCellAtIndex(nb, cell, cellIndex);
         });
         setActiveCell(cellIndex);
     };
@@ -101,7 +101,7 @@ export function NotebookEditor<T>(props: {
     const addOrReplaceActiveCell = (cell: Cell<T>) => {
         const cellIndex = activeCell() ?? -1;
         const existingCell =
-            cellIndex >= 0 ? NotebookUtils.tryGetCellByIndex(props.notebook, cellIndex) : null;
+            cellIndex >= 0 ? Nb.tryGetCellByIndex(props.notebook, cellIndex) : null;
         if (existingCell?.tag === "stem") {
             replaceCellWith(cellIndex, cell);
         } else {
@@ -111,9 +111,9 @@ export function NotebookEditor<T>(props: {
 
     const appendCell = (cell: Cell<T>) => {
         props.changeNotebook((nb) => {
-            NotebookUtils.appendCell(nb, cell);
+            Nb.appendCell(nb, cell);
         });
-        setActiveCell(NotebookUtils.numCells(props.notebook) - 1);
+        setActiveCell(Nb.numCells(props.notebook) - 1);
     };
 
     const insertCommands = (): Completion[] =>
@@ -145,7 +145,7 @@ export function NotebookEditor<T>(props: {
             name: "Text",
             description: "Start writing text",
             shortcut: ["T"],
-            construct: () => newRichTextCell(),
+            construct: () => Nb.newRichTextCell(),
         },
         ...(props.cellConstructors ?? []),
     ];
@@ -174,7 +174,7 @@ export function NotebookEditor<T>(props: {
             }
         }
         if (evt.shiftKey && evt.key === "Enter") {
-            addAfterActiveCell(newStemCell());
+            addAfterActiveCell(Nb.newStemCell());
             return evt.preventDefault();
         }
     });
@@ -218,7 +218,7 @@ export function NotebookEditor<T>(props: {
                     axis: "vertical",
                 });
                 props.changeNotebook((nb) => {
-                    NotebookUtils.moveCellByIndex(nb, sourceIndex, finalIndex);
+                    Nb.moveCellByIndex(nb, sourceIndex, finalIndex);
                 });
                 setCurrentDropTarget(null);
             },
@@ -240,7 +240,7 @@ export function NotebookEditor<T>(props: {
         >
             <Show when={props.notebook.cellOrder.length === 0}>
                 <div class="notebook-cell-placeholder">
-                    <IconButton onClick={() => appendCell(newStemCell())}>
+                    <IconButton onClick={() => appendCell(Nb.newStemCell())}>
                         <ListPlus />
                     </IconButton>
                     <span>Click button or press Shift-Enter to create a cell</span>
@@ -258,48 +258,48 @@ export function NotebookEditor<T>(props: {
                                 }
                             },
                             activateBelow() {
-                                if (i() < NotebookUtils.numCells(props.notebook) - 1) {
+                                if (i() < Nb.numCells(props.notebook) - 1) {
                                     setActiveCell(i() + 1);
                                 }
                             },
                             createAbove() {
                                 const index = i();
                                 props.changeNotebook((nb) => {
-                                    NotebookUtils.newStemCellAtIndex(nb, index);
+                                    Nb.newStemCellAtIndex(nb, index);
                                 });
                                 setActiveCell(index);
                             },
                             createBelow() {
                                 const index = i() + 1;
                                 props.changeNotebook((nb) => {
-                                    NotebookUtils.newStemCellAtIndex(nb, index);
+                                    Nb.newStemCellAtIndex(nb, index);
                                 });
                                 setActiveCell(index);
                             },
                             deleteBackward() {
                                 const index = i();
                                 props.changeNotebook((nb) => {
-                                    NotebookUtils.deleteCellAtIndex(nb, index);
+                                    Nb.deleteCellAtIndex(nb, index);
                                 });
                                 setActiveCell(index - 1);
                             },
                             deleteForward() {
                                 const index = i();
                                 props.changeNotebook((nb) => {
-                                    NotebookUtils.deleteCellAtIndex(nb, index);
+                                    Nb.deleteCellAtIndex(nb, index);
                                 });
                                 setActiveCell(index);
                             },
                             moveUp() {
                                 // oxlint-disable-next-line solid/reactivity -- event handler
                                 props.changeNotebook((nb) => {
-                                    NotebookUtils.moveCellUp(nb, i());
+                                    Nb.moveCellUp(nb, i());
                                 });
                             },
                             moveDown() {
                                 // oxlint-disable-next-line solid/reactivity -- event handler
                                 props.changeNotebook((nb) => {
-                                    NotebookUtils.moveCellDown(nb, i());
+                                    Nb.moveCellDown(nb, i());
                                 });
                             },
                             hasFocused() {
@@ -316,11 +316,7 @@ export function NotebookEditor<T>(props: {
                                 const index = i();
                                 // oxlint-disable-next-line solid/reactivity -- event handler
                                 props.changeNotebook((nb) => {
-                                    NotebookUtils.duplicateCellAtIndex(
-                                        nb,
-                                        index,
-                                        props.duplicateCell,
-                                    );
+                                    Nb.duplicateCellAtIndex(nb, index, props.duplicateCell);
                                 });
                                 setActiveCell(index + 1);
                             };
@@ -350,21 +346,23 @@ export function NotebookEditor<T>(props: {
                                                 actions={cellActions}
                                             />
                                         </Match>
-                                        <Match when={cell.tag === "formal"}>
-                                            <props.formalCellEditor
-                                                content={(cell as FormalCell<T>).content}
-                                                changeContent={(f) =>
-                                                    props.changeNotebook((nb) =>
-                                                        NotebookUtils.mutateCellContentById(
-                                                            nb,
-                                                            cell.id,
-                                                            f,
-                                                        ),
-                                                    )
-                                                }
-                                                isActive={isActive()}
-                                                actions={cellActions}
-                                            />
+                                        <Match when={cell.tag === "formal" ? cell : undefined}>
+                                            {(formalCell) => (
+                                                <props.formalCellEditor
+                                                    content={formalCell().content}
+                                                    changeContent={(f) =>
+                                                        props.changeNotebook((nb) =>
+                                                            Nb.mutateCellContentById(
+                                                                nb,
+                                                                cell.id,
+                                                                f,
+                                                            ),
+                                                        )
+                                                    }
+                                                    isActive={isActive()}
+                                                    actions={cellActions}
+                                                />
+                                            )}
                                         </Match>
                                         <Match when={cell.tag === "stem"}>
                                             <StemCellEditor
@@ -380,10 +378,10 @@ export function NotebookEditor<T>(props: {
                     }}
                 </For>
             </ul>
-            <Show when={NotebookUtils.getCells(props.notebook).some((cell) => cell.tag !== "stem")}>
+            <Show when={Nb.getCells(props.notebook).some((cell) => cell.tag !== "stem")}>
                 <div class="notebook-cell-placeholder">
                     <IconButton
-                        onClick={() => appendCell(newStemCell())}
+                        onClick={() => appendCell(Nb.newStemCell())}
                         tooltip="Create a new cell"
                     >
                         <ListPlus />

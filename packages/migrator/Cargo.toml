@@ -16,7 +16,7 @@ async-trait = "0.1.88"
 automerge = "0.8.0"
 clap = { version = "4.5.44", features = ["derive"] }
 dotenvy = "0.15.7"
-document-types = { version = "0.1.0", path = "../document-types", features = ["backend"] }
+catcolab-document-types = { version = "0.1.0", path = "../document-types", features = ["backend"] }
 samod = { version = "0.9.0", features = ["tokio"] }
 serde_json = "1.0"
 sqlx = { version = "0.8.2", features = [

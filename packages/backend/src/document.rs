@@ -3,9 +3,9 @@
 use crate::app::{AppCtx, AppError, AppState};
 use crate::ref_actor::ensure_ref_actor;
 use crate::user_state_updates::{update_ref_for_users, update_user_state};
+use catcolab_document_types::automerge_json::{hydrate_to_json, populate_automerge_from_json};
+use catcolab_document_types::automerge_util::copy_doc_at_heads;
 use chrono::{DateTime, Utc};
-use document_types::automerge_json::{hydrate_to_json, populate_automerge_from_json};
-use document_types::automerge_util::copy_doc_at_heads;
 use samod::DocumentId;
 use serde_json::Value;
 use uuid::Uuid;
@@ -25,8 +25,9 @@ pub async fn new_ref(ctx: AppCtx, content: Value) -> Result<Uuid, AppError> {
     }
 
     // Validate document structure by attempting to deserialize it
-    let _validated_doc: document_types::VersionedDocument = serde_json::from_value(content.clone())
-        .map_err(|e| AppError::Invalid(format!("Failed to parse document: {}", e)))?;
+    let _validated_doc: catcolab_document_types::VersionedDocument =
+        serde_json::from_value(content.clone())
+            .map_err(|e| AppError::Invalid(format!("Failed to parse document: {}", e)))?;
 
     let ref_id = Uuid::now_v7();
 

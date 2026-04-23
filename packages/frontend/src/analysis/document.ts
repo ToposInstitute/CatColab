@@ -1,5 +1,6 @@
 import type { AnyDocumentId, Repo } from "@automerge/automerge-repo";
 
+import { Nb } from "catcolab-document-methods";
 import {
     type Analysis,
     type AnalysisType,
@@ -11,7 +12,6 @@ import {
 import { type Api, type DocRef, findAndMigrate, type LiveDoc, makeLiveDoc } from "../api";
 import { getLiveDiagram, getLiveDiagramFromRepo, type LiveDiagramDoc } from "../diagram";
 import type { LiveModelDoc, ModelLibrary } from "../model";
-import { NotebookUtils, newNotebook } from "../notebook";
 import { assertExhaustive } from "../util/assert_exhaustive";
 
 /** A document defining an analysis. */
@@ -35,7 +35,7 @@ export const newAnalysisDocument = (
         ...analysisOf,
         type: "analysis-of",
     },
-    notebook: newNotebook<Analysis>(),
+    notebook: Nb.newNotebook<Analysis>(),
     version: currentVersion(),
 });
 
@@ -176,7 +176,7 @@ function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
     };
 
     const doc = liveAnalysis.liveDoc.doc;
-    for (const cell of NotebookUtils.getFormalCells(doc.notebook)) {
+    for (const cell of Nb.getFormalCells(doc.notebook)) {
         const meta = getAnalysisMeta(cell.content.id);
         if (!meta) {
             continue;
@@ -185,7 +185,7 @@ function migrateAnalysis(liveAnalysis: LiveAnalysisDoc) {
         for (const key in initialContent) {
             if (!(key in cell.content.content)) {
                 liveAnalysis.liveDoc.changeDoc((doc) => {
-                    NotebookUtils.mutateCellContentById(doc.notebook, cell.id, (content) => {
+                    Nb.mutateCellContentById(doc.notebook, cell.id, (content) => {
                         content.content[key] = initialContent[key];
                     });
                 });

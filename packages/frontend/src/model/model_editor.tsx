@@ -2,23 +2,13 @@ import { Match, Switch, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
-import type { InstantiatedModel, ModelJudgment, MorDecl, ObDecl } from "catlog-wasm";
-import {
-    type CellConstructor,
-    type FormalCellEditorProps,
-    NotebookEditor,
-    newFormalCell,
-} from "../notebook";
+import { Model, Nb } from "catcolab-document-methods";
+import type { InstantiatedModel, ModelJudgment, MorDecl, ObDecl } from "catcolab-document-types";
+import { type CellConstructor, type FormalCellEditorProps, NotebookEditor } from "../notebook";
 import { TheoryLibraryContext, type ModelTypeMeta, type Theory } from "../theory";
 import { LiveModelContext } from "./context";
 import type { LiveModelDoc } from "./document";
 import { InstantiationCellEditor } from "./instantiation_cell_editor";
-import {
-    duplicateModelJudgment,
-    newInstantiatedModel,
-    newMorphismDecl,
-    newObjectDecl,
-} from "./types";
 
 /** Notebook editor for a model of a double theory.
  */
@@ -43,7 +33,7 @@ export function ModelNotebookEditor(props: { liveModel: LiveModelDoc }) {
                 formalCellEditor={ModelCellEditor}
                 cellConstructors={cellConstructors()}
                 cellLabel={judgmentLabel}
-                duplicateCell={duplicateModelJudgment}
+                duplicateCell={Model.duplicateModelJudgment}
             />
         </LiveModelContext.Provider>
     );
@@ -123,7 +113,7 @@ function modelCellConstructors(theory: Theory): CellConstructor<ModelJudgment>[]
         description: "Instantiate an existing model into this one",
         shortcut: ["I"],
         construct() {
-            return newFormalCell(newInstantiatedModel());
+            return Nb.newFormalCell(Model.newInstantiatedModel());
         },
     });
     for (const meta of theory.modelTypes ?? []) {
@@ -141,9 +131,9 @@ function modelCellConstructor(meta: ModelTypeMeta): CellConstructor<ModelJudgmen
         construct() {
             switch (tag) {
                 case "ObType":
-                    return newFormalCell(newObjectDecl(meta.obType));
+                    return Nb.newFormalCell(Model.newObjectDecl(meta.obType));
                 case "MorType":
-                    return newFormalCell(newMorphismDecl(meta.morType));
+                    return Nb.newFormalCell(Model.newMorphismDecl(meta.morType));
                 default:
                     throw tag satisfies never;
             }

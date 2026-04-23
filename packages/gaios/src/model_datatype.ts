@@ -1,12 +1,12 @@
+import { Model } from "catcolab-document-methods";
 import type { Document } from "catlog-wasm";
-import { newModelDocument } from "../../frontend/src/model";
 
 export type ModelDoc = Document & { type: "model" };
 
 // SCHEMA
 
 export const init = (doc: ModelDoc) => {
-    Object.assign(doc, newModelDocument({ theory: "empty" }));
+    Object.assign(doc, Model.newModelDocument({ theory: "empty" }));
     doc.name = "New model";
 };
 

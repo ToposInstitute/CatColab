@@ -11,6 +11,7 @@ import { type Accessor, createResource, onCleanup } from "solid-js";
 import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
+import { Nb, type ModelDocument } from "catcolab-document-methods";
 import {
     type DblModel,
     DblModelMap,
@@ -22,9 +23,8 @@ import {
     type Uuid,
 } from "catlog-wasm";
 import { type Api, findAndMigrate, type LiveDoc, makeLiveDoc } from "../api";
-import { NotebookUtils } from "../notebook/types";
 import type { Theory, TheoryLibrary } from "../theory";
-import type { LiveModelDoc, ModelDocument } from "./document";
+import type { LiveModelDoc } from "./document";
 
 /** An elaborated model along with its validation status. */
 export type ValidatedModel =
@@ -265,7 +265,7 @@ export class ModelLibrary<RefId> {
         theory: DblTheory,
     ): Promise<ValidatedModel> {
         const instantiated = new DblModelMap();
-        for (const cell of NotebookUtils.getFormalContent(notebook)) {
+        for (const cell of Nb.getFormalContent(notebook)) {
             if (!(cell.tag === "instantiation" && cell.model)) {
                 continue;
             }
