@@ -177,16 +177,17 @@ and satisfying the cell equations:
 }
 
 \subtree{
-  \title{Comparison with the theory of promonads}
+  \title{Comparison with theory of promonads}
   \taxon{remark}
 
-  \p{This theory might also be called the "theory of #{T}-promonads" as it
+  \p{This theory might also be called the "theory of #{T}-promonads" as it's
   analogous to the [theory of promonads](thy-0004) except that the monad #{T}
-  acts on the source of proarrow #{p}. The axioms on composition and unitality
-  correspond to the three axioms of the theory of promonads. The remaining two
-  axioms, on associativity, uniquely extend the right action from #{Tp} (hence
-  from #{p}) and enable another way to decompose a length-three composite of
-  multimorphisms. In fact, if one forces #{T} to be the identity monad, then the
-  two associativity axioms trivialize and the theory of promonads is recovered.}
+  acts on the source of the proarrow #{p}. The axioms on composition and
+  unitality correspond to the three axioms of the theory of promonads. The
+  remaining two axioms, on associativity, uniquely extend the right action from
+  #{Tp} (hence from #{p}) and enable another way to decompose a length-three
+  composite of multimorphisms. In fact, if one forces #{T} to be the identity
+  monad, then the two associativity axioms trivialize and the theory of
+  promonads is recovered.}
 
 }

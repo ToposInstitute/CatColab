@@ -4,5 +4,8 @@
 
 \p{The \define{theory of generalized PROs} is the [theory of unnormalized
 PROs](thy-000P) augmented with the \em{normalization axiom}: the unit cell
-#{\eta} is a restriction, i.e., the unique globular cell #{\id_x \To m(\eta_x,
-\eta_x)} factoring #{\eta} through any chosen restriction is an isomorphism.}
+#{\theta} is a restriction, i.e., the unique globular cell
+
+#{\id_x \To m(\eta_x, \eta_x)}
+
+factoring #{\theta} through any chosen restriction is an isomorphism.}
