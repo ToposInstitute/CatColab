@@ -110,7 +110,6 @@ subject to the equations
   \end{tikzcd}
   }
   }
-  \li{\em{Functorality of unit}: #{\theta \odot \theta = \theta}}
   \li{\em{Unitality of unit}:
   \centerfigs{
   \quiverinline{
@@ -180,9 +179,15 @@ subject to the equations
 
   \p{The part of this theory comprising the object #{x}, proarrow #{m}, and cell
   #{\theta} is analogous to the [theory of promonads](thy-0004) except that the
-  monad #{T} acts on both the source and the target of #{m}. One difference is
-  that, in this case, the functorality of the unit, #{\theta \odot \theta =
-  \theta}, seems not to be derivable from the other axioms and so is included as
-  a primitive axiom.}
+  monad #{T} acts on the source and the target of #{m}.}
+
+  \p{Here too the \em{functorality} axiom for the unit can be derived from the
+  other axioms. To do so, precompose, say, the left equation of the unitality
+  axiom with
+
+  #{\theta \odot \eta_{\id_x} = \theta \odot \id_{\eta_x} = \theta}
+
+  and use the naturality of #{\eta} at #{\theta} along with unitality of the
+  product #{\otimes} to deduce that #{\theta \odot \theta = \theta}.}
 
 }
