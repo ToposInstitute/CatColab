@@ -37,52 +37,7 @@ and satisfying the cell equations:
 
 \ul{
 
-  \li{\em{Functorality}:
-  \centerfigs{
-  \quiverinline{
-  % https://q.uiver.app/#q=WzAsOCxbMCwwLCJ4Il0sWzEsMCwieCJdLFsyLDAsIngiXSxbMCwyLCJUeCJdLFsyLDIsIngiXSxbMCwxLCJUeCJdLFsxLDEsIngiXSxbMiwxLCJ4Il0sWzAsMSwiXFxpZF94IiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzEsMiwiXFxpZF94IiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzMsNCwicCIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFswLDUsIlxcZXRhX3giLDJdLFs1LDYsInAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMSw2LCIiLDEseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs2LDcsIlxcaWRfeCIsMl0sWzIsNywiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNSwzLCIiLDEseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs3LDQsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzgsMTIsIlxcdGhldGEiLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbOSwxNCwiMSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs2LDEwLCJcXHRleHR7Y29tcH0iLDEseyJzaG9ydGVuIjp7InRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
-  \begin{tikzcd}
-	x & x & x \\
-	Tx & x & x \\
-	Tx && x
-	\arrow[""{name=0, anchor=center, inner sep=0}, "{\id_x}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-2]
-	\arrow["{\eta_x}"', from=1-1, to=2-1]
-	\arrow[""{name=1, anchor=center, inner sep=0}, "{\id_x}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-2, to=1-3]
-	\arrow[equals, from=1-2, to=2-2]
-	\arrow[equals, from=1-3, to=2-3]
-	\arrow[""{name=2, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-2]
-	\arrow[equals, from=2-1, to=3-1]
-	\arrow[""{name=3, anchor=center, inner sep=0}, "{\id_x}"', from=2-2, to=2-3]
-	\arrow[equals, from=2-3, to=3-3]
-	\arrow[""{name=4, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-3]
-	\arrow["\theta"{description}, draw=none, from=0, to=2]
-	\arrow["1"{description}, draw=none, from=1, to=3]
-	\arrow["{\text{comp}}"{description}, draw=none, from=2-2, to=4]
-  \end{tikzcd}
-  }
-  #{\qquad=\qquad}
-  \quiverinline{
-  % https://q.uiver.app/#q=WzAsNyxbMCwwLCJ4Il0sWzEsMCwieCJdLFsyLDAsIngiXSxbMCwxLCJ4Il0sWzIsMSwieCJdLFswLDIsIlR4Il0sWzIsMiwieCJdLFswLDEsIlxcaWRfeCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxLDIsIlxcaWRfeCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFswLDMsIiIsMix7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzIsNCwiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMyw0LCJcXGlkX3giLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMyw1LCJcXGV0YV94IiwyXSxbNSw2LCJwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzQsNiwiIiwyLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMSwxMSwiXFx0ZXh0e2NvbXB9IiwxLHsibGFiZWxfcG9zaXRpb24iOjQwLCJzaG9ydGVuIjp7InRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMTEsMTMsIlxcdGhldGEiLDEseyJsYWJlbF9wb3NpdGlvbiI6NjAsInNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dXQ==
-  \begin{tikzcd}
-	x & x & x \\
-	x && x \\
-	Tx && x
-	\arrow["{\id_x}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-2]
-	\arrow[equals, from=1-1, to=2-1]
-	\arrow["{\id_x}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-2, to=1-3]
-	\arrow[equals, from=1-3, to=2-3]
-	\arrow[""{name=0, anchor=center, inner sep=0}, "{\id_x}"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-3]
-	\arrow["{\eta_x}"', from=2-1, to=3-1]
-	\arrow[equals, from=2-3, to=3-3]
-	\arrow[""{name=1, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-3]
-	\arrow["{\text{comp}}"{description, pos=0.4}, draw=none, from=1-2, to=0]
-	\arrow["\theta"{description, pos=0.6}, draw=none, from=0, to=1]
-  \end{tikzcd}
-  }
-  }
-  }
-
-  \li{\em{Compatibility of left action}:
+  \li{\em{Unitality on the left}:
   \centerfigs{
   \quiverinline{
   % https://q.uiver.app/#q=WzAsMTAsWzAsMCwiVHgiXSxbMSwwLCJUeCJdLFsyLDAsIngiXSxbMCwzLCJUeCJdLFsyLDMsIngiXSxbMCwxLCJUXjIgeCJdLFsxLDEsIlR4Il0sWzIsMSwieCJdLFswLDIsIlReMiB4Il0sWzIsMiwieCJdLFswLDEsIlxcaWRfe1R4fSIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxLDIsInAiLDAseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMCw1LCJUXFxldGFfeCIsMl0sWzUsNiwiVHAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMSw2LCIiLDEseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs2LDcsInAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMiw3XSxbMyw0LCJwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzgsOSwiKFxcbXVfeClfISBcXG9kb3QgcCIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFs4LDMsIlxcbXVfeCIsMl0sWzksNCwiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNyw5LCIiLDEseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs1LDgsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzEwLDEzLCJUXFx0aGV0YSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxMSwxNSwiMV9wIiwxLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzE4LDE3LCJcXHRleHR7cmVzfSIsMSx7ImxhYmVsX3Bvc2l0aW9uIjo2MCwic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzYsMTgsIlxcdGV4dHtjb21wfSIsMSx7ImxhYmVsX3Bvc2l0aW9uIjo0MCwic2hvcnRlbiI6eyJ0YXJnZXQiOjIwfSwic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoibm9uZSJ9LCJoZWFkIjp7Im5hbWUiOiJub25lIn19fV1d
@@ -127,7 +82,7 @@ and satisfying the cell equations:
   }
   }
 
-  \li{\em{Compatibility of right action}:
+  \li{\em{Unitality on the right}:
   \centerfigs{
   \quiverinline{
   % https://q.uiver.app/#q=WzAsMTAsWzAsMCwiVHgiXSxbMSwwLCJ4Il0sWzIsMCwieCJdLFswLDEsIlReMiB4Il0sWzEsMSwiVHgiXSxbMiwxLCJ4Il0sWzIsMiwieCJdLFswLDIsIlReMiB4Il0sWzAsMywiVHgiXSxbMiwzLCJ4Il0sWzAsMSwicCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxLDIsIlxcaWRfeCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFswLDMsIlxcZXRhX3tUeH0iLDJdLFsxLDQsIlxcZXRhX3giLDFdLFszLDQsIlRwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzIsNSwiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNCw1LCJwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzcsNiwiKFxcbXVfeClfISBcXG9kb3QgcCIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFs1LDYsIiIsMix7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzMsNywiIiwyLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbOCw5LCJwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzcsOCwiXFxtdV94IiwyXSxbNiw5LCIiLDIseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxMSwxNiwiXFx0aGV0YSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxMCwxNCwiXFxldGFfcCIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs0LDE3LCJcXHRleHR7Y29tcH0iLDEseyJsYWJlbF9wb3NpdGlvbiI6NDAsInNob3J0ZW4iOnsidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFsxNywyMCwiXFx0ZXh0e3Jlc30iLDEseyJsYWJlbF9wb3NpdGlvbiI6NjAsInNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dXQ==
@@ -222,18 +177,17 @@ and satisfying the cell equations:
 }
 
 \subtree{
-  \title{Comparison with the theory of promonads}
+  \title{Comparison with theory of promonads}
   \taxon{remark}
 
-  \p{This theory might also be called the "theory of #{T}-promonads" as it
+  \p{This theory might also be called the "theory of #{T}-promonads" as it's
   analogous to the [theory of promonads](thy-0004) except that the monad #{T}
-  acts on the source of proarrow #{p}. The axioms on composition, functorality,
-  and compatibility of the left and right actions correspond to the four axioms
-  of the theory of promonads, although we have used the right action axiom to
-  express the functorality axiom more tersely. The remaining two axioms, on
-  associativity, uniquely extend the right action from #{Tp} (hence from #{p})
-  and enable another way to decompose a length-three composite of
-  multimorphisms. In fact, if one forces #{T} to be the identity monad, then the
-  two associativity axioms trivialize and the theory of promonads is recovered.}
+  acts on the source of the proarrow #{p}. The axioms on composition and
+  unitality correspond to the three axioms of the theory of promonads. The
+  remaining two axioms, on associativity, uniquely extend the right action from
+  #{Tp} (hence from #{p}) and enable another way to decompose a length-three
+  composite of multimorphisms. In fact, if one forces #{T} to be the identity
+  monad, then the two associativity axioms trivialize and the theory of
+  promonads is recovered.}
 
 }

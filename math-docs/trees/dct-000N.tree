@@ -5,19 +5,17 @@
 \p{In the Cruttwell-Shulman framework for [generalized
 multicategories](dct-000F), the main definition, that of a \em{#{T}-monoid} for
 a monad #{T} on a virtual double category ([CS10](cruttwell-shulman-2010),
-Definition 4.3), often produces not just a multicategory, but also a category
-equipped with an identity-on-objects functor into the multicategory's underlying
-category of unary morphisms. While it has found a few applications ([Baez-Dolan
-1998](baez-dolan-1998), [Cheng 2004](cheng-2004)), this extra data is usually
-unwanted. It can be removed by "normalization," leading to Cruttwell-Shulman's
-preferred definition of a "generalized multicategory" as a \em{normalized
-#{T}-monoid} ([CS10](cruttwell-shulman-2010), Definition 8.19).}
+Definition 4.3), often yields not only a multicategory but the further data of a
+category equipped with an identity-on-objects functor into the multicategory's
+underlying category of unary morphisms. While it has found a few applications
+([Baez-Dolan 1998](baez-dolan-1998), [Cheng 2004](cheng-2004)), this extra data
+is usually unwanted. It can be removed by "normalization," leading to
+Cruttwell-Shulman's preferred definition of a "generalized multicategory" as a
+\em{normalized #{T}-monoid} ([CS10](cruttwell-shulman-2010), Definition 8.19).}
 
-\p{We also take generalized multicategories to be normalized by default. It is
-instructive, however, to axiomatize unnormalized multicategories in
-double-categorical logic. Compared to the normalized case, the analogy to
-[promonads](dct-0004) is crisper, and there no coincidences making certain
-intuitively required axioms superfluous.}
+\p{We also take generalized multicategories to be normalized by default.
+However, it is still instructive to axiomatize unnormalized multicategories, as
+it makes for a crisper analogy with [promonads](dct-0004).}
 
 \transclude{thy-000N}
 
@@ -80,8 +78,8 @@ intuitively required axioms superfluous.}
   the multicategory's composition operation uniquely determines the image of the
   composition cell on the right-hand side.}
 
-  \p{Next, the image of the unit cell #{\theta}, along with the functorality
-  axiom, furnishes a natural transformation
+  \p{Next, the image of the unit cell #{\theta} furnishes a natural
+  transformation in \dbl{S}:
 
   \quiver{
   % https://q.uiver.app/#q=WzAsNCxbMCwwLCJYIl0sWzEsMCwiWCJdLFswLDEsIlMoWCkiXSxbMSwxLCJYIl0sWzAsMSwiXFxIb21fWCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFswLDIsIlxcZXRhX3tYfSIsMl0sWzIsMywiUCIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxLDMsIiIsMCx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzQsNiwiXFxUaGV0YSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dXQ==
@@ -96,14 +94,61 @@ intuitively required axioms superfluous.}
   \end{tikzcd}
   }
 
-  in \dbl{S} that is functorial (cf. [Cheng 2004](cheng-2004), Definition 2.1,
-  Axiom 6). Thus, #{\Theta} is an identity-on-objects functor from #{X} to the
-  unary morphisms of #{P}, where by definition the identity unaries in #{P} are
-  the images under #{\Theta} of the identities in #{X}. Moreover, the left and
-  right actions of the profunctor #{P} are uniquely determined by this functor,
-  due to the corresponding compatibility axioms. The unitality laws of the
-  generalized multicategory follow from the unitality of the profunctor
-  actions.}
+  The \em{functorality} equation in \dbl{T} (abbreviated using the right
+  unitality axiom)
+
+  \centerfigs{
+  \quiverinline{
+  % https://q.uiver.app/#q=WzAsOCxbMCwwLCJ4Il0sWzEsMCwieCJdLFsyLDAsIngiXSxbMCwyLCJUeCJdLFsyLDIsIngiXSxbMCwxLCJUeCJdLFsxLDEsIngiXSxbMiwxLCJ4Il0sWzAsMSwiXFxpZF94IiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzEsMiwiXFxpZF94IiwwLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzMsNCwicCIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFswLDUsIlxcZXRhX3giLDJdLFs1LDYsInAiLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMSw2LCIiLDEseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs2LDcsIlxcaWRfeCIsMl0sWzIsNywiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNSwzLCIiLDEseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs3LDQsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzgsMTIsIlxcdGhldGEiLDEseyJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbOSwxNCwiMSIsMSx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs2LDEwLCJcXHRleHR7Y29tcH0iLDEseyJzaG9ydGVuIjp7InRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
+  \begin{tikzcd}
+	x & x & x \\
+	Tx & x & x \\
+	Tx && x
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{\id_x}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-2]
+	\arrow["{\eta_x}"', from=1-1, to=2-1]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "{\id_x}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-2, to=1-3]
+	\arrow[equals, from=1-2, to=2-2]
+	\arrow[equals, from=1-3, to=2-3]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-2]
+	\arrow[equals, from=2-1, to=3-1]
+	\arrow[""{name=3, anchor=center, inner sep=0}, "{\id_x}"', from=2-2, to=2-3]
+	\arrow[equals, from=2-3, to=3-3]
+	\arrow[""{name=4, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-3]
+	\arrow["\theta"{description}, draw=none, from=0, to=2]
+	\arrow["1"{description}, draw=none, from=1, to=3]
+	\arrow["{\text{comp}}"{description}, draw=none, from=2-2, to=4]
+  \end{tikzcd}
+  }
+  #{\qquad=\qquad}
+  \quiverinline{
+  % https://q.uiver.app/#q=WzAsNyxbMCwwLCJ4Il0sWzEsMCwieCJdLFsyLDAsIngiXSxbMCwxLCJ4Il0sWzIsMSwieCJdLFswLDIsIlR4Il0sWzIsMiwieCJdLFswLDEsIlxcaWRfeCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxLDIsIlxcaWRfeCIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFswLDMsIiIsMix7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzIsNCwiIiwwLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMyw0LCJcXGlkX3giLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMyw1LCJcXGV0YV94IiwyXSxbNSw2LCJwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzQsNiwiIiwyLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMSwxMSwiXFx0ZXh0e2NvbXB9IiwxLHsibGFiZWxfcG9zaXRpb24iOjQwLCJzaG9ydGVuIjp7InRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMTEsMTMsIlxcdGhldGEiLDEseyJsYWJlbF9wb3NpdGlvbiI6NjAsInNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dXQ==
+  \begin{tikzcd}
+	x & x & x \\
+	x && x \\
+	Tx && x
+	\arrow["{\id_x}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-1, to=1-2]
+	\arrow[equals, from=1-1, to=2-1]
+	\arrow["{\id_x}"{inner sep=.8ex}, "\shortmid"{marking}, from=1-2, to=1-3]
+	\arrow[equals, from=1-3, to=2-3]
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{\id_x}"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-3]
+	\arrow["{\eta_x}"', from=2-1, to=3-1]
+	\arrow[equals, from=2-3, to=3-3]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-3]
+	\arrow["{\text{comp}}"{description, pos=0.4}, draw=none, from=1-2, to=0]
+	\arrow["\theta"{description, pos=0.6}, draw=none, from=0, to=1]
+  \end{tikzcd}
+  }
+  }
+
+  holds, as shown by precomposing both sides with the nullary composition cell
+  #{x \To \id_x} and using its universal property. Thus, #{\Theta} preserves
+  composition (cf. [Cheng 2004](cheng-2004), Definition 2.1, Axiom 6) and hence
+  is an identity-on-objects functor from #{X} to the unary morphisms of #{P},
+  where by definition the identity unaries in #{P} are the images under
+  #{\Theta} of the identities in #{X}. Moreover, the left and right actions of
+  the profunctor #{P} are uniquely determined by this functor, due to the
+  corresponding unitality axioms. The unitality laws of the generalized
+  multicategory follow from the unitality of the profunctor actions.}
 
   \p{It remains to prove the associativity law of the generalized multicategory.
   First, note that the composition cell for #{T^2 p} and #{(\mu_x)_!} generates
