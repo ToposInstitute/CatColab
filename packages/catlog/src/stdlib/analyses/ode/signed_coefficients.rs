@@ -66,16 +66,22 @@ impl<ObType, MorType> SignedCoefficientBuilder<ObType, MorType> {
         let mut mat = DMatrix::from_element(n, n, zero());
         for mor_type in self.positive_mor_types.iter() {
             for mor in model.mor_generators_with_type(mor_type) {
-                let i = *ob_index.get(&model.mor_generator_dom(&mor)).unwrap();
-                let j = *ob_index.get(&model.mor_generator_cod(&mor)).unwrap();
-                mat[(j, i)] += (1.0, Monomial::generator(mor));
+                if let (Some(i), Some(j)) = (
+                    ob_index.get(&model.mor_generator_dom(&mor)),
+                    ob_index.get(&model.mor_generator_cod(&mor)),
+                ) {
+                    mat[(*j, *i)] += (1.0, Monomial::generator(mor));
+                }
             }
         }
         for mor_type in self.negative_mor_types.iter() {
             for mor in model.mor_generators_with_type(mor_type) {
-                let i = *ob_index.get(&model.mor_generator_dom(&mor)).unwrap();
-                let j = *ob_index.get(&model.mor_generator_cod(&mor)).unwrap();
-                mat[(j, i)] += (-1.0, Monomial::generator(mor));
+                if let (Some(i), Some(j)) = (
+                    ob_index.get(&model.mor_generator_dom(&mor)),
+                    ob_index.get(&model.mor_generator_cod(&mor)),
+                ) {
+                    mat[(*j, *i)] += (-1.0, Monomial::generator(mor));
+                }
             }
         }
 
