@@ -36,5 +36,4 @@ let
 in
 {
   inherit hosts;
-  allUserKeys = builtins.attrValues allUserKeys;
 }
