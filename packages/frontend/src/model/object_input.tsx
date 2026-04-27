@@ -4,10 +4,9 @@ import invariant from "tiny-invariant";
 import { match, P } from "ts-pattern";
 
 import type { TextInputOptions } from "catcolab-ui-components";
-import type { MorType, Ob, ObOp, ObType, QualifiedName, Uuid } from "catlog-wasm";
+import type { MorType, Ob, ObType, QualifiedName, Uuid } from "catlog-wasm";
 import { IdInput, type IdInputOptions, ObIdInput } from "../components";
 import { LiveModelContext } from "./context";
-import { unwrapApp, wrapApp } from "./ob_operations";
 import { ObListEditor } from "./object_list_editor";
 
 /** Props passed to any object input component. */
@@ -32,29 +31,8 @@ export type ObInputProps = {
 };
 
 /** Input an object that already exists in a model. */
-export function ObInput(
-    allProps: ObInputProps &
-        TextInputOptions & {
-            /** Operation to apply to the object afterwards, if any. */
-            applyOp?: ObOp;
-        },
-) {
-    const [props, otherProps] = splitProps(allProps, ["ob", "setOb", "obType", "applyOp"]);
-
-    const ob = () => (props.applyOp ? unwrapApp(props.ob, props.applyOp) : props.ob);
-
-    const setOb = (ob: Ob | null) =>
-        props.setOb(ob && props.applyOp ? wrapApp(ob, props.applyOp) : ob);
-
-    return (
-        <Dynamic
-            component={obEditorForType(props.obType)}
-            ob={ob()}
-            setOb={setOb}
-            obType={props.obType}
-            {...otherProps}
-        />
-    );
+export function ObInput(props: ObInputProps & TextInputOptions) {
+    return <Dynamic component={obEditorForType(props.obType)} {...props} />;
 }
 
 function obEditorForType(obType: ObType): Component<ObInputProps> {

@@ -2,12 +2,11 @@ import { Index, createEffect, createMemo, createSignal, untrack, useContext } fr
 import invariant from "tiny-invariant";
 
 import { NameInput } from "catcolab-ui-components";
-import type { Ob, ObOp, ObType, QualifiedName } from "catlog-wasm";
+import type { Ob, QualifiedName } from "catlog-wasm";
 import { ObIdInput } from "../components";
-import { removeProxyAndCopy } from "../util/remove_proxy_and_copy";
 import { LiveModelContext } from "./context";
+import { MultiaryMorphismEditHandle } from "./edit_handle";
 import type { MorphismEditorProps } from "./editors";
-import { buildObList, extractObList, unwrapApp, wrapApp } from "./ob_operations";
 
 import styles from "./string_diagram_morphism_cell_editor.module.css";
 
@@ -16,9 +15,22 @@ type ActiveInput =
     | { zone: "dom"; index: number }
     | { zone: "cod"; index: number };
 
+/** Drop null entries with no in-progress text from a wire list. */
+function pruneEmptyWires(
+    list: readonly (Ob | null)[],
+    texts: Map<number, string>,
+    remove: (i: number) => void,
+) {
+    for (let i = list.length - 1; i >= 0; i--) {
+        if (list[i] === null && (texts.get(i) ?? "") === "") {
+            remove(i);
+        }
+    }
+}
+
 /** A column of wire inputs, used for both domain (left) and codomain (right). */
 function WireColumn(props: {
-    obs: Array<Ob | null>;
+    obs: readonly (Ob | null)[];
     side: "left" | "right";
     isInvalid: boolean;
     completions: QualifiedName[] | undefined;
@@ -132,147 +144,73 @@ export default function StringDiagramMorphismCellEditor(props: MorphismEditorPro
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 
+    /* oxlint-disable solid/reactivity -- handle methods read props lazily */
+    const mor = new MultiaryMorphismEditHandle({
+        theory: () => props.theory,
+        morphism: () => props.morphism,
+        modify: (f) => props.modifyMorphism(f),
+        validated: () => liveModel().validatedModel(),
+    });
+    /* oxlint-enable solid/reactivity */
+
     const [active, setActive] = createSignal<ActiveInput | null>({ zone: "name" });
 
-    // Track which wire indices have non-empty text (including incomplete input).
-    const domInputTexts = new Map<number, string>();
-    const codInputTexts = new Map<number, string>();
+    // Track currently-typed text for each wire so we can distinguish "empty
+    // placeholder" from "in-progress input" when pruning on deactivation.
+    const domTexts = new Map<number, string>();
+    const codTexts = new Map<number, string>();
 
     const morTypeMeta = () => props.theory.modelMorTypeMeta(props.morphism.morType);
-    const domApplyOp = () => morTypeMeta()?.domain?.apply;
-    const codApplyOp = () => morTypeMeta()?.codomain?.apply;
-
-    /** Rebuild a domain/codomain Ob from a list of objects. */
-    const makeObList = (
-        objects: Array<Ob | null>,
-        obType: ObType | undefined,
-        applyOp: ObOp | undefined,
-    ): Ob | null => {
-        if (!applyOp || !obType || obType.tag !== "ModeApp") {
-            return null;
-        }
-        return wrapApp(buildObList(obType.content.modality, objects), applyOp);
-    };
-
-    const domType = createMemo(() => {
-        const op = domApplyOp();
-        return op === undefined
-            ? props.theory.theory.src(props.morphism.morType)
-            : props.theory.theory.dom(op);
-    });
-
-    const codType = createMemo(() => {
-        const op = codApplyOp();
-        return op === undefined
-            ? props.theory.theory.tgt(props.morphism.morType)
-            : props.theory.theory.dom(op);
-    });
 
     /** The inner element type (unwrapped from ModeApp) for completions. */
     const elementObType = createMemo(() => {
-        const dt = domType();
+        const dt = mor.domType;
         return dt?.tag === "ModeApp" ? dt.content.obType : dt;
-    });
-
-    const domObs = () => {
-        const op = domApplyOp();
-        return extractObList(op ? unwrapApp(props.morphism.dom, op) : props.morphism.dom);
-    };
-    const codObs = () => {
-        const op = codApplyOp();
-        return extractObList(op ? unwrapApp(props.morphism.cod, op) : props.morphism.cod);
-    };
-
-    const setDomObs = (objects: Array<Ob | null>) => {
-        const ob = makeObList(objects, domType(), domApplyOp());
-        props.modifyMorphism((mor) => {
-            mor.dom = removeProxyAndCopy(ob);
-        });
-    };
-
-    const setCodObs = (objects: Array<Ob | null>) => {
-        const ob = makeObList(objects, codType(), codApplyOp());
-        props.modifyMorphism((mor) => {
-            mor.cod = removeProxyAndCopy(ob);
-        });
-    };
-
-    const updateDomObs = (f: (objects: Array<Ob | null>) => void) => {
-        const objects = removeProxyAndCopy(domObs());
-        f(objects);
-        setDomObs(objects);
-    };
-
-    const updateCodObs = (f: (objects: Array<Ob | null>) => void) => {
-        const objects = removeProxyAndCopy(codObs());
-        f(objects);
-        setCodObs(objects);
-    };
-
-    const insertDom = (i: number) => {
-        updateDomObs((objects) => objects.splice(i, 0, null));
-        setActive({ zone: "dom", index: i });
-    };
-
-    const insertCod = (i: number) => {
-        updateCodObs((objects) => objects.splice(i, 0, null));
-        setActive({ zone: "cod", index: i });
-    };
-
-    /** Reset active input and clean up null placeholders that have no user-entered text. */
-    const deactivate = () => {
-        setActive(null);
-        const dom = domObs().filter((ob, i) => ob !== null || (domInputTexts.get(i) ?? "") !== "");
-        if (dom.length !== domObs().length) {
-            setDomObs(dom);
-        }
-        const cod = codObs().filter((ob, i) => ob !== null || (codInputTexts.get(i) ?? "") !== "");
-        if (cod.length !== codObs().length) {
-            setCodObs(cod);
-        }
-    };
-
-    // Clean up when the cell becomes inactive.
-    createEffect(() => {
-        if (!props.isActive) {
-            untrack(() => deactivate());
-        }
     });
 
     const completions = () => liveModel().elaboratedModel()?.obGeneratorsWithType(elementObType());
 
-    const errors = () => {
-        const validated = liveModel().validatedModel();
-        if (validated?.tag !== "Invalid") {
-            return [];
-        }
-        return validated.errors.filter((err) => err.content === props.morphism.id);
+    const insertDom = (i: number) => {
+        mor.insertDom(i, null);
+        setActive({ zone: "dom", index: i });
     };
+
+    const insertCod = (i: number) => {
+        mor.insertCod(i, null);
+        setActive({ zone: "cod", index: i });
+    };
+
+    // Clean up null placeholders when the cell becomes inactive.
+    createEffect(() => {
+        if (!props.isActive) {
+            untrack(() => {
+                setActive(null);
+                pruneEmptyWires(mor.domList, domTexts, (i) => mor.removeDom(i));
+                pruneEmptyWires(mor.codList, codTexts, (i) => mor.removeCod(i));
+            });
+        }
+    });
 
     return (
         <div class={`formal-judgment ${styles.morphism}`}>
             <WireColumn
-                obs={domObs()}
+                obs={mor.domList}
                 side="left"
-                isInvalid={errors().some((err) => err.tag === "Dom" || err.tag === "DomType")}
+                isInvalid={mor.hasDomError}
                 completions={completions()}
                 isActive={(i) => {
                     const a = active();
                     return props.isActive && a?.zone === "dom" && a.index === i;
                 }}
-                onTextChange={(i, text) => domInputTexts.set(i, text)}
+                onTextChange={(i, text) => domTexts.set(i, text)}
                 insertWire={insertDom}
-                updateOb={(i, ob) =>
-                    updateDomObs((objects) => {
-                        objects[i] = ob;
-                    })
-                }
-                deleteWire={(i) => updateDomObs((objects) => objects.splice(i, 1))}
+                updateOb={(i, ob) => mor.setDomAt(i, ob)}
+                deleteWire={(i) => mor.removeDom(i)}
                 activateWire={(i) => setActive({ zone: "dom", index: i })}
                 activateName={() => setActive({ zone: "name" })}
                 exitFirstBackward={() => setActive({ zone: "name" })}
                 exitLastForward={() => {
-                    if (codObs().length > 0) {
+                    if (mor.codList.length > 0) {
                         setActive({ zone: "cod", index: 0 });
                     } else {
                         insertCod(0);
@@ -283,18 +221,14 @@ export default function StringDiagramMorphismCellEditor(props: MorphismEditorPro
             <div class={styles.box}>
                 <NameInput
                     placeholder={morTypeMeta()?.preferUnnamed ? undefined : "Unnamed"}
-                    name={props.morphism.name}
-                    setName={(name) => {
-                        props.modifyMorphism((mor) => {
-                            mor.name = name;
-                        });
-                    }}
+                    name={mor.name}
+                    setName={mor.setName}
                     isActive={props.isActive && active()?.zone === "name"}
                     deleteBackward={props.actions.deleteBackward}
                     deleteForward={props.actions.deleteForward}
                     exitBackward={props.actions.activateAbove}
                     exitForward={() => {
-                        if (domObs().length > 0) {
+                        if (mor.domList.length > 0) {
                             setActive({ zone: "dom", index: 0 });
                         } else {
                             insertDom(0);
@@ -303,14 +237,15 @@ export default function StringDiagramMorphismCellEditor(props: MorphismEditorPro
                     exitUp={props.actions.activateAbove}
                     exitDown={props.actions.activateBelow}
                     exitLeft={() => {
-                        if (domObs().length > 0) {
-                            setActive({ zone: "dom", index: domObs().length - 1 });
+                        const xs = mor.domList;
+                        if (xs.length > 0) {
+                            setActive({ zone: "dom", index: xs.length - 1 });
                         } else {
                             insertDom(0);
                         }
                     }}
                     exitRight={() => {
-                        if (codObs().length > 0) {
+                        if (mor.codList.length > 0) {
                             setActive({ zone: "cod", index: 0 });
                         } else {
                             insertCod(0);
@@ -323,27 +258,24 @@ export default function StringDiagramMorphismCellEditor(props: MorphismEditorPro
                 />
             </div>
             <WireColumn
-                obs={codObs()}
+                obs={mor.codList}
                 side="right"
-                isInvalid={errors().some((err) => err.tag === "Cod" || err.tag === "CodType")}
+                isInvalid={mor.hasCodError}
                 completions={completions()}
                 isActive={(i) => {
                     const a = active();
                     return props.isActive && a?.zone === "cod" && a.index === i;
                 }}
-                onTextChange={(i, text) => codInputTexts.set(i, text)}
+                onTextChange={(i, text) => codTexts.set(i, text)}
                 insertWire={insertCod}
-                updateOb={(i, ob) =>
-                    updateCodObs((objects) => {
-                        objects[i] = ob;
-                    })
-                }
-                deleteWire={(i) => updateCodObs((objects) => objects.splice(i, 1))}
+                updateOb={(i, ob) => mor.setCodAt(i, ob)}
+                deleteWire={(i) => mor.removeCod(i)}
                 activateWire={(i) => setActive({ zone: "cod", index: i })}
                 activateName={() => setActive({ zone: "name" })}
                 exitFirstBackward={() => {
-                    if (domObs().length > 0) {
-                        setActive({ zone: "dom", index: domObs().length - 1 });
+                    const xs = mor.domList;
+                    if (xs.length > 0) {
+                        setActive({ zone: "dom", index: xs.length - 1 });
                     } else {
                         setActive({ zone: "name" });
                     }

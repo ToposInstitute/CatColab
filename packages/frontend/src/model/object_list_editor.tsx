@@ -16,7 +16,7 @@ import type { Ob, QualifiedName } from "catlog-wasm";
 import { ObIdInput } from "../components";
 import { removeProxyAndCopy } from "../util/remove_proxy_and_copy";
 import { LiveModelContext } from "./context";
-import { buildObList, extractObList } from "./ob_operations";
+import { buildObList, extractObList } from "./edit_handle/ob";
 import type { ObInputProps } from "./object_input";
 
 import "./object_list_editor.css";

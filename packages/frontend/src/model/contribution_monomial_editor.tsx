@@ -6,7 +6,7 @@ import invariant from "tiny-invariant";
 import type { TextInputOptions } from "catcolab-ui-components";
 import type { Ob } from "catlog-wasm";
 import { LiveModelContext } from "./context";
-import { extractObList } from "./ob_operations";
+import { extractObList } from "./edit_handle/ob";
 import type { ObInputProps } from "./object_input";
 import { ObListEditor } from "./object_list_editor";
 
