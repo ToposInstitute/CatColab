@@ -1,12 +1,11 @@
-import { createMemo, createSignal, useContext, Switch, Match } from "solid-js";
+import { Match, Switch, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { NameInput } from "catcolab-ui-components";
-import type { Ob } from "catlog-wasm";
 import { LiveModelContext } from "./context";
 import { ContributionMonomialEditor } from "./contribution_monomial_editor";
+import { MorphismEditHandle } from "./edit_handle";
 import type { MorphismEditorProps } from "./editors";
-import { unwrapApp, wrapApp } from "./ob_operations";
 import { obClasses } from "./object_cell_editor";
 import { ObInput } from "./object_input";
 
@@ -32,71 +31,31 @@ export default function ContributionCellEditor(
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 
+    /* oxlint-disable solid/reactivity -- handle methods read props lazily */
+    const mor = new MorphismEditHandle({
+        theory: () => props.theory,
+        morphism: () => props.morphism,
+        modify: (f) => props.modifyMorphism(f),
+        validated: () => liveModel().validatedModel(),
+    });
+    /* oxlint-enable solid/reactivity */
+
     const [activeInput, setActiveInput] = createSignal<MorphismCellInput>("name");
 
     const morTypeMeta = () => props.theory.modelMorTypeMeta(props.morphism.morType);
 
-    const domType = createMemo(() => {
-        const theory = props.theory.theory;
-        const op = morTypeMeta()?.domain?.apply;
-        if (op === undefined) {
-            return theory.src(props.morphism.morType);
-        } else {
-            // Codomain type for operation should equal source type above.
-            return theory.dom(op);
-        }
-    });
-
-    const codType = createMemo(() => {
-        const theory = props.theory.theory;
-        const op = morTypeMeta()?.codomain?.apply;
-        if (op === undefined) {
-            return theory.tgt(props.morphism.morType);
-        } else {
-            // Codomain type for operation should equal target type above.
-            return theory.dom(op);
-        }
-    });
-
-    const domClasses = () => ["morphism-decl-dom", ...obClasses(props.theory, domType())];
-    const codClasses = () => ["morphism-decl-cod", ...obClasses(props.theory, codType())];
+    const domClasses = () => ["morphism-decl-dom", ...obClasses(props.theory, mor.domType)];
+    const codClasses = () => ["morphism-decl-cod", ...obClasses(props.theory, mor.codType)];
 
     const nameClasses = () => ["morphism-decl-name", ...(morTypeMeta()?.textClasses ?? [])];
-
-    const errors = () => {
-        const validated = liveModel().validatedModel();
-        if (validated?.tag !== "Invalid") {
-            return [];
-        }
-        return validated.errors.filter((err) => err.content === props.morphism.id);
-    };
-
-    const domApplyOp = () => morTypeMeta()?.domain?.apply;
-
-    const domOb = () => {
-        const op = domApplyOp();
-        return op ? unwrapApp(props.morphism.dom, op) : props.morphism.dom;
-    };
-
-    const setDomOb = (ob: Ob | null) => {
-        const op = domApplyOp();
-        const wrapped = ob && op ? wrapApp(ob, op) : ob;
-        props.modifyMorphism((mor) => {
-            mor.dom = wrapped;
-        });
-    };
 
     return (
         <div class={`formal-judgment ${styles["morphism-decl"]}`}>
             <div class={nameClasses().join(" ")}>
                 <NameInput
                     placeholder={morTypeMeta()?.preferUnnamed ? undefined : "Unnamed"}
-                    name={props.morphism.name}
-                    setName={(name) => {
-                        props.modifyMorphism((mor) => {
-                            mor.name = name;
-                        });
-                    }}
+                    name={mor.name}
+                    setName={mor.setName}
                     isActive={props.isActive && activeInput() === "name"}
                     deleteBackward={props.actions.deleteBackward}
                     deleteForward={props.actions.deleteForward}
@@ -122,15 +81,10 @@ export default function ContributionCellEditor(
             <div class={codClasses().join(" ")}>
                 <ObInput
                     placeholder="..."
-                    ob={props.morphism.cod}
-                    setOb={(ob) => {
-                        props.modifyMorphism((mor) => {
-                            mor.cod = ob;
-                        });
-                    }}
-                    obType={codType()}
-                    applyOp={morTypeMeta()?.codomain?.apply}
-                    isInvalid={errors().some((err) => err.tag === "Cod" || err.tag === "CodType")}
+                    ob={mor.cod}
+                    setOb={mor.setCod}
+                    obType={mor.codType}
+                    isInvalid={mor.hasCodError}
                     isActive={props.isActive && activeInput() === "cod"}
                     deleteForward={() => setActiveInput("name")}
                     exitBackward={props.actions.activateAbove}
@@ -153,10 +107,10 @@ export default function ContributionCellEditor(
             <div class={domClasses().join(" ")}>
                 <ContributionMonomialEditor
                     placeholder="..."
-                    ob={domOb()}
-                    setOb={setDomOb}
-                    obType={domType()}
-                    isInvalid={errors().some((err) => err.tag === "Dom" || err.tag === "DomType")}
+                    ob={mor.dom}
+                    setOb={mor.setDom}
+                    obType={mor.domType}
+                    isInvalid={mor.hasDomError}
                     isActive={props.isActive && activeInput() === "dom"}
                     deleteBackward={() => setActiveInput("name")}
                     exitBackward={() => setActiveInput("name")}
