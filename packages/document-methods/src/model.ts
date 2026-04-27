@@ -2,7 +2,6 @@ import { v7 } from "uuid";
 
 import type { Document, Link, ModelJudgment, MorType, ObType } from "catcolab-document-types";
 import { currentVersion } from "catcolab-document-types";
-import { deepCopyJSON } from "./deepcopy";
 import { newNotebook } from "./notebook";
 
 /** A document defining a model. */
@@ -52,6 +51,6 @@ export const newInstantiatedModel = (
 
 /** Duplicate a model judgment, creating a fresh UUID when applicable. */
 export const duplicateModelJudgment = (jgmt: ModelJudgment): ModelJudgment => ({
-    ...deepCopyJSON(jgmt),
+    ...structuredClone(jgmt),
     id: v7(),
 });

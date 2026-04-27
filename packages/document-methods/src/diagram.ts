@@ -10,7 +10,6 @@ import type {
     StableRef,
 } from "catcolab-document-types";
 import { currentVersion } from "catcolab-document-types";
-import { deepCopyJSON } from "./deepcopy";
 import { newNotebook } from "./notebook";
 
 /** A document defining a diagram in a model. */
@@ -56,6 +55,6 @@ export const newDiagramMorphismDecl = (
 
 /** Duplicate a diagram judgment, creating a fresh UUID. */
 export const duplicateDiagramJudgment = (jgmt: DiagramJudgment): DiagramJudgment => ({
-    ...deepCopyJSON(jgmt),
+    ...structuredClone(jgmt),
     id: v7(),
 });
