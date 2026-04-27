@@ -1,8 +1,8 @@
 import { createMemo, createSignal, useContext } from "solid-js";
-import { unwrap } from "solid-js/store";
 import invariant from "tiny-invariant";
 
 import { NameInput } from "catcolab-ui-components";
+import { removeProxyAndCopy } from "../util/remove_proxy_and_copy";
 import { LiveModelContext } from "./context";
 import type { MorphismEditorProps } from "./editors";
 import { obClasses } from "./object_cell_editor";
@@ -68,7 +68,7 @@ export default function MorphismCellEditor(props: MorphismEditorProps) {
                     ob={props.morphism.dom}
                     setOb={(ob) => {
                         props.modifyMorphism((mor) => {
-                            mor.dom = structuredClone(unwrap(ob));
+                            mor.dom = removeProxyAndCopy(ob);
                         });
                     }}
                     obType={domType()}
@@ -120,7 +120,7 @@ export default function MorphismCellEditor(props: MorphismEditorProps) {
                     ob={props.morphism.cod}
                     setOb={(ob) => {
                         props.modifyMorphism((mor) => {
-                            mor.cod = structuredClone(unwrap(ob));
+                            mor.cod = removeProxyAndCopy(ob);
                         });
                     }}
                     obType={codType()}
