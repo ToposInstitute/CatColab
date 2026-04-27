@@ -37,4 +37,5 @@
 <!-- Type theory -->
 \newcommand{\context}{\mathsf{cx}}
 \newcommand{\type}{\mathsf{ty}}
+\newcommand{\eqtype}{\mathsf{eq}}
 \newcommand{\letin}[1]{\mathsf{let}\;{#1}\;\mathsf{in}\;}
