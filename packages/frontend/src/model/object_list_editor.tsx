@@ -14,7 +14,7 @@ import invariant from "tiny-invariant";
 import type { TextInputOptions } from "catcolab-ui-components";
 import type { Ob, QualifiedName } from "catlog-wasm";
 import { ObIdInput } from "../components";
-import { deepCopyJSON } from "../util/deepcopy";
+import { removeProxyAndCopy } from "../util/remove_proxy_and_copy";
 import { LiveModelContext } from "./context";
 import { buildObList, extractObList } from "./ob_operations";
 import type { ObInputProps } from "./object_input";
@@ -63,7 +63,7 @@ export function ObListEditor(originalProps: ObListEditorProps) {
     };
 
     const updateObList = (f: (objects: Array<Ob | null>) => void) => {
-        const objects = deepCopyJSON(obList());
+        const objects = removeProxyAndCopy(obList());
         f(objects);
         setObList(objects);
     };

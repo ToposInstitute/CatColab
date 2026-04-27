@@ -2,7 +2,6 @@ import invariant from "tiny-invariant";
 import { v7 } from "uuid";
 
 import type { Cell, Notebook } from "catcolab-document-types";
-import { deepCopyJSON } from "./deepcopy";
 
 /** A cell containing custom data, usually a formal object. */
 export type FormalCell<T> = Cell<T> & { tag: "formal" };
@@ -141,10 +140,17 @@ export function numCells<T>(notebook: Notebook<T>): number {
     return notebook.cellOrder.length;
 }
 
-function duplicateCell<T>(cell: Cell<T>, duplicateFn?: (cellContent: T) => T): Cell<T> {
+/** Duplicate a cell, optionally using a caller-supplied content cloner.
+
+The default cloner is `structuredClone`, which requires `cell.content` to
+be a plain JavaScript value (no proxies). Callers working with Automerge
+or Solid store proxies should materialize the cell to plain JS before
+calling this function.
+ */
+export function duplicateCell<T>(cell: Cell<T>, duplicateFn?: (cellContent: T) => T): Cell<T> {
     switch (cell.tag) {
         case "formal": {
-            const content = (duplicateFn ?? deepCopyJSON)(cell.content);
+            const content = duplicateFn ? duplicateFn(cell.content) : structuredClone(cell.content);
             return newFormalCell(content);
         }
         case "rich-text":
@@ -154,16 +160,6 @@ function duplicateCell<T>(cell: Cell<T>, duplicateFn?: (cellContent: T) => T): C
         default:
             throw new Error(`Call has unknown tag: ${cell}`);
     }
-}
-
-export function duplicateCellAtIndex<T>(
-    notebook: Notebook<T>,
-    index: number,
-    duplicateFn?: (cellContent: T) => T,
-) {
-    const cell = getCellByIndex(notebook, index);
-    const newCell = duplicateCell(cell, duplicateFn);
-    insertCellAtIndex(notebook, newCell, index + 1);
 }
 
 export function mutateCellContentById<T>(

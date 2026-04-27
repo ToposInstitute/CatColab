@@ -24,6 +24,7 @@ import {
     keyEventHasModifier,
     type ModifierKey,
 } from "catcolab-ui-components";
+import { materializeFromAutomerge } from "../util/materialize_from_automerge";
 import {
     type CellActions,
     type CellDragData,
@@ -314,9 +315,18 @@ export function NotebookEditor<T>(props: {
                             // oxlint-disable-next-line solid/reactivity -- event handler
                             cellActions.duplicate = () => {
                                 const index = i();
+                                // Materialize the source cell out of Automerge
+                                // before entering the change callback, so that
+                                // `duplicateCell` (which uses `structuredClone`
+                                // by default) operates on plain JS values.
+                                const plainCell = materializeFromAutomerge(
+                                    props.handle.doc(),
+                                    cell,
+                                );
+                                const newCell = Nb.duplicateCell(plainCell, props.duplicateCell);
                                 // oxlint-disable-next-line solid/reactivity -- event handler
                                 props.changeNotebook((nb) => {
-                                    Nb.duplicateCellAtIndex(nb, index, props.duplicateCell);
+                                    Nb.insertCellAtIndex(nb, newCell, index + 1);
                                 });
                                 setActiveCell(index + 1);
                             };

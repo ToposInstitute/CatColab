@@ -1,10 +1,10 @@
 import { Index, createEffect, createMemo, createSignal, untrack, useContext } from "solid-js";
-import { unwrap } from "solid-js/store";
 import invariant from "tiny-invariant";
 
 import { NameInput } from "catcolab-ui-components";
 import type { Ob, ObOp, ObType, QualifiedName } from "catlog-wasm";
 import { ObIdInput } from "../components";
+import { removeProxyAndCopy } from "../util/remove_proxy_and_copy";
 import { LiveModelContext } from "./context";
 import type { MorphismEditorProps } from "./editors";
 import { buildObList, extractObList, unwrapApp, wrapApp } from "./ob_operations";
@@ -186,25 +186,25 @@ export default function StringDiagramMorphismCellEditor(props: MorphismEditorPro
     const setDomObs = (objects: Array<Ob | null>) => {
         const ob = makeObList(objects, domType(), domApplyOp());
         props.modifyMorphism((mor) => {
-            mor.dom = structuredClone(unwrap(ob));
+            mor.dom = removeProxyAndCopy(ob);
         });
     };
 
     const setCodObs = (objects: Array<Ob | null>) => {
         const ob = makeObList(objects, codType(), codApplyOp());
         props.modifyMorphism((mor) => {
-            mor.cod = structuredClone(unwrap(ob));
+            mor.cod = removeProxyAndCopy(ob);
         });
     };
 
     const updateDomObs = (f: (objects: Array<Ob | null>) => void) => {
-        const objects = structuredClone(unwrap(domObs()));
+        const objects = removeProxyAndCopy(domObs());
         f(objects);
         setDomObs(objects);
     };
 
     const updateCodObs = (f: (objects: Array<Ob | null>) => void) => {
-        const objects = structuredClone(unwrap(codObs()));
+        const objects = removeProxyAndCopy(codObs());
         f(objects);
         setCodObs(objects);
     };
