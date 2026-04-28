@@ -10,17 +10,55 @@
 }
 
 .model-specializations {
+    --add-specialization-height: 1.5em;
+
+    /* Use a grid so the arrow column is always at the same x position across
+       all rows, regardless of what is rendered on the left or right side. */
+    display: grid;
+    grid-template-columns: max-content max-content 1fr;
+    align-items: baseline;
+    column-gap: 1ex;
+    row-gap: 0;
+
+    position: relative;
     list-style: none;
 
     margin-left: 0.5rem;
     padding-left: 1rem;
-    border-left: 2px solid var(--color-gray-450);
+    transition: padding-bottom 0.15s;
+
+    &.has-instantiated {
+        padding-bottom: var(--add-specialization-height);
+    }
+
+    &:before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--color-gray-450);
+        transition: bottom 0.15s;
+    }
+
+    &.has-instantiated:before {
+        bottom: var(--add-specialization-height);
+    }
+
+    /* Each row spans all three grid columns by becoming a subgrid. */
+    & > li {
+        display: grid;
+        grid-template-columns: subgrid;
+        grid-column: 1 / -1;
+        align-items: baseline;
+    }
 }
 
 .model-specialization {
-    display: flex;
-    flex-direction: row;
-    gap: 1ex;
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: 1 / -1;
     align-items: baseline;
 
     & .specialize-as:before {
@@ -29,5 +67,42 @@
 
     & .placeholder {
         color: var(--color-gray-750);
+    }
+
+    /* When the inline-input-filler is being used directly as a placeholder
+       (no real input on top of it), make it visible. */
+    & .inline-input-filler.placeholder {
+        visibility: visible;
+    }
+}
+
+.model-specialization-add {
+    cursor: pointer;
+    height: 0;
+    overflow: hidden;
+    pointer-events: none;
+    opacity: 0;
+    transition:
+        opacity 0.15s,
+        height 0.15s;
+}
+
+.formal-judgment:hover .model-specializations.has-instantiated,
+.formal-judgment:focus-within .model-specializations.has-instantiated {
+    padding-bottom: 0;
+
+    &:before {
+        bottom: 0;
+    }
+}
+
+.formal-judgment:hover .model-specializations.has-instantiated .model-specialization-add,
+.formal-judgment:focus-within .model-specializations.has-instantiated .model-specialization-add {
+    opacity: 0.5;
+    height: var(--add-specialization-height);
+    pointer-events: auto;
+
+    &:hover {
+        opacity: 0.85;
     }
 }

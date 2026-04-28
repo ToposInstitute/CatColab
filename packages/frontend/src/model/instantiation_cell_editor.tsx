@@ -1,5 +1,14 @@
 import type { DocInfo } from "catcolab-api/src/user_state";
-import { batch, createSignal, Index, Show, splitProps, useContext } from "solid-js";
+import {
+    batch,
+    createEffect,
+    createSignal,
+    Index,
+    Show,
+    splitProps,
+    untrack,
+    useContext,
+} from "solid-js";
 import invariant from "tiny-invariant";
 
 import { NameInput, type TextInputOptions } from "catcolab-ui-components";
@@ -73,6 +82,73 @@ export function InstantiationCellEditor(props: {
         activateIndex(0);
     };
 
+    const appendSpecialization = () => {
+        let newIndex = 0;
+        props.modifyInstantiation((inst) => {
+            inst.specializations.push({ id: null, ob: null });
+            newIndex = inst.specializations.length - 1;
+        });
+        activateIndex(newIndex);
+    };
+
+    // Track the displayed text in each specialization row's id input so we can
+    // distinguish a fully-empty row from one with invalid (incomplete) text.
+    // The ob input is only rendered when id is set, so we don't need to track
+    // its text for emptiness detection.
+    const idInputTexts = new Map<number, string>();
+
+    /** Drop specialization rows whose id and ob are both null AND whose visible
+     * text in the id input is empty. Rows with invalid (non-empty) text are
+     * kept so the user can correct them.
+     */
+    const pruneEmptySpecializations = () => {
+        const specs = props.instantiation.specializations;
+        // Collect indices of empty rows in increasing order.
+        const removedIndices: number[] = [];
+        for (let i = 0; i < specs.length; i++) {
+            const spec = specs[i]!;
+            const idText = idInputTexts.get(i) ?? "";
+            if (spec.id == null && spec.ob == null && idText === "") {
+                removedIndices.push(i);
+            }
+        }
+        if (removedIndices.length === 0) {
+            return;
+        }
+        // Splice in reverse order so earlier indices stay valid; this avoids
+        // creating a new array and reassigning, which would copy proxy objects.
+        props.modifyInstantiation((inst) => {
+            for (let k = removedIndices.length - 1; k >= 0; k--) {
+                inst.specializations.splice(removedIndices[k]!, 1);
+            }
+        });
+        // Remap the text-tracking map to the new indices.
+        const removedSet = new Set(removedIndices);
+        const newIdTexts = new Map<number, string>();
+        let newIdx = 0;
+        for (let oldIdx = 0; oldIdx < specs.length; oldIdx++) {
+            if (removedSet.has(oldIdx)) {
+                continue;
+            }
+            const idText = idInputTexts.get(oldIdx);
+            if (idText !== undefined) {
+                newIdTexts.set(newIdx, idText);
+            }
+            newIdx++;
+        }
+        idInputTexts.clear();
+        for (const [k, v] of newIdTexts) {
+            idInputTexts.set(k, v);
+        }
+    };
+
+    // Clean up empty rows when the cell becomes inactive.
+    createEffect(() => {
+        if (!props.isActive) {
+            untrack(() => pruneEmptySpecializations());
+        }
+    });
+
     const exitDownFromTop = () => {
         if (props.instantiation.specializations.length === 0) {
             props.actions.activateBelow();
@@ -108,10 +184,7 @@ export function InstantiationCellEditor(props: {
                 <span class="is-a" />
                 <DocumentPicker
                     refId={refId() ?? null}
-                    setRefId={(refId) => {
-                        setRefId(refId);
-                        insertSpecializationAtTop();
-                    }}
+                    setRefId={setRefId}
                     filterCompletions={filterCompletions}
                     placeholder="..."
                     deleteBackward={() => setActiveComponent("name")}
@@ -126,7 +199,10 @@ export function InstantiationCellEditor(props: {
                     }}
                 />
             </div>
-            <ul class="model-specializations">
+            <ul
+                class="model-specializations"
+                classList={{ "has-instantiated": instantiated() != null }}
+            >
                 <Index each={props.instantiation.specializations}>
                     {(spec, i) => (
                         <li>
@@ -139,6 +215,7 @@ export function InstantiationCellEditor(props: {
                                         f(spec);
                                     });
                                 }}
+                                onIdTextChange={(text) => idInputTexts.set(i, text)}
                                 instantiatedModel={instantiated()?.validatedModel.model ?? null}
                                 isActive={
                                     props.isActive &&
@@ -176,6 +253,34 @@ export function InstantiationCellEditor(props: {
                         </li>
                     )}
                 </Index>
+                <Show when={instantiated()}>
+                    <li
+                        class="model-specialization-add"
+                        onMouseDown={(evt) => {
+                            appendSpecialization();
+                            props.actions.hasFocused();
+                            evt.preventDefault();
+                        }}
+                    >
+                        <div class="model-specialization">
+                            {/* Match the DOM of a real specialization row
+                                (IdInput-shaped input/filler on both sides) so
+                                the ghost's text positions align with real rows
+                                whose ob input is rendered. */}
+                            <div class="id-input">
+                                <div class="inline-input-container">
+                                    <span class="inline-input-filler placeholder">{"..."}</span>
+                                </div>
+                            </div>
+                            <span class="specialize-as" />
+                            <div class="id-input">
+                                <div class="inline-input-container">
+                                    <span class="inline-input-filler placeholder">{"..."}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                </Show>
             </ul>
         </div>
     );
@@ -188,6 +293,8 @@ function SpecializationEditor(
         specialization: SpecializeModel;
         modifySpecialization: (f: (spec: SpecializeModel) => void) => void;
         instantiatedModel: DblModel | null;
+        /** Called when the displayed text of the id input changes. */
+        onIdTextChange?: (text: string) => void;
     } & Pick<
         TextInputOptions,
         "isActive" | "hasFocused" | "createBelow" | "deleteBackward" | "exitDown" | "exitUp"
@@ -217,6 +324,7 @@ function SpecializationEditor(
                         spec.id = id;
                     });
                 }}
+                onTextChange={props.onIdTextChange}
                 completions={props.instantiatedModel?.obGenerators()}
                 idToLabel={(id) => props.instantiatedModel?.obGeneratorLabel(id)}
                 labelToId={(label) => props.instantiatedModel?.obGeneratorWithLabel(label)}
@@ -231,7 +339,16 @@ function SpecializationEditor(
                 {...inputProps}
             />
             <span class="specialize-as" />
-            <Show when={obType()} fallback={<span class="placeholder">{"..."}</span>}>
+            <Show
+                when={obType()}
+                fallback={
+                    <div class="id-input">
+                        <div class="inline-input-container">
+                            <span class="inline-input-filler placeholder">{"..."}</span>
+                        </div>
+                    </div>
+                }
+            >
                 {(obType) => (
                     <ObInput
                         placeholder="..."
