@@ -36,9 +36,18 @@ include notable new features.
 
 ### Changed
 
-- Backend re-architecture: Automerge meta-documents are now created by the
-  backend to maintain user state, such as the user's list of documents
+- Backend architecture: Automerge meta-documents are now created by the backend
+  to maintain user state, such as the user's list of documents
   ([#976](https://github.com/ToposInstitute/CatColab/pull/976))
+- Frontend architecture: TypeScript methods to manipulate CatColab documents
+  independent of the UI have been extracted into a new package
+  (`packages/document-methods`)
+  ([#1238](https://github.com/ToposInstitute/CatColab/pull/1238))
+- Experimental: the plugin for
+  [Patchwork](https://www.inkandswitch.com/project/patchwork/) (previously
+  `packages/patchwork`) has been replaced with a plugin for new Patchwork/GAIOS
+  (now `packages/gaios`)
+  ([#1233](https://github.com/ToposInstitute/CatColab/pull/1233))
 
 ## [v0.5.1](https://github.com/ToposInstitute/CatColab/releases/tag/v0.5.1) & [v0.5.2](https://github.com/ToposInstitute/CatColab/releases/tag/v0.5.2) (2026-03-24)
 
@@ -80,7 +89,7 @@ Sandpiper](https://topos.institute/blog/2026-03-23-catcolab-0-5-sandpiper/)
 
 ### Changed
 
-- Backend re-architecture
+- Backend architecture
   ([#875](https://github.com/ToposInstitute/CatColab/pull/875)): syncing of
   [Automerge](https://automerge.org/) documents is now provided by the Rust
   crate [samod](https://github.com/alexjg/samod) instead of the Node package
