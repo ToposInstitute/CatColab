@@ -33,7 +33,7 @@ pub enum Mor {
     Basic(String),
 
     /// Composite of morphisms.
-    Composite(Box<Path<Ob, Mor>>),
+    Composite(#[tsify(type = "Path<Ob, Mor>")] Box<Path<Ob, Mor>>),
 
     /// Morphism between tabulated morphisms, a commutative square.
     TabulatorSquare {
