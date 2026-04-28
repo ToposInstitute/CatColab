@@ -148,6 +148,7 @@ export function IdInput(
                 status={status()}
                 autofill={props.generateId ? setNewId : undefined}
                 {...inputProps}
+                showCompletionsOnFocus={inputProps.showCompletionsOnFocus ?? true}
             />
         </div>
     );
