@@ -74,6 +74,13 @@
     & .inline-input-filler.placeholder {
         visibility: visible;
     }
+
+    /* Mark the left-hand side as a sub-object with a leading dot. The left
+       cell is the first grid item in every row (left, arrow, right). */
+    & > :nth-child(1):before {
+        content: ".";
+        margin-right: -0.4ex;
+    }
 }
 
 .model-specialization-add {
