@@ -28,7 +28,7 @@ export type TextInputOptions = TextInputActions & {
     /** List of possible auto-completions. */
     completions?: Completion[];
 
-    /** Whether to show possible auto-completions when focus is gained. */
+    /** Whether to show possible auto-completions when focus is gained. Defaults to yes. */
     showCompletionsOnFocus?: boolean;
 
     /** Extra CSS class to apply to the completions popup. */
@@ -225,16 +225,22 @@ export function TextInput(allProps: TextInputProps) {
                     use:focus={(isFocused) => {
                         if (isFocused) {
                             options.hasFocused?.();
+                            if (
+                                options.completions != null &&
+                                (options.showCompletionsOnFocus ?? true)
+                            ) {
+                                setCompletionsOpen(true);
+                            }
                         } else {
                             options.hasBlurred?.();
-                        }
-                        if (!isFocused || options.showCompletionsOnFocus) {
-                            setCompletionsOpen(isFocused);
+                            setCompletionsOpen(false);
                         }
                     }}
                     onInput={(evt) => {
                         props.setText(evt.target.value);
-                        setCompletionsOpen(true);
+                        if (options.completions != null) {
+                            setCompletionsOpen(true);
+                        }
                     }}
                     onKeyDown={onKeyDown}
                     {...inputProps}
