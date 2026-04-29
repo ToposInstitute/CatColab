@@ -36,6 +36,10 @@ include notable new features.
 
 ### Changed
 
+- UI/UX: Better interface to instantiate and specialize models, including a new
+  widget to search over existing models
+  ([#1210](https://github.com/ToposInstitute/CatColab/pull/1210),
+  [#1244](https://github.com/ToposInstitute/CatColab/pull/1244))
 - Backend architecture: Automerge meta-documents are now created by the backend
   to maintain user state, such as the user's list of documents
   ([#976](https://github.com/ToposInstitute/CatColab/pull/976))
