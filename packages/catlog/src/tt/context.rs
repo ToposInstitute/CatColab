@@ -4,6 +4,21 @@ use derive_more::Constructor;
 
 use crate::tt::{prelude::*, val::*};
 
+/// What kind of binding a context entry represents.
+///
+/// Most bindings are ordinary `Term` bindings. `Diagram` bindings are pushed
+/// by the `diagram` toplevel arm so that `@over .E` can recover the
+/// enclosing diagram's name and codomain type without exposing the diagram
+/// to ordinary term lookup (where it would masquerade as a term of the
+/// codomain type).
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum VarKind {
+    /// An ordinary term-level binding.
+    Term,
+    /// A binding for a diagram declaration; not resolvable by [`Context::lookup`].
+    Diagram,
+}
+
 /// Each variable in context is associated with a label and a type.
 ///
 /// Multiple variables with the same name can show up in context; in this case
@@ -19,6 +34,8 @@ pub struct VarInContext {
     /// We allow the type to be null as a hack for the `self` variable before we
     /// know the type of the `self` variable.
     pub ty: Option<TyV>,
+    /// What kind of binding this is.
+    pub kind: VarKind,
 }
 
 /// The variable context during elaboration.
@@ -61,35 +78,38 @@ impl Context {
         self.scope.truncate(c.scope);
     }
 
-    /// Add a new variable to scope (note: does not add it to the environment).
+    /// Add a new term-kind variable to scope (note: does not add it to the environment).
     pub fn push_scope(&mut self, name: VarName, label: LabelSegment, ty: Option<TyV>) {
-        self.scope.push(VarInContext::new(name, label, ty))
+        self.scope.push(VarInContext::new(name, label, ty, VarKind::Term))
     }
 
-    /// Lookup a variable by name.
+    /// Add a new diagram-kind variable to scope.
+    pub fn push_diagram(&mut self, name: VarName, label: LabelSegment, ty: TyV) {
+        self.scope.push(VarInContext::new(name, label, Some(ty), VarKind::Diagram))
+    }
+
+    /// Lookup a term-kind variable by name.
+    ///
+    /// Diagram-kind entries are skipped, so a `Var(I)` referring to an
+    /// enclosing `diagram I := ...` will not resolve here.
     pub fn lookup(&self, name: VarName) -> Option<(BwdIdx, LabelSegment, Option<TyV>)> {
         self.scope
             .iter()
             .rev()
             .enumerate()
-            .find(|(_, v)| v.name == name)
+            .find(|(_, v)| v.kind == VarKind::Term && v.name == name)
             .map(|(i, v)| (i.into(), v.label, v.ty.clone()))
     }
 
-    /// Lookup a variable by label.
+    /// Find the most recent diagram-kind binding in scope, if any.
     ///
-    /// Used to find variables bound under a reserved label (e.g. `@diag`)
-    /// where the caller wants to recover the variable's name rather than
-    /// look it up by name.
-    pub fn lookup_by_label(
-        &self,
-        label: LabelSegment,
-    ) -> Option<(BwdIdx, VarName, Option<TyV>)> {
+    /// Returns the diagram's name and codomain type. Used by the `@over .E`
+    /// type elaborator.
+    pub fn lookup_diagram(&self) -> Option<(VarName, TyV)> {
         self.scope
             .iter()
             .rev()
-            .enumerate()
-            .find(|(_, v)| v.label == label)
-            .map(|(i, v)| (i.into(), v.name, v.ty.clone()))
+            .find(|v| v.kind == VarKind::Diagram)
+            .map(|v| (v.name, v.ty.clone().expect("diagram binding must have a type")))
     }
 }
