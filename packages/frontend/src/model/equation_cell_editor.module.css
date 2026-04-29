@@ -26,6 +26,19 @@
     gap: 1ex;
 }
 
+.equals {
+    font-size: 1.5em;
+    text-align: center;
+    line-height: 1;
+}
+
+.rhsRow {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+}
+
 .pathDisplay {
     cursor: text;
 

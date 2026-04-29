@@ -22,7 +22,7 @@ import { obClasses } from "./object_cell_editor";
 import arrowStyles from "../stdlib/arrow_styles.module.css";
 import styles from "./equation_cell_editor.module.css";
 
-type EquationCellInput = "name" | "ob" | "lhs";
+type EquationCellInput = "name" | "ob" | "lhs" | "rhs";
 
 /** Extract the starting object from an equation's lhs.
 
@@ -69,9 +69,9 @@ function basicObId(ob: Ob | null): string | null {
 
 /** Editor for an equation cell in a model.
 
-Layout: `[name] [starting object] [lhs path picker]`.
+Layout: `[name] [starting object] [lhs path picker] = [rhs path picker]`.
 
-The lhs path picker shows a typeable list of every simple path from the
+Each path picker shows a typeable list of every simple path from the
 starting object as completions, each rendered diagrammatically.
  */
 export default function EquationCellEditor(props: EquationEditorProps) {
@@ -106,6 +106,11 @@ export default function EquationCellEditor(props: EquationEditorProps) {
             eqn.lhs = mor;
         });
 
+    const setRhs = (mor: Mor | null) =>
+        props.modifyEquation((eqn) => {
+            eqn.rhs = mor;
+        });
+
     const setName = (name: string) =>
         props.modifyEquation((eqn) => {
             eqn.name = name;
@@ -121,26 +126,26 @@ export default function EquationCellEditor(props: EquationEditorProps) {
 
     return (
         <div class={`formal-judgment ${styles["decl"]}`}>
+            <div class={styles["name"]}>
+                <NameInput
+                    placeholder="Unnamed"
+                    name={props.equation.name}
+                    setName={setName}
+                    isActive={props.isActive && activeInput() === "name"}
+                    deleteBackward={props.actions.deleteBackward}
+                    deleteForward={props.actions.deleteForward}
+                    exitBackward={props.actions.activateAbove}
+                    exitForward={() => setActiveInput("ob")}
+                    exitUp={props.actions.activateAbove}
+                    exitDown={() => setActiveInput("ob")}
+                    exitRight={() => setActiveInput("ob")}
+                    hasFocused={() => {
+                        setActiveInput("name");
+                        props.actions.hasFocused?.();
+                    }}
+                />
+            </div>
             <div class={styles["header"]}>
-                <div class={styles["name"]}>
-                    <NameInput
-                        placeholder="Unnamed"
-                        name={props.equation.name}
-                        setName={setName}
-                        isActive={props.isActive && activeInput() === "name"}
-                        deleteBackward={props.actions.deleteBackward}
-                        deleteForward={props.actions.deleteForward}
-                        exitBackward={props.actions.activateAbove}
-                        exitForward={() => setActiveInput("ob")}
-                        exitUp={props.actions.activateAbove}
-                        exitDown={() => setActiveInput("ob")}
-                        exitRight={() => setActiveInput("ob")}
-                        hasFocused={() => {
-                            setActiveInput("name");
-                            props.actions.hasFocused?.();
-                        }}
-                    />
-                </div>
                 <ObPicker
                     ob={startingOb()}
                     setOb={setStartingOb}
@@ -151,7 +156,7 @@ export default function EquationCellEditor(props: EquationEditorProps) {
                     placeholder="…"
                     exitBackward={() => setActiveInput("name")}
                     exitForward={() => setActiveInput("lhs")}
-                    exitUp={props.actions.activateAbove}
+                    exitUp={() => setActiveInput("name")}
                     exitDown={() => setActiveInput("lhs")}
                     exitLeft={() => setActiveInput("name")}
                     exitRight={() => setActiveInput("lhs")}
@@ -169,13 +174,35 @@ export default function EquationCellEditor(props: EquationEditorProps) {
                     isActive={props.isActive && activeInput() === "lhs"}
                     isCellActive={props.isActive}
                     exitBackward={() => setActiveInput("ob")}
-                    exitForward={props.actions.activateBelow}
-                    exitUp={props.actions.activateAbove}
-                    exitDown={props.actions.activateBelow}
+                    exitForward={() => setActiveInput("rhs")}
+                    exitUp={() => setActiveInput("name")}
+                    exitDown={() => setActiveInput("rhs")}
                     exitLeft={() => setActiveInput("ob")}
-                    exitRight={props.actions.activateBelow}
+                    exitRight={() => setActiveInput("rhs")}
                     hasFocused={() => {
                         setActiveInput("lhs");
+                        props.actions.hasFocused?.();
+                    }}
+                />
+            </div>
+            <div class={styles["equals"]}>{"="}</div>
+            <div class={styles["rhsRow"]}>
+                <PathPicker
+                    model={elaborated()}
+                    theory={props.theory}
+                    from={startingOb()}
+                    mor={props.equation.rhs}
+                    setMor={setRhs}
+                    isActive={props.isActive && activeInput() === "rhs"}
+                    isCellActive={props.isActive}
+                    exitBackward={() => setActiveInput("lhs")}
+                    exitForward={props.actions.activateBelow}
+                    exitUp={() => setActiveInput("lhs")}
+                    exitDown={props.actions.activateBelow}
+                    exitLeft={() => setActiveInput("lhs")}
+                    exitRight={props.actions.activateBelow}
+                    hasFocused={() => {
+                        setActiveInput("rhs");
                         props.actions.hasFocused?.();
                     }}
                 />
