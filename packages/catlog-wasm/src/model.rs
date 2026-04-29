@@ -19,7 +19,9 @@ use catlog::dbl::{
     },
     theory::{self as dbl_theory, ModalObOp, NonUnital, Unital},
 };
-use catlog::one::{Category as _, FgCategory, Path, QualifiedPath};
+use catlog::one::{
+    Category as _, FgCategory, Path, QualifiedPath, graph_algorithms::bounded_simple_paths_from,
+};
 use catlog::tt::{
     self,
     notebook_elab::{Elaborator as ElaboratorNext, demote_modality, promote_modality},
@@ -584,6 +586,40 @@ impl DblModel {
         })
     }
 
+    /// Lists all simple paths starting at the given object.
+    ///
+    /// "Simple" means no edge is repeated, so the result is finite even when
+    /// the underlying graph contains cycles. The identity path at `from` is
+    /// included as the first result. An optional `max_length` limits the
+    /// path length (number of edges); `None` means unbounded (still finite
+    /// because of the simple-path requirement).
+    ///
+    /// Currently supported only for discrete double models.
+    #[wasm_bindgen(js_name = "boundedSimplePathsFrom")]
+    pub fn bounded_simple_paths_from(
+        &self,
+        from: Ob,
+        max_length: Option<usize>,
+    ) -> Result<Vec<Mor>, String> {
+        match &self.model {
+            DblModelBox::Discrete(model) => {
+                let from_name: QualifiedName = Elaborator.elab(&from)?;
+                if !model.has_ob(&from_name) {
+                    return Err(format!(
+                        "Starting object not in model: {}",
+                        from_name.serialize_string()
+                    ));
+                }
+                let graph = model.generating_graph();
+                let paths = bounded_simple_paths_from(graph, &from_name, max_length)
+                    .map(|p| Quoter.quote(&p))
+                    .collect();
+                Ok(paths)
+            }
+            _ => Err("boundedSimplePathsFrom is only supported on discrete double models".into()),
+        }
+    }
+
     /// Gets the human-readable label, if any, for an object generator.
     #[wasm_bindgen(js_name = "obGeneratorLabel")]
     pub fn ob_generator_label(&self, id: &QualifiedName) -> Option<QualifiedLabel> {
@@ -917,5 +953,61 @@ pub(crate) mod tests {
         assert_eq!(model.ob_generators().len(), 2);
         assert_eq!(model.mor_generators().len(), 2);
         assert_eq!(model.validate().0, JsResult::Ok(()));
+    }
+
+    #[test]
+    fn bounded_simple_paths_from_simple() {
+        let th = ThSchema::new().theory();
+        let [a, entity, attr_type] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
+        let model = sch_walking_attr(&th, [a, entity, attr_type]);
+
+        let from = Ob::Basic(entity.to_string());
+        let paths = model.bounded_simple_paths_from(from.clone(), None).expect("should succeed");
+
+        // Identity at entity, plus the single morphism `a` from entity to attr_type.
+        assert_eq!(paths.len(), 2);
+        // First path is the identity.
+        match &paths[0] {
+            Mor::Composite(boxed) => match boxed.as_ref() {
+                notebook_path::Path::Id(ob) => {
+                    assert_eq!(ob, &from);
+                }
+                _ => panic!("Expected Path::Id, got {:?}", boxed),
+            },
+            other => panic!("Expected Mor::Composite, got {:?}", other),
+        }
+        // Second path is the basic morphism.
+        assert_eq!(paths[1], Mor::Basic(a.to_string()));
+
+        // max_length = 0 yields only the identity path.
+        let paths_zero =
+            model.bounded_simple_paths_from(from.clone(), Some(0)).expect("should succeed");
+        assert_eq!(paths_zero.len(), 1);
+    }
+
+    #[test]
+    fn bounded_simple_paths_from_unknown_object() {
+        let th = ThSchema::new().theory();
+        let [a, entity, attr_type] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
+        let model = sch_walking_attr(&th, [a, entity, attr_type]);
+
+        let unknown = Uuid::now_v7();
+        let result = model.bounded_simple_paths_from(Ob::Basic(unknown.to_string()), None);
+        let err = result.expect_err("expected error for missing object");
+        assert!(err.contains("Starting object not in model"), "unexpected error: {err}");
+    }
+
+    #[test]
+    fn bounded_simple_paths_from_non_discrete() {
+        // Modal theory ⇒ bounded_simple_paths_from should error.
+        let th = ThSymMonoidalCategory::new().theory();
+        let model = DblModel::new(&th);
+        let dummy = Uuid::now_v7();
+        let result = model.bounded_simple_paths_from(Ob::Basic(dummy.to_string()), None);
+        let err = result.expect_err("expected error for non-discrete model");
+        assert!(
+            err.contains("only supported on discrete double models"),
+            "unexpected error: {err}"
+        );
     }
 }
