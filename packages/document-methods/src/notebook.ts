@@ -9,13 +9,6 @@ export type FormalCell<T> = Cell<T> & { tag: "formal" };
 /** A cell containing rich text. */
 export type RichTextCell = Cell<unknown> & { tag: "rich-text" };
 
-/** A stem cell is a placeholder which will be converted into another cell.
-
-Stem cells are created when the user opens the "new cell" menu and are destroyed
-and replaced when a type for the new cell is selected.
- */
-export type StemCell = Cell<unknown> & { tag: "stem" };
-
 /** Creates an empty notebook. */
 export const newNotebook = <T>(): Notebook<T> => ({
     cellOrder: [],
@@ -34,12 +27,6 @@ export const newFormalCell = <T>(content: T): FormalCell<T> => ({
     tag: "formal",
     id: v7(),
     content: content,
-});
-
-/** Creates a new stem cell. */
-export const newStemCell = (): StemCell => ({
-    tag: "stem",
-    id: v7(),
 });
 
 export function getCells<T>(notebook: Notebook<T>): Array<Cell<T>> {
@@ -93,11 +80,6 @@ export function appendCell<T>(notebook: Notebook<T>, cell: Cell<T>) {
 export function insertCellAtIndex<T>(notebook: Notebook<T>, cell: Cell<T>, index: number) {
     notebook.cellOrder.splice(index, 0, cell.id);
     notebook.cellContents[cell.id] = cell;
-}
-
-export function newStemCellAtIndex<T>(notebook: Notebook<T>, index: number) {
-    const newCell = newStemCell();
-    insertCellAtIndex(notebook, newCell, index);
 }
 
 export function deleteCellAtIndex<T>(notebook: Notebook<T>, index: number) {
@@ -155,8 +137,6 @@ export function duplicateCell<T>(cell: Cell<T>, duplicateFn?: (cellContent: T) =
         }
         case "rich-text":
             throw new Error("Rich text cells may not be duplicated");
-        case "stem":
-            return newStemCell();
         default:
             throw new Error(`Call has unknown tag: ${cell}`);
     }

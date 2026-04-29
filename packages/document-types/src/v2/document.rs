@@ -1,16 +1,18 @@
-use crate::v0;
 use crate::v0::AnalysisType;
-pub use crate::v0::document::DocumentType;
+use crate::v1;
+pub use crate::v1::DocumentType;
 
 use super::analysis::Analysis;
 use super::api::Link;
 use super::notebook::Notebook;
 
 use serde::{Deserialize, Serialize};
+use tsify::Tsify;
 
 /// This is the content of a model document. For legacy reasons, we reserve
 /// the name "ModelDocument" for `Document & { type: "model" }`.
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct ModelDocumentContent {
     pub name: String,
     pub theory: String,
@@ -24,7 +26,8 @@ pub struct ModelDocumentContent {
     pub version: String,
 }
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct DiagramDocumentContent {
     pub name: String,
     #[serde(rename = "diagramIn")]
@@ -33,7 +36,8 @@ pub struct DiagramDocumentContent {
     pub version: String,
 }
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct AnalysisDocumentContent {
     pub name: String,
     #[serde(rename = "analysisType")]
@@ -44,8 +48,9 @@ pub struct AnalysisDocumentContent {
     pub version: String,
 }
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
 #[serde(tag = "type")]
+#[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum Document {
     #[serde(rename = "model")]
     Model(ModelDocumentContent),
@@ -56,29 +61,29 @@ pub enum Document {
 }
 
 impl Document {
-    pub fn migrate_from_v0(old: v0::Document) -> Self {
+    pub fn migrate_from_v1(old: v1::Document) -> Self {
         match old {
-            v0::Document::Model(old) => Document::Model(ModelDocumentContent {
+            v1::Document::Model(old) => Document::Model(ModelDocumentContent {
                 name: old.name,
                 theory: old.theory,
-                editor_variant: None,
-                notebook: Notebook::migrate_from_v0(old.notebook),
-                version: "1".to_string(),
+                editor_variant: old.editor_variant,
+                notebook: Notebook::migrate_from_v1(old.notebook),
+                version: "2".to_string(),
             }),
 
-            v0::Document::Diagram(old) => Document::Diagram(DiagramDocumentContent {
+            v1::Document::Diagram(old) => Document::Diagram(DiagramDocumentContent {
                 name: old.name,
                 diagram_in: old.diagram_in,
-                notebook: Notebook::migrate_from_v0(old.notebook),
-                version: "1".to_string(),
+                notebook: Notebook::migrate_from_v1(old.notebook),
+                version: "2".to_string(),
             }),
 
-            v0::Document::Analysis(old) => Document::Analysis(AnalysisDocumentContent {
+            v1::Document::Analysis(old) => Document::Analysis(AnalysisDocumentContent {
                 name: old.name,
                 analysis_type: old.analysis_type,
                 analysis_of: old.analysis_of,
-                notebook: Notebook::migrate_from_v0(old.notebook),
-                version: "1".to_string(),
+                notebook: Notebook::migrate_from_v1(old.notebook),
+                version: "2".to_string(),
             }),
         }
     }

@@ -17,7 +17,7 @@ import type { EditorView } from "prosemirror-view";
 import { createEffect, createSignal, type JSX, onCleanup, Show } from "solid-js";
 
 import type { Uuid } from "catcolab-document-types";
-import { type Completion, Completions, IconButton, InlineInput } from "catcolab-ui-components";
+import { type Completion, Completions, IconButton } from "catcolab-ui-components";
 import { RichTextEditor } from "../components";
 import { CellTypePopover } from "./notebook_editor";
 
@@ -46,12 +46,6 @@ export type CellActions = {
 
     /** Activate the cell below this one. */
     activateBelow: () => void;
-
-    /** Create a new stem cell above this one. */
-    createAbove: () => void;
-
-    /** Create a new stem cell below this one. */
-    createBelow: () => void;
 
     /** Delete this cell in the backward/upward direction. */
     deleteBackward: () => void;
@@ -316,32 +310,6 @@ export function RichTextCellEditor(
             exitUp={props.actions.activateAbove}
             exitDown={props.actions.activateBelow}
             onFocus={props.actions.hasFocused}
-        />
-    );
-}
-
-/** Editor for stem cells; cells that have not been differentiated yet.
- */
-export function StemCellEditor(
-    props: CellEditorProps & {
-        completions: Completion[];
-    },
-) {
-    const [text, setText] = createSignal("");
-
-    return (
-        <InlineInput
-            text={text()}
-            setText={setText}
-            placeholder="Select cell type"
-            completions={props.completions}
-            showCompletionsOnFocus={true}
-            isActive={props.isActive}
-            deleteBackward={props.actions.deleteBackward}
-            deleteForward={props.actions.deleteForward}
-            exitUp={props.actions.activateAbove}
-            exitDown={props.actions.activateBelow}
-            hasFocused={props.actions.hasFocused}
         />
     );
 }

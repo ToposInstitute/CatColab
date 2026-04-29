@@ -36,7 +36,6 @@ import {
     isCellDragData,
     NotebookCell,
     RichTextCellEditor,
-    StemCellEditor,
 } from "./notebook_cell";
 
 import "./notebook_editor.css";
@@ -124,19 +123,6 @@ export function NotebookEditor<T>(props: {
             };
         });
 
-    const replaceCellWith = (i: number, cell: Cell<T>) => {
-        props.changeNotebook((nb) => {
-            const oldId = nb.cellOrder[i];
-
-            nb.cellOrder[i] = cell.id;
-            nb.cellContents[cell.id] = cell;
-
-            if (oldId) {
-                delete nb.cellContents[oldId];
-            }
-        });
-    };
-
     const cellConstructors = (): CellConstructor<T>[] => [
         {
             name: "Text",
@@ -146,17 +132,6 @@ export function NotebookEditor<T>(props: {
         },
         ...(props.cellConstructors ?? []),
     ];
-
-    const replaceCommands = (i: number): Completion[] =>
-        cellConstructors().map((cc) => {
-            const { name, description, shortcut } = cc;
-            return {
-                name,
-                description,
-                shortcut: shortcut && [cellShortcutModifier, ...shortcut],
-                onComplete: () => replaceCellWith(i, cc.construct()),
-            };
-        });
 
     /** Completions for creating a new cell below position `i`. */
     const createBelowCommands = (i: number): Completion[] =>
@@ -343,20 +318,6 @@ export function NotebookEditor<T>(props: {
                                     setActiveCell(i() + 1);
                                 }
                             },
-                            createAbove() {
-                                const index = i();
-                                props.changeNotebook((nb) => {
-                                    Nb.newStemCellAtIndex(nb, index);
-                                });
-                                setActiveCell(index);
-                            },
-                            createBelow() {
-                                const index = i() + 1;
-                                props.changeNotebook((nb) => {
-                                    Nb.newStemCellAtIndex(nb, index);
-                                });
-                                setActiveCell(index);
-                            },
                             deleteBackward() {
                                 const index = i();
                                 props.changeNotebook((nb) => {
@@ -454,13 +415,6 @@ export function NotebookEditor<T>(props: {
                                                     actions={cellActions}
                                                 />
                                             )}
-                                        </Match>
-                                        <Match when={cell.tag === "stem"}>
-                                            <StemCellEditor
-                                                completions={replaceCommands(i())}
-                                                isActive={isActive()}
-                                                actions={cellActions}
-                                            />
                                         </Match>
                                     </Switch>
                                 </NotebookCell>

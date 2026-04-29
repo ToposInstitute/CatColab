@@ -1,12 +1,14 @@
-use crate::v0;
+use crate::v1;
 
 use super::cell::NotebookCell;
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use tsify::Tsify;
 use uuid::Uuid;
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)]
 pub struct Notebook<T> {
     #[serde(rename = "cellContents")]
     pub cell_contents: HashMap<Uuid, NotebookCell<T>>,
@@ -14,17 +16,19 @@ pub struct Notebook<T> {
     pub cell_order: Vec<Uuid>,
 }
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct ModelNotebook(pub Notebook<super::model_judgment::ModelJudgment>);
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct DiagramNotebook(pub Notebook<super::diagram_judgment::DiagramJudgment>);
 
 /// Arbitrary instances for property-based testing.
 #[cfg(feature = "property-tests")]
 pub(crate) mod arbitrary {
     use super::*;
-    use crate::v0::cell::arbitrary::arb_notebook_cell;
+    use crate::v2::cell::arbitrary::arb_notebook_cell;
     use proptest::prelude::*;
 
     fn arb_uuid() -> BoxedStrategy<Uuid> {
@@ -52,7 +56,6 @@ pub(crate) mod arbitrary {
                         NotebookCell::Formal { content, .. } => {
                             NotebookCell::Formal { id, content }
                         }
-                        NotebookCell::Stem { .. } => NotebookCell::Stem { id },
                     };
                     cell_contents.insert(id, cell);
                     cell_order.push(id);
@@ -86,21 +89,28 @@ impl<T> Notebook<T> {
         })
     }
 
-    pub fn migrate_from_v0(old: v0::Notebook<T>) -> Self {
-        let mut cell_contents = HashMap::new();
-        let mut cell_order = Vec::new();
+    /// Migrate a [`v1::Notebook`] to v2 by dropping stem cells.
+    ///
+    /// Both the cell contents map and the cell order are filtered to remove
+    /// stem cells; non-stem cells preserve their UUIDs and ordering.
+    pub fn migrate_from_v1(old: v1::Notebook<T>) -> Self {
+        let v1::Notebook { cell_contents, cell_order } = old;
 
-        for old_cell in old.cells {
-            let id = match old_cell {
-                v0::NotebookCell::RichText { id, .. }
-                | v0::NotebookCell::Formal { id, .. }
-                | v0::NotebookCell::Stem { id } => id,
-            };
-
-            cell_order.push(id);
-            cell_contents.insert(id, old_cell);
+        let mut new_contents = HashMap::with_capacity(cell_contents.len());
+        for (id, cell) in cell_contents {
+            if let Some(new_cell) = NotebookCell::migrate_from_v1(cell) {
+                new_contents.insert(id, new_cell);
+            }
         }
 
-        Notebook { cell_contents, cell_order }
+        // Keep only ids that survived the migration, preserving the original
+        // order.
+        let new_order: Vec<Uuid> =
+            cell_order.into_iter().filter(|id| new_contents.contains_key(id)).collect();
+
+        Notebook {
+            cell_contents: new_contents,
+            cell_order: new_order,
+        }
     }
 }
