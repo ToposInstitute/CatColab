@@ -269,14 +269,15 @@ function PathPicker(props: {
         return mor;
     });
 
-    /** Compute the typeable text for a path: morphism labels joined by `;`. */
+    /** Compute the typeable text for a path: morphism labels joined by `;`.
+        Unlabelled morphisms show as "Unnamed". */
     const pathText = (mor: Mor | null): string => {
         const m = props.model;
         if (!m || !mor) {
             return "";
         }
         const segs = describePath(m, mor);
-        return segs ? segs.morphisms.join(";") : "";
+        return segs ? segs.morphisms.map((s) => s || "Unnamed").join(";") : "";
     };
 
     /** Free-form text in the input.
@@ -360,8 +361,8 @@ function buildCompletion(
     }
     return {
         // The typeable name: morphism labels joined by the diagrammatic
-        // composition operator `;`.
-        name: segs.morphisms.join(";"),
+        // composition operator `;`. Unlabelled morphisms show as "Unnamed".
+        name: segs.morphisms.map((s) => s || "Unnamed").join(";"),
         nameClass: styles["completionName"],
         description: <PathSegmentsView segments={segs} />,
         onComplete: () => setMor(mor),
@@ -390,13 +391,28 @@ function PathSegmentsView(props: { segments: PathSegments }) {
                 {(mor, i) => (
                     <>
                         <span class={styles["arrow"]}>{"—"}</span>
-                        <span class={styles["morName"]}>{mor || "?"}</span>
+                        <UnnamedAware label={mor} class={styles["morName"]} />
                         <span class={styles["arrow"]}>{"→"}</span>
-                        <span class={styles["object"]}>{props.segments.codomains[i()] ?? "?"}</span>
+                        <UnnamedAware
+                            label={props.segments.codomains[i()] ?? ""}
+                            class={styles["object"]}
+                        />
                     </>
                 )}
             </For>
         </span>
+    );
+}
+
+/** Render a label, falling back to a styled "Unnamed" when empty. */
+function UnnamedAware(props: { label: string; class?: string }) {
+    return (
+        <Show
+            when={props.label}
+            fallback={<span class={`${props.class ?? ""} ${styles["unnamed"]}`}>Unnamed</span>}
+        >
+            <span class={props.class}>{props.label}</span>
+        </Show>
     );
 }
 
@@ -481,9 +497,14 @@ function obLabel(model: DblModel, ob: Ob): string {
         .with({ tag: "Basic", content: P.select() }, (id) =>
             labelToString(model.obGeneratorLabel(id)),
         )
-        .otherwise(() => "?");
+        .otherwise(() => "");
 }
 
+/** Render a qualified label as a dotted string, or "" if no label is set.
+
+The `""` case is handled by the consumer (typically rendered as a styled
+"Unnamed" placeholder).
+ */
 function labelToString(label: QualifiedLabel | undefined): string {
     if (!label || label.length === 0) {
         return "";

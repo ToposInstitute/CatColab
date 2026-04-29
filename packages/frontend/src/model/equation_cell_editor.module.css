@@ -66,6 +66,11 @@
     font-family: var(--font-mono, monospace);
 }
 
+.unnamed {
+    font-style: italic;
+    color: var(--color-gray-600, #777);
+}
+
 .error {
     color: var(--color-red-500, red);
     font-size: 0.9em;
