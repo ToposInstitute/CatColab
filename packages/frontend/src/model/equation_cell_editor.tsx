@@ -1,8 +1,8 @@
-import { For, Show, createMemo, createSignal, useContext } from "solid-js";
+import { For, Show, createEffect, createMemo, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 import { match, P } from "ts-pattern";
 
-import { NameInput } from "catcolab-ui-components";
+import { type Completion, InlineInput, NameInput } from "catcolab-ui-components";
 import type { DblModel, Mor, NameLookup, Ob, QualifiedLabel, QualifiedName } from "catlog-wasm";
 import { IdInput } from "../components";
 import { LiveModelContext } from "./context";
@@ -10,26 +10,35 @@ import type { EquationEditorProps } from "./editors";
 
 import styles from "./equation_cell_editor.module.css";
 
-type EquationCellInput = "name" | "ob";
+type EquationCellInput = "name" | "ob" | "lhs";
 
 /** Extract the starting object from an equation's lhs.
 
-The cell stores its starting object as `lhs = Mor::Composite(Path::Id(ob))`.
-Returns null if the lhs is missing or doesn't have that shape.
+The cell stores its starting object as `lhs = Mor::Composite(Path::Id(ob))`
+when only the starting object has been chosen, and as the chosen path
+otherwise (in which case the starting object is its domain, looked up via
+the model).
  */
-function getStartingOb(mor: Mor | null): Ob | null {
-    return match(mor)
-        .with(
-            {
-                tag: "Composite",
-                content: {
-                    tag: "Id",
-                    content: P.select(),
-                },
-            },
-            (ob) => ob,
-        )
+function getStartingOb(mor: Mor | null, model: DblModel | undefined): Ob | null {
+    if (!mor) {
+        return null;
+    }
+    // Identity path: the object is encoded directly.
+    const idOb = match(mor)
+        .with({ tag: "Composite", content: { tag: "Id", content: P.select() } }, (ob) => ob)
         .otherwise(() => null);
+    if (idOb !== null) {
+        return idOb;
+    }
+    // Non-identity path: look up the domain in the model.
+    if (!model) {
+        return null;
+    }
+    try {
+        return model.dom(mor);
+    } catch {
+        return null;
+    }
 }
 
 /** Is this morphism an identity path, `Mor::Composite(Path::Id(_))`? */
@@ -42,21 +51,16 @@ function isIdentityPath(mor: Mor): boolean {
 /** Extract the basic-object id from an Ob, if it is a basic object. */
 function basicObId(ob: Ob | null): string | null {
     return match(ob)
-        .with(
-            {
-                tag: "Basic",
-                content: P.select(),
-            },
-            (id) => id,
-        )
+        .with({ tag: "Basic", content: P.select() }, (id) => id)
         .otherwise(() => null);
 }
 
 /** Editor for an equation cell in a model.
 
-Initial behaviour: the user picks a starting object, and we list every simple
-path beginning at that object. Each path is rendered diagrammatically
-(`A —f→ B —g→ C`).
+Layout: `[name] [starting object] [lhs path picker]`.
+
+The lhs path picker shows a typeable list of every simple path from the
+starting object as completions, each rendered diagrammatically.
  */
 export default function EquationCellEditor(props: EquationEditorProps) {
     const liveModel = useContext(LiveModelContext);
@@ -66,8 +70,14 @@ export default function EquationCellEditor(props: EquationEditorProps) {
 
     const elaborated = (): DblModel | undefined => liveModel().elaboratedModel();
 
-    const startingOb = createMemo<Ob | null>(() => getStartingOb(props.equation.lhs));
+    const startingOb = createMemo<Ob | null>(() => getStartingOb(props.equation.lhs, elaborated()));
 
+    /** Set the starting object.
+
+    Replaces `lhs` with the identity path at the new object. If a non-identity
+    path was previously selected, this discards it (since the starting object
+    has changed).
+     */
     const setStartingOb = (ob: Ob | null) => {
         props.modifyEquation((eqn) => {
             eqn.lhs = ob
@@ -78,6 +88,11 @@ export default function EquationCellEditor(props: EquationEditorProps) {
                 : null;
         });
     };
+
+    const setLhs = (mor: Mor | null) =>
+        props.modifyEquation((eqn) => {
+            eqn.lhs = mor;
+        });
 
     const setName = (name: string) =>
         props.modifyEquation((eqn) => {
@@ -123,18 +138,35 @@ export default function EquationCellEditor(props: EquationEditorProps) {
                     isActive={props.isActive && activeInput() === "ob"}
                     placeholder="…"
                     exitBackward={() => setActiveInput("name")}
-                    exitForward={props.actions.activateBelow}
+                    exitForward={() => setActiveInput("lhs")}
                     exitUp={props.actions.activateAbove}
-                    exitDown={props.actions.activateBelow}
+                    exitDown={() => setActiveInput("lhs")}
                     exitLeft={() => setActiveInput("name")}
-                    exitRight={props.actions.activateBelow}
+                    exitRight={() => setActiveInput("lhs")}
                     hasFocused={() => {
                         setActiveInput("ob");
                         props.actions.hasFocused?.();
                     }}
                 />
+                <PathPicker
+                    model={elaborated()}
+                    from={startingOb()}
+                    mor={props.equation.lhs}
+                    setMor={setLhs}
+                    isActive={props.isActive && activeInput() === "lhs"}
+                    isCellActive={props.isActive}
+                    exitBackward={() => setActiveInput("ob")}
+                    exitForward={props.actions.activateBelow}
+                    exitUp={props.actions.activateAbove}
+                    exitDown={props.actions.activateBelow}
+                    exitLeft={() => setActiveInput("ob")}
+                    exitRight={props.actions.activateBelow}
+                    hasFocused={() => {
+                        setActiveInput("lhs");
+                        props.actions.hasFocused?.();
+                    }}
+                />
             </div>
-            <PathList model={elaborated()} from={startingOb()} />
         </div>
     );
 }
@@ -193,32 +225,147 @@ function ObPicker(allProps: {
     );
 }
 
-/** List of all simple paths from a given starting object. */
-function PathList(props: { model: DblModel | undefined; from: Ob | null }) {
-    /** Result of `boundedSimplePathsFrom`, with the identity path filtered out. */
-    const paths = createMemo<Mor[] | null>(() => {
+/** Picker for a path starting at a given object.
+
+When inactive and a non-identity path is set, renders the path
+diagrammatically (`—f→ B —g→ C`). When active, an `InlineInput` is shown with
+all simple paths from the starting object as completions.
+ */
+function PathPicker(props: {
+    model: DblModel | undefined;
+    from: Ob | null;
+    mor: Mor | null;
+    setMor: (mor: Mor | null) => void;
+    isActive: boolean;
+    isCellActive: boolean;
+    exitBackward?: () => void;
+    exitForward?: () => void;
+    exitUp?: () => void;
+    exitDown?: () => void;
+    exitLeft?: () => void;
+    exitRight?: () => void;
+    hasFocused?: () => void;
+}) {
+    /** All non-identity simple paths from the starting object. */
+    const paths = createMemo<Mor[]>(() => {
         const m = props.model;
         const from = props.from;
         if (!m || !from) {
-            return null;
+            return [];
         }
         try {
             return m.boundedSimplePathsFrom(from, undefined).filter((mor) => !isIdentityPath(mor));
         } catch {
-            // Object not in model yet, or other transient error.
-            return null;
+            return [];
         }
     });
 
+    /** The chosen path, if any. The identity path counts as "no choice". */
+    const chosenPath = createMemo<Mor | null>(() => {
+        const mor = props.mor;
+        if (!mor || isIdentityPath(mor)) {
+            return null;
+        }
+        return mor;
+    });
+
+    /** Compute the typeable text for a path: morphism labels joined by `;`. */
+    const pathText = (mor: Mor | null): string => {
+        const m = props.model;
+        if (!m || !mor) {
+            return "";
+        }
+        const segs = describePath(m, mor);
+        return segs ? segs.morphisms.join(";") : "";
+    };
+
+    /** Free-form text in the input.
+
+    Synced from the chosen path whenever the picker is not the active input,
+    so re-entering edit mode pre-fills with the chosen path's name and the
+    completions list is filtered to it.
+     */
+    const [text, setText] = createSignal("");
+
+    createEffect(() => {
+        if (!props.isActive) {
+            setText(pathText(chosenPath()));
+        }
+    });
+
+    const completions = (): Completion[] => {
+        const m = props.model;
+        if (!m) {
+            return [];
+        }
+        return paths()
+            .map((mor) => buildCompletion(m, mor, props.setMor))
+            .filter((c): c is Completion => c !== null);
+    };
+
+    /** Show the input when the picker is the active input or no path is chosen. */
+    const showInput = () => props.isActive || chosenPath() === null;
+
     return (
-        <Show when={props.from && paths() && (paths() as Mor[]).length > 0}>
-            <div class={styles["paths"]}>
-                <For each={paths() ?? []}>
-                    {(mor) => <PathView model={props.model} mor={mor} />}
-                </For>
-            </div>
-        </Show>
+        <div class={styles["pathPicker"]}>
+            <Show when={!showInput() ? chosenPath() : null}>
+                {(mor) => (
+                    <button
+                        type="button"
+                        class={styles["pathDisplay"]}
+                        onMouseDown={(evt) => {
+                            props.hasFocused?.();
+                            evt.preventDefault();
+                        }}
+                    >
+                        <PathView model={props.model} mor={mor()} />
+                    </button>
+                )}
+            </Show>
+            <Show when={showInput()}>
+                <InlineInput
+                    text={text()}
+                    setText={setText}
+                    placeholder="path…"
+                    completions={completions()}
+                    showCompletionsOnFocus={true}
+                    completionsEmptyText={
+                        props.from === undefined || props.from === null
+                            ? "Choose a starting object."
+                            : "No paths available."
+                    }
+                    isActive={props.isActive}
+                    hasFocused={props.hasFocused}
+                    exitBackward={props.exitBackward}
+                    exitForward={props.exitForward}
+                    exitUp={props.exitUp}
+                    exitDown={props.exitDown}
+                    exitLeft={props.exitLeft}
+                    exitRight={props.exitRight}
+                />
+            </Show>
+        </div>
     );
+}
+
+/** Build a completion entry for a path. */
+function buildCompletion(
+    model: DblModel,
+    mor: Mor,
+    setMor: (mor: Mor | null) => void,
+): Completion | null {
+    const segs = describePath(model, mor);
+    if (!segs) {
+        return null;
+    }
+    return {
+        // The typeable name: morphism labels joined by the diagrammatic
+        // composition operator `;`.
+        name: segs.morphisms.join(";"),
+        nameClass: styles["completionName"],
+        description: <PathSegmentsView segments={segs} />,
+        onComplete: () => setMor(mor),
+    };
 }
 
 /** Render a non-identity simple path diagrammatically.
@@ -230,22 +377,26 @@ function PathView(props: { model: DblModel | undefined; mor: Mor }) {
     const segments = createMemo(() => describePath(props.model, props.mor));
 
     return (
-        <div class={styles["path"]}>
-            <Show when={segments()} fallback={<span class={styles["error"]}>(invalid path)</span>}>
-                {(segs) => (
-                    <For each={segs().morphisms}>
-                        {(mor, i) => (
-                            <>
-                                <span class={styles["arrow"]}>{"—"}</span>
-                                <span class={styles["morName"]}>{mor || "?"}</span>
-                                <span class={styles["arrow"]}>{"→"}</span>
-                                <span class={styles["object"]}>{segs().codomains[i()] ?? "?"}</span>
-                            </>
-                        )}
-                    </For>
+        <Show when={segments()} fallback={<span class={styles["error"]}>(invalid path)</span>}>
+            {(segs) => <PathSegmentsView segments={segs()} />}
+        </Show>
+    );
+}
+
+function PathSegmentsView(props: { segments: PathSegments }) {
+    return (
+        <span class={styles["path"]}>
+            <For each={props.segments.morphisms}>
+                {(mor, i) => (
+                    <>
+                        <span class={styles["arrow"]}>{"—"}</span>
+                        <span class={styles["morName"]}>{mor || "?"}</span>
+                        <span class={styles["arrow"]}>{"→"}</span>
+                        <span class={styles["object"]}>{props.segments.codomains[i()] ?? "?"}</span>
+                    </>
                 )}
-            </Show>
-        </div>
+            </For>
+        </span>
     );
 }
 
@@ -279,10 +430,7 @@ function describePath(model: DblModel | undefined, mor: Mor): PathSegments | nul
         .with(
             {
                 tag: "Composite",
-                content: {
-                    tag: "Seq",
-                    content: P.select(),
-                },
+                content: { tag: "Seq", content: P.select() },
             },
             (xs) => xs,
         )
@@ -291,8 +439,6 @@ function describePath(model: DblModel | undefined, mor: Mor): PathSegments | nul
         return seqSegments(model, seq);
     }
 
-    // Identity paths are filtered out before reaching here, and any other
-    // shape (e.g. tabulator squares) is not expected from `boundedSimplePathsFrom`.
     return null;
 }
 

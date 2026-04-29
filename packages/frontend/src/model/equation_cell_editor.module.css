@@ -19,15 +19,28 @@
     min-width: 6ex;
 }
 
-.paths {
+.pathPicker {
     display: flex;
-    flex-direction: column;
-    gap: 0.25em;
-    padding-left: 1em;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5ex;
+}
+
+.pathDisplay {
+    cursor: text;
+
+    /* Styled as plain text since this is a <button> for click-to-edit. */
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    color: inherit;
+    font: inherit;
+    text-align: inherit;
 }
 
 .path {
-    display: flex;
+    display: inline-flex;
     flex-direction: row;
     align-items: center;
     gap: 0.5ex;
@@ -49,9 +62,8 @@
     color: var(--color-gray-700, #555);
 }
 
-.empty {
-    font-style: italic;
-    color: var(--color-gray-600, #777);
+.completionName {
+    font-family: var(--font-mono, monospace);
 }
 
 .error {
