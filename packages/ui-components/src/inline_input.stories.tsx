@@ -7,7 +7,7 @@ import type { Meta, StoryObj } from "storybook-solidjs-vite";
 
 import { Button } from "./button";
 import type { Completion } from "./completions";
-import { InlineInput } from "./inline_input";
+import { InlineInput, PlaceholderInlineInput } from "./inline_input";
 
 const meta = {
     title: "Forms & Inputs/InlineInput",
@@ -196,6 +196,28 @@ export const WithAutofill: Story = {
                     }}
                 />
                 {autofillTriggered() && <p style={{ color: "green" }}>Autofill triggered</p>}
+            </div>
+        );
+    },
+};
+
+export const Placeholder: Story = {
+    render: () => {
+        const [text, setText] = createSignal("");
+
+        return (
+            <div style={{ padding: "16px" }}>
+                <p>
+                    A <code>PlaceholderInlineInput</code> is shaped like a real{" "}
+                    <code>InlineInput</code> so the two align on the same baseline:
+                </p>
+                <div style={{ display: "flex", "align-items": "baseline", gap: "1ex" }}>
+                    <InlineInput text={text()} setText={setText} placeholder="Real input" />
+                    <span>{"\u27F5"}</span>
+                    <PlaceholderInlineInput />
+                </div>
+                <p style={{ "margin-top": "16px" }}>With a custom placeholder:</p>
+                <PlaceholderInlineInput placeholder="not yet available" />
             </div>
         );
     },

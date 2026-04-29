@@ -14,7 +14,7 @@ import invariant from "tiny-invariant";
 import { NameInput, type TextInputOptions } from "catcolab-ui-components";
 import type { DblModel, InstantiatedModel, Ob, SpecializeModel } from "catlog-wasm";
 import { useApi } from "../api";
-import { DocumentPicker, IdInput } from "../components";
+import { DocumentPicker, IdInput, IdInputPlaceholder } from "../components";
 import type { CellActions } from "../notebook";
 import { DocRefIdContext } from "../page/context";
 import { useUserState } from "../user/user_state_context";
@@ -263,21 +263,9 @@ export function InstantiationCellEditor(props: {
                         }}
                     >
                         <div class="model-specialization">
-                            {/* Match the DOM of a real specialization row
-                                (IdInput-shaped input/filler on both sides) so
-                                the ghost's text positions align with real rows
-                                whose ob input is rendered. */}
-                            <div class="id-input">
-                                <div class="inline-input-container">
-                                    <span class="inline-input-filler placeholder">{"..."}</span>
-                                </div>
-                            </div>
+                            <IdInputPlaceholder />
                             <span class="specialize-as" />
-                            <div class="id-input">
-                                <div class="inline-input-container">
-                                    <span class="inline-input-filler placeholder">{"..."}</span>
-                                </div>
-                            </div>
+                            <IdInputPlaceholder />
                         </div>
                     </li>
                 </Show>
@@ -339,16 +327,7 @@ function SpecializationEditor(
                 {...inputProps}
             />
             <span class="specialize-as" />
-            <Show
-                when={obType()}
-                fallback={
-                    <div class="id-input">
-                        <div class="inline-input-container">
-                            <span class="inline-input-filler placeholder">{"..."}</span>
-                        </div>
-                    </div>
-                }
-            >
+            <Show when={obType()} fallback={<IdInputPlaceholder />}>
                 {(obType) => (
                     <ObInput
                         placeholder="..."

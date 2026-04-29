@@ -6,6 +6,7 @@ import {
     InlineInput,
     type InlineInputErrorStatus,
     type InlineInputOptions,
+    PlaceholderInlineInput,
 } from "catcolab-ui-components";
 import type {
     LabelSegment,
@@ -226,3 +227,15 @@ export function MorIdInput(
 
     return <IdInput id={id()} setId={setId} {...inputProps} />;
 }
+
+/** A non-editable placeholder shaped like an `IdInput`.
+
+Use this where an `IdInput` would normally appear but the input cannot yet be
+edited (e.g. because a related id is unset). The placeholder occupies the same
+space and aligns on the same baseline as a real `IdInput`.
+ */
+export const IdInputPlaceholder = (props: { placeholder?: string }) => (
+    <div class="id-input">
+        <PlaceholderInlineInput placeholder={props.placeholder ?? "..."} />
+    </div>
+);

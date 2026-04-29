@@ -65,16 +65,6 @@
         content: "⟵";
     }
 
-    & .placeholder {
-        color: var(--color-gray-750);
-    }
-
-    /* When the inline-input-filler is being used directly as a placeholder
-       (no real input on top of it), make it visible. */
-    & .inline-input-filler.placeholder {
-        visibility: visible;
-    }
-
     /* Mark the left-hand side as a sub-object with a leading dot. The left
        cell is the first grid item in every row (left, arrow, right). */
     & > :nth-child(1):before {

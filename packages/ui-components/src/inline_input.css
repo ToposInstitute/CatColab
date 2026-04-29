@@ -41,3 +41,10 @@
         border-bottom: 2px solid var(--color-inline-input-danger);
     }
 }
+
+/* Used by `PlaceholderInlineInput`: make the filler visible (since there is
+   no real input on top of it) and render it in the placeholder color. */
+.inline-input-filler.placeholder-inline-input {
+    visibility: visible;
+    color: var(--color-text-placeholder);
+}
