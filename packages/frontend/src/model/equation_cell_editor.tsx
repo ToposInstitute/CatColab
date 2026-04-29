@@ -22,6 +22,13 @@ function isIdentityPath(mor: Mor): boolean {
         .otherwise(() => false);
 }
 
+/** Extract the object an identity path is at, if `mor` is an identity path. */
+function identityPathObject(mor: Mor): Ob | null {
+    return match(mor)
+        .with({ tag: "Composite", content: { tag: "Id", content: P.select() } }, (ob) => ob)
+        .otherwise(() => null);
+}
+
 /** Extract the basic-object id from an Ob, if it is a basic object. */
 function basicObId(ob: Ob | null): string | null {
     return match(ob)
@@ -85,14 +92,14 @@ export default function EquationCellEditor(props: EquationEditorProps) {
             eqn.name = name;
         });
 
-    /** All non-identity simple paths in the model. */
+    /** All simple paths in the model, including identities. */
     const allPaths = createMemo<Mor[]>(() => {
         const m = elaborated();
         if (!m) {
             return [];
         }
         try {
-            return m.listSimplePaths(undefined).filter((mor) => !isIdentityPath(mor));
+            return m.listSimplePaths(undefined);
         } catch {
             return [];
         }
@@ -205,20 +212,19 @@ function PathPicker(props: {
     hasFocused?: () => void;
 }) {
     /** The chosen path, if any. */
-    const chosenPath = createMemo<Mor | null>(() => {
-        const mor = props.mor;
-        if (!mor || isIdentityPath(mor)) {
-            return null;
-        }
-        return mor;
-    });
+    const chosenPath = createMemo<Mor | null>(() => props.mor);
 
     /** Compute the typeable text for a path: morphism labels joined by `;`.
-        Unlabelled morphisms show as "Unnamed". */
+        Unlabelled morphisms show as "Unnamed". Identity paths show as
+        `id(Object)`. */
     const pathText = (mor: Mor | null): string => {
         const m = props.model;
         if (!m || !mor) {
             return "";
+        }
+        const idOb = identityPathObject(mor);
+        if (idOb !== null) {
+            return identityText(m, idOb);
         }
         const segs = describePath(m, mor);
         return segs ? segs.morphisms.map((s) => s.label || "Unnamed").join(";") : "";
@@ -244,7 +250,10 @@ function PathPicker(props: {
             return [];
         }
         const theory = props.theory;
+        // Only show identity paths in completions when the input is empty.
+        const inputIsEmpty = text() === "";
         return props.paths
+            .filter((mor) => inputIsEmpty || !isIdentityPath(mor))
             .map((mor) => buildCompletion(m, theory, mor, props.setMor))
             .filter((c): c is Completion => c !== null);
     };
@@ -302,21 +311,35 @@ function buildCompletion(
     if (!segs) {
         return null;
     }
+    const idOb = identityPathObject(mor);
+    // Typeable name: `id(Label)` for identities; otherwise morphism labels
+    // joined by the diagrammatic composition operator `;` (unlabelled
+    // morphisms show as "Unnamed").
+    const name =
+        idOb !== null
+            ? identityText(model, idOb)
+            : segs.morphisms.map((m) => m.label || "Unnamed").join(";");
     return {
-        // The typeable name: morphism labels joined by the diagrammatic
-        // composition operator `;`. Unlabelled morphisms show as "Unnamed".
-        name: segs.morphisms.map((m) => m.label || "Unnamed").join(";"),
+        name,
         nameClass: styles["completionName"],
         description: <PathSegmentsView segments={segs} theory={theory} />,
         onComplete: () => setMor(mor),
     };
 }
 
-/** Render a non-identity simple path diagrammatically.
+/** Typeable text for an identity path at the given object: `id(Label)`. */
+function identityText(model: DblModel, ob: Ob): string {
+    const id = basicObId(ob);
+    const label = id !== null ? labelToString(model.obGeneratorLabel(id)) : "";
+    return `id(${label || "Unnamed"})`;
+}
+
+/** Render a simple path diagrammatically.
 
 Uses the same arrow styling as `MorphismCellEditor`: a leading domain object,
 followed by each segment rendered as `[name above arrow]  [cod object]`, with
-arrow style and object/morphism classes coming from theory metadata.
+arrow style and object/morphism classes coming from theory metadata. Identity
+paths produce no segments, so they render as the styled object node alone.
  */
 function PathView(props: { model: DblModel | undefined; theory: Theory; mor: Mor }) {
     const segments = createMemo(() => describePath(props.model, props.mor));
@@ -417,11 +440,18 @@ type PathSegments = {
 /** Compute display data for the segments making up a path.
 
 Returns null if the morphism cannot be presented (e.g., contains
-non-basic morphisms or is an identity, which we don't render here).
+non-basic morphisms).
  */
 function describePath(model: DblModel | undefined, mor: Mor): PathSegments | null {
     if (!model) {
         return null;
+    }
+
+    // Identity path: Mor::Composite(Path::Id(ob)). Display as just the object,
+    // matching the leading-domain-object rendering of a regular path.
+    const idOb = identityPathObject(mor);
+    if (idOb !== null) {
+        return { dom: describeObSegment(model, idOb), morphisms: [] };
     }
 
     // Single-morphism path written as Mor::Basic(uuid).
