@@ -24,7 +24,7 @@ pub const TT_PARSE_CONFIG: ParseConfig = ParseConfig::new(
         ("==", Prec::nonassoc(30)),
     ],
     &[":", ":=", "&", "Unit", "Hom", "*", "=="],
-    &["type", "def", "syn", "chk", "norm", "generate", "uwd", "set_theory"],
+    &["type", "def", "syn", "chk", "norm", "generate", "uwd", "set_theory", "diagram"],
 );
 
 /// The result of elaborating a top-level statement.
@@ -127,6 +127,29 @@ impl TopElaborator {
                 Some(TopElabResult::Declaration(
                     name,
                     TopDecl::Type(Type::new(theory.clone(), ty_s, ty_v)),
+                ))
+            }
+            "diagram" => {
+                let theory = self.get_theory(tn.loc)?;
+                let mut elab = self.elaborator(&theory, toplevel);
+                let (name, args_n, annotn, valn) = self.annotated_def(tn.body).or_else(|| {
+                    self.error(
+                        tn.loc,
+                        "unknown syntax for diagram declaration, expected <name> : <type> := <term>",
+                    )
+                })?;
+                if args_n.is_some() {
+                    return self.error(tn.loc, "diagrams cannot have arguments");
+                }
+                let (_, ret_ty_v) = elab.ty(annotn);
+                // Bind the diagram's name in scope under the reserved
+                // label `@diag` so that `@over .E` inside the body can
+                // recover both the diagram's name and its codomain type.
+                elab.intro(name, label_seg("@diag"), Some(ret_ty_v.clone()));
+                let (val_s, val_v) = elab.ty(valn);
+                Some(TopElabResult::Declaration(
+                    name,
+                    TopDecl::Diag(Diag::new(theory.clone(), ret_ty_v, val_s, val_v)),
                 ))
             }
             "def" => {
@@ -379,6 +402,9 @@ impl<'a> Elaborator<'a> {
                         ))
                     }
                 }
+                TopDecl::Diag(_) => {
+                    self.ty_error(format!("{name} refers to a diagram, not a type"))
+                }
                 TopDecl::Def(_) | TopDecl::DefConst(_) => {
                     self.ty_error(format!("{name} refers to a term not a type"))
                 }
@@ -387,7 +413,6 @@ impl<'a> Elaborator<'a> {
             self.ty_error(format!("no such type {name} defined"))
         }
     }
-
     fn morphism_ty(&mut self, n: &FNtn) -> Option<(MorType, ObType, ObType)> {
         let elab = self.enter(n.loc());
         let theory = elab.theory();
@@ -458,6 +483,32 @@ impl<'a> Elaborator<'a> {
             App1(L(_, Prim("sing")), tm_n) => {
                 let (tm_s, tm_v, ty_v) = elab.syn(tm_n);
                 (TyS::sing(elab.evaluator().quote_ty(&ty_v), tm_s), TyV::sing(ty_v, tm_v))
+            }
+            App1(L(_, Prim("over")), p_n) => {
+                let Some(path) = elab.path(p_n) else {
+                    return elab.ty_hole();
+                };
+                // Recover the enclosing diagram from the reserved `@diag`
+                // binding pushed by the `diagram` toplevel arm.
+                let Some((_, diag_name, model_ty)) =
+                    elab.ctx.lookup_by_label(label_seg("@diag"))
+                else {
+                    return elab.ty_error("@over is only allowed inside a diagram declaration");
+                };
+                let Some(model_ty) = model_ty else {
+                    return elab.ty_error("enclosing diagram has no known codomain type");
+                };
+                let evaluator = elab.evaluator();
+                let (self_n, _) = evaluator.bind_self(model_ty.clone());
+                let self_val = evaluator.eta_neu(&self_n, &model_ty);
+                let resolved = match evaluator.path_ty(&model_ty, &self_val, &path) {
+                    Ok(t) => t,
+                    Err(msg) => return elab.ty_error(msg),
+                };
+                let TyV_::Object(_) = &*resolved else {
+                    return elab.ty_error("path does not refer to an object generator");
+                };
+                (TyS::over(diag_name, path.clone()), TyV::over(diag_name, path))
             }
             App1(mt_n, L(_, Tuple(domcod_n))) => {
                 let [dom_n, cod_n] = domcod_n.as_slice() else {
@@ -568,6 +619,9 @@ impl<'a> Elaborator<'a> {
                 TopDecl::Type(_) => self.syn_error(format!("{name} refers type, not term")),
                 TopDecl::DefConst(d) => (TmS::topvar(name), d.val.clone(), d.ty.clone()),
                 TopDecl::Def(_) => self.syn_error(format!("{name} must be applied to arguments")),
+                TopDecl::Diag(_) => {
+                    self.syn_error(format!("{name} refers to a diagram, not a term"))
+                }
             }
         } else {
             self.syn_error(format!("no such variable {name}"))

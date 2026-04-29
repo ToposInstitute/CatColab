@@ -75,4 +75,21 @@ impl Context {
             .find(|(_, v)| v.name == name)
             .map(|(i, v)| (i.into(), v.label, v.ty.clone()))
     }
+
+    /// Lookup a variable by label.
+    ///
+    /// Used to find variables bound under a reserved label (e.g. `@diag`)
+    /// where the caller wants to recover the variable's name rather than
+    /// look it up by name.
+    pub fn lookup_by_label(
+        &self,
+        label: LabelSegment,
+    ) -> Option<(BwdIdx, VarName, Option<TyV>)> {
+        self.scope
+            .iter()
+            .rev()
+            .enumerate()
+            .find(|(_, v)| v.label == label)
+            .map(|(i, v)| (i.into(), v.name, v.ty.clone()))
+    }
 }
