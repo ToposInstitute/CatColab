@@ -345,6 +345,7 @@ function PathPicker(props: {
                     placeholder="path…"
                     completions={completions()}
                     showCompletionsOnFocus={true}
+                    popupClass={`formal-judgment ${styles["completionsPopup"]}`}
                     completionsEmptyText={
                         props.from === undefined || props.from === null
                             ? "Choose a starting object."

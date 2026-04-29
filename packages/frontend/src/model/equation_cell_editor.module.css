@@ -44,6 +44,13 @@
     flex-direction: row;
     align-items: center;
     gap: 1ex;
+
+    /* Drives the vertical room for the morphism name above each arrow.
+       (See `arrow_styles.module.css`: the `arrowContainer`'s margin-bottom
+       depends on this variable.) */
+    --formal-judgment-font-size: 0.9em;
+
+    line-height: 1.2;
 }
 
 .object {
@@ -59,6 +66,35 @@
 
 .completionName {
     font-family: var(--font-mono, monospace);
+}
+
+/* Roomy popup for path completions. The popup also receives the global
+   `formal-judgment` class (applied via `popupClass`) so its font-size and
+   `--formal-judgment-font-size` match those of the surrounding cell inputs. */
+.completionsPopup {
+    min-width: 24em;
+    max-width: 40em;
+    padding: 0.5rem;
+
+    & :global(.completion-list li) {
+        padding: 0.5em 0.75em;
+    }
+
+    & :global(.completion-head) {
+        gap: 1em;
+        align-items: baseline;
+    }
+
+    & :global(.completion-name) {
+        white-space: nowrap;
+        overflow: visible;
+        text-overflow: clip;
+    }
+
+    & :global(.completion-description) {
+        font-size: inherit;
+        margin-top: 0.25em;
+    }
 }
 
 .unnamed {
