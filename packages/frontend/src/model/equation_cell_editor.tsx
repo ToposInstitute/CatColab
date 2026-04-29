@@ -369,7 +369,7 @@ function PathSegmentView(props: { segment: PathMorSegment; theory: Theory }) {
     ];
 
     return (
-        <>
+        <div class={styles["segment"]}>
             <div class={arrowStyles.arrowWithName}>
                 <div class={nameClasses().join(" ")}>
                     <UnnamedLabel label={props.segment.label} />
@@ -381,7 +381,7 @@ function PathSegmentView(props: { segment: PathMorSegment; theory: Theory }) {
             <div class={codClasses().join(" ")}>
                 <UnnamedLabel label={props.segment.cod.label} />
             </div>
-        </>
+        </div>
     );
 }
 

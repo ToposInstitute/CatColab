@@ -24,6 +24,10 @@
     flex-direction: row;
     align-items: center;
     gap: 1ex;
+    /* Allow children (in particular the path display) to shrink so the inner
+       path can wrap rather than overflow horizontally. */
+    min-width: 0;
+    flex: 1 1 auto;
 }
 
 .equals {
@@ -50,13 +54,23 @@
     color: inherit;
     font: inherit;
     text-align: inherit;
+
+    /* Allow the inner `.path` to wrap when there isn't enough horizontal room. */
+    display: block;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .path {
-    display: inline-flex;
+    display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
     align-items: center;
     gap: 1ex;
+    /* Allow the path to wrap inside its container (e.g. the cell row or the
+       completions popup) when it gets too long. */
+    min-width: 0;
+    max-width: 100%;
 
     /* Drives the vertical room for the morphism name above each arrow.
        (See `arrow_styles.module.css`: the `arrowContainer`'s margin-bottom
@@ -64,6 +78,15 @@
     --formal-judgment-font-size: 0.9em;
 
     line-height: 1.2;
+}
+
+/* A single (arrow + cod object) segment, kept together as one wrappable unit
+   so the arrow never lands on a different line than its codomain. */
+.segment {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 1ex;
 }
 
 .object {
