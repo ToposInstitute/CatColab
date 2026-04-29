@@ -81,9 +81,9 @@ export class Theory {
 
     /** Whether equation cells are supported in the model editor.
 
-    Currently equation cells rely on `boundedSimplePathsFrom`, which only
-    works on discrete double models. Theories that opt in here are responsible
-    for ensuring their models are discrete.
+    Currently equation cells rely on `listSimplePaths`, which only works on
+    discrete double models. Theories that opt in here are responsible for
+    ensuring their models are discrete.
      */
     readonly supportsEquations!: boolean;
 

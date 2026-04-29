@@ -20,18 +20,18 @@ use catlog::dbl::{
     theory::{self as dbl_theory, ModalObOp, NonUnital, Unital},
 };
 use catlog::one::{
-    Category as _, FgCategory, Path, QualifiedPath, graph_algorithms::bounded_simple_paths_from,
+    graph_algorithms::bounded_simple_paths_all, Category as _, FgCategory, Path, QualifiedPath,
 };
 use catlog::tt::{
     self,
-    notebook_elab::{Elaborator as ElaboratorNext, demote_modality, promote_modality},
+    notebook_elab::{demote_modality, promote_modality, Elaborator as ElaboratorNext},
     toplevel::{TopDecl, Toplevel, Type},
 };
 use catlog::validate::Validate;
 use catlog::zero::{NameLookup, NameSegment, Namespace, QualifiedLabel, QualifiedName};
 
 use super::result::JsResult;
-use super::theory::{DblTheory, DblTheoryBox, expect_single_name};
+use super::theory::{expect_single_name, DblTheory, DblTheoryBox};
 use super::{model_presentation::*, notation::*, wd::*};
 
 /// Elaborates into an object in a model of a discrete double theory.
@@ -586,37 +586,25 @@ impl DblModel {
         })
     }
 
-    /// Lists all simple paths starting at the given object.
+    /// Lists all simple paths in the model.
     ///
     /// "Simple" means no edge is repeated, so the result is finite even when
-    /// the underlying graph contains cycles. The identity path at `from` is
-    /// included as the first result. An optional `max_length` limits the
-    /// path length (number of edges); `None` means unbounded (still finite
-    /// because of the simple-path requirement).
+    /// the underlying graph contains cycles. Identity paths at each object
+    /// are included. An optional `max_length` limits the path length (number
+    /// of edges); `None` means unbounded (still finite because of the
+    /// simple-path requirement).
     ///
     /// Currently supported only for discrete double models.
-    #[wasm_bindgen(js_name = "boundedSimplePathsFrom")]
-    pub fn bounded_simple_paths_from(
-        &self,
-        from: Ob,
-        max_length: Option<usize>,
-    ) -> Result<Vec<Mor>, String> {
+    #[wasm_bindgen(js_name = "listSimplePaths")]
+    pub fn list_simple_paths(&self, max_length: Option<usize>) -> Result<Vec<Mor>, String> {
         match &self.model {
             DblModelBox::Discrete(model) => {
-                let from_name: QualifiedName = Elaborator.elab(&from)?;
-                if !model.has_ob(&from_name) {
-                    return Err(format!(
-                        "Starting object not in model: {}",
-                        from_name.serialize_string()
-                    ));
-                }
                 let graph = model.generating_graph();
-                let paths = bounded_simple_paths_from(graph, &from_name, max_length)
-                    .map(|p| Quoter.quote(&p))
-                    .collect();
+                let paths =
+                    bounded_simple_paths_all(graph, max_length).map(|p| Quoter.quote(&p)).collect();
                 Ok(paths)
             }
-            _ => Err("boundedSimplePathsFrom is only supported on discrete double models".into()),
+            _ => Err("listSimplePaths is only supported on discrete double models".into()),
         }
     }
 
@@ -821,35 +809,29 @@ pub(crate) mod tests {
     pub(crate) fn sch_walking_attr(th: &DblTheory, ids: [Uuid; 3]) -> DblModel {
         let mut model = DblModel::new(th);
         let [attr, entity, attr_type] = ids;
-        assert!(
-            model
-                .add_ob(&ObDecl {
-                    name: "entity".into(),
-                    id: entity,
-                    ob_type: ObType::Basic("Entity".into())
-                })
-                .is_ok()
-        );
-        assert!(
-            model
-                .add_ob(&ObDecl {
-                    name: "attr_type".into(),
-                    id: attr_type,
-                    ob_type: ObType::Basic("AttrType".into())
-                })
-                .is_ok()
-        );
-        assert!(
-            model
-                .add_mor(&MorDecl {
-                    name: "attr".into(),
-                    id: attr,
-                    mor_type: MorType::Basic("Attr".into()),
-                    dom: Some(Ob::Basic(entity.to_string())),
-                    cod: Some(Ob::Basic(attr_type.to_string())),
-                })
-                .is_ok()
-        );
+        assert!(model
+            .add_ob(&ObDecl {
+                name: "entity".into(),
+                id: entity,
+                ob_type: ObType::Basic("Entity".into())
+            })
+            .is_ok());
+        assert!(model
+            .add_ob(&ObDecl {
+                name: "attr_type".into(),
+                id: attr_type,
+                ob_type: ObType::Basic("AttrType".into())
+            })
+            .is_ok());
+        assert!(model
+            .add_mor(&MorDecl {
+                name: "attr".into(),
+                id: attr,
+                mor_type: MorType::Basic("Attr".into()),
+                dom: Some(Ob::Basic(entity.to_string())),
+                cod: Some(Ob::Basic(attr_type.to_string())),
+            })
+            .is_ok());
         model
     }
 
@@ -886,17 +868,15 @@ pub(crate) mod tests {
         assert_eq!(presentation.mor_generators.len(), 1);
 
         let mut model = DblModel::new(&th);
-        assert!(
-            model
-                .add_mor(&MorDecl {
-                    name: "a".into(),
-                    id: a_id,
-                    mor_type: MorType::Basic("Attr".into()),
-                    dom: None,
-                    cod: Some(y.clone())
-                })
-                .is_ok()
-        );
+        assert!(model
+            .add_mor(&MorDecl {
+                name: "a".into(),
+                id: a_id,
+                mor_type: MorType::Basic("Attr".into()),
+                dom: None,
+                cod: Some(y.clone())
+            })
+            .is_ok());
         assert_eq!(Result::from(model.validate().0).map_err(|errs| errs.len()), Err(2));
     }
 
@@ -904,46 +884,38 @@ pub(crate) mod tests {
         let th = ThCategoryLinks::new().theory();
         let mut model = DblModel::new(&th);
         let [f, x, y, link] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
-        assert!(
-            model
-                .add_ob(&ObDecl {
-                    name: src_name.into(),
-                    id: x,
-                    ob_type: ObType::Basic("Object".into())
-                })
-                .is_ok()
-        );
-        assert!(
-            model
-                .add_ob(&ObDecl {
-                    name: tgt_name.into(),
-                    id: y,
-                    ob_type: ObType::Basic("Object".into()),
-                })
-                .is_ok()
-        );
-        assert!(
-            model
-                .add_mor(&MorDecl {
-                    name: flow_name.into(),
-                    id: f,
-                    mor_type: MorType::Hom(Box::new(ObType::Basic("Object".into()))),
-                    dom: Some(Ob::Basic(x.to_string())),
-                    cod: Some(Ob::Basic(y.to_string())),
-                })
-                .is_ok()
-        );
-        assert!(
-            model
-                .add_mor(&MorDecl {
-                    name: "link".into(),
-                    id: link,
-                    mor_type: MorType::Basic("Link".into()),
-                    dom: Some(Ob::Basic(y.to_string())),
-                    cod: Some(Ob::Tabulated(Mor::Basic(f.to_string()))),
-                })
-                .is_ok()
-        );
+        assert!(model
+            .add_ob(&ObDecl {
+                name: src_name.into(),
+                id: x,
+                ob_type: ObType::Basic("Object".into())
+            })
+            .is_ok());
+        assert!(model
+            .add_ob(&ObDecl {
+                name: tgt_name.into(),
+                id: y,
+                ob_type: ObType::Basic("Object".into()),
+            })
+            .is_ok());
+        assert!(model
+            .add_mor(&MorDecl {
+                name: flow_name.into(),
+                id: f,
+                mor_type: MorType::Hom(Box::new(ObType::Basic("Object".into()))),
+                dom: Some(Ob::Basic(x.to_string())),
+                cod: Some(Ob::Basic(y.to_string())),
+            })
+            .is_ok());
+        assert!(model
+            .add_mor(&MorDecl {
+                name: "link".into(),
+                id: link,
+                mor_type: MorType::Basic("Link".into()),
+                dom: Some(Ob::Basic(y.to_string())),
+                cod: Some(Ob::Tabulated(Mor::Basic(f.to_string()))),
+            })
+            .is_ok());
         model
     }
 
@@ -956,54 +928,40 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn bounded_simple_paths_from_simple() {
+    fn list_simple_paths_simple() {
         let th = ThSchema::new().theory();
         let [a, entity, attr_type] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
         let model = sch_walking_attr(&th, [a, entity, attr_type]);
 
-        let from = Ob::Basic(entity.to_string());
-        let paths = model.bounded_simple_paths_from(from.clone(), None).expect("should succeed");
+        let paths = model.list_simple_paths(None).expect("should succeed");
 
-        // Identity at entity, plus the single morphism `a` from entity to attr_type.
-        assert_eq!(paths.len(), 2);
-        // First path is the identity.
-        match &paths[0] {
-            Mor::Composite(boxed) => match boxed.as_ref() {
-                notebook_path::Path::Id(ob) => {
-                    assert_eq!(ob, &from);
-                }
-                _ => panic!("Expected Path::Id, got {:?}", boxed),
-            },
-            other => panic!("Expected Mor::Composite, got {:?}", other),
-        }
-        // Second path is the basic morphism.
-        assert_eq!(paths[1], Mor::Basic(a.to_string()));
+        // Identity at entity + identity at attr_type + the single morphism `a`.
+        assert_eq!(paths.len(), 3);
+        // The basic morphism appears in the result.
+        assert!(paths.iter().any(|p| matches!(p, Mor::Basic(id) if id == &a.to_string())));
+        // Two identity paths appear in the result.
+        let id_count = paths
+            .iter()
+            .filter(|p| {
+                matches!(
+                    p,
+                    Mor::Composite(boxed) if matches!(boxed.as_ref(), notebook_path::Path::Id(_))
+                )
+            })
+            .count();
+        assert_eq!(id_count, 2);
 
-        // max_length = 0 yields only the identity path.
-        let paths_zero =
-            model.bounded_simple_paths_from(from.clone(), Some(0)).expect("should succeed");
-        assert_eq!(paths_zero.len(), 1);
+        // max_length = 0 yields only the two identity paths.
+        let paths_zero = model.list_simple_paths(Some(0)).expect("should succeed");
+        assert_eq!(paths_zero.len(), 2);
     }
 
     #[test]
-    fn bounded_simple_paths_from_unknown_object() {
-        let th = ThSchema::new().theory();
-        let [a, entity, attr_type] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
-        let model = sch_walking_attr(&th, [a, entity, attr_type]);
-
-        let unknown = Uuid::now_v7();
-        let result = model.bounded_simple_paths_from(Ob::Basic(unknown.to_string()), None);
-        let err = result.expect_err("expected error for missing object");
-        assert!(err.contains("Starting object not in model"), "unexpected error: {err}");
-    }
-
-    #[test]
-    fn bounded_simple_paths_from_non_discrete() {
-        // Modal theory ⇒ bounded_simple_paths_from should error.
+    fn list_simple_paths_non_discrete() {
+        // Modal theory ⇒ listSimplePaths should error.
         let th = ThSymMonoidalCategory::new().theory();
         let model = DblModel::new(&th);
-        let dummy = Uuid::now_v7();
-        let result = model.bounded_simple_paths_from(Ob::Basic(dummy.to_string()), None);
+        let result = model.list_simple_paths(None);
         let err = result.expect_err("expected error for non-discrete model");
         assert!(
             err.contains("only supported on discrete double models"),

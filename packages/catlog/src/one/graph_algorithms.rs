@@ -93,19 +93,19 @@ where
     maybe_empty_path.into_iter().chain(nonempty_paths)
 }
 
-/// Iterates over all simple paths of bounded length starting at a vertex.
+/// Iterates over all simple paths of bounded length in a finite graph.
 ///
-/// Like [`bounded_simple_paths`] but with no fixed target: yields a path for
-/// every vertex reachable from `from`, including the identity path at `from`
-/// itself. As with [`bounded_simple_paths`], "simple" means no edge is
-/// repeated, guaranteeing termination on graphs with cycles.
+/// Yields a path starting at every vertex of the graph, in the order returned
+/// by [`FinGraph::vertices`]. For each starting vertex `v`, the identity
+/// path at `v` is yielded first, followed by every non-identity simple path
+/// starting at `v`. As with [`bounded_simple_paths`], "simple" means no edge
+/// is repeated, guaranteeing termination on graphs with cycles.
 ///
 /// The **length** of a path is the number of edges in it. If `max_length` is
 /// `None`, there is no length restriction (other than the implicit one from
 /// the simple-path requirement).
-pub fn bounded_simple_paths_from<'a, G>(
+pub fn bounded_simple_paths_all<'a, G>(
     graph: &'a G,
-    from: &'a G::V,
     max_length: Option<usize>,
 ) -> impl Iterator<Item = Path<G::V, G::E>> + 'a
 where
@@ -113,38 +113,12 @@ where
     G::V: Hash,
     G::E: Hash,
 {
-    // The current path.
-    let mut path: Vec<G::E> = Vec::new();
-    // The set of edges in the current path.
-    let mut visited: HashSet<G::E> = HashSet::new();
-    // Stack of out-edges of each vertex in the current path.
-    let mut stack: Vec<Vec<G::E>> = vec![graph.out_edges(from).collect()];
-
-    let identity_path = Some(Path::Id(from.clone()));
-
-    let nonempty_paths = std::iter::from_fn(move || {
-        while let Some(out_edges) = stack.last_mut() {
-            let Some(e) = out_edges.pop() else {
-                stack.pop();
-                if let Some(e) = path.pop() {
-                    visited.remove(&e);
-                }
-                continue;
-            };
-            if visited.contains(&e) || max_length.is_some_and(|n| path.len() >= n) {
-                continue;
-            }
-            let tgt = graph.tgt(&e);
-            path.push(e.clone());
-            visited.insert(e);
-            stack.push(graph.out_edges(&tgt).collect());
-            let result = Path::collect(path.iter().cloned());
-            return Some(result.unwrap());
-        }
-        None
-    });
-
-    identity_path.into_iter().chain(nonempty_paths)
+    let vertices: Vec<G::V> = graph.vertices().collect();
+    vertices.clone().into_iter().flat_map(move |from| {
+        vertices.clone().into_iter().flat_map(move |to| {
+            bounded_simple_paths(graph, &from.clone(), &to, max_length).collect::<Vec<_>>()
+        })
+    })
 }
 
 /// Arrange all the elements of a finite graph in specialization order.
@@ -445,34 +419,60 @@ mod tests {
     }
 
     #[test]
-    fn find_simple_paths_from() {
+    fn find_simple_paths_all() {
         // Triangle: edge 0: 0->1, edge 1: 1->2, edge 2: 0->2.
         let g = SkelGraph::triangle();
-        let paths: Vec<_> = bounded_simple_paths_from(&g, &0, None).collect();
-        // Identity path is yielded first.
-        assert_eq!(paths.first(), Some(&Path::Id(0)));
-        let paths_set: HashSet<_> = paths.into_iter().collect();
+        let paths: Vec<_> = bounded_simple_paths_all(&g, None).collect();
+        let paths_set: HashSet<_> = paths.iter().cloned().collect();
         let expected: HashSet<_> = HashSet::from([
+            // Identity paths at each vertex.
             Path::Id(0),
+            Path::Id(1),
+            Path::Id(2),
+            // Non-identity simple paths from 0.
             Path::single(0),  // 0 -> 1
-            Path::single(2),  // 0 -> 2 (via diagonal)
+            Path::single(2),  // 0 -> 2 (diagonal)
             Path::pair(0, 1), // 0 -> 1 -> 2
+            // Non-identity simple paths from 1.
+            Path::single(1), // 1 -> 2
+                             // No non-identity paths from 2 (no out-edges).
         ]);
         assert_eq!(paths_set, expected);
+        // Vertices are visited in order, identity emitted first per vertex.
+        assert_eq!(
+            paths.iter().filter(|p| matches!(p, Path::Id(_))).cloned().collect::<Vec<_>>(),
+            vec![Path::Id(0), Path::Id(1), Path::Id(2)]
+        );
 
-        // max_length restricts edge count.
-        assert_eq!(bounded_simple_paths_from(&g, &0, Some(0)).count(), 1); // only Id
-        assert_eq!(bounded_simple_paths_from(&g, &0, Some(1)).count(), 3); // Id + 2 single-edge
-        assert_eq!(bounded_simple_paths_from(&g, &0, Some(2)).count(), 4); // + the pair
+        // max_length restricts edge count, but identity paths at every vertex
+        // are always emitted.
+        // 3 identities only.
+        assert_eq!(bounded_simple_paths_all(&g, Some(0)).count(), 3);
+        // 3 identities + 3 single-edge paths (0->1, 0->2, 1->2).
+        assert_eq!(bounded_simple_paths_all(&g, Some(1)).count(), 6);
+        // ...plus the 0 -> 1 -> 2 pair.
+        assert_eq!(bounded_simple_paths_all(&g, Some(2)).count(), 7);
 
         // Cycle terminates due to simple-path semantics.
         let g = SkelGraph::cycle(3);
-        let paths: HashSet<_> = bounded_simple_paths_from(&g, &0, None).collect();
+        let paths: HashSet<_> = bounded_simple_paths_all(&g, None).collect();
         let expected: HashSet<_> = HashSet::from([
+            // Identity paths.
             Path::Id(0),
+            Path::Id(1),
+            Path::Id(2),
+            // From 0: 0, 0;1, 0;1;2.
             Path::single(0),
             Path::pair(0, 1),
             Path::Seq(nonempty![0, 1, 2]),
+            // From 1: 1, 1;2, 1;2;0.
+            Path::single(1),
+            Path::pair(1, 2),
+            Path::Seq(nonempty![1, 2, 0]),
+            // From 2: 2, 2;0, 2;0;1.
+            Path::single(2),
+            Path::pair(2, 0),
+            Path::Seq(nonempty![2, 0, 1]),
         ]);
         assert_eq!(paths, expected);
 
@@ -481,7 +481,7 @@ mod tests {
         assert!(g.add_vertex('x'));
         assert!(g.add_edge('f', 'x', 'x'));
         assert!(g.add_edge('g', 'x', 'x'));
-        let paths: HashSet<_> = bounded_simple_paths_from(&g, &'x', None).collect();
+        let paths: HashSet<_> = bounded_simple_paths_all(&g, None).collect();
         let expected: HashSet<_> = HashSet::from([
             Path::Id('x'),
             Path::Seq(nonempty!['f']),

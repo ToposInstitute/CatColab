@@ -1,19 +1,10 @@
+import { deepEqual } from "fast-equals";
 import { For, Show, createEffect, createMemo, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
-import { match, P } from "ts-pattern";
+import { P, match } from "ts-pattern";
 
 import { type Completion, InlineInput, NameInput } from "catcolab-ui-components";
-import type {
-    DblModel,
-    Mor,
-    MorType,
-    NameLookup,
-    Ob,
-    ObType,
-    QualifiedLabel,
-    QualifiedName,
-} from "catlog-wasm";
-import { IdInput } from "../components";
+import type { DblModel, Mor, MorType, Ob, ObType, QualifiedLabel } from "catlog-wasm";
 import type { Theory } from "../theory";
 import { LiveModelContext } from "./context";
 import type { EquationEditorProps } from "./editors";
@@ -22,36 +13,7 @@ import { obClasses } from "./object_cell_editor";
 import arrowStyles from "../stdlib/arrow_styles.module.css";
 import styles from "./equation_cell_editor.module.css";
 
-type EquationCellInput = "name" | "ob" | "lhs" | "rhs";
-
-/** Extract the starting object from an equation's lhs.
-
-The cell stores its starting object as `lhs = Mor::Composite(Path::Id(ob))`
-when only the starting object has been chosen, and as the chosen path
-otherwise (in which case the starting object is its domain, looked up via
-the model).
- */
-function getStartingOb(mor: Mor | null, model: DblModel | undefined): Ob | null {
-    if (!mor) {
-        return null;
-    }
-    // Identity path: the object is encoded directly.
-    const idOb = match(mor)
-        .with({ tag: "Composite", content: { tag: "Id", content: P.select() } }, (ob) => ob)
-        .otherwise(() => null);
-    if (idOb !== null) {
-        return idOb;
-    }
-    // Non-identity path: look up the domain in the model.
-    if (!model) {
-        return null;
-    }
-    try {
-        return model.dom(mor);
-    } catch {
-        return null;
-    }
-}
+type EquationCellInput = "name" | "lhs" | "rhs";
 
 /** Is this morphism an identity path, `Mor::Composite(Path::Id(_))`? */
 function isIdentityPath(mor: Mor): boolean {
@@ -67,12 +29,38 @@ function basicObId(ob: Ob | null): string | null {
         .otherwise(() => null);
 }
 
+/** Compute the domain object of a morphism using the model. */
+function morDom(model: DblModel | undefined, mor: Mor | null): Ob | null {
+    if (!model || !mor) {
+        return null;
+    }
+    try {
+        return model.dom(mor);
+    } catch {
+        return null;
+    }
+}
+
+/** Compute the codomain object of a morphism using the model. */
+function morCod(model: DblModel | undefined, mor: Mor | null): Ob | null {
+    if (!model || !mor) {
+        return null;
+    }
+    try {
+        return model.cod(mor);
+    } catch {
+        return null;
+    }
+}
+
 /** Editor for an equation cell in a model.
 
-Layout: `[name] [starting object] [lhs path picker] = [rhs path picker]`.
+Layout: `[name] [lhs path picker] = [rhs path picker]`.
 
-Each path picker shows a typeable list of every simple path from the
-starting object as completions, each rendered diagrammatically.
+Each path picker shows a typeable list of every simple path in the model as
+completions, each rendered diagrammatically (with leading domain object).
+The RHS picker is filtered to only paths whose domain and codomain match
+those of the LHS path, once one is chosen.
  */
 export default function EquationCellEditor(props: EquationEditorProps) {
     const liveModel = useContext(LiveModelContext);
@@ -81,25 +69,6 @@ export default function EquationCellEditor(props: EquationEditorProps) {
     const [activeInput, setActiveInput] = createSignal<EquationCellInput>("name");
 
     const elaborated = (): DblModel | undefined => liveModel().elaboratedModel();
-
-    const startingOb = createMemo<Ob | null>(() => getStartingOb(props.equation.lhs, elaborated()));
-
-    /** Set the starting object.
-
-    Replaces `lhs` with the identity path at the new object. If a non-identity
-    path was previously selected, this discards it (since the starting object
-    has changed).
-     */
-    const setStartingOb = (ob: Ob | null) => {
-        props.modifyEquation((eqn) => {
-            eqn.lhs = ob
-                ? {
-                      tag: "Composite",
-                      content: { tag: "Id", content: ob },
-                  }
-                : null;
-        });
-    };
 
     const setLhs = (mor: Mor | null) =>
         props.modifyEquation((eqn) => {
@@ -116,13 +85,37 @@ export default function EquationCellEditor(props: EquationEditorProps) {
             eqn.name = name;
         });
 
-    /** All object generators in the model, used as completions. */
-    const obCompletions = (): QualifiedName[] | undefined => elaborated()?.obGenerators();
+    /** All non-identity simple paths in the model. */
+    const allPaths = createMemo<Mor[]>(() => {
+        const m = elaborated();
+        if (!m) {
+            return [];
+        }
+        try {
+            return m.listSimplePaths(undefined).filter((mor) => !isIdentityPath(mor));
+        } catch {
+            return [];
+        }
+    });
 
-    const obIdToLabel = (id: QualifiedName): QualifiedLabel | undefined =>
-        elaborated()?.obGeneratorLabel(id);
-    const obLabelToId = (label: QualifiedLabel): NameLookup | undefined =>
-        elaborated()?.obGeneratorWithLabel(label);
+    /** Domain and codomain of the LHS, used to filter the RHS picker. */
+    const lhsDom = createMemo<Ob | null>(() => morDom(elaborated(), props.equation.lhs));
+    const lhsCod = createMemo<Ob | null>(() => morCod(elaborated(), props.equation.lhs));
+
+    /** Paths available for the RHS picker. Filters by dom/cod once LHS is set. */
+    const rhsPaths = createMemo<Mor[]>(() => {
+        const m = elaborated();
+        const dom = lhsDom();
+        const cod = lhsCod();
+        if (!m || dom === null || cod === null) {
+            return allPaths();
+        }
+        return allPaths().filter((mor) => {
+            const d = morDom(m, mor);
+            const c = morCod(m, mor);
+            return d !== null && c !== null && deepEqual(d, dom) && deepEqual(c, cod);
+        });
+    });
 
     return (
         <div class={`formal-judgment ${styles["decl"]}`}>
@@ -135,10 +128,10 @@ export default function EquationCellEditor(props: EquationEditorProps) {
                     deleteBackward={props.actions.deleteBackward}
                     deleteForward={props.actions.deleteForward}
                     exitBackward={props.actions.activateAbove}
-                    exitForward={() => setActiveInput("ob")}
+                    exitForward={() => setActiveInput("lhs")}
                     exitUp={props.actions.activateAbove}
-                    exitDown={() => setActiveInput("ob")}
-                    exitRight={() => setActiveInput("ob")}
+                    exitDown={() => setActiveInput("lhs")}
+                    exitRight={() => setActiveInput("lhs")}
                     hasFocused={() => {
                         setActiveInput("name");
                         props.actions.hasFocused?.();
@@ -146,38 +139,18 @@ export default function EquationCellEditor(props: EquationEditorProps) {
                 />
             </div>
             <div class={styles["header"]}>
-                <ObPicker
-                    ob={startingOb()}
-                    setOb={setStartingOb}
-                    completions={obCompletions()}
-                    idToLabel={obIdToLabel}
-                    labelToId={obLabelToId}
-                    isActive={props.isActive && activeInput() === "ob"}
-                    placeholder="…"
-                    exitBackward={() => setActiveInput("name")}
-                    exitForward={() => setActiveInput("lhs")}
-                    exitUp={() => setActiveInput("name")}
-                    exitDown={() => setActiveInput("lhs")}
-                    exitLeft={() => setActiveInput("name")}
-                    exitRight={() => setActiveInput("lhs")}
-                    hasFocused={() => {
-                        setActiveInput("ob");
-                        props.actions.hasFocused?.();
-                    }}
-                />
                 <PathPicker
                     model={elaborated()}
                     theory={props.theory}
-                    from={startingOb()}
+                    paths={allPaths()}
                     mor={props.equation.lhs}
                     setMor={setLhs}
                     isActive={props.isActive && activeInput() === "lhs"}
-                    isCellActive={props.isActive}
-                    exitBackward={() => setActiveInput("ob")}
+                    exitBackward={() => setActiveInput("name")}
                     exitForward={() => setActiveInput("rhs")}
                     exitUp={() => setActiveInput("name")}
                     exitDown={() => setActiveInput("rhs")}
-                    exitLeft={() => setActiveInput("ob")}
+                    exitLeft={() => setActiveInput("name")}
                     exitRight={() => setActiveInput("rhs")}
                     hasFocused={() => {
                         setActiveInput("lhs");
@@ -190,11 +163,10 @@ export default function EquationCellEditor(props: EquationEditorProps) {
                 <PathPicker
                     model={elaborated()}
                     theory={props.theory}
-                    from={startingOb()}
+                    paths={rhsPaths()}
                     mor={props.equation.rhs}
                     setMor={setRhs}
                     isActive={props.isActive && activeInput() === "rhs"}
-                    isCellActive={props.isActive}
                     exitBackward={() => setActiveInput("lhs")}
                     exitForward={props.actions.activateBelow}
                     exitUp={() => setActiveInput("lhs")}
@@ -211,74 +183,19 @@ export default function EquationCellEditor(props: EquationEditorProps) {
     );
 }
 
-/** Picker for any basic object generator in the model.
+/** Picker for a path in the model.
 
-Unlike `ObInput`, this is not restricted to a particular object type so that
-the equation cell can list paths starting from any object regardless of
-its type.
- */
-function ObPicker(allProps: {
-    ob: Ob | null;
-    setOb: (ob: Ob | null) => void;
-    completions?: QualifiedName[];
-    idToLabel?: (id: QualifiedName) => QualifiedLabel | undefined;
-    labelToId?: (label: QualifiedLabel) => NameLookup | undefined;
-    isActive: boolean;
-    placeholder?: string;
-    exitBackward?: () => void;
-    exitForward?: () => void;
-    exitUp?: () => void;
-    exitDown?: () => void;
-    exitLeft?: () => void;
-    exitRight?: () => void;
-    hasFocused?: () => void;
-}) {
-    const id = (): QualifiedName | null => basicObId(allProps.ob);
-    const setId = (newId: QualifiedName | null) => {
-        allProps.setOb(
-            newId === null
-                ? null
-                : {
-                      tag: "Basic",
-                      content: newId,
-                  },
-        );
-    };
-
-    return (
-        <IdInput
-            id={id()}
-            setId={setId}
-            completions={allProps.completions}
-            idToLabel={allProps.idToLabel}
-            labelToId={allProps.labelToId}
-            isActive={allProps.isActive}
-            placeholder={allProps.placeholder}
-            exitBackward={allProps.exitBackward}
-            exitForward={allProps.exitForward}
-            exitUp={allProps.exitUp}
-            exitDown={allProps.exitDown}
-            exitLeft={allProps.exitLeft}
-            exitRight={allProps.exitRight}
-            hasFocused={allProps.hasFocused}
-        />
-    );
-}
-
-/** Picker for a path starting at a given object.
-
-When inactive and a non-identity path is set, renders the path
-diagrammatically (`—f→ B —g→ C`). When active, an `InlineInput` is shown with
-all simple paths from the starting object as completions.
+When inactive and a path is set, renders the path diagrammatically
+(`A —f→ B —g→ C`). When active, an `InlineInput` is shown with the supplied
+list of paths as completions.
  */
 function PathPicker(props: {
     model: DblModel | undefined;
     theory: Theory;
-    from: Ob | null;
+    paths: Mor[];
     mor: Mor | null;
     setMor: (mor: Mor | null) => void;
     isActive: boolean;
-    isCellActive: boolean;
     exitBackward?: () => void;
     exitForward?: () => void;
     exitUp?: () => void;
@@ -287,21 +204,7 @@ function PathPicker(props: {
     exitRight?: () => void;
     hasFocused?: () => void;
 }) {
-    /** All non-identity simple paths from the starting object. */
-    const paths = createMemo<Mor[]>(() => {
-        const m = props.model;
-        const from = props.from;
-        if (!m || !from) {
-            return [];
-        }
-        try {
-            return m.boundedSimplePathsFrom(from, undefined).filter((mor) => !isIdentityPath(mor));
-        } catch {
-            return [];
-        }
-    });
-
-    /** The chosen path, if any. The identity path counts as "no choice". */
+    /** The chosen path, if any. */
     const chosenPath = createMemo<Mor | null>(() => {
         const mor = props.mor;
         if (!mor || isIdentityPath(mor)) {
@@ -341,7 +244,7 @@ function PathPicker(props: {
             return [];
         }
         const theory = props.theory;
-        return paths()
+        return props.paths
             .map((mor) => buildCompletion(m, theory, mor, props.setMor))
             .filter((c): c is Completion => c !== null);
     };
@@ -373,11 +276,7 @@ function PathPicker(props: {
                     completions={completions()}
                     showCompletionsOnFocus={true}
                     popupClass={`formal-judgment ${styles["completionsPopup"]}`}
-                    completionsEmptyText={
-                        props.from === undefined || props.from === null
-                            ? "Choose a starting object."
-                            : "No paths available."
-                    }
+                    completionsEmptyText="No paths available."
                     isActive={props.isActive}
                     hasFocused={props.hasFocused}
                     exitBackward={props.exitBackward}
@@ -415,10 +314,9 @@ function buildCompletion(
 
 /** Render a non-identity simple path diagrammatically.
 
-Uses the same arrow styling as `MorphismCellEditor`: each segment is rendered
-as `[name above arrow]  [cod object]`, with arrow style and object/morphism
-classes coming from theory metadata. The leading domain object is omitted
-(it's the starting object, shown in the cell header).
+Uses the same arrow styling as `MorphismCellEditor`: a leading domain object,
+followed by each segment rendered as `[name above arrow]  [cod object]`, with
+arrow style and object/morphism classes coming from theory metadata.
  */
 function PathView(props: { model: DblModel | undefined; theory: Theory; mor: Mor }) {
     const segments = createMemo(() => describePath(props.model, props.mor));
@@ -431,8 +329,15 @@ function PathView(props: { model: DblModel | undefined; theory: Theory; mor: Mor
 }
 
 function PathSegmentsView(props: { segments: PathSegments; theory: Theory }) {
+    const domClasses = () => [
+        styles["object"],
+        ...obClasses(props.theory, props.segments.dom.obType),
+    ];
     return (
         <div class={styles["path"]}>
+            <div class={domClasses().join(" ")}>
+                <UnnamedLabel label={props.segments.dom.label} />
+            </div>
             <For each={props.segments.morphisms}>
                 {(mor) => <PathSegmentView segment={mor} theory={props.theory} />}
             </For>
@@ -503,6 +408,8 @@ type PathObSegment = {
 };
 
 type PathSegments = {
+    /** The path's domain (initial object). */
+    dom: PathObSegment;
     /** N segments for a path of N morphisms. */
     morphisms: PathMorSegment[];
 };
@@ -523,7 +430,11 @@ function describePath(model: DblModel | undefined, mor: Mor): PathSegments | nul
         .otherwise(() => null);
     if (basicId !== null) {
         const seg = describeMorSegment(model, basicId);
-        return seg ? { morphisms: [seg] } : null;
+        if (!seg) {
+            return null;
+        }
+        const dom = morDom(model, mor);
+        return { dom: describeObSegment(model, dom), morphisms: [seg] };
     }
 
     // Composite sequence: Mor::Composite(Path::Seq([Mor::Basic, ...])).
@@ -553,7 +464,8 @@ function describePath(model: DblModel | undefined, mor: Mor): PathSegments | nul
         }
         morphisms.push(seg);
     }
-    return { morphisms };
+    const dom = morDom(model, mor);
+    return { dom: describeObSegment(model, dom), morphisms };
 }
 
 function describeMorSegment(model: DblModel, id: string): PathMorSegment | null {
@@ -568,7 +480,10 @@ function describeMorSegment(model: DblModel, id: string): PathMorSegment | null 
     };
 }
 
-function describeObSegment(model: DblModel, ob: Ob): PathObSegment {
+function describeObSegment(model: DblModel, ob: Ob | null): PathObSegment {
+    if (ob === null) {
+        return { label: "", obType: undefined };
+    }
     const id = basicObId(ob);
     let obType: ObType | undefined;
     try {

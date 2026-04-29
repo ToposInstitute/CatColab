@@ -1,6 +1,6 @@
 import { v7 } from "uuid";
 
-import type { Document, Link, ModelJudgment, MorType, Ob, ObType } from "catcolab-document-types";
+import type { Document, Link, ModelJudgment, MorType, ObType } from "catcolab-document-types";
 import { currentVersion } from "catcolab-document-types";
 import { newNotebook } from "./notebook";
 
@@ -38,24 +38,12 @@ export const newMorphismDecl = (morType: MorType): ModelJudgment & { tag: "morph
     cod: null,
 });
 
-/** Create a new equation declaration.
-
-The starting object, if given, is stored on the equation's `lhs` as the
-identity path at that object. This is a placeholder used by the equation cell
-editor when only the starting object has been chosen by the user.
- */
-export const newEquationDecl = (
-    startingOb?: Ob | null,
-): ModelJudgment & { tag: "equation" } => ({
+/** Create a new equation declaration. */
+export const newEquationDecl = (): ModelJudgment & { tag: "equation" } => ({
     tag: "equation",
     id: v7(),
     name: "",
-    lhs: startingOb
-        ? {
-              tag: "Composite",
-              content: { tag: "Id", content: startingOb },
-          }
-        : null,
+    lhs: null,
     rhs: null,
 });
 
