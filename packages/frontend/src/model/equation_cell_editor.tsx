@@ -15,13 +15,6 @@ import styles from "./equation_cell_editor.module.css";
 
 type EquationCellInput = "name" | "lhs" | "rhs";
 
-/** Is this morphism an identity path, `Mor::Composite(Path::Id(_))`? */
-function isIdentityPath(mor: Mor): boolean {
-    return match(mor)
-        .with({ tag: "Composite", content: { tag: "Id" } }, () => true)
-        .otherwise(() => false);
-}
-
 /** Extract the object an identity path is at, if `mor` is an identity path. */
 function identityPathObject(mor: Mor): Ob | null {
     return match(mor)
@@ -267,10 +260,10 @@ function PathPicker(props: {
             return [];
         }
         const theory = props.theory;
-        // Only show identity paths in completions when the input is empty.
-        const inputIsEmpty = text() === "";
+        // Standard completions filter (in `<Completions>`) matches the typed
+        // text against `Completion.name`. Identity completions have name
+        // `id(Foo)`, so typing `id`, `id(Foo)`, or just `Foo` all match.
         return props.paths
-            .filter((mor) => inputIsEmpty || !isIdentityPath(mor))
             .map((mor) => buildCompletion(m, theory, mor, props.setMor))
             .filter((c): c is Completion => c !== null);
     };
