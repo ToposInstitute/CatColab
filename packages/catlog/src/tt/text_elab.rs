@@ -142,10 +142,15 @@ impl TopElaborator {
                     return self.error(tn.loc, "diagrams cannot have arguments");
                 }
                 let (_, ret_ty_v) = elab.ty(annotn);
-                // Bind the diagram's name in scope under the reserved
-                // label `@diag` so that `@over .E` inside the body can
-                // recover both the diagram's name and its codomain type.
-                elab.intro(name, label_seg("@diag"), Some(ret_ty_v.clone()));
+                // Bind the diagram's name as a diagram-kind context entry
+                // so that `@over .E` inside the body can recover both the
+                // diagram's name and its codomain type, while ordinary
+                // term lookups cannot see it.
+                let diag_label = match name {
+                    NameSegment::Text(s) => label_seg(s),
+                    NameSegment::Uuid(_) => label_seg("diag"),
+                };
+                elab.intro_diagram(name, diag_label, ret_ty_v.clone());
                 let (val_s, val_v) = elab.ty(valn);
                 Some(TopElabResult::Declaration(
                     name,
@@ -375,6 +380,15 @@ impl<'a> Elaborator<'a> {
         v
     }
 
+    /// Like [`Self::intro`], but pushes a diagram-kind binding so it is
+    /// invisible to ordinary term lookup.
+    fn intro_diagram(&mut self, name: VarName, label: LabelSegment, ty: TyV) {
+        let v = TmV::neu(TmN::var(self.ctx.scope.len().into(), name, label), ty.clone());
+        let v = self.evaluator().eta(&v, Some(&ty));
+        self.ctx.env = self.ctx.env.snoc(v);
+        self.ctx.push_diagram(name, label, ty);
+    }
+
     fn binding(&mut self, n: &FNtn) -> Option<(VarName, LabelSegment, TyS, TyV)> {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
@@ -484,19 +498,19 @@ impl<'a> Elaborator<'a> {
                 let (tm_s, tm_v, ty_v) = elab.syn(tm_n);
                 (TyS::sing(elab.evaluator().quote_ty(&ty_v), tm_s), TyV::sing(ty_v, tm_v))
             }
+            // `@Instance(X)` is a structural alias for `X`, used in diagram
+            // annotations. Treating it as an alias keeps the type system
+            // simple; `I` is kept out of term lookup by the diagram-kind
+            // binding pushed in the `diagram` toplevel arm.
+            App1(L(_, Prim("Instance")), x_n) => elab.ty(x_n),
             App1(L(_, Prim("over")), p_n) => {
                 let Some(path) = elab.path(p_n) else {
                     return elab.ty_hole();
                 };
-                // Recover the enclosing diagram from the reserved `@diag`
-                // binding pushed by the `diagram` toplevel arm.
-                let Some((_, diag_name, model_ty)) =
-                    elab.ctx.lookup_by_label(label_seg("@diag"))
-                else {
+                // Recover the enclosing diagram from the most recent
+                // diagram-kind binding pushed by the `diagram` toplevel arm.
+                let Some((diag_name, model_ty)) = elab.ctx.lookup_diagram() else {
                     return elab.ty_error("@over is only allowed inside a diagram declaration");
-                };
-                let Some(model_ty) = model_ty else {
-                    return elab.ty_error("enclosing diagram has no known codomain type");
                 };
                 let evaluator = elab.evaluator();
                 let (self_n, _) = evaluator.bind_self(model_ty.clone());
