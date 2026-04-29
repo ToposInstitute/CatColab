@@ -29,6 +29,17 @@ function identityPathObject(mor: Mor): Ob | null {
         .otherwise(() => null);
 }
 
+/** Number of edges in a simple-path morphism: 0 for identities, 1 for a basic
+    morphism, n for `Mor::Composite(Path::Seq(xs))`. Other shapes return
+    `Number.POSITIVE_INFINITY` so they sort last. */
+function pathLength(mor: Mor): number {
+    return match(mor)
+        .with({ tag: "Composite", content: { tag: "Id" } }, () => 0)
+        .with({ tag: "Basic" }, () => 1)
+        .with({ tag: "Composite", content: { tag: "Seq", content: P.select() } }, (xs) => xs.length)
+        .otherwise(() => Number.POSITIVE_INFINITY);
+}
+
 /** Extract the basic-object id from an Ob, if it is a basic object. */
 function basicObId(ob: Ob | null): string | null {
     return match(ob)
@@ -92,14 +103,20 @@ export default function EquationCellEditor(props: EquationEditorProps) {
             eqn.name = name;
         });
 
-    /** All simple paths in the model, including identities. */
+    /** All simple paths in the model, including identities, sorted by length
+        (shortest first; ties broken by the iteration order from the wasm). */
     const allPaths = createMemo<Mor[]>(() => {
         const m = elaborated();
         if (!m) {
             return [];
         }
         try {
-            return m.listSimplePaths(undefined);
+            const paths = m.listSimplePaths(undefined);
+            // Stable sort by edge count.
+            return paths
+                .map((mor, i) => ({ mor, i, len: pathLength(mor) }))
+                .toSorted((a, b) => a.len - b.len || a.i - b.i)
+                .map((x) => x.mor);
         } catch {
             return [];
         }
