@@ -66,6 +66,7 @@ impl<'a> Evaluator<'a> {
             }
             TyS_::Unit => TyV::unit(),
             TyS_::Meta(mv) => TyV::meta(*mv),
+            TyS_::Over(name, path) => TyV::over(*name, path.clone()),
         }
     }
 
@@ -192,6 +193,7 @@ impl<'a> Evaluator<'a> {
             }
             TyV_::Unit => TyS::unit(),
             TyV_::Meta(mv) => TyS::meta(*mv),
+            TyV_::Over(name, path) => TyS::over(*name, path.clone()),
         }
     }
 
@@ -255,6 +257,7 @@ impl<'a> Evaluator<'a> {
             TyV_::Id(_, _, _) => Ok(()),
             TyV_::Unit => Ok(()),
             TyV_::Meta(_) => Ok(()),
+            TyV_::Over(_, _) => Ok(()),
         }
     }
 
@@ -321,6 +324,7 @@ impl<'a> Evaluator<'a> {
             TyV_::Id(_, _, _) => TmV::tt(), // Extensional equality at a 100% discount!
             TyV_::Unit => TmV::tt(),
             TyV_::Meta(_) => TmV::neu(n.clone(), ty.clone()),
+            TyV_::Over(_, _) => TmV::neu(n.clone(), ty.clone()),
         }
     }
 
@@ -423,6 +427,8 @@ impl<'a> Evaluator<'a> {
         }
     }
 
+    // TODO: refactor to use [`Evaluator::path_ty`] for the descent and
+    // keep only the subtype check here.
     fn can_specialize(
         &self,
         ty: &TyV,
@@ -453,6 +459,34 @@ impl<'a> Evaluator<'a> {
         } else {
             self.can_specialize(&orig_field_ty, &self.proj(val, field.0, field.1), path, field_ty)
         }
+    }
+
+    /// Walk `path` from the value `val` of record type `ty`, returning
+    /// the type of the field at the end of the path.
+    ///
+    /// An empty path returns `ty` unchanged. Each segment requires the
+    /// current type to be a record containing the named field.
+    pub fn path_ty(
+        &self,
+        ty: &TyV,
+        val: &TmV,
+        path: &[(FieldName, LabelSegment)],
+    ) -> Result<TyV, String> {
+        let mut ty = ty.clone();
+        let mut val = val.clone();
+        for &(name, label) in path {
+            let TyV_::Record(r) = &*ty.clone() else {
+                return Err(format!("expected a record type at .{label}"));
+            };
+            if !r.fields.has(name) {
+                return Err(format!("no such field .{label}"));
+            }
+            let next_ty = self.field_ty(&ty, &val, name);
+            let next_val = self.proj(&val, name, label);
+            ty = next_ty;
+            val = next_val;
+        }
+        Ok(ty)
     }
 
     /// Try to specialize the record `r` with the subtype `ty` at `path`.
