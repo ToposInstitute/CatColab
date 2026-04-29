@@ -3,6 +3,7 @@
     flex-direction: column;
     align-items: stretch;
     gap: 0.5em;
+    margin-bottom: 1em;
 }
 
 .header {
@@ -14,9 +15,10 @@
 }
 
 .name {
-    font-style: italic;
-    color: var(--color-gray-700, #555);
-    min-width: 6ex;
+    /* Match the look of a morphism cell's name: a plain `NameInput` rendered
+       at the surrounding `formal-judgment` font size, with no extra styling. */
+    display: inline-flex;
+    align-items: baseline;
 }
 
 .pathPicker {
@@ -24,10 +26,11 @@
     flex-direction: row;
     align-items: center;
     gap: 1ex;
-    /* Allow children (in particular the path display) to shrink so the inner
-       path can wrap rather than overflow horizontally. */
+    /* Always span the full width of the surrounding cell, but still allow
+       children (in particular the path display) to shrink so the inner path
+       can wrap rather than overflow horizontally. */
+    width: 100%;
     min-width: 0;
-    flex: 1 1 auto;
 }
 
 .equals {
@@ -55,10 +58,11 @@
     font: inherit;
     text-align: inherit;
 
-    /* Allow the inner `.path` to wrap when there isn't enough horizontal room. */
+    /* Allow the inner `.path` to wrap when there isn't enough horizontal room,
+       and span the full width of the surrounding cell. */
     display: block;
+    width: 100%;
     min-width: 0;
-    max-width: 100%;
 }
 
 .path {
@@ -66,11 +70,18 @@
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
+    /* Center the path's segments horizontally within the full-width box. */
+    justify-content: center;
     gap: 1ex;
-    /* Allow the path to wrap inside its container (e.g. the cell row or the
-       completions popup) when it gets too long. */
+    /* Always span the full width of the surrounding cell. */
+    width: 100%;
     min-width: 0;
-    max-width: 100%;
+    box-sizing: border-box;
+
+    /* Grey border around the rendered path. */
+    border: 1px solid var(--color-gray-450, #bbb);
+    border-radius: 4px;
+    padding: 0.25em 0.5em;
 
     /* Drives the vertical room for the morphism name above each arrow.
        (See `arrow_styles.module.css`: the `arrowContainer`'s margin-bottom
