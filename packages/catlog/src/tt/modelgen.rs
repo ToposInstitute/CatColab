@@ -398,6 +398,7 @@ impl<'a> ModelGenerator<'a> {
             }
             TyV_::Unit => None,
             TyV_::Meta(_) => None,
+            TyV_::Over(_, _) => None,
         }
     }
 }
