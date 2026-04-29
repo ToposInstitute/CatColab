@@ -109,13 +109,18 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
                     actions={props.actions}
                 />
             </Match>
-            <Match when={props.content.tag === "equation"}>
-                <EquationCellEditor
-                    equation={props.content as EqnDecl}
-                    modifyEquation={(f) => props.changeContent((content) => f(content as EqnDecl))}
-                    isActive={props.isActive}
-                    actions={props.actions}
-                />
+            <Match when={props.content.tag === "equation" && liveModel().theory()}>
+                {(theory) => (
+                    <EquationCellEditor
+                        equation={props.content as EqnDecl}
+                        modifyEquation={(f) =>
+                            props.changeContent((content) => f(content as EqnDecl))
+                        }
+                        isActive={props.isActive}
+                        actions={props.actions}
+                        theory={theory()}
+                    />
+                )}
             </Match>
         </Switch>
     );

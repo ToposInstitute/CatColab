@@ -3,11 +3,23 @@ import invariant from "tiny-invariant";
 import { match, P } from "ts-pattern";
 
 import { type Completion, InlineInput, NameInput } from "catcolab-ui-components";
-import type { DblModel, Mor, NameLookup, Ob, QualifiedLabel, QualifiedName } from "catlog-wasm";
+import type {
+    DblModel,
+    Mor,
+    MorType,
+    NameLookup,
+    Ob,
+    ObType,
+    QualifiedLabel,
+    QualifiedName,
+} from "catlog-wasm";
 import { IdInput } from "../components";
+import type { Theory } from "../theory";
 import { LiveModelContext } from "./context";
 import type { EquationEditorProps } from "./editors";
+import { obClasses } from "./object_cell_editor";
 
+import arrowStyles from "../stdlib/arrow_styles.module.css";
 import styles from "./equation_cell_editor.module.css";
 
 type EquationCellInput = "name" | "ob" | "lhs";
@@ -150,6 +162,7 @@ export default function EquationCellEditor(props: EquationEditorProps) {
                 />
                 <PathPicker
                     model={elaborated()}
+                    theory={props.theory}
                     from={startingOb()}
                     mor={props.equation.lhs}
                     setMor={setLhs}
@@ -233,6 +246,7 @@ all simple paths from the starting object as completions.
  */
 function PathPicker(props: {
     model: DblModel | undefined;
+    theory: Theory;
     from: Ob | null;
     mor: Mor | null;
     setMor: (mor: Mor | null) => void;
@@ -277,7 +291,7 @@ function PathPicker(props: {
             return "";
         }
         const segs = describePath(m, mor);
-        return segs ? segs.morphisms.map((s) => s || "Unnamed").join(";") : "";
+        return segs ? segs.morphisms.map((s) => s.label || "Unnamed").join(";") : "";
     };
 
     /** Free-form text in the input.
@@ -299,8 +313,9 @@ function PathPicker(props: {
         if (!m) {
             return [];
         }
+        const theory = props.theory;
         return paths()
-            .map((mor) => buildCompletion(m, mor, props.setMor))
+            .map((mor) => buildCompletion(m, theory, mor, props.setMor))
             .filter((c): c is Completion => c !== null);
     };
 
@@ -319,7 +334,7 @@ function PathPicker(props: {
                             evt.preventDefault();
                         }}
                     >
-                        <PathView model={props.model} mor={mor()} />
+                        <PathView model={props.model} theory={props.theory} mor={mor()} />
                     </button>
                 )}
             </Show>
@@ -352,6 +367,7 @@ function PathPicker(props: {
 /** Build a completion entry for a path. */
 function buildCompletion(
     model: DblModel,
+    theory: Theory,
     mor: Mor,
     setMor: (mor: Mor | null) => void,
 ): Completion | null {
@@ -362,68 +378,108 @@ function buildCompletion(
     return {
         // The typeable name: morphism labels joined by the diagrammatic
         // composition operator `;`. Unlabelled morphisms show as "Unnamed".
-        name: segs.morphisms.map((s) => s || "Unnamed").join(";"),
+        name: segs.morphisms.map((m) => m.label || "Unnamed").join(";"),
         nameClass: styles["completionName"],
-        description: <PathSegmentsView segments={segs} />,
+        description: <PathSegmentsView segments={segs} theory={theory} />,
         onComplete: () => setMor(mor),
     };
 }
 
 /** Render a non-identity simple path diagrammatically.
 
-Displays the codomain after each morphism but omits the leading domain
-(which is the starting object, already shown in the cell header).
+Uses the same arrow styling as `MorphismCellEditor`: each segment is rendered
+as `[name above arrow]  [cod object]`, with arrow style and object/morphism
+classes coming from theory metadata. The leading domain object is omitted
+(it's the starting object, shown in the cell header).
  */
-function PathView(props: { model: DblModel | undefined; mor: Mor }) {
+function PathView(props: { model: DblModel | undefined; theory: Theory; mor: Mor }) {
     const segments = createMemo(() => describePath(props.model, props.mor));
 
     return (
         <Show when={segments()} fallback={<span class={styles["error"]}>(invalid path)</span>}>
-            {(segs) => <PathSegmentsView segments={segs()} />}
+            {(segs) => <PathSegmentsView segments={segs()} theory={props.theory} />}
         </Show>
     );
 }
 
-function PathSegmentsView(props: { segments: PathSegments }) {
+function PathSegmentsView(props: { segments: PathSegments; theory: Theory }) {
     return (
-        <span class={styles["path"]}>
+        <div class={styles["path"]}>
             <For each={props.segments.morphisms}>
-                {(mor, i) => (
-                    <>
-                        <span class={styles["arrow"]}>{"—"}</span>
-                        <UnnamedAware label={mor} class={styles["morName"]} />
-                        <span class={styles["arrow"]}>{"→"}</span>
-                        <UnnamedAware
-                            label={props.segments.codomains[i()] ?? ""}
-                            class={styles["object"]}
-                        />
-                    </>
-                )}
+                {(mor) => <PathSegmentView segment={mor} theory={props.theory} />}
             </For>
-        </span>
+        </div>
+    );
+}
+
+/** Render a single (morphism, codomain) segment of a path.
+
+Mirrors the layout of `MorphismCellEditor`: the morphism name sits above an
+arrow drawn in the theory's arrow style; the codomain is rendered with the
+object type's CSS classes.
+ */
+function PathSegmentView(props: { segment: PathMorSegment; theory: Theory }) {
+    const morTypeMeta = () =>
+        props.segment.morType ? props.theory.modelMorTypeMeta(props.segment.morType) : undefined;
+
+    const arrowClass = () => arrowStyles[morTypeMeta()?.arrowStyle ?? "default"];
+
+    const nameClasses = () => [
+        styles["morName"],
+        arrowStyles.arrowName,
+        ...(morTypeMeta()?.textClasses ?? []),
+    ];
+
+    const codClasses = () => [
+        styles["object"],
+        ...obClasses(props.theory, props.segment.cod.obType),
+    ];
+
+    return (
+        <>
+            <div class={arrowStyles.arrowWithName}>
+                <div class={nameClasses().join(" ")}>
+                    <UnnamedLabel label={props.segment.label} />
+                </div>
+                <div class={[arrowStyles.arrowContainer, arrowClass()].join(" ")}>
+                    <div class={[arrowStyles.arrow, arrowClass()].join(" ")} />
+                </div>
+            </div>
+            <div class={codClasses().join(" ")}>
+                <UnnamedLabel label={props.segment.cod.label} />
+            </div>
+        </>
     );
 }
 
 /** Render a label, falling back to a styled "Unnamed" when empty. */
-function UnnamedAware(props: { label: string; class?: string }) {
+function UnnamedLabel(props: { label: string }) {
     return (
-        <Show
-            when={props.label}
-            fallback={<span class={`${props.class ?? ""} ${styles["unnamed"]}`}>Unnamed</span>}
-        >
-            <span class={props.class}>{props.label}</span>
+        <Show when={props.label} fallback={<span class={styles["unnamed"]}>Unnamed</span>}>
+            {props.label}
         </Show>
     );
 }
 
-type PathSegments = {
-    /** N codomain labels for a path of N morphisms. */
-    codomains: string[];
-    /** N morphism labels. */
-    morphisms: string[];
+/** A single segment of a path: a morphism plus its codomain. */
+type PathMorSegment = {
+    label: string;
+    morType: MorType | undefined;
+    cod: PathObSegment;
 };
 
-/** Compute display labels for the codomains and morphisms making up a path.
+/** An object as displayed in a path. */
+type PathObSegment = {
+    label: string;
+    obType: ObType | undefined;
+};
+
+type PathSegments = {
+    /** N segments for a path of N morphisms. */
+    morphisms: PathMorSegment[];
+};
+
+/** Compute display data for the segments making up a path.
 
 Returns null if the morphism cannot be presented (e.g., contains
 non-basic morphisms or is an identity, which we don't render here).
@@ -438,7 +494,8 @@ function describePath(model: DblModel | undefined, mor: Mor): PathSegments | nul
         .with({ tag: "Basic", content: P.select() }, (id) => id)
         .otherwise(() => null);
     if (basicId !== null) {
-        return basicMorSegments(model, basicId);
+        const seg = describeMorSegment(model, basicId);
+        return seg ? { morphisms: [seg] } : null;
     }
 
     // Composite sequence: Mor::Composite(Path::Seq([Mor::Basic, ...])).
@@ -451,30 +508,10 @@ function describePath(model: DblModel | undefined, mor: Mor): PathSegments | nul
             (xs) => xs,
         )
         .otherwise(() => null);
-    if (seq !== null) {
-        return seqSegments(model, seq);
-    }
-
-    return null;
-}
-
-function basicMorSegments(model: DblModel, id: string): PathSegments | null {
-    const pres = model.morPresentation(id);
-    if (!pres) {
+    if (seq === null || seq.length === 0) {
         return null;
     }
-    return {
-        codomains: [obLabel(model, pres.cod)],
-        morphisms: [labelToString(model.morGeneratorLabel(id))],
-    };
-}
-
-function seqSegments(model: DblModel, seq: Mor[]): PathSegments | null {
-    if (seq.length === 0) {
-        return null;
-    }
-    const codomains: string[] = [];
-    const morphisms: string[] = [];
+    const morphisms: PathMorSegment[] = [];
     for (const m of seq) {
         const id = match(m)
             .with({ tag: "Basic", content: P.select() }, (id) => id)
@@ -482,22 +519,39 @@ function seqSegments(model: DblModel, seq: Mor[]): PathSegments | null {
         if (id === null) {
             return null;
         }
-        const pres = model.morPresentation(id);
-        if (!pres) {
+        const seg = describeMorSegment(model, id);
+        if (!seg) {
             return null;
         }
-        morphisms.push(labelToString(model.morGeneratorLabel(id)));
-        codomains.push(obLabel(model, pres.cod));
+        morphisms.push(seg);
     }
-    return { codomains, morphisms };
+    return { morphisms };
 }
 
-function obLabel(model: DblModel, ob: Ob): string {
-    return match(ob)
-        .with({ tag: "Basic", content: P.select() }, (id) =>
-            labelToString(model.obGeneratorLabel(id)),
-        )
-        .otherwise(() => "");
+function describeMorSegment(model: DblModel, id: string): PathMorSegment | null {
+    const pres = model.morPresentation(id);
+    if (!pres) {
+        return null;
+    }
+    return {
+        label: labelToString(model.morGeneratorLabel(id)),
+        morType: pres.morType,
+        cod: describeObSegment(model, pres.cod),
+    };
+}
+
+function describeObSegment(model: DblModel, ob: Ob): PathObSegment {
+    const id = basicObId(ob);
+    let obType: ObType | undefined;
+    try {
+        obType = model.obType(ob);
+    } catch {
+        obType = undefined;
+    }
+    return {
+        label: id !== null ? labelToString(model.obGeneratorLabel(id)) : "",
+        obType,
+    };
 }
 
 /** Render a qualified label as a dotted string, or "" if no label is set.

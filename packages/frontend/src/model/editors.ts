@@ -39,4 +39,5 @@ export type EquationEditorProps = {
     modifyEquation: (f: (decl: EqnDecl) => void) => void;
     isActive: boolean;
     actions: CellActions;
+    theory: Theory;
 };
