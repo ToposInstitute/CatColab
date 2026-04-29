@@ -184,7 +184,20 @@ export function InstantiationCellEditor(props: {
                 <span class="is-a" />
                 <DocumentPicker
                     refId={refId() ?? null}
-                    setRefId={setRefId}
+                    setRefId={(newRefId) => {
+                        setRefId(newRefId);
+                        // After picking a model, move focus out of the picker
+                        // and into the specializations area so the user can
+                        // keep going on the keyboard. If there are no rows
+                        // yet, add an empty one to focus.
+                        if (newRefId) {
+                            if (props.instantiation.specializations.length === 0) {
+                                insertSpecializationAtTop();
+                            } else {
+                                activateIndex(0);
+                            }
+                        }
+                    }}
                     filterCompletions={filterCompletions}
                     placeholder="..."
                     deleteBackward={() => setActiveComponent("name")}
