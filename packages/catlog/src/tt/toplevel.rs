@@ -1,6 +1,7 @@
 //! Data structures for managing toplevel declarations in the type theory.
 //!
-//! Specifically, notebooks will produce [TopDecl::Type] declarations.
+//! Specifically, notebooks will produce [TopDecl::Type] declarations, or
+//! maybe [TopDecl::Diag] declartions.
 
 use derive_more::Constructor;
 
@@ -16,6 +17,8 @@ pub enum TopDecl {
     DefConst(DefConst),
     /// See [Def].
     Def(Def),
+    /// See [Diag]
+    Diag(Diag),
 }
 
 /// A toplevel declaration of a type.
@@ -64,6 +67,19 @@ pub struct Def {
     pub body: TmS,
 }
 
+/// A toplevel declaration of a diagram.
+#[derive(Constructor, Clone)]
+pub struct Diag {
+    /// The theory that the diagram is defined in.
+    pub theory: Theory,
+    /// The model G that this diagram is an instance of.
+    pub model: TyV,
+    /// The body: a record TyS whose fields have @over-typed entries,
+    /// presenting both the domain generators and the mapping.
+    pub body_stx: TyS,
+    /// Evaluated body — useful for downstream consumers that want the TyV directly.
+    pub body_val: TyV,
+}
 impl TopDecl {
     /// Unwraps the type for a toplevel-declaration of a type, or panics.
     ///
@@ -92,6 +108,14 @@ impl TopDecl {
         match self {
             TopDecl::Def(d) => d,
             _ => panic!("top-level should be a term judgment"),
+        }
+    }
+
+    /// Unwraps the diagram for a toplevel diagram declaration, or panics.
+    pub fn unwrap_diag(self) -> Diag {
+        match self {
+            TopDecl::Diag(d) => d,
+            _ => panic!("top-level should be a diagram declaration"),
         }
     }
 }
