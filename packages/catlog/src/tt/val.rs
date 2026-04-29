@@ -98,6 +98,11 @@ pub enum TyV_ {
     Unit,
     /// A metavariable, also see [TyS_::Meta].
     Meta(MetaVar),
+    /// The type of terms of a fiber over a generator of a diagram's
+    /// codomain model.
+    ///
+    /// See [TyS_::Over] for the syntactic counterpart.
+    Over(TopVarName, Vec<(FieldName, LabelSegment)>),
 }
 
 /// Value for total types, dereferences to [TyV_].
@@ -176,6 +181,11 @@ impl TyV {
     /// Smart constructor for [TyV], [TyV_::Meta] case.
     pub fn meta(mv: MetaVar) -> Self {
         Self(Rc::new(TyV_::Meta(mv)))
+    }
+
+    /// Smart constructor for [TyV], [TyV_::Over] case.
+    pub fn over(diag_name: TopVarName, path: Vec<(FieldName, LabelSegment)>) -> Self {
+        Self(Rc::new(TyV_::Over(diag_name, path)))
     }
 }
 
