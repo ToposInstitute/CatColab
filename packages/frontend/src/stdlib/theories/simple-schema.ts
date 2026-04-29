@@ -30,6 +30,7 @@ export default function createSchemaTheory(theoryMeta: TheoryMeta): Theory {
     return new Theory({
         ...theoryMeta,
         theory: thSchema.theory(),
+        supportsEquations: true,
         pushforwards: [
             {
                 target: "simple-olog",

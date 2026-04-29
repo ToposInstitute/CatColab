@@ -16,6 +16,7 @@ export default function createOlogTheory(theoryMeta: TheoryMeta): Theory {
     return new Theory({
         ...theoryMeta,
         theory: thCategory.theory(),
+        supportsEquations: true,
         pushforwards: [
             {
                 target: "simple-schema",

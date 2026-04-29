@@ -79,6 +79,14 @@ export class Theory {
     /** Whether models of the double theory are constrained to be free. */
     readonly onlyFreeModels!: boolean;
 
+    /** Whether equation cells are supported in the model editor.
+
+    Currently equation cells rely on `boundedSimplePathsFrom`, which only
+    works on discrete double models. Theories that opt in here are responsible
+    for ensuring their models are discrete.
+     */
+    readonly supportsEquations!: boolean;
+
     /** Human-readable name for instances of models of theory.
 
     Defaults to "Instance of".
@@ -130,6 +138,7 @@ export class Theory {
         modelTypes?: ModelTypeMeta[];
         modelAnalyses?: ModelAnalysisMeta[];
         onlyFreeModels?: boolean;
+        supportsEquations?: boolean;
         instanceOfName?: string;
         instanceTypes?: InstanceTypeMeta[];
         diagramAnalyses?: DiagramAnalysisMeta[];
@@ -162,6 +171,7 @@ export class Theory {
         }
         this.modelAnalysisMap = uniqueIndexArray(props.modelAnalyses ?? [], (meta) => meta.id);
         this.onlyFreeModels = props.onlyFreeModels ?? false;
+        this.supportsEquations = props.supportsEquations ?? false;
 
         // Instances.
         this.instanceOfName = props.instanceOfName ?? "Instance of";

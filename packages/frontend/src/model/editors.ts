@@ -1,6 +1,6 @@
 import type { Component } from "solid-js";
 
-import type { MorDecl, ObDecl } from "catlog-wasm";
+import type { EqnDecl, MorDecl, ObDecl } from "catlog-wasm";
 import type { CellActions } from "../notebook";
 import type { Theory } from "../theory";
 import type { MorTypeMap, ObTypeMap } from "../theory/types";
@@ -31,4 +31,12 @@ export type MorphismEditorProps = {
     isActive: boolean;
     actions: CellActions;
     theory: Theory;
+};
+
+/** Props for an equation cell editor component in a model. */
+export type EquationEditorProps = {
+    equation: EqnDecl;
+    modifyEquation: (f: (decl: EqnDecl) => void) => void;
+    isActive: boolean;
+    actions: CellActions;
 };

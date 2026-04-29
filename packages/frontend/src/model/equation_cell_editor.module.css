@@ -1,0 +1,60 @@
+.decl {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5em;
+}
+
+.header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5em;
+    flex-wrap: wrap;
+}
+
+.name {
+    font-style: italic;
+    color: var(--color-gray-700, #555);
+    min-width: 6ex;
+}
+
+.paths {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25em;
+    padding-left: 1em;
+}
+
+.path {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5ex;
+    font-family: var(--font-mono, monospace);
+}
+
+.object {
+    padding: 0 0.25ex;
+}
+
+.morName {
+    padding: 0 0.5ex;
+    color: var(--color-gray-800, #333);
+}
+
+.arrow {
+    display: inline-flex;
+    align-items: center;
+    color: var(--color-gray-700, #555);
+}
+
+.empty {
+    font-style: italic;
+    color: var(--color-gray-600, #777);
+}
+
+.error {
+    color: var(--color-red-500, red);
+    font-size: 0.9em;
+}

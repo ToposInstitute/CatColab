@@ -3,11 +3,18 @@ import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
 import { Model, Nb } from "catcolab-document-methods";
-import type { InstantiatedModel, ModelJudgment, MorDecl, ObDecl } from "catcolab-document-types";
+import type {
+    EqnDecl,
+    InstantiatedModel,
+    ModelJudgment,
+    MorDecl,
+    ObDecl,
+} from "catcolab-document-types";
 import { type CellConstructor, type FormalCellEditorProps, NotebookEditor } from "../notebook";
 import { TheoryLibraryContext, type ModelTypeMeta, type Theory } from "../theory";
 import { LiveModelContext } from "./context";
 import type { LiveModelDoc } from "./document";
+import EquationCellEditor from "./equation_cell_editor";
 import { InstantiationCellEditor } from "./instantiation_cell_editor";
 
 /** Notebook editor for a model of a double theory.
@@ -102,6 +109,14 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
                     actions={props.actions}
                 />
             </Match>
+            <Match when={props.content.tag === "equation"}>
+                <EquationCellEditor
+                    equation={props.content as EqnDecl}
+                    modifyEquation={(f) => props.changeContent((content) => f(content as EqnDecl))}
+                    isActive={props.isActive}
+                    actions={props.actions}
+                />
+            </Match>
         </Switch>
     );
 }
@@ -118,6 +133,16 @@ function modelCellConstructors(theory: Theory): CellConstructor<ModelJudgment>[]
     });
     for (const meta of theory.modelTypes ?? []) {
         constructors.push(modelCellConstructor(meta));
+    }
+    if (theory.supportsEquations) {
+        constructors.push({
+            name: "Equation",
+            description: "Add an equation between morphisms",
+            shortcut: ["E"],
+            construct() {
+                return Nb.newFormalCell(Model.newEquationDecl());
+            },
+        });
     }
     return constructors;
 }
