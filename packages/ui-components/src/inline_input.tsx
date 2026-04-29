@@ -38,3 +38,25 @@ export const InlineInput = (props: InlineInputProps) => (
         />
     </div>
 );
+
+/** Props for `PlaceholderInlineInput` component. */
+export type PlaceholderInlineInputProps = {
+    /** Placeholder text to display. Defaults to `"..."`. */
+    placeholder?: string;
+};
+
+/** A non-editable placeholder shaped like an `InlineInput`.
+
+Renders the same DOM shell as `InlineInput` (so its size, baseline, and spacing
+match a real inline input) but with no underlying text field. Use this where an
+`InlineInput` would normally appear but the input cannot yet be edited (e.g.
+because its parent state is incomplete) and you want a dimmed placeholder
+occupying the same space.
+ */
+export const PlaceholderInlineInput = (props: PlaceholderInlineInputProps) => (
+    <div class="inline-input-container">
+        <span class="inline-input-filler placeholder-inline-input">
+            {props.placeholder ?? "..."}
+        </span>
+    </div>
+);
