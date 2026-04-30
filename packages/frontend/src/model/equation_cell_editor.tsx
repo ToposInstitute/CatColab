@@ -263,6 +263,37 @@ function PathPicker(props: {
         }
     });
 
+    // Revalidate the currently selected morphism against the currently
+    // available path set (e.g. RHS after LHS changes).
+    createEffect(() => {
+        const mor = chosenPath();
+        if (mor === null) {
+            return;
+        }
+        const stillAvailable = props.paths.some((p) => deepEqual(p, mor));
+        if (stillAvailable) {
+            return;
+        }
+        const previous = pathText(mor);
+        props.setMor(null);
+        setText(previous);
+        setUnresolvedText(previous);
+    });
+
+    // Revalidate unresolved text when model/path options change; if it becomes
+    // resolvable again, commit it and clear warning state.
+    createEffect(() => {
+        if (unresolvedText() === null) {
+            return;
+        }
+        const resolved = resolvedFromText();
+        if (!resolved) {
+            return;
+        }
+        setUnresolvedText(null);
+        props.setMor(resolved);
+    });
+
     const commitTypedText = () => {
         const typed = text();
         if (typed.trim() === "") {
@@ -320,6 +351,8 @@ function PathPicker(props: {
         return out;
     });
 
+    const resolvedFromText = createMemo(() => resolveTypedPath(text(), items()));
+
     /** Show the input only when the picker is the active input. The
         non-active state always renders a static display: the rendered path
         when one is chosen, or `...` placeholder when empty. */
@@ -369,7 +402,7 @@ function PathPicker(props: {
                     status={
                         text().trim() === ""
                             ? null
-                            : resolveTypedPath(text(), items()) !== null
+                            : resolvedFromText() !== null
                               ? null
                               : "incomplete"
                     }
