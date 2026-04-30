@@ -108,10 +108,10 @@
     text-overflow: ellipsis;
 }
 
-/* Roomy popup for path completions. The popup also receives the global
-   `formal-judgment` class (applied via `popupClass`) so its font-size and
-   `--formal-judgment-font-size` match those of the surrounding cell inputs. */
+/* Roomy popup for path completions. */
 .completionsPopup {
+    font-size: 1.3em;
+    line-height: 1.1;
     min-width: 24em;
     max-width: 40em;
     padding: 0.5rem;

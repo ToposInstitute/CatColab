@@ -417,7 +417,7 @@ function PathPicker(props: {
                         />
                     )}
                     showCompletionsOnFocus={true}
-                    popupClass={`formal-judgment ${styles["completionsPopup"]}`}
+                    popupClass={styles.completionsPopup}
                     completionsEmptyText="No paths available."
                     isActive={props.isActive}
                     hasFocused={props.hasFocused}
