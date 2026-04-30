@@ -25,12 +25,14 @@
     display: flex;
     flex-direction: row;
     align-items: center;
+    justify-content: center;
     gap: 1ex;
-    /* Always span the full width of the surrounding cell, but still allow
-       children (in particular the path display) to shrink so the inner path
-       can wrap rather than overflow horizontally. */
     width: 100%;
     min-width: 0;
+    box-sizing: border-box;
+    border: 1px solid var(--color-gray-450, #bbb);
+    border-radius: 4px;
+    padding: 0.25em 0.5em;
 }
 
 .equals {
@@ -47,9 +49,8 @@
 }
 
 .pathDisplay {
+    /* Plain-text styling for the click-to-edit <button>. */
     cursor: text;
-
-    /* Styled as plain text since this is a <button> for click-to-edit. */
     background: transparent;
     border: none;
     padding: 0;
@@ -57,11 +58,7 @@
     color: inherit;
     font: inherit;
     text-align: inherit;
-
-    /* Allow the inner `.path` to wrap when there isn't enough horizontal room,
-       and span the full width of the surrounding cell. */
     display: block;
-    width: 100%;
     min-width: 0;
 }
 
@@ -70,24 +67,12 @@
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
-    /* Center the path's segments horizontally within the full-width box. */
     justify-content: center;
     gap: 1ex;
-    /* Always span the full width of the surrounding cell. */
-    width: 100%;
     min-width: 0;
     box-sizing: border-box;
-
-    /* Grey border around the rendered path. */
-    border: 1px solid var(--color-gray-450, #bbb);
-    border-radius: 4px;
-    padding: 0.25em 0.5em;
-
-    /* Drives the vertical room for the morphism name above each arrow.
-       (See `arrow_styles.module.css`: the `arrowContainer`'s margin-bottom
-       depends on this variable.) */
+    /* Vertical room for morphism names above arrows; see arrow_styles.module.css. */
     --formal-judgment-font-size: 0.9em;
-
     line-height: 1.2;
 }
 

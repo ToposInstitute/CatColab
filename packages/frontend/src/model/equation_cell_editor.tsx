@@ -314,7 +314,7 @@ function PathPicker(props: {
                 <InlineInput
                     text={text()}
                     setText={setText}
-                    placeholder="path…"
+                    placeholder="..."
                     completions={items()}
                     completionsFilter={(its, text) =>
                         filterPathCompletions(its as PathCompletionItem[], text)
@@ -369,8 +369,9 @@ Filtering rules (case-insensitive):
 - `;`-separated tokens match composite paths whose successive morphism
   labels start with the corresponding tokens (an empty trailing token is
   ignored, so `f;` still matches paths starting with `f`).
-- Otherwise, fall back to the same startsWith → includes match on the
-  precomputed name string used by the default filter.
+- Otherwise, match against the synthesized name (startsWith → includes) or
+  the path's domain-object label (so e.g. typing `obj` matches `id(object)`
+  as well as any non-identity path starting at `object`).
  */
 function filterPathCompletions(items: PathCompletionItem[], text: string): PathCompletionItem[] {
     const trimmed = text.trim();
@@ -418,11 +419,23 @@ function filterPathCompletions(items: PathCompletionItem[], text: string): PathC
         });
     }
 
-    // Fallback: startsWith → includes on the synthesized name.
-    const starts = items.filter((it) => it.path.nameLower.startsWith(lower));
+    // Fallback: match against the synthesized name or the domain-object
+    // label. Domain-label matches let typing an object name surface every
+    // path starting at that object (including its identity).
+    const starts = items.filter(
+        (it) => it.path.nameLower.startsWith(lower) || domLabel(it).startsWith(lower),
+    );
     const startsSet = new Set(starts);
-    const includes = items.filter((it) => !startsSet.has(it) && it.path.nameLower.includes(lower));
+    const includes = items.filter(
+        (it) =>
+            !startsSet.has(it) &&
+            (it.path.nameLower.includes(lower) || domLabel(it).includes(lower)),
+    );
     return starts.concat(includes);
+}
+
+function domLabel(it: PathCompletionItem): string {
+    return (it.path.segments.dom.label || "Unnamed").toLowerCase();
 }
 
 /** Render a path completion as a single row in the completions list:
