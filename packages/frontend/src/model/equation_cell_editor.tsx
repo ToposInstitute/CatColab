@@ -325,6 +325,8 @@ function PathPicker(props: {
         when one is chosen, or `...` placeholder when empty. */
     const showInput = () => props.isActive;
 
+    const resolvedPath = createMemo(() => resolveTypedPath(text(), items()));
+
     return (
         <div
             class={styles["pathPicker"]}
@@ -367,11 +369,7 @@ function PathPicker(props: {
                     setText={setText}
                     placeholder="..."
                     status={
-                        text().trim() === ""
-                            ? null
-                            : resolveTypedPath(text(), items()) !== null
-                              ? null
-                              : "incomplete"
+                        text().trim() === "" ? null : resolvedPath() !== null ? null : "incomplete"
                     }
                     completions={items()}
                     completionsFilter={(its, text) =>
@@ -385,7 +383,7 @@ function PathPicker(props: {
                     )}
                     showCompletionsOnFocus={true}
                     popupClass={styles.completionsPopup}
-                    completionsEmptyText="No paths available."
+                    completionsEmptyText="No matching paths found."
                     isActive={props.isActive}
                     hasFocused={props.hasFocused}
                     hasBlurred={commitTypedText}
@@ -551,7 +549,7 @@ function PathSegmentsView(props: { segments: PathSegments; theory: Theory }) {
     return (
         <div class={styles["path"]}>
             <div class={domClasses().join(" ")}>
-                <UnnamedLabel label={props.segments.dom.label} />
+                <LabelOrUnnamed name={props.segments.dom.label} />
             </div>
             <For each={props.segments.morphisms}>
                 {(mor) => <PathSegmentView segment={mor} theory={props.theory} />}
@@ -587,24 +585,24 @@ function PathSegmentView(props: { segment: PathMorSegment; theory: Theory }) {
         <div class={styles["segment"]}>
             <div class={arrowStyles.arrowWithName}>
                 <div class={nameClasses().join(" ")}>
-                    <UnnamedLabel label={props.segment.label} />
+                    <LabelOrUnnamed name={props.segment.label} />
                 </div>
                 <div class={[arrowStyles.arrowContainer, arrowClass()].join(" ")}>
                     <div class={[arrowStyles.arrow, arrowClass()].join(" ")} />
                 </div>
             </div>
             <div class={codClasses().join(" ")}>
-                <UnnamedLabel label={props.segment.cod.label} />
+                <LabelOrUnnamed name={props.segment.cod.label} />
             </div>
         </div>
     );
 }
 
 /** Render a label, falling back to a styled "Unnamed" when empty. */
-function UnnamedLabel(props: { label: string }) {
+function LabelOrUnnamed(props: { name: string }) {
     return (
-        <Show when={props.label} fallback={<span class={styles["unnamed"]}>Unnamed</span>}>
-            {props.label}
+        <Show when={props.name} fallback={<span class={styles["unnamed"]}>Unnamed</span>}>
+            {props.name}
         </Show>
     );
 }
