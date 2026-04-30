@@ -111,8 +111,23 @@
     text-align: center;
 }
 
+/* A single completion row: diagrammatic path on top, typeable name beneath
+   as a small caption. The whole row is supplied via `renderItem` and replaces
+   the default `<Completions>` row layout. */
+.completionRow {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25em;
+    min-width: 0;
+}
+
 .completionName {
     font-family: var(--font-mono, monospace);
+    font-size: 0.85em;
+    color: var(--color-text-secondary, #555);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Roomy popup for path completions. The popup also receives the global
@@ -125,22 +140,6 @@
 
     & :global(.completion-list li) {
         padding: 0.5em 0.75em;
-    }
-
-    & :global(.completion-head) {
-        gap: 1em;
-        align-items: baseline;
-    }
-
-    & :global(.completion-name) {
-        white-space: nowrap;
-        overflow: visible;
-        text-overflow: clip;
-    }
-
-    & :global(.completion-description) {
-        font-size: inherit;
-        margin-top: 0.25em;
     }
 }
 

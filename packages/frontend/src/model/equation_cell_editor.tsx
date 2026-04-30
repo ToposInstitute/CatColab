@@ -96,8 +96,9 @@ export default function EquationCellEditor(props: EquationEditorProps) {
             eqn.name = name;
         });
 
-    /** All simple paths in the model, including identities, sorted by length
-        (shortest first; ties broken by the iteration order from the wasm). */
+    /** All simple paths in the model, including identities, sorted by edge
+        count (shortest first); ties broken by the iteration order from the
+        wasm. */
     const allPaths = createMemo<Mor[]>(() => {
         const m = elaborated();
         if (!m) {
@@ -105,7 +106,6 @@ export default function EquationCellEditor(props: EquationEditorProps) {
         }
         try {
             const paths = m.listSimplePaths(undefined);
-            // Stable sort by edge count.
             return paths
                 .map((mor, i) => ({ mor, i, len: pathLength(mor) }))
                 .toSorted((a, b) => a.len - b.len || a.i - b.i)
@@ -204,7 +204,9 @@ export default function EquationCellEditor(props: EquationEditorProps) {
 
 When inactive and a path is set, renders the path diagrammatically
 (`A —f→ B —g→ C`). When active, an `InlineInput` is shown with the supplied
-list of paths as completions.
+list of paths as completions; a custom filter recognises path-syntax
+conventions (`id(Foo)`, `f;g`) and a custom renderer draws each completion
+diagrammatically.
  */
 function PathPicker(props: {
     model: DblModel | undefined;
@@ -254,19 +256,40 @@ function PathPicker(props: {
         }
     });
 
-    const completions = (): Completion[] => {
+    /** Build path-completion items (one per available path).
+
+    Each item is a standard `Completion` (so it flows through `InlineInput`'s
+    typed `completions` prop) augmented with a `path` field carrying the
+    precomputed display data used by the custom filter and renderer. Items
+    with no presentable segments are skipped. */
+    const items = createMemo<PathCompletionItem[]>(() => {
         const m = props.model;
         if (!m) {
             return [];
         }
-        const theory = props.theory;
-        // Standard completions filter (in `<Completions>`) matches the typed
-        // text against `Completion.name`. Identity completions have name
-        // `id(Foo)`, so typing `id`, `id(Foo)`, or just `Foo` all match.
-        return props.paths
-            .map((mor) => buildCompletion(m, theory, mor, props.setMor))
-            .filter((c): c is Completion => c !== null);
-    };
+        const out: PathCompletionItem[] = [];
+        for (const mor of props.paths) {
+            const segs = describePath(m, mor);
+            if (!segs) {
+                continue;
+            }
+            const idOb = identityPathObject(mor);
+            const name =
+                idOb !== null
+                    ? identityText(m, idOb)
+                    : segs.morphisms.map((s) => s.label || "Unnamed").join(";");
+            out.push({
+                name,
+                onComplete: () => props.setMor(mor),
+                path: {
+                    segments: segs,
+                    isIdentity: idOb !== null,
+                    nameLower: name.toLowerCase(),
+                },
+            });
+        }
+        return out;
+    });
 
     /** Show the input when the picker is the active input or no path is chosen. */
     const showInput = () => props.isActive || chosenPath() === null;
@@ -292,7 +315,16 @@ function PathPicker(props: {
                     text={text()}
                     setText={setText}
                     placeholder="path…"
-                    completions={completions()}
+                    completions={items()}
+                    completionsFilter={(its, text) =>
+                        filterPathCompletions(its as PathCompletionItem[], text)
+                    }
+                    completionsRenderItem={(item) => (
+                        <PathCompletionRow
+                            item={item as PathCompletionItem}
+                            theory={props.theory}
+                        />
+                    )}
                     showCompletionsOnFocus={true}
                     popupClass={`formal-judgment ${styles["completionsPopup"]}`}
                     completionsEmptyText="No paths available."
@@ -310,31 +342,99 @@ function PathPicker(props: {
     );
 }
 
-/** Build a completion entry for a path. */
-function buildCompletion(
-    model: DblModel,
-    theory: Theory,
-    mor: Mor,
-    setMor: (mor: Mor | null) => void,
-): Completion | null {
-    const segs = describePath(model, mor);
-    if (!segs) {
-        return null;
-    }
-    const idOb = identityPathObject(mor);
-    // Typeable name: `id(Label)` for identities; otherwise morphism labels
-    // joined by the diagrammatic composition operator `;` (unlabelled
-    // morphisms show as "Unnamed").
-    const name =
-        idOb !== null
-            ? identityText(model, idOb)
-            : segs.morphisms.map((m) => m.label || "Unnamed").join(";");
-    return {
-        name,
-        nameClass: styles["completionName"],
-        description: <PathSegmentsView segments={segs} theory={theory} />,
-        onComplete: () => setMor(mor),
+/** A path completion item.
+
+Stored as a regular `Completion` so it threads through `InlineInput`'s
+`completions` prop without casts; an extra `path` field carries the data
+the custom filter and renderer need (segments for rendering, lower-cased
+name for matching).
+ */
+type PathCompletionItem = Completion & {
+    path: {
+        segments: PathSegments;
+        isIdentity: boolean;
+        nameLower: string;
     };
+};
+
+/** Filter path completions, preserving input order (which is already sorted
+    by edge count upstream in `allPaths`).
+
+Filtering rules (case-insensitive):
+- Empty input matches everything.
+- `id`, `id(`, or `id(Foo)` matches identity paths whose object label starts
+  with the prefix after the opening parenthesis. Just typing `Foo` also
+  matches `id(Foo)` via the standard substring fallback.
+- `;`-separated tokens match composite paths whose successive morphism
+  labels start with the corresponding tokens (an empty trailing token is
+  ignored, so `f;` still matches paths starting with `f`).
+- Otherwise, fall back to the same startsWith → includes match on the
+  precomputed name string used by the default filter.
+ */
+function filterPathCompletions(items: PathCompletionItem[], text: string): PathCompletionItem[] {
+    const trimmed = text.trim();
+    if (trimmed === "") {
+        return items.slice();
+    }
+    const lower = trimmed.toLowerCase();
+
+    // Identity-path syntax: `id`, `id(`, `id(Foo`, `id(Foo)`.
+    const idMatch = lower.match(/^id(?:\((.*?)\)?)?$/);
+    if (idMatch !== null) {
+        const innerPrefix = idMatch[1] ?? "";
+        return items.filter((it) => {
+            if (!it.path.isIdentity) {
+                return false;
+            }
+            const label = (it.path.segments.dom.label || "Unnamed").toLowerCase();
+            return innerPrefix === "" || label.startsWith(innerPrefix);
+        });
+    }
+
+    // Composite-path syntax: `;`-separated label prefixes.
+    if (lower.includes(";")) {
+        const tokens = lower.split(";").map((t) => t.trim());
+        // Drop a single trailing empty token so `f;` matches paths starting
+        // with `f`. Other empty tokens (e.g. `f;;g`) prevent any match.
+        if (tokens.length > 0 && tokens[tokens.length - 1] === "") {
+            tokens.pop();
+        }
+        if (tokens.some((t) => t === "")) {
+            return [];
+        }
+        return items.filter((it) => {
+            if (it.path.isIdentity) {
+                return false;
+            }
+            if (it.path.segments.morphisms.length < tokens.length) {
+                return false;
+            }
+            return tokens.every((tok, i) => {
+                const seg = it.path.segments.morphisms[i];
+                invariant(seg, "tokens.length is bounded by morphisms.length");
+                const label = (seg.label || "Unnamed").toLowerCase();
+                return label.startsWith(tok);
+            });
+        });
+    }
+
+    // Fallback: startsWith → includes on the synthesized name.
+    const starts = items.filter((it) => it.path.nameLower.startsWith(lower));
+    const startsSet = new Set(starts);
+    const includes = items.filter((it) => !startsSet.has(it) && it.path.nameLower.includes(lower));
+    return starts.concat(includes);
+}
+
+/** Render a path completion as a single row in the completions list:
+    diagrammatic path on top, the typeable name underneath as a subtle
+    caption. */
+function PathCompletionRow(props: { item: PathCompletionItem; theory: Theory }) {
+    return (
+        <div class={styles["completionRow"]}>
+            <PathSegmentsView segments={props.item.path.segments} theory={props.theory} />
+            <div class={styles["completionName"]}>{props.item.name}</div>
+        </div>
+    );
 }
 
 /** Typeable text for an identity path at the given object: `id(Label)`. */

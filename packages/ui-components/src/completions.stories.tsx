@@ -162,3 +162,65 @@ export const CustomEmptyText: Story = {
         return <Completions completions={[]} emptyText="No results" />;
     },
 };
+
+type ColoredItem = {
+    name: string;
+    tags: string[];
+    color: string;
+};
+
+const COLORED_ITEMS: ColoredItem[] = [
+    { name: "Apple", tags: ["fruit", "red"], color: "#e23" },
+    { name: "Avocado", tags: ["fruit", "green"], color: "#5a3" },
+    { name: "Banana", tags: ["fruit", "yellow"], color: "#dc4" },
+    { name: "Carrot", tags: ["vegetable", "orange"], color: "#e72" },
+    { name: "Cabbage", tags: ["vegetable", "green"], color: "#7a5" },
+];
+
+// Custom filter: match if any tag starts with the input, or the name
+// contains it.
+const filterColoredItems = (xs: ColoredItem[], q: string) => {
+    const lower = q.toLowerCase();
+    return xs.filter(
+        (it) => it.name.toLowerCase().includes(lower) || it.tags.some((t) => t.startsWith(lower)),
+    );
+};
+
+const renderColoredItem = (item: ColoredItem) => (
+    <div style={{ display: "flex", "align-items": "center", gap: "0.5em" }}>
+        <div
+            style={{
+                width: "1em",
+                height: "1em",
+                "background-color": item.color,
+                "border-radius": "50%",
+            }}
+        />
+        <strong>{item.name}</strong>
+        <span style={{ color: "#888", "font-size": "0.85em" }}>{item.tags.join(", ")}</span>
+    </div>
+);
+
+export const CustomFilterAndRenderer: Story = {
+    render: () => {
+        const [text, setText] = createSignal("");
+        return (
+            <div>
+                <input
+                    type="text"
+                    value={text()}
+                    onInput={(e) => setText(e.currentTarget.value)}
+                    placeholder="Try `fruit`, `green`, `app`..."
+                    style={{ "margin-bottom": "8px", padding: "4px", width: "260px" }}
+                />
+                <Completions<ColoredItem>
+                    completions={COLORED_ITEMS}
+                    text={text()}
+                    filter={filterColoredItems}
+                    renderItem={renderColoredItem}
+                    onSelect={(it) => alert(`Selected ${it.name}`)}
+                />
+            </div>
+        );
+    },
+};

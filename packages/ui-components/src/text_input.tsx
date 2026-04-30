@@ -7,6 +7,15 @@ void focus;
 import { type Completion, Completions, type CompletionsRef } from "./completions";
 import { assertTypelevel } from "./util/types";
 
+/** Custom filter for completions in `TextInput`. */
+export type TextInputCompletionFilter = (items: Completion[], text: string) => Completion[];
+
+/** Custom item renderer for completions in `TextInput`. */
+export type TextInputCompletionRenderer = (item: Completion, presumptive: boolean) => JSX.Element;
+
+/** Custom selection handler for completions in `TextInput`. */
+export type TextInputCompletionOnSelect = (item: Completion) => void;
+
 /** Props for `TextInput` component. */
 type TextInputProps = Omit<ComponentProps<"input">, "onKeyDown"> &
     TextInputOptions & {
@@ -36,6 +45,25 @@ export type TextInputOptions = TextInputActions & {
 
     /** Text shown when no completions match. Defaults to "No completions". */
     completionsEmptyText?: string;
+
+    /** Custom filter for the completions list.
+
+    Defaults to a built-in startsWith → includes match against
+    `Completion.name`.
+     */
+    completionsFilter?: TextInputCompletionFilter;
+
+    /** Custom renderer for completion items.
+
+    Defaults to the built-in icon/name/shortcut/description layout.
+     */
+    completionsRenderItem?: TextInputCompletionRenderer;
+
+    /** Custom selection handler for completions.
+
+    Defaults to invoking `Completion.onComplete`.
+     */
+    completionsOnSelect?: TextInputCompletionOnSelect;
 
     /** Called to intercept `keydown` events.`
 
@@ -110,6 +138,9 @@ const TEXT_INPUT_OPTIONS = [
     "showCompletionsOnFocus",
     "popupClass",
     "completionsEmptyText",
+    "completionsFilter",
+    "completionsRenderItem",
+    "completionsOnSelect",
     "interceptKeyDown",
     "autofill",
     "createBelow",
@@ -252,6 +283,9 @@ export function TextInput(allProps: TextInputProps) {
                         completions={options.completions ?? []}
                         text={props.text}
                         emptyText={options.completionsEmptyText}
+                        filter={options.completionsFilter}
+                        renderItem={options.completionsRenderItem}
+                        onSelect={options.completionsOnSelect}
                         ref={setCompletionsRef}
                         onComplete={() => setCompletionsOpen(false)}
                     />
