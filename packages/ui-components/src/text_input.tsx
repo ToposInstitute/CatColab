@@ -7,6 +7,11 @@ void focus;
 import { type Completion, Completions, type CompletionsRef } from "./completions";
 import { assertTypelevel } from "./util/types";
 
+/** Floating-options type accepted by Corvu's `Popover`. */
+export type PopoverFloatingOptions = NonNullable<
+    NonNullable<ComponentProps<typeof Popover>["floatingOptions"]>
+>;
+
 /** Custom filter for completions in `TextInput`. */
 export type TextInputCompletionFilter = (items: Completion[], text: string) => Completion[];
 
@@ -64,6 +69,12 @@ export type TextInputOptions = TextInputActions & {
     Defaults to invoking `Completion.onComplete`.
      */
     completionsOnSelect?: TextInputCompletionOnSelect;
+
+    /** Placement of the completions popup. Defaults to `"bottom-start"`. */
+    popoverPlacement?: ComponentProps<typeof Popover>["placement"];
+
+    /** Floating-UI options forwarded to Corvu's `Popover`. */
+    popoverFloatingOptions?: PopoverFloatingOptions;
 
     /** Called to intercept `keydown` events.`
 
@@ -141,6 +152,8 @@ const TEXT_INPUT_OPTIONS = [
     "completionsFilter",
     "completionsRenderItem",
     "completionsOnSelect",
+    "popoverPlacement",
+    "popoverFloatingOptions",
     "interceptKeyDown",
     "autofill",
     "createBelow",
@@ -243,7 +256,8 @@ export function TextInput(allProps: TextInputProps) {
                     completionsRef()?.setPresumptive(0);
                 }
             }}
-            placement="bottom-start"
+            placement={options.popoverPlacement ?? "bottom-start"}
+            floatingOptions={options.popoverFloatingOptions}
             closeOnOutsideFocus={false}
             closeOnOutsidePointer={false}
             trapFocus={false}

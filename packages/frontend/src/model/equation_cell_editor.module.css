@@ -108,7 +108,6 @@
     text-overflow: ellipsis;
 }
 
-/* Roomy popup for path completions. */
 .completionsPopup {
     font-size: 1.3em;
     line-height: 1.1;
@@ -136,7 +135,13 @@
 }
 
 .clearButton {
-    margin-left: auto;
     display: inline-flex;
     align-items: center;
+}
+
+/* Invisible spacer matching the clear button's width so the input stays
+   centered when the button is shown. */
+.clearSpacer {
+    visibility: hidden;
+    pointer-events: none;
 }

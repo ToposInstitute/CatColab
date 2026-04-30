@@ -373,6 +373,13 @@ function PathPicker(props: {
                 </div>
             </Show>
             <Show when={showInput()}>
+                <Show when={hasContent()}>
+                    <div class={`${styles["clearButton"]} ${styles["clearSpacer"]}`} aria-hidden>
+                        <IconButton tabIndex={-1}>
+                            <X />
+                        </IconButton>
+                    </div>
+                </Show>
                 <InlineInput
                     text={text()}
                     setText={setText}
@@ -392,6 +399,8 @@ function PathPicker(props: {
                     )}
                     showCompletionsOnFocus={true}
                     popupClass={styles.completionsPopup}
+                    popoverPlacement="bottom-start"
+                    popoverFloatingOptions={{ flip: false, offset: 8 }}
                     completionsEmptyText="No matching paths found."
                     isActive={props.isActive}
                     hasFocused={props.hasFocused}
@@ -410,9 +419,7 @@ function PathPicker(props: {
                             tooltip="Clear path"
                             aria-label="Clear path"
                             onMouseDown={(evt) => {
-                                // Prevent the input from losing focus (which
-                                // would commit the typed text before we
-                                // clear).
+                                // Don't blur the input before clearing.
                                 evt.preventDefault();
                                 evt.stopPropagation();
                                 clear();
