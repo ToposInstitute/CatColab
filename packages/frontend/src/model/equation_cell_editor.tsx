@@ -149,6 +149,7 @@ export default function EquationCellEditor(props: EquationEditorProps) {
                     exitUp={props.actions.activateAbove}
                     exitDown={() => setActiveInput("lhs")}
                     exitRight={() => setActiveInput("lhs")}
+                    createBelow={() => setActiveInput("lhs")}
                     hasFocused={() => {
                         setActiveInput("name");
                         props.actions.hasFocused?.();
@@ -173,6 +174,7 @@ export default function EquationCellEditor(props: EquationEditorProps) {
                         setActiveInput("lhs");
                         props.actions.hasFocused?.();
                     }}
+                    createBelow={() => setActiveInput("rhs")}
                 />
             </div>
             <div class={styles["equals"]}>{"="}</div>
@@ -194,6 +196,7 @@ export default function EquationCellEditor(props: EquationEditorProps) {
                         setActiveInput("rhs");
                         props.actions.hasFocused?.();
                     }}
+                    createBelow={props.actions.activateBelow}
                 />
             </div>
         </div>
@@ -222,6 +225,7 @@ function PathPicker(props: {
     exitLeft?: () => void;
     exitRight?: () => void;
     hasFocused?: () => void;
+    createBelow?: () => void;
 }) {
     /** The chosen path, if any. */
     const chosenPath = createMemo<Mor | null>(() => props.mor);
@@ -385,6 +389,7 @@ function PathPicker(props: {
                     isActive={props.isActive}
                     hasFocused={props.hasFocused}
                     hasBlurred={commitTypedText}
+                    createBelow={props.createBelow}
                     exitBackward={props.exitBackward}
                     exitForward={props.exitForward}
                     exitUp={props.exitUp}
