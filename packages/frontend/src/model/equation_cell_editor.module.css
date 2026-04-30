@@ -130,3 +130,7 @@
     color: var(--color-red-500, red);
     font-size: 0.9em;
 }
+
+.unresolved {
+    border-bottom: 2px solid var(--color-inline-input-warning);
+}

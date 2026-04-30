@@ -249,12 +249,32 @@ function PathPicker(props: {
     completions list is filtered to it.
      */
     const [text, setText] = createSignal("");
+    const [unresolvedText, setUnresolvedText] = createSignal<string | null>(null);
 
     createEffect(() => {
         if (!props.isActive) {
-            setText(pathText(chosenPath()));
+            if (unresolvedText() === null) {
+                setText(pathText(chosenPath()));
+            }
         }
     });
+
+    const commitTypedText = () => {
+        const typed = text();
+        if (typed.trim() === "") {
+            setUnresolvedText(null);
+            props.setMor(null);
+            return;
+        }
+        const resolved = resolveTypedPath(typed, items());
+        if (resolved) {
+            setUnresolvedText(null);
+            props.setMor(resolved);
+            return;
+        }
+        props.setMor(null);
+        setUnresolvedText(typed);
+    };
 
     /** Build path-completion items (one per available path).
 
@@ -280,7 +300,12 @@ function PathPicker(props: {
                     : segs.morphisms.map((s) => s.label || "Unnamed").join(";");
             out.push({
                 name,
-                onComplete: () => props.setMor(mor),
+                onComplete: () => {
+                    setUnresolvedText(null);
+                    setText(name);
+                    props.setMor(mor);
+                },
+                mor,
                 path: {
                     segments: segs,
                     isIdentity: idOb !== null,
@@ -311,10 +336,24 @@ function PathPicker(props: {
         >
             <Show when={!showInput()}>
                 <div class={styles["pathDisplay"]}>
-                    <Show when={chosenPath()} fallback={<span class={styles["unnamed"]}>...</span>}>
-                        {(mor) => (
-                            <PathView model={props.model} theory={props.theory} mor={mor()} />
-                        )}
+                    <Show
+                        when={unresolvedText()}
+                        fallback={
+                            <Show
+                                when={chosenPath()}
+                                fallback={<span class={styles["unnamed"]}>...</span>}
+                            >
+                                {(mor) => (
+                                    <PathView
+                                        model={props.model}
+                                        theory={props.theory}
+                                        mor={mor()}
+                                    />
+                                )}
+                            </Show>
+                        }
+                    >
+                        {(typed) => <span class={styles["unresolved"]}>{typed()}</span>}
                     </Show>
                 </div>
             </Show>
@@ -323,6 +362,13 @@ function PathPicker(props: {
                     text={text()}
                     setText={setText}
                     placeholder="..."
+                    status={
+                        text().trim() === ""
+                            ? null
+                            : resolveTypedPath(text(), items()) !== null
+                              ? null
+                              : "incomplete"
+                    }
                     completions={items()}
                     completionsFilter={(its, text) =>
                         filterPathCompletions(its as PathCompletionItem[], text)
@@ -338,6 +384,7 @@ function PathPicker(props: {
                     completionsEmptyText="No paths available."
                     isActive={props.isActive}
                     hasFocused={props.hasFocused}
+                    hasBlurred={commitTypedText}
                     exitBackward={props.exitBackward}
                     exitForward={props.exitForward}
                     exitUp={props.exitUp}
@@ -350,6 +397,14 @@ function PathPicker(props: {
     );
 }
 
+function resolveTypedPath(typed: string, items: PathCompletionItem[]): Mor | null {
+    const query = typed.trim().toLowerCase();
+    if (query === "") {
+        return null;
+    }
+    return items.find((item) => item.name.trim().toLowerCase() === query)?.mor ?? null;
+}
+
 /** A path completion item.
 
 Stored as a regular `Completion` so it threads through `InlineInput`'s
@@ -358,6 +413,7 @@ the custom filter and renderer need (segments for rendering, lower-cased
 name for matching).
  */
 type PathCompletionItem = Completion & {
+    mor: Mor;
     path: {
         segments: PathSegments;
         isIdentity: boolean;
