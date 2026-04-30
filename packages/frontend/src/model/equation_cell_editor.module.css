@@ -134,3 +134,9 @@
 .unresolved {
     border-bottom: 2px solid var(--color-inline-input-warning);
 }
+
+.clearButton {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+}

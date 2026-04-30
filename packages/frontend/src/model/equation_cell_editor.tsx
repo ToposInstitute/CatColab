@@ -1,9 +1,10 @@
 import { deepEqual } from "fast-equals";
+import X from "lucide-solid/icons/x";
 import { For, Show, createEffect, createMemo, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 import { P, match } from "ts-pattern";
 
-import { type Completion, InlineInput, NameInput } from "catcolab-ui-components";
+import { type Completion, IconButton, InlineInput, NameInput } from "catcolab-ui-components";
 import type { DblModel, Mor, MorType, Ob, ObType, QualifiedLabel } from "catlog-wasm";
 import type { Theory } from "../theory";
 import { LiveModelContext } from "./context";
@@ -327,6 +328,14 @@ function PathPicker(props: {
 
     const resolvedPath = createMemo(() => resolveTypedPath(text(), items()));
 
+    const hasContent = () => chosenPath() !== null || unresolvedText() !== null || text() !== "";
+
+    const clear = () => {
+        setText("");
+        setUnresolvedText(null);
+        props.setMor(null);
+    };
+
     return (
         <div
             class={styles["pathPicker"]}
@@ -395,6 +404,24 @@ function PathPicker(props: {
                     exitLeft={props.exitLeft}
                     exitRight={props.exitRight}
                 />
+                <Show when={hasContent()}>
+                    <div class={styles["clearButton"]}>
+                        <IconButton
+                            tooltip="Clear path"
+                            aria-label="Clear path"
+                            onMouseDown={(evt) => {
+                                // Prevent the input from losing focus (which
+                                // would commit the typed text before we
+                                // clear).
+                                evt.preventDefault();
+                                evt.stopPropagation();
+                                clear();
+                            }}
+                        >
+                            <X />
+                        </IconButton>
+                    </div>
+                </Show>
             </Show>
         </div>
     );
