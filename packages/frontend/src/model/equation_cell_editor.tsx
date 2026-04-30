@@ -362,9 +362,10 @@ type PathCompletionItem = Completion & {
 
 Filtering rules (case-insensitive):
 - Empty input matches everything.
-- `id`, `id(`, or `id(Foo)` matches identity paths whose object label starts
-  with the prefix after the opening parenthesis. Just typing `Foo` also
-  matches `id(Foo)` via the standard substring fallback.
+- `id`, `id(`, or `id(Foo)` matches every path (identity or otherwise) whose
+  domain object's label starts with the prefix after the opening parenthesis.
+  An empty prefix matches all paths. The identity at `Foo` is included
+  because its domain object is `Foo`.
 - `;`-separated tokens match composite paths whose successive morphism
   labels start with the corresponding tokens (an empty trailing token is
   ignored, so `f;` still matches paths starting with `f`).
@@ -378,14 +379,13 @@ function filterPathCompletions(items: PathCompletionItem[], text: string): PathC
     }
     const lower = trimmed.toLowerCase();
 
-    // Identity-path syntax: `id`, `id(`, `id(Foo`, `id(Foo)`.
+    // Domain-prefixed syntax: `id`, `id(`, `id(Foo`, `id(Foo)`. Matches any
+    // path whose domain label starts with the prefix (including the
+    // identity at that object, since its domain is the object).
     const idMatch = lower.match(/^id(?:\((.*?)\)?)?$/);
     if (idMatch !== null) {
         const innerPrefix = idMatch[1] ?? "";
         return items.filter((it) => {
-            if (!it.path.isIdentity) {
-                return false;
-            }
             const label = (it.path.segments.dom.label || "Unnamed").toLowerCase();
             return innerPrefix === "" || label.startsWith(innerPrefix);
         });
