@@ -31,8 +31,9 @@
     min-width: 0;
     box-sizing: border-box;
     border: 1px solid var(--color-gray-450, #bbb);
-    border-radius: 4px;
-    padding: 0.25em 0.5em;
+    padding: 0.75em 1em;
+    cursor: text;
+    min-height: 90px;
 }
 
 .equals {
@@ -49,15 +50,7 @@
 }
 
 .pathDisplay {
-    /* Plain-text styling for the click-to-edit <button>. */
     cursor: text;
-    background: transparent;
-    border: none;
-    padding: 0;
-    margin: 0;
-    color: inherit;
-    font: inherit;
-    text-align: inherit;
     display: block;
     min-width: 0;
 }

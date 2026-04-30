@@ -291,24 +291,32 @@ function PathPicker(props: {
         return out;
     });
 
-    /** Show the input when the picker is the active input or no path is chosen. */
-    const showInput = () => props.isActive || chosenPath() === null;
+    /** Show the input only when the picker is the active input. The
+        non-active state always renders a static display: the rendered path
+        when one is chosen, or `...` placeholder when empty. */
+    const showInput = () => props.isActive;
 
     return (
-        <div class={styles["pathPicker"]}>
-            <Show when={!showInput() ? chosenPath() : null}>
-                {(mor) => (
-                    <button
-                        type="button"
-                        class={styles["pathDisplay"]}
-                        onMouseDown={(evt) => {
-                            props.hasFocused?.();
-                            evt.preventDefault();
-                        }}
-                    >
-                        <PathView model={props.model} theory={props.theory} mor={mor()} />
-                    </button>
-                )}
+        <div
+            class={styles["pathPicker"]}
+            onMouseDown={(evt) => {
+                // Activate the picker when clicking anywhere inside the
+                // border, but only when not already in editing mode (so
+                // selecting text in the input still works).
+                if (!showInput()) {
+                    props.hasFocused?.();
+                    evt.preventDefault();
+                }
+            }}
+        >
+            <Show when={!showInput()}>
+                <div class={styles["pathDisplay"]}>
+                    <Show when={chosenPath()} fallback={<span class={styles["unnamed"]}>...</span>}>
+                        {(mor) => (
+                            <PathView model={props.model} theory={props.theory} mor={mor()} />
+                        )}
+                    </Show>
+                </div>
             </Show>
             <Show when={showInput()}>
                 <InlineInput
