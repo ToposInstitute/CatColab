@@ -1,6 +1,6 @@
 import { deepEqual } from "fast-equals";
 import X from "lucide-solid/icons/x";
-import { For, Show, createMemo, createSignal, useContext } from "solid-js";
+import { For, Show, createEffect, createMemo, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 import { P, match } from "ts-pattern";
 
@@ -244,6 +244,76 @@ syncing effect to track external state.
 function PathPicker(props: PathPickerProps) {
     const [unresolvedText, setUnresolvedText] = createSignal<string | null>(null);
 
+    /** Resolution-relevant data for each available path: enough to render a
+        completion row, filter, and resolve typed text. The active input
+        wraps these into full `Completion` items by attaching its
+        `onComplete` closure. Hoisted to the parent so re-association can
+        run while the input is unmounted. */
+    const entries = createMemo<PathEntry[]>(() => {
+        const m = props.model;
+        if (!m) {
+            return [];
+        }
+        const out: PathEntry[] = [];
+        for (const mor of props.paths) {
+            const segs = describePath(m, mor);
+            if (!segs) {
+                continue;
+            }
+            const idOb = identityPathObject(mor);
+            const name =
+                idOb !== null
+                    ? identityText(m, idOb)
+                    : segs.morphisms.map((s) => s.label || "Unnamed").join(";");
+            out.push({
+                mor,
+                name,
+                segments: segs,
+                isIdentity: idOb !== null,
+                nameLower: name.toLowerCase(),
+            });
+        }
+        return out;
+    });
+
+    // Re-association: while the input is not active, react to changes in
+    // the available entries (e.g. a morphism was renamed, added, removed,
+    // or the RHS dom/cod filter changed).
+    //
+    // Two directions, run in priority order:
+    // 1. If a committed path no longer appears in the entries (e.g. the
+    //    RHS was id(A) but LHS just changed so only B-paths remain),
+    //    demote it to unresolved text so the user can see and edit what
+    //    used to be selected.
+    // 2. Otherwise, if there is unresolved text and it now matches an
+    //    available entry, commit the path and clear the unresolved text.
+    createEffect(() => {
+        if (props.isActive) {
+            return;
+        }
+        // Skip while the model is unavailable: entries will be empty and
+        // we'd spuriously demote every committed path.
+        if (!props.model) {
+            return;
+        }
+        const es = entries();
+        const mor = props.mor;
+        if (mor !== null && !es.some((e) => deepEqual(e.mor, mor))) {
+            setUnresolvedText(pathText(props.model, mor));
+            props.setMor(null);
+            return;
+        }
+        const typed = unresolvedText();
+        if (typed === null) {
+            return;
+        }
+        const resolved = resolveTypedPath(typed, es);
+        if (resolved) {
+            props.setMor(resolved);
+            setUnresolvedText(null);
+        }
+    });
+
     return (
         <div
             class={styles["pathPicker"]}
@@ -270,6 +340,7 @@ function PathPicker(props: PathPickerProps) {
             >
                 <PathPickerInput
                     {...props}
+                    entries={entries()}
                     initialText={unresolvedText() ?? pathText(props.model, props.mor)}
                     setUnresolvedText={setUnresolvedText}
                 />
@@ -309,51 +380,33 @@ function PathPickerDisplay(props: {
     without any external sync. */
 function PathPickerInput(
     props: PathPickerProps & {
+        entries: PathEntry[];
         initialText: string;
         setUnresolvedText: (s: string | null) => void;
     },
 ) {
     const [text, setText] = createSignal(props.initialText);
 
-    /** Build path-completion items (one per available path).
-
-    Each item is a standard `Completion` (so it threads through `InlineInput`'s
-    typed `completions` prop) augmented with a `path` field carrying the
-    precomputed display data used by the custom filter and renderer. Items
-    with no presentable segments are skipped. */
-    const items = createMemo<PathCompletionItem[]>(() => {
-        const m = props.model;
-        if (!m) {
-            return [];
-        }
-        const out: PathCompletionItem[] = [];
-        for (const mor of props.paths) {
-            const segs = describePath(m, mor);
-            if (!segs) {
-                continue;
-            }
-            const idOb = identityPathObject(mor);
-            const name =
-                idOb !== null
-                    ? identityText(m, idOb)
-                    : segs.morphisms.map((s) => s.label || "Unnamed").join(";");
-            out.push({
-                name,
-                onComplete: () => {
-                    props.setUnresolvedText(null);
-                    setText(name);
-                    props.setMor(mor);
-                },
-                mor,
-                path: {
-                    segments: segs,
-                    isIdentity: idOb !== null,
-                    nameLower: name.toLowerCase(),
-                },
-            });
-        }
-        return out;
-    });
+    /** Wrap each entry into a `Completion` by attaching the `onComplete`
+        closure that needs access to `setText` and the unresolved-text
+        setter. Other resolution and rendering data passes through
+        unchanged on the `path` field. */
+    const items = createMemo<PathCompletionItem[]>(() =>
+        props.entries.map((entry) => ({
+            name: entry.name,
+            onComplete: () => {
+                props.setUnresolvedText(null);
+                setText(entry.name);
+                props.setMor(entry.mor);
+            },
+            mor: entry.mor,
+            path: {
+                segments: entry.segments,
+                isIdentity: entry.isIdentity,
+                nameLower: entry.nameLower,
+            },
+        })),
+    );
 
     const commitTypedText = () => {
         const typed = text();
@@ -362,7 +415,7 @@ function PathPickerInput(
             props.setMor(null);
             return;
         }
-        const resolved = resolveTypedPath(typed, items());
+        const resolved = resolveTypedPath(typed, props.entries);
         if (resolved) {
             props.setUnresolvedText(null);
             props.setMor(resolved);
@@ -377,7 +430,7 @@ function PathPickerInput(
         if (t.trim() === "") {
             return null;
         }
-        return resolveTypedPath(t, items()) !== null ? null : "incomplete";
+        return resolveTypedPath(t, props.entries) !== null ? null : "incomplete";
     };
 
     const hasContent = () => text() !== "" || props.mor !== null;
@@ -434,13 +487,25 @@ function PathPickerInput(
     );
 }
 
-function resolveTypedPath(typed: string, items: PathCompletionItem[]): Mor | null {
+function resolveTypedPath(typed: string, entries: PathEntry[]): Mor | null {
     const query = typed.trim().toLowerCase();
     if (query === "") {
         return null;
     }
-    return items.find((item) => item.name.trim().toLowerCase() === query)?.mor ?? null;
+    return entries.find((entry) => entry.nameLower === query)?.mor ?? null;
 }
+
+/** Resolution-relevant data for one path: enough to build a completion row,
+    filter completions, and resolve typed text. Owned by `PathPicker` so the
+    parent can re-resolve unresolved text whenever entries change, even
+    while the input is unmounted. */
+type PathEntry = {
+    mor: Mor;
+    name: string;
+    segments: PathSegments;
+    isIdentity: boolean;
+    nameLower: string;
+};
 
 /** A path completion item.
 
