@@ -82,23 +82,34 @@
     padding: 0 0.25em;
 }
 
-/* A single completion row: diagrammatic path on top, typeable name beneath
-   as a small caption. The whole row is supplied via `renderItem` and replaces
-   the default `<Completions>` row layout. */
+/* A single completion row: typeable name on top as a caption, diagrammatic
+   path beneath. The whole row is supplied via `renderItem` and replaces the
+   default `<Completions>` row layout, so the box is drawn here rather than
+   on the surrounding `<li>`. */
 .completionRow {
     display: flex;
     flex-direction: column;
-    gap: 0.25em;
+    gap: 1.25em;
     min-width: 0;
+    border: 1px solid var(--color-gray-300, #ddd);
+    border-radius: 4px;
+    padding: 0.75em 1em;
+    background: var(--color-bg, transparent);
 }
 
 .completionName {
-    font-family: var(--font-mono, monospace);
-    font-size: 0.85em;
-    color: var(--color-text-secondary, #555);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    /* Inherit the surrounding font (matches the InlineInput) instead of
+       using a monospace face. */
+    font-size: 1em;
+    text-align: center;
+
+    & > span {
+        display: inline-block;
+        max-width: 100%;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
 }
 
 .completionsPopup {
@@ -108,8 +119,16 @@
     max-width: 40em;
     padding: 0.5rem;
 
+    & :global(.completion-list) {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5em;
+    }
+
+    /* The per-row box draws its own padding, so suppress the default per-li
+       padding and let the box reach the list edges. */
     & :global(.completion-list li) {
-        padding: 0.5em 0.75em;
+        padding: 0;
     }
 }
 

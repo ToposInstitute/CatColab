@@ -605,13 +605,16 @@ function domLabel(it: PathCompletionItem): string {
 }
 
 /** Render a path completion as a single row in the completions list:
-    diagrammatic path on top, the typeable name underneath as a subtle
-    caption. */
+    typeable name on top as a small caption, diagrammatic path beneath. The
+    name is wrapped in a span so the underline sits under the text only,
+    not stretching across the full row width. */
 function PathCompletionRow(props: { item: PathCompletionItem; theory: Theory }) {
     return (
         <div class={styles["completionRow"]}>
+            <div class={styles["completionName"]}>
+                <span>{props.item.name}</span>
+            </div>
             <PathSegmentsView segments={props.item.path.segments} theory={props.theory} />
-            <div class={styles["completionName"]}>{props.item.name}</div>
         </div>
     );
 }
