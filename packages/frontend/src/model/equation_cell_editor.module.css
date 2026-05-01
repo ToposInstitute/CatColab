@@ -74,6 +74,14 @@
     text-align: center;
 }
 
+/* Mid-path ellipsis used when abbreviating long paths. Sits inline between
+   adjacent (arrow + cod object) segments. */
+.ellipsis {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 0.25em;
+}
+
 /* A single completion row: diagrammatic path on top, typeable name beneath
    as a small caption. The whole row is supplied via `renderItem` and replaces
    the default `<Completions>` row layout. */

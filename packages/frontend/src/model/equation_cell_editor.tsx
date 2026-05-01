@@ -640,18 +640,78 @@ function PathView(props: { model: DblModel | undefined; theory: Theory; mor: Mor
     );
 }
 
+/** Maximum number of morphism segments to render before abbreviating with
+    a mid-path ellipsis. Paths longer than this collapse to the first
+    `ABBREV_HEAD` and last `ABBREV_TAIL` segments with `...` between. */
+const ABBREV_THRESHOLD = 6;
+const ABBREV_HEAD = 3;
+const ABBREV_TAIL = 3;
+
+/** Items rendered between the leading domain object and any further
+    segments. Either an (arrow + cod) segment, a mid-path ellipsis, or a
+    "resume" object node rendered after the ellipsis so the first tail
+    segment (which itself only carries an arrow + cod) is anchored at a
+    visible domain object. */
+type PathSegmentItem =
+    | { kind: "segment"; segment: PathMorSegment }
+    | { kind: "ellipsis" }
+    | { kind: "object"; ob: PathObSegment };
+
+function abbreviateSegments(morphisms: PathMorSegment[]): PathSegmentItem[] {
+    if (morphisms.length <= ABBREV_THRESHOLD) {
+        return morphisms.map((segment) => ({ kind: "segment", segment }));
+    }
+    const head = morphisms.slice(0, ABBREV_HEAD);
+    const tail = morphisms.slice(morphisms.length - ABBREV_TAIL);
+    // Domain of the first tail segment: equals the cod of
+    // `morphisms[morphisms.length - ABBREV_TAIL - 1]`. Render it after the
+    // ellipsis so the tail's first arrow has a visible source object.
+    const firstTailDomIdx = morphisms.length - ABBREV_TAIL - 1;
+    const resumeOb = morphisms[firstTailDomIdx]?.cod;
+    const items: PathSegmentItem[] = head.map(
+        (segment): PathSegmentItem => ({ kind: "segment", segment }),
+    );
+    items.push({ kind: "ellipsis" });
+    if (resumeOb) {
+        items.push({ kind: "object", ob: resumeOb });
+    }
+    items.push(...tail.map((segment): PathSegmentItem => ({ kind: "segment", segment })));
+    return items;
+}
+
 function PathSegmentsView(props: { segments: PathSegments; theory: Theory }) {
     const domClasses = () => [
         styles["object"],
         ...obClasses(props.theory, props.segments.dom.obType),
     ];
+    const items = createMemo(() => abbreviateSegments(props.segments.morphisms));
     return (
         <div class={styles["path"]}>
             <div class={domClasses().join(" ")}>
                 <LabelOrUnnamed name={props.segments.dom.label} />
             </div>
-            <For each={props.segments.morphisms}>
-                {(mor) => <PathSegmentView segment={mor} theory={props.theory} />}
+            <For each={items()}>
+                {(item) => {
+                    if (item.kind === "segment") {
+                        return <PathSegmentView segment={item.segment} theory={props.theory} />;
+                    }
+                    if (item.kind === "object") {
+                        const obNodeClasses = [
+                            styles["object"],
+                            ...obClasses(props.theory, item.ob.obType),
+                        ];
+                        return (
+                            <div class={obNodeClasses.join(" ")}>
+                                <LabelOrUnnamed name={item.ob.label} />
+                            </div>
+                        );
+                    }
+                    return (
+                        <span class={styles["ellipsis"]} aria-hidden="true">
+                            {"\u22ef"}
+                        </span>
+                    );
+                }}
             </For>
         </div>
     );
