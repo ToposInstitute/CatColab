@@ -5,8 +5,25 @@
     gap: 0.5em;
     margin-bottom: 1em;
     margin-right: 1em;
-    border-left: 1px solid var(--color-gray-450, #bbb);
-    padding-left: 0.75em;
+}
+
+.body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+    position: relative;
+    margin-left: 0.5rem;
+    padding-left: 1rem;
+
+    &:before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--color-gray-450);
+    }
 }
 
 .name {

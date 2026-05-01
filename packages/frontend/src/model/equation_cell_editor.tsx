@@ -72,7 +72,10 @@ function formatPathName(labels: string[]): string {
 }
 
 function normalizePathName(text: string): string {
-    return text.replace(/\s*;\s*/g, ";").trim().toLowerCase();
+    return text
+        .replace(/\s*;\s*/g, ";")
+        .trim()
+        .toLowerCase();
 }
 
 function pathText(model: DblModel | undefined, mor: Mor | null): string {
@@ -138,19 +141,31 @@ export default function EquationCellEditor(props: EquationEditorProps) {
         }
     });
 
-    /** Paths available for the RHS picker. Filters by dom/cod once LHS is set. */
+    /** Paths available for the RHS picker.
+    
+    When LHS has dom/cod we prioritize paths with matching dom/cod first.
+    */
     const rhsPaths = createMemo<Mor[]>(() => {
         const m = elaborated();
+        const paths = allPaths();
         const dom = morDom(m, props.equation.lhs);
         const cod = morCod(m, props.equation.lhs);
         if (!m || dom === null || cod === null) {
-            return allPaths();
+            return paths;
         }
-        return allPaths().filter((mor) => {
+
+        const prioritized: Mor[] = [];
+        const rest: Mor[] = [];
+        for (const mor of paths) {
             const d = morDom(m, mor);
             const c = morCod(m, mor);
-            return d !== null && c !== null && deepEqual(d, dom) && deepEqual(c, cod);
-        });
+            if (d !== null && c !== null && deepEqual(d, dom) && deepEqual(c, cod)) {
+                prioritized.push(mor);
+            } else {
+                rest.push(mor);
+            }
+        }
+        return prioritized.concat(rest);
     });
 
     return (
@@ -175,45 +190,47 @@ export default function EquationCellEditor(props: EquationEditorProps) {
                     }}
                 />
             </div>
-            <PathPicker
-                model={elaborated()}
-                theory={props.theory}
-                paths={allPaths()}
-                mor={props.equation.lhs}
-                setMor={setLhs}
-                isActive={props.isActive && activeInput() === "lhs"}
-                exitBackward={() => setActiveInput("name")}
-                exitForward={() => setActiveInput("rhs")}
-                exitUp={() => setActiveInput("name")}
-                exitDown={() => setActiveInput("rhs")}
-                exitLeft={() => setActiveInput("name")}
-                exitRight={() => setActiveInput("rhs")}
-                hasFocused={() => {
-                    setActiveInput("lhs");
-                    props.actions.hasFocused?.();
-                }}
-                createBelow={() => setActiveInput("rhs")}
-            />
-            <div class={styles["equals"]}>{"="}</div>
-            <PathPicker
-                model={elaborated()}
-                theory={props.theory}
-                paths={rhsPaths()}
-                mor={props.equation.rhs}
-                setMor={setRhs}
-                isActive={props.isActive && activeInput() === "rhs"}
-                exitBackward={() => setActiveInput("lhs")}
-                exitForward={props.actions.activateBelow}
-                exitUp={() => setActiveInput("lhs")}
-                exitDown={props.actions.activateBelow}
-                exitLeft={() => setActiveInput("lhs")}
-                exitRight={props.actions.activateBelow}
-                hasFocused={() => {
-                    setActiveInput("rhs");
-                    props.actions.hasFocused?.();
-                }}
-                createBelow={props.actions.activateBelow}
-            />
+            <div class={styles.body}>
+                <PathPicker
+                    model={elaborated()}
+                    theory={props.theory}
+                    paths={allPaths()}
+                    mor={props.equation.lhs}
+                    setMor={setLhs}
+                    isActive={props.isActive && activeInput() === "lhs"}
+                    exitBackward={() => setActiveInput("name")}
+                    exitForward={() => setActiveInput("rhs")}
+                    exitUp={() => setActiveInput("name")}
+                    exitDown={() => setActiveInput("rhs")}
+                    exitLeft={() => setActiveInput("name")}
+                    exitRight={() => setActiveInput("rhs")}
+                    hasFocused={() => {
+                        setActiveInput("lhs");
+                        props.actions.hasFocused?.();
+                    }}
+                    createBelow={() => setActiveInput("rhs")}
+                />
+                <div class={styles["equals"]}>{"="}</div>
+                <PathPicker
+                    model={elaborated()}
+                    theory={props.theory}
+                    paths={rhsPaths()}
+                    mor={props.equation.rhs}
+                    setMor={setRhs}
+                    isActive={props.isActive && activeInput() === "rhs"}
+                    exitBackward={() => setActiveInput("lhs")}
+                    exitForward={props.actions.activateBelow}
+                    exitUp={() => setActiveInput("lhs")}
+                    exitDown={props.actions.activateBelow}
+                    exitLeft={() => setActiveInput("lhs")}
+                    exitRight={props.actions.activateBelow}
+                    hasFocused={() => {
+                        setActiveInput("rhs");
+                        props.actions.hasFocused?.();
+                    }}
+                    createBelow={props.actions.activateBelow}
+                />
+            </div>
         </div>
     );
 }
