@@ -67,6 +67,14 @@ function morCod(model: DblModel | undefined, mor: Mor | null): Ob | null {
 
 /** Typeable text for a path: morphism labels joined by `;`, or `id(Object)`
     for an identity. Returns `""` if the path can't be presented. */
+function formatPathName(labels: string[]): string {
+    return labels.join(" ; ");
+}
+
+function normalizePathName(text: string): string {
+    return text.replace(/\s*;\s*/g, ";").trim().toLowerCase();
+}
+
 function pathText(model: DblModel | undefined, mor: Mor | null): string {
     if (!model || !mor) {
         return "";
@@ -76,7 +84,7 @@ function pathText(model: DblModel | undefined, mor: Mor | null): string {
         return identityText(model, idOb);
     }
     const segs = describePath(model, mor);
-    return segs ? segs.morphisms.map((s) => s.label || "Unnamed").join(";") : "";
+    return segs ? formatPathName(segs.morphisms.map((s) => s.label || "Unnamed")) : "";
 }
 
 /** Editor for an equation cell in a model.
@@ -264,13 +272,13 @@ function PathPicker(props: PathPickerProps) {
             const name =
                 idOb !== null
                     ? identityText(m, idOb)
-                    : segs.morphisms.map((s) => s.label || "Unnamed").join(";");
+                    : formatPathName(segs.morphisms.map((s) => s.label || "Unnamed"));
             out.push({
                 mor,
                 name,
                 segments: segs,
                 isIdentity: idOb !== null,
-                nameLower: name.toLowerCase(),
+                nameLower: normalizePathName(name),
             });
         }
         return out;
@@ -488,7 +496,7 @@ function PathPickerInput(
 }
 
 function resolveTypedPath(typed: string, entries: PathEntry[]): Mor | null {
-    const query = typed.trim().toLowerCase();
+    const query = normalizePathName(typed);
     if (query === "") {
         return null;
     }
@@ -545,6 +553,7 @@ function filterPathCompletions(items: PathCompletionItem[], text: string): PathC
         return items.slice();
     }
     const lower = trimmed.toLowerCase();
+    const lowerNormalized = normalizePathName(trimmed);
 
     // Domain-prefixed syntax: `id`, `id(`, `id(Foo`, `id(Foo)`. Matches any
     // path whose domain label starts with the prefix (including the
@@ -589,13 +598,13 @@ function filterPathCompletions(items: PathCompletionItem[], text: string): PathC
     // label. Domain-label matches let typing an object name surface every
     // path starting at that object (including its identity).
     const starts = items.filter(
-        (it) => it.path.nameLower.startsWith(lower) || domLabel(it).startsWith(lower),
+        (it) => it.path.nameLower.startsWith(lowerNormalized) || domLabel(it).startsWith(lower),
     );
     const startsSet = new Set(starts);
     const includes = items.filter(
         (it) =>
             !startsSet.has(it) &&
-            (it.path.nameLower.includes(lower) || domLabel(it).includes(lower)),
+            (it.path.nameLower.includes(lowerNormalized) || domLabel(it).includes(lower)),
     );
     return starts.concat(includes);
 }
