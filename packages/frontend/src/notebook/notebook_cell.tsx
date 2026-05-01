@@ -103,6 +103,10 @@ export function NotebookCell(props: {
     children: JSX.Element;
     tag?: string;
     createCompletions?: Completion[];
+    /** Whether the cell-below popover should be open. */
+    popoverOpen?: boolean;
+    /** Called when the cell-below popover open state should change. */
+    setPopoverOpen?: (open: boolean) => void;
     currentDropTarget: string | null;
     setCurrentDropTarget: (cellId: string | null) => void;
 }) {
@@ -233,6 +237,8 @@ export function NotebookCell(props: {
                     completions={props.createCompletions ?? []}
                     tooltip="Create a new cell below this one"
                     showButton={isGutterVisible()}
+                    open={props.popoverOpen}
+                    onOpenChange={props.setPopoverOpen}
                 >
                     <Plus />
                 </CellTypePopover>

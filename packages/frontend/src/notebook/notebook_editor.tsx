@@ -40,6 +40,13 @@ import {
 
 import "./notebook_editor.css";
 
+/** Identifies which create-cell popover, if any, the editor wants open.
+
+Either an index of an existing cell (open the "create below" popover anchored
+to that cell) or `"append"` (open the popover for the end-of-notebook button).
+ */
+type CreatePopoverTarget = number | "append" | null;
+
 /** Constructor for a cell in a notebook.
 
 A notebook knows how to edit cells, but without cell constructors, it wouldn't
@@ -92,16 +99,10 @@ export function NotebookEditor<T>(props: {
     const [activeCell, setActiveCell] = createSignal<number | null>(null);
     const [currentDropTarget, setCurrentDropTarget] = createSignal<string | null>(null);
 
-    // Popup state for Shift-Enter cell type selection.
-    const [shiftEnterPopupOpen, setShiftEnterPopupOpen] = createSignal(false);
-    // The active cell index captured at the moment Shift-Enter is pressed, so
-    // that the popup inserts below the correct cell even after focus moves.
-    const [shiftEnterCellIndex, setShiftEnterCellIndex] = createSignal<number | null>(null);
-    // Position of the shift-enter popup, stored as signals.
-    const [popupLeft, setPopupLeft] = createSignal(0);
-    const [popupTop, setPopupTop] = createSignal(0);
-    // Ref for keyboard navigation of the shift-enter popup completions.
-    const [shiftEnterCompletionsRef, setShiftEnterCompletionsRef] = createSignal<CompletionsRef>();
+    // Which create-cell popover (if any) the editor has requested to open.
+    // The popover itself is rendered by the cell (or end-of-notebook button) it
+    // is anchored to, so positioning is automatic.
+    const [createPopoverTarget, setCreatePopoverTarget] = createSignal<CreatePopoverTarget>(null);
 
     // Set up commands and their keyboard shortcuts.
     const insertCommands = (): Completion[] =>
@@ -176,27 +177,6 @@ export function NotebookEditor<T>(props: {
         if (props.noShortcuts) {
             return;
         }
-        // When the shift-enter popup is open, take over keyboard navigation.
-        if (shiftEnterPopupOpen()) {
-            const ref = shiftEnterCompletionsRef();
-            if (evt.key === "ArrowDown") {
-                ref?.nextPresumptive();
-                return evt.preventDefault();
-            }
-            if (evt.key === "ArrowUp") {
-                ref?.previousPresumptive();
-                return evt.preventDefault();
-            }
-            if (evt.key === "Enter") {
-                ref?.selectPresumptive();
-                return evt.preventDefault();
-            }
-            if (evt.key === "Escape") {
-                setShiftEnterPopupOpen(false);
-                return evt.preventDefault();
-            }
-            // Fall through for other keys (e.g. shortcut chords below).
-        }
         if (keyEventHasModifier(evt, cellShortcutModifier)) {
             for (const command of insertCommands()) {
                 const key = command.shortcut?.at(-1);
@@ -210,28 +190,14 @@ export function NotebookEditor<T>(props: {
             (evt.shiftKey && evt.key === "Enter") ||
             (keyEventHasModifier(evt, cellShortcutModifier) && evt.key === "Enter")
         ) {
-            // Capture the active cell *before* focus changes.
+            // Capture the active cell *before* focus changes, then ask the
+            // appropriate cell (or the end-of-notebook button) to open its
+            // create-cell popover. The popover is rendered by that anchor, so
+            // it is positioned automatically and doesn't require any DOM
+            // queries here.
             const cellIndex = activeCell();
-            setShiftEnterCellIndex(cellIndex);
-
-            // Position the popup at the bottom edge of the active cell.
-            const cellEls = document.querySelectorAll(".notebook-cells .cell");
-            const cellEl = cellIndex != null ? cellEls[cellIndex] : cellEls[cellEls.length - 1];
-            if (cellEl) {
-                const rect = cellEl.getBoundingClientRect();
-                setPopupLeft(rect.left);
-                setPopupTop(rect.bottom);
-            }
-            setShiftEnterPopupOpen(true);
+            setCreatePopoverTarget(cellIndex != null ? cellIndex : "append");
             return evt.preventDefault();
-        }
-    });
-
-    // Close the shift-enter popup when clicking outside it.
-    let shiftEnterPopupRef: HTMLDivElement | undefined;
-    makeEventListener(window, "pointerdown", (evt) => {
-        if (shiftEnterPopupOpen() && !shiftEnterPopupRef?.contains(evt.target as Node)) {
-            setShiftEnterPopupOpen(false);
         }
     });
 
@@ -296,7 +262,11 @@ export function NotebookEditor<T>(props: {
         >
             <Show when={props.notebook.cellOrder.length === 0}>
                 <div class="notebook-cell-placeholder">
-                    <CellTypePopover completions={appendCommands()}>
+                    <CellTypePopover
+                        completions={appendCommands()}
+                        open={createPopoverTarget() === "append"}
+                        onOpenChange={(open) => setCreatePopoverTarget(open ? "append" : null)}
+                    >
                         <ListPlus />
                     </CellTypePopover>
                     <span>Click button or press Shift-Enter to create a cell</span>
@@ -385,6 +355,10 @@ export function NotebookEditor<T>(props: {
                                             : undefined
                                     }
                                     createCompletions={createBelowCommands(i())}
+                                    popoverOpen={createPopoverTarget() === i()}
+                                    setPopoverOpen={(open) =>
+                                        setCreatePopoverTarget(open ? i() : null)
+                                    }
                                     currentDropTarget={currentDropTarget()}
                                     setCurrentDropTarget={setCurrentDropTarget}
                                 >
@@ -423,31 +397,14 @@ export function NotebookEditor<T>(props: {
                     }}
                 </For>
             </ul>
-            <Show when={shiftEnterPopupOpen()}>
-                <div
-                    ref={shiftEnterPopupRef}
-                    class="popup"
-                    style={{
-                        position: "fixed",
-                        left: `${popupLeft()}px`,
-                        top: `${popupTop()}px`,
-                        "z-index": 1000,
-                    }}
-                >
-                    <Completions
-                        completions={
-                            shiftEnterCellIndex() != null
-                                ? createBelowCommands(shiftEnterCellIndex()!)
-                                : appendCommands()
-                        }
-                        ref={setShiftEnterCompletionsRef}
-                        onComplete={() => setShiftEnterPopupOpen(false)}
-                    />
-                </div>
-            </Show>
             <Show when={props.notebook.cellOrder.length > 0}>
                 <div class="notebook-cell-placeholder">
-                    <CellTypePopover completions={appendCommands()} tooltip="Create a new cell">
+                    <CellTypePopover
+                        completions={appendCommands()}
+                        tooltip="Create a new cell"
+                        open={createPopoverTarget() === "append"}
+                        onOpenChange={(open) => setCreatePopoverTarget(open ? "append" : null)}
+                    >
                         <ListPlus />
                     </CellTypePopover>
                 </div>
@@ -457,6 +414,11 @@ export function NotebookEditor<T>(props: {
 }
 
 /** A button that opens a popover with cell type completions.
+
+The open state can either be managed internally (default) or controlled by the
+parent via the `open` and `onOpenChange` props. When the popover is open, this
+component handles keyboard navigation of the completions list (Arrow
+Up/Down to move, Enter to select, Escape to close).
  */
 export function CellTypePopover(props: {
     completions: Completion[];
@@ -464,9 +426,46 @@ export function CellTypePopover(props: {
     /** Whether the button is visible. Defaults to `true`. The button always
         remains visible while the popover is open. */
     showButton?: boolean;
+    /** Controlled open state. If omitted, the popover manages its own state. */
+    open?: boolean;
+    /** Called when the open state should change. */
+    onOpenChange?: (open: boolean) => void;
     children: JSX.Element;
 }) {
-    const [isOpen, setIsOpen] = createSignal(false);
+    const [internalOpen, setInternalOpen] = createSignal(false);
+    const isOpen = () => props.open ?? internalOpen();
+    const setIsOpen = (open: boolean) => {
+        setInternalOpen(open);
+        props.onOpenChange?.(open);
+    };
+
+    const [completionsRef, setCompletionsRef] = createSignal<CompletionsRef>();
+
+    // While open, take over the relevant keys for keyboard navigation. We
+    // listen on the window because focus may be elsewhere (e.g. the cell
+    // editor that triggered Shift-Enter).
+    makeEventListener(window, "keydown", (evt) => {
+        if (!isOpen()) {
+            return;
+        }
+        const ref = completionsRef();
+        if (evt.key === "ArrowDown") {
+            ref?.nextPresumptive();
+            return evt.preventDefault();
+        }
+        if (evt.key === "ArrowUp") {
+            ref?.previousPresumptive();
+            return evt.preventDefault();
+        }
+        if (evt.key === "Enter") {
+            ref?.selectPresumptive();
+            return evt.preventDefault();
+        }
+        if (evt.key === "Escape") {
+            setIsOpen(false);
+            return evt.preventDefault();
+        }
+    });
 
     return (
         <Popover
@@ -491,6 +490,7 @@ export function CellTypePopover(props: {
                 <Popover.Content class="popup">
                     <Completions
                         completions={props.completions}
+                        ref={setCompletionsRef}
                         onComplete={() => setIsOpen(false)}
                     />
                 </Popover.Content>
