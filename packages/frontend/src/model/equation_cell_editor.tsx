@@ -1,6 +1,6 @@
 import { deepEqual } from "fast-equals";
 import X from "lucide-solid/icons/x";
-import { For, Show, createEffect, createMemo, createSignal, useContext } from "solid-js";
+import { For, Show, createMemo, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 import { P, match } from "ts-pattern";
 
@@ -65,6 +65,20 @@ function morCod(model: DblModel | undefined, mor: Mor | null): Ob | null {
     }
 }
 
+/** Typeable text for a path: morphism labels joined by `;`, or `id(Object)`
+    for an identity. Returns `""` if the path can't be presented. */
+function pathText(model: DblModel | undefined, mor: Mor | null): string {
+    if (!model || !mor) {
+        return "";
+    }
+    const idOb = identityPathObject(mor);
+    if (idOb !== null) {
+        return identityText(model, idOb);
+    }
+    const segs = describePath(model, mor);
+    return segs ? segs.morphisms.map((s) => s.label || "Unnamed").join(";") : "";
+}
+
 /** Editor for an equation cell in a model.
 
 Layout: `[name] [lhs path picker] = [rhs path picker]`.
@@ -116,15 +130,11 @@ export default function EquationCellEditor(props: EquationEditorProps) {
         }
     });
 
-    /** Domain and codomain of the LHS, used to filter the RHS picker. */
-    const lhsDom = createMemo<Ob | null>(() => morDom(elaborated(), props.equation.lhs));
-    const lhsCod = createMemo<Ob | null>(() => morCod(elaborated(), props.equation.lhs));
-
     /** Paths available for the RHS picker. Filters by dom/cod once LHS is set. */
     const rhsPaths = createMemo<Mor[]>(() => {
         const m = elaborated();
-        const dom = lhsDom();
-        const cod = lhsCod();
+        const dom = morDom(m, props.equation.lhs);
+        const cod = morCod(m, props.equation.lhs);
         if (!m || dom === null || cod === null) {
             return allPaths();
         }
@@ -157,62 +167,50 @@ export default function EquationCellEditor(props: EquationEditorProps) {
                     }}
                 />
             </div>
-            <div class={styles["header"]}>
-                <PathPicker
-                    model={elaborated()}
-                    theory={props.theory}
-                    paths={allPaths()}
-                    mor={props.equation.lhs}
-                    setMor={setLhs}
-                    isActive={props.isActive && activeInput() === "lhs"}
-                    exitBackward={() => setActiveInput("name")}
-                    exitForward={() => setActiveInput("rhs")}
-                    exitUp={() => setActiveInput("name")}
-                    exitDown={() => setActiveInput("rhs")}
-                    exitLeft={() => setActiveInput("name")}
-                    exitRight={() => setActiveInput("rhs")}
-                    hasFocused={() => {
-                        setActiveInput("lhs");
-                        props.actions.hasFocused?.();
-                    }}
-                    createBelow={() => setActiveInput("rhs")}
-                />
-            </div>
+            <PathPicker
+                model={elaborated()}
+                theory={props.theory}
+                paths={allPaths()}
+                mor={props.equation.lhs}
+                setMor={setLhs}
+                isActive={props.isActive && activeInput() === "lhs"}
+                exitBackward={() => setActiveInput("name")}
+                exitForward={() => setActiveInput("rhs")}
+                exitUp={() => setActiveInput("name")}
+                exitDown={() => setActiveInput("rhs")}
+                exitLeft={() => setActiveInput("name")}
+                exitRight={() => setActiveInput("rhs")}
+                hasFocused={() => {
+                    setActiveInput("lhs");
+                    props.actions.hasFocused?.();
+                }}
+                createBelow={() => setActiveInput("rhs")}
+            />
             <div class={styles["equals"]}>{"="}</div>
-            <div class={styles["rhsRow"]}>
-                <PathPicker
-                    model={elaborated()}
-                    theory={props.theory}
-                    paths={rhsPaths()}
-                    mor={props.equation.rhs}
-                    setMor={setRhs}
-                    isActive={props.isActive && activeInput() === "rhs"}
-                    exitBackward={() => setActiveInput("lhs")}
-                    exitForward={props.actions.activateBelow}
-                    exitUp={() => setActiveInput("lhs")}
-                    exitDown={props.actions.activateBelow}
-                    exitLeft={() => setActiveInput("lhs")}
-                    exitRight={props.actions.activateBelow}
-                    hasFocused={() => {
-                        setActiveInput("rhs");
-                        props.actions.hasFocused?.();
-                    }}
-                    createBelow={props.actions.activateBelow}
-                />
-            </div>
+            <PathPicker
+                model={elaborated()}
+                theory={props.theory}
+                paths={rhsPaths()}
+                mor={props.equation.rhs}
+                setMor={setRhs}
+                isActive={props.isActive && activeInput() === "rhs"}
+                exitBackward={() => setActiveInput("lhs")}
+                exitForward={props.actions.activateBelow}
+                exitUp={() => setActiveInput("lhs")}
+                exitDown={props.actions.activateBelow}
+                exitLeft={() => setActiveInput("lhs")}
+                exitRight={props.actions.activateBelow}
+                hasFocused={() => {
+                    setActiveInput("rhs");
+                    props.actions.hasFocused?.();
+                }}
+                createBelow={props.actions.activateBelow}
+            />
         </div>
     );
 }
 
-/** Picker for a path in the model.
-
-When inactive and a path is set, renders the path diagrammatically
-(`A —f→ B —g→ C`). When active, an `InlineInput` is shown with the supplied
-list of paths as completions; a custom filter recognises path-syntax
-conventions (`id(Foo)`, `f;g`) and a custom renderer draws each completion
-diagrammatically.
- */
-function PathPicker(props: {
+type PathPickerProps = {
     model: DblModel | undefined;
     theory: Theory;
     paths: Mor[];
@@ -227,63 +225,99 @@ function PathPicker(props: {
     exitRight?: () => void;
     hasFocused?: () => void;
     createBelow?: () => void;
-}) {
-    /** The chosen path, if any. */
-    const chosenPath = createMemo<Mor | null>(() => props.mor);
+};
 
-    /** Compute the typeable text for a path: morphism labels joined by `;`.
-        Unlabelled morphisms show as "Unnamed". Identity paths show as
-        `id(Object)`. */
-    const pathText = (mor: Mor | null): string => {
-        const m = props.model;
-        if (!m || !mor) {
-            return "";
-        }
-        const idOb = identityPathObject(mor);
-        if (idOb !== null) {
-            return identityText(m, idOb);
-        }
-        const segs = describePath(m, mor);
-        return segs ? segs.morphisms.map((s) => s.label || "Unnamed").join(";") : "";
-    };
+/** Picker for a path in the model.
 
-    /** Free-form text in the input.
+When inactive and a path is set, renders the path diagrammatically
+(`A —f→ B —g→ C`). When active, an `InlineInput` is shown with the supplied
+list of paths as completions; a custom filter recognises path-syntax
+conventions (`id(Foo)`, `f;g`) and a custom renderer draws each completion
+diagrammatically.
 
-    Synced from the chosen path whenever the picker is not the active input,
-    so re-entering edit mode pre-fills with the chosen path's name and the
-    completions list is filtered to it.
-     */
-    const [text, setText] = createSignal("");
+The picker keeps the last unresolved typed text (i.e. text the user typed
+that didn't match any path) in a parent-owned signal, so re-entering edit
+mode re-populates the input with what was typed before. The active input is
+remounted on every activation via `<Show keyed>`, so it doesn't need a
+syncing effect to track external state.
+ */
+function PathPicker(props: PathPickerProps) {
     const [unresolvedText, setUnresolvedText] = createSignal<string | null>(null);
 
-    createEffect(() => {
-        if (!props.isActive) {
-            if (unresolvedText() === null) {
-                setText(pathText(chosenPath()));
-            }
-        }
-    });
+    return (
+        <div
+            class={styles["pathPicker"]}
+            onMouseDown={(evt) => {
+                // Activate the picker when clicking anywhere inside the
+                // border, but only when not already in editing mode (so
+                // selecting text in the input still works).
+                if (!props.isActive) {
+                    props.hasFocused?.();
+                    evt.preventDefault();
+                }
+            }}
+        >
+            <Show
+                when={props.isActive}
+                fallback={
+                    <PathPickerDisplay
+                        model={props.model}
+                        theory={props.theory}
+                        mor={props.mor}
+                        unresolvedText={unresolvedText()}
+                    />
+                }
+            >
+                <PathPickerInput
+                    {...props}
+                    initialText={unresolvedText() ?? pathText(props.model, props.mor)}
+                    setUnresolvedText={setUnresolvedText}
+                />
+            </Show>
+        </div>
+    );
+}
 
-    const commitTypedText = () => {
-        const typed = text();
-        if (typed.trim() === "") {
-            setUnresolvedText(null);
-            props.setMor(null);
-            return;
-        }
-        const resolved = resolveTypedPath(typed, items());
-        if (resolved) {
-            setUnresolvedText(null);
-            props.setMor(resolved);
-            return;
-        }
-        props.setMor(null);
-        setUnresolvedText(typed);
-    };
+/** Inactive view of a path picker: shows the chosen path, last unresolved
+    typing, or a placeholder. */
+function PathPickerDisplay(props: {
+    model: DblModel | undefined;
+    theory: Theory;
+    mor: Mor | null;
+    unresolvedText: string | null;
+}) {
+    return (
+        <div class={styles["pathDisplay"]}>
+            <Show
+                when={props.unresolvedText}
+                fallback={
+                    <Show when={props.mor} fallback={<span class={styles["unnamed"]}>...</span>}>
+                        {(mor) => (
+                            <PathView model={props.model} theory={props.theory} mor={mor()} />
+                        )}
+                    </Show>
+                }
+            >
+                {(typed) => <span class={styles["unresolved"]}>{typed()}</span>}
+            </Show>
+        </div>
+    );
+}
+
+/** Active view of a path picker: an `InlineInput` with a custom completions
+    list. Fresh-mounted on every activation, so it can own its `text` signal
+    without any external sync. */
+function PathPickerInput(
+    props: PathPickerProps & {
+        initialText: string;
+        setUnresolvedText: (s: string | null) => void;
+    },
+) {
+    const [text, setText] = createSignal(props.initialText);
 
     /** Build path-completion items (one per available path).
 
-    Each item is a standard `Completion` (so it flows through `InlineInput`'s
+    Each item is a standard `Completion` (so it threads through `InlineInput`'s
     typed `completions` prop) augmented with a `path` field carrying the
     precomputed display data used by the custom filter and renderer. Items
     with no presentable segments are skipped. */
@@ -306,7 +340,7 @@ function PathPicker(props: {
             out.push({
                 name,
                 onComplete: () => {
-                    setUnresolvedText(null);
+                    props.setUnresolvedText(null);
                     setText(name);
                     props.setMor(mor);
                 },
@@ -321,116 +355,82 @@ function PathPicker(props: {
         return out;
     });
 
-    /** Show the input only when the picker is the active input. The
-        non-active state always renders a static display: the rendered path
-        when one is chosen, or `...` placeholder when empty. */
-    const showInput = () => props.isActive;
-
-    const resolvedPath = createMemo(() => resolveTypedPath(text(), items()));
-
-    const hasContent = () => chosenPath() !== null || unresolvedText() !== null || text() !== "";
-
-    const clear = () => {
-        setText("");
-        setUnresolvedText(null);
+    const commitTypedText = () => {
+        const typed = text();
+        if (typed.trim() === "") {
+            props.setUnresolvedText(null);
+            props.setMor(null);
+            return;
+        }
+        const resolved = resolveTypedPath(typed, items());
+        if (resolved) {
+            props.setUnresolvedText(null);
+            props.setMor(resolved);
+            return;
+        }
         props.setMor(null);
+        props.setUnresolvedText(typed);
     };
 
+    const status = () => {
+        const t = text();
+        if (t.trim() === "") {
+            return null;
+        }
+        return resolveTypedPath(t, items()) !== null ? null : "incomplete";
+    };
+
+    const hasContent = () => text() !== "" || props.mor !== null;
+
     return (
-        <div
-            class={styles["pathPicker"]}
-            onMouseDown={(evt) => {
-                // Activate the picker when clicking anywhere inside the
-                // border, but only when not already in editing mode (so
-                // selecting text in the input still works).
-                if (!showInput()) {
-                    props.hasFocused?.();
-                    evt.preventDefault();
+        <>
+            <InlineInput
+                text={text()}
+                setText={setText}
+                placeholder="..."
+                status={status()}
+                completions={items()}
+                completionsFilter={(its, text) =>
+                    filterPathCompletions(its as PathCompletionItem[], text)
                 }
-            }}
-        >
-            <Show when={!showInput()}>
-                <div class={styles["pathDisplay"]}>
-                    <Show
-                        when={unresolvedText()}
-                        fallback={
-                            <Show
-                                when={chosenPath()}
-                                fallback={<span class={styles["unnamed"]}>...</span>}
-                            >
-                                {(mor) => (
-                                    <PathView
-                                        model={props.model}
-                                        theory={props.theory}
-                                        mor={mor()}
-                                    />
-                                )}
-                            </Show>
-                        }
+                completionsRenderItem={(item) => (
+                    <PathCompletionRow item={item as PathCompletionItem} theory={props.theory} />
+                )}
+                showCompletionsOnFocus={true}
+                popupClass={styles.completionsPopup}
+                popoverPlacement="bottom-start"
+                popoverFloatingOptions={{ flip: false, offset: 8 }}
+                completionsEmptyText="No matching paths found."
+                isActive={props.isActive}
+                hasFocused={props.hasFocused}
+                hasBlurred={commitTypedText}
+                createBelow={props.createBelow}
+                exitBackward={props.exitBackward}
+                exitForward={props.exitForward}
+                exitUp={props.exitUp}
+                exitDown={props.exitDown}
+                exitLeft={props.exitLeft}
+                exitRight={props.exitRight}
+            />
+            <Show when={hasContent()}>
+                <div class={styles["clearButton"]}>
+                    <IconButton
+                        tooltip="Clear path"
+                        aria-label="Clear path"
+                        onMouseDown={(evt) => {
+                            // Don't blur the input before clearing.
+                            evt.preventDefault();
+                            evt.stopPropagation();
+                            setText("");
+                            props.setUnresolvedText(null);
+                            props.setMor(null);
+                        }}
                     >
-                        {(typed) => <span class={styles["unresolved"]}>{typed()}</span>}
-                    </Show>
+                        <X />
+                    </IconButton>
                 </div>
             </Show>
-            <Show when={showInput()}>
-                <Show when={hasContent()}>
-                    <div class={`${styles["clearButton"]} ${styles["clearSpacer"]}`} aria-hidden>
-                        <IconButton tabIndex={-1}>
-                            <X />
-                        </IconButton>
-                    </div>
-                </Show>
-                <InlineInput
-                    text={text()}
-                    setText={setText}
-                    placeholder="..."
-                    status={
-                        text().trim() === "" ? null : resolvedPath() !== null ? null : "incomplete"
-                    }
-                    completions={items()}
-                    completionsFilter={(its, text) =>
-                        filterPathCompletions(its as PathCompletionItem[], text)
-                    }
-                    completionsRenderItem={(item) => (
-                        <PathCompletionRow
-                            item={item as PathCompletionItem}
-                            theory={props.theory}
-                        />
-                    )}
-                    showCompletionsOnFocus={true}
-                    popupClass={styles.completionsPopup}
-                    popoverPlacement="bottom-start"
-                    popoverFloatingOptions={{ flip: false, offset: 8 }}
-                    completionsEmptyText="No matching paths found."
-                    isActive={props.isActive}
-                    hasFocused={props.hasFocused}
-                    hasBlurred={commitTypedText}
-                    createBelow={props.createBelow}
-                    exitBackward={props.exitBackward}
-                    exitForward={props.exitForward}
-                    exitUp={props.exitUp}
-                    exitDown={props.exitDown}
-                    exitLeft={props.exitLeft}
-                    exitRight={props.exitRight}
-                />
-                <Show when={hasContent()}>
-                    <div class={styles["clearButton"]}>
-                        <IconButton
-                            tooltip="Clear path"
-                            aria-label="Clear path"
-                            onMouseDown={(evt) => {
-                                // Don't blur the input before clearing.
-                                evt.preventDefault();
-                                evt.stopPropagation();
-                                clear();
-                            }}
-                        >
-                            <X />
-                        </IconButton>
-                    </div>
-                </Show>
-            </Show>
-        </div>
+        </>
     );
 }
 

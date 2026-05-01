@@ -6,14 +6,6 @@
     margin-bottom: 1em;
 }
 
-.header {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 0.5em;
-    flex-wrap: wrap;
-}
-
 .name {
     /* Match the look of a morphism cell's name: a plain `NameInput` rendered
        at the surrounding `formal-judgment` font size, with no extra styling. */
@@ -40,13 +32,6 @@
     font-size: 1.5em;
     text-align: center;
     line-height: 1;
-}
-
-.rhsRow {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-start;
 }
 
 .pathDisplay {
@@ -137,11 +122,4 @@
 .clearButton {
     display: inline-flex;
     align-items: center;
-}
-
-/* Invisible spacer matching the clear button's width so the input stays
-   centered when the button is shown. */
-.clearSpacer {
-    visibility: hidden;
-    pointer-events: none;
 }
