@@ -4,6 +4,9 @@
     align-items: stretch;
     gap: 0.5em;
     margin-bottom: 1em;
+    margin-right: 1em;
+    border-left: 1px solid var(--color-gray-450, #bbb);
+    padding-left: 0.75em;
 }
 
 .name {
@@ -22,7 +25,6 @@
     width: 100%;
     min-width: 0;
     box-sizing: border-box;
-    border: 1px solid var(--color-gray-450, #bbb);
     padding: 0.75em 1em;
     cursor: text;
     min-height: 90px;
