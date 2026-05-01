@@ -169,8 +169,8 @@ export default function EquationCellEditor(props: EquationEditorProps) {
     });
 
     return (
-        <div class={`formal-judgment ${styles["decl"]}`}>
-            <div class={styles["name"]}>
+        <div class={`formal-judgment ${styles.decl}`}>
+            <div class={styles.name}>
                 <NameInput
                     placeholder="Unnamed"
                     name={props.equation.name}
@@ -210,7 +210,7 @@ export default function EquationCellEditor(props: EquationEditorProps) {
                     }}
                     createBelow={() => setActiveInput("rhs")}
                 />
-                <div class={styles["equals"]}>{"="}</div>
+                <div class={styles.equals}>{"="}</div>
                 <PathPicker
                     model={elaborated()}
                     theory={props.theory}
@@ -341,7 +341,7 @@ function PathPicker(props: PathPickerProps) {
 
     return (
         <div
-            class={styles["pathPicker"]}
+            class={styles.pathPicker}
             onMouseDown={(evt) => {
                 // Activate the picker when clicking anywhere inside the
                 // border, but only when not already in editing mode (so
@@ -383,18 +383,18 @@ function PathPickerDisplay(props: {
     unresolvedText: string | null;
 }) {
     return (
-        <div class={styles["pathDisplay"]}>
+        <div class={styles.pathDisplay}>
             <Show
                 when={props.unresolvedText}
                 fallback={
-                    <Show when={props.mor} fallback={<span class={styles["unnamed"]}>...</span>}>
+                    <Show when={props.mor} fallback={<span class={styles.unnamed}>...</span>}>
                         {(mor) => (
                             <PathView model={props.model} theory={props.theory} mor={mor()} />
                         )}
                     </Show>
                 }
             >
-                {(typed) => <span class={styles["unresolved"]}>{typed()}</span>}
+                {(typed) => <span class={styles.unresolved}>{typed()}</span>}
             </Show>
         </div>
     );
@@ -491,7 +491,7 @@ function PathPickerInput(
                 exitRight={props.exitRight}
             />
             <Show when={hasContent()}>
-                <div class={styles["clearButton"]}>
+                <div class={styles.clearButton}>
                     <IconButton
                         tooltip="Clear path"
                         aria-label="Clear path"
@@ -636,8 +636,8 @@ function domLabel(it: PathCompletionItem): string {
     not stretching across the full row width. */
 function PathCompletionRow(props: { item: PathCompletionItem; theory: Theory }) {
     return (
-        <div class={styles["completionRow"]}>
-            <div class={styles["completionName"]}>
+        <div class={styles.completionRow}>
+            <div class={styles.completionName}>
                 <span>{props.item.name}</span>
             </div>
             <PathSegmentsView segments={props.item.path.segments} theory={props.theory} />
@@ -663,7 +663,7 @@ function PathView(props: { model: DblModel | undefined; theory: Theory; mor: Mor
     const segments = createMemo(() => describePath(props.model, props.mor));
 
     return (
-        <Show when={segments()} fallback={<span class={styles["error"]}>(invalid path)</span>}>
+        <Show when={segments()} fallback={<span class={styles.error}>(invalid path)</span>}>
             {(segs) => <PathSegmentsView segments={segs()} theory={props.theory} />}
         </Show>
     );
@@ -709,13 +709,10 @@ function abbreviateSegments(morphisms: PathMorSegment[]): PathSegmentItem[] {
 }
 
 function PathSegmentsView(props: { segments: PathSegments; theory: Theory }) {
-    const domClasses = () => [
-        styles["object"],
-        ...obClasses(props.theory, props.segments.dom.obType),
-    ];
+    const domClasses = () => [styles.object, ...obClasses(props.theory, props.segments.dom.obType)];
     const items = createMemo(() => abbreviateSegments(props.segments.morphisms));
     return (
-        <div class={styles["path"]}>
+        <div class={styles.path}>
             <div class={domClasses().join(" ")}>
                 <LabelOrUnnamed name={props.segments.dom.label} />
             </div>
@@ -726,7 +723,7 @@ function PathSegmentsView(props: { segments: PathSegments; theory: Theory }) {
                     }
                     if (item.kind === "object") {
                         const obNodeClasses = [
-                            styles["object"],
+                            styles.object,
                             ...obClasses(props.theory, item.ob.obType),
                         ];
                         return (
@@ -736,7 +733,7 @@ function PathSegmentsView(props: { segments: PathSegments; theory: Theory }) {
                         );
                     }
                     return (
-                        <span class={styles["ellipsis"]} aria-hidden="true">
+                        <span class={styles.ellipsis} aria-hidden="true">
                             {"\u22ef"}
                         </span>
                     );
@@ -759,18 +756,15 @@ function PathSegmentView(props: { segment: PathMorSegment; theory: Theory }) {
     const arrowClass = () => arrowStyles[morTypeMeta()?.arrowStyle ?? "default"];
 
     const nameClasses = () => [
-        styles["morName"],
+        styles.morName,
         arrowStyles.arrowName,
         ...(morTypeMeta()?.textClasses ?? []),
     ];
 
-    const codClasses = () => [
-        styles["object"],
-        ...obClasses(props.theory, props.segment.cod.obType),
-    ];
+    const codClasses = () => [styles.object, ...obClasses(props.theory, props.segment.cod.obType)];
 
     return (
-        <div class={styles["segment"]}>
+        <div class={styles.segment}>
             <div class={arrowStyles.arrowWithName}>
                 <div class={nameClasses().join(" ")}>
                     <LabelOrUnnamed name={props.segment.label} />
@@ -789,7 +783,7 @@ function PathSegmentView(props: { segment: PathMorSegment; theory: Theory }) {
 /** Render a label, falling back to a styled "Unnamed" when empty. */
 function LabelOrUnnamed(props: { name: string }) {
     return (
-        <Show when={props.name} fallback={<span class={styles["unnamed"]}>Unnamed</span>}>
+        <Show when={props.name} fallback={<span class={styles.unnamed}>Unnamed</span>}>
             {props.name}
         </Show>
     );
