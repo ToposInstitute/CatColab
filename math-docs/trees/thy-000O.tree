@@ -2,11 +2,8 @@
 \taxon{theory}
 \import{macros}
 
-\p{The theory can be defined for generalized multicategories in both the
-[normalized](dct-000F) and [unnormalized](dct-000N) cases.}
-
-\p{The \define{theory of representable unnormalized multicategories} extends the
-[theory of unnormalized multicategories](thy-000N) with the generators
+\p{The \define{theory of representable multicategories} extends the
+[theory of generalized multicategories](thy-000F) with the generators
 
 \ul{
   \li{an arrow #{a: Tx \to x}}
@@ -29,12 +26,12 @@ and the follwing relations:
 
 \ul{
 
-\li{\em{Unitality}: #{a \circ \eta_x = 1_x}}
+\li{\em{Unitality}: the nullary cell #{\iota} uniquely determined by the
+universal property of restriction as shown below
 
-\li{\em{Compatibility with unit cell}:
 \centerfigs{
 \quiverinline{
-% https://q.uiver.app/#q=WzAsNCxbMSwxLCJUeCJdLFswLDIsIlR4Il0sWzIsMiwieCJdLFsxLDAsIngiXSxbMCwyLCJhIl0sWzAsMSwiIiwyLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMSwyLCJwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzMsMCwiXFxldGFfeCIsMl0sWzAsNiwiXFxjaGkiLDEseyJzaG9ydGVuIjp7InRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
+% https://q.uiver.app/#q=WzAsNCxbMSwxLCJUeCJdLFsyLDIsIngiXSxbMCwyLCJUeCJdLFsxLDAsIngiXSxbMiwxLCJwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzAsMiwiIiwyLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbMCwxLCJhIl0sWzMsMCwiXFxldGFfeCIsMl0sWzAsNCwiXFxjaGkiLDEseyJzaG9ydGVuIjp7InRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
 \begin{tikzcd}
 	& x & \\
 	& Tx \\
@@ -48,24 +45,25 @@ and the follwing relations:
 }
 #{\qquad=\qquad}
 \quiverinline{
-% https://q.uiver.app/#q=WzAsNSxbMCwyLCJUeCJdLFsyLDIsIngiXSxbMCwxLCJ4Il0sWzIsMSwieCJdLFsxLDAsIngiXSxbMCwxLCJwIiwyLHsic3R5bGUiOnsiYm9keSI6eyJuYW1lIjoiYmFycmVkIn19fV0sWzIsMCwiXFxldGFfeCIsMl0sWzIsMywiXFxtYXRocm17aWR9X3giLDIseyJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJiYXJyZWQifX19XSxbMywxLCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs0LDIsIiIsMSx7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzQsMywiIiwxLHsibGV2ZWwiOjIsInN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNyw1LCJcXHRoZXRhIiwxLHsibGFiZWxfcG9zaXRpb24iOjYwLCJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbNCw3LCJcXHRleHR7Y29tcH0iLDEseyJzaG9ydGVuIjp7InRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
+% https://q.uiver.app/#q=WzAsNSxbMSwwLCJ4Il0sWzAsMSwieCJdLFsyLDEsIngiXSxbMCwyLCJUeCJdLFsyLDIsIngiXSxbMCwxLCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFswLDIsImEgXFxjaXJjIFxcZXRhX3giXSxbMSwyLCJcXG1hdGhybXtpZH1feCIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFsxLDMsIlxcZXRhX3giLDJdLFsyLDQsIiIsMix7ImxldmVsIjoyLCJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzMsNCwicCIsMix7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImJhcnJlZCJ9fX1dLFswLDcsIlxcaW90YSIsMSx7InNob3J0ZW4iOnsidGFyZ2V0IjoyMH0sInN0eWxlIjp7ImJvZHkiOnsibmFtZSI6Im5vbmUifSwiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFs3LDEwLCJcXG1hdGhybXtyZXN9IiwxLHsibGFiZWxfcG9zaXRpb24iOjYwLCJzaG9ydGVuIjp7InNvdXJjZSI6MjAsInRhcmdldCI6MjB9LCJzdHlsZSI6eyJib2R5Ijp7Im5hbWUiOiJub25lIn0sImhlYWQiOnsibmFtZSI6Im5vbmUifX19XV0=
 \begin{tikzcd}
 	& x & \\
 	x && x \\
 	Tx && x
 	\arrow[equals, from=1-2, to=2-1]
-	\arrow[equals, from=1-2, to=2-3]
+	\arrow["{a \circ \eta_x}", from=1-2, to=2-3]
 	\arrow[""{name=0, anchor=center, inner sep=0}, "{\mathrm{id}_x}"'{inner sep=.8ex}, "\shortmid"{marking}, from=2-1, to=2-3]
 	\arrow["{\eta_x}"', from=2-1, to=3-1]
 	\arrow[equals, from=2-3, to=3-3]
 	\arrow[""{name=1, anchor=center, inner sep=0}, "p"'{inner sep=.8ex}, "\shortmid"{marking}, from=3-1, to=3-3]
-	\arrow["{\text{comp}}"{description}, draw=none, from=1-2, to=0]
-	\arrow["\theta"{description, pos=0.6}, draw=none, from=0, to=1]
+	\arrow["\iota"{description}, draw=none, from=1-2, to=0]
+	\arrow["{\mathrm{res}}"{description, pos=0.6}, draw=none, from=0, to=1]
 \end{tikzcd}
 }
 }
 
-}
+is loosely invertible (that is, there is a generating nullary cell #{a \circ
+\eta_x \proto 1_x} mutually inverse to #{\iota}).}
 
 \li{\em{Universal property}: the composite cell
 
@@ -90,16 +88,12 @@ and the follwing relations:
 \end{tikzcd}
 }
 
-is invertible (that is, there is a globular generating cell #{p(\mu_x,1_x) \To
-p(Ta, 1_x)} mutually inverse to the globular cell above).}
+is tightly invertible (that is, there is a generating globular cell
+#{p(\mu_x,1_x) \To p(Ta, 1_x)} mutually inverse to the globular cell above).}
 
 }
 
 }
-
-\p{The \define{theory of representable (normalized) multicategories} is similar,
-except that it extends the [theory of (normalized) multicategories](thy-000F)
-and the cell #{\theta} is replaced with a restriction cell.}
 
 \subtree{
 \title{Comparison with literature}

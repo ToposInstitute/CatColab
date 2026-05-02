@@ -19,10 +19,10 @@ objects admits a tensor product.}
 \taxon{proposition}
 
 \p{A model of the modal theory #{(\dbl{T}, T)} of representable multicategories
-in #{(\SSet,\List)} is precisely a representable multicategory along with a
-choice of tensor products under which the unary product is the identity. Similar
-statements hold for #{(\SSet, \ListSym)} and symmetric multicategories, and for
-#{(\SSet, \ListCart)} and cartesian multicategories.}
+in #{(\SSet,\List)} is precisely a representable multicategory equipped with a
+choice of tensor products. Similar statements hold for #{(\SSet, \ListSym)} and
+symmetric multicategories, and for #{(\SSet, \ListCart)} and cartesian
+multicategories.}
 
 \proof{
 
@@ -37,8 +37,9 @@ functor #{\otimes: \List X \to X}, and a family of multimorphisms
 }
 
 natural in lists of morphisms of #{X}, with the universal property that for
-every list #{[\vec{x}_1, \dots \vec{x}_k]} of lists of objects, precomposition
-with #{[\chi_{\vec{x}_1}, \dots, \chi_{\vec{x}_k}]} gives a bijection
+every choice #{[\vec{x}_1, \dots \vec{x}_k]} of \em{lists of lists} of objects,
+precomposition with #{[\chi_{\vec{x}_1}, \dots, \chi_{\vec{x}_k}]} gives a
+bijection
 
 ##{
 P(\otimes \vec{x}_1, \dots, \otimes \vec{x}_k; y)
@@ -46,10 +47,11 @@ P(\otimes \vec{x}_1, \dots, \otimes \vec{x}_k; y)
 P(x_{1,1}, \dots, x_{k,n_k}; y).
 }
 
-Moreover, for each object #{x} in #{X}, we have #{\otimes [x] = x} and
-#{\chi_{[x]}: [x] \to x} is the identity morphism. Thus, the standard definition
-of representability is recovered by applying the universal property when all but
-one of the lists #{\vec{x}_i} are singletons.
+Moreover, by the unitality axiom, for each object #{x} in #{X}, the morphism in
+#{X} corresponding to the unary multimorphism #{\chi_{[x]}: [x] \to \otimes [x]}
+is an isomorphism. Thus, the standard definition of representability is
+recovered by applying the universal property when all but one of the lists
+#{\vec{x}_i} are singletons.
 
 }
 
