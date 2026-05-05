@@ -8,10 +8,11 @@ use super::{eval::*, prelude::*, text_elab, theory::*, toplevel::*, val::*};
 use crate::dbl::{
     discrete, discrete_tabulator, modal,
     model::{DblModel, DblModelPrinter, MutDblModel},
+    model_diagram::DblModelDiagram,
     theory::{DblTheory, DblTheoryKind, NonUnital, Unital},
 };
 use crate::one::{
-    Category,
+    Category, QualifiedPath,
     path::{Path, PathEq},
 };
 use crate::zero::{Namespace, QualifiedName};
@@ -398,7 +399,211 @@ impl<'a> ModelGenerator<'a> {
             }
             TyV_::Unit => None,
             TyV_::Meta(_) => None,
-            TyV_::Over(_, _) => None,
+            TyV_::Over(_) => None,
         }
+    }
+}
+
+/// Generates a [`DiscreteDblModelDiagram`] from an elaborated [`Diag`].
+///
+/// Restricted to discrete double theories for the moment; other theory
+/// kinds will need their own diagram types in catlog before this can be
+/// promoted to an enum mirroring [`Model`].
+pub fn diagram_from_diag(
+    toplevel: &Toplevel,
+    th: &TheoryDef,
+    diag: &Diag,
+) -> Result<(discrete::DiscreteDblModelDiagram, Namespace), String> {
+    let TheoryDef::Discrete(theory) = th else {
+        return Err("diagram generation only supports discrete double theories".into());
+    };
+    let mut generator = DiagramGenerator {
+        eval: Evaluator::empty(toplevel),
+        codomain_ty: diag.model.clone(),
+        domain: discrete::DiscreteDblModel::new(theory.clone()),
+        mapping: discrete::DiscreteDblModelMapping::default(),
+    };
+    let namespace = generator.generate(&diag.body_val)?;
+    let DiagramGenerator { domain, mapping, .. } = generator;
+    Ok((DblModelDiagram(mapping, domain), namespace))
+}
+
+struct DiagramGenerator<'a> {
+    eval: Evaluator<'a>,
+    codomain_ty: TyV,
+    domain: discrete::DiscreteDblModel,
+    mapping: discrete::DiscreteDblModelMapping,
+}
+
+impl DiagramGenerator<'_> {
+    fn generate(&mut self, body_ty: &TyV) -> Result<Namespace, String> {
+        let (self_n, eval_with_self) = self.eval.bind_self(body_ty.clone());
+        self.eval = eval_with_self;
+        let self_val = self.eval.eta_neu(&self_n, body_ty);
+        Ok(self.extract(vec![], &self_val, body_ty)?.unwrap_or_else(Namespace::new_for_uuid))
+    }
+
+    fn extract(
+        &mut self,
+        prefix: Vec<NameSegment>,
+        val: &TmV,
+        ty: &TyV,
+    ) -> Result<Option<Namespace>, String> {
+        match &**ty {
+            TyV_::Record(r) => {
+                let mut namespace = Namespace::new_for_uuid();
+                for (name, (label, _)) in r.fields.iter() {
+                    let mut child_prefix = prefix.clone();
+                    child_prefix.push(*name);
+                    if let NameSegment::Uuid(uuid) = name {
+                        namespace.set_label(*uuid, *label);
+                    }
+                    let field_tm = self.eval.proj(val, *name, *label);
+                    let field_ty = self.eval.field_ty(ty, val, *name);
+                    if let Some(inner) = self.extract(child_prefix, &field_tm, &field_ty)? {
+                        namespace.add_inner(*name, inner);
+                    }
+                }
+                Ok(Some(namespace))
+            }
+            TyV_::Over(path) => {
+                // Resolve the path against the codomain to find the
+                // catlog object type for this generator.
+                let (cod_self_n, cod_eval) = self.eval.bind_self(self.codomain_ty.clone());
+                let cod_val = cod_eval.eta_neu(&cod_self_n, &self.codomain_ty);
+                let resolved = cod_eval.path_ty(&self.codomain_ty, &cod_val, path)?;
+                let TyV_::Object(ot) = &*resolved else {
+                    return Err(
+                        "@over path does not refer to an object generator in the codomain".into(),
+                    );
+                };
+                let ot: QualifiedName = ot.clone().try_into().map_err(|_| {
+                    "@over codomain object type is not valid for a discrete theory".to_string()
+                })?;
+                let qname: QualifiedName = prefix.into();
+                self.domain.add_ob(qname.clone(), ot);
+                let target: QualifiedName =
+                    path.iter().map(|(seg, _)| *seg).collect::<Vec<_>>().into();
+                self.mapping.assign_ob(qname, target);
+                Ok(None)
+            }
+            TyV_::Morphism(mt, dom, cod) => {
+                // Augmentation produces lift morphisms whose dom and cod
+                // are projections from the body's self, resolving to the
+                // qualified names of generators (declared or specialized).
+                let dom_name = neutral_qualified_name(dom).ok_or_else(|| {
+                    "morphism domain does not resolve to a generator name".to_string()
+                })?;
+                let cod_name = neutral_qualified_name(cod).ok_or_else(|| {
+                    "morphism codomain does not resolve to a generator name".to_string()
+                })?;
+                let mt_inner: QualifiedPath = mt.clone().try_into().map_err(|_| {
+                    "morphism type is not valid for a discrete theory".to_string()
+                })?;
+                let qname: QualifiedName = prefix.clone().into();
+                self.domain.add_mor(qname.clone(), dom_name, cod_name, mt_inner);
+                // Mapping target: extract the codomain morphism's name
+                // from the synthetic lift name `~f(e)`. For other shapes
+                // (e.g., a future user-declared morphism in a body), fall
+                // back to the field name itself.
+                if let Some(last) = prefix.last()
+                    && let Some(cod_mor) = parse_lift_morphism_name(last)
+                {
+                    let target = Path::single(QualifiedName::single(cod_mor));
+                    self.mapping.assign_mor(qname, target);
+                }
+                Ok(None)
+            }
+            TyV_::Object(_)
+            | TyV_::Sing(_, _)
+            | TyV_::Id(_, _, _)
+            | TyV_::Unit
+            | TyV_::Meta(_) => Ok(None),
+        }
+    }
+}
+
+/// Read off a [`QualifiedName`] from a value that's a neutral chain of
+/// projections from a self-variable (regardless of which level the self
+/// is bound at). Returns `None` if the value isn't of that shape.
+fn neutral_qualified_name(tm: &TmV) -> Option<QualifiedName> {
+    let TmV_::Neu(n, _) = &**tm else {
+        return None;
+    };
+    Some(n.to_qualified_name())
+}
+
+/// Parse a synthetic lift-morphism field name of the form `~f(e)` and
+/// return the codomain morphism's name `f`. Returns `None` if the name
+/// isn't of that shape.
+fn parse_lift_morphism_name(name: &NameSegment) -> Option<NameSegment> {
+    let NameSegment::Text(s) = name else {
+        return None;
+    };
+    let s = s.as_str();
+    let rest = s.strip_prefix('~')?;
+    let paren = rest.find('(')?;
+    Some(name_seg(ustr(&rest[..paren])))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dbl::model::FpDblModel;
+    use crate::tt::text_elab::{TT_PARSE_CONFIG, TopElabResult, TopElaborator};
+    use crate::tt::theory::std_theories;
+    use crate::zero::Mapping;
+
+    fn elaborate_to_toplevel(src: &str) -> Toplevel {
+        let reporter = Reporter::new();
+        let mut toplevel = Toplevel::new(std_theories());
+        let _ = TT_PARSE_CONFIG.with_parsed_top(src, reporter.clone(), |topntns| {
+            let mut topelab = TopElaborator::new(reporter.clone());
+            for topntn in topntns.iter() {
+                if let Some(TopElabResult::Declaration(name, decl)) =
+                    topelab.elab(&toplevel, topntn)
+                {
+                    toplevel.declarations.insert(name, decl);
+                }
+            }
+            Some(())
+        });
+        assert!(!reporter.errored(), "elaboration produced errors");
+        toplevel
+    }
+
+    #[test]
+    fn diagram_over_weighted_graph() {
+        let src = r#"
+set_theory ThSchema
+
+type WeightedGraph := [
+  V : Entity,
+  E : Entity,
+  Weight : AttrType,
+  src : (Hom Entity)[E, V],
+  tgt : (Hom Entity)[E, V],
+  weight : Attr[E, Weight]
+]
+
+diagram I : @Instance(WeightedGraph) := [
+    e : @over .E,
+]
+"#;
+        let toplevel = elaborate_to_toplevel(src);
+        let diag = match toplevel.declarations.get(&name_seg("I")) {
+            Some(TopDecl::Diag(d)) => d.clone(),
+            _ => panic!("expected I to be a diagram declaration"),
+        };
+        let (DblModelDiagram(mapping, domain), _ns) =
+            diagram_from_diag(&toplevel, &diag.theory.definition, &diag).unwrap();
+
+        let e_qname: QualifiedName = vec![name_seg("e")].into();
+        let entity_ot: QualifiedName = vec![name_seg("Entity")].into();
+        let e_target: QualifiedName = vec![name_seg("E")].into();
+
+        assert!(domain.has_ob(&e_qname));
+        assert_eq!(domain.ob_generator_type(&e_qname), entity_ot);
+        assert_eq!(mapping.0.ob_generator_map.apply_to_ref(&e_qname), Some(e_target));
     }
 }

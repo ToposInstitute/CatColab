@@ -95,14 +95,16 @@ pub enum TyS_ {
     /// add more unification/holes later.
     Meta(MetaVar),
 
-    /// The type of terms of a fiber over a generator of a diagram's
-    /// codomain model.
+    /// The type of terms in a fiber over an object generator of some
+    /// diagram's codomain model.
     ///
-    /// The first component names a top-level diagram declaration; the
-    /// second is a path into that diagram's theory record, identifying
-    /// an object generator. Example surface syntax: `e : @over .E`,
-    /// where `E` is a field of the enclosing diagram's theory.
-    Over(TopVarName, Vec<(FieldName, LabelSegment)>),
+    /// The path identifies the object generator in the codomain. Diagram
+    /// identity is contextual rather than part of the type: any diagram
+    /// in scope contributes its terms to this type, so two `@over .V`
+    /// types from different diagram declarations are convertible. The
+    /// elaborator validates the path against the enclosing diagram's
+    /// codomain at construction time. Example surface syntax: `e : @over .E`.
+    Over(Vec<(FieldName, LabelSegment)>),
 }
 
 /// Syntax for total types, dereferences to [TyS_].
@@ -163,8 +165,8 @@ impl TyS {
     }
 
     /// Smart constructor for [TyS], [TyS_::Over] case.
-    pub fn over(diag_name: TopVarName, path: Vec<(FieldName, LabelSegment)>) -> Self {
-        Self(Rc::new(TyS_::Over(diag_name, path)))
+    pub fn over(path: Vec<(FieldName, LabelSegment)>) -> Self {
+        Self(Rc::new(TyS_::Over(path)))
     }
 }
 
@@ -190,9 +192,7 @@ impl ToDoc for TyS {
             ),
             TyS_::Unit => t("Unit"),
             TyS_::Meta(mv) => t(format!("?{}", mv.id)),
-            TyS_::Over(diag_name, path) => {
-                t(format!("@over({}){}", diag_name, path_to_string(path)))
-            }
+            TyS_::Over(path) => t(format!("@over{}", path_to_string(path))),
         }
     }
 }
