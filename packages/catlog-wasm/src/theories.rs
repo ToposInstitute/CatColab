@@ -9,10 +9,10 @@ use wasm_bindgen::prelude::*;
 use catlog::dbl::theory::{self as theory, NonUnital, Unital};
 use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
-use catlog::zero::{name, QualifiedLabel};
+use catlog::zero::name;
 
 use super::latex::LatexEquations;
-use super::model_morphism::{motifs, MotifOccurrence, MotifsOptions};
+use super::model_morphism::{MotifOccurrence, MotifsOptions, motifs};
 use super::result::JsResult;
 use super::theories::MassActionAnalysisLogic;
 use super::{analyses::*, model::DblModel, theory::DblTheory};
@@ -97,16 +97,8 @@ impl ThSchema {
                 analyses::sql::SQLAnalysis::new(backend)
                     .render(
                         model.discrete()?,
-                        |id| {
-                            model
-                                .ob_generator_label(id)
-                                .unwrap_or_else(|| QualifiedLabel::single("".into()))
-                        },
-                        |id| {
-                            model
-                                .mor_generator_label(id)
-                                .unwrap_or_else(|| QualifiedLabel::single("".into()))
-                        },
+                        |id| model.ob_namespace.label_string(id),
+                        |id| model.mor_namespace.label_string(id),
                     )
                     .map_err(|e| format!("{}", e))
             })

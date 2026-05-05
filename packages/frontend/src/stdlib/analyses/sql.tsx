@@ -8,7 +8,7 @@ import { CodeView, BlockTitle, ErrorAlert, IconButton } from "catcolab-ui-compon
 import type { ModelAnalysisProps } from "../../analysis";
 import * as SQL from "./sql_types.ts";
 
-import styles from "../styles.module.css";
+import styles from "./sql.module.css";
 
 const copyToClipboard = (text: string) => navigator.clipboard.writeText(text);
 

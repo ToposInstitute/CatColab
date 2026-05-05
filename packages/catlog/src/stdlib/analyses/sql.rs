@@ -14,7 +14,7 @@ use itertools::Itertools;
 use nonempty::nonempty;
 use sea_query::SchemaBuilder;
 use sea_query::{
-    ColumnDef, ForeignKey, ForeignKeyCreateStatement, Iden, MysqlQueryBuilder,
+    Alias, ColumnDef, ForeignKey, ForeignKeyCreateStatement, Iden, MysqlQueryBuilder,
     PostgresQueryBuilder, SqliteQueryBuilder, Table, TableCreateStatement, prepare::Write,
 };
 use sqlformat::{Dialect, format};
@@ -41,7 +41,7 @@ impl Iden for &QualifiedLabel {
 /// Enum for specifying the behavior of a column. For example, an Ordinary column is simply
 /// a foreign key constraint.
 #[derive(Debug, Clone, PartialEq)]
-pub enum ColumnBehavior {
+pub enum ColumnType {
     /// A foreign key constraint. The target is an entity.
     Ordinary {
         /// The name of the morphism.
@@ -65,7 +65,7 @@ pub enum ColumnBehavior {
     },
 }
 
-impl ColumnBehavior {
+impl ColumnType {
     fn build(
         model: &DiscreteDblModel,
         cycles: &IndexMap<QualifiedName, Vec<QualifiedName>>,
@@ -75,13 +75,13 @@ impl ColumnBehavior {
         let tgt = model.get_cod(&mor).unwrap();
         match model.mor_generator_type(&mor) {
             t if t == Path::Seq(nonempty![name("Attr")]) => {
-                ColumnBehavior::Attribute { mor, tgt: tgt.clone() }
+                ColumnType::Attribute { mor, tgt: tgt.clone() }
             }
             _ => {
                 if cycles.contains_key(src) || cycles.contains_key(&tgt.clone()) {
-                    ColumnBehavior::Deferrable { mor, tgt: tgt.clone() }
+                    ColumnType::Deferrable { mor, tgt: tgt.clone() }
                 } else {
-                    ColumnBehavior::Ordinary { mor, tgt: tgt.clone() }
+                    ColumnType::Ordinary { mor, tgt: tgt.clone() }
                 }
             }
         }
@@ -89,17 +89,17 @@ impl ColumnBehavior {
 
     fn mor(&self) -> &QualifiedName {
         match self {
-            ColumnBehavior::Ordinary { mor, tgt: _ }
-            | ColumnBehavior::Deferrable { mor, tgt: _ }
-            | ColumnBehavior::Attribute { mor, tgt: _ } => mor,
+            ColumnType::Ordinary { mor, tgt: _ }
+            | ColumnType::Deferrable { mor, tgt: _ }
+            | ColumnType::Attribute { mor, tgt: _ } => mor,
         }
     }
 
     fn tgt(&self) -> &QualifiedName {
         match self {
-            ColumnBehavior::Ordinary { mor: _, tgt }
-            | ColumnBehavior::Deferrable { mor: _, tgt }
-            | ColumnBehavior::Attribute { mor: _, tgt } => tgt,
+            ColumnType::Ordinary { mor: _, tgt }
+            | ColumnType::Deferrable { mor: _, tgt }
+            | ColumnType::Attribute { mor: _, tgt } => tgt,
         }
     }
 
@@ -108,10 +108,10 @@ impl ColumnBehavior {
     fn render_postgres_fk(
         &self,
         src: &QualifiedName,
-        ob_label: impl Fn(&QualifiedName) -> QualifiedLabel,
-        mor_label: impl Fn(&QualifiedName) -> QualifiedLabel,
+        ob_label: impl Fn(&QualifiedName) -> String,
+        mor_label: impl Fn(&QualifiedName) -> String,
     ) -> String {
-        let fk = |src: &QualifiedLabel, mor: &QualifiedLabel, tgt: &QualifiedLabel| -> String {
+        let fk = |src: String, mor: &String, tgt: &String| -> String {
             format!(
                 r#"ALTER TABLE "{src}"
 	ADD CONSTRAINT fk_{mor}_{src}_{tgt}
@@ -119,16 +119,16 @@ impl ColumnBehavior {
             )
         };
         match self {
-            ColumnBehavior::Ordinary { mor, tgt } => {
-                fk(&ob_label(src), &mor_label(mor), &ob_label(tgt)) + ";"
+            ColumnType::Ordinary { mor, tgt } => {
+                fk(ob_label(src), &mor_label(mor), &ob_label(tgt)) + ";"
             }
-            ColumnBehavior::Deferrable { mor, tgt } => {
-                fk(&ob_label(src), &mor_label(mor), &ob_label(tgt))
+            ColumnType::Deferrable { mor, tgt } => {
+                fk(ob_label(src), &mor_label(mor), &ob_label(tgt))
                     + "\n"
                     + r#"DEFERRABLE INITIALLY DEFERRED;"#
             }
             // this is unreachable, since attributes cannot be foreign keys.
-            ColumnBehavior::Attribute { mor: _, tgt: _ } => "".to_string(),
+            ColumnType::Attribute { mor: _, tgt: _ } => unreachable!(),
         }
     }
 }
@@ -138,7 +138,7 @@ impl ColumnBehavior {
 #[derive(Clone, Debug)]
 pub struct ForeignKeyConstraints {
     /// Foreign key constraints for every table.
-    fks: IndexMap<QualifiedName, Vec<ColumnBehavior>>,
+    fks: IndexMap<QualifiedName, Vec<ColumnType>>,
 }
 
 impl ForeignKeyConstraints {
@@ -150,8 +150,8 @@ impl ForeignKeyConstraints {
             (name("Entity") == model.ob_generator_type(&v)).then_some((
                 v.clone(),
                 g.out_edges(&v)
-                    .map(|e| ColumnBehavior::build(model, &cycles, &v, e))
-                    .collect::<Vec<ColumnBehavior>>(),
+                    .map(|e| ColumnType::build(model, &cycles, &v, e))
+                    .collect::<Vec<ColumnType>>(),
             ))
         }));
         Self { fks }
@@ -162,7 +162,7 @@ impl ForeignKeyConstraints {
             .values()
             .flatten()
             .into_iter()
-            .any(|s| matches!(s, ColumnBehavior::Deferrable { mor: _, tgt: _ }))
+            .any(|s| matches!(s, ColumnType::Deferrable { mor: _, tgt: _ }))
     }
 }
 
@@ -175,7 +175,7 @@ pub enum SQLAnalysisError {
         /// does not support cyclic foreign key constraints.
         backend: SQLBackend,
         /// The tables which have failing foreign key constraints.
-        cycles: Vec<(QualifiedName, ColumnBehavior)>,
+        cycles: Vec<(QualifiedName, ColumnType)>,
     },
 }
 
@@ -216,8 +216,8 @@ impl SQLAnalysis {
         &self,
         tables: Vec<TableCreateStatement>,
         constraints: ForeignKeyConstraints,
-        ob_label: impl Fn(&QualifiedName) -> QualifiedLabel,
-        mor_label: impl Fn(&QualifiedName) -> QualifiedLabel,
+        ob_label: impl Fn(&QualifiedName) -> String,
+        mor_label: impl Fn(&QualifiedName) -> String,
     ) -> String {
         let table_def: String = tables
             .iter()
@@ -235,7 +235,7 @@ impl SQLAnalysis {
             .iter()
             .flat_map(|(ob, mors)| {
                 mors.iter()
-                    .filter(|fkb| matches!(fkb, ColumnBehavior::Deferrable { mor: _, tgt: _ }))
+                    .filter(|fkb| matches!(fkb, ColumnType::Deferrable { mor: _, tgt: _ }))
                     .map(|fkb| fkb.render_postgres_fk(ob, &ob_label, &mor_label))
                     .collect::<Vec<String>>()
             })
@@ -256,7 +256,7 @@ impl SQLAnalysis {
                 .fks
                 .into_iter()
                 .flat_map(|(k, v)| v.into_iter().map(move |e| (k.clone(), e)))
-                .filter(|(_, e)| matches!(e, ColumnBehavior::Deferrable { mor: _, tgt: _ }))
+                .filter(|(_, e)| matches!(e, ColumnType::Deferrable { mor: _, tgt: _ }))
                 .collect::<Vec<_>>();
             Err(SQLAnalysisError::CyclicForeignKeyError { backend: self.backend.clone(), cycles })
         } else {
@@ -277,8 +277,8 @@ impl SQLAnalysis {
     pub fn render(
         &self,
         model: &DiscreteDblModel,
-        ob_label: impl Fn(&QualifiedName) -> QualifiedLabel,
-        mor_label: impl Fn(&QualifiedName) -> QualifiedLabel,
+        ob_label: impl Fn(&QualifiedName) -> String,
+        mor_label: impl Fn(&QualifiedName) -> String,
     ) -> Result<String, SQLAnalysisError> {
         let constraints = self.toposort_morphisms(model);
         let tables = self.make_tables(model, constraints.clone()?, &ob_label, &mor_label);
@@ -291,16 +291,11 @@ impl SQLAnalysis {
         }
     }
 
-    fn fk(
-        &self,
-        src_name: QualifiedLabel,
-        tgt_name: QualifiedLabel,
-        mor_name: QualifiedLabel,
-    ) -> ForeignKeyCreateStatement {
+    fn fk(&self, src: &str, tgt: &str, mor: &str) -> ForeignKeyCreateStatement {
         ForeignKey::create()
-            .name(format!("FK_{}_{}_{}", mor_name, src_name, tgt_name))
-            .from(src_name.clone(), mor_name)
-            .to(tgt_name.clone(), "id")
+            .name(format!("FK_{}_{}_{}", mor, src, tgt))
+            .from(Alias::new(src), Alias::new(mor))
+            .to(Alias::new(tgt), "id")
             .to_owned()
     }
 
@@ -308,8 +303,8 @@ impl SQLAnalysis {
         &self,
         model: &DiscreteDblModel,
         constraints: ForeignKeyConstraints,
-        ob_label: impl Fn(&QualifiedName) -> QualifiedLabel,
-        mor_label: impl Fn(&QualifiedName) -> QualifiedLabel,
+        ob_label: impl Fn(&QualifiedName) -> String,
+        mor_label: impl Fn(&QualifiedName) -> String,
     ) -> Vec<TableCreateStatement> {
         constraints
             .fks
@@ -319,19 +314,23 @@ impl SQLAnalysis {
 
                 // the targets for arrows
                 let table_column_defs = mors.iter().fold(
-                    tbl.table(ob_label(&ob)).if_not_exists().col(
+                    tbl.table(Alias::new(ob_label(&ob))).if_not_exists().col(
                         ColumnDef::new("id").integer().not_null().auto_increment().primary_key(),
                     ),
                     |acc, mor| {
+                        let mor_tgt = mor.tgt();
+                        let ob_name = ob_label(mor_tgt);
                         let mor_name = mor_label(mor.mor());
                         // if the Id of the name is an entity, it is assumed to be a column
                         // which references the primary key of another table.
                         if model.mor_generator_type(mor.mor()) == Path::Id(name("Entity")) {
-                            acc.col(ColumnDef::new(mor_name.clone()).integer().not_null())
+                            acc.col(
+                                ColumnDef::new(Alias::new(mor_name.as_str())).integer().not_null(),
+                            )
                         } else {
-                            let mut col = ColumnDef::new(mor_name);
+                            let mut col = ColumnDef::new(Alias::new(mor_name.as_str()));
                             col.not_null();
-                            add_column_type(&mut col, &ob_label(mor.tgt()));
+                            add_column_type(&mut col, ob_name.as_str());
                             acc.col(col)
                         }
                     },
@@ -341,7 +340,7 @@ impl SQLAnalysis {
                     .filter(|mor| {
                         (model.mor_generator_type(mor.mor()) == Path::Id(name("Entity")))
                             && (if self.backend == SQLBackend::PostgresSQL {
-                                matches!(mor, ColumnBehavior::Ordinary { mor: _, tgt: _ })
+                                matches!(mor, ColumnType::Ordinary { mor: _, tgt: _ })
                             } else {
                                 true
                             })
@@ -352,9 +351,9 @@ impl SQLAnalysis {
                         |acc, mor| {
                             // if there is a cyclic pattern, we want to add deferrable...
                             acc.foreign_key(&mut self.fk(
-                                ob_label(&ob),
-                                ob_label(mor.tgt()),
-                                mor_label(mor.mor()),
+                                ob_label(&ob).as_str(),
+                                ob_label(mor.tgt()).as_str(),
+                                mor_label(mor.mor()).as_str(),
                             ))
                         },
                     )
@@ -422,8 +421,8 @@ impl fmt::Display for SQLBackend {
     }
 }
 
-fn add_column_type(col: &mut ColumnDef, label: &QualifiedLabel) {
-    match format!("{label}").as_str() {
+fn add_column_type(col: &mut ColumnDef, label: &str) {
+    match label {
         "Int" => col.integer(),
         "TinyInt" => col.tiny_integer(),
         "Bool" => col.boolean(),
@@ -431,7 +430,7 @@ fn add_column_type(col: &mut ColumnDef, label: &QualifiedLabel) {
         "Time" => col.timestamp(),
         "Date" => col.date(),
         "DateTime" => col.date_time(),
-        _ => col.custom(label.clone()),
+        _ => col.custom(Alias::new(label)),
     };
 }
 
@@ -556,11 +555,11 @@ ADD
                 cycles: vec![
                     (
                         name("Snapshots"),
-                        ColumnBehavior::Deferrable { mor: name("for_ref"), tgt: name("Refs") }
+                        ColumnType::Deferrable { mor: name("for_ref"), tgt: name("Refs") }
                     ),
                     (
                         name("Refs"),
-                        ColumnBehavior::Deferrable {
+                        ColumnType::Deferrable {
                             mor: name("head"),
                             tgt: name("Snapshots")
                         }
