@@ -1,0 +1,28 @@
+set_theory ThSchema
+
+type WeightedGraph := [
+  V : Entity,
+  E : Entity,
+  Weight : AttrType,
+  src : (Hom Entity)[E, V],
+  tgt : (Hom Entity)[E, V],
+  weight : Attr[E, Weight]
+]
+
+diagram I : @Instance(WeightedGraph) := [
+    e : @over .E,
+]
+
+#/ Should there be some sugar for this situation, where I'm basically just renaming default-named guys?
+diagram I2 : @Instance(WeightedGraph) := [
+    v1 : @over .V,
+    v2 : @over .V,
+    w : @over .Weight,
+    we : I & [.src(e) := v1, .tgt(e) := v2, .weight(e) := w],
+    wf : I & [.src(e) := v2, .tgt(e) := v1, .weight(e) := w]
+]
+
+diagram I3 : @Instance(WeightedGraph) := [
+    e1 : @over .E,
+    e2 : @over .E
+]
