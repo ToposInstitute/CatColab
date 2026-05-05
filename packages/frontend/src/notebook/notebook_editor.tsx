@@ -197,7 +197,13 @@ export function NotebookEditor<T>(props: {
             // queries here.
             const cellIndex = activeCell();
             setCreatePopoverTarget(cellIndex != null ? cellIndex : "append");
-            return evt.preventDefault();
+            evt.preventDefault();
+            // Stop the same event from reaching `CellTypePopover`'s window
+            // keydown listener, which would otherwise see the popover as
+            // already open and treat this Enter as confirming the first
+            // completion (creating a rich-text cell immediately).
+            evt.stopImmediatePropagation();
+            return;
         }
     });
 
