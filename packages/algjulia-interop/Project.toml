@@ -12,6 +12,7 @@ MLStyle = "d8e11817-5142-5d16-987a-aa16d5891078"
 Oxygen = "df9a0d86-3283-4920-82dc-4555fc0d1d8b"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 StructTypes = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
+TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [extensions]
 CatlabExt = ["Catlab", "ACSets"]
@@ -24,4 +25,5 @@ MLStyle = "0.4.17"
 Oxygen = "1.7.5"
 Reexport = "1.2.2"
 StructTypes = "1.11.0"
+TOML = "1.0.3"
 julia = "1.11"

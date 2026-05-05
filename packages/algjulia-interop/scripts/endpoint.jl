@@ -31,12 +31,12 @@ function CorsHandler(handle)
     end
 end
 
-defaults = [:Catlab,:ACSets] # all extensions to date
+defaults = [:CatlabExt] # all extensions to date
 
-# Dynamically load packages in command lin eargs
-for pkg in (isempty(ARGS) ? defaults : Symbol.(ARGS) )
-  @info "using $pkg"
-  @eval using $pkg
+# Dynamically load packages in command line args
+for ext in (isempty(ARGS) ? defaults : Symbol.(ARGS) )
+  @info "loading $ext"
+  eval(Expr(:macrocall, Symbol("@ext"), LineNumberNode(0), Expr(:call, ext, "Project.toml")))
 end
 
 for m in methods(CatColabInterop.endpoint)

@@ -1,10 +1,11 @@
 module TestCatlab 
 
-using CatColabInterop, Catlab
+using CatColabInterop
 using Catlab.CategoricalAlgebra.Pointwise.FunctorialDataMigrations.Yoneda: 
   colimit_representables
 using HTTP, Test, Oxygen, JSON3
-const CatlabExt = Base.get_extension(CatColabInterop, :CatlabExt)
+
+const CatlabExt = @ext CatlabExt("../Project.toml")
 
 # Example JSON
 #-------------
