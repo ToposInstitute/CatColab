@@ -49,7 +49,11 @@ impl<'a> Evaluator<'a> {
     /// to self.env.
     pub fn eval_ty(&self, ty: &TyS) -> TyV {
         match &**ty {
-            TyS_::TopVar(tv) => self.toplevel.declarations.get(tv).unwrap().clone().unwrap_ty().val,
+            TyS_::TopVar(tv) => match self.toplevel.declarations.get(tv).unwrap() {
+                TopDecl::Type(t) => t.val.clone(),
+                TopDecl::Diag(d) => d.body_val.clone(),
+                _ => panic!("top-level {tv} should be a type or diagram declaration"),
+            },
             TyS_::Object(ot) => TyV::object(ot.clone()),
             TyS_::Morphism(pt, dom, cod) => {
                 TyV::morphism(pt.clone(), self.eval_tm(dom), self.eval_tm(cod))
@@ -66,7 +70,7 @@ impl<'a> Evaluator<'a> {
             }
             TyS_::Unit => TyV::unit(),
             TyS_::Meta(mv) => TyV::meta(*mv),
-            TyS_::Over(name, path) => TyV::over(*name, path.clone()),
+            TyS_::Over(path) => TyV::over(path.clone()),
         }
     }
 
@@ -193,7 +197,7 @@ impl<'a> Evaluator<'a> {
             }
             TyV_::Unit => TyS::unit(),
             TyV_::Meta(mv) => TyS::meta(*mv),
-            TyV_::Over(name, path) => TyS::over(*name, path.clone()),
+            TyV_::Over(path) => TyS::over(path.clone()),
         }
     }
 
@@ -257,7 +261,7 @@ impl<'a> Evaluator<'a> {
             TyV_::Id(_, _, _) => Ok(()),
             TyV_::Unit => Ok(()),
             TyV_::Meta(_) => Ok(()),
-            TyV_::Over(_, _) => Ok(()),
+            TyV_::Over(_) => Ok(()),
         }
     }
 
@@ -302,6 +306,13 @@ impl<'a> Evaluator<'a> {
             (TyV_::Sing(ty1, _), _) => self.convertible_ty(ty1, ty2),
             (_, TyV_::Sing(ty2, _)) => self.convertible_ty(ty1, ty2),
             (TyV_::Unit, TyV_::Unit) => Ok(()),
+            (TyV_::Over(p1), TyV_::Over(p2)) => {
+                if p1 == p2 {
+                    Ok(())
+                } else {
+                    Err(t("over-types refer to different paths in the codomain"))
+                }
+            }
             _ => Err(t("tried to convert between types of different type constructors")),
         }
     }
@@ -324,7 +335,7 @@ impl<'a> Evaluator<'a> {
             TyV_::Id(_, _, _) => TmV::tt(), // Extensional equality at a 100% discount!
             TyV_::Unit => TmV::tt(),
             TyV_::Meta(_) => TmV::neu(n.clone(), ty.clone()),
-            TyV_::Over(_, _) => TmV::neu(n.clone(), ty.clone()),
+            TyV_::Over(_) => TmV::neu(n.clone(), ty.clone()),
         }
     }
 
