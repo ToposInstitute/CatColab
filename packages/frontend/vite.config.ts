@@ -37,6 +37,9 @@ export default defineConfig({
         // Run test files sequentially to prevent cross-test contamination via
         // the server's shared user state.
         fileParallelism: false,
+        // DOM-rendering tests have their own config and environment; see
+        // `vitest.config.dom.ts`.
+        exclude: ["**/node_modules/**", "**/dist/**", "**/*.dom.test.{ts,tsx}"],
     },
     server: {
         proxy: {
