@@ -1,6 +1,8 @@
 import { lazy } from "solid-js";
 
 import type {
+    LCCEquationsData,
+    LotkaVolterraEquationsData,
     MassActionEquationsData,
     MorType,
     ObType,
@@ -107,9 +109,9 @@ const Kuramoto = lazy(() => import("./analyses/kuramoto"));
 
 export function linearODE(
     options: Partial<AnalysisOptions> & {
-        simulate: Simulators.LinearODESimulator;
+        simulate: Simulators.LCCSimulator;
     },
-): ModelAnalysisMeta<Simulators.LinearODEProblemData> {
+): ModelAnalysisMeta<Simulators.LCCProblemData> {
     const {
         id = "linear-ode",
         name = "Linear ODE dynamics",
@@ -122,7 +124,7 @@ export function linearODE(
         name,
         description,
         help,
-        component: (props) => <LinearODE simulate={simulate} title={name} {...props} />,
+        component: (props) => <LCC simulate={simulate} title={name} {...props} />,
         initialContent: () => ({
             coefficients: {},
             initialValues: {},
@@ -131,7 +133,32 @@ export function linearODE(
     };
 }
 
-const LinearODE = lazy(() => import("./analyses/linear_ode"));
+const LCC = lazy(() => import("./analyses/linear_ode"));
+
+export function linearODEEquations(
+    options: Partial<AnalysisOptions> & {
+        getEquations: Simulators.LCCEquations;
+    },
+): ModelAnalysisMeta<LCCEquationsData> {
+    const {
+        id = "linear-ode-equations",
+        name = "Linear ODE equations",
+        description = "Display the symbolic linear ODE dynamics equations",
+        help = "linear-ode-equations",
+        ...otherOptions
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => <LCCEquationsDisplay title={name} {...otherOptions} {...props} />,
+        initialContent: () => ({
+            trivialData: true,
+        }),
+    };
+}
+const LCCEquationsDisplay = lazy(() => import("./analyses/linear_ode_equations"));
 
 export function lotkaVolterra(
     options: Partial<AnalysisOptions> & {
@@ -140,8 +167,8 @@ export function lotkaVolterra(
 ): ModelAnalysisMeta<Simulators.LotkaVolterraProblemData> {
     const {
         id = "lotka-volterra",
-        name = "Lotka-Volterra dynamics",
-        description = "Simulate the system using a Lotka-Volterra ODE",
+        name = "Lotka–Volterra dynamics",
+        description = "Simulate the system using a Lotka–Volterra ODE",
         help = "lotka-volterra",
         simulate,
     } = options;
@@ -161,6 +188,33 @@ export function lotkaVolterra(
 }
 
 const LotkaVolterra = lazy(() => import("./analyses/lotka_volterra"));
+
+export function lotkaVolterraEquations(
+    options: Partial<AnalysisOptions> & {
+        getEquations: Simulators.LotkaVolterraEquations;
+    },
+): ModelAnalysisMeta<LotkaVolterraEquationsData> {
+    const {
+        id = "lotka-volterra-equations",
+        name = "Lotka–Volterra equations",
+        description = "Display the symbolic Lotka–Volterra dynamics equations",
+        help = "lotka-volterra-equations",
+        ...otherOptions
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => (
+            <LotkaVolterraEquationsDisplay title={name} {...otherOptions} {...props} />
+        ),
+        initialContent: () => ({
+            trivialData: true,
+        }),
+    };
+}
+const LotkaVolterraEquationsDisplay = lazy(() => import("./analyses/lotka_volterra_equations"));
 
 export function massAction(
     options: Partial<AnalysisOptions> & {
