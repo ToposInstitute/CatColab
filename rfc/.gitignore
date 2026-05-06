@@ -1,6 +1,7 @@
 # RFCs
 _site
 _svgs
-.gitignore
+
+.auctex-auto
+.quarto
 .svg-cache
-/.quarto/
