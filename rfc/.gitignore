@@ -3,5 +3,7 @@ _site
 _svgs
 
 .auctex-auto
-.quarto
 .svg-cache
+
+/.quarto/
+**/*.quarto_ipynb

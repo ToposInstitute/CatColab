@@ -2,7 +2,6 @@ project:
   type: website
   preview:
     port: 3950
-    browser: false
 
 website:
   title: "CatColab RFCs"
@@ -12,12 +11,7 @@ website:
     collapse-level: 1
     contents:
       - index.md
-      - 0001.md
-      - 0002.md
-      - 0004.md
-      - section: Non-actionable
-        contents:
-          - 0003.md
+      - auto: "*.md"
   # GitHub links
   repo-url: https://github.com/ToposInstitute/CatColab
   repo-subdir: rfc
