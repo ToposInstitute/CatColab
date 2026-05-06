@@ -17,7 +17,7 @@ pub enum TopDecl {
     DefConst(DefConst),
     /// See [Def].
     Def(Def),
-    /// See [Diag]
+    /// See [Diag].
     Diag(Diag),
 }
 
