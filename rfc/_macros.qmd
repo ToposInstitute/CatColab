@@ -24,7 +24,7 @@
 <!-- Arrows -->
 \newcommand{\xto}[1]{\xrightarrow{#1}}
 \newcommand{\from}{\leftarrow}
-\newcommand{\proto}{\nrightarrow}
+\newcommand{\proto}{\mathrel{\mkern3mu\vcenter{\hbox{$\shortmid$}}\mkern-10mu{\to}}}
 \newcommand{\xproto}[1]{\overset{#1}{\proto}}
 \newcommand{\proTo}{\mathrel{\mkern3mu\vcenter{\hbox{$\shortmid$}}\mkern-10mu{\Rightarrow}}}
 
