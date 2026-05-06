@@ -94,7 +94,8 @@ impl DblModelDiagram {
     /// Adds a morphism to the diagram.
     pub fn add_mor(&mut self, decl: &DiagramMorDecl) -> Result<(), String> {
         match &mut self.diagram {
-            DblModelDiagramBox::Discrete(diagram) => {
+            // TODO
+            DblModelDiagramBox::Discrete(_diagram) => {
                 // let (mapping, model) = diagram.into();
                 // let mor_type = Elaborator.elab(&decl.mor_type)?;
                 // model.make_mor(decl.id.into(), mor_type.into());
@@ -403,7 +404,7 @@ mod tests {
     fn diagram_dec_heat_eq() {
         let th = ThDEC::new().theory();
         let [form0, op1dot, op1laplace] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
-        let model = dec_heat_eq(&th, [form0, op1dot, op1laplace]);
+        let _model = dec_heat_eq(&th, [form0, op1dot, op1laplace]);
 
         let mut diagram = DblModelDiagram::new(&th);
         let [u, udot, dot, lapl] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
@@ -428,12 +429,23 @@ mod tests {
 
         assert!(diagram
             .add_mor(&DiagramMorDecl {
-                name: "".into(),
+                name: "dot".into(),
                 id: dot,
                 mor_type: MorType::Basic("Form0".into()),
                 dom: Some(Ob::Basic(u.to_string())),
                 cod: Some(Ob::Basic(udot.to_string())),
                 over: Some(Mor::Basic(op1dot.to_string())),
+            })
+            .is_ok());
+
+        assert!(diagram
+            .add_mor(&DiagramMorDecl {
+                name: "lapl".into(),
+                id: lapl,
+                mor_type: MorType::Basic("Form0".into()),
+                dom: Some(Ob::Basic(u.to_string())),
+                cod: Some(Ob::Basic(udot.to_string())),
+                over: Some(Mor::Basic(op1laplace.to_string())),
             })
             .is_ok());
     }
@@ -443,10 +455,10 @@ mod tests {
         let th = ThDEC::new().theory();
         let [form0, form1, op1d, op2wedge] =
             [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
-        let model = dec_wedge(&th, [form0, form1, op1d, op2wedge]);
+        let _model = dec_wedge(&th, [form0, form1, op1d, op2wedge]);
 
         let mut diagram = DblModelDiagram::new(&th);
-        let [u0, v0, v1, d, wedge01, wedge00, wedge00result, result] = [
+        let [u0, v0, v1, _d, wedge01, wedge00, wedge00result, result] = [
             Uuid::now_v7(),
             Uuid::now_v7(),
             Uuid::now_v7(),

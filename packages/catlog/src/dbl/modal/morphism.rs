@@ -1,13 +1,16 @@
 //! Morphism between models of a modal double theory.
 
-use crate::dbl::discrete::DblModelMorphism;
 use crate::dbl::modal::{ModalDblModel, ModalMor, ModalOb};
-use crate::dbl::model::DblModel;
-use crate::dbl::model_morphism::InvalidDblModelMorphism;
+use crate::dbl::model::MutDblModel;
+use crate::dbl::model_morphism::{DblModelMorphism, InvalidDblModelMorphism};
 use crate::dbl::theory::Unital;
-use crate::one::{FpFunctorData, InvalidFpFunctor};
+use crate::one::{
+    category::{Category, FgCategory},
+    graph::GraphMapping, // TODO
+    FpFunctorData,
+};
 use crate::validate::{self, Validate};
-use crate::zero::{HashColumn, MutMapping, QualifiedName};
+use crate::zero::{HashColumn, Mapping, MutMapping, QualifiedName};
 
 use nonempty::NonEmpty;
 
@@ -38,6 +41,19 @@ impl ModalDblModelMapping {
     pub fn assign_mor(&mut self, e: QualifiedName, n: ModalMor) -> Option<ModalMor> {
         self.0.mor_generator_map.set(e, n)
     }
+
+    ///
+    pub fn apply_ob(&self, ob: ModalOb) -> Result<ModalOb, String> {
+        match ob {
+            ModalOb::Generator(name) => self.0.apply_vertex(name.clone()).ok_or("!".to_string()),
+            ModalOb::List(List, args) => args
+                .into_iter()
+                .map(|name| self.apply_ob(name.clone()))
+                .collect::<Result<Vec<ModalOb>, String>>()
+                .map(|args| ModalOb::List(List, args)),
+            _ => todo!(),
+        }
+    }
 }
 
 /// A morphism between models of a modal double theory.
@@ -51,44 +67,40 @@ impl<'a> ModalDblModelMorphism<'a> {
         &self,
     ) -> impl Iterator<Item = InvalidDblModelMorphism<QualifiedName, QualifiedName>> + 'a + use<'a>
     {
-        // vec![].into_iter()
-        let DblModelMorphism(ModalDblModelMapping(mapping), dom, cod) = *self;
-        dbg!(&cod.theory());
-        // let category_errors: Vec<_> = mapping
-        //     .functor_into(&cod.category) // TODO
-        //     .iter_invalid_on(&dom.category)
-        //     .map(|err| match err {
-        //         InvalidFpFunctor::ObGen(x) => InvalidDblModelMorphism::Ob(x),
-        //         InvalidFpFunctor::MorGen(m) => InvalidDblModelMorphism::Mor(m),
-        //         InvalidFpFunctor::Dom(m) => InvalidDblModelMorphism::Dom(m),
-        //         InvalidFpFunctor::Cod(m) => InvalidDblModelMorphism::Cod(m),
-        //         InvalidFpFunctor::Eq(id) => InvalidDblModelMorphism::Eq(id),
-        //     })
-        //     .collect();
-        // let ob_type_errors = dom.ob_generators().filter_map(|x| {
-        //     if let Some(y) = mapping.ob_generator_map.get(&x)
-        //         && cod.has_ob(y)
-        //         && dom.ob_type(&x) != cod.ob_type(y)
-        //     {
-        //         Some(InvalidDblModelMorphism::ObType(x))
-        //     } else {
-        //         None
-        //     }
-        // });
-        let th_cat = cod.theory();
-        dbg!(th_cat);
-        // let mor_type_errors = dom.mor_generators().filter_map(move |f| {
-        //     if let Some(g) = mapping.mor_generator_map.get(&f)
-        //         && cod.has_mor(g)
-        //         && !th_cat.0.morphisms_are_equal(dom.mor_generator_type(&f), cod.mor_type(g))
-        //     {
-        //         Some(InvalidDblModelMorphism::MorType(f))
-        //     } else {
-        //         None
-        //     }
-        // });
-        vec![].into_iter()
-        // category_errors.into_iter().chain(ob_type_errors).chain(mor_type_errors)
+        // DiscreteDblModelMapping is destructured at this step, but I've decided not to
+        // destructure further out of convenience.
+        let DblModelMorphism(mapping, dom, cod) = *self;
+
+        let ob_errors = dom.ob_generators().filter_map(|v| {
+            if mapping.0.vertex_map().apply_to_ref(&v).is_some_and(|w| cod.has_ob(&w)) {
+                None
+            } else {
+                Some(InvalidDblModelMorphism::<QualifiedName, QualifiedName>::Ob(v))
+            }
+        });
+
+        let mor_errors = dom.mor_generators().filter_map(|e| {
+            /// Check if the morphism is correct.
+            let f = match mapping.0.edge_map().apply_to_ref(&e) {
+                Some(ModalMor::Generator(f)) if cod.has_mor(&ModalMor::Generator(f.clone())) => f,
+                Some(ModalMor::Generator(f)) => return Some(InvalidDblModelMorphism::Mor(f)),
+                _ => return None,
+            };
+
+            let dom_check = dom.get_dom(&e).zip(cod.get_dom(&f)).and_then(|(left, right)| {
+                (mapping.apply_ob(left.clone()).expect("!") != *right)
+                    .then(|| InvalidDblModelMorphism::Dom(e.clone()).into())
+            });
+
+            let cod_check = dom.get_cod(&e).zip(cod.get_cod(&f)).and_then(|(left, right)| {
+                (mapping.apply_ob(left.clone()).expect("!") != *right)
+                    .then(|| InvalidDblModelMorphism::Cod(e).into())
+            });
+
+            return dom_check.or(cod_check);
+        });
+
+        ob_errors.chain(mor_errors)
     }
 }
 

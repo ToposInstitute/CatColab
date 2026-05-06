@@ -72,14 +72,6 @@ impl DiscreteDblModelMapping {
     }
 }
 
-/// A functor between models of a double theory.
-///
-/// This struct borrows its data to perform validation. The domain and codomain are
-/// assumed to be valid models of double theories. If that is in question, the
-/// models should be validated *before* validating this object.
-pub struct DblModelMorphism<'a, Map, Dom, Cod>(pub &'a Map, pub &'a Dom, pub &'a Cod);
-// XXX should this be moved up the directory?
-
 /// A morphism between models of a discrete double theory.
 pub type DiscreteDblModelMorphism<'a> =
     DblModelMorphism<'a, DiscreteDblModelMapping, DiscreteDblModel, DiscreteDblModel>;

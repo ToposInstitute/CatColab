@@ -243,6 +243,13 @@ pub fn dec(th: Rc<ModalDblTheory<Unital>>) -> ModalDblModel<Unital> {
         model.add_ob(form, ob_type.clone());
     }
 
+    model.add_mor(
+        name("laplacian"),
+        ModalOb::List(List::Plain, vec![ModalOb::Generator(forms[0].clone())]),
+        ModalOb::Generator(forms[0].clone()),
+        ModalMorType::Zero(ob_type.clone()),
+    );
+
     let dualforms = vec![name("DualForm0"), name("DualForm1"), name("DualForm2")];
     for form in dualforms.clone() {
         model.add_ob(form, ob_type.clone());
@@ -250,14 +257,14 @@ pub fn dec(th: Rc<ModalDblTheory<Unital>>) -> ModalDblModel<Unital> {
 
     for (dim, form) in forms.clone().into_iter().enumerate() {
         model.add_mor(
-            name(format!("partial_{dim}").as_str()),
-            ModalOb::Generator(form.clone()),
+            name(format!("partial_t{dim}").as_str()),
+            ModalOb::List(List::Plain, vec![ModalOb::Generator(form.clone()).into()]),
             ModalOb::Generator(form.clone()),
             ModalMorType::Zero(ob_type.clone()),
         );
         model.add_mor(
             name(format!("hodge_{dim}").as_str()),
-            ModalOb::Generator(form.clone()),
+            ModalOb::List(List::Plain, vec![ModalOb::Generator(form.clone()).into()]),
             ModalOb::Generator(dualforms[3 - dim - 1].clone()),
             ModalMorType::Zero(ob_type.clone()),
         );
@@ -268,13 +275,21 @@ pub fn dec(th: Rc<ModalDblTheory<Unital>>) -> ModalDblModel<Unital> {
 
         model.add_mor(
             name(format!("d_{dim}").as_str()),
-            ModalOb::Generator(form.clone()),
+            ModalOb::List(List::Plain, vec![ModalOb::Generator(form.clone())]),
             ModalOb::Generator(forms[dim + 1].clone()),
             ModalMorType::Zero(ob_type.clone()),
         );
     }
 
     let mor_type: ModalMorType = ModeApp::new(name("Multihom")).into();
+
+    model.add_mor(
+        name("multiplication"),
+        ModalOb::List(List::Plain, vec![forms[0].clone().into(), forms[0].clone().into()]),
+        ModalOb::Generator(forms[0].clone()),
+        mor_type.clone(),
+    );
+
     for (i, form1) in forms.iter().enumerate() {
         for (j, form2) in forms.iter().enumerate() {
             if !(i < j) || (i + j > 2) {

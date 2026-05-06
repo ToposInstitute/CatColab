@@ -28,6 +28,13 @@ use tsify::Tsify;
 
 pub use super::discrete::model_morphism::*;
 
+/// A functor between models of a double theory.
+///
+/// This struct borrows its data to perform validation. The domain and codomain are
+/// assumed to be valid models of double theories. If that is in question, the
+/// models should be validated *before* validating this object.
+pub struct DblModelMorphism<'a, Map, Dom, Cod>(pub &'a Map, pub &'a Dom, pub &'a Cod);
+
 /// An invalid assignment in a morphism between models of a double theory.
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
