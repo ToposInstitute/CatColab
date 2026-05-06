@@ -1,7 +1,9 @@
+# RFCs
 _site
 _svgs
 
+.auctex-auto
+.svg-cache
+
 /.quarto/
 **/*.quarto_ipynb
-
-.auctex-auto

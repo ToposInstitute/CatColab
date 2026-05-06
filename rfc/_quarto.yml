@@ -1,11 +1,14 @@
 project:
   type: website
+  preview:
+    port: 3950
 
 website:
   title: "CatColab RFCs"
   # Navigation
   sidebar:
     style: "docked"
+    collapse-level: 1
     contents:
       - index.md
       - auto: "*.md"
