@@ -94,14 +94,10 @@ impl BatchOutput {
             }
             for g in &mor_gens {
                 let mt = format_path(&domain.mor_generator_type(g));
-                let dom_str = domain
-                    .get_dom(g)
-                    .map(|o| format!("{o}"))
-                    .unwrap_or_else(|| "?".into());
-                let cod_str = domain
-                    .get_cod(g)
-                    .map(|o| format!("{o}"))
-                    .unwrap_or_else(|| "?".into());
+                let dom_str =
+                    domain.get_dom(g).map(|o| format!("{o}")).unwrap_or_else(|| "?".into());
+                let cod_str =
+                    domain.get_cod(g).map(|o| format!("{o}")).unwrap_or_else(|| "?".into());
                 let target_str = mapping
                     .0
                     .mor_generator_map
@@ -119,10 +115,7 @@ impl BatchOutput {
         }
     }
 
-    fn validation_result<I: IntoIterator<Item = InvalidDiscreteDblModelDiagram>>(
-        &self,
-        errs: I,
-    ) {
+    fn validation_result<I: IntoIterator<Item = InvalidDiscreteDblModelDiagram>>(&self, errs: I) {
         if let BatchOutput::Snapshot(out) = self {
             let mut out = out.borrow_mut();
             let mut iter = errs.into_iter().peekable();
@@ -259,11 +252,7 @@ pub fn elaborate(src: &str, path: &str, output: &BatchOutput) -> io::Result<bool
                                 && let Some(TopDecl::Diag(diag)) =
                                     toplevel.declarations.get(&name_segment)
                             {
-                                match diagram_from_diag(
-                                    &toplevel,
-                                    &diag.theory.definition,
-                                    diag,
-                                ) {
+                                match diagram_from_diag(&toplevel, &diag.theory.definition, diag) {
                                     Ok((model_diag, _)) => {
                                         output.diagram_summary(&model_diag);
                                         let (cod, _) = Model::from_ty(
