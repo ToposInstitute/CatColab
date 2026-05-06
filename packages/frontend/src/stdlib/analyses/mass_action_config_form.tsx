@@ -32,7 +32,7 @@ export function MassActionConfigForm(props: {
                         } else {
                             content.massConservationType = {
                                 type: "Unbalanced",
-                                granularity: "PerTransition",
+                                granularity: "PerFlow",
                             };
                         }
                     });
@@ -41,7 +41,7 @@ export function MassActionConfigForm(props: {
             <Show when={massConservation().type === "Unbalanced" && props.enableGranularity}>
                 <SelectField
                     label="Rate granularity"
-                    value={massConservationGranularity() ?? "PerTransition"}
+                    value={massConservationGranularity() ?? "PerFlow"}
                     onChange={(evt) => {
                         props.changeConfig((content) => {
                             if (content.massConservationType.type === "Unbalanced") {
@@ -51,8 +51,8 @@ export function MassActionConfigForm(props: {
                         });
                     }}
                 >
-                    <option value={"PerTransition"}>{"Per transition"}</option>
-                    <option value={"PerPlace"}>{"Per place"}</option>
+                    <option value={"PerFlow"}>{"Per flow"}</option>
+                    <option value={"PerStock"}>{"Per stock"}</option>
                 </SelectField>
             </Show>
         </FormGroup>
