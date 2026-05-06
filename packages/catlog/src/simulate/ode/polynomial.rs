@@ -9,14 +9,11 @@ use indexmap::IndexMap;
 use nalgebra::DVector;
 use num_traits::{One, Pow, Zero};
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-#[cfg(feature = "serde-wasm")]
-use tsify::Tsify;
-
 #[cfg(test)]
 use super::ODEProblem;
 use super::ODESystem;
+use crate::latex::{Latex, LatexEquation, LatexEquations, ToLatex, ToLatexWithMap};
+use crate::zero::QualifiedName;
 use crate::zero::{alg::Polynomial, rig::DisplayCoef};
 
 /// A system of polynomial differential equations.
@@ -94,33 +91,48 @@ where
         PolynomialSystem { components }
     }
 
-    /// Converts to equations as LaTeX strings.
-    pub fn to_latex_equations(&self) -> Vec<LatexEquation>
+    /// Converts to equations as Latex strings.
+    pub fn to_latex_equations(&self) -> LatexEquations
     where
-        Var: Display,
-        Coef: Display + DisplayCoef + Clone + PartialEq + One + Neg<Output = Coef>,
-        Exp: Display + PartialEq + One,
+        Var: Display + ToLatexWithMap,
+        Coef: Display + ToLatexWithMap + DisplayCoef + Clone + PartialEq + One + Neg<Output = Coef>,
+        Exp: Display + ToLatex + PartialEq + One,
     {
-        self.components
-            .iter()
-            .map(|(var, poly)| LatexEquation {
-                lhs: format!("\\frac{{\\mathrm{{d}}}}{{\\mathrm{{d}}t}} {var}"),
-                rhs: poly.to_latex(),
-            })
-            .collect()
+        let name = |id: &QualifiedName| id.to_string();
+        self.to_latex_equations_with_map(name)
     }
-}
 
-#[derive(Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
-#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
-/// An equation in LaTeX format with a left-hand side and a right-hand side.
-pub struct LatexEquation {
-    /// The left-hand side of the equation.
-    pub lhs: String,
-    /// The right-hand side of the equation.
-    pub rhs: String,
+    // REQUEST  | It might be much cleaner to only implement `to_latex_equations_with_map` in the
+    //   FOR    | case where `Var = QualifiedName` and `Coef = Parameter<P: ODEParameter>`, but I
+    // FEEDBACK | cannot figure out how to convince Rust to let me do this.
+    //__________/
+    /// Converts to equations as Latex string, after applying the function `f : &QualifiedName -> String`
+    /// to each of the variables and coefficients. This is intended for frontend functionality, where we
+    /// do not want to display UUIDs directly but instead look them up in the model namespace. For more
+    /// details, see `catlog-wasm::src::latex` where we use `to_latex_equations_with_map` and pass in
+    /// the function `catlog-wasm::src::latex_names`.
+    pub fn to_latex_equations_with_map<F: Fn(&QualifiedName) -> String>(
+        &self,
+        f: F,
+    ) -> LatexEquations
+    where
+        Var: Display + ToLatexWithMap,
+        Coef: Display + ToLatexWithMap + DisplayCoef + Clone + PartialEq + One + Neg<Output = Coef>,
+        Exp: Display + ToLatex + PartialEq + One,
+    {
+        LatexEquations(
+            self.components
+                .iter()
+                .map(|(var, poly)| LatexEquation {
+                    lhs: Latex(format!(
+                        "\\frac{{\\mathrm{{d}}}}{{\\mathrm{{d}}t}} {}",
+                        var.to_latex_with_map(|var| f(var))
+                    )),
+                    rhs: poly.to_latex_with_map(|term| f(term)),
+                })
+                .collect(),
+        )
+    }
 }
 
 impl<Var, Exp> PolynomialSystem<Var, f32, Exp>
