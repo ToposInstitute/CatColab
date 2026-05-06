@@ -53,7 +53,7 @@ The rest of the analysis depends on whether **mass conservation** is checked as 
     - $\dot{X}=r_T AB$
     - $\dot{Y}=r_T AB$
 
-- If **mass conservation** is checked as _false_, and **rate granularity** is set to _per transition_, then a transition $A\xrightarrow{T}B$ between places $A$ and $B$ is interpreted as the equations $\{\dot{A}=-\kappa_T,\dot{B}=\rho_T\}$. Here $\kappa_T$ and $\rho_T$ are the **consumption** and **production** rate coefficients of the transition.
+- If **mass conservation** is checked as _false_, and **rate granularity** is set to _per flow_, then a transition $A\xrightarrow{T}B$ between places $A$ and $B$ is interpreted as the equations $\{\dot{A}=-\kappa_T,\dot{B}=\rho_T\}$. Here $\kappa_T$ and $\rho_T$ are the **consumption** and **production** rate coefficients of the transition.
 
     A transition $[A,B]\xrightarrow{T}[X,Y]$ gives the equations
     - $\dot{A}=-\kappa_T AB$
@@ -61,7 +61,7 @@ The rest of the analysis depends on whether **mass conservation** is checked as 
     - $\dot{X}=\rho_T AB$
     - $\dot{Y}=\rho_T AB$
 
-- If **mass conservation** is checked as _false_, and **rate granularity** is set to _per place_, then a transition $A\xrightarrow{T}B$ between places $A$ and $B$ is interpreted as the equations $\{\dot{A}=-\kappa_T^A,\dot{B}=\rho_T^B\}$. Here $\kappa_T^A$ and $\rho_T^B$ are the **consumption** and **production** rate coefficients of the objects $A$ and $B$ with respect to the transition $T$.
+- If **mass conservation** is checked as _false_, and **rate granularity** is set to _per stock_, then a transition $A\xrightarrow{T}B$ between places $A$ and $B$ is interpreted as the equations $\{\dot{A}=-\kappa_T^A,\dot{B}=\rho_T^B\}$. Here $\kappa_T^A$ and $\rho_T^B$ are the **consumption** and **production** rate coefficients of the objects $A$ and $B$ with respect to the transition $T$.
 
     A transition $[A,B]\xrightarrow{T}[X,Y]$ gives the equations
     - $\dot{A}=-\kappa_T^A AB$

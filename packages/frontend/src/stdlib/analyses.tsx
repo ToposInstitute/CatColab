@@ -4,7 +4,6 @@ import type {
     MassActionEquationsData,
     MorType,
     ObType,
-    PolynomialODEEquationsData,
     StochasticMassActionProblemData,
 } from "catlog-wasm";
 import type { DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
@@ -21,6 +20,8 @@ type AnalysisOptions = {
     description?: string;
     help?: string;
 };
+
+const ODESemanticsEquationsDisplay = lazy(() => import("./analyses/ode_semantics_equations"));
 
 export const decapodes = (
     options: AnalysisOptions,
@@ -133,6 +134,30 @@ export function linearODE(
 
 const LinearODE = lazy(() => import("./analyses/linear_ode"));
 
+export function linearODEEquations(
+    options: Partial<AnalysisOptions> & {
+        getEquations: Simulators.LinearODEEquations;
+    },
+): ModelAnalysisMeta<null> {
+    const {
+        id = "linear-ode-equations",
+        name = "Linear ODE equations",
+        description = "Display the symbolic linear ODE dynamics equations",
+        help = "linear-ode-equations",
+        ...otherOptions
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => (
+            <ODESemanticsEquationsDisplay title={name} {...otherOptions} {...props} />
+        ),
+        initialContent: () => null,
+    };
+}
+
 export function lotkaVolterra(
     options: Partial<AnalysisOptions> & {
         simulate: Simulators.LotkaVolterraSimulator;
@@ -140,8 +165,8 @@ export function lotkaVolterra(
 ): ModelAnalysisMeta<Simulators.LotkaVolterraProblemData> {
     const {
         id = "lotka-volterra",
-        name = "Lotka-Volterra dynamics",
-        description = "Simulate the system using a Lotka-Volterra ODE",
+        name = "Lotka–Volterra dynamics",
+        description = "Simulate the system using a Lotka–Volterra ODE",
         help = "lotka-volterra",
         simulate,
     } = options;
@@ -161,6 +186,30 @@ export function lotkaVolterra(
 }
 
 const LotkaVolterra = lazy(() => import("./analyses/lotka_volterra"));
+
+export function lotkaVolterraEquations(
+    options: Partial<AnalysisOptions> & {
+        getEquations: Simulators.LotkaVolterraEquations;
+    },
+): ModelAnalysisMeta<null> {
+    const {
+        id = "lotka-volterra-equations",
+        name = "Lotka–Volterra equations",
+        description = "Display the symbolic Lotka–Volterra dynamics equations",
+        help = "lotka-volterra-equations",
+        ...otherOptions
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => (
+            <ODESemanticsEquationsDisplay title={name} {...otherOptions} {...props} />
+        ),
+        initialContent: () => null,
+    };
+}
 
 export function massAction(
     options: Partial<AnalysisOptions> & {
@@ -184,7 +233,7 @@ export function massAction(
         help,
         component: (props) => <MassAction title={name} {...otherOptions} {...props} />,
         initialContent: () => ({
-            massConservationType: { type: "Balanced" },
+            equationsData: { massConservationType: { type: "Balanced" } },
             rates: {},
             transitionProductionRates: {},
             transitionConsumptionRates: {},
@@ -372,7 +421,7 @@ export function polynomialODEEquations(
     options: Partial<AnalysisOptions> & {
         getEquations: Simulators.PolynomialODEEquations;
     },
-): ModelAnalysisMeta<PolynomialODEEquationsData> {
+): ModelAnalysisMeta<null> {
     const {
         id = "polynomial-ode-equations",
         name = "Polynomial ODE equations",
@@ -386,14 +435,11 @@ export function polynomialODEEquations(
         description,
         help,
         component: (props) => (
-            <PolynomialODEEquationsDisplay title={name} {...otherOptions} {...props} />
+            <ODESemanticsEquationsDisplay title={name} {...otherOptions} {...props} />
         ),
-        initialContent: () => ({
-            trivialData: true,
-        }),
+        initialContent: () => null,
     };
 }
-const PolynomialODEEquationsDisplay = lazy(() => import("./analyses/polynomial_ode_equations"));
 
 export function polynomialODESimulation(
     options: Partial<AnalysisOptions> & {
