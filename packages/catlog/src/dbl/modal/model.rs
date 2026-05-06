@@ -10,8 +10,7 @@ use itertools::Itertools;
 use ref_cast::RefCast;
 
 use super::theory::*;
-use crate::dbl::theory::DblTheoryKind;
-use crate::dbl::{graph::VDblGraph, model::*, theory::DblTheory};
+use crate::dbl::{category::VDblCategory, graph::VDblGraph, model::*, theory::{DblTheory, DblTheoryKind}};
 use crate::tt::util::pretty::*;
 use crate::validate::{self, Validate};
 use crate::{one::computad::*, one::*, zero::*};
@@ -99,6 +98,25 @@ impl<Kind: DblTheoryKind> ModalDblModel<Kind> {
     /// Gets the computing generating the morphisms of the model.
     fn computad(&self) -> Computad<'_, ModalOb, ModalDblModelObs<Kind>, QualifiedName> {
         Computad::new(ModalDblModelObs::ref_cast(self), &self.mor_generators)
+    }
+
+    /// TODO
+    pub fn infer_missing(&mut self) {
+        let edges: Vec<_> = self.mor_generators().collect();
+        for e in edges {
+            if let Some(x) = self.get_dom(&e).filter(|x| !self.has_ob(x)) {
+                let ob_type = self.theory.src(&self.mor_generator_type(&e));
+                if let Some(id) = x.clone().clone().generator() {
+                    self.add_ob(id.clone(), ob_type)
+                };
+            }
+            if let Some(x) = self.get_cod(&e).filter(|x| !self.has_ob(x)) {
+                let ob_type = self.theory.tgt(&self.mor_generator_type(&e));
+                if let Some(id) = x.clone().clone().generator() {
+                    self.add_ob(id.clone(), ob_type)
+                };
+            }
+        }
     }
 }
 
