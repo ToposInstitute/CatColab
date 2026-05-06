@@ -9,6 +9,7 @@ website:
   # Navigation
   sidebar:
     style: "docked"
+    collapse-level: 1
     contents:
       - index.md
       - 0001.md
