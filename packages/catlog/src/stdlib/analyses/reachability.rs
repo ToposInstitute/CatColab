@@ -3,10 +3,10 @@
 use itertools::Itertools;
 use std::collections::HashMap;
 
-use crate::dbl::modal::model::{ModalDblModel, ModalOb};
+use crate::dbl::modal::model::ModalDblModel;
 use crate::dbl::theory::Unital;
 use crate::one::category::FgCategory;
-use crate::stdlib::analyses::petri::transition_interface;
+use crate::stdlib::analyses::petri::{TransitionInterface, transition_interface};
 use crate::zero::QualifiedName;
 
 #[cfg(feature = "serde")]
@@ -57,16 +57,14 @@ pub fn subreachability(m: &ModalDblModel<Unital>, data: ReachabilityProblemData)
 
     for e in m.mor_generators() {
         let e_idx = *hom_inv.get(&e).unwrap();
-        let (inputs, outputs) = transition_interface(m, &e);
+        let transition_interface: TransitionInterface = transition_interface(m, &e);
+        let inputs = transition_interface.input_places.clone();
+        let outputs = transition_interface.output_places.clone();
         for ob in inputs {
-            if let ModalOb::Generator(u) = ob {
-                i_mat[*ob_inv.get(&u).unwrap()][e_idx] += 1;
-            }
+            i_mat[*ob_inv.get(&ob).unwrap()][e_idx] += 1;
         }
         for ob in outputs {
-            if let ModalOb::Generator(u) = ob {
-                o_mat[*ob_inv.get(&u).unwrap()][e_idx] += 1;
-            }
+            o_mat[*ob_inv.get(&ob).unwrap()][e_idx] += 1;
         }
     }
     let (i_mat_, o_mat_) = (&i_mat, &o_mat);

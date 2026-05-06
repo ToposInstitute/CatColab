@@ -57,7 +57,7 @@ pub(crate) fn latex_mor_names(model: &DblModel) -> impl Fn(&QualifiedName) -> St
 /// falls back to the domain→codomain format (e.g., `X \to Y`).
 pub(crate) fn latex_mor_names_mass_action(
     model: &DblModel,
-) -> impl Fn(&ode::FlowParameter) -> String {
+) -> impl Fn(&ode::MassActionParameter) -> String {
     // Returns a LaTeX fragment for a transition, suitable for use as a subscript.
     // Named morphisms produce `\text{name}`, unnamed ones produce
     // `\text{dom} \to \text{cod}` so that `\to` is in math mode.
@@ -72,31 +72,106 @@ pub(crate) fn latex_mor_names_mass_action(
         }
     };
 
-    move |id: &ode::FlowParameter| match id {
-        ode::FlowParameter::Balanced { transition } => {
+    move |id: &ode::MassActionParameter| match id {
+        ode::MassActionParameter::Balanced { flow: transition } => {
             let sub = transition_subscript(transition);
             format!("r_{{{sub}}}")
         }
-        ode::FlowParameter::Unbalanced { direction, parameter } => match (direction, parameter) {
-            (ode::Direction::IncomingFlow, ode::RateParameter::PerTransition { transition }) => {
-                let sub = transition_subscript(transition);
-                format!("\\rho_{{{sub}}}")
+        ode::MassActionParameter::Unbalanced { direction, parameter } => {
+            match (direction, parameter) {
+                (
+                    ode::Direction::IncomingFlow,
+                    ode::RateParameter::PerFlow { flow: transition },
+                ) => {
+                    let sub = transition_subscript(transition);
+                    format!("\\rho_{{{sub}}}")
+                }
+                (
+                    ode::Direction::OutgoingFlow,
+                    ode::RateParameter::PerFlow { flow: transition },
+                ) => {
+                    let sub = transition_subscript(transition);
+                    format!("\\kappa_{{{sub}}}")
+                }
+                (
+                    ode::Direction::IncomingFlow,
+                    ode::RateParameter::PerStock { flow: transition, stock: place },
+                ) => {
+                    let sub = transition_subscript(transition);
+                    let output_place_label = model.ob_namespace.label_string(place);
+                    format!("\\rho_{{{sub}}}^{{\\text{{{output_place_label}}}}}")
+                }
+                (
+                    ode::Direction::OutgoingFlow,
+                    ode::RateParameter::PerStock { flow: transition, stock: place },
+                ) => {
+                    let sub = transition_subscript(transition);
+                    let input_place_label = model.ob_namespace.label_string(place);
+                    format!("\\kappa_{{{sub}}}^{{\\text{{{input_place_label}}}}}")
+                }
             }
-            (ode::Direction::OutgoingFlow, ode::RateParameter::PerTransition { transition }) => {
-                let sub = transition_subscript(transition);
-                format!("\\kappa_{{{sub}}}")
-            }
-            (ode::Direction::IncomingFlow, ode::RateParameter::PerPlace { transition, place }) => {
-                let sub = transition_subscript(transition);
-                let output_place_label = model.ob_namespace.label_string(place);
-                format!("\\rho_{{{sub}}}^{{\\text{{{output_place_label}}}}}")
-            }
-            (ode::Direction::OutgoingFlow, ode::RateParameter::PerPlace { transition, place }) => {
-                let sub = transition_subscript(transition);
-                let input_place_label = model.ob_namespace.label_string(place);
-                format!("\\kappa_{{{sub}}}^{{\\text{{{input_place_label}}}}}")
-            }
-        },
+        }
+    }
+}
+
+/// Creates a closure that formats morphism names for Lotka-Volterra LaTeX output.
+///
+/// When a morphism has a label, it is used directly. When unnamed, the label
+/// falls back to the domain→codomain format (e.g., `X \to Y`).
+pub(crate) fn latex_mor_names_lotka_volterra(
+    model: &DblModel,
+) -> impl Fn(&ode::LotkaVolterraParameter) -> String {
+    // Returns a LaTeX fragment for a transition, suitable for use as a subscript.
+    // Named morphisms produce `\text{name}`, unnamed ones produce
+    // `\text{dom} \to \text{cod}` so that `\to` is in math mode.
+    let transition_subscript = |transition: &QualifiedName| -> String {
+        if let Some(label) = model.mor_namespace.label(transition) {
+            format!("\\text{{{label}}}")
+        } else {
+            let (dom, cod) = model
+                .mor_generator_dom_cod_label_strings(transition)
+                .expect("Morphism in equation system should have domain and codomain");
+            format!("\\text{{{dom}}} \\to \\text{{{cod}}}")
+        }
+    };
+
+    move |id: &ode::LotkaVolterraParameter| match id {
+        ode::LotkaVolterraParameter::Growth { variable } => {
+            format!("g_{{{variable}}}")
+        }
+        ode::LotkaVolterraParameter::Interaction { link } => {
+            let sub = transition_subscript(link);
+            format!("k_{{{sub}}}")
+        }
+    }
+}
+
+/// Creates a closure that formats morphism names for mass-action LaTeX output.
+///
+/// When a morphism has a label, it is used directly. When unnamed, the label
+/// falls back to the domain→codomain format (e.g., `X \to Y`).
+pub(crate) fn latex_mor_names_linear_ode(
+    model: &DblModel,
+) -> impl Fn(&ode::LCCParameter) -> String {
+    // Returns a LaTeX fragment for a transition, suitable for use as a subscript.
+    // Named morphisms produce `\text{name}`, unnamed ones produce
+    // `\text{dom} \to \text{cod}` so that `\to` is in math mode.
+    let transition_subscript = |transition: &QualifiedName| -> String {
+        if let Some(label) = model.mor_namespace.label(transition) {
+            format!("\\text{{{label}}}")
+        } else {
+            let (dom, cod) = model
+                .mor_generator_dom_cod_label_strings(transition)
+                .expect("Morphism in equation system should have domain and codomain");
+            format!("\\text{{{dom}}} \\to \\text{{{cod}}}")
+        }
+    };
+
+    move |id: &ode::LCCParameter| match id {
+        ode::LCCParameter::Parameter { morphism } => {
+            let sub = transition_subscript(morphism);
+            format!("\\lambda_{{{sub}}}")
+        }
     }
 }
 
@@ -105,6 +180,7 @@ mod tests {
     use catlog::dbl::modal::{List, ModalMorType, ModalOb, ModalObType};
     use catlog::dbl::model::{ModalDblModel, MutDblModel};
     use catlog::simulate::ode::LatexEquation;
+    use catlog::stdlib::analyses::ode::{StockFlowMassActionAnalysis, ode_semantics::*};
     use catlog::stdlib::{analyses::ode, theories};
     use catlog::zero::{LabelSegment, Namespace, QualifiedName};
     use std::rc::Rc;
@@ -117,11 +193,13 @@ mod tests {
     fn unbalanced_mass_action_latex_equations() {
         let model = backward_link("xxx", "yyy", "fff");
         let tab_model = model.discrete_tab().unwrap();
-        let analysis = ode::StockFlowMassActionAnalysis::default();
-        let sys = analysis.build_system(
-            tab_model,
-            ode::MassConservationType::Unbalanced(ode::RateGranularity::PerTransition),
-        );
+        let analysis = StockFlowMassActionAnalysis {
+            mass_conservation_type: ode::MassConservationType::Unbalanced(
+                ode::RateGranularity::PerFlow,
+            ),
+            ..StockFlowMassActionAnalysis::default()
+        };
+        let sys = analysis.build_system(tab_model);
         let equations = sys
             .map_variables(latex_ob_names(&model))
             .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(&model)))
@@ -144,11 +222,13 @@ mod tests {
     fn unnamed_mor_uses_dom_cod_in_equations() {
         let model = backward_link("xxx", "yyy", "");
         let tab_model = model.discrete_tab().unwrap();
-        let analysis = ode::StockFlowMassActionAnalysis::default();
-        let sys = analysis.build_system(
-            tab_model,
-            ode::MassConservationType::Unbalanced(ode::RateGranularity::PerTransition),
-        );
+        let analysis = StockFlowMassActionAnalysis {
+            mass_conservation_type: ode::MassConservationType::Unbalanced(
+                ode::RateGranularity::PerFlow,
+            ),
+            ..StockFlowMassActionAnalysis::default()
+        };
+        let sys = analysis.build_system(tab_model);
         let equations = sys
             .map_variables(latex_ob_names(&model))
             .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(&model)))

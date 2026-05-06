@@ -150,16 +150,14 @@ impl ThSignedCategory {
         &self,
         model: &DblModel,
         data: analyses::ode::LotkaVolterraProblemData,
-    ) -> Result<ODEResult, String> {
-        Ok(ODEResult(
-            analyses::ode::SignedCoefficientBuilder::new(name("Object"))
-                .add_positive(Path::Id(name("Object")))
-                .add_negative(name("Negative").into())
-                .lotka_volterra_analysis(model.discrete()?, data)
-                .solve_with_defaults()
-                .map_err(|err| format!("{err:?}"))
-                .into(),
-        ))
+    ) -> Result<ODEResultWithEquations, String> {
+        lotka_volterra_simulation(model, data)
+    }
+
+    /// Show the equations of the Lotka-Volterra system derived from a model.
+    #[wasm_bindgen(js_name = "lotkaVolterraEquations")]
+    pub fn lotka_volterra_equations(&self, model: &DblModel) -> Result<LatexEquations, String> {
+        lotka_volterra_equations(model)
     }
 
     /// Simulate the linear ODE system derived from a model.
@@ -167,17 +165,15 @@ impl ThSignedCategory {
     pub fn linear_ode(
         &self,
         model: &DblModel,
-        data: analyses::ode::LinearODEProblemData,
-    ) -> Result<ODEResult, String> {
-        Ok(ODEResult(
-            analyses::ode::SignedCoefficientBuilder::new(name("Object"))
-                .add_positive(Path::Id(name("Object")))
-                .add_negative(name("Negative").into())
-                .linear_ode_analysis(model.discrete()?, data)
-                .solve_with_defaults()
-                .map_err(|err| format!("{err:?}"))
-                .into(),
-        ))
+        data: analyses::ode::LCCProblemData,
+    ) -> Result<ODEResultWithEquations, String> {
+        linear_ode_simulation(model, data)
+    }
+
+    /// Show the equations of the linear ODE system derived from a model.
+    #[wasm_bindgen(js_name = "linearODEEquations")]
+    pub fn linear_ode_equations(&self, model: &DblModel) -> Result<LatexEquations, String> {
+        linear_ode_equations(model)
     }
 }
 
@@ -339,26 +335,6 @@ impl ThCategorySignedLinks {
     #[wasm_bindgen]
     pub fn theory(&self) -> DblTheory {
         DblTheory(self.0.clone().into())
-    }
-
-    /// Simulates the mass-action ODE system derived from a model.
-    #[wasm_bindgen(js_name = "massAction")]
-    pub fn mass_action(
-        &self,
-        model: &DblModel,
-        data: analyses::ode::MassActionProblemData,
-    ) -> Result<ODEResultWithEquations, String> {
-        mass_action_simulation(model, data, MassActionAnalysisLogic::StockFlow)
-    }
-
-    /// Returns the symbolic mass-action equations in LaTeX format.
-    #[wasm_bindgen(js_name = "massActionEquations")]
-    pub fn mass_action_equations(
-        &self,
-        model: &DblModel,
-        data: MassActionEquationsData,
-    ) -> Result<LatexEquations, String> {
-        mass_action_equations(model, data, MassActionAnalysisLogic::StockFlow)
     }
 }
 
