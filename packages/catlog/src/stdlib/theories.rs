@@ -379,6 +379,7 @@ mod tests {
         assert!(th_sym_multicategory().validate().is_ok());
         assert!(modal_th_power_system().validate().is_ok());
         assert!(th_polynomial_ode_system().validate().is_ok());
+        assert!(th_signed_polynomial_ode_system().validate().is_ok());
     }
 
     #[test]

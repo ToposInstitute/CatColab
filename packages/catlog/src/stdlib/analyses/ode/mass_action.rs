@@ -5,7 +5,7 @@
 //! where we do not require that mass be preserved. This allows the construction
 //! of systems of arbitrary polynomial (first-order) ODEs.
 
-use std::{collections::HashMap, fmt};
+use std::{collections::HashMap, fmt, rc::Rc};
 
 use indexmap::IndexMap;
 use nalgebra::DVector;
@@ -17,14 +17,18 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use super::{ODEAnalysis, Parameter};
-use crate::dbl::{
-    model::{DiscreteTabModel, FpDblModel, ModalDblModel, TabEdge},
-    theory::{ModalMorType, ModalObType, TabMorType, TabObType, Unital},
-};
 use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
 use crate::stdlib::analyses::petri::transition_interface;
-use crate::zero::{QualifiedName, alg::Polynomial, name, rig::Monomial};
+use crate::zero::{alg::Polynomial, name, rig::Monomial, QualifiedName};
+use crate::{
+    dbl::{
+        modal::{List, ModeApp},
+        model::{DiscreteTabModel, FpDblModel, ModalDblModel, ModalOb, MutDblModel, TabEdge},
+        theory::{ModalMorType, ModalObType, TabMorType, TabObType, Unital},
+    },
+    stdlib::th_signed_polynomial_ode_system,
+};
 
 /// There are three types of mass-action semantics, each more expressive than the previous:
 /// - balanced
@@ -214,6 +218,50 @@ impl PetriNetMassActionAnalysis {
         model: &ModalDblModel<Unital>,
         mass_conservation_type: MassConservationType,
     ) -> PolynomialSystem<QualifiedName, Parameter<FlowParameter>, i8> {
+        let theory = Rc::new(th_signed_polynomial_ode_system());
+        let ob_type = ModalObType::new(name("State"));
+        let pos_mor_type: ModalMorType = ModeApp::new(name("Contribution")).into();
+        let neg_mor_type: ModalMorType = ModeApp::new(name("NegativeContribution")).into();
+
+        let mut ode_model = ModalDblModel::new(theory);
+
+        for ob in model.ob_generators_with_type(&self.place_ob_type) {
+            ode_model.add_ob(ob, ob_type.clone());
+        }
+
+        for mor in model.mor_generators_with_type(&self.transition_mor_type) {
+            let (inputs, outputs) = transition_interface(model, &mor);
+            let term = ModalOb::List(List::Symmetric, inputs);
+
+            match mass_conservation_type {
+                MassConservationType::Balanced => {
+                    for input in inputs {
+                        ode_model.add_mor(
+                            mor.clone(),
+                            term.clone(),
+                            input.clone(),
+                            neg_mor_type.clone(),
+                        );
+                    }
+                    for output in outputs {
+                        ode_model.add_mor(
+                            mor.clone(),
+                            term.clone(),
+                            output.clone(),
+                            pos_mor_type.clone(),
+                            );
+                    }
+                }
+                MassConservationType::Unbalanced(granularity) => {
+                    
+                }
+            }
+            // TODO: add morphisms
+        }
+
+        // TODO: use PolynomialODEAnalysis::build_system (??)
+
+        // TODO: delete this old code
         let mut sys = PolynomialSystem::new();
         for ob in model.ob_generators_with_type(&self.place_ob_type) {
             sys.add_term(ob, Polynomial::zero());
@@ -224,22 +272,22 @@ impl PetriNetMassActionAnalysis {
                 inputs.iter().map(|ob| (ob.clone().unwrap_generator(), 1)).collect();
 
             match mass_conservation_type {
-                MassConservationType::Balanced => {
-                    let term: Polynomial<_, _, _> = [(
-                        Parameter::generator(FlowParameter::Balanced { transition: mor }),
-                        term.clone(),
-                    )]
-                    .into_iter()
-                    .collect();
+                // MassConservationType::Balanced => {
+                //     let term: Polynomial<_, _, _> = [(
+                //         Parameter::generator(FlowParameter::Balanced { transition: mor }),
+                //         term.clone(),
+                //     )]
+                //     .into_iter()
+                //     .collect();
 
-                    for input in inputs {
-                        sys.add_term(input.unwrap_generator(), -term.clone());
-                    }
+                //     for input in inputs {
+                //         sys.add_term(input.unwrap_generator(), -term.clone());
+                //     }
 
-                    for output in outputs {
-                        sys.add_term(output.unwrap_generator(), term.clone());
-                    }
-                }
+                //     for output in outputs {
+                //         sys.add_term(output.unwrap_generator(), term.clone());
+                //     }
+                // }
 
                 MassConservationType::Unbalanced(granularity) => {
                     for input in inputs {

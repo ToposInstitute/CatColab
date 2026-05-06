@@ -68,6 +68,9 @@ impl PolynomialODEAnalysis {
     pub fn build_system(
         &self,
         model: &ModalDblModel<NonUnital>,
+        // TODO: replace Parameter<QualifiedName> with Parameter<T> where
+        //       the T just has to implement some GetQualifiedName();
+        //       also take as an argument a function (MorGen -> T)
     ) -> PolynomialSystem<QualifiedName, Parameter<QualifiedName>, i8> {
         let mut sys = PolynomialSystem::new();
 
@@ -155,9 +158,9 @@ mod tests {
 
     // (Unsigned) Lotka–Volterra dynamics on a two-level model.
     #[test]
-    fn lotka_volterra_equations() {
+    fn unsigned_lotka_volterra_equations() {
         let th = Rc::new(th_polynomial_ode_system());
-        let model = lotka_volterra_dynamics(th);
+        let model = unsigned_lotka_volterra_dynamics(th);
         let sys = PolynomialODEAnalysis::default().build_system(&model);
         let expected = expect!([r#"
             dA = A_growth A + BA_interaction A B
@@ -167,25 +170,21 @@ mod tests {
         expected.assert_eq(&sys.to_string());
     }
 
-    // (Unsigned) Lotka–Volterra dynamics on a two-level model with LaTeX.
+    // Lotka–Volterra dynamics on a two-level model with LaTeX.
     #[test]
     fn lotka_volterra_equations_latex() {
-        let th = Rc::new(th_polynomial_ode_system());
-        let model = lotka_volterra_dynamics(th);
+        let th = Rc::new(th_signed_polynomial_ode_system());
+        let model = signed_lotka_volterra_dynamics(th);
         let sys = PolynomialODEAnalysis::default().build_system(&model);
         let expected = vec![
             LatexEquation {
                 lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} A".to_string(),
-                rhs: "A_growth \\cdot A + BA_interaction \\cdot A \\cdot B".to_string(),
+                rhs: "A_growth \\cdot A - BA_interaction \\cdot A \\cdot B".to_string(),
             },
             LatexEquation {
                 lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} B".to_string(),
-                rhs: "AB_interaction \\cdot A \\cdot B + B_growth \\cdot B + CB_interaction \\cdot B \\cdot C"
+                rhs: "AB_interaction \\cdot A \\cdot B + B_growth \\cdot B"
                     .to_string(),
-            },
-            LatexEquation {
-                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} C".to_string(),
-                rhs: "BC_interaction \\cdot B \\cdot C + C_growth \\cdot C".to_string(),
             },
         ];
         assert_eq!(expected, sys.to_latex_equations());

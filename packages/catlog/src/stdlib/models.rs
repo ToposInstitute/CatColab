@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use crate::dbl::{model::*, theory::*};
 use crate::one::{Path, QualifiedPath};
-use crate::zero::{QualifiedName, name};
+use crate::zero::{name, QualifiedName};
 
 /// The positive self-loop.
 ///
@@ -167,14 +167,15 @@ pub fn sir_petri(th: Rc<ModalDblTheory<Unital>>) -> ModalDblModel<Unital> {
     model
 }
 
-/// An example of Lotka–Volterra dynamics viewed as a non-unital theory for a symmetric multicategory.
-pub fn lotka_volterra_dynamics(th: Rc<ModalDblTheory<NonUnital>>) -> ModalDblModel<NonUnital> {
+/// An example of (unsigned) Lotka–Volterra dynamics viewed as a non-unital theory for a symmetric multicategory.
+pub fn unsigned_lotka_volterra_dynamics(
+    th: Rc<ModalDblTheory<NonUnital>>,
+) -> ModalDblModel<NonUnital> {
     let ob_type = ModalObType::new(name("State"));
     let mor_type: ModalMorType = ModeApp::new(name("Contribution")).into();
 
     let mut model = ModalDblModel::new(th);
-    // We're going to build a two-level predator-prey model, but where (in absence of signed
-    // arrows) all interactions have positive coefficients.
+    // A two-level predator-prey model, but where (in absence of signed arrows) all interactions have positive coefficients.
     let (a, b, c) = (name("A"), name("B"), name("C"));
 
     model.add_ob(a.clone(), ob_type.clone());
@@ -235,6 +236,54 @@ pub fn lotka_volterra_dynamics(th: Rc<ModalDblTheory<NonUnital>>) -> ModalDblMod
     model
 }
 
+/// An example of Lotka–Volterra dynamics viewed as a non-unital theory for a symmetric multicategory.
+pub fn signed_lotka_volterra_dynamics(
+    th: Rc<ModalDblTheory<NonUnital>>,
+) -> ModalDblModel<NonUnital> {
+    let ob_type = ModalObType::new(name("State"));
+    let pos_mor_type: ModalMorType = ModeApp::new(name("Contribution")).into();
+    let neg_mor_type: ModalMorType = ModeApp::new(name("NegativeContribution")).into();
+
+    let mut model = ModalDblModel::new(th);
+    // We're going to build a simple predator-prey model.
+    let (a, b) = (name("A"), name("B"));
+
+    model.add_ob(a.clone(), ob_type.clone());
+    model.add_ob(b.clone(), ob_type.clone());
+    // The growth terms, corresponding to
+    // dA/dt += g_A A
+    // dB/dt += g_B B
+    model.add_mor(
+        name("A_growth"),
+        ModalOb::List(List::Symmetric, vec![a.clone().into()]),
+        a.clone().into(),
+        pos_mor_type.clone(),
+    );
+    model.add_mor(
+        name("B_growth"),
+        ModalOb::List(List::Symmetric, vec![b.clone().into()]),
+        b.clone().into(),
+        pos_mor_type.clone(),
+    );
+    // The interaction terms, corresponding to
+    // dB/dt += k_AB AB
+    // dA/dt -= k_BA AB
+    model.add_mor(
+        name("AB_interaction"),
+        ModalOb::List(List::Symmetric, vec![a.clone().into(), b.clone().into()]),
+        b.clone().into(),
+        pos_mor_type.clone(),
+    );
+    model.add_mor(
+        name("BA_interaction"),
+        ModalOb::List(List::Symmetric, vec![a.clone().into(), b.clone().into()]),
+        a.clone().into(),
+        neg_mor_type.clone(),
+    );
+
+    model
+}
+
 #[cfg(test)]
 mod tests {
     use super::super::theories::*;
@@ -288,6 +337,6 @@ mod tests {
     #[test]
     fn polynomial_ode_systems() {
         let th = Rc::new(th_polynomial_ode_system());
-        assert!(lotka_volterra_dynamics(th.clone()).validate().is_ok());
+        assert!(unsigned_lotka_volterra_dynamics(th.clone()).validate().is_ok());
     }
 }
