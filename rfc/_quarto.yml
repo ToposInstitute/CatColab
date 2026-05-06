@@ -11,7 +11,12 @@ website:
     style: "docked"
     contents:
       - index.md
-      - auto: "*.md"
+      - 0001.md
+      - 0002.md
+      - 0004.md
+      - section: Non-actionable
+        contents:
+          - 0003.md
   # GitHub links
   repo-url: https://github.com/ToposInstitute/CatColab
   repo-subdir: rfc
