@@ -4,20 +4,22 @@ import {
     createNumericalColumn,
     FixedTableEditor,
     Foldable,
+    ExpandableTable,
+    KatexDisplay,
 } from "catcolab-ui-components";
-import type { DblModel, LinearODEProblemData, QualifiedName } from "catlog-wasm";
+import type { LCCProblemData, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
-import { createModelODEPlot } from "./model_ode_plot";
-import type { LinearODESimulator } from "./simulator_types";
+import { createModelODEPlotWithEquations } from "./model_ode_plot";
+import type { LCCSimulator } from "./simulator_types";
 
 import "./simulation.css";
 
-/** Analyze a model using LinearODE dynamics. */
-export default function LinearODE(
-    props: ModelAnalysisProps<LinearODEProblemData> & {
-        simulate: LinearODESimulator;
+/** Analyze a model using LCC dynamics. */
+export default function LCC(
+    props: ModelAnalysisProps<LCCProblemData> & {
+        simulate: LCCSimulator;
         title?: string;
     },
 ) {
@@ -70,10 +72,13 @@ export default function LinearODE(
         }),
     ];
 
-    const plotResult = createModelODEPlot(
+    const result = createModelODEPlotWithEquations(
         () => props.liveModel.validatedModel(),
-        (model: DblModel) => props.simulate(model, props.content),
+        (model) => props.simulate(model, props.content),
     );
+
+    const plotResult = () => result()?.plotData;
+    const latexEquations = () => result()?.latexEquations ?? [];
 
     return (
         <div class="simulation">
@@ -91,7 +96,20 @@ export default function LinearODE(
                     <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
             </Foldable>
-            <ODEResultPlot result={plotResult()} />
+            <Foldable title="Equations">
+                <ExpandableTable
+                    threshold={20}
+                    rows={latexEquations()}
+                    columns={[
+                        { cell: (row) => <KatexDisplay math={row.lhs} /> },
+                        { cell: () => <KatexDisplay math="=" /> },
+                        { cell: (row) => <KatexDisplay math={row.rhs} /> },
+                    ]}
+                />
+            </Foldable>
+            <Foldable title="Simulation" defaultExpanded>
+                <ODEResultPlot result={plotResult()} />
+            </Foldable>
         </div>
     );
 }
