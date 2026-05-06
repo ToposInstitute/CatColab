@@ -941,18 +941,10 @@ fn augment_with_lifts(body_s: &TyS, codomain: &TyV) -> TyS {
                 let lift_seg = name_seg(lift_name);
                 let lift_label = label_seg(lift_name);
                 if !row.has(lift_seg) {
-                    let self_var = TmS::var(
-                        BwdIdx::from(0),
-                        name_seg("self"),
-                        label_seg("self"),
-                    );
+                    let self_var = TmS::var(BwdIdx::from(0), name_seg("self"), label_seg("self"));
                     let dom_term = TmS::proj(self_var.clone(), *field_name, *field_label);
                     let cod_term = TmS::proj(self_var, synth_seg, synth_label);
-                    row.insert(
-                        lift_seg,
-                        lift_label,
-                        TyS::morphism(mt.clone(), dom_term, cod_term),
-                    );
+                    row.insert(lift_seg, lift_label, TyS::morphism(mt.clone(), dom_term, cod_term));
                     added = true;
                 }
             }

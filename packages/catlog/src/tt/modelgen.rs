@@ -440,7 +440,9 @@ impl DiagramGenerator<'_> {
         let (self_n, eval_with_self) = self.eval.bind_self(body_ty.clone());
         self.eval = eval_with_self;
         let self_val = self.eval.eta_neu(&self_n, body_ty);
-        Ok(self.extract(vec![], &self_val, body_ty)?.unwrap_or_else(Namespace::new_for_uuid))
+        Ok(self
+            .extract(vec![], &self_val, body_ty)?
+            .unwrap_or_else(Namespace::new_for_uuid))
     }
 
     fn extract(
@@ -474,7 +476,7 @@ impl DiagramGenerator<'_> {
                 let resolved = cod_eval.path_ty(&self.codomain_ty, &cod_val, path)?;
                 let TyV_::Object(ot) = &*resolved else {
                     return Err(
-                        "@over path does not refer to an object generator in the codomain".into(),
+                        "@over path does not refer to an object generator in the codomain".into()
                     );
                 };
                 let ot: QualifiedName = ot.clone().try_into().map_err(|_| {
@@ -497,9 +499,10 @@ impl DiagramGenerator<'_> {
                 let cod_name = neutral_qualified_name(cod).ok_or_else(|| {
                     "morphism codomain does not resolve to a generator name".to_string()
                 })?;
-                let mt_inner: QualifiedPath = mt.clone().try_into().map_err(|_| {
-                    "morphism type is not valid for a discrete theory".to_string()
-                })?;
+                let mt_inner: QualifiedPath = mt
+                    .clone()
+                    .try_into()
+                    .map_err(|_| "morphism type is not valid for a discrete theory".to_string())?;
                 let qname: QualifiedName = prefix.clone().into();
                 self.domain.add_mor(qname.clone(), dom_name, cod_name, mt_inner);
                 // Mapping target: extract the codomain morphism's name
@@ -514,11 +517,9 @@ impl DiagramGenerator<'_> {
                 }
                 Ok(None)
             }
-            TyV_::Object(_)
-            | TyV_::Sing(_, _)
-            | TyV_::Id(_, _, _)
-            | TyV_::Unit
-            | TyV_::Meta(_) => Ok(None),
+            TyV_::Object(_) | TyV_::Sing(_, _) | TyV_::Id(_, _, _) | TyV_::Unit | TyV_::Meta(_) => {
+                Ok(None)
+            }
         }
     }
 }
