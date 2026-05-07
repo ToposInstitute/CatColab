@@ -404,7 +404,7 @@ impl<'a> ModelGenerator<'a> {
     }
 }
 
-/// Generates a [`DiscreteDblModelDiagram`] from an elaborated [`Diag`].
+/// Generates a [`discrete::DiscreteDblModelDiagram`] from an elaborated [`Diag`].
 ///
 /// Restricted to discrete double theories for the moment; other theory
 /// kinds will need their own diagram types in catlog before this can be
