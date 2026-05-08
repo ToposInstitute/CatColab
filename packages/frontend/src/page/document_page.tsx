@@ -428,36 +428,36 @@ export function DocumentPane(props: {
                     </Show>
                     <div class="notebook-container">
                         <Switch>
-                            <Match when={props.doc.type === "model" && props.doc}>
-                                {(liveModel) => <ModelDocumentHead liveModel={liveModel()} />}
+                            <Match keyed when={props.doc.type === "model" && props.doc}>
+                                {(liveModel) => <ModelDocumentHead liveModel={liveModel} />}
                             </Match>
-                            <Match when={props.doc.type === "diagram" && props.doc}>
+                            <Match keyed when={props.doc.type === "diagram" && props.doc}>
                                 {(liveDiagram) => (
-                                    <DocumentHead liveDoc={liveDiagram().liveDoc}>
-                                        <DiagramInfo liveDiagram={liveDiagram()} />
+                                    <DocumentHead liveDoc={liveDiagram.liveDoc}>
+                                        <DiagramInfo liveDiagram={liveDiagram} />
                                     </DocumentHead>
                                 )}
                             </Match>
-                            <Match when={props.doc.type === "analysis" && props.doc}>
+                            <Match keyed when={props.doc.type === "analysis" && props.doc}>
                                 {(liveAnalysis) => (
-                                    <DocumentHead liveDoc={liveAnalysis().liveDoc}>
-                                        <AnalysisInfo liveAnalysis={liveAnalysis()} />
+                                    <DocumentHead liveDoc={liveAnalysis.liveDoc}>
+                                        <AnalysisInfo liveAnalysis={liveAnalysis} />
                                     </DocumentHead>
                                 )}
                             </Match>
                         </Switch>
                         <Switch>
-                            <Match when={props.doc.type === "model" && props.doc}>
-                                {(liveModel) => <ModelNotebookEditor liveModel={liveModel()} />}
+                            <Match keyed when={props.doc.type === "model" && props.doc}>
+                                {(liveModel) => <ModelNotebookEditor liveModel={liveModel} />}
                             </Match>
-                            <Match when={props.doc.type === "diagram" && props.doc}>
+                            <Match keyed when={props.doc.type === "diagram" && props.doc}>
                                 {(liveDiagram) => (
-                                    <DiagramNotebookEditor liveDiagram={liveDiagram()} />
+                                    <DiagramNotebookEditor liveDiagram={liveDiagram} />
                                 )}
                             </Match>
-                            <Match when={props.doc.type === "analysis" && props.doc}>
+                            <Match keyed when={props.doc.type === "analysis" && props.doc}>
                                 {(liveAnalysis) => (
-                                    <AnalysisNotebookEditor liveAnalysis={liveAnalysis()} />
+                                    <AnalysisNotebookEditor liveAnalysis={liveAnalysis} />
                                 )}
                             </Match>
                         </Switch>
