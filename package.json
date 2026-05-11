@@ -24,7 +24,7 @@
         "oxfmt": "^0.37.0",
         "oxlint": "^1.62.0",
         "oxlint-tsgolint": "^0.22.1",
-        "stylelint": "^17.4.0",
+        "stylelint": "^17.9.1",
         "stylelint-config-standard": "^40.0.0",
         "tsx": "^4.16.5",
         "typedoc": "^0.26.5"
