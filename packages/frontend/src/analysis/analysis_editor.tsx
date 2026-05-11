@@ -39,7 +39,6 @@ export function AnalysisNotebookEditor(props: { liveAnalysis: LiveAnalysisDoc })
                 changeNotebook={(f) => liveDoc().changeDoc((doc) => f(doc.notebook))}
                 formalCellEditor={AnalysisCellEditor}
                 cellConstructors={cellConstructors()}
-                noShortcuts={true}
             />
         </LiveAnalysisContext.Provider>
     );

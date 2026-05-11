@@ -11,11 +11,13 @@ import * as uuid from "uuid";
 
 import { Button } from "catcolab-ui-components";
 import { Api, ApiContext, useApi } from "./api";
+import { FocusProvider } from "./focus";
 import { helpRoutes } from "./help/routes";
 import { createModelLibraryWithApi, ModelLibraryContext } from "./model";
 import { createModel } from "./model/document";
 import { ErrorBoundaryDialog } from "./page/error_boundary";
 import { PageContainer } from "./page/page_container";
+import { ShortcutProvider } from "./shortcuts";
 import { stdTheories } from "./stdlib";
 import { TheoryLibraryContext } from "./theory";
 import { UserStateProvider } from "./user/user_state_provider";
@@ -57,6 +59,8 @@ const Root = (props: RouteSectionProps) => {
                     [TheoryLibraryContext, theories],
                     [ModelLibraryContext, models],
                     UserStateProvider,
+                    FocusProvider,
+                    ShortcutProvider,
                 ]}
             >
                 <MetaProvider>

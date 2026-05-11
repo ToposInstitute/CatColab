@@ -25,6 +25,7 @@ import { type Api, type DocRef, type DocumentType, useApi } from "../api";
 import { getLiveDiagram, type LiveDiagramDoc } from "../diagram";
 import { DiagramNotebookEditor } from "../diagram/diagram_editor";
 import { DiagramInfo } from "../diagram/diagram_info";
+import { focusTarget, useFocus } from "../focus";
 import { type LiveModelDoc, type ModelLibrary, ModelLibraryContext } from "../model";
 import { ModelNotebookEditor } from "../model/model_editor";
 import { ModelDocumentHead } from "../model/model_info";
@@ -367,11 +368,22 @@ export function DocumentPane(props: {
     historySidebarOpen: boolean;
 }) {
     const api = useApi();
+    const focus = useFocus();
     const [isDeleted, setIsDeleted] = createSignal(false);
 
     createEffect(() => {
         setIsDeleted(props.docRef.isDeleted);
     });
+
+    /** Set notebook-level focus on this pane's notebook. Called by the
+     * pane-wide click handler so clicking anywhere in the pane (background,
+     * head, padding, etc.) outside a cell switches focus to this notebook. */
+    const focusThisNotebook = () => {
+        const refId = props.docRef.refId;
+        if (refId) {
+            focus.setFocused(focusTarget.notebook(refId));
+        }
+    };
 
     const handleRestore = async () => {
         const refId = props.docRef.refId;
@@ -404,7 +416,16 @@ export function DocumentPane(props: {
     // oxlint-disable solid/reactivity -- Context.Provider value getter is reactive
     return (
         <DocRefIdContext.Provider value={() => props.docRef.refId}>
-            <div class="document-pane-layout">
+            <div
+                class="document-pane-layout"
+                onClick={() => {
+                    // Any click anywhere in this pane focuses this pane's
+                    // notebook. The notebook itself also handles clicks
+                    // within its DOM; both set the same target so the result
+                    // is idempotent.
+                    focusThisNotebook();
+                }}
+            >
                 <div class="document-pane-content">
                     <Show when={isDeleted()}>
                         <WarningBanner

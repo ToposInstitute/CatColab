@@ -8,12 +8,14 @@ import {
     type Component,
     createEffect,
     createSignal,
+    createUniqueId,
     For,
     type JSX,
     Match,
     onCleanup,
     Show,
     Switch,
+    useContext,
 } from "solid-js";
 import invariant from "tiny-invariant";
 
@@ -25,9 +27,11 @@ import {
     type CompletionsRef,
     IconButton,
     type KbdKey,
-    keyEventHasModifier,
     type ModifierKey,
 } from "catcolab-ui-components";
+import { focusMatch, focusTarget, type NotebookFocus, useFocus } from "../focus";
+import { DocRefIdContext } from "../page/context";
+import { type ShortcutHandle, useShortcutContext } from "../shortcuts";
 import { materializeFromAutomerge } from "../util/materialize_from_automerge";
 import {
     type CellActions,
@@ -92,10 +96,9 @@ export function NotebookEditor<T>(props: {
     If omitted, a deep copy is performed.
      */
     duplicateCell?: (content: T) => T;
-
-    // FIXME: Remove this option once we fix focus management.
-    noShortcuts?: boolean;
 }) {
+    const focus = useFocus();
+    const shortcuts = useShortcutContext();
     const [activeCell, setActiveCell] = createSignal<number | null>(null);
     const [currentDropTarget, setCurrentDropTarget] = createSignal<string | null>(null);
 
@@ -103,6 +106,18 @@ export function NotebookEditor<T>(props: {
     // The popover itself is rendered by the cell (or end-of-notebook button) it
     // is anchored to, so positioning is automatic.
     const [createPopoverTarget, setCreatePopoverTarget] = createSignal<CreatePopoverTarget>(null);
+
+    // Identifier for this notebook's focus target. Prefer the surrounding
+    // document pane's ref ID so focus survives remounts; otherwise fall back
+    // to a per-instance unique id.
+    const docRefId = useContext(DocRefIdContext);
+    const fallbackId = createUniqueId();
+    const notebookId = () => docRefId?.() ?? fallbackId;
+
+    /** Focus target representing this notebook. Shortcut bindings use
+     * `focusMatch.notebook(notebookTarget())` so they fire whenever this
+     * notebook is focused. */
+    const notebookTarget = (): NotebookFocus => focusTarget.notebook(notebookId());
 
     // Set up commands and their keyboard shortcuts.
     const insertCommands = (): Completion[] =>
@@ -173,38 +188,69 @@ export function NotebookEditor<T>(props: {
             };
         });
 
-    makeEventListener(window, "keydown", (evt) => {
-        if (props.noShortcuts) {
-            return;
-        }
-        if (keyEventHasModifier(evt, cellShortcutModifier)) {
-            for (const command of insertCommands()) {
-                const key = command.shortcut?.at(-1);
-                if (key && evt.key.toUpperCase() === key) {
-                    command.onComplete?.();
-                    return evt.preventDefault();
-                }
+    /** Open the create-cell popover anchored to the current active cell, or
+     * the end-of-notebook button if no cell is active. */
+    const openCreatePopover = () => {
+        const cellIndex = activeCell();
+        setCreatePopoverTarget(cellIndex != null ? cellIndex : "append");
+    };
+
+    // Register Shift+Enter and Modifier+Enter shortcuts to open the
+    // create-cell popover. Scoped via `focusMatch.notebook(...)`, so they
+    // match whenever this notebook (or a cell within it) is focused.
+    createEffect(() => {
+        const handles: ShortcutHandle[] = [
+            shortcuts.register({
+                keys: ["Shift", "Enter"],
+                when: focusMatch.notebook(notebookTarget()),
+                handler: openCreatePopover,
+                label: "Open create-cell popover",
+            }),
+            shortcuts.register({
+                keys: [cellShortcutModifier, "Enter"],
+                when: focusMatch.notebook(notebookTarget()),
+                handler: openCreatePopover,
+                label: "Open create-cell popover",
+            }),
+        ];
+        onCleanup(() => {
+            for (const h of handles) {
+                h.dispose();
             }
+        });
+    });
+
+    // Register one shortcut per cell constructor (modifier + key). Re-runs
+    // when the constructor list changes.
+    createEffect(() => {
+        const handles: ShortcutHandle[] = [];
+        for (const command of insertCommands()) {
+            const key = command.shortcut?.at(-1);
+            if (!key) {
+                continue;
+            }
+            handles.push(
+                shortcuts.register({
+                    keys: [cellShortcutModifier, key],
+                    when: focusMatch.notebook(notebookTarget()),
+                    handler: () => command.onComplete?.(),
+                    label: command.name,
+                }),
+            );
         }
-        if (
-            (evt.shiftKey && evt.key === "Enter") ||
-            (keyEventHasModifier(evt, cellShortcutModifier) && evt.key === "Enter")
-        ) {
-            // Capture the active cell *before* focus changes, then ask the
-            // appropriate cell (or the end-of-notebook button) to open its
-            // create-cell popover. The popover is rendered by that anchor, so
-            // it is positioned automatically and doesn't require any DOM
-            // queries here.
-            const cellIndex = activeCell();
-            setCreatePopoverTarget(cellIndex != null ? cellIndex : "append");
-            evt.preventDefault();
-            // Stop the same event from reaching `CellTypePopover`'s window
-            // keydown listener, which would otherwise see the popover as
-            // already open and treat this Enter as confirming the first
-            // completion (creating a rich-text cell immediately).
-            evt.stopImmediatePropagation();
-            return;
-        }
+        onCleanup(() => {
+            for (const h of handles) {
+                h.dispose();
+            }
+        });
+    });
+
+    // Register this notebook as a default focus candidate. The first
+    // candidate in registration order (the leftmost notebook in two-pane
+    // layouts) is auto-focused whenever no other element is focused.
+    createEffect(() => {
+        const handle = focus.registerDefault(() => notebookTarget());
+        onCleanup(handle.dispose);
     });
 
     // Set up drag and drop for notebook cells. Each cell reports to the
@@ -257,7 +303,17 @@ export function NotebookEditor<T>(props: {
     return (
         <div
             class="notebook"
+            onClick={() => {
+                // Any click anywhere in the notebook focuses this notebook.
+                // The active-cell highlight is independent state managed
+                // locally below.
+                focus.setFocused(notebookTarget());
+            }}
             onFocusOut={(evt) => {
+                // When DOM focus leaves the notebook container, clear the
+                // active-cell highlight. Notebook-level focus in the focus
+                // context is unaffected; it persists until something else
+                // takes it.
                 const container = evt.currentTarget;
                 setTimeout(() => {
                     if (!container.contains(document.activeElement)) {
