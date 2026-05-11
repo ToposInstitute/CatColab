@@ -9,17 +9,17 @@ type WeightedGraph := [
   weight : Attr[E, Weight]
 ]
 
-diagram I : @Instance(WeightedGraph) := [
+diagram Edge : @Instance(WeightedGraph) := [
     e : @over .E,
 ]
 
 #/ Should there be some sugar for this situation, where I'm basically just renaming default-named guys?
-diagram I2 : @Instance(WeightedGraph) := [
+diagram I : @Instance(WeightedGraph) := [
     v1 : @over .V,
     v2 : @over .V,
     w : @over .Weight,
-    we : I & [.src(e) := v1, .tgt(e) := v2, .weight(e) := w],
-    wf : I & [.src(e) := v2, .tgt(e) := v1, .weight(e) := w]
+    we : Edge & [.src(e) := v1, .tgt(e) := v2, .weight(e) := w],
+    wf : Edge & [.src(e) := v2, .tgt(e) := v1, .weight(e) := w]
 ]
 
 diagram I3 : @Instance(WeightedGraph) := [
