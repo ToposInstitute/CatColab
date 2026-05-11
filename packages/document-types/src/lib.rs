@@ -5,6 +5,7 @@ use wasm_bindgen::prelude::*;
 
 mod v0;
 pub mod v1;
+pub mod v2;
 
 #[cfg(feature = "backend")]
 pub mod automerge_json;
@@ -21,7 +22,7 @@ pub(crate) mod common_test;
 pub mod current {
     // this should always track the latest version, and is the only version
     // that is exported from document-types
-    pub use crate::v1::*;
+    pub use crate::v2::*;
 }
 
 /// Generate type defs for dependencies supporting `serde` but not `tsify`.
@@ -39,7 +40,7 @@ type Ustr = string;
 type Value = unknown;
 "#;
 
-pub static CURRENT_VERSION: &str = "1";
+pub static CURRENT_VERSION: &str = "2";
 
 #[wasm_bindgen(js_name = "currentVersion")]
 pub fn current_version() -> String {
@@ -50,6 +51,7 @@ pub fn current_version() -> String {
 pub enum VersionedDocument {
     V0(v0::Document),
     V1(v1::Document),
+    V2(v2::Document),
 }
 
 impl<'de> Deserialize<'de> for VersionedDocument {
@@ -72,6 +74,11 @@ impl<'de> Deserialize<'de> for VersionedDocument {
                     serde_json::from_value(value).map_err(serde::de::Error::custom)?;
                 Ok(VersionedDocument::V1(doc))
             }
+            "2" => {
+                let doc: v2::Document =
+                    serde_json::from_value(value).map_err(serde::de::Error::custom)?;
+                Ok(VersionedDocument::V2(doc))
+            }
             other => Err(serde::de::Error::custom(format!("unsupported version {other}"))),
         }
     }
@@ -81,11 +88,16 @@ impl VersionedDocument {
     pub fn to_current(self) -> current::Document {
         match self {
             VersionedDocument::V0(v0) => {
-                // Recursive call to VersionedNotebook::to_current
+                // Recursive call to VersionedDocument::to_current
                 VersionedDocument::V1(v1::Document::migrate_from_v0(v0)).to_current()
             }
 
-            VersionedDocument::V1(old1) => old1,
+            VersionedDocument::V1(v1) => {
+                // Recursive call to VersionedDocument::to_current
+                VersionedDocument::V2(v2::Document::migrate_from_v1(v1)).to_current()
+            }
+
+            VersionedDocument::V2(old2) => old2,
         }
     }
 }
