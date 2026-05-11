@@ -1,0 +1,13 @@
+{
+    "name": "catcolab-lint-config",
+    "version": "0.0.0",
+    "private": true,
+    "type": "module",
+    "exports": {
+        ".": "./oxlint.config.ts",
+        "./oxlint.config": "./oxlint.config.ts"
+    },
+    "devDependencies": {
+        "oxlint": "^1.51.0"
+    }
+}

@@ -3,3 +3,6 @@
 bin/
 pkg/
 wasm-pack.log
+
+# Rush per-project temp
+.rush/

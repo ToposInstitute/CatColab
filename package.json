@@ -16,18 +16,11 @@
     "type": "module",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
-        "build:deps": "pnpm --filter ./packages/frontend run build:deps",
-        "dev": "pnpm --filter ./packages/frontend run dev"
+        "build:deps": "rush build --to-except frontend",
+        "dev": "cd packages/frontend && rushx --quiet dev"
     },
     "devDependencies": {
         "depcheck": "^1.4.7",
-        "oxfmt": "^0.37.0",
-        "oxlint": "^1.62.0",
-        "oxlint-tsgolint": "^0.22.1",
-        "stylelint": "^17.9.1",
-        "stylelint-config-standard": "^40.0.0",
-        "tsx": "^4.16.5",
-        "typedoc": "^0.26.5"
-    },
-    "packageManager": "pnpm@10.32.1"
+        "tsx": "^4.16.5"
+    }
 }

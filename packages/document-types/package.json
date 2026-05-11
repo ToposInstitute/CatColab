@@ -1,0 +1,24 @@
+{
+    "name": "catcolab-document-types",
+    "private": true,
+    "license": "MIT",
+    "version": "0.1.0",
+    "type": "module",
+    "main": "pkg/catcolab_document_types.js",
+    "types": "pkg/catcolab_document_types.d.ts",
+    "exports": {
+        ".": {
+            "types": "./pkg/catcolab_document_types.d.ts",
+            "default": "./pkg/catcolab_document_types.js"
+        },
+        "./*": "./pkg/*"
+    },
+    "sideEffects": [
+        "./pkg/catcolab_document_types.js",
+        "./pkg/snippets/*"
+    ],
+    "scripts": {
+        "build": "wasm-pack build ./. --target bundler -d ./pkg",
+        "clean": "rm -rf pkg target"
+    }
+}

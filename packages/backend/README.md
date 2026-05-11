@@ -46,20 +46,22 @@ cd packages/backend
 cargo run
 ```
 
-The backend is now running locally; you can run the frontend with `pnpm run dev` from the top-level `CatColab` directory.
+The backend is now running locally; you can run the frontend with `rushx dev`
+from `packages/frontend`. (`rush`/`rushx` are provided by the Nix devShell;
+otherwise install with `npm install -g @microsoft/rush`.)
 
 To run the integration tests for the RPC API:
 
 ```sh
 cd packages/frontend
-pnpm run test
+rushx test
 ```
 
 To launch the frontend using the local backend:
 
 ```
 cd packages/frontend
-pnpm run dev
+rushx dev
 ```
 ## Database schema
 

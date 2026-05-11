@@ -88,23 +88,34 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
       - name: Setup NodeJS
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: "pnpm"
 
-      - name: Install dependencies
-        run: pnpm install
+      - name: Cache Rush install
+        uses: actions/cache@v4
+        with:
+          path: |
+            common/temp/install-run
+            ~/.rush
+          key: rush-${{ runner.os }}-${{ hashFiles('rush.json', 'common/config/rush/pnpm-lock.yaml') }}
+          restore-keys: |
+            rush-${{ runner.os }}-
+
+      - name: Install Rush CLI
+        run: npm install -g @microsoft/rush
+
+      - name: Rush install
+        run: rush install
 
       - name: Install Playwright browser
-        run: pnpm --filter ./packages/ui-components exec playwright install chromium
+        run: ./node_modules/.bin/playwright install chromium
+        working-directory: packages/ui-components
 
       - name: Run ui-components tests
-        run: pnpm --filter ./packages/ui-components run test
+        run: rushx --quiet test
+        working-directory: packages/ui-components
 
   npm_checks:
     name: npm checks
@@ -113,18 +124,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
       - name: Setup NodeJS
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: "pnpm"
 
-      - name: Install NodeJS dependencies
-        run: |
-          pnpm install
+      - name: Cache Rush install
+        uses: actions/cache@v4
+        with:
+          path: |
+            common/temp/install-run
+            ~/.rush
+          key: rush-${{ runner.os }}-${{ hashFiles('rush.json', 'common/config/rush/pnpm-lock.yaml') }}
+          restore-keys: |
+            rush-${{ runner.os }}-
+
+      - name: Install Rush CLI
+        run: npm install -g @microsoft/rush
+
+      - name: Rush install
+        run: rush install
 
       - name: Install Rust toolchain from file
         uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -132,10 +151,11 @@ jobs:
           # Don't override flags in cargo config files.
           rustflags: ""
 
-      - name: Format/linting/import sorting
-        run: |
-          pnpm --filter "./packages/*" run build:deps
-          pnpm --filter "./packages/*" run ci
+      - name: Build dependencies (wasm, bindings, CSS modules)
+        run: rush build
+
+      - name: Run per-project CI checks (lint, format, typecheck)
+        run: rush ci
 
   build_nixos_system:
     name: build NixOS system
@@ -166,9 +186,6 @@ jobs:
 
       - name: Install Rust toolchain from file
         uses: actions-rust-lang/setup-rust-toolchain@v1
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
 
       - name: Run dev setup
         run: |

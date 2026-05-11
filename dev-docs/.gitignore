@@ -1,1 +1,4 @@
 output/
+
+# Rush per-project temp
+.rush/

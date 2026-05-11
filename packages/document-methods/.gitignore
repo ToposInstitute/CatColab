@@ -1,5 +1,3 @@
-target/
-pkg/
-
 # Rush per-project temp
 .rush/
+node_modules/

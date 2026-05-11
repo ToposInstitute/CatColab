@@ -1,0 +1,70 @@
+/**
+ * Rush custom commands and phases.
+ *
+ * Bulk commands wrap an npm script of the same name per project. Phased
+ * commands compose multiple per-project scripts into a build graph that
+ * Rush executes in dependency order.
+ *
+ * Rush reserves the names `build`, `rebuild`, `check`, `install`, `update`,
+ * etc. Built-in `rush build` runs each project's `build` script in dependency
+ * order — that is the main entry point for the wasm → bindings → tsc/vite
+ * pipeline. See packages/*\/package.json for the per-project scripts.
+ *
+ * https://rushjs.io/pages/configs/command-line_json/
+ */
+{
+    "$schema": "https://developer.microsoft.com/json-schemas/rush/v5/command-line.schema.json",
+
+    "commands": [
+        {
+            "name": "ci",
+            "commandKind": "bulk",
+            "summary": "Run per-project `ci` script (CI-mode lint + format check + typecheck).",
+            "description": "Invokes the `ci` npm script in each project that defines one. Used by GitHub Actions.",
+            "enableParallelism": true,
+            "ignoreMissingScript": true,
+            "ignoreDependencyOrder": false,
+            "incremental": false,
+            "allowWarningsInSuccessfulBuild": false,
+            "safeForSimultaneousRushProcesses": false
+        },
+        {
+            "name": "lint",
+            "commandKind": "bulk",
+            "summary": "Run per-project `lint` script.",
+            "description": "Invokes the `lint` npm script in each project that defines one (auto-fixes formatting).",
+            "enableParallelism": true,
+            "ignoreMissingScript": true,
+            "ignoreDependencyOrder": true,
+            "incremental": false,
+            "allowWarningsInSuccessfulBuild": true,
+            "safeForSimultaneousRushProcesses": false
+        },
+        {
+            "name": "test",
+            "commandKind": "bulk",
+            "summary": "Run per-project `test` script.",
+            "description": "Invokes the `test` npm script in each project that defines one.",
+            "enableParallelism": true,
+            "ignoreMissingScript": true,
+            "ignoreDependencyOrder": true,
+            "incremental": false,
+            "allowWarningsInSuccessfulBuild": true,
+            "safeForSimultaneousRushProcesses": false
+        },
+        {
+            "name": "doc",
+            "commandKind": "bulk",
+            "summary": "Build per-project documentation.",
+            "description": "Invokes the `doc` npm script in each project that defines one (typedoc).",
+            "enableParallelism": true,
+            "ignoreMissingScript": true,
+            "ignoreDependencyOrder": true,
+            "incremental": false,
+            "allowWarningsInSuccessfulBuild": true,
+            "safeForSimultaneousRushProcesses": false
+        }
+    ],
+
+    "parameters": []
+}

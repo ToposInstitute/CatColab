@@ -5,19 +5,24 @@ in TypeScript using the [Solid.js](https://www.solidjs.com/) framework.
 
 ## Setup
 
-Install Rust and [pnpm](https://pnpm.io/), then run
+Install Rust and Node.js 22+, then run
 
 ```sh
-cd packages/frontend
-pnpm install
+rush install
 ```
+
+from the repo root. The Nix devShell (`nix develop`) puts both `rush` and
+`rushx` on your `PATH`; otherwise install Rush globally with
+`npm install -g @microsoft/rush`. Rush invokes pnpm under the hood.
 
 ## Usage
 
 To develop the frontend locally, run
 
 ```sh
-pnpm run dev --mode $MODE
+rush build --to-except frontend
+cd packages/frontend
+rushx dev -- --mode $MODE
 ```
 
 where `$MODE` is replaced with one of the following:
@@ -29,8 +34,9 @@ where `$MODE` is replaced with one of the following:
 - `production`: uses the production deployment of CatColab at `catcolab.org`
   (_not_ recommended)
 
-Running the command above builds the Wasm and other local dependencies (by
-running `pnpm run build:deps`) before launching the Vite preview server.
+The first `rush build --to-except frontend` command builds the Wasm
+packages, generated API bindings, and CSS module typings that the Vite
+dev server depends on.
 
 ## Troubleshooting
 

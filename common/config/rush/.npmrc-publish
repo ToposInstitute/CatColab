@@ -1,0 +1,4 @@
+# .npmrc used by `rush publish`. CatColab does not publish to a registry, but
+# Rush expects this file to exist.
+registry=https://registry.npmjs.org/
+always-auth=false

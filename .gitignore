@@ -112,3 +112,10 @@ CHANGELOG.html
 
 # VSCode
 .vscode/*
+
+# Rush
+common/deploy/
+common/temp/
+common/autoinstallers/*/.npmrc
+**/.rush/temp/
+

@@ -1,0 +1,34 @@
+/**
+ * common-versions.json declares dependency versions that should be consistent
+ * across all projects in the Rush monorepo.
+ *
+ * https://rushjs.io/pages/configs/common-versions_json/
+ */
+{
+    "$schema": "https://developer.microsoft.com/json-schemas/rush/v5/common-versions.schema.json",
+
+    /**
+     * Preferred versions: when multiple projects request different ranges of the
+     * same dependency, Rush will try to satisfy them with these versions to
+     * encourage deduplication.
+     */
+    "preferredVersions": {
+        "solid-js": "1.9.10",
+        "vite-plugin-solid": "2.11.10"
+    },
+
+    /**
+     * Packages that are allowed to have multiple versions/ranges declared across
+     * the monorepo. Most of these reflect the current state; tighten over time.
+     */
+    "allowedAlternativeVersions": {
+        "typescript": ["^5.2.2", "^5.6.2"],
+        "@types/node": ["^24.0.0"],
+        "typedoc": ["^0.26.8", "^0.28.8"],
+        "vite": ["^5.3.4", "^7.2.2"],
+        "vite-plugin-wasm": ["^3.3.0", "^3.5.0"],
+        "vite-plugin-solid": ["^2.10.2", "^2.11.10"],
+        "solid-js": ["^1.9.7", "^1.9.10"],
+        "uuid": ["^11.0.3", "^13.0.0"]
+    }
+}

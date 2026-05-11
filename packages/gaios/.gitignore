@@ -1,2 +1,5 @@
 .pushwork/
 dist/
+
+# Rush per-project temp
+.rush/

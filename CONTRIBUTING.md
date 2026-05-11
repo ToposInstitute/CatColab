@@ -22,15 +22,22 @@ CatColab is written in a mix of [Rust](https://www.rust-lang.org/) and
 [TypeScript](https://www.typescriptlang.org/). To start any development, the first steps are
 
 1. install Rust (say, by using [rustup](https://rustup.rs/))
-2. install [pnpm](https://pnpm.io/)
+2. install [Node.js](https://nodejs.org/) 22 or newer (the Nix devShell does this for you)
 3. clone the [CatColab repository](https://github.com/ToposInstitute/CatColab)
+
+TypeScript dependencies and the build graph are managed by [Rush](https://rushjs.io/).
+Rush invokes pnpm under the hood. If you use the Nix devShell (`nix develop`)
+both `rush` and `rushx` are on your `PATH`; otherwise install Rush globally
+(`npm install -g @microsoft/rush`).
 
 ### General development
 
 "Most" development will likely only require changes to the **core** (`catlog`) and the **frontend** (`frontend`) (and thus also the **bindings** in `catlog-wasm`). For this, you can simply follow the instructions in the [`frontend` docs](https://next.catcolab.org/dev/frontend/), replacing `$MODE` by `staging`, i.e. running
 
 ```
-pnpm run dev --mode staging
+rush install
+rush build --to-except frontend
+cd packages/frontend && rushx dev --mode staging
 ```
 
 to view any changes made.
@@ -38,7 +45,7 @@ to view any changes made.
 If you are getting a `Cannot find module @... or its corresponding type declarations.` error then you should try running
 
 ```
-pnpm install
+rush install
 ```
 
 to install/update the npm packages.
@@ -55,8 +62,9 @@ code formatting and style. To format and lint the frontend code, run these
 commands from the top-level directory:
 
 ```sh
-pnpm --filter ./packages/frontend run format
-pnpm --filter ./packages/frontend run lint
+cd packages/frontend
+rushx format
+rushx lint
 ```
 
 To format and lint the Rust code, run these commands from the top-level directory:

@@ -16,13 +16,17 @@ This generally happens in two scenarios:
 If you encounter a hash mismatch without updating anything it should probably be investigated: it means
 the external source changed unexpectedly.
 
-#### pnpm Dependencies
+#### pnpm Dependencies (Rush-managed)
 
 This only applies to the `frontend` package.
 
+The lockfile that Nix consumes lives at `common/config/rush/pnpm-lock.yaml`
+(written by `rush update`). Whenever that file changes, the hash inside
+`packages/frontend/default.nix` must be regenerated.
+
 The following error occurs when a dependency has changed but the Nix hash has not:
 ```
-> ERR_PNPM_NO_OFFLINE_TARBALL  A package is missing from the store but cannot download it in offline mode. The missing package may be downloaded from https://registry.npmjs.org/@automerge/prosemirror/-/prosemirror-0.2.0-alpha.0.tgz.
+> ERR_PNPM_NO_OFFLINE_TARBALL  A package is missing from the store but cannot download it in offline mode. The missing package may be downloaded from https://registry.npmjs.org/@automerge/prosemirror/-/prosemirror-0.2.0-alpha.0.tgz.
 > ERROR: pnpm failed to install dependencies
 ```
 
@@ -39,6 +43,10 @@ You can search for the text "hash" to find it quickly.
 
 The frontend package can be built by running the command `nix build .#frontend` in the repository root.
 This will build the minimum needed to print the hash mismatch described in the instructions.
+
+Note: the Nix derivation rewrites the Rush lockfile on the fly (rebasing
+importer paths and stripping `pnpmfileChecksum`) before handing it to
+`fetchPnpmDeps`. The hash is computed against the *rewritten* lockfile.
 
 
 #### Other Dependencies

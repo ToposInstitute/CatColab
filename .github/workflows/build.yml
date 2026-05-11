@@ -33,22 +33,32 @@ jobs:
           path: dev-docs/output
           key: dev-docs-build-${{ steps.cache-key.outputs.git-hash }}
 
-      - name: Setup pnpm
-        if: steps.cache-dev-docs-build.outputs.cache-hit != 'true'
-        uses: pnpm/action-setup@v4
-
       - name: Setup NodeJS
         if: steps.cache-dev-docs-build.outputs.cache-hit != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: "pnpm"
+
+      - name: Cache Rush install
+        if: steps.cache-dev-docs-build.outputs.cache-hit != 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            common/temp/install-run
+            ~/.rush
+          key: rush-${{ runner.os }}-${{ hashFiles('rush.json', 'common/config/rush/pnpm-lock.yaml') }}
+          restore-keys: |
+            rush-${{ runner.os }}-
+
+      - name: Install Rush CLI
+        if: steps.cache-dev-docs-build.outputs.cache-hit != 'true'
+        run: npm install -g @microsoft/rush
 
       - name: Build developer docs
         if: steps.cache-dev-docs-build.outputs.cache-hit != 'true'
         run: |
-          pnpm install
-          pnpm --filter ./dev-docs run doc
+          rush install
+          rush doc --to dev-docs --only dev-docs
 
       - name: Report cache status
         run: |
@@ -92,16 +102,26 @@ jobs:
             packages/frontend/dist
           key: frontend-build-${{ steps.cache-key.outputs.git-hash }}-${{ github.event_name == 'release' && 'production' || 'staging' }}
 
-      - name: Setup pnpm
-        if: github.event_name == 'release' || steps.cache-frontend-build.outputs.cache-hit != 'true'
-        uses: pnpm/action-setup@v4
-
       - name: Setup NodeJS
         if: github.event_name == 'release' || steps.cache-frontend-build.outputs.cache-hit != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: "pnpm"
+
+      - name: Cache Rush install
+        if: github.event_name == 'release' || steps.cache-frontend-build.outputs.cache-hit != 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            common/temp/install-run
+            ~/.rush
+          key: rush-${{ runner.os }}-${{ hashFiles('rush.json', 'common/config/rush/pnpm-lock.yaml') }}
+          restore-keys: |
+            rush-${{ runner.os }}-
+
+      - name: Install Rush CLI
+        if: github.event_name == 'release' || steps.cache-frontend-build.outputs.cache-hit != 'true'
+        run: npm install -g @microsoft/rush
 
       - name: Install Rust toolchain from file
         if: github.event_name == 'release' || steps.cache-frontend-build.outputs.cache-hit != 'true'
@@ -110,21 +130,26 @@ jobs:
           # Don't override flags in cargo config files.
           rustflags: ""
 
-      - name: Build for Staging
-        if: (github.event_name == 'push' || github.event_name == 'pull_request') && steps.cache-frontend-build.outputs.cache-hit != 'true'
-        run: |
-          pnpm install
-          pnpm --filter ./packages/frontend run build:deps
-          # Uses env from packages/frontend/.env.staging
-          pnpm --filter ./packages/frontend run build:staging
+      - name: Rush install
+        if: github.event_name == 'release' || steps.cache-frontend-build.outputs.cache-hit != 'true'
+        run: rush install
 
-      - name: Build for Production
+      - name: Build all dependencies of frontend
+        if: github.event_name == 'release' || steps.cache-frontend-build.outputs.cache-hit != 'true'
+        # `--to-except` selects everything frontend depends on but excludes frontend itself.
+        run: rush build --to-except frontend
+
+      - name: Build frontend for Staging
+        if: (github.event_name == 'push' || github.event_name == 'pull_request') && steps.cache-frontend-build.outputs.cache-hit != 'true'
+        # Uses env from packages/frontend/.env.staging
+        run: rushx --quiet build:staging
+        working-directory: packages/frontend
+
+      - name: Build frontend for Production
         if: github.event_name == 'release'
-        run: |
-          pnpm install
-          pnpm --filter ./packages/frontend run build:deps
-          # Uses env from packages/frontend/.env.production
-          pnpm --filter ./packages/frontend run build
+        # Uses env from packages/frontend/.env.production
+        run: rushx --quiet build
+        working-directory: packages/frontend
 
       - name: Report cache status
         run: |
@@ -151,8 +176,7 @@ jobs:
 
       - name: Build frontend docs
         if: steps.cache-frontend-docs.outputs.cache-hit != 'true'
-        run: |
-          pnpm --filter ./packages/frontend run doc
+        run: rush doc --to frontend --only frontend
 
       - name: Report frontend docs cache status
         run: |
@@ -332,24 +356,34 @@ jobs:
           path: packages/ui-components/storybook-static
           key: ui-components-${{ steps.cache-key.outputs.git-hash }}
 
-      - name: Setup pnpm
-        if: steps.cache-ui-components.outputs.cache-hit != 'true'
-        uses: pnpm/action-setup@v4
-
       - name: Setup NodeJS
         if: steps.cache-ui-components.outputs.cache-hit != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: "pnpm"
 
-      - name: Install dependencies
+      - name: Cache Rush install
         if: steps.cache-ui-components.outputs.cache-hit != 'true'
-        run: pnpm install
+        uses: actions/cache@v4
+        with:
+          path: |
+            common/temp/install-run
+            ~/.rush
+          key: rush-${{ runner.os }}-${{ hashFiles('rush.json', 'common/config/rush/pnpm-lock.yaml') }}
+          restore-keys: |
+            rush-${{ runner.os }}-
+
+      - name: Install Rush CLI
+        if: steps.cache-ui-components.outputs.cache-hit != 'true'
+        run: npm install -g @microsoft/rush
+
+      - name: Rush install
+        if: steps.cache-ui-components.outputs.cache-hit != 'true'
+        run: rush install
 
       - name: Build ui-components Storybook
         if: steps.cache-ui-components.outputs.cache-hit != 'true'
-        run: pnpm --filter ./packages/ui-components run build
+        run: rush build --to catcolab-ui-components --only catcolab-ui-components
 
       - name: Report cache status
         run: |

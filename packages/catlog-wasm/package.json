@@ -4,7 +4,22 @@
     "license": "MIT",
     "version": "0.1.0",
     "type": "module",
+    "main": "dist/pkg-browser/catlog_wasm.js",
+    "types": "dist/pkg-browser/catlog_wasm.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/pkg-browser/catlog_wasm.d.ts",
+            "default": "./dist/pkg-browser/catlog_wasm.js"
+        },
+        "./*": "./dist/pkg-browser/*"
+    },
+    "sideEffects": [
+        "./dist/pkg-browser/catlog_wasm.js",
+        "./dist/pkg-browser/snippets/*"
+    ],
     "scripts": {
-        "build:browser": "wasm-pack build ./. --target browser -d ./dist/pkg-browser --debug"
+        "build:browser": "wasm-pack build ./. --target browser -d ./dist/pkg-browser --debug",
+        "build": "wasm-pack build ./. --target browser -d ./dist/pkg-browser --debug",
+        "clean": "rm -rf dist target"
     }
 }

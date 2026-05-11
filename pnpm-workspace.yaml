@@ -1,9 +1,0 @@
-# 9 days, in minutes
-minimumReleaseAge: 12960
-packages:
-  - "dev-docs"
-  - "packages/backend/pkg"
-  - "packages/frontend"
-  - "packages/document-methods"
-  - "packages/ui-components"
-  - "packages/gaios"

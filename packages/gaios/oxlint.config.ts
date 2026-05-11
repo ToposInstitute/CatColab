@@ -1,6 +1,6 @@
 import { defineConfig } from "oxlint";
 
-import baseConfig from "../../oxlint.config.ts";
+import baseConfig from "catcolab-lint-config/oxlint.config";
 
 export default defineConfig({
     ...baseConfig,

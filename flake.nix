@@ -101,6 +101,20 @@
               [ ];
 
           nightlyRustfmt = inputs.fenix.packages.${system}.latest.rustfmt;
+
+          # Bootstrap Rush via pnpm dlx. nixpkgs' nodePackages.@microsoft/rush
+          # is broken (missing transitive deps) and packaging Rush ourselves
+          # via buildNpmPackage would require a committed lockfile. Instead we
+          # delegate to `pnpm dlx`, which fetches + caches Rush in pnpm's
+          # store on first invocation. The version is sourced from this
+          # single string; keep it in sync with rush.json's `rushVersion`.
+          rushVersion = "5.175.1";
+          rushWrapper = pkgs.writeShellScriptBin "rush" ''
+            exec ${pkgs.pnpm}/bin/pnpm dlx @microsoft/rush@${rushVersion} "$@"
+          '';
+          rushxWrapper = pkgs.writeShellScriptBin "rushx" ''
+            exec ${pkgs.pnpm}/bin/pnpm dlx --package=@microsoft/rush@${rushVersion} rushx "$@"
+          '';
         in
         pkgs.mkShell {
           name = "catcolab-devshell";
@@ -124,6 +138,8 @@
               python312Packages.jupyter-server
               python312Packages.requests
               python312Packages.websocket-client
+              rushWrapper
+              rushxWrapper
               rustToolchain
               nightlyRustfmt
               sqlx-cli

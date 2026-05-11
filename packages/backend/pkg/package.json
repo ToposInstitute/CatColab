@@ -5,7 +5,8 @@
     "license": "MIT",
     "main": "src/index.ts",
     "scripts": {
-        "build": "tsc -b"
+        "build:bindings": "cargo run -p backend -- generate-bindings",
+        "build": "npm run build:bindings && tsc -b"
     },
     "dependencies": {
         "@qubit-rs/client": "^0.4.5",

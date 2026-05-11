@@ -1,0 +1,78 @@
+/**
+ * Rush monorepo configuration for CatColab. Rush manages all TypeScript
+ * projects under packages/ as well as dev-docs/. It drives pnpm under the
+ * hood; the lockfile lives at common/config/rush/pnpm-lock.yaml.
+ *
+ * See https://rushjs.io for documentation.
+ */
+{
+    "$schema": "https://developer.microsoft.com/json-schemas/rush/v5/rush.schema.json",
+
+    "rushVersion": "5.175.1",
+
+    "pnpmVersion": "10.32.1",
+
+    "nodeSupportedVersionRange": ">=22.0.0 <25.0.0",
+
+    "ensureConsistentVersions": true,
+
+    "projectFolderMinDepth": 1,
+    "projectFolderMaxDepth": 4,
+
+    "projects": [
+        {
+            "packageName": "frontend",
+            "projectFolder": "packages/frontend",
+            "reviewCategory": "production",
+            "shouldPublish": false
+        },
+        {
+            "packageName": "frontend-gaios",
+            "projectFolder": "packages/gaios",
+            "reviewCategory": "production",
+            "shouldPublish": false
+        },
+        {
+            "packageName": "catcolab-ui-components",
+            "projectFolder": "packages/ui-components",
+            "reviewCategory": "production",
+            "shouldPublish": false
+        },
+        {
+            "packageName": "catcolab-document-methods",
+            "projectFolder": "packages/document-methods",
+            "reviewCategory": "production",
+            "shouldPublish": false
+        },
+        {
+            "packageName": "catcolab-api",
+            "projectFolder": "packages/backend/pkg",
+            "reviewCategory": "production",
+            "shouldPublish": false
+        },
+        {
+            "packageName": "catlog-wasm",
+            "projectFolder": "packages/catlog-wasm",
+            "reviewCategory": "production",
+            "shouldPublish": false
+        },
+        {
+            "packageName": "catcolab-document-types",
+            "projectFolder": "packages/document-types",
+            "reviewCategory": "production",
+            "shouldPublish": false
+        },
+        {
+            "packageName": "dev-docs",
+            "projectFolder": "dev-docs",
+            "reviewCategory": "production",
+            "shouldPublish": false
+        },
+        {
+            "packageName": "catcolab-lint-config",
+            "projectFolder": "tools/lint-config",
+            "reviewCategory": "production",
+            "shouldPublish": false
+        }
+    ]
+}

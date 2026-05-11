@@ -1,0 +1,23 @@
+/**
+ * Rush's pnpm-specific options. See:
+ * https://rushjs.io/pages/configs/pnpm-config_json/
+ */
+{
+    "$schema": "https://developer.microsoft.com/json-schemas/rush/v5/pnpm-config.schema.json",
+
+    "useWorkspaces": true,
+    "preventManualShrinkwrapChanges": false,
+    "strictPeerDependencies": false,
+    "resolutionMode": "highest",
+    "autoInstallPeers": false,
+
+    /* Match pnpm-workspace.yaml's minimumReleaseAge: 12960 (9 days) */
+    "minimumReleaseAgeMinutes": 12960,
+
+    /* PNPM 10 disables build scripts by default; allow these. */
+    "globalOnlyBuiltDependencies": ["esbuild", "playwright"],
+
+    "globalOverrides": {},
+    "globalAllowedDeprecatedVersions": {},
+    "globalPatchedDependencies": {}
+}
