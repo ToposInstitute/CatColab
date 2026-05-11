@@ -179,7 +179,9 @@ export const WithKatex: Story = {
             <div style={{ padding: "16px", "max-width": "600px" }}>
                 <ExpandableList
                     items={equations}
-                    renderItem={(equation: string) => <KatexDisplay math={equation} />}
+                    renderItem={(item) =>
+                        typeof item === "string" ? <KatexDisplay math={item} /> : item
+                    }
                 />
             </div>
         );
