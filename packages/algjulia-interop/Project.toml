@@ -13,9 +13,6 @@ Oxygen = "df9a0d86-3283-4920-82dc-4555fc0d1d8b"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 StructTypes = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
 
-[extensions]
-CatlabExt = ["Catlab", "ACSets"]
-
 [compat]
 ACSets = "0.2.26"
 Catlab = "0.17.2"

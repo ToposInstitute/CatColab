@@ -2,13 +2,13 @@
 
 julia_version = "1.12.5"
 manifest_format = "2.0"
-project_hash = "ae3caef2a0866469616d51a6bb9ac744f063ad55"
+project_hash = "8e27b017675e11d4ba34f579de046e8ab3cb258a"
 
 [[deps.ACSets]]
 deps = ["AlgebraicInterfaces", "Base64", "CompTime", "DataStructures", "JSON3", "MLStyle", "OrderedCollections", "PEG", "Permutations", "Pkg", "PrettyTables", "Random", "Reexport", "SHA", "StaticArrays", "StructEquality", "StructTypes", "Tables"]
-git-tree-sha1 = "80ca69d6844aa5a1e67338b5362e393007c4c168"
+git-tree-sha1 = "dabea268e85bfa2d87019772d1e5b5115542450f"
 uuid = "227ef7b5-1206-438b-ac65-934d6da304b8"
-version = "0.2.26"
+version = "0.2.28"
 
     [deps.ACSets.extensions]
     DataFramesACSetsExt = "DataFrames"
@@ -44,18 +44,15 @@ version = "0.1.9"
 
 [[deps.CatColabInterop]]
 deps = ["ACSets", "Catlab", "HTTP", "MLStyle", "Oxygen", "Reexport", "StructTypes"]
-path = "."
+path = ".."
 uuid = "9ecda8fb-39ab-46a2-a496-7285fa6368c1"
 version = "0.1.1"
 
-    [deps.CatColabInterop.extensions]
-    CatlabExt = ["Catlab", "ACSets"]
-
 [[deps.Catlab]]
 deps = ["ACSets", "AlgebraicInterfaces", "Colors", "CompTime", "Compose", "DataStructures", "GATlab", "GeneralizedGenerated", "JSON3", "LightXML", "LinearAlgebra", "Logging", "MLStyle", "PEG", "PrettyTables", "Random", "Reexport", "SparseArrays", "StaticArrays", "Statistics", "StructEquality", "StructTypes", "Tables"]
-git-tree-sha1 = "bf515a1858d0dfd00887a3ba1daf587d14ec7b51"
+git-tree-sha1 = "fadf5ec3e429cc88be1178b6baf687b99bb3177c"
 uuid = "134e5e36-593f-5add-ad60-77f754baafbe"
-version = "0.17.4"
+version = "0.17.5"
 
     [deps.Catlab.extensions]
     CatlabConvexExt = "Convex"
@@ -217,9 +214,9 @@ version = "1.0.0"
 
 [[deps.JLLWrappers]]
 deps = ["Artifacts", "Preferences"]
-git-tree-sha1 = "0533e564aae234aff59ab625543145446d8b6ec2"
+git-tree-sha1 = "7204148362dafe5fe6a273f855b8ccbe4df8173e"
 uuid = "692b3bcd-3c85-4b1f-b108-f13ce0eb3210"
-version = "1.7.1"
+version = "1.8.0"
 
 [[deps.JSON]]
 deps = ["Dates", "Mmap", "Parsers", "Unicode"]
@@ -339,9 +336,9 @@ version = "1.1.10"
 
 [[deps.MbedTLS_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "926c6af3a037c68d02596a44c22ec3595f5f760b"
+git-tree-sha1 = "ff69a2b1330bcb730b9ac1ab7dd680176f5896b8"
 uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
-version = "2.28.6+0"
+version = "2.28.1010+0"
 
 [[deps.Measures]]
 git-tree-sha1 = "b513cedd20d9c914783d8ad83d08120702bf2c77"
@@ -418,9 +415,9 @@ version = "1.0.4"
 
 [[deps.Parsers]]
 deps = ["Dates", "PrecompileTools", "UUIDs"]
-git-tree-sha1 = "7d2f8f21da5db6a806faf7b9b292296da42b2810"
+git-tree-sha1 = "5d5e0a78e971354b1c7bff0655d11fdc1b0e12c8"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
-version = "2.8.3"
+version = "2.8.4"
 
 [[deps.Permutations]]
 deps = ["Combinatorics", "LinearAlgebra", "Random"]
@@ -432,18 +429,16 @@ version = "0.4.23"
 deps = ["Artifacts", "Dates", "Downloads", "FileWatching", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "Random", "SHA", "TOML", "Tar", "UUIDs", "p7zip_jll"]
 uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 version = "1.12.1"
+weakdeps = ["REPL"]
 
     [deps.Pkg.extensions]
     REPLExt = "REPL"
 
-    [deps.Pkg.weakdeps]
-    REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
-
 [[deps.PrecompileTools]]
 deps = ["Preferences"]
-git-tree-sha1 = "5aa36f7049a63a1528fe8f7c3f2113413ffd4e1f"
+git-tree-sha1 = "07a921781cab75691315adc645096ed5e370cb77"
 uuid = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
-version = "1.2.1"
+version = "1.3.3"
 
 [[deps.Preferences]]
 deps = ["TOML"]
@@ -457,14 +452,25 @@ uuid = "8162dcfd-2161-5ef2-ae6c-7681170c5f98"
 version = "0.2.0"
 
 [[deps.PrettyTables]]
-deps = ["Crayons", "LaTeXStrings", "Markdown", "PrecompileTools", "Printf", "Reexport", "StringManipulation", "Tables"]
-git-tree-sha1 = "1101cd475833706e4d0e7b122218257178f48f34"
+deps = ["Crayons", "LaTeXStrings", "Markdown", "PrecompileTools", "Printf", "REPL", "Reexport", "StringManipulation", "Tables"]
+git-tree-sha1 = "624de6279ab7d94fc9f672f0068107eb6619732c"
 uuid = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
-version = "2.4.0"
+version = "3.3.2"
+
+    [deps.PrettyTables.extensions]
+    PrettyTablesTypstryExt = "Typstry"
+
+    [deps.PrettyTables.weakdeps]
+    Typstry = "f0ed7684-a786-439e-b1e3-3b82803b501e"
 
 [[deps.Printf]]
 deps = ["Unicode"]
 uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+version = "1.11.0"
+
+[[deps.REPL]]
+deps = ["InteractiveUtils", "JuliaSyntaxHighlighting", "Markdown", "Sockets", "StyledStrings", "Unicode"]
+uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 version = "1.11.0"
 
 [[deps.Random]]
