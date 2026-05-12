@@ -117,12 +117,12 @@ impl<'a> ModalDblModelMorphism<'a> {
             };
 
             let dom_check = dom.get_dom(&e).zip(cod.get_dom(&f)).and_then(|(left, right)| {
-                (mapping.apply_ob(left.clone()).expect("!") != *right)
+                (mapping.apply_ob(left.clone()) != Ok(right.clone()))
                     .then(|| InvalidDblModelMorphism::Dom(e.clone()).into())
             });
 
             let cod_check = dom.get_cod(&e).zip(cod.get_cod(&f)).and_then(|(left, right)| {
-                (mapping.apply_ob(left.clone()).expect("!") != *right)
+                (mapping.apply_ob(left.clone()) != Ok(right.clone()))
                     .then(|| InvalidDblModelMorphism::Cod(e).into())
             });
 
