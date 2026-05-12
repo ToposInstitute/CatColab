@@ -69,61 +69,8 @@ impl ModalDblModelDiagram {
                 continue;
             }
 
-            if let Some(ob) = domain.clone().get_dom(&e) {
-                let names: Vec<QualifiedName> = match ob {
-                    ModalOb::Generator(name) => vec![name.clone()],
-                    ModalOb::List(List, args) => {
-                        args.into_iter().filter_map(|ob| ob.clone().generator()).collect()
-                    }
-                    _ => todo!(),
-                };
-
-                for name in names {
-                    if !mapping.0.is_vertex_assigned(&name) {
-                        mapping.assign_ob(name, model.dom(&g));
-                    }
-                }
-
-                //                         if !mapping.0.is_vertex_assigned(&name) => {
-                //                         mapping.assign_ob(name.clone(), model.dom(&g))
-                //                     }
-                //                     ModalOb::List(List, args) => args
-                //                         .into_iter()
-                //                         .filter(|ob: &ModalOb| {
-                //                             ob.clone()
-                //                                 .generator()
-                //                                 .is_some_and(|name| !mapping.0.is_vertex_assigned(&name))
-                //                         })
-                //                         .map(|missing_ob| {
-                //                             missing_ob
-                //                                 .generator()
-                //                                 .and_then(|name| mapping.assign_ob(name.clone(), model.dom(&g)))
-                //                         }),
-                //                     _ => todo!(),
-                // }
-            }
-
-            // for ob in domain.clone().get_cod(&e) {
-            //     match ob {
-            //         ModalOb::Generator(name) if !ampping.0.is_vertex_assigned(&name) => {
-            //             mapping.assign_ob(name.clone(), model.cod(&g))
-            //         }
-            //         ModalOb::List(List, args) => args
-            //             .into_iter()
-            //             .filter(|ob: &ModalOb| {
-            //                 ob.clone()
-            //                     .generator()
-            //                     .is_some_and(|name| !ismapping.0.is_vertex_assigned(&name))
-            //             })
-            //             // why not just apply assign_ob to all the generators
-            //             .map(|missing_ob| {
-            //                 missing_ob
-            //                     .generator()
-            //                     .and_then(|name| mapping.assign_ob(name.clone(), model.cod(&g)))
-            //             }),
-            //         _ => todo!(),
-            //     }
-            // }
+            mapping.infer_missing(domain.clone().get_dom(&e), model.dom(&g));
+            mapping.infer_missing(domain.clone().get_cod(&e), model.cod(&g));
         }
     }
 }
@@ -227,25 +174,11 @@ mod tests {
         };
 
         let mut f: ModalDblModelMapping = Default::default();
-        f.assign_mor(name("partial_t"), name("partial_t").into());
+        f.assign_mor(name("partial_t"), name("partial_t0").into());
         let mut diagram = DblModelDiagram(f, domain.clone());
 
-        if let Ok(Some(heat_eq)) = Model::from_text(
-            &th.into(),
-            "[
-                u : Object,
-                dot_u : Object,
-                k : Object,
-                anon : Object,
-                partial_t : Multihom[[u], dot_u],
-                laplacian : Multihom[[u], anon],
-                multiplication : Multihom[[k, anon], dot_u]
-            ]",
-        )
-        .map(|m| m.as_modal())
-        {
-            diagram.infer_missing_from(&heat_eq);
-            assert!(diagram.validate_in(&heat_eq).is_ok());
-        }
+        let dec = dec(th.clone());
+        diagram.infer_missing_from(&dec);
+        assert!(diagram.validate_in(&dec).is_ok());
     }
 }
