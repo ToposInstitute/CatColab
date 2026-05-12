@@ -75,19 +75,37 @@
       pkgsLinux = nixpkgsFor linuxSystem;
       rustToolchainLinux = rustToolchainFor linuxSystem;
 
-      craneLib = (crane.mkLib pkgsLinux).overrideToolchain rustToolchainLinux;
+      # Per-system crane library + prebuilt cargo dependency layer. The
+      # frontend package is exposed for every system in `devShellSystems` so
+      # macOS developers can `nix build .#frontend` against the same wasm/api
+      # chain linux developers use; that requires per-system cargoArtifacts.
+      craneLibFor =
+        system:
+        let
+          pkgs = nixpkgsFor system;
+        in
+        (crane.mkLib pkgs).overrideToolchain (rustToolchainFor system);
 
-      cargoArtifacts = craneLib.buildDepsOnly {
-        src = craneLib.cleanCargoSource ./.;
-        strictDeps = true;
-        nativeBuildInputs = [
-          pkgsLinux.pkg-config
-        ];
+      cargoArtifactsFor =
+        system:
+        let
+          pkgs = nixpkgsFor system;
+          craneLib = craneLibFor system;
+        in
+        craneLib.buildDepsOnly {
+          src = craneLib.cleanCargoSource ./.;
+          strictDeps = true;
+          nativeBuildInputs = [
+            pkgs.pkg-config
+          ];
 
-        buildInputs = [
-          pkgsLinux.openssl
-        ];
-      };
+          buildInputs = [
+            pkgs.openssl
+          ];
+        };
+
+      craneLib = craneLibFor linuxSystem;
+      cargoArtifacts = cargoArtifactsFor linuxSystem;
 
       # Generate devShells for each system
       devShellForSystem =
@@ -199,92 +217,121 @@
       # Example of how to build and test individual package built by nix:
       # nix build .#packages.x86_64-linux.automerge
       # node ./result/main.cjs
-      packages = {
-        x86_64-linux = {
-          catcolabApi = pkgsLinux.callPackage ./infrastructure/catcolab-api.nix {
-            inherit craneLib cargoArtifacts;
-            pkgs = pkgsLinux;
-          };
-
-          backend = pkgsLinux.callPackage ./packages/backend/default.nix {
-            inherit craneLib cargoArtifacts;
-            pkgs = pkgsLinux;
-          };
-
-          migrator = pkgsLinux.callPackage ./packages/migrator/default.nix {
-            inherit craneLib cargoArtifacts;
-            pkgs = pkgsLinux;
-          };
-
-          catlog-wasm-browser = pkgsLinux.callPackage ./packages/catlog-wasm/default.nix {
-            inherit craneLib cargoArtifacts;
-            pkgs = pkgsLinux;
-          };
-
-          document-types-wasm = pkgsLinux.callPackage ./packages/document-types/default.nix {
-            inherit craneLib cargoArtifacts;
-            pkgs = pkgsLinux;
-          };
-
-          julia-fhs = (pkgsLinux.callPackage ./infrastructure/julia.nix { }).julia-fhs;
-
-          frontend =
-            (pkgsLinux.callPackage ./packages/frontend/default.nix {
-              inherit inputs rustToolchainLinux self;
-              pnpm2nix = inputs.pnpm2nix-nzbr;
-            }).package;
-
-          frontend-tests =
-            (pkgsLinux.callPackage ./packages/frontend/default.nix {
-              inherit inputs rustToolchainLinux self;
-              pnpm2nix = inputs.pnpm2nix-nzbr;
-            }).tests;
-
-          rust-docs = pkgsLinux.callPackage ./infrastructure/rust-docs.nix {
-            inherit craneLib cargoArtifacts;
-            pkgs = pkgsLinux;
-          };
-
-          rust-docs-check = pkgsLinux.callPackage ./infrastructure/rust-docs.nix {
-            inherit craneLib cargoArtifacts;
-            pkgs = pkgsLinux;
-            checkMode = true;
-          };
-
-          # VMs built with `nixos-rebuild build-vm` (like `nix build
-          # .#nixosConfigurations.catcolab-vm.config.system.build.vm`) are not the same
-          # as "traditional" VMs, which causes deploy-rs to fail when deploying to them.
-          # https://github.com/serokell/deploy-rs/issues/85#issuecomment-885782350
-          #
-          # This is worked around by creating a full featured VM image.
-          #
-          # use:
-          # nix build .#catcolab-vm
-          # cp result/catcolab-vm.qcow2 catcolab-vm.qcow2
-          # db-utils vm start
-          # deploy -s .#catcolab-vm
-          catcolab-vm = pkgsLinux.stdenv.mkDerivation {
-            name = "catcolab-vm";
-            src = nixos-generators.nixosGenerate {
-              system = "x86_64-linux";
-              format = "qcow";
-
-              modules = [
-                ./infrastructure/hosts/catcolab-vm
-              ];
-
-              specialArgs = {
-                inherit inputs self;
-                rustToolchain = rustToolchainLinux;
+      #
+      # The frontend and its rust-derived dependencies (catcolabApi,
+      # catlog-wasm-browser, document-types-wasm) are exposed for every
+      # `devShellSystems` entry so macOS developers can `nix build .#frontend`
+      # natively. Linux-only outputs (backend, migrator, julia-fhs, rust-docs,
+      # catcolab-vm) stay under packages.x86_64-linux only.
+      packages =
+        let
+          frontendChainFor =
+            system:
+            let
+              pkgs = nixpkgsFor system;
+              craneLib' = craneLibFor system;
+              cargoArtifacts' = cargoArtifactsFor system;
+            in
+            {
+              catcolabApi = pkgs.callPackage ./infrastructure/catcolab-api.nix {
+                craneLib = craneLib';
+                cargoArtifacts = cargoArtifacts';
+                inherit pkgs;
               };
+
+              catlog-wasm-browser = pkgs.callPackage ./packages/catlog-wasm/default.nix {
+                craneLib = craneLib';
+                cargoArtifacts = cargoArtifacts';
+                inherit pkgs;
+              };
+
+              document-types-wasm = pkgs.callPackage ./packages/document-types/default.nix {
+                craneLib = craneLib';
+                cargoArtifacts = cargoArtifacts';
+                inherit pkgs;
+              };
+
+              frontend =
+                (pkgs.callPackage ./packages/frontend/default.nix {
+                  inherit inputs self;
+                  rustToolchain = rustToolchainFor system;
+                  pnpm2nix = inputs.pnpm2nix-nzbr;
+                }).package;
+
+              frontend-tests =
+                (pkgs.callPackage ./packages/frontend/default.nix {
+                  inherit inputs self;
+                  rustToolchain = rustToolchainFor system;
+                  pnpm2nix = inputs.pnpm2nix-nzbr;
+                }).tests;
             };
-            installPhase = ''
-              mkdir -p $out
-              cp $src/nixos.qcow2 $out/catcolab-vm.qcow2
-            '';
+
+          linuxOnlyPackages = {
+            backend = pkgsLinux.callPackage ./packages/backend/default.nix {
+              inherit craneLib cargoArtifacts;
+              pkgs = pkgsLinux;
+            };
+
+            migrator = pkgsLinux.callPackage ./packages/migrator/default.nix {
+              inherit craneLib cargoArtifacts;
+              pkgs = pkgsLinux;
+            };
+
+            julia-fhs = (pkgsLinux.callPackage ./infrastructure/julia.nix { }).julia-fhs;
+
+            rust-docs = pkgsLinux.callPackage ./infrastructure/rust-docs.nix {
+              inherit craneLib cargoArtifacts;
+              pkgs = pkgsLinux;
+            };
+
+            rust-docs-check = pkgsLinux.callPackage ./infrastructure/rust-docs.nix {
+              inherit craneLib cargoArtifacts;
+              pkgs = pkgsLinux;
+              checkMode = true;
+            };
+
+            # VMs built with `nixos-rebuild build-vm` (like `nix build
+            # .#nixosConfigurations.catcolab-vm.config.system.build.vm`) are not the same
+            # as "traditional" VMs, which causes deploy-rs to fail when deploying to them.
+            # https://github.com/serokell/deploy-rs/issues/85#issuecomment-885782350
+            #
+            # This is worked around by creating a full featured VM image.
+            #
+            # use:
+            # nix build .#catcolab-vm
+            # cp result/catcolab-vm.qcow2 catcolab-vm.qcow2
+            # db-utils vm start
+            # deploy -s .#catcolab-vm
+            catcolab-vm = pkgsLinux.stdenv.mkDerivation {
+              name = "catcolab-vm";
+              src = nixos-generators.nixosGenerate {
+                system = "x86_64-linux";
+                format = "qcow";
+
+                modules = [
+                  ./infrastructure/hosts/catcolab-vm
+                ];
+
+                specialArgs = {
+                  inherit inputs self;
+                  rustToolchain = rustToolchainLinux;
+                };
+              };
+              installPhase = ''
+                mkdir -p $out
+                cp $src/nixos.qcow2 $out/catcolab-vm.qcow2
+              '';
+            };
           };
-        };
-      };
+        in
+        builtins.listToAttrs (
+          map (system: {
+            name = system;
+            value =
+              frontendChainFor system
+              // pkgsLinux.lib.optionalAttrs (system == linuxSystem) linuxOnlyPackages;
+          }) devShellSystems
+        );
 
       # Create a NixOS configuration for each host
       nixosConfigurations = {

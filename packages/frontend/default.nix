@@ -134,15 +134,15 @@ let
 
         # Set up catlog-wasm before TypeScript build needs it
         mkdir -p packages/catlog-wasm/dist/pkg-browser
-        cp -r ${self.packages.x86_64-linux.catlog-wasm-browser}/* packages/catlog-wasm/dist/pkg-browser/
+        cp -r ${self.packages.${pkgs.stdenv.hostPlatform.system}.catlog-wasm-browser}/* packages/catlog-wasm/dist/pkg-browser/
 
         # Set up document-types wasm output
         mkdir -p packages/document-types/pkg
-        cp -r ${self.packages.x86_64-linux.document-types-wasm}/* packages/document-types/pkg/
+        cp -r ${self.packages.${pkgs.stdenv.hostPlatform.system}.document-types-wasm}/* packages/document-types/pkg/
 
         # Set up generated API bindings
         mkdir -p packages/backend/pkg/src
-        cp -r ${self.packages.x86_64-linux.catcolabApi}/src packages/backend/pkg/
+        cp -r ${self.packages.${pkgs.stdenv.hostPlatform.system}.catcolabApi}/src packages/backend/pkg/
 
         cd packages/frontend
         # Generate CSS module type declarations
@@ -189,15 +189,15 @@ let
         mkdir -p $out/packages
 
         mkdir -p $out/packages/catlog-wasm/dist/pkg-browser
-        cp -r ${self.packages.x86_64-linux.catlog-wasm-browser}/* $out/packages/catlog-wasm/dist/pkg-browser/
+        cp -r ${self.packages.${pkgs.stdenv.hostPlatform.system}.catlog-wasm-browser}/* $out/packages/catlog-wasm/dist/pkg-browser/
 
         # Set up document-types wasm output before copying to $out
         mkdir -p packages/document-types/pkg
-        cp -r ${self.packages.x86_64-linux.document-types-wasm}/* packages/document-types/pkg/
+        cp -r ${self.packages.${pkgs.stdenv.hostPlatform.system}.document-types-wasm}/* packages/document-types/pkg/
 
         # Bindings must be copied into source tree BEFORE the cp below copies backend to $out
         mkdir -p packages/backend/pkg/src
-        cp -r ${self.packages.x86_64-linux.catcolabApi}/src packages/backend/pkg/
+        cp -r ${self.packages.${pkgs.stdenv.hostPlatform.system}.catcolabApi}/src packages/backend/pkg/
 
         cp -r packages/backend $out/packages/
         cp -r packages/frontend $out/packages/
