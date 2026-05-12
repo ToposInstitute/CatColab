@@ -19,8 +19,9 @@ use tsify::Tsify;
 use super::{ODEAnalysis, Parameter};
 use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
+use crate::stdlib::analyses::ode::{PolynomialODEAnalysis, SuitableParameters};
 use crate::stdlib::analyses::petri::transition_interface;
-use crate::zero::{alg::Polynomial, name, rig::Monomial, QualifiedName};
+use crate::zero::{QualifiedName, alg::Polynomial, name, rig::Monomial};
 use crate::{
     dbl::{
         modal::{List, ModeApp},
@@ -108,6 +109,31 @@ pub enum Direction {
 
     /// The parameter corresponds to an outgoing flow to a specific input.
     OutgoingFlow,
+}
+
+impl SuitableParameters for FlowParameter {
+    fn extract_qualified_name(&self) -> QualifiedName {
+        match &self {
+            FlowParameter::Balanced { transition: trans } => trans.clone(),
+            FlowParameter::Unbalanced {
+                direction: _,
+                parameter: RateParameter::PerTransition { transition: trans },
+                // TODO: use the direction in the above??
+            } => trans.clone(),
+            FlowParameter::Unbalanced {
+                direction: _,
+                parameter: RateParameter::PerPlace { transition: trans, place: _ },
+            } => {
+                trans.clone()
+                // TODO: use the direction in the above??
+                // TODO: replace the above with something like trans.clone().snoc(output.clone().only())
+            }
+        }
+    }
+
+    fn embed_qualified_name(name: QualifiedName) -> Self {
+        FlowParameter::Balanced { transition: name.clone() }
+    }
 }
 
 impl fmt::Display for FlowParameter {
@@ -231,124 +257,116 @@ impl PetriNetMassActionAnalysis {
 
         for mor in model.mor_generators_with_type(&self.transition_mor_type) {
             let (inputs, outputs) = transition_interface(model, &mor);
-            let term = ModalOb::List(List::Symmetric, inputs);
+            let term = ModalOb::List(List::Symmetric, inputs.clone());
 
-            match mass_conservation_type {
-                MassConservationType::Balanced => {
-                    for input in inputs {
-                        ode_model.add_mor(
-                            mor.clone(),
-                            term.clone(),
-                            input.clone(),
-                            neg_mor_type.clone(),
-                        );
-                    }
-                    for output in outputs {
-                        ode_model.add_mor(
-                            mor.clone(),
-                            term.clone(),
-                            output.clone(),
-                            pos_mor_type.clone(),
-                            );
-                    }
-                }
-                MassConservationType::Unbalanced(granularity) => {
-                    
-                }
+            for input in inputs {
+                ode_model.add_mor(mor.clone(), term.clone(), input.clone(), neg_mor_type.clone());
             }
-            // TODO: add morphisms
+            for output in outputs {
+                ode_model.add_mor(mor.clone(), term.clone(), output.clone(), pos_mor_type.clone());
+            }
         }
 
-        // TODO: use PolynomialODEAnalysis::build_system (??)
+        let make_parameter = |mor: QualifiedName| match mass_conservation_type {
+            MassConservationType::Balanced => FlowParameter::Balanced { transition: mor },
+            MassConservationType::Unbalanced(granularity) => match granularity {
+                RateGranularity::PerTransition => FlowParameter::Balanced { transition: mor },
+                RateGranularity::PerPlace => FlowParameter::Balanced { transition: mor },
+            },
+        };
+
+        let sys = PolynomialODEAnalysis::default()
+            .build_fancy_system::<FlowParameter>(&ode_model, make_parameter);
+        sys
+        // TODO: the above should use build_fancy_system::<FlowParameter>()
 
         // TODO: delete this old code
-        let mut sys = PolynomialSystem::new();
-        for ob in model.ob_generators_with_type(&self.place_ob_type) {
-            sys.add_term(ob, Polynomial::zero());
-        }
-        for mor in model.mor_generators_with_type(&self.transition_mor_type) {
-            let (inputs, outputs) = transition_interface(model, &mor);
-            let term: Monomial<_, _> =
-                inputs.iter().map(|ob| (ob.clone().unwrap_generator(), 1)).collect();
+        // let mut sys = PolynomialSystem::new();
+        // for ob in model.ob_generators_with_type(&self.place_ob_type) {
+        //     sys.add_term(ob, Polynomial::zero());
+        // }
+        // for mor in model.mor_generators_with_type(&self.transition_mor_type) {
+        //     let (inputs, outputs) = transition_interface(model, &mor);
+        //     let term: Monomial<_, _> =
+        //         inputs.iter().map(|ob| (ob.clone().unwrap_generator(), 1)).collect();
 
-            match mass_conservation_type {
-                // MassConservationType::Balanced => {
-                //     let term: Polynomial<_, _, _> = [(
-                //         Parameter::generator(FlowParameter::Balanced { transition: mor }),
-                //         term.clone(),
-                //     )]
-                //     .into_iter()
-                //     .collect();
+        //     match mass_conservation_type {
+        //         // MassConservationType::Balanced => {
+        //         //     let term: Polynomial<_, _, _> = [(
+        //         //         Parameter::generator(FlowParameter::Balanced { transition: mor }),
+        //         //         term.clone(),
+        //         //     )]
+        //         //     .into_iter()
+        //         //     .collect();
 
-                //     for input in inputs {
-                //         sys.add_term(input.unwrap_generator(), -term.clone());
-                //     }
+        //         //     for input in inputs {
+        //         //         sys.add_term(input.unwrap_generator(), -term.clone());
+        //         //     }
 
-                //     for output in outputs {
-                //         sys.add_term(output.unwrap_generator(), term.clone());
-                //     }
-                // }
+        //         //     for output in outputs {
+        //         //         sys.add_term(output.unwrap_generator(), term.clone());
+        //         //     }
+        //         // }
+        //         MassConservationType::Unbalanced(granularity) => {
+        //             for input in inputs {
+        //                 let input_term: Polynomial<_, _, _> = match granularity {
+        //                     RateGranularity::PerTransition => [(
+        //                         Parameter::generator(FlowParameter::Unbalanced {
+        //                             direction: Direction::OutgoingFlow,
+        //                             parameter: RateParameter::PerTransition {
+        //                                 transition: mor.clone(),
+        //                             },
+        //                         }),
+        //                         term.clone(),
+        //                     )],
+        //                     RateGranularity::PerPlace => [(
+        //                         Parameter::generator(FlowParameter::Unbalanced {
+        //                             direction: Direction::OutgoingFlow,
+        //                             parameter: RateParameter::PerPlace {
+        //                                 transition: mor.clone(),
+        //                                 place: input.clone().unwrap_generator(),
+        //                             },
+        //                         }),
+        //                         term.clone(),
+        //                     )],
+        //                 }
+        //                 .into_iter()
+        //                 .collect();
 
-                MassConservationType::Unbalanced(granularity) => {
-                    for input in inputs {
-                        let input_term: Polynomial<_, _, _> = match granularity {
-                            RateGranularity::PerTransition => [(
-                                Parameter::generator(FlowParameter::Unbalanced {
-                                    direction: Direction::OutgoingFlow,
-                                    parameter: RateParameter::PerTransition {
-                                        transition: mor.clone(),
-                                    },
-                                }),
-                                term.clone(),
-                            )],
-                            RateGranularity::PerPlace => [(
-                                Parameter::generator(FlowParameter::Unbalanced {
-                                    direction: Direction::OutgoingFlow,
-                                    parameter: RateParameter::PerPlace {
-                                        transition: mor.clone(),
-                                        place: input.clone().unwrap_generator(),
-                                    },
-                                }),
-                                term.clone(),
-                            )],
-                        }
-                        .into_iter()
-                        .collect();
+        //                 sys.add_term(input.unwrap_generator(), -input_term.clone());
+        //             }
+        //             for output in outputs {
+        //                 let output_term: Polynomial<_, _, _> = match granularity {
+        //                     RateGranularity::PerTransition => [(
+        //                         Parameter::generator(FlowParameter::Unbalanced {
+        //                             direction: Direction::IncomingFlow,
+        //                             parameter: RateParameter::PerTransition {
+        //                                 transition: mor.clone(),
+        //                             },
+        //                         }),
+        //                         term.clone(),
+        //                     )],
+        //                     RateGranularity::PerPlace => [(
+        //                         Parameter::generator(FlowParameter::Unbalanced {
+        //                             direction: Direction::IncomingFlow,
+        //                             parameter: RateParameter::PerPlace {
+        //                                 transition: mor.clone(),
+        //                                 place: output.clone().unwrap_generator(),
+        //                             },
+        //                         }),
+        //                         term.clone(),
+        //                     )],
+        //                 }
+        //                 .into_iter()
+        //                 .collect();
 
-                        sys.add_term(input.unwrap_generator(), -input_term.clone());
-                    }
-                    for output in outputs {
-                        let output_term: Polynomial<_, _, _> = match granularity {
-                            RateGranularity::PerTransition => [(
-                                Parameter::generator(FlowParameter::Unbalanced {
-                                    direction: Direction::IncomingFlow,
-                                    parameter: RateParameter::PerTransition {
-                                        transition: mor.clone(),
-                                    },
-                                }),
-                                term.clone(),
-                            )],
-                            RateGranularity::PerPlace => [(
-                                Parameter::generator(FlowParameter::Unbalanced {
-                                    direction: Direction::IncomingFlow,
-                                    parameter: RateParameter::PerPlace {
-                                        transition: mor.clone(),
-                                        place: output.clone().unwrap_generator(),
-                                    },
-                                }),
-                                term.clone(),
-                            )],
-                        }
-                        .into_iter()
-                        .collect();
+        //                 sys.add_term(output.unwrap_generator(), output_term.clone());
+        //             }
+        //         }
+        //     }
+        // }
 
-                        sys.add_term(output.unwrap_generator(), output_term.clone());
-                    }
-                }
-            }
-        }
-
-        sys.normalize()
+        // sys.normalize()
     }
 }
 

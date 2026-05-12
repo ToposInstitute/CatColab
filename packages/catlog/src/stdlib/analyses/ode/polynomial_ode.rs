@@ -16,7 +16,7 @@ use crate::{
         theory::NonUnital,
     },
     simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem},
-    zero::{QualifiedName, alg::Polynomial, name, rig::Monomial},
+    zero::{alg::Polynomial, name, rig::Monomial, HasQualifiedName, QualifiedName},
 };
 
 use super::{ODEAnalysis, Parameter};
@@ -63,14 +63,30 @@ impl Default for PolynomialODEAnalysis {
     }
 }
 
+/// TODO write docs.
+pub trait SuitableParameters: Ord + Clone {
+    /// TODO document.
+    // TODO : THINK ABOUT THIS!!!!!!!! IS THIS *REALLY* THE TRAIT THAT YOU WANT????????????????????
+    fn extract_qualified_name(&self) -> QualifiedName;
+
+    /// TODO document.
+    fn embed_qualified_name(name: QualifiedName) -> Self;
+}
+
+impl SuitableParameters for QualifiedName {
+    fn extract_qualified_name(&self) -> QualifiedName {
+        self.clone()
+    }
+    fn embed_qualified_name(name: QualifiedName) -> Self {
+        name
+    }
+}
+
 impl PolynomialODEAnalysis {
     /// Creates a system with symbolic coefficients.
     pub fn build_system(
         &self,
         model: &ModalDblModel<NonUnital>,
-        // TODO: replace Parameter<QualifiedName> with Parameter<T> where
-        //       the T just has to implement some GetQualifiedName();
-        //       also take as an argument a function (MorGen -> T)
     ) -> PolynomialSystem<QualifiedName, Parameter<QualifiedName>, i8> {
         let mut sys = PolynomialSystem::new();
 
@@ -90,6 +106,59 @@ impl PolynomialODEAnalysis {
                 inputs.iter().cloned().map(|ob| (ob.unwrap_generator(), 1)).collect();
             let term: Polynomial<_, _, _> =
                 [(Parameter::generator(mor), term.clone())].into_iter().collect();
+
+            Some((output.clone().unwrap_generator(), term))
+        };
+
+        // Add a monomial with positive sign for each positive contribution.
+        for mor in model.mor_generators_with_type(&self.positive_contribution_mor_type) {
+            if let Some((var, term)) = make_term(mor) {
+                sys.add_term(var, term);
+            }
+        }
+
+        // Add a monomial with negative sign for each negative contribution.
+        for mor in model.mor_generators_with_type(&self.negative_contribution_mor_type) {
+            if let Some((var, term)) = make_term(mor) {
+                sys.add_term(var, -term);
+            }
+        }
+
+        sys.normalize()
+    }
+
+    // TODO: combine build_fancy_system into build_system ???
+
+    /// Creates a TODO write docs.
+    pub fn build_fancy_system<T: SuitableParameters>(
+        &self,
+        model: &ModalDblModel<NonUnital>,
+        associated_parameters: HashMap<QualifiedName, T>,
+    ) -> PolynomialSystem<QualifiedName, Parameter<T>, i8> {
+        let mut sys = PolynomialSystem::new();
+
+        // Create a variable for each object.
+        for ob in model.ob_generators_with_type(&self.variable_ob_type) {
+            sys.add_term(ob, Polynomial::zero());
+        }
+
+        let make_term = |mor: QualifiedName| {
+            let (Some(ModalOb::List(_, inputs)), Some(output)) =
+                (model.get_dom(&mor), model.get_cod(&mor))
+            else {
+                return None;
+            };
+
+            let term: Monomial<_, _> =
+                inputs.iter().cloned().map(|ob| (ob.unwrap_generator(), 1)).collect();
+            let term: Polynomial<_, _, _> =
+                [(Parameter::generator(associated_parameters
+                    .get(&mor)
+                    .unwrap_or(&T::embed_qualified_name(mor))
+                    .clone()),
+                term.clone())]
+                .into_iter()
+                .collect();
 
             Some((output.clone().unwrap_generator(), term))
         };
@@ -183,8 +252,7 @@ mod tests {
             },
             LatexEquation {
                 lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} B".to_string(),
-                rhs: "AB_interaction \\cdot A \\cdot B + B_growth \\cdot B"
-                    .to_string(),
+                rhs: "AB_interaction \\cdot A \\cdot B + B_growth \\cdot B".to_string(),
             },
         ];
         assert_eq!(expected, sys.to_latex_equations());
