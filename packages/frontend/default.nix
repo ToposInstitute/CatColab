@@ -19,6 +19,7 @@ let
         ../../.npmrc
         ../../pnpm-workspace.yaml
         ../../pnpm-lock.yaml
+        ../../patches
         ../../packages/frontend
         ../../packages/ui-components
         ../../packages/document-methods
@@ -36,7 +37,7 @@ let
 
     pnpmDeps = pkgs.fetchPnpmDeps {
       # see ../../dev-docs/fixing-hash-mismatches.md
-      hash = "sha256-n/0a/wK2mLkGvKWSBs/8zdfgF+dxMmPz3Ir1k30Qw9s=";
+      hash = "";
 
       pname = name;
       fetcherVersion = 2;
@@ -48,6 +49,7 @@ let
           ../../.npmrc
           ../../pnpm-workspace.yaml
           ../../pnpm-lock.yaml
+          ../../patches
           ../../packages/frontend/package.json
           ../../packages/frontend/pnpm-lock.yaml
           ../../packages/ui-components/package.json
