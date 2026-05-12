@@ -30,12 +30,10 @@
 \newcommand{\proTo}{\mathrel{\mkern3mu\vcenter{\hbox{$\shortmid$}}\mkern-10mu{\Rightarrow}}}
 
 <!-- Monads -->
-\newcommand{\List}{\mathop{\mathrm{List}}}
-\newcommand{\Disc}{\mathop{\mathrm{Disc}}}
-\newcommand{\coDisc}{\mathop{\mathrm{coDisc}}}
+\newcommand{\List}{\operatorname{List}}
+\newcommand{\Disc}{\operatorname{Disc}}
+\newcommand{\coDisc}{\operatorname{coDisc}}
 
 <!-- Type theory -->
 \newcommand{\context}{\mathsf{cx}}
 \newcommand{\type}{\mathsf{ty}}
-\newcommand{\eqtype}{\mathsf{eq}}
-\newcommand{\letin}[1]{\mathsf{let}\;{#1}\;\mathsf{in}\;}
