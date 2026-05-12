@@ -1,4 +1,4 @@
-module CatlabExt
+module CatlabInterop
 
 using ACSets
 using Catlab: Presentation, FreeSchema, Left

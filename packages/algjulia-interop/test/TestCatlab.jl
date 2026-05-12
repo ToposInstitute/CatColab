@@ -4,8 +4,7 @@ using CatColabInterop, Catlab
 using Catlab.CategoricalAlgebra.Pointwise.FunctorialDataMigrations.Yoneda: 
   colimit_representables
 using HTTP, Test, Oxygen, JSON3
-const CatlabExt = Base.get_extension(CatColabInterop, :CatlabExt)
-
+import CatColabInterop.CatlabInterop
 # Example JSON
 #-------------
 body = read((@__DIR__)*"/data/diagrams/acset.json", String)
@@ -16,11 +15,11 @@ p = JSON3.read(body, ModelDiagram)
 
 # Convert to ACSet 
 #-----------------
-schema, names = CatlabExt.model_to_schema(p.model)
+schema, ids = CatColabInterop.CatlabInterop.model_to_schema(p.model)
 acset_type = AnonACSet(
   schema; type_assignment=Dict(a=>Nothing for a in schema.attrtypes))
 y = yoneda(constructor(acset_type))
-data = CatlabExt.diagram_to_data(p.diagram, names)
+data = CatlabInterop.diagram_to_data(p.diagram, ids)
 names, res = colimit_representables(data, y)
 
 S = acset_schema(res)
@@ -36,8 +35,14 @@ expected[1, :g] = AttrVar(1)
 
 # Test final JSON output
 #-----------------------
-expected_json = Dict(:Z => ["z"],:f => ["y"],:X => ["x"],:Y => ["y"],:g => ["z"])
-@test expected_json == CatlabExt.acset_to_json(res, schema, CatlabExt.make_names(res, names))
+expected_json = Dict(
+  "019a60e3-1785-72b9-90d2-84dc8bdddc85" => ["z"],
+  "019a6042-2872-7654-a9b4-67becc9ef693" => ["y"],
+  "019a6042-1241-77bd-8055-bfea5c206bc7" => ["x"],
+  "019a6042-1f1c-745e-bfea-753eeaccedf2" => ["y"], 
+  "019a60e3-2ccf-74ef-a1e1-1c940564e1ca" => ["z"] 
+)
+@test expected_json == CatlabInterop.acset_to_json(res, schema, ids, CatlabInterop.make_names(res, names))
 
 # Optionally test the endpoint if running endpoint.jl:
 # resp = HTTP.post("http://127.0.0.1:8080/acsetcolim"; body)
@@ -49,6 +54,6 @@ expected_json = Dict(:Z => ["z"],:f => ["y"],:X => ["x"],:Y => ["y"],:g => ["z"]
 @acset_type T(SchThree)
 exT = @acset T begin A=2; B=3; C=3; f=[2,3]; g=[2,3,2] end
 names = (z=(:C, 1), y= (:B, 1), x = (:A, 1), x2 = (:A, 2))
-@test CatlabExt.make_names(exT, names) == Dict(:A=>["x","x2"], :B=>["y","f(x)","f(x2)"], :C=>["z","g(y)","g(f(x))"])
+@test CatlabInterop.make_names(exT, names) == Dict(:A=>["x","x2"], :B=>["y","f(x)","f(x2)"], :C=>["z","g(y)","g(f(x))"])
 
 end # module

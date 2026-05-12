@@ -10,6 +10,9 @@ using CatColabInterop
 using Oxygen
 using HTTP
 
+using Catlab 
+using ACSets
+
 const port = parse(Int, get(ENV, "JULIA_PORT", "8080"))
 
 const CORS_HEADERS = [
@@ -29,14 +32,6 @@ function CorsHandler(handle)
             r
         end
     end
-end
-
-defaults = [:Catlab,:ACSets] # all extensions to date
-
-# Dynamically load packages in command lin eargs
-for pkg in (isempty(ARGS) ? defaults : Symbol.(ARGS) )
-  @info "using $pkg"
-  @eval using $pkg
 end
 
 for m in methods(CatColabInterop.endpoint)
