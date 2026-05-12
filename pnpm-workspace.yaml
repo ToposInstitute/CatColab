@@ -7,3 +7,5 @@ packages:
   - "packages/document-methods"
   - "packages/ui-components"
   - "packages/gaios"
+patchedDependencies:
+    wasm-pack@0.14.0: patches/wasm-pack@0.14.0.patch

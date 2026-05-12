@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  wasm-pack@0.14.0:
+    hash: 3c7b8af86d6b541704193ec3130f1444612e1187cf4f53aff0ed0570b58d5e56
+    path: ../../patches/wasm-pack@0.14.0.patch
+
 importers:
 
   .:
@@ -212,7 +217,7 @@ importers:
         version: 4.0.8(@types/debug@4.1.12)(@types/node@24.10.0)(yaml@2.5.1)
       wasm-pack:
         specifier: ^0.14.0
-        version: 0.14.0
+        version: 0.14.0(patch_hash=3c7b8af86d6b541704193ec3130f1444612e1187cf4f53aff0ed0570b58d5e56)
       web-worker:
         specifier: ^1.5.0
         version: 1.5.0
@@ -1748,8 +1753,8 @@ packages:
   flatted@3.4.1:
     resolution: {integrity: sha512-IxfVbRFVlV8V/yRaGzk0UVIcsKKHMSfYw66T/u4nTwlWteQePsxe//LjudR1AMX4tZW3WFCh3Zqa/sjlqpbURQ==}
 
-  follow-redirects@1.15.9:
-    resolution: {integrity: sha512-gew4GsXizNgdoRyqmyfMHyAmXsZDk6mHkSxZFCzW9gwlbtOW44CDtYavM+y+72qD/Vq2l550kMF52DT8fOLJqQ==}
+  follow-redirects@1.16.0:
+    resolution: {integrity: sha512-y5rN/uOsadFT/JfYwhxRS5R7Qce+g3zG97+JrtFZlC9klX/W5hD7iiLzScI4nZqUS7DNUdhPgw4xI8W2LuXlUw==}
     engines: {node: '>=4.0'}
     peerDependencies:
       debug: '*'
@@ -2329,9 +2334,6 @@ packages:
   minimatch@10.2.4:
     resolution: {integrity: sha512-oRjTw/97aTBN0RHbYCdtF1MQfvusSIBQM0IZEgzl6426+8jSC0nF1a/GmnVLpfB9yyr6g6FTqWqiZVbxrtaCIg==}
     engines: {node: 18 || 20 || >=22}
-
-  minimatch@3.1.2:
-    resolution: {integrity: sha512-J7p63hRiAjw1NDEww1W7i37+ByIrOWO5XQQAzZ3VOcL0PNybwpfmV/N05zFAzwQ9USyEcX6t3UO+K5aqBQOIHw==}
 
   minimatch@3.1.5:
     resolution: {integrity: sha512-VgjWUsnnT6n+NUk6eZq77zeFdpW2LWDzP6zFGrCbHXiYNul5Dzqk2HHQ5uFH2DNW5Xbp8+jVzaeNt94ssEEl4w==}
@@ -4443,7 +4445,7 @@ snapshots:
 
   axios@0.26.1:
     dependencies:
-      follow-redirects: 1.15.9
+      follow-redirects: 1.16.0
     transitivePeerDependencies:
       - debug
 
@@ -4935,7 +4937,7 @@ snapshots:
 
   flatted@3.4.1: {}
 
-  follow-redirects@1.15.9: {}
+  follow-redirects@1.16.0: {}
 
   foreground-child@3.3.0:
     dependencies:
@@ -4977,7 +4979,7 @@ snapshots:
       fs.realpath: 1.0.0
       inflight: 1.0.6
       inherits: 2.0.4
-      minimatch: 3.1.2
+      minimatch: 3.1.5
       once: 1.4.0
       path-is-absolute: 1.0.1
 
@@ -5986,10 +5988,6 @@ snapshots:
     dependencies:
       brace-expansion: 5.0.4
 
-  minimatch@3.1.2:
-    dependencies:
-      brace-expansion: 1.1.11
-
   minimatch@3.1.5:
     dependencies:
       brace-expansion: 1.1.11
@@ -6838,7 +6836,7 @@ snapshots:
 
   w3c-keyname@2.2.8: {}
 
-  wasm-pack@0.14.0:
+  wasm-pack@0.14.0(patch_hash=3c7b8af86d6b541704193ec3130f1444612e1187cf4f53aff0ed0570b58d5e56):
     dependencies:
       binary-install: 1.1.2
     transitivePeerDependencies:
