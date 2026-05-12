@@ -1,0 +1,81 @@
+name: macos
+
+on:
+  workflow_dispatch:
+
+jobs:
+  frontend_dev_macos:
+    name: frontend-dev on macOS
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v25
+        with:
+          install_url: https://releases.nixos.org/nix/nix-2.29.2/install
+
+      - name: Configure Cachix
+        uses: cachix/cachix-action@v14
+        with:
+          name: catcolab-jmoggr
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+
+      - name: Run frontend-dev and verify Vite serves content
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/frontend-dev-logs
+
+          # Launch frontend-dev in the background. The script ends with
+          # `exec pnpm exec vite --host`, so the launched PID becomes vite
+          # once setup finishes.
+          nix run .#frontend-dev -- --port 5173 \
+            > /tmp/frontend-dev-logs/stdout.log \
+            2> /tmp/frontend-dev-logs/stderr.log &
+          DEV_PID=$!
+
+          cleanup() {
+            echo "--- stdout ---"
+            cat /tmp/frontend-dev-logs/stdout.log || true
+            echo "--- stderr ---"
+            cat /tmp/frontend-dev-logs/stderr.log || true
+            # Try killing the whole process group, then the PID directly.
+            kill -TERM -"$DEV_PID" 2>/dev/null || kill -TERM "$DEV_PID" 2>/dev/null || true
+            sleep 2
+            kill -KILL -"$DEV_PID" 2>/dev/null || kill -KILL "$DEV_PID" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          # Generous timeout: cold Nix evaluation on macOS may build
+          # catlog-wasm-browser, document-types-wasm, and catcolabApi from
+          # source if Cachix lacks aarch64-darwin artifacts.
+          deadline=$(( $(date +%s) + 900 ))
+          until curl -fsS --max-time 5 http://localhost:5173/ > /dev/null; do
+            if [ "$(date +%s)" -ge "$deadline" ]; then
+              echo "Timed out waiting for Vite dev server" >&2
+              exit 1
+            fi
+            if ! kill -0 "$DEV_PID" 2>/dev/null; then
+              echo "frontend-dev process exited prematurely" >&2
+              exit 1
+            fi
+            sleep 5
+          done
+
+          echo "Vite dev server is responding."
+
+          # Confirm Vite is actually serving an HTML page, not a placeholder.
+          if ! curl -fsS http://localhost:5173/ | grep -qi '<html'; then
+            echo "Response did not look like an HTML page" >&2
+            exit 1
+          fi
+
+      - name: Upload dev server logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dev-logs-macos
+          path: /tmp/frontend-dev-logs
