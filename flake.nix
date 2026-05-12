@@ -15,6 +15,11 @@
     };
 
     nixos-generators.url = "github:nix-community/nixos-generators";
+
+    pnpm2nix-nzbr = {
+      url = "github:FliegendeWurst/pnpm2nix-nzbr";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -226,11 +231,13 @@
           frontend =
             (pkgsLinux.callPackage ./packages/frontend/default.nix {
               inherit inputs rustToolchainLinux self;
+              pnpm2nix = inputs.pnpm2nix-nzbr;
             }).package;
 
           frontend-tests =
             (pkgsLinux.callPackage ./packages/frontend/default.nix {
               inherit inputs rustToolchainLinux self;
+              pnpm2nix = inputs.pnpm2nix-nzbr;
             }).tests;
 
           rust-docs = pkgsLinux.callPackage ./infrastructure/rust-docs.nix {

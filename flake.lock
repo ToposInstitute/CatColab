@@ -115,6 +115,24 @@
         "type": "github"
       }
     },
+    "flake-utils": {
+      "inputs": {
+        "systems": "systems_3"
+      },
+      "locked": {
+        "lastModified": 1701680307,
+        "narHash": "sha256-kAuep2h5ajznlPMD9rnQyffWG8EM/C73lejGofXvdM8=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "4022d587cbbfd70fe950c1e2083a02621806a725",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
     "home-manager": {
       "inputs": {
         "nixpkgs": [
@@ -234,6 +252,27 @@
         "type": "github"
       }
     },
+    "pnpm2nix-nzbr": {
+      "inputs": {
+        "flake-utils": "flake-utils",
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1749022118,
+        "narHash": "sha256-7Qzmy1snKbxFBKoqUrfyxxmEB8rPxDdV7PQwRiAR01o=",
+        "owner": "FliegendeWurst",
+        "repo": "pnpm2nix-nzbr",
+        "rev": "35f88a41d29839b3989f31871263451c8e092cb1",
+        "type": "github"
+      },
+      "original": {
+        "owner": "FliegendeWurst",
+        "repo": "pnpm2nix-nzbr",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "agenix": "agenix",
@@ -241,7 +280,8 @@
         "deploy-rs": "deploy-rs",
         "fenix": "fenix",
         "nixos-generators": "nixos-generators",
-        "nixpkgs": "nixpkgs_4"
+        "nixpkgs": "nixpkgs_4",
+        "pnpm2nix-nzbr": "pnpm2nix-nzbr"
       }
     },
     "rust-analyzer-src": {
@@ -277,6 +317,21 @@
       }
     },
     "systems_2": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
+      }
+    },
+    "systems_3": {
       "locked": {
         "lastModified": 1681028828,
         "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
