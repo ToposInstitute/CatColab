@@ -42,10 +42,13 @@ impl ModalDblModelMapping {
         self.0.mor_generator_map.set(e, n)
     }
 
-    ///
+    /// This applies a mapping onto a given object in the domain, returning the corresponding
+    /// object in the codomain.
     pub fn apply_ob(&self, ob: ModalOb) -> Result<ModalOb, String> {
         match ob {
-            ModalOb::Generator(name) => self.0.apply_vertex(name.clone()).ok_or("!".to_string()),
+            ModalOb::Generator(name) => {
+                self.0.apply_vertex(name.clone()).ok_or("Vertex {name} not found".to_string())
+            }
             ModalOb::List(List, args) => args
                 .into_iter()
                 .map(|name| self.apply_ob(name.clone()))
@@ -53,6 +56,32 @@ impl ModalDblModelMapping {
                 .map(|args| ModalOb::List(List, args)),
             _ => todo!(),
         }
+    }
+
+    /// This checks if an object in the domain also exists in the model.
+    pub fn infer_missing(&mut self, domain_ob: Option<&ModalOb>, model_ob: ModalOb) {
+        if let Some(ob) = domain_ob {
+            let names: Vec<QualifiedName> = match ob {
+                ModalOb::Generator(name) => vec![name.clone()],
+                ModalOb::List(List, args) => {
+                    args.into_iter().filter_map(|ob| ob.clone().generator()).collect()
+                }
+                _ => todo!(),
+            };
+
+            for name in names {
+                if !self.0.is_vertex_assigned(&name) {
+                    match model_ob {
+                        ref ob @ ModalOb::Generator(_) => self.assign_ob(name, ob.clone()),
+                        ModalOb::List(_, ref args) => match args.as_slice() {
+                            [only] => self.assign_ob(name, only.clone()),
+                            rest => todo!(),
+                        },
+                        _ => todo!(),
+                    };
+                };
+            }
+        };
     }
 }
 
