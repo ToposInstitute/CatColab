@@ -19,7 +19,7 @@ jobs:
       - name: Install Nix
         uses: cachix/install-nix-action@v25
         with:
-          install_url: https://releases.nixos.org/nix/nix-2.29.2/install
+          install_url: https://releases.nixos.org/nix/nix-2.31.2/install
 
       - name: Configure Cachix
         uses: cachix/cachix-action@v14
@@ -55,7 +55,7 @@ jobs:
           # Generous timeout: cold Nix evaluation on macOS may build
           # catlog-wasm-browser, document-types-wasm, and catcolabApi from
           # source if Cachix lacks aarch64-darwin artifacts.
-          deadline=$(( $(date +%s) + 2000 ))
+          deadline=$(( $(date +%s) + 3500 ))
           until curl -fsS --max-time 5 http://localhost:5173/ > /dev/null; do
             if [ "$(date +%s)" -ge "$deadline" ]; then
               echo "Timed out waiting for Vite dev server" >&2
