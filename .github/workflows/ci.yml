@@ -137,6 +137,39 @@ jobs:
           pnpm --filter "./packages/*" run build:deps
           pnpm --filter "./packages/*" run ci
 
+  frontend_dom_tests:
+    name: frontend DOM tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      - name: Install NodeJS dependencies
+        run: pnpm install
+
+      - name: Install Rust toolchain from file
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          # Don't override flags in cargo config files.
+          rustflags: ""
+
+      - name: Build frontend dependencies
+        env:
+          SQLX_OFFLINE: "true"
+        run: pnpm --filter ./packages/frontend run build:deps
+
+      - name: Run frontend DOM tests
+        run: pnpm --filter ./packages/frontend run test:dom:ci
+
   build_nixos_system:
     name: build NixOS system
     runs-on: ubuntu-latest

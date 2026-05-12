@@ -1,4 +1,4 @@
-import type { Patch, Prop } from "@automerge/automerge";
+import type { Prop } from "@automerge/automerge";
 import type { DocHandle, DocHandleChangePayload } from "@automerge/automerge-repo";
 import {
     makeBlockMathInputRule,
@@ -54,6 +54,7 @@ import { getLinkFromHouseEvent, linkEditorPlugin } from "./link_editor";
 import { MathInlineView } from "./math_inline_view";
 import { type CustomSchema, proseMirrorAutomergeInit } from "./schema";
 import { activeHeading, initPlaceholderPlugin, isMarkActive } from "./utils";
+import { hasStructuralReplacement, wrapHandleForPath } from "./wrap_handle";
 
 import "katex/dist/katex.min.css";
 import "@benrbray/prosemirror-math/dist/prosemirror-math.css";
@@ -138,8 +139,15 @@ export const RichTextEditor = (
             return;
         }
 
+        // Pass a wrapper handle to `@automerge/prosemirror` so that its
+        // syncPlugin never sees `change` events whose patches structurally
+        // replace this editor's path (e.g. those produced by `load_snapshot` /
+        // undo/redo, which delete and recreate the notebook subtree). See
+        // `wrap_handle.ts` for the upstream bug this works around.
+        // oxlint-disable-next-line solid/reactivity -- path getter sampled lazily by wrapper
+        const wrappedHandle = wrapHandleForPath(props.handle, () => props.path);
         const { schema, pmDoc, automergePlugin } = proseMirrorAutomergeInit(
-            props.handle,
+            wrappedHandle,
             props.path,
         );
 
@@ -493,29 +501,5 @@ function TooltipButton(props: {
                 </button>
             </div>
         </Show>
-    );
-}
-
-/** True when `candidate` is a prefix of (or equal to) `target`. */
-function isPathPrefixOf(candidate: Prop[], target: Prop[]): boolean {
-    if (candidate.length > target.length) {
-        return false;
-    }
-    for (let i = 0; i < candidate.length; i++) {
-        if (candidate[i] !== target[i]) {
-            return false;
-        }
-    }
-    return true;
-}
-
-/**
- * Detect patches that indicate structural replacement of the text object or
- * one of its ancestors. `@automerge/prosemirror`'s `gatherPatches` skips these,
- * leaving the ProseMirror document out of sync with the Automerge state.
- */
-function hasStructuralReplacement(patches: Patch[], textPath: Prop[]): boolean {
-    return patches.some(
-        (p) => (p.action === "put" || p.action === "del") && isPathPrefixOf(p.path, textPath),
     );
 }
