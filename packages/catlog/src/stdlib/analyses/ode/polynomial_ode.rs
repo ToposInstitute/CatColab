@@ -1,5 +1,5 @@
 //! ODE analysis of models of the logic of systems of polynomial ODEs.
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt};
 
 use indexmap::IndexMap;
 use nalgebra::DVector;
@@ -63,19 +63,6 @@ impl Default for PolynomialODEAnalysis {
     }
 }
 
-/// TODO write docs.
-pub trait SuitableParameters: Ord + Clone {
-    /// TODO document.
-    // TODO : THINK ABOUT THIS!!!!!!!! IS THIS *REALLY* THE TRAIT THAT YOU WANT????????????????????
-    fn extract_qualified_name(&self) -> QualifiedName;
-}
-
-impl SuitableParameters for QualifiedName {
-    fn extract_qualified_name(&self) -> QualifiedName {
-        self.clone()
-    }
-}
-
 impl PolynomialODEAnalysis {
     /// Creates a system with symbolic coefficients.
     pub fn build_system(
@@ -122,9 +109,13 @@ impl PolynomialODEAnalysis {
     }
 
     // TODO: combine build_fancy_system into build_system ???
+    //       n.b. the only bit that's different is the `make_term` closure
 
     /// TODO: write docs.
-    pub fn build_fancy_system<T: SuitableParameters>(
+    // TODO: make sure to point out this fact that the assignment of a parameter from a name is
+    //       not necessarily unique (and very often isn't! e.g. for balanced or unbalanced-by-transition,
+    //       since the same coefficient will turn up in more than one place).
+    pub fn build_system_custom_parameters<T: Ord + Clone + fmt::Display>(
         &self,
         model: &ModalDblModel<NonUnital>,
         associated_parameters: HashMap<QualifiedName, T>,

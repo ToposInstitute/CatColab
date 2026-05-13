@@ -19,12 +19,13 @@ use tsify::Tsify;
 use super::{ODEAnalysis, Parameter};
 use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
-use crate::stdlib::analyses::ode::{PolynomialODEAnalysis, SuitableParameters};
+use crate::stdlib::analyses::ode::PolynomialODEAnalysis;
 use crate::stdlib::analyses::petri::transition_interface;
+use crate::zero::name_seg;
 use crate::zero::{QualifiedName, alg::Polynomial, name, rig::Monomial};
 use crate::{
     dbl::{
-        modal::{List, ModeApp},
+        modal::List,
         model::{DiscreteTabModel, FpDblModel, ModalDblModel, ModalOb, MutDblModel, TabEdge},
         theory::{ModalMorType, ModalObType, TabMorType, TabObType, Unital},
     },
@@ -111,27 +112,6 @@ pub enum Direction {
     OutgoingFlow,
 }
 
-impl SuitableParameters for FlowParameter {
-    fn extract_qualified_name(&self) -> QualifiedName {
-        match &self {
-            FlowParameter::Balanced { transition: trans } => trans.clone(),
-            FlowParameter::Unbalanced {
-                direction: _,
-                parameter: RateParameter::PerTransition { transition: trans },
-                // TODO: use the direction in the above!!!!!!
-            } => trans.clone(),
-            FlowParameter::Unbalanced {
-                direction: _,
-                parameter: RateParameter::PerPlace { transition: trans, place: _ },
-            } => {
-                trans.clone()
-                // TODO: use the direction in the above!!!!!!
-                // TODO: replace the above with something like trans.clone().snoc(output.clone().only())
-            }
-        }
-    }
-}
-
 impl fmt::Display for FlowParameter {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self {
@@ -166,52 +146,6 @@ impl fmt::Display for FlowParameter {
     }
 }
 
-/// Data defining an unbalanced mass-action ODE problem for a model.
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
-#[cfg_attr(
-    feature = "serde-wasm",
-    tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
-)]
-pub struct MassActionProblemData {
-    /// Whether or not mass is conserved.
-    #[cfg_attr(feature = "serde", serde(rename = "massConservationType"))]
-    pub mass_conservation_type: MassConservationType,
-
-    /// Map from morphism IDs to consumption rate coefficients (nonnegative reals),
-    /// for the balanced per transition case.
-    /// N.B. This is renamed to "rates" in catlog-wasm for backwards compatibility.
-    #[cfg_attr(feature = "serde", serde(rename = "rates"))]
-    transition_rates: HashMap<QualifiedName, f32>,
-
-    /// Map from morphism IDs to consumption rate coefficients (nonnegative reals),
-    /// for the unbalanced per transition case.
-    #[cfg_attr(feature = "serde", serde(rename = "transitionConsumptionRates"))]
-    transition_consumption_rates: HashMap<QualifiedName, f32>,
-
-    /// Map from morphism IDs to production rate coefficients (nonnegative reals),
-    /// for the unbalanced per transition case.
-    #[cfg_attr(feature = "serde", serde(rename = "transitionProductionRates"))]
-    transition_production_rates: HashMap<QualifiedName, f32>,
-
-    /// Map from morphism IDs to (map from input objects to consumption rate coefficients),
-    /// for the unbalanced per place case (nonnegative reals).
-    #[cfg_attr(feature = "serde", serde(rename = "placeConsumptionRates"))]
-    place_consumption_rates: HashMap<QualifiedName, HashMap<QualifiedName, f32>>,
-
-    /// Map from morphism IDs to (map from output objects to production rate coefficients),
-    /// for the unbalanced per place case (nonnegative reals).
-    #[cfg_attr(feature = "serde", serde(rename = "placeProductionRates"))]
-    place_production_rates: HashMap<QualifiedName, HashMap<QualifiedName, f32>>,
-
-    /// Map from object IDs to initial values (nonnegative reals).
-    #[cfg_attr(feature = "serde", serde(rename = "initialValues"))]
-    pub initial_values: HashMap<QualifiedName, f32>,
-
-    /// Duration of simulation.
-    pub duration: f32,
-}
-
 /// Mass-action ODE analysis for Petri nets.
 ///
 /// This struct implements the object part of the functorial semantics for reaction
@@ -240,23 +174,44 @@ impl PetriNetMassActionAnalysis {
         model: &ModalDblModel<Unital>,
         mass_conservation_type: MassConservationType,
     ) -> PolynomialSystem<QualifiedName, Parameter<FlowParameter>, i8> {
-        let theory = Rc::new(th_signed_polynomial_ode_system());
-        let ob_type = ModalObType::new(name("State"));
-        let pos_mor_type: ModalMorType = ModeApp::new(name("Contribution")).into();
-        let neg_mor_type: ModalMorType = ModeApp::new(name("NegativeContribution")).into();
+        // We will create ("derive") a model in the theory of signed polynomial ODE systems.
+        let ode_theory = Rc::new(th_signed_polynomial_ode_system());
+        let mut ode_model = ModalDblModel::new(ode_theory);
 
-        let mut ode_model = ModalDblModel::new(theory);
+        // We will apply `polynomial_ode::PolynomialODEAnalysis.build_system_custom_parameters()`
+        // to the `ode_model` that we create. Further documentation can be found in `polynomial_ode`.
+        let ode_analysis = PolynomialODEAnalysis::default();
+        let ode_ob_type = ode_analysis.variable_ob_type;
+        let ode_pos_cont_type = ode_analysis.positive_contribution_mor_type;
+        let ode_neg_cont_type = ode_analysis.negative_contribution_mor_type;
         let mut associated_parameters: HashMap<QualifiedName, FlowParameter> = HashMap::new();
 
+        // For every object in our Petri net (i.e. of type `place_ob_type`) we want to create
+        // an object in our ODE model (i.e. of type `ode_ob_type`).
         for ob in model.ob_generators_with_type(&self.place_ob_type) {
-            ode_model.add_ob(ob, ob_type.clone());
+            ode_model.add_ob(ob, ode_ob_type.clone());
         }
 
+        // For every morphism in our Petri net we want to create, not just morphisms in our
+        // ODE model (of the right sign), but also the desired parameter that should be used
+        // by `PolynomialODEAnalysis.build_system_custom_parameters()` when constructing the
+        // output of type PolynomialSystem<QualifiedName, Parameter<T>, i8>.
+        //
+        // Note that a single morphism in a Petri net gives rise to multiple morphisms in the
+        // derived model of signed polynomial ODE systems, according to its interface. For example,
+        // a single transition T: [a,b] -> [x,y] in `model` will give four morphisms in `ode_model`,
+        // namely two positive contributions (ab -> x , ab -> y) and two negative (ab -> a , ab -> b).
         for mor in model.mor_generators_with_type(&self.transition_mor_type) {
             let (inputs, outputs) = transition_interface(model, &mor);
             let term = ModalOb::List(List::Symmetric, inputs.clone());
 
             for input in inputs {
+                let input_place = input.clone().unwrap_generator();
+
+                // A parameter is constructed according to `mass_conservation_type`. Note again
+                // that this parameter need not be unique. Indeed, for every case apart from
+                // `MassConservationType::Unbalanced(RateGranularity::PerPlace)`, the same
+                // parameter will be constructed for each value of `input`.
                 let parameter: FlowParameter = match mass_conservation_type {
                     MassConservationType::Balanced => {
                         FlowParameter::Balanced { transition: mor.clone() }
@@ -270,19 +225,27 @@ impl PetriNetMassActionAnalysis {
                             direction: Direction::OutgoingFlow,
                             parameter: RateParameter::PerPlace {
                                 transition: mor.clone(),
-                                place: input.clone().unwrap_generator(),
+                                place: input_place.clone(),
                             },
                         },
                     },
                 };
 
-                let name = parameter.clone().extract_qualified_name();
+                // Due to the aforementioned fact that a single morphism in `model` gives multiple
+                // morphisms in `ode_model` (according to its interface), we need to give new names
+                // to each one. These names can be anything, but we opt to name the e.g. the morphism
+                // ab -> a (from the example above) "T.ToInput.a".
+                let name = mor.clone().snoc(name_seg("ToInput")).snoc(input_place.only().unwrap());
 
                 associated_parameters.insert(name.clone(), parameter);
-                ode_model.add_mor(name, term.clone(), input, neg_mor_type.clone());
+                ode_model.add_mor(name, term.clone(), input, ode_neg_cont_type.clone());
             }
 
+            // For outputs, we do the same as for inputs but create `Direction::IncomingFlow` parameters
+            // and `ode_pos_cont_type` contributions instead.
             for output in outputs {
+                let output_place = output.clone().unwrap_generator();
+
                 let parameter: FlowParameter = match mass_conservation_type {
                     MassConservationType::Balanced => {
                         FlowParameter::Balanced { transition: mor.clone() }
@@ -296,22 +259,24 @@ impl PetriNetMassActionAnalysis {
                             direction: Direction::IncomingFlow,
                             parameter: RateParameter::PerPlace {
                                 transition: mor.clone(),
-                                place: output.clone().unwrap_generator(),
+                                place: output_place.clone(),
                             },
                         },
                     },
                 };
 
-                let name = parameter.clone().extract_qualified_name();
+                let name =
+                    mor.clone().snoc(name_seg("ToOutput")).snoc(output_place.only().unwrap());
 
                 associated_parameters.insert(name.clone(), parameter);
-                ode_model.add_mor(name, term.clone(), output, pos_mor_type.clone());
+                ode_model.add_mor(name, term.clone(), output, ode_pos_cont_type.clone());
             }
         }
 
+        // Finally, build the system using
         let sys = PolynomialODEAnalysis::default()
-            .build_fancy_system::<FlowParameter>(&ode_model, associated_parameters);
-        sys
+            .build_system_custom_parameters::<FlowParameter>(&ode_model, associated_parameters);
+        sys.normalize()
     }
 }
 
@@ -419,6 +384,52 @@ impl StockFlowMassActionAnalysis {
 
         terms
     }
+}
+
+/// Data defining an unbalanced mass-action ODE problem for a model.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(
+    feature = "serde-wasm",
+    tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
+)]
+pub struct MassActionProblemData {
+    /// Whether or not mass is conserved.
+    #[cfg_attr(feature = "serde", serde(rename = "massConservationType"))]
+    pub mass_conservation_type: MassConservationType,
+
+    /// Map from morphism IDs to consumption rate coefficients (nonnegative reals),
+    /// for the balanced per transition case.
+    /// N.B. This is renamed to "rates" in catlog-wasm for backwards compatibility.
+    #[cfg_attr(feature = "serde", serde(rename = "rates"))]
+    transition_rates: HashMap<QualifiedName, f32>,
+
+    /// Map from morphism IDs to consumption rate coefficients (nonnegative reals),
+    /// for the unbalanced per transition case.
+    #[cfg_attr(feature = "serde", serde(rename = "transitionConsumptionRates"))]
+    transition_consumption_rates: HashMap<QualifiedName, f32>,
+
+    /// Map from morphism IDs to production rate coefficients (nonnegative reals),
+    /// for the unbalanced per transition case.
+    #[cfg_attr(feature = "serde", serde(rename = "transitionProductionRates"))]
+    transition_production_rates: HashMap<QualifiedName, f32>,
+
+    /// Map from morphism IDs to (map from input objects to consumption rate coefficients),
+    /// for the unbalanced per place case (nonnegative reals).
+    #[cfg_attr(feature = "serde", serde(rename = "placeConsumptionRates"))]
+    place_consumption_rates: HashMap<QualifiedName, HashMap<QualifiedName, f32>>,
+
+    /// Map from morphism IDs to (map from output objects to production rate coefficients),
+    /// for the unbalanced per place case (nonnegative reals).
+    #[cfg_attr(feature = "serde", serde(rename = "placeProductionRates"))]
+    place_production_rates: HashMap<QualifiedName, HashMap<QualifiedName, f32>>,
+
+    /// Map from object IDs to initial values (nonnegative reals).
+    #[cfg_attr(feature = "serde", serde(rename = "initialValues"))]
+    pub initial_values: HashMap<QualifiedName, f32>,
+
+    /// Duration of simulation.
+    pub duration: f32,
 }
 
 /// Substitutes numerical rate coefficients into a symbolic mass-action system.
