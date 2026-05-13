@@ -2,10 +2,15 @@ import download from "js-file-download";
 import CircleHelp from "lucide-solid/icons/circle-help";
 import Copy from "lucide-solid/icons/copy";
 import Download from "lucide-solid/icons/download";
-import { For, Match, Show, Switch } from "solid-js";
+import { useContext, For, Match, Show, Switch } from "solid-js";
+import { createMemo, createEffect } from "solid-js";
+import invariant from "tiny-invariant";
 
 import { BlockTitle, ErrorAlert, IconButton } from "catcolab-ui-components";
+import { elaborateModel, DblModelMap } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
+import { type ModelLibrary, ModelLibraryContext } from "../../model";
+import { getConfig } from "../../user/documents";
 import * as SQL from "./sql_types.ts";
 
 const copyToClipboard = (text: string) => navigator.clipboard.writeText(text);
@@ -67,12 +72,40 @@ export default function SQLSchemaAnalysis(
         title: string;
     },
 ) {
+
+    const configDoc = getConfig();
+    const models = useContext(ModelLibraryContext);
+    const otherModel = models?.useElaboratedModel(() => configDoc[0].refId);
+
+    const sqlBackend = createMemo(() => {
+        const entry = otherModel();
+        if (entry?.validatedModel.tag === "Valid") {
+            const gen = entry.validatedModel.model
+                .presentation()
+                .obGenerators.find((ob) => ob.label.includes("SQLBackend"));
+            if (!gen) return undefined;
+            const mor = entry.validatedModel.model
+                .presentation()
+                .morGenerators.find((m) => m.dom.content === gen.id);
+            return mor?.label?.join(".") as SQL.SQLBackend | undefined;
+        }
+    });
+
     const sql_script = () => {
         const model = props.liveModel.elaboratedModel();
         if (model) {
             return props.render(model, props.content.backend);
         }
     };
+
+    createEffect(() => {
+        const configBackend = sqlBackend();
+        if (configBackend) {
+            props.changeContent((content) => {
+                content.backend = configBackend as SQL.SQLBackend;
+            });
+        }
+    });
 
     const BackendConfig = () => (
         <div>
