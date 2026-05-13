@@ -16,7 +16,7 @@ use crate::{
         theory::NonUnital,
     },
     simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem},
-    zero::{alg::Polynomial, name, rig::Monomial, HasQualifiedName, QualifiedName},
+    zero::{QualifiedName, alg::Polynomial, name, rig::Monomial},
 };
 
 use super::{ODEAnalysis, Parameter};
@@ -68,17 +68,11 @@ pub trait SuitableParameters: Ord + Clone {
     /// TODO document.
     // TODO : THINK ABOUT THIS!!!!!!!! IS THIS *REALLY* THE TRAIT THAT YOU WANT????????????????????
     fn extract_qualified_name(&self) -> QualifiedName;
-
-    /// TODO document.
-    fn embed_qualified_name(name: QualifiedName) -> Self;
 }
 
 impl SuitableParameters for QualifiedName {
     fn extract_qualified_name(&self) -> QualifiedName {
         self.clone()
-    }
-    fn embed_qualified_name(name: QualifiedName) -> Self {
-        name
     }
 }
 
@@ -129,7 +123,7 @@ impl PolynomialODEAnalysis {
 
     // TODO: combine build_fancy_system into build_system ???
 
-    /// Creates a TODO write docs.
+    /// TODO: write docs.
     pub fn build_fancy_system<T: SuitableParameters>(
         &self,
         model: &ModalDblModel<NonUnital>,
@@ -151,14 +145,12 @@ impl PolynomialODEAnalysis {
 
             let term: Monomial<_, _> =
                 inputs.iter().cloned().map(|ob| (ob.unwrap_generator(), 1)).collect();
-            let term: Polynomial<_, _, _> =
-                [(Parameter::generator(associated_parameters
-                    .get(&mor)
-                    .unwrap_or(&T::embed_qualified_name(mor))
-                    .clone()),
-                term.clone())]
-                .into_iter()
-                .collect();
+            let term: Polynomial<_, _, _> = [(
+                Parameter::generator(associated_parameters.get(&mor).unwrap().clone()),
+                term.clone(),
+            )]
+            .into_iter()
+            .collect();
 
             Some((output.clone().unwrap_generator(), term))
         };
