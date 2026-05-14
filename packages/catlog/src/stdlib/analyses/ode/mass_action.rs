@@ -114,28 +114,28 @@ pub enum Direction {
 impl fmt::Display for FlowParameter {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self {
-            FlowParameter::Balanced { transition: trans } => {
+            Self::Balanced { transition: trans } => {
                 write!(f, "{}", trans)
             }
-            FlowParameter::Unbalanced {
+            Self::Unbalanced {
                 direction: Direction::IncomingFlow,
                 parameter: RateParameter::PerTransition { transition: trans },
             } => {
                 write!(f, "Incoming({})", trans)
             }
-            FlowParameter::Unbalanced {
+            Self::Unbalanced {
                 direction: Direction::IncomingFlow,
                 parameter: RateParameter::PerPlace { transition: trans, place: output },
             } => {
                 write!(f, "([{}]->{})", trans, output)
             }
-            FlowParameter::Unbalanced {
+            Self::Unbalanced {
                 direction: Direction::OutgoingFlow,
                 parameter: RateParameter::PerTransition { transition: trans },
             } => {
                 write!(f, "Outgoing({})", trans)
             }
-            FlowParameter::Unbalanced {
+            Self::Unbalanced {
                 direction: Direction::OutgoingFlow,
                 parameter: RateParameter::PerPlace { transition: trans, place: input },
             } => {
@@ -183,6 +183,8 @@ impl PetriNetMassActionAnalysis {
         let ode_ob_type = ode_analysis.variable_ob_type;
         let ode_pos_cont_type = ode_analysis.positive_contribution_mor_type;
         let ode_neg_cont_type = ode_analysis.negative_contribution_mor_type;
+
+        // The parameters for terms will be bespoke, according to the `mass_conservation_type`.
         let mut associated_parameters: HashMap<QualifiedName, FlowParameter> = HashMap::new();
 
         // For every object in our Petri net (i.e. of type `place_ob_type`) we want to create

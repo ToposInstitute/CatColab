@@ -156,16 +156,17 @@ impl ThSignedCategory {
         &self,
         model: &DblModel,
         data: analyses::ode::LotkaVolterraProblemData,
-    ) -> Result<ODEResult, String> {
-        Ok(ODEResult(
-            analyses::ode::SignedCoefficientBuilder::new(name("Object"))
-                .add_positive(Path::Id(name("Object")))
-                .add_negative(name("Negative").into())
-                .lotka_volterra_analysis(model.discrete()?, data)
-                .solve_with_defaults()
-                .map_err(|err| format!("{err:?}"))
-                .into(),
-        ))
+    ) -> Result<ODEResultWithEquations, String> {
+        lotka_volterra_simulation(model, data)
+    }
+
+    /// Simulate the Lotka-Volterra system derived from a model.
+    #[wasm_bindgen(js_name = "lotkaVolterraEquations")]
+    pub fn lotka_volterra_equations(
+        &self,
+        model: &DblModel,
+    ) -> Result<LatexEquations, String> {
+        lotka_volterra_equations(model)
     }
 
     /// Simulate the linear ODE system derived from a model.

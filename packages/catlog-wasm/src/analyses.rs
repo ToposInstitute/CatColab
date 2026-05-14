@@ -7,6 +7,8 @@ use catlog::simulate::ode::PolynomialSystem;
 use catlog::stdlib::analyses::ode;
 use catlog::zero::QualifiedName;
 
+use crate::latex::latex_mor_names_lotka_volterra;
+
 use super::latex::{LatexEquations, latex_mor_names, latex_mor_names_mass_action, latex_ob_names};
 use super::model::DblModel;
 use super::result::JsResult;
@@ -74,8 +76,8 @@ pub(crate) fn polynomial_ode_simulation(
     })
 }
 
-/// The mass-action analysis is currently implemented for Petri nets and stock-flow
-/// diagrams, and we can avoid some code reduplication by making this explicit.
+/// Mass-action analysis is currently implemented for Petri nets and stock-flow diagrams
+/// and we can avoid some code reduplication by making this explicit.
 pub enum MassActionAnalysisLogic {
     /// The modal theory of Petri nets.
     PetriNet,
@@ -137,6 +139,44 @@ pub(crate) fn mass_action_simulation(
     let latex_equations =
         sys_extended_scalars.map_variables(latex_ob_names(model)).to_latex_equations();
     let analysis = ode::into_mass_action_analysis(sys_extended_scalars, data);
+    let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
+    Ok(ODEResultWithEquations {
+        solution: ODEResult(solution.into()),
+        latex_equations: LatexEquations(latex_equations),
+    })
+}
+
+/// Generates the PolynomialSystem for Lotka-Volterra dynamics.
+fn lotka_volterra_system(
+    model: &DblModel,
+) -> Result<PolynomialSystem<QualifiedName, ode::Parameter<ode::LotkaVolterraParameter>, i8>, String> {
+    let realised_model = model.discrete()?;
+    let analysis = ode::CLDLotkaVolterraAnalysis::default();
+    Ok(analysis.build_system(realised_model))
+}
+
+/// Generates Lotka-Volterra equations for the system.
+pub(crate) fn lotka_volterra_equations(
+    model: &DblModel,
+) -> Result<LatexEquations, String> {
+    let sys = lotka_volterra_system(model);
+    let equations = sys?
+        .map_variables(latex_ob_names(model))
+        .extend_scalars(|param| param.map_variables(latex_mor_names_lotka_volterra(model)))
+        .to_latex_equations();
+    Ok(LatexEquations(equations))
+}
+
+/// Simulates Lotka-Volterra ODEs.
+pub(crate) fn lotka_volterra_simulation(
+    model: &DblModel,
+    data: ode::LotkaVolterraProblemData,
+) -> Result<ODEResultWithEquations, String> {
+    let sys = lotka_volterra_system(model);
+    let sys_extended_scalars = ode::extend_lotka_volterra_scalars(sys?, &data);
+    let latex_equations =
+        sys_extended_scalars.map_variables(latex_ob_names(model)).to_latex_equations();
+    let analysis = ode::into_lotka_volterra_analysis(sys_extended_scalars, data);
     let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
     Ok(ODEResultWithEquations {
         solution: ODEResult(solution.into()),
