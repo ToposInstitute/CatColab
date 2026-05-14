@@ -43,15 +43,20 @@ impl<'a> Evaluator<'a> {
         RecordV::new(self.env.clone(), fields.clone(), Dtry::empty())
     }
 
+    /// Pass-through method for looking up names in the toplevel.
+    fn lookup(&self, name: TopVarName) -> Option<&TopDecl> {
+        self.toplevel.lookup(&name)
+    }
+
     /// Evaluate type syntax to produce a type value.
     ///
     /// Assumes that the type syntax is well-formed and well-scoped with respect
     /// to self.env.
     pub fn eval_ty(&self, ty: &TyS) -> TyV {
         match &**ty {
-            TyS_::TopVar(tv) => match self.toplevel.declarations.get(tv).unwrap() {
-                TopDecl::Type(t) => t.val.clone(),
-                TopDecl::Diag(d) => d.body_val.clone(),
+            TyS_::TopVar(tv) => match self.lookup(tv) {
+                Some(TopDecl::Type(t)) => t.val.clone(),
+                Some(TopDecl::Diag(d)) => d.body_val.clone(),
                 _ => panic!("top-level {tv} should be a type or diagram declaration"),
             },
             TyS_::Object(ot) => TyV::object(ot.clone()),
@@ -80,12 +85,10 @@ impl<'a> Evaluator<'a> {
     /// to self.env.
     pub fn eval_tm(&self, tm: &TmS) -> TmV {
         match &**tm {
-            TmS_::TopVar(tv) => {
-                self.toplevel.declarations.get(tv).unwrap().clone().unwrap_const().val
-            }
+            TmS_::TopVar(tv) => self.lookup(tv).and_then(|n| n.unwrap_const().val),
             TmS_::TopApp(tv, args_s) => {
                 let env = Env::nil().extend_by(args_s.iter().map(|arg_s| self.eval_tm(arg_s)));
-                let def = self.toplevel.declarations.get(tv).unwrap().clone().unwrap_def();
+                let def = self.lookup(tv).and_then(|n| n.unwrap_def());
                 self.with_env(env).eval_tm(&def.body)
             }
             TmS_::Var(i, _, _) => self.env.get(**i).cloned().unwrap(),
@@ -273,11 +276,7 @@ impl<'a> Evaluator<'a> {
     pub fn convertible_ty<'b>(&self, ty1: &TyV, ty2: &TyV) -> Result<(), D<'b>> {
         match (&**ty1, &**ty2) {
             (TyV_::Object(ot1), TyV_::Object(ot2)) => {
-                if ot1 == ot2 {
-                    Ok(())
-                } else {
-                    Err(t(format!("object types {ot1} and {ot2} are not equal")))
-                }
+                (ot1 == ot2).is_ok_or(Err(t(format!("object types {ot1} and {ot2} are not equal"))))
             }
             (TyV_::Morphism(mt1, dom1, cod1), TyV_::Morphism(mt2, dom2, cod2)) => {
                 if mt1 != mt2 {
@@ -307,11 +306,7 @@ impl<'a> Evaluator<'a> {
             (_, TyV_::Sing(ty2, _)) => self.convertible_ty(ty1, ty2),
             (TyV_::Unit, TyV_::Unit) => Ok(()),
             (TyV_::Over(p1), TyV_::Over(p2)) => {
-                if p1 == p2 {
-                    Ok(())
-                } else {
-                    Err(t("over-types refer to different paths in the codomain"))
-                }
+                (p1 == p2).is_ok_or(Err(t("over-types refer to different paths in the codomain")))
             }
             _ => Err(t("tried to convert between types of different type constructors")),
         }
@@ -397,17 +392,11 @@ impl<'a> Evaluator<'a> {
             (_, TmV_::Neu(n2, ty2)) if !strict2 => {
                 self.equal_tm_helper(tm1, &self.eta_neu(n2, ty2), strict1, true)
             }
-            (TmV_::Neu(n1, _), TmV_::Neu(n2, _)) => {
-                if n1 == n2 {
-                    Ok(())
-                } else {
-                    Err(t(format!(
-                        "Neutrals {} and {} are not equal.",
-                        self.quote_neu(n1),
-                        self.quote_neu(n2)
-                    )))
-                }
-            }
+            (TmV_::Neu(n1, _), TmV_::Neu(n2, _)) => (n1 == n2).is_ok_or(Err(t(format!(
+                "Neutrals {} and {} are not equal.",
+                self.quote_neu(n1),
+                self.quote_neu(n2)
+            )))),
             (TmV_::Cons(fields1), TmV_::Cons(fields2)) => {
                 for ((_, (_, tm1)), (_, (_, tm2))) in fields1.iter().zip(fields2.iter()) {
                     self.equal_tm_helper(tm1, tm2, strict1, strict2)?
@@ -416,11 +405,7 @@ impl<'a> Evaluator<'a> {
             }
             (TmV_::Tt, TmV_::Tt) => Ok(()),
             (TmV_::Meta(mv1), TmV_::Meta(mv2)) => {
-                if mv1 == mv2 {
-                    Ok(())
-                } else {
-                    Err(t(format!("Holes {} and {} are not equal.", mv1, mv2)))
-                }
+                (mv1 == mv2).is_ok_or(Err(t(format!("Holes {} and {} are not equal.", mv1, mv2))))
             }
             (TmV_::Id(x1), TmV_::Id(x2)) => self.equal_tm_helper(x1, x2, strict1, strict2),
             (TmV_::Compose(f1, g1), TmV_::Compose(f2, g2)) => {
