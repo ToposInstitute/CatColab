@@ -346,26 +346,6 @@ impl ThCategorySignedLinks {
     pub fn theory(&self) -> DblTheory {
         DblTheory(self.0.clone().into())
     }
-
-    /// Simulates the mass-action ODE system derived from a model.
-    #[wasm_bindgen(js_name = "massAction")]
-    pub fn mass_action(
-        &self,
-        model: &DblModel,
-        data: analyses::ode::MassActionProblemData,
-    ) -> Result<ODEResultWithEquations, String> {
-        mass_action_simulation(model, data, MassActionAnalysisLogic::StockFlow)
-    }
-
-    /// Returns the symbolic mass-action equations in LaTeX format.
-    #[wasm_bindgen(js_name = "massActionEquations")]
-    pub fn mass_action_equations(
-        &self,
-        model: &DblModel,
-        data: MassActionEquationsData,
-    ) -> Result<LatexEquations, String> {
-        mass_action_equations(model, data, MassActionAnalysisLogic::StockFlow)
-    }
 }
 
 /// The theory of strict symmetric monoidal categories.

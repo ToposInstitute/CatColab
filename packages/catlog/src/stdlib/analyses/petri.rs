@@ -4,6 +4,11 @@ use crate::dbl::model::{ModalDblModel, ModalOb, MutDblModel};
 use crate::dbl::theory::Unital;
 use crate::zero::QualifiedName;
 
+pub struct TransitionInterface {
+    pub input_places: Vec<ModalOb>,
+    pub output_places: Vec<ModalOb>,
+}
+
 /// Gets the inputs and outputs of a transition in a Petri net.
 pub fn transition_interface(
     model: &ModalDblModel<Unital>,

@@ -81,8 +81,7 @@ impl PolynomialODEAnalysis {
             associated_parameters.insert(mor.clone(), mor.clone());
         }
 
-        let sys = self.build_system_custom_parameters::<QualifiedName>(model, associated_parameters);
-        sys
+        self.build_system_custom_parameters::<QualifiedName>(model, associated_parameters)
     }
 
     /// Creates a `PolynomialSystem` with symbolic coefficients of some generic type.
