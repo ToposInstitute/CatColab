@@ -1,11 +1,10 @@
-//! Diagrams in models of a modal double theory
+//! Diagrams in models of a modal double theory.
 
 #[cfg(feature = "serde-wasm")]
 use tsify::declare;
 
-// TODO use super
 use crate::dbl::{
-    modal::{ModalDblModelMapping, ModalOb},
+    modal::ModalDblModelMapping,
     model::{InvalidDblModel, ModalDblModel, MutDblModel},
     model_diagram::*,
     model_morphism::{DblModelMorphism, InvalidDblModelMorphism},
@@ -16,7 +15,7 @@ use crate::one::{
     graph::GraphMapping,
 };
 use crate::validate;
-use crate::zero::{column::Mapping, QualifiedName};
+use crate::zero::{QualifiedName, column::Mapping};
 
 use itertools::Either;
 use nonempty::NonEmpty;
@@ -60,7 +59,6 @@ impl ModalDblModelDiagram {
     pub fn infer_missing_from(&mut self, model: &ModalDblModel<Unital>) {
         let (mapping, domain) = self.into();
         domain.infer_missing();
-        // TODO is_vertex_assigned is expected QualifiedName but we git it ModalOb
         for e in domain.mor_generators() {
             let Some(g) = mapping.0.edge_map().apply_to_ref(&e) else {
                 continue;
@@ -157,7 +155,6 @@ mod tests {
         assert_eq!(diagram.validate_in(&dec), err);
     }
 
-    // TODO
     #[test]
     fn infer_modal_model_diagram() {
         let th = Rc::new(th_multicategory());

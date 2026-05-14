@@ -105,17 +105,22 @@ impl<Kind: DblTheoryKind> ModalDblModel<Kind> {
         Computad::new(ModalDblModelObs::ref_cast(self), &self.mor_generators)
     }
 
-    /// TODO
+    /// Infers missing data in the model, where possible.
+    ///
+    /// Objects used in the domain or codomain of morphisms, but not contained as
+    /// objects of the model, are added and their types are inferred. It is not
+    /// always possible to do this consistently, so it is important to `validate`
+    /// the model even after calling this method.
     pub fn infer_missing(&mut self) {
         let edges: Vec<_> = self.mor_generators().collect();
         for e in edges {
-            if let Some(x) = self.get_dom(&e).clone().filter(|x| !self.has_ob(x)) {
+            if let Some(x) = self.get_dom(&e).filter(|x| !self.has_ob(x)) {
                 let ob_type = self.theory.src(&self.mor_generator_type(&e));
                 if let Some(id) = x.clone().generator() {
                     self.add_ob(id.clone(), ob_type)
                 };
             }
-            if let Some(x) = self.get_cod(&e).clone().filter(|x| !self.has_ob(x)) {
+            if let Some(x) = self.get_cod(&e).filter(|x| !self.has_ob(x)) {
                 let ob_type = self.theory.tgt(&self.mor_generator_type(&e));
                 if let Some(id) = x.clone().generator() {
                     self.add_ob(id.clone(), ob_type)
@@ -437,7 +442,7 @@ impl<Kind: DblTheoryKind> ModalDblModel<Kind> {
     // TODO
     /// Iterates over failures of model to be well defined.
     pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidDblModel> + '_ {
-        type Invalid = InvalidDblModel;
+        // type Invalid = InvalidDblModel;
         vec![].into_iter()
     }
 }
