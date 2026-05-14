@@ -16,7 +16,7 @@ pub struct FlowInterface {
     pub output_stock: TabOb,
 }
 
-/// Gets the inputs (including links) of a flow in a stock-flow diagram.
+/// Gets the inputs (including links) and output of a flow in a stock-flow diagram.
 pub fn flow_interface(model: &DiscreteTabModel, flow: &QualifiedName) -> FlowInterface {
     let dom = model.mor_generator_dom(flow);
     let cod = model.mor_generator_cod(flow);
@@ -24,6 +24,8 @@ pub fn flow_interface(model: &DiscreteTabModel, flow: &QualifiedName) -> FlowInt
     let mut input_pos_link_doms: Vec<TabOb> = Vec::new();
     let mut input_neg_link_doms: Vec<TabOb> = Vec::new();
 
+    // Iterate over positive links and add them to the interface if their codomain is the
+    // link in question.
     for link in model.mor_generators_with_type(&TabMorType::Basic(name("Link"))) {
         let dom = model.mor_generator_dom(&link);
         let path = model.mor_generator_cod(&link).unwrap_tabulated();
@@ -35,6 +37,8 @@ pub fn flow_interface(model: &DiscreteTabModel, flow: &QualifiedName) -> FlowInt
         };
     }
 
+    // Iterate over negative links and add them to the interface if their codomain is the
+    // link in question.
     for link in model.mor_generators_with_type(&TabMorType::Basic(name("NegativeLink"))) {
         let dom = model.mor_generator_dom(&link);
         let path = model.mor_generator_cod(&link).unwrap_tabulated();

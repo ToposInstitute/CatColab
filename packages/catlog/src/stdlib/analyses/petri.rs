@@ -13,7 +13,7 @@ pub struct TransitionInterface {
 pub fn transition_interface(
     model: &ModalDblModel<Unital>,
     id: &QualifiedName,
-) -> (Vec<ModalOb>, Vec<ModalOb>) {
+) -> TransitionInterface {
     let inputs = model
         .get_dom(id)
         .and_then(|ob| ob.clone().collect_product(None))
@@ -22,5 +22,8 @@ pub fn transition_interface(
         .get_cod(id)
         .and_then(|ob| ob.clone().collect_product(None))
         .unwrap_or_default();
-    (inputs, outputs)
+    TransitionInterface {
+        input_places: inputs,
+        output_places: outputs,
+    }
 }

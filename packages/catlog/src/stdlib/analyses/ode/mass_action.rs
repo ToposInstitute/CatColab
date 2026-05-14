@@ -18,7 +18,7 @@ use tsify::Tsify;
 use super::{ODEAnalysis, Parameter};
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
 use crate::stdlib::analyses::ode::PolynomialODEAnalysis;
-use crate::stdlib::analyses::petri::transition_interface;
+use crate::stdlib::analyses::petri::{TransitionInterface, transition_interface};
 use crate::stdlib::analyses::stock_flow::{FlowInterface, flow_interface};
 use crate::zero::name_seg;
 use crate::zero::{QualifiedName, name};
@@ -201,7 +201,11 @@ impl PetriNetMassActionAnalysis {
         // a single transition T: [a,b] -> [x,y] in `model` will give four morphisms in `ode_model`,
         // namely two positive contributions (ab -> x , ab -> y) and two negative (ab -> a , ab -> b).
         for transition in model.mor_generators_with_type(&self.transition_mor_type) {
-            let (inputs, outputs) = transition_interface(model, &transition);
+            let transition_interface: TransitionInterface =
+                transition_interface(model, &transition);
+            let inputs = transition_interface.input_places.clone();
+            let outputs = transition_interface.output_places.clone();
+
             let term = ModalOb::List(List::Symmetric, inputs.clone());
 
             for input in inputs {
@@ -371,9 +375,14 @@ impl StockFlowMassActionAnalysis {
                 .map(|ob| ModalOb::Generator(ob.clone().unwrap_basic()))
                 .collect();
             pos_inputs.push(dom_object.clone());
-            let term = ModalOb::List(List::Symmetric, pos_inputs.clone());
 
-            // TODO: negative exponent inputs!
+            let mut _neg_inputs: Vec<ModalOb> = flow_interface
+                .input_neg_link_doms
+                .iter()
+                .map(|ob| ModalOb::Generator(ob.clone().unwrap_basic()))
+                .collect();
+
+            let term = ModalOb::List(List::Symmetric, pos_inputs.clone());
 
             ode_model.add_mor(dom_name, term.clone(), dom_object, ode_neg_cont_type.clone());
             ode_model.add_mor(cod_name, term.clone(), cod_object, ode_pos_cont_type.clone());
