@@ -167,7 +167,8 @@ pub fn sir_petri(th: Rc<ModalDblTheory<Unital>>) -> ModalDblModel<Unital> {
     model
 }
 
-/// An example of (unsigned) Lotka–Volterra dynamics viewed as a non-unital theory for a symmetric multicategory.
+/// An example of (unsigned) Lotka–Volterra dynamics viewed as a non-unital theory for
+/// a symmetric multicategory.
 pub fn unsigned_lotka_volterra_dynamics(
     th: Rc<ModalDblTheory<NonUnital>>,
 ) -> ModalDblModel<NonUnital> {
@@ -175,7 +176,8 @@ pub fn unsigned_lotka_volterra_dynamics(
     let mor_type: ModalMorType = ModeApp::new(name("Contribution")).into();
 
     let mut model = ModalDblModel::new(th);
-    // A two-level predator-prey model, but where (in absence of signed arrows) all interactions have positive coefficients.
+    // A two-level predator-prey model, but where (in absence of signed arrows) all
+    // interactions have positive coefficients.
     let (a, b, c) = (name("A"), name("B"), name("C"));
 
     model.add_ob(a.clone(), ob_type.clone());
