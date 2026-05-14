@@ -235,6 +235,8 @@ pub fn lotka_volterra_dynamics(th: Rc<ModalDblTheory<NonUnital>>) -> ModalDblMod
     model
 }
 
+/// The forms and operations of the two-dimensional Discrete Exterior Calculus viewed as a model of
+/// a modal double theory.
 pub fn dec(th: Rc<ModalDblTheory<Unital>>) -> ModalDblModel<Unital> {
     let ob_type = ModalObType::new(name("Object"));
     let mut model = ModalDblModel::new(th);
@@ -258,13 +260,13 @@ pub fn dec(th: Rc<ModalDblTheory<Unital>>) -> ModalDblModel<Unital> {
     for (dim, form) in forms.clone().into_iter().enumerate() {
         model.add_mor(
             name(format!("partial_t{dim}").as_str()),
-            ModalOb::List(List::Plain, vec![ModalOb::Generator(form.clone()).into()]),
+            ModalOb::List(List::Plain, vec![ModalOb::Generator(form.clone())]),
             ModalOb::Generator(form.clone()),
             ModalMorType::Zero(ob_type.clone()),
         );
         model.add_mor(
             name(format!("hodge_{dim}").as_str()),
-            ModalOb::List(List::Plain, vec![ModalOb::Generator(form.clone()).into()]),
+            ModalOb::List(List::Plain, vec![ModalOb::Generator(form.clone())]),
             ModalOb::Generator(dualforms[3 - dim - 1].clone()),
             ModalMorType::Zero(ob_type.clone()),
         );
@@ -292,7 +294,7 @@ pub fn dec(th: Rc<ModalDblTheory<Unital>>) -> ModalDblModel<Unital> {
 
     for (i, form1) in forms.iter().enumerate() {
         for (j, form2) in forms.iter().enumerate() {
-            if !(i < j) || (i + j > 2) {
+            if (i >= j) || (i + j > 2) {
                 continue;
             }
             model.add_mor(

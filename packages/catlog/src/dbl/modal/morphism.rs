@@ -5,15 +5,16 @@ use crate::dbl::model::MutDblModel;
 use crate::dbl::model_morphism::{DblModelMorphism, InvalidDblModelMorphism};
 use crate::dbl::theory::Unital;
 use crate::one::{
-    category::{Category, FgCategory},
-    graph::GraphMapping, // TODO
     FpFunctorData,
+    category::{Category, FgCategory},
+    graph::GraphMapping,
 };
 use crate::validate::{self, Validate};
 use crate::zero::{HashColumn, Mapping, MutMapping, QualifiedName};
 
 use nonempty::NonEmpty;
 
+/// A mapping between models of a modal double theory.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct ModalDblModelMapping(pub ModalDblModelMappingData);
 
@@ -49,12 +50,14 @@ impl ModalDblModelMapping {
             ModalOb::Generator(name) => {
                 self.0.apply_vertex(name.clone()).ok_or("Vertex {name} not found".to_string())
             }
-            ModalOb::List(List, args) => args
+            ModalOb::App(_, name) => {
+                self.0.apply_vertex(name.clone()).ok_or("Vertex {name} not found".to_string())
+            }
+            ModalOb::List(list, args) => args
                 .into_iter()
                 .map(|name| self.apply_ob(name.clone()))
                 .collect::<Result<Vec<ModalOb>, String>>()
-                .map(|args| ModalOb::List(List, args)),
-            _ => todo!(),
+                .map(|args| ModalOb::List(list, args)),
         }
     }
 
@@ -63,21 +66,21 @@ impl ModalDblModelMapping {
         if let Some(ob) = domain_ob {
             let names: Vec<QualifiedName> = match ob {
                 ModalOb::Generator(name) => vec![name.clone()],
-                ModalOb::List(List, args) => {
-                    args.into_iter().filter_map(|ob| ob.clone().generator()).collect()
+                ModalOb::App(_, name) => vec![name.clone()],
+                ModalOb::List(_, args) => {
+                    args.iter().filter_map(|ob| ob.clone().generator()).collect()
                 }
-                _ => todo!(),
             };
 
             for name in names {
                 if !self.0.is_vertex_assigned(&name) {
                     match model_ob {
                         ref ob @ ModalOb::Generator(_) => self.assign_ob(name, ob.clone()),
+                        ref ob @ ModalOb::App(_, _) => self.assign_ob(name, ob.clone()),
                         ModalOb::List(_, ref args) => match args.as_slice() {
                             [only] => self.assign_ob(name, only.clone()),
-                            rest => todo!(),
+                            _ => todo!("What happens when we receive more than one arg?"),
                         },
-                        _ => todo!(),
                     };
                 };
             }
@@ -86,7 +89,7 @@ impl ModalDblModelMapping {
 }
 
 /// A morphism between models of a modal double theory.
-/// TODO kinds are fixed
+// TODO kinds are fixed
 pub type ModalDblModelMorphism<'a> =
     DblModelMorphism<'a, ModalDblModelMapping, ModalDblModel<Unital>, ModalDblModel<Unital>>;
 
@@ -109,7 +112,7 @@ impl<'a> ModalDblModelMorphism<'a> {
         });
 
         let mor_errors = dom.mor_generators().filter_map(|e| {
-            /// Check if the morphism is correct.
+            // Check if the morphism is correct.
             let f = match mapping.0.edge_map().apply_to_ref(&e) {
                 Some(ModalMor::Generator(f)) if cod.has_mor(&ModalMor::Generator(f.clone())) => f,
                 Some(ModalMor::Generator(f)) => return Some(InvalidDblModelMorphism::Mor(f)),
@@ -118,15 +121,17 @@ impl<'a> ModalDblModelMorphism<'a> {
 
             let dom_check = dom.get_dom(&e).zip(cod.get_dom(&f)).and_then(|(left, right)| {
                 (mapping.apply_ob(left.clone()) != Ok(right.clone()))
-                    .then(|| InvalidDblModelMorphism::Dom(e.clone()).into())
+                    .then_some(InvalidDblModelMorphism::Dom(e.clone()))
             });
 
             let cod_check = dom.get_cod(&e).zip(cod.get_cod(&f)).and_then(|(left, right)| {
                 (mapping.apply_ob(left.clone()) != Ok(right.clone()))
-                    .then(|| InvalidDblModelMorphism::Cod(e).into())
+                    .then_some(InvalidDblModelMorphism::Cod(e))
             });
 
-            return dom_check.or(cod_check);
+            // we're short-circuiting errors here. i'd like to collect them into one error message
+            // in the future
+            dom_check.or(cod_check)
         });
 
         ob_errors.chain(mor_errors)
