@@ -16,7 +16,7 @@ stochastic = ["dep:rebop"]
 all-the-same = "1.1.0"
 bwd = "0.2.1"
 derivative = "2"
-derive_more = { version = "2", features = ["constructor", "deref", "from", "into", "try_into"] }
+derive_more = { version = "2", features = ["constructor", "deref", "from", "into", "try_into", "display"] }
 duplicate = "2"
 egglog = { version = "2.0.0", default-features = false }
 ego-tree = "0.10"
@@ -41,6 +41,7 @@ wasm-bindgen = { version = "0.2.100", optional = true }
 catcolab-document-types = { version = "0.1.0", path = "../document-types" }
 sea-query = { version = "0.32.7", optional = true }
 sqlformat = { version = "0.5.0", optional = true }
+textwrap = "0.16.2"
 
 [dev-dependencies]
 clap = { version = "4.5.47", features = ["derive"] }
