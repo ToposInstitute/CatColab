@@ -3,10 +3,10 @@
 //! The main entry point for this module is
 //! [`lotka_volterra_analysis`](SignedCoefficientBuilder::lotka_volterra_analysis).
 
+use indexmap::IndexMap;
 use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
-use indexmap::IndexMap;
 
 use nalgebra::DVector;
 #[cfg(feature = "serde")]
@@ -21,19 +21,22 @@ use crate::one::Path;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
 use crate::stdlib::analyses::ode::{ODEAnalysis, PolynomialODEAnalysis};
 use crate::stdlib::th_signed_polynomial_ode_system;
-use crate::zero::{name, name_seg};
+use crate::zero::name;
 use crate::{dbl::model::DiscreteDblModel, one::QualifiedPath, zero::QualifiedName};
 
-/// TODO: documentation
+/// Parameters in the Lotka-Volterra equations come in two flavours, corresponding to
+/// either variables or links.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub enum LotkaVolterraParameter {
+    /// The parameter associated to a variable.
     Growth {
+        /// The variable.
         variable: QualifiedName,
     },
+    /// The parameter associated to a link.
     Interaction {
-        source: QualifiedName,
+        /// The link.
         link: QualifiedName,
-        target: QualifiedName,
     },
 }
 
@@ -43,8 +46,8 @@ impl fmt::Display for LotkaVolterraParameter {
             Self::Growth { variable } => {
                 write!(f, "Growth({})", variable)
             }
-            Self::Interaction { source, link, target } => {
-                write!(f, "Interaction({}: {} -> {})", link, source, target)
+            Self::Interaction { link } => {
+                write!(f, "Interaction({})", link)
             }
         }
     }
@@ -96,16 +99,18 @@ impl CLDLotkaVolterraAnalysis {
         // Each variable in the CLD gives a variable in the ODE system *as well as*
         // its growth contribution: (d/dt)x += x.
         for var in model.ob_generators_with_type(&self.var_ob_type) {
+            // for var in model.ob_generators_with_type(&self.var_ob_type) {
             // Add the variable to the ODE system.
             ode_model.add_ob(var.clone(), ode_ob_type.clone());
 
             // Add the growth contribution to the ODE system.
             let var_object = ModalOb::Generator(var.clone());
+            let var_term = ModalOb::List(List::Symmetric, vec![var_object.clone()]);
             let var_parameter = LotkaVolterraParameter::Growth { variable: var.clone() };
-            let var_name = var.clone().snoc(name_seg("Growth"));
+            let var_name = var;
 
             associated_parameters.insert(var_name.clone(), var_parameter);
-            ode_model.add_mor(var_name, var_object.clone(), var_object, ode_pos_cont_type.clone());
+            ode_model.add_mor(var_name, var_term.clone(), var_object, ode_pos_cont_type.clone());
         }
 
         // Links in the CLD give contributions to the ODEs governing their *codomain*, namely
@@ -118,11 +123,9 @@ impl CLDLotkaVolterraAnalysis {
             let cod_object = ModalOb::Generator(cod.clone());
 
             let term = ModalOb::List(List::Symmetric, vec![dom_object.clone(), cod_object.clone()]);
-            let interaction_parameter =
-                LotkaVolterraParameter::Interaction { source: dom.clone(), link, target: cod.clone() };
-            let interaction_name =
-                dom.clone().snoc(name_seg("Increases")).snoc(cod.clone().only().unwrap());
-            
+            let interaction_parameter = LotkaVolterraParameter::Interaction { link: link.clone() };
+            let interaction_name = link;
+
             associated_parameters.insert(interaction_name.clone(), interaction_parameter);
             ode_model.add_mor(interaction_name, term, cod_object, ode_pos_cont_type.clone());
         }
@@ -133,10 +136,8 @@ impl CLDLotkaVolterraAnalysis {
             let cod_object = ModalOb::Generator(cod.clone());
 
             let term = ModalOb::List(List::Symmetric, vec![dom_object.clone(), cod_object.clone()]);
-            let interaction_parameter =
-                LotkaVolterraParameter::Interaction { source: dom.clone(), link, target: cod.clone() };
-            let interaction_name =
-                dom.clone().snoc(name_seg("Decreases")).snoc(cod.clone().only().unwrap());
+            let interaction_parameter = LotkaVolterraParameter::Interaction { link: link.clone() };
+            let interaction_name = link;
 
             associated_parameters.insert(interaction_name.clone(), interaction_parameter);
             ode_model.add_mor(interaction_name, term, cod_object, ode_neg_cont_type.clone());
@@ -181,9 +182,9 @@ pub fn extend_lotka_volterra_scalars(
             LotkaVolterraParameter::Growth { variable } => {
                 data.growth_rates.get(variable).cloned().unwrap_or_default()
             }
-            LotkaVolterraParameter::Interaction { source: _, link, target: _ } => {
+            LotkaVolterraParameter::Interaction { link } => {
                 data.interaction_coeffs.get(link).cloned().unwrap_or_default()
-            },
+            }
         })
     });
 
@@ -221,11 +222,16 @@ mod test {
     #[test]
     fn predator_prey_symbolic() {
         let th = Rc::new(th_signed_category());
-        let neg_feedback = negative_feedback(th);
-        let sys = CLDLotkaVolterraAnalysis::default().build_system(&neg_feedback);
+        // let model = negative_feedback(th);
+        let mut model = DiscreteDblModel::new(th);
+        model.add_ob(name("x"), name("Object"));
+        model.add_ob(name("y"), name("Object"));
+        model.add_mor(name("positive"), name("x"), name("y"), Path::Id(name("Object")));
+        model.add_mor(name("negative"), name("y"), name("x"), name("Negative").into());
+        let sys = CLDLotkaVolterraAnalysis::default().build_system(&model);
         let expected = expect!([r#"
-            dx = Growth(x) x - Interaction(negative: y -> x) x y
-            dy = Interaction(positive: x -> y) x y + Growth(y) y
+            dx = Growth(x) x - Interaction(negative) x y
+            dy = Interaction(positive) x y + Growth(y) y
         "#]);
         expected.assert_eq(&sys.to_string());
     }
@@ -233,7 +239,7 @@ mod test {
     #[test]
     fn predator_prey_numerical() {
         let th = Rc::new(th_signed_category());
-        let neg_feedback = negative_feedback(th);
+        let model = negative_feedback(th);
 
         let data = LotkaVolterraProblemData {
             interaction_coeffs: [(name("positive"), 1.0), (name("negative"), 1.0)]
@@ -244,11 +250,11 @@ mod test {
             duration: 10.0,
         };
 
-        let sys = CLDLotkaVolterraAnalysis::default().build_system(&neg_feedback);
+        let sys = CLDLotkaVolterraAnalysis::default().build_system(&model);
         let analysis = extend_lotka_volterra_scalars(sys, &data);
         let expected = expect!([r#"
-            dx0 = 2 x0 - x0 x1
-            dx1 = x0 x1 - x1
+            dx = 2 x - x y
+            dy = x y - y
         "#]);
         expected.assert_eq(&analysis.to_string());
     }

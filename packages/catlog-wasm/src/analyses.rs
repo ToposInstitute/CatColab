@@ -149,16 +149,15 @@ pub(crate) fn mass_action_simulation(
 /// Generates the PolynomialSystem for Lotka-Volterra dynamics.
 fn lotka_volterra_system(
     model: &DblModel,
-) -> Result<PolynomialSystem<QualifiedName, ode::Parameter<ode::LotkaVolterraParameter>, i8>, String> {
+) -> Result<PolynomialSystem<QualifiedName, ode::Parameter<ode::LotkaVolterraParameter>, i8>, String>
+{
     let realised_model = model.discrete()?;
     let analysis = ode::CLDLotkaVolterraAnalysis::default();
     Ok(analysis.build_system(realised_model))
 }
 
 /// Generates Lotka-Volterra equations for the system.
-pub(crate) fn lotka_volterra_equations(
-    model: &DblModel,
-) -> Result<LatexEquations, String> {
+pub(crate) fn lotka_volterra_equations(model: &DblModel) -> Result<LatexEquations, String> {
     let sys = lotka_volterra_system(model);
     let equations = sys?
         .map_variables(latex_ob_names(model))

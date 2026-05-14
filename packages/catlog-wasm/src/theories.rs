@@ -162,10 +162,7 @@ impl ThSignedCategory {
 
     /// Simulate the Lotka-Volterra system derived from a model.
     #[wasm_bindgen(js_name = "lotkaVolterraEquations")]
-    pub fn lotka_volterra_equations(
-        &self,
-        model: &DblModel,
-    ) -> Result<LatexEquations, String> {
+    pub fn lotka_volterra_equations(&self, model: &DblModel) -> Result<LatexEquations, String> {
         lotka_volterra_equations(model)
     }
 

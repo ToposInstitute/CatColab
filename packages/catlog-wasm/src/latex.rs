@@ -124,11 +124,11 @@ pub(crate) fn latex_mor_names_lotka_volterra(
     move |id: &ode::LotkaVolterraParameter| match id {
         ode::LotkaVolterraParameter::Growth { variable } => {
             format!("g_{{{variable}}}")
-        },
-        ode::LotkaVolterraParameter::Interaction { source: _, link, target: _ } => {
+        }
+        ode::LotkaVolterraParameter::Interaction { link } => {
             let sub = transition_subscript(link);
             format!("k_{{{sub}}}")
-        },
+        }
     }
 }
 
