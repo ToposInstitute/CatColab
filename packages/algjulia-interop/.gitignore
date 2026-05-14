@@ -22,3 +22,7 @@ docs/site/
 
 # Local preferences
 LocalPreferences.toml
+
+# Julia
+test/Manifest.toml
+test/Project.toml
