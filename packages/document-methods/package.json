@@ -22,7 +22,7 @@
     },
     "devDependencies": {
         "@types/uuid": "^10.0.0",
-        "typescript": "^5.2.2",
+        "typescript": "^6.0.3",
         "wasm-pack": "^0.14.0"
     }
 }
