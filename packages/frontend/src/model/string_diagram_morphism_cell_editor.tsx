@@ -134,6 +134,13 @@ export default function StringDiagramMorphismCellEditor(props: MorphismEditorPro
 
     const [active, setActive] = createSignal<ActiveInput | null>({ zone: "name" });
 
+    // Reset to default on deactivation so re-entry lands on the name input.
+    createEffect(() => {
+        if (!props.isActive) {
+            setActive({ zone: "name" });
+        }
+    });
+
     // Track which wire indices have non-empty text (including incomplete input).
     const domInputTexts = new Map<number, string>();
     const codInputTexts = new Map<number, string>();
