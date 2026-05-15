@@ -100,7 +100,7 @@ pub(crate) fn latex_mor_names_mass_action(
     }
 }
 
-/// Creates a closure that formats morphism names for mass-action LaTeX output.
+/// Creates a closure that formats morphism names for Lotka-Volterra LaTeX output.
 ///
 /// When a morphism has a label, it is used directly. When unnamed, the label
 /// falls back to the domain→codomain format (e.g., `X \to Y`).
@@ -128,6 +128,35 @@ pub(crate) fn latex_mor_names_lotka_volterra(
         ode::LotkaVolterraParameter::Interaction { link } => {
             let sub = transition_subscript(link);
             format!("k_{{{sub}}}")
+        }
+    }
+}
+
+/// Creates a closure that formats morphism names for mass-action LaTeX output.
+///
+/// When a morphism has a label, it is used directly. When unnamed, the label
+/// falls back to the domain→codomain format (e.g., `X \to Y`).
+pub(crate) fn latex_mor_names_linear_ode(
+    model: &DblModel,
+) -> impl Fn(&ode::LinearODEParameter) -> String {
+    // Returns a LaTeX fragment for a transition, suitable for use as a subscript.
+    // Named morphisms produce `\text{name}`, unnamed ones produce
+    // `\text{dom} \to \text{cod}` so that `\to` is in math mode.
+    let transition_subscript = |transition: &QualifiedName| -> String {
+        if let Some(label) = model.mor_namespace.label(transition) {
+            format!("\\text{{{label}}}")
+        } else {
+            let (dom, cod) = model
+                .mor_generator_dom_cod_label_strings(transition)
+                .expect("Morphism in equation system should have domain and codomain");
+            format!("\\text{{{dom}}} \\to \\text{{{cod}}}")
+        }
+    };
+
+    move |id: &ode::LinearODEParameter| match id {
+        ode::LinearODEParameter::Parameter { morphism } => {
+            let sub = transition_subscript(morphism);
+            format!("\\lambda_{{{sub}}}")
         }
     }
 }

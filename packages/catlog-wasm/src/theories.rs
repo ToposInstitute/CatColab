@@ -160,7 +160,7 @@ impl ThSignedCategory {
         lotka_volterra_simulation(model, data)
     }
 
-    /// Simulate the Lotka-Volterra system derived from a model.
+    /// Show the equations of the Lotka-Volterra system derived from a model.
     #[wasm_bindgen(js_name = "lotkaVolterraEquations")]
     pub fn lotka_volterra_equations(&self, model: &DblModel) -> Result<LatexEquations, String> {
         lotka_volterra_equations(model)
@@ -172,16 +172,14 @@ impl ThSignedCategory {
         &self,
         model: &DblModel,
         data: analyses::ode::LinearODEProblemData,
-    ) -> Result<ODEResult, String> {
-        Ok(ODEResult(
-            analyses::ode::SignedCoefficientBuilder::new(name("Object"))
-                .add_positive(Path::Id(name("Object")))
-                .add_negative(name("Negative").into())
-                .linear_ode_analysis(model.discrete()?, data)
-                .solve_with_defaults()
-                .map_err(|err| format!("{err:?}"))
-                .into(),
-        ))
+    ) -> Result<ODEResultWithEquations, String> {
+        linear_ode_simulation(model, data)
+    }
+
+    /// Show the equations of the linear ODE system derived from a model.
+    #[wasm_bindgen(js_name = "linearODEEquations")]
+    pub fn linear_ode_equations(&self, model: &DblModel) -> Result<LatexEquations, String> {
+        linear_ode_equations(model)
     }
 }
 

@@ -1,7 +1,4 @@
 //! Lotka-Volterra ODE analysis of models.
-//!
-//! The main entry point for this module is
-//! [`lotka_volterra_analysis`](SignedCoefficientBuilder::lotka_volterra_analysis).
 
 use indexmap::IndexMap;
 use std::collections::HashMap;
@@ -99,7 +96,6 @@ impl CLDLotkaVolterraAnalysis {
         // Each variable in the CLD gives a variable in the ODE system *as well as*
         // its growth contribution: (d/dt)x += x.
         for var in model.ob_generators_with_type(&self.var_ob_type) {
-            // for var in model.ob_generators_with_type(&self.var_ob_type) {
             // Add the variable to the ODE system.
             ode_model.add_ob(var.clone(), ode_ob_type.clone());
 

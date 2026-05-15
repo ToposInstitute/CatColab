@@ -7,7 +7,7 @@ use catlog::simulate::ode::PolynomialSystem;
 use catlog::stdlib::analyses::ode;
 use catlog::zero::QualifiedName;
 
-use crate::latex::latex_mor_names_lotka_volterra;
+use crate::latex::{latex_mor_names_linear_ode, latex_mor_names_lotka_volterra};
 
 use super::latex::{LatexEquations, latex_mor_names, latex_mor_names_mass_action, latex_ob_names};
 use super::model::DblModel;
@@ -184,6 +184,50 @@ pub(crate) fn lotka_volterra_simulation(
     let latex_equations =
         sys_extended_scalars.map_variables(latex_ob_names(model)).to_latex_equations();
     let analysis = ode::into_lotka_volterra_analysis(sys_extended_scalars, data);
+    let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
+    Ok(ODEResultWithEquations {
+        solution: ODEResult(solution.into()),
+        latex_equations: LatexEquations(latex_equations),
+    })
+}
+
+/// Generates the PolynomialSystem for linear ODE dynamics.
+fn linear_ode_system(
+    model: &DblModel,
+) -> Result<PolynomialSystem<QualifiedName, ode::Parameter<ode::LinearODEParameter>, i8>, String> {
+    let realised_model = model.discrete()?;
+    let analysis = ode::CLDLinearODEAnalysis::default();
+    Ok(analysis.build_system(realised_model))
+}
+
+/// The analysis data for polynomial ODE equations.
+#[derive(Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct LinearODEEquationsData {
+    #[serde(rename = "trivialData")]
+    trivial_data: bool,
+}
+
+/// Generates linear ODE equations for the system.
+pub(crate) fn linear_ode_equations(model: &DblModel) -> Result<LatexEquations, String> {
+    let sys = linear_ode_system(model);
+    let equations = sys?
+        .map_variables(latex_ob_names(model))
+        .extend_scalars(|param| param.map_variables(latex_mor_names_linear_ode(model)))
+        .to_latex_equations();
+    Ok(LatexEquations(equations))
+}
+
+/// Simulates linear ODE equations.
+pub(crate) fn linear_ode_simulation(
+    model: &DblModel,
+    data: ode::LinearODEProblemData,
+) -> Result<ODEResultWithEquations, String> {
+    let sys = linear_ode_system(model);
+    let sys_extended_scalars = ode::extend_linear_ode_scalars(sys?, &data);
+    let latex_equations =
+        sys_extended_scalars.map_variables(latex_ob_names(model)).to_latex_equations();
+    let analysis = ode::into_linear_ode_analysis(sys_extended_scalars, data);
     let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
     Ok(ODEResultWithEquations {
         solution: ODEResult(solution.into()),

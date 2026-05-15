@@ -76,6 +76,11 @@ export default function createCausalLoopTheory(theoryMeta: TheoryMeta): Theory {
             analyses.linearODE({
                 simulate: (model, data) => thSignedCategory.linearODE(model, data),
             }),
+            analyses.linearODEEquations({
+                getEquations(model, data) {
+                    return thSignedCategory.linearODEEquations(model, data);
+                },
+            }),
             analyses.lotkaVolterra({
                 simulate: (model, data) => thSignedCategory.lotkaVolterra(model, data),
             }),
