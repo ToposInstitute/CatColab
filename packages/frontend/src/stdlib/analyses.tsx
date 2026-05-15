@@ -1,6 +1,7 @@
 import { lazy } from "solid-js";
 
 import type {
+    LinearODEEquationsData,
     LotkaVolterraEquationsData,
     MassActionEquationsData,
     MorType,
@@ -133,6 +134,33 @@ export function linearODE(
 }
 
 const LinearODE = lazy(() => import("./analyses/linear_ode"));
+
+export function linearODEEquations(
+    options: Partial<AnalysisOptions> & {
+        getEquations: Simulators.LinearODEEquations;
+    },
+): ModelAnalysisMeta<LinearODEEquationsData> {
+    const {
+        id = "linear-ode-equations",
+        name = "Linear ODE equations",
+        description = "Display the symbolic linear ODE dynamics equations",
+        help = "linear-ode-equations",
+        ...otherOptions
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => (
+            <LinearODEEquationsDisplay title={name} {...otherOptions} {...props} />
+        ),
+        initialContent: () => ({
+            trivialData: true,
+        }),
+    };
+}
+const LinearODEEquationsDisplay = lazy(() => import("./analyses/linear_ode_equations"));
 
 export function lotkaVolterra(
     options: Partial<AnalysisOptions> & {

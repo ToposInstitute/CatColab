@@ -28,10 +28,7 @@ export type LinearODESimulator = (
     model: DblModel,
     data: LinearODEProblemData,
 ) => ODEResultWithEquations;
-export type LinearODEEquations = (
-    model: DblModel,
-    data: LinearODEEquationsData,
-) => LatexEquations;
+export type LinearODEEquations = (model: DblModel, data: LinearODEEquationsData) => LatexEquations;
 export type LotkaVolterraSimulator = (
     model: DblModel,
     data: LotkaVolterraProblemData,
