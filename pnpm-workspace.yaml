@@ -1,5 +1,7 @@
 # 9 days, in minutes
 minimumReleaseAge: 12960
+minimumReleaseAgeExclude:
+  - wasm-pack
 packages:
   - "dev-docs"
   - "packages/backend/pkg"
@@ -7,5 +9,4 @@ packages:
   - "packages/document-methods"
   - "packages/ui-components"
   - "packages/gaios"
-patchedDependencies:
-    wasm-pack@0.14.0: patches/wasm-pack@0.14.0.patch
+
