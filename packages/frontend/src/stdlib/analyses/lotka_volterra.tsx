@@ -4,12 +4,14 @@ import {
     createNumericalColumn,
     FixedTableEditor,
     Foldable,
+    ExpandableTable,
+    KatexDisplay,
 } from "catcolab-ui-components";
 import type { DblModel, LotkaVolterraProblemData, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
-import { createModelODEPlot } from "./model_ode_plot";
+import { createModelODEPlot, createModelODEPlotWithEquations } from "./model_ode_plot";
 import type { LotkaVolterraSimulator } from "./simulator_types";
 
 import "./simulation.css";
@@ -78,10 +80,13 @@ export default function LotkaVolterra(
         }),
     ];
 
-    const plotResult = createModelODEPlot(
+    const result = createModelODEPlotWithEquations(
         () => props.liveModel.validatedModel(),
-        (model: DblModel) => props.simulate(model, props.content),
+        (model) => props.simulate(model, props.content),
     );
+
+    const plotResult = () => result()?.plotData;
+    const latexEquations = () => result()?.latexEquations ?? [];
 
     return (
         <div class="simulation">
@@ -99,7 +104,20 @@ export default function LotkaVolterra(
                     <FixedTableEditor rows={[null]} schema={toplevelSchema} />
                 </div>
             </Foldable>
-            <ODEResultPlot result={plotResult()} />
+            <Foldable title="Equations">
+                <ExpandableTable
+                    threshold={20}
+                    rows={latexEquations()}
+                    columns={[
+                        { cell: (row) => <KatexDisplay math={row.lhs} /> },
+                        { cell: () => <KatexDisplay math="=" /> },
+                        { cell: (row) => <KatexDisplay math={row.rhs} /> },
+                    ]}
+                />
+            </Foldable>
+            <Foldable title="Simulation" defaultExpanded>
+                <ODEResultPlot result={plotResult()} />
+            </Foldable>
         </div>
     );
 }
