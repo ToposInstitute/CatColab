@@ -1,6 +1,7 @@
 import { lazy } from "solid-js";
 
 import type {
+    LotkaVolterraEquationsData,
     MassActionEquationsData,
     MorType,
     ObType,
@@ -140,8 +141,8 @@ export function lotkaVolterra(
 ): ModelAnalysisMeta<Simulators.LotkaVolterraProblemData> {
     const {
         id = "lotka-volterra",
-        name = "Lotka-Volterra dynamics",
-        description = "Simulate the system using a Lotka-Volterra ODE",
+        name = "Lotka–Volterra dynamics",
+        description = "Simulate the system using a Lotka–Volterra ODE",
         help = "lotka-volterra",
         simulate,
     } = options;
@@ -161,6 +162,33 @@ export function lotkaVolterra(
 }
 
 const LotkaVolterra = lazy(() => import("./analyses/lotka_volterra"));
+
+export function lotkaVolterraEquations(
+    options: Partial<AnalysisOptions> & {
+        getEquations: Simulators.LotkaVolterraEquations;
+    },
+): ModelAnalysisMeta<LotkaVolterraEquationsData> {
+    const {
+        id = "lotka-volterra-equations",
+        name = "Lotka–Volterra equations",
+        description = "Display the symbolic Lotka–Volterra dynamics equations",
+        help = "lotka-volterra-equations",
+        ...otherOptions
+    } = options;
+    return {
+        id,
+        name,
+        description,
+        help,
+        component: (props) => (
+            <LotkaVolterraEquationsDisplay title={name} {...otherOptions} {...props} />
+        ),
+        initialContent: () => ({
+            trivialData: true,
+        }),
+    };
+}
+const LotkaVolterraEquationsDisplay = lazy(() => import("./analyses/lotka_volterra_equations"));
 
 export function massAction(
     options: Partial<AnalysisOptions> & {

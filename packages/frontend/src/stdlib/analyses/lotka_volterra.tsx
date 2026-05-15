@@ -7,11 +7,11 @@ import {
     ExpandableTable,
     KatexDisplay,
 } from "catcolab-ui-components";
-import type { DblModel, LotkaVolterraProblemData, QualifiedName } from "catlog-wasm";
+import type { LotkaVolterraProblemData, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
-import { createModelODEPlot, createModelODEPlotWithEquations } from "./model_ode_plot";
+import { createModelODEPlotWithEquations } from "./model_ode_plot";
 import type { LotkaVolterraSimulator } from "./simulator_types";
 
 import "./simulation.css";

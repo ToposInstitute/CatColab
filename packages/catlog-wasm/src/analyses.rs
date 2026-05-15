@@ -156,6 +156,14 @@ fn lotka_volterra_system(
     Ok(analysis.build_system(realised_model))
 }
 
+/// The analysis data for polynomial ODE equations.
+#[derive(Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct LotkaVolterraEquationsData {
+    #[serde(rename = "trivialData")]
+    trivial_data: bool,
+}
+
 /// Generates Lotka-Volterra equations for the system.
 pub(crate) fn lotka_volterra_equations(model: &DblModel) -> Result<LatexEquations, String> {
     let sys = lotka_volterra_system(model);

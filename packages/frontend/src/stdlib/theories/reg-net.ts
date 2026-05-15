@@ -80,6 +80,11 @@ export default function createRegulatoryNetworkTheory(theoryMeta: TheoryMeta): T
                     return thSignedCategory.lotkaVolterra(model, data);
                 },
             }),
+            analyses.lotkaVolterraEquations({
+                getEquations(model, data) {
+                    return thSignedCategory.lotkaVolterraEquations(model, data);
+                },
+            }),
         ],
     });
 }
