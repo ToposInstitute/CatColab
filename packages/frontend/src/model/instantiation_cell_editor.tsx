@@ -77,6 +77,16 @@ export function InstantiationCellEditor(props: {
             setActiveIndex(index);
         });
 
+    // Reset to default on deactivation so re-entry lands on the name input.
+    createEffect(() => {
+        if (!props.isActive) {
+            batch(() => {
+                setActiveComponent("name");
+                setActiveIndex(0);
+            });
+        }
+    });
+
     const insertSpecializationAtTop = () => {
         props.modifyInstantiation((inst) => {
             inst.specializations.unshift({ id: null, ob: null });
@@ -306,6 +316,13 @@ function SpecializationEditor(
     const [inputProps, props] = splitProps(allProps, ["createBelow", "exitDown", "exitUp"]);
 
     const [activeInput, setActiveInput] = createSignal<SpecializationEditorInput>("id");
+
+    // Reset to default on deactivation so re-entry lands on the id input.
+    createEffect(() => {
+        if (!props.isActive) {
+            setActiveInput("id");
+        }
+    });
 
     const obType = () => {
         const id = props.specialization.id;

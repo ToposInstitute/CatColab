@@ -1,4 +1,4 @@
-import { createMemo, createSignal, useContext } from "solid-js";
+import { createEffect, createMemo, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { NameInput } from "catcolab-ui-components";
@@ -17,6 +17,13 @@ export default function MorphismCellEditor(props: MorphismEditorProps) {
     invariant(liveModel, "Live model should be provided as context");
 
     const [activeInput, setActiveInput] = createSignal<MorphismCellInput>("name");
+
+    // Reset to default on deactivation so re-entry lands on the name input.
+    createEffect(() => {
+        if (!props.isActive) {
+            setActiveInput("name");
+        }
+    });
 
     const morTypeMeta = () => props.theory.modelMorTypeMeta(props.morphism.morType);
 
