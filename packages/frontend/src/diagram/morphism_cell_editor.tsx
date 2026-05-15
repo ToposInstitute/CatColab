@@ -1,4 +1,4 @@
-import { createSignal, useContext } from "solid-js";
+import { createEffect, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 import { v7 } from "uuid";
 
@@ -24,6 +24,13 @@ export function DiagramMorphismCellEditor(props: {
     invariant(liveDiagram, "Live diagram should be provided as context");
 
     const [activeInput, setActiveInput] = createSignal<DiagramMorphismCellInput>("mor");
+
+    // Reset to default on deactivation so re-entry lands on the morphism input.
+    createEffect(() => {
+        if (!props.isActive) {
+            setActiveInput("mor");
+        }
+    });
 
     const domType = () => props.theory.theory.src(props.decl.morType);
     const codType = () => props.theory.theory.tgt(props.decl.morType);
