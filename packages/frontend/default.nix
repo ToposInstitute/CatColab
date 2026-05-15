@@ -16,7 +16,6 @@ let
     src = lib.fileset.toSource {
       root = ../../.;
       fileset = lib.fileset.unions [
-        ../../.npmrc
         ../../pnpm-workspace.yaml
         ../../pnpm-lock.yaml
         ../../patches
@@ -24,6 +23,9 @@ let
         ../../packages/ui-components
         ../../packages/document-methods
         ../../packages/backend/pkg
+        ../../packages/gaios/package.json
+        ../../dev-docs/package.json
+        ../../package.json
       ];
     };
 
@@ -37,7 +39,7 @@ let
 
     pnpmDeps = pkgs.fetchPnpmDeps {
       # see ../../dev-docs/fixing-hash-mismatches.md
-      hash = "sha256-heS7iYxu9mOAHa4yQ6d1/j1SO8LPA7Vj1evLmzqiVqo=";
+      hash = "sha256-P/HvbuEep2myHxQfPNHUWtfRVLWsE573EocA1kMQ29M=";
 
       pname = name;
       fetcherVersion = 2;
@@ -46,18 +48,16 @@ let
       src = lib.fileset.toSource {
         root = ../../.;
         fileset = lib.fileset.unions [
-          ../../.npmrc
           ../../pnpm-workspace.yaml
           ../../pnpm-lock.yaml
           ../../patches
+          ../../package.json
           ../../packages/frontend/package.json
-          ../../packages/frontend/pnpm-lock.yaml
           ../../packages/ui-components/package.json
-          ../../packages/ui-components/pnpm-lock.yaml
           ../../packages/document-methods/package.json
-          ../../packages/document-methods/pnpm-lock.yaml
           ../../packages/backend/pkg/package.json
-          ../../packages/backend/pkg/pnpm-lock.yaml
+          ../../packages/gaios/package.json
+          ../../dev-docs/package.json
         ];
       };
     };
