@@ -1,6 +1,5 @@
 import { createEffect, createSignal, useContext } from "solid-js";
 import invariant from "tiny-invariant";
-import { v7 } from "uuid";
 
 import type { DiagramMorDecl } from "catlog-wasm";
 import { BasicMorInput } from "../model/morphism_input";
@@ -53,7 +52,6 @@ export function DiagramMorphismCellEditor(props: {
             <ObInput
                 placeholder="..."
                 ob={props.decl.dom}
-                generateId={v7}
                 setOb={(ob) => {
                     props.modifyDecl((decl) => {
                         decl.dom = ob;
@@ -104,7 +102,6 @@ export function DiagramMorphismCellEditor(props: {
             <ObInput
                 placeholder="..."
                 ob={props.decl.cod}
-                generateId={v7}
                 setOb={(ob) => {
                     props.modifyDecl((decl) => {
                         decl.cod = ob;
