@@ -1,6 +1,5 @@
 import { useContext } from "solid-js";
 import invariant from "tiny-invariant";
-import { v7 } from "uuid";
 
 import { type FocusHandle, useChildFocus } from "catcolab-ui-components";
 import type { DiagramMorDecl } from "catlog-wasm";
@@ -48,7 +47,6 @@ export function DiagramMorphismCellEditor(props: {
             <ObInput
                 placeholder="..."
                 ob={props.decl.dom}
-                generateId={v7}
                 setOb={(ob) => {
                     props.modifyDecl((decl) => {
                         decl.dom = ob;
@@ -91,7 +89,6 @@ export function DiagramMorphismCellEditor(props: {
             <ObInput
                 placeholder="..."
                 ob={props.decl.cod}
-                generateId={v7}
                 setOb={(ob) => {
                     props.modifyDecl((decl) => {
                         decl.cod = ob;
