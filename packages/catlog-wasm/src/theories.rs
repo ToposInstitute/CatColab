@@ -9,10 +9,10 @@ use wasm_bindgen::prelude::*;
 use catlog::dbl::theory::{self as theory, NonUnital, Unital};
 use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
-use catlog::zero::{name, QualifiedLabel};
+use catlog::zero::{QualifiedLabel, name};
 
 use super::latex::LatexEquations;
-use super::model_morphism::{motifs, MotifOccurrence, MotifsOptions};
+use super::model_morphism::{MotifOccurrence, MotifsOptions, motifs};
 use super::result::JsResult;
 use super::theories::MassActionAnalysisLogic;
 use super::{analyses::*, model::DblModel, theory::DblTheory};

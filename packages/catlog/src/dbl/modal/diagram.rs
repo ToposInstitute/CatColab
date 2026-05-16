@@ -76,11 +76,10 @@ impl ModalDblModelDiagram {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dbl::modal::ModalDblModel;
     use crate::dbl::model_diagram::DblModelDiagram;
     use crate::stdlib::dec;
     use crate::stdlib::th_multicategory;
-    use crate::tt::{modelgen::Model, prelude::Path};
+    use crate::tt::modelgen::Model;
     use crate::validate;
     use crate::zero::name;
     use std::rc::Rc;
@@ -158,7 +157,7 @@ mod tests {
     #[test]
     fn infer_modal_model_diagram() {
         let th = Rc::new(th_multicategory());
-        let Ok(Some(domain)) = Model::from_text(
+        let domain = Model::from_text(
             &th.clone().into(),
             "[
                 u : Object,
@@ -166,9 +165,9 @@ mod tests {
                 partial_t : Multihom[[u], dot_u]
             ]",
         )
-        .map(|m| m.as_modal()) else {
-            return ();
-        };
+        .unwrap()
+        .as_modal()
+        .unwrap();
 
         let mut f: ModalDblModelMapping = Default::default();
         f.assign_mor(name("partial_t"), name("partial_t0").into());

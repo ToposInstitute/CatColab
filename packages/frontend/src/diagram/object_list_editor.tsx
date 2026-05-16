@@ -29,38 +29,21 @@ type ObListEditorProps = ObInputProps &
     };
 
 /** Edits a list of objects of given type. */
-export function ObListEditor(props: ObListEditorProps) {
-    props = mergeProps(
+export function ObListEditor(originalProps: ObListEditorProps) {
+    const props = mergeProps(
         {
             insertKey: ",",
             startDelimiter: <div class="default-delimiter">{"["}</div>,
             endDelimiter: <div class="default-delimiter">{"]"}</div>,
             separator: () => <div class="default-separator">{","}</div>,
         },
-        props,
+        originalProps,
     );
 
     const liveDiagram = useContext(LiveDiagramContext);
     invariant(liveDiagram, "Live model should be provided as context");
 
     const [activeIndex, setActiveIndex] = createSignal<number>(0);
-
-    const modeAppType = () => {
-        if (props.obType.tag !== "ModeApp") {
-            throw new Error(`Object type should be a list modality, received: ${props.obType}`);
-        }
-        return props.obType;
-    };
-
-    const obList = (): Array<Ob | null> => {
-        if (!props.ob) {
-            return [];
-        }
-        if (props.ob.tag !== "List") {
-            throw new Error(`Object should be a list, received: ${props.ob}`);
-        }
-        return props.ob.content.objects;
-    };
 
     const setObList = (objects: Array<Ob | null>) => {
         props.setOb({
@@ -85,6 +68,23 @@ export function ObListEditor(props: ObListEditorProps) {
             });
             setActiveIndex(i);
         });
+    };
+
+    const modeAppType = () => {
+        if (props.obType.tag !== "ModeApp") {
+            throw new Error(`Object type should be a list modality, received: ${props.obType}`);
+        }
+        return props.obType;
+    };
+
+    const obList = (): Array<Ob | null> => {
+        if (!props.ob) {
+            return [];
+        }
+        if (props.ob.tag !== "List") {
+            throw new Error(`Object should be a list, received: ${props.ob}`);
+        }
+        return props.ob.content.objects;
     };
 
     const completions = (): QualifiedName[] | undefined =>
