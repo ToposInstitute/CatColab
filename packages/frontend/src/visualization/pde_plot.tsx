@@ -29,11 +29,6 @@ const max = (x: number, y: number) => Math.max(x, y);
 
 /** Display the output data from a 2D PDE simulation. */
 export function PDEPlot2D(props: { data: PDEPlotData2D }) {
-    // XXX: JavaScript is not stable under eta-equivalence.
-    const min = (x: number, y: number) => Math.min(x, y);
-    const max = (x: number, y: number) => Math.max(x, y);
-
-    console.log(props.data);
     const firstState = (): StateVarAtTime[] => {
         // FIXME: Shouldn't just take the first one!
         const keys = Object.keys(props.data.data.state);
@@ -58,7 +53,6 @@ export function PDEPlot2D(props: { data: PDEPlotData2D }) {
     const [timeIndex, setTimeIndex] = createSignal(0);
 
     // Animate the heat map by varying the time index to display.
-    console.log(props.data.data);
     makeTimer(
         () => {
             const timeLength = props.data.data.time.length;

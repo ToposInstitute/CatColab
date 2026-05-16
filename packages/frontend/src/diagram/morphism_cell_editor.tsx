@@ -7,7 +7,7 @@ import { BasicMorInput } from "../model/morphism_input";
 import type { CellActions } from "../notebook";
 import type { Theory } from "../theory";
 import { LiveDiagramContext } from "./context";
-import { BasicObInput, ObInput } from "./object_input";
+import { ObInput } from "./object_input";
 
 import arrowStyles from "../stdlib/arrow_styles.module.css";
 import "./morphism_cell_editor.css";
@@ -48,7 +48,6 @@ export function DiagramMorphismCellEditor(props: {
     const codInvalid = (): boolean =>
         errors().some((err) => err.err.tag === "Cod" || err.err.tag === "CodType");
 
-    console.log(codType());
     return (
         <div class="formal-judgment diagram-morphism-decl">
             <ObInput
@@ -108,7 +107,6 @@ export function DiagramMorphismCellEditor(props: {
                 generateId={v7}
                 setOb={(ob) => {
                     props.modifyDecl((decl) => {
-                        console.log(decl.cod, ob);
                         decl.cod = ob;
                     });
                 }}
