@@ -224,7 +224,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
             return pode ? { pode } : undefined;
         },
         async ({ pode }) => {
-            // const juliaUrl = import.meta.env.VITE_JULIA_URL;
+            // console.log(import.meta.env.development.VITE_JULIA_URL);
             const juliaUrl = "http://127.0.0.1:8080";
             console.log(juliaUrl);
             const reqBody = {
@@ -233,8 +233,8 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                 body: JSON.stringify({ pode }),
             };
             const response = juliaUrl
-                ? await fetch(`${juliaUrl}/decapodes`, reqBody)
-                : await api.fetch("/julia/decapodes", reqBody);
+                ? await fetch(`${juliaUrl}/decapodes-string`, reqBody)
+                : await api.fetch("/julia/decapodes-string", reqBody);
             if (!response.ok) throw new Error(`HTTP error! status ${response.status}`);
             return { pode, data: await response.json() };
         },
@@ -283,7 +283,8 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                     </ErrorAlert>
                 </Match>
                 <Match when={res()}>{(data) => {
-                console.log(data.data)}}</Match>
+                  console.log("plot data:", JSON.stringify(data().data).slice(0, 200));
+                return <PDEPlot2D data={data().data} />}}</Match>
             </Switch>
         </div>
     );

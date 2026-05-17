@@ -15,6 +15,8 @@ use crate::zero::{NameSegment, name};
 use catcolab_document_types::current as nb;
 
 static ANON: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(.+)_(\w+)([0-9]+)$").unwrap());
+static FORM: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"([0-9]+)-Form$").unwrap());
+static DUAL_FORM: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"Dual ([0-9]+)-Form").unwrap());
 
 pub trait JuliaTranspiler {
     fn transpile(&self) -> String;
@@ -101,14 +103,14 @@ impl JuliaTranspiler for Decapodes {
         for (ob, ty) in obs {
             // `first` is unhappy
             if !ANON.is_match(&format!("{ob}")) {
-                out.push_str(&format!("\t{}::{}\n", ob, ty.first().unwrap()));
+                out.push_str(&format!("\t{}::{}\n", ob, ty));
             }
         }
 
         for (lhs, rhs) in mors {
             out.push_str(&format!("\n\t{} == {}", lhs, rhs));
         }
-        format!("@decapode begin\n{out}\nend")
+        format!("{out}")
     }
 }
 
@@ -117,7 +119,7 @@ fn collect_fields(
     ty: &TyV,
     self_v: &TmV,
     prefix: &str,
-    obs: &mut IndexMap<String, Vec<String>>,
+    obs: &mut IndexMap<String, String>,
     mors: &mut IndexSet<(String, String)>,
     subs: &mut HashMap<String, String>,
 ) {
@@ -134,9 +136,24 @@ fn collect_fields(
         };
         match &*qt {
             TyS_::Over(path) => {
-                let p = path.iter().map(|(_, l)| l.to_string()).collect();
+                let p: String = path.iter().map(|(_, l)| l.to_string()).collect();
                 if subs.get(&full_label).is_none() {
-                    obs.insert(full_label, p);
+                    let ty = match p.to_owned() {
+                        p if DUAL_FORM.is_match(&p) => {
+                            let Some(dim) = DUAL_FORM.captures(&p) else {
+                                continue;
+                            };
+                            format!("DualForm{}", &dim[1])
+                        }
+                        p if FORM.is_match(&p) => {
+                            let Some(dim) = FORM.captures(&p) else {
+                                continue;
+                            };
+                            format!("Form{}", &dim[1])
+                        }
+                        p => p,
+                    };
+                    obs.insert(full_label, ty);
                 }
             }
             TyS_::Morphism(_, dom, cod) => {
@@ -154,6 +171,10 @@ fn collect_fields(
                         op if ADD.is_match(op) => "+",
                         op if SUBTRACT.is_match(op) => "-",
                         op if MULT.is_match(op) => "*",
+                        op if D.is_match(op) => "d",
+                        op if STAR.is_match(op) => &format!("{}", '\u{2605}'),
+                        op if INV_STAR.is_match(op) => "",
+                        op if LIE.is_match(op) => "L",
                         op if PARTIAL.is_match(op) => &format!("{}{}", '\u{2202}', '\u{209C}'),
                         op if LAPL.is_match(op) => &format!("{}", '\u{0394}'),
                         op => op,
@@ -178,12 +199,16 @@ fn collect_fields(
     }
 }
 
-static ADD: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"add-(.+)$").unwrap());
-static SUBTRACT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"subtract-(.+)$").unwrap());
-static MULT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"multiplication-(.+)$").unwrap());
-static PARTIAL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"partial-(.+)$").unwrap());
-static LAPL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"laplace-(.+)$").unwrap());
-static EQ: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"eq-(.+)$").unwrap());
+static ADD: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"add_(.+)$").unwrap());
+static SUBTRACT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"subtract_(.+)$").unwrap());
+static MULT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"multiplication_(.+)$").unwrap());
+static PARTIAL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"partial_(.+)$").unwrap());
+static D: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"d_(.+)$").unwrap());
+static LAPL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"laplace_(.+)$").unwrap());
+static STAR: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"star_(.+)$").unwrap());
+static INV_STAR: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"inv_star_(.+)$").unwrap());
+static EQ: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"eq_(.+)$").unwrap());
+static LIE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"lie_(.+)$").unwrap());
 
 fn to_plain_text(tm: &TmS) -> String {
     match &**tm {
@@ -206,6 +231,10 @@ fn to_plain_text(tm: &TmS) -> String {
                 _ if ADD.is_match(op) => "+",
                 _ if SUBTRACT.is_match(op) => "-",
                 _ if MULT.is_match(op) => "*",
+                _ if D.is_match(op) => "d",
+                _ if LIE.is_match(op) => "L",
+                _ if STAR.is_match(op) => &format!("{}", '\u{2605}'),
+                _ if INV_STAR.is_match(op) => "", // TODO
                 _ if PARTIAL.is_match(op) => &format!("{}{}", '\u{2202}', '\u{209C}'),
                 _ if LAPL.is_match(op) => &format!("{}", '\u{0394}'),
                 _ => op,
