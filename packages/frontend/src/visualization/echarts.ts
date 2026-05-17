@@ -9,6 +9,6 @@ import * as echarts from "echarts";
 
 void echarts;
 
-import { EChartsAutoSize } from "echarts-solid";
+import { ECharts } from "echarts-solid";
 
-export default EChartsAutoSize;
+export default ECharts;

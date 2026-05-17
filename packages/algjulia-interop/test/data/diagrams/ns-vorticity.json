@@ -1,0 +1,804 @@
+{
+  "model": {
+    "obGenerators": [
+      {
+        "id": "019df3f4-8443-71d6-a106-e211b1f1a359",
+        "label": [
+          "0-Form"
+        ],
+        "obType": {
+          "tag": "Basic",
+          "content": "Object"
+        }
+      },
+      {
+        "id": "019df509-56a6-7656-98e6-896813fa1052",
+        "label": [
+          "1-Form"
+        ],
+        "obType": {
+          "tag": "Basic",
+          "content": "Object"
+        }
+      },
+      {
+        "id": "019df509-6110-70d2-91fd-d81a3b4eab88",
+        "label": [
+          "2-Form"
+        ],
+        "obType": {
+          "tag": "Basic",
+          "content": "Object"
+        }
+      },
+      {
+        "id": "019df3f4-3ec3-7069-94bd-5f5097133079",
+        "label": [
+          "Dual 0-Form"
+        ],
+        "obType": {
+          "tag": "Basic",
+          "content": "Object"
+        }
+      },
+      {
+        "id": "019df509-6978-72bf-9362-0e085ed78843",
+        "label": [
+          "Dual 1-Form"
+        ],
+        "obType": {
+          "tag": "Basic",
+          "content": "Object"
+        }
+      },
+      {
+        "id": "019df3f4-7663-7519-ba02-9cadb41b87f0",
+        "label": [
+          "Dual 2-Form"
+        ],
+        "obType": {
+          "tag": "Basic",
+          "content": "Object"
+        }
+      }
+    ],
+    "morGenerators": [
+      {
+        "id": "019df920-3a9a-70c4-821e-a871751e58ec",
+        "label": [
+          "multiplication"
+        ],
+        "morType": {
+          "tag": "Basic",
+          "content": "Multihom"
+        },
+        "dom": {
+          "tag": "List",
+          "content": {
+            "modality": "List",
+            "objects": [
+              {
+                "tag": "Basic",
+                "content": "019df3f4-8443-71d6-a106-e211b1f1a359"
+              },
+              {
+                "tag": "Basic",
+                "content": "019df3f4-8443-71d6-a106-e211b1f1a359"
+              }
+            ]
+          }
+        },
+        "cod": {
+          "tag": "Basic",
+          "content": "019df3f4-8443-71d6-a106-e211b1f1a359"
+        }
+      },
+      {
+        "id": "019df91e-8033-716b-8526-12e08e9bec59",
+        "label": [
+          "laplace"
+        ],
+        "morType": {
+          "tag": "Basic",
+          "content": "Multihom"
+        },
+        "dom": {
+          "tag": "List",
+          "content": {
+            "modality": "List",
+            "objects": [
+              {
+                "tag": "Basic",
+                "content": "019df3f4-8443-71d6-a106-e211b1f1a359"
+              }
+            ]
+          }
+        },
+        "cod": {
+          "tag": "Basic",
+          "content": "019df3f4-8443-71d6-a106-e211b1f1a359"
+        }
+      },
+      {
+        "id": "019df50c-6981-7248-8a82-b1da5d63ab63",
+        "label": [
+          "inv-laplace"
+        ],
+        "morType": {
+          "tag": "Basic",
+          "content": "Multihom"
+        },
+        "dom": {
+          "tag": "List",
+          "content": {
+            "modality": "List",
+            "objects": [
+              {
+                "tag": "Basic",
+                "content": "019df3f4-8443-71d6-a106-e211b1f1a359"
+              }
+            ]
+          }
+        },
+        "cod": {
+          "tag": "Basic",
+          "content": "019df3f4-8443-71d6-a106-e211b1f1a359"
+        }
+      },
+      {
+        "id": "019df509-e051-77aa-9899-db60385d3b57",
+        "label": [
+          "0-d"
+        ],
+        "morType": {
+          "tag": "Basic",
+          "content": "Multihom"
+        },
+        "dom": {
+          "tag": "List",
+          "content": {
+            "modality": "List",
+            "objects": [
+              {
+                "tag": "Basic",
+                "content": "019df3f4-8443-71d6-a106-e211b1f1a359"
+              }
+            ]
+          }
+        },
+        "cod": {
+          "tag": "Basic",
+          "content": "019df509-56a6-7656-98e6-896813fa1052"
+        }
+      },
+      {
+        "id": "019df50a-6e39-7216-9b89-87168f762a5c",
+        "label": [
+          "1-star"
+        ],
+        "morType": {
+          "tag": "Basic",
+          "content": "Multihom"
+        },
+        "dom": {
+          "tag": "List",
+          "content": {
+            "modality": "List",
+            "objects": [
+              {
+                "tag": "Basic",
+                "content": "019df509-56a6-7656-98e6-896813fa1052"
+              }
+            ]
+          }
+        },
+        "cod": {
+          "tag": "Basic",
+          "content": "019df509-6978-72bf-9362-0e085ed78843"
+        }
+      },
+      {
+        "id": "019df50b-da40-7399-9c85-094a02bde699",
+        "label": [
+          "sharp-flat"
+        ],
+        "morType": {
+          "tag": "Basic",
+          "content": "Multihom"
+        },
+        "dom": {
+          "tag": "List",
+          "content": {
+            "modality": "List",
+            "objects": [
+              {
+                "tag": "Basic",
+                "content": "019df509-56a6-7656-98e6-896813fa1052"
+              }
+            ]
+          }
+        },
+        "cod": {
+          "tag": "Basic",
+          "content": "019df509-56a6-7656-98e6-896813fa1052"
+        }
+      },
+      {
+        "id": "019df50d-0c28-71f9-bcc4-643ca621044d",
+        "label": [
+          "dual 0-d"
+        ],
+        "morType": {
+          "tag": "Basic",
+          "content": "Multihom"
+        },
+        "dom": {
+          "tag": "List",
+          "content": {
+            "modality": "List",
+            "objects": [
+              {
+                "tag": "Basic",
+                "content": "019df3f4-3ec3-7069-94bd-5f5097133079"
+              }
+            ]
+          }
+        },
+        "cod": {
+          "tag": "Basic",
+          "content": "019df509-6978-72bf-9362-0e085ed78843"
+        }
+      },
+      {
+        "id": "019df508-fe6a-751c-92e0-ed1ffccbfb20",
+        "label": [
+          "0-inv-star"
+        ],
+        "morType": {
+          "tag": "Basic",
+          "content": "Multihom"
+        },
+        "dom": {
+          "tag": "List",
+          "content": {
+            "modality": "List",
+            "objects": [
+              {
+                "tag": "Basic",
+                "content": "019df3f4-3ec3-7069-94bd-5f5097133079"
+              }
+            ]
+          }
+        },
+        "cod": {
+          "tag": "Basic",
+          "content": "019df509-6110-70d2-91fd-d81a3b4eab88"
+        }
+      },
+      {
+        "id": "019df526-a755-75f8-8528-f381f4feec4d",
+        "label": [
+          "dual 1-d"
+        ],
+        "morType": {
+          "tag": "Basic",
+          "content": "Multihom"
+        },
+        "dom": {
+          "tag": "List",
+          "content": {
+            "modality": "List",
+            "objects": [
+              {
+                "tag": "Basic",
+                "content": "019df509-6978-72bf-9362-0e085ed78843"
+              }
+            ]
+          }
+        },
+        "cod": {
+          "tag": "Basic",
+          "content": "019df3f4-7663-7519-ba02-9cadb41b87f0"
+        }
+      },
+      {
+        "id": "019df526-5735-724b-b232-140c13a4a438",
+        "label": [
+          "2-inv-star"
+        ],
+        "morType": {
+          "tag": "Basic",
+          "content": "Multihom"
+        },
+        "dom": {
+          "tag": "List",
+          "content": {
+            "modality": "List",
+            "objects": [
+              {
+                "tag": "Basic",
+                "content": "019df3f4-7663-7519-ba02-9cadb41b87f0"
+              }
+            ]
+          }
+        },
+        "cod": {
+          "tag": "Basic",
+          "content": "019df3f4-8443-71d6-a106-e211b1f1a359"
+        }
+      },
+      {
+        "id": "019df509-9301-77d7-bdd5-3ffaea8a24a1",
+        "label": [
+          "partial"
+        ],
+        "morType": {
+          "tag": "Basic",
+          "content": "Multihom"
+        },
+        "dom": {
+          "tag": "List",
+          "content": {
+            "modality": "List",
+            "objects": [
+              {
+                "tag": "Basic",
+                "content": "019df3f4-7663-7519-ba02-9cadb41b87f0"
+              }
+            ]
+          }
+        },
+        "cod": {
+          "tag": "Basic",
+          "content": "019df3f4-7663-7519-ba02-9cadb41b87f0"
+        }
+      },
+      {
+        "id": "019df522-b423-7419-880c-7c8b6f62eb38",
+        "label": [
+          "dp-wedge-10"
+        ],
+        "morType": {
+          "tag": "Basic",
+          "content": "Multihom"
+        },
+        "dom": {
+          "tag": "List",
+          "content": {
+            "modality": "List",
+            "objects": [
+              {
+                "tag": "Basic",
+                "content": "019df509-6978-72bf-9362-0e085ed78843"
+              },
+              {
+                "tag": "Basic",
+                "content": "019df3f4-8443-71d6-a106-e211b1f1a359"
+              }
+            ]
+          }
+        },
+        "cod": {
+          "tag": "Basic",
+          "content": "019df509-56a6-7656-98e6-896813fa1052"
+        }
+      },
+      {
+        "id": "019df5ea-62d9-761e-8c9c-9b5cf73e7240",
+        "label": [
+          "-"
+        ],
+        "morType": {
+          "tag": "Basic",
+          "content": "Multihom"
+        },
+        "dom": {
+          "tag": "List",
+          "content": {
+            "modality": "List",
+            "objects": [
+              {
+                "tag": "Basic",
+                "content": "019df3f4-7663-7519-ba02-9cadb41b87f0"
+              }
+            ]
+          }
+        },
+        "cod": {
+          "tag": "Basic",
+          "content": "019df3f4-7663-7519-ba02-9cadb41b87f0"
+        }
+      }
+    ]
+  },
+  "diagram": {
+    "obGenerators": [
+      {
+        "id": "019df529-6dbc-74ef-b09b-e9033b1cd729",
+        "label": [
+          "v"
+        ],
+        "obType": {
+          "tag": "Basic",
+          "content": "Object"
+        },
+        "over": {
+          "tag": "Basic",
+          "content": "019df509-6978-72bf-9362-0e085ed78843"
+        }
+      },
+      {
+        "id": "019df529-8da6-763a-b0b6-ef7faa28e8f2",
+        "label": [
+          "dv"
+        ],
+        "obType": {
+          "tag": "Basic",
+          "content": "Object"
+        },
+        "over": {
+          "tag": "Basic",
+          "content": "019df3f4-7663-7519-ba02-9cadb41b87f0"
+        }
+      },
+      {
+        "id": "019df529-ab54-760c-a5d6-d16cd2905323",
+        "label": [
+          "psi"
+        ],
+        "obType": {
+          "tag": "Basic",
+          "content": "Object"
+        },
+        "over": {
+          "tag": "Basic",
+          "content": "019df3f4-8443-71d6-a106-e211b1f1a359"
+        }
+      }
+    ],
+    "morGenerators": [
+      {
+        "id": "019df53a-d21a-76b8-a969-a408c47360a3",
+        "morType": {
+          "tag": "Basic",
+          "content": "Multihom"
+        },
+        "over": {
+          "tag": "Basic",
+          "content": "019df508-fe6a-751c-92e0-ed1ffccbfb20"
+        },
+        "dom": {
+          "tag": "List",
+          "content": {
+            "modality": "List",
+            "objects": [
+              {
+                "tag": "Basic",
+                "content": "019df529-8da6-763a-b0b6-ef7faa28e8f2"
+              }
+            ]
+          }
+        },
+        "cod": {
+          "tag": "Basic",
+          "content": "019df5e1-f2ff-7458-9b18-7552e4ed2411"
+        }
+      },
+      {
+        "id": "019df5e1-fe53-737f-ae36-9a8a537486c7",
+        "morType": {
+          "tag": "Basic",
+          "content": "Multihom"
+        },
+        "over": {
+          "tag": "Basic",
+          "content": "019df50c-6981-7248-8a82-b1da5d63ab63"
+        },
+        "dom": {
+          "tag": "List",
+          "content": {
+            "modality": "List",
+            "objects": [
+              {
+                "tag": "Basic",
+                "content": "019df5e1-f2ff-7458-9b18-7552e4ed2411"
+              }
+            ]
+          }
+        },
+        "cod": {
+          "tag": "Basic",
+          "content": "019df529-ab54-760c-a5d6-d16cd2905323"
+        }
+      },
+      {
+        "id": "019df5e5-af2b-7008-9f4c-d6019e3131f4",
+        "morType": {
+          "tag": "Basic",
+          "content": "Multihom"
+        },
+        "over": {
+          "tag": "Basic",
+          "content": "019df509-e051-77aa-9899-db60385d3b57"
+        },
+        "dom": {
+          "tag": "List",
+          "content": {
+            "modality": "List",
+            "objects": [
+              {
+                "tag": "Basic",
+                "content": "019df529-ab54-760c-a5d6-d16cd2905323"
+              }
+            ]
+          }
+        },
+        "cod": {
+          "tag": "Basic",
+          "content": "019df5e5-c238-72a0-bfd8-07e43d5877bc"
+        }
+      },
+      {
+        "id": "019df5e5-dc48-73d8-80ff-adce21a06334",
+        "morType": {
+          "tag": "Basic",
+          "content": "Multihom"
+        },
+        "over": {
+          "tag": "Basic",
+          "content": "019df50a-6e39-7216-9b89-87168f762a5c"
+        },
+        "dom": {
+          "tag": "List",
+          "content": {
+            "modality": "List",
+            "objects": [
+              {
+                "tag": "Basic",
+                "content": "019df5e5-c238-72a0-bfd8-07e43d5877bc"
+              }
+            ]
+          }
+        },
+        "cod": {
+          "tag": "Basic",
+          "content": "019df529-6dbc-74ef-b09b-e9033b1cd729"
+        }
+      },
+      {
+        "id": "019df5e6-7de5-72dd-a1ca-c94fec27e219",
+        "morType": {
+          "tag": "Basic",
+          "content": "Multihom"
+        },
+        "over": {
+          "tag": "Basic",
+          "content": "019df526-a755-75f8-8528-f381f4feec4d"
+        },
+        "dom": {
+          "tag": "List",
+          "content": {
+            "modality": "List",
+            "objects": [
+              {
+                "tag": "Basic",
+                "content": "019df529-6dbc-74ef-b09b-e9033b1cd729"
+              }
+            ]
+          }
+        },
+        "cod": {
+          "tag": "Basic",
+          "content": "019df5e7-3b4f-769e-8b78-4e7aa6ed6cca"
+        }
+      },
+      {
+        "id": "019df5e7-54dd-73a3-9d4d-fb851fab23eb",
+        "morType": {
+          "tag": "Basic",
+          "content": "Multihom"
+        },
+        "over": {
+          "tag": "Basic",
+          "content": "019df508-fe6a-751c-92e0-ed1ffccbfb20"
+        },
+        "dom": {
+          "tag": "List",
+          "content": {
+            "modality": "List",
+            "objects": [
+              {
+                "tag": "Basic",
+                "content": "019df5e7-3b4f-769e-8b78-4e7aa6ed6cca"
+              }
+            ]
+          }
+        },
+        "cod": {
+          "tag": "Basic",
+          "content": "019df5e7-cd6a-757d-989b-821888c27cc6"
+        }
+      },
+      {
+        "id": "019df5e6-1b54-7791-b6d6-2b773528d386",
+        "morType": {
+          "tag": "Basic",
+          "content": "Multihom"
+        },
+        "over": {
+          "tag": "Basic",
+          "content": "019df522-b423-7419-880c-7c8b6f62eb38"
+        },
+        "dom": {
+          "tag": "List",
+          "content": {
+            "modality": "List",
+            "objects": [
+              {
+                "tag": "Basic",
+                "content": "019df529-6dbc-74ef-b09b-e9033b1cd729"
+              },
+              {
+                "tag": "Basic",
+                "content": "019df5e7-cd6a-757d-989b-821888c27cc6"
+              }
+            ]
+          }
+        },
+        "cod": {
+          "tag": "Basic",
+          "content": "019df5e7-2dea-777b-beaf-1d649ae5dc63"
+        }
+      },
+      {
+        "id": "019df5e8-04c5-76a7-94f0-ecd7e73b9b5a",
+        "morType": {
+          "tag": "Basic",
+          "content": "Multihom"
+        },
+        "over": {
+          "tag": "Basic",
+          "content": "019df50b-da40-7399-9c85-094a02bde699"
+        },
+        "dom": {
+          "tag": "List",
+          "content": {
+            "modality": "List",
+            "objects": [
+              {
+                "tag": "Basic",
+                "content": "019df5e7-2dea-777b-beaf-1d649ae5dc63"
+              }
+            ]
+          }
+        },
+        "cod": {
+          "tag": "Basic",
+          "content": "019df5e8-1e54-742a-a46b-e67afce0c7b9"
+        }
+      },
+      {
+        "id": "019df5e8-a1a0-7387-ba3d-4a014db3e8dc",
+        "morType": {
+          "tag": "Basic",
+          "content": "Multihom"
+        },
+        "over": {
+          "tag": "Basic",
+          "content": "019df50a-6e39-7216-9b89-87168f762a5c"
+        },
+        "dom": {
+          "tag": "List",
+          "content": {
+            "modality": "List",
+            "objects": [
+              {
+                "tag": "Basic",
+                "content": "019df5e8-1e54-742a-a46b-e67afce0c7b9"
+              }
+            ]
+          }
+        },
+        "cod": {
+          "tag": "Basic",
+          "content": "019df5e8-d2b9-7747-a43b-13c7b6c6a0ff"
+        }
+      },
+      {
+        "id": "019df5e8-3257-7148-b61b-3d04eb245d60",
+        "morType": {
+          "tag": "Basic",
+          "content": "Multihom"
+        },
+        "over": {
+          "tag": "Basic",
+          "content": "019df509-9301-77d7-bdd5-3ffaea8a24a1"
+        },
+        "dom": {
+          "tag": "List",
+          "content": {
+            "modality": "List",
+            "objects": [
+              {
+                "tag": "Basic",
+                "content": "019df529-8da6-763a-b0b6-ef7faa28e8f2"
+              }
+            ]
+          }
+        },
+        "cod": {
+          "tag": "Basic",
+          "content": "019df5e9-1ff1-76be-876c-9ca1ff79c322"
+        }
+      },
+      {
+        "id": "019df5e9-3517-729b-8ead-98793f1ab691",
+        "morType": {
+          "tag": "Basic",
+          "content": "Multihom"
+        },
+        "over": {
+          "tag": "Basic",
+          "content": "019df526-a755-75f8-8528-f381f4feec4d"
+        },
+        "dom": {
+          "tag": "List",
+          "content": {
+            "modality": "List",
+            "objects": [
+              {
+                "tag": "Basic",
+                "content": "019df5e8-d2b9-7747-a43b-13c7b6c6a0ff"
+              }
+            ]
+          }
+        },
+        "cod": {
+          "tag": "Basic",
+          "content": "019df5ea-23eb-714f-aceb-d3c8130fb2a3"
+        }
+      },
+      {
+        "id": "019df5ea-2af4-709f-8807-f8981a83d190",
+        "morType": {
+          "tag": "Basic",
+          "content": "Multihom"
+        },
+        "over": {
+          "tag": "Basic",
+          "content": "019df5ea-62d9-761e-8c9c-9b5cf73e7240"
+        },
+        "dom": {
+          "tag": "List",
+          "content": {
+            "modality": "List",
+            "objects": [
+              {
+                "tag": "Basic",
+                "content": "019df5ea-23eb-714f-aceb-d3c8130fb2a3"
+              }
+            ]
+          }
+        },
+        "cod": {
+          "tag": "Basic",
+          "content": "019df5e9-1ff1-76be-876c-9ca1ff79c322"
+        }
+      }
+    ]
+  },
+  "analysis": {
+    "duration": 5,
+    "plotVariables": [
+      "019df529-8da6-763a-b0b6-ef7faa28e8f2"
+    ],
+    "domain": "Sphere",
+    "mesh": "Icosphere7",
+    "initialConditions": {
+      "019df529-6dbc-74ef-b09b-e9033b1cd729": "TaylorVortex",
+      "019df529-8da6-763a-b0b6-ef7faa28e8f2": "TaylorVortex",
+      "019df529-ab54-760c-a5d6-d16cd2905323": "TaylorVortex" 
+    },
+    "scalars": {}
+  }
+}
