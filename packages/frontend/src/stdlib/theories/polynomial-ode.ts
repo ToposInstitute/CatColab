@@ -44,6 +44,9 @@ export default function createPolynomialODETheory(theoryMeta: TheoryMeta): Theor
                     return thPolynomialODE.polynomialODESimulation(model, data);
                 },
             }),
+            analyses.modelicaExport({
+                generate: (model, data) => thPolynomialODE.polynomialODEModelica(model, data),
+            }),
         ],
     });
 }
