@@ -1,4 +1,5 @@
 import Resizable, { type ContextValue } from "@corvu/resizable";
+import { makeEventListener } from "@solid-primitives/event-listener";
 import { Title } from "@solidjs/meta";
 import { useNavigate, useParams } from "@solidjs/router";
 import ChevronsRight from "lucide-solid/icons/chevrons-right";
@@ -21,6 +22,8 @@ import {
     Button,
     type FocusHandle,
     IconButton,
+    keyEventHasModifier,
+    primaryModifier,
     ResizableHandle,
     rootFocus,
     useChildFocus,
@@ -418,6 +421,29 @@ export function DocumentPane(props: {
     const canRestore = () => props.docRef.permissions.user === "Own";
 
     const history = useSnapshotHistory(() => props.docRef.refId);
+
+    makeEventListener(window, "keydown", (evt) => {
+        if (!props.focus.hasFocus()) {
+            return;
+        }
+        const key = evt.key.toUpperCase();
+        const hasPrimary = keyEventHasModifier(evt, primaryModifier);
+        if (!hasPrimary || evt.altKey) {
+            return;
+        }
+
+        if (key === "Z" && !evt.shiftKey && history.canUndo()) {
+            history.onUndo();
+            return evt.preventDefault();
+        }
+        if (
+            ((key === "Z" && evt.shiftKey) || (key === "Y" && !evt.shiftKey)) &&
+            history.canRedo()
+        ) {
+            history.onRedo();
+            return evt.preventDefault();
+        }
+    });
 
     // oxlint-disable solid/reactivity -- Context.Provider value getter is reactive
     return (
