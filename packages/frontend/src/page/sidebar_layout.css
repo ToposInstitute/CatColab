@@ -122,7 +122,7 @@
 .related-document {
     padding: 5px 8px;
     height: 30px;
-    border-radius: 6px;
+    border-left: 3px solid transparent;
     transition: background 20ms;
     display: flex;
     justify-content: space-between;
@@ -172,6 +172,10 @@
         &:hover {
             background: var(--color-hover-bg-dark);
         }
+    }
+
+    &.focused {
+        border-left-color: var(--color-alert-question);
     }
 }
 
