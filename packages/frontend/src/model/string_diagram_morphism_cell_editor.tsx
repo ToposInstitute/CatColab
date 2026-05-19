@@ -1,7 +1,7 @@
 import { Index, createEffect, createMemo, createSignal, untrack, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { NameInput } from "catcolab-ui-components";
+import { type FocusHandle, NameInput } from "catcolab-ui-components";
 import type { Ob, ObOp, ObType, QualifiedName } from "catlog-wasm";
 import { ObIdInput } from "../components";
 import { removeProxyAndCopy } from "../util/remove_proxy_and_copy";
@@ -34,7 +34,7 @@ function WireColumn(props: {
     exitFirstBackward: (() => void) | undefined;
     /** Called when tabbing forward from the last wire. */
     exitLastForward: (() => void) | undefined;
-    hasFocused: (() => void) | undefined;
+    setFocused: () => void;
 }) {
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
@@ -90,7 +90,7 @@ function WireColumn(props: {
             }}
             hasFocused={() => {
                 props.activateWire(i);
-                props.hasFocused?.();
+                props.setFocused();
             }}
         />
     );
@@ -110,7 +110,7 @@ function WireColumn(props: {
                 class={`${styles.wire} ${styles.addWire}`}
                 onMouseDown={(evt) => {
                     props.insertWire(props.obs.length);
-                    props.hasFocused?.();
+                    props.setFocused();
                     evt.preventDefault();
                 }}
             >
@@ -136,7 +136,7 @@ export default function StringDiagramMorphismCellEditor(props: MorphismEditorPro
 
     // Reset to default on deactivation so re-entry lands on the name input.
     createEffect(() => {
-        if (!props.isActive) {
+        if (!props.focus.hasFocus()) {
             setActive({ zone: "name" });
         }
     });
@@ -241,12 +241,22 @@ export default function StringDiagramMorphismCellEditor(props: MorphismEditorPro
 
     // Clean up when the cell becomes inactive.
     createEffect(() => {
-        if (!props.isActive) {
+        if (!props.focus.hasFocus()) {
             untrack(() => deactivate());
         }
     });
 
     const completions = () => liveModel().elaboratedModel()?.obGeneratorsWithType(elementObType());
+
+    const nameFocus: FocusHandle = {
+        hasFocus: () => props.focus.hasFocus() && active()?.zone === "name",
+        setFocused: (focused) => {
+            if (focused) {
+                setActive({ zone: "name" });
+                props.focus.setFocused(true);
+            }
+        },
+    };
 
     const errors = () => {
         const validated = liveModel().validatedModel();
@@ -265,7 +275,7 @@ export default function StringDiagramMorphismCellEditor(props: MorphismEditorPro
                 completions={completions()}
                 isActive={(i) => {
                     const a = active();
-                    return props.isActive && a?.zone === "dom" && a.index === i;
+                    return props.focus.hasFocus() && a?.zone === "dom" && a.index === i;
                 }}
                 onTextChange={(i, text) => domInputTexts.set(i, text)}
                 insertWire={insertDom}
@@ -285,7 +295,7 @@ export default function StringDiagramMorphismCellEditor(props: MorphismEditorPro
                         insertCod(0);
                     }
                 }}
-                hasFocused={props.actions.hasFocused}
+                setFocused={() => props.focus.setFocused(true)}
             />
             <div class={styles.box}>
                 <NameInput
@@ -296,7 +306,7 @@ export default function StringDiagramMorphismCellEditor(props: MorphismEditorPro
                             mor.name = name;
                         });
                     }}
-                    isActive={props.isActive && active()?.zone === "name"}
+                    focus={nameFocus}
                     deleteBackward={props.actions.deleteBackward}
                     deleteForward={props.actions.deleteForward}
                     exitBackward={props.actions.activateAbove}
@@ -323,10 +333,6 @@ export default function StringDiagramMorphismCellEditor(props: MorphismEditorPro
                             insertCod(0);
                         }
                     }}
-                    hasFocused={() => {
-                        setActive({ zone: "name" });
-                        props.actions.hasFocused?.();
-                    }}
                 />
             </div>
             <WireColumn
@@ -336,7 +342,7 @@ export default function StringDiagramMorphismCellEditor(props: MorphismEditorPro
                 completions={completions()}
                 isActive={(i) => {
                     const a = active();
-                    return props.isActive && a?.zone === "cod" && a.index === i;
+                    return props.focus.hasFocus() && a?.zone === "cod" && a.index === i;
                 }}
                 onTextChange={(i, text) => codInputTexts.set(i, text)}
                 insertWire={insertCod}
@@ -356,7 +362,7 @@ export default function StringDiagramMorphismCellEditor(props: MorphismEditorPro
                     }
                 }}
                 exitLastForward={props.actions.activateBelow}
-                hasFocused={props.actions.hasFocused}
+                setFocused={() => props.focus.setFocused(true)}
             />
         </div>
     );

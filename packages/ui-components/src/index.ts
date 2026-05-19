@@ -22,6 +22,7 @@ export * from "./relative_time";
 export * from "./resizable";
 export * from "./spinner";
 export * from "./text_input";
+export * from "./util/focus";
 export * from "./util/keyboard";
 export * from "./virtual_list";
 export * from "./warning_banner";
