@@ -232,14 +232,17 @@ function DocumentsTreeLeaf(props: {
     const handleClick = async () => {
         // If clicking on primary or secondary doc, navigate to just that doc
         if (clickedRefId() === primaryRefId() || clickedRefId() === secondaryRefId()) {
+            props.primaryFocus.setFocused(true);
             navigate(`/${createLinkPart(props.doc)}`);
         } else {
             // Otherwise, open it as a side panel or put on the left if it is a parent doc
             const clickedDoc = props.doc;
             const parentOfPrimary = await getDocParent(props.primaryDoc.liveDoc.doc, api);
             if (parentOfPrimary && clickedDoc.docRef.refId === parentOfPrimary.docRef.refId) {
+                props.primaryFocus.setFocused(true);
                 navigate(`/${createLinkPart(clickedDoc)}/${createLinkPart(props.primaryDoc)}`);
             } else {
+                props.secondaryFocus.setFocused(true);
                 navigate(`/${createLinkPart(props.primaryDoc)}/${createLinkPart(clickedDoc)}`);
             }
         }
