@@ -55,6 +55,7 @@ export function DocumentPicker(
         "docType",
         "placeholder",
         "isActive",
+        "focus",
         "filterCompletions",
     ]);
 
@@ -68,10 +69,13 @@ export function DocumentPicker(
     );
 
     const [editMode, setEditMode] = createSignal(false);
-    const enableEditMode = () => setEditMode(true);
+    const enableEditMode = () => {
+        props.focus?.setFocused(true);
+        setEditMode(true);
+    };
     const disableEditMode = () => setEditMode(false);
 
-    createEffect(() => setEditMode(props.isActive ?? false));
+    createEffect(() => setEditMode(props.focus?.hasFocus() ?? props.isActive ?? false));
 
     const DocLink = (linkProps: ComponentProps<"a">) => (
         <Switch>
@@ -123,6 +127,7 @@ export function DocumentPicker(
             <Show when={editMode()} fallback={<EditableDocLink />}>
                 <DocSearchInput
                     isActive={true}
+                    focus={props.focus}
                     refId={props.refId}
                     setRefId={(refId) => {
                         props.setRefId(refId);

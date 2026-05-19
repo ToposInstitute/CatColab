@@ -1,7 +1,6 @@
 import {
     batch,
     createEffect,
-    createSignal,
     Index,
     type JSX,
     mergeProps,
@@ -11,7 +10,7 @@ import {
 } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { TextInputOptions } from "catcolab-ui-components";
+import { type FocusHandle, type TextInputOptions, useChildFocus } from "catcolab-ui-components";
 import type { Ob, QualifiedName } from "catlog-wasm";
 import { ObIdInput } from "../components";
 import { removeProxyAndCopy } from "../util/remove_proxy_and_copy";
@@ -44,7 +43,17 @@ export function ObListEditor(originalProps: ObListEditorProps) {
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 
-    const [activeIndex, setActiveIndex] = createSignal<number>(0);
+    const parentFocus: FocusHandle = {
+        hasFocus: () => props.focus?.hasFocus() ?? !!props.isActive,
+        setFocused: (focused) => {
+            if (props.focus) {
+                props.focus.setFocused(focused);
+            } else if (focused) {
+                props.hasFocused?.();
+            }
+        },
+    };
+    const focus = useChildFocus<number>(parentFocus, { default: 0 });
 
     // Track which indices have non-empty text (including incomplete input).
     const inputTexts = new Map<number, string>();
@@ -73,7 +82,7 @@ export function ObListEditor(originalProps: ObListEditorProps) {
             updateObList((objects) => {
                 objects.splice(i, 0, null);
             });
-            setActiveIndex(i);
+            focus.setActiveChild(i);
         });
     };
 
@@ -89,7 +98,7 @@ export function ObListEditor(originalProps: ObListEditorProps) {
 
     // Insert into new object into empty list when focus is gained.
     createEffect(() => {
-        if (props.isActive && untrack(obList).length === 0) {
+        if (parentFocus.hasFocus() && untrack(obList).length === 0) {
             insertNewOb(0);
         }
     });
@@ -104,7 +113,7 @@ export function ObListEditor(originalProps: ObListEditorProps) {
 
     // Clean up when the component becomes inactive.
     createEffect(() => {
-        if (!props.isActive) {
+        if (!parentFocus.hasFocus()) {
             untrack(() => deactivate());
         }
     });
@@ -115,7 +124,7 @@ export function ObListEditor(originalProps: ObListEditorProps) {
             onMouseDown={(evt) => {
                 if (obList().length === 0) {
                     insertNewOb(0);
-                    props.hasFocused?.();
+                    parentFocus.setFocused(true);
                     evt.preventDefault();
                 }
             }}
@@ -139,7 +148,7 @@ export function ObListEditor(originalProps: ObListEditorProps) {
                                 liveModel().elaboratedModel()?.obGeneratorWithLabel(label)
                             }
                             completions={completions()}
-                            isActive={props.isActive && activeIndex() === i}
+                            focus={focus.childFocus(i)}
                             deleteBackward={() =>
                                 batch(() => {
                                     updateObList((objects) => {
@@ -148,7 +157,7 @@ export function ObListEditor(originalProps: ObListEditorProps) {
                                     if (i === 0) {
                                         props.deleteBackward?.();
                                     } else {
-                                        setActiveIndex(i - 1);
+                                        focus.setActiveChild(i - 1);
                                     }
                                 })
                             }
@@ -168,14 +177,14 @@ export function ObListEditor(originalProps: ObListEditorProps) {
                                 if (i === 0) {
                                     props.exitLeft?.();
                                 } else {
-                                    setActiveIndex(i - 1);
+                                    focus.setActiveChild(i - 1);
                                 }
                             }}
                             exitRight={() => {
                                 if (i === obList().length - 1) {
                                     props.exitRight?.();
                                 } else {
-                                    setActiveIndex(i + 1);
+                                    focus.setActiveChild(i + 1);
                                 }
                             }}
                             interceptKeyDown={(evt) => {
@@ -184,15 +193,11 @@ export function ObListEditor(originalProps: ObListEditorProps) {
                                     return true;
                                 } else if (evt.key === "Home" && !evt.shiftKey) {
                                     // TODO: Should move to beginning of input.
-                                    setActiveIndex(0);
+                                    focus.setActiveChild(0);
                                 } else if (evt.key === "End" && !evt.shiftKey) {
-                                    setActiveIndex(obList().length - 1);
+                                    focus.setActiveChild(obList().length - 1);
                                 }
                                 return false;
-                            }}
-                            hasFocused={() => {
-                                setActiveIndex(i);
-                                props.hasFocused?.();
                             }}
                         />
                     </li>
