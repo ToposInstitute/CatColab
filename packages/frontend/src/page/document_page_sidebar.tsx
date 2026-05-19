@@ -12,8 +12,8 @@ import { DocumentMenu } from "./document_menu";
 export function DocumentSidebar(props: {
     primaryDoc?: LiveDocWithRef;
     secondaryDoc?: LiveDocWithRef;
-    primaryFocus: FocusHandle;
-    secondaryFocus: FocusHandle;
+    primaryPaneFocus: FocusHandle;
+    secondaryPaneFocus: FocusHandle;
     refetchPrimaryDoc: () => void;
     refetchSecondaryDoc: () => void;
 }) {
@@ -23,8 +23,8 @@ export function DocumentSidebar(props: {
                 <RelatedDocuments
                     primaryDoc={primaryDoc()}
                     secondaryDoc={props.secondaryDoc}
-                    primaryFocus={props.primaryFocus}
-                    secondaryFocus={props.secondaryFocus}
+                    primaryPaneFocus={props.primaryPaneFocus}
+                    secondaryPaneFocus={props.secondaryPaneFocus}
                     refetchPrimaryDoc={props.refetchPrimaryDoc}
                     refetchSecondaryDoc={props.refetchSecondaryDoc}
                 />
@@ -63,8 +63,8 @@ async function getDocParent(doc: Document, api: Api): Promise<LiveDocWithRef | u
 function RelatedDocuments(props: {
     primaryDoc: LiveDocWithRef;
     secondaryDoc?: LiveDocWithRef;
-    primaryFocus: FocusHandle;
-    secondaryFocus: FocusHandle;
+    primaryPaneFocus: FocusHandle;
+    secondaryPaneFocus: FocusHandle;
     refetchPrimaryDoc: () => void;
     refetchSecondaryDoc: () => void;
 }) {
@@ -84,8 +84,8 @@ function RelatedDocuments(props: {
                         indent={1}
                         primaryDoc={props.primaryDoc}
                         secondaryDoc={props.secondaryDoc}
-                        primaryFocus={props.primaryFocus}
-                        secondaryFocus={props.secondaryFocus}
+                        primaryPaneFocus={props.primaryPaneFocus}
+                        secondaryPaneFocus={props.secondaryPaneFocus}
                         refetchPrimaryDoc={props.refetchPrimaryDoc}
                         refetchSecondaryDoc={props.refetchSecondaryDoc}
                     />
@@ -100,8 +100,8 @@ function DocumentsTreeNode(props: {
     indent: number;
     primaryDoc: LiveDocWithRef;
     secondaryDoc?: LiveDocWithRef;
-    primaryFocus: FocusHandle;
-    secondaryFocus: FocusHandle;
+    primaryPaneFocus: FocusHandle;
+    secondaryPaneFocus: FocusHandle;
     refetchPrimaryDoc: () => void;
     refetchSecondaryDoc: () => void;
 }) {
@@ -169,8 +169,8 @@ function DocumentsTreeNode(props: {
                 indent={props.indent}
                 primaryDoc={props.primaryDoc}
                 secondaryDoc={props.secondaryDoc}
-                primaryFocus={props.primaryFocus}
-                secondaryFocus={props.secondaryFocus}
+                primaryPaneFocus={props.primaryPaneFocus}
+                secondaryPaneFocus={props.secondaryPaneFocus}
                 refetchPrimaryDoc={props.refetchPrimaryDoc}
                 refetchSecondaryDoc={props.refetchSecondaryDoc}
             />
@@ -181,8 +181,8 @@ function DocumentsTreeNode(props: {
                         indent={props.indent + 1}
                         primaryDoc={props.primaryDoc}
                         secondaryDoc={props.secondaryDoc}
-                        primaryFocus={props.primaryFocus}
-                        secondaryFocus={props.secondaryFocus}
+                        primaryPaneFocus={props.primaryPaneFocus}
+                        secondaryPaneFocus={props.secondaryPaneFocus}
                         refetchPrimaryDoc={props.refetchPrimaryDoc}
                         refetchSecondaryDoc={props.refetchSecondaryDoc}
                     />
@@ -197,8 +197,8 @@ function DocumentsTreeLeaf(props: {
     indent: number;
     primaryDoc: LiveDocWithRef;
     secondaryDoc?: LiveDocWithRef;
-    primaryFocus: FocusHandle;
-    secondaryFocus: FocusHandle;
+    primaryPaneFocus: FocusHandle;
+    secondaryPaneFocus: FocusHandle;
     refetchPrimaryDoc: () => void;
     refetchSecondaryDoc: () => void;
 }) {
@@ -212,8 +212,8 @@ function DocumentsTreeLeaf(props: {
     const isPrimary = () => clickedRefId() === primaryRefId();
     const isSecondary = () => clickedRefId() === secondaryRefId();
     const isFocused = () =>
-        (isPrimary() && props.primaryFocus.hasFocus()) ||
-        (isSecondary() && props.secondaryFocus.hasFocus());
+        (isPrimary() && props.primaryPaneFocus.hasFocus()) ||
+        (isSecondary() && props.secondaryPaneFocus.hasFocus());
 
     const iconLetters = createMemo(() => {
         const doc = props.doc.liveDoc.doc;
@@ -232,17 +232,17 @@ function DocumentsTreeLeaf(props: {
     const handleClick = async () => {
         // If clicking on primary or secondary doc, navigate to just that doc
         if (clickedRefId() === primaryRefId() || clickedRefId() === secondaryRefId()) {
-            props.primaryFocus.setFocused(true);
+            props.primaryPaneFocus.setFocused(true);
             navigate(`/${createLinkPart(props.doc)}`);
         } else {
             // Otherwise, open it as a side panel or put on the left if it is a parent doc
             const clickedDoc = props.doc;
             const parentOfPrimary = await getDocParent(props.primaryDoc.liveDoc.doc, api);
             if (parentOfPrimary && clickedDoc.docRef.refId === parentOfPrimary.docRef.refId) {
-                props.primaryFocus.setFocused(true);
+                props.primaryPaneFocus.setFocused(true);
                 navigate(`/${createLinkPart(clickedDoc)}/${createLinkPart(props.primaryDoc)}`);
             } else {
-                props.secondaryFocus.setFocused(true);
+                props.secondaryPaneFocus.setFocused(true);
                 navigate(`/${createLinkPart(props.primaryDoc)}/${createLinkPart(clickedDoc)}`);
             }
         }
