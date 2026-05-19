@@ -4,7 +4,7 @@ import Copy from "lucide-solid/icons/copy";
 import Download from "lucide-solid/icons/download";
 import { For, Match, Show, Switch } from "solid-js";
 
-import { BlockTitle, ErrorAlert, IconButton } from "catcolab-ui-components";
+import { CodeView, BlockTitle, ErrorAlert, IconButton } from "catcolab-ui-components";
 import type { ModelAnalysisProps } from "../../analysis";
 import * as SQL from "./sql_types.ts";
 
@@ -105,7 +105,9 @@ export default function SQLSchemaAnalysis(
                                         actions={SQLHeader(sql())}
                                         settingsPane={BackendConfig()}
                                     />
-                                    <pre>{sql()}</pre>
+                                    <Show when={props.content.backend} keyed>
+                                        {(_) => <CodeView language="sql" text={sql()} />}
+                                    </Show>
                                 </div>
                             )}
                         </Match>

@@ -2,6 +2,7 @@ export * from "./alert";
 export * from "./block_title";
 export * from "./settings_disclosure";
 export * from "./button";
+export * from "./code_view";
 export * from "./completions";
 export * from "./dialog";
 export * from "./document_type_icon";
