@@ -2,7 +2,7 @@ import { useNavigate } from "@solidjs/router";
 import { createMemo, createResource, For, Show, useContext } from "solid-js";
 import { stringify as uuidStringify } from "uuid";
 
-import { DocumentTypeIcon } from "catcolab-ui-components";
+import { DocumentTypeIcon, type FocusHandle } from "catcolab-ui-components";
 import type { Document, Link } from "catlog-wasm";
 import { type Api, type LiveDocWithRef, useApi } from "../api";
 import { TheoryLibraryContext } from "../theory";
@@ -12,6 +12,8 @@ import { DocumentMenu } from "./document_menu";
 export function DocumentSidebar(props: {
     primaryDoc?: LiveDocWithRef;
     secondaryDoc?: LiveDocWithRef;
+    primaryFocus: FocusHandle;
+    secondaryFocus: FocusHandle;
     refetchPrimaryDoc: () => void;
     refetchSecondaryDoc: () => void;
 }) {
@@ -21,6 +23,8 @@ export function DocumentSidebar(props: {
                 <RelatedDocuments
                     primaryDoc={primaryDoc()}
                     secondaryDoc={props.secondaryDoc}
+                    primaryFocus={props.primaryFocus}
+                    secondaryFocus={props.secondaryFocus}
                     refetchPrimaryDoc={props.refetchPrimaryDoc}
                     refetchSecondaryDoc={props.refetchSecondaryDoc}
                 />
@@ -59,6 +63,8 @@ async function getDocParent(doc: Document, api: Api): Promise<LiveDocWithRef | u
 function RelatedDocuments(props: {
     primaryDoc: LiveDocWithRef;
     secondaryDoc?: LiveDocWithRef;
+    primaryFocus: FocusHandle;
+    secondaryFocus: FocusHandle;
     refetchPrimaryDoc: () => void;
     refetchSecondaryDoc: () => void;
 }) {
@@ -78,6 +84,8 @@ function RelatedDocuments(props: {
                         indent={1}
                         primaryDoc={props.primaryDoc}
                         secondaryDoc={props.secondaryDoc}
+                        primaryFocus={props.primaryFocus}
+                        secondaryFocus={props.secondaryFocus}
                         refetchPrimaryDoc={props.refetchPrimaryDoc}
                         refetchSecondaryDoc={props.refetchSecondaryDoc}
                     />
@@ -92,6 +100,8 @@ function DocumentsTreeNode(props: {
     indent: number;
     primaryDoc: LiveDocWithRef;
     secondaryDoc?: LiveDocWithRef;
+    primaryFocus: FocusHandle;
+    secondaryFocus: FocusHandle;
     refetchPrimaryDoc: () => void;
     refetchSecondaryDoc: () => void;
 }) {
@@ -159,6 +169,8 @@ function DocumentsTreeNode(props: {
                 indent={props.indent}
                 primaryDoc={props.primaryDoc}
                 secondaryDoc={props.secondaryDoc}
+                primaryFocus={props.primaryFocus}
+                secondaryFocus={props.secondaryFocus}
                 refetchPrimaryDoc={props.refetchPrimaryDoc}
                 refetchSecondaryDoc={props.refetchSecondaryDoc}
             />
@@ -169,6 +181,8 @@ function DocumentsTreeNode(props: {
                         indent={props.indent + 1}
                         primaryDoc={props.primaryDoc}
                         secondaryDoc={props.secondaryDoc}
+                        primaryFocus={props.primaryFocus}
+                        secondaryFocus={props.secondaryFocus}
                         refetchPrimaryDoc={props.refetchPrimaryDoc}
                         refetchSecondaryDoc={props.refetchSecondaryDoc}
                     />
@@ -183,6 +197,8 @@ function DocumentsTreeLeaf(props: {
     indent: number;
     primaryDoc: LiveDocWithRef;
     secondaryDoc?: LiveDocWithRef;
+    primaryFocus: FocusHandle;
+    secondaryFocus: FocusHandle;
     refetchPrimaryDoc: () => void;
     refetchSecondaryDoc: () => void;
 }) {
@@ -193,6 +209,11 @@ function DocumentsTreeLeaf(props: {
     const clickedRefId = createMemo(() => props.doc.docRef.refId);
     const primaryRefId = createMemo(() => props.primaryDoc.docRef.refId);
     const secondaryRefId = createMemo(() => props.secondaryDoc?.docRef.refId);
+    const isPrimary = () => clickedRefId() === primaryRefId();
+    const isSecondary = () => clickedRefId() === secondaryRefId();
+    const isFocused = () =>
+        (isPrimary() && props.primaryFocus.hasFocus()) ||
+        (isSecondary() && props.secondaryFocus.hasFocus());
 
     const iconLetters = createMemo(() => {
         const doc = props.doc.liveDoc.doc;
@@ -229,7 +250,8 @@ function DocumentsTreeLeaf(props: {
             onClick={handleClick}
             class="related-document"
             classList={{
-                active: props.doc.docRef.refId === props.primaryDoc.docRef.refId,
+                active: isPrimary() || isSecondary(),
+                focused: isFocused(),
             }}
             style={{ "padding-left": `${props.indent * 16}px` }}
         >
