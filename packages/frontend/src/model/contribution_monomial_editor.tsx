@@ -59,11 +59,12 @@ export function ContributionMonomialEditor(props: ContributionMonomialEditorProp
 
     return (
         <Show
-            when={props.isActive || obList().some((ob) => ob === null)}
+            when={(props.focus?.hasFocus() ?? props.isActive) || obList().some((ob) => ob === null)}
             fallback={
                 <div
                     class={`${styles.monomial} ${styles.collapsed}`}
                     onMouseDown={(evt) => {
+                        props.focus?.setFocused(true);
                         props.hasFocused?.();
                         evt.preventDefault();
                     }}
@@ -91,14 +92,13 @@ export function ContributionMonomialEditor(props: ContributionMonomialEditorProp
                     obType={props.obType}
                     placeholder={props.placeholder}
                     isInvalid={props.isInvalid}
-                    isActive={props.isActive}
+                    focus={props.focus}
                     deleteBackward={props.deleteBackward}
                     deleteForward={props.deleteForward}
                     exitBackward={props.exitBackward}
                     exitForward={props.exitForward}
                     exitLeft={props.exitLeft}
                     exitRight={props.exitRight}
-                    hasFocused={props.hasFocused}
                     insertKey={props.insertKey ?? ","}
                     startDelimiter={<div class={styles.delimiter}>{"["}</div>}
                     endDelimiter={<div class={styles.delimiter}>{"]"}</div>}

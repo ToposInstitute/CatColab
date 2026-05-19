@@ -4,6 +4,7 @@ import invariant from "tiny-invariant";
 
 import { Diagram, Nb } from "catcolab-document-methods";
 import type { DiagramJudgment, DiagramMorDecl, DiagramObDecl } from "catcolab-document-types";
+import { type FocusHandle } from "catcolab-ui-components";
 import { LiveModelContext } from "../model";
 import { type CellConstructor, type FormalCellEditorProps, NotebookEditor } from "../notebook";
 import type { InstanceTypeMeta } from "../theory";
@@ -14,7 +15,7 @@ import { DiagramObjectCellEditor } from "./object_cell_editor";
 
 /** Notebook editor for a diagram in a model.
  */
-export function DiagramNotebookEditor(props: { liveDiagram: LiveDiagramDoc }) {
+export function DiagramNotebookEditor(props: { liveDiagram: LiveDiagramDoc; focus: FocusHandle }) {
     const liveDoc = () => props.liveDiagram.liveDoc;
     const liveModel = () => props.liveDiagram.liveModel;
 
@@ -39,6 +40,7 @@ export function DiagramNotebookEditor(props: { liveDiagram: LiveDiagramDoc }) {
                 cellConstructors={cellConstructors()}
                 cellLabel={judgmentLabel}
                 duplicateCell={Diagram.duplicateDiagramJudgment}
+                focus={props.focus}
             />
         </MultiProvider>
     );
@@ -59,7 +61,7 @@ function DiagramCellEditor(props: FormalCellEditorProps<DiagramJudgment>) {
                         modifyDecl={(f) =>
                             props.changeContent((content) => f(content as DiagramObDecl))
                         }
-                        isActive={props.isActive}
+                        focus={props.focus}
                         actions={props.actions}
                         theory={theory()}
                     />
@@ -72,7 +74,7 @@ function DiagramCellEditor(props: FormalCellEditorProps<DiagramJudgment>) {
                         modifyDecl={(f) =>
                             props.changeContent((content) => f(content as DiagramMorDecl))
                         }
-                        isActive={props.isActive}
+                        focus={props.focus}
                         actions={props.actions}
                         theory={theory()}
                     />

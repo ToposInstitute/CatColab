@@ -4,6 +4,7 @@ import invariant from "tiny-invariant";
 
 import { Model, Nb } from "catcolab-document-methods";
 import type { InstantiatedModel, ModelJudgment, MorDecl, ObDecl } from "catcolab-document-types";
+import { type FocusHandle } from "catcolab-ui-components";
 import { type CellConstructor, type FormalCellEditorProps, NotebookEditor } from "../notebook";
 import { TheoryLibraryContext, type ModelTypeMeta, type Theory } from "../theory";
 import { LiveModelContext } from "./context";
@@ -12,7 +13,7 @@ import { InstantiationCellEditor } from "./instantiation_cell_editor";
 
 /** Notebook editor for a model of a double theory.
  */
-export function ModelNotebookEditor(props: { liveModel: LiveModelDoc }) {
+export function ModelNotebookEditor(props: { liveModel: LiveModelDoc; focus: FocusHandle }) {
     const liveDoc = () => props.liveModel.liveDoc;
 
     const cellConstructors = () => {
@@ -34,6 +35,7 @@ export function ModelNotebookEditor(props: { liveModel: LiveModelDoc }) {
                 cellConstructors={cellConstructors()}
                 cellLabel={judgmentLabel}
                 duplicateCell={Model.duplicateModelJudgment}
+                focus={props.focus}
             />
         </LiveModelContext.Provider>
     );
@@ -65,7 +67,7 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
                             modifyObject={(f: (decl: ObDecl) => void) =>
                                 props.changeContent((content) => f(content as ObDecl))
                             }
-                            isActive={props.isActive}
+                            focus={props.focus}
                             actions={props.actions}
                             theory={theory()}
                         />
@@ -85,7 +87,7 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
                             modifyMorphism={(f: (decl: MorDecl) => void) =>
                                 props.changeContent((content) => f(content as MorDecl))
                             }
-                            isActive={props.isActive}
+                            focus={props.focus}
                             actions={props.actions}
                             theory={theory()}
                         />
@@ -98,7 +100,7 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
                     modifyInstantiation={(f) =>
                         props.changeContent((content) => f(content as InstantiatedModel))
                     }
-                    isActive={props.isActive}
+                    focus={props.focus}
                     actions={props.actions}
                 />
             </Match>

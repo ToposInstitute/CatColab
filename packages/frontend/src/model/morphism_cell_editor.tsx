@@ -1,7 +1,7 @@
-import { createEffect, createMemo, createSignal, useContext } from "solid-js";
+import { createMemo, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { NameInput } from "catcolab-ui-components";
+import { NameInput, useChildFocus } from "catcolab-ui-components";
 import { removeProxyAndCopy } from "../util/remove_proxy_and_copy";
 import { LiveModelContext } from "./context";
 import type { MorphismEditorProps } from "./editors";
@@ -16,14 +16,8 @@ export default function MorphismCellEditor(props: MorphismEditorProps) {
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 
-    const [activeInput, setActiveInput] = createSignal<MorphismCellInput>("name");
-
-    // Reset to default on deactivation so re-entry lands on the name input.
-    createEffect(() => {
-        if (!props.isActive) {
-            setActiveInput("name");
-        }
-    });
+    // oxlint-disable-next-line solid/reactivity -- Focus handles are stable for a mounted cell.
+    const focus = useChildFocus<MorphismCellInput>(props.focus, { default: "name" });
 
     const morTypeMeta = () => props.theory.modelMorTypeMeta(props.morphism.morType);
 
@@ -81,15 +75,11 @@ export default function MorphismCellEditor(props: MorphismEditorProps) {
                     obType={domType()}
                     applyOp={morTypeMeta()?.domain?.apply}
                     isInvalid={errors().some((err) => err.tag === "Dom" || err.tag === "DomType")}
-                    isActive={props.isActive && activeInput() === "dom"}
-                    deleteForward={() => setActiveInput("name")}
-                    exitBackward={() => setActiveInput("name")}
-                    exitForward={() => setActiveInput("cod")}
-                    exitRight={() => setActiveInput("name")}
-                    hasFocused={() => {
-                        setActiveInput("dom");
-                        props.actions.hasFocused?.();
-                    }}
+                    focus={focus.childFocus("dom")}
+                    deleteForward={() => focus.setActiveChild("name")}
+                    exitBackward={() => focus.setActiveChild("name")}
+                    exitForward={() => focus.setActiveChild("cod")}
+                    exitRight={() => focus.setActiveChild("name")}
                 />
             </div>
             <div class={arrowStyles.arrowWithName}>
@@ -102,19 +92,15 @@ export default function MorphismCellEditor(props: MorphismEditorProps) {
                                 mor.name = name;
                             });
                         }}
-                        isActive={props.isActive && activeInput() === "name"}
+                        focus={focus.childFocus("name")}
                         deleteBackward={props.actions.deleteBackward}
                         deleteForward={props.actions.deleteForward}
                         exitBackward={props.actions.activateAbove}
-                        exitForward={() => setActiveInput("dom")}
+                        exitForward={() => focus.setActiveChild("dom")}
                         exitUp={props.actions.activateAbove}
                         exitDown={props.actions.activateBelow}
-                        exitLeft={() => setActiveInput("dom")}
-                        exitRight={() => setActiveInput("cod")}
-                        hasFocused={() => {
-                            setActiveInput("name");
-                            props.actions.hasFocused?.();
-                        }}
+                        exitLeft={() => focus.setActiveChild("dom")}
+                        exitRight={() => focus.setActiveChild("cod")}
                     />
                 </div>
                 <div class={[arrowStyles.arrowContainer, arrowClass()].join(" ")}>
@@ -133,15 +119,11 @@ export default function MorphismCellEditor(props: MorphismEditorProps) {
                     obType={codType()}
                     applyOp={morTypeMeta()?.codomain?.apply}
                     isInvalid={errors().some((err) => err.tag === "Cod" || err.tag === "CodType")}
-                    isActive={props.isActive && activeInput() === "cod"}
-                    deleteBackward={() => setActiveInput("name")}
-                    exitBackward={() => setActiveInput("dom")}
+                    focus={focus.childFocus("cod")}
+                    deleteBackward={() => focus.setActiveChild("name")}
+                    exitBackward={() => focus.setActiveChild("dom")}
                     exitForward={props.actions.activateBelow}
-                    exitLeft={() => setActiveInput("name")}
-                    hasFocused={() => {
-                        setActiveInput("cod");
-                        props.actions.hasFocused?.();
-                    }}
+                    exitLeft={() => focus.setActiveChild("name")}
                 />
             </div>
         </div>
