@@ -175,6 +175,8 @@ export default function DocumentPage() {
                                 closeSidePanel={closeSidePanel}
                                 togglePrimaryHistorySidebar={togglePrimaryHistorySidebar}
                                 toggleSecondaryHistorySidebar={toggleSecondaryHistorySidebar}
+                                primaryFocus={paneFocus.childFocus("primary")}
+                                secondaryFocus={paneFocus.childFocus("secondary")}
                             />
                         }
                         sidebarContents={
@@ -230,6 +232,8 @@ function SplitPaneToolbar(props: {
     maximizeSidePanel: () => void;
     togglePrimaryHistorySidebar: () => void;
     toggleSecondaryHistorySidebar: () => void;
+    primaryFocus: FocusHandle;
+    secondaryFocus: FocusHandle;
 }) {
     const secondaryPanelSize = () => props.panelSizes?.[1];
     const primaryPanelSize = () => props.panelSizes?.[0];
@@ -239,7 +243,13 @@ function SplitPaneToolbar(props: {
             <DocumentBreadcrumbs liveDoc={props.doc.liveDoc} docRefId={props.docRef.refId} />
             <span class="filler" />
             <Show when={!secondaryPanelSize()}>
-                <IconButton onClick={props.togglePrimaryHistorySidebar} tooltip="Toggle history">
+                <IconButton
+                    onClick={() => {
+                        props.primaryFocus.setFocused(true);
+                        props.togglePrimaryHistorySidebar();
+                    }}
+                    tooltip="Toggle history"
+                >
                     <History size={20} />
                 </IconButton>
                 <PermissionsButton liveDoc={props.doc.liveDoc} docRef={props.docRef} />
@@ -250,7 +260,10 @@ function SplitPaneToolbar(props: {
                     style={{ left: `${(primaryPanelSize() ?? 0) * 100}%` }}
                 >
                     <IconButton
-                        onClick={props.togglePrimaryHistorySidebar}
+                        onClick={() => {
+                            props.primaryFocus.setFocused(true);
+                            props.togglePrimaryHistorySidebar();
+                        }}
                         tooltip="Toggle history"
                     >
                         <History size={20} />
@@ -267,6 +280,7 @@ function SplitPaneToolbar(props: {
                         closeSidePanel={props.closeSidePanel}
                         maximizeSidePanel={props.maximizeSidePanel}
                         toggleHistorySidebar={props.toggleSecondaryHistorySidebar}
+                        focus={props.secondaryFocus}
                     />
                 )}
             </Show>
@@ -281,6 +295,7 @@ function SecondaryToolbar(props: {
     closeSidePanel: () => void;
     maximizeSidePanel: () => void;
     toggleHistorySidebar: () => void;
+    focus: FocusHandle;
 }) {
     return (
         <>
@@ -306,7 +321,13 @@ function SecondaryToolbar(props: {
             >
                 {(secondary) => (
                     <div class="secondary-permissions-toolbar toolbar">
-                        <IconButton onClick={props.toggleHistorySidebar} tooltip="Toggle history">
+                        <IconButton
+                            onClick={() => {
+                                props.focus.setFocused(true);
+                                props.toggleHistorySidebar();
+                            }}
+                            tooltip="Toggle history"
+                        >
                             <History size={20} />
                         </IconButton>
                         <PermissionsButton
