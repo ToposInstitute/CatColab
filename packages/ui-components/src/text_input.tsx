@@ -161,7 +161,10 @@ export function TextInput(allProps: TextInputProps) {
     const onKeyDown: JSX.EventHandler<HTMLInputElement, KeyboardEvent> = (evt) => {
         const remaining = completionsRef()?.remainingCompletions() ?? [];
         const value = evt.currentTarget.value;
-        if (options.interceptKeyDown?.(evt)) {
+        if (evt.key === "Escape" && isCompletionsOpen()) {
+            setCompletionsOpen(false);
+            evt.stopPropagation();
+        } else if (options.interceptKeyDown?.(evt)) {
         } else if (options.deleteBackward && evt.key === "Backspace" && !value) {
             options.deleteBackward();
         } else if (options.deleteForward && evt.key === "Delete" && !value) {
