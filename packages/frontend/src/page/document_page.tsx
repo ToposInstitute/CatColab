@@ -175,8 +175,8 @@ export default function DocumentPage() {
                                 closeSidePanel={closeSidePanel}
                                 togglePrimaryHistorySidebar={togglePrimaryHistorySidebar}
                                 toggleSecondaryHistorySidebar={toggleSecondaryHistorySidebar}
-                                primaryFocus={paneFocus.childFocus("primary")}
-                                secondaryFocus={paneFocus.childFocus("secondary")}
+                                primaryPaneFocus={paneFocus.childFocus("primary")}
+                                secondaryPaneFocus={paneFocus.childFocus("secondary")}
                             />
                         }
                         sidebarContents={
@@ -194,8 +194,8 @@ export default function DocumentPage() {
                                           }
                                         : undefined;
                                 })()}
-                                primaryFocus={paneFocus.childFocus("primary")}
-                                secondaryFocus={paneFocus.childFocus("secondary")}
+                                primaryPaneFocus={paneFocus.childFocus("primary")}
+                                secondaryPaneFocus={paneFocus.childFocus("secondary")}
                                 refetchPrimaryDoc={refetchPrimaryDoc}
                                 refetchSecondaryDoc={refetchSecondaryDoc}
                             />
@@ -212,8 +212,8 @@ export default function DocumentPage() {
                             setResizableContext={setResizableContext}
                             primaryHistoryOpen={primaryHistoryOpen()}
                             secondaryHistoryOpen={secondaryHistoryOpen()}
-                            primaryFocus={paneFocus.childFocus("primary")}
-                            secondaryFocus={paneFocus.childFocus("secondary")}
+                            primaryPaneFocus={paneFocus.childFocus("primary")}
+                            secondaryPaneFocus={paneFocus.childFocus("secondary")}
                         />
                     </SidebarLayout>
                 )}
@@ -232,8 +232,8 @@ function SplitPaneToolbar(props: {
     maximizeSidePanel: () => void;
     togglePrimaryHistorySidebar: () => void;
     toggleSecondaryHistorySidebar: () => void;
-    primaryFocus: FocusHandle;
-    secondaryFocus: FocusHandle;
+    primaryPaneFocus: FocusHandle;
+    secondaryPaneFocus: FocusHandle;
 }) {
     const secondaryPanelSize = () => props.panelSizes?.[1];
     const primaryPanelSize = () => props.panelSizes?.[0];
@@ -245,7 +245,7 @@ function SplitPaneToolbar(props: {
             <Show when={!secondaryPanelSize()}>
                 <IconButton
                     onClick={() => {
-                        props.primaryFocus.setFocused(true);
+                        props.primaryPaneFocus.setFocused(true);
                         props.togglePrimaryHistorySidebar();
                     }}
                     tooltip="Toggle history"
@@ -261,7 +261,7 @@ function SplitPaneToolbar(props: {
                 >
                     <IconButton
                         onClick={() => {
-                            props.primaryFocus.setFocused(true);
+                            props.primaryPaneFocus.setFocused(true);
                             props.togglePrimaryHistorySidebar();
                         }}
                         tooltip="Toggle history"
@@ -280,7 +280,7 @@ function SplitPaneToolbar(props: {
                         closeSidePanel={props.closeSidePanel}
                         maximizeSidePanel={props.maximizeSidePanel}
                         toggleHistorySidebar={props.toggleSecondaryHistorySidebar}
-                        focus={props.secondaryFocus}
+                        secondaryPaneFocus={props.secondaryPaneFocus}
                     />
                 )}
             </Show>
@@ -295,7 +295,7 @@ function SecondaryToolbar(props: {
     closeSidePanel: () => void;
     maximizeSidePanel: () => void;
     toggleHistorySidebar: () => void;
-    focus: FocusHandle;
+    secondaryPaneFocus: FocusHandle;
 }) {
     return (
         <>
@@ -323,7 +323,7 @@ function SecondaryToolbar(props: {
                     <div class="secondary-permissions-toolbar toolbar">
                         <IconButton
                             onClick={() => {
-                                props.focus.setFocused(true);
+                                props.secondaryPaneFocus.setFocused(true);
                                 props.toggleHistorySidebar();
                             }}
                             tooltip="Toggle history"
@@ -352,8 +352,8 @@ function ResizablePanels(props: {
     setResizableContext: (context: ContextValue) => void;
     primaryHistoryOpen: boolean;
     secondaryHistoryOpen: boolean;
-    primaryFocus: FocusHandle;
-    secondaryFocus: FocusHandle;
+    primaryPaneFocus: FocusHandle;
+    secondaryPaneFocus: FocusHandle;
 }) {
     return (
         <Resizable class="resizeable-panels">
@@ -370,7 +370,7 @@ function ResizablePanels(props: {
                                 refetchPrimaryDoc={props.refetchPrimaryDoc}
                                 refetchSecondaryDoc={props.refetchSecondaryDoc}
                                 historySidebarOpen={props.primaryHistoryOpen}
-                                focus={props.primaryFocus}
+                                focus={props.primaryPaneFocus}
                             />
                         </Resizable.Panel>
                         <Show when={props.isSidePanelOpen}>
@@ -389,7 +389,7 @@ function ResizablePanels(props: {
                                             refetchPrimaryDoc={props.refetchPrimaryDoc}
                                             refetchSecondaryDoc={props.refetchSecondaryDoc}
                                             historySidebarOpen={props.secondaryHistoryOpen}
-                                            focus={props.secondaryFocus}
+                                            focus={props.secondaryPaneFocus}
                                         />
                                     )}
                                 </Show>
