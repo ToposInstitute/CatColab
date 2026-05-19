@@ -192,6 +192,8 @@ export default function DocumentPage() {
                                           }
                                         : undefined;
                                 })()}
+                                primaryFocus={paneFocus.childFocus("primary")}
+                                secondaryFocus={paneFocus.childFocus("secondary")}
                                 refetchPrimaryDoc={refetchPrimaryDoc}
                                 refetchSecondaryDoc={refetchSecondaryDoc}
                             />
