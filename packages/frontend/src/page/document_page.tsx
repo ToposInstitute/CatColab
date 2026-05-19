@@ -17,7 +17,15 @@ import {
 } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { Button, IconButton, ResizableHandle, WarningBanner } from "catcolab-ui-components";
+import {
+    Button,
+    type FocusHandle,
+    IconButton,
+    ResizableHandle,
+    rootFocus,
+    useChildFocus,
+    WarningBanner,
+} from "catcolab-ui-components";
 import { getLiveAnalysis, type LiveAnalysisDoc } from "../analysis";
 import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
 import { AnalysisInfo } from "../analysis/analysis_info";
@@ -63,6 +71,7 @@ export default function DocumentPage() {
     const params = useParams();
     const navigate = useNavigate();
     const isSidePanelOpen = () => !!params.subkind && !!params.subref;
+    const paneFocus = useChildFocus<"primary" | "secondary">(rootFocus, { default: "primary" });
 
     // Redirect if primary and secondary refs match
     createEffect(() => {
@@ -101,6 +110,7 @@ export default function DocumentPage() {
     );
 
     const closeSidePanel = () => {
+        paneFocus.setActiveChild("primary");
         navigate(`/${params.kind}/${params.ref}`);
     };
 
@@ -120,6 +130,7 @@ export default function DocumentPage() {
             // expand the second panel
             context?.expand(1);
         } else {
+            paneFocus.setActiveChild("primary");
             // collapse the second panel
             context?.collapse(1);
             // Set the first panel to be the full size
@@ -194,6 +205,8 @@ export default function DocumentPage() {
                             setResizableContext={setResizableContext}
                             primaryHistoryOpen={primaryHistoryOpen()}
                             secondaryHistoryOpen={secondaryHistoryOpen()}
+                            primaryFocus={paneFocus.childFocus("primary")}
+                            secondaryFocus={paneFocus.childFocus("secondary")}
                         />
                     </SidebarLayout>
                 )}
@@ -313,6 +326,8 @@ function ResizablePanels(props: {
     setResizableContext: (context: ContextValue) => void;
     primaryHistoryOpen: boolean;
     secondaryHistoryOpen: boolean;
+    primaryFocus: FocusHandle;
+    secondaryFocus: FocusHandle;
 }) {
     return (
         <Resizable class="resizeable-panels">
@@ -329,6 +344,7 @@ function ResizablePanels(props: {
                                 refetchPrimaryDoc={props.refetchPrimaryDoc}
                                 refetchSecondaryDoc={props.refetchSecondaryDoc}
                                 historySidebarOpen={props.primaryHistoryOpen}
+                                focus={props.primaryFocus}
                             />
                         </Resizable.Panel>
                         <Show when={props.isSidePanelOpen}>
@@ -347,6 +363,7 @@ function ResizablePanels(props: {
                                             refetchPrimaryDoc={props.refetchPrimaryDoc}
                                             refetchSecondaryDoc={props.refetchSecondaryDoc}
                                             historySidebarOpen={props.secondaryHistoryOpen}
+                                            focus={props.secondaryFocus}
                                         />
                                     )}
                                 </Show>
@@ -365,6 +382,7 @@ export function DocumentPane(props: {
     refetchPrimaryDoc: () => void;
     refetchSecondaryDoc: () => void;
     historySidebarOpen: boolean;
+    focus: FocusHandle;
 }) {
     const api = useApi();
     const [isDeleted, setIsDeleted] = createSignal(false);
@@ -404,7 +422,7 @@ export function DocumentPane(props: {
     // oxlint-disable solid/reactivity -- Context.Provider value getter is reactive
     return (
         <DocRefIdContext.Provider value={() => props.docRef.refId}>
-            <div class="document-pane-layout">
+            <div class="document-pane-layout" onMouseDown={() => props.focus.setFocused(true)}>
                 <div class="document-pane-content">
                     <Show when={isDeleted()}>
                         <WarningBanner
@@ -448,16 +466,27 @@ export function DocumentPane(props: {
                         </Switch>
                         <Switch>
                             <Match keyed when={props.doc.type === "model" && props.doc}>
-                                {(liveModel) => <ModelNotebookEditor liveModel={liveModel} />}
+                                {(liveModel) => (
+                                    <ModelNotebookEditor
+                                        liveModel={liveModel}
+                                        focus={props.focus}
+                                    />
+                                )}
                             </Match>
                             <Match keyed when={props.doc.type === "diagram" && props.doc}>
                                 {(liveDiagram) => (
-                                    <DiagramNotebookEditor liveDiagram={liveDiagram} />
+                                    <DiagramNotebookEditor
+                                        liveDiagram={liveDiagram}
+                                        focus={props.focus}
+                                    />
                                 )}
                             </Match>
                             <Match keyed when={props.doc.type === "analysis" && props.doc}>
                                 {(liveAnalysis) => (
-                                    <AnalysisNotebookEditor liveAnalysis={liveAnalysis} />
+                                    <AnalysisNotebookEditor
+                                        liveAnalysis={liveAnalysis}
+                                        focus={props.focus}
+                                    />
                                 )}
                             </Match>
                         </Switch>

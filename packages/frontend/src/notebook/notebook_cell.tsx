@@ -17,7 +17,7 @@ import type { EditorView } from "prosemirror-view";
 import { createEffect, createSignal, type JSX, onCleanup, Show } from "solid-js";
 
 import type { Uuid } from "catcolab-document-types";
-import { type Completion, Completions, IconButton } from "catcolab-ui-components";
+import { type Completion, Completions, type FocusHandle, IconButton } from "catcolab-ui-components";
 import { RichTextEditor } from "../components";
 import { CellTypePopover } from "./notebook_editor";
 
@@ -25,11 +25,8 @@ import "./notebook_cell.css";
 
 /** Props available to all notebook cell editors. */
 export type CellEditorProps = {
-    /** Is the cell requested to be active?
-
-    When this prop changes to `true`, the cell is authorizeed to grab the focus.
-     */
-    isActive: boolean;
+    /** Focus state for this cell. */
+    focus: FocusHandle;
 
     /** Actions invokable within the cell. */
     actions: CellActions;
@@ -61,9 +58,6 @@ export type CellActions = {
 
     /** Move this cell down, if possible. */
     moveDown: () => void;
-
-    /** The cell has received focus. */
-    hasFocused: () => void;
 };
 
 const cellDragDataKey = Symbol("notebook-cell");
@@ -99,6 +93,7 @@ the cell is rendered by its children.
 export function NotebookCell(props: {
     cellId: Uuid;
     index: number;
+    focus: FocusHandle;
     actions: CellActions;
     children: JSX.Element;
     tag?: string;
@@ -235,6 +230,7 @@ export function NotebookCell(props: {
             <div class="cell-gutter">
                 <CellTypePopover
                     completions={props.createCompletions ?? []}
+                    focus={props.focus}
                     tooltip="Create a new cell below this one"
                     showButton={isGutterVisible()}
                     open={props.popoverOpen}
@@ -299,7 +295,7 @@ export function RichTextCellEditor(
 
     createEffect(() => {
         const view = editorView();
-        if (props.isActive && view) {
+        if (props.focus.hasFocus() && view) {
             view.focus();
         }
     });
@@ -315,7 +311,7 @@ export function RichTextCellEditor(
             deleteForward={props.actions.deleteForward}
             exitUp={props.actions.activateAbove}
             exitDown={props.actions.activateBelow}
-            onFocus={props.actions.hasFocused}
+            onFocus={() => props.focus.setFocused(true)}
         />
     );
 }

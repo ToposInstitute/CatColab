@@ -23,14 +23,13 @@ export default function ObjectCellEditor(props: ObjectEditorProps) {
                         ob.name = name;
                     });
                 }}
-                isActive={props.isActive}
+                focus={props.focus}
                 deleteBackward={props.actions.deleteBackward}
                 deleteForward={props.actions.deleteForward}
                 exitBackward={props.actions.activateAbove}
                 exitForward={props.actions.activateBelow}
                 exitUp={props.actions.activateAbove}
                 exitDown={props.actions.activateBelow}
-                hasFocused={props.actions.hasFocused}
             />
         </div>
     );

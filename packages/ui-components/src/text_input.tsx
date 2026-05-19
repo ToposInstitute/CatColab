@@ -5,6 +5,7 @@ import { type ComponentProps, createEffect, createSignal, type JSX, splitProps }
 void focus;
 
 import { type Completion, Completions, type CompletionsRef } from "./completions";
+import type { FocusHandle } from "./util/focus";
 import { assertTypelevel } from "./util/types";
 
 /** Props for `TextInput` component. */
@@ -16,6 +17,9 @@ type TextInputProps = Omit<ComponentProps<"input">, "onKeyDown"> &
 
 /** Optional props available to a `TextInput` component. */
 export type TextInputOptions = TextInputActions & {
+    /** Focus state for this input. */
+    focus?: FocusHandle;
+
     /** Whether the input is active: allowed to the grab the focus. */
     isActive?: boolean;
 
@@ -103,6 +107,7 @@ type TextInputActions = {
 
 // XXX: Need the list of options as a *value* to split props.
 const TEXT_INPUT_OPTIONS = [
+    "focus",
     "isActive",
     "hasFocused",
     "hasBlurred",
@@ -143,7 +148,7 @@ export function TextInput(allProps: TextInputProps) {
     let ref!: HTMLInputElement;
 
     createEffect(() => {
-        if (options.isActive && document.activeElement !== ref) {
+        if ((options.focus?.hasFocus() ?? options.isActive) && document.activeElement !== ref) {
             ref.focus();
             // Move cursor to end of input.
             ref.selectionStart = ref.selectionEnd = ref.value.length;
@@ -224,6 +229,7 @@ export function TextInput(allProps: TextInputProps) {
                     value={props.text}
                     use:focus={(isFocused) => {
                         if (isFocused) {
+                            options.focus?.setFocused(true);
                             options.hasFocused?.();
                             if (
                                 options.completions != null &&

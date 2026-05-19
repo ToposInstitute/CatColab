@@ -23,10 +23,12 @@ import {
     type Completion,
     Completions,
     type CompletionsRef,
+    type FocusHandle,
     IconButton,
     type KbdKey,
     keyEventHasModifier,
     type ModifierKey,
+    useChildFocus,
 } from "catcolab-ui-components";
 import { materializeFromAutomerge } from "../util/materialize_from_automerge";
 import {
@@ -86,17 +88,16 @@ export function NotebookEditor<T>(props: {
     formalCellEditor: Component<FormalCellEditorProps<T>>;
     cellConstructors?: CellConstructor<T>[];
     cellLabel?: (content: T) => string | undefined;
+    focus: FocusHandle;
 
     /** Called to duplicate an existing cell.
 
     If omitted, a deep copy is performed.
      */
     duplicateCell?: (content: T) => T;
-
-    // FIXME: Remove this option once we fix focus management.
-    noShortcuts?: boolean;
 }) {
-    const [activeCell, setActiveCell] = createSignal<number | null>(null);
+    // oxlint-disable-next-line solid/reactivity -- Focus handles are stable for a mounted notebook.
+    const cellFocus = useChildFocus<number>(props.focus);
     const [currentDropTarget, setCurrentDropTarget] = createSignal<string | null>(null);
 
     // Which create-cell popover (if any) the editor has requested to open.
@@ -113,13 +114,13 @@ export function NotebookEditor<T>(props: {
                 description,
                 shortcut: shortcut && [cellShortcutModifier, ...shortcut],
                 onComplete: () => {
-                    const [i, n] = [activeCell(), props.notebook.cellOrder.length];
+                    const [i, n] = [cellFocus.activeChild(), props.notebook.cellOrder.length];
                     const cellIndex = i != null ? Math.min(i + 1, n) : n;
                     props.changeNotebook((nb) => {
                         Nb.insertCellAtIndex(nb, cc.construct(), cellIndex);
                     });
                     // Defer so the popover fully closes before we focus the new cell.
-                    requestAnimationFrame(() => setActiveCell(cellIndex));
+                    requestAnimationFrame(() => cellFocus.setActiveChild(cellIndex));
                 },
             };
         });
@@ -148,7 +149,7 @@ export function NotebookEditor<T>(props: {
                         Nb.insertCellAtIndex(nb, cc.construct(), index);
                     });
                     // Defer so the popover fully closes before we focus the new cell.
-                    requestAnimationFrame(() => setActiveCell(index));
+                    requestAnimationFrame(() => cellFocus.setActiveChild(index));
                 },
             };
         });
@@ -167,14 +168,14 @@ export function NotebookEditor<T>(props: {
                     });
                     // Defer so the popover fully closes before we focus the new cell.
                     requestAnimationFrame(() => {
-                        setActiveCell(Nb.numCells(props.notebook) - 1);
+                        cellFocus.setActiveChild(Nb.numCells(props.notebook) - 1);
                     });
                 },
             };
         });
 
     makeEventListener(window, "keydown", (evt) => {
-        if (props.noShortcuts) {
+        if (!props.focus.hasFocus()) {
             return;
         }
         if (keyEventHasModifier(evt, cellShortcutModifier)) {
@@ -195,7 +196,7 @@ export function NotebookEditor<T>(props: {
             // create-cell popover. The popover is rendered by that anchor, so
             // it is positioned automatically and doesn't require any DOM
             // queries here.
-            const cellIndex = activeCell();
+            const cellIndex = cellFocus.activeChild();
             setCreatePopoverTarget(cellIndex != null ? cellIndex : "append");
             evt.preventDefault();
             // Stop the same event from reaching `CellTypePopover`'s window
@@ -255,21 +256,12 @@ export function NotebookEditor<T>(props: {
     });
 
     return (
-        <div
-            class="notebook"
-            onFocusOut={(evt) => {
-                const container = evt.currentTarget;
-                setTimeout(() => {
-                    if (!container.contains(document.activeElement)) {
-                        setActiveCell(null);
-                    }
-                }, 0);
-            }}
-        >
+        <div class="notebook">
             <Show when={props.notebook.cellOrder.length === 0}>
                 <div class="notebook-cell-placeholder">
                     <CellTypePopover
                         completions={appendCommands()}
+                        focus={props.focus}
                         open={createPopoverTarget() === "append"}
                         onOpenChange={(open) => setCreatePopoverTarget(open ? "append" : null)}
                     >
@@ -281,17 +273,17 @@ export function NotebookEditor<T>(props: {
             <ul class="notebook-cells">
                 <For each={props.notebook.cellOrder}>
                     {(cellId, i) => {
-                        const isActive = () => activeCell() === i();
+                        const focus = () => cellFocus.childFocus(i());
 
                         const cellActions: CellActions = {
                             activateAbove() {
                                 if (i() > 0) {
-                                    setActiveCell(i() - 1);
+                                    cellFocus.setActiveChild(i() - 1);
                                 }
                             },
                             activateBelow() {
                                 if (i() < Nb.numCells(props.notebook) - 1) {
-                                    setActiveCell(i() + 1);
+                                    cellFocus.setActiveChild(i() + 1);
                                 }
                             },
                             deleteBackward() {
@@ -299,14 +291,14 @@ export function NotebookEditor<T>(props: {
                                 props.changeNotebook((nb) => {
                                     Nb.deleteCellAtIndex(nb, index);
                                 });
-                                setActiveCell(index - 1);
+                                cellFocus.setActiveChild(index - 1);
                             },
                             deleteForward() {
                                 const index = i();
                                 props.changeNotebook((nb) => {
                                     Nb.deleteCellAtIndex(nb, index);
                                 });
-                                setActiveCell(index);
+                                cellFocus.setActiveChild(index);
                             },
                             moveUp() {
                                 // oxlint-disable-next-line solid/reactivity -- event handler
@@ -319,9 +311,6 @@ export function NotebookEditor<T>(props: {
                                 props.changeNotebook((nb) => {
                                     Nb.moveCellDown(nb, i());
                                 });
-                            },
-                            hasFocused() {
-                                setActiveCell(i());
                             },
                         };
 
@@ -345,7 +334,7 @@ export function NotebookEditor<T>(props: {
                                 props.changeNotebook((nb) => {
                                     Nb.insertCellAtIndex(nb, newCell, index + 1);
                                 });
-                                setActiveCell(index + 1);
+                                cellFocus.setActiveChild(index + 1);
                             };
                         }
 
@@ -354,6 +343,7 @@ export function NotebookEditor<T>(props: {
                                 <NotebookCell
                                     cellId={cell.id}
                                     index={i()}
+                                    focus={focus()}
                                     actions={cellActions}
                                     tag={
                                         cell.tag === "formal"
@@ -374,7 +364,7 @@ export function NotebookEditor<T>(props: {
                                                 cellId={cell.id}
                                                 handle={props.handle}
                                                 path={[...props.path, "cellContents", cell.id]}
-                                                isActive={isActive()}
+                                                focus={focus()}
                                                 actions={cellActions}
                                             />
                                         </Match>
@@ -391,7 +381,7 @@ export function NotebookEditor<T>(props: {
                                                             ),
                                                         )
                                                     }
-                                                    isActive={isActive()}
+                                                    focus={focus()}
                                                     actions={cellActions}
                                                 />
                                             )}
@@ -407,6 +397,7 @@ export function NotebookEditor<T>(props: {
                 <div class="notebook-cell-placeholder">
                     <CellTypePopover
                         completions={appendCommands()}
+                        focus={props.focus}
                         tooltip="Create a new cell"
                         open={createPopoverTarget() === "append"}
                         onOpenChange={(open) => setCreatePopoverTarget(open ? "append" : null)}
@@ -428,6 +419,7 @@ Up/Down to move, Enter to select, Escape to close).
  */
 export function CellTypePopover(props: {
     completions: Completion[];
+    focus?: FocusHandle;
     tooltip?: string;
     /** Whether the button is visible. Defaults to `true`. The button always
         remains visible while the popover is open. */
@@ -452,6 +444,9 @@ export function CellTypePopover(props: {
     // editor that triggered Shift-Enter).
     makeEventListener(window, "keydown", (evt) => {
         if (!isOpen()) {
+            return;
+        }
+        if (props.focus && !props.focus.hasFocus()) {
             return;
         }
         const ref = completionsRef();
