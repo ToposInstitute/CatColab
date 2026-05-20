@@ -1,4 +1,4 @@
-We import the logic and notebook API from separate packages.
+We import the logic value and notebook API from separate packages.
 
 <!-- verifier:prepend-to-following -->
 
@@ -12,7 +12,7 @@ Using this we create our notebook.
 <!-- verifier:prepend-to-following -->
 
 ```ts
-const notebook = ModelNotebook.create(SimpleOlog, { name: "An Olog" });
+const notebook = ModelNotebook.create({ name: "An Olog", logic: SimpleOlog });
 ```
 
 We can add rich text cells to our notebook.
@@ -28,24 +28,24 @@ We can create objects and morphisms in the notebook.
 <!-- verifier:prepend-to-following -->
 
 ```ts
-const source = notebook.object<SimpleOlog.Type>({
+const source = notebook.object({
     name: "A",
 });
 
-const target = notebook.object<SimpleOlog.Type>({
+const target = notebook.object({
     name: "B",
 });
 
-const arrow = notebook.morphism<SimpleOlog.Aspect>({
+const arrow = notebook.morphism({
     name: "has",
     dom: source,
     cod: target,
 });
 ```
 
-<!-- verifier:prepend-to-following -->
-
 We can update any item.
+
+<!-- verifier:prepend-to-following -->
 
 ```ts
 notebook.update({ name: "A simple Olog example" });
@@ -83,7 +83,7 @@ arrow.update({
     dom: [source],
 });
 
-const arrow2 = notebook.morphism<SimpleOlog.Aspect>({
+const arrow2 = notebook.morphism({
     name: "bad",
     // @ts-expect-error Arrays are not valid endpoints in a simple olog.
     dom: [source, target],
@@ -99,21 +99,21 @@ But adapt to the underlying logic:
 import { PetriNet } from "catcolab-logics";
 import { ModelNotebook } from "catcolab-document-methods/future";
 
-const notebook = ModelNotebook.create(PetriNet, { name: "Example Petri-net" });
+const notebook = ModelNotebook.create({ name: "Example Petri-net", logic: PetriNet });
 
-const a = notebook.object<PetriNet.Place>({ name: "A" });
+const a = notebook.object({ name: "A" });
 
-const b = notebook.object<PetriNet.Place>({ name: "B" });
+const b = notebook.object({ name: "B" });
 
-const c = notebook.object<PetriNet.Place>({ name: "C" });
+const c = notebook.object({ name: "C" });
 
-notebook.morphism<PetriNet.Transition>({
+notebook.morphism({
     name: "t1",
     dom: [a, b],
     cod: [c],
 });
 
-notebook.morphism<PetriNet.Transition>({
+notebook.morphism({
     name: "bad",
     // @ts-expect-error Petri net transitions require arrays of places.
     dom: a,
