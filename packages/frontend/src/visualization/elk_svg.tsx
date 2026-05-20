@@ -40,14 +40,20 @@ export function ElkLayout<T>(props: {
         () => {
             const elk = elkResource();
             const graph = props.graph;
+            const args = props.args;
+            const elkToLayout = props.elkToLayout;
             if (elk && graph) {
-                return [elk, graph] as const;
+                return [elk, graph, args, elkToLayout] as const;
             }
         },
-        // oxlint-disable-next-line solid/reactivity -- createResource fetcher
-        async ([elk, graph]: readonly [ELK, ElkNode]): Promise<T> => {
-            const elkNode = await elk.layout(graph, props.args);
-            return props.elkToLayout(elkNode);
+        async ([elk, graph, args, elkToLayout]: readonly [
+            ELK,
+            ElkNode,
+            ElkLayoutArguments | undefined,
+            (e: ElkNode) => T,
+        ]): Promise<T> => {
+            const elkNode = await elk.layout(graph, args);
+            return elkToLayout(elkNode);
         },
     );
 
