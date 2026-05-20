@@ -105,8 +105,8 @@ export default function SQLSchemaAnalysis(
                                         actions={SQLHeader(sql())}
                                         settingsPane={BackendConfig()}
                                     />
-                                    <Show when={props.content.backend} keyed>
-                                        {(_) => <CodeView lang="sql" text={sql()} />}
+                                    <Show when={props.content.backend}>
+                                        <CodeView lang="sql" text={sql()} />
                                     </Show>
                                 </div>
                             )}
