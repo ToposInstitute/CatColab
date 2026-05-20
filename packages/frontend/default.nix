@@ -37,7 +37,7 @@ let
 
     pnpmDeps = pkgs.fetchPnpmDeps {
       # see ../../dev-docs/fixing-hash-mismatches.md
-      hash = "sha256-tIcRNotCTct15zr6DypDALXS+tyQy4bstldHLX5HYys=";
+      hash = "sha256-hmjA8fRTgeVYksCp7PVBUTY7Y6huasNCx8KRofapC2g=";
 
       pname = name;
       fetcherVersion = 2;
