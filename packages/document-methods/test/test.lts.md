@@ -81,17 +81,15 @@ Invalid shapes should by type errors:
 
 ```ts
 arrow.update({
+              // Error: Expected a single object, not an array.
     dom: [source],
-//  ~~~ Type 'ObjectCell<ObjectType<"Type">>[]' is not assignable to type 'SimpleOlogObject'. Property 'update' is missing in type 'ObjectCell<ObjectType<"Type">>[]' but required in type 'Update<{ name: string; }>'.
 });
 
-
 const arrow2 = notebook.morphism(Aspect, {
+                                          // Error: Expected a single object, not an array.
     name: "bad",
     dom: [source, target],
-//  ~~~ Type 'ObjectCell<ObjectType<"Type">>[]' is missing the following properties from type 'ObjectCell<ObjectType<"Type">>': id, type, update
     cod: [target, source],
-//  ~~~ Type 'ObjectCell<ObjectType<"Type">>[]' is missing the following properties from type 'ObjectCell<ObjectType<"Type">>': id, type, update
 });
 ```
 
@@ -116,5 +114,12 @@ notebook.morphism(PetriNet.morphismTypes.Transition, {
     name: "t1",
     dom: [a, b],
     cod: [c],
+});
+
+notebook.morphism(PetriNet.morphismTypes.Transition, {
+                                                     // Error: Expected an array, not a single object.
+    name: "bad",
+    dom: a,
+    cod: c,
 });
 ```
