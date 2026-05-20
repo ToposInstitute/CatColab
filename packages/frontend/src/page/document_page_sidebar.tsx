@@ -114,12 +114,22 @@ function DocumentsTreeNode(props: {
             .map((rel) => uuidStringify(rel.refId));
     });
 
-    // oxlint-disable-next-line solid/reactivity -- createResource fetcher
-    const [childDocs] = createResource(childRefIds, async (refIds) => {
+    const childDocSource = createMemo(() => {
+        const refIds = childRefIds();
+        return {
+            createdAtByRefId: Object.fromEntries(
+                refIds.map((refId) => [refId, userState.documents[refId]?.createdAt ?? 0]),
+            ),
+            isParentOwnerless: props.doc.docRef.permissions.anyone === "Own",
+            refIds,
+        };
+    });
+
+    const [childDocs] = createResource(childDocSource, async (source) => {
         // Individual failures are skipped to prevent one corrupt document
         // from crashing the entire sidebar.
         const childDocs = await Promise.all(
-            refIds.map(async (refId) => {
+            source.refIds.map(async (refId) => {
                 try {
                     return await api.getLiveDoc(refId);
                 } catch (e) {
@@ -132,21 +142,18 @@ function DocumentsTreeNode(props: {
             (doc): doc is NonNullable<typeof doc> => doc !== null,
         );
 
-        const isParentOwnerless = props.doc.docRef.permissions.anyone === "Own";
-
         // Don't show ownerless children or deleted documents
         const filtered = loadedChildDocs.filter(
             (childDoc) =>
                 !childDoc.docRef.isDeleted &&
-                (isParentOwnerless || childDoc.docRef.permissions.anyone !== "Own"),
+                (source.isParentOwnerless || childDoc.docRef.permissions.anyone !== "Own"),
         );
 
         // Sort by createdAt descending (newest first)
-        const docs = userState.documents;
         filtered.sort((a, b) => {
-            const aInfo = a.docRef.refId ? docs[a.docRef.refId] : undefined;
-            const bInfo = b.docRef.refId ? docs[b.docRef.refId] : undefined;
-            return (bInfo?.createdAt ?? 0) - (aInfo?.createdAt ?? 0);
+            const aCreatedAt = a.docRef.refId ? (source.createdAtByRefId[a.docRef.refId] ?? 0) : 0;
+            const bCreatedAt = b.docRef.refId ? (source.createdAtByRefId[b.docRef.refId] ?? 0) : 0;
+            return bCreatedAt - aCreatedAt;
         });
 
         return filtered;
