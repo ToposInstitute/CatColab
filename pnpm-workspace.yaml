@@ -2,6 +2,9 @@
 minimumReleaseAge: 12960
 minimumReleaseAgeExclude:
   - wasm-pack
+  - echarts
+onlyBuiltDependencies:
+  - echarts-solid
 packages:
   - "dev-docs"
   - "packages/backend/pkg"
