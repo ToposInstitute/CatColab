@@ -109,3 +109,15 @@ function DeleteButton(props: { doc: DocInfo & { refId: string } }) {
         </div>
     );
 }
+
+export function getConfig() {
+    const userState = useUserState();
+    const config = createMemo(() =>
+        filterDocuments(userState.documents, {
+            query: "config",
+            deleted: false,
+        }),
+    );
+
+    return config();
+}
