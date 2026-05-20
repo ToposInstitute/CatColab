@@ -1,7 +1,8 @@
-import { createEffect, createSignal, useContext } from "solid-js";
+import { useContext } from "solid-js";
 import invariant from "tiny-invariant";
 import { v7 } from "uuid";
 
+import { type FocusHandle, useChildFocus } from "catcolab-ui-components";
 import type { DiagramMorDecl } from "catlog-wasm";
 import { BasicMorInput } from "../model/morphism_input";
 import type { CellActions } from "../notebook";
@@ -16,21 +17,15 @@ import "./morphism_cell_editor.css";
 export function DiagramMorphismCellEditor(props: {
     decl: DiagramMorDecl;
     modifyDecl: (f: (decl: DiagramMorDecl) => void) => void;
-    isActive: boolean;
+    focus: FocusHandle;
     actions: CellActions;
     theory: Theory;
 }) {
     const liveDiagram = useContext(LiveDiagramContext);
     invariant(liveDiagram, "Live diagram should be provided as context");
 
-    const [activeInput, setActiveInput] = createSignal<DiagramMorphismCellInput>("mor");
-
-    // Reset to default on deactivation so re-entry lands on the morphism input.
-    createEffect(() => {
-        if (!props.isActive) {
-            setActiveInput("mor");
-        }
-    });
+    // oxlint-disable-next-line solid/reactivity -- Focus handles are stable for a mounted cell.
+    const focus = useChildFocus<DiagramMorphismCellInput>(props.focus, { default: "mor" });
 
     const domType = () => props.theory.theory.src(props.decl.morType);
     const codType = () => props.theory.theory.tgt(props.decl.morType);
@@ -61,15 +56,11 @@ export function DiagramMorphismCellEditor(props: {
                 obType={domType()}
                 generateId={v7}
                 isInvalid={domInvalid()}
-                isActive={props.isActive && activeInput() === "dom"}
-                deleteForward={() => setActiveInput("mor")}
-                exitBackward={() => setActiveInput("mor")}
-                exitForward={() => setActiveInput("cod")}
-                exitRight={() => setActiveInput("mor")}
-                hasFocused={() => {
-                    setActiveInput("dom");
-                    props.actions.hasFocused?.();
-                }}
+                focus={focus.childFocus("dom")}
+                deleteForward={() => focus.setActiveChild("mor")}
+                exitBackward={() => focus.setActiveChild("mor")}
+                exitForward={() => focus.setActiveChild("cod")}
+                exitRight={() => focus.setActiveChild("mor")}
             />
             <div class={arrowStyles.arrowWithName}>
                 <div class={arrowStyles.arrowName}>
@@ -82,19 +73,15 @@ export function DiagramMorphismCellEditor(props: {
                         }}
                         morType={props.decl.morType}
                         placeholder={props.theory.modelMorTypeMeta(props.decl.morType)?.name}
-                        isActive={props.isActive && activeInput() === "mor"}
+                        focus={focus.childFocus("mor")}
                         deleteBackward={props.actions.deleteBackward}
                         deleteForward={props.actions.deleteForward}
                         exitBackward={props.actions.activateAbove}
-                        exitForward={() => setActiveInput("dom")}
+                        exitForward={() => focus.setActiveChild("dom")}
                         exitUp={props.actions.activateAbove}
                         exitDown={props.actions.activateBelow}
-                        exitLeft={() => setActiveInput("dom")}
-                        exitRight={() => setActiveInput("cod")}
-                        hasFocused={() => {
-                            setActiveInput("mor");
-                            props.actions.hasFocused?.();
-                        }}
+                        exitLeft={() => focus.setActiveChild("dom")}
+                        exitRight={() => focus.setActiveChild("cod")}
                     />
                 </div>
                 <div class={[arrowStyles.arrowContainer, arrowStyles.default].join(" ")}>
@@ -112,15 +99,11 @@ export function DiagramMorphismCellEditor(props: {
                 obType={codType()}
                 generateId={v7}
                 isInvalid={codInvalid()}
-                isActive={props.isActive && activeInput() === "cod"}
-                deleteBackward={() => setActiveInput("mor")}
-                exitBackward={() => setActiveInput("dom")}
+                focus={focus.childFocus("cod")}
+                deleteBackward={() => focus.setActiveChild("mor")}
+                exitBackward={() => focus.setActiveChild("dom")}
                 exitForward={props.actions.activateBelow}
-                exitLeft={() => setActiveInput("mor")}
-                hasFocused={() => {
-                    setActiveInput("cod");
-                    props.actions.hasFocused?.();
-                }}
+                exitLeft={() => focus.setActiveChild("mor")}
             />
         </div>
     );
