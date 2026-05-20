@@ -1,0 +1,13 @@
+{
+    "extends": "../../tsconfig.json",
+    "compilerOptions": {
+        "baseUrl": ".",
+        "ignoreDeprecations": "6.0",
+        "lib": ["ES2023", "DOM"],
+        "paths": {
+            "catcolab-document-methods/future": ["../../src/future.ts"]
+        },
+        "noUnusedLocals": false,
+        "noEmit": false
+    }
+}
