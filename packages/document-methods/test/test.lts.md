@@ -27,18 +27,15 @@ We can create objects and morphisms in the notebook.
 <!-- verifier:prepend-to-following -->
 
 ```ts
-const Type = SimpleOlog.objectTypes.Type;
-const Aspect = SimpleOlog.morphismTypes.Aspect;
-
-const source = notebook.object(Type, {
+const source = notebook.object<SimpleOlog.Type>({
     name: "A",
 });
 
-const target = notebook.object(Type, {
+const target = notebook.object<SimpleOlog.Type>({
     name: "B",
 });
 
-const arrow = notebook.morphism(Aspect, {
+const arrow = notebook.morphism<SimpleOlog.Aspect>({
     name: "has",
     dom: source,
     cod: target,
@@ -77,19 +74,19 @@ arrow.update({
 });
 ```
 
-Invalid shapes should by type errors:
+Invalid shapes should be type errors:
 
 ```ts
+// @ts-expect-error Arrays are not valid endpoints in a simple olog.
 arrow.update({
-              // Error: Expected a single object, not an array.
     dom: [source],
 });
 
-const arrow2 = notebook.morphism(Aspect, {
-                                          // Error: Expected a single object, not an array.
+const arrow2 = notebook.morphism<SimpleOlog.Aspect>({
     name: "bad",
+    // @ts-expect-error Arrays are not valid endpoints in a simple olog.
     dom: [source, target],
-    cod: [target, source],
+    cod: target,
 });
 ```
 
@@ -102,24 +99,22 @@ import { PetriNet } from "catcolab-document-methods/future";
 
 const notebook = PetriNet.create({ name: "Example Petri-net" });
 
-const Place = PetriNet.objectTypes.Place;
+const a = notebook.object<PetriNet.Place>({ name: "A" });
 
-const a = notebook.object(Place, { name: "A" });
+const b = notebook.object<PetriNet.Place>({ name: "B" });
 
-const b = notebook.object(Place, { name: "B" });
+const c = notebook.object<PetriNet.Place>({ name: "C" });
 
-const c = notebook.object(Place, { name: "C" });
-
-notebook.morphism(PetriNet.morphismTypes.Transition, {
+notebook.morphism<PetriNet.Transition>({
     name: "t1",
     dom: [a, b],
     cod: [c],
 });
 
-notebook.morphism(PetriNet.morphismTypes.Transition, {
-                                                     // Error: Expected an array, not a single object.
+notebook.morphism<PetriNet.Transition>({
     name: "bad",
+    // @ts-expect-error Petri net transitions require arrays of places.
     dom: a,
-    cod: c,
+    cod: [c],
 });
 ```
