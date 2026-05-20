@@ -27,6 +27,7 @@
         "@solid-primitives/destructure": "^0.2.1",
         "katex": "^0.16.22",
         "lucide-solid": "^0.471.0",
+        "shiki": "^4.0.2",
         "solid-js": "^1.9.10"
     },
     "devDependencies": {
