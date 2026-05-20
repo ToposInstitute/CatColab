@@ -11,15 +11,23 @@ type SimpleOlogAspect = MorphismType<ObjectCell<SimpleOlogType>, "Aspect">;
 
 export const SimpleOlog = {
     theory: "simple-olog",
-    objectType: objectType<"Type">("Type"),
-    morphismType: morphismType<ObjectCell<SimpleOlogType>, "Aspect">(),
-} satisfies ModelLogic<"simple-olog", SimpleOlogType, SimpleOlogAspect>;
+    objectTypes: {
+        Type: objectType<"Type">("Type"),
+    },
+    morphismTypes: {
+        Aspect: morphismType<ObjectCell<SimpleOlogType>, "Aspect">(),
+    },
+} satisfies ModelLogic<"simple-olog", { Type: SimpleOlogType }, { Aspect: SimpleOlogAspect }>;
 
 type PetriNetPlace = ObjectType<"Place">;
 type PetriNetTransition = MorphismType<ObjectCell<PetriNetPlace>[], "Transition">;
 
 export const PetriNet = {
     theory: "petri-net",
-    objectType: objectType<"Place">("Place"),
-    morphismType: morphismType<ObjectCell<PetriNetPlace>[], "Transition">(),
-} satisfies ModelLogic<"petri-net", PetriNetPlace, PetriNetTransition>;
+    objectTypes: {
+        Place: objectType<"Place">("Place"),
+    },
+    morphismTypes: {
+        Transition: morphismType<ObjectCell<PetriNetPlace>[], "Transition">(),
+    },
+} satisfies ModelLogic<"petri-net", { Place: PetriNetPlace }, { Transition: PetriNetTransition }>;

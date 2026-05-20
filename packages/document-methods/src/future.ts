@@ -66,37 +66,51 @@ export type RichTextCell = Update<{ content: string }> & {
 
 export type ModelLogic<
     Theory extends string,
-    TObjectType extends ObjectType<string>,
-    TMorphismType extends MorphismType<unknown, string>,
+    TObjectTypes extends Record<string, ObjectType<string>>,
+    TMorphismTypes extends Record<string, MorphismType<unknown, string>>,
 > = {
     readonly theory: Theory;
-    readonly objectType: TObjectType;
-    readonly morphismType: TMorphismType;
+    readonly objectTypes: TObjectTypes;
+    readonly morphismTypes: TMorphismTypes;
 };
 
-type AnyModelLogic = ModelLogic<string, ObjectType<string>, MorphismType<unknown, string>>;
+type AnyModelLogic = ModelLogic<
+    string,
+    Record<string, ObjectType<string>>,
+    Record<string, MorphismType<unknown, string>>
+>;
 
 type LogicTheory<TLogic extends AnyModelLogic> =
-    TLogic extends ModelLogic<infer Theory, ObjectType<string>, MorphismType<unknown, string>>
+    TLogic extends ModelLogic<
+        infer Theory,
+        Record<string, ObjectType<string>>,
+        Record<string, MorphismType<unknown, string>>
+    >
         ? Theory
         : never;
 
 type LogicObjectType<TLogic extends AnyModelLogic> =
-    TLogic extends ModelLogic<string, infer TObjectType, MorphismType<unknown, string>>
-        ? TObjectType
+    TLogic extends ModelLogic<
+        string,
+        infer TObjectTypes,
+        Record<string, MorphismType<unknown, string>>
+    >
+        ? TObjectTypes[keyof TObjectTypes]
         : never;
 
 type LogicMorphismType<TLogic extends AnyModelLogic> =
-    TLogic extends ModelLogic<string, ObjectType<string>, infer TMorphismType>
-        ? TMorphismType
+    TLogic extends ModelLogic<string, Record<string, ObjectType<string>>, infer TMorphismTypes>
+        ? TMorphismTypes[keyof TMorphismTypes]
         : never;
 
 export type ModelNotebook<TLogic extends AnyModelLogic> = Update<{ name: string }> & {
     richText(args: { content: string }): RichTextCell;
-    object<TType extends LogicObjectType<TLogic> = LogicObjectType<TLogic>>(args: {
-        name: string;
-    }): ObjectCell<TType>;
+    object<TType extends LogicObjectType<TLogic> = LogicObjectType<TLogic>>(
+        type: TType,
+        args: { name: string },
+    ): ObjectCell<TType>;
     morphism<TType extends LogicMorphismType<TLogic> = LogicMorphismType<TLogic>>(
+        type: TType,
         args: MorphismArgs<TType>,
     ): MorphismCell<TType>;
 };
@@ -107,11 +121,11 @@ export const objectType = <Name extends string>(content: string) =>
 export const morphismType = <Endpoint, Name extends string>() =>
     ({ tag: "Hom", content: { tag: "Basic", content: "Object" } }) as MorphismType<Endpoint, Name>;
 
-function createNotebook<TLogic extends AnyModelLogic>(args: {
-    name: string;
-    logic: TLogic;
-}): ModelNotebook<TLogic> {
-    const document = newModelDocument({ theory: args.logic.theory as LogicTheory<TLogic> });
+function createNotebook<TLogic extends AnyModelLogic>(
+    logic: TLogic,
+    args: { name: string },
+): ModelNotebook<TLogic> {
+    const document = newModelDocument({ theory: logic.theory as LogicTheory<TLogic> });
     document.name = args.name;
 
     const api = {
@@ -129,31 +143,33 @@ function createNotebook<TLogic extends AnyModelLogic>(args: {
                 },
             };
         },
-        object<TType extends LogicObjectType<TLogic> = LogicObjectType<TLogic>>(objectArgs: {
-            name: string;
-        }) {
-            const judgment = newObjectDecl(args.logic.objectType);
+        object<TType extends LogicObjectType<TLogic> = LogicObjectType<TLogic>>(
+            type: TType,
+            objectArgs: { name: string },
+        ) {
+            const judgment = newObjectDecl(type);
             judgment.name = objectArgs.name;
             appendCell(document.notebook, newFormalCell(judgment));
 
             return {
                 id: judgment.id,
-                type: args.logic.objectType as TType,
+                type,
                 update(updateArgs: Partial<{ name: string }>) {
                     Object.assign(judgment, updateArgs);
                 },
             };
         },
         morphism<TType extends LogicMorphismType<TLogic> = LogicMorphismType<TLogic>>(
+            type: TType,
             morphismArgs: MorphismArgs<TType>,
         ) {
-            const judgment = newMorphismDecl(args.logic.morphismType);
+            const judgment = newMorphismDecl(type);
             judgment.name = morphismArgs.name;
             appendCell(document.notebook, newFormalCell(judgment));
 
             return {
                 id: judgment.id,
-                type: args.logic.morphismType as TType,
+                type,
                 update(updateArgs: Partial<MorphismArgs<TType>>) {
                     Object.assign(judgment, updateArgs);
                 },
@@ -165,7 +181,7 @@ function createNotebook<TLogic extends AnyModelLogic>(args: {
 }
 
 export const ModelNotebook = {
-    create<TLogic extends AnyModelLogic>(args: { name: string; logic: TLogic }) {
-        return createNotebook<TLogic>(args);
+    create<TLogic extends AnyModelLogic>(logic: TLogic, args: { name: string }) {
+        return createNotebook<TLogic>(logic, args);
     },
 };
