@@ -1,23 +1,26 @@
-import { codeToHtml } from "shiki";
+import { type BundledLanguage, type BundledTheme, codeToHtml } from "shiki";
 import { createResource } from "solid-js";
 
-type CodeViewProps = {
+export type CodeViewProps = {
     text: string;
-    language: string;
+    lang: BundledLanguage;
+    theme?: BundledTheme;
 };
 
-export type CodeViewOptions = CodeViewProps & {
-    placeholder?: string;
-};
-
-export const CodeView = (props: CodeViewOptions) => {
-    const [html] = createResource(() =>
-        codeToHtml(props.text, {
-            lang: props.language,
-            theme: "min-light",
-        }),
+export const CodeView = (props: CodeViewProps) => {
+    const [html] = createResource(
+        () => ({ text: props.text, lang: props.lang, theme: props.theme }),
+        ({ text, lang, theme }) =>
+            codeToHtml(text, {
+                lang,
+                theme: theme ?? "min-light",
+            }),
     );
 
-    // oxlint-disable-next-line solid/no-innerhtml -- shiki uses hast-util-to-html which escapes html entitites so no need for extra sanitization and setting innerHTML should be safe
-    return <div innerHTML={html()} />;
+    return (
+        // shiki uses hast-util-to-html which escapes html entities so no need
+        // for extra sanitization and setting innerHTML should be safe
+        // oxlint-disable-next-line solid/no-innerhtml
+        <div innerHTML={html()} />
+    );
 };
