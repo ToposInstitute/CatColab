@@ -12,6 +12,7 @@
         "build:wasm": "wasm-pack build ../document-types",
         "format": "oxfmt .",
         "lint": "oxlint --fix && oxfmt .",
+        "test:lts": "cd test/literate-ts && literate-ts --nocache ../*.lts.md",
         "check": "pnpm run build:wasm && tsc && pnpm run lint",
         "ci": "tsc && oxlint --deny-warnings && oxfmt --check ."
     },
@@ -22,6 +23,7 @@
     },
     "devDependencies": {
         "@types/uuid": "^10.0.0",
+        "literate-ts": "^2.5.0",
         "typescript": "^6.0.3",
         "wasm-pack": "^0.15.0"
     }
