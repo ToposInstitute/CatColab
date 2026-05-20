@@ -1,9 +1,10 @@
-We import the logic from our package.
+We import the logic and notebook API from separate packages.
 
 <!-- verifier:prepend-to-following -->
 
 ```ts
-import { SimpleOlog } from "catcolab-document-methods/future";
+import { SimpleOlog } from "catcolab-logics";
+import { ModelNotebook } from "catcolab-document-methods/future";
 ```
 
 Using this we create our notebook.
@@ -11,7 +12,7 @@ Using this we create our notebook.
 <!-- verifier:prepend-to-following -->
 
 ```ts
-const notebook = SimpleOlog.create({ name: "An Olog" });
+const notebook = ModelNotebook.create(SimpleOlog, { name: "An Olog" });
 ```
 
 We can add rich text cells to our notebook.
@@ -95,9 +96,10 @@ But adapt to the underlying logic:
 <!-- verifier:reset -->
 
 ```ts
-import { PetriNet } from "catcolab-document-methods/future";
+import { PetriNet } from "catcolab-logics";
+import { ModelNotebook } from "catcolab-document-methods/future";
 
-const notebook = PetriNet.create({ name: "Example Petri-net" });
+const notebook = ModelNotebook.create(PetriNet, { name: "Example Petri-net" });
 
 const a = notebook.object<PetriNet.Place>({ name: "A" });
 

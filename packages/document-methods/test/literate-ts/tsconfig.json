@@ -5,6 +5,7 @@
         "ignoreDeprecations": "6.0",
         "lib": ["ES2023", "DOM"],
         "paths": {
+            "catcolab-logics": ["./catcolab-logics.ts"],
             "catcolab-document-methods/future": ["../../src/future.ts"]
         },
         "noUnusedLocals": false,

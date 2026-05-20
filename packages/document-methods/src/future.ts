@@ -2,8 +2,8 @@ import type { MorType, ObType } from "catcolab-document-types";
 import { newModelDocument, newMorphismDecl, newObjectDecl } from "./model";
 import { appendCell, newFormalCell, newRichTextCell } from "./notebook";
 
-type ObjectType<Name extends string> = ObType & { readonly objectTypeName?: Name };
-type MorphismType<Endpoint, Name extends string> = MorType & {
+export type ObjectType<Name extends string> = ObType & { readonly objectTypeName?: Name };
+export type MorphismType<Endpoint, Name extends string> = MorType & {
     readonly morphismTypeName?: Name;
     readonly endpoint?: Endpoint;
 };
@@ -40,7 +40,7 @@ type Update<T> = {
     ): void;
 };
 
-type ObjectCell<TType extends ObjectType<string>> = Update<{ name: string }> & {
+export type ObjectCell<TType extends ObjectType<string>> = Update<{ name: string }> & {
     readonly id: string;
     readonly type: TType;
 };
@@ -53,16 +53,27 @@ type MorphismArgs<TType extends MorphismType<unknown, string>> = {
     cod: EndpointOf<TType>;
 };
 
-type MorphismCell<TType extends MorphismType<unknown, string>> = Update<MorphismArgs<TType>> & {
+export type MorphismCell<TType extends MorphismType<unknown, string>> = Update<
+    MorphismArgs<TType>
+> & {
     readonly id: string;
     readonly type: TType;
 };
 
-type RichTextCell = Update<{ content: string }> & {
+export type RichTextCell = Update<{ content: string }> & {
     readonly id: string;
 };
 
-type NotebookApi<
+export type ModelLogic<
+    TObjectType extends ObjectType<string>,
+    TMorphismType extends MorphismType<unknown, string>,
+> = {
+    readonly theory: string;
+    readonly objectType: TObjectType;
+    readonly morphismType: TMorphismType;
+};
+
+export type ModelNotebook<
     TObjectType extends ObjectType<string>,
     TMorphismType extends MorphismType<unknown, string>,
 > = Update<{ name: string }> & {
@@ -71,22 +82,20 @@ type NotebookApi<
     morphism<TType extends TMorphismType>(args: MorphismArgs<TType>): MorphismCell<TType>;
 };
 
-const objectType = <Name extends string>(content: string) =>
+export const objectType = <Name extends string>(content: string) =>
     ({ tag: "Basic", content }) as ObjectType<Name>;
 
-const morphismType = <Endpoint, Name extends string>() =>
+export const morphismType = <Endpoint, Name extends string>() =>
     ({ tag: "Hom", content: { tag: "Basic", content: "Object" } }) as MorphismType<Endpoint, Name>;
 
 function createNotebook<
     TObjectType extends ObjectType<string>,
     TMorphismType extends MorphismType<unknown, string>,
 >(
-    theory: string,
-    objectType: TObjectType,
-    morphismType: TMorphismType,
+    logic: ModelLogic<TObjectType, TMorphismType>,
     args: { name: string },
-): NotebookApi<TObjectType, TMorphismType> {
-    const document = newModelDocument({ theory });
+): ModelNotebook<TObjectType, TMorphismType> {
+    const document = newModelDocument({ theory: logic.theory });
     document.name = args.name;
 
     const api = {
@@ -105,26 +114,26 @@ function createNotebook<
             };
         },
         object<TType extends TObjectType>(objectArgs: { name: string }) {
-            const judgment = newObjectDecl(objectType);
+            const judgment = newObjectDecl(logic.objectType);
             judgment.name = objectArgs.name;
             appendCell(document.notebook, newFormalCell(judgment));
 
             return {
                 id: judgment.id,
-                type: objectType as TType,
+                type: logic.objectType as TType,
                 update(updateArgs: Partial<{ name: string }>) {
                     Object.assign(judgment, updateArgs);
                 },
             };
         },
         morphism<TType extends TMorphismType>(morphismArgs: MorphismArgs<TType>) {
-            const judgment = newMorphismDecl(morphismType);
+            const judgment = newMorphismDecl(logic.morphismType);
             judgment.name = morphismArgs.name;
             appendCell(document.notebook, newFormalCell(judgment));
 
             return {
                 id: judgment.id,
-                type: morphismType as TType,
+                type: logic.morphismType as TType,
                 update(updateArgs: Partial<MorphismArgs<TType>>) {
                     Object.assign(judgment, updateArgs);
                 },
@@ -132,45 +141,14 @@ function createNotebook<
         },
     };
 
-    return api as NotebookApi<TObjectType, TMorphismType>;
+    return api as ModelNotebook<TObjectType, TMorphismType>;
 }
 
-const SimpleOlogType = objectType<"Type">("Object");
-type SimpleOlogObject = ObjectCell<typeof SimpleOlogType>;
-const SimpleOlogAspect = morphismType<SimpleOlogObject, "Aspect">();
-
-export const SimpleOlog = {
-    create(args: { name: string }) {
-        return createNotebook<typeof SimpleOlogType, typeof SimpleOlogAspect>(
-            "simple-olog",
-            SimpleOlogType,
-            SimpleOlogAspect,
-            args,
-        );
+export const ModelNotebook = {
+    create<
+        TObjectType extends ObjectType<string>,
+        TMorphismType extends MorphismType<unknown, string>,
+    >(logic: ModelLogic<TObjectType, TMorphismType>, args: { name: string }) {
+        return createNotebook(logic, args);
     },
 };
-
-export namespace SimpleOlog {
-    export type Type = typeof SimpleOlogType;
-    export type Aspect = typeof SimpleOlogAspect;
-}
-
-const PetriNetPlace = objectType<"Place">("Object");
-type PetriNetPlaceObject = ObjectCell<typeof PetriNetPlace>;
-const PetriNetTransition = morphismType<PetriNetPlaceObject[], "Transition">();
-
-export const PetriNet = {
-    create(args: { name: string }) {
-        return createNotebook<typeof PetriNetPlace, typeof PetriNetTransition>(
-            "petri-net",
-            PetriNetPlace,
-            PetriNetTransition,
-            args,
-        );
-    },
-};
-
-export namespace PetriNet {
-    export type Place = typeof PetriNetPlace;
-    export type Transition = typeof PetriNetTransition;
-}
