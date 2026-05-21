@@ -1,5 +1,6 @@
 import { useNavigate } from "@solidjs/router";
 import { getAuth } from "firebase/auth";
+import ArrowLeftIcon from "lucide-solid/icons/arrow-left";
 import Binoculars from "lucide-solid/icons/binoculars";
 import Bird from "lucide-solid/icons/bird";
 import ExternalLink from "lucide-solid/icons/external-link";
@@ -58,11 +59,8 @@ export default function HomePage() {
                             <div class="home-body fade-in">
                                 <Login onComplete={handleLoginComplete} />
                                 <div class="home-navigation-buttons left">
-                                    <Button
-                                        variant="positive"
-                                        class="home-nav-button"
-                                        onClick={() => setLoginOpen(false)}
-                                    >
+                                    <Button variant="utility" onClick={() => setLoginOpen(false)}>
+                                        <ArrowLeftIcon />
                                         Go back
                                     </Button>
                                 </div>
