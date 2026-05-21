@@ -456,7 +456,7 @@ export const AllColors: Story = {
 
                 <ColorSection
                     title="Information"
-                    colors={["--color-alert-question", "--color-alert-note"]}
+                    colors={["--color-accent-info", "--color-alert-note"]}
                 />
 
                 <ColorSection
@@ -3150,11 +3150,11 @@ export const InformationColorUsage: Story = {
                             "font-weight": "600",
                         }}
                     >
-                        Alert Question Variant (alert.css)
+                        Information Accent (alert.css, history_navigator.module.css)
                     </h2>
                     <p style={{ "margin-bottom": "1rem", color: "var(--color-gray-800)" }}>
-                        Question alerts use --color-alert-question (cornflowerblue) for the accent
-                        color and heading text.
+                        Informational accents use --color-accent-info (cornflowerblue), including
+                        question alert headings and the history navigator's active marker.
                     </p>
                     <Question>
                         <p>
@@ -3172,7 +3172,7 @@ export const InformationColorUsage: Story = {
                             "font-size": "0.875rem",
                         }}
                     >
-                        <div>--alert-color: var(--color-alert-question);</div>
+                        <div>--alert-color: var(--color-accent-info);</div>
                         <div>border-left: 4px solid var(--alert-color);</div>
                         <div>color: var(--alert-color); {/* heading */}</div>
                     </div>
@@ -3231,7 +3231,7 @@ export const InformationColorUsage: Story = {
                             gap: "1.5rem",
                         }}
                     >
-                        <ColorSwatch value="--color-alert-question" />
+                        <ColorSwatch value="--color-accent-info" />
                         <ColorSwatch value="--color-alert-note" />
                     </div>
                 </div>
