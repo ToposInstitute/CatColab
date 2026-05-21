@@ -535,21 +535,6 @@ export const ButtonColorsStudy: Story = {
                     <Button
                         style={{
                             color: "white",
-                            background: "var(--color-topos-primary)",
-                            border: "1px solid var(--color-topos-primary)",
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.background = "var(--color-topos-primary-hover)";
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.background = "var(--color-topos-primary)";
-                        }}
-                    >
-                        Topos Primary
-                    </Button>
-                    <Button
-                        style={{
-                            color: "white",
                             background: "var(--color-topos-secondary)",
                             border: "1px solid var(--color-topos-secondary)",
                         }}

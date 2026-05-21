@@ -11,6 +11,7 @@ import LogInIcon from "lucide-solid/icons/log-in";
 import { useAuth, useFirebaseApp } from "solid-firebase";
 import { createSignal, Match, Show, Switch } from "solid-js";
 
+import { Button } from "catcolab-ui-components";
 import { useApi } from "../api";
 import { createModel } from "../model/document";
 import { stdTheories } from "../stdlib";
@@ -57,12 +58,13 @@ export default function HomePage() {
                             <div class="home-body fade-in">
                                 <Login onComplete={handleLoginComplete} />
                                 <div class="home-navigation-buttons left">
-                                    <button
+                                    <Button
+                                        variant="positive"
                                         class="home-nav-button"
                                         onClick={() => setLoginOpen(false)}
                                     >
                                         Go back
-                                    </button>
+                                    </Button>
                                 </div>
                             </div>
                         </Match>
@@ -74,28 +76,34 @@ export default function HomePage() {
                                 </div>
                                 <div class="quick-actions">
                                     <Show when={!isAuthLoading() && !isLoggedIn()}>
-                                        <button
+                                        <Button
+                                            variant="positive"
                                             class="home-nav-button get-started"
                                             onClick={() => setLoginOpen(true)}
                                         >
                                             <LogInIcon />
                                             <span>Log in or sign up</span>
-                                        </button>
+                                        </Button>
                                     </Show>
                                     <Show when={!isAuthLoading() && isLoggedIn()}>
-                                        <a href="/documents" class="home-nav-button outline">
+                                        <Button
+                                            variant="utility"
+                                            class="home-nav-button"
+                                            onClick={() => navigate("/documents")}
+                                        >
                                             <Files />
                                             <span>My documents</span>
-                                        </a>
+                                        </Button>
                                     </Show>
-                                    <button
+                                    <Button
+                                        variant="positive"
                                         class="home-nav-button get-started"
                                         onClick={handleCreateModel}
                                         disabled={creating()}
                                     >
                                         <FilePlus />
                                         <span>{creating() ? "Creating..." : "New model"}</span>
-                                    </button>
+                                    </Button>
                                 </div>
                                 <div class="resources-container">
                                     <div class="resources-list">
