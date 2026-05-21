@@ -96,8 +96,8 @@ importers:
         specifier: ^6.1.0
         version: 6.1.0
       echarts-solid:
-        specifier: github:ToposInstitute/echarts-solid#allow-git-dep
-        version: https://codeload.github.com/ToposInstitute/echarts-solid/tar.gz/7191b18a556747b8f1df0d9bd002ecf9b3dacf30(echarts@6.1.0)(solid-js@1.9.10)
+        specifier: github:ToposInstitute/echarts-solid#kb/echarts-v6-dist
+        version: https://codeload.github.com/ToposInstitute/echarts-solid/tar.gz/fa9fd59f51067c3ad3f6aaddb6c62eadad738f8a(echarts@6.1.0)(solid-js@1.9.10)
       elkjs:
         specifier: ^0.11.0
         version: 0.11.0
@@ -1548,8 +1548,8 @@ packages:
   eastasianwidth@0.2.0:
     resolution: {integrity: sha512-I88TYZWc9XiYHRQ4/3c5rjjfgkjhLyW2luGIheGERbNQ6OY7yTybanSpDXZa8y7VUP9YmDcYa+eyq4ca7iLqWA==}
 
-  echarts-solid@https://codeload.github.com/ToposInstitute/echarts-solid/tar.gz/7191b18a556747b8f1df0d9bd002ecf9b3dacf30:
-    resolution: {tarball: https://codeload.github.com/ToposInstitute/echarts-solid/tar.gz/7191b18a556747b8f1df0d9bd002ecf9b3dacf30}
+  echarts-solid@https://codeload.github.com/ToposInstitute/echarts-solid/tar.gz/fa9fd59f51067c3ad3f6aaddb6c62eadad738f8a:
+    resolution: {tarball: https://codeload.github.com/ToposInstitute/echarts-solid/tar.gz/fa9fd59f51067c3ad3f6aaddb6c62eadad738f8a}
     version: 0.2.0
     engines: {node: '>=18', pnpm: '>=8.6.0'}
     peerDependencies:
@@ -4598,7 +4598,7 @@ snapshots:
 
   eastasianwidth@0.2.0: {}
 
-  echarts-solid@https://codeload.github.com/ToposInstitute/echarts-solid/tar.gz/7191b18a556747b8f1df0d9bd002ecf9b3dacf30(echarts@6.1.0)(solid-js@1.9.10):
+  echarts-solid@https://codeload.github.com/ToposInstitute/echarts-solid/tar.gz/fa9fd59f51067c3ad3f6aaddb6c62eadad738f8a(echarts@6.1.0)(solid-js@1.9.10):
     dependencies:
       '@solid-primitives/refs': 1.1.3(solid-js@1.9.10)
       '@solid-primitives/resize-observer': 2.1.5(solid-js@1.9.10)
