@@ -3189,8 +3189,8 @@ export const InformationColorUsage: Story = {
                         Alert Note Variant (alert.css)
                     </h2>
                     <p style={{ "margin-bottom": "1rem", color: "var(--color-gray-800)" }}>
-                        Note alerts use --color-alert-note (teal) for the accent color and heading
-                        text.
+                        Note alerts use --color-alert-note (Topos primary) for the accent color and
+                        heading text.
                     </p>
                     <Note>
                         <p>

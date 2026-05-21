@@ -112,7 +112,8 @@
      * Information Colors 
      * ======================================== */
     --color-indicator: cornflowerblue;
-    --color-alert-note: teal;
+    --color-alert-question: var(--color-indicator);
+    --color-alert-note: var(--color-topos-primary);
 
     /* ========================================
      * Rich Text Editor Colors
