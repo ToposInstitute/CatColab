@@ -65,13 +65,7 @@
 .home-nav-button {
     margin-top: 20px;
     padding: 10px 20px;
-    background: var(--color-topos-primary);
-    border: none;
-    border-radius: 5px;
-    font-family: var(--main-font);
     font-size: 18px;
-    color: var(--color-background);
-    cursor: pointer;
 }
 
 .quick-actions {
@@ -205,31 +199,5 @@
 }
 
 .home-nav-button.get-started {
-    border: 1px solid var(--color-background);
-    border-radius: 5px;
-    cursor: pointer;
     font-weight: bold;
-    color: var(--color-background);
-}
-
-.home-nav-button.outline {
-    background: var(--color-background);
-    color: var(--color-gray-850);
-    border: 1px solid var(--color-gray-700);
-    border-radius: 5px;
-    cursor: pointer;
-}
-
-.home-nav-button.outline:hover:not(:disabled) {
-    background-color: var(--color-hover-button-light);
-}
-
-.home-nav-button:hover:not(:disabled) {
-    background-color: var(--color-topos-primary-hover);
-}
-
-/* stylelint-disable-next-line no-descending-specificity -- :disabled and :hover:not(:disabled) are mutually exclusive */
-.home-nav-button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
 }
