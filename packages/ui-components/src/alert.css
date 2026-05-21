@@ -34,5 +34,5 @@
 }
 
 .alert-question {
-    --alert-color: var(--color-accent-info);
+    --alert-color: var(--color-alert-question);
 }

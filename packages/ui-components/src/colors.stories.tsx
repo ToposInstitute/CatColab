@@ -456,7 +456,7 @@ export const AllColors: Story = {
 
                 <ColorSection
                     title="Information"
-                    colors={["--color-accent-info", "--color-alert-note"]}
+                    colors={["--color-indicator", "--color-alert-question", "--color-alert-note"]}
                 />
 
                 <ColorSection
@@ -2595,9 +2595,9 @@ export const PositiveColorUsage: Story = {
                         Button Component (button.css)
                     </h2>
                     <p style={{ "margin-bottom": "1rem", color: "var(--color-gray-800)" }}>
-                        Positive buttons use --color-button-positive-base for background and
-                        --color-button-positive-border for border. On hover, they transition to
-                        --color-button-positive-hover.
+                        Positive buttons use the Topos primary palette: --color-button-positive-base
+                        for background and --color-button-positive-border for border. On hover, they
+                        transition to --color-button-positive-hover.
                     </p>
                     <div style={{ display: "flex", gap: "1rem", "align-items": "center" }}>
                         <Button variant="positive">Positive Button</Button>
@@ -2635,8 +2635,8 @@ export const PositiveColorUsage: Story = {
                     </h2>
                     <p style={{ "margin-bottom": "1rem", color: "var(--color-gray-800)" }}>
                         Positive icon buttons use transparent background by default. On hover, they
-                        use --color-icon-button-positive-hover for background and
-                        --color-icon-button-positive-text for color. On active, they use
+                        use Topos-primary-tinted --color-icon-button-positive-hover for background
+                        and --color-icon-button-positive-text for color. On active, they use
                         --color-icon-button-positive-active.
                     </p>
                     <div
@@ -3150,11 +3150,11 @@ export const InformationColorUsage: Story = {
                             "font-weight": "600",
                         }}
                     >
-                        Information Accent (alert.css, history_navigator.module.css)
+                        Indicator (alert.css, history_navigator.module.css)
                     </h2>
                     <p style={{ "margin-bottom": "1rem", color: "var(--color-gray-800)" }}>
-                        Informational accents use --color-accent-info (cornflowerblue), including
-                        question alert headings and the history navigator's active marker.
+                        Indicators use --color-indicator (cornflowerblue), with
+                        --color-alert-question as the alert-specific alias for question headings.
                     </p>
                     <Question>
                         <p>
@@ -3172,7 +3172,7 @@ export const InformationColorUsage: Story = {
                             "font-size": "0.875rem",
                         }}
                     >
-                        <div>--alert-color: var(--color-accent-info);</div>
+                        <div>--alert-color: var(--color-alert-question);</div>
                         <div>border-left: 4px solid var(--alert-color);</div>
                         <div>color: var(--alert-color); {/* heading */}</div>
                     </div>
@@ -3231,7 +3231,8 @@ export const InformationColorUsage: Story = {
                             gap: "1.5rem",
                         }}
                     >
-                        <ColorSwatch value="--color-accent-info" />
+                        <ColorSwatch value="--color-indicator" />
+                        <ColorSwatch value="--color-alert-question" />
                         <ColorSwatch value="--color-alert-note" />
                     </div>
                 </div>
