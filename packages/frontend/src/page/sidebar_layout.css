@@ -175,7 +175,7 @@
     }
 
     &.focused {
-        border-left-color: var(--color-alert-question);
+        border-left-color: var(--color-indicator);
     }
 }
 
