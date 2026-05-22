@@ -1,6 +1,5 @@
 <!-- verifier:prepend-to-following -->
-<!-- verifier:next-is-tsx -->
-```ts
+```tsx
 import { SimpleOlog } from "catcolab-logics";
 import { ModelNotebook } from "catcolab-document-methods/future";
 

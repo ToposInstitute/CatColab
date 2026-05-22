@@ -24,7 +24,7 @@
     },
     "devDependencies": {
         "@types/uuid": "^10.0.0",
-        "literate-ts": "^2.5.0",
+        "literate-ts": "github:ToposInstitute/literate-ts#kb/improved-tsx-dist",
         "solid-js": "^1.9.10",
         "typescript": "^6.0.3",
         "wasm-pack": "^0.15.0"
