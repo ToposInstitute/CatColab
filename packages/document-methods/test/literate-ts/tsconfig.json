@@ -3,6 +3,8 @@
     "compilerOptions": {
         "baseUrl": ".",
         "ignoreDeprecations": "6.0",
+        "jsx": "preserve",
+        "jsxImportSource": "solid-js",
         "lib": ["ES2023", "DOM"],
         "paths": {
             "catcolab-logics": ["./catcolab-logics.ts"],
