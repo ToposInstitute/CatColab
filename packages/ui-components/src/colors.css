@@ -78,12 +78,12 @@
      * Positive Colors
      * From lightest to darkest
      * ======================================== */
-    --color-icon-button-positive-hover: #efe;
-    --color-icon-button-positive-active: #dfd;
-    --color-button-positive-hover: #3cb371;
-    --color-button-positive-base: #2e8b57;
-    --color-icon-button-positive-text: #0a0;
-    --color-button-positive-border: darkgreen;
+    --color-icon-button-positive-hover: #e8f7f6;
+    --color-icon-button-positive-active: #d4efed;
+    --color-button-positive-hover: var(--color-topos-primary-hover);
+    --color-button-positive-base: var(--color-topos-primary);
+    --color-icon-button-positive-text: var(--color-topos-primary);
+    --color-button-positive-border: var(--color-topos-primary);
 
     /* ========================================
      * Danger Colors
@@ -111,8 +111,9 @@
     /* ========================================
      * Information Colors 
      * ======================================== */
-    --color-alert-question: cornflowerblue;
-    --color-alert-note: teal;
+    --color-indicator: cornflowerblue;
+    --color-alert-question: var(--color-indicator);
+    --color-alert-note: var(--color-topos-primary);
 
     /* ========================================
      * Rich Text Editor Colors
