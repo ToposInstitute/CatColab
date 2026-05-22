@@ -39,6 +39,9 @@ importers:
         specifier: ^11.0.3
         version: 11.1.0
     devDependencies:
+      '@catcolab-dev-tools/vite-plugin-monorepo-dedupe':
+        specifier: link:../../tools/vite-plugin-monorepo-dedupe
+        version: link:../../tools/vite-plugin-monorepo-dedupe
       '@types/react':
         specifier: ^18.3.3
         version: 18.3.18
@@ -992,7 +995,6 @@ packages:
 
   glob@10.5.0:
     resolution: {integrity: sha512-DfXN8DfhJ7NH3Oe7cFmu3NCu1wKbkReJ8TorzSAFbSKrlNaQSKfIzqYqVY8zlbs2NLBbWpRiU52GX2PbaBVNkg==}
-    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
     hasBin: true
 
   globals@11.12.0:

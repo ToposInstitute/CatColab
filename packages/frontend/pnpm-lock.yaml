@@ -162,6 +162,9 @@ importers:
         specifier: ^13.0.0
         version: 13.0.0
     devDependencies:
+      '@catcolab-dev-tools/vite-plugin-monorepo-dedupe':
+        specifier: link:../../tools/vite-plugin-monorepo-dedupe
+        version: link:../../tools/vite-plugin-monorepo-dedupe
       '@mdx-js/mdx':
         specifier: ^2.3.0
         version: 2.3.0
