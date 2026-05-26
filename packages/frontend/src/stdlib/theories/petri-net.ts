@@ -7,6 +7,7 @@ import * as analyses from "../analyses";
 
 const ObjectCellEditor = lazy(() => import("../../model/object_cell_editor"));
 const MorphismCellEditor = lazy(() => import("../../model/morphism_cell_editor"));
+const PetrinautEditor = lazy(() => import("../petrinaut_editor"));
 
 export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
     const thSymMonoidalCategory = new ThSymMonoidalCategory();
@@ -33,6 +34,13 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
                                 ),
                             ],
                         ]),
+                    },
+                },
+                {
+                    id: "editor-variant-petri-net-petrinaut",
+                    label: "Petrinaut",
+                    editorOverrides: {
+                        replaceModelEditor: PetrinautEditor,
                     },
                 },
             ],

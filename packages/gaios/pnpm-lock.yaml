@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@hashintel/ds-helpers@0.2.1':
+    hash: 5b9457b2891845ebb9d139d3cb67107892eba2390088f05a51d8f77bd5312b9c
+    path: ../../patches/@hashintel__ds-helpers@0.2.1.patch
+
 importers:
 
   .:
