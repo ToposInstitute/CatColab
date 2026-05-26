@@ -8,6 +8,7 @@ packages:
   - "packages/backend/pkg"
   - "packages/frontend"
   - "packages/document-methods"
+  - "packages/literate-typescript"
   - "packages/ui-components"
   - "packages/gaios"
 

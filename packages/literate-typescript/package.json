@@ -1,0 +1,19 @@
+{
+    "name": "catcolab-literate-typescript",
+    "version": "0.0.0",
+    "private": true,
+    "type": "module",
+    "bin": {
+        "catcolab-literate-typescript": "./src/cli.mjs"
+    },
+    "scripts": {
+        "format": "oxfmt .",
+        "lint": "oxlint --fix && oxfmt ."
+    },
+    "dependencies": {
+        "typescript": "^6.0.3"
+    },
+    "peerDependencies": {
+        "tsx": "^4.0.0"
+    }
+}

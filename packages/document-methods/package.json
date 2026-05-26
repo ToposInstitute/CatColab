@@ -13,7 +13,7 @@
         "build:wasm": "wasm-pack build ../document-types",
         "format": "oxfmt .",
         "lint": "oxlint --fix && oxfmt .",
-        "test:lts": "cd test/literate-ts && literate-ts --nocache ../*.lts.md",
+        "test:lts": "catcolab-literate-typescript test/*.lts.md",
         "check": "pnpm run build:wasm && tsc && pnpm run lint",
         "ci": "tsc && oxlint --deny-warnings && oxfmt --check ."
     },
@@ -24,8 +24,9 @@
     },
     "devDependencies": {
         "@types/uuid": "^10.0.0",
-        "literate-ts": "github:ToposInstitute/literate-ts#kb/improved-tsx-dist",
+        "catcolab-literate-typescript": "workspace:*",
         "solid-js": "^1.9.10",
+        "tsx": "^4.19.0",
         "typescript": "^6.0.3",
         "wasm-pack": "^0.15.0"
     }
