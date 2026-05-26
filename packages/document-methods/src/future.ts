@@ -1,6 +1,15 @@
 import type { MorType, ObType } from "catcolab-document-types";
-import { newModelDocument, newMorphismDecl, newObjectDecl } from "./model";
+import { type ModelDocument, newModelDocument, newMorphismDecl, newObjectDecl } from "./model";
 import { appendCell, newFormalCell, newRichTextCell } from "./notebook";
+
+/**
+ * Minimal structural type matching the call shapes of Solid's
+ * `SetStoreFunction` that we actually use. Declared locally so this package
+ * does not need a runtime dependency on `solid-js`.
+ */
+// Loose callable that accepts Solid's SetStoreFunction without taking
+// `solid-js` as a runtime dependency.
+type StoreSetter = (...args: unknown[]) => void;
 
 export type ObjectType<Name extends string> = ObType & { readonly objectTypeName?: Name };
 export type MorphismType<Endpoint, Name extends string> = MorType & {
@@ -104,7 +113,13 @@ type LogicMorphismType<TLogic extends AnyModelLogic> =
         : never;
 
 export type ModelNotebook<TLogic extends AnyModelLogic> = Update<{ name: string }> & {
-    readonly name: string;
+    name: string;
+    /**
+     * Bind a Solid store setter so that subsequent mutations
+     * (`update`, cell `update`, cell creation) are routed through the setter,
+     * making them observable to Solid reactivity.
+     */
+    bind(setter: StoreSetter): void;
     richText(args: { content: string }): RichTextCell;
     object<TType extends LogicObjectType<TLogic> = LogicObjectType<TLogic>>(
         type: TType,
@@ -129,21 +144,45 @@ function createNotebook<TLogic extends AnyModelLogic>(
     const document = newModelDocument({ theory: logic.theory as LogicTheory<TLogic> });
     document.name = args.name;
 
-    const api = {
-        get name() {
-            return document.name;
+    let setter: StoreSetter | null = null;
+
+    // The api object owns the document's state as its own writable properties
+    // so a wrapping Solid store can intercept reads/writes on `name`,
+    // `notebook`, etc. Methods are added alongside the data.
+    const state = document as ModelDocument & Record<string, unknown>;
+
+    const appendCellViaStore = <T>(cell: { id: string } & T) => {
+        if (setter) {
+            setter("notebook", "cellContents", cell.id, cell);
+            setter("notebook", "cellOrder", (order: unknown) => [...(order as string[]), cell.id]);
+        } else {
+            appendCell(state.notebook, cell as unknown as Parameters<typeof appendCell>[1]);
+        }
+    };
+
+    const methods = {
+        bind(s: StoreSetter) {
+            setter = s;
         },
         update(updateArgs: Partial<{ name: string }>) {
-            Object.assign(document, updateArgs);
+            if (setter) {
+                setter(updateArgs);
+            } else {
+                Object.assign(state, updateArgs);
+            }
         },
         richText(cellArgs: { content: string }) {
             const cell = newRichTextCell(cellArgs.content);
-            appendCell(document.notebook, cell);
+            appendCellViaStore(cell);
 
             return {
                 id: cell.id,
                 update(updateArgs: Partial<{ content: string }>) {
-                    Object.assign(cell, updateArgs);
+                    if (setter) {
+                        setter("notebook", "cellContents", cell.id, updateArgs);
+                    } else {
+                        Object.assign(cell, updateArgs);
+                    }
                 },
             };
         },
@@ -153,13 +192,18 @@ function createNotebook<TLogic extends AnyModelLogic>(
         ) {
             const judgment = newObjectDecl(type);
             judgment.name = objectArgs.name;
-            appendCell(document.notebook, newFormalCell(judgment));
+            const formalCell = newFormalCell(judgment);
+            appendCellViaStore(formalCell);
 
             return {
                 id: judgment.id,
                 type,
                 update(updateArgs: Partial<{ name: string }>) {
-                    Object.assign(judgment, updateArgs);
+                    if (setter) {
+                        setter("notebook", "cellContents", formalCell.id, "content", updateArgs);
+                    } else {
+                        Object.assign(judgment, updateArgs);
+                    }
                 },
             };
         },
@@ -169,19 +213,29 @@ function createNotebook<TLogic extends AnyModelLogic>(
         ) {
             const judgment = newMorphismDecl(type);
             judgment.name = morphismArgs.name;
-            appendCell(document.notebook, newFormalCell(judgment));
+            const formalCell = newFormalCell(judgment);
+            appendCellViaStore(formalCell);
 
             return {
                 id: judgment.id,
                 type,
                 update(updateArgs: Partial<MorphismArgs<TType>>) {
-                    Object.assign(judgment, updateArgs);
+                    if (setter) {
+                        setter("notebook", "cellContents", formalCell.id, "content", updateArgs);
+                    } else {
+                        Object.assign(judgment, updateArgs);
+                    }
                 },
             };
         },
     };
 
-    return api as ModelNotebook<TLogic>;
+    // Merge state and methods so the returned object owns `name`, `notebook`,
+    // etc. as plain writable properties. A wrapping Solid store can then
+    // observe reads and route writes via `setter`.
+    const api = Object.assign(state, methods);
+
+    return api as unknown as ModelNotebook<TLogic>;
 }
 
 export const ModelNotebook = {

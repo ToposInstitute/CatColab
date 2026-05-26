@@ -67,9 +67,18 @@ function runOne(filePath, cwd, tsconfigPath) {
             ? `${localBin}${delimiter}${existingPath}`
             : existingPath;
 
+        // Pass `--conditions=browser --conditions=development` so packages
+        // exporting different builds for node vs browser (e.g. `solid-js`)
+        // resolve to their browser/dev build, where reactivity is active.
         const proc = spawn(
             resolveTsxBin(),
-            ["--tsconfig", tsconfigPath, filePath],
+            [
+                "--conditions=browser",
+                "--conditions=development",
+                "--tsconfig",
+                tsconfigPath,
+                filePath,
+            ],
             {
                 cwd,
                 env: {
