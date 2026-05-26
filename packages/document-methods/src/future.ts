@@ -104,6 +104,7 @@ type LogicMorphismType<TLogic extends AnyModelLogic> =
         : never;
 
 export type ModelNotebook<TLogic extends AnyModelLogic> = Update<{ name: string }> & {
+    readonly name: string;
     richText(args: { content: string }): RichTextCell;
     object<TType extends LogicObjectType<TLogic> = LogicObjectType<TLogic>>(
         type: TType,
@@ -129,6 +130,9 @@ function createNotebook<TLogic extends AnyModelLogic>(
     document.name = args.name;
 
     const api = {
+        get name() {
+            return document.name;
+        },
         update(updateArgs: Partial<{ name: string }>) {
             Object.assign(document, updateArgs);
         },

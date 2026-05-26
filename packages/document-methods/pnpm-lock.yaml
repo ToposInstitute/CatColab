@@ -23,10 +23,10 @@ importers:
         version: 10.0.0
       literate-ts:
         specifier: github:ToposInstitute/literate-ts#kb/improved-tsx-dist
-        version: https://codeload.github.com/ToposInstitute/literate-ts/tar.gz/e7192c974ce20cb74d7019a99b9a4c5fb1daef29(typescript@6.0.3)
+        version: https://codeload.github.com/ToposInstitute/literate-ts/tar.gz/554274c568500017a61cbd72af57ec54a4f72a25(typescript@6.0.3)
       solid-js:
         specifier: ^1.9.10
-        version: 1.9.12
+        version: 1.9.13
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -241,8 +241,8 @@ packages:
   leac@0.7.0:
     resolution: {integrity: sha512-qMrZeyEekgdRQ9o6a4NAB2EQZrv827GJdn1vnapwSJ90hWRB4TzUSunvacPkxQ2TnNqHNI1/zSt0hlo0crG8Jw==}
 
-  literate-ts@https://codeload.github.com/ToposInstitute/literate-ts/tar.gz/e7192c974ce20cb74d7019a99b9a4c5fb1daef29:
-    resolution: {tarball: https://codeload.github.com/ToposInstitute/literate-ts/tar.gz/e7192c974ce20cb74d7019a99b9a4c5fb1daef29}
+  literate-ts@https://codeload.github.com/ToposInstitute/literate-ts/tar.gz/554274c568500017a61cbd72af57ec54a4f72a25:
+    resolution: {tarball: https://codeload.github.com/ToposInstitute/literate-ts/tar.gz/554274c568500017a61cbd72af57ec54a4f72a25}
     version: 2.5.0
     hasBin: true
     peerDependencies:
@@ -376,8 +376,8 @@ packages:
     resolution: {integrity: sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw==}
     engines: {node: '>=14'}
 
-  solid-js@1.9.12:
-    resolution: {integrity: sha512-QzKaSJq2/iDrWR1As6MHZQ8fQkdOBf8GReYb7L5iKwMGceg7HxDcaOHk0at66tNgn9U2U7dXo8ZZpLIAmGMzgw==}
+  solid-js@1.9.13:
+    resolution: {integrity: sha512-6hJeJMOcEX8ktqjpDoJZEmld3ijvcvWBDtiXBm7f4332SiFN66QeAQI1REQshvyUoISsSeJ4PHDauKYbwao9JQ==}
 
   spdx-correct@3.2.0:
     resolution: {integrity: sha512-kN9dJbvnySHULIluDHy32WHRUu3Og7B9sbY7tsFLctQkIqnMh3hErYgdMjTYuqmcXX+lK5T1lnUt3G7zNswmZA==}
@@ -668,7 +668,7 @@ snapshots:
 
   leac@0.7.0: {}
 
-  literate-ts@https://codeload.github.com/ToposInstitute/literate-ts/tar.gz/e7192c974ce20cb74d7019a99b9a4c5fb1daef29(typescript@6.0.3):
+  literate-ts@https://codeload.github.com/ToposInstitute/literate-ts/tar.gz/554274c568500017a61cbd72af57ec54a4f72a25(typescript@6.0.3):
     dependencies:
       chalk: 5.6.2
       fast-glob: 3.3.3
@@ -809,7 +809,7 @@ snapshots:
 
   signal-exit@4.1.0: {}
 
-  solid-js@1.9.12:
+  solid-js@1.9.13:
     dependencies:
       csstype: 3.2.3
       seroval: 1.5.4
