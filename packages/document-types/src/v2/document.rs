@@ -48,7 +48,7 @@ pub struct AnalysisDocumentContent {
     pub version: String,
 }
 
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[derive(PartialEq, Debug, Serialize, Deserialize, Tsify)]
 #[serde(tag = "type")]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum Document {
@@ -58,6 +58,12 @@ pub enum Document {
     Diagram(DiagramDocumentContent),
     #[serde(rename = "analysis")]
     Analysis(AnalysisDocumentContent),
+    // TODO: Re-enable this only after the frontend supports Petri net documents
+    // throughout its document routing, menus ... other exhaustive checks over
+    // document types.
+
+    // #[serde(rename = "petrinet")]
+    // PetriNet(PetriNetDocumentContent),
 }
 
 impl Document {
