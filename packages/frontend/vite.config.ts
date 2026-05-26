@@ -30,6 +30,20 @@ export default defineConfig({
         sourcemap: true,
         target: "es2022",
     },
+    optimizeDeps: {
+        // Force Vite to pre-bundle the React ecosystem entries used by
+        // `@hashintel/petrinaut` / `@hashintel/ds-components`. Without
+        // this, browsers see React's CJS `jsx-runtime` directly and
+        // can't import named exports like `jsx` / `Fragment`.
+        include: [
+            "react",
+            "react/jsx-runtime",
+            "react/jsx-dev-runtime",
+            "react/compiler-runtime",
+            "react-dom",
+            "react-dom/client",
+        ],
+    },
     resolve: {
         dedupe: getCommonDependencies(),
     },

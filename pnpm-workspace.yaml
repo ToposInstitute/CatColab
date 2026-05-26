@@ -1,8 +1,3 @@
-# 9 days, in minutes
-minimumReleaseAge: 12960
-minimumReleaseAgeExclude:
-  - wasm-pack
-  - echarts
 packages:
   - "dev-docs"
   - "packages/backend/pkg"
@@ -10,4 +5,21 @@ packages:
   - "packages/document-methods"
   - "packages/ui-components"
   - "packages/gaios"
-
+# 9 days, in minutes
+minimumReleaseAge: 12960
+minimumReleaseAgeExclude:
+  - "@hashintel/petrinaut"
+  - "@hashintel/ds-components"
+  - "@hashintel/ds-helpers"
+  - "@hashintel/refractive"
+  - "@hashintel/petrinaut-core"
+  - wasm-pack
+  - echarts
+# Per-package `pnpm-lock.yaml`s mean each workspace member runs its own resolution,
+# and `patchedDependencies` is shared across all of them. Patches whose target isn't
+# in a given member's dep graph (e.g. `@hashintel/ds-helpers` is only used by the
+# frontend) trip `ERR_PNPM_UNUSED_PATCH` in unrelated members. Allow that until the
+# repo unifies on a single workspace lockfile.
+allowUnusedPatches: true
+patchedDependencies:
+  '@hashintel/ds-helpers@0.2.1': patches/@hashintel__ds-helpers@0.2.1.patch

@@ -1,0 +1,116 @@
+diff --git a/styled-system/css/index.d.ts b/styled-system/css/index.d.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..a675f25512572a798ba45e59959e502e0e9cf76b
+--- /dev/null
++++ b/styled-system/css/index.d.ts
+@@ -0,0 +1,41 @@
++// Minimal type declarations matching the runtime shim in `./index.mjs`.
++// Mirrors a subset of PandaCSS's generated types. Real types come from the
++// (missing) upstream generation; this is just enough to satisfy TS callers.
++
++export type SystemStyleObject = Record<string, unknown>;
++
++export interface CssFunction {
++    (styles?: SystemStyleObject): string;
++    raw: (styles?: SystemStyleObject) => SystemStyleObject;
++}
++
++export const css: CssFunction;
++
++export function cx(...names: Array<string | false | null | undefined>): string;
++
++export interface RecipeRuntimeFn<Variants extends Record<string, unknown> = Record<string, unknown>> {
++    (props?: Partial<Variants>): string;
++    raw: (props?: Partial<Variants>) => Partial<Variants>;
++    variantKeys: string[];
++    variantMap: Record<string, string[]>;
++    splitVariantProps: <P extends Partial<Variants>>(props: P) => [Partial<Variants>, Omit<P, keyof Variants>];
++}
++
++export function cva<Variants extends Record<string, unknown> = Record<string, unknown>>(
++    config: unknown,
++): RecipeRuntimeFn<Variants>;
++
++export interface SlotRecipeRuntimeFn<
++    Slots extends string = string,
++    Variants extends Record<string, unknown> = Record<string, unknown>,
++> {
++    (props?: Partial<Variants>): Record<Slots, string>;
++    raw: (props?: Partial<Variants>) => Partial<Variants>;
++    variantKeys: string[];
++    splitVariantProps: <P extends Partial<Variants>>(props: P) => [Partial<Variants>, Omit<P, keyof Variants>];
++}
++
++export function sva<
++    Slots extends string = string,
++    Variants extends Record<string, unknown> = Record<string, unknown>,
++>(config: unknown): SlotRecipeRuntimeFn<Slots, Variants>;
+diff --git a/styled-system/css/index.mjs b/styled-system/css/index.mjs
+new file mode 100644
+index 0000000000000000000000000000000000000000..d414a8e6a7b39f151021df9ac4007bff6a9dd895
+--- /dev/null
++++ b/styled-system/css/index.mjs
+@@ -0,0 +1,63 @@
++// Minimal runtime shim for `@hashintel/ds-helpers/css`.
++//
++// The published 0.2.0 tarball is missing its generated `styled-system/`
++// directory (PandaCSS codegen output) entirely. Until upstream republishes
++// with the generated files included, this shim provides just enough surface
++// area for `@hashintel/ds-components` (and transitively `@hashintel/petrinaut`)
++// to resolve and evaluate. The functions are stubs — they return reasonable
++// no-op values so import-time module evaluation succeeds; the result is that
++// the Petrinaut UI will render without PandaCSS-generated styling.
++//
++// See: upstream packaging issue at hashintel/hash @hashintel/ds-helpers.
++
++const NOOP_CLASS = "";
++
++/** Generate a class name from a style object. Real impl emits atomic classes
++ * and registers the corresponding CSS; here we just return an empty string
++ * so callers that build a `className` end up with no class. */
++export function css(/* styles */) {
++    return NOOP_CLASS;
++}
++
++/** Pull `.raw(styles)` access onto the function itself, mimicking PandaCSS. */
++css.raw = function cssRaw(styles) {
++    return styles ?? {};
++};
++
++/** Concatenate class names, ignoring falsy values. */
++export function cx(...names) {
++    return names.filter(Boolean).join(" ");
++}
++
++/** PandaCSS `cva` (class-variance-authority style). Returns a function that,
++ * when called with props, returns a class string. We stub to always return
++ * an empty class so component variants don't crash. */
++export function cva(config) {
++    function recipe(/* props */) {
++        return NOOP_CLASS;
++    }
++    recipe.raw = (props) => props ?? {};
++    recipe.variantKeys = Object.keys(config?.variants ?? {});
++    recipe.variantMap = Object.fromEntries(
++        Object.entries(config?.variants ?? {}).map(([k, v]) => [k, Object.keys(v)]),
++    );
++    recipe.splitVariantProps = (props) => [{}, props ?? {}];
++    return recipe;
++}
++
++/** PandaCSS slot recipes. Returns a function that maps every slot to "" so
++ * `recipe(props).<slotName>` is always a no-op class. */
++export function sva(config) {
++    const slots = config?.slots ?? [];
++    function recipe(/* props */) {
++        const result = {};
++        for (const slot of slots) {
++            result[slot] = NOOP_CLASS;
++        }
++        return result;
++    }
++    recipe.raw = (props) => props ?? {};
++    recipe.variantKeys = Object.keys(config?.variants ?? {});
++    recipe.splitVariantProps = (props) => [{}, props ?? {}];
++    return recipe;
++}

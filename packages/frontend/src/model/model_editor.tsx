@@ -1,4 +1,4 @@
-import { Match, Switch, useContext } from "solid-js";
+import { Match, Show, Switch, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
@@ -12,9 +12,23 @@ import type { LiveModelDoc } from "./document";
 import { InstantiationCellEditor } from "./instantiation_cell_editor";
 
 /** Notebook editor for a model of a double theory.
+
+When the active editor variant supplies a `replaceModelEditor`, that
+component is rendered in place of the notebook entirely. This lets variants
+that don't fit the per-cell editing model (e.g. whole-graph editors) take
+over the editing surface while leaving the underlying CatColab document
+untouched.
  */
 export function ModelNotebookEditor(props: { liveModel: LiveModelDoc; focus: FocusHandle }) {
     const liveDoc = () => props.liveModel.liveDoc;
+    const theories = useContext(TheoryLibraryContext);
+
+    const replaceModelEditor = () => {
+        const variantId = liveDoc().doc.editorVariant;
+        return variantId && theories
+            ? theories.getEditorOverrides(variantId)?.replaceModelEditor
+            : undefined;
+    };
 
     const cellConstructors = () => {
         const theory = props.liveModel.theory();
@@ -24,19 +38,26 @@ export function ModelNotebookEditor(props: { liveModel: LiveModelDoc; focus: Foc
     // oxlint-disable solid/reactivity -- Context.Provider value getter is reactive
     return (
         <LiveModelContext.Provider value={() => props.liveModel}>
-            <NotebookEditor
-                handle={liveDoc().docHandle}
-                path={["notebook"]}
-                notebook={liveDoc().doc.notebook}
-                changeNotebook={(f) => {
-                    liveDoc().changeDoc((doc) => f(doc.notebook));
-                }}
-                formalCellEditor={ModelCellEditor}
-                cellConstructors={cellConstructors()}
-                cellLabel={judgmentLabel}
-                duplicateCell={Model.duplicateModelJudgment}
-                focus={props.focus}
-            />
+            <Show
+                when={replaceModelEditor()}
+                fallback={
+                    <NotebookEditor
+                        handle={liveDoc().docHandle}
+                        path={["notebook"]}
+                        notebook={liveDoc().doc.notebook}
+                        changeNotebook={(f) => {
+                            liveDoc().changeDoc((doc) => f(doc.notebook));
+                        }}
+                        formalCellEditor={ModelCellEditor}
+                        cellConstructors={cellConstructors()}
+                        cellLabel={judgmentLabel}
+                        duplicateCell={Model.duplicateModelJudgment}
+                        focus={props.focus}
+                    />
+                }
+            >
+                {(component) => <Dynamic component={component()} liveModel={props.liveModel} />}
+            </Show>
         </LiveModelContext.Provider>
     );
 }
