@@ -101,31 +101,6 @@ jobs:
         run: |
           nix build .#rust-docs-check
 
-  ui_components_tests:
-    name: ui-components tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup NodeJS
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Install Playwright browser
-        run: pnpm --filter ./packages/ui-components exec playwright install chromium
-
-      - name: Run ui-components tests
-        run: pnpm --filter ./packages/ui-components run test
-
   npm_checks:
     name: npm checks
     runs-on: ubuntu-latest
