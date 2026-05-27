@@ -229,41 +229,23 @@
             system:
             let
               pkgs = nixpkgsFor system;
-              craneLib' = craneLibFor system;
-              cargoArtifacts' = cargoArtifactsFor system;
+              craneArgs = {
+                craneLib = craneLibFor system;
+                cargoArtifacts = cargoArtifactsFor system;
+                inherit pkgs;
+              };
+              frontendPackage = pkgs.callPackage ./packages/frontend/default.nix {
+                inherit inputs self;
+                rustToolchain = rustToolchainFor system;
+                pnpm2nix = inputs.pnpm2nix-nzbr;
+              };
             in
             {
-              catcolabApi = pkgs.callPackage ./infrastructure/catcolab-api.nix {
-                craneLib = craneLib';
-                cargoArtifacts = cargoArtifacts';
-                inherit pkgs;
-              };
-
-              catlog-wasm-browser = pkgs.callPackage ./packages/catlog-wasm/default.nix {
-                craneLib = craneLib';
-                cargoArtifacts = cargoArtifacts';
-                inherit pkgs;
-              };
-
-              document-types-wasm = pkgs.callPackage ./packages/document-types/default.nix {
-                craneLib = craneLib';
-                cargoArtifacts = cargoArtifacts';
-                inherit pkgs;
-              };
-
-              frontend =
-                (pkgs.callPackage ./packages/frontend/default.nix {
-                  inherit inputs self;
-                  rustToolchain = rustToolchainFor system;
-                  pnpm2nix = inputs.pnpm2nix-nzbr;
-                }).package;
-
-              frontend-tests =
-                (pkgs.callPackage ./packages/frontend/default.nix {
-                  inherit inputs self;
-                  rustToolchain = rustToolchainFor system;
-                  pnpm2nix = inputs.pnpm2nix-nzbr;
-                }).tests;
+              catcolabApi = pkgs.callPackage ./infrastructure/catcolab-api.nix craneArgs;
+              catlog-wasm-browser = pkgs.callPackage ./packages/catlog-wasm/default.nix craneArgs;
+              document-types-wasm = pkgs.callPackage ./packages/document-types/default.nix craneArgs;
+              frontend = frontendPackage.package;
+              frontend-tests = frontendPackage.tests;
             };
 
           linuxOnlyPackages = {
