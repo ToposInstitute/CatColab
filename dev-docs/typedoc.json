@@ -2,6 +2,5 @@
     "entryPoints": ["./index.ts"],
     "out": "output",
     "name": "CatColab: for developers",
-    "readme": "../CONTRIBUTING.md",
-    "projectDocuments": ["fixing-hash-mismatches.md"]
+    "readme": "../CONTRIBUTING.md"
 }
