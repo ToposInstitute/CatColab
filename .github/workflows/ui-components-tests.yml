@@ -34,13 +34,20 @@ jobs:
           node-version: 24
           cache: "pnpm"
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('packages/ui-components/pnpm-lock.yaml') }}
+
       - name: Install dependencies
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
         run: pnpm install
 
       - name: Install Playwright browser
-        run: pnpm --filter ./packages/ui-components exec playwright install --with-deps --no-shell chromium
+        run: pnpm --filter ./packages/ui-components exec playwright install --with-deps chromium-headless-shell
 
       - name: Run ui-components tests
         run: pnpm --filter ./packages/ui-components run test
