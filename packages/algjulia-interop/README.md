@@ -3,7 +3,7 @@
 This small package makes functionality from
 [AlgebraicJulia](https://www.algebraicjulia.org/) available to CatColab. At this 
 time, only a [Catlab.jl](https://github.com/AlgebraicJulia/Catlab.jl) service is
-provided. Other packages (e.g. Decapodes.jl) will be added in the future.
+provided. Other packages (e.g. [Decapodes.jl](https://github.com/AlgebraicJulia/Decapodes.jl))) will be added in the future.
 
 ## Usage
 

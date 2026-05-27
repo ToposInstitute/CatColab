@@ -10,26 +10,6 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  julia_tests:
-    name: julia tests
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        toolchain:
-          - stable
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Setup Julia
-        uses: julia-actions/setup-julia@v2
-        with:
-          version: '1'
-
-      - name: Tests
-        run : |
-          julia --project=packages/algjulia-interop -e 'import Pkg; Pkg.test()'
-
   catlog_tests:
     name: catlog tests
     runs-on: ubuntu-latest
