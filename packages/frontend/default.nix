@@ -44,11 +44,12 @@ let
 
   processedLocks = lib.mapAttrs (_: processLock) lockfilesToProcess;
 
+  yamlFormat = pkgs.formats.yaml { };
+
   patchedLockfiles = lib.mapAttrs (
     relPath: processed:
-    pkgs.writeText "pnpm-lock-${builtins.replaceStrings [ "/" ] [ "-" ] relPath}.yaml" (
-      builtins.toJSON processed.patchedLockfile
-    )
+    yamlFormat.generate "pnpm-lock-${builtins.replaceStrings [ "/" ] [ "-" ] relPath}.yaml"
+      processed.patchedLockfile
   ) processedLocks;
 
   allTarballs = lib.unique (
