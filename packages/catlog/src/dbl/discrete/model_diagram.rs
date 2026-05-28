@@ -6,7 +6,9 @@ use nonempty::NonEmpty;
 #[cfg(feature = "serde-wasm")]
 use tsify::declare;
 
-use crate::dbl::{model::*, model_diagram::*, model_morphism::*};
+use crate::dbl::{
+    discrete::DiscreteDblModelMapping, model::*, model_diagram::*, model_morphism::*,
+};
 use crate::one::{Category, FgCategory, GraphMapping};
 use crate::validate;
 use crate::zero::{Mapping, QualifiedName};
@@ -95,7 +97,7 @@ mod tests {
         domain.add_mor(name("f"), name("x"), name("y"), name("Attr").into());
         let mut f: DiscreteDblModelMapping = Default::default();
         f.assign_mor(name("f"), Path::single(name("attr")));
-        let mut diagram = DblModelDiagram(f, domain);
+        let mut diagram = DblModelDiagram(f, domain.clone());
 
         let model = walking_attr(th);
         diagram.infer_missing_from(&model);
