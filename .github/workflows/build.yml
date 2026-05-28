@@ -227,6 +227,11 @@ jobs:
         run: |
           tlmgr update --self
           tlmgr install dvisvgm standalone preview pgf tikz-cd amsmath quiver spath3 ebproof
+          # Work around https://github.com/loopspace/spath3/issues/37 by
+          # dropping the redundant `NNn` variant that newer expl3 rejects.
+          SPATH3="$(kpsewhich spath3.sty)"
+          sed -i 's|\\spath_maybe_split_curve:NNn {NNn, NNV }|\\spath_maybe_split_curve:NNn {NNV}|' "$SPATH3"
+          sed -i 's|\\spath_maybe_gsplit_curve:NNn {NNn, NNV}|\\spath_maybe_gsplit_curve:NNn {NNV}|' "$SPATH3"
 
       - name: Build mathematical docs
         if: steps.cache-math-docs.outputs.cache-hit != 'true'
@@ -287,6 +292,11 @@ jobs:
         run: |
           tlmgr update --self
           tlmgr install dvisvgm standalone preview pgf tikz-cd amsmath quiver spath3 ebproof luatex85
+          # Work around https://github.com/loopspace/spath3/issues/37 by
+          # dropping the redundant `NNn` variant that newer expl3 rejects.
+          SPATH3="$(kpsewhich spath3.sty)"
+          sed -i 's|\\spath_maybe_split_curve:NNn {NNn, NNV }|\\spath_maybe_split_curve:NNn {NNV}|' "$SPATH3"
+          sed -i 's|\\spath_maybe_gsplit_curve:NNn {NNn, NNV}|\\spath_maybe_gsplit_curve:NNn {NNV}|' "$SPATH3"
 
       - name: Render Quarto project
         if: steps.cache-rfc.outputs.cache-hit != 'true'
