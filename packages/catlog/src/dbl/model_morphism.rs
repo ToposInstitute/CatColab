@@ -26,7 +26,52 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
+use crate::zero::QualifiedName;
+
 pub use super::discrete::model_morphism::*;
+pub use super::modal::morphism::*;
+
+/// Mapping
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct DblModelMapping<MappingData: Clone>(pub MappingData);
+
+/// Mapping
+pub trait MutDblModelMapping {
+    /// Object generators for the DblModelMapping
+    type ObGen;
+    /// Morphism generators for the DblModelMapping
+    type MorGen;
+
+    /// Constructs a model mapping from a pair of hash maps.
+    fn new(
+        ob_pairs: impl IntoIterator<Item = (QualifiedName, Self::ObGen)>,
+        mor_pairs: impl IntoIterator<Item = (QualifiedName, Self::MorGen)>,
+    ) -> Self;
+
+    /// Assigns an object generator, returning the previous assignment.
+    fn assign_ob(&mut self, x: QualifiedName, y: Self::ObGen) -> Option<Self::ObGen>;
+
+    /// Assigns a morphism generator, returning the previous assignment.
+    fn assign_mor(&mut self, e: QualifiedName, n: Self::MorGen) -> Option<Self::MorGen>;
+
+    /// Unassigns an object generator, returning the previous assignment.
+    fn unassign_ob(&mut self, x: &QualifiedName) -> Option<Self::ObGen>;
+
+    /// Unassigns a morphism generator, returning the previous assignment.
+    fn unassign_mor(&mut self, e: &QualifiedName) -> Option<Self::MorGen>;
+
+    // /// Interprets the data as a functor into the given model.
+    // fn functor_into<'a>(
+    //     &'a self,
+    //     cod: &'a Self::DblModel,
+    // ) -> FpFunctor<'a, Self::DblModelMappingData, QualifiedFpCategory>;
+
+    // /// Finder of morphisms between two models of a discrete double theory.
+    // fn morphisms<'a>(
+    //     dom: &'a Self::DblModel,
+    //     cod: &'a Self::DblModel,
+    // ) -> Self::DblModelMorphismFinder;
+}
 
 /// A functor between models of a double theory.
 ///

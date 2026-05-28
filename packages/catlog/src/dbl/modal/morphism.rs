@@ -2,7 +2,7 @@
 
 use crate::dbl::modal::{ModalDblModel, ModalMor, ModalOb};
 use crate::dbl::model::MutDblModel;
-use crate::dbl::model_morphism::{DblModelMorphism, InvalidDblModelMorphism};
+use crate::dbl::model_morphism::{DblModelMorphism, InvalidDblModelMorphism, MutDblModelMapping};
 use crate::dbl::theory::Unital;
 use crate::one::{
     FpFunctorData,
@@ -14,16 +14,19 @@ use crate::zero::{HashColumn, Mapping, MutMapping, QualifiedName};
 
 use nonempty::NonEmpty;
 
+// TODO FpFunctorData on ModalDblModalMapping...?
+type ModalDblModelMappingData =
+    FpFunctorData<HashColumn<QualifiedName, ModalOb>, HashColumn<QualifiedName, ModalMor>>;
+
 /// A mapping between models of a modal double theory.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct ModalDblModelMapping(pub ModalDblModelMappingData);
 
-type ModalDblModelMappingData =
-    FpFunctorData<HashColumn<QualifiedName, ModalOb>, HashColumn<QualifiedName, ModalMor>>;
-
-impl ModalDblModelMapping {
+impl MutDblModelMapping for ModalDblModelMapping {
+    type ObGen = ModalOb;
+    type MorGen = ModalMor;
     /// Constructs a new model mapping from a pair of hash maps.
-    pub fn new(
+    fn new(
         ob_pairs: impl IntoIterator<Item = (QualifiedName, ModalOb)>,
         mor_pairs: impl IntoIterator<Item = (QualifiedName, ModalMor)>,
     ) -> Self {
@@ -34,33 +37,35 @@ impl ModalDblModelMapping {
     }
 
     /// Assigns an object generator, returning the previous assignment.
-    pub fn assign_ob(&mut self, x: QualifiedName, y: ModalOb) -> Option<ModalOb> {
+    fn assign_ob(&mut self, x: QualifiedName, y: ModalOb) -> Option<ModalOb> {
         self.0.ob_generator_map.set(x, y)
     }
 
     /// Assigns a morphism generator, returning the previous assignment.
-    pub fn assign_mor(&mut self, e: QualifiedName, n: ModalMor) -> Option<ModalMor> {
+    fn assign_mor(&mut self, e: QualifiedName, n: ModalMor) -> Option<ModalMor> {
         self.0.mor_generator_map.set(e, n)
     }
 
-    /// This applies a mapping onto a given object in the domain, returning the corresponding
-    /// object in the codomain.
-    pub fn apply_ob(&self, ob: ModalOb) -> Result<ModalOb, String> {
-        match ob {
-            ModalOb::Generator(name) => {
-                self.0.apply_vertex(name.clone()).ok_or("Vertex {name} not found".to_string())
-            }
-            ModalOb::App(_, name) => {
-                self.0.apply_vertex(name.clone()).ok_or("Vertex {name} not found".to_string())
-            }
-            ModalOb::List(list, args) => args
-                .into_iter()
-                .map(|name| self.apply_ob(name.clone()))
-                .collect::<Result<Vec<ModalOb>, String>>()
-                .map(|args| ModalOb::List(list, args)),
-        }
+    /// Unassigns an object generator, returning the previous assignment.
+    fn unassign_ob(&mut self, x: &QualifiedName) -> Option<ModalOb> {
+        self.0.ob_generator_map.unset(x)
     }
 
+    /// Unassigns a morphism generator, returning the previous assignment.
+    fn unassign_mor(&mut self, e: &QualifiedName) -> Option<ModalMor> {
+        self.0.mor_generator_map.unset(e)
+    }
+
+    // Finder of morphisms between two models of a modal double theory.
+    // fn morphisms<'a>(
+    //     dom: &'a ModalDblModel<Unital>,
+    //     cod: &'a ModalDblModel<Unital>,
+    // ) -> QualifiedName {
+    //     todo!()
+    // }
+}
+
+impl ModalDblModelMapping {
     /// This checks if an object in the domain also exists in the model.
     pub fn infer_missing(&mut self, domain_ob: Option<&ModalOb>, model_ob: ModalOb) {
         if let Some(ob) = domain_ob {
@@ -85,6 +90,24 @@ impl ModalDblModelMapping {
                 };
             }
         };
+    }
+
+    /// This applies a mapping onto a given object in the domain, returning the corresponding
+    /// object in the codomain.
+    fn apply_ob(&self, ob: ModalOb) -> Result<ModalOb, String> {
+        match ob {
+            ModalOb::Generator(name) => {
+                self.0.apply_vertex(name.clone()).ok_or("Vertex {name} not found".to_string())
+            }
+            ModalOb::App(_, name) => {
+                self.0.apply_vertex(name.clone()).ok_or("Vertex {name} not found".to_string())
+            }
+            ModalOb::List(list, args) => args
+                .into_iter()
+                .map(|name| self.apply_ob(name.clone()))
+                .collect::<Result<Vec<ModalOb>, String>>()
+                .map(|args| ModalOb::List(list, args)),
+        }
     }
 }
 
