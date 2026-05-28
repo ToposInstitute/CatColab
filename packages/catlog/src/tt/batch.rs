@@ -6,23 +6,19 @@ use std::ops::DerefMut;
 use std::time::{Duration, Instant};
 use std::{fs, io};
 
+use all_the_same::all_the_same;
 use fnotation::FNtnTop;
 use scopeguard::guard;
 use tattle::display::SourceInfo;
 use tattle::{Reporter, declare_error};
 
-use super::{
-    modelgen::{Model, diagram_from_diag},
-    text_elab::*,
-    theory::std_theories,
-    toplevel::*,
-};
-use crate::dbl::discrete::{DiscreteDblModelDiagram, InvalidDiscreteDblModelDiagram};
+use super::{modelgen::diagram_from_diag, text_elab::*, theory::std_theories, toplevel::*};
+use crate::dbl::discrete::InvalidDiscreteDblModelDiagram;
 use crate::dbl::model::{FpDblModel, MutDblModel};
-use crate::dbl::model_diagram::DblModelDiagram;
+use crate::dbl::model_diagram::{DblModelDiagramType, Diagram};
 use crate::one::category::FgCategory;
-use crate::one::path::Path;
-use crate::zero::{Mapping, NameSegment, QualifiedName};
+use crate::tt::modelgen::Model;
+use crate::zero::{Mapping, NameSegment};
 
 declare_error!(TOP_ERROR, "top", "an error at the top-level");
 
@@ -74,38 +70,42 @@ impl BatchOutput {
         }
     }
 
-    fn diagram_summary(&self, diagram: &DiscreteDblModelDiagram) {
+    fn diagram_summary(&self, diagram: &DblModelDiagramType) {
         if let BatchOutput::Snapshot(out) = self {
-            let DblModelDiagram(mapping, domain) = diagram;
-            let mut out = out.borrow_mut();
-            let ob_gens: Vec<_> = domain.ob_generators().collect();
-            let mor_gens: Vec<_> = domain.mor_generators().collect();
-            if ob_gens.is_empty() && mor_gens.is_empty() {
-                writeln!(out, "#/ diagram has no domain generators").unwrap();
-                return;
-            }
-            writeln!(out, "#/ diagram domain:").unwrap();
-            for g in &ob_gens {
-                let ot = domain.ob_generator_type(g);
-                match mapping.0.ob_generator_map.apply_to_ref(g) {
-                    Some(target) => writeln!(out, "#/   {g} : {ot} -> {target}").unwrap(),
-                    None => writeln!(out, "#/   {g} : {ot}").unwrap(),
+            all_the_same!(match diagram {
+                DblModelDiagramType::[Discrete, ModalUnital](diagram) => {
+                    let (mapping, domain) = diagram.destructure();
+                    let mut out = out.borrow_mut();
+                    let ob_gens: Vec<_> = domain.ob_generators().collect();
+                    let mor_gens: Vec<_> = domain.mor_generators().collect();
+                    if ob_gens.is_empty() && mor_gens.is_empty() {
+                        writeln!(out, "#/ diagram has no domain generators").unwrap();
+                        return;
+                    }
+                    writeln!(out, "#/ diagram domain:").unwrap();
+                    for g in &ob_gens {
+                        let ot = domain.ob_generator_type(g);
+                        match mapping.0.ob_generator_map.apply_to_ref(g) {
+                            Some(target) => writeln!(out, "#/   {g} : {ot} -> {target}").unwrap(),
+                            None => writeln!(out, "#/   {g} : {ot}").unwrap(),
+                        }
+                    }
+                    for g in &mor_gens {
+                        let mt = &domain.mor_generator_type(g).format_path();
+                        let dom_str =
+                            domain.get_dom(g).map(|o| format!("{o}")).unwrap_or_else(|| "?".into());
+                        let cod_str =
+                            domain.get_cod(g).map(|o| format!("{o}")).unwrap_or_else(|| "?".into());
+                        let target_str = mapping
+                            .0
+                            .mor_generator_map
+                            .apply_to_ref(g)
+                            .map(|p| format!(" -> {}", &p.format_path()))
+                            .unwrap_or_default();
+                        writeln!(out, "#/   {g} : {mt}[{dom_str}, {cod_str}]{target_str}").unwrap();
+                    }
                 }
-            }
-            for g in &mor_gens {
-                let mt = format_path(&domain.mor_generator_type(g));
-                let dom_str =
-                    domain.get_dom(g).map(|o| format!("{o}")).unwrap_or_else(|| "?".into());
-                let cod_str =
-                    domain.get_cod(g).map(|o| format!("{o}")).unwrap_or_else(|| "?".into());
-                let target_str = mapping
-                    .0
-                    .mor_generator_map
-                    .apply_to_ref(g)
-                    .map(|p| format!(" -> {}", format_path(&p)))
-                    .unwrap_or_default();
-                writeln!(out, "#/   {g} : {mt}[{dom_str}, {cod_str}]{target_str}").unwrap();
-            }
+            })
         }
     }
 
@@ -260,10 +260,21 @@ pub fn elaborate(src: &str, path: &str, output: &BatchOutput) -> io::Result<bool
                                             &diag.theory.definition,
                                             &diag.model,
                                         );
-                                        if let Some(cod) = cod.as_discrete() {
-                                            output.validation_result(
-                                                model_diag.iter_invalid_in(&cod),
-                                            );
+                                        match &model_diag {
+                                            DblModelDiagramType::Discrete(diagram) => {
+                                                if let Some(cod) = cod.as_discrete() {
+                                                    output.validation_result(
+                                                        diagram.iter_invalid_in(&cod),
+                                                    );
+                                                }
+                                            }
+                                            DblModelDiagramType::ModalUnital(diagram) => {
+                                                if let Some(cod) = cod.as_modal() {
+                                                    output.validation_result(
+                                                        diagram.iter_invalid_in(&cod),
+                                                    );
+                                                }
+                                            }
                                         }
                                     }
                                     Err(msg) => output.diagram_error(&msg),
@@ -329,15 +340,4 @@ fn snapshot_examples() {
         }
     }
     assert!(succeeded);
-}
-
-/// Render a [`QualifiedPath`] for snapshot output.
-fn format_path(p: &Path<QualifiedName, QualifiedName>) -> String {
-    match p {
-        Path::Id(v) => format!("Hom({v})"),
-        Path::Seq(es) => {
-            let parts: Vec<String> = es.iter().map(|e| format!("{e}")).collect();
-            parts.join(".")
-        }
-    }
 }

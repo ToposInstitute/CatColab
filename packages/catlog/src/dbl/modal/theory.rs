@@ -18,7 +18,7 @@
 //! 2-category or monoidal category. Instead, the mode theory is implicit and baked
 //! in at the type level.
 
-use std::fmt;
+use std::fmt::{self, Display};
 use std::hash::Hash;
 use std::iter::repeat_n;
 use std::marker::PhantomData;
@@ -166,6 +166,12 @@ impl<T> ModeApp<T> {
 ///
 /// These are (object or morphism) types that cannot be built out of others.
 pub type ModalType = ModeApp<QualifiedName>;
+
+impl Display for ModeApp<QualifiedName> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.arg)
+    }
+}
 
 /// A basic operation in a modal double theory.
 ///

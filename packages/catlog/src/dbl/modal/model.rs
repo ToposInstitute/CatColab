@@ -1,9 +1,9 @@
 //! Models of modal double theories.
 
-use std::collections::HashMap;
-use std::fmt::Debug;
+use std::fmt::{self, Debug};
 use std::rc::Rc;
 use std::sync::LazyLock;
+use std::{collections::HashMap, fmt::Display};
 
 use derive_more::From;
 use itertools::Itertools;
@@ -13,7 +13,8 @@ use super::theory::*;
 use crate::dbl::{
     category::VDblCategory,
     graph::VDblGraph,
-    model::*,    theory::{DblTheory, DblTheoryKind},
+    model::*,
+    theory::{DblTheory, DblTheoryKind},
 };
 use crate::tt::util::pretty::*;
 use crate::validate::{self, Validate};
@@ -31,6 +32,12 @@ pub enum ModalOb {
 
     /// List of objects in a [list modality](List).
     List(List, Vec<Self>),
+}
+
+impl Display for ModalOb {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:#?}", self)
+    }
 }
 
 /// Morphism is a model of a modal double theory.
@@ -51,6 +58,16 @@ pub enum ModalMor {
 
     /// List of morphisms.
     List(MorListData, Vec<Self>),
+}
+
+impl ModalMor {
+    /// Render a [`QualifiedPath`] for snapshot output.
+    pub fn format_path(&self) -> String {
+        match &self {
+            ModalMor::Generator(name) => format!("{name}"),
+            _ => todo!(),
+        }
+    }
 }
 
 /// Extra data associated with a list of morphisms in a [list modality](List).
@@ -126,6 +143,11 @@ impl<Kind: DblTheoryKind> ModalDblModel<Kind> {
                 };
             }
         }
+    }
+
+    /// Render a [`QualifiedPath`] for snapshot output.
+    pub fn format_path<T: Debug>(&self, p: &ModalMorType) -> String {
+        format!("{:#?}", p)
     }
 }
 
