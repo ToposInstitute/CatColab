@@ -98,6 +98,9 @@ end
 local function handle_codeblock(el)
   local tikz_template = tikz_templates[el.classes[1]]
   if tikz_template ~= nil then
+    if FORMAT:match "latex" then
+      return pandoc.RawBlock("latex", el.text)
+    end
     local before = tikz_template[1]:gsub("@OPTIONAL_PREAMBLE", tikz_user_preamble)
     return pandoc.Div(
       memoize_svg(el.text, tikz2image(tikz_template), before .. tikz_template[2]),

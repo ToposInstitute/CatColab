@@ -32,6 +32,14 @@ format:
     number-sections: true
     date-format: YYYY-MM-DD
     csl: chicago-author-date.csl
+  pdf:
+    include-in-header:
+      text: |
+        \usepackage{mathtools}
+        \usepackage{tikz-cd}
+        \usepackage{quiver}
+        \usepackage{ebproof}
+        \ebproofnewstyle{small}{template=\footnotesize$\inserttext$}
 
 filters:
   - filters.lua

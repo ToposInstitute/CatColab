@@ -293,6 +293,7 @@ jobs:
         uses: quarto-dev/quarto-actions/render@v2
         with:
           path: rfc
+          to: html
 
       - name: Report cache status
         run: |
