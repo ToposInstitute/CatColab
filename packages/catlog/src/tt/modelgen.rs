@@ -9,6 +9,7 @@ use crate::dbl::{
     discrete, discrete_tabulator, modal,
     model::{DblModel, DblModelPrinter, MutDblModel},
     model_diagram::DblModelDiagram,
+    model_morphism::MutDblModelMapping,
     theory::{DblTheory, DblTheoryKind, NonUnital, Unital},
 };
 use crate::one::{
