@@ -127,6 +127,7 @@ export function ObListEditor(originalProps: ObListEditorProps) {
                                     objects[i] = ob;
                                 });
                             }}
+                            generateId={props.generateId}
                             placeholder={props.placeholder}
                             idToLabel={(id) =>
                                 liveDiagram().elaboratedDiagram()?.obGeneratorLabel(id)
