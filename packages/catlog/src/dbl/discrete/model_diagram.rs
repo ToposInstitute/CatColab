@@ -6,7 +6,9 @@ use nonempty::NonEmpty;
 #[cfg(feature = "serde-wasm")]
 use tsify::declare;
 
-use crate::dbl::{model::*, model_diagram::*, model_morphism::*};
+use crate::dbl::{
+    discrete::DiscreteDblModelMapping, model::*, model_diagram::*, model_morphism::*,
+};
 use crate::one::{Category, FgCategory, GraphMapping};
 use crate::validate;
 use crate::zero::{Mapping, QualifiedName};

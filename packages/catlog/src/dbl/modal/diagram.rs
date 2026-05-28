@@ -7,7 +7,7 @@ use crate::dbl::{
     modal::ModalDblModelMapping,
     model::{InvalidDblModel, ModalDblModel, MutDblModel},
     model_diagram::*,
-    model_morphism::{DblModelMorphism, InvalidDblModelMorphism},
+    model_morphism::{DblModelMorphism, InvalidDblModelMorphism, MutDblModelMapping},
     theory::Unital,
 };
 use crate::one::{

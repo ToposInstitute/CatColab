@@ -13,8 +13,7 @@ use super::theory::*;
 use crate::dbl::{
     category::VDblCategory,
     graph::VDblGraph,
-    model::*,
-    theory::{DblTheory, DblTheoryKind},
+    model::*,    theory::{DblTheory, DblTheoryKind},
 };
 use crate::tt::util::pretty::*;
 use crate::validate::{self, Validate};

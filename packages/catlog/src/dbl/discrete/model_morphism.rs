@@ -15,17 +15,19 @@ use crate::zero::{HashColumn, Mapping, MutMapping, QualifiedName};
 ///
 /// Because a discrete double theory has only trivial operations, the naturality
 /// axioms for a model morphism are also trivial.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct DiscreteDblModelMapping(pub DiscreteDblModelMappingData);
+pub type DiscreteDblModelMapping = DblModelMapping<DiscreteDblModelMappingData>;
 
 type DiscreteDblModelMappingData = FpFunctorData<
     HashColumn<QualifiedName, QualifiedName>,
     HashColumn<QualifiedName, QualifiedPath>,
 >;
 
-impl DiscreteDblModelMapping {
+impl MutDblModelMapping for DiscreteDblModelMapping {
+    type ObGen = QualifiedName;
+    type MorGen = QualifiedPath;
+
     /// Constructs a model mapping from a pair of hash maps.
-    pub fn new(
+    fn new(
         ob_pairs: impl IntoIterator<Item = (QualifiedName, QualifiedName)>,
         mor_pairs: impl IntoIterator<Item = (QualifiedName, QualifiedPath)>,
     ) -> Self {
@@ -36,23 +38,33 @@ impl DiscreteDblModelMapping {
     }
 
     /// Assigns an object generator, returning the previous assignment.
-    pub fn assign_ob(&mut self, x: QualifiedName, y: QualifiedName) -> Option<QualifiedName> {
+    fn assign_ob(&mut self, x: QualifiedName, y: QualifiedName) -> Option<QualifiedName> {
         self.0.ob_generator_map.set(x, y)
     }
 
     /// Assigns a morphism generator, returning the previous assignment.
-    pub fn assign_mor(&mut self, e: QualifiedName, n: QualifiedPath) -> Option<QualifiedPath> {
+    fn assign_mor(&mut self, e: QualifiedName, n: QualifiedPath) -> Option<QualifiedPath> {
         self.0.mor_generator_map.set(e, n)
     }
 
     /// Unassigns an object generator, returning the previous assignment.
-    pub fn unassign_ob(&mut self, x: &QualifiedName) -> Option<QualifiedName> {
+    fn unassign_ob(&mut self, x: &QualifiedName) -> Option<QualifiedName> {
         self.0.ob_generator_map.unset(x)
     }
 
     /// Unassigns a morphism generator, returning the previous assignment.
-    pub fn unassign_mor(&mut self, e: &QualifiedName) -> Option<QualifiedPath> {
+    fn unassign_mor(&mut self, e: &QualifiedName) -> Option<QualifiedPath> {
         self.0.mor_generator_map.unset(e)
+    }
+}
+
+impl DiscreteDblModelMapping {
+    /// Finder of morphisms between two models of a discrete double theory.
+    pub fn morphisms<'a>(
+        dom: &'a DiscreteDblModel,
+        cod: &'a DiscreteDblModel,
+    ) -> DiscreteDblModelMorphismFinder<'a> {
+        DiscreteDblModelMorphismFinder::new(dom, cod)
     }
 
     /// Interprets the data as a functor into the given model.
@@ -61,14 +73,6 @@ impl DiscreteDblModelMapping {
         cod: &'a DiscreteDblModel,
     ) -> FpFunctor<'a, DiscreteDblModelMappingData, QualifiedFpCategory> {
         self.0.functor_into(&cod.category)
-    }
-
-    /// Finder of morphisms between two models of a discrete double theory.
-    pub fn morphisms<'a>(
-        dom: &'a DiscreteDblModel,
-        cod: &'a DiscreteDblModel,
-    ) -> DiscreteDblModelMorphismFinder<'a> {
-        DiscreteDblModelMorphismFinder::new(dom, cod)
     }
 }
 
@@ -82,7 +86,7 @@ impl<'a> DiscreteDblModelMorphism<'a> {
         &self,
     ) -> impl Iterator<Item = InvalidDblModelMorphism<QualifiedName, QualifiedName>> + 'a + use<'a>
     {
-        let DblModelMorphism(DiscreteDblModelMapping(mapping), dom, cod) = *self;
+        let DblModelMorphism(DblModelMapping(mapping), dom, cod) = *self;
         let category_errors: Vec<_> = mapping
             .functor_into(&cod.category)
             .iter_invalid_on(&dom.category)
@@ -121,14 +125,14 @@ impl<'a> DiscreteDblModelMorphism<'a> {
     /// Are morphism generators sent to simple composites of morphisms in the
     /// codomain?
     fn is_simple(&self) -> bool {
-        let DblModelMorphism(DiscreteDblModelMapping(mapping), dom, _) = *self;
+        let DblModelMorphism(DblModelMapping(mapping), dom, _) = *self;
         dom.mor_generators()
             .all(|e| mapping.apply_edge(e).map(|p| p.is_simple()).unwrap_or(true))
     }
 
     /// Is the model morphism injective on objects?
     pub fn is_injective_objects(&self) -> bool {
-        let DblModelMorphism(DiscreteDblModelMapping(mapping), dom, _) = *self;
+        let DblModelMorphism(DblModelMapping(mapping), dom, _) = *self;
         let mut seen_obs: HashSet<_> = HashSet::new();
         for x in dom.ob_generators() {
             if let Some(f_x) = mapping.apply_vertex(x) {
@@ -150,7 +154,7 @@ impl<'a> DiscreteDblModelMorphism<'a> {
     /// morphisms in the domain to simple paths in the codomain. If any of these
     /// assumptions are violated, the function will panic.
     pub fn is_free_simple_faithful(&self) -> bool {
-        let DblModelMorphism(DiscreteDblModelMapping(mapping), dom, cod) = *self;
+        let DblModelMorphism(DblModelMapping(mapping), dom, cod) = *self;
 
         assert!(dom.is_free(), "Domain model should be free");
         assert!(cod.is_free(), "Codomain model should be free");

@@ -12,7 +12,7 @@ use catcolab_document_types::current::*;
 use catlog::dbl::modal::ModalDblModelMapping;
 use catlog::dbl::model::{DblModel as _, DiscreteDblModel, FpDblModel, ModalDblModel, MutDblModel};
 use catlog::dbl::model_diagram as diagram;
-use catlog::dbl::model_morphism::DiscreteDblModelMapping;
+use catlog::dbl::model_morphism::{DiscreteDblModelMapping, MutDblModelMapping};
 use catlog::dbl::theory::{DblTheory as DblT, Unital};
 use catlog::one::{Category, FgCategory};
 use catlog::zero::{MutMapping, NameLookup, NameSegment, Namespace, QualifiedLabel, QualifiedName};
