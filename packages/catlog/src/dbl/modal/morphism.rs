@@ -2,7 +2,9 @@
 
 use crate::dbl::modal::{ModalDblModel, ModalMor, ModalOb};
 use crate::dbl::model::MutDblModel;
-use crate::dbl::model_morphism::{DblModelMorphism, InvalidDblModelMorphism, MutDblModelMapping};
+use crate::dbl::model_morphism::{
+    DblModelMapping, DblModelMorphism, InvalidDblModelMorphism, MutDblModelMapping,
+};
 use crate::dbl::theory::Unital;
 use crate::one::{
     FpFunctorData,
@@ -19,8 +21,7 @@ type ModalDblModelMappingData =
     FpFunctorData<HashColumn<QualifiedName, ModalOb>, HashColumn<QualifiedName, ModalMor>>;
 
 /// A mapping between models of a modal double theory.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct ModalDblModelMapping(pub ModalDblModelMappingData);
+pub type ModalDblModelMapping = DblModelMapping<ModalDblModelMappingData>;
 
 impl MutDblModelMapping for ModalDblModelMapping {
     type ObGen = ModalOb;

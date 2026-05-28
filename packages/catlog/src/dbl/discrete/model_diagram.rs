@@ -21,11 +21,20 @@ pub type DiscreteDblModelDiagram = DblModelDiagram<DiscreteDblModelMapping, Disc
 pub type InvalidDiscreteDblModelDiagram =
     InvalidDblModelDiagram<InvalidDblModel, InvalidDblModelMorphism<QualifiedName, QualifiedName>>;
 
-impl DiscreteDblModelDiagram {
+impl Diagram for DiscreteDblModelDiagram {
+    type Model = DiscreteDblModel;
+    type Mapping = DiscreteDblModelMapping;
+    type InvalidDiagram = InvalidDiscreteDblModelDiagram;
+
+    /// Destructure
+    fn destructure(&self) -> (Self::Mapping, Self::Model) {
+        (self.0.clone(), self.1.clone())
+    }
+
     /// Validates that the diagram is well-defined in the given model.
     ///
     /// Assumes that the model is valid. If it is not, this function may panic.
-    pub fn validate_in(
+    fn validate_in(
         &self,
         model: &DiscreteDblModel,
     ) -> Result<(), NonEmpty<InvalidDiscreteDblModelDiagram>> {
@@ -33,7 +42,7 @@ impl DiscreteDblModelDiagram {
     }
 
     /// Iterates over failures of the diagram to be valid in the given model.
-    pub fn iter_invalid_in<'a>(
+    fn iter_invalid_in<'a>(
         &'a self,
         model: &'a DiscreteDblModel,
     ) -> impl Iterator<Item = InvalidDiscreteDblModelDiagram> + 'a {
@@ -49,7 +58,7 @@ impl DiscreteDblModelDiagram {
     /// Infer missing data in the diagram from the model, where possible.
     ///
     /// Assumes that the model is valid.
-    pub fn infer_missing_from(&mut self, model: &DiscreteDblModel) {
+    fn infer_missing_from(&mut self, model: &DiscreteDblModel) {
         let (mapping, domain) = self.into();
         domain.infer_missing();
         for e in domain.mor_generators() {
