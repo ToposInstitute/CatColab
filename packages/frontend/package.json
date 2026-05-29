@@ -77,7 +77,6 @@
         "uuid": "^13.0.0"
     },
     "devDependencies": {
-        "@catcolab-dev-tools/vite-plugin-monorepo-dedupe": "link:../../tools/vite-plugin-monorepo-dedupe",
         "@mdx-js/mdx": "^2.3.0",
         "@types/html-escaper": "^3.0.4",
         "@types/mdx": "^2.0.13",
