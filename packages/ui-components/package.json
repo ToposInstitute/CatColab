@@ -31,6 +31,7 @@
         "solid-js": "^1.9.10"
     },
     "devDependencies": {
+        "@catcolab-dev-tools/vite-plugin-monorepo-dedupe": "link:../../tools/vite-plugin-monorepo-dedupe",
         "@chromatic-com/storybook": "^4.1.2",
         "@storybook/addon-a11y": "^10.0.2",
         "@storybook/addon-docs": "^10.0.2",
