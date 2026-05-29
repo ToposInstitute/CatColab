@@ -1,16 +1,16 @@
 /// <reference types="vitest/config" />
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { monorepoDedupe } from "@catcolab-dev-tools/vite-plugin-monorepo-dedupe";
 import { storybookTest } from "@storybook/addon-vitest/vitest-plugin";
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vite";
 
-const dirname =
-    typeof __dirname !== "undefined" ? __dirname : path.dirname(fileURLToPath(import.meta.url));
+const configDir = path.dirname(fileURLToPath(import.meta.url));
 
 // https://vite.dev/config/
 export default defineConfig({
-    plugins: [],
+    plugins: [monorepoDedupe()],
     define: {
         "process.env": {},
     },
@@ -22,7 +22,7 @@ export default defineConfig({
                     // The plugin will run tests for the stories defined in your Storybook config
                     // See options at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon#storybooktest
                     storybookTest({
-                        configDir: path.join(dirname, ".storybook"),
+                        configDir: path.join(configDir, ".storybook"),
                     }),
                 ],
                 test: {
