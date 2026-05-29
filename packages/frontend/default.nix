@@ -40,7 +40,6 @@ let
     "packages/ui-components" = ../ui-components/pnpm-lock.yaml;
     "packages/document-methods" = ../document-methods/pnpm-lock.yaml;
     "packages/backend/pkg" = ../backend/pkg/pnpm-lock.yaml;
-    "tools/vite-plugin-monorepo-dedupe" = ../../tools/vite-plugin-monorepo-dedupe/pnpm-lock.yaml;
   };
 
   processedLocks = lib.mapAttrs (_: processLock) lockfilesToProcess;
@@ -76,7 +75,6 @@ let
         (lib.fileset.maybeMissing ../../patches)
         ../../packages/frontend
         ../../packages/ui-components
-        ../../tools/vite-plugin-monorepo-dedupe
         ../../packages/document-methods
         ../../packages/backend/pkg
       ];
@@ -205,8 +203,6 @@ let
         cp -r packages/backend $out/packages/
         cp -r packages/frontend $out/packages/
         cp -r packages/ui-components $out/packages/
-        mkdir -p $out/tools
-        cp -r tools/vite-plugin-monorepo-dedupe $out/tools/
         cp -r packages/document-methods $out/packages/
         mkdir -p $out/packages/document-types
         cp -r packages/document-types/pkg $out/packages/document-types/
