@@ -10,4 +10,4 @@ packages:
   - "packages/document-methods"
   - "packages/ui-components"
   - "packages/gaios"
-  - "tools/vite-plugin-monorepo-dedupe"
+

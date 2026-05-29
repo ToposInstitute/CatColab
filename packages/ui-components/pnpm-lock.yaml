@@ -45,9 +45,6 @@ importers:
         specifier: ^1.9.10
         version: 1.9.10
     devDependencies:
-      '@catcolab-dev-tools/vite-plugin-monorepo-dedupe':
-        specifier: link:../../tools/vite-plugin-monorepo-dedupe
-        version: link:../../tools/vite-plugin-monorepo-dedupe
       '@chromatic-com/storybook':
         specifier: ^4.1.2
         version: 4.1.2(storybook@10.0.2(@testing-library/dom@10.4.1)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(vite@7.2.2(@types/node@24.10.0)))
