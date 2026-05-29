@@ -11,7 +11,7 @@ use wasm_bindgen::prelude::*;
 use catcolab_document_types::current::*;
 use catlog::dbl::model::{DblModel as _, DiscreteDblModel, FpDblModel, MutDblModel};
 use catlog::dbl::model_diagram as diagram;
-use catlog::dbl::model_morphism::DiscreteDblModelMapping;
+use catlog::dbl::model_morphism::{DiscreteDblModelMapping, MutDblModelMapping};
 use catlog::one::FgCategory;
 use catlog::zero::{MutMapping, NameLookup, NameSegment, Namespace, QualifiedLabel, QualifiedName};
 
