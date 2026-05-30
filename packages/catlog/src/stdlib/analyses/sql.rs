@@ -2,10 +2,11 @@
 use crate::{
     dbl::model::*,
     one::{
-        Path,
+        FgCategory, Path,
         graph::FinGraph,
         graph_algorithms::{ToposortData, toposort_lenient},
     },
+    validate::Validate,
     zero::{QualifiedLabel, QualifiedName, name},
 };
 use derive_more::Constructor;
@@ -18,7 +19,10 @@ use sea_query::{
     PostgresQueryBuilder, SqliteQueryBuilder, Table, TableCreateStatement, prepare::Write,
 };
 use sqlformat::{Dialect, format};
+use sqlparser::{dialect::GenericDialect, parser};
 use std::fmt;
+
+const PRIMARY_KEY_NAME: &str = "id";
 
 impl Iden for QualifiedName {
     fn unquoted(&self, s: &mut dyn Write) {
@@ -177,6 +181,15 @@ pub enum SQLAnalysisError {
         /// The tables which have failing foreign key constraints.
         cycles: Vec<(QualifiedName, ColumnType)>,
     },
+    /// There is a duplicate column on a table.
+    DuplicateColumnError {
+        /// The table with the duplicate column.
+        table: QualifiedName,
+        /// The duplicate column.
+        column: QualifiedName,
+    },
+    /// Miscellaneous SQL parsing errors.
+    SQLParsingError(String),
 }
 
 impl std::fmt::Display for SQLAnalysisError {
@@ -187,6 +200,10 @@ impl std::fmt::Display for SQLAnalysisError {
                 "Cycle detected at tables {:#?}. {backend} cannot support cyclic foreign keys.",
                 cycles
             ),
+            SQLAnalysisError::DuplicateColumnError { table, column } => {
+                write!(f, "Duplicate column {column} found on {table}")
+            }
+            SQLAnalysisError::SQLParsingError(err) => write!(f, "{err}"),
         }
     }
 }
@@ -195,6 +212,55 @@ impl std::fmt::Display for SQLAnalysisError {
 #[derive(Constructor)]
 pub struct SQLAnalysis {
     backend: SQLBackend,
+}
+
+type SQLAnalysisResult = Result<String, nonempty::NonEmpty<SQLAnalysisError>>;
+
+impl SQLAnalysis {
+    /// Consumes itself and a discrete double model to produce a SQL string.
+    pub fn execute(
+        &self,
+        model: &DiscreteDblModel,
+        ob_label: impl Fn(&QualifiedName) -> String,
+        mor_label: impl Fn(&QualifiedName) -> String,
+        // SQLAnalysisOutput has the output of the execution as well as warnings
+    ) -> SQLAnalysisResult {
+        let mut errors: Vec<SQLAnalysisError> = self.pre_validate(model, &mor_label);
+
+        let constraints = match self.toposort_morphisms(model) {
+            Ok(x) => x,
+            Err(e) => {
+                errors.push(e);
+                return Err(nonempty::NonEmpty::from_vec(errors).unwrap());
+            }
+        };
+
+        let tables = self.make_tables(model, constraints.clone(), &ob_label, &mor_label);
+        let output: String = self.build(tables, constraints.clone(), ob_label, mor_label);
+        let formatted_output = self.format(&output);
+        // pragmas
+        let result = match self.backend {
+            SQLBackend::SQLite => ["PRAGMA foreign_keys = ON", &formatted_output].join(";\n\n"),
+            _ => formatted_output,
+        };
+
+        match SQLAnalysisResult::Ok(result.clone()).validate() {
+            Ok(_) => Ok(result),
+            Err(nonempty::NonEmpty { head: e, tail: _ }) => {
+                errors.push(e);
+                Err(nonempty::NonEmpty::from_vec(errors).unwrap())
+            }
+        }
+    }
+
+    /// Validates the model before execute the analysis. Useful for checking things such as a duplicate foreign keys.
+    fn pre_validate(
+        &self,
+        model: &DiscreteDblModel,
+        mor_label: impl Fn(&QualifiedName) -> String,
+    ) -> Vec<SQLAnalysisError> {
+        self.validate_duplicate_foreign_keys(model, &mor_label)
+    }
 }
 
 impl SQLAnalysis {
@@ -209,6 +275,26 @@ impl SQLAnalysis {
                 ..Default::default()
             },
         )
+    }
+
+    /// Validates duplicate foreign keys
+    pub fn validate_duplicate_foreign_keys(
+        &self,
+        model: &DiscreteDblModel,
+        mor_label: impl Fn(&QualifiedName) -> String,
+    ) -> Vec<SQLAnalysisError> {
+        model
+            .mor_generators()
+            .filter_map(|mor| {
+                (&mor_label(&mor) == PRIMARY_KEY_NAME).then_some({
+                    Some(SQLAnalysisError::DuplicateColumnError {
+                        table: model.get_dom(&mor).unwrap().clone(),
+                        column: mor,
+                    })
+                })
+            })
+            .collect::<Option<Vec<SQLAnalysisError>>>()
+            .unwrap()
     }
 
     /// Builds table statements into valid SQL DML.
@@ -273,29 +359,11 @@ impl SQLAnalysis {
         self.validate_toposort(constraints)
     }
 
-    /// Consumes itself and a discrete double model to produce a SQL string.
-    pub fn render(
-        &self,
-        model: &DiscreteDblModel,
-        ob_label: impl Fn(&QualifiedName) -> String,
-        mor_label: impl Fn(&QualifiedName) -> String,
-    ) -> Result<String, SQLAnalysisError> {
-        let constraints = self.toposort_morphisms(model);
-        let tables = self.make_tables(model, constraints.clone()?, &ob_label, &mor_label);
-        let output: String = self.build(tables, constraints.clone()?, ob_label, mor_label);
-        let formatted_output = self.format(&output);
-        // pragmas
-        match self.backend {
-            SQLBackend::SQLite => Ok(["PRAGMA foreign_keys = ON", &formatted_output].join(";\n\n")),
-            _ => Ok(formatted_output),
-        }
-    }
-
     fn fk(&self, src: &str, tgt: &str, mor: &str) -> ForeignKeyCreateStatement {
         ForeignKey::create()
             .name(format!("FK_{}_{}_{}", mor, src, tgt))
             .from(Alias::new(src), Alias::new(mor))
-            .to(Alias::new(tgt), "id")
+            .to(Alias::new(tgt), PRIMARY_KEY_NAME)
             .to_owned()
     }
 
@@ -315,7 +383,11 @@ impl SQLAnalysis {
                 // the targets for arrows
                 let table_column_defs = mors.iter().fold(
                     tbl.table(Alias::new(ob_label(&ob))).if_not_exists().col(
-                        ColumnDef::new("id").integer().not_null().auto_increment().primary_key(),
+                        ColumnDef::new(PRIMARY_KEY_NAME)
+                            .integer()
+                            .not_null()
+                            .auto_increment()
+                            .primary_key(),
                     ),
                     |acc, mor| {
                         let mor_tgt = mor.tgt();
@@ -417,7 +489,7 @@ impl fmt::Display for SQLBackend {
             SQLBackend::SQLite => "SQLite",
             SQLBackend::PostgresSQL => "PostgresSQL",
         };
-        write!(f, "{}", string)
+        write!(f, "{string}")
     }
 }
 
@@ -432,6 +504,19 @@ fn add_column_type(col: &mut ColumnDef, label: &str) {
         "DateTime" => col.date_time(),
         _ => col.custom(Alias::new(label)),
     };
+}
+
+impl Validate for SQLAnalysisResult {
+    type ValidationError = SQLAnalysisError;
+
+    fn validate(&self) -> Result<(), nonempty::NonEmpty<Self::ValidationError>> {
+        self.clone().and_then(|result| {
+            match parser::Parser::parse_sql(&GenericDialect {}, &result) {
+                Ok(_) => Ok(()),
+                Err(e) => Err(nonempty![SQLAnalysisError::SQLParsingError(format!("{e}"))]),
+            }
+        })
+    }
 }
 
 #[cfg(test)]
@@ -468,13 +553,69 @@ CREATE TABLE IF NOT EXISTS `Person` (
 );"#
         ]];
         let ddl = SQLAnalysis::new(SQLBackend::MySQL)
-            .render(
+            .execute(
                 &model,
                 |id| format!("{id}").as_str().into(),
                 |id| format!("{id}").as_str().into(),
             )
             .expect("SQL should render");
         expected.assert_eq(&ddl);
+    }
+
+    #[test]
+    fn sql_schema_duplicate_columns() {
+        let th = Rc::new(th_schema());
+        let source = "[
+                Person : Entity,
+                Dog : Entity,
+                walks : (Hom Entity)[Person, Dog],
+                hair : AttrType,
+                name: AttrType,
+                id : Attr[Person, hair],
+                has : Attr[Person, name],
+            ]";
+        let model = tt::modelgen::Model::from_text(&th.clone().into(), source)
+            .ok()
+            .and_then(|m| m.as_discrete())
+            .unwrap();
+
+        let expected = vec![SQLAnalysisError::DuplicateColumnError {
+            table: name("Person"),
+            column: name("id"),
+        }];
+        let errors = SQLAnalysis::new(SQLBackend::MySQL)
+            .pre_validate(&model, |id| format!("{id}").as_str().into());
+        assert_eq!(&expected, &errors);
+    }
+
+    #[test]
+    fn sql_schema_bad_characters() {
+        let th = Rc::new(th_schema());
+        let source = "[
+                Person : Entity,
+                Dog : Entity,
+                walks : (Hom Entity)[Person, Dog],
+                | : AttrType,
+                has : Attr[Person, |],
+            ]";
+        let model = tt::modelgen::Model::from_text(&th.clone().into(), source)
+            .ok()
+            .and_then(|m| m.as_discrete())
+            .unwrap();
+
+        let result = SQLAnalysis::new(SQLBackend::MySQL).execute(
+            &model,
+            |id| format!("{id}").as_str().into(),
+            |id| format!("{id}").as_str().into(),
+        );
+        let validation = result.validate();
+
+        let expected: Result<(), nonempty::NonEmpty<SQLAnalysisError>> =
+            Err(nonempty![SQLAnalysisError::SQLParsingError(
+                "sql parser error: Expected: a data type name, found: | at Line: 6, Column: 9"
+                    .into()
+            )]);
+        assert_eq!(&expected, &validation);
     }
 
     #[test]
@@ -516,7 +657,7 @@ ALTER TABLE
 ADD
   CONSTRAINT fk_head_Refs_Snapshots FOREIGN KEY (head) REFERENCES "Snapshots" (id) DEFERRABLE INITIALLY DEFERRED;"#]];
         let ddl = SQLAnalysis::new(SQLBackend::PostgresSQL)
-            .render(
+            .execute(
                 &model,
                 |id| format!("{id}").as_str().into(),
                 |id| format!("{id}").as_str().into(),
@@ -542,7 +683,7 @@ ADD
             .and_then(|m| m.as_discrete())
             .unwrap();
 
-        let ddl = SQLAnalysis::new(SQLBackend::MySQL).render(
+        let ddl = SQLAnalysis::new(SQLBackend::MySQL).execute(
             &model,
             |id| format!("{id}").as_str().into(),
             |id| format!("{id}").as_str().into(),
@@ -550,7 +691,7 @@ ADD
         let e = ddl.unwrap_err();
         assert_eq!(
             e,
-            SQLAnalysisError::CyclicForeignKeyError {
+            nonempty![SQLAnalysisError::CyclicForeignKeyError {
                 backend: SQLBackend::MySQL,
                 cycles: vec![
                     (
@@ -565,7 +706,7 @@ ADD
                         }
                     )
                 ]
-            }
+            }]
         );
     }
 }

@@ -111,7 +111,7 @@ export default function SQLSchemaAnalysis(
                                 <BlockTitle title={props.title} settingsPane={BackendConfig()} />
                                 <ErrorAlert>
                                     <p>{"The model failed to compile into a SQL script."}</p>
-                                    <p>{"Check for cycles in foreign key constraints."}</p>
+                                    <p>{result().content}</p>
                                 </ErrorAlert>
                             </div>
                         </Match>
