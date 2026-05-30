@@ -77,6 +77,9 @@ export function enlivenDiagramDocument(
                 // Abort immediately if the theory is undefined or the model is invalid.
                 return undefined;
             }
+            if (!(th && can_elaborate_diagrams(th))) {
+                return undefined;
+            }
             const { model } = validatedModel;
             let diagram: DblModelDiagram;
             try {
