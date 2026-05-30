@@ -8,7 +8,7 @@ use crate::dbl::{
     model::{InvalidDblModel, ModalDblModel, MutDblModel},
     model_diagram::*,
     model_morphism::{DblModelMorphism, InvalidDblModelMorphism},
-    theory::Unital,
+    theory::DblTheoryKind,
 };
 use crate::one::{
     category::{Category, FgCategory},
@@ -21,20 +21,20 @@ use itertools::Either;
 use nonempty::NonEmpty;
 
 /// A diagram is a model of a modal double theoruy.
-pub type ModalDblModelDiagram = DblModelDiagram<ModalDblModelMapping, ModalDblModel<Unital>>;
+pub type ModalDblModelDiagram<Kind> = DblModelDiagram<ModalDblModelMapping, ModalDblModel<Kind>>;
 
 /// A failure to be valid in a diagram in a model of a discrete double theory.
 #[cfg_attr(feature = "serde-wasm", declare)]
 pub type InvalidModalDblModelDiagram =
     InvalidDblModelDiagram<InvalidDblModel, InvalidDblModelMorphism<QualifiedName, QualifiedName>>;
 
-impl ModalDblModelDiagram {
+impl<Kind: DblTheoryKind + Clone> ModalDblModelDiagram<Kind> {
     /// Validates that the diagram is well-defined in the given model.
     ///
     /// Assumes that the model is valid. If it is not, this function may panic.
     pub fn validate_in(
         &self,
-        model: &ModalDblModel<Unital>,
+        model: &ModalDblModel<Kind>,
     ) -> Result<(), NonEmpty<InvalidModalDblModelDiagram>> {
         validate::wrap_errors(self.iter_invalid_in(model))
     }
@@ -42,7 +42,7 @@ impl ModalDblModelDiagram {
     /// Iterates over failures of the diagram to be valid in the given model.
     pub fn iter_invalid_in<'a>(
         &'a self,
-        model: &'a ModalDblModel<Unital>,
+        model: &'a ModalDblModel<Kind>,
     ) -> impl Iterator<Item = InvalidModalDblModelDiagram> + 'a {
         let mut dom_errs = self.1.iter_invalid().peekable();
         if dom_errs.peek().is_some() {
@@ -56,7 +56,7 @@ impl ModalDblModelDiagram {
     /// Infer missing data in the diagram from the model, where possible.
     ///
     /// Assumes that the model is valid.
-    pub fn infer_missing_from(&mut self, model: &ModalDblModel<Unital>) {
+    pub fn infer_missing_from(&mut self, model: &ModalDblModel<Kind>) {
         let (mapping, domain) = self.into();
         domain.infer_missing();
         for e in domain.mor_generators() {

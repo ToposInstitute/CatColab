@@ -3,7 +3,7 @@
 use crate::dbl::modal::{ModalDblModel, ModalMor, ModalOb};
 use crate::dbl::model::MutDblModel;
 use crate::dbl::model_morphism::{DblModelMorphism, InvalidDblModelMorphism, MutDblModelMapping};
-use crate::dbl::theory::Unital;
+use crate::dbl::theory::DblTheoryKind;
 use crate::one::{
     category::{Category, FgCategory},
     graph::GraphMapping,
@@ -131,15 +131,14 @@ impl ModalDblModelMapping {
 }
 
 /// A morphism between models of a modal double theory.
-// TODO kinds are fixed
-pub type ModalDblModelMorphism<'a> =
-    DblModelMorphism<'a, ModalDblModelMapping, ModalDblModel<Unital>, ModalDblModel<Unital>>;
+pub type ModalDblModelMorphism<'a, Kind> =
+    DblModelMorphism<'a, ModalDblModelMapping, ModalDblModel<Kind>, ModalDblModel<Kind>>;
 
-impl<'a> ModalDblModelMorphism<'a> {
+impl<'a, Kind: DblTheoryKind> ModalDblModelMorphism<'a, Kind> {
     /// Iterates over failures of the mapping to be a model morphism.
     pub fn iter_invalid(
         &self,
-    ) -> impl Iterator<Item = InvalidDblModelMorphism<QualifiedName, QualifiedName>> + 'a + use<'a>
+    ) -> impl Iterator<Item = InvalidDblModelMorphism<QualifiedName, QualifiedName>> + 'a + use<'a, Kind>
     {
         let DblModelMorphism(mapping, dom, cod) = *self;
 
@@ -178,7 +177,7 @@ impl<'a> ModalDblModelMorphism<'a> {
     }
 }
 
-impl Validate for ModalDblModelMorphism<'_> {
+impl<Kind: DblTheoryKind> Validate for ModalDblModelMorphism<'_, Kind> {
     type ValidationError = InvalidDblModelMorphism<QualifiedName, QualifiedName>;
 
     fn validate(&self) -> Result<(), NonEmpty<Self::ValidationError>> {
