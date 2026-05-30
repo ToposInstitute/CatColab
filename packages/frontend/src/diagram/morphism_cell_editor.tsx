@@ -1,6 +1,5 @@
-import { useContext } from "solid-js";
+import { createMemo, useContext } from "solid-js";
 import invariant from "tiny-invariant";
-import { v7 } from "uuid";
 
 import { type FocusHandle, useChildFocus } from "catcolab-ui-components";
 import type { DiagramMorDecl } from "catlog-wasm";
@@ -8,7 +7,7 @@ import { BasicMorInput } from "../model/morphism_input";
 import type { CellActions } from "../notebook";
 import type { Theory } from "../theory";
 import { LiveDiagramContext } from "./context";
-import { BasicObInput } from "./object_input";
+import { ObInput } from "./object_input";
 
 import arrowStyles from "../stdlib/arrow_styles.module.css";
 import "./morphism_cell_editor.css";
@@ -27,8 +26,28 @@ export function DiagramMorphismCellEditor(props: {
     // oxlint-disable-next-line solid/reactivity -- Focus handles are stable for a mounted cell.
     const focus = useChildFocus<DiagramMorphismCellInput>(props.focus, { default: "mor" });
 
-    const domType = () => props.theory.theory.src(props.decl.morType);
-    const codType = () => props.theory.theory.tgt(props.decl.morType);
+    const morTypeMeta = () => props.theory.modelMorTypeMeta(props.decl.morType);
+
+    const domType = createMemo(() => {
+        const theory = props.theory.theory;
+        const op = morTypeMeta()?.domain?.apply;
+        if (op === undefined) {
+            return theory.src(props.decl.morType);
+        } else {
+            return theory.dom(op);
+        }
+    });
+
+    const codType = createMemo(() => {
+        const theory = props.theory.theory;
+        const op = morTypeMeta()?.codomain?.apply;
+        if (op === undefined) {
+            return theory.tgt(props.decl.morType);
+        } else {
+            // Codomain type for operation should equal target type above.
+            return theory.dom(op);
+        }
+    });
 
     const errors = () => {
         const validated = liveDiagram().validatedDiagram();
@@ -45,7 +64,7 @@ export function DiagramMorphismCellEditor(props: {
 
     return (
         <div class="formal-judgment diagram-morphism-decl">
-            <BasicObInput
+            <ObInput
                 placeholder="..."
                 ob={props.decl.dom}
                 setOb={(ob) => {
@@ -54,7 +73,6 @@ export function DiagramMorphismCellEditor(props: {
                     });
                 }}
                 obType={domType()}
-                generateId={v7}
                 isInvalid={domInvalid()}
                 focus={focus.childFocus("dom")}
                 deleteForward={() => focus.setActiveChild("mor")}
@@ -88,7 +106,7 @@ export function DiagramMorphismCellEditor(props: {
                     <div class={[arrowStyles.arrow, arrowStyles.default].join(" ")} />
                 </div>
             </div>
-            <BasicObInput
+            <ObInput
                 placeholder="..."
                 ob={props.decl.cod}
                 setOb={(ob) => {
@@ -97,7 +115,6 @@ export function DiagramMorphismCellEditor(props: {
                     });
                 }}
                 obType={codType()}
-                generateId={v7}
                 isInvalid={codInvalid()}
                 focus={focus.childFocus("cod")}
                 deleteBackward={() => focus.setActiveChild("mor")}
