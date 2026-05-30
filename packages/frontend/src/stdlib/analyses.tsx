@@ -49,6 +49,16 @@ export const diagramGraph = (
 
 const DiagramGraph = lazy(() => import("./analyses/diagram_graph"));
 
+export const modalDiagramGraph = (
+    options: AnalysisOptions,
+): DiagramAnalysisMeta<GraphLayoutConfig.Config> => ({
+    ...options,
+    component: (props) => <ModalDiagramGraph title={options.name} {...props} />,
+    initialContent: GraphLayoutConfig.defaultConfig,
+});
+
+const ModalDiagramGraph = lazy(() => import("./analyses/modal_diagram_graph"));
+
 export const tabularView = (
     options: AnalysisOptions,
 ): DiagramAnalysisMeta<Record<string, never>> => ({
@@ -358,7 +368,7 @@ export function renderSQL(
         help,
         component: (props) => <SQLSchemaAnalysis title={name} render={render} {...props} />,
         initialContent: () => ({
-            backend: SQLBackend.PostgresSQL,
+            backend: SQLBackend.MySQL,
             filename: "schema.sql",
         }),
     };

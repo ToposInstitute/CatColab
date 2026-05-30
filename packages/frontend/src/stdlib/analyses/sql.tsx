@@ -8,8 +8,6 @@ import { CodeView, BlockTitle, ErrorAlert, IconButton } from "catcolab-ui-compon
 import type { ModelAnalysisProps } from "../../analysis";
 import * as SQL from "./sql_types.ts";
 
-import styles from "./sql.module.css";
-
 const copyToClipboard = (text: string) => navigator.clipboard.writeText(text);
 
 const tooltip = () => (
@@ -33,7 +31,14 @@ const tooltip = () => (
 
 export function SQLHeader(sql: string) {
     return (
-        <div class={styles.headerContainer}>
+        <div
+            style={{
+                display: "flex",
+                "align-items": "center",
+                "justify-content": "flex-end",
+                gap: "4px",
+            }}
+        >
             <IconButton
                 onClick={() => copyToClipboard(sql)}
                 disabled={false}
@@ -107,13 +112,10 @@ export default function SQLSchemaAnalysis(
                             )}
                         </Match>
                         <Match when={result().tag === "Err"}>
-                            <div>
-                                <BlockTitle title={props.title} settingsPane={BackendConfig()} />
-                                <ErrorAlert>
-                                    <p>{"The model failed to compile into a SQL script."}</p>
-                                    <p>{"Check for cycles in foreign key constraints."}</p>
-                                </ErrorAlert>
-                            </div>
+                            <ErrorAlert>
+                                <p>{"The model failed to compile into a SQL script."}</p>
+                                <p>{"Check for cycles in foreign key constraints."}</p>
+                            </ErrorAlert>
                         </Match>
                     </Switch>
                 )}
