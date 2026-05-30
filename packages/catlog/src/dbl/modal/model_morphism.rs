@@ -15,9 +15,21 @@ use nonempty::NonEmpty;
 
 /// A mapping between models of a modal double theory.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct ModalDblModelMapping {
-    ob_map: HashColumn<QualifiedName, ModalOb>,
-    mor_map: HashColumn<QualifiedName, ModalMor>,
+pub struct ModalDblModelMapping(
+    pub HashColumn<QualifiedName, ModalOb>,
+    pub HashColumn<QualifiedName, ModalMor>,
+);
+
+impl ModalDblModelMapping {
+    /// Returns object generators.
+    pub fn ob_generator_map(&self) -> HashColumn<QualifiedName, ModalOb> {
+        self.0.clone()
+    }
+
+    /// Returns morphism generators.
+    pub fn mor_generator_map(&self) -> HashColumn<QualifiedName, ModalMor> {
+        self.1.clone()
+    }
 }
 
 impl MutDblModelMapping for ModalDblModelMapping {
@@ -28,30 +40,27 @@ impl MutDblModelMapping for ModalDblModelMapping {
         ob_pairs: impl IntoIterator<Item = (QualifiedName, ModalOb)>,
         mor_pairs: impl IntoIterator<Item = (QualifiedName, ModalMor)>,
     ) -> Self {
-        Self {
-            ob_map: ob_pairs.into_iter().collect(),
-            mor_map: mor_pairs.into_iter().collect(),
-        }
+        Self(ob_pairs.into_iter().collect(), mor_pairs.into_iter().collect())
     }
 
     /// Assigns an object generator, returning the previous assignment.
     fn assign_ob(&mut self, x: QualifiedName, y: ModalOb) -> Option<ModalOb> {
-        self.ob_map.set(x, y)
+        self.0.set(x, y)
     }
 
     /// Assigns a morphism generator, returning the previous assignment.
     fn assign_mor(&mut self, e: QualifiedName, n: ModalMor) -> Option<ModalMor> {
-        self.mor_map.set(e, n)
+        self.1.set(e, n)
     }
 
     /// Unassigns an object generator, returning the previous assignment.
     fn unassign_ob(&mut self, x: &QualifiedName) -> Option<ModalOb> {
-        self.ob_map.unset(x)
+        self.0.unset(x)
     }
 
     /// Unassigns a morphism generator, returning the previous assignment.
     fn unassign_mor(&mut self, e: &QualifiedName) -> Option<ModalMor> {
-        self.mor_map.unset(e)
+        self.1.unset(e)
     }
 }
 
@@ -68,10 +77,10 @@ where
     type EdgeMap = HashColumn<QualifiedName, ModalMor>;
 
     fn vertex_map(&self) -> &Self::VertexMap {
-        &self.ob_map
+        &self.0
     }
     fn edge_map(&self) -> &Self::EdgeMap {
-        &self.mor_map
+        &self.1
     }
 }
 

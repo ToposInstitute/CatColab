@@ -23,6 +23,18 @@ type DiscreteDblModelMappingData = FpFunctorData<
     HashColumn<QualifiedName, QualifiedPath>,
 >;
 
+impl DiscreteDblModelMapping {
+    /// Returns object generators.
+    pub fn ob_generator_map(&self) -> HashColumn<QualifiedName, QualifiedName> {
+        self.0.ob_generator_map.clone()
+    }
+
+    /// Returns morphism generators.
+    pub fn mor_generator_map(&self) -> HashColumn<QualifiedName, QualifiedPath> {
+        self.0.mor_generator_map.clone()
+    }
+}
+
 impl MutDblModelMapping for DiscreteDblModelMapping {
     type ObGen = QualifiedName;
     type MorGen = QualifiedPath;

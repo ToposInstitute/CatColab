@@ -434,6 +434,13 @@ impl<Kind: DblTheoryKind> ModalDblModel<Kind> {
             _ => false,
         }
     }
+
+    // TODO
+    /// Iterates over failures of model to be well defined.
+    pub fn iter_invalid(&self) -> impl Iterator<Item = InvalidDblModel> + '_ {
+        // type Invalid = InvalidDblModel;
+        vec![].into_iter()
+    }
 }
 
 impl ModalObOp {
