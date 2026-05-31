@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 pub use super::discrete::model_diagram::*;
+pub use super::modal::model_diagram::*;
 
 /// A diagram in a model of a double theory.
 ///

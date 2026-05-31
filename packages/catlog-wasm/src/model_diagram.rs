@@ -13,7 +13,7 @@ use catlog::dbl::modal::ModalDblModelMapping;
 use catlog::dbl::model::{DblModel as _, DiscreteDblModel, FpDblModel, ModalDblModel, MutDblModel};
 use catlog::dbl::model_diagram as diagram;
 use catlog::dbl::model_morphism::{DiscreteDblModelMapping, MutDblModelMapping};
-use catlog::dbl::theory::{DblTheory as DblT, Unital};
+use catlog::dbl::theory::{DblTheory as DblT, NonUnital, Unital};
 use catlog::one::{Category, FgCategory};
 use catlog::zero::{MutMapping, NameLookup, NameSegment, Namespace, QualifiedLabel, QualifiedName};
 
@@ -28,10 +28,27 @@ use super::theory::{DblTheory, DblTheoryBox};
 #[derive(From)]
 pub enum DblModelDiagramBox {
     /// A diagram in a model of a discrete double theory.
-    Discrete(diagram::DblModelDiagram<DiscreteDblModelMapping, DiscreteDblModel>),
+    Discrete(Rc<diagram::DblModelDiagram<DiscreteDblModelMapping, DiscreteDblModel>>),
     /// A diagram in a model of a modal double theory.
-    // TODO moar kind fixing
-    Modal(diagram::DblModelDiagram<ModalDblModelMapping, ModalDblModel<Unital>>),
+    ModalUnital(Rc<diagram::DblModelDiagram<ModalDblModelMapping, ModalDblModel<Unital>>>),
+    /// A diagram in a model of a non-unital modal double theory.
+    ModalNonUnital(Rc<diagram::DblModelDiagram<ModalDblModelMapping, ModalDblModel<NonUnital>>>),
+}
+
+impl From<diagram::DiscreteDblModelDiagram> for DblModelDiagramBox {
+    fn from(value: diagram::DiscreteDblModelDiagram) -> Self {
+        Self::Discrete(Rc::new(value))
+    }
+}
+impl From<diagram::ModalDblModelDiagram<Unital>> for DblModelDiagramBox {
+    fn from(value: diagram::ModalDblModelDiagram<Unital>) -> Self {
+        Self::ModalUnital(Rc::new(value))
+    }
+}
+impl From<diagram::ModalDblModelDiagram<NonUnital>> for DblModelDiagramBox {
+    fn from(value: diagram::ModalDblModelDiagram<NonUnital>) -> Self {
+        Self::ModalNonUnital(Rc::new(value))
+    }
 }
 
 /// Wasm binding for a diagram in a model of a double theory.
@@ -69,15 +86,24 @@ impl DblModelDiagram {
     pub fn add_ob(&mut self, decl: &DiagramObDecl) -> Result<(), String> {
         match &mut self.diagram {
             DblModelDiagramBox::Discrete(diagram) => {
-                let (mapping, model) = diagram.into();
+                let diagram::DblModelDiagram(mapping, model) = Rc::make_mut(diagram);
                 let ob_type: QualifiedName = Elaborator.elab(&decl.ob_type)?;
                 if let Some(over) = decl.over.as_ref().map(|ob| Elaborator.elab(ob)).transpose()? {
                     mapping.assign_ob(decl.id.into(), over);
                 }
                 model.add_ob(decl.id.into(), ob_type);
             }
-            DblModelDiagramBox::Modal(diagram) => {
-                let (mapping, model) = diagram.into();
+            DblModelDiagramBox::ModalUnital(diagram) => {
+                let diagram::DblModelDiagram(mapping, model) = Rc::make_mut(diagram);
+                let ob_type: catlog::dbl::modal::ModeApp<QualifiedName> =
+                    Elaborator.elab(&decl.ob_type)?;
+                if let Some(over) = decl.over.as_ref().map(|ob| Elaborator.elab(ob)).transpose()? {
+                    mapping.assign_ob(decl.id.into(), over);
+                }
+                model.add_ob(decl.id.into(), ob_type);
+            }
+            DblModelDiagramBox::ModalNonUnital(diagram) => {
+                let diagram::DblModelDiagram(mapping, model) = Rc::make_mut(diagram);
                 let ob_type: catlog::dbl::modal::ModeApp<QualifiedName> =
                     Elaborator.elab(&decl.ob_type)?;
                 if let Some(over) = decl.over.as_ref().map(|ob| Elaborator.elab(ob)).transpose()? {
@@ -96,7 +122,7 @@ impl DblModelDiagram {
     pub fn add_mor(&mut self, decl: &DiagramMorDecl) -> Result<(), String> {
         match &mut self.diagram {
             DblModelDiagramBox::Discrete(diagram) => {
-                let (mapping, model) = diagram.into();
+                let diagram::DblModelDiagram(mapping, model) = Rc::make_mut(diagram);
                 let mor_type: catlog::one::QualifiedPath = Elaborator.elab(&decl.mor_type)?;
                 model.make_mor(decl.id.into(), mor_type);
                 if let Some(dom) = decl.dom.as_ref().map(|ob| Elaborator.elab(ob)).transpose()? {
@@ -111,8 +137,33 @@ impl DblModelDiagram {
                     mapping.assign_mor(decl.id.into(), over);
                 }
             }
-            DblModelDiagramBox::Modal(diagram) => {
-                let (mapping, model) = diagram.into();
+            DblModelDiagramBox::ModalUnital(diagram) => {
+                let diagram::DblModelDiagram(mapping, model) = Rc::make_mut(diagram);
+                let mor_type: catlog::one::ShortPath<
+                    catlog::dbl::modal::ModeApp<QualifiedName>,
+                    _,
+                > = Elaborator.elab(&decl.mor_type)?;
+                model.make_mor(decl.id.into(), mor_type.clone());
+                if let Some(dom) = decl.dom.as_ref().map(|ob| Elaborator.elab(ob)).transpose()? {
+                    model.set_dom(decl.id.into(), dom);
+                }
+                if let Some(cod) = decl.cod.as_ref().map(|ob| Elaborator.elab(ob)).transpose()? {
+                    if !model.has_ob(&cod) {
+                        let ob_type = model.theory().tgt_type(&mor_type);
+                        if let Some(name) = cod.clone().generator() {
+                            model.add_ob(name, ob_type);
+                        }
+                    }
+                    model.set_cod(decl.id.into(), cod);
+                }
+                if let Some(over) =
+                    decl.over.as_ref().map(|mor| Elaborator.elab(mor)).transpose()?
+                {
+                    mapping.assign_mor(decl.id.into(), over);
+                }
+            }
+            DblModelDiagramBox::ModalNonUnital(diagram) => {
+                let diagram::DblModelDiagram(mapping, model) = Rc::make_mut(diagram);
                 let mor_type: catlog::one::ShortPath<
                     catlog::dbl::modal::ModeApp<QualifiedName>,
                     _,
@@ -152,8 +203,8 @@ impl DblModelDiagram {
     #[wasm_bindgen(js_name = "obType")]
     pub fn ob_type(&self, ob: Ob) -> Result<ObType, String> {
         all_the_same!(match &self.diagram {
-            DblModelDiagramBox::[Discrete, Modal](diagram) => {
-                let (_, model) = diagram.into();
+            DblModelDiagramBox::[Discrete, ModalUnital, ModalNonUnital ](diagram) => {
+                let diagram::DblModelDiagram(_, model) = &**diagram;
                 Ok(Quoter.quote(&model.ob_type(&Elaborator.elab(&ob)?)))
             }
         })
@@ -163,8 +214,8 @@ impl DblModelDiagram {
     #[wasm_bindgen(js_name = "morType")]
     pub fn mor_type(&self, mor: Mor) -> Result<MorType, String> {
         all_the_same!(match &self.diagram {
-            DblModelDiagramBox::[Discrete, Modal](diagram) => {
-                let (_, model) = diagram.into();
+            DblModelDiagramBox::[Discrete, ModalUnital, ModalNonUnital](diagram) => {
+                let diagram::DblModelDiagram(_, model) = &**diagram;
                 Ok(Quoter.quote(&model.mor_type(&Elaborator.elab(&mor)?)))
             }
         })
@@ -174,8 +225,8 @@ impl DblModelDiagram {
     #[wasm_bindgen(js_name = "obGenerators")]
     pub fn ob_generators(&self) -> Vec<QualifiedName> {
         all_the_same!(match &self.diagram {
-            DblModelDiagramBox::[Discrete, Modal](diagram) => {
-                let (_, model) = diagram.into();
+            DblModelDiagramBox::[Discrete, ModalUnital, ModalNonUnital](diagram) => {
+                let diagram::DblModelDiagram(_, model) = &**diagram;
                 model.ob_generators().collect()
             }
         })
@@ -185,8 +236,8 @@ impl DblModelDiagram {
     #[wasm_bindgen(js_name = "morGenerators")]
     pub fn mor_generators(&self) -> Vec<QualifiedName> {
         all_the_same!(match &self.diagram {
-            DblModelDiagramBox::[Discrete, Modal](diagram) => {
-                let (_, model) = diagram.into();
+            DblModelDiagramBox::[Discrete, ModalUnital, ModalNonUnital](diagram) => {
+                let diagram::DblModelDiagram(_, model) = &**diagram;
                 model.mor_generators().collect()
             }
         })
@@ -196,8 +247,8 @@ impl DblModelDiagram {
     #[wasm_bindgen(js_name = "obGeneratorsWithType")]
     pub fn ob_generators_with_type(&self, ob_type: ObType) -> Result<Vec<QualifiedName>, String> {
         all_the_same!(match &self.diagram {
-            DblModelDiagramBox::[Discrete, Modal](diagram) => {
-                let (_, model) = diagram.into();
+            DblModelDiagramBox::[Discrete, ModalUnital, ModalNonUnital](diagram) => {
+                let diagram::DblModelDiagram(_, model) = &**diagram;
                 let ob_type = Elaborator.elab(&ob_type)?;
                 Ok(model.ob_generators_with_type(&ob_type).collect())
             }
@@ -211,8 +262,8 @@ impl DblModelDiagram {
         mor_type: MorType,
     ) -> Result<Vec<QualifiedName>, String> {
         all_the_same!(match &self.diagram {
-            DblModelDiagramBox::[Discrete, Modal](diagram) => {
-                let (_, model) = diagram.into();
+            DblModelDiagramBox::[Discrete, ModalUnital, ModalNonUnital](diagram) => {
+                let diagram::DblModelDiagram(_, model) = &**diagram;
                 let mor_type = Elaborator.elab(&mor_type)?;
                 Ok(model.mor_generators_with_type(&mor_type).collect())
             }
@@ -236,8 +287,8 @@ impl DblModelDiagram {
     pub fn ob_presentation(&self, id: QualifiedName) -> Option<DiagramObGenerator> {
         let label = self.ob_generator_label(&id);
         let (ob_type, over) = all_the_same!(match &self.diagram {
-            DblModelDiagramBox::[Discrete, Modal](diagram) => {
-                let (mapping, model) = diagram.into();
+            DblModelDiagramBox::[Discrete, ModalUnital, ModalNonUnital](diagram) => {
+                let diagram::DblModelDiagram(mapping, model) = &**diagram;
                 (Quoter.quote(&model.ob_generator_type(&id)),
                  Quoter.quote(mapping.ob_generator_map().get(&id)?))
             }
@@ -249,8 +300,8 @@ impl DblModelDiagram {
     #[wasm_bindgen(js_name = "morPresentation")]
     pub fn mor_presentation(&self, id: QualifiedName) -> Option<DiagramMorGenerator> {
         let (mor_type, over, dom, cod) = all_the_same!(match &self.diagram {
-            DblModelDiagramBox::[Discrete, Modal](diagram) => {
-                let (mapping, model) = diagram.into();
+            DblModelDiagramBox::[Discrete, ModalUnital, ModalNonUnital](diagram) => {
+                let diagram::DblModelDiagram(mapping, model) = &**diagram;
                 (Quoter.quote(&model.mor_generator_type(&id)),
                  Quoter.quote(mapping.mor_generator_map().get(&id)?),
                  Quoter.quote(model.get_dom(&id)?),
@@ -264,14 +315,13 @@ impl DblModelDiagram {
     #[wasm_bindgen]
     pub fn presentation(&self) -> ModelDiagramPresentation {
         all_the_same!(match &self.diagram {
-            DblModelDiagramBox::[Discrete, Modal](diagram) => {
-                let (_, model) = diagram.into();
+            DblModelDiagramBox::[Discrete, ModalUnital, ModalNonUnital](diagram) => {
                 ModelDiagramPresentation {
                     ob_generators: {
-                        model.ob_generators().filter_map(|id| self.ob_presentation(id)).collect()
+                        diagram.1.ob_generators().filter_map(|id| self.ob_presentation(id)).collect()
                     },
                     mor_generators: {
-                        model.mor_generators().filter_map(|id| self.mor_presentation(id)).collect()
+                        diagram.1.mor_generators().filter_map(|id| self.mor_presentation(id)).collect()
                     }
                 }
             }
@@ -282,9 +332,10 @@ impl DblModelDiagram {
     #[wasm_bindgen(js_name = "inferMissingFrom")]
     pub fn infer_missing_from(&mut self, model: &DblModel) -> Result<(), String> {
         all_the_same!(match &mut self.diagram {
-            DblModelDiagramBox::[Discrete, Modal](diagram) => {
+            DblModelDiagramBox::[Discrete, ModalUnital, ModalNonUnital](diagram) => {
                 let model: &Rc<_> = (&model.model).try_into().map_err(
                     |_| "Type of model should match type of diagram")?;
+                let diagram = Rc::make_mut(diagram);
                 diagram.infer_missing_from(model);
             }
         });
@@ -308,7 +359,7 @@ impl DblModelDiagram {
     #[wasm_bindgen(js_name = "validateIn")]
     pub fn validate_in(&self, model: &DblModel) -> Result<ModelDiagramValidationResult, String> {
         let result = all_the_same!(match &self.diagram {
-            DblModelDiagramBox::[Discrete, Modal](diagram) => {
+            DblModelDiagramBox::[Discrete, ModalUnital, ModalNonUnital](diagram) => {
                 let model: &Rc<_> = (&model.model).try_into().map_err(
                     |_| "Type of model should match type of diagram")?;
                 diagram.validate_in(model)
