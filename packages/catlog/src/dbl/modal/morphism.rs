@@ -17,6 +17,7 @@ use crate::zero::{HashColumn, Mapping, MutMapping, QualifiedName};
 use nonempty::NonEmpty;
 
 // TODO FpFunctorData on ModalDblModalMapping...?
+// define a new struct `ModalDblModelMapping` which carries
 type ModalDblModelMappingData =
     FpFunctorData<HashColumn<QualifiedName, ModalOb>, HashColumn<QualifiedName, ModalMor>>;
 
