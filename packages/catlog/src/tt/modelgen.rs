@@ -184,9 +184,11 @@ impl Model {
             Model::DiscreteTab(_) => {
                 // Discrete tabulator models currently do not support equations, so we ignore them.
             }
-            Model::ModalUnital(_) | Model::ModalNonUnital(_) => {
+            Model::ModalUnital(_) => {
+                // model.add_equation(PathEq::new(lhs.try_into().unwrap(), rhs.try_into().unwrap()));
                 // Modal models currently do not support equations, so we ignore them.
             }
+            Model::ModalNonUnital(_) => {}
         }
     }
 
@@ -603,18 +605,42 @@ impl DiagramGenerator<'_, ModalDblModel<Unital>, ModalDblModelMapping> {
                 // Augmentation produces lift morphisms whose dom and cod
                 // are projections from the body's self, resolving to the
                 // qualified names of generators (declared or specialized).
-                let dom_name = neutral_qualified_name(dom).ok_or_else(|| {
-                    "morphism domain does not resolve to a generator name".to_string()
-                })?;
-                let cod_name = neutral_qualified_name(cod).ok_or_else(|| {
-                    "morphism codomain does not resolve to a generator name".to_string()
-                })?;
+                println!("CHECKING: {}", self.eval.quote_tm(&dom));
+
                 let mt_inner: ModalMorType = mt
                     .clone()
                     .try_into()
                     .map_err(|_| "morphism type is not valid for a discrete theory".to_string())?;
+                let dom_ob: ModalOb = match &**dom {
+                    TmV_::List(elems) => {
+                        let src_ot: ModalObType = self.domain.theory().src_type(&mt_inner); // adapt: see note
+                        let Some(modal::Modality::List(list_type)) = src_ot.modalities.last()
+                        else {
+                            return Err("multihom source is not a list object type".to_string());
+                        };
+                        let obs = elems
+                            .iter()
+                            .map(|e| neutral_qualified_name(e).map(ModalOb::Generator))
+                            .collect::<Option<Vec<_>>>()
+                            .ok_or_else(|| {
+                                "multihom domain element does not resolve to a generator name"
+                                    .to_string()
+                            })?;
+                        ModalOb::List(*list_type, obs)
+                    }
+                    _ => ModalOb::Generator(neutral_qualified_name(dom).ok_or_else(|| {
+                        "morphism domain does not resolve to a generator name".to_string()
+                    })?),
+                };
+
+                // let dom_name = neutral_qualified_name(dom).ok_or_else(|| {
+                //     "morphism domain does not resolve to a generator name".to_string()
+                // })?;
+                let cod_name = neutral_qualified_name(cod).ok_or_else(|| {
+                    "morphism codomain does not resolve to a generator name".to_string()
+                })?;
                 let qname: QualifiedName = prefix.clone().into();
-                self.domain.add_mor(qname.clone(), dom_name.into(), cod_name.into(), mt_inner);
+                self.domain.add_mor(qname.clone(), dom_ob.into(), cod_name.into(), mt_inner);
                 // Mapping target: extract the codomain morphism's name
                 // from the synthetic lift name `~f(e)`. For other shapes
                 // (e.g., a future user-declared morphism in a body), fall
@@ -638,10 +664,27 @@ impl DiagramGenerator<'_, ModalDblModel<Unital>, ModalDblModelMapping> {
 /// projections from a self-variable (regardless of which level the self
 /// is bound at). Returns `None` if the value isn't of that shape.
 fn neutral_qualified_name(tm: &TmV) -> Option<QualifiedName> {
+    if let TmV_::List(elems) = &**tm {
+        for e in elems {
+            println!("{:?}", neutral_qualified_name(e));
+        }
+    };
     let TmV_::Neu(n, _) = &**tm else {
         return None;
     };
     Some(n.to_qualified_name())
+}
+
+fn neutral_qualified_names(tm: &TmV) -> Option<Vec<QualifiedName>> {
+    if let TmV_::List(elems) = &**tm {
+        for e in elems {
+            println!("{:?}", neutral_qualified_name(e));
+        }
+    };
+    let TmV_::List(elems) = &**tm else {
+        return None;
+    };
+    elems.into_iter().map(|n| neutral_qualified_name(n)).collect::<Option<Vec<_>>>()
 }
 
 /// Parse a synthetic lift-morphism field name of the form `~f(e)` and
@@ -676,6 +719,8 @@ mod tests {
                 {
                     dbg!(&name);
                     toplevel.declarations.insert(name, decl);
+                } else {
+                    dbg!(&topntn.name);
                 }
             }
             Some(())
@@ -726,18 +771,26 @@ diagram I : @Instance(WeightedGraph) := [
 
     #[test]
     fn diagram_over_dec() {
+        // TODO breaks when i write "dot-u" and other hyphens
         let src = r#"
 set_theory ThMulticategory
 
 type DEC := [
   Form0 : Object,
   Form1 : Object,
-  Form2 : Object
+  partial : Multihom[[Form0], Form0],
+  mult: Multihom[[Form0, Form0], Form0],
+  wedge00: Multihom[[Form0, Form0], Form0],
+  wedge10: Multihom[[Form1, Form0], Form1]
 ]
 
 diagram I : @Instance(DEC) := [
-    s : @over .Form0,
+    v : @over .Form0,
+    u : @over .Form0,
+    w : @over .Form1,
+    result : (partial(u) == v)
 ]
+
 "#;
         let toplevel = elaborate_to_toplevel(src);
         let diag = match toplevel.declarations.get(&name_seg("I")) {
@@ -751,7 +804,108 @@ diagram I : @Instance(DEC) := [
                 panic!("We should not be here!")
             }
             DblModelDiagramType::ModalUnital(DblModelDiagram(mapping, domain)) => {
-                let e_qname: QualifiedName = vec![name_seg("s")].into();
+                let e_qname: QualifiedName = vec![name_seg("u")].into();
+                let entity_ot = modal::ModeApp::new(name("Object"));
+                let e_target: QualifiedName = vec![name_seg("Form0")].into();
+                assert!(domain.has_ob(&e_qname.clone().into()));
+                assert_eq!(domain.ob_generator_type(&e_qname), entity_ot);
+                assert_eq!(
+                    mapping.0.ob_generator_map.apply_to_ref(&e_qname),
+                    Some(e_target.into())
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn glueing_modal_diagrams() {
+        let src = r#"
+                set_theory ThMulticategory
+
+                type DEC := [
+                  Form0 : Object,
+                  Form1 : Object,
+                  DualForm0 : Object,
+                  lapl_d0 : Multihom[[DualForm0], DualForm0],
+                  partial_0 : Multihom[[Form0], Form0],
+                  partial_1 : Multihom[[Form1], Form1],
+                  partial_d0 : Multihom[[DualForm0], DualForm0],
+                  square_d0 : Multihom[[DualForm0], DualForm0],
+                  add_d0d0 : Multihom[[DualForm0, DualForm0], DualForm0],
+                  sub_d01 : Multihom[[DualForm0, Form0], DualForm0],
+                  sub_d0d0 : Multihom[[DualForm0, DualForm0], DualForm0],
+                  mult_00 : Multihom[[Form0, Form0], Form0],
+                  mult_d0d0 : Multihom[[DualForm0, DualForm0], DualForm0],
+                  lie_1d0 : Multihom[[Form1, DualForm0], DualForm0],
+                  wedge_00: Multihom[[Form0, Form0], Form0],
+                  wedge_10: Multihom[[Form1, Form0], Form1]
+                ]
+
+                diagram Hydrodynamics : @Instance(DEC) := [
+                    a : @over .Form0,
+                    k : @over .Form0,
+                    n : @over .DualForm0,
+                    w : @over .DualForm0,
+                    dX : @over .Form1,
+                    x0 : @over .DualForm0,
+                    x1 : @over .DualForm0,
+                    x2 : @over .DualForm0,
+                    x3 : @over .DualForm0,
+                    x4 : @over .DualForm0,
+                    x5 : @over .DualForm0,
+                    x6 : @over .DualForm0,
+                    _ : x0 == sub_d01([a, w]),
+                    _ : x1 == square_d0([n]),
+                    _ : x2 == mult_d0d0([w, x1]),
+                    _ : x3 == sub_d01([x0, x2]),
+                    _ : x4 == lie_1d0([dX, w]),
+                    _ : x5 == mult_00([k, x4]),
+                    _ : x6 == add_d0d0([x3, x5]),
+                    _ : x6 == partial_d0([w])
+                ]
+
+                diagram Phytodynamics : @Instance(DEC) := [
+                    n : @over .DualForm0,
+                    w : @over .DualForm0,
+                    m : @over .Form0,
+                    y0 : @over .DualForm0,
+                    y1 : @over .DualForm0,
+                    y2 : @over .DualForm0,
+                    y3 : @over .DualForm0,
+                    y4 : @over .DualForm0,
+                    y5 : @over .DualForm0,
+                    y6 : @over .DualForm0,
+                    _ : y0 == square_d0([n]),
+                    _ : y1 == mult_d0d0([w, x0]),
+                    _ : y2 == mult_d0d0([m, n]),
+                    _ : y3 == sub_d0d0([y1, y2]),
+                    _ : y4 == lapl([n]),
+                    _ : y5 == add_d0d0([y3, y4]),
+                    _ : y6 == partial([w]),
+                    _ : y6 == y5
+                ]
+
+                diagram Klausmeier : @Instance(DEC) := [
+                    hydro : Hydrodynamics,
+                    phyto : Phytodynamics,
+                    _ : hydro.n == phyto.n,
+                    _ : hydro.w == phyto.w
+                ]
+                "#;
+        let toplevel = elaborate_to_toplevel(src);
+        let diag = match toplevel.declarations.get(&name_seg("Klausmeier")) {
+            Some(TopDecl::Diag(d)) => d.clone(),
+            _ => panic!("expected I to be a diagram declaration"),
+        };
+
+        let (model_diag, _) = diagram_from_diag(&toplevel, &diag.theory.definition, &diag).unwrap();
+        // dbg!((&model_diag));
+        match model_diag {
+            DblModelDiagramType::Discrete(_) => {
+                panic!("We should not be here!")
+            }
+            DblModelDiagramType::ModalUnital(DblModelDiagram(mapping, domain)) => {
+                let e_qname: QualifiedName = vec![name_seg("u")].into();
                 let entity_ot = modal::ModeApp::new(name("Object"));
                 let e_target: QualifiedName = vec![name_seg("Form0")].into();
                 assert!(domain.has_ob(&e_qname.clone().into()));
