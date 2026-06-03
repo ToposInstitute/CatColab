@@ -67,7 +67,9 @@ function HypergraphSVG(props: {
     // once.)
     const incidence = () => {
         const map = new Map<string, Set<string>>();
-        for (const id of props.hyperedgeIds) map.set(id, new Set());
+        for (const id of props.hyperedgeIds) {
+            map.set(id, new Set());
+        }
         for (const edge of props.graph.edges) {
             if (props.hyperedgeIds.has(edge.source)) {
                 map.get(edge.source)?.add(edge.target);
@@ -81,18 +83,21 @@ function HypergraphSVG(props: {
     const hullPath = (heId: string): string => {
         const nodes = nodeMap();
         const anchor = nodes.get(heId);
-        if (!anchor) return "";
+        if (!anchor) {
+            return "";
+        }
         const incident = incidence().get(heId);
         const pts: GraphLayout.Point[] = [anchor.pos];
         for (const vid of incident ?? []) {
             const v = nodes.get(vid);
-            if (v) pts.push(v.pos);
+            if (v) {
+                pts.push(v.pos);
+            }
         }
         return pointsToHullPath(pts);
     };
 
-    const visibleNodes = () =>
-        props.graph.nodes.filter((n) => !props.hyperedgeIds.has(n.id));
+    const visibleNodes = () => props.graph.nodes.filter((n) => !props.hyperedgeIds.has(n.id));
 
     return (
         <svg ref={props.ref} class="graph" width={props.graph.width} height={props.graph.height}>
@@ -127,16 +132,16 @@ function HypergraphSVG(props: {
                     const sourceIsHyperedge = props.hyperedgeIds.has(edge.source);
                     const heId = sourceIsHyperedge ? edge.source : edge.target;
                     const anchor = nodeMap().get(heId);
-                    if (!anchor) return null;
+                    if (!anchor) {
+                        return null;
+                    }
                     const from = sourceIsHyperedge ? anchor.pos : edge.sourcePos;
                     const to = sourceIsHyperedge ? edge.targetPos : anchor.pos;
                     return (
                         <g class="edge">
                             <path
                                 d={curvedArcPath(from, to)}
-                                marker-end={
-                                    sourceIsHyperedge ? "url(#arrowhead-vee)" : undefined
-                                }
+                                marker-end={sourceIsHyperedge ? "url(#arrowhead-vee)" : undefined}
                                 marker-start={
                                     sourceIsHyperedge ? undefined : "url(#arrowhead-vee-fwd)"
                                 }
@@ -172,7 +177,9 @@ function hypergraphFromModel(model: DblModel): {
     const edges: GraphSpec.Edge[] = [];
     for (const id of model.morGenerators()) {
         const mor = model.morPresentation(id);
-        if (!mor) continue;
+        if (!mor) {
+            continue;
+        }
         hyperedgeIds.push(id);
         // Small invisible anchor: gives ELK room to route arcs, but the hull
         // (drawn separately) is what the user sees.
@@ -209,7 +216,9 @@ function curvedArcPath(from: GraphLayout.Point, to: GraphLayout.Point): string {
     const dx = to.x - from.x;
     const dy = to.y - from.y;
     const len = Math.hypot(dx, dy);
-    if (len < 1) return `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+    if (len < 1) {
+        return `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+    }
     const offset = len * 0.15;
     const cx = (from.x + to.x) / 2 - (dy / len) * offset;
     const cy = (from.y + to.y) / 2 + (dx / len) * offset;
@@ -232,7 +241,9 @@ function pointsToHullPath(points: GraphLayout.Point[]): string {
             dedup.push(p);
         }
     }
-    if (dedup.length === 0) return "";
+    if (dedup.length === 0) {
+        return "";
+    }
     if (dedup.length === 1) {
         // Round line cap on a zero-length segment renders as a disk.
         const p = dedup[0];
@@ -240,7 +251,7 @@ function pointsToHullPath(points: GraphLayout.Point[]): string {
         return `M ${p.x} ${p.y} L ${p.x} ${p.y}`;
     }
 
-    const sorted = dedup.slice().sort((a, b) => a.x - b.x || a.y - b.y);
+    const sorted = dedup.slice().toSorted((a, b) => a.x - b.x || a.y - b.y);
     const cross = (O: GraphLayout.Point, A: GraphLayout.Point, B: GraphLayout.Point) =>
         (A.x - O.x) * (B.y - O.y) - (A.y - O.y) * (B.x - O.x);
 
@@ -250,8 +261,11 @@ function pointsToHullPath(points: GraphLayout.Point[]): string {
             const a = lower[lower.length - 2];
             const b = lower[lower.length - 1];
             invariant(a && b);
-            if (cross(a, b, p) <= 0) lower.pop();
-            else break;
+            if (cross(a, b, p) <= 0) {
+                lower.pop();
+            } else {
+                break;
+            }
         }
         lower.push(p);
     }
@@ -263,8 +277,11 @@ function pointsToHullPath(points: GraphLayout.Point[]): string {
             const a = upper[upper.length - 2];
             const b = upper[upper.length - 1];
             invariant(a && b);
-            if (cross(a, b, p) <= 0) upper.pop();
-            else break;
+            if (cross(a, b, p) <= 0) {
+                upper.pop();
+            } else {
+                break;
+            }
         }
         upper.push(p);
     }
