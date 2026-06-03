@@ -15,7 +15,7 @@ use crate::{tt::prelude::*, zero::LabelSegment};
 /// of a row in a database, which is a map from fields to values.
 ///
 /// Create this using the [FromIterator] implementation.
-#[derive(Clone, Derivative, PartialEq, Eq, From)]
+#[derive(Clone, Debug, Derivative, PartialEq, Eq, From)]
 #[derivative(Default(bound = ""))]
 pub struct Row<T>(IndexMap<FieldName, (LabelSegment, T)>);
 

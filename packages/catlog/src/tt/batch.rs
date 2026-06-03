@@ -253,7 +253,7 @@ pub fn elaborate(src: &str, path: &str, output: &BatchOutput) -> io::Result<bool
                                     toplevel.declarations.get(&name_segment)
                             {
                                 match diagram_from_diag(&toplevel, &diag.theory.definition, diag) {
-                                    Ok((model_diag, _)) => {
+                                    Ok((model_diag, _, _)) => {
                                         output.diagram_summary(&model_diag);
                                         let (cod, _) = Model::from_ty(
                                             &toplevel,

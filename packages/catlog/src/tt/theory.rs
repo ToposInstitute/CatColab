@@ -9,7 +9,7 @@
 
 use all_the_same::all_the_same;
 use derivative::Derivative;
-use derive_more::{Constructor, From, TryInto};
+use derive_more::{Constructor, Debug, From, TryInto};
 use std::{fmt, rc::Rc};
 
 use super::prelude::*;
@@ -26,13 +26,14 @@ use crate::zero::{QualifiedName, name};
 ///
 /// Equality of these theories is nominal; two theories are the same if and only
 /// if they have the same name.
-#[derive(Constructor, Clone, Derivative)]
+#[derive(Constructor, Debug, Clone, Derivative)]
 #[derivative(PartialEq, Eq)]
 pub struct Theory {
     /// The name of the theory.
     pub name: QualifiedName,
     /// The definition of the theory.
     #[derivative(PartialEq = "ignore")]
+    #[debug(skip)]
     pub definition: TheoryDef,
 }
 

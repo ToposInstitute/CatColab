@@ -9,7 +9,7 @@ use super::{prelude::*, stx::*, theory::*, val::*};
 use crate::zero::QualifiedName;
 
 /// A toplevel declaration.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum TopDecl {
     /// See [Type].
     Type(Type),
@@ -25,7 +25,7 @@ pub enum TopDecl {
 ///
 /// Also stores the evaluation of that type. Because this is an evaluation in
 /// the empty context, this is OK to use in any other context as well.
-#[derive(Constructor, Clone)]
+#[derive(Constructor, Debug, Clone)]
 pub struct Type {
     /// The theory for the type.
     pub theory: Theory,
@@ -40,7 +40,7 @@ pub struct Type {
 /// Also stores the evaluation of that term, and the evaluation of the
 /// corresponding type of that term. Because this is an evaluation in the empty
 /// context, this is OK to use in any other context as well.
-#[derive(Constructor, Clone)]
+#[derive(Constructor, Debug, Clone)]
 pub struct DefConst {
     /// The theory that the constant is defined in.
     pub theory: Theory,
@@ -53,7 +53,7 @@ pub struct DefConst {
 }
 
 /// A toplevel declaration of a term judgment.
-#[derive(Constructor, Clone)]
+#[derive(Constructor, Debug, Clone)]
 pub struct Def {
     /// The theory that the definition is defined in.
     pub theory: Theory,
@@ -68,7 +68,7 @@ pub struct Def {
 }
 
 /// A toplevel declaration of a diagram.
-#[derive(Constructor, Clone)]
+#[derive(Constructor, Debug, Clone)]
 pub struct Diag {
     /// The theory that the diagram is defined in.
     pub theory: Theory,
