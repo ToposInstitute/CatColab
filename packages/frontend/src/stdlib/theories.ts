@@ -55,6 +55,17 @@ stdTheories.add(
 
 stdTheories.add(
     {
+        id: "directed-hypergraph",
+        name: "Directed hypergraph",
+        description: "Vertices connected by directed hyperedges",
+        iconLetters: ["H", "g"],
+        group: "Experimental",
+    },
+    async () => (await import("./theories/directed-hypergraph")).default,
+);
+
+stdTheories.add(
+    {
         id: "polynomial-ode",
         name: "Polynomial ODEs",
         description: "Systems of polynomial ordinary differential equations",

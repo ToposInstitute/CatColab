@@ -305,6 +305,16 @@ export const petriNetVisualization = (
 
 const PetriNetVisualization = lazy(() => import("./analyses/petri_net_visualization"));
 
+export const hypergraphVisualization = (
+    options: AnalysisOptions,
+): ModelAnalysisMeta<GraphLayoutConfig.Config> => ({
+    ...options,
+    component: HypergraphVisualization,
+    initialContent: GraphLayoutConfig.defaultConfig,
+});
+
+const HypergraphVisualization = lazy(() => import("./analyses/hypergraph_visualization"));
+
 export function reachability(
     options: Partial<AnalysisOptions> & {
         check: Checkers.ReachabilityChecker;

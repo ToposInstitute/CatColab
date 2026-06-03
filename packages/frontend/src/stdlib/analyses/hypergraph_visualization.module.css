@@ -1,0 +1,9 @@
+.hull {
+    fill: rgb(97, 97, 255);
+    stroke: rgb(97, 97, 255);
+    stroke-width: 36;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    opacity: 0.4;
+    pointer-events: none;
+}
