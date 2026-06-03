@@ -15,7 +15,7 @@ use crate::zero::LabelSegment;
 /// requested with `@hole`.
 ///
 /// Metavariables in notebook elaboration are namespaced to the notebook.
-#[derive(Constructor, Clone, Copy, PartialEq, Eq)]
+#[derive(Constructor, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MetaVar {
     ref_id: Option<Ustr>,
     id: usize,
@@ -28,6 +28,7 @@ impl fmt::Display for MetaVar {
 }
 
 /// Inner enum for [TyS].
+#[derive(Debug)]
 pub enum TyS_ {
     /// A reference to a top-level declaration.
     TopVar(TopVarName),
@@ -111,7 +112,7 @@ pub enum TyS_ {
 ///
 /// See [crate::tt] for an explanation of what total types are, and for an
 /// explanation of our approach to Rc pointers in abstract syntax trees.
-#[derive(Clone, Deref)]
+#[derive(Clone, Debug, Deref)]
 #[deref(forward)]
 pub struct TyS(Rc<TyS_>);
 
@@ -212,6 +213,7 @@ impl fmt::Display for TyS {
 }
 
 /// Inner enum for [TmS].
+#[derive(Debug)]
 pub enum TmS_ {
     /// A reference to a top-level constant def.
     TopVar(TopVarName),
@@ -250,7 +252,7 @@ pub enum TmS_ {
 ///
 /// See [crate::tt] for an explanation of what total types are, and for an
 /// explanation of our approach to Rc pointers in abstract syntax trees.
-#[derive(Clone, Deref)]
+#[derive(Clone, Debug, Deref)]
 #[deref(forward)]
 pub struct TmS(Rc<TmS_>);
 

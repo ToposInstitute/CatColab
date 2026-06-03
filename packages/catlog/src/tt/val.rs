@@ -3,6 +3,7 @@
 //! See [crate::tt] for what this means.
 
 use bwd::Bwd;
+use derive_more::Debug;
 use derive_more::Deref;
 
 use super::{prelude::*, stx::*, theory::*};
@@ -12,7 +13,7 @@ use crate::zero::{LabelSegment, QualifiedName};
 pub type Env = Bwd<TmV>;
 
 /// The content of a record type value.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct RecordV {
     /// The closed-over environment.
     pub env: Env,
@@ -22,6 +23,7 @@ pub struct RecordV {
     ///
     /// When we get to actually computing the type of fields, we will look here
     /// to see if they have been specialized.
+    #[debug(skip)]
     pub specializations: Dtry<TyV>,
 }
 
@@ -77,6 +79,7 @@ pub fn merge_specializations(old: &Dtry<TyV>, new: &Dtry<TyV>) -> Dtry<TyV> {
 }
 
 /// Inner enum for [TyV].
+#[derive(Debug)]
 pub enum TyV_ {
     /// Type constructor for object types, also see [TyS_::Object].
     Object(ObType),
@@ -107,7 +110,7 @@ pub enum TyV_ {
 }
 
 /// Value for total types, dereferences to [TyV_].
-#[derive(Clone, Deref)]
+#[derive(Clone, Debug, Deref)]
 #[deref(forward)]
 pub struct TyV(Rc<TyV_>);
 
@@ -191,7 +194,7 @@ impl TyV {
 }
 
 /// Inner enum for [TmN].
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Debug, Eq)]
 pub enum TmN_ {
     /// Variable.
     Var(FwdIdx, VarName, LabelSegment),
@@ -200,7 +203,7 @@ pub enum TmN_ {
 }
 
 /// Neutrals for [terms](TmV), dereferences to [TmN_].
-#[derive(Clone, Deref, PartialEq, Eq)]
+#[derive(Clone, Debug, Deref, PartialEq, Eq)]
 #[deref(forward)]
 pub struct TmN(Rc<TmN_>);
 
@@ -229,6 +232,7 @@ impl TmN {
 }
 
 /// Inner enum for [TmV].
+#[derive(Debug)]
 pub enum TmV_ {
     /// Neutrals.
     ///
@@ -253,7 +257,7 @@ pub enum TmV_ {
 }
 
 /// Values for terms, dereferences to [TmV_].
-#[derive(Clone, Deref)]
+#[derive(Clone, Debug, Deref)]
 #[deref(forward)]
 pub struct TmV(Rc<TmV_>);
 

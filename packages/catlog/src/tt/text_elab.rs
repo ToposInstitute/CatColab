@@ -125,7 +125,7 @@ impl TopElaborator {
                     )
                 })?;
                 let (ty_s, ty_v) = self.elaborator(&theory, toplevel).ty(ty_n);
-                println!("TYPE: {}, \n\n {}", ty_s, ty_n);
+                // println!("TYPE: {}, \n\n {}", ty_s, ty_n);
                 Some(TopElabResult::Declaration(
                     name,
                     TopDecl::Type(Type::new(theory.clone(), ty_s, ty_v)),
@@ -135,14 +135,14 @@ impl TopElaborator {
                 let theory = self.get_theory(tn.loc)?;
                 let mut elab = self.elaborator(&theory, toplevel);
                 let (name, args_n, annotn, valn) = self.annotated_def(tn.body).or_else(|| {
-                    dbg!(&tn.body);
+                    // dbg!(&tn.body);
                     self.error(
                         tn.loc,
                         "unknown syntax for diagram declaration, expected <name> : <type> := <term>",
                     )
                 })?;
                 if args_n.is_some() {
-                    dbg!(&tn.loc);
+                    // dbg!(&tn.loc);
                     return self.error(tn.loc, "diagrams cannot have arguments");
                 }
                 let (_, ret_ty_v) = elab.ty(annotn);
@@ -150,21 +150,21 @@ impl TopElaborator {
                 // so that `@over .E` inside the body can recover both the
                 // diagram's name and its codomain type, while ordinary
                 // term lookups cannot see it.
-                dbg!(&name);
+                // dbg!(&name);
                 let diag_label = match name {
                     NameSegment::Text(s) => label_seg(s),
                     NameSegment::Uuid(_) => label_seg("diag"),
                 };
                 elab.intro_diagram(name, diag_label, ret_ty_v.clone());
-                println!("VALN: {}", &valn);
+                // println!("VALN: {}", &valn);
                 let (val_s, _val_v) = elab.ty(valn);
                 // Augment the body with synthetic lift-target fields forced
                 // by the discrete-opfibration condition: for each declared
                 // `e : @over .X` and codomain morphism `f : X → Y`, add a
                 // synthetic field `f(e) : @over .Y`.
-                println!("VALS: {}", &val_s);
+                // println!("VALS: {}", &val_s);
                 let val_s = augment_with_lifts(&val_s, &ret_ty_v);
-                println!("AUGMENTED: {}", &val_s);
+                // println!("AUGMENTED: {}", &val_s);
                 let val_v = elab.evaluator().eval_ty(&val_s);
                 Some(TopElabResult::Declaration(
                     name,
@@ -472,7 +472,7 @@ impl<'a> Elaborator<'a> {
                 if let Some(mor_type) = theory.basic_mor_type(qname.clone()) {
                     let dom = theory.src_type(&mor_type);
                     let cod = theory.tgt_type(&mor_type);
-                    println!("MOR {} TYPE {} : DOM {} => COD {}", &qname, &mor_type, &dom, &cod);
+                    // println!("MOR {} TYPE {} : DOM {} => COD {}", &qname, &mor_type, &dom, &cod);
                     Some((mor_type, dom, cod))
                 } else {
                     elab.error(format!("no such morphism type {name}"))
@@ -533,7 +533,7 @@ impl<'a> Elaborator<'a> {
     /// Elaborates a type from notation, returning both syntax and value.
     pub fn ty(&mut self, n: &FNtn) -> (TyS, TyV) {
         let mut elab = self.enter(n.loc());
-        println!("ELABORATING TYPE... {}", &n);
+        // println!("ELABORATING TYPE... {}", &n);
         match n.ast0() {
             Var(name) => elab.lookup_ty(name_seg(*name)),
             Keyword("Unit") => (TyS::unit(), TyV::unit()),
@@ -641,14 +641,29 @@ impl<'a> Elaborator<'a> {
                 (TyS::specialize(ty_s, specializations), ty_v)
             }
             App2(L(_, Keyword("==")), tm1_n, tm2_n) => {
+                // println!("!!!!!!!!! {} {}", tm1_n, tm2_n);
                 let (tm1_s, tm1_v, tm1_ty) = elab.syn(tm1_n);
                 let (tm2_s, tm2_v, tm2_ty) = elab.syn(tm2_n);
-                let TyV_::Morphism(_, _, _) = &*tm1_ty else {
-                    elab.loc = Some(tm1_n.loc());
-                    return elab.ty_error("Equality types are only supported for morphisms");
+                // println!("{:#?}", tm1_ty);
+                let _ = match &*tm1_ty {
+                    TyV_::Morphism(_, _, _) | TyV_::Over(_) => {
+                        // println!("YES!");
+                    }
+                    _ => {
+                        elab.loc = Some(tm1_n.loc());
+                        // println!("ERROR {} : {:#?}", &tm1_n, &tm1_ty);
+                        return elab.ty_error("Equality types are only supported for morphisms");
+                    }
                 };
+                // println!("EQUALITY: {:#?} == {:#?}", &tm1_ty, &tm2_ty);
                 if let Err(e) = elab.evaluator().convertible_ty(&tm1_ty, &tm2_ty) {
                     let eval = elab.evaluator();
+                    // println!(
+                    //     "HELLO! {:#?} : {}, {}",
+                    //     &tm1_s,
+                    //     eval.quote_ty(&tm1_ty),
+                    //     eval.quote_ty(&tm2_ty)
+                    // );
                     return elab.ty_error(format!(
                         "types {} and {} are not convertible:\n{}",
                         eval.quote_ty(&tm1_ty),
@@ -661,7 +676,7 @@ impl<'a> Elaborator<'a> {
                 (eq_ty_s, eq_ty_v)
             }
             _ => {
-                println!("UNEXPECTED NOTATION FOR TYPE");
+                // println!("UNEXPECTED NOTATION FOR TYPE");
                 elab.ty_error("unexpected notation for type")
             }
         }
@@ -693,10 +708,12 @@ impl<'a> Elaborator<'a> {
     /// Elaborates a term from notation, returning syntax, value, and synthesized type.
     fn syn(&mut self, n: &FNtn) -> (TmS, TmV, TyV) {
         let mut elab = self.enter(n.loc());
+        // println!("AST: {:#?}", &n);
         match n.ast0() {
             Var(name) => elab.lookup_tm(ustr(name)),
             App1(tm_n, L(_, Field(f))) => {
                 let (tm_s, tm_v, ty_v) = elab.syn(tm_n);
+                // println!("DEBUGGING: {:#?}, {:#?}, {:#?}", &tm_s, &tm_v, &ty_v);
                 let TyV_::Record(r) = &*ty_v else {
                     return elab.syn_error("can only project from record type");
                 };
@@ -705,6 +722,7 @@ impl<'a> Elaborator<'a> {
                 if !r.fields.has(f) {
                     return elab.syn_error(format!("no such field {f}"));
                 }
+                // dbg!(&tm_s);
                 (
                     TmS::proj(tm_s, f, label),
                     elab.evaluator().proj(&tm_v, f, label),
@@ -783,27 +801,82 @@ impl<'a> Elaborator<'a> {
             }
             App1(L(_, Var(tv)), L(_, Tuple(args_n))) => {
                 let tv = name_seg(*tv);
-                let Some(TopDecl::Def(d)) = elab.toplevel.lookup(tv) else {
-                    return elab.syn_error(format!("no such toplevel def {tv}"));
-                };
-                let mut arg_stxs = Vec::new();
-                let mut env = Env::nil();
-                if args_n.len() != d.args.len() {
-                    return elab.syn_error(format!(
-                        "wrong number of args for {tv}, expected {}, got {}",
-                        d.args.len(),
-                        args_n.len()
-                    ));
+                if let Some(TopDecl::Def(d)) = elab.toplevel.lookup(tv) {
+                    // ---- existing toplevel-def path, unchanged ----
+                    let mut arg_stxs = Vec::new();
+                    let mut env = Env::nil();
+                    if args_n.len() != d.args.len() {
+                        return elab.syn_error(format!(
+                            "wrong number of args for {tv}, expected {}, got {}",
+                            d.args.len(),
+                            args_n.len()
+                        ));
+                    }
+                    for (arg_n, (_, (_, arg_ty_s))) in args_n.iter().zip(d.args.iter()) {
+                        let arg_ty_v = elab.evaluator().with_env(env.clone()).eval_ty(arg_ty_s);
+                        let (arg_s, arg_v) = elab.chk(&arg_ty_v, arg_n);
+                        arg_stxs.push(arg_s);
+                        env = env.snoc(arg_v);
+                    }
+                    let eval = elab.evaluator().with_env(env.clone());
+                    (TmS::topapp(tv, arg_stxs), eval.eval_tm(&d.body), eval.eval_ty(&d.ret_ty))
+                } else if let Some((_, codomain_ty)) = elab.ctx.lookup_diagram()
+                    && let TyV_::Record(cod_r) = &*codomain_ty
+                    && let Some((_, (_, mor_ty_s))) = cod_r.fields.iter().find(|(n, _)| **n == tv)
+                    && let TyS_::Morphism(_mt, dom_s, cod_s) = &**mor_ty_s
+                    && let Some(dom_paths) = term_to_paths(dom_s)
+                    && let Some(cod_path) = tms_to_path(cod_s)
+                {
+                    if args_n.len() != dom_paths.len() {
+                        return elab.syn_error(format!(
+                            "{tv}: expected {} args, got {}",
+                            dom_paths.len(),
+                            args_n.len()
+                        ));
+                    }
+                    let mut arg_stxs = Vec::new();
+                    let mut arg_vals = Vec::new();
+                    for (arg_n, expected_path) in args_n.iter().zip(dom_paths.iter()) {
+                        let (arg_s, arg_v) = elab.chk(&TyV::over(expected_path.clone()), arg_n);
+                        arg_stxs.push(arg_s);
+                        arg_vals.push(arg_v);
+                    }
+                    (
+                        TmS::ob_app(tv, TmS::list(arg_stxs)),
+                        TmV::app(tv, TmV::list(arg_vals)),
+                        TyV::over(cod_path),
+                    )
+                } else {
+                    elab.syn_error(format!("no such toplevel def {tv}"))
                 }
-                for (arg_n, (_, (_, arg_ty_s))) in args_n.iter().zip(d.args.iter()) {
-                    let arg_ty_v = elab.evaluator().with_env(env.clone()).eval_ty(arg_ty_s);
-                    let (arg_s, arg_v) = elab.chk(&arg_ty_v, arg_n);
-                    arg_stxs.push(arg_s);
-                    env = env.snoc(arg_v);
-                }
-                let eval = elab.evaluator().with_env(env.clone());
-                (TmS::topapp(tv, arg_stxs), eval.eval_tm(&d.body), eval.eval_ty(&d.ret_ty))
             }
+
+            // App1(L(_, Var(tv)), L(_, Tuple(args_n))) => {
+            //     let tv = name_seg(*tv);
+            //     println!("======= {:#?}", elab.ctx.lookup_diagram().unwrap().1);
+            //     // println!("====== NAME: {tv} {:#?}", elab.toplevel.declarations.keys());
+            //     let Some(TopDecl::Def(d)) = elab.toplevel.lookup(tv) else {
+            //         return elab.syn_error(format!("no such toplevel def {tv}"));
+            //     };
+            //     println!("TOPLEVEL: {:#?}", d);
+            //     let mut arg_stxs = Vec::new();
+            //     let mut env = Env::nil();
+            //     if args_n.len() != d.args.len() {
+            //         return elab.syn_error(format!(
+            //             "wrong number of args for {tv}, expected {}, got {}",
+            //             d.args.len(),
+            //             args_n.len()
+            //         ));
+            //     }
+            //     for (arg_n, (_, (_, arg_ty_s))) in args_n.iter().zip(d.args.iter()) {
+            //         let arg_ty_v = elab.evaluator().with_env(env.clone()).eval_ty(arg_ty_s);
+            //         let (arg_s, arg_v) = elab.chk(&arg_ty_v, arg_n);
+            //         arg_stxs.push(arg_s);
+            //         env = env.snoc(arg_v);
+            //     }
+            //     let eval = elab.evaluator().with_env(env.clone());
+            //     (TmS::topapp(tv, arg_stxs), eval.eval_tm(&d.body), eval.eval_ty(&d.ret_ty))
+            // }
             Tag("tt") => (TmS::tt(), TmV::tt(), TyV::unit()),
             Tuple(_) => elab.syn_error("must check against a type in order to construct a record"),
             Prim("hole") => elab.syn_error("explicit hole"),
@@ -942,7 +1015,7 @@ fn augment_with_lifts(body_s: &TyS, codomain: &TyV) -> TyS {
         for (mor_name, mt, dom_path, cod_path) in &cod_morphisms {
             match mt {
                 MorType::Modal(_) => {
-                    println!("MORTYPE: {}", &mt);
+                    // println!("MORTYPE: {}", &mt);
                     let Some(per_slot): Option<Vec<&Vec<(NameSegment, LabelSegment)>>> =
                         dom_path.iter().map(|slot| fields_by_path.get(slot)).collect()
                     else {
