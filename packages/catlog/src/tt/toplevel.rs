@@ -79,6 +79,8 @@ pub struct Diag {
     pub body_stx: TyS,
     /// Evaluated body — useful for downstream consumers that want the TyV directly.
     pub body_val: TyV,
+    /// Collection of @over declarations and their types.
+    pub over_decls: Vec<(Vec<NameSegment>, (LabelSegment, Vec<FieldName>))>,
 }
 impl TopDecl {
     /// Unwraps the type for a toplevel-declaration of a type, or panics.
