@@ -151,13 +151,7 @@ impl TopElaborator {
                     NameSegment::Uuid(_) => label_seg("diag"),
                 };
                 elab.intro_diagram(name, diag_label, ret_ty_v.clone());
-                let (val_s, _val_v) = elab.ty(valn);
-                // Augment the body with synthetic lift-target fields forced
-                // by the discrete-opfibration condition: for each declared
-                // `e : @over .X` and codomain morphism `f : X → Y`, add a
-                // synthetic field `f(e) : @over .Y`.
-                let val_s = augment_with_lifts(&val_s, &ret_ty_v);
-                let val_v = elab.evaluator().eval_ty(&val_s);
+                let (val_s, val_v) = elab.ty(valn);
                 Some(TopElabResult::Declaration(
                     name,
                     TopDecl::Diag(Diag::new(theory.clone(), ret_ty_v, val_s, val_v)),
@@ -482,23 +476,6 @@ impl<'a> Elaborator<'a> {
                 p.push((name_seg(*f), label_seg(*f)));
                 Some(p)
             }
-            // `.f(x)` — applied path segment, resolved to a single synthetic
-            // field whose name is the canonical string `"f(x)"`. This makes
-            // the lift-target objects forced by the discrete-opfibration
-            // condition addressable by ordinary path-walking.
-            App1(head_n, L(_, Var(x))) => match head_n.ast0() {
-                Field(f) => {
-                    let s = ustr(&format!("{f}({x})"));
-                    Some(vec![(name_seg(s), label_seg(s))])
-                }
-                App1(p_n, L(_, Field(f))) => {
-                    let mut p = elab.path(p_n)?;
-                    let s = ustr(&format!("{f}({x})"));
-                    p.push((name_seg(s), label_seg(s)));
-                    Some(p)
-                }
-                _ => elab.error("unexpected notation for path"),
-            },
             _ => elab.error("unexpected notation for path"),
         }
     }
@@ -707,26 +684,72 @@ impl<'a> Elaborator<'a> {
                     elab.evaluator().field_ty(&ty_v, &tm_v, f),
                 )
             }
-            // `tm.f(x)` — applied projection, resolved to a projection by
-            // the single synthetic field whose name is the canonical string
-            // `"f(x)"`. Mirrors the same trick in [`Self::path`] so that the
-            // lift-target fields inserted by `augment_with_lifts` are
-            // projectable as ordinary terms (e.g. `we.src(e)`).
+            // `tm.f(x)` — applied projection. Inside a diagram, this is the
+            // surface syntax for applying a codomain morphism `f` to a field
+            // `x` of `tm` whose type is `@over <src_path>`. The discrete-
+            // opfibration condition forces a unique lift target in the fiber
+            // over `f`'s codomain, and `tm.f(x)` denotes that lift target.
+            //
+            // Elaborates to a [`TmS_::OverApp`] node carrying the codomain
+            // morphism name and its target path. No synthetic field is
+            // inserted into the diagram body.
             App1(L(_, App1(tm_n, L(_, Field(f)))), L(_, Var(x))) => {
                 let (tm_s, tm_v, ty_v) = elab.syn(tm_n);
                 let TyV_::Record(r) = &*ty_v else {
                     return elab.syn_error("can only project from record type");
                 };
-                let s = ustr(&format!("{f}({x})"));
-                let label = label_seg(s);
-                let f = name_seg(s);
-                if !r.fields.has(f) {
-                    return elab.syn_error(format!("no such field {f}"));
+                let x_label = label_seg(*x);
+                let x_name = name_seg(*x);
+                if !r.fields.has(x_name) {
+                    return elab.syn_error(format!("no such field {x_name}"));
+                }
+                let inner_ty = elab.evaluator().field_ty(&ty_v, &tm_v, x_name);
+                let TyV_::Over(src_path) = &*inner_ty else {
+                    let quoted = elab.evaluator().quote_ty(&inner_ty);
+                    return elab
+                        .syn_error(format!("field {x_name} has type {quoted}, expected an @over type"));
+                };
+                let inner_s = TmS::proj(tm_s, x_name, x_label);
+                let inner_v = elab.evaluator().proj(&tm_v, x_name, x_label);
+                let f_label = label_seg(*f);
+                let f_name = name_seg(*f);
+                // Look up `f` in the diagram's codomain as a morphism field
+                // whose source path equals `src_path`, and read off its
+                // target path.
+                let Some((_, model_ty)) = elab.ctx.lookup_diagram() else {
+                    return elab.syn_error(
+                        "applied codomain morphism is only allowed inside a diagram declaration",
+                    );
+                };
+                let TyV_::Record(cod_r) = &*model_ty else {
+                    return elab.syn_error("diagram codomain is not a record type");
+                };
+                let Some(mor_ty_s) = cod_r.fields.get(f_name) else {
+                    return elab.syn_error(format!("no such codomain morphism {f_name}"));
+                };
+                let TyS_::Morphism(_, dom_s, cod_s) = &**mor_ty_s else {
+                    return elab.syn_error(format!(
+                        "codomain field {f_name} is not a morphism"
+                    ));
+                };
+                let (Some(dom_path), Some(cod_path)) =
+                    (tms_to_path(dom_s), tms_to_path(cod_s))
+                else {
+                    return elab.syn_error(format!(
+                        "codomain morphism {f_name} has non-path dom/cod; \
+                         applied-projection syntax requires both to be paths"
+                    ));
+                };
+                if dom_path != *src_path {
+                    return elab.syn_error(format!(
+                        "codomain morphism {f_name} has source path differing from the \
+                         @over path of {x_name}"
+                    ));
                 }
                 (
-                    TmS::proj(tm_s, f, label),
-                    elab.evaluator().proj(&tm_v, f, label),
-                    elab.evaluator().field_ty(&ty_v, &tm_v, f),
+                    TmS::over_app(f_name, f_label, cod_path.clone(), inner_s),
+                    TmV::over_app(f_name, f_label, cod_path.clone(), inner_v),
+                    TyV::over(cod_path),
                 )
             }
             App1(L(_, Prim("id")), ob_n) => {
@@ -906,87 +929,6 @@ impl<'a> Elaborator<'a> {
             }
         }
     }
-}
-
-/// Augment a diagram's body with synthetic lift-target fields.
-///
-/// For each declared `e : @over .X` field, and each codomain morphism
-/// `f : X → Y`, add a synthetic field named `"f(e)" : @over .Y`. Iterates
-/// to a fixpoint, with a depth bound to guard against cyclic theories.
-///
-/// The synthetic fields exist only in the type-theoretic body so that
-/// path-walking and specialization (e.g., `we : I & [.src(e) := v1]`)
-/// can resolve `.src(e)` as an ordinary field. Modelgen filters them
-/// out by name when extracting the domain model.
-fn augment_with_lifts(body_s: &TyS, codomain: &TyV) -> TyS {
-    const MAX_DEPTH: usize = 16;
-    let TyS_::Record(initial) = &**body_s else {
-        return body_s.clone();
-    };
-    let TyV_::Record(cod_r) = &**codomain else {
-        return body_s.clone();
-    };
-
-    // Collect (mor_name, mt, dom_path, cod_path) for each codomain
-    // morphism field whose source/target reduce to a single chain of
-    // fields.
-    type LiftPath = Vec<(NameSegment, LabelSegment)>;
-    type CodMor = (NameSegment, MorType, LiftPath, LiftPath);
-    let mut cod_morphisms: Vec<CodMor> = Vec::new();
-    for (mor_name, (_, mor_ty_s)) in cod_r.fields.iter() {
-        if let TyS_::Morphism(mt, dom_s, cod_s) = &**mor_ty_s
-            && let (Some(dom_path), Some(cod_path)) = (tms_to_path(dom_s), tms_to_path(cod_s))
-        {
-            cod_morphisms.push((*mor_name, mt.clone(), dom_path, cod_path));
-        }
-    }
-
-    let mut row = initial.clone();
-    for _ in 0..MAX_DEPTH {
-        let snapshot = row.clone();
-        let mut added = false;
-        for (field_name, (field_label, field_ty)) in snapshot.iter() {
-            let TyS_::Over(path) = &**field_ty else {
-                continue;
-            };
-            for (mor_name, mt, dom_path, cod_path) in &cod_morphisms {
-                if dom_path != path {
-                    continue;
-                }
-                // Synthetic object field `f(e) : @over .Y`, the unique
-                // lift target forced by the discrete-opfibration condition.
-                let synth = ustr(&format!("{mor_name}({field_name})"));
-                let synth_seg = name_seg(synth);
-                let synth_label = label_seg(synth);
-                if !row.has(synth_seg) {
-                    row.insert(synth_seg, synth_label, TyS::over(cod_path.clone()));
-                    added = true;
-                }
-                // Synthetic morphism field `~f(e) : Morphism(mt, e, f(e))`,
-                // the lift morphism itself. The `~` prefix evokes the
-                // overline notation for lifts and disambiguates per source
-                // object so multiple declared `@over .X` fields can each
-                // get their own lift; modelgen strips the wrapper to
-                // recover the codomain morphism's name.
-                let lift_name = ustr(&format!("~{mor_name}({field_name})"));
-                let lift_seg = name_seg(lift_name);
-                let lift_label = label_seg(lift_name);
-                if !row.has(lift_seg) {
-                    let self_var = TmS::var(BwdIdx::from(0), name_seg("self"), label_seg("self"));
-                    let dom_term = TmS::proj(self_var.clone(), *field_name, *field_label);
-                    let cod_term = TmS::proj(self_var, synth_seg, synth_label);
-                    row.insert(lift_seg, lift_label, TyS::morphism(mt.clone(), dom_term, cod_term));
-                    added = true;
-                }
-            }
-        }
-        if !added {
-            return TyS::record(row);
-        }
-    }
-    // Hit the depth bound — return what we have. Cyclic theories will
-    // produce an under-augmented body; this is a known limitation.
-    TyS::record(row)
 }
 
 /// Read off a path of `(name, label)` segments from a term that is a chain
