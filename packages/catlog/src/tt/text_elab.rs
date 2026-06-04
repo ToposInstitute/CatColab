@@ -579,7 +579,15 @@ impl<'a> Elaborator<'a> {
                     elab.loc = Some(field_n.loc());
                     let Some((name, label, ty_n)) = (match field_n.ast0() {
                         App2(L(_, Keyword(":")), L(_, Var(name)), ty_n) => {
-                            Some((name_seg(*name), label_seg(*name), ty_n))
+                            // `_` is a fresh anonymous binder — give it a
+                            // UUID name so distinct `_` fields don't collide
+                            // in the record row.
+                            let name_seg = if *name == "_" {
+                                NameSegment::Uuid(uuid::Uuid::new_v4())
+                            } else {
+                                name_seg(*name)
+                            };
+                            Some((name_seg, label_seg(*name), ty_n))
                         }
                         _ => elab.error("expected fields in the form <name> : <type>"),
                     }) else {
@@ -633,10 +641,11 @@ impl<'a> Elaborator<'a> {
             App2(L(_, Keyword("==")), tm1_n, tm2_n) => {
                 let (tm1_s, tm1_v, tm1_ty) = elab.syn(tm1_n);
                 let (tm2_s, tm2_v, tm2_ty) = elab.syn(tm2_n);
-                let TyV_::Morphism(_, _, _) = &*tm1_ty else {
+                if !matches!(&*tm1_ty, TyV_::Morphism(_, _, _) | TyV_::Over(_)) {
                     elab.loc = Some(tm1_n.loc());
-                    return elab.ty_error("Equality types are only supported for morphisms");
-                };
+                    return elab
+                        .ty_error("Equality types are only supported for morphisms and @over");
+                }
                 if let Err(e) = elab.evaluator().convertible_ty(&tm1_ty, &tm2_ty) {
                     let eval = elab.evaluator();
                     return elab.ty_error(format!(
@@ -689,6 +698,28 @@ impl<'a> Elaborator<'a> {
                 };
                 let label = label_seg(*f);
                 let f = name_seg(*f);
+                if !r.fields.has(f) {
+                    return elab.syn_error(format!("no such field {f}"));
+                }
+                (
+                    TmS::proj(tm_s, f, label),
+                    elab.evaluator().proj(&tm_v, f, label),
+                    elab.evaluator().field_ty(&ty_v, &tm_v, f),
+                )
+            }
+            // `tm.f(x)` — applied projection, resolved to a projection by
+            // the single synthetic field whose name is the canonical string
+            // `"f(x)"`. Mirrors the same trick in [`Self::path`] so that the
+            // lift-target fields inserted by `augment_with_lifts` are
+            // projectable as ordinary terms (e.g. `we.src(e)`).
+            App1(L(_, App1(tm_n, L(_, Field(f)))), L(_, Var(x))) => {
+                let (tm_s, tm_v, ty_v) = elab.syn(tm_n);
+                let TyV_::Record(r) = &*ty_v else {
+                    return elab.syn_error("can only project from record type");
+                };
+                let s = ustr(&format!("{f}({x})"));
+                let label = label_seg(s);
+                let f = name_seg(s);
                 if !r.fields.has(f) {
                     return elab.syn_error(format!("no such field {f}"));
                 }
