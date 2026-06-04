@@ -135,14 +135,12 @@ impl TopElaborator {
                 let theory = self.get_theory(tn.loc)?;
                 let mut elab = self.elaborator(&theory, toplevel);
                 let (name, args_n, annotn, valn) = self.annotated_def(tn.body).or_else(|| {
-                    // dbg!(&tn.body);
                     self.error(
                         tn.loc,
                         "unknown syntax for diagram declaration, expected <name> : <type> := <term>",
                     )
                 })?;
                 if args_n.is_some() {
-                    // dbg!(&tn.loc);
                     return self.error(tn.loc, "diagrams cannot have arguments");
                 }
                 let (_, ret_ty_v) = elab.ty(annotn);
@@ -150,25 +148,46 @@ impl TopElaborator {
                 // so that `@over .E` inside the body can recover both the
                 // diagram's name and its codomain type, while ordinary
                 // term lookups cannot see it.
-                // dbg!(&name);
                 let diag_label = match name {
                     NameSegment::Text(s) => label_seg(s),
                     NameSegment::Uuid(_) => label_seg("diag"),
                 };
                 elab.intro_diagram(name, diag_label, ret_ty_v.clone());
-                // println!("VALN: {}", &valn);
+
+                let mut sub_diag_fields = Vec::new();
+                if let Tuple(field_ns) = valn.ast0() {
+                    for field_n in field_ns.iter() {
+                        if let App2(L(_, Keyword(":")), L(_, Var(fname)), L(_, Var(tname))) =
+                            field_n.ast0()
+                        {
+                            let tname = name_seg(*tname);
+                            if let Some(TopDecl::Diag(_)) = elab.toplevel.lookup(tname) {
+                                sub_diag_fields.push((name_seg(*fname), tname));
+                            }
+                        }
+                    }
+                }
+
                 let (val_s, _val_v) = elab.ty(valn);
                 // Augment the body with synthetic lift-target fields forced
                 // by the discrete-opfibration condition: for each declared
                 // `e : @over .X` and codomain morphism `f : X → Y`, add a
                 // synthetic field `f(e) : @over .Y`.
-                // println!("VALS: {}", &val_s);
-                let val_s = augment_with_lifts(&val_s, &ret_ty_v);
-                // println!("AUGMENTED: {}", &val_s);
+                let (val_s, mut over_decls) = augment_with_lifts(&val_s, &ret_ty_v);
+
+                for (field_name, diag_name) in &sub_diag_fields {
+                    if let Some(TopDecl::Diag(sub)) = elab.toplevel.lookup(*diag_name) {
+                        for (sub_path, info) in &sub.over_decls {
+                            let mut full = vec![*field_name];
+                            full.extend(sub_path.iter().copied());
+                            over_decls.push((full, info.clone()));
+                        }
+                    }
+                }
                 let val_v = elab.evaluator().eval_ty(&val_s);
                 Some(TopElabResult::Declaration(
                     name,
-                    TopDecl::Diag(Diag::new(theory.clone(), ret_ty_v, val_s, val_v)),
+                    TopDecl::Diag(Diag::new(theory.clone(), ret_ty_v, val_s, val_v, over_decls)),
                 ))
             }
             "def" => {
@@ -973,13 +992,16 @@ impl<'a> Elaborator<'a> {
 /// path-walking and specialization (e.g., `we : I & [.src(e) := v1]`)
 /// can resolve `.src(e)` as an ordinary field. Modelgen filters them
 /// out by name when extracting the domain model.
-fn augment_with_lifts(body_s: &TyS, codomain: &TyV) -> TyS {
+fn augment_with_lifts(
+    body_s: &TyS,
+    codomain: &TyV,
+) -> (TyS, Vec<(Vec<NameSegment>, (LabelSegment, Vec<NameSegment>))>) {
     const MAX_DEPTH: usize = 16;
     let TyS_::Record(initial) = &**body_s else {
-        return body_s.clone();
+        return (body_s.clone(), vec![]);
     };
     let TyV_::Record(cod_r) = &**codomain else {
-        return body_s.clone();
+        return (body_s.clone(), vec![]);
     };
 
     // Collect (mor_name, mt, dom_path, cod_path) for each codomain
@@ -998,6 +1020,17 @@ fn augment_with_lifts(body_s: &TyS, codomain: &TyV) -> TyS {
         }
     }
 
+    let over_declarations = initial
+        .iter()
+        .filter_map(|(fname, (flabel, fty))| match &**fty {
+            TyS_::Over(path) => {
+                let names: Vec<_> = path.iter().map(|(n, _)| *n).collect();
+                Some((vec![fname.clone()], (flabel.clone(), names)))
+            }
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+
     let mut row = initial.clone();
     for _ in 0..1 {
         let snapshot = row.clone();
@@ -1015,7 +1048,6 @@ fn augment_with_lifts(body_s: &TyS, codomain: &TyV) -> TyS {
         for (mor_name, mt, dom_path, cod_path) in &cod_morphisms {
             match mt {
                 MorType::Modal(_) => {
-                    // println!("MORTYPE: {}", &mt);
                     let Some(per_slot): Option<Vec<&Vec<(NameSegment, LabelSegment)>>> =
                         dom_path.iter().map(|slot| fields_by_path.get(slot)).collect()
                     else {
@@ -1096,12 +1128,12 @@ fn augment_with_lifts(body_s: &TyS, codomain: &TyV) -> TyS {
             }
         }
         if !added {
-            return TyS::record(row);
+            return (TyS::record(row), vec![]);
         }
     }
     // Hit the depth bound — return what we have. Cyclic theories will
     // produce an under-augmented body; this is a known limitation.
-    TyS::record(row)
+    (TyS::record(row), over_declarations)
 }
 
 /// Flatten a morphism domain/codomain term into the object paths it
