@@ -240,6 +240,30 @@ pub enum TmS_ {
     ObApp(VarName, TmS),
     /// List of objects.
     List(Vec<TmS>),
+    /// Application of a codomain morphism to an [`@over`-typed](TyS_::Over)
+    /// term. Only well-formed inside a diagram declaration.
+    ///
+    /// Arguments, in order:
+    /// 1. `mor` — name of the codomain morphism being applied
+    ///    (e.g. `src` in `we.src(e)`).
+    /// 2. `mor_label` — display label for that name.
+    /// 3. `tgt_path` — the codomain object-path that `mor` lands at.
+    ///    Stored on the node so [`Evaluator::eval_tm`] can recover the
+    ///    result type `@over <tgt_path>` without consulting the codomain.
+    /// 4. `inner` — the `@over`-typed argument (e.g. the elaboration of
+    ///    `we.e`, whose type is `@over <src_path>` where the codomain
+    ///    morphism `mor : <src_path> → <tgt_path>`).
+    ///
+    /// Example: in
+    /// ```text
+    /// diagram I : @Instance(WeightedGraph) := [
+    ///     we : Edge,           // Edge := [e : @over .E]
+    ///     _ : (we.src(e) == v1),
+    /// ]
+    /// ```
+    /// the LHS `we.src(e)` elaborates to
+    /// `OverApp(src, src, [(V, V)], Proj(Var(we), e, e))` of type `@over .V`.
+    OverApp(FieldName, LabelSegment, Vec<(FieldName, LabelSegment)>, TmS),
     /// A metavar.
     ///
     /// This only appears when we have an error in elaboration.
@@ -310,6 +334,16 @@ impl TmS {
         Self(Rc::new(TmS_::List(elems)))
     }
 
+    /// Smart constructor for [TmS], [TmS_::OverApp] case.
+    pub fn over_app(
+        mor: FieldName,
+        mor_label: LabelSegment,
+        tgt_path: Vec<(FieldName, LabelSegment)>,
+        inner: TmS,
+    ) -> Self {
+        Self(Rc::new(TmS_::OverApp(mor, mor_label, tgt_path, inner)))
+    }
+
     /// Smart constructor for [TmS], [TmS_::Meta] case.
     pub fn meta(mv: MetaVar) -> Self {
         Self(Rc::new(TmS_::Meta(mv)))
@@ -333,6 +367,9 @@ impl ToDoc for TmS {
             TmS_::Compose(f, g) => binop(t("·"), f.to_doc(), g.to_doc()),
             TmS_::ObApp(name, x) => unop(t(format!("@{name}")), x.to_doc()),
             TmS_::List(elems) => tuple(elems.iter().map(|elem| elem.to_doc())),
+            TmS_::OverApp(_, mor_label, _, inner) => {
+                inner.to_doc() + t(format!(".{mor_label}"))
+            }
             TmS_::Tt => t("tt"),
             TmS_::Meta(mv) => t(format!("?{}", mv.id)),
         }

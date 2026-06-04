@@ -1,7 +1,5 @@
 //! Generate catlog models from DoubleTT types.
 
-use std::collections::HashMap;
-
 use all_the_same::all_the_same;
 use derive_more::{From, TryInto};
 use tattle::display::SourceInfo;
@@ -14,7 +12,7 @@ use crate::dbl::{
     theory::{DblTheory, DblTheoryKind, NonUnital, Unital},
 };
 use crate::one::{
-    Category, QualifiedPath,
+    Category,
     path::{Path, PathEq},
 };
 use crate::zero::{Namespace, QualifiedName};
@@ -424,7 +422,6 @@ pub fn diagram_from_diag(
         codomain_ty: diag.model.clone(),
         domain: discrete::DiscreteDblModel::new(theory.clone()),
         mapping: discrete::DiscreteDblModelMapping::default(),
-        ob_aliases: HashMap::new(),
     };
     let namespace = generator.generate(&diag.body_val)?;
     let DiagramGenerator { domain, mapping, .. } = generator;
@@ -436,16 +433,6 @@ struct DiagramGenerator<'a> {
     codomain_ty: TyV,
     domain: discrete::DiscreteDblModel,
     mapping: discrete::DiscreteDblModelMapping,
-    /// Names of domain object generators that should be elided in favor
-    /// of a canonical alias. Populated by [`Self::collect_ob_aliases`]
-    /// before [`Self::extract`] runs; the [`TyV_::Over`] arm skips aliased
-    /// names, and the [`TyV_::Morphism`] arm rewrites dom/cod names through
-    /// the map. This is the interim mechanism by which `Id`-equalities
-    /// whose carrier is an `@over` type fold their two sides into a
-    /// single domain generator: `DiscreteDblModel`'s only equation
-    /// facility is for morphism paths, so object equations are realized
-    /// here by name substitution instead.
-    ob_aliases: HashMap<QualifiedName, QualifiedName>,
 }
 
 impl DiagramGenerator<'_> {
@@ -453,67 +440,9 @@ impl DiagramGenerator<'_> {
         let (self_n, eval_with_self) = self.eval.bind_self(body_ty.clone());
         self.eval = eval_with_self;
         let self_val = self.eval.eta_neu(&self_n, body_ty);
-        self.collect_ob_aliases(&self_val, body_ty);
-        self.normalize_ob_aliases();
         Ok(self
             .extract(vec![], &self_val, body_ty)?
             .unwrap_or_else(Namespace::new_for_uuid))
-    }
-
-    /// Walks the body and records every `Id`-equality whose carrier is
-    /// `@over` as a name substitution from the longer qualified name
-    /// (ties broken lex) to the shorter. The elaborator's well-typedness
-    /// check on the `Id` already ensures the two sides have the same
-    /// underlying object type, so the resulting domain stays well-typed.
-    fn collect_ob_aliases(&mut self, val: &TmV, ty: &TyV) {
-        match &**ty {
-            TyV_::Record(r) => {
-                for (name, (label, _)) in r.fields.iter() {
-                    let field_tm = self.eval.proj(val, *name, *label);
-                    let field_ty = self.eval.field_ty(ty, val, *name);
-                    self.collect_ob_aliases(&field_tm, &field_ty);
-                }
-            }
-            TyV_::Id(carrier, lhs, rhs) if matches!(&**carrier, TyV_::Over(_)) => {
-                if let (TmV_::Neu(ln, _), TmV_::Neu(rn, _)) = (&**lhs, &**rhs) {
-                    let ln = ln.to_qualified_name();
-                    let rn = rn.to_qualified_name();
-                    if ln == rn {
-                        return;
-                    }
-                    let (from, to) = if (ln.as_slice().len(), &ln) > (rn.as_slice().len(), &rn) {
-                        (ln, rn)
-                    } else {
-                        (rn, ln)
-                    };
-                    self.ob_aliases.insert(from, to);
-                }
-            }
-            _ => {}
-        }
-    }
-
-    /// Collapses multi-hop chains in `ob_aliases` so each key maps directly
-    /// to its terminal canonical name. Bails on cycles (which can only
-    /// arise from contradictory user constraints).
-    fn normalize_ob_aliases(&mut self) {
-        let keys: Vec<QualifiedName> = self.ob_aliases.keys().cloned().collect();
-        for key in keys {
-            let mut cur = self.ob_aliases[&key].clone();
-            let mut seen = std::collections::HashSet::new();
-            seen.insert(key.clone());
-            while let Some(next) = self.ob_aliases.get(&cur).cloned() {
-                if !seen.insert(cur.clone()) {
-                    break;
-                }
-                cur = next;
-            }
-            self.ob_aliases.insert(key, cur);
-        }
-    }
-
-    fn canonical_ob_name(&self, name: QualifiedName) -> QualifiedName {
-        self.ob_aliases.get(&name).cloned().unwrap_or(name)
     }
 
     fn extract(
@@ -554,77 +483,20 @@ impl DiagramGenerator<'_> {
                     "@over codomain object type is not valid for a discrete theory".to_string()
                 })?;
                 let qname: QualifiedName = prefix.into();
-                // Folded into a canonical alias by an `Id`-over-`@over`
-                // equation elsewhere in the body — skip both the domain
-                // generator and the mapping entry. The canonical name's
-                // own `@over` declaration handles them.
-                if self.ob_aliases.contains_key(&qname) {
-                    return Ok(None);
-                }
                 self.domain.add_ob(qname.clone(), ot);
                 let target: QualifiedName =
                     path.iter().map(|(seg, _)| *seg).collect::<Vec<_>>().into();
                 self.mapping.assign_ob(qname, target);
                 Ok(None)
             }
-            TyV_::Morphism(mt, dom, cod) => {
-                // Augmentation produces lift morphisms whose dom and cod
-                // are projections from the body's self, resolving to the
-                // qualified names of generators (declared or specialized).
-                let dom_name =
-                    self.canonical_ob_name(neutral_qualified_name(dom).ok_or_else(|| {
-                        "morphism domain does not resolve to a generator name".to_string()
-                    })?);
-                let cod_name =
-                    self.canonical_ob_name(neutral_qualified_name(cod).ok_or_else(|| {
-                        "morphism codomain does not resolve to a generator name".to_string()
-                    })?);
-                let mt_inner: QualifiedPath = mt
-                    .clone()
-                    .try_into()
-                    .map_err(|_| "morphism type is not valid for a discrete theory".to_string())?;
-                let qname: QualifiedName = prefix.clone().into();
-                self.domain.add_mor(qname.clone(), dom_name, cod_name, mt_inner);
-                // Mapping target: extract the codomain morphism's name
-                // from the synthetic lift name `~f(e)`. For other shapes
-                // (e.g., a future user-declared morphism in a body), fall
-                // back to the field name itself.
-                if let Some(last) = prefix.last()
-                    && let Some(cod_mor) = parse_lift_morphism_name(last)
-                {
-                    let target = Path::single(QualifiedName::single(cod_mor));
-                    self.mapping.assign_mor(qname, target);
-                }
-                Ok(None)
-            }
-            TyV_::Object(_) | TyV_::Sing(_, _) | TyV_::Id(_, _, _) | TyV_::Unit | TyV_::Meta(_) => {
-                Ok(None)
-            }
+            TyV_::Object(_)
+            | TyV_::Morphism(_, _, _)
+            | TyV_::Sing(_, _)
+            | TyV_::Id(_, _, _)
+            | TyV_::Unit
+            | TyV_::Meta(_) => Ok(None),
         }
     }
-}
-
-/// Read off a [`QualifiedName`] from a value that's a neutral chain of
-/// projections from a self-variable (regardless of which level the self
-/// is bound at). Returns `None` if the value isn't of that shape.
-fn neutral_qualified_name(tm: &TmV) -> Option<QualifiedName> {
-    let TmV_::Neu(n, _) = &**tm else {
-        return None;
-    };
-    Some(n.to_qualified_name())
-}
-
-/// Parse a synthetic lift-morphism field name of the form `~f(e)` and
-/// return the codomain morphism's name `f`. Returns `None` if the name
-/// isn't of that shape.
-fn parse_lift_morphism_name(name: &NameSegment) -> Option<NameSegment> {
-    let NameSegment::Text(s) = name else {
-        return None;
-    };
-    let s = s.as_str();
-    let rest = s.strip_prefix('~')?;
-    let paren = rest.find('(')?;
-    Some(name_seg(ustr(&rest[..paren])))
 }
 
 #[cfg(test)]

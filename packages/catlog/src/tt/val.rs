@@ -236,6 +236,10 @@ pub enum TmV_ {
     Neu(TmN, TyV),
     /// Application of an object operation in the theory.
     App(VarName, TmV),
+    /// Application of a codomain morphism to an [`@over`-typed](TyV_::Over)
+    /// term. See [`TmS_::OverApp`] for the syntactic counterpart and
+    /// argument-by-argument documentation.
+    OverApp(FieldName, LabelSegment, Vec<(FieldName, LabelSegment)>, TmV),
     /// Lists of objects.
     List(Vec<TmV>),
     /// Records.
@@ -266,6 +270,16 @@ impl TmV {
     /// Smart constructor for [TmV], [TmV_::App] case.
     pub fn app(name: VarName, x: TmV) -> Self {
         TmV(Rc::new(TmV_::App(name, x)))
+    }
+
+    /// Smart constructor for [TmV], [TmV_::OverApp] case.
+    pub fn over_app(
+        mor: FieldName,
+        mor_label: LabelSegment,
+        tgt_path: Vec<(FieldName, LabelSegment)>,
+        inner: TmV,
+    ) -> Self {
+        TmV(Rc::new(TmV_::OverApp(mor, mor_label, tgt_path, inner)))
     }
 
     /// Smart constructor for [TmV], [TmV_::List] case.

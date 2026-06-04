@@ -97,6 +97,9 @@ impl<'a> Evaluator<'a> {
             TmS_::Compose(f, g) => TmV::compose(self.eval_tm(f), self.eval_tm(g)),
             TmS_::ObApp(name, x) => TmV::app(*name, self.eval_tm(x)),
             TmS_::List(elems) => TmV::list(elems.iter().map(|tm| self.eval_tm(tm)).collect()),
+            TmS_::OverApp(mor, mor_label, tgt_path, inner) => {
+                TmV::over_app(*mor, *mor_label, tgt_path.clone(), self.eval_tm(inner))
+            }
             TmS_::Meta(mv) => TmV::meta(*mv),
         }
     }
@@ -218,6 +221,9 @@ impl<'a> Evaluator<'a> {
         match &**tm {
             TmV_::Neu(n, _) => self.quote_neu(n),
             TmV_::App(name, x) => TmS::ob_app(*name, self.quote_tm(x)),
+            TmV_::OverApp(mor, mor_label, tgt_path, inner) => {
+                TmS::over_app(*mor, *mor_label, tgt_path.clone(), self.quote_tm(inner))
+            }
             TmV_::List(elems) => TmS::list(elems.iter().map(|tm| self.quote_tm(tm)).collect()),
             TmV_::Cons(fields) => TmS::cons(fields.map(|tm| self.quote_tm(tm))),
             TmV_::Tt => TmS::tt(),
@@ -344,6 +350,9 @@ impl<'a> Evaluator<'a> {
         match &**v {
             TmV_::Neu(tm_n, ty_v) => self.eta_neu(tm_n, ty_v),
             TmV_::App(name, x) => TmV::app(*name, self.eta(x, None)),
+            TmV_::OverApp(mor, mor_label, tgt_path, inner) => {
+                TmV::over_app(*mor, *mor_label, tgt_path.clone(), self.eta(inner, None))
+            }
             TmV_::List(elems) => TmV::list(elems.iter().map(|elem| self.eta(elem, None)).collect()),
             TmV_::Cons(row) => {
                 if let Some(ty) = ty {
@@ -429,6 +438,14 @@ impl<'a> Evaluator<'a> {
             }
             (TmV_::Tab(mor1), TmV_::Tab(mor2)) => {
                 self.equal_tm_helper(mor1, mor2, strict1, strict2)
+            }
+            (TmV_::OverApp(mor1, _, _, inner1), TmV_::OverApp(mor2, _, _, inner2)) => {
+                if mor1 != mor2 {
+                    return Err(t(format!(
+                        "OverApp morphisms {mor1} and {mor2} are not equal"
+                    )));
+                }
+                self.equal_tm_helper(inner1, inner2, strict1, strict2)
             }
             _ => Err(t(format!(
                 "failed to match terms {} and {}",
