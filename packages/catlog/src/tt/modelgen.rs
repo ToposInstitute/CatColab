@@ -725,16 +725,14 @@ fn parse_lift_morphism_name(name: &NameSegment) -> Option<NameSegment> {
 
 #[cfg(test)]
 mod tests {
-    use regex::Regex;
     use std::fs::read_to_string;
     use std::path::PathBuf;
-    use std::sync::LazyLock;
 
     use super::*;
     use crate::dbl::model::FpDblModel;
-    use crate::tt::stx::TmS_;
     use crate::tt::text_elab::{TT_PARSE_CONFIG, TopElabResult, TopElaborator};
     use crate::tt::theory::std_theories;
+    use crate::tt::toplevel::Toplevel;
     use crate::zero::{Mapping, name};
 
     fn elaborate_to_toplevel(src: &str) -> Toplevel {
@@ -854,125 +852,6 @@ diagram I : @Instance(DEC) := [
         }
     }
 
-    struct JuliaTranspiler {}
-
-    impl JuliaTranspiler {
-        fn transpile(src: &str, decl_name: &str) -> String {
-            let toplevel = elaborate_to_toplevel(&src);
-            let diag = match toplevel.declarations.get(&name_seg(decl_name)) {
-                Some(TopDecl::Diag(d)) => d.clone(),
-                _ => panic!("expected {decl_name} to be a diagram declaration"),
-            };
-
-            let Ok((_, _, equations)) =
-                diagram_from_diag(&toplevel, &diag.theory.definition, &diag)
-            else {
-                panic!("Error with destructuring diagram")
-            };
-
-            let mut out: String = Default::default();
-
-            let mut tms: HashMap<String, String> = Default::default();
-            // unhappy
-            let re = regex::Regex::new(r"(.+)_(\w+)([0-9]+)$").unwrap();
-            for ob in diag.over_decls {
-                let tm = ob.0.into_iter().map(|n| n.to_string()).collect::<Vec<_>>().join("_");
-                let ty = ob.1.1.into_iter().map(|n| n.to_string()).collect::<Vec<_>>().join("_");
-                // remove anonymous variables
-                if !re.is_match(&tm) {
-                    tms.insert(tm, ty);
-                    // out.push_str(&format!("\t{tm}::{typ}"));
-                    // out.push_str("\n");
-                }
-            }
-
-            static ADD: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"add_(.+)$").unwrap());
-            static SUBTRACT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"sub_(.+)$").unwrap());
-            static MULT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"mult_(.+)$").unwrap());
-            static PARTIAL: LazyLock<Regex> =
-                LazyLock::new(|| Regex::new(r"partial_(.+)$").unwrap());
-            static LAPL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"lapl_(.+)$").unwrap());
-
-            fn to_plain(tm: &TmS) -> String {
-                match &**tm {
-                    TmS_::Var(_, name, _) => {
-                        let s = name.to_string();
-                        if s == "self" { String::new() } else { s }
-                    }
-                    TmS_::Proj(inner, name, _) => {
-                        let prefix = to_plain(inner);
-                        let n = name.to_string();
-                        if prefix.is_empty() {
-                            n
-                        } else {
-                            format!("{prefix}_{n}")
-                        }
-                    }
-                    TmS_::ObApp(op, args) => {
-                        let op = &format!("{op}");
-                        let op = match op {
-                            _ if ADD.is_match(op) => "+",
-                            _ if SUBTRACT.is_match(op) => "-",
-                            _ if MULT.is_match(op) => "*",
-                            _ if PARTIAL.is_match(op) => &format!("{}{}", '\u{2202}', '\u{209C}'),
-                            _ if LAPL.is_match(op) => &format!("{}", '\u{0394}'),
-                            _ => op,
-                        };
-                        format!("{op}({})", splat_plain(args))
-                    }
-                    _ => format!("{}", tm),
-                }
-            }
-
-            fn splat_plain(tm: &TmS) -> String {
-                match &**tm {
-                    TmS_::List(args) => {
-                        args.iter().map(|a| to_plain(a)).collect::<Vec<_>>().join(", ")
-                    }
-                    _ => to_plain(tm),
-                }
-            }
-
-            let mut eqs: HashMap<String, String> = HashMap::new();
-            let mut substitute: HashMap<String, String> = HashMap::new();
-            for (lhs, rhs) in &equations {
-                let lhs = to_plain(lhs);
-                let rhs = to_plain(rhs);
-                if tms.get(&lhs).is_some() && tms.get(&rhs).is_some() {
-                    substitute.insert(lhs.clone(), rhs.clone());
-                } else {
-                }
-                eqs.insert(lhs, rhs);
-            }
-
-            // if there would exists an equality between two declared ojects, e.g.,
-            // ```
-            // a::Form0
-            // b::Form0
-            // a == b
-            // ```
-            // then instead treat the LHS object as an anonymous variable, e.g.,
-            // ```
-            // b::Form0
-            // a == b
-            // ```
-            for (tm, ty) in tms.iter() {
-                // treat the LHS term as an anonymous variable
-                if substitute.get(&tm.clone()).is_none() {
-                    out.push_str(&format!("\t{}::{}\n", tm, ty))
-                }
-            }
-
-            for (lhs, rhs) in eqs.iter() {
-                out.push_str(&format!("\n\t{} == {}", lhs, rhs));
-            }
-
-            // interpolate the diagram into a template expected by the program in the target language, e.g.,
-            // insert `out` into a Decapode macro call.
-            format!("@decapode begin\n{out}\nend")
-        }
-    }
-
     #[test]
     fn glueing_modal_diagrams() {
         let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -988,8 +867,8 @@ diagram I : @Instance(DEC) := [
 
         let (model_diag, _, _) =
             diagram_from_diag(&toplevel, &diag.theory.definition, &diag).unwrap();
-        let out = JuliaTranspiler::transpile(&src, "Klausmeier");
-        println!("Klausmeier:\n{out}");
+        let out = JuliaTranspiler::transpile(&src, "Klausmeier", elaborate_to_toplevel);
+        println!("{out}");
 
         match model_diag {
             DblModelDiagramType::Discrete(_) => {
