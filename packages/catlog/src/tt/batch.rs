@@ -12,12 +12,15 @@ use tattle::display::SourceInfo;
 use tattle::{Reporter, declare_error};
 
 use super::{
-    modelgen::{Model, diagram_from_diag},
+    modelgen::{Model, diagram_from_diag, instance_from_diag},
     text_elab::*,
     theory::std_theories,
     toplevel::*,
 };
-use crate::dbl::discrete::{DiscreteDblModelDiagram, InvalidDiscreteDblModelDiagram};
+use crate::dbl::discrete::{
+    DiscreteDblModelDiagram, DiscreteDblModelInstance, DiscreteInstanceTerm,
+    InvalidDiscreteDblModelDiagram,
+};
 use crate::dbl::model::{FpDblModel, MutDblModel};
 use crate::dbl::model_diagram::DblModelDiagram;
 use crate::one::category::FgCategory;
@@ -112,6 +115,42 @@ impl BatchOutput {
     fn diagram_error(&self, msg: &str) {
         if let BatchOutput::Snapshot(out) = self {
             writeln!(out.borrow_mut(), "#/ diagram generation failed: {msg}").unwrap();
+        }
+    }
+
+    fn instance_summary(&self, instance: &DiscreteDblModelInstance) {
+        if let BatchOutput::Snapshot(out) = self {
+            let mut out = out.borrow_mut();
+            let gens: Vec<_> = instance.generators().collect();
+            let eqns: Vec<_> = instance.equations().collect();
+            if gens.is_empty() && eqns.is_empty() {
+                writeln!(out, "#/ instance has no generators or equations").unwrap();
+                return;
+            }
+            if !gens.is_empty() {
+                writeln!(out, "#/ instance generators:").unwrap();
+                for (name, fiber) in &gens {
+                    writeln!(out, "#/   {name} : {fiber}").unwrap();
+                }
+            }
+            if !eqns.is_empty() {
+                writeln!(out, "#/ instance equations:").unwrap();
+                for (lhs, rhs) in &eqns {
+                    writeln!(
+                        out,
+                        "#/   {} == {}",
+                        format_instance_term(lhs),
+                        format_instance_term(rhs)
+                    )
+                    .unwrap();
+                }
+            }
+        }
+    }
+
+    fn instance_error(&self, msg: &str) {
+        if let BatchOutput::Snapshot(out) = self {
+            writeln!(out.borrow_mut(), "#/ instance generation failed: {msg}").unwrap();
         }
     }
 
@@ -268,6 +307,10 @@ pub fn elaborate(src: &str, path: &str, output: &BatchOutput) -> io::Result<bool
                                     }
                                     Err(msg) => output.diagram_error(&msg),
                                 }
+                                match instance_from_diag(&toplevel, &diag.theory.definition, diag) {
+                                    Ok((instance, _)) => output.instance_summary(&instance),
+                                    Err(msg) => output.instance_error(&msg),
+                                }
                             }
                         }
                         TopElabResult::Output(s) => {
@@ -338,6 +381,15 @@ fn format_path(p: &Path<QualifiedName, QualifiedName>) -> String {
         Path::Seq(es) => {
             let parts: Vec<String> = es.iter().map(|e| format!("{e}")).collect();
             parts.join(".")
+        }
+    }
+}
+
+fn format_instance_term(tm: &DiscreteInstanceTerm) -> String {
+    match tm {
+        DiscreteInstanceTerm::Generator(name) => format!("{name}"),
+        DiscreteInstanceTerm::Apply(mor, arg) => {
+            format!("{}({})", format_path(mor), format_instance_term(arg))
         }
     }
 }
