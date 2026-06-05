@@ -18,6 +18,8 @@ diagram Edge : @Instance(WeightedGraph) := [
 #/ diagram domain:
 #/   e : Entity -> E
 #/ diagram validates against codomain
+#/ instance generators:
+#/   e : E
 
 diagram I : @Instance(WeightedGraph) := [
     v1 : @over .V,
@@ -40,6 +42,19 @@ diagram I : @Instance(WeightedGraph) := [
 #/   we.e : Entity -> E
 #/   wf.e : Entity -> E
 #/ diagram validates against codomain
+#/ instance generators:
+#/   v1 : V
+#/   v2 : V
+#/   w : Weight
+#/   we.e : E
+#/   wf.e : E
+#/ instance equations:
+#/   src(we.e) == v1
+#/   tgt(we.e) == v2
+#/   src(wf.e) == v2
+#/   tgt(wf.e) == v1
+#/   weight(we.e) == w
+#/   weight(wf.e) == w
 
 diagram I3 : @Instance(WeightedGraph) := [
     e1 : @over .E,
@@ -50,4 +65,7 @@ diagram I3 : @Instance(WeightedGraph) := [
 #/   e1 : Entity -> E
 #/   e2 : Entity -> E
 #/ diagram validates against codomain
+#/ instance generators:
+#/   e1 : E
+#/   e2 : E
 

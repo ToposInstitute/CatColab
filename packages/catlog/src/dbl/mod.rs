@@ -52,6 +52,7 @@ pub mod tree;
 
 pub mod model;
 pub mod model_diagram;
+pub mod model_instance;
 pub mod model_morphism;
 pub mod theory;
 
