@@ -76,9 +76,13 @@ type BadOpApp := [
 ]
 #/ declared: BadOpApp
 #/ expected errors:
-#/ error[elab]: synthesized type Object does not match expected type List.Symmetric Object:
-#/ object types Object and List.Symmetric Object are not equal
-#/ --> examples/tt/text/test_modal_theories.dbltt:44:29
+#/ error[elab]: unexpected notation for term
+#/ --> examples/tt/text/test_modal_theories.dbltt:44:21
 #/ 44|    f : (Hom Object)[@tensor X, X],
-#/ 44|                             ^
+#/ 44|                     ^^^^^^^^^
+#/ error[elab]: synthesized type ?1 does not match expected type Object:
+#/ tried to convert between types of different type constructors
+#/ --> examples/tt/text/test_modal_theories.dbltt:44:21
+#/ 44|    f : (Hom Object)[@tensor X, X],
+#/ 44|                     ^^^^^^^^^
 
