@@ -11,7 +11,6 @@ use crate::dbl::{
     discrete::{self, DiscreteDblModelInstance, DiscreteInstanceTerm},
     discrete_tabulator, modal,
     model::{DblModel, DblModelPrinter, MutDblModel},
-    model_diagram::DblModelDiagram,
     theory::{DblTheory, DblTheoryKind, NonUnital, Unital},
 };
 use crate::one::{
@@ -407,101 +406,6 @@ impl<'a> ModelGenerator<'a> {
     }
 }
 
-/// Generates a [`discrete::DiscreteDblModelDiagram`] from an elaborated [`Diag`].
-///
-/// Restricted to discrete double theories for the moment; other theory
-/// kinds will need their own diagram types in catlog before this can be
-/// promoted to an enum mirroring [`Model`].
-pub fn diagram_from_diag(
-    toplevel: &Toplevel,
-    th: &TheoryDef,
-    diag: &Diag,
-) -> Result<(discrete::DiscreteDblModelDiagram, Namespace), String> {
-    let TheoryDef::Discrete(theory) = th else {
-        return Err("diagram generation only supports discrete double theories".into());
-    };
-    let mut generator = DiagramGenerator {
-        eval: Evaluator::empty(toplevel),
-        codomain_ty: diag.model.clone(),
-        domain: discrete::DiscreteDblModel::new(theory.clone()),
-        mapping: discrete::DiscreteDblModelMapping::default(),
-    };
-    let namespace = generator.generate(&diag.body_val)?;
-    let DiagramGenerator { domain, mapping, .. } = generator;
-    Ok((DblModelDiagram(mapping, domain), namespace))
-}
-
-struct DiagramGenerator<'a> {
-    eval: Evaluator<'a>,
-    codomain_ty: TyV,
-    domain: discrete::DiscreteDblModel,
-    mapping: discrete::DiscreteDblModelMapping,
-}
-
-impl DiagramGenerator<'_> {
-    fn generate(&mut self, body_ty: &TyV) -> Result<Namespace, String> {
-        let (self_n, eval_with_self) = self.eval.bind_self(body_ty.clone());
-        self.eval = eval_with_self;
-        let self_val = self.eval.eta_neu(&self_n, body_ty);
-        Ok(self
-            .extract(vec![], &self_val, body_ty)?
-            .unwrap_or_else(Namespace::new_for_uuid))
-    }
-
-    fn extract(
-        &mut self,
-        prefix: Vec<NameSegment>,
-        val: &TmV,
-        ty: &TyV,
-    ) -> Result<Option<Namespace>, String> {
-        match &**ty {
-            TyV_::Record(r) => {
-                let mut namespace = Namespace::new_for_uuid();
-                for (name, (label, _)) in r.fields.iter() {
-                    let mut child_prefix = prefix.clone();
-                    child_prefix.push(*name);
-                    if let NameSegment::Uuid(uuid) = name {
-                        namespace.set_label(*uuid, *label);
-                    }
-                    let field_tm = self.eval.proj(val, *name, *label);
-                    let field_ty = self.eval.field_ty(ty, val, *name);
-                    if let Some(inner) = self.extract(child_prefix, &field_tm, &field_ty)? {
-                        namespace.add_inner(*name, inner);
-                    }
-                }
-                Ok(Some(namespace))
-            }
-            TyV_::Over(path) => {
-                // Resolve the path against the codomain to find the
-                // catlog object type for this generator.
-                let (cod_self_n, cod_eval) = self.eval.bind_self(self.codomain_ty.clone());
-                let cod_val = cod_eval.eta_neu(&cod_self_n, &self.codomain_ty);
-                let resolved = cod_eval.path_ty(&self.codomain_ty, &cod_val, path)?;
-                let TyV_::Object(ot) = &*resolved else {
-                    return Err(
-                        "@over path does not refer to an object generator in the codomain".into()
-                    );
-                };
-                let ot: QualifiedName = ot.clone().try_into().map_err(|_| {
-                    "@over codomain object type is not valid for a discrete theory".to_string()
-                })?;
-                let qname: QualifiedName = prefix.into();
-                self.domain.add_ob(qname.clone(), ot);
-                let target: QualifiedName =
-                    path.iter().map(|(seg, _)| *seg).collect::<Vec<_>>().into();
-                self.mapping.assign_ob(qname, target);
-                Ok(None)
-            }
-            TyV_::Object(_)
-            | TyV_::Morphism(_, _, _)
-            | TyV_::Sing(_, _)
-            | TyV_::Id(_, _, _)
-            | TyV_::Unit
-            | TyV_::Meta(_) => Ok(None),
-        }
-    }
-}
-
 /// Generates a [`DiscreteDblModelInstance`] from an elaborated [`Diag`].
 ///
 /// Walks the diagram body, adding one instance generator per `@over .X`
@@ -618,10 +522,8 @@ fn tm_to_discrete_instance_term(tm: &TmV) -> Result<DiscreteInstanceTerm, String
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dbl::model::FpDblModel;
     use crate::tt::text_elab::{TT_PARSE_CONFIG, TopElabResult, TopElaborator};
     use crate::tt::theory::std_theories;
-    use crate::zero::Mapping;
 
     fn elaborate_to_toplevel(src: &str) -> Toplevel {
         let reporter = Reporter::new();
@@ -642,7 +544,7 @@ mod tests {
     }
 
     #[test]
-    fn diagram_over_weighted_graph() {
+    fn instance_over_weighted_graph() {
         let src = r#"
 set_theory ThSchema
 
@@ -656,7 +558,9 @@ type WeightedGraph := [
 ]
 
 diagram I : @Instance(WeightedGraph) := [
+    v : @over .V,
     e : @over .E,
+    _ : (src(e) == v)
 ]
 "#;
         let toplevel = elaborate_to_toplevel(src);
@@ -664,15 +568,12 @@ diagram I : @Instance(WeightedGraph) := [
             Some(TopDecl::Diag(d)) => d.clone(),
             _ => panic!("expected I to be a diagram declaration"),
         };
-        let (DblModelDiagram(mapping, domain), _ns) =
-            diagram_from_diag(&toplevel, &diag.theory.definition, &diag).unwrap();
+        let (instance, _ns) =
+            instance_from_diag(&toplevel, &diag.theory.definition, &diag).unwrap();
 
         let e_qname: QualifiedName = vec![name_seg("e")].into();
-        let entity_ot: QualifiedName = vec![name_seg("Entity")].into();
-        let e_target: QualifiedName = vec![name_seg("E")].into();
-
-        assert!(domain.has_ob(&e_qname));
-        assert_eq!(domain.ob_generator_type(&e_qname), entity_ot);
-        assert_eq!(mapping.0.ob_generator_map.apply_to_ref(&e_qname), Some(e_target));
+        let e_fiber: QualifiedName = vec![name_seg("E")].into();
+        assert_eq!(instance.fiber_of(&e_qname), Some(&e_fiber));
+        assert_eq!(instance.equations().count(), 1);
     }
 }

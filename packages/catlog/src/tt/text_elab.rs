@@ -684,43 +684,59 @@ impl<'a> Elaborator<'a> {
                     elab.evaluator().field_ty(&ty_v, &tm_v, f),
                 )
             }
-            // `tm.f(x)` — applied projection. Inside a diagram, this is the
-            // surface syntax for applying a codomain morphism `f` to a field
-            // `x` of `tm` whose type is `@over <src_path>`. The discrete-
-            // opfibration condition forces a unique lift target in the fiber
-            // over `f`'s codomain, and `tm.f(x)` denotes that lift target.
+            // Applied codomain-morphism syntax, in either of two shapes:
             //
-            // Elaborates to a [`TmS_::OverApp`] node carrying the codomain
-            // morphism name and its target path. No synthetic field is
-            // inserted into the diagram body.
-            App1(L(_, App1(tm_n, L(_, Field(f)))), L(_, Var(x))) => {
-                let (tm_s, tm_v, ty_v) = elab.syn(tm_n);
-                let TyV_::Record(r) = &*ty_v else {
-                    return elab.syn_error("can only project from record type");
+            //   `f(x)`       — `x` is a variable of `@over <src_path>` in
+            //                  scope (e.g. a generator declared by an
+            //                  enclosing field), and `f` is the codomain
+            //                  morphism name.
+            //   `tm.f(x)`    — same idea, but the argument is the field
+            //                  `x` of the record-typed receiver `tm`,
+            //                  and `f` is still the codomain morphism
+            //                  name. The receiver belongs to the
+            //                  *argument*, not the morphism — `tm.f(x)`
+            //                  is sugar for `f(tm.x)`.
+            //
+            // Both shapes elaborate to a [`TmS_::OverApp`] applying `f`
+            // (a codomain morphism in the enclosing diagram) to the
+            // resolved argument term.
+            App1(head_n, L(_, Var(x))) => {
+                let (f, inner) = match head_n.ast0() {
+                    Var(f) => (f, None),
+                    App1(tm_n, L(_, Field(f))) => (f, Some(tm_n)),
+                    _ => return elab.syn_error("unexpected notation for term"),
                 };
-                let x_label = label_seg(*x);
-                let x_name = name_seg(*x);
-                if !r.fields.has(x_name) {
-                    return elab.syn_error(format!("no such field {x_name}"));
-                }
-                let inner_ty = elab.evaluator().field_ty(&ty_v, &tm_v, x_name);
-                let TyV_::Over(src_path) = &*inner_ty else {
-                    let quoted = elab.evaluator().quote_ty(&inner_ty);
-                    return elab
-                        .syn_error(format!("field {x_name} has type {quoted}, expected an @over type"));
-                };
-                let inner_s = TmS::proj(tm_s, x_name, x_label);
-                let inner_v = elab.evaluator().proj(&tm_v, x_name, x_label);
-                let f_label = label_seg(*f);
-                let f_name = name_seg(*f);
-                // Look up `f` in the diagram's codomain as a morphism field
-                // whose source path equals `src_path`, and read off its
-                // target path.
                 let Some((_, model_ty)) = elab.ctx.lookup_diagram() else {
                     return elab.syn_error(
                         "applied codomain morphism is only allowed inside a diagram declaration",
                     );
                 };
+                let (inner_s, inner_v, inner_ty) = match inner {
+                    None => elab.lookup_tm(ustr(*x)),
+                    Some(tm_n) => {
+                        let (tm_s, tm_v, ty_v) = elab.syn(tm_n);
+                        let TyV_::Record(r) = &*ty_v else {
+                            return elab.syn_error("can only project from record type");
+                        };
+                        let x_label = label_seg(*x);
+                        let x_name = name_seg(*x);
+                        if !r.fields.has(x_name) {
+                            return elab.syn_error(format!("no such field {x_name}"));
+                        }
+                        let ty = elab.evaluator().field_ty(&ty_v, &tm_v, x_name);
+                        let s = TmS::proj(tm_s, x_name, x_label);
+                        let v = elab.evaluator().proj(&tm_v, x_name, x_label);
+                        (s, v, ty)
+                    }
+                };
+                let TyV_::Over(src_path) = &*inner_ty else {
+                    let quoted = elab.evaluator().quote_ty(&inner_ty);
+                    return elab.syn_error(format!(
+                        "argument {x} has type {quoted}, expected an @over type"
+                    ));
+                };
+                let f_label = label_seg(*f);
+                let f_name = name_seg(*f);
                 let TyV_::Record(cod_r) = &*model_ty else {
                     return elab.syn_error("diagram codomain is not a record type");
                 };
@@ -743,7 +759,7 @@ impl<'a> Elaborator<'a> {
                 if dom_path != *src_path {
                     return elab.syn_error(format!(
                         "codomain morphism {f_name} has source path differing from the \
-                         @over path of {x_name}"
+                         @over path of {x}"
                     ));
                 }
                 (

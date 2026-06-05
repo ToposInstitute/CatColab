@@ -12,20 +12,14 @@ use tattle::display::SourceInfo;
 use tattle::{Reporter, declare_error};
 
 use super::{
-    modelgen::{Model, diagram_from_diag, instance_from_diag},
+    modelgen::instance_from_diag,
     text_elab::*,
     theory::std_theories,
     toplevel::*,
 };
-use crate::dbl::discrete::{
-    DiscreteDblModelDiagram, DiscreteDblModelInstance, DiscreteInstanceTerm,
-    InvalidDiscreteDblModelDiagram,
-};
-use crate::dbl::model::{FpDblModel, MutDblModel};
-use crate::dbl::model_diagram::DblModelDiagram;
-use crate::one::category::FgCategory;
+use crate::dbl::discrete::{DiscreteDblModelInstance, DiscreteInstanceTerm};
 use crate::one::path::Path;
-use crate::zero::{Mapping, NameSegment, QualifiedName};
+use crate::zero::{NameSegment, QualifiedName};
 
 declare_error!(TOP_ERROR, "top", "an error at the top-level");
 
@@ -77,47 +71,6 @@ impl BatchOutput {
         }
     }
 
-    fn diagram_summary(&self, diagram: &DiscreteDblModelDiagram) {
-        if let BatchOutput::Snapshot(out) = self {
-            let DblModelDiagram(mapping, domain) = diagram;
-            let mut out = out.borrow_mut();
-            let ob_gens: Vec<_> = domain.ob_generators().collect();
-            let mor_gens: Vec<_> = domain.mor_generators().collect();
-            if ob_gens.is_empty() && mor_gens.is_empty() {
-                writeln!(out, "#/ diagram has no domain generators").unwrap();
-                return;
-            }
-            writeln!(out, "#/ diagram domain:").unwrap();
-            for g in &ob_gens {
-                let ot = domain.ob_generator_type(g);
-                match mapping.0.ob_generator_map.apply_to_ref(g) {
-                    Some(target) => writeln!(out, "#/   {g} : {ot} -> {target}").unwrap(),
-                    None => writeln!(out, "#/   {g} : {ot}").unwrap(),
-                }
-            }
-            for g in &mor_gens {
-                let mt = format_path(&domain.mor_generator_type(g));
-                let dom_str =
-                    domain.get_dom(g).map(|o| format!("{o}")).unwrap_or_else(|| "?".into());
-                let cod_str =
-                    domain.get_cod(g).map(|o| format!("{o}")).unwrap_or_else(|| "?".into());
-                let target_str = mapping
-                    .0
-                    .mor_generator_map
-                    .apply_to_ref(g)
-                    .map(|p| format!(" -> {}", format_path(&p)))
-                    .unwrap_or_default();
-                writeln!(out, "#/   {g} : {mt}[{dom_str}, {cod_str}]{target_str}").unwrap();
-            }
-        }
-    }
-
-    fn diagram_error(&self, msg: &str) {
-        if let BatchOutput::Snapshot(out) = self {
-            writeln!(out.borrow_mut(), "#/ diagram generation failed: {msg}").unwrap();
-        }
-    }
-
     fn instance_summary(&self, instance: &DiscreteDblModelInstance) {
         if let BatchOutput::Snapshot(out) = self {
             let mut out = out.borrow_mut();
@@ -151,21 +104,6 @@ impl BatchOutput {
     fn instance_error(&self, msg: &str) {
         if let BatchOutput::Snapshot(out) = self {
             writeln!(out.borrow_mut(), "#/ instance generation failed: {msg}").unwrap();
-        }
-    }
-
-    fn validation_result<I: IntoIterator<Item = InvalidDiscreteDblModelDiagram>>(&self, errs: I) {
-        if let BatchOutput::Snapshot(out) = self {
-            let mut out = out.borrow_mut();
-            let mut iter = errs.into_iter().peekable();
-            if iter.peek().is_none() {
-                writeln!(out, "#/ diagram validates against codomain").unwrap();
-            } else {
-                writeln!(out, "#/ diagram validation failed:").unwrap();
-                for e in iter {
-                    writeln!(out, "#/   {e:?}").unwrap();
-                }
-            }
         }
     }
 
@@ -291,22 +229,6 @@ pub fn elaborate(src: &str, path: &str, output: &BatchOutput) -> io::Result<bool
                                 && let Some(TopDecl::Diag(diag)) =
                                     toplevel.declarations.get(&name_segment)
                             {
-                                match diagram_from_diag(&toplevel, &diag.theory.definition, diag) {
-                                    Ok((model_diag, _)) => {
-                                        output.diagram_summary(&model_diag);
-                                        let (cod, _) = Model::from_ty(
-                                            &toplevel,
-                                            &diag.theory.definition,
-                                            &diag.model,
-                                        );
-                                        if let Some(cod) = cod.as_discrete() {
-                                            output.validation_result(
-                                                model_diag.iter_invalid_in(&cod),
-                                            );
-                                        }
-                                    }
-                                    Err(msg) => output.diagram_error(&msg),
-                                }
                                 match instance_from_diag(&toplevel, &diag.theory.definition, diag) {
                                     Ok((instance, _)) => output.instance_summary(&instance),
                                     Err(msg) => output.instance_error(&msg),
