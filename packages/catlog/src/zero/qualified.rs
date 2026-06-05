@@ -294,7 +294,14 @@ impl QualifiedName {
         }
     }
 
-    /// Add another segment onto the end.
+    /// Prepends a name segment.
+    pub fn cons(&self, segment: NameSegment) -> Self {
+        let mut segments = self.0.clone();
+        segments.insert(0, segment);
+        Self(segments)
+    }
+
+    /// Adds another segment onto the end.
     pub fn snoc(&self, segment: NameSegment) -> Self {
         let mut segments = self.0.clone();
         segments.push(segment);

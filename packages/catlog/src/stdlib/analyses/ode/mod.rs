@@ -72,7 +72,9 @@ impl<Sys> ODEAnalysis<Sys> {
 pub mod kuramoto;
 pub mod linear_ode;
 pub mod lotka_volterra;
+pub mod lotka_volterra_next;
 pub mod mass_action;
+pub mod ode_builder;
 pub mod polynomial_ode;
 pub mod signed_coefficients;
 
