@@ -1,0 +1,20 @@
+{
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "ESNext",
+        "lib": ["ES2023"],
+        "types": ["node"],
+        "skipLibCheck": true,
+
+        "moduleResolution": "bundler",
+        "isolatedModules": true,
+        "noEmit": true,
+        "allowImportingTsExtensions": true,
+
+        "strict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noFallthroughCasesInSwitch": true
+    },
+    "include": ["src"]
+}

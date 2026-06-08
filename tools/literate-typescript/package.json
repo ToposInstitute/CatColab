@@ -1,0 +1,22 @@
+{
+    "name": "@catcolab-dev-tools/literate-typescript",
+    "version": "0.0.0",
+    "private": true,
+    "bin": {
+        "literate-typescript": "./bin/literate-typescript.mjs"
+    },
+    "type": "module",
+    "scripts": {
+        "format": "oxfmt .",
+        "lint": "oxlint --fix && oxfmt .",
+        "check": "tsc && pnpm run lint",
+        "ci": "tsc && oxlint --deny-warnings && oxfmt --check ."
+    },
+    "dependencies": {
+        "tsx": "^4.19.0",
+        "typescript": "^6.0.3"
+    },
+    "devDependencies": {
+        "@types/node": "^24.0.0"
+    }
+}
