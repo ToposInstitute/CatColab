@@ -6,12 +6,14 @@
     "type": "module",
     "exports": {
         ".": "./src/index.ts",
+        "./future": "./src/future/index.ts",
         "./*": "./src/*"
     },
     "scripts": {
         "build:wasm": "wasm-pack build ../document-types",
         "format": "oxfmt .",
         "lint": "oxlint --fix && oxfmt .",
+        "test:lts": "literate-typescript test/*.lts.md",
         "check": "pnpm run build:wasm && tsc && pnpm run lint",
         "ci": "tsc && oxlint --deny-warnings && oxfmt --check ."
     },
@@ -21,7 +23,12 @@
         "uuid": "^13.0.0"
     },
     "devDependencies": {
+        "@automerge/automerge": "^3.2.5",
+        "@automerge/automerge-repo": "^2.5.5",
+        "@automerge/automerge-repo-solid-primitives": "^2.0.0",
+        "@catcolab-dev-tools/literate-typescript": "workspace:*",
         "@types/uuid": "^10.0.0",
+        "solid-js": "^1.9.10",
         "typescript": "^6.0.3",
         "wasm-pack": "^0.15.0"
     }
