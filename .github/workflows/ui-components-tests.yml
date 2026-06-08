@@ -9,6 +9,8 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - "flake.nix"
+      - "flake.lock"
       - ".github/workflows/ui-components-tests.yml"
   pull_request:
     paths:
@@ -16,6 +18,8 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - "flake.nix"
+      - "flake.lock"
       - ".github/workflows/ui-components-tests.yml"
 
 jobs:
@@ -25,29 +29,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - name: Install Nix
+        uses: cachix/install-nix-action@v25
 
-      - name: Setup NodeJS
-        uses: actions/setup-node@v4
+      - name: Configure Cachix
+        uses: cachix/cachix-action@v14
         with:
-          node-version: 24
-          cache: "pnpm"
+          name: catcolab-jmoggr
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
 
-      - name: Cache Playwright browsers
-        uses: actions/cache@v4
-        id: playwright-cache
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('packages/ui-components/pnpm-lock.yaml') }}
-
-      - name: Install dependencies
-        env:
-          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
-        run: pnpm install
-
-      - name: Install Playwright browser
-        run: pnpm --filter ./packages/ui-components exec playwright install --with-deps chromium-headless-shell
-
+      # The ui-components-tests devShell provides nodejs_24, pnpm, and
+      # playwright-driver.browsers (set via PLAYWRIGHT_BROWSERS_PATH).
+      # PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 is exported from the shell so
+      # `pnpm install` will not try to fetch browsers.
+      # See https://wiki.nixos.org/wiki/Playwright.
       - name: Run ui-components tests
-        run: pnpm --filter ./packages/ui-components run test
+        run: |
+          nix develop .#ui-components-tests --command bash -c '
+            set -euo pipefail
+            pnpm install --frozen-lockfile
+            pnpm --filter ./packages/ui-components run test
+          '
