@@ -464,6 +464,7 @@ struct DiagramGenerator<'a, M: DblModel + MutDblModel + FgCategory, Mapping: Mut
     codomain_ty: TyV,
     domain: M,
     mapping: Mapping,
+    // I've added this
     equations: Vec<(TmS, TmS)>,
 }
 
@@ -555,7 +556,6 @@ impl DiagramGenerator<'_, DiscreteDblModel, DiscreteDblModelMapping> {
                 Ok(None)
             }
             TyV_::Id(_, lhs, rhs) => {
-                // println!("LHS: {:#?}, RHS: {:#?}", lhs, rhs);
                 // XXX trying to print as syntax, not values
                 self.equations.push((self.eval.quote_tm(lhs), self.eval.quote_tm(rhs)));
                 // self.equations.push((lhs.clone(), rhs.clone()));
@@ -624,8 +624,6 @@ impl DiagramGenerator<'_, ModalDblModel<Unital>, ModalDblModelMapping> {
                 // Augmentation produces lift morphisms whose dom and cod
                 // are projections from the body's self, resolving to the
                 // qualified names of generators (declared or specialized).
-                // println!("CHECKING: {}", self.eval.quote_tm(&dom));
-
                 let mt_inner: ModalMorType = mt
                     .clone()
                     .try_into()
@@ -674,7 +672,6 @@ impl DiagramGenerator<'_, ModalDblModel<Unital>, ModalDblModelMapping> {
             }
             TyV_::Id(_, lhs, rhs) => {
                 self.equations.push((self.eval.quote_tm(lhs), self.eval.quote_tm(rhs)));
-                // self.equations.push((lhs.clone(), rhs.clone()));
                 Ok(None)
             }
 
@@ -868,7 +865,6 @@ diagram I : @Instance(DEC) := [
         let (model_diag, _, _) =
             diagram_from_diag(&toplevel, &diag.theory.definition, &diag).unwrap();
         let out = JuliaTranspiler::transpile(&src, "Klausmeier", elaborate_to_toplevel);
-        println!("{out}");
 
         match model_diag {
             DblModelDiagramType::Discrete(_) => {
