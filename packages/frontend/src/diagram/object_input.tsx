@@ -76,6 +76,7 @@ export function ObInput(
 }
 
 function obEditorForType(obType: ObType): Component<ObInputProps> {
+    // console.log(obType.tag);
     if (obType.tag === "Basic") {
         return BasicObInput;
     } else if (obType.tag === "ModeApp") {

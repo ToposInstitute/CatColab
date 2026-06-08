@@ -98,5 +98,25 @@ export default function createPetriNetTheory(theoryMeta: TheoryMeta): Theory {
                 },
             }),
         ],
+        instanceOfName: "Diagrams in",
+        instanceTypes: [
+            {
+                tag: "ObType",
+                obType: { tag: "Basic", content: "Object" },
+                name: "Element",
+                description: "State of the system",
+                shortcut: ["O"],
+            },
+            {
+                tag: "MorType",
+                morType: {
+                    tag: "Hom",
+                    content: { tag: "Basic", content: "Object" },
+                },
+                name: "Operation",
+                description: "Event causing change of state",
+                shortcut: ["M"],
+            },
+        ],
     });
 }

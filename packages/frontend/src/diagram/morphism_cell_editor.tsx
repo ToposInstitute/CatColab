@@ -1,4 +1,4 @@
-import { useContext } from "solid-js";
+import { createMemo, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
 import { type FocusHandle, useChildFocus } from "catcolab-ui-components";
@@ -26,8 +26,28 @@ export function DiagramMorphismCellEditor(props: {
     // oxlint-disable-next-line solid/reactivity -- Focus handles are stable for a mounted cell.
     const focus = useChildFocus<DiagramMorphismCellInput>(props.focus, { default: "mor" });
 
-    const domType = () => props.theory.theory.src(props.decl.morType);
-    const codType = () => props.theory.theory.tgt(props.decl.morType);
+    const morTypeMeta = () => props.theory.modelMorTypeMeta(props.decl.morType);
+
+    const domType = createMemo(() => {
+        const theory = props.theory.theory;
+        const op = morTypeMeta()?.domain?.apply;
+        if (op === undefined) {
+            return theory.src(props.decl.morType);
+        } else {
+            return theory.dom(op);
+        }
+    });
+
+    const codType = createMemo(() => {
+        const theory = props.theory.theory;
+        const op = morTypeMeta()?.codomain?.apply;
+        if (op === undefined) {
+            return theory.tgt(props.decl.morType);
+        } else {
+            // Codomain type for operation should equal target type above.
+            return theory.dom(op);
+        }
+    });
 
     const errors = () => {
         const validated = liveDiagram().validatedDiagram();
