@@ -660,29 +660,18 @@ impl<'a> Elaborator<'a> {
                 (TyS::specialize(ty_s, specializations), ty_v)
             }
             App2(L(_, Keyword("==")), tm1_n, tm2_n) => {
-                // println!("!!!!!!!!! {} {}", tm1_n, tm2_n);
                 let (tm1_s, tm1_v, tm1_ty) = elab.syn(tm1_n);
                 let (tm2_s, tm2_v, tm2_ty) = elab.syn(tm2_n);
-                // println!("{:#?}", tm1_ty);
                 let _ = match &*tm1_ty {
-                    TyV_::Morphism(_, _, _) | TyV_::Over(_) => {
-                        // println!("YES!");
-                    }
+                    TyV_::Morphism(_, _, _) | TyV_::Over(_) => {}
                     _ => {
                         elab.loc = Some(tm1_n.loc());
-                        // println!("ERROR {} : {:#?}", &tm1_n, &tm1_ty);
                         return elab.ty_error("Equality types are only supported for morphisms");
                     }
                 };
-                // println!("EQUALITY: {:#?} == {:#?}", &tm1_ty, &tm2_ty);
+
                 if let Err(e) = elab.evaluator().convertible_ty(&tm1_ty, &tm2_ty) {
                     let eval = elab.evaluator();
-                    // println!(
-                    //     "HELLO! {:#?} : {}, {}",
-                    //     &tm1_s,
-                    //     eval.quote_ty(&tm1_ty),
-                    //     eval.quote_ty(&tm2_ty)
-                    // );
                     return elab.ty_error(format!(
                         "types {} and {} are not convertible:\n{}",
                         eval.quote_ty(&tm1_ty),
@@ -694,10 +683,7 @@ impl<'a> Elaborator<'a> {
                 let eq_ty_v = TyV::id(tm1_ty, tm1_v, tm2_v);
                 (eq_ty_s, eq_ty_v)
             }
-            _ => {
-                // println!("UNEXPECTED NOTATION FOR TYPE");
-                elab.ty_error("unexpected notation for type")
-            }
+            _ => elab.ty_error("unexpected notation for type"),
         }
     }
 
@@ -727,12 +713,10 @@ impl<'a> Elaborator<'a> {
     /// Elaborates a term from notation, returning syntax, value, and synthesized type.
     fn syn(&mut self, n: &FNtn) -> (TmS, TmV, TyV) {
         let mut elab = self.enter(n.loc());
-        // println!("AST: {:#?}", &n);
         match n.ast0() {
             Var(name) => elab.lookup_tm(ustr(name)),
             App1(tm_n, L(_, Field(f))) => {
                 let (tm_s, tm_v, ty_v) = elab.syn(tm_n);
-                // println!("DEBUGGING: {:#?}, {:#?}, {:#?}", &tm_s, &tm_v, &ty_v);
                 let TyV_::Record(r) = &*ty_v else {
                     return elab.syn_error("can only project from record type");
                 };
@@ -741,7 +725,6 @@ impl<'a> Elaborator<'a> {
                 if !r.fields.has(f) {
                     return elab.syn_error(format!("no such field {f}"));
                 }
-                // dbg!(&tm_s);
                 (
                     TmS::proj(tm_s, f, label),
                     elab.evaluator().proj(&tm_v, f, label),
@@ -839,6 +822,7 @@ impl<'a> Elaborator<'a> {
                     }
                     let eval = elab.evaluator().with_env(env.clone());
                     (TmS::topapp(tv, arg_stxs), eval.eval_tm(&d.body), eval.eval_ty(&d.ret_ty))
+                // TODO document this
                 } else if let Some((_, codomain_ty)) = elab.ctx.lookup_diagram()
                     && let TyV_::Record(cod_r) = &*codomain_ty
                     && let Some((_, (_, mor_ty_s))) = cod_r.fields.iter().find(|(n, _)| **n == tv)
@@ -869,33 +853,6 @@ impl<'a> Elaborator<'a> {
                     elab.syn_error(format!("no such toplevel def {tv}"))
                 }
             }
-
-            // App1(L(_, Var(tv)), L(_, Tuple(args_n))) => {
-            //     let tv = name_seg(*tv);
-            //     println!("======= {:#?}", elab.ctx.lookup_diagram().unwrap().1);
-            //     // println!("====== NAME: {tv} {:#?}", elab.toplevel.declarations.keys());
-            //     let Some(TopDecl::Def(d)) = elab.toplevel.lookup(tv) else {
-            //         return elab.syn_error(format!("no such toplevel def {tv}"));
-            //     };
-            //     println!("TOPLEVEL: {:#?}", d);
-            //     let mut arg_stxs = Vec::new();
-            //     let mut env = Env::nil();
-            //     if args_n.len() != d.args.len() {
-            //         return elab.syn_error(format!(
-            //             "wrong number of args for {tv}, expected {}, got {}",
-            //             d.args.len(),
-            //             args_n.len()
-            //         ));
-            //     }
-            //     for (arg_n, (_, (_, arg_ty_s))) in args_n.iter().zip(d.args.iter()) {
-            //         let arg_ty_v = elab.evaluator().with_env(env.clone()).eval_ty(arg_ty_s);
-            //         let (arg_s, arg_v) = elab.chk(&arg_ty_v, arg_n);
-            //         arg_stxs.push(arg_s);
-            //         env = env.snoc(arg_v);
-            //     }
-            //     let eval = elab.evaluator().with_env(env.clone());
-            //     (TmS::topapp(tv, arg_stxs), eval.eval_tm(&d.body), eval.eval_ty(&d.ret_ty))
-            // }
             Tag("tt") => (TmS::tt(), TmV::tt(), TyV::unit()),
             Tuple(_) => elab.syn_error("must check against a type in order to construct a record"),
             Prim("hole") => elab.syn_error("explicit hole"),

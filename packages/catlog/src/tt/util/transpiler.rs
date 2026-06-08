@@ -86,7 +86,6 @@ static MULT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"mult_(.+)$").unwrap
 static PARTIAL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"partial_(.+)$").unwrap());
 static LAPL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"lapl_(.+)$").unwrap());
 
-// this should be a single string method
 fn to_plain(tm: &TmS) -> String {
     match &**tm {
         TmS_::Var(_, name, _) => {
@@ -112,16 +111,9 @@ fn to_plain(tm: &TmS) -> String {
                 _ if LAPL.is_match(op) => &format!("{}", '\u{0394}'),
                 _ => op,
             };
-            format!("{op}({})", splat_plain(args))
+            format!("{op}({})", to_plain(args))
         }
-        _ => format!("{}", tm),
-    }
-}
-
-// merge into `to_plain` function above
-fn splat_plain(tm: &TmS) -> String {
-    match &**tm {
         TmS_::List(args) => args.iter().map(|a| to_plain(a)).collect::<Vec<_>>().join(", "),
-        _ => to_plain(tm),
+        _ => format!("{}", tm),
     }
 }
