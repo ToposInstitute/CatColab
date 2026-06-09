@@ -17,7 +17,7 @@
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
         "build:deps": "pnpm --filter ./packages/frontend run build:deps",
-        "dev": "pnpm --filter ./packages/frontend run dev"
+        "dev": "nix run .#frontend-dev -- "
     },
     "devDependencies": {
         "depcheck": "^1.4.7",

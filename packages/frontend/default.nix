@@ -265,7 +265,48 @@ let
       meta.mainProgram = "${name}-tests";
     }
   );
+
+  # `nix run .#frontend-dev` from the repository root: this drops the Nix-built
+  # wasm/API artifacts into the source tree and then launches `vite --host`
+  # against a regular pnpm install. 
+  dev = pkgs.writeShellApplication {
+    name = "frontend-dev";
+    runtimeInputs = with pkgs; [
+      nodejs_24
+      pnpm
+    ];
+    text = ''
+      if [ ! -f flake.nix ]; then
+        echo "Error: must be run from the repository root" >&2
+        exit 1
+      fi
+
+      echo "Setting up Nix-built dependencies..."
+
+      mkdir -p packages/catlog-wasm/dist/pkg-browser
+      rm -rf packages/catlog-wasm/dist/pkg-browser/*
+      cp -r ${self.packages.${pkgs.stdenv.hostPlatform.system}.catlog-wasm-browser}/* packages/catlog-wasm/dist/pkg-browser/
+
+      mkdir -p packages/document-types/pkg
+      rm -rf packages/document-types/pkg/*
+      cp -r ${self.packages.${pkgs.stdenv.hostPlatform.system}.document-types-wasm}/* packages/document-types/pkg/
+
+      mkdir -p packages/backend/pkg/src
+      rm -rf packages/backend/pkg/src/*
+      cp -r ${self.packages.${pkgs.stdenv.hostPlatform.system}.catcolabApi}/src packages/backend/pkg/
+
+      echo "Installing npm dependencies..."
+      pnpm install
+
+      cd packages/frontend
+      echo "Generating CSS module types..."
+      pnpm run build:tcm
+
+      echo "Starting Vite dev server..."
+      exec pnpm exec vite --host "$@"
+    '';
+  };
 in
 {
-  inherit package tests;
+  inherit package tests dev;
 }
