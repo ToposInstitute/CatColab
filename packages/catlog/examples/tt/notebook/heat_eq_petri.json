@@ -1,0 +1,228 @@
+{
+  "diagramIn": {
+    "_id": "019ea9ae-f867-7373-a70b-5a860e6f8c06",
+    "_server": "backend-next.catcolab.org",
+    "_version": null,
+    "type": "diagram-in"
+  },
+  "name": "Heat Equation",
+  "notebook": {
+    "cellContents": {
+      "019ea9af-e082-7468-a8b2-83cb49b28357": {
+        "content": {
+          "id": "019ea9af-e081-750a-9908-daf11a552da4",
+          "name": "u",
+          "obType": {
+            "content": "Object",
+            "tag": "Basic"
+          },
+          "over": {
+            "content": "019ea9af-269b-721a-9cf1-ce539f888301",
+            "tag": "Basic"
+          },
+          "tag": "object"
+        },
+        "id": "019ea9af-e082-7468-a8b2-83cb49b28357",
+        "tag": "formal"
+      },
+      "019ea9af-f8ab-72b4-aad2-d81325a4e3e0": {
+        "content": {
+          "id": "019ea9af-f8ab-72b4-aad2-d623ce6613fe",
+          "name": "partial-u",
+          "obType": {
+            "content": "Object",
+            "tag": "Basic"
+          },
+          "over": {
+            "content": "019ea9af-269b-721a-9cf1-ce539f888301",
+            "tag": "Basic"
+          },
+          "tag": "object"
+        },
+        "id": "019ea9af-f8ab-72b4-aad2-d81325a4e3e0",
+        "tag": "formal"
+      },
+      "019ea9b0-0e80-708d-9a8c-3e4f53c7b00b": {
+        "content": {
+          "id": "019ea9b0-0e80-708d-9a8c-3979c09e762d",
+          "name": "k",
+          "obType": {
+            "content": "Object",
+            "tag": "Basic"
+          },
+          "over": {
+            "content": "019ea9af-269b-721a-9cf1-ce539f888301",
+            "tag": "Basic"
+          },
+          "tag": "object"
+        },
+        "id": "019ea9b0-0e80-708d-9a8c-3e4f53c7b00b",
+        "tag": "formal"
+      },
+      "019ea9b0-23e4-7758-9b54-013344564998": {
+        "content": {
+          "id": "019ea9b0-23e4-7758-9b53-fed672c047e5",
+          "name": "anon-0",
+          "obType": {
+            "content": "Object",
+            "tag": "Basic"
+          },
+          "over": {
+            "content": "019ea9af-269b-721a-9cf1-ce539f888301",
+            "tag": "Basic"
+          },
+          "tag": "object"
+        },
+        "id": "019ea9b0-23e4-7758-9b54-013344564998",
+        "tag": "formal"
+      },
+      "019ea9b0-3404-7440-8ecb-ea5c43b9af99": {
+        "content": {
+          "cod": {
+            "content": {
+              "modality": "SymmetricList",
+              "objects": [
+                {
+                  "content": "019ea9af-f8ab-72b4-aad2-d623ce6613fe",
+                  "tag": "Basic"
+                }
+              ]
+            },
+            "tag": "List"
+          },
+          "dom": {
+            "content": {
+              "modality": "SymmetricList",
+              "objects": [
+                {
+                  "content": "019ea9af-e081-750a-9908-daf11a552da4",
+                  "tag": "Basic"
+                }
+              ]
+            },
+            "tag": "List"
+          },
+          "id": "019ea9b0-3404-7440-8ecb-e686c716a09c",
+          "morType": {
+            "content": {
+              "content": "Object",
+              "tag": "Basic"
+            },
+            "tag": "Hom"
+          },
+          "name": "",
+          "over": {
+            "content": "019ea9af-2fe2-7139-b2df-881d5af7703b",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "019ea9b0-3404-7440-8ecb-ea5c43b9af99",
+        "tag": "formal"
+      },
+      "019ea9b0-59a4-72ac-a395-99003d1c3157": {
+        "content": {
+          "cod": {
+            "content": {
+              "modality": "SymmetricList",
+              "objects": [
+                {
+                  "content": "019ea9b0-23e4-7758-9b53-fed672c047e5",
+                  "tag": "Basic"
+                }
+              ]
+            },
+            "tag": "List"
+          },
+          "dom": {
+            "content": {
+              "modality": "SymmetricList",
+              "objects": [
+                {
+                  "content": "019ea9af-e081-750a-9908-daf11a552da4",
+                  "tag": "Basic"
+                }
+              ]
+            },
+            "tag": "List"
+          },
+          "id": "019ea9b0-59a3-738c-b9ec-3ef91df1f1d1",
+          "morType": {
+            "content": {
+              "content": "Object",
+              "tag": "Basic"
+            },
+            "tag": "Hom"
+          },
+          "name": "",
+          "over": {
+            "content": "019ea9b0-7e0d-752f-b77d-a7ec0956ea8c",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "019ea9b0-59a4-72ac-a395-99003d1c3157",
+        "tag": "formal"
+      },
+      "019ea9b0-a2db-707a-8acb-a18a182dbac0": {
+        "content": {
+          "cod": {
+            "content": {
+              "modality": "SymmetricList",
+              "objects": [
+                {
+                  "content": "019ea9af-f8ab-72b4-aad2-d623ce6613fe",
+                  "tag": "Basic"
+                }
+              ]
+            },
+            "tag": "List"
+          },
+          "dom": {
+            "content": {
+              "modality": "SymmetricList",
+              "objects": [
+                {
+                  "content": "019ea9b0-23e4-7758-9b53-fed672c047e5",
+                  "tag": "Basic"
+                },
+                {
+                  "content": "019ea9b0-0e80-708d-9a8c-3979c09e762d",
+                  "tag": "Basic"
+                }
+              ]
+            },
+            "tag": "List"
+          },
+          "id": "019ea9b0-a2db-707a-8acb-9edcb61d66b3",
+          "morType": {
+            "content": {
+              "content": "Object",
+              "tag": "Basic"
+            },
+            "tag": "Hom"
+          },
+          "name": "",
+          "over": {
+            "content": "019ea9af-5ddd-70c2-a9a4-31ea4065da9e",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "019ea9b0-a2db-707a-8acb-a18a182dbac0",
+        "tag": "formal"
+      }
+    },
+    "cellOrder": [
+      "019ea9af-e082-7468-a8b2-83cb49b28357",
+      "019ea9af-f8ab-72b4-aad2-d81325a4e3e0",
+      "019ea9b0-0e80-708d-9a8c-3e4f53c7b00b",
+      "019ea9b0-23e4-7758-9b54-013344564998",
+      "019ea9b0-3404-7440-8ecb-ea5c43b9af99",
+      "019ea9b0-59a4-72ac-a395-99003d1c3157",
+      "019ea9b0-a2db-707a-8acb-a18a182dbac0"
+    ]
+  },
+  "type": "diagram",
+  "version": "2"
+}

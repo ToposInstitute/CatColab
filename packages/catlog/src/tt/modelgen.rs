@@ -526,6 +526,7 @@ impl DiagramGenerator<'_, DiscreteDblModel, DiscreteDblModelMapping> {
                 // Augmentation produces lift morphisms whose dom and cod
                 // are projections from the body's self, resolving to the
                 // qualified names of generators (declared or specialized).
+                dbg!(&mt, &dom);
                 let dom_name = neutral_qualified_name(dom).ok_or_else(|| {
                     "morphism domain does not resolve to a generator name".to_string()
                 })?;
@@ -633,6 +634,8 @@ impl DiagramGenerator<'_, ModalDblModel<Unital>, ModalDblModelMapping> {
                         let src_ot: ModalObType = self.domain.theory().src_type(&mt_inner); // adapt: see note
                         let Some(modal::Modality::List(list_type)) = src_ot.modalities.last()
                         else {
+                            // XXX
+                            dbg!(&mt_inner);
                             return Err("multihom source is not a list object type".to_string());
                         };
                         let obs = elems
@@ -645,19 +648,76 @@ impl DiagramGenerator<'_, ModalDblModel<Unital>, ModalDblModelMapping> {
                             })?;
                         ModalOb::List(*list_type, obs)
                     }
+                    TmV_::App(n, tm_v) => {
+                        let ob_op = modal::ModalObOp::generator(QualifiedName::single(*n));
+                        let op_dom: ModalObType = self.domain.theory().ob_op_dom(&ob_op);
+                        let Some(modal::Modality::List(list_type)) = op_dom.modalities.last()
+                        else {
+                            return Err("ob_op domain is not a list type".to_string());
+                        };
+                        match &**tm_v {
+                            TmV_::List(elems) => {
+                                let obs = elems
+                                    .iter()
+                                    .map(|e| neutral_qualified_name(e).map(ModalOb::Generator))
+                                    .collect::<Option<Vec<_>>>()
+                                    .ok_or_else(|| "domain element does not resolve".to_string())?;
+                                ModalOb::List(*list_type, obs)
+                            }
+                            _ => return Err("expected list inside ob_op".to_string()),
+                        }
+                    }
                     _ => ModalOb::Generator(neutral_qualified_name(dom).ok_or_else(|| {
                         "morphism domain does not resolve to a generator name".to_string()
                     })?),
                 };
+                //
 
-                // let dom_name = neutral_qualified_name(dom).ok_or_else(|| {
-                //     "morphism domain does not resolve to a generator name".to_string()
-                // })?;
-                let cod_name = neutral_qualified_name(cod).ok_or_else(|| {
-                    "morphism codomain does not resolve to a generator name".to_string()
-                })?;
+                let cod_ob: ModalOb = match &**cod {
+                    TmV_::List(elems) => {
+                        let src_ot: ModalObType = self.domain.theory().src_type(&mt_inner); // adapt: see note
+                        let Some(modal::Modality::List(list_type)) = src_ot.modalities.last()
+                        else {
+                            // XXX
+                            dbg!(&mt_inner);
+                            return Err("multihom source is not a list object type".to_string());
+                        };
+                        let obs = elems
+                            .iter()
+                            .map(|e| neutral_qualified_name(e).map(ModalOb::Generator))
+                            .collect::<Option<Vec<_>>>()
+                            .ok_or_else(|| {
+                                "multihom domain element does not resolve to a generator name"
+                                    .to_string()
+                            })?;
+                        ModalOb::List(*list_type, obs)
+                    }
+                    TmV_::App(n, tm_v) => {
+                        let ob_op = modal::ModalObOp::generator(QualifiedName::single(*n));
+                        let op_cod: ModalObType = self.domain.theory().ob_op_dom(&ob_op);
+                        let Some(modal::Modality::List(list_type)) = op_cod.modalities.last()
+                        else {
+                            return Err("ob_op domain is not a list type".to_string());
+                        };
+                        match &**tm_v {
+                            TmV_::List(elems) => {
+                                let obs = elems
+                                    .iter()
+                                    .map(|e| neutral_qualified_name(e).map(ModalOb::Generator))
+                                    .collect::<Option<Vec<_>>>()
+                                    .ok_or_else(|| "domain element does not resolve".to_string())?;
+                                ModalOb::List(*list_type, obs)
+                            }
+                            _ => return Err("expected list inside ob_op".to_string()),
+                        }
+                    }
+                    _ => ModalOb::Generator(neutral_qualified_name(cod).ok_or_else(|| {
+                        "morphism domain does not resolve to a generator name".to_string()
+                    })?),
+                };
+
                 let qname: QualifiedName = prefix.clone().into();
-                self.domain.add_mor(qname.clone(), dom_ob.into(), cod_name.into(), mt_inner);
+                self.domain.add_mor(qname.clone(), dom_ob.into(), cod_ob.into(), mt_inner);
                 // Mapping target: extract the codomain morphism's name
                 // from the synthetic lift name `~f(e)`. For other shapes
                 // (e.g., a future user-declared morphism in a body), fall
@@ -864,7 +924,12 @@ diagram I : @Instance(DEC) := [
 
         let (model_diag, _, _) =
             diagram_from_diag(&toplevel, &diag.theory.definition, &diag).unwrap();
-        let out = JuliaTranspiler::transpile(&src, "Klausmeier", elaborate_to_toplevel);
+        let diagram = TextModel {
+            decl: "Klausmeier".into(),
+            toplevel: elaborate_to_toplevel(&src),
+        };
+        let out = diagram.transpile();
+        println!("{}", &out);
 
         match model_diag {
             DblModelDiagramType::Discrete(_) => {
