@@ -70,8 +70,6 @@ arrow.update({
 
 We can also do partial updates.
 
-<!-- verifier:prepend-to-following -->
-
 ```ts
 arrow.update({
     name: "has as example",
@@ -80,8 +78,6 @@ arrow.update({
 
 We can duplicate formal cells. Copies keep the same logical shape but receive fresh
 identities, and their handles can be updated independently.
-
-<!-- verifier:prepend-to-following -->
 
 ```ts
 const sourceCopy = source.duplicate();

@@ -1,6 +1,6 @@
 /**
- * Execute paired samples via `tsx` and compare stdout against the expected
- * `-output` body.
+ * Execute samples that carry an expected-output body via `tsx` and compare
+ * stdout against the expected text.
  */
 
 import { spawn } from "node:child_process";
@@ -100,20 +100,17 @@ function runOne(
 }
 
 /**
- * For each materialised sample that has a paired `<id>-output` body, run the
- * sample with tsx and compare stdout. Returns a list of failures (empty on
- * success).
+ * For each materialised sample carrying an `expectedOutput`, run the sample
+ * with tsx and compare stdout. Returns a list of failures (empty on success).
  */
 export async function runPairs(
     files: MaterialisedSample[],
-    outputBodies: Map<string, string>,
     pkgRoot: string,
     tsconfigPath: string,
 ): Promise<RunFailure[]> {
     const failures: RunFailure[] = [];
     for (const m of files) {
-        const expectedKey = `${m.sample.id}-output`;
-        const expected = outputBodies.get(expectedKey);
+        const expected = m.sample.expectedOutput;
         if (expected === undefined) {
             continue;
         }

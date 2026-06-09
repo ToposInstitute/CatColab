@@ -28,8 +28,8 @@ async function main(): Promise<void> {
         const mdPath = resolve(mdPathRaw);
         const text = readFileSync(mdPath, "utf8");
         const slug = markdownSlug(mdPath);
-        const items = parse(text, slug);
-        const { tsSamples, outputBodies } = assemble(items);
+        const items = parse(text);
+        const { tsSamples } = assemble(items, slug);
 
         const pkgRoot = findPackageRoot(mdPath);
         const tsconfigPath = findTsConfig(pkgRoot);
@@ -42,10 +42,10 @@ async function main(): Promise<void> {
         // produces noisier failures.
         let runFailures: RunFailure[] = [];
         if (diagnostics.length === 0) {
-            runFailures = await runPairs(materialised, outputBodies, pkgRoot, tsconfigPath);
+            runFailures = await runPairs(materialised, pkgRoot, tsconfigPath);
         }
 
-        const runCount = countRunnable(materialised, outputBodies);
+        const runCount = countRunnable(materialised);
 
         const report: FileReport = {
             mdPath: mdPathRaw,
@@ -64,10 +64,10 @@ async function main(): Promise<void> {
     }
 }
 
-function countRunnable(files: MaterialisedSample[], outputBodies: Map<string, string>): number {
+function countRunnable(files: MaterialisedSample[]): number {
     let n = 0;
     for (const m of files) {
-        if (outputBodies.has(`${m.sample.id}-output`)) {
+        if (m.sample.expectedOutput !== undefined) {
             n += 1;
         }
     }

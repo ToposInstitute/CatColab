@@ -1,31 +1,27 @@
 /**
- * Parse a `.lts.md` Markdown file into a list of raw samples.
+ * Parse a `.lts.md` Markdown file into an ordered list of fenced code blocks
+ * and directives.
  *
- * Each sample carries:
- *   - id: explicit `<!-- #id -->` or an auto-generated slug-line id.
+ * Each fence carries:
  *   - language: 'ts' for type-checked/executed samples; null for free-form fences
- *     (used as -output bodies).
+ *     (treated as expected output of the preceding ts sample, if any).
  *   - content: raw text of the fence body (no fence delimiters).
  *   - mdLine: 1-based line number in the markdown of the first line of fence body.
- *   - directive: one of 'prepend-to-following', 'reset', or null. Directives are
- *     emitted as ordered events; the assembler walks samples and directive events
- *     together.
+ *
+ * Directives are emitted as ordered events; the assembler walks fences and
+ * directives together.
  *
  * Recognised comment forms:
- *   <!-- #id -->
- *   <!-- verifier:prepend-to-following -->
  *   <!-- verifier:reset -->
  *
  * Anything else is treated as prose.
  */
 
-const ID_RE = /^<!--\s*#([^\s]+)\s*-->\s*$/;
 const DIRECTIVE_RE = /^<!--\s*verifier:([a-z0-9-]+)\s*-->\s*$/;
 const FENCE_OPEN_RE = /^(```+)([a-zA-Z0-9_-]*)\s*$/;
 
-export type SampleItem = {
-    kind: "sample";
-    id: string;
+export type FenceItem = {
+    kind: "fence";
     language: "ts" | null;
     content: string;
     /** 1-based line of first content line. */
@@ -37,21 +33,14 @@ export type DirectiveItem = {
     directive: string;
 };
 
-export type ParsedItem = SampleItem | DirectiveItem;
+export type ParsedItem = FenceItem | DirectiveItem;
 
-export function parse(text: string, slug: string): ParsedItem[] {
+export function parse(text: string): ParsedItem[] {
     const lines = text.split("\n");
     const items: ParsedItem[] = [];
-    let pendingId: string | null = null;
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i] as string;
-
-        const idMatch = ID_RE.exec(line);
-        if (idMatch) {
-            pendingId = idMatch[1] as string;
-            continue;
-        }
 
         const directiveMatch = DIRECTIVE_RE.exec(line);
         if (directiveMatch) {
@@ -72,23 +61,15 @@ export function parse(text: string, slug: string): ParsedItem[] {
                 }
             }
             const content = lines.slice(bodyStart, j).join("\n");
-            const id = pendingId ?? `${slug}-${i + 1}`;
-            pendingId = null;
             const normalisedLanguage: "ts" | null = language === "ts" ? "ts" : null;
             items.push({
-                kind: "sample",
-                id,
+                kind: "fence",
                 language: normalisedLanguage,
                 content,
                 mdLine: bodyStart + 1, // 1-based
             });
             i = j; // skip past closing fence
-            continue;
         }
-
-        // Any blank/prose line clears a pending id only if no fence appears soon.
-        // To keep semantics simple: ids persist only until the next fence; intervening
-        // prose between an id comment and its fence is allowed.
     }
 
     return items;

@@ -1,16 +1,20 @@
 /**
- * Walk the parsed item stream, applying directives to produce two artefacts:
+ * Walk the parsed item stream and produce the list of materialisable `ts`
+ * samples.
  *
- *   - tsSamples: the materialisable `ts` samples, each with its full assembled
- *     content (prepends concatenated above the sample body) and the line-offset
- *     mapping needed to translate assembled-file line numbers back to the
- *     original markdown.
- *   - outputBodies: a map from `<id>-output` → expected stdout text.
+ * Semantics:
+ *   - `<!-- verifier:prepend-to-following -->` marks the next `ts` fence as a
+ *     prelude: it is added to the active prepend stack and concatenated above
+ *     every subsequent `ts` fence (in addition to being a sample itself).
+ *   - `ts` fences without that directive are standalone samples (they still
+ *     see the existing prepend stack, but do not themselves get added to it).
+ *   - A non-`ts` fence immediately following a `ts` fence is treated as that
+ *     sample's expected stdout.
+ *   - `<!-- verifier:reset -->` clears the prepend stack so the next `ts`
+ *     fence starts fresh.
  *
- * Directives:
- *   prepend-to-following: the next sample becomes part of the active prepend
- *     stack and is concatenated above every subsequent ts sample (until reset).
- *   reset: empties the prepend stack.
+ * Each sample also carries the line-offset mapping needed to translate
+ * assembled-file line numbers back to the original markdown.
  */
 
 import type { ParsedItem } from "./parse.ts";
@@ -26,39 +30,41 @@ export type TsSample = {
      * prepends, plus their separator newlines). Used to map assembled-line → mdLine.
      */
     bodyOffset: number;
+    /** Expected stdout, if the sample is followed by a non-ts fence. */
+    expectedOutput?: string;
 };
 
 export type Assembled = {
     tsSamples: TsSample[];
-    /** id-output → expected stdout text */
-    outputBodies: Map<string, string>;
 };
 
-export function assemble(items: ParsedItem[]): Assembled {
+export function assemble(items: ParsedItem[], slug: string): Assembled {
     const tsSamples: TsSample[] = [];
-    const outputBodies = new Map<string, string>();
 
     let prependStack: string[] = [];
     let prependNext = false;
+    let lastTsSample: TsSample | null = null;
 
     for (const item of items) {
         if (item.kind === "directive") {
             if (item.directive === "reset") {
                 prependStack = [];
                 prependNext = false;
+                lastTsSample = null;
             } else if (item.directive === "prepend-to-following") {
                 prependNext = true;
-            } else {
-                // Unknown directive — silently ignore so future additions are non-fatal.
             }
+            // Unknown directives are silently ignored so future additions
+            // remain non-fatal.
             continue;
         }
 
-        // item.kind === "sample"
+        // item.kind === "fence"
         if (item.language !== "ts") {
-            // Treat as -output body if id ends with -output.
-            if (item.id.endsWith("-output")) {
-                outputBodies.set(item.id, item.content);
+            // Non-ts fence immediately after a ts sample → expected output.
+            if (lastTsSample !== null) {
+                lastTsSample.expectedOutput = item.content;
+                lastTsSample = null;
             }
             continue;
         }
@@ -69,22 +75,19 @@ export function assemble(items: ParsedItem[]): Assembled {
                 ? item.content
                 : prependParts.join("\n") + "\n" + item.content;
         // Number of lines the prepend block contributes before the body begins.
-        // Each prepend part is followed by a '\n' that introduces the next part or
-        // the body. The body's first line in the assembled file is at index = total
-        // newlines added by prepends (counted across parts and their joiners).
         let bodyOffset = 0;
-        if (prependParts.length > 0) {
-            for (const part of prependParts) {
-                bodyOffset += part.split("\n").length;
-            }
+        for (const part of prependParts) {
+            bodyOffset += part.split("\n").length;
         }
 
-        tsSamples.push({
-            id: item.id,
+        const sample: TsSample = {
+            id: `${slug}-${item.mdLine}`,
             content: assembled,
             mdLine: item.mdLine,
             bodyOffset,
-        });
+        };
+        tsSamples.push(sample);
+        lastTsSample = sample;
 
         if (prependNext) {
             prependStack = prependStack.concat([item.content]);
@@ -92,5 +95,5 @@ export function assemble(items: ParsedItem[]): Assembled {
         }
     }
 
-    return { tsSamples, outputBodies };
+    return { tsSamples };
 }
