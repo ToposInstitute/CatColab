@@ -11,7 +11,8 @@ use wasm_bindgen::prelude::*;
 use catcolab_document_types::current::*;
 use catlog::dbl::model::{DblModel as _, DiscreteDblModel, FpDblModel, MutDblModel};
 use catlog::dbl::model_diagram as diagram;
-use catlog::dbl::model_morphism::DiscreteDblModelMapping;
+use catlog::dbl::model_diagram::Diagram;
+use catlog::dbl::model_morphism::{DiscreteDblModelMapping, MutDblModelMapping};
 use catlog::one::FgCategory;
 use catlog::zero::{MutMapping, NameLookup, NameSegment, Namespace, QualifiedLabel, QualifiedName};
 
@@ -290,6 +291,7 @@ pub fn elaborate_diagram(
         match judgment {
             DiagramJudgment::Object(decl) => diagram.add_ob(&decl)?,
             DiagramJudgment::Morphism(decl) => diagram.add_mor(&decl)?,
+            DiagramJudgment::Instantiation(_) => todo!(),
             DiagramJudgment::Equation(_) => {
                 return Err("Elaboration of equations in diagrams is not yet supported".into());
             }

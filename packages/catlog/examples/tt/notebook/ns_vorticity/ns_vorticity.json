@@ -1,0 +1,483 @@
+{
+  "diagramIn": {
+    "_id": "019df1c9-1c72-72d3-a0f7-9de7af7db5d5",
+    "_server": "backend-next.catcolab.org",
+    "_version": null,
+    "type": "diagram-in"
+  },
+  "name": "NS Vorticity",
+  "notebook": {
+    "cellContents": {
+      "019df529-6dbd-70ad-b1bb-452cb63e81ef": {
+        "content": {
+          "id": "019df529-6dbc-74ef-b09b-e9033b1cd729",
+          "name": "v",
+          "obType": {
+            "content": "Object",
+            "tag": "Basic"
+          },
+          "over": {
+            "content": "019df509-6978-72bf-9362-0e085ed78843",
+            "tag": "Basic"
+          },
+          "tag": "object"
+        },
+        "id": "019df529-6dbd-70ad-b1bb-452cb63e81ef",
+        "tag": "formal"
+      },
+      "019df529-8da6-763a-b0b6-f0fcca704e74": {
+        "content": {
+          "id": "019df529-8da6-763a-b0b6-ef7faa28e8f2",
+          "name": "dv",
+          "obType": {
+            "content": "Object",
+            "tag": "Basic"
+          },
+          "over": {
+            "content": "019df3f4-7663-7519-ba02-9cadb41b87f0",
+            "tag": "Basic"
+          },
+          "tag": "object"
+        },
+        "id": "019df529-8da6-763a-b0b6-f0fcca704e74",
+        "tag": "formal"
+      },
+      "019df529-ab54-760c-a5d6-d5417c8ad548": {
+        "content": {
+          "id": "019df529-ab54-760c-a5d6-d16cd2905323",
+          "name": "psi",
+          "obType": {
+            "content": "Object",
+            "tag": "Basic"
+          },
+          "over": {
+            "content": "019df3f4-8443-71d6-a106-e211b1f1a359",
+            "tag": "Basic"
+          },
+          "tag": "object"
+        },
+        "id": "019df529-ab54-760c-a5d6-d5417c8ad548",
+        "tag": "formal"
+      },
+      "019df53a-d21a-76b8-a969-a907758040d7": {
+        "content": {
+          "cod": {
+            "content": "019df5e1-f2ff-7458-9b18-7552e4ed2411",
+            "tag": "Basic"
+          },
+          "dom": {
+            "content": {
+              "modality": "List",
+              "objects": [
+                {
+                  "content": "019df529-8da6-763a-b0b6-ef7faa28e8f2",
+                  "tag": "Basic"
+                }
+              ]
+            },
+            "tag": "List"
+          },
+          "id": "019df53a-d21a-76b8-a969-a408c47360a3",
+          "morType": {
+            "content": "Multihom",
+            "tag": "Basic"
+          },
+          "name": "",
+          "over": {
+            "content": "019df508-fe6a-751c-92e0-ed1ffccbfb20",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "019df53a-d21a-76b8-a969-a907758040d7",
+        "tag": "formal"
+      },
+      "019df5e1-fe53-737f-ae36-9f9724456c7f": {
+        "content": {
+          "cod": {
+            "content": "019df529-ab54-760c-a5d6-d16cd2905323",
+            "tag": "Basic"
+          },
+          "dom": {
+            "content": {
+              "modality": "List",
+              "objects": [
+                {
+                  "content": "019df5e1-f2ff-7458-9b18-7552e4ed2411",
+                  "tag": "Basic"
+                }
+              ]
+            },
+            "tag": "List"
+          },
+          "id": "019df5e1-fe53-737f-ae36-9a8a537486c7",
+          "morType": {
+            "content": "Multihom",
+            "tag": "Basic"
+          },
+          "name": "",
+          "over": {
+            "content": "019df50c-6981-7248-8a82-b1da5d63ab63",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "019df5e1-fe53-737f-ae36-9f9724456c7f",
+        "tag": "formal"
+      },
+      "019df5e5-af2b-7008-9f4c-db1a24416d55": {
+        "content": {
+          "cod": {
+            "content": "019df5e5-c238-72a0-bfd8-07e43d5877bc",
+            "tag": "Basic"
+          },
+          "dom": {
+            "content": {
+              "modality": "List",
+              "objects": [
+                {
+                  "content": "019df529-ab54-760c-a5d6-d16cd2905323",
+                  "tag": "Basic"
+                }
+              ]
+            },
+            "tag": "List"
+          },
+          "id": "019df5e5-af2b-7008-9f4c-d6019e3131f4",
+          "morType": {
+            "content": "Multihom",
+            "tag": "Basic"
+          },
+          "name": "",
+          "over": {
+            "content": "019df509-e051-77aa-9899-db60385d3b57",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "019df5e5-af2b-7008-9f4c-db1a24416d55",
+        "tag": "formal"
+      },
+      "019df5e5-dc48-73d8-80ff-b0696f8fcfc7": {
+        "content": {
+          "cod": {
+            "content": "019df529-6dbc-74ef-b09b-e9033b1cd729",
+            "tag": "Basic"
+          },
+          "dom": {
+            "content": {
+              "modality": "List",
+              "objects": [
+                {
+                  "content": "019df5e5-c238-72a0-bfd8-07e43d5877bc",
+                  "tag": "Basic"
+                }
+              ]
+            },
+            "tag": "List"
+          },
+          "id": "019df5e5-dc48-73d8-80ff-adce21a06334",
+          "morType": {
+            "content": "Multihom",
+            "tag": "Basic"
+          },
+          "name": "",
+          "over": {
+            "content": "019df50a-6e39-7216-9b89-87168f762a5c",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "019df5e5-dc48-73d8-80ff-b0696f8fcfc7",
+        "tag": "formal"
+      },
+      "019df5e6-1b54-7791-b6d6-2dd1f0f34ca6": {
+        "content": {
+          "cod": {
+            "content": "019df5e7-2dea-777b-beaf-1d649ae5dc63",
+            "tag": "Basic"
+          },
+          "dom": {
+            "content": {
+              "modality": "List",
+              "objects": [
+                {
+                  "content": "019df529-6dbc-74ef-b09b-e9033b1cd729",
+                  "tag": "Basic"
+                },
+                {
+                  "content": "019df5e7-cd6a-757d-989b-821888c27cc6",
+                  "tag": "Basic"
+                }
+              ]
+            },
+            "tag": "List"
+          },
+          "id": "019df5e6-1b54-7791-b6d6-2b773528d386",
+          "morType": {
+            "content": "Multihom",
+            "tag": "Basic"
+          },
+          "name": "",
+          "over": {
+            "content": "019df522-b423-7419-880c-7c8b6f62eb38",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "019df5e6-1b54-7791-b6d6-2dd1f0f34ca6",
+        "tag": "formal"
+      },
+      "019df5e6-7de5-72dd-a1ca-ce67fdb559d5": {
+        "content": {
+          "cod": {
+            "content": "019df5e7-3b4f-769e-8b78-4e7aa6ed6cca",
+            "tag": "Basic"
+          },
+          "dom": {
+            "content": {
+              "modality": "List",
+              "objects": [
+                {
+                  "content": "019df529-6dbc-74ef-b09b-e9033b1cd729",
+                  "tag": "Basic"
+                }
+              ]
+            },
+            "tag": "List"
+          },
+          "id": "019df5e6-7de5-72dd-a1ca-c94fec27e219",
+          "morType": {
+            "content": "Multihom",
+            "tag": "Basic"
+          },
+          "name": "",
+          "over": {
+            "content": "019df526-a755-75f8-8528-f381f4feec4d",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "019df5e6-7de5-72dd-a1ca-ce67fdb559d5",
+        "tag": "formal"
+      },
+      "019df5e7-54dd-73a3-9d4d-fe96f8f88e34": {
+        "content": {
+          "cod": {
+            "content": "019df5e7-cd6a-757d-989b-821888c27cc6",
+            "tag": "Basic"
+          },
+          "dom": {
+            "content": {
+              "modality": "List",
+              "objects": [
+                {
+                  "content": "019df5e7-3b4f-769e-8b78-4e7aa6ed6cca",
+                  "tag": "Basic"
+                }
+              ]
+            },
+            "tag": "List"
+          },
+          "id": "019df5e7-54dd-73a3-9d4d-fb851fab23eb",
+          "morType": {
+            "content": "Multihom",
+            "tag": "Basic"
+          },
+          "name": "",
+          "over": {
+            "content": "019df508-fe6a-751c-92e0-ed1ffccbfb20",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "019df5e7-54dd-73a3-9d4d-fe96f8f88e34",
+        "tag": "formal"
+      },
+      "019df5e8-04c5-76a7-94f0-f3ba870ea0a4": {
+        "content": {
+          "cod": {
+            "content": "019df5e8-1e54-742a-a46b-e67afce0c7b9",
+            "tag": "Basic"
+          },
+          "dom": {
+            "content": {
+              "modality": "List",
+              "objects": [
+                {
+                  "content": "019df5e7-2dea-777b-beaf-1d649ae5dc63",
+                  "tag": "Basic"
+                }
+              ]
+            },
+            "tag": "List"
+          },
+          "id": "019df5e8-04c5-76a7-94f0-ecd7e73b9b5a",
+          "morType": {
+            "content": "Multihom",
+            "tag": "Basic"
+          },
+          "name": "",
+          "over": {
+            "content": "019df50b-da40-7399-9c85-094a02bde699",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "019df5e8-04c5-76a7-94f0-f3ba870ea0a4",
+        "tag": "formal"
+      },
+      "019df5e8-3257-7148-b61b-4022cead3750": {
+        "content": {
+          "cod": {
+            "content": "019df5e9-1ff1-76be-876c-9ca1ff79c322",
+            "tag": "Basic"
+          },
+          "dom": {
+            "content": {
+              "modality": "List",
+              "objects": [
+                {
+                  "content": "019df529-8da6-763a-b0b6-ef7faa28e8f2",
+                  "tag": "Basic"
+                }
+              ]
+            },
+            "tag": "List"
+          },
+          "id": "019df5e8-3257-7148-b61b-3d04eb245d60",
+          "morType": {
+            "content": "Multihom",
+            "tag": "Basic"
+          },
+          "name": "",
+          "over": {
+            "content": "019df509-9301-77d7-bdd5-3ffaea8a24a1",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "019df5e8-3257-7148-b61b-4022cead3750",
+        "tag": "formal"
+      },
+      "019df5e8-a1a0-7387-ba3d-4c14e3c0d09c": {
+        "content": {
+          "cod": {
+            "content": "019df5e8-d2b9-7747-a43b-13c7b6c6a0ff",
+            "tag": "Basic"
+          },
+          "dom": {
+            "content": {
+              "modality": "List",
+              "objects": [
+                {
+                  "content": "019df5e8-1e54-742a-a46b-e67afce0c7b9",
+                  "tag": "Basic"
+                }
+              ]
+            },
+            "tag": "List"
+          },
+          "id": "019df5e8-a1a0-7387-ba3d-4a014db3e8dc",
+          "morType": {
+            "content": "Multihom",
+            "tag": "Basic"
+          },
+          "name": "",
+          "over": {
+            "content": "019df50a-6e39-7216-9b89-87168f762a5c",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "019df5e8-a1a0-7387-ba3d-4c14e3c0d09c",
+        "tag": "formal"
+      },
+      "019df5e9-3517-729b-8ead-9ff927e40a12": {
+        "content": {
+          "cod": {
+            "content": "019df5ea-23eb-714f-aceb-d3c8130fb2a3",
+            "tag": "Basic"
+          },
+          "dom": {
+            "content": {
+              "modality": "List",
+              "objects": [
+                {
+                  "content": "019df5e8-d2b9-7747-a43b-13c7b6c6a0ff",
+                  "tag": "Basic"
+                }
+              ]
+            },
+            "tag": "List"
+          },
+          "id": "019df5e9-3517-729b-8ead-98793f1ab691",
+          "morType": {
+            "content": "Multihom",
+            "tag": "Basic"
+          },
+          "name": "",
+          "over": {
+            "content": "019df526-a755-75f8-8528-f381f4feec4d",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "019df5e9-3517-729b-8ead-9ff927e40a12",
+        "tag": "formal"
+      },
+      "019df5ea-2af4-709f-8807-fcfccfdd5cdc": {
+        "content": {
+          "cod": {
+            "content": "019df5e9-1ff1-76be-876c-9ca1ff79c322",
+            "tag": "Basic"
+          },
+          "dom": {
+            "content": {
+              "modality": "List",
+              "objects": [
+                {
+                  "content": "019df5ea-23eb-714f-aceb-d3c8130fb2a3",
+                  "tag": "Basic"
+                }
+              ]
+            },
+            "tag": "List"
+          },
+          "id": "019df5ea-2af4-709f-8807-f8981a83d190",
+          "morType": {
+            "content": "Multihom",
+            "tag": "Basic"
+          },
+          "name": "",
+          "over": {
+            "content": "019df5ea-62d9-761e-8c9c-9b5cf73e7240",
+            "tag": "Basic"
+          },
+          "tag": "morphism"
+        },
+        "id": "019df5ea-2af4-709f-8807-fcfccfdd5cdc",
+        "tag": "formal"
+      }
+    },
+    "cellOrder": [
+      "019df529-6dbd-70ad-b1bb-452cb63e81ef",
+      "019df529-8da6-763a-b0b6-f0fcca704e74",
+      "019df529-ab54-760c-a5d6-d5417c8ad548",
+      "019df53a-d21a-76b8-a969-a907758040d7",
+      "019df5e1-fe53-737f-ae36-9f9724456c7f",
+      "019df5e5-af2b-7008-9f4c-db1a24416d55",
+      "019df5e5-dc48-73d8-80ff-b0696f8fcfc7",
+      "019df5e6-7de5-72dd-a1ca-ce67fdb559d5",
+      "019df5e7-54dd-73a3-9d4d-fe96f8f88e34",
+      "019df5e6-1b54-7791-b6d6-2dd1f0f34ca6",
+      "019df5e8-04c5-76a7-94f0-f3ba870ea0a4",
+      "019df5e8-a1a0-7387-ba3d-4c14e3c0d09c",
+      "019df5e8-3257-7148-b61b-4022cead3750",
+      "019df5e9-3517-729b-8ead-9ff927e40a12",
+      "019df5ea-2af4-709f-8807-fcfccfdd5cdc"
+    ]
+  },
+  "type": "diagram",
+  "version": "2"
+}

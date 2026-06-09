@@ -747,7 +747,7 @@ pub fn elaborate_model(
         let theory = tt::theory::Theory::new(ustr("_").into(), theory_def);
         let ref_id = ustr(&ref_id);
         let mut elab = ElaboratorNext::new(theory.clone(), &instantiated.toplevel, ref_id);
-        let (ty_s, ty_v) = elab.notebook(notebook.0.formal_content());
+        let (ty_s, ty_v) = elab.model_notebook(notebook.0.formal_content());
         let (model, namespace) =
             tt::modelgen::Model::from_ty(&instantiated.toplevel, &theory.definition, &ty_v);
         Ok(DblModel {
