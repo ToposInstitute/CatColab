@@ -21,7 +21,7 @@ export interface NotebookBackend<Handle> {
     /** Initialize a backend handle from an initial document. */
     init(initialDoc: ModelDocument): Handle;
     /** Read view of the document for a handle (reactive where applicable). */
-    doc(handle: Handle): ModelDocument;
+    view(handle: Handle): ModelDocument;
     /** Apply a mutation by mutating a draft document. */
     change(handle: Handle, fn: (doc: ModelDocument) => void): void;
     /** Make a detached plain-JS copy of a backend-owned value before cloning it. */
@@ -31,7 +31,7 @@ export interface NotebookBackend<Handle> {
 /** A plain in-memory backend whose handle is the document itself. */
 export const plainBackend: NotebookBackend<ModelDocument> = {
     init: (initialDoc) => initialDoc,
-    doc: (handle) => handle,
+    view: (handle) => handle,
     change: (handle, fn) => fn(handle),
 };
 
@@ -172,7 +172,7 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
     handle: Handle,
     _logic: TLogic,
 ): ModelNotebook<TLogic, Handle> {
-    const doc = backend.doc(handle);
+    const doc = backend.view(handle);
     const change = (fn: (doc: ModelDocument) => void) => backend.change(handle, fn);
     const copy = backend.copy ? <T>(value: T) => backend.copy!(handle, value) : undefined;
 
