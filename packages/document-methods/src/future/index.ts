@@ -12,31 +12,28 @@ import { duplicateCell, newFormalCell, newRichTextCell } from "../notebook";
 export { type ModelDocument, newModelDocument } from "../model";
 
 /**
- * A notebook backend instance abstracts the read/write surface that
- * `ModelNotebook` operates over. Reads come from `doc` (which may be a reactive
- * proxy, e.g. a Solid store). Writes are expressed as draft mutations of the
- * document, mirroring Solid's `produce` and Automerge's `handle.change`.
+ * A notebook backend abstracts the storage that notebooks operate over. A
+ * backend is a stateless object working on handles of its own choosing: a
+ * plain document, a Solid store, an Automerge `DocHandle`, etc. Handles are
+ * produced by `init` and passed back into the other methods.
  */
-export interface NotebookBackendInstance {
-    /** Read view of the document. Will be reactive if used with Solid correctly. */
-    readonly doc: ModelDocument;
+export interface NotebookBackend<Handle> {
+    /** Initialize a backend handle from an initial document. */
+    init(initialDoc: ModelDocument): Handle;
+    /** Read view of the document for a handle (reactive where applicable). */
+    doc(handle: Handle): ModelDocument;
     /** Apply a mutation by mutating a draft document. */
-    change(fn: (doc: ModelDocument) => void): void;
+    change(handle: Handle, fn: (doc: ModelDocument) => void): void;
     /** Make a detached plain-JS copy of a backend-owned value before cloning it. */
-    copy?<T>(value: T): T;
+    copy?<T>(handle: Handle, value: T): T;
 }
 
-/**
- * Factory that constructs a `NotebookBackendInstance` from an initial document.
- * `ModelNotebook.create` builds the seed and hands it to the factory.
- */
-export type NotebookBackend = (intialDoc: ModelDocument) => NotebookBackendInstance;
-
-/** A plain in-memory backend that mutates the document in place. */
-export const plainBackend: NotebookBackend = (initial) => ({
-    doc: initial,
-    change: (fn) => fn(initial),
-});
+/** A plain in-memory backend whose handle is the document itself. */
+export const plainBackend: NotebookBackend<ModelDocument> = {
+    init: (initialDoc) => initialDoc,
+    doc: (handle) => handle,
+    change: (handle, fn) => fn(handle),
+};
 
 export type ObjectType<Name extends string> = ObType & { readonly objectTypeName?: Name };
 export type MorphismType<Endpoint, Name extends string> = MorType & {
@@ -135,9 +132,16 @@ type LogicMorphismType<TLogic extends AnyModelLogic> =
         ? TMorphismTypes[keyof TMorphismTypes]
         : never;
 
-export type ModelNotebook<TLogic extends AnyModelLogic> = Update<{ name: string }> & {
+export type ModelNotebook<TLogic extends AnyModelLogic, Handle = ModelDocument> = Update<{
+    name: string;
+}> & {
     /** Reactive read of the notebook's name. */
     readonly name: string;
+    /**
+     * The backend handle this notebook is bound to, e.g. an Automerge
+     * `DocHandle`. With the plain in-memory backend it is the document itself.
+     */
+    readonly handle: Handle;
     /**
      * The underlying document. With a reactive backend (Solid, Automerge), this
      * is the reactive proxy; with the plain in-memory backend it is the raw
@@ -163,24 +167,29 @@ export const objectType = <Name extends string>(content: string) =>
 export const morphismType = <Endpoint, Name extends string>() =>
     ({ tag: "Hom", content: { tag: "Basic", content: "Object" } }) as MorphismType<Endpoint, Name>;
 
-function attachNotebook<TLogic extends AnyModelLogic>(
-    backend: NotebookBackendInstance,
+function attachNotebook<TLogic extends AnyModelLogic, Handle>(
+    backend: NotebookBackend<Handle>,
+    handle: Handle,
     _logic: TLogic,
-): ModelNotebook<TLogic> {
+): ModelNotebook<TLogic, Handle> {
+    const doc = backend.doc(handle);
+    const change = (fn: (doc: ModelDocument) => void) => backend.change(handle, fn);
+    const copy = backend.copy ? <T>(value: T) => backend.copy!(handle, value) : undefined;
+
     const readCellContent = <T>(cellId: string): T =>
-        (backend.doc.notebook.cellContents[cellId] as unknown as { content: T }).content;
+        (doc.notebook.cellContents[cellId] as unknown as { content: T }).content;
 
     const cloneJudgment = (judgment: ModelJudgment): ModelJudgment =>
-        duplicateModelJudgment(backend.copy ? backend.copy(judgment) : judgment);
+        duplicateModelJudgment(copy ? copy(judgment) : judgment);
 
     const duplicateFormalCell = (cellId: string): Cell<ModelJudgment> => {
-        const cell = backend.doc.notebook.cellContents[cellId];
+        const cell = doc.notebook.cellContents[cellId];
         return duplicateCell(cell, cloneJudgment);
     };
 
     const appendDuplicate = (cellId: string): string => {
         const duplicatedCell = duplicateFormalCell(cellId);
-        backend.change((d) => {
+        change((d) => {
             d.notebook.cellContents[duplicatedCell.id] = duplicatedCell;
             d.notebook.cellOrder.push(duplicatedCell.id);
         });
@@ -197,7 +206,7 @@ function attachNotebook<TLogic extends AnyModelLogic>(
                 return readCellContent<{ name: string }>(cellId).name;
             },
             update(u: { name?: string }) {
-                backend.change((d) => {
+                change((d) => {
                     Object.assign(
                         (d.notebook.cellContents[cellId] as { content: object }).content,
                         u,
@@ -219,7 +228,7 @@ function attachNotebook<TLogic extends AnyModelLogic>(
                 return readCellContent<{ name: string }>(cellId).name;
             },
             update(u: Partial<MorphismArgs<TType>>) {
-                backend.change((d) => {
+                change((d) => {
                     Object.assign(
                         (d.notebook.cellContents[cellId] as { content: object }).content,
                         u,
@@ -233,22 +242,23 @@ function attachNotebook<TLogic extends AnyModelLogic>(
 
     return {
         get name() {
-            return backend.doc.name;
+            return doc.name;
         },
+        handle,
         get document() {
-            return backend.doc;
+            return doc;
         },
         dump() {
-            return backend.copy ? backend.copy(backend.doc) : structuredClone(backend.doc);
+            return copy ? copy(doc) : structuredClone(doc);
         },
         update(u: { name?: string }) {
-            backend.change((d) => {
+            change((d) => {
                 Object.assign(d, u);
             });
         },
         richText({ content }: { content: string }) {
             const cell = newRichTextCell(content);
-            backend.change((d) => {
+            change((d) => {
                 d.notebook.cellContents[cell.id] = cell;
                 d.notebook.cellOrder.push(cell.id);
             });
@@ -259,7 +269,7 @@ function attachNotebook<TLogic extends AnyModelLogic>(
                     return readCellContent<string>(cellId);
                 },
                 update(u: { content?: string }) {
-                    backend.change((d) => {
+                    change((d) => {
                         Object.assign(d.notebook.cellContents[cellId] as object, u);
                     });
                 },
@@ -272,7 +282,7 @@ function attachNotebook<TLogic extends AnyModelLogic>(
             const judgment = newObjectDecl(type);
             judgment.name = objectArgs.name;
             const formalCell = newFormalCell(judgment);
-            backend.change((d) => {
+            change((d) => {
                 d.notebook.cellContents[formalCell.id] = formalCell;
                 d.notebook.cellOrder.push(formalCell.id);
             });
@@ -286,42 +296,64 @@ function attachNotebook<TLogic extends AnyModelLogic>(
             const judgment = newMorphismDecl(type);
             judgment.name = morphismArgs.name;
             const formalCell = newFormalCell(judgment);
-            backend.change((d) => {
+            change((d) => {
                 d.notebook.cellContents[formalCell.id] = formalCell;
                 d.notebook.cellOrder.push(formalCell.id);
             });
             const cellId = formalCell.id;
             return morphismHandle(cellId, type);
         },
-    } as unknown as ModelNotebook<TLogic>;
+    } as unknown as ModelNotebook<TLogic, Handle>;
 }
 
-export const ModelNotebook = {
+/**
+ * Entry points for typed notebooks over a fixed backend. Obtain one with
+ * `createBinder`.
+ */
+export interface Binder<Handle> {
     /**
-     * Build a typed notebook. The document seed is constructed internally
-     * from `data.name` and `logic.theory`. An optional backend factory in
-     * `options` controls how the seed is wrapped (in-memory by default;
-     * Solid- or Automerge-backed via the helpers in `./backends/`).
+     * Build a typed notebook from fresh data. The document seed is constructed
+     * internally from `data.name` and `logic.theory`, then handed to the
+     * backend's `init`.
      */
     create<TLogic extends AnyModelLogic>(
         logic: TLogic,
         data: { name: string },
-        options?: { backend?: NotebookBackend },
-    ): ModelNotebook<TLogic> {
-        const seed = newModelDocument({ theory: logic.theory });
-        seed.name = data.name;
-        return this.load(logic, seed, options);
-    },
+    ): ModelNotebook<TLogic, Handle>;
     /**
-     * Build a typed notebook around an existing document. An optional backend
-     * factory in `options` controls how the document is wrapped.
+     * Build a typed notebook around an existing plain document by initializing
+     * backend storage from it.
      */
     load<TLogic extends AnyModelLogic>(
         logic: TLogic,
         document: ModelDocument,
-        options?: { backend?: NotebookBackend },
-    ): ModelNotebook<TLogic> {
-        const backend = options?.backend ? options.backend(document) : plainBackend(document);
-        return attachNotebook(backend, logic);
-    },
-};
+    ): ModelNotebook<TLogic, Handle>;
+    /**
+     * Build a typed notebook around an existing backend handle, e.g. an
+     * Automerge `DocHandle` found in a repo. No backend storage is created.
+     */
+    attach<TLogic extends AnyModelLogic>(
+        logic: TLogic,
+        handle: Handle,
+    ): ModelNotebook<TLogic, Handle>;
+}
+
+/** Bind a backend once, yielding `create`/`load`/`attach` entry points. */
+export function createBinder<Handle>(backend: NotebookBackend<Handle>): Binder<Handle> {
+    return {
+        create(logic, data) {
+            const seed = newModelDocument({ theory: logic.theory });
+            seed.name = data.name;
+            return this.load(logic, seed);
+        },
+        load(logic, document) {
+            return attachNotebook(backend, backend.init(document), logic);
+        },
+        attach(logic, handle) {
+            return attachNotebook(backend, handle, logic);
+        },
+    };
+}
+
+/** A ready-made binder over the plain in-memory backend. */
+export const binder: Binder<ModelDocument> = createBinder(plainBackend);

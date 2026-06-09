@@ -4,15 +4,16 @@ A new package for our built-in logics `catcolab-logics`. In the future people ma
 
 ```ts
 import { SimpleOlog } from "catcolab-logics";
-import { ModelNotebook } from "catcolab-document-methods/future";
+import { binder } from "catcolab-document-methods/future";
 ```
 
-Using this we create our notebook.
+Notebooks are created through a binder, which ties the notebook API to a
+storage backend. The default `binder` uses the plain in-memory backend.
 
 <!-- verifier:prepend-to-following -->
 
 ```ts
-const notebook = ModelNotebook.create(SimpleOlog, { name: "An Olog" });
+const notebook = binder.create(SimpleOlog, { name: "An Olog" });
 ```
 
 We can add rich text cells to our notebook.
@@ -118,9 +119,9 @@ But adapt to the underlying logic:
 
 ```ts
 import { PetriNet } from "catcolab-logics";
-import { ModelNotebook } from "catcolab-document-methods/future";
+import { binder } from "catcolab-document-methods/future";
 
-const notebook = ModelNotebook.create(PetriNet, { name: "Example Petri-net" });
+const notebook = binder.create(PetriNet, { name: "Example Petri-net" });
 
 const Place = PetriNet.objectTypes.Place;
 const Transition = PetriNet.morphismTypes.Transition;
@@ -158,5 +159,5 @@ And load it.
 <!-- verifier:prepend-to-following -->
 
 ```ts
-const notebook2 = ModelNotebook.load(PetriNet, notebookData);
+const notebook2 = binder.load(PetriNet, notebookData);
 ```
