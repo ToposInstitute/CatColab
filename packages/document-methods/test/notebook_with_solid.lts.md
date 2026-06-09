@@ -10,21 +10,21 @@ We can plug in Solid's reactivity by itself using `createStore` and `produce`.
 import { createEffect, createRoot } from "solid-js";
 import { createStore, produce, unwrap } from "solid-js/store";
 import { SimpleOlog } from "catcolab-logics";
-import { ModelNotebook, type NotebookBackend } from "catcolab-document-methods/future";
+import { ModelNotebook, type NotebookBackendInstance } from "catcolab-document-methods/future";
 import { type ModelDocument } from "catcolab-document-methods";
 
 function removeProxyAndCopy<T>(value: T): T {
     return structuredClone(unwrap(value));
 }
 
-const solidBackend: NotebookBackend = (initialDoc: ModelDocument) => {
+function solidBackend(initialDoc: ModelDocument): NotebookBackendInstance {
     const [doc, setDoc] = createStore<ModelDocument>(initialDoc);
     return {
         doc,
         change: (fn) => setDoc(produce<ModelDocument>(fn)),
         copy: removeProxyAndCopy,
     };
-};
+}
 
 const notebook = ModelNotebook.create(SimpleOlog, { name: "An Olog" }, { backend: solidBackend });
 ```
@@ -140,7 +140,11 @@ import { createEffect, createRoot } from "solid-js";
 import { type DocHandle, Repo } from "@automerge/automerge-repo";
 import { makeDocumentProjection } from "@automerge/automerge-repo-solid-primitives";
 import { SimpleOlog } from "catcolab-logics";
-import { ModelNotebook, type NotebookBackend } from "catcolab-document-methods/future";
+import {
+    ModelNotebook,
+    type NotebookBackend,
+    type NotebookBackendInstance,
+} from "catcolab-document-methods/future";
 import { type ModelDocument } from "catcolab-document-methods";
 
 function materializeFromAutomerge<T>(doc: Doc<unknown>, subtree: T): T {
@@ -149,23 +153,24 @@ function materializeFromAutomerge<T>(doc: Doc<unknown>, subtree: T): T {
 }
 
 const repo = new Repo();
-const solidAutomergeBackend: NotebookBackend = (initialDoc: ModelDocument) => {
-    const handle = repo.create<ModelDocument>(initialDoc);
-    return solidAutomergeBackendFromHandle(handle)(initialDoc);
-};
 
-const solidAutomergeBackendFromHandle =
-    (handle: DocHandle<ModelDocument>): NotebookBackend =>
-    () => {
-        return {
-            doc: makeDocumentProjection(handle),
-            change: (fn) => handle.change(fn),
-            copy: (x) => {
-                const doc = handle.doc();
-                return materializeFromAutomerge(doc, x);
-            },
-        };
+function solidAutomergeBackend(initialDoc: ModelDocument): NotebookBackendInstance {
+    const handle = repo.create<ModelDocument>(initialDoc);
+    return solidAutomergeBackendFromHandle(handle);
+}
+
+function solidAutomergeBackendFromHandle(
+    handle: DocHandle<ModelDocument>,
+): NotebookBackendInstance {
+    return {
+        doc: makeDocumentProjection(handle),
+        change: (fn) => handle.change(fn),
+        copy: (x) => {
+            const doc = handle.doc();
+            return materializeFromAutomerge(doc, x);
+        },
     };
+}
 
 const notebook = ModelNotebook.create(
     SimpleOlog,
@@ -218,7 +223,7 @@ const loadedAutomergeHandle = await repo.find<ModelDocument>(existingAutomergeUr
 const loadedAutomergeNotebook = ModelNotebook.load(
     SimpleOlog,
     loadedAutomergeHandle.doc() as ModelDocument,
-    { backend: solidAutomergeBackendFromHandle(loadedAutomergeHandle) },
+    { backend: (_initialDoc) => solidAutomergeBackendFromHandle(loadedAutomergeHandle) },
 );
 
 loadedAutomergeNotebook.update({ name: "Updated loaded Automerge Olog" });
