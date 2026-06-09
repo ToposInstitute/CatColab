@@ -305,7 +305,18 @@ export const ModelNotebook = {
     ): ModelNotebook<TLogic> {
         const seed = newModelDocument({ theory: logic.theory });
         seed.name = data.name;
-        const backend = options?.backend ? options.backend(seed) : plainBackend(seed);
+        return this.load(logic, seed, options);
+    },
+    /**
+     * Build a typed notebook around an existing document. An optional backend
+     * factory in `options` controls how the document is wrapped.
+     */
+    load<TLogic extends AnyModelLogic>(
+        logic: TLogic,
+        document: ModelDocument,
+        options?: { backend?: NotebookBackend },
+    ): ModelNotebook<TLogic> {
+        const backend = options?.backend ? options.backend(document) : plainBackend(document);
         return attachNotebook(backend, logic);
     },
 };

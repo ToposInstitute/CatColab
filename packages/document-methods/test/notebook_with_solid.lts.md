@@ -29,6 +29,37 @@ const solidBackend: NotebookBackend = (initialDoc: ModelDocument) => {
 const notebook = ModelNotebook.create(SimpleOlog, { name: "An Olog" }, { backend: solidBackend });
 ```
 
+Backends can also wrap an existing document instead of a fresh notebook. This
+lets storage-specific code load the document first and then hand it to the typed
+notebook API.
+
+<!-- #solid-load-existing -->
+
+```ts
+const existingSolidDoc = ModelNotebook.create(SimpleOlog, { name: "Loaded Olog" }).document;
+
+const loadedSolidNotebook = ModelNotebook.load(SimpleOlog, existingSolidDoc, {
+    backend: solidBackend,
+});
+
+createRoot(async () => {
+    createEffect(() => {
+        console.log("loaded notebook name:", loadedSolidNotebook.name);
+    });
+
+    await Promise.resolve();
+    loadedSolidNotebook.update({ name: "Updated loaded Olog" });
+    await Promise.resolve();
+});
+```
+
+<!-- #solid-load-existing-output -->
+
+```
+loaded notebook name: Loaded Olog
+loaded notebook name: Updated loaded Olog
+```
+
 Reads of fields, e.g. `notebook.name` are reactive.
 
 <!-- #solid-notebook-read -->
@@ -120,7 +151,7 @@ To combine Solid reactivity with Automerge, we could make custom functions or us
 ```ts
 import { type Doc, getBackend, getObjectId } from "@automerge/automerge";
 import { createEffect, createRoot } from "solid-js";
-import { Repo } from "@automerge/automerge-repo";
+import { type DocHandle, Repo } from "@automerge/automerge-repo";
 import { makeDocumentProjection } from "@automerge/automerge-repo-solid-primitives";
 import { SimpleOlog } from "catcolab-logics";
 import { ModelNotebook, type NotebookBackend } from "catcolab-document-methods/future";
@@ -134,15 +165,21 @@ function materializeFromAutomerge<T>(doc: Doc<unknown>, subtree: T): T {
 const repo = new Repo();
 const solidAutomergeBackend: NotebookBackend = (initialDoc: ModelDocument) => {
     const handle = repo.create<ModelDocument>(initialDoc);
-    return {
-        doc: makeDocumentProjection(handle),
-        change: (fn) => handle.change(fn),
-        copy: (x) => {
-            const doc = handle.doc();
-            return materializeFromAutomerge(doc, x);
-        },
-    };
+    return solidAutomergeBackendFromHandle(handle)(initialDoc);
 };
+
+const solidAutomergeBackendFromHandle =
+    (handle: DocHandle<ModelDocument>): NotebookBackend =>
+    () => {
+        return {
+            doc: makeDocumentProjection(handle),
+            change: (fn) => handle.change(fn),
+            copy: (x) => {
+                const doc = handle.doc();
+                return materializeFromAutomerge(doc, x);
+            },
+        };
+    };
 
 const notebook = ModelNotebook.create(
     SimpleOlog,
@@ -153,11 +190,17 @@ createRoot(async () => {
     createEffect(() => {
         console.log("notebook name:", notebook.name);
     });
-    // Let the initial effect run.
     await Promise.resolve();
     notebook.update({ name: "An updated Olog" });
     await Promise.resolve();
 });
+```
+
+<!-- #automerge-notebook-read-output -->
+
+```
+notebook name: An Olog
+notebook name: An updated Olog
 ```
 
 Copies materialize from the Automerge document itself rather than from the Solid
@@ -177,9 +220,53 @@ console.log("automerge copy:", copiedAutomergeObj.name);
 automerge copy: Updated Automerge copy
 ```
 
-<!-- #automerge-notebook-read-output -->
+<!-- verifier:reset -->
+
+To load an existing Automerge document, first find its handle in the repo, then
+adapt that handle into a notebook backend.
+
+<!-- #automerge-load-existing -->
+
+```ts
+import { type Doc, getBackend, getObjectId } from "@automerge/automerge";
+import { type DocHandle, Repo } from "@automerge/automerge-repo";
+import { makeDocumentProjection } from "@automerge/automerge-repo-solid-primitives";
+import { SimpleOlog } from "catcolab-logics";
+import { ModelNotebook, type NotebookBackend } from "catcolab-document-methods/future";
+import { type ModelDocument } from "catcolab-document-methods";
+
+function materializeFromLoadedAutomerge<T>(doc: Doc<unknown>, subtree: T): T {
+    const objId = getObjectId(subtree as object);
+    return getBackend(doc).materialize(objId!) as T;
+}
+
+const repo = new Repo();
+const backendFromHandle =
+    (handle: DocHandle<ModelDocument>): NotebookBackend =>
+    () => ({
+        doc: makeDocumentProjection(handle),
+        change: (fn) => handle.change(fn),
+        copy: (x) => materializeFromLoadedAutomerge(handle.doc(), x),
+    });
+
+const existingAutomergeHandle = repo.create<ModelDocument>(
+    ModelNotebook.create(SimpleOlog, { name: "Loaded Automerge Olog" }).document,
+);
+const existingAutomergeUrl = existingAutomergeHandle.url;
+
+const loadedAutomergeHandle = await repo.find<ModelDocument>(existingAutomergeUrl);
+const loadedAutomergeNotebook = ModelNotebook.load(
+    SimpleOlog,
+    loadedAutomergeHandle.doc() as ModelDocument,
+    { backend: backendFromHandle(loadedAutomergeHandle) },
+);
+
+loadedAutomergeNotebook.update({ name: "Updated loaded Automerge Olog" });
+console.log("loaded automerge notebook:", loadedAutomergeNotebook.name);
+```
+
+<!-- #automerge-load-existing-output -->
 
 ```
-notebook name: An Olog
-notebook name: An updated Olog
+loaded automerge notebook: Updated loaded Automerge Olog
 ```
