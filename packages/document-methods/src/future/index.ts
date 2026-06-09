@@ -144,6 +144,8 @@ export type ModelNotebook<TLogic extends AnyModelLogic> = Update<{ name: string 
      * object.
      */
     readonly document: ModelDocument;
+    /** Make a detached plain-JS snapshot of the underlying document. */
+    dump(): ModelDocument;
     richText(args: { content: string }): RichTextCell;
     object<TType extends LogicObjectType<TLogic> = LogicObjectType<TLogic>>(
         type: TType,
@@ -235,6 +237,9 @@ function attachNotebook<TLogic extends AnyModelLogic>(
         },
         get document() {
             return backend.doc;
+        },
+        dump() {
+            return backend.copy ? backend.copy(backend.doc) : structuredClone(backend.doc);
         },
         update(u: { name?: string }) {
             backend.change((d) => {

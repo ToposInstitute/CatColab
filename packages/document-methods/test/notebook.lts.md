@@ -114,6 +114,8 @@ But adapt to the underlying logic:
 
 <!-- verifier:reset -->
 
+<!-- verifier:prepend-to-following -->
+
 ```ts
 import { PetriNet } from "catcolab-logics";
 import { ModelNotebook } from "catcolab-document-methods/future";
@@ -141,4 +143,20 @@ notebook.morphism(Transition, {
     dom: a,
     cod: [c],
 });
+```
+
+We can dump a notebook.
+
+<!-- verifier:prepend-to-following -->
+
+```ts
+const notebookData = notebook.dump();
+```
+
+And load it.
+
+<!-- verifier:prepend-to-following -->
+
+```ts
+const notebook2 = ModelNotebook.load(PetriNet, notebookData);
 ```
