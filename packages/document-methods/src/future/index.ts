@@ -1,6 +1,13 @@
 import type { MorType, ObType } from "catcolab-document-types";
-import { type ModelDocument, newModelDocument, newMorphismDecl, newObjectDecl } from "../model";
-import { newFormalCell, newRichTextCell } from "../notebook";
+import type { Cell, ModelJudgment } from "catcolab-document-types";
+import {
+    duplicateModelJudgment,
+    type ModelDocument,
+    newModelDocument,
+    newMorphismDecl,
+    newObjectDecl,
+} from "../model";
+import { duplicateCell, newFormalCell, newRichTextCell } from "../notebook";
 
 export { type ModelDocument, newModelDocument } from "../model";
 
@@ -15,6 +22,8 @@ export interface NotebookBackendInstance {
     readonly doc: ModelDocument;
     /** Apply a mutation by mutating a draft document. */
     change(fn: (doc: ModelDocument) => void): void;
+    /** Make a detached plain-JS copy of a backend-owned value before cloning it. */
+    copy?<T>(value: T): T;
 }
 
 /**
@@ -71,6 +80,7 @@ export type ObjectCell<TType extends ObjectType<string>> = Update<{ name: string
     readonly id: string;
     readonly type: TType;
     readonly name: string;
+    duplicate(): ObjectCell<TType>;
 };
 
 type EndpointOf<TType> = TType extends MorphismType<infer Endpoint, string> ? Endpoint : never;
@@ -87,6 +97,7 @@ export type MorphismCell<TType extends MorphismType<unknown, string>> = Update<
     readonly id: string;
     readonly type: TType;
     readonly name: string;
+    duplicate(): MorphismCell<TType>;
 };
 
 export type RichTextCell = Update<{ content: string }> & {
@@ -157,6 +168,67 @@ function attachNotebook<TLogic extends AnyModelLogic>(
     const readCellContent = <T>(cellId: string): T =>
         (backend.doc.notebook.cellContents[cellId] as unknown as { content: T }).content;
 
+    const cloneJudgment = (judgment: ModelJudgment): ModelJudgment =>
+        duplicateModelJudgment(backend.copy ? backend.copy(judgment) : judgment);
+
+    const duplicateFormalCell = (cellId: string): Cell<ModelJudgment> => {
+        const cell = backend.doc.notebook.cellContents[cellId];
+        return duplicateCell(cell, cloneJudgment);
+    };
+
+    const appendDuplicate = (cellId: string): string => {
+        const duplicatedCell = duplicateFormalCell(cellId);
+        backend.change((d) => {
+            d.notebook.cellContents[duplicatedCell.id] = duplicatedCell;
+            d.notebook.cellOrder.push(duplicatedCell.id);
+        });
+        return duplicatedCell.id;
+    };
+
+    const objectHandle = <TType extends LogicObjectType<TLogic>>(cellId: string, type: TType) =>
+        ({
+            get id() {
+                return readCellContent<{ id: string }>(cellId).id;
+            },
+            type,
+            get name() {
+                return readCellContent<{ name: string }>(cellId).name;
+            },
+            update(u: { name?: string }) {
+                backend.change((d) => {
+                    Object.assign(
+                        (d.notebook.cellContents[cellId] as { content: object }).content,
+                        u,
+                    );
+                });
+            },
+            duplicate() {
+                return objectHandle(appendDuplicate(cellId), type);
+            },
+        }) as unknown as ObjectCell<TType>;
+
+    const morphismHandle = <TType extends LogicMorphismType<TLogic>>(cellId: string, type: TType) =>
+        ({
+            get id() {
+                return readCellContent<{ id: string }>(cellId).id;
+            },
+            type,
+            get name() {
+                return readCellContent<{ name: string }>(cellId).name;
+            },
+            update(u: Partial<MorphismArgs<TType>>) {
+                backend.change((d) => {
+                    Object.assign(
+                        (d.notebook.cellContents[cellId] as { content: object }).content,
+                        u,
+                    );
+                });
+            },
+            duplicate() {
+                return morphismHandle(appendDuplicate(cellId), type);
+            },
+        }) as unknown as MorphismCell<TType>;
+
     return {
         get name() {
             return backend.doc.name;
@@ -200,21 +272,7 @@ function attachNotebook<TLogic extends AnyModelLogic>(
                 d.notebook.cellOrder.push(formalCell.id);
             });
             const cellId = formalCell.id;
-            return {
-                id: judgment.id,
-                type,
-                get name() {
-                    return readCellContent<{ name: string }>(cellId).name;
-                },
-                update(u: { name?: string }) {
-                    backend.change((d) => {
-                        Object.assign(
-                            (d.notebook.cellContents[cellId] as { content: object }).content,
-                            u,
-                        );
-                    });
-                },
-            } as unknown as ObjectCell<TType>;
+            return objectHandle(cellId, type);
         },
         morphism<TType extends LogicMorphismType<TLogic> = LogicMorphismType<TLogic>>(
             type: TType,
@@ -228,21 +286,7 @@ function attachNotebook<TLogic extends AnyModelLogic>(
                 d.notebook.cellOrder.push(formalCell.id);
             });
             const cellId = formalCell.id;
-            return {
-                id: judgment.id,
-                type,
-                get name() {
-                    return readCellContent<{ name: string }>(cellId).name;
-                },
-                update(u: Partial<MorphismArgs<TType>>) {
-                    backend.change((d) => {
-                        Object.assign(
-                            (d.notebook.cellContents[cellId] as { content: object }).content,
-                            u,
-                        );
-                    });
-                },
-            } as unknown as MorphismCell<TType>;
+            return morphismHandle(cellId, type);
         },
     } as unknown as ModelNotebook<TLogic>;
 }

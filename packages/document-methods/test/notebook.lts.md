@@ -78,6 +78,26 @@ arrow.update({
 });
 ```
 
+We can duplicate formal cells. Copies keep the same logical shape but receive fresh
+identities, and their handles can be updated independently.
+
+<!-- verifier:prepend-to-following -->
+
+```ts
+const sourceCopy = source.duplicate();
+sourceCopy.update({
+    name: "Source copy",
+});
+
+console.log("source:", source.name);
+console.log("source copy:", sourceCopy.name);
+```
+
+```
+source: Source
+source copy: Source copy
+```
+
 Invalid shapes should be type errors:
 
 ```ts
