@@ -141,6 +141,28 @@ notebook.morphism(Aspect, {
 });
 ```
 
+Morphism types distinguish their domain from their codomain, so mixing up
+endpoints is a type error.
+
+<!-- verifier:reset -->
+
+```ts
+import { SimpleSchema } from "catcolab-logics";
+import { binder } from "catcolab-document-methods/future";
+
+const schema = binder.create(SimpleSchema, { name: "Example schema" });
+
+const Attr = SimpleSchema.morphismTypes.Attr;
+const str = schema.object(SimpleSchema.objectTypes.AttrType, { name: "String" });
+
+schema.morphism(Attr, {
+    name: "bad",
+    // @ts-expect-error An attribute's domain must be an entity.
+    dom: str,
+    cod: str,
+});
+```
+
 But adapt to the underlying logic:
 
 <!-- verifier:reset -->
@@ -216,7 +238,7 @@ filter cells by their exact type, not just their kind.
 
 ```ts
 import { SimpleSchema } from "catcolab-logics";
-import { binder, CellKind } from "catcolab-document-methods/future";
+import { binder, byMorphismType, byObjectType } from "catcolab-document-methods/future";
 
 const notebook = binder.create(SimpleSchema, { name: "Example schema" });
 
@@ -237,12 +259,8 @@ Filtering on an exact type narrows the handles and excludes cells of every
 other type.
 
 ```ts
-const entities = notebook
-    .cells()
-    .filter((cell) => cell.kind === CellKind.Object && cell.type === Entity);
-const attrs = notebook
-    .cells()
-    .filter((cell) => cell.kind === CellKind.Morphism && cell.type === Attr);
+const entities = notebook.cells().filter(byObjectType(Entity));
+const attrs = notebook.cells().filter(byMorphismType(Attr));
 
 console.log("entities:", entities.map((cell) => cell.name).join(", "));
 console.log("attrs:", attrs.map((cell) => cell.name).join(", "));
@@ -251,16 +269,4 @@ console.log("attrs:", attrs.map((cell) => cell.name).join(", "));
 ```
 entities: Person, Company
 attrs: name
-```
-
-Morphism types distinguish their domain from their codomain, so mixing up
-endpoints is a type error.
-
-```ts
-notebook.morphism(Attr, {
-    name: "bad",
-    // @ts-expect-error An attribute's domain must be an entity.
-    dom: str,
-    cod: str,
-});
 ```

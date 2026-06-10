@@ -56,8 +56,14 @@ export const SimpleSchema = {
         AttrType: objectType<"AttrType">("AttrType"),
     },
     morphismTypes: {
-        Mapping: morphismType<ObjectCell<SchemaEntity>, ObjectCell<SchemaEntity>, "Mapping">(),
-        Attr: morphismType<ObjectCell<SchemaEntity>, ObjectCell<SchemaAttrType>, "Attr">(),
+        Mapping: morphismType<ObjectCell<SchemaEntity>, ObjectCell<SchemaEntity>, "Mapping">({
+            tag: "Hom",
+            content: { tag: "Basic", content: "Entity" },
+        }),
+        Attr: morphismType<ObjectCell<SchemaEntity>, ObjectCell<SchemaAttrType>, "Attr">({
+            tag: "Basic",
+            content: "Attr",
+        }),
     },
 } satisfies ModelLogic<
     "simple-schema",

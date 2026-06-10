@@ -118,6 +118,20 @@ export type RichTextCell = Update<{ content: string }> & {
     readonly content: string;
 };
 
+/**
+ * One `ObjectCell` per object type of the logic, mapped over keys so that each
+ * handle wraps the exact type value. (A distributive conditional would
+ * instead shatter each `ObType` union into its variants.)
+ */
+type LogicObjectCell<TLogic extends AnyModelLogic> = {
+    [K in keyof TLogic["objectTypes"]]: ObjectCell<TLogic["objectTypes"][K]>;
+}[keyof TLogic["objectTypes"]];
+
+/** One `MorphismCell` per morphism type of the logic. */
+type LogicMorphismCell<TLogic extends AnyModelLogic> = {
+    [K in keyof TLogic["morphismTypes"]]: MorphismCell<TLogic["morphismTypes"][K]>;
+}[keyof TLogic["morphismTypes"]];
+
 export type ModelLogic<
     Theory extends string,
     TObjectTypes extends Record<string, ObjectType<string>>,
@@ -148,6 +162,16 @@ type LogicMorphismType<TLogic extends AnyModelLogic> =
         ? TMorphismTypes[keyof TMorphismTypes]
         : never;
 
+/**
+ * The union of cell handles that iterating over a notebook can yield,
+ * distributed over the logic's exact object and morphism types so that
+ * comparisons like `cell.type === Entity` narrow the handle.
+ */
+export type NotebookCell<TLogic extends AnyModelLogic> =
+    | RichTextCell
+    | LogicObjectCell<TLogic>
+    | LogicMorphismCell<TLogic>;
+
 export type ModelNotebook<TLogic extends AnyModelLogic, Handle = ModelDocument> = Update<{
     name: string;
 }> & {
@@ -166,6 +190,8 @@ export type ModelNotebook<TLogic extends AnyModelLogic, Handle = ModelDocument> 
     readonly document: ModelDocument;
     /** Make a detached plain-JS snapshot of the underlying document. */
     dump(): ModelDocument;
+    /** Handles for all cells, in notebook order. */
+    cells(): Array<NotebookCell<TLogic>>;
     richText(args: { content: string }): RichTextCell;
     object<TType extends LogicObjectType<TLogic> = LogicObjectType<TLogic>>(
         type: TType,
@@ -180,13 +206,51 @@ export type ModelNotebook<TLogic extends AnyModelLogic, Handle = ModelDocument> 
 export const objectType = <Name extends string>(content: string) =>
     ({ tag: "Basic", content }) as ObjectType<Name>;
 
-export const morphismType = <Dom, Cod, Name extends string>() =>
-    ({ tag: "Hom", content: { tag: "Basic", content: "Object" } }) as MorphismType<Dom, Cod, Name>;
+export const morphismType = <Dom, Cod, Name extends string>(morType?: MorType) =>
+    (morType ?? { tag: "Hom", content: { tag: "Basic", content: "Object" } }) as MorphismType<
+        Dom,
+        Cod,
+        Name
+    >;
+
+/**
+ * Typed filter for object cells with exactly the given object type. TypeScript
+ * only narrows `===` comparisons on unit types, so a comparison like
+ * `cell.type === Entity` cannot narrow a cell handle by itself; this guard
+ * carries the narrowing instead.
+ */
+export const byObjectType =
+    <TType extends ObjectType<string>>(type: TType) =>
+    (cell: { readonly kind: symbol }): cell is ObjectCell<TType> =>
+        cell.kind === CellKind.Object && (cell as { type?: unknown }).type === type;
+
+/** Typed filter for morphism cells with exactly the given morphism type. */
+export const byMorphismType =
+    <TType extends MorphismType<unknown, unknown, string>>(type: TType) =>
+    (cell: { readonly kind: symbol }): cell is MorphismCell<TType> =>
+        cell.kind === CellKind.Morphism && (cell as { type?: unknown }).type === type;
+
+/** Structural equality of stored type expressions (plain JSON-like values). */
+const sameTypeValue = (a: unknown, b: unknown): boolean => {
+    if (a === b) {
+        return true;
+    }
+    if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) {
+        return false;
+    }
+    const aRecord = a as Record<string, unknown>;
+    const bRecord = b as Record<string, unknown>;
+    const keys = Object.keys(aRecord);
+    if (keys.length !== Object.keys(bRecord).length) {
+        return false;
+    }
+    return keys.every((key) => sameTypeValue(aRecord[key], bRecord[key]));
+};
 
 function attachNotebook<TLogic extends AnyModelLogic, Handle>(
     backend: NotebookBackend<Handle>,
     handle: Handle,
-    _logic: TLogic,
+    logic: TLogic,
 ): ModelNotebook<TLogic, Handle> {
     const doc = backend.view(handle);
     const change = (fn: (doc: ModelDocument) => void) => backend.change(handle, fn);
@@ -258,6 +322,42 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
             },
         }) as unknown as MorphismCell<TType>;
 
+    const richTextHandle = (cellId: string): RichTextCell =>
+        ({
+            kind: CellKind.RichText,
+            id: cellId,
+            get content() {
+                return readCellContent<string>(cellId);
+            },
+            update(u: { content?: string }) {
+                change((d) => {
+                    Object.assign(d.notebook.cellContents[cellId] as object, u);
+                });
+            },
+        }) as unknown as RichTextCell;
+
+    const findObjectType = (obType: ObType): LogicObjectType<TLogic> => {
+        const match = Object.values(logic.objectTypes).find((t) => sameTypeValue(t, obType));
+        if (!match) {
+            throw new Error(
+                `No object type in logic with theory "${logic.theory}" ` +
+                    `matches ${JSON.stringify(obType)}.`,
+            );
+        }
+        return match as LogicObjectType<TLogic>;
+    };
+
+    const findMorphismType = (morType: MorType): LogicMorphismType<TLogic> => {
+        const match = Object.values(logic.morphismTypes).find((t) => sameTypeValue(t, morType));
+        if (!match) {
+            throw new Error(
+                `No morphism type in logic with theory "${logic.theory}" ` +
+                    `matches ${JSON.stringify(morType)}.`,
+            );
+        }
+        return match as LogicMorphismType<TLogic>;
+    };
+
     return {
         get name() {
             return doc.name;
@@ -274,25 +374,33 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
                 Object.assign(d, u);
             });
         },
+        cells(): Array<NotebookCell<TLogic>> {
+            return doc.notebook.cellOrder.map((cellId) => {
+                const cell = doc.notebook.cellContents[cellId];
+                if (!cell) {
+                    throw new Error(`Failed to find notebook cell contents for cell '${cellId}'`);
+                }
+                if (cell.tag === "rich-text") {
+                    return richTextHandle(cellId);
+                }
+                const judgment = cell.content as ModelJudgment;
+                switch (judgment.tag) {
+                    case "object":
+                        return objectHandle(cellId, findObjectType(judgment.obType));
+                    case "morphism":
+                        return morphismHandle(cellId, findMorphismType(judgment.morType));
+                    default:
+                        throw new Error(`Unsupported judgment tag: ${judgment.tag}`);
+                }
+            }) as Array<NotebookCell<TLogic>>;
+        },
         richText({ content }: { content: string }) {
             const cell = newRichTextCell(content);
             change((d) => {
                 d.notebook.cellContents[cell.id] = cell;
                 d.notebook.cellOrder.push(cell.id);
             });
-            const cellId = cell.id;
-            return {
-                kind: CellKind.RichText,
-                id: cellId,
-                get content() {
-                    return readCellContent<string>(cellId);
-                },
-                update(u: { content?: string }) {
-                    change((d) => {
-                        Object.assign(d.notebook.cellContents[cellId] as object, u);
-                    });
-                },
-            } as unknown as RichTextCell;
+            return richTextHandle(cell.id);
         },
         object<TType extends LogicObjectType<TLogic> = LogicObjectType<TLogic>>(
             type: TType,
