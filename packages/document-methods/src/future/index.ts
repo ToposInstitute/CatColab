@@ -124,13 +124,13 @@ export type RichTextCell = Update<{ content: string }> & {
  * instead shatter each `ObType` union into its variants.)
  */
 type LogicObjectCell<TLogic extends AnyModelLogic> = {
-    [K in keyof TLogic["objectTypes"]]: ObjectCell<TLogic["objectTypes"][K]>;
-}[keyof TLogic["objectTypes"]];
+    [K in keyof TLogic["objects"]]: ObjectCell<TLogic["objects"][K]>;
+}[keyof TLogic["objects"]];
 
 /** One `MorphismCell` per morphism type of the logic. */
 type LogicMorphismCell<TLogic extends AnyModelLogic> = {
-    [K in keyof TLogic["morphismTypes"]]: MorphismCell<TLogic["morphismTypes"][K]>;
-}[keyof TLogic["morphismTypes"]];
+    [K in keyof TLogic["morphisms"]]: MorphismCell<TLogic["morphisms"][K]>;
+}[keyof TLogic["morphisms"]];
 
 export type ModelLogic<
     Theory extends string,
@@ -138,8 +138,8 @@ export type ModelLogic<
     TMorphismTypes extends Record<string, MorphismType<unknown, unknown, string>>,
 > = {
     readonly theory: Theory;
-    readonly objectTypes: TObjectTypes;
-    readonly morphismTypes: TMorphismTypes;
+    readonly objects: TObjectTypes;
+    readonly morphisms: TMorphismTypes;
 };
 
 type AnyModelLogic = ModelLogic<
@@ -340,7 +340,7 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
         }) as unknown as RichTextCell;
 
     const findObjectType = (obType: ObType): LogicObjectType<TLogic> => {
-        const match = Object.values(logic.objectTypes).find((t) => sameTypeValue(t, obType));
+        const match = Object.values(logic.objects).find((t) => sameTypeValue(t, obType));
         if (!match) {
             throw new Error(
                 `No object type in logic with theory "${logic.theory}" ` +
@@ -351,7 +351,7 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
     };
 
     const findMorphismType = (morType: MorType): LogicMorphismType<TLogic> => {
-        const match = Object.values(logic.morphismTypes).find((t) => sameTypeValue(t, morType));
+        const match = Object.values(logic.morphisms).find((t) => sameTypeValue(t, morType));
         if (!match) {
             throw new Error(
                 `No morphism type in logic with theory "${logic.theory}" ` +

@@ -31,8 +31,8 @@ We can create objects and morphisms in the notebook.
 <!-- verifier:prepend-to-following -->
 
 ```ts
-const Type = SimpleOlog.objectTypes.Type;
-const Aspect = SimpleOlog.morphismTypes.Aspect;
+const Type = SimpleOlog.objects.Type;
+const Aspect = SimpleOlog.morphisms.Aspect;
 
 const source = notebook.addObject(Type, {
     name: "A",
@@ -139,10 +139,10 @@ import { binder } from "catcolab-document-methods/future";
 
 const notebook = binder.createNotebook(SimpleSchema, { name: "Example schema" });
 
-const Entity = SimpleSchema.objectTypes.Entity;
-const AttrType = SimpleSchema.objectTypes.AttrType;
-const Mapping = SimpleSchema.morphismTypes.Mapping;
-const Attr = SimpleSchema.morphismTypes.Attr;
+const Entity = SimpleSchema.objects.Entity;
+const AttrType = SimpleSchema.objects.AttrType;
+const Mapping = SimpleSchema.morphisms.Mapping;
+const Attr = SimpleSchema.morphisms.Attr;
 
 const person = notebook.addObject(Entity, { name: "Person" });
 const company = notebook.addObject(Entity, { name: "Company" });
@@ -182,8 +182,8 @@ import { binder } from "catcolab-document-methods/future";
 
 const notebook = binder.createNotebook(SimpleOlog, { name: "An Olog" });
 
-const Type = SimpleOlog.objectTypes.Type;
-const Aspect = SimpleOlog.morphismTypes.Aspect;
+const Type = SimpleOlog.objects.Type;
+const Aspect = SimpleOlog.morphisms.Aspect;
 
 const source = notebook.addObject(Type, { name: "A" });
 const target = notebook.addObject(Type, { name: "B" });
@@ -214,8 +214,8 @@ import { binder } from "catcolab-document-methods/future";
 
 const schema = binder.createNotebook(SimpleSchema, { name: "Example schema" });
 
-const Attr = SimpleSchema.morphismTypes.Attr;
-const str = schema.addObject(SimpleSchema.objectTypes.AttrType, { name: "String" });
+const Attr = SimpleSchema.morphisms.Attr;
+const str = schema.addObject(SimpleSchema.objects.AttrType, { name: "String" });
 
 schema.addMorphism(Attr, {
     name: "bad",
@@ -237,8 +237,8 @@ import { binder } from "catcolab-document-methods/future";
 
 const notebook = binder.createNotebook(PetriNet, { name: "Example Petri-net" });
 
-const Place = PetriNet.objectTypes.Place;
-const Transition = PetriNet.morphismTypes.Transition;
+const Place = PetriNet.objects.Place;
+const Transition = PetriNet.morphisms.Transition;
 
 const a = notebook.addObject(Place, { name: "A" });
 

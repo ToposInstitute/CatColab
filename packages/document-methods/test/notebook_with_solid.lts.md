@@ -82,7 +82,7 @@ Cell handles are reactive too. `source.name` reads from the same store, so it ca
 
 ```ts
 createRoot(async () => {
-    const Type = SimpleOlog.objectTypes.Type;
+    const Type = SimpleOlog.objects.Type;
     const obj = notebook.addObject(Type, { name: "A" });
 
     createEffect(() => {
@@ -105,7 +105,7 @@ store proxies do not leak into the copied cell.
 
 ```ts
 createRoot(async () => {
-    const Type = SimpleOlog.objectTypes.Type;
+    const Type = SimpleOlog.objects.Type;
     const obj = notebook.addObject(Type, { name: "A" });
     const copiedObj = obj.duplicate();
 
@@ -186,7 +186,7 @@ projection.
 
 ```ts
 const copiedAutomergeObj = notebook
-    .addObject(SimpleOlog.objectTypes.Type, { name: "Copied with Automerge" })
+    .addObject(SimpleOlog.objects.Type, { name: "Copied with Automerge" })
     .duplicate();
 copiedAutomergeObj.update({ name: "Updated Automerge copy" });
 console.log("automerge copy:", copiedAutomergeObj.name);

@@ -15,10 +15,10 @@ type SimpleOlogAspect = MorphismType<
 
 export const SimpleOlog = {
     theory: "simple-olog",
-    objectTypes: {
+    objects: {
         Type: objectType<"Type">("Type"),
     },
-    morphismTypes: {
+    morphisms: {
         Aspect: morphismType<ObjectCell<SimpleOlogType>, ObjectCell<SimpleOlogType>, "Aspect">(),
     },
 } satisfies ModelLogic<"simple-olog", { Type: SimpleOlogType }, { Aspect: SimpleOlogAspect }>;
@@ -32,10 +32,10 @@ type PetriNetTransition = MorphismType<
 
 export const PetriNet = {
     theory: "petri-net",
-    objectTypes: {
+    objects: {
         Place: objectType<"Place">("Place"),
     },
-    morphismTypes: {
+    morphisms: {
         Transition: morphismType<
             ObjectCell<PetriNetPlace>[],
             ObjectCell<PetriNetPlace>[],
@@ -51,11 +51,11 @@ type SchemaAttr = MorphismType<ObjectCell<SchemaEntity>, ObjectCell<SchemaAttrTy
 
 export const SimpleSchema = {
     theory: "simple-schema",
-    objectTypes: {
+    objects: {
         Entity: objectType<"Entity">("Entity"),
         AttrType: objectType<"AttrType">("AttrType"),
     },
-    morphismTypes: {
+    morphisms: {
         Mapping: morphismType<ObjectCell<SchemaEntity>, ObjectCell<SchemaEntity>, "Mapping">({
             tag: "Hom",
             content: { tag: "Basic", content: "Entity" },
