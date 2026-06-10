@@ -1,6 +1,11 @@
 /**
  * Execute samples that carry an expected-output body via `tsx` and compare
  * stdout against the expected text.
+ *
+ * `tsx`-language samples (Solid JSX) are first compiled with
+ * babel-preset-solid (see compile.ts); the compiled `.mjs` is what gets
+ * executed. The `tsx` CLI still drives execution either way, so transitive
+ * `.ts` imports and tsconfig path mappings keep resolving.
  */
 
 import { spawn } from "node:child_process";
@@ -9,6 +14,7 @@ import { delimiter, join } from "node:path";
 
 import { stripAnsi } from "./ansi.ts";
 import type { MaterialisedSample } from "./check.ts";
+import { compileTsxSample } from "./compile.ts";
 
 export type RunFailure = {
     sampleId: string;
@@ -115,7 +121,20 @@ export async function runPairs(
             continue;
         }
 
-        const { stdout, stderr, code } = await runOne(m.filePath, pkgRoot, tsconfigPath);
+        let entryPath = m.filePath;
+        if (m.sample.language === "tsx") {
+            try {
+                entryPath = await compileTsxSample(m);
+            } catch (err) {
+                failures.push({
+                    sampleId: m.sample.id,
+                    reason: `Solid JSX compilation failed: ${err instanceof Error ? err.message : String(err)}`,
+                });
+                continue;
+            }
+        }
+
+        const { stdout, stderr, code } = await runOne(entryPath, pkgRoot, tsconfigPath);
         if (code !== 0) {
             failures.push({
                 sampleId: m.sample.id,

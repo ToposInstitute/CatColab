@@ -1,26 +1,31 @@
 /**
- * Walk the parsed item stream and produce the list of materialisable `ts`
+ * Walk the parsed item stream and produce the list of materialisable `ts`/`tsx`
  * samples.
  *
  * Semantics:
- *   - `<!-- verifier:prepend-to-following -->` marks the next `ts` fence as a
+ *   - `<!-- verifier:prepend-to-following -->` marks the next code fence as a
  *     prelude: it is added to the active prepend stack and concatenated above
- *     every subsequent `ts` fence (in addition to being a sample itself).
- *   - `ts` fences without that directive are standalone samples (they still
+ *     every subsequent code fence (in addition to being a sample itself).
+ *   - Code fences without that directive are standalone samples (they still
  *     see the existing prepend stack, but do not themselves get added to it).
- *   - A non-`ts` fence immediately following a `ts` fence is treated as that
+ *   - A non-code fence immediately following a code fence is treated as that
  *     sample's expected stdout.
- *   - `<!-- verifier:reset -->` clears the prepend stack so the next `ts`
+ *   - `<!-- verifier:reset -->` clears the prepend stack so the next code
  *     fence starts fresh.
+ *   - A sample is `tsx` if its body or any active prepend is a `tsx` fence;
+ *     `tsx` samples are written with a `.tsx` extension and are compiled with
+ *     babel-preset-solid before execution.
  *
  * Each sample also carries the line-offset mapping needed to translate
  * assembled-file line numbers back to the original markdown.
  */
 
-import type { ParsedItem } from "./parse.ts";
+import type { ParsedItem, SampleLanguage } from "./parse.ts";
 
 export type TsSample = {
     id: string;
+    /** 'ts' or 'tsx'; tsx if the body or any prepend is tsx. */
+    language: SampleLanguage;
     /** Assembled (prepends + body), each section separated by '\n'. */
     content: string;
     /** 1-based line of the body's first line in the markdown. */
@@ -30,7 +35,7 @@ export type TsSample = {
      * prepends, plus their separator newlines). Used to map assembled-line → mdLine.
      */
     bodyOffset: number;
-    /** Expected stdout, if the sample is followed by a non-ts fence. */
+    /** Expected stdout, if the sample is followed by a non-code fence. */
     expectedOutput?: string;
 };
 
@@ -38,10 +43,15 @@ export type Assembled = {
     tsSamples: TsSample[];
 };
 
+type PrependPart = {
+    content: string;
+    language: SampleLanguage;
+};
+
 export function assemble(items: ParsedItem[], slug: string): Assembled {
     const tsSamples: TsSample[] = [];
 
-    let prependStack: string[] = [];
+    let prependStack: PrependPart[] = [];
     let prependNext = false;
     let lastTsSample: TsSample | null = null;
 
@@ -60,8 +70,8 @@ export function assemble(items: ParsedItem[], slug: string): Assembled {
         }
 
         // item.kind === "fence"
-        if (item.language !== "ts") {
-            // Non-ts fence immediately after a ts sample → expected output.
+        if (item.language === null) {
+            // Non-code fence immediately after a code sample → expected output.
             if (lastTsSample !== null) {
                 lastTsSample.expectedOutput = item.content;
                 lastTsSample = null;
@@ -73,15 +83,21 @@ export function assemble(items: ParsedItem[], slug: string): Assembled {
         const assembled =
             prependParts.length === 0
                 ? item.content
-                : prependParts.join("\n") + "\n" + item.content;
+                : prependParts.map((p) => p.content).join("\n") + "\n" + item.content;
         // Number of lines the prepend block contributes before the body begins.
         let bodyOffset = 0;
         for (const part of prependParts) {
-            bodyOffset += part.split("\n").length;
+            bodyOffset += part.content.split("\n").length;
         }
+
+        const language: SampleLanguage =
+            item.language === "tsx" || prependParts.some((p) => p.language === "tsx")
+                ? "tsx"
+                : "ts";
 
         const sample: TsSample = {
             id: `${slug}-${item.mdLine}`,
+            language,
             content: assembled,
             mdLine: item.mdLine,
             bodyOffset,
@@ -90,7 +106,9 @@ export function assemble(items: ParsedItem[], slug: string): Assembled {
         lastTsSample = sample;
 
         if (prependNext) {
-            prependStack = prependStack.concat([item.content]);
+            prependStack = prependStack.concat([
+                { content: item.content, language: item.language },
+            ]);
             prependNext = false;
         }
     }

@@ -9,8 +9,8 @@
         "lib": ["ES2023", "DOM"],
         "paths": {
             "catcolab-logics": ["./test/literate-ts/catcolab-logics.ts"],
-            "catcolab-document-methods/future": ["./src/future.ts"]
+            "catcolab-document-methods/future": ["./src/future/index.ts"]
         }
     },
-    "include": [".lts/**/*.ts"]
+    "include": [".lts/**/*.ts", ".lts/**/*.tsx"]
 }

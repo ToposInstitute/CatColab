@@ -3,8 +3,9 @@
  * and directives.
  *
  * Each fence carries:
- *   - language: 'ts' for type-checked/executed samples; null for free-form fences
- *     (treated as expected output of the preceding ts sample, if any).
+ *   - language: 'ts' or 'tsx' for type-checked/executed samples; null for
+ *     free-form fences (treated as expected output of the preceding sample, if
+ *     any).
  *   - content: raw text of the fence body (no fence delimiters).
  *   - mdLine: 1-based line number in the markdown of the first line of fence body.
  *
@@ -20,9 +21,11 @@
 const DIRECTIVE_RE = /^<!--\s*verifier:([a-z0-9-]+)\s*-->\s*$/;
 const FENCE_OPEN_RE = /^(```+)([a-zA-Z0-9_-]*)\s*$/;
 
+export type SampleLanguage = "ts" | "tsx";
+
 export type FenceItem = {
     kind: "fence";
-    language: "ts" | null;
+    language: SampleLanguage | null;
     content: string;
     /** 1-based line of first content line. */
     mdLine: number;
@@ -61,7 +64,8 @@ export function parse(text: string): ParsedItem[] {
                 }
             }
             const content = lines.slice(bodyStart, j).join("\n");
-            const normalisedLanguage: "ts" | null = language === "ts" ? "ts" : null;
+            const normalisedLanguage: SampleLanguage | null =
+                language === "ts" || language === "tsx" ? language : null;
             items.push({
                 kind: "fence",
                 language: normalisedLanguage,

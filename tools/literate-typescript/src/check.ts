@@ -37,7 +37,7 @@ export type CheckResult = {
 export function materialise(samples: TsSample[], outDir: string): MaterialisedSample[] {
     const out: MaterialisedSample[] = [];
     for (const sample of samples) {
-        const filePath = join(outDir, `${sample.id}.ts`);
+        const filePath = join(outDir, `${sample.id}.${sample.language}`);
         // Append a trailing newline so TypeScript line counts match what editors show.
         writeFileSync(filePath, sample.content + "\n", "utf8");
         out.push({ sample, filePath });
