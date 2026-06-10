@@ -193,11 +193,11 @@ export type ModelNotebook<TLogic extends AnyModelLogic, Handle = ModelDocument> 
     /** Handles for all cells, in notebook order. */
     cells(): Array<NotebookCell<TLogic>>;
     richText(args: { content: string }): RichTextCell;
-    object<TType extends LogicObjectType<TLogic> = LogicObjectType<TLogic>>(
+    addObject<TType extends LogicObjectType<TLogic> = LogicObjectType<TLogic>>(
         type: TType,
         args: { name: string },
     ): ObjectCell<TType>;
-    morphism<TType extends LogicMorphismType<TLogic> = LogicMorphismType<TLogic>>(
+    addMorphism<TType extends LogicMorphismType<TLogic> = LogicMorphismType<TLogic>>(
         type: TType,
         args: MorphismArgs<TType>,
     ): MorphismCell<TType>;
@@ -402,7 +402,7 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
             });
             return richTextHandle(cell.id);
         },
-        object<TType extends LogicObjectType<TLogic> = LogicObjectType<TLogic>>(
+        addObject<TType extends LogicObjectType<TLogic> = LogicObjectType<TLogic>>(
             type: TType,
             objectArgs: { name: string },
         ) {
@@ -416,7 +416,7 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
             const cellId = formalCell.id;
             return objectHandle(cellId, type);
         },
-        morphism<TType extends LogicMorphismType<TLogic> = LogicMorphismType<TLogic>>(
+        addMorphism<TType extends LogicMorphismType<TLogic> = LogicMorphismType<TLogic>>(
             type: TType,
             morphismArgs: MorphismArgs<TType>,
         ) {
@@ -443,7 +443,7 @@ export interface Binder<Handle> {
      * internally from `data.name` and `logic.theory`, then handed to the
      * backend's `init`.
      */
-    create<TLogic extends AnyModelLogic>(
+    createNotebook<TLogic extends AnyModelLogic>(
         logic: TLogic,
         data: { name: string },
     ): ModelNotebook<TLogic, Handle>;
@@ -452,7 +452,7 @@ export interface Binder<Handle> {
      * backend storage from it. Throws if the document's theory does not match
      * the logic's theory.
      */
-    load<TLogic extends AnyModelLogic>(
+    loadNotebook<TLogic extends AnyModelLogic>(
         logic: TLogic,
         document: ModelDocument,
     ): ModelNotebook<TLogic, Handle>;
@@ -466,15 +466,15 @@ export interface Binder<Handle> {
     ): ModelNotebook<TLogic, Handle>;
 }
 
-/** Bind a backend once, yielding `create`/`load`/`attach` entry points. */
+/** Bind a backend once, yielding `createNotebook`/`loadNotebook`/`attach` entry points. */
 export function createBinder<Handle>(backend: NotebookBackend<Handle>): Binder<Handle> {
     return {
-        create(logic, data) {
+        createNotebook(logic, data) {
             const seed = newModelDocument({ theory: logic.theory });
             seed.name = data.name;
-            return this.load(logic, seed);
+            return this.loadNotebook(logic, seed);
         },
-        load(logic, document) {
+        loadNotebook(logic, document) {
             if (document.theory !== logic.theory) {
                 throw new Error(
                     `Cannot load document with theory "${document.theory}" ` +

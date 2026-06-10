@@ -2,7 +2,7 @@ A notebook's storage is abstracted to allow plugging in custom backends. This co
 
 A `NotebookBackend` is a stateless object that works on handles of its own choosing. `init` creates a handle from an initial document; the other methods receive that handle back: `view` returns the read view, `change` applies a draft mutation, and the optional `copy` makes detached plain-JS copies of values from the backend's canonical document.
 
-A backend is bound once with `createBinder`, which yields the notebook entry points `create`, `load`, and `attach`.
+A backend is bound once with `createBinder`, which yields the notebook entry points `createNotebook`, `loadNotebook`, and `attach`.
 
 We can plug in Solid's reactivity by itself using `createStore` and `produce`.
 
@@ -32,16 +32,16 @@ const solidBackend: NotebookBackend<SolidStoreHandle> = {
 
 const solidBinder = createBinder(solidBackend);
 
-const notebook = solidBinder.create(SimpleOlog, { name: "An Olog" });
+const notebook = solidBinder.createNotebook(SimpleOlog, { name: "An Olog" });
 ```
 
 A binder can also load an existing plain document instead of creating a fresh
 notebook. The backend initializes its storage from the document.
 
 ```ts
-const existingSolidDoc = binder.create(SimpleOlog, { name: "Loaded Olog" }).document;
+const existingSolidDoc = binder.createNotebook(SimpleOlog, { name: "Loaded Olog" }).document;
 
-const loadedSolidNotebook = solidBinder.load(SimpleOlog, existingSolidDoc);
+const loadedSolidNotebook = solidBinder.loadNotebook(SimpleOlog, existingSolidDoc);
 
 createRoot(async () => {
     createEffect(() => {
@@ -83,7 +83,7 @@ Cell handles are reactive too. `source.name` reads from the same store, so it ca
 ```ts
 createRoot(async () => {
     const Type = SimpleOlog.objectTypes.Type;
-    const obj = notebook.object(Type, { name: "A" });
+    const obj = notebook.addObject(Type, { name: "A" });
 
     createEffect(() => {
         console.log("obj:", obj.name);
@@ -106,7 +106,7 @@ store proxies do not leak into the copied cell.
 ```ts
 createRoot(async () => {
     const Type = SimpleOlog.objectTypes.Type;
-    const obj = notebook.object(Type, { name: "A" });
+    const obj = notebook.addObject(Type, { name: "A" });
     const copiedObj = obj.duplicate();
 
     createEffect(() => {
@@ -162,7 +162,7 @@ const solidAutomergeBackend: NotebookBackend<DocHandle<ModelDocument>> = {
 
 const automergeBinder = createBinder(solidAutomergeBackend);
 
-const notebook = automergeBinder.create(SimpleOlog, { name: "An Olog" });
+const notebook = automergeBinder.createNotebook(SimpleOlog, { name: "An Olog" });
 ```
 
 ```ts
@@ -186,7 +186,7 @@ projection.
 
 ```ts
 const copiedAutomergeObj = notebook
-    .object(SimpleOlog.objectTypes.Type, { name: "Copied with Automerge" })
+    .addObject(SimpleOlog.objectTypes.Type, { name: "Copied with Automerge" })
     .duplicate();
 copiedAutomergeObj.update({ name: "Updated Automerge copy" });
 console.log("automerge copy:", copiedAutomergeObj.name);
@@ -201,7 +201,9 @@ as `notebook.handle.url`. To work with an existing Automerge document, find its
 handle in the repo and attach to it.
 
 ```ts
-const sourceNotebook = automergeBinder.create(SimpleOlog, { name: "Loaded Automerge Olog" });
+const sourceNotebook = automergeBinder.createNotebook(SimpleOlog, {
+    name: "Loaded Automerge Olog",
+});
 
 const loadedAutomergeHandle = await repo.find<ModelDocument>(sourceNotebook.handle.url);
 const loadedAutomergeNotebook = automergeBinder.attach(SimpleOlog, loadedAutomergeHandle);

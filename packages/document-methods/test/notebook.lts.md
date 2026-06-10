@@ -15,7 +15,7 @@ storage backend. The default `binder` uses the plain in-memory backend.
 <!-- verifier:prepend-to-following -->
 
 ```ts
-const notebook = binder.create(SimpleOlog, { name: "An Olog" });
+const notebook = binder.createNotebook(SimpleOlog, { name: "An Olog" });
 ```
 
 We can add rich text cells to our notebook.
@@ -34,15 +34,15 @@ We can create objects and morphisms in the notebook.
 const Type = SimpleOlog.objectTypes.Type;
 const Aspect = SimpleOlog.morphismTypes.Aspect;
 
-const source = notebook.object(Type, {
+const source = notebook.addObject(Type, {
     name: "A",
 });
 
-const target = notebook.object(Type, {
+const target = notebook.addObject(Type, {
     name: "B",
 });
 
-const arrow = notebook.morphism(Aspect, {
+const arrow = notebook.addMorphism(Aspect, {
     name: "has",
     dom: source,
     cod: target,
@@ -137,19 +137,19 @@ We can filter cells by their type, not just their kind and we provide some utili
 import { SimpleSchema } from "catcolab-logics";
 import { binder } from "catcolab-document-methods/future";
 
-const notebook = binder.create(SimpleSchema, { name: "Example schema" });
+const notebook = binder.createNotebook(SimpleSchema, { name: "Example schema" });
 
 const Entity = SimpleSchema.objectTypes.Entity;
 const AttrType = SimpleSchema.objectTypes.AttrType;
 const Mapping = SimpleSchema.morphismTypes.Mapping;
 const Attr = SimpleSchema.morphismTypes.Attr;
 
-const person = notebook.object(Entity, { name: "Person" });
-const company = notebook.object(Entity, { name: "Company" });
-const str = notebook.object(AttrType, { name: "String" });
+const person = notebook.addObject(Entity, { name: "Person" });
+const company = notebook.addObject(Entity, { name: "Company" });
+const str = notebook.addObject(AttrType, { name: "String" });
 
-notebook.morphism(Mapping, { name: "employer", dom: person, cod: company });
-notebook.morphism(Attr, { name: "name", dom: person, cod: str });
+notebook.addMorphism(Mapping, { name: "employer", dom: person, cod: company });
+notebook.addMorphism(Attr, { name: "name", dom: person, cod: str });
 ```
 
 Filtering on an exact type narrows the handles and excludes cells of every
@@ -180,14 +180,14 @@ attrs: name
 import { SimpleOlog } from "catcolab-logics";
 import { binder } from "catcolab-document-methods/future";
 
-const notebook = binder.create(SimpleOlog, { name: "An Olog" });
+const notebook = binder.createNotebook(SimpleOlog, { name: "An Olog" });
 
 const Type = SimpleOlog.objectTypes.Type;
 const Aspect = SimpleOlog.morphismTypes.Aspect;
 
-const source = notebook.object(Type, { name: "A" });
-const target = notebook.object(Type, { name: "B" });
-const arrow = notebook.morphism(Aspect, { name: "has", dom: source, cod: target });
+const source = notebook.addObject(Type, { name: "A" });
+const target = notebook.addObject(Type, { name: "B" });
+const arrow = notebook.addMorphism(Aspect, { name: "has", dom: source, cod: target });
 ```
 
 Invalid shapes should be type errors:
@@ -198,7 +198,7 @@ arrow.update({
     dom: [source],
 });
 
-notebook.morphism(Aspect, {
+notebook.addMorphism(Aspect, {
     name: "bad",
     // @ts-expect-error Arrays are not valid endpoints in a simple olog.
     dom: [source, target],
@@ -212,12 +212,12 @@ notebook.morphism(Aspect, {
 import { SimpleSchema } from "catcolab-logics";
 import { binder } from "catcolab-document-methods/future";
 
-const schema = binder.create(SimpleSchema, { name: "Example schema" });
+const schema = binder.createNotebook(SimpleSchema, { name: "Example schema" });
 
 const Attr = SimpleSchema.morphismTypes.Attr;
-const str = schema.object(SimpleSchema.objectTypes.AttrType, { name: "String" });
+const str = schema.addObject(SimpleSchema.objectTypes.AttrType, { name: "String" });
 
-schema.morphism(Attr, {
+schema.addMorphism(Attr, {
     name: "bad",
     // @ts-expect-error An attribute's domain must be an entity.
     dom: str,
@@ -235,24 +235,24 @@ But adapt to the underlying logic:
 import { PetriNet } from "catcolab-logics";
 import { binder } from "catcolab-document-methods/future";
 
-const notebook = binder.create(PetriNet, { name: "Example Petri-net" });
+const notebook = binder.createNotebook(PetriNet, { name: "Example Petri-net" });
 
 const Place = PetriNet.objectTypes.Place;
 const Transition = PetriNet.morphismTypes.Transition;
 
-const a = notebook.object(Place, { name: "A" });
+const a = notebook.addObject(Place, { name: "A" });
 
-const b = notebook.object(Place, { name: "B" });
+const b = notebook.addObject(Place, { name: "B" });
 
-const c = notebook.object(Place, { name: "C" });
+const c = notebook.addObject(Place, { name: "C" });
 
-notebook.morphism(Transition, {
+notebook.addMorphism(Transition, {
     name: "t1",
     dom: [a, b],
     cod: [c],
 });
 
-notebook.morphism(Transition, {
+notebook.addMorphism(Transition, {
     name: "bad",
     // @ts-expect-error Petri net transitions require arrays of places.
     dom: a,
@@ -273,7 +273,7 @@ const notebookData = notebook.dump();
 And load it.
 
 ```ts
-const notebook2 = binder.load(PetriNet, notebookData);
+const notebook2 = binder.loadNotebook(PetriNet, notebookData);
 ```
 
 Trying to load a document with the wrong logic will throw an error.
@@ -282,7 +282,7 @@ Trying to load a document with the wrong logic will throw an error.
 
 ```ts
 import { SimpleOlog } from "catcolab-logics";
-binder.load(SimpleOlog, notebookData);
+binder.loadNotebook(SimpleOlog, notebookData);
 ```
 
 ```

@@ -29,7 +29,7 @@ const automergeBinder = createBinder(solidAutomergeBackend);
 ```tsx
 import { render } from "solid-js/web";
 
-const notebook = automergeBinder.create(SimpleOlog, { name: "An Olog" });
+const notebook = automergeBinder.createNotebook(SimpleOlog, { name: "An Olog" });
 
 function Title(props: { title: string }) {
     return <h1>{props.title}</h1>;

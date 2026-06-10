@@ -24,7 +24,7 @@ const solidBackend: NotebookBackend<SolidStoreHandle> = {
 
 const solidBinder = createBinder(solidBackend);
 
-const notebook = solidBinder.create(SimpleOlog, { name: "An Olog" });
+const notebook = solidBinder.createNotebook(SimpleOlog, { name: "An Olog" });
 ```
 
 ```tsx
