@@ -6,7 +6,7 @@ may create their own logics. The logics need to play nice with
 
 ```ts
 import { SimpleOlog } from "catcolab-logics";
-import { binder, CellKind } from "catcolab-document-methods/future";
+import { binder } from "catcolab-document-methods/future";
 ```
 
 Notebooks are created through a binder, which ties the notebook API to a
@@ -103,6 +103,8 @@ We can iterate through cells: both informal cells and formal judgment cells.
 Each cell handle is discriminated by `CellKind`.
 
 ```ts
+import { CellKind } from "catcolab-document-methods/future";
+
 for (const cell of notebook.cells()) {
     switch (cell.kind) {
         case CellKind.RichText:
@@ -133,7 +135,7 @@ We can filter cells by their type, not just their kind and we provide some utili
 
 ```ts
 import { SimpleSchema } from "catcolab-logics";
-import { binder, byMorphismType, byObjectType } from "catcolab-document-methods/future";
+import { binder } from "catcolab-document-methods/future";
 
 const notebook = binder.create(SimpleSchema, { name: "Example schema" });
 
@@ -154,6 +156,8 @@ Filtering on an exact type narrows the handles and excludes cells of every
 other type.
 
 ```ts
+import { byMorphismType, byObjectType } from "catcolab-document-methods/future";
+
 const entities = notebook.cells().filter(byObjectType(Entity));
 const attrs = notebook.cells().filter(byMorphismType(Attr));
 
