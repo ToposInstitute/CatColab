@@ -288,3 +288,71 @@ binder.loadNotebook(SimpleOlog, notebookData);
 ```
 ❌ Cannot load document with theory "petri-net" using a logic with theory "simple-olog".
 ```
+
+## Re-ordering cells
+
+Every cell handle can move itself within the notebook. Moves locate the cell
+by its id at the moment the change applies, so they remain valid even if the
+notebook was edited after the handle was obtained.
+
+<!-- verifier:reset -->
+
+<!-- verifier:prepend-to-following -->
+
+```ts
+import { SimpleOlog } from "catcolab-logics";
+import { binder, byObjectType } from "catcolab-document-methods/future";
+
+const notebook = binder.createNotebook(SimpleOlog, { name: "An Olog" });
+
+const Type = SimpleOlog.objects.Type;
+
+const a = notebook.addObject(Type, { name: "A" });
+const b = notebook.addObject(Type, { name: "B" });
+const c = notebook.addObject(Type, { name: "C" });
+
+function names() {
+    return notebook
+        .cells()
+        .filter(byObjectType(Type))
+        .map((cell) => cell.name)
+        .join(", ");
+}
+```
+
+`moveUp` and `moveDown` shift a cell one position; `moveTo` moves it to an
+index, interpreted after the cell is removed from its current position.
+
+```ts
+c.moveUp();
+console.log(names());
+
+a.moveDown();
+console.log(names());
+
+b.moveTo(0);
+console.log(names());
+```
+
+```
+A, C, B
+C, A, B
+B, C, A
+```
+
+Impossible moves are silent no-ops and out-of-range targets clamp to the ends
+of the notebook.
+
+```ts
+a.moveUp();
+c.moveDown();
+console.log(names());
+
+b.moveTo(99);
+console.log(names());
+```
+
+```
+A, B, C
+A, C, B
+```

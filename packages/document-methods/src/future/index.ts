@@ -85,13 +85,30 @@ type Update<T> = {
     ): void;
 };
 
-export type ObjectCell<TType extends ObjectType<string>> = Update<{ name: string }> & {
-    readonly kind: typeof CellKind.Object;
-    readonly id: string;
-    readonly type: TType;
-    readonly name: string;
-    duplicate(): ObjectCell<TType>;
+/** Re-ordering methods shared by all cell handles. Cells are identified by
+id at the moment the change applies, so moves stay valid even if the
+notebook was edited after the handle was obtained. */
+type Reorder = {
+    /** Move this cell one position earlier; no-op if already first. */
+    moveUp(): void;
+    /** Move this cell one position later; no-op if already last. */
+    moveDown(): void;
+    /**
+     * Move this cell to the given index, interpreted after the cell is
+     * removed from its current position. Out-of-range targets clamp to the
+     * ends of the notebook.
+     */
+    moveTo(index: number): void;
 };
+
+export type ObjectCell<TType extends ObjectType<string>> = Update<{ name: string }> &
+    Reorder & {
+        readonly kind: typeof CellKind.Object;
+        readonly id: string;
+        readonly type: TType;
+        readonly name: string;
+        duplicate(): ObjectCell<TType>;
+    };
 
 type DomOf<TType> = TType extends MorphismType<infer Dom, unknown, string> ? Dom : never;
 type CodOf<TType> = TType extends MorphismType<unknown, infer Cod, string> ? Cod : never;
@@ -104,19 +121,21 @@ type MorphismArgs<TType extends MorphismType<unknown, unknown, string>> = {
 
 export type MorphismCell<TType extends MorphismType<unknown, unknown, string>> = Update<
     MorphismArgs<TType>
-> & {
-    readonly kind: typeof CellKind.Morphism;
-    readonly id: string;
-    readonly type: TType;
-    readonly name: string;
-    duplicate(): MorphismCell<TType>;
-};
+> &
+    Reorder & {
+        readonly kind: typeof CellKind.Morphism;
+        readonly id: string;
+        readonly type: TType;
+        readonly name: string;
+        duplicate(): MorphismCell<TType>;
+    };
 
-export type RichTextCell = Update<{ content: string }> & {
-    readonly kind: typeof CellKind.RichText;
-    readonly id: string;
-    readonly content: string;
-};
+export type RichTextCell = Update<{ content: string }> &
+    Reorder & {
+        readonly kind: typeof CellKind.RichText;
+        readonly id: string;
+        readonly content: string;
+    };
 
 /**
  * One `ObjectCell` per object type of the logic, mapped over keys so that each
@@ -279,6 +298,30 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
         return duplicatedCell.id;
     };
 
+    /** Move a cell, locating it by id inside the change so stale indices
+    cannot misplace it. The target index is interpreted after removal and
+    clamped to the valid range; impossible moves are silent no-ops. */
+    const moveCell = (cellId: string, target: (from: number) => number) =>
+        change((d) => {
+            const order = d.notebook.cellOrder;
+            const from = order.indexOf(cellId);
+            if (from < 0) {
+                return;
+            }
+            const to = Math.max(0, Math.min(target(from), order.length - 1));
+            if (to === from) {
+                return;
+            }
+            order.splice(from, 1);
+            order.splice(to, 0, cellId);
+        });
+
+    const reorderMethods = (cellId: string): Reorder => ({
+        moveUp: () => moveCell(cellId, (from) => from - 1),
+        moveDown: () => moveCell(cellId, (from) => from + 1),
+        moveTo: (index: number) => moveCell(cellId, () => index),
+    });
+
     const objectHandle = <TType extends LogicObjectType<TLogic>>(cellId: string, type: TType) =>
         ({
             kind: CellKind.Object,
@@ -300,6 +343,7 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
             duplicate() {
                 return objectHandle(appendDuplicate(cellId), type);
             },
+            ...reorderMethods(cellId),
         }) as unknown as ObjectCell<TType>;
 
     const morphismHandle = <TType extends LogicMorphismType<TLogic>>(cellId: string, type: TType) =>
@@ -323,6 +367,7 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
             duplicate() {
                 return morphismHandle(appendDuplicate(cellId), type);
             },
+            ...reorderMethods(cellId),
         }) as unknown as MorphismCell<TType>;
 
     const richTextHandle = (cellId: string): RichTextCell =>
@@ -337,6 +382,7 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
                     Object.assign(d.notebook.cellContents[cellId] as object, u);
                 });
             },
+            ...reorderMethods(cellId),
         }) as unknown as RichTextCell;
 
     const findObjectType = (obType: ObType): LogicObjectType<TLogic> => {
