@@ -107,6 +107,33 @@
       craneLib = craneLibFor linuxSystem;
       cargoArtifacts = cargoArtifactsFor linuxSystem;
 
+      # Minimal devShell for the ui-components Playwright/vitest tests.
+      # Provides node + pnpm and points Playwright at the nixpkgs-managed
+      # browser bundle so `pnpm install` can skip browser downloads in CI.
+      # Kept separate from the main devShell to avoid pulling
+      # `playwright-driver.browsers` (~hundreds of MB) into the default shell.
+      uiComponentsTestsShellForSystem =
+        system:
+        let
+          pkgs = nixpkgsFor system;
+        in
+        pkgs.mkShell {
+          name = "catcolab-ui-components-tests";
+
+          packages = with pkgs; [
+            nodejs_24
+            pnpm
+            playwright-driver.browsers
+          ];
+
+          # See https://wiki.nixos.org/wiki/Playwright. The npm `playwright`
+          # version (1.56.1, packages/ui-components/pnpm-lock.yaml) must match
+          # `pkgs.playwright-driver.version`; bump both together.
+          PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
+          PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
+        };
+
       # Generate devShells for each system
       devShellForSystem =
         system:
@@ -210,6 +237,7 @@
           name = system;
           value = {
             default = devShellForSystem system;
+            ui-components-tests = uiComponentsTestsShellForSystem system;
           };
         }) devShellSystems
       );
