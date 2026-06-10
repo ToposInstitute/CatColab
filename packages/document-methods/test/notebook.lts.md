@@ -1,4 +1,6 @@
-A new package for our built-in logics `catcolab-logics`. In the future people may create their own logics. The logics need to play nice with `catcolab-document-methods`.
+A new package for our built-in logics `catcolab-logics`. In the future people
+may create their own logics. The logics need to play nice with
+`catcolab-document-methods`.
 
 <!-- verifier:prepend-to-following -->
 
@@ -77,8 +79,8 @@ arrow.update({
 });
 ```
 
-We can duplicate formal cells. Copies keep the same logical shape but receive fresh
-identities, and their handles can be updated independently.
+We can duplicate formal cells. Copies keep the same logical shape but receive
+fresh identities, and their handles can be updated independently.
 
 ```ts
 const sourceCopy = source.duplicate();
@@ -156,8 +158,19 @@ const notebookData = notebook.dump();
 
 And load it.
 
-<!-- verifier:prepend-to-following -->
-
 ```ts
 const notebook2 = binder.load(PetriNet, notebookData);
+```
+
+Trying to load a document with the wrong logic will throw an error.
+
+<!-- verifier:throws -->
+
+```ts
+import { SimpleOlog } from "catcolab-logics";
+binder.load(SimpleOlog, notebookData);
+```
+
+```
+❌ Cannot load document with theory "petri-net" using a logic with theory "simple-olog".
 ```

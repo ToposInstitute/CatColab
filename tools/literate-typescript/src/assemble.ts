@@ -10,6 +10,10 @@
  *     see the existing prepend stack, but do not themselves get added to it).
  *   - A non-code fence immediately following a code fence is treated as that
  *     sample's expected stdout.
+ *   - `<!-- verifier:throws -->` marks the next code fence as expected to throw
+ *     at runtime: the sample must exit non-zero, and a following non-code fence
+ *     is matched as a substring of the runtime error output (stderr) instead of
+ *     stdout.
  *   - `<!-- verifier:reset -->` clears the prepend stack so the next code
  *     fence starts fresh.
  *   - A sample is `tsx` if its body or any active prepend is a `tsx` fence;
@@ -37,6 +41,11 @@ export type TsSample = {
     bodyOffset: number;
     /** Expected stdout, if the sample is followed by a non-code fence. */
     expectedOutput?: string;
+    /**
+     * Whether the sample is expected to throw at runtime. If set,
+     * `expectedOutput` is matched as a substring of stderr instead of stdout.
+     */
+    throws?: boolean;
 };
 
 export type Assembled = {
@@ -53,6 +62,7 @@ export function assemble(items: ParsedItem[], slug: string): Assembled {
 
     let prependStack: PrependPart[] = [];
     let prependNext = false;
+    let throwsNext = false;
     let lastTsSample: TsSample | null = null;
 
     for (const item of items) {
@@ -60,9 +70,12 @@ export function assemble(items: ParsedItem[], slug: string): Assembled {
             if (item.directive === "reset") {
                 prependStack = [];
                 prependNext = false;
+                throwsNext = false;
                 lastTsSample = null;
             } else if (item.directive === "prepend-to-following") {
                 prependNext = true;
+            } else if (item.directive === "throws") {
+                throwsNext = true;
             }
             // Unknown directives are silently ignored so future additions
             // remain non-fatal.
@@ -101,7 +114,9 @@ export function assemble(items: ParsedItem[], slug: string): Assembled {
             content: assembled,
             mdLine: item.mdLine,
             bodyOffset,
+            ...(throwsNext ? { throws: true } : {}),
         };
+        throwsNext = false;
         tsSamples.push(sample);
         lastTsSample = sample;
 

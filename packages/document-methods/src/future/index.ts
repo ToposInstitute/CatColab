@@ -322,7 +322,8 @@ export interface Binder<Handle> {
     ): ModelNotebook<TLogic, Handle>;
     /**
      * Build a typed notebook around an existing plain document by initializing
-     * backend storage from it.
+     * backend storage from it. Throws if the document's theory does not match
+     * the logic's theory.
      */
     load<TLogic extends AnyModelLogic>(
         logic: TLogic,
@@ -347,6 +348,12 @@ export function createBinder<Handle>(backend: NotebookBackend<Handle>): Binder<H
             return this.load(logic, seed);
         },
         load(logic, document) {
+            if (document.theory !== logic.theory) {
+                throw new Error(
+                    `Cannot load document with theory "${document.theory}" ` +
+                        `using a logic with theory "${logic.theory}".`,
+                );
+            }
             return attachNotebook(backend, backend.init(document), logic);
         },
         attach(logic, handle) {

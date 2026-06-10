@@ -1,6 +1,8 @@
 /**
  * Execute samples that carry an expected-output body via `tsx` and compare
- * stdout against the expected text.
+ * stdout against the expected text. Samples marked `throws` are expected to
+ * exit non-zero; their expected-output body (if any) is matched as a substring
+ * of stderr.
  *
  * `tsx`-language samples (Solid JSX) are first compiled with
  * babel-preset-solid (see compile.ts); the compiled `.mjs` is what gets
@@ -27,11 +29,14 @@ export type RunFailure = {
 };
 
 /**
- * Normalise output for comparison: strip ANSI, then trim trailing whitespace
- * on each line, then trim trailing blank lines.
+ * Normalise output for comparison: strip ANSI, remove red cross emoji
+ * decorations (`\u274c`, optionally followed by a space), then trim trailing
+ * whitespace on each line, then trim trailing blank lines. The emoji lets
+ * expected-output fences flag failure cases visually without affecting the
+ * comparison.
  */
 export function normalise(s: string): string {
-    const stripped = stripAnsi(s);
+    const stripped = stripAnsi(s).replace(/\u274c ?/g, "");
     const lines = stripped.split("\n").map((line) => line.replace(/[ \t]+$/g, ""));
     while (lines.length > 0 && lines[lines.length - 1] === "") {
         lines.pop();
@@ -106,8 +111,9 @@ function runOne(
 }
 
 /**
- * For each materialised sample carrying an `expectedOutput`, run the sample
- * with tsx and compare stdout. Returns a list of failures (empty on success).
+ * For each materialised sample carrying an `expectedOutput` or marked
+ * `throws`, run the sample with tsx and check the outcome. Returns a list of
+ * failures (empty on success).
  */
 export async function runPairs(
     files: MaterialisedSample[],
@@ -117,7 +123,8 @@ export async function runPairs(
     const failures: RunFailure[] = [];
     for (const m of files) {
         const expected = m.sample.expectedOutput;
-        if (expected === undefined) {
+        const throws = m.sample.throws === true;
+        if (expected === undefined && !throws) {
             continue;
         }
 
@@ -135,6 +142,34 @@ export async function runPairs(
         }
 
         const { stdout, stderr, code } = await runOne(entryPath, pkgRoot, tsconfigPath);
+        if (throws) {
+            if (code === 0) {
+                failures.push({
+                    sampleId: m.sample.id,
+                    reason: "expected the sample to throw, but it exited with code 0",
+                    exitCode: code,
+                });
+                continue;
+            }
+            if (expected !== undefined) {
+                const actualErr = normalise(stderr);
+                const expectedErr = normalise(expected);
+                if (!actualErr.includes(expectedErr)) {
+                    failures.push({
+                        sampleId: m.sample.id,
+                        reason: "runtime error output does not contain expected text",
+                        expected: expectedErr,
+                        actual: actualErr,
+                    });
+                }
+            }
+            continue;
+        }
+        if (expected === undefined) {
+            // Unreachable: non-throws samples without expected output are
+            // skipped above. Guard keeps the narrowing explicit.
+            continue;
+        }
         if (code !== 0) {
             failures.push({
                 sampleId: m.sample.id,

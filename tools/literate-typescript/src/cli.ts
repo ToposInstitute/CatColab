@@ -67,7 +67,7 @@ async function main(): Promise<void> {
 function countRunnable(files: MaterialisedSample[]): number {
     let n = 0;
     for (const m of files) {
-        if (m.sample.expectedOutput !== undefined) {
+        if (m.sample.expectedOutput !== undefined || m.sample.throws === true) {
             n += 1;
         }
     }
