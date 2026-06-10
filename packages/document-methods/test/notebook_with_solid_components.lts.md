@@ -13,12 +13,12 @@ type SolidStoreHandle = {
 };
 
 const solidBackend: NotebookBackend<SolidStoreHandle> = {
-    init(initialDoc) {
+    createHandle(initialDoc) {
         const [doc, setDoc] = createStore<ModelDocument>(initialDoc);
         return { doc, setDoc };
     },
-    view: (handle) => handle.doc,
-    change: (handle, fn) => handle.setDoc(produce<ModelDocument>(fn)),
+    viewDocument: (handle) => handle.doc,
+    changeDocument: (handle, fn) => handle.setDoc(produce<ModelDocument>(fn)),
     copy: (_handle, value) => structuredClone(unwrap(value)),
 };
 

@@ -1,6 +1,6 @@
 A notebook's storage is abstracted to allow plugging in custom backends. This could be used with anything but our concrete plan is to use this with Solid and Automerge.
 
-A `NotebookBackend` is a stateless object that works on handles of its own choosing. `init` creates a handle from an initial document; the other methods receive that handle back: `view` returns the read view, `change` applies a draft mutation, and the optional `copy` makes detached plain-JS copies of values from the backend's canonical document.
+A `NotebookBackend` is a stateless object that works on handles of its own choosing. `createHandle` creates a handle from an initial document; the other methods receive that handle back: `viewDocument` returns the read view, `changeDocument` applies a draft mutation, and the optional `copy` makes detached plain-JS copies of values from the backend's canonical document.
 
 A backend is bound once with `createBinder`, which yields the notebook entry points `createNotebook`, `loadNotebook`, and `attach`.
 
@@ -21,12 +21,12 @@ type SolidStoreHandle = {
 };
 
 const solidBackend: NotebookBackend<SolidStoreHandle> = {
-    init(initialDoc) {
+    createHandle(initialDoc) {
         const [doc, setDoc] = createStore<ModelDocument>(initialDoc);
         return { doc, setDoc };
     },
-    view: (handle) => handle.doc,
-    change: (handle, fn) => handle.setDoc(produce<ModelDocument>(fn)),
+    viewDocument: (handle) => handle.doc,
+    changeDocument: (handle, fn) => handle.setDoc(produce<ModelDocument>(fn)),
     copy: (_handle, value) => structuredClone(unwrap(value)),
 };
 
@@ -133,7 +133,7 @@ copied obj: Updated copied
 
 <!-- verifier:reset -->
 
-To combine Solid reactivity with Automerge, we could make custom functions or use `makeDocumentProjection` from `@automerge/automerge-repo-solid-primitives`. The backend's handle is the Automerge `DocHandle` itself: `init` creates a document in the repo, and the other methods work through the handle.
+To combine Solid reactivity with Automerge, we could make custom functions or use `makeDocumentProjection` from `@automerge/automerge-repo-solid-primitives`. The backend's handle is the Automerge `DocHandle` itself: `createHandle` creates a document in the repo, and the other methods work through the handle.
 
 <!-- verifier:prepend-to-following -->
 
@@ -154,9 +154,9 @@ function materializeFromAutomerge<T>(doc: Doc<unknown>, subtree: T): T {
 const repo = new Repo();
 
 const solidAutomergeBackend: NotebookBackend<DocHandle<ModelDocument>> = {
-    init: (initialDoc) => repo.create<ModelDocument>(initialDoc),
-    view: (handle) => makeDocumentProjection(handle),
-    change: (handle, fn) => handle.change(fn),
+    createHandle: (initialDoc) => repo.create<ModelDocument>(initialDoc),
+    viewDocument: (handle) => makeDocumentProjection(handle),
+    changeDocument: (handle, fn) => handle.change(fn),
     copy: (handle, value) => materializeFromAutomerge(handle.doc(), value),
 };
 

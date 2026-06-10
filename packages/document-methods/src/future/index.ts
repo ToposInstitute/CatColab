@@ -15,24 +15,24 @@ export { type ModelDocument, newModelDocument } from "../model";
  * A notebook backend abstracts the storage that notebooks operate over. A
  * backend is a stateless object working on handles of its own choosing: a
  * plain document, a Solid store, an Automerge `DocHandle`, etc. Handles are
- * produced by `init` and passed back into the other methods.
+ * produced by `createHandle` and passed back into the other methods.
  */
 export interface NotebookBackend<Handle> {
     /** Initialize a backend handle from an initial document. */
-    init(initialDoc: ModelDocument): Handle;
+    createHandle(initialDoc: ModelDocument): Handle;
     /** Read view of the document for a handle (reactive where applicable). */
-    view(handle: Handle): ModelDocument;
+    viewDocument(handle: Handle): ModelDocument;
     /** Apply a mutation by mutating a draft document. */
-    change(handle: Handle, fn: (doc: ModelDocument) => void): void;
+    changeDocument(handle: Handle, fn: (doc: ModelDocument) => void): void;
     /** Make a detached plain-JS copy of a backend-owned value before cloning it. */
     copy?<T>(handle: Handle, value: T): T;
 }
 
 /** A plain in-memory backend whose handle is the document itself. */
 export const plainBackend: NotebookBackend<ModelDocument> = {
-    init: (initialDoc) => initialDoc,
-    view: (handle) => handle,
-    change: (handle, fn) => fn(handle),
+    createHandle: (initialDoc) => initialDoc,
+    viewDocument: (handle) => handle,
+    changeDocument: (handle, fn) => fn(handle),
 };
 
 const richTextKind: unique symbol = Symbol("richText");
@@ -252,8 +252,8 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
     handle: Handle,
     logic: TLogic,
 ): ModelNotebook<TLogic, Handle> {
-    const doc = backend.view(handle);
-    const change = (fn: (doc: ModelDocument) => void) => backend.change(handle, fn);
+    const doc = backend.viewDocument(handle);
+    const change = (fn: (doc: ModelDocument) => void) => backend.changeDocument(handle, fn);
     const copy = backend.copy ? <T>(value: T) => backend.copy!(handle, value) : undefined;
 
     const readCellContent = <T>(cellId: string): T =>
@@ -481,7 +481,7 @@ export function createBinder<Handle>(backend: NotebookBackend<Handle>): Binder<H
                         `using a logic with theory "${logic.theory}".`,
                 );
             }
-            return attachNotebook(backend, backend.init(document), logic);
+            return attachNotebook(backend, backend.createHandle(document), logic);
         },
         attach(logic, handle) {
             return attachNotebook(backend, handle, logic);

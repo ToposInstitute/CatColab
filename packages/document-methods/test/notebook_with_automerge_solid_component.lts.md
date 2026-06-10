@@ -17,9 +17,9 @@ function materializeFromAutomerge<T>(doc: Doc<unknown>, subtree: T): T {
 const repo = new Repo();
 
 const solidAutomergeBackend: NotebookBackend<DocHandle<ModelDocument>> = {
-    init: (initialDoc) => repo.create<ModelDocument>(initialDoc),
-    view: (handle) => makeDocumentProjection(handle),
-    change: (handle, fn) => handle.change(fn),
+    createHandle: (initialDoc) => repo.create<ModelDocument>(initialDoc),
+    viewDocument: (handle) => makeDocumentProjection(handle),
+    changeDocument: (handle, fn) => handle.change(fn),
     copy: (handle, value) => materializeFromAutomerge(handle.doc(), value),
 };
 
