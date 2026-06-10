@@ -27,6 +27,7 @@
         "@automerge/automerge-repo": "^2.5.5",
         "@automerge/automerge-repo-solid-primitives": "^2.0.0",
         "@catcolab-dev-tools/literate-typescript": "workspace:*",
+        "@tsconfig/strictest": "^2.0.8",
         "@types/uuid": "^10.0.0",
         "solid-js": "^1.9.10",
         "typescript": "^6.0.3",

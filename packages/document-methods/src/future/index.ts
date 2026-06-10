@@ -264,6 +264,9 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
 
     const duplicateFormalCell = (cellId: string): Cell<ModelJudgment> => {
         const cell = doc.notebook.cellContents[cellId];
+        if (!cell) {
+            throw new Error(`Failed to find notebook cell contents for cell '${cellId}'`);
+        }
         return duplicateCell(cell, cloneJudgment);
     };
 
