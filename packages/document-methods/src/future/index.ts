@@ -35,10 +35,22 @@ export const plainBackend: NotebookBackend<ModelDocument> = {
     change: (handle, fn) => fn(handle),
 };
 
+const richTextKind: unique symbol = Symbol("richText");
+const objectKind: unique symbol = Symbol("object");
+const morphismKind: unique symbol = Symbol("morphism");
+
+/** Precise discriminants for notebook cell handles. */
+export const CellKind = {
+    RichText: richTextKind,
+    Object: objectKind,
+    Morphism: morphismKind,
+} as const;
+
 export type ObjectType<Name extends string> = ObType & { readonly objectTypeName?: Name };
-export type MorphismType<Endpoint, Name extends string> = MorType & {
+export type MorphismType<Dom, Cod, Name extends string> = MorType & {
     readonly morphismTypeName?: Name;
-    readonly endpoint?: Endpoint;
+    readonly dom?: Dom;
+    readonly cod?: Cod;
 };
 
 type FieldError<Key extends PropertyKey, Message extends string> = {
@@ -74,23 +86,26 @@ type Update<T> = {
 };
 
 export type ObjectCell<TType extends ObjectType<string>> = Update<{ name: string }> & {
+    readonly kind: typeof CellKind.Object;
     readonly id: string;
     readonly type: TType;
     readonly name: string;
     duplicate(): ObjectCell<TType>;
 };
 
-type EndpointOf<TType> = TType extends MorphismType<infer Endpoint, string> ? Endpoint : never;
+type DomOf<TType> = TType extends MorphismType<infer Dom, unknown, string> ? Dom : never;
+type CodOf<TType> = TType extends MorphismType<unknown, infer Cod, string> ? Cod : never;
 
-type MorphismArgs<TType extends MorphismType<unknown, string>> = {
+type MorphismArgs<TType extends MorphismType<unknown, unknown, string>> = {
     name: string;
-    dom: EndpointOf<TType>;
-    cod: EndpointOf<TType>;
+    dom: DomOf<TType>;
+    cod: CodOf<TType>;
 };
 
-export type MorphismCell<TType extends MorphismType<unknown, string>> = Update<
+export type MorphismCell<TType extends MorphismType<unknown, unknown, string>> = Update<
     MorphismArgs<TType>
 > & {
+    readonly kind: typeof CellKind.Morphism;
     readonly id: string;
     readonly type: TType;
     readonly name: string;
@@ -98,6 +113,7 @@ export type MorphismCell<TType extends MorphismType<unknown, string>> = Update<
 };
 
 export type RichTextCell = Update<{ content: string }> & {
+    readonly kind: typeof CellKind.RichText;
     readonly id: string;
     readonly content: string;
 };
@@ -105,7 +121,7 @@ export type RichTextCell = Update<{ content: string }> & {
 export type ModelLogic<
     Theory extends string,
     TObjectTypes extends Record<string, ObjectType<string>>,
-    TMorphismTypes extends Record<string, MorphismType<unknown, string>>,
+    TMorphismTypes extends Record<string, MorphismType<unknown, unknown, string>>,
 > = {
     readonly theory: Theory;
     readonly objectTypes: TObjectTypes;
@@ -115,14 +131,14 @@ export type ModelLogic<
 type AnyModelLogic = ModelLogic<
     string,
     Record<string, ObjectType<string>>,
-    Record<string, MorphismType<unknown, string>>
+    Record<string, MorphismType<unknown, unknown, string>>
 >;
 
 type LogicObjectType<TLogic extends AnyModelLogic> =
     TLogic extends ModelLogic<
         string,
         infer TObjectTypes,
-        Record<string, MorphismType<unknown, string>>
+        Record<string, MorphismType<unknown, unknown, string>>
     >
         ? TObjectTypes[keyof TObjectTypes]
         : never;
@@ -164,8 +180,8 @@ export type ModelNotebook<TLogic extends AnyModelLogic, Handle = ModelDocument> 
 export const objectType = <Name extends string>(content: string) =>
     ({ tag: "Basic", content }) as ObjectType<Name>;
 
-export const morphismType = <Endpoint, Name extends string>() =>
-    ({ tag: "Hom", content: { tag: "Basic", content: "Object" } }) as MorphismType<Endpoint, Name>;
+export const morphismType = <Dom, Cod, Name extends string>() =>
+    ({ tag: "Hom", content: { tag: "Basic", content: "Object" } }) as MorphismType<Dom, Cod, Name>;
 
 function attachNotebook<TLogic extends AnyModelLogic, Handle>(
     backend: NotebookBackend<Handle>,
@@ -198,6 +214,7 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
 
     const objectHandle = <TType extends LogicObjectType<TLogic>>(cellId: string, type: TType) =>
         ({
+            kind: CellKind.Object,
             get id() {
                 return readCellContent<{ id: string }>(cellId).id;
             },
@@ -220,6 +237,7 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
 
     const morphismHandle = <TType extends LogicMorphismType<TLogic>>(cellId: string, type: TType) =>
         ({
+            kind: CellKind.Morphism,
             get id() {
                 return readCellContent<{ id: string }>(cellId).id;
             },
@@ -264,6 +282,7 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
             });
             const cellId = cell.id;
             return {
+                kind: CellKind.RichText,
                 id: cellId,
                 get content() {
                     return readCellContent<string>(cellId);

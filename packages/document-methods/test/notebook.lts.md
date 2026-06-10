@@ -6,7 +6,7 @@ may create their own logics. The logics need to play nice with
 
 ```ts
 import { SimpleOlog } from "catcolab-logics";
-import { binder } from "catcolab-document-methods/future";
+import { binder, CellKind } from "catcolab-document-methods/future";
 ```
 
 Notebooks are created through a binder, which ties the notebook API to a
@@ -97,6 +97,34 @@ source: Source
 source copy: Source copy
 ```
 
+We can iterate through cells: both informal cells and formal judgment cells.
+Each cell handle is discriminated by `CellKind`.
+
+```ts
+for (const cell of notebook.cells()) {
+    switch (cell.kind) {
+        case CellKind.RichText:
+            console.log("text:", cell.content);
+            break;
+        case CellKind.Object:
+            console.log("object:", cell.name);
+            break;
+        case CellKind.Morphism:
+            console.log("morphism:", cell.name);
+            break;
+    }
+}
+```
+
+```
+text: We define a simple olog with two objects and one arrow.
+object: Source
+object: B
+morphism: has as
+```
+
+## Type safety
+
 Invalid shapes should be type errors:
 
 ```ts
@@ -148,6 +176,8 @@ notebook.morphism(Transition, {
 });
 ```
 
+## Serialization
+
 We can dump a notebook.
 
 <!-- verifier:prepend-to-following -->
@@ -173,4 +203,64 @@ binder.load(SimpleOlog, notebookData);
 
 ```
 ❌ Cannot load document with theory "petri-net" using a logic with theory "simple-olog".
+```
+
+## Filtering by exact types
+
+The simple schema logic has two object types and two morphism types, so we can
+filter cells by their exact type, not just their kind.
+
+<!-- verifier:reset -->
+
+<!-- verifier:prepend-to-following -->
+
+```ts
+import { SimpleSchema } from "catcolab-logics";
+import { binder, CellKind } from "catcolab-document-methods/future";
+
+const notebook = binder.create(SimpleSchema, { name: "Example schema" });
+
+const Entity = SimpleSchema.objectTypes.Entity;
+const AttrType = SimpleSchema.objectTypes.AttrType;
+const Mapping = SimpleSchema.morphismTypes.Mapping;
+const Attr = SimpleSchema.morphismTypes.Attr;
+
+const person = notebook.object(Entity, { name: "Person" });
+const company = notebook.object(Entity, { name: "Company" });
+const str = notebook.object(AttrType, { name: "String" });
+
+notebook.morphism(Mapping, { name: "employer", dom: person, cod: company });
+notebook.morphism(Attr, { name: "name", dom: person, cod: str });
+```
+
+Filtering on an exact type narrows the handles and excludes cells of every
+other type.
+
+```ts
+const entities = notebook
+    .cells()
+    .filter((cell) => cell.kind === CellKind.Object && cell.type === Entity);
+const attrs = notebook
+    .cells()
+    .filter((cell) => cell.kind === CellKind.Morphism && cell.type === Attr);
+
+console.log("entities:", entities.map((cell) => cell.name).join(", "));
+console.log("attrs:", attrs.map((cell) => cell.name).join(", "));
+```
+
+```
+entities: Person, Company
+attrs: name
+```
+
+Morphism types distinguish their domain from their codomain, so mixing up
+endpoints is a type error.
+
+```ts
+notebook.morphism(Attr, {
+    name: "bad",
+    // @ts-expect-error An attribute's domain must be an entity.
+    dom: str,
+    cod: str,
+});
 ```

@@ -7,7 +7,11 @@ import type {
 import { morphismType, objectType } from "catcolab-document-methods/future";
 
 type SimpleOlogType = ObjectType<"Type">;
-type SimpleOlogAspect = MorphismType<ObjectCell<SimpleOlogType>, "Aspect">;
+type SimpleOlogAspect = MorphismType<
+    ObjectCell<SimpleOlogType>,
+    ObjectCell<SimpleOlogType>,
+    "Aspect"
+>;
 
 export const SimpleOlog = {
     theory: "simple-olog",
@@ -15,12 +19,16 @@ export const SimpleOlog = {
         Type: objectType<"Type">("Type"),
     },
     morphismTypes: {
-        Aspect: morphismType<ObjectCell<SimpleOlogType>, "Aspect">(),
+        Aspect: morphismType<ObjectCell<SimpleOlogType>, ObjectCell<SimpleOlogType>, "Aspect">(),
     },
 } satisfies ModelLogic<"simple-olog", { Type: SimpleOlogType }, { Aspect: SimpleOlogAspect }>;
 
 type PetriNetPlace = ObjectType<"Place">;
-type PetriNetTransition = MorphismType<ObjectCell<PetriNetPlace>[], "Transition">;
+type PetriNetTransition = MorphismType<
+    ObjectCell<PetriNetPlace>[],
+    ObjectCell<PetriNetPlace>[],
+    "Transition"
+>;
 
 export const PetriNet = {
     theory: "petri-net",
@@ -28,6 +36,31 @@ export const PetriNet = {
         Place: objectType<"Place">("Place"),
     },
     morphismTypes: {
-        Transition: morphismType<ObjectCell<PetriNetPlace>[], "Transition">(),
+        Transition: morphismType<
+            ObjectCell<PetriNetPlace>[],
+            ObjectCell<PetriNetPlace>[],
+            "Transition"
+        >(),
     },
 } satisfies ModelLogic<"petri-net", { Place: PetriNetPlace }, { Transition: PetriNetTransition }>;
+
+type SchemaEntity = ObjectType<"Entity">;
+type SchemaAttrType = ObjectType<"AttrType">;
+type SchemaMapping = MorphismType<ObjectCell<SchemaEntity>, ObjectCell<SchemaEntity>, "Mapping">;
+type SchemaAttr = MorphismType<ObjectCell<SchemaEntity>, ObjectCell<SchemaAttrType>, "Attr">;
+
+export const SimpleSchema = {
+    theory: "simple-schema",
+    objectTypes: {
+        Entity: objectType<"Entity">("Entity"),
+        AttrType: objectType<"AttrType">("AttrType"),
+    },
+    morphismTypes: {
+        Mapping: morphismType<ObjectCell<SchemaEntity>, ObjectCell<SchemaEntity>, "Mapping">(),
+        Attr: morphismType<ObjectCell<SchemaEntity>, ObjectCell<SchemaAttrType>, "Attr">(),
+    },
+} satisfies ModelLogic<
+    "simple-schema",
+    { Entity: SchemaEntity; AttrType: SchemaAttrType },
+    { Mapping: SchemaMapping; Attr: SchemaAttr }
+>;
