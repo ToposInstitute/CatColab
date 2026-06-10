@@ -97,6 +97,8 @@ source: Source
 source copy: Source copy
 ```
 
+## Iterating through cells
+
 We can iterate through cells: both informal cells and formal judgment cells.
 Each cell handle is discriminated by `CellKind`.
 
@@ -123,7 +125,66 @@ object: B
 morphism: has as
 ```
 
+We can filter cells by their type, not just their kind and we provide some utilities to do so.
+
+<!-- verifier:reset -->
+
+<!-- verifier:prepend-to-following -->
+
+```ts
+import { SimpleSchema } from "catcolab-logics";
+import { binder, byMorphismType, byObjectType } from "catcolab-document-methods/future";
+
+const notebook = binder.create(SimpleSchema, { name: "Example schema" });
+
+const Entity = SimpleSchema.objectTypes.Entity;
+const AttrType = SimpleSchema.objectTypes.AttrType;
+const Mapping = SimpleSchema.morphismTypes.Mapping;
+const Attr = SimpleSchema.morphismTypes.Attr;
+
+const person = notebook.object(Entity, { name: "Person" });
+const company = notebook.object(Entity, { name: "Company" });
+const str = notebook.object(AttrType, { name: "String" });
+
+notebook.morphism(Mapping, { name: "employer", dom: person, cod: company });
+notebook.morphism(Attr, { name: "name", dom: person, cod: str });
+```
+
+Filtering on an exact type narrows the handles and excludes cells of every
+other type.
+
+```ts
+const entities = notebook.cells().filter(byObjectType(Entity));
+const attrs = notebook.cells().filter(byMorphismType(Attr));
+
+console.log("entities:", entities.map((cell) => cell.name).join(", "));
+console.log("attrs:", attrs.map((cell) => cell.name).join(", "));
+```
+
+```
+entities: Person, Company
+attrs: name
+```
+
 ## Type safety
+
+<!-- verifier:reset -->
+
+<!-- verifier:prepend-to-following -->
+
+```ts
+import { SimpleOlog } from "catcolab-logics";
+import { binder } from "catcolab-document-methods/future";
+
+const notebook = binder.create(SimpleOlog, { name: "An Olog" });
+
+const Type = SimpleOlog.objectTypes.Type;
+const Aspect = SimpleOlog.morphismTypes.Aspect;
+
+const source = notebook.object(Type, { name: "A" });
+const target = notebook.object(Type, { name: "B" });
+const arrow = notebook.morphism(Aspect, { name: "has", dom: source, cod: target });
+```
 
 Invalid shapes should be type errors:
 
@@ -140,9 +201,6 @@ notebook.morphism(Aspect, {
     cod: target,
 });
 ```
-
-Morphism types distinguish their domain from their codomain, so mixing up
-endpoints is a type error.
 
 <!-- verifier:reset -->
 
@@ -225,48 +283,4 @@ binder.load(SimpleOlog, notebookData);
 
 ```
 ❌ Cannot load document with theory "petri-net" using a logic with theory "simple-olog".
-```
-
-## Filtering by exact types
-
-The simple schema logic has two object types and two morphism types, so we can
-filter cells by their exact type, not just their kind.
-
-<!-- verifier:reset -->
-
-<!-- verifier:prepend-to-following -->
-
-```ts
-import { SimpleSchema } from "catcolab-logics";
-import { binder, byMorphismType, byObjectType } from "catcolab-document-methods/future";
-
-const notebook = binder.create(SimpleSchema, { name: "Example schema" });
-
-const Entity = SimpleSchema.objectTypes.Entity;
-const AttrType = SimpleSchema.objectTypes.AttrType;
-const Mapping = SimpleSchema.morphismTypes.Mapping;
-const Attr = SimpleSchema.morphismTypes.Attr;
-
-const person = notebook.object(Entity, { name: "Person" });
-const company = notebook.object(Entity, { name: "Company" });
-const str = notebook.object(AttrType, { name: "String" });
-
-notebook.morphism(Mapping, { name: "employer", dom: person, cod: company });
-notebook.morphism(Attr, { name: "name", dom: person, cod: str });
-```
-
-Filtering on an exact type narrows the handles and excludes cells of every
-other type.
-
-```ts
-const entities = notebook.cells().filter(byObjectType(Entity));
-const attrs = notebook.cells().filter(byMorphismType(Attr));
-
-console.log("entities:", entities.map((cell) => cell.name).join(", "));
-console.log("attrs:", attrs.map((cell) => cell.name).join(", "));
-```
-
-```
-entities: Person, Company
-attrs: name
 ```
