@@ -32,6 +32,7 @@
         "uuid": "^11.0.3"
     },
     "devDependencies": {
+        "@catcolab-dev-tools/vite-plugin-monorepo-dedupe": "link:../../tools/vite-plugin-monorepo-dedupe",
         "@types/react": "^18.3.3",
         "@types/uuid": "^10.0.0",
         "@vitejs/plugin-react": "^4.3.1",
