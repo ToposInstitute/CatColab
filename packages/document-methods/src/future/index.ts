@@ -211,7 +211,7 @@ export type ModelNotebook<TLogic extends AnyModelLogic, Handle = ModelDocument> 
     dump(): ModelDocument;
     /** Handles for all cells, in notebook order. */
     cells(): Array<NotebookCell<TLogic>>;
-    richText(args: { content: string }): RichTextCell;
+    addRichText(args: { content: string }): RichTextCell;
     addObject<TType extends LogicObjectType<TLogic> = LogicObjectType<TLogic>>(
         type: TType,
         args: { name: string },
@@ -443,7 +443,7 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
                 }
             }) as Array<NotebookCell<TLogic>>;
         },
-        richText({ content }: { content: string }) {
+        addRichText({ content }: { content: string }) {
             const cell = newRichTextCell(content);
             change((d) => {
                 d.notebook.cellContents[cell.id] = cell;
@@ -509,13 +509,13 @@ export interface Binder<Handle> {
      * Build a typed notebook around an existing backend handle, e.g. an
      * Automerge `DocHandle` found in a repo. No backend storage is created.
      */
-    attach<TLogic extends AnyModelLogic>(
+    loadFromHandle<TLogic extends AnyModelLogic>(
         logic: TLogic,
         handle: Handle,
     ): ModelNotebook<TLogic, Handle>;
 }
 
-/** Bind a backend once, yielding `createNotebook`/`loadNotebook`/`attach` entry points. */
+/** Bind a backend once, yielding `createNotebook`/`loadNotebook`/`loadFromHandle` entry points. */
 export function createBinder<Handle>(backend: NotebookBackend<Handle>): Binder<Handle> {
     return {
         createNotebook(logic, data) {
@@ -532,7 +532,7 @@ export function createBinder<Handle>(backend: NotebookBackend<Handle>): Binder<H
             }
             return attachNotebook(backend, backend.createHandle(document), logic);
         },
-        attach(logic, handle) {
+        loadFromHandle(logic, handle) {
             return attachNotebook(backend, handle, logic);
         },
     };

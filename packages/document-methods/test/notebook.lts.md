@@ -23,7 +23,7 @@ We can add rich text cells to our notebook.
 <!-- verifier:prepend-to-following -->
 
 ```ts
-const intro = notebook.richText({ content: "We define a simple olog." });
+const intro = notebook.addRichText({ content: "We define a simple olog." });
 ```
 
 We can create objects and morphisms in the notebook.

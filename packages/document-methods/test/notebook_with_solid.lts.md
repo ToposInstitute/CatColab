@@ -2,7 +2,7 @@ A notebook's storage is abstracted to allow plugging in custom backends. This co
 
 A `NotebookBackend` is a stateless object that works on handles of its own choosing. `createHandle` creates a handle from an initial document; the other methods receive that handle back: `viewDocument` returns the read view, `changeDocument` applies a draft mutation, and the optional `copyValue` makes detached plain-JS copies of values from the backend's canonical document.
 
-A backend is bound once with `createBinder`, which yields the notebook entry points `createNotebook`, `loadNotebook`, and `attach`.
+A backend is bound once with `createBinder`, which yields the notebook entry points `createNotebook`, `loadNotebook`, and `loadFromHandle`.
 
 We can plug in Solid's reactivity by itself using `createStore` and `produce`.
 
@@ -206,7 +206,7 @@ const sourceNotebook = automergeBinder.createNotebook(SimpleOlog, {
 });
 
 const loadedAutomergeHandle = await repo.find<ModelDocument>(sourceNotebook.handle.url);
-const loadedAutomergeNotebook = automergeBinder.attach(SimpleOlog, loadedAutomergeHandle);
+const loadedAutomergeNotebook = automergeBinder.loadFromHandle(SimpleOlog, loadedAutomergeHandle);
 
 loadedAutomergeNotebook.update({ name: "Updated loaded Automerge Olog" });
 console.log("loaded automerge notebook:", loadedAutomergeNotebook.name);
