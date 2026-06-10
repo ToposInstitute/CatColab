@@ -113,7 +113,7 @@ export function IdInput(
 
     const isComplete = () => {
         const name = props.id ? idToText(props.id) : "";
-        return text() === name;
+        return name === "" || text() === name;
     };
 
     const status = (): InlineInputErrorStatus => {
