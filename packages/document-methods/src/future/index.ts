@@ -509,13 +509,13 @@ export interface Binder<Handle> {
      * Build a typed notebook around an existing backend handle, e.g. an
      * Automerge `DocHandle` found in a repo. No backend storage is created.
      */
-    loadFromHandle<TLogic extends AnyModelLogic>(
+    loadNotebookFromHandle<TLogic extends AnyModelLogic>(
         logic: TLogic,
         handle: Handle,
     ): ModelNotebook<TLogic, Handle>;
 }
 
-/** Bind a backend once, yielding `createNotebook`/`loadNotebook`/`loadFromHandle` entry points. */
+/** Bind a backend once, yielding `createNotebook`/`loadNotebook`/`loadNotebookFromHandle` entry points. */
 export function createBinder<Handle>(backend: NotebookBackend<Handle>): Binder<Handle> {
     return {
         createNotebook(logic, data) {
@@ -532,7 +532,7 @@ export function createBinder<Handle>(backend: NotebookBackend<Handle>): Binder<H
             }
             return attachNotebook(backend, backend.createHandle(document), logic);
         },
-        loadFromHandle(logic, handle) {
+        loadNotebookFromHandle(logic, handle) {
             return attachNotebook(backend, handle, logic);
         },
     };
