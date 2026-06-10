@@ -111,10 +111,10 @@ for (const cell of notebook.cells()) {
             console.log("text:", cell.content);
             break;
         case CellKind.Object:
-            console.log("object:", cell.name);
+            console.log("object:", cell.name, "is a Type:", cell.type === Type);
             break;
         case CellKind.Morphism:
-            console.log("morphism:", cell.name);
+            console.log("morphism:", cell.name, "is an Aspect:", cell.type === Aspect);
             break;
     }
 }
@@ -122,9 +122,9 @@ for (const cell of notebook.cells()) {
 
 ```
 text: We define a simple olog with two objects and one arrow.
-object: Source
-object: B
-morphism: has as
+object: Source is a Type: true
+object: B is a Type: true
+morphism: has as is an Aspect: true
 ```
 
 We can filter cells by their type, not just their kind and we provide some utilities to do so.
