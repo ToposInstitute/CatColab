@@ -424,6 +424,23 @@ impl ThSymMonoidalCategory {
     }
 }
 
+/// The theory of an R-graded causal digraph feeding a hypergraph.
+#[wasm_bindgen]
+pub struct ThCausalHypergraph(Rc<theory::ModalDblTheory<Unital>>);
+
+#[wasm_bindgen]
+impl ThCausalHypergraph {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Rc::new(theories::th_causal_hypergraph()))
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory(self.0.clone().into())
+    }
+}
+
 /// A theory of systems of polynomial ODEs
 #[wasm_bindgen]
 pub struct ThPolynomialODE(Rc<theory::ModalDblTheory<NonUnital>>);

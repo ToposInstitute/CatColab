@@ -306,14 +306,40 @@ export const petriNetVisualization = (
 const PetriNetVisualization = lazy(() => import("./analyses/petri_net_visualization"));
 
 export const hypergraphVisualization = (
+    options: AnalysisOptions & {
+        /** Object type whose generators become the hypergraph's vertices.
+        Defaults to all objects. */
+        vertexObType?: ObType;
+        /** Morphism type whose generators become the hyperedges.
+        Defaults to all morphisms. */
+        hyperedgeMorType?: MorType;
+    },
+): ModelAnalysisMeta<GraphLayoutConfig.Config> => {
+    const { vertexObType, hyperedgeMorType, ...rest } = options;
+    return {
+        ...rest,
+        component: (props) => (
+            <HypergraphVisualization
+                vertexObType={vertexObType}
+                hyperedgeMorType={hyperedgeMorType}
+                {...props}
+            />
+        ),
+        initialContent: GraphLayoutConfig.defaultConfig,
+    };
+};
+
+const HypergraphVisualization = lazy(() => import("./analyses/hypergraph_visualization"));
+
+export const causalDigraphVisualization = (
     options: AnalysisOptions,
 ): ModelAnalysisMeta<GraphLayoutConfig.Config> => ({
     ...options,
-    component: HypergraphVisualization,
+    component: CausalDigraphVisualization,
     initialContent: GraphLayoutConfig.defaultConfig,
 });
 
-const HypergraphVisualization = lazy(() => import("./analyses/hypergraph_visualization"));
+const CausalDigraphVisualization = lazy(() => import("./analyses/causal_digraph_visualization"));
 
 export function reachability(
     options: Partial<AnalysisOptions> & {

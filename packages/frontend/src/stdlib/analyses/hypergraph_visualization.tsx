@@ -2,7 +2,7 @@ import { For, Index } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
-import { collectProduct, type DblModel } from "catlog-wasm";
+import { collectProduct, type DblModel, type MorType, type ObType } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import {
     arrowMarkerSVG,
@@ -27,12 +27,17 @@ a per-vertex basis (an arrowhead pointing into the curve = input role; out of
 the curve = output role; a vertex playing both roles gets two arrowheads).
  */
 export default function HypergraphVisualization(
-    props: ModelAnalysisProps<GraphLayoutConfig.Config>,
+    props: ModelAnalysisProps<GraphLayoutConfig.Config> & {
+        /** Restrict the vertices to objects of this type (default: all). */
+        vertexObType?: ObType;
+        /** Restrict the hyperedges to morphisms of this type (default: all). */
+        hyperedgeMorType?: MorType;
+    },
 ) {
     const result = () => {
         const model = props.liveModel.elaboratedModel();
         if (model) {
-            return hypergraphFromModel(model);
+            return hypergraphFromModel(model, props.vertexObType, props.hyperedgeMorType);
         }
     };
 
@@ -155,15 +160,25 @@ function HypergraphSVG(props: {
     );
 }
 
-/** Build the Levi graph and record which node IDs are hyperedges. */
-function hypergraphFromModel(model: DblModel): {
+/** Build the Levi graph and record which node IDs are hyperedges.
+
+When `vertexObType`/`hyperedgeMorType` are given, only objects/morphisms of those
+types contribute (so a theory with extra object and morphism types can still
+present a clean hypergraph view); otherwise every object is a vertex and every
+morphism is a hyperedge. */
+function hypergraphFromModel(
+    model: DblModel,
+    vertexObType?: ObType,
+    hyperedgeMorType?: MorType,
+): {
     graph: GraphSpec.Graph;
     hyperedgeIds: string[];
 } {
     const nodes: GraphSpec.Node[] = [];
     const hyperedgeIds: string[] = [];
 
-    for (const id of model.obGenerators()) {
+    const obIds = vertexObType ? model.obGeneratorsWithType(vertexObType) : model.obGenerators();
+    for (const id of obIds) {
         const ob = model.obPresentation(id);
         nodes.push({
             id,
@@ -175,7 +190,10 @@ function hypergraphFromModel(model: DblModel): {
     }
 
     const edges: GraphSpec.Edge[] = [];
-    for (const id of model.morGenerators()) {
+    const morIds = hyperedgeMorType
+        ? model.morGeneratorsWithType(hyperedgeMorType)
+        : model.morGenerators();
+    for (const id of morIds) {
         const mor = model.morPresentation(id);
         if (!mor) {
             continue;

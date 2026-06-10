@@ -236,6 +236,63 @@ pub fn th_signed_polynomial_ode_system() -> ModalDblTheory<NonUnital> {
     th
 }
 
+/// The theory of an R-graded causal digraph feeding a hypergraph.
+///
+/// Free models of this theory are the structures depicted in the "toy digraph"
+/// example: a digraph of **actions** (objects) carrying a **grading** (a second
+/// kind of edge, standing in for the eventual real-number grading / temporal
+/// order), together with **causal** edges that are themselves reified as objects
+/// so that **hyperedges** can relate several causal edges to several others.
+///
+/// ## Formalization
+///
+/// - `Action` is the type of the (red) action vertices.
+/// - `Causal` reifies the (green) causal edges as objects. Each causal edge has
+///   a source and target action, recorded by the morphism types `CausalSrc` and
+///   `CausalTgt`. Ideally these would be *object operations* (functions), so that
+///   every causal edge has exactly one source and target; but pinning a function
+///   value (`src(c) = a`) to a generating action is an object equation, which our
+///   free models do not support. The functional version is exactly what the
+///   tabulator of a `Causal` morphism type would provide; until modal tabulators
+///   exist, `CausalSrc`/`CausalTgt` are spans and functionality is a convention.
+/// - `Grading` is the (dotted) grading/temporal edge between actions.
+/// - The `tensor` operation on `Causal`, together with the `Hom` type on `Causal`
+///   (used with `tensor` applied to its domain and codomain), gives the (blue)
+///   hyperedges relating a list of causal edges to a list of causal edges, just as
+///   in the directed hypergraph theory ([`th_sym_monoidal_category`]).
+pub fn th_causal_hypergraph() -> ModalDblTheory<Unital> {
+    let list = List::Symmetric;
+    let m = Modality::List(list);
+
+    let mut th = ModalDblTheory::new();
+    th.add_ob_type(name("Action"));
+    th.add_ob_type(name("Causal"));
+
+    let action = ModeApp::new(name("Action"));
+    let causal = ModeApp::new(name("Causal"));
+
+    // Endpoints of causal edges. Spans, not functions; see the doc comment.
+    th.add_mor_type(name("CausalSrc"), causal.clone(), action.clone());
+    th.add_mor_type(name("CausalTgt"), causal.clone(), action.clone());
+
+    // Grading / temporal order between actions.
+    th.add_mor_type(name("Grading"), action.clone(), action);
+
+    // Tensor of causal edges, so that hyperedges can have multiple inputs and
+    // outputs. Mirrors the list-algebra structure of `th_list_algebra`.
+    th.add_ob_op(name("tensor"), causal.clone().apply(m), causal.clone());
+    let a = ModeApp::new(name("tensor").into());
+    th.equate_ob_ops(
+        Path::pair(a.clone().apply(m), a.clone()),
+        Path::pair(ModeApp::new(ModalOp::Concat(list, 2, causal.clone())), a.clone()),
+    );
+    th.equate_ob_ops(
+        Path::empty(causal.clone()),
+        Path::pair(ModeApp::new(ModalOp::Concat(list, 0, causal)), a),
+    );
+    th
+}
+
 /// The theory of a generalized multicategory over a list monad.
 fn th_generalized_multicategory(list: List) -> ModalDblTheory<Unital> {
     let mut th = ModalDblTheory::new();
@@ -379,6 +436,14 @@ mod tests {
         assert!(th_sym_multicategory().validate().is_ok());
         assert!(modal_th_power_system().validate().is_ok());
         assert!(th_polynomial_ode_system().validate().is_ok());
+        assert!(th_causal_hypergraph().validate().is_ok());
+    }
+
+    #[test]
+    fn causal_hypergraph() {
+        let th = th_causal_hypergraph();
+        assert!(th.has_ob_type(&ModeApp::new(name("Action"))));
+        assert!(th.has_ob_type(&ModeApp::new(name("Causal"))));
     }
 
     #[test]

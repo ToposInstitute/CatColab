@@ -66,6 +66,17 @@ stdTheories.add(
 
 stdTheories.add(
     {
+        id: "causal-hypergraph",
+        name: "Causal hypergraph",
+        description: "Graded causal digraph feeding a directed hypergraph",
+        iconLetters: ["C", "h"],
+        group: "Experimental",
+    },
+    async () => (await import("./theories/causal-hypergraph")).default,
+);
+
+stdTheories.add(
+    {
         id: "polynomial-ode",
         name: "Polynomial ODEs",
         description: "Systems of polynomial ordinary differential equations",
