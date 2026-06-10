@@ -19,7 +19,7 @@ const solidBackend: NotebookBackend<SolidStoreHandle> = {
     },
     viewDocument: (handle) => handle.doc,
     changeDocument: (handle, fn) => handle.setDoc(produce<ModelDocument>(fn)),
-    copy: (_handle, value) => structuredClone(unwrap(value)),
+    copyValue: (_handle, value) => structuredClone(unwrap(value)),
 };
 
 const solidBinder = createBinder(solidBackend);

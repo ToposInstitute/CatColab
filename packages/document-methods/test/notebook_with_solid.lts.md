@@ -1,6 +1,6 @@
 A notebook's storage is abstracted to allow plugging in custom backends. This could be used with anything but our concrete plan is to use this with Solid and Automerge.
 
-A `NotebookBackend` is a stateless object that works on handles of its own choosing. `createHandle` creates a handle from an initial document; the other methods receive that handle back: `viewDocument` returns the read view, `changeDocument` applies a draft mutation, and the optional `copy` makes detached plain-JS copies of values from the backend's canonical document.
+A `NotebookBackend` is a stateless object that works on handles of its own choosing. `createHandle` creates a handle from an initial document; the other methods receive that handle back: `viewDocument` returns the read view, `changeDocument` applies a draft mutation, and the optional `copyValue` makes detached plain-JS copies of values from the backend's canonical document.
 
 A backend is bound once with `createBinder`, which yields the notebook entry points `createNotebook`, `loadNotebook`, and `attach`.
 
@@ -27,7 +27,7 @@ const solidBackend: NotebookBackend<SolidStoreHandle> = {
     },
     viewDocument: (handle) => handle.doc,
     changeDocument: (handle, fn) => handle.setDoc(produce<ModelDocument>(fn)),
-    copy: (_handle, value) => structuredClone(unwrap(value)),
+    copyValue: (_handle, value) => structuredClone(unwrap(value)),
 };
 
 const solidBinder = createBinder(solidBackend);
@@ -157,7 +157,7 @@ const solidAutomergeBackend: NotebookBackend<DocHandle<ModelDocument>> = {
     createHandle: (initialDoc) => repo.create<ModelDocument>(initialDoc),
     viewDocument: (handle) => makeDocumentProjection(handle),
     changeDocument: (handle, fn) => handle.change(fn),
-    copy: (handle, value) => materializeFromAutomerge(handle.doc(), value),
+    copyValue: (handle, value) => materializeFromAutomerge(handle.doc(), value),
 };
 
 const automergeBinder = createBinder(solidAutomergeBackend);

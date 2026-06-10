@@ -20,7 +20,7 @@ const solidAutomergeBackend: NotebookBackend<DocHandle<ModelDocument>> = {
     createHandle: (initialDoc) => repo.create<ModelDocument>(initialDoc),
     viewDocument: (handle) => makeDocumentProjection(handle),
     changeDocument: (handle, fn) => handle.change(fn),
-    copy: (handle, value) => materializeFromAutomerge(handle.doc(), value),
+    copyValue: (handle, value) => materializeFromAutomerge(handle.doc(), value),
 };
 
 const automergeBinder = createBinder(solidAutomergeBackend);
