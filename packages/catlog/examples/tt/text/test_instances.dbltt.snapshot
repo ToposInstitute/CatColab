@@ -11,18 +11,18 @@ type WeightedGraph := [
 ]
 #/ declared: WeightedGraph
 
-diagram Edge : @Instance(WeightedGraph) := [
+def Edge : WeightedGraph := [
     e : @over .E,
 ]
 #/ declared: Edge
 #/ instance generators:
 #/   e : E
 
-diagram I : @Instance(WeightedGraph) := [
+def I : WeightedGraph := [
     v1 : @over .V,
     v2 : @over .V,
     w : @over .Weight,
-    we : Edge, 
+    we : Edge,
     wf : Edge,
     _ : (we.src(e) == v1),
     _ : (we.tgt(e) == v2),
@@ -46,7 +46,7 @@ diagram I : @Instance(WeightedGraph) := [
 #/   weight(we.e) == w
 #/   weight(wf.e) == w
 
-diagram I3 : @Instance(WeightedGraph) := [
+def I3 : WeightedGraph := [
     e1 : @over .E,
     e2 : @over .E
 ]
