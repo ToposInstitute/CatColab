@@ -95,6 +95,54 @@ function obEditorForType(obType: ObType): Component<ObInputProps> {
     throw new Error(`No editor for object of type: ${obType}`);
 }
 
+/** Object lookup that falls back to formalJudgments when the diagram
+ *  cannot be elaborated (e.g. modal theories).
+ */
+export function createObLookup(liveDiagram: Accessor<LiveDiagramDoc>) {
+    const elaborated = () => liveDiagram().elaboratedDiagram();
+    const judgments = () => liveDiagram().formalJudgments();
+
+    function completions(obType?: ObType): Uuid[] | undefined {
+        const diag = elaborated();
+        if (diag && obType) {
+            return diag.obGeneratorsWithType(obType);
+        }
+        if (!obType) {
+            return undefined;
+        }
+        return judgments()
+            .filter((j) => j.tag === "object" && deepEqual(j.obType, obType))
+            .map((j) => j.id);
+    }
+
+    function idToLabel(id: QualifiedName): QualifiedLabel | undefined {
+        const diag = elaborated();
+        if (diag) {
+            return diag.obGeneratorLabel(id);
+        }
+        const found = judgments().find((j) => j.tag === "object" && j.id === id);
+        return found?.tag === "object" && found.name ? [found.name] : undefined;
+    }
+
+    function labelToId(label: QualifiedLabel): NameLookup | undefined {
+        const diag = elaborated();
+        if (diag) {
+            return diag.obGeneratorWithLabel(label);
+        }
+        const name = String(label[0]);
+        const matches = judgments().filter((j) => j.tag === "object" && j.name === name);
+        if (matches.length === 1) {
+            return { tag: "Unique", content: matches[0].id };
+        }
+        if (matches.length > 1) {
+            return { tag: "Ambiguous" };
+        }
+        return { tag: "None" };
+    }
+
+    return { completions, idToLabel, labelToId };
+}
+
 /** Input a basic object in a diagram via its human-readable name.
  */
 export function BasicObInput(
@@ -107,15 +155,14 @@ export function BasicObInput(
     const liveDiagram = useContext(LiveDiagramContext);
     invariant(liveDiagram, "Live diagram should be provided as context");
 
-    const completions = (): QualifiedName[] | undefined =>
-        props.obType && liveDiagram().elaboratedDiagram()?.obGeneratorsWithType(props.obType);
+    const lookup = createObLookup(liveDiagram);
 
     // FIXME: Push diagram labels into Wasm layer.
     return (
         <ObIdInput
-            completions={completions()}
-            idToLabel={(id) => liveDiagram().elaboratedDiagram()?.obGeneratorLabel(id)}
-            labelToId={(label) => liveDiagram().elaboratedDiagram()?.obGeneratorWithLabel(label)}
+            completions={lookup.completions(props.obType)}
+            idToLabel={lookup.idToLabel}
+            labelToId={lookup.labelToId}
             {...props}
         />
     );
