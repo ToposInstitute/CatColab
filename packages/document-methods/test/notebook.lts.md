@@ -135,7 +135,7 @@ We can filter cells by their type, not just their kind and we provide some utili
 
 ```ts
 import { SimpleSchema } from "catcolab-logics";
-import { binder } from "catcolab-document-methods/future";
+import { binder, byMorphismType, byObjectType } from "catcolab-document-methods/future";
 
 const notebook = binder.createNotebook(SimpleSchema, { name: "Example schema" });
 
@@ -150,13 +150,6 @@ const str = notebook.addObject(AttrType, { name: "String" });
 
 notebook.addMorphism(Mapping, { name: "employer", dom: person, cod: company });
 notebook.addMorphism(Attr, { name: "name", dom: person, cod: str });
-```
-
-Filtering on an exact type narrows the handles and excludes cells of every
-other type.
-
-```ts
-import { byMorphismType, byObjectType } from "catcolab-document-methods/future";
 
 const entities = notebook.cells().filter(byObjectType(Entity));
 const attrs = notebook.cells().filter(byMorphismType(Attr));
