@@ -12,7 +12,7 @@ We can plug in Solid's reactivity by itself using `createStore` and `produce`.
 import { createEffect, createRoot } from "solid-js";
 import { createStore, produce, type SetStoreFunction, unwrap } from "solid-js/store";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
-import { binder, createBinder, type NotebookBackend } from "catcolab-document-methods/future";
+import { binder, createBinder, type NotebookBackend } from "catcolab-binder";
 import { type ModelDocument } from "catcolab-document-methods";
 
 type SolidStoreHandle = {
@@ -141,7 +141,7 @@ import { createEffect, createRoot } from "solid-js";
 import { type DocHandle, Repo } from "@automerge/automerge-repo";
 import { makeDocumentProjection } from "@automerge/automerge-repo-solid-primitives";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
-import { createBinder, type NotebookBackend } from "catcolab-document-methods/future";
+import { createBinder, type NotebookBackend } from "catcolab-binder";
 import { type ModelDocument } from "catcolab-document-methods";
 
 function materializeFromAutomerge<T>(doc: Doc<unknown>, subtree: T): T {
@@ -183,9 +183,7 @@ Copies materialize from the Automerge document itself rather than from the Solid
 projection.
 
 ```ts
-const copiedAutomergeObj = notebook
-    .add(Type, { name: "Copied with Automerge" })
-    .duplicate();
+const copiedAutomergeObj = notebook.add(Type, { name: "Copied with Automerge" }).duplicate();
 copiedAutomergeObj.update({ name: "Updated Automerge copy" });
 console.log("automerge copy:", copiedAutomergeObj.name);
 ```

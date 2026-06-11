@@ -4,7 +4,7 @@
 import { createStore, produce, type SetStoreFunction, unwrap } from "solid-js/store";
 import { render } from "solid-js/web";
 import { SimpleOlog } from "catcolab-logics/simple-olog";
-import { createBinder, type NotebookBackend } from "catcolab-document-methods/future";
+import { createBinder, type NotebookBackend } from "catcolab-binder";
 import { type ModelDocument } from "catcolab-document-methods";
 
 type SolidStoreHandle = {

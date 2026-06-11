@@ -8,13 +8,7 @@
         "lib": ["ES2023", "DOM"],
         "paths": {
             "catcolab-logics/*": ["./catcolab-logics/*.ts"],
-            "catcolab-document-methods/future": ["../../src/future/index.ts"],
-            "catcolab-document-methods/future/backends/solid": [
-                "../../src/future/backends/solid.ts"
-            ],
-            "catcolab-document-methods/future/backends/automerge": [
-                "../../src/future/backends/automerge.ts"
-            ]
+            "catcolab-binder": ["../../src/binder/index.ts"]
         },
         "noUnusedLocals": false,
         "noEmit": false

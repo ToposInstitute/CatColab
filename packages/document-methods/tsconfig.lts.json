@@ -13,7 +13,7 @@
         "lib": ["ES2023", "DOM"],
         "paths": {
             "catcolab-logics/*": ["./test/literate-ts/catcolab-logics/*.ts"],
-            "catcolab-document-methods/future": ["./src/future/index.ts"]
+            "catcolab-binder": ["./src/binder/index.ts"]
         }
     },
     "include": [".lts/**/*.ts", ".lts/**/*.tsx"]
