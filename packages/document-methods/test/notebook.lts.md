@@ -260,35 +260,6 @@ notebook.addMorphism(Transition, {
 });
 ```
 
-## Serialization
-
-We can dump a notebook.
-
-<!-- verifier:prepend-to-following -->
-
-```ts
-const notebookData = notebook.dump();
-```
-
-And load it.
-
-```ts
-const notebook2 = binder.loadNotebook(PetriNet, notebookData);
-```
-
-Trying to load a document with the wrong logic will throw an error.
-
-<!-- verifier:throws -->
-
-```ts
-import { SimpleOlog } from "catcolab-logics";
-binder.loadNotebook(SimpleOlog, notebookData);
-```
-
-```
-❌ Cannot load document with theory "petri-net" using a logic with theory "simple-olog".
-```
-
 ## Re-ordering cells
 
 Every cell handle can move itself within the notebook. Moves locate the cell
@@ -413,4 +384,44 @@ console.log(names());
 
 ```
 A, C
+```
+
+## Serialization
+
+<!-- verifier:reset -->
+
+<!-- verifier:prepend-to-following -->
+
+```ts
+import { PetriNet } from "catcolab-logics";
+import { binder } from "catcolab-document-methods/future";
+
+const notebook = binder.createNotebook(PetriNet, { name: "Example Petri-net" });
+```
+
+We can dump a notebook.
+
+<!-- verifier:prepend-to-following -->
+
+```ts
+const notebookData = notebook.dump();
+```
+
+And load it.
+
+```ts
+const notebook2 = binder.loadNotebook(PetriNet, notebookData);
+```
+
+Trying to load a document with the wrong logic will throw an error.
+
+<!-- verifier:throws -->
+
+```ts
+import { SimpleOlog } from "catcolab-logics";
+binder.loadNotebook(SimpleOlog, notebookData);
+```
+
+```
+❌ Cannot load document with theory "petri-net" using a logic with theory "simple-olog".
 ```
