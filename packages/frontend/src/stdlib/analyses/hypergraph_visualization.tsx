@@ -282,6 +282,9 @@ function curvedArcPath(from: GraphLayout.Point, to: GraphLayout.Point): string {
     return `M ${from.x} ${from.y} Q ${cx} ${cy} ${to.x} ${to.y}`;
 }
 
+const cross = (O: GraphLayout.Point, A: GraphLayout.Point, B: GraphLayout.Point) =>
+    (A.x - O.x) * (B.y - O.y) - (A.y - O.y) * (B.x - O.x);
+
 /** Convex hull (Andrew's monotone chain) emitted as an SVG path.
 
 A thick round stroke on the path produces the visual padding around the hull
@@ -309,8 +312,6 @@ function pointsToHullPath(points: GraphLayout.Point[]): string {
     }
 
     const sorted = dedup.slice().toSorted((a, b) => a.x - b.x || a.y - b.y);
-    const cross = (O: GraphLayout.Point, A: GraphLayout.Point, B: GraphLayout.Point) =>
-        (A.x - O.x) * (B.y - O.y) - (A.y - O.y) * (B.x - O.x);
 
     const lower: GraphLayout.Point[] = [];
     for (const p of sorted) {
