@@ -78,7 +78,7 @@ impl<'a> Elaborator<'a> {
             v
         };
         self.ctx.env = self.ctx.env.snoc(v.clone());
-        self.ctx.scope.push(VarInContext::new(name, label, ty, VarKind::Term));
+        self.ctx.scope.push(VarInContext::new(name, label, ty));
         v
     }
 
@@ -454,7 +454,7 @@ impl<'a> Elaborator<'a> {
             field_ty_vs.push((name, (label, ty_v.clone())));
             self.ctx
                 .scope
-                .push(VarInContext::new(name, label, Some(ty_v.clone()), VarKind::Term));
+                .push(VarInContext::new(name, label, Some(ty_v.clone())));
             self.ctx.env =
                 self.ctx.env.snoc(TmV::neu(TmN::proj(self_var.clone(), name, label), ty_v));
         }
