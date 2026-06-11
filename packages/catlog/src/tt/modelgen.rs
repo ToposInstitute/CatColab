@@ -511,9 +511,9 @@ fn tm_to_discrete_instance_term(tm: &TmV) -> Result<DiscreteInstanceTerm, String
     match &**tm {
         TmV_::Neu(n, _) => Ok(DiscreteInstanceTerm::Generator(n.to_qualified_name())),
         TmV_::OverApp(mor_name, _, _, inner) => {
-            let mor_path = Path::single(QualifiedName::single(*mor_name));
+            let mor_qname = QualifiedName::single(*mor_name);
             let inner_t = tm_to_discrete_instance_term(inner)?;
-            Ok(DiscreteInstanceTerm::Apply(mor_path, Box::new(inner_t)))
+            Ok(DiscreteInstanceTerm::Apply(mor_qname, Box::new(inner_t)))
         }
         _ => Err("term is not a generator or codomain-morphism application".into()),
     }

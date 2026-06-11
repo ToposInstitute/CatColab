@@ -27,22 +27,20 @@ pub const TT_PARSE_CONFIG: ParseConfig = ParseConfig::new(
     &["type", "def", "syn", "chk", "norm", "generate", "uwd", "set_theory"],
 );
 
-/// Transitional dispatch for `def NAME : TYPE := BODY`.
-///
-/// Returns true when BODY looks like an instance specification — i.e.,
-/// a tuple whose clauses use `:` annotations (declaring generators,
-/// equations, or sub-instances). Returns false when the body uses
-/// `:=` field assignments (the ordinary record-construction `def`).
-///
-/// During Pass A the two shapes are disjoint: `:` for instances,
-/// `:=` for record construction. Once Pass C migrates the instance
-/// surface to `:=`-with-set/mapping-literals, this dispatch will need
-/// a different signal.
+/// Temporary `def`-time dispatch — see Pass D in `tt/README` (TODO)
+/// for the eventual move into `chk`. A body is instance-shaped if it
+/// contains any `:` clause, any `mor(arg) := target` clause (LHS is an
+/// application), or any `field := [...]` set-literal clause.
 fn body_is_instance_shaped(n: &FNtn) -> bool {
     let Tuple(field_ns) = n.ast0() else {
         return false;
     };
-    field_ns.iter().any(|field_n| matches!(field_n.ast0(), App2(L(_, Keyword(":")), _, _)))
+    field_ns.iter().any(|field_n| match field_n.ast0() {
+        App2(L(_, Keyword(":")), _, _) => true,
+        App2(L(_, Keyword(":=")), L(_, Var(_)), L(_, Tuple(_))) => true,
+        App2(L(_, Keyword(":=")), L(_, App1(_, _)), _) => true,
+        _ => false,
+    })
 }
 
 /// The result of elaborating a top-level statement.
@@ -572,28 +570,131 @@ impl<'a> Elaborator<'a> {
                 let c = elab.checkpoint();
                 for field_n in field_ns.iter() {
                     elab.loc = Some(field_n.loc());
-                    let Some((name, label, ty_n)) = (match field_n.ast0() {
+                    // Each clause emits zero or more field-row entries.
+                    // Set-literal clauses introduce one entry per generator
+                    // name; everything else is single-entry.
+                    let entries: Vec<(FieldName, LabelSegment, TyV)> = match field_n.ast0() {
+                        // `name : type` — ordinary typed field declaration
+                        // (generator slot, sub-instance, or annotated
+                        // equation field).
                         App2(L(_, Keyword(":")), L(_, Var(name)), ty_n) => {
                             // `_` is a fresh anonymous binder — give it a
                             // UUID name so distinct `_` fields don't collide
                             // in the record row.
-                            let name_seg = if *name == "_" {
+                            let n = if *name == "_" {
                                 NameSegment::Uuid(uuid::Uuid::new_v4())
                             } else {
                                 name_seg(*name)
                             };
-                            Some((name_seg, label_seg(*name), ty_n))
+                            let (_, ty_v) = elab.ty(ty_n);
+                            vec![(n, label_seg(*name), ty_v)]
                         }
-                        _ => elab.error("expected fields in the form <name> : <type>"),
-                    }) else {
-                        failed = true;
-                        continue;
+                        // `field := [name1, name2, ...]` — set-literal
+                        // assignment to an object-typed field of the
+                        // enclosing instance codomain. Each `nameI`
+                        // introduces a fresh generator slot of type
+                        // `@over .<field>`.
+                        App2(
+                            L(_, Keyword(":=")),
+                            L(_, Var(field_name)),
+                            L(_, Tuple(name_ns)),
+                        ) => {
+                            let Some(model_ty) = elab.current_instance_codomain().cloned() else {
+                                elab.error::<()>(
+                                    "set-literal field assignment is only allowed inside an \
+                                     instance body",
+                                );
+                                failed = true;
+                                continue;
+                            };
+                            let TyV_::Record(cod_r) = &*model_ty else {
+                                elab.error::<()>("instance codomain is not a record type");
+                                failed = true;
+                                continue;
+                            };
+                            let f_seg = name_seg(*field_name);
+                            let f_label = label_seg(*field_name);
+                            let Some(field_ty_s) = cod_r.fields.get(f_seg) else {
+                                elab.error::<()>(format!(
+                                    "no such codomain field {field_name}"
+                                ));
+                                failed = true;
+                                continue;
+                            };
+                            if !matches!(&**field_ty_s, TyS_::Object(_)) {
+                                elab.error::<()>(format!(
+                                    "set-literal assignment requires field {field_name} to be \
+                                     object-typed"
+                                ));
+                                failed = true;
+                                continue;
+                            };
+                            let path = vec![(f_seg, f_label)];
+                            let gen_ty_v = TyV::over(path);
+                            let mut entries = Vec::with_capacity(name_ns.len());
+                            let mut local_failed = false;
+                            for name_n in name_ns.iter() {
+                                let Var(gen_name) = name_n.ast0() else {
+                                    elab.loc = Some(name_n.loc());
+                                    elab.error::<()>(
+                                        "set-literal entries must be bare names",
+                                    );
+                                    local_failed = true;
+                                    break;
+                                };
+                                entries.push((
+                                    name_seg(*gen_name),
+                                    label_seg(*gen_name),
+                                    gen_ty_v.clone(),
+                                ));
+                            }
+                            if local_failed {
+                                failed = true;
+                                continue;
+                            }
+                            entries
+                        }
+                        // `mor(arg) := target` — mapping-entry clause:
+                        // sugar for an anonymous Id-typed field witnessing
+                        // the equation `mor(arg) == target`. The LHS
+                        // synthesizes (and validates) via the same `f(x)`
+                        // arm in [`Self::syn`].
+                        App2(L(_, Keyword(":=")), lhs_n, rhs_n) => {
+                            let (_lhs_s, lhs_v, lhs_ty) = elab.syn(lhs_n);
+                            if !matches!(&*lhs_ty, TyV_::Morphism(_, _, _) | TyV_::Over(_)) {
+                                elab.loc = Some(lhs_n.loc());
+                                elab.error::<()>(
+                                    "mapping-entry clause `mor(arg) := target` requires the LHS \
+                                     to have a morphism or @over type",
+                                );
+                                failed = true;
+                                continue;
+                            }
+                            let (_rhs_s, rhs_v) = elab.chk(&lhs_ty, rhs_n);
+                            let id_ty_v = TyV::id(lhs_ty, lhs_v, rhs_v);
+                            vec![(
+                                NameSegment::Uuid(uuid::Uuid::new_v4()),
+                                label_seg("_"),
+                                id_ty_v,
+                            )]
+                        }
+                        _ => {
+                            elab.error::<()>(
+                                "expected fields in the form `name : type`, \
+                                 `field := [names]`, or `mor(arg) := target`",
+                            );
+                            failed = true;
+                            continue;
+                        }
                     };
-                    let (_, ty_v) = elab.ty(ty_n);
-                    field_ty_vs.push((name, (label, ty_v.clone())));
-                    elab.ctx.push_scope(name, label, Some(ty_v.clone()));
-                    elab.ctx.env =
-                        elab.ctx.env.snoc(TmV::neu(TmN::proj(self_var.clone(), name, label), ty_v));
+                    for (name, label, ty_v) in entries {
+                        field_ty_vs.push((name, (label, ty_v.clone())));
+                        elab.ctx.push_scope(name, label, Some(ty_v.clone()));
+                        elab.ctx.env = elab.ctx.env.snoc(TmV::neu(
+                            TmN::proj(self_var.clone(), name, label),
+                            ty_v,
+                        ));
+                    }
                 }
                 if failed {
                     return elab.ty_hole();
@@ -1032,7 +1133,7 @@ mod tests {
 
         let result = Model::from_text(&th, "[ : Entit]");
         let expected = expect![[r#"
-            error[elab]: expected fields in the form <name> : <type>
+            error[elab]: expected fields in the form `name : type`, `field := [names]`, or `mor(arg) := target`
             --> <none>:1:3
             1| [ : Entit]
             1|   ^^^^^^^
