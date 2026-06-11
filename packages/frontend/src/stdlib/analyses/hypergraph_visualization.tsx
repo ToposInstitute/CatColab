@@ -2,7 +2,7 @@ import { For, Index } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
-import { collectProduct, type DblModel, type MorType, type ObType } from "catlog-wasm";
+import { collectProduct, type DblModel, type MorType, type Ob, type ObType } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import {
     arrowMarkerSVG,
@@ -30,6 +30,9 @@ export default function HypergraphVisualization(
     props: ModelAnalysisProps<GraphLayoutConfig.Config> & {
         /** Restrict the vertices to objects of this type (default: all). */
         vertexObType?: ObType;
+        /** Use morphisms of this type as the vertices, each incident to a
+        hyperedge through a tabulated reference. Overrides `vertexObType`. */
+        vertexMorType?: MorType;
         /** Restrict the hyperedges to morphisms of this type (default: all). */
         hyperedgeMorType?: MorType;
     },
@@ -37,7 +40,11 @@ export default function HypergraphVisualization(
     const result = () => {
         const model = props.liveModel.elaboratedModel();
         if (model) {
-            return hypergraphFromModel(model, props.vertexObType, props.hyperedgeMorType);
+            return hypergraphFromModel(model, {
+                vertexObType: props.vertexObType,
+                vertexMorType: props.vertexMorType,
+                hyperedgeMorType: props.hyperedgeMorType,
+            });
         }
     };
 
@@ -160,33 +167,69 @@ function HypergraphSVG(props: {
     );
 }
 
+/** Identifier of the vertex incident to a hyperedge through an endpoint object.
+
+In the default mode, vertices are objects and an endpoint is a basic object. When
+`vertexMorType` is set, vertices are morphisms and an endpoint is a *tabulated*
+reference to one (`Ob::Tabulated(Mor::Basic(id))`). Returns `undefined` for an
+endpoint that does not name a vertex. */
+function incidentVertexId(ob: Ob, tabulated: boolean): string | undefined {
+    if (tabulated) {
+        if (ob.tag === "Tabulated" && ob.content.tag === "Basic") {
+            return ob.content.content;
+        }
+        return undefined;
+    }
+    return ob.tag === "Basic" ? ob.content : undefined;
+}
+
 /** Build the Levi graph and record which node IDs are hyperedges.
 
-When `vertexObType`/`hyperedgeMorType` are given, only objects/morphisms of those
-types contribute (so a theory with extra object and morphism types can still
-present a clean hypergraph view); otherwise every object is a vertex and every
-morphism is a hyperedge. */
+`hyperedgeMorType` selects which morphisms are hyperedges (default: all). Vertices
+are either objects (`vertexObType`, default all objects) or — when `vertexMorType`
+is given — morphisms of that type, incident to hyperedges through tabulated
+references. This lets a theory with extra types present a clean hypergraph view. */
 function hypergraphFromModel(
     model: DblModel,
-    vertexObType?: ObType,
-    hyperedgeMorType?: MorType,
+    opts: {
+        vertexObType?: ObType;
+        vertexMorType?: MorType;
+        hyperedgeMorType?: MorType;
+    },
 ): {
     graph: GraphSpec.Graph;
     hyperedgeIds: string[];
 } {
+    const { vertexObType, vertexMorType, hyperedgeMorType } = opts;
+    const tabulated = vertexMorType !== undefined;
     const nodes: GraphSpec.Node[] = [];
     const hyperedgeIds: string[] = [];
 
-    const obIds = vertexObType ? model.obGeneratorsWithType(vertexObType) : model.obGenerators();
-    for (const id of obIds) {
-        const ob = model.obPresentation(id);
-        nodes.push({
-            id,
-            label: ob.label?.join(".") ?? "",
-            cssClass: svgStyles["place"],
-            minimumWidth: 36,
-            minimumHeight: 36,
-        });
+    if (vertexMorType) {
+        for (const id of model.morGeneratorsWithType(vertexMorType)) {
+            const mor = model.morPresentation(id);
+            nodes.push({
+                id,
+                label: mor?.label?.join(".") ?? "",
+                cssClass: svgStyles["place"],
+                minimumWidth: 36,
+                minimumHeight: 36,
+            });
+        }
+    } else {
+        const obIds = vertexObType
+            ? model.obGeneratorsWithType(vertexObType)
+            : model.obGenerators();
+        for (const id of obIds) {
+            const ob = model.obPresentation(id);
+            nodes.push({
+                id,
+                label: ob.label?.join(".") ?? "",
+                cssClass: svgStyles["place"],
+                minimumWidth: 36,
+                minimumHeight: 36,
+            });
+        }
     }
 
     const edges: GraphSpec.Edge[] = [];
@@ -208,20 +251,16 @@ function hypergraphFromModel(
             minimumHeight: 12,
         });
         for (const [i, ob] of collectProduct(mor.dom).entries()) {
-            invariant(ob.tag === "Basic");
-            edges.push({
-                id: `${id}:dom:${i}`,
-                source: ob.content,
-                target: id,
-            });
+            const vertex = incidentVertexId(ob, tabulated);
+            if (vertex !== undefined) {
+                edges.push({ id: `${id}:dom:${i}`, source: vertex, target: id });
+            }
         }
         for (const [i, ob] of collectProduct(mor.cod).entries()) {
-            invariant(ob.tag === "Basic");
-            edges.push({
-                id: `${id}:cod:${i}`,
-                source: id,
-                target: ob.content,
-            });
+            const vertex = incidentVertexId(ob, tabulated);
+            if (vertex !== undefined) {
+                edges.push({ id: `${id}:cod:${i}`, source: id, target: vertex });
+            }
         }
     }
 

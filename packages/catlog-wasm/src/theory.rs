@@ -11,8 +11,8 @@ use wasm_bindgen::prelude::*;
 
 use catcolab_document_types::current::theory::*;
 use catlog::dbl::theory::{
-    self, DblTheory as _, ModalMorType, ModalObOp, ModalObType, ModeApp, NonUnital, TabMorType,
-    TabObOp, TabObType, Unital,
+    self, DblTheory as _, ModalMorType, ModalObOp, ModalObType, ModalTypeData, NonUnital,
+    TabMorType, TabObOp, TabObType, Unital, modal_ob_type, modal_tabulator,
 };
 use catlog::one::{Path, QualifiedPath, ShortPath};
 use catlog::tt::{
@@ -96,12 +96,15 @@ impl CanElaborate<ObOp, TabObOp> for Elaborator {
 impl CanElaborate<ObType, ModalObType> for Elaborator {
     fn elab(&self, ob_type: &ObType) -> Result<ModalObType, String> {
         match ob_type {
-            ObType::Basic(id) => Ok(ModeApp::new((*id).into())),
+            ObType::Basic(id) => Ok(modal_ob_type((*id).into())),
+            ObType::Tabulator(mor_type) => {
+                let mor_type: ModalMorType = self.elab(mor_type.as_ref())?;
+                Ok(modal_tabulator(mor_type))
+            }
             ObType::ModeApp { modality, ob_type } => Ok({
                 let ob_type: ModalObType = self.elab(ob_type.as_ref())?;
                 ob_type.apply(promote_modality(*modality))
             }),
-            _ => Err(format!("Cannot use object type in modal theory: {ob_type:#?}")),
         }
     }
 }
@@ -110,7 +113,7 @@ impl CanElaborate<ObType, ModalObType> for Elaborator {
 impl CanElaborate<MorType, ModalMorType> for Elaborator {
     fn elab(&self, mor_type: &MorType) -> Result<ModalMorType, String> {
         match mor_type {
-            MorType::Basic(id) => Ok(ModeApp::new((*id).into()).into()),
+            MorType::Basic(id) => Ok(modal_ob_type((*id).into()).into()),
             MorType::Hom(ob_type) => Ok(ShortPath::Zero(self.elab(ob_type.as_ref())?)),
             MorType::ModeApp { modality, mor_type } => Ok({
                 let mor_type: ModalMorType = self.elab(mor_type.as_ref())?;
@@ -187,7 +190,12 @@ impl CanQuote<TabMorType, MorType> for Quoter {
 /// Quotes an object type in a modal theory.
 impl CanQuote<ModalObType, ObType> for Quoter {
     fn quote(&self, app: &ModalObType) -> ObType {
-        let mut quoted = ObType::Basic(expect_single_name(&app.arg));
+        let mut quoted = match &app.arg {
+            ModalTypeData::Basic(name) => ObType::Basic(expect_single_name(name)),
+            ModalTypeData::Tabulator(mor_type) => {
+                ObType::Tabulator(Box::new(self.quote(mor_type.as_ref())))
+            }
+        };
         for modality in &app.modalities {
             quoted = ObType::ModeApp {
                 modality: demote_modality(*modality),
@@ -204,7 +212,13 @@ impl CanQuote<ModalMorType, MorType> for Quoter {
         match mor_type {
             ShortPath::Zero(ob_type) => MorType::Hom(Box::new(self.quote(ob_type))),
             ShortPath::One(app) => {
-                let mut quoted = MorType::Basic(expect_single_name(&app.arg));
+                let name = match &app.arg {
+                    ModalTypeData::Basic(name) => name,
+                    ModalTypeData::Tabulator(_) => {
+                        unreachable!("tabulator is not a basic morphism type")
+                    }
+                };
+                let mut quoted = MorType::Basic(expect_single_name(name));
                 for modality in &app.modalities {
                     quoted = MorType::ModeApp {
                         modality: demote_modality(*modality),

@@ -310,17 +310,21 @@ export const hypergraphVisualization = (
         /** Object type whose generators become the hypergraph's vertices.
         Defaults to all objects. */
         vertexObType?: ObType;
+        /** Morphism type whose generators become the vertices, incident to
+        hyperedges via tabulated references. Overrides `vertexObType`. */
+        vertexMorType?: MorType;
         /** Morphism type whose generators become the hyperedges.
         Defaults to all morphisms. */
         hyperedgeMorType?: MorType;
     },
 ): ModelAnalysisMeta<GraphLayoutConfig.Config> => {
-    const { vertexObType, hyperedgeMorType, ...rest } = options;
+    const { vertexObType, vertexMorType, hyperedgeMorType, ...rest } = options;
     return {
         ...rest,
         component: (props) => (
             <HypergraphVisualization
                 vertexObType={vertexObType}
+                vertexMorType={vertexMorType}
                 hyperedgeMorType={hyperedgeMorType}
                 {...props}
             />

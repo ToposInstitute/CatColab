@@ -19,7 +19,7 @@ use tsify::Tsify;
 use super::{ODEAnalysis, Parameter};
 use crate::dbl::{
     model::{DiscreteTabModel, FpDblModel, ModalDblModel, TabEdge},
-    theory::{ModalMorType, ModalObType, TabMorType, TabObType, Unital},
+    theory::{ModalMorType, ModalObType, TabMorType, TabObType, Unital, modal_ob_type},
 };
 use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
@@ -199,7 +199,7 @@ pub struct PetriNetMassActionAnalysis {
 
 impl Default for PetriNetMassActionAnalysis {
     fn default() -> Self {
-        let ob_type = ModalObType::new(name("Object"));
+        let ob_type = modal_ob_type(name("Object"));
         Self {
             place_ob_type: ob_type.clone(),
             transition_mor_type: ModalMorType::Zero(ob_type),

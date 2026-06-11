@@ -102,7 +102,7 @@ pub(crate) fn latex_mor_names_mass_action(
 
 #[cfg(test)]
 mod tests {
-    use catlog::dbl::modal::{List, ModalMorType, ModalOb, ModalObType};
+    use catlog::dbl::modal::{List, ModalMorType, ModalOb, modal_ob_type};
     use catlog::dbl::model::{ModalDblModel, MutDblModel};
     use catlog::simulate::ode::LatexEquation;
     use catlog::stdlib::{analyses::ode, theories};
@@ -173,7 +173,7 @@ mod tests {
     #[test]
     fn modal_mor_dom_cod_labels() {
         let th = Rc::new(theories::th_sym_monoidal_category());
-        let ob_type = ModalObType::new(QualifiedName::from("Object"));
+        let ob_type = modal_ob_type(QualifiedName::from("Object"));
         let op = QualifiedName::from("tensor");
 
         let [s_id, i_id, r_id] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];

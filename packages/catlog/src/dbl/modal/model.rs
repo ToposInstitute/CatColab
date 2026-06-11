@@ -28,6 +28,9 @@ pub enum ModalOb {
 
     /// List of objects in a [list modality](List).
     List(List, Vec<Self>),
+
+    /// A morphism viewed as an object of its [tabulator](ModalTypeData::Tabulator).
+    Tabulated(Box<ModalMor>),
 }
 
 /// Morphism is a model of a modal double theory.
@@ -117,6 +120,7 @@ impl<Kind: DblTheoryKind> Set for ModalDblModelObs<Kind> {
                     && self.0.ob_has_type(x, &self.0.theory.tight_computad().src(op_id))
             }
             ModalOb::List(_, xs) => xs.iter().all(|x| self.contains(x)),
+            ModalOb::Tabulated(mor) => self.0.has_mor(mor),
         }
     }
 }
@@ -369,6 +373,13 @@ impl<Kind: DblTheoryKind> ModalDblModel<Kind> {
                     Err(None) => Ok(InferredType::Unknown),
                 }
             }
+            ModalOb::Tabulated(mor) => {
+                let inferred = self.infer_mor_type(mor)?;
+                Ok(match Option::<ModalMorType>::from(inferred) {
+                    Some(mor_type) => modal_tabulator(mor_type).into(),
+                    None => InferredType::Unknown,
+                })
+            }
         }
     }
 
@@ -562,6 +573,7 @@ impl<Kind: DblTheoryKind> PrintableDblModel for ModalDblModel<Kind> {
                 unop(op_doc, self.ob_to_doc(ob, ob_ns, mor_ns))
             }
             ModalOb::List(_, obs) => tuple(obs.iter().map(|ob| self.ob_to_doc(ob, ob_ns, mor_ns))),
+            ModalOb::Tabulated(mor) => unop(t("Tab"), self.mor_to_doc(mor, ob_ns, mor_ns)),
         }
     }
 
@@ -573,15 +585,22 @@ impl<Kind: DblTheoryKind> PrintableDblModel for ModalDblModel<Kind> {
         modal_type_to_doc(ob_type)
     }
     fn mor_type_to_doc<'a>(mor_type: &Self::MorType) -> D<'a> {
-        match mor_type {
-            ShortPath::Zero(ob_type) => unop(t("Hom"), Self::ob_type_to_doc(ob_type)),
-            ShortPath::One(app) => modal_type_to_doc(app),
-        }
+        modal_mor_type_to_doc(mor_type)
+    }
+}
+
+fn modal_mor_type_to_doc<'a>(mor_type: &ModalMorType) -> D<'a> {
+    match mor_type {
+        ShortPath::Zero(ob_type) => unop(t("Hom"), modal_type_to_doc(ob_type)),
+        ShortPath::One(app) => modal_type_to_doc(app),
     }
 }
 
 fn modal_type_to_doc<'a>(app: &ModalType) -> D<'a> {
-    let mut doc = app.arg.to_doc();
+    let mut doc = match &app.arg {
+        ModalTypeData::Basic(name) => name.to_doc(),
+        ModalTypeData::Tabulator(m) => unop(t("Tab"), modal_mor_type_to_doc(m)),
+    };
     for mode in app.modalities.iter() {
         doc = unop(t(mode.to_string()), doc);
     }
@@ -611,7 +630,7 @@ mod tests {
     #[test]
     fn monoidal_category() {
         let th = Rc::new(th_monoidal_category());
-        let ob_type = ModeApp::new(name("Object"));
+        let ob_type = modal_ob_type(name("Object"));
 
         // Lists of objects.
         let mut model = ModalDblModel::new(th.clone());
@@ -679,7 +698,7 @@ mod tests {
     #[test]
     fn sym_monoidal_category() {
         let th = Rc::new(th_sym_monoidal_category());
-        let ob_type = ModeApp::new(name("Object"));
+        let ob_type = modal_ob_type(name("Object"));
 
         // Model validation.
         let mut model = ModalDblModel::new(th.clone());
@@ -706,10 +725,40 @@ mod tests {
     }
 
     #[test]
+    fn causal_hypergraph() {
+        let th = Rc::new(th_causal_hypergraph());
+        let mut model = ModalDblModel::new(th.clone());
+
+        // Two actions and two causal edges between them.
+        let action = modal_ob_type(name("Action"));
+        model.add_ob(name("a"), action.clone());
+        model.add_ob(name("b"), action);
+        let causal: ModalMorType = ShortPath::One(modal_ob_type(name("Causal")));
+        model.add_mor(name("e1"), name("a").into(), name("b").into(), causal.clone());
+        model.add_mor(name("e2"), name("a").into(), name("b").into(), causal.clone());
+
+        // A hyperedge relating the causal edges, viewed as tabulated objects.
+        let tab = modal_tabulator(causal);
+        let tabulated = |id| ModalOb::Tabulated(Box::new(ModalMor::Generator(name(id))));
+        let dom = ModalOb::App(
+            ModalOb::List(List::Symmetric, vec![tabulated("e1")]).into(),
+            name("tensor"),
+        );
+        let cod = ModalOb::App(
+            ModalOb::List(List::Symmetric, vec![tabulated("e2")]).into(),
+            name("tensor"),
+        );
+        assert!(model.has_ob(&tabulated("e1")));
+        model.add_mor(name("h"), dom, cod, th.hom_type(tab));
+
+        assert!(model.validate().is_ok());
+    }
+
+    #[test]
     fn multicategory() {
         let th = Rc::new(th_multicategory());
-        let ob_type = ModeApp::new(name("Object"));
-        let mor_type: ModalMorType = ModeApp::new(name("Multihom")).into();
+        let ob_type = modal_ob_type(name("Object"));
+        let mor_type: ModalMorType = modal_ob_type(name("Multihom")).into();
 
         // Model validation.
         let mut model = ModalDblModel::new(th.clone());
