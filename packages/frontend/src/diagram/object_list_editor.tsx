@@ -17,6 +17,7 @@ import { ObIdInput } from "../components";
 import { removeProxyAndCopy } from "../util/remove_proxy_and_copy";
 import { LiveDiagramContext } from "./context";
 import type { ObInputProps } from "./object_input";
+import { createObLookup } from "./object_input.tsx";
 
 import "./object_list_editor.css";
 
@@ -42,6 +43,8 @@ export function ObListEditor(originalProps: ObListEditorProps) {
 
     const liveDiagram = useContext(LiveDiagramContext);
     invariant(liveDiagram, "Live model should be provided as context");
+
+    const lookup = createObLookup(liveDiagram);
 
     const [activeIndex, setActiveIndex] = createSignal<number>(0);
 
@@ -88,7 +91,7 @@ export function ObListEditor(originalProps: ObListEditorProps) {
     };
 
     const completions = (): QualifiedName[] | undefined =>
-        liveDiagram().elaboratedDiagram()?.obGeneratorsWithType(modeAppType().content.obType);
+        lookup.completions(modeAppType().content.obType);
 
     // Make the default value the empty list, rather than null.
     createEffect(() => {
@@ -128,12 +131,8 @@ export function ObListEditor(originalProps: ObListEditorProps) {
                                 });
                             }}
                             placeholder={props.placeholder}
-                            idToLabel={(id) =>
-                                liveDiagram().elaboratedDiagram()?.obGeneratorLabel(id)
-                            }
-                            labelToId={(label) =>
-                                liveDiagram().elaboratedDiagram()?.obGeneratorWithLabel(label)
-                            }
+                            idToLabel={lookup.idToLabel}
+                            labelToId={lookup.labelToId}
                             completions={completions()}
                             isActive={props.isActive && activeIndex() === i}
                             deleteBackward={() =>
