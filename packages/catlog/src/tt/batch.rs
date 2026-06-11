@@ -18,8 +18,7 @@ use super::{
     toplevel::*,
 };
 use crate::dbl::discrete::{DiscreteDblModelInstance, DiscreteInstanceTerm};
-use crate::one::path::Path;
-use crate::zero::{NameSegment, QualifiedName};
+use crate::zero::NameSegment;
 
 declare_error!(TOP_ERROR, "top", "an error at the top-level");
 
@@ -297,21 +296,11 @@ fn snapshot_examples() {
 }
 
 /// Render a [`QualifiedPath`] for snapshot output.
-fn format_path(p: &Path<QualifiedName, QualifiedName>) -> String {
-    match p {
-        Path::Id(v) => format!("Hom({v})"),
-        Path::Seq(es) => {
-            let parts: Vec<String> = es.iter().map(|e| format!("{e}")).collect();
-            parts.join(".")
-        }
-    }
-}
-
 fn format_instance_term(tm: &DiscreteInstanceTerm) -> String {
     match tm {
         DiscreteInstanceTerm::Generator(name) => format!("{name}"),
         DiscreteInstanceTerm::Apply(mor, arg) => {
-            format!("{}({})", format_path(mor), format_instance_term(arg))
+            format!("{}({})", mor, format_instance_term(arg))
         }
     }
 }
