@@ -356,3 +356,61 @@ console.log(names());
 A, B, C
 A, C, B
 ```
+
+## Deleting cells
+
+Every cell handle can remove itself from the notebook with `delete`. Like the
+reorder methods, delete locates the cell by its id when the change applies, so
+it stays valid even if the notebook was edited after the handle was obtained.
+
+Deleting a cell removes it from the notebook's order and contents.
+
+```ts
+console.log(names());
+b.delete();
+console.log(names());
+```
+
+```
+A, B, C
+A, C
+```
+
+Rich-text cells can be deleted in the same way.
+
+```ts
+const note = notebook.addRichText({ content: "A note." });
+console.log(notebook.cells().length);
+note.delete();
+console.log(notebook.cells().length);
+```
+
+```
+4
+3
+```
+
+After deletion, reading fields off the stale handle throws.
+
+<!-- verifier:throws -->
+
+```ts
+b.delete();
+console.log(b.name);
+```
+
+```
+❌ not found (it may have been deleted).
+```
+
+Deleting an already-deleted cell is a silent no-op.
+
+```ts
+b.delete();
+b.delete();
+console.log(names());
+```
+
+```
+A, C
+```

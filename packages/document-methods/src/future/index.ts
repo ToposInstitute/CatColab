@@ -85,9 +85,9 @@ type Update<T> = {
     ): void;
 };
 
-/** Re-ordering methods shared by all cell handles. Cells are identified by
-id at the moment the change applies, so moves stay valid even if the
-notebook was edited after the handle was obtained. */
+/** Methods shared by all cell handles for re-ordering and removal. Cells
+are identified by id at the moment the change applies, so operations stay
+valid even if the notebook was edited after the handle was obtained. */
 type Reorder = {
     /** Move this cell one position earlier; no-op if already first. */
     moveUp(): void;
@@ -99,6 +99,12 @@ type Reorder = {
      * ends of the notebook.
      */
     moveTo(index: number): void;
+    /**
+     * Remove this cell from the notebook. After deletion, reads of the
+     * handle's fields (e.g. `name`, `content`) will throw. Deleting a cell
+     * that is no longer in the notebook is a silent no-op.
+     */
+    delete(): void;
 };
 
 export type ObjectCell<TType extends ObjectType<string>> = Update<{ name: string }> &
@@ -275,8 +281,13 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
     const change = (fn: (doc: ModelDocument) => void) => backend.changeDocument(handle, fn);
     const copy = backend.copyValue ? <T>(value: T) => backend.copyValue!(handle, value) : undefined;
 
-    const readCellContent = <T>(cellId: string): T =>
-        (doc.notebook.cellContents[cellId] as unknown as { content: T }).content;
+    const readCellContent = <T>(cellId: string): T => {
+        const cell = doc.notebook.cellContents[cellId];
+        if (!cell) {
+            throw new Error(`Notebook cell '${cellId}' not found (it may have been deleted).`);
+        }
+        return (cell as unknown as { content: T }).content;
+    };
 
     const cloneJudgment = (judgment: ModelJudgment): ModelJudgment =>
         duplicateModelJudgment(copy ? copy(judgment) : judgment);
@@ -316,10 +327,22 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
             order.splice(to, 0, cellId);
         });
 
+    const deleteCell = (cellId: string) =>
+        change((d) => {
+            const order = d.notebook.cellOrder;
+            const from = order.indexOf(cellId);
+            if (from < 0) {
+                return;
+            }
+            order.splice(from, 1);
+            delete d.notebook.cellContents[cellId];
+        });
+
     const reorderMethods = (cellId: string): Reorder => ({
         moveUp: () => moveCell(cellId, (from) => from - 1),
         moveDown: () => moveCell(cellId, (from) => from + 1),
         moveTo: (index: number) => moveCell(cellId, () => index),
+        delete: () => deleteCell(cellId),
     });
 
     const objectHandle = <TType extends LogicObjectType<TLogic>>(cellId: string, type: TType) =>

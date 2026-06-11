@@ -206,7 +206,10 @@ const sourceNotebook = automergeBinder.createNotebook(SimpleOlog, {
 });
 
 const loadedAutomergeHandle = await repo.find<ModelDocument>(sourceNotebook.handle.url);
-const loadedAutomergeNotebook = automergeBinder.loadNotebookFromHandle(SimpleOlog, loadedAutomergeHandle);
+const loadedAutomergeNotebook = automergeBinder.loadNotebookFromHandle(
+    SimpleOlog,
+    loadedAutomergeHandle,
+);
 
 loadedAutomergeNotebook.update({ name: "Updated loaded Automerge Olog" });
 console.log("loaded automerge notebook:", loadedAutomergeNotebook.name);
