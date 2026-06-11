@@ -1,13 +1,13 @@
+//! Helpers to make formatting more ergonomic when writing display
+//! implementations. This file contains an attempt to remedy rather unpleasant
+//! boilerplate imposed by the way that rust mandates [std::fmt::Display] be
+//! implemented. By specifying a few small helper types, which additionally
+//! sidestep the orphan rule by being wrappers, we can format arguments in an
+//! in-line #[display()] directive by wrapping those arguments in these structs.
+
 use derive_more::Display;
 use std::collections::HashMap;
 use textwrap::indent;
-
-/// This file contains an attempt to remedy rather unpleasant boilerplate
-/// imposed by the way that rust mandates std::fmt::Display be implemented. By
-/// specifying a few small helper types, which additionally sidestep the orphan
-/// rule by being wrappers, we can format arguments in an in-line #[display()]
-/// directive by wrapping those arguments in these structs.
-
 #[derive(Display)]
 #[display("[{}]", _0.iter().map(|o| o.to_string()).collect::<Vec<_>>().join(", "))]
 /// A helper to display lists as "[item1, ..., itemN]"

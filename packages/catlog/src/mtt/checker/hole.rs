@@ -1,63 +1,19 @@
-use crate::mtt::{checker::TheoryObject, theory::Theory};
+use crate::mtt::{
+    checker::{TheoryObject, error::EConstraint},
+    theory::Theory,
+};
 
-/// A container type used to track knowledge about holes during checking and
-/// inference. A constraint is considered either "open" or "solved".
-pub enum HoleState<C> {
-    /// The conjuction of all of the individual C.
-    Open(Vec<C>),
-    /// The known quantity S.
-    Closed(C),
-}
+/// Operations concerning the partial knowledge we accumulate about a
+/// [TheoryObject] during checking and inference. These all exploit the fact
+/// that a TheoryObject is a linear chain --- modal applications terminating in
+/// a generator or a hole --- so there is never complementary partial
+/// information to merge.
 
-impl<C: Clone> Clone for HoleState<C> {
-    fn clone(&self) -> Self {
-        match self {
-            HoleState::Open(vec) => HoleState::Open(vec.clone()),
-            HoleState::Closed(soln) => HoleState::Closed(soln.clone()),
-        }
-    }
-}
-
-impl<C: std::fmt::Display> std::fmt::Display for HoleState<C> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        match self {
-            HoleState::Open(vec) => {
-                write!(f, "⦅{}⦆", vec.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" ∧ "))
-            }
-            HoleState::Closed(soln) => write!(f, "〚={soln}〛"),
-        }
-    }
-}
-
-/// Operations of interests on inductive types which carry a "hole" variant.
-pub trait Holy: Sized {
-    /// Determine whether a given term is concrete, that is, does not have any
-    /// holes.
-    fn is_concrete(&self) -> bool;
-
-    /// Among a variety of candidates with holes, attempt to select the
-    /// individual term which is the most specific.
-    fn select_most_specific_non_empty<'a>(first: &'a Self, rest: &'a [Self]) -> &'a Self;
-
-    /// The contract for this function is that None is returned iff cands is empty.
-    fn select_most_specific(cands: &[Self]) -> Option<&Self> {
-        match cands.split_first() {
-            Some((first, rest)) => Some(Self::select_most_specific_non_empty(first, rest)),
-            None => None,
-        }
-    }
-}
-
-impl<T: Theory> Holy for TheoryObject<T> {
-    fn is_concrete(&self) -> bool {
-        match self {
-            TheoryObject::Generator(_) => true,
-            TheoryObject::ModalApplication { on, .. } => on.is_concrete(),
-            TheoryObject::Hole { .. } => false,
-        }
-    }
-
-    fn select_most_specific_non_empty<'a>(first: &'a Self, rest: &'a [Self]) -> &'a Self {
+impl<T: Theory> TheoryObject<T> {
+    /// Among a collection of candidates, select the most specific, i.e. the one
+    /// whose concrete modal prefix runs deepest before bottoming out in a hole.
+    /// Returns None iff `cands` is empty.
+    pub fn select_most_specific(cands: &[Self]) -> Option<&Self> {
         fn specificity_score<T: Theory>(obj: &TheoryObject<T>) -> usize {
             match obj {
                 TheoryObject::Generator(_) => 1,
@@ -65,19 +21,23 @@ impl<T: Theory> Holy for TheoryObject<T> {
                 TheoryObject::Hole { .. } => 0,
             }
         }
-        let mut best = (specificity_score(first), first);
-        if best.0 == 0 {
-            return first;
+        cands.iter().max_by_key(|o| specificity_score(o))
+    }
+
+    /// Refine the knowledge recorded by `self` with a new observation `by`,
+    /// returning the meet of the two. Because a TheoryObject is a linear chain,
+    /// two objects can only ever be compatible by one being a prefix-refinement
+    /// of the other, so the meet is simply the more specific of the two
+    /// whenever they unify, and a failure to unify is a genuine conflict.
+    pub fn refine(&self, by: &Self) -> Result<Self, EConstraint> {
+        if !T::objects_unify(&[self, by]) {
+            return Err(EConstraint::CannotUnify {
+                known: self.to_string(),
+                with: by.to_string(),
+            });
         }
-        for to in rest.iter() {
-            let s = specificity_score(to);
-            if s == 0 {
-                return to;
-            }
-            if best.0 < s {
-                best = (s, to);
-            }
-        }
-        best.1
+        Ok(Self::select_most_specific(&[self.clone(), by.clone()])
+            .expect("two-element slice is non-empty")
+            .clone())
     }
 }

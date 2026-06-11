@@ -1,3 +1,5 @@
+//! TODO
+
 use derive_more::Display;
 use textwrap::indent;
 
@@ -6,7 +8,7 @@ use std::collections::HashMap;
 use crate::mtt::{
     checker::{
         ModelGeneratingProArrow,
-        core_types::{ObjectTerm, ObjectType, ProTerm, TheoryGeneratingProArrow, TheoryObject},
+        core_types::{ObjectTerm, ObjectType, ProTerm, TheoryObject, TheoryProArrow},
         error::EContext,
     },
     composite::Composite,
@@ -64,7 +66,7 @@ pub struct ProTermJudgement<T: Theory> {
     /// The object of the theory over which "Y" lies, None for holes.
     pub codomain_theory_object: TheoryObject<T>,
     /// The portion "P" in the above, None for holes.
-    pub pro_arrow: Option<Composite<TheoryGeneratingProArrow<T>>>,
+    pub pro_arrow: Option<Composite<TheoryProArrow<T>>>,
 }
 
 #[derive(Display)]
@@ -125,6 +127,25 @@ relations ~> {}
             DHMap(&self.relations)
         );
         write!(f, "ModelEntry{{{}}}", indent(&inner, "  "))
+    }
+}
+
+impl<T: Theory> ModelEntry<T> {
+    /// Construct an empty model context, ready to accumulate checked
+    /// declarations for a model over the theory `T`.
+    pub fn new() -> Self {
+        ModelEntry {
+            object_generators: HashMap::new(),
+            pro_arrow_generators: HashMap::new(),
+            definitions: HashMap::new(),
+            relations: HashMap::new(),
+        }
+    }
+}
+
+impl<T: Theory> Default for ModelEntry<T> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

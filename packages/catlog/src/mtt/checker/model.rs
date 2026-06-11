@@ -1,13 +1,13 @@
+//! TODO
+
 use std::marker::PhantomData;
 
 use crate::mtt::{
     ast::{Decl, Model},
     checker::{
-        ModelGeneratingProArrow, ObjectType, TheoryGeneratingProArrow, TheoryObject,
-        constraint::Constraint,
         context::{GeneratingProArrowEntry, ModelEntry, ObjectEntry},
+        core_types::{ModelGeneratingProArrow, ObjectType, TheoryObject, TheoryProArrow},
         error::{CheckResult, EInfer, EType, Error},
-        hole::{HoleState, Holy},
     },
     theory::Theory,
 };
@@ -29,7 +29,7 @@ impl<T: Theory> ModelEntry<T> {
             // essentially data-less.
             Decl::ObjectGenerator { name, over } => {
                 let over = self.elaborate_theory_object(over)?;
-                if T::has_object(&over) {
+                if !T::has_object(&over) {
                     return Err(EType::InvalidTheoryObject {
                         theory: T::name(),
                         object: over.to_string(),
@@ -60,9 +60,9 @@ impl<T: Theory> ModelEntry<T> {
                 }
 
                 // infer a theory arrow if necessary
-                let over = over.unwrap_or(self.infer_theory_generating_pro_arrow(&pro_arrow)?);
+                let over = over.unwrap_or(self.infer_theory_pro_arrow(&pro_arrow)?);
 
-                if !T::has_generating_pro_arrow(&over) {
+                if !T::has_pro_arrow(&over) {
                     return Err(EType::InvalidTheoryProArrow {
                         theory: T::name(),
                         pro_arrow: over.to_string(),
@@ -142,10 +142,9 @@ impl<T: Theory> ModelEntry<T> {
                     on: Box::new(inner),
                 })
             }
-            // TODO: we may have to begin recording these constraints somehow?
-            ObjectType::Hole { name, constraints } => {
-                let constraints = constraints.extend(over)?;
-                Ok(ObjectType::Hole { name: name.clone(), constraints })
+            ObjectType::Hole { name, over: known } => {
+                let over = known.refine(over)?;
+                Ok(ObjectType::Hole { name: name.clone(), over })
             }
         }
     }
@@ -165,7 +164,6 @@ impl<T: Theory> ModelEntry<T> {
                         modality,
                         on: Box::new(TheoryObject::Hole {
                             name: "theory_object_for_empty_list".to_string(),
-                            constraints: Vec::new(),
                             _theory: PhantomData,
                         }),
                     });
@@ -173,9 +171,6 @@ impl<T: Theory> ModelEntry<T> {
 
                 let theory_objects: Vec<TheoryObject<T>> =
                     list.iter().map(|ot| self.infer_theory_object(ot)).collect::<Result<_, _>>()?;
-                // TODO: some of these inferences may be better than others,
-                // should we prefer some entry over others when returning? what
-                // would that look like?
                 if !T::objects_unify(&theory_objects.iter().collect::<Vec<&_>>()) {
                     return Err(EInfer::InconsistentTheoryObjectForList.into());
                 }
@@ -199,27 +194,27 @@ impl<T: Theory> ModelEntry<T> {
                     self.infer_theory_object(on)
                 }
             }
-            ObjectType::Hole { name, constraints } => match constraints {
-                HoleState::Closed(soln) => Ok(soln.clone()),
-
-                HoleState::Open(known) => Ok(TheoryObject::Hole {
-                    name: format!("theory_object_for_{name}"),
-                    constraints: known.clone(),
-                    _theory: PhantomData,
-                }),
-            },
+            // The hole already records the theory object it lies over (itself
+            // possibly partial); that is exactly what we infer.
+            ObjectType::Hole { over, .. } => Ok(over.clone()),
         }
     }
 
-    fn infer_theory_generating_pro_arrow(
+    fn infer_theory_pro_arrow(
         &self,
         arr: &ModelGeneratingProArrow<T>,
-    ) -> Result<TheoryGeneratingProArrow<T>, Error> {
+    ) -> Result<TheoryProArrow<T>, Error> {
         let t_dom = self.infer_theory_object(&arr.dom)?;
         let t_cod = self.infer_theory_object(&arr.cod)?;
         let candidates = T::generating_pro_arrow_by_boundary(&t_dom, &t_cod);
         match candidates.len() {
-            0 => Err(EInfer::NoTheoryGeneratingProArrow(arr.to_string()).into()),
+            0 => {
+                // No named generating pro-arrow fills this boundary. Fall back
+                // to the parametric hom pro-arrow, which is never reported by
+                // `generating_pro_arrow_by_boundary`.
+                T::make_hom_pro_arrow(&t_dom, &t_cod)
+                    .map_or(Err(EInfer::NoTheoryProArrow(arr.to_string()).into()), Ok)
+            }
             1 => {
                 let name =
                     candidates.iter().next().expect("we know there's a unique candidate name");
@@ -227,12 +222,11 @@ impl<T: Theory> ModelEntry<T> {
                     .expect("we know this generating pro-arrow exists, the theory must have a bug"))
             }
             _ => {
-                // special case, if the theory thinks that the objects are equal
-                // then we will default to inferring hom
-                T::make_hom_pro_arrow(&t_dom, &t_cod).map_or(
-                    Err(EInfer::AmbiguousTheoryGeneratingProArrow(arr.to_string()).into()),
-                    Ok,
-                )
+                // Multiple named generating pro-arrows fill this boundary. As
+                // a special case, if the objects coincide we default to
+                // inferring hom; otherwise the boundary is ambiguous.
+                T::make_hom_pro_arrow(&t_dom, &t_cod)
+                    .map_or(Err(EInfer::AmbiguousTheoryProArrow(arr.to_string()).into()), Ok)
             }
         }
     }

@@ -1,8 +1,9 @@
+//! TODO
 use crate::mtt::{
     ast::{Expression, ExpressionProArrow},
     checker::{
-        ModelGeneratingProArrow, ObjectType, TheoryGeneratingArrow, TheoryGeneratingProArrow,
-        TheoryObject, context::ModelEntry, error::EElaborate,
+        ModelGeneratingProArrow, ObjectType, TheoryGeneratingArrow, TheoryObject, TheoryProArrow,
+        context::ModelEntry, error::EElaborate,
     },
     composite::Composite,
     theory::Theory,
@@ -47,12 +48,11 @@ impl<T: Theory> ModelEntry<T> {
         }
     }
 
-    /// Transform an ExpressionProArrow into a TheoryProArrow, assumed to be a
-    /// generating such.
+    /// Transform an ExpressionProArrow into a TheoryProArrow.
     pub fn elaborate_theory_pro_arrow(
         &self,
         arr: &ExpressionProArrow,
-    ) -> Result<Option<TheoryGeneratingProArrow<T>>, EElaborate> {
+    ) -> Result<Option<TheoryProArrow<T>>, EElaborate> {
         match arr {
             ExpressionProArrow::None => Ok(None),
             ExpressionProArrow::NameOnly(name) => {
@@ -64,7 +64,7 @@ impl<T: Theory> ModelEntry<T> {
             ExpressionProArrow::Complete(arr) => {
                 let dom = self.elaborate_theory_object(&arr.dom)?;
                 let cod = self.elaborate_theory_object(&arr.cod)?;
-                Ok(Some(TheoryGeneratingProArrow::from(arr.name.clone(), dom, cod)))
+                Ok(Some(TheoryProArrow::from(arr.name.clone(), dom, cod)))
             }
         }
     }

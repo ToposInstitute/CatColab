@@ -1,8 +1,9 @@
+//! TODO
+
 use std::marker::PhantomData;
 
 use crate::mtt::{
     arrow::{Arrow, ProArrowKind, VerticalArrowKind},
-    checker::hole::HoleState,
     composite::Composite,
     display_helpers::{DHList, DHTuple},
     theory::{ListVariant, Theory},
@@ -28,10 +29,17 @@ pub enum TheoryObject<T: Theory> {
         on: Box<TheoryObject<T>>,
     },
 
-    /// A hole generated during type checking, and used for unification.
+    /// A hole generated during type checking, and used for unification. A
+    /// TheoryObject is a linear chain of modal applications terminating in a
+    /// generator or a hole, so all partial knowledge about an object lives in
+    /// the modal prefix above the hole; the hole itself is a bare wildcard
+    /// carrying no constraints of its own.
     Hole {
+        /// The name of the hole.
         name: String,
-        constraints: Vec<TheoryObject<T>>,
+        /// For internal use only, and a by-product of Rust rules about type
+        /// parameters. Theories are zero-sized, so we need only consume the
+        /// parameter T.
         _theory: PhantomData<T>,
     },
 }
@@ -58,11 +66,7 @@ impl<T: Theory> Clone for TheoryObject<T> {
                 modality: modality.clone(),
                 on: on.clone(),
             },
-            Self::Hole { name, constraints, .. } => Self::Hole {
-                name: name.clone(),
-                constraints: constraints.clone(),
-                _theory: PhantomData,
-            },
+            Self::Hole { name, .. } => Self::Hole { name: name.clone(), _theory: PhantomData },
         }
     }
 }
@@ -72,17 +76,17 @@ impl<T: Theory> std::fmt::Display for TheoryObject<T> {
         match self {
             Self::Generator(g) => write!(f, "{g}"),
             Self::ModalApplication { modality, on } => write!(f, "{modality}({on})"),
-            Self::Hole { name, constraints, .. } => {
-                write!(f, "?{name}{}", HoleState::Open(constraints.clone()))
-            }
+            Self::Hole { name, .. } => write!(f, "?{name}"),
         }
     }
 }
 
 /// Theory vertical arrows between theory objects.
 pub type TheoryGeneratingArrow<T> = Arrow<TheoryObject<T>, VerticalArrowKind>;
-/// Theory pro-arrows between theory objects.
-pub type TheoryGeneratingProArrow<T> = Arrow<TheoryObject<T>, ProArrowKind>;
+/// Theory pro-arrows between theory objects. These are atomic (non-composite)
+/// pro-arrows and *may* include the parametric hom pro-arrow — see
+/// [`make_hom_pro_arrow`](../theory/trait.Theory.html#tymethod.make_hom_pro_arrow).
+pub type TheoryProArrow<T> = Arrow<TheoryObject<T>, ProArrowKind>;
 
 /// The description of a (square) boundary in the theory, where the convention
 /// in the comments is that vertical composition is top-to-bottom, and
@@ -99,11 +103,11 @@ pub struct Boundary<T: Theory> {
     /// The left, vertical boundary.
     pub dom_vertical: Composite<TheoryGeneratingArrow<T>>,
     /// The top, pro-arrow boundary.
-    pub dom_proarrow: Composite<TheoryGeneratingProArrow<T>>,
+    pub dom_proarrow: Composite<TheoryProArrow<T>>,
     /// The right, vertical boundary.
     pub cod_vertical: Composite<TheoryGeneratingArrow<T>>,
     /// The bottom, pro-arrow boundary.
-    pub cod_proarrow: Composite<TheoryGeneratingProArrow<T>>, // TODO: can we get away with making this only a TheoryGeneratingProArrow
+    pub cod_proarrow: Composite<TheoryProArrow<T>>,
 }
 
 // -----------------------------------------------------------------------------
@@ -114,8 +118,6 @@ pub struct Boundary<T: Theory> {
 pub type ModelGeneratingObject = String;
 /// The type of generating pro-arrows for a model.
 pub type ModelGeneratingProArrow<T> = Arrow<ObjectType<T>, ProArrowKind>;
-/// The type of partial knowledge about a hole for an ObjectType.
-pub type TheoryObjectConstraint<T> = HoleState<TheoryObject<T>>;
 
 /// A type in the type theory of the model.
 pub enum ObjectType<T: Theory> {
@@ -146,9 +148,13 @@ pub enum ObjectType<T: Theory> {
     Hole {
         /// The name of the hole.
         name: String,
-        /// What is currently known about the TheoryObject over which this hole
-        /// lies.
-        constraints: TheoryObjectConstraint<T>,
+        /// The theory object over which this hole lies. This records everything
+        /// currently known about the hole: it may itself be (or contain) a
+        /// theory-object hole when that knowledge is still partial. A single
+        /// TheoryObject always suffices because a TheoryObject is a linear
+        /// chain, so refining by new information is a meet that collapses to
+        /// the more specific of the two — there is never a set of constraints.
+        over: TheoryObject<T>,
     },
 }
 
@@ -162,10 +168,7 @@ impl<T: Theory> Clone for ObjectType<T> {
                 function: function.clone(),
                 on: on.clone(),
             },
-            Self::Hole { name, constraints } => Self::Hole {
-                name: name.clone(),
-                constraints: constraints.clone(),
-            },
+            Self::Hole { name, over } => Self::Hole { name: name.clone(), over: over.clone() },
         }
     }
 }
@@ -176,7 +179,7 @@ impl<T: Theory> std::fmt::Display for ObjectType<T> {
             Self::Generator(g) => write!(f, "{g}"),
             Self::List(xs) => write!(f, "{}", DHList(xs)),
             Self::FunctionApplication { function, on } => write!(f, "{function}({on})"),
-            Self::Hole { name, constraints } => write!(f, "?{name}{constraints}"),
+            Self::Hole { name, over } => write!(f, "?{name}/{over}"),
         }
     }
 }
@@ -247,7 +250,7 @@ pub enum ProTerm<T: Theory> {
         /// The generator in the post-composition.
         generator: ModelGeneratingProArrow<T>,
         /// The theory pro-arrow over which the generator lies.
-        generator_over: TheoryGeneratingProArrow<T>,
+        generator_over: TheoryProArrow<T>,
         /// The pro-term where are post-composing.
         pro_term: Box<ProTerm<T>>,
     },

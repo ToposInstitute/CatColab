@@ -1,3 +1,6 @@
+//! Framework for dealing with items which may be linearly ordered subject to
+//! compatibility conditions.
+
 use derive_more::Display;
 
 /// A simple trait for determining whether data may be linearly arranged subject

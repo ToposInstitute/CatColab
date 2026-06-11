@@ -1,3 +1,6 @@
+//!  The AST which is produced by the parsing process and consumed by the
+//!  checker.
+
 use derive_more::Display;
 
 use crate::mtt::composite::Composable;

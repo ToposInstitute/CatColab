@@ -1,6 +1,5 @@
+//! TODO
 use derive_more::{Display, From};
-
-use crate::mtt::display_helpers::DHList;
 
 #[derive(Display)]
 /// An enum of the errors that checking may produce.
@@ -37,27 +36,35 @@ pub enum EType {
 #[derive(Display)]
 /// An enum of errors that elaboration may produce.
 pub enum EElaborate {
+    #[display("The expression {_0} is not a syntactically valid theory object")]
     /// The expression does not specify a syntactically valid theory object.
     InvalidTheoryObject(String),
 
+    #[display("The expression {_0} does not determine a theory arrow")]
     /// The expression does not determine a theory arrow.
     InvalidTheoryArrow(String),
 
+    #[display("Unknown theory arrow {_0}")]
     /// Unknown theory arrow.
     UnknownTheoryArrow(String),
 
-    /// Unknown theory arrow.
+    #[display("Unknown theory pro-arrow {_0}")]
+    /// Unknown theory pro-arrow.
     UnknownTheoryProArrow(String),
 
+    #[display("Could not form the composite of theory arrows: {_0}")]
     /// We were not able to form the composite of theory arrows specified.
     InvalidTheoryArrowComposite(String),
 
+    #[display("The expression {_0} is not a syntactically valid model object type")]
     /// The expression does not specify a syntactically valid model object type
     InvalidModelObjectType(String),
 
+    #[display("The modality {_0} does not exist in the theory")]
     /// The specified modality does not exist in the theory.
     UnknownModality(String),
 
+    #[display("Unsupported syntax: {_0}")]
     /// Currently unsupported syntactical feature.
     UnsupportedSyntax(String),
 }
@@ -65,21 +72,25 @@ pub enum EElaborate {
 #[derive(Display)]
 /// An enum of errors that type inference may produce.
 pub enum EInfer {
-    /// We were asked to infer the generating theory pro-arrow over which this
-    /// generating model pro-arrow lives, but there isn't one.
-    NoTheoryGeneratingProArrow(String),
+    #[display("No theory pro-arrow lies over the boundary of {_0}")]
+    /// We were asked to infer the theory pro-arrow over which this model
+    /// pro-arrow lives, but there isn't one.
+    NoTheoryProArrow(String),
 
+    #[display("The theory has no list modality, but one was required to infer a theory object")]
     /// We were asked to infer a theory object involving a list modality, but
     /// the theory has no list modality.
     NoTheoryListModality,
 
+    #[display("There is no consistent theory object for the elements of a list")]
     /// We were asked to infer a theory object from a list of object types, but
     /// there is no consistent choice.
     InconsistentTheoryObjectForList,
 
-    /// We were asked to infer the generating theory pro-arrow over which this
-    /// generating model pro-arrow lives, but there is not a unique answer.
-    AmbiguousTheoryGeneratingProArrow(String),
+    #[display("More than one theory pro-arrow lies over the boundary of {_0}")]
+    /// We were asked to infer the theory pro-arrow over which this model
+    /// pro-arrow lives, but there is not a unique answer.
+    AmbiguousTheoryProArrow(String),
 }
 
 #[derive(Display)]
@@ -97,11 +108,10 @@ pub enum EContext {
 #[derive(Display)]
 /// An enum of errors that constraint interactions may produce.
 pub enum EConstraint {
-    #[display(
-        "Cannot unify additional constraint {with} with known constraints {}",
-        DHList(known)
-    )]
-    CannotUnify { known: Vec<String>, with: String },
+    #[display("Cannot refine known theory object {known} with {with}")]
+    /// A new observation about a theory object hole conflicts with what was
+    /// already known.
+    CannotUnify { known: String, with: String },
 }
 
 #[derive(Display, From)]
@@ -118,6 +128,12 @@ pub enum Error {
     /// A constraint error.
     ConstraintError(EConstraint),
 
+    #[from(skip)]
+    #[display("Unknown theory: {_0}")]
+    /// The model named a theory for which there is no implementation.
+    UnknownTheory(String),
+
+    #[from(skip)]
     #[display("Unimplemented feature: {_0}")]
     /// A particular feature is unimplented.
     Unimplemented(String),
