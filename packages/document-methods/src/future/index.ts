@@ -53,6 +53,24 @@ export type MorphismType<Dom, Cod, Name extends string> = MorType & {
     readonly cod?: Cod;
 };
 
+const richTextTypeBrand: unique symbol = Symbol("richTextType");
+
+/**
+ * The sentinel cell-type used to add rich-text cells to a notebook. Pass it
+ * as the first argument to {@link ModelNotebook.add}; the second argument is
+ * `{ content: string }`. Unlike `ObjectType` and `MorphismType`, `RichText`
+ * is logic-agnostic and lives at the top level.
+ */
+export type RichTextType = { readonly [richTextTypeBrand]: true };
+
+/** The singleton {@link RichTextType} value. */
+export const RichText: RichTextType = { [richTextTypeBrand]: true };
+
+const isRichTextType = (value: unknown): value is RichTextType =>
+    typeof value === "object" &&
+    value !== null &&
+    (value as RichTextType)[richTextTypeBrand] === true;
+
 type FieldError<Key extends PropertyKey, Message extends string> = {
     readonly [K in `Type error: ${Key & string}`]: Message;
 };
@@ -217,15 +235,24 @@ export type ModelNotebook<TLogic extends AnyModelLogic, Handle = ModelDocument> 
     dump(): ModelDocument;
     /** Handles for all cells, in notebook order. */
     cells(): Array<NotebookCell<TLogic>>;
-    addRichText(args: { content: string }): RichTextCell;
-    addObject<TType extends LogicObjectType<TLogic> = LogicObjectType<TLogic>>(
-        type: TType,
-        args: { name: string },
-    ): ObjectCell<TType>;
-    addMorphism<TType extends LogicMorphismType<TLogic> = LogicMorphismType<TLogic>>(
+    /**
+     * Add a cell to the notebook. The kind of cell is selected by the first
+     * argument:
+     *
+     * - {@link RichText} adds a rich-text cell; `args` is `{ content }`.
+     * - An object type from the logic adds an object cell; `args` is `{ name }`.
+     * - A morphism type from the logic adds a morphism cell; `args` is
+     *   `{ name, dom, cod }`, with `dom`/`cod` constrained by the morphism type.
+     */
+    add(type: RichTextType, args: { content: string }): RichTextCell;
+    add<TType extends LogicMorphismType<TLogic> = LogicMorphismType<TLogic>>(
         type: TType,
         args: MorphismArgs<TType>,
     ): MorphismCell<TType>;
+    add<TType extends LogicObjectType<TLogic> = LogicObjectType<TLogic>>(
+        type: TType,
+        args: { name: string },
+    ): ObjectCell<TType>;
 };
 
 export const objectType = <Name extends string>(content: string) =>
@@ -466,43 +493,51 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
                 }
             }) as Array<NotebookCell<TLogic>>;
         },
-        addRichText({ content }: { content: string }) {
-            const cell = newRichTextCell(content);
-            change((d) => {
-                d.notebook.cellContents[cell.id] = cell;
-                d.notebook.cellOrder.push(cell.id);
-            });
-            return richTextHandle(cell.id);
-        },
-        addObject<TType extends LogicObjectType<TLogic> = LogicObjectType<TLogic>>(
-            type: TType,
-            objectArgs: { name: string },
-        ) {
-            const judgment = newObjectDecl(type);
-            judgment.name = objectArgs.name;
-            const formalCell = newFormalCell(judgment);
-            change((d) => {
-                d.notebook.cellContents[formalCell.id] = formalCell;
-                d.notebook.cellOrder.push(formalCell.id);
-            });
-            const cellId = formalCell.id;
-            return objectHandle(cellId, type);
-        },
-        addMorphism<TType extends LogicMorphismType<TLogic> = LogicMorphismType<TLogic>>(
-            type: TType,
-            morphismArgs: MorphismArgs<TType>,
-        ) {
-            const judgment = newMorphismDecl(type);
-            judgment.name = morphismArgs.name;
-            const formalCell = newFormalCell(judgment);
-            change((d) => {
-                d.notebook.cellContents[formalCell.id] = formalCell;
-                d.notebook.cellOrder.push(formalCell.id);
-            });
-            const cellId = formalCell.id;
-            return morphismHandle(cellId, type);
+        add(type: unknown, args: { content?: string; name?: string }) {
+            if (isRichTextType(type)) {
+                const cell = newRichTextCell((args as { content: string }).content);
+                change((d) => {
+                    d.notebook.cellContents[cell.id] = cell;
+                    d.notebook.cellOrder.push(cell.id);
+                });
+                return richTextHandle(cell.id);
+            }
+            if (isLogicMorphismType(type)) {
+                const morType = type as LogicMorphismType<TLogic>;
+                const judgment = newMorphismDecl(morType);
+                judgment.name = (args as { name: string }).name;
+                const formalCell = newFormalCell(judgment);
+                change((d) => {
+                    d.notebook.cellContents[formalCell.id] = formalCell;
+                    d.notebook.cellOrder.push(formalCell.id);
+                });
+                return morphismHandle(formalCell.id, morType);
+            }
+            if (isLogicObjectType(type)) {
+                const obType = type as LogicObjectType<TLogic>;
+                const judgment = newObjectDecl(obType);
+                judgment.name = (args as { name: string }).name;
+                const formalCell = newFormalCell(judgment);
+                change((d) => {
+                    d.notebook.cellContents[formalCell.id] = formalCell;
+                    d.notebook.cellOrder.push(formalCell.id);
+                });
+                return objectHandle(formalCell.id, obType);
+            }
+            throw new Error(
+                `Unknown cell type passed to add(); expected RichText, an object type ` +
+                    `or morphism type belonging to logic "${logic.theory}".`,
+            );
         },
     } as unknown as ModelNotebook<TLogic, Handle>;
+
+    function isLogicObjectType(value: unknown): boolean {
+        return Object.values(logic.objects).some((t) => t === value);
+    }
+
+    function isLogicMorphismType(value: unknown): boolean {
+        return Object.values(logic.morphisms).some((t) => t === value);
+    }
 }
 
 /**
