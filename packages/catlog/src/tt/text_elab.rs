@@ -24,8 +24,26 @@ pub const TT_PARSE_CONFIG: ParseConfig = ParseConfig::new(
         ("==", Prec::nonassoc(30)),
     ],
     &[":", ":=", "&", "Unit", "Hom", "*", "=="],
-    &["type", "def", "syn", "chk", "norm", "generate", "uwd", "set_theory", "diagram"],
+    &["type", "def", "syn", "chk", "norm", "generate", "uwd", "set_theory"],
 );
+
+/// Transitional dispatch for `def NAME : TYPE := BODY`.
+///
+/// Returns true when BODY looks like an instance specification — i.e.,
+/// a tuple whose clauses use `:` annotations (declaring generators,
+/// equations, or sub-instances). Returns false when the body uses
+/// `:=` field assignments (the ordinary record-construction `def`).
+///
+/// During Pass A the two shapes are disjoint: `:` for instances,
+/// `:=` for record construction. Once Pass C migrates the instance
+/// surface to `:=`-with-set/mapping-literals, this dispatch will need
+/// a different signal.
+fn body_is_instance_shaped(n: &FNtn) -> bool {
+    let Tuple(field_ns) = n.ast0() else {
+        return false;
+    };
+    field_ns.iter().any(|field_n| matches!(field_n.ast0(), App2(L(_, Keyword(":")), _, _)))
+}
 
 /// The result of elaborating a top-level statement.
 pub enum TopElabResult {
@@ -129,34 +147,6 @@ impl TopElaborator {
                     TopDecl::Type(Type::new(theory.clone(), ty_s, ty_v)),
                 ))
             }
-            "diagram" => {
-                let theory = self.get_theory(tn.loc)?;
-                let mut elab = self.elaborator(&theory, toplevel);
-                let (name, args_n, annotn, valn) = self.annotated_def(tn.body).or_else(|| {
-                    self.error(
-                        tn.loc,
-                        "unknown syntax for diagram declaration, expected <name> : <type> := <term>",
-                    )
-                })?;
-                if args_n.is_some() {
-                    return self.error(tn.loc, "diagrams cannot have arguments");
-                }
-                let (_, ret_ty_v) = elab.ty(annotn);
-                // Bind the diagram's name as a diagram-kind context entry
-                // so that `@over .E` inside the body can recover both the
-                // diagram's name and its codomain type, while ordinary
-                // term lookups cannot see it.
-                let diag_label = match name {
-                    NameSegment::Text(s) => label_seg(s),
-                    NameSegment::Uuid(_) => label_seg("diag"),
-                };
-                elab.intro_diagram(name, diag_label, ret_ty_v.clone());
-                let (val_s, val_v) = elab.ty(valn);
-                Some(TopElabResult::Declaration(
-                    name,
-                    TopDecl::Diag(Diag::new(theory.clone(), ret_ty_v, val_s, val_v)),
-                ))
-            }
             "def" => {
                 let theory = self.get_theory(tn.loc)?;
                 let (name, args_n, ty_n, tm_n) = self.annotated_def(tn.body).or_else(|| {
@@ -188,12 +178,31 @@ impl TopElaborator {
                     }
                     None => {
                         let mut elab = self.elaborator(&theory, toplevel);
-                        let (_, ty_v) = elab.ty(ty_n);
-                        let (tm_s, tm_v) = elab.chk(&ty_v, tm_n);
-                        Some(TopElabResult::Declaration(
-                            name,
-                            TopDecl::DefConst(DefConst::new(theory.clone(), tm_s, tm_v, ty_v)),
-                        ))
+                        let (_, ret_ty_v) = elab.ty(ty_n);
+                        // An "instance body" is a tuple of `:`-bound clauses
+                        // (rather than `:=`-bound ones). Route those to the
+                        // instance-elaboration path; everything else is an
+                        // ordinary const-term `def`.
+                        if body_is_instance_shaped(tm_n) {
+                            elab.push_instance_codomain(ret_ty_v.clone());
+                            let (val_s, val_v) = elab.ty(tm_n);
+                            elab.pop_instance_codomain();
+                            Some(TopElabResult::Declaration(
+                                name,
+                                TopDecl::Diag(Diag::new(theory.clone(), ret_ty_v, val_s, val_v)),
+                            ))
+                        } else {
+                            let (tm_s, tm_v) = elab.chk(&ret_ty_v, tm_n);
+                            Some(TopElabResult::Declaration(
+                                name,
+                                TopDecl::DefConst(DefConst::new(
+                                    theory.clone(),
+                                    tm_s,
+                                    tm_v,
+                                    ret_ty_v,
+                                )),
+                            ))
+                        }
                     }
                 }
             }
@@ -273,6 +282,11 @@ pub struct Elaborator<'a> {
     loc: Option<Loc>,
     ctx: Context,
     next_meta: usize,
+    /// Stack of model types currently being instantiated, used by
+    /// `@over .X` and the applied-codomain-morphism arms to recover
+    /// the codomain. The top of the stack is the innermost enclosing
+    /// instance body.
+    instance_codomains: Vec<TyV>,
 }
 
 struct ElaboratorCheckpoint {
@@ -292,7 +306,20 @@ impl<'a> Elaborator<'a> {
             loc: None,
             ctx: Context::new(),
             next_meta: 0,
+            instance_codomains: Vec::new(),
         }
+    }
+
+    fn push_instance_codomain(&mut self, ty: TyV) {
+        self.instance_codomains.push(ty);
+    }
+
+    fn pop_instance_codomain(&mut self) {
+        self.instance_codomains.pop();
+    }
+
+    fn current_instance_codomain(&self) -> Option<&TyV> {
+        self.instance_codomains.last()
     }
 
     fn theory(&self) -> &TheoryDef {
@@ -378,15 +405,6 @@ impl<'a> Elaborator<'a> {
         self.ctx.env = self.ctx.env.snoc(v.clone());
         self.ctx.push_scope(name, label, ty);
         v
-    }
-
-    /// Like [`Self::intro`], but pushes a diagram-kind binding so it is
-    /// invisible to ordinary term lookup.
-    fn intro_diagram(&mut self, name: VarName, label: LabelSegment, ty: TyV) {
-        let v = TmV::neu(TmN::var(self.ctx.scope.len().into(), name, label), ty.clone());
-        let v = self.evaluator().eta(&v, Some(&ty));
-        self.ctx.env = self.ctx.env.snoc(v);
-        self.ctx.push_diagram(name, label, ty);
     }
 
     fn binding(&mut self, n: &FNtn) -> Option<(VarName, LabelSegment, TyS, TyV)> {
@@ -517,12 +535,12 @@ impl<'a> Elaborator<'a> {
                 let Some(path) = elab.path(p_n) else {
                     return elab.ty_hole();
                 };
-                // The enclosing diagram-kind binding gives the codomain
-                // against which we validate the path. The diagram's
-                // identity is not stored in the resulting type — `@over`
-                // names a fiber-type that's shared across diagrams.
-                let Some((_, model_ty)) = elab.ctx.lookup_diagram() else {
-                    return elab.ty_error("@over is only allowed inside a diagram declaration");
+                // The enclosing instance body gives the codomain against
+                // which we validate the path. The codomain's identity is
+                // not stored in the resulting type — `@over` names a
+                // fiber-type that's shared across instances.
+                let Some(model_ty) = elab.current_instance_codomain().cloned() else {
+                    return elab.ty_error("@over is only allowed inside an instance body");
                 };
                 let evaluator = elab.evaluator();
                 let (self_n, _) = evaluator.bind_self(model_ty.clone());
@@ -706,9 +724,9 @@ impl<'a> Elaborator<'a> {
                     App1(tm_n, L(_, Field(f))) => (f, Some(tm_n)),
                     _ => return elab.syn_error("unexpected notation for term"),
                 };
-                let Some((_, model_ty)) = elab.ctx.lookup_diagram() else {
+                let Some(model_ty) = elab.current_instance_codomain().cloned() else {
                     return elab.syn_error(
-                        "applied codomain morphism is only allowed inside a diagram declaration",
+                        "applied codomain morphism is only allowed inside an instance body",
                     );
                 };
                 let (inner_s, inner_v, inner_ty) = match inner {

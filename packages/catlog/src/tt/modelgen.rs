@@ -557,7 +557,7 @@ type WeightedGraph := [
   weight : Attr[E, Weight]
 ]
 
-diagram I : @Instance(WeightedGraph) := [
+def I : WeightedGraph := [
     v : @over .V,
     e : @over .E,
     _ : (src(e) == v)
