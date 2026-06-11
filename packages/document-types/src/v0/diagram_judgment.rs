@@ -83,7 +83,7 @@ pub enum DiagramJudgment {
     #[serde(rename = "equation")]
     Equation(DiagramEqnDecl),
 
-    ///
+    /// Declares an instantiated diagram
     #[serde(rename = "instantiation")]
     Instantiation(InstantiatedDiagram),
 }

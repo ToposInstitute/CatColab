@@ -1,11 +1,15 @@
 //! Wasm bindings for diagrams in models of a double theory.
 
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use all_the_same::all_the_same;
+use catlog::tt;
+use catlog::tt::toplevel::Toplevel;
 use derive_more::From;
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
+use ustr::ustr;
 use wasm_bindgen::prelude::*;
 
 use catcolab_document_types::current::*;
@@ -22,7 +26,7 @@ use super::result::JsResult;
 use super::theory::{DblTheory, DblTheoryBox};
 
 /// A box containing a diagram in a model of a double theory.
-#[derive(From)]
+#[derive(From, Clone)]
 pub enum DblModelDiagramBox {
     /// A diagram in a model of a discrete double theory.
     Discrete(diagram::DblModelDiagram<DiscreteDblModelMapping, DiscreteDblModel>),
@@ -30,6 +34,7 @@ pub enum DblModelDiagramBox {
 }
 
 /// Wasm binding for a diagram in a model of a double theory.
+#[derive(Clone)]
 #[wasm_bindgen]
 pub struct DblModelDiagram {
     /// The boxed underlying diagram.
@@ -279,6 +284,63 @@ pub struct ModelDiagramValidationResult(
     pub JsResult<(), Vec<diagram::InvalidDiscreteDblModelDiagram>>,
 );
 
+/// A named collection of diagrams of double models.
+#[wasm_bindgen]
+pub struct DblDiagramMap {
+    #[wasm_bindgen(skip)]
+    diagrams: HashMap<String, DblModelDiagram>,
+    #[wasm_bindgen(skip)]
+    toplevel: Toplevel,
+}
+
+impl Default for DblDiagramMap {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[wasm_bindgen]
+impl DblDiagramMap {
+    /// Constructs an empty collection of models.
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        DblDiagramMap {
+            diagrams: HashMap::new(),
+            toplevel: Toplevel::new(tt::theory::std_theories()),
+        }
+    }
+
+    /// Returns whether the collection contains a model with the given name.
+    #[wasm_bindgen(js_name = "has")]
+    pub fn contains_key(&self, id: &str) -> bool {
+        self.diagrams.contains_key(id)
+    }
+
+    /// Inserts a model with the given name.
+    #[wasm_bindgen(js_name = "set")]
+    pub fn insert(&mut self, id: String, diagram: &DblModelDiagram) {
+        // let id_ustr = ustr(&id);
+        self.diagrams.insert(id, diagram.clone());
+        // let DblModelDiagramBox::Discrete(diagram::DblModelDiagram(_, model)) = diagram.diagram
+        // else {
+        //     panic!()
+        // };
+        // if let Some((ty_s, ty_v)) = &model.ty {
+        //     let Some(theory) = model.theory().try_into_tt() else {
+        //         return;
+        //     };
+        //     self.toplevel.declarations.insert(
+        //         NameSegment::Text(id_ustr),
+        //         TopDecl::Type(Type::new(
+        //             tt::theory::Theory::new(ustr("_").into(), theory),
+        //             ty_s.clone(),
+        //             ty_v.clone(),
+        //         )),
+        //     );
+        // }
+    }
+}
+
 /// Elaborates a diagram defined by a notebook into a catlog diagram.
 #[wasm_bindgen(js_name = "elaborateDiagram")]
 pub fn elaborate_diagram(
@@ -290,9 +352,7 @@ pub fn elaborate_diagram(
         match judgment {
             DiagramJudgment::Object(decl) => diagram.add_ob(&decl)?,
             DiagramJudgment::Morphism(decl) => diagram.add_mor(&decl)?,
-            DiagramJudgment::Instantiation(_) => {
-                return Err("Elaboration of instantiations in diagrams is not yet supported".into());
-            }
+            DiagramJudgment::Instantiation(_) => return Err("Instantiation not supported".into()),
             DiagramJudgment::Equation(_) => {
                 return Err("Elaboration of equations in diagrams is not yet supported".into());
             }
