@@ -15,13 +15,11 @@ type SimpleOlogAspect = MorphismType<
 
 export const SimpleOlog = {
     theory: "simple-olog",
-    objects: {
+    cellTypes: {
         Type: objectType<"Type">("Type"),
-    },
-    morphisms: {
         Aspect: morphismType<ObjectCell<SimpleOlogType>, ObjectCell<SimpleOlogType>, "Aspect">(),
     },
-} satisfies ModelLogic<"simple-olog", { Type: SimpleOlogType }, { Aspect: SimpleOlogAspect }>;
+} satisfies ModelLogic<"simple-olog", { Type: SimpleOlogType; Aspect: SimpleOlogAspect }>;
 
 type PetriNetPlace = ObjectType<"Place">;
 type PetriNetTransition = MorphismType<
@@ -32,17 +30,15 @@ type PetriNetTransition = MorphismType<
 
 export const PetriNet = {
     theory: "petri-net",
-    objects: {
+    cellTypes: {
         Place: objectType<"Place">("Place"),
-    },
-    morphisms: {
         Transition: morphismType<
             ObjectCell<PetriNetPlace>[],
             ObjectCell<PetriNetPlace>[],
             "Transition"
         >(),
     },
-} satisfies ModelLogic<"petri-net", { Place: PetriNetPlace }, { Transition: PetriNetTransition }>;
+} satisfies ModelLogic<"petri-net", { Place: PetriNetPlace; Transition: PetriNetTransition }>;
 
 type SchemaEntity = ObjectType<"Entity">;
 type SchemaAttrType = ObjectType<"AttrType">;
@@ -51,11 +47,9 @@ type SchemaAttr = MorphismType<ObjectCell<SchemaEntity>, ObjectCell<SchemaAttrTy
 
 export const SimpleSchema = {
     theory: "simple-schema",
-    objects: {
+    cellTypes: {
         Entity: objectType<"Entity">("Entity"),
         AttrType: objectType<"AttrType">("AttrType"),
-    },
-    morphisms: {
         Mapping: morphismType<ObjectCell<SchemaEntity>, ObjectCell<SchemaEntity>, "Mapping">({
             tag: "Hom",
             content: { tag: "Basic", content: "Entity" },
@@ -67,6 +61,10 @@ export const SimpleSchema = {
     },
 } satisfies ModelLogic<
     "simple-schema",
-    { Entity: SchemaEntity; AttrType: SchemaAttrType },
-    { Mapping: SchemaMapping; Attr: SchemaAttr }
+    {
+        Entity: SchemaEntity;
+        AttrType: SchemaAttrType;
+        Mapping: SchemaMapping;
+        Attr: SchemaAttr;
+    }
 >;

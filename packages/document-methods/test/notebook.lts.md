@@ -33,8 +33,8 @@ We can create objects and morphisms in the notebook.
 <!-- verifier:prepend-to-following -->
 
 ```ts
-const Type = SimpleOlog.objects.Type;
-const Aspect = SimpleOlog.morphisms.Aspect;
+const Type = SimpleOlog.cellTypes.Type;
+const Aspect = SimpleOlog.cellTypes.Aspect;
 
 const source = notebook.add(Type, {
     name: "A",
@@ -137,14 +137,14 @@ We can filter cells by their type, not just their kind and we provide some utili
 
 ```ts
 import { SimpleSchema } from "catcolab-logics";
-import { binder, byMorphismType, byObjectType } from "catcolab-document-methods/future";
+import { binder, byType } from "catcolab-document-methods/future";
 
 const notebook = binder.createNotebook(SimpleSchema, { name: "Example schema" });
 
-const Entity = SimpleSchema.objects.Entity;
-const AttrType = SimpleSchema.objects.AttrType;
-const Mapping = SimpleSchema.morphisms.Mapping;
-const Attr = SimpleSchema.morphisms.Attr;
+const Entity = SimpleSchema.cellTypes.Entity;
+const AttrType = SimpleSchema.cellTypes.AttrType;
+const Mapping = SimpleSchema.cellTypes.Mapping;
+const Attr = SimpleSchema.cellTypes.Attr;
 
 const person = notebook.add(Entity, { name: "Person" });
 const company = notebook.add(Entity, { name: "Company" });
@@ -153,8 +153,8 @@ const str = notebook.add(AttrType, { name: "String" });
 notebook.add(Mapping, { name: "employer", dom: person, cod: company });
 notebook.add(Attr, { name: "name", dom: person, cod: str });
 
-const entities = notebook.cells().filter(byObjectType(Entity));
-const attrs = notebook.cells().filter(byMorphismType(Attr));
+const entities = notebook.cells().filter(byType(Entity));
+const attrs = notebook.cells().filter(byType(Attr));
 
 console.log("entities:", entities.map((cell) => cell.name).join(", "));
 console.log("attrs:", attrs.map((cell) => cell.name).join(", "));
@@ -177,8 +177,8 @@ import { binder } from "catcolab-document-methods/future";
 
 const notebook = binder.createNotebook(SimpleOlog, { name: "An Olog" });
 
-const Type = SimpleOlog.objects.Type;
-const Aspect = SimpleOlog.morphisms.Aspect;
+const Type = SimpleOlog.cellTypes.Type;
+const Aspect = SimpleOlog.cellTypes.Aspect;
 
 const source = notebook.add(Type, { name: "A" });
 const target = notebook.add(Type, { name: "B" });
@@ -209,8 +209,8 @@ import { binder } from "catcolab-document-methods/future";
 
 const schema = binder.createNotebook(SimpleSchema, { name: "Example schema" });
 
-const Attr = SimpleSchema.morphisms.Attr;
-const AttrType = SimpleSchema.objects.AttrType;
+const Attr = SimpleSchema.cellTypes.Attr;
+const AttrType = SimpleSchema.cellTypes.AttrType;
 const str = schema.add(AttrType, { name: "String" });
 
 // @ts-expect-error An attribute's domain must be an entity.
@@ -233,8 +233,8 @@ import { binder } from "catcolab-document-methods/future";
 
 const notebook = binder.createNotebook(PetriNet, { name: "Example Petri-net" });
 
-const Place = PetriNet.objects.Place;
-const Transition = PetriNet.morphisms.Transition;
+const Place = PetriNet.cellTypes.Place;
+const Transition = PetriNet.cellTypes.Transition;
 
 const a = notebook.add(Place, { name: "A" });
 
@@ -268,11 +268,11 @@ notebook was edited after the handle was obtained.
 
 ```ts
 import { SimpleOlog } from "catcolab-logics";
-import { binder, byObjectType, RichText } from "catcolab-document-methods/future";
+import { binder, byType, RichText } from "catcolab-document-methods/future";
 
 const notebook = binder.createNotebook(SimpleOlog, { name: "An Olog" });
 
-const Type = SimpleOlog.objects.Type;
+const Type = SimpleOlog.cellTypes.Type;
 
 const a = notebook.add(Type, { name: "A" });
 const b = notebook.add(Type, { name: "B" });
@@ -281,7 +281,7 @@ const c = notebook.add(Type, { name: "C" });
 function names() {
     return notebook
         .cells()
-        .filter(byObjectType(Type))
+        .filter(byType(Type))
         .map((cell) => cell.name)
         .join(", ");
 }
