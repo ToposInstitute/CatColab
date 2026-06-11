@@ -1,6 +1,6 @@
-A new package for our built-in logics `catcolab-logics`. In the future people
-may create their own logics. The logics need to play nice with
-`catcolab-document-methods`.
+Two new package for our built-in logics `catcolab-logics` and
+`catcolab-binder`. In the future people may create their own logics instead of
+using `catcolab-logics`. The logics need to play nice with `catcolab-binder`.
 
 <!-- verifier:prepend-to-following -->
 
