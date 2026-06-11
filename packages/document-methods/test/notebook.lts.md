@@ -5,7 +5,7 @@ may create their own logics. The logics need to play nice with
 <!-- verifier:prepend-to-following -->
 
 ```ts
-import { SimpleOlog } from "catcolab-logics";
+import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { binder, RichText } from "catcolab-document-methods/future";
 ```
 
@@ -33,9 +33,6 @@ We can create objects and morphisms in the notebook.
 <!-- verifier:prepend-to-following -->
 
 ```ts
-const Type = SimpleOlog.cellTypes.Type;
-const Aspect = SimpleOlog.cellTypes.Aspect;
-
 const source = notebook.add(Type, {
     name: "A",
 });
@@ -136,15 +133,10 @@ We can filter cells by their type, not just their kind and we provide some utili
 <!-- verifier:prepend-to-following -->
 
 ```ts
-import { SimpleSchema } from "catcolab-logics";
+import { Attr, AttrType, Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
 import { binder, byType } from "catcolab-document-methods/future";
 
 const notebook = binder.createNotebook(SimpleSchema, { name: "Example schema" });
-
-const Entity = SimpleSchema.cellTypes.Entity;
-const AttrType = SimpleSchema.cellTypes.AttrType;
-const Mapping = SimpleSchema.cellTypes.Mapping;
-const Attr = SimpleSchema.cellTypes.Attr;
 
 const person = notebook.add(Entity, { name: "Person" });
 const company = notebook.add(Entity, { name: "Company" });
@@ -172,13 +164,10 @@ attrs: name
 <!-- verifier:prepend-to-following -->
 
 ```ts
-import { SimpleOlog } from "catcolab-logics";
+import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { binder } from "catcolab-document-methods/future";
 
 const notebook = binder.createNotebook(SimpleOlog, { name: "An Olog" });
-
-const Type = SimpleOlog.cellTypes.Type;
-const Aspect = SimpleOlog.cellTypes.Aspect;
 
 const source = notebook.add(Type, { name: "A" });
 const target = notebook.add(Type, { name: "B" });
@@ -204,13 +193,11 @@ notebook.add(Aspect, {
 <!-- verifier:reset -->
 
 ```ts
-import { SimpleSchema } from "catcolab-logics";
+import { Attr, AttrType, SimpleSchema } from "catcolab-logics/simple-schema";
 import { binder } from "catcolab-document-methods/future";
 
 const schema = binder.createNotebook(SimpleSchema, { name: "Example schema" });
 
-const Attr = SimpleSchema.cellTypes.Attr;
-const AttrType = SimpleSchema.cellTypes.AttrType;
 const str = schema.add(AttrType, { name: "String" });
 
 // @ts-expect-error An attribute's domain must be an entity.
@@ -228,13 +215,10 @@ But adapt to the underlying logic:
 <!-- verifier:prepend-to-following -->
 
 ```ts
-import { PetriNet } from "catcolab-logics";
+import { PetriNet, Place, Transition } from "catcolab-logics/petri-net";
 import { binder } from "catcolab-document-methods/future";
 
 const notebook = binder.createNotebook(PetriNet, { name: "Example Petri-net" });
-
-const Place = PetriNet.cellTypes.Place;
-const Transition = PetriNet.cellTypes.Transition;
 
 const a = notebook.add(Place, { name: "A" });
 
@@ -267,12 +251,10 @@ notebook was edited after the handle was obtained.
 <!-- verifier:prepend-to-following -->
 
 ```ts
-import { SimpleOlog } from "catcolab-logics";
+import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { binder, byType, RichText } from "catcolab-document-methods/future";
 
 const notebook = binder.createNotebook(SimpleOlog, { name: "An Olog" });
-
-const Type = SimpleOlog.cellTypes.Type;
 
 const a = notebook.add(Type, { name: "A" });
 const b = notebook.add(Type, { name: "B" });
@@ -389,7 +371,7 @@ A, C
 <!-- verifier:prepend-to-following -->
 
 ```ts
-import { PetriNet } from "catcolab-logics";
+import { PetriNet } from "catcolab-logics/petri-net";
 import { binder } from "catcolab-document-methods/future";
 
 const notebook = binder.createNotebook(PetriNet, { name: "Example Petri-net" });
@@ -414,7 +396,7 @@ Trying to load a document with the wrong logic will throw an error.
 <!-- verifier:throws -->
 
 ```ts
-import { SimpleOlog } from "catcolab-logics";
+import { SimpleOlog } from "catcolab-logics/simple-olog";
 binder.loadNotebook(SimpleOlog, notebookData);
 ```
 

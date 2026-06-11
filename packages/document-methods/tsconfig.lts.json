@@ -12,7 +12,7 @@
         "jsxImportSource": "solid-js",
         "lib": ["ES2023", "DOM"],
         "paths": {
-            "catcolab-logics": ["./test/literate-ts/catcolab-logics.ts"],
+            "catcolab-logics/*": ["./test/literate-ts/catcolab-logics/*.ts"],
             "catcolab-document-methods/future": ["./src/future/index.ts"]
         }
     },

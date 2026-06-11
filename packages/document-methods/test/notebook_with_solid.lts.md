@@ -11,7 +11,7 @@ We can plug in Solid's reactivity by itself using `createStore` and `produce`.
 ```ts
 import { createEffect, createRoot } from "solid-js";
 import { createStore, produce, type SetStoreFunction, unwrap } from "solid-js/store";
-import { SimpleOlog } from "catcolab-logics";
+import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { binder, createBinder, type NotebookBackend } from "catcolab-document-methods/future";
 import { type ModelDocument } from "catcolab-document-methods";
 
@@ -82,7 +82,6 @@ Cell handles are reactive too. `source.name` reads from the same store, so it ca
 
 ```ts
 createRoot(async () => {
-    const Type = SimpleOlog.cellTypes.Type;
     const obj = notebook.add(Type, { name: "A" });
 
     createEffect(() => {
@@ -105,7 +104,6 @@ store proxies do not leak into the copied cell.
 
 ```ts
 createRoot(async () => {
-    const Type = SimpleOlog.cellTypes.Type;
     const obj = notebook.add(Type, { name: "A" });
     const copiedObj = obj.duplicate();
 
@@ -142,7 +140,7 @@ import { type Doc, getBackend, getObjectId } from "@automerge/automerge";
 import { createEffect, createRoot } from "solid-js";
 import { type DocHandle, Repo } from "@automerge/automerge-repo";
 import { makeDocumentProjection } from "@automerge/automerge-repo-solid-primitives";
-import { SimpleOlog } from "catcolab-logics";
+import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { createBinder, type NotebookBackend } from "catcolab-document-methods/future";
 import { type ModelDocument } from "catcolab-document-methods";
 
@@ -186,7 +184,7 @@ projection.
 
 ```ts
 const copiedAutomergeObj = notebook
-    .add(SimpleOlog.cellTypes.Type, { name: "Copied with Automerge" })
+    .add(Type, { name: "Copied with Automerge" })
     .duplicate();
 copiedAutomergeObj.update({ name: "Updated Automerge copy" });
 console.log("automerge copy:", copiedAutomergeObj.name);
