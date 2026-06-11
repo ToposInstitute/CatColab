@@ -135,7 +135,7 @@ impl CanElaborate<Ob, ModalOb> for Elaborator {
                     objects.iter().filter_map(|ob| ob.as_ref().map(|ob| self.elab(ob))).collect();
                 Ok(ModalOb::List(list_type, objects?))
             }
-            _ => Err(format!("Cannot use object with modal theory: {ob:#?}")),
+            Ob::Tabulated(mor) => Ok(ModalOb::Tabulated(Box::new(self.elab(mor)?))),
         }
     }
 }
@@ -228,6 +228,7 @@ impl CanQuote<ModalOb, Ob> for Quoter {
                 modality: demote_modality(dbl_theory::Modality::List(*list_type)),
                 objects: objects.iter().map(|ob| Some(self.quote(ob))).collect(),
             },
+            ModalOb::Tabulated(mor) => Ob::Tabulated(self.quote(mor.as_ref())),
         }
     }
 }
@@ -467,6 +468,10 @@ impl DblModel {
                     .map(|ob| ob.as_ref().and_then(|ob| self.ob_label_string(ob)))
                     .collect();
                 Some(format!("[{}]", labels?.join(", ")))
+            }
+            Ob::Tabulated(Mor::Basic(s)) => {
+                let name = QualifiedName::deserialize_str(s).ok()?;
+                Some(self.mor_namespace.label_string(&name))
             }
             _ => None,
         }
@@ -815,6 +820,160 @@ pub(crate) mod tests {
                 .is_ok()
         );
         model
+    }
+
+    #[test]
+    fn model_causal_hypergraph() {
+        let th = ThCausalHypergraph::new().theory();
+        let mut model = DblModel::new(&th);
+        let [a1, a2] = [Uuid::now_v7(), Uuid::now_v7()];
+        let [e1, e2, h] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
+
+        for (name, id) in [("a1", a1), ("a2", a2)] {
+            model
+                .add_ob(&ObDecl {
+                    name: name.into(),
+                    id,
+                    ob_type: ObType::Basic("Action".into()),
+                })
+                .unwrap();
+        }
+        let causal = MorType::Basic("Causal".into());
+        for (name, id) in [("e1", e1), ("e2", e2)] {
+            model
+                .add_mor(&MorDecl {
+                    name: name.into(),
+                    id,
+                    mor_type: causal.clone(),
+                    dom: Some(Ob::Basic(a1.to_string())),
+                    cod: Some(Ob::Basic(a2.to_string())),
+                })
+                .unwrap();
+        }
+        let hom_tab =
+            MorType::Hom(Box::new(ObType::Tabulator(Box::new(MorType::Basic("Causal".into())))));
+        let tensor = ObOp::Basic("tensor".into());
+        let tabulated = |id: Uuid| Ob::App {
+            op: tensor.clone(),
+            ob: Box::new(Ob::List {
+                modality: Modality::SymmetricList,
+                objects: vec![Some(Ob::Tabulated(Mor::Basic(id.to_string())))],
+            }),
+        };
+        model
+            .add_mor(&MorDecl {
+                name: "h".into(),
+                id: h,
+                mor_type: hom_tab.clone(),
+                dom: Some(tabulated(e1)),
+                cod: Some(tabulated(e2)),
+            })
+            .unwrap();
+
+        // The hyperedge is found by its `Hom(Tab(Causal))` type.
+        assert_eq!(model.mor_generators_with_type(hom_tab), Ok(vec![h.into()]));
+        // Its domain collects to the tabulated causal edge `e1`.
+        let pres = model.mor_presentation(h.into()).unwrap();
+        assert_eq!(collect_product(pres.dom), Ok(vec![Ob::Tabulated(Mor::Basic(e1.to_string()))]));
+        // Both causal edges are found by their type.
+        assert_eq!(model.mor_generators_with_type(causal).map(|v| v.len()), Ok(2));
+    }
+
+    #[test]
+    fn elaborate_causal_hypergraph_notebook() {
+        // A causal-hypergraph notebook with two actions, two causal edges, and a
+        // hyperedge over the tabulated causal edges. This exercises the DoubleTT
+        // elaboration path (which the frontend uses), where modal tabulated
+        // objects must survive elaboration.
+        use catcolab_document_types::current::{
+            Modality, ModelJudgment, ModelNotebook, Notebook, NotebookCell,
+        };
+
+        let [a1, a2] = [Uuid::now_v7(), Uuid::now_v7()];
+        let [e1, e2, h] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
+        let action = ObType::Basic("Action".into());
+        let causal = MorType::Basic("Causal".into());
+        let hom_tab =
+            MorType::Hom(Box::new(ObType::Tabulator(Box::new(MorType::Basic("Causal".into())))));
+        let tensor_of = |id: Uuid| Ob::App {
+            op: ObOp::Basic("tensor".into()),
+            ob: Box::new(Ob::List {
+                modality: Modality::SymmetricList,
+                objects: vec![Some(Ob::Tabulated(Mor::Basic(id.to_string())))],
+            }),
+        };
+        let judgments = vec![
+            (
+                a1,
+                ModelJudgment::Object(ObDecl {
+                    name: "A1".into(),
+                    id: a1,
+                    ob_type: action.clone(),
+                }),
+            ),
+            (
+                a2,
+                ModelJudgment::Object(ObDecl {
+                    name: "A2".into(),
+                    id: a2,
+                    ob_type: action,
+                }),
+            ),
+            (
+                e1,
+                ModelJudgment::Morphism(MorDecl {
+                    name: "a".into(),
+                    id: e1,
+                    mor_type: causal.clone(),
+                    dom: Some(Ob::Basic(a1.to_string())),
+                    cod: Some(Ob::Basic(a2.to_string())),
+                }),
+            ),
+            (
+                e2,
+                ModelJudgment::Morphism(MorDecl {
+                    name: "b".into(),
+                    id: e2,
+                    mor_type: causal,
+                    dom: Some(Ob::Basic(a1.to_string())),
+                    cod: Some(Ob::Basic(a2.to_string())),
+                }),
+            ),
+            (
+                h,
+                ModelJudgment::Morphism(MorDecl {
+                    name: "h".into(),
+                    id: h,
+                    mor_type: hom_tab.clone(),
+                    dom: Some(tensor_of(e1)),
+                    cod: Some(tensor_of(e2)),
+                }),
+            ),
+        ];
+        let mut cell_contents = std::collections::HashMap::new();
+        let mut cell_order = Vec::new();
+        for (id, content) in judgments {
+            cell_contents.insert(id, NotebookCell::Formal { id, content });
+            cell_order.push(id);
+        }
+        let notebook = ModelNotebook(Notebook { cell_contents, cell_order });
+
+        let th = ThCausalHypergraph::new().theory();
+        let model =
+            elaborate_model(&notebook, &DblModelMap::new(), &th, "ref".into()).expect("elaborates");
+
+        // The hyperedge survives elaboration with its tabulated domain intact.
+        let hyperedges = model.mor_generators_with_type(hom_tab).unwrap();
+        assert_eq!(hyperedges.len(), 1);
+        let pres = model.mor_presentation(hyperedges[0].clone()).unwrap();
+        let dom_obs = collect_product(pres.dom).unwrap();
+        assert_eq!(dom_obs.len(), 1);
+        assert!(matches!(dom_obs[0], Ob::Tabulated(_)), "domain element should be tabulated");
+        // Both causal edges are present as morphisms.
+        assert_eq!(
+            model.mor_generators_with_type(MorType::Basic("Causal".into())).map(|v| v.len()),
+            Ok(2)
+        );
     }
 
     #[test]

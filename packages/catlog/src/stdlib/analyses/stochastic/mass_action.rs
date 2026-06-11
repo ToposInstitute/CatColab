@@ -84,7 +84,7 @@ pub struct PetriNetStochasticMassActionAnalysis {
 
 impl Default for PetriNetStochasticMassActionAnalysis {
     fn default() -> Self {
-        let ob_type = ModalObType::new(name("Object"));
+        let ob_type = modal_ob_type(name("Object"));
         Self {
             place_ob_type: ob_type.clone(),
             transition_mor_type: ModalMorType::Zero(ob_type),

@@ -144,7 +144,10 @@ impl Model {
         match self {
             Model::Discrete(_) => None,
             Model::DiscreteTab(model) => Some(model.tabulated(mor.try_into().unwrap()).into()),
-            Model::ModalUnital(_) | Model::ModalNonUnital(_) => None,
+            Model::ModalUnital(_) | Model::ModalNonUnital(_) => {
+                let mor: modal::ModalMor = mor.try_into().ok()?;
+                Some(modal::ModalOb::Tabulated(Box::new(mor)).into())
+            }
         }
     }
 

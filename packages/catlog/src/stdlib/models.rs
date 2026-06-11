@@ -128,7 +128,7 @@ fn backward_link_of_type(th: Rc<DiscreteTabTheory>, link_type: TabMorType) -> Di
 ///
 /// A free symmetric monoidal category, viewed as a reaction network.
 pub fn catalyzed_reaction(th: Rc<ModalDblTheory<Unital>>) -> ModalDblModel<Unital> {
-    let (ob_type, op) = (ModalObType::new(name("Object")), name("tensor"));
+    let (ob_type, op) = (modal_ob_type(name("Object")), name("tensor"));
     let mut model = ModalDblModel::new(th);
     model.add_ob(name("x"), ob_type.clone());
     model.add_ob(name("y"), ob_type.clone());
@@ -145,7 +145,7 @@ pub fn catalyzed_reaction(th: Rc<ModalDblTheory<Unital>>) -> ModalDblModel<Unita
 
 /// The SIR model viewed as a reaction network.
 pub fn sir_petri(th: Rc<ModalDblTheory<Unital>>) -> ModalDblModel<Unital> {
-    let (ob_type, op) = (ModalObType::new(name("Object")), name("tensor"));
+    let (ob_type, op) = (modal_ob_type(name("Object")), name("tensor"));
     let mut model = ModalDblModel::new(th);
     let (s, i, r) = (name("S"), name("I"), name("R"));
     model.add_ob(s.clone(), ob_type.clone());
@@ -169,8 +169,8 @@ pub fn sir_petri(th: Rc<ModalDblTheory<Unital>>) -> ModalDblModel<Unital> {
 
 /// An example of Lotka–Volterra dynamics viewed as a non-unital theory for a symmetric multicategory.
 pub fn lotka_volterra_dynamics(th: Rc<ModalDblTheory<NonUnital>>) -> ModalDblModel<NonUnital> {
-    let ob_type = ModalObType::new(name("State"));
-    let mor_type: ModalMorType = ModeApp::new(name("Contribution")).into();
+    let ob_type = modal_ob_type(name("State"));
+    let mor_type: ModalMorType = modal_ob_type(name("Contribution")).into();
 
     let mut model = ModalDblModel::new(th);
     // We're going to build a two-level predator-prey model, but where (in absence of signed

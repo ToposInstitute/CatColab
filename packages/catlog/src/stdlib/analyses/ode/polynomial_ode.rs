@@ -11,7 +11,7 @@ use tsify::Tsify;
 
 use crate::{
     dbl::{
-        modal::{ModalMorType, ModalObType, ModeApp},
+        modal::{ModalMorType, ModalObType, modal_ob_type},
         model::{FpDblModel, ModalDblModel, ModalOb, MutDblModel},
         theory::NonUnital,
     },
@@ -56,9 +56,9 @@ pub struct PolynomialODEAnalysis {
 impl Default for PolynomialODEAnalysis {
     fn default() -> Self {
         Self {
-            variable_ob_type: ModalObType::new(name("State")),
-            positive_contribution_mor_type: ModeApp::new(name("Contribution")).into(),
-            negative_contribution_mor_type: ModeApp::new(name("NegativeContribution")).into(),
+            variable_ob_type: modal_ob_type(name("State")),
+            positive_contribution_mor_type: modal_ob_type(name("Contribution")).into(),
+            negative_contribution_mor_type: modal_ob_type(name("NegativeContribution")).into(),
         }
     }
 }
