@@ -53,6 +53,18 @@ export const newDiagramMorphismDecl = (
     cod: null,
 });
 
+/** Create a new instantiation of an existing model. */
+export const newInstantiatedDiagram = (
+    diagram?: Link | null,
+): DiagramJudgment & { tag: "instantiation" } => ({
+    tag: "instantiation",
+    id: v7(),
+    name: "",
+    diagram: diagram ?? null,
+    specializations: [],
+});
+
+
 /** Duplicate a diagram judgment, creating a fresh UUID. */
 export const duplicateDiagramJudgment = (jgmt: DiagramJudgment): DiagramJudgment => ({
     ...structuredClone(jgmt),
