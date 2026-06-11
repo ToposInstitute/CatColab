@@ -1,0 +1,22 @@
+/* Red action vertices. */
+.action rect {
+    fill: #ffd9d9;
+    stroke: #d05a5a;
+    rx: 8px;
+    ry: auto;
+}
+
+/* Green causal edges. */
+.causal path {
+    fill: none;
+    stroke: #2ca02c;
+    stroke-width: 2.5;
+}
+
+/* Dotted grading / temporal-order edges. */
+.grading path {
+    fill: none;
+    stroke: var(--color-foreground);
+    stroke-width: 1.5;
+    stroke-dasharray: 4 3;
+}

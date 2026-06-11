@@ -1,7 +1,7 @@
 //! Standard library of double theories.
 
 use crate::dbl::theory::*;
-use crate::one::{Path, fp_category::FpCategory};
+use crate::one::{Path, ShortPath, fp_category::FpCategory};
 use crate::zero::name;
 
 /// The empty theory, which has a single model, the empty model.
@@ -160,7 +160,7 @@ fn th_list_algebra(list: List) -> ModalDblTheory<Unital> {
 
     let mut th = ModalDblTheory::new();
     th.add_ob_type(name("Object"));
-    let x = ModeApp::new(name("Object"));
+    let x = modal_ob_type(name("Object"));
     th.add_ob_op(name("tensor"), x.clone().apply(m), x.clone());
     let a = ModeApp::new(name("tensor").into());
 
@@ -181,7 +181,7 @@ fn th_list_lax_algebra(list: List) -> ModalDblTheory<Unital> {
 
     let mut th = ModalDblTheory::new();
     th.add_ob_type(name("Object"));
-    let x = ModeApp::new(name("Object"));
+    let x = modal_ob_type(name("Object"));
     th.add_ob_op(name("tensor"), x.clone().apply(m), x.clone());
     let a = ModeApp::new(name("tensor").into());
 
@@ -213,7 +213,7 @@ pub fn th_sym_multicategory() -> ModalDblTheory<Unital> {
 pub fn th_polynomial_ode_system() -> ModalDblTheory<NonUnital> {
     let mut th = ModalDblTheory::new();
     th.add_ob_type(name("State"));
-    let x = ModeApp::new(name("State"));
+    let x = modal_ob_type(name("State"));
     th.add_mor_type(name("Contribution"), x.clone().apply(Modality::List(List::Symmetric)), x);
     th
 }
@@ -222,7 +222,7 @@ pub fn th_polynomial_ode_system() -> ModalDblTheory<NonUnital> {
 pub fn th_signed_polynomial_ode_system() -> ModalDblTheory<NonUnital> {
     let mut th = ModalDblTheory::new();
     th.add_ob_type(name("State"));
-    let x = ModeApp::new(name("State"));
+    let x = modal_ob_type(name("State"));
     th.add_mor_type(
         name("Contribution"),
         x.clone().apply(Modality::List(List::Symmetric)),
@@ -236,11 +236,67 @@ pub fn th_signed_polynomial_ode_system() -> ModalDblTheory<NonUnital> {
     th
 }
 
+/// The theory of an R-graded causal digraph feeding a hypergraph.
+///
+/// Free models of this theory are the structures depicted in the "toy digraph"
+/// example: a digraph of **actions** (objects) carrying a **grading** (a second
+/// kind of edge, standing in for the eventual real-number grading / temporal
+/// order), together with **causal** edges, from which **hyperedges** relate
+/// several causal edges to several others.
+///
+/// ## Formalization
+///
+/// - `Action` is the type of the (red) action vertices.
+/// - `Causal` is the type of (green) causal edges, a morphism type `Action →
+///   Action`. Each causal edge thus has exactly one source and target action,
+///   entered inline as the domain and codomain of a single morphism.
+/// - `Grading` is the (dotted) grading/temporal edge between actions.
+/// - The (blue) hyperedges relate a list of causal edges to a list of causal
+///   edges. To treat causal edges as the objects that hyperedges connect, we use
+///   the **tabulator** `Tab(Causal)` — a minimal modal tabulator (object only, no
+///   projections or universal property; see [`ModalTypeData::Tabulator`]). The
+///   `tensor` operation on `Tab(Causal)`, with the `Hom` type on `Tab(Causal)`
+///   (used with `tensor` applied to its domain and codomain), gives hyperedges
+///   just as in the directed hypergraph theory ([`th_sym_monoidal_category`]).
+pub fn th_causal_hypergraph() -> ModalDblTheory<Unital> {
+    let list = List::Symmetric;
+    let m = Modality::List(list);
+
+    let mut th = ModalDblTheory::new();
+    th.add_ob_type(name("Action"));
+
+    let action = modal_ob_type(name("Action"));
+
+    // Causal edges (green) and grading/temporal edges (dotted), both between
+    // actions. Each causal edge is a single morphism with inline endpoints.
+    th.add_mor_type(name("Causal"), action.clone(), action.clone());
+    th.add_mor_type(name("Grading"), action.clone(), action);
+
+    // The tabulator of `Causal`: causal edges viewed as objects, so that
+    // hyperedges can relate them.
+    let causal_mor_type: ModalMorType = ShortPath::One(modal_ob_type(name("Causal")));
+    let tab = modal_tabulator(causal_mor_type);
+
+    // Tensor of causal edges, so that hyperedges can have multiple inputs and
+    // outputs. Mirrors the list-algebra structure of `th_list_algebra`.
+    th.add_ob_op(name("tensor"), tab.clone().apply(m), tab.clone());
+    let a = ModeApp::new(name("tensor").into());
+    th.equate_ob_ops(
+        Path::pair(a.clone().apply(m), a.clone()),
+        Path::pair(ModeApp::new(ModalOp::Concat(list, 2, tab.clone())), a.clone()),
+    );
+    th.equate_ob_ops(
+        Path::empty(tab.clone()),
+        Path::pair(ModeApp::new(ModalOp::Concat(list, 0, tab)), a),
+    );
+    th
+}
+
 /// The theory of a generalized multicategory over a list monad.
 fn th_generalized_multicategory(list: List) -> ModalDblTheory<Unital> {
     let mut th = ModalDblTheory::new();
     th.add_ob_type(name("Object"));
-    let x = ModeApp::new(name("Object"));
+    let x = modal_ob_type(name("Object"));
     th.add_mor_type(name("Multihom"), x.clone().apply(Modality::List(list)), x);
     // TODO: Axioms, which depend on implementing composites and restrictions.
     th
@@ -322,18 +378,18 @@ fn modal_th_power_system() -> ModalDblTheory<Unital> {
 
     // Object type for buses, whose hom type is the morphism type for lines.
     th.add_ob_type(name("Bus"));
-    let bus = ModeApp::new(name("Bus"));
+    let bus = modal_ob_type(name("Bus"));
 
     // Morphism type for passive branches.
     th.add_mor_type(name("Passive"), bus.clone(), bus.clone());
-    let passive = ModeApp::new(name("Passive"));
+    let passive = modal_ob_type(name("Passive"));
     th.set_composite(passive.clone(), passive.clone(), passive.clone().into());
     th.add_globular_mor_op(name("line_is_passive"), Path::Id(bus.clone()), passive.clone().into());
     // TODO: Promonad cell equations
 
     // Morphism type for generic branches.
     th.add_mor_type(name("Branch"), bus.clone(), bus.clone());
-    let branch = ModeApp::new(name("Branch"));
+    let branch = modal_ob_type(name("Branch"));
     th.set_composite(branch.clone(), passive.clone(), branch.clone().into());
     th.set_composite(passive.clone(), branch.clone(), branch.clone().into());
     th.set_composite(branch.clone(), branch.clone(), branch.clone().into());
@@ -379,6 +435,19 @@ mod tests {
         assert!(th_sym_multicategory().validate().is_ok());
         assert!(modal_th_power_system().validate().is_ok());
         assert!(th_polynomial_ode_system().validate().is_ok());
+        assert!(th_causal_hypergraph().validate().is_ok());
+    }
+
+    #[test]
+    fn causal_hypergraph() {
+        let th = th_causal_hypergraph();
+        // Action is an object type; Causal and Grading are morphism types.
+        assert!(th.has_ob_type(&modal_ob_type(name("Action"))));
+        let causal: ModalMorType = ShortPath::One(modal_ob_type(name("Causal")));
+        assert!(th.has_mor_type(&causal));
+        assert!(th.has_mor_type(&ShortPath::One(modal_ob_type(name("Grading")))));
+        // The tabulator of Causal is a valid object type.
+        assert!(th.has_ob_type(&modal_tabulator(causal)));
     }
 
     #[test]

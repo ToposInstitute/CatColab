@@ -305,6 +305,46 @@ export const petriNetVisualization = (
 
 const PetriNetVisualization = lazy(() => import("./analyses/petri_net_visualization"));
 
+export const hypergraphVisualization = (
+    options: AnalysisOptions & {
+        /** Object type whose generators become the hypergraph's vertices.
+        Defaults to all objects. */
+        vertexObType?: ObType;
+        /** Morphism type whose generators become the vertices, incident to
+        hyperedges via tabulated references. Overrides `vertexObType`. */
+        vertexMorType?: MorType;
+        /** Morphism type whose generators become the hyperedges.
+        Defaults to all morphisms. */
+        hyperedgeMorType?: MorType;
+    },
+): ModelAnalysisMeta<GraphLayoutConfig.Config> => {
+    const { vertexObType, vertexMorType, hyperedgeMorType, ...rest } = options;
+    return {
+        ...rest,
+        component: (props) => (
+            <HypergraphVisualization
+                vertexObType={vertexObType}
+                vertexMorType={vertexMorType}
+                hyperedgeMorType={hyperedgeMorType}
+                {...props}
+            />
+        ),
+        initialContent: GraphLayoutConfig.defaultConfig,
+    };
+};
+
+const HypergraphVisualization = lazy(() => import("./analyses/hypergraph_visualization"));
+
+export const causalDigraphVisualization = (
+    options: AnalysisOptions,
+): ModelAnalysisMeta<GraphLayoutConfig.Config> => ({
+    ...options,
+    component: CausalDigraphVisualization,
+    initialContent: GraphLayoutConfig.defaultConfig,
+});
+
+const CausalDigraphVisualization = lazy(() => import("./analyses/causal_digraph_visualization"));
+
 export function reachability(
     options: Partial<AnalysisOptions> & {
         check: Checkers.ReachabilityChecker;

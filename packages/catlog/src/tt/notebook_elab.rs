@@ -97,8 +97,23 @@ impl<'a> Elaborator<'a> {
     fn ob_type(&mut self, ob_type: &nb::ObType) -> Option<ObType> {
         match &ob_type {
             nb::ObType::Basic(name) => self.theory().basic_ob_type((*name).into()),
-            nb::ObType::Tabulator(_) => None,
+            nb::ObType::Tabulator(mor_type) => {
+                let mor_type = self.mor_type(mor_type.as_ref())?;
+                self.theory().tabulator(mor_type)
+            }
             nb::ObType::ModeApp { .. } => None,
+        }
+    }
+
+    /// Resolves a basic or hom morphism type from the notebook.
+    fn mor_type(&mut self, mor_type: &nb::MorType) -> Option<MorType> {
+        match mor_type {
+            nb::MorType::Basic(name) => self.theory().basic_mor_type((*name).into()),
+            nb::MorType::Hom(ob_type) => {
+                let ob_type = self.ob_type(ob_type.as_ref())?;
+                self.theory().hom_type(ob_type)
+            }
+            _ => None,
         }
     }
 

@@ -451,7 +451,7 @@ impl<V, E> Path<V, Path<V, E>> {
 /// - *augmented* virtual double categories ([Koudenburg
 ///   2020](crate::refs::AugmentedVDCs)), where the codomain of a cell is by
 ///   definition a short path, and relatedly *unital* virtual double categories
-#[derive(Clone, Debug, PartialEq, Eq, From)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, From)]
 pub enum ShortPath<V, E> {
     /// Path of length zero.
     Zero(V),

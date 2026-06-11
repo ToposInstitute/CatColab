@@ -3,7 +3,6 @@ import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 import { match, P } from "ts-pattern";
 
-import type { TextInputOptions } from "catcolab-ui-components";
 import type { MorType, Ob, ObOp, ObType, QualifiedName, Uuid } from "catlog-wasm";
 import { IdInput, type IdInputOptions, ObIdInput } from "../components";
 import { LiveModelContext } from "./context";
@@ -34,7 +33,7 @@ export type ObInputProps = {
 /** Input an object that already exists in a model. */
 export function ObInput(
     allProps: ObInputProps &
-        TextInputOptions & {
+        IdInputOptions & {
             /** Operation to apply to the object afterwards, if any. */
             applyOp?: ObOp;
         },
