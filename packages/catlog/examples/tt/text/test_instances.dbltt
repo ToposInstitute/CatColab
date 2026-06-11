@@ -10,25 +10,22 @@ type WeightedGraph := [
 ]
 
 def Edge : WeightedGraph := [
-    e : @over .E,
+    E := [e]
 ]
 
-#/ Needs some sugar, maybe analogous to in the notebook
 def I : WeightedGraph := [
-    v1 : @over .V,
-    v2 : @over .V,
-    w : @over .Weight,
+    V := [v1, v2],
+    Weight := [w],
     we : Edge,
     wf : Edge,
-    _ : (we.src(e) == v1),
-    _ : (we.tgt(e) == v2),
-    _ : (wf.src(e) == v2),
-    _ : (wf.tgt(e) == v1),
-    _ : (we.weight(e) == w),
-    _ : (wf.weight(e) == w)
+    we.src(e) := v1,
+    we.tgt(e) := v2,
+    wf.src(e) := v2,
+    wf.tgt(e) := v1,
+    we.weight(e) := w,
+    wf.weight(e) := w
 ]
 
 def I3 : WeightedGraph := [
-    e1 : @over .E,
-    e2 : @over .E
+    E := [e1, e2]
 ]
