@@ -21,7 +21,7 @@ use crate::stdlib::analyses::ode::ode_semantics::{
     ContributionSign, ODEParameterType, ODESemantics, ODESemanticsAnalysis,
     ODESemanticsProblemData, PolynomialODESystemBuilder,
 };
-use crate::zero::{name, name_seg};
+use crate::zero::name;
 use crate::{dbl::model::DiscreteDblModel, one::QualifiedPath, zero::QualifiedName};
 
 /// Implementing Lotka-Volterra as an ODE semantics for models of type `DiscreteDblModel`.
@@ -105,11 +105,13 @@ impl
         let mut builder = PolynomialODESystemBuilder::new();
 
         for var in model.ob_generators_with_type(&self.var_ob_type) {
-            // TODO: variables
+            // For each object, we create a variable.
             builder.add_variable(var.clone());
 
-            // TODO: contributions
-            // x becomes the contribution \dot{x} += Growth_x \cdot x
+            // The object
+            //   x
+            // becomes the contribution
+            //   \dot{x} += Growth_x \cdot x
             builder.add_contribution(
                 var.clone(),
                 var.clone(),
@@ -124,7 +126,10 @@ impl
                 continue;
             };
 
-            // f: x -> y becomes the contribution \dot{y} += Interaction_f \cdot xy
+            // The morphism
+            //   f: x -> y
+            // becomes the contribution
+            //   \dot{y} += Interaction_f \cdot xy
             builder.add_contribution(
                 mor.clone(),
                 cod.clone(),
@@ -139,7 +144,10 @@ impl
                 continue;
             };
 
-            // f: x -> y becomes the contribution \dot{y} -= Interaction_f \cdot xy
+            // The morphism
+            //   f: x -> y
+            // becomes the contribution
+            //   \dot{y} -= Interaction_f \cdot xy
             builder.add_contribution(
                 mor.clone(),
                 cod.clone(),
