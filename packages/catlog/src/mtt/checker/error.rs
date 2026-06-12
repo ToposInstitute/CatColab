@@ -56,6 +56,10 @@ pub enum EElaborate {
     /// We were not able to form the composite of theory arrows specified.
     InvalidTheoryArrowComposite(String),
 
+    #[display("Could not form the composite of theory pro-arrows: {_0}")]
+    /// We were not able to form the composite of theory pro-arrows specified.
+    InvalidTheoryProArrowComposite(String),
+
     #[display("The expression {_0} is not a syntactically valid model object type")]
     /// The expression does not specify a syntactically valid model object type
     InvalidModelObjectType(String),
@@ -91,6 +95,12 @@ pub enum EInfer {
     /// We were asked to infer the theory pro-arrow over which this model
     /// pro-arrow lives, but there is not a unique answer.
     AmbiguousTheoryProArrow(String),
+
+    #[display("Cannot determine the boundary of an empty pro-arrow composite")]
+    /// An empty composite of theory pro-arrows was provided where a non-empty
+    /// one was required. An empty composite has no well-defined domain or
+    /// codomain, so its boundary cannot be checked or inferred.
+    EmptyProArrowComposite,
 }
 
 #[derive(Display)]

@@ -182,6 +182,26 @@ impl<T: Theory> ModelEntry<T> {
         Ok(())
     }
 
+    pub fn add_definition(
+        &mut self,
+        name: String,
+        entry: DefinitionEntry<T>,
+    ) -> Result<(), EContext> {
+        if self.definitions.contains_key(&name) {
+            return Err(EContext::Redecleration(name));
+        }
+        self.definitions.insert(name, entry);
+        Ok(())
+    }
+
+    pub fn add_relation(&mut self, name: String, entry: RelationEntry<T>) -> Result<(), EContext> {
+        if self.relations.contains_key(&name) {
+            return Err(EContext::Redecleration(name));
+        }
+        self.relations.insert(name, entry);
+        Ok(())
+    }
+
     pub fn lookup_generating_pro_arrow(&self, name: &String) -> Option<ModelGeneratingProArrow<T>> {
         self.pro_arrow_generators
             .get(name)

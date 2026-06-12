@@ -3,12 +3,16 @@
 use std::marker::PhantomData;
 
 use crate::mtt::{
-    ast::{Decl, Model},
+    ast::{Binder, Decl, Expression, ExpressionProArrow, Model},
     checker::{
-        context::{GeneratingProArrowEntry, ModelEntry, ObjectEntry},
-        core_types::{ModelGeneratingProArrow, ObjectType},
+        context::{
+            DefinitionEntry, GeneratingProArrowEntry, ModelEntry, ObjectEntry, ProTermJudgement,
+            RelationEntry,
+        },
+        core_types::{ObjectTerm, ObjectType},
         error::{CheckResult, EInfer, EType, Error},
     },
+    composite::Composite,
     theory::{Theory, TheoryObject, TheoryProArrow},
 };
 
@@ -48,7 +52,7 @@ impl<T: Theory> ModelEntry<T> {
             Decl::ProArrowGenerator { name, dom, cod, over } => {
                 let pro_arrow = self.elaborate_pro_arrow(name, dom, cod)?;
 
-                let over = self.elaborate_theory_pro_arrow(over)?;
+                let over = self.elaborate_theory_pro_arrow_atomic(over)?;
 
                 // if we have a theory arrow that we haven't inferred then we
                 // must check that the generating arrow actually lies over the
@@ -60,7 +64,14 @@ impl<T: Theory> ModelEntry<T> {
                 }
 
                 // infer a theory arrow if necessary
-                let over = over.unwrap_or(self.infer_theory_pro_arrow(&pro_arrow)?);
+                let over = over.map_or_else(
+                    || {
+                        let t_dom = self.infer_theory_object(&pro_arrow.dom)?;
+                        let t_cod = self.infer_theory_object(&pro_arrow.cod)?;
+                        self.infer_theory_pro_arrow_by_boundary(&t_dom, &t_cod)
+                    },
+                    Ok,
+                )?;
 
                 if !T::has_pro_arrow(&over) {
                     return Err(EType::InvalidTheoryProArrow {
@@ -87,13 +98,89 @@ impl<T: Theory> ModelEntry<T> {
                 .map_err(|e| e.into())
             }
             Decl::Definition { name, binder, codomain, over, body } => {
-                Err(Error::Unimplemented("definition".to_string()))
+                let judgement = self.build_pro_term_judgement(name, binder, codomain, over)?;
+                let pro_term = self.check_pro_term(body, &judgement)?;
+                self.add_definition(name.clone(), DefinitionEntry { pro_term, judgement })
+                    .map_err(|e| e.into())
             }
             Decl::Relation { name, binder, codomain, over, lhs, rhs } => {
-                Err(Error::Unimplemented("relation".to_string()))
+                // TODO: what should name be here?
+                let judgement = self.build_pro_term_judgement(name, binder, codomain, over)?;
+                let lhs_pro_term = self.check_pro_term(lhs, &judgement)?;
+                let rhs_pro_term = self.check_pro_term(rhs, &judgement)?;
+                self.add_relation(
+                    name.clone(),
+                    RelationEntry { lhs_pro_term, rhs_pro_term, judgement },
+                )
+                .map_err(|e| e.into())
             }
-            Decl::Use { source, local, bindings } => Err(Error::Unimplemented("use".to_string())),
+            Decl::Use { .. } => Err(Error::Unimplemented("use".to_string())),
         }
+    }
+
+    fn build_pro_term_judgement(
+        &self,
+        name: &String,
+        binder: &Binder,
+        codomain: &Expression,
+        over: &ExpressionProArrow,
+    ) -> Result<ProTermJudgement<T>, Error> {
+        // -----------------------------------------------------------
+        // domain
+        let (domain_object_term, domain_object_type) = self.elaborate_binder(binder)?;
+        let domain_theory_object = self.infer_theory_object(&domain_object_type)?;
+
+        // -----------------------------------------------------------
+        // codomain
+        let codomain_object_type = self.elaborate_object_type(codomain)?;
+        let codomain_theory_object = self.infer_theory_object(&codomain_object_type)?;
+        let codomain_object_term = ObjectTerm::Variable(name.clone()); // TODO
+
+        // -----------------------------------------------------------
+        // theory pro-arrow
+        let stated_over = self.elaborate_theory_pro_arrow(over)?;
+
+        // If the user stated an over, check that the outermost domain and
+        // codomain objects of the composite are consistent with the declared
+        // domain and codomain types; inferred overs always satisfy this.
+        if let Some(ref stated) = stated_over {
+            // A composite P1;...;Pn spans from the domain of P1 to the codomain
+            // of Pn; an empty composite has no boundary to check against.
+            let first = stated.iter().next().ok_or(EInfer::EmptyProArrowComposite)?;
+            let last = stated.iter().last().ok_or(EInfer::EmptyProArrowComposite)?;
+            self.check_object(&domain_object_type, &first.dom)?;
+            self.check_object(&codomain_object_type, &last.cod)?;
+            for atomic in stated.iter() {
+                if !T::has_pro_arrow(atomic) {
+                    return Err(EType::InvalidTheoryProArrow {
+                        theory: T::name(),
+                        pro_arrow: atomic.to_string(),
+                    }
+                    .into());
+                }
+            }
+        }
+
+        let pro_arrow = Some(match stated_over {
+            Some(composite) => composite,
+            None => {
+                let inferred = self.infer_theory_pro_arrow_by_boundary(
+                    &domain_theory_object,
+                    &codomain_theory_object,
+                )?;
+                Composite::try_from(vec![inferred]).expect("singleton is always composable")
+            }
+        });
+
+        Ok(ProTermJudgement {
+            domain_object_term,
+            domain_object_type,
+            domain_theory_object,
+            codomain_object_term,
+            codomain_object_type,
+            codomain_theory_object,
+            pro_arrow,
+        })
     }
 
     fn check_object(
@@ -200,20 +287,25 @@ impl<T: Theory> ModelEntry<T> {
         }
     }
 
-    fn infer_theory_pro_arrow(
+    fn infer_theory_pro_arrow_by_boundary(
         &self,
-        arr: &ModelGeneratingProArrow<T>,
+        t_dom: &TheoryObject<T>,
+        t_cod: &TheoryObject<T>,
     ) -> Result<TheoryProArrow<T>, Error> {
-        let t_dom = self.infer_theory_object(&arr.dom)?;
-        let t_cod = self.infer_theory_object(&arr.cod)?;
-        let candidates = T::generating_pro_arrow_by_boundary(&t_dom, &t_cod);
+        let candidates = T::generating_pro_arrow_by_boundary(t_dom, t_cod);
         match candidates.len() {
             0 => {
                 // No named generating pro-arrow fills this boundary. Fall back
                 // to the parametric hom pro-arrow, which is never reported by
                 // `generating_pro_arrow_by_boundary`.
-                T::make_hom_pro_arrow(&t_dom, &t_cod)
-                    .map_or(Err(EInfer::NoTheoryProArrow(arr.to_string()).into()), Ok)
+                T::make_hom_pro_arrow(t_dom, t_cod).map_or(
+                    Err(EInfer::NoTheoryProArrow(
+                        TheoryProArrow::from("?".to_string(), t_dom.clone(), t_cod.clone())
+                            .to_string(),
+                    )
+                    .into()),
+                    Ok,
+                )
             }
             1 => {
                 let name =
@@ -225,8 +317,14 @@ impl<T: Theory> ModelEntry<T> {
                 // Multiple named generating pro-arrows fill this boundary. As
                 // a special case, if the objects coincide we default to
                 // inferring hom; otherwise the boundary is ambiguous.
-                T::make_hom_pro_arrow(&t_dom, &t_cod)
-                    .map_or(Err(EInfer::AmbiguousTheoryProArrow(arr.to_string()).into()), Ok)
+                T::make_hom_pro_arrow(t_dom, t_cod).map_or(
+                    Err(EInfer::AmbiguousTheoryProArrow(
+                        TheoryProArrow::from("?".to_string(), t_dom.clone(), t_cod.clone())
+                            .to_string(),
+                    )
+                    .into()),
+                    Ok,
+                )
             }
         }
     }

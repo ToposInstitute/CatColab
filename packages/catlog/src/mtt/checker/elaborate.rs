@@ -1,7 +1,12 @@
 //! TODO
 use crate::mtt::{
-    ast::{Expression, ExpressionProArrow},
-    checker::{ModelGeneratingProArrow, ObjectType, context::ModelEntry, error::EElaborate},
+    ast::{Binder, Expression, ExpressionProArrow},
+    checker::{
+        ModelGeneratingProArrow, ObjectTerm, ObjectType,
+        context::{ModelEntry, ProTermJudgement},
+        core_types::ProTerm,
+        error::{EElaborate, Error},
+    },
     composite::Composite,
     theory::{Theory, TheoryGeneratingArrow, TheoryObject, TheoryProArrow},
 };
@@ -45,8 +50,12 @@ impl<T: Theory> ModelEntry<T> {
         }
     }
 
-    /// Transform an ExpressionProArrow into a TheoryProArrow.
-    pub fn elaborate_theory_pro_arrow(
+    /// Transform an [ExpressionProArrow] into a single atomic
+    /// [TheoryProArrow]. This variant is used by [Decl::ProArrowGenerator],
+    /// which must lie over a single generating theory pro-arrow. For the
+    /// composite case used by declarations, see
+    /// [Self::elaborate_theory_pro_arrow].
+    pub fn elaborate_theory_pro_arrow_atomic(
         &self,
         arr: &ExpressionProArrow,
     ) -> Result<Option<TheoryProArrow<T>>, EElaborate> {
@@ -62,6 +71,55 @@ impl<T: Theory> ModelEntry<T> {
                 let dom = self.elaborate_theory_object(&arr.dom)?;
                 let cod = self.elaborate_theory_object(&arr.cod)?;
                 Ok(Some(TheoryProArrow::from(arr.name.clone(), dom, cod)))
+            }
+            ExpressionProArrow::CompositeNameOnly(_) => {
+                Err(EElaborate::UnsupportedSyntax(
+                    "a composite pro-arrow cannot appear here; generating pro-arrows must lie over a single theory pro-arrow".to_string(),
+                ))
+            }
+        }
+    }
+
+    /// Transform an [ExpressionProArrow] into a composite of
+    /// [TheoryProArrow]s. This is the form used by [Decl::Definition] and
+    /// [Decl::Relation], where the stated pro-arrow may be a composite.
+    pub fn elaborate_theory_pro_arrow(
+        &self,
+        arr: &ExpressionProArrow,
+    ) -> Result<Option<Composite<TheoryProArrow<T>>>, EElaborate> {
+        match arr {
+            ExpressionProArrow::None => Ok(None),
+            ExpressionProArrow::NameOnly(name) => {
+                let Some(p) = T::lookup_generating_pro_arrow(name) else {
+                    return Err(EElaborate::UnknownTheoryProArrow(name.clone()));
+                };
+                Ok(Some(
+                    Composite::try_from(vec![p])
+                        .expect("singleton is always composable"),
+                ))
+            }
+            ExpressionProArrow::Complete(arr) => {
+                let dom = self.elaborate_theory_object(&arr.dom)?;
+                let cod = self.elaborate_theory_object(&arr.cod)?;
+                Ok(Some(
+                    Composite::try_from(vec![TheoryProArrow::from(arr.name.clone(), dom, cod)])
+                        .expect("singleton is always composable"),
+                ))
+            }
+            ExpressionProArrow::CompositeNameOnly(names) => {
+                // NonEmpty guarantees at least one element, so the resulting
+                // Composite is never empty.
+                let arrows = names
+                    .iter()
+                    .map(|name| {
+                        T::lookup_generating_pro_arrow(name)
+                            .ok_or_else(|| EElaborate::UnknownTheoryProArrow(name.clone()))
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(Some(
+                    Composite::try_from(arrows)
+                        .map_err(EElaborate::InvalidTheoryProArrowComposite)?,
+                ))
             }
         }
     }
@@ -115,5 +173,69 @@ impl<T: Theory> ModelEntry<T> {
         let dom = self.elaborate_object_type(dom)?;
         let cod = self.elaborate_object_type(cod)?;
         Ok(ModelGeneratingProArrow::from(name.clone(), dom, cod))
+    }
+
+    /// Transform an Expression into an ObjectTerm.
+    pub fn elaborate_object_term(&self, term: &Expression) -> Result<ObjectTerm<T>, EElaborate> {
+        match term {
+            Expression::Literal(lit) => Ok(ObjectTerm::Variable(lit.clone())),
+            Expression::List(list) => Ok(ObjectTerm::List(
+                list.iter()
+                    .map(|t| self.elaborate_object_term(t))
+                    .collect::<Result<Vec<_>, _>>()?,
+            )),
+            Expression::Tuple(_tuple) => Err(EElaborate::UnsupportedSyntax(term.to_string())),
+            Expression::Juxtaposition { .. } => {
+                // Right-associate and peel the spine of theory generating
+                // arrows, exactly as in elaborate_object_type.
+                let mut expr = term.right_associate_juxtaposition();
+                let mut spine: Vec<TheoryGeneratingArrow<T>> = Vec::new();
+                while let Expression::Juxtaposition { post, pre } = expr {
+                    let Expression::Literal(fun) = *post else {
+                        return Err(EElaborate::InvalidTheoryArrow(post.to_string()));
+                    };
+                    let Some(arr) = T::lookup_generating_arrow(&fun) else {
+                        return Err(EElaborate::UnknownTheoryArrow(fun));
+                    };
+                    spine.push(arr);
+                    expr = *pre;
+                }
+                let function = Composite::try_from(spine)
+                    .map_err(|e| EElaborate::InvalidTheoryArrowComposite(e))?;
+                let on = Box::new(self.elaborate_object_term(&expr)?);
+                Ok(ObjectTerm::FunctionApplication { function, on })
+            }
+            Expression::ProArrowAnnotation { .. } => {
+                Err(EElaborate::InvalidModelObjectType(term.to_string()))
+            }
+        }
+    }
+
+    pub fn elaborate_binder(
+        &self,
+        binder: &Binder,
+    ) -> Result<(ObjectTerm<T>, ObjectType<T>), EElaborate> {
+        let Binder { object_term, object_type } = binder;
+        let object_term = self.elaborate_object_term(object_term)?;
+        let object_type = self.elaborate_object_type(object_type)?;
+        Ok((object_term, object_type))
+    }
+}
+
+impl<T: Theory> ModelEntry<T> {
+    /// Check a body expression against a fully-resolved [ProTermJudgement],
+    /// returning the elaborated [ProTerm]. This is the bidirectional *checking
+    /// mode* for pro-terms: it takes raw syntax and a typing target and
+    /// produces a typed term. Elaboration and checking are unified here because
+    /// [Expression::ProArrowAnnotation] nodes inside the body carry sub-typing
+    /// hints that can only be consumed during the descent into the body itself;
+    /// there is no useful intermediate representation to separate the two
+    /// passes.
+    pub fn check_pro_term(
+        &self,
+        body: &Expression,
+        target: &ProTermJudgement<T>,
+    ) -> Result<ProTerm<T>, Error> {
+        todo!("check_pro_term")
     }
 }

@@ -4,6 +4,8 @@
 use derive_more::Display;
 use textwrap::indent;
 
+use nonempty::NonEmpty;
+
 use crate::mtt::arrow::{Arrow, ProArrowKind};
 use crate::mtt::display_helpers::{DHBindings, DHList, DHTuple};
 
@@ -160,8 +162,14 @@ pub enum ExpressionProArrow {
     NameOnly(String),
 
     #[display("{_0}")]
-    /// The user has provided complete data for the pro-arrow.
+    /// The user has provided complete data for a single pro-arrow.
     Complete(Arrow<Expression, ProArrowKind>),
+
+    #[display("{}", _0.iter().map(|a| a.to_string()).collect::<Vec<_>>().join(" ; "))]
+    /// The user has named a non-empty composite of pro-arrows, by name alone.
+    /// The checker will look up each name and verify composability. The
+    /// non-empty guarantee rules out the otherwise-ambiguous empty composite.
+    CompositeNameOnly(NonEmpty<String>),
 }
 
 impl Expression {
