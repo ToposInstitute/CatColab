@@ -23,12 +23,12 @@ def I : WeightedGraph := [
     Weight := [w],
     we : Edge,
     wf : Edge,
-    we.src(e) := v1,
-    we.tgt(e) := v2,
-    wf.src(e) := v2,
-    wf.tgt(e) := v1,
-    we.weight(e) := w,
-    wf.weight(e) := w
+    src(we.e) := v1,
+    tgt(we.e) := v2,
+    src(wf.e) := v2,
+    tgt(wf.e) := v1,
+    weight(we.e) := w,
+    weight(wf.e) := w
 ]
 #/ declared: I
 #/ instance generators:
@@ -41,6 +41,30 @@ def I : WeightedGraph := [
 #/   src(we.e) == v1
 #/   tgt(we.e) == v2
 #/   src(wf.e) == v2
+#/   tgt(wf.e) == v1
+#/   weight(we.e) == w
+#/   weight(wf.e) == w
+
+def I2 : WeightedGraph := [
+    V := [v1, v2],
+    Weight := [w],
+    we : Edge,
+    wf : Edge,
+    src := [we.e := v1, wf.e := v2],
+    tgt := [we.e := v2, wf.e := v1],
+    weight := [we.e := w, wf.e := w]
+]
+#/ declared: I2
+#/ instance generators:
+#/   v1 : V
+#/   v2 : V
+#/   w : Weight
+#/   we.e : E
+#/   wf.e : E
+#/ instance equations:
+#/   src(we.e) == v1
+#/   src(wf.e) == v2
+#/   tgt(we.e) == v2
 #/   tgt(wf.e) == v1
 #/   weight(we.e) == w
 #/   weight(wf.e) == w

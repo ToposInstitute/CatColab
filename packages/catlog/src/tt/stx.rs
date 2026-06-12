@@ -96,14 +96,18 @@ pub enum TyS_ {
     Meta(MetaVar),
 
     /// The type of terms in a fiber over an object generator of some
-    /// diagram's codomain model.
+    /// instance's codomain model. Internal-only; no surface syntax —
+    /// inhabitants are introduced via set-literal clauses `field :=
+    /// [...]` inside an instance body, and applications via the
+    /// `mor(arg)` and `tm.mor(arg)` syn arms.
     ///
-    /// The path identifies the object generator in the codomain. Diagram
-    /// identity is contextual rather than part of the type: any diagram
-    /// in scope contributes its terms to this type, so two `@over .V`
-    /// types from different diagram declarations are convertible. The
-    /// elaborator validates the path against the enclosing diagram's
-    /// codomain at construction time. Example surface syntax: `e : @over .E`.
+    /// The path identifies the object generator in the codomain.
+    /// Instance identity is contextual rather than part of the type:
+    /// any instance body in scope contributes its terms to this type,
+    /// so two fiber-types over the same codomain path from different
+    /// instance declarations are convertible. The elaborator validates
+    /// the path against the enclosing instance's codomain at
+    /// construction time.
     Over(Vec<(FieldName, LabelSegment)>),
 }
 
@@ -205,6 +209,19 @@ fn path_to_string(path: &[(FieldName, LabelSegment)]) -> String {
     out
 }
 
+fn instance_body_to_doc<'a>(body: &InstanceBodyS) -> D<'a> {
+    let gens = body.generators.iter().map(|(_, (label, path))| {
+        binop(t(":"), t(format!("{label}")), t(format!("@over{}", path_to_string(path))))
+    });
+    let eqns = body.equations.iter().map(|(lhs, rhs)| {
+        binop(t(":="), lhs.to_doc(), rhs.to_doc())
+    });
+    let subs = body.sub_instances.iter().map(|(_, (label, inner))| {
+        binop(t(":"), t(format!("{label}")), inner.to_doc())
+    });
+    tuple(gens.chain(subs).chain(eqns))
+}
+
 impl fmt::Display for TyS {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.to_doc().group().pretty())
@@ -240,8 +257,8 @@ pub enum TmS_ {
     ObApp(VarName, TmS),
     /// List of objects.
     List(Vec<TmS>),
-    /// Application of a codomain morphism to an [`@over`-typed](TyS_::Over)
-    /// term. Only well-formed inside a diagram declaration.
+    /// Application of a codomain morphism to a fiber-typed
+    /// ([`TyS_::Over`]) term. Only well-formed inside an instance body.
     ///
     /// Arguments, in order:
     /// 1. `mor` — name of the codomain morphism being applied
@@ -249,25 +266,55 @@ pub enum TmS_ {
     /// 2. `mor_label` — display label for that name.
     /// 3. `tgt_path` — the codomain object-path that `mor` lands at.
     ///    Stored on the node so [`Evaluator::eval_tm`] can recover the
-    ///    result type `@over <tgt_path>` without consulting the codomain.
-    /// 4. `inner` — the `@over`-typed argument (e.g. the elaboration of
-    ///    `we.e`, whose type is `@over <src_path>` where the codomain
-    ///    morphism `mor : <src_path> → <tgt_path>`).
+    ///    result fiber type without consulting the codomain.
+    /// 4. `inner` — the fiber-typed argument (e.g. the elaboration of
+    ///    `we.e`, whose type is the fiber over `<src_path>` where the
+    ///    codomain morphism `mor : <src_path> → <tgt_path>`).
     ///
     /// Example: in
     /// ```text
-    /// diagram I : @Instance(WeightedGraph) := [
-    ///     we : Edge,           // Edge := [e : @over .E]
-    ///     _ : (we.src(e) == v1),
+    /// def Edge : WeightedGraph := [E := [e]]
+    /// def I : WeightedGraph := [
+    ///     V := [v1],
+    ///     we : Edge,
+    ///     we.src(e) := v1,
     /// ]
     /// ```
-    /// the LHS `we.src(e)` elaborates to
-    /// `OverApp(src, src, [(V, V)], Proj(Var(we), e, e))` of type `@over .V`.
+    /// the LHS of the mapping clause elaborates to
+    /// `OverApp(src, src, [(V, V)], Proj(Var(we), e, e))` of fiber-type
+    /// over `.V`.
     OverApp(FieldName, LabelSegment, Vec<(FieldName, LabelSegment)>, TmS),
+    /// An instance value: the level-shifted introduction rule for terms
+    /// of a model (sketch) type. See [`InstanceBodyS`] for the payload.
+    Instance(InstanceBodyS),
     /// A metavar.
     ///
     /// This only appears when we have an error in elaboration.
     Meta(MetaVar),
+}
+
+/// Payload of [`TmS_::Instance`].
+///
+/// Captures the data needed to build a `DblModelInstance` at extraction
+/// time, while staying theory-agnostic at the term-syntax level.
+///
+/// - `generators` maps each generator's local name (within this
+///   instance) to a path into the model identifying which object
+///   generator's fiber it lives over. The path mirrors what a
+///   surface `name : @over <path>` clause used to declare.
+/// - `equations` is a list of `(lhs, rhs)` pairs over either `@over`
+///   or morphism types. Order is preserved but identity isn't
+///   semantically significant.
+/// - `sub_instances` maps each sub-instance import's local name to a
+///   nested instance term. This is what surface `we : Edge` lowers to.
+#[derive(Default)]
+pub struct InstanceBodyS {
+    /// Generators introduced by this instance, with their fibers.
+    pub generators: IndexMap<FieldName, (LabelSegment, Vec<(FieldName, LabelSegment)>)>,
+    /// Equation witnesses, asserted to hold in this instance.
+    pub equations: Vec<(TmS, TmS)>,
+    /// Sub-instance imports, keyed by import name.
+    pub sub_instances: IndexMap<FieldName, (LabelSegment, TmS)>,
 }
 
 /// Syntax for total terms, dereferences to [TmS_].
@@ -344,6 +391,11 @@ impl TmS {
         Self(Rc::new(TmS_::OverApp(mor, mor_label, tgt_path, inner)))
     }
 
+    /// Smart constructor for [TmS], [TmS_::Instance] case.
+    pub fn instance(body: InstanceBodyS) -> Self {
+        Self(Rc::new(TmS_::Instance(body)))
+    }
+
     /// Smart constructor for [TmS], [TmS_::Meta] case.
     pub fn meta(mv: MetaVar) -> Self {
         Self(Rc::new(TmS_::Meta(mv)))
@@ -370,6 +422,7 @@ impl ToDoc for TmS {
             TmS_::OverApp(_, mor_label, _, inner) => {
                 inner.to_doc() + t(format!(".{mor_label}"))
             }
+            TmS_::Instance(body) => instance_body_to_doc(body),
             TmS_::Tt => t("tt"),
             TmS_::Meta(mv) => t(format!("?{}", mv.id)),
         }

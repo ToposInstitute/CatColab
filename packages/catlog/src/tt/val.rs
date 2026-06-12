@@ -228,6 +228,18 @@ impl TmN {
     }
 }
 
+/// Value-level payload of [`TmV_::Instance`]. Parallels
+/// [`InstanceBodyS`](super::stx::InstanceBodyS).
+#[derive(Default)]
+pub struct InstanceBodyV {
+    /// Generators introduced by this instance, with their fibers.
+    pub generators: IndexMap<FieldName, (LabelSegment, Vec<(FieldName, LabelSegment)>)>,
+    /// Equation witnesses, asserted to hold in this instance.
+    pub equations: Vec<(TmV, TmV)>,
+    /// Sub-instance imports, keyed by import name.
+    pub sub_instances: IndexMap<FieldName, (LabelSegment, TmV)>,
+}
+
 /// Inner enum for [TmV].
 pub enum TmV_ {
     /// Neutrals.
@@ -240,6 +252,10 @@ pub enum TmV_ {
     /// term. See [`TmS_::OverApp`] for the syntactic counterpart and
     /// argument-by-argument documentation.
     OverApp(FieldName, LabelSegment, Vec<(FieldName, LabelSegment)>, TmV),
+    /// An instance value of a model (sketch) type. See
+    /// [`stx::InstanceBodyS`](super::stx::InstanceBodyS) for the
+    /// payload description; this is its value-level counterpart.
+    Instance(InstanceBodyV),
     /// Lists of objects.
     List(Vec<TmV>),
     /// Records.
@@ -280,6 +296,11 @@ impl TmV {
         inner: TmV,
     ) -> Self {
         TmV(Rc::new(TmV_::OverApp(mor, mor_label, tgt_path, inner)))
+    }
+
+    /// Smart constructor for [TmV], [TmV_::Instance] case.
+    pub fn instance(body: InstanceBodyV) -> Self {
+        TmV(Rc::new(TmV_::Instance(body)))
     }
 
     /// Smart constructor for [TmV], [TmV_::List] case.
