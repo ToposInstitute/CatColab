@@ -14,6 +14,7 @@ export * from "./form";
 export * from "./history_navigator";
 export * from "./icon_button";
 export * from "./inline_input";
+export * from "./inline_list_editor";
 export * from "./input_options";
 export * from "./katex_display";
 export * from "./model_file_icon";
