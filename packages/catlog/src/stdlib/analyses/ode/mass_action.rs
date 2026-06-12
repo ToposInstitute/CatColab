@@ -5,7 +5,6 @@
 //! where we do not require that mass be preserved. This allows the construction
 //! of systems of arbitrary polynomial (first-order) ODEs.
 
-use std::num::IntErrorKind;
 use std::{collections::HashMap, fmt};
 
 #[cfg(feature = "serde")]
@@ -206,7 +205,7 @@ impl
         }
 
         for transition in model.mor_generators_with_type(&self.transition_mor_type) {
-            let interface = transition_interface(&model, &transition);
+            let interface = transition_interface(model, &transition);
             let (inputs, outputs) =
                 (interface.input_places.clone(), interface.output_places.clone());
 
@@ -217,7 +216,7 @@ impl
             // and two negative (ab -> a , ab -> b).
 
             for output in outputs.clone() {
-                let id = output.cons(name_seg("ToOutput")).cons(transition.only().unwrap().clone());
+                let id = output.cons(name_seg("ToOutput")).cons(transition.only().unwrap());
                 // The transition
                 //   T: [x_1, ..., x_n] -> [y_1, ..., y_n]
                 // becomes the contributions
@@ -255,15 +254,15 @@ impl
             }
 
             for input in inputs.clone() {
-                let id = input.cons(name_seg("ToInput")).cons(transition.only().unwrap().clone());
+                let id = input.cons(name_seg("ToInput")).cons(transition.only().unwrap());
                 // The transition
                 //   T: [x_1, ..., x_n] -> [y_1, ..., y_n]
                 // becomes the contributions
                 //   \dot{x_i} -= Parameter_! \cdot x_1...x_n
                 // where Parameter_! depends on `mass_conservation_type`:
-                //   Balanced                  => Parameter_T
-                //   Unbalanced::PerTransition => Parameter_T^outflow
-                //   Unbalanced::PerPlace      => Parameter_{T,x_i}^outflow
+                //   Balanced             => Parameter_T
+                //   Unbalanced::PerFlow  => Parameter_T^outflow
+                //   Unbalanced::PerStock => Parameter_{T,x_i}^outflow
                 let parameter = match self.mass_conservation_type {
                     MassConservationType::Balanced => {
                         MassActionParameter::Balanced { flow: transition.clone() }
@@ -282,7 +281,7 @@ impl
                         },
                     },
                 };
-                
+
                 builder.add_contribution(
                     id,
                     input,
@@ -338,159 +337,72 @@ impl
         let mut builder = PolynomialODESystemBuilder::new();
 
         for stock in model.ob_generators_with_type(&self.stock_ob_type) {
-            // TODO: variables
+            // For each stock, we create a variable.
             builder.add_variable(stock.clone());
         }
 
         for flow in model.mor_generators_with_type(&self.flow_mor_type) {
-            match self.mass_conservation_type {
+            let interface = flow_interface(model, &flow);
+            let (input, output) = (interface.input_stock, interface.output_stock);
+
+            // TODO: explain this monomial
+            let monomial = [interface.input_pos_link_doms, vec![input.clone()]].concat();
+
+            // TODO: fix this comment
+            // Each transition gives a positive contribution to each term corresponding to
+            // one of its outputs, and a negative contribution to each term corresponding to
+            // one of its inputs. For example, a single transition T: [a,b] -> [x,y] will give
+            // four contributions, namely two positive contributions (ab -> x , ab -> y)
+            // and two negative (ab -> a , ab -> b).
+
+            // TODO: fix this comment too
+            // The transition
+            //   T: [x_1, ..., x_n] -> [y_1, ..., y_n]
+            // becomes the contributions
+            //   \dot{x_i} -= Parameter_! \cdot x_1...x_n
+            // where Parameter_! depends on `mass_conservation_type`:
+            //   Balanced                  => Parameter_T
+            //   Unbalanced::PerFlow => Parameter_T^outflow
+
+            let output_id = output.cons(name_seg("ToOutput")).cons(flow.only().unwrap());
+            let output_parameter = match self.mass_conservation_type {
                 MassConservationType::Balanced => {
-                    todo!()
+                    MassActionParameter::Balanced { flow: flow.clone() }
                 }
-                MassConservationType::Unbalanced(granularity) => match granularity {
-                    RateGranularity::PerFlow => {
-                        todo!()
-                    }
-                    RateGranularity::PerStock => {
-                        todo!()
-                    }
+                MassConservationType::Unbalanced(_) => MassActionParameter::Unbalanced {
+                    direction: Direction::IncomingFlow,
+                    parameter: RateParameter::PerFlow { flow: flow.clone() },
                 },
-            }
+            };
+            builder.add_contribution(
+                output_id,
+                output.clone(),
+                ContributionSign::Positive,
+                output_parameter,
+                monomial.clone(),
+            );
+
+            let input_id = input.cons(name_seg("ToInput")).cons(flow.only().unwrap());
+            let input_parameter = match self.mass_conservation_type {
+                MassConservationType::Balanced => {
+                    MassActionParameter::Balanced { flow: flow.clone() }
+                }
+                MassConservationType::Unbalanced(_) => MassActionParameter::Unbalanced {
+                    direction: Direction::OutgoingFlow,
+                    parameter: RateParameter::PerFlow { flow: flow.clone() },
+                },
+            };
+            builder.add_contribution(
+                input_id,
+                input.clone(),
+                ContributionSign::Negative,
+                input_parameter,
+                monomial,
+            );
         }
 
         builder
     }
-    // fn build_semantics(
-    //     &self,
-    // ) -> ODESemanticsBuilder<
-    //     <StockFlowMassActionSemantics as ODESemantics>::ModelType,
-    //     <StockFlowMassActionSemantics as ODESemantics>::ParameterType,
-    // > {
-    //     let variable_builders = vec![ODEVariableBuilder::Object {
-    //         ob_type: StockFlowMassActionAnalysis::default().stock_ob_type,
-    //     }];
-
-    //     let flow_input = ODEContributionBuilder::<
-    //         <StockFlowMassActionSemantics as ODESemantics>::ModelType,
-    //         <StockFlowMassActionSemantics as ODESemantics>::ParameterType,
-    //     >::Morphism {
-    //         mor_types_and_signs: vec![(
-    //             StockFlowMassActionAnalysis::default().flow_mor_type,
-    //             ContributionSign::Negative,
-    //         )],
-    //         mor_contributions: match self.mass_conservation_type {
-    //             MassConservationType::Balanced => {
-    //                 vec![{
-    //                     |flow, model| {
-    //                         let flow_interface = flow_interface(model, flow);
-    //                         let dom = flow_interface.input_stock;
-    //                         // N.B. We completely ignore negative links.
-    //                         let mut term = flow_interface.input_pos_link_doms;
-    //                         term.push(dom.clone());
-
-    //                         vec![Contribution {
-    //                             name: flow
-    //                                 .clone()
-    //                                 .snoc(name_seg("ToInput"))
-    //                                 .snoc(dom.clone().only().unwrap()),
-    //                             monomial: term,
-    //                             parameter: MassActionParameter::Balanced { flow: flow.clone() },
-    //                             target: dom.clone(),
-    //                         }]
-    //                     }
-    //                 }]
-    //             }
-    //             MassConservationType::Unbalanced(_) => {
-    //                 vec![{
-    //                     |flow, model| {
-    //                         let flow_interface = flow_interface(model, flow);
-    //                         let dom = flow_interface.input_stock;
-    //                         // N.B. We completely ignore negative links.
-    //                         let mut term = flow_interface.input_pos_link_doms;
-    //                         term.push(dom.clone());
-
-    //                         vec![Contribution {
-    //                             name: flow
-    //                                 .clone()
-    //                                 .snoc(name_seg("ToInput"))
-    //                                 .snoc(dom.clone().only().unwrap()),
-    //                             monomial: term,
-    //                             parameter: MassActionParameter::Unbalanced {
-    //                                 direction: Direction::OutgoingFlow,
-    //                                 parameter: RateParameter::PerFlow { flow: flow.clone() },
-    //                             },
-    //                             target: dom.clone(),
-    //                         }]
-    //                     }
-    //                 }]
-    //             }
-    //         },
-    //     };
-
-    //     let flow_output = ODEContributionBuilder::<
-    //         <StockFlowMassActionSemantics as ODESemantics>::ModelType,
-    //         <StockFlowMassActionSemantics as ODESemantics>::ParameterType,
-    //     >::Morphism {
-    //         mor_types_and_signs: vec![(
-    //             StockFlowMassActionAnalysis::default().flow_mor_type,
-    //             ContributionSign::Positive,
-    //         )],
-    //         mor_contributions: match self.mass_conservation_type {
-    //             MassConservationType::Balanced => {
-    //                 vec![{
-    //                     |flow, model| {
-    //                         let flow_interface = flow_interface(model, flow);
-    //                         let dom = flow_interface.input_stock;
-    //                         let cod = flow_interface.output_stock;
-    //                         // N.B. We completely ignore negative links.
-    //                         let mut term = flow_interface.input_pos_link_doms;
-    //                         term.push(dom.clone());
-
-    //                         vec![Contribution {
-    //                             name: flow
-    //                                 .clone()
-    //                                 .snoc(name_seg("ToOutput"))
-    //                                 .snoc(cod.clone().only().unwrap()),
-    //                             monomial: term,
-    //                             parameter: MassActionParameter::Balanced { flow: flow.clone() },
-    //                             target: cod.clone(),
-    //                         }]
-    //                     }
-    //                 }]
-    //             }
-    //             MassConservationType::Unbalanced(_) => {
-    //                 vec![{
-    //                     |flow, model| {
-    //                         let flow_interface = flow_interface(model, flow);
-    //                         let dom = flow_interface.input_stock;
-    //                         let cod = flow_interface.output_stock;
-    //                         // N.B. We completely ignore negative links.
-    //                         let mut term = flow_interface.input_pos_link_doms;
-    //                         term.push(dom.clone());
-
-    //                         vec![Contribution {
-    //                             name: flow
-    //                                 .clone()
-    //                                 .snoc(name_seg("ToOutput"))
-    //                                 .snoc(cod.clone().only().unwrap()),
-    //                             monomial: term,
-    //                             parameter: MassActionParameter::Unbalanced {
-    //                                 direction: Direction::IncomingFlow,
-    //                                 parameter: RateParameter::PerFlow { flow: flow.clone() },
-    //                             },
-    //                             target: cod.clone(),
-    //                         }]
-    //                     }
-    //                 }]
-    //             }
-    //         },
-    //     };
-
-    //     ODESemanticsBuilder {
-    //         variable_builders,
-    //         contribution_builders: vec![flow_input, flow_output],
-    //     }
-    // }
 }
 
 /// Data defining an unbalanced mass-action ODE problem for a model.
