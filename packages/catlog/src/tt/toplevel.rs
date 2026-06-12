@@ -67,18 +67,28 @@ pub struct Def {
     pub body: TmS,
 }
 
-/// A toplevel declaration of a diagram.
+/// A toplevel declaration of an instance of a model (sketch).
+///
+/// The body is a level-shifted introduction value of the model type
+/// — generator slots, equation witnesses, and sub-instance imports
+/// packaged into a [`TmS_::Instance`](super::stx::TmS_::Instance)
+/// term whose evaluated form is [`TmV_::Instance`](super::val::TmV_::Instance).
 #[derive(Constructor, Clone)]
 pub struct Diag {
-    /// The theory that the diagram is defined in.
+    /// The theory that the instance is defined in.
     pub theory: Theory,
-    /// The model G that this diagram is an instance of.
+    /// The model (sketch) type that this is an instance of.
     pub model: TyV,
-    /// The body: a record TyS whose fields have @over-typed entries,
-    /// presenting both the domain generators and the mapping.
-    pub body_stx: TyS,
-    /// Evaluated body — useful for downstream consumers that want the TyV directly.
-    pub body_val: TyV,
+    /// Body syntax: a [`TmS_::Instance`](super::stx::TmS_::Instance) term.
+    pub body_stx: TmS,
+    /// Body value: a [`TmV_::Instance`](super::val::TmV_::Instance) term.
+    pub body_val: TmV,
+    /// Synthesized record type matching the instance's structure — the
+    /// shape a sub-instance import sees when this instance is named as
+    /// a type via `lookup_ty`. Each generator becomes an `@over`-typed
+    /// field; each sub-instance recurses; equations are elided (they're
+    /// not projectable).
+    pub body_ty: TyV,
 }
 impl TopDecl {
     /// Unwraps the type for a toplevel-declaration of a type, or panics.
