@@ -10,6 +10,8 @@ use crate::tt::toplevel::{TopDecl, Toplevel};
 use crate::tt::val::{TmV, TyV, TyV_};
 use crate::zero::name_seg;
 
+static ANON: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(.+)_(\w+)([0-9]+)$").unwrap());
+
 pub trait JuliaTranspiler {
     fn transpile(&self) -> String;
 }
@@ -20,7 +22,7 @@ pub struct Decapodes {
 
 impl JuliaTranspiler for Decapodes {
     fn transpile(&self) -> String {
-        let TyV_::Record(r) = &*self.pode else {
+        let TyV_::Record(_) = &*self.pode else {
             panic!()
         };
         let toplevel = Toplevel::new(Default::default());
@@ -28,15 +30,39 @@ impl JuliaTranspiler for Decapodes {
         let (self_n, eval) = eval.bind_self(self.pode.clone());
         let self_v = eval.eta_neu(&self_n, &self.pode);
 
+        let mut subs = HashMap::new();
         let mut obs = IndexMap::new();
         let mut mors = IndexSet::new();
-        collect_fields(&eval, &self.pode, &self_v, "", &mut obs, &mut mors);
+        collect_fields(&eval, &self.pode, &self_v, "", &mut obs, &mut mors, &mut subs);
+
+        // Remove specialized obs from declarations
+        for bound in subs.keys() {
+            // XXX swap_remove is slow, i understand
+            obs.swap_remove(bound);
+        }
+
+        // Rewrite morphism terms
+        let mors: IndexSet<_> = mors
+            .into_iter()
+            .map(|(lhs, rhs)| {
+                let mut lhs = lhs;
+                let mut rhs = rhs;
+                // TODO this is not stable
+                for (from, to) in &subs {
+                    lhs = lhs.replace(from.as_str(), to);
+                    rhs = rhs.replace(from.as_str(), to);
+                }
+                (lhs, rhs)
+            })
+            .collect();
 
         let mut out = String::new();
 
         for (ob, ty) in obs {
             // `first` is unhappy
-            out.push_str(&format!("\t{}::{}\n", ob, ty.first().unwrap()));
+            if !ANON.is_match(&format!("{ob}")) {
+                out.push_str(&format!("\t{}::{}\n", ob, ty.first().unwrap()));
+            }
         }
 
         for (lhs, rhs) in mors {
@@ -53,6 +79,7 @@ fn collect_fields(
     prefix: &str,
     obs: &mut IndexMap<String, Vec<String>>,
     mors: &mut IndexSet<(String, String)>,
+    subs: &mut HashMap<String, String>,
 ) {
     let TyV_::Record(r) = &**ty else { return };
     for (name, (label, _)) in r.fields.iter() {
@@ -65,11 +92,12 @@ fn collect_fields(
         } else {
             format!("{}_{}", prefix, label)
         };
-
         match &*qt {
             TyS_::Over(path) => {
                 let p = path.iter().map(|(_, l)| l.to_string()).collect();
-                obs.insert(full_label, p);
+                if subs.get(&full_label).is_none() {
+                    obs.insert(full_label, p);
+                }
             }
 
             TyS_::Morphism(_, dom, cod) => {
@@ -77,7 +105,11 @@ fn collect_fields(
                 let cod = to_plain_text(cod);
                 let op = &format!("{label}");
                 if EQ.is_match(op) {
-                    mors.insert((cod, dom));
+                    if obs.contains_key(&dom) && obs.contains_key(&cod) {
+                        subs.insert(dom, cod);
+                    } else {
+                        mors.insert((cod, dom));
+                    }
                 } else {
                     let op = match op {
                         op if ADD.is_match(op) => "+",
@@ -90,9 +122,17 @@ fn collect_fields(
                     mors.insert((cod, format!("{op}({dom})")));
                 }
             }
+            TyS_::Sing(_, tm) => {
+                let target = to_plain_text(tm);
+                subs.insert(full_label, target);
+            }
             TyS_::Record(_) => {
                 // Recurse into sub-diagram
-                collect_fields(eval, &field_ty, &field_v, &full_label, obs, mors);
+                collect_fields(eval, &field_ty, &field_v, &full_label, obs, mors, subs);
+            }
+            // TODO whither the specializations?
+            TyS_::Specialize(_, _) => {
+                collect_fields(eval, &field_ty, &field_v, &full_label, obs, mors, subs);
             }
             _ => {}
         }

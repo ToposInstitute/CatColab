@@ -597,32 +597,59 @@ impl<'a> Elaborator<'a> {
         for specialization in i_decl.specializations.iter() {
             if let (Some(field_id), Some(ob)) = (&specialization.id, &specialization.ob) {
                 let field_name = NameSegment::Uuid(Uuid::from_str(field_id).unwrap());
-                let Some((ob_s, ob_v, ob_type)) = self.ob_syn(ob) else {
+                // let Some((ob_s, ob_v, ob_type)) = self.ob_syn(ob) else {
+                //     println!("OB_SYN: {:#?}", ob);
+                //     continue;
+                // };
+                // let Some((field_label, field_ty)) = r.fields.get_with_label(field_name) else {
+                //     println!("PASSING: {}", field_name);
+                //     continue;
+                // };
+                // match &**field_ty {
+                //     TyS_::Object(expected_ob_ty) => {
+                //         if &ob_type != expected_ob_ty {
+                //             continue;
+                //         }
+                //     }
+                //     _ => {
+                //         continue;
+                //     }
+                // }
+                let ob_name = match ob {
+                    nb::Ob::Basic(id) => NameSegment::Uuid(Uuid::parse_str(id).unwrap()),
+                    _ => continue,
+                };
+                let Some((ob_s, ob_v, ob_ty)) = self.lookup_tm(ob_name) else {
                     continue;
                 };
                 let Some((field_label, field_ty)) = r.fields.get_with_label(field_name) else {
                     continue;
                 };
-                match &**field_ty {
-                    TyS_::Object(expected_ob_ty) => {
-                        if &ob_type != expected_ob_ty {
-                            continue;
-                        }
+                // println!("{}::{:#?}", field_ty, ob_ty);
+                match (&**field_ty, &*ob_ty) {
+                    (TyS_::Over(_), TyV_::Over(path)) => {
+                        specializations.push((
+                            vec![(field_name, *field_label)],
+                            TyS::sing(TyS::over(path.clone()), ob_s),
+                        ));
+                        r = r.add_specialization(
+                            &[(field_name, *field_label)],
+                            TyV::sing(TyV::over(path.clone()), ob_v),
+                        );
                     }
-                    _ => {
-                        continue;
-                    }
+                    _ => continue,
                 }
-                specializations.push((
-                    vec![(field_name, *field_label)],
-                    TyS::sing(TyS::object(ob_type.clone()), ob_s),
-                ));
-                r = r.add_specialization(
-                    &[(field_name, *field_label)],
-                    TyV::sing(TyV::object(ob_type), ob_v),
-                )
+                // specializations.push((
+                //     vec![(field_name, *field_label)],
+                //     TyS::sing(TyS::object(ob_type.clone()), ob_s),
+                // ));
+                // r = r.add_specialization(
+                //     &[(field_name, *field_label)],
+                //     TyV::sing(TyV::object(ob_type), ob_v),
+                // )
             }
         }
+        // dbg!(&specializations);
         let ty_s = if specializations.is_empty() {
             TyS::topvar(topname)
         } else {
