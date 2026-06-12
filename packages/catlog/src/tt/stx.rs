@@ -267,8 +267,9 @@ pub enum TmS_ {
     ///    (e.g. `src` in `we.src(e)`).
     /// 2. `mor_label` — display label for that name.
     /// 3. `tgt_path` — the codomain object-path that `mor` lands at.
-    ///    Stored on the node so [`Evaluator::eval_tm`] can recover the
-    ///    result fiber type without consulting the codomain.
+    ///    Stored on the node so [`super::eval::Evaluator::eval_tm`]
+    ///    can recover the result fiber type without consulting the
+    ///    codomain.
     /// 4. `inner` — the fiber-typed argument (e.g. the elaboration of
     ///    `we.e`, whose type is the fiber over `<src_path>` where the
     ///    codomain morphism `mor : <src_path> → <tgt_path>`).

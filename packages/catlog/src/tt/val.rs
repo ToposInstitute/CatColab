@@ -229,7 +229,7 @@ impl TmN {
 }
 
 /// Value-level payload of [`TmV_::Instance`]. Parallels
-/// [`InstanceBodyS`](super::stx::InstanceBodyS).
+/// [`super::stx::InstanceBodyS`].
 #[derive(Default)]
 pub struct InstanceBodyV {
     /// Generators introduced by this instance, with their fibers.
@@ -253,8 +253,8 @@ pub enum TmV_ {
     /// argument-by-argument documentation.
     OverApp(FieldName, LabelSegment, Vec<(FieldName, LabelSegment)>, TmV),
     /// An instance value of a model (sketch) type. See
-    /// [`stx::InstanceBodyS`](super::stx::InstanceBodyS) for the
-    /// payload description; this is its value-level counterpart.
+    /// [`super::stx::InstanceBodyS`] for the payload description; this
+    /// is its value-level counterpart.
     Instance(InstanceBodyV),
     /// Lists of objects.
     List(Vec<TmV>),
