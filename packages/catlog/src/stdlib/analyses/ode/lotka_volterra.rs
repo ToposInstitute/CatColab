@@ -14,10 +14,11 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use super::Parameter;
+use crate::dbl::model::FpDblModel;
 use crate::one::Path;
 use crate::simulate::ode::PolynomialSystem;
-use crate::stdlib::analyses::ode::ode_semantics::*;
-use crate::zero::name;
+use crate::stdlib::analyses::ode::ode_semantics::{self, *};
+use crate::zero::{name, name_seg};
 use crate::{
     dbl::model::{DiscreteDblModel, MutDblModel},
     one::QualifiedPath,
@@ -98,68 +99,48 @@ impl
     /// sometimes called the "generalized Lotka-Volterra equations." For more, see
     /// [Wikipedia](https://en.wikipedia.org/wiki/Generalized_Lotka%E2%80%93Volterra_equation)
     /// and [our paper on regulatory networks](crate::refs::RegNets).
-    fn build_semantics(
+    fn build_system_builder(
         &self,
-    ) -> ODESemanticsBuilder<
-        <LotkaVolterraSemantics as ODESemantics>::ModelType,
+        model: &<LotkaVolterraSemantics as ODESemantics>::ModelType,
+    ) -> ode_semantics::PolynomialODESystemBuilder<
         <LotkaVolterraSemantics as ODESemantics>::ParameterType,
     > {
-        // Each variable in the CLD gives a variable in the ODE system.
-        let variable_builders = vec![ODEVariableBuilder::Object {
-            ob_type: LotkaVolterraAnalysis::default().var_ob_type,
-        }];
+        let mut builder = PolynomialODESystemBuilder::new();
 
-        // Each variable in the CLD *also* gives its growth contribution:
-        // "(d/dt)x += g_x x" for a coefficient g_x.
-        let growth = ODEContributionBuilder::<
-            <LotkaVolterraSemantics as ODESemantics>::ModelType,
-            <LotkaVolterraSemantics as ODESemantics>::ParameterType,
-        >::Object {
-            ob_types_and_signs: vec![(
-                LotkaVolterraAnalysis::default().var_ob_type,
+        for var in model.ob_generators_with_type(&self.var_ob_type) {
+            builder.add_variable(var.clone());
+
+            // Arbitrarily signed contribution for growth or decay.
+            let id = var.cons(name_seg("Growth"));
+            // TODO: explain this contribution (\dot{x} += Growth_x \cdot x)
+            builder.add_contribution(
+                id,
+                var.clone(),
                 ContributionSign::Positive,
-            )],
-            ob_contributions: vec![{
-                |var, _| {
-                    vec![Contribution {
-                        name: var.clone(),
-                        monomial: vec![var.clone()],
-                        parameter: LotkaVolterraParameter::Growth { variable: var.clone() },
-                        target: var.clone(),
-                    }]
-                }
-            }],
-        };
-
-        // Links in the CLD give contributions to the ODEs governing their codomain, namely
-        // x -> y gives "(d/dt)y += k_xy xy" for a coefficient k_xy. Each positive link
-        // in the CLD gives a positive contribution, and each negative link a negative contribution.
-        let interaction = ODEContributionBuilder::<
-            <LotkaVolterraSemantics as ODESemantics>::ModelType,
-            <LotkaVolterraSemantics as ODESemantics>::ParameterType,
-        >::Morphism {
-            mor_types_and_signs: vec![
-                (LotkaVolterraAnalysis::default().pos_link_type, ContributionSign::Positive),
-                (LotkaVolterraAnalysis::default().neg_link_type, ContributionSign::Negative),
-            ],
-            mor_contributions: vec![{
-                |link, model| {
-                    let dom = model.get_dom(link).unwrap();
-                    let cod = model.get_cod(link).unwrap();
-                    vec![Contribution {
-                        name: link.clone(),
-                        monomial: vec![dom.clone(), cod.clone()],
-                        parameter: LotkaVolterraParameter::Interaction { link: link.clone() },
-                        target: cod.clone(),
-                    }]
-                }
-            }],
-        };
-
-        ODESemanticsBuilder {
-            variable_builders,
-            contribution_builders: vec![growth, interaction],
+                LotkaVolterraParameter::Growth { variable: var.clone() },
+                [var],
+            );
         }
+
+        // // FIXME: Should be *positively signed* contributions.
+        // for mor in model.mor_generators_with_type(&self.pos_link_type) {
+        //     let (Some(dom), Some(cod)) = (model.get_dom(&mor), model.get_cod(&mor)) else {
+        //         continue;
+        //     };
+        //     let id = mor.cons(name_seg("Influence"));
+        //     builder.add_contribution(id, dom.clone(), [dom.clone(), cod.clone()]);
+        // }
+
+        // // FIXME: Should be *negatively signed* contributions.
+        // for mor in model.mor_generators_with_type(&self.neg_link_type) {
+        //     let (Some(dom), Some(cod)) = (model.get_dom(&mor), model.get_cod(&mor)) else {
+        //         continue;
+        //     };
+        //     let id = mor.cons(name_seg("Influence"));
+        //     builder.add_contribution(id, dom.clone(), [dom.clone(), cod.clone()]);
+        // }
+
+        builder
     }
 }
 

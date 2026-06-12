@@ -23,7 +23,7 @@
 
 use indexmap::IndexMap;
 use nalgebra::DVector;
-use std::{collections::HashMap, fmt, rc::Rc};
+use std::{collections::HashMap, fmt};
 
 use crate::{
     dbl::{
@@ -39,66 +39,6 @@ use crate::{
     },
     zero::{QualifiedName, name},
 };
-
-/// Builder for polynomial ODE systems.
-///
-/// This struct is just a convenient interface to construct a model of the
-/// [theory of polynomial ODE systems](th_polynomial_ode_system). Being an
-/// ordinary mutable Rust struct, it does *not* constitute a declarative
-/// language to define ODE semantics for models of other theories. However, the
-/// idea is that it should be used in a style that can mechanically translated
-/// to a future declarative language for model migration.
-///
-/// Since an ODE semantics often has contributions of several types, a useful
-/// pattern is to use qualified names with an initial segment indicating the
-/// type of contribution. This corresponds to a model migration in which the
-/// contributions arise as a coproduct of several queries.
-pub struct PolynomialODESystemBuilder {
-    model: ModalDblModel<NonUnital>,
-}
-
-impl Default for PolynomialODESystemBuilder {
-    fn default() -> Self {
-        let th = th_signed_polynomial_ode_system();
-        Self { model: ModalDblModel::new(th.into()) }
-    }
-}
-
-impl PolynomialODESystemBuilder {
-    /// Constructs an empty ODE system.
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Returns a model of the theory of polynomial ODE systems.
-    pub fn model(self) -> ModalDblModel<NonUnital> {
-        self.model
-    }
-
-    // TODO: add_variable() and add_contribution() should both do something to associated_parameters
-
-    /// Adds a state variable to the ODE system.
-    pub fn add_variable(&mut self, var: QualifiedName) {
-        self.model.add_ob(var, ModeApp::new(name("State")));
-    }
-
-    /// Adds a contribution to the ODE system.
-    pub fn add_contribution(
-        &mut self,
-        id: QualifiedName,
-        var: QualifiedName,
-        monomial: impl IntoIterator<Item = QualifiedName>,
-    ) {
-        let monomial = monomial.into_iter().map(ModalOb::Generator).collect();
-        // TODO: we land in *signed* polynomial ODEs, so we should worry about the sign
-        self.model.add_mor(
-            id,
-            ModalOb::List(List::Symmetric, monomial),
-            ModalOb::Generator(var),
-            ModeApp::new(name("Contribution")).into(),
-        )
-    }
-}
 
 /// The trait for an ODE semantics on models.
 pub trait ODESemantics {
@@ -136,6 +76,80 @@ impl DblModelForODESemantics for ModalDblModel<NonUnital> {}
 /// (again) these bounds are not particularly restrictive.
 pub trait ODEParameterType: Eq + Ord + Clone + fmt::Display {}
 
+// TODO: this is the bare minimum
+impl ODEParameterType for QualifiedName;
+
+/// Builder for polynomial ODE systems.
+///
+/// This struct is just a convenient interface to construct a model of the
+/// [theory of polynomial ODE systems](th_polynomial_ode_system). Being an
+/// ordinary mutable Rust struct, it does *not* constitute a declarative
+/// language to define ODE semantics for models of other theories. However, the
+/// idea is that it should be used in a style that can mechanically translated
+/// to a future declarative language for model migration.
+///
+/// Since an ODE semantics often has contributions of several types, a useful
+/// pattern is to use qualified names with an initial segment indicating the
+/// type of contribution. This corresponds to a model migration in which the
+/// contributions arise as a coproduct of several queries.
+pub struct PolynomialODESystemBuilder<P: ODEParameterType> {
+    // TODO: should this struct also have types <T> ?????
+    model: ModalDblModel<NonUnital>,
+    associated_parameters: HashMap<QualifiedName, P>
+}
+
+impl <P: ODEParameterType> Default for PolynomialODESystemBuilder<P> {
+    fn default() -> Self {
+        let th = th_signed_polynomial_ode_system();
+        Self { model: ModalDblModel::new(th.into()), associated_parameters: HashMap::new() }
+    }
+}
+
+impl <P: ODEParameterType> PolynomialODESystemBuilder<P> {
+    /// Constructs an empty ODE system.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Returns a model of the theory of polynomial ODE systems.
+    pub fn model(self) -> ModalDblModel<NonUnital> {
+        self.model
+    }
+
+    // TODO: write associated_parameters() (which requires making this struct parametric over <P>)
+    // pub fn associated_parameters(self) ->
+
+    /// Adds a state variable to the ODE system.
+    pub fn add_variable(&mut self, var: QualifiedName) {
+        self.model.add_ob(var, ModeApp::new(name("State")));
+    }
+
+    /// Adds a contribution to the ODE system.
+    pub fn add_contribution(
+        &mut self,
+        id: QualifiedName,
+        var: QualifiedName,
+        sign: ContributionSign,
+        parameter: P,
+        monomial: impl IntoIterator<Item = QualifiedName>,
+    ) {
+        let monomial = monomial.into_iter().map(ModalOb::Generator).collect();
+        let sign = match sign {
+            ContributionSign::Positive => ModeApp::new(name("Contribution")).into(),
+            ContributionSign::Negative => ModeApp::new(name("NegativeContribution")).into(),
+        };
+
+        self.model.add_mor(
+            id.clone(),
+            ModalOb::List(List::Symmetric, monomial),
+            ModalOb::Generator(var),
+            sign,
+        );
+
+        self.associated_parameters.insert(id, parameter);
+    }
+}
+
 /// This trait is where we give the actual functions for building the data that
 /// `build_system_from_ode_semantics()` needs in order to construct
 /// the multicategory. The implementation of `build_semantics()` is where the actual
@@ -150,74 +164,14 @@ pub trait ODEParameterType: Eq + Ord + Clone + fmt::Display {}
 /// some `MassConservationType`, whose value is fundamental in constructing the semantics).
 /// However, this is left to the user: the type checker will not enforce any of these extras.
 pub trait ODESemanticsAnalysis<T: DblModelForODESemantics, P: ODEParameterType>: Default {
-    /// Construct the data required by `build_system_from_ode_semantics()`
-    /// to actually build the multicategory.
-    fn build_semantics(&self) -> ODESemanticsBuilder<T, P>;
+    // TODO: change the return type from a tuple to something better
+    fn build_system_builder(&self, model: &T) -> PolynomialODESystemBuilder<P>;
 
-    // TODO: SWITCH THIS AROUND! i.e. from here we should EXPOSE add_contribution() functions
-    //          and then e.g. lotka_volterra.rs should USE them (we pop out a new blank ODESemantics
-    //          and lotka_volterra populates it)
-    /// Construct the polynomial system from the `ODESemanticsBuilder`. This default
-    /// implementation should hopefully essentially always be the desired one.
     fn build_system(&self, model: &T) -> PolynomialSystem<QualifiedName, Parameter<P>, i8> {
-        build_system_from_ode_semantics::<T, P>(model, self.build_semantics())
+        let builder = self.build_system_builder(model);
+        PolynomialODEAnalysis::default()
+            .build_system_custom_parameters(&builder.model(), builder.associated_parameters())
     }
-}
-
-/// The data required by `build_system_from_ode_semantics()` consists of
-/// information on how to construct *variables* (objects) and *contributions* (multimorphisms).
-pub struct ODESemanticsBuilder<T: DblModelForODESemantics, P: ODEParameterType> {
-    /// The list of terms of `T::ObType` to iterate over when constructing variables in the
-    /// ODE system.
-    pub variable_builders: Vec<ODEVariableBuilder<T>>,
-    /// The list of terms of `T::ObType` and of `T::MorType` to iterate over when constructing
-    /// contributions in the ODE system, along with the corresponding migrations.
-    pub contribution_builders: Vec<ODEContributionBuilder<T, P>>,
-}
-
-/// The type that describes how to construct *variables* in the ODE system.
-pub enum ODEVariableBuilder<T: DblModelForODESemantics> {
-    /// Construct variables from *objects* in the original model.
-    Object {
-        /// The type of objects in the original model to use to construct variables.
-        /// In short, this is used in `ode::polynomial_ode` in the following way:
-        /// ```ignore
-        /// for ob in model.ob_generators_with_type(&self.variable_ob_type) {
-        ///    sys.add_term(ob, Polynomial::zero());
-        /// }
-        /// ```
-        ob_type: T::ObType,
-    },
-    // N.B. Constructing variables from *morphisms* in the original model is not currently
-    // supported, but would be useful for e.g. "span migration", where flows x--[f]->y in a stock-flow
-    // diagram are viewed as spans x<-f->y and so a new apex variable f needs to be created.
-}
-
-/// The type that describes how to construct *contributions* in the ODE system.
-pub enum ODEContributionBuilder<T: DblModelForODESemantics, P: ODEParameterType> {
-    /// Construct contributions from *variables* in the original model.
-    Object {
-        /// The type(s) of objects in the original model to use to construct variables.
-        /// Analogous to `ODEVariableBuilder::Object`, this is used to iterate over in
-        /// `ode::polynomial_ode`. The only extra data here is that of a term of type
-        /// `ContributionSign`, which happens to be a convenient way of reducing duplication
-        /// in the existing ODE semantics. For example, in all current ODE semantics on
-        /// CLDs, the migration defined on positive links and the one on negative links are
-        /// identical in terms of their monomial, target, and parameter, but differ in the
-        /// *sign* of the contribution. However, this is purely a convention of convenience,
-        /// i.e. there is no good mathematical reason to put this data here instead of inside
-        /// `ob_contributions`. Indeed, at some point it might be more sensible to move it there.
-        ob_types_and_signs: Vec<(T::ObType, ContributionSign)>,
-        /// A list of contributions, as described in `Contribution`.
-        ob_contributions: Vec<fn(ob: &T::ObGen, model: &T) -> Vec<Contribution<P>>>,
-    },
-    /// Construct contributions from *morphisms* in the original model.
-    Morphism {
-        /// Analogous to `Object.ob_types_and_signs`, but for morphisms types.
-        mor_types_and_signs: Vec<(T::MorType, ContributionSign)>,
-        /// A list of contributions, as described in `Contribution`.
-        mor_contributions: Vec<fn(mor: &T::MorGen, model: &T) -> Vec<Contribution<P>>>,
-    },
 }
 
 /// A contribution to the ODE system consists of all the data that `ModalDblModel::add_mor()`
@@ -297,107 +251,4 @@ pub trait ODESemanticsProblemData<P: ODEParameterType> {
 
         ODEAnalysis::new(problem, ob_index)
     }
-}
-
-/// The main function of this module: taking the data of an `ODESemanticsBuilder<T,P>`
-/// and constructing a `PolynomialSystem` (with parameters of type `P`). We first construct
-/// `ode_model: ModalDblModel<NonUnital>` in the theory of signed polynomial ODE systems,
-/// along with a hash map of parameters associated to names. This data is precisely what we
-/// need to then simply call `PolynomialODEAnalysis::default().build_system_custom_parameters`
-/// to build the desired `PolynomialSystem`.
-pub fn build_system_from_ode_semantics<T, P>(
-    // TODO: this should now take in some PolynomialODESystemBuilder instead of
-    //       the now-deleted ODESemanticsBuilder
-    model: &T,
-    ode_semantics: ODESemanticsBuilder<T, P>,
-) -> PolynomialSystem<QualifiedName, Parameter<P>, i8>
-where
-    T: DblModelForODESemantics,
-    P: ODEParameterType,
-{
-    let ode_theory = Rc::new(th_signed_polynomial_ode_system());
-    let mut ode_model = ModalDblModel::new(ode_theory);
-
-    let ode_analysis = PolynomialODEAnalysis::default();
-    let ode_ob_type = ode_analysis.variable_ob_type;
-    let ode_pos_cont_type = ode_analysis.positive_contribution_mor_type;
-    let ode_neg_cont_type = ode_analysis.negative_contribution_mor_type;
-
-    let mut associated_parameters: HashMap<QualifiedName, P> = HashMap::new();
-
-    for var_build in ode_semantics.variable_builders {
-        let ODEVariableBuilder::Object { ob_type } = var_build;
-        for ob in model.ob_generators_with_type(&ob_type) {
-            ode_model.add_ob(ob, ode_ob_type.clone());
-        }
-    }
-
-    let apply_contribution = {
-        |contribution: Contribution<P>,
-         sign: ContributionSign,
-         associated_parameters: &mut HashMap<QualifiedName, P>,
-         ode_model: &mut ModalDblModel<NonUnital>| {
-            associated_parameters.insert(contribution.name.clone(), contribution.parameter);
-            ode_model.add_mor(
-                contribution.name,
-                ModalOb::List(
-                    List::Symmetric,
-                    contribution
-                        .monomial
-                        .iter()
-                        .map(|var| ModalOb::Generator(var.clone()))
-                        .collect(),
-                ),
-                ModalOb::Generator(contribution.target),
-                match sign {
-                    ContributionSign::Positive => ode_pos_cont_type.clone(),
-                    ContributionSign::Negative => ode_neg_cont_type.clone(),
-                },
-            )
-        }
-    };
-
-    // REQUEST  | The below is the most naive way of doing this, but it involves a *lot* of nested
-    //   FOR    | loops. Is there a nicer way of doing this? Note that both arms of the `match`
-    // FEEDBACK | are essentially identical, differing only in their use of `ob_generators_with_type`
-    // _________/ versus `mor_generators_with_type`.
-    for cont_build in ode_semantics.contribution_builders {
-        match cont_build {
-            ODEContributionBuilder::Object { ob_types_and_signs, ob_contributions } => {
-                for (ob_type, sign) in ob_types_and_signs {
-                    for ob in model.ob_generators_with_type(&ob_type) {
-                        for contribution in ob_contributions.clone() {
-                            for contribution in contribution(&ob, model) {
-                                apply_contribution(
-                                    contribution.clone(),
-                                    sign,
-                                    &mut associated_parameters,
-                                    &mut ode_model,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-            ODEContributionBuilder::Morphism { mor_types_and_signs, mor_contributions } => {
-                for (mor_type, sign) in mor_types_and_signs {
-                    for mor in model.mor_generators_with_type(&mor_type) {
-                        for contribution in mor_contributions.clone() {
-                            for contribution in contribution(&mor, model) {
-                                apply_contribution(
-                                    contribution.clone(),
-                                    sign,
-                                    &mut associated_parameters,
-                                    &mut ode_model,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    PolynomialODEAnalysis::default()
-        .build_system_custom_parameters(&ode_model, associated_parameters)
 }
