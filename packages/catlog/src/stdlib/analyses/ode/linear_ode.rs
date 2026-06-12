@@ -106,12 +106,11 @@ impl
             };
 
             // f: x -> y becomes the contribution \dot{y} += Parameter_x x
-            let id = mor.cons(name_seg("PositiveInfluence"));
             builder.add_contribution(
-                id.clone(),
+                mor.clone(),
                 cod.clone(),
                 ContributionSign::Positive,
-                LCCParameter::Parameter { morphism: id },
+                LCCParameter::Parameter { morphism: mor },
                 [dom.clone()],
             );
         }
@@ -122,12 +121,11 @@ impl
             };
 
             // f: x -> y becomes the contribution \dot{y} -= Parameter_f \cdot xy
-            let id = mor.cons(name_seg("NegativeInfluence"));
             builder.add_contribution(
-                id.clone(),
+                mor.clone(),
                 cod.clone(),
                 ContributionSign::Negative,
-                LCCParameter::Parameter { morphism: id },
+                LCCParameter::Parameter { morphism: mor },
                 [dom.clone()],
             );
         }
