@@ -148,6 +148,7 @@ impl <P: ODEParameterType> PolynomialODESystemBuilder<P> {
     }
 }
 
+// TODO: fix documentation
 /// This trait is where we give the actual functions for building the data that
 /// `build_system_from_ode_semantics()` needs in order to construct
 /// the multicategory. The implementation of `build_semantics()` is where the actual
@@ -162,9 +163,10 @@ impl <P: ODEParameterType> PolynomialODESystemBuilder<P> {
 /// some `MassConservationType`, whose value is fundamental in constructing the semantics).
 /// However, this is left to the user: the type checker will not enforce any of these extras.
 pub trait ODESemanticsAnalysis<T: DblModelForODESemantics, P: ODEParameterType>: Default {
-    // TODO: change the return type from a tuple to something better
+    /// TODO: documentation.
     fn build_system_builder(&self, model: &T) -> PolynomialODESystemBuilder<P>;
 
+    /// TODO: documentation.
     fn build_system(&self, model: &T) -> PolynomialSystem<QualifiedName, Parameter<P>, i8> {
         let builder = self.build_system_builder(model);
         PolynomialODEAnalysis::default()
@@ -177,18 +179,20 @@ pub trait ODESemanticsAnalysis<T: DblModelForODESemantics, P: ODEParameterType>:
 #[derive(Clone)]
 pub struct Contribution<P: ODEParameterType> {
     /// The name of the multimorphism.
-    pub name: QualifiedName,
-    /// The source of the multimorphism (a list of objects), to be interpreted
-    /// as the monomial given by the product of all the list elements.
-    pub monomial: Vec<QualifiedName>,
-    /// The parameter (coefficient) to be associated with this contribution.
-    pub parameter: P,
+    pub id: QualifiedName,
     /// The target of the multimorphism, to be interpreted as the variable whose
     /// first derivative is affected by the monomial.
     pub target: QualifiedName,
+    /// The sign of a contribution.
+    pub sign: ContributionSign,
+    /// The parameter (coefficient) to be associated with this contribution.
+    pub parameter: P,
+    /// The source of the multimorphism (a list of objects), to be interpreted
+    /// as the monomial given by the product of all the list elements.
+    pub monomial: Vec<QualifiedName>,
 }
 
-/// The sign of the contribution, since we work in *signed* multicategories.
+/// The sign of a contribution, since we work in *signed* multicategories.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub enum ContributionSign {
     /// Positive contribution: (d/dt)y -= x.
