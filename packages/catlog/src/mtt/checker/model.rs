@@ -18,7 +18,7 @@ use crate::mtt::{
 
 impl<T: Theory> ModelEntry<T> {
     pub fn check_model_ast(&mut self, model_ast: &Model) -> CheckResult {
-        let Model { name, decls, theory } = model_ast;
+        let Model { name: _name, decls, theory: _theory } = model_ast;
         // TODO: name
         // TODO: theory
         for decl in decls.iter() {
@@ -56,8 +56,7 @@ impl<T: Theory> ModelEntry<T> {
 
                 // if we have a theory arrow that we haven't inferred then we
                 // must check that the generating arrow actually lies over the
-                // stated theory arrow; inferred arrows always satisfy this
-                // property.
+                // stated theory arrow
                 if let Some(ref over) = over {
                     self.check_object(&pro_arrow.dom, &over.dom)?;
                     self.check_object(&pro_arrow.cod, &over.cod)?;
@@ -126,40 +125,45 @@ impl<T: Theory> ModelEntry<T> {
         over: &ExpressionProArrow,
     ) -> Result<ProTermJudgement<T>, Error> {
         // -----------------------------------------------------------
-        // domain
+        // elaborate the binder and codomain
         let (domain_object_term, domain_object_type) = self.elaborate_binder(binder)?;
-        let domain_theory_object = self.infer_theory_object(&domain_object_type)?;
-
-        // -----------------------------------------------------------
-        // codomain
+        let domain_object_term =
+            self.check_object_term(&domain_object_term, &domain_object_type)?;
         let codomain_object_type = self.elaborate_object_type(codomain)?;
-        let codomain_theory_object = self.infer_theory_object(&codomain_object_type)?;
         let codomain_object_term = ObjectTerm::Variable(name.clone()); // TODO
 
         // -----------------------------------------------------------
-        // theory pro-arrow
+        // theory pro-arrow, and the theory objects at the boundary
         let stated_over = self.elaborate_theory_pro_arrow(over)?;
 
-        // If the user stated an over, check that the outermost domain and
-        // codomain objects of the composite are consistent with the declared
-        // domain and codomain types; inferred overs always satisfy this.
-        if let Some(ref stated) = stated_over {
-            // A composite P1;...;Pn spans from the domain of P1 to the codomain
-            // of Pn; an empty composite has no boundary to check against.
-            let first = stated.iter().next().ok_or(EInfer::EmptyProArrowComposite)?;
-            let last = stated.iter().last().ok_or(EInfer::EmptyProArrowComposite)?;
-            self.check_object(&domain_object_type, &first.dom)?;
-            self.check_object(&codomain_object_type, &last.cod)?;
-            for atomic in stated.iter() {
-                if !T::has_pro_arrow(atomic) {
-                    return Err(EType::InvalidTheoryProArrow {
-                        theory: T::name(),
-                        pro_arrow: atomic.to_string(),
+        let (domain_theory_object, codomain_theory_object) = match &stated_over {
+            Some(stated) => {
+                // A composite P1;...;Pn spans from the domain of P1 to the
+                // codomain of Pn
+
+                // TODO: more questions about how to enforce this composition
+                // ordering correctly
+                let first = stated.iter().next().ok_or(EInfer::EmptyProArrowComposite)?;
+                let last = stated.iter().last().ok_or(EInfer::EmptyProArrowComposite)?;
+                for atomic in stated.iter() {
+                    if !T::has_pro_arrow(atomic) {
+                        return Err(EType::InvalidTheoryProArrow {
+                            theory: T::name(),
+                            pro_arrow: atomic.to_string(),
+                        }
+                        .into());
                     }
-                    .into());
                 }
+                self.check_object(&domain_object_type, &first.dom)?;
+                self.check_object(&codomain_object_type, &last.cod)?;
+                (first.dom.clone(), last.cod.clone())
             }
-        }
+            None => {
+                let dom = self.infer_theory_object(&domain_object_type)?;
+                let cod = self.infer_theory_object(&codomain_object_type)?;
+                (dom, cod)
+            }
+        };
 
         let pro_arrow = Some(match stated_over {
             Some(composite) => composite,
@@ -235,10 +239,47 @@ impl<T: Theory> ModelEntry<T> {
             }
         }
     }
+
+    fn check_object_term(
+        &self,
+        term: &ObjectTerm<T>,
+        object_type: &ObjectType<T>,
+    ) -> Result<ObjectTerm<T>, Error> {
+        fn malformed_binder<T: Theory>(term: &ObjectTerm<T>, object_type: &ObjectType<T>) -> Error {
+            EType::MalformedBinder {
+                term: term.to_string(),
+                object_type: object_type.to_string(),
+            }
+            .into()
+        }
+
+        match term {
+            // TODO: we don't know anything here, right?
+            ObjectTerm::Variable(v) => Ok(ObjectTerm::Variable(v.clone())),
+            // Pointwise
+            ObjectTerm::List(terms) => {
+                let ObjectType::List(types) = object_type else {
+                    return Err(malformed_binder(term, object_type));
+                };
+                if terms.len() != types.len() {
+                    return Err(malformed_binder(term, object_type));
+                }
+                let terms = std::iter::zip(terms, types)
+                    .map(|(t, ty)| self.check_object_term(t, ty))
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(ObjectTerm::List(terms))
+            }
+            ObjectTerm::FunctionApplication { .. } => {
+                todo!("function-application binder (vertical arrow) checking")
+            }
+            ObjectTerm::Tuple(_) => Err(EType::TupleBinderUnimplemented.into()),
+            ObjectTerm::Hole(_) => Err(EType::HoleInBinder.into()),
+        }
+    }
 }
 
 impl<T: Theory> ModelEntry<T> {
-    fn infer_theory_object(&self, obj: &ObjectType<T>) -> Result<TheoryObject<T>, Error> {
+    pub fn infer_theory_object(&self, obj: &ObjectType<T>) -> Result<TheoryObject<T>, Error> {
         match obj {
             ObjectType::Generator(g) => Ok(self.lookup_generating_object(g)?.over.clone()),
             ObjectType::List(list) => {
@@ -292,6 +333,8 @@ impl<T: Theory> ModelEntry<T> {
         t_dom: &TheoryObject<T>,
         t_cod: &TheoryObject<T>,
     ) -> Result<TheoryProArrow<T>, Error> {
+        // TODO: this is a real gap, if we infer, we only ever infer Hom or
+        // generators. We should be able to infer composites!
         let candidates = T::generating_pro_arrow_by_boundary(t_dom, t_cod);
         match candidates.len() {
             0 => {

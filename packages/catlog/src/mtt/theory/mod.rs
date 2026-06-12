@@ -10,6 +10,7 @@ mod category;
 mod schema;
 
 pub use core_types::*;
+pub use shared::HOM;
 pub use theory::*;
 
 pub use category::Category;

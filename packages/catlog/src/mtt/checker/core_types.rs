@@ -108,6 +108,23 @@ pub enum ObjectTerm<T: Theory> {
     Hole(String),
 }
 
+// As with [ObjectType], a derived `Clone` would impose a spurious `T: Clone`
+// bound, so we implement it by hand.
+impl<T: Theory> Clone for ObjectTerm<T> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Variable(v) => Self::Variable(v.clone()),
+            Self::List(xs) => Self::List(xs.clone()),
+            Self::Tuple(xs) => Self::Tuple(xs.clone()),
+            Self::FunctionApplication { function, on } => Self::FunctionApplication {
+                function: function.clone(),
+                on: on.clone(),
+            },
+            Self::Hole(h) => Self::Hole(h.clone()),
+        }
+    }
+}
+
 impl<T: Theory> std::fmt::Display for ObjectTerm<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

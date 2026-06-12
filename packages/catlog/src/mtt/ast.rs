@@ -7,7 +7,7 @@ use textwrap::indent;
 use nonempty::NonEmpty;
 
 use crate::mtt::arrow::{Arrow, ProArrowKind};
-use crate::mtt::display_helpers::{DHBindings, DHList, DHTuple};
+use crate::mtt::display_helpers::{DHBindings, DHList, DHProArrowComposite, DHTuple};
 
 #[derive(Display)]
 #[display("{}", models.iter().map(|m| m.to_string()).collect::<Vec<_>>().join("\n"))]
@@ -159,17 +159,27 @@ pub enum ExpressionProArrow {
 
     #[display("{_0}")]
     /// The user has named a pro-arrow by name alone.
+    // TODO: a bare name resolves only to a *generating* pro-arrow, so this
+    // form cannot currently name the parametric `Hom`: "over Hom" carries no
+    // object for the hom to live over, and we have not decided whether to
+    // infer that object from the binder/codomain or to require it explicitly.
+    // For now, name a hom via [Self::Complete] with its boundary given
+    // explicitly.
     NameOnly(String),
 
     #[display("{_0}")]
     /// The user has provided complete data for a single pro-arrow.
     Complete(Arrow<Expression, ProArrowKind>),
 
-    #[display("{}", _0.iter().map(|a| a.to_string()).collect::<Vec<_>>().join(" ; "))]
+    #[display("{}", DHProArrowComposite(_0))]
     /// The user has named a non-empty composite of pro-arrows, by name alone.
-    /// The checker will look up each name and verify composability. The
-    /// non-empty guarantee rules out the otherwise-ambiguous empty composite.
+    // TODO: same Hom problem here.
     CompositeNameOnly(NonEmpty<String>),
+
+    #[display("{}", DHProArrowComposite(_0))]
+    /// The user has provided complete data for a non-empty composite of
+    /// pro-arrows.
+    CompositeComplete(NonEmpty<Arrow<Expression, ProArrowKind>>),
 }
 
 impl Expression {

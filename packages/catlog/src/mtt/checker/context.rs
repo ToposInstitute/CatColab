@@ -7,7 +7,6 @@ use std::collections::HashMap;
 
 use crate::mtt::{
     checker::{
-        ModelGeneratingProArrow,
         core_types::{ObjectTerm, ObjectType, ProTerm},
         error::EContext,
     },
@@ -202,15 +201,16 @@ impl<T: Theory> ModelEntry<T> {
         Ok(())
     }
 
-    pub fn lookup_generating_pro_arrow(&self, name: &String) -> Option<ModelGeneratingProArrow<T>> {
+    pub fn lookup_generating_pro_arrow_entry(
+        &self,
+        name: &String,
+    ) -> Result<&GeneratingProArrowEntry<T>, EContext> {
         self.pro_arrow_generators
             .get(name)
-            .map(|GeneratingProArrowEntry { dom, cod, .. }| {
-                ModelGeneratingProArrow::from(
-                    name.clone(),
-                    dom.object_type.clone(),
-                    cod.object_type.clone(),
-                )
-            })
+            .map_or(Err(EContext::Unbound(name.clone())), Ok)
+    }
+
+    pub fn lookup_definition(&self, name: &String) -> Option<&DefinitionEntry<T>> {
+        self.definitions.get(name)
     }
 }

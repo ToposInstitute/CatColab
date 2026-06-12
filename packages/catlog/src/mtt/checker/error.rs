@@ -31,6 +31,104 @@ pub enum EType {
         /// The theory object we're inspecting.
         theory_object: String,
     },
+
+    #[display("The variable {_0} is not bound by the domain of the judgement")]
+    /// A variable referenced in the body does not appear in the domain object
+    /// term, i.e. it is free in the body. The Hom rule may only lift object
+    /// terms built from variables that the binder introduces into scope.
+    UnboundVariable(String),
+
+    #[display("The domain binder {term} is malformed against its type {object_type}")]
+    /// The domain object term and its object type disagree in shape (e.g. a
+    /// list term against a non-list type), so no consistent variable scope can
+    /// be extracted from the binder.
+    MalformedBinder {
+        /// The domain object term.
+        term: String,
+        /// The domain object type it was checked against.
+        object_type: String,
+    },
+
+    #[display("A hole is not permitted in the domain binder")]
+    /// The domain binder contained a hole. The binder is the claimed left-hand
+    /// side of the judgement, so it must be a fully-specified object term
+    /// introducing a definite variable scope; a hole has no place there.
+    HoleInBinder,
+
+    #[display("Tuple binders are not currently implemented")]
+    /// The domain binder contained a tuple. Tuples are a theory-registered
+    /// shorthand for a particular function application; elaborating them in
+    /// binders is not yet implemented.
+    TupleBinderUnimplemented,
+
+    #[display("The synthesised domain {found} cannot be reconciled with the declared {expected}")]
+    /// The domain end of the synthesised term cannot be reconciled with the
+    /// declared binder, and no coercion (list manipulation / restriction)
+    /// supplied by the theory bridges the gap.
+    DomainMismatch {
+        /// The declared domain (from the binder).
+        expected: String,
+        /// The synthesised domain end of the body.
+        found: String,
+    },
+
+    #[display(
+        "The synthesised codomain object type {found} does not match the declared {expected}"
+    )]
+    /// The object type synthesised for the body does not match the declared
+    /// codomain object type of the judgement.
+    CodomainObjectTypeMismatch {
+        /// The declared codomain object type.
+        expected: String,
+        /// The synthesised codomain object type.
+        found: String,
+    },
+
+    #[display(
+        "The synthesised codomain theory object {found} does not match the declared {expected}"
+    )]
+    /// The theory object synthesised for the body does not match the declared
+    /// codomain theory object of the judgement.
+    CodomainTheoryObjectMismatch {
+        /// The declared codomain theory object.
+        expected: String,
+        /// The synthesised codomain theory object.
+        found: String,
+    },
+
+    #[display("The synthesised pro-arrow {found} does not match the declared {expected}")]
+    /// The composite theory pro-arrow synthesised for the body does not match
+    /// the declared (or inferred) `over` of the judgement, up to flat
+    /// hom-collapse.
+    ProArrowMismatch {
+        /// The declared composite theory pro-arrow.
+        expected: String,
+        /// The synthesised composite theory pro-arrow.
+        found: String,
+    },
+
+    #[display("Cannot post-compose the generator {generator} onto a pro-term with codomain {onto}")]
+    /// A post-composition's generating pro-arrow does not compose with the
+    /// codomain of the pro-term it is being applied to.
+    NonComposablePostComposition {
+        /// The generating pro-arrow being post-composed.
+        generator: String,
+        /// The codomain of the pro-term it was applied to.
+        onto: String,
+    },
+
+    #[display("{_0} is not a generating pro-arrow in this model")]
+    /// The head of an application is neither a model generating pro-arrow nor a
+    /// theory vertical arrow, so it cannot be applied.
+    NotApplicable(String),
+
+    #[display("A list pro-term was supplied, but the theory {_0} has no list modality")]
+    /// A list term was encountered but the theory does not support lists.
+    NoListModality(String),
+
+    #[display("Unsupported body expression: {_0}")]
+    /// A body expression form that is not (yet) supported in this theory.
+    UnsupportedBody(String),
 }
 
 #[derive(Display)]
