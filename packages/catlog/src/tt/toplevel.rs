@@ -71,17 +71,17 @@ pub struct Def {
 ///
 /// The body is a level-shifted introduction value of the model type
 /// — generator slots, equation witnesses, and sub-instance imports
-/// packaged into a [`TmS_::Instance`](super::stx::TmS_::Instance)
-/// term whose evaluated form is [`TmV_::Instance`](super::val::TmV_::Instance).
+/// packaged into a [`super::stx::TmS_::Instance`]
+/// term whose evaluated form is [`super::val::TmV_::Instance`].
 #[derive(Constructor, Clone)]
 pub struct Diag {
     /// The theory that the instance is defined in.
     pub theory: Theory,
     /// The model (sketch) type that this is an instance of.
     pub model: TyV,
-    /// Body syntax: a [`TmS_::Instance`](super::stx::TmS_::Instance) term.
+    /// Body syntax: a [`super::stx::TmS_::Instance`] term.
     pub body_stx: TmS,
-    /// Body value: a [`TmV_::Instance`](super::val::TmV_::Instance) term.
+    /// Body value: a [`super::val::TmV_::Instance`] term.
     pub body_val: TmV,
     /// Synthesized record type matching the instance's structure — the
     /// shape a sub-instance import sees when this instance is named as
