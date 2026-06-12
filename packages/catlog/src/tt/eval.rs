@@ -51,7 +51,7 @@ impl<'a> Evaluator<'a> {
         match &**ty {
             TyS_::TopVar(tv) => match self.toplevel.declarations.get(tv).unwrap() {
                 TopDecl::Type(t) => t.val.clone(),
-                TopDecl::Diag(d) => d.body_val.clone(),
+                TopDecl::Diag(d) => d.body_ty.clone(),
                 _ => panic!("top-level {tv} should be a type or diagram declaration"),
             },
             TyS_::Object(ot) => TyV::object(ot.clone()),
@@ -100,6 +100,19 @@ impl<'a> Evaluator<'a> {
             TmS_::OverApp(mor, mor_label, tgt_path, inner) => {
                 TmV::over_app(*mor, *mor_label, tgt_path.clone(), self.eval_tm(inner))
             }
+            TmS_::Instance(body) => TmV::instance(InstanceBodyV {
+                generators: body.generators.clone(),
+                equations: body
+                    .equations
+                    .iter()
+                    .map(|(lhs, rhs)| (self.eval_tm(lhs), self.eval_tm(rhs)))
+                    .collect(),
+                sub_instances: body
+                    .sub_instances
+                    .iter()
+                    .map(|(name, (label, inner))| (*name, (*label, self.eval_tm(inner))))
+                    .collect(),
+            }),
             TmS_::Meta(mv) => TmV::meta(*mv),
         }
     }
@@ -149,6 +162,26 @@ impl<'a> Evaluator<'a> {
     /// Bind a variable called "self" to `ty`.
     pub fn bind_self(&self, ty: TyV) -> (TmN, Self) {
         self.bind_neu("self".into(), "self".into(), ty)
+    }
+
+    /// Synthesize the record type matching an instance body's
+    /// structure. Generators become `@over`-typed fields; sub-instances
+    /// recurse. Equations are elided (they aren't projectable).
+    pub fn synth_instance_body_ty(&self, body: &InstanceBodyV) -> TyV {
+        let mut fields: Row<TyS> = Row::empty();
+        for (name, (label, path)) in &body.generators {
+            fields.insert(*name, *label, TyS::over(path.clone()));
+        }
+        for (name, (label, sub_v)) in &body.sub_instances {
+            let TmV_::Instance(sub_body) = &**sub_v else {
+                continue;
+            };
+            let sub_ty_v = self.synth_instance_body_ty(sub_body);
+            let sub_ty_s = self.quote_ty(&sub_ty_v);
+            fields.insert(*name, *label, sub_ty_s);
+        }
+        let r_v = RecordV::new(self.env.clone(), fields, Dtry::empty());
+        TyV::record(r_v)
     }
 
     /// Produce type syntax from a type value.
@@ -224,6 +257,19 @@ impl<'a> Evaluator<'a> {
             TmV_::OverApp(mor, mor_label, tgt_path, inner) => {
                 TmS::over_app(*mor, *mor_label, tgt_path.clone(), self.quote_tm(inner))
             }
+            TmV_::Instance(body) => TmS::instance(InstanceBodyS {
+                generators: body.generators.clone(),
+                equations: body
+                    .equations
+                    .iter()
+                    .map(|(lhs, rhs)| (self.quote_tm(lhs), self.quote_tm(rhs)))
+                    .collect(),
+                sub_instances: body
+                    .sub_instances
+                    .iter()
+                    .map(|(name, (label, inner))| (*name, (*label, self.quote_tm(inner))))
+                    .collect(),
+            }),
             TmV_::List(elems) => TmS::list(elems.iter().map(|tm| self.quote_tm(tm)).collect()),
             TmV_::Cons(fields) => TmS::cons(fields.map(|tm| self.quote_tm(tm))),
             TmV_::Tt => TmS::tt(),
@@ -353,6 +399,9 @@ impl<'a> Evaluator<'a> {
             TmV_::OverApp(mor, mor_label, tgt_path, inner) => {
                 TmV::over_app(*mor, *mor_label, tgt_path.clone(), self.eta(inner, None))
             }
+            // An [`Instance`](TmV_::Instance) is already in normal form
+            // — its structure isn't subject to η-expansion.
+            TmV_::Instance(_) => v.clone(),
             TmV_::List(elems) => TmV::list(elems.iter().map(|elem| self.eta(elem, None)).collect()),
             TmV_::Cons(row) => {
                 if let Some(ty) = ty {
@@ -446,6 +495,38 @@ impl<'a> Evaluator<'a> {
                     )));
                 }
                 self.equal_tm_helper(inner1, inner2, strict1, strict2)
+            }
+            (TmV_::Instance(b1), TmV_::Instance(b2)) => {
+                if b1.generators.len() != b2.generators.len()
+                    || b1.equations.len() != b2.equations.len()
+                    || b1.sub_instances.len() != b2.sub_instances.len()
+                {
+                    return Err(t("instance bodies have differing shapes"));
+                }
+                for ((n1, (_, p1)), (n2, (_, p2))) in
+                    b1.generators.iter().zip(b2.generators.iter())
+                {
+                    if n1 != n2 || p1 != p2 {
+                        return Err(t(format!("instance generator {n1} differs from {n2}")));
+                    }
+                }
+                for ((lhs1, rhs1), (lhs2, rhs2)) in
+                    b1.equations.iter().zip(b2.equations.iter())
+                {
+                    self.equal_tm_helper(lhs1, lhs2, strict1, strict2)?;
+                    self.equal_tm_helper(rhs1, rhs2, strict1, strict2)?;
+                }
+                for ((n1, (_, t1)), (n2, (_, t2))) in
+                    b1.sub_instances.iter().zip(b2.sub_instances.iter())
+                {
+                    if n1 != n2 {
+                        return Err(t(format!(
+                            "instance sub-instance {n1} differs from {n2}"
+                        )));
+                    }
+                    self.equal_tm_helper(t1, t2, strict1, strict2)?;
+                }
+                Ok(())
             }
             _ => Err(t(format!(
                 "failed to match terms {} and {}",
