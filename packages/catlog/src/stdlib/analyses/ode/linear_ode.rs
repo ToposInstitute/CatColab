@@ -14,11 +14,14 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use super::Parameter;
-use crate::dbl::model::MutDblModel;
+use crate::dbl::model::{FpDblModel, MutDblModel};
 use crate::one::Path;
 use crate::simulate::ode::PolynomialSystem;
-use crate::stdlib::analyses::ode::ode_semantics::*;
-use crate::zero::name;
+use crate::stdlib::analyses::ode::ode_semantics::{
+    ContributionSign, ODEParameterType, ODESemantics, ODESemanticsAnalysis,
+    ODESemanticsProblemData, PolynomialODESystemBuilder,
+};
+use crate::zero::{name, name_seg};
 use crate::{dbl::model::DiscreteDblModel, one::QualifiedPath, zero::QualifiedName};
 
 /// Implementing LCC as an ODE semantics for models of type `DiscreteDblModel`.
@@ -83,46 +86,53 @@ impl
     /// Creates a linear system with symbolic rate coefficients.
     ///
     /// A system of ODEs for building arbitrary LCC ODEs from CLDs.
-    fn build_semantics(
+    fn build_system_builder(
         &self,
-    ) -> ODESemanticsBuilder<
-        <LCCSemantics as ODESemantics>::ModelType,
-        <LCCSemantics as ODESemantics>::ParameterType,
-    > {
-        // Each variable in the CLD gives a variable in the ODE system.
-        let variable_builders = vec![ODEVariableBuilder::Object {
-            ob_type: LCCAnalysis::default().var_ob_type,
-        }];
+        model: &<LCCSemantics as ODESemantics>::ModelType,
+    ) -> PolynomialODESystemBuilder<<LCCSemantics as ODESemantics>::ParameterType> {
+        let mut builder = PolynomialODESystemBuilder::new();
+
+        for var in model.ob_generators_with_type(&self.var_ob_type) {
+            // TODO: variables
+            builder.add_variable(var.clone());
+        }
 
         // Links in the CLD give contributions to the ODEs governing their *codomain*, in an amount
         // proportionate to their *domain*, i.e. x -> y gives (d/dt)y += x. Each positive link
         // in the CLD gives a positive contribution and each negative link a negative contribution.
-        let interaction = ODEContributionBuilder::<
-            <LCCSemantics as ODESemantics>::ModelType,
-            <LCCSemantics as ODESemantics>::ParameterType,
-        >::Morphism {
-            mor_types_and_signs: vec![
-                (LCCAnalysis::default().pos_link_type, ContributionSign::Positive),
-                (LCCAnalysis::default().neg_link_type, ContributionSign::Negative),
-            ],
-            mor_contributions: vec![{
-                |link, model| {
-                    let dom = model.get_dom(link).unwrap();
-                    let cod = model.get_cod(link).unwrap();
-                    vec![Contribution {
-                        name: link.clone(),
-                        monomial: vec![dom.clone()],
-                        parameter: LCCParameter::Parameter { morphism: link.clone() },
-                        target: cod.clone(),
-                    }]
-                }
-            }],
-        };
+        for mor in model.mor_generators_with_type(&self.pos_link_type) {
+            let (Some(dom), Some(cod)) = (model.get_dom(&mor), model.get_cod(&mor)) else {
+                continue;
+            };
 
-        ODESemanticsBuilder {
-            variable_builders,
-            contribution_builders: vec![interaction],
+            // f: x -> y becomes the contribution \dot{y} += Parameter_x x
+            let id = mor.cons(name_seg("PositiveInfluence"));
+            builder.add_contribution(
+                id.clone(),
+                cod.clone(),
+                ContributionSign::Positive,
+                LCCParameter::Parameter { morphism: id },
+                [dom.clone()],
+            );
         }
+
+        for mor in model.mor_generators_with_type(&self.neg_link_type) {
+            let (Some(dom), Some(cod)) = (model.get_dom(&mor), model.get_cod(&mor)) else {
+                continue;
+            };
+
+            // f: x -> y becomes the contribution \dot{y} -= Parameter_f \cdot xy
+            let id = mor.cons(name_seg("NegativeInfluence"));
+            builder.add_contribution(
+                id.clone(),
+                cod.clone(),
+                ContributionSign::Negative,
+                LCCParameter::Parameter { morphism: id },
+                [dom.clone()],
+            );
+        }
+
+        builder
     }
 }
 
