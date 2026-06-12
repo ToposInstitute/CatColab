@@ -21,7 +21,7 @@ use crate::stdlib::analyses::ode::ode_semantics::{
     ContributionSign, ODEParameterType, ODESemantics, ODESemanticsAnalysis,
     ODESemanticsProblemData, PolynomialODESystemBuilder,
 };
-use crate::zero::{name, name_seg};
+use crate::zero::name;
 use crate::{dbl::model::DiscreteDblModel, one::QualifiedPath, zero::QualifiedName};
 
 /// Implementing LCC as an ODE semantics for models of type `DiscreteDblModel`.
@@ -93,19 +93,19 @@ impl
         let mut builder = PolynomialODESystemBuilder::new();
 
         for var in model.ob_generators_with_type(&self.var_ob_type) {
-            // TODO: variables
+            // For each object, we create a variable.
             builder.add_variable(var.clone());
         }
 
-        // Links in the CLD give contributions to the ODEs governing their *codomain*, in an amount
-        // proportionate to their *domain*, i.e. x -> y gives (d/dt)y += x. Each positive link
-        // in the CLD gives a positive contribution and each negative link a negative contribution.
         for mor in model.mor_generators_with_type(&self.pos_link_type) {
             let (Some(dom), Some(cod)) = (model.get_dom(&mor), model.get_cod(&mor)) else {
                 continue;
             };
 
-            // f: x -> y becomes the contribution \dot{y} += Parameter_x x
+            // The morphism
+            //   f: x -> y
+            // becomes the contribution
+            //   \dot{y} += Parameter_f x
             builder.add_contribution(
                 mor.clone(),
                 cod.clone(),
@@ -120,7 +120,10 @@ impl
                 continue;
             };
 
-            // f: x -> y becomes the contribution \dot{y} -= Parameter_f \cdot xy
+            // The morphism
+            //   f: x -> y
+            // becomes the contribution
+            //   \dot{y} -= Parameter_f x
             builder.add_contribution(
                 mor.clone(),
                 cod.clone(),

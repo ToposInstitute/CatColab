@@ -13,16 +13,18 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use super::Parameter;
-use crate::dbl::{
-    model::{DiscreteTabModel, FpDblModel, ModalDblModel},
-    theory::{ModalMorType, ModalObType, TabMorType, TabObType, Unital},
-};
 use crate::simulate::ode::PolynomialSystem;
 use crate::stdlib::analyses::ode::ode_semantics::*;
 use crate::stdlib::analyses::petri::transition_interface;
 use crate::stdlib::analyses::stock_flow::flow_interface;
-use crate::zero::name_seg;
 use crate::zero::{QualifiedName, name};
+use crate::{
+    dbl::{
+        model::{DiscreteTabModel, FpDblModel, ModalDblModel},
+        theory::{ModalMorType, ModalObType, TabMorType, TabObType, Unital},
+    },
+    zero::name_seg,
+};
 
 /// Mass-action semantics for Petri nets.
 pub struct PetriNetMassActionSemantics;
@@ -198,8 +200,59 @@ impl
         let mut builder = PolynomialODESystemBuilder::new();
 
         for place in model.ob_generators_with_type(&self.place_ob_type) {
-            // TODO: variables
+            // For each place, we create a variable.
             builder.add_variable(place.clone());
+        }
+
+        for transition in model.mor_generators_with_type(&self.transition_mor_type) {
+            match self.mass_conservation_type {
+                MassConservationType::Balanced => {
+                    let interface = transition_interface(&model, &transition);
+                    let (inputs, outputs) = (interface.input_places.clone(), interface.output_places.clone());
+
+                    for output in outputs.clone() {
+                        let id = output
+                            .cons(name_seg("ToOutput"))
+                            .cons(transition.only().unwrap().clone());
+                        // The transition
+                        //   T: [x_1, ..., x_n] -> [y_1, ..., y_n]
+                        // becomes the contributions
+                        //   \dot{y_i} += Balanced_T \cdot x_1...x_n
+                        builder.add_contribution(
+                            id,
+                            output,
+                            ContributionSign::Positive,
+                            MassActionParameter::Balanced { flow: transition.clone() },
+                            inputs.clone(),
+                        );
+                    }
+
+                    for input in inputs.clone() {
+                        let id = input
+                            .cons(name_seg("ToInput"))
+                            .cons(transition.only().unwrap().clone());
+                        // The transition
+                        //   T: [x_1, ..., x_n] -> [y_1, ..., y_n]
+                        // becomes the contributions
+                        //   \dot{x_i} -= Balanced_T \cdot x_1...x_n
+                        builder.add_contribution(
+                            id,
+                            input,
+                            ContributionSign::Negative,
+                            MassActionParameter::Balanced { flow: transition.clone() },
+                            inputs.clone(),
+                        );
+                    }
+                }
+                MassConservationType::Unbalanced(granularity) => match granularity {
+                    RateGranularity::PerFlow => {
+                        todo!()
+                    }
+                    RateGranularity::PerStock => {
+                        todo!()
+                    }
+                },
+            }
         }
 
         builder
@@ -473,6 +526,22 @@ impl
             builder.add_variable(stock.clone());
         }
 
+        for flow in model.mor_generators_with_type(&self.flow_mor_type) {
+            match self.mass_conservation_type {
+                MassConservationType::Balanced => {
+                    todo!()
+                }
+                MassConservationType::Unbalanced(granularity) => match granularity {
+                    RateGranularity::PerFlow => {
+                        todo!()
+                    }
+                    RateGranularity::PerStock => {
+                        todo!()
+                    }
+                },
+            }
+        }
+
         builder
     }
     // fn build_semantics(
@@ -713,161 +782,125 @@ impl ODESemanticsProblemData<MassActionParameter> for MassActionProblemData {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use expect_test::expect;
-//     use std::rc::Rc;
+#[cfg(test)]
+mod tests {
+    use expect_test::expect;
+    use std::rc::Rc;
 
-//     use super::*;
-//     use crate::simulate::ode::LatexEquation;
-//     use crate::stdlib::{analyses, models::*, theories::*};
+    use super::*;
+    use crate::simulate::ode::LatexEquation;
+    use crate::stdlib::{analyses, models::*, theories::*};
 
-//     // Tests for stock-flow diagrams. These all use the backward_link() model,
-//     // which has a single flow x==f==>y and a single link y->f.
+    // Tests for stock-flow diagrams. These all use the backward_link() model,
+    // which has a single flow x==f==>y and a single link y->f.
 
-//     #[test]
-//     fn balanced_stock_flow() {
-//         let th = Rc::new(th_category_links());
-//         let model = backward_link(th);
-//         let sys = StockFlowMassActionAnalysis::default().build_system(&model);
-//         let expected = expect!([r#"
-//             dx = -f x y
-//             dy = f x y
-//         "#]);
-//         expected.assert_eq(&sys.to_string());
-//     }
+    #[test]
+    fn balanced_stock_flow() {
+        let th = Rc::new(th_category_links());
+        let model = backward_link(th);
+        let sys = StockFlowMassActionAnalysis::default().build_system(&model);
+        let expected = expect!([r#"
+            dx = -f x y
+            dy = f x y
+        "#]);
+        expected.assert_eq(&sys.to_string());
+    }
 
-//     #[test]
-//     fn unbalanced_stock_flow() {
-//         let th = Rc::new(th_category_links());
-//         let model = backward_link(th);
-//         let sys = StockFlowMassActionAnalysis {
-//             mass_conservation_type: analyses::ode::MassConservationType::Unbalanced(
-//                 analyses::ode::RateGranularity::PerFlow,
-//             ),
-//             ..StockFlowMassActionAnalysis::default()
-//         }
-//         .build_system(&model);
-//         let expected = expect!([r#"
-//             dx = -Outgoing(f) x y
-//             dy = Incoming(f) x y
-//         "#]);
-//         expected.assert_eq(&sys.to_string());
-//     }
+    #[test]
+    fn unbalanced_stock_flow() {
+        let th = Rc::new(th_category_links());
+        let model = backward_link(th);
+        let sys = StockFlowMassActionAnalysis {
+            mass_conservation_type: analyses::ode::MassConservationType::Unbalanced(
+                analyses::ode::RateGranularity::PerFlow,
+            ),
+            ..StockFlowMassActionAnalysis::default()
+        }
+        .build_system(&model);
+        let expected = expect!([r#"
+            dx = -Outgoing(f) x y
+            dy = Incoming(f) x y
+        "#]);
+        expected.assert_eq(&sys.to_string());
+    }
 
-//     // Tests for signed stock-flow diagrams. These all use the negative_backwards_link()
-//     // model, which has a single flow x==f=>y and a single negative link y->f.
+    // Tests for Petri nets. These all use the catalyzed_reaction() model, which
+    // has a single transition [x,c]-->f-->[y,c].
 
-//     // N.B. These tests are currently disabled, because they require a theory of *rational*,
-//     // not merely polynomial, ODE systems.
+    #[test]
+    fn balanced_petri() {
+        let th = Rc::new(th_sym_monoidal_category());
+        let model = catalyzed_reaction(th);
+        let sys = PetriNetMassActionAnalysis::default().build_system(&model);
+        let expected = expect!([r#"
+            dx = -f c x
+            dy = f c x
+            dc = 0
+        "#]);
+        expected.assert_eq(&sys.to_string());
+    }
 
-//     // #[test]
-//     // fn balanced_signed_stock_flow() {
-//     //     let th = Rc::new(th_category_signed_links());
-//     //     let model = negative_backward_link(th);
-//     //     let sys = StockFlowMassActionAnalysis::default()
-//     //         .build_system(&model, analyses::ode::MassConservationType::Balanced);
-//     //     let expected = expect!([r#"
-//     //         dx = -f x y^{-1}
-//     //         dy = f x y^{-1}
-//     //     "#]);
-//     //     expected.assert_eq(&sys.to_string());
-//     // }
+    #[test]
+    fn unbalanced_petri_per_transition() {
+        let th = Rc::new(th_sym_monoidal_category());
+        let model = catalyzed_reaction(th);
+        let sys = PetriNetMassActionAnalysis {
+            mass_conservation_type: analyses::ode::MassConservationType::Unbalanced(
+                analyses::ode::RateGranularity::PerFlow,
+            ),
+            ..PetriNetMassActionAnalysis::default()
+        }
+        .build_system(&model);
+        let expected = expect!([r#"
+            dx = -Outgoing(f) c x
+            dy = Incoming(f) c x
+            dc = (Incoming(f) - Outgoing(f)) c x
+        "#]);
+        expected.assert_eq(&sys.to_string());
+    }
 
-//     // #[test]
-//     // fn unbalanced_signed_stock_flow() {
-//     //     let th = Rc::new(th_category_signed_links());
-//     //     let model = negative_backward_link(th);
-//     //     let sys = StockFlowMassActionAnalysis::default().build_system(
-//     //         &model,
-//     //         analyses::ode::MassConservationType::Unbalanced(
-//     //             analyses::ode::RateGranularity::PerFlow,
-//     //         ),
-//     //     );
-//     //     let expected = expect!([r#"
-//     //         dx = -Outgoing(f) x y^{-1}
-//     //         dy = Incoming(f) x y^{-1}
-//     //     "#]);
-//     //     expected.assert_eq(&sys.to_string());
-//     // }
+    #[test]
+    fn unbalanced_petri_per_place() {
+        let th = Rc::new(th_sym_monoidal_category());
+        let model = catalyzed_reaction(th);
+        let sys = PetriNetMassActionAnalysis {
+            mass_conservation_type: analyses::ode::MassConservationType::Unbalanced(
+                analyses::ode::RateGranularity::PerStock,
+            ),
+            ..PetriNetMassActionAnalysis::default()
+        }
+        .build_system(&model);
+        let expected = expect!([r#"
+            dx = -(x->[f]) c x
+            dy = ([f]->y) c x
+            dc = (([f]->c) - (c->[f])) c x
+        "#]);
+        expected.assert_eq(&sys.to_string());
+    }
 
-//     // Tests for Petri nets. These all use the catalyzed_reaction() model, which
-//     // has a single transition [x,c]-->f-->[y,c].
+    // Test for LaTeX.
 
-//     #[test]
-//     fn balanced_petri() {
-//         let th = Rc::new(th_sym_monoidal_category());
-//         let model = catalyzed_reaction(th);
-//         let sys = PetriNetMassActionAnalysis::default().build_system(&model);
-//         let expected = expect!([r#"
-//             dx = -f c x
-//             dy = f c x
-//             dc = 0
-//         "#]);
-//         expected.assert_eq(&sys.to_string());
-//     }
-
-//     #[test]
-//     fn unbalanced_petri_per_transition() {
-//         let th = Rc::new(th_sym_monoidal_category());
-//         let model = catalyzed_reaction(th);
-//         let sys = PetriNetMassActionAnalysis {
-//             mass_conservation_type: analyses::ode::MassConservationType::Unbalanced(
-//                 analyses::ode::RateGranularity::PerFlow,
-//             ),
-//             ..PetriNetMassActionAnalysis::default()
-//         }
-//         .build_system(&model);
-//         let expected = expect!([r#"
-//             dx = -Outgoing(f) c x
-//             dy = Incoming(f) c x
-//             dc = (Incoming(f) - Outgoing(f)) c x
-//         "#]);
-//         expected.assert_eq(&sys.to_string());
-//     }
-
-//     #[test]
-//     fn unbalanced_petri_per_place() {
-//         let th = Rc::new(th_sym_monoidal_category());
-//         let model = catalyzed_reaction(th);
-//         let sys = PetriNetMassActionAnalysis {
-//             mass_conservation_type: analyses::ode::MassConservationType::Unbalanced(
-//                 analyses::ode::RateGranularity::PerStock,
-//             ),
-//             ..PetriNetMassActionAnalysis::default()
-//         }
-//         .build_system(&model);
-//         let expected = expect!([r#"
-//             dx = -(x->[f]) c x
-//             dy = ([f]->y) c x
-//             dc = (([f]->c) - (c->[f])) c x
-//         "#]);
-//         expected.assert_eq(&sys.to_string());
-//     }
-
-//     // Test for LaTeX.
-
-//     #[test]
-//     fn to_latex() {
-//         let th = Rc::new(th_category_links());
-//         let model = backward_link(th);
-//         let sys = StockFlowMassActionAnalysis {
-//             mass_conservation_type: analyses::ode::MassConservationType::Unbalanced(
-//                 analyses::ode::RateGranularity::PerFlow,
-//             ),
-//             ..StockFlowMassActionAnalysis::default()
-//         }
-//         .build_system(&model);
-//         let expected = vec![
-//             LatexEquation {
-//                 lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string(),
-//                 rhs: "-Outgoing(f) \\cdot x \\cdot y".to_string(),
-//             },
-//             LatexEquation {
-//                 lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string(),
-//                 rhs: "Incoming(f) \\cdot x \\cdot y".to_string(),
-//             },
-//         ];
-//         assert_eq!(expected, sys.to_latex_equations());
-//     }
-// }
+    #[test]
+    fn to_latex() {
+        let th = Rc::new(th_category_links());
+        let model = backward_link(th);
+        let sys = StockFlowMassActionAnalysis {
+            mass_conservation_type: analyses::ode::MassConservationType::Unbalanced(
+                analyses::ode::RateGranularity::PerFlow,
+            ),
+            ..StockFlowMassActionAnalysis::default()
+        }
+        .build_system(&model);
+        let expected = vec![
+            LatexEquation {
+                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string(),
+                rhs: "-Outgoing(f) \\cdot x \\cdot y".to_string(),
+            },
+            LatexEquation {
+                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string(),
+                rhs: "Incoming(f) \\cdot x \\cdot y".to_string(),
+            },
+        ];
+        assert_eq!(expected, sys.to_latex_equations());
+    }
+}
