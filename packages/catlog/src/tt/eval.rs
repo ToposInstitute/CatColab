@@ -490,9 +490,7 @@ impl<'a> Evaluator<'a> {
             }
             (TmV_::OverApp(mor1, _, _, inner1), TmV_::OverApp(mor2, _, _, inner2)) => {
                 if mor1 != mor2 {
-                    return Err(t(format!(
-                        "OverApp morphisms {mor1} and {mor2} are not equal"
-                    )));
+                    return Err(t(format!("OverApp morphisms {mor1} and {mor2} are not equal")));
                 }
                 self.equal_tm_helper(inner1, inner2, strict1, strict2)
             }
@@ -503,16 +501,13 @@ impl<'a> Evaluator<'a> {
                 {
                     return Err(t("instance bodies have differing shapes"));
                 }
-                for ((n1, (_, p1)), (n2, (_, p2))) in
-                    b1.generators.iter().zip(b2.generators.iter())
+                for ((n1, (_, p1)), (n2, (_, p2))) in b1.generators.iter().zip(b2.generators.iter())
                 {
                     if n1 != n2 || p1 != p2 {
                         return Err(t(format!("instance generator {n1} differs from {n2}")));
                     }
                 }
-                for ((lhs1, rhs1), (lhs2, rhs2)) in
-                    b1.equations.iter().zip(b2.equations.iter())
-                {
+                for ((lhs1, rhs1), (lhs2, rhs2)) in b1.equations.iter().zip(b2.equations.iter()) {
                     self.equal_tm_helper(lhs1, lhs2, strict1, strict2)?;
                     self.equal_tm_helper(rhs1, rhs2, strict1, strict2)?;
                 }
@@ -520,9 +515,7 @@ impl<'a> Evaluator<'a> {
                     b1.sub_instances.iter().zip(b2.sub_instances.iter())
                 {
                     if n1 != n2 {
-                        return Err(t(format!(
-                            "instance sub-instance {n1} differs from {n2}"
-                        )));
+                        return Err(t(format!("instance sub-instance {n1} differs from {n2}")));
                     }
                     self.equal_tm_helper(t1, t2, strict1, strict2)?;
                 }
