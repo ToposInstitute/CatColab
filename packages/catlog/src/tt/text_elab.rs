@@ -27,22 +27,6 @@ pub const TT_PARSE_CONFIG: ParseConfig = ParseConfig::new(
     &["type", "def", "syn", "chk", "norm", "generate", "uwd", "set_theory"],
 );
 
-/// Temporary `def`-time dispatch — see Pass D in `tt/README` (TODO)
-/// for the eventual move into `chk`. A body is instance-shaped if it
-/// contains any `:` clause, any `mor(arg) := target` clause (LHS is an
-/// application), or any `field := [...]` set-literal clause.
-fn body_is_instance_shaped(n: &FNtn) -> bool {
-    let Tuple(field_ns) = n.ast0() else {
-        return false;
-    };
-    field_ns.iter().any(|field_n| match field_n.ast0() {
-        App2(L(_, Keyword(":")), _, _) => true,
-        App2(L(_, Keyword(":=")), L(_, Var(_)), L(_, Tuple(_))) => true,
-        App2(L(_, Keyword(":=")), L(_, App1(_, _)), _) => true,
-        _ => false,
-    })
-}
-
 /// The result of elaborating a top-level statement.
 pub enum TopElabResult {
     /// A new declaration.
@@ -177,21 +161,27 @@ impl TopElaborator {
                     None => {
                         let mut elab = self.elaborator(&theory, toplevel);
                         let (_, ret_ty_v) = elab.ty(ty_n);
-                        // An "instance body" is a tuple of `:`-bound clauses
-                        // (rather than `:=`-bound ones). Route those to the
-                        // instance-elaboration path; everything else is an
-                        // ordinary const-term `def`.
-                        if body_is_instance_shaped(tm_n) {
-                            elab.push_instance_codomain(ret_ty_v.clone());
-                            let (val_s, val_v) = elab.ty(tm_n);
-                            elab.pop_instance_codomain();
-                            Some(TopElabResult::Declaration(
-                                name,
-                                TopDecl::Diag(Diag::new(theory.clone(), ret_ty_v, val_s, val_v)),
-                            ))
-                        } else {
-                            let (tm_s, tm_v) = elab.chk(&ret_ty_v, tm_n);
-                            Some(TopElabResult::Declaration(
+                        let (tm_s, tm_v) = elab.chk(&ret_ty_v, tm_n);
+                        // chk dispatches: if the body was instance-shaped,
+                        // the returned TmV is a [`TmV_::Instance`], and we
+                        // wrap as an instance declaration with a
+                        // synthesized record type for sub-instance lookups.
+                        // Otherwise the body is an ordinary const term.
+                        match &*tm_v {
+                            TmV_::Instance(body) => {
+                                let body_ty = elab.evaluator().synth_instance_body_ty(body);
+                                Some(TopElabResult::Declaration(
+                                    name,
+                                    TopDecl::Diag(Diag::new(
+                                        theory.clone(),
+                                        ret_ty_v,
+                                        tm_s,
+                                        tm_v,
+                                        body_ty,
+                                    )),
+                                ))
+                            }
+                            _ => Some(TopElabResult::Declaration(
                                 name,
                                 TopDecl::DefConst(DefConst::new(
                                     theory.clone(),
@@ -199,7 +189,7 @@ impl TopElaborator {
                                     tm_v,
                                     ret_ty_v,
                                 )),
-                            ))
+                            )),
                         }
                     }
                 }
@@ -405,6 +395,335 @@ impl<'a> Elaborator<'a> {
         v
     }
 
+    /// Apply a codomain morphism `f` to an already-elaborated argument
+    /// of fiber type. Shared by the bare `f(x)` and `f(receiver.fld)`
+    /// arms of [`Self::syn`].
+    fn apply_codomain_morphism(
+        &mut self,
+        f: &str,
+        arg_s: TmS,
+        arg_v: TmV,
+        arg_ty: TyV,
+        arg_label_str: &str,
+    ) -> (TmS, TmV, TyV) {
+        let Some(model_ty) = self.current_instance_codomain().cloned() else {
+            return self.syn_error(
+                "applied codomain morphism is only allowed inside an instance body",
+            );
+        };
+        let TyV_::Over(src_path) = &*arg_ty else {
+            let quoted = self.evaluator().quote_ty(&arg_ty);
+            return self.syn_error(format!(
+                "argument {arg_label_str} has type {quoted}, expected a fiber type",
+            ));
+        };
+        let f_label = label_seg(f);
+        let f_name = name_seg(f);
+        let TyV_::Record(cod_r) = &*model_ty else {
+            return self.syn_error("instance codomain is not a record type");
+        };
+        let Some(mor_ty_s) = cod_r.fields.get(f_name) else {
+            return self.syn_error(format!("no such codomain morphism {f_name}"));
+        };
+        let TyS_::Morphism(_, dom_s, cod_s) = &**mor_ty_s else {
+            return self.syn_error(format!("codomain field {f_name} is not a morphism"));
+        };
+        let (Some(dom_path), Some(cod_path)) = (tms_to_path(dom_s), tms_to_path(cod_s)) else {
+            return self.syn_error(format!(
+                "codomain morphism {f_name} has non-path dom/cod; \
+                 applied-morphism syntax requires both to be paths",
+            ));
+        };
+        if dom_path != *src_path {
+            return self.syn_error(format!(
+                "codomain morphism {f_name} has source path differing from the argument",
+            ));
+        }
+        (
+            TmS::over_app(f_name, f_label, cod_path.clone(), arg_s),
+            TmV::over_app(f_name, f_label, cod_path.clone(), arg_v),
+            TyV::over(cod_path),
+        )
+    }
+
+    /// Elaborate an instance body — a tuple of `name : type`, `field
+    /// := [names]`, and `mor(arg) := target` clauses — against the
+    /// enclosing sketch type `model_ty`. Produces a [`TmS_::Instance`]
+    /// / [`TmV_::Instance`] pair whose payload is the instance's
+    /// generator slots, equation witnesses, and sub-instance imports.
+    ///
+    /// The codomain is pushed onto the instance-codomain stack so that
+    /// `@over .X` annotations and applied-codomain-morphism syntax
+    /// inside the body resolve correctly.
+    fn instance_body(&mut self, model_ty: &TyV, n: &FNtn) -> (TmS, TmV) {
+        self.push_instance_codomain(model_ty.clone());
+        let result = self.instance_body_inner(n);
+        self.pop_instance_codomain();
+        result
+    }
+
+    fn instance_body_inner(&mut self, n: &FNtn) -> (TmS, TmV) {
+        let mut elab = self.enter(n.loc());
+        let Tuple(field_ns) = n.ast0() else {
+            elab.error::<()>("expected a tuple instance body");
+            return (TmS::instance(InstanceBodyS::default()), TmV::instance(InstanceBodyV::default()));
+        };
+        let mut gens: IndexMap<FieldName, (LabelSegment, Vec<(FieldName, LabelSegment)>)> =
+            IndexMap::new();
+        let mut eqns_s: Vec<(TmS, TmS)> = Vec::new();
+        let mut eqns_v: Vec<(TmV, TmV)> = Vec::new();
+        let mut subs_s: IndexMap<FieldName, (LabelSegment, TmS)> = IndexMap::new();
+        let mut subs_v: IndexMap<FieldName, (LabelSegment, TmV)> = IndexMap::new();
+        let mut failed = false;
+
+        for field_n in field_ns.iter() {
+            elab.loc = Some(field_n.loc());
+            match field_n.ast0() {
+                // `name : type` — generator, sub-instance, or
+                // anonymous equation clause (dispatched on the
+                // elaborated type's shape).
+                App2(L(_, Keyword(":")), L(_, Var(name)), ty_n) => {
+                    let name_str = *name;
+                    let n_seg = if name_str == "_" {
+                        NameSegment::Uuid(uuid::Uuid::new_v4())
+                    } else {
+                        name_seg(name_str)
+                    };
+                    let label = label_seg(name_str);
+                    let (_, ty_v) = elab.ty(ty_n);
+                    match &*ty_v {
+                        TyV_::Over(path) => {
+                            gens.insert(n_seg, (label, path.clone()));
+                            elab.intro(n_seg, label, Some(ty_v));
+                        }
+                        TyV_::Record(_) => {
+                            let (sub_s, sub_v) = match ty_n.ast0() {
+                                Var(sub_name) => {
+                                    let topvar = name_seg(*sub_name);
+                                    match elab.toplevel.declarations.get(&topvar) {
+                                        Some(TopDecl::Diag(d)) => {
+                                            (d.body_stx.clone(), d.body_val.clone())
+                                        }
+                                        _ => {
+                                            elab.error::<()>(format!(
+                                                "sub-instance {sub_name} must reference a \
+                                                 top-level instance declaration",
+                                            ));
+                                            failed = true;
+                                            continue;
+                                        }
+                                    }
+                                }
+                                _ => {
+                                    elab.error::<()>(
+                                        "sub-instance type must be a top-level def name",
+                                    );
+                                    failed = true;
+                                    continue;
+                                }
+                            };
+                            subs_s.insert(n_seg, (label, sub_s));
+                            subs_v.insert(n_seg, (label, sub_v));
+                            elab.intro(n_seg, label, Some(ty_v));
+                        }
+                        TyV_::Id(_, lhs, rhs) => {
+                            let evaluator = elab.evaluator();
+                            let lhs_s = evaluator.quote_tm(lhs);
+                            let rhs_s = evaluator.quote_tm(rhs);
+                            eqns_s.push((lhs_s, rhs_s));
+                            eqns_v.push((lhs.clone(), rhs.clone()));
+                        }
+                        _ => {
+                            let quoted = elab.evaluator().quote_ty(&ty_v);
+                            elab.error::<()>(format!(
+                                "instance clause {name_str} has type {quoted}, expected \
+                                 @over, a sub-sketch, or an equation",
+                            ));
+                            failed = true;
+                        }
+                    }
+                }
+                // `field := [k1 := t1, k2 := t2, ...]` — mapping-literal
+                // assignment to a morphism-typed field of the codomain.
+                // Equivalent to a sequence of per-entry mapping clauses
+                // `field(k1) := t1`, `field(k2) := t2`, ...
+                App2(L(_, Keyword(":=")), L(_, Var(field_name)), L(_, Tuple(entries)))
+                    if !entries.is_empty()
+                        && entries
+                            .iter()
+                            .all(|e| matches!(e.ast0(), App2(L(_, Keyword(":=")), _, _))) =>
+                {
+                    let Some(codomain) = elab.current_instance_codomain().cloned() else {
+                        elab.error::<()>(
+                            "mapping-literal assignment is only allowed inside an instance body",
+                        );
+                        failed = true;
+                        continue;
+                    };
+                    let TyV_::Record(cod_r) = &*codomain else {
+                        elab.error::<()>("instance codomain is not a record type");
+                        failed = true;
+                        continue;
+                    };
+                    let f_seg = name_seg(*field_name);
+                    let f_label = label_seg(*field_name);
+                    let Some(mor_ty_s) = cod_r.fields.get(f_seg) else {
+                        elab.error::<()>(format!(
+                            "no such codomain field {field_name}"
+                        ));
+                        failed = true;
+                        continue;
+                    };
+                    let TyS_::Morphism(_, dom_s, cod_s) = &**mor_ty_s else {
+                        elab.error::<()>(format!(
+                            "mapping-literal assignment requires field {field_name} to be \
+                             morphism-typed",
+                        ));
+                        failed = true;
+                        continue;
+                    };
+                    let (Some(dom_path), Some(cod_path)) =
+                        (tms_to_path(dom_s), tms_to_path(cod_s))
+                    else {
+                        elab.error::<()>(format!(
+                            "codomain morphism {field_name} has non-path dom/cod; \
+                             mapping-literal assignment requires both to be paths",
+                        ));
+                        failed = true;
+                        continue;
+                    };
+                    let mut entry_failed = false;
+                    for entry_n in entries.iter() {
+                        elab.loc = Some(entry_n.loc());
+                        let App2(L(_, Keyword(":=")), key_n, target_n) = entry_n.ast0() else {
+                            unreachable!("guard ensured all entries are `:=` clauses");
+                        };
+                        let (key_s, key_v, key_ty) = elab.syn(key_n);
+                        let TyV_::Over(key_path) = &*key_ty else {
+                            let quoted = elab.evaluator().quote_ty(&key_ty);
+                            elab.error::<()>(format!(
+                                "mapping-literal key has type {quoted}, expected an @over type",
+                            ));
+                            entry_failed = true;
+                            break;
+                        };
+                        if key_path != &dom_path {
+                            elab.error::<()>(format!(
+                                "mapping-literal key's @over path does not match the source of {field_name}",
+                            ));
+                            entry_failed = true;
+                            break;
+                        }
+                        let lhs_ty = TyV::over(cod_path.clone());
+                        let lhs_s =
+                            TmS::over_app(f_seg, f_label, cod_path.clone(), key_s);
+                        let lhs_v =
+                            TmV::over_app(f_seg, f_label, cod_path.clone(), key_v);
+                        let (rhs_s, rhs_v) = elab.chk(&lhs_ty, target_n);
+                        eqns_s.push((lhs_s, rhs_s));
+                        eqns_v.push((lhs_v, rhs_v));
+                    }
+                    if entry_failed {
+                        failed = true;
+                        continue;
+                    }
+                }
+                // `field := [n1, n2, ...]` — set-literal assignment to
+                // an object-typed field of the codomain.
+                App2(
+                    L(_, Keyword(":=")),
+                    L(_, Var(field_name)),
+                    L(_, Tuple(name_ns)),
+                ) => {
+                    let Some(codomain) = elab.current_instance_codomain().cloned() else {
+                        elab.error::<()>(
+                            "set-literal field assignment is only allowed inside an \
+                             instance body",
+                        );
+                        failed = true;
+                        continue;
+                    };
+                    let TyV_::Record(cod_r) = &*codomain else {
+                        elab.error::<()>("instance codomain is not a record type");
+                        failed = true;
+                        continue;
+                    };
+                    let f_seg = name_seg(*field_name);
+                    let f_label = label_seg(*field_name);
+                    let Some(field_ty_s) = cod_r.fields.get(f_seg) else {
+                        elab.error::<()>(format!("no such codomain field {field_name}"));
+                        failed = true;
+                        continue;
+                    };
+                    if !matches!(&**field_ty_s, TyS_::Object(_)) {
+                        elab.error::<()>(format!(
+                            "set-literal assignment requires field {field_name} to be \
+                             object-typed",
+                        ));
+                        failed = true;
+                        continue;
+                    }
+                    let path = vec![(f_seg, f_label)];
+                    let gen_ty = TyV::over(path.clone());
+                    for name_n in name_ns.iter() {
+                        let Var(gen_name) = name_n.ast0() else {
+                            elab.loc = Some(name_n.loc());
+                            elab.error::<()>("set-literal entries must be bare names");
+                            failed = true;
+                            break;
+                        };
+                        let gen_seg = name_seg(*gen_name);
+                        let gen_label = label_seg(*gen_name);
+                        gens.insert(gen_seg, (gen_label, path.clone()));
+                        elab.intro(gen_seg, gen_label, Some(gen_ty.clone()));
+                    }
+                }
+                // `mor(arg) := target` — mapping-entry clause:
+                // an equation witness.
+                App2(L(_, Keyword(":=")), lhs_n, rhs_n) => {
+                    let (lhs_s, lhs_v, lhs_ty) = elab.syn(lhs_n);
+                    if !matches!(&*lhs_ty, TyV_::Morphism(_, _, _) | TyV_::Over(_)) {
+                        elab.loc = Some(lhs_n.loc());
+                        elab.error::<()>(
+                            "mapping-entry clause `mor(arg) := target` requires the LHS \
+                             to have a morphism or @over type",
+                        );
+                        failed = true;
+                        continue;
+                    }
+                    let (rhs_s, rhs_v) = elab.chk(&lhs_ty, rhs_n);
+                    eqns_s.push((lhs_s, rhs_s));
+                    eqns_v.push((lhs_v, rhs_v));
+                }
+                _ => {
+                    elab.error::<()>(
+                        "expected fields in the form `name : type`, \
+                         `field := [names]`, or `mor(arg) := target`",
+                    );
+                    failed = true;
+                }
+            }
+        }
+
+        if failed {
+            return (
+                TmS::instance(InstanceBodyS::default()),
+                TmV::instance(InstanceBodyV::default()),
+            );
+        }
+        let body_s = InstanceBodyS {
+            generators: gens.clone(),
+            equations: eqns_s,
+            sub_instances: subs_s,
+        };
+        let body_v = InstanceBodyV {
+            generators: gens,
+            equations: eqns_v,
+            sub_instances: subs_v,
+        };
+        (TmS::instance(body_s), TmV::instance(body_v))
+    }
+
     fn binding(&mut self, n: &FNtn) -> Option<(VarName, LabelSegment, TyS, TyV)> {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
@@ -434,10 +753,11 @@ impl<'a> Elaborator<'a> {
                 }
                 TopDecl::Diag(d) => {
                     if d.theory == self.theory {
-                        // Using a diagram name as a type yields the diagram's
-                        // body record, allowing `we : I & [...]`-style
-                        // specializations to walk paths through I's fields.
-                        (TyS::topvar(name), d.body_val.clone())
+                        // Using an instance name as a type yields the
+                        // instance's synthesized record type, allowing
+                        // sub-instance imports (`we : Edge`) to project
+                        // into Edge's fields.
+                        (TyS::topvar(name), d.body_ty.clone())
                     } else {
                         self.ty_error(format!(
                             "{name} refers to a diagram in theory {}, expected theory {}",
@@ -524,34 +844,6 @@ impl<'a> Elaborator<'a> {
                 let (tm_s, tm_v, ty_v) = elab.syn(tm_n);
                 (TyS::sing(elab.evaluator().quote_ty(&ty_v), tm_s), TyV::sing(ty_v, tm_v))
             }
-            // `@Instance(X)` is a structural alias for `X`, used in diagram
-            // annotations. Treating it as an alias keeps the type system
-            // simple; `I` is kept out of term lookup by the diagram-kind
-            // binding pushed in the `diagram` toplevel arm.
-            App1(L(_, Prim("Instance")), x_n) => elab.ty(x_n),
-            App1(L(_, Prim("over")), p_n) => {
-                let Some(path) = elab.path(p_n) else {
-                    return elab.ty_hole();
-                };
-                // The enclosing instance body gives the codomain against
-                // which we validate the path. The codomain's identity is
-                // not stored in the resulting type — `@over` names a
-                // fiber-type that's shared across instances.
-                let Some(model_ty) = elab.current_instance_codomain().cloned() else {
-                    return elab.ty_error("@over is only allowed inside an instance body");
-                };
-                let evaluator = elab.evaluator();
-                let (self_n, _) = evaluator.bind_self(model_ty.clone());
-                let self_val = evaluator.eta_neu(&self_n, &model_ty);
-                let resolved = match evaluator.path_ty(&model_ty, &self_val, &path) {
-                    Ok(t) => t,
-                    Err(msg) => return elab.ty_error(msg),
-                };
-                let TyV_::Object(_) = &*resolved else {
-                    return elab.ty_error("path does not refer to an object generator");
-                };
-                (TyS::over(path.clone()), TyV::over(path))
-            }
             App1(mt_n, L(_, Tuple(domcod_n))) => {
                 let [dom_n, cod_n] = domcod_n.as_slice() else {
                     return elab.ty_error("expected two arguments for morphism type");
@@ -570,131 +862,28 @@ impl<'a> Elaborator<'a> {
                 let c = elab.checkpoint();
                 for field_n in field_ns.iter() {
                     elab.loc = Some(field_n.loc());
-                    // Each clause emits zero or more field-row entries.
-                    // Set-literal clauses introduce one entry per generator
-                    // name; everything else is single-entry.
-                    let entries: Vec<(FieldName, LabelSegment, TyV)> = match field_n.ast0() {
-                        // `name : type` — ordinary typed field declaration
-                        // (generator slot, sub-instance, or annotated
-                        // equation field).
+                    let Some((name, label, ty_n)) = (match field_n.ast0() {
                         App2(L(_, Keyword(":")), L(_, Var(name)), ty_n) => {
                             // `_` is a fresh anonymous binder — give it a
                             // UUID name so distinct `_` fields don't collide
                             // in the record row.
-                            let n = if *name == "_" {
+                            let name_seg = if *name == "_" {
                                 NameSegment::Uuid(uuid::Uuid::new_v4())
                             } else {
                                 name_seg(*name)
                             };
-                            let (_, ty_v) = elab.ty(ty_n);
-                            vec![(n, label_seg(*name), ty_v)]
+                            Some((name_seg, label_seg(*name), ty_n))
                         }
-                        // `field := [name1, name2, ...]` — set-literal
-                        // assignment to an object-typed field of the
-                        // enclosing instance codomain. Each `nameI`
-                        // introduces a fresh generator slot of type
-                        // `@over .<field>`.
-                        App2(
-                            L(_, Keyword(":=")),
-                            L(_, Var(field_name)),
-                            L(_, Tuple(name_ns)),
-                        ) => {
-                            let Some(model_ty) = elab.current_instance_codomain().cloned() else {
-                                elab.error::<()>(
-                                    "set-literal field assignment is only allowed inside an \
-                                     instance body",
-                                );
-                                failed = true;
-                                continue;
-                            };
-                            let TyV_::Record(cod_r) = &*model_ty else {
-                                elab.error::<()>("instance codomain is not a record type");
-                                failed = true;
-                                continue;
-                            };
-                            let f_seg = name_seg(*field_name);
-                            let f_label = label_seg(*field_name);
-                            let Some(field_ty_s) = cod_r.fields.get(f_seg) else {
-                                elab.error::<()>(format!(
-                                    "no such codomain field {field_name}"
-                                ));
-                                failed = true;
-                                continue;
-                            };
-                            if !matches!(&**field_ty_s, TyS_::Object(_)) {
-                                elab.error::<()>(format!(
-                                    "set-literal assignment requires field {field_name} to be \
-                                     object-typed"
-                                ));
-                                failed = true;
-                                continue;
-                            };
-                            let path = vec![(f_seg, f_label)];
-                            let gen_ty_v = TyV::over(path);
-                            let mut entries = Vec::with_capacity(name_ns.len());
-                            let mut local_failed = false;
-                            for name_n in name_ns.iter() {
-                                let Var(gen_name) = name_n.ast0() else {
-                                    elab.loc = Some(name_n.loc());
-                                    elab.error::<()>(
-                                        "set-literal entries must be bare names",
-                                    );
-                                    local_failed = true;
-                                    break;
-                                };
-                                entries.push((
-                                    name_seg(*gen_name),
-                                    label_seg(*gen_name),
-                                    gen_ty_v.clone(),
-                                ));
-                            }
-                            if local_failed {
-                                failed = true;
-                                continue;
-                            }
-                            entries
-                        }
-                        // `mor(arg) := target` — mapping-entry clause:
-                        // sugar for an anonymous Id-typed field witnessing
-                        // the equation `mor(arg) == target`. The LHS
-                        // synthesizes (and validates) via the same `f(x)`
-                        // arm in [`Self::syn`].
-                        App2(L(_, Keyword(":=")), lhs_n, rhs_n) => {
-                            let (_lhs_s, lhs_v, lhs_ty) = elab.syn(lhs_n);
-                            if !matches!(&*lhs_ty, TyV_::Morphism(_, _, _) | TyV_::Over(_)) {
-                                elab.loc = Some(lhs_n.loc());
-                                elab.error::<()>(
-                                    "mapping-entry clause `mor(arg) := target` requires the LHS \
-                                     to have a morphism or @over type",
-                                );
-                                failed = true;
-                                continue;
-                            }
-                            let (_rhs_s, rhs_v) = elab.chk(&lhs_ty, rhs_n);
-                            let id_ty_v = TyV::id(lhs_ty, lhs_v, rhs_v);
-                            vec![(
-                                NameSegment::Uuid(uuid::Uuid::new_v4()),
-                                label_seg("_"),
-                                id_ty_v,
-                            )]
-                        }
-                        _ => {
-                            elab.error::<()>(
-                                "expected fields in the form `name : type`, \
-                                 `field := [names]`, or `mor(arg) := target`",
-                            );
-                            failed = true;
-                            continue;
-                        }
+                        _ => elab.error("expected fields in the form <name> : <type>"),
+                    }) else {
+                        failed = true;
+                        continue;
                     };
-                    for (name, label, ty_v) in entries {
-                        field_ty_vs.push((name, (label, ty_v.clone())));
-                        elab.ctx.push_scope(name, label, Some(ty_v.clone()));
-                        elab.ctx.env = elab.ctx.env.snoc(TmV::neu(
-                            TmN::proj(self_var.clone(), name, label),
-                            ty_v,
-                        ));
-                    }
+                    let (_, ty_v) = elab.ty(ty_n);
+                    field_ty_vs.push((name, (label, ty_v.clone())));
+                    elab.ctx.push_scope(name, label, Some(ty_v.clone()));
+                    elab.ctx.env =
+                        elab.ctx.env.snoc(TmV::neu(TmN::proj(self_var.clone(), name, label), ty_v));
                 }
                 if failed {
                     return elab.ty_hole();
@@ -803,89 +992,34 @@ impl<'a> Elaborator<'a> {
                     elab.evaluator().field_ty(&ty_v, &tm_v, f),
                 )
             }
-            // Applied codomain-morphism syntax, in either of two shapes:
+            // Applied codomain-morphism syntax. Two shapes:
             //
-            //   `f(x)`       — `x` is a variable of `@over <src_path>` in
-            //                  scope (e.g. a generator declared by an
-            //                  enclosing field), and `f` is the codomain
-            //                  morphism name.
-            //   `tm.f(x)`    — same idea, but the argument is the field
-            //                  `x` of the record-typed receiver `tm`,
-            //                  and `f` is still the codomain morphism
-            //                  name. The receiver belongs to the
-            //                  *argument*, not the morphism — `tm.f(x)`
-            //                  is sugar for `f(tm.x)`.
+            //   `f(x)`            — `x` is a variable of fiber type in
+            //                       scope.
+            //   `f(receiver.fld)` — argument is a record projection
+            //                       (e.g. `src(we.e)`).
             //
-            // Both shapes elaborate to a [`TmS_::OverApp`] applying `f`
-            // (a codomain morphism in the enclosing diagram) to the
+            // Both elaborate to a [`TmS_::OverApp`] applying `f` (a
+            // codomain morphism in the enclosing instance) to the
             // resolved argument term.
-            App1(head_n, L(_, Var(x))) => {
-                let (f, inner) = match head_n.ast0() {
-                    Var(f) => (f, None),
-                    App1(tm_n, L(_, Field(f))) => (f, Some(tm_n)),
-                    _ => return elab.syn_error("unexpected notation for term"),
+            App1(L(_, Var(f)), L(_, Var(x))) => {
+                let (inner_s, inner_v, inner_ty) = elab.lookup_tm(ustr(*x));
+                elab.apply_codomain_morphism(*f, inner_s, inner_v, inner_ty, *x)
+            }
+            App1(L(_, Var(f)), L(_, App1(recv_n, L(_, Field(arg_field))))) => {
+                let (recv_s, recv_v, recv_ty) = elab.syn(recv_n);
+                let TyV_::Record(r) = &*recv_ty else {
+                    return elab.syn_error("can only project from record type");
                 };
-                let Some(model_ty) = elab.current_instance_codomain().cloned() else {
-                    return elab.syn_error(
-                        "applied codomain morphism is only allowed inside an instance body",
-                    );
-                };
-                let (inner_s, inner_v, inner_ty) = match inner {
-                    None => elab.lookup_tm(ustr(*x)),
-                    Some(tm_n) => {
-                        let (tm_s, tm_v, ty_v) = elab.syn(tm_n);
-                        let TyV_::Record(r) = &*ty_v else {
-                            return elab.syn_error("can only project from record type");
-                        };
-                        let x_label = label_seg(*x);
-                        let x_name = name_seg(*x);
-                        if !r.fields.has(x_name) {
-                            return elab.syn_error(format!("no such field {x_name}"));
-                        }
-                        let ty = elab.evaluator().field_ty(&ty_v, &tm_v, x_name);
-                        let s = TmS::proj(tm_s, x_name, x_label);
-                        let v = elab.evaluator().proj(&tm_v, x_name, x_label);
-                        (s, v, ty)
-                    }
-                };
-                let TyV_::Over(src_path) = &*inner_ty else {
-                    let quoted = elab.evaluator().quote_ty(&inner_ty);
-                    return elab.syn_error(format!(
-                        "argument {x} has type {quoted}, expected an @over type"
-                    ));
-                };
-                let f_label = label_seg(*f);
-                let f_name = name_seg(*f);
-                let TyV_::Record(cod_r) = &*model_ty else {
-                    return elab.syn_error("diagram codomain is not a record type");
-                };
-                let Some(mor_ty_s) = cod_r.fields.get(f_name) else {
-                    return elab.syn_error(format!("no such codomain morphism {f_name}"));
-                };
-                let TyS_::Morphism(_, dom_s, cod_s) = &**mor_ty_s else {
-                    return elab.syn_error(format!(
-                        "codomain field {f_name} is not a morphism"
-                    ));
-                };
-                let (Some(dom_path), Some(cod_path)) =
-                    (tms_to_path(dom_s), tms_to_path(cod_s))
-                else {
-                    return elab.syn_error(format!(
-                        "codomain morphism {f_name} has non-path dom/cod; \
-                         applied-projection syntax requires both to be paths"
-                    ));
-                };
-                if dom_path != *src_path {
-                    return elab.syn_error(format!(
-                        "codomain morphism {f_name} has source path differing from the \
-                         @over path of {x}"
-                    ));
+                let arg_name = name_seg(*arg_field);
+                let arg_label = label_seg(*arg_field);
+                if !r.fields.has(arg_name) {
+                    return elab.syn_error(format!("no such field {arg_name}"));
                 }
-                (
-                    TmS::over_app(f_name, f_label, cod_path.clone(), inner_s),
-                    TmV::over_app(f_name, f_label, cod_path.clone(), inner_v),
-                    TyV::over(cod_path),
-                )
+                let arg_ty = elab.evaluator().field_ty(&recv_ty, &recv_v, arg_name);
+                let arg_s = TmS::proj(recv_s, arg_name, arg_label);
+                let arg_v = elab.evaluator().proj(&recv_v, arg_name, arg_label);
+                elab.apply_codomain_morphism(*f, arg_s, arg_v, arg_ty, *arg_field)
             }
             App1(L(_, Prim("id")), ob_n) => {
                 let (ob_s, ob_v, ob_t) = elab.syn(ob_n);
@@ -992,6 +1126,53 @@ impl<'a> Elaborator<'a> {
         let mut elab = self.enter(n.loc());
         match (&**ty, n.ast0()) {
             (TyV_::Record(r), Tuple(field_ns)) => {
+                // Dispatch by clause shape. An instance body has at
+                // least one clause that doesn't fit the
+                // `field := value` record-construction shape — either a
+                // `:`-typed slot, a `mor(arg) := target` mapping entry
+                // (LHS is an application), a `field := [names]`
+                // set-literal assignment (RHS is a tuple of bare names),
+                // or a `field := [key := target, ...]` mapping-literal
+                // assignment (RHS is a tuple of `:=`-clauses). The
+                // remaining `field := value` shape — and a tuple of
+                // `:=`-clauses where each LHS matches an inner field of
+                // a nested record type — is ordinary record construction.
+                if field_ns.iter().any(|f| match f.ast0() {
+                    App2(L(_, Keyword(":")), _, _) => true,
+                    App2(L(_, Keyword(":=")), L(_, App1(_, _)), _) => true,
+                    App2(L(_, Keyword(":=")), L(_, Var(_)), L(_, Tuple(elems))) => {
+                        // Set-literal: tuple of bare names.
+                        elems.iter().all(|e| matches!(e.ast0(), Var(_)))
+                    }
+                    _ => false,
+                }) {
+                    return elab.instance_body(ty, n);
+                }
+                // Mapping-literal disambiguation: `field := [k := v, ...]`
+                // where the LHS field is a *morphism* of the enclosing
+                // record (sketch). If the field is object- or
+                // record-typed, treat as nested record construction
+                // instead — this distinction can only be made by
+                // consulting the record's field type.
+                if field_ns.iter().any(|f| {
+                    let App2(L(_, Keyword(":=")), L(_, Var(field_name)), L(_, Tuple(elems))) =
+                        f.ast0()
+                    else {
+                        return false;
+                    };
+                    if !elems
+                        .iter()
+                        .all(|e| matches!(e.ast0(), App2(L(_, Keyword(":=")), _, _)))
+                    {
+                        return false;
+                    }
+                    let Some(field_ty_s) = r.fields.get(name_seg(*field_name)) else {
+                        return false;
+                    };
+                    matches!(&**field_ty_s, TyS_::Morphism(_, _, _))
+                }) {
+                    return elab.instance_body(ty, n);
+                }
                 if r.fields.len() != field_ns.len() {
                     return elab.chk_error(format!(
                         "wrong number of fields provided, expected {}, got {}",
@@ -1133,7 +1314,7 @@ mod tests {
 
         let result = Model::from_text(&th, "[ : Entit]");
         let expected = expect![[r#"
-            error[elab]: expected fields in the form `name : type`, `field := [names]`, or `mor(arg) := target`
+            error[elab]: expected fields in the form <name> : <type>
             --> <none>:1:3
             1| [ : Entit]
             1|   ^^^^^^^

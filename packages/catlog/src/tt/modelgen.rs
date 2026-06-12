@@ -408,10 +408,10 @@ impl<'a> ModelGenerator<'a> {
 
 /// Generates a [`DiscreteDblModelInstance`] from an elaborated [`Diag`].
 ///
-/// Walks the diagram body, adding one instance generator per `@over .X`
-/// field (with fiber resolved against the codomain) and one equation per
-/// `_ : (lhs == rhs)` field whose carrier is an `@over` type. No synthetic
-/// lift-target objects or lift morphisms are materialized.
+/// Walks the instance body's [`TmV_::Instance`] payload, registering
+/// each generator with its fiber, each equation as a pair of
+/// [`DiscreteInstanceTerm`]s, and each sub-instance's contents under
+/// the appropriate prefix.
 ///
 /// Restricted to discrete double theories for the moment.
 pub fn instance_from_diag(
@@ -426,97 +426,95 @@ pub fn instance_from_diag(
     let cod_model = cod_model
         .as_discrete()
         .ok_or_else(|| "expected a discrete codomain model".to_string())?;
-    let mut generator = InstanceGenerator {
-        eval: Evaluator::empty(toplevel),
-        codomain_ty: diag.model.clone(),
-        instance: DiscreteDblModelInstance::new(Rc::new(cod_model)),
+    let mut instance = DiscreteDblModelInstance::new(Rc::new(cod_model));
+    let TmV_::Instance(body) = &*diag.body_val else {
+        return Err("expected a TmV::Instance body".into());
     };
-    let namespace = generator.generate(&diag.body_val)?;
-    Ok((generator.instance, namespace))
+    let mut namespace = Namespace::new_for_uuid();
+    extract_instance_body(&mut instance, &mut namespace, &[], body)?;
+    Ok((instance, namespace))
 }
 
-struct InstanceGenerator<'a> {
-    eval: Evaluator<'a>,
-    codomain_ty: TyV,
-    instance: DiscreteDblModelInstance,
-}
-
-impl InstanceGenerator<'_> {
-    fn generate(&mut self, body_ty: &TyV) -> Result<Namespace, String> {
-        let (self_n, eval_with_self) = self.eval.bind_self(body_ty.clone());
-        self.eval = eval_with_self;
-        let self_val = self.eval.eta_neu(&self_n, body_ty);
-        Ok(self
-            .extract(vec![], &self_val, body_ty)?
-            .unwrap_or_else(Namespace::new_for_uuid))
-    }
-
-    fn extract(
-        &mut self,
-        prefix: Vec<NameSegment>,
-        val: &TmV,
-        ty: &TyV,
-    ) -> Result<Option<Namespace>, String> {
-        match &**ty {
-            TyV_::Record(r) => {
-                let mut namespace = Namespace::new_for_uuid();
-                for (name, (label, _)) in r.fields.iter() {
-                    let mut child_prefix = prefix.clone();
-                    child_prefix.push(*name);
-                    if let NameSegment::Uuid(uuid) = name {
-                        namespace.set_label(*uuid, *label);
-                    }
-                    let field_tm = self.eval.proj(val, *name, *label);
-                    let field_ty = self.eval.field_ty(ty, val, *name);
-                    if let Some(inner) = self.extract(child_prefix, &field_tm, &field_ty)? {
-                        namespace.add_inner(*name, inner);
-                    }
-                }
-                Ok(Some(namespace))
-            }
-            TyV_::Over(path) => {
-                // Add an instance generator over the resolved codomain object.
-                let (cod_self_n, cod_eval) = self.eval.bind_self(self.codomain_ty.clone());
-                let cod_val = cod_eval.eta_neu(&cod_self_n, &self.codomain_ty);
-                let resolved = cod_eval.path_ty(&self.codomain_ty, &cod_val, path)?;
-                let TyV_::Object(_) = &*resolved else {
-                    return Err(
-                        "@over path does not refer to an object generator in the codomain".into()
-                    );
-                };
-                let qname: QualifiedName = prefix.into();
-                let fiber: QualifiedName =
-                    path.iter().map(|(seg, _)| *seg).collect::<Vec<_>>().into();
-                self.instance.add_generator(qname, fiber);
-                Ok(None)
-            }
-            TyV_::Id(carrier, lhs, rhs) if matches!(&**carrier, TyV_::Over(_)) => {
-                let lhs_t = tm_to_discrete_instance_term(lhs)?;
-                let rhs_t = tm_to_discrete_instance_term(rhs)?;
-                self.instance.add_equation(lhs_t, rhs_t);
-                Ok(None)
-            }
-            _ => Ok(None),
+fn extract_instance_body(
+    instance: &mut DiscreteDblModelInstance,
+    namespace: &mut Namespace,
+    prefix: &[NameSegment],
+    body: &InstanceBodyV,
+) -> Result<(), String> {
+    for (name, (label, path)) in &body.generators {
+        if let NameSegment::Uuid(uuid) = name {
+            namespace.set_label(*uuid, *label);
         }
+        let mut qsegs = prefix.to_vec();
+        qsegs.push(*name);
+        let qname: QualifiedName = qsegs.into();
+        let fiber: QualifiedName = path.iter().map(|(seg, _)| *seg).collect::<Vec<_>>().into();
+        instance.add_generator(qname, fiber);
     }
+    for (lhs, rhs) in &body.equations {
+        let lhs_t = tm_to_discrete_instance_term_with_prefix(lhs, prefix)?;
+        let rhs_t = tm_to_discrete_instance_term_with_prefix(rhs, prefix)?;
+        instance.add_equation(lhs_t, rhs_t);
+    }
+    for (name, (label, sub_v)) in &body.sub_instances {
+        if let NameSegment::Uuid(uuid) = name {
+            namespace.set_label(*uuid, *label);
+        }
+        let TmV_::Instance(sub_body) = &**sub_v else {
+            return Err("sub-instance is not a TmV::Instance".into());
+        };
+        let mut sub_prefix = prefix.to_vec();
+        sub_prefix.push(*name);
+        extract_instance_body(instance, namespace, &sub_prefix, sub_body)?;
+    }
+    Ok(())
 }
 
-/// Convert an `@over`-typed term value into a [`DiscreteInstanceTerm`].
-///
-/// Handles bare neutrals (projections of declared generator fields, which
-/// become [`DiscreteInstanceTerm::Generator`]) and nested
-/// [`TmV_::OverApp`] applications. The morphism is a single codomain field
-/// name, wrapped as a singleton [`Path`].
-fn tm_to_discrete_instance_term(tm: &TmV) -> Result<DiscreteInstanceTerm, String> {
+/// Convert an `@over`-typed term value into a [`DiscreteInstanceTerm`],
+/// prefixing each generator name with the path into any enclosing
+/// sub-instances.
+fn tm_to_discrete_instance_term_with_prefix(
+    tm: &TmV,
+    prefix: &[NameSegment],
+) -> Result<DiscreteInstanceTerm, String> {
     match &**tm {
-        TmV_::Neu(n, _) => Ok(DiscreteInstanceTerm::Generator(n.to_qualified_name())),
+        TmV_::Neu(n, _) => {
+            let mut segs = prefix.to_vec();
+            segs.extend(neu_full_name(n));
+            Ok(DiscreteInstanceTerm::Generator(segs.into()))
+        }
         TmV_::OverApp(mor_name, _, _, inner) => {
             let mor_qname = QualifiedName::single(*mor_name);
-            let inner_t = tm_to_discrete_instance_term(inner)?;
+            let inner_t = tm_to_discrete_instance_term_with_prefix(inner, prefix)?;
             Ok(DiscreteInstanceTerm::Apply(mor_qname, Box::new(inner_t)))
         }
         _ => Err("term is not a generator or codomain-morphism application".into()),
     }
+}
+
+/// Read off the full name of a neutral, including its leading variable
+/// name and any subsequent projection segments. Unlike
+/// [`TmN::to_qualified_name`] this does *not* treat the leading
+/// variable as an implicit root — for instance-body terms the leading
+/// variable is itself a generator name (e.g. `v1`) or sub-instance
+/// name (e.g. `we`), and must contribute a segment.
+fn neu_full_name(n: &TmN) -> Vec<NameSegment> {
+    let mut segments = Vec::new();
+    let mut cur = n;
+    loop {
+        match &**cur {
+            TmN_::Var(_, name, _) => {
+                segments.push(*name);
+                break;
+            }
+            TmN_::Proj(n1, f, _) => {
+                segments.push(*f);
+                cur = n1;
+            }
+        }
+    }
+    segments.reverse();
+    segments
 }
 
 #[cfg(test)]
@@ -558,9 +556,9 @@ type WeightedGraph := [
 ]
 
 def I : WeightedGraph := [
-    v : @over .V,
-    e : @over .E,
-    _ : (src(e) == v)
+    V := [v],
+    E := [e],
+    src(e) := v
 ]
 "#;
         let toplevel = elaborate_to_toplevel(src);
