@@ -1,6 +1,7 @@
 //! TODO
 //! The theory trait, and zero-sized instances and implementations of various
 //! theories.
+mod core_types;
 mod shared;
 pub mod theory;
 
@@ -8,6 +9,8 @@ pub mod theory;
 mod category;
 mod schema;
 
+pub use core_types::*;
+pub use theory::*;
+
 pub use category::Category;
 pub use schema::Schema;
-pub use theory::*;

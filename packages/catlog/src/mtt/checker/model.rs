@@ -6,10 +6,10 @@ use crate::mtt::{
     ast::{Decl, Model},
     checker::{
         context::{GeneratingProArrowEntry, ModelEntry, ObjectEntry},
-        core_types::{ModelGeneratingProArrow, ObjectType, TheoryObject, TheoryProArrow},
+        core_types::{ModelGeneratingProArrow, ObjectType},
         error::{CheckResult, EInfer, EType, Error},
     },
-    theory::Theory,
+    theory::{Theory, TheoryObject, TheoryProArrow},
 };
 
 impl<T: Theory> ModelEntry<T> {

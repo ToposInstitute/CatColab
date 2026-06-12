@@ -1,6 +1,6 @@
 use crate::mtt::{
-    checker::{TheoryObject, error::EConstraint},
-    theory::Theory,
+    checker::error::EConstraint,
+    theory::{Theory, TheoryObject},
 };
 
 /// Operations concerning the partial knowledge we accumulate about a

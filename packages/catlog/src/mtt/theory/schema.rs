@@ -1,11 +1,8 @@
 use std::collections::HashSet;
 
-use crate::mtt::{
-    checker::{Boundary, TheoryGeneratingArrow, TheoryObject, TheoryProArrow},
-    theory::{
-        ListVariant, Theory,
-        shared::{HOM, hom_pro_arrow, pro_arrow_composites_match},
-    },
+use crate::mtt::theory::{
+    Boundary, ListVariant, Theory, TheoryGeneratingArrow, TheoryObject, TheoryProArrow,
+    shared::{HOM, hom_pro_arrow, pro_arrow_composites_match},
 };
 
 /// The theory of database schemas with attributes, aka the "walking pro-arrow".

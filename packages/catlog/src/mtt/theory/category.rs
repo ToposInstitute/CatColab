@@ -1,11 +1,8 @@
 use std::collections::HashSet;
 
-use crate::mtt::{
-    checker::{Boundary, TheoryGeneratingArrow, TheoryObject, TheoryProArrow},
-    theory::{
-        ListVariant, Theory,
-        shared::{HOM, hom_pro_arrow},
-    },
+use crate::mtt::theory::{
+    Boundary, ListVariant, Theory, TheoryGeneratingArrow, TheoryObject, TheoryProArrow,
+    shared::{HOM, hom_pro_arrow},
 };
 
 /// The theory of categories, aka the trivial (terminal) double theory. It is

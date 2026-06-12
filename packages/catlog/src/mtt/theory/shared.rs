@@ -1,7 +1,9 @@
 use crate::mtt::{
-    checker::{TheoryObject, TheoryProArrow},
     composite::Composite,
-    theory::Theory,
+    theory::{
+        Theory,
+        core_types::{TheoryObject, TheoryProArrow},
+    },
 };
 
 /// The name used for the canonical hom (identity) pro-arrow on an object.
@@ -10,10 +12,7 @@ pub const HOM: &str = "Hom";
 /// Construct the hom pro-arrow on a pair of objects, used by the various
 /// `make_hom_pro_arrow` implementations. The caller is responsible for having
 /// already decided that `dom` and `cod` ought to coincide.
-pub fn hom_pro_arrow<T: Theory>(
-    dom: &TheoryObject<T>,
-    cod: &TheoryObject<T>,
-) -> TheoryProArrow<T> {
+pub fn hom_pro_arrow<T: Theory>(dom: &TheoryObject<T>, cod: &TheoryObject<T>) -> TheoryProArrow<T> {
     TheoryProArrow::from(HOM.to_string(), dom.clone(), cod.clone())
 }
 

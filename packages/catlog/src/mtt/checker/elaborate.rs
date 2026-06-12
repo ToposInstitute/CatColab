@@ -1,12 +1,9 @@
 //! TODO
 use crate::mtt::{
     ast::{Expression, ExpressionProArrow},
-    checker::{
-        ModelGeneratingProArrow, ObjectType, TheoryGeneratingArrow, TheoryObject, TheoryProArrow,
-        context::ModelEntry, error::EElaborate,
-    },
+    checker::{ModelGeneratingProArrow, ObjectType, context::ModelEntry, error::EElaborate},
     composite::Composite,
-    theory::Theory,
+    theory::{Theory, TheoryGeneratingArrow, TheoryObject, TheoryProArrow},
 };
 
 /// Procedures for transforming raw AST inputs into various core types. The

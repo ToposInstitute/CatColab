@@ -2,7 +2,7 @@
 use derive_more::Display;
 use std::collections::HashSet;
 
-use crate::mtt::checker::{Boundary, TheoryGeneratingArrow, TheoryObject, TheoryProArrow};
+use crate::mtt::theory::{Boundary, TheoryGeneratingArrow, TheoryObject, TheoryProArrow};
 
 #[derive(Clone, Display, PartialEq)]
 /// The kind of list modality in question.

@@ -8,12 +8,12 @@ use std::collections::HashMap;
 use crate::mtt::{
     checker::{
         ModelGeneratingProArrow,
-        core_types::{ObjectTerm, ObjectType, ProTerm, TheoryObject, TheoryProArrow},
+        core_types::{ObjectTerm, ObjectType, ProTerm},
         error::EContext,
     },
     composite::Composite,
     display_helpers::DHMap,
-    theory::Theory,
+    theory::{Theory, TheoryObject, TheoryProArrow},
 };
 
 #[derive(Display)]

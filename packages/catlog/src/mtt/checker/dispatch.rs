@@ -29,6 +29,8 @@ fn check_model_over<T: Theory>(model: &Model) -> CheckResult {
 
 /// Check an entire program, model by model, in declaration order.
 pub fn check_program(program: &Program) -> CheckResult {
+    // TODO: we'll need a new context for USE statements, right now every model
+    // is checked in isolation.
     for model in program.models.iter() {
         check_model(model)?;
     }
