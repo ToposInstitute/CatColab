@@ -407,9 +407,8 @@ impl<'a> Elaborator<'a> {
         arg_label_str: &str,
     ) -> (TmS, TmV, TyV) {
         let Some(model_ty) = self.current_instance_codomain().cloned() else {
-            return self.syn_error(
-                "applied codomain morphism is only allowed inside an instance body",
-            );
+            return self
+                .syn_error("applied codomain morphism is only allowed inside an instance body");
         };
         let TyV_::Over(src_path) = &*arg_ty else {
             let quoted = self.evaluator().quote_ty(&arg_ty);
@@ -466,7 +465,10 @@ impl<'a> Elaborator<'a> {
         let mut elab = self.enter(n.loc());
         let Tuple(field_ns) = n.ast0() else {
             elab.error::<()>("expected a tuple instance body");
-            return (TmS::instance(InstanceBodyS::default()), TmV::instance(InstanceBodyV::default()));
+            return (
+                TmS::instance(InstanceBodyS::default()),
+                TmV::instance(InstanceBodyV::default()),
+            );
         };
         let mut gens: IndexMap<FieldName, (LabelSegment, Vec<(FieldName, LabelSegment)>)> =
             IndexMap::new();
@@ -568,9 +570,7 @@ impl<'a> Elaborator<'a> {
                     let f_seg = name_seg(*field_name);
                     let f_label = label_seg(*field_name);
                     let Some(mor_ty_s) = cod_r.fields.get(f_seg) else {
-                        elab.error::<()>(format!(
-                            "no such codomain field {field_name}"
-                        ));
+                        elab.error::<()>(format!("no such codomain field {field_name}"));
                         failed = true;
                         continue;
                     };
@@ -582,8 +582,7 @@ impl<'a> Elaborator<'a> {
                         failed = true;
                         continue;
                     };
-                    let (Some(dom_path), Some(cod_path)) =
-                        (tms_to_path(dom_s), tms_to_path(cod_s))
+                    let (Some(dom_path), Some(cod_path)) = (tms_to_path(dom_s), tms_to_path(cod_s))
                     else {
                         elab.error::<()>(format!(
                             "codomain morphism {field_name} has non-path dom/cod; \
@@ -615,10 +614,8 @@ impl<'a> Elaborator<'a> {
                             break;
                         }
                         let lhs_ty = TyV::over(cod_path.clone());
-                        let lhs_s =
-                            TmS::over_app(f_seg, f_label, cod_path.clone(), key_s);
-                        let lhs_v =
-                            TmV::over_app(f_seg, f_label, cod_path.clone(), key_v);
+                        let lhs_s = TmS::over_app(f_seg, f_label, cod_path.clone(), key_s);
+                        let lhs_v = TmV::over_app(f_seg, f_label, cod_path.clone(), key_v);
                         let (rhs_s, rhs_v) = elab.chk(&lhs_ty, target_n);
                         eqns_s.push((lhs_s, rhs_s));
                         eqns_v.push((lhs_v, rhs_v));
@@ -630,11 +627,7 @@ impl<'a> Elaborator<'a> {
                 }
                 // `field := [n1, n2, ...]` — set-literal assignment to
                 // an object-typed field of the codomain.
-                App2(
-                    L(_, Keyword(":=")),
-                    L(_, Var(field_name)),
-                    L(_, Tuple(name_ns)),
-                ) => {
+                App2(L(_, Keyword(":=")), L(_, Var(field_name)), L(_, Tuple(name_ns))) => {
                     let Some(codomain) = elab.current_instance_codomain().cloned() else {
                         elab.error::<()>(
                             "set-literal field assignment is only allowed inside an \
@@ -1003,8 +996,8 @@ impl<'a> Elaborator<'a> {
             // codomain morphism in the enclosing instance) to the
             // resolved argument term.
             App1(L(_, Var(f)), L(_, Var(x))) => {
-                let (inner_s, inner_v, inner_ty) = elab.lookup_tm(ustr(*x));
-                elab.apply_codomain_morphism(*f, inner_s, inner_v, inner_ty, *x)
+                let (inner_s, inner_v, inner_ty) = elab.lookup_tm(ustr(x));
+                elab.apply_codomain_morphism(f, inner_s, inner_v, inner_ty, x)
             }
             App1(L(_, Var(f)), L(_, App1(recv_n, L(_, Field(arg_field))))) => {
                 let (recv_s, recv_v, recv_ty) = elab.syn(recv_n);
@@ -1019,7 +1012,7 @@ impl<'a> Elaborator<'a> {
                 let arg_ty = elab.evaluator().field_ty(&recv_ty, &recv_v, arg_name);
                 let arg_s = TmS::proj(recv_s, arg_name, arg_label);
                 let arg_v = elab.evaluator().proj(&recv_v, arg_name, arg_label);
-                elab.apply_codomain_morphism(*f, arg_s, arg_v, arg_ty, *arg_field)
+                elab.apply_codomain_morphism(f, arg_s, arg_v, arg_ty, arg_field)
             }
             App1(L(_, Prim("id")), ob_n) => {
                 let (ob_s, ob_v, ob_t) = elab.syn(ob_n);
@@ -1160,10 +1153,7 @@ impl<'a> Elaborator<'a> {
                     else {
                         return false;
                     };
-                    if !elems
-                        .iter()
-                        .all(|e| matches!(e.ast0(), App2(L(_, Keyword(":=")), _, _)))
-                    {
+                    if !elems.iter().all(|e| matches!(e.ast0(), App2(L(_, Keyword(":=")), _, _))) {
                         return false;
                     }
                     let Some(field_ty_s) = r.fields.get(name_seg(*field_name)) else {
