@@ -14,16 +14,15 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use super::Parameter;
-use crate::dbl::model::FpDblModel;
+use crate::dbl::model::{FpDblModel, MutDblModel};
 use crate::one::Path;
 use crate::simulate::ode::PolynomialSystem;
-use crate::stdlib::analyses::ode::ode_semantics::{self, *};
-use crate::zero::{name, name_seg};
-use crate::{
-    dbl::model::{DiscreteDblModel, MutDblModel},
-    one::QualifiedPath,
-    zero::QualifiedName,
+use crate::stdlib::analyses::ode::ode_semantics::{
+    ContributionSign, ODEParameterType, ODESemantics, ODESemanticsAnalysis,
+    ODESemanticsProblemData, PolynomialODESystemBuilder,
 };
+use crate::zero::{name, name_seg};
+use crate::{dbl::model::DiscreteDblModel, one::QualifiedPath, zero::QualifiedName};
 
 /// Implementing Lotka-Volterra as an ODE semantics for models of type `DiscreteDblModel`.
 pub struct LotkaVolterraSemantics;
@@ -102,17 +101,16 @@ impl
     fn build_system_builder(
         &self,
         model: &<LotkaVolterraSemantics as ODESemantics>::ModelType,
-    ) -> ode_semantics::PolynomialODESystemBuilder<
-        <LotkaVolterraSemantics as ODESemantics>::ParameterType,
-    > {
+    ) -> PolynomialODESystemBuilder<<LotkaVolterraSemantics as ODESemantics>::ParameterType> {
         let mut builder = PolynomialODESystemBuilder::new();
 
         for var in model.ob_generators_with_type(&self.var_ob_type) {
+            // TODO: variables
             builder.add_variable(var.clone());
 
-            // Arbitrarily signed contribution for growth or decay.
+            // TODO: contributions
             let id = var.cons(name_seg("Growth"));
-            // TODO: explain this contribution (\dot{x} += Growth_x \cdot x)
+            // x becomes the contribution \dot{x} += Growth_x \cdot x
             builder.add_contribution(
                 id,
                 var.clone(),
@@ -122,23 +120,37 @@ impl
             );
         }
 
-        // // FIXME: Should be *positively signed* contributions.
-        // for mor in model.mor_generators_with_type(&self.pos_link_type) {
-        //     let (Some(dom), Some(cod)) = (model.get_dom(&mor), model.get_cod(&mor)) else {
-        //         continue;
-        //     };
-        //     let id = mor.cons(name_seg("Influence"));
-        //     builder.add_contribution(id, dom.clone(), [dom.clone(), cod.clone()]);
-        // }
+        for mor in model.mor_generators_with_type(&self.pos_link_type) {
+            let (Some(dom), Some(cod)) = (model.get_dom(&mor), model.get_cod(&mor)) else {
+                continue;
+            };
 
-        // // FIXME: Should be *negatively signed* contributions.
-        // for mor in model.mor_generators_with_type(&self.neg_link_type) {
-        //     let (Some(dom), Some(cod)) = (model.get_dom(&mor), model.get_cod(&mor)) else {
-        //         continue;
-        //     };
-        //     let id = mor.cons(name_seg("Influence"));
-        //     builder.add_contribution(id, dom.clone(), [dom.clone(), cod.clone()]);
-        // }
+            // f: x -> y becomes the contribution \dot{y} += Interaction_f \cdot xy
+            let id = mor.cons(name_seg("PositiveInfluence"));
+            builder.add_contribution(
+                id.clone(),
+                cod.clone(),
+                ContributionSign::Positive,
+                LotkaVolterraParameter::Interaction { link: id },
+                [dom.clone(), cod.clone()],
+            );
+        }
+
+        for mor in model.mor_generators_with_type(&self.neg_link_type) {
+            let (Some(dom), Some(cod)) = (model.get_dom(&mor), model.get_cod(&mor)) else {
+                continue;
+            };
+
+            // f: x -> y becomes the contribution \dot{y} -= Interaction_f \cdot xy
+            let id = mor.cons(name_seg("NegativeInfluence"));
+            builder.add_contribution(
+                id.clone(),
+                cod.clone(),
+                ContributionSign::Negative,
+                LotkaVolterraParameter::Interaction { link: id },
+                [dom.clone(), cod.clone()],
+            );
+        }
 
         builder
     }
