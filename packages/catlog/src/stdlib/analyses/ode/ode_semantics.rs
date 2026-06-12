@@ -87,11 +87,6 @@ impl ODEParameterType for QualifiedName {}
 /// language to define ODE semantics for models of other theories. However, the
 /// idea is that it should be used in a style that can mechanically translated
 /// to a future declarative language for model migration.
-///
-/// Since an ODE semantics often has contributions of several types, a useful
-/// pattern is to use qualified names with an initial segment indicating the
-/// type of contribution. This corresponds to a model migration in which the
-/// contributions arise as a coproduct of several queries.
 #[derive(Clone)]
 pub struct PolynomialODESystemBuilder<P: ODEParameterType> {
     // TODO: should this struct also have types <T> ?????
@@ -117,6 +112,7 @@ impl <P: ODEParameterType> PolynomialODESystemBuilder<P> {
         self.model
     }
 
+    /// TODO: documentation.
     pub fn associated_parameters(self) -> HashMap<QualifiedName, P> {
         self.associated_parameters
     }
