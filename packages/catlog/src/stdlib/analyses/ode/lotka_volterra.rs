@@ -109,10 +109,9 @@ impl
             builder.add_variable(var.clone());
 
             // TODO: contributions
-            let id = var.cons(name_seg("Growth"));
             // x becomes the contribution \dot{x} += Growth_x \cdot x
             builder.add_contribution(
-                id,
+                var.clone(),
                 var.clone(),
                 ContributionSign::Positive,
                 LotkaVolterraParameter::Growth { variable: var.clone() },
@@ -126,12 +125,11 @@ impl
             };
 
             // f: x -> y becomes the contribution \dot{y} += Interaction_f \cdot xy
-            let id = mor.cons(name_seg("PositiveInfluence"));
             builder.add_contribution(
-                id.clone(),
+                mor.clone(),
                 cod.clone(),
                 ContributionSign::Positive,
-                LotkaVolterraParameter::Interaction { link: id },
+                LotkaVolterraParameter::Interaction { link: mor },
                 [dom.clone(), cod.clone()],
             );
         }
@@ -142,12 +140,11 @@ impl
             };
 
             // f: x -> y becomes the contribution \dot{y} -= Interaction_f \cdot xy
-            let id = mor.cons(name_seg("NegativeInfluence"));
             builder.add_contribution(
-                id.clone(),
+                mor.clone(),
                 cod.clone(),
                 ContributionSign::Negative,
-                LotkaVolterraParameter::Interaction { link: id },
+                LotkaVolterraParameter::Interaction { link: mor },
                 [dom.clone(), cod.clone()],
             );
         }
@@ -202,6 +199,7 @@ impl ODESemanticsProblemData<<LotkaVolterraSemantics as ODESemantics>::Parameter
         let sys = sys.extend_scalars(|poly| {
             poly.eval(|param| match param {
                 LotkaVolterraParameter::Growth { variable } => {
+                    // FIXME: this won't work, because `variable` will now be `Growth.variable`
                     self.growth_rates.get(variable).cloned().unwrap_or_default()
                 }
                 LotkaVolterraParameter::Interaction { link } => {
