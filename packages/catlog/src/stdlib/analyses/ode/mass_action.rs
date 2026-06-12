@@ -5,6 +5,7 @@
 //! where we do not require that mass be preserved. This allows the construction
 //! of systems of arbitrary polynomial (first-order) ODEs.
 
+use std::num::IntErrorKind;
 use std::{collections::HashMap, fmt};
 
 #[cfg(feature = "serde")]
@@ -205,280 +206,95 @@ impl
         }
 
         for transition in model.mor_generators_with_type(&self.transition_mor_type) {
-            match self.mass_conservation_type {
-                MassConservationType::Balanced => {
-                    let interface = transition_interface(&model, &transition);
-                    let (inputs, outputs) = (interface.input_places.clone(), interface.output_places.clone());
+            let interface = transition_interface(&model, &transition);
+            let (inputs, outputs) =
+                (interface.input_places.clone(), interface.output_places.clone());
 
-                    for output in outputs.clone() {
-                        let id = output
-                            .cons(name_seg("ToOutput"))
-                            .cons(transition.only().unwrap().clone());
-                        // The transition
-                        //   T: [x_1, ..., x_n] -> [y_1, ..., y_n]
-                        // becomes the contributions
-                        //   \dot{y_i} += Balanced_T \cdot x_1...x_n
-                        builder.add_contribution(
-                            id,
-                            output,
-                            ContributionSign::Positive,
-                            MassActionParameter::Balanced { flow: transition.clone() },
-                            inputs.clone(),
-                        );
-                    }
+            // Each transition gives a positive contribution to each term corresponding to
+            // one of its outputs, and a negative contribution to each term corresponding to
+            // one of its inputs. For example, a single transition T: [a,b] -> [x,y] will give
+            // four contributions, namely two positive contributions (ab -> x , ab -> y)
+            // and two negative (ab -> a , ab -> b).
 
-                    for input in inputs.clone() {
-                        let id = input
-                            .cons(name_seg("ToInput"))
-                            .cons(transition.only().unwrap().clone());
-                        // The transition
-                        //   T: [x_1, ..., x_n] -> [y_1, ..., y_n]
-                        // becomes the contributions
-                        //   \dot{x_i} -= Balanced_T \cdot x_1...x_n
-                        builder.add_contribution(
-                            id,
-                            input,
-                            ContributionSign::Negative,
-                            MassActionParameter::Balanced { flow: transition.clone() },
-                            inputs.clone(),
-                        );
+            for output in outputs.clone() {
+                let id = output.cons(name_seg("ToOutput")).cons(transition.only().unwrap().clone());
+                // The transition
+                //   T: [x_1, ..., x_n] -> [y_1, ..., y_n]
+                // becomes the contributions
+                //   \dot{y_i} += Parameter_! \cdot x_1...x_n
+                // where Parameter_! depends on `mass_conservation_type`:
+                //   Balanced                  => Parameter_T
+                //   Unbalanced::PerTransition => Parameter_T^inflow
+                //   Unbalanced::PerPlace      => Parameter_{T,y_i}^inflow
+                let parameter = match self.mass_conservation_type {
+                    MassConservationType::Balanced => {
+                        MassActionParameter::Balanced { flow: transition.clone() }
                     }
-                }
-                MassConservationType::Unbalanced(granularity) => match granularity {
-                    RateGranularity::PerFlow => {
-                        todo!()
+                    MassConservationType::Unbalanced(granularity) => match granularity {
+                        RateGranularity::PerFlow => MassActionParameter::Unbalanced {
+                            direction: Direction::IncomingFlow,
+                            parameter: RateParameter::PerFlow { flow: transition.clone() },
+                        },
+                        RateGranularity::PerStock => MassActionParameter::Unbalanced {
+                            direction: Direction::IncomingFlow,
+                            parameter: RateParameter::PerStock {
+                                flow: transition.clone(),
+                                stock: output.clone(),
+                            },
+                        },
+                    },
+                };
+
+                builder.add_contribution(
+                    id,
+                    output,
+                    ContributionSign::Positive,
+                    parameter,
+                    inputs.clone(),
+                );
+            }
+
+            for input in inputs.clone() {
+                let id = input.cons(name_seg("ToInput")).cons(transition.only().unwrap().clone());
+                // The transition
+                //   T: [x_1, ..., x_n] -> [y_1, ..., y_n]
+                // becomes the contributions
+                //   \dot{x_i} -= Parameter_! \cdot x_1...x_n
+                // where Parameter_! depends on `mass_conservation_type`:
+                //   Balanced                  => Parameter_T
+                //   Unbalanced::PerTransition => Parameter_T^outflow
+                //   Unbalanced::PerPlace      => Parameter_{T,x_i}^outflow
+                let parameter = match self.mass_conservation_type {
+                    MassConservationType::Balanced => {
+                        MassActionParameter::Balanced { flow: transition.clone() }
                     }
-                    RateGranularity::PerStock => {
-                        todo!()
-                    }
-                },
+                    MassConservationType::Unbalanced(granularity) => match granularity {
+                        RateGranularity::PerFlow => MassActionParameter::Unbalanced {
+                            direction: Direction::OutgoingFlow,
+                            parameter: RateParameter::PerFlow { flow: transition.clone() },
+                        },
+                        RateGranularity::PerStock => MassActionParameter::Unbalanced {
+                            direction: Direction::OutgoingFlow,
+                            parameter: RateParameter::PerStock {
+                                flow: transition.clone(),
+                                stock: input.clone(),
+                            },
+                        },
+                    },
+                };
+                
+                builder.add_contribution(
+                    id,
+                    input,
+                    ContributionSign::Negative,
+                    parameter,
+                    inputs.clone(),
+                );
             }
         }
 
         builder
     }
-    // fn build_semantics(
-    //     &self,
-    // ) -> ODESemanticsBuilder<
-    //     <PetriNetMassActionSemantics as ODESemantics>::ModelType,
-    //     <PetriNetMassActionSemantics as ODESemantics>::ParameterType,
-    // > {
-    //     let variable_builders = vec![ODEVariableBuilder::Object {
-    //         ob_type: PetriNetMassActionAnalysis::default().place_ob_type,
-    //     }];
-
-    //     // REQUEST  | The following code is horrible, with so much duplication that it makes
-    //     //   FOR    | editing (and inspecting) it really difficult. This is all because we store
-    //     // FEEDBACK | `mass_conservation_type` in `PetriNetMassActionAnalysis`, and we can't use
-    //     // _________/ `self.mass_conservation_type` in any of the closures constructed for
-    //     // `mor_contributions` (otherwise it'd try to coerce some captured values or something).
-    //     //
-    //     // I can see a few possible fixes here:
-    //     //
-    //     // 1. Use some Rust magic to just refactor everything and make it work without any
-    //     //    substantial design changes to code elsewhere (both here and in `ode_semantics`).
-    //     //
-    //     // 2. Move `mass_conservation_type` elsewhere, into a different struct, or pass it as an
-    //     //    argument into `build_semantics()` (which will require quite a reshuffle in other place).
-    //     //
-    //     // 3. Actually create three separate structs here: one `PetriNetMassActionAnalysis` for each
-    //     //    mass-conservation type.
-    //     //
-    //     // 4. Do some Rust wizardry that allows you to essentially fake a dependent type
-    //     //    `PetriNetMassActionAnalysis(MassConservationType)`.
-
-    //     // Note that a single morphism in a Petri net gives rise to multiple morphisms in the
-    //     // derived model of signed polynomial ODE systems, according to its interface. For example,
-    //     // a single transition T: [a,b] -> [x,y] in `model` will give four morphisms in `ode_model`,
-    //     // namely two positive contributions (ab -> x , ab -> y) and two negative (ab -> a , ab -> b).
-    //     //
-    //     // First we look at all the *negative* contributions coming from a transition, to its input places.
-    //     let transition_inputs = ODEContributionBuilder::<
-    //         <PetriNetMassActionSemantics as ODESemantics>::ModelType,
-    //         <PetriNetMassActionSemantics as ODESemantics>::ParameterType,
-    //     >::Morphism {
-    //         mor_types_and_signs: vec![(
-    //             PetriNetMassActionAnalysis::default().transition_mor_type,
-    //             ContributionSign::Negative,
-    //         )],
-    //         mor_contributions: match self.mass_conservation_type {
-    //             MassConservationType::Balanced => {
-    //                 vec![{
-    //                     |transition, model| {
-    //                         let inputs =
-    //                             transition_interface(model, transition).input_places.clone();
-
-    //                         inputs
-    //                             .iter()
-    //                             .map(|input| Contribution {
-    //                                 name: transition
-    //                                     .clone()
-    //                                     .snoc(name_seg("ToInput"))
-    //                                     .snoc(input.clone().only().unwrap()),
-    //                                 monomial: inputs.clone(),
-    //                                 parameter: MassActionParameter::Balanced {
-    //                                     flow: transition.clone(),
-    //                                 },
-    //                                 target: input.clone(),
-    //                             })
-    //                             .collect()
-    //                     }
-    //                 }]
-    //             }
-    //             MassConservationType::Unbalanced(granularity) => match granularity {
-    //                 RateGranularity::PerFlow => {
-    //                     vec![{
-    //                         |transition, model| {
-    //                             let inputs =
-    //                                 transition_interface(model, transition).input_places.clone();
-
-    //                             inputs
-    //                                 .iter()
-    //                                 .map(|input| Contribution {
-    //                                     name: transition
-    //                                         .clone()
-    //                                         .snoc(name_seg("ToInput"))
-    //                                         .snoc(input.clone().only().unwrap()),
-    //                                     monomial: inputs.clone(),
-    //                                     parameter: MassActionParameter::Unbalanced {
-    //                                         direction: Direction::OutgoingFlow,
-    //                                         parameter: RateParameter::PerFlow {
-    //                                             flow: transition.clone(),
-    //                                         },
-    //                                     },
-    //                                     target: input.clone(),
-    //                                 })
-    //                                 .collect()
-    //                         }
-    //                     }]
-    //                 }
-    //                 RateGranularity::PerStock => {
-    //                     vec![{
-    //                         |transition, model| {
-    //                             let inputs =
-    //                                 transition_interface(model, transition).input_places.clone();
-
-    //                             inputs
-    //                                 .iter()
-    //                                 .map(|input| Contribution {
-    //                                     name: transition
-    //                                         .clone()
-    //                                         .snoc(name_seg("ToInput"))
-    //                                         .snoc(input.clone().only().unwrap()),
-    //                                     monomial: inputs.clone(),
-    //                                     parameter: MassActionParameter::Unbalanced {
-    //                                         direction: Direction::OutgoingFlow,
-    //                                         parameter: RateParameter::PerStock {
-    //                                             flow: transition.clone(),
-    //                                             stock: input.clone(),
-    //                                         },
-    //                                     },
-    //                                     target: input.clone(),
-    //                                 })
-    //                                 .collect()
-    //                         }
-    //                     }]
-    //                 }
-    //             },
-    //         },
-    //     };
-
-    //     // Now we look at all the *positive* contributions coming from a transition, to its output places.
-    //     let transition_outputs = ODEContributionBuilder::<
-    //         <PetriNetMassActionSemantics as ODESemantics>::ModelType,
-    //         <PetriNetMassActionSemantics as ODESemantics>::ParameterType,
-    //     >::Morphism {
-    //         mor_types_and_signs: vec![(
-    //             PetriNetMassActionAnalysis::default().transition_mor_type,
-    //             ContributionSign::Positive,
-    //         )],
-    //         mor_contributions: match self.mass_conservation_type {
-    //             MassConservationType::Balanced => {
-    //                 vec![{
-    //                     |transition, model| {
-    //                         let inputs = transition_interface(model, transition).input_places;
-    //                         let outputs = transition_interface(model, transition).output_places;
-
-    //                         outputs
-    //                             .iter()
-    //                             .map(|output| Contribution {
-    //                                 name: transition
-    //                                     .clone()
-    //                                     .snoc(name_seg("ToOutPut"))
-    //                                     .snoc(output.clone().only().unwrap()),
-    //                                 monomial: inputs.clone(),
-    //                                 parameter: MassActionParameter::Balanced {
-    //                                     flow: transition.clone(),
-    //                                 },
-    //                                 target: output.clone(),
-    //                             })
-    //                             .collect()
-    //                     }
-    //                 }]
-    //             }
-    //             MassConservationType::Unbalanced(granularity) => match granularity {
-    //                 RateGranularity::PerFlow => {
-    //                     vec![{
-    //                         |transition, model| {
-    //                             let inputs = transition_interface(model, transition).input_places;
-    //                             let outputs = transition_interface(model, transition).output_places;
-
-    //                             outputs
-    //                                 .iter()
-    //                                 .map(|output| Contribution {
-    //                                     name: transition
-    //                                         .clone()
-    //                                         .snoc(name_seg("ToOutput"))
-    //                                         .snoc(output.clone().only().unwrap()),
-    //                                     monomial: inputs.clone(),
-    //                                     parameter: MassActionParameter::Unbalanced {
-    //                                         direction: Direction::IncomingFlow,
-    //                                         parameter: RateParameter::PerFlow {
-    //                                             flow: transition.clone(),
-    //                                         },
-    //                                     },
-    //                                     target: output.clone(),
-    //                                 })
-    //                                 .collect()
-    //                         }
-    //                     }]
-    //                 }
-    //                 RateGranularity::PerStock => {
-    //                     vec![{
-    //                         |transition, model| {
-    //                             let inputs = transition_interface(model, transition).input_places;
-    //                             let outputs = transition_interface(model, transition).output_places;
-
-    //                             outputs
-    //                                 .iter()
-    //                                 .map(|output| Contribution {
-    //                                     name: transition
-    //                                         .clone()
-    //                                         .snoc(name_seg("ToOutput"))
-    //                                         .snoc(output.clone().only().unwrap()),
-    //                                     monomial: inputs.clone(),
-    //                                     parameter: MassActionParameter::Unbalanced {
-    //                                         direction: Direction::IncomingFlow,
-    //                                         parameter: RateParameter::PerStock {
-    //                                             flow: transition.clone(),
-    //                                             stock: output.clone(),
-    //                                         },
-    //                                     },
-    //                                     target: output.clone(),
-    //                                 })
-    //                                 .collect()
-    //                         }
-    //                     }]
-    //                 }
-    //             },
-    //         },
-    //     };
-
-    //     ODESemanticsBuilder {
-    //         variable_builders,
-    //         contribution_builders: vec![transition_inputs, transition_outputs],
-    //     }
-    // }
 }
 
 /// Mass-action ODE analysis for stock-flow models.
