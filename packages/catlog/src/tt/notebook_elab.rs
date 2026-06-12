@@ -452,9 +452,7 @@ impl<'a> Elaborator<'a> {
                 nb::ModelJudgment::Equation(eqn_decl) => self.equation_cell(eqn_decl),
             };
             field_ty_vs.push((name, (label, ty_v.clone())));
-            self.ctx
-                .scope
-                .push(VarInContext::new(name, label, Some(ty_v.clone())));
+            self.ctx.scope.push(VarInContext::new(name, label, Some(ty_v.clone())));
             self.ctx.env =
                 self.ctx.env.snoc(TmV::neu(TmN::proj(self_var.clone(), name, label), ty_v));
         }

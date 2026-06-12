@@ -213,12 +213,14 @@ fn instance_body_to_doc<'a>(body: &InstanceBodyS) -> D<'a> {
     let gens = body.generators.iter().map(|(_, (label, path))| {
         binop(t(":"), t(format!("{label}")), t(format!("@over{}", path_to_string(path))))
     });
-    let eqns = body.equations.iter().map(|(lhs, rhs)| {
-        binop(t(":="), lhs.to_doc(), rhs.to_doc())
-    });
-    let subs = body.sub_instances.iter().map(|(_, (label, inner))| {
-        binop(t(":"), t(format!("{label}")), inner.to_doc())
-    });
+    let eqns = body
+        .equations
+        .iter()
+        .map(|(lhs, rhs)| binop(t(":="), lhs.to_doc(), rhs.to_doc()));
+    let subs = body
+        .sub_instances
+        .iter()
+        .map(|(_, (label, inner))| binop(t(":"), t(format!("{label}")), inner.to_doc()));
     tuple(gens.chain(subs).chain(eqns))
 }
 
@@ -271,7 +273,7 @@ pub enum TmS_ {
     ///    `we.e`, whose type is the fiber over `<src_path>` where the
     ///    codomain morphism `mor : <src_path> → <tgt_path>`).
     ///
-    /// Example: in
+    /// Here is an example:
     /// ```text
     /// def Edge : WeightedGraph := [E := [e]]
     /// def I : WeightedGraph := [
@@ -280,7 +282,7 @@ pub enum TmS_ {
     ///     we.src(e) := v1,
     /// ]
     /// ```
-    /// the LHS of the mapping clause elaborates to
+    /// The LHS of the mapping clause elaborates to
     /// `OverApp(src, src, [(V, V)], Proj(Var(we), e, e))` of fiber-type
     /// over `.V`.
     OverApp(FieldName, LabelSegment, Vec<(FieldName, LabelSegment)>, TmS),
@@ -419,9 +421,7 @@ impl ToDoc for TmS {
             TmS_::Compose(f, g) => binop(t("·"), f.to_doc(), g.to_doc()),
             TmS_::ObApp(name, x) => unop(t(format!("@{name}")), x.to_doc()),
             TmS_::List(elems) => tuple(elems.iter().map(|elem| elem.to_doc())),
-            TmS_::OverApp(_, mor_label, _, inner) => {
-                inner.to_doc() + t(format!(".{mor_label}"))
-            }
+            TmS_::OverApp(_, mor_label, _, inner) => inner.to_doc() + t(format!(".{mor_label}")),
             TmS_::Instance(body) => instance_body_to_doc(body),
             TmS_::Tt => t("tt"),
             TmS_::Meta(mv) => t(format!("?{}", mv.id)),

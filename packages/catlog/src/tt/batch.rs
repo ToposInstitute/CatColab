@@ -11,12 +11,7 @@ use scopeguard::guard;
 use tattle::display::SourceInfo;
 use tattle::{Reporter, declare_error};
 
-use super::{
-    modelgen::instance_from_diag,
-    text_elab::*,
-    theory::std_theories,
-    toplevel::*,
-};
+use super::{modelgen::instance_from_diag, text_elab::*, theory::std_theories, toplevel::*};
 use crate::dbl::discrete::{DiscreteDblModelInstance, DiscreteInstanceTerm};
 use crate::zero::NameSegment;
 
