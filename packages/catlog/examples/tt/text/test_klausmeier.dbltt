@@ -1,0 +1,72 @@
+set_theory ThMulticategory
+
+type DEC := [
+  Form0 : Object,
+  Form1 : Object,
+  DualForm0 : Object,
+  lapl_d0 : Multihom[[DualForm0], DualForm0],
+  partial_0 : Multihom[[Form0], Form0],
+  partial_1 : Multihom[[Form1], Form1],
+  partial_d0 : Multihom[[DualForm0], DualForm0],
+  square_d0 : Multihom[[DualForm0], DualForm0],
+  add_d0d0 : Multihom[[DualForm0, DualForm0], DualForm0],
+  sub_d01 : Multihom[[DualForm0, Form0], DualForm0],
+  sub_d0d0 : Multihom[[DualForm0, DualForm0], DualForm0],
+  mult_00 : Multihom[[Form0, Form0], Form0],
+  mult_d0d0 : Multihom[[DualForm0, DualForm0], DualForm0],
+  mult_0d0 : Multihom[[Form0, DualForm0], DualForm0],
+  lie_1d0 : Multihom[[Form1, DualForm0], DualForm0],
+  wedge_00: Multihom[[Form0, Form0], Form0],
+  wedge_10: Multihom[[Form1, Form0], Form1]
+]
+
+diagram Hydrodynamics : @Instance(DEC) := [
+    a : @over .Form0,
+    k : @over .Form0,
+    n : @over .DualForm0,
+    w : @over .DualForm0,
+    dX : @over .Form1,
+    x0 : @over .DualForm0,
+    x1 : @over .DualForm0,
+    x2 : @over .DualForm0,
+    x3 : @over .DualForm0,
+    x4 : @over .DualForm0,
+    x5 : @over .DualForm0,
+    x6 : @over .DualForm0,               
+    _1 : ( x0 == sub_d01([w,a]) ),
+    _2 : ( x1 == square_d0([n]) ),
+    _3 : ( x2 == mult_d0d0([w, x1]) ),
+    _4 : ( x3 == sub_d0d0([x0, x2]) ), 
+    _5 : ( x4 == lie_1d0([dX, w]) ),
+    _6 : ( x5 == mult_0d0([k, x4]) ),
+    _7 : ( x6 == add_d0d0([x3, x5]) ),
+    _8 : ( x6 == partial_d0([w]) )
+]
+
+diagram Phytodynamics : @Instance(DEC) := [
+    n : @over .DualForm0,
+    w : @over .DualForm0,
+    m : @over .Form0,
+    y0 : @over .DualForm0,
+    y1 : @over .DualForm0,
+    y2 : @over .DualForm0,
+    y3 : @over .DualForm0,
+    y4 : @over .DualForm0,
+    y5 : @over .DualForm0,
+    y6 : @over .DualForm0,
+    _1 : ( y0 == square_d0([n]) ),
+    _2 : ( y1 == mult_d0d0([w, y0]) ),
+    _3 : ( y2 == mult_0d0([m, n]) ),
+    _4 : ( y3 == sub_d0d0([y1, y2]) ),
+    _5 : ( y4 == lapl_d0([n]) ), 
+    _6 : ( y5 == add_d0d0([y3, y4]) ),
+    _7 : ( y6 == partial_d0([w]) ),
+    _8 : ( y6 == y5 )
+]
+
+diagram Klausmeier : @Instance(DEC) := [
+    hydro : Hydrodynamics,
+    phyto : Phytodynamics,
+    _1 : ( hydro.n == phyto.n ),
+    _2 : ( hydro.w == phyto.w )
+]

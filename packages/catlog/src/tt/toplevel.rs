@@ -1,6 +1,7 @@
 //! Data structures for managing toplevel declarations in the type theory.
 //!
-//! Specifically, notebooks will produce [TopDecl::Type] declarations.
+//! Specifically, notebooks will produce [TopDecl::Type] declarations, or
+//! maybe [TopDecl::Diag] declartions.
 
 use derive_more::Constructor;
 
@@ -8,7 +9,7 @@ use super::{prelude::*, stx::*, theory::*, val::*};
 use crate::zero::QualifiedName;
 
 /// A toplevel declaration.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum TopDecl {
     /// See [Type].
     Type(Type),
@@ -16,13 +17,15 @@ pub enum TopDecl {
     DefConst(DefConst),
     /// See [Def].
     Def(Def),
+    /// See [Diag].
+    Diag(Diag),
 }
 
 /// A toplevel declaration of a type.
 ///
 /// Also stores the evaluation of that type. Because this is an evaluation in
 /// the empty context, this is OK to use in any other context as well.
-#[derive(Constructor, Clone)]
+#[derive(Constructor, Debug, Clone)]
 pub struct Type {
     /// The theory for the type.
     pub theory: Theory,
@@ -37,7 +40,7 @@ pub struct Type {
 /// Also stores the evaluation of that term, and the evaluation of the
 /// corresponding type of that term. Because this is an evaluation in the empty
 /// context, this is OK to use in any other context as well.
-#[derive(Constructor, Clone)]
+#[derive(Constructor, Debug, Clone)]
 pub struct DefConst {
     /// The theory that the constant is defined in.
     pub theory: Theory,
@@ -50,7 +53,7 @@ pub struct DefConst {
 }
 
 /// A toplevel declaration of a term judgment.
-#[derive(Constructor, Clone)]
+#[derive(Constructor, Debug, Clone)]
 pub struct Def {
     /// The theory that the definition is defined in.
     pub theory: Theory,
@@ -64,6 +67,21 @@ pub struct Def {
     pub body: TmS,
 }
 
+/// A toplevel declaration of a diagram.
+#[derive(Constructor, Debug, Clone)]
+pub struct Diag {
+    /// The theory that the diagram is defined in.
+    pub theory: Theory,
+    /// The model G that this diagram is an instance of.
+    pub model: TyV,
+    /// The body: a record TyS whose fields have @over-typed entries,
+    /// presenting both the domain generators and the mapping.
+    pub body_stx: TyS,
+    /// Evaluated body — useful for downstream consumers that want the TyV directly.
+    pub body_val: TyV,
+    /// Collection of @over declarations and their types.
+    pub over_decls: Vec<(Vec<NameSegment>, (LabelSegment, Vec<FieldName>))>,
+}
 impl TopDecl {
     /// Unwraps the type for a toplevel-declaration of a type, or panics.
     ///
@@ -92,6 +110,14 @@ impl TopDecl {
         match self {
             TopDecl::Def(d) => d,
             _ => panic!("top-level should be a term judgment"),
+        }
+    }
+
+    /// Unwraps the diagram for a toplevel diagram declaration, or panics.
+    pub fn unwrap_diag(self) -> Diag {
+        match self {
+            TopDecl::Diag(d) => d,
+            _ => panic!("top-level should be a diagram declaration"),
         }
     }
 }

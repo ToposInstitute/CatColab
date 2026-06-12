@@ -1,0 +1,270 @@
+{
+  "name": "Testing Petri-Net",
+  "notebook": {
+    "cellContents": {
+      "019ea9af-269b-721a-9cf1-d2de10f159d0": {
+        "content": {
+          "id": "019ea9af-269b-721a-9cf1-ce539f888301",
+          "name": "Form0",
+          "obType": {
+            "content": "Object",
+            "tag": "Basic"
+          },
+          "tag": "object"
+        },
+        "id": "019ea9af-269b-721a-9cf1-d2de10f159d0",
+        "tag": "formal"
+      },
+      "019ea9af-2fe2-7139-b2df-8d84761e149b": {
+        "content": {
+          "cod": {
+            "content": {
+              "ob": {
+                "content": {
+                  "modality": "SymmetricList",
+                  "objects": [
+                    {
+                      "content": "019ea9af-269b-721a-9cf1-ce539f888301",
+                      "tag": "Basic"
+                    }
+                  ]
+                },
+                "tag": "List"
+              },
+              "op": {
+                "content": "tensor",
+                "tag": "Basic"
+              }
+            },
+            "tag": "App"
+          },
+          "dom": {
+            "content": {
+              "ob": {
+                "content": {
+                  "modality": "SymmetricList",
+                  "objects": [
+                    {
+                      "content": "019ea9af-269b-721a-9cf1-ce539f888301",
+                      "tag": "Basic"
+                    }
+                  ]
+                },
+                "tag": "List"
+              },
+              "op": {
+                "content": "tensor",
+                "tag": "Basic"
+              }
+            },
+            "tag": "App"
+          },
+          "id": "019ea9af-2fe2-7139-b2df-881d5af7703b",
+          "morType": {
+            "content": {
+              "content": "Object",
+              "tag": "Basic"
+            },
+            "tag": "Hom"
+          },
+          "name": "partial",
+          "tag": "morphism"
+        },
+        "id": "019ea9af-2fe2-7139-b2df-8d84761e149b",
+        "tag": "formal"
+      },
+      "019ea9af-5ddd-70c2-a9a4-364cc20b5879": {
+        "content": {
+          "cod": {
+            "content": {
+              "ob": {
+                "content": {
+                  "modality": "SymmetricList",
+                  "objects": [
+                    {
+                      "content": "019ea9af-269b-721a-9cf1-ce539f888301",
+                      "tag": "Basic"
+                    }
+                  ]
+                },
+                "tag": "List"
+              },
+              "op": {
+                "content": "tensor",
+                "tag": "Basic"
+              }
+            },
+            "tag": "App"
+          },
+          "dom": {
+            "content": {
+              "ob": {
+                "content": {
+                  "modality": "SymmetricList",
+                  "objects": [
+                    {
+                      "content": "019ea9af-269b-721a-9cf1-ce539f888301",
+                      "tag": "Basic"
+                    },
+                    {
+                      "content": "019ea9af-269b-721a-9cf1-ce539f888301",
+                      "tag": "Basic"
+                    }
+                  ]
+                },
+                "tag": "List"
+              },
+              "op": {
+                "content": "tensor",
+                "tag": "Basic"
+              }
+            },
+            "tag": "App"
+          },
+          "id": "019ea9af-5ddd-70c2-a9a4-31ea4065da9e",
+          "morType": {
+            "content": {
+              "content": "Object",
+              "tag": "Basic"
+            },
+            "tag": "Hom"
+          },
+          "name": "multiplication",
+          "tag": "morphism"
+        },
+        "id": "019ea9af-5ddd-70c2-a9a4-364cc20b5879",
+        "tag": "formal"
+      },
+      "019ea9af-88a5-76da-b6db-4af42a0cf5c8": {
+        "content": {
+          "cod": {
+            "content": {
+              "ob": {
+                "content": {
+                  "modality": "SymmetricList",
+                  "objects": [
+                    {
+                      "content": "019ea9af-269b-721a-9cf1-ce539f888301",
+                      "tag": "Basic"
+                    }
+                  ]
+                },
+                "tag": "List"
+              },
+              "op": {
+                "content": "tensor",
+                "tag": "Basic"
+              }
+            },
+            "tag": "App"
+          },
+          "dom": {
+            "content": {
+              "ob": {
+                "content": {
+                  "modality": "SymmetricList",
+                  "objects": [
+                    {
+                      "content": "019ea9af-269b-721a-9cf1-ce539f888301",
+                      "tag": "Basic"
+                    },
+                    {
+                      "content": "019ea9af-269b-721a-9cf1-ce539f888301",
+                      "tag": "Basic"
+                    }
+                  ]
+                },
+                "tag": "List"
+              },
+              "op": {
+                "content": "tensor",
+                "tag": "Basic"
+              }
+            },
+            "tag": "App"
+          },
+          "id": "019ea9af-88a5-76da-b6db-457deb58b8a6",
+          "morType": {
+            "content": {
+              "content": "Object",
+              "tag": "Basic"
+            },
+            "tag": "Hom"
+          },
+          "name": "wedge",
+          "tag": "morphism"
+        },
+        "id": "019ea9af-88a5-76da-b6db-4af42a0cf5c8",
+        "tag": "formal"
+      },
+      "019ea9b0-7e0d-752f-b77d-ab2d32f9a41d": {
+        "content": {
+          "cod": {
+            "content": {
+              "ob": {
+                "content": {
+                  "modality": "SymmetricList",
+                  "objects": [
+                    {
+                      "content": "019ea9af-269b-721a-9cf1-ce539f888301",
+                      "tag": "Basic"
+                    }
+                  ]
+                },
+                "tag": "List"
+              },
+              "op": {
+                "content": "tensor",
+                "tag": "Basic"
+              }
+            },
+            "tag": "App"
+          },
+          "dom": {
+            "content": {
+              "ob": {
+                "content": {
+                  "modality": "SymmetricList",
+                  "objects": [
+                    {
+                      "content": "019ea9af-269b-721a-9cf1-ce539f888301",
+                      "tag": "Basic"
+                    }
+                  ]
+                },
+                "tag": "List"
+              },
+              "op": {
+                "content": "tensor",
+                "tag": "Basic"
+              }
+            },
+            "tag": "App"
+          },
+          "id": "019ea9b0-7e0d-752f-b77d-a7ec0956ea8c",
+          "morType": {
+            "content": {
+              "content": "Object",
+              "tag": "Basic"
+            },
+            "tag": "Hom"
+          },
+          "name": "lapl",
+          "tag": "morphism"
+        },
+        "id": "019ea9b0-7e0d-752f-b77d-ab2d32f9a41d",
+        "tag": "formal"
+      }
+    },
+    "cellOrder": [
+      "019ea9af-269b-721a-9cf1-d2de10f159d0",
+      "019ea9af-2fe2-7139-b2df-8d84761e149b",
+      "019ea9b0-7e0d-752f-b77d-ab2d32f9a41d",
+      "019ea9af-5ddd-70c2-a9a4-364cc20b5879",
+      "019ea9af-88a5-76da-b6db-4af42a0cf5c8"
+    ]
+  },
+  "theory": "petri-net",
+  "type": "model",
+  "version": "2"
+}

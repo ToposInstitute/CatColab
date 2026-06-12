@@ -1,0 +1,71 @@
+set_theory ThSchema
+#/ result: set theory to ThSchema
+
+type WeightedGraph := [
+  V : Entity,
+  E : Entity,
+  Weight : AttrType,
+  src : (Hom Entity)[E, V],
+  tgt : (Hom Entity)[E, V],
+  weight : Attr[E, Weight]
+]
+#/ declared: WeightedGraph
+
+diagram I : @Instance(WeightedGraph) := [
+    e : @over .E,
+]
+#/ declared: I
+#/ diagram domain:
+#/   e : Entity -> E
+#/   src(e) : Entity -> V
+#/   tgt(e) : Entity -> V
+#/   weight(e) : AttrType -> Weight
+#/   ~src(e) : Hom(Entity)[e, src(e)] -> src
+#/   ~tgt(e) : Hom(Entity)[e, tgt(e)] -> tgt
+#/   ~weight(e) : Attr[e, weight(e)] -> weight
+#/ diagram validates against codomain
+
+diagram I2 : @Instance(WeightedGraph) := [
+    v1 : @over .V,
+    v2 : @over .V,
+    w : @over .Weight,
+    we : I & [.src(e) := v1, .tgt(e) := v2, .weight(e) := w],
+    wf : I & [.src(e) := v2, .tgt(e) := v1, .weight(e) := w]
+]
+#/ declared: I2
+#/ diagram domain:
+#/   v1 : Entity -> V
+#/   v2 : Entity -> V
+#/   w : AttrType -> Weight
+#/   we.e : Entity -> E
+#/   wf.e : Entity -> E
+#/   we.~src(e) : Hom(Entity)[we.e, v1] -> src
+#/   we.~tgt(e) : Hom(Entity)[we.e, v2] -> tgt
+#/   we.~weight(e) : Attr[we.e, w] -> weight
+#/   wf.~src(e) : Hom(Entity)[wf.e, v2] -> src
+#/   wf.~tgt(e) : Hom(Entity)[wf.e, v1] -> tgt
+#/   wf.~weight(e) : Attr[wf.e, w] -> weight
+#/ diagram validates against codomain
+
+diagram I3 : @Instance(WeightedGraph) := [
+    e1 : @over .E,
+    e2 : @over .E
+]
+#/ declared: I3
+#/ diagram domain:
+#/   e1 : Entity -> E
+#/   e2 : Entity -> E
+#/   src(e1) : Entity -> V
+#/   tgt(e1) : Entity -> V
+#/   weight(e1) : AttrType -> Weight
+#/   src(e2) : Entity -> V
+#/   tgt(e2) : Entity -> V
+#/   weight(e2) : AttrType -> Weight
+#/   ~src(e1) : Hom(Entity)[e1, src(e1)] -> src
+#/   ~tgt(e1) : Hom(Entity)[e1, tgt(e1)] -> tgt
+#/   ~weight(e1) : Attr[e1, weight(e1)] -> weight
+#/   ~src(e2) : Hom(Entity)[e2, src(e2)] -> src
+#/   ~tgt(e2) : Hom(Entity)[e2, tgt(e2)] -> tgt
+#/   ~weight(e2) : Attr[e2, weight(e2)] -> weight
+#/ diagram validates against codomain
+

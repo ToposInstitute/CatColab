@@ -15,7 +15,7 @@ use crate::zero::LabelSegment;
 /// requested with `@hole`.
 ///
 /// Metavariables in notebook elaboration are namespaced to the notebook.
-#[derive(Constructor, Clone, Copy, PartialEq, Eq)]
+#[derive(Constructor, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MetaVar {
     ref_id: Option<Ustr>,
     id: usize,
@@ -28,6 +28,7 @@ impl fmt::Display for MetaVar {
 }
 
 /// Inner enum for [TyS].
+#[derive(Debug)]
 pub enum TyS_ {
     /// A reference to a top-level declaration.
     TopVar(TopVarName),
@@ -94,13 +95,24 @@ pub enum TyS_ {
     /// Currently, this is only used for handling elaboration errors, we might
     /// add more unification/holes later.
     Meta(MetaVar),
+
+    /// The type of terms in a fiber over an object generator of some
+    /// diagram's codomain model.
+    ///
+    /// The path identifies the object generator in the codomain. Diagram
+    /// identity is contextual rather than part of the type: any diagram
+    /// in scope contributes its terms to this type, so two `@over .V`
+    /// types from different diagram declarations are convertible. The
+    /// elaborator validates the path against the enclosing diagram's
+    /// codomain at construction time. Example surface syntax: `e : @over .E`.
+    Over(Vec<(FieldName, LabelSegment)>),
 }
 
 /// Syntax for total types, dereferences to [TyS_].
 ///
 /// See [crate::tt] for an explanation of what total types are, and for an
 /// explanation of our approach to Rc pointers in abstract syntax trees.
-#[derive(Clone, Deref)]
+#[derive(Clone, Debug, Deref)]
 #[deref(forward)]
 pub struct TyS(Rc<TyS_>);
 
@@ -152,6 +164,11 @@ impl TyS {
     pub fn meta(mv: MetaVar) -> Self {
         Self(Rc::new(TyS_::Meta(mv)))
     }
+
+    /// Smart constructor for [TyS], [TyS_::Over] case.
+    pub fn over(path: Vec<(FieldName, LabelSegment)>) -> Self {
+        Self(Rc::new(TyS_::Over(path)))
+    }
 }
 
 impl ToDoc for TyS {
@@ -176,6 +193,7 @@ impl ToDoc for TyS {
             ),
             TyS_::Unit => t("Unit"),
             TyS_::Meta(mv) => t(format!("?{}", mv.id)),
+            TyS_::Over(path) => t(format!("@over{}", path_to_string(path))),
         }
     }
 }
@@ -195,6 +213,7 @@ impl fmt::Display for TyS {
 }
 
 /// Inner enum for [TmS].
+#[derive(Debug)]
 pub enum TmS_ {
     /// A reference to a top-level constant def.
     TopVar(TopVarName),
@@ -233,7 +252,7 @@ pub enum TmS_ {
 ///
 /// See [crate::tt] for an explanation of what total types are, and for an
 /// explanation of our approach to Rc pointers in abstract syntax trees.
-#[derive(Clone, Deref)]
+#[derive(Clone, Debug, Deref)]
 #[deref(forward)]
 pub struct TmS(Rc<TmS_>);
 

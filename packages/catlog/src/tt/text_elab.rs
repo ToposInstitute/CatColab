@@ -1,6 +1,7 @@
 //! Elaboration from plain text for DoubleTT.
 
 use fnotation::*;
+use itertools::Itertools;
 use scopeguard::{ScopeGuard, guard};
 
 use fnotation::{ParseConfig, parser::Prec};
@@ -24,7 +25,7 @@ pub const TT_PARSE_CONFIG: ParseConfig = ParseConfig::new(
         ("==", Prec::nonassoc(30)),
     ],
     &[":", ":=", "&", "Unit", "Hom", "*", "=="],
-    &["type", "def", "syn", "chk", "norm", "generate", "uwd", "set_theory"],
+    &["type", "def", "syn", "chk", "norm", "generate", "uwd", "set_theory", "diagram"],
 );
 
 /// The result of elaborating a top-level statement.
@@ -124,9 +125,69 @@ impl TopElaborator {
                     )
                 })?;
                 let (ty_s, ty_v) = self.elaborator(&theory, toplevel).ty(ty_n);
+                // println!("TYPE: {}, \n\n {}", ty_s, ty_n);
                 Some(TopElabResult::Declaration(
                     name,
                     TopDecl::Type(Type::new(theory.clone(), ty_s, ty_v)),
+                ))
+            }
+            "diagram" => {
+                let theory = self.get_theory(tn.loc)?;
+                let mut elab = self.elaborator(&theory, toplevel);
+                let (name, args_n, annotn, valn) = self.annotated_def(tn.body).or_else(|| {
+                    self.error(
+                        tn.loc,
+                        "unknown syntax for diagram declaration, expected <name> : <type> := <term>",
+                    )
+                })?;
+                if args_n.is_some() {
+                    return self.error(tn.loc, "diagrams cannot have arguments");
+                }
+                let (_, ret_ty_v) = elab.ty(annotn);
+                // Bind the diagram's name as a diagram-kind context entry
+                // so that `@over .E` inside the body can recover both the
+                // diagram's name and its codomain type, while ordinary
+                // term lookups cannot see it.
+                let diag_label = match name {
+                    NameSegment::Text(s) => label_seg(s),
+                    NameSegment::Uuid(_) => label_seg("diag"),
+                };
+                elab.intro_diagram(name, diag_label, ret_ty_v.clone());
+
+                let mut sub_diag_fields = Vec::new();
+                if let Tuple(field_ns) = valn.ast0() {
+                    for field_n in field_ns.iter() {
+                        if let App2(L(_, Keyword(":")), L(_, Var(fname)), L(_, Var(tname))) =
+                            field_n.ast0()
+                        {
+                            let tname = name_seg(*tname);
+                            if let Some(TopDecl::Diag(_)) = elab.toplevel.lookup(tname) {
+                                sub_diag_fields.push((name_seg(*fname), tname));
+                            }
+                        }
+                    }
+                }
+
+                let (val_s, _val_v) = elab.ty(valn);
+                // Augment the body with synthetic lift-target fields forced
+                // by the discrete-opfibration condition: for each declared
+                // `e : @over .X` and codomain morphism `f : X → Y`, add a
+                // synthetic field `f(e) : @over .Y`.
+                let (val_s, mut over_decls) = augment_with_lifts(&val_s, &ret_ty_v);
+
+                for (field_name, diag_name) in &sub_diag_fields {
+                    if let Some(TopDecl::Diag(sub)) = elab.toplevel.lookup(*diag_name) {
+                        for (sub_path, info) in &sub.over_decls {
+                            let mut full = vec![*field_name];
+                            full.extend(sub_path.iter().copied());
+                            over_decls.push((full, info.clone()));
+                        }
+                    }
+                }
+                let val_v = elab.evaluator().eval_ty(&val_s);
+                Some(TopElabResult::Declaration(
+                    name,
+                    TopDecl::Diag(Diag::new(theory.clone(), ret_ty_v, val_s, val_v, over_decls)),
                 ))
             }
             "def" => {
@@ -352,6 +413,15 @@ impl<'a> Elaborator<'a> {
         v
     }
 
+    /// Like [`Self::intro`], but pushes a diagram-kind binding so it is
+    /// invisible to ordinary term lookup.
+    fn intro_diagram(&mut self, name: VarName, label: LabelSegment, ty: TyV) {
+        let v = TmV::neu(TmN::var(self.ctx.scope.len().into(), name, label), ty.clone());
+        let v = self.evaluator().eta(&v, Some(&ty));
+        self.ctx.env = self.ctx.env.snoc(v);
+        self.ctx.push_diagram(name, label, ty);
+    }
+
     fn binding(&mut self, n: &FNtn) -> Option<(VarName, LabelSegment, TyS, TyV)> {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
@@ -379,6 +449,19 @@ impl<'a> Elaborator<'a> {
                         ))
                     }
                 }
+                TopDecl::Diag(d) => {
+                    if d.theory == self.theory {
+                        // Using a diagram name as a type yields the diagram's
+                        // body record, allowing `we : I & [...]`-style
+                        // specializations to walk paths through I's fields.
+                        (TyS::topvar(name), d.body_val.clone())
+                    } else {
+                        self.ty_error(format!(
+                            "{name} refers to a diagram in theory {}, expected theory {}",
+                            d.theory, self.theory
+                        ))
+                    }
+                }
                 TopDecl::Def(_) | TopDecl::DefConst(_) => {
                     self.ty_error(format!("{name} refers to a term not a type"))
                 }
@@ -387,7 +470,6 @@ impl<'a> Elaborator<'a> {
             self.ty_error(format!("no such type {name} defined"))
         }
     }
-
     fn morphism_ty(&mut self, n: &FNtn) -> Option<(MorType, ObType, ObType)> {
         let elab = self.enter(n.loc());
         let theory = elab.theory();
@@ -406,9 +488,10 @@ impl<'a> Elaborator<'a> {
             }
             Var(name) => {
                 let qname = QualifiedName::single(name_seg(*name));
-                if let Some(mor_type) = theory.basic_mor_type(qname) {
+                if let Some(mor_type) = theory.basic_mor_type(qname.clone()) {
                     let dom = theory.src_type(&mor_type);
                     let cod = theory.tgt_type(&mor_type);
+                    // println!("MOR {} TYPE {} : DOM {} => COD {}", &qname, &mor_type, &dom, &cod);
                     Some((mor_type, dom, cod))
                 } else {
                     elab.error(format!("no such morphism type {name}"))
@@ -427,6 +510,23 @@ impl<'a> Elaborator<'a> {
                 p.push((name_seg(*f), label_seg(*f)));
                 Some(p)
             }
+            // `.f(x)` — applied path segment, resolved to a single synthetic
+            // field whose name is the canonical string `"f(x)"`. This makes
+            // the lift-target objects forced by the discrete-opfibration
+            // condition addressable by ordinary path-walking.
+            App1(head_n, L(_, Var(x))) => match head_n.ast0() {
+                Field(f) => {
+                    let s = ustr(&format!("{f}({x})"));
+                    Some(vec![(name_seg(s), label_seg(s))])
+                }
+                App1(p_n, L(_, Field(f))) => {
+                    let mut p = elab.path(p_n)?;
+                    let s = ustr(&format!("{f}({x})"));
+                    p.push((name_seg(s), label_seg(s)));
+                    Some(p)
+                }
+                _ => elab.error("unexpected notation for path"),
+            },
             _ => elab.error("unexpected notation for path"),
         }
     }
@@ -452,12 +552,41 @@ impl<'a> Elaborator<'a> {
     /// Elaborates a type from notation, returning both syntax and value.
     pub fn ty(&mut self, n: &FNtn) -> (TyS, TyV) {
         let mut elab = self.enter(n.loc());
+        // println!("ELABORATING TYPE... {}", &n);
         match n.ast0() {
             Var(name) => elab.lookup_ty(name_seg(*name)),
             Keyword("Unit") => (TyS::unit(), TyV::unit()),
             App1(L(_, Prim("sing")), tm_n) => {
                 let (tm_s, tm_v, ty_v) = elab.syn(tm_n);
                 (TyS::sing(elab.evaluator().quote_ty(&ty_v), tm_s), TyV::sing(ty_v, tm_v))
+            }
+            // `@Instance(X)` is a structural alias for `X`, used in diagram
+            // annotations. Treating it as an alias keeps the type system
+            // simple; `I` is kept out of term lookup by the diagram-kind
+            // binding pushed in the `diagram` toplevel arm.
+            App1(L(_, Prim("Instance")), x_n) => elab.ty(x_n),
+            App1(L(_, Prim("over")), p_n) => {
+                let Some(path) = elab.path(p_n) else {
+                    return elab.ty_hole();
+                };
+                // The enclosing diagram-kind binding gives the codomain
+                // against which we validate the path. The diagram's
+                // identity is not stored in the resulting type — `@over`
+                // names a fiber-type that's shared across diagrams.
+                let Some((_, model_ty)) = elab.ctx.lookup_diagram() else {
+                    return elab.ty_error("@over is only allowed inside a diagram declaration");
+                };
+                let evaluator = elab.evaluator();
+                let (self_n, _) = evaluator.bind_self(model_ty.clone());
+                let self_val = evaluator.eta_neu(&self_n, &model_ty);
+                let resolved = match evaluator.path_ty(&model_ty, &self_val, &path) {
+                    Ok(t) => t,
+                    Err(msg) => return elab.ty_error(msg),
+                };
+                let TyV_::Object(_) = &*resolved else {
+                    return elab.ty_error("path does not refer to an object generator");
+                };
+                (TyS::over(path.clone()), TyV::over(path))
             }
             App1(mt_n, L(_, Tuple(domcod_n))) => {
                 let [dom_n, cod_n] = domcod_n.as_slice() else {
@@ -533,10 +662,14 @@ impl<'a> Elaborator<'a> {
             App2(L(_, Keyword("==")), tm1_n, tm2_n) => {
                 let (tm1_s, tm1_v, tm1_ty) = elab.syn(tm1_n);
                 let (tm2_s, tm2_v, tm2_ty) = elab.syn(tm2_n);
-                let TyV_::Morphism(_, _, _) = &*tm1_ty else {
-                    elab.loc = Some(tm1_n.loc());
-                    return elab.ty_error("Equality types are only supported for morphisms");
+                let _ = match &*tm1_ty {
+                    TyV_::Morphism(_, _, _) | TyV_::Over(_) => {}
+                    _ => {
+                        elab.loc = Some(tm1_n.loc());
+                        return elab.ty_error("Equality types are only supported for morphisms");
+                    }
                 };
+
                 if let Err(e) = elab.evaluator().convertible_ty(&tm1_ty, &tm2_ty) {
                     let eval = elab.evaluator();
                     return elab.ty_error(format!(
@@ -568,6 +701,9 @@ impl<'a> Elaborator<'a> {
                 TopDecl::Type(_) => self.syn_error(format!("{name} refers type, not term")),
                 TopDecl::DefConst(d) => (TmS::topvar(name), d.val.clone(), d.ty.clone()),
                 TopDecl::Def(_) => self.syn_error(format!("{name} must be applied to arguments")),
+                TopDecl::Diag(_) => {
+                    self.syn_error(format!("{name} refers to a diagram, not a term"))
+                }
             }
         } else {
             self.syn_error(format!("no such variable {name}"))
@@ -667,26 +803,55 @@ impl<'a> Elaborator<'a> {
             }
             App1(L(_, Var(tv)), L(_, Tuple(args_n))) => {
                 let tv = name_seg(*tv);
-                let Some(TopDecl::Def(d)) = elab.toplevel.lookup(tv) else {
-                    return elab.syn_error(format!("no such toplevel def {tv}"));
-                };
-                let mut arg_stxs = Vec::new();
-                let mut env = Env::nil();
-                if args_n.len() != d.args.len() {
-                    return elab.syn_error(format!(
-                        "wrong number of args for {tv}, expected {}, got {}",
-                        d.args.len(),
-                        args_n.len()
-                    ));
+                if let Some(TopDecl::Def(d)) = elab.toplevel.lookup(tv) {
+                    // ---- existing toplevel-def path, unchanged ----
+                    let mut arg_stxs = Vec::new();
+                    let mut env = Env::nil();
+                    if args_n.len() != d.args.len() {
+                        return elab.syn_error(format!(
+                            "wrong number of args for {tv}, expected {}, got {}",
+                            d.args.len(),
+                            args_n.len()
+                        ));
+                    }
+                    for (arg_n, (_, (_, arg_ty_s))) in args_n.iter().zip(d.args.iter()) {
+                        let arg_ty_v = elab.evaluator().with_env(env.clone()).eval_ty(arg_ty_s);
+                        let (arg_s, arg_v) = elab.chk(&arg_ty_v, arg_n);
+                        arg_stxs.push(arg_s);
+                        env = env.snoc(arg_v);
+                    }
+                    let eval = elab.evaluator().with_env(env.clone());
+                    (TmS::topapp(tv, arg_stxs), eval.eval_tm(&d.body), eval.eval_ty(&d.ret_ty))
+                // TODO document this
+                } else if let Some((_, codomain_ty)) = elab.ctx.lookup_diagram()
+                    && let TyV_::Record(cod_r) = &*codomain_ty
+                    && let Some((_, (_, mor_ty_s))) = cod_r.fields.iter().find(|(n, _)| **n == tv)
+                    && let TyS_::Morphism(_mt, dom_s, cod_s) = &**mor_ty_s
+                    && let Some(dom_paths) = term_to_paths(dom_s)
+                    && let Some(cod_path) = tms_to_path(cod_s)
+                {
+                    if args_n.len() != dom_paths.len() {
+                        return elab.syn_error(format!(
+                            "{tv}: expected {} args, got {}",
+                            dom_paths.len(),
+                            args_n.len()
+                        ));
+                    }
+                    let mut arg_stxs = Vec::new();
+                    let mut arg_vals = Vec::new();
+                    for (arg_n, expected_path) in args_n.iter().zip(dom_paths.iter()) {
+                        let (arg_s, arg_v) = elab.chk(&TyV::over(expected_path.clone()), arg_n);
+                        arg_stxs.push(arg_s);
+                        arg_vals.push(arg_v);
+                    }
+                    (
+                        TmS::ob_app(tv, TmS::list(arg_stxs)),
+                        TmV::app(tv, TmV::list(arg_vals)),
+                        TyV::over(cod_path),
+                    )
+                } else {
+                    elab.syn_error(format!("no such toplevel def {tv}"))
                 }
-                for (arg_n, (_, (_, arg_ty_s))) in args_n.iter().zip(d.args.iter()) {
-                    let arg_ty_v = elab.evaluator().with_env(env.clone()).eval_ty(arg_ty_s);
-                    let (arg_s, arg_v) = elab.chk(&arg_ty_v, arg_n);
-                    arg_stxs.push(arg_s);
-                    env = env.snoc(arg_v);
-                }
-                let eval = elab.evaluator().with_env(env.clone());
-                (TmS::topapp(tv, arg_stxs), eval.eval_tm(&d.body), eval.eval_ty(&d.ret_ty))
             }
             Tag("tt") => (TmS::tt(), TmV::tt(), TyV::unit()),
             Tuple(_) => elab.syn_error("must check against a type in order to construct a record"),
@@ -771,6 +936,191 @@ impl<'a> Elaborator<'a> {
                 (tm_s, tm_v)
             }
         }
+    }
+}
+
+/// Augment a diagram's body with synthetic lift-target fields.
+///
+/// For each declared `e : @over .X` field, and each codomain morphism
+/// `f : X → Y`, add a synthetic field named `"f(e)" : @over .Y`. Iterates
+/// to a fixpoint, with a depth bound to guard against cyclic theories.
+///
+/// The synthetic fields exist only in the type-theoretic body so that
+/// path-walking and specialization (e.g., `we : I & [.src(e) := v1]`)
+/// can resolve `.src(e)` as an ordinary field. Modelgen filters them
+/// out by name when extracting the domain model.
+fn augment_with_lifts(
+    body_s: &TyS,
+    codomain: &TyV,
+) -> (TyS, Vec<(Vec<NameSegment>, (LabelSegment, Vec<NameSegment>))>) {
+    const MAX_DEPTH: usize = 16;
+    let TyS_::Record(initial) = &**body_s else {
+        return (body_s.clone(), vec![]);
+    };
+    let TyV_::Record(cod_r) = &**codomain else {
+        return (body_s.clone(), vec![]);
+    };
+
+    // Collect (mor_name, mt, dom_path, cod_path) for each codomain
+    // morphism field whose source/target reduce to a single chain of
+    // fields.
+    type LiftPath = Vec<(NameSegment, LabelSegment)>;
+    // TODO assuming List for now
+    type CodMor = (NameSegment, MorType, Vec<LiftPath>, LiftPath);
+    let mut cod_morphisms: Vec<CodMor> = Vec::new();
+    for (mor_name, (_, mor_ty_s)) in cod_r.fields.iter() {
+        if let TyS_::Morphism(mt, dom_s, cod_s) = &**mor_ty_s
+            // XXX replace tms_to_path
+            && let (Some(dom_path), Some(cod_path)) = (term_to_paths(dom_s), tms_to_path(cod_s))
+        {
+            cod_morphisms.push((*mor_name, mt.clone(), dom_path, cod_path));
+        }
+    }
+
+    let over_declarations = initial
+        .iter()
+        .filter_map(|(fname, (flabel, fty))| match &**fty {
+            TyS_::Over(path) => {
+                let names: Vec<_> = path.iter().map(|(n, _)| *n).collect();
+                Some((vec![fname.clone()], (flabel.clone(), names)))
+            }
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+
+    let mut row = initial.clone();
+    for _ in 0..1 {
+        let snapshot = row.clone();
+        let mut added = false;
+
+        // path (of an @over field's target) -> declared fields over that path
+        let mut fields_by_path: HashMap<LiftPath, Vec<(NameSegment, LabelSegment)>> =
+            HashMap::new();
+        for (fname, (flabel, fty)) in snapshot.iter() {
+            if let TyS_::Over(p) = &**fty {
+                fields_by_path.entry(p.clone()).or_default().push((*fname, *flabel));
+            }
+        }
+
+        for (mor_name, mt, dom_path, cod_path) in &cod_morphisms {
+            match mt {
+                MorType::Modal(_) => {
+                    let Some(per_slot): Option<Vec<&Vec<(NameSegment, LabelSegment)>>> =
+                        dom_path.iter().map(|slot| fields_by_path.get(slot)).collect()
+                    else {
+                        continue;
+                    };
+
+                    // let Some(per_slot) = per_slot else { continue }; // a slot with no candidate object
+                    // ( (u, u), (v, v) )
+                    for tuple in
+                        per_slot.into_iter().map(|v| v.iter().copied()).multi_cartesian_product()
+                    {
+                        let args =
+                            tuple.iter().map(|(n, _)| n.to_string()).collect::<Vec<_>>().join(", ");
+                        let synth = ustr(&format!("{mor_name}({args})"));
+                        let synth_seg = name_seg(synth);
+                        let synth_label = label_seg(synth);
+                        if !row.has(synth_seg) {
+                            row.insert(synth_seg, synth_label, TyS::over(cod_path.clone()));
+                            added = true;
+                        }
+                        let lift_name = ustr(&format!("~{mor_name}({args})"));
+                        let lift_seg = name_seg(lift_name);
+                        let lift_label = label_seg(lift_name);
+                        if !row.has(lift_seg) {
+                            let self_var =
+                                TmS::var(BwdIdx::from(0), name_seg("self"), label_seg("self"));
+                            let dom_elems: Vec<TmS> = tuple
+                                .iter()
+                                .map(|(n, l)| TmS::proj(self_var.clone(), *n, *l))
+                                .collect();
+                            let dom_term = TmS::list(dom_elems);
+                            let cod_term = TmS::proj(self_var, synth_seg, synth_label);
+                            row.insert(
+                                lift_seg,
+                                lift_label,
+                                TyS::morphism(mt.clone(), dom_term, cod_term),
+                            );
+                            added = true;
+                        }
+                    }
+                }
+                _ => {
+                    // A discrete morphism's domain is a single object, so exactly one slot.
+                    let [slot] = &dom_path[..] else {
+                        continue;
+                    };
+                    let Some(candidates) = fields_by_path.get(slot) else {
+                        continue;
+                    };
+                    for &(field_name, field_label) in candidates {
+                        // Synthetic object field `f(e) : @over .Y`, the unique lift
+                        // target forced by the discrete-opfibration condition.
+                        let synth = ustr(&format!("{mor_name}({field_name})"));
+                        let synth_seg = name_seg(synth);
+                        let synth_label = label_seg(synth);
+                        if !row.has(synth_seg) {
+                            row.insert(synth_seg, synth_label, TyS::over(cod_path.clone()));
+                            added = true;
+                        }
+                        // Synthetic morphism field `~f(e) : Morphism(mt, e, f(e))`.
+                        let lift_name = ustr(&format!("~{mor_name}({field_name})"));
+                        let lift_seg = name_seg(lift_name);
+                        let lift_label = label_seg(lift_name);
+                        if !row.has(lift_seg) {
+                            let self_var =
+                                TmS::var(BwdIdx::from(0), name_seg("self"), label_seg("self"));
+                            let dom_term = TmS::proj(self_var.clone(), field_name, field_label);
+                            let cod_term = TmS::proj(self_var, synth_seg, synth_label);
+                            row.insert(
+                                lift_seg,
+                                lift_label,
+                                TyS::morphism(mt.clone(), dom_term, cod_term),
+                            );
+                            added = true;
+                        }
+                    }
+                }
+            }
+        }
+        if !added {
+            return (TyS::record(row), vec![]);
+        }
+    }
+    // Hit the depth bound — return what we have. Cyclic theories will
+    // produce an under-augmented body; this is a known limitation.
+    (TyS::record(row), over_declarations)
+}
+
+/// Flatten a morphism domain/codomain term into the object paths it
+/// references. A scalar chain yields one path; a `List` yields one per
+/// element. `None` if any leaf isn't a projection chain.
+fn term_to_paths(tm: &TmS) -> Option<Vec<Vec<(NameSegment, LabelSegment)>>> {
+    match &**tm {
+        TmS_::List(args) => args.iter().flat_map(|a| tms_to_path(a)).collect::<Vec<_>>().into(),
+        _ => Some(vec![tms_to_path(tm)?]),
+    }
+}
+
+/// Read off a path of `(name, label)` segments from a term that is a chain
+/// of projections rooted in a variable.
+///
+/// The leading variable is treated as the implicit root (e.g., the `self`
+/// of an enclosing record) and contributes no segment. So `Var(self)`
+/// returns `[]` and `Proj(Var(self), E, E_label)` returns `[(E, E_label)]`,
+/// matching the path representation produced by the surface `.E` syntax.
+/// Returns `None` if the term has any other shape.
+fn tms_to_path(tm: &TmS) -> Option<Vec<(NameSegment, LabelSegment)>> {
+    match &**tm {
+        // XXX It doesn't know what to do here when the incoming morphism is a multihom
+        TmS_::Var(_, _, _) => Some(vec![]),
+        TmS_::Proj(inner, name, label) => {
+            let mut p = tms_to_path(inner)?;
+            p.push((*name, *label));
+            Some(p)
+        }
+        _ => None,
     }
 }
 

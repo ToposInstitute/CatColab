@@ -50,6 +50,19 @@ pub enum Path<V, E> {
 /// A path whose vertices and edges are qualified names.
 pub type QualifiedPath = Path<QualifiedName, QualifiedName>;
 
+impl QualifiedPath {
+    /// Render a [`QualifiedPath`] for snapshot output.
+    pub fn format_path(&self) -> String {
+        match &self {
+            Path::Id(v) => format!("Hom({v})"),
+            Path::Seq(es) => {
+                let parts: Vec<String> = es.iter().map(|e| format!("{e}")).collect();
+                parts.join(".")
+            }
+        }
+    }
+}
+
 /// A path in a graph with skeletal vertex and edge sets.
 pub type SkelPath = Path<usize, usize>;
 
@@ -485,6 +498,11 @@ impl<V, E> TryFrom<Path<V, E>> for ShortPath<V, E> {
 }
 
 impl<V, E> ShortPath<V, E> {
+    ///
+    pub fn format_path(&self) -> String {
+        "TODO".into()
+    }
+
     /// Is the path contained in the given graph?
     pub fn contained_in(&self, graph: &impl Graph<V = V, E = E>) -> bool {
         match self {

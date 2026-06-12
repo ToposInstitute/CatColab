@@ -6,13 +6,19 @@ use std::ops::DerefMut;
 use std::time::{Duration, Instant};
 use std::{fs, io};
 
+use all_the_same::all_the_same;
 use fnotation::FNtnTop;
 use scopeguard::guard;
 use tattle::display::SourceInfo;
 use tattle::{Reporter, declare_error};
 
-use super::{text_elab::*, theory::std_theories, toplevel::*};
-use crate::zero::NameSegment;
+use super::{modelgen::diagram_from_diag, text_elab::*, theory::std_theories, toplevel::*};
+use crate::dbl::discrete::InvalidDiscreteDblModelDiagram;
+use crate::dbl::model::{FpDblModel, MutDblModel};
+use crate::dbl::model_diagram::{DblModelDiagramType, Diagram};
+use crate::one::category::FgCategory;
+use crate::tt::modelgen::Model;
+use crate::zero::{Mapping, NameSegment};
 
 declare_error!(TOP_ERROR, "top", "an error at the top-level");
 
@@ -61,6 +67,66 @@ impl BatchOutput {
                 writeln!(out.borrow_mut(), "#/ declared: {}", name).unwrap();
             }
             BatchOutput::Interactive => {}
+        }
+    }
+
+    fn diagram_summary(&self, diagram: &DblModelDiagramType) {
+        if let BatchOutput::Snapshot(out) = self {
+            all_the_same!(match diagram {
+                DblModelDiagramType::[Discrete, ModalUnital](diagram) => {
+                    let (mapping, domain) = diagram.destructure();
+                    let mut out = out.borrow_mut();
+                    let ob_gens: Vec<_> = domain.ob_generators().collect();
+                    let mor_gens: Vec<_> = domain.mor_generators().collect();
+                    if ob_gens.is_empty() && mor_gens.is_empty() {
+                        writeln!(out, "#/ diagram has no domain generators").unwrap();
+                        return;
+                    }
+                    writeln!(out, "#/ diagram domain:").unwrap();
+                    for g in &ob_gens {
+                        let ot = domain.ob_generator_type(g);
+                        match mapping.0.ob_generator_map.apply_to_ref(g) {
+                            Some(target) => writeln!(out, "#/   {g} : {ot} -> {target}").unwrap(),
+                            None => writeln!(out, "#/   {g} : {ot}").unwrap(),
+                        }
+                    }
+                    for g in &mor_gens {
+                        let mt = &domain.mor_generator_type(g).format_path();
+                        let dom_str =
+                            domain.get_dom(g).map(|o| format!("{o}")).unwrap_or_else(|| "?".into());
+                        let cod_str =
+                            domain.get_cod(g).map(|o| format!("{o}")).unwrap_or_else(|| "?".into());
+                        let target_str = mapping
+                            .0
+                            .mor_generator_map
+                            .apply_to_ref(g)
+                            .map(|p| format!(" -> {}", &p.format_path()))
+                            .unwrap_or_default();
+                        writeln!(out, "#/   {g} : {mt}[{dom_str}, {cod_str}]{target_str}").unwrap();
+                    }
+                }
+            })
+        }
+    }
+
+    fn diagram_error(&self, msg: &str) {
+        if let BatchOutput::Snapshot(out) = self {
+            writeln!(out.borrow_mut(), "#/ diagram generation failed: {msg}").unwrap();
+        }
+    }
+
+    fn validation_result<I: IntoIterator<Item = InvalidDiscreteDblModelDiagram>>(&self, errs: I) {
+        if let BatchOutput::Snapshot(out) = self {
+            let mut out = out.borrow_mut();
+            let mut iter = errs.into_iter().peekable();
+            if iter.peek().is_none() {
+                writeln!(out, "#/ diagram validates against codomain").unwrap();
+            } else {
+                writeln!(out, "#/ diagram validation failed:").unwrap();
+                for e in iter {
+                    writeln!(out, "#/   {e:?}").unwrap();
+                }
+            }
         }
     }
 
@@ -179,8 +245,41 @@ pub fn elaborate(src: &str, path: &str, output: &BatchOutput) -> io::Result<bool
                 } else {
                     match d {
                         TopElabResult::Declaration(name_segment, top_decl) => {
+                            let is_diag = matches!(top_decl, TopDecl::Diag(_));
                             toplevel.declarations.insert(name_segment, top_decl);
                             output.declared(name_segment);
+                            if is_diag
+                                && let Some(TopDecl::Diag(diag)) =
+                                    toplevel.declarations.get(&name_segment)
+                            {
+                                match diagram_from_diag(&toplevel, &diag.theory.definition, diag) {
+                                    Ok((model_diag, _, _)) => {
+                                        output.diagram_summary(&model_diag);
+                                        let (cod, _) = Model::from_ty(
+                                            &toplevel,
+                                            &diag.theory.definition,
+                                            &diag.model,
+                                        );
+                                        match &model_diag {
+                                            DblModelDiagramType::Discrete(diagram) => {
+                                                if let Some(cod) = cod.as_discrete() {
+                                                    output.validation_result(
+                                                        diagram.iter_invalid_in(&cod),
+                                                    );
+                                                }
+                                            }
+                                            DblModelDiagramType::ModalUnital(diagram) => {
+                                                if let Some(cod) = cod.as_modal() {
+                                                    output.validation_result(
+                                                        diagram.iter_invalid_in(&cod),
+                                                    );
+                                                }
+                                            }
+                                        }
+                                    }
+                                    Err(msg) => output.diagram_error(&msg),
+                                }
+                            }
                         }
                         TopElabResult::Output(s) => {
                             output.got_result(&s);
