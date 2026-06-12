@@ -172,7 +172,7 @@ pub trait ODESemanticsAnalysis<T: DblModelForODESemantics, P: ODEParameterType>:
     fn build_system(&self, model: &T) -> PolynomialSystem<QualifiedName, Parameter<P>, i8> {
         let builder = self.build_system_builder(model);
         PolynomialODEAnalysis::default()
-            .build_system_custom_parameters(&builder.clone().model(), builder.associated_parameters())
+            .build_system_custom_parameters(&builder.model(), builder.associated_parameters())
     }
 }
 
