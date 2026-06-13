@@ -529,8 +529,6 @@ impl<'a> Evaluator<'a> {
         }
     }
 
-    // TODO: refactor to use [`Evaluator::path_ty`] for the descent and
-    // keep only the subtype check here.
     fn can_specialize(
         &self,
         ty: &TyV,
@@ -539,28 +537,15 @@ impl<'a> Evaluator<'a> {
         field_ty: TyV,
     ) -> Result<(), String> {
         assert!(!path.is_empty());
-
-        let TyV_::Record(r) = &**ty else {
-            return Err("cannot specialize a non-record type".into());
-        };
-
-        let (field, path) = (path[0], &path[1..]);
-        if !r.fields.has(field.0) {
-            return Err(format!("no such field .{}", field.1));
-        }
-        let orig_field_ty = self.field_ty(ty, val, field.0);
-        if path.is_empty() {
-            self.subtype(&field_ty, &orig_field_ty).map_err(|msg| {
-                format!(
-                    "{} is not a subtype of {}:\n... because {}",
-                    self.quote_ty(&field_ty),
-                    self.quote_ty(&orig_field_ty),
-                    msg.pretty()
-                )
-            })
-        } else {
-            self.can_specialize(&orig_field_ty, &self.proj(val, field.0, field.1), path, field_ty)
-        }
+        let orig_field_ty = self.path_ty(ty, val, path)?;
+        self.subtype(&field_ty, &orig_field_ty).map_err(|msg| {
+            format!(
+                "{} is not a subtype of {}:\n... because {}",
+                self.quote_ty(&field_ty),
+                self.quote_ty(&orig_field_ty),
+                msg.pretty()
+            )
+        })
     }
 
     /// Walk `path` from the value `val` of record type `ty`, returning
