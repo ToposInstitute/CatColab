@@ -486,11 +486,7 @@ impl<'a> Elaborator<'a> {
                 // elaborated type's shape).
                 App2(L(_, Keyword(":")), L(_, Var(name)), ty_n) => {
                     let name_str = *name;
-                    let n_seg = if name_str == "_" {
-                        NameSegment::Uuid(uuid::Uuid::new_v4())
-                    } else {
-                        name_seg(name_str)
-                    };
+                    let n_seg = name_seg(name_str);
                     let label = label_seg(name_str);
                     let (_, ty_v) = elab.ty(ty_n);
                     match &*ty_v {
@@ -857,14 +853,7 @@ impl<'a> Elaborator<'a> {
                     elab.loc = Some(field_n.loc());
                     let Some((name, label, ty_n)) = (match field_n.ast0() {
                         App2(L(_, Keyword(":")), L(_, Var(name)), ty_n) => {
-                            // `_` is a fresh anonymous binder — give it a
-                            // UUID name so distinct `_` fields don't collide
-                            // in the record row.
-                            let name_seg = if *name == "_" {
-                                NameSegment::Uuid(uuid::Uuid::new_v4())
-                            } else {
-                                name_seg(*name)
-                            };
+                            let name_seg = name_seg(*name);
                             Some((name_seg, label_seg(*name), ty_n))
                         }
                         _ => elab.error("expected fields in the form <name> : <type>"),
