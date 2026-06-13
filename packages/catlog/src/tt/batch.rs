@@ -13,6 +13,7 @@ use tattle::{Reporter, declare_error};
 
 use super::{modelgen::instance_from_diag, text_elab::*, theory::std_theories, toplevel::*};
 use crate::dbl::discrete::{DiscreteDblModelInstance, DiscreteInstanceTerm};
+use crate::one::path::Path;
 use crate::zero::NameSegment;
 
 declare_error!(TOP_ERROR, "top", "an error at the top-level");
@@ -290,12 +291,14 @@ fn snapshot_examples() {
     assert!(succeeded);
 }
 
-/// Render a [`QualifiedPath`] for snapshot output.
+/// Render an instance term for snapshot output as `f(g(base))`, with
+/// `f` the outermost (last-applied) model morphism in the path.
 fn format_instance_term(tm: &DiscreteInstanceTerm) -> String {
-    match tm {
-        DiscreteInstanceTerm::Generator(name) => format!("{name}"),
-        DiscreteInstanceTerm::Apply(mor, arg) => {
-            format!("{}({})", mor, format_instance_term(arg))
+    let mut s = format!("{}", tm.base);
+    if let Path::Seq(edges) = &tm.path {
+        for mor in edges.iter() {
+            s = format!("{}({})", mor, s);
         }
     }
+    s
 }
