@@ -10,7 +10,7 @@ import { type CellConstructor, type FormalCellEditorProps, NotebookEditor } from
 import type { InstanceTypeMeta } from "../theory";
 import { LiveDiagramContext } from "./context";
 import type { LiveDiagramDoc } from "./document";
-import { InstantiationCellEditor } from "./instantiation_cell_editor";
+import { DiagramInstantiationCellEditor } from "./diagram_instantiation_cell_editor";
 import { DiagramMorphismCellEditor } from "./morphism_cell_editor";
 import { DiagramObjectCellEditor } from "./object_cell_editor";
 
@@ -84,14 +84,14 @@ function DiagramCellEditor(props: FormalCellEditorProps<DiagramJudgment>) {
                 )}
             </Match>
             <Match when={props.content.tag === "instantiation"}>
-                <InstantiationCellEditor
+
+            <DiagramInstantiationCellEditor
                     instantiation={props.content as InstantiatedDiagram}
-                    modifyInstantiation={(f) =>
-                        props.changeContent((content) => f(content as InstantiatedDiagram))
-                    }
+                    changeContent={(f) => props.changeContent((c) => f(c as InstantiatedDiagram))}
                     focus={props.focus}
                     actions={props.actions}
                 />
+
             </Match>{" "}
         </Switch>
     );
