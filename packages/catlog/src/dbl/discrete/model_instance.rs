@@ -6,20 +6,20 @@ use crate::zero::QualifiedName;
 
 use super::model::DiscreteDblModel;
 
-/// A term in an instance of a discrete double model.
+/// A term in an instance of a discrete double model: a model morphism
+/// applied to a single instance generator.
 ///
-/// Discrete morphisms have single-object domains, so applications are
-/// 1-ary. The morphism is identified by its name (a [`QualifiedName`])
-/// rather than a path, since instance terms only ever apply a single
-/// model morphism at a time — composition is reflected by the
-/// composability of [`Apply`](Self::Apply) nodes themselves, not by
-/// path values living inside one.
+/// Composition of model morphisms is reflected inside [`path`](Self::path)
+/// itself, not by nesting term constructors, so every term has the
+/// flat canonical shape `path(base)`. When `path` is the identity, the
+/// term denotes `base` directly; its `Id` vertex must agree with the
+/// fiber of `base` in the surrounding instance.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum DiscreteInstanceTerm {
-    /// A bare instance generator.
-    Generator(QualifiedName),
-    /// A morphism of the model applied to one argument term.
-    Apply(QualifiedName, Box<DiscreteInstanceTerm>),
+pub struct DiscreteInstanceTerm {
+    /// Model morphism applied to `base`.
+    pub path: QualifiedPath,
+    /// The instance generator at the root of the term.
+    pub base: QualifiedName,
 }
 
 impl InstanceTerm for DiscreteInstanceTerm {

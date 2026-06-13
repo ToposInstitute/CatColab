@@ -452,8 +452,8 @@ fn extract_instance_body(
         instance.add_generator(qname, fiber);
     }
     for (lhs, rhs) in &body.equations {
-        let lhs_t = tm_to_discrete_instance_term_with_prefix(lhs, prefix)?;
-        let rhs_t = tm_to_discrete_instance_term_with_prefix(rhs, prefix)?;
+        let lhs_t = tm_to_discrete_instance_term_with_prefix(instance, lhs, prefix)?;
+        let rhs_t = tm_to_discrete_instance_term_with_prefix(instance, rhs, prefix)?;
         instance.add_equation(lhs_t, rhs_t);
     }
     for (name, (label, sub_v)) in &body.sub_instances {
@@ -473,23 +473,44 @@ fn extract_instance_body(
 /// Convert an `@over`-typed term value into a [`DiscreteInstanceTerm`],
 /// prefixing each generator name with the path into any enclosing
 /// sub-instances.
+///
+/// Nested [`TmV_::OverApp`]s are flattened into a single morphism path
+/// applied to the generator at the leaf, matching the flat canonical
+/// shape of [`DiscreteInstanceTerm`].
 fn tm_to_discrete_instance_term_with_prefix(
+    instance: &DiscreteDblModelInstance,
     tm: &TmV,
     prefix: &[NameSegment],
 ) -> Result<DiscreteInstanceTerm, String> {
-    match &**tm {
-        TmV_::Neu(n, _) => {
-            let mut segs = prefix.to_vec();
-            segs.extend(neu_full_name(n));
-            Ok(DiscreteInstanceTerm::Generator(segs.into()))
+    // Walk outer-to-inner, recording each applied morphism.
+    let mut mors_outer_first: Vec<QualifiedName> = Vec::new();
+    let mut cur = tm;
+    let base: QualifiedName = loop {
+        match &**cur {
+            TmV_::Neu(n, _) => {
+                let mut segs = prefix.to_vec();
+                segs.extend(neu_full_name(n));
+                break segs.into();
+            }
+            TmV_::OverApp(mor_name, _, _, inner) => {
+                mors_outer_first.push(QualifiedName::single(*mor_name));
+                cur = inner;
+            }
+            _ => return Err("term is not a generator or codomain-morphism application".into()),
         }
-        TmV_::OverApp(mor_name, _, _, inner) => {
-            let mor_qname = QualifiedName::single(*mor_name);
-            let inner_t = tm_to_discrete_instance_term_with_prefix(inner, prefix)?;
-            Ok(DiscreteInstanceTerm::Apply(mor_qname, Box::new(inner_t)))
+    };
+    // Path order is innermost-first (apply first goes first).
+    mors_outer_first.reverse();
+    let path = match Path::from_vec(mors_outer_first) {
+        Some(p) => p,
+        None => {
+            let fiber = instance.fiber_of(&base).ok_or_else(|| {
+                format!("instance term mentions unknown generator {base}")
+            })?;
+            Path::Id(fiber.clone())
         }
-        _ => Err("term is not a generator or codomain-morphism application".into()),
-    }
+    };
+    Ok(DiscreteInstanceTerm { path, base })
 }
 
 /// Read off the full name of a neutral, including its leading variable

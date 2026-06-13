@@ -1,17 +1,16 @@
 //! Instances of models of a double theory.
 //!
-//! An **instance** of a model presents a fibered structure over the model:
+//! An **instance** of a model (see [Carlson-Patterson 2025][https://arxiv.org/abs/2510.08861]) 
+//! is here presented via
 //! a set of generators living over each object of the model, together with
 //! equations between terms built from morphisms of the model applied to
-//! those generators. Crucially, the equations are stated *abstractly*: the
+//! those generators. Crucially, the
 //! lift targets and lift morphisms forced by the discrete-opfibration
-//! condition are *not* materialized as explicit generators. This is what
-//! makes the data structure suited to "minimalist" presentations such as
-//! the ones produced by the `diagram` form in DoubleTT.
+//! condition may be used in equations but are *not* materialized as explicit generators.
 //!
 //! The term language is left to each doctrine to define, via the
 //! [`InstanceTerm`] trait and the [`HasInstanceTerm`] extension on
-//! [`DblModel`]. Discrete doctrines typically need only bare generators
+//! [`DblModel`]. Discrete doctrines need only bare generators
 //! and morphism applications; modal doctrines additionally allow list
 //! terms to feed list-shaped morphism domains.
 //!
@@ -22,18 +21,17 @@
 use std::rc::Rc;
 
 use super::model::DblModel;
-use crate::one::Category;
 use crate::zero::{Column, HashColumn, MutMapping, QualifiedName};
 
 /// A term in the language of an instance of some model.
 ///
 /// Each doctrine implements its own concrete term type. The associated
 /// [`Mor`](Self::Mor) type ties the term language to a particular
+/// 
 /// model's morphism type.
 pub trait InstanceTerm {
-    /// Morphism type from the associated model that this term language
-    /// can apply to its arguments.
-    type Mor;
+    /// The type of morphisms from the associated model.
+    type Mor; 
 }
 
 /// A [`DblModel`] that has an associated term language for instances.
@@ -43,10 +41,10 @@ pub trait InstanceTerm {
 pub trait HasInstanceTerm: DblModel {
     /// The kind of term used to express equations in instances of this
     /// model.
-    type Term: InstanceTerm<Mor = <Self as Category>::Mor>;
+    type Term: InstanceTerm<Mor = Self::Mor>;
 }
 
-/// An instance of a model: a set of fibered generators plus equations
+/// An instance of a model: a fibered set of generators plus equations
 /// between terms in the model's instance-term language.
 ///
 /// Owns the generator-to-fiber assignment and the equations, but does
