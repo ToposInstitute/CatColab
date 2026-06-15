@@ -218,7 +218,7 @@ impl
             for output in outputs.clone() {
                 let id = output.cons(name_seg("ToOutput")).cons(transition.only().unwrap());
                 // The transition
-                //   T: [x_1, ..., x_n] -> [y_1, ..., y_n]
+                //   T : [x_1, ..., x_n] -> [y_1, ..., y_n]
                 // becomes the contributions
                 //   \dot{y_i} += Parameter_! \cdot x_1...x_n
                 // where Parameter_! depends on `mass_conservation_type`:
@@ -256,7 +256,7 @@ impl
             for input in inputs.clone() {
                 let id = input.cons(name_seg("ToInput")).cons(transition.only().unwrap());
                 // The transition
-                //   T: [x_1, ..., x_n] -> [y_1, ..., y_n]
+                //   T : [x_1, ..., x_n] -> [y_1, ..., y_n]
                 // becomes the contributions
                 //   \dot{x_i} -= Parameter_! \cdot x_1...x_n
                 // where Parameter_! depends on `mass_conservation_type`:
@@ -345,24 +345,23 @@ impl
             let interface = flow_interface(model, &flow);
             let (input, output) = (interface.input_stock, interface.output_stock);
 
-            // TODO: explain this monomial
+            // Each flow gives a positive contribution to the term corresponding to its output, and
+            // a negative contribution to the term corresponding to its input; the term is given by
+            // the product of the input with the sources of all incoming links.
             let monomial = [interface.input_pos_link_doms, vec![input.clone()]].concat();
 
-            // TODO: fix this comment
-            // Each transition gives a positive contribution to each term corresponding to
-            // one of its outputs, and a negative contribution to each term corresponding to
-            // one of its inputs. For example, a single transition T: [a,b] -> [x,y] will give
-            // four contributions, namely two positive contributions (ab -> x , ab -> y)
-            // and two negative (ab -> a , ab -> b).
-
-            // TODO: fix this comment too
-            // The transition
-            //   T: [x_1, ..., x_n] -> [y_1, ..., y_n]
+            // The flow
+            //   F : a -> b
+            // with links
+            //   l_i : x_i -> F
             // becomes the contributions
-            //   \dot{x_i} -= Parameter_! \cdot x_1...x_n
-            // where Parameter_! depends on `mass_conservation_type`:
-            //   Balanced                  => Parameter_T
-            //   Unbalanced::PerFlow => Parameter_T^outflow
+            //   \dot{b} += Parameter_! \cdot a x_1.. x_n
+            //   \dot{a} -= Parameter_? \cdot a x_1.. x_n
+            // where Parameter_! and Parameter_? depend on `mass_conservation_type`:
+            //   Balanced            => Parameter_! = Parameter_F
+            //                          Parameter_? = Parameter_F
+            //   Unbalanced::PerFlow => Parameter_! = Parameter_F^inflow
+            //                          Parameter_? = Parameter_F^outflow
 
             let output_id = output.cons(name_seg("ToOutput")).cons(flow.only().unwrap());
             let output_parameter = match self.mass_conservation_type {
