@@ -504,9 +504,9 @@ fn tm_to_discrete_instance_term_with_prefix(
     let path = match Path::from_vec(mors_outer_first) {
         Some(p) => p,
         None => {
-            let fiber = instance.fiber_of(&base).ok_or_else(|| {
-                format!("instance term mentions unknown generator {base}")
-            })?;
+            let fiber = instance
+                .fiber_of(&base)
+                .ok_or_else(|| format!("instance term mentions unknown generator {base}"))?;
             Path::Id(fiber.clone())
         }
     };
