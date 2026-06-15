@@ -1287,6 +1287,13 @@ mod tests {
         assert_eq!(eqns.len(), 1);
     }
 
+    // TODO generate instance
+    #[test]
+    fn generate_instance() {
+        // let th = Rc::new(stdlib::th_multicategory()).into();
+        // let instance = Instance::from()
+    }
+
     #[test]
     fn text_error_reporting() {
         let th = Rc::new(stdlib::th_schema()).into();
