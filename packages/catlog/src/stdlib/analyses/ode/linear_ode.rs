@@ -1,7 +1,7 @@
 //! Linear constant-coefficient (LCC) first-order ODE analysis of models.
 //!
-//! This follows the structure of [`ode::ode_semantics`], implementing `ODESemantics` for
-//! the struct `LCCSemantics`. For heritage reasons, "LCC" is sometimes referred to as "LinearODE".
+//! This follows the structure of [`ode::ode_semantics`], implementing `ODESemantics` for the struct
+//! `LCCSemantics`. For heritage reasons, "LCC" is sometimes referred to as "LinearODE".
 //!
 //! [`ode::ode_semantics`]: crate::stdlib::analyses::ode::ode_semantics
 
