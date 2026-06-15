@@ -214,3 +214,25 @@ console.log("loaded automerge notebook:", loadedAutomergeNotebook.name);
 ```
 loaded automerge notebook: Updated loaded Automerge Olog
 ```
+
+Migration mutates the document in place, so the backend handle is preserved. The
+migrated notebook keeps the very same Automerge `DocHandle` and URL as before.
+
+```ts
+import { SimpleSchema } from "catcolab-logics/simple-schema";
+
+const migratable = automergeBinder.createNotebook(SimpleOlog, { name: "To migrate" });
+const urlBefore = migratable.handle.url;
+
+const migrated = migratable.migrate(SimpleSchema);
+
+console.log("same handle:", migrated.handle === migratable.handle);
+console.log("same url:", migrated.handle.url === urlBefore);
+console.log("theory:", migrated.document.theory);
+```
+
+```
+same handle: true
+same url: true
+theory: simple-schema
+```

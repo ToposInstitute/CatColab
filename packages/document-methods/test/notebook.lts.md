@@ -473,3 +473,106 @@ binder.loadNotebook(SimpleOlog, notebookData);
 ```
 ❌ Cannot load document with theory "petri-net" using a logic with theory "simple-olog".
 ```
+
+## Migrating between logics
+
+A notebook is bound to a single logic, but its document can be migrated to
+another logic. Migration mirrors the core: it transports the elaborated model
+along a theory morphism and re-types each cell, preserving cell ids, names, and
+morphism endpoints. Only the cell types change.
+
+`migrate` **mutates the notebook in place**: it rewrites the underlying
+document to the target theory rather than producing a copy. It returns a new
+notebook handle bound to the target logic over that same document. The original
+handle is now stale — its implicit types no longer matches the document it points at — so
+continue through the returned handle.
+
+Migrating in place means the backend handle is preserved: the document keeps its
+identity across the migration. With the Automerge backend, for example, the
+migrated notebook shares the same `DocHandle` and Automerge URL as before, so
+references held elsewhere (links, open editors, sync peers) still resolve.
+
+<!-- verifier:reset -->
+
+<!-- verifier:prepend-to-following -->
+
+```ts
+import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
+import { Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
+import { binder, byType } from "catcolab-documents";
+
+const olog = binder.createNotebook(SimpleOlog, { name: "An Olog" });
+
+const a = olog.add(Type, { name: "A" });
+const b = olog.add(Type, { name: "B" });
+olog.add(Aspect, { name: "has", dom: a, cod: b });
+```
+
+Migrating an olog to a schema turns each `Type` into an `Entity` and each
+`Aspect` into a `Mapping`. Names and endpoints are carried over unchanged.
+Because `migrate` mutates in place, the olog notebook's own document is now a
+schema; `migrate` hands back a schema-typed handle over it.
+
+```ts
+const schema = olog.migrate(SimpleSchema);
+
+// The original document was rewritten in place, not copied.
+console.log("same document:", schema.document === olog.document);
+console.log("theory:", schema.document.theory);
+console.log(
+    "entities:",
+    schema
+        .cells()
+        .filter(byType(Entity))
+        .map((cell) => cell.name)
+        .join(", "),
+);
+console.log(
+    "mappings:",
+    schema
+        .cells()
+        .filter(byType(Mapping))
+        .map((cell) => cell.name)
+        .join(", "),
+);
+console.log("tag:", schema.validate().tag);
+```
+
+```
+same document: true
+theory: simple-schema
+entities: A, B
+mappings: has
+tag: Valid
+```
+
+### When migration goes wrong
+
+Not every pair of logics is connected by a migration. Migrating to a logic
+with no defined path throws.
+
+<!-- verifier:reset -->
+
+<!-- verifier:prepend-to-following -->
+
+```ts
+import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
+import { PetriNet } from "catcolab-logics/petri-net";
+import { binder } from "catcolab-documents";
+
+const olog = binder.createNotebook(SimpleOlog, { name: "An Olog" });
+
+const a = olog.add(Type, { name: "A" });
+const b = olog.add(Type, { name: "B" });
+olog.add(Aspect, { name: "has", dom: a, cod: b });
+```
+
+<!-- verifier:throws -->
+
+```ts
+olog.migrate(PetriNet);
+```
+
+```
+❌ No migration defined from "simple-olog" to "petri-net".
+```
