@@ -48,8 +48,11 @@ const Operation: OperationType = morphismType<
 <!-- verifier:prepend-to-following -->
 
 ```ts
+import { ThSchema } from "catlog-wasm";
+
 const SimpleSchema = {
     theory: "simple-schema",
+    coreTheory: new ThSchema().theory(),
     cellTypes: { Entity, AttrType, Mapping, Attr, Operation },
 } satisfies ModelLogic<
     "simple-schema",

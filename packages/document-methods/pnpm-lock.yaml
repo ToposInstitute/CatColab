@@ -11,6 +11,9 @@ importers:
       catcolab-document-types:
         specifier: link:../document-types/pkg
         version: link:../document-types/pkg
+      catlog-wasm:
+        specifier: link:../catlog-wasm/dist/pkg-browser
+        version: link:../catlog-wasm/dist/pkg-browser
       tiny-invariant:
         specifier: ^1.3.3
         version: 1.3.3

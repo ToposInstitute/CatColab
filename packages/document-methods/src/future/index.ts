@@ -1,5 +1,15 @@
-import type { MorType, ObType } from "catcolab-document-types";
+import { v7 } from "uuid";
+
+import type { MorType, Ob, ObType } from "catcolab-document-types";
 import type { Cell, ModelJudgment } from "catcolab-document-types";
+import {
+    type DblModel,
+    DblModelMap,
+    type DblTheory,
+    elaborateModel,
+    type InvalidDblModel,
+    type ModelNotebook as WasmModelNotebook,
+} from "catlog-wasm";
 import {
     duplicateModelJudgment,
     type ModelDocument,
@@ -202,9 +212,25 @@ type LogicMorphismCell<TLogic extends AnyModelLogic> = {
 }[keyof TLogic["cellTypes"]];
 
 export type ModelLogic<Theory extends string, TCellTypes extends Record<string, CellType>> = {
+    /** Identifier of the document theory this logic targets. */
     readonly theory: Theory;
+    /**
+     * The double theory in the core that notebooks of this logic elaborate
+     * into. Obtained from a `catlog-wasm` theory class, e.g.
+     * `new ThCategory().theory()`.
+     */
+    readonly coreTheory: DblTheory;
     readonly cellTypes: TCellTypes;
 };
+
+/** An elaborated model together with its validation status. */
+export type ModelValidationResult =
+    /** Successfully elaborated and validated. */
+    | { tag: "Valid"; model: DblModel }
+    /** Elaborated, but failing one or more validation checks. */
+    | { tag: "Invalid"; model: DblModel; errors: InvalidDblModel[] }
+    /** Failed to even elaborate into a model. */
+    | { tag: "Illformed"; model: null; error: string };
 
 type AnyModelLogic = ModelLogic<string, Record<string, CellType>>;
 
@@ -255,6 +281,12 @@ export type ModelNotebook<TLogic extends AnyModelLogic, Handle = ModelDocument> 
     readonly document: ModelDocument;
     /** Make a detached plain-JS snapshot of the underlying document. */
     dump(): ModelDocument;
+    /**
+     * Elaborate the notebook into a core model and validate it. Returns a
+     * tagged result: `Valid` with the model, `Invalid` with the model and its
+     * validation errors, or `Illformed` if elaboration itself failed.
+     */
+    validate(): ModelValidationResult;
     /** Handles for all cells, in notebook order. */
     cells(): Array<NotebookCell<TLogic>>;
     /**
@@ -317,6 +349,42 @@ const sameTypeValue = (a: unknown, b: unknown): boolean => {
         return false;
     }
     return keys.every((key) => sameTypeValue(aRecord[key], bRecord[key]));
+};
+
+/** Encode an object-cell endpoint reference as a model object. */
+const encodeObjectRef = (cell: { readonly id: string }): Ob => ({
+    tag: "Basic",
+    content: cell.id,
+});
+
+/**
+ * Encode a morphism endpoint into the document's object notation. A single
+ * object cell becomes a basic object; an array of cells becomes a tensor
+ * product over a symmetric list, matching the shape logics like Petri nets
+ * expect.
+ */
+const encodeEndpoint = (value: unknown): Ob | null => {
+    if (value == null) {
+        return null;
+    }
+    if (Array.isArray(value)) {
+        return {
+            tag: "App",
+            content: {
+                op: { tag: "Basic", content: "tensor" },
+                ob: {
+                    tag: "List",
+                    content: {
+                        modality: "SymmetricList",
+                        objects: value.map((cell) =>
+                            encodeObjectRef(cell as { readonly id: string }),
+                        ),
+                    },
+                },
+            },
+        };
+    }
+    return encodeObjectRef(value as { readonly id: string });
 };
 
 function attachNotebook<TLogic extends AnyModelLogic, Handle>(
@@ -428,10 +496,20 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
             },
             update(u: Partial<MorphismArgs<TType>>) {
                 change((d) => {
-                    Object.assign(
-                        (d.notebook.cellContents[cellId] as { content: object }).content,
-                        u,
-                    );
+                    const content = (
+                        d.notebook.cellContents[cellId] as {
+                            content: { name: string; dom: Ob | null; cod: Ob | null };
+                        }
+                    ).content;
+                    if (u.name !== undefined) {
+                        content.name = u.name as string;
+                    }
+                    if ("dom" in u) {
+                        content.dom = encodeEndpoint(u.dom);
+                    }
+                    if ("cod" in u) {
+                        content.cod = encodeEndpoint(u.cod);
+                    }
                 });
             },
             duplicate() {
@@ -492,6 +570,25 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
         dump() {
             return copy ? copy(doc) : structuredClone(doc);
         },
+        validate(): ModelValidationResult {
+            const snapshot = copy ? copy(doc) : structuredClone(doc);
+            let model: DblModel;
+            try {
+                model = elaborateModel(
+                    snapshot.notebook as unknown as WasmModelNotebook,
+                    new DblModelMap(),
+                    logic.coreTheory,
+                    v7(),
+                );
+            } catch (e) {
+                return { tag: "Illformed", model: null, error: String(e) };
+            }
+            const result = model.validate();
+            if (result.tag === "Ok") {
+                return { tag: "Valid", model };
+            }
+            return { tag: "Invalid", model, errors: result.content };
+        },
         update(u: { name?: string }) {
             change((d) => {
                 Object.assign(d, u);
@@ -529,7 +626,10 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
             if (isLogicMorphismType(type)) {
                 const morType = type as LogicMorphismType<TLogic>;
                 const judgment = newMorphismDecl(morType);
-                judgment.name = (args as { name: string }).name;
+                const morArgs = args as { name: string; dom?: unknown; cod?: unknown };
+                judgment.name = morArgs.name;
+                judgment.dom = encodeEndpoint(morArgs.dom);
+                judgment.cod = encodeEndpoint(morArgs.cod);
                 const formalCell = newFormalCell(judgment);
                 change((d) => {
                     d.notebook.cellContents[formalCell.id] = formalCell;

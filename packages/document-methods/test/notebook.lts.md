@@ -364,6 +364,76 @@ console.log(names());
 A, C
 ```
 
+## Validation
+
+A notebook is a document: a loosely structured collection of cells. To use it
+as a formal model we elaborate it into a core model and validate it. The
+`validate` method walks the formal cells, builds the core model, and runs the
+logic's validation in one step. It returns a tagged result so that ill-formed
+and invalid notebooks can be handled without throwing.
+
+<!-- verifier:reset -->
+
+<!-- verifier:prepend-to-following -->
+
+```ts
+import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
+import { binder } from "catcolab-documents";
+
+const notebook = binder.createNotebook(SimpleOlog, { name: "An Olog" });
+
+const source = notebook.add(Type, { name: "A" });
+const target = notebook.add(Type, { name: "B" });
+notebook.add(Aspect, { name: "has", dom: source, cod: target });
+```
+
+A well-formed notebook validates to a `Valid` model.
+
+```ts
+const result = notebook.validate();
+console.log("tag:", result.tag);
+```
+
+```
+tag: Valid
+```
+
+The validated model is available on the result and can be queried.
+
+```ts
+const result = notebook.validate();
+if (result.tag === "Valid") {
+    console.log("objects:", result.model.obGenerators().length);
+    console.log("morphisms:", result.model.morGenerators().length);
+}
+```
+
+```
+objects: 2
+morphisms: 1
+```
+
+```ts
+import type { ModelValidationResult } from "catcolab-documents";
+
+function describe(result: ModelValidationResult): string {
+    switch (result.tag) {
+        case "Valid":
+            return `valid model with ${result.model.obGenerators().length} objects`;
+        case "Invalid":
+            return `invalid model with ${result.errors.length} errors`;
+        case "Illformed":
+            return `ill-formed: ${result.error}`;
+    }
+}
+
+console.log(describe(notebook.validate()));
+```
+
+```
+valid model with 2 objects
+```
+
 ## Serialization
 
 <!-- verifier:reset -->

@@ -1,10 +1,7 @@
-import type {
-    ModelLogic,
-    MorphismType,
-    ObjectCell,
-    ObjectType,
-} from "catcolab-documents";
+import type { ModelLogic, MorphismType, ObjectCell, ObjectType } from "catcolab-documents";
 import { morphismType, objectType } from "catcolab-documents";
+
+import { ThSchema } from "catlog-wasm";
 
 type EntityType = ObjectType<"Entity">;
 type AttrTypeType = ObjectType<"AttrType">;
@@ -32,6 +29,7 @@ export const Attr: AttrMorphismType = morphismType<
 
 export const SimpleSchema = {
     theory: "simple-schema",
+    coreTheory: new ThSchema().theory(),
     cellTypes: { Entity, AttrType, Mapping, Attr },
 } satisfies ModelLogic<
     "simple-schema",
