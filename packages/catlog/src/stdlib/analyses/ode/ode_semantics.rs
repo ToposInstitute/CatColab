@@ -1,25 +1,25 @@
 //! Analyses for different ODE semantics on models.
 //!
-//! Following inspiration from schema migration, we define the data of an ODE semantics on
-//! models in a theory to be a migration into the theory of multicategories (more specifically,
-//! [`th_polynomial_ode_system()`]). We then simply use the "canonical" interpretation of
-//! multicategories as systems of polynomial ODEs as implemented in [`ode::polynomial_ode`]
-//! (and see there also for documentation on this interpretation of models as systems of ODEs).
+//! Inspired by schema migration, we define the data of an ODE semantics on models in a theory to
+//! consist of (in particular) a `PolynomialODESystemBuilder`, which contains all the data needed
+//! for [`ode::polynomial_ode::PolynomialODEAnalysis`] to do the following:
 //!
-//! That is, we take some `model: T` where `T: DblModelForODESemantics`, and from this use
-//! `ODESemanticsAnalysis::build_semantics()` to build `ode_model: ModalDblModel` (to be
-//! understood as a model for [`th_polynomial_ode_system()`]), and finally use
-//! [`ode::polynomial_ode`] to build `system: PolynomialSystem<QualifiedName, Parameter<P>, i8>`
-//! where `P: ODEParameterType`. Finally, for an actual front-end analysis, we use
-//! `ODESemanticsProblemData::extend_scalars()` and `ODESemanticsProblemData::build_analysis()`
-//! to construct `analysis: ODEAnalysis<NumericalPolynomialSystem<i8>>`, which we can feed into
-//! the ODE solver.
+//! 1. Build the system as a model of the theory of polynomial ODE systems (i.e. multicategories)
+//!    with abstract coefficients, using `build_system_custom_parameters()`.
+//! 2. Substitute in numerical coefficients, using `extend_polynomial_ode_scalars()`.
+//! 3. Build an `ODEAnalysis<NumericalPolynomialSystem<i8>>` that can be fed into an ODE solver,
+//!    using `polynomial_ode_analysis()`.
 //!
-//! To implement a new ODE semantics for models in some theory, one essentially needs to create
-//! an empty struct and implement `ODESemantics`, and then follow the compiler.
+//! In short, this module constructs multicategories from models, and [`ode::polynomial_ode`] then
+//! constructs `PolynomialSystem` from multicategories.
 //!
-//! [`th_polynomial_ode_system()`]: crate::stdlib::theories
+//! To implement a new ODE semantics for models in some theory, one essentially needs to create an
+//! empty struct and implement `ODESemantics`, and then follow the compiler. For more documentation,
+//! see [`ode::polynomial_ode`]; for an example implementation, see [`ode::mass_action`].
+//!
 //! [`ode::polynomial_ode`]: crate::stdlib::analyses::ode::polynomial_ode
+//! [`ode::polynomial_ode::PolynomialODEAnalysis`]: crate::stdlib::analyses::ode::polynomial_ode::PolynomialODEAnalysis
+//! [`ode::mass_action`]: crate::stdlib::analyses::ode::mass_action
 
 use indexmap::IndexMap;
 use nalgebra::DVector;
@@ -44,19 +44,18 @@ use crate::{
 pub trait ODESemantics {
     /// The type of the model for which these ODE semantics are intended.
     type ModelType: DblModelForODESemantics;
-    /// The type of the parameters associated to each contribution in the multicategory
-    /// built from the model. The "default" value for this would be `QualifiedName`, but
-    /// it can be useful to have a more descriptive type. For example, we might wish for
-    /// certain parameters to be identified with one another, or to be rendered differently
-    /// in debug/LaTeX output. An instructive example of this is `LotkaVolterraParameter`;
-    /// a more complicated example is `MassActionParameter`.
+    /// The type of the parameters associated to each contribution in the multicategory built from
+    /// the model. The "default" value for this would be `QualifiedName`, but it can be useful to
+    /// have a more descriptive type. For example, we might wish for certain parameters to be
+    /// identified with one another, or to be rendered differently in debug/LaTeX output. For an
+    /// instructive example, see `MassActionParameter` in `ode::mass_action`.
     type ParameterType: ODEParameterType;
-    /// The data describing the things that the ODE semantics "cares about". (See the
-    /// documentation for `ODESemanticsAnalysis`).
+    /// The data describing the things that the ODE semantics "cares about". (See the documentation
+    /// for `ODESemanticsAnalysis`).
     type AnalysisType: ODESemanticsAnalysis<Self::ModelType, Self::ParameterType>;
     /// The data describing how to turn the algebraic system of equations into a simulation,
-    /// including e.g. which values that appear in the front-end analysis correspond to
-    /// which parameters within the equations.
+    /// including e.g. which values that appear in the front-end analysis correspond to which
+    /// parameters within the equations.
     type ProblemDataType: ODESemanticsProblemData<Self::ParameterType>;
 }
 
@@ -76,32 +75,33 @@ impl DblModelForODESemantics for ModalDblModel<NonUnital> {}
 /// (again) these bounds are not particularly restrictive.
 pub trait ODEParameterType: Eq + Ord + Clone + fmt::Display {}
 
-// TODO: this is the bare minimum
+/// The simplest type for parameters is `QualifiedName`.
 impl ODEParameterType for QualifiedName {}
 
 /// Builder for polynomial ODE systems.
 ///
-/// This struct is just a convenient interface to construct a model of the
-/// [theory of polynomial ODE systems](th_polynomial_ode_system). Being an
-/// ordinary mutable Rust struct, it does *not* constitute a declarative
-/// language to define ODE semantics for models of other theories. However, the
-/// idea is that it should be used in a style that can mechanically translated
-/// to a future declarative language for model migration.
+/// This struct is just a convenient interface to construct a model of the theory of polynomial ODE
+/// systems. Being an ordinary mutable Rust struct, it does *not* constitute a declarative language
+/// to define ODE semantics for models of other theories. However, the idea is that it should be
+/// used in a style that can mechanically translated to a future declarative language for model
+/// migration.
 #[derive(Clone)]
 pub struct PolynomialODESystemBuilder<P: ODEParameterType> {
-    // TODO: should this struct also have types <T> ?????
     model: ModalDblModel<NonUnital>,
-    associated_parameters: HashMap<QualifiedName, P>
+    associated_parameters: HashMap<QualifiedName, P>,
 }
 
-impl <P: ODEParameterType> Default for PolynomialODESystemBuilder<P> {
+impl<P: ODEParameterType> Default for PolynomialODESystemBuilder<P> {
     fn default() -> Self {
         let th = th_signed_polynomial_ode_system();
-        Self { model: ModalDblModel::new(th.into()), associated_parameters: HashMap::new() }
+        Self {
+            model: ModalDblModel::new(th.into()),
+            associated_parameters: HashMap::new(),
+        }
     }
 }
 
-impl <P: ODEParameterType> PolynomialODESystemBuilder<P> {
+impl<P: ODEParameterType> PolynomialODESystemBuilder<P> {
     /// Constructs an empty ODE system.
     pub fn new() -> Self {
         Self::default()
@@ -112,7 +112,8 @@ impl <P: ODEParameterType> PolynomialODESystemBuilder<P> {
         self.model
     }
 
-    /// TODO: documentation.
+    /// Returns the HashMap of associated parameters, giving the term of type `P: ODEParameterType`
+    /// corresponding to each monomial.
     pub fn associated_parameters(self) -> HashMap<QualifiedName, P> {
         self.associated_parameters
     }
@@ -148,29 +149,30 @@ impl <P: ODEParameterType> PolynomialODESystemBuilder<P> {
     }
 }
 
-// TODO: fix documentation
-/// This trait is where we give the actual functions for building the data that
-/// `build_system_from_ode_semantics()` needs in order to construct
-/// the multicategory. The implementation of `build_semantics()` is where the actual
-/// migration (i.e. the actual ODE semantics) is specified, but `build_system()` can
-/// essentially always use the default implementation given below.
+/// This trait is where we define the actual ODE semantics, in the implementation of
+/// `build_system_builder()`; `build_system()` will almost certainly always use the default
+/// implementation given below.
 ///
-/// Note that the type that implements this trait is also where you are expected to state
-/// everything that your semantics "cares about". For example, the expected minimum is to
-/// give the values of `ObType` and `MorType` that you want to distinguish between and
-/// iterate over. It can also hold any extra data upon which your semantics can depend
-/// (see e.g. `ode::mass_action::PetriNetMassActionAnalysis`, which contains the data of
-/// some `MassConservationType`, whose value is fundamental in constructing the semantics).
-/// However, this is left to the user: the type checker will not enforce any of these extras.
+/// Note that the type that implements this trait is also where you are expected to state everything
+/// that your semantics "cares about". For example, the default minimum is to give the values of
+/// `ObType` and `MorType` that you want to distinguish between and iterate over. It can also hold
+/// any extra data upon which your semantics can depend (see e.g.
+/// `ode::mass_action::PetriNetMassActionAnalysis`, which contains the data of some
+/// `MassConservationType`, whose value is fundamental in constructing the semantics). However,
+/// this is left to the user: the type checker will *not* enforce any of these extras.
 pub trait ODESemanticsAnalysis<T: DblModelForODESemantics, P: ODEParameterType>: Default {
-    /// TODO: documentation.
+    /// The implementation of this function is what contains the actual data of the ODE semantics,
+    /// in the form of a `PolynomialODESystemBuilder`.
     fn build_system_builder(&self, model: &T) -> PolynomialODESystemBuilder<P>;
 
-    /// TODO: documentation.
+    /// We simply feed the `PolynomialODESystemBuilder` constructed by the above function into
+    /// `PolynomialODEAnalysis::build_system_custom_parameters`.
     fn build_system(&self, model: &T) -> PolynomialSystem<QualifiedName, Parameter<P>, i8> {
         let builder = self.build_system_builder(model);
-        PolynomialODEAnalysis::default()
-            .build_system_custom_parameters(&builder.clone().model(), builder.associated_parameters())
+        PolynomialODEAnalysis::default().build_system_custom_parameters(
+            &builder.clone().model(),
+            builder.associated_parameters(),
+        )
     }
 }
 
@@ -203,8 +205,8 @@ pub enum ContributionSign {
 
 /// The trait describing how to turn the formal system of ODEs into a numerical problem, to be
 /// solved by an ODE solver and presented to the front-end. At minimum, such data must contain
-/// initial values for variables and the intended duration of simulation, as well as the method
-/// for converting the parameters (which are of type `ODEParameterType`) into floats.
+/// initial values for variables and the intended duration of simulation, as well as the method for
+/// converting the parameters (which are of type `ODEParameterType`) into floats.
 // REQUEST  | If you look at a struct that implements this trait (such as `LotkaVolterraProblemData`),
 //   FOR    | there are a lot of serde statements going on. Should I be able to just move them
 // FEEDBACK | (that is, those that come *before* the struct) here and have things all work? I'm still
