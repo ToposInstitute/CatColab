@@ -20,6 +20,7 @@
 pub mod refs;
 
 pub mod egglog_util;
+pub mod latex;
 pub mod validate;
 
 pub mod dbl;

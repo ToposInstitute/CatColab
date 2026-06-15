@@ -199,7 +199,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        simulate::ode::LatexEquation,
+        latex::{Latex, LatexEquation},
         stdlib::{models::*, theories::*},
         tt,
     };
@@ -226,12 +226,12 @@ mod tests {
         let sys = PolynomialODEAnalysis::default().build_system(&model);
         let expected = vec![
             LatexEquation {
-                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} A".to_string(),
-                rhs: "A_growth \\cdot A - BA_interaction \\cdot A \\cdot B".to_string(),
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} A".to_string()),
+                rhs: Latex("A_growth \\cdot A - BA_interaction \\cdot A \\cdot B".to_string()),
             },
             LatexEquation {
-                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} B".to_string(),
-                rhs: "AB_interaction \\cdot A \\cdot B + B_growth \\cdot B".to_string(),
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} B".to_string()),
+                rhs: Latex("AB_interaction \\cdot A \\cdot B + B_growth \\cdot B".to_string()),
             },
         ];
         assert_eq!(expected, sys.to_latex_equations());
