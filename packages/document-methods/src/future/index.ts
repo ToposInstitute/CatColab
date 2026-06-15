@@ -22,24 +22,24 @@ import { duplicateCell, newFormalCell, newRichTextCell } from "../notebook";
 export { type ModelDocument, newModelDocument } from "../model";
 
 /**
- * A notebook backend abstracts the storage that notebooks operate over. A
- * backend is a stateless object working on handles of its own choosing: a
+ * A document store abstracts the storage that notebooks operate over. A
+ * store is a stateless object working on handles of its own choosing: a
  * plain document, a Solid store, an Automerge `DocHandle`, etc. Handles are
  * produced by `createHandle` and passed back into the other methods.
  */
-export interface NotebookBackend<Handle> {
-    /** Initialize a backend handle from an initial document. */
+export interface DocumentStore<Handle> {
+    /** Initialize a store handle from an initial document. */
     createHandle(initialDoc: ModelDocument): Handle;
     /** Read view of the document for a handle (reactive where applicable). */
     viewDocument(handle: Handle): ModelDocument;
     /** Apply a mutation by mutating a draft document. */
     changeDocument(handle: Handle, fn: (doc: ModelDocument) => void): void;
-    /** Make a detached plain-JS copy of a backend-owned value before cloning it. */
+    /** Make a detached plain-JS copy of a store-owned value before cloning it. */
     copyValue?<T>(handle: Handle, value: T): T;
 }
 
-/** A plain in-memory backend whose handle is the document itself. */
-export const plainBackend: NotebookBackend<ModelDocument> = {
+/** A plain in-memory store whose handle is the document itself. */
+export const plainStore: DocumentStore<ModelDocument> = {
     createHandle: (initialDoc) => initialDoc,
     viewDocument: (handle) => handle,
     changeDocument: (handle, fn) => fn(handle),
@@ -292,13 +292,13 @@ export type ModelNotebook<TLogic extends AnyModelLogic, Handle = ModelDocument> 
     /** Reactive read of the notebook's name. */
     readonly name: string;
     /**
-     * The backend handle this notebook is bound to, e.g. an Automerge
-     * `DocHandle`. With the plain in-memory backend it is the document itself.
+     * The store handle this notebook is bound to, e.g. an Automerge
+     * `DocHandle`. With the plain in-memory store it is the document itself.
      */
     readonly handle: Handle;
     /**
-     * The underlying document. With a reactive backend (Solid, Automerge), this
-     * is the reactive proxy; with the plain in-memory backend it is the raw
+     * The underlying document. With a reactive store (Solid, Automerge), this
+     * is the reactive proxy; with the plain in-memory store it is the raw
      * object.
      */
     readonly document: ModelDocument;
@@ -318,7 +318,7 @@ export type ModelNotebook<TLogic extends AnyModelLogic, Handle = ModelDocument> 
      * and morphism endpoints.
      *
      * Returns a new notebook handle bound to the target logic over the same
-     * backend handle and document. The original handle is now stale (its
+     * store handle and document. The original handle is now stale (its
      * implicit types no longer match the document), so continue through the
      * returned handle. Throws if no migration to the target logic is defined.
      */
@@ -424,13 +424,13 @@ const encodeEndpoint = (value: unknown): Ob | null => {
 };
 
 function attachNotebook<TLogic extends AnyModelLogic, Handle>(
-    backend: NotebookBackend<Handle>,
+    store: DocumentStore<Handle>,
     handle: Handle,
     logic: TLogic,
 ): ModelNotebook<TLogic, Handle> {
-    const doc = backend.viewDocument(handle);
-    const change = (fn: (doc: ModelDocument) => void) => backend.changeDocument(handle, fn);
-    const copy = backend.copyValue ? <T>(value: T) => backend.copyValue!(handle, value) : undefined;
+    const doc = store.viewDocument(handle);
+    const change = (fn: (doc: ModelDocument) => void) => store.changeDocument(handle, fn);
+    const copy = store.copyValue ? <T>(value: T) => store.copyValue!(handle, value) : undefined;
 
     const readCellContent = <T>(cellId: string): T => {
         const cell = doc.notebook.cellContents[cellId];
@@ -637,14 +637,12 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
                     d.theory = targetLogic.theory;
                     delete d.editorVariant;
                 });
-                return attachNotebook(backend, handle, targetLogic);
+                return attachNotebook(store, handle, targetLogic);
             }
 
             // Pushforward migration: transport the elaborated model along the
             // theory morphism, then re-type each cell from the migrated model.
-            const migration = (logic.migrations ?? []).find(
-                (m) => m.target === targetLogic.theory,
-            );
+            const migration = (logic.migrations ?? []).find((m) => m.target === targetLogic.theory);
             if (!migration) {
                 throw new Error(
                     `No migration defined from "${logic.theory}" to "${targetLogic.theory}".`,
@@ -685,7 +683,7 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
                     }
                 }
             });
-            return attachNotebook(backend, handle, targetLogic);
+            return attachNotebook(store, handle, targetLogic);
         },
         update(u: { name?: string }) {
             change((d) => {
@@ -765,14 +763,14 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
 }
 
 /**
- * Entry points for typed notebooks over a fixed backend. Obtain one with
+ * Entry points for typed notebooks over a fixed store. Obtain one with
  * `createBinder`.
  */
 export interface Binder<Handle> {
     /**
      * Build a typed notebook from fresh data. The document seed is constructed
      * internally from `data.name` and `logic.theory`, then handed to the
-     * backend's `init`.
+     * store's `init`.
      */
     createNotebook<TLogic extends AnyModelLogic>(
         logic: TLogic,
@@ -780,7 +778,7 @@ export interface Binder<Handle> {
     ): ModelNotebook<TLogic, Handle>;
     /**
      * Build a typed notebook around an existing plain document by initializing
-     * backend storage from it. Throws if the document's theory does not match
+     * store storage from it. Throws if the document's theory does not match
      * the logic's theory.
      */
     loadNotebook<TLogic extends AnyModelLogic>(
@@ -788,8 +786,8 @@ export interface Binder<Handle> {
         document: ModelDocument,
     ): ModelNotebook<TLogic, Handle>;
     /**
-     * Build a typed notebook around an existing backend handle, e.g. an
-     * Automerge `DocHandle` found in a repo. No backend storage is created.
+     * Build a typed notebook around an existing store handle, e.g. an
+     * Automerge `DocHandle` found in a repo. No store storage is created.
      */
     loadNotebookFromHandle<TLogic extends AnyModelLogic>(
         logic: TLogic,
@@ -797,8 +795,8 @@ export interface Binder<Handle> {
     ): ModelNotebook<TLogic, Handle>;
 }
 
-/** Bind a backend once, yielding `createNotebook`/`loadNotebook`/`loadNotebookFromHandle` entry points. */
-export function createBinder<Handle>(backend: NotebookBackend<Handle>): Binder<Handle> {
+/** Bind a store once, yielding `createNotebook`/`loadNotebook`/`loadNotebookFromHandle` entry points. */
+export function createBinder<Handle>(store: DocumentStore<Handle>): Binder<Handle> {
     return {
         createNotebook(logic, data) {
             const seed = newModelDocument({ theory: logic.theory });
@@ -812,13 +810,13 @@ export function createBinder<Handle>(backend: NotebookBackend<Handle>): Binder<H
                         `using a logic with theory "${logic.theory}".`,
                 );
             }
-            return attachNotebook(backend, backend.createHandle(document), logic);
+            return attachNotebook(store, store.createHandle(document), logic);
         },
         loadNotebookFromHandle(logic, handle) {
-            return attachNotebook(backend, handle, logic);
+            return attachNotebook(store, handle, logic);
         },
     };
 }
 
-/** A ready-made binder over the plain in-memory backend. */
-export const binder: Binder<ModelDocument> = createBinder(plainBackend);
+/** A ready-made binder over the plain in-memory store. */
+export const binder: Binder<ModelDocument> = createBinder(plainStore);

@@ -10,7 +10,7 @@ import { binder, RichText } from "catcolab-documents";
 ```
 
 Notebooks are created through a binder, which ties the notebook API to a
-storage backend. The default `binder` uses the plain in-memory backend.
+document store. The default `binder` uses the plain in-memory store.
 
 <!-- verifier:prepend-to-following -->
 
@@ -487,8 +487,8 @@ notebook handle bound to the target logic over that same document. The original
 handle is now stale — its implicit types no longer matches the document it points at — so
 continue through the returned handle.
 
-Migrating in place means the backend handle is preserved: the document keeps its
-identity across the migration. With the Automerge backend, for example, the
+Migrating in place means the store handle is preserved: the document keeps its
+identity across the migration. With the Automerge store, for example, the
 migrated notebook shares the same `DocHandle` and Automerge URL as before, so
 references held elsewhere (links, open editors, sync peers) still resolve.
 

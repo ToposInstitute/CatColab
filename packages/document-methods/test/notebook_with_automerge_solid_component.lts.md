@@ -6,7 +6,7 @@ import { createEffect, createRoot } from "solid-js";
 import { type DocHandle, Repo } from "@automerge/automerge-repo";
 import { makeDocumentProjection } from "@automerge/automerge-repo-solid-primitives";
 import { SimpleOlog } from "catcolab-logics/simple-olog";
-import { createBinder, type NotebookBackend } from "catcolab-documents";
+import { createBinder, type DocumentStore } from "catcolab-documents";
 import { type ModelDocument } from "catcolab-document-methods";
 
 function materializeFromAutomerge<T>(doc: Doc<unknown>, subtree: T): T {
@@ -16,14 +16,14 @@ function materializeFromAutomerge<T>(doc: Doc<unknown>, subtree: T): T {
 
 const repo = new Repo();
 
-const solidAutomergeBackend: NotebookBackend<DocHandle<ModelDocument>> = {
+const solidAutomergeStore: DocumentStore<DocHandle<ModelDocument>> = {
     createHandle: (initialDoc) => repo.create<ModelDocument>(initialDoc),
     viewDocument: (handle) => makeDocumentProjection(handle),
     changeDocument: (handle, fn) => handle.change(fn),
     copyValue: (handle, value) => materializeFromAutomerge(handle.doc(), value),
 };
 
-const automergeBinder = createBinder(solidAutomergeBackend);
+const automergeBinder = createBinder(solidAutomergeStore);
 ```
 
 ```tsx

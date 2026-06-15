@@ -4,7 +4,7 @@
 import { createStore, produce, type SetStoreFunction, unwrap } from "solid-js/store";
 import { render } from "solid-js/web";
 import { SimpleOlog } from "catcolab-logics/simple-olog";
-import { createBinder, type NotebookBackend } from "catcolab-documents";
+import { createBinder, type DocumentStore } from "catcolab-documents";
 import { type ModelDocument } from "catcolab-document-methods";
 
 type SolidStoreHandle = {
@@ -12,7 +12,7 @@ type SolidStoreHandle = {
     setDoc: SetStoreFunction<ModelDocument>;
 };
 
-const solidBackend: NotebookBackend<SolidStoreHandle> = {
+const solidStore: DocumentStore<SolidStoreHandle> = {
     createHandle(initialDoc) {
         const [doc, setDoc] = createStore<ModelDocument>(initialDoc);
         return { doc, setDoc };
@@ -22,7 +22,7 @@ const solidBackend: NotebookBackend<SolidStoreHandle> = {
     copyValue: (_handle, value) => structuredClone(unwrap(value)),
 };
 
-const solidBinder = createBinder(solidBackend);
+const solidBinder = createBinder(solidStore);
 
 const notebook = solidBinder.createNotebook(SimpleOlog, { name: "An Olog" });
 ```

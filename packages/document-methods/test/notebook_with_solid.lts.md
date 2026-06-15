@@ -1,8 +1,8 @@
-A notebook's storage is abstracted to allow plugging in custom backends. This could be used with anything but our concrete plan is to use this with Solid and Automerge.
+A notebook's storage is abstracted to allow plugging in custom stores. This could be used with anything but our concrete plan is to use this with Solid and Automerge.
 
-A `NotebookBackend` is a stateless object that works on handles of its own choosing. `createHandle` creates a handle from an initial document; the other methods receive that handle back: `viewDocument` returns the read view, `changeDocument` applies a draft mutation, and the optional `copyValue` makes detached plain-JS copies of values from the backend's canonical document.
+A `DocumentStore` is a stateless object that works on handles of its own choosing. `createHandle` creates a handle from an initial document; the other methods receive that handle back: `viewDocument` returns the read view, `changeDocument` applies a draft mutation, and the optional `copyValue` makes detached plain-JS copies of values from the store's canonical document.
 
-A backend is bound once with `createBinder`, which yields the notebook entry points `createNotebook`, `loadNotebook`, and `loadNotebookFromHandle`.
+A store is bound once with `createBinder`, which yields the notebook entry points `createNotebook`, `loadNotebook`, and `loadNotebookFromHandle`.
 
 We can plug in Solid's reactivity by itself using `createStore` and `produce`.
 
@@ -12,7 +12,7 @@ We can plug in Solid's reactivity by itself using `createStore` and `produce`.
 import { createEffect, createRoot } from "solid-js";
 import { createStore, produce, type SetStoreFunction, unwrap } from "solid-js/store";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
-import { binder, createBinder, type NotebookBackend } from "catcolab-documents";
+import { binder, createBinder, type DocumentStore } from "catcolab-documents";
 import { type ModelDocument } from "catcolab-document-methods";
 
 type SolidStoreHandle = {
@@ -20,7 +20,7 @@ type SolidStoreHandle = {
     setDoc: SetStoreFunction<ModelDocument>;
 };
 
-const solidBackend: NotebookBackend<SolidStoreHandle> = {
+const solidStore: DocumentStore<SolidStoreHandle> = {
     createHandle(initialDoc) {
         const [doc, setDoc] = createStore<ModelDocument>(initialDoc);
         return { doc, setDoc };
@@ -30,13 +30,13 @@ const solidBackend: NotebookBackend<SolidStoreHandle> = {
     copyValue: (_handle, value) => structuredClone(unwrap(value)),
 };
 
-const solidBinder = createBinder(solidBackend);
+const solidBinder = createBinder(solidStore);
 
 const notebook = solidBinder.createNotebook(SimpleOlog, { name: "An Olog" });
 ```
 
 A binder can also load an existing plain document instead of creating a fresh
-notebook. The backend initializes its storage from the document.
+notebook. The store initializes its storage from the document.
 
 ```ts
 const existingSolidDoc = binder.createNotebook(SimpleOlog, { name: "Loaded Olog" }).document;
@@ -99,7 +99,7 @@ obj: A
 obj: Updated
 ```
 
-Copies materialize through the backend before writing the duplicate, so Solid
+Copies materialize through the store before writing the duplicate, so Solid
 store proxies do not leak into the copied cell.
 
 ```ts
@@ -131,7 +131,7 @@ copied obj: Updated copied
 
 <!-- verifier:reset -->
 
-To combine Solid reactivity with Automerge, we could make custom functions or use `makeDocumentProjection` from `@automerge/automerge-repo-solid-primitives`. The backend's handle is the Automerge `DocHandle` itself: `createHandle` creates a document in the repo, and the other methods work through the handle.
+To combine Solid reactivity with Automerge, we could make custom functions or use `makeDocumentProjection` from `@automerge/automerge-repo-solid-primitives`. The store's handle is the Automerge `DocHandle` itself: `createHandle` creates a document in the repo, and the other methods work through the handle.
 
 <!-- verifier:prepend-to-following -->
 
@@ -141,7 +141,7 @@ import { createEffect, createRoot } from "solid-js";
 import { type DocHandle, Repo } from "@automerge/automerge-repo";
 import { makeDocumentProjection } from "@automerge/automerge-repo-solid-primitives";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
-import { createBinder, type NotebookBackend } from "catcolab-documents";
+import { createBinder, type DocumentStore } from "catcolab-documents";
 import { type ModelDocument } from "catcolab-document-methods";
 
 function materializeFromAutomerge<T>(doc: Doc<unknown>, subtree: T): T {
@@ -151,14 +151,14 @@ function materializeFromAutomerge<T>(doc: Doc<unknown>, subtree: T): T {
 
 const repo = new Repo();
 
-const solidAutomergeBackend: NotebookBackend<DocHandle<ModelDocument>> = {
+const solidAutomergeStore: DocumentStore<DocHandle<ModelDocument>> = {
     createHandle: (initialDoc) => repo.create<ModelDocument>(initialDoc),
     viewDocument: (handle) => makeDocumentProjection(handle),
     changeDocument: (handle, fn) => handle.change(fn),
     copyValue: (handle, value) => materializeFromAutomerge(handle.doc(), value),
 };
 
-const automergeBinder = createBinder(solidAutomergeBackend);
+const automergeBinder = createBinder(solidAutomergeStore);
 
 const notebook = automergeBinder.createNotebook(SimpleOlog, { name: "An Olog" });
 ```
@@ -192,7 +192,7 @@ console.log("automerge copy:", copiedAutomergeObj.name);
 automerge copy: Updated Automerge copy
 ```
 
-The notebook exposes its backend handle, so e.g. the Automerge URL is available
+The notebook exposes its store handle, so e.g. the Automerge URL is available
 as `notebook.handle.url`. To work with an existing Automerge document, find its
 handle in the repo and attach to it.
 
@@ -215,7 +215,7 @@ console.log("loaded automerge notebook:", loadedAutomergeNotebook.name);
 loaded automerge notebook: Updated loaded Automerge Olog
 ```
 
-Migration mutates the document in place, so the backend handle is preserved. The
+Migration mutates the document in place, so the store handle is preserved. The
 migrated notebook keeps the very same Automerge `DocHandle` and URL as before.
 
 ```ts
