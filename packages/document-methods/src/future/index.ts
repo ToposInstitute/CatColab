@@ -211,6 +211,18 @@ type LogicMorphismCell<TLogic extends AnyModelLogic> = {
         : never;
 }[keyof TLogic["cellTypes"]];
 
+/**
+ * A pushforward migration from this logic to another. Mirrors the core: it
+ * transports an elaborated model along a theory morphism into the target
+ * theory. The target's core theory is supplied by the caller of `migrate`.
+ */
+export type ModelMigration = {
+    /** Identifier of the document theory migrated into. */
+    readonly target: string;
+    /** Transport an elaborated model along the morphism into `targetTheory`. */
+    readonly migrate: (model: DblModel, targetTheory: DblTheory) => DblModel;
+};
+
 export type ModelLogic<Theory extends string, TCellTypes extends Record<string, CellType>> = {
     /** Identifier of the document theory this logic targets. */
     readonly theory: Theory;
@@ -221,6 +233,17 @@ export type ModelLogic<Theory extends string, TCellTypes extends Record<string, 
      */
     readonly coreTheory: DblTheory;
     readonly cellTypes: TCellTypes;
+    /**
+     * Theories this logic includes into. Migrating to an inclusion target is
+     * trivial: only the document's theory changes, cell types are untouched.
+     */
+    readonly inclusions?: readonly string[];
+    /**
+     * Non-trivial migrations to other logics, keyed by target theory. Used by
+     * {@link ModelNotebook.migrate} to transport the elaborated model and
+     * re-type cells.
+     */
+    readonly migrations?: readonly ModelMigration[];
 };
 
 /** An elaborated model together with its validation status. */
@@ -287,6 +310,19 @@ export type ModelNotebook<TLogic extends AnyModelLogic, Handle = ModelDocument> 
      * validation errors, or `Illformed` if elaboration itself failed.
      */
     validate(): ModelValidationResult;
+    /**
+     * Migrate the notebook's document to another logic, **mutating it in
+     * place**: the underlying document is rewritten to the target theory rather
+     * than copied. Mirrors the core — the elaborated model is transported along
+     * a theory morphism and each cell is re-typed, preserving cell ids, names,
+     * and morphism endpoints.
+     *
+     * Returns a new notebook handle bound to the target logic over the same
+     * backend handle and document. The original handle is now stale (its
+     * implicit types no longer match the document), so continue through the
+     * returned handle. Throws if no migration to the target logic is defined.
+     */
+    migrate<TTarget extends AnyModelLogic>(targetLogic: TTarget): ModelNotebook<TTarget, Handle>;
     /** Handles for all cells, in notebook order. */
     cells(): Array<NotebookCell<TLogic>>;
     /**
@@ -588,6 +624,68 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
                 return { tag: "Valid", model };
             }
             return { tag: "Invalid", model, errors: result.content };
+        },
+        migrate<TTarget extends AnyModelLogic>(targetLogic: TTarget) {
+            // Trivial migration: an empty notebook or an inclusion target only
+            // needs its theory rewritten; cell types are left untouched.
+            const hasFormalCells = doc.notebook.cellOrder.some(
+                (cellId) => doc.notebook.cellContents[cellId]?.tag === "formal",
+            );
+            const isInclusion = (logic.inclusions ?? []).includes(targetLogic.theory);
+            if (!hasFormalCells || isInclusion) {
+                change((d) => {
+                    d.theory = targetLogic.theory;
+                    delete d.editorVariant;
+                });
+                return attachNotebook(backend, handle, targetLogic);
+            }
+
+            // Pushforward migration: transport the elaborated model along the
+            // theory morphism, then re-type each cell from the migrated model.
+            const migration = (logic.migrations ?? []).find(
+                (m) => m.target === targetLogic.theory,
+            );
+            if (!migration) {
+                throw new Error(
+                    `No migration defined from "${logic.theory}" to "${targetLogic.theory}".`,
+                );
+            }
+
+            const snapshot = copy ? copy(doc) : structuredClone(doc);
+            let model: DblModel;
+            try {
+                model = elaborateModel(
+                    snapshot.notebook as unknown as WasmModelNotebook,
+                    new DblModelMap(),
+                    logic.coreTheory,
+                    v7(),
+                );
+            } catch (e) {
+                throw new Error(
+                    `Cannot migrate notebook from "${logic.theory}" to ` +
+                        `"${targetLogic.theory}": the model failed to elaborate (${String(e)}).`,
+                    { cause: e },
+                );
+            }
+
+            const migrated = migration.migrate(model, targetLogic.coreTheory);
+            change((d) => {
+                d.theory = targetLogic.theory;
+                delete d.editorVariant;
+                for (const cellId of d.notebook.cellOrder) {
+                    const cell = d.notebook.cellContents[cellId];
+                    if (!cell || cell.tag !== "formal") {
+                        continue;
+                    }
+                    const judgment = cell.content as ModelJudgment;
+                    if (judgment.tag === "object") {
+                        judgment.obType = migrated.obType({ tag: "Basic", content: judgment.id });
+                    } else if (judgment.tag === "morphism") {
+                        judgment.morType = migrated.morType({ tag: "Basic", content: judgment.id });
+                    }
+                }
+            });
+            return attachNotebook(backend, handle, targetLogic);
         },
         update(u: { name?: string }) {
             change((d) => {

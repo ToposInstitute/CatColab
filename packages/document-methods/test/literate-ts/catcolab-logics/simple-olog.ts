@@ -17,4 +17,10 @@ export const SimpleOlog = {
     theory: "simple-olog",
     coreTheory: new ThCategory().theory(),
     cellTypes: { Type, Aspect },
+    migrations: [
+        {
+            target: "simple-schema",
+            migrate: ThCategory.toSchema,
+        },
+    ],
 } satisfies ModelLogic<"simple-olog", { Type: TypeType; Aspect: AspectType }>;
