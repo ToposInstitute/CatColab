@@ -30,14 +30,10 @@ use crate::{
         modal::{List, ModeApp},
         model::{DiscreteDblModel, DiscreteTabModel, ModalDblModel, ModalOb, MutDblModel},
         theory::{NonUnital, Unital},
-    },
-    one::FgCategory,
-    simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem},
-    stdlib::{
+    }, latex::{Latex, ToLatex}, one::FgCategory, simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem}, stdlib::{
         analyses::ode::{ODEAnalysis, Parameter, PolynomialODEAnalysis},
         th_signed_polynomial_ode_system,
-    },
-    zero::{QualifiedName, name},
+    }, zero::{QualifiedName, name}
 };
 
 /// The trait for an ODE semantics on models.
@@ -72,10 +68,19 @@ impl DblModelForODESemantics for ModalDblModel<Unital> {}
 impl DblModelForODESemantics for ModalDblModel<NonUnital> {}
 
 /// The type of the parameters in the ODE system need to be sufficiently nice, though
-/// (again) these bounds are not particularly restrictive.
-pub trait ODEParameterType: Eq + Ord + Clone + fmt::Display {}
+/// (again) these bounds are not particularly restrictive. The two that will need the most
+/// manual effort for implementation are `Display` and `ToLatex`, which govern how these
+/// coefficients should be rendered. The `Display` trait is used for debugging whereas the
+/// `ToLatex` trait is used for user-facing display.
+pub trait ODEParameterType: Eq + Ord + Clone + fmt::Display + ToLatex {}
 
 /// The simplest type for parameters is `QualifiedName`.
+impl ToLatex for QualifiedName {
+  fn to_latex(&self) -> Latex {
+    Latex(self.to_string())
+  }
+}
+
 impl ODEParameterType for QualifiedName {}
 
 /// Builder for polynomial ODE systems.

@@ -9,6 +9,8 @@ use std::ops::{Add, AddAssign, Mul, Neg};
 
 use derivative::Derivative;
 
+use crate::latex::{Latex, ToLatex};
+
 use super::rig::*;
 
 /// A commutative algebra over a commutative ring.
@@ -147,16 +149,16 @@ where
     }
 }
 
-impl<Var, Coef, Exp> Polynomial<Var, Coef, Exp>
+impl<Var, Coef, Exp> ToLatex for Polynomial<Var, Coef, Exp>
 where
     Var: Display,
     Coef: Display + DisplayCoef + Clone + PartialEq + One + Neg<Output = Coef>,
     Exp: Display + PartialEq + One,
 {
     /// Convert to a LaTeX string, formatting each monomial via [`Monomial::to_latex`].
-    pub fn to_latex(&self) -> String {
+    fn to_latex(&self) -> Latex {
         let fmt_term = |coef: &Coef, monomial: &Monomial<Var, Exp>| -> String {
-            let monomial = monomial.to_latex();
+            let Latex(monomial) = monomial.to_latex();
             if coef.is_one() {
                 monomial
             } else if *coef == Coef::one().neg() {
@@ -170,7 +172,7 @@ where
 
         let mut terms = (&self.0).into_iter();
         let Some((coef, monomial)) = terms.next() else {
-            return "0".to_string();
+            return Latex("0".to_string());
         };
         let mut output = fmt_term(coef, monomial);
         for (coef, monomial) in terms {
@@ -182,7 +184,7 @@ where
                 output.push_str(&fmt_term(coef, monomial));
             }
         }
-        output
+        Latex(output)
     }
 }
 

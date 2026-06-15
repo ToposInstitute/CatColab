@@ -15,6 +15,7 @@ use tsify::Tsify;
 
 use super::Parameter;
 use crate::dbl::model::{FpDblModel, MutDblModel};
+use crate::latex::{Latex, ToLatex};
 use crate::one::Path;
 use crate::simulate::ode::PolynomialSystem;
 use crate::stdlib::analyses::ode::ode_semantics::{
@@ -59,6 +60,19 @@ impl fmt::Display for LotkaVolterraParameter {
             Self::Interaction { link } => {
                 write!(f, "Interaction({})", link)
             }
+        }
+    }
+}
+
+impl ToLatex for LotkaVolterraParameter {
+    fn to_latex(&self) -> Latex {
+        match self {
+            Self::Growth { variable } => {
+                Latex(format!("\\g_{{{variable}}}"))
+            },
+            Self::Interaction { link } => {
+                Latex(format!("\\k_{{{link}}}"))
+            },
         }
     }
 }
@@ -228,7 +242,7 @@ mod test {
     use super::*;
     use crate::{
         dbl::model::MutDblModel,
-        simulate::ode::LatexEquation,
+        latex::LatexEquation,
         stdlib::{models::*, theories::*},
     };
 
@@ -279,12 +293,12 @@ mod test {
         let sys = LotkaVolterraAnalysis::default().build_system(&model);
         let expected = vec![
             LatexEquation {
-                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string(),
-                rhs: "Growth(x) \\cdot x - Interaction(negative) \\cdot x \\cdot y".to_string(),
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string()),
+                rhs: Latex("Growth(x) \\cdot x - Interaction(negative) \\cdot x \\cdot y".to_string()),
             },
             LatexEquation {
-                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string(),
-                rhs: "Interaction(positive) \\cdot x \\cdot y + Growth(y) \\cdot y".to_string(),
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string()),
+                rhs: Latex("Interaction(positive) \\cdot x \\cdot y + Growth(y) \\cdot y".to_string()),
             },
         ];
         assert_eq!(expected, sys.to_latex_equations());

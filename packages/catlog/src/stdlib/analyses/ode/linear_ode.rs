@@ -15,6 +15,7 @@ use tsify::Tsify;
 
 use super::Parameter;
 use crate::dbl::model::{FpDblModel, MutDblModel};
+use crate::latex::{Latex, ToLatex};
 use crate::one::Path;
 use crate::simulate::ode::PolynomialSystem;
 use crate::stdlib::analyses::ode::ode_semantics::{
@@ -49,6 +50,16 @@ impl fmt::Display for LCCParameter {
         match self {
             Self::Parameter { morphism } => {
                 write!(f, "Parameter({})", morphism)
+            }
+        }
+    }
+}
+
+impl ToLatex for LCCParameter {
+    fn to_latex(&self) -> Latex {
+        match self {
+            Self::Parameter { morphism } => {
+                Latex(format!("\\lambda_{{{morphism}}}"))
             }
         }
     }
@@ -194,7 +205,7 @@ mod test {
     use super::*;
     use crate::{
         dbl::model::MutDblModel,
-        simulate::ode::LatexEquation,
+        latex::LatexEquation,
         stdlib::{models::*, theories::*},
     };
 
@@ -245,12 +256,12 @@ mod test {
         let sys = LCCAnalysis::default().build_system(&model);
         let expected = vec![
             LatexEquation {
-                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string(),
-                rhs: "-Parameter(negative) \\cdot y".to_string(),
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string()),
+                rhs: Latex("-Parameter(negative) \\cdot y".to_string()),
             },
             LatexEquation {
-                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string(),
-                rhs: "Parameter(positive) \\cdot x".to_string(),
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string()),
+                rhs: Latex("Parameter(positive) \\cdot x".to_string()),
             },
         ];
         assert_eq!(expected, sys.to_latex_equations());

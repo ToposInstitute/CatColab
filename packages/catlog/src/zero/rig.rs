@@ -22,6 +22,8 @@ use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use derivative::Derivative;
 use duplicate::duplicate_item;
 
+use crate::latex::{Latex, ToLatex};
+
 /// A commutative monoid, written additively.
 pub trait AdditiveMonoid: Add<Output = Self> + Zero {}
 
@@ -586,13 +588,13 @@ where
     }
 }
 
-impl<Var, Exp> Monomial<Var, Exp>
+impl<Var, Exp> ToLatex for Monomial<Var, Exp>
 where
     Var: Display,
     Exp: Display + PartialEq + One,
 {
     /// Convert to a LaTeX string, separating variables with `\cdot`.
-    pub fn to_latex(&self) -> String {
+    fn to_latex(&self) -> Latex {
         let fmt_power = |var: &Var, exp: &Exp| {
             if exp.is_one() {
                 format!("{var}")
@@ -607,14 +609,14 @@ where
         };
         let mut pairs = self.0.iter();
         let Some((var, exp)) = pairs.next() else {
-            return "1".to_string();
+            return Latex("1".to_string());
         };
         let mut output = fmt_power(var, exp);
         for (var, exp) in pairs {
             output.push_str(" \\cdot ");
             output.push_str(&fmt_power(var, exp));
         }
-        output
+        Latex(output)
     }
 }
 

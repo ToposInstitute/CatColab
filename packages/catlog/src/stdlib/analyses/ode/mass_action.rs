@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use super::Parameter;
+use crate::latex::{Latex, ToLatex};
 use crate::simulate::ode::PolynomialSystem;
 use crate::stdlib::analyses::ode::ode_semantics::*;
 use crate::stdlib::analyses::petri::transition_interface;
@@ -156,6 +157,34 @@ impl fmt::Display for MassActionParameter {
             } => {
                 write!(f, "({}->[{}])", input, trans)
             }
+        }
+    }
+}
+
+impl ToLatex for MassActionParameter {
+    fn to_latex(&self) -> Latex {
+        match self {
+            Self::Balanced { flow: transition } => Latex(format!("r_{{{transition}}}")),
+            Self::Unbalanced { direction, parameter } => match (direction, parameter) {
+                (Direction::IncomingFlow, RateParameter::PerFlow { flow: transition }) => {
+                    Latex(format!("\\rho_{{{transition}}}"))
+                }
+                (Direction::OutgoingFlow, RateParameter::PerFlow { flow: transition }) => {
+                    Latex(format!("\\kappa_{{{transition}}}"))
+                }
+                (
+                    Direction::IncomingFlow,
+                    RateParameter::PerStock { flow: transition, stock: place },
+                ) => {
+                    Latex(format!("\\rho_{{{transition}}}^{{\\text{{{place}}}}}"))
+                }
+                (
+                    Direction::OutgoingFlow,
+                    RateParameter::PerStock { flow: transition, stock: place },
+                ) => {
+                    Latex(format!("\\kappa_{{{transition}}}^{{\\text{{{place}}}}}"))
+                }
+            },
         }
     }
 }
