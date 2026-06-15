@@ -3,8 +3,8 @@ import type {
     MorphismType,
     ObjectCell,
     ObjectType,
-} from "catcolab-binder";
-import { morphismType, objectType } from "catcolab-binder";
+} from "catcolab-documents";
+import { morphismType, objectType } from "catcolab-documents";
 
 type TypeType = ObjectType<"Type">;
 type AspectType = MorphismType<ObjectCell<TypeType>, ObjectCell<TypeType>, "Aspect">;

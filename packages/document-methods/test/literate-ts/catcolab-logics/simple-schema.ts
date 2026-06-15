@@ -3,8 +3,8 @@ import type {
     MorphismType,
     ObjectCell,
     ObjectType,
-} from "catcolab-binder";
-import { morphismType, objectType } from "catcolab-binder";
+} from "catcolab-documents";
+import { morphismType, objectType } from "catcolab-documents";
 
 type EntityType = ObjectType<"Entity">;
 type AttrTypeType = ObjectType<"AttrType">;

@@ -12,7 +12,7 @@ We can plug in Solid's reactivity by itself using `createStore` and `produce`.
 import { createEffect, createRoot } from "solid-js";
 import { createStore, produce, type SetStoreFunction, unwrap } from "solid-js/store";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
-import { binder, createBinder, type NotebookBackend } from "catcolab-binder";
+import { binder, createBinder, type NotebookBackend } from "catcolab-documents";
 import { type ModelDocument } from "catcolab-document-methods";
 
 type SolidStoreHandle = {
@@ -141,7 +141,7 @@ import { createEffect, createRoot } from "solid-js";
 import { type DocHandle, Repo } from "@automerge/automerge-repo";
 import { makeDocumentProjection } from "@automerge/automerge-repo-solid-primitives";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
-import { createBinder, type NotebookBackend } from "catcolab-binder";
+import { createBinder, type NotebookBackend } from "catcolab-documents";
 import { type ModelDocument } from "catcolab-document-methods";
 
 function materializeFromAutomerge<T>(doc: Doc<unknown>, subtree: T): T {

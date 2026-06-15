@@ -1,12 +1,12 @@
 Two new package for our built-in logics `catcolab-logics` and
-`catcolab-binder`. In the future people may create their own logics instead of
-using `catcolab-logics`. The logics need to play nice with `catcolab-binder`.
+`catcolab-documents`. In the future people may create their own logics instead of
+using `catcolab-logics`. The logics need to play nice with `catcolab-documents`.
 
 <!-- verifier:prepend-to-following -->
 
 ```ts
 import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
-import { binder, RichText } from "catcolab-binder";
+import { binder, RichText } from "catcolab-documents";
 ```
 
 Notebooks are created through a binder, which ties the notebook API to a
@@ -102,7 +102,7 @@ We can iterate through cells: both informal cells and formal judgment cells.
 Each cell handle is discriminated by `CellKind`.
 
 ```ts
-import { CellKind } from "catcolab-binder";
+import { CellKind } from "catcolab-documents";
 
 for (const cell of notebook.cells()) {
     switch (cell.kind) {
@@ -134,7 +134,7 @@ We can filter cells by their type, not just their kind and we provide some utili
 
 ```ts
 import { Attr, AttrType, Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
-import { binder, byType } from "catcolab-binder";
+import { binder, byType } from "catcolab-documents";
 
 const notebook = binder.createNotebook(SimpleSchema, { name: "Example schema" });
 
@@ -165,7 +165,7 @@ attrs: name
 
 ```ts
 import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
-import { binder } from "catcolab-binder";
+import { binder } from "catcolab-documents";
 
 const notebook = binder.createNotebook(SimpleOlog, { name: "An Olog" });
 
@@ -194,7 +194,7 @@ notebook.add(Aspect, {
 
 ```ts
 import { Attr, AttrType, SimpleSchema } from "catcolab-logics/simple-schema";
-import { binder } from "catcolab-binder";
+import { binder } from "catcolab-documents";
 
 const schema = binder.createNotebook(SimpleSchema, { name: "Example schema" });
 
@@ -216,7 +216,7 @@ But adapt to the underlying logic:
 
 ```ts
 import { PetriNet, Place, Transition } from "catcolab-logics/petri-net";
-import { binder } from "catcolab-binder";
+import { binder } from "catcolab-documents";
 
 const notebook = binder.createNotebook(PetriNet, { name: "Example Petri-net" });
 
@@ -252,7 +252,7 @@ notebook was edited after the handle was obtained.
 
 ```ts
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
-import { binder, byType, RichText } from "catcolab-binder";
+import { binder, byType, RichText } from "catcolab-documents";
 
 const notebook = binder.createNotebook(SimpleOlog, { name: "An Olog" });
 
@@ -372,7 +372,7 @@ A, C
 
 ```ts
 import { PetriNet } from "catcolab-logics/petri-net";
-import { binder } from "catcolab-binder";
+import { binder } from "catcolab-documents";
 
 const notebook = binder.createNotebook(PetriNet, { name: "Example Petri-net" });
 ```

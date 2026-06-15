@@ -6,7 +6,7 @@ import { createEffect, createRoot } from "solid-js";
 import { type DocHandle, Repo } from "@automerge/automerge-repo";
 import { makeDocumentProjection } from "@automerge/automerge-repo-solid-primitives";
 import { SimpleOlog } from "catcolab-logics/simple-olog";
-import { createBinder, type NotebookBackend } from "catcolab-binder";
+import { createBinder, type NotebookBackend } from "catcolab-documents";
 import { type ModelDocument } from "catcolab-document-methods";
 
 function materializeFromAutomerge<T>(doc: Doc<unknown>, subtree: T): T {
