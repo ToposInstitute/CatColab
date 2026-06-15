@@ -465,6 +465,350 @@ impl<'a> Elaborator<'a> {
         let r_v = RecordV::new(self.ctx.env.clone(), field_tys.clone(), Dtry::empty());
         (TyS::record(field_tys), TyV::record(r_v))
     }
+
+    // ================= DIAGRAM == //
+
+    fn diag_object_cell(
+        &mut self,
+        model: &RecordV,
+        ob_decl: &nb::DiagramObDecl,
+    ) -> (NameSegment, LabelSegment, TyS, TyV) {
+        let name = NameSegment::Uuid(ob_decl.id);
+        let label = LabelSegment::Text(ustr(&ob_decl.name));
+
+        let over_uuid = match &ob_decl.over {
+            Some(nb::Ob::Basic(id)) => id,
+            _ => panic!("expected basic"),
+        };
+        let over_name = NameSegment::Uuid(Uuid::parse_str(&over_uuid).unwrap());
+        let Some((_, (over_label, _))) = model.fields.iter().find(|(n, _)| *n == &over_name) else {
+            panic!("over reference not found in codomain model");
+        };
+
+        let path = vec![(over_name, *over_label)];
+        (name, label, TyS::over(path.clone()), TyV::over(path))
+    }
+
+    fn diag_morphism_cell_ty(
+        &mut self,
+        model: &RecordV,
+        mor_decl: &nb::DiagramMorDecl,
+    ) -> (TyS, TyV, Vec<(TmS, TmS)>, Vec<(TmV, TmV)>) {
+        let over_uuid = match &mor_decl.over {
+            Some(nb::Mor::Basic(id)) => id,
+            _ => panic!("expected basic over reference"),
+        };
+        let over_name = NameSegment::Uuid(Uuid::parse_str(&over_uuid).unwrap());
+        let Some((_, (over_label, mor_ty_s))) = model.fields.iter().find(|(n, _)| *n == &over_name)
+        else {
+            panic!("over morphism not found in codomain");
+        };
+        let TyS_::Morphism(mt, cod_dom_s, _cod_cod_s) = &**mor_ty_s else {
+            panic!("over reference is not a morphism");
+        };
+
+        let ob_op = match &**cod_dom_s {
+            TmS_::ObApp(op, _) => Some(*op),
+            _ => None,
+        };
+
+        let mut dom_stxs = Vec::new();
+        let mut dom_vals = Vec::new();
+        let mut dom_tys = Vec::new();
+        match &mor_decl.dom {
+            Some(nb::Ob::List { objects, .. }) => {
+                for ob in objects {
+                    let id = match ob {
+                        Some(nb::Ob::Basic(id)) => id,
+                        _ => panic!(),
+                    };
+                    let Some((s, v, ty)) =
+                        self.lookup_tm(NameSegment::Uuid(Uuid::parse_str(&id).unwrap()))
+                    else {
+                        panic!()
+                    };
+                    dom_stxs.push(s);
+                    dom_vals.push(v);
+                    dom_tys.push(ty);
+                }
+            }
+
+            Some(nb::Ob::Basic(id)) => {
+                let Some((s, v, ty)) =
+                    self.lookup_tm(NameSegment::Uuid(Uuid::parse_str(&id).unwrap()))
+                else {
+                    panic!()
+                };
+                dom_stxs.push(s);
+                dom_vals.push(v);
+                dom_tys.push(ty);
+            }
+
+            _ => todo!(),
+        }
+
+        let (dom_s, dom_v) = if let Some(op) = ob_op {
+            (
+                TmS::ob_app(op, TmS::list(dom_stxs.clone())),
+                TmV::app(op, TmV::list(dom_vals.clone())),
+            )
+        } else {
+            (TmS::list(dom_stxs.clone()), TmV::list(dom_vals.clone()))
+        };
+
+        let mut cod_stxs = Vec::new();
+        let mut cod_vals = Vec::new();
+        let mut cod_tys = Vec::new();
+        match &mor_decl.cod {
+            Some(nb::Ob::List { objects, .. }) => {
+                for ob in objects {
+                    let id = match ob {
+                        Some(nb::Ob::Basic(id)) => id,
+                        _ => panic!(),
+                    };
+                    let Some((s, v, ty)) =
+                        self.lookup_tm(NameSegment::Uuid(Uuid::parse_str(&id).unwrap()))
+                    else {
+                        panic!()
+                    };
+                    cod_stxs.push(s);
+                    cod_vals.push(v);
+                    cod_tys.push(ty);
+                }
+            }
+            Some(nb::Ob::Basic(id)) => {
+                let Some((s, v, ty)) =
+                    self.lookup_tm(NameSegment::Uuid(Uuid::parse_str(&id).unwrap()))
+                else {
+                    panic!("{}", id)
+                };
+                cod_stxs.push(s);
+                cod_vals.push(v);
+                cod_tys.push(ty);
+            }
+            _ => panic!(),
+        }
+
+        let tgt_path = match &*cod_tys[0] {
+            TyV_::Over(path) => path.clone(),
+            _ => panic!("codomain element is not @over-typed"),
+        };
+
+        let mut eqns_s = Vec::new();
+        let mut eqns_v = Vec::new();
+        for (d_s, c_s) in dom_stxs.iter().zip(cod_stxs.iter()) {
+            eqns_s.push((
+                TmS::over_app(over_name, *over_label, tgt_path.clone(), d_s.clone()),
+                c_s.clone(),
+            ));
+        }
+        for (d_v, c_v) in dom_vals.iter().zip(cod_vals.iter()) {
+            eqns_v.push((
+                TmV::over_app(over_name, *over_label, tgt_path.clone(), d_v.clone()),
+                c_v.clone(),
+            ));
+        }
+
+        let (cod_s, cod_v) = if let Some(op) = ob_op {
+            (
+                TmS::ob_app(op, TmS::list(cod_stxs.clone())),
+                TmV::app(op, TmV::list(cod_vals.clone())),
+            )
+        } else {
+            (TmS::list(cod_stxs.clone()), TmV::list(cod_vals.clone()))
+        };
+
+        (
+            TyS::morphism(mt.clone(), dom_s, cod_s),
+            TyV::morphism(mt.clone(), dom_v, cod_v),
+            eqns_s,
+            eqns_v,
+        )
+    }
+
+    fn diag_morphism_cell(
+        &mut self,
+        model: &RecordV,
+        mor_decl: &nb::DiagramMorDecl,
+    ) -> (NameSegment, LabelSegment, TyS, TyV, Vec<(TmS, TmS)>, Vec<(TmV, TmV)>) {
+        let name = NameSegment::Uuid(mor_decl.id);
+        // let label = LabelSegment::Text(ustr(&mor_decl.name));
+
+        let over_uuid = match &mor_decl.over {
+            Some(nb::Mor::Basic(id)) => id,
+            _ => panic!("expected basic"),
+        };
+        let over_name = NameSegment::Uuid(Uuid::parse_str(&over_uuid).unwrap());
+        let Some((_, (over_label, _))) = model.fields.iter().find(|(n, _)| *n == &over_name) else {
+            panic!("over reference not found in codomain model");
+        };
+
+        let (ty_s, ty_v, eqns_s, eqns_v) = self.diag_morphism_cell_ty(model, mor_decl);
+        (name, over_label.clone(), ty_s, ty_v, eqns_s, eqns_v)
+    }
+
+    fn diag_instantiation_cell_ty(&mut self, i_decl: &nb::InstantiatedDiagram) -> (TyS, TyV) {
+        let name = QualifiedName::single(NameSegment::Uuid(i_decl.id));
+        let link = match &i_decl.diagram {
+            Some(l) => l,
+            None => return self.ty_error(InvalidDblModel::InvalidLink(name)),
+        };
+        let catcolab_document_types::current::LinkType::Instantiation = link.r#type else {
+            return self.ty_error(InvalidDblModel::InvalidLink(name));
+        };
+        let ref_id = ustr(&link.stable_ref.id);
+        let topname = NameSegment::Text(ref_id);
+        let Some(TopDecl::Diag(diag_def)) = self.toplevel.declarations.get(&topname) else {
+            return self.ty_error(InvalidDblModel::InvalidLink(name));
+        };
+        let mut specializations = Vec::new();
+        let TyV_::Record(r) = &*diag_def.body_ty else {
+            return self.ty_error(InvalidDblModel::InvalidLink(name));
+        };
+        let mut r = r.clone();
+        for specialization in i_decl.specializations.iter() {
+            if let (Some(field_id), Some(ob)) = (&specialization.id, &specialization.ob) {
+                let field_name = NameSegment::Uuid(Uuid::from_str(field_id).unwrap());
+                let ob_name = match ob {
+                    nb::Ob::Basic(id) => NameSegment::Uuid(Uuid::parse_str(id).unwrap()),
+                    _ => continue,
+                };
+                let Some((ob_s, ob_v, ob_ty)) = self.lookup_tm(ob_name) else {
+                    continue;
+                };
+                let Some((field_label, field_ty)) = r.fields.get_with_label(field_name) else {
+                    continue;
+                };
+                match (&**field_ty, &*ob_ty) {
+                    (TyS_::Over(_), TyV_::Over(path)) => {
+                        specializations.push((
+                            vec![(field_name, *field_label)],
+                            TyS::sing(TyS::over(path.clone()), ob_s),
+                        ));
+                        r = r.add_specialization(
+                            &[(field_name, *field_label)],
+                            TyV::sing(TyV::over(path.clone()), ob_v),
+                        );
+                    }
+                    _ => continue,
+                }
+            }
+        }
+        let ty_s = if specializations.is_empty() {
+            TyS::topvar(topname)
+        } else {
+            TyS::specialize(TyS::topvar(topname), specializations)
+        };
+        (ty_s, TyV::record(r))
+    }
+
+    fn diag_instantiation_cell(
+        &mut self,
+        i_decl: &nb::InstantiatedDiagram,
+    ) -> (NameSegment, LabelSegment, TyS, TyV) {
+        let name = NameSegment::Uuid(i_decl.id);
+        let label = LabelSegment::Text(ustr(&i_decl.name));
+        let (ty_s, ty_v) = self.diag_instantiation_cell_ty(i_decl);
+        (name, label, ty_s, ty_v)
+    }
+
+    /// Elaborates diagram and its accompanying model into a quadruple
+    ///
+    /// (Instance Term Syntax, Instance Term Value, Record Type Syntax, Record Type Value)
+    ///
+    pub fn diagram_notebook<'b>(
+        &mut self,
+        model: TyV,
+        cells: impl Iterator<Item = &'b nb::DiagramJudgment>,
+    ) -> (TmS, TmV, TyS, TyV) {
+        let TyV_::Record(r) = &*model else { panic!() };
+
+        // Process the cells in dependency order. This is important because the
+        // UI allows users to reorder cells freely and that shouldn't affect the
+        // result of elaboration.
+        let mut cells: Vec<_> = cells.collect();
+        cells.sort_by_key(|judgment| match judgment {
+            nb::DiagramJudgment::Object(_) => 0,
+            nb::DiagramJudgment::Instantiation(_) => 1,
+            nb::DiagramJudgment::Morphism(_) => 2,
+            nb::DiagramJudgment::Equation(_) => 3,
+        });
+
+        let mut field_ty_vs = Vec::new();
+
+        // for instances
+        let mut generators: IndexMap<FieldName, (LabelSegment, Vec<(FieldName, LabelSegment)>)> =
+            IndexMap::new();
+
+        let mut eqns_s: Vec<(TmS, TmS)> = Vec::new();
+        let mut eqns_v: Vec<(TmV, TmV)> = Vec::new();
+        let mut subs_s: IndexMap<FieldName, (LabelSegment, TmS)> = IndexMap::new();
+        let mut subs_v: IndexMap<FieldName, (LabelSegment, TmV)> = IndexMap::new();
+
+        let self_var = self.intro(name_seg("self"), label_seg("self"), None).unwrap_neu();
+        let c = self.checkpoint();
+
+        for cell in cells {
+            let (name, label, _, ty_v) = match &cell {
+                nb::DiagramJudgment::Object(ob_decl) => {
+                    let result = self.diag_object_cell(r, ob_decl);
+                    if let TyV_::Over(path) = &*result.3 {
+                        generators.insert(result.0, (result.1, path.clone()));
+                    }
+                    result
+                }
+                nb::DiagramJudgment::Morphism(mor_decl) => {
+                    let (name, label, ty_s, ty_v, mor_eqns_s, mor_eqns_v) =
+                        self.diag_morphism_cell(r, mor_decl);
+                    eqns_s.extend(mor_eqns_s);
+                    eqns_v.extend(mor_eqns_v);
+                    (name, label, ty_s, ty_v)
+                }
+                nb::DiagramJudgment::Instantiation(i_decl) => {
+                    let result = self.diag_instantiation_cell(i_decl);
+                    if let Some(link) = &i_decl.diagram {
+                        let ref_id = ustr(&link.stable_ref.id);
+                        let topname = NameSegment::Text(ref_id);
+                        if let Some(TopDecl::Diag(d)) = self.toplevel.declarations.get(&topname) {
+                            subs_s.insert(result.0, (result.1, d.body_stx.clone()));
+                            subs_v.insert(result.0, (result.1, d.body_val.clone()));
+                        }
+                    }
+                    result
+                }
+                nb::DiagramJudgment::Equation(_) => todo!(),
+            };
+            field_ty_vs.push((name, (label, ty_v.clone())));
+            self.ctx.scope.push(VarInContext::new(name, label, Some(ty_v.clone())));
+            self.ctx.env =
+                self.ctx.env.snoc(TmV::neu(TmN::proj(self_var.clone(), name, label), ty_v));
+        }
+
+        self.reset_to(c);
+        let field_tys: Row<_> = field_ty_vs
+            .iter()
+            .map(|(name, (label, ty_v))| (*name, (*label, self.evaluator().quote_ty(ty_v))))
+            .collect();
+
+        let body_s = InstanceBodyS {
+            generators: generators.clone(),
+            equations: eqns_s,
+            sub_instances: subs_s,
+        };
+        let body_v = InstanceBodyV {
+            generators: generators,
+            equations: eqns_v,
+            sub_instances: subs_v,
+        };
+
+        let r_v = RecordV::new(self.ctx.env.clone(), field_tys.clone(), Dtry::empty());
+        (
+            TmS::instance(body_s),
+            TmV::instance(body_v),
+            TyS::record(field_tys),
+            TyV::record(r_v),
+        )
+    }
 }
 
 /// Promotes a modality from notebook type to modality for modal theory.
@@ -503,15 +847,17 @@ mod test {
     use ustr::ustr;
 
     use crate::dbl::model::DblModelPrinter;
-    use crate::stdlib::{th_schema, th_sym_monoidal_category};
+    use crate::stdlib::{th_multicategory, th_schema, th_sym_monoidal_category};
+    use crate::tt::toplevel::{Diag, TopDecl};
+    use crate::tt::util::{Decapodes, JuliaTranspiler};
     use crate::tt::{
         modelgen::Model,
         notebook_elab::Elaborator,
         theory::{Theory, TheoryDef},
         toplevel::Toplevel,
     };
-    use crate::zero::name;
-    use catcolab_document_types::current::ModelDocumentContent;
+    use crate::zero::{NameSegment, name};
+    use catcolab_document_types::current::{DiagramDocumentContent, ModelDocumentContent};
 
     fn elab_example(theory: &Theory, name: &str, expected: Expect) -> Model {
         let src = fs::read_to_string(format!("examples/tt/notebook/{name}.json")).unwrap();
@@ -600,5 +946,70 @@ mod test {
         let model = model.as_discrete().unwrap();
         let eqns: Vec<_> = model.category.equations().collect();
         assert_eq!(eqns.len(), 1);
+    }
+
+    #[test]
+    fn glueing_modal_instances() {
+        let theory =
+            Theory::new(name("ThMulticategory"), TheoryDef::modal_unital(th_multicategory()));
+        let mut toplevel = Toplevel::new(Default::default());
+        let mut elab = Elaborator::new(theory.clone(), &toplevel, ustr(""));
+
+        let src =
+            fs::read_to_string("examples/tt/notebook/klausmeier/model_dec_fragment.json").unwrap();
+        let doc: ModelDocumentContent = serde_json::from_str(&src).unwrap();
+        let (_, model_ty_v) = elab.notebook(doc.notebook.formal_content());
+
+        let hydro_src =
+            fs::read_to_string(format!("examples/tt/notebook/klausmeier/hydrodynamics.json"))
+                .unwrap();
+        let hydro_doc: DiagramDocumentContent = serde_json::from_str(&hydro_src).unwrap();
+        let mut elab = Elaborator::new(theory.clone(), &toplevel, ustr(""));
+
+        let hydro_doc_id = "019eb37e-eb26-7283-8c68-63d4cb8cd1f7"; // from Klausmeier.json
+        let (hydro_stx, hydro_val, _, hydro_ty) =
+            elab.diagram_notebook(model_ty_v.clone(), hydro_doc.notebook.formal_content());
+        toplevel.declarations.insert(
+            NameSegment::Text(ustr(hydro_doc_id)),
+            TopDecl::Diag(Diag::new(
+                theory.clone(),
+                model_ty_v.clone(),
+                hydro_stx,
+                hydro_val,
+                hydro_ty,
+            )),
+        );
+
+        let phyto_src =
+            fs::read_to_string(format!("examples/tt/notebook/klausmeier/phytodynamics.json"))
+                .unwrap();
+        let phyto_doc: DiagramDocumentContent = serde_json::from_str(&phyto_src).unwrap();
+        let mut elab = Elaborator::new(theory.clone(), &toplevel, ustr(""));
+
+        let phyto_doc_id = "019eb288-c310-7f33-b2c3-171279589942";
+        let (phyto_stx, phyto_val, _, phyto_ty) =
+            elab.diagram_notebook(model_ty_v.clone(), phyto_doc.notebook.formal_content());
+        toplevel.declarations.insert(
+            NameSegment::Text(ustr(phyto_doc_id)),
+            TopDecl::Diag(Diag::new(
+                theory.clone(),
+                model_ty_v.clone(),
+                phyto_stx,
+                phyto_val,
+                phyto_ty,
+            )),
+        );
+
+        // LOAD THE DIAGRAM
+        let src =
+            fs::read_to_string(format!("examples/tt/notebook/klausmeier/Klausmeier.json")).unwrap();
+        let doc: DiagramDocumentContent = serde_json::from_str(&src).unwrap();
+        let mut elab = Elaborator::new(theory.clone(), &toplevel, ustr(""));
+        let (_, _, _, ty_v) =
+            elab.diagram_notebook(model_ty_v.clone(), doc.notebook.formal_content());
+
+        let pode = Decapodes { pode: ty_v };
+        let out = pode.transpile();
+        println!("{}", &out);
     }
 }
