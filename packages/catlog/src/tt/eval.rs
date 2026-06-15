@@ -169,9 +169,27 @@ impl<'a> Evaluator<'a> {
         self.bind_neu("self".into(), "self".into(), ty)
     }
 
-    /// Synthesize the record type matching an instance body's
-    /// structure. Generators become `@over`-typed fields; sub-instances
-    /// recurse. Equations are elided (they aren't projectable).
+    /// Synthesize the type of an instance body when its name is used in
+    /// *type* position — i.e. the representable `Hom_Inst(D, self)`, the
+    /// type of instance morphisms out of the instance `D`.
+    ///
+    /// By Yoneda such a morphism is determined by where `D`'s generators
+    /// land, so each generator becomes an `@over`-typed field and each
+    /// sub-instance recurses. A *fiber* equation (`mor(gen) := target`)
+    /// is exactly a condition cutting this down from the free product of
+    /// `@over` fields to the presented representable — the equalizer — so
+    /// each becomes an `Id`-typed field witnessing that the constraint
+    /// holds for the morphism's images. Morphism equations (`==`)
+    /// constrain the model rather than the generator images, so they are
+    /// correctly *not* equalizer conditions and are omitted.
+    ///
+    /// WARNING: these `Id` fields make the type *honest* but are not
+    /// *enforced*. An import (`we : D`) introduces a neutral of this type
+    /// rather than constructing one, so nothing checks the equalizer
+    /// conditions, and equation extraction reads the inlined instance body
+    /// (not this type). An import that contradicts `D`'s fiber equations is
+    /// therefore not rejected here — consistency of the resulting equation
+    /// set is a model-layer concern, not checked during elaboration.
     pub fn synth_instance_body_ty(&self, body: &InstanceBodyV) -> TyV {
         let mut fields: Row<TyS> = Row::empty();
         for (name, (label, path)) in &body.generators {
@@ -184,6 +202,24 @@ impl<'a> Evaluator<'a> {
             let sub_ty_v = self.synth_instance_body_ty(sub_body);
             let sub_ty_s = self.quote_ty(&sub_ty_v);
             fields.insert(*name, *label, sub_ty_s);
+        }
+        // The equation terms reference this body's generators as local
+        // binders; re-root them at `self` (the record being built) so they
+        // read as field projections, exactly as sibling references do in an
+        // ordinary record type. The self var's type is irrelevant — quoting
+        // a neutral ignores it — so a placeholder suffices. Quoting in `ev`
+        // (one binder deeper) sends `self` to de Bruijn index 0, matching
+        // how `field_ty` snocs the record value when projecting.
+        let (self_n, ev) = self.bind_self(TyV::unit());
+        for (i, (lhs_v, rhs_v)) in body.equations.iter().enumerate() {
+            let Some(over_ty) = fiber_equation_ty(lhs_v) else {
+                continue;
+            };
+            let lhs_s = ev.quote_tm(&reroot_at_self(lhs_v, &self_n, body));
+            let rhs_s = ev.quote_tm(&reroot_at_self(rhs_v, &self_n, body));
+            let eq_ty = TyS::id(ev.quote_ty(&over_ty), lhs_s, rhs_s);
+            let key = format!("_eq{i}");
+            fields.insert(name_seg(key.as_str()), label_seg(key.as_str()), eq_ty);
         }
         let r_v = RecordV::new(self.env.clone(), fields, Dtry::empty());
         TyV::record(r_v)
@@ -597,5 +633,62 @@ impl<'a> Evaluator<'a> {
             panic!("Input to `try_specialize` should be a record type")
         };
         Ok(TyV::record(r.add_specialization(path, field_ty)))
+    }
+}
+
+/// The `@over` type of a *fiber* equation's side, if it is one.
+///
+/// Fiber equations (`mor(gen) := target`) relate `@over`-typed terms; their
+/// common type is recoverable from the left-hand side. Returns `None` for
+/// morphism (`==`) equations, which are not equalizer conditions on an
+/// instance's generator images (see [`Evaluator::synth_instance_body_ty`]).
+fn fiber_equation_ty(tm: &TmV) -> Option<TyV> {
+    match &**tm {
+        TmV_::OverApp(_, _, tgt_path, _) => Some(TyV::over(tgt_path.clone())),
+        TmV_::Neu(_, ty) => matches!(&**ty, TyV_::Over(_)).then(|| ty.clone()),
+        _ => None,
+    }
+}
+
+/// Re-root an instance-body term so its generator/sub-instance references
+/// become projections of `self_n`.
+///
+/// In an instance body a generator (e.g. `v1`) or sub-instance (e.g. `we`)
+/// is a local binder, so it appears as the leading [`TmN_::Var`] of a
+/// neutral. To reuse such a term as a field type of the representable
+/// record `Hom_Inst(D, self)`, that leading variable must instead read as
+/// `self.v1` / `self.we` — a projection of the record. Names not bound by
+/// this body are left untouched.
+fn reroot_at_self(tm: &TmV, self_n: &TmN, body: &InstanceBodyV) -> TmV {
+    match &**tm {
+        TmV_::Neu(n, ty) => TmV::neu(reroot_neu_at_self(n, self_n, body), ty.clone()),
+        TmV_::OverApp(mor, mor_label, tgt_path, inner) => {
+            TmV::over_app(*mor, *mor_label, tgt_path.clone(), reroot_at_self(inner, self_n, body))
+        }
+        TmV_::App(name, x) => TmV::app(*name, reroot_at_self(x, self_n, body)),
+        TmV_::Compose(f, g) => {
+            TmV::compose(reroot_at_self(f, self_n, body), reroot_at_self(g, self_n, body))
+        }
+        TmV_::Id(x) => TmV::id(reroot_at_self(x, self_n, body)),
+        TmV_::Tab(x) => TmV::tab(reroot_at_self(x, self_n, body)),
+        TmV_::List(elems) => {
+            TmV::list(elems.iter().map(|e| reroot_at_self(e, self_n, body)).collect())
+        }
+        _ => tm.clone(),
+    }
+}
+
+fn reroot_neu_at_self(n: &TmN, self_n: &TmN, body: &InstanceBodyV) -> TmN {
+    match &**n {
+        TmN_::Var(_, name, label) => {
+            if body.generators.contains_key(name) || body.sub_instances.contains_key(name) {
+                TmN::proj(self_n.clone(), *name, *label)
+            } else {
+                n.clone()
+            }
+        }
+        TmN_::Proj(inner, field, label) => {
+            TmN::proj(reroot_neu_at_self(inner, self_n, body), *field, *label)
+        }
     }
 }

@@ -595,4 +595,75 @@ def I : WeightedGraph := [
         assert_eq!(instance.fiber_of(&e_qname), Some(&e_fiber));
         assert_eq!(instance.equations().count(), 1);
     }
+
+    /// An instance carrying fiber equations, imported as a sub-instance.
+    ///
+    /// Exercises the presented-representable synthesis: `Loop`'s type (as
+    /// used by the import `l : Loop`) must carry an `Id`-typed field per
+    /// fiber equation, and that type must quote/evaluate without panicking.
+    /// Extraction of the importer must still recover both copies of the
+    /// loop's structure.
+    #[test]
+    fn import_of_instance_with_fiber_equations() {
+        let src = r#"
+set_theory ThSchema
+
+type WeightedGraph := [
+  V : Entity,
+  E : Entity,
+  Weight : AttrType,
+  src : (Hom Entity)[E, V],
+  tgt : (Hom Entity)[E, V],
+  weight : Attr[E, Weight]
+]
+
+def Loop : WeightedGraph := [
+    V := [v],
+    E := [e],
+    src(e) := v,
+    tgt(e) := v
+]
+
+def UseLoop : WeightedGraph := [
+    l : Loop
+]
+"#;
+        let toplevel = elaborate_to_toplevel(src);
+
+        // `Loop`'s representable type must expose its two fiber equations as
+        // `Id`-typed fields alongside the `e`/`v` generators, and quoting it
+        // (which re-evaluates every field type against a bound `self`) must
+        // not panic.
+        let loop_def = match toplevel.declarations.get(&name_seg("Loop")) {
+            Some(TopDecl::DefConst(d)) => d.clone(),
+            _ => panic!("expected Loop to be an instance declaration"),
+        };
+        let TmV_::Instance(loop_body) = &*loop_def.val else {
+            panic!("Loop should evaluate to an instance");
+        };
+        let eval = Evaluator::empty(&toplevel);
+        let body_ty = eval.synth_instance_body_ty(loop_body);
+        let TyV_::Record(r) = &*body_ty else {
+            panic!("synthesized instance type should be a record");
+        };
+        assert!(r.fields.get(name_seg("e")).is_some(), "generator field e");
+        assert!(r.fields.get(name_seg("v")).is_some(), "generator field v");
+        assert!(r.fields.get(name_seg("_eq0")).is_some(), "first fiber equation");
+        assert!(r.fields.get(name_seg("_eq1")).is_some(), "second fiber equation");
+        // Round-trips through eval+quote of the dependent `Id` fields.
+        let _ = eval.quote_ty(&body_ty);
+
+        // The importer still extracts both generators and the imported
+        // copy's two equations.
+        let use_def = match toplevel.declarations.get(&name_seg("UseLoop")) {
+            Some(TopDecl::DefConst(d)) => d.clone(),
+            _ => panic!("expected UseLoop to be an instance declaration"),
+        };
+        let (instance, _ns) =
+            instance_from_def(&toplevel, &use_def.theory.definition, &use_def).unwrap();
+        let le_qname: QualifiedName = vec![name_seg("l"), name_seg("e")].into();
+        let e_fiber: QualifiedName = vec![name_seg("E")].into();
+        assert_eq!(instance.fiber_of(&le_qname), Some(&e_fiber));
+        assert_eq!(instance.equations().count(), 2);
+    }
 }
