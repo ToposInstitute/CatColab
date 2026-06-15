@@ -51,8 +51,13 @@ impl<'a> Evaluator<'a> {
         match &**ty {
             TyS_::TopVar(tv) => match self.toplevel.declarations.get(tv).unwrap() {
                 TopDecl::Type(t) => t.val.clone(),
-                TopDecl::Diag(d) => d.body_ty.clone(),
-                _ => panic!("top-level {tv} should be a type or diagram declaration"),
+                // An instance term used in type position evaluates to the
+                // record type synthesized from its body (see `lookup_ty`).
+                TopDecl::DefConst(d) => match &*d.val {
+                    TmV_::Instance(body) => self.synth_instance_body_ty(body),
+                    _ => panic!("top-level {tv} should be a type or instance declaration"),
+                },
+                _ => panic!("top-level {tv} should be a type or instance declaration"),
             },
             TyS_::Object(ot) => TyV::object(ot.clone()),
             TyS_::Morphism(pt, dom, cod) => {
