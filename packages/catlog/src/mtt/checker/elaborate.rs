@@ -2,19 +2,22 @@
 use crate::mtt::{
     ast::{Binder, Expression, ExpressionProArrow},
     checker::{
-        ModelGeneratingProArrow, ObjectTerm, ObjectType, context::ModelEntry, error::EElaborate,
+        ModelGeneratingProArrow, ObjectTerm, ObjectType,
+        context::{ModelEntry, ProTermJudgement},
+        error::EElaborate,
     },
     composite::Composite,
-    theory::{Theory, TheoryGeneratingArrow, TheoryObject, TheoryProArrow},
+    hole::Holy,
+    theory::{Theory, TheoryArrow, TheoryObject, TheoryProArrow},
 };
 
 /// Procedures for transforming raw AST inputs into various core types. The
 /// elaborator performs no checking beyond that of "syntactical" correctness.
 /// That is, for example, it is invalid to use lists of literals when specifying
-/// a TheoryObject, but whether the resulting TheoryObject is actually in any
+/// a [TheoryObject], but whether the resulting [TheoryObject] is actually in any
 /// given theory is beyond the scope of this module.
 impl<T: Theory> ModelEntry<T> {
-    /// Transform an Expression into a TheoryObject.
+    /// Transform an [Expression] into a [TheoryObject].
     pub fn elaborate_theory_object(&self, obj: &Expression) -> Result<TheoryObject<T>, EElaborate> {
         match obj {
             // base case: we named a theory object
@@ -59,7 +62,7 @@ impl<T: Theory> ModelEntry<T> {
         match arr {
             ExpressionProArrow::None => Ok(None),
             ExpressionProArrow::NameOnly(name) => {
-                let Some(p) = T::lookup_generating_pro_arrow(name) else {
+                let Some(p) = T::generating_pro_arrow_by_name(name) else {
                     return Err(EElaborate::UnknownTheoryProArrow(name.clone()));
                 };
                 Ok(Some(p.clone()))
@@ -67,7 +70,7 @@ impl<T: Theory> ModelEntry<T> {
             ExpressionProArrow::Complete(arr) => {
                 let dom = self.elaborate_theory_object(&arr.dom)?;
                 let cod = self.elaborate_theory_object(&arr.cod)?;
-                Ok(Some(TheoryProArrow::from(arr.name.clone(), dom, cod)))
+                Ok(Some(TheoryProArrow::Generator { name: arr.name.clone(), dom, cod }))
             }
             ExpressionProArrow::CompositeNameOnly(_) | ExpressionProArrow::CompositeComplete(_) => {
                 Err(EElaborate::UnsupportedSyntax(
@@ -87,18 +90,19 @@ impl<T: Theory> ModelEntry<T> {
         match arr {
             ExpressionProArrow::None => Ok(None),
             ExpressionProArrow::NameOnly(name) => {
-                let Some(p) = T::lookup_generating_pro_arrow(name) else {
+                let Some(p) = T::generating_pro_arrow_by_name(name) else {
                     return Err(EElaborate::UnknownTheoryProArrow(name.clone()));
                 };
-                Ok(Some(Composite::try_from(vec![p]).expect("singleton is always composable")))
+                Ok(Some(Composite::singleton(p)))
             }
             ExpressionProArrow::Complete(arr) => {
                 let dom = self.elaborate_theory_object(&arr.dom)?;
                 let cod = self.elaborate_theory_object(&arr.cod)?;
-                Ok(Some(
-                    Composite::try_from(vec![TheoryProArrow::from(arr.name.clone(), dom, cod)])
-                        .expect("singleton is always composable"),
-                ))
+                Ok(Some(Composite::singleton(TheoryProArrow::Generator {
+                    name: arr.name.clone(),
+                    dom,
+                    cod,
+                })))
             }
             ExpressionProArrow::CompositeNameOnly(names) => {
                 // NonEmpty guarantees at least one element, so the resulting
@@ -106,7 +110,7 @@ impl<T: Theory> ModelEntry<T> {
                 let arrows = names
                     .iter()
                     .map(|name| {
-                        T::lookup_generating_pro_arrow(name)
+                        T::generating_pro_arrow_by_name(name)
                             .ok_or_else(|| EElaborate::UnknownTheoryProArrow(name.clone()))
                     })
                     .collect::<Result<Vec<_>, _>>()?;
@@ -121,7 +125,7 @@ impl<T: Theory> ModelEntry<T> {
                     .map(|arr| {
                         let dom = self.elaborate_theory_object(&arr.dom)?;
                         let cod = self.elaborate_theory_object(&arr.cod)?;
-                        Ok(TheoryProArrow::from(arr.name.clone(), dom, cod))
+                        Ok(TheoryProArrow::Generator { name: arr.name.clone(), dom, cod })
                     })
                     .collect::<Result<Vec<_>, _>>()?;
                 Ok(Some(
@@ -132,7 +136,7 @@ impl<T: Theory> ModelEntry<T> {
         }
     }
 
-    /// Transform an Expression into an ObjectType.
+    /// Transform an [Expression] into an [ObjectType].
     pub fn elaborate_object_type(&self, obj: &Expression) -> Result<ObjectType<T>, EElaborate> {
         match obj {
             Expression::Literal(lit) => Ok(ObjectType::Generator(lit.clone())),
@@ -142,12 +146,12 @@ impl<T: Theory> ModelEntry<T> {
                 // Once we have this associated form, we extract the "spine" and
                 // rework the data into a formal composite of theory generating
                 // arrows.
-                let mut spine: Vec<TheoryGeneratingArrow<T>> = Vec::new();
+                let mut spine: Vec<TheoryArrow<T>> = Vec::new();
                 while let Expression::Juxtaposition { post, pre } = expr {
                     let Expression::Literal(fun) = *post else {
                         return Err(EElaborate::InvalidTheoryArrow(post.to_string()));
                     };
-                    let Some(arr) = T::lookup_generating_arrow(&fun) else {
+                    let Some(arr) = T::generating_arrow_by_name(&fun) else {
                         return Err(EElaborate::UnknownTheoryArrow(fun));
                     };
                     spine.push(arr);
@@ -171,7 +175,27 @@ impl<T: Theory> ModelEntry<T> {
         }
     }
 
-    /// Transform an ExpressionProArrow into a ModelGeneratingProArrow.
+    /// Transform the data of a [Expression::ProArrowAnnotation] into a
+    /// [ProTermJudgement]. There is data that cannot be deduced from this
+    /// alone, which we fill with [ProTermJudgement::unconstrained].
+    pub fn elaborate_annotation(
+        &self,
+        domain: &Expression,
+        codomain: &Expression,
+        over: &ExpressionProArrow,
+    ) -> Result<ProTermJudgement<T>, EElaborate> {
+        let unconstrained = ProTermJudgement::unconstrained("_".to_string());
+        Ok(ProTermJudgement {
+            domain_object_type: self.elaborate_object_type(domain)?,
+            codomain_object_type: self.elaborate_object_type(codomain)?,
+            // An absent `over` leaves the pro-arrow unconstrained (a hole),
+            // never an empty composite.
+            pro_arrow: self.elaborate_theory_pro_arrow(over)?.unwrap_or(unconstrained.pro_arrow),
+            ..unconstrained
+        })
+    }
+
+    /// Transform an [ExpressionProArrow] into a [ModelGeneratingProArrow].
     pub fn elaborate_pro_arrow(
         &self,
         name: &String,
@@ -180,10 +204,10 @@ impl<T: Theory> ModelEntry<T> {
     ) -> Result<ModelGeneratingProArrow<T>, EElaborate> {
         let dom = self.elaborate_object_type(dom)?;
         let cod = self.elaborate_object_type(cod)?;
-        Ok(ModelGeneratingProArrow::from(name.clone(), dom, cod))
+        Ok(ModelGeneratingProArrow { name: name.clone(), dom, cod })
     }
 
-    /// Transform an Expression into an ObjectTerm.
+    /// Transform an [Expression] into an [ObjectTerm].
     pub fn elaborate_object_term(&self, term: &Expression) -> Result<ObjectTerm<T>, EElaborate> {
         match term {
             Expression::Literal(lit) => Ok(ObjectTerm::Variable(lit.clone())),
@@ -197,12 +221,12 @@ impl<T: Theory> ModelEntry<T> {
                 // Right-associate and peel the spine of theory generating
                 // arrows, exactly as in elaborate_object_type.
                 let mut expr = term.right_associate_juxtaposition();
-                let mut spine: Vec<TheoryGeneratingArrow<T>> = Vec::new();
+                let mut spine: Vec<TheoryArrow<T>> = Vec::new();
                 while let Expression::Juxtaposition { post, pre } = expr {
                     let Expression::Literal(fun) = *post else {
                         return Err(EElaborate::InvalidTheoryArrow(post.to_string()));
                     };
-                    let Some(arr) = T::lookup_generating_arrow(&fun) else {
+                    let Some(arr) = T::generating_arrow_by_name(&fun) else {
                         return Err(EElaborate::UnknownTheoryArrow(fun));
                     };
                     spine.push(arr);

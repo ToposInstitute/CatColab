@@ -3,7 +3,7 @@
 //! boilerplate imposed by the way that rust mandates [std::fmt::Display] be
 //! implemented. By specifying a few small helper types, which additionally
 //! sidestep the orphan rule by being wrappers, we can format arguments in an
-//! in-line #[display()] directive by wrapping those arguments in these structs.
+//! in-line `#[display()]` directive by wrapping those arguments in these structs.
 
 use derive_more::Display;
 use nonempty::NonEmpty;
@@ -17,7 +17,8 @@ pub struct DHList<'a, T: std::fmt::Display>(pub &'a Vec<T>);
 #[derive(Display)]
 #[display("{}", _0.iter().map(|o| o.to_string()).collect::<Vec<_>>().join(" ; "))]
 /// A helper to display a non-empty composite of pro-arrows as
-/// "item1 ; ... ; itemN", used by the [ExpressionProArrow] composite forms.
+/// "item1 ; ... ; itemN", used by the [ExpressionProArrow](crate::mtt::ast::ExpressionProArrow)
+/// composite forms.
 pub struct DHProArrowComposite<'a, T: std::fmt::Display>(pub &'a NonEmpty<T>);
 
 #[derive(Display)]

@@ -1,10 +1,10 @@
 //! TODO
 
+use derive_more::Display;
+
 use crate::mtt::{
-    arrow::{Arrow, ProArrowKind},
     composite::Composite,
-    display_helpers::{DHList, DHTuple},
-    theory::{Boundary, Theory, TheoryGeneratingArrow, TheoryObject, TheoryProArrow},
+    theory::{Boundary, Theory, TheoryArrow, TheoryObject, TheoryProArrow},
 };
 
 // -----------------------------------------------------------------------------
@@ -13,8 +13,19 @@ use crate::mtt::{
 /// An alias of String used to specify generators in the model, enforce typing
 /// discipline.
 pub type ModelGeneratingObject = String;
-/// The type of generating pro-arrows for a model.
-pub type ModelGeneratingProArrow<T> = Arrow<ObjectType<T>, ProArrowKind>;
+
+/// A generating pro-arrow for a model: a named pro-arrow between two model
+/// object types.
+#[derive(Display)]
+#[display("{name}: {dom} -|-> {cod}")]
+pub struct ModelGeneratingProArrow<T: Theory> {
+    /// The name of the generator.
+    pub name: String,
+    /// The domain object type.
+    pub dom: ObjectType<T>,
+    /// The codomain object type.
+    pub cod: ObjectType<T>,
+}
 
 /// A type in the type theory of the model.
 pub enum ObjectType<T: Theory> {
@@ -36,7 +47,7 @@ pub enum ObjectType<T: Theory> {
     /// An application of theory vertical arrows to a model type.
     FunctionApplication {
         /// The composite of theory vertical arrows being applied.
-        function: Composite<TheoryGeneratingArrow<T>>,
+        function: Composite<TheoryArrow<T>>,
         /// The model type to which the composite is being applied.
         on: Box<ObjectType<T>>,
     },
@@ -48,37 +59,11 @@ pub enum ObjectType<T: Theory> {
         /// The theory object over which this hole lies. This records everything
         /// currently known about the hole: it may itself be (or contain) a
         /// theory-object hole when that knowledge is still partial. A single
-        /// TheoryObject always suffices because a TheoryObject is a linear
+        /// [TheoryObject] always suffices because a [TheoryObject] is a linear
         /// chain, so refining by new information is a meet that collapses to
         /// the more specific of the two — there is never a set of constraints.
         over: TheoryObject<T>,
     },
-}
-
-// Same story as above, we must implement these things by hand.
-impl<T: Theory> Clone for ObjectType<T> {
-    fn clone(&self) -> Self {
-        match self {
-            Self::Generator(g) => Self::Generator(g.clone()),
-            Self::List(xs) => Self::List(xs.clone()),
-            Self::FunctionApplication { function, on } => Self::FunctionApplication {
-                function: function.clone(),
-                on: on.clone(),
-            },
-            Self::Hole { name, over } => Self::Hole { name: name.clone(), over: over.clone() },
-        }
-    }
-}
-
-impl<T: Theory> std::fmt::Display for ObjectType<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Generator(g) => write!(f, "{g}"),
-            Self::List(xs) => write!(f, "{}", DHList(xs)),
-            Self::FunctionApplication { function, on } => write!(f, "{function}({on})"),
-            Self::Hole { name, over } => write!(f, "?{name}/{over}"),
-        }
-    }
 }
 
 // -----------------------------------------------------------------------------
@@ -99,42 +84,13 @@ pub enum ObjectTerm<T: Theory> {
     /// An application of theory vertical arrows to model terms.
     FunctionApplication {
         /// The composite of theory vertial arrows being applied.
-        function: Composite<TheoryGeneratingArrow<T>>,
+        function: Composite<TheoryArrow<T>>,
         /// The model term to which the composite is being applied.
         on: Box<ObjectTerm<T>>,
     },
 
     /// A hole generated during type checking, and used for unification.
     Hole(String),
-}
-
-// As with [ObjectType], a derived `Clone` would impose a spurious `T: Clone`
-// bound, so we implement it by hand.
-impl<T: Theory> Clone for ObjectTerm<T> {
-    fn clone(&self) -> Self {
-        match self {
-            Self::Variable(v) => Self::Variable(v.clone()),
-            Self::List(xs) => Self::List(xs.clone()),
-            Self::Tuple(xs) => Self::Tuple(xs.clone()),
-            Self::FunctionApplication { function, on } => Self::FunctionApplication {
-                function: function.clone(),
-                on: on.clone(),
-            },
-            Self::Hole(h) => Self::Hole(h.clone()),
-        }
-    }
-}
-
-impl<T: Theory> std::fmt::Display for ObjectTerm<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Variable(v) => write!(f, "{v}"),
-            Self::List(xs) => write!(f, "{}", DHList(xs)),
-            Self::Tuple(xs) => write!(f, "{}", DHTuple(xs)),
-            Self::FunctionApplication { function, on } => write!(f, "{function}({on})"),
-            Self::Hole(h) => write!(f, "?{h}"),
-        }
-    }
 }
 
 // -----------------------------------------------------------------------------

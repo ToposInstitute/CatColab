@@ -4,9 +4,12 @@ mod core_types;
 mod dispatch;
 mod elaborate;
 mod error;
-mod hole;
 mod model;
 mod pro_term;
+mod reconcile;
+mod scope;
+mod trait_impls;
 
 pub use core_types::*;
 pub use dispatch::*;
+pub use error::*;

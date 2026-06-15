@@ -5,18 +5,19 @@ use crate::mtt::{
         context::ModelEntry,
         error::{CheckResult, Error},
     },
-    theory::{Category, Schema, Theory},
+    theory::{Category, Multicategory, Schema, Theory},
 };
 
 /// Check a model against the theory it names, dispatching on the theory's
 /// string identifier. This is the bridge between the theory-erased AST and the
-/// theory-parametric checker: it instantiates a fresh [ModelEntry] over the
+/// theory-parametric checker: it instantiates a fresh `ModelEntry` over the
 /// concrete theory and runs the checker. To add a theory, give it a [Theory]
-/// implementation and add an arm here keyed on [Theory::name].
+/// implementation and add an arm here keyed on [`Theory::name`].
 pub fn check_model(model: &Model) -> CheckResult {
     match model.theory.as_str() {
         _ if model.theory == Category::name() => check_model_over::<Category>(model),
         _ if model.theory == Schema::name() => check_model_over::<Schema>(model),
+        _ if model.theory == Multicategory::name() => check_model_over::<Multicategory>(model),
         other => Err(Error::UnknownTheory(other.to_string())),
     }
 }

@@ -1,69 +1,32 @@
-//! TODO
+//! TODO: Elaboration of a surface body expression into a [ProTerm] [Derivation].
+
 use std::collections::HashMap;
 
 use crate::mtt::{
     ast::Expression,
+    binary_signature::BinarySignature,
     checker::{
-        ModelGeneratingProArrow, ObjectTerm, ObjectType,
-        context::{DefinitionEntry, ModelEntry, ProTermJudgement},
-        core_types::ProTerm,
-        error::{EType, Error},
+        EType, Error, ModelGeneratingProArrow, ObjectTerm, ObjectType, ProTerm,
+        context::{
+            DefinitionEntry, Derivation, GeneratingProArrowEntry, ModelEntry, ProTermJudgement,
+        },
+        scope::{Scope, ScopeEntry},
     },
     composite::Composite,
-    theory::{HOM, Theory, TheoryGeneratingArrow, TheoryObject, TheoryProArrow},
+    hole::Holy,
+    theory::{
+        Boundary, Theory, TheoryArrow, TheoryObject, TheoryProArrow, UnificationResult,
+        pro_arrow_is_constrained,
+    },
 };
 
 // -----------------------------------------------------------------------------
-// Synthesis state
-
-/// The scope a domain binder introduces: each variable the binder names, paired
-/// with the object type and theory object at which it stands.
-type Scope<T> = HashMap<String, ScopeEntry<T>>;
-
-struct ScopeEntry<T: Theory> {
-    object_type: ObjectType<T>,
-    theory_object: TheoryObject<T>,
-}
-
-/// A synthesised pro-term together with the full boundary it occupies. Both
-/// ends are recorded because the synthesised domain need not coincide with the
-/// binder, and reconciling the two may insert a further node.
-struct Synth<T: Theory> {
-    pro_term: ProTerm<T>,
-    domain_object_term: ObjectTerm<T>,
-    domain_object_type: ObjectType<T>,
-    domain_theory_object: TheoryObject<T>,
-    codomain_object_type: ObjectType<T>,
-    codomain_theory_object: TheoryObject<T>,
-    over: Composite<TheoryProArrow<T>>,
-}
-
-/// A required end-boundary: the object type and theory object some operation
-/// expects at its input (or the judgement expects at the codomain / domain).
-struct Boundary<T: Theory> {
-    object_type: ObjectType<T>,
-    theory_object: TheoryObject<T>,
-}
-
-/// The kind of gap between a boundary we *have* and one we *want*, i.e. the
-/// node that must be inserted to bridge them.
-enum Gap {
-    /// The boundaries already coincide; nothing to insert.
-    None,
-    /// Bridge by a restriction cell the theory sanctions.
-    Restriction,
-    /// Bridge by an operation/cell application.
-    Cell,
-    /// Bridge by a list reindexing (permute / duplicate / drop leaves).
-    ListManipulation,
-}
-
-// -----------------------------------------------------------------------------
-// Checking
+// Entry point
 
 impl<T: Theory> ModelEntry<T> {
-    /// Check a body expression against a fully-resolved [ProTermJudgement].
-    pub fn check_pro_term(
+    /// Elaborate a body expression into a pro-term, and check against a
+    /// fully-resolved [ProTermJudgement].
+    pub fn elaborate_and_check_pro_term(
         &self,
         body: &Expression,
         target: &ProTermJudgement<T>,
@@ -73,140 +36,97 @@ impl<T: Theory> ModelEntry<T> {
             &target.domain_object_type,
             &target.domain_theory_object,
         );
-        let synth = self.synthesise(body, &scope)?;
-        self.align_to_target(synth, target)
+        let derivation = self.elaborate_body(body, Some(target), &scope)?;
+        Ok(derivation.pro_term)
     }
 }
 
 // -----------------------------------------------------------------------------
-// The gap-filler
+// Synthesis
 
 impl<T: Theory> ModelEntry<T> {
-    /// Classify the gap between a boundary we have and a boundary we want.
-    fn classify_gap(&self, have: &Boundary<T>, want: &Boundary<T>) -> Result<Gap, Error> {
-        if object_types_match(&have.object_type, &want.object_type)
-            && T::objects_unify(&[&have.theory_object, &want.theory_object])
-        {
-            return Ok(Gap::None);
-        }
-        todo!("classify a non-trivial boundary gap (restriction / cell / list manipulation)")
-    }
-
-    fn fill_codomain_gap(&self, synth: Synth<T>, want: &Boundary<T>) -> Result<Synth<T>, Error> {
-        let have = Boundary {
-            object_type: synth.codomain_object_type.clone(),
-            theory_object: synth.codomain_theory_object.clone(),
-        };
-        match self.classify_gap(&have, want)? {
-            Gap::None => Ok(synth),
-            Gap::Restriction => todo!("insert a Restriction at the codomain"),
-            Gap::Cell => todo!("insert a CellApplication at the codomain"),
-            Gap::ListManipulation => todo!("insert a ListManipulation at the codomain"),
-        }
-    }
-
-    fn fill_domain_gap(&self, synth: Synth<T>, want: &Boundary<T>) -> Result<Synth<T>, Error> {
-        let have = Boundary {
-            object_type: synth.domain_object_type.clone(),
-            theory_object: synth.domain_theory_object.clone(),
-        };
-        match self.classify_gap(&have, want)? {
-            Gap::None => Ok(synth),
-            Gap::Restriction => todo!("wrap with a Restriction at the domain"),
-            Gap::Cell => todo!("wrap with a CellApplication at the domain"),
-            Gap::ListManipulation => todo!("wrap with a ListManipulation at the domain"),
-        }
-    }
-}
-
-// -----------------------------------------------------------------------------
-// Final alignment
-
-impl<T: Theory> ModelEntry<T> {
-    fn align_to_target(
+    fn elaborate_body(
         &self,
-        synth: Synth<T>,
-        target: &ProTermJudgement<T>,
-    ) -> Result<ProTerm<T>, Error> {
-        let synth = self.fill_domain_gap(
-            synth,
-            &Boundary {
-                object_type: target.domain_object_type.clone(),
-                theory_object: target.domain_theory_object.clone(),
-            },
-        )?;
-
-        // The codomain *term* is not checked: the body *is* the codomain term.
-        if !object_types_match(&synth.codomain_object_type, &target.codomain_object_type) {
-            return Err(EType::CodomainObjectTypeMismatch {
-                expected: target.codomain_object_type.to_string(),
-                found: synth.codomain_object_type.to_string(),
-            }
-            .into());
-        }
-        if !T::objects_unify(&[&synth.codomain_theory_object, &target.codomain_theory_object]) {
-            return Err(EType::CodomainTheoryObjectMismatch {
-                expected: target.codomain_theory_object.to_string(),
-                found: synth.codomain_theory_object.to_string(),
-            }
-            .into());
-        }
-        if let Some(ref target_over) = target.pro_arrow {
-            if !pro_arrow_composites_equal::<T>(&synth.over, target_over) {
-                return Err(EType::ProArrowMismatch {
-                    expected: target_over.to_string(),
-                    found: synth.over.to_string(),
-                }
-                .into());
-            }
-        }
-
-        Ok(synth.pro_term)
-    }
-}
-
-// -----------------------------------------------------------------------------
-// Bottom-up synthesis
-
-impl<T: Theory> ModelEntry<T> {
-    fn synthesise(&self, body: &Expression, scope: &Scope<T>) -> Result<Synth<T>, Error> {
+        body: &Expression,
+        hint: Option<&ProTermJudgement<T>>,
+        scope: &Scope<T>,
+    ) -> Result<Derivation<T>, Error> {
         match body {
-            Expression::Literal(x) => self.synthesise_variable(x, scope),
-            Expression::Juxtaposition { .. } => self.synthesise_application(body, scope),
-            Expression::List(items) => self.synthesise_list(items, scope),
+            Expression::Literal(x) => self.synthesise_literal(x, hint, scope),
+            Expression::Juxtaposition { .. } => self.synthesise_application(body, hint, scope),
+            Expression::List(items) => self.synthesise_list(items, hint, scope),
             Expression::Tuple(_) => Err(EType::UnsupportedBody(body.to_string()).into()),
-            Expression::ProArrowAnnotation { .. } => {
-                todo!("pro-arrow annotation hints in pro-term synthesis")
+            Expression::ProArrowAnnotation { subject, domain, codomain, over } => {
+                let sub_hint = self.elaborate_annotation(domain, codomain, over)?;
+                let derivation = self.elaborate_body(subject, Some(&sub_hint), scope)?;
+                self.finish(derivation, hint)
             }
         }
     }
 
-    fn synthesise_variable(&self, x: &str, scope: &Scope<T>) -> Result<Synth<T>, Error> {
-        let Some(entry) = scope.get(x) else {
-            return Err(EType::UnboundVariable(x.to_string()).into());
-        };
+    /// Reconcile a synthesised derivation against the hint, if any.
+    fn finish(
+        &self,
+        derivation: Derivation<T>,
+        hint: Option<&ProTermJudgement<T>>,
+    ) -> Result<Derivation<T>, Error> {
+        match hint {
+            Some(want) => self.reconcile(derivation, want),
+            None => Ok(derivation),
+        }
+    }
+
+    // It is intentional that we do not allow a free-standing literal to
+    // reference an existing definition, for we are requiring "point-ful" style
+    // in this type checker so users must always write "f x" even if "f" would
+    // suffice.
+    fn synthesise_literal(
+        &self,
+        literal: &String,
+        hint: Option<&ProTermJudgement<T>>,
+        scope: &Scope<T>,
+    ) -> Result<Derivation<T>, Error> {
+        if let Some(entry) = scope.get(literal) {
+            let derivation = self.synthesise_variable(literal, entry)?;
+            self.finish(derivation, hint)
+        } else if let Ok(ge) = self.lookup_generating_pro_arrow_entry(literal) {
+            self.synthesise_post_composition(ge, &Expression::List(Vec::new()), hint, scope)
+        } else {
+            Err(EType::UnboundVariable(literal.to_string()).into())
+        }
+    }
+
+    // `Γ ⊢ X: Ob_𝕩` yields `Γ | x: X ⊢_{Hom_𝕩} x: X`.
+    fn synthesise_variable(
+        &self,
+        var: &String,
+        entry: &ScopeEntry<T>,
+    ) -> Result<Derivation<T>, Error> {
         let hom = T::make_hom_pro_arrow(&entry.theory_object, &entry.theory_object)
             .expect("the hom pro-arrow on an object with itself always exists");
-        Ok(Synth {
+        Ok(Derivation {
             pro_term: ProTerm::Hom {
-                object_term: ObjectTerm::Variable(x.to_string()),
+                object_term: ObjectTerm::Variable(var.to_string()),
                 object_type: entry.object_type.clone(),
                 theory_object: entry.theory_object.clone(),
             },
-            domain_object_term: ObjectTerm::Variable(x.to_string()),
-            domain_object_type: entry.object_type.clone(),
-            domain_theory_object: entry.theory_object.clone(),
-            codomain_object_type: entry.object_type.clone(),
-            codomain_theory_object: entry.theory_object.clone(),
-            over: Composite::try_from(vec![hom]).expect("singleton is always composable"),
+            judgement: ProTermJudgement {
+                domain_object_term: ObjectTerm::Variable(var.to_string()),
+                domain_object_type: entry.object_type.clone(),
+                domain_theory_object: entry.theory_object.clone(),
+                codomain_object_type: entry.object_type.clone(),
+                codomain_theory_object: entry.theory_object.clone(),
+                pro_arrow: Composite::singleton(hom),
+            },
         })
     }
 
     fn synthesise_application(
         &self,
         body: &Expression,
+        hint: Option<&ProTermJudgement<T>>,
         scope: &Scope<T>,
-    ) -> Result<Synth<T>, Error> {
+    ) -> Result<Derivation<T>, Error> {
         let Expression::Juxtaposition { post, pre } = body.right_associate_juxtaposition() else {
             unreachable!("re-associating a juxtaposition yields a juxtaposition")
         };
@@ -214,195 +134,353 @@ impl<T: Theory> ModelEntry<T> {
             return Err(EType::UnsupportedBody(body.to_string()).into());
         };
 
-        if self.lookup_generating_pro_arrow_entry(&head).is_ok() {
-            self.synthesise_post_composition(&head, &pre, scope)
-        } else if let Some(definition) = self.lookup_definition(&head) {
-            self.linearise_definition(definition, &pre, scope)
-        } else if T::lookup_generating_arrow(&head).is_some() {
-            todo!("operation application (vertical arrow / cell) in pro-term synthesis")
+        // It is not correct to mention variables in the head position.
+        if let Ok(ge) = self.lookup_generating_pro_arrow_entry(&head) {
+            self.synthesise_post_composition(ge, &pre, hint, scope)
+        } else if let Some(entry) = self.lookup_definition(&head) {
+            self.apply_definition(entry, &pre, hint, scope)
+        } else if let Some(arrow) = T::generating_arrow_by_name(&head) {
+            self.synthesise_operation_application(arrow, &pre, hint, scope)
         } else {
             Err(EType::NotApplicable(head).into())
         }
     }
 
-    fn synthesise_post_composition(
+    // A theory vertical arrow `g: A -> B` may be applied a pro-term's codomain
+    // through a cell whose left boundary is the identity. Thus we may take `Γ |
+    // x: X ⊢_P y: Y` (with `Y` over `A`) to `Γ | x: X ⊢_Q g(y): g(Y)` (with
+    // `g(Y)` over `B`). The `Q` for which this operation is valid is not
+    // determined by the input data alone, and so we rely on `hint` or in its
+    // abscence the theory to attempt to infer Q.
+    fn synthesise_operation_application(
         &self,
-        head: &str,
-        rest: &Expression,
+        arrow: TheoryArrow<T>,
+        arg: &Expression,
+        hint: Option<&ProTermJudgement<T>>,
         scope: &Scope<T>,
-    ) -> Result<Synth<T>, Error> {
-        let inner = self.synthesise(rest, scope)?;
+    ) -> Result<Derivation<T>, Error> {
+        // TODO: it would seem that the only useful hint we can pass to the body
+        // is that the codomain_theory_object is determined.
+        let arg_hint = ProTermJudgement {
+            codomain_theory_object: arrow.dom(),
+            ..ProTermJudgement::unconstrained("_".to_string())
+        };
+        // Expand body
+        let inner = self.elaborate_body(arg, Some(&arg_hint), scope)?;
 
-        let entry = self.lookup_generating_pro_arrow_entry(&head.to_string())?;
-        let generator = ModelGeneratingProArrow::from(
-            head.to_string(),
-            entry.dom.object_type.clone(),
-            entry.cod.object_type.clone(),
-        );
-        let generator_over = TheoryProArrow::from(
-            entry.over.clone(),
-            entry.dom.over.clone(),
-            entry.cod.over.clone(),
-        );
-        let codomain_object_type = entry.cod.object_type.clone();
-        let codomain_theory_object = entry.cod.over.clone();
+        // Make sure that whatever judgement this gives is compatible with the
+        // arrow we want to use.
+        if !T::unify_objects(&[&inner.judgement.codomain_theory_object, &arrow.dom()])
+            .is_compatible()
+        {
+            return Err(EType::OperationNotApplicable {
+                operation: arrow.to_string(),
+                onto: inner.judgement.codomain_theory_object.to_string(),
+            }
+            .into());
+        }
 
-        // Reconcile the sub-tower's codomain to the generator's input boundary,
-        // inserting any bridging node the gap requires.
-        let inner = self.fill_codomain_gap(
-            inner,
-            &Boundary {
-                object_type: entry.dom.object_type.clone(),
-                theory_object: entry.dom.over.clone(),
-            },
+        // Construct the boundary of the cell we want to apply.
+        let codomain_object_type = ObjectType::FunctionApplication {
+            function: Composite::singleton(arrow.clone()),
+            on: Box::new(inner.judgement.codomain_object_type.clone()),
+        };
+        let codomain_theory_object = arrow.cod();
+
+        // Do our best, as discussed in the comment abovet this function, we
+        // cannot always be determined from the data we have.
+        let cod_proarrow = self.infer_pro_arrow_for_application(
+            &arrow,
+            hint,
+            &inner.judgement.domain_theory_object,
+            &codomain_theory_object,
         )?;
 
-        // The boundary now coincides, so the pro-arrows compose.
-        let mut over = inner.over.clone();
-        over.extend(generator_over.clone())
-            .expect("gap-fill aligned the boundary, so the composite extends");
+        let boundary = Boundary {
+            dom_dom_object: inner.judgement.domain_theory_object.clone(),
+            dom_cod_object: inner.judgement.codomain_theory_object.clone(),
+            cod_dom_object: inner.judgement.domain_theory_object.clone(),
+            cod_cod_object: codomain_theory_object.clone(),
+            dom_vertical: Composite::empty(),
+            dom_proarrow: inner.judgement.pro_arrow.clone(),
+            cod_vertical: Composite::singleton(arrow.clone()),
+            cod_proarrow: cod_proarrow.clone(),
+        };
+        if !T::has_cell(&boundary) {
+            return Err(EType::NoApplicableCell {
+                theory: T::name(),
+                operation: arrow.to_string(),
+            }
+            .into());
+        }
 
-        Ok(Synth {
+        let derivation = Derivation {
+            pro_term: ProTerm::CellApplication {
+                theory_boundary: boundary,
+                on: Box::new(inner.pro_term),
+            },
+            judgement: ProTermJudgement {
+                domain_object_term: inner.judgement.domain_object_term,
+                domain_object_type: inner.judgement.domain_object_type,
+                domain_theory_object: inner.judgement.domain_theory_object,
+                codomain_object_type,
+                codomain_theory_object,
+                pro_arrow: cod_proarrow,
+            },
+        };
+        self.finish(derivation, hint)
+    }
+
+    fn infer_pro_arrow_for_application(
+        &self,
+        arrow: &TheoryArrow<T>,
+        hint: Option<&ProTermJudgement<T>>,
+        domain_theory_object: &TheoryObject<T>,
+        codomain_theory_object: &TheoryObject<T>,
+    ) -> Result<Composite<TheoryProArrow<T>>, Error> {
+        match hint {
+            Some(want) if pro_arrow_is_constrained(&want.pro_arrow) => Ok(want.pro_arrow.clone()),
+            _ => self
+                .infer_theory_pro_arrow_by_boundary(domain_theory_object, codomain_theory_object)
+                .map_err(|_| {
+                    EType::OperationNeedsAnnotation { operation: arrow.to_string() }.into()
+                }),
+        }
+    }
+
+    // TODO: check this logic
+    fn apply_definition(
+        &self,
+        entry: &DefinitionEntry<T>,
+        arg: &Expression,
+        hint: Option<&ProTermJudgement<T>>,
+        scope: &Scope<T>,
+    ) -> Result<Derivation<T>, Error> {
+        // The formal parameters are the leaves of the definition's binder; the
+        // actuals are the leaves of the (surface) argument, paired positionally.
+        let formals = object_term_variables(&entry.derivation.judgement.domain_object_term);
+        let actuals = argument_leaves(arg);
+        if formals.len() != actuals.len() {
+            return Err(EType::MalformedBinder {
+                term: arg.to_string(),
+                object_type: entry.derivation.judgement.domain_object_type.to_string(),
+            }
+            .into());
+        }
+        let substitution: HashMap<String, Expression> =
+            std::iter::zip(formals, actuals).map(|(f, a)| (f, a.clone())).collect();
+
+        // A definition is inlined at its use site, so the outer hint applies
+        // unchanged to the inlined body.
+        let inlined = substitute_expression(&entry.body, &substitution);
+        self.elaborate_body(&inlined, hint, scope)
+    }
+
+    // Post-composition rule: given `Γ | u: X ⊢_P t: Y` and a generating
+    // pro-arrow `f: Q(Y, Z)`, derive `Γ | u: X ⊢_{P ⊙ Q} f(t): Z`.
+    fn synthesise_post_composition(
+        &self,
+        generator_entry: &GeneratingProArrowEntry<T>,
+        arg: &Expression,
+        hint: Option<&ProTermJudgement<T>>,
+        scope: &Scope<T>,
+    ) -> Result<Derivation<T>, Error> {
+        // The two relevant pro-arrows here: `Q` and `f` respectively.
+        let generator_over = generator_entry.over.clone();
+        let generator: ModelGeneratingProArrow<T> = generator_entry.into();
+
+        // Elaborate the argument onto the generator's input boundary, so the
+        // composite extends. The outer hint constrains the whole term's
+        // pro-arrow `P ⊙ Q`; peeling off the generator's `Q` to recover `P`
+        // for the argument is not attempted here, so the argument only inherits
+        // the input-boundary constraint.
+        let codomain_hint = ProTermJudgement {
+            codomain_object_type: generator.dom(),
+            codomain_theory_object: generator_over.dom(),
+            ..ProTermJudgement::unconstrained(format!("post_comp_with_{generator}"))
+        };
+        let inner = self.elaborate_body(arg, Some(&codomain_hint), scope)?;
+
+        // Now build `P ⊙ Q` from what we have computed
+        let mut over = inner.judgement.pro_arrow.clone();
+        if over.extend(generator_over.clone()).is_err() {
+            // TODO: actually be helpful with this error
+            return Err(EType::CodomainTheoryObjectMismatch {
+                expected: generator_over.dom().to_string(),
+                found: over.cod().to_string(),
+            }
+            .into());
+        }
+
+        let derivation = Derivation {
             pro_term: ProTerm::PostComposition {
-                generator,
-                generator_over,
+                generator: generator.clone(),
+                generator_over: generator_over.clone(),
                 pro_term: Box::new(inner.pro_term),
             },
-            domain_object_term: inner.domain_object_term,
-            domain_object_type: inner.domain_object_type,
-            domain_theory_object: inner.domain_theory_object,
-            codomain_object_type,
-            codomain_theory_object,
-            over,
-        })
+            judgement: ProTermJudgement {
+                domain_object_term: inner.judgement.domain_object_term,
+                domain_object_type: inner.judgement.domain_object_type,
+                domain_theory_object: inner.judgement.domain_theory_object,
+                codomain_object_type: generator.cod(),
+                codomain_theory_object: generator_over.cod(),
+                pro_arrow: over,
+            },
+        };
+        self.finish(derivation, hint)
     }
 
-    fn synthesise_list(&self, items: &[Expression], scope: &Scope<T>) -> Result<Synth<T>, Error> {
-        if T::list_modality().is_none() {
-            return Err(EType::NoListModality(T::name()).into());
-        }
-        let children =
-            items.iter().map(|e| self.synthesise(e, scope)).collect::<Result<Vec<_>, _>>()?;
-        let _ = children;
-        todo!("assemble a list pro-term from its synthesised children")
-    }
-
-    fn linearise_definition(
+    /// From `Γ | u_i: X_i ⊢_Q t_i: Y_i` over one common pro-arrow `Q`, build
+    /// the list `Γ | [u1,…]: [X1,…] ⊢_{List Q} [t1,…]: [Y1,…]`.
+    // TODO: check  this
+    fn synthesise_list(
         &self,
-        definition: &DefinitionEntry<T>,
-        argument: &Expression,
+        items: &[Expression],
+        hint: Option<&ProTermJudgement<T>>,
         scope: &Scope<T>,
-    ) -> Result<Synth<T>, Error> {
-        let _ = (definition, argument, scope);
-        todo!("linearise a juxtaposed definition into the current tower")
-    }
-}
+    ) -> Result<Derivation<T>, Error> {
+        let Some(modality) = T::list_modality() else {
+            return Err(EType::NoListModality(T::name()).into());
+        };
 
-// -----------------------------------------------------------------------------
-// Scope extraction
+        // We do not currently decompose the list's hint (`List Q`) into a
+        // per-element hint (`Q`); the elements synthesise freely and their
+        // common pro-arrow is recovered below. The whole list is then finished
+        // against the hint.
+        let elements = items
+            .iter()
+            .map(|item| self.elaborate_body(item, None, scope))
+            .collect::<Result<Vec<_>, _>>()?;
 
-impl<T: Theory> ModelEntry<T> {
-    /// Build the variable [Scope] introduced by a domain binder. The binder is
-    /// assumed already checked against its type, so this is pure extraction.
-    fn build_domain_scope(
-        &self,
-        term: &ObjectTerm<T>,
-        object_type: &ObjectType<T>,
-        theory_object: &TheoryObject<T>,
-    ) -> Scope<T> {
-        let mut scope = HashMap::new();
-        self.populate_scope(term, object_type, theory_object, &mut scope);
-        scope
-    }
-
-    fn populate_scope(
-        &self,
-        term: &ObjectTerm<T>,
-        object_type: &ObjectType<T>,
-        theory_object: &TheoryObject<T>,
-        scope: &mut Scope<T>,
-    ) {
-        match term {
-            ObjectTerm::Variable(x) => {
-                scope.insert(
-                    x.clone(),
-                    ScopeEntry {
-                        object_type: object_type.clone(),
-                        theory_object: theory_object.clone(),
-                    },
-                );
-            }
-            ObjectTerm::List(terms) => {
-                let ObjectType::List(types) = object_type else {
-                    unreachable!("checked binder: a list term has a list type")
-                };
-                let TheoryObject::ModalApplication { on, .. } = theory_object else {
-                    unreachable!("checked binder: a list type lies over a modal application")
-                };
-                for (t, ty) in std::iter::zip(terms, types) {
-                    self.populate_scope(t, ty, on, scope);
+        // A list lies over `List Q` for a single common atomic `Q`, so every
+        // element must already lie over one common pro-arrow. The theory
+        // unifies the elements' pro-arrows: failure is a genuine clash. An
+        // empty list has no elements to unify and lies over `List Hom` on a
+        // hole.
+        let overs: Vec<&Composite<TheoryProArrow<T>>> =
+            elements.iter().map(|e| &e.judgement.pro_arrow).collect();
+        let common = if overs.is_empty() {
+            None
+        } else {
+            match T::unify_pro_arrows(&overs) {
+                UnificationResult::MostSpecific(common) => common.only().cloned(),
+                UnificationResult::Incompatible => {
+                    let found = overs.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(", ");
+                    return Err(EType::HeterogeneousListProArrows { found }.into());
                 }
             }
-            ObjectTerm::FunctionApplication { .. } => {
-                todo!("function-application binder (vertical arrow) scope extraction")
+        };
+
+        let modal = |children: Vec<TheoryObject<T>>| -> TheoryObject<T> {
+            let child_refs: Vec<&TheoryObject<T>> = children.iter().collect();
+            let on = T::unify_objects(&child_refs)
+                .most_specific()
+                .unwrap_or_else(|| TheoryObject::unconstrained("list_element".to_string()));
+            TheoryObject::ModalApplication {
+                modality: modality.clone(),
+                on: Box::new(on),
             }
-            ObjectTerm::Tuple(_) => todo!("no tuples"),
-            ObjectTerm::Hole(_) => unreachable!("checked binder: no holes"),
-        }
+        };
+
+        let domain_object_term = ObjectTerm::List(
+            elements.iter().map(|e| e.judgement.domain_object_term.clone()).collect(),
+        );
+        let domain_object_type = ObjectType::List(
+            elements.iter().map(|e| e.judgement.domain_object_type.clone()).collect(),
+        );
+        let domain_theory_object =
+            modal(elements.iter().map(|e| e.judgement.domain_theory_object.clone()).collect());
+        let codomain_object_type = ObjectType::List(
+            elements.iter().map(|e| e.judgement.codomain_object_type.clone()).collect(),
+        );
+        let codomain_theory_object =
+            modal(elements.iter().map(|e| e.judgement.codomain_theory_object.clone()).collect());
+
+        // The list pro-arrow lifts the common atomic pro-arrow once under the
+        // modality, at the list's modal boundary: `List Hom = Hom` when the
+        // elements are homs (or the list is empty), else `List Q` for the
+        // common generator `Q`.
+        let lifted = match &common {
+            None | Some(TheoryProArrow::Hom(_)) => {
+                T::make_hom_pro_arrow(&domain_theory_object, &codomain_theory_object)
+                    .expect("a list of homs lies over the hom on its modal object")
+            }
+            Some(TheoryProArrow::Generator { name, .. }) => TheoryProArrow::Generator {
+                name: name.clone(),
+                dom: domain_theory_object.clone(),
+                cod: codomain_theory_object.clone(),
+            },
+            Some(other) => other.clone(),
+        };
+        let over = Composite::singleton(lifted);
+
+        let derivation = Derivation {
+            pro_term: ProTerm::List(elements.into_iter().map(|e| e.pro_term).collect()),
+            judgement: ProTermJudgement {
+                domain_object_term,
+                domain_object_type,
+                domain_theory_object,
+                codomain_object_type,
+                codomain_theory_object,
+                pro_arrow: over,
+            },
+        };
+        self.finish(derivation, hint)
     }
 }
 
 // -----------------------------------------------------------------------------
-// Structural comparison helpers
+// Structural helpers shared by synthesis and reconciliation
+// TODO: check below this line
 
-/// Structural equality of model object types.
-fn object_types_match<T: Theory>(a: &ObjectType<T>, b: &ObjectType<T>) -> bool {
-    match (a, b) {
-        (ObjectType::Generator(x), ObjectType::Generator(y)) => x == y,
-        (ObjectType::List(xs), ObjectType::List(ys)) => {
-            xs.len() == ys.len()
-                && std::iter::zip(xs, ys).all(|(x, y)| object_types_match::<T>(x, y))
-        }
-        (
-            ObjectType::FunctionApplication { function: f1, on: o1 },
-            ObjectType::FunctionApplication { function: f2, on: o2 },
-        ) => vertical_composites_match::<T>(f1, f2) && object_types_match::<T>(o1, o2),
-        (ObjectType::Hole { over: oa, .. }, ObjectType::Hole { over: ob, .. }) => {
-            T::objects_unify(&[oa, ob])
-        }
-        _ => false,
+/// The variable names at the leaves of an object term, flattening every list,
+/// in left-to-right order. Used to read a definition's formal parameters from
+/// its binder. A non-variable leaf would mean a malformed binder, which the
+/// binder check rejects upstream.
+fn object_term_variables<T: Theory>(term: &ObjectTerm<T>) -> Vec<String> {
+    match term {
+        ObjectTerm::Variable(v) => vec![v.clone()],
+        ObjectTerm::List(items) => items.iter().flat_map(object_term_variables).collect(),
+        ObjectTerm::FunctionApplication { on, .. } => object_term_variables(on),
+        ObjectTerm::Tuple(_) => todo!("tuple binder formal parameters"),
+        ObjectTerm::Hole(_) => unreachable!("checked binder: no holes"),
     }
 }
 
-fn vertical_composites_match<T: Theory>(
-    a: &Composite<TheoryGeneratingArrow<T>>,
-    b: &Composite<TheoryGeneratingArrow<T>>,
-) -> bool {
-    let a: Vec<_> = a.iter().collect();
-    let b: Vec<_> = b.iter().collect();
-    a.len() == b.len()
-        && std::iter::zip(a, b).all(|(l, r)| {
-            l.name == r.name
-                && T::objects_unify(&[&l.dom, &r.dom])
-                && T::objects_unify(&[&l.cod, &r.cod])
-        })
+/// The leaves of a (surface) argument expression, flattening every list, in
+/// left-to-right order. These are the actuals positionally matched to a
+/// definition's formal parameters.
+fn argument_leaves(expr: &Expression) -> Vec<&Expression> {
+    match expr {
+        Expression::List(items) => items.iter().flat_map(argument_leaves).collect(),
+        other => vec![other],
+    }
 }
 
-/// Equality of pro-arrow composites up to object unification and the flat
-/// hom-collapse (hom is the unit for composition).
-fn pro_arrow_composites_equal<T: Theory>(
-    a: &Composite<TheoryProArrow<T>>,
-    b: &Composite<TheoryProArrow<T>>,
-) -> bool {
-    let drop_hom = |c: &Composite<TheoryProArrow<T>>| {
-        c.iter().filter(|p| p.name != HOM).cloned().collect::<Vec<_>>()
-    };
-    let a = drop_hom(a);
-    let b = drop_hom(b);
-    a.len() == b.len()
-        && std::iter::zip(a, b).all(|(l, r)| {
-            l.name == r.name
-                && T::objects_unify(&[&l.dom, &r.dom])
-                && T::objects_unify(&[&l.cod, &r.cod])
-        })
+/// Substitute argument expressions for a definition's formal parameters
+/// throughout its body, so the call site can re-synthesise the inlined body.
+/// Only the formal *variables* are replaced; every other literal (an operation
+/// name, say) is left intact, as are the structural forms, recursing into them.
+fn substitute_expression(body: &Expression, subst: &HashMap<String, Expression>) -> Expression {
+    match body {
+        Expression::Literal(name) => subst.get(name).cloned().unwrap_or_else(|| body.clone()),
+        Expression::Juxtaposition { post, pre } => Expression::Juxtaposition {
+            post: Box::new(substitute_expression(post, subst)),
+            pre: Box::new(substitute_expression(pre, subst)),
+        },
+        Expression::List(items) => {
+            Expression::List(items.iter().map(|i| substitute_expression(i, subst)).collect())
+        }
+        Expression::Tuple(items) => {
+            Expression::Tuple(items.iter().map(|i| substitute_expression(i, subst)).collect())
+        }
+        Expression::ProArrowAnnotation { subject, domain, codomain, over } => {
+            Expression::ProArrowAnnotation {
+                subject: Box::new(substitute_expression(subject, subst)),
+                domain: domain.clone(),
+                codomain: codomain.clone(),
+                over: over.clone(),
+            }
+        }
+    }
 }

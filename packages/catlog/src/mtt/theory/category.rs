@@ -1,18 +1,13 @@
-use std::collections::HashSet;
-
 use crate::mtt::theory::{
-    Boundary, ListVariant, Theory, TheoryGeneratingArrow, TheoryObject, TheoryProArrow,
-    shared::{HOM, hom_pro_arrow},
+    Boundary, ListVariant, ProArrowByBoundary, Theory, TheoryArrow, TheoryObject, TheoryProArrow,
 };
 
-/// The theory of categories, aka the trivial (terminal) double theory. It is
-/// degenerate in that it has a single object, `Object`, and a single pro-arrow,
-/// the hom pro-arrow on that object: model pro-arrows are exactly the morphisms
-/// of a category and all lie over `Hom`. There are no non-trivial vertical
-/// arrows and no list modality.
+// TODO: check this whole file
+
+/// The theory of categories: a single object `Object`, whose pro-arrows are all
+/// homs. No vertical arrows, no list modality.
 pub struct Category;
 
-/// The single generating object of the theory of categories.
 const OBJECT: &str = "Object";
 
 impl Theory for Category {
@@ -28,40 +23,38 @@ impl Theory for Category {
         obj_a: &TheoryObject<Self>,
         obj_b: &TheoryObject<Self>,
     ) -> Option<TheoryProArrow<Self>> {
-        Self::objects_unify(&[obj_a, obj_b]).then(|| hom_pro_arrow(obj_a, obj_b))
+        Self::unify_objects(&[obj_a, obj_b]).most_specific().map(TheoryProArrow::Hom)
     }
 
-    fn lookup_generating_arrow(_name: &String) -> Option<TheoryGeneratingArrow<Self>> {
+    fn generating_arrow_by_name(_name: &String) -> Option<TheoryArrow<Self>> {
         None
     }
 
-    fn lookup_generating_pro_arrow(_name: &String) -> Option<TheoryProArrow<Self>> {
-        // The only pro-arrow is the parametric hom, which is not a named
-        // generating pro-arrow and therefore cannot be looked up by name.
+    fn generating_pro_arrow_by_name(_name: &String) -> Option<TheoryProArrow<Self>> {
         None
     }
 
-    fn generating_pro_arrow_by_boundary(
-        _dom: &TheoryObject<Self>,
-        _cod: &TheoryObject<Self>,
-    ) -> HashSet<String> {
-        // The only pro-arrow is the parametric hom, which is never reported by
-        // this function.
-        HashSet::new()
+    fn pro_arrow_by_boundary(
+        dom: &TheoryObject<Self>,
+        cod: &TheoryObject<Self>,
+    ) -> ProArrowByBoundary<Self> {
+        match Self::make_hom_pro_arrow(dom, cod) {
+            Some(hom) => ProArrowByBoundary::Hom(hom),
+            None => ProArrowByBoundary::None,
+        }
     }
 
     fn has_object(obj: &TheoryObject<Self>) -> bool {
         let object = TheoryObject::Generator(OBJECT.to_string());
-        Self::objects_unify(&[obj, &object])
+        Self::unify_objects(&[obj, &object]).is_compatible()
     }
 
-    fn has_generating_arrow(_arr: TheoryGeneratingArrow<Self>) -> bool {
+    fn has_theory_arrow(_arr: TheoryArrow<Self>) -> bool {
         false
     }
 
     fn has_pro_arrow(pro: &TheoryProArrow<Self>) -> bool {
-        // The only pro-arrow is the hom pro-arrow on the single object.
-        pro.name == HOM && Self::has_object(&pro.dom) && Self::has_object(&pro.cod)
+        matches!(pro, TheoryProArrow::Hom(o) if Self::has_object(o))
     }
 
     fn has_cell(b: &Boundary<Self>) -> bool {

@@ -6,7 +6,9 @@ use textwrap::indent;
 use std::collections::HashMap;
 
 use crate::mtt::{
+    ast::Expression,
     checker::{
+        ModelGeneratingProArrow,
         core_types::{ObjectTerm, ObjectType, ProTerm},
         error::EContext,
     },
@@ -26,7 +28,7 @@ pub struct ObjectEntry<T: Theory> {
 }
 
 #[derive(Display)]
-#[display("{over}({dom} -|-> {cod})")]
+#[display("{dom_object_entry} -|-> {cod_object_entry} over {over}")]
 /// A context entry recording a well-founded generating pro-arrow in the model.
 /// We store these entries indexed by their name, so there is no further data
 /// beyond those fields below. Explicit in this particular arrangement of data
@@ -34,23 +36,36 @@ pub struct ObjectEntry<T: Theory> {
 /// generating pro-arrow for the theory. In the future we may wish to lift this
 /// restriction.
 pub struct GeneratingProArrowEntry<T: Theory> {
+    /// A redundant copy of the name of the pro-arrow generator, so that the
+    /// data is enough to recover the [ModelGeneratingProArrow] that is
+    /// implicitly recorded here.
+    pub name: String,
     /// The domain object type.
-    pub dom: ObjectEntry<T>,
+    pub dom_object_entry: ObjectEntry<T>,
     /// The codomain object type.
-    pub cod: ObjectEntry<T>,
+    pub cod_object_entry: ObjectEntry<T>,
     /// The theory pro-arrow over which this object lives.
-    pub over: String,
+    pub over: TheoryProArrow<T>,
+}
+
+impl<T: Theory> From<&GeneratingProArrowEntry<T>> for ModelGeneratingProArrow<T> {
+    fn from(ge: &GeneratingProArrowEntry<T>) -> ModelGeneratingProArrow<T> {
+        ModelGeneratingProArrow {
+            name: ge.name.clone(),
+            dom: ge.dom_object_entry.object_type.clone(),
+            cod: ge.cod_object_entry.object_type.clone(),
+        }
+    }
 }
 
 #[derive(Display)]
 #[display(
-    "{domain_object_term}: {domain_object_type}/{domain_theory_object} ⊢_{{{}}} {codomain_object_term}: {codomain_object_type}/{codomain_theory_object}",
-    pro_arrow.as_ref().map(|p| p.to_string()).unwrap_or("_".to_string()),
-
+    "{domain_object_term}: {domain_object_type}/{domain_theory_object} ⊢_{{{pro_arrow}}} {codomain_object_type}/{codomain_theory_object}"
 )]
-/// The data of a judgement of a pro-term, which may be computed from an
-/// abitrary derivation of a pro-term in context. In what follows we will refer
-/// to "Γ | x : X ⊢_P y : Y"
+/// The boundary of a pro-term derivation. The derivation itself is the
+/// [ProTerm]; this records the data shared by every derivation of it. In what
+/// follows we refer to "Γ | x : X ⊢_P Y", noting that the codomain term is the
+/// pro-term, so it has no separate slot here.
 pub struct ProTermJudgement<T: Theory> {
     /// The portion "x" in the above.
     pub domain_object_term: ObjectTerm<T>,
@@ -58,42 +73,60 @@ pub struct ProTermJudgement<T: Theory> {
     pub domain_object_type: ObjectType<T>,
     /// The object of the theory over which "X" lies, None for holes.
     pub domain_theory_object: TheoryObject<T>,
-    /// The portion "y" in the above.
-    pub codomain_object_term: ObjectTerm<T>,
     /// The portion "Y" in the above.
     pub codomain_object_type: ObjectType<T>,
     /// The object of the theory over which "Y" lies, None for holes.
     pub codomain_theory_object: TheoryObject<T>,
-    /// The portion "P" in the above, None for holes.
-    pub pro_arrow: Option<Composite<TheoryProArrow<T>>>,
+    /// The portion "P" in the above. An unconstrained "P" is the singleton
+    /// [TheoryProArrow::Hole]; this composite is never empty.
+    pub pro_arrow: Composite<TheoryProArrow<T>>,
+}
+
+// A derived `Clone` would impose a spurious `T: Clone` bound, so we implement
+// it by hand.
+impl<T: Theory> Clone for ProTermJudgement<T> {
+    fn clone(&self) -> Self {
+        ProTermJudgement {
+            domain_object_term: self.domain_object_term.clone(),
+            domain_object_type: self.domain_object_type.clone(),
+            domain_theory_object: self.domain_theory_object.clone(),
+            codomain_object_type: self.codomain_object_type.clone(),
+            codomain_theory_object: self.codomain_theory_object.clone(),
+            pro_arrow: self.pro_arrow.clone(),
+        }
+    }
 }
 
 #[derive(Display)]
-#[display("TODO ~ {judgement}")]
-/// A context entry recording a well-founded derived pro-term in the model. As
-/// derivations may not be unique, it behooves us to store these alongside the
-/// judgement data.
-pub struct DefinitionEntry<T: Theory> {
-    /// The pro-term derivation itself.
+#[display("{judgement}")]
+/// A pro-term together with the judgement it witnesses.
+pub struct Derivation<T: Theory> {
+    /// The pro-term.
     pub pro_term: ProTerm<T>,
-    /// The data of the judgement of the pro-term.
+    /// The judgement it witnesses.
     pub judgement: ProTermJudgement<T>,
 }
 
 #[derive(Display)]
-#[display("TODO ~ {judgement}")]
-/// A context entry recording a well-founded relation in the model. The two
-/// derivations of pro-terms share the same judgement data.
+#[display("TODO ~ {derivation}")]
+/// A context entry recording a definition: a derivation together with the
+/// surface body it was elaborated from.
+pub struct DefinitionEntry<T: Theory> {
+    /// The derivation.
+    pub derivation: Derivation<T>,
+    /// The surface body of the definition.
+    pub body: Expression,
+}
+
+#[derive(Display)]
+#[display("TODO ~ {} == {}", lhs.judgement, rhs.judgement)]
+/// A context entry recording a relation: two derivations over a common
+/// judgement.
 pub struct RelationEntry<T: Theory> {
-    /// One of the derivations of a pro-term, subject of the relation.
-    pub lhs_pro_term: ProTerm<T>,
-    /// The other of the derivations of a pro-term, subject of the relation.
-    pub rhs_pro_term: ProTerm<T>,
-    /// The data of the judgement, necessarily the same for both derivations. In
-    /// greater detail, because we are declaring these two pro-term derivations,
-    /// the "y : Y" data of the judgement is a "representative" of this equality
-    /// class and so in a sense it does not matter which judgement we store.
-    pub judgement: ProTermJudgement<T>,
+    /// One of the related derivations.
+    pub lhs: Derivation<T>,
+    /// The other related derivation.
+    pub rhs: Derivation<T>,
 }
 
 /// A context in which type checking for a single model occurs.

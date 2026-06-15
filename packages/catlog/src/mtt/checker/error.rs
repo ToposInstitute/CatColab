@@ -122,9 +122,52 @@ pub enum EType {
     /// theory vertical arrow, so it cannot be applied.
     NotApplicable(String),
 
+    #[display("Cannot apply the operation {operation} to a pro-term with codomain {onto}")]
+    /// An operation (theory vertical arrow) was applied to a pro-term whose
+    /// codomain theory object does not meet the operation's domain.
+    OperationNotApplicable {
+        /// The operation (theory vertical arrow) being applied.
+        operation: String,
+        /// The codomain theory object of the pro-term it was applied to.
+        onto: String,
+    },
+
+    #[display(
+        "The operation {operation} does not determine its transported pro-arrow; annotate the result"
+    )]
+    /// An operation (theory vertical arrow) was applied without a hint, and the
+    /// transported pro-arrow could not be inferred from the boundary. Because a
+    /// general vertical arrow has no canonical pushforward of a pro-arrow, the
+    /// result must be annotated to name the transported pro-arrow.
+    OperationNeedsAnnotation {
+        /// The operation (theory vertical arrow) being applied.
+        operation: String,
+    },
+
+    #[display("The theory {theory} has no cell witnessing the application of {operation}")]
+    /// An operation application would require a cell transporting the
+    /// pro-term's pro-arrow along the operation, but the theory has none.
+    NoApplicableCell {
+        /// The theory consulted.
+        theory: String,
+        /// The operation (theory vertical arrow) being applied.
+        operation: String,
+    },
+
     #[display("A list pro-term was supplied, but the theory {_0} has no list modality")]
     /// A list term was encountered but the theory does not support lists.
     NoListModality(String),
+
+    #[display(
+        "A list's elements do not lie over a common pro-arrow (found {found}); a list lies over a single common pro-arrow"
+    )]
+    /// A list pro-term's elements were found not to unify to a single common
+    /// pro-arrow. The list-formation rule requires every element to lie over
+    /// one common atomic pro-arrow.
+    HeterogeneousListProArrows {
+        /// The distinct pro-arrows found among the elements.
+        found: String,
+    },
 
     #[display("Unsupported body expression: {_0}")]
     /// A body expression form that is not (yet) supported in this theory.
@@ -193,12 +236,6 @@ pub enum EInfer {
     /// We were asked to infer the theory pro-arrow over which this model
     /// pro-arrow lives, but there is not a unique answer.
     AmbiguousTheoryProArrow(String),
-
-    #[display("Cannot determine the boundary of an empty pro-arrow composite")]
-    /// An empty composite of theory pro-arrows was provided where a non-empty
-    /// one was required. An empty composite has no well-defined domain or
-    /// codomain, so its boundary cannot be checked or inferred.
-    EmptyProArrowComposite,
 }
 
 #[derive(Display)]
@@ -213,15 +250,6 @@ pub enum EContext {
     Unbound(String),
 }
 
-#[derive(Display)]
-/// An enum of errors that constraint interactions may produce.
-pub enum EConstraint {
-    #[display("Cannot refine known theory object {known} with {with}")]
-    /// A new observation about a theory object hole conflicts with what was
-    /// already known.
-    CannotUnify { known: String, with: String },
-}
-
 #[derive(Display, From)]
 /// The union of all errors that may occur when checking an AST.
 pub enum Error {
@@ -233,8 +261,6 @@ pub enum Error {
     InferenceError(EInfer),
     /// A context error.
     ContextError(EContext),
-    /// A constraint error.
-    ConstraintError(EConstraint),
 
     #[from(skip)]
     #[display("Unknown theory: {_0}")]

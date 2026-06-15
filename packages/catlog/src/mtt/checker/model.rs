@@ -1,19 +1,19 @@
 //! TODO
 
-use std::marker::PhantomData;
-
 use crate::mtt::{
     ast::{Binder, Decl, Expression, ExpressionProArrow, Model},
+    binary_signature::BinarySignature,
     checker::{
         context::{
-            DefinitionEntry, GeneratingProArrowEntry, ModelEntry, ObjectEntry, ProTermJudgement,
-            RelationEntry,
+            DefinitionEntry, Derivation, GeneratingProArrowEntry, ModelEntry, ObjectEntry,
+            ProTermJudgement, RelationEntry,
         },
         core_types::{ObjectTerm, ObjectType},
         error::{CheckResult, EInfer, EType, Error},
     },
     composite::Composite,
-    theory::{Theory, TheoryObject, TheoryProArrow},
+    hole::Holy,
+    theory::{ProArrowByBoundary, Theory, TheoryObject, TheoryProArrow, UnificationResult},
 };
 
 impl<T: Theory> ModelEntry<T> {
@@ -58,19 +58,31 @@ impl<T: Theory> ModelEntry<T> {
                 // must check that the generating arrow actually lies over the
                 // stated theory arrow
                 if let Some(ref over) = over {
-                    self.check_object(&pro_arrow.dom, &over.dom)?;
-                    self.check_object(&pro_arrow.cod, &over.cod)?;
+                    self.check_object(&pro_arrow.dom, &over.dom())?;
+                    self.check_object(&pro_arrow.cod, &over.cod())?;
                 }
 
-                // infer a theory arrow if necessary
-                let over = over.map_or_else(
-                    || {
+                // infer a theory arrow if necessary. A generator lies over a
+                // single atomic theory pro-arrow, so the inferred filler must
+                // be a singleton composite.
+                let over = match over {
+                    Some(over) => over,
+                    None => {
                         let t_dom = self.infer_theory_object(&pro_arrow.dom)?;
                         let t_cod = self.infer_theory_object(&pro_arrow.cod)?;
-                        self.infer_theory_pro_arrow_by_boundary(&t_dom, &t_cod)
-                    },
-                    Ok,
-                )?;
+                        let inferred = self.infer_theory_pro_arrow_by_boundary(&t_dom, &t_cod)?;
+                        inferred.only().cloned().ok_or_else(|| {
+                            EInfer::NoTheoryProArrow(
+                                TheoryProArrow::Generator {
+                                    name: "?".to_string(),
+                                    dom: t_dom,
+                                    cod: t_cod,
+                                }
+                                .to_string(),
+                            )
+                        })?
+                    }
+                };
 
                 if !T::has_pro_arrow(&over) {
                     return Err(EType::InvalidTheoryProArrow {
@@ -81,35 +93,47 @@ impl<T: Theory> ModelEntry<T> {
                 };
 
                 self.add_pro_arrow(
-                    pro_arrow.name,
+                    pro_arrow.name.clone(),
                     GeneratingProArrowEntry {
-                        dom: ObjectEntry {
+                        name: pro_arrow.name,
+                        dom_object_entry: ObjectEntry {
                             object_type: pro_arrow.dom,
-                            over: over.dom,
+                            over: over.dom().clone(),
                         },
-                        cod: ObjectEntry {
+                        cod_object_entry: ObjectEntry {
                             object_type: pro_arrow.cod,
-                            over: over.cod,
+                            over: over.cod().clone(),
                         },
-                        over: over.name,
+                        over,
                     },
                 )
                 .map_err(|e| e.into())
             }
             Decl::Definition { name, binder, codomain, over, body } => {
-                let judgement = self.build_pro_term_judgement(name, binder, codomain, over)?;
-                let pro_term = self.check_pro_term(body, &judgement)?;
-                self.add_definition(name.clone(), DefinitionEntry { pro_term, judgement })
-                    .map_err(|e| e.into())
+                let judgement = self.build_pro_term_judgement(binder, codomain, over)?;
+                let pro_term = self.elaborate_and_check_pro_term(body, &judgement)?;
+                self.add_definition(
+                    name.clone(),
+                    DefinitionEntry {
+                        derivation: Derivation { pro_term, judgement },
+                        body: body.clone(),
+                    },
+                )
+                .map_err(|e| e.into())
             }
             Decl::Relation { name, binder, codomain, over, lhs, rhs } => {
-                // TODO: what should name be here?
-                let judgement = self.build_pro_term_judgement(name, binder, codomain, over)?;
-                let lhs_pro_term = self.check_pro_term(lhs, &judgement)?;
-                let rhs_pro_term = self.check_pro_term(rhs, &judgement)?;
+                let judgement = self.build_pro_term_judgement(binder, codomain, over)?;
+                let lhs_pro_term = self.elaborate_and_check_pro_term(lhs, &judgement)?;
+                let rhs_pro_term = self.elaborate_and_check_pro_term(rhs, &judgement)?;
                 self.add_relation(
                     name.clone(),
-                    RelationEntry { lhs_pro_term, rhs_pro_term, judgement },
+                    RelationEntry {
+                        lhs: Derivation {
+                            pro_term: lhs_pro_term,
+                            judgement: judgement.clone(),
+                        },
+                        rhs: Derivation { pro_term: rhs_pro_term, judgement },
+                    },
                 )
                 .map_err(|e| e.into())
             }
@@ -119,7 +143,6 @@ impl<T: Theory> ModelEntry<T> {
 
     fn build_pro_term_judgement(
         &self,
-        name: &String,
         binder: &Binder,
         codomain: &Expression,
         over: &ExpressionProArrow,
@@ -130,7 +153,6 @@ impl<T: Theory> ModelEntry<T> {
         let domain_object_term =
             self.check_object_term(&domain_object_term, &domain_object_type)?;
         let codomain_object_type = self.elaborate_object_type(codomain)?;
-        let codomain_object_term = ObjectTerm::Variable(name.clone()); // TODO
 
         // -----------------------------------------------------------
         // theory pro-arrow, and the theory objects at the boundary
@@ -138,13 +160,6 @@ impl<T: Theory> ModelEntry<T> {
 
         let (domain_theory_object, codomain_theory_object) = match &stated_over {
             Some(stated) => {
-                // A composite P1;...;Pn spans from the domain of P1 to the
-                // codomain of Pn
-
-                // TODO: more questions about how to enforce this composition
-                // ordering correctly
-                let first = stated.iter().next().ok_or(EInfer::EmptyProArrowComposite)?;
-                let last = stated.iter().last().ok_or(EInfer::EmptyProArrowComposite)?;
                 for atomic in stated.iter() {
                     if !T::has_pro_arrow(atomic) {
                         return Err(EType::InvalidTheoryProArrow {
@@ -154,9 +169,9 @@ impl<T: Theory> ModelEntry<T> {
                         .into());
                     }
                 }
-                self.check_object(&domain_object_type, &first.dom)?;
-                self.check_object(&codomain_object_type, &last.cod)?;
-                (first.dom.clone(), last.cod.clone())
+                self.check_object(&domain_object_type, &stated.dom())?;
+                self.check_object(&codomain_object_type, &stated.cod())?;
+                (stated.dom(), stated.cod())
             }
             None => {
                 let dom = self.infer_theory_object(&domain_object_type)?;
@@ -165,22 +180,18 @@ impl<T: Theory> ModelEntry<T> {
             }
         };
 
-        let pro_arrow = Some(match stated_over {
+        let pro_arrow = match stated_over {
             Some(composite) => composite,
-            None => {
-                let inferred = self.infer_theory_pro_arrow_by_boundary(
-                    &domain_theory_object,
-                    &codomain_theory_object,
-                )?;
-                Composite::try_from(vec![inferred]).expect("singleton is always composable")
-            }
-        });
+            None => self.infer_theory_pro_arrow_by_boundary(
+                &domain_theory_object,
+                &codomain_theory_object,
+            )?,
+        };
 
         Ok(ProTermJudgement {
             domain_object_term,
             domain_object_type,
             domain_theory_object,
-            codomain_object_term,
             codomain_object_type,
             codomain_theory_object,
             pro_arrow,
@@ -195,7 +206,7 @@ impl<T: Theory> ModelEntry<T> {
         match obj {
             ObjectType::Generator(g) => {
                 let oe = self.lookup_generating_object(g)?;
-                if !T::objects_unify(&[&oe.over, over]) {
+                if !T::unify_objects(&[&oe.over, over]).is_compatible() {
                     Err(EType::BadObjectTypeTheoryObject {
                         object_type: obj.to_string(),
                         theory_object: over.to_string(),
@@ -224,8 +235,8 @@ impl<T: Theory> ModelEntry<T> {
                     // TODO: should we be permissive about empty function applications?
                     return self.check_object(on, over);
                 }
-                let inner = self.check_object(on, &function.iter().next().unwrap().dom)?;
-                if !T::objects_unify(&[over, &function.iter().last().unwrap().cod]) {
+                let inner = self.check_object(on, &function.dom())?;
+                if !T::unify_objects(&[over, &function.cod()]).is_compatible() {
                     todo!("error message here")
                 };
                 Ok(ObjectType::FunctionApplication {
@@ -234,7 +245,17 @@ impl<T: Theory> ModelEntry<T> {
                 })
             }
             ObjectType::Hole { name, over: known } => {
-                let over = known.refine(over)?;
+                // Refine what we know about the hole's theory object with the
+                // freshly-observed `over`. Because a theory object is a linear
+                // chain, compatible objects are ordered by prefix-refinement,
+                // so the meet is just the more specific of the two; a failure
+                // to unify is a genuine conflict.
+                let over = T::unify_objects(&[known, over]).most_specific().ok_or_else(|| {
+                    EType::BadObjectTypeTheoryObject {
+                        object_type: known.to_string(),
+                        theory_object: over.to_string(),
+                    }
+                })?;
                 Ok(ObjectType::Hole { name: name.clone(), over })
             }
         }
@@ -279,6 +300,7 @@ impl<T: Theory> ModelEntry<T> {
 }
 
 impl<T: Theory> ModelEntry<T> {
+    /// Infer a [TheoryObject] given an [ObjectType].
     pub fn infer_theory_object(&self, obj: &ObjectType<T>) -> Result<TheoryObject<T>, Error> {
         match obj {
             ObjectType::Generator(g) => Ok(self.lookup_generating_object(g)?.over.clone()),
@@ -290,36 +312,27 @@ impl<T: Theory> ModelEntry<T> {
                 if list.is_empty() {
                     return Ok(TheoryObject::ModalApplication {
                         modality,
-                        on: Box::new(TheoryObject::Hole {
-                            name: "theory_object_for_empty_list".to_string(),
-                            _theory: PhantomData,
-                        }),
+                        on: Box::new(TheoryObject::unconstrained("theory_object_for_empty_list".to_string())),
                     });
                 }
 
                 let theory_objects: Vec<TheoryObject<T>> =
                     list.iter().map(|ot| self.infer_theory_object(ot)).collect::<Result<_, _>>()?;
-                if !T::objects_unify(&theory_objects.iter().collect::<Vec<&_>>()) {
+                let refs: Vec<&TheoryObject<T>> = theory_objects.iter().collect();
+                let UnificationResult::MostSpecific(on) = T::unify_objects(&refs) else {
                     return Err(EInfer::InconsistentTheoryObjectForList.into());
-                }
+                };
 
-                Ok(TheoryObject::ModalApplication {
-                    modality,
-                    on: Box::new(
-                        TheoryObject::select_most_specific(&theory_objects).unwrap().clone(),
-                    ),
-                })
+                Ok(TheoryObject::ModalApplication { modality, on: Box::new(on) })
             }
             ObjectType::FunctionApplication { function, on } => {
-                // TODO: here we are assuming composition order, is there some
-                // way to make this explicit or hide it behind an api surface?
-                if let Some(outer) = function.iter().last() {
-                    // TODO: whose job will it be to check that this application actually makes sense?
-                    Ok(outer.cod.clone())
-                } else {
+                if function.is_empty() {
                     // TODO: should we be permissive about empty function
                     // composites?
                     self.infer_theory_object(on)
+                } else {
+                    // TODO: whose job will it be to check that this application actually makes sense?
+                    Ok(function.cod())
                 }
             }
             // The hole already records the theory object it lies over (itself
@@ -328,47 +341,26 @@ impl<T: Theory> ModelEntry<T> {
         }
     }
 
-    fn infer_theory_pro_arrow_by_boundary(
+    /// Infer the theory pro-arrow composite filling a boundary, thin wrapper
+    /// around the theory.
+    pub fn infer_theory_pro_arrow_by_boundary(
         &self,
         t_dom: &TheoryObject<T>,
         t_cod: &TheoryObject<T>,
-    ) -> Result<TheoryProArrow<T>, Error> {
-        // TODO: this is a real gap, if we infer, we only ever infer Hom or
-        // generators. We should be able to infer composites!
-        let candidates = T::generating_pro_arrow_by_boundary(t_dom, t_cod);
-        match candidates.len() {
-            0 => {
-                // No named generating pro-arrow fills this boundary. Fall back
-                // to the parametric hom pro-arrow, which is never reported by
-                // `generating_pro_arrow_by_boundary`.
-                T::make_hom_pro_arrow(t_dom, t_cod).map_or(
-                    Err(EInfer::NoTheoryProArrow(
-                        TheoryProArrow::from("?".to_string(), t_dom.clone(), t_cod.clone())
-                            .to_string(),
-                    )
-                    .into()),
-                    Ok,
-                )
+    ) -> Result<Composite<TheoryProArrow<T>>, Error> {
+        let unknown = || {
+            TheoryProArrow::Generator {
+                name: "?".to_string(),
+                dom: t_dom.clone(),
+                cod: t_cod.clone(),
             }
-            1 => {
-                let name =
-                    candidates.iter().next().expect("we know there's a unique candidate name");
-                Ok(T::lookup_generating_pro_arrow(name)
-                    .expect("we know this generating pro-arrow exists, the theory must have a bug"))
-            }
-            _ => {
-                // Multiple named generating pro-arrows fill this boundary. As
-                // a special case, if the objects coincide we default to
-                // inferring hom; otherwise the boundary is ambiguous.
-                T::make_hom_pro_arrow(t_dom, t_cod).map_or(
-                    Err(EInfer::AmbiguousTheoryProArrow(
-                        TheoryProArrow::from("?".to_string(), t_dom.clone(), t_cod.clone())
-                            .to_string(),
-                    )
-                    .into()),
-                    Ok,
-                )
-            }
+            .to_string()
+        };
+        match T::pro_arrow_by_boundary(t_dom, t_cod) {
+            ProArrowByBoundary::Composite(composite) => Ok(composite),
+            ProArrowByBoundary::Hom(hom) => Ok(Composite::singleton(hom)),
+            ProArrowByBoundary::None => Err(EInfer::NoTheoryProArrow(unknown()).into()),
+            ProArrowByBoundary::Ambiguous => Err(EInfer::AmbiguousTheoryProArrow(unknown()).into()),
         }
     }
 }

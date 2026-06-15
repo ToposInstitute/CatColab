@@ -3,7 +3,6 @@
 use std::marker::PhantomData;
 
 use crate::mtt::{
-    arrow::{Arrow, ProArrowKind, VerticalArrowKind},
     composite::Composite,
     theory::{ListVariant, Theory},
 };
@@ -29,7 +28,7 @@ pub enum TheoryObject<T: Theory> {
     },
 
     /// A hole generated during type checking, and used for unification. A
-    /// TheoryObject is a linear chain of modal applications terminating in a
+    /// [TheoryObject] is a linear chain of modal applications terminating in a
     /// generator or a hole, so all partial knowledge about an object lives in
     /// the modal prefix above the hole; the hole itself is a bare wildcard
     /// carrying no constraints of its own.
@@ -43,49 +42,74 @@ pub enum TheoryObject<T: Theory> {
     },
 }
 
-impl<T: Theory> PartialEq for TheoryObject<T> {
-    fn eq(&self, other: &TheoryObject<T>) -> bool {
-        T::objects_unify(&[self, other])
+/// An atomic (non-composite) theory vertical arrow between theory objects.
+pub enum TheoryArrow<T: Theory> {
+    /// A named generating vertical arrow at a stated boundary.
+    Generator {
+        /// The name of the generator.
+        name: String,
+        /// The domain object.
+        dom: TheoryObject<T>,
+        /// The codomain object.
+        cod: TheoryObject<T>,
+    },
+    /// A vertical arrow lifted under a list modality: `List F` for the inner
+    /// arrow `F`, spanning the modal lift of `F`'s boundary.
+    ModalApplication {
+        /// The modality applied.
+        modality: ListVariant,
+        /// The vertical arrow being lifted.
+        on: Box<TheoryArrow<T>>,
+    },
+}
+
+/// An atomic (non-composite) theory pro-arrow.
+pub enum TheoryProArrow<T: Theory> {
+    /// The parametric identity pro-arrow on an object.
+    Hom(TheoryObject<T>),
+    /// A named generating pro-arrow at a stated boundary.
+    Generator {
+        /// The name of the generator.
+        name: String,
+        /// The domain object.
+        dom: TheoryObject<T>,
+        /// The codomain object.
+        cod: TheoryObject<T>,
+    },
+    /// A base pro-arrow restricted along a vertical arrow on each side: the
+    /// `base` pulled back along `dom_leg` on the left and `cod_leg` on the
+    /// right.
+    Restriction {
+        /// The pro-arrow being restricted.
+        base: Box<TheoryProArrow<T>>,
+        /// The vertical arrow restricting the domain side.
+        dom_leg: TheoryArrow<T>,
+        /// The vertical arrow restricting the codomain side.
+        cod_leg: TheoryArrow<T>,
+    },
+    /// A hole for a pro-arrow, the matching information for which is carried by
+    /// its domain and codomain. Note that [TheoryObject] also has "hole"
+    /// variants.
+    Hole {
+        /// The domain object known so far.
+        dom: TheoryObject<T>,
+        /// The codomain object known so far.
+        cod: TheoryObject<T>,
+    },
+}
+
+impl<T: Theory> TheoryProArrow<T> {
+    /// Whether this is an unconstrained pro-arrow hole.
+    pub fn is_hole(&self) -> bool {
+        matches!(self, TheoryProArrow::Hole { .. })
     }
 }
 
-// Rust does not, at the time of writing, have a sufficiently smart compiler.
-// This causes two, related issues for us:
-//
-// 1. #[derive(Clone)] on TheoryObject adds the sufficient but not necessary
-// bound T: Clone.
-//
-// 2. #[derive(Display)] incorrectly sets the bound for the Box<..> to be the
-// entire structure again, and exhausts the recursive stack.
-impl<T: Theory> Clone for TheoryObject<T> {
-    fn clone(&self) -> Self {
-        match self {
-            Self::Generator(g) => Self::Generator(g.clone()),
-            Self::ModalApplication { modality, on } => Self::ModalApplication {
-                modality: modality.clone(),
-                on: on.clone(),
-            },
-            Self::Hole { name, .. } => Self::Hole { name: name.clone(), _theory: PhantomData },
-        }
-    }
+/// Whether a pro-arrow composite actually constrains the pro-arrow, i.e. is
+/// anything other than a lone unconstrained hole. The composite is never empty.
+pub fn pro_arrow_is_constrained<T: Theory>(pro_arrow: &Composite<TheoryProArrow<T>>) -> bool {
+    !matches!(pro_arrow.only(), Some(p) if p.is_hole())
 }
-
-impl<T: Theory> std::fmt::Display for TheoryObject<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Generator(g) => write!(f, "{g}"),
-            Self::ModalApplication { modality, on } => write!(f, "{modality}({on})"),
-            Self::Hole { name, .. } => write!(f, "?{name}"),
-        }
-    }
-}
-
-/// Theory vertical arrows between theory objects.
-pub type TheoryGeneratingArrow<T> = Arrow<TheoryObject<T>, VerticalArrowKind>;
-/// Theory pro-arrows between theory objects. These are atomic (non-composite)
-/// pro-arrows and *may* include the parametric hom pro-arrow — see
-/// [`make_hom_pro_arrow`](../theory/trait.Theory.html#tymethod.make_hom_pro_arrow).
-pub type TheoryProArrow<T> = Arrow<TheoryObject<T>, ProArrowKind>;
 
 /// The description of a (square) boundary in the theory, where the convention
 /// in the comments is that vertical composition is top-to-bottom, and
@@ -100,11 +124,54 @@ pub struct Boundary<T: Theory> {
     /// The bottom right object.
     pub cod_cod_object: TheoryObject<T>,
     /// The left, vertical boundary.
-    pub dom_vertical: Composite<TheoryGeneratingArrow<T>>,
+    pub dom_vertical: Composite<TheoryArrow<T>>,
     /// The top, pro-arrow boundary.
     pub dom_proarrow: Composite<TheoryProArrow<T>>,
     /// The right, vertical boundary.
-    pub cod_vertical: Composite<TheoryGeneratingArrow<T>>,
+    pub cod_vertical: Composite<TheoryArrow<T>>,
     /// The bottom, pro-arrow boundary.
     pub cod_proarrow: Composite<TheoryProArrow<T>>,
+}
+
+// -----------------------------------------------------------------------------
+// Helper types
+
+/// The outcome of unifying a collection of values. Isomorphic to `Option`, but
+/// the variants name the contract directly: either the values are mutually
+/// incompatible, or they unify and we hand back the single most specific value
+/// they all refine to (their meet).
+pub enum UnificationResult<V> {
+    /// The values cannot be made to coincide.
+    Incompatible,
+    /// The values unify; this is the most specific value they all refine to.
+    MostSpecific(V),
+}
+
+impl<V> UnificationResult<V> {
+    /// Whether the values unified (regardless of the meet).
+    pub fn is_compatible(&self) -> bool {
+        matches!(self, UnificationResult::MostSpecific(_))
+    }
+
+    /// The most specific value if the values unified, else `None`.
+    pub fn most_specific(self) -> Option<V> {
+        match self {
+            UnificationResult::Incompatible => None,
+            UnificationResult::MostSpecific(v) => Some(v),
+        }
+    }
+}
+
+/// The type reported by a theory when it's asked to decide what, if any,
+/// [TheoryProArrow] between a specified pair of [TheoryObject]s.
+pub enum ProArrowByBoundary<T: Theory> {
+    /// Nothing fills the boundary.
+    None,
+    /// More than one distict filler exists.
+    Ambiguous,
+    /// The boundary is filled by the parametric hom pro-arrow, which is not a
+    /// named generator.
+    Hom(TheoryProArrow<T>),
+    /// A composite of named generating pro-arrows fills the boundary.
+    Composite(Composite<TheoryProArrow<T>>),
 }

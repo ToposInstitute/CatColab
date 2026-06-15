@@ -6,8 +6,20 @@ use textwrap::indent;
 
 use nonempty::NonEmpty;
 
-use crate::mtt::arrow::{Arrow, ProArrowKind};
 use crate::mtt::display_helpers::{DHBindings, DHList, DHProArrowComposite, DHTuple};
+
+/// Complete surface data for a single pro-arrow: a name together with its
+/// domain and codomain [Expression]s.
+#[derive(Clone, Display)]
+#[display("{name}: {dom} -|-> {cod}")]
+pub struct ProArrow {
+    /// The name of the pro-arrow.
+    pub name: String,
+    /// The domain expression.
+    pub dom: Expression,
+    /// The codomain expression.
+    pub cod: Expression,
+}
 
 #[derive(Display)]
 #[display("{}", models.iter().map(|m| m.to_string()).collect::<Vec<_>>().join("\n"))]
@@ -43,14 +55,14 @@ pub enum Decl {
         over: Expression,
     },
 
-    #[display("const {} {over}", Arrow::<_,ProArrowKind>::from(name.clone(), dom, cod))]
+    #[display("const {name}: {dom} -|-> {cod} {over}")]
     /// A pro-arrow generator.
     ProArrowGenerator {
         /// The name of the generator.
         name: String,
-        /// The domain ObjectType of the generator.
+        /// The domain [ObjectType](crate::mtt::checker::ObjectType) of the generator.
         dom: Expression,
-        /// The codomain ObjectType of the generator.
+        /// The codomain [ObjectType](crate::mtt::checker::ObjectType) of the generator.
         cod: Expression,
         /// The pro-arrow P in the theory for which the generator lies over
         /// P(dom, cod). If this is omitted the checker will attempt to infer
@@ -111,7 +123,9 @@ pub enum Decl {
 #[derive(Clone, Display)]
 /// Purely syntactical expressions for the AST, and as such many of these do not
 /// have precise meanings to give. The job of the checker is to elaborate this
-/// syntax into rigorous [ObjectType], [ObjectTerm], and [ProTerm] instances.
+/// syntax into rigorous [ObjectType](crate::mtt::checker::ObjectType),
+/// [ObjectTerm](crate::mtt::checker::ObjectTerm), and
+/// [ProTerm](crate::mtt::checker::ProTerm) instances.
 /// This type is very persmissive, far more so than the parser will allow.
 pub enum Expression {
     /// A literal string, the atomic case.
@@ -169,7 +183,7 @@ pub enum ExpressionProArrow {
 
     #[display("{_0}")]
     /// The user has provided complete data for a single pro-arrow.
-    Complete(Arrow<Expression, ProArrowKind>),
+    Complete(ProArrow),
 
     #[display("{}", DHProArrowComposite(_0))]
     /// The user has named a non-empty composite of pro-arrows, by name alone.
@@ -179,7 +193,7 @@ pub enum ExpressionProArrow {
     #[display("{}", DHProArrowComposite(_0))]
     /// The user has provided complete data for a non-empty composite of
     /// pro-arrows.
-    CompositeComplete(NonEmpty<Arrow<Expression, ProArrowKind>>),
+    CompositeComplete(NonEmpty<ProArrow>),
 }
 
 impl Expression {
