@@ -1,6 +1,6 @@
 //! Instances of models of a double theory.
 //!
-//! An **instance** of a model (see [Carlson-Patterson 2025][https://arxiv.org/abs/2510.08861]) 
+//! An **instance** of a model (see [Carlson-Patterson 2025][https://arxiv.org/abs/2510.08861])
 //! is here presented via
 //! a set of generators living over each object of the model, together with
 //! equations between terms built from morphisms of the model applied to
@@ -27,11 +27,10 @@ use crate::zero::{Column, HashColumn, MutMapping, QualifiedName};
 ///
 /// Each doctrine implements its own concrete term type. The associated
 /// [`Mor`](Self::Mor) type ties the term language to a particular
-/// 
 /// model's morphism type.
 pub trait InstanceTerm {
     /// The type of morphisms from the associated model.
-    type Mor; 
+    type Mor;
 }
 
 /// A [`DblModel`] that has an associated term language for instances.
