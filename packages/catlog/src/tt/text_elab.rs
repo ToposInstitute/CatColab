@@ -162,35 +162,15 @@ impl TopElaborator {
                         let mut elab = self.elaborator(&theory, toplevel);
                         let (_, ret_ty_v) = elab.ty(ty_n);
                         let (tm_s, tm_v) = elab.chk(&ret_ty_v, tm_n);
-                        // chk dispatches: if the body was instance-shaped,
-                        // the returned TmV is a [`TmV_::Instance`], and we
-                        // wrap as an instance declaration with a
-                        // synthesized record type for sub-instance lookups.
-                        // Otherwise the body is an ordinary const term.
-                        match &*tm_v {
-                            TmV_::Instance(body) => {
-                                let body_ty = elab.evaluator().synth_instance_body_ty(body);
-                                Some(TopElabResult::Declaration(
-                                    name,
-                                    TopDecl::Diag(Diag::new(
-                                        theory.clone(),
-                                        ret_ty_v,
-                                        tm_s,
-                                        tm_v,
-                                        body_ty,
-                                    )),
-                                ))
-                            }
-                            _ => Some(TopElabResult::Declaration(
-                                name,
-                                TopDecl::DefConst(DefConst::new(
-                                    theory.clone(),
-                                    tm_s,
-                                    tm_v,
-                                    ret_ty_v,
-                                )),
-                            )),
-                        }
+                        // A term in the empty context. The body may be an
+                        // ordinary constant or a [`TmV_::Instance`] (when it
+                        // was instance-shaped); both are just terms, so the
+                        // declaration is the same `DefConst` either way.
+                        // Instance-ness is later read off the term value.
+                        Some(TopElabResult::Declaration(
+                            name,
+                            TopDecl::DefConst(DefConst::new(theory.clone(), tm_s, tm_v, ret_ty_v)),
+                        ))
                     }
                 }
             }
@@ -499,8 +479,10 @@ impl<'a> Elaborator<'a> {
                                 Var(sub_name) => {
                                     let topvar = name_seg(*sub_name);
                                     match elab.toplevel.declarations.get(&topvar) {
-                                        Some(TopDecl::Diag(d)) => {
-                                            (d.body_stx.clone(), d.body_val.clone())
+                                        Some(TopDecl::DefConst(d))
+                                            if matches!(&*d.val, TmV_::Instance(_)) =>
+                                        {
+                                            (d.stx.clone(), d.val.clone())
                                         }
                                         _ => {
                                             elab.error::<()>(format!(
@@ -740,16 +722,19 @@ impl<'a> Elaborator<'a> {
                         ))
                     }
                 }
-                TopDecl::Diag(d) => {
+                // An instance term used in type position yields the record
+                // type synthesized from its body, allowing sub-instance
+                // imports (`we : Edge`) to project into Edge's fields.
+                TopDecl::DefConst(d) if matches!(&*d.val, TmV_::Instance(_)) => {
                     if d.theory == self.theory {
-                        // Using an instance name as a type yields the
-                        // instance's synthesized record type, allowing
-                        // sub-instance imports (`we : Edge`) to project
-                        // into Edge's fields.
-                        (TyS::topvar(name), d.body_ty.clone())
+                        let TmV_::Instance(body) = &*d.val else {
+                            unreachable!("guarded by the match arm above")
+                        };
+                        let body_ty = self.evaluator().synth_instance_body_ty(body);
+                        (TyS::topvar(name), body_ty)
                     } else {
                         self.ty_error(format!(
-                            "{name} refers to a diagram in theory {}, expected theory {}",
+                            "{name} refers to an instance in theory {}, expected theory {}",
                             d.theory, self.theory
                         ))
                     }
@@ -942,11 +927,10 @@ impl<'a> Elaborator<'a> {
         } else if let Some(d) = self.toplevel.lookup(name) {
             match d {
                 TopDecl::Type(_) => self.syn_error(format!("{name} refers type, not term")),
+                // An instance is just a term (its `val` is a `TmV_::Instance`),
+                // so it resolves here like any other constant.
                 TopDecl::DefConst(d) => (TmS::topvar(name), d.val.clone(), d.ty.clone()),
                 TopDecl::Def(_) => self.syn_error(format!("{name} must be applied to arguments")),
-                TopDecl::Diag(_) => {
-                    self.syn_error(format!("{name} refers to a diagram, not a term"))
-                }
             }
         } else {
             self.syn_error(format!("no such variable {name}"))

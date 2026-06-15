@@ -406,7 +406,8 @@ impl<'a> ModelGenerator<'a> {
     }
 }
 
-/// Generates a [`DiscreteDblModelInstance`] from an elaborated [`Diag`].
+/// Generates a [`DiscreteDblModelInstance`] from an elaborated instance
+/// term — a [`DefConst`] whose value is a [`TmV_::Instance`].
 ///
 /// Walks the instance body's [`TmV_::Instance`] payload, registering
 /// each generator with its fiber, each equation as a pair of
@@ -414,20 +415,20 @@ impl<'a> ModelGenerator<'a> {
 /// the appropriate prefix.
 ///
 /// Restricted to discrete double theories for the moment.
-pub fn instance_from_diag(
+pub fn instance_from_def(
     toplevel: &Toplevel,
     th: &TheoryDef,
-    diag: &Diag,
+    def: &DefConst,
 ) -> Result<(DiscreteDblModelInstance, Namespace), String> {
     let TheoryDef::Discrete(_) = th else {
         return Err("instance generation only supports discrete double theories".into());
     };
-    let (cod_model, _) = Model::from_ty(toplevel, th, &diag.model);
+    let (cod_model, _) = Model::from_ty(toplevel, th, &def.ty);
     let cod_model = cod_model
         .as_discrete()
         .ok_or_else(|| "expected a discrete codomain model".to_string())?;
     let mut instance = DiscreteDblModelInstance::new(Rc::new(cod_model));
-    let TmV_::Instance(body) = &*diag.body_val else {
+    let TmV_::Instance(body) = &*def.val else {
         return Err("expected a TmV::Instance body".into());
     };
     let mut namespace = Namespace::new_for_uuid();
@@ -583,12 +584,11 @@ def I : WeightedGraph := [
 ]
 "#;
         let toplevel = elaborate_to_toplevel(src);
-        let diag = match toplevel.declarations.get(&name_seg("I")) {
-            Some(TopDecl::Diag(d)) => d.clone(),
-            _ => panic!("expected I to be a diagram declaration"),
+        let def = match toplevel.declarations.get(&name_seg("I")) {
+            Some(TopDecl::DefConst(d)) if matches!(&*d.val, TmV_::Instance(_)) => d.clone(),
+            _ => panic!("expected I to be an instance declaration"),
         };
-        let (instance, _ns) =
-            instance_from_diag(&toplevel, &diag.theory.definition, &diag).unwrap();
+        let (instance, _ns) = instance_from_def(&toplevel, &def.theory.definition, &def).unwrap();
 
         let e_qname: QualifiedName = vec![name_seg("e")].into();
         let e_fiber: QualifiedName = vec![name_seg("E")].into();
