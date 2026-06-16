@@ -174,10 +174,10 @@ impl<'a> Evaluator<'a> {
     /// type of instance morphisms out of the instance `D`.
     ///
     /// By Yoneda such a morphism is determined by where `D`'s generators
-    /// land, so each generator becomes an `@over`-typed field and each
+    /// land, so each generator becomes an `Over`-typed field and each
     /// sub-instance recurses. A *fiber* equation (`mor(gen) := target`)
     /// is exactly a condition cutting this down from the free product of
-    /// `@over` fields to the presented representable — the equalizer — so
+    /// `Over` fields to the presented representable — the equalizer — so
     /// each becomes an `Id`-typed field witnessing that the constraint
     /// holds for the morphism's images. Morphism equations (`==`)
     /// constrain the model rather than the generator images, so they are
@@ -636,9 +636,9 @@ impl<'a> Evaluator<'a> {
     }
 }
 
-/// The `@over` type of a *fiber* equation's side, if it is one.
+/// The `Over` type of a *fiber* equation's side, if it is one.
 ///
-/// Fiber equations (`mor(gen) := target`) relate `@over`-typed terms; their
+/// Fiber equations (`mor(gen) := target`) relate `Over`-typed terms; their
 /// common type is recoverable from the left-hand side. Returns `None` for
 /// morphism (`==`) equations, which are not equalizer conditions on an
 /// instance's generator images (see [`Evaluator::synth_instance_body_ty`]).
