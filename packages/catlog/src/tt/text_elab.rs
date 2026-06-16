@@ -248,11 +248,6 @@ pub struct Elaborator<'a> {
     loc: Option<Loc>,
     ctx: Context,
     next_meta: usize,
-    /// Stack of model types currently being instantiated, used by the
-    /// generator (fiber) and applied-codomain-morphism arms to recover
-    /// the codomain. The top of the stack is the innermost enclosing
-    /// instance body.
-    instance_codomains: Vec<TyV>,
 }
 
 struct ElaboratorCheckpoint {
@@ -272,20 +267,14 @@ impl<'a> Elaborator<'a> {
             loc: None,
             ctx: Context::new(),
             next_meta: 0,
-            instance_codomains: Vec::new(),
         }
     }
 
-    fn push_instance_codomain(&mut self, ty: TyV) {
-        self.instance_codomains.push(ty);
-    }
-
-    fn pop_instance_codomain(&mut self) {
-        self.instance_codomains.pop();
-    }
-
-    fn current_instance_codomain(&self) -> Option<&TyV> {
-        self.instance_codomains.last()
+    /// The codomain model of the instance body currently being
+    /// elaborated, if any. Its fields are the codomain's generators,
+    /// looked up by name by the instance-clause arms.
+    fn instance_codomain(&self) -> Option<Rc<RecordV>> {
+        self.ctx.codomain.clone()
     }
 
     fn theory(&self) -> &TheoryDef {
@@ -384,7 +373,7 @@ impl<'a> Elaborator<'a> {
         arg_ty: TyV,
         arg_label_str: &str,
     ) -> (TmS, TmV, TyV) {
-        let Some(model_ty) = self.current_instance_codomain().cloned() else {
+        let Some(codomain) = self.instance_codomain() else {
             return self
                 .syn_error("applied codomain morphism is only allowed inside an instance body");
         };
@@ -396,10 +385,7 @@ impl<'a> Elaborator<'a> {
         };
         let f_label = label_seg(f);
         let f_name = name_seg(f);
-        let TyV_::Record(cod_r) = &*model_ty else {
-            return self.syn_error("instance codomain is not a record type");
-        };
-        let Some(mor_ty_s) = cod_r.fields.get(f_name) else {
+        let Some(mor_ty_s) = codomain.fields.get(f_name) else {
             return self.syn_error(format!("no such codomain morphism {f_name}"));
         };
         let TyS_::Morphism(_, dom_s, cod_s) = &**mor_ty_s else {
@@ -425,17 +411,17 @@ impl<'a> Elaborator<'a> {
 
     /// Elaborate an instance body — a tuple of `name : type`, `field
     /// := [names]`, and `mor(arg) := target` clauses — against the
-    /// enclosing sketch type `model_ty`. Produces a [`TmS_::Instance`]
+    /// enclosing sketch type `codomain`. Produces a [`TmS_::Instance`]
     /// / [`TmV_::Instance`] pair whose payload is the instance's
     /// generator slots, equation witnesses, and sub-instance imports.
     ///
-    /// The codomain is pushed onto the instance-codomain stack so that
-    /// generator (fiber) clauses and applied-codomain-morphism syntax
-    /// inside the body resolve correctly.
-    fn instance_body(&mut self, model_ty: &TyV, n: &FNtn) -> (TmS, TmV) {
-        self.push_instance_codomain(model_ty.clone());
+    /// The codomain is set on the context (and restored on exit) so
+    /// that generator (fiber) clauses and applied-codomain-morphism
+    /// syntax inside the body resolve their generators by name.
+    fn instance_body(&mut self, codomain: &RecordV, n: &FNtn) -> (TmS, TmV) {
+        let saved = self.ctx.codomain.replace(Rc::new(codomain.clone()));
         let result = self.instance_body_inner(n);
-        self.pop_instance_codomain();
+        self.ctx.codomain = saved;
         result
     }
 
@@ -531,21 +517,16 @@ impl<'a> Elaborator<'a> {
                             .iter()
                             .all(|e| matches!(e.ast0(), App2(L(_, Keyword(":=")), _, _))) =>
                 {
-                    let Some(codomain) = elab.current_instance_codomain().cloned() else {
+                    let Some(codomain) = elab.instance_codomain() else {
                         elab.error::<()>(
                             "mapping-literal assignment is only allowed inside an instance body",
                         );
                         failed = true;
                         continue;
                     };
-                    let TyV_::Record(cod_r) = &*codomain else {
-                        elab.error::<()>("instance codomain is not a record type");
-                        failed = true;
-                        continue;
-                    };
                     let f_seg = name_seg(*field_name);
                     let f_label = label_seg(*field_name);
-                    let Some(mor_ty_s) = cod_r.fields.get(f_seg) else {
+                    let Some(mor_ty_s) = codomain.fields.get(f_seg) else {
                         elab.error::<()>(format!("no such codomain field {field_name}"));
                         failed = true;
                         continue;
@@ -607,7 +588,7 @@ impl<'a> Elaborator<'a> {
                 // `field := [n1, n2, ...]` — set-literal assignment to
                 // an object-typed field of the codomain.
                 App2(L(_, Keyword(":=")), L(_, Var(field_name)), L(_, Tuple(name_ns))) => {
-                    let Some(codomain) = elab.current_instance_codomain().cloned() else {
+                    let Some(codomain) = elab.instance_codomain() else {
                         elab.error::<()>(
                             "set-literal field assignment is only allowed inside an \
                              instance body",
@@ -615,14 +596,9 @@ impl<'a> Elaborator<'a> {
                         failed = true;
                         continue;
                     };
-                    let TyV_::Record(cod_r) = &*codomain else {
-                        elab.error::<()>("instance codomain is not a record type");
-                        failed = true;
-                        continue;
-                    };
                     let f_seg = name_seg(*field_name);
                     let f_label = label_seg(*field_name);
-                    let Some(field_ty_s) = cod_r.fields.get(f_seg) else {
+                    let Some(field_ty_s) = codomain.fields.get(f_seg) else {
                         elab.error::<()>(format!("no such codomain field {field_name}"));
                         failed = true;
                         continue;
@@ -1115,7 +1091,7 @@ impl<'a> Elaborator<'a> {
                     }
                     _ => false,
                 }) {
-                    return elab.instance_body(ty, n);
+                    return elab.instance_body(r, n);
                 }
                 // Mapping-literal disambiguation: `field := [k := v, ...]`
                 // where the LHS field is a *morphism* of the enclosing
@@ -1137,7 +1113,7 @@ impl<'a> Elaborator<'a> {
                     };
                     matches!(&**field_ty_s, TyS_::Morphism(_, _, _))
                 }) {
-                    return elab.instance_body(ty, n);
+                    return elab.instance_body(r, n);
                 }
                 if r.fields.len() != field_ns.len() {
                     return elab.chk_error(format!(
