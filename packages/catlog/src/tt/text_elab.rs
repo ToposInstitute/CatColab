@@ -425,6 +425,30 @@ impl<'a> Elaborator<'a> {
         result
     }
 
+    /// Elaborate the clauses of an instance body (the tuple `n`) into the
+    /// payload of an [`InstanceBodyS`]/[`InstanceBodyV`]. The codomain is
+    /// already set on the context by [`Self::instance_body`].
+    ///
+    /// Steps:
+    /// 1. Set up empty accumulators (see below) for the clauses to fill.
+    /// 2. Walk each clause, dispatching on its surface shape into one of
+    ///    the forms below. A malformed clause reports an error and sets
+    ///    `failed`, but the walk continues so a single pass surfaces as
+    ///    many errors as possible.
+    /// 3. If any clause failed, return an empty instance (errors already
+    ///    reported); otherwise assemble the accumulators into the paired
+    ///    instance terms.
+    ///
+    /// The clause forms, in match order:
+    /// - `name : type` — dispatched on the *elaborated type's* shape: a
+    ///   fiber type `Over(p)` declares a generator; a record type is a
+    ///   sub-instance import (must name a top-level instance def); an
+    ///   identity type `a == b` is an anonymous equation.
+    /// - `field := [k := t, ...]` — mapping-literal: sugar for a batch of
+    ///   per-key equations `field(k) := t` against a codomain *morphism*.
+    /// - `field := [n1, n2, ...]` — set-literal: declares generators in
+    ///   the fiber over a codomain *object* `field`.
+    /// - `mor(arg) := target` — a single equation witness.
     fn instance_body_inner(&mut self, n: &FNtn) -> (TmS, TmV) {
         let mut elab = self.enter(n.loc());
         let Tuple(field_ns) = n.ast0() else {
@@ -434,6 +458,10 @@ impl<'a> Elaborator<'a> {
                 TmV::instance(InstanceBodyV::default()),
             );
         };
+        // Accumulators, assembled into the instance payload at the end:
+        // generators (with the codomain fiber path each lives over),
+        // equation witnesses (quoted lhs/rhs pairs), and imported
+        // sub-instances. `_s`/`_v` hold the syntactic / value forms.
         let mut gens: IndexMap<FieldName, (LabelSegment, Vec<(FieldName, LabelSegment)>)> =
             IndexMap::new();
         let mut eqns_s: Vec<(TmS, TmS)> = Vec::new();
@@ -653,6 +681,9 @@ impl<'a> Elaborator<'a> {
             }
         }
 
+        // Assemble the accumulators into the instance payload, unless a
+        // clause failed — then errors are already reported, so bail with
+        // an empty instance rather than a half-built one.
         if failed {
             return (
                 TmS::instance(InstanceBodyS::default()),
