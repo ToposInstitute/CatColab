@@ -354,6 +354,130 @@ export const morphismType = <Dom, Cod, Name extends string>(morType?: MorType) =
         [typeKind]: "morphism",
     }) as MorphismType<Dom, Cod, Name>;
 
+type ObjectTypeSpec = string | ObType;
+type ObjectName<TObjects extends Record<string, ObjectTypeSpec>> = keyof TObjects & string;
+type EndpointSpec<TObjects extends Record<string, ObjectTypeSpec>> =
+    | ObjectName<TObjects>
+    | readonly [ObjectName<TObjects>];
+
+type GeneratedObjectTypes<TObjects extends Record<string, ObjectTypeSpec>> = {
+    readonly [K in keyof TObjects & string]: ObjectType<K>;
+};
+
+type EndpointType<
+    TObjects extends Record<string, ObjectTypeSpec>,
+    TEndpoint,
+> = TEndpoint extends readonly [infer TName extends ObjectName<TObjects>]
+    ? ObjectCell<ObjectType<TName>>[]
+    : TEndpoint extends ObjectName<TObjects>
+      ? ObjectCell<ObjectType<TEndpoint>>
+      : never;
+
+type GeneratedMorphismSpec<TObjects extends Record<string, ObjectTypeSpec>> = {
+    readonly dom: EndpointSpec<TObjects>;
+    readonly cod: EndpointSpec<TObjects>;
+    readonly morType?: MorType;
+};
+
+type GeneratedMorphismTypes<
+    TObjects extends Record<string, ObjectTypeSpec>,
+    TMorphisms extends Record<string, GeneratedMorphismSpec<TObjects>>,
+> = {
+    readonly [K in keyof TMorphisms & string]: MorphismType<
+        EndpointType<TObjects, TMorphisms[K]["dom"]>,
+        EndpointType<TObjects, TMorphisms[K]["cod"]>,
+        K
+    >;
+};
+
+type GeneratedCellTypes<
+    TObjects extends Record<string, ObjectTypeSpec>,
+    TMorphisms extends Record<string, GeneratedMorphismSpec<TObjects>>,
+> = GeneratedObjectTypes<TObjects> & GeneratedMorphismTypes<TObjects, TMorphisms>;
+
+type GeneratedLogic<
+    TTheory extends string,
+    TObjects extends Record<string, ObjectTypeSpec>,
+    TMorphisms extends Record<string, GeneratedMorphismSpec<TObjects>>,
+> = ModelLogic<TTheory, GeneratedCellTypes<TObjects, TMorphisms>>;
+
+type GeneratedLogicSpec<
+    TTheory extends string,
+    TObjects extends Record<string, ObjectTypeSpec>,
+    TMorphisms extends Record<string, GeneratedMorphismSpec<TObjects>>,
+> = {
+    readonly theory: TTheory;
+    readonly coreTheory: DblTheory;
+    readonly objects: TObjects;
+    readonly morphisms: TMorphisms;
+    readonly inclusions?: readonly string[];
+    readonly migrations?: readonly ModelMigration[];
+};
+
+const objectTypeFromSpec = <Name extends string>(spec: ObjectTypeSpec) =>
+    ({
+        ...(typeof spec === "string" ? { tag: "Basic", content: spec } : spec),
+        [typeKind]: "object",
+    }) as ObjectType<Name>;
+
+const objectSpecToObType = (spec: ObjectTypeSpec): ObType =>
+    typeof spec === "string" ? { tag: "Basic", content: spec } : spec;
+
+const endpointObjectName = <TObjects extends Record<string, ObjectTypeSpec>>(
+    endpoint: EndpointSpec<TObjects>,
+): ObjectName<TObjects> =>
+    (Array.isArray(endpoint) ? endpoint[0] : endpoint) as ObjectName<TObjects>;
+
+const defaultGeneratedMorType = <TObjects extends Record<string, ObjectTypeSpec>>(
+    objects: TObjects,
+    name: string,
+    spec: GeneratedMorphismSpec<TObjects>,
+): MorType => {
+    const dom = endpointObjectName(spec.dom);
+    const cod = endpointObjectName(spec.cod);
+    if (dom === cod) {
+        return { tag: "Hom", content: objectSpecToObType(objects[dom]!) };
+    }
+    return { tag: "Basic", content: name };
+};
+
+/**
+ * Generate a typed `ModelLogic` from a compact declaration of object and
+ * morphism cell types. Object keys become typed object-cell constructors;
+ * morphism endpoint references point at those object keys. Use `["Object"]`
+ * for array endpoints such as Petri-net transition boundaries.
+ */
+export function defineModelLogic<
+    const TTheory extends string,
+    const TObjects extends Record<string, ObjectTypeSpec>,
+    const TMorphisms extends Record<string, GeneratedMorphismSpec<TObjects>>,
+>(
+    spec: GeneratedLogicSpec<TTheory, TObjects, TMorphisms>,
+): GeneratedLogic<TTheory, TObjects, TMorphisms> {
+    const objectTypes = Object.fromEntries(
+        Object.entries(spec.objects).map(([name, objectSpec]) => [
+            name,
+            objectTypeFromSpec(objectSpec),
+        ]),
+    );
+    const morphismTypes = Object.fromEntries(
+        Object.entries(spec.morphisms).map(([name, morphismSpec]) => [
+            name,
+            morphismType(
+                morphismSpec.morType ?? defaultGeneratedMorType(spec.objects, name, morphismSpec),
+            ),
+        ]),
+    );
+
+    return {
+        theory: spec.theory,
+        coreTheory: spec.coreTheory,
+        cellTypes: { ...objectTypes, ...morphismTypes },
+        ...(spec.inclusions ? { inclusions: spec.inclusions } : {}),
+        ...(spec.migrations ? { migrations: spec.migrations } : {}),
+    } as GeneratedLogic<TTheory, TObjects, TMorphisms>;
+}
+
 /**
  * Typed filter for cells with exactly the given object or morphism type.
  * TypeScript only narrows `===` comparisons on unit types, so a comparison
