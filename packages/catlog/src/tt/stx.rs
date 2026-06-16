@@ -196,7 +196,7 @@ impl ToDoc for TyS {
             ),
             TyS_::Unit => t("Unit"),
             TyS_::Meta(mv) => t(format!("?{}", mv.id)),
-            TyS_::Over(path) => t(format!("@over{}", path_to_string(path))),
+            TyS_::Over(path) => t(format!("Over({})", object_path_to_string(path))),
         }
     }
 }
@@ -209,9 +209,19 @@ fn path_to_string(path: &[(FieldName, LabelSegment)]) -> String {
     out
 }
 
+/// Render an object path as a dotted label string with no leading dot
+/// (e.g. `V`, or `we.E` for a nested path), for use inside `Over(...)`.
+fn object_path_to_string(path: &[(FieldName, LabelSegment)]) -> String {
+    path.iter().map(|(_, seg)| seg.to_string()).collect::<Vec<_>>().join(".")
+}
+
 fn instance_body_to_doc<'a>(body: &InstanceBodyS) -> D<'a> {
     let gens = body.generators.iter().map(|(_, (label, path))| {
-        binop(t(":"), t(format!("{label}")), t(format!("@over{}", path_to_string(path))))
+        binop(
+            t(":"),
+            t(format!("{label}")),
+            t(format!("Over({})", object_path_to_string(path))),
+        )
     });
     let eqns = body
         .equations
@@ -303,11 +313,11 @@ pub enum TmS_ {
 ///
 /// - `generators` maps each generator's local name (within this
 ///   instance) to a path into the model identifying which object
-///   generator's fiber it lives over. The path mirrors what a
-///   surface `name : @over <path>` clause used to declare.
-/// - `equations` is a list of `(lhs, rhs)` pairs over either `@over`
-///   or morphism types. Order is preserved but identity isn't
-///   semantically significant.
+///   generator's fiber it lives over. Generators are introduced by
+///   surface set-literal clauses `field := [...]` in the instance body.
+/// - `equations` is a list of `(lhs, rhs)` pairs over either fiber
+///   ([`TyS_::Over`]) or morphism types. Order is preserved but identity
+///   isn't semantically significant.
 /// - `sub_instances` maps each sub-instance import's local name to a
 ///   nested instance term. This is what surface `we : Edge` lowers to.
 #[derive(Default)]

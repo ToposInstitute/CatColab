@@ -163,9 +163,7 @@ impl TopElaborator {
                         let (_, ret_ty_v) = elab.ty(ty_n);
                         let (tm_s, tm_v) = elab.chk(&ret_ty_v, tm_n);
                         // A term in the empty context. The body may be an
-                        // ordinary constant or a [`TmV_::Instance`] (when it
-                        // was instance-shaped); both are just terms, so the
-                        // declaration is the same `DefConst` either way.
+                        // ordinary constant or a [`TmV_::Instance`].
                         // Instance-ness is later read off the term value.
                         Some(TopElabResult::Declaration(
                             name,
@@ -250,8 +248,8 @@ pub struct Elaborator<'a> {
     loc: Option<Loc>,
     ctx: Context,
     next_meta: usize,
-    /// Stack of model types currently being instantiated, used by
-    /// `@over .X` and the applied-codomain-morphism arms to recover
+    /// Stack of model types currently being instantiated, used by the
+    /// generator (fiber) and applied-codomain-morphism arms to recover
     /// the codomain. The top of the stack is the innermost enclosing
     /// instance body.
     instance_codomains: Vec<TyV>,
@@ -432,7 +430,7 @@ impl<'a> Elaborator<'a> {
     /// generator slots, equation witnesses, and sub-instance imports.
     ///
     /// The codomain is pushed onto the instance-codomain stack so that
-    /// `@over .X` annotations and applied-codomain-morphism syntax
+    /// generator (fiber) clauses and applied-codomain-morphism syntax
     /// inside the body resolve correctly.
     fn instance_body(&mut self, model_ty: &TyV, n: &FNtn) -> (TmS, TmV) {
         self.push_instance_codomain(model_ty.clone());
@@ -517,7 +515,7 @@ impl<'a> Elaborator<'a> {
                             let quoted = elab.evaluator().quote_ty(&ty_v);
                             elab.error::<()>(format!(
                                 "instance clause {name_str} has type {quoted}, expected \
-                                 @over, a sub-sketch, or an equation",
+                                 an element over an object generator, a sub-sketch, or an equation",
                             ));
                             failed = true;
                         }
@@ -579,14 +577,17 @@ impl<'a> Elaborator<'a> {
                         let TyV_::Over(key_path) = &*key_ty else {
                             let quoted = elab.evaluator().quote_ty(&key_ty);
                             elab.error::<()>(format!(
-                                "mapping-literal key has type {quoted}, expected an @over type",
+                                "mapping-literal key has type {quoted}, expected an element over {}",
+                                object_path_str(&dom_path),
                             ));
                             entry_failed = true;
                             break;
                         };
                         if key_path != &dom_path {
                             elab.error::<()>(format!(
-                                "mapping-literal key's @over path does not match the source of {field_name}",
+                                "mapping-literal key is an element over {}, but {field_name} expects an element over {}",
+                                object_path_str(key_path),
+                                object_path_str(&dom_path),
                             ));
                             entry_failed = true;
                             break;
@@ -657,7 +658,7 @@ impl<'a> Elaborator<'a> {
                         elab.loc = Some(lhs_n.loc());
                         elab.error::<()>(
                             "mapping-entry clause `mor(arg) := target` requires the LHS \
-                             to have a morphism or @over type",
+                             to be a morphism or an element over an object",
                         );
                         failed = true;
                         continue;
@@ -896,7 +897,9 @@ impl<'a> Elaborator<'a> {
                 if !matches!(&*tm1_ty, TyV_::Morphism(_, _, _) | TyV_::Over(_)) {
                     elab.loc = Some(tm1_n.loc());
                     return elab
-                        .ty_error("Equality types are only supported for morphisms and @over");
+                        .ty_error(
+                            "Equality types are only supported for morphisms and elements over an object",
+                        );
                 }
                 if let Err(e) = elab.evaluator().convertible_ty(&tm1_ty, &tm2_ty) {
                     let eval = elab.evaluator();
@@ -1218,6 +1221,12 @@ impl<'a> Elaborator<'a> {
 /// returns `[]` and `Proj(Var(self), E, E_label)` returns `[(E, E_label)]`,
 /// matching the path representation produced by the surface `.E` syntax.
 /// Returns `None` if the term has any other shape.
+/// Render an object path (e.g. `[(V, V)]`) as a dotted label string
+/// (e.g. `V`, or `we.E` for a nested path) for use in error messages.
+fn object_path_str(path: &[(FieldName, LabelSegment)]) -> String {
+    path.iter().map(|(_, seg)| seg.to_string()).collect::<Vec<_>>().join(".")
+}
+
 fn tms_to_path(tm: &TmS) -> Option<Vec<(NameSegment, LabelSegment)>> {
     match &**tm {
         TmS_::Var(_, _, _) => Some(vec![]),
