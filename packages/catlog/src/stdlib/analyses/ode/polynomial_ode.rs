@@ -199,7 +199,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        latex::{Latex, LatexEquation},
+        latex::{Latex, LatexEquation, LatexEquations},
         stdlib::{models::*, theories::*},
         tt,
     };
@@ -224,7 +224,7 @@ mod tests {
         let th = Rc::new(th_signed_polynomial_ode_system());
         let model = signed_lotka_volterra_dynamics(th);
         let sys = PolynomialODEAnalysis::default().build_system(&model);
-        let expected = vec![
+        let expected = LatexEquations(vec![
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} A".to_string()),
                 rhs: Latex("A_growth \\cdot A - BA_interaction \\cdot A \\cdot B".to_string()),
@@ -233,7 +233,7 @@ mod tests {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} B".to_string()),
                 rhs: Latex("AB_interaction \\cdot A \\cdot B + B_growth \\cdot B".to_string()),
             },
-        ];
+        ]);
         assert_eq!(expected, sys.to_latex_equations());
     }
 

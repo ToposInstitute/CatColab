@@ -58,9 +58,7 @@ impl fmt::Display for LCCParameter {
 impl ToLatex for LCCParameter {
     fn to_latex(&self) -> Latex {
         match self {
-            Self::Parameter { morphism } => {
-                Latex(format!("\\lambda_{{{morphism}}}"))
-            }
+            Self::Parameter { morphism } => Latex(format!("\\lambda_{{{morphism}}}")),
         }
     }
 }
@@ -205,7 +203,7 @@ mod test {
     use super::*;
     use crate::{
         dbl::model::MutDblModel,
-        latex::LatexEquation,
+        latex::{LatexEquation, LatexEquations},
         stdlib::{models::*, theories::*},
     };
 
@@ -254,16 +252,16 @@ mod test {
         let th = Rc::new(th_signed_category());
         let model = negative_feedback(th);
         let sys = LCCAnalysis::default().build_system(&model);
-        let expected = vec![
+        let expected = LatexEquations(vec![
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string()),
-                rhs: Latex("-Parameter(negative) \\cdot y".to_string()),
+                rhs: Latex("-\\lambda_{negative} \\cdot y".to_string()),
             },
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string()),
-                rhs: Latex("Parameter(positive) \\cdot x".to_string()),
+                rhs: Latex("\\labmda{positive} \\cdot x".to_string()),
             },
-        ];
+        ]);
         assert_eq!(expected, sys.to_latex_equations());
     }
 

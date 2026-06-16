@@ -12,7 +12,7 @@ use num_traits::{One, Pow, Zero};
 #[cfg(test)]
 use super::ODEProblem;
 use super::ODESystem;
-use crate::latex::{Latex, LatexEquation, LatexEquations, ToLatex, ToLatexEquations};
+use crate::latex::{Latex, LatexEquation, LatexEquations, ToLatex};
 use crate::zero::{alg::Polynomial, rig::DisplayCoef};
 
 /// A system of polynomial differential equations.
@@ -91,19 +91,21 @@ where
     }
 
     /// Converts to equations as LaTeX strings.
-    pub fn to_latex_equations(&self) -> Vec<LatexEquation>
+    pub fn to_latex_equations(&self) -> LatexEquations
     where
         Var: Display,
         Coef: Display + DisplayCoef + Clone + PartialEq + One + Neg<Output = Coef>,
         Exp: Display + PartialEq + One,
     {
-        self.components
-            .iter()
-            .map(|(var, poly)| LatexEquation {
-                lhs: Latex(format!("\\frac{{\\mathrm{{d}}}}{{\\mathrm{{d}}t}} {var}")),
-                rhs: poly.to_latex(),
-            })
-            .collect()
+        LatexEquations(
+            self.components
+                .iter()
+                .map(|(var, poly)| LatexEquation {
+                    lhs: Latex(format!("\\frac{{\\mathrm{{d}}}}{{\\mathrm{{d}}t}} {var}")),
+                    rhs: poly.to_latex(),
+                })
+                .collect(),
+        )
     }
 }
 
@@ -154,32 +156,6 @@ where
             system.add_term(var, term);
         }
         system
-    }
-}
-
-impl<Var, Coef, Exp> ToLatexEquations for PolynomialSystem<Var, Coef, Exp>
-where
-    Var: Display,
-    Coef: Display + PartialEq + One + DisplayCoef + Clone + Neg<Output = Coef>,
-    Exp: Display + PartialEq + One,
-{
-
-    /// Converts to equations as LaTeX strings.
-    fn to_latex_equations(&self) -> LatexEquations
-    where
-        Var: Display,
-        Coef: Display + PartialEq + One + Neg<Output = Coef>,
-        Exp: Display + PartialEq + One,
-    {
-        LatexEquations(
-            self.components
-                .iter()
-                .map(|(var, poly)| LatexEquation {
-                    lhs: Latex(format!("\\frac{{\\mathrm{{d}}}}{{\\mathrm{{d}}t}} {var}")),
-                    rhs: poly.to_latex(),
-                })
-                .collect()
-        )
     }
 }
 

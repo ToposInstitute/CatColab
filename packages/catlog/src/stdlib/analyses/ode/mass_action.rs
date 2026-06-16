@@ -544,8 +544,7 @@ mod tests {
     use std::rc::Rc;
 
     use super::*;
-    use crate::simulate::ode::LatexEquation;
-    use crate::stdlib::{analyses, models::*, theories::*};
+    use crate::{latex::{LatexEquation, LatexEquations}, stdlib::{analyses, models::*, theories::*}};
 
     // Tests for stock-flow diagrams. These all use the backward_link() model,
     // which has a single flow x==f==>y and a single link y->f.
@@ -647,16 +646,16 @@ mod tests {
             ..StockFlowMassActionAnalysis::default()
         }
         .build_system(&model);
-        let expected = vec![
+        let expected = LatexEquations(vec![
             LatexEquation {
-                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string(),
-                rhs: "-Outgoing(f) \\cdot x \\cdot y".to_string(),
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string()),
+                rhs: Latex("-\\kappa_{f} \\cdot x \\cdot y".to_string()),
             },
             LatexEquation {
-                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string(),
-                rhs: "Incoming(f) \\cdot x \\cdot y".to_string(),
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string()),
+                rhs: Latex("\\rho_{f} \\cdot x \\cdot y".to_string()),
             },
-        ];
+        ]);
         assert_eq!(expected, sys.to_latex_equations());
     }
 }
