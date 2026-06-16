@@ -99,10 +99,10 @@ pub enum TyV_ {
     /// A metavariable, also see [TyS_::Meta].
     Meta(MetaVar),
     /// The type of terms in a fiber over an object generator of some
-    /// diagram's codomain model.
+    /// instance's codomain model.
     ///
     /// See [TyS_::Over] for the syntactic counterpart and explanation
-    /// of why diagram identity is not part of this type.
+    /// of why instance identity is not part of this type.
     Over(Vec<(FieldName, LabelSegment)>),
 }
 
@@ -248,7 +248,7 @@ pub enum TmV_ {
     Neu(TmN, TyV),
     /// Application of an object operation in the theory.
     App(VarName, TmV),
-    /// Application of a codomain morphism to an [`@over`-typed](TyV_::Over)
+    /// Application of a codomain morphism to an [`Over`-typed](TyV_::Over)
     /// term. See [`TmS_::OverApp`] for the syntactic counterpart and
     /// argument-by-argument documentation.
     OverApp(FieldName, LabelSegment, Vec<(FieldName, LabelSegment)>, TmV),

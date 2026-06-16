@@ -471,7 +471,7 @@ fn extract_instance_body(
     Ok(())
 }
 
-/// Convert an `@over`-typed term value into a [`DiscreteInstanceTerm`],
+/// Convert an `Over`-typed term value into a [`DiscreteInstanceTerm`],
 /// prefixing each generator name with the path into any enclosing
 /// sub-instances.
 ///
