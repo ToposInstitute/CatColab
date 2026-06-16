@@ -6,6 +6,7 @@
 //! N.B. Although the software is called "LaTeX" we will consistently ignore the
 //! correct capitalisation and simply write latex or Latex in our code.
 
+use duplicate::duplicate_item;
 use std::fmt;
 
 #[cfg(feature = "serde")]
@@ -13,7 +14,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
-/// We should mark which strings are to be parsed as LaTeX.
+/// We should mark which strings are to be parsed as Latex.
 #[derive(Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Latex(pub String);
@@ -25,16 +26,20 @@ impl fmt::Display for Latex {
     }
 }
 
-/// An object that can be rendered to LaTeX.
-pub trait ToLatex: fmt::Display {
-    /// Convert the object to its LaTeX representation. Here the default
-    /// implementation simply falls back to `Display`.
+/// An object that can be rendered to Latex.
+pub trait ToLatex {
+    /// Convert the object to its Latex representation.
+    fn to_latex(&self) -> Latex;
+}
+
+#[duplicate_item(T; [f32]; [f64]; [i8]; [i32]; [i64]; [u32]; [u64]; [usize]; [char]; [String])]
+impl ToLatex for T {
     fn to_latex(&self) -> Latex {
-      Latex(self.to_string())
+        Latex(self.to_string())
     }
 }
 
-/// An equation in LaTeX format with a left-hand side and a right-hand side.
+/// An equation in Latex format with a left-hand side and a right-hand side.
 #[derive(Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
@@ -46,7 +51,7 @@ pub struct LatexEquation {
     pub rhs: Latex,
 }
 
-/// Symbolic equations in LaTeX format.
+/// Symbolic equations in Latex format.
 #[derive(Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]

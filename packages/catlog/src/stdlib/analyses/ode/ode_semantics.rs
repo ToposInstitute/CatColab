@@ -30,10 +30,15 @@ use crate::{
         modal::{List, ModeApp},
         model::{DiscreteDblModel, DiscreteTabModel, ModalDblModel, ModalOb, MutDblModel},
         theory::{NonUnital, Unital},
-    }, latex::{Latex, ToLatex}, one::FgCategory, simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem}, stdlib::{
+    },
+    latex::{Latex, ToLatex},
+    one::FgCategory,
+    simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem},
+    stdlib::{
         analyses::ode::{ODEAnalysis, Parameter, PolynomialODEAnalysis},
         th_signed_polynomial_ode_system,
-    }, zero::{QualifiedName, name}
+    },
+    zero::{QualifiedName, name},
 };
 
 /// The trait for an ODE semantics on models.
@@ -76,9 +81,9 @@ pub trait ODEParameterType: Eq + Ord + Clone + fmt::Display + ToLatex {}
 
 /// The simplest type for parameters is `QualifiedName`.
 impl ToLatex for QualifiedName {
-  fn to_latex(&self) -> Latex {
-    Latex(self.to_string())
-  }
+    fn to_latex(&self) -> Latex {
+        Latex(self.to_string())
+    }
 }
 
 impl ODEParameterType for QualifiedName {}

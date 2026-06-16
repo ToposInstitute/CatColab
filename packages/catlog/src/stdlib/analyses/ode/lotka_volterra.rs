@@ -67,8 +67,8 @@ impl fmt::Display for LotkaVolterraParameter {
 impl ToLatex for LotkaVolterraParameter {
     fn to_latex(&self) -> Latex {
         match self {
-            Self::Growth { variable } => Latex(format!("\\g_{{{variable}}}")),
-            Self::Interaction { link } => Latex(format!("\\k_{{{link}}}")),
+            Self::Growth { variable } => Latex(format!("g_{{{variable}}}")),
+            Self::Interaction { link } => Latex(format!("k_{{{link}}}")),
         }
     }
 }

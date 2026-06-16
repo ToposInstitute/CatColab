@@ -252,6 +252,7 @@ mod test {
         let th = Rc::new(th_signed_category());
         let model = negative_feedback(th);
         let sys = LCCAnalysis::default().build_system(&model);
+        // .extend_scalars(|param| param.map_variables(to_latex))
         let expected = LatexEquations(vec![
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string()),
@@ -259,7 +260,7 @@ mod test {
             },
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string()),
-                rhs: Latex("\\labmda{positive} \\cdot x".to_string()),
+                rhs: Latex("\\lambda_{positive} \\cdot x".to_string()),
             },
         ]);
         assert_eq!(expected, sys.to_latex_equations());

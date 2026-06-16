@@ -175,15 +175,11 @@ impl ToLatex for MassActionParameter {
                 (
                     Direction::IncomingFlow,
                     RateParameter::PerStock { flow: transition, stock: place },
-                ) => {
-                    Latex(format!("\\rho_{{{transition}}}^{{\\text{{{place}}}}}"))
-                }
+                ) => Latex(format!("\\rho_{{{transition}}}^{{\\text{{{place}}}}}")),
                 (
                     Direction::OutgoingFlow,
                     RateParameter::PerStock { flow: transition, stock: place },
-                ) => {
-                    Latex(format!("\\kappa_{{{transition}}}^{{\\text{{{place}}}}}"))
-                }
+                ) => Latex(format!("\\kappa_{{{transition}}}^{{\\text{{{place}}}}}")),
             },
         }
     }
@@ -544,7 +540,10 @@ mod tests {
     use std::rc::Rc;
 
     use super::*;
-    use crate::{latex::{LatexEquation, LatexEquations}, stdlib::{analyses, models::*, theories::*}};
+    use crate::{
+        latex::{LatexEquation, LatexEquations},
+        stdlib::{analyses, models::*, theories::*},
+    };
 
     // Tests for stock-flow diagrams. These all use the backward_link() model,
     // which has a single flow x==f==>y and a single link y->f.

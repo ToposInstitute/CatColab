@@ -93,9 +93,9 @@ where
     /// Converts to equations as LaTeX strings.
     pub fn to_latex_equations(&self) -> LatexEquations
     where
-        Var: Display,
-        Coef: Display + DisplayCoef + Clone + PartialEq + One + Neg<Output = Coef>,
-        Exp: Display + PartialEq + One,
+        Var: Display + ToLatex,
+        Coef: Display + ToLatex + DisplayCoef + Clone + PartialEq + One + Neg<Output = Coef>,
+        Exp: Display + ToLatex + PartialEq + One,
     {
         LatexEquations(
             self.components

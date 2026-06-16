@@ -20,8 +20,7 @@ pub(crate) fn latex_ob_names(model: &DblModel) -> impl Fn(&QualifiedName) -> Str
 /// falls back to the domain→codomain format (e.g., `X \to Y`).
 pub(crate) fn latex_mor_names(model: &DblModel) -> impl Fn(&QualifiedName) -> String {
     // Returns a LaTeX fragment for a morphism, suitable for use as a subscript.
-    // Named morphisms produce `\text{name}`, unnamed ones produce
-    // `\text{dom} \to \text{cod}` so that `\to` is in math mode.
+    // Named morphisms produce `\text{name}`, unnamed ones produce `\text{dom} \to \text{cod}`.
     let morphism_subscript = |morphism: &QualifiedName| -> String {
         if let Some(label) = model.mor_namespace.label(morphism) {
             format!("\\text{{{label}}}")

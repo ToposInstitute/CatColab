@@ -151,22 +151,23 @@ where
 
 impl<Var, Coef, Exp> ToLatex for Polynomial<Var, Coef, Exp>
 where
-    Var: Display,
-    Coef: Display + DisplayCoef + Clone + PartialEq + One + Neg<Output = Coef>,
-    Exp: Display + PartialEq + One,
+    Var: Display + ToLatex,
+    Coef: DisplayCoef + Clone + PartialEq + One + Neg<Output = Coef> + ToLatex,
+    Exp: Display + ToLatex + PartialEq + One,
 {
     /// Convert to a LaTeX string, formatting each monomial via [`Monomial::to_latex`].
     fn to_latex(&self) -> Latex {
         let fmt_term = |coef: &Coef, monomial: &Monomial<Var, Exp>| -> String {
             let Latex(monomial) = monomial.to_latex();
+            let Latex(coef_latex) = coef.to_latex();
             if coef.is_one() {
                 monomial
             } else if *coef == Coef::one().neg() {
                 format!("-{monomial}")
             } else if coef.needs_parentheses() {
-                format!("({coef}) \\cdot {monomial}")
+                format!("({coef_latex}) \\cdot {monomial}")
             } else {
-                format!("{coef} \\cdot {monomial}")
+                format!("{coef_latex} \\cdot {monomial}")
             }
         };
 
