@@ -7,19 +7,27 @@ typed cell constructors and the `ModelLogic` value used by notebooks.
 
 ```ts
 import { defineModelLogic, binder, byType } from "catcolab-documents";
+import type { MorType, ObType } from "catcolab-document-types";
 import { ThSchema } from "catlog-wasm";
+
+const entityObType: ObType = { tag: "Basic", content: "Entity" };
+const attrTypeObType: ObType = { tag: "Basic", content: "AttrType" };
+
+const mappingMorType: MorType = { tag: "Hom", content: entityObType };
+const attrMorType: MorType = { tag: "Basic", content: "Attr" };
+const operationMorType: MorType = { tag: "Hom", content: attrTypeObType };
 
 const SimpleSchema = defineModelLogic({
     theory: "simple-schema",
     coreTheory: new ThSchema().theory(),
     objects: {
-        Entity: "Entity",
-        AttrType: "AttrType",
+        Entity: entityObType,
+        AttrType: attrTypeObType,
     },
     morphisms: {
-        Mapping: { dom: "Entity", cod: "Entity" },
-        Attr: { dom: "Entity", cod: "AttrType" },
-        Operation: { dom: "AttrType", cod: "AttrType" },
+        Mapping: { dom: "Entity", cod: "Entity", morType: mappingMorType },
+        Attr: { dom: "Entity", cod: "AttrType", morType: attrMorType },
+        Operation: { dom: "AttrType", cod: "AttrType", morType: operationMorType },
     },
 });
 
@@ -58,6 +66,47 @@ operations: uppercase
 
 Endpoint types are inferred from the compact definition.
 
+Logic definitions use explicit core types from `catcolab-document-types`; object
+string shorthand and omitted morphism types are rejected.
+
+<!-- verifier:typescript-errors -->
+
+```ts
+defineModelLogic({
+    theory: "bad-object-shorthand",
+    coreTheory: SimpleSchema.coreTheory,
+    objects: {
+        Entity: "Entity",
+    },
+    morphisms: {
+        Mapping: { dom: "Entity", cod: "Entity", morType: mappingMorType },
+    },
+});
+```
+
+```txt
+error TS2322: Type 'string' is not assignable to type 'ObType'.
+```
+
+<!-- verifier:typescript-errors -->
+
+```ts
+defineModelLogic({
+    theory: "bad-missing-mor-type",
+    coreTheory: SimpleSchema.coreTheory,
+    objects: {
+        Entity: entityObType,
+    },
+    morphisms: {
+        Mapping: { dom: "Entity", cod: "Entity" },
+    },
+});
+```
+
+```txt
+error TS2741: Property 'morType' is missing in type '{ dom: "Entity"; cod: "Entity"; }' but required in type 'GeneratedMorphismSpec<{ readonly Entity: { tag: "Basic"; content: string; }; }>'.
+```
+
 <!-- verifier:typescript-errors -->
 
 ```ts
@@ -94,16 +143,20 @@ Array endpoints are written with a single-element tuple in the logic definition.
 
 ```ts
 import { defineModelLogic, binder } from "catcolab-documents";
+import type { MorType, ObType } from "catcolab-document-types";
 import { ThSymMonoidalCategory } from "catlog-wasm";
+
+const placeObType: ObType = { tag: "Basic", content: "Object" };
+const transitionMorType: MorType = { tag: "Hom", content: placeObType };
 
 const PetriNet = defineModelLogic({
     theory: "petri-net",
     coreTheory: new ThSymMonoidalCategory().theory(),
     objects: {
-        Place: "Object",
+        Place: placeObType,
     },
     morphisms: {
-        Transition: { dom: ["Place"], cod: ["Place"] },
+        Transition: { dom: ["Place"], cod: ["Place"], morType: transitionMorType },
     },
 });
 

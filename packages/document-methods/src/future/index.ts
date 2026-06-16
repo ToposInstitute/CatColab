@@ -370,7 +370,7 @@ export const morphismType = <Dom, Cod, Name extends string>(morType?: MorType) =
         [typeKind]: "morphism",
     }) as MorphismType<Dom, Cod, Name>;
 
-type ObjectTypeSpec = string | ObType;
+type ObjectTypeSpec = ObType;
 type ObjectName<TObjects extends Record<string, ObjectTypeSpec>> = keyof TObjects & string;
 type EndpointSpec<TObjects extends Record<string, ObjectTypeSpec>> =
     | ObjectName<TObjects>
@@ -392,7 +392,7 @@ type EndpointType<
 type GeneratedMorphismSpec<TObjects extends Record<string, ObjectTypeSpec>> = {
     readonly dom: EndpointSpec<TObjects>;
     readonly cod: EndpointSpec<TObjects>;
-    readonly morType?: MorType;
+    readonly morType: MorType;
 };
 
 type GeneratedMorphismTypes<
@@ -432,34 +432,14 @@ type GeneratedLogicSpec<
 
 const objectTypeFromSpec = <Name extends string>(spec: ObjectTypeSpec) =>
     ({
-        ...(typeof spec === "string" ? { tag: "Basic", content: spec } : spec),
+        ...spec,
         [typeKind]: "object",
     }) as ObjectType<Name>;
 
-const objectSpecToObType = (spec: ObjectTypeSpec): ObType =>
-    typeof spec === "string" ? { tag: "Basic", content: spec } : spec;
-
-const endpointObjectName = <TObjects extends Record<string, ObjectTypeSpec>>(
-    endpoint: EndpointSpec<TObjects>,
-): ObjectName<TObjects> =>
-    (Array.isArray(endpoint) ? endpoint[0] : endpoint) as ObjectName<TObjects>;
-
-const defaultGeneratedMorType = <TObjects extends Record<string, ObjectTypeSpec>>(
-    objects: TObjects,
-    name: string,
-    spec: GeneratedMorphismSpec<TObjects>,
-): MorType => {
-    const dom = endpointObjectName(spec.dom);
-    const cod = endpointObjectName(spec.cod);
-    if (dom === cod) {
-        return { tag: "Hom", content: objectSpecToObType(objects[dom]!) };
-    }
-    return { tag: "Basic", content: name };
-};
-
 /**
  * Generate a typed `ModelLogic` from a compact declaration of object and
- * morphism cell types. Object keys become typed object-cell constructors;
+ * morphism cell types. Objects and morphisms require explicit `ObType` and
+ * `MorType` values. Object keys become typed object-cell constructors;
  * morphism endpoint references point at those object keys. Use `["Object"]`
  * for array endpoints such as Petri-net transition boundaries.
  */
@@ -479,9 +459,7 @@ export function defineModelLogic<
     const morphismTypes = Object.fromEntries(
         Object.entries(spec.morphisms).map(([name, morphismSpec]) => [
             name,
-            morphismType(
-                morphismSpec.morType ?? defaultGeneratedMorType(spec.objects, name, morphismSpec),
-            ),
+            morphismType(morphismSpec.morType),
         ]),
     );
 
