@@ -542,7 +542,7 @@ pub struct ThDEC(Rc<theory::ModalDblTheory<Unital>>);
 impl ThDEC {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        Self(Rc::new(theories::th_multicategory())) // TODO symmetric?
+        Self(Rc::new(theories::th_multicategory()))
     }
 
     #[wasm_bindgen]
