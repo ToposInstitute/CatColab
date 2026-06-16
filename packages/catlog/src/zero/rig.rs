@@ -590,20 +590,21 @@ where
 
 impl<Var, Exp> ToLatex for Monomial<Var, Exp>
 where
-    Var: Display,
-    Exp: Display + PartialEq + One,
+    Var: Display + ToLatex,
+    Exp: Display + ToLatex + PartialEq + One,
 {
     /// Convert to a LaTeX string, separating variables with `\cdot`.
     fn to_latex(&self) -> Latex {
         let fmt_power = |var: &Var, exp: &Exp| {
+            let Latex(var_latex) = var.to_latex();
             if exp.is_one() {
-                format!("{var}")
+                format!("{var_latex}")
             } else {
                 let exp = exp.to_string();
                 if exp.len() == 1 {
-                    format!("{var}^{exp}")
+                    format!("{var_latex}^{exp}")
                 } else {
-                    format!("{var}^{{{exp}}}")
+                    format!("{var_latex}^{{{exp}}}")
                 }
             }
         };
