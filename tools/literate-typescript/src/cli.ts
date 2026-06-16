@@ -36,12 +36,12 @@ async function main(): Promise<void> {
         const outDir = prepareOutDir(pkgRoot, slug);
 
         const materialised = materialise(tsSamples, outDir);
-        const { diagnostics } = typeCheck(materialised, tsconfigPath, mdPathRaw);
+        const { diagnostics, typeFailures } = typeCheck(materialised, tsconfigPath, mdPathRaw);
 
         // Only attempt to run if type-checking passed; running broken samples
         // produces noisier failures.
         let runFailures: RunFailure[] = [];
-        if (diagnostics.length === 0) {
+        if (diagnostics.length === 0 && typeFailures.length === 0) {
             runFailures = await runPairs(materialised, pkgRoot, tsconfigPath);
         }
 
@@ -52,6 +52,7 @@ async function main(): Promise<void> {
             sampleCount: tsSamples.length,
             runCount,
             diagnostics,
+            typeFailures,
             runFailures,
         };
         reports.push(report);
@@ -67,7 +68,10 @@ async function main(): Promise<void> {
 function countRunnable(files: MaterialisedSample[]): number {
     let n = 0;
     for (const m of files) {
-        if (m.sample.expectedOutput !== undefined || m.sample.throws === true) {
+        if (
+            m.sample.typeErrors !== true &&
+            (m.sample.expectedOutput !== undefined || m.sample.throws === true)
+        ) {
             n += 1;
         }
     }

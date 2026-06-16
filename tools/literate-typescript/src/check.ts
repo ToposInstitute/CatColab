@@ -8,6 +8,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import ts from "typescript";
 
+import { stripAnsi } from "./ansi.ts";
 import type { TsSample } from "./assemble.ts";
 
 export type MaterialisedSample = {
@@ -23,12 +24,22 @@ export type CheckDiagnostic = {
     mdLine: number;
     /** 1-based column in the original line. */
     column?: number;
+    code?: number;
+    category?: string;
     message: string;
+};
+
+export type TypeErrorExpectationFailure = {
+    sampleId: string;
+    reason: string;
+    expected?: string;
+    actual?: string;
 };
 
 export type CheckResult = {
     ok: boolean;
     diagnostics: CheckDiagnostic[];
+    typeFailures: TypeErrorExpectationFailure[];
 };
 
 /**
@@ -104,6 +115,8 @@ export function typeCheck(
 
     const allDiagnostics = ts.getPreEmitDiagnostics(program);
     const diagnostics: CheckDiagnostic[] = [];
+    const expectedDiagnostics = new Map<string, CheckDiagnostic[]>();
+    const typeFailures: TypeErrorExpectationFailure[] = [];
 
     for (const diag of allDiagnostics) {
         const message = ts.flattenDiagnosticMessageText(diag.messageText, "\n");
@@ -112,6 +125,8 @@ export function typeCheck(
                 sampleId: "(global)",
                 mdPath,
                 mdLine: 0,
+                code: diag.code,
+                category: diagnosticCategory(diag),
                 message,
             });
             continue;
@@ -127,6 +142,8 @@ export function typeCheck(
                 mdPath: diag.file.fileName,
                 mdLine: line + 1,
                 column: character + 1,
+                code: diag.code,
+                category: diagnosticCategory(diag),
                 message,
             });
             continue;
@@ -144,14 +161,77 @@ export function typeCheck(
             const bodyLine = line - sample.bodyOffset; // 0-based within body
             mdLine = sample.mdLine + bodyLine;
         }
-        diagnostics.push({
+        const mappedDiagnostic: CheckDiagnostic = {
             sampleId: sample.id,
             mdPath,
             mdLine,
             column: character + 1,
+            code: diag.code,
+            category: diagnosticCategory(diag),
             message,
-        });
+        };
+        if (sample.typeErrors === true) {
+            const existing = expectedDiagnostics.get(sample.id) ?? [];
+            existing.push(mappedDiagnostic);
+            expectedDiagnostics.set(sample.id, existing);
+        } else {
+            diagnostics.push(mappedDiagnostic);
+        }
     }
 
-    return { ok: diagnostics.length === 0, diagnostics };
+    for (const file of files) {
+        const { sample } = file;
+        if (sample.typeErrors !== true) {
+            continue;
+        }
+        const actualDiagnostics = expectedDiagnostics.get(sample.id) ?? [];
+        const actual = formatTypeErrors(actualDiagnostics);
+        if (actualDiagnostics.length === 0) {
+            typeFailures.push({
+                sampleId: sample.id,
+                reason: "expected TypeScript errors, but the sample type-checked successfully",
+            });
+            continue;
+        }
+        if (sample.expectedOutput === undefined) {
+            continue;
+        }
+        const expected = normaliseTypeErrors(sample.expectedOutput);
+        if (actual !== expected) {
+            typeFailures.push({
+                sampleId: sample.id,
+                reason: "TypeScript diagnostics do not match expected output",
+                expected,
+                actual,
+            });
+        }
+    }
+
+    return {
+        ok: diagnostics.length === 0 && typeFailures.length === 0,
+        diagnostics,
+        typeFailures,
+    };
+}
+
+function diagnosticCategory(diag: ts.Diagnostic): string {
+    return ts.DiagnosticCategory[diag.category].toLowerCase();
+}
+
+function formatTypeErrors(diagnostics: CheckDiagnostic[]): string {
+    return normaliseTypeErrors(
+        diagnostics
+            .map((d) => `${d.category ?? "error"} TS${d.code ?? 0}: ${d.message}`)
+            .join("\n"),
+    );
+}
+
+function normaliseTypeErrors(s: string): string {
+    const lines = stripAnsi(s)
+        .split("\n")
+        .map((line) => line.replace(/[ \t]+$/g, ""));
+    while (lines.length > 0 && lines[lines.length - 1] === "") {
+        lines.pop();
+    }
+    return lines.join("\n");
 }

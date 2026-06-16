@@ -14,6 +14,9 @@
  *     at runtime: the sample must exit non-zero, and a following non-code fence
  *     is matched as a substring of the runtime error output (stderr) instead of
  *     stdout.
+ *   - `<!-- verifier:typescript-errors -->` marks the next code fence as
+ *     expected to fail type-checking: a following non-code fence is compared
+ *     against the exact TypeScript diagnostic text for that sample.
  *   - `<!-- verifier:reset -->` clears the prepend stack so the next code
  *     fence starts fresh.
  *   - A sample is `tsx` if its body or any active prepend is a `tsx` fence;
@@ -46,6 +49,8 @@ export type TsSample = {
      * `expectedOutput` is matched as a substring of stderr instead of stdout.
      */
     throws?: boolean;
+    /** Whether this sample is expected to fail TypeScript type-checking. */
+    typeErrors?: boolean;
 };
 
 export type Assembled = {
@@ -63,6 +68,7 @@ export function assemble(items: ParsedItem[], slug: string): Assembled {
     let prependStack: PrependPart[] = [];
     let prependNext = false;
     let throwsNext = false;
+    let typeErrorsNext = false;
     let lastTsSample: TsSample | null = null;
 
     for (const item of items) {
@@ -71,11 +77,14 @@ export function assemble(items: ParsedItem[], slug: string): Assembled {
                 prependStack = [];
                 prependNext = false;
                 throwsNext = false;
+                typeErrorsNext = false;
                 lastTsSample = null;
             } else if (item.directive === "prepend-to-following") {
                 prependNext = true;
             } else if (item.directive === "throws") {
                 throwsNext = true;
+            } else if (item.directive === "typescript-errors") {
+                typeErrorsNext = true;
             }
             // Unknown directives are silently ignored so future additions
             // remain non-fatal.
@@ -115,8 +124,10 @@ export function assemble(items: ParsedItem[], slug: string): Assembled {
             mdLine: item.mdLine,
             bodyOffset,
             ...(throwsNext ? { throws: true } : {}),
+            ...(typeErrorsNext ? { typeErrors: true } : {}),
         };
         throwsNext = false;
+        typeErrorsNext = false;
         tsSamples.push(sample);
         lastTsSample = sample;
 

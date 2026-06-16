@@ -124,6 +124,9 @@ export async function runPairs(
     for (const m of files) {
         const expected = m.sample.expectedOutput;
         const throws = m.sample.throws === true;
+        if (m.sample.typeErrors === true) {
+            continue;
+        }
         if (expected === undefined && !throws) {
             continue;
         }

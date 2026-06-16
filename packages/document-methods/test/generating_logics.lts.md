@@ -58,26 +58,34 @@ operations: uppercase
 
 Endpoint types are inferred from the compact definition.
 
-<!-- verifier:prepend-to-following -->
+<!-- verifier:typescript-errors -->
 
 ```ts
-// @ts-expect-error A mapping's codomain must be an entity.
-notebook.add(Mapping, {
-    name: "bad",
-    dom: person,
+const employer = notebook.add(Mapping, { name: "employer2", dom: person, cod: company });
+
+employer.update({
     cod: str,
 });
 ```
 
-<!-- verifier:prepend-to-following -->
+```txt
+error TS2345: Argument of type '{ cod: ObjectCell<ObjectType<"AttrType">>; }' is not assignable to parameter of type '{ cod: ObjectCell<ObjectType<"AttrType">>; } & FieldError<"cod", "Unexpected value shape.">'.
+  Property '"Type error: cod"' is missing in type '{ cod: ObjectCell<ObjectType<"AttrType">>; }' but required in type 'FieldError<"cod", "Unexpected value shape.">'.
+```
+
+<!-- verifier:typescript-errors -->
 
 ```ts
-// @ts-expect-error An attribute's domain must be an entity.
-notebook.add(Attr, {
-    name: "bad",
+const nameAttr = notebook.add(Attr, { name: "name2", dom: person, cod: str });
+
+nameAttr.update({
     dom: str,
-    cod: str,
 });
+```
+
+```txt
+error TS2345: Argument of type '{ dom: ObjectCell<ObjectType<"AttrType">>; }' is not assignable to parameter of type '{ dom: ObjectCell<ObjectType<"AttrType">>; } & FieldError<"dom", "Unexpected value shape.">'.
+  Property '"Type error: dom"' is missing in type '{ dom: ObjectCell<ObjectType<"AttrType">>; }' but required in type 'FieldError<"dom", "Unexpected value shape.">'.
 ```
 
 Array endpoints are written with a single-element tuple in the logic definition.
@@ -118,13 +126,21 @@ notebook.add(Transition, {
 });
 ```
 
-<!-- verifier:prepend-to-following -->
+<!-- verifier:typescript-errors -->
 
 ```ts
-// @ts-expect-error Petri-net transition endpoints are arrays.
-notebook.add(Transition, {
-    name: "bad",
-    dom: a,
+const fires = notebook.add(Transition, {
+    name: "fires2",
+    dom: [a],
     cod: [b],
 });
+
+fires.update({
+    dom: a,
+});
+```
+
+```txt
+error TS2345: Argument of type '{ dom: ObjectCell<ObjectType<"Place">>; }' is not assignable to parameter of type '{ dom: ObjectCell<ObjectType<"Place">>; } & FieldError<"dom", "Expected an array, not a single object.">'.
+  Property '"Type error: dom"' is missing in type '{ dom: ObjectCell<ObjectType<"Place">>; }' but required in type 'FieldError<"dom", "Expected an array, not a single object.">'.
 ```
