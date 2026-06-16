@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 /// We should mark which strings are to be parsed as Latex.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Latex(pub String);
 
@@ -34,6 +34,8 @@ pub trait ToLatex {
 
 #[duplicate_item(T; [f32]; [f64]; [i8]; [i32]; [i64]; [u32]; [u64]; [usize]; [char]; [String])]
 impl ToLatex for T {
+    // TODO: this should be generic over `P -> String` where `P: ODEParameterType` (or some subset thereof)
+    //       and the default implementation just uses `to_string()` ???
     fn to_latex(&self) -> Latex {
         Latex(self.to_string())
     }

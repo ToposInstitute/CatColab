@@ -28,7 +28,7 @@ use std::{collections::HashMap, fmt};
 use crate::{
     dbl::{
         modal::{List, ModeApp},
-        model::{DiscreteDblModel, DiscreteTabModel, ModalDblModel, ModalOb, MutDblModel},
+        model::{DblModel, DiscreteDblModel, DiscreteTabModel, ModalDblModel, ModalOb, MutDblModel},
         theory::{NonUnital, Unital},
     },
     latex::{Latex, ToLatex},
@@ -63,7 +63,7 @@ pub trait ODESemantics {
 /// The models for which we support ODE semantics need to be sufficiently nice, though
 /// these bounds are not particularly restrictive.
 pub trait DblModelForODESemantics:
-    FgCategory + MutDblModel<ObGen = QualifiedName, MorGen = QualifiedName> + Clone
+    FgCategory + DblModel + MutDblModel<ObGen = QualifiedName, MorGen = QualifiedName> + Clone
 {
 }
 
