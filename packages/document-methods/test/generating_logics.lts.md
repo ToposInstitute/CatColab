@@ -69,8 +69,7 @@ employer.update({
 ```
 
 ```txt
-error TS2345: Argument of type '{ cod: ObjectCell<ObjectType<"AttrType">>; }' is not assignable to parameter of type '{ cod: ObjectCell<ObjectType<"AttrType">>; } & FieldError<"cod", "Unexpected value shape.">'.
-  Property '"Type error: cod"' is missing in type '{ cod: ObjectCell<ObjectType<"AttrType">>; }' but required in type 'FieldError<"cod", "Unexpected value shape.">'.
+error TS2345: Type error: cod: Expected object cell of type "Entity", got "AttrType".
 ```
 
 <!-- verifier:typescript-errors -->
@@ -84,8 +83,7 @@ nameAttr.update({
 ```
 
 ```txt
-error TS2345: Argument of type '{ dom: ObjectCell<ObjectType<"AttrType">>; }' is not assignable to parameter of type '{ dom: ObjectCell<ObjectType<"AttrType">>; } & FieldError<"dom", "Unexpected value shape.">'.
-  Property '"Type error: dom"' is missing in type '{ dom: ObjectCell<ObjectType<"AttrType">>; }' but required in type 'FieldError<"dom", "Unexpected value shape.">'.
+error TS2345: Type error: dom: Expected object cell of type "Entity", got "AttrType".
 ```
 
 Array endpoints are written with a single-element tuple in the logic definition.
@@ -141,6 +139,5 @@ fires.update({
 ```
 
 ```txt
-error TS2345: Argument of type '{ dom: ObjectCell<ObjectType<"Place">>; }' is not assignable to parameter of type '{ dom: ObjectCell<ObjectType<"Place">>; } & FieldError<"dom", "Expected an array, not a single object.">'.
-  Property '"Type error: dom"' is missing in type '{ dom: ObjectCell<ObjectType<"Place">>; }' but required in type 'FieldError<"dom", "Expected an array, not a single object.">'.
+error TS2345: Type error: dom: Expected an array, not a single object.
 ```

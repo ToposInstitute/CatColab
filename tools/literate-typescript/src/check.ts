@@ -221,9 +221,21 @@ function diagnosticCategory(diag: ts.Diagnostic): string {
 function formatTypeErrors(diagnostics: CheckDiagnostic[]): string {
     return normaliseTypeErrors(
         diagnostics
-            .map((d) => `${d.category ?? "error"} TS${d.code ?? 0}: ${d.message}`)
+            .map(
+                (d) =>
+                    `${d.category ?? "error"} TS${d.code ?? 0}: ${formatTypeErrorMessage(d.message)}`,
+            )
             .join("\n"),
     );
+}
+
+function formatTypeErrorMessage(message: string): string {
+    const fieldError = message.match(/FieldError<"([^"]+)", "((?:\\.|[^"])*)">/);
+    if (fieldError) {
+        const [, field, reason] = fieldError;
+        return `Type error: ${field}: ${reason.replace(/\\"/g, '"')}`;
+    }
+    return message;
 }
 
 function normaliseTypeErrors(s: string): string {

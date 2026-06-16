@@ -101,6 +101,22 @@ type FieldError<Key extends PropertyKey, Message extends string> = {
     readonly [K in `Type error: ${Key & string}`]: Message;
 };
 
+type ObjectCellTypeName<T> = T extends ObjectCell<ObjectType<infer Name>> ? Name : never;
+
+type ObjectCellMismatchMessage<Expected, Actual> =
+    ObjectCellTypeName<Expected> extends infer ExpectedName extends string
+        ? ObjectCellTypeName<Actual> extends infer ActualName extends string
+            ? `Expected object cell of type "${ExpectedName}", got "${ActualName}".`
+            : `Expected object cell of type "${ExpectedName}".`
+        : "Unexpected endpoint object type.";
+
+type ObjectCellArrayMismatchMessage<Expected, Actual> =
+    ObjectCellTypeName<Expected> extends infer ExpectedName extends string
+        ? ObjectCellTypeName<Actual> extends infer ActualName extends string
+            ? `Expected array of object cells of type "${ExpectedName}", got array containing "${ActualName}".`
+            : `Expected array of object cells of type "${ExpectedName}".`
+        : "Expected an array of objects of the correct endpoint type.";
+
 type UnionToIntersection<T> = (T extends unknown ? (arg: T) => void : never) extends (
     arg: infer U,
 ) => void
@@ -111,11 +127,11 @@ type ValidateField<Expected, Actual, Key extends PropertyKey> = Actual extends E
     ? unknown
     : Expected extends readonly unknown[]
       ? Actual extends readonly unknown[]
-          ? FieldError<Key, "Expected an array of objects of the correct shape.">
+          ? FieldError<Key, ObjectCellArrayMismatchMessage<Expected[number], Actual[number]>>
           : FieldError<Key, "Expected an array, not a single object.">
       : Actual extends readonly unknown[]
         ? FieldError<Key, "Expected a single object, not an array.">
-        : FieldError<Key, "Unexpected value shape.">;
+        : FieldError<Key, ObjectCellMismatchMessage<Expected, Actual>>;
 
 type ValidateFields<Expected, Actual> = UnionToIntersection<
     {
