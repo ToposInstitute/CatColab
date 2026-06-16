@@ -67,12 +67,8 @@ impl fmt::Display for LotkaVolterraParameter {
 impl ToLatex for LotkaVolterraParameter {
     fn to_latex(&self) -> Latex {
         match self {
-            Self::Growth { variable } => {
-                Latex(format!("\\g_{{{variable}}}"))
-            },
-            Self::Interaction { link } => {
-                Latex(format!("\\k_{{{link}}}"))
-            },
+            Self::Growth { variable } => Latex(format!("\\g_{{{variable}}}")),
+            Self::Interaction { link } => Latex(format!("\\k_{{{link}}}")),
         }
     }
 }
@@ -242,7 +238,7 @@ mod test {
     use super::*;
     use crate::{
         dbl::model::MutDblModel,
-        latex::LatexEquation,
+        latex::{LatexEquation, LatexEquations},
         stdlib::{models::*, theories::*},
     };
 
@@ -291,16 +287,20 @@ mod test {
         let th = Rc::new(th_signed_category());
         let model = negative_feedback(th);
         let sys = LotkaVolterraAnalysis::default().build_system(&model);
-        let expected = vec![
+        let expected = LatexEquations(vec![
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string()),
-                rhs: Latex("Growth(x) \\cdot x - Interaction(negative) \\cdot x \\cdot y".to_string()),
+                rhs: Latex(
+                    "g_{x} \\cdot x - k_{negative} \\cdot x \\cdot y".to_string(),
+                ),
             },
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string()),
-                rhs: Latex("Interaction(positive) \\cdot x \\cdot y + Growth(y) \\cdot y".to_string()),
+                rhs: Latex(
+                    "k_{positive} \\cdot x \\cdot y + g_{y} \\cdot y".to_string(),
+                ),
             },
-        ];
+        ]);
         assert_eq!(expected, sys.to_latex_equations());
     }
 

@@ -49,11 +49,6 @@ pub struct LatexEquation {
 /// Symbolic equations in LaTeX format.
 #[derive(Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 pub struct LatexEquations(pub Vec<LatexEquation>);
-
-/// An object that can be rendered to a collection of LaTeX equations (of the form
-/// "lhs = rhs").
-pub trait ToLatexEquations {
-    /// Convert the object to the LaTeX equations.
-    fn to_latex_equations(&self) -> LatexEquations;
-}

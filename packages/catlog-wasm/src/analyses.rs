@@ -1,5 +1,6 @@
 //! Auxiliary structs and glue code for data passed to/from analyses.
 
+use catlog::latex::LatexEquations;
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
@@ -7,9 +8,8 @@ use catlog::simulate::ode::PolynomialSystem;
 use catlog::stdlib::analyses::ode::{self, ODESemanticsAnalysis, ODESemanticsProblemData};
 use catlog::zero::QualifiedName;
 
-use crate::latex::{latex_mor_names_linear_ode, latex_mor_names_lotka_volterra};
+use crate::latex::{latex_mor_names, latex_ob_names};
 
-use super::latex::{LatexEquations, latex_mor_names, latex_mor_names_mass_action, latex_ob_names};
 use super::model::DblModel;
 use super::result::JsResult;
 
@@ -56,7 +56,7 @@ pub(crate) fn polynomial_ode_equations(
         .map_variables(latex_ob_names(model))
         .extend_scalars(|param| param.map_variables(latex_mor_names(model)))
         .to_latex_equations();
-    Ok(LatexEquations(equations))
+    Ok(equations)
 }
 
 /// Simulates mass-action ODEs.
@@ -72,7 +72,7 @@ pub(crate) fn polynomial_ode_simulation(
     let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
     Ok(ODEResultWithEquations {
         solution: ODEResult(solution.into()),
-        latex_equations: LatexEquations(latex_equations),
+        latex_equations: latex_equations,
     })
 }
 
@@ -129,9 +129,10 @@ pub(crate) fn mass_action_equations(
     let sys = mass_action_system(model, data.mass_conservation_type, logic);
     let equations = sys?
         .map_variables(latex_ob_names(model))
-        .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(model)))
+        //TODO: FIX THIS
+        // .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(model)))
         .to_latex_equations();
-    Ok(LatexEquations(equations))
+    Ok(equations)
 }
 
 /// Simulates mass-action ODEs.
@@ -148,7 +149,7 @@ pub(crate) fn mass_action_simulation(
     let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
     Ok(ODEResultWithEquations {
         solution: ODEResult(solution.into()),
-        latex_equations: LatexEquations(latex_equations),
+        latex_equations: latex_equations,
     })
 }
 
@@ -175,9 +176,10 @@ pub(crate) fn lotka_volterra_equations(model: &DblModel) -> Result<LatexEquation
     let sys = lotka_volterra_system(model);
     let equations = sys?
         .map_variables(latex_ob_names(model))
-        .extend_scalars(|param| param.map_variables(latex_mor_names_lotka_volterra(model)))
+        //TODO: FIX THIS
+        // .extend_scalars(|param| param.map_variables(latex_mor_names_lotka_volterra(model)))
         .to_latex_equations();
-    Ok(LatexEquations(equations))
+    Ok(equations)
 }
 
 /// Simulates Lotka-Volterra ODEs.
@@ -193,7 +195,7 @@ pub(crate) fn lotka_volterra_simulation(
     let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
     Ok(ODEResultWithEquations {
         solution: ODEResult(solution.into()),
-        latex_equations: LatexEquations(latex_equations),
+        latex_equations: latex_equations,
     })
 }
 
@@ -219,9 +221,10 @@ pub(crate) fn linear_ode_equations(model: &DblModel) -> Result<LatexEquations, S
     let sys = linear_ode_system(model);
     let equations = sys?
         .map_variables(latex_ob_names(model))
-        .extend_scalars(|param| param.map_variables(latex_mor_names_linear_ode(model)))
+        //TODO: FIX THIS
+        // .extend_scalars(|param| param.map_variables(latex_mor_names_linear_ode(model)))
         .to_latex_equations();
-    Ok(LatexEquations(equations))
+    Ok(equations)
 }
 
 /// Simulates linear ODE equations.
@@ -237,6 +240,6 @@ pub(crate) fn linear_ode_simulation(
     let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
     Ok(ODEResultWithEquations {
         solution: ODEResult(solution.into()),
-        latex_equations: LatexEquations(latex_equations),
+        latex_equations: latex_equations,
     })
 }

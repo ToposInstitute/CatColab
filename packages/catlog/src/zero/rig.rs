@@ -745,7 +745,7 @@ mod tests {
 
         let monomial: Monomial<char, u32> = Monomial::one();
         assert_eq!(monomial.to_string(), "1");
-        assert_eq!(monomial.to_latex(), "1");
+        assert_eq!(monomial.to_latex(), Latex("1".to_string()));
 
         let monomial: Monomial<_, u32> = [('x', 1), ('y', 0), ('x', 2)].into_iter().collect();
         assert_eq!(monomial.normalize().to_string(), "x^3");
@@ -754,6 +754,6 @@ mod tests {
         assert_eq!(monomial.normalize().to_string(), "x y^{-2}");
 
         let monomial: Monomial<_, i32> = [('x', 1), ('y', 2), ('z', -1)].into_iter().collect();
-        assert_eq!(monomial.to_latex(), "x \\cdot y^2 \\cdot z^{-1}");
+        assert_eq!(monomial.to_latex(), Latex("x \\cdot y^2 \\cdot z^{-1}".to_string()));
     }
 }
