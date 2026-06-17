@@ -42,6 +42,9 @@ pub struct Type {
 /// An *instance* of a model is just such a term whose [`val`](Self::val) is a
 /// [`TmV_::Instance`](super::val::TmV_::Instance): a generator/equation/
 /// sub-instance body packaged as an introduction value of a record type.
+/// Both kinds arise as a `DefConst`, but from different surface declarations:
+/// `def NAME : T := <term>` for a plain term, `instance NAME : T := [...]` for
+/// an instance.
 /// When an instance name is used in *type* position (for a
 /// sub-instance import), its type is the record type synthesized from that body
 /// by [`synth_instance_body_ty`](super::eval::Evaluator::synth_instance_body_ty).

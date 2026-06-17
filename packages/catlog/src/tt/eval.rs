@@ -130,7 +130,10 @@ impl<'a> Evaluator<'a> {
                 self.field_ty(ty, tm, field_name),
             ),
             TmV_::Cons(fields) => fields.get(field_name).cloned().unwrap(),
-            _ => panic!(),
+            // Instances are eliminated by map-out (the representable), never
+            // projection; the elaborator rejects projecting one, so reaching
+            // here with any other term value is an elaboration bug.
+            _ => unreachable!("projected field {field_name} from a non-record term value"),
         }
     }
 

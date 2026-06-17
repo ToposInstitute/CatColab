@@ -11,14 +11,14 @@ type WeightedGraph := [
 ]
 #/ declared: WeightedGraph
 
-def Edge : WeightedGraph := [
+instance Edge : WeightedGraph := [
     E := [e]
 ]
 #/ declared: Edge
 #/ instance generators:
 #/   e : E
 
-def I : WeightedGraph := [
+instance I : WeightedGraph := [
     V := [v1, v2],
     Weight := [w],
     we : Edge,
@@ -45,7 +45,7 @@ def I : WeightedGraph := [
 #/   weight(we.e) == w
 #/   weight(wf.e) == w
 
-def I2 : WeightedGraph := [
+instance I2 : WeightedGraph := [
     V := [v1, v2],
     Weight := [w],
     we : Edge,
@@ -69,11 +69,20 @@ def I2 : WeightedGraph := [
 #/   weight(we.e) == w
 #/   weight(wf.e) == w
 
-def I3 : WeightedGraph := [
+instance I3 : WeightedGraph := [
     E := [e1, e2]
 ]
 #/ declared: I3
 #/ instance generators:
 #/   e1 : E
 #/   e2 : E
+
+#(should_fail)
+syn I.E
+#/ result: ?0 : ?1
+#/ expected errors:
+#/ error[elab]: cannot project a field out of an instance; an instance is eliminated by mapping out of it, not by projection
+#/ --> examples/tt/text/test_instances.dbltt:44:5
+#/ 44| syn I.E
+#/ 44|     ^^^
 
