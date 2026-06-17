@@ -1,6 +1,6 @@
 //! Instances of models of a double theory.
 //!
-//! An **instance** of a model (see [Carlson-Patterson 2025][https://arxiv.org/abs/2510.08861])
+//! An **instance** of a model (see [Carlson-Patterson 2025](https://arxiv.org/abs/2510.08861))
 //! is here presented via
 //! a set of generators living over each object of the model, together with
 //! equations between terms built from morphisms of the model applied to
