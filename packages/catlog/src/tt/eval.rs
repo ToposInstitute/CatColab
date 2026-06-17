@@ -193,6 +193,19 @@ impl<'a> Evaluator<'a> {
     /// (not this type). An import that contradicts `D`'s fiber equations is
     /// therefore not rejected here — consistency of the resulting equation
     /// set is a model-layer concern, not checked during elaboration.
+    ///
+    /// Because these `Id` fields are inert, the *concrete* way of mapping out
+    /// of `D` — building a record literal (`Cons`) of this type by hand — only
+    /// works when `D` is equation-free. For an equational `D`, record
+    /// construction demands the `_eq{i}` fields too, and they can't be
+    /// discharged through the surface: projecting `l._eqN` fails an `Id`/`Id`
+    /// convertibility check (the two sides print alike but don't convert), and
+    /// the unit `'tt` is rejected (`Unit` is not the `Id` type). The supported
+    /// map-out is the *abstract* one — a neutral of this type, as `we : D`
+    /// imports produce — for which the witnesses never need constructing. A
+    /// concrete map-out of an equational `D` would require auto-discharging the
+    /// `Id` fields during record construction (they are extensional, so η to
+    /// `tt`); not yet done.
     pub fn synth_instance_body_ty(&self, body: &InstanceBodyV) -> TyV {
         let mut fields: Row<TyS> = Row::empty();
         for (name, (label, path)) in &body.generators {
