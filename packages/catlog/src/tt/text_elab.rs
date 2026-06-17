@@ -557,7 +557,18 @@ impl<'a> Elaborator<'a> {
                             subs_v.insert(n_seg, (label, sub_v));
                             elab.intro(n_seg, label, Some(ty_v));
                         }
-                        TyV_::Id(_, lhs, rhs) => {
+                        TyV_::Id(eq_ty, lhs, rhs) => {
+                            if !matches!(&**eq_ty, TyV_::Over(_)) {
+                                let quoted = elab.evaluator().quote_ty(eq_ty);
+                                elab.error::<()>(format!(
+                                    "instance equation {name_str} is over {quoted}, but an \
+                                     instance's equations must be between elements over an \
+                                     object (fiber elements); morphism equations constrain \
+                                     the model, not an instance",
+                                ));
+                                failed = true;
+                                continue;
+                            }
                             let evaluator = elab.evaluator();
                             let lhs_s = evaluator.quote_tm(lhs);
                             let rhs_s = evaluator.quote_tm(rhs);
@@ -697,11 +708,12 @@ impl<'a> Elaborator<'a> {
                 // an equation witness.
                 App2(L(_, Keyword(":=")), lhs_n, rhs_n) => {
                     let (lhs_s, lhs_v, lhs_ty) = elab.syn(lhs_n);
-                    if !matches!(&*lhs_ty, TyV_::Morphism(_, _, _) | TyV_::Over(_)) {
+                    if !matches!(&*lhs_ty, TyV_::Over(_)) {
                         elab.loc = Some(lhs_n.loc());
                         elab.error::<()>(
                             "mapping-entry clause `mor(arg) := target` requires the LHS \
-                             to be a morphism or an element over an object",
+                             to be an element over an object (a fiber element); morphism \
+                             equations constrain the model, not an instance",
                         );
                         failed = true;
                         continue;
