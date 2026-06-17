@@ -15,7 +15,7 @@ use tsify::Tsify;
 
 use super::Parameter;
 use crate::dbl::model::{FpDblModel, MutDblModel};
-use crate::latex::{Latex, ToLatex};
+use crate::latex::{Latex, ToLatexWithMap};
 use crate::one::Path;
 use crate::simulate::ode::PolynomialSystem;
 use crate::stdlib::analyses::ode::ode_semantics::{
@@ -55,10 +55,10 @@ impl fmt::Display for LCCParameter {
     }
 }
 
-impl ToLatex for LCCParameter {
-    fn to_latex(&self) -> Latex {
+impl ToLatexWithMap for LCCParameter {
+    fn to_latex_with_map<T: Fn(&QualifiedName) -> String>(&self, f: T) -> Latex {
         match self {
-            Self::Parameter { morphism } => Latex(format!("\\lambda_{{{morphism}}}")),
+            Self::Parameter { morphism } => Latex(format!("\\lambda_{{{}}}", f(morphism))),
         }
     }
 }
