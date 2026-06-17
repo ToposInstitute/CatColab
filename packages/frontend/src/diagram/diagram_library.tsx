@@ -215,6 +215,45 @@ export class DiagramLibrary<RefId> {
         return makeLiveDiagram(liveDoc, () => this.entries.get(key));
     }
 
+    // temporary method to get diagrams without validating :o
+    async getLiveDiagramWithInstantiations(
+        refId: RefId,
+    ): Promise<[Theory, LiveDiagramDoc, Map<string, Document>]> {
+        await this.addDiagram(refId);
+        const key = this.params.canonicalize(refId);
+        const docHandle = this.handles.get(key)?.docHandle;
+        invariant(docHandle);
+        const doc = docHandle.doc();
+        const theories = this.params.theories;
+        const theory = await theories.get(doc.theory);
+        const [liveDiagram, subDiagrams] = await this._getLiveDiagramWithInstantiations(
+            key,
+            doc.notebook,
+            theory.theory,
+        );
+        return [theory, liveDiagram, subDiagrams];
+    }
+
+    //
+    private async _getLiveDiagramWithInstantiations(
+        key: DiagramKey,
+        notebook: DiagramNotebook,
+        theory: DblTheory,
+    ): Promise<[LiveDiagramDoc, Map<string, Document>]> {
+        const subDiagrams = new Map<string, Document>();
+        for (const cell of Nb.getFormalContent(notebook)) {
+            if (!(cell.tag === "instantiation" && cell.diagram)) continue;
+            const refId = cell.diagram._id;
+            if (subDiagrams.has(refId)) continue;
+            await this.addDiagram(refId as RefId);
+            const handleEntry = this.handles.get(this.params.canonicalize(refId as RefId));
+            invariant(handleEntry);
+            subDiagrams.set(refId, handleEntry.docHandle.doc());
+        }
+        const liveDiagram = await this.getLiveDiagram(key as RefId);
+        return [liveDiagram, subDiagrams];
+    }
+
     /** Use elaborated diagram in a component. */
     useElaboratedDiagram(refId: () => RefId | undefined): Accessor<DiagramEntry | undefined> {
         const [resource] = createResource(refId, (refId) => this.getElaboratedDiagram(refId));

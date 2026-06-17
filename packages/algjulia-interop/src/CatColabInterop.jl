@@ -13,5 +13,12 @@ include("Types.jl")
 include("CatlabInterop.jl")
 # Add more interops here...
 
+using Oxygen, HTTP
+
+function endpoint(::Val{:Test})
+  @post "/decapodes" function(req::HTTP.Request)
+    @info req.response
+  end
+end
 
 end # module
