@@ -94,8 +94,6 @@ pub enum TyV_ {
     Sing(TyV, TmV),
     /// Type constructor for identity types, also see [TyS_::Id].
     Id(TyV, TmV, TmV),
-    /// Type constructor for unit types, also see [TyS_::Unit].
-    Unit,
     /// A metavariable, also see [TyS_::Meta].
     Meta(MetaVar),
     /// The type of terms in a fiber over an object generator of some
@@ -174,9 +172,12 @@ impl TyV {
         }
     }
 
-    /// Smart constructor for [TyV], [TyV_::Unit] case.
-    pub fn unit() -> Self {
-        Self(Rc::new(TyV_::Unit))
+    /// The empty record type — the unit type / empty model. Its
+    /// environment is empty because the type has no fields, so the
+    /// environment is never consulted. Also used as a throwaway type for
+    /// untyped placeholder binders (whose type is discarded).
+    pub fn empty_record() -> Self {
+        Self(Rc::new(TyV_::Record(RecordV::new(Env::nil(), Row::empty(), Dtry::empty()))))
     }
 
     /// Smart constructor for [TyV], [TyV_::Meta] case.
@@ -260,8 +261,6 @@ pub enum TmV_ {
     List(Vec<TmV>),
     /// Records.
     Cons(Row<TmV>),
-    /// The unique element of the unit type.
-    Tt,
     /// The identity morphism of an object.
     Id(TmV),
     /// The tabulation of a morphism.
@@ -313,9 +312,11 @@ impl TmV {
         TmV(Rc::new(TmV_::Cons(fields)))
     }
 
-    /// Smart constructor for [TmV], [TmV_::Tt] case.
-    pub fn tt() -> Self {
-        TmV(Rc::new(TmV_::Tt))
+    /// The empty record value `[]` — the unique element of the empty
+    /// record type. Also serves as the (proof-irrelevant) canonical
+    /// inhabitant of `Id` types under eta.
+    pub fn empty_cons() -> Self {
+        TmV(Rc::new(TmV_::Cons(Row::empty())))
     }
 
     /// Smart constructor for [TmV], [TmV_::Id] case.

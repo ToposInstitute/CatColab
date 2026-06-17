@@ -162,9 +162,12 @@ impl TopElaborator {
                         let mut elab = self.elaborator(&theory, toplevel);
                         let (_, ret_ty_v) = elab.ty(ty_n);
                         let (tm_s, tm_v) = elab.chk(&ret_ty_v, tm_n);
-                        // A term in the empty context — a tight transformation
-                        // / generalized element (e.g. record construction).
-                        // Instances are declared with `instance`, not here.
+                        // A closed (empty-context) term: a tight transformation
+                        // S -> Unit. Unit is the empty record, i.e. the empty model. 
+                        // A tight map into the empty model exists only when S is itself empty,
+                        // so the sole closed `def` is the identity on the empty
+                        // model, `tt : Unit`. Closed loose terms are instances,
+                        // declared with `instance`.
                         Some(TopElabResult::Declaration(
                             name,
                             TopDecl::DefConst(DefConst::new(theory.clone(), tm_s, tm_v, ret_ty_v)),
@@ -190,14 +193,10 @@ impl TopElaborator {
                 let mut elab = self.elaborator(&theory, toplevel);
                 let (_, ret_ty_v) = elab.ty(ty_n);
                 // An instance body is checked against its codomain model, a
-                // record (sketch) type — the same `Record` shape `chk` requires
-                // for any `[...]`, matched here since instance dispatch lives at
-                // this keyword rather than in `chk`.
+                // record type.
                 let TyV_::Record(r) = &*ret_ty_v else {
-                    return self.error(
-                        tn.loc,
-                        "an instance must be declared against a record (sketch) type",
-                    );
+                    return self
+                        .error(tn.loc, "an instance must be declared against a record type");
                 };
                 let (tm_s, tm_v) = elab.instance_body(r, tm_n);
                 Some(TopElabResult::Declaration(
@@ -383,7 +382,7 @@ impl<'a> Elaborator<'a> {
     fn intro(&mut self, name: VarName, label: LabelSegment, ty: Option<TyV>) -> TmV {
         let v = TmV::neu(
             TmN::var(self.ctx.scope.len().into(), name, label),
-            ty.clone().unwrap_or(TyV::unit()),
+            ty.clone().unwrap_or(TyV::empty_record()),
         );
         let v = if ty.is_some() {
             self.evaluator().eta(&v, ty.as_ref())
@@ -393,6 +392,13 @@ impl<'a> Elaborator<'a> {
         self.ctx.env = self.ctx.env.snoc(v.clone());
         self.ctx.push_scope(name, label, ty);
         v
+    }
+
+    /// The unit type, elaborated as the empty record — i.e. the empty
+    /// model. `Unit` and `tt` are surface sugar for the empty record type
+    /// and its unique element, the empty cons `[]`.
+    fn empty_record_ty(&self) -> (TyS, TyV) {
+        (TyS::record(Row::empty()), TyV::empty_record())
     }
 
     /// Apply a codomain morphism `f` to an already-elaborated argument
@@ -854,7 +860,7 @@ impl<'a> Elaborator<'a> {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
             Var(name) => elab.lookup_ty(name_seg(*name)),
-            Keyword("Unit") => (TyS::unit(), TyV::unit()),
+            Keyword("Unit") => elab.empty_record_ty(),
             App1(L(_, Prim("sing")), tm_n) => {
                 let (tm_s, tm_v, ty_v) = elab.syn(tm_n);
                 (TyS::sing(elab.evaluator().quote_ty(&ty_v), tm_s), TyV::sing(ty_v, tm_v))
@@ -1133,7 +1139,11 @@ impl<'a> Elaborator<'a> {
                 let eval = elab.evaluator().with_env(env.clone());
                 (TmS::topapp(tv, arg_stxs), eval.eval_tm(&d.body), eval.eval_ty(&d.ret_ty))
             }
-            Tag("tt") => (TmS::tt(), TmV::tt(), TyV::unit()),
+            Tag("tt") => {
+                // `tt` is the unique element of `Unit`, i.e. the empty record `[]`.
+                let (_, ty_v) = elab.empty_record_ty();
+                (TmS::cons(Row::empty()), TmV::cons(Row::empty()), ty_v)
+            }
             Tuple(_) => elab.syn_error("must check against a type in order to construct a record"),
             Prim("hole") => elab.syn_error("explicit hole"),
             _ => elab.syn_error("unexpected notation for term"),
