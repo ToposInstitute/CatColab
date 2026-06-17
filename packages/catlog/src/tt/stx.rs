@@ -286,11 +286,11 @@ pub enum TmS_ {
     ///
     /// Here is an example:
     /// ```text
-    /// def Edge : WeightedGraph := [E := [e]]
-    /// def I : WeightedGraph := [
+    /// instance Edge : WeightedGraph := [E := [e]]
+    /// instance I : WeightedGraph := [
     ///     V := [v1],
     ///     we : Edge,
-    ///     we.src(e) := v1,
+    ///     src(we.e) := v1,
     /// ]
     /// ```
     /// The LHS of the mapping clause elaborates to

@@ -577,7 +577,7 @@ type WeightedGraph := [
   weight : Attr[E, Weight]
 ]
 
-def I : WeightedGraph := [
+instance I : WeightedGraph := [
     V := [v],
     E := [e],
     src(e) := v
@@ -617,14 +617,14 @@ type WeightedGraph := [
   weight : Attr[E, Weight]
 ]
 
-def Loop : WeightedGraph := [
+instance Loop : WeightedGraph := [
     V := [v],
     E := [e],
     src(e) := v,
     tgt(e) := v
 ]
 
-def UseLoop : WeightedGraph := [
+instance UseLoop : WeightedGraph := [
     l : Loop
 ]
 "#;

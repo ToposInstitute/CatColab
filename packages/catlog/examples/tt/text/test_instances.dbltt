@@ -9,11 +9,11 @@ type WeightedGraph := [
   weight : Attr[E, Weight]
 ]
 
-def Edge : WeightedGraph := [
+instance Edge : WeightedGraph := [
     E := [e]
 ]
 
-def I : WeightedGraph := [
+instance I : WeightedGraph := [
     V := [v1, v2],
     Weight := [w],
     we : Edge,
@@ -26,7 +26,7 @@ def I : WeightedGraph := [
     weight(wf.e) := w
 ]
 
-def I2 : WeightedGraph := [
+instance I2 : WeightedGraph := [
     V := [v1, v2],
     Weight := [w],
     we : Edge,
@@ -36,6 +36,9 @@ def I2 : WeightedGraph := [
     weight := [we.e := w, wf.e := w]
 ]
 
-def I3 : WeightedGraph := [
+instance I3 : WeightedGraph := [
     E := [e1, e2]
 ]
+
+#(should_fail)
+syn I.E

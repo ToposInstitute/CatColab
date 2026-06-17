@@ -24,7 +24,7 @@ pub const TT_PARSE_CONFIG: ParseConfig = ParseConfig::new(
         ("==", Prec::nonassoc(30)),
     ],
     &[":", ":=", "&", "Unit", "Hom", "*", "=="],
-    &["type", "def", "syn", "chk", "norm", "generate", "uwd", "set_theory"],
+    &["type", "def", "instance", "syn", "chk", "norm", "generate", "uwd", "set_theory"],
 );
 
 /// The result of elaborating a top-level statement.
@@ -162,15 +162,48 @@ impl TopElaborator {
                         let mut elab = self.elaborator(&theory, toplevel);
                         let (_, ret_ty_v) = elab.ty(ty_n);
                         let (tm_s, tm_v) = elab.chk(&ret_ty_v, tm_n);
-                        // A term in the empty context. The body may be an
-                        // ordinary constant or a [`TmV_::Instance`].
-                        // Instance-ness is later read off the term value.
+                        // A term in the empty context — a tight transformation
+                        // / generalized element (e.g. record construction).
+                        // Instances are declared with `instance`, not here.
                         Some(TopElabResult::Declaration(
                             name,
                             TopDecl::DefConst(DefConst::new(theory.clone(), tm_s, tm_v, ret_ty_v)),
                         ))
                     }
                 }
+            }
+            "instance" => {
+                let theory = self.get_theory(tn.loc)?;
+                let (name, args_n, ty_n, tm_n) = self.annotated_def(tn.body).or_else(|| {
+                    self.error(
+                        tn.loc,
+                        "unknown syntax for instance declaration, expected <name> : <type> := [...]",
+                    )
+                })?;
+                if args_n.is_some() {
+                    return self.error(
+                        tn.loc,
+                        "an instance takes no arguments; for a parameterized map between \
+                         models, use `def`",
+                    );
+                }
+                let mut elab = self.elaborator(&theory, toplevel);
+                let (_, ret_ty_v) = elab.ty(ty_n);
+                // An instance body is checked against its codomain model, a
+                // record (sketch) type — the same `Record` shape `chk` requires
+                // for any `[...]`, matched here since instance dispatch lives at
+                // this keyword rather than in `chk`.
+                let TyV_::Record(r) = &*ret_ty_v else {
+                    return self.error(
+                        tn.loc,
+                        "an instance must be declared against a record (sketch) type",
+                    );
+                };
+                let (tm_s, tm_v) = elab.instance_body(r, tm_n);
+                Some(TopElabResult::Declaration(
+                    name,
+                    TopDecl::DefConst(DefConst::new(theory.clone(), tm_s, tm_v, ret_ty_v)),
+                ))
             }
             "syn" => {
                 let theory = self.get_theory(tn.loc)?;
@@ -425,7 +458,7 @@ impl<'a> Elaborator<'a> {
         result
     }
 
-    /// Elaborate the clauses of an instance body (the tuple `n`) into the
+    /// Elaborate the clauses of an instance body (the f-notation `n`) into the
     /// payload of an [`InstanceBodyS`]/[`InstanceBodyV`]. The codomain is
     /// already set on the context by [`Self::instance_body`].
     ///
@@ -937,8 +970,6 @@ impl<'a> Elaborator<'a> {
         } else if let Some(d) = self.toplevel.lookup(name) {
             match d {
                 TopDecl::Type(_) => self.syn_error(format!("{name} refers type, not term")),
-                // An instance is just a term (its `val` is a `TmV_::Instance`),
-                // so it resolves here like any other constant.
                 TopDecl::DefConst(d) => (TmS::topvar(name), d.val.clone(), d.ty.clone()),
                 TopDecl::Def(_) => self.syn_error(format!("{name} must be applied to arguments")),
             }
@@ -957,6 +988,12 @@ impl<'a> Elaborator<'a> {
                 let TyV_::Record(r) = &*ty_v else {
                     return elab.syn_error("can only project from record type");
                 };
+                if matches!(&*tm_v, TmV_::Instance(_)) {
+                    return elab.syn_error(
+                        "cannot project a field out of an instance; an instance is \
+                         eliminated by mapping out of it, not by projection",
+                    );
+                }
                 let label = label_seg(*f);
                 let f = name_seg(*f);
                 if !r.fields.has(f) {
@@ -987,6 +1024,12 @@ impl<'a> Elaborator<'a> {
                 let TyV_::Record(r) = &*recv_ty else {
                     return elab.syn_error("can only project from record type");
                 };
+                if matches!(&*recv_v, TmV_::Instance(_)) {
+                    return elab.syn_error(
+                        "cannot project a field out of an instance; an instance is \
+                         eliminated by mapping out of it, not by projection",
+                    );
+                }
                 let arg_name = name_seg(*arg_field);
                 let arg_label = label_seg(*arg_field);
                 if !r.fields.has(arg_name) {
@@ -1102,50 +1145,11 @@ impl<'a> Elaborator<'a> {
         let mut elab = self.enter(n.loc());
         match (&**ty, n.ast0()) {
             (TyV_::Record(r), Tuple(field_ns)) => {
-                // Dispatch by clause shape. An instance body has at
-                // least one clause that doesn't fit the
-                // `field := value` record-construction shape — either a
-                // `:`-typed slot, a `mor(arg) := target` mapping entry
-                // (LHS is an application), a `field := [names]`
-                // set-literal assignment (RHS is a tuple of bare names),
-                // or a `field := [key := target, ...]` mapping-literal
-                // assignment (RHS is a tuple of `:=`-clauses). The
-                // remaining `field := value` shape — and a tuple of
-                // `:=`-clauses where each LHS matches an inner field of
-                // a nested record type — is ordinary record construction.
-                if field_ns.iter().any(|f| match f.ast0() {
-                    App2(L(_, Keyword(":")), _, _) => true,
-                    App2(L(_, Keyword(":=")), L(_, App1(_, _)), _) => true,
-                    App2(L(_, Keyword(":=")), L(_, Var(_)), L(_, Tuple(elems))) => {
-                        // Set-literal: tuple of bare names.
-                        elems.iter().all(|e| matches!(e.ast0(), Var(_)))
-                    }
-                    _ => false,
-                }) {
-                    return elab.instance_body(r, n);
-                }
-                // Mapping-literal disambiguation: `field := [k := v, ...]`
-                // where the LHS field is a *morphism* of the enclosing
-                // record (sketch). If the field is object- or
-                // record-typed, treat as nested record construction
-                // instead — this distinction can only be made by
-                // consulting the record's field type.
-                if field_ns.iter().any(|f| {
-                    let App2(L(_, Keyword(":=")), L(_, Var(field_name)), L(_, Tuple(elems))) =
-                        f.ast0()
-                    else {
-                        return false;
-                    };
-                    if !elems.iter().all(|e| matches!(e.ast0(), App2(L(_, Keyword(":=")), _, _))) {
-                        return false;
-                    }
-                    let Some(field_ty_s) = r.fields.get(name_seg(*field_name)) else {
-                        return false;
-                    };
-                    matches!(&**field_ty_s, TyS_::Morphism(_, _, _))
-                }) {
-                    return elab.instance_body(r, n);
-                }
+                // Ordinary record construction (a tight transformation /
+                // generalized element). Instance bodies are *not* dispatched
+                // here — they are introduced by the `instance` keyword, which
+                // calls `instance_body` directly — so this arm has no clause
+                // shape to disambiguate.
                 if r.fields.len() != field_ns.len() {
                     return elab.chk_error(format!(
                         "wrong number of fields provided, expected {}, got {}",
