@@ -172,9 +172,8 @@ impl TyV {
         }
     }
 
-    /// The empty record type — the unit type / empty model. Its
-    /// environment is empty because the type has no fields, so the
-    /// environment is never consulted. Also used as a throwaway type for
+    /// The empty record type — the unit type / empty model. 
+    /// Also used as a throwaway type for
     /// untyped placeholder binders (whose type is discarded).
     pub fn empty_record() -> Self {
         Self(Rc::new(TyV_::Record(RecordV::new(Env::nil(), Row::empty(), Dtry::empty()))))
