@@ -9,7 +9,6 @@ use catlog::tt::toplevel::Toplevel;
 use derive_more::From;
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
-use ustr::ustr;
 use wasm_bindgen::prelude::*;
 
 use catcolab_document_types::current::*;
