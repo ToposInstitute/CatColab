@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use super::Parameter;
-use crate::latex::{Latex, ToLatex};
+use crate::latex::{Latex, ToLatexWithMap};
 use crate::simulate::ode::PolynomialSystem;
 use crate::stdlib::analyses::ode::ode_semantics::*;
 use crate::stdlib::analyses::petri::transition_interface;
@@ -161,26 +161,26 @@ impl fmt::Display for MassActionParameter {
     }
 }
 
-impl ToLatex for MassActionParameter {
-    fn to_latex(&self) -> Latex {
+impl ToLatexWithMap for MassActionParameter {
+    fn to_latex_with_map<T: Fn(&QualifiedName) -> String>(&self, f: T) -> Latex {
         match self {
-            Self::Balanced { flow: transition } => Latex(format!("r_{{{transition}}}")),
-            Self::Unbalanced { direction, parameter } => match (direction, parameter) {
-                (Direction::IncomingFlow, RateParameter::PerFlow { flow: transition }) => {
-                    Latex(format!("\\rho_{{{transition}}}"))
+            MassActionParameter::Balanced { flow } => Latex(format!("r_{{{}}}", f(flow))),
+            MassActionParameter::Unbalanced { direction, parameter } => {
+                match (direction, parameter) {
+                    (Direction::IncomingFlow, RateParameter::PerFlow { flow }) => {
+                        Latex(format!("\\rho_{{{}}}", f(flow)))
+                    }
+                    (Direction::OutgoingFlow, RateParameter::PerFlow { flow }) => {
+                        Latex(format!("\\kappa_{{{}}}", f(flow)))
+                    }
+                    (Direction::IncomingFlow, RateParameter::PerStock { flow, stock }) => {
+                        Latex(format!("\\rho_{{{}}}^{{{}}}", f(flow), stock))
+                    }
+                    (Direction::OutgoingFlow, RateParameter::PerStock { flow, stock }) => {
+                        Latex(format!("\\kappa_{{{}}}^{{{}}}", f(flow), stock))
+                    }
                 }
-                (Direction::OutgoingFlow, RateParameter::PerFlow { flow: transition }) => {
-                    Latex(format!("\\kappa_{{{transition}}}"))
-                }
-                (
-                    Direction::IncomingFlow,
-                    RateParameter::PerStock { flow: transition, stock: place },
-                ) => Latex(format!("\\rho_{{{transition}}}^{{\\text{{{place}}}}}")),
-                (
-                    Direction::OutgoingFlow,
-                    RateParameter::PerStock { flow: transition, stock: place },
-                ) => Latex(format!("\\kappa_{{{transition}}}^{{\\text{{{place}}}}}")),
-            },
+            }
         }
     }
 }

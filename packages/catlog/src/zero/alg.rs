@@ -9,7 +9,8 @@ use std::ops::{Add, AddAssign, Mul, Neg};
 
 use derivative::Derivative;
 
-use crate::latex::{Latex, ToLatex};
+use crate::latex::{Latex, ToLatex, ToLatexWithMap};
+use crate::zero::QualifiedName;
 
 use super::rig::*;
 
@@ -149,25 +150,25 @@ where
     }
 }
 
-impl<Var, Coef, Exp> ToLatex for Polynomial<Var, Coef, Exp>
+impl<Var, Coef, Exp> ToLatexWithMap for Polynomial<Var, Coef, Exp>
 where
-    Var: Display + ToLatex,
-    Coef: DisplayCoef + Clone + PartialEq + One + Neg<Output = Coef> + ToLatex,
+    Var: Display + ToLatexWithMap,
+    Coef: Display + ToLatexWithMap + DisplayCoef + Clone + PartialEq + One + Neg<Output = Coef>,
     Exp: Display + ToLatex + PartialEq + One,
 {
     /// Convert to a LaTeX string, formatting each monomial via [`Monomial::to_latex`].
-    fn to_latex(&self) -> Latex {
+    fn to_latex_with_map<F: Fn(&QualifiedName) -> String>(&self, f: F) -> Latex {
         let fmt_term = |coef: &Coef, monomial: &Monomial<Var, Exp>| -> String {
-            let Latex(monomial) = monomial.to_latex();
-            let Latex(coef_latex) = coef.to_latex();
+            let Latex(monomial_latex) = monomial.to_latex_with_map(|m| f(m));
+            let Latex(coef_latex) = coef.to_latex_with_map(|c| f(c));
             if coef.is_one() {
-                monomial
+                monomial_latex
             } else if *coef == Coef::one().neg() {
-                format!("-{monomial}")
+                format!("-{monomial_latex}")
             } else if coef.needs_parentheses() {
-                format!("({coef_latex}) \\cdot {monomial}")
+                format!("({coef_latex}) \\cdot {monomial_latex}")
             } else {
-                format!("{coef_latex} \\cdot {monomial}")
+                format!("{coef_latex} \\cdot {monomial_latex}")
             }
         };
 

@@ -22,7 +22,8 @@ use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use derivative::Derivative;
 use duplicate::duplicate_item;
 
-use crate::latex::{Latex, ToLatex};
+use crate::latex::{Latex, ToLatex, ToLatexWithMap};
+use crate::zero::QualifiedName;
 
 /// A commutative monoid, written additively.
 pub trait AdditiveMonoid: Add<Output = Self> + Zero {}
@@ -588,17 +589,17 @@ where
     }
 }
 
-impl<Var, Exp> ToLatex for Monomial<Var, Exp>
+impl<Var, Exp> ToLatexWithMap for Monomial<Var, Exp>
 where
-    Var: Display + ToLatex,
+    Var: Display + ToLatexWithMap,
     Exp: Display + ToLatex + PartialEq + One,
 {
     /// Convert to a LaTeX string, separating variables with `\cdot`.
-    fn to_latex(&self) -> Latex {
+    fn to_latex_with_map<F: Fn(&QualifiedName) -> String>(&self, f: F) -> Latex {
         let fmt_power = |var: &Var, exp: &Exp| {
-            let Latex(var_latex) = var.to_latex();
+            let Latex(var_latex) = var.to_latex_with_map(|v| f(v));
             if exp.is_one() {
-                format!("{var_latex}")
+                var_latex.to_string()
             } else {
                 let exp = exp.to_string();
                 if exp.len() == 1 {

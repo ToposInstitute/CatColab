@@ -14,6 +14,8 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
+use crate::zero::QualifiedName;
+
 /// We should mark which strings are to be parsed as Latex.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -32,11 +34,25 @@ pub trait ToLatex {
     fn to_latex(&self) -> Latex;
 }
 
-#[duplicate_item(T; [f32]; [f64]; [i8]; [i32]; [i64]; [u32]; [u64]; [usize]; [char]; [String])]
-impl ToLatex for T {
-    // TODO: this should be generic over `P -> String` where `P: ODEParameterType` (or some subset thereof)
-    //       and the default implementation just uses `to_string()` ???
+/// TODO: documentation
+pub trait ToLatexWithMap {
+    /// TODO: documentation
+    fn to_latex_with_map<F: Fn(&QualifiedName) -> String>(&self, f: F) -> Latex;
+}
+
+impl<T> ToLatex for T
+where
+    T: ToLatexWithMap,
+{
     fn to_latex(&self) -> Latex {
+        let name = |id: &QualifiedName| {id.to_string()};
+        self.to_latex_with_map(name)
+    }
+}
+
+#[duplicate_item(T; [f32]; [f64]; [i8]; [i32]; [i64]; [u32]; [u64]; [usize]; [char]; [String])]
+impl ToLatexWithMap for T {
+    fn to_latex_with_map<F: Fn(&QualifiedName) -> String>(&self, _f: F) -> Latex {
         Latex(self.to_string())
     }
 }

@@ -12,7 +12,8 @@ use num_traits::{One, Pow, Zero};
 #[cfg(test)]
 use super::ODEProblem;
 use super::ODESystem;
-use crate::latex::{Latex, LatexEquation, LatexEquations, ToLatex};
+use crate::latex::{Latex, LatexEquation, LatexEquations, ToLatex, ToLatexWithMap};
+use crate::zero::QualifiedName;
 use crate::zero::{alg::Polynomial, rig::DisplayCoef};
 
 /// A system of polynomial differential equations.
@@ -90,11 +91,11 @@ where
         PolynomialSystem { components }
     }
 
-    /// Converts to equations as LaTeX strings.
-    pub fn to_latex_equations(&self) -> LatexEquations
+    /// TODO: documentation
+    pub fn to_latex_equations_with_map<F: Fn(&QualifiedName) -> String>(&self, f: F) -> LatexEquations
     where
-        Var: Display + ToLatex,
-        Coef: Display + ToLatex + DisplayCoef + Clone + PartialEq + One + Neg<Output = Coef>,
+        Var: Display + ToLatexWithMap,
+        Coef: Display + ToLatexWithMap + DisplayCoef + Clone + PartialEq + One + Neg<Output = Coef>,
         Exp: Display + ToLatex + PartialEq + One,
     {
         LatexEquations(
@@ -102,10 +103,21 @@ where
                 .iter()
                 .map(|(var, poly)| LatexEquation {
                     lhs: Latex(format!("\\frac{{\\mathrm{{d}}}}{{\\mathrm{{d}}t}} {var}")),
-                    rhs: poly.to_latex(),
+                    rhs: poly.to_latex_with_map(|p| f(p)),
                 })
                 .collect(),
         )
+    }
+
+    /// Converts to equations as LaTeX strings.
+    pub fn to_latex_equations(&self) -> LatexEquations
+    where
+        Var: Display + ToLatexWithMap,
+        Coef: Display + ToLatexWithMap + DisplayCoef + Clone + PartialEq + One + Neg<Output = Coef>,
+        Exp: Display + ToLatex + PartialEq + One,
+    {
+        let name = |id: &QualifiedName| {id.to_string()};
+        self.to_latex_equations_with_map(name)
     }
 }
 

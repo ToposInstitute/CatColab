@@ -72,7 +72,7 @@ pub(crate) fn polynomial_ode_simulation(
     let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
     Ok(ODEResultWithEquations {
         solution: ODEResult(solution.into()),
-        latex_equations: latex_equations,
+        latex_equations,
     })
 }
 
@@ -149,7 +149,7 @@ pub(crate) fn mass_action_simulation(
     let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
     Ok(ODEResultWithEquations {
         solution: ODEResult(solution.into()),
-        latex_equations: latex_equations,
+        latex_equations,
     })
 }
 
@@ -195,7 +195,7 @@ pub(crate) fn lotka_volterra_simulation(
     let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
     Ok(ODEResultWithEquations {
         solution: ODEResult(solution.into()),
-        latex_equations: latex_equations,
+        latex_equations,
     })
 }
 
@@ -240,6 +240,6 @@ pub(crate) fn linear_ode_simulation(
     let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
     Ok(ODEResultWithEquations {
         solution: ODEResult(solution.into()),
-        latex_equations: latex_equations,
+        latex_equations,
     })
 }

@@ -1,6 +1,6 @@
 //! Auxiliary structs and glue code for any LaTeX code being passed through analyses.
 
-use catlog::{stdlib::analyses::ode, zero::QualifiedName};
+use catlog::zero::QualifiedName;
 
 use super::model::DblModel;
 
@@ -33,71 +33,6 @@ pub(crate) fn latex_mor_names(model: &DblModel) -> impl Fn(&QualifiedName) -> St
     }
 }
 
-
-// TODO: THIS SHOULD NOT BE A WHOLE NEW CLOSURE
-/// Creates a closure that formats morphism names for mass-action LaTeX output.
-///
-/// When a morphism has a label, it is used directly. When unnamed, the label
-/// falls back to the domain→codomain format (e.g., `X \to Y`).
-pub(crate) fn latex_mor_names_mass_action(
-    model: &DblModel,
-) -> impl Fn(&ode::MassActionParameter) -> String {
-    // Returns a LaTeX fragment for a transition, suitable for use as a subscript.
-    // Named morphisms produce `\text{name}`, unnamed ones produce
-    // `\text{dom} \to \text{cod}` so that `\to` is in math mode.
-    let transition_subscript = |transition: &QualifiedName| -> String {
-        if let Some(label) = model.mor_namespace.label(transition) {
-            format!("\\text{{{label}}}")
-        } else {
-            let (dom, cod) = model
-                .mor_generator_dom_cod_label_strings(transition)
-                .expect("Morphism in equation system should have domain and codomain");
-            format!("\\text{{{dom}}} \\to \\text{{{cod}}}")
-        }
-    };
-
-    move |id: &ode::MassActionParameter| match id {
-        ode::MassActionParameter::Balanced { flow: transition } => {
-            let sub = transition_subscript(transition);
-            format!("r_{{{sub}}}")
-        }
-        ode::MassActionParameter::Unbalanced { direction, parameter } => {
-            match (direction, parameter) {
-                (
-                    ode::Direction::IncomingFlow,
-                    ode::RateParameter::PerFlow { flow: transition },
-                ) => {
-                    let sub = transition_subscript(transition);
-                    format!("\\rho_{{{sub}}}")
-                }
-                (
-                    ode::Direction::OutgoingFlow,
-                    ode::RateParameter::PerFlow { flow: transition },
-                ) => {
-                    let sub = transition_subscript(transition);
-                    format!("\\kappa_{{{sub}}}")
-                }
-                (
-                    ode::Direction::IncomingFlow,
-                    ode::RateParameter::PerStock { flow: transition, stock: place },
-                ) => {
-                    let sub = transition_subscript(transition);
-                    let output_place_label = model.ob_namespace.label_string(place);
-                    format!("\\rho_{{{sub}}}^{{\\text{{{output_place_label}}}}}")
-                }
-                (
-                    ode::Direction::OutgoingFlow,
-                    ode::RateParameter::PerStock { flow: transition, stock: place },
-                ) => {
-                    let sub = transition_subscript(transition);
-                    let input_place_label = model.ob_namespace.label_string(place);
-                    format!("\\kappa_{{{sub}}}^{{\\text{{{input_place_label}}}}}")
-                }
-            }
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use catlog::dbl::modal::{List, ModalMorType, ModalOb, ModalObType};
@@ -125,8 +60,7 @@ mod tests {
         let sys = analysis.build_system(tab_model);
         let equations = sys
             .map_variables(latex_ob_names(&model))
-            .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(&model)))
-            .to_latex_equations();
+            .to_latex_equations_with_map(|param| latex_mor_names(&model)(param));
 
         let expected = LatexEquations(vec![
             LatexEquation {
@@ -143,6 +77,8 @@ mod tests {
         assert_eq!(equations, expected);
     }
 
+    // TODO: add more tests here for the other ODE semantics
+
     #[test]
     fn unnamed_mor_uses_dom_cod_in_equations() {
         let model = backward_link("xxx", "yyy", "");
@@ -156,8 +92,7 @@ mod tests {
         let sys = analysis.build_system(tab_model);
         let equations = sys
             .map_variables(latex_ob_names(&model))
-            .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(&model)))
-            .to_latex_equations();
+            .to_latex_equations_with_map(|param| latex_mor_names(&model)(param));
 
         let expected = LatexEquations(vec![
             LatexEquation {
