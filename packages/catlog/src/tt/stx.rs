@@ -82,13 +82,6 @@ pub enum TyS_ {
     /// the type of the field at path `p`.
     Specialize(TyS, Vec<(Vec<(FieldName, LabelSegment)>, TyS)>),
 
-    /// Type constructor for the unit type.
-    ///
-    /// Example syntax: `Unit`.
-    ///
-    /// All terms of this type are convertible with `tt : Unit`.
-    Unit,
-
     /// A metavar.
     ///
     /// Currently, this is only used for handling elaboration errors, we might
@@ -158,11 +151,6 @@ impl TyS {
         Self(Rc::new(TyS_::Specialize(ty, specializations)))
     }
 
-    /// Smart constructor for [TyS], [TyS_::Unit] case.
-    pub fn unit() -> Self {
-        Self(Rc::new(TyS_::Unit))
-    }
-
     /// Smart constructor for [TyS], [TyS_::Meta] case.
     pub fn meta(mv: MetaVar) -> Self {
         Self(Rc::new(TyS_::Meta(mv)))
@@ -194,7 +182,6 @@ impl ToDoc for TyS {
                     d.iter().map(|(name, ty)| binop(t(":"), t(path_to_string(name)), ty.to_doc())),
                 ),
             ),
-            TyS_::Unit => t("Unit"),
             TyS_::Meta(mv) => t(format!("?{}", mv.id)),
             TyS_::Over(path) => t(format!("Over({})", object_path_to_string(path))),
         }
@@ -255,10 +242,6 @@ pub enum TmS_ {
     Cons(Row<TmS>),
     /// Record elimination.
     Proj(TmS, FieldName, LabelSegment),
-    /// Unit introduction.
-    ///
-    /// Note that eta-expansion takes care of elimination for units.
-    Tt,
     /// Identity morphism at an object.
     Id(TmS),
     /// Tabulation of a morphism.
@@ -364,11 +347,6 @@ impl TmS {
         Self(Rc::new(TmS_::Proj(tm_s, field_name, label)))
     }
 
-    /// Smart constructor for [TmS], [TmS_::Tt] case.
-    pub fn tt() -> Self {
-        Self(Rc::new(TmS_::Tt))
-    }
-
     /// Smart constructor for [TmS], [TmS_::Id] case.
     pub fn id(ob: TmS) -> Self {
         Self(Rc::new(TmS_::Id(ob)))
@@ -434,7 +412,6 @@ impl ToDoc for TmS {
             TmS_::List(elems) => tuple(elems.iter().map(|elem| elem.to_doc())),
             TmS_::OverApp(_, mor_label, _, inner) => inner.to_doc() + t(format!(".{mor_label}")),
             TmS_::Instance(body) => instance_body_to_doc(body),
-            TmS_::Tt => t("tt"),
             TmS_::Meta(mv) => t(format!("?{}", mv.id)),
         }
     }
