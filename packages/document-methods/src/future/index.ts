@@ -302,6 +302,43 @@ export type NotebookCell<TLogic extends AnyModelLogic> =
     | LogicObjectCell<TLogic>
     | LogicMorphismCell<TLogic>;
 
+/**
+ * An object-cell handle in a {@link GenericNotebook}. Unlike {@link ObjectCell},
+ * the cell's `type` is the bare, un-branded `ObType` read from the document
+ * rather than a logic's exact object type.
+ */
+export type GenericObjectCell = Update<{ name: string }> &
+    Reorder & {
+        readonly kind: typeof CellKind.Object;
+        readonly id: string;
+        readonly type: ObType;
+        readonly name: string;
+        duplicate(): GenericObjectCell;
+    };
+
+/** Endpoint of a generic morphism: a single object cell or a list of them. */
+type GenericEndpoint = GenericObjectCell | GenericObjectCell[];
+
+/**
+ * A morphism-cell handle in a {@link GenericNotebook}. The `type` is a bare
+ * `MorType`, and endpoints are unconstrained object-cell references.
+ */
+export type GenericMorphismCell = Update<{
+    name: string;
+    dom: GenericEndpoint;
+    cod: GenericEndpoint;
+}> &
+    Reorder & {
+        readonly kind: typeof CellKind.Morphism;
+        readonly id: string;
+        readonly type: MorType;
+        readonly name: string;
+        duplicate(): GenericMorphismCell;
+    };
+
+/** The union of cell handles a {@link GenericNotebook} can yield. */
+export type GenericNotebookCell = RichTextCell | GenericObjectCell | GenericMorphismCell;
+
 export type ModelNotebook<TLogic extends AnyModelLogic, Handle = ModelDocument> = Update<{
     name: string;
 }> & {
@@ -324,8 +361,12 @@ export type ModelNotebook<TLogic extends AnyModelLogic, Handle = ModelDocument> 
      * Elaborate the notebook into a core model and validate it. Returns a
      * tagged result: `Valid` with the model, `Invalid` with the model and its
      * validation errors, or `Illformed` if elaboration itself failed.
+     *
+     * The core theory to elaborate into defaults to the logic's `coreTheory`;
+     * pass one explicitly to elaborate against a different theory (this is how
+     * a {@link GenericNotebook}, which has no logic, supplies its theory).
      */
-    validate(): ModelValidationResult;
+    validate(coreTheory?: DblTheory): ModelValidationResult;
     /**
      * Migrate the notebook's document to another logic, **mutating it in
      * place**: the underlying document is rewritten to the target theory rather
@@ -359,6 +400,52 @@ export type ModelNotebook<TLogic extends AnyModelLogic, Handle = ModelDocument> 
         type: TType,
         args: { name: string },
     ): ObjectCell<TType>;
+    /**
+     * Add an object cell from a bare {@link ObType}, bypassing the logic's
+     * typed object constructors. The returned handle is an untyped
+     * {@link GenericObjectCell}. Useful when the object type is computed at
+     * runtime rather than chosen from the logic.
+     */
+    addObject(type: ObType, args: { name: string }): GenericObjectCell;
+    /**
+     * Add a morphism cell from a bare {@link MorType}, bypassing the logic's
+     * typed morphism constructors. Endpoints are untyped object-cell handles.
+     */
+    addMorphism(
+        type: MorType,
+        args: { name: string; dom?: GenericEndpoint; cod?: GenericEndpoint },
+    ): GenericMorphismCell;
+};
+
+/**
+ * A notebook viewed without a static logic: cell types are bare `ObType` and
+ * `MorType` values rather than a logic's exact branded types. Every typed
+ * {@link ModelNotebook} is also a `GenericNotebook`, so code that does not need
+ * the static typing can accept the wider interface.
+ *
+ * Cells are added with {@link addObject} and {@link addMorphism} (or
+ * {@link add} with {@link RichText}); there are no logic-specific constructors.
+ * Because there is no logic to supply a core theory, {@link validate} requires
+ * one to be passed in.
+ */
+export type GenericNotebook<Handle = ModelDocument> = Update<{ name: string }> & {
+    readonly name: string;
+    readonly handle: Handle;
+    readonly document: ModelDocument;
+    dump(): ModelDocument;
+    /** Elaborate and validate against the given core theory. */
+    validate(coreTheory: DblTheory): ModelValidationResult;
+    /** Handles for all cells, in notebook order. */
+    cells(): Array<GenericNotebookCell>;
+    /** Add a rich-text cell. */
+    add(type: RichTextType, args: { content: string }): RichTextCell;
+    /** Add an object cell from a bare {@link ObType}. */
+    addObject(type: ObType, args: { name: string }): GenericObjectCell;
+    /** Add a morphism cell from a bare {@link MorType}. */
+    addMorphism(
+        type: MorType,
+        args: { name: string; dom?: GenericEndpoint; cod?: GenericEndpoint },
+    ): GenericMorphismCell;
 };
 
 export const objectType = <Name extends string>(content: string) =>
@@ -687,11 +774,19 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
             ...reorderMethods(cellId),
         }) as unknown as RichTextCell;
 
+    // A generic notebook carries no cell types; cell handles then report the
+    // bare `ObType`/`MorType` stored in each judgment rather than a matched
+    // logic type. A logic with cell types still requires an exact match.
+    const isGeneric = Object.keys(logic.cellTypes).length === 0;
+
     const findObjectType = (obType: ObType): LogicObjectType<TLogic> => {
         const match = Object.values(logic.cellTypes).find(
             (t) => t[typeKind] === "object" && sameTypeValue(t, obType),
         );
         if (!match) {
+            if (isGeneric) {
+                return obType as LogicObjectType<TLogic>;
+            }
             throw new Error(
                 `No object type in logic with theory "${logic.theory}" ` +
                     `matches ${JSON.stringify(obType)}.`,
@@ -705,6 +800,9 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
             (t) => t[typeKind] === "morphism" && sameTypeValue(t, morType),
         );
         if (!match) {
+            if (isGeneric) {
+                return morType as LogicMorphismType<TLogic>;
+            }
             throw new Error(
                 `No morphism type in logic with theory "${logic.theory}" ` +
                     `matches ${JSON.stringify(morType)}.`,
@@ -724,14 +822,14 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
         dump() {
             return copy ? copy(doc) : structuredClone(doc);
         },
-        validate(): ModelValidationResult {
+        validate(coreTheory?: DblTheory): ModelValidationResult {
             const snapshot = copy ? copy(doc) : structuredClone(doc);
             let model: DblModel;
             try {
                 model = elaborateModel(
                     snapshot.notebook as unknown as WasmModelNotebook,
                     new DblModelMap(),
-                    logic.coreTheory,
+                    coreTheory ?? logic.coreTheory,
                     v7(),
                 );
             } catch (e) {
@@ -867,6 +965,37 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
                     `or morphism type belonging to logic "${logic.theory}".`,
             );
         },
+        addObject(type: ObType, args: { name: string }): GenericObjectCell {
+            const judgment = newObjectDecl(type);
+            judgment.name = args.name;
+            const formalCell = newFormalCell(judgment);
+            change((d) => {
+                d.notebook.cellContents[formalCell.id] = formalCell;
+                d.notebook.cellOrder.push(formalCell.id);
+            });
+            return objectHandle(
+                formalCell.id,
+                type as LogicObjectType<TLogic>,
+            ) as unknown as GenericObjectCell;
+        },
+        addMorphism(
+            type: MorType,
+            args: { name: string; dom?: GenericEndpoint; cod?: GenericEndpoint },
+        ): GenericMorphismCell {
+            const judgment = newMorphismDecl(type);
+            judgment.name = args.name;
+            judgment.dom = encodeEndpoint(args.dom);
+            judgment.cod = encodeEndpoint(args.cod);
+            const formalCell = newFormalCell(judgment);
+            change((d) => {
+                d.notebook.cellContents[formalCell.id] = formalCell;
+                d.notebook.cellOrder.push(formalCell.id);
+            });
+            return morphismHandle(
+                formalCell.id,
+                type as LogicMorphismType<TLogic>,
+            ) as unknown as GenericMorphismCell;
+        },
     } as unknown as ModelNotebook<TLogic, Handle>;
 
     function isLogicObjectType(value: unknown): boolean {
@@ -895,6 +1024,14 @@ export interface Binder<Handle> {
         data: { name: string },
     ): ModelNotebook<TLogic, Handle>;
     /**
+     * Build a logic-less notebook for the given document theory. Cells are
+     * added from bare `ObType`/`MorType` values via
+     * {@link GenericNotebook.addObject} and {@link GenericNotebook.addMorphism},
+     * and {@link GenericNotebook.validate} is supplied a core theory explicitly.
+     * Use this when the theory is known only as a string at runtime.
+     */
+    createGenericNotebook(theory: string, data: { name: string }): GenericNotebook<Handle>;
+    /**
      * Build a typed notebook around an existing plain document by initializing
      * store storage from it. Throws if the document's theory does not match
      * the logic's theory.
@@ -920,6 +1057,23 @@ export function createBinder<Handle>(store: DocumentStore<Handle>): Binder<Handl
             const seed = newModelDocument({ theory: logic.theory });
             seed.name = data.name;
             return this.loadNotebook(logic, seed);
+        },
+        createGenericNotebook(theory, data) {
+            const seed = newModelDocument({ theory });
+            seed.name = data.name;
+            // A generic notebook has no logic: empty `cellTypes` mark it generic
+            // so cell handles report bare document types, and `coreTheory` is
+            // unused because `validate` requires an explicit one.
+            const genericLogic = {
+                theory,
+                coreTheory: undefined as unknown as DblTheory,
+                cellTypes: {},
+            } satisfies AnyModelLogic;
+            return attachNotebook(
+                store,
+                store.createHandle(seed),
+                genericLogic,
+            ) as unknown as GenericNotebook<Handle>;
         },
         loadNotebook(logic, document) {
             if (document.theory !== logic.theory) {
