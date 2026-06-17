@@ -163,7 +163,7 @@ impl TopElaborator {
                         let (_, ret_ty_v) = elab.ty(ty_n);
                         let (tm_s, tm_v) = elab.chk(&ret_ty_v, tm_n);
                         // A closed (empty-context) term: a tight transformation
-                        // S -> Unit. Unit is the empty record, i.e. the empty model. 
+                        // S -> Unit. Unit is the empty record, i.e. the empty model.
                         // A tight map into the empty model exists only when S is itself empty,
                         // so the sole closed `def` is the identity on the empty
                         // model, `tt : Unit`. Closed loose terms are instances,
