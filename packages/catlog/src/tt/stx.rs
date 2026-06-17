@@ -299,7 +299,7 @@ pub enum TmS_ {
 ///   generator's fiber it lives over. Generators are introduced by
 ///   surface set-literal clauses `field := [...]` in the instance body.
 /// - `equations` is a list of `(lhs, rhs)` pairs over fiber
-///   ([`TyS_::Over`]) types. 
+///   ([`TyS_::Over`]) types.
 /// - `sub_instances` maps each sub-instance import's local name to a
 ///   nested instance term. This is what surface `we : Edge` lowers to.
 #[derive(Default)]
