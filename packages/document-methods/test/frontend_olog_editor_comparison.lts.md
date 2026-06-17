@@ -1,7 +1,7 @@
 # Frontend olog editor comparison
 
 This compares the shape of a small olog notebook editor in the current
-frontend-style API with the proposed `catcolab-documents` API. The current
+frontend-style API with the proposed `catcolab-documents` APIs. The current
 example is reduced from the real frontend path: a model document is edited
 through raw notebook cells, low-level model declarations, explicit endpoint
 encoding, and a document mutation callback.
@@ -10,7 +10,7 @@ encoding, and a document mutation callback.
 
 The frontend currently derives olog cell constructors from theory metadata and
 then mutates a raw `ModelDocument` notebook. In the sample body below, compare
-the same sequence of work against the proposed API: create a notebook, add two
+the same sequence of work against the proposed APIs: create a notebook, add two
 types and one aspect, render, then rename the first type.
 
 <!-- verifier:prepend-to-following -->
@@ -179,7 +179,107 @@ Type: Person | Type: Company | Aspect: works for
 Type: Employee | Type: Company | Aspect: works for
 ```
 
-## Proposed `catcolab-documents`
+## Proposed `catcolab-documents`, generic
+
+The generic API keeps the same store boundary and cell-handle operations as the
+typed API, but does not require a static logic value. Cells are created from bare
+`ObType` and `MorType` values, so it is a closer replacement for code that gets
+cell types from frontend theory metadata at runtime.
+
+<!-- verifier:reset -->
+
+<!-- verifier:prepend-to-following -->
+
+```tsx
+import { For } from "solid-js";
+import { createStore, produce, type SetStoreFunction, unwrap } from "solid-js/store";
+import { render } from "solid-js/web";
+
+import type { MorType, ObType } from "catcolab-document-types";
+import { CellKind, createBinder, type DocumentStore } from "catcolab-documents";
+import type { ModelDocument } from "catcolab-document-methods";
+
+type SolidStoreHandle = {
+    doc: ModelDocument;
+    setDoc: SetStoreFunction<ModelDocument>;
+};
+
+const solidStore: DocumentStore<SolidStoreHandle> = {
+    createHandle(initialDoc) {
+        const [doc, setDoc] = createStore<ModelDocument>(initialDoc);
+        return { doc, setDoc };
+    },
+    viewDocument: (handle) => handle.doc,
+    changeDocument: (handle, fn) => handle.setDoc(produce<ModelDocument>(fn)),
+    copyValue: (_handle, value) => structuredClone(unwrap(value)),
+};
+
+const solidBinder = createBinder(solidStore);
+
+const ologObjectType: ObType = { tag: "Basic", content: "Object" };
+const ologAspectType: MorType = { tag: "Hom", content: ologObjectType };
+
+function createGenericOlogNotebook(data: { name: string }) {
+    return solidBinder.createGenericNotebook("simple-olog", data);
+}
+
+type GenericOlogNotebook = ReturnType<typeof createGenericOlogNotebook>;
+
+function GenericOlogEditor(props: { notebook: GenericOlogNotebook }) {
+    return (
+        <section>
+            <h1>{props.notebook.name}</h1>
+            <ul>
+                <For each={props.notebook.cells()}>
+                    {(cell) => (
+                        <li>
+                            {cell.kind === CellKind.RichText
+                                ? `Text: ${cell.content}`
+                                : cell.kind === CellKind.Object
+                                  ? `Type: ${cell.name}`
+                                  : `Aspect: ${cell.name}`}
+                        </li>
+                    )}
+                </For>
+            </ul>
+        </section>
+    );
+}
+
+function renderedCellText(container: HTMLElement): string {
+    return Array.from(container.querySelectorAll("li"))
+        .map((li) => li.textContent ?? "")
+        .join(" | ");
+}
+```
+
+```tsx
+const notebook = createGenericOlogNotebook({ name: "An Olog" });
+const person = notebook.addObject(ologObjectType, { name: "Person" });
+const company = notebook.addObject(ologObjectType, { name: "Company" });
+notebook.addMorphism(ologAspectType, { name: "works for", dom: person, cod: company });
+
+const container = document.createElement("div");
+document.body.appendChild(container);
+
+const dispose = render(() => <GenericOlogEditor notebook={notebook} />, container);
+
+console.log(container.querySelector("h1")?.textContent);
+console.log(renderedCellText(container));
+
+person.update({ name: "Employee" });
+console.log(renderedCellText(container));
+
+dispose();
+```
+
+```
+An Olog
+Type: Person | Type: Company | Aspect: works for
+Type: Employee | Type: Company | Aspect: works for
+```
+
+## Proposed `catcolab-documents`, typed logic
 
 With the proposed package, the store boundary is explicit and reusable. The
 editor receives a typed notebook handle instead of raw notebook data plus a
