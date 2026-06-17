@@ -2,13 +2,13 @@ import { lazy } from "solid-js";
 
 import { ThDEC } from "catlog-wasm";
 import { type DiagramAnalysisMeta, Theory, type TheoryMeta } from "../../theory";
+import * as analyses from "../analyses";
 
 const ObjectCellEditor = lazy(() => import("../../model/object_cell_editor"));
 const MorphismCellEditor = lazy(() => import("../../model/morphism_cell_editor"));
 
 export default function createThDECTheory(theoryMeta: TheoryMeta): Theory {
     const thDEC = new ThDEC();
-    const diagramAnalyses: DiagramAnalysisMeta[] = [];
 
     return new Theory({
         ...theoryMeta,
@@ -54,6 +54,13 @@ export default function createThDECTheory(theoryMeta: TheoryMeta): Theory {
                 shortcut: ["M"],
             },
         ],
-        diagramAnalyses: diagramAnalyses,
+        diagramAnalyses: [
+            analyses.decapodes({
+                id: "decapodes",
+                name: "Simulate Decapode",
+                description: "",
+                help: "decapode",
+            }),
+        ],
     });
 }

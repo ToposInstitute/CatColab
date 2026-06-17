@@ -2,12 +2,17 @@ use indexmap::{IndexMap, IndexSet};
 use regex::Regex;
 use std::collections::HashMap;
 use std::sync::LazyLock;
+use ustr::ustr;
 
+use crate::stdlib::th_multicategory;
 use crate::tt::eval::Evaluator;
+use crate::tt::notebook_elab::Elaborator;
 use crate::tt::stx::{TmS, TmS_, TyS_};
-use crate::tt::toplevel::{TopDecl, Toplevel};
+use crate::tt::theory::{Theory, TheoryDef};
+use crate::tt::toplevel::{Diag, TopDecl, Toplevel};
 use crate::tt::val::{TmV, TyV, TyV_};
-use crate::zero::name_seg;
+use crate::zero::{NameSegment, name};
+use catcolab_document_types::current as nb;
 
 static ANON: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(.+)_(\w+)([0-9]+)$").unwrap());
 
@@ -17,6 +22,42 @@ pub trait JuliaTranspiler {
 
 pub struct Decapodes {
     pub pode: TyV,
+}
+
+impl Decapodes {
+    // TODO needs Result
+    /// meme
+    pub fn elab_and_transpile<'b>(
+        model: nb::ModelDocumentContent,
+        diagram: nb::DiagramDocumentContent,
+        diagram_map: HashMap<String, nb::DiagramDocumentContent>,
+    ) -> String {
+        let theory =
+            Theory::new(name("ThMulticategory"), TheoryDef::modal_unital(th_multicategory()));
+        let mut toplevel = Toplevel::new(Default::default());
+        let mut elab = Elaborator::new(theory.clone(), &toplevel, ustr(""));
+
+        // model
+        let (_, model_ty_v) = elab.notebook(model.notebook.formal_content());
+
+        // diagrams
+        for (ref_id, diag) in diagram_map {
+            let mut elab = Elaborator::new(theory.clone(), &toplevel, ustr(""));
+            let (stx, val, _, ty) =
+                elab.diagram_notebook(model_ty_v.clone(), diag.notebook.formal_content());
+            toplevel.declarations.insert(
+                NameSegment::Text(ustr(&ref_id)),
+                TopDecl::Diag(Diag::new(theory.clone(), model_ty_v.clone(), stx, val, ty)),
+            );
+        }
+
+        let mut elab = Elaborator::new(theory.clone(), &toplevel, ustr(""));
+        let (_, _, _, ty_v) =
+            elab.diagram_notebook(model_ty_v.clone(), diagram.notebook.formal_content());
+
+        let pode = Decapodes { pode: ty_v };
+        return pode.transpile();
+    }
 }
 
 impl JuliaTranspiler for Decapodes {
@@ -67,7 +108,7 @@ impl JuliaTranspiler for Decapodes {
         for (lhs, rhs) in mors {
             out.push_str(&format!("\n\t{} == {}", lhs, rhs));
         }
-        out
+        format!("@decapode begin\n{out}\nend")
     }
 }
 

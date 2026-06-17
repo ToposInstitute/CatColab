@@ -1,6 +1,18 @@
 import Loader from "lucide-solid/icons/loader";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
-import { createMemo, createResource, For, Match, Show, Switch } from "solid-js";
+import {
+    useContext,
+    createMemo,
+    createResource,
+    For,
+    Match,
+    Show,
+    Switch,
+    createEffect,
+} from "solid-js";
+import { unwrap } from "solid-js/store";
+import invariant from "tiny-invariant";
+import { useApi } from "../../api";
 
 import {
     BlockTitle,
@@ -13,8 +25,9 @@ import {
     Warning,
 } from "catcolab-ui-components";
 import type { ModelDiagramPresentation, ModelPresentation, QualifiedName } from "catlog-wasm";
+import { ThDEC } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
-import type { LiveDiagramDoc } from "../../diagram";
+import { LiveDiagramDoc, DiagramLibraryContext } from "../../diagram";
 import { PDEPlot2D } from "../../visualization";
 import type { DecapodesAnalysisContent } from "./simulator_types";
 
@@ -31,86 +44,111 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
 
     // Step 3: Run the simulation in the kernel!
     const [result, { refetch: rerunSimulation }] = createResource(() => undefined);
+    const api = useApi();
 
-    const elaboratedModel = () => props.liveDiagram.liveModel.elaboratedModel();
-    const elaboratedDiagram = () => props.liveDiagram.elaboratedDiagram();
+    const diagrams = useContext(DiagramLibraryContext);
+    invariant(diagrams);
 
-    const scalars = createMemo<QualifiedName[]>(
-        () =>
-            elaboratedModel()?.morGeneratorsWithType({
-                tag: "Hom",
-                content: { tag: "Basic", content: "Object" },
-            }) ?? [],
-    );
+    const instantiatedRefIds = createMemo(() => {
+        const js = unwrap(props.liveDiagram.formalJudgments());
+        return js.filter((j) => "diagram" in j && j.diagram).map((j) => j.diagram._id);
+    });
 
-    const variables = (): QualifiedName[] => elaboratedDiagram()?.obGenerators() ?? [];
+    const [subDiagramDocs] = createResource(instantiatedRefIds, async (refIds) => {
+        const entries = await Promise.all(
+            refIds.map(async (id) => {
+                const live = await diagrams.getLiveDiagram(id);
+                return [id, live.liveDoc.doc] as const;
+            }),
+        );
+        return Object.fromEntries(entries);
+    });
 
-    const scalarSchema: ColumnSchema<QualifiedName>[] = [
-        {
-            contentType: "string",
-            header: true,
-            name: "Scalar constant",
-            content: (id) => elaboratedModel()?.morGeneratorLabel(id)?.join(".") ?? "",
-        },
-        createNumericalColumn({
-            name: "Value",
-            data: (id) => props.content.scalars[id],
-            setData: (id, value) =>
-                props.changeContent((content) => {
-                    content.scalars[id] = value;
-                }),
-        }),
-    ];
+    // createEffect(() => {
+    //     const subs = subDiagramDocs();
+    //     if (!subs) return;
+    //     const model = props.liveDiagram.liveModel.liveDoc.doc;
+    //     if (!model) return;
+    //     const diagramDoc = props.liveDiagram.liveDoc.doc;
+    //     const out = ThDEC.simulatePode(model, diagramDoc, subs);
+    // });
 
-    const variableSchema: ColumnSchema<QualifiedName>[] = [
-        {
-            contentType: "string",
-            header: true,
-            name: "Variable",
-            content: (id) => elaboratedDiagram()?.obGeneratorLabel(id)?.join(".") ?? "",
-        },
-        {
-            contentType: "enum",
-            name: "Initial/boundary",
-            variants() {
-                if (!props.content.domain) {
-                    return [];
-                }
-                //return options()?.domains.get(props.content.domain)?.initialConditions ?? [];
-                return [];
-            },
-            content: (id) => props.content.initialConditions[id] ?? null,
-            setContent: (id, value) =>
-                props.changeContent((content) => {
-                    if (value === null) {
-                        delete content.initialConditions[id];
-                    } else {
-                        content.initialConditions[id] = value;
-                    }
-                }),
-        },
-        {
-            contentType: "boolean",
-            name: "Plot",
-            content: (id) => props.content.plotVariables[id] ?? false,
-            setContent: (id, value) =>
-                props.changeContent((content) => {
-                    content.plotVariables[id] = value;
-                }),
-        },
-    ];
+    // const scalars = createMemo<QualifiedName[]>(
+    //     () =>
+    //         elaboratedModel()?.morGeneratorsWithType({
+    //             tag: "Hom",
+    //             content: { tag: "Basic", content: "Object" },
+    //         }) ?? [],
+    // );
 
-    const toplevelSchema: ColumnSchema<null>[] = [
-        createNumericalColumn({
-            name: "Duration",
-            data: (_) => props.content.duration,
-            validate: (_, data) => data >= 0,
-            setData: (_, data) =>
-                props.changeContent((content) => {
-                    content.duration = data;
-                }),
-        }),
-    ];
+    // const variables = (): QualifiedName[] => elaboratedDiagram()?.obGenerators() ?? [];
+
+    // const scalarSchema: ColumnSchema<QualifiedName>[] = [
+    //     {
+    //         contentType: "string",
+    //         header: true,
+    //         name: "Scalar constant",
+    //         content: (id) => elaboratedModel()?.morGeneratorLabel(id)?.join(".") ?? "",
+    //     },
+    //     createNumericalColumn({
+    //         name: "Value",
+    //         data: (id) => props.content.scalars[id],
+    //         setData: (id, value) =>
+    //             props.changeContent((content) => {
+    //                 content.scalars[id] = value;
+    //             }),
+    //     }),
+    // ];
+
+    // const variableSchema: ColumnSchema<QualifiedName>[] = [
+    //     {
+    //         contentType: "string",
+    //         header: true,
+    //         name: "Variable",
+    //         content: (id) => elaboratedDiagram()?.obGeneratorLabel(id)?.join(".") ?? "",
+    //     },
+    //     {
+    //         contentType: "enum",
+    //         name: "Initial/boundary",
+    //         variants() {
+    //             if (!props.content.domain) {
+    //                 return [];
+    //             }
+    //             //return options()?.domains.get(props.content.domain)?.initialConditions ?? [];
+    //             return [];
+    //         },
+    //         content: (id) => props.content.initialConditions[id] ?? null,
+    //         setContent: (id, value) =>
+    //             props.changeContent((content) => {
+    //                 if (value === null) {
+    //                     delete content.initialConditions[id];
+    //                 } else {
+    //                     content.initialConditions[id] = value;
+    //                 }
+    //             }),
+    //     },
+    //     {
+    //         contentType: "boolean",
+    //         name: "Plot",
+    //         content: (id) => props.content.plotVariables[id] ?? false,
+    //         setContent: (id, value) =>
+    //             props.changeContent((content) => {
+    //                 content.plotVariables[id] = value;
+    //             }),
+    //     },
+    // ];
+
+    // const toplevelSchema: ColumnSchema<null>[] = [
+    //     createNumericalColumn({
+    //         name: "Duration",
+    //         data: (_) => props.content.duration,
+    //         validate: (_, data) => data >= 0,
+    //         setData: (_, data) =>
+    //             props.changeContent((content) => {
+    //                 content.duration = data;
+    //             }),
+    //     }),
+    // ];
 
     const RestartOrRerunButton = () => (
         <Switch>
@@ -176,6 +214,32 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         </div>
     );
 
+    const [res] = createResource(
+        () => {
+            const model = props.liveDiagram.liveModel.liveDoc.doc;
+            const diagram = props.liveDiagram.liveDoc.doc;
+            const subDiagrams = subDiagramDocs();
+            if (!model || !diagram || !subDiagrams) return undefined;
+            const pode = ThDEC.simulatePode(model, diagram, subDiagrams);
+            return pode ? { pode } : undefined;
+        },
+        async ({ pode }) => {
+            // const juliaUrl = import.meta.env.VITE_JULIA_URL;
+            const juliaUrl = "http://127.0.0.1:8080";
+            console.log(juliaUrl);
+            const reqBody = {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ pode }),
+            };
+            const response = juliaUrl
+                ? await fetch(`${juliaUrl}/decapodes`, reqBody)
+                : await api.fetch("/julia/decapodes", reqBody);
+            if (!response.ok) throw new Error(`HTTP error! status ${response.status}`);
+            return { pode, data: await response.json() };
+        },
+    );
+
     return (
         <div class="simulation">
             <BlockTitle title="Simulation" actions={RestartOrRerunButton()} />
@@ -186,11 +250,6 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                         return DomainConfig(new Map());
                     }}
                 </Show>
-                <div class="parameters">
-                    <FixedTableEditor rows={variables()} schema={variableSchema} />
-                    <FixedTableEditor rows={scalars()} schema={scalarSchema} />
-                    <FixedTableEditor rows={[null]} schema={toplevelSchema} />
-                </div>
             </Foldable>
             <Switch>
                 <Match when={kernel.loading || options.loading}>
@@ -218,12 +277,13 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                         </ErrorAlert>
                     )}
                 </Match>
-                <Match when={props.liveDiagram.validatedDiagram()?.tag !== "Valid"}>
+                <Match when={false}>
                     <ErrorAlert title="Modeling error">
                         {"Cannot run the simulation because the diagram is invalid"}
                     </ErrorAlert>
                 </Match>
-                <Match when={result()}>{(data) => <PDEPlot2D data={data()} />}</Match>
+                <Match when={res()}>{(data) => {
+                console.log(data.data)}}</Match>
             </Switch>
         </div>
     );

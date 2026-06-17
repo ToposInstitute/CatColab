@@ -3,7 +3,10 @@
 //! Each struct in this module provides a [`DblTheory`], possibly with additional
 //! methods for theory-specific analyses.
 
+use catcolab_document_types::current::{DiagramDocumentContent, ModelDocumentContent};
+use std::collections::HashMap;
 use std::rc::Rc;
+use tsify::serde_wasm_bindgen;
 use wasm_bindgen::prelude::*;
 
 use catlog::dbl::theory::{self as theory, NonUnital, Unital};
@@ -548,6 +551,17 @@ impl ThDEC {
     #[wasm_bindgen]
     pub fn theory(&self) -> DblTheory {
         DblTheory(self.0.clone().into())
+    }
+
+    #[wasm_bindgen(js_name = "simulatePode")]
+    pub fn simulate_pode(
+        model: ModelDocumentContent,
+        diagram: DiagramDocumentContent,
+        diagram_map: JsValue,
+    ) -> Result<String, String> {
+        let diagram_map: HashMap<String, DiagramDocumentContent> =
+            serde_wasm_bindgen::from_value(diagram_map).map_err(|e| e.to_string())?;
+        simulate_pode(model, diagram, diagram_map)
     }
 }
 
