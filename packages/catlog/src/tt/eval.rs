@@ -73,7 +73,6 @@ impl<'a> Evaluator<'a> {
                     ty_v.add_specialization(path, self.eval_ty(s))
                 })
             }
-            TyS_::Unit => TyV::unit(),
             TyS_::Meta(mv) => TyV::meta(*mv),
             TyS_::Over(path) => TyV::over(path.clone()),
         }
@@ -96,7 +95,6 @@ impl<'a> Evaluator<'a> {
             TmS_::Var(i, _, _) => self.env.get(**i).cloned().unwrap(),
             TmS_::Cons(fields) => TmV::cons(fields.map(|tm| self.eval_tm(tm))),
             TmS_::Proj(tm, field, label) => self.proj(&self.eval_tm(tm), *field, *label),
-            TmS_::Tt => TmV::tt(),
             TmS_::Id(x) => TmV::id(self.eval_tm(x)),
             TmS_::Tab(mor) => TmV::tab(self.eval_tm(mor)),
             TmS_::Compose(f, g) => TmV::compose(self.eval_tm(f), self.eval_tm(g)),
@@ -200,12 +198,12 @@ impl<'a> Evaluator<'a> {
     /// construction demands the `_eq{i}` fields too, and they can't be
     /// discharged through the surface: projecting `l._eqN` fails an `Id`/`Id`
     /// convertibility check (the two sides print alike but don't convert), and
-    /// the unit `'tt` is rejected (`Unit` is not the `Id` type). The supported
-    /// map-out is the *abstract* one — a neutral of this type, as `we : D`
-    /// imports produce — for which the witnesses never need constructing. A
-    /// concrete map-out of an equational `D` would require auto-discharging the
-    /// `Id` fields during record construction (they are extensional, so η to
-    /// `tt`); not yet done.
+    /// the empty record `'tt` (`[]`) is rejected (a record is not the `Id`
+    /// type). The supported map-out is the *abstract* one — a neutral of this
+    /// type, as `we : D` imports produce — for which the witnesses never need
+    /// constructing. A concrete map-out of an equational `D` would require
+    /// auto-discharging the `Id` fields during record construction (they are
+    /// extensional, so η to the empty cons); not yet done.
     pub fn synth_instance_body_ty(&self, body: &InstanceBodyV) -> TyV {
         let mut fields: Row<TyS> = Row::empty();
         for (name, (label, path)) in &body.generators {
@@ -226,7 +224,7 @@ impl<'a> Evaluator<'a> {
         // a neutral ignores it — so a placeholder suffices. Quoting in `ev`
         // (one binder deeper) sends `self` to de Bruijn index 0, matching
         // how `field_ty` snocs the record value when projecting.
-        let (self_n, ev) = self.bind_self(TyV::unit());
+        let (self_n, ev) = self.bind_self(TyV::empty_record());
         for (i, (lhs_v, rhs_v)) in body.equations.iter().enumerate() {
             let Some(over_ty) = fiber_equation_ty(lhs_v) else {
                 continue;
@@ -288,7 +286,6 @@ impl<'a> Evaluator<'a> {
             TyV_::Id(ty, tm1, tm2) => {
                 TyS::id(self.quote_ty(ty), self.quote_tm(tm1), self.quote_tm(tm2))
             }
-            TyV_::Unit => TyS::unit(),
             TyV_::Meta(mv) => TyS::meta(*mv),
             TyV_::Over(path) => TyS::over(path.clone()),
         }
@@ -329,7 +326,6 @@ impl<'a> Evaluator<'a> {
             }),
             TmV_::List(elems) => TmS::list(elems.iter().map(|tm| self.quote_tm(tm)).collect()),
             TmV_::Cons(fields) => TmS::cons(fields.map(|tm| self.quote_tm(tm))),
-            TmV_::Tt => TmS::tt(),
             TmV_::Id(x) => TmS::id(self.quote_tm(x)),
             TmV_::Tab(mor) => TmS::tab(self.quote_tm(mor)),
             TmV_::Compose(f, g) => TmS::compose(self.quote_tm(f), self.quote_tm(g)),
@@ -368,7 +364,6 @@ impl<'a> Evaluator<'a> {
             }
             TyV_::Sing(_, x) => self.equal_tm(tm, x),
             TyV_::Id(_, _, _) => Ok(()),
-            TyV_::Unit => Ok(()),
             TyV_::Meta(_) => Ok(()),
             TyV_::Over(_) => Ok(()),
         }
@@ -414,7 +409,6 @@ impl<'a> Evaluator<'a> {
             }
             (TyV_::Sing(ty1, _), _) => self.convertible_ty(ty1, ty2),
             (_, TyV_::Sing(ty2, _)) => self.convertible_ty(ty1, ty2),
-            (TyV_::Unit, TyV_::Unit) => Ok(()),
             (TyV_::Over(p1), TyV_::Over(p2)) => {
                 if p1 == p2 {
                     Ok(())
@@ -441,8 +435,7 @@ impl<'a> Evaluator<'a> {
                 TmV::cons(fields)
             }
             TyV_::Sing(_, x) => x.clone(),
-            TyV_::Id(_, _, _) => TmV::tt(), // Extensional equality at a 100% discount!
-            TyV_::Unit => TmV::tt(),
+            TyV_::Id(_, _, _) => TmV::empty_cons(), // Extensional equality at a 100% discount!
             TyV_::Meta(_) => TmV::neu(n.clone(), ty.clone()),
             TyV_::Over(_) => TmV::neu(n.clone(), ty.clone()),
         }
@@ -475,7 +468,6 @@ impl<'a> Evaluator<'a> {
                     v.clone()
                 }
             }
-            TmV_::Tt => TmV::tt(),
             TmV_::Id(x) => TmV::id(self.eta(x, None)),
             TmV_::Tab(mor) => TmV::tab(self.eta(mor, None)),
             TmV_::Compose(f, g) => TmV::compose(self.eta(f, None), self.eta(g, None)),
@@ -529,7 +521,6 @@ impl<'a> Evaluator<'a> {
                 }
                 Ok(())
             }
-            (TmV_::Tt, TmV_::Tt) => Ok(()),
             (TmV_::Meta(mv1), TmV_::Meta(mv2)) => {
                 if mv1 == mv2 {
                     Ok(())

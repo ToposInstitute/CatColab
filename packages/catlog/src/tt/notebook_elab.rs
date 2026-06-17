@@ -70,7 +70,7 @@ impl<'a> Elaborator<'a> {
     fn intro(&mut self, name: VarName, label: LabelSegment, ty: Option<TyV>) -> TmV {
         let v = TmV::neu(
             TmN::var(self.ctx.scope.len().into(), name, label),
-            ty.clone().unwrap_or(TyV::unit()),
+            ty.clone().unwrap_or(TyV::empty_record()),
         );
         let v = if ty.is_some() {
             self.evaluator().eta(&v, ty.as_ref())
