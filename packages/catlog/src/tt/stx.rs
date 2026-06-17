@@ -92,7 +92,7 @@ pub enum TyS_ {
     /// instance's codomain model. Internal-only; no surface syntax —
     /// inhabitants are introduced via set-literal clauses `field :=
     /// [...]` inside an instance body, and applications via the
-    /// `mor(arg)` and `tm.mor(arg)` syn arms.
+    /// `mor(arg)` and `mor(receiver.fld)` syn arms.
     ///
     /// The path identifies the object generator in the codomain.
     /// Instance identity is contextual rather than part of the type:
@@ -257,7 +257,7 @@ pub enum TmS_ {
     ///
     /// Arguments, in order:
     /// 1. `mor` — name of the codomain morphism being applied
-    ///    (e.g. `src` in `we.src(e)`).
+    ///    (e.g. `src` in `src(we.e)`).
     /// 2. `mor_label` — display label for that name.
     /// 3. `tgt_path` — the codomain object-path that `mor` lands at.
     ///    Stored on the node so [`super::eval::Evaluator::eval_tm`]
@@ -298,9 +298,8 @@ pub enum TmS_ {
 ///   instance) to a path into the model identifying which object
 ///   generator's fiber it lives over. Generators are introduced by
 ///   surface set-literal clauses `field := [...]` in the instance body.
-/// - `equations` is a list of `(lhs, rhs)` pairs over either fiber
-///   ([`TyS_::Over`]) or morphism types. Order is preserved but identity
-///   isn't semantically significant.
+/// - `equations` is a list of `(lhs, rhs)` pairs over fiber
+///   ([`TyS_::Over`]) types. 
 /// - `sub_instances` maps each sub-instance import's local name to a
 ///   nested instance term. This is what surface `we : Edge` lowers to.
 #[derive(Default)]
