@@ -172,7 +172,7 @@ impl TyV {
         }
     }
 
-    /// The empty record type — the unit type / empty model. 
+    /// The empty record type — the unit type / empty model.
     /// Also used as a throwaway type for
     /// untyped placeholder binders (whose type is discarded).
     pub fn empty_record() -> Self {
