@@ -185,7 +185,8 @@ function CurrentTransitionCell(props: {
     return (
         <li>
             <span class="cell-label">
-                Transition: <InlinePlaceListEditor placeIds={placeIds(props.transition.dom)} placeName={name} />
+                Transition:{" "}
+                <InlinePlaceListEditor placeIds={placeIds(props.transition.dom)} placeName={name} />
                 <span> -&gt; </span>
                 <InlinePlaceListEditor placeIds={placeIds(props.transition.cod)} placeName={name} />
                 <span> {props.transition.name}</span>
@@ -347,11 +348,7 @@ const solidBinder = createBinder(solidStore);
 const placeObType: ObType = { tag: "Basic", content: "Object" };
 const transitionMorType: MorType = { tag: "Hom", content: placeObType };
 
-function createGenericPetriNetNotebook(data: { name: string }) {
-    return solidBinder.createGenericNotebook("petri-net", data);
-}
-
-type GenericPetriNetNotebook = ReturnType<typeof createGenericPetriNetNotebook>;
+type GenericPetriNetNotebook = ReturnType<typeof solidBinder.createGenericNotebook>;
 
 function InlinePlaceListEditor(props: { places: GenericObjectCell[] }) {
     return <span>[{props.places.map((place) => place.name).join(", ")}]</span>;
@@ -374,10 +371,7 @@ function GenericTransitionCell(props: {
     );
 }
 
-function GenericPetriNetCell(props: {
-    cell: GenericNotebookCell;
-    appendInput: () => void;
-}) {
+function GenericPetriNetCell(props: { cell: GenericNotebookCell; appendInput: () => void }) {
     switch (props.cell.kind) {
         case CellKind.RichText:
             return (
@@ -393,10 +387,7 @@ function GenericPetriNetCell(props: {
             );
         case CellKind.Morphism:
             return (
-                <GenericTransitionCell
-                    transition={props.cell}
-                    appendInput={props.appendInput}
-                />
+                <GenericTransitionCell transition={props.cell} appendInput={props.appendInput} />
             );
     }
 }
@@ -410,22 +401,14 @@ function GenericPetriNetEditor(props: {
             <h1>{props.notebook.name}</h1>
             <ul>
                 <For each={props.notebook.cells()}>
-                    {(cell) => (
-                        <GenericPetriNetCell
-                            cell={cell}
-                            appendInput={props.appendInput}
-                        />
-                    )}
+                    {(cell) => <GenericPetriNetCell cell={cell} appendInput={props.appendInput} />}
                 </For>
             </ul>
         </section>
     );
 }
 
-function appendGenericInput(
-    transition: GenericMorphismCell,
-    place: GenericObjectCell,
-) {
+function appendGenericInput(transition: GenericMorphismCell, place: GenericObjectCell) {
     transition.update({ dom: [...transition.dom, place] });
 }
 
@@ -437,7 +420,7 @@ function renderedCellText(container: HTMLElement): string {
 ```
 
 ```tsx
-const notebook = createGenericPetriNetNotebook({ name: "Petri net" });
+const notebook = solidBinder.createGenericNotebook("petri-net", { name: "Petri net" });
 const a = notebook.addObject(placeObType, { name: "A" });
 const b = notebook.addObject(placeObType, { name: "B" });
 const c = notebook.addObject(placeObType, { name: "C" });
@@ -485,12 +468,7 @@ import { For } from "solid-js";
 import { createStore, produce, type SetStoreFunction, unwrap } from "solid-js/store";
 import { render } from "solid-js/web";
 
-import {
-    CellKind,
-    createBinder,
-    type DocumentStore,
-    type NotebookCell,
-} from "catcolab-documents";
+import { CellKind, createBinder, type DocumentStore, type NotebookCell } from "catcolab-documents";
 import {
     PetriNet,
     Place,
@@ -517,21 +495,14 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
 
 const solidBinder = createBinder(solidStore);
 
-function createTypedPetriNetNotebook(data: { name: string }) {
-    return solidBinder.createNotebook(PetriNet, data);
-}
-
-type TypedPetriNetNotebook = ReturnType<typeof createTypedPetriNetNotebook>;
+type TypedPetriNetNotebook = ReturnType<typeof solidBinder.createNotebook<typeof PetriNet>>;
 type TypedPetriNetCell = NotebookCell<typeof PetriNet>;
 
 function InlinePlaceListEditor(props: { places: PlaceCell[] }) {
     return <span>[{props.places.map((place) => place.name).join(", ")}]</span>;
 }
 
-function TypedTransitionCell(props: {
-    transition: TransitionCell;
-    appendInput: () => void;
-}) {
+function TypedTransitionCell(props: { transition: TransitionCell; appendInput: () => void }) {
     return (
         <li>
             <span class="cell-label">
@@ -545,10 +516,7 @@ function TypedTransitionCell(props: {
     );
 }
 
-function TypedPetriNetCellView(props: {
-    cell: TypedPetriNetCell;
-    appendInput: () => void;
-}) {
+function TypedPetriNetCellView(props: { cell: TypedPetriNetCell; appendInput: () => void }) {
     switch (props.cell.kind) {
         case CellKind.RichText:
             return (
@@ -563,29 +531,18 @@ function TypedPetriNetCellView(props: {
                 </li>
             );
         case CellKind.Morphism:
-            return (
-                <TypedTransitionCell
-                    transition={props.cell}
-                    appendInput={props.appendInput}
-                />
-            );
+            return <TypedTransitionCell transition={props.cell} appendInput={props.appendInput} />;
     }
 }
 
-function TypedPetriNetEditor(props: {
-    notebook: TypedPetriNetNotebook;
-    appendInput: () => void;
-}) {
+function TypedPetriNetEditor(props: { notebook: TypedPetriNetNotebook; appendInput: () => void }) {
     return (
         <section>
             <h1>{props.notebook.name}</h1>
             <ul>
                 <For each={props.notebook.cells()}>
                     {(cell) => (
-                        <TypedPetriNetCellView
-                            cell={cell}
-                            appendInput={props.appendInput}
-                        />
+                        <TypedPetriNetCellView cell={cell} appendInput={props.appendInput} />
                     )}
                 </For>
             </ul>
@@ -601,7 +558,7 @@ function renderedCellText(container: HTMLElement): string {
 ```
 
 ```tsx
-const notebook = createTypedPetriNetNotebook({ name: "Petri net" });
+const notebook = solidBinder.createNotebook(PetriNet, { name: "Petri net" });
 const a = notebook.add(Place, { name: "A" });
 const b = notebook.add(Place, { name: "B" });
 const c = notebook.add(Place, { name: "C" });
