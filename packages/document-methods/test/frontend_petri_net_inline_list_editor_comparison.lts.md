@@ -287,19 +287,17 @@ const dispose = render(
     container,
 );
 
-console.log(container.querySelector("h1")?.textContent);
-console.log(renderedCellText(container));
+console.log(container.innerHTML);
 
 appendCurrentInput(notebook, transition, b);
-console.log(renderedCellText(container));
+console.log(container.innerHTML);
 
 dispose();
 ```
 
 ```
-Petri net
-Place: A | Place: B | Place: C | Transition: [A] -> [C] fires
-Place: A | Place: B | Place: C | Transition: [A, B] -> [C] fires
+<section><h1>Petri net</h1><ul><li><span class="cell-label">Place: A</span></li><li><span class="cell-label">Place: B</span></li><li><span class="cell-label">Place: C</span></li><li><span class="cell-label">Transition: <span>[A<!---->]</span><span> -&gt; </span><span>[C<!---->]</span><span> fires</span></span><button aria-label="append input place"></button></li></ul></section>
+<section><h1>Petri net</h1><ul><li><span class="cell-label">Place: A</span></li><li><span class="cell-label">Place: B</span></li><li><span class="cell-label">Place: C</span></li><li><span class="cell-label">Transition: <span>[A, B<!---->]</span><span> -&gt; </span><span>[C<!---->]</span><span> fires</span></span><button aria-label="append input place"></button></li></ul></section>
 ```
 
 ## `catcolab-documents`, generic
@@ -439,19 +437,17 @@ const dispose = render(
     container,
 );
 
-console.log(container.querySelector("h1")?.textContent);
-console.log(renderedCellText(container));
+console.log(container.innerHTML);
 
 appendGenericInput(transition, b);
-console.log(renderedCellText(container));
+console.log(container.innerHTML);
 
 dispose();
 ```
 
 ```
-Petri net
-Place: A | Place: B | Place: C | Transition: [A] -> [C] fires
-Place: A | Place: B | Place: C | Transition: [A, B] -> [C] fires
+<section><h1>Petri net</h1><ul><li><span class="cell-label">Place: A</span></li><li><span class="cell-label">Place: B</span></li><li><span class="cell-label">Place: C</span></li><li><span class="cell-label">Transition: <span>[A<!---->]</span><span> -&gt; </span><span>[C<!---->]</span><span> fires</span></span><button aria-label="append input place"></button></li></ul></section>
+<section><h1>Petri net</h1><ul><li><span class="cell-label">Place: A</span></li><li><span class="cell-label">Place: B</span></li><li><span class="cell-label">Place: C</span></li><li><span class="cell-label">Transition: <span>[A, B<!---->]</span><span> -&gt; </span><span>[C<!---->]</span><span> fires</span></span><button aria-label="append input place"></button></li></ul></section>
 ```
 
 ## `catcolab-documents`, typed logic
@@ -577,17 +573,15 @@ const dispose = render(
     container,
 );
 
-console.log(container.querySelector("h1")?.textContent);
-console.log(renderedCellText(container));
+console.log(container.innerHTML);
 
 transition.update({ dom: [...transition.dom, b] });
-console.log(renderedCellText(container));
+console.log(container.innerHTML);
 
 dispose();
 ```
 
 ```
-Petri net
-Place: A | Place: B | Place: C | Transition: [A] -> [C] fires
-Place: A | Place: B | Place: C | Transition: [A, B] -> [C] fires
+<section><h1>Petri net</h1><ul><li><span class="cell-label">Place: A</span></li><li><span class="cell-label">Place: B</span></li><li><span class="cell-label">Place: C</span></li><li><span class="cell-label">Transition: <span>[A<!---->]</span><span> -&gt; </span><span>[C<!---->]</span><span> fires</span></span><button aria-label="append input place"></button></li></ul></section>
+<section><h1>Petri net</h1><ul><li><span class="cell-label">Place: A</span></li><li><span class="cell-label">Place: B</span></li><li><span class="cell-label">Place: C</span></li><li><span class="cell-label">Transition: <span>[A, B<!---->]</span><span> -&gt; </span><span>[C<!---->]</span><span> fires</span></span><button aria-label="append input place"></button></li></ul></section>
 ```
