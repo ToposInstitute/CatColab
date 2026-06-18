@@ -91,7 +91,22 @@ where
         PolynomialSystem { components }
     }
 
-    /// TODO: documentation
+    /// Converts to equations as Latex strings.
+    pub fn to_latex_equations(&self) -> LatexEquations
+    where
+        Var: Display + ToLatexWithMap,
+        Coef: Display + ToLatexWithMap + DisplayCoef + Clone + PartialEq + One + Neg<Output = Coef>,
+        Exp: Display + ToLatex + PartialEq + One,
+    {
+        let name = |id: &QualifiedName| {id.to_string()};
+        self.to_latex_equations_with_map(name)
+    }
+
+    /// Converts to equations as Latex string, after applying the function `f : &QualifiedName -> String`
+    /// to each of the variables and coefficients. This is intended for frontend functionality, where we
+    /// do not want to display UUIDs directly but instead look them up in the model namespace. For more
+    /// details, see `catlog-wasm::src::latex` where we use `to_latex_equations_with_map` and pass in
+    /// the function `catlog-wasm::src::latex_names`.
     pub fn to_latex_equations_with_map<F: Fn(&QualifiedName) -> String>(&self, f: F) -> LatexEquations
     where
         Var: Display + ToLatexWithMap,
@@ -107,17 +122,6 @@ where
                 })
                 .collect(),
         )
-    }
-
-    /// Converts to equations as LaTeX strings.
-    pub fn to_latex_equations(&self) -> LatexEquations
-    where
-        Var: Display + ToLatexWithMap,
-        Coef: Display + ToLatexWithMap + DisplayCoef + Clone + PartialEq + One + Neg<Output = Coef>,
-        Exp: Display + ToLatex + PartialEq + One,
-    {
-        let name = |id: &QualifiedName| {id.to_string()};
-        self.to_latex_equations_with_map(name)
     }
 }
 

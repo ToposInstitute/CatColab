@@ -53,13 +53,20 @@ pub trait ToLatex {
     fn to_latex(&self) -> Latex;
 }
 
-/// TODO: documentation
+/// An object that can be rendered to Latex, with some function that can be applied to selected
+/// appearances of a `QualifiedName` within the object. The main purpose of this trait is for rendering
+/// the equations derived from an ODE semantics analysis, where we do not want to show UUIDs directly
+/// to the frontend. For an example implementation see e.g. `catlog::src::stdlib::analyses::ode::mass_action`
+/// where this is implemented for `MassActionParameter`.
 pub trait ToLatexWithMap {
-    /// TODO: documentation
+    /// Convert the object to its Latex representation, after applying the provided function `f` to
+    /// selected `QualifiedName`. See `PolynomialSystem::to_latex_equations_with_map` for the main
+    /// use of this function.
     fn to_latex_with_map<F: Fn(&QualifiedName) -> String>(&self, f: F) -> Latex;
 }
 
-// TODO: documentation
+/// We can recover the intended behaviour of `to_latex` by simply passing the "identity function"
+/// to `to_latex_with_map`.
 impl<T> ToLatex for T
 where
     T: ToLatexWithMap,
@@ -70,7 +77,8 @@ where
     }
 }
 
-// TODO: documentation
+/// We only want to apply the `f : &QualifiedName -> String` to something of type `QualifiedName`;
+/// we leave any numerical or string-literal values unchanged.
 #[duplicate_item(T; [f32]; [f64]; [i8]; [i32]; [i64]; [u32]; [u64]; [usize]; [char]; [String])]
 impl ToLatexWithMap for T {
     fn to_latex_with_map<F: Fn(&QualifiedName) -> String>(&self, _f: F) -> Latex {
