@@ -11,9 +11,7 @@ use scopeguard::guard;
 use tattle::display::SourceInfo;
 use tattle::{Reporter, declare_error};
 
-use super::{
-    modelgen::instance_from_def, text_elab::*, theory::std_theories, toplevel::*, val::TmV_,
-};
+use super::{modelgen::instance_from_def, text_elab::*, theory::std_theories, toplevel::*};
 use crate::dbl::discrete::{DiscreteDblModelInstance, DiscreteInstanceTerm};
 use crate::one::path::Path;
 use crate::zero::NameSegment;
@@ -219,14 +217,11 @@ pub fn elaborate(src: &str, path: &str, output: &BatchOutput) -> io::Result<bool
                 } else {
                     match d {
                         TopElabResult::Declaration(name_segment, top_decl) => {
-                            let is_instance = matches!(
-                                &top_decl,
-                                TopDecl::DefConst(d) if matches!(&*d.val, TmV_::Instance(_))
-                            );
+                            let is_instance = matches!(&top_decl, TopDecl::Instance(_));
                             toplevel.declarations.insert(name_segment, top_decl);
                             output.declared(name_segment);
                             if is_instance
-                                && let Some(TopDecl::DefConst(def)) =
+                                && let Some(TopDecl::Instance(def)) =
                                     toplevel.declarations.get(&name_segment)
                             {
                                 match instance_from_def(&toplevel, &def.theory.definition, def) {
