@@ -28,7 +28,9 @@ use std::{collections::HashMap, fmt};
 use crate::{
     dbl::{
         modal::{List, ModeApp},
-        model::{DblModel, DiscreteDblModel, DiscreteTabModel, ModalDblModel, ModalOb, MutDblModel},
+        model::{
+            DblModel, DiscreteDblModel, DiscreteTabModel, ModalDblModel, ModalOb, MutDblModel,
+        },
         theory::{NonUnital, Unital},
     },
     latex::{Latex, ToLatexWithMap},

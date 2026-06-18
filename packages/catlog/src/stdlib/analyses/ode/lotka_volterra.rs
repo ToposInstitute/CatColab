@@ -290,15 +290,11 @@ mod test {
         let expected = LatexEquations(vec![
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string()),
-                rhs: Latex(
-                    "g_{x} \\cdot x - k_{negative} \\cdot x \\cdot y".to_string(),
-                ),
+                rhs: Latex("g_{x} \\cdot x - k_{negative} \\cdot x \\cdot y".to_string()),
             },
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string()),
-                rhs: Latex(
-                    "k_{positive} \\cdot x \\cdot y + g_{y} \\cdot y".to_string(),
-                ),
+                rhs: Latex("k_{positive} \\cdot x \\cdot y + g_{y} \\cdot y".to_string()),
             },
         ]);
         assert_eq!(expected, sys.to_latex_equations());

@@ -7,6 +7,7 @@ use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 
 use catlog::dbl::theory::{self as theory, NonUnital, Unital};
+use catlog::latex::LatexEquations;
 use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 use catlog::zero::name;
