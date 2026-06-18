@@ -1,42 +1,31 @@
-import type { ModelLogic, MorphismType, ObjectCell, ObjectType } from "catcolab-documents";
-import { morphismType, objectType } from "catcolab-documents";
+import type { MorphismCell, ObjectCell } from "catcolab-documents";
+import { defineModelLogic } from "catcolab-documents";
 
+import type { MorType, ObType } from "catcolab-document-types";
 import { ThSchema } from "catlog-wasm";
 
-type EntityType = ObjectType<"Entity">;
-type AttrTypeType = ObjectType<"AttrType">;
-type MappingType = MorphismType<ObjectCell<EntityType>, ObjectCell<EntityType>, "Mapping">;
-type AttrMorphismType = MorphismType<ObjectCell<EntityType>, ObjectCell<AttrTypeType>, "Attr">;
+const entityObType: ObType = { tag: "Basic", content: "Entity" };
+const attrTypeObType: ObType = { tag: "Basic", content: "AttrType" };
 
-export const Entity: EntityType = objectType<"Entity">("Entity");
-export const AttrType: AttrTypeType = objectType<"AttrType">("AttrType");
-export const Mapping: MappingType = morphismType<
-    ObjectCell<EntityType>,
-    ObjectCell<EntityType>,
-    "Mapping"
->({
-    tag: "Hom",
-    content: { tag: "Basic", content: "Entity" },
-});
-export const Attr: AttrMorphismType = morphismType<
-    ObjectCell<EntityType>,
-    ObjectCell<AttrTypeType>,
-    "Attr"
->({
-    tag: "Basic",
-    content: "Attr",
-});
+const mappingMorType: MorType = { tag: "Hom", content: { tag: "Basic", content: "Entity" } };
+const attrMorType: MorType = { tag: "Basic", content: "Attr" };
 
-export const SimpleSchema = {
+export const SimpleSchema = defineModelLogic({
     theory: "simple-schema",
     coreTheory: new ThSchema().theory(),
-    cellTypes: { Entity, AttrType, Mapping, Attr },
-} satisfies ModelLogic<
-    "simple-schema",
-    {
-        Entity: EntityType;
-        AttrType: AttrTypeType;
-        Mapping: MappingType;
-        Attr: AttrMorphismType;
-    }
->;
+    objects: {
+        Entity: entityObType,
+        AttrType: attrTypeObType,
+    },
+    morphisms: {
+        Mapping: { dom: "Entity", cod: "Entity", morType: mappingMorType },
+        Attr: { dom: "Entity", cod: "AttrType", morType: attrMorType },
+    },
+});
+
+export const { Entity, AttrType, Mapping, Attr } = SimpleSchema.cellTypes;
+
+export type EntityCell = ObjectCell<typeof Entity>;
+export type AttrTypeCell = ObjectCell<typeof AttrType>;
+export type MappingCell = MorphismCell<typeof Mapping>;
+export type AttrCell = MorphismCell<typeof Attr>;
