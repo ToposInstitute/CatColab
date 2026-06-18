@@ -145,12 +145,6 @@ function CurrentOlogEditor(props: { notebook: CurrentOlogNotebook }) {
         </section>
     );
 }
-
-function renderedCellText(container: HTMLElement): string {
-    return Array.from(container.querySelectorAll("li"))
-        .map((li) => li.textContent ?? "")
-        .join(" | ");
-}
 ```
 
 ```tsx
@@ -164,19 +158,17 @@ document.body.appendChild(container);
 
 const dispose = render(() => <CurrentOlogEditor notebook={notebook} />, container);
 
-console.log(container.querySelector("h1")?.textContent);
-console.log(renderedCellText(container));
+console.log(container.innerHTML);
 
 updateCurrentType(notebook, person, { name: "Employee" });
-console.log(renderedCellText(container));
+console.log(container.innerHTML);
 
 dispose();
 ```
 
 ```
-An Olog
-Type: Person | Type: Company | Aspect: works for
-Type: Employee | Type: Company | Aspect: works for
+<section><h1>An Olog</h1><ul><li>Type: Person</li><li>Type: Company</li><li>Aspect: works for</li></ul></section>
+<section><h1>An Olog</h1><ul><li>Type: Employee</li><li>Type: Company</li><li>Aspect: works for</li></ul></section>
 ```
 
 ## `catcolab-documents`, generic
@@ -219,13 +211,9 @@ const solidBinder = createBinder(solidStore);
 const ologObjectType: ObType = { tag: "Basic", content: "Object" };
 const ologAspectType: MorType = { tag: "Hom", content: ologObjectType };
 
-function createGenericOlogNotebook(data: { name: string }) {
-    return solidBinder.createGenericNotebook("simple-olog", data);
-}
+type GenericNotebook = ReturnType<typeof solidBinder.createGenericNotebook>;
 
-type GenericOlogNotebook = ReturnType<typeof createGenericOlogNotebook>;
-
-function GenericOlogEditor(props: { notebook: GenericOlogNotebook }) {
+function GenericOlogEditor(props: { notebook: GenericNotebook }) {
     return (
         <section>
             <h1>{props.notebook.name}</h1>
@@ -245,16 +233,10 @@ function GenericOlogEditor(props: { notebook: GenericOlogNotebook }) {
         </section>
     );
 }
-
-function renderedCellText(container: HTMLElement): string {
-    return Array.from(container.querySelectorAll("li"))
-        .map((li) => li.textContent ?? "")
-        .join(" | ");
-}
 ```
 
 ```tsx
-const notebook = createGenericOlogNotebook({ name: "An Olog" });
+const notebook = solidBinder.createGenericNotebook("simple-olog", { name: "An Olog" });
 const person = notebook.addObject(ologObjectType, { name: "Person" });
 const company = notebook.addObject(ologObjectType, { name: "Company" });
 notebook.addMorphism(ologAspectType, { name: "works for", dom: person, cod: company });
@@ -264,19 +246,17 @@ document.body.appendChild(container);
 
 const dispose = render(() => <GenericOlogEditor notebook={notebook} />, container);
 
-console.log(container.querySelector("h1")?.textContent);
-console.log(renderedCellText(container));
+console.log(container.innerHTML);
 
 person.update({ name: "Employee" });
-console.log(renderedCellText(container));
+console.log(container.innerHTML);
 
 dispose();
 ```
 
 ```
-An Olog
-Type: Person | Type: Company | Aspect: works for
-Type: Employee | Type: Company | Aspect: works for
+<section><h1>An Olog</h1><ul><li>Type: Person</li><li>Type: Company</li><li>Aspect: works for</li></ul></section>
+<section><h1>An Olog</h1><ul><li>Type: Employee</li><li>Type: Company</li><li>Aspect: works for</li></ul></section>
 ```
 
 ## `catcolab-documents`, typed logic
@@ -317,11 +297,7 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
 
 const solidBinder = createBinder(solidStore);
 
-function createTypedOlogNotebook(data: { name: string }) {
-    return solidBinder.createNotebook(SimpleOlog, data);
-}
-
-type TypedOlogNotebook = ReturnType<typeof createTypedOlogNotebook>;
+type TypedOlogNotebook = ReturnType<typeof solidBinder.createNotebook<typeof SimpleOlog>>;
 
 function TypedOlogEditor(props: { notebook: TypedOlogNotebook }) {
     return (
@@ -343,16 +319,10 @@ function TypedOlogEditor(props: { notebook: TypedOlogNotebook }) {
         </section>
     );
 }
-
-function renderedCellText(container: HTMLElement): string {
-    return Array.from(container.querySelectorAll("li"))
-        .map((li) => li.textContent ?? "")
-        .join(" | ");
-}
 ```
 
 ```tsx
-const notebook = createTypedOlogNotebook({ name: "An Olog" });
+const notebook = solidBinder.createNotebook(SimpleOlog, { name: "An Olog" });
 const person = notebook.add(Type, { name: "Person" });
 const company = notebook.add(Type, { name: "Company" });
 notebook.add(Aspect, { name: "works for", dom: person, cod: company });
@@ -362,17 +332,15 @@ document.body.appendChild(container);
 
 const dispose = render(() => <TypedOlogEditor notebook={notebook} />, container);
 
-console.log(container.querySelector("h1")?.textContent);
-console.log(renderedCellText(container));
+console.log(container.innerHTML);
 
 person.update({ name: "Employee" });
-console.log(renderedCellText(container));
+console.log(container.innerHTML);
 
 dispose();
 ```
 
 ```
-An Olog
-Type: Person | Type: Company | Aspect: works for
-Type: Employee | Type: Company | Aspect: works for
+<section><h1>An Olog</h1><ul><li>Type: Person</li><li>Type: Company</li><li>Aspect: works for</li></ul></section>
+<section><h1>An Olog</h1><ul><li>Type: Employee</li><li>Type: Company</li><li>Aspect: works for</li></ul></section>
 ```

@@ -259,12 +259,6 @@ function CurrentPetriNetEditor(props: {
         </section>
     );
 }
-
-function renderedCellText(container: HTMLElement): string {
-    return Array.from(container.querySelectorAll(".cell-label"))
-        .map((label) => label.textContent ?? "")
-        .join(" | ");
-}
 ```
 
 ```tsx
@@ -409,12 +403,6 @@ function GenericPetriNetEditor(props: {
 function appendGenericInput(transition: GenericMorphismCell, place: GenericObjectCell) {
     transition.update({ dom: [...transition.dom, place] });
 }
-
-function renderedCellText(container: HTMLElement): string {
-    return Array.from(container.querySelectorAll(".cell-label"))
-        .map((label) => label.textContent ?? "")
-        .join(" | ");
-}
 ```
 
 ```tsx
@@ -544,12 +532,6 @@ function TypedPetriNetEditor(props: { notebook: TypedPetriNetNotebook; appendInp
             </ul>
         </section>
     );
-}
-
-function renderedCellText(container: HTMLElement): string {
-    return Array.from(container.querySelectorAll(".cell-label"))
-        .map((label) => label.textContent ?? "")
-        .join(" | ");
 }
 ```
 
