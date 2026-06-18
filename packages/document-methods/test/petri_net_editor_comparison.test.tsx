@@ -213,10 +213,7 @@ describe("Petri-net editor comparison", () => {
             return "?";
         }
 
-        function ObListEditor(props: {
-            placeIds: string[];
-            placeName: (id: string) => string;
-        }) {
+        function ObListEditor(props: { placeIds: string[]; placeName: (id: string) => string }) {
             return <span>[{props.placeIds.map(props.placeName).join(", ")}]</span>;
         }
 
@@ -230,15 +227,9 @@ describe("Petri-net editor comparison", () => {
                 <li>
                     <span class="cell-label">
                         Transition:{" "}
-                        <ObListEditor
-                            placeIds={placeIds(props.transition.dom)}
-                            placeName={name}
-                        />
+                        <ObListEditor placeIds={placeIds(props.transition.dom)} placeName={name} />
                         <span> -&gt; </span>
-                        <ObListEditor
-                            placeIds={placeIds(props.transition.cod)}
-                            placeName={name}
-                        />
+                        <ObListEditor placeIds={placeIds(props.transition.cod)} placeName={name} />
                         <span> {props.transition.name}</span>
                     </span>
                     <button aria-label="append input place" onClick={props.appendInput} />
@@ -338,7 +329,6 @@ describe("Petri-net editor comparison", () => {
         container.remove();
     });
 
-
     test("catcolab-documents, typed logic", () => {
         const isPlace = byObjectType(Place);
         const isTransition = byMorphismType(Transition);
@@ -347,10 +337,7 @@ describe("Petri-net editor comparison", () => {
             return <span>[{props.places.map((place) => place.name).join(", ")}]</span>;
         }
 
-        function TransitionCell(props: {
-            transition: TransitionCell;
-            appendInput: () => void;
-        }) {
+        function TransitionCell(props: { transition: TransitionCell; appendInput: () => void }) {
             return (
                 <li>
                     <span class="cell-label">
@@ -398,12 +385,7 @@ describe("Petri-net editor comparison", () => {
                     <h1>{props.notebook.name}</h1>
                     <ul>
                         <For each={props.notebook.cells()}>
-                            {(cell) => (
-                                <PetriNetCell
-                                    cell={cell}
-                                    appendInput={props.appendInput}
-                                />
-                            )}
+                            {(cell) => <PetriNetCell cell={cell} appendInput={props.appendInput} />}
                         </For>
                     </ul>
                 </section>
@@ -516,15 +498,13 @@ describe("Petri-net editor comparison", () => {
                     <h1>{props.notebook.name}</h1>
                     <ul>
                         <For each={props.notebook.cells()}>
-                            {(cell) => <ModelCellEditor cell={cell} appendInput={props.appendInput} />}
+                            {(cell) => (
+                                <ModelCellEditor cell={cell} appendInput={props.appendInput} />
+                            )}
                         </For>
                     </ul>
                 </section>
             );
-        }
-
-        function appendGenericInput(transition: SymmetricListCell, place: BasicObCell) {
-            transition.update({ dom: [...transition.dom, place] });
         }
 
         const notebook = solidBinder.createNotebook(PetriNet, { name: "Petri net" });
@@ -544,7 +524,7 @@ describe("Petri-net editor comparison", () => {
             () => (
                 <ModelNotebookEditor
                     notebook={notebook}
-                    appendInput={() => appendGenericInput(transition, input)}
+                    appendInput={() => transition.update({ dom: [...transition.dom, input] })}
                 />
             ),
             container,
@@ -552,7 +532,7 @@ describe("Petri-net editor comparison", () => {
 
         expect(container.innerHTML).toBe(EXPECTED_INITIAL);
 
-        appendGenericInput(transition, input);
+        transition.update({ dom: [...transition.dom, input] });
         expect(container.innerHTML).toBe(EXPECTED_AFTER_APPEND);
 
         dispose();
