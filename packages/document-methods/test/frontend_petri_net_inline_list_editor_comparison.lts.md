@@ -3,8 +3,8 @@
 This compares a small Petri-net notebook editor where a transition has list-valued
 input and output endpoints. The current frontend uses an inline object-list
 editor for these endpoints; it writes endpoint values as
-`App(tensor, List(SymmetricList, ...))`. The proposed APIs let the editor work
-with arrays of object-cell handles and keep that encoding inside the document
+`App(tensor, List(SymmetricList, ...))`. The document API lets the editor work
+with arrays of object-cell handles and keeps that encoding inside the document
 methods layer.
 
 Each example follows the same sequence: create a Petri-net notebook, add places
@@ -301,11 +301,11 @@ Place: A | Place: B | Place: C | Transition: [A] -> [C] fires
 Place: A | Place: B | Place: C | Transition: [A, B] -> [C] fires
 ```
 
-## Proposed `catcolab-documents`, generic
+## `catcolab-documents`, generic
 
-The generic API keeps runtime cell types (`ObType`/`MorType`) but replaces raw
-notebook mutation with object and morphism cell handles. The inline list editor
-can update a transition endpoint by supplying an array of object-cell handles.
+The generic API keeps runtime cell types (`ObType`/`MorType`) but exposes
+transition endpoints as object-cell arrays. The inline list editor renders place
+handles directly and writes the same shape back.
 
 <!-- verifier:reset -->
 
@@ -313,103 +313,40 @@ can update a transition endpoint by supplying an array of object-cell handles.
 
 ```tsx
 import { For } from "solid-js";
-import { createStore, produce, type SetStoreFunction, unwrap } from "solid-js/store";
 import { render } from "solid-js/web";
 
-import type { ModelJudgment, MorType, Ob, ObType } from "catcolab-document-types";
 import {
     CellKind,
-    createBinder,
-    type DocumentStore,
+    createGenericNotebook,
     type GenericMorphismCell,
     type GenericNotebookCell,
     type GenericObjectCell,
 } from "catcolab-documents";
-import type { ModelDocument } from "catcolab-document-methods";
-
-type SolidStoreHandle = {
-    doc: ModelDocument;
-    setDoc: SetStoreFunction<ModelDocument>;
-};
-
-const solidStore: DocumentStore<SolidStoreHandle> = {
-    createHandle(initialDoc) {
-        const [doc, setDoc] = createStore<ModelDocument>(initialDoc);
-        return { doc, setDoc };
-    },
-    viewDocument: (handle) => handle.doc,
-    changeDocument: (handle, fn) => handle.setDoc(produce<ModelDocument>(fn)),
-    copyValue: (_handle, value) => structuredClone(unwrap(value)),
-};
-
-const solidBinder = createBinder(solidStore);
+import type { MorType, ObType } from "catcolab-document-types";
 
 const placeObType: ObType = { tag: "Basic", content: "Object" };
 const transitionMorType: MorType = { tag: "Hom", content: placeObType };
 
 function createGenericPetriNetNotebook(data: { name: string }) {
-    return solidBinder.createGenericNotebook("petri-net", data);
+    return createGenericNotebook("petri-net", data);
 }
 
 type GenericPetriNetNotebook = ReturnType<typeof createGenericPetriNetNotebook>;
 
-function placeIds(ob: Ob | null): string[] {
-    if (!ob) {
-        return [];
-    }
-    switch (ob.tag) {
-        case "Basic":
-            return [ob.content];
-        case "App":
-            return placeIds(ob.content.ob);
-        case "List":
-            return ob.content.objects.flatMap((item) =>
-                item?.tag === "Basic" ? [item.content] : [],
-            );
-        case "Tabulated":
-            return [];
-    }
-}
-
-function morphismJudgment(
-    document: ModelDocument,
-    id: string,
-): Extract<ModelJudgment, { tag: "morphism" }> | null {
-    for (const cellId of document.notebook.cellOrder) {
-        const cell = document.notebook.cellContents[cellId];
-        if (cell?.tag === "formal" && cell.content.tag === "morphism" && cell.content.id === id) {
-            return cell.content;
-        }
-    }
-    return null;
-}
-
-function placeName(notebook: GenericPetriNetNotebook, id: string): string {
-    for (const cell of notebook.cells()) {
-        if (cell.kind === CellKind.Object && cell.id === id) {
-            return cell.name;
-        }
-    }
-    return "?";
-}
-
-function InlinePlaceListEditor(props: { placeIds: string[]; placeName: (id: string) => string }) {
-    return <span>[{props.placeIds.map(props.placeName).join(", ")}]</span>;
+function InlinePlaceListEditor(props: { places: GenericObjectCell[] }) {
+    return <span>[{props.places.map((place) => place.name).join(", ")}]</span>;
 }
 
 function GenericTransitionCell(props: {
-    notebook: GenericPetriNetNotebook;
     transition: GenericMorphismCell;
     appendInput: () => void;
 }) {
-    const name = (id: string) => placeName(props.notebook, id);
-    const judgment = () => morphismJudgment(props.notebook.document, props.transition.id);
     return (
         <li>
             <span class="cell-label">
-                Transition: <InlinePlaceListEditor placeIds={placeIds(judgment()?.dom ?? null)} placeName={name} />
+                Transition: <InlinePlaceListEditor places={props.transition.dom} />
                 <span> -&gt; </span>
-                <InlinePlaceListEditor placeIds={placeIds(judgment()?.cod ?? null)} placeName={name} />
+                <InlinePlaceListEditor places={props.transition.cod} />
                 <span> {props.transition.name}</span>
             </span>
             <button aria-label="append input place" onClick={props.appendInput} />
@@ -418,7 +355,6 @@ function GenericTransitionCell(props: {
 }
 
 function GenericPetriNetCell(props: {
-    notebook: GenericPetriNetNotebook;
     cell: GenericNotebookCell;
     appendInput: () => void;
 }) {
@@ -438,7 +374,6 @@ function GenericPetriNetCell(props: {
         case CellKind.Morphism:
             return (
                 <GenericTransitionCell
-                    notebook={props.notebook}
                     transition={props.cell}
                     appendInput={props.appendInput}
                 />
@@ -457,7 +392,6 @@ function GenericPetriNetEditor(props: {
                 <For each={props.notebook.cells()}>
                     {(cell) => (
                         <GenericPetriNetCell
-                            notebook={props.notebook}
                             cell={cell}
                             appendInput={props.appendInput}
                         />
@@ -470,9 +404,9 @@ function GenericPetriNetEditor(props: {
 
 function appendGenericInput(
     transition: GenericMorphismCell,
-    inputs: GenericObjectCell[],
+    place: GenericObjectCell,
 ) {
-    transition.update({ dom: inputs });
+    transition.update({ dom: [...transition.dom, place] });
 }
 
 function renderedCellText(container: HTMLElement): string {
@@ -496,7 +430,7 @@ const dispose = render(
     () => (
         <GenericPetriNetEditor
             notebook={notebook}
-            appendInput={() => appendGenericInput(transition, [a, b])}
+            appendInput={() => appendGenericInput(transition, b)}
         />
     ),
     container,
@@ -505,7 +439,7 @@ const dispose = render(
 console.log(container.querySelector("h1")?.textContent);
 console.log(renderedCellText(container));
 
-appendGenericInput(transition, [a, b]);
+appendGenericInput(transition, b);
 console.log(renderedCellText(container));
 
 dispose();
@@ -517,7 +451,7 @@ Place: A | Place: B | Place: C | Transition: [A] -> [C] fires
 Place: A | Place: B | Place: C | Transition: [A, B] -> [C] fires
 ```
 
-## Proposed `catcolab-documents`, typed logic
+## `catcolab-documents`, typed logic
 
 The typed logic API has the same editor shape as the generic API, but the
 transition type requires arrays of `Place` cells at compile time.
@@ -528,100 +462,42 @@ transition type requires arrays of `Place` cells at compile time.
 
 ```tsx
 import { For } from "solid-js";
-import { createStore, produce, type SetStoreFunction, unwrap } from "solid-js/store";
 import { render } from "solid-js/web";
 
-import type { ModelJudgment, Ob } from "catcolab-document-types";
-import { PetriNet, Place, Transition } from "catcolab-logics/petri-net";
 import {
     CellKind,
-    createBinder,
-    type DocumentStore,
+    createNotebook,
     type NotebookCell,
 } from "catcolab-documents";
-import type { ModelDocument } from "catcolab-document-methods";
-
-type SolidStoreHandle = {
-    doc: ModelDocument;
-    setDoc: SetStoreFunction<ModelDocument>;
-};
-
-const solidStore: DocumentStore<SolidStoreHandle> = {
-    createHandle(initialDoc) {
-        const [doc, setDoc] = createStore<ModelDocument>(initialDoc);
-        return { doc, setDoc };
-    },
-    viewDocument: (handle) => handle.doc,
-    changeDocument: (handle, fn) => handle.setDoc(produce<ModelDocument>(fn)),
-    copyValue: (_handle, value) => structuredClone(unwrap(value)),
-};
-
-const solidBinder = createBinder(solidStore);
+import {
+    PetriNet,
+    Place,
+    Transition,
+    type PlaceCell,
+    type TransitionCell,
+} from "catcolab-logics/petri-net";
 
 function createTypedPetriNetNotebook(data: { name: string }) {
-    return solidBinder.createNotebook(PetriNet, data);
+    return createNotebook(PetriNet, data);
 }
 
 type TypedPetriNetNotebook = ReturnType<typeof createTypedPetriNetNotebook>;
 type TypedPetriNetCell = NotebookCell<typeof PetriNet>;
 
-function placeIds(ob: Ob | null): string[] {
-    if (!ob) {
-        return [];
-    }
-    switch (ob.tag) {
-        case "Basic":
-            return [ob.content];
-        case "App":
-            return placeIds(ob.content.ob);
-        case "List":
-            return ob.content.objects.flatMap((item) =>
-                item?.tag === "Basic" ? [item.content] : [],
-            );
-        case "Tabulated":
-            return [];
-    }
-}
-
-function morphismJudgment(
-    document: ModelDocument,
-    id: string,
-): Extract<ModelJudgment, { tag: "morphism" }> | null {
-    for (const cellId of document.notebook.cellOrder) {
-        const cell = document.notebook.cellContents[cellId];
-        if (cell?.tag === "formal" && cell.content.tag === "morphism" && cell.content.id === id) {
-            return cell.content;
-        }
-    }
-    return null;
-}
-
-function placeName(notebook: TypedPetriNetNotebook, id: string): string {
-    for (const cell of notebook.cells()) {
-        if (cell.kind === CellKind.Object && cell.id === id) {
-            return cell.name;
-        }
-    }
-    return "?";
-}
-
-function InlinePlaceListEditor(props: { placeIds: string[]; placeName: (id: string) => string }) {
-    return <span>[{props.placeIds.map(props.placeName).join(", ")}]</span>;
+function InlinePlaceListEditor(props: { places: PlaceCell[] }) {
+    return <span>[{props.places.map((place) => place.name).join(", ")}]</span>;
 }
 
 function TypedTransitionCell(props: {
-    notebook: TypedPetriNetNotebook;
-    transition: Extract<TypedPetriNetCell, { kind: typeof CellKind.Morphism }>;
+    transition: TransitionCell;
     appendInput: () => void;
 }) {
-    const name = (id: string) => placeName(props.notebook, id);
-    const judgment = () => morphismJudgment(props.notebook.document, props.transition.id);
     return (
         <li>
             <span class="cell-label">
-                Transition: <InlinePlaceListEditor placeIds={placeIds(judgment()?.dom ?? null)} placeName={name} />
+                Transition: <InlinePlaceListEditor places={props.transition.dom} />
                 <span> -&gt; </span>
-                <InlinePlaceListEditor placeIds={placeIds(judgment()?.cod ?? null)} placeName={name} />
+                <InlinePlaceListEditor places={props.transition.cod} />
                 <span> {props.transition.name}</span>
             </span>
             <button aria-label="append input place" onClick={props.appendInput} />
@@ -630,7 +506,6 @@ function TypedTransitionCell(props: {
 }
 
 function TypedPetriNetCellView(props: {
-    notebook: TypedPetriNetNotebook;
     cell: TypedPetriNetCell;
     appendInput: () => void;
 }) {
@@ -650,7 +525,6 @@ function TypedPetriNetCellView(props: {
         case CellKind.Morphism:
             return (
                 <TypedTransitionCell
-                    notebook={props.notebook}
                     transition={props.cell}
                     appendInput={props.appendInput}
                 />
@@ -669,7 +543,6 @@ function TypedPetriNetEditor(props: {
                 <For each={props.notebook.cells()}>
                     {(cell) => (
                         <TypedPetriNetCellView
-                            notebook={props.notebook}
                             cell={cell}
                             appendInput={props.appendInput}
                         />
@@ -701,7 +574,7 @@ const dispose = render(
     () => (
         <TypedPetriNetEditor
             notebook={notebook}
-            appendInput={() => transition.update({ dom: [a, b] })}
+            appendInput={() => transition.update({ dom: [...transition.dom, b] })}
         />
     ),
     container,
@@ -710,7 +583,7 @@ const dispose = render(
 console.log(container.querySelector("h1")?.textContent);
 console.log(renderedCellText(container));
 
-transition.update({ dom: [a, b] });
+transition.update({ dom: [...transition.dom, b] });
 console.log(renderedCellText(container));
 
 dispose();

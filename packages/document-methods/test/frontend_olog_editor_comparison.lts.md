@@ -1,7 +1,7 @@
 # Frontend olog editor comparison
 
 This compares the shape of a small olog notebook editor in the current
-frontend-style API with the proposed `catcolab-documents` APIs. The current
+frontend-style API with the `catcolab-documents` APIs. The current
 example is reduced from the real frontend path: a model document is edited
 through raw notebook cells, low-level model declarations, explicit endpoint
 encoding, and a document mutation callback.
@@ -10,7 +10,7 @@ encoding, and a document mutation callback.
 
 The frontend currently derives olog cell constructors from theory metadata and
 then mutates a raw `ModelDocument` notebook. In the sample body below, compare
-the same sequence of work against the proposed APIs: create a notebook, add two
+the same sequence of work against the document APIs: create a notebook, add two
 types and one aspect, render, then rename the first type.
 
 <!-- verifier:prepend-to-following -->
@@ -179,7 +179,7 @@ Type: Person | Type: Company | Aspect: works for
 Type: Employee | Type: Company | Aspect: works for
 ```
 
-## Proposed `catcolab-documents`, generic
+## `catcolab-documents`, generic
 
 The generic API keeps the same store boundary and cell-handle operations as the
 typed API, but does not require a static logic value. Cells are created from bare
@@ -279,9 +279,9 @@ Type: Person | Type: Company | Aspect: works for
 Type: Employee | Type: Company | Aspect: works for
 ```
 
-## Proposed `catcolab-documents`, typed logic
+## `catcolab-documents`, typed logic
 
-With the proposed package, the store boundary is explicit and reusable. The
+With `catcolab-documents`, the store boundary is explicit and reusable. The
 editor receives a typed notebook handle instead of raw notebook data plus a
 separate mutation callback. The sample body follows the same sequence as above,
 but creating cells, wiring endpoints, and updating the first type all go through
@@ -317,13 +317,13 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
 
 const solidBinder = createBinder(solidStore);
 
-function createProposedOlogNotebook(data: { name: string }) {
+function createTypedOlogNotebook(data: { name: string }) {
     return solidBinder.createNotebook(SimpleOlog, data);
 }
 
-type ProposedOlogNotebook = ReturnType<typeof createProposedOlogNotebook>;
+type TypedOlogNotebook = ReturnType<typeof createTypedOlogNotebook>;
 
-function ProposedOlogEditor(props: { notebook: ProposedOlogNotebook }) {
+function TypedOlogEditor(props: { notebook: TypedOlogNotebook }) {
     return (
         <section>
             <h1>{props.notebook.name}</h1>
@@ -352,7 +352,7 @@ function renderedCellText(container: HTMLElement): string {
 ```
 
 ```tsx
-const notebook = createProposedOlogNotebook({ name: "An Olog" });
+const notebook = createTypedOlogNotebook({ name: "An Olog" });
 const person = notebook.add(Type, { name: "Person" });
 const company = notebook.add(Type, { name: "Company" });
 notebook.add(Aspect, { name: "works for", dom: person, cod: company });
@@ -360,7 +360,7 @@ notebook.add(Aspect, { name: "works for", dom: person, cod: company });
 const container = document.createElement("div");
 document.body.appendChild(container);
 
-const dispose = render(() => <ProposedOlogEditor notebook={notebook} />, container);
+const dispose = render(() => <TypedOlogEditor notebook={notebook} />, container);
 
 console.log(container.querySelector("h1")?.textContent);
 console.log(renderedCellText(container));
