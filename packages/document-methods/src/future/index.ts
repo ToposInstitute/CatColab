@@ -193,6 +193,8 @@ export type MorphismCell<TType extends MorphismType<unknown, unknown, string>> =
         readonly id: string;
         readonly type: TType;
         readonly name: string;
+        readonly dom: DomOf<TType>;
+        readonly cod: CodOf<TType>;
         duplicate(): MorphismCell<TType>;
     };
 
@@ -323,21 +325,26 @@ type GenericEndpoint = GenericObjectCell | GenericObjectCell[];
  * A morphism-cell handle in a {@link GenericNotebook}. The `type` is a bare
  * `MorType`, and endpoints are unconstrained object-cell references.
  */
-export type GenericMorphismCell = Update<{
+export type GenericMorphismCell<
+    Dom extends GenericEndpoint = GenericObjectCell[],
+    Cod extends GenericEndpoint = GenericObjectCell[],
+> = Update<{
     name: string;
-    dom: GenericEndpoint;
-    cod: GenericEndpoint;
+    dom: Dom;
+    cod: Cod;
 }> &
     Reorder & {
         readonly kind: typeof CellKind.Morphism;
         readonly id: string;
         readonly type: MorType;
         readonly name: string;
-        duplicate(): GenericMorphismCell;
+        readonly dom: Dom;
+        readonly cod: Cod;
+        duplicate(): GenericMorphismCell<Dom, Cod>;
     };
 
 /** The union of cell handles a {@link GenericNotebook} can yield. */
-export type GenericNotebookCell = RichTextCell | GenericObjectCell | GenericMorphismCell;
+export type GenericNotebookCell = RichTextCell | GenericObjectCell | GenericMorphismCell<any, any>;
 
 export type ModelNotebook<TLogic extends AnyModelLogic, Handle = ModelDocument> = Update<{
     name: string;
@@ -411,10 +418,13 @@ export type ModelNotebook<TLogic extends AnyModelLogic, Handle = ModelDocument> 
      * Add a morphism cell from a bare {@link MorType}, bypassing the logic's
      * typed morphism constructors. Endpoints are untyped object-cell handles.
      */
-    addMorphism(
+    addMorphism<
+        TDom extends GenericEndpoint = GenericEndpoint,
+        TCod extends GenericEndpoint = GenericEndpoint,
+    >(
         type: MorType,
-        args: { name: string; dom?: GenericEndpoint; cod?: GenericEndpoint },
-    ): GenericMorphismCell;
+        args: { name: string; dom?: TDom; cod?: TCod },
+    ): GenericMorphismCell<TDom, TCod>;
 };
 
 /**
@@ -442,10 +452,13 @@ export type GenericNotebook<Handle = ModelDocument> = Update<{ name: string }> &
     /** Add an object cell from a bare {@link ObType}. */
     addObject(type: ObType, args: { name: string }): GenericObjectCell;
     /** Add a morphism cell from a bare {@link MorType}. */
-    addMorphism(
+    addMorphism<
+        TDom extends GenericEndpoint = GenericEndpoint,
+        TCod extends GenericEndpoint = GenericEndpoint,
+    >(
         type: MorType,
-        args: { name: string; dom?: GenericEndpoint; cod?: GenericEndpoint },
-    ): GenericMorphismCell;
+        args: { name: string; dom?: TDom; cod?: TCod },
+    ): GenericMorphismCell<TDom, TCod>;
 };
 
 export const objectType = <Name extends string>(content: string) =>
@@ -725,6 +738,41 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
             ...reorderMethods(cellId),
         }) as unknown as ObjectCell<TType>;
 
+    const objectHandleForId = (objectId: string): GenericObjectCell => {
+        for (const candidateCellId of doc.notebook.cellOrder) {
+            const cell = doc.notebook.cellContents[candidateCellId];
+            if (cell?.tag !== "formal" || cell.content.tag !== "object") {
+                continue;
+            }
+            if (cell.content.id === objectId) {
+                return objectHandle(
+                    candidateCellId,
+                    findObjectType(cell.content.obType),
+                ) as unknown as GenericObjectCell;
+            }
+        }
+        throw new Error(`No object cell found for endpoint '${objectId}'.`);
+    };
+
+    const decodeEndpoint = (value: Ob | null): GenericEndpoint => {
+        if (!value) {
+            return [];
+        }
+        switch (value.tag) {
+            case "Basic":
+                return objectHandleForId(value.content);
+            case "App":
+                return decodeEndpoint(value.content.ob);
+            case "List":
+                return value.content.objects.flatMap((item) => {
+                    const endpoint = decodeEndpoint(item);
+                    return Array.isArray(endpoint) ? endpoint : [endpoint];
+                });
+            case "Tabulated":
+                return [];
+        }
+    };
+
     const morphismHandle = <TType extends LogicMorphismType<TLogic>>(cellId: string, type: TType) =>
         ({
             kind: CellKind.Morphism,
@@ -734,6 +782,16 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
             type,
             get name() {
                 return readCellContent<{ name: string }>(cellId).name;
+            },
+            get dom() {
+                return decodeEndpoint(
+                    readCellContent<{ dom: Ob | null }>(cellId).dom,
+                ) as DomOf<TType>;
+            },
+            get cod() {
+                return decodeEndpoint(
+                    readCellContent<{ cod: Ob | null }>(cellId).cod,
+                ) as CodOf<TType>;
             },
             update(u: Partial<MorphismArgs<TType>>) {
                 change((d) => {

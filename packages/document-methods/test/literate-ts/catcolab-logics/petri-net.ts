@@ -1,4 +1,10 @@
-import type { ModelLogic, MorphismType, ObjectCell, ObjectType } from "catcolab-documents";
+import type {
+    ModelLogic,
+    MorphismCell,
+    MorphismType,
+    ObjectCell,
+    ObjectType,
+} from "catcolab-documents";
 import { morphismType, objectType } from "catcolab-documents";
 
 import { ThSymMonoidalCategory } from "catlog-wasm";
@@ -12,6 +18,9 @@ export const Transition: TransitionType = morphismType<
     ObjectCell<PlaceType>[],
     "Transition"
 >();
+
+export type PlaceCell = ObjectCell<PlaceType>;
+export type TransitionCell = MorphismCell<TransitionType>;
 
 export const PetriNet = {
     theory: "petri-net",

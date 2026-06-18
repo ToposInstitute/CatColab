@@ -313,22 +313,42 @@ handles directly and writes the same shape back.
 
 ```tsx
 import { For } from "solid-js";
+import { createStore, produce, type SetStoreFunction, unwrap } from "solid-js/store";
 import { render } from "solid-js/web";
 
 import {
     CellKind,
-    createGenericNotebook,
+    createBinder,
+    type DocumentStore,
     type GenericMorphismCell,
     type GenericNotebookCell,
     type GenericObjectCell,
 } from "catcolab-documents";
 import type { MorType, ObType } from "catcolab-document-types";
+import type { ModelDocument } from "catcolab-document-methods";
+
+type SolidStoreHandle = {
+    doc: ModelDocument;
+    setDoc: SetStoreFunction<ModelDocument>;
+};
+
+const solidStore: DocumentStore<SolidStoreHandle> = {
+    createHandle(initialDoc) {
+        const [doc, setDoc] = createStore<ModelDocument>(initialDoc);
+        return { doc, setDoc };
+    },
+    viewDocument: (handle) => handle.doc,
+    changeDocument: (handle, fn) => handle.setDoc(produce<ModelDocument>(fn)),
+    copyValue: (_handle, value) => structuredClone(unwrap(value)),
+};
+
+const solidBinder = createBinder(solidStore);
 
 const placeObType: ObType = { tag: "Basic", content: "Object" };
 const transitionMorType: MorType = { tag: "Hom", content: placeObType };
 
 function createGenericPetriNetNotebook(data: { name: string }) {
-    return createGenericNotebook("petri-net", data);
+    return solidBinder.createGenericNotebook("petri-net", data);
 }
 
 type GenericPetriNetNotebook = ReturnType<typeof createGenericPetriNetNotebook>;
@@ -462,11 +482,13 @@ transition type requires arrays of `Place` cells at compile time.
 
 ```tsx
 import { For } from "solid-js";
+import { createStore, produce, type SetStoreFunction, unwrap } from "solid-js/store";
 import { render } from "solid-js/web";
 
 import {
     CellKind,
-    createNotebook,
+    createBinder,
+    type DocumentStore,
     type NotebookCell,
 } from "catcolab-documents";
 import {
@@ -476,9 +498,27 @@ import {
     type PlaceCell,
     type TransitionCell,
 } from "catcolab-logics/petri-net";
+import type { ModelDocument } from "catcolab-document-methods";
+
+type SolidStoreHandle = {
+    doc: ModelDocument;
+    setDoc: SetStoreFunction<ModelDocument>;
+};
+
+const solidStore: DocumentStore<SolidStoreHandle> = {
+    createHandle(initialDoc) {
+        const [doc, setDoc] = createStore<ModelDocument>(initialDoc);
+        return { doc, setDoc };
+    },
+    viewDocument: (handle) => handle.doc,
+    changeDocument: (handle, fn) => handle.setDoc(produce<ModelDocument>(fn)),
+    copyValue: (_handle, value) => structuredClone(unwrap(value)),
+};
+
+const solidBinder = createBinder(solidStore);
 
 function createTypedPetriNetNotebook(data: { name: string }) {
-    return createNotebook(PetriNet, data);
+    return solidBinder.createNotebook(PetriNet, data);
 }
 
 type TypedPetriNetNotebook = ReturnType<typeof createTypedPetriNetNotebook>;
