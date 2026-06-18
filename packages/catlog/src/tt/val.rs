@@ -98,6 +98,12 @@ pub enum TyV_ {
     Unit,
     /// A metavariable, also see [TyS_::Meta].
     Meta(MetaVar),
+    /// The type of terms in a fiber over an object generator of some
+    /// diagram's codomain model.
+    ///
+    /// See [TyS_::Over] for the syntactic counterpart and explanation
+    /// of why diagram identity is not part of this type.
+    Over(Vec<(FieldName, LabelSegment)>),
 }
 
 /// Value for total types, dereferences to [TyV_].
@@ -177,6 +183,11 @@ impl TyV {
     pub fn meta(mv: MetaVar) -> Self {
         Self(Rc::new(TyV_::Meta(mv)))
     }
+
+    /// Smart constructor for [TyV], [TyV_::Over] case.
+    pub fn over(path: Vec<(FieldName, LabelSegment)>) -> Self {
+        Self(Rc::new(TyV_::Over(path)))
+    }
 }
 
 /// Inner enum for [TmN].
@@ -217,6 +228,18 @@ impl TmN {
     }
 }
 
+/// Value-level payload of [`TmV_::Instance`]. Parallels
+/// [`super::stx::InstanceBodyS`].
+#[derive(Default)]
+pub struct InstanceBodyV {
+    /// Generators introduced by this instance, with their fibers.
+    pub generators: IndexMap<FieldName, (LabelSegment, Vec<(FieldName, LabelSegment)>)>,
+    /// Equation witnesses, asserted to hold in this instance.
+    pub equations: Vec<(TmV, TmV)>,
+    /// Sub-instance imports, keyed by import name.
+    pub sub_instances: IndexMap<FieldName, (LabelSegment, TmV)>,
+}
+
 /// Inner enum for [TmV].
 pub enum TmV_ {
     /// Neutrals.
@@ -225,6 +248,14 @@ pub enum TmV_ {
     Neu(TmN, TyV),
     /// Application of an object operation in the theory.
     App(VarName, TmV),
+    /// Application of a codomain morphism to an [`@over`-typed](TyV_::Over)
+    /// term. See [`TmS_::OverApp`] for the syntactic counterpart and
+    /// argument-by-argument documentation.
+    OverApp(FieldName, LabelSegment, Vec<(FieldName, LabelSegment)>, TmV),
+    /// An instance value of a model (sketch) type. See
+    /// [`super::stx::InstanceBodyS`] for the payload description; this
+    /// is its value-level counterpart.
+    Instance(InstanceBodyV),
     /// Lists of objects.
     List(Vec<TmV>),
     /// Records.
@@ -255,6 +286,21 @@ impl TmV {
     /// Smart constructor for [TmV], [TmV_::App] case.
     pub fn app(name: VarName, x: TmV) -> Self {
         TmV(Rc::new(TmV_::App(name, x)))
+    }
+
+    /// Smart constructor for [TmV], [TmV_::OverApp] case.
+    pub fn over_app(
+        mor: FieldName,
+        mor_label: LabelSegment,
+        tgt_path: Vec<(FieldName, LabelSegment)>,
+        inner: TmV,
+    ) -> Self {
+        TmV(Rc::new(TmV_::OverApp(mor, mor_label, tgt_path, inner)))
+    }
+
+    /// Smart constructor for [TmV], [TmV_::Instance] case.
+    pub fn instance(body: InstanceBodyV) -> Self {
+        TmV(Rc::new(TmV_::Instance(body)))
     }
 
     /// Smart constructor for [TmV], [TmV_::List] case.
