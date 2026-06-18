@@ -57,7 +57,10 @@ import { CellKind, type GenericNotebook, type GenericNotebookCell } from "catcol
 import type { MorType, ObType } from "catcolab-document-types";
 
 const placeObType: ObType = { tag: "Basic", content: "Object" };
-const transitionMorType: MorType = { tag: "Hom", content: placeObType };
+const transitionMorType: MorType = {
+    tag: "Hom",
+    content: { tag: "ModeApp", content: { modality: "SymmetricList", obType: placeObType } },
+};
 
 function GenericCellView(props: { cell: GenericNotebookCell }) {
     switch (props.cell.kind) {
@@ -188,7 +191,10 @@ import { type GenericMorphismCell } from "catcolab-documents";
 import type { MorType, ObType } from "catcolab-document-types";
 
 const placeObType: ObType = { tag: "Basic", content: "Object" };
-const transitionMorType: MorType = { tag: "Hom", content: placeObType };
+const transitionMorType: MorType = {
+    tag: "Hom",
+    content: { tag: "ModeApp", content: { modality: "SymmetricList", obType: placeObType } },
+};
 
 function TransitionCellView(props: { transition: GenericMorphismCell; appendInput: () => void }) {
     return (

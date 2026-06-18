@@ -135,7 +135,10 @@ nameAttr.update({
 error TS2345: Type error: dom: Expected object cell of type "Entity", got "AttrType".
 ```
 
-Array endpoints are written with a single-element tuple in the logic definition.
+Endpoint arity is taken from the morphism type: a `Hom` over a list modality
+such as `SymmetricList` produces array-valued endpoints. The morphism type must
+be a literal (declared with `satisfies MorType`, not `: MorType`) so the
+modality survives inference.
 
 <!-- verifier:reset -->
 
@@ -147,7 +150,13 @@ import type { MorType, ObType } from "catcolab-document-types";
 import { ThSymMonoidalCategory } from "catlog-wasm";
 
 const placeObType: ObType = { tag: "Basic", content: "Object" };
-const transitionMorType: MorType = { tag: "Hom", content: placeObType };
+const transitionMorType = {
+    tag: "Hom",
+    content: {
+        tag: "ModeApp",
+        content: { modality: "SymmetricList", obType: placeObType },
+    },
+} satisfies MorType;
 
 const PetriNet = defineModelLogic({
     theory: "petri-net",
@@ -156,7 +165,7 @@ const PetriNet = defineModelLogic({
         Place: placeObType,
     },
     morphisms: {
-        Transition: { dom: ["Place"], cod: ["Place"], morType: transitionMorType },
+        Transition: { dom: "Place", cod: "Place", morType: transitionMorType },
     },
 });
 

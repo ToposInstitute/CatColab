@@ -4,7 +4,7 @@ The olog and Petri-net editor comparisons
 ([`olog_editor_comparison.lts.md`](./olog_editor_comparison.lts.md),
 [`petri_net_editor_comparison.lts.md`](./petri_net_editor_comparison.lts.md))
 show three tiers of API that produce identical editors and identical output. The
-tiers diverge only in *what mistakes the compiler can see*. The reduced frontend
+tiers diverge only in _what mistakes the compiler can see_. The reduced frontend
 hand-encodes endpoints as raw `Ob` values and the generic API exposes them as
 unbranded `GenericObjectCell` handles, so neither can tell one object type from
 another. The typed logic API brands each cell with its declared type, so wiring
@@ -65,25 +65,33 @@ notebook.add(Mapping, { name: "broken", dom: person, cod: age });
 
 ## Bug 2: a single object where an endpoint list is required
 
-A Petri-net transition's endpoints are *lists* of places. The generic
-`addMorphism` endpoint type is `GenericObjectCell | GenericObjectCell[]`, so a
-bare place is accepted in place of a list and the transition ends up with a
-single-object domain instead of a list — a different encoding from every other
-transition.
+A Petri-net transition's endpoints are _lists_ of places, which the transition's
+morphism type records as a `SymmetricList` modality. The generic `addMorphism`
+endpoint type is `GenericObjectCell | GenericObjectCell[]`, so a bare place is
+accepted in place of a list. The stored shape follows the morphism type rather
+than the argument, so the bare place is silently wrapped into a one-element list
+instead of being flagged — the mistake compiles, runs, and goes unnoticed.
 
 ```ts
 import { binder } from "catcolab-documents";
 import type { MorType, ObType } from "catcolab-document-types";
 
 const Place: ObType = { tag: "Basic", content: "Object" };
-const Transition: MorType = { tag: "Hom", content: { tag: "Basic", content: "Object" } };
+const Transition: MorType = {
+    tag: "Hom",
+    content: {
+        tag: "ModeApp",
+        content: { modality: "SymmetricList", obType: { tag: "Basic", content: "Object" } },
+    },
+};
 
 const notebook = binder.createGenericNotebook("petri-net", { name: "Net" });
 const a = notebook.addObject(Place, { name: "A" });
 const c = notebook.addObject(Place, { name: "C" });
 
 // `dom` should be a list of places, but a single place type-checks just as
-// readily, so the domain is stored with the wrong shape.
+// readily. The endpoint shape comes from the morphism type, so the bare place
+// is silently wrapped into a one-element list rather than rejected.
 const transition = notebook.addMorphism(Transition, { name: "fires", dom: a, cod: [c] });
 
 console.log("dom stored as array:", Array.isArray(transition.dom));
@@ -91,7 +99,7 @@ console.log("cod stored as array:", Array.isArray(transition.cod));
 ```
 
 ```
-dom stored as array: false
+dom stored as array: true
 cod stored as array: true
 ```
 

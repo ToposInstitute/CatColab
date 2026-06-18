@@ -42,7 +42,10 @@ type CurrentCellConstructor = {
 };
 
 const placeObType: ObType = { tag: "Basic", content: "Object" };
-const transitionMorType: MorType = { tag: "Hom", content: placeObType };
+const transitionMorType: MorType = {
+    tag: "Hom",
+    content: { tag: "ModeApp", content: { modality: "SymmetricList", obType: placeObType } },
+};
 const tensorOp = { tag: "Basic", content: "tensor" } as const;
 
 const placeCellConstructor: CurrentCellConstructor = {
@@ -339,7 +342,10 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
 const solidBinder = createBinder(solidStore);
 
 const placeObType: ObType = { tag: "Basic", content: "Object" };
-const transitionMorType: MorType = { tag: "Hom", content: placeObType };
+const transitionMorType: MorType = {
+    tag: "Hom",
+    content: { tag: "ModeApp", content: { modality: "SymmetricList", obType: placeObType } },
+};
 
 function InlinePlaceListEditor(props: { places: GenericObjectCell[] }) {
     return <span>[{props.places.map((place) => place.name).join(", ")}]</span>;

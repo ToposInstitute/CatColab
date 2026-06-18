@@ -1,6 +1,6 @@
 import { v7 } from "uuid";
 
-import type { MorType, Ob, ObType } from "catcolab-document-types";
+import type { Modality, MorType, Ob, ObType } from "catcolab-document-types";
 import type { Cell, ModelJudgment } from "catcolab-document-types";
 import {
     type DblModel,
@@ -417,6 +417,9 @@ export type ModelNotebook<TLogic extends AnyModelLogic, Handle = ModelDocument> 
     /**
      * Add a morphism cell from a bare {@link MorType}, bypassing the logic's
      * typed morphism constructors. Endpoints are untyped object-cell handles.
+     * Endpoint shape follows the morphism type: a list-modality `Hom` (e.g.
+     * `Hom(ModeApp(SymmetricList, Object))`) stores and reads its endpoints as
+     * arrays of object cells; any other morphism type uses single object cells.
      */
     addMorphism<
         TDom extends GenericEndpoint = GenericEndpoint,
@@ -451,7 +454,11 @@ export type GenericNotebook<Handle = ModelDocument> = Update<{ name: string }> &
     add(type: RichTextType, args: { content: string }): RichTextCell;
     /** Add an object cell from a bare {@link ObType}. */
     addObject(type: ObType, args: { name: string }): GenericObjectCell;
-    /** Add a morphism cell from a bare {@link MorType}. */
+    /**
+     * Add a morphism cell from a bare {@link MorType}. Endpoint shape follows
+     * the morphism type's modality: a list-modality `Hom` uses arrays of object
+     * cells, any other morphism type uses single object cells.
+     */
     addMorphism<
         TDom extends GenericEndpoint = GenericEndpoint,
         TCod extends GenericEndpoint = GenericEndpoint,
@@ -472,9 +479,28 @@ export const morphismType = <Dom, Cod, Name extends string>(morType?: MorType) =
 
 type ObjectTypeSpec = ObType;
 type ObjectName<TObjects extends Record<string, ObjectTypeSpec>> = keyof TObjects & string;
-type EndpointSpec<TObjects extends Record<string, ObjectTypeSpec>> =
-    | ObjectName<TObjects>
-    | readonly [ObjectName<TObjects>];
+type EndpointSpec<TObjects extends Record<string, ObjectTypeSpec>> = ObjectName<TObjects>;
+
+/**
+ * Modalities whose endpoints are lists of objects rather than a single
+ * object. A morphism type over one of these (e.g. a Petri-net transition's
+ * `Hom(ModeApp(SymmetricList, Object))`) has array-valued endpoints.
+ */
+type ListModality = "List" | "SymmetricList" | "CocartesianList" | "CartesianList" | "AdditiveList";
+
+/**
+ * Whether a morphism type's endpoints are list-valued, read from the modality
+ * in its `Hom` content. The morphism type must be a literal (declare it with
+ * `satisfies MorType`, not `: MorType`) so the modality survives inference.
+ */
+type MorTypeIsList<TMorType> = TMorType extends {
+    tag: "Hom";
+    content: { tag: "ModeApp"; content: { modality: infer M } };
+}
+    ? M extends ListModality
+        ? true
+        : false
+    : false;
 
 type GeneratedObjectTypes<TObjects extends Record<string, ObjectTypeSpec>> = {
     readonly [K in keyof TObjects & string]: ObjectType<K>;
@@ -482,12 +508,9 @@ type GeneratedObjectTypes<TObjects extends Record<string, ObjectTypeSpec>> = {
 
 type EndpointType<
     TObjects extends Record<string, ObjectTypeSpec>,
-    TEndpoint,
-> = TEndpoint extends readonly [infer TName extends ObjectName<TObjects>]
-    ? ObjectCell<ObjectType<TName>>[]
-    : TEndpoint extends ObjectName<TObjects>
-      ? ObjectCell<ObjectType<TEndpoint>>
-      : never;
+    TName extends ObjectName<TObjects>,
+    TIsList extends boolean,
+> = TIsList extends true ? ObjectCell<ObjectType<TName>>[] : ObjectCell<ObjectType<TName>>;
 
 type GeneratedMorphismSpec<TObjects extends Record<string, ObjectTypeSpec>> = {
     readonly dom: EndpointSpec<TObjects>;
@@ -500,8 +523,8 @@ type GeneratedMorphismTypes<
     TMorphisms extends Record<string, GeneratedMorphismSpec<TObjects>>,
 > = {
     readonly [K in keyof TMorphisms & string]: MorphismType<
-        EndpointType<TObjects, TMorphisms[K]["dom"]>,
-        EndpointType<TObjects, TMorphisms[K]["cod"]>,
+        EndpointType<TObjects, TMorphisms[K]["dom"], MorTypeIsList<TMorphisms[K]["morType"]>>,
+        EndpointType<TObjects, TMorphisms[K]["cod"], MorTypeIsList<TMorphisms[K]["morType"]>>,
         K
     >;
 };
@@ -540,8 +563,11 @@ const objectTypeFromSpec = <Name extends string>(spec: ObjectTypeSpec) =>
  * Generate a typed `ModelLogic` from a compact declaration of object and
  * morphism cell types. Objects and morphisms require explicit `ObType` and
  * `MorType` values. Object keys become typed object-cell constructors;
- * morphism endpoint references point at those object keys. Use `["Object"]`
- * for array endpoints such as Petri-net transition boundaries.
+ * morphism endpoint references point at those object keys. Endpoint arity is
+ * taken from the morphism type: a `Hom` over a list modality such as
+ * `SymmetricList` yields array-valued endpoints (e.g. Petri-net transition
+ * boundaries). For that to be visible to the type system, declare such
+ * morphism types as literals with `satisfies MorType` rather than `: MorType`.
  */
 export function defineModelLogic<
     const TTheory extends string,
@@ -605,6 +631,30 @@ const sameTypeValue = (a: unknown, b: unknown): boolean => {
     return keys.every((key) => sameTypeValue(aRecord[key], bRecord[key]));
 };
 
+const LIST_MODALITIES: ReadonlySet<Modality> = new Set<Modality>([
+    "List",
+    "SymmetricList",
+    "CocartesianList",
+    "CartesianList",
+    "AdditiveList",
+]);
+
+/**
+ * The list modality of a morphism type's endpoints, read from the modality in
+ * its `Hom` content, or `null` when the endpoints are single objects. This is
+ * the runtime counterpart of the {@link MorTypeIsList} type.
+ */
+const morTypeListModality = (morType: MorType): Modality | null => {
+    if (morType.tag !== "Hom") {
+        return null;
+    }
+    const inner = morType.content;
+    if (inner.tag === "ModeApp" && LIST_MODALITIES.has(inner.content.modality)) {
+        return inner.content.modality;
+    }
+    return null;
+};
+
 /** Encode an object-cell endpoint reference as a model object. */
 const encodeObjectRef = (cell: { readonly id: string }): Ob => ({
     tag: "Basic",
@@ -612,16 +662,16 @@ const encodeObjectRef = (cell: { readonly id: string }): Ob => ({
 });
 
 /**
- * Encode a morphism endpoint into the document's object notation. A single
- * object cell becomes a basic object; an array of cells becomes a tensor
- * product over a symmetric list, matching the shape logics like Petri nets
- * expect.
+ * Encode a morphism endpoint into the document's object notation. The shape is
+ * chosen from the morphism type: a list-modality `Hom` (e.g. a Petri-net
+ * transition) wraps an array of cells as a tensor product over the modality's
+ * list; any other morphism type encodes a single object cell as a basic
+ * object.
  */
-const encodeEndpoint = (value: unknown): Ob | null => {
-    if (value == null) {
-        return null;
-    }
-    if (Array.isArray(value)) {
+const encodeEndpoint = (morType: MorType, value: unknown): Ob | null => {
+    const modality = morTypeListModality(morType);
+    if (modality !== null) {
+        const cells = Array.isArray(value) ? value : value == null ? [] : [value];
         return {
             tag: "App",
             content: {
@@ -629,14 +679,17 @@ const encodeEndpoint = (value: unknown): Ob | null => {
                 ob: {
                     tag: "List",
                     content: {
-                        modality: "SymmetricList",
-                        objects: value.map((cell) =>
+                        modality,
+                        objects: cells.map((cell) =>
                             encodeObjectRef(cell as { readonly id: string }),
                         ),
                     },
                 },
             },
         };
+    }
+    if (value == null) {
+        return null;
     }
     return encodeObjectRef(value as { readonly id: string });
 };
@@ -754,23 +807,32 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
         throw new Error(`No object cell found for endpoint '${objectId}'.`);
     };
 
-    const decodeEndpoint = (value: Ob | null): GenericEndpoint => {
+    /** Flatten any stored endpoint object into the object-cell handles it
+    references, regardless of tensor/list wrapping. */
+    const decodeEndpointObjects = (value: Ob | null): GenericObjectCell[] => {
         if (!value) {
             return [];
         }
         switch (value.tag) {
             case "Basic":
-                return objectHandleForId(value.content);
+                return [objectHandleForId(value.content)];
             case "App":
-                return decodeEndpoint(value.content.ob);
+                return decodeEndpointObjects(value.content.ob);
             case "List":
-                return value.content.objects.flatMap((item) => {
-                    const endpoint = decodeEndpoint(item);
-                    return Array.isArray(endpoint) ? endpoint : [endpoint];
-                });
+                return value.content.objects.flatMap((item) => decodeEndpointObjects(item));
             case "Tabulated":
                 return [];
         }
+    };
+
+    /** Decode a stored endpoint, choosing array vs single shape from the
+    morphism type's modality rather than from the stored value's shape. */
+    const decodeEndpoint = (morType: MorType, value: Ob | null): GenericEndpoint => {
+        const objects = decodeEndpointObjects(value);
+        if (morTypeListModality(morType) !== null) {
+            return objects;
+        }
+        return objects[0] as GenericEndpoint;
     };
 
     const morphismHandle = <TType extends LogicMorphismType<TLogic>>(cellId: string, type: TType) =>
@@ -785,11 +847,13 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
             },
             get dom() {
                 return decodeEndpoint(
+                    type as MorType,
                     readCellContent<{ dom: Ob | null }>(cellId).dom,
                 ) as DomOf<TType>;
             },
             get cod() {
                 return decodeEndpoint(
+                    type as MorType,
                     readCellContent<{ cod: Ob | null }>(cellId).cod,
                 ) as CodOf<TType>;
             },
@@ -804,10 +868,10 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
                         content.name = u.name as string;
                     }
                     if ("dom" in u) {
-                        content.dom = encodeEndpoint(u.dom);
+                        content.dom = encodeEndpoint(type as MorType, u.dom);
                     }
                     if ("cod" in u) {
-                        content.cod = encodeEndpoint(u.cod);
+                        content.cod = encodeEndpoint(type as MorType, u.cod);
                     }
                 });
             },
@@ -998,8 +1062,8 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
                 const judgment = newMorphismDecl(morType);
                 const morArgs = args as { name: string; dom?: unknown; cod?: unknown };
                 judgment.name = morArgs.name;
-                judgment.dom = encodeEndpoint(morArgs.dom);
-                judgment.cod = encodeEndpoint(morArgs.cod);
+                judgment.dom = encodeEndpoint(morType, morArgs.dom);
+                judgment.cod = encodeEndpoint(morType, morArgs.cod);
                 const formalCell = newFormalCell(judgment);
                 change((d) => {
                     d.notebook.cellContents[formalCell.id] = formalCell;
@@ -1042,8 +1106,8 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
         ): GenericMorphismCell {
             const judgment = newMorphismDecl(type);
             judgment.name = args.name;
-            judgment.dom = encodeEndpoint(args.dom);
-            judgment.cod = encodeEndpoint(args.cod);
+            judgment.dom = encodeEndpoint(type, args.dom);
+            judgment.cod = encodeEndpoint(type, args.cod);
             const formalCell = newFormalCell(judgment);
             change((d) => {
                 d.notebook.cellContents[formalCell.id] = formalCell;
