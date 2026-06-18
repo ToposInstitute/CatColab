@@ -349,120 +349,6 @@ describe("Petri-net editor comparison", () => {
         container.remove();
     });
 
-    test("catcolab-documents, generic consumer", () => {
-        // Bare runtime type values, declared `as const` so a transition's
-        // list-valued endpoint arity survives inference.
-        const ob = { tag: "Basic", content: "Object" } as const;
-        const mor = {
-            tag: "Hom",
-            content: {
-                tag: "ModeApp",
-                content: { modality: "SymmetricList", obType: ob },
-            },
-        } as const;
-
-        type ObCell = ObjectCell<typeof ob>;
-        type MorCell = MorphismCell<typeof mor>;
-
-        const GenericShape = defineShape({
-            objects: { ob },
-            morphisms: { mor },
-        });
-
-        const isOb = byObjectType(ob);
-        const isMor = byMorphismType(mor);
-
-        function InlineListEditor(props: { places: ObCell[] }) {
-            return <span>[{props.places.map((place) => place.name).join(", ")}]</span>;
-        }
-
-        function MorCellView(props: { transition: MorCell; appendInput: () => void }) {
-            return (
-                <li>
-                    <span class="cell-label">
-                        Transition: <InlineListEditor places={props.transition.dom} />
-                        <span> -&gt; </span>
-                        <InlineListEditor places={props.transition.cod} />
-                        <span> {props.transition.name}</span>
-                    </span>
-                    <button aria-label="append input place" onClick={props.appendInput} />
-                </li>
-            );
-        }
-
-        function CellView(props: { cell: NotebookCell; appendInput: () => void }) {
-            const cell = props.cell;
-            if (isMor(cell)) {
-                return <MorCellView transition={cell} appendInput={props.appendInput} />;
-            }
-            if (isOb(cell)) {
-                return (
-                    <li>
-                        <span class="cell-label">Place: {cell.name}</span>
-                    </li>
-                );
-            }
-            if (cell.kind === CellKind.RichText) {
-                return (
-                    <li>
-                        <span class="cell-label">Text: {cell.content}</span>
-                    </li>
-                );
-            }
-            return null;
-        }
-
-        function ModelEditor(props: {
-            notebook: Notebook<typeof GenericShape, SolidStoreHandle>;
-            appendInput: () => void;
-        }) {
-            return (
-                <section>
-                    <h1>{props.notebook.name}</h1>
-                    <ul>
-                        <For each={props.notebook.cells()}>
-                            {(cell) => <CellView cell={cell} appendInput={props.appendInput} />}
-                        </For>
-                    </ul>
-                </section>
-            );
-        }
-
-        function appendGenericInput(transition: MorCell, place: ObCell) {
-            transition.update({ dom: [...transition.dom, place] });
-        }
-
-        const notebook = solidBinder.createNotebook(PetriNet, { name: "Petri net" });
-        const a = notebook.addObject(Place, { name: "A" });
-        notebook.addObject(Place, { name: "B" });
-        const c = notebook.addObject(Place, { name: "C" });
-        notebook.addMorphism(Transition, { name: "fires", dom: [a], cod: [c] });
-
-        // The runtime API returns untyped handles; recover precise ones via the guards.
-        const transition = notebook.cells().find(byMorphismType(Transition))!;
-        const input = notebook.cells().filter(byObjectType(Place))[1]!;
-
-        const container = document.createElement("div");
-        document.body.appendChild(container);
-
-        const dispose = render(
-            () => (
-                <ModelEditor
-                    notebook={notebook}
-                    appendInput={() => appendGenericInput(transition, input)}
-                />
-            ),
-            container,
-        );
-
-        expect(container.innerHTML).toBe(EXPECTED_INITIAL);
-
-        appendGenericInput(transition, input);
-        expect(container.innerHTML).toBe(EXPECTED_AFTER_APPEND);
-
-        dispose();
-        container.remove();
-    });
 
     test("catcolab-documents, typed logic", () => {
         const isPlace = byObjectType(Place);
@@ -489,7 +375,10 @@ describe("Petri-net editor comparison", () => {
             );
         }
 
-        function PetriNetCell(props: { cell: NotebookCell; appendInput: () => void }) {
+        function PetriNetCell(props: {
+            cell: NotebookCell<typeof PetriNet>;
+            appendInput: () => void;
+        }) {
             const cell = props.cell;
             if (isTransition(cell)) {
                 return <TransitionCell transition={cell} appendInput={props.appendInput} />;
@@ -554,6 +443,124 @@ describe("Petri-net editor comparison", () => {
         expect(container.innerHTML).toBe(EXPECTED_INITIAL);
 
         transition.update({ dom: [...transition.dom, b] });
+        expect(container.innerHTML).toBe(EXPECTED_AFTER_APPEND);
+
+        dispose();
+        container.remove();
+    });
+
+    test("catcolab-documents, generic consumer", () => {
+        // Bare runtime type values, declared `as const` so a transition's
+        // list-valued endpoint arity survives inference.
+        const basicObject = { tag: "Basic", content: "Object" } as const;
+        const symmetricListMorphism = {
+            tag: "Hom",
+            content: {
+                tag: "ModeApp",
+                content: { modality: "SymmetricList", obType: basicObject },
+            },
+        } as const;
+
+        type BasicObCell = ObjectCell<typeof basicObject>;
+        type SymmetricListCell = MorphismCell<typeof symmetricListMorphism>;
+
+        const GenericShape = defineShape({
+            objects: { ob: basicObject },
+            morphisms: { mor: symmetricListMorphism },
+        });
+
+        const isOb = byObjectType(basicObject);
+        const isMor = byMorphismType(symmetricListMorphism);
+
+        function InlineListEditor(props: { places: BasicObCell[] }) {
+            return <span>[{props.places.map((place) => place.name).join(", ")}]</span>;
+        }
+
+        function MorCellView(props: { transition: SymmetricListCell; appendInput: () => void }) {
+            return (
+                <li>
+                    <span class="cell-label">
+                        Transition: <InlineListEditor places={props.transition.dom} />
+                        <span> -&gt; </span>
+                        <InlineListEditor places={props.transition.cod} />
+                        <span> {props.transition.name}</span>
+                    </span>
+                    <button aria-label="append input place" onClick={props.appendInput} />
+                </li>
+            );
+        }
+
+        function CellView(props: {
+            cell: NotebookCell<typeof GenericShape>;
+            appendInput: () => void;
+        }) {
+            const cell = props.cell;
+            if (isMor(cell)) {
+                return <MorCellView transition={cell} appendInput={props.appendInput} />;
+            }
+            if (isOb(cell)) {
+                return (
+                    <li>
+                        <span class="cell-label">Place: {cell.name}</span>
+                    </li>
+                );
+            }
+            if (cell.kind === CellKind.RichText) {
+                return (
+                    <li>
+                        <span class="cell-label">Text: {cell.content}</span>
+                    </li>
+                );
+            }
+            return null;
+        }
+
+        function ModelEditor(props: {
+            notebook: Notebook<typeof GenericShape, SolidStoreHandle>;
+            appendInput: () => void;
+        }) {
+            return (
+                <section>
+                    <h1>{props.notebook.name}</h1>
+                    <ul>
+                        <For each={props.notebook.cells()}>
+                            {(cell) => <CellView cell={cell} appendInput={props.appendInput} />}
+                        </For>
+                    </ul>
+                </section>
+            );
+        }
+
+        function appendGenericInput(transition: SymmetricListCell, place: BasicObCell) {
+            transition.update({ dom: [...transition.dom, place] });
+        }
+
+        const notebook = solidBinder.createNotebook(PetriNet, { name: "Petri net" });
+        const a = notebook.addObject(Place, { name: "A" });
+        notebook.addObject(Place, { name: "B" });
+        const c = notebook.addObject(Place, { name: "C" });
+        notebook.addMorphism(Transition, { name: "fires", dom: [a], cod: [c] });
+
+        // The runtime API returns untyped handles; recover precise ones via the guards.
+        const transition = notebook.cells().find(byMorphismType(Transition))!;
+        const input = notebook.cells().filter(byObjectType(Place))[1]!;
+
+        const container = document.createElement("div");
+        document.body.appendChild(container);
+
+        const dispose = render(
+            () => (
+                <ModelEditor
+                    notebook={notebook}
+                    appendInput={() => appendGenericInput(transition, input)}
+                />
+            ),
+            container,
+        );
+
+        expect(container.innerHTML).toBe(EXPECTED_INITIAL);
+
+        appendGenericInput(transition, input);
         expect(container.innerHTML).toBe(EXPECTED_AFTER_APPEND);
 
         dispose();

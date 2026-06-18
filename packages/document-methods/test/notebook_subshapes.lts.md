@@ -1,11 +1,14 @@
-# Interactive components over sub-shapes
+# Interactive components over any notebook
 
-A shape declares the object and morphism types a notebook is built from. A
-component can be written against a _sub-shape_ — a shape that names only the
-cell types the component touches — and stay fully interactive: it reads cells
-with `byObjectType`/`byMorphismType`, edits them with `update`, and adds new
-ones with `add`. Because a notebook over a richer shape is assignable to one
-over a sub-shape, the component accepts a notebook of the full theory.
+A shape declares the object and morphism types a notebook is built from, and
+`cells()` is typed precisely by that shape: a consumer that names a shape must
+handle every cell type the shape implies. A reusable component therefore does
+not pin itself to one theory's shape; it is written against the generic
+`Notebook` interface, whose `cells()` yields the widest `NotebookCell` union. It
+stays fully interactive — it reads cells with `byObjectType`/`byMorphismType`,
+edits them with `update`, and adds new ones with `addObject`/`addMorphism` — and
+because a notebook over any shape is assignable to the generic `Notebook`, the
+component accepts a notebook of any theory.
 
 <!-- verifier:prepend-to-following -->
 
@@ -14,40 +17,27 @@ import { binder, byObjectType, defineShape, type Notebook } from "catcolab-docum
 import { PetriNet, Place, Transition } from "catcolab-logics/petri-net";
 ```
 
-A sub-shape names just the cell types the component needs — here, places. It has
-no `theory`, so it is a contract for _consuming_ notebooks, not for creating
-them: a sub-shape cannot be passed to `createNotebook`.
+`renamePlaces` is written against the generic `Notebook`. It filters the
+notebook's places, renames each, and adds one — selecting the cells it handles
+with `byObjectType`, ignoring the rest.
 
 <!-- verifier:prepend-to-following -->
 
 ```ts
-const PlacesShape = defineShape({
-    objects: { Place: { tag: "Basic", content: "Object" } },
-    morphisms: {},
-});
-```
-
-`renamePlaces` is written against `Notebook<typeof PlacesShape>`. It filters the
-notebook's places, renames each, and adds one — every step type-checked against
-the sub-shape.
-
-<!-- verifier:prepend-to-following -->
-
-```ts
-function renamePlaces(notebook: Notebook<typeof PlacesShape>): string[] {
-    for (const place of notebook.cells().filter(byObjectType(PlacesShape.objects.Place))) {
+function renamePlaces(notebook: Notebook): string[] {
+    for (const place of notebook.cells().filter(byObjectType(Place))) {
         place.update({ name: place.name.toUpperCase() });
     }
-    notebook.add(PlacesShape.objects.Place, { name: "new" });
+    notebook.addObject(Place, { name: "new" });
     return notebook
         .cells()
-        .filter(byObjectType(PlacesShape.objects.Place))
+        .filter(byObjectType(Place))
         .map((place) => place.name);
 }
 ```
 
 A full Petri-net notebook — whose shape has both `Place` and `Transition` — is
-accepted wherever a `Notebook<typeof PlacesShape>` is expected.
+accepted wherever a generic `Notebook` is expected.
 
 <!-- verifier:prepend-to-following -->
 
@@ -123,12 +113,18 @@ const entity = schema.add(Entity, { name: "Person" });
 transition.update({ dom: [...transition.dom, entity] });
 ```
 
-### A sub-shape cannot create a document
+### A theory-less shape cannot create a document
 
-`PlacesShape` has no `theory`, so it is rejected by `createNotebook`: it can only
-consume notebooks created from a full shape.
+A shape without a `theory` — for example one that names only a subset of cell
+types — is rejected by `createNotebook`: it can only describe notebooks, not
+originate them.
 
 ```ts
-// @ts-expect-error A sub-shape without a `theory` cannot originate a document.
+const PlacesShape = defineShape({
+    objects: { Place: { tag: "Basic", content: "Object" } },
+    morphisms: {},
+});
+
+// @ts-expect-error A shape without a `theory` cannot originate a document.
 binder.createNotebook(PlacesShape, { name: "Nope" });
 ```

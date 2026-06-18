@@ -186,13 +186,38 @@ export type RichTextCell = Update<{ content: string }> &
     };
 
 /**
+ * The union of object-cell handles a shape declares, one member per object
+ * type keyed in the shape. Distributing over the shape's declared keys (rather
+ * than over the internal {@link ObType} union) keeps each declared type a
+ * distinct, discriminable member; for the default {@link AnyShape} it collapses
+ * to the widest {@link ObjectCell}.
+ */
+type ObjectCellsOf<TShape extends AnyShape> = {
+    [K in keyof TShape["objects"]]: ObjectCell<TShape["objects"][K] & ObType>;
+}[keyof TShape["objects"]];
+
+/** The union of morphism-cell handles a shape declares; see {@link ObjectCellsOf}. */
+type MorphismCellsOf<TShape extends AnyShape> = {
+    [K in keyof TShape["morphisms"]]: MorphismCell<TShape["morphisms"][K] & MorType>;
+}[keyof TShape["morphisms"]];
+
+/**
  * The union of cell handles that iterating a notebook with {@link
- * Notebook.cells} yields. It is intentionally untyped: object and morphism
- * cells come back as the widest `ObjectCell`/`MorphismCell`. Recover precise,
- * type-checked handles by filtering with {@link byObjectType} or {@link
+ * Notebook.cells} yields, parametrized by the notebook's {@link Shape}. Each of
+ * the shape's object and morphism types contributes its own precise handle
+ * (e.g. a Petri-net `NotebookCell<typeof PetriNet>` is `RichTextCell |
+ * PlaceCell | TransitionCell`), so a single-type endpoint like `cell.dom.name`
+ * type-checks after discriminating on `cell.kind`.
+ *
+ * The default {@link AnyShape} instantiation (the bare `NotebookCell`) widens
+ * the object and morphism members to `ObjectCell`/`MorphismCell`; recover
+ * precise handles from it by filtering with {@link byObjectType} or {@link
  * byMorphismType}.
  */
-export type NotebookCell = RichTextCell | ObjectCell | MorphismCell;
+export type NotebookCell<TShape extends AnyShape = AnyShape> =
+    | RichTextCell
+    | ObjectCellsOf<TShape>
+    | MorphismCellsOf<TShape>;
 
 /**
  * A pushforward migration from this shape to another. Mirrors the core: it
@@ -760,8 +785,8 @@ function attachNotebook<TShape extends AnyShape, Handle>(
 /**
  * A notebook built over a {@link Shape}. The shape constrains the typed {@link
  * Notebook.add} constructor to the shape's cell types; reading via {@link
- * Notebook.cells} always yields the untyped {@link NotebookCell} union, with
- * precise handles recovered through {@link byObjectType}/{@link byMorphismType}.
+ * Notebook.cells} yields the shape-parametrized {@link NotebookCell} union,
+ * with each declared object/morphism type contributing its own precise handle.
  *
  * A notebook over a richer shape is assignable to a notebook over a sub-shape,
  * so a fully-interactive component can be written against a sub-shape (e.g.
@@ -804,7 +829,7 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
      */
     migrate<TTarget extends CreatableShape>(targetShape: TTarget): Notebook<TTarget, Handle>;
     /** Handles for all cells, in notebook order. */
-    cells(): Array<NotebookCell>;
+    cells(): Array<NotebookCell<TShape>>;
     /**
      * Add a cell to the notebook. The kind of cell is selected by the first
      * argument:

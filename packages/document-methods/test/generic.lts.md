@@ -2,18 +2,24 @@
 
 ```ts
 import type { MorType, ObType } from "catcolab-document-types";
-import { binder, CellKind, defineShape } from "catcolab-documents";
+import { binder, CellKind, defineShape, type Notebook } from "catcolab-documents";
 ```
 
 A shape that declares no object or morphism types still carries a `theory`, so it
 is creatable; cells are then added from bare `ObType`/`MorType` values through
-`addObject`/`addMorphism`, and read back as untyped handles.
+`addObject`/`addMorphism`. Since the shape declares no types, `cells()` over it
+yields only rich-text handles; to read the bare-added cells back as untyped
+object and morphism handles, view the notebook through the generic `Notebook`
+interface, whose `cells()` is the widest union.
 
 <!-- verifier:prepend-to-following -->
 
 ```ts
 const EmptyOlog = defineShape({ theory: "simple-olog", objects: {}, morphisms: {} });
 const notebook = binder.createNotebook(EmptyOlog, { name: "A generic notebook" });
+
+// A wide view whose `cells()` yields the untyped `NotebookCell` union.
+const generic: Notebook = notebook;
 ```
 
 ```ts
@@ -61,7 +67,7 @@ source copy: Source copy
 ```
 
 ```ts
-for (const cell of notebook.cells()) {
+for (const cell of generic.cells()) {
     switch (cell.kind) {
         case CellKind.Object:
             console.log("object:", cell.name, "type:", cell.type.content);
@@ -81,19 +87,19 @@ object: Source copy type: Object
 ```
 
 ```ts
-console.log(notebook.cells().length);
+console.log(generic.cells().length);
 
 sourceCopy.delete();
 arrow.moveTo(0);
 
 console.log(
     "order:",
-    notebook
+    generic
         .cells()
         .map((cell) => (cell.kind === CellKind.RichText ? cell.content : cell.name))
         .join(", "),
 );
-console.log(notebook.cells().length);
+console.log(generic.cells().length);
 ```
 
 ```
