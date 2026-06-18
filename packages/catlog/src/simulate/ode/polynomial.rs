@@ -98,7 +98,7 @@ where
         Coef: Display + ToLatexWithMap + DisplayCoef + Clone + PartialEq + One + Neg<Output = Coef>,
         Exp: Display + ToLatex + PartialEq + One,
     {
-        let name = |id: &QualifiedName| {id.to_string()};
+        let name = |id: &QualifiedName| id.to_string();
         self.to_latex_equations_with_map(name)
     }
 
@@ -107,7 +107,10 @@ where
     /// do not want to display UUIDs directly but instead look them up in the model namespace. For more
     /// details, see `catlog-wasm::src::latex` where we use `to_latex_equations_with_map` and pass in
     /// the function `catlog-wasm::src::latex_names`.
-    pub fn to_latex_equations_with_map<F: Fn(&QualifiedName) -> String>(&self, f: F) -> LatexEquations
+    pub fn to_latex_equations_with_map<F: Fn(&QualifiedName) -> String>(
+        &self,
+        f: F,
+    ) -> LatexEquations
     where
         Var: Display + ToLatexWithMap,
         Coef: Display + ToLatexWithMap + DisplayCoef + Clone + PartialEq + One + Neg<Output = Coef>,
@@ -117,7 +120,10 @@ where
             self.components
                 .iter()
                 .map(|(var, poly)| LatexEquation {
-                    lhs: Latex(format!("\\frac{{\\mathrm{{d}}}}{{\\mathrm{{d}}t}} {}", var.to_latex_with_map(|var| f(var)))),
+                    lhs: Latex(format!(
+                        "\\frac{{\\mathrm{{d}}}}{{\\mathrm{{d}}t}} {}",
+                        var.to_latex_with_map(|var| f(var))
+                    )),
                     rhs: poly.to_latex_with_map(|term| f(term)),
                 })
                 .collect(),

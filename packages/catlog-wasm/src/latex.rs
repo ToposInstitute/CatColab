@@ -50,15 +50,12 @@ mod tests {
         let tab_model = model.discrete_tab().unwrap();
         let analysis = StockFlowMassActionAnalysis::default();
         let sys = analysis.build_system(tab_model);
-        let equations = sys
-            .to_latex_equations_with_map(|param| latex_names(&model)(param));
+        let equations = sys.to_latex_equations_with_map(|param| latex_names(&model)(param));
 
         let expected = LatexEquations(vec![
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{xxx}".to_string()),
-                rhs: Latex(
-                    "-r_{\\text{fff}} \\cdot \\text{xxx} \\cdot \\text{yyy}".to_string(),
-                ),
+                rhs: Latex("-r_{\\text{fff}} \\cdot \\text{xxx} \\cdot \\text{yyy}".to_string()),
             },
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{yyy}".to_string()),
@@ -79,8 +76,7 @@ mod tests {
             ..StockFlowMassActionAnalysis::default()
         };
         let sys = analysis.build_system(tab_model);
-        let equations = sys
-            .to_latex_equations_with_map(|param| latex_names(&model)(param));
+        let equations = sys.to_latex_equations_with_map(|param| latex_names(&model)(param));
 
         let expected = LatexEquations(vec![
             LatexEquation {
@@ -98,16 +94,24 @@ mod tests {
     }
 
     #[test]
-    fn cld_lotka_volterra_latex_equations() {}
+    fn cld_lotka_volterra_latex_equations() {
+        todo!()
+    }
 
     #[test]
-    fn cld_lcc_latex_equations() {}
+    fn cld_lcc_latex_equations() {
+        todo!()
+    }
 
     #[test]
-    fn petri_net_unbalanced_pp_mass_action_latex_equations() {}
+    fn petri_net_unbalanced_pp_mass_action_latex_equations() {
+        todo!()
+    }
 
     #[test]
-    fn petri_net_unbalanced_pt_mass_action_latex_equations() {}
+    fn petri_net_unbalanced_pt_mass_action_latex_equations() {
+        todo!()
+    }
 
     #[test]
     fn unnamed_mor_uses_dom_cod_in_equations() {
@@ -120,8 +124,7 @@ mod tests {
             ..StockFlowMassActionAnalysis::default()
         };
         let sys = analysis.build_system(tab_model);
-        let equations = sys
-            .to_latex_equations_with_map(|param| latex_names(&model)(param));
+        let equations = sys.to_latex_equations_with_map(|param| latex_names(&model)(param));
 
         let expected = LatexEquations(vec![
             LatexEquation {

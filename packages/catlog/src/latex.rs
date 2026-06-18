@@ -72,7 +72,7 @@ where
     T: ToLatexWithMap,
 {
     fn to_latex(&self) -> Latex {
-        let name = |id: &QualifiedName| {id.to_string()};
+        let name = |id: &QualifiedName| id.to_string();
         self.to_latex_with_map(name)
     }
 }
