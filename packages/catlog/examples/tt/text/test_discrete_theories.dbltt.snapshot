@@ -1,7 +1,7 @@
 set_theory ThSchema
 #/ result: set theory to ThSchema
 
-type WeightedGraph := [
+model WeightedGraph := [
   V : Entity,
   E : Entity,
   Weight : AttrType,
@@ -20,14 +20,14 @@ generate WeightedGraph
 #/ tgt : E -> V : Hom Entity
 #/ weight : E -> Weight : Attr
 
-type EntityArr := [
+model EntityArr := [
   dom : Entity,
   cod : Entity,
   arr : (Hom Entity)[dom, cod]
 ]
 #/ declared: EntityArr
 
-type Graph1 := [
+model Graph1 := [
   V : Entity,
   E : Entity,
   src : EntityArr & [ .dom := E, .cod := V ],
@@ -59,7 +59,7 @@ norm [x : [a : Entity, b : @sing a]] x.b
 #/ result: x.a
 
 #(should_fail)
-type Graph1 := [
+model Graph1 := [
   V : Entity,
   E : Entity,
   src : EntityArr & [ .dom := E, .dom := V ]
@@ -73,7 +73,7 @@ type Graph1 := [
 #/ 42|   src : EntityArr & [ .dom := E, .dom := V ]
 #/ 42|                                  ^^^^^^^^^
 
-type Graph := [
+model Graph := [
   V : Entity,
   E : Entity,
   src : (Hom Entity)[E, V],
@@ -115,7 +115,7 @@ norm [G : Graph] (reverse[G]).E
 syn [G : Graph] (reverse[G]).src
 #/ result: reverse[G].src : (Hom Entity)[G.E, G.V]
 
-type ReflexiveGraph := [
+model ReflexiveGraph := [
   V : Entity,
   E : Entity,
   src : (Hom Entity)[E, V],
@@ -130,7 +130,7 @@ def edge_id[G : ReflexiveGraph] : (Hom Entity)[G.E, G.E] := @id G.E
 def edge_src[G : ReflexiveGraph] : (Hom Entity)[G.E, G.E] := G.src * G.refl
 #/ declared: edge_src
 
-type Graph2 := [
+model Graph2 := [
   V : Entity,
   g1 : Graph & [ .V := V],
   g2 : Graph & [ .V := V]
@@ -153,7 +153,7 @@ generate Graph2
 #/ g2.src : g2.E -> V : Hom Entity
 #/ g2.tgt : g2.E -> V : Hom Entity
 
-type ProfunctorGraph := [
+model ProfunctorGraph := [
   g1 : Graph,
   g2 : Graph,
   het : (Hom Entity)[g1.V, g2.V]
@@ -172,7 +172,7 @@ generate ProfunctorGraph
 #/ g2.tgt : g2.E -> g2.V : Hom Entity
 #/ het : g1.V -> g2.V : Hom Entity
 
-type WeightedGraph2 := [
+model WeightedGraph2 := [
   V : Entity,
   g1 : WeightedGraph & [ .V := V ],
   g2 : WeightedGraph & [ .V := V ]
@@ -197,7 +197,7 @@ set_theory ThCategory
 #/ result: set theory to ThCategory
 
 #(should_fail)
-type Set := [
+model Set := [
   A : Entity,
 ]
 #/ declared: Set
@@ -207,12 +207,12 @@ type Set := [
 #/ 114|   A : Entity,
 #/ 114|       ^^^^^^
 
-type Set := [
+model Set := [
   A : Object
 ]
 #/ declared: Set
 
-type DDS := [
+model DDS := [
   X : Object,
   φ : (Hom Object)[X, X]
 ]
@@ -221,7 +221,7 @@ type DDS := [
 set_theory ThSignedCategory
 #/ result: set theory to ThSignedCategory
 
-type NegFeedback := [
+model NegFeedback := [
   X : Object,
   Y : Object,
   f : (Hom Object)[X, Y],
@@ -237,7 +237,7 @@ generate NegFeedback
 #/ g : Y -> X : Negative
 
 #(should_fail)
-type NegFeedback1 := [
+model NegFeedback1 := [
   X : Object,
   Y : Object,
   f : (Hom Object)[@hole, Y],

@@ -24,7 +24,17 @@ pub const TT_PARSE_CONFIG: ParseConfig = ParseConfig::new(
         ("==", Prec::nonassoc(30)),
     ],
     &[":", ":=", "&", "Unit", "Hom", "*", "=="],
-    &["type", "def", "instance", "syn", "chk", "norm", "generate", "uwd", "set_theory"],
+    &[
+        "model",
+        "def",
+        "instance",
+        "syn",
+        "chk",
+        "norm",
+        "generate",
+        "uwd",
+        "set_theory",
+    ],
 );
 
 /// The result of elaborating a top-level statement.
@@ -115,12 +125,12 @@ impl TopElaborator {
                 },
                 _ => self.error(tn.loc, "expected a theory name"),
             },
-            "type" => {
+            "model" => {
                 let theory = self.get_theory(tn.loc)?;
                 let (name, ty_n) = self.bare_def(tn.body).or_else(|| {
                     self.error(
                         tn.loc,
-                        "unknown syntax for type declaration, expected <name> := <type>",
+                        "unknown syntax for model declaration, expected <name> := <model>",
                     )
                 })?;
                 let (ty_s, ty_v) = self.elaborator(&theory, toplevel).ty(ty_n);
@@ -160,17 +170,17 @@ impl TopElaborator {
                     }
                     None => {
                         let mut elab = self.elaborator(&theory, toplevel);
-                        let (_, ret_ty_v) = elab.ty(ty_n);
-                        let (tm_s, tm_v) = elab.chk(&ret_ty_v, tm_n);
+                        let (ret_ty_s, ret_ty_v) = elab.ty(ty_n);
+                        let (body_s, _) = elab.chk(&ret_ty_v, tm_n);
                         // A closed (empty-context) term: a tight transformation
                         // S -> Unit. Unit is the empty record, i.e. the empty model.
                         // A tight map into the empty model exists only when S is itself empty,
                         // so the sole closed `def` is the identity on the empty
-                        // model, `tt : Unit`. Closed loose terms are instances,
-                        // declared with `instance`.
+                        // model, `tt : Unit`. Such a closed term is just a nullary
+                        // `Def` (empty argument context).
                         Some(TopElabResult::Declaration(
                             name,
-                            TopDecl::DefConst(DefConst::new(theory.clone(), tm_s, tm_v, ret_ty_v)),
+                            TopDecl::Def(Def::new(theory.clone(), Row::empty(), ret_ty_s, body_s)),
                         ))
                     }
                 }
@@ -201,7 +211,7 @@ impl TopElaborator {
                 let (tm_s, tm_v) = elab.instance_body(r, tm_n);
                 Some(TopElabResult::Declaration(
                     name,
-                    TopDecl::DefConst(DefConst::new(theory.clone(), tm_s, tm_v, ret_ty_v)),
+                    TopDecl::Instance(Instance::new(theory.clone(), tm_s, tm_v, ret_ty_v)),
                 ))
             }
             "syn" => {
@@ -530,10 +540,8 @@ impl<'a> Elaborator<'a> {
                                 Var(sub_name) => {
                                     let topvar = name_seg(*sub_name);
                                     match elab.toplevel.declarations.get(&topvar) {
-                                        Some(TopDecl::DefConst(d))
-                                            if matches!(&*d.val, TmV_::Instance(_)) =>
-                                        {
-                                            (d.stx.clone(), d.val.clone())
+                                        Some(TopDecl::Instance(i)) => {
+                                            (i.stx.clone(), i.val.clone())
                                         }
                                         _ => {
                                             elab.error::<()>(format!(
@@ -781,26 +789,24 @@ impl<'a> Elaborator<'a> {
                         ))
                     }
                 }
-                // An instance term used in type position yields the record
-                // type synthesized from its body, allowing sub-instance
+                // An instance used in type position yields the representable
+                // record type synthesized from its body, allowing sub-instance
                 // imports (`we : Edge`) to project into Edge's fields.
-                TopDecl::DefConst(d) if matches!(&*d.val, TmV_::Instance(_)) => {
-                    if d.theory == self.theory {
-                        let TmV_::Instance(body) = &*d.val else {
-                            unreachable!("guarded by the match arm above")
+                TopDecl::Instance(i) => {
+                    if i.theory == self.theory {
+                        let TmV_::Instance(body) = &*i.val else {
+                            unreachable!("an Instance always has an instance body")
                         };
                         let body_ty = self.evaluator().synth_instance_body_ty(body);
                         (TyS::topvar(name), body_ty)
                     } else {
                         self.ty_error(format!(
                             "{name} refers to an instance in theory {}, expected theory {}",
-                            d.theory, self.theory
+                            i.theory, self.theory
                         ))
                     }
                 }
-                TopDecl::Def(_) | TopDecl::DefConst(_) => {
-                    self.ty_error(format!("{name} refers to a term not a type"))
-                }
+                TopDecl::Def(_) => self.ty_error(format!("{name} refers to a term not a type")),
             }
         } else {
             self.ty_error(format!("no such type {name} defined"))
@@ -988,8 +994,19 @@ impl<'a> Elaborator<'a> {
         } else if let Some(d) = self.toplevel.lookup(name) {
             match d {
                 TopDecl::Type(_) => self.syn_error(format!("{name} refers type, not term")),
-                TopDecl::DefConst(d) => (TmS::topvar(name), d.val.clone(), d.ty.clone()),
+                // A nullary `Def` (a closed term, e.g. `tt : Unit`) used as a
+                // bare name; evaluate its body and return type in the empty
+                // context.
+                TopDecl::Def(d) if d.args.is_empty() => {
+                    let def = d.clone();
+                    let eval = self.evaluator();
+                    (TmS::topapp(name, vec![]), eval.eval_tm(&def.body), eval.eval_ty(&def.ret_ty))
+                }
                 TopDecl::Def(_) => self.syn_error(format!("{name} must be applied to arguments")),
+                TopDecl::Instance(_) => self.syn_error(format!(
+                    "{name} refers to an instance; use it in type position to import it, \
+                     not as a term"
+                )),
             }
         } else {
             self.syn_error(format!("no such variable {name}"))
@@ -1002,16 +1019,25 @@ impl<'a> Elaborator<'a> {
         match n.ast0() {
             Var(name) => elab.lookup_tm(ustr(name)),
             App1(tm_n, L(_, Field(f))) => {
-                let (tm_s, tm_v, ty_v) = elab.syn(tm_n);
-                let TyV_::Record(r) = &*ty_v else {
-                    return elab.syn_error("can only project from record type");
-                };
-                if matches!(&*tm_v, TmV_::Instance(_)) {
+                // A top-level instance has no term-position use, so projecting
+                // a field out of one would otherwise produce a confusing
+                // "not a term"/"not a record" cascade; catch it here with the
+                // targeted elimination message.
+                if let Var(inst) = tm_n.ast0()
+                    && matches!(
+                        elab.toplevel.declarations.get(&name_seg(*inst)),
+                        Some(TopDecl::Instance(_))
+                    )
+                {
                     return elab.syn_error(
                         "cannot project a field out of an instance; an instance is \
                          eliminated by mapping out of it, not by projection",
                     );
                 }
+                let (tm_s, tm_v, ty_v) = elab.syn(tm_n);
+                let TyV_::Record(r) = &*ty_v else {
+                    return elab.syn_error("can only project from record type");
+                };
                 let label = label_seg(*f);
                 let f = name_seg(*f);
                 if !r.fields.has(f) {
@@ -1038,16 +1064,21 @@ impl<'a> Elaborator<'a> {
                 elab.apply_codomain_morphism(f, inner_s, inner_v, inner_ty, x)
             }
             App1(L(_, Var(f)), L(_, App1(recv_n, L(_, Field(arg_field))))) => {
-                let (recv_s, recv_v, recv_ty) = elab.syn(recv_n);
-                let TyV_::Record(r) = &*recv_ty else {
-                    return elab.syn_error("can only project from record type");
-                };
-                if matches!(&*recv_v, TmV_::Instance(_)) {
+                if let Var(inst) = recv_n.ast0()
+                    && matches!(
+                        elab.toplevel.declarations.get(&name_seg(*inst)),
+                        Some(TopDecl::Instance(_))
+                    )
+                {
                     return elab.syn_error(
                         "cannot project a field out of an instance; an instance is \
                          eliminated by mapping out of it, not by projection",
                     );
                 }
+                let (recv_s, recv_v, recv_ty) = elab.syn(recv_n);
+                let TyV_::Record(r) = &*recv_ty else {
+                    return elab.syn_error("can only project from record type");
+                };
                 let arg_name = name_seg(*arg_field);
                 let arg_label = label_seg(*arg_field);
                 if !r.fields.has(arg_name) {

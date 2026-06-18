@@ -51,11 +51,12 @@ impl<'a> Evaluator<'a> {
         match &**ty {
             TyS_::TopVar(tv) => match self.toplevel.declarations.get(tv).unwrap() {
                 TopDecl::Type(t) => t.val.clone(),
-                // An instance term used in type position evaluates to the
-                // record type synthesized from its body (see `lookup_ty`).
-                TopDecl::DefConst(d) => match &*d.val {
+                // An instance used in type position evaluates to the
+                // representable record type synthesized from its body (see
+                // `lookup_ty`).
+                TopDecl::Instance(i) => match &*i.val {
                     TmV_::Instance(body) => self.synth_instance_body_ty(body),
-                    _ => panic!("top-level {tv} should be a type or instance declaration"),
+                    _ => panic!("instance {tv} should have an instance body"),
                 },
                 _ => panic!("top-level {tv} should be a type or instance declaration"),
             },
@@ -84,9 +85,6 @@ impl<'a> Evaluator<'a> {
     /// to self.env.
     pub fn eval_tm(&self, tm: &TmS) -> TmV {
         match &**tm {
-            TmS_::TopVar(tv) => {
-                self.toplevel.declarations.get(tv).unwrap().clone().unwrap_const().val
-            }
             TmS_::TopApp(tv, args_s) => {
                 let env = Env::nil().extend_by(args_s.iter().map(|arg_s| self.eval_tm(arg_s)));
                 let def = self.toplevel.declarations.get(tv).unwrap().clone().unwrap_def();
@@ -128,9 +126,6 @@ impl<'a> Evaluator<'a> {
                 self.field_ty(ty, tm, field_name),
             ),
             TmV_::Cons(fields) => fields.get(field_name).cloned().unwrap(),
-            // Instances are eliminated by map-out (the representable), never
-            // projection; the elaborator rejects projecting one, so reaching
-            // here with any other term value is an elaboration bug.
             _ => unreachable!("projected field {field_name} from a non-record term value"),
         }
     }
@@ -174,36 +169,18 @@ impl<'a> Evaluator<'a> {
     /// *type* position — i.e. the representable `Hom_Inst(D, self)`, the
     /// type of instance morphisms out of the instance `D`.
     ///
-    /// By Yoneda such a morphism is determined by where `D`'s generators
+    /// Such a morphism is determined by where `D`'s generators
     /// land, so each generator becomes an `Over`-typed field and each
-    /// sub-instance recurses. A *fiber* equation (`mor(gen) := target`)
-    /// is exactly a condition cutting this down from the free product of
-    /// `Over` fields to the presented representable — the equalizer — so
-    /// each becomes an `Id`-typed field witnessing that the constraint
-    /// holds for the morphism's images. Morphism equations (`==`)
-    /// constrain the model rather than the generator images, so they are
-    /// correctly *not* equalizer conditions and are omitted.
+    /// sub-instance recurses. A fiber equation (`mor(gen) := target`)
+    /// becomes an `Id`-typed field witnessing that the constraint
+    /// holds for the morphism's images.
     ///
-    /// WARNING: these `Id` fields make the type *honest* but are not
-    /// *enforced*. An import (`we : D`) introduces a neutral of this type
-    /// rather than constructing one, so nothing checks the equalizer
-    /// conditions, and equation extraction reads the inlined instance body
-    /// (not this type). An import that contradicts `D`'s fiber equations is
-    /// therefore not rejected here — consistency of the resulting equation
-    /// set is a model-layer concern, not checked during elaboration.
-    ///
+    /// Note that these `Id` fields make the type *honest* but are not
+    /// *enforced*. An import that contradicts `D`'s fiber equations is
+    /// not rejected here at this time.
     /// Because these `Id` fields are inert, the *concrete* way of mapping out
     /// of `D` — building a record literal (`Cons`) of this type by hand — only
-    /// works when `D` is equation-free. For an equational `D`, record
-    /// construction demands the `_eq{i}` fields too, and they can't be
-    /// discharged through the surface: projecting `l._eqN` fails an `Id`/`Id`
-    /// convertibility check (the two sides print alike but don't convert), and
-    /// the empty record `'tt` (`[]`) is rejected (a record is not the `Id`
-    /// type). The supported map-out is the *abstract* one — a neutral of this
-    /// type, as `we : D` imports produce — for which the witnesses never need
-    /// constructing. A concrete map-out of an equational `D` would require
-    /// auto-discharging the `Id` fields during record construction (they are
-    /// extensional, so η to the empty cons); not yet done.
+    /// currently works when `D` is equation-free.
     pub fn synth_instance_body_ty(&self, body: &InstanceBodyV) -> TyV {
         let mut fields: Row<TyS> = Row::empty();
         for (name, (label, path)) in &body.generators {
@@ -220,14 +197,14 @@ impl<'a> Evaluator<'a> {
         // The equation terms reference this body's generators as local
         // binders; re-root them at `self` (the record being built) so they
         // read as field projections, exactly as sibling references do in an
-        // ordinary record type. The self var's type is irrelevant — quoting
-        // a neutral ignores it — so a placeholder suffices. Quoting in `ev`
+        // ordinary record type. The self var's type is irrelevant,
+        // so a placeholder suffices. Quoting in `ev`
         // (one binder deeper) sends `self` to de Bruijn index 0, matching
         // how `field_ty` snocs the record value when projecting.
         let (self_n, ev) = self.bind_self(TyV::empty_record());
         for (i, (lhs_v, rhs_v)) in body.equations.iter().enumerate() {
             let Some(over_ty) = fiber_equation_ty(lhs_v) else {
-                continue;
+                unreachable!("instance equation LHS is not a fiber element");
             };
             let lhs_s = ev.quote_tm(&reroot_at_self(lhs_v, &self_n, body));
             let rhs_s = ev.quote_tm(&reroot_at_self(rhs_v, &self_n, body));
@@ -449,8 +426,6 @@ impl<'a> Evaluator<'a> {
             TmV_::OverApp(mor, mor_label, tgt_path, inner) => {
                 TmV::over_app(*mor, *mor_label, tgt_path.clone(), self.eta(inner, None))
             }
-            // An [`Instance`](TmV_::Instance) is already in normal form
-            // — its structure isn't subject to η-expansion.
             TmV_::Instance(_) => v.clone(),
             TmV_::List(elems) => TmV::list(elems.iter().map(|elem| self.eta(elem, None)).collect()),
             TmV_::Cons(row) => {
@@ -646,9 +621,7 @@ impl<'a> Evaluator<'a> {
 /// The `Over` type of a *fiber* equation's side, if it is one.
 ///
 /// Fiber equations (`mor(gen) := target`) relate `Over`-typed terms; their
-/// common type is recoverable from the left-hand side. Returns `None` for
-/// morphism (`==`) equations, which are not equalizer conditions on an
-/// instance's generator images (see [`Evaluator::synth_instance_body_ty`]).
+/// common type is recoverable from the left-hand side.
 fn fiber_equation_ty(tm: &TmV) -> Option<TyV> {
     match &**tm {
         TmV_::OverApp(_, _, tgt_path, _) => Some(TyV::over(tgt_path.clone())),

@@ -1,7 +1,7 @@
 set_theory ThMulticategory
 #/ result: set theory to ThMulticategory
 
-type SigMonoid := [
+model SigMonoid := [
   M : Object,
   op : Multihom[[M, M], M],
   unit : Multihom[[], M]
@@ -14,7 +14,7 @@ generate SigMonoid
 #/ op : [M, M] -> M : Multihom
 #/ unit : [] -> M : Multihom
 
-type SigRig := [
+model SigRig := [
   R : Object,
   Add : SigMonoid & [ .M := R ],
   Mul : SigMonoid & [ .M := R ]
@@ -32,7 +32,7 @@ generate SigRig
 set_theory ThSymMonoidalCategory
 #/ result: set theory to ThSymMonoidalCategory
 
-type SIR := [
+model SIR := [
   S : Object,
   I : Object,
   R : Object,
@@ -52,7 +52,7 @@ generate SIR
 syn [P: SIR] (@tensor [P.S, P.I])
 #/ result: @tensor [P.S, P.I] : Object
 
-type SIRV := [
+model SIRV := [
   Unvax : SIR,
   V : Object,
   vaccinate : (Hom Object)[Unvax.S, V]
@@ -70,7 +70,7 @@ generate SIRV
 #/ vaccinate : Unvax.S -> V : Hom Object
 
 #(should_fail)
-type BadOpApp := [
+model BadOpApp := [
    X : Object,
    f : (Hom Object)[@tensor X, X],
 ]

@@ -1,7 +1,7 @@
 set_theory ThCategoryLinks
 #/ result: set theory to ThCategoryLinks
 
-type SIR := [
+model SIR := [
     S : Object,
     I : Object,
     R : Object, 
@@ -20,7 +20,7 @@ generate SIR
 #/ rec : I -> R : Hom Object
 #/ _ : I -> inf : Link
 
-type Endo := [
+model Endo := [
     A : Object,
     f : (Hom Object)[A,A],
 ]
@@ -32,7 +32,7 @@ generate Endo
 #/ f : A -> A : Hom Object
 
 #(should_fail)
-type LinkFlows := [
+model LinkFlows := [
     E : Endo,
     l : Link[@tab E.f,@tab E.f]
 ]
@@ -44,7 +44,7 @@ type LinkFlows := [
 #/ 24|     l : Link[@tab E.f,@tab E.f]
 #/ 24|              ^^^^^^^^
 
-type WalkingLink := [
+model WalkingLink := [
     x : Object,
     y : Object, 
     z : Object,
@@ -53,7 +53,7 @@ type WalkingLink := [
 ]
 #/ declared: WalkingLink
 
-type SI := [
+model SI := [
     S : Object,
     I : Object,
     inf : WalkingLink & [.x := S, .y := I, .z := I]
@@ -95,7 +95,7 @@ chk [sf : SI] (sf.inf : WalkingLink & [.x := sf.I])
 def act_on_link[d : SI] : Link[d.S,@tab d.inf.f] := d.inf.f * d.inf.l
 #/ declared: act_on_link
 
-type Triangle := [
+model Triangle := [
     x : Object,
     y : Object,
     z : Object,

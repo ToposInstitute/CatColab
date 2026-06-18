@@ -134,7 +134,7 @@
 //! the following double models.
 //!
 //! ```text
-//! type Graph := [
+//! model Graph := [
 //!     E : Entity,
 //!     V : Entity,
 //!     src : (Id Entity)[E, V],
@@ -142,7 +142,7 @@
 //! ]
 //! /# declared: Graph
 //!
-//! type Graph2 := [
+//! model Graph2 := [
 //!     V : Entity,
 //!     g1 : Graph & [ .V := V ],
 //!     g2 : Graph & [ .V := V ]

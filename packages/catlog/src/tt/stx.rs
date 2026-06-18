@@ -229,9 +229,10 @@ impl fmt::Display for TyS {
 
 /// Inner enum for [TmS].
 pub enum TmS_ {
-    /// A reference to a top-level constant def.
-    TopVar(TopVarName),
     /// An application of a top-level term judgment to arguments.
+    ///
+    /// A closed term (a nullary `def`, e.g. `tt : Unit`) is the empty-argument
+    /// case `TopApp(name, [])`.
     TopApp(TopVarName, Vec<TmS>),
     /// Variable syntax.
     ///
@@ -321,11 +322,6 @@ pub struct InstanceBodyS {
 pub struct TmS(Rc<TmS_>);
 
 impl TmS {
-    /// Smart constructor for [TmS], [TmS_::TopVar] case.
-    pub fn topvar(var_name: VarName) -> Self {
-        Self(Rc::new(TmS_::TopVar(var_name)))
-    }
-
     /// Smart constructor for [TmS], [TmS_::TopApp] case.
     pub fn topapp(var_name: VarName, args: Vec<TmS>) -> Self {
         Self(Rc::new(TmS_::TopApp(var_name, args)))
@@ -395,7 +391,7 @@ impl TmS {
 impl ToDoc for TmS {
     fn to_doc<'a>(&self) -> D<'a> {
         match &**self {
-            TmS_::TopVar(name) => t(format!("{}", name)),
+            TmS_::TopApp(name, args) if args.is_empty() => t(format!("{}", name)),
             TmS_::TopApp(name, args) => {
                 t(format!("{}", name)) + tuple(args.iter().map(|arg| arg.to_doc()))
             }

@@ -1,7 +1,9 @@
 //! Data structures for managing toplevel declarations in the type theory.
 //!
-//! Specifically, notebooks will produce [TopDecl::Type] declarations, or
-//! [TopDecl::DefConst] declarations.
+//! The three kinds mirror the comprehension category of `D`-models: a [Type]
+//! is a model (a context, i.e. an object of the base), a [Def] is a tight
+//! transformation (a substitution, i.e. a morphism of the base), and an
+//! [Instance] is an object of a fiber (a type in context).
 
 use derive_more::Constructor;
 
@@ -13,10 +15,10 @@ use crate::zero::QualifiedName;
 pub enum TopDecl {
     /// See [Type].
     Type(Type),
-    /// See [DefConst].
-    DefConst(DefConst),
     /// See [Def].
     Def(Def),
+    /// See [Instance].
+    Instance(Instance),
 }
 
 /// A toplevel declaration of a type.
@@ -33,31 +35,28 @@ pub struct Type {
     pub val: TyV,
 }
 
-/// A toplevel declaration of a term in the empty context.
+/// A toplevel declaration of an instance of a model.
 ///
-/// Also stores the evaluation of that term, and the evaluation of the
-/// corresponding type of that term. Because this is an evaluation in the empty
-/// context, this is OK to use in any other context as well.
+/// An instance is an object of the fiber over its codomain model `X` in the
+/// comprehension category of `D`-models: a generator/equation/sub-instance
+/// body packaged as the presentation of an `X`-instance. It is declared with
+/// `instance NAME : X := [...]`.
 ///
-/// An *instance* of a model is just such a term whose [`val`](Self::val) is a
-/// [`TmV_::Instance`]: a generator/equation/
-/// sub-instance body packaged as an introduction value of a record type.
-/// Both kinds arise as a `DefConst`, but from different surface declarations:
-/// `def NAME : T := <term>` for a plain term, `instance NAME : T := [...]` for
-/// an instance.
-/// When an instance name is used in *type* position (for a
-/// sub-instance import), its type is the record type synthesized from that body
-/// by [`synth_instance_body_ty`](super::eval::Evaluator::synth_instance_body_ty).
+/// When an instance name is used in *type* position (for a sub-instance
+/// import), its type is the representable record type synthesized from that
+/// body by
+/// [`synth_instance_body_ty`](super::eval::Evaluator::synth_instance_body_ty),
+/// whose terms are the instance morphisms out of it.
 #[derive(Constructor, Clone)]
-pub struct DefConst {
-    /// The theory that the constant is defined in.
+pub struct Instance {
+    /// The theory that the instance is defined in.
     pub theory: Theory,
-    /// The syntax of the constant (unnormalized).
+    /// The syntax of the instance body (unnormalized).
     pub stx: TmS,
-    /// The value of the constant (normalized).
+    /// The value of the instance body (normalized); always a [`TmV_::Instance`].
     pub val: TmV,
-    /// The type of the constant.
-    pub ty: TyV,
+    /// The codomain model `X` that this is an instance of.
+    pub codomain: TyV,
 }
 
 /// A toplevel declaration of a term judgment.
@@ -84,17 +83,6 @@ impl TopDecl {
         match self {
             TopDecl::Type(ty) => ty,
             _ => panic!("top-level should be a type declaration"),
-        }
-    }
-
-    /// Unwraps the term for a toplevel declaration of a term, or panics.
-    ///
-    /// This should only be used after type checking, when we know that a toplevel
-    /// variable name does in fact point to a toplevel declaration for a term.
-    pub fn unwrap_const(self) -> DefConst {
-        match self {
-            TopDecl::DefConst(d) => d,
-            _ => panic!("top-level should be a constant declaration"),
         }
     }
 
