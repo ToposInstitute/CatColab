@@ -188,7 +188,7 @@ import { createStore, produce, type SetStoreFunction, unwrap } from "solid-js/st
 import { render } from "solid-js/web";
 
 import type { MorType, ObType } from "catcolab-document-types";
-import { CellKind, createBinder, type DocumentStore } from "catcolab-documents";
+import { CellKind, createBinder, type DocumentStore, type GenericNotebook } from "catcolab-documents";
 import type { ModelDocument } from "catcolab-document-methods";
 
 type SolidStoreHandle = {
@@ -211,9 +211,7 @@ const solidBinder = createBinder(solidStore);
 const ologObjectType: ObType = { tag: "Basic", content: "Object" };
 const ologAspectType: MorType = { tag: "Hom", content: ologObjectType };
 
-type GenericNotebook = ReturnType<typeof solidBinder.createGenericNotebook>;
-
-function GenericOlogEditor(props: { notebook: GenericNotebook }) {
+function GenericOlogEditor(props: { notebook: GenericNotebook<SolidStoreHandle> }) {
     return (
         <section>
             <h1>{props.notebook.name}</h1>

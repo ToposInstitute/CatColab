@@ -314,6 +314,7 @@ import {
     createBinder,
     type DocumentStore,
     type GenericMorphismCell,
+    type GenericNotebook,
     type GenericNotebookCell,
     type GenericObjectCell,
 } from "catcolab-documents";
@@ -339,8 +340,6 @@ const solidBinder = createBinder(solidStore);
 
 const placeObType: ObType = { tag: "Basic", content: "Object" };
 const transitionMorType: MorType = { tag: "Hom", content: placeObType };
-
-type GenericPetriNetNotebook = ReturnType<typeof solidBinder.createGenericNotebook>;
 
 function InlinePlaceListEditor(props: { places: GenericObjectCell[] }) {
     return <span>[{props.places.map((place) => place.name).join(", ")}]</span>;
@@ -385,7 +384,7 @@ function GenericPetriNetCell(props: { cell: GenericNotebookCell; appendInput: ()
 }
 
 function GenericPetriNetEditor(props: {
-    notebook: GenericPetriNetNotebook;
+    notebook: GenericNotebook<SolidStoreHandle>;
     appendInput: () => void;
 }) {
     return (
