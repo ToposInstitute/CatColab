@@ -1,16 +1,3 @@
-# Frontend Petri-net inline list editor comparison
-
-This compares a small Petri-net notebook editor where a transition has list-valued
-input and output endpoints. The current frontend uses an inline object-list
-editor for these endpoints; it writes endpoint values as
-`App(tensor, List(SymmetricList, ...))`. The document API lets the editor work
-with arrays of object-cell handles and keeps that encoding inside the document
-methods layer.
-
-Each example follows the same sequence: create a Petri-net notebook, add places
-`A`, `B`, and `C`, add a transition `fires` from `[A]` to `[C]`, render it, then
-simulate the inline list editor adding `B` to the transition's input list.
-
 ## Current frontend, reduced
 
 The reduced current example mirrors the frontend's list endpoint storage: the
@@ -297,11 +284,7 @@ dispose();
 <section><h1>Petri net</h1><ul><li><span class="cell-label">Place: A</span></li><li><span class="cell-label">Place: B</span></li><li><span class="cell-label">Place: C</span></li><li><span class="cell-label">Transition: <span>[A, B<!---->]</span><span> -&gt; </span><span>[C<!---->]</span><span> fires</span></span><button aria-label="append input place"></button></li></ul></section>
 ```
 
-## `catcolab-documents`, generic
-
-The generic API keeps runtime cell types (`ObType`/`MorType`) but exposes
-transition endpoints as object-cell arrays. The inline list editor renders place
-handles directly and writes the same shape back.
+## `catcolab-documents`, generic consumer
 
 <!-- verifier:reset -->
 
@@ -313,6 +296,8 @@ import { createStore, produce, type SetStoreFunction, unwrap } from "solid-js/st
 import { render } from "solid-js/web";
 
 import {
+    byMorphismType,
+    byObjectType,
     CellKind,
     createBinder,
     type DocumentStore,
@@ -322,7 +307,6 @@ import {
     type ObjectCell,
     type Shape,
 } from "catcolab-documents";
-import type { MorType, ObType } from "catcolab-document-types";
 import type { ModelDocument } from "catcolab-document-methods";
 
 type SolidStoreHandle = {
@@ -342,31 +326,34 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
 
 const solidBinder = createBinder(solidStore);
 
-const placeObType: ObType = { tag: "Basic", content: "Object" };
-const transitionMorType: MorType = {
+// Bare runtime type values, declared `as const` so a transition's list-valued
+// endpoint arity survives inference. A `Place` is a basic object; a transition
+// is a `Hom` over a `SymmetricList` of places.
+const placeObType = { tag: "Basic", content: "Object" } as const;
+const transitionMorType = {
     tag: "Hom",
     content: { tag: "ModeApp", content: { modality: "SymmetricList", obType: placeObType } },
-};
+} as const;
 
-// A generic morphism cell's endpoints are untyped: a single object cell or a
-// list. The Petri-net editor knows transitions are lists, so it normalizes.
-const asList = (endpoint: ObjectCell | ObjectCell[]): ObjectCell[] =>
-    Array.isArray(endpoint) ? endpoint : [endpoint];
+type PlaceCell = ObjectCell<typeof placeObType>;
+type TransitionCell = MorphismCell<typeof transitionMorType>;
 
-function InlinePlaceListEditor(props: { places: ObjectCell[] }) {
+// `cells()` yields the untyped `NotebookCell` union; these guards recover
+// precise handles — a `TransitionCell`'s `dom`/`cod` are `PlaceCell[]`.
+const isPlace = byObjectType(placeObType);
+const isTransition = byMorphismType(transitionMorType);
+
+function InlinePlaceListEditor(props: { places: PlaceCell[] }) {
     return <span>[{props.places.map((place) => place.name).join(", ")}]</span>;
 }
 
-function GenericTransitionCell(props: {
-    transition: MorphismCell;
-    appendInput: () => void;
-}) {
+function GenericTransitionCell(props: { transition: TransitionCell; appendInput: () => void }) {
     return (
         <li>
             <span class="cell-label">
-                Transition: <InlinePlaceListEditor places={asList(props.transition.dom)} />
+                Transition: <InlinePlaceListEditor places={props.transition.dom} />
                 <span> -&gt; </span>
-                <InlinePlaceListEditor places={asList(props.transition.cod)} />
+                <InlinePlaceListEditor places={props.transition.cod} />
                 <span> {props.transition.name}</span>
             </span>
             <button aria-label="append input place" onClick={props.appendInput} />
@@ -374,25 +361,26 @@ function GenericTransitionCell(props: {
     );
 }
 
-function GenericPetriNetCell(props: { cell: NotebookCell; appendInput: () => void }) {
-    switch (props.cell.kind) {
-        case CellKind.RichText:
-            return (
-                <li>
-                    <span class="cell-label">Text: {props.cell.content}</span>
-                </li>
-            );
-        case CellKind.Object:
-            return (
-                <li>
-                    <span class="cell-label">Place: {props.cell.name}</span>
-                </li>
-            );
-        case CellKind.Morphism:
-            return (
-                <GenericTransitionCell transition={props.cell} appendInput={props.appendInput} />
-            );
+function GenericPetriNetCellView(props: { cell: NotebookCell; appendInput: () => void }) {
+    const cell = props.cell;
+    if (isTransition(cell)) {
+        return <GenericTransitionCell transition={cell} appendInput={props.appendInput} />;
     }
+    if (isPlace(cell)) {
+        return (
+            <li>
+                <span class="cell-label">Place: {cell.name}</span>
+            </li>
+        );
+    }
+    if (cell.kind === CellKind.RichText) {
+        return (
+            <li>
+                <span class="cell-label">Text: {cell.content}</span>
+            </li>
+        );
+    }
+    return null;
 }
 
 function GenericPetriNetEditor(props: {
@@ -404,24 +392,30 @@ function GenericPetriNetEditor(props: {
             <h1>{props.notebook.name}</h1>
             <ul>
                 <For each={props.notebook.cells()}>
-                    {(cell) => <GenericPetriNetCell cell={cell} appendInput={props.appendInput} />}
+                    {(cell) => (
+                        <GenericPetriNetCellView cell={cell} appendInput={props.appendInput} />
+                    )}
                 </For>
             </ul>
         </section>
     );
 }
 
-function appendGenericInput(transition: MorphismCell, place: ObjectCell) {
-    transition.update({ dom: [...asList(transition.dom), place] });
+function appendGenericInput(transition: TransitionCell, place: PlaceCell) {
+    transition.update({ dom: [...transition.dom, place] });
 }
 ```
 
 ```tsx
 const notebook = solidBinder.createGenericNotebook("petri-net", { name: "Petri net" });
 const a = notebook.addObject(placeObType, { name: "A" });
-const b = notebook.addObject(placeObType, { name: "B" });
+notebook.addObject(placeObType, { name: "B" });
 const c = notebook.addObject(placeObType, { name: "C" });
-const transition = notebook.addMorphism(transitionMorType, { name: "fires", dom: [a], cod: [c] });
+notebook.addMorphism(transitionMorType, { name: "fires", dom: [a], cod: [c] });
+
+// The runtime API returns untyped handles; recover precise ones via the guards.
+const transition = notebook.cells().filter(isTransition)[0]!;
+const input = notebook.cells().filter(isPlace)[1]!;
 
 const container = document.createElement("div");
 document.body.appendChild(container);
@@ -430,7 +424,7 @@ const dispose = render(
     () => (
         <GenericPetriNetEditor
             notebook={notebook}
-            appendInput={() => appendGenericInput(transition, b)}
+            appendInput={() => appendGenericInput(transition, input)}
         />
     ),
     container,
@@ -438,7 +432,7 @@ const dispose = render(
 
 console.log(container.innerHTML);
 
-appendGenericInput(transition, b);
+appendGenericInput(transition, input);
 console.log(container.innerHTML);
 
 dispose();
