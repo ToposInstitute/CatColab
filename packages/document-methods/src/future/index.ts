@@ -852,13 +852,6 @@ export interface Binder<Handle> {
         data: { name: string },
     ): Notebook<TShape, Handle>;
     /**
-     * Build a fully-generic notebook for the given document theory. Cells are
-     * added from bare `ObType`/`MorType` values; {@link Notebook.validate} is
-     * supplied a core theory explicitly. Use this when the theory is known only
-     * as a string at runtime.
-     */
-    createGenericNotebook(theory: string, data: { name: string }): Notebook<AnyShape, Handle>;
-    /**
      * Build a notebook around an existing plain document by initializing store
      * storage from it. Throws if the document's theory does not match the
      * shape's theory.
@@ -884,15 +877,6 @@ export function createBinder<Handle>(store: DocumentStore<Handle>): Binder<Handl
             const seed = newModelDocument({ theory: shape.theory });
             seed.name = data.name;
             return this.loadNotebook(shape, seed);
-        },
-        createGenericNotebook(theory, data) {
-            const seed = newModelDocument({ theory });
-            seed.name = data.name;
-            const genericShape = { theory, objects: {}, morphisms: {} } satisfies AnyShape;
-            return attachNotebook(store, store.createHandle(seed), genericShape) as Notebook<
-                AnyShape,
-                Handle
-            >;
         },
         loadNotebook(shape, document) {
             if (document.theory !== shape.theory) {

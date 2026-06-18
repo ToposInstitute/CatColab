@@ -191,6 +191,7 @@ import type { MorType, ObType } from "catcolab-document-types";
 import {
     CellKind,
     createBinder,
+    defineShape,
     type DocumentStore,
     type Notebook,
     type Shape,
@@ -240,7 +241,8 @@ function GenericOlogEditor(props: { notebook: Notebook<Shape, SolidStoreHandle> 
 ```
 
 ```tsx
-const notebook = solidBinder.createGenericNotebook("simple-olog", { name: "An Olog" });
+const EmptyOlog = defineShape({ theory: "simple-olog", objects: {}, morphisms: {} });
+const notebook = solidBinder.createNotebook(EmptyOlog, { name: "An Olog" });
 const person = notebook.addObject(ologObjectType, { name: "Person" });
 const company = notebook.addObject(ologObjectType, { name: "Company" });
 notebook.addMorphism(ologAspectType, { name: "works for", dom: person, cod: company });

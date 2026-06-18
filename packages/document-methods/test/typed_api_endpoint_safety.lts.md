@@ -4,40 +4,42 @@ The olog and Petri-net editor comparisons
 ([`olog_editor_comparison.lts.md`](./olog_editor_comparison.lts.md),
 [`petri_net_editor_comparison.lts.md`](./petri_net_editor_comparison.lts.md))
 build the same editor over the same unified `Notebook` API, differing only in
-_what the compiler can see_. A shape-less notebook (`createGenericNotebook`)
-adds cells from bare `ObType`/`MorType` values and reads them back as untyped
+_what the compiler can see_. A notebook over an empty shape (one that declares
+no cell types) adds cells from bare `ObType`/`MorType` values through
+`addObject`/`addMorphism` and reads them back as untyped
 `ObjectCell`/`MorphismCell` handles, so it cannot tell one object type from
-another. A notebook over a shape (`createNotebook`) constrains `add` to the
-shape's cell types and derives each morphism's endpoints from its `MorType`, so
+another. A notebook over a shape that declares its cell types constrains `add`
+to those types and derives each morphism's endpoints from its `MorType`, so
 wiring an endpoint with the wrong cell is a compile error rather than a corrupt
 document.
 
-The examples below take the same editing actions through the shape-less and the
-shaped notebook and show, for three classes of bug, that the shape-less version
+The examples below take the same editing actions through the empty-shape and the
+shaped notebook and show, for three classes of bug, that the empty-shape version
 compiles (and silently misbehaves at runtime) while the shaped version is
 rejected by `tsc`.
 
 ## Bug 1: an endpoint of the wrong object type
 
 A schema `Mapping` goes between entities (`Entity -> Entity`); an `Attr` goes
-from an entity to an attribute type (`Entity -> AttrType`). With a shape-less
+from an entity to an attribute type (`Entity -> AttrType`). With an empty-shape
 notebook every object cell is the same `ObjectCell`, so pointing a mapping's
 codomain at an attribute type type-checks and runs — the document silently
 stores a mapping whose codomain is an attribute.
 
 ```ts
-import { binder } from "catcolab-documents";
+import { binder, defineShape } from "catcolab-documents";
 import type { MorType, ObType } from "catcolab-document-types";
 
 const Entity: ObType = { tag: "Basic", content: "Entity" };
 const AttrType: ObType = { tag: "Basic", content: "AttrType" };
 const Mapping: MorType = { tag: "Hom", content: { tag: "Basic", content: "Entity" } };
 
-const notebook = binder.createGenericNotebook("simple-schema", { name: "Schema" });
+const EmptySchema = defineShape({ theory: "simple-schema", objects: {}, morphisms: {} });
+const notebook = binder.createNotebook(EmptySchema, { name: "Schema" });
 const person = notebook.addObject(Entity, { name: "Person" });
 const age = notebook.addObject(AttrType, { name: "Age" });
 
-// A Mapping must end on an Entity, but the shape-less endpoint type is just
+// A Mapping must end on an Entity, but the empty-shape endpoint type is just
 // `ObjectCell`, so the attribute cell `age` is accepted with no error.
 const mapping = notebook.addMorphism(Mapping, { name: "broken", dom: person, cod: age });
 
@@ -70,14 +72,14 @@ notebook.add(Mapping, { name: "broken", dom: person, cod: age });
 ## Bug 2: a single object where an endpoint list is required
 
 A Petri-net transition's endpoints are _lists_ of places, recorded as a
-`SymmetricList` modality on its morphism type. The shape-less `addMorphism`
+`SymmetricList` modality on its morphism type. The empty-shape `addMorphism`
 endpoint type is `ObjectCell | ObjectCell[]`, so a bare place is accepted in
 place of a list. The stored shape follows the morphism type rather than the
 argument, so the bare place is silently wrapped into a one-element list instead
 of being flagged — the mistake compiles, runs, and goes unnoticed.
 
 ```ts
-import { binder } from "catcolab-documents";
+import { binder, defineShape } from "catcolab-documents";
 import type { MorType, ObType } from "catcolab-document-types";
 
 const Place: ObType = { tag: "Basic", content: "Object" };
@@ -89,7 +91,8 @@ const Transition: MorType = {
     },
 };
 
-const notebook = binder.createGenericNotebook("petri-net", { name: "Net" });
+const EmptyPetriNet = defineShape({ theory: "petri-net", objects: {}, morphisms: {} });
+const notebook = binder.createNotebook(EmptyPetriNet, { name: "Net" });
 const a = notebook.addObject(Place, { name: "A" });
 const c = notebook.addObject(Place, { name: "C" });
 
@@ -124,7 +127,7 @@ notebook.add(Transition, { name: "fires", dom: a, cod: [c] });
 
 ## Bug 3: a cell from another theory or another notebook
 
-A shape-less object handle erases both the theory and the object type, so a
+An empty-shape object handle erases both the theory and the object type, so a
 place handle from one notebook can be wired into a mapping in a different schema
 notebook. It compiles, but the referenced cell does not exist in the target
 document, so reading the endpoint back throws at runtime — a failure that only
@@ -133,17 +136,19 @@ surfaces once the editor renders that cell.
 <!-- verifier:throws -->
 
 ```ts
-import { binder } from "catcolab-documents";
+import { binder, defineShape } from "catcolab-documents";
 import type { MorType, ObType } from "catcolab-document-types";
 
 const Place: ObType = { tag: "Basic", content: "Object" };
 const Entity: ObType = { tag: "Basic", content: "Entity" };
 const Mapping: MorType = { tag: "Hom", content: { tag: "Basic", content: "Entity" } };
 
-const net = binder.createGenericNotebook("petri-net", { name: "Net" });
+const EmptyPetriNet = defineShape({ theory: "petri-net", objects: {}, morphisms: {} });
+const net = binder.createNotebook(EmptyPetriNet, { name: "Net" });
 const place = net.addObject(Place, { name: "A place" });
 
-const schema = binder.createGenericNotebook("simple-schema", { name: "Schema" });
+const EmptySchema = defineShape({ theory: "simple-schema", objects: {}, morphisms: {} });
+const schema = binder.createNotebook(EmptySchema, { name: "Schema" });
 const person = schema.addObject(Entity, { name: "Person" });
 
 // `place` belongs to a different notebook and theory, but both are just
@@ -182,7 +187,7 @@ schema.add(Mapping, { name: "tangled", dom: person, cod: place });
 ## Why this matters
 
 In each case the same `Notebook` API is used; only the shape differs. A
-shape-less notebook keeps the endpoint contract at runtime: nothing checks that
+empty-shape notebook keeps the endpoint contract at runtime: nothing checks that
 a `dom` or `cod` holds the right kind of object, so wrong-type, wrong-arity, and
 dangling endpoints all type-check and fail only when the cell is read. Declaring
 a shape moves that contract into the type system: `add` is constrained to the

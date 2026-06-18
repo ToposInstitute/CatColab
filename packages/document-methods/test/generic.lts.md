@@ -2,13 +2,18 @@
 
 ```ts
 import type { MorType, ObType } from "catcolab-document-types";
-import { binder, CellKind } from "catcolab-documents";
+import { binder, CellKind, defineShape } from "catcolab-documents";
 ```
+
+A shape that declares no object or morphism types still carries a `theory`, so it
+is creatable; cells are then added from bare `ObType`/`MorType` values through
+`addObject`/`addMorphism`, and read back as untyped handles.
 
 <!-- verifier:prepend-to-following -->
 
 ```ts
-const notebook = binder.createGenericNotebook("simple-olog", { name: "A generic notebook" });
+const EmptyOlog = defineShape({ theory: "simple-olog", objects: {}, morphisms: {} });
+const notebook = binder.createNotebook(EmptyOlog, { name: "A generic notebook" });
 ```
 
 ```ts

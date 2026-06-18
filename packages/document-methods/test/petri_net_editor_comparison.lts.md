@@ -300,6 +300,7 @@ import {
     byObjectType,
     CellKind,
     createBinder,
+    defineShape,
     type DocumentStore,
     type MorphismCell,
     type Notebook,
@@ -407,7 +408,8 @@ function appendGenericInput(transition: TransitionCell, place: PlaceCell) {
 ```
 
 ```tsx
-const notebook = solidBinder.createGenericNotebook("petri-net", { name: "Petri net" });
+const EmptyPetriNet = defineShape({ theory: "petri-net", objects: {}, morphisms: {} });
+const notebook = solidBinder.createNotebook(EmptyPetriNet, { name: "Petri net" });
 const a = notebook.addObject(placeObType, { name: "A" });
 notebook.addObject(placeObType, { name: "B" });
 const c = notebook.addObject(placeObType, { name: "C" });
