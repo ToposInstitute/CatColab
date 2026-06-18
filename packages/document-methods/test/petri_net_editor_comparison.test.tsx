@@ -8,7 +8,7 @@ import {
     type Notebook,
     type NotebookCell,
     type ObjectCell,
-    type Shape,
+    defineShape,
 } from "catcolab-documents";
 import {
     PetriNet,
@@ -364,6 +364,11 @@ describe("Petri-net editor comparison", () => {
         type ObCell = ObjectCell<typeof ob>;
         type MorCell = MorphismCell<typeof mor>;
 
+        const GenericShape = defineShape({
+            objects: { ob },
+            morphisms: { mor },
+        });
+
         const isOb = byObjectType(ob);
         const isMor = byMorphismType(mor);
 
@@ -371,10 +376,7 @@ describe("Petri-net editor comparison", () => {
             return <span>[{props.places.map((place) => place.name).join(", ")}]</span>;
         }
 
-        function MorCellView(props: {
-            transition: MorCell;
-            appendInput: () => void;
-        }) {
+        function MorCellView(props: { transition: MorCell; appendInput: () => void }) {
             return (
                 <li>
                     <span class="cell-label">
@@ -391,9 +393,7 @@ describe("Petri-net editor comparison", () => {
         function CellView(props: { cell: NotebookCell; appendInput: () => void }) {
             const cell = props.cell;
             if (isMor(cell)) {
-                return (
-                    <MorCellView transition={cell} appendInput={props.appendInput} />
-                );
+                return <MorCellView transition={cell} appendInput={props.appendInput} />;
             }
             if (isOb(cell)) {
                 return (
@@ -413,7 +413,7 @@ describe("Petri-net editor comparison", () => {
         }
 
         function ModelEditor(props: {
-            notebook: Notebook<Shape, SolidStoreHandle>;
+            notebook: Notebook<typeof GenericShape, SolidStoreHandle>;
             appendInput: () => void;
         }) {
             return (
@@ -421,12 +421,7 @@ describe("Petri-net editor comparison", () => {
                     <h1>{props.notebook.name}</h1>
                     <ul>
                         <For each={props.notebook.cells()}>
-                            {(cell) => (
-                                <CellView
-                                    cell={cell}
-                                    appendInput={props.appendInput}
-                                />
-                            )}
+                            {(cell) => <CellView cell={cell} appendInput={props.appendInput} />}
                         </For>
                     </ul>
                 </section>
@@ -477,7 +472,7 @@ describe("Petri-net editor comparison", () => {
             return <span>[{props.places.map((place) => place.name).join(", ")}]</span>;
         }
 
-        function TypedTransitionCell(props: {
+        function TransitionCell(props: {
             transition: TransitionCell;
             appendInput: () => void;
         }) {
@@ -494,10 +489,10 @@ describe("Petri-net editor comparison", () => {
             );
         }
 
-        function TypedPetriNetCellView(props: { cell: NotebookCell; appendInput: () => void }) {
+        function PetriNetCell(props: { cell: NotebookCell; appendInput: () => void }) {
             const cell = props.cell;
             if (isTransition(cell)) {
-                return <TypedTransitionCell transition={cell} appendInput={props.appendInput} />;
+                return <TransitionCell transition={cell} appendInput={props.appendInput} />;
             }
             if (isPlace(cell)) {
                 return (
@@ -516,7 +511,7 @@ describe("Petri-net editor comparison", () => {
             return null;
         }
 
-        function TypedPetriNetEditor(props: {
+        function PetriNetEditor(props: {
             notebook: Notebook<typeof PetriNet, SolidStoreHandle>;
             appendInput: () => void;
         }) {
@@ -526,7 +521,7 @@ describe("Petri-net editor comparison", () => {
                     <ul>
                         <For each={props.notebook.cells()}>
                             {(cell) => (
-                                <TypedPetriNetCellView
+                                <PetriNetCell
                                     cell={cell}
                                     appendInput={props.appendInput}
                                 />
@@ -548,7 +543,7 @@ describe("Petri-net editor comparison", () => {
 
         const dispose = render(
             () => (
-                <TypedPetriNetEditor
+                <PetriNetEditor
                     notebook={notebook}
                     appendInput={() => transition.update({ dom: [...transition.dom, b] })}
                 />
