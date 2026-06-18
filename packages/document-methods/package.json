@@ -13,8 +13,10 @@
         "format": "oxfmt .",
         "lint": "oxlint --fix && oxfmt .",
         "test:lts": "literate-typescript test/*.lts.md",
-        "check": "pnpm run build:wasm && tsc && pnpm run lint",
-        "ci": "tsc && oxlint --deny-warnings && oxfmt --check ."
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "check": "pnpm run build:wasm && tsc && tsc -p tsconfig.test.json && pnpm run lint",
+        "ci": "tsc && tsc -p tsconfig.test.json && oxlint --deny-warnings && oxfmt --check ."
     },
     "dependencies": {
         "catcolab-document-types": "link:../document-types/pkg",
@@ -27,10 +29,17 @@
         "@automerge/automerge-repo": "^2.5.5",
         "@automerge/automerge-repo-solid-primitives": "^2.0.0",
         "@catcolab-dev-tools/literate-typescript": "workspace:*",
+        "@catcolab-dev-tools/vite-plugin-monorepo-dedupe": "link:../../tools/vite-plugin-monorepo-dedupe",
         "@tsconfig/strictest": "^2.0.8",
+        "@types/node": "^24.0.0",
         "@types/uuid": "^10.0.0",
+        "happy-dom": "^20.0.0",
         "solid-js": "^1.9.10",
         "typescript": "^6.0.3",
+        "vite": "^7.2.2",
+        "vite-plugin-solid": "^2.11.10",
+        "vite-plugin-wasm": "^3.5.0",
+        "vitest": "^4.0.8",
         "wasm-pack": "^0.15.0"
     }
 }

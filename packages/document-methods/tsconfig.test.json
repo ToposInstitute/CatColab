@@ -1,0 +1,15 @@
+{
+    "extends": ["./tsconfig.json", "@tsconfig/strictest/tsconfig.json"],
+    "compilerOptions": {
+        "noEmit": true,
+        "types": ["node"],
+        "jsx": "preserve",
+        "jsxImportSource": "solid-js",
+        "lib": ["ES2023", "DOM"],
+        "paths": {
+            "catcolab-logics/*": ["./test/literate-ts/catcolab-logics/*.ts"],
+            "catcolab-documents": ["./src/future/index.ts"]
+        }
+    },
+    "include": ["vite.config.ts", "test/**/*.test.ts", "test/**/*.test.tsx"]
+}
