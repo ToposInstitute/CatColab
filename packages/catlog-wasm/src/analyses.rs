@@ -8,7 +8,7 @@ use catlog::simulate::ode::PolynomialSystem;
 use catlog::stdlib::analyses::ode::{self, ODESemanticsAnalysis, ODESemanticsProblemData};
 use catlog::zero::QualifiedName;
 
-use crate::latex::{latex_mor_names, latex_ob_names};
+use crate::latex::latex_names;
 
 use super::model::DblModel;
 use super::result::JsResult;
@@ -53,9 +53,7 @@ pub(crate) fn polynomial_ode_equations(
 ) -> Result<LatexEquations, String> {
     let sys = polynomial_ode_system(model);
     let equations = sys?
-        .map_variables(latex_ob_names(model))
-        .extend_scalars(|param| param.map_variables(latex_mor_names(model)))
-        .to_latex_equations();
+        .to_latex_equations_with_map(|param| latex_names(&model)(param));
     Ok(equations)
 }
 
@@ -67,7 +65,7 @@ pub(crate) fn polynomial_ode_simulation(
     let sys = polynomial_ode_system(model);
     let sys_extended_scalars = ode::extend_polynomial_ode_scalars(sys?, &data);
     let latex_equations =
-        sys_extended_scalars.map_variables(latex_ob_names(model)).to_latex_equations();
+        sys_extended_scalars.map_variables(latex_names(model)).to_latex_equations();
     let analysis = ode::polynomial_ode_analysis(sys_extended_scalars, data);
     let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
     Ok(ODEResultWithEquations {
@@ -128,10 +126,7 @@ pub(crate) fn mass_action_equations(
 ) -> Result<LatexEquations, String> {
     let sys = mass_action_system(model, data.mass_conservation_type, logic);
     let equations = sys?
-        .map_variables(latex_ob_names(model))
-        //TODO: FIX THIS
-        // .extend_scalars(|param| param.map_variables(latex_mor_names_mass_action(model)))
-        .to_latex_equations();
+        .to_latex_equations_with_map(|param| latex_names(&model)(param));
     Ok(equations)
 }
 
@@ -144,7 +139,7 @@ pub(crate) fn mass_action_simulation(
     let sys = mass_action_system(model, data.mass_conservation_type, logic);
     let sys_extended_scalars = data.extend_scalars(sys?);
     let latex_equations =
-        sys_extended_scalars.map_variables(latex_ob_names(model)).to_latex_equations();
+        sys_extended_scalars.map_variables(latex_names(model)).to_latex_equations();
     let analysis = data.build_analysis(sys_extended_scalars);
     let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
     Ok(ODEResultWithEquations {
@@ -175,10 +170,7 @@ pub struct LotkaVolterraEquationsData {
 pub(crate) fn lotka_volterra_equations(model: &DblModel) -> Result<LatexEquations, String> {
     let sys = lotka_volterra_system(model);
     let equations = sys?
-        .map_variables(latex_ob_names(model))
-        //TODO: FIX THIS
-        // .extend_scalars(|param| param.map_variables(latex_mor_names_lotka_volterra(model)))
-        .to_latex_equations();
+        .to_latex_equations_with_map(|param| latex_names(&model)(param));
     Ok(equations)
 }
 
@@ -190,7 +182,7 @@ pub(crate) fn lotka_volterra_simulation(
     let sys = lotka_volterra_system(model);
     let sys_extended_scalars = data.extend_scalars(sys?);
     let latex_equations =
-        sys_extended_scalars.map_variables(latex_ob_names(model)).to_latex_equations();
+        sys_extended_scalars.map_variables(latex_names(model)).to_latex_equations();
     let analysis = data.build_analysis(sys_extended_scalars);
     let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
     Ok(ODEResultWithEquations {
@@ -220,10 +212,7 @@ pub struct LCCEquationsData {
 pub(crate) fn linear_ode_equations(model: &DblModel) -> Result<LatexEquations, String> {
     let sys = linear_ode_system(model);
     let equations = sys?
-        .map_variables(latex_ob_names(model))
-        //TODO: FIX THIS
-        // .extend_scalars(|param| param.map_variables(latex_mor_names_linear_ode(model)))
-        .to_latex_equations();
+        .to_latex_equations_with_map(|param| latex_names(&model)(param));
     Ok(equations)
 }
 
@@ -235,7 +224,7 @@ pub(crate) fn linear_ode_simulation(
     let sys = linear_ode_system(model);
     let sys_extended_scalars = data.extend_scalars(sys?);
     let latex_equations =
-        sys_extended_scalars.map_variables(latex_ob_names(model)).to_latex_equations();
+        sys_extended_scalars.map_variables(latex_names(model)).to_latex_equations();
     let analysis = data.build_analysis(sys_extended_scalars);
     let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
     Ok(ODEResultWithEquations {

@@ -597,7 +597,7 @@ where
     /// Convert to a LaTeX string, separating variables with `\cdot`.
     fn to_latex_with_map<F: Fn(&QualifiedName) -> String>(&self, f: F) -> Latex {
         let fmt_power = |var: &Var, exp: &Exp| {
-            let Latex(var_latex) = var.to_latex_with_map(|v| f(v));
+            let Latex(var_latex) = var.to_latex_with_map(|variable| f(variable));
             if exp.is_one() {
                 var_latex.to_string()
             } else {

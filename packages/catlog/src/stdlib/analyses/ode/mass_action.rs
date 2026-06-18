@@ -69,12 +69,12 @@ pub enum MassConservationType {
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 pub enum RateGranularity {
-    /// Each flow gets assigned a single consumption and single production rate.
-    PerFlow,
+    /// Each flow (transition) gets assigned a single consumption and single production rate.
+    PerTransition,
 
-    /// Each flow gets assigned a consumption rate for each input stock and
-    /// a production rate for each output stock.
-    PerStock,
+    /// Each flow (transition) gets assigned a consumption rate for each input stock (place) and
+    /// a production rate for each output stock (place).
+    PerPlace,
 }
 
 /// Now, corresponding to each term of `MassConvervationType`, we have different
@@ -100,14 +100,14 @@ pub enum MassActionParameter {
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub enum RateParameter {
     /// For per flow rates, we simply need to know the associated flow.
-    PerFlow {
+    PerTransition {
         /// The flow to which we associate the rate parameter.
         flow: QualifiedName,
     },
 
     /// For per stock rates, we need to know both the transition and the corresponding
     /// input/output stock.
-    PerStock {
+    PerPlace {
         /// The flow whose input/output objects we wish to associate rate parameters.
         flow: QualifiedName,
         /// The input/output stock to which we associate the rate parameter.
@@ -135,25 +135,25 @@ impl fmt::Display for MassActionParameter {
             }
             Self::Unbalanced {
                 direction: Direction::IncomingFlow,
-                parameter: RateParameter::PerFlow { flow: trans },
+                parameter: RateParameter::PerTransition { flow: trans },
             } => {
                 write!(f, "Incoming({})", trans)
             }
             Self::Unbalanced {
                 direction: Direction::IncomingFlow,
-                parameter: RateParameter::PerStock { flow: trans, stock: output },
+                parameter: RateParameter::PerPlace { flow: trans, stock: output },
             } => {
                 write!(f, "([{}]->{})", trans, output)
             }
             Self::Unbalanced {
                 direction: Direction::OutgoingFlow,
-                parameter: RateParameter::PerFlow { flow: trans },
+                parameter: RateParameter::PerTransition { flow: trans },
             } => {
                 write!(f, "Outgoing({})", trans)
             }
             Self::Unbalanced {
                 direction: Direction::OutgoingFlow,
-                parameter: RateParameter::PerStock { flow: trans, stock: input },
+                parameter: RateParameter::PerPlace { flow: trans, stock: input },
             } => {
                 write!(f, "({}->[{}])", input, trans)
             }
@@ -167,17 +167,17 @@ impl ToLatexWithMap for MassActionParameter {
             MassActionParameter::Balanced { flow } => Latex(format!("r_{{{}}}", f(flow))),
             MassActionParameter::Unbalanced { direction, parameter } => {
                 match (direction, parameter) {
-                    (Direction::IncomingFlow, RateParameter::PerFlow { flow }) => {
+                    (Direction::IncomingFlow, RateParameter::PerTransition { flow }) => {
                         Latex(format!("\\rho_{{{}}}", f(flow)))
                     }
-                    (Direction::OutgoingFlow, RateParameter::PerFlow { flow }) => {
+                    (Direction::OutgoingFlow, RateParameter::PerTransition { flow }) => {
                         Latex(format!("\\kappa_{{{}}}", f(flow)))
                     }
-                    (Direction::IncomingFlow, RateParameter::PerStock { flow, stock }) => {
-                        Latex(format!("\\rho_{{{}}}^{{{}}}", f(flow), stock))
+                    (Direction::IncomingFlow, RateParameter::PerPlace { flow, stock }) => {
+                        Latex(format!("\\rho_{{{}}}^{{{}}}", f(flow), f(stock)))
                     }
-                    (Direction::OutgoingFlow, RateParameter::PerStock { flow, stock }) => {
-                        Latex(format!("\\kappa_{{{}}}^{{{}}}", f(flow), stock))
+                    (Direction::OutgoingFlow, RateParameter::PerPlace { flow, stock }) => {
+                        Latex(format!("\\kappa_{{{}}}^{{{}}}", f(flow), f(stock)))
                     }
                 }
             }
@@ -255,13 +255,13 @@ impl
                         MassActionParameter::Balanced { flow: transition.clone() }
                     }
                     MassConservationType::Unbalanced(granularity) => match granularity {
-                        RateGranularity::PerFlow => MassActionParameter::Unbalanced {
+                        RateGranularity::PerTransition => MassActionParameter::Unbalanced {
                             direction: Direction::IncomingFlow,
-                            parameter: RateParameter::PerFlow { flow: transition.clone() },
+                            parameter: RateParameter::PerTransition { flow: transition.clone() },
                         },
-                        RateGranularity::PerStock => MassActionParameter::Unbalanced {
+                        RateGranularity::PerPlace => MassActionParameter::Unbalanced {
                             direction: Direction::IncomingFlow,
-                            parameter: RateParameter::PerStock {
+                            parameter: RateParameter::PerPlace {
                                 flow: transition.clone(),
                                 stock: output.clone(),
                             },
@@ -286,20 +286,20 @@ impl
                 //   \dot{x_i} -= Parameter_! \cdot x_1...x_n
                 // where Parameter_! depends on `mass_conservation_type`:
                 //   Balanced             => Parameter_T
-                //   Unbalanced::PerFlow  => Parameter_T^outflow
-                //   Unbalanced::PerStock => Parameter_{T,x_i}^outflow
+                //   Unbalanced::PerTransition  => Parameter_T^outflow
+                //   Unbalanced::PerPlace => Parameter_{T,x_i}^outflow
                 let parameter = match self.mass_conservation_type {
                     MassConservationType::Balanced => {
                         MassActionParameter::Balanced { flow: transition.clone() }
                     }
                     MassConservationType::Unbalanced(granularity) => match granularity {
-                        RateGranularity::PerFlow => MassActionParameter::Unbalanced {
+                        RateGranularity::PerTransition => MassActionParameter::Unbalanced {
                             direction: Direction::OutgoingFlow,
-                            parameter: RateParameter::PerFlow { flow: transition.clone() },
+                            parameter: RateParameter::PerTransition { flow: transition.clone() },
                         },
-                        RateGranularity::PerStock => MassActionParameter::Unbalanced {
+                        RateGranularity::PerPlace => MassActionParameter::Unbalanced {
                             direction: Direction::OutgoingFlow,
-                            parameter: RateParameter::PerStock {
+                            parameter: RateParameter::PerPlace {
                                 flow: transition.clone(),
                                 stock: input.clone(),
                             },
@@ -385,7 +385,7 @@ impl
             // where Parameter_! and Parameter_? depend on `mass_conservation_type`:
             //   Balanced            => Parameter_! = Parameter_F
             //                          Parameter_? = Parameter_F
-            //   Unbalanced::PerFlow => Parameter_! = Parameter_F^inflow
+            //   Unbalanced::PerTransition => Parameter_! = Parameter_F^inflow
             //                          Parameter_? = Parameter_F^outflow
 
             let output_id = output.cons(name_seg("ToOutput")).cons(flow.only().unwrap());
@@ -395,7 +395,7 @@ impl
                 }
                 MassConservationType::Unbalanced(_) => MassActionParameter::Unbalanced {
                     direction: Direction::IncomingFlow,
-                    parameter: RateParameter::PerFlow { flow: flow.clone() },
+                    parameter: RateParameter::PerTransition { flow: flow.clone() },
                 },
             };
             builder.add_contribution(
@@ -413,7 +413,7 @@ impl
                 }
                 MassConservationType::Unbalanced(_) => MassActionParameter::Unbalanced {
                     direction: Direction::OutgoingFlow,
-                    parameter: RateParameter::PerFlow { flow: flow.clone() },
+                    parameter: RateParameter::PerTransition { flow: flow.clone() },
                 },
             };
             builder.add_contribution(
@@ -495,13 +495,13 @@ impl ODESemanticsProblemData<MassActionParameter> for MassActionProblemData {
                 }
                 MassActionParameter::Unbalanced { direction, parameter } => {
                     match (direction, parameter) {
-                        (Direction::IncomingFlow, RateParameter::PerFlow { flow: transition }) => {
+                        (Direction::IncomingFlow, RateParameter::PerTransition { flow: transition }) => {
                             self.transition_production_rates
                                 .get(transition)
                                 .cloned()
                                 .unwrap_or_default()
                         }
-                        (Direction::OutgoingFlow, RateParameter::PerFlow { flow: transition }) => {
+                        (Direction::OutgoingFlow, RateParameter::PerTransition { flow: transition }) => {
                             self.transition_consumption_rates
                                 .get(transition)
                                 .cloned()
@@ -509,7 +509,7 @@ impl ODESemanticsProblemData<MassActionParameter> for MassActionProblemData {
                         }
                         (
                             Direction::IncomingFlow,
-                            RateParameter::PerStock { flow: transition, stock: place },
+                            RateParameter::PerPlace { flow: transition, stock: place },
                         ) => self
                             .place_production_rates
                             .get(transition)
@@ -518,7 +518,7 @@ impl ODESemanticsProblemData<MassActionParameter> for MassActionProblemData {
                             .unwrap_or_default(),
                         (
                             Direction::OutgoingFlow,
-                            RateParameter::PerStock { flow: transition, stock: place },
+                            RateParameter::PerPlace { flow: transition, stock: place },
                         ) => self
                             .place_consumption_rates
                             .get(transition)
@@ -566,7 +566,7 @@ mod tests {
         let model = backward_link(th);
         let sys = StockFlowMassActionAnalysis {
             mass_conservation_type: analyses::ode::MassConservationType::Unbalanced(
-                analyses::ode::RateGranularity::PerFlow,
+                analyses::ode::RateGranularity::PerTransition,
             ),
             ..StockFlowMassActionAnalysis::default()
         }
@@ -600,7 +600,7 @@ mod tests {
         let model = catalyzed_reaction(th);
         let sys = PetriNetMassActionAnalysis {
             mass_conservation_type: analyses::ode::MassConservationType::Unbalanced(
-                analyses::ode::RateGranularity::PerFlow,
+                analyses::ode::RateGranularity::PerTransition,
             ),
             ..PetriNetMassActionAnalysis::default()
         }
@@ -619,7 +619,7 @@ mod tests {
         let model = catalyzed_reaction(th);
         let sys = PetriNetMassActionAnalysis {
             mass_conservation_type: analyses::ode::MassConservationType::Unbalanced(
-                analyses::ode::RateGranularity::PerStock,
+                analyses::ode::RateGranularity::PerPlace,
             ),
             ..PetriNetMassActionAnalysis::default()
         }
@@ -640,7 +640,7 @@ mod tests {
         let model = backward_link(th);
         let sys = StockFlowMassActionAnalysis {
             mass_conservation_type: analyses::ode::MassConservationType::Unbalanced(
-                analyses::ode::RateGranularity::PerFlow,
+                analyses::ode::RateGranularity::PerTransition,
             ),
             ..StockFlowMassActionAnalysis::default()
         }

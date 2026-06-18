@@ -160,7 +160,7 @@ export default function MassAction(
         }),
     ];
 
-    // Secondly, the case MassConservationType = Unbalanced(PerFlow)
+    // Secondly, the case MassConservationType = Unbalanced(PerTransition)
     const morInputSchema: ColumnSchema<QualifiedName>[] = [
         {
             contentType: "string",
@@ -196,7 +196,7 @@ export default function MassAction(
         }),
     ];
 
-    // Finally, the case MassConservationType = Unbalanced(PerStock)
+    // Finally, the case MassConservationType = Unbalanced(PerPlace)
     const morInputsSchema: ColumnSchema<[QualifiedName, QualifiedName]>[] = [
         {
             contentType: "string",
@@ -259,7 +259,7 @@ export default function MassAction(
             <Match
                 when={
                     props.content.massConservationType.type === "Unbalanced" &&
-                    props.content.massConservationType.granularity === "PerFlow"
+                    props.content.massConservationType.granularity === "PerTransition"
                 }
             >
                 <FixedTableEditor rows={morGenerators()} schema={morInputSchema} />
@@ -268,7 +268,7 @@ export default function MassAction(
             <Match
                 when={
                     props.content.massConservationType.type === "Unbalanced" &&
-                    props.content.massConservationType.granularity === "PerStock"
+                    props.content.massConservationType.granularity === "PerPlace"
                 }
             >
                 <FixedTableEditor rows={morGeneratorsInputs()} schema={morInputsSchema} />
