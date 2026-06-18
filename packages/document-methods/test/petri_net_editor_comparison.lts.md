@@ -1,9 +1,21 @@
 ## Current frontend, reduced
 
-The reduced current example mirrors the frontend's list endpoint storage: the
-inline list editor edits the inner `List(SymmetricList, ...)`, and the morphism
-editor wraps it with the tensor object operation before writing it to the raw
-model declaration.
+The reduced current example mirrors the frontend's list endpoint storage. The
+frontend never unwraps an endpoint in one step; it peels two independent layers,
+exactly as `packages/frontend/src/model/ob_operations.ts` does:
+
+- `unwrapApp`/`wrapApp` strip and restore the `App(tensorOp, ...)` wrapper. The
+  tensor `ObOp` is not hard-coded in the editor — it comes from the theory's
+  `MorDomainMeta.apply` metadata (`apply: { tag: "Basic", content: "tensor" }`
+  for the petri-net domain and codomain).
+- `extractObList`/`buildObList` turn the inner `List(SymmetricList, ...)` into a
+  flat array of element objects and back, using the modality carried by the
+  endpoint's `ModeApp` object type.
+
+So reading an endpoint is `extractObList(unwrapApp(ob, tensorOp))` and writing it
+is `wrapApp(buildObList("SymmetricList", objects), tensorOp)`. The inline list
+editor only ever sees the inner element array; the `App` wrapper is the morphism
+editor's concern.
 
 <!-- verifier:prepend-to-following -->
 
@@ -62,38 +74,39 @@ function appendConstructedCell(notebook: CurrentPetriNetNotebook, cell: Cell<Mod
     });
 }
 
+// Layer 1: the tensor `App` wrapper, mirroring `wrapApp`/`unwrapApp`. The op is
+// the theory's `MorDomainMeta.apply`, passed in rather than assumed.
+function unwrapApp(ob: Ob | null, applyOp: typeof tensorOp): Ob | null {
+    if (ob?.tag === "App" && ob.content.op.content === applyOp.content) {
+        return ob.content.ob;
+    }
+    return null;
+}
+
+function wrapApp(ob: Ob, applyOp: typeof tensorOp): Ob {
+    return { tag: "App", content: { op: applyOp, ob } };
+}
+
+// Layer 2: the `List` modality, mirroring `extractObList`/`buildObList`.
+function extractObList(ob: Ob | null): Array<Ob | null> {
+    return ob?.tag === "List" ? ob.content.objects : [];
+}
+
+function buildObList(modality: "SymmetricList", objects: Array<Ob | null>): Ob {
+    return { tag: "List", content: { modality, objects } };
+}
+
+// Compose the two layers the way the morphism editor does: the list editor
+// works with the element array, the morphism editor owns the `App` wrapper.
 function encodePlaceIds(placeIds: string[]): Ob {
-    return {
-        tag: "App",
-        content: {
-            op: tensorOp,
-            ob: {
-                tag: "List",
-                content: {
-                    modality: "SymmetricList",
-                    objects: placeIds.map((id): Ob => ({ tag: "Basic", content: id })),
-                },
-            },
-        },
-    };
+    const objects = placeIds.map((id): Ob => ({ tag: "Basic", content: id }));
+    return wrapApp(buildObList("SymmetricList", objects), tensorOp);
 }
 
 function placeIds(ob: Ob | null): string[] {
-    if (!ob) {
-        return [];
-    }
-    switch (ob.tag) {
-        case "Basic":
-            return [ob.content];
-        case "App":
-            return placeIds(ob.content.ob);
-        case "List":
-            return ob.content.objects.flatMap((item) =>
-                item?.tag === "Basic" ? [item.content] : [],
-            );
-        case "Tabulated":
-            return [];
-    }
+    return extractObList(unwrapApp(ob, tensorOp)).flatMap((item) =>
+        item?.tag === "Basic" ? [item.content] : [],
+    );
 }
 
 function addCurrentPlace(
