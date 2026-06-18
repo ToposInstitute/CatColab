@@ -451,7 +451,13 @@ import { For } from "solid-js";
 import { createStore, produce, type SetStoreFunction, unwrap } from "solid-js/store";
 import { render } from "solid-js/web";
 
-import { CellKind, createBinder, type DocumentStore, type NotebookCell } from "catcolab-documents";
+import {
+    CellKind,
+    createBinder,
+    type DocumentStore,
+    ModelNotebook,
+    type NotebookCell,
+} from "catcolab-documents";
 import {
     PetriNet,
     Place,
@@ -478,7 +484,7 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
 
 const solidBinder = createBinder(solidStore);
 
-type TypedPetriNetNotebook = ReturnType<typeof solidBinder.createNotebook<typeof PetriNet>>;
+type TypedPetriNetNotebook = ModelNotebook<typeof PetriNet, SolidStoreHandle>;
 type TypedPetriNetCell = NotebookCell<typeof PetriNet>;
 
 function InlinePlaceListEditor(props: { places: PlaceCell[] }) {
