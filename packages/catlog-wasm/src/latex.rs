@@ -45,7 +45,31 @@ mod tests {
     use crate::model::{DblModel, tests::backward_link};
 
     #[test]
-    fn unbalanced_mass_action_latex_equations() {
+    fn stock_flow_balanced_mass_action_latex_equations() {
+        let model = backward_link("xxx", "yyy", "fff");
+        let tab_model = model.discrete_tab().unwrap();
+        let analysis = StockFlowMassActionAnalysis::default();
+        let sys = analysis.build_system(tab_model);
+        let equations = sys
+            .to_latex_equations_with_map(|param| latex_names(&model)(param));
+
+        let expected = LatexEquations(vec![
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{xxx}".to_string()),
+                rhs: Latex(
+                    "-r_{\\text{fff}} \\cdot \\text{xxx} \\cdot \\text{yyy}".to_string(),
+                ),
+            },
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{yyy}".to_string()),
+                rhs: Latex("r_{\\text{fff}} \\cdot \\text{xxx} \\cdot \\text{yyy}".to_string()),
+            },
+        ]);
+        assert_eq!(equations, expected);
+    }
+
+    #[test]
+    fn stock_flow_unbalanced_mass_action_latex_equations() {
         let model = backward_link("xxx", "yyy", "fff");
         let tab_model = model.discrete_tab().unwrap();
         let analysis = StockFlowMassActionAnalysis {
@@ -73,7 +97,17 @@ mod tests {
         assert_eq!(equations, expected);
     }
 
-    // TODO: add more tests here for the other ODE semantics
+    #[test]
+    fn cld_lotka_volterra_latex_equations() {}
+
+    #[test]
+    fn cld_lcc_latex_equations() {}
+
+    #[test]
+    fn petri_net_unbalanced_pp_mass_action_latex_equations() {}
+
+    #[test]
+    fn petri_net_unbalanced_pt_mass_action_latex_equations() {}
 
     #[test]
     fn unnamed_mor_uses_dom_cod_in_equations() {
