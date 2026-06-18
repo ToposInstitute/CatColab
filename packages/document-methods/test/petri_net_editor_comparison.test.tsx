@@ -352,35 +352,35 @@ describe("Petri-net editor comparison", () => {
     test("catcolab-documents, generic consumer", () => {
         // Bare runtime type values, declared `as const` so a transition's
         // list-valued endpoint arity survives inference.
-        const placeObType = { tag: "Basic", content: "Object" } as const;
-        const transitionMorType = {
+        const ob = { tag: "Basic", content: "Object" } as const;
+        const mor = {
             tag: "Hom",
             content: {
                 tag: "ModeApp",
-                content: { modality: "SymmetricList", obType: placeObType },
+                content: { modality: "SymmetricList", obType: ob },
             },
         } as const;
 
-        type GenericPlaceCell = ObjectCell<typeof placeObType>;
-        type GenericTransitionCell = MorphismCell<typeof transitionMorType>;
+        type ObCell = ObjectCell<typeof ob>;
+        type MorCell = MorphismCell<typeof mor>;
 
-        const isPlace = byObjectType(placeObType);
-        const isTransition = byMorphismType(transitionMorType);
+        const isOb = byObjectType(ob);
+        const isMor = byMorphismType(mor);
 
-        function InlinePlaceListEditor(props: { places: GenericPlaceCell[] }) {
+        function InlineListEditor(props: { places: ObCell[] }) {
             return <span>[{props.places.map((place) => place.name).join(", ")}]</span>;
         }
 
-        function GenericTransitionCellView(props: {
-            transition: GenericTransitionCell;
+        function MorCellView(props: {
+            transition: MorCell;
             appendInput: () => void;
         }) {
             return (
                 <li>
                     <span class="cell-label">
-                        Transition: <InlinePlaceListEditor places={props.transition.dom} />
+                        Transition: <InlineListEditor places={props.transition.dom} />
                         <span> -&gt; </span>
-                        <InlinePlaceListEditor places={props.transition.cod} />
+                        <InlineListEditor places={props.transition.cod} />
                         <span> {props.transition.name}</span>
                     </span>
                     <button aria-label="append input place" onClick={props.appendInput} />
@@ -388,14 +388,14 @@ describe("Petri-net editor comparison", () => {
             );
         }
 
-        function GenericPetriNetCellView(props: { cell: NotebookCell; appendInput: () => void }) {
+        function CellView(props: { cell: NotebookCell; appendInput: () => void }) {
             const cell = props.cell;
-            if (isTransition(cell)) {
+            if (isMor(cell)) {
                 return (
-                    <GenericTransitionCellView transition={cell} appendInput={props.appendInput} />
+                    <MorCellView transition={cell} appendInput={props.appendInput} />
                 );
             }
-            if (isPlace(cell)) {
+            if (isOb(cell)) {
                 return (
                     <li>
                         <span class="cell-label">Place: {cell.name}</span>
@@ -412,7 +412,7 @@ describe("Petri-net editor comparison", () => {
             return null;
         }
 
-        function GenericPetriNetEditor(props: {
+        function ModelEditor(props: {
             notebook: Notebook<Shape, SolidStoreHandle>;
             appendInput: () => void;
         }) {
@@ -422,7 +422,7 @@ describe("Petri-net editor comparison", () => {
                     <ul>
                         <For each={props.notebook.cells()}>
                             {(cell) => (
-                                <GenericPetriNetCellView
+                                <CellView
                                     cell={cell}
                                     appendInput={props.appendInput}
                                 />
@@ -433,7 +433,7 @@ describe("Petri-net editor comparison", () => {
             );
         }
 
-        function appendGenericInput(transition: GenericTransitionCell, place: GenericPlaceCell) {
+        function appendGenericInput(transition: MorCell, place: ObCell) {
             transition.update({ dom: [...transition.dom, place] });
         }
 
@@ -452,7 +452,7 @@ describe("Petri-net editor comparison", () => {
 
         const dispose = render(
             () => (
-                <GenericPetriNetEditor
+                <ModelEditor
                     notebook={notebook}
                     appendInput={() => appendGenericInput(transition, input)}
                 />

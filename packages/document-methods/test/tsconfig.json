@@ -1,0 +1,8 @@
+{
+    // Editor-only config so tsserver (e.g. coc-tsserver) routes files under
+    // `test/` to the test compiler options. The canonical config used by
+    // `pnpm run check`/`ci` is `../tsconfig.test.json`; this just makes those
+    // same settings the nearest discoverable `tsconfig.json` for test files.
+    "extends": "../tsconfig.test.json",
+    "include": ["**/*.ts", "**/*.tsx"]
+}
