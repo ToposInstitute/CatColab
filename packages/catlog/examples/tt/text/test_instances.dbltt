@@ -1,6 +1,6 @@
 set_theory ThSchema
 
-type WeightedGraph := [
+model WeightedGraph := [
   V : Entity,
   E : Entity,
   Weight : AttrType,

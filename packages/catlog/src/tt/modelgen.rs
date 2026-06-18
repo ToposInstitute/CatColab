@@ -405,8 +405,8 @@ impl<'a> ModelGenerator<'a> {
     }
 }
 
-/// Generates a [`DiscreteDblModelInstance`] from an elaborated instance
-/// term — a [`DefConst`] whose value is a [`TmV_::Instance`].
+/// Generates a [`DiscreteDblModelInstance`] from an elaborated [`Instance`]
+/// declaration.
 ///
 /// Walks the instance body's [`TmV_::Instance`] payload, registering
 /// each generator with its fiber, each equation as a pair of
@@ -417,17 +417,17 @@ impl<'a> ModelGenerator<'a> {
 pub fn instance_from_def(
     toplevel: &Toplevel,
     th: &TheoryDef,
-    def: &DefConst,
+    inst: &Instance,
 ) -> Result<(DiscreteDblModelInstance, Namespace), String> {
     let TheoryDef::Discrete(_) = th else {
         return Err("instance generation only supports discrete double theories".into());
     };
-    let (cod_model, _) = Model::from_ty(toplevel, th, &def.ty);
+    let (cod_model, _) = Model::from_ty(toplevel, th, &inst.codomain);
     let cod_model = cod_model
         .as_discrete()
         .ok_or_else(|| "expected a discrete codomain model".to_string())?;
     let mut instance = DiscreteDblModelInstance::new(Rc::new(cod_model));
-    let TmV_::Instance(body) = &*def.val else {
+    let TmV_::Instance(body) = &*inst.val else {
         return Err("expected a TmV::Instance body".into());
     };
     let mut namespace = Namespace::new_for_uuid();
@@ -567,7 +567,7 @@ mod tests {
         let src = r#"
 set_theory ThSchema
 
-type WeightedGraph := [
+model WeightedGraph := [
   V : Entity,
   E : Entity,
   Weight : AttrType,
@@ -584,7 +584,7 @@ instance I : WeightedGraph := [
 "#;
         let toplevel = elaborate_to_toplevel(src);
         let def = match toplevel.declarations.get(&name_seg("I")) {
-            Some(TopDecl::DefConst(d)) if matches!(&*d.val, TmV_::Instance(_)) => d.clone(),
+            Some(TopDecl::Instance(i)) => i.clone(),
             _ => panic!("expected I to be an instance declaration"),
         };
         let (instance, _ns) = instance_from_def(&toplevel, &def.theory.definition, &def).unwrap();
@@ -607,7 +607,7 @@ instance I : WeightedGraph := [
         let src = r#"
 set_theory ThSchema
 
-type WeightedGraph := [
+model WeightedGraph := [
   V : Entity,
   E : Entity,
   Weight : AttrType,
@@ -634,7 +634,7 @@ instance UseLoop : WeightedGraph := [
         // (which re-evaluates every field type against a bound `self`) must
         // not panic.
         let loop_def = match toplevel.declarations.get(&name_seg("Loop")) {
-            Some(TopDecl::DefConst(d)) => d.clone(),
+            Some(TopDecl::Instance(i)) => i.clone(),
             _ => panic!("expected Loop to be an instance declaration"),
         };
         let TmV_::Instance(loop_body) = &*loop_def.val else {
@@ -655,7 +655,7 @@ instance UseLoop : WeightedGraph := [
         // The importer still extracts both generators and the imported
         // copy's two equations.
         let use_def = match toplevel.declarations.get(&name_seg("UseLoop")) {
-            Some(TopDecl::DefConst(d)) => d.clone(),
+            Some(TopDecl::Instance(i)) => i.clone(),
             _ => panic!("expected UseLoop to be an instance declaration"),
         };
         let (instance, _ns) =

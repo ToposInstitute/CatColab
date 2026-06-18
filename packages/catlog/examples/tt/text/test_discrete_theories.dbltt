@@ -1,6 +1,6 @@
 set_theory ThSchema
 
-type WeightedGraph := [
+model WeightedGraph := [
   V : Entity,
   E : Entity,
   Weight : AttrType,
@@ -11,13 +11,13 @@ type WeightedGraph := [
 
 generate WeightedGraph
 
-type EntityArr := [
+model EntityArr := [
   dom : Entity,
   cod : Entity,
   arr : (Hom Entity)[dom, cod]
 ]
 
-type Graph1 := [
+model Graph1 := [
   V : Entity,
   E : Entity,
   src : EntityArr & [ .dom := E, .cod := V ],
@@ -36,13 +36,13 @@ chk [G : Graph1] (G.src : EntityArr & [ .dom := G.V ] )
 norm [x : [a : Entity, b : @sing a]] x.b
 
 #(should_fail)
-type Graph1 := [
+model Graph1 := [
   V : Entity,
   E : Entity,
   src : EntityArr & [ .dom := E, .dom := V ]
 ]
 
-type Graph := [
+model Graph := [
   V : Entity,
   E : Entity,
   src : (Hom Entity)[E, V],
@@ -67,7 +67,7 @@ def reverse1[G : Graph] : Graph := [
 norm [G : Graph] (reverse[G]).E
 syn [G : Graph] (reverse[G]).src
 
-type ReflexiveGraph := [
+model ReflexiveGraph := [
   V : Entity,
   E : Entity,
   src : (Hom Entity)[E, V],
@@ -79,7 +79,7 @@ def edge_id[G : ReflexiveGraph] : (Hom Entity)[G.E, G.E] := @id G.E
 
 def edge_src[G : ReflexiveGraph] : (Hom Entity)[G.E, G.E] := G.src * G.refl
 
-type Graph2 := [
+model Graph2 := [
   V : Entity,
   g1 : Graph & [ .V := V],
   g2 : Graph & [ .V := V]
@@ -91,7 +91,7 @@ norm [g : Graph2] g.g1.V
 
 generate Graph2
 
-type ProfunctorGraph := [
+model ProfunctorGraph := [
   g1 : Graph,
   g2 : Graph,
   het : (Hom Entity)[g1.V, g2.V]
@@ -99,7 +99,7 @@ type ProfunctorGraph := [
 
 generate ProfunctorGraph
 
-type WeightedGraph2 := [
+model WeightedGraph2 := [
   V : Entity,
   g1 : WeightedGraph & [ .V := V ],
   g2 : WeightedGraph & [ .V := V ]
@@ -110,22 +110,22 @@ generate WeightedGraph2
 set_theory ThCategory
 
 #(should_fail)
-type Set := [
+model Set := [
   A : Entity,
 ]
 
-type Set := [
+model Set := [
   A : Object
 ]
 
-type DDS := [
+model DDS := [
   X : Object,
   φ : (Hom Object)[X, X]
 ]
 
 set_theory ThSignedCategory
 
-type NegFeedback := [
+model NegFeedback := [
   X : Object,
   Y : Object,
   f : (Hom Object)[X, Y],
@@ -135,7 +135,7 @@ type NegFeedback := [
 generate NegFeedback
 
 #(should_fail)
-type NegFeedback1 := [
+model NegFeedback1 := [
   X : Object,
   Y : Object,
   f : (Hom Object)[@hole, Y],
