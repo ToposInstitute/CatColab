@@ -1,16 +1,15 @@
 import type { MorphismCell, ObjectCell } from "catcolab-documents";
-import { defineModelLogic } from "catcolab-documents";
+import { defineShape } from "catcolab-documents";
 
-import type { MorType, ObType } from "catcolab-document-types";
 import { ThSchema } from "catlog-wasm";
 
-const entityObType: ObType = { tag: "Basic", content: "Entity" };
-const attrTypeObType: ObType = { tag: "Basic", content: "AttrType" };
+const entityObType = { tag: "Basic", content: "Entity" } as const;
+const attrTypeObType = { tag: "Basic", content: "AttrType" } as const;
 
-const mappingMorType: MorType = { tag: "Hom", content: { tag: "Basic", content: "Entity" } };
-const attrMorType: MorType = { tag: "Basic", content: "Attr" };
+const mappingMorType = { tag: "Hom", content: { tag: "Basic", content: "Entity" } } as const;
+const attrMorType = { tag: "Basic", content: "Attr" } as const;
 
-export const SimpleSchema = defineModelLogic({
+export const SimpleSchema = defineShape({
     theory: "simple-schema",
     coreTheory: new ThSchema().theory(),
     objects: {
@@ -18,12 +17,13 @@ export const SimpleSchema = defineModelLogic({
         AttrType: attrTypeObType,
     },
     morphisms: {
-        Mapping: { dom: "Entity", cod: "Entity", morType: mappingMorType },
-        Attr: { dom: "Entity", cod: "AttrType", morType: attrMorType },
+        Mapping: mappingMorType,
+        Attr: attrMorType,
     },
 });
 
-export const { Entity, AttrType, Mapping, Attr } = SimpleSchema.cellTypes;
+export const { Entity, AttrType } = SimpleSchema.objects;
+export const { Mapping, Attr } = SimpleSchema.morphisms;
 
 export type EntityCell = ObjectCell<typeof Entity>;
 export type AttrTypeCell = ObjectCell<typeof AttrType>;

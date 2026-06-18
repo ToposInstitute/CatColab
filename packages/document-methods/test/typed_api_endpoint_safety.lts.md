@@ -1,25 +1,27 @@
-# How the typed API avoids endpoint bugs
+# How a shape avoids endpoint bugs
 
 The olog and Petri-net editor comparisons
 ([`olog_editor_comparison.lts.md`](./olog_editor_comparison.lts.md),
 [`petri_net_editor_comparison.lts.md`](./petri_net_editor_comparison.lts.md))
-show three tiers of API that produce identical editors and identical output. The
-tiers diverge only in _what mistakes the compiler can see_. The reduced frontend
-hand-encodes endpoints as raw `Ob` values and the generic API exposes them as
-unbranded `GenericObjectCell` handles, so neither can tell one object type from
-another. The typed logic API brands each cell with its declared type, so wiring
-an endpoint with the wrong cell is a compile error rather than a corrupt
+build the same editor over the same unified `Notebook` API, differing only in
+_what the compiler can see_. A shape-less notebook (`createGenericNotebook`)
+adds cells from bare `ObType`/`MorType` values and reads them back as untyped
+`ObjectCell`/`MorphismCell` handles, so it cannot tell one object type from
+another. A notebook over a shape (`createNotebook`) constrains `add` to the
+shape's cell types and derives each morphism's endpoints from its `MorType`, so
+wiring an endpoint with the wrong cell is a compile error rather than a corrupt
 document.
 
-The examples below take the same editing actions through the generic and typed
-APIs and show, for three classes of bug, that the generic version compiles (and
-silently misbehaves at runtime) while the typed version is rejected by `tsc`.
+The examples below take the same editing actions through the shape-less and the
+shaped notebook and show, for three classes of bug, that the shape-less version
+compiles (and silently misbehaves at runtime) while the shaped version is
+rejected by `tsc`.
 
 ## Bug 1: an endpoint of the wrong object type
 
 A schema `Mapping` goes between entities (`Entity -> Entity`); an `Attr` goes
-from an entity to an attribute type (`Entity -> AttrType`). With the generic API,
-every object cell is the same `GenericObjectCell`, so pointing a mapping's
+from an entity to an attribute type (`Entity -> AttrType`). With a shape-less
+notebook every object cell is the same `ObjectCell`, so pointing a mapping's
 codomain at an attribute type type-checks and runs — the document silently
 stores a mapping whose codomain is an attribute.
 
@@ -35,12 +37,13 @@ const notebook = binder.createGenericNotebook("simple-schema", { name: "Schema" 
 const person = notebook.addObject(Entity, { name: "Person" });
 const age = notebook.addObject(AttrType, { name: "Age" });
 
-// A Mapping must end on an Entity, but the generic endpoint type is just
-// `GenericObjectCell`, so the attribute cell `age` is accepted with no error.
+// A Mapping must end on an Entity, but the shape-less endpoint type is just
+// `ObjectCell`, so the attribute cell `age` is accepted with no error.
 const mapping = notebook.addMorphism(Mapping, { name: "broken", dom: person, cod: age });
 
-console.log("codomain name:", mapping.cod.name);
-console.log("codomain object type:", mapping.cod.type.content);
+const cod = mapping.cod;
+console.log("codomain name:", Array.isArray(cod) ? cod.map((c) => c.name).join(", ") : cod.name);
+console.log("codomain object type:", Array.isArray(cod) ? "" : cod.type.content);
 ```
 
 ```
@@ -48,8 +51,9 @@ codomain name: Age
 codomain object type: AttrType
 ```
 
-With the typed logic, `Mapping`'s codomain is `ObjectCell<EntityType>`. Passing
-the attribute cell is a compile error, caught before any document is written.
+With a shape, `Mapping` is `Hom(Entity)`, so its codomain is `ObjectCell` of the
+`Entity` type. Passing the attribute cell is a compile error, caught before any
+document is written.
 
 ```ts
 import { binder } from "catcolab-documents";
@@ -65,12 +69,12 @@ notebook.add(Mapping, { name: "broken", dom: person, cod: age });
 
 ## Bug 2: a single object where an endpoint list is required
 
-A Petri-net transition's endpoints are _lists_ of places, which the transition's
-morphism type records as a `SymmetricList` modality. The generic `addMorphism`
-endpoint type is `GenericObjectCell | GenericObjectCell[]`, so a bare place is
-accepted in place of a list. The stored shape follows the morphism type rather
-than the argument, so the bare place is silently wrapped into a one-element list
-instead of being flagged — the mistake compiles, runs, and goes unnoticed.
+A Petri-net transition's endpoints are _lists_ of places, recorded as a
+`SymmetricList` modality on its morphism type. The shape-less `addMorphism`
+endpoint type is `ObjectCell | ObjectCell[]`, so a bare place is accepted in
+place of a list. The stored shape follows the morphism type rather than the
+argument, so the bare place is silently wrapped into a one-element list instead
+of being flagged — the mistake compiles, runs, and goes unnoticed.
 
 ```ts
 import { binder } from "catcolab-documents";
@@ -103,8 +107,8 @@ dom stored as array: true
 cod stored as array: true
 ```
 
-The typed `Transition` requires `ObjectCell<PlaceType>[]` for each endpoint, so
-the single place is rejected at compile time.
+A shaped `Transition` derives `ObjectCell[]` for each endpoint from its
+`SymmetricList` modality, so the single place is rejected at compile time.
 
 ```ts
 import { binder } from "catcolab-documents";
@@ -120,8 +124,8 @@ notebook.add(Transition, { name: "fires", dom: a, cod: [c] });
 
 ## Bug 3: a cell from another theory or another notebook
 
-Because the generic handle erases both the theory and the declared type, a place
-handle from one notebook can be wired into a mapping in a different schema
+A shape-less object handle erases both the theory and the object type, so a
+place handle from one notebook can be wired into a mapping in a different schema
 notebook. It compiles, but the referenced cell does not exist in the target
 document, so reading the endpoint back throws at runtime — a failure that only
 surfaces once the editor renders that cell.
@@ -143,19 +147,21 @@ const schema = binder.createGenericNotebook("simple-schema", { name: "Schema" })
 const person = schema.addObject(Entity, { name: "Person" });
 
 // `place` belongs to a different notebook and theory, but both are just
-// `GenericObjectCell`, so wiring it into the schema mapping type-checks.
+// `ObjectCell`, so wiring it into the schema mapping type-checks.
 const mapping = schema.addMorphism(Mapping, { name: "tangled", dom: person, cod: place });
 
 // Reading the endpoint back fails: the place id is not in this document.
-console.log(mapping.cod.name);
+const cod = mapping.cod;
+console.log(Array.isArray(cod) ? cod.length : cod.name);
 ```
 
 ```
 No object cell found for endpoint
 ```
 
-The typed API tags the place handle as `ObjectCell<ObjectType<"Place">>`, which
-is not assignable to the mapping's `ObjectCell<EntityType>` endpoint, so the
+With a shape the place handle is `ObjectCell` of the `Place` type
+(`{ tag: "Basic", content: "Object" }`), which is not assignable to the
+mapping's `Entity` endpoint (`{ tag: "Basic", content: "Entity" }`), so the
 cross-theory wiring is a compile error.
 
 ```ts
@@ -175,13 +181,13 @@ schema.add(Mapping, { name: "tangled", dom: person, cod: place });
 
 ## Why this matters
 
-In each case the bug is the same one the reduced frontend is exposed to: the
-endpoint contract lives only in hand-written encode/decode helpers
-(`encodePlaceIds`/`placeIds` in the Petri-net comparison), so nothing checks that
-a `dom` or `cod` actually holds the right kind of object. The generic API keeps
-that contract at runtime. The typed logic moves it into the type system: object
-and morphism cells are branded with their declared type names, endpoint
-arguments are constrained by the morphism type, and `update`'s `ValidateFields`
-produces targeted messages such as `Expected object cell of type "Entity", got
-"AttrType".`. The mistakes above stop being runtime surprises and become
-compile-time errors.
+In each case the same `Notebook` API is used; only the shape differs. A
+shape-less notebook keeps the endpoint contract at runtime: nothing checks that
+a `dom` or `cod` holds the right kind of object, so wrong-type, wrong-arity, and
+dangling endpoints all type-check and fail only when the cell is read. Declaring
+a shape moves that contract into the type system: `add` is constrained to the
+shape's cell types, and each morphism's endpoints are derived from its `MorType`
+(`Hom(Entity)` wants an `Entity` cell; a `SymmetricList` `Hom` wants a list).
+The mistakes above stop being runtime surprises and become compile-time errors,
+while reads still go through the untyped `cells()` and recover precise handles
+with `byObjectType`/`byMorphismType`.

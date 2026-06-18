@@ -1,36 +1,35 @@
 import type { MorphismCell, ObjectCell } from "catcolab-documents";
-import { defineModelLogic } from "catcolab-documents";
+import { defineShape } from "catcolab-documents";
 
-import type { MorType, ObType } from "catcolab-document-types";
 import { ThSymMonoidalCategory } from "catlog-wasm";
 
-const placeObType: ObType = { tag: "Basic", content: "Object" };
-
-// A transition's source and target are symmetric lists of places, so its
-// morphism type is a `Hom` over a `SymmetricList` modality. This list modality
-// is what drives the array-valued endpoints. The type must be a literal
-// (declared with `satisfies MorType`, not `: MorType`) so the modality survives
-// inference.
+// Object and morphism types are plain `ObType`/`MorType` literals, declared
+// with `as const` so their structure survives type inference. A transition's
+// source and target are symmetric lists of places, so its morphism type is a
+// `Hom` over a `SymmetricList` modality; that list modality is what drives the
+// array-valued endpoints.
+const placeObType = { tag: "Basic", content: "Object" } as const;
 const transitionMorType = {
     tag: "Hom",
     content: {
         tag: "ModeApp",
         content: { modality: "SymmetricList", obType: placeObType },
     },
-} satisfies MorType;
+} as const;
 
-export const PetriNet = defineModelLogic({
+export const PetriNet = defineShape({
     theory: "petri-net",
     coreTheory: new ThSymMonoidalCategory().theory(),
     objects: {
         Place: placeObType,
     },
     morphisms: {
-        Transition: { dom: "Place", cod: "Place", morType: transitionMorType },
+        Transition: transitionMorType,
     },
 });
 
-export const { Place, Transition } = PetriNet.cellTypes;
+export const { Place } = PetriNet.objects;
+export const { Transition } = PetriNet.morphisms;
 
 export type PlaceCell = ObjectCell<typeof Place>;
 export type TransitionCell = MorphismCell<typeof Transition>;

@@ -56,36 +56,13 @@ export const CellKind = {
     Morphism: morphismKind,
 } as const;
 
-/**
- * Runtime discriminant attached to cell-type values by the `objectType` and
- * `morphismType` factories. A symbol key is invisible to `Object.keys` and
- * JSON, so branded type values still compare structurally equal to the bare
- * `ObType`/`MorType` expressions stored in documents. Being required at the
- * type level, it also keeps `ObjectType` and `MorphismType` disjoint.
- */
-const typeKind: unique symbol = Symbol("typeKind");
-
-export type ObjectType<Name extends string> = ObType & {
-    readonly [typeKind]: "object";
-    readonly objectTypeName?: Name;
-};
-export type MorphismType<Dom, Cod, Name extends string> = MorType & {
-    readonly [typeKind]: "morphism";
-    readonly morphismTypeName?: Name;
-    readonly dom?: Dom;
-    readonly cod?: Cod;
-};
-
-/** Any cell type that can belong to a logic. */
-export type CellType = ObjectType<string> | MorphismType<unknown, unknown, string>;
-
 const richTextTypeBrand: unique symbol = Symbol("richTextType");
 
 /**
  * The sentinel cell-type used to add rich-text cells to a notebook. Pass it
- * as the first argument to {@link ModelNotebook.add}; the second argument is
- * `{ content: string }`. Unlike `ObjectType` and `MorphismType`, `RichText`
- * is logic-agnostic and lives at the top level.
+ * as the first argument to {@link Notebook.add}; the second argument is
+ * `{ content: string }`. Unlike object and morphism types, `RichText` is not
+ * an `ObType`/`MorType`; it lives at the top level.
  */
 export type RichTextType = { readonly [richTextTypeBrand]: true };
 
@@ -97,52 +74,10 @@ const isRichTextType = (value: unknown): value is RichTextType =>
     value !== null &&
     (value as RichTextType)[richTextTypeBrand] === true;
 
-type FieldError<Key extends PropertyKey, Message extends string> = {
-    readonly [K in `Type error: ${Key & string}`]: Message;
-};
-
-type ObjectCellTypeName<T> = T extends ObjectCell<ObjectType<infer Name>> ? Name : never;
-
-type ObjectCellMismatchMessage<Expected, Actual> =
-    ObjectCellTypeName<Expected> extends infer ExpectedName extends string
-        ? ObjectCellTypeName<Actual> extends infer ActualName extends string
-            ? `Expected object cell of type "${ExpectedName}", got "${ActualName}".`
-            : `Expected object cell of type "${ExpectedName}".`
-        : "Unexpected endpoint object type.";
-
-type ObjectCellArrayMismatchMessage<Expected, Actual> =
-    ObjectCellTypeName<Expected> extends infer ExpectedName extends string
-        ? ObjectCellTypeName<Actual> extends infer ActualName extends string
-            ? `Expected array of object cells of type "${ExpectedName}", got array containing "${ActualName}".`
-            : `Expected array of object cells of type "${ExpectedName}".`
-        : "Expected an array of objects of the correct endpoint type.";
-
-type UnionToIntersection<T> = (T extends unknown ? (arg: T) => void : never) extends (
-    arg: infer U,
-) => void
-    ? U
-    : never;
-
-type ValidateField<Expected, Actual, Key extends PropertyKey> = Actual extends Expected
-    ? unknown
-    : Expected extends readonly unknown[]
-      ? Actual extends readonly unknown[]
-          ? FieldError<Key, ObjectCellArrayMismatchMessage<Expected[number], Actual[number]>>
-          : FieldError<Key, "Expected an array, not a single object.">
-      : Actual extends readonly unknown[]
-        ? FieldError<Key, "Expected a single object, not an array.">
-        : FieldError<Key, ObjectCellMismatchMessage<Expected, Actual>>;
-
-type ValidateFields<Expected, Actual> = UnionToIntersection<
-    {
-        [Key in keyof Actual & keyof Expected]: ValidateField<Expected[Key], Actual[Key], Key>;
-    }[keyof Actual & keyof Expected]
->;
-
+/** Methods shared by all cell handles for editing a field. */
 type Update<T> = {
-    update<TArgs extends Partial<Record<keyof T, unknown>>>(
-        args: TArgs & ValidateFields<T, TArgs>,
-    ): void;
+    /** Update one or more of the cell's fields. */
+    update(args: Partial<T>): void;
 };
 
 /** Methods shared by all cell handles for re-ordering and removal. Cells
@@ -167,35 +102,80 @@ type Reorder = {
     delete(): void;
 };
 
-export type ObjectCell<TType extends ObjectType<string>> = Update<{ name: string }> &
+/**
+ * An object-cell handle. The cell is parametrized by its `ObType`: two object
+ * types with different `ObType` values (e.g. a Petri-net `Place`, which is
+ * `{ tag: "Basic", content: "Object" }`, and a schema `Entity`, which is
+ * `{ tag: "Basic", content: "Entity" }`) yield distinct, non-interchangeable
+ * cell handles. The widest instantiation, `ObjectCell<ObType>` (or the default
+ * `ObjectCell`), is the untyped form a generic notebook yields.
+ */
+export type ObjectCell<O extends ObType = ObType> = Update<{ name: string }> &
     Reorder & {
         readonly kind: typeof CellKind.Object;
         readonly id: string;
-        readonly type: TType;
+        readonly type: O;
         readonly name: string;
-        duplicate(): ObjectCell<TType>;
+        duplicate(): ObjectCell<O>;
     };
 
-type DomOf<TType> = TType extends MorphismType<infer Dom, unknown, string> ? Dom : never;
-type CodOf<TType> = TType extends MorphismType<unknown, infer Cod, string> ? Cod : never;
+/** Modalities whose endpoints are lists of objects rather than a single one. */
+type ListModality = "List" | "SymmetricList" | "CocartesianList" | "CartesianList" | "AdditiveList";
 
-type MorphismArgs<TType extends MorphismType<unknown, unknown, string>> = {
+/**
+ * The endpoint type of a morphism cell, derived from the morphism's `MorType`:
+ *
+ * - a `Hom` over a list modality (e.g. a Petri-net transition's
+ *   `Hom(ModeApp(SymmetricList, Object))`) has array-valued endpoints of the
+ *   inner object type;
+ * - a plain `Hom` over an object type (e.g. a schema `Mapping`,
+ *   `Hom(Entity)`) has a single object cell of that type;
+ * - any other morphism type (e.g. a `Basic` morphism such as a schema `Attr`)
+ *   does not record its endpoint object type, so its endpoints stay untyped: a
+ *   single object cell or a list of them.
+ *
+ * For the precise cases the `MorType` must be a literal (declare it with
+ * `as const`) so its structure survives inference.
+ */
+export type EndpointOf<M extends MorType> = [M] extends [
+    {
+        tag: "Hom";
+        content: {
+            tag: "ModeApp";
+            content: { modality: infer Mod; obType: infer O extends ObType };
+        };
+    },
+]
+    ? Mod extends ListModality
+        ? ObjectCell<O>[]
+        : ObjectCell<O>
+    : [M] extends [{ tag: "Hom"; content: infer O extends ObType }]
+      ? ObjectCell<O>
+      : ObjectCell<ObType> | ObjectCell<ObType>[];
+
+/**
+ * A morphism-cell handle, parametrized by its `MorType`. The domain and
+ * codomain types are derived from the morphism type by {@link EndpointOf}, so
+ * wiring an endpoint of the wrong object type, or a single object where a list
+ * is required, is a compile error. The widest instantiation,
+ * `MorphismCell<MorType>` (or the default `MorphismCell`), is the untyped form
+ * a generic notebook yields; its endpoints are then the union of a single
+ * object cell or a list, so reading a single field like `cell.dom.name` is a
+ * type error.
+ */
+export type MorphismCell<M extends MorType = MorType> = Update<{
     name: string;
-    dom: DomOf<TType>;
-    cod: CodOf<TType>;
-};
-
-export type MorphismCell<TType extends MorphismType<unknown, unknown, string>> = Update<
-    MorphismArgs<TType>
-> &
+    dom: EndpointOf<M>;
+    cod: EndpointOf<M>;
+}> &
     Reorder & {
         readonly kind: typeof CellKind.Morphism;
         readonly id: string;
-        readonly type: TType;
+        readonly type: M;
         readonly name: string;
-        readonly dom: DomOf<TType>;
-        readonly cod: CodOf<TType>;
-        duplicate(): MorphismCell<TType>;
+        readonly dom: EndpointOf<M>;
+        readonly cod: EndpointOf<M>;
+        duplicate(): MorphismCell<M>;
     };
 
 export type RichTextCell = Update<{ content: string }> &
@@ -206,31 +186,16 @@ export type RichTextCell = Update<{ content: string }> &
     };
 
 /**
- * One `ObjectCell` per object type of the logic, mapped over keys so that each
- * handle wraps the exact type value. The non-distributive `infer ... extends`
- * check selects object types without shattering each `ObType` union into its
- * variants (as a distributive conditional would).
+ * The union of cell handles that iterating a notebook with {@link
+ * Notebook.cells} yields. It is intentionally untyped: object and morphism
+ * cells come back as the widest `ObjectCell`/`MorphismCell`. Recover precise,
+ * type-checked handles by filtering with {@link byObjectType} or {@link
+ * byMorphismType}.
  */
-type LogicObjectCell<TLogic extends AnyModelLogic> = {
-    [K in keyof TLogic["cellTypes"]]: TLogic["cellTypes"][K] extends infer T extends
-        ObjectType<string>
-        ? ObjectCell<T>
-        : never;
-}[keyof TLogic["cellTypes"]];
-
-/** One `MorphismCell` per morphism type of the logic. */
-type LogicMorphismCell<TLogic extends AnyModelLogic> = {
-    [K in keyof TLogic["cellTypes"]]: TLogic["cellTypes"][K] extends infer T extends MorphismType<
-        unknown,
-        unknown,
-        string
-    >
-        ? MorphismCell<T>
-        : never;
-}[keyof TLogic["cellTypes"]];
+export type NotebookCell = RichTextCell | ObjectCell | MorphismCell;
 
 /**
- * A pushforward migration from this logic to another. Mirrors the core: it
+ * A pushforward migration from this shape to another. Mirrors the core: it
  * transports an elaborated model along a theory morphism into the target
  * theory. The target's core theory is supplied by the caller of `migrate`.
  */
@@ -241,28 +206,49 @@ export type ModelMigration = {
     readonly migrate: (model: DblModel, targetTheory: DblTheory) => DblModel;
 };
 
-export type ModelLogic<Theory extends string, TCellTypes extends Record<string, CellType>> = {
-    /** Identifier of the document theory this logic targets. */
-    readonly theory: Theory;
+/**
+ * A shape describes the object and morphism types a notebook is built from.
+ *
+ * - With a `theory` (and usually a `coreTheory`) it is a full, *creatable*
+ *   shape: a notebook can be created, loaded, validated and migrated from it.
+ * - Without a `theory` it is a *sub-shape*: a structural contract a component
+ *   declares over a subset of cell types. It can type props, filter cells and
+ *   edit an existing notebook, but cannot originate a document.
+ *
+ * Object and morphism types are plain `ObType`/`MorType` literals; declare
+ * them with `as const` so their structure (and a morphism's endpoint object
+ * type) survives type inference.
+ */
+export type Shape = {
+    /** Identifier of the document theory; omit for a sub-shape contract. */
+    readonly theory?: string;
     /**
-     * The double theory in the core that notebooks of this logic elaborate
-     * into. Obtained from a `catlog-wasm` theory class, e.g.
-     * `new ThCategory().theory()`.
+     * The double theory in the core that notebooks of this shape elaborate
+     * into, e.g. `new ThCategory().theory()`. Optional: a sub-shape has none,
+     * and {@link Notebook.validate} can also be passed one explicitly.
      */
-    readonly coreTheory: DblTheory;
-    readonly cellTypes: TCellTypes;
-    /**
-     * Theories this logic includes into. Migrating to an inclusion target is
-     * trivial: only the document's theory changes, cell types are untouched.
-     */
+    readonly coreTheory?: DblTheory;
+    /** Object types, keyed by name. */
+    readonly objects: Record<string, ObType>;
+    /** Morphism types, keyed by name. */
+    readonly morphisms: Record<string, MorType>;
+    /** Theories this shape includes into (trivial migration target). */
     readonly inclusions?: readonly string[];
-    /**
-     * Non-trivial migrations to other logics, keyed by target theory. Used by
-     * {@link ModelNotebook.migrate} to transport the elaborated model and
-     * re-type cells.
-     */
+    /** Non-trivial migrations to other shapes, keyed by target theory. */
     readonly migrations?: readonly ModelMigration[];
 };
+
+/** Any shape, used as the default and as a generic constraint. */
+type AnyShape = Shape;
+
+/** A shape that can originate a document: it carries a document theory. */
+type CreatableShape = Shape & { readonly theory: string };
+
+/** The union of a shape's object types. */
+type ShapeObjects<TShape extends AnyShape> = TShape["objects"][keyof TShape["objects"]] & ObType;
+/** The union of a shape's morphism types. */
+type ShapeMorphisms<TShape extends AnyShape> = TShape["morphisms"][keyof TShape["morphisms"]] &
+    MorType;
 
 /** An elaborated model together with its validation status. */
 export type ModelValidationResult =
@@ -273,345 +259,39 @@ export type ModelValidationResult =
     /** Failed to even elaborate into a model. */
     | { tag: "Illformed"; model: null; error: string };
 
-type AnyModelLogic = ModelLogic<string, Record<string, CellType>>;
-
-/** The object types of a logic, selected from `cellTypes` by their brand. */
-type LogicObjectType<TLogic extends AnyModelLogic> = {
-    [K in keyof TLogic["cellTypes"]]: TLogic["cellTypes"][K] extends infer T extends
-        ObjectType<string>
-        ? T
-        : never;
-}[keyof TLogic["cellTypes"]];
-
-/** The morphism types of a logic, selected from `cellTypes` by their brand. */
-type LogicMorphismType<TLogic extends AnyModelLogic> = {
-    [K in keyof TLogic["cellTypes"]]: TLogic["cellTypes"][K] extends infer T extends MorphismType<
-        unknown,
-        unknown,
-        string
-    >
-        ? T
-        : never;
-}[keyof TLogic["cellTypes"]];
-
 /**
- * The union of cell handles that iterating over a notebook can yield,
- * distributed over the logic's exact object and morphism types so that
- * comparisons like `cell.type === Entity` narrow the handle.
+ * Define a shape from a compact declaration of object and morphism types.
+ * Object and morphism types are `ObType`/`MorType` literals (declare them with
+ * `as const`); a morphism's endpoint object type and arity are read from its
+ * `MorType` structure. `theory`/`coreTheory` are optional: include them for a
+ * creatable shape, omit them for a sub-shape contract.
  */
-export type NotebookCell<TLogic extends AnyModelLogic> =
-    | RichTextCell
-    | LogicObjectCell<TLogic>
-    | LogicMorphismCell<TLogic>;
-
-/**
- * An object-cell handle in a {@link GenericNotebook}. Unlike {@link ObjectCell},
- * the cell's `type` is the bare, un-branded `ObType` read from the document
- * rather than a logic's exact object type.
- */
-export type GenericObjectCell = Update<{ name: string }> &
-    Reorder & {
-        readonly kind: typeof CellKind.Object;
-        readonly id: string;
-        readonly type: ObType;
-        readonly name: string;
-        duplicate(): GenericObjectCell;
-    };
-
-/** Endpoint of a generic morphism: a single object cell or a list of them. */
-type GenericEndpoint = GenericObjectCell | GenericObjectCell[];
-
-/**
- * A morphism-cell handle in a {@link GenericNotebook}. The `type` is a bare
- * `MorType`, and endpoints are unconstrained object-cell references.
- */
-export type GenericMorphismCell<
-    Dom extends GenericEndpoint = GenericObjectCell[],
-    Cod extends GenericEndpoint = GenericObjectCell[],
-> = Update<{
-    name: string;
-    dom: Dom;
-    cod: Cod;
-}> &
-    Reorder & {
-        readonly kind: typeof CellKind.Morphism;
-        readonly id: string;
-        readonly type: MorType;
-        readonly name: string;
-        readonly dom: Dom;
-        readonly cod: Cod;
-        duplicate(): GenericMorphismCell<Dom, Cod>;
-    };
-
-/** The union of cell handles a {@link GenericNotebook} can yield. */
-export type GenericNotebookCell = RichTextCell | GenericObjectCell | GenericMorphismCell<any, any>;
-
-export type ModelNotebook<TLogic extends AnyModelLogic, Handle = ModelDocument> = Update<{
-    name: string;
-}> & {
-    /** Reactive read of the notebook's name. */
-    readonly name: string;
-    /**
-     * The store handle this notebook is bound to, e.g. an Automerge
-     * `DocHandle`. With the plain in-memory store it is the document itself.
-     */
-    readonly handle: Handle;
-    /**
-     * The underlying document. With a reactive store (Solid, Automerge), this
-     * is the reactive proxy; with the plain in-memory store it is the raw
-     * object.
-     */
-    readonly document: ModelDocument;
-    /** Make a detached plain-JS snapshot of the underlying document. */
-    dump(): ModelDocument;
-    /**
-     * Elaborate the notebook into a core model and validate it. Returns a
-     * tagged result: `Valid` with the model, `Invalid` with the model and its
-     * validation errors, or `Illformed` if elaboration itself failed.
-     *
-     * The core theory to elaborate into defaults to the logic's `coreTheory`;
-     * pass one explicitly to elaborate against a different theory (this is how
-     * a {@link GenericNotebook}, which has no logic, supplies its theory).
-     */
-    validate(coreTheory?: DblTheory): ModelValidationResult;
-    /**
-     * Migrate the notebook's document to another logic, **mutating it in
-     * place**: the underlying document is rewritten to the target theory rather
-     * than copied. Mirrors the core — the elaborated model is transported along
-     * a theory morphism and each cell is re-typed, preserving cell ids, names,
-     * and morphism endpoints.
-     *
-     * Returns a new notebook handle bound to the target logic over the same
-     * store handle and document. The original handle is now stale (its
-     * implicit types no longer match the document), so continue through the
-     * returned handle. Throws if no migration to the target logic is defined.
-     */
-    migrate<TTarget extends AnyModelLogic>(targetLogic: TTarget): ModelNotebook<TTarget, Handle>;
-    /** Handles for all cells, in notebook order. */
-    cells(): Array<NotebookCell<TLogic>>;
-    /**
-     * Add a cell to the notebook. The kind of cell is selected by the first
-     * argument:
-     *
-     * - {@link RichText} adds a rich-text cell; `args` is `{ content }`.
-     * - An object type from the logic adds an object cell; `args` is `{ name }`.
-     * - A morphism type from the logic adds a morphism cell; `args` is
-     *   `{ name, dom, cod }`, with `dom`/`cod` constrained by the morphism type.
-     */
-    add(type: RichTextType, args: { content: string }): RichTextCell;
-    add<TType extends LogicMorphismType<TLogic> = LogicMorphismType<TLogic>>(
-        type: TType,
-        args: MorphismArgs<TType>,
-    ): MorphismCell<TType>;
-    add<TType extends LogicObjectType<TLogic> = LogicObjectType<TLogic>>(
-        type: TType,
-        args: { name: string },
-    ): ObjectCell<TType>;
-    /**
-     * Add an object cell from a bare {@link ObType}, bypassing the logic's
-     * typed object constructors. The returned handle is an untyped
-     * {@link GenericObjectCell}. Useful when the object type is computed at
-     * runtime rather than chosen from the logic.
-     */
-    addObject(type: ObType, args: { name: string }): GenericObjectCell;
-    /**
-     * Add a morphism cell from a bare {@link MorType}, bypassing the logic's
-     * typed morphism constructors. Endpoints are untyped object-cell handles.
-     * Endpoint shape follows the morphism type: a list-modality `Hom` (e.g.
-     * `Hom(ModeApp(SymmetricList, Object))`) stores and reads its endpoints as
-     * arrays of object cells; any other morphism type uses single object cells.
-     */
-    addMorphism<
-        TDom extends GenericEndpoint = GenericEndpoint,
-        TCod extends GenericEndpoint = GenericEndpoint,
-    >(
-        type: MorType,
-        args: { name: string; dom?: TDom; cod?: TCod },
-    ): GenericMorphismCell<TDom, TCod>;
-};
-
-/**
- * A notebook viewed without a static logic: cell types are bare `ObType` and
- * `MorType` values rather than a logic's exact branded types. Every typed
- * {@link ModelNotebook} is also a `GenericNotebook`, so code that does not need
- * the static typing can accept the wider interface.
- *
- * Cells are added with {@link addObject} and {@link addMorphism} (or
- * {@link add} with {@link RichText}); there are no logic-specific constructors.
- * Because there is no logic to supply a core theory, {@link validate} requires
- * one to be passed in.
- */
-export type GenericNotebook<Handle = ModelDocument> = Update<{ name: string }> & {
-    readonly name: string;
-    readonly handle: Handle;
-    readonly document: ModelDocument;
-    dump(): ModelDocument;
-    /** Elaborate and validate against the given core theory. */
-    validate(coreTheory: DblTheory): ModelValidationResult;
-    /** Handles for all cells, in notebook order. */
-    cells(): Array<GenericNotebookCell>;
-    /** Add a rich-text cell. */
-    add(type: RichTextType, args: { content: string }): RichTextCell;
-    /** Add an object cell from a bare {@link ObType}. */
-    addObject(type: ObType, args: { name: string }): GenericObjectCell;
-    /**
-     * Add a morphism cell from a bare {@link MorType}. Endpoint shape follows
-     * the morphism type's modality: a list-modality `Hom` uses arrays of object
-     * cells, any other morphism type uses single object cells.
-     */
-    addMorphism<
-        TDom extends GenericEndpoint = GenericEndpoint,
-        TCod extends GenericEndpoint = GenericEndpoint,
-    >(
-        type: MorType,
-        args: { name: string; dom?: TDom; cod?: TCod },
-    ): GenericMorphismCell<TDom, TCod>;
-};
-
-export const objectType = <Name extends string>(content: string) =>
-    ({ tag: "Basic", content, [typeKind]: "object" }) as ObjectType<Name>;
-
-export const morphismType = <Dom, Cod, Name extends string>(morType?: MorType) =>
-    ({
-        ...(morType ?? { tag: "Hom", content: { tag: "Basic", content: "Object" } }),
-        [typeKind]: "morphism",
-    }) as MorphismType<Dom, Cod, Name>;
-
-type ObjectTypeSpec = ObType;
-type ObjectName<TObjects extends Record<string, ObjectTypeSpec>> = keyof TObjects & string;
-type EndpointSpec<TObjects extends Record<string, ObjectTypeSpec>> = ObjectName<TObjects>;
-
-/**
- * Modalities whose endpoints are lists of objects rather than a single
- * object. A morphism type over one of these (e.g. a Petri-net transition's
- * `Hom(ModeApp(SymmetricList, Object))`) has array-valued endpoints.
- */
-type ListModality = "List" | "SymmetricList" | "CocartesianList" | "CartesianList" | "AdditiveList";
-
-/**
- * Whether a morphism type's endpoints are list-valued, read from the modality
- * in its `Hom` content. The morphism type must be a literal (declare it with
- * `satisfies MorType`, not `: MorType`) so the modality survives inference.
- */
-type MorTypeIsList<TMorType> = TMorType extends {
-    tag: "Hom";
-    content: { tag: "ModeApp"; content: { modality: infer M } };
-}
-    ? M extends ListModality
-        ? true
-        : false
-    : false;
-
-type GeneratedObjectTypes<TObjects extends Record<string, ObjectTypeSpec>> = {
-    readonly [K in keyof TObjects & string]: ObjectType<K>;
-};
-
-type EndpointType<
-    TObjects extends Record<string, ObjectTypeSpec>,
-    TName extends ObjectName<TObjects>,
-    TIsList extends boolean,
-> = TIsList extends true ? ObjectCell<ObjectType<TName>>[] : ObjectCell<ObjectType<TName>>;
-
-type GeneratedMorphismSpec<TObjects extends Record<string, ObjectTypeSpec>> = {
-    readonly dom: EndpointSpec<TObjects>;
-    readonly cod: EndpointSpec<TObjects>;
-    readonly morType: MorType;
-};
-
-type GeneratedMorphismTypes<
-    TObjects extends Record<string, ObjectTypeSpec>,
-    TMorphisms extends Record<string, GeneratedMorphismSpec<TObjects>>,
-> = {
-    readonly [K in keyof TMorphisms & string]: MorphismType<
-        EndpointType<TObjects, TMorphisms[K]["dom"], MorTypeIsList<TMorphisms[K]["morType"]>>,
-        EndpointType<TObjects, TMorphisms[K]["cod"], MorTypeIsList<TMorphisms[K]["morType"]>>,
-        K
-    >;
-};
-
-type GeneratedCellTypes<
-    TObjects extends Record<string, ObjectTypeSpec>,
-    TMorphisms extends Record<string, GeneratedMorphismSpec<TObjects>>,
-> = GeneratedObjectTypes<TObjects> & GeneratedMorphismTypes<TObjects, TMorphisms>;
-
-type GeneratedLogic<
-    TTheory extends string,
-    TObjects extends Record<string, ObjectTypeSpec>,
-    TMorphisms extends Record<string, GeneratedMorphismSpec<TObjects>>,
-> = ModelLogic<TTheory, GeneratedCellTypes<TObjects, TMorphisms>>;
-
-type GeneratedLogicSpec<
-    TTheory extends string,
-    TObjects extends Record<string, ObjectTypeSpec>,
-    TMorphisms extends Record<string, GeneratedMorphismSpec<TObjects>>,
-> = {
-    readonly theory: TTheory;
-    readonly coreTheory: DblTheory;
-    readonly objects: TObjects;
-    readonly morphisms: TMorphisms;
-    readonly inclusions?: readonly string[];
-    readonly migrations?: readonly ModelMigration[];
-};
-
-const objectTypeFromSpec = <Name extends string>(spec: ObjectTypeSpec) =>
-    ({
-        ...spec,
-        [typeKind]: "object",
-    }) as ObjectType<Name>;
-
-/**
- * Generate a typed `ModelLogic` from a compact declaration of object and
- * morphism cell types. Objects and morphisms require explicit `ObType` and
- * `MorType` values. Object keys become typed object-cell constructors;
- * morphism endpoint references point at those object keys. Endpoint arity is
- * taken from the morphism type: a `Hom` over a list modality such as
- * `SymmetricList` yields array-valued endpoints (e.g. Petri-net transition
- * boundaries). For that to be visible to the type system, declare such
- * morphism types as literals with `satisfies MorType` rather than `: MorType`.
- */
-export function defineModelLogic<
-    const TTheory extends string,
-    const TObjects extends Record<string, ObjectTypeSpec>,
-    const TMorphisms extends Record<string, GeneratedMorphismSpec<TObjects>>,
->(
-    spec: GeneratedLogicSpec<TTheory, TObjects, TMorphisms>,
-): GeneratedLogic<TTheory, TObjects, TMorphisms> {
-    const objectTypes = Object.fromEntries(
-        Object.entries(spec.objects).map(([name, objectSpec]) => [
-            name,
-            objectTypeFromSpec(objectSpec),
-        ]),
-    );
-    const morphismTypes = Object.fromEntries(
-        Object.entries(spec.morphisms).map(([name, morphismSpec]) => [
-            name,
-            morphismType(morphismSpec.morType),
-        ]),
-    );
-
-    return {
-        theory: spec.theory,
-        coreTheory: spec.coreTheory,
-        cellTypes: { ...objectTypes, ...morphismTypes },
-        ...(spec.inclusions ? { inclusions: spec.inclusions } : {}),
-        ...(spec.migrations ? { migrations: spec.migrations } : {}),
-    } as GeneratedLogic<TTheory, TObjects, TMorphisms>;
+export function defineShape<const TSpec extends Shape>(spec: TSpec): TSpec {
+    return spec;
 }
 
 /**
- * Typed filter for cells with exactly the given object or morphism type.
- * TypeScript only narrows `===` comparisons on unit types, so a comparison
- * like `cell.type === Entity` cannot narrow a cell handle by itself; this
- * guard carries the narrowing instead.
+ * Typed filter for cells of exactly the given object type. TypeScript only
+ * narrows `===` comparisons on unit types, so a comparison like `cell.type ===
+ * Place` cannot narrow a cell handle by itself; this guard carries the
+ * narrowing instead. Matching is structural, so a cell whose stored `ObType`
+ * equals `type` is selected regardless of which shape produced `type`.
  */
-export function byType<TType extends ObjectType<string>>(
-    type: TType,
-): (cell: { readonly kind: symbol }) => cell is ObjectCell<TType>;
-export function byType<TType extends MorphismType<unknown, unknown, string>>(
-    type: TType,
-): (cell: { readonly kind: symbol }) => cell is MorphismCell<TType>;
-export function byType(type: CellType) {
-    return (cell: { readonly kind: symbol }): boolean => (cell as { type?: unknown }).type === type;
+export function byObjectType<O extends ObType>(
+    type: O,
+): (cell: { readonly kind: symbol }) => cell is ObjectCell<O> {
+    return (cell): cell is ObjectCell<O> =>
+        (cell as { kind: symbol }).kind === CellKind.Object &&
+        sameTypeValue((cell as { type?: unknown }).type, type);
+}
+
+/** Typed filter for cells of exactly the given morphism type. */
+export function byMorphismType<M extends MorType>(
+    type: M,
+): (cell: { readonly kind: symbol }) => cell is MorphismCell<M> {
+    return (cell): cell is MorphismCell<M> =>
+        (cell as { kind: symbol }).kind === CellKind.Morphism &&
+        sameTypeValue((cell as { type?: unknown }).type, type);
 }
 
 /** Structural equality of stored type expressions (plain JSON-like values). */
@@ -642,7 +322,7 @@ const LIST_MODALITIES: ReadonlySet<Modality> = new Set<Modality>([
 /**
  * The list modality of a morphism type's endpoints, read from the modality in
  * its `Hom` content, or `null` when the endpoints are single objects. This is
- * the runtime counterpart of the {@link MorTypeIsList} type.
+ * the runtime counterpart of the list branch of {@link EndpointOf}.
  */
 const morTypeListModality = (morType: MorType): Modality | null => {
     if (morType.tag !== "Hom") {
@@ -694,11 +374,11 @@ const encodeEndpoint = (morType: MorType, value: unknown): Ob | null => {
     return encodeObjectRef(value as { readonly id: string });
 };
 
-function attachNotebook<TLogic extends AnyModelLogic, Handle>(
+function attachNotebook<TShape extends AnyShape, Handle>(
     store: DocumentStore<Handle>,
     handle: Handle,
-    logic: TLogic,
-): ModelNotebook<TLogic, Handle> {
+    shape: TShape,
+): Notebook<TShape, Handle> {
     const doc = store.viewDocument(handle);
     const change = (fn: (doc: ModelDocument) => void) => store.changeDocument(handle, fn);
     const copy = store.copyValue ? <T>(value: T) => store.copyValue!(handle, value) : undefined;
@@ -767,7 +447,7 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
         delete: () => deleteCell(cellId),
     });
 
-    const objectHandle = <TType extends LogicObjectType<TLogic>>(cellId: string, type: TType) =>
+    const objectHandle = <O extends ObType>(cellId: string, type: O): ObjectCell<O> =>
         ({
             kind: CellKind.Object,
             get id() {
@@ -789,19 +469,16 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
                 return objectHandle(appendDuplicate(cellId), type);
             },
             ...reorderMethods(cellId),
-        }) as unknown as ObjectCell<TType>;
+        }) as unknown as ObjectCell<O>;
 
-    const objectHandleForId = (objectId: string): GenericObjectCell => {
+    const objectHandleForId = (objectId: string): ObjectCell => {
         for (const candidateCellId of doc.notebook.cellOrder) {
             const cell = doc.notebook.cellContents[candidateCellId];
             if (cell?.tag !== "formal" || cell.content.tag !== "object") {
                 continue;
             }
             if (cell.content.id === objectId) {
-                return objectHandle(
-                    candidateCellId,
-                    findObjectType(cell.content.obType),
-                ) as unknown as GenericObjectCell;
+                return objectHandle(candidateCellId, cell.content.obType);
             }
         }
         throw new Error(`No object cell found for endpoint '${objectId}'.`);
@@ -809,7 +486,7 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
 
     /** Flatten any stored endpoint object into the object-cell handles it
     references, regardless of tensor/list wrapping. */
-    const decodeEndpointObjects = (value: Ob | null): GenericObjectCell[] => {
+    const decodeEndpointObjects = (value: Ob | null): ObjectCell[] => {
         if (!value) {
             return [];
         }
@@ -827,15 +504,15 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
 
     /** Decode a stored endpoint, choosing array vs single shape from the
     morphism type's modality rather than from the stored value's shape. */
-    const decodeEndpoint = (morType: MorType, value: Ob | null): GenericEndpoint => {
+    const decodeEndpoint = (morType: MorType, value: Ob | null): ObjectCell | ObjectCell[] => {
         const objects = decodeEndpointObjects(value);
         if (morTypeListModality(morType) !== null) {
             return objects;
         }
-        return objects[0] as GenericEndpoint;
+        return objects[0] as ObjectCell;
     };
 
-    const morphismHandle = <TType extends LogicMorphismType<TLogic>>(cellId: string, type: TType) =>
+    const morphismHandle = <M extends MorType>(cellId: string, type: M): MorphismCell<M> =>
         ({
             kind: CellKind.Morphism,
             get id() {
@@ -846,18 +523,12 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
                 return readCellContent<{ name: string }>(cellId).name;
             },
             get dom() {
-                return decodeEndpoint(
-                    type as MorType,
-                    readCellContent<{ dom: Ob | null }>(cellId).dom,
-                ) as DomOf<TType>;
+                return decodeEndpoint(type, readCellContent<{ dom: Ob | null }>(cellId).dom);
             },
             get cod() {
-                return decodeEndpoint(
-                    type as MorType,
-                    readCellContent<{ cod: Ob | null }>(cellId).cod,
-                ) as CodOf<TType>;
+                return decodeEndpoint(type, readCellContent<{ cod: Ob | null }>(cellId).cod);
             },
-            update(u: Partial<MorphismArgs<TType>>) {
+            update(u: { name?: string; dom?: unknown; cod?: unknown }) {
                 change((d) => {
                     const content = (
                         d.notebook.cellContents[cellId] as {
@@ -865,13 +536,13 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
                         }
                     ).content;
                     if (u.name !== undefined) {
-                        content.name = u.name as string;
+                        content.name = u.name;
                     }
                     if ("dom" in u) {
-                        content.dom = encodeEndpoint(type as MorType, u.dom);
+                        content.dom = encodeEndpoint(type, u.dom);
                     }
                     if ("cod" in u) {
-                        content.cod = encodeEndpoint(type as MorType, u.cod);
+                        content.cod = encodeEndpoint(type, u.cod);
                     }
                 });
             },
@@ -879,7 +550,7 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
                 return morphismHandle(appendDuplicate(cellId), type);
             },
             ...reorderMethods(cellId),
-        }) as unknown as MorphismCell<TType>;
+        }) as unknown as MorphismCell<M>;
 
     const richTextHandle = (cellId: string): RichTextCell =>
         ({
@@ -896,41 +567,34 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
             ...reorderMethods(cellId),
         }) as unknown as RichTextCell;
 
-    // A generic notebook carries no cell types; cell handles then report the
-    // bare `ObType`/`MorType` stored in each judgment rather than a matched
-    // logic type. A logic with cell types still requires an exact match.
-    const isGeneric = Object.keys(logic.cellTypes).length === 0;
+    const isShapeMorphism = (type: MorType): boolean =>
+        Object.values(shape.morphisms).some((t) => sameTypeValue(t, type));
 
-    const findObjectType = (obType: ObType): LogicObjectType<TLogic> => {
-        const match = Object.values(logic.cellTypes).find(
-            (t) => t[typeKind] === "object" && sameTypeValue(t, obType),
-        );
-        if (!match) {
-            if (isGeneric) {
-                return obType as LogicObjectType<TLogic>;
-            }
-            throw new Error(
-                `No object type in logic with theory "${logic.theory}" ` +
-                    `matches ${JSON.stringify(obType)}.`,
-            );
-        }
-        return match as LogicObjectType<TLogic>;
+    const addObjectCell = (type: ObType, name: string): ObjectCell => {
+        const judgment = newObjectDecl(type);
+        judgment.name = name;
+        const formalCell = newFormalCell(judgment);
+        change((d) => {
+            d.notebook.cellContents[formalCell.id] = formalCell;
+            d.notebook.cellOrder.push(formalCell.id);
+        });
+        return objectHandle(formalCell.id, type);
     };
 
-    const findMorphismType = (morType: MorType): LogicMorphismType<TLogic> => {
-        const match = Object.values(logic.cellTypes).find(
-            (t) => t[typeKind] === "morphism" && sameTypeValue(t, morType),
-        );
-        if (!match) {
-            if (isGeneric) {
-                return morType as LogicMorphismType<TLogic>;
-            }
-            throw new Error(
-                `No morphism type in logic with theory "${logic.theory}" ` +
-                    `matches ${JSON.stringify(morType)}.`,
-            );
-        }
-        return match as LogicMorphismType<TLogic>;
+    const addMorphismCell = (
+        type: MorType,
+        args: { name: string; dom?: unknown; cod?: unknown },
+    ): MorphismCell => {
+        const judgment = newMorphismDecl(type);
+        judgment.name = args.name;
+        judgment.dom = encodeEndpoint(type, args.dom);
+        judgment.cod = encodeEndpoint(type, args.cod);
+        const formalCell = newFormalCell(judgment);
+        change((d) => {
+            d.notebook.cellContents[formalCell.id] = formalCell;
+            d.notebook.cellOrder.push(formalCell.id);
+        });
+        return morphismHandle(formalCell.id, type);
     };
 
     return {
@@ -945,13 +609,20 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
             return copy ? copy(doc) : structuredClone(doc);
         },
         validate(coreTheory?: DblTheory): ModelValidationResult {
+            const theory = coreTheory ?? shape.coreTheory;
+            if (!theory) {
+                throw new Error(
+                    "validate() needs a core theory: this shape has no `coreTheory`, " +
+                        "so pass one explicitly.",
+                );
+            }
             const snapshot = copy ? copy(doc) : structuredClone(doc);
             let model: DblModel;
             try {
                 model = elaborateModel(
                     snapshot.notebook as unknown as WasmModelNotebook,
                     new DblModelMap(),
-                    coreTheory ?? logic.coreTheory,
+                    theory,
                     v7(),
                 );
             } catch (e) {
@@ -963,27 +634,32 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
             }
             return { tag: "Invalid", model, errors: result.content };
         },
-        migrate<TTarget extends AnyModelLogic>(targetLogic: TTarget) {
+        migrate<TTarget extends CreatableShape>(targetShape: TTarget) {
             // Trivial migration: an empty notebook or an inclusion target only
             // needs its theory rewritten; cell types are left untouched.
             const hasFormalCells = doc.notebook.cellOrder.some(
                 (cellId) => doc.notebook.cellContents[cellId]?.tag === "formal",
             );
-            const isInclusion = (logic.inclusions ?? []).includes(targetLogic.theory);
+            const isInclusion = (shape.inclusions ?? []).includes(targetShape.theory);
             if (!hasFormalCells || isInclusion) {
                 change((d) => {
-                    d.theory = targetLogic.theory;
+                    d.theory = targetShape.theory;
                     delete d.editorVariant;
                 });
-                return attachNotebook(store, handle, targetLogic);
+                return attachNotebook(store, handle, targetShape);
             }
 
             // Pushforward migration: transport the elaborated model along the
             // theory morphism, then re-type each cell from the migrated model.
-            const migration = (logic.migrations ?? []).find((m) => m.target === targetLogic.theory);
+            const migration = (shape.migrations ?? []).find((m) => m.target === targetShape.theory);
             if (!migration) {
                 throw new Error(
-                    `No migration defined from "${logic.theory}" to "${targetLogic.theory}".`,
+                    `No migration defined from "${shape.theory}" to "${targetShape.theory}".`,
+                );
+            }
+            if (!shape.coreTheory || !targetShape.coreTheory) {
+                throw new Error(
+                    "Migration needs the source and target core theories; one shape has none.",
                 );
             }
 
@@ -993,20 +669,20 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
                 model = elaborateModel(
                     snapshot.notebook as unknown as WasmModelNotebook,
                     new DblModelMap(),
-                    logic.coreTheory,
+                    shape.coreTheory,
                     v7(),
                 );
             } catch (e) {
                 throw new Error(
-                    `Cannot migrate notebook from "${logic.theory}" to ` +
-                        `"${targetLogic.theory}": the model failed to elaborate (${String(e)}).`,
+                    `Cannot migrate notebook from "${shape.theory}" to ` +
+                        `"${targetShape.theory}": the model failed to elaborate (${String(e)}).`,
                     { cause: e },
                 );
             }
 
-            const migrated = migration.migrate(model, targetLogic.coreTheory);
+            const migrated = migration.migrate(model, targetShape.coreTheory);
             change((d) => {
-                d.theory = targetLogic.theory;
+                d.theory = targetShape.theory;
                 delete d.editorVariant;
                 for (const cellId of d.notebook.cellOrder) {
                     const cell = d.notebook.cellContents[cellId];
@@ -1021,14 +697,14 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
                     }
                 }
             });
-            return attachNotebook(store, handle, targetLogic);
+            return attachNotebook(store, handle, targetShape);
         },
         update(u: { name?: string }) {
             change((d) => {
                 Object.assign(d, u);
             });
         },
-        cells(): Array<NotebookCell<TLogic>> {
+        cells(): Array<NotebookCell> {
             return doc.notebook.cellOrder.map((cellId) => {
                 const cell = doc.notebook.cellContents[cellId];
                 if (!cell) {
@@ -1040,15 +716,18 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
                 const judgment = cell.content as ModelJudgment;
                 switch (judgment.tag) {
                     case "object":
-                        return objectHandle(cellId, findObjectType(judgment.obType));
+                        return objectHandle(cellId, judgment.obType);
                     case "morphism":
-                        return morphismHandle(cellId, findMorphismType(judgment.morType));
+                        return morphismHandle(cellId, judgment.morType);
                     default:
                         throw new Error(`Unsupported judgment tag: ${judgment.tag}`);
                 }
-            }) as Array<NotebookCell<TLogic>>;
+            });
         },
-        add(type: unknown, args: { content?: string; name?: string }) {
+        add(
+            type: unknown,
+            args: { content?: string; name?: string; dom?: unknown; cod?: unknown },
+        ) {
             if (isRichTextType(type)) {
                 const cell = newRichTextCell((args as { content: string }).content);
                 change((d) => {
@@ -1057,157 +736,175 @@ function attachNotebook<TLogic extends AnyModelLogic, Handle>(
                 });
                 return richTextHandle(cell.id);
             }
-            if (isLogicMorphismType(type)) {
-                const morType = type as LogicMorphismType<TLogic>;
-                const judgment = newMorphismDecl(morType);
-                const morArgs = args as { name: string; dom?: unknown; cod?: unknown };
-                judgment.name = morArgs.name;
-                judgment.dom = encodeEndpoint(morType, morArgs.dom);
-                judgment.cod = encodeEndpoint(morType, morArgs.cod);
-                const formalCell = newFormalCell(judgment);
-                change((d) => {
-                    d.notebook.cellContents[formalCell.id] = formalCell;
-                    d.notebook.cellOrder.push(formalCell.id);
-                });
-                return morphismHandle(formalCell.id, morType);
+            const cellType = type as ObType | MorType;
+            const looksLikeMorphism =
+                cellType.tag === "Hom" ||
+                cellType.tag === "Composite" ||
+                "dom" in args ||
+                "cod" in args ||
+                isShapeMorphism(cellType as MorType);
+            if (looksLikeMorphism) {
+                return addMorphismCell(cellType as MorType, args as { name: string });
             }
-            if (isLogicObjectType(type)) {
-                const obType = type as LogicObjectType<TLogic>;
-                const judgment = newObjectDecl(obType);
-                judgment.name = (args as { name: string }).name;
-                const formalCell = newFormalCell(judgment);
-                change((d) => {
-                    d.notebook.cellContents[formalCell.id] = formalCell;
-                    d.notebook.cellOrder.push(formalCell.id);
-                });
-                return objectHandle(formalCell.id, obType);
-            }
-            throw new Error(
-                `Unknown cell type passed to add(); expected RichText, an object type ` +
-                    `or morphism type belonging to logic "${logic.theory}".`,
-            );
+            return addObjectCell(cellType as ObType, (args as { name: string }).name);
         },
-        addObject(type: ObType, args: { name: string }): GenericObjectCell {
-            const judgment = newObjectDecl(type);
-            judgment.name = args.name;
-            const formalCell = newFormalCell(judgment);
-            change((d) => {
-                d.notebook.cellContents[formalCell.id] = formalCell;
-                d.notebook.cellOrder.push(formalCell.id);
-            });
-            return objectHandle(
-                formalCell.id,
-                type as LogicObjectType<TLogic>,
-            ) as unknown as GenericObjectCell;
+        addObject(type: ObType, args: { name: string }) {
+            return addObjectCell(type, args.name);
         },
-        addMorphism(
-            type: MorType,
-            args: { name: string; dom?: GenericEndpoint; cod?: GenericEndpoint },
-        ): GenericMorphismCell {
-            const judgment = newMorphismDecl(type);
-            judgment.name = args.name;
-            judgment.dom = encodeEndpoint(type, args.dom);
-            judgment.cod = encodeEndpoint(type, args.cod);
-            const formalCell = newFormalCell(judgment);
-            change((d) => {
-                d.notebook.cellContents[formalCell.id] = formalCell;
-                d.notebook.cellOrder.push(formalCell.id);
-            });
-            return morphismHandle(
-                formalCell.id,
-                type as LogicMorphismType<TLogic>,
-            ) as unknown as GenericMorphismCell;
+        addMorphism(type: MorType, args: { name: string; dom?: unknown; cod?: unknown }) {
+            return addMorphismCell(type, args);
         },
-    } as unknown as ModelNotebook<TLogic, Handle>;
-
-    function isLogicObjectType(value: unknown): boolean {
-        return Object.values(logic.cellTypes).some((t) => t === value && t[typeKind] === "object");
-    }
-
-    function isLogicMorphismType(value: unknown): boolean {
-        return Object.values(logic.cellTypes).some(
-            (t) => t === value && t[typeKind] === "morphism",
-        );
-    }
+    } as unknown as Notebook<TShape, Handle>;
 }
 
 /**
- * Entry points for typed notebooks over a fixed store. Obtain one with
+ * A notebook built over a {@link Shape}. The shape constrains the typed {@link
+ * Notebook.add} constructor to the shape's cell types; reading via {@link
+ * Notebook.cells} always yields the untyped {@link NotebookCell} union, with
+ * precise handles recovered through {@link byObjectType}/{@link byMorphismType}.
+ *
+ * A notebook over a richer shape is assignable to a notebook over a sub-shape,
+ * so a fully-interactive component can be written against a sub-shape (e.g.
+ * `Notebook<typeof PlacesShape>`) and handed a notebook of the full theory.
+ */
+export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument> = Update<{
+    name: string;
+}> & {
+    /** Reactive read of the notebook's name. */
+    readonly name: string;
+    /**
+     * The store handle this notebook is bound to, e.g. an Automerge
+     * `DocHandle`. With the plain in-memory store it is the document itself.
+     */
+    readonly handle: Handle;
+    /**
+     * The underlying document. With a reactive store (Solid, Automerge), this
+     * is the reactive proxy; with the plain in-memory store it is the raw
+     * object.
+     */
+    readonly document: ModelDocument;
+    /** Make a detached plain-JS snapshot of the underlying document. */
+    dump(): ModelDocument;
+    /**
+     * Elaborate the notebook into a core model and validate it. Returns a
+     * tagged result: `Valid` with the model, `Invalid` with the model and its
+     * validation errors, or `Illformed` if elaboration itself failed.
+     *
+     * The core theory to elaborate into defaults to the shape's `coreTheory`;
+     * pass one explicitly to elaborate against a different theory, or when the
+     * shape has no `coreTheory`.
+     */
+    validate(coreTheory?: DblTheory): ModelValidationResult;
+    /**
+     * Migrate the notebook's document to another shape, **mutating it in
+     * place**: the underlying document is rewritten to the target theory rather
+     * than copied. Returns a new notebook handle bound to the target shape; the
+     * original handle is now stale, so continue through the returned handle.
+     * Throws if no migration to the target is defined.
+     */
+    migrate<TTarget extends CreatableShape>(targetShape: TTarget): Notebook<TTarget, Handle>;
+    /** Handles for all cells, in notebook order. */
+    cells(): Array<NotebookCell>;
+    /**
+     * Add a cell to the notebook. The kind of cell is selected by the first
+     * argument:
+     *
+     * - {@link RichText} adds a rich-text cell; `args` is `{ content }`.
+     * - A morphism type from the shape adds a morphism cell; `args` is
+     *   `{ name, dom, cod }`, with `dom`/`cod` constrained by the morphism type.
+     * - An object type from the shape adds an object cell; `args` is `{ name }`.
+     */
+    add(type: RichTextType, args: { content: string }): RichTextCell;
+    add<M extends ShapeMorphisms<TShape>>(
+        type: M,
+        args: { name: string; dom: EndpointOf<M>; cod: EndpointOf<M> },
+    ): MorphismCell<M>;
+    add<O extends ShapeObjects<TShape>>(type: O, args: { name: string }): ObjectCell<O>;
+    /**
+     * Add an object cell from a bare {@link ObType}, bypassing the shape's
+     * typed constructors. The returned handle is the untyped {@link ObjectCell}.
+     * Useful when the object type is computed at runtime.
+     */
+    addObject(type: ObType, args: { name: string }): ObjectCell;
+    /**
+     * Add a morphism cell from a bare {@link MorType}, bypassing the shape's
+     * typed constructors. Endpoints are untyped: a single object cell or a list
+     * of them, with the stored shape following the morphism type's modality.
+     * The returned handle is the untyped {@link MorphismCell}.
+     */
+    addMorphism(
+        type: MorType,
+        args: { name: string; dom?: ObjectCell | ObjectCell[]; cod?: ObjectCell | ObjectCell[] },
+    ): MorphismCell;
+};
+
+/**
+ * Entry points for notebooks over a fixed store. Obtain one with
  * `createBinder`.
  */
 export interface Binder<Handle> {
     /**
-     * Build a typed notebook from fresh data. The document seed is constructed
-     * internally from `data.name` and `logic.theory`, then handed to the
-     * store's `init`.
+     * Build a notebook from fresh data. The document seed is constructed
+     * internally from `data.name` and the shape's `theory`.
      */
-    createNotebook<TLogic extends AnyModelLogic>(
-        logic: TLogic,
+    createNotebook<TShape extends CreatableShape>(
+        shape: TShape,
         data: { name: string },
-    ): ModelNotebook<TLogic, Handle>;
+    ): Notebook<TShape, Handle>;
     /**
-     * Build a logic-less notebook for the given document theory. Cells are
-     * added from bare `ObType`/`MorType` values via
-     * {@link GenericNotebook.addObject} and {@link GenericNotebook.addMorphism},
-     * and {@link GenericNotebook.validate} is supplied a core theory explicitly.
-     * Use this when the theory is known only as a string at runtime.
+     * Build a fully-generic notebook for the given document theory. Cells are
+     * added from bare `ObType`/`MorType` values; {@link Notebook.validate} is
+     * supplied a core theory explicitly. Use this when the theory is known only
+     * as a string at runtime.
      */
-    createGenericNotebook(theory: string, data: { name: string }): GenericNotebook<Handle>;
+    createGenericNotebook(theory: string, data: { name: string }): Notebook<AnyShape, Handle>;
     /**
-     * Build a typed notebook around an existing plain document by initializing
-     * store storage from it. Throws if the document's theory does not match
-     * the logic's theory.
+     * Build a notebook around an existing plain document by initializing store
+     * storage from it. Throws if the document's theory does not match the
+     * shape's theory.
      */
-    loadNotebook<TLogic extends AnyModelLogic>(
-        logic: TLogic,
+    loadNotebook<TShape extends CreatableShape>(
+        shape: TShape,
         document: ModelDocument,
-    ): ModelNotebook<TLogic, Handle>;
+    ): Notebook<TShape, Handle>;
     /**
-     * Build a typed notebook around an existing store handle, e.g. an
-     * Automerge `DocHandle` found in a repo. No store storage is created.
+     * Build a notebook around an existing store handle, e.g. an Automerge
+     * `DocHandle` found in a repo. No store storage is created.
      */
-    loadNotebookFromHandle<TLogic extends AnyModelLogic>(
-        logic: TLogic,
+    loadNotebookFromHandle<TShape extends CreatableShape>(
+        shape: TShape,
         handle: Handle,
-    ): ModelNotebook<TLogic, Handle>;
+    ): Notebook<TShape, Handle>;
 }
 
-/** Bind a store once, yielding `createNotebook`/`loadNotebook`/`loadNotebookFromHandle` entry points. */
+/** Bind a store once, yielding the notebook entry points. */
 export function createBinder<Handle>(store: DocumentStore<Handle>): Binder<Handle> {
     return {
-        createNotebook(logic, data) {
-            const seed = newModelDocument({ theory: logic.theory });
+        createNotebook(shape, data) {
+            const seed = newModelDocument({ theory: shape.theory });
             seed.name = data.name;
-            return this.loadNotebook(logic, seed);
+            return this.loadNotebook(shape, seed);
         },
         createGenericNotebook(theory, data) {
             const seed = newModelDocument({ theory });
             seed.name = data.name;
-            // A generic notebook has no logic: empty `cellTypes` mark it generic
-            // so cell handles report bare document types, and `coreTheory` is
-            // unused because `validate` requires an explicit one.
-            const genericLogic = {
-                theory,
-                coreTheory: undefined as unknown as DblTheory,
-                cellTypes: {},
-            } satisfies AnyModelLogic;
-            return attachNotebook(
-                store,
-                store.createHandle(seed),
-                genericLogic,
-            ) as unknown as GenericNotebook<Handle>;
+            const genericShape = { theory, objects: {}, morphisms: {} } satisfies AnyShape;
+            return attachNotebook(store, store.createHandle(seed), genericShape) as Notebook<
+                AnyShape,
+                Handle
+            >;
         },
-        loadNotebook(logic, document) {
-            if (document.theory !== logic.theory) {
+        loadNotebook(shape, document) {
+            if (document.theory !== shape.theory) {
                 throw new Error(
                     `Cannot load document with theory "${document.theory}" ` +
-                        `using a logic with theory "${logic.theory}".`,
+                        `using a shape with theory "${shape.theory}".`,
                 );
             }
-            return attachNotebook(store, store.createHandle(document), logic);
+            return attachNotebook(store, store.createHandle(document), shape);
         },
-        loadNotebookFromHandle(logic, handle) {
-            return attachNotebook(store, handle, logic);
+        loadNotebookFromHandle(shape, handle) {
+            return attachNotebook(store, handle, shape);
         },
     };
 }

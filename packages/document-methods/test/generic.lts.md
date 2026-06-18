@@ -118,12 +118,14 @@ morphisms: 1
 
 ```ts
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
-import { binder, CellKind, type GenericNotebook } from "catcolab-documents";
+import { binder, CellKind, type Notebook } from "catcolab-documents";
 
 const typed = binder.createNotebook(SimpleOlog, { name: "An Olog" });
 typed.add(Type, { name: "A" });
 
-const generic: GenericNotebook = typed;
+// A notebook over the full Olog shape is assignable to a notebook over the
+// widest shape, so code that does not need the static typing can take it.
+const generic: Notebook = typed;
 generic.update({ name: "Renamed via generic interface" });
 
 console.log("name:", generic.name);

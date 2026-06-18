@@ -1,20 +1,19 @@
 import type { MorphismCell, ObjectCell } from "catcolab-documents";
-import { defineModelLogic } from "catcolab-documents";
+import { defineShape } from "catcolab-documents";
 
-import type { MorType, ObType } from "catcolab-document-types";
 import { ThCategory } from "catlog-wasm";
 
-const typeObType: ObType = { tag: "Basic", content: "Object" };
-const aspectMorType: MorType = { tag: "Hom", content: { tag: "Basic", content: "Object" } };
+const typeObType = { tag: "Basic", content: "Object" } as const;
+const aspectMorType = { tag: "Hom", content: { tag: "Basic", content: "Object" } } as const;
 
-export const SimpleOlog = defineModelLogic({
+export const SimpleOlog = defineShape({
     theory: "simple-olog",
     coreTheory: new ThCategory().theory(),
     objects: {
         Type: typeObType,
     },
     morphisms: {
-        Aspect: { dom: "Type", cod: "Type", morType: aspectMorType },
+        Aspect: aspectMorType,
     },
     migrations: [
         {
@@ -24,7 +23,8 @@ export const SimpleOlog = defineModelLogic({
     ],
 });
 
-export const { Type, Aspect } = SimpleOlog.cellTypes;
+export const { Type } = SimpleOlog.objects;
+export const { Aspect } = SimpleOlog.morphisms;
 
 export type TypeCell = ObjectCell<typeof Type>;
 export type AspectCell = MorphismCell<typeof Aspect>;

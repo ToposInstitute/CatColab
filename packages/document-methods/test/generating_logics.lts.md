@@ -1,37 +1,32 @@
-# Generating logics
+# Defining shapes from a compact spec
 
-A logic can be defined from a compact specification. The generator produces the
-typed cell constructors and the `ModelLogic` value used by notebooks.
+A shape is defined from a compact specification of object and morphism types,
+given as plain `ObType`/`MorType` literals. A morphism's endpoint object type
+and arity are read from its `MorType` structure, so no separate endpoint
+declaration is needed.
 
 <!-- verifier:prepend-to-following -->
 
 ```ts
-import { defineModelLogic, binder, byType } from "catcolab-documents";
-import type { MorType, ObType } from "catcolab-document-types";
+import { binder, byMorphismType, byObjectType, defineShape } from "catcolab-documents";
 import { ThSchema } from "catlog-wasm";
 
-const entityObType: ObType = { tag: "Basic", content: "Entity" };
-const attrTypeObType: ObType = { tag: "Basic", content: "AttrType" };
-
-const mappingMorType: MorType = { tag: "Hom", content: entityObType };
-const attrMorType: MorType = { tag: "Basic", content: "Attr" };
-const operationMorType: MorType = { tag: "Hom", content: attrTypeObType };
-
-const SimpleSchema = defineModelLogic({
+const SimpleSchema = defineShape({
     theory: "simple-schema",
     coreTheory: new ThSchema().theory(),
     objects: {
-        Entity: entityObType,
-        AttrType: attrTypeObType,
+        Entity: { tag: "Basic", content: "Entity" },
+        AttrType: { tag: "Basic", content: "AttrType" },
     },
     morphisms: {
-        Mapping: { dom: "Entity", cod: "Entity", morType: mappingMorType },
-        Attr: { dom: "Entity", cod: "AttrType", morType: attrMorType },
-        Operation: { dom: "AttrType", cod: "AttrType", morType: operationMorType },
+        Mapping: { tag: "Hom", content: { tag: "Basic", content: "Entity" } },
+        Attr: { tag: "Basic", content: "Attr" },
+        Operation: { tag: "Hom", content: { tag: "Basic", content: "AttrType" } },
     },
 });
 
-const { Entity, AttrType, Mapping, Attr, Operation } = SimpleSchema.cellTypes;
+const { Entity, AttrType } = SimpleSchema.objects;
+const { Mapping, Attr, Operation } = SimpleSchema.morphisms;
 ```
 
 <!-- verifier:prepend-to-following -->
@@ -49,11 +44,9 @@ notebook.add(Attr, { name: "name", dom: person, cod: str });
 notebook.add(Operation, { name: "uppercase", dom: str, cod: upper });
 ```
 
-<!-- verifier:prepend-to-following -->
-
 ```ts
-const entities = notebook.cells().filter(byType(Entity));
-const operations = notebook.cells().filter(byType(Operation));
+const entities = notebook.cells().filter(byObjectType(Entity));
+const operations = notebook.cells().filter(byMorphismType(Operation));
 
 console.log("entities:", entities.map((cell) => cell.name).join(", "));
 console.log("operations:", operations.map((cell) => cell.name).join(", "));
@@ -64,112 +57,68 @@ entities: Person, Company
 operations: uppercase
 ```
 
-Endpoint types are inferred from the compact definition.
-
-Logic definitions use explicit core types from `catcolab-document-types`; object
-string shorthand and omitted morphism types are rejected.
-
-<!-- verifier:typescript-errors -->
+Object types must be `ObType` values, not string shorthand.
 
 ```ts
-defineModelLogic({
+defineShape({
     theory: "bad-object-shorthand",
     coreTheory: SimpleSchema.coreTheory,
     objects: {
+        // @ts-expect-error Object types must be `ObType` values, not strings.
         Entity: "Entity",
     },
-    morphisms: {
-        Mapping: { dom: "Entity", cod: "Entity", morType: mappingMorType },
-    },
+    morphisms: {},
 });
 ```
 
-```txt
-error TS2322: Type 'string' is not assignable to type 'ObType'.
-```
-
-<!-- verifier:typescript-errors -->
-
-```ts
-defineModelLogic({
-    theory: "bad-missing-mor-type",
-    coreTheory: SimpleSchema.coreTheory,
-    objects: {
-        Entity: entityObType,
-    },
-    morphisms: {
-        Mapping: { dom: "Entity", cod: "Entity" },
-    },
-});
-```
-
-```txt
-error TS2741: Property 'morType' is missing in type '{ dom: "Entity"; cod: "Entity"; }' but required in type 'GeneratedMorphismSpec<{ readonly Entity: { tag: "Basic"; content: string; }; }>'.
-```
-
-<!-- verifier:typescript-errors -->
+Endpoint types are inferred from each morphism's `MorType`. A `Mapping` is
+`Hom(Entity)`, so its endpoints are `Entity` cells; wiring its codomain to an
+attribute type is rejected.
 
 ```ts
 const employer = notebook.add(Mapping, { name: "employer2", dom: person, cod: company });
 
-employer.update({
-    cod: str,
-});
+// @ts-expect-error A mapping's codomain must be an Entity cell, not an AttrType cell.
+employer.update({ cod: str });
 ```
 
-```txt
-error TS2345: Type error: cod: Expected object cell of type "Entity", got "AttrType".
-```
-
-<!-- verifier:typescript-errors -->
+An `Operation` is `Hom(AttrType)`, so its domain must be an attribute type.
 
 ```ts
-const nameAttr = notebook.add(Attr, { name: "name2", dom: person, cod: str });
-
-nameAttr.update({
-    dom: str,
-});
-```
-
-```txt
-error TS2345: Type error: dom: Expected object cell of type "Entity", got "AttrType".
+// @ts-expect-error An operation's domain must be an AttrType cell, not an Entity cell.
+notebook.add(Operation, { name: "op2", dom: person, cod: str });
 ```
 
 Endpoint arity is taken from the morphism type: a `Hom` over a list modality
-such as `SymmetricList` produces array-valued endpoints. The morphism type must
-be a literal (declared with `satisfies MorType`, not `: MorType`) so the
-modality survives inference.
+such as `SymmetricList` produces array-valued endpoints.
 
 <!-- verifier:reset -->
 
 <!-- verifier:prepend-to-following -->
 
 ```ts
-import { defineModelLogic, binder } from "catcolab-documents";
-import type { MorType, ObType } from "catcolab-document-types";
+import { binder, defineShape } from "catcolab-documents";
 import { ThSymMonoidalCategory } from "catlog-wasm";
 
-const placeObType: ObType = { tag: "Basic", content: "Object" };
-const transitionMorType = {
-    tag: "Hom",
-    content: {
-        tag: "ModeApp",
-        content: { modality: "SymmetricList", obType: placeObType },
-    },
-} satisfies MorType;
-
-const PetriNet = defineModelLogic({
+const PetriNet = defineShape({
     theory: "petri-net",
     coreTheory: new ThSymMonoidalCategory().theory(),
     objects: {
-        Place: placeObType,
+        Place: { tag: "Basic", content: "Object" },
     },
     morphisms: {
-        Transition: { dom: "Place", cod: "Place", morType: transitionMorType },
+        Transition: {
+            tag: "Hom",
+            content: {
+                tag: "ModeApp",
+                content: { modality: "SymmetricList", obType: { tag: "Basic", content: "Object" } },
+            },
+        },
     },
 });
 
-const { Place, Transition } = PetriNet.cellTypes;
+const { Place } = PetriNet.objects;
+const { Transition } = PetriNet.morphisms;
 ```
 
 <!-- verifier:prepend-to-following -->
@@ -186,20 +135,11 @@ notebook.add(Transition, {
 });
 ```
 
-<!-- verifier:typescript-errors -->
+A transition's endpoints are arrays of places, so a single place is rejected.
 
 ```ts
-const fires = notebook.add(Transition, {
-    name: "fires2",
-    dom: [a],
-    cod: [b],
-});
+const fires = notebook.add(Transition, { name: "fires2", dom: [a], cod: [b] });
 
-fires.update({
-    dom: a,
-});
-```
-
-```txt
-error TS2345: Type error: dom: Expected an array, not a single object.
+// @ts-expect-error A transition endpoint is an array of places, not a single place.
+fires.update({ dom: a });
 ```

@@ -110,10 +110,10 @@ for (const cell of notebook.cells()) {
             console.log("text:", cell.content);
             break;
         case CellKind.Object:
-            console.log("object:", cell.name, "is a Type:", cell.type === Type);
+            console.log("object:", cell.name, "type:", cell.type.content);
             break;
         case CellKind.Morphism:
-            console.log("morphism:", cell.name, "is an Aspect:", cell.type === Aspect);
+            console.log("morphism:", cell.name, "type tag:", cell.type.tag);
             break;
     }
 }
@@ -121,9 +121,9 @@ for (const cell of notebook.cells()) {
 
 ```
 text: We define a simple olog with two objects and one arrow.
-object: Source is a Type: true
-object: B is a Type: true
-morphism: has as is an Aspect: true
+object: Source type: Object
+object: B type: Object
+morphism: has as type tag: Hom
 ```
 
 We can filter cells by their type, not just their kind and we provide some utilities to do so.
@@ -134,7 +134,7 @@ We can filter cells by their type, not just their kind and we provide some utili
 
 ```ts
 import { Attr, AttrType, Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
-import { binder, byType } from "catcolab-documents";
+import { binder, byMorphismType, byObjectType } from "catcolab-documents";
 
 const notebook = binder.createNotebook(SimpleSchema, { name: "Example schema" });
 
@@ -145,8 +145,8 @@ const str = notebook.add(AttrType, { name: "String" });
 notebook.add(Mapping, { name: "employer", dom: person, cod: company });
 notebook.add(Attr, { name: "name", dom: person, cod: str });
 
-const entities = notebook.cells().filter(byType(Entity));
-const attrs = notebook.cells().filter(byType(Attr));
+const entities = notebook.cells().filter(byObjectType(Entity));
+const attrs = notebook.cells().filter(byMorphismType(Attr));
 
 console.log("entities:", entities.map((cell) => cell.name).join(", "));
 console.log("attrs:", attrs.map((cell) => cell.name).join(", "));
@@ -178,30 +178,24 @@ Invalid shapes should be type errors:
 
 ```ts
 // @ts-expect-error Arrays are not valid endpoints in a simple olog.
-arrow.update({
-    dom: [source],
-});
+arrow.update({ dom: [source] });
 
 // @ts-expect-error Arrays are not valid endpoints in a simple olog.
-notebook.add(Aspect, {
-    name: "bad",
-    dom: [source, target],
-    cod: target,
-});
+notebook.add(Aspect, { name: "bad", dom: [source, target], cod: target });
 ```
 
 <!-- verifier:reset -->
 
 ```ts
-import { Attr, AttrType, SimpleSchema } from "catcolab-logics/simple-schema";
+import { AttrType, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
 import { binder } from "catcolab-documents";
 
 const schema = binder.createNotebook(SimpleSchema, { name: "Example schema" });
 
 const str = schema.add(AttrType, { name: "String" });
 
-// @ts-expect-error An attribute's domain must be an entity.
-schema.add(Attr, {
+// @ts-expect-error A mapping's endpoints must be entities, not attribute types.
+schema.add(Mapping, {
     name: "bad",
     dom: str,
     cod: str,
@@ -252,7 +246,7 @@ notebook was edited after the handle was obtained.
 
 ```ts
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
-import { binder, byType, RichText } from "catcolab-documents";
+import { binder, byObjectType, RichText } from "catcolab-documents";
 
 const notebook = binder.createNotebook(SimpleOlog, { name: "An Olog" });
 
@@ -263,7 +257,7 @@ const c = notebook.add(Type, { name: "C" });
 function names() {
     return notebook
         .cells()
-        .filter(byType(Type))
+        .filter(byObjectType(Type))
         .map((cell) => cell.name)
         .join(", ");
 }
@@ -461,7 +455,7 @@ And load it.
 const notebook2 = binder.loadNotebook(PetriNet, notebookData);
 ```
 
-Trying to load a document with the wrong logic will throw an error.
+Trying to load a document with the wrong shape will throw an error.
 
 <!-- verifier:throws -->
 
@@ -471,7 +465,7 @@ binder.loadNotebook(SimpleOlog, notebookData);
 ```
 
 ```
-❌ Cannot load document with theory "petri-net" using a logic with theory "simple-olog".
+❌ Cannot load document with theory "petri-net" using a shape with theory "simple-olog".
 ```
 
 ## Migrating between logics
@@ -499,7 +493,7 @@ references held elsewhere (links, open editors, sync peers) still resolve.
 ```ts
 import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
-import { binder, byType } from "catcolab-documents";
+import { binder, byMorphismType, byObjectType } from "catcolab-documents";
 
 const olog = binder.createNotebook(SimpleOlog, { name: "An Olog" });
 
@@ -523,7 +517,7 @@ console.log(
     "entities:",
     schema
         .cells()
-        .filter(byType(Entity))
+        .filter(byObjectType(Entity))
         .map((cell) => cell.name)
         .join(", "),
 );
@@ -531,7 +525,7 @@ console.log(
     "mappings:",
     schema
         .cells()
-        .filter(byType(Mapping))
+        .filter(byMorphismType(Mapping))
         .map((cell) => cell.name)
         .join(", "),
 );

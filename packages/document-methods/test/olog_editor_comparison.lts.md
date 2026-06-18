@@ -192,7 +192,8 @@ import {
     CellKind,
     createBinder,
     type DocumentStore,
-    type GenericNotebook,
+    type Notebook,
+    type Shape,
 } from "catcolab-documents";
 import type { ModelDocument } from "catcolab-document-methods";
 
@@ -216,7 +217,7 @@ const solidBinder = createBinder(solidStore);
 const ologObjectType: ObType = { tag: "Basic", content: "Object" };
 const ologAspectType: MorType = { tag: "Hom", content: ologObjectType };
 
-function GenericOlogEditor(props: { notebook: GenericNotebook<SolidStoreHandle> }) {
+function GenericOlogEditor(props: { notebook: Notebook<Shape, SolidStoreHandle> }) {
     return (
         <section>
             <h1>{props.notebook.name}</h1>
@@ -280,7 +281,7 @@ import { createStore, produce, type SetStoreFunction, unwrap } from "solid-js/st
 import { render } from "solid-js/web";
 
 import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
-import { CellKind, createBinder, type DocumentStore, ModelNotebook } from "catcolab-documents";
+import { CellKind, createBinder, type DocumentStore, type Notebook } from "catcolab-documents";
 import type { ModelDocument } from "catcolab-document-methods";
 
 type SolidStoreHandle = {
@@ -300,7 +301,7 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
 
 const solidBinder = createBinder(solidStore);
 
-type TypedOlogNotebook = ModelNotebook<typeof SimpleOlog, SolidStoreHandle>;
+type TypedOlogNotebook = Notebook<typeof SimpleOlog, SolidStoreHandle>;
 
 function TypedOlogEditor(props: { notebook: TypedOlogNotebook }) {
     return (

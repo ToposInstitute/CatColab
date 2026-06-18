@@ -1,75 +1,40 @@
-<!-- verifier:prepend-to-following -->
+# Defining a schema shape
 
-```ts
-import type { ModelLogic, MorphismType, ObjectCell, ObjectType } from "catcolab-documents";
-import { morphismType, objectType } from "catcolab-documents";
-
-type EntityType = ObjectType<"Entity">;
-type AttrTypeType = ObjectType<"AttrType">;
-type MappingType = MorphismType<ObjectCell<EntityType>, ObjectCell<EntityType>, "Mapping">;
-type AttrMorphismType = MorphismType<ObjectCell<EntityType>, ObjectCell<AttrTypeType>, "Attr">;
-type OperationType = MorphismType<ObjectCell<AttrTypeType>, ObjectCell<AttrTypeType>, "Operation">;
-```
+A shape declares a notebook's object and morphism types as plain `ObType`/
+`MorType` literals. A morphism's endpoint object type and arity are read from
+its `MorType` structure, so no separate endpoint declaration is needed.
 
 <!-- verifier:prepend-to-following -->
 
 ```ts
-const Entity: EntityType = objectType<"Entity">("Entity");
-const AttrType: AttrTypeType = objectType<"AttrType">("AttrType");
-
-const Mapping: MappingType = morphismType<
-    ObjectCell<EntityType>,
-    ObjectCell<EntityType>,
-    "Mapping"
->({
-    tag: "Hom",
-    content: { tag: "Basic", content: "Entity" },
-});
-
-const Attr: AttrMorphismType = morphismType<
-    ObjectCell<EntityType>,
-    ObjectCell<AttrTypeType>,
-    "Attr"
->({
-    tag: "Basic",
-    content: "Attr",
-});
-
-const Operation: OperationType = morphismType<
-    ObjectCell<AttrTypeType>,
-    ObjectCell<AttrTypeType>,
-    "Operation"
->({
-    tag: "Hom",
-    content: { tag: "Basic", content: "AttrType" },
-});
-```
-
-<!-- verifier:prepend-to-following -->
-
-```ts
+import { defineShape } from "catcolab-documents";
 import { ThSchema } from "catlog-wasm";
 
-const SimpleSchema = {
+const SimpleSchema = defineShape({
     theory: "simple-schema",
     coreTheory: new ThSchema().theory(),
-    cellTypes: { Entity, AttrType, Mapping, Attr, Operation },
-} satisfies ModelLogic<
-    "simple-schema",
-    {
-        Entity: EntityType;
-        AttrType: AttrTypeType;
-        Mapping: MappingType;
-        Attr: AttrMorphismType;
-        Operation: OperationType;
-    }
->;
+    objects: {
+        Entity: { tag: "Basic", content: "Entity" },
+        AttrType: { tag: "Basic", content: "AttrType" },
+    },
+    morphisms: {
+        // `Hom(Entity)`: a mapping between entities; endpoints are `Entity` cells.
+        Mapping: { tag: "Hom", content: { tag: "Basic", content: "Entity" } },
+        // A `Basic` morphism does not record its endpoints, so they stay untyped.
+        Attr: { tag: "Basic", content: "Attr" },
+        // `Hom(AttrType)`: an operation between attribute types.
+        Operation: { tag: "Hom", content: { tag: "Basic", content: "AttrType" } },
+    },
+});
+
+const { Entity, AttrType } = SimpleSchema.objects;
+const { Mapping, Attr, Operation } = SimpleSchema.morphisms;
 ```
 
 <!-- verifier:prepend-to-following -->
 
 ```ts
-import { binder, byType } from "catcolab-documents";
+import { binder, byMorphismType, byObjectType } from "catcolab-documents";
 
 const notebook = binder.createNotebook(SimpleSchema, { name: "Company schema" });
 ```
@@ -88,10 +53,10 @@ notebook.add(Operation, { name: "uppercase", dom: str, cod: upper });
 ```
 
 ```ts
-const entities = notebook.cells().filter(byType(Entity));
-const mappings = notebook.cells().filter(byType(Mapping));
-const attrs = notebook.cells().filter(byType(Attr));
-const operations = notebook.cells().filter(byType(Operation));
+const entities = notebook.cells().filter(byObjectType(Entity));
+const mappings = notebook.cells().filter(byMorphismType(Mapping));
+const attrs = notebook.cells().filter(byMorphismType(Attr));
+const operations = notebook.cells().filter(byMorphismType(Operation));
 
 console.log("entities:", entities.map((cell) => cell.name).join(", "));
 console.log("mappings:", mappings.map((cell) => cell.name).join(", "));
@@ -106,8 +71,11 @@ attrs: name
 operations: uppercase
 ```
 
+A `Mapping` ends on an `Entity` (`Hom(Entity)`), so pointing its codomain at an
+attribute type is a compile error.
+
 ```ts
-// @ts-expect-error A mapping's codomain must be an entity, not an attribute type.
+// @ts-expect-error A mapping's codomain must be an Entity cell, not an AttrType cell.
 notebook.add(Mapping, {
     name: "bad",
     dom: person,
@@ -115,11 +83,14 @@ notebook.add(Mapping, {
 });
 ```
 
+Likewise an `Operation` goes between attribute types (`Hom(AttrType)`), so an
+entity domain is rejected.
+
 ```ts
-// @ts-expect-error An attribute's domain must be an entity, not an attribute type.
-notebook.add(Attr, {
+// @ts-expect-error An operation's domain must be an AttrType cell, not an Entity cell.
+notebook.add(Operation, {
     name: "bad",
-    dom: str,
+    dom: person,
     cod: str,
 });
 ```
