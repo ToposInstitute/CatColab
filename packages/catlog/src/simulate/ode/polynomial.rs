@@ -102,8 +102,8 @@ where
             self.components
                 .iter()
                 .map(|(var, poly)| LatexEquation {
-                    lhs: Latex(format!("\\frac{{\\mathrm{{d}}}}{{\\mathrm{{d}}t}} {var}")),
-                    rhs: poly.to_latex_with_map(|p| f(p)),
+                    lhs: Latex(format!("\\frac{{\\mathrm{{d}}}}{{\\mathrm{{d}}t}} {}", var.to_latex_with_map(|var| f(var)))),
+                    rhs: poly.to_latex_with_map(|term| f(term)),
                 })
                 .collect(),
         )

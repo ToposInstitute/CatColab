@@ -156,11 +156,11 @@ where
     Coef: Display + ToLatexWithMap + DisplayCoef + Clone + PartialEq + One + Neg<Output = Coef>,
     Exp: Display + ToLatex + PartialEq + One,
 {
-    /// Convert to a LaTeX string, formatting each monomial via [`Monomial::to_latex`].
+    /// Convert to a LaTeX string, formatting each monomial via [`Monomial::to_latex_with_map`].
     fn to_latex_with_map<F: Fn(&QualifiedName) -> String>(&self, f: F) -> Latex {
         let fmt_term = |coef: &Coef, monomial: &Monomial<Var, Exp>| -> String {
-            let Latex(monomial_latex) = monomial.to_latex_with_map(|m| f(m));
-            let Latex(coef_latex) = coef.to_latex_with_map(|c| f(c));
+            let Latex(monomial_latex) = monomial.to_latex_with_map(|mon| f(mon));
+            let Latex(coef_latex) = coef.to_latex_with_map(|param| f(param));
             if coef.is_one() {
                 monomial_latex
             } else if *coef == Coef::one().neg() {

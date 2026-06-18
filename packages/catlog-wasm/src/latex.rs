@@ -4,26 +4,23 @@ use catlog::zero::QualifiedName;
 
 use super::model::DblModel;
 
-/// Creates a closure that formats object names for LaTeX output.
-pub(crate) fn latex_ob_names(model: &DblModel) -> impl Fn(&QualifiedName) -> String {
+/// Creates a closure that formats object and morphism names for LaTeX output. When a morphism has a
+/// name (and thus label), it is used directly; when unnamed, the label falls back to the format
+/// `domain→codomain` (e.g., `X \to Y`).
+pub(crate) fn latex_names(model: &DblModel) -> impl Fn(&QualifiedName) -> String {
     |id: &QualifiedName| {
-        let name = model.ob_namespace.label_string(id);
-        if name.chars().count() > 1 {
-            format!("\\text{{{name}}}")
-        } else {
-            name
-        }
-    }
-}
-
-/// When a morphism has a label, it is used directly. When unnamed, the label
-/// falls back to the domain→codomain format (e.g., `X \to Y`).
-pub(crate) fn latex_mor_names(model: &DblModel) -> impl Fn(&QualifiedName) -> String {
-    // Returns a LaTeX fragment for a morphism, suitable for use as a subscript.
-    // Named morphisms produce `\text{name}`, unnamed ones produce `\text{dom} \to \text{cod}`.
-    |id: &QualifiedName| {
-        if let Some(label) = model.mor_namespace.label(id) {
-            format!("\\text{{{label}}}")
+        if let Some(ob_label) = model.ob_namespace.label(id) {
+            if ob_label.to_string().chars().count() > 1 {
+                format!("\\text{{{ob_label}}}")
+            } else {
+                format!("{ob_label}")
+            }
+        } else if let Some(mor_label) = model.mor_namespace.label(id) {
+            if mor_label.to_string().chars().count() > 1 {
+                format!("\\text{{{mor_label}}}")
+            } else {
+                format!("{mor_label}")
+            }
         } else {
             let (dom, cod) = model
                 .mor_generator_dom_cod_label_strings(id)
@@ -53,14 +50,13 @@ mod tests {
         let tab_model = model.discrete_tab().unwrap();
         let analysis = StockFlowMassActionAnalysis {
             mass_conservation_type: ode::MassConservationType::Unbalanced(
-                ode::RateGranularity::PerFlow,
+                ode::RateGranularity::PerTransition,
             ),
             ..StockFlowMassActionAnalysis::default()
         };
         let sys = analysis.build_system(tab_model);
         let equations = sys
-            .map_variables(latex_ob_names(&model))
-            .to_latex_equations_with_map(|param| latex_mor_names(&model)(param));
+            .to_latex_equations_with_map(|param| latex_names(&model)(param));
 
         let expected = LatexEquations(vec![
             LatexEquation {
@@ -85,14 +81,13 @@ mod tests {
         let tab_model = model.discrete_tab().unwrap();
         let analysis = StockFlowMassActionAnalysis {
             mass_conservation_type: ode::MassConservationType::Unbalanced(
-                ode::RateGranularity::PerFlow,
+                ode::RateGranularity::PerTransition,
             ),
             ..StockFlowMassActionAnalysis::default()
         };
         let sys = analysis.build_system(tab_model);
         let equations = sys
-            .map_variables(latex_ob_names(&model))
-            .to_latex_equations_with_map(|param| latex_mor_names(&model)(param));
+            .to_latex_equations_with_map(|param| latex_names(&model)(param));
 
         let expected = LatexEquations(vec![
             LatexEquation {

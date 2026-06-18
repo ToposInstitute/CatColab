@@ -28,35 +28,6 @@ impl fmt::Display for Latex {
     }
 }
 
-/// An object that can be rendered to Latex.
-pub trait ToLatex {
-    /// Convert the object to its Latex representation.
-    fn to_latex(&self) -> Latex;
-}
-
-/// TODO: documentation
-pub trait ToLatexWithMap {
-    /// TODO: documentation
-    fn to_latex_with_map<F: Fn(&QualifiedName) -> String>(&self, f: F) -> Latex;
-}
-
-impl<T> ToLatex for T
-where
-    T: ToLatexWithMap,
-{
-    fn to_latex(&self) -> Latex {
-        let name = |id: &QualifiedName| {id.to_string()};
-        self.to_latex_with_map(name)
-    }
-}
-
-#[duplicate_item(T; [f32]; [f64]; [i8]; [i32]; [i64]; [u32]; [u64]; [usize]; [char]; [String])]
-impl ToLatexWithMap for T {
-    fn to_latex_with_map<F: Fn(&QualifiedName) -> String>(&self, _f: F) -> Latex {
-        Latex(self.to_string())
-    }
-}
-
 /// An equation in Latex format with a left-hand side and a right-hand side.
 #[derive(Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -75,3 +46,34 @@ pub struct LatexEquation {
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 pub struct LatexEquations(pub Vec<LatexEquation>);
+
+/// An object that can be rendered to Latex.
+pub trait ToLatex {
+    /// Convert the object to its Latex representation.
+    fn to_latex(&self) -> Latex;
+}
+
+/// TODO: documentation
+pub trait ToLatexWithMap {
+    /// TODO: documentation
+    fn to_latex_with_map<F: Fn(&QualifiedName) -> String>(&self, f: F) -> Latex;
+}
+
+// TODO: documentation
+impl<T> ToLatex for T
+where
+    T: ToLatexWithMap,
+{
+    fn to_latex(&self) -> Latex {
+        let name = |id: &QualifiedName| {id.to_string()};
+        self.to_latex_with_map(name)
+    }
+}
+
+// TODO: documentation
+#[duplicate_item(T; [f32]; [f64]; [i8]; [i32]; [i64]; [u32]; [u64]; [usize]; [char]; [String])]
+impl ToLatexWithMap for T {
+    fn to_latex_with_map<F: Fn(&QualifiedName) -> String>(&self, _f: F) -> Latex {
+        Latex(self.to_string())
+    }
+}
