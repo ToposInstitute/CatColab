@@ -81,21 +81,21 @@ pub(crate) fn latex_mor_names_mass_action(
             match (direction, parameter) {
                 (
                     ode::Direction::IncomingFlow,
-                    ode::RateParameter::PerFlow { flow: transition },
+                    ode::RateParameter::PerTransition { flow: transition },
                 ) => {
                     let sub = transition_subscript(transition);
                     format!("\\rho_{{{sub}}}")
                 }
                 (
                     ode::Direction::OutgoingFlow,
-                    ode::RateParameter::PerFlow { flow: transition },
+                    ode::RateParameter::PerTransition { flow: transition },
                 ) => {
                     let sub = transition_subscript(transition);
                     format!("\\kappa_{{{sub}}}")
                 }
                 (
                     ode::Direction::IncomingFlow,
-                    ode::RateParameter::PerStock { flow: transition, stock: place },
+                    ode::RateParameter::PerPlace { flow: transition, stock: place },
                 ) => {
                     let sub = transition_subscript(transition);
                     let output_place_label = model.ob_namespace.label_string(place);
@@ -103,7 +103,7 @@ pub(crate) fn latex_mor_names_mass_action(
                 }
                 (
                     ode::Direction::OutgoingFlow,
-                    ode::RateParameter::PerStock { flow: transition, stock: place },
+                    ode::RateParameter::PerPlace { flow: transition, stock: place },
                 ) => {
                     let sub = transition_subscript(transition);
                     let input_place_label = model.ob_namespace.label_string(place);
@@ -195,7 +195,7 @@ mod tests {
         let tab_model = model.discrete_tab().unwrap();
         let analysis = StockFlowMassActionAnalysis {
             mass_conservation_type: ode::MassConservationType::Unbalanced(
-                ode::RateGranularity::PerFlow,
+                ode::RateGranularity::PerTransition,
             ),
             ..StockFlowMassActionAnalysis::default()
         };
@@ -224,7 +224,7 @@ mod tests {
         let tab_model = model.discrete_tab().unwrap();
         let analysis = StockFlowMassActionAnalysis {
             mass_conservation_type: ode::MassConservationType::Unbalanced(
-                ode::RateGranularity::PerFlow,
+                ode::RateGranularity::PerTransition,
             ),
             ..StockFlowMassActionAnalysis::default()
         };
