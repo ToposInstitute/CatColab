@@ -29,10 +29,6 @@ pub struct ODEResultWithEquations {
     pub latex_equations: LatexEquations,
 }
 
-
-
-
-
 /// Generates the PolynomialSystem for the systems of polynomial ODEs.
 fn polynomial_ode_system(
     model: &DblModel,
@@ -44,7 +40,7 @@ fn polynomial_ode_system(
 
 // TODO: can all of the following be generalised by iterating (with a macro) over all the implementations
 //       of ODESemanics? use e.g. `<T as ODESemantics>::ODEParameter`
-//       
+//
 //       ... OR just define `fn polynomial_system<S: ODESemantics>` ??????????
 
 /// Generates the PolynomialSystem for Lotka-Volterra dynamics.
@@ -101,10 +97,6 @@ fn mass_action_system(
         }
     }
 }
-
-
-
-
 
 /// The analysis data for polynomial ODE equations.
 #[derive(Serialize, Deserialize, Tsify)]
@@ -169,10 +161,6 @@ pub(crate) fn mass_action_equations(
     let equations = sys?.to_latex_equations_with_map(|param| latex_names(model)(param));
     Ok(equations)
 }
-
-
-
-
 
 /// Simulates polynomial ODE equations.
 pub(crate) fn polynomial_ode_simulation(
