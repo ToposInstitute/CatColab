@@ -10,6 +10,7 @@ use std::ops::{Add, AddAssign, Mul, Neg};
 use derivative::Derivative;
 
 use crate::latex::{Latex, ToLatex, ToLatexWithMap};
+use crate::stdlib::analyses::ode::Parameter;
 use crate::zero::QualifiedName;
 
 use super::rig::*;
