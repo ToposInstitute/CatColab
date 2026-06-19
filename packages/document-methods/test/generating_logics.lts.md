@@ -1,27 +1,36 @@
 # Defining shapes from a compact spec
 
 A shape is defined from a compact specification of object and morphism types,
-given as plain `ObType`/`MorType` literals. A morphism's endpoint object type
-and arity are read from its `MorType` structure, so no separate endpoint
-declaration is needed.
+given as plain `ObType`/`MorType` literals. A `Hom` morphism's endpoint object
+type and arity are read from its `MorType` structure; a `Basic` morphism records
+no endpoints in its literal, so it declares them with `basicMorphism(name, dom, cod)`.
 
 <!-- verifier:prepend-to-following -->
 
 ```ts
-import { binder, byMorphismType, byObjectType, defineShape } from "catcolab-documents";
+import {
+    basicMorphism,
+    binder,
+    byMorphismType,
+    byObjectType,
+    defineShape,
+} from "catcolab-documents";
 import { ThSchema } from "catlog-wasm";
+
+const entity = { tag: "Basic", content: "Entity" } as const;
+const attrType = { tag: "Basic", content: "AttrType" } as const;
 
 const SimpleSchema = defineShape({
     theory: "simple-schema",
     coreTheory: new ThSchema().theory(),
     objects: {
-        Entity: { tag: "Basic", content: "Entity" },
-        AttrType: { tag: "Basic", content: "AttrType" },
+        Entity: entity,
+        AttrType: attrType,
     },
     morphisms: {
-        Mapping: { tag: "Hom", content: { tag: "Basic", content: "Entity" } },
-        Attr: { tag: "Basic", content: "Attr" },
-        Operation: { tag: "Hom", content: { tag: "Basic", content: "AttrType" } },
+        Mapping: { tag: "Hom", content: entity },
+        Attr: basicMorphism("Attr", entity, attrType),
+        Operation: { tag: "Hom", content: attrType },
     },
 });
 
@@ -100,18 +109,20 @@ such as `SymmetricList` produces array-valued endpoints.
 import { binder, defineShape } from "catcolab-documents";
 import { ThSymMonoidalCategory } from "catlog-wasm";
 
+const object = { tag: "Basic", content: "Object" } as const;
+
 const PetriNet = defineShape({
     theory: "petri-net",
     coreTheory: new ThSymMonoidalCategory().theory(),
     objects: {
-        Place: { tag: "Basic", content: "Object" },
+        Place: object,
     },
     morphisms: {
         Transition: {
             tag: "Hom",
             content: {
                 tag: "ModeApp",
-                content: { modality: "SymmetricList", obType: { tag: "Basic", content: "Object" } },
+                content: { modality: "SymmetricList", obType: object },
             },
         },
     },

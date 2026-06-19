@@ -153,6 +153,79 @@ export type EndpointOf<M extends MorType> = [M] extends [
       ? ObjectCell<O>
       : ObjectCell<ObType> | ObjectCell<ObType>[];
 
+declare const domBrand: unique symbol;
+declare const codBrand: unique symbol;
+
+/**
+ * Phantom carrier of a morphism's endpoint object types. A `Hom` morphism reads
+ * its endpoints from its `MorType` structure, but a `Basic` morphism (e.g. a
+ * schema `Attr`) records nothing about its source/target in the literal, so it
+ * must declare them with {@link basicMorphism}. These properties exist only in the
+ * type system; they are never written at runtime.
+ */
+export type Endpoints<D extends ObType, C extends ObType> = {
+    readonly [domBrand]: D;
+    readonly [codBrand]: C;
+};
+
+/**
+ * Declare a `Basic` morphism type with explicit endpoint object types. The
+ * first argument is the morphism's name (its `content`); the returned value is
+ * the `Basic` `MorType` at runtime, with its source/target object types carried
+ * only in the static type. A `Basic` morphism records no endpoints in its
+ * literal, so declaring one in a shape *requires* this helper; a bare `Basic`
+ * literal is a compile error (see {@link defineShape}).
+ */
+export function basicMorphism<
+    const Name extends string,
+    const D extends ObType,
+    const C extends ObType,
+>(content: Name, _dom: D, _cod: C): { tag: "Basic"; content: Name } & Endpoints<D, C> {
+    return { tag: "Basic", content } as { tag: "Basic"; content: Name } & Endpoints<D, C>;
+}
+
+/**
+ * The compile error surfaced when a `Basic` morphism is declared without
+ * endpoints. Its sole key spells out the fix, so the diagnostic names it.
+ */
+export type EndpointsRequired<M extends MorType> = {
+    "This Basic morphism must be declared with basicMorphism(name, dom, cod)": M;
+};
+
+/**
+ * A morphism type carries typed endpoints when it is a `Hom` (endpoints read
+ * from its structure) or has been declared with {@link basicMorphism}. Anything else
+ * — notably a bare `Basic` morphism — does not.
+ */
+type HasTypedEndpoints<M extends MorType> = [M] extends [Endpoints<ObType, ObType>]
+    ? true
+    : [M] extends [{ tag: "Hom"; content: ObType }]
+      ? true
+      : false;
+
+/**
+ * The domain endpoint type of a morphism cell. A {@link basicMorphism}-branded
+ * morphism uses its declared domain; a `Hom` derives it via {@link EndpointOf};
+ * a bare `Basic` morphism is a type error, and any wider/unknown morphism type
+ * falls back to the untyped endpoint union.
+ */
+export type DomOf<M extends MorType> = [M] extends [Endpoints<infer D extends ObType, ObType>]
+    ? ObjectCell<D>
+    : [M] extends [{ tag: "Hom"; content: ObType }]
+      ? EndpointOf<M>
+      : [M] extends [{ tag: "Basic"; content: string }]
+        ? EndpointsRequired<M>
+        : EndpointOf<M>;
+
+/** The codomain endpoint type of a morphism cell; see {@link DomOf}. */
+export type CodOf<M extends MorType> = [M] extends [Endpoints<ObType, infer C extends ObType>]
+    ? ObjectCell<C>
+    : [M] extends [{ tag: "Hom"; content: ObType }]
+      ? EndpointOf<M>
+      : [M] extends [{ tag: "Basic"; content: string }]
+        ? EndpointsRequired<M>
+        : EndpointOf<M>;
+
 /**
  * A morphism-cell handle, parametrized by its `MorType`. The domain and
  * codomain types are derived from the morphism type by {@link EndpointOf}, so
@@ -165,16 +238,16 @@ export type EndpointOf<M extends MorType> = [M] extends [
  */
 export type MorphismCell<M extends MorType = MorType> = Update<{
     name: string;
-    dom: EndpointOf<M>;
-    cod: EndpointOf<M>;
+    dom: DomOf<M>;
+    cod: CodOf<M>;
 }> &
     Reorder & {
         readonly kind: typeof CellKind.Morphism;
         readonly id: string;
         readonly type: M;
         readonly name: string;
-        readonly dom: EndpointOf<M>;
-        readonly cod: EndpointOf<M>;
+        readonly dom: DomOf<M>;
+        readonly cod: CodOf<M>;
         duplicate(): MorphismCell<M>;
     };
 
@@ -287,13 +360,26 @@ export type ModelValidationResult =
 /**
  * Define a shape from a compact declaration of object and morphism types.
  * Object and morphism types are `ObType`/`MorType` literals (declare them with
- * `as const`); a morphism's endpoint object type and arity are read from its
- * `MorType` structure. `theory`/`coreTheory` are optional: include them for a
- * creatable shape, omit them for a sub-shape contract.
+ * `as const`). A `Hom` morphism's endpoint object type and arity are read from
+ * its `MorType` structure; a `Basic` morphism records no endpoints in its
+ * literal, so it must declare them with {@link basicMorphism} — a bare `Basic`
+ * morphism is a compile error. `theory`/`coreTheory` are optional: include them
+ * for a creatable shape, omit them for a sub-shape contract.
  */
-export function defineShape<const TSpec extends Shape>(spec: TSpec): TSpec {
+export function defineShape<const TSpec extends Shape>(
+    spec: TSpec & {
+        morphisms: {
+            [K in keyof TSpec["morphisms"]]: ValidatedMorphism<TSpec["morphisms"][K] & MorType>;
+        };
+    },
+): TSpec {
     return spec;
 }
+
+/** A morphism declaration is kept as-is when it has typed endpoints, otherwise
+ * it is replaced by the {@link EndpointsRequired} error type. */
+type ValidatedMorphism<M extends MorType> =
+    HasTypedEndpoints<M> extends true ? M : EndpointsRequired<M>;
 
 /**
  * Typed filter for cells of exactly the given object type. TypeScript only
@@ -842,7 +928,7 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
     add(type: RichTextType, args: { content: string }): RichTextCell;
     add<M extends ShapeMorphisms<TShape>>(
         type: M,
-        args: { name: string; dom: EndpointOf<M>; cod: EndpointOf<M> },
+        args: { name: string; dom: DomOf<M>; cod: CodOf<M> },
     ): MorphismCell<M>;
     add<O extends ShapeObjects<TShape>>(type: O, args: { name: string }): ObjectCell<O>;
     /**

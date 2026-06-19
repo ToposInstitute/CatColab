@@ -245,10 +245,7 @@ describe("Petri-net editor comparison", () => {
             };
         }
 
-        function appendConstructedCell(
-            notebook: CurrentNotebook,
-            cell: Cell<ModelJudgment>,
-        ) {
+        function appendConstructedCell(notebook: CurrentNotebook, cell: Cell<ModelJudgment>) {
             notebook.changeDoc((doc) => {
                 Nb.appendCell(doc.notebook, cell);
             });
@@ -388,10 +385,7 @@ describe("Petri-net editor comparison", () => {
             );
         }
 
-        function ModelCellEditor(props: {
-            notebook: CurrentNotebook;
-            cell: Cell<ModelJudgment>;
-        }) {
+        function ModelCellEditor(props: { notebook: CurrentNotebook; cell: Cell<ModelJudgment> }) {
             if (props.cell.tag !== "formal") {
                 return (
                     <li>

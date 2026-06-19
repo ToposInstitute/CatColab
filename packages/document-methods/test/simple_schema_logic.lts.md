@@ -1,29 +1,35 @@
 # Defining a schema shape
 
 A shape declares a notebook's object and morphism types as plain `ObType`/
-`MorType` literals. A morphism's endpoint object type and arity are read from
-its `MorType` structure, so no separate endpoint declaration is needed.
+`MorType` literals. A `Hom` morphism's endpoint object type and arity are read
+from its `MorType` structure. A `Basic` morphism records no endpoints in its
+literal, so it must declare them with `basicMorphism(name, dom, cod)`; a bare
+`Basic` morphism is a compile error.
 
 <!-- verifier:prepend-to-following -->
 
 ```ts
-import { defineShape } from "catcolab-documents";
+import { basicMorphism, defineShape } from "catcolab-documents";
 import { ThSchema } from "catlog-wasm";
+
+const entity = { tag: "Basic", content: "Entity" } as const;
+const attrType = { tag: "Basic", content: "AttrType" } as const;
 
 const SimpleSchema = defineShape({
     theory: "simple-schema",
     coreTheory: new ThSchema().theory(),
     objects: {
-        Entity: { tag: "Basic", content: "Entity" },
-        AttrType: { tag: "Basic", content: "AttrType" },
+        Entity: entity,
+        AttrType: attrType,
     },
     morphisms: {
         // `Hom(Entity)`: a mapping between entities; endpoints are `Entity` cells.
-        Mapping: { tag: "Hom", content: { tag: "Basic", content: "Entity" } },
-        // A `Basic` morphism does not record its endpoints, so they stay untyped.
-        Attr: { tag: "Basic", content: "Attr" },
+        Mapping: { tag: "Hom", content: entity },
+        // A `Basic` morphism records no endpoints, so they are declared here:
+        // an `Attr` goes from an `Entity` to an `AttrType`.
+        Attr: basicMorphism("Attr", entity, attrType),
         // `Hom(AttrType)`: an operation between attribute types.
-        Operation: { tag: "Hom", content: { tag: "Basic", content: "AttrType" } },
+        Operation: { tag: "Hom", content: attrType },
     },
 });
 
@@ -92,5 +98,33 @@ notebook.add(Operation, {
     name: "bad",
     dom: person,
     cod: str,
+});
+```
+
+The `basicMorphism(...)` declaration types an `Attr`'s endpoints just like a
+`Hom`: its domain is an `Entity` and its codomain an `AttrType`, so swapping them
+is a compile error even though `Attr` is a `Basic` morphism.
+
+```ts
+// @ts-expect-error An attr's domain must be an Entity cell and its codomain an AttrType cell.
+notebook.add(Attr, {
+    name: "bad",
+    dom: str,
+    cod: person,
+});
+```
+
+A `Basic` morphism declared without `basicMorphism(...)` is rejected by
+`defineShape`: there is no way to type its endpoints, so the shape is ill-formed.
+
+```ts
+defineShape({
+    theory: "missing-endpoints",
+    coreTheory: SimpleSchema.coreTheory,
+    objects: { Entity: entity },
+    morphisms: {
+        // @ts-expect-error A Basic morphism must be declared with basicMorphism(name, dom, cod).
+        Attr: { tag: "Basic", content: "Attr" },
+    },
 });
 ```
