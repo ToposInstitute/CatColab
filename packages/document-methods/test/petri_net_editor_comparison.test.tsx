@@ -43,6 +43,145 @@ const EXPECTED_AFTER_APPEND =
     "<span>[C<!---->]</span><span> fires</span></span>" +
     '<button aria-label="append input place"></button></li></ul></section>';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Deep-clone a value, replacing every UUID with a stable label assigned by
+ * first encounter (`uuid:0`, `uuid:1`, ...). The mapping is shared across the
+ * whole value, so equal UUIDs collapse to equal labels: a morphism endpoint
+ * that references an object's id stays equal to that object's id, while the
+ * random values themselves are erased. UUID-valued object keys (the
+ * `cellContents` map keys) are normalized with the same map.
+ */
+function normalizeUuids(value: unknown): unknown {
+    const labels = new Map<string, string>();
+    const label = (s: string): string => {
+        let l = labels.get(s);
+        if (l === undefined) {
+            l = `uuid:${labels.size}`;
+            labels.set(s, l);
+        }
+        return l;
+    };
+    const walk = (v: unknown): unknown => {
+        if (typeof v === "string") {
+            return UUID_RE.test(v) ? label(v) : v;
+        }
+        if (Array.isArray(v)) {
+            return v.map(walk);
+        }
+        if (v && typeof v === "object") {
+            const out: Record<string, unknown> = {};
+            for (const k of Object.keys(v as Record<string, unknown>)) {
+                const nk = UUID_RE.test(k) ? label(k) : k;
+                out[nk] = walk((v as Record<string, unknown>)[k]);
+            }
+            return out;
+        }
+        return v;
+    };
+    return walk(value);
+}
+
+/**
+ * The notebook all three tests build (places A, B, C and a transition `fires`),
+ * after the editor's "append input place" button has wired place B into the
+ * transition's domain, so `dom: [A, B]` and `cod: [C]`. UUIDs are normalized by
+ * {@link normalizeUuids}; the labels `uuid:4`, `uuid:5`, `uuid:6` are the object
+ * *judgment* ids of A, B, C, so the transition's `dom`/`cod` references below
+ * verify the wiring produced by the component, not just the presence of some
+ * object.
+ */
+const EXPECTED_NOTEBOOK_JSON = {
+    name: "Petri net",
+    type: "model",
+    theory: "petri-net",
+    notebook: {
+        cellOrder: ["uuid:0", "uuid:1", "uuid:2", "uuid:3"],
+        cellContents: {
+            "uuid:0": {
+                tag: "formal",
+                id: "uuid:0",
+                content: {
+                    tag: "object",
+                    id: "uuid:4",
+                    name: "A",
+                    obType: { tag: "Basic", content: "Object" },
+                },
+            },
+            "uuid:1": {
+                tag: "formal",
+                id: "uuid:1",
+                content: {
+                    tag: "object",
+                    id: "uuid:5",
+                    name: "B",
+                    obType: { tag: "Basic", content: "Object" },
+                },
+            },
+            "uuid:2": {
+                tag: "formal",
+                id: "uuid:2",
+                content: {
+                    tag: "object",
+                    id: "uuid:6",
+                    name: "C",
+                    obType: { tag: "Basic", content: "Object" },
+                },
+            },
+            "uuid:3": {
+                tag: "formal",
+                id: "uuid:3",
+                content: {
+                    tag: "morphism",
+                    id: "uuid:7",
+                    name: "fires",
+                    morType: {
+                        tag: "Hom",
+                        content: {
+                            tag: "ModeApp",
+                            content: {
+                                modality: "SymmetricList",
+                                obType: { tag: "Basic", content: "Object" },
+                            },
+                        },
+                    },
+                    dom: {
+                        tag: "App",
+                        content: {
+                            op: { tag: "Basic", content: "tensor" },
+                            ob: {
+                                tag: "List",
+                                content: {
+                                    modality: "SymmetricList",
+                                    objects: [
+                                        { tag: "Basic", content: "uuid:4" },
+                                        { tag: "Basic", content: "uuid:5" },
+                                    ],
+                                },
+                            },
+                        },
+                    },
+                    cod: {
+                        tag: "App",
+                        content: {
+                            op: { tag: "Basic", content: "tensor" },
+                            ob: {
+                                tag: "List",
+                                content: {
+                                    modality: "SymmetricList",
+                                    objects: [{ tag: "Basic", content: "uuid:6" }],
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+    version: "2",
+};
+
 type SolidStoreHandle = {
     doc: ModelDocument;
     setDoc: SetStoreFunction<ModelDocument>;
@@ -325,6 +464,13 @@ describe("Petri-net editor comparison", () => {
         appendButton.click();
         expect(container.innerHTML).toBe(EXPECTED_AFTER_APPEND);
 
+        // After the component's append-input edit, the stored document is
+        // identical (modulo UUIDs) across all three construction paths; see
+        // EXPECTED_NOTEBOOK_JSON.
+        expect(normalizeUuids(structuredClone(unwrap(notebook.doc)))).toEqual(
+            EXPECTED_NOTEBOOK_JSON,
+        );
+
         dispose();
         container.remove();
     });
@@ -415,6 +561,11 @@ describe("Petri-net editor comparison", () => {
         )!;
         appendButton.click();
         expect(container.innerHTML).toBe(EXPECTED_AFTER_APPEND);
+
+        // After the component's append-input edit, the stored document is
+        // identical (modulo UUIDs) across all three construction paths; see
+        // EXPECTED_NOTEBOOK_JSON.
+        expect(normalizeUuids(notebook.dump())).toEqual(EXPECTED_NOTEBOOK_JSON);
 
         dispose();
         container.remove();
@@ -529,6 +680,11 @@ describe("Petri-net editor comparison", () => {
         )!;
         appendButton.click();
         expect(container.innerHTML).toBe(EXPECTED_AFTER_APPEND);
+
+        // After the component's append-input edit, the stored document is
+        // identical (modulo UUIDs) across all three construction paths; see
+        // EXPECTED_NOTEBOOK_JSON.
+        expect(normalizeUuids(notebook.dump())).toEqual(EXPECTED_NOTEBOOK_JSON);
 
         dispose();
         container.remove();
