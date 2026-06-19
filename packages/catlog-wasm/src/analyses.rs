@@ -5,7 +5,9 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use catlog::simulate::ode::PolynomialSystem;
-use catlog::stdlib::analyses::ode::{self, ODESemanticsAnalysis, ODESemanticsProblemData};
+use catlog::stdlib::analyses::ode::{
+    self, ODESemantics, ODESemanticsAnalysis, ODESemanticsProblemData,
+};
 use catlog::zero::QualifiedName;
 
 use crate::latex::latex_names;
@@ -42,6 +44,11 @@ fn polynomial_ode_system(
 //       of ODESemanics? use e.g. `<T as ODESemantics>::ODEParameter`
 //
 //       ... OR just define `fn polynomial_system<S: ODESemantics>` ??????????
+// fn polynomial_system<S: ODESemantics>(
+//     model: &DblModel,
+// ) -> Result<PolynomialSystem<QualifiedName, ode::Parameter<S::ParameterType>, i8>, String> {
+//     // TODO: match on some enum `Discrete | Tabulated | ModalUnital | ModalNonUnital`
+// }
 
 /// Generates the PolynomialSystem for Lotka-Volterra dynamics.
 fn lotka_volterra_system(
