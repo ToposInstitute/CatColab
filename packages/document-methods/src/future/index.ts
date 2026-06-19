@@ -681,6 +681,9 @@ function attachNotebook<TShape extends AnyShape, Handle>(
     const isShapeMorphism = (type: MorType): boolean =>
         Object.values(shape.morphisms).some((t) => sameTypeValue(t, type));
 
+    const isShapeObject = (type: ObType): boolean =>
+        Object.values(shape.objects).some((t) => sameTypeValue(t, type));
+
     const addObjectCell = (type: ObType, name: string): ObjectCell => {
         const judgment = newObjectDecl(type);
         judgment.name = name;
@@ -815,6 +818,19 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                 Object.assign(d, u);
             });
         },
+        supports(type: ObType | MorType): boolean {
+            const cellType = type as ObType | MorType;
+            switch (cellType.tag) {
+                case "Hom":
+                case "Composite":
+                    return isShapeMorphism(cellType as MorType);
+                default:
+                    return (
+                        isShapeMorphism(cellType as MorType) ||
+                        isShapeObject(cellType as ObType)
+                    );
+            }
+        },
         cells(): Array<NotebookCell> {
             return doc.notebook.cellOrder.map((cellId) => {
                 const cell = doc.notebook.cellContents[cellId];
@@ -908,6 +924,15 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
      * Throws if no migration to the target is defined.
      */
     migrate<TTarget extends CreatableShape>(targetShape: TTarget): Notebook<TTarget, Handle>;
+    /**
+     * Whether this notebook's shape declares a cell type structurally equal to
+     * the given object or morphism type. A function written against a shape
+     * (e.g. `Notebook<typeof ListShape>`) can be handed a notebook of a
+     * narrower theory whose shape only covers some of those types; `supports`
+     * tests, at runtime, which of the shape's types this particular notebook
+     * actually provides before {@link Notebook.add}ing them.
+     */
+    supports(type: ObType | MorType): boolean;
     /** Handles for all cells, in notebook order. */
     cells(): Array<NotebookCell<TShape>>;
     /**
