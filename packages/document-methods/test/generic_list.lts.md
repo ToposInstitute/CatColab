@@ -3,9 +3,8 @@
 <!-- verifier:prepend-to-following -->
 
 ```ts
-import { binder, defineShape, type Notebook } from "catcolab-documents";
-
-import { MorType, ObType } from "catcolab-document-types";
+import { defineShape, type Notebook } from "catcolab-documents";
+import type { MorType, ObType } from "catcolab-document-types";
 
 const basicObjType = { tag: "Basic", content: "Object" } as const satisfies ObType;
 const symmetricListMorType = {
@@ -103,6 +102,8 @@ const AdditiveListMor = AdditiveListShape.morphisms.AdditiveListMor;
 
 <!-- verifier:prepend-to-following -->
 
+`addListMorphism` works on any notebook that supports any of the objects or morphisms `ListShape` supports. When implementing a generic consumer like this it is our responsibility to narrow down what object and morphism types the notebook actually supports before adding them by using `notebook.supports`.
+
 ```ts
 type SupportedNotebook = Notebook<
     | typeof ListShape
@@ -123,6 +124,7 @@ function addListMorphism(props: { notebook: SupportedNotebook }) {
     if (notebook.supports(ListMor)) {
         notebook.add(ListMor, { name: "L", dom: [a, b], cod: [c] });
     } else if (notebook.supports(SymmetricListMor)) {
+        console.log("Adding SymmetricListMor!");
         notebook.add(SymmetricListMor, { name: "L", dom: [a, b], cod: [c] });
     } else if (notebook.supports(CocartesianListMor)) {
         notebook.add(CocartesianListMor, { name: "L", dom: [a, b], cod: [c] });
@@ -181,7 +183,7 @@ function badAddListMorphism2(props: { notebook: Notebook<typeof MultiObjectListS
 
 
     notebook.add(ListMor, { name: "L1", dom: [a, b], cod: [b] });
-    //@ts-expect-error We can't use 
+    //@ts-expect-error We can't use an EntityObj with a ListMor
     notebook.add(ListMor, { name: "L2", dom: [a, b], cod: [e] });
 }
 ```
@@ -217,26 +219,29 @@ type SupportedNotebookWithEntity = Notebook<
     unknown
 >;
 
-function badAddListMorphism3(props: { notebook: SupportedNotebookWithEntity }) {
-    const { notebook } = props;
-
-    //@ts-expect-error We can't add a BasicObj without narrowing the notebook type because EntityObjectListShape  does not support BasicObj.
+function badAddObject(notebook: SupportedNotebookWithEntity) {
+    //@ts-expect-error We can't add a BasicObj without narrowing the notebook type because EntityObjectListShape does not support BasicObj.
     notebook.add(BasicObj, { name: "A" });
 }
 ```
 
 
 
-## A structurally compatible notebook is accepted
+## A structurally compatible notebook is accepted and the appropriate morphism is added.
 
 <!-- verifier:prepend-to-following -->
 
 ```ts
+import { binder } from "catcolab-documents";
 import { PetriNet } from "catcolab-logics/petri-net";
 
 const petriNet = binder.createNotebook(PetriNet, { name: "example" });
 
 addListMorphism({ notebook: petriNet });
+```
+
+```
+Adding SymmetricListMor!
 ```
 
 ## A structurally incompatible notebook should be rejected
