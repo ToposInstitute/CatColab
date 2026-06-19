@@ -4597,6 +4597,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "theory-codegen"
+version = "0.1.0"
+dependencies = [
+ "catlog",
+]
+
+[[package]]
 name = "thiserror"
 version = "1.0.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"

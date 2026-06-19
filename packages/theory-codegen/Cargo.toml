@@ -1,0 +1,8 @@
+[package]
+name = "theory-codegen"
+version = "0.1.0"
+edition = "2024"
+description = "Generates TypeScript theory shape definitions for catcolab-document-methods from the catlog theory definitions."
+
+[dependencies]
+catlog = { path = "../catlog" }

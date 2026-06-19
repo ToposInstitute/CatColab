@@ -69,6 +69,24 @@ const age = notebook.add(AttrType, { name: "Age" });
 notebook.add(Mapping, { name: "broken", dom: person, cod: age });
 ```
 
+A `Basic` morphism records no endpoints in its `MorType` literal, so the shape
+declares them with `basicMorphism` (the declaration is generated from the Rust
+theory, where `Attr` goes `Entity -> AttrType`). An `Attr` therefore types its
+endpoints just like a `Hom`: its domain must be an `Entity` and its codomain an
+`AttrType`, so swapping them is a compile error even though `Attr` is `Basic`.
+
+```ts
+import { binder } from "catcolab-documents";
+import { Attr, AttrType, Entity, SimpleSchema } from "catcolab-logics/simple-schema";
+
+const notebook = binder.createNotebook(SimpleSchema, { name: "Schema" });
+const person = notebook.add(Entity, { name: "Person" });
+const age = notebook.add(AttrType, { name: "Age" });
+
+// @ts-expect-error An Attr's domain is an Entity cell and its codomain an AttrType cell.
+notebook.add(Attr, { name: "broken", dom: age, cod: person });
+```
+
 ## Bug 2: a single object where an endpoint list is required
 
 A Petri-net transition's endpoints are _lists_ of places, recorded as a

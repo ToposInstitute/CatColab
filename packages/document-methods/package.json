@@ -10,6 +10,7 @@
     },
     "scripts": {
         "build:wasm": "wasm-pack build ../document-types",
+        "generate:theories": "cargo run -p theory-codegen",
         "format": "oxfmt .",
         "lint": "oxlint --fix && oxfmt .",
         "test:lts": "literate-typescript test/*.lts.md",
