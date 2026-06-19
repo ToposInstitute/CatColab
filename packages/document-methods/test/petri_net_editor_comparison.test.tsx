@@ -1,3 +1,8 @@
+// Each test case defines its editor components and helpers inside the `test()`
+// body so that the three scenarios stay fully self-contained and comparable.
+// Some of these are pure (don't capture parent-scope variables), which trips
+// `consistent-function-scoping`; hoisting them out would scatter each scenario.
+/* oxlint-disable unicorn/consistent-function-scoping */
 import {
     byMorphismType,
     byObjectType,
