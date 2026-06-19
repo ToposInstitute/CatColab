@@ -470,18 +470,22 @@ impl ODESemanticsProblemData<MassActionParameter> for MassActionProblemData {
                 }
                 MassActionParameter::Unbalanced { direction, parameter } => {
                     match (direction, parameter) {
-                        (Direction::IncomingFlow, RateParameter::PerTransition { flow: transition }) => {
-                            self.transition_production_rates
-                                .get(transition)
-                                .cloned()
-                                .unwrap_or_default()
-                        }
-                        (Direction::OutgoingFlow, RateParameter::PerTransition { flow: transition }) => {
-                            self.transition_consumption_rates
-                                .get(transition)
-                                .cloned()
-                                .unwrap_or_default()
-                        }
+                        (
+                            Direction::IncomingFlow,
+                            RateParameter::PerTransition { flow: transition },
+                        ) => self
+                            .transition_production_rates
+                            .get(transition)
+                            .cloned()
+                            .unwrap_or_default(),
+                        (
+                            Direction::OutgoingFlow,
+                            RateParameter::PerTransition { flow: transition },
+                        ) => self
+                            .transition_consumption_rates
+                            .get(transition)
+                            .cloned()
+                            .unwrap_or_default(),
                         (
                             Direction::IncomingFlow,
                             RateParameter::PerPlace { flow: transition, stock: place },
