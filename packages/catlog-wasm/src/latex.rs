@@ -4,38 +4,41 @@ use catlog::zero::QualifiedName;
 
 use super::model::DblModel;
 
+fn wrap_with_backslash_text(name: String) -> String {
+    if name.chars().count() > 1 {
+        format!("\\text{{{name}}}")
+    } else {
+        format!("{name}")
+    }
+}
+
 /// Creates a closure that formats object and morphism names for LaTeX output. When a morphism has a
 /// name (and thus label), it is used directly; when unnamed, the label falls back to the format
 /// `domain→codomain` (e.g., `X \to Y`).
 pub(crate) fn latex_names(model: &DblModel) -> impl Fn(&QualifiedName) -> String {
     |id: &QualifiedName| {
         if let Some(ob_label) = model.ob_namespace.label(id) {
-            if ob_label.to_string().chars().count() > 1 {
-                format!("\\text{{{ob_label}}}")
-            } else {
-                format!("{ob_label}")
-            }
+            wrap_with_backslash_text(ob_label.to_string())
         } else if let Some(mor_label) = model.mor_namespace.label(id) {
-            if mor_label.to_string().chars().count() > 1 {
-                format!("\\text{{{mor_label}}}")
-            } else {
-                format!("{mor_label}")
-            }
+            wrap_with_backslash_text(mor_label.to_string())
         } else {
             let (dom, cod) = model
                 .mor_generator_dom_cod_label_strings(id)
                 .expect("Morphism in equation system should have domain and codomain");
-            format!("\\text{{{dom}}} \\to \\text{{{cod}}}")
+            format!("{} \\to {}", wrap_with_backslash_text(dom), wrap_with_backslash_text(cod))
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use catcolab_document_types::v2::{MorDecl, MorType, Ob, ObDecl, ObType};
     use catlog::dbl::modal::{List, ModalMorType, ModalOb, ModalObType};
     use catlog::dbl::model::{ModalDblModel, MutDblModel};
     use catlog::latex::{Latex, LatexEquation, LatexEquations};
-    use catlog::stdlib::analyses::ode::{StockFlowMassActionAnalysis, ode_semantics::*};
+    use catlog::stdlib::analyses::ode::{
+        LotkaVolterraAnalysis, StockFlowMassActionAnalysis, ode_semantics::*,
+    };
     use catlog::stdlib::{analyses::ode, theories};
     use catlog::zero::{LabelSegment, Namespace, QualifiedName};
     use std::rc::Rc;
@@ -43,6 +46,7 @@ mod tests {
 
     use super::*;
     use crate::model::{DblModel, tests::backward_link};
+    use crate::theories::ThSignedCategory;
 
     #[test]
     fn stock_flow_balanced_mass_action_latex_equations() {
@@ -69,14 +73,14 @@ mod tests {
     fn stock_flow_unbalanced_mass_action_latex_equations() {
         let model = backward_link("xxx", "yyy", "fff");
         let tab_model = model.discrete_tab().unwrap();
-        let analysis = StockFlowMassActionAnalysis {
+        let equations = StockFlowMassActionAnalysis {
             mass_conservation_type: ode::MassConservationType::Unbalanced(
                 ode::RateGranularity::PerTransition,
             ),
             ..StockFlowMassActionAnalysis::default()
-        };
-        let sys = analysis.build_system(tab_model);
-        let equations = sys.to_latex_equations_with_map(|param| latex_names(&model)(param));
+        }
+        .build_system(tab_model)
+        .to_latex_equations_with_map(|param| latex_names(&model)(param));
 
         let expected = LatexEquations(vec![
             LatexEquation {
@@ -95,36 +99,103 @@ mod tests {
 
     #[test]
     fn cld_lotka_volterra_latex_equations() {
-        todo!()
+        let th = ThSignedCategory::new().theory();
+        let mut model = DblModel::new(&th);
+        // Constructing a causal loop diagram with objects x, y and negative links f, g : x -> y.
+        let [x, y, f, g] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
+        assert!(
+            model
+                .add_ob(&ObDecl {
+                    name: "x".into(),
+                    id: x,
+                    ob_type: ObType::Basic("Object".into())
+                })
+                .is_ok()
+        );
+        assert!(
+            model
+                .add_ob(&ObDecl {
+                    name: "yellow".into(),
+                    id: y,
+                    ob_type: ObType::Basic("Object".into())
+                })
+                .is_ok()
+        );
+        assert!(
+            model
+                .add_mor(&MorDecl {
+                    name: "f".into(),
+                    id: f,
+                    mor_type: MorType::Basic("Negative".into()),
+                    dom: Some(Ob::Basic(x.to_string())),
+                    cod: Some(Ob::Basic(y.to_string())),
+                })
+                .is_ok()
+        );
+        assert!(
+            model
+                .add_mor(&MorDecl {
+                    name: "".into(),
+                    id: g,
+                    mor_type: MorType::Basic("Negative".into()),
+                    dom: Some(Ob::Basic(x.to_string())),
+                    cod: Some(Ob::Basic(y.to_string())),
+                })
+                .is_ok()
+        );
+
+        let discrete_model = model.discrete().unwrap();
+        let equations = LotkaVolterraAnalysis::default()
+            .build_system(discrete_model)
+            .to_latex_equations_with_map(|param| latex_names(&model)(param));
+
+        let expected = LatexEquations(vec![
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string()),
+                rhs: Latex(
+                    "g_{x} \\cdot x"
+                        .to_string(),
+                ),
+            },
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{yellow}".to_string()),
+                rhs: Latex(
+                    "(-k_{f} - k_{x \\to \\text{yellow}}) \\cdot x \\cdot \\text{yellow} + g_{\\text{yellow}} \\cdot \\text{yellow}"
+                        .to_string(),
+                ),
+            },
+        ]);
+
+        assert_eq!(equations, expected);
     }
 
     #[test]
     fn cld_lcc_latex_equations() {
-        todo!()
+        // TODO
     }
 
     #[test]
     fn petri_net_unbalanced_pp_mass_action_latex_equations() {
-        todo!()
+        // TODO
     }
 
     #[test]
     fn petri_net_unbalanced_pt_mass_action_latex_equations() {
-        todo!()
+        // TODO
     }
 
     #[test]
     fn unnamed_mor_uses_dom_cod_in_equations() {
         let model = backward_link("xxx", "yyy", "");
         let tab_model = model.discrete_tab().unwrap();
-        let analysis = StockFlowMassActionAnalysis {
+        let equations = StockFlowMassActionAnalysis {
             mass_conservation_type: ode::MassConservationType::Unbalanced(
                 ode::RateGranularity::PerTransition,
             ),
             ..StockFlowMassActionAnalysis::default()
-        };
-        let sys = analysis.build_system(tab_model);
-        let equations = sys.to_latex_equations_with_map(|param| latex_names(&model)(param));
+        }
+        .build_system(tab_model)
+        .to_latex_equations_with_map(|param| latex_names(&model)(param));
 
         let expected = LatexEquations(vec![
             LatexEquation {

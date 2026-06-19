@@ -42,6 +42,11 @@ fn polynomial_ode_system(
     Ok(analysis.build_system(realised_model))
 }
 
+// TODO: can all of the following be generalised by iterating (with a macro) over all the implementations
+//       of ODESemanics? use e.g. `<T as ODESemantics>::ODEParameter`
+//       
+//       ... OR just define `fn polynomial_system<S: ODESemantics>` ??????????
+
 /// Generates the PolynomialSystem for Lotka-Volterra dynamics.
 fn lotka_volterra_system(
     model: &DblModel,
@@ -169,7 +174,7 @@ pub(crate) fn mass_action_equations(
 
 
 
-/// Simulates mass-action ODEs.
+/// Simulates polynomial ODE equations.
 pub(crate) fn polynomial_ode_simulation(
     model: &DblModel,
     data: ode::PolynomialODEProblemData,
@@ -185,6 +190,8 @@ pub(crate) fn polynomial_ode_simulation(
         latex_equations,
     })
 }
+
+// TODO: define some closure that takes `sys_extended_scalars` to the result
 
 /// Simulates Lotka-Volterra ODEs.
 pub(crate) fn lotka_volterra_simulation(

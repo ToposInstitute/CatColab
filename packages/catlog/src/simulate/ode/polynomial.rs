@@ -102,6 +102,10 @@ where
         self.to_latex_equations_with_map(name)
     }
 
+    // REQUEST  | It might be much cleaner to only implement `to_latex_equations_with_map` in the
+    //   FOR    | case where `Var = QualifiedName` and `Coef = Parameter<P: ODEParameter>`, but I
+    // FEEDBACK | cannot figure out how to convince Rust to let me do this.
+    //__________/
     /// Converts to equations as Latex string, after applying the function `f : &QualifiedName -> String`
     /// to each of the variables and coefficients. This is intended for frontend functionality, where we
     /// do not want to display UUIDs directly but instead look them up in the model namespace. For more
