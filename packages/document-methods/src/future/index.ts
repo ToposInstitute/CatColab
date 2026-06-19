@@ -119,13 +119,18 @@ export type ObjectCell<O extends ObType = ObType> = Update<{ name: string }> &
         duplicate(): ObjectCell<O>;
     };
 
-/** Modalities whose endpoints are lists of objects rather than a single one. */
-type ListModality = "List" | "SymmetricList" | "CocartesianList" | "CartesianList" | "AdditiveList";
+/** The kinds of list an endpoint can be, rather than a single object. */
+export type ListKind =
+    | "List"
+    | "SymmetricList"
+    | "CocartesianList"
+    | "CartesianList"
+    | "AdditiveList";
 
 /**
  * The endpoint type of a morphism cell, derived from the morphism's `MorType`:
  *
- * - a `Hom` over a list modality (e.g. a Petri-net transition's
+ * - a `Hom` over a list (e.g. a Petri-net transition's
  *   `Hom(ModeApp(SymmetricList, Object))`) has array-valued endpoints of the
  *   inner object type;
  * - a plain `Hom` over an object type (e.g. a schema `Mapping`,
@@ -142,11 +147,11 @@ export type EndpointOf<M extends MorType> = [M] extends [
         tag: "Hom";
         content: {
             tag: "ModeApp";
-            content: { modality: infer Mod; obType: infer O extends ObType };
+            content: { modality: infer Kind; obType: infer O extends ObType };
         };
     },
 ]
-    ? Mod extends ListModality
+    ? Kind extends ListKind
         ? ObjectCell<O>[]
         : ObjectCell<O>
     : [M] extends [{ tag: "Hom"; content: infer O extends ObType }]
@@ -182,6 +187,21 @@ export function basicMorphism<
     const C extends ObType,
 >(content: Name, _dom: D, _cod: C): { tag: "Basic"; content: Name } & Endpoints<D, C> {
     return { tag: "Basic", content } as { tag: "Basic"; content: Name } & Endpoints<D, C>;
+}
+
+/**
+ * Declare a `Hom` morphism type whose endpoints are a *list* of objects of the
+ * given object type, rather than a single one. The `kind` selects which kind of
+ * list it is (a Petri-net transition is the `SymmetricList` case); every {@link
+ * ListKind} yields the same array-valued endpoints, so a consumer written
+ * against one works for all of them. Pass the object type as a literal (declare
+ * it `as const`) so the endpoint object type survives inference.
+ */
+export function homList<const K extends ListKind, const O extends ObType>(
+    kind: K,
+    obType: O,
+): { tag: "Hom"; content: { tag: "ModeApp"; content: { modality: K; obType: O } } } {
+    return { tag: "Hom", content: { tag: "ModeApp", content: { modality: kind, obType } } };
 }
 
 /**
@@ -422,7 +442,7 @@ const sameTypeValue = (a: unknown, b: unknown): boolean => {
     return keys.every((key) => sameTypeValue(aRecord[key], bRecord[key]));
 };
 
-const LIST_MODALITIES: ReadonlySet<Modality> = new Set<Modality>([
+const LIST_KINDS: ReadonlySet<Modality> = new Set<Modality>([
     "List",
     "SymmetricList",
     "CocartesianList",
@@ -431,16 +451,16 @@ const LIST_MODALITIES: ReadonlySet<Modality> = new Set<Modality>([
 ]);
 
 /**
- * The list modality of a morphism type's endpoints, read from the modality in
- * its `Hom` content, or `null` when the endpoints are single objects. This is
- * the runtime counterpart of the list branch of {@link EndpointOf}.
+ * The list kind of a morphism type's endpoints, read from its `Hom` content, or
+ * `null` when the endpoints are single objects. This is the runtime counterpart
+ * of the list branch of {@link EndpointOf}.
  */
-const morTypeListModality = (morType: MorType): Modality | null => {
+const morTypeListKind = (morType: MorType): Modality | null => {
     if (morType.tag !== "Hom") {
         return null;
     }
     const inner = morType.content;
-    if (inner.tag === "ModeApp" && LIST_MODALITIES.has(inner.content.modality)) {
+    if (inner.tag === "ModeApp" && LIST_KINDS.has(inner.content.modality)) {
         return inner.content.modality;
     }
     return null;
@@ -454,14 +474,13 @@ const encodeObjectRef = (cell: { readonly id: string }): Ob => ({
 
 /**
  * Encode a morphism endpoint into the document's object notation. The shape is
- * chosen from the morphism type: a list-modality `Hom` (e.g. a Petri-net
- * transition) wraps an array of cells as a tensor product over the modality's
- * list; any other morphism type encodes a single object cell as a basic
- * object.
+ * chosen from the morphism type: a list `Hom` (e.g. a Petri-net transition)
+ * wraps an array of cells as a tensor product over the list; any other morphism
+ * type encodes a single object cell as a basic object.
  */
 const encodeEndpoint = (morType: MorType, value: unknown): Ob | null => {
-    const modality = morTypeListModality(morType);
-    if (modality !== null) {
+    const listKind = morTypeListKind(morType);
+    if (listKind !== null) {
         const cells = Array.isArray(value) ? value : value == null ? [] : [value];
         return {
             tag: "App",
@@ -470,7 +489,7 @@ const encodeEndpoint = (morType: MorType, value: unknown): Ob | null => {
                 ob: {
                     tag: "List",
                     content: {
-                        modality,
+                        modality: listKind,
                         objects: cells.map((cell) =>
                             encodeObjectRef(cell as { readonly id: string }),
                         ),
@@ -614,10 +633,10 @@ function attachNotebook<TShape extends AnyShape, Handle>(
     };
 
     /** Decode a stored endpoint, choosing array vs single shape from the
-    morphism type's modality rather than from the stored value's shape. */
+    morphism type's list kind rather than from the stored value's shape. */
     const decodeEndpoint = (morType: MorType, value: Ob | null): ObjectCell | ObjectCell[] => {
         const objects = decodeEndpointObjects(value);
-        if (morTypeListModality(morType) !== null) {
+        if (morTypeListKind(morType) !== null) {
             return objects;
         }
         return objects[0] as ObjectCell;
@@ -940,7 +959,7 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
     /**
      * Add a morphism cell from a bare {@link MorType}, bypassing the shape's
      * typed constructors. Endpoints are untyped: a single object cell or a list
-     * of them, with the stored shape following the morphism type's modality.
+     * of them, with the stored shape following the morphism type's list kind.
      * The returned handle is the untyped {@link MorphismCell}.
      */
     addMorphism(
