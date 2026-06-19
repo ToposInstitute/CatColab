@@ -8,7 +8,7 @@ fn wrap_with_backslash_text(name: String) -> String {
     if name.chars().count() > 1 {
         format!("\\text{{{name}}}")
     } else {
-        format!("{name}")
+        name.to_string()
     }
 }
 
@@ -32,12 +32,12 @@ pub(crate) fn latex_names(model: &DblModel) -> impl Fn(&QualifiedName) -> String
 
 #[cfg(test)]
 mod tests {
-    use catcolab_document_types::v2::{MorDecl, MorType, Ob, ObDecl, ObType};
     use catlog::dbl::modal::{List, ModalMorType, ModalOb, ModalObType};
     use catlog::dbl::model::{ModalDblModel, MutDblModel};
     use catlog::latex::{Latex, LatexEquation, LatexEquations};
     use catlog::stdlib::analyses::ode::{
-        LotkaVolterraAnalysis, StockFlowMassActionAnalysis, ode_semantics::*,
+        LCCAnalysis, LotkaVolterraAnalysis, PetriNetMassActionAnalysis,
+        StockFlowMassActionAnalysis, ode_semantics::*,
     };
     use catlog::stdlib::{analyses::ode, theories};
     use catlog::zero::{LabelSegment, Namespace, QualifiedName};
@@ -45,8 +45,8 @@ mod tests {
     use uuid::Uuid;
 
     use super::*;
+    use crate::model::tests::{catalytic_petri_net, parallel_negative_cld};
     use crate::model::{DblModel, tests::backward_link};
-    use crate::theories::ThSignedCategory;
 
     #[test]
     fn stock_flow_balanced_mass_action_latex_equations() {
@@ -99,50 +99,8 @@ mod tests {
 
     #[test]
     fn cld_lotka_volterra_latex_equations() {
-        let th = ThSignedCategory::new().theory();
-        let mut model = DblModel::new(&th);
-        // Constructing a causal loop diagram with objects x, y and negative links f, g : x -> y.
-        let [x, y, f, g] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
-        assert!(
-            model
-                .add_ob(&ObDecl {
-                    name: "x".into(),
-                    id: x,
-                    ob_type: ObType::Basic("Object".into())
-                })
-                .is_ok()
-        );
-        assert!(
-            model
-                .add_ob(&ObDecl {
-                    name: "yellow".into(),
-                    id: y,
-                    ob_type: ObType::Basic("Object".into())
-                })
-                .is_ok()
-        );
-        assert!(
-            model
-                .add_mor(&MorDecl {
-                    name: "f".into(),
-                    id: f,
-                    mor_type: MorType::Basic("Negative".into()),
-                    dom: Some(Ob::Basic(x.to_string())),
-                    cod: Some(Ob::Basic(y.to_string())),
-                })
-                .is_ok()
-        );
-        assert!(
-            model
-                .add_mor(&MorDecl {
-                    name: "".into(),
-                    id: g,
-                    mor_type: MorType::Basic("Negative".into()),
-                    dom: Some(Ob::Basic(x.to_string())),
-                    cod: Some(Ob::Basic(y.to_string())),
-                })
-                .is_ok()
-        );
+        // The CLD with objects "x" and "yellow", and two negative links "f" and [unnamed] from x to y.
+        let model = parallel_negative_cld("x", "yellow", "f", "");
 
         let discrete_model = model.discrete().unwrap();
         let equations = LotkaVolterraAnalysis::default()
@@ -171,17 +129,122 @@ mod tests {
 
     #[test]
     fn cld_lcc_latex_equations() {
-        // TODO
+        // The CLD with objects "x" and "yellow", and two negative links "f" and [unnamed] from x to y.
+        let model = parallel_negative_cld("x", "yellow", "f", "");
+        let discrete_model = model.discrete().unwrap();
+        let equations = LCCAnalysis::default()
+            .build_system(discrete_model)
+            .to_latex_equations_with_map(|param| latex_names(&model)(param));
+
+        let expected = LatexEquations(vec![
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string()),
+                rhs: Latex("0".to_string()),
+            },
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{yellow}".to_string()),
+                rhs: Latex(
+                    "(-\\lambda_{f} - \\lambda_{x \\to \\text{yellow}}) \\cdot x".to_string(),
+                ),
+            },
+        ]);
+
+        assert_eq!(equations, expected);
     }
 
     #[test]
-    fn petri_net_unbalanced_pp_mass_action_latex_equations() {
-        // TODO
+    fn petri_net_balanced_mass_action_latex_equations() {
+        // The Petri net with places "liquid", "solid", and "c", and one (unnamed) transition [liquid, c] -> [solid, c].
+        let model = catalytic_petri_net("liquid", "solid", "c", "");
+        let modal_model = model.modal_unital().unwrap();
+        let equations = PetriNetMassActionAnalysis::default()
+            .build_system(modal_model)
+            .to_latex_equations_with_map(|param| latex_names(&model)(param));
+
+        let expected = LatexEquations(vec![
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{liquid}".to_string()),
+                rhs: Latex(
+                    "-r_{[\\text{liquid}, c] \\to [\\text{solid}, c]} \\text{liquid} \\cdot c"
+                        .to_string(),
+                ),
+            },
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{solid}".to_string()),
+                rhs: Latex(
+                    "r_{[\\text{liquid}, c] \\to [\\text{solid}, c]} \\text{liquid} \\cdot c"
+                        .to_string(),
+                ),
+            },
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} c".to_string()),
+                rhs: Latex("0".to_string()),
+            },
+        ]);
+        assert_eq!(equations, expected);
     }
 
     #[test]
     fn petri_net_unbalanced_pt_mass_action_latex_equations() {
-        // TODO
+        // The Petri net with places "liquid", "solid", and "c", and one (unnamed) transition [liquid, c] -> [solid, c].
+        let model = catalytic_petri_net("liquid", "solid", "c", "");
+        let modal_model = model.modal_unital().unwrap();
+        let equations = PetriNetMassActionAnalysis {
+            mass_conservation_type: ode::MassConservationType::Unbalanced(
+                ode::RateGranularity::PerTransition,
+            ),
+            ..PetriNetMassActionAnalysis::default()
+        }
+        .build_system(modal_model)
+        .to_latex_equations_with_map(|param| latex_names(&model)(param));
+
+        let expected = LatexEquations(vec![
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{liquid}".to_string()),
+                rhs: Latex("-\\kappa_{[\\text{liquid}, c] \\to [\\text{solid}, c]} \\text{liquid} \\cdot c".to_string()),
+            },
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{solid}".to_string()),
+                rhs: Latex("\\rho_{[\\text{liquid}, c] \\to [\\text{solid}, c]} \\text{liquid} \\cdot c".to_string()),
+            },
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} c".to_string()),
+                rhs: Latex("(\\rho_{[\\text{liquid}, c] \\to [\\text{solid}, c]} - \\kappa_{[\\text{liquid}, c] \\to [\\text{solid}, c]}) \\cdot \\text{liquid} \\cdot c".to_string()),
+            },
+        ]);
+        assert_eq!(equations, expected);
+    }
+
+    #[test]
+    fn petri_net_unbalanced_pp_mass_action_latex_equations() {
+        // The Petri net with places "liquid", "solid", and "c", and one (unnamed) transition [liquid, c] -> [solid, c].
+        let model = catalytic_petri_net("liquid", "solid", "c", "");
+        let modal_model = model.modal_unital().unwrap();
+        let equations = PetriNetMassActionAnalysis {
+            mass_conservation_type: ode::MassConservationType::Unbalanced(
+                ode::RateGranularity::PerPlace,
+            ),
+            ..PetriNetMassActionAnalysis::default()
+        }
+        .build_system(modal_model)
+        .to_latex_equations_with_map(|param| latex_names(&model)(param));
+
+        // TODO: write down the expected equations
+        let expected = LatexEquations(vec![
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{liquid}".to_string()),
+                rhs: Latex("".to_string()),
+            },
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{solid}".to_string()),
+                rhs: Latex("".to_string()),
+            },
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} c".to_string()),
+                rhs: Latex("".to_string()),
+            },
+        ]);
+        assert_eq!(equations, expected);
     }
 
     #[test]
