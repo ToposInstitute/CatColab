@@ -11,7 +11,6 @@ import {
     type Notebook,
     type NotebookCell,
     type ObjectCell,
-    type Shape,
 } from "catcolab-documents";
 import { For } from "solid-js";
 import { createStore, produce, type SetStoreFunction, unwrap } from "solid-js/store";
@@ -53,69 +52,73 @@ function listShape<const K extends ListKind>(theory: string, kind: K) {
     });
 }
 
-type GenericNotebook = Notebook<Shape, SolidStoreHandle>;
+// ---------------------------------------------------------------------------
+// The consumer is written against a *precise* sub-shape, not `Notebook<Shape>`.
+// It states exactly what it accepts: `Node` objects, and `Edge` morphisms whose
+// endpoints are a list — of *any* `ListKind` — of those nodes. Because the
+// contract pins the endpoints to a list, every endpoint the consumer reads is a
+// typed `ObjectCell[]`; there is no `ObjectCell | ObjectCell[]` widening to
+// normalize, and a notebook whose edges are single objects is rejected by the
+// compiler rather than handled at runtime.
+// ---------------------------------------------------------------------------
 
-/** Predicate that narrows an untyped cell handle to an object cell. */
-type ObjectGuard = (cell: { readonly kind: symbol }) => cell is ObjectCell;
-/** Predicate that narrows an untyped cell handle to a morphism cell. */
-type MorphismGuard = (cell: { readonly kind: symbol }) => cell is MorphismCell;
+const node = { tag: "Basic", content: "Object" } as const;
 
-/**
- * Normalize an endpoint into a list. A list morphism always decodes its
- * endpoints to an array, but the *untyped* {@link MorphismCell} the generic
- * consumer reads widens that to `ObjectCell | ObjectCell[]`, so the consumer
- * normalizes rather than assuming a shape — which is exactly why the same code
- * works for every {@link ListKind}.
- */
-const asList = (endpoint: ObjectCell | ObjectCell[]): ObjectCell[] =>
-    Array.isArray(endpoint) ? endpoint : endpoint ? [endpoint] : [];
+/** The accepted edge: a `Hom` whose endpoints are a list of `node`s, of any
+ * {@link ListKind}. Derived from {@link homList} so it never names the wire key
+ * itself. */
+type ListEdge = ReturnType<typeof homList<ListKind, typeof node>>;
 
-function ObListEditor(props: { objects: ObjectCell[] }) {
+/** The sub-shape the consumer accepts: `Node` objects and list-valued `Edge`s.
+ * This is deliberately narrower than `Shape`: it admits exactly the cell types
+ * below and nothing else. */
+type AcceptsLists = {
+    objects: { Node: typeof node };
+    morphisms: { Edge: ListEdge };
+};
+
+type ListNotebook = Notebook<AcceptsLists, SolidStoreHandle>;
+type NodeCell = ObjectCell<typeof node>;
+type EdgeCell = MorphismCell<ListEdge>;
+
+const isNode = byObjectType(node);
+
+function ObListEditor(props: { objects: NodeCell[] }) {
     return <span>[{props.objects.map((ob) => ob.name).join(", ")}]</span>;
 }
 
-function MorphismCellEditor(props: {
-    notebook: GenericNotebook;
-    morphism: MorphismCell;
-    isOb: ObjectGuard;
-}) {
-    const dom = () => asList(props.morphism.dom);
-    const cod = () => asList(props.morphism.cod);
-    // Contrived test example: adding an arbitrary but valid input object.
+function EdgeCellEditor(props: { notebook: ListNotebook; edge: EdgeCell }) {
+    // `dom`/`cod` are typed `NodeCell[]` from the contract: no normalization.
+    // Contrived test example: adding an arbitrary but valid input node.
     const runTestMutation = () => {
-        const referenced = new Set([...dom(), ...cod()].map((ob) => ob.id));
+        const referenced = new Set([...props.edge.dom, ...props.edge.cod].map((ob) => ob.id));
         const input = props.notebook
             .cells()
-            .filter(props.isOb)
+            .filter(isNode)
             .find((ob) => !referenced.has(ob.id));
         if (input) {
-            props.morphism.update({ dom: [...dom(), input] });
+            props.edge.update({ dom: [...props.edge.dom, input] });
         }
     };
     return (
         <li>
             <span class="cell-label">
-                Edge: <ObListEditor objects={dom()} />
+                Edge: <ObListEditor objects={props.edge.dom} />
                 <span> -&gt; </span>
-                <ObListEditor objects={cod()} />
-                <span> {props.morphism.name}</span>
+                <ObListEditor objects={props.edge.cod} />
+                <span> {props.edge.name}</span>
             </span>
             <button aria-label="run test mutation" onClick={runTestMutation} />
         </li>
     );
 }
 
-function NotebookCellEditor(props: {
-    notebook: GenericNotebook;
-    cell: NotebookCell;
-    isOb: ObjectGuard;
-    isMor: MorphismGuard;
-}) {
+function NotebookCellEditor(props: { notebook: ListNotebook; cell: NotebookCell<AcceptsLists> }) {
     const cell = props.cell;
-    if (props.isMor(cell)) {
-        return <MorphismCellEditor notebook={props.notebook} morphism={cell} isOb={props.isOb} />;
+    if (cell.kind === CellKind.Morphism) {
+        return <EdgeCellEditor notebook={props.notebook} edge={cell} />;
     }
-    if (props.isOb(cell)) {
+    if (cell.kind === CellKind.Object) {
         return (
             <li>
                 <span class="cell-label">Node: {cell.name}</span>
@@ -132,24 +135,13 @@ function NotebookCellEditor(props: {
     return null;
 }
 
-function NotebookEditor(props: {
-    notebook: GenericNotebook;
-    isOb: ObjectGuard;
-    isMor: MorphismGuard;
-}) {
+function NotebookEditor(props: { notebook: ListNotebook }) {
     return (
         <section>
             <h1>{props.notebook.name}</h1>
             <ul>
                 <For each={props.notebook.cells()}>
-                    {(cell) => (
-                        <NotebookCellEditor
-                            notebook={props.notebook}
-                            cell={cell}
-                            isOb={props.isOb}
-                            isMor={props.isMor}
-                        />
-                    )}
+                    {(cell) => <NotebookCellEditor notebook={props.notebook} cell={cell} />}
                 </For>
             </ul>
         </section>
@@ -178,13 +170,11 @@ const LIST_KINDS = [
     ["additive", "AdditiveList"],
 ] as const satisfies ReadonlyArray<readonly [theory: string, kind: ListKind]>;
 
-describe("Generic consumer over different kinds of list", () => {
+describe("Precise consumer over different kinds of list", () => {
     for (const [theory, kind] of LIST_KINDS) {
         test(`drives a ${kind} notebook`, () => {
-            const node = { tag: "Basic", content: "Object" } as const;
             const shape = listShape(theory, kind);
-            const isOb = byObjectType(shape.objects.Node);
-            const isMor = byMorphismType(shape.morphisms.Edge);
+            const isEdge = byMorphismType(shape.morphisms.Edge);
 
             const notebook = solidBinder.createNotebook(shape, { name: "Net" });
             const a = notebook.add(shape.objects.Node, { name: "A" });
@@ -195,10 +185,8 @@ describe("Generic consumer over different kinds of list", () => {
             const container = document.createElement("div");
             document.body.appendChild(container);
 
-            const dispose = render(
-                () => <NotebookEditor notebook={notebook} isOb={isOb} isMor={isMor} />,
-                container,
-            );
+            // A concrete single-kind notebook satisfies the consumer's contract.
+            const dispose = render(() => <NotebookEditor notebook={notebook} />, container);
 
             expect(container.innerHTML).toBe(expectedHtml(["A"]));
 
@@ -208,12 +196,12 @@ describe("Generic consumer over different kinds of list", () => {
             appendButton.click();
             expect(container.innerHTML).toBe(expectedHtml(["A", "B"]));
 
-            // The mutation round-trips through the store: the consumer reads the
-            // appended object back out of the list endpoint.
-            const edges = notebook.cells().filter(isMor);
+            // The mutation round-trips through the store; the typed endpoint is
+            // an array, read back without any normalization.
+            const edges = notebook.cells().filter(isEdge);
             expect(edges).toHaveLength(1);
-            expect(asList(edges[0]!.dom).map((ob) => ob.name)).toEqual(["A", "B"]);
-            expect(asList(edges[0]!.cod).map((ob) => ob.name)).toEqual(["C"]);
+            expect(edges[0]!.dom.map((ob) => ob.name)).toEqual(["A", "B"]);
+            expect(edges[0]!.cod.map((ob) => ob.name)).toEqual(["C"]);
 
             // The stored morphism type carries *this* list kind specifically: a
             // guard for a different kind rejects it, so the kind is persisted.
@@ -225,4 +213,18 @@ describe("Generic consumer over different kinds of list", () => {
             container.remove();
         });
     }
+
+    test("rejects a notebook whose edges are single objects, not lists", () => {
+        const singleHomShape = defineShape({
+            theory: "single-hom",
+            objects: { Node: node },
+            morphisms: { Edge: { tag: "Hom", content: node } },
+        });
+        const singleNotebook = solidBinder.createNotebook(singleHomShape, { name: "Net" });
+
+        // @ts-expect-error A single-object `Hom` is not a list edge: the precise
+        // contract refuses a notebook the consumer could not safely drive.
+        const _rejected: ListNotebook = singleNotebook;
+        void _rejected;
+    });
 });
