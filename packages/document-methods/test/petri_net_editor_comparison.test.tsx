@@ -659,10 +659,10 @@ describe("Petri-net editor comparison", () => {
         }
 
         const notebook = solidBinder.createNotebook(PetriNet, { name: "Petri net" });
-        const a = notebook.addObject(Place, { name: "A" });
-        notebook.addObject(Place, { name: "B" });
-        const c = notebook.addObject(Place, { name: "C" });
-        notebook.addMorphism(Transition, { name: "fires", dom: [a], cod: [c] });
+        const a = notebook.add(Place, { name: "A" });
+        notebook.add(Place, { name: "B" });
+        const c = notebook.add(Place, { name: "C" });
+        notebook.add(Transition, { name: "fires", dom: [a], cod: [c] });
 
         const container = document.createElement("div");
         document.body.appendChild(container);

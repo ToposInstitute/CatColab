@@ -859,12 +859,6 @@ function attachNotebook<TShape extends AnyShape, Handle>(
             }
             return addObjectCell(cellType as ObType, (args as { name: string }).name);
         },
-        addObject(type: ObType, args: { name: string }) {
-            return addObjectCell(type, args.name);
-        },
-        addMorphism(type: MorType, args: { name: string; dom?: unknown; cod?: unknown }) {
-            return addMorphismCell(type, args);
-        },
     } as unknown as Notebook<TShape, Handle>;
 }
 
@@ -931,22 +925,6 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
         args: { name: string; dom: DomOf<M>; cod: CodOf<M> },
     ): MorphismCell<M>;
     add<O extends ShapeObjects<TShape>>(type: O, args: { name: string }): ObjectCell<O>;
-    /**
-     * Add an object cell from a bare {@link ObType}, bypassing the shape's
-     * typed constructors. The returned handle is the untyped {@link ObjectCell}.
-     * Useful when the object type is computed at runtime.
-     */
-    addObject(type: ObType, args: { name: string }): ObjectCell;
-    /**
-     * Add a morphism cell from a bare {@link MorType}, bypassing the shape's
-     * typed constructors. Endpoints are untyped: a single object cell or a list
-     * of them, with the stored shape following the morphism type's modality.
-     * The returned handle is the untyped {@link MorphismCell}.
-     */
-    addMorphism(
-        type: MorType,
-        args: { name: string; dom?: ObjectCell | ObjectCell[]; cod?: ObjectCell | ObjectCell[] },
-    ): MorphismCell;
 };
 
 /**

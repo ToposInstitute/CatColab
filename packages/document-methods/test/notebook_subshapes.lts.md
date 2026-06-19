@@ -6,9 +6,9 @@ handle every cell type the shape implies. A reusable component therefore does
 not pin itself to one theory's shape; it is written against the generic
 `Notebook` interface, whose `cells()` yields the widest `NotebookCell` union. It
 stays fully interactive — it reads cells with `byObjectType`/`byMorphismType`,
-edits them with `update`, and adds new ones with `addObject`/`addMorphism` — and
-because a notebook over any shape is assignable to the generic `Notebook`, the
-component accepts a notebook of any theory.
+edits them with `update`, and adds new ones with `add` — and because a notebook
+over any shape is assignable to the generic `Notebook`, the component accepts a
+notebook of any theory.
 
 <!-- verifier:prepend-to-following -->
 
@@ -28,7 +28,7 @@ function renamePlaces(notebook: Notebook): string[] {
     for (const place of notebook.cells().filter(byObjectType(Place))) {
         place.update({ name: place.name.toUpperCase() });
     }
-    notebook.addObject(Place, { name: "new" });
+    notebook.add(Place, { name: "new" });
     return notebook
         .cells()
         .filter(byObjectType(Place))

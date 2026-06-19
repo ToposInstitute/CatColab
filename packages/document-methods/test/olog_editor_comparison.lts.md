@@ -174,9 +174,9 @@ dispose();
 ## `catcolab-documents`, generic
 
 The generic API keeps the same store boundary and cell-handle operations as the
-typed API, but does not require a static logic value. Cells are created from bare
-`ObType` and `MorType` values, so it is a closer replacement for code that gets
-cell types from frontend theory metadata at runtime.
+typed API. A shape is defined inline from the cell types, so this is a close
+replacement for code that builds a shape from frontend theory metadata; the
+editor itself is written against the generic `Notebook` interface.
 
 <!-- verifier:reset -->
 
@@ -187,7 +187,6 @@ import { For } from "solid-js";
 import { createStore, produce, type SetStoreFunction, unwrap } from "solid-js/store";
 import { render } from "solid-js/web";
 
-import type { MorType, ObType } from "catcolab-document-types";
 import {
     CellKind,
     createBinder,
@@ -215,8 +214,14 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
 
 const solidBinder = createBinder(solidStore);
 
-const ologObjectType: ObType = { tag: "Basic", content: "Object" };
-const ologAspectType: MorType = { tag: "Hom", content: ologObjectType };
+const ologObjectType = { tag: "Basic", content: "Object" } as const;
+const ologAspectType = { tag: "Hom", content: ologObjectType } as const;
+
+const Olog = defineShape({
+    theory: "simple-olog",
+    objects: { Type: ologObjectType },
+    morphisms: { Aspect: ologAspectType },
+});
 
 function GenericOlogEditor(props: { notebook: Notebook<Shape, SolidStoreHandle> }) {
     return (
@@ -241,11 +246,10 @@ function GenericOlogEditor(props: { notebook: Notebook<Shape, SolidStoreHandle> 
 ```
 
 ```tsx
-const EmptyOlog = defineShape({ theory: "simple-olog", objects: {}, morphisms: {} });
-const notebook = solidBinder.createNotebook(EmptyOlog, { name: "An Olog" });
-const person = notebook.addObject(ologObjectType, { name: "Person" });
-const company = notebook.addObject(ologObjectType, { name: "Company" });
-notebook.addMorphism(ologAspectType, { name: "works for", dom: person, cod: company });
+const notebook = solidBinder.createNotebook(Olog, { name: "An Olog" });
+const person = notebook.add(ologObjectType, { name: "Person" });
+const company = notebook.add(ologObjectType, { name: "Company" });
+notebook.add(ologAspectType, { name: "works for", dom: person, cod: company });
 
 const container = document.createElement("div");
 document.body.appendChild(container);

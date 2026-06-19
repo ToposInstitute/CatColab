@@ -1,22 +1,22 @@
 <!-- verifier:prepend-to-following -->
 
 ```ts
-import type { MorType, ObType } from "catcolab-document-types";
 import { binder, CellKind, defineShape, type Notebook } from "catcolab-documents";
 ```
-
-A shape that declares no object or morphism types still carries a `theory`, so it
-is creatable; cells are then added from bare `ObType`/`MorType` values through
-`addObject`/`addMorphism`. Since the shape declares no types, `cells()` over it
-yields only rich-text handles; to read the bare-added cells back as untyped
-object and morphism handles, view the notebook through the generic `Notebook`
-interface, whose `cells()` is the widest union.
 
 <!-- verifier:prepend-to-following -->
 
 ```ts
-const EmptyOlog = defineShape({ theory: "simple-olog", objects: {}, morphisms: {} });
-const notebook = binder.createNotebook(EmptyOlog, { name: "A generic notebook" });
+const Object = { tag: "Basic", content: "Object" } as const;
+const Aspect = { tag: "Hom", content: { tag: "Basic", content: "Object" } } as const;
+
+const Olog = defineShape({
+    theory: "simple-olog",
+    objects: { Object },
+    morphisms: { Aspect },
+});
+
+const notebook = binder.createNotebook(Olog, { name: "A generic notebook" });
 
 // A wide view whose `cells()` yields the untyped `NotebookCell` union.
 const generic: Notebook = notebook;
@@ -35,13 +35,10 @@ theory: simple-olog
 <!-- verifier:prepend-to-following -->
 
 ```ts
-const Object: ObType = { tag: "Basic", content: "Object" };
-const Aspect: MorType = { tag: "Hom", content: { tag: "Basic", content: "Object" } };
+const source = notebook.add(Object, { name: "A" });
+const target = notebook.add(Object, { name: "B" });
 
-const source = notebook.addObject(Object, { name: "A" });
-const target = notebook.addObject(Object, { name: "B" });
-
-const arrow = notebook.addMorphism(Aspect, {
+const arrow = notebook.add(Aspect, {
     name: "has",
     dom: source,
     cod: target,
