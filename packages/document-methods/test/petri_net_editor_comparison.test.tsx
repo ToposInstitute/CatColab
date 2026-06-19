@@ -220,9 +220,11 @@ describe("Petri-net editor comparison", () => {
         function MorphismCellEditor(props: {
             notebook: CurrentPetriNetNotebook;
             transition: CurrentTransitionDecl;
-            appendInput: () => void;
+            inputPlace: CurrentPlaceDecl;
         }) {
             const name = (id: string) => placeName(props.notebook, id);
+            const appendInput = () =>
+                appendCurrentInput(props.notebook, props.transition, props.inputPlace);
             return (
                 <li>
                     <span class="cell-label">
@@ -232,7 +234,7 @@ describe("Petri-net editor comparison", () => {
                         <ObListEditor placeIds={placeIds(props.transition.cod)} placeName={name} />
                         <span> {props.transition.name}</span>
                     </span>
-                    <button aria-label="append input place" onClick={props.appendInput} />
+                    <button aria-label="append input place" onClick={appendInput} />
                 </li>
             );
         }
@@ -240,7 +242,7 @@ describe("Petri-net editor comparison", () => {
         function ModelCellEditor(props: {
             notebook: CurrentPetriNetNotebook;
             cell: Cell<ModelJudgment>;
-            appendInput: () => void;
+            inputPlace: CurrentPlaceDecl;
         }) {
             if (props.cell.tag !== "formal") {
                 return (
@@ -261,7 +263,7 @@ describe("Petri-net editor comparison", () => {
                         <MorphismCellEditor
                             notebook={props.notebook}
                             transition={props.cell.content}
-                            appendInput={props.appendInput}
+                            inputPlace={props.inputPlace}
                         />
                     );
                 case "equation":
@@ -281,7 +283,7 @@ describe("Petri-net editor comparison", () => {
 
         function ModelNotebookEditor(props: {
             notebook: CurrentPetriNetNotebook;
-            appendInput: () => void;
+            inputPlace: CurrentPlaceDecl;
         }) {
             return (
                 <section>
@@ -292,7 +294,7 @@ describe("Petri-net editor comparison", () => {
                                 <ModelCellEditor
                                     notebook={props.notebook}
                                     cell={cell}
-                                    appendInput={props.appendInput}
+                                    inputPlace={props.inputPlace}
                                 />
                             )}
                         </For>
@@ -305,24 +307,22 @@ describe("Petri-net editor comparison", () => {
         const a = addCurrentPlace(notebook, { name: "A" });
         const b = addCurrentPlace(notebook, { name: "B" });
         const c = addCurrentPlace(notebook, { name: "C" });
-        const transition = addCurrentTransition(notebook, { name: "fires", dom: [a], cod: [c] });
+        addCurrentTransition(notebook, { name: "fires", dom: [a], cod: [c] });
 
         const container = document.createElement("div");
         document.body.appendChild(container);
 
         const dispose = render(
-            () => (
-                <ModelNotebookEditor
-                    notebook={notebook}
-                    appendInput={() => appendCurrentInput(notebook, transition, b)}
-                />
-            ),
+            () => <ModelNotebookEditor notebook={notebook} inputPlace={b} />,
             container,
         );
 
         expect(container.innerHTML).toBe(EXPECTED_INITIAL);
 
-        appendCurrentInput(notebook, transition, b);
+        const appendButton = container.querySelector<HTMLButtonElement>(
+            '[aria-label="append input place"]',
+        )!;
+        appendButton.click();
         expect(container.innerHTML).toBe(EXPECTED_AFTER_APPEND);
 
         dispose();
@@ -337,7 +337,9 @@ describe("Petri-net editor comparison", () => {
             return <span>[{props.places.map((place) => place.name).join(", ")}]</span>;
         }
 
-        function TransitionCell(props: { transition: TransitionCell; appendInput: () => void }) {
+        function TransitionCell(props: { transition: TransitionCell; input: PlaceCell }) {
+            const appendInput = () =>
+                props.transition.update({ dom: [...props.transition.dom, props.input] });
             return (
                 <li>
                     <span class="cell-label">
@@ -346,18 +348,18 @@ describe("Petri-net editor comparison", () => {
                         <InlinePlaceListEditor places={props.transition.cod} />
                         <span> {props.transition.name}</span>
                     </span>
-                    <button aria-label="append input place" onClick={props.appendInput} />
+                    <button aria-label="append input place" onClick={appendInput} />
                 </li>
             );
         }
 
         function PetriNetCell(props: {
             cell: NotebookCell<typeof PetriNet>;
-            appendInput: () => void;
+            input: PlaceCell;
         }) {
             const cell = props.cell;
             if (isTransition(cell)) {
-                return <TransitionCell transition={cell} appendInput={props.appendInput} />;
+                return <TransitionCell transition={cell} input={props.input} />;
             }
             if (isPlace(cell)) {
                 return (
@@ -378,14 +380,14 @@ describe("Petri-net editor comparison", () => {
 
         function PetriNetEditor(props: {
             notebook: Notebook<typeof PetriNet, SolidStoreHandle>;
-            appendInput: () => void;
+            input: PlaceCell;
         }) {
             return (
                 <section>
                     <h1>{props.notebook.name}</h1>
                     <ul>
                         <For each={props.notebook.cells()}>
-                            {(cell) => <PetriNetCell cell={cell} appendInput={props.appendInput} />}
+                            {(cell) => <PetriNetCell cell={cell} input={props.input} />}
                         </For>
                     </ul>
                 </section>
@@ -396,24 +398,22 @@ describe("Petri-net editor comparison", () => {
         const a = notebook.add(Place, { name: "A" });
         const b = notebook.add(Place, { name: "B" });
         const c = notebook.add(Place, { name: "C" });
-        const transition = notebook.add(Transition, { name: "fires", dom: [a], cod: [c] });
+        notebook.add(Transition, { name: "fires", dom: [a], cod: [c] });
 
         const container = document.createElement("div");
         document.body.appendChild(container);
 
         const dispose = render(
-            () => (
-                <PetriNetEditor
-                    notebook={notebook}
-                    appendInput={() => transition.update({ dom: [...transition.dom, b] })}
-                />
-            ),
+            () => <PetriNetEditor notebook={notebook} input={b} />,
             container,
         );
 
         expect(container.innerHTML).toBe(EXPECTED_INITIAL);
 
-        transition.update({ dom: [...transition.dom, b] });
+        const appendButton = container.querySelector<HTMLButtonElement>(
+            '[aria-label="append input place"]',
+        )!;
+        appendButton.click();
         expect(container.innerHTML).toBe(EXPECTED_AFTER_APPEND);
 
         dispose();
@@ -421,8 +421,6 @@ describe("Petri-net editor comparison", () => {
     });
 
     test("catcolab-documents, generic consumer", () => {
-        // Bare runtime type values, declared `as const` so a transition's
-        // list-valued endpoint arity survives inference.
         const basicObject = { tag: "Basic", content: "Object" } as const;
         const symmetricListMorphism = {
             tag: "Hom",
@@ -436,8 +434,8 @@ describe("Petri-net editor comparison", () => {
         type SymmetricListCell = MorphismCell<typeof symmetricListMorphism>;
 
         const GenericShape = defineShape({
-            objects: { ob: basicObject },
-            morphisms: { mor: symmetricListMorphism },
+            objects: { basicObject },
+            morphisms: { symmetricListMorphism },
         });
 
         const isOb = byObjectType(basicObject);
@@ -449,8 +447,10 @@ describe("Petri-net editor comparison", () => {
 
         function MorphismCellEditor(props: {
             transition: SymmetricListCell;
-            appendInput: () => void;
+            input: BasicObCell;
         }) {
+            const appendInput = () =>
+                props.transition.update({ dom: [...props.transition.dom, props.input] });
             return (
                 <li>
                     <span class="cell-label">
@@ -459,18 +459,18 @@ describe("Petri-net editor comparison", () => {
                         <ObListEditor places={props.transition.cod} />
                         <span> {props.transition.name}</span>
                     </span>
-                    <button aria-label="append input place" onClick={props.appendInput} />
+                    <button aria-label="append input place" onClick={appendInput} />
                 </li>
             );
         }
 
         function ModelCellEditor(props: {
             cell: NotebookCell<typeof GenericShape>;
-            appendInput: () => void;
+            input: BasicObCell;
         }) {
             const cell = props.cell;
             if (isMor(cell)) {
-                return <MorphismCellEditor transition={cell} appendInput={props.appendInput} />;
+                return <MorphismCellEditor transition={cell} input={props.input} />;
             }
             if (isOb(cell)) {
                 return (
@@ -491,16 +491,14 @@ describe("Petri-net editor comparison", () => {
 
         function ModelNotebookEditor(props: {
             notebook: Notebook<typeof GenericShape, SolidStoreHandle>;
-            appendInput: () => void;
+            input: BasicObCell;
         }) {
             return (
                 <section>
                     <h1>{props.notebook.name}</h1>
                     <ul>
                         <For each={props.notebook.cells()}>
-                            {(cell) => (
-                                <ModelCellEditor cell={cell} appendInput={props.appendInput} />
-                            )}
+                            {(cell) => <ModelCellEditor cell={cell} input={props.input} />}
                         </For>
                     </ul>
                 </section>
@@ -513,26 +511,23 @@ describe("Petri-net editor comparison", () => {
         const c = notebook.addObject(Place, { name: "C" });
         notebook.addMorphism(Transition, { name: "fires", dom: [a], cod: [c] });
 
-        // The runtime API returns untyped handles; recover precise ones via the guards.
-        const transition = notebook.cells().find(byMorphismType(Transition))!;
+        // The runtime API returns untyped handles; recover a precise one via the guard.
         const input = notebook.cells().filter(byObjectType(Place))[1]!;
 
         const container = document.createElement("div");
         document.body.appendChild(container);
 
         const dispose = render(
-            () => (
-                <ModelNotebookEditor
-                    notebook={notebook}
-                    appendInput={() => transition.update({ dom: [...transition.dom, input] })}
-                />
-            ),
+            () => <ModelNotebookEditor notebook={notebook} input={input} />,
             container,
         );
 
         expect(container.innerHTML).toBe(EXPECTED_INITIAL);
 
-        transition.update({ dom: [...transition.dom, input] });
+        const appendButton = container.querySelector<HTMLButtonElement>(
+            '[aria-label="append input place"]',
+        )!;
+        appendButton.click();
         expect(container.innerHTML).toBe(EXPECTED_AFTER_APPEND);
 
         dispose();
