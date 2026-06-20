@@ -179,6 +179,26 @@ impl ThSignedCategory {
                 .into(),
         ))
     }
+
+    /// Emit Modelica source code for the Lotka-Volterra system of this model.
+    #[wasm_bindgen(js_name = "lotkaVolterraModelica")]
+    pub fn lotka_volterra_modelica(
+        &self,
+        model: &DblModel,
+        data: ModelicaExportData,
+    ) -> Result<ModelicaResult, String> {
+        lotka_volterra_modelica(model, data)
+    }
+
+    /// Emit Modelica source code for the linear ODE system of this model.
+    #[wasm_bindgen(js_name = "linearODEModelica")]
+    pub fn linear_ode_modelica(
+        &self,
+        model: &DblModel,
+        data: ModelicaExportData,
+    ) -> Result<ModelicaResult, String> {
+        linear_ode_modelica(model, data)
+    }
 }
 
 /// The theory of delayable signed categories.
@@ -323,6 +343,22 @@ impl ThCategoryLinks {
     ) -> Result<LatexEquations, String> {
         mass_action_equations(model, data, MassActionAnalysisLogic::StockFlow)
     }
+
+    /// Emit Modelica source code for the mass-action ODE system of this model.
+    #[wasm_bindgen(js_name = "massActionModelica")]
+    pub fn mass_action_modelica(
+        &self,
+        model: &DblModel,
+        data: MassActionEquationsData,
+        export: ModelicaExportData,
+    ) -> Result<ModelicaResult, String> {
+        mass_action_modelica(
+            model,
+            data.mass_conservation_type,
+            export,
+            MassActionAnalysisLogic::StockFlow,
+        )
+    }
 }
 
 /// The theory of categories with signed links.
@@ -359,6 +395,22 @@ impl ThCategorySignedLinks {
         data: MassActionEquationsData,
     ) -> Result<LatexEquations, String> {
         mass_action_equations(model, data, MassActionAnalysisLogic::StockFlow)
+    }
+
+    /// Emit Modelica source code for the mass-action ODE system of this model.
+    #[wasm_bindgen(js_name = "massActionModelica")]
+    pub fn mass_action_modelica(
+        &self,
+        model: &DblModel,
+        data: MassActionEquationsData,
+        export: ModelicaExportData,
+    ) -> Result<ModelicaResult, String> {
+        mass_action_modelica(
+            model,
+            data.mass_conservation_type,
+            export,
+            MassActionAnalysisLogic::StockFlow,
+        )
     }
 }
 
@@ -412,6 +464,22 @@ impl ThSymMonoidalCategory {
         )))
     }
 
+    /// Emit Modelica source code for the mass-action ODE system of this model.
+    #[wasm_bindgen(js_name = "massActionModelica")]
+    pub fn mass_action_modelica(
+        &self,
+        model: &DblModel,
+        data: MassActionEquationsData,
+        export: ModelicaExportData,
+    ) -> Result<ModelicaResult, String> {
+        mass_action_modelica(
+            model,
+            data.mass_conservation_type,
+            export,
+            MassActionAnalysisLogic::PetriNet,
+        )
+    }
+
     /// Solve the subreachability problem for petri nets.
     #[wasm_bindgen(js_name = "subreachability")]
     pub fn subreachability(
@@ -459,6 +527,16 @@ impl ThPolynomialODE {
     ) -> Result<LatexEquations, String> {
         polynomial_ode_equations(model, data)
     }
+
+    /// Emit Modelica source code for the polynomial ODE system of this model.
+    #[wasm_bindgen(js_name = "polynomialODEModelica")]
+    pub fn polynomial_ode_modelica(
+        &self,
+        model: &DblModel,
+        data: ModelicaExportData,
+    ) -> Result<ModelicaResult, String> {
+        polynomial_ode_modelica(model, data)
+    }
 }
 
 /// A theory of systems of signed polynomial ODEs
@@ -495,6 +573,16 @@ impl ThSignedPolynomialODE {
         data: PolynomialODEEquationsData,
     ) -> Result<LatexEquations, String> {
         polynomial_ode_equations(model, data)
+    }
+
+    /// Emit Modelica source code for the polynomial ODE system of this model.
+    #[wasm_bindgen(js_name = "polynomialODEModelica")]
+    pub fn polynomial_ode_modelica(
+        &self,
+        model: &DblModel,
+        data: ModelicaExportData,
+    ) -> Result<ModelicaResult, String> {
+        polynomial_ode_modelica(model, data)
     }
 }
 

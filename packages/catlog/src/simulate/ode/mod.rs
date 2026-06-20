@@ -158,7 +158,9 @@ pub(crate) fn textplot_mapped_ode_result<Sys>(
 }
 
 pub mod kuramoto;
+pub mod modelica;
 pub mod polynomial;
 
 pub use kuramoto::*;
+pub use modelica::*;
 pub use polynomial::*;

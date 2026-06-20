@@ -480,6 +480,11 @@ where
         self.0.keys()
     }
 
+    /// Iterates over the `(variable, exponent)` pairs of the monomial.
+    pub fn iter(&self) -> impl ExactSizeIterator<Item = (&Var, &Exp)> {
+        self.0.iter()
+    }
+
     /// Evaluates the monomial by substituting for the variables.
     pub fn eval<A, F>(&self, mut f: F) -> A
     where

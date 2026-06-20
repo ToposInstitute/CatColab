@@ -61,6 +61,9 @@ export default function createSignedPolynomialODETheory(theoryMeta: TheoryMeta):
                     return thSignedPolynomialODE.polynomialODESimulation(model, data);
                 },
             }),
+            analyses.modelicaExport({
+                generate: (model, data) => thSignedPolynomialODE.polynomialODEModelica(model, data),
+            }),
         ],
     });
 }
