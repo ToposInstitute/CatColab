@@ -8,11 +8,11 @@ import {
     Match,
     Show,
     Switch,
+    createSignal,
     createEffect,
 } from "solid-js";
 import { unwrap } from "solid-js/store";
 import invariant from "tiny-invariant";
-import { useApi } from "../../api";
 
 import {
     BlockTitle,
@@ -27,6 +27,7 @@ import {
 import type { ModelDiagramPresentation, ModelPresentation, QualifiedName } from "catlog-wasm";
 import { ThDEC } from "catlog-wasm";
 import type { DiagramAnalysisProps } from "../../analysis";
+import { useApi } from "../../api";
 import { LiveDiagramDoc, DiagramLibraryContext } from "../../diagram";
 import { PDEPlot2D } from "../../visualization";
 import type { DecapodesAnalysisContent } from "./simulator_types";
@@ -48,6 +49,9 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
 
     const diagrams = useContext(DiagramLibraryContext);
     invariant(diagrams);
+
+    const [progress, setProgress] = createSignal<number | null>(null);
+    const [status, setStatus] = createSignal<string | null>(null);
 
     const instantiatedRefIds = createMemo(() => {
         const js = unwrap(props.liveDiagram.formalJudgments());
@@ -224,19 +228,41 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
             return pode ? { pode } : undefined;
         },
         async ({ pode }) => {
-            // console.log(import.meta.env.development.VITE_JULIA_URL);
             const juliaUrl = "http://127.0.0.1:8080";
-            console.log(juliaUrl);
-            const reqBody = {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ pode }),
-            };
-            const response = juliaUrl
-                ? await fetch(`${juliaUrl}/decapodes-string`, reqBody)
-                : await api.fetch("/julia/decapodes-string", reqBody);
+            setProgress(0);
+
+            const url = `${juliaUrl}/decapodes-string?pode=${encodeURIComponent(pode)}`;
+            const response = await fetch(url);
             if (!response.ok) throw new Error(`HTTP error! status ${response.status}`);
-            return { pode, data: await response.json() };
+
+            const reader = response.body!.getReader();
+            const decoder = new TextDecoder();
+            let buffer = "";
+            let resultData = null;
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split("\n");
+                buffer = lines.pop()!;
+                for (const line of lines) {
+                    if (!line.trim()) continue;
+                    const msg = JSON.parse(line);
+                    if ("status" in msg) {
+                        setStatus(msg.status);
+                        setProgress(null);
+                    } else if ("progress" in msg) {
+                        setStatus(null); // clear status so progress bar shows
+                        setProgress(msg.progress);
+                    }
+                    if ("data" in msg) resultData = msg.data;
+                }
+            }
+
+            setProgress(null);
+            if (!resultData) throw new Error("No simulation result received");
+            return { pode, data: resultData };
         },
     );
 
@@ -269,7 +295,25 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                         </Warning>
                     )}
                 </Match>
-                <Match when={result.loading}>{"Running the simulation..."}</Match>
+                <Match when={res.loading}>
+                    <Switch fallback="Running the simulation...">
+                        <Match when={status() === "initializing"}>Initializing simulation...</Match>
+                        <Match when={status() === "finalizing"}>Finalizing results...</Match>
+                        <Match when={progress() !== null}>
+                            <div class="simulation-progress">
+                                <div class="progress-bar">
+                                    <div
+                                        class="progress-fill"
+                                        style={{ width: `${(progress()! * 100).toFixed(0)}%` }}
+                                    />
+                                </div>
+                                <span class="progress-label">
+                                    {(progress()! * 100).toFixed(0)}%
+                                </span>
+                            </div>
+                        </Match>
+                    </Switch>
+                </Match>
                 <Match when={result.error}>
                     {(error) => (
                         <ErrorAlert title="Simulation error">
@@ -282,9 +326,12 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                         {"Cannot run the simulation because the diagram is invalid"}
                     </ErrorAlert>
                 </Match>
-                <Match when={res()}>{(data) => {
-                  console.log("plot data:", JSON.stringify(data().data).slice(0, 200));
-                return <PDEPlot2D data={data().data} />}}</Match>
+                <Match when={res()}>
+                    {(data) => {
+                        console.log("plot data:", JSON.stringify(data().data).slice(0, 200));
+                        return <PDEPlot2D data={data().data} />;
+                    }}
+                </Match>
             </Switch>
         </div>
     );
