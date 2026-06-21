@@ -1009,7 +1009,7 @@ mod test {
             elab.diagram_notebook(model_ty_v.clone(), doc.notebook.formal_content());
 
         let pode = Decapodes { pode: ty_v };
-        let out = pode.transpile();
-        println!("{}", &out);
+        let target = pode.transpile();
+        println!("{}", &target.out);
     }
 }
