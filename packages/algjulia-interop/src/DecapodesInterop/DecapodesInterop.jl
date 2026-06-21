@@ -7,6 +7,7 @@ using StaticArrays
 using LinearAlgebra
 using OrdinaryDiffEq
 using CoordRefSystems
+using DiffEqCallbacks
 
 using CombinatorialSpaces
 using DiagrammaticEquations
@@ -49,16 +50,89 @@ function endpoint(::Val{:Decapodes})
     end
 end
 
+const progress_channel = Channel{Dict{String,Any}}(64)
+
+function make_progress_callback(channel::Channel, tspan)
+    t0, tf = tspan
+    DiscreteCallback(
+        (u, t, integrator) -> true,  # fire every step
+        (integrator) -> begin
+            frac = (integrator.t - t0) / (tf - t0)
+            try
+                push!(channel, Dict("t" => integrator.t, "progress" => frac))
+            catch end  # channel closed
+        end;
+        save_positions = (false, false)
+    )
+end
+
+
+# function endpoint(::Val{:DecapodesString})
+#     @post "/decapodes-string" function (req::HTTP.Request)
+#         j = JSON3.read(req.body)
+#         pode = j["pode"]
+#         pode = SummationDecapode(parse_decapode(Meta.parse("begin\n$pode\nend")))
+#         infer_types!(pode)
+#         system = DecapodesSystem(pode)
+
+#         cb = make_progress_callback(progress_channel, system.tspan)
+#         result = run(system; callback=cb)
+
+#         # Signal completion
+#         push!(progress_channel, Dict("progress" => 1.0, "done" => true))
+        
+#         format(system.geometry.dualmesh, result)
+#     end
+# end
+
 function endpoint(::Val{:DecapodesString})
-    @post "/decapodes-string" function (req::HTTP.Request)
-        j = JSON3.read(req.body)
-        pode = j["pode"]
+    @stream "/decapodes-string" function(stream::HTTP.Stream)
+        req = stream.message
+        uri = HTTP.URI(req.target)
+        params = HTTP.queryparams(uri)
+        pode = params["pode"]
+
         pode = SummationDecapode(parse_decapode(Meta.parse("begin\n$pode\nend")))
         infer_types!(pode)
         system = DecapodesSystem(pode)
-        result = run(system)
-        # @info format(result)
-        format(system.geometry.dualmesh, result)
+
+        @info "Starting"
+        HTTP.setheader(stream, "Content-Type" => "application/x-ndjson")
+        HTTP.setheader(stream, "Access-Control-Allow-Origin" => "*")
+        
+        startwrite(stream)
+
+        t0, tf = 0, system.duration
+        last_write = Ref(time())
+
+        write(stream, JSON3.write(Dict("status" => "initializing")) * "\n")
+        flush(stream)
+
+        cb = DiscreteCallback(
+            (u, t, integrator) -> true,
+            (integrator) -> begin
+                now = time()
+                if last_write[] == 0.0
+                    write(stream, JSON3.write(Dict("status" => "running")) * "\n")
+                end
+                if now - last_write[] > 0.1
+                    frac = clamp((integrator.t - t0) / (tf - t0), 0.0, 1.0)
+                    @info "Writing progress" frac
+                    write(stream, JSON3.write(Dict("progress" => frac)) * "\n")
+                    if frac == 1.0
+                        write(stream, JSON3.write(Dict("status" => "finalizing")) * "\n")
+                    end  
+                    flush(stream)
+                    last_write[] = now
+                end
+            end;
+            save_positions = (false, false)
+        )
+
+        result = run(system; callback=cb)
+        formatted = format(system.geometry.dualmesh, result)
+        write(stream, JSON3.write(Dict("progress" => 1.0, "data" => formatted)) * "\n")
+        closewrite(stream)
     end
 end
 

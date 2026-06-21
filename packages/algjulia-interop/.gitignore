@@ -27,5 +27,6 @@ tests/build/
 LocalPreferences.toml
 
 # Julia
+Manifest.toml
 test/Manifest.toml
 test/Project.toml

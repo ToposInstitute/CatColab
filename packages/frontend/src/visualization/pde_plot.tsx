@@ -115,7 +115,7 @@ export function PDEPlot2D(props: { data: PDEPlotData2D }) {
 
     return (
         <div>
-        <ECharts option={options(timeIndex())} width={500} height={500} />
+            <ECharts option={options(timeIndex())} width={500} height={500} />
         </div>
     );
 }
