@@ -91,11 +91,12 @@ function endpoint(::Val{:DecapodesString})
         uri = HTTP.URI(req.target)
         params = HTTP.queryparams(uri)
         pode = pop!(params, "pode")
+        duration = parse(Int, pop!(params, "duration"))
         constants = ComponentArray(; (Symbol(k) => parse(Float64, v) for (k, v) in params)...)
         
         pode = SummationDecapode(parse_decapode(Meta.parse("begin\n$pode\nend")))
         infer_types!(pode)
-        system = DecapodesSystem(pode)
+        system = DecapodesSystem(pode; duration=duration)
 
         @info "Starting"
         HTTP.setheader(stream, "Content-Type" => "application/x-ndjson")
@@ -104,6 +105,7 @@ function endpoint(::Val{:DecapodesString})
         startwrite(stream)
 
         t0, tf = 0, system.duration
+        @info "Duration set to $tf"
         last_write = Ref(time())
 
         write(stream, JSON3.write(Dict("status" => "initializing")) * "\n")
