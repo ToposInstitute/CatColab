@@ -65,7 +65,6 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                 return [id, live.liveDoc.doc] as const;
             }),
         );
-        console.log(entries);
         return Object.fromEntries(entries);
     });
 
@@ -85,8 +84,6 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
     //             content: { tag: "Basic", content: "Object" },
     //         }) ?? [],
     // );
-
-    // const variables = (): QualifiedName[] => elaboratedDiagram()?.obGenerators() ?? [];
 
     // const scalarSchema: ColumnSchema<QualifiedName>[] = [
     //     {
@@ -143,17 +140,18 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
     //     },
     // ];
 
-    // const toplevelSchema: ColumnSchema<null>[] = [
-    //     createNumericalColumn({
-    //         name: "Duration",
-    //         data: (_) => props.content.duration,
-    //         validate: (_, data) => data >= 0,
-    //         setData: (_, data) =>
-    //             props.changeContent((content) => {
-    //                 content.duration = data;
-    //             }),
-    //     }),
-    // ];
+    const toplevelSchema: ColumnSchema<null>[] = [
+        createNumericalColumn({
+            name: "Duration",
+            data: (_) => props.content.duration,
+            validate: (_, data) => data >= 0,
+            default: 10,
+            setData: (_, data) =>
+                props.changeContent((content) => {
+                    content.duration = data;
+                }),
+        }),
+    ];
 
     const RestartOrRerunButton = () => (
         <Switch>
@@ -252,10 +250,10 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
     ];
 
     const [runPayload, setRunPayload] = createSignal<
-        { pode: string; constants: Record<string, number> } | undefined
+        { pode: string; constants: Record<string, number>; duration: number } | undefined
     >(undefined);
 
-    const [res] = createResource(runPayload, async ({ pode, constants }) => {
+    const [res] = createResource(runPayload, async ({ pode, constants, duration }) => {
         const juliaUrl = "http://127.0.0.1:8080";
         setProgress(0);
 
@@ -263,6 +261,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         for (const [k, v] of Object.entries(constants)) {
             params.set(k, String(v));
         }
+        params.set("duration", String(duration));
         const url = `${juliaUrl}/decapodes-string?${params.toString()}`;
 
         const response = await fetch(url);
@@ -300,9 +299,8 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
 
     const runSimulation = () => {
         const pd = podeData();
-        console.log(pd);
         if (!pd) return;
-        setRunPayload({ pode: pd.pode, constants: constantValues() });
+        setRunPayload({ pode: pd.pode, constants: constantValues(), duration: props.content.duration ?? 10, });
     };
 
     return (
@@ -318,6 +316,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                 <Show when={podeData()}>
                     {(pd) => <FixedTableEditor rows={pd().constants} schema={constantSchema} />}
                 </Show>
+                <FixedTableEditor rows={[null]} schema={toplevelSchema} />
 
                 <button onClick={runSimulation} disabled={!podeData() || res.loading}>
                     Run Simulation
@@ -360,7 +359,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                         </Match>
                     </Switch>
                 </Match>
-                <Match when={result.error}>
+                <Match when={res.error}>
                     {(error) => (
                         <ErrorAlert title="Simulation error">
                             <pre>{error().message}</pre>
@@ -374,7 +373,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                 </Match>
                 <Match when={res()}>
                     {(data) => {
-                        console.log("plot data:", JSON.stringify(data().data).slice(0, 200));
+                        console.log("plot data:", data().data.time.length);
                         return <PDEPlot2D data={data().data} />;
                     }}
                 </Match>

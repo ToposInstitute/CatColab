@@ -115,6 +115,7 @@ export function PDEPlot2D(props: { data: PDEPlotData2D }) {
 
     return (
         <div>
+            <span>t = {props.data.time[timeIndex()]?.toFixed(2)}</span>
             <ECharts option={options(timeIndex())} width={500} height={500} />
         </div>
     );
