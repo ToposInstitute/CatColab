@@ -65,6 +65,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                 return [id, live.liveDoc.doc] as const;
             }),
         );
+        console.log(entries);
         return Object.fromEntries(entries);
     });
 
@@ -218,53 +219,91 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         </div>
     );
 
-    const [res] = createResource(
-        () => {
-            const model = props.liveDiagram.liveModel.liveDoc.doc;
-            const diagram = props.liveDiagram.liveDoc.doc;
-            const subDiagrams = subDiagramDocs();
-            if (!model || !diagram || !subDiagrams) return undefined;
-            const pode = ThDEC.simulatePode(model, diagram, subDiagrams);
-            return pode ? { pode } : undefined;
+    const podeData = createMemo(() => {
+        const model = props.liveDiagram.liveModel.liveDoc.doc;
+        const diagram = props.liveDiagram.liveDoc.doc;
+        const subDiagrams = subDiagramDocs();
+        if (!model || !diagram || !subDiagrams) return undefined;
+        try {
+            const result = ThDEC.simulatePode(model, diagram, subDiagrams);
+            if (!result) return undefined;
+            const { pode, constants } = result as { pode: string; constants: string[] };
+            return { pode, constants };
+        } catch (e) {
+            console.error("simulatePode failed:", e);
+            return undefined;
+        }
+    });
+
+    const [constantValues, setConstantValues] = createSignal<Record<string, number>>({});
+
+    const constantSchema: ColumnSchema<string>[] = [
+        {
+            contentType: "string",
+            header: true,
+            name: "Constant",
+            content: (name) => name,
         },
-        async ({ pode }) => {
-            const juliaUrl = "http://127.0.0.1:8080";
-            setProgress(0);
+        createNumericalColumn({
+            name: "Value",
+            data: (name) => constantValues()[name],
+            setData: (name, value) => setConstantValues((prev) => ({ ...prev, [name]: value })),
+        }),
+    ];
 
-            const url = `${juliaUrl}/decapodes-string?pode=${encodeURIComponent(pode)}`;
-            const response = await fetch(url);
-            if (!response.ok) throw new Error(`HTTP error! status ${response.status}`);
+    const [runPayload, setRunPayload] = createSignal<
+        { pode: string; constants: Record<string, number> } | undefined
+    >(undefined);
 
-            const reader = response.body!.getReader();
-            const decoder = new TextDecoder();
-            let buffer = "";
-            let resultData = null;
+    const [res] = createResource(runPayload, async ({ pode, constants }) => {
+        const juliaUrl = "http://127.0.0.1:8080";
+        setProgress(0);
 
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split("\n");
-                buffer = lines.pop()!;
-                for (const line of lines) {
-                    if (!line.trim()) continue;
-                    const msg = JSON.parse(line);
-                    if ("status" in msg) {
-                        setStatus(msg.status);
-                        setProgress(null);
-                    } else if ("progress" in msg) {
-                        setStatus(null); // clear status so progress bar shows
-                        setProgress(msg.progress);
-                    }
-                    if ("data" in msg) resultData = msg.data;
+        const params = new URLSearchParams({ pode });
+        for (const [k, v] of Object.entries(constants)) {
+            params.set(k, String(v));
+        }
+        const url = `${juliaUrl}/decapodes-string?${params.toString()}`;
+
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP error! status ${response.status}`);
+
+        const reader = response.body!.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let resultData = null;
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop()!;
+            for (const line of lines) {
+                if (!line.trim()) continue;
+                const msg = JSON.parse(line);
+                if ("status" in msg) {
+                    setStatus(msg.status);
+                    setProgress(null);
+                } else if ("progress" in msg) {
+                    setStatus(null); // clear status so progress bar shows
+                    setProgress(msg.progress);
                 }
+                if ("data" in msg) resultData = msg.data;
             }
+        }
 
-            setProgress(null);
-            if (!resultData) throw new Error("No simulation result received");
-            return { pode, data: resultData };
-        },
-    );
+        setProgress(null);
+        if (!resultData) throw new Error("No simulation result received");
+        return { pode, data: resultData };
+    });
+
+    const runSimulation = () => {
+        const pd = podeData();
+        console.log(pd);
+        if (!pd) return;
+        setRunPayload({ pode: pd.pode, constants: constantValues() });
+    };
 
     return (
         <div class="simulation">
@@ -276,6 +315,13 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                         return DomainConfig(new Map());
                     }}
                 </Show>
+                <Show when={podeData()}>
+                    {(pd) => <FixedTableEditor rows={pd().constants} schema={constantSchema} />}
+                </Show>
+
+                <button onClick={runSimulation} disabled={!podeData() || res.loading}>
+                    Run Simulation
+                </button>
             </Foldable>
             <Switch>
                 <Match when={kernel.loading || options.loading}>

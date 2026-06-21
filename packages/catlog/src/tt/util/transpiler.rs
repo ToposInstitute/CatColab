@@ -4,6 +4,11 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 use ustr::ustr;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+#[cfg(feature = "serde-wasm")]
+use tsify::Tsify;
+
 use crate::stdlib::th_multicategory;
 use crate::tt::eval::Evaluator;
 use crate::tt::notebook_elab::Elaborator;
@@ -18,8 +23,22 @@ static ANON: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(.+)_(\w+)([0-9]+)$
 static FORM: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"([0-9]+)-Form$").unwrap());
 static DUAL_FORM: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"Dual ([0-9]+)-Form").unwrap());
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(
+    feature = "serde-wasm",
+    tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
+)]
+pub struct Target {
+    #[cfg_attr(feature = "serde", serde(rename = "pode"))]
+    pub out: String,
+
+    #[cfg_attr(feature = "serde", serde(rename = "constants"))]
+    pub constants: Vec<String>,
+}
+
 pub trait JuliaTranspiler {
-    fn transpile(&self) -> String;
+    fn transpile(&self) -> Target;
 }
 
 pub struct Decapodes {
@@ -33,7 +52,7 @@ impl Decapodes {
         model: nb::ModelDocumentContent,
         diagram: nb::DiagramDocumentContent,
         diagram_map: HashMap<String, nb::DiagramDocumentContent>,
-    ) -> String {
+    ) -> Target {
         let theory =
             Theory::new(name("ThMulticategory"), TheoryDef::modal_unital(th_multicategory()));
         let mut toplevel = Toplevel::new(Default::default());
@@ -63,7 +82,7 @@ impl Decapodes {
 }
 
 impl JuliaTranspiler for Decapodes {
-    fn transpile(&self) -> String {
+    fn transpile(&self) -> Target {
         let TyV_::Record(_) = &*self.pode else {
             panic!()
         };
@@ -75,6 +94,7 @@ impl JuliaTranspiler for Decapodes {
         let mut subs = HashMap::new();
         let mut obs = IndexMap::new();
         let mut mors = IndexSet::new();
+        let mut constants = Vec::new();
         collect_fields(&eval, &self.pode, &self_v, "", &mut obs, &mut mors, &mut subs);
 
         // Remove specialized obs from declarations
@@ -101,16 +121,18 @@ impl JuliaTranspiler for Decapodes {
         let mut out = String::new();
 
         for (ob, ty) in obs {
-            // `first` is unhappy
             if !ANON.is_match(&format!("{ob}")) {
                 out.push_str(&format!("\t{}::{}\n", ob, ty));
+                if ty == "Constant" {
+                    constants.push(ob);
+                }
             }
         }
 
         for (lhs, rhs) in mors {
             out.push_str(&format!("\n\t{} == {}", lhs, rhs));
         }
-        format!("{out}")
+        Target { out: format!("{out}"), constants }
     }
 }
 

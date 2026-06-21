@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "12858cc48af06aedad48433b2bbf167a53d6e1c9"
+project_hash = "bb210926d4c5ee37c61bcb1df4db8f43a5dc2678"
 
 [[deps.ACSets]]
 deps = ["AlgebraicInterfaces", "Base64", "CompTime", "DataStructures", "JSON3", "MLStyle", "OrderedCollections", "PEG", "Permutations", "Pkg", "PrettyTables", "Random", "Reexport", "SHA", "StaticArrays", "StructEquality", "StructTypes", "Tables"]
@@ -215,7 +215,7 @@ uuid = "2a0fbf3d-bb9c-48f3-b0a9-814d99fd7ab9"
 version = "0.2.7"
 
 [[deps.CatColabInterop]]
-deps = ["ACSets", "Catlab", "CombinatorialSpaces", "ComponentArrays", "CoordRefSystems", "Decapodes", "DiagrammaticEquations", "Distributions", "HTTP", "JSON3", "LinearAlgebra", "MLStyle", "OrdinaryDiffEq", "Oxygen", "Reexport", "StaticArrays", "StructTypes"]
+deps = ["ACSets", "Catlab", "CombinatorialSpaces", "ComponentArrays", "CoordRefSystems", "Decapodes", "DiagrammaticEquations", "DiffEqCallbacks", "Distributions", "HTTP", "JSON3", "LinearAlgebra", "MLStyle", "OrdinaryDiffEq", "Oxygen", "Reexport", "StaticArrays", "StructTypes"]
 path = "."
 uuid = "9ecda8fb-39ab-46a2-a496-7285fa6368c1"
 version = "0.1.1"
@@ -511,6 +511,16 @@ version = "6.213.0"
     SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
     Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"
     Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
+
+[[deps.DiffEqCallbacks]]
+deps = ["ConcreteStructs", "DataStructures", "DiffEqBase", "DifferentiationInterface", "LinearAlgebra", "Markdown", "PrecompileTools", "RecipesBase", "RecursiveArrayTools", "SciMLBase", "StaticArraysCore"]
+git-tree-sha1 = "450217b2cc2fe3396de5452ca315952573f0d452"
+uuid = "459566f4-90b8-5000-8ac3-15dfb0a30def"
+version = "4.18.0"
+weakdeps = ["Functors"]
+
+    [deps.DiffEqCallbacks.extensions]
+    DiffEqCallbacksFunctorsExt = "Functors"
 
 [[deps.DiffResults]]
 deps = ["StaticArraysCore"]

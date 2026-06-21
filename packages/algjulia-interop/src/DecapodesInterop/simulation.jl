@@ -144,11 +144,11 @@ struct SolutionResult
     system::DecapodesSystem
 end
 
-function Base.run(system::DecapodesSystem; callback=nothing)::SolutionResult
+function Base.run(system::DecapodesSystem, params::ComponentArray; callback=nothing)::SolutionResult
     simulator = evalsim(system.pode; dimension=1)
     f = Base.invokelatest(simulator, system.geometry.dualmesh, system.generate, DiagonalHodge())
     # TODO remove ComponentArray
-    prob = ODEProblem(f, system.init, system.duration, ComponentArray(Hydrodynamics_a=0.94,Hydrodynamics_k=182.5,Phytodynamics_m=0.45,))
+    prob = ODEProblem(f, system.init, system.duration, params)
     soln = solve(prob, Tsit5(), saveat=0.01; callback=callback)
     # soln
     SolutionResult(soln, system)

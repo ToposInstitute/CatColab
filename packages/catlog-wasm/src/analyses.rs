@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use catcolab_document_types::v2::{DiagramDocumentContent, ModelDocumentContent};
-use catlog::tt::util::Decapodes;
+use catlog::tt::util::{Decapodes, Target};
 use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
@@ -158,6 +158,6 @@ pub(crate) fn simulate_pode(
     model: ModelDocumentContent,
     diagram: DiagramDocumentContent,
     diagram_map: HashMap<String, DiagramDocumentContent>,
-) -> Result<String, String> {
+) -> Result<Target, String> {
     Ok(Decapodes::elab_and_transpile(model, diagram, diagram_map))
 }
