@@ -90,8 +90,9 @@ function endpoint(::Val{:DecapodesString})
         req = stream.message
         uri = HTTP.URI(req.target)
         params = HTTP.queryparams(uri)
-        pode = params["pode"]
-
+        pode = pop!(params, "pode")
+        constants = ComponentArray(; (Symbol(k) => parse(Float64, v) for (k, v) in params)...)
+        
         pode = SummationDecapode(parse_decapode(Meta.parse("begin\n$pode\nend")))
         infer_types!(pode)
         system = DecapodesSystem(pode)
@@ -129,7 +130,7 @@ function endpoint(::Val{:DecapodesString})
             save_positions = (false, false)
         )
 
-        result = run(system; callback=cb)
+        result = run(system, constants; callback=cb)
         formatted = format(system.geometry.dualmesh, result)
         write(stream, JSON3.write(Dict("progress" => 1.0, "data" => formatted)) * "\n")
         closewrite(stream)

@@ -4,6 +4,7 @@
 //! methods for theory-specific analyses.
 
 use catcolab_document_types::current::{DiagramDocumentContent, ModelDocumentContent};
+use catlog::tt::util::Target;
 use std::collections::HashMap;
 use std::rc::Rc;
 use tsify::serde_wasm_bindgen;
@@ -558,10 +559,11 @@ impl ThDEC {
         model: ModelDocumentContent,
         diagram: DiagramDocumentContent,
         diagram_map: JsValue,
-    ) -> Result<String, String> {
+    ) -> Result<JsValue, String> {
         let diagram_map: HashMap<String, DiagramDocumentContent> =
             serde_wasm_bindgen::from_value(diagram_map).map_err(|e| e.to_string())?;
-        simulate_pode(model, diagram, diagram_map)
+        let target = simulate_pode(model, diagram, diagram_map)?;
+        serde_wasm_bindgen::to_value(&target).map_err(|e| e.to_string())
     }
 }
 
