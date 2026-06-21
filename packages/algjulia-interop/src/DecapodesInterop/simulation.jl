@@ -1,5 +1,7 @@
 # SIMULATION
 
+const MAX_FRAMES = 1000
+
 using Distributions
 using CombinatorialSpaces
 
@@ -86,8 +88,7 @@ function klausmeier_initial_conditions(pode::SummationDecapode, dualmesh)
     ComponentArray(n = n, w = w, Hydrodynamics_dX = dX)
 end
 
-function DecapodesSystem(pode::SummationDecapode)
-    duration = 300
+function DecapodesSystem(pode::SummationDecapode; duration=10)
     # geometry = Geometry(PREDEFINED_MESHES[:Rectangle])
 
     s,sd = circle(9,500)
@@ -147,9 +148,9 @@ end
 function Base.run(system::DecapodesSystem, params::ComponentArray; callback=nothing)::SolutionResult
     simulator = evalsim(system.pode; dimension=1)
     f = Base.invokelatest(simulator, system.geometry.dualmesh, system.generate, DiagonalHodge())
-    # TODO remove ComponentArray
     prob = ODEProblem(f, system.init, system.duration, params)
-    soln = solve(prob, Tsit5(), saveat=0.01; callback=callback)
+    dt = max(0.01, system.duration / MAX_FRAMES)
+    soln = solve(prob, Tsit5(), saveat=dt; callback=callback)
     # soln
     SolutionResult(soln, system)
 end
