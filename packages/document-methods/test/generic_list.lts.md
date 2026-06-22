@@ -102,7 +102,10 @@ const AdditiveListMor = AdditiveListShape.morphisms.AdditiveListMor;
 
 <!-- verifier:prepend-to-following -->
 
-`addListMorphism` works on any notebook that supports any of the objects or morphisms `ListShape` supports. When implementing a generic consumer like this it is our responsibility to narrow down what object and morphism types the notebook actually supports before adding them by using `notebook.supports`.
+`addListMorphism` works on any notebook that supports any of the objects or
+morphisms our list shapes support. When implementing a generic consumer like
+this we need to narrow down what object and morphism types the notebook
+actually supports by using `notebook.supports`.
 
 ```ts
 type MyNotebook = Notebook<
@@ -114,9 +117,7 @@ type MyNotebook = Notebook<
     unknown
 >;
 
-function addListMorphism(props: { notebook: MyNotebook }) {
-    const { notebook } = props;
-
+function addListMorphism(notebook: MyNotebook) {
     const a = notebook.add(BasicObj, { name: "A" });
     const b = notebook.add(BasicObj, { name: "B" });
     const c = notebook.add(BasicObj, { name: "C" });
@@ -140,9 +141,7 @@ function addListMorphism(props: { notebook: MyNotebook }) {
 ```
 
 ```ts
-function badAddListMorphism(props: { notebook: MyNotebook }) {
-    const { notebook } = props;
-
+function badAddListMorphism(notebook: MyNotebook) {
     const a = notebook.add(BasicObj, { name: "A" });
     const b = notebook.add(BasicObj, { name: "B" });
     const c = notebook.add(BasicObj, { name: "C" });
@@ -162,7 +161,7 @@ import { PetriNet } from "catcolab-logics/petri-net";
 
 const petriNet = binder.createNotebook(PetriNet, { name: "example" });
 
-addListMorphism({ notebook: petriNet });
+addListMorphism(petriNet);
 ```
 
 ```
@@ -177,7 +176,7 @@ import { SimpleOlog } from "catcolab-logics/simple-olog";
 const simpleOlog = binder.createNotebook(SimpleOlog, { name: "example" });
 
 // @ts-expect-error A SimpleOlog notebook lacks the list-valued morphisms ListShape requires.
-addListMorphism({ notebook: simpleOlog });
+addListMorphism(simpleOlog);
 ```
 
 ```ts
@@ -202,9 +201,7 @@ const MultiObjectListShape = defineShape({
     },
 });
 
-function badAddListMorphism2(props: { notebook: Notebook<typeof MultiObjectListShape, unknown> }) {
-    const { notebook } = props;
-
+function badAddListMorphism2(notebook: Notebook<typeof MultiObjectListShape, unknown>) {
     const a = notebook.add(BasicObj, { name: "A" });
     const b = notebook.add(BasicObj, { name: "B" });
     const e = notebook.add(MultiObjectListShape.objects.EntityObj, { name: "E" });
