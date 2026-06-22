@@ -6,7 +6,7 @@ use tsify::Tsify;
 
 use catlog::simulate::ode::PolynomialSystem;
 use catlog::stdlib::analyses::ode::{
-    self, ODESemantics, ODESemanticsAnalysis, ODESemanticsProblemData,
+    self, ODESemantics, ODESemanticsAnalysis, ODESemanticsProblemData, Parameter,
 };
 use catlog::zero::QualifiedName;
 
@@ -32,7 +32,7 @@ pub struct ODEResultWithEquations {
 }
 
 /// Generates the PolynomialSystem for the systems of polynomial ODEs.
-fn polynomial_ode_system(
+pub(crate) fn polynomial_ode_system(
     model: &DblModel,
 ) -> Result<PolynomialSystem<QualifiedName, ode::Parameter<QualifiedName>, i8>, String> {
     let realised_model = model.modal_nonunital()?;
@@ -40,18 +40,49 @@ fn polynomial_ode_system(
     Ok(analysis.build_system(realised_model))
 }
 
-// TODO: can all of the following be generalised by iterating (with a macro) over all the implementations
-//       of ODESemanics? use e.g. `<T as ODESemantics>::ODEParameter`
+// // TODO: This enum should already be defined somewhere else...
+// enum Doctrine {
+//     Discrete,
+//     Tabulated,
+//     ModalUnital,
+//     ModalNonUnital,
+// }
+
+// // TODO: can all of the following be generalised by iterating (with a macro) over all the implementations
+// //       of ODESemantics? use e.g. `<T as ODESemantics>::ODEParameter`
+// //
+// //       ... OR just define `fn polynomial_system<S: ODESemantics>` ??????????
 //
-//       ... OR just define `fn polynomial_system<S: ODESemantics>` ??????????
-// fn polynomial_system<S: ODESemantics>(
+// fn ode_semantics_system<S: ODESemantics>(
 //     model: &DblModel,
+//     doctrine: Doctrine,
 // ) -> Result<PolynomialSystem<QualifiedName, ode::Parameter<S::ParameterType>, i8>, String> {
-//     // TODO: match on some enum `Discrete | Tabulated | ModalUnital | ModalNonUnital`
+//     match doctrine {
+//         Doctrine::Discrete => {
+//             let realised_model = model.discrete()?;
+//             let analysis = <S::AnalysisType>::default();
+//             Ok(analysis.build_system(realised_model))
+//         }
+//         Doctrine::Tabulated => {
+//             let realised_model = model.discrete_tab()?;
+//             let analysis = S::AnalysisType::default();
+//             Ok(analysis.build_system(realised_model))
+//         }
+//         Doctrine::ModalUnital => {
+//             let realised_model = model.modal_unital()?;
+//             let analysis = S::AnalysisType::default();
+//             Ok(analysis.build_system(realised_model))
+//         }
+//         Doctrine::ModalNonUnital => {
+//             let realised_model = model.modal_nonunital()?;
+//             let analysis = S::AnalysisType::default();
+//             Ok(analysis.build_system(realised_model))
+//         }
+//     }
 // }
 
 /// Generates the PolynomialSystem for Lotka-Volterra dynamics.
-fn lotka_volterra_system(
+pub(crate) fn lotka_volterra_system(
     model: &DblModel,
 ) -> Result<PolynomialSystem<QualifiedName, ode::Parameter<ode::LotkaVolterraParameter>, i8>, String>
 {
@@ -61,7 +92,7 @@ fn lotka_volterra_system(
 }
 
 /// Generates the PolynomialSystem for LCC dynamics.
-fn linear_ode_system(
+pub(crate) fn linear_ode_system(
     model: &DblModel,
 ) -> Result<PolynomialSystem<QualifiedName, ode::Parameter<ode::LCCParameter>, i8>, String> {
     let realised_model = model.discrete()?;
@@ -69,10 +100,11 @@ fn linear_ode_system(
     Ok(analysis.build_system(realised_model))
 }
 
-// TODO: you should be able to REMOVE this enum (or EXTEND it to also contain e.g. Lotka-Volterra)
+// TODO: you should be able to REMOVE this enum
 /// Mass-action analysis is currently implemented for Petri nets and stock-flow diagrams
 /// and we can avoid some code reduplication by making this explicit.
-pub enum MassActionAnalysisLogic {
+#[derive(Copy, Clone)]
+pub(crate) enum MassActionAnalysisLogic {
     /// The modal theory of Petri nets.
     PetriNet,
     /// The discrete tabulator theory of stock-flow diagrams.
@@ -80,7 +112,7 @@ pub enum MassActionAnalysisLogic {
 }
 
 /// Generates the PolynomialSystem for mass-action dynamics.
-fn mass_action_system(
+pub(crate) fn mass_action_system(
     model: &DblModel,
     mass_conservation_type: ode::MassConservationType,
     logic: MassActionAnalysisLogic,
@@ -105,80 +137,48 @@ fn mass_action_system(
     }
 }
 
-/// The analysis data for polynomial ODE equations.
-#[derive(Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct PolynomialODEEquationsData {
-    #[serde(rename = "trivialData")]
-    trivial_data: bool,
-}
-/// Generates equations for the system of polynomial ODEs.
-pub(crate) fn polynomial_ode_equations(
+/// TODO: documentation.
+// TODO: rewrite this to use ode_semantics_system, so that there's no need to preface with e.g.
+//          let system = lotka_volterra_system(model);
+//       in theories.rs
+pub(crate) fn ode_semantics_simulation<S: ODESemantics>(
     model: &DblModel,
-    _data: PolynomialODEEquationsData,
-) -> Result<LatexEquations, String> {
-    let sys = polynomial_ode_system(model);
-    let equations = sys?.to_latex_equations_with_map(|param| latex_names(model)(param));
-    Ok(equations)
+    problem_data: S::ProblemDataType,
+    system: PolynomialSystem<QualifiedName, Parameter<S::ParameterType>, i8>,
+) -> Result<ODEResultWithEquations, String> {
+    let sys_extended_scalars = problem_data.extend_scalars(system);
+    let latex_equations =
+        sys_extended_scalars.map_variables(latex_names(model)).to_latex_equations();
+    let analysis = problem_data.build_analysis(sys_extended_scalars);
+    let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
+    Ok(ODEResultWithEquations {
+        solution: ODEResult(solution.into()),
+        latex_equations,
+    })
 }
 
-/// The analysis data for Lotka-Volterra equations.
-#[derive(Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct LotkaVolterraEquationsData {
-    #[serde(rename = "trivialData")]
-    trivial_data: bool,
-}
-/// Generates Lotka-Volterra equations for the system.
-pub(crate) fn lotka_volterra_equations(model: &DblModel) -> Result<LatexEquations, String> {
-    let sys = lotka_volterra_system(model);
-    let equations = sys?.to_latex_equations_with_map(|param| latex_names(model)(param));
-    Ok(equations)
-}
-
-/// The analysis data for LCC equations.
-#[derive(Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct LCCEquationsData {
-    #[serde(rename = "trivialData")]
-    trivial_data: bool,
-}
-/// Generates LCC equations for the system.
-pub(crate) fn linear_ode_equations(model: &DblModel) -> Result<LatexEquations, String> {
-    let sys = linear_ode_system(model);
-    let equations = sys?.to_latex_equations_with_map(|param| latex_names(model)(param));
-    Ok(equations)
-}
-
-/// The analysis data for mass-action equations.
-#[derive(Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct MassActionEquationsData {
-    /// The mass-conservation type.
-    #[serde(rename = "massConservationType")]
-    pub mass_conservation_type: ode::MassConservationType,
-}
-/// Generates mass-action equations for the system.
-pub(crate) fn mass_action_equations(
+/// TODO: documentation.
+// TODO: rewrite this to use ode_semantics_system, so that there's no need to preface with e.g.
+//          let system = lotka_volterra_system(model);
+//       in theories.rs
+pub(crate) fn ode_semantics_equations<S: ODESemantics>(
     model: &DblModel,
-    data: MassActionEquationsData,
-    logic: MassActionAnalysisLogic,
+    system: PolynomialSystem<QualifiedName, Parameter<S::ParameterType>, i8>,
 ) -> Result<LatexEquations, String> {
-    let sys = mass_action_system(model, data.mass_conservation_type, logic);
-    let equations = sys?.to_latex_equations_with_map(|param| latex_names(model)(param));
-    Ok(equations)
+    Ok(system.to_latex_equations_with_map(|param| latex_names(model)(param)))
 }
 
+// TODO: replace this with ode_semantics_simulation by implementing ODESemantics for polynomial_ode ???
 /// Simulates polynomial ODE equations.
 pub(crate) fn polynomial_ode_simulation(
     model: &DblModel,
-    data: ode::PolynomialODEProblemData,
+    problem_data: ode::PolynomialODEProblemData,
 ) -> Result<ODEResultWithEquations, String> {
-    let sys = polynomial_ode_system(model);
-    let sys_extended_scalars = ode::extend_polynomial_ode_scalars(sys?, &data);
+    let system = polynomial_ode_system(model);
+    let sys_extended_scalars = ode::extend_polynomial_ode_scalars(system?, &problem_data);
     let latex_equations =
         sys_extended_scalars.map_variables(latex_names(model)).to_latex_equations();
-    let analysis = ode::polynomial_ode_analysis(sys_extended_scalars, data);
+    let analysis = ode::polynomial_ode_analysis(sys_extended_scalars, problem_data);
     let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
     Ok(ODEResultWithEquations {
         solution: ODEResult(solution.into()),
@@ -186,56 +186,10 @@ pub(crate) fn polynomial_ode_simulation(
     })
 }
 
-// TODO: define some closure that takes `sys_extended_scalars` to the result
-
-/// Simulates Lotka-Volterra ODEs.
-pub(crate) fn lotka_volterra_simulation(
-    model: &DblModel,
-    data: ode::LotkaVolterraProblemData,
-) -> Result<ODEResultWithEquations, String> {
-    let sys = lotka_volterra_system(model);
-    let sys_extended_scalars = data.extend_scalars(sys?);
-    let latex_equations =
-        sys_extended_scalars.map_variables(latex_names(model)).to_latex_equations();
-    let analysis = data.build_analysis(sys_extended_scalars);
-    let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
-    Ok(ODEResultWithEquations {
-        solution: ODEResult(solution.into()),
-        latex_equations,
-    })
-}
-
-/// Simulates LCC equations.
-pub(crate) fn linear_ode_simulation(
-    model: &DblModel,
-    data: ode::LCCProblemData,
-) -> Result<ODEResultWithEquations, String> {
-    let sys = linear_ode_system(model);
-    let sys_extended_scalars = data.extend_scalars(sys?);
-    let latex_equations =
-        sys_extended_scalars.map_variables(latex_names(model)).to_latex_equations();
-    let analysis = data.build_analysis(sys_extended_scalars);
-    let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
-    Ok(ODEResultWithEquations {
-        solution: ODEResult(solution.into()),
-        latex_equations,
-    })
-}
-
-/// Simulates mass-action ODEs.
-pub(crate) fn mass_action_simulation(
-    model: &DblModel,
-    data: ode::MassActionProblemData,
-    logic: MassActionAnalysisLogic,
-) -> Result<ODEResultWithEquations, String> {
-    let sys = mass_action_system(model, data.mass_conservation_type, logic);
-    let sys_extended_scalars = data.extend_scalars(sys?);
-    let latex_equations =
-        sys_extended_scalars.map_variables(latex_names(model)).to_latex_equations();
-    let analysis = data.build_analysis(sys_extended_scalars);
-    let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
-    Ok(ODEResultWithEquations {
-        solution: ODEResult(solution.into()),
-        latex_equations,
-    })
+// TODO: replace this with ode_semantics_equations by implementing ODESemantics for polynomial_ode ???
+/// Generates equations for the system of polynomial ODEs.
+pub(crate) fn polynomial_ode_equations(model: &DblModel) -> Result<LatexEquations, String> {
+    let system = polynomial_ode_system(model);
+    let equations = system?.to_latex_equations_with_map(|param| latex_names(model)(param));
+    Ok(equations)
 }

@@ -36,6 +36,7 @@ impl ODESemantics for PetriNetMassActionSemantics {
     type ModelType = ModalDblModel<Unital>;
     type ParameterType = MassActionParameter;
     type AnalysisType = PetriNetMassActionAnalysis;
+    type EquationsDataType = MassActionEquationsData;
     type ProblemDataType = MassActionProblemData;
 }
 
@@ -43,6 +44,7 @@ impl ODESemantics for StockFlowMassActionSemantics {
     type ModelType = DiscreteTabModel;
     type ParameterType = MassActionParameter;
     type AnalysisType = StockFlowMassActionAnalysis;
+    type EquationsDataType = MassActionEquationsData;
     type ProblemDataType = MassActionProblemData;
 }
 
@@ -429,7 +431,29 @@ impl
     }
 }
 
-/// Data defining an unbalanced mass-action ODE problem for a model.
+
+/// Data defining mass-action ODE equations for a model.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(
+    feature = "serde-wasm",
+    tsify(into_wasm_abi, from_wasm_abi)
+)]
+pub struct MassActionEquationsData {
+    /// Whether or not mass is conserved.
+    #[cfg_attr(feature = "serde", serde(rename = "massConservationType"))]
+    pub mass_conservation_type: MassConservationType,
+}
+
+impl Default for MassActionEquationsData {
+    fn default() -> Self {
+        Self { mass_conservation_type: MassConservationType::Balanced }
+    }
+}
+
+impl ODESemanticsEquationsData for MassActionEquationsData {}
+
+/// Data defining a mass-action ODE problem for a model.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(
@@ -437,9 +461,8 @@ impl
     tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
 )]
 pub struct MassActionProblemData {
-    /// Whether or not mass is conserved.
-    #[cfg_attr(feature = "serde", serde(rename = "massConservationType"))]
-    pub mass_conservation_type: MassConservationType,
+    /// Data used for generating the equations (namely, whether or not mass is conserved).
+    pub equations_data: MassActionEquationsData,
 
     /// Map from morphism IDs to consumption rate coefficients (nonnegative reals),
     /// for the balanced per transition case.
