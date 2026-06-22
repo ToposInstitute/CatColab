@@ -267,15 +267,17 @@ export type RichTextCell = Update<{ content: string }> &
  */
 type ObjectCellsOf<TShape extends AnyShape> = TShape extends AnyShape
     ? {
-          [K in keyof TShape["objects"]]: ObjectCell<TShape["objects"][K] & ObType>;
-      }[keyof TShape["objects"]]
+          [K in keyof ShapeObjectRecord<TShape>]: ObjectCell<ShapeObjectRecord<TShape>[K] & ObType>;
+      }[keyof ShapeObjectRecord<TShape>]
     : never;
 
 /** The union of morphism-cell handles a shape declares; see {@link ObjectCellsOf}. */
 type MorphismCellsOf<TShape extends AnyShape> = TShape extends AnyShape
     ? {
-          [K in keyof TShape["morphisms"]]: MorphismCell<TShape["morphisms"][K] & MorType>;
-      }[keyof TShape["morphisms"]]
+          [K in keyof ShapeMorphismRecord<TShape>]: MorphismCell<
+              ShapeMorphismRecord<TShape>[K] & MorType
+          >;
+      }[keyof ShapeMorphismRecord<TShape>]
     : never;
 
 /**
@@ -330,10 +332,10 @@ export type Shape = {
      * and {@link Notebook.validate} can also be passed one explicitly.
      */
     readonly coreTheory?: DblTheory;
-    /** Object types, keyed by name. */
-    readonly objects: Record<string, ObType>;
-    /** Morphism types, keyed by name. */
-    readonly morphisms: Record<string, MorType>;
+    /** Object types, keyed by name. Omit for a shape that declares no objects. */
+    readonly objects?: Record<string, ObType>;
+    /** Morphism types, keyed by name. Omit for a shape that declares no morphisms. */
+    readonly morphisms?: Record<string, MorType>;
     /** Theories this shape includes into (trivial migration target). */
     readonly inclusions?: readonly string[];
     /** Non-trivial migrations to other shapes, keyed by target theory. */
@@ -342,6 +344,20 @@ export type Shape = {
 
 /** Any shape, used as the default and as a generic constraint. */
 type AnyShape = Shape;
+
+/**
+ * A shape's object record, defaulting an omitted `objects` to the empty record
+ * so indexing and `keyof` stay well-defined for shapes that declare none.
+ */
+type ShapeObjectRecord<TShape extends AnyShape> = [NonNullable<TShape["objects"]>] extends [never]
+    ? Record<never, ObType>
+    : NonNullable<TShape["objects"]>;
+/** A shape's morphism record; see {@link ShapeObjectRecord}. */
+type ShapeMorphismRecord<TShape extends AnyShape> = [NonNullable<TShape["morphisms"]>] extends [
+    never,
+]
+    ? Record<never, MorType>
+    : NonNullable<TShape["morphisms"]>;
 
 /** A shape that can originate a document: it carries a document theory. */
 type CreatableShape = Shape & { readonly theory: string };
@@ -353,10 +369,11 @@ type CreatableShape = Shape & { readonly theory: string };
  * over a union shape accepts an object only when it is safe for whichever member
  * the notebook turns out to be. Narrow first with {@link Notebook.supports}.
  */
-type ShapeObjects<TShape extends AnyShape> = TShape["objects"][keyof TShape["objects"]] & ObType;
+type ShapeObjects<TShape extends AnyShape> =
+    ShapeObjectRecord<TShape>[keyof ShapeObjectRecord<TShape>] & ObType;
 /** The union of a shape's morphism types; see {@link ShapeObjects} for the union-shape semantics. */
-type ShapeMorphisms<TShape extends AnyShape> = TShape["morphisms"][keyof TShape["morphisms"]] &
-    MorType;
+type ShapeMorphisms<TShape extends AnyShape> =
+    ShapeMorphismRecord<TShape>[keyof ShapeMorphismRecord<TShape>] & MorType;
 
 /**
  * Every object and morphism type a shape declares. Unlike {@link ShapeObjects}
@@ -370,8 +387,8 @@ type ShapeMorphisms<TShape extends AnyShape> = TShape["morphisms"][keyof TShape[
  */
 type DeclaredTypes<TShape extends AnyShape> = TShape extends AnyShape
     ?
-          | (TShape["objects"][keyof TShape["objects"]] & ObType)
-          | (TShape["morphisms"][keyof TShape["morphisms"]] & MorType)
+          | (ShapeObjectRecord<TShape>[keyof ShapeObjectRecord<TShape>] & ObType)
+          | (ShapeMorphismRecord<TShape>[keyof ShapeMorphismRecord<TShape>] & MorType)
     : never;
 
 /**
@@ -402,6 +419,32 @@ type AddCapability<T extends ObType | MorType> =
           ? { add(type: T, args: { name: string }): ObjectCell<T> }
           : object;
 
+/**
+ * Turn a union into the intersection of its members. Used to combine the
+ * per-type {@link AddCapability}s of every type a shape declares into a single
+ * capability, so {@link Notebook.supportsShape} can grant them all at once.
+ */
+type UnionToIntersection<U> = (U extends unknown ? (k: U) => void : never) extends (
+    k: infer I,
+) => void
+    ? I
+    : never;
+
+/**
+ * The combined {@link Notebook.add} capability gained once a notebook is known
+ * to support *every* object and morphism type a sub-shape declares: the
+ * intersection of {@link AddCapability} over the shape's {@link DeclaredTypes}.
+ * Narrowing a notebook to its own type intersected with this lets a guarded
+ * block add any of the sub-shape's types without narrowing each individually.
+ */
+type ShapeAddCapability<S extends AnyShape> = UnionToIntersection<
+    DeclaredTypes<S> extends infer T
+        ? T extends ObType | MorType
+            ? AddCapability<T>
+            : never
+        : never
+>;
+
 /** An elaborated model together with its validation status. */
 export type ModelValidationResult =
     /** Successfully elaborated and validated. */
@@ -422,8 +465,10 @@ export type ModelValidationResult =
  */
 export function defineShape<const TSpec extends Shape>(
     spec: TSpec & {
-        morphisms: {
-            [K in keyof TSpec["morphisms"]]: ValidatedMorphism<TSpec["morphisms"][K] & MorType>;
+        morphisms?: {
+            [K in keyof ShapeMorphismRecord<TSpec>]: ValidatedMorphism<
+                ShapeMorphismRecord<TSpec>[K] & MorType
+            >;
         };
     },
 ): TSpec {
@@ -733,10 +778,10 @@ function attachNotebook<TShape extends AnyShape, Handle>(
         }) as unknown as RichTextCell;
 
     const isShapeMorphism = (type: MorType): boolean =>
-        Object.values(shape.morphisms).some((t) => sameTypeValue(t, type));
+        Object.values(shape.morphisms ?? {}).some((t) => sameTypeValue(t, type));
 
     const isShapeObject = (type: ObType): boolean =>
-        Object.values(shape.objects).some((t) => sameTypeValue(t, type));
+        Object.values(shape.objects ?? {}).some((t) => sameTypeValue(t, type));
 
     const addObjectCell = (type: ObType, name: string): ObjectCell => {
         const judgment = newObjectDecl(type);
@@ -884,6 +929,12 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                     );
             }
         },
+        supportsShape(other: AnyShape): boolean {
+            return (
+                Object.values(other.objects ?? {}).every((t) => isShapeObject(t)) &&
+                Object.values(other.morphisms ?? {}).every((t) => isShapeMorphism(t))
+            );
+        },
         cells(): Array<NotebookCell> {
             return doc.notebook.cellOrder.map((cellId) => {
                 const cell = doc.notebook.cellContents[cellId];
@@ -1006,6 +1057,21 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
     supports<T extends ObType | MorType>(
         type: T,
     ): this is Notebook<TShape, Handle> & AddCapability<T>;
+    /**
+     * Whether this notebook's shape declares *every* object and morphism type a
+     * sub-shape declares — the many-types counterpart of {@link Notebook.supports}.
+     * Pass a {@link defineShape} contract (e.g. one bundling several objects);
+     * a true result means each of its declared types is provided by this
+     * notebook at runtime.
+     *
+     * It is a type guard: a true result narrows the notebook to its own type
+     * intersected with the combined add-capability of all the sub-shape's
+     * declared types, so a single guarded block may {@link Notebook.add} any of
+     * them without narrowing each one individually.
+     */
+    supportsShape<S extends AnyShape>(
+        shape: S,
+    ): this is Notebook<TShape, Handle> & ShapeAddCapability<S>;
     /** Handles for all cells, in notebook order. */
     cells(): Array<NotebookCell<TShape>>;
     /**

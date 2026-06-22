@@ -229,6 +229,20 @@ function goodAddObject(notebook: SupportedNotebookWithEntity) {
     }
 }
 
+const BothObjectsShape = defineShape({
+    objects: {
+        BasicObj: basicObjType,
+        EntityObj: entityObType,
+    },
+});
+
+function goodAddObject2(notebook: SupportedNotebookWithEntity) {
+    if (notebook.supportsShape(BothObjectsShape)) {
+        notebook.add(BasicObj, { name: "A" });
+        notebook.add(EntityObj, { name: "E" });
+    }
+}
+
 function badAddObject(notebook: SupportedNotebookWithEntity) {
     //@ts-expect-error We can't add a BasicObj without narrowing the notebook type because EntityObjectListShape does not support BasicObj.
     notebook.add(BasicObj, { name: "A" });
