@@ -136,6 +136,19 @@ function addListMorphism(props: { notebook: SupportedNotebook }) {
 }
 ```
 
+```ts
+function badAddListMorphism(props: { notebook: SupportedNotebook }) {
+    const { notebook } = props;
+
+    const a = notebook.add(BasicObj, { name: "A" });
+    const b = notebook.add(BasicObj, { name: "B" });
+    const c = notebook.add(BasicObj, { name: "C" });
+
+    //@ts-expect-error Not all variants support adding a `ListMor`
+    notebook.add(ListMor, { name: "L", dom: [a, b], cod: [c] });
+}
+```
+
 ## A structurally compatible notebook is accepted
 
 <!-- verifier:prepend-to-following -->

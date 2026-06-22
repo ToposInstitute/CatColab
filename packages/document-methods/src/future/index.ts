@@ -347,16 +347,49 @@ type AnyShape = Shape;
 type CreatableShape = Shape & { readonly theory: string };
 
 /**
- * The union of a shape's object types. Distributes over a union of shapes, so a
- * notebook typed over `A | B` accepts the object types declared by either.
+ * The union of a shape's object types. Deliberately *not* distributive over a
+ * union of shapes: indexing the union of object records by their shared keys
+ * yields only the object types every member declares, so {@link Notebook.add}
+ * over a union shape accepts an object only when it is safe for whichever member
+ * the notebook turns out to be. Narrow first with {@link Notebook.supports}.
  */
-type ShapeObjects<TShape extends AnyShape> = TShape extends AnyShape
-    ? TShape["objects"][keyof TShape["objects"]] & ObType
+type ShapeObjects<TShape extends AnyShape> = TShape["objects"][keyof TShape["objects"]] & ObType;
+/** The union of a shape's morphism types; see {@link ShapeObjects} for the union-shape semantics. */
+type ShapeMorphisms<TShape extends AnyShape> = TShape["morphisms"][keyof TShape["morphisms"]] &
+    MorType;
+
+/**
+ * Every object and morphism type a shape declares. Unlike {@link ShapeObjects}
+ * and {@link ShapeMorphisms}, this *distributes* over a union of shapes, so a
+ * union shape's declared types are the union of all members' declared types.
+ * Carried by the phantom {@link Notebook} member that drives shape assignability
+ * (see there): a notebook is assignable to another only when its declared types
+ * relate to the target's, so a notebook whose morphisms are foreign to a union
+ * shape (e.g. a `SimpleOlog` against a union of list shapes) is rejected, while
+ * one declaring a subset (e.g. a `PetriNet`) is accepted.
+ */
+type DeclaredTypes<TShape extends AnyShape> = TShape extends AnyShape
+    ?
+          | (TShape["objects"][keyof TShape["objects"]] & ObType)
+          | (TShape["morphisms"][keyof TShape["morphisms"]] & MorType)
     : never;
-/** The union of a shape's morphism types; distributes over a union of shapes. */
-type ShapeMorphisms<TShape extends AnyShape> = TShape extends AnyShape
-    ? TShape["morphisms"][keyof TShape["morphisms"]] & MorType
-    : never;
+
+/**
+ * The {@link Notebook.add} capability gained once a notebook is known to
+ * support the cell type `T`. {@link Notebook.supports} narrows a notebook to its
+ * own type intersected with this, which adds an `add` overload accepting exactly
+ * `T` — so the guarded `add` type-checks even when `T` is not declared by every
+ * member of a union shape. An intersection is always a subtype of the original
+ * notebook, so this narrowing is immune to the method-bivariance that makes
+ * union- and member-shape notebooks otherwise mutually assignable.
+ */
+type AddCapability<T extends ObType | MorType> = T extends MorType
+    ? {
+          add(type: T, args: { name: string; dom: DomOf<T>; cod: CodOf<T> }): MorphismCell<T>;
+      }
+    : T extends ObType
+      ? { add(type: T, args: { name: string }): ObjectCell<T> }
+      : object;
 
 /** An elaborated model together with its validation status. */
 export type ModelValidationResult =
@@ -900,6 +933,19 @@ function attachNotebook<TShape extends AnyShape, Handle>(
 export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument> = Update<{
     name: string;
 }> & {
+    /**
+     * Phantom carrier of the shape's declared types, present only in the type:
+     * the runtime object never provides it. It exists so shape assignability is
+     * decided by the declared cell types rather than collapsing under the
+     * method-bivariance of the rest of the surface. Declared as a *method* so
+     * its parameter is compared bivariantly: a notebook is assignable to another
+     * when its declared types are a subset of, or a superset of, the target's —
+     * which accepts a notebook that declares a subset of a union shape's types
+     * (e.g. `PetriNet` into a union of list shapes) and against the widest
+     * `Notebook` (whose declared types are all of `ObType | MorType`), while
+     * rejecting one whose types are foreign to the target (e.g. `SimpleOlog`).
+     */
+    __shapeBound?(declared: DeclaredTypes<TShape>): void;
     /** Reactive read of the notebook's name. */
     readonly name: string;
     /**
@@ -940,8 +986,15 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
      * narrower theory whose shape only covers some of those types; `supports`
      * tests, at runtime, which of the shape's types this particular notebook
      * actually provides before {@link Notebook.add}ing them.
+     *
+     * It is a type guard: for a notebook typed over a *union* of shapes, a true
+     * result narrows it to just those members that declare `type`, so the
+     * subsequent {@link Notebook.add} of that type type-checks. Adding a type
+     * not declared by every member without first narrowing is a compile error.
      */
-    supports(type: ObType | MorType): boolean;
+    supports<T extends ObType | MorType>(
+        type: T,
+    ): this is Notebook<TShape, Handle> & AddCapability<T>;
     /** Handles for all cells, in notebook order. */
     cells(): Array<NotebookCell<TShape>>;
     /**
