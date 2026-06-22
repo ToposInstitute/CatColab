@@ -32,6 +32,7 @@ impl ODESemantics for LotkaVolterraSemantics {
     type ModelType = DiscreteDblModel;
     type ParameterType = LotkaVolterraParameter;
     type AnalysisType = LotkaVolterraAnalysis;
+    type EquationsDataType = ();
     type ProblemDataType = LotkaVolterraProblemData;
 }
 

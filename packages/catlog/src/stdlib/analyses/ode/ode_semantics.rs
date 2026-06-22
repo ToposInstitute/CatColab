@@ -56,6 +56,10 @@ pub trait ODESemantics {
     /// The data describing the things that the ODE semantics "cares about". (See the documentation
     /// for `ODESemanticsAnalysis`).
     type AnalysisType: ODESemanticsAnalysis<Self::ModelType, Self::ParameterType>;
+
+    /// TODO: documentation
+    type EquationsDataType: ODESemanticsEquationsData;
+
     /// The data describing how to turn the algebraic system of equations into a simulation,
     /// including e.g. which values that appear in the front-end analysis correspond to which
     /// parameters within the equations.
@@ -215,6 +219,11 @@ pub enum ContributionSign {
     Negative,
 }
 
+/// TODO: documentation
+// TODO: similar question about including all the serde stuff here
+pub trait ODESemanticsEquationsData {}
+impl ODESemanticsEquationsData for () {}
+
 /// The trait describing how to turn the formal system of ODEs into a numerical problem, to be
 /// solved by an ODE solver and presented to the front-end. At minimum, such data must contain
 /// initial values for variables and the intended duration of simulation, as well as the method for
@@ -231,10 +240,11 @@ pub enum ContributionSign {
 //     tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
 // )]
 pub trait ODESemanticsProblemData<P: ODEParameterType> {
-    // REQUEST  | The two getters (`initial_values()` and `duration()`) are annoying boilerplate to
-    //   FOR    | ask to be implemented. Is there a nice way to get rid of them here? Without them,
+    // REQUEST  | These getters (`equations_data`, `initial_values`, and `duration`) are annoying
+    //   FOR    | boilerplate to ask for. Is there a nice way to get rid of them here? Without them,
     // FEEDBACK | the call to `self.initial_values` in `build_analysis()` fails because there is no
     // _________/ way of knowing whether a struct implementing this trait actually has those fields.
+    /// Further data needed to specify the ODE equations.
     /// Map from object IDs to initial values (nonnegative reals).
     fn initial_values(&self) -> HashMap<QualifiedName, f32>;
     /// Duration of simulation.

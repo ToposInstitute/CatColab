@@ -32,6 +32,7 @@ impl ODESemantics for LCCSemantics {
     type ModelType = DiscreteDblModel;
     type ParameterType = LCCParameter;
     type AnalysisType = LCCAnalysis;
+    type EquationsDataType = ();
     type ProblemDataType = LCCProblemData;
 }
 
