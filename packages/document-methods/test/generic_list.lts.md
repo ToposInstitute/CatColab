@@ -102,13 +102,13 @@ const AdditiveListMor = AdditiveListShape.morphisms.AdditiveListMor;
 
 <!-- verifier:prepend-to-following -->
 
-`addListMorphism` works on any notebook that supports any of the objects or
-morphisms our list shapes support. When implementing a generic consumer like
-this we need to narrow down what object and morphism types the notebook
-actually supports by using `notebook.supports`.
+`addListMorphism` works on any notebook that supports basic objects and any of
+the morphisms morphisms our list shapes support. When implementing a generic
+consumer like this we need to narrow down what object and morphism types the
+notebook actually supports by using `notebook.supports`.
 
 ```ts
-type MyNotebook = Notebook<
+type NotebookOfLists = Notebook<
     | typeof ListShape
     | typeof SymmetricListShape
     | typeof CocartesianListShape
@@ -117,7 +117,7 @@ type MyNotebook = Notebook<
     unknown
 >;
 
-function addListMorphism(notebook: MyNotebook) {
+function addListMorphism(notebook: NotebookOfLists) {
     const a = notebook.add(BasicObj, { name: "A" });
     const b = notebook.add(BasicObj, { name: "B" });
     const c = notebook.add(BasicObj, { name: "C" });
@@ -141,7 +141,7 @@ function addListMorphism(notebook: MyNotebook) {
 ```
 
 ```ts
-function badAddListMorphism(notebook: MyNotebook) {
+function badAddListMorphism(notebook: NotebookOfLists) {
     const a = notebook.add(BasicObj, { name: "A" });
     const b = notebook.add(BasicObj, { name: "B" });
     const c = notebook.add(BasicObj, { name: "C" });
@@ -178,6 +178,7 @@ const simpleOlog = binder.createNotebook(SimpleOlog, { name: "example" });
 // @ts-expect-error A SimpleOlog notebook lacks the list-valued morphisms ListShape requires.
 addListMorphism(simpleOlog);
 ```
+
 
 ```ts
 const entityObType = { tag: "Basic", content: "Entity" } as const satisfies ObType;
@@ -232,7 +233,7 @@ const EntityObjectListShape = defineShape({
     },
 });
 
-type MyNotebookWithEntity = Notebook<
+type NotebookOfListsWithEntity = Notebook<
     | typeof ListShape
     | typeof SymmetricListShape
     | typeof CocartesianListShape
@@ -244,7 +245,7 @@ type MyNotebookWithEntity = Notebook<
 
 const EntityObj = EntityObjectListShape.objects.EntityObj;
 
-function goodAddObject(notebook: MyNotebookWithEntity) {
+function goodAddObject(notebook: NotebookOfListsWithEntity) {
     if (notebook.supports(BasicObj)) {
         notebook.add(BasicObj, { name: "A" });
     }
@@ -261,7 +262,7 @@ const BothObjectsShape = defineShape({
     },
 });
 
-function goodAddObject2(notebook: MyNotebookWithEntity) {
+function goodAddObject2(notebook: NotebookOfListsWithEntity) {
     if (notebook.supports(BothObjectsShape)) {
         notebook.add(BasicObj, { name: "A" });
         notebook.add(EntityObj, { name: "E" });
@@ -274,7 +275,7 @@ function goodAddObject3(notebook: JustEntityObjectListShape) {
     notebook.add(EntityObj, { name: "E" });
 }
 
-function badAddObject(notebook: MyNotebookWithEntity) {
+function badAddObject(notebook: NotebookOfListsWithEntity) {
     //@ts-expect-error We can't add a BasicObj without narrowing the notebook type because EntityObjectListShape does not support BasicObj.
     notebook.add(BasicObj, { name: "A" });
 
