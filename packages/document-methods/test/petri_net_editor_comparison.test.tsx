@@ -535,7 +535,7 @@ describe("Petri-net editor comparison", () => {
                 <section>
                     <h1>{props.notebook.name}</h1>
                     <ul>
-                        <For each={props.notebook.cells()}>
+                        <For each={props.notebook.cellsOf(PetriNet)}>
                             {(cell) => <PetriNetCell notebook={props.notebook} cell={cell} />}
                         </For>
                     </ul>
@@ -655,7 +655,7 @@ describe("Petri-net editor comparison", () => {
                 <section>
                     <h1>{props.notebook.name}</h1>
                     <ul>
-                        <For each={props.notebook.cells()}>
+                        <For each={props.notebook.cellsOf(GenericShape)}>
                             {(cell) => <ModelCellEditor notebook={props.notebook} cell={cell} />}
                         </For>
                     </ul>

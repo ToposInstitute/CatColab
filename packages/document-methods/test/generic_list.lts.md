@@ -168,6 +168,24 @@ addListMorphism(petriNet);
 Adding SymmetricListMor!
 ```
 
+```ts
+const entityObType = { tag: "Basic", content: "Entity" } as const satisfies ObType;
+const EntityObjectShape = defineShape({
+    theory: "entity-objects",
+    objects: {
+        obj: entityObType,
+        x: basicObjType,
+    },
+    morphisms: {
+        mor: listMorType,
+    },
+});
+
+const entityObjects = binder.createNotebook(EntityObjectShape, { name: "example" });
+
+addListMorphism(entityObjects);
+```
+
 ## A structurally incompatible notebook should be rejected
 
 ```ts

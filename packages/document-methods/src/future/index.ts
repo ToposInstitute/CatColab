@@ -983,6 +983,24 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                 }
             });
         },
+        cellsOf(shape: AnyShape): Array<NotebookCell> {
+            const objectTypes = Object.values(shape.objects ?? {});
+            const morphismTypes = Object.values(shape.morphisms ?? {});
+            return (this as Notebook<TShape, Handle>).cells().filter((cell) => {
+                if (cell.kind === CellKind.RichText) {
+                    return true;
+                }
+                if (cell.kind === CellKind.Object) {
+                    const type = (cell as { type?: unknown }).type;
+                    return objectTypes.some((obType) => sameTypeValue(type, obType));
+                }
+                if (cell.kind === CellKind.Morphism) {
+                    const type = (cell as { type?: unknown }).type;
+                    return morphismTypes.some((morType) => sameTypeValue(type, morType));
+                }
+                return false;
+            });
+        },
         add(
             type: unknown,
             args: { content?: string; name?: string; dom?: unknown; cod?: unknown },
@@ -1024,25 +1042,35 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
     name: string;
 }> & {
     /**
-     * Phantom carrier of the shape's declared types, present only in the type:
-     * the runtime object never provides it. It exists so shape assignability is
-     * decided by the declared cell types rather than collapsing under the
-     * method-bivariance of the rest of the surface. Declared as a *method* so
-     * its parameter is compared bivariantly: a notebook is assignable to another
-     * when its declared types are a subset of, or a superset of, the target's —
-     * which accepts a notebook that declares a subset of a union shape's types
-     * (e.g. `PetriNet` into a union of list shapes) and against the widest
-     * `Notebook` (whose declared types are all of `ObType | MorType`), while
-     * rejecting one whose types are foreign to the target (e.g. `SimpleOlog`).
+     * Phantom carrier of the shape's declared *object* types, present only in
+     * the type: the runtime object never provides it. It exists so shape
+     * assignability is decided by the declared cell types rather than collapsing
+     * under the method-bivariance of the rest of the surface. Declared as a
+     * *method* so its parameter is compared bivariantly: a notebook is assignable
+     * to another when its declared object types are a subset of, or a superset
+     * of, the target's. Objects and morphisms are carried on *separate* members
+     * (see {@link __morphismShapeBound}) so the two axes are related
+     * independently — a notebook that declares a superset of the target's
+     * objects (extra object types alongside the shared ones) and a subset of its
+     * morphisms is still accepted, rather than being rejected because the
+     * combined type set is neither subset nor superset.
      */
-    __shapeBound?(declared: DeclaredTypes<TShape>): void;
+    __objectShapeBound?(declared: DeclaredObjects<TShape>): void;
+    /**
+     * Phantom carrier of the shape's declared *morphism* types; the morphism-side
+     * counterpart of {@link __objectShapeBound}, compared bivariantly the same
+     * way. Relating morphisms independently of objects is what rejects a notebook
+     * whose morphisms are foreign to the target (e.g. `SimpleOlog`, whose
+     * `Hom`-over-`Basic` aspect is neither a subset nor a superset of a list
+     * shape's morphisms) while accepting one that merely adds extra object types.
+     */
+    __morphismShapeBound?(declared: DeclaredMorphisms<TShape>): void;
     /**
      * Phantom carrier of whether the shape declares any morphism type, present
-     * only in the type. It complements {@link __shapeBound}: that member relates
-     * declared types by subset/superset, so a notebook declaring a *subset* of a
-     * target's types is accepted — which lets one whose only declared type is a
-     * shared *object* slip through even though it declares none of the target's
-     * morphisms (an empty morphism set never produces the foreign type that the
+     * only in the type. It complements {@link __morphismShapeBound}: bivariance
+     * relates declared morphisms by subset/superset, and the empty set is a
+     * subset of everything, so a notebook declaring *no* morphisms would slip
+     * through (its empty morphism set never produces the foreign type the
      * bivariance check rejects). This member closes that gap: a target whose
      * shape declares morphisms types it as the literal `true`, which a
      * morphism-free shape (typed `boolean`) cannot satisfy, so handing an
@@ -1126,8 +1154,29 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
     supports<S extends AnyShape>(
         shape: S,
     ): this is Notebook<TShape, Handle> & ShapeAddCapability<S>;
-    /** Handles for all cells, in notebook order. */
-    cells(): Array<NotebookCell<TShape>>;
+    /**
+     * Handles for all cells, in notebook order, as the widest {@link
+     * NotebookCell} union: object and morphism handles are the untyped
+     * `ObjectCell`/`MorphismCell`. It is deliberately *not* parametrized by the
+     * notebook's shape, so a notebook declaring extra cell types stays
+     * assignable where a narrower shape is expected (e.g. a notebook with an
+     * extra object type handed to a consumer over a union of list shapes); the
+     * tradeoff is that the result may include cell types beyond that shape.
+     * Recover precise handles with {@link Notebook.cellsOf}, or filter with
+     * {@link byObjectType}/{@link byMorphismType}.
+     */
+    cells(): Array<NotebookCell>;
+    /**
+     * Handles for the cells whose object or morphism type is declared by the
+     * given sub-shape, precisely typed by that shape: each of its declared
+     * object/morphism types contributes its own handle, so `cell.kind`
+     * discriminates to a precise `ObjectCell`/`MorphismCell`. Rich-text cells
+     * are always included (they belong to no shape), so an editor can render
+     * them alongside the shape's typed cells. Matching is structural, like
+     * {@link byObjectType}, so cells are selected by their stored type value
+     * regardless of which shape produced `shape`.
+     */
+    cellsOf<S extends AnyShape>(shape: S): Array<NotebookCell<S>>;
     /**
      * Add a cell to the notebook. The kind of cell is selected by the first
      * argument:
