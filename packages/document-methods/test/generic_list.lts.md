@@ -187,6 +187,46 @@ function badAddListMorphism2(props: { notebook: Notebook<typeof MultiObjectListS
 ```
 
 
+```ts
+const entityObType = { tag: "Basic", content: "Entity" } as const satisfies ObType;
+
+const entityListMorType = {
+    tag: "Hom",
+    content: {
+        tag: "ModeApp",
+        content: { modality: "List", obType: entityObType },
+    },
+} as const satisfies MorType;
+
+const EntityObjectListShape = defineShape({
+    objects: {
+        EntityOb: entityObType,
+    },
+    morphisms: {
+        EntityListMor: entityListMorType,
+    },
+});
+
+type SupportedNotebookWithEntity = Notebook<
+    | typeof ListShape
+    | typeof SymmetricListShape
+    | typeof CocartesianListShape
+    | typeof CartesianListShape
+    | typeof AdditiveListShape
+    | typeof EntityObjectListShape,
+    unknown
+>;
+
+function badAddListMorphism3(props: { notebook: SupportedNotebookWithEntity }) {
+    const { notebook } = props;
+
+    //@ts-expect-error We can't add a BasicObj without narrowing the notebook type because EntityObjectListShape  does not support BasicObj.
+    notebook.add(BasicObj, { name: "A" });
+}
+```
+
+
+
 ## A structurally compatible notebook is accepted
 
 <!-- verifier:prepend-to-following -->
