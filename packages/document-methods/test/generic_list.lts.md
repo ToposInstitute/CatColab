@@ -200,7 +200,7 @@ const entityListMorType = {
 
 const EntityObjectListShape = defineShape({
     objects: {
-        EntityOb: entityObType,
+        EntityObj: entityObType,
     },
     morphisms: {
         EntityListMor: entityListMorType,
@@ -217,15 +217,30 @@ type SupportedNotebookWithEntity = Notebook<
     unknown
 >;
 
+const EntityObj = EntityObjectListShape.objects.EntityObj;
+
 function goodAddObject(notebook: SupportedNotebookWithEntity) {
     if (notebook.supports(BasicObj)) {
         notebook.add(BasicObj, { name: "A" });
+    }
+
+    if (notebook.supports(EntityObj)) {
+        notebook.add(EntityObj, { name: "E" });
     }
 }
 
 function badAddObject(notebook: SupportedNotebookWithEntity) {
     //@ts-expect-error We can't add a BasicObj without narrowing the notebook type because EntityObjectListShape does not support BasicObj.
     notebook.add(BasicObj, { name: "A" });
+
+    //@ts-expect-error We can't add a EntityObj without narrowing the notebook type because not all notebooks support EntityObj.
+    notebook.add(EntityObj, { name: "E" });
+}
+
+type JustEntityObjectListShape = Notebook<typeof EntityObjectListShape, unknown>;
+
+function addEntityObject(notebook: JustEntityObjectListShape) {
+    notebook.add(EntityObj, { name: "E" });
 }
 ```
 
