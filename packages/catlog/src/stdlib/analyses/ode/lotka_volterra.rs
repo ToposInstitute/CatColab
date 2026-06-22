@@ -218,7 +218,6 @@ impl ODESemanticsProblemData<<LotkaVolterraSemantics as ODESemantics>::Parameter
         let sys = sys.extend_scalars(|poly| {
             poly.eval(|param| match param {
                 LotkaVolterraParameter::Growth { variable } => {
-                    // FIXME: this won't work, because `variable` will now be `Growth.variable`
                     self.growth_rates.get(variable).cloned().unwrap_or_default()
                 }
                 LotkaVolterraParameter::Interaction { link } => {

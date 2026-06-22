@@ -777,6 +777,14 @@ pub fn elaborate_model(
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use catlog::{
+        dbl::{
+            modal::{List, ModalMorType, ModalObType},
+            model::ModalDblModel,
+        },
+        stdlib::theories,
+        zero::LabelSegment,
+    };
     use uuid::Uuid;
 
     use super::*;
@@ -864,61 +872,6 @@ pub(crate) mod tests {
         assert_eq!(Result::from(model.validate().0).map_err(|errs| errs.len()), Err(2));
     }
 
-    //. Construct a causal loop diagram with objects x, y and negative links f, g : x -> y.
-    pub(crate) fn parallel_negative_cld(
-        src_name: &str,
-        tgt_name: &str,
-        first_link_name: &str,
-        second_link_name: &str,
-    ) -> DblModel {
-        let th = ThSignedCategory::new().theory();
-        let mut model = DblModel::new(&th);
-        let [x, y, f, g] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
-
-        assert!(
-            model
-                .add_ob(&ObDecl {
-                    name: src_name.into(),
-                    id: x,
-                    ob_type: ObType::Basic("Object".into())
-                })
-                .is_ok()
-        );
-        assert!(
-            model
-                .add_ob(&ObDecl {
-                    name: tgt_name.into(),
-                    id: y,
-                    ob_type: ObType::Basic("Object".into())
-                })
-                .is_ok()
-        );
-        assert!(
-            model
-                .add_mor(&MorDecl {
-                    name: first_link_name.into(),
-                    id: f,
-                    mor_type: MorType::Basic("Negative".into()),
-                    dom: Some(Ob::Basic(x.to_string())),
-                    cod: Some(Ob::Basic(y.to_string())),
-                })
-                .is_ok()
-        );
-        assert!(
-            model
-                .add_mor(&MorDecl {
-                    name: second_link_name.into(),
-                    id: g,
-                    mor_type: MorType::Basic("Negative".into()),
-                    dom: Some(Ob::Basic(x.to_string())),
-                    cod: Some(Ob::Basic(y.to_string())),
-                })
-                .is_ok()
-        );
-
-        model
-    }
-
     /// Construct a stock-flow diagram with a backwards link.
     pub(crate) fn backward_link(src_name: &str, tgt_name: &str, flow_name: &str) -> DblModel {
         let th = ThCategoryLinks::new().theory();
@@ -968,66 +921,80 @@ pub(crate) mod tests {
         model
     }
 
-    /// Construct a Petri net representing a catalytic transition [x,c] -> [y,c].
-    pub(crate) fn catalytic_petri_net(
-        src_name: &str,
-        tgt_name: &str,
-        catalyst_name: &str,
-        _transition_name: &str,
-    ) -> DblModel {
-        let th = ThSymMonoidalCategory::new().theory();
-        let mut model = DblModel::new(&th);
-        let [x, y, c, _t] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
-
-        assert!(
-            model
-                .add_ob(&ObDecl {
-                    name: src_name.into(),
-                    id: x,
-                    // ob_type: ObType::Basic("Object".into()),
-                    // TODO: what is the correct ob_type here?
-                    ob_type: ObType::ModeApp {
-                        modality: Modality::SymmetricList,
-                        ob_type: Box::new(ObType::Basic("Object".into()))
-                    },
-                })
-                .is_ok()
-        );
-        assert!(
-            model
-                .add_ob(&ObDecl {
-                    name: tgt_name.into(),
-                    id: y,
-                    // ob_type: ObType::Basic("Object".into()),
-                    ob_type: ObType::ModeApp {
-                        modality: Modality::SymmetricList,
-                        ob_type: Box::new(ObType::Basic("Object".into()))
-                    },
-                })
-                .is_ok()
-        );
-        assert!(
-            model
-                .add_ob(&ObDecl {
-                    name: catalyst_name.into(),
-                    id: c,
-                    // ob_type: ObType::Basic("Object".into()),
-                    ob_type: ObType::ModeApp {
-                        modality: Modality::SymmetricList,
-                        ob_type: Box::new(ObType::Basic("Object".into()))
-                    },
-                })
-                .is_ok()
-        );
-        // TODO: add the transition [x, c] -> [y, c]
-
-        model
-    }
     #[test]
     fn model_category_links() {
         let model = backward_link("x", "y", "f");
         assert_eq!(model.ob_generators().len(), 2);
         assert_eq!(model.mor_generators().len(), 2);
         assert_eq!(model.validate().0, JsResult::Ok(()));
+    }
+
+    #[test]
+    fn modal_mor_dom_cod_labels() {
+        let th = Rc::new(theories::th_sym_monoidal_category());
+        let ob_type = ModalObType::new(QualifiedName::from("Object"));
+        let op = QualifiedName::from("tensor");
+
+        let [s_id, i_id, r_id] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
+        let [infect_id, recover_id] = [Uuid::now_v7(), Uuid::now_v7()];
+
+        let mut inner = ModalDblModel::new(th);
+        inner.add_ob(s_id.into(), ob_type.clone());
+        inner.add_ob(i_id.into(), ob_type.clone());
+        inner.add_ob(r_id.into(), ob_type.clone());
+
+        // infect: tensor(S, I) -> tensor(I, I) — product-typed dom and cod.
+        inner.add_mor(
+            infect_id.into(),
+            ModalOb::App(
+                ModalOb::List(
+                    List::Symmetric,
+                    vec![ModalOb::Generator(s_id.into()), ModalOb::Generator(i_id.into())],
+                )
+                .into(),
+                op.clone(),
+            ),
+            ModalOb::App(
+                ModalOb::List(
+                    List::Symmetric,
+                    vec![ModalOb::Generator(i_id.into()), ModalOb::Generator(i_id.into())],
+                )
+                .into(),
+                op.clone(),
+            ),
+            ModalMorType::Zero(ob_type.clone()),
+        );
+
+        // recover: I -> R — simple generator dom and cod.
+        inner.add_mor(
+            recover_id.into(),
+            ModalOb::Generator(i_id.into()),
+            ModalOb::Generator(r_id.into()),
+            ModalMorType::Zero(ob_type),
+        );
+
+        let mut ob_namespace = Namespace::new_for_uuid();
+        ob_namespace.set_label(s_id, LabelSegment::Text("S".into()));
+        ob_namespace.set_label(i_id, LabelSegment::Text("I".into()));
+        ob_namespace.set_label(r_id, LabelSegment::Text("R".into()));
+
+        let model = DblModel {
+            model: inner.into(),
+            ty: None,
+            ob_namespace,
+            mor_namespace: Namespace::new_for_uuid(),
+        };
+
+        // Morphism with basic generator dom/cod resolves labels.
+        assert_eq!(
+            model.mor_generator_dom_cod_label_strings(&recover_id.into()),
+            Some(("I".to_string(), "R".to_string()))
+        );
+
+        // Morphism with product-typed dom/cod resolves to bracketed labels.
+        assert_eq!(
+            model.mor_generator_dom_cod_label_strings(&infect_id.into()),
+            Some(("[S, I]".to_string(), "[I, I]".to_string()))
+        );
     }
 }
