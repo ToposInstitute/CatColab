@@ -54,25 +54,66 @@ const ListShape = defineShape({
     },
     morphisms: {
         ListMor: listMorType,
+    },
+});
+
+const SymmetricListShape = defineShape({
+    objects: {
+        BasicObj: basicObjType,
+    },
+    morphisms: {
         SymmetricListMor: symmetricListMorType,
+    },
+});
+
+const CocartesianListShape = defineShape({
+    objects: {
+        BasicObj: basicObjType,
+    },
+    morphisms: {
         CocartesianListMor: cocartesianListMorType,
+    },
+});
+
+const CartesianListShape = defineShape({
+    objects: {
+        BasicObj: basicObjType,
+    },
+    morphisms: {
         CartesianListMor: cartesianListMorType,
+    },
+});
+
+const AdditiveListShape = defineShape({
+    objects: {
+        BasicObj: basicObjType,
+    },
+    morphisms: {
         AdditiveListMor: additiveListMorType,
     },
 });
 
 const BasicObj = ListShape.objects.BasicObj;
 const ListMor = ListShape.morphisms.ListMor;
-const SymmetricListMor = ListShape.morphisms.SymmetricListMor;
-const CocartesianListMor = ListShape.morphisms.CocartesianListMor;
-const CartesianListMor = ListShape.morphisms.CartesianListMor;
-const AdditiveListMor = ListShape.morphisms.AdditiveListMor;
+const SymmetricListMor = SymmetricListShape.morphisms.SymmetricListMor;
+const CocartesianListMor = CocartesianListShape.morphisms.CocartesianListMor;
+const CartesianListMor = CartesianListShape.morphisms.CartesianListMor;
+const AdditiveListMor = AdditiveListShape.morphisms.AdditiveListMor;
 ```
 
 <!-- verifier:prepend-to-following -->
 
 ```ts
-function addListMorphism(props: { notebook: Notebook<typeof ListShape, unknown> }) {
+type SupportedNotebook = Notebook<
+    | typeof ListShape
+    | typeof SymmetricListShape
+    | typeof CocartesianListShape
+    | typeof CartesianListShape
+    | typeof AdditiveListShape,
+    unknown
+>;
+
+function addListMorphism(props: { notebook: SupportedNotebook }) {
     const { notebook } = props;
 
     const a = notebook.add(BasicObj, { name: "A" });

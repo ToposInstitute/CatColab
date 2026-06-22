@@ -265,14 +265,18 @@ export type RichTextCell = Update<{ content: string }> &
  * distinct, discriminable member; for the default {@link AnyShape} it collapses
  * to the widest {@link ObjectCell}.
  */
-type ObjectCellsOf<TShape extends AnyShape> = {
-    [K in keyof TShape["objects"]]: ObjectCell<TShape["objects"][K] & ObType>;
-}[keyof TShape["objects"]];
+type ObjectCellsOf<TShape extends AnyShape> = TShape extends AnyShape
+    ? {
+          [K in keyof TShape["objects"]]: ObjectCell<TShape["objects"][K] & ObType>;
+      }[keyof TShape["objects"]]
+    : never;
 
 /** The union of morphism-cell handles a shape declares; see {@link ObjectCellsOf}. */
-type MorphismCellsOf<TShape extends AnyShape> = {
-    [K in keyof TShape["morphisms"]]: MorphismCell<TShape["morphisms"][K] & MorType>;
-}[keyof TShape["morphisms"]];
+type MorphismCellsOf<TShape extends AnyShape> = TShape extends AnyShape
+    ? {
+          [K in keyof TShape["morphisms"]]: MorphismCell<TShape["morphisms"][K] & MorType>;
+      }[keyof TShape["morphisms"]]
+    : never;
 
 /**
  * The union of cell handles that iterating a notebook with {@link
@@ -342,11 +346,17 @@ type AnyShape = Shape;
 /** A shape that can originate a document: it carries a document theory. */
 type CreatableShape = Shape & { readonly theory: string };
 
-/** The union of a shape's object types. */
-type ShapeObjects<TShape extends AnyShape> = TShape["objects"][keyof TShape["objects"]] & ObType;
-/** The union of a shape's morphism types. */
-type ShapeMorphisms<TShape extends AnyShape> = TShape["morphisms"][keyof TShape["morphisms"]] &
-    MorType;
+/**
+ * The union of a shape's object types. Distributes over a union of shapes, so a
+ * notebook typed over `A | B` accepts the object types declared by either.
+ */
+type ShapeObjects<TShape extends AnyShape> = TShape extends AnyShape
+    ? TShape["objects"][keyof TShape["objects"]] & ObType
+    : never;
+/** The union of a shape's morphism types; distributes over a union of shapes. */
+type ShapeMorphisms<TShape extends AnyShape> = TShape extends AnyShape
+    ? TShape["morphisms"][keyof TShape["morphisms"]] & MorType
+    : never;
 
 /** An elaborated model together with its validation status. */
 export type ModelValidationResult =
@@ -826,8 +836,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                     return isShapeMorphism(cellType as MorType);
                 default:
                     return (
-                        isShapeMorphism(cellType as MorType) ||
-                        isShapeObject(cellType as ObType)
+                        isShapeMorphism(cellType as MorType) || isShapeObject(cellType as ObType)
                     );
             }
         },
