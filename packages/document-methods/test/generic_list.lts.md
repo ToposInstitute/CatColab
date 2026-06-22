@@ -193,6 +193,19 @@ const justObjects = binder.createNotebook(JustObjectShape, { name: "example" });
 addListMorphism(justObjects);
 ```
 
+```ts
+const JustMorphismShape = defineShape({
+    theory: "just-morphisms",
+    morphisms: {
+        mor: listMorType,
+    },
+});
+
+const justMorphisms = binder.createNotebook(JustMorphismShape, { name: "example" });
+
+// @ts-expect-error We have no objects in `JustMorphismShape`.
+addListMorphism(justMorphisms);
+```
 
 ```ts
 const entityObType = { tag: "Basic", content: "Entity" } as const satisfies ObType;

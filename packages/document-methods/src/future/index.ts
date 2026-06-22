@@ -406,6 +406,17 @@ type DeclaresMorphism<TShape extends AnyShape> = [DeclaredMorphisms<TShape>] ext
     ? false
     : true;
 
+/** The object types a shape declares, distributing over a union of shapes; the
+ * object-side dual of {@link DeclaredMorphisms}. */
+type DeclaredObjects<TShape extends AnyShape> = TShape extends AnyShape
+    ? ShapeObjectRecord<TShape>[keyof ShapeObjectRecord<TShape>] & ObType
+    : never;
+
+/** Whether a shape declares at least one object type. */
+type DeclaresObject<TShape extends AnyShape> = [DeclaredObjects<TShape>] extends [never]
+    ? false
+    : true;
+
 /**
  * The {@link Notebook.add} capability gained once a notebook is known to
  * support the cell type `T`. {@link Notebook.supports} narrows a notebook to its
@@ -1040,6 +1051,15 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
      * notebook, preserving the "richer notebook into a sub-shape" assignability.
      */
     readonly __morphismBound?: DeclaresMorphism<TShape> extends true ? true : boolean;
+    /**
+     * Object-side dual of {@link __morphismBound}: requires that a notebook
+     * handed to code expecting objects actually declares some. A target whose
+     * shape declares object types types this as the literal `true`, which an
+     * object-free shape (typed `boolean`) cannot satisfy, so handing a
+     * morphisms-only notebook to code that must add an object is rejected. A
+     * target with no objects types it as `boolean` and accepts any notebook.
+     */
+    readonly __objectBound?: DeclaresObject<TShape> extends true ? true : boolean;
     /** Reactive read of the notebook's name. */
     readonly name: string;
     /**
