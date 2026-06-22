@@ -181,13 +181,11 @@ function badAddListMorphism2(props: { notebook: Notebook<typeof MultiObjectListS
     const b = notebook.add(BasicObj, { name: "B" });
     const e = notebook.add(MultiObjectListShape.objects.EntityObj, { name: "E" });
 
-
     notebook.add(ListMor, { name: "L1", dom: [a, b], cod: [b] });
     //@ts-expect-error We can't use an EntityObj with a ListMor
     notebook.add(ListMor, { name: "L2", dom: [a, b], cod: [e] });
 }
 ```
-
 
 ```ts
 const entityObType = { tag: "Basic", content: "Entity" } as const satisfies ObType;
@@ -219,13 +217,17 @@ type SupportedNotebookWithEntity = Notebook<
     unknown
 >;
 
+function goodAddObject(notebook: SupportedNotebookWithEntity) {
+    if (notebook.supports(BasicObj)) {
+        notebook.add(BasicObj, { name: "A" });
+    }
+}
+
 function badAddObject(notebook: SupportedNotebookWithEntity) {
     //@ts-expect-error We can't add a BasicObj without narrowing the notebook type because EntityObjectListShape does not support BasicObj.
     notebook.add(BasicObj, { name: "A" });
 }
 ```
-
-
 
 ## A structurally compatible notebook is accepted and the appropriate morphism is added.
 

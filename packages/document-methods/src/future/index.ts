@@ -382,14 +382,25 @@ type DeclaredTypes<TShape extends AnyShape> = TShape extends AnyShape
  * member of a union shape. An intersection is always a subtype of the original
  * notebook, so this narrowing is immune to the method-bivariance that makes
  * union- and member-shape notebooks otherwise mutually assignable.
+ *
+ * A `Basic` object type and a `Basic` morphism type are structurally identical
+ * (`{ tag: "Basic"; content: Ustr }` is a member of both {@link ObType} and
+ * {@link MorType}), so `T extends MorType` cannot tell them apart. The morphism
+ * capability is therefore selected by {@link HasTypedEndpoints} — the same test
+ * that distinguishes a real morphism (a `Hom`, or a {@link basicMorphism}-branded
+ * `Basic`) from a bare `Basic`, which is treated as an object.
  */
-type AddCapability<T extends ObType | MorType> = T extends MorType
-    ? {
-          add(type: T, args: { name: string; dom: DomOf<T>; cod: CodOf<T> }): MorphismCell<T>;
-      }
-    : T extends ObType
-      ? { add(type: T, args: { name: string }): ObjectCell<T> }
-      : object;
+type AddCapability<T extends ObType | MorType> =
+    HasTypedEndpoints<T & MorType> extends true
+        ? {
+              add(
+                  type: T,
+                  args: { name: string; dom: DomOf<T & MorType>; cod: CodOf<T & MorType> },
+              ): MorphismCell<T & MorType>;
+          }
+        : T extends ObType
+          ? { add(type: T, args: { name: string }): ObjectCell<T> }
+          : object;
 
 /** An elaborated model together with its validation status. */
 export type ModelValidationResult =
