@@ -3,18 +3,14 @@ import { defineShape } from "catcolab-documents";
 
 import { ThCategory } from "catlog-wasm";
 
-const typeObType = { tag: "Basic", content: "Object" } as const;
-const aspectMorType = { tag: "Hom", content: { tag: "Basic", content: "Object" } } as const;
+export const Type = { tag: "Basic", content: "Object" } as const;
+export const Aspect = { tag: "Hom", content: { tag: "Basic", content: "Object" } } as const;
 
 export const SimpleOlog = defineShape({
     theory: "simple-olog",
     coreTheory: new ThCategory().theory(),
-    objects: {
-        Type: typeObType,
-    },
-    morphisms: {
-        Aspect: aspectMorType,
-    },
+    objects: [Type],
+    morphisms: [Aspect],
     migrations: [
         {
             target: "simple-schema",
@@ -22,9 +18,6 @@ export const SimpleOlog = defineShape({
         },
     ],
 });
-
-export const { Type } = SimpleOlog.objects;
-export const { Aspect } = SimpleOlog.morphisms;
 
 export type TypeCell = ObjectCell<typeof Type>;
 export type AspectCell = MorphismCell<typeof Aspect>;

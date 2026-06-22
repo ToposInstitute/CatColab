@@ -121,8 +121,8 @@ originate them.
 
 ```ts
 const PlacesShape = defineShape({
-    objects: { Place: { tag: "Basic", content: "Object" } },
-    morphisms: {},
+    objects: [{ tag: "Basic", content: "Object" }],
+    morphisms: [],
 });
 
 // @ts-expect-error A shape without a `theory` cannot originate a document.

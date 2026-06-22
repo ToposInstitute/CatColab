@@ -6,106 +6,79 @@
 import { defineShape, type Notebook } from "catcolab-documents";
 import type { MorType, ObType } from "catcolab-document-types";
 
-const basicObjType = { tag: "Basic", content: "Object" } as const satisfies ObType;
-const symmetricListMorType = {
+const BasicObj = { tag: "Basic", content: "Object" } as const satisfies ObType;
+const SymmetricListMor = {
     tag: "Hom",
     content: {
         tag: "ModeApp",
-        content: { modality: "SymmetricList", obType: basicObjType },
+        content: { modality: "SymmetricList", obType: BasicObj },
     },
 } as const satisfies MorType;
 
-const listMorType = {
+const ListMor = {
     tag: "Hom",
     content: {
         tag: "ModeApp",
-        content: { modality: "List", obType: basicObjType },
+        content: { modality: "List", obType: BasicObj },
     },
 } as const satisfies MorType;
 
-const cocartesianListMorType = {
+const CocartesianListMor = {
     tag: "Hom",
     content: {
         tag: "ModeApp",
-        content: { modality: "CocartesianList", obType: basicObjType },
+        content: { modality: "CocartesianList", obType: BasicObj },
     },
 } as const satisfies MorType;
 
-const cartesianListMorType = {
+const CartesianListMor = {
     tag: "Hom",
     content: {
         tag: "ModeApp",
-        content: { modality: "CartesianList", obType: basicObjType },
+        content: { modality: "CartesianList", obType: BasicObj },
     },
 } as const satisfies MorType;
 
-const additiveListMorType = {
+const AdditiveListMor = {
     tag: "Hom",
     content: {
         tag: "ModeApp",
-        content: { modality: "AdditiveList", obType: basicObjType },
+        content: { modality: "AdditiveList", obType: BasicObj },
     },
 } as const satisfies MorType;
 
 const ListShape = defineShape({
-    objects: {
-        BasicObj: basicObjType,
-    },
-    morphisms: {
-        ListMor: listMorType,
-    },
+    objects: [BasicObj],
+    morphisms: [ListMor],
 });
 
 const SymmetricListShape = defineShape({
-    objects: {
-        BasicObj: basicObjType,
-    },
-    morphisms: {
-        SymmetricListMor: symmetricListMorType,
-    },
+    objects: [BasicObj],
+    morphisms: [SymmetricListMor],
 });
 
 const CocartesianListShape = defineShape({
-    objects: {
-        BasicObj: basicObjType,
-    },
-    morphisms: {
-        CocartesianListMor: cocartesianListMorType,
-    },
+    objects: [BasicObj],
+    morphisms: [CocartesianListMor],
 });
 
 const CartesianListShape = defineShape({
-    objects: {
-        BasicObj: basicObjType,
-    },
-    morphisms: {
-        CartesianListMor: cartesianListMorType,
-    },
+    objects: [BasicObj],
+    morphisms: [CartesianListMor],
 });
 
 const AdditiveListShape = defineShape({
-    objects: {
-        BasicObj: basicObjType,
-    },
-    morphisms: {
-        AdditiveListMor: additiveListMorType,
-    },
+    objects: [BasicObj],
+    morphisms: [AdditiveListMor],
 });
-
-const BasicObj = ListShape.objects.BasicObj;
-const ListMor = ListShape.morphisms.ListMor;
-const SymmetricListMor = SymmetricListShape.morphisms.SymmetricListMor;
-const CocartesianListMor = CocartesianListShape.morphisms.CocartesianListMor;
-const CartesianListMor = CartesianListShape.morphisms.CartesianListMor;
-const AdditiveListMor = AdditiveListShape.morphisms.AdditiveListMor;
 ```
 
 <!-- verifier:prepend-to-following -->
 
-`addListMorphism` works on any notebook that supports basic objects and any of
-the morphisms morphisms our list shapes support. When implementing a generic
-consumer like this we need to narrow down what object and morphism types the
-notebook actually supports by using `notebook.supports`.
+`addListMorphism` works on any notebook that supports any of the morphisms our
+list shapes support. When implementing a generic consumer like this we need to
+narrow down what object and morphism types the notebook actually supports by
+using `notebook.supports`.
 
 ```ts
 type NotebookOfLists = Notebook<
@@ -172,13 +145,8 @@ Adding SymmetricListMor!
 const entityObType = { tag: "Basic", content: "Entity" } as const satisfies ObType;
 const EntityObjectShape = defineShape({
     theory: "entity-objects",
-    objects: {
-        obj: entityObType,
-        x: basicObjType,
-    },
-    morphisms: {
-        mor: listMorType,
-    },
+    objects: [entityObType, BasicObj],
+    morphisms: [ListMor],
 });
 
 const entityObjects = binder.createNotebook(EntityObjectShape, { name: "example" });
@@ -200,9 +168,7 @@ addListMorphism(simpleOlog);
 ```ts
 const JustObjectShape = defineShape({
     theory: "just-objects",
-    objects: {
-        obj: basicObjType,
-    },
+    objects: [BasicObj],
 });
 
 const justObjects = binder.createNotebook(JustObjectShape, { name: "example" });
@@ -214,9 +180,7 @@ addListMorphism(justObjects);
 ```ts
 const JustMorphismShape = defineShape({
     theory: "just-morphisms",
-    morphisms: {
-        mor: listMorType,
-    },
+    morphisms: [ListMor],
 });
 
 const justMorphisms = binder.createNotebook(JustMorphismShape, { name: "example" });
@@ -237,20 +201,14 @@ const entityListMorType = {
 } as const satisfies MorType;
 
 const MultiObjectListShape = defineShape({
-    objects: {
-        BasicObj: basicObjType,
-        EntityObj: entityObType,
-    },
-    morphisms: {
-        ListMor: listMorType,
-        EntityListMor: entityListMorType,
-    },
+    objects: [BasicObj, entityObType],
+    morphisms: [ListMor, entityListMorType],
 });
 
 function badAddListMorphism2(notebook: Notebook<typeof MultiObjectListShape, unknown>) {
     const a = notebook.add(BasicObj, { name: "A" });
     const b = notebook.add(BasicObj, { name: "B" });
-    const e = notebook.add(MultiObjectListShape.objects.EntityObj, { name: "E" });
+    const e = notebook.add(entityObType, { name: "E" });
 
     notebook.add(ListMor, { name: "L1", dom: [a, b], cod: [b] });
     //@ts-expect-error We can't use an EntityObj with a ListMor
@@ -270,12 +228,8 @@ const entityListMorType = {
 } as const satisfies MorType;
 
 const EntityObjectListShape = defineShape({
-    objects: {
-        EntityObj: entityObType,
-    },
-    morphisms: {
-        EntityListMor: entityListMorType,
-    },
+    objects: [entityObType],
+    morphisms: [entityListMorType],
 });
 
 type NotebookOfListsWithEntity = Notebook<
@@ -288,7 +242,7 @@ type NotebookOfListsWithEntity = Notebook<
     unknown
 >;
 
-const EntityObj = EntityObjectListShape.objects.EntityObj;
+const EntityObj = entityObType;
 
 function goodAddObject(notebook: NotebookOfListsWithEntity) {
     if (notebook.supports(BasicObj)) {
@@ -301,10 +255,7 @@ function goodAddObject(notebook: NotebookOfListsWithEntity) {
 }
 
 const BothObjectsShape = defineShape({
-    objects: {
-        BasicObj: basicObjType,
-        EntityObj: entityObType,
-    },
+    objects: [BasicObj, entityObType],
 });
 
 function goodAddObject2(notebook: NotebookOfListsWithEntity) {

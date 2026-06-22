@@ -12,29 +12,23 @@ literal, so it must declare them with `basicMorphism(name, dom, cod)`; a bare
 import { basicMorphism, defineShape } from "catcolab-documents";
 import { ThSchema } from "catlog-wasm";
 
-const entity = { tag: "Basic", content: "Entity" } as const;
-const attrType = { tag: "Basic", content: "AttrType" } as const;
+const Entity = { tag: "Basic", content: "Entity" } as const;
+const AttrType = { tag: "Basic", content: "AttrType" } as const;
+
+// `Hom(Entity)`: a mapping between entities; endpoints are `Entity` cells.
+const Mapping = { tag: "Hom", content: Entity } as const;
+// A `Basic` morphism records no endpoints, so they are declared here:
+// an `Attr` goes from an `Entity` to an `AttrType`.
+const Attr = basicMorphism("Attr", Entity, AttrType);
+// `Hom(AttrType)`: an operation between attribute types.
+const Operation = { tag: "Hom", content: AttrType } as const;
 
 const SimpleSchema = defineShape({
     theory: "simple-schema",
     coreTheory: new ThSchema().theory(),
-    objects: {
-        Entity: entity,
-        AttrType: attrType,
-    },
-    morphisms: {
-        // `Hom(Entity)`: a mapping between entities; endpoints are `Entity` cells.
-        Mapping: { tag: "Hom", content: entity },
-        // A `Basic` morphism records no endpoints, so they are declared here:
-        // an `Attr` goes from an `Entity` to an `AttrType`.
-        Attr: basicMorphism("Attr", entity, attrType),
-        // `Hom(AttrType)`: an operation between attribute types.
-        Operation: { tag: "Hom", content: attrType },
-    },
+    objects: [Entity, AttrType],
+    morphisms: [Mapping, Attr, Operation],
 });
-
-const { Entity, AttrType } = SimpleSchema.objects;
-const { Mapping, Attr, Operation } = SimpleSchema.morphisms;
 ```
 
 <!-- verifier:prepend-to-following -->
@@ -121,10 +115,10 @@ A `Basic` morphism declared without `basicMorphism(...)` is rejected by
 defineShape({
     theory: "missing-endpoints",
     coreTheory: SimpleSchema.coreTheory,
-    objects: { Entity: entity },
-    morphisms: {
+    objects: [Entity],
+    morphisms: [
         // @ts-expect-error A Basic morphism must be declared with basicMorphism(name, dom, cod).
-        Attr: { tag: "Basic", content: "Attr" },
-    },
+        { tag: "Basic", content: "Attr" },
+    ],
 });
 ```

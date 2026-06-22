@@ -17,25 +17,19 @@ import {
 } from "catcolab-documents";
 import { ThSchema } from "catlog-wasm";
 
-const entity = { tag: "Basic", content: "Entity" } as const;
-const attrType = { tag: "Basic", content: "AttrType" } as const;
+const Entity = { tag: "Basic", content: "Entity" } as const;
+const AttrType = { tag: "Basic", content: "AttrType" } as const;
+
+const Mapping = { tag: "Hom", content: Entity } as const;
+const Attr = basicMorphism("Attr", Entity, AttrType);
+const Operation = { tag: "Hom", content: AttrType } as const;
 
 const SimpleSchema = defineShape({
     theory: "simple-schema",
     coreTheory: new ThSchema().theory(),
-    objects: {
-        Entity: entity,
-        AttrType: attrType,
-    },
-    morphisms: {
-        Mapping: { tag: "Hom", content: entity },
-        Attr: basicMorphism("Attr", entity, attrType),
-        Operation: { tag: "Hom", content: attrType },
-    },
+    objects: [Entity, AttrType],
+    morphisms: [Mapping, Attr, Operation],
 });
-
-const { Entity, AttrType } = SimpleSchema.objects;
-const { Mapping, Attr, Operation } = SimpleSchema.morphisms;
 ```
 
 <!-- verifier:prepend-to-following -->
@@ -72,11 +66,9 @@ Object types must be `ObType` values, not string shorthand.
 defineShape({
     theory: "bad-object-shorthand",
     coreTheory: SimpleSchema.coreTheory,
-    objects: {
-        // @ts-expect-error Object types must be `ObType` values, not strings.
-        Entity: "Entity",
-    },
-    morphisms: {},
+    // @ts-expect-error Object types must be `ObType` values, not strings.
+    objects: ["Entity"],
+    morphisms: [],
 });
 ```
 
@@ -109,27 +101,21 @@ such as `SymmetricList` produces array-valued endpoints.
 import { binder, defineShape } from "catcolab-documents";
 import { ThSymMonoidalCategory } from "catlog-wasm";
 
-const object = { tag: "Basic", content: "Object" } as const;
+const Place = { tag: "Basic", content: "Object" } as const;
+const Transition = {
+    tag: "Hom",
+    content: {
+        tag: "ModeApp",
+        content: { modality: "SymmetricList", obType: Place },
+    },
+} as const;
 
 const PetriNet = defineShape({
     theory: "petri-net",
     coreTheory: new ThSymMonoidalCategory().theory(),
-    objects: {
-        Place: object,
-    },
-    morphisms: {
-        Transition: {
-            tag: "Hom",
-            content: {
-                tag: "ModeApp",
-                content: { modality: "SymmetricList", obType: object },
-            },
-        },
-    },
+    objects: [Place],
+    morphisms: [Transition],
 });
-
-const { Place } = PetriNet.objects;
-const { Transition } = PetriNet.morphisms;
 ```
 
 <!-- verifier:prepend-to-following -->

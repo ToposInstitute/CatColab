@@ -219,8 +219,8 @@ const ologAspectType = { tag: "Hom", content: ologObjectType } as const;
 
 const Olog = defineShape({
     theory: "simple-olog",
-    objects: { Type: ologObjectType },
-    morphisms: { Aspect: ologAspectType },
+    objects: [ologObjectType],
+    morphisms: [ologAspectType],
 });
 
 function GenericOlogEditor(props: { notebook: Notebook<Shape, SolidStoreHandle> }) {

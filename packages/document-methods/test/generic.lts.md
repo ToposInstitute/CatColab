@@ -12,8 +12,8 @@ const Aspect = { tag: "Hom", content: { tag: "Basic", content: "Object" } } as c
 
 const Olog = defineShape({
     theory: "simple-olog",
-    objects: { Object },
-    morphisms: { Aspect },
+    objects: [Object],
+    morphisms: [Aspect],
 });
 
 const notebook = binder.createNotebook(Olog, { name: "A generic notebook" });

@@ -582,8 +582,8 @@ describe("Petri-net editor comparison", () => {
         type SymmetricListCell = MorphismCell<typeof symmetricListMorphism>;
 
         const GenericShape = defineShape({
-            objects: { basicObject },
-            morphisms: { symmetricListMorphism },
+            objects: [basicObject],
+            morphisms: [symmetricListMorphism],
         });
 
         const isOb = byObjectType(basicObject);
