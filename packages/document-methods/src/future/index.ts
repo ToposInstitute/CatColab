@@ -917,8 +917,16 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                 Object.assign(d, u);
             });
         },
-        supports(type: ObType | MorType): boolean {
-            const cellType = type as ObType | MorType;
+        supports(arg: ObType | MorType | AnyShape): boolean {
+            // A shape declares `objects`/`morphisms`; a bare type carries a `tag`.
+            if ("objects" in arg || "morphisms" in arg) {
+                const other = arg as AnyShape;
+                return (
+                    Object.values(other.objects ?? {}).every((t) => isShapeObject(t)) &&
+                    Object.values(other.morphisms ?? {}).every((t) => isShapeMorphism(t))
+                );
+            }
+            const cellType = arg as ObType | MorType;
             switch (cellType.tag) {
                 case "Hom":
                 case "Composite":
@@ -928,12 +936,6 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                         isShapeMorphism(cellType as MorType) || isShapeObject(cellType as ObType)
                     );
             }
-        },
-        supportsShape(other: AnyShape): boolean {
-            return (
-                Object.values(other.objects ?? {}).every((t) => isShapeObject(t)) &&
-                Object.values(other.morphisms ?? {}).every((t) => isShapeMorphism(t))
-            );
         },
         cells(): Array<NotebookCell> {
             return doc.notebook.cellOrder.map((cellId) => {
@@ -1058,18 +1060,16 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
         type: T,
     ): this is Notebook<TShape, Handle> & AddCapability<T>;
     /**
-     * Whether this notebook's shape declares *every* object and morphism type a
-     * sub-shape declares — the many-types counterpart of {@link Notebook.supports}.
-     * Pass a {@link defineShape} contract (e.g. one bundling several objects);
-     * a true result means each of its declared types is provided by this
-     * notebook at runtime.
+     * Given a sub-shape (a {@link defineShape} contract bundling several object
+     * and morphism types), whether this notebook's shape declares *every* type
+     * it declares — the many-types counterpart of the single-type overload.
      *
      * It is a type guard: a true result narrows the notebook to its own type
      * intersected with the combined add-capability of all the sub-shape's
      * declared types, so a single guarded block may {@link Notebook.add} any of
      * them without narrowing each one individually.
      */
-    supportsShape<S extends AnyShape>(
+    supports<S extends AnyShape>(
         shape: S,
     ): this is Notebook<TShape, Handle> & ShapeAddCapability<S>;
     /** Handles for all cells, in notebook order. */

@@ -105,7 +105,7 @@ const AdditiveListMor = AdditiveListShape.morphisms.AdditiveListMor;
 `addListMorphism` works on any notebook that supports any of the objects or morphisms `ListShape` supports. When implementing a generic consumer like this it is our responsibility to narrow down what object and morphism types the notebook actually supports before adding them by using `notebook.supports`.
 
 ```ts
-type SupportedNotebook = Notebook<
+type MyNotebook = Notebook<
     | typeof ListShape
     | typeof SymmetricListShape
     | typeof CocartesianListShape
@@ -114,7 +114,7 @@ type SupportedNotebook = Notebook<
     unknown
 >;
 
-function addListMorphism(props: { notebook: SupportedNotebook }) {
+function addListMorphism(props: { notebook: MyNotebook }) {
     const { notebook } = props;
 
     const a = notebook.add(BasicObj, { name: "A" });
@@ -140,7 +140,7 @@ function addListMorphism(props: { notebook: SupportedNotebook }) {
 ```
 
 ```ts
-function badAddListMorphism(props: { notebook: SupportedNotebook }) {
+function badAddListMorphism(props: { notebook: MyNotebook }) {
     const { notebook } = props;
 
     const a = notebook.add(BasicObj, { name: "A" });
@@ -150,6 +150,34 @@ function badAddListMorphism(props: { notebook: SupportedNotebook }) {
     //@ts-expect-error Not all variants support adding a `ListMor`. You need to narrow the type using the `supports` method.
     notebook.add(ListMor, { name: "L", dom: [a, b], cod: [c] });
 }
+```
+
+## A structurally compatible notebook is accepted and the appropriate morphism is added.
+
+<!-- verifier:prepend-to-following -->
+
+```ts
+import { binder } from "catcolab-documents";
+import { PetriNet } from "catcolab-logics/petri-net";
+
+const petriNet = binder.createNotebook(PetriNet, { name: "example" });
+
+addListMorphism({ notebook: petriNet });
+```
+
+```
+Adding SymmetricListMor!
+```
+
+## A structurally incompatible notebook should be rejected
+
+```ts
+import { SimpleOlog } from "catcolab-logics/simple-olog";
+
+const simpleOlog = binder.createNotebook(SimpleOlog, { name: "example" });
+
+// @ts-expect-error A SimpleOlog notebook lacks the list-valued morphisms ListShape requires.
+addListMorphism({ notebook: simpleOlog });
 ```
 
 ```ts
@@ -207,7 +235,7 @@ const EntityObjectListShape = defineShape({
     },
 });
 
-type SupportedNotebookWithEntity = Notebook<
+type MyNotebookWithEntity = Notebook<
     | typeof ListShape
     | typeof SymmetricListShape
     | typeof CocartesianListShape
@@ -219,7 +247,7 @@ type SupportedNotebookWithEntity = Notebook<
 
 const EntityObj = EntityObjectListShape.objects.EntityObj;
 
-function goodAddObject(notebook: SupportedNotebookWithEntity) {
+function goodAddObject(notebook: MyNotebookWithEntity) {
     if (notebook.supports(BasicObj)) {
         notebook.add(BasicObj, { name: "A" });
     }
@@ -236,52 +264,24 @@ const BothObjectsShape = defineShape({
     },
 });
 
-function goodAddObject2(notebook: SupportedNotebookWithEntity) {
-    if (notebook.supportsShape(BothObjectsShape)) {
+function goodAddObject2(notebook: MyNotebookWithEntity) {
+    if (notebook.supports(BothObjectsShape)) {
         notebook.add(BasicObj, { name: "A" });
         notebook.add(EntityObj, { name: "E" });
     }
 }
 
-function badAddObject(notebook: SupportedNotebookWithEntity) {
+type JustEntityObjectListShape = Notebook<typeof EntityObjectListShape, unknown>;
+
+function goodAddObject3(notebook: JustEntityObjectListShape) {
+    notebook.add(EntityObj, { name: "E" });
+}
+
+function badAddObject(notebook: MyNotebookWithEntity) {
     //@ts-expect-error We can't add a BasicObj without narrowing the notebook type because EntityObjectListShape does not support BasicObj.
     notebook.add(BasicObj, { name: "A" });
 
     //@ts-expect-error We can't add a EntityObj without narrowing the notebook type because not all notebooks support EntityObj.
     notebook.add(EntityObj, { name: "E" });
 }
-
-type JustEntityObjectListShape = Notebook<typeof EntityObjectListShape, unknown>;
-
-function addEntityObject(notebook: JustEntityObjectListShape) {
-    notebook.add(EntityObj, { name: "E" });
-}
-```
-
-## A structurally compatible notebook is accepted and the appropriate morphism is added.
-
-<!-- verifier:prepend-to-following -->
-
-```ts
-import { binder } from "catcolab-documents";
-import { PetriNet } from "catcolab-logics/petri-net";
-
-const petriNet = binder.createNotebook(PetriNet, { name: "example" });
-
-addListMorphism({ notebook: petriNet });
-```
-
-```
-Adding SymmetricListMor!
-```
-
-## A structurally incompatible notebook should be rejected
-
-```ts
-import { SimpleOlog } from "catcolab-logics/simple-olog";
-
-const simpleOlog = binder.createNotebook(SimpleOlog, { name: "example" });
-
-// @ts-expect-error A SimpleOlog notebook lacks the list-valued morphisms ListShape requires.
-addListMorphism({ notebook: simpleOlog });
 ```
