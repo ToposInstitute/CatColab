@@ -8,6 +8,8 @@ import {
     byObjectType,
     CellKind,
     createBinder,
+    defineMorphism,
+    defineObject,
     type DocumentStore,
     type MorphismCell,
     type Notebook,
@@ -569,14 +571,14 @@ describe("Petri-net editor comparison", () => {
     });
 
     test("catcolab-documents, generic consumer", () => {
-        const basicObject = { tag: "Basic", content: "Object" } as const;
-        const symmetricListMorphism = {
+        const basicObject = defineObject({ tag: "Basic", content: "Object" });
+        const symmetricListMorphism = defineMorphism({
             tag: "Hom",
             content: {
                 tag: "ModeApp",
-                content: { modality: "SymmetricList", obType: basicObject },
+                content: { modality: "SymmetricList", obType: basicObject.obType },
             },
-        } as const;
+        });
 
         type BasicObCell = ObjectCell<typeof basicObject>;
         type SymmetricListCell = MorphismCell<typeof symmetricListMorphism>;

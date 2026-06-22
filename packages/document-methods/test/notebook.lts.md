@@ -110,10 +110,10 @@ for (const cell of notebook.cells()) {
             console.log("text:", cell.content);
             break;
         case CellKind.Object:
-            console.log("object:", cell.name, "type:", cell.type.content);
+            console.log("object:", cell.name, "type:", cell.type.obType.content);
             break;
         case CellKind.Morphism:
-            console.log("morphism:", cell.name, "type tag:", cell.type.tag);
+            console.log("morphism:", cell.name, "type tag:", cell.type.morType.tag);
             break;
     }
 }

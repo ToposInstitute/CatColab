@@ -1,14 +1,24 @@
 <!-- verifier:prepend-to-following -->
 
 ```ts
-import { binder, CellKind, defineShape, type Notebook } from "catcolab-documents";
+import {
+    binder,
+    CellKind,
+    defineMorphism,
+    defineObject,
+    defineShape,
+    type Notebook,
+} from "catcolab-documents";
 ```
 
 <!-- verifier:prepend-to-following -->
 
 ```ts
-const Object = { tag: "Basic", content: "Object" } as const;
-const Aspect = { tag: "Hom", content: { tag: "Basic", content: "Object" } } as const;
+const Object = defineObject({ tag: "Basic", content: "Object" });
+const Aspect = defineMorphism({
+    tag: "Hom",
+    content: { tag: "Basic", content: "Object" },
+});
 
 const Olog = defineShape({
     theory: "simple-olog",
@@ -67,10 +77,10 @@ source copy: Source copy
 for (const cell of generic.cells()) {
     switch (cell.kind) {
         case CellKind.Object:
-            console.log("object:", cell.name, "type:", cell.type.content);
+            console.log("object:", cell.name, "type:", cell.type.obType.content);
             break;
         case CellKind.Morphism:
-            console.log("morphism:", cell.name, "type tag:", cell.type.tag);
+            console.log("morphism:", cell.name, "type tag:", cell.type.morType.tag);
             break;
     }
 }

@@ -3,49 +3,48 @@
 <!-- verifier:prepend-to-following -->
 
 ```ts
-import { defineShape, type Notebook } from "catcolab-documents";
-import type { MorType, ObType } from "catcolab-document-types";
+import { defineMorphism, defineObject, defineShape, type Notebook } from "catcolab-documents";
 
-const BasicObj = { tag: "Basic", content: "Object" } as const satisfies ObType;
-const SymmetricListMor = {
+const BasicObj = defineObject({ tag: "Basic", content: "Object" });
+const SymmetricListMor = defineMorphism({
     tag: "Hom",
     content: {
         tag: "ModeApp",
-        content: { modality: "SymmetricList", obType: BasicObj },
+        content: { modality: "SymmetricList", obType: BasicObj.obType },
     },
-} as const satisfies MorType;
+});
 
-const ListMor = {
+const ListMor = defineMorphism({
     tag: "Hom",
     content: {
         tag: "ModeApp",
-        content: { modality: "List", obType: BasicObj },
+        content: { modality: "List", obType: BasicObj.obType },
     },
-} as const satisfies MorType;
+});
 
-const CocartesianListMor = {
+const CocartesianListMor = defineMorphism({
     tag: "Hom",
     content: {
         tag: "ModeApp",
-        content: { modality: "CocartesianList", obType: BasicObj },
+        content: { modality: "CocartesianList", obType: BasicObj.obType },
     },
-} as const satisfies MorType;
+});
 
-const CartesianListMor = {
+const CartesianListMor = defineMorphism({
     tag: "Hom",
     content: {
         tag: "ModeApp",
-        content: { modality: "CartesianList", obType: BasicObj },
+        content: { modality: "CartesianList", obType: BasicObj.obType },
     },
-} as const satisfies MorType;
+});
 
-const AdditiveListMor = {
+const AdditiveListMor = defineMorphism({
     tag: "Hom",
     content: {
         tag: "ModeApp",
-        content: { modality: "AdditiveList", obType: BasicObj },
+        content: { modality: "AdditiveList", obType: BasicObj.obType },
     },
-} as const satisfies MorType;
+});
 
 const ListShape = defineShape({
     objects: [BasicObj],
@@ -142,7 +141,7 @@ Adding SymmetricListMor!
 ```
 
 ```ts
-const entityObType = { tag: "Basic", content: "Entity" } as const satisfies ObType;
+const entityObType = defineObject({ tag: "Basic", content: "Entity" });
 const EntityObjectShape = defineShape({
     theory: "entity-objects",
     objects: [entityObType, BasicObj],
@@ -190,15 +189,15 @@ addListMorphism(justMorphisms);
 ```
 
 ```ts
-const entityObType = { tag: "Basic", content: "Entity" } as const satisfies ObType;
+const entityObType = defineObject({ tag: "Basic", content: "Entity" });
 
-const entityListMorType = {
+const entityListMorType = defineMorphism({
     tag: "Hom",
     content: {
         tag: "ModeApp",
-        content: { modality: "List", obType: entityObType },
+        content: { modality: "List", obType: entityObType.obType },
     },
-} as const satisfies MorType;
+});
 
 const MultiObjectListShape = defineShape({
     objects: [BasicObj, entityObType],
@@ -217,15 +216,15 @@ function badAddListMorphism2(notebook: Notebook<typeof MultiObjectListShape, unk
 ```
 
 ```ts
-const entityObType = { tag: "Basic", content: "Entity" } as const satisfies ObType;
+const entityObType = defineObject({ tag: "Basic", content: "Entity" });
 
-const entityListMorType = {
+const entityListMorType = defineMorphism({
     tag: "Hom",
     content: {
         tag: "ModeApp",
-        content: { modality: "List", obType: entityObType },
+        content: { modality: "List", obType: entityObType.obType },
     },
-} as const satisfies MorType;
+});
 
 const EntityObjectListShape = defineShape({
     objects: [entityObType],

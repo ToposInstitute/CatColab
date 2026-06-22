@@ -190,6 +190,8 @@ import { render } from "solid-js/web";
 import {
     CellKind,
     createBinder,
+    defineMorphism,
+    defineObject,
     defineShape,
     type DocumentStore,
     type Notebook,
@@ -214,8 +216,11 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
 
 const solidBinder = createBinder(solidStore);
 
-const ologObjectType = { tag: "Basic", content: "Object" } as const;
-const ologAspectType = { tag: "Hom", content: ologObjectType } as const;
+const ologObjectType = defineObject({ tag: "Basic", content: "Object" });
+const ologAspectType = defineMorphism({
+    tag: "Hom",
+    content: ologObjectType.obType,
+});
 
 const Olog = defineShape({
     theory: "simple-olog",

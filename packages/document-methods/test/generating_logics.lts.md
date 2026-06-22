@@ -1,28 +1,32 @@
 # Defining shapes from a compact spec
 
 A shape is defined from a compact specification of object and morphism types,
-given as plain `ObType`/`MorType` literals. A `Hom` morphism's endpoint object
+built with `defineObject`/`defineMorphism`. A `Hom` morphism's endpoint object
 type and arity are read from its `MorType` structure; a `Basic` morphism records
-no endpoints in its literal, so it declares them with `basicMorphism(name, dom, cod)`.
+no endpoints in its literal, so it declares them with `defineMorphism(morType, { domObType, codObType })`.
 
 <!-- verifier:prepend-to-following -->
 
 ```ts
 import {
-    basicMorphism,
     binder,
     byMorphismType,
     byObjectType,
+    defineMorphism,
+    defineObject,
     defineShape,
 } from "catcolab-documents";
 import { ThSchema } from "catlog-wasm";
 
-const Entity = { tag: "Basic", content: "Entity" } as const;
-const AttrType = { tag: "Basic", content: "AttrType" } as const;
+const Entity = defineObject({ tag: "Basic", content: "Entity" });
+const AttrType = defineObject({ tag: "Basic", content: "AttrType" });
 
-const Mapping = { tag: "Hom", content: Entity } as const;
-const Attr = basicMorphism("Attr", Entity, AttrType);
-const Operation = { tag: "Hom", content: AttrType } as const;
+const Mapping = defineMorphism({ tag: "Hom", content: Entity.obType });
+const Attr = defineMorphism(
+    { tag: "Basic", content: "Attr" },
+    { domObType: Entity.obType, codObType: AttrType.obType },
+);
+const Operation = defineMorphism({ tag: "Hom", content: AttrType.obType });
 
 const SimpleSchema = defineShape({
     theory: "simple-schema",
@@ -60,13 +64,13 @@ entities: Person, Company
 operations: uppercase
 ```
 
-Object types must be `ObType` values, not string shorthand.
+Object defs must be built with `defineObject`, not string shorthand.
 
 ```ts
 defineShape({
     theory: "bad-object-shorthand",
     coreTheory: SimpleSchema.coreTheory,
-    // @ts-expect-error Object types must be `ObType` values, not strings.
+    // @ts-expect-error Object defs must be built with defineObject, not strings.
     objects: ["Entity"],
     morphisms: [],
 });
@@ -98,17 +102,17 @@ such as `SymmetricList` produces array-valued endpoints.
 <!-- verifier:prepend-to-following -->
 
 ```ts
-import { binder, defineShape } from "catcolab-documents";
+import { binder, defineMorphism, defineObject, defineShape } from "catcolab-documents";
 import { ThSymMonoidalCategory } from "catlog-wasm";
 
-const Place = { tag: "Basic", content: "Object" } as const;
-const Transition = {
+const Place = defineObject({ tag: "Basic", content: "Object" });
+const Transition = defineMorphism({
     tag: "Hom",
     content: {
         tag: "ModeApp",
-        content: { modality: "SymmetricList", obType: Place },
+        content: { modality: "SymmetricList", obType: Place.obType },
     },
-} as const;
+});
 
 const PetriNet = defineShape({
     theory: "petri-net",

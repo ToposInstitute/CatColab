@@ -1,22 +1,16 @@
 import type { MorphismCell, ObjectCell } from "catcolab-documents";
-import { defineShape } from "catcolab-documents";
+import { defineMorphism, defineObject, defineShape } from "catcolab-documents";
 
 import { ThSymMonoidalCategory } from "catlog-wasm";
 
-// Object and morphism types are plain `ObType`/`MorType` literals, declared as
-// standalone `const`s (with `as const` so their structure survives type
-// inference) and listed in the shape. A transition's source and target are
-// symmetric lists of places, so its morphism type is a `Hom` over a
-// `SymmetricList` modality; that list modality is what drives the array-valued
-// endpoints.
-export const Place = { tag: "Basic", content: "Object" } as const;
-export const Transition = {
+export const Place = defineObject({ tag: "Basic", content: "Object" });
+export const Transition = defineMorphism({
     tag: "Hom",
     content: {
         tag: "ModeApp",
-        content: { modality: "SymmetricList", obType: Place },
+        content: { modality: "SymmetricList", obType: Place.obType },
     },
-} as const;
+});
 
 export const PetriNet = defineShape({
     theory: "petri-net",

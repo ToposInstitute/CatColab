@@ -1,10 +1,13 @@
 import type { MorphismCell, ObjectCell } from "catcolab-documents";
-import { defineShape } from "catcolab-documents";
+import { defineMorphism, defineObject, defineShape } from "catcolab-documents";
 
 import { ThCategory } from "catlog-wasm";
 
-export const Type = { tag: "Basic", content: "Object" } as const;
-export const Aspect = { tag: "Hom", content: { tag: "Basic", content: "Object" } } as const;
+export const Type = defineObject({ tag: "Basic", content: "Object" });
+export const Aspect = defineMorphism({
+    tag: "Hom",
+    content: { tag: "Basic", content: "Object" },
+});
 
 export const SimpleOlog = defineShape({
     theory: "simple-olog",

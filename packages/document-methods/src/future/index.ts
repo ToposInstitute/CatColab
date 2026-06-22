@@ -103,20 +103,38 @@ type Reorder = {
 };
 
 /**
- * An object-cell handle. The cell is parametrized by its `ObType`: two object
- * types with different `ObType` values (e.g. a Petri-net `Place`, which is
- * `{ tag: "Basic", content: "Object" }`, and a schema `Entity`, which is
- * `{ tag: "Basic", content: "Entity" }`) yield distinct, non-interchangeable
- * cell handles. The widest instantiation, `ObjectCell<ObType>` (or the default
- * `ObjectCell`), is the untyped form a generic notebook yields.
+ * A tagged wrapper declaring an object type, built with {@link defineObject}.
+ * The `tag` discriminates it from a {@link MorphismDef}, so a `Basic` object
+ * and a `Basic` morphism — structurally identical as `ObType`/`MorType` — are
+ * told apart by their wrapper rather than by any structural heuristic.
  */
-export type ObjectCell<O extends ObType = ObType> = Update<{ name: string }> &
+export type ObjectDef<O extends ObType = ObType> = {
+    readonly tag: "object";
+    readonly obType: O;
+};
+
+/** Wrap an `ObType` literal as an {@link ObjectDef}. Declare the result as a
+ * `const` and pass it both to a shape's `objects` list and to {@link
+ * Notebook.add}. */
+export function defineObject<const O extends ObType>(obType: O): ObjectDef<O> {
+    return { tag: "object", obType };
+}
+
+/**
+ * An object-cell handle, parametrized by its {@link ObjectDef}: two object
+ * defs with different `obType` values (e.g. a Petri-net `Place`, wrapping
+ * `{ tag: "Basic", content: "Object" }`, and a schema `Entity`, wrapping
+ * `{ tag: "Basic", content: "Entity" }`) yield distinct, non-interchangeable
+ * cell handles. The widest instantiation, `ObjectCell<ObjectDef>` (or the
+ * default `ObjectCell`), is the untyped form a generic notebook yields.
+ */
+export type ObjectCell<Def extends ObjectDef = ObjectDef> = Update<{ name: string }> &
     Reorder & {
         readonly kind: typeof CellKind.Object;
         readonly id: string;
-        readonly type: O;
+        readonly type: Def;
         readonly name: string;
-        duplicate(): ObjectCell<O>;
+        duplicate(): ObjectCell<Def>;
     };
 
 /** Modalities whose endpoints are lists of objects rather than a single one. */
@@ -130,12 +148,11 @@ type ListModality = "List" | "SymmetricList" | "CocartesianList" | "CartesianLis
  *   inner object type;
  * - a plain `Hom` over an object type (e.g. a schema `Mapping`,
  *   `Hom(Entity)`) has a single object cell of that type;
- * - any other morphism type (e.g. a `Basic` morphism such as a schema `Attr`)
- *   does not record its endpoint object type, so its endpoints stay untyped: a
- *   single object cell or a list of them.
+ * - any other morphism type does not record its endpoint object type, so its
+ *   endpoints stay untyped: a single object cell or a list of them.
  *
- * For the precise cases the `MorType` must be a literal (declare it with
- * `as const`) so its structure survives inference.
+ * For the precise cases the `MorType` must be a literal, which {@link
+ * defineMorphism}'s `const` type parameter preserves automatically.
  */
 export type EndpointOf<M extends MorType> = [M] extends [
     {
@@ -147,11 +164,11 @@ export type EndpointOf<M extends MorType> = [M] extends [
     },
 ]
     ? Mod extends ListModality
-        ? ObjectCell<O>[]
-        : ObjectCell<O>
+        ? ObjectCell<ObjectDef<O>>[]
+        : ObjectCell<ObjectDef<O>>
     : [M] extends [{ tag: "Hom"; content: infer O extends ObType }]
-      ? ObjectCell<O>
-      : ObjectCell<ObType> | ObjectCell<ObType>[];
+      ? ObjectCell<ObjectDef<O>>
+      : ObjectCell | ObjectCell[];
 
 declare const domBrand: unique symbol;
 declare const codBrand: unique symbol;
@@ -159,9 +176,9 @@ declare const codBrand: unique symbol;
 /**
  * Phantom carrier of a morphism's endpoint object types. A `Hom` morphism reads
  * its endpoints from its `MorType` structure, but a `Basic` morphism (e.g. a
- * schema `Attr`) records nothing about its source/target in the literal, so it
- * must declare them with {@link basicMorphism}. These properties exist only in the
- * type system; they are never written at runtime.
+ * schema `Attr`) records nothing about its source/target in the literal, so
+ * {@link defineMorphism} brands it with these. They exist only in the type
+ * system; they are never written at runtime.
  */
 export type Endpoints<D extends ObType, C extends ObType> = {
     readonly [domBrand]: D;
@@ -169,86 +186,85 @@ export type Endpoints<D extends ObType, C extends ObType> = {
 };
 
 /**
- * Declare a `Basic` morphism type with explicit endpoint object types. The
- * first argument is the morphism's name (its `content`); the returned value is
- * the `Basic` `MorType` at runtime, with its source/target object types carried
- * only in the static type. A `Basic` morphism records no endpoints in its
- * literal, so declaring one in a shape *requires* this helper; a bare `Basic`
- * literal is a compile error (see {@link defineShape}).
+ * A tagged wrapper declaring a morphism type, built with {@link defineMorphism}.
+ * For a `Hom` morphism the endpoints are derived from its `MorType` structure;
+ * for any other (e.g. a `Basic` morphism such as a schema `Attr`) the endpoint
+ * object types are carried in the phantom {@link Endpoints} brand.
  */
-export function basicMorphism<
-    const Name extends string,
+export type MorphismDef<M extends MorType = MorType> = {
+    readonly tag: "morphism";
+    readonly morType: M;
+};
+
+/** The inner `MorType` of a {@link MorphismDef}. */
+type MorTypeOf<Def extends MorphismDef> = Def extends MorphismDef<infer M> ? M : never;
+
+/**
+ * Declare a morphism type as a {@link MorphismDef}.
+ *
+ * - For a `Hom` morphism, the endpoint object types and arity are read from the
+ *   `MorType` structure, so only the morphism type is passed.
+ * - For any other morphism (e.g. a `Basic` morphism), the endpoint object types
+ *   are not recorded in the literal, so they must be passed explicitly as a
+ *   `{ domObType, codObType }` object; they are carried in the phantom {@link
+ *   Endpoints} brand.
+ */
+export function defineMorphism<const M extends MorType & { tag: "Hom" }>(
+    morType: M,
+): MorphismDef<M>;
+export function defineMorphism<
+    const M extends MorType,
     const D extends ObType,
     const C extends ObType,
->(content: Name, _dom: D, _cod: C): { tag: "Basic"; content: Name } & Endpoints<D, C> {
-    return { tag: "Basic", content } as { tag: "Basic"; content: Name } & Endpoints<D, C>;
+>(morType: M, endpoints: { domObType: D; codObType: C }): MorphismDef<M> & Endpoints<D, C>;
+export function defineMorphism(
+    morType: MorType,
+    _endpoints?: { domObType: ObType; codObType: ObType },
+): MorphismDef {
+    return { tag: "morphism", morType };
 }
 
 /**
- * The compile error surfaced when a `Basic` morphism is declared without
- * endpoints. Its sole key spells out the fix, so the diagnostic names it.
+ * The domain endpoint type of a morphism cell. A {@link defineMorphism}-branded
+ * morphism uses its declared domain; otherwise the endpoints are derived from
+ * the morphism type via {@link EndpointOf}.
  */
-export type EndpointsRequired<M extends MorType> = {
-    "This Basic morphism must be declared with basicMorphism(name, dom, cod)": M;
-};
-
-/**
- * A morphism type carries typed endpoints when it is a `Hom` (endpoints read
- * from its structure) or has been declared with {@link basicMorphism}. Anything else
- * — notably a bare `Basic` morphism — does not.
- */
-type HasTypedEndpoints<M extends MorType> = [M] extends [Endpoints<ObType, ObType>]
-    ? true
-    : [M] extends [{ tag: "Hom"; content: ObType }]
-      ? true
-      : false;
-
-/**
- * The domain endpoint type of a morphism cell. A {@link basicMorphism}-branded
- * morphism uses its declared domain; a `Hom` derives it via {@link EndpointOf};
- * a bare `Basic` morphism is a type error, and any wider/unknown morphism type
- * falls back to the untyped endpoint union.
- */
-export type DomOf<M extends MorType> = [M] extends [Endpoints<infer D extends ObType, ObType>]
-    ? ObjectCell<D>
-    : [M] extends [{ tag: "Hom"; content: ObType }]
-      ? EndpointOf<M>
-      : [M] extends [{ tag: "Basic"; content: string }]
-        ? EndpointsRequired<M>
-        : EndpointOf<M>;
+export type DomOf<Def extends MorphismDef> = [Def] extends [
+    Endpoints<infer D extends ObType, ObType>,
+]
+    ? ObjectCell<ObjectDef<D>>
+    : EndpointOf<MorTypeOf<Def>>;
 
 /** The codomain endpoint type of a morphism cell; see {@link DomOf}. */
-export type CodOf<M extends MorType> = [M] extends [Endpoints<ObType, infer C extends ObType>]
-    ? ObjectCell<C>
-    : [M] extends [{ tag: "Hom"; content: ObType }]
-      ? EndpointOf<M>
-      : [M] extends [{ tag: "Basic"; content: string }]
-        ? EndpointsRequired<M>
-        : EndpointOf<M>;
+export type CodOf<Def extends MorphismDef> = [Def] extends [
+    Endpoints<ObType, infer C extends ObType>,
+]
+    ? ObjectCell<ObjectDef<C>>
+    : EndpointOf<MorTypeOf<Def>>;
 
 /**
- * A morphism-cell handle, parametrized by its `MorType`. The domain and
- * codomain types are derived from the morphism type by {@link EndpointOf}, so
- * wiring an endpoint of the wrong object type, or a single object where a list
- * is required, is a compile error. The widest instantiation,
- * `MorphismCell<MorType>` (or the default `MorphismCell`), is the untyped form
- * a generic notebook yields; its endpoints are then the union of a single
+ * A morphism-cell handle, parametrized by its {@link MorphismDef}. The domain
+ * and codomain types are derived by {@link DomOf}/{@link CodOf}, so wiring an
+ * endpoint of the wrong object type, or a single object where a list is
+ * required, is a compile error. The widest instantiation,
+ * `MorphismCell<MorphismDef>` (or the default `MorphismCell`), is the untyped
+ * form a generic notebook yields; its endpoints are then the union of a single
  * object cell or a list, so reading a single field like `cell.dom.name` is a
  * type error.
  */
-export type MorphismCell<M extends MorType = MorType> = Update<{
+export type MorphismCell<Def extends MorphismDef = MorphismDef> = Update<{
     name: string;
-    dom: DomOf<M>;
-    cod: CodOf<M>;
+    dom: DomOf<Def>;
+    cod: CodOf<Def>;
 }> &
     Reorder & {
         readonly kind: typeof CellKind.Morphism;
         readonly id: string;
-        readonly type: M;
+        readonly type: Def;
         readonly name: string;
-        readonly dom: DomOf<M>;
-        readonly cod: CodOf<M>;
-        duplicate(): MorphismCell<M>;
+        readonly dom: DomOf<Def>;
+        readonly cod: CodOf<Def>;
+        duplicate(): MorphismCell<Def>;
     };
 
 export type RichTextCell = Update<{ content: string }> &
@@ -273,12 +289,12 @@ type ObjectCellsOf<TShape extends AnyShape> = TShape extends AnyShape
  * Map a shape's object list to a parallel list of object-cell handles. Taking
  * the list as an array type parameter makes this a homomorphic mapped type over
  * the tuple, so distribution happens over the tuple's *positions* (one handle
- * per listed type) rather than over the internal {@link ObType} union — the
- * base `Shape` (whose element is the whole `ObType`) collapses to the single
+ * per listed def) rather than over the internal {@link ObjectDef} union — the
+ * base `Shape` (whose element is the whole `ObjectDef`) collapses to the single
  * widest {@link ObjectCell}.
  */
-type ObjectCellTuple<Os extends readonly ObType[]> = {
-    [K in keyof Os]: ObjectCell<Os[K] & ObType>;
+type ObjectCellTuple<Os extends readonly ObjectDef[]> = {
+    [K in keyof Os]: ObjectCell<Os[K] & ObjectDef>;
 };
 
 /** The union of morphism-cell handles a shape declares; see {@link ObjectCellsOf}. */
@@ -287,8 +303,8 @@ type MorphismCellsOf<TShape extends AnyShape> = TShape extends AnyShape
     : never;
 
 /** Morphism-side counterpart of {@link ObjectCellTuple}. */
-type MorphismCellTuple<Ms extends readonly MorType[]> = {
-    [K in keyof Ms]: MorphismCell<Ms[K] & MorType>;
+type MorphismCellTuple<Ms extends readonly MorphismDef[]> = {
+    [K in keyof Ms]: MorphismCell<Ms[K] & MorphismDef>;
 };
 
 /**
@@ -330,9 +346,9 @@ export type ModelMigration = {
  *   declares over a subset of cell types. It can type props, filter cells and
  *   edit an existing notebook, but cannot originate a document.
  *
- * Object and morphism types are plain `ObType`/`MorType` literals; declare
- * them with `as const` so their structure (and a morphism's endpoint object
- * type) survives type inference.
+ * Object and morphism types are tagged wrappers built with {@link
+ * defineObject}/{@link defineMorphism}; declare each as a `const` so its
+ * structure (and a morphism's endpoint object type) survives type inference.
  */
 export type Shape = {
     /** Identifier of the document theory; omit for a sub-shape contract. */
@@ -344,17 +360,17 @@ export type Shape = {
      */
     readonly coreTheory?: DblTheory;
     /**
-     * Object types, as a list. Declare each type as a standalone `const`
-     * (e.g. `const Place = { tag: "Basic", content: "Object" } as const`) and
-     * pass it both here and to {@link Notebook.add}. Omit for a shape that
+     * Object defs, as a list. Declare each as a standalone `const`
+     * (e.g. `const Place = defineObject({ tag: "Basic", content: "Object" })`)
+     * and pass it both here and to {@link Notebook.add}. Omit for a shape that
      * declares no objects.
      */
-    readonly objects?: readonly ObType[];
+    readonly objects?: readonly ObjectDef[];
     /**
-     * Morphism types, as a list; see {@link Shape.objects}. Omit for a shape
+     * Morphism defs, as a list; see {@link Shape.objects}. Omit for a shape
      * that declares no morphisms.
      */
-    readonly morphisms?: readonly MorType[];
+    readonly morphisms?: readonly MorphismDef[];
     /** Theories this shape includes into (trivial migration target). */
     readonly inclusions?: readonly string[];
     /** Non-trivial migrations to other shapes, keyed by target theory. */
@@ -380,46 +396,50 @@ type ShapeMorphismList<TShape extends AnyShape> = "morphisms" extends keyof TSha
     ? NonNullable<TShape["morphisms"]>
     : readonly [];
 
+/** The list element types, defaulted to the widest def for indexing safety. */
+type ObjectDefOf<TShape extends AnyShape> = ShapeObjectList<TShape>[number] & ObjectDef;
+type MorphismDefOf<TShape extends AnyShape> = ShapeMorphismList<TShape>[number] & MorphismDef;
+
 /** A shape that can originate a document: it carries a document theory. */
 type CreatableShape = Shape & { readonly theory: string };
 
 /**
- * Whether the object type `T` is listed by *every* member of the (possibly
+ * Whether the object def `T` is listed by *every* member of the (possibly
  * union) shape `S`. For each member, `T` either appears in its object list
  * (contributing `never`) or does not (contributing the member itself); the
  * union of those collapses to `never` only when every member lists `T`.
  */
-type ObjectInEveryMember<T extends ObType, S extends AnyShape> = [
+type ObjectInEveryMember<T extends ObjectDef, S extends AnyShape> = [
     S extends AnyShape ? (T extends ShapeObjectList<S>[number] ? never : S) : never,
 ] extends [never]
     ? true
     : false;
 /** Morphism-side counterpart of {@link ObjectInEveryMember}. */
-type MorphismInEveryMember<T extends MorType, S extends AnyShape> = [
+type MorphismInEveryMember<T extends MorphismDef, S extends AnyShape> = [
     S extends AnyShape ? (T extends ShapeMorphismList<S>[number] ? never : S) : never,
 ] extends [never]
     ? true
     : false;
 
 /**
- * The union of a shape's object types. Deliberately *not* distributive over a
- * union of shapes: it yields only the object types every member declares, so
+ * The union of a shape's object defs. Deliberately *not* distributive over a
+ * union of shapes: it yields only the object defs every member declares, so
  * {@link Notebook.add} over a union shape accepts an object only when it is safe
  * for whichever member the notebook turns out to be. Narrow first with {@link
  * Notebook.supports}.
  */
 type ShapeObjects<TShape extends AnyShape> =
     DeclaredObjects<TShape> extends infer O
-        ? O extends ObType
+        ? O extends ObjectDef
             ? ObjectInEveryMember<O, TShape> extends true
                 ? O
                 : never
             : never
         : never;
-/** The union of a shape's morphism types; see {@link ShapeObjects} for the union-shape semantics. */
+/** The union of a shape's morphism defs; see {@link ShapeObjects} for the union-shape semantics. */
 type ShapeMorphisms<TShape extends AnyShape> =
     DeclaredMorphisms<TShape> extends infer M
-        ? M extends MorType
+        ? M extends MorphismDef
             ? MorphismInEveryMember<M, TShape> extends true
                 ? M
                 : never
@@ -427,27 +447,27 @@ type ShapeMorphisms<TShape extends AnyShape> =
         : never;
 
 /**
- * Every object and morphism type a shape declares. Unlike {@link ShapeObjects}
+ * Every object and morphism def a shape declares. Unlike {@link ShapeObjects}
  * and {@link ShapeMorphisms}, this *distributes* over a union of shapes, so a
- * union shape's declared types are the union of all members' declared types.
+ * union shape's declared defs are the union of all members' declared defs.
  * Carried by the phantom {@link Notebook} member that drives shape assignability
- * (see there): a notebook is assignable to another only when its declared types
+ * (see there): a notebook is assignable to another only when its declared defs
  * relate to the target's, so a notebook whose morphisms are foreign to a union
  * shape (e.g. a `SimpleOlog` against a union of list shapes) is rejected, while
  * one declaring a subset (e.g. a `PetriNet`) is accepted.
  */
 type DeclaredTypes<TShape extends AnyShape> = TShape extends AnyShape
-    ? (ShapeObjectList<TShape>[number] & ObType) | (ShapeMorphismList<TShape>[number] & MorType)
+    ? ObjectDefOf<TShape> | MorphismDefOf<TShape>
     : never;
 
 /**
- * The morphism types a shape declares, distributing over a union of shapes like
+ * The morphism defs a shape declares, distributing over a union of shapes like
  * {@link DeclaredTypes} (and unlike {@link ShapeMorphisms}, which collapses to
  * the morphisms shared by every member): the union of every member's morphism
- * types, or `never` for a shape that declares none.
+ * defs, or `never` for a shape that declares none.
  */
 type DeclaredMorphisms<TShape extends AnyShape> = TShape extends AnyShape
-    ? ShapeMorphismList<TShape>[number] & MorType
+    ? MorphismDefOf<TShape>
     : never;
 
 /** Whether a shape declares at least one morphism type. */
@@ -455,10 +475,10 @@ type DeclaresMorphism<TShape extends AnyShape> = [DeclaredMorphisms<TShape>] ext
     ? false
     : true;
 
-/** The object types a shape declares, distributing over a union of shapes; the
+/** The object defs a shape declares, distributing over a union of shapes; the
  * object-side dual of {@link DeclaredMorphisms}. */
 type DeclaredObjects<TShape extends AnyShape> = TShape extends AnyShape
-    ? ShapeObjectList<TShape>[number] & ObType
+    ? ObjectDefOf<TShape>
     : never;
 
 /** Whether a shape declares at least one object type. */
@@ -475,24 +495,17 @@ type DeclaresObject<TShape extends AnyShape> = [DeclaredObjects<TShape>] extends
  * notebook, so this narrowing is immune to the method-bivariance that makes
  * union- and member-shape notebooks otherwise mutually assignable.
  *
- * A `Basic` object type and a `Basic` morphism type are structurally identical
- * (`{ tag: "Basic"; content: Ustr }` is a member of both {@link ObType} and
- * {@link MorType}), so `T extends MorType` cannot tell them apart. The morphism
- * capability is therefore selected by {@link HasTypedEndpoints} — the same test
- * that distinguishes a real morphism (a `Hom`, or a {@link basicMorphism}-branded
- * `Basic`) from a bare `Basic`, which is treated as an object.
+ * An object def and a morphism def carry distinct `tag`s, so `T extends
+ * MorphismDef` cleanly selects the morphism capability; everything else is an
+ * object def.
  */
-type AddCapability<T extends ObType | MorType> =
-    HasTypedEndpoints<T & MorType> extends true
-        ? {
-              add(
-                  type: T,
-                  args: { name: string; dom: DomOf<T & MorType>; cod: CodOf<T & MorType> },
-              ): MorphismCell<T & MorType>;
-          }
-        : T extends ObType
-          ? { add(type: T, args: { name: string }): ObjectCell<T> }
-          : object;
+type AddCapability<T extends ObjectDef | MorphismDef> = T extends MorphismDef
+    ? {
+          add(type: T, args: { name: string; dom: DomOf<T>; cod: CodOf<T> }): MorphismCell<T>;
+      }
+    : T extends ObjectDef
+      ? { add(type: T, args: { name: string }): ObjectCell<T> }
+      : object;
 
 /**
  * Turn a union into the intersection of its members. Used to combine the
@@ -514,7 +527,7 @@ type UnionToIntersection<U> = (U extends unknown ? (k: U) => void : never) exten
  */
 type ShapeAddCapability<S extends AnyShape> = UnionToIntersection<
     DeclaredTypes<S> extends infer T
-        ? T extends ObType | MorType
+        ? T extends ObjectDef | MorphismDef
             ? AddCapability<T>
             : never
         : never
@@ -530,57 +543,38 @@ export type ModelValidationResult =
     | { tag: "Illformed"; model: null; error: string };
 
 /**
- * Define a shape from a compact declaration of object and morphism types.
- * Object and morphism types are `ObType`/`MorType` literals (declare them with
- * `as const`). A `Hom` morphism's endpoint object type and arity are read from
- * its `MorType` structure; a `Basic` morphism records no endpoints in its
- * literal, so it must declare them with {@link basicMorphism} — a bare `Basic`
- * morphism is a compile error. `theory`/`coreTheory` are optional: include them
- * for a creatable shape, omit them for a sub-shape contract.
+ * Define a shape from a compact declaration of object and morphism defs.
+ * Object and morphism defs are built with {@link defineObject}/{@link
+ * defineMorphism} (declare each as a `const`). A `Hom` morphism's endpoint
+ * object type and arity are read from its `MorType` structure; any other
+ * morphism declares its endpoints when built with {@link defineMorphism}.
+ * `theory`/`coreTheory` are optional: include them for a creatable shape, omit
+ * them for a sub-shape contract.
  */
-export function defineShape<const TSpec extends Shape>(
-    spec: TSpec & {
-        morphisms?: ValidatedMorphisms<ShapeMorphismList<TSpec>>;
-    },
-): TSpec {
+export function defineShape<const TSpec extends Shape>(spec: TSpec): TSpec {
     return spec;
 }
 
-/** A morphism declaration is kept as-is when it has typed endpoints, otherwise
- * it is replaced by the {@link EndpointsRequired} error type. */
-type ValidatedMorphism<M extends MorType> =
-    HasTypedEndpoints<M> extends true ? M : EndpointsRequired<M>;
-
 /**
- * Validate each morphism in a shape's morphism list. Taking the list as a bona
- * fide array type parameter `Ms` makes this a homomorphic mapped type over a
- * tuple, so it maps element-by-element (rather than over `length` and the other
- * array keys) and preserves the tuple's structure.
- */
-type ValidatedMorphisms<Ms extends readonly MorType[]> = {
-    [K in keyof Ms]: ValidatedMorphism<Ms[K] & MorType>;
-};
-
-/**
- * Typed filter for cells of exactly the given object type. TypeScript only
+ * Typed filter for cells of exactly the given object def. TypeScript only
  * narrows `===` comparisons on unit types, so a comparison like `cell.type ===
  * Place` cannot narrow a cell handle by itself; this guard carries the
- * narrowing instead. Matching is structural, so a cell whose stored `ObType`
+ * narrowing instead. Matching is structural, so a cell whose stored def
  * equals `type` is selected regardless of which shape produced `type`.
  */
-export function byObjectType<O extends ObType>(
-    type: O,
-): (cell: { readonly kind: symbol }) => cell is ObjectCell<O> {
-    return (cell): cell is ObjectCell<O> =>
+export function byObjectType<Def extends ObjectDef>(
+    type: Def,
+): (cell: { readonly kind: symbol }) => cell is ObjectCell<Def> {
+    return (cell): cell is ObjectCell<Def> =>
         (cell as { kind: symbol }).kind === CellKind.Object &&
         sameTypeValue((cell as { type?: unknown }).type, type);
 }
 
-/** Typed filter for cells of exactly the given morphism type. */
-export function byMorphismType<M extends MorType>(
-    type: M,
-): (cell: { readonly kind: symbol }) => cell is MorphismCell<M> {
-    return (cell): cell is MorphismCell<M> =>
+/** Typed filter for cells of exactly the given morphism def. */
+export function byMorphismType<Def extends MorphismDef>(
+    type: Def,
+): (cell: { readonly kind: symbol }) => cell is MorphismCell<Def> {
+    return (cell): cell is MorphismCell<Def> =>
         (cell as { kind: symbol }).kind === CellKind.Morphism &&
         sameTypeValue((cell as { type?: unknown }).type, type);
 }
@@ -738,7 +732,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
         delete: () => deleteCell(cellId),
     });
 
-    const objectHandle = <O extends ObType>(cellId: string, type: O): ObjectCell<O> =>
+    const objectHandle = <Def extends ObjectDef>(cellId: string, type: Def): ObjectCell<Def> =>
         ({
             kind: CellKind.Object,
             get id() {
@@ -760,7 +754,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                 return objectHandle(appendDuplicate(cellId), type);
             },
             ...reorderMethods(cellId),
-        }) as unknown as ObjectCell<O>;
+        }) as unknown as ObjectCell<Def>;
 
     const objectHandleForId = (objectId: string): ObjectCell => {
         for (const candidateCellId of doc.notebook.cellOrder) {
@@ -769,7 +763,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                 continue;
             }
             if (cell.content.id === objectId) {
-                return objectHandle(candidateCellId, cell.content.obType);
+                return objectHandle(candidateCellId, defineObject(cell.content.obType));
             }
         }
         throw new Error(`No object cell found for endpoint '${objectId}'.`);
@@ -803,7 +797,10 @@ function attachNotebook<TShape extends AnyShape, Handle>(
         return objects[0] as ObjectCell;
     };
 
-    const morphismHandle = <M extends MorType>(cellId: string, type: M): MorphismCell<M> =>
+    const morphismHandle = <Def extends MorphismDef>(
+        cellId: string,
+        type: Def,
+    ): MorphismCell<Def> =>
         ({
             kind: CellKind.Morphism,
             get id() {
@@ -814,10 +811,16 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                 return readCellContent<{ name: string }>(cellId).name;
             },
             get dom() {
-                return decodeEndpoint(type, readCellContent<{ dom: Ob | null }>(cellId).dom);
+                return decodeEndpoint(
+                    type.morType,
+                    readCellContent<{ dom: Ob | null }>(cellId).dom,
+                );
             },
             get cod() {
-                return decodeEndpoint(type, readCellContent<{ cod: Ob | null }>(cellId).cod);
+                return decodeEndpoint(
+                    type.morType,
+                    readCellContent<{ cod: Ob | null }>(cellId).cod,
+                );
             },
             update(u: { name?: string; dom?: unknown; cod?: unknown }) {
                 change((d) => {
@@ -830,10 +833,10 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                         content.name = u.name;
                     }
                     if ("dom" in u) {
-                        content.dom = encodeEndpoint(type, u.dom);
+                        content.dom = encodeEndpoint(type.morType, u.dom);
                     }
                     if ("cod" in u) {
-                        content.cod = encodeEndpoint(type, u.cod);
+                        content.cod = encodeEndpoint(type.morType, u.cod);
                     }
                 });
             },
@@ -841,7 +844,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                 return morphismHandle(appendDuplicate(cellId), type);
             },
             ...reorderMethods(cellId),
-        }) as unknown as MorphismCell<M>;
+        }) as unknown as MorphismCell<Def>;
 
     const richTextHandle = (cellId: string): RichTextCell =>
         ({
@@ -858,37 +861,37 @@ function attachNotebook<TShape extends AnyShape, Handle>(
             ...reorderMethods(cellId),
         }) as unknown as RichTextCell;
 
-    const isShapeMorphism = (type: MorType): boolean =>
-        (shape.morphisms ?? []).some((t) => sameTypeValue(t, type));
+    const isShapeMorphism = (def: MorphismDef): boolean =>
+        (shape.morphisms ?? []).some((t) => sameTypeValue(t, def));
 
-    const isShapeObject = (type: ObType): boolean =>
-        (shape.objects ?? []).some((t) => sameTypeValue(t, type));
+    const isShapeObject = (def: ObjectDef): boolean =>
+        (shape.objects ?? []).some((t) => sameTypeValue(t, def));
 
-    const addObjectCell = (type: ObType, name: string): ObjectCell => {
-        const judgment = newObjectDecl(type);
+    const addObjectCell = (def: ObjectDef, name: string): ObjectCell => {
+        const judgment = newObjectDecl(def.obType);
         judgment.name = name;
         const formalCell = newFormalCell(judgment);
         change((d) => {
             d.notebook.cellContents[formalCell.id] = formalCell;
             d.notebook.cellOrder.push(formalCell.id);
         });
-        return objectHandle(formalCell.id, type);
+        return objectHandle(formalCell.id, def);
     };
 
     const addMorphismCell = (
-        type: MorType,
+        def: MorphismDef,
         args: { name: string; dom?: unknown; cod?: unknown },
     ): MorphismCell => {
-        const judgment = newMorphismDecl(type);
+        const judgment = newMorphismDecl(def.morType);
         judgment.name = args.name;
-        judgment.dom = encodeEndpoint(type, args.dom);
-        judgment.cod = encodeEndpoint(type, args.cod);
+        judgment.dom = encodeEndpoint(def.morType, args.dom);
+        judgment.cod = encodeEndpoint(def.morType, args.cod);
         const formalCell = newFormalCell(judgment);
         change((d) => {
             d.notebook.cellContents[formalCell.id] = formalCell;
             d.notebook.cellOrder.push(formalCell.id);
         });
-        return morphismHandle(formalCell.id, type);
+        return morphismHandle(formalCell.id, def);
     };
 
     return {
@@ -998,25 +1001,15 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                 Object.assign(d, u);
             });
         },
-        supports(arg: ObType | MorType | AnyShape): boolean {
-            // A shape declares `objects`/`morphisms`; a bare type carries a `tag`.
-            if ("objects" in arg || "morphisms" in arg) {
-                const other = arg as AnyShape;
-                return (
-                    (other.objects ?? []).every((t) => isShapeObject(t)) &&
-                    (other.morphisms ?? []).every((t) => isShapeMorphism(t))
-                );
+        supports(arg: ObjectDef | MorphismDef | AnyShape): boolean {
+            // A def carries an "object"/"morphism" `tag`; a shape does not.
+            if ("tag" in arg) {
+                return arg.tag === "object" ? isShapeObject(arg) : isShapeMorphism(arg);
             }
-            const cellType = arg as ObType | MorType;
-            switch (cellType.tag) {
-                case "Hom":
-                case "Composite":
-                    return isShapeMorphism(cellType as MorType);
-                default:
-                    return (
-                        isShapeMorphism(cellType as MorType) || isShapeObject(cellType as ObType)
-                    );
-            }
+            return (
+                (arg.objects ?? []).every((t) => isShapeObject(t)) &&
+                (arg.morphisms ?? []).every((t) => isShapeMorphism(t))
+            );
         },
         cells(): Array<NotebookCell> {
             return doc.notebook.cellOrder.map((cellId) => {
@@ -1030,28 +1023,31 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                 const judgment = cell.content as ModelJudgment;
                 switch (judgment.tag) {
                     case "object":
-                        return objectHandle(cellId, judgment.obType);
+                        return objectHandle(cellId, defineObject(judgment.obType));
                     case "morphism":
-                        return morphismHandle(cellId, judgment.morType);
+                        return morphismHandle(cellId, {
+                            tag: "morphism",
+                            morType: judgment.morType,
+                        });
                     default:
                         throw new Error(`Unsupported judgment tag: ${judgment.tag}`);
                 }
             });
         },
         cellsOf(shape: AnyShape): Array<NotebookCell> {
-            const objectTypes = shape.objects ?? [];
-            const morphismTypes = shape.morphisms ?? [];
+            const objectDefs = shape.objects ?? [];
+            const morphismDefs = shape.morphisms ?? [];
             return (this as Notebook<TShape, Handle>).cells().filter((cell) => {
                 if (cell.kind === CellKind.RichText) {
                     return true;
                 }
                 if (cell.kind === CellKind.Object) {
                     const type = (cell as { type?: unknown }).type;
-                    return objectTypes.some((obType) => sameTypeValue(type, obType));
+                    return objectDefs.some((def) => sameTypeValue(type, def));
                 }
                 if (cell.kind === CellKind.Morphism) {
                     const type = (cell as { type?: unknown }).type;
-                    return morphismTypes.some((morType) => sameTypeValue(type, morType));
+                    return morphismDefs.some((def) => sameTypeValue(type, def));
                 }
                 return false;
             });
@@ -1068,17 +1064,11 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                 });
                 return richTextHandle(cell.id);
             }
-            const cellType = type as ObType | MorType;
-            const looksLikeMorphism =
-                cellType.tag === "Hom" ||
-                cellType.tag === "Composite" ||
-                "dom" in args ||
-                "cod" in args ||
-                isShapeMorphism(cellType as MorType);
-            if (looksLikeMorphism) {
-                return addMorphismCell(cellType as MorType, args as { name: string });
+            const def = type as ObjectDef | MorphismDef;
+            if (def.tag === "morphism") {
+                return addMorphismCell(def, args as { name: string });
             }
-            return addObjectCell(cellType as ObType, (args as { name: string }).name);
+            return addObjectCell(def, (args as { name: string }).name);
         },
     } as unknown as Notebook<TShape, Handle>;
 }

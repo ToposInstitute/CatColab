@@ -13,7 +13,7 @@ notebook of any theory.
 <!-- verifier:prepend-to-following -->
 
 ```ts
-import { binder, byObjectType, defineShape, type Notebook } from "catcolab-documents";
+import { binder, byObjectType, defineObject, defineShape, type Notebook } from "catcolab-documents";
 import { PetriNet, Place, Transition } from "catcolab-logics/petri-net";
 ```
 
@@ -121,7 +121,7 @@ originate them.
 
 ```ts
 const PlacesShape = defineShape({
-    objects: [{ tag: "Basic", content: "Object" }],
+    objects: [defineObject({ tag: "Basic", content: "Object" })],
     morphisms: [],
 });
 
