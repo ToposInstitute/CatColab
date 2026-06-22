@@ -179,6 +179,20 @@ const simpleOlog = binder.createNotebook(SimpleOlog, { name: "example" });
 addListMorphism(simpleOlog);
 ```
 
+```ts
+const JustObjectShape = defineShape({
+    theory: "just-objects",
+    objects: {
+        obj: basicObjType,
+    },
+});
+
+const justObjects = binder.createNotebook(JustObjectShape, { name: "example" });
+
+// @ts-expect-error We have no morphisms in `JustObjectShape`.
+addListMorphism(justObjects);
+```
+
 
 ```ts
 const entityObType = { tag: "Basic", content: "Entity" } as const satisfies ObType;
@@ -283,7 +297,7 @@ function badAddObject(notebook: NotebookOfListsWithEntity) {
     notebook.add(EntityObj, { name: "E" });
 }
 
-function badAddObject2(notebook: Notebook<typeof BothObjectsShape, unknown> ) {
+function badAddObject2(notebook: Notebook<typeof BothObjectsShape, unknown>) {
     const a = notebook.add(BasicObj, { name: "A" });
     const b = notebook.add(BasicObj, { name: "B" });
 

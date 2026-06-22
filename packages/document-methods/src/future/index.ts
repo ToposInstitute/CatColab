@@ -392,6 +392,21 @@ type DeclaredTypes<TShape extends AnyShape> = TShape extends AnyShape
     : never;
 
 /**
+ * The morphism types a shape declares, distributing over a union of shapes like
+ * {@link DeclaredTypes} (and unlike {@link ShapeMorphisms}, which collapses to
+ * the morphisms shared by every member): the union of every member's morphism
+ * types, or `never` for a shape that declares none.
+ */
+type DeclaredMorphisms<TShape extends AnyShape> = TShape extends AnyShape
+    ? ShapeMorphismRecord<TShape>[keyof ShapeMorphismRecord<TShape>] & MorType
+    : never;
+
+/** Whether a shape declares at least one morphism type. */
+type DeclaresMorphism<TShape extends AnyShape> = [DeclaredMorphisms<TShape>] extends [never]
+    ? false
+    : true;
+
+/**
  * The {@link Notebook.add} capability gained once a notebook is known to
  * support the cell type `T`. {@link Notebook.supports} narrows a notebook to its
  * own type intersected with this, which adds an `add` overload accepting exactly
@@ -1010,6 +1025,21 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
      * rejecting one whose types are foreign to the target (e.g. `SimpleOlog`).
      */
     __shapeBound?(declared: DeclaredTypes<TShape>): void;
+    /**
+     * Phantom carrier of whether the shape declares any morphism type, present
+     * only in the type. It complements {@link __shapeBound}: that member relates
+     * declared types by subset/superset, so a notebook declaring a *subset* of a
+     * target's types is accepted — which lets one whose only declared type is a
+     * shared *object* slip through even though it declares none of the target's
+     * morphisms (an empty morphism set never produces the foreign type that the
+     * bivariance check rejects). This member closes that gap: a target whose
+     * shape declares morphisms types it as the literal `true`, which a
+     * morphism-free shape (typed `boolean`) cannot satisfy, so handing an
+     * objects-only notebook to code that must add a morphism is rejected. A
+     * target with no morphisms types it as `boolean` and still accepts any
+     * notebook, preserving the "richer notebook into a sub-shape" assignability.
+     */
+    readonly __morphismBound?: DeclaresMorphism<TShape> extends true ? true : boolean;
     /** Reactive read of the notebook's name. */
     readonly name: string;
     /**
