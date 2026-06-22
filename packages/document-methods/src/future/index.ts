@@ -1055,8 +1055,12 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
      * result narrows it to just those members that declare `type`, so the
      * subsequent {@link Notebook.add} of that type type-checks. Adding a type
      * not declared by every member without first narrowing is a compile error.
+     *
+     * `type` is constrained to the shape's {@link DeclaredTypes}: asking about a
+     * type no member of the shape could ever declare is itself a compile error,
+     * since the guard could never succeed.
      */
-    supports<T extends ObType | MorType>(
+    supports<T extends DeclaredTypes<TShape>>(
         type: T,
     ): this is Notebook<TShape, Handle> & AddCapability<T>;
     /**

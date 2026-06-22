@@ -281,4 +281,15 @@ function badAddObject(notebook: MyNotebookWithEntity) {
     //@ts-expect-error We can't add a EntityObj without narrowing the notebook type because not all notebooks support EntityObj.
     notebook.add(EntityObj, { name: "E" });
 }
+
+function badAddObject2(notebook: Notebook<typeof BothObjectsShape, unknown> ) {
+    const a = notebook.add(BasicObj, { name: "A" });
+    const b = notebook.add(BasicObj, { name: "B" });
+
+    //@ts-expect-error BothObjectsShape can never support CocartesianListMor.
+    if (notebook.supports(CocartesianListMor)) {
+        //@ts-expect-error BothObjectsShape does not support CocartesianListMor.
+        notebook.add(CocartesianListMor, { name: "L", dom: [a, b], cod: [b] });
+    }
+}
 ```
