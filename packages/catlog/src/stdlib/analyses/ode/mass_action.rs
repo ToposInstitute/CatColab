@@ -431,14 +431,11 @@ impl
     }
 }
 
-
 /// Data defining mass-action ODE equations for a model.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
-#[cfg_attr(
-    feature = "serde-wasm",
-    tsify(into_wasm_abi, from_wasm_abi)
-)]
+#[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
+#[derive(Clone)]
 pub struct MassActionEquationsData {
     /// Whether or not mass is conserved.
     #[cfg_attr(feature = "serde", serde(rename = "massConservationType"))]
@@ -447,7 +444,9 @@ pub struct MassActionEquationsData {
 
 impl Default for MassActionEquationsData {
     fn default() -> Self {
-        Self { mass_conservation_type: MassConservationType::Balanced }
+        Self {
+            mass_conservation_type: MassConservationType::Balanced,
+        }
     }
 }
 
@@ -499,6 +498,10 @@ pub struct MassActionProblemData {
 }
 
 impl ODESemanticsProblemData<MassActionParameter> for MassActionProblemData {
+    fn equations_data(&self) -> impl ODESemanticsEquationsData {
+        self.equations_data.clone()
+    }
+
     fn initial_values(&self) -> HashMap<QualifiedName, f32> {
         self.initial_values.clone()
     }

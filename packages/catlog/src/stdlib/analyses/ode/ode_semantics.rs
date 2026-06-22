@@ -4,6 +4,7 @@
 //! consist of (in particular) a `PolynomialODESystemBuilder`, which contains all the data needed
 //! for [`ode::polynomial_ode::PolynomialODEAnalysis`] to do the following:
 //!
+// TODO: is this true????????????
 //! 1. Build the system as a model of the theory of polynomial ODE systems (i.e. multicategories)
 //!    with abstract coefficients, using `build_system_custom_parameters()`.
 //! 2. Substitute in numerical coefficients, using `extend_polynomial_ode_scalars()`.
@@ -53,16 +54,16 @@ pub trait ODESemantics {
     /// identified with one another, or to be rendered differently in debug/LaTeX output. For an
     /// instructive example, see `MassActionParameter` in `ode::mass_action`.
     type ParameterType: ODEParameterType;
-    /// The data describing the things that the ODE semantics "cares about". (See the documentation
-    /// for `ODESemanticsAnalysis`).
+    /// The data describing the things that the ODE semantics "cares about". See the documentation
+    /// for `ODESemanticsAnalysis` for more details.
     type AnalysisType: ODESemanticsAnalysis<Self::ModelType, Self::ParameterType>;
-
-    /// TODO: documentation
+    /// The data necessary for displaying the system of equations, to be provided at run-time by the
+    /// front-end.
     type EquationsDataType: ODESemanticsEquationsData;
-
-    /// The data describing how to turn the algebraic system of equations into a simulation,
-    /// including e.g. which values that appear in the front-end analysis correspond to which
-    /// parameters within the equations.
+    /// The data necessary for simulating the system of equations, to be provided at run-time by the
+    /// front-end. For example, which values appear in the front-end analysis widget, and to which
+    /// which parameters within the algebraic equations they correspond. Note that this is forced to
+    /// contain a value of type `EquationsDataType` by the definition of `ODESemanticsProblemData`.
     type ProblemDataType: ODESemanticsProblemData<Self::ParameterType>;
 }
 
@@ -121,6 +122,15 @@ impl<P: ODEParameterType> PolynomialODESystemBuilder<P> {
     /// Constructs an empty ODE system.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Constructs an ODE system for an existing model of an ODE system. (Essentially trivial, but
+    /// useful to reduce boilerplate).
+    pub fn identity(model: ModalDblModel<NonUnital>) -> Self {
+        Self {
+            model,
+            associated_parameters: HashMap::new(),
+        }
     }
 
     /// Returns a model of the theory of polynomial ODE systems.
@@ -219,7 +229,7 @@ pub enum ContributionSign {
     Negative,
 }
 
-/// TODO: documentation
+/// TODO: documentation.
 // TODO: similar question about including all the serde stuff here
 pub trait ODESemanticsEquationsData {}
 impl ODESemanticsEquationsData for () {}
@@ -244,7 +254,13 @@ pub trait ODESemanticsProblemData<P: ODEParameterType> {
     //   FOR    | boilerplate to ask for. Is there a nice way to get rid of them here? Without them,
     // FEEDBACK | the call to `self.initial_values` in `build_analysis()` fails because there is no
     // _________/ way of knowing whether a struct implementing this trait actually has those fields.
+    // In short:
+    //     is there a better way to ensure that any struct implementing a trait has specific fields?
     /// Further data needed to specify the ODE equations.
+    /// TODO: documenation.
+    fn equations_data(&self) -> impl ODESemanticsEquationsData {
+        ()
+    }
     /// Map from object IDs to initial values (nonnegative reals).
     fn initial_values(&self) -> HashMap<QualifiedName, f32>;
     /// Duration of simulation.

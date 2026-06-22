@@ -13,8 +13,6 @@
 
 use std::{collections::HashMap, fmt};
 
-use indexmap::IndexMap;
-use nalgebra::DVector;
 use num_traits::Zero;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -27,29 +25,23 @@ use crate::{
         model::{FpDblModel, ModalDblModel, ModalOb, MutDblModel},
         theory::NonUnital,
     },
-    simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem},
+    simulate::ode::PolynomialSystem,
+    stdlib::analyses::ode::{
+        ODESemantics, ODESemanticsAnalysis, ODESemanticsProblemData, Parameter,
+        PolynomialODESystemBuilder,
+    },
     zero::{QualifiedName, alg::Polynomial, name, rig::Monomial},
 };
 
-use super::{ODEAnalysis, Parameter};
+/// Implementing Lotka-Volterra as an ODE semantics for models of type `DiscreteDblModel`.
+pub struct PolynomialODESemantics;
 
-/// Data defining an unbalanced mass-action ODE problem for a model.
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
-#[cfg_attr(
-    feature = "serde-wasm",
-    tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
-)]
-pub struct PolynomialODEProblemData {
-    /// Map from morphism IDs to coefficients (nonnegative reals).
-    coefficients: HashMap<QualifiedName, f32>,
-
-    /// Map from object IDs to initial values (nonnegative reals).
-    #[cfg_attr(feature = "serde", serde(rename = "initialValues"))]
-    pub initial_values: HashMap<QualifiedName, f32>,
-
-    /// Duration of simulation.
-    pub duration: f32,
+impl ODESemantics for PolynomialODESemantics {
+    type ModelType = ModalDblModel<NonUnital>;
+    type ParameterType = QualifiedName;
+    type AnalysisType = PolynomialODEAnalysis;
+    type EquationsDataType = ();
+    type ProblemDataType = PolynomialODEProblemData;
 }
 
 /// Polynomial ODE analysis.
@@ -72,6 +64,21 @@ impl Default for PolynomialODEAnalysis {
             positive_contribution_mor_type: ModeApp::new(name("Contribution")).into(),
             negative_contribution_mor_type: ModeApp::new(name("NegativeContribution")).into(),
         }
+    }
+}
+
+// TODO: remove this implementation? it's so silly?????????? but we need it????????????????????????
+impl
+    ODESemanticsAnalysis<
+        <PolynomialODESemantics as ODESemantics>::ModelType,
+        <PolynomialODESemantics as ODESemantics>::ParameterType,
+    > for PolynomialODEAnalysis
+{
+    fn build_system_builder(
+        &self,
+        model: &<PolynomialODESemantics as ODESemantics>::ModelType,
+    ) -> PolynomialODESystemBuilder<<PolynomialODESemantics as ODESemantics>::ParameterType> {
+        PolynomialODESystemBuilder::identity(model.clone())
     }
 }
 
@@ -160,36 +167,50 @@ impl PolynomialODEAnalysis {
     }
 }
 
-/// Substitutes numerical rate coefficients into a symbolic mass-action system.
-pub fn extend_polynomial_ode_scalars(
-    sys: PolynomialSystem<QualifiedName, Parameter<QualifiedName>, i8>,
-    data: &PolynomialODEProblemData,
-) -> PolynomialSystem<QualifiedName, f32, i8> {
-    let sys = sys.extend_scalars(|poly| {
-        poly.eval(|mor| data.coefficients.get(mor).cloned().unwrap_or_default())
-    });
+/// Data defining an unbalanced mass-action ODE problem for a model.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde-wasm", derive(Tsify))]
+#[cfg_attr(
+    feature = "serde-wasm",
+    tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
+)]
+pub struct PolynomialODEProblemData {
+    /// Map from morphism IDs to coefficients (nonnegative reals).
+    coefficients: HashMap<QualifiedName, f32>,
 
-    sys.normalize()
+    /// Map from object IDs to initial values (nonnegative reals).
+    #[cfg_attr(feature = "serde", serde(rename = "initialValues"))]
+    pub initial_values: HashMap<QualifiedName, f32>,
+
+    /// Duration of simulation.
+    pub duration: f32,
 }
 
-/// Builds the numerical ODE analysis for a system of polynomial ODEs whose scalars have been substituted.
-pub fn polynomial_ode_analysis(
-    sys: PolynomialSystem<QualifiedName, f32, i8>,
-    data: PolynomialODEProblemData,
-) -> ODEAnalysis<NumericalPolynomialSystem<i8>> {
-    let ob_index: IndexMap<_, _> =
-        sys.components.keys().cloned().enumerate().map(|(i, x)| (x, i)).collect();
-    let n = ob_index.len();
+impl ODESemanticsProblemData<<PolynomialODESemantics as ODESemantics>::ParameterType>
+    for PolynomialODEProblemData
+{
+    fn initial_values(&self) -> HashMap<QualifiedName, f32> {
+        self.initial_values.clone()
+    }
 
-    let initial_values = ob_index
-        .keys()
-        .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
-    let x0 = DVector::from_iterator(n, initial_values);
+    fn duration(&self) -> f32 {
+        self.duration
+    }
 
-    let num_sys = sys.to_numerical();
-    let problem = ODEProblem::new(num_sys, x0).end_time(data.duration);
+    fn extend_scalars(
+        &self,
+        sys: PolynomialSystem<
+            QualifiedName,
+            Parameter<<PolynomialODESemantics as ODESemantics>::ParameterType>,
+            i8,
+        >,
+    ) -> PolynomialSystem<QualifiedName, f32, i8> {
+        let sys = sys.extend_scalars(|poly| {
+            poly.eval(|mor| self.coefficients.get(mor).cloned().unwrap_or_default())
+        });
 
-    ODEAnalysis::new(problem, ob_index)
+        sys.normalize()
+    }
 }
 
 #[cfg(test)]
