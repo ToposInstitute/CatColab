@@ -4,7 +4,7 @@ use crate::mtt::{
     binary_signature::BinarySignature,
     checker::{
         ModelGeneratingProArrow,
-        context::ProTermJudgement,
+        context::{Derivation, ProTermJudgement},
         core_types::{ObjectTerm, ObjectType, ProTerm},
     },
     composite::Composite,
@@ -22,6 +22,10 @@ impl<T: Theory> Holy for ObjectType<T> {
             over: TheoryObject::unconstrained(name.clone()),
             name,
         }
+    }
+
+    fn is_hole(&self) -> bool {
+        matches!(self, ObjectType::Hole { .. })
     }
 }
 
@@ -56,6 +60,10 @@ impl<T: Theory> std::fmt::Display for ObjectType<T> {
 impl<T: Theory> Holy for ObjectTerm<T> {
     fn unconstrained(name: String) -> ObjectTerm<T> {
         ObjectTerm::Hole(name)
+    }
+
+    fn is_hole(&self) -> bool {
+        matches!(self, ObjectTerm::Hole(_))
     }
 }
 
@@ -116,6 +124,10 @@ impl<T: Theory> Holy for ProTerm<T> {
     fn unconstrained(name: String) -> Self {
         ProTerm::Hole(name)
     }
+
+    fn is_hole(&self) -> bool {
+        matches!(self, ProTerm::Hole(_))
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -131,5 +143,52 @@ impl<T: Theory> Holy for ProTermJudgement<T> {
             codomain_theory_object: TheoryObject::unconstrained(name.clone()),
             pro_arrow: Composite::singleton(TheoryProArrow::unconstrained(name)),
         }
+    }
+
+    fn is_hole(&self) -> bool {
+        todo!("probably never called")
+    }
+}
+
+impl<T: Theory> BinarySignature<TheoryObject<T>> for ProTermJudgement<T> {
+    fn dom(&self) -> TheoryObject<T> {
+        self.domain_theory_object.clone()
+    }
+
+    fn cod(&self) -> TheoryObject<T> {
+        self.codomain_theory_object.clone()
+    }
+}
+
+impl<T: Theory> BinarySignature<ObjectType<T>> for ProTermJudgement<T> {
+    fn dom(&self) -> ObjectType<T> {
+        self.domain_object_type.clone()
+    }
+
+    fn cod(&self) -> ObjectType<T> {
+        self.codomain_object_type.clone()
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Derivation
+
+impl<T: Theory> BinarySignature<TheoryObject<T>> for Derivation<T> {
+    fn dom(&self) -> TheoryObject<T> {
+        self.judgement.dom()
+    }
+
+    fn cod(&self) -> TheoryObject<T> {
+        self.judgement.cod()
+    }
+}
+
+impl<T: Theory> BinarySignature<ObjectType<T>> for Derivation<T> {
+    fn dom(&self) -> ObjectType<T> {
+        self.judgement.dom()
+    }
+
+    fn cod(&self) -> ObjectType<T> {
+        self.judgement.cod()
     }
 }

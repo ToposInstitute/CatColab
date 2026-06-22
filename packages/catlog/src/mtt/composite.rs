@@ -20,7 +20,7 @@ pub struct Composite<T> {
 
 impl<T: std::fmt::Display> std::fmt::Display for Composite<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.path.iter().map(|t| t.to_string()).collect::<Vec<_>>().join("∘"))
+        write!(f, "{}", self.path.iter().map(ToString::to_string).collect::<Vec<_>>().join("∘"))
     }
 }
 

@@ -4,7 +4,7 @@ use crate::mtt::{
     theory::{
         Boundary, ListVariant, ProArrowByBoundary, TheoryArrow, TheoryObject, TheoryProArrow,
         UnificationResult,
-        shared::{default_pro_arrows_unify, structural_object_unification},
+        shared::{default_pro_arrow_composite_unify, structural_object_unification},
     },
 };
 
@@ -29,10 +29,10 @@ pub trait Theory: Sized {
     /// object they all refine to (their meet), or
     /// [UnificationResult::Incompatible] if they cannot be made to coincide.
     ///
-    /// There are no object-level equations in a theory, so this is always the
-    /// purely structural notion and is not a customisation point: two rigid
-    /// (non-hole) objects unify iff they share a head and their children unify,
-    /// and holes are bare wildcards that unify with anything.
+    /// There are presently no object-level equations in a theory, so this is
+    /// always the purely structural notion and is not a customisation point
+    /// yet: two rigid (non-hole) objects unify iff they share a head and their
+    /// children unify, and holes are bare wildcards that unify with anything.
     fn unify_objects(objects: &[&TheoryObject<Self>]) -> UnificationResult<TheoryObject<Self>> {
         structural_object_unification::<Self>(objects)
     }
@@ -71,7 +71,7 @@ pub trait Theory: Sized {
     fn unify_pro_arrows(
         composites: &[&Composite<TheoryProArrow<Self>>],
     ) -> UnificationResult<Composite<TheoryProArrow<Self>>> {
-        default_pro_arrows_unify(composites)
+        default_pro_arrow_composite_unify(composites)
     }
 
     /// Decide what information is available about pro-arrows given the

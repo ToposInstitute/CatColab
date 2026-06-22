@@ -6,4 +6,7 @@
 pub trait Holy {
     /// An unconstrained value, tagged with `name` for diagnostics.
     fn unconstrained(name: String) -> Self;
+
+    /// Is this value a Hole?
+    fn is_hole(&self) -> bool;
 }

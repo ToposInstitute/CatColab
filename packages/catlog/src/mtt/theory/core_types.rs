@@ -4,6 +4,7 @@ use std::marker::PhantomData;
 
 use crate::mtt::{
     composite::Composite,
+    hole::Holy,
     theory::{ListVariant, Theory},
 };
 
@@ -53,12 +54,11 @@ pub enum TheoryArrow<T: Theory> {
         /// The codomain object.
         cod: TheoryObject<T>,
     },
-    /// A vertical arrow lifted under a list modality: `List F` for the inner
-    /// arrow `F`, spanning the modal lift of `F`'s boundary.
+    /// A vertical arrow under a list modality.
     ModalApplication {
         /// The modality applied.
         modality: ListVariant,
-        /// The vertical arrow being lifted.
+        /// The vertical arrow acted on.
         on: Box<TheoryArrow<T>>,
     },
 }
@@ -75,6 +75,13 @@ pub enum TheoryProArrow<T: Theory> {
         dom: TheoryObject<T>,
         /// The codomain object.
         cod: TheoryObject<T>,
+    },
+    /// A pro-arrow  under a list modality.
+    ModalApplication {
+        /// The list modality being applied.
+        modality: ListVariant,
+        /// The pro-arrow being acted on.
+        on: Box<TheoryProArrow<T>>,
     },
     /// A base pro-arrow restricted along a vertical arrow on each side: the
     /// `base` pulled back along `dom_leg` on the left and `cod_leg` on the
@@ -98,15 +105,7 @@ pub enum TheoryProArrow<T: Theory> {
     },
 }
 
-impl<T: Theory> TheoryProArrow<T> {
-    /// Whether this is an unconstrained pro-arrow hole.
-    pub fn is_hole(&self) -> bool {
-        matches!(self, TheoryProArrow::Hole { .. })
-    }
-}
-
-/// Whether a pro-arrow composite actually constrains the pro-arrow, i.e. is
-/// anything other than a lone unconstrained hole. The composite is never empty.
+// TODO: drop this!
 pub fn pro_arrow_is_constrained<T: Theory>(pro_arrow: &Composite<TheoryProArrow<T>>) -> bool {
     !matches!(pro_arrow.only(), Some(p) if p.is_hole())
 }
@@ -140,6 +139,9 @@ pub struct Boundary<T: Theory> {
 /// the variants name the contract directly: either the values are mutually
 /// incompatible, or they unify and we hand back the single most specific value
 /// they all refine to (their meet).
+///
+/// Rust support for the Try trait is currently on nightly, so we're not able to
+/// leverage `?` in dealing with functions which return this particular enum.
 pub enum UnificationResult<V> {
     /// The values cannot be made to coincide.
     Incompatible,
@@ -158,6 +160,15 @@ impl<V> UnificationResult<V> {
         match self {
             UnificationResult::Incompatible => None,
             UnificationResult::MostSpecific(v) => Some(v),
+        }
+    }
+
+    /// Map a function, semantics are natural with respect to the isomorphism to
+    /// Option<T>.
+    pub fn map<U, F: FnOnce(V) -> U>(self, f: F) -> UnificationResult<U> {
+        match self {
+            UnificationResult::MostSpecific(x) => UnificationResult::MostSpecific(f(x)),
+            UnificationResult::Incompatible => UnificationResult::Incompatible,
         }
     }
 }

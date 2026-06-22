@@ -7,9 +7,7 @@ use crate::mtt::{
     },
 };
 
-// TODO: check this whole file
-
-/// The theory of database schemas with attributes, aka the "walking pro-arrow".
+/// The theory of database schemas with attributes.
 pub struct Schema;
 
 const ENTITY: &str = "Entity";
@@ -56,20 +54,26 @@ impl Theory for Schema {
     ) -> ProArrowByBoundary<Self> {
         let entity = TheoryObject::Generator(ENTITY.to_string());
         let attr_type = TheoryObject::Generator(ATTR_TYPE.to_string());
-        if Self::unify_objects(&[dom, &entity]).is_compatible()
-            && Self::unify_objects(&[cod, &attr_type]).is_compatible()
-        {
-            ProArrowByBoundary::Composite(Composite::singleton(Self::attr_pro_arrow()))
-        } else if let Some(hom) = Self::make_hom_pro_arrow(dom, cod) {
-            ProArrowByBoundary::Hom(hom)
-        } else {
-            ProArrowByBoundary::None
+
+        let attr = (Self::unify_objects(&[dom, &entity]).is_compatible()
+            && Self::unify_objects(&[cod, &attr_type]).is_compatible())
+        .then(Self::attr_pro_arrow)
+        .map(Composite::singleton)
+        .map(ProArrowByBoundary::Composite);
+
+        let hom = Self::make_hom_pro_arrow(dom, cod).map(ProArrowByBoundary::Hom);
+        match (attr, hom) {
+            (Some(result), None) => result,
+            (None, Some(result)) => result,
+            (None, None) => ProArrowByBoundary::None,
+            _ => ProArrowByBoundary::Ambiguous,
         }
     }
 
     fn has_object(obj: &TheoryObject<Self>) -> bool {
         let entity = TheoryObject::Generator(ENTITY.to_string());
         let attr_type = TheoryObject::Generator(ATTR_TYPE.to_string());
+
         Self::unify_objects(&[obj, &entity]).is_compatible()
             || Self::unify_objects(&[obj, &attr_type]).is_compatible()
     }
@@ -87,16 +91,54 @@ impl Theory for Schema {
                     && Self::unify_objects(&[dom, &attr.dom()]).is_compatible()
                     && Self::unify_objects(&[cod, &attr.cod()]).is_compatible()
             }
-            TheoryProArrow::Restriction { .. } | TheoryProArrow::Hole { .. } => false,
+            // Schema has no list modality, so modal pro-arrows are invalid.
+            TheoryProArrow::ModalApplication { .. }
+            | TheoryProArrow::Restriction { .. }
+            | TheoryProArrow::Hole { .. } => false,
         }
     }
 
     fn has_cell(b: &Boundary<Self>) -> bool {
-        // Discrete double theory: the only cells are identities.
-        b.dom_vertical.is_empty()
-            && b.cod_vertical.is_empty()
-            && Self::unify_objects(&[&b.dom_dom_object, &b.cod_dom_object]).is_compatible()
-            && Self::unify_objects(&[&b.dom_cod_object, &b.cod_cod_object]).is_compatible()
-            && Self::unify_pro_arrows(&[&b.dom_proarrow, &b.cod_proarrow]).is_compatible()
+        // these cells must be globular
+        if !(b.dom_vertical.is_empty() && b.cod_vertical.is_empty()) {
+            return false;
+        };
+
+        // the objects must all be valid
+        if ![&b.dom_dom_object, &b.dom_cod_object, &b.cod_dom_object, &b.cod_cod_object]
+            .into_iter()
+            .all(Self::has_object)
+        {
+            return false;
+        }
+
+        // regardless of what happens in the pro-arrow world me must recognise
+        // them all and the bottom may not be empty
+        if !b.dom_proarrow.iter().all(Self::has_pro_arrow)
+            || !b.cod_proarrow.iter().all(Self::has_pro_arrow)
+            || b.cod_proarrow.is_empty()
+        {
+            return false;
+        }
+
+        let hom = |o: &TheoryObject<Self>| Composite::singleton(TheoryProArrow::Hom(o.clone()));
+        let attr = Composite::singleton(Self::attr_pro_arrow());
+
+        if b.dom_proarrow.is_empty() {
+            // if the top is empty the bottom must be unifiable with a single
+            // hom, relying on the default implementation which treats hom as
+            // unital
+            Self::unify_pro_arrows(&[&b.cod_proarrow, &hom(&b.cod_dom_object)]).is_compatible()
+        } else if Self::unify_pro_arrows(&[&b.dom_proarrow, &hom(&b.dom_dom_object)])
+            .is_compatible()
+        {
+            // if the top unifies against a single hom, so too must the bottom
+            Self::unify_pro_arrows(&[&b.cod_proarrow, &hom(&b.cod_dom_object)]).is_compatible()
+        } else if Self::unify_pro_arrows(&[&b.dom_proarrow, &attr]).is_compatible() {
+            // if the top unifies against a single Attr then so too must the bottom
+            Self::unify_pro_arrows(&[&b.cod_proarrow, &attr]).is_compatible()
+        } else {
+            false
+        }
     }
 }

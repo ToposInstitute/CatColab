@@ -22,7 +22,7 @@ pub struct ProArrow {
 }
 
 #[derive(Display)]
-#[display("{}", models.iter().map(|m| m.to_string()).collect::<Vec<_>>().join("\n"))]
+#[display("{}", models.iter().map(ToString::to_string).collect::<Vec<_>>().join("\n"))]
 /// A model type theory programme.
 pub struct Program {
     /// Ordered list of models, the ordering is used for dependency resolution.
@@ -30,7 +30,7 @@ pub struct Program {
 }
 
 #[derive(Clone, Display)]
-#[display("model {name} of {theory} {{\n{}\n}}", indent(&decls.iter().map(|d| d.to_string()).collect::<Vec<_>>().join("\n"), "  "))]
+#[display("model {name} of {theory} {{\n{}\n}}", indent(&decls.iter().map(ToString::to_string).collect::<Vec<_>>().join("\n"), "  "))]
 /// A model specifies a theory which it instantiates, and provides a finite
 /// presentation via generators and relations.
 pub struct Model {

@@ -98,11 +98,11 @@ impl<T: Theory> ModelEntry<T> {
                         name: pro_arrow.name,
                         dom_object_entry: ObjectEntry {
                             object_type: pro_arrow.dom,
-                            over: over.dom().clone(),
+                            over: (&over).dom(),
                         },
                         cod_object_entry: ObjectEntry {
                             object_type: pro_arrow.cod,
-                            over: over.cod().clone(),
+                            over: (&over).cod(),
                         },
                         over,
                     },
@@ -312,7 +312,9 @@ impl<T: Theory> ModelEntry<T> {
                 if list.is_empty() {
                     return Ok(TheoryObject::ModalApplication {
                         modality,
-                        on: Box::new(TheoryObject::unconstrained("theory_object_for_empty_list".to_string())),
+                        on: Box::new(TheoryObject::unconstrained(
+                            "theory_object_for_empty_list".to_string(),
+                        )),
                     });
                 }
 

@@ -10,19 +10,19 @@ use nonempty::NonEmpty;
 use std::collections::HashMap;
 use textwrap::indent;
 #[derive(Display)]
-#[display("[{}]", _0.iter().map(|o| o.to_string()).collect::<Vec<_>>().join(", "))]
+#[display("[{}]", _0.iter().map(ToString::to_string).collect::<Vec<_>>().join(", "))]
 /// A helper to display lists as "[item1, ..., itemN]"
 pub struct DHList<'a, T: std::fmt::Display>(pub &'a Vec<T>);
 
 #[derive(Display)]
-#[display("{}", _0.iter().map(|o| o.to_string()).collect::<Vec<_>>().join(" ; "))]
+#[display("{}", _0.iter().map(ToString::to_string).collect::<Vec<_>>().join(" ; "))]
 /// A helper to display a non-empty composite of pro-arrows as
 /// "item1 ; ... ; itemN", used by the [ExpressionProArrow](crate::mtt::ast::ExpressionProArrow)
 /// composite forms.
 pub struct DHProArrowComposite<'a, T: std::fmt::Display>(pub &'a NonEmpty<T>);
 
 #[derive(Display)]
-#[display("({})", _0.iter().map(|o| o.to_string()).collect::<Vec<_>>().join(", "))]
+#[display("({})", _0.iter().map(ToString::to_string).collect::<Vec<_>>().join(", "))]
 /// A helper to display tuples as "(item1, ..., itemN)"
 pub struct DHTuple<'a, T: std::fmt::Display>(pub &'a Vec<T>);
 

@@ -365,7 +365,8 @@ impl<T: Theory> ModelEntry<T> {
             match T::unify_pro_arrows(&overs) {
                 UnificationResult::MostSpecific(common) => common.only().cloned(),
                 UnificationResult::Incompatible => {
-                    let found = overs.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(", ");
+                    let found =
+                        overs.iter().map(ToString::to_string).collect::<Vec<_>>().join(", ");
                     return Err(EType::HeterogeneousListProArrows { found }.into());
                 }
             }
@@ -385,16 +386,12 @@ impl<T: Theory> ModelEntry<T> {
         let domain_object_term = ObjectTerm::List(
             elements.iter().map(|e| e.judgement.domain_object_term.clone()).collect(),
         );
-        let domain_object_type = ObjectType::List(
-            elements.iter().map(|e| e.judgement.domain_object_type.clone()).collect(),
-        );
-        let domain_theory_object =
-            modal(elements.iter().map(|e| e.judgement.domain_theory_object.clone()).collect());
-        let codomain_object_type = ObjectType::List(
-            elements.iter().map(|e| e.judgement.codomain_object_type.clone()).collect(),
-        );
-        let codomain_theory_object =
-            modal(elements.iter().map(|e| e.judgement.codomain_theory_object.clone()).collect());
+        let domain_object_type =
+            ObjectType::List(elements.iter().map(BinarySignature::dom).collect());
+        let domain_theory_object = modal(elements.iter().map(BinarySignature::dom).collect());
+        let codomain_object_type =
+            ObjectType::List(elements.iter().map(BinarySignature::cod).collect());
+        let codomain_theory_object = modal(elements.iter().map(BinarySignature::cod).collect());
 
         // The list pro-arrow lifts the common atomic pro-arrow once under the
         // modality, at the list's modal boundary: `List Hom = Hom` when the

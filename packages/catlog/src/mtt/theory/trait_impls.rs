@@ -17,6 +17,10 @@ impl<T: Theory> Holy for TheoryObject<T> {
     fn unconstrained(name: String) -> Self {
         TheoryObject::Hole { name, _theory: PhantomData }
     }
+
+    fn is_hole(&self) -> bool {
+        matches!(self, TheoryObject::Hole { .. })
+    }
 }
 
 impl<T: Theory> Clone for TheoryObject<T> {
@@ -53,7 +57,7 @@ impl<T: Theory> BinarySignature<TheoryObject<T>> for TheoryArrow<T> {
             TheoryArrow::Generator { dom, .. } => dom.clone(),
             TheoryArrow::ModalApplication { modality, on } => TheoryObject::ModalApplication {
                 modality: modality.clone(),
-                on: Box::new(on.dom()),
+                on: Box::new(on.as_ref().dom()),
             },
         }
     }
@@ -65,7 +69,7 @@ impl<T: Theory> BinarySignature<TheoryObject<T>> for TheoryArrow<T> {
             TheoryArrow::Generator { cod, .. } => cod.clone(),
             TheoryArrow::ModalApplication { modality, on } => TheoryObject::ModalApplication {
                 modality: modality.clone(),
-                on: Box::new(on.cod()),
+                on: Box::new(on.as_ref().cod()),
             },
         }
     }
@@ -116,6 +120,10 @@ impl<T: Theory> Holy for TheoryProArrow<T> {
             cod: TheoryObject::unconstrained(name),
         }
     }
+
+    fn is_hole(&self) -> bool {
+        matches!(self, TheoryProArrow::Hole { .. })
+    }
 }
 
 impl<T: Theory> BinarySignature<TheoryObject<T>> for TheoryProArrow<T> {
@@ -125,6 +133,10 @@ impl<T: Theory> BinarySignature<TheoryObject<T>> for TheoryProArrow<T> {
         match self {
             TheoryProArrow::Hom(o) => o.clone(),
             TheoryProArrow::Generator { dom, .. } => dom.clone(),
+            TheoryProArrow::ModalApplication { modality, on } => TheoryObject::ModalApplication {
+                modality: modality.clone(),
+                on: Box::new(on.as_ref().dom()),
+            },
             TheoryProArrow::Restriction { dom_leg, .. } => dom_leg.dom(),
             TheoryProArrow::Hole { dom, .. } => dom.clone(),
         }
@@ -136,6 +148,10 @@ impl<T: Theory> BinarySignature<TheoryObject<T>> for TheoryProArrow<T> {
         match self {
             TheoryProArrow::Hom(o) => o.clone(),
             TheoryProArrow::Generator { cod, .. } => cod.clone(),
+            TheoryProArrow::ModalApplication { modality, on } => TheoryObject::ModalApplication {
+                modality: modality.clone(),
+                on: Box::new(on.as_ref().cod()),
+            },
             TheoryProArrow::Restriction { cod_leg, .. } => cod_leg.dom(),
             TheoryProArrow::Hole { cod, .. } => cod.clone(),
         }
@@ -150,6 +166,10 @@ impl<T: Theory> Clone for TheoryProArrow<T> {
                 name: name.clone(),
                 dom: dom.clone(),
                 cod: cod.clone(),
+            },
+            TheoryProArrow::ModalApplication { modality, on } => TheoryProArrow::ModalApplication {
+                modality: modality.clone(),
+                on: on.clone(),
             },
             TheoryProArrow::Restriction { base, dom_leg, cod_leg } => TheoryProArrow::Restriction {
                 base: base.clone(),
@@ -168,6 +188,7 @@ impl<T: Theory> std::fmt::Display for TheoryProArrow<T> {
         match self {
             TheoryProArrow::Hom(o) => write!(f, "Hom({o})"),
             TheoryProArrow::Generator { name, dom, cod } => write!(f, "{name}: {dom} -|-> {cod}"),
+            TheoryProArrow::ModalApplication { modality, on } => write!(f, "{modality}({on})"),
             TheoryProArrow::Restriction { base, dom_leg, cod_leg } => {
                 write!(f, "({base})({dom_leg}, {cod_leg})")
             }
