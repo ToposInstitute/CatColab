@@ -131,7 +131,8 @@ function addListMorphism(props: { notebook: SupportedNotebook }) {
     } else if (notebook.supports(AdditiveListMor)) {
         notebook.add(AdditiveListMor, { name: "L", dom: [a, b], cod: [c] });
     } else {
-        throw new Error("This notebook does not support ListShape.");
+        // If the code type checked this should be unreachable.
+        throw new Error("Did not find any supported List morphism in the notebook.");
     }
 }
 ```
@@ -144,10 +145,47 @@ function badAddListMorphism(props: { notebook: SupportedNotebook }) {
     const b = notebook.add(BasicObj, { name: "B" });
     const c = notebook.add(BasicObj, { name: "C" });
 
-    //@ts-expect-error Not all variants support adding a `ListMor`
+    //@ts-expect-error Not all variants support adding a `ListMor`. You need to narrow the type using the `supports` method.
     notebook.add(ListMor, { name: "L", dom: [a, b], cod: [c] });
 }
 ```
+
+```ts
+const entityObType = { tag: "Basic", content: "Entity" } as const satisfies ObType;
+
+const entityListMorType = {
+    tag: "Hom",
+    content: {
+        tag: "ModeApp",
+        content: { modality: "List", obType: entityObType },
+    },
+} as const satisfies MorType;
+
+const MultiObjectListShape = defineShape({
+    objects: {
+        BasicObj: basicObjType,
+        EntityObj: entityObType,
+    },
+    morphisms: {
+        ListMor: listMorType,
+        EntityListMor: entityListMorType,
+    },
+});
+
+function badAddListMorphism2(props: { notebook: Notebook<typeof MultiObjectListShape, unknown> }) {
+    const { notebook } = props;
+
+    const a = notebook.add(BasicObj, { name: "A" });
+    const b = notebook.add(BasicObj, { name: "B" });
+    const e = notebook.add(MultiObjectListShape.objects.EntityObj, { name: "E" });
+
+
+    notebook.add(ListMor, { name: "L1", dom: [a, b], cod: [b] });
+    //@ts-expect-error We can't use 
+    notebook.add(ListMor, { name: "L2", dom: [a, b], cod: [e] });
+}
+```
+
 
 ## A structurally compatible notebook is accepted
 
