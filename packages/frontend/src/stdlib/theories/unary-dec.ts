@@ -1,6 +1,11 @@
+import { lazy } from "solid-js";
+
 import { ThCategoryWithScalars } from "catlog-wasm";
 import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
+
+const ObjectCellEditor = lazy(() => import("../../model/object_cell_editor"));
+const MorphismCellEditor = lazy(() => import("../../model/morphism_cell_editor"));
 
 export default function createUnaryDECTheory(theoryMeta: TheoryMeta): Theory {
     const thCategoryWithScalars = new ThCategoryWithScalars();
@@ -12,6 +17,7 @@ export default function createUnaryDECTheory(theoryMeta: TheoryMeta): Theory {
             {
                 tag: "ObType",
                 obType: { tag: "Basic", content: "Object" },
+                editor: ObjectCellEditor,
                 name: "Form type",
                 shortcut: ["F"],
                 description: "A type of differential form on the space",
@@ -19,6 +25,7 @@ export default function createUnaryDECTheory(theoryMeta: TheoryMeta): Theory {
             {
                 tag: "MorType",
                 morType: { tag: "Basic", content: "Nonscalar" },
+                editor: MorphismCellEditor,
                 name: "Operator",
                 shortcut: ["D"],
                 description: "A differential operator",
@@ -29,6 +36,7 @@ export default function createUnaryDECTheory(theoryMeta: TheoryMeta): Theory {
                     tag: "Hom",
                     content: { tag: "Basic", content: "Object" },
                 },
+                editor: MorphismCellEditor,
                 name: "Scalar",
                 arrowStyle: "scalar",
                 shortcut: ["S"],

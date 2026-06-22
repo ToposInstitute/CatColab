@@ -31,7 +31,7 @@ craneLib.buildPackage {
       ../../Cargo.lock
       (craneLib.fileset.commonCargoSources ./.)
       (craneLib.fileset.commonCargoSources ../migrator)
-      (craneLib.fileset.commonCargoSources ../notebook-types)
+      (craneLib.fileset.commonCargoSources ../document-types)
       ./.sqlx
     ];
   };

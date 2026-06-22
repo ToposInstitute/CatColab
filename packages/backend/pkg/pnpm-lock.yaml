@@ -12,16 +12,16 @@ importers:
         specifier: ^0.4.5
         version: 0.4.5
       typescript:
-        specifier: ^5.6.2
-        version: 5.6.2
+        specifier: ^6.0.3
+        version: 6.0.3
 
 packages:
 
   '@qubit-rs/client@0.4.5':
     resolution: {integrity: sha512-L7pBAUs1sPWCkuoRq7rdwqXy1+iLOmOVhADxj+QoNY24yu4J1aiTUSlJJllK9rXRxfvkjRNEPSeUE5H+U3ncug==}
 
-  typescript@5.6.2:
-    resolution: {integrity: sha512-NW8ByodCSNCwZeghjN3o+JX5OFH0Ojg6sadjEKY4huZ52TqbJTJnDo5+Tw98lSy63NZvi4n+ez5m2u5d4PkZyw==}
+  typescript@6.0.3:
+    resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
     engines: {node: '>=14.17'}
     hasBin: true
 
@@ -29,4 +29,4 @@ snapshots:
 
   '@qubit-rs/client@0.4.5': {}
 
-  typescript@5.6.2: {}
+  typescript@6.0.3: {}

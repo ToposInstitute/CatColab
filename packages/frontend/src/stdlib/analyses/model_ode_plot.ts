@@ -3,8 +3,7 @@ import { type Accessor, createMemo } from "solid-js";
 import type {
     DblModel,
     JsResult,
-    LatexEquation,
-    ODELatex,
+    LatexEquations,
     ODEResult,
     ODEResultWithEquations,
 } from "catlog-wasm";
@@ -14,7 +13,7 @@ import type { ODEPlotData, StateVarData } from "../../visualization";
 /** Result of simulating an ODE with equations, containing both plot data and LaTeX equations. */
 export type ODEPlotDataWithEquations = {
     plotData: JsResult<ODEPlotData, string>;
-    latexEquations: LatexEquation[];
+    latexEquations: LatexEquations;
 };
 
 /** Convert an ODE solution result to plot data for a model. */
@@ -92,9 +91,9 @@ export function createModelODEPlotWithEquations(
  */
 export function createModelODELatex(
     validatedModel: Accessor<ValidatedModel | undefined>,
-    getEquations: (model: DblModel) => ODELatex,
+    getEquations: (model: DblModel) => LatexEquations,
 ) {
-    return createMemo<LatexEquation[] | undefined>(
+    return createMemo<LatexEquations | undefined>(
         () => {
             const validated = validatedModel();
             if (validated?.tag !== "Valid") {

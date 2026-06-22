@@ -1,6 +1,11 @@
+import { lazy } from "solid-js";
+
 import { ThSignedCategory } from "catlog-wasm";
 import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
+
+const ObjectCellEditor = lazy(() => import("../../model/object_cell_editor"));
+const MorphismCellEditor = lazy(() => import("../../model/morphism_cell_editor"));
 
 export default function createCausalLoopTheory(theoryMeta: TheoryMeta): Theory {
     const thSignedCategory = new ThSignedCategory();
@@ -14,6 +19,7 @@ export default function createCausalLoopTheory(theoryMeta: TheoryMeta): Theory {
             {
                 tag: "ObType",
                 obType: { tag: "Basic", content: "Object" },
+                editor: ObjectCellEditor,
                 name: "Variable",
                 shortcut: ["V"],
                 description: "Variable quantity",
@@ -24,6 +30,7 @@ export default function createCausalLoopTheory(theoryMeta: TheoryMeta): Theory {
                     tag: "Hom",
                     content: { tag: "Basic", content: "Object" },
                 },
+                editor: MorphismCellEditor,
                 name: "Positive link",
                 shortcut: ["P"],
                 description: "Variables change in the same direction",
@@ -33,6 +40,7 @@ export default function createCausalLoopTheory(theoryMeta: TheoryMeta): Theory {
             {
                 tag: "MorType",
                 morType: { tag: "Basic", content: "Negative" },
+                editor: MorphismCellEditor,
                 name: "Negative link",
                 shortcut: ["N"],
                 description: "Variables change in the opposite direction",

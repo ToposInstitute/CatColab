@@ -2,24 +2,20 @@ import { MultiProvider } from "@solid-primitives/context";
 import { Match, Switch, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import type { DiagramJudgment, DiagramMorDecl, DiagramObDecl } from "catlog-wasm";
+import { Diagram, Nb } from "catcolab-document-methods";
+import type { DiagramJudgment, DiagramMorDecl, DiagramObDecl } from "catcolab-document-types";
+import { type FocusHandle } from "catcolab-ui-components";
 import { LiveModelContext } from "../model";
-import {
-    type CellConstructor,
-    type FormalCellEditorProps,
-    NotebookEditor,
-    newFormalCell,
-} from "../notebook";
+import { type CellConstructor, type FormalCellEditorProps, NotebookEditor } from "../notebook";
 import type { InstanceTypeMeta } from "../theory";
 import { LiveDiagramContext } from "./context";
 import type { LiveDiagramDoc } from "./document";
 import { DiagramMorphismCellEditor } from "./morphism_cell_editor";
 import { DiagramObjectCellEditor } from "./object_cell_editor";
-import { duplicateDiagramJudgment, newDiagramMorphismDecl, newDiagramObjectDecl } from "./types";
 
 /** Notebook editor for a diagram in a model.
  */
-export function DiagramNotebookEditor(props: { liveDiagram: LiveDiagramDoc }) {
+export function DiagramNotebookEditor(props: { liveDiagram: LiveDiagramDoc; focus: FocusHandle }) {
     const liveDoc = () => props.liveDiagram.liveDoc;
     const liveModel = () => props.liveDiagram.liveModel;
 
@@ -43,7 +39,8 @@ export function DiagramNotebookEditor(props: { liveDiagram: LiveDiagramDoc }) {
                 formalCellEditor={DiagramCellEditor}
                 cellConstructors={cellConstructors()}
                 cellLabel={judgmentLabel}
-                duplicateCell={duplicateDiagramJudgment}
+                duplicateCell={Diagram.duplicateDiagramJudgment}
+                focus={props.focus}
             />
         </MultiProvider>
     );
@@ -64,7 +61,7 @@ function DiagramCellEditor(props: FormalCellEditorProps<DiagramJudgment>) {
                         modifyDecl={(f) =>
                             props.changeContent((content) => f(content as DiagramObDecl))
                         }
-                        isActive={props.isActive}
+                        focus={props.focus}
                         actions={props.actions}
                         theory={theory()}
                     />
@@ -77,7 +74,7 @@ function DiagramCellEditor(props: FormalCellEditorProps<DiagramJudgment>) {
                         modifyDecl={(f) =>
                             props.changeContent((content) => f(content as DiagramMorDecl))
                         }
-                        isActive={props.isActive}
+                        focus={props.focus}
                         actions={props.actions}
                         theory={theory()}
                     />
@@ -96,9 +93,9 @@ function diagramCellConstructor(meta: InstanceTypeMeta): CellConstructor<Diagram
         construct() {
             switch (tag) {
                 case "ObType":
-                    return newFormalCell(newDiagramObjectDecl(meta.obType));
+                    return Nb.newFormalCell(Diagram.newDiagramObjectDecl(meta.obType));
                 case "MorType":
-                    return newFormalCell(newDiagramMorphismDecl(meta.morType));
+                    return Nb.newFormalCell(Diagram.newDiagramMorphismDecl(meta.morType));
                 default:
                     throw tag satisfies never;
             }

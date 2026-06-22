@@ -1,20 +1,14 @@
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { monorepoDedupe } from "@catcolab-dev-tools/vite-plugin-monorepo-dedupe";
 import mdx from "@mdx-js/rollup";
 import rehypeKatex from "rehype-katex";
 import remarkMath from "remark-math";
-import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
 import wasm from "vite-plugin-wasm";
-
-// __dirname is not available in ES modules. The test:ci script uses --configLoader=runner
-// (required for readonly (Nix) environments), which runs Vite in ESM mode.
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
     plugins: [
+        monorepoDedupe(),
         wasm(),
         mdx({
             // https://mdxjs.com/docs/getting-started/#solid
@@ -30,8 +24,10 @@ export default defineConfig({
         sourcemap: true,
         target: "es2022",
     },
-    resolve: {
-        dedupe: getCommonDependencies(),
+    test: {
+        // Run test files sequentially to prevent cross-test contamination via
+        // the server's shared user state.
+        fileParallelism: false,
     },
     server: {
         proxy: {
@@ -47,24 +43,3 @@ export default defineConfig({
         },
     },
 });
-
-/**
- * Get common dependencies between frontend and ui-components packages.
- * Needed to link other packages that use Solid.js:
- * https://github.com/solidjs/solid/issues/1472
- */
-function getCommonDependencies(): string[] {
-    const frontendPkg = JSON.parse(readFileSync(resolve(__dirname, "./package.json"), "utf-8"));
-    const uiComponentsPkg = JSON.parse(
-        readFileSync(resolve(__dirname, "../ui-components/package.json"), "utf-8"),
-    );
-
-    const frontendDeps = new Set(Object.keys(frontendPkg.dependencies || {}));
-    const uiComponentsDeps = new Set(Object.keys(uiComponentsPkg.dependencies || {}));
-
-    // @ts-expect-error: intersection method does exist on Set in our
-    // vite.config target i.e. NodeJS
-    const commonDeps = frontendDeps.intersection(uiComponentsDeps);
-
-    return Array.from(commonDeps);
-}

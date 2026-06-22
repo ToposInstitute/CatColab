@@ -78,7 +78,7 @@ jobs:
         id: cache-key
         run: |
           # Get git hash of the most recent commit affecting frontend or any of its dependencies
-          hash=$(git log -1 --format="%H" -- packages/frontend packages/backend/pkg packages/catlog packages/catlog-wasm packages/notebook-types packages/ui-components Cargo.toml Cargo.lock)
+          hash=$(git log -1 --format="%H" -- packages/frontend packages/backend/pkg packages/catlog packages/catlog-wasm packages/document-types packages/document-methods packages/ui-components Cargo.toml Cargo.lock)
           echo "git-hash=${hash}" >> $GITHUB_OUTPUT
           echo "Frontend git hash: ${git_hash}"
 
@@ -122,6 +122,7 @@ jobs:
         if: github.event_name == 'release'
         run: |
           pnpm install
+          pnpm --filter ./packages/frontend run build:deps
           # Uses env from packages/frontend/.env.production
           pnpm --filter ./packages/frontend run build
 
@@ -235,14 +236,12 @@ jobs:
         if: steps.cache-math-docs.outputs.cache-hit != 'true'
         run: |
           tlmgr update --self
-          tlmgr install dvisvgm
-          tlmgr install standalone
-          tlmgr install pgf
-          tlmgr install tikz-cd
-          tlmgr install amsmath
-          tlmgr install quiver
-          tlmgr install spath3
-          tlmgr install ebproof
+          tlmgr install dvisvgm standalone preview pgf tikz-cd amsmath quiver spath3 ebproof
+          # Work around https://github.com/loopspace/spath3/issues/37 by
+          # dropping the redundant `NNn` variant that newer expl3 rejects.
+          SPATH3="$(kpsewhich spath3.sty)"
+          sed -i 's|\\spath_maybe_split_curve:NNn {NNn, NNV }|\\spath_maybe_split_curve:NNn {NNV}|' "$SPATH3"
+          sed -i 's|\\spath_maybe_gsplit_curve:NNn {NNn, NNV}|\\spath_maybe_gsplit_curve:NNn {NNV}|' "$SPATH3"
 
       - name: Build mathematical docs
         if: steps.cache-math-docs.outputs.cache-hit != 'true'
@@ -263,6 +262,72 @@ jobs:
         with:
           name: math-docs
           path: math-docs/output
+
+  build_rfc:
+    name: Build RFCs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository Checkout
+        uses: actions/checkout@v4
+        with:
+          # Need full history for `git log` for cache key
+          fetch-depth: 0
+
+      - name: Compute cache key
+        id: cache-key
+        run: |
+          hash=$(git log -1 --format="%H" -- rfc)
+          echo "git-hash=${hash}" >> $GITHUB_OUTPUT
+          echo "RFC hash: ${hash}"
+
+      - name: Cache RFC build
+        id: cache-rfc
+        uses: actions/cache@v4
+        with:
+          path: rfc/_site
+          key: rfc-build-${{ steps.cache-key.outputs.git-hash }}
+
+      - name: Set up Quarto
+        if: steps.cache-rfc.outputs.cache-hit != 'true'
+        uses: quarto-dev/quarto-actions/setup@v2
+        with:
+            version: 1.8.26
+
+      - name: Setup TinyTeX
+        if: steps.cache-rfc.outputs.cache-hit != 'true'
+        uses: r-lib/actions/setup-tinytex@v2
+
+      - name: Install TeX Packages
+        if: steps.cache-rfc.outputs.cache-hit != 'true'
+        run: |
+          tlmgr update --self
+          tlmgr install dvisvgm standalone preview pgf tikz-cd amsmath quiver spath3 ebproof luatex85
+          # Work around https://github.com/loopspace/spath3/issues/37 by
+          # dropping the redundant `NNn` variant that newer expl3 rejects.
+          SPATH3="$(kpsewhich spath3.sty)"
+          sed -i 's|\\spath_maybe_split_curve:NNn {NNn, NNV }|\\spath_maybe_split_curve:NNn {NNV}|' "$SPATH3"
+          sed -i 's|\\spath_maybe_gsplit_curve:NNn {NNn, NNV}|\\spath_maybe_gsplit_curve:NNn {NNV}|' "$SPATH3"
+
+      - name: Render Quarto project
+        if: steps.cache-rfc.outputs.cache-hit != 'true'
+        uses: quarto-dev/quarto-actions/render@v2
+        with:
+          path: rfc
+          to: html
+
+      - name: Report cache status
+        run: |
+          if [ "${{ steps.cache-rfc.outputs.cache-hit }}" = "true" ]; then
+            echo "✅ RFCs restored from cache"
+          else
+            echo "🔨 RFCs built and cached"
+          fi
+
+      - name: Upload RFCs
+        uses: actions/upload-artifact@v4
+        with:
+          name: rfc
+          path: rfc/_site
 
   build_ui_components:
     name: Build ui-components Storybook

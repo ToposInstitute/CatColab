@@ -1,23 +1,11 @@
 import type { Accessor } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { currentVersion, type DblModel, type Document, type ModelJudgment } from "catlog-wasm";
+import { Nb, Model, type ModelDocument } from "catcolab-document-methods";
+import { type DblModel } from "catlog-wasm";
 import type { Api, LiveDoc } from "../api";
-import { NotebookUtils, newNotebook } from "../notebook/types";
 import type { Theory, TheoryLibrary } from "../theory";
 import type { ValidatedModel } from "./model_library";
-
-/** A document defining a model. */
-export type ModelDocument = Document & { type: "model" };
-
-/** Create an empty model document. */
-export const newModelDocument = (theory: string): ModelDocument => ({
-    name: "",
-    type: "model",
-    theory,
-    notebook: newNotebook<ModelJudgment>(),
-    version: currentVersion(),
-});
 
 /** A model document "live" for editing.
 
@@ -50,11 +38,27 @@ export async function createModel(
 ): Promise<string> {
     let init: ModelDocument;
     if (typeof initOrTheoryId === "string") {
-        init = newModelDocument(initOrTheoryId);
+        init = Model.newModelDocument({ theory: initOrTheoryId });
     } else {
         init = initOrTheoryId;
     }
     return api.createDoc(init);
+}
+
+/** Switch the editor variant of a model document.
+
+This is a purely frontend operation that changes which editor components are
+used for the model's cells without altering the underlying theory or data.
+ */
+export function switchEditorVariant(liveModel: LiveModelDoc, editorVariant: string | undefined) {
+    const { changeDoc } = liveModel.liveDoc;
+    changeDoc((doc) => {
+        if (editorVariant) {
+            doc.editorVariant = editorVariant;
+        } else {
+            delete doc.editorVariant;
+        }
+    });
 }
 
 /** Migrate a model document from one theory to another. */
@@ -70,9 +74,10 @@ export async function migrateModelDocument(
     invariant(theory && model); // FIXME: Should fail gracefully.
 
     // Trivial migration.
-    if (!NotebookUtils.hasFormalCells(doc.notebook) || theory.inclusions.includes(targetTheoryId)) {
+    if (!Nb.hasFormalCells(doc.notebook) || theory.inclusions.includes(targetTheoryId)) {
         changeDoc((doc) => {
             doc.theory = targetTheoryId;
+            delete doc.editorVariant;
         });
         return;
     }
@@ -88,7 +93,8 @@ export async function migrateModelDocument(
     model = migration.migrate(model, targetTheory.theory);
     changeDoc((doc) => {
         doc.theory = targetTheoryId;
-        for (const judgment of NotebookUtils.getFormalContent(doc.notebook)) {
+        delete doc.editorVariant;
+        for (const judgment of Nb.getFormalContent(doc.notebook)) {
             if (judgment.tag === "object") {
                 judgment.obType = model.obType({
                     tag: "Basic",

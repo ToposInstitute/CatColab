@@ -3,15 +3,13 @@ use sqlx_migrator::Info;
 use sqlx_migrator::cli::MigrationCommand;
 use sqlx_migrator::migrator::Migrator;
 
-mod migrations;
-
 #[tokio::main]
 async fn main() {
     let database_url = dotenvy::var("DATABASE_URL").expect("`DATABASE_URL` should be set");
 
     let mut migrator = Migrator::default();
     migrator
-        .add_migrations(migrations::migrations())
+        .add_migrations(migrator::migrations())
         .expect("Failed to load migrations");
 
     let mut conn = PgConnection::connect(&database_url)

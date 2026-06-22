@@ -28,6 +28,7 @@
 .cell-tag {
     color: var(--color-gray-600);
     font-size: 11pt;
+    align-self: flex-start;
 }
 
 .cell-content {

@@ -24,7 +24,7 @@ craneLib.mkCargoDerivation {
       ../Cargo.lock
       (craneLib.fileset.commonCargoSources ../packages/backend)
       (craneLib.fileset.commonCargoSources ../packages/migrator)
-      (craneLib.fileset.commonCargoSources ../packages/notebook-types)
+      (craneLib.fileset.commonCargoSources ../packages/document-types)
       ../packages/backend/.sqlx
     ];
   };
@@ -39,6 +39,6 @@ craneLib.mkCargoDerivation {
 
   installPhaseCommand = ''
     mkdir -p $out/src
-    cp packages/backend/pkg/src/index.ts $out/src/index.ts
+    cp -r packages/backend/pkg/src $out/
   '';
 }

@@ -4,6 +4,7 @@ use itertools::Itertools;
 use std::collections::HashMap;
 
 use crate::dbl::modal::model::{ModalDblModel, ModalOb};
+use crate::dbl::theory::Unital;
 use crate::one::category::FgCategory;
 use crate::stdlib::analyses::petri::transition_interface;
 use crate::zero::QualifiedName;
@@ -32,7 +33,7 @@ pub struct ReachabilityProblemData {
 /// The "Region Algebra for Petri Nets" algorithm from Ch 31 of
 /// ([Clarke et al 2018](crate::refs::HandbookModelChecking)):
 /// "Symbolic Model Checking in Non Boolean Domains".
-pub fn subreachability(m: &ModalDblModel, data: ReachabilityProblemData) -> bool {
+pub fn subreachability(m: &ModalDblModel<Unital>, data: ReachabilityProblemData) -> bool {
     // Convert model into a pair of matrices
     //--------------------------------------
 
@@ -188,7 +189,7 @@ mod tests {
         );
 
         // Test starting configurations, see if (0,0,2) is reachable subtokening
-        fn test_input(m: &ModalDblModel, x1: i32, x2: i32, x3: i32, expect: bool) {
+        fn test_input(m: &ModalDblModel<Unital>, x1: i32, x2: i32, x3: i32, expect: bool) {
             let (p1, p2, p3) = (name("p1"), name("p2"), name("p3"));
             let forbidden = HashMap::from_iter([(p1.clone(), 0), (p2.clone(), 0), (p3.clone(), 2)]);
 

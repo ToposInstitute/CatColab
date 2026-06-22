@@ -456,7 +456,7 @@ export const AllColors: Story = {
 
                 <ColorSection
                     title="Information"
-                    colors={["--color-alert-question", "--color-alert-note"]}
+                    colors={["--color-indicator", "--color-alert-question", "--color-alert-note"]}
                 />
 
                 <ColorSection
@@ -532,21 +532,6 @@ export const ButtonColorsStudy: Story = {
                             Disabled
                         </Button>
                     </div>
-                    <Button
-                        style={{
-                            color: "white",
-                            background: "var(--color-topos-primary)",
-                            border: "1px solid var(--color-topos-primary)",
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.background = "var(--color-topos-primary-hover)";
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.background = "var(--color-topos-primary)";
-                        }}
-                    >
-                        Topos Primary
-                    </Button>
                     <Button
                         style={{
                             color: "white",
@@ -2595,9 +2580,9 @@ export const PositiveColorUsage: Story = {
                         Button Component (button.css)
                     </h2>
                     <p style={{ "margin-bottom": "1rem", color: "var(--color-gray-800)" }}>
-                        Positive buttons use --color-button-positive-base for background and
-                        --color-button-positive-border for border. On hover, they transition to
-                        --color-button-positive-hover.
+                        Positive buttons use the Topos primary palette: --color-button-positive-base
+                        for background and --color-button-positive-border for border. On hover, they
+                        transition to --color-button-positive-hover.
                     </p>
                     <div style={{ display: "flex", gap: "1rem", "align-items": "center" }}>
                         <Button variant="positive">Positive Button</Button>
@@ -2635,8 +2620,8 @@ export const PositiveColorUsage: Story = {
                     </h2>
                     <p style={{ "margin-bottom": "1rem", color: "var(--color-gray-800)" }}>
                         Positive icon buttons use transparent background by default. On hover, they
-                        use --color-icon-button-positive-hover for background and
-                        --color-icon-button-positive-text for color. On active, they use
+                        use Topos-primary-tinted --color-icon-button-positive-hover for background
+                        and --color-icon-button-positive-text for color. On active, they use
                         --color-icon-button-positive-active.
                     </p>
                     <div
@@ -3150,11 +3135,11 @@ export const InformationColorUsage: Story = {
                             "font-weight": "600",
                         }}
                     >
-                        Alert Question Variant (alert.css)
+                        Indicator (alert.css, history_navigator.module.css)
                     </h2>
                     <p style={{ "margin-bottom": "1rem", color: "var(--color-gray-800)" }}>
-                        Question alerts use --color-alert-question (cornflowerblue) for the accent
-                        color and heading text.
+                        Indicators use --color-indicator (cornflowerblue), with
+                        --color-alert-question as the alert-specific alias for question headings.
                     </p>
                     <Question>
                         <p>
@@ -3189,8 +3174,8 @@ export const InformationColorUsage: Story = {
                         Alert Note Variant (alert.css)
                     </h2>
                     <p style={{ "margin-bottom": "1rem", color: "var(--color-gray-800)" }}>
-                        Note alerts use --color-alert-note (teal) for the accent color and heading
-                        text.
+                        Note alerts use --color-alert-note (Topos primary) for the accent color and
+                        heading text.
                     </p>
                     <Note>
                         <p>
@@ -3231,6 +3216,7 @@ export const InformationColorUsage: Story = {
                             gap: "1.5rem",
                         }}
                     >
+                        <ColorSwatch value="--color-indicator" />
                         <ColorSwatch value="--color-alert-question" />
                         <ColorSwatch value="--color-alert-note" />
                     </div>

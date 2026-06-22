@@ -22,7 +22,7 @@ let
       allKeys = [ hostKey ] ++ userKeys;
     };
     catcolab-next = rec {
-      hostKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJEyUzs+ymd6YFKnPTi6cfoWuNI/fhBGgcx0YELTzWJI root@ip-172-31-9-115.us-east-2.compute.internal";
+      hostKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHn7l+VBTwN08mde2SDw6I1UPahIe17F3rLxvPL+IHcc root@ip-172-31-43-26.us-east-2.compute.internal";
       userKeys = with allUserKeys; [
         owen
         epatters
@@ -36,5 +36,4 @@ let
 in
 {
   inherit hosts;
-  allUserKeys = builtins.attrValues allUserKeys;
 }

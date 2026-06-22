@@ -329,7 +329,7 @@ impl VDCWithComposites for DiscreteTabTheory {
     }
 }
 
-crate::dbl::theory::impl_dbl_theory!(DiscreteTabTheory, Unital);
+crate::dbl::theory::impl_dbl_theory!(DiscreteTabTheory, crate::dbl::theory::Unital);
 
 #[cfg(test)]
 mod tests {

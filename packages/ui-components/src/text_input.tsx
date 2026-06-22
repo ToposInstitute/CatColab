@@ -5,6 +5,7 @@ import { type ComponentProps, createEffect, createSignal, type JSX, splitProps }
 void focus;
 
 import { type Completion, Completions, type CompletionsRef } from "./completions";
+import type { FocusHandle } from "./util/focus";
 import { assertTypelevel } from "./util/types";
 
 /** Props for `TextInput` component. */
@@ -16,17 +17,29 @@ type TextInputProps = Omit<ComponentProps<"input">, "onKeyDown"> &
 
 /** Optional props available to a `TextInput` component. */
 export type TextInputOptions = TextInputActions & {
+    /** Focus state for this input. */
+    focus?: FocusHandle;
+
     /** Whether the input is active: allowed to the grab the focus. */
     isActive?: boolean;
 
     /** Called when component has received focus. */
     hasFocused?: () => void;
 
+    /** Called when component has lost focus. */
+    hasBlurred?: () => void;
+
     /** List of possible auto-completions. */
     completions?: Completion[];
 
-    /** Whether to show possible auto-completions when focus is gained. */
+    /** Whether to show possible auto-completions when focus is gained. Defaults to yes. */
     showCompletionsOnFocus?: boolean;
+
+    /** Extra CSS class to apply to the completions popup. */
+    popupClass?: string;
+
+    /** Text shown when no completions match. Defaults to "No completions". */
+    completionsEmptyText?: string;
 
     /** Called to intercept `keydown` events.`
 
@@ -94,10 +107,14 @@ type TextInputActions = {
 
 // XXX: Need the list of options as a *value* to split props.
 const TEXT_INPUT_OPTIONS = [
+    "focus",
     "isActive",
     "hasFocused",
+    "hasBlurred",
     "completions",
     "showCompletionsOnFocus",
+    "popupClass",
+    "completionsEmptyText",
     "interceptKeyDown",
     "autofill",
     "createBelow",
@@ -131,7 +148,7 @@ export function TextInput(allProps: TextInputProps) {
     let ref!: HTMLInputElement;
 
     createEffect(() => {
-        if (options.isActive && document.activeElement !== ref) {
+        if ((options.focus?.hasFocus() ?? options.isActive) && document.activeElement !== ref) {
             ref.focus();
             // Move cursor to end of input.
             ref.selectionStart = ref.selectionEnd = ref.value.length;
@@ -144,7 +161,10 @@ export function TextInput(allProps: TextInputProps) {
     const onKeyDown: JSX.EventHandler<HTMLInputElement, KeyboardEvent> = (evt) => {
         const remaining = completionsRef()?.remainingCompletions() ?? [];
         const value = evt.currentTarget.value;
-        if (options.interceptKeyDown?.(evt)) {
+        if (evt.key === "Escape" && isCompletionsOpen()) {
+            setCompletionsOpen(false);
+            evt.stopPropagation();
+        } else if (options.interceptKeyDown?.(evt)) {
         } else if (options.deleteBackward && evt.key === "Backspace" && !value) {
             options.deleteBackward();
         } else if (options.deleteForward && evt.key === "Delete" && !value) {
@@ -180,7 +200,7 @@ export function TextInput(allProps: TextInputProps) {
         } else if (options.autofill && evt.code === "Space" && evt.ctrlKey) {
             options.autofill();
         } else if (evt.key === "Enter" && !evt.shiftKey) {
-            if (isCompletionsOpen()) {
+            if (isCompletionsOpen() && remaining.length > 0) {
                 completionsRef()?.selectPresumptive();
             } else if (options.createBelow) {
                 options.createBelow();
@@ -212,25 +232,35 @@ export function TextInput(allProps: TextInputProps) {
                     value={props.text}
                     use:focus={(isFocused) => {
                         if (isFocused) {
+                            options.focus?.setFocused(true);
                             options.hasFocused?.();
-                        }
-                        if (!isFocused || options.showCompletionsOnFocus) {
-                            setCompletionsOpen(isFocused);
+                            if (
+                                options.completions != null &&
+                                (options.showCompletionsOnFocus ?? true)
+                            ) {
+                                setCompletionsOpen(true);
+                            }
+                        } else {
+                            options.hasBlurred?.();
+                            setCompletionsOpen(false);
                         }
                     }}
                     onInput={(evt) => {
                         props.setText(evt.target.value);
-                        setCompletionsOpen(true);
+                        if (options.completions != null) {
+                            setCompletionsOpen(true);
+                        }
                     }}
                     onKeyDown={onKeyDown}
                     {...inputProps}
                 />
             </Popover.Anchor>
             <Popover.Portal>
-                <Popover.Content class="popup">
+                <Popover.Content class={`popup ${options.popupClass ?? ""}`}>
                     <Completions
                         completions={options.completions ?? []}
                         text={props.text}
+                        emptyText={options.completionsEmptyText}
                         ref={setCompletionsRef}
                         onComplete={() => setCompletionsOpen(false)}
                     />

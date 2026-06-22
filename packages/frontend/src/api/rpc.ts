@@ -8,8 +8,8 @@ import type { QubitServer, RpcResult } from "catcolab-api";
 /** RPC client for communicating with the CatColab backend. */
 export type RpcClient = QubitServer;
 
-/** Create the RPC client for communicating with the backend. */
-export function createRpcClient(serverUrl: string, firebaseApp?: FirebaseApp) {
+/** Create a fetch function that automatically attaches Firebase auth tokens. */
+export function createFetchWithAuth(firebaseApp?: FirebaseApp): typeof fetch {
     let currentUser: User | null = null;
     const authInitialized = new Promise<null>((resolve) => {
         if (firebaseApp) {
@@ -22,7 +22,7 @@ export function createRpcClient(serverUrl: string, firebaseApp?: FirebaseApp) {
         }
     });
 
-    const fetchWithAuth: typeof fetch = async (input, init?) => {
+    return async (input, init?) => {
         await authInitialized;
         if (currentUser) {
             const token = await currentUser.getIdToken();
@@ -35,8 +35,12 @@ export function createRpcClient(serverUrl: string, firebaseApp?: FirebaseApp) {
         }
         return await fetch(input, init);
     };
+}
+
+/** Create the RPC client for communicating with the backend. */
+export function createRpcClient(serverUrl: string, fetchFn: typeof fetch) {
     const transport = http(`${serverUrl}/rpc`, {
-        fetch: fetchWithAuth,
+        fetch: fetchFn,
     });
     return build_client<QubitServer>(transport);
 }

@@ -13,11 +13,11 @@
 //! [linear combinations](Combination) and [monomials](Monomial). These are actually
 //! the same data structure, but with different notation!
 
-use num_traits::{One, Pow, Zero};
+use num_traits::{One, Pow, Signed, Zero};
 use std::collections::{BTreeMap, btree_map};
 use std::fmt::Display;
 use std::iter::{Product, Sum};
-use std::ops::{Add, AddAssign, Mul, MulAssign, Neg};
+use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use derivative::Derivative;
 use duplicate::duplicate_item;
@@ -86,6 +86,40 @@ pub trait Module: RigModule<Rig = Self::Ring> + AbGroup {
     type Ring: CommRing;
 }
 
+/// A coefficent that can be displayed in a linear combination.
+pub trait DisplayCoef {
+    /// Does coefficent have a negative sign?
+    ///
+    /// In contrast to the `is_negative` method of [`num_traits::Signed`], this
+    /// is about *syntax* rather than denotion. For example, the symbolic
+    /// expression `-k` has a negative sign, but may or may not denote a
+    /// negative number, depending on whether `k` itself takes a positive value.
+    fn has_negative_sign(&self) -> bool;
+
+    /// Does the coefficient need to be parenthesized when displayed?
+    fn needs_parentheses(&self) -> bool;
+}
+
+#[duplicate_item(T; [u32]; [u64]; [usize])]
+impl DisplayCoef for T {
+    fn has_negative_sign(&self) -> bool {
+        false
+    }
+    fn needs_parentheses(&self) -> bool {
+        false
+    }
+}
+
+#[duplicate_item(T; [f32]; [f64]; [i32]; [i64])]
+impl DisplayCoef for T {
+    fn has_negative_sign(&self) -> bool {
+        self.is_negative()
+    }
+    fn needs_parentheses(&self) -> bool {
+        false
+    }
+}
+
 /// A formal linear combination.
 ///
 /// This data structure is for linear combinations of indeterminates/variables
@@ -113,6 +147,16 @@ where
         Coef: One,
     {
         Combination([(var, Coef::one())].into_iter().collect())
+    }
+
+    /// Number of variables appearing in the combination.
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    /// Is the combination empty, i.e., equal to zero?
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 
     /// Iterates over the variables used in the combination.
@@ -168,62 +212,6 @@ where
     }
 }
 
-impl<Var, Coef> Combination<Var, Coef>
-where
-    Var: Display,
-    Coef: Display + PartialEq + One + Neg<Output = Coef>,
-{
-    /// Convert to a LaTeX string.
-    pub fn to_latex(&self) -> String {
-        let is_simple = |s: &str| {
-            // Numeric: digits and dots
-            if s.chars().all(|c| c.is_ascii_digit() || c == '.') {
-                return true;
-            }
-            // Alphabetic identifier
-            if s.chars().all(|c| c.is_alphabetic()) {
-                return true;
-            }
-            // Braced identifier like {uuid} or {name}
-            if s.starts_with('{') && s.ends_with('}') && s.matches('{').count() == 1 {
-                return true;
-            }
-            false
-        };
-
-        let fmt_scalar_mul = |coef: &Coef, var: &Var| -> String {
-            if coef.is_one() {
-                format!("{var}")
-            } else if *coef == Coef::one().neg() {
-                format!("-{var}")
-            } else {
-                let coef_str = coef.to_string();
-                if is_simple(&coef_str) {
-                    format!("{coef_str} {var}")
-                } else {
-                    format!("({coef_str}) {var}")
-                }
-            }
-        };
-
-        let mut pairs = self.0.iter();
-        let mut output = String::new();
-
-        if let Some((var, coef)) = pairs.next() {
-            output.push_str(&fmt_scalar_mul(coef, var));
-        } else {
-            output.push('0');
-        }
-
-        for (var, coef) in pairs {
-            output.push_str(" + ");
-            output.push_str(&fmt_scalar_mul(coef, var));
-        }
-
-        output
-    }
-}
-
 /// Constructs a combination from a list of terms (coefficient-variable pairs).
 impl<Var, Coef> FromIterator<(Coef, Var)> for Combination<Var, Coef>
 where
@@ -261,17 +249,40 @@ impl<'a, Var, Coef> IntoIterator for &'a Combination<Var, Coef> {
     }
 }
 
-/// Print the combination using ASCII.
-///
-/// Intended for debugging/testing. It currently just uses the LaTeX format since we are not yet
-/// using any LaTeX-specific characters there.
 impl<Var, Coef> Display for Combination<Var, Coef>
 where
     Var: Display,
-    Coef: Display + PartialEq + One + Neg<Output = Coef>,
+    Coef: Display + DisplayCoef + Clone + PartialEq + One + Neg<Output = Coef>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_latex())
+        let fmt_scalar_mul = |f: &mut std::fmt::Formatter<'_>, coef: &Coef, var: &Var| {
+            if coef.is_one() {
+                write!(f, "{var}")
+            } else if *coef == Coef::one().neg() {
+                write!(f, "-{var}")
+            } else if coef.needs_parentheses() {
+                write!(f, "({coef}) {var}")
+            } else {
+                write!(f, "{coef} {var}")
+            }
+        };
+
+        let mut pairs = self.0.iter();
+        if let Some((var, coef)) = pairs.next() {
+            fmt_scalar_mul(f, coef, var)?;
+        } else {
+            write!(f, "0")?;
+        }
+        for (var, coef) in pairs {
+            if coef.has_negative_sign() {
+                write!(f, " - ")?;
+                fmt_scalar_mul(f, &coef.clone().neg(), var)?;
+            } else {
+                write!(f, " + ")?;
+                fmt_scalar_mul(f, coef, var)?;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -383,6 +394,29 @@ where
     }
 }
 
+impl<Var, Coef> SubAssign for Combination<Var, Coef>
+where
+    Var: Ord,
+    Coef: Default + Add<Output = Coef> + Neg<Output = Coef> + Zero,
+{
+    fn sub_assign(&mut self, rhs: Self) {
+        *self += -rhs;
+    }
+}
+
+impl<Var, Coef> Sub for Combination<Var, Coef>
+where
+    Var: Ord,
+    Coef: Default + Add<Output = Coef> + Neg<Output = Coef> + Zero,
+{
+    type Output = Self;
+
+    fn sub(mut self, rhs: Self) -> Self::Output {
+        self -= rhs;
+        self
+    }
+}
+
 impl<Var, Coef> AbGroup for Combination<Var, Coef>
 where
     Var: Ord,
@@ -429,6 +463,16 @@ where
         Exp: One,
     {
         Monomial([(var, Exp::one())].into_iter().collect())
+    }
+
+    /// Number of variables appearing in the monomial.
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    /// Is the monomial empty, i.e., equal to one?
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 
     /// Iterates over the variables used in the monomial.
@@ -530,16 +574,47 @@ where
             }
             Ok(())
         };
-        if let Some((var, exp)) = pairs.next() {
-            fmt_power(f, var, exp)?;
-        } else {
-            write!(f, "1")?;
-        }
+        let Some((var, exp)) = pairs.next() else {
+            return write!(f, "1");
+        };
+        fmt_power(f, var, exp)?;
         for (var, exp) in pairs {
             write!(f, " ")?;
             fmt_power(f, var, exp)?;
         }
         Ok(())
+    }
+}
+
+impl<Var, Exp> Monomial<Var, Exp>
+where
+    Var: Display,
+    Exp: Display + PartialEq + One,
+{
+    /// Convert to a LaTeX string, separating variables with `\cdot`.
+    pub fn to_latex(&self) -> String {
+        let fmt_power = |var: &Var, exp: &Exp| {
+            if exp.is_one() {
+                format!("{var}")
+            } else {
+                let exp = exp.to_string();
+                if exp.len() == 1 {
+                    format!("{var}^{exp}")
+                } else {
+                    format!("{var}^{{{exp}}}")
+                }
+            }
+        };
+        let mut pairs = self.0.iter();
+        let Some((var, exp)) = pairs.next() else {
+            return "1".to_string();
+        };
+        let mut output = fmt_power(var, exp);
+        for (var, exp) in pairs {
+            output.push_str(" \\cdot ");
+            output.push_str(&fmt_power(var, exp));
+        }
+        output
     }
 }
 
@@ -638,6 +713,9 @@ mod tests {
         let vars: Vec<_> = combination.variables().cloned().collect();
         assert_eq!(vars, vec!['x', 'y']);
 
+        let combination = x() * 2 - y() * 3;
+        assert_eq!(combination.to_string(), "2 x - 3 y");
+
         assert_eq!(Combination::<char, i32>::zero().to_string(), "0");
 
         let x = Combination::generator('x');
@@ -663,12 +741,17 @@ mod tests {
         assert_eq!(vars, vec!['x', 'y']);
         assert_eq!(monomial.map_variables(|_| 'x').to_string(), "x^3");
 
-        assert_eq!(Monomial::<char, u32>::one().to_string(), "1");
+        let monomial: Monomial<char, u32> = Monomial::one();
+        assert_eq!(monomial.to_string(), "1");
+        assert_eq!(monomial.to_latex(), "1");
 
         let monomial: Monomial<_, u32> = [('x', 1), ('y', 0), ('x', 2)].into_iter().collect();
         assert_eq!(monomial.normalize().to_string(), "x^3");
 
         let monomial: Monomial<_, i32> = [('x', -1), ('y', -2), ('x', 2)].into_iter().collect();
         assert_eq!(monomial.normalize().to_string(), "x y^{-2}");
+
+        let monomial: Monomial<_, i32> = [('x', 1), ('y', 2), ('z', -1)].into_iter().collect();
+        assert_eq!(monomial.to_latex(), "x \\cdot y^2 \\cdot z^{-1}");
     }
 }

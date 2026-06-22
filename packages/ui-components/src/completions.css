@@ -17,6 +17,18 @@
     display: flex;
     gap: 0.25em;
     justify-content: space-between;
+    min-width: 0;
+}
+
+.completion-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.completion-icon {
+    flex-shrink: 0;
 }
 
 .completion-description {

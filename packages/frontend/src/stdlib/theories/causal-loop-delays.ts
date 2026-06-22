@@ -1,6 +1,11 @@
+import { lazy } from "solid-js";
+
 import { ThDelayableSignedCategory } from "catlog-wasm";
 import { Theory, type TheoryMeta } from "../../theory";
 import * as analyses from "../analyses";
+
+const ObjectCellEditor = lazy(() => import("../../model/object_cell_editor"));
+const MorphismCellEditor = lazy(() => import("../../model/morphism_cell_editor"));
 
 export default function createCausalLoopDelaysTheory(theoryMeta: TheoryMeta): Theory {
     const thDelayedSignedCategory = new ThDelayableSignedCategory();
@@ -19,6 +24,7 @@ export default function createCausalLoopDelaysTheory(theoryMeta: TheoryMeta): Th
             {
                 tag: "ObType",
                 obType: { tag: "Basic", content: "Object" },
+                editor: ObjectCellEditor,
                 name: "Variable",
                 shortcut: ["V"],
                 description: "Variable quantity",
@@ -29,6 +35,7 @@ export default function createCausalLoopDelaysTheory(theoryMeta: TheoryMeta): Th
                     tag: "Hom",
                     content: { tag: "Basic", content: "Object" },
                 },
+                editor: MorphismCellEditor,
                 name: "Positive link",
                 shortcut: ["P"],
                 description: "Fast-acting positive influence",
@@ -38,6 +45,7 @@ export default function createCausalLoopDelaysTheory(theoryMeta: TheoryMeta): Th
             {
                 tag: "MorType",
                 morType: { tag: "Basic", content: "Negative" },
+                editor: MorphismCellEditor,
                 name: "Negative link",
                 shortcut: ["N"],
                 description: "Fast-acting negative influence",
@@ -47,6 +55,7 @@ export default function createCausalLoopDelaysTheory(theoryMeta: TheoryMeta): Th
             {
                 tag: "MorType",
                 morType: { tag: "Basic", content: "PositiveSlow" },
+                editor: MorphismCellEditor,
                 name: "Delayed positive link",
                 description: "Slow-acting positive influence",
                 arrowStyle: "plusCaesura",
@@ -55,6 +64,7 @@ export default function createCausalLoopDelaysTheory(theoryMeta: TheoryMeta): Th
             {
                 tag: "MorType",
                 morType: { tag: "Basic", content: "NegativeSlow" },
+                editor: MorphismCellEditor,
                 name: "Delayed negative link",
                 description: "Slow-acting negative influence",
                 arrowStyle: "minusCaesura",

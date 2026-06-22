@@ -16,10 +16,10 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
-use super::ODEAnalysis;
+use super::{ODEAnalysis, Parameter};
 use crate::dbl::{
     model::{DiscreteTabModel, FpDblModel, ModalDblModel, TabEdge},
-    theory::{ModalMorType, ModalObType, TabMorType, TabObType},
+    theory::{ModalMorType, ModalObType, TabMorType, TabObType, Unital},
 };
 use crate::one::FgCategory;
 use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
@@ -186,9 +186,6 @@ pub struct MassActionProblemData {
     pub duration: f32,
 }
 
-/// Symbolic parameter in mass-action polynomial system.
-type Parameter<Id> = Polynomial<Id, f32, i8>;
-
 /// Mass-action ODE analysis for Petri nets.
 ///
 /// This struct implements the object part of the functorial semantics for reaction
@@ -214,7 +211,7 @@ impl PetriNetMassActionAnalysis {
     /// Creates a mass-action system with symbolic rate coefficients.
     pub fn build_system(
         &self,
-        model: &ModalDblModel,
+        model: &ModalDblModel<Unital>,
         mass_conservation_type: MassConservationType,
     ) -> PolynomialSystem<QualifiedName, Parameter<FlowParameter>, i8> {
         let mut sys = PolynomialSystem::new();
@@ -488,7 +485,7 @@ mod tests {
         let sys = StockFlowMassActionAnalysis::default()
             .build_system(&model, analyses::ode::MassConservationType::Balanced);
         let expected = expect!([r#"
-            dx = (-f) x y
+            dx = -f x y
             dy = f x y
         "#]);
         expected.assert_eq(&sys.to_string());
@@ -505,8 +502,8 @@ mod tests {
             ),
         );
         let expected = expect!([r#"
-            dx = (-Outgoing(f)) x y
-            dy = (Incoming(f)) x y
+            dx = -Outgoing(f) x y
+            dy = Incoming(f) x y
         "#]);
         expected.assert_eq(&sys.to_string());
     }
@@ -521,7 +518,7 @@ mod tests {
         let sys = StockFlowMassActionAnalysis::default()
             .build_system(&model, analyses::ode::MassConservationType::Balanced);
         let expected = expect!([r#"
-            dx = (-f) x y^{-1}
+            dx = -f x y^{-1}
             dy = f x y^{-1}
         "#]);
         expected.assert_eq(&sys.to_string());
@@ -538,8 +535,8 @@ mod tests {
             ),
         );
         let expected = expect!([r#"
-            dx = (-Outgoing(f)) x y^{-1}
-            dy = (Incoming(f)) x y^{-1}
+            dx = -Outgoing(f) x y^{-1}
+            dy = Incoming(f) x y^{-1}
         "#]);
         expected.assert_eq(&sys.to_string());
     }
@@ -554,7 +551,7 @@ mod tests {
         let sys = PetriNetMassActionAnalysis::default()
             .build_system(&model, analyses::ode::MassConservationType::Balanced);
         let expected = expect!([r#"
-            dx = (-f) c x
+            dx = -f c x
             dy = f c x
             dc = 0
         "#]);
@@ -572,9 +569,9 @@ mod tests {
             ),
         );
         let expected = expect!([r#"
-            dx = (-Outgoing(f)) c x
-            dy = (Incoming(f)) c x
-            dc = (Incoming(f) + -Outgoing(f)) c x
+            dx = -Outgoing(f) c x
+            dy = Incoming(f) c x
+            dc = (Incoming(f) - Outgoing(f)) c x
         "#]);
         expected.assert_eq(&sys.to_string());
     }
@@ -590,9 +587,9 @@ mod tests {
             ),
         );
         let expected = expect!([r#"
-            dx = (-(x->[f])) c x
-            dy = (([f]->y)) c x
-            dc = (([f]->c) + -(c->[f])) c x
+            dx = -(x->[f]) c x
+            dy = ([f]->y) c x
+            dc = (([f]->c) - (c->[f])) c x
         "#]);
         expected.assert_eq(&sys.to_string());
     }
@@ -612,11 +609,11 @@ mod tests {
         let expected = vec![
             LatexEquation {
                 lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string(),
-                rhs: "(-Outgoing(f)) x y".to_string(),
+                rhs: "-Outgoing(f) \\cdot x \\cdot y".to_string(),
             },
             LatexEquation {
                 lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string(),
-                rhs: "(Incoming(f)) x y".to_string(),
+                rhs: "Incoming(f) \\cdot x \\cdot y".to_string(),
             },
         ];
         assert_eq!(expected, sys.to_latex_equations());

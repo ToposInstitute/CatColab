@@ -2,6 +2,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use super::app::{AppCtx, AppError, AppState};
+use crate::user_state_updates::update_profile_for_users;
 
 /// Notify the backend that a user has signed up or signed in.
 pub async fn sign_up_or_sign_in(ctx: AppCtx) -> Result<(), AppError> {
@@ -43,8 +44,11 @@ pub async fn user_by_username(
 #[qubit::ts]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UserSummary {
+    /// The Firebase user ID.
     pub id: String,
+    /// The user's chosen username, if set.
     pub username: Option<String>,
+    /// The user's chosen display name, if set.
     #[serde(rename = "displayName")]
     pub display_name: Option<String>,
 }
@@ -113,6 +117,16 @@ pub async fn set_active_user_profile(ctx: AppCtx, profile: UserProfile) -> Resul
         profile.display_name,
     );
     query.execute(&ctx.state.db).await?;
+
+    // Update user state for the user and all peers who share documents with them.
+    if let Err(e) = update_profile_for_users(&ctx.state, &user.user_id).await {
+        tracing::error!(
+            user_id = %user.user_id,
+            error = %e,
+            "Failed to update user states after profile update"
+        );
+    }
+
     Ok(())
 }
 
@@ -120,7 +134,9 @@ pub async fn set_active_user_profile(ctx: AppCtx, profile: UserProfile) -> Resul
 #[qubit::ts]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UserProfile {
+    /// The user's chosen username.
     pub username: Option<String>,
+    /// The user's chosen display name.
     #[serde(rename = "displayName")]
     pub display_name: Option<String>,
     // TODO: More fields, such as:

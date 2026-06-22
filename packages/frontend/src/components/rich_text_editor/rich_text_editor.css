@@ -59,6 +59,19 @@
     align-items: center;
 }
 
+.menubar-reopen-button-wrapper button,
+.menubar button {
+    overflow: hidden;
+    padding: 3px;
+    border: none;
+    cursor: pointer;
+    background-color: transparent;
+    /* override default on firefox */
+    transition:
+        background-color 0.2s ease,
+        transform 0.2s ease;
+}
+
 .menubar-left > :first-child > button {
     border-radius: 5px 0 0 0;
 }
@@ -73,6 +86,7 @@
     right: 2px;
     z-index: 1;
 
+    /* stylelint-disable-next-line no-descending-specificity -- different element from .menubar-left button */
     & button {
         padding: 0;
         margin: 3px;
@@ -83,31 +97,6 @@
 
 .menubar-reopen-button:hover {
     background-color: var(--color-hover-button-bg);
-}
-
-.menubar select .menubar button {
-    transition:
-        background-color 0.2s ease,
-        transform 0.2s ease;
-}
-
-.menubar select:hover,
-.menubar-reopen-button-wrapper button:hover,
-.menubar button:hover {
-    background-color: var(--color-hover-button-bg);
-}
-
-.menubar-reopen-button-wrapper button,
-.menubar button {
-    overflow: hidden;
-    padding: 3px;
-    border: none;
-    cursor: pointer;
-    background-color: transparent;
-    /* override default on firefox */
-    transition:
-        background-color 0.2s ease,
-        transform 0.2s ease;
 }
 
 .menubar button.active {
@@ -121,6 +110,12 @@
     transition:
         background-color 0.15s ease,
         transform 0.15s ease;
+}
+
+.menubar select:hover,
+.menubar-reopen-button-wrapper button:hover,
+.menubar button:hover {
+    background-color: var(--color-hover-button-bg);
 }
 
 .menubar select option {

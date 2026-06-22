@@ -6,9 +6,6 @@
   self,
   ...
 }:
-let
-  keys = import ../../ssh-keys.nix;
-in
 {
   imports = [
     (modulesPath + "/profiles/qemu-guest.nix")
@@ -33,9 +30,23 @@ in
     environmentFile = /etc/catcolab/catcolab-secrets.env;
     host = {
       enable = true;
-      userKeys = keys.allUserKeys;
+      userKeys = [];
     };
   };
+
+  # Accept any SSH key for the local dev VM. This avoids requiring developers
+  # to have their SSH keys committed to the repository. The AuthorizedKeysCommand
+  # script simply echoes back whatever public key the client presents.
+  services.openssh.authorizedKeysCommand = "/etc/ssh/accept-all-keys %t %k";
+  services.openssh.authorizedKeysCommandUser = "nobody";
+  environment.etc."ssh/accept-all-keys" = {
+    mode = "0755";
+    text = ''
+      #!/bin/sh
+      echo "$1 $2"
+    '';
+  };
+  users.allowNoPasswordLogin = true;
 
   services.postgresql.settings.listen_addresses = lib.mkForce "*";
   services.postgresql.authentication = ''

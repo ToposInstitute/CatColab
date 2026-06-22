@@ -6,13 +6,15 @@
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 
-use catlog::dbl::theory;
+use catlog::dbl::theory::{self as theory, NonUnital, Unital};
 use catlog::one::Path;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
-use catlog::zero::{QualifiedLabel, name};
+use catlog::zero::name;
 
+use super::latex::LatexEquations;
 use super::model_morphism::{MotifOccurrence, MotifsOptions, motifs};
 use super::result::JsResult;
+use super::theories::MassActionAnalysisLogic;
 use super::{analyses::*, model::DblModel, theory::DblTheory};
 
 /// The empty or initial theory.
@@ -92,19 +94,13 @@ impl ThSchema {
     pub fn render_sql(&self, model: &DblModel, backend: &str) -> JsResult<String, String> {
         analyses::sql::SQLBackend::try_from(backend)
             .and_then(|backend| {
-                analyses::sql::SQLAnalysis::new(backend).render(
-                    model.discrete()?,
-                    |id| {
-                        model
-                            .ob_generator_label(id)
-                            .unwrap_or_else(|| QualifiedLabel::single("".into()))
-                    },
-                    |id| {
-                        model
-                            .mor_generator_label(id)
-                            .unwrap_or_else(|| QualifiedLabel::single("".into()))
-                    },
-                )
+                analyses::sql::SQLAnalysis::new(backend)
+                    .render(
+                        model.discrete()?,
+                        |id| model.ob_namespace.label_string(id),
+                        |id| model.mor_namespace.label_string(id),
+                    )
+                    .map_err(|e| format!("{}", e))
             })
             .into()
     }
@@ -315,7 +311,7 @@ impl ThCategoryLinks {
         model: &DblModel,
         data: analyses::ode::MassActionProblemData,
     ) -> Result<ODEResultWithEquations, String> {
-        mass_action_tab(model, data)
+        mass_action_simulation(model, data, MassActionAnalysisLogic::StockFlow)
     }
 
     /// Returns the symbolic mass-action equations in LaTeX format.
@@ -324,8 +320,8 @@ impl ThCategoryLinks {
         &self,
         model: &DblModel,
         data: MassActionEquationsData,
-    ) -> Result<ODELatex, String> {
-        mass_action_equations_tab(model, data)
+    ) -> Result<LatexEquations, String> {
+        mass_action_equations(model, data, MassActionAnalysisLogic::StockFlow)
     }
 }
 
@@ -352,7 +348,7 @@ impl ThCategorySignedLinks {
         model: &DblModel,
         data: analyses::ode::MassActionProblemData,
     ) -> Result<ODEResultWithEquations, String> {
-        mass_action_tab(model, data)
+        mass_action_simulation(model, data, MassActionAnalysisLogic::StockFlow)
     }
 
     /// Returns the symbolic mass-action equations in LaTeX format.
@@ -361,14 +357,14 @@ impl ThCategorySignedLinks {
         &self,
         model: &DblModel,
         data: MassActionEquationsData,
-    ) -> Result<ODELatex, String> {
-        mass_action_equations_tab(model, data)
+    ) -> Result<LatexEquations, String> {
+        mass_action_equations(model, data, MassActionAnalysisLogic::StockFlow)
     }
 }
 
 /// The theory of strict symmetric monoidal categories.
 #[wasm_bindgen]
-pub struct ThSymMonoidalCategory(Rc<theory::ModalDblTheory>);
+pub struct ThSymMonoidalCategory(Rc<theory::ModalDblTheory<Unital>>);
 
 #[wasm_bindgen]
 impl ThSymMonoidalCategory {
@@ -389,7 +385,7 @@ impl ThSymMonoidalCategory {
         model: &DblModel,
         data: analyses::ode::MassActionProblemData,
     ) -> Result<ODEResultWithEquations, String> {
-        mass_action_modal(model, data)
+        mass_action_simulation(model, data, MassActionAnalysisLogic::PetriNet)
     }
 
     /// Returns the symbolic mass-action equations in LaTeX format.
@@ -398,8 +394,8 @@ impl ThSymMonoidalCategory {
         &self,
         model: &DblModel,
         data: MassActionEquationsData,
-    ) -> Result<ODELatex, String> {
-        mass_action_equations_modal(model, data)
+    ) -> Result<LatexEquations, String> {
+        mass_action_equations(model, data, MassActionAnalysisLogic::PetriNet)
     }
 
     /// Simulates the stochastic mass-action system derived from a model.
@@ -411,7 +407,7 @@ impl ThSymMonoidalCategory {
     ) -> Result<ODEResult, String> {
         Ok(ODEResult(JsResult::Ok(
             analyses::stochastic::PetriNetStochasticMassActionAnalysis::default()
-                .build_stochastic_system(model.modal()?, data)
+                .build_stochastic_system(model.modal_unital()?, data)
                 .simulate(),
         )))
     }
@@ -423,8 +419,82 @@ impl ThSymMonoidalCategory {
         model: &DblModel,
         data: analyses::reachability::ReachabilityProblemData,
     ) -> Result<bool, String> {
-        let model = model.modal().map_err(|_| "Model should be of a modal theory")?;
+        let model = model.modal_unital().map_err(|_| "Model should be of a modal theory")?;
         Ok(analyses::reachability::subreachability(model, data))
+    }
+}
+
+/// A theory of systems of polynomial ODEs
+#[wasm_bindgen]
+pub struct ThPolynomialODE(Rc<theory::ModalDblTheory<NonUnital>>);
+
+#[wasm_bindgen]
+impl ThPolynomialODE {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Rc::new(theories::th_polynomial_ode_system()))
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory(self.0.clone().into())
+    }
+
+    /// Simulates the ODE system derived from a model.
+    #[wasm_bindgen(js_name = "polynomialODESimulation")]
+    pub fn polynomial_ode_simulation(
+        &self,
+        model: &DblModel,
+        data: analyses::ode::PolynomialODEProblemData,
+    ) -> Result<ODEResultWithEquations, String> {
+        polynomial_ode_simulation(model, data)
+    }
+
+    /// Returns the symbolic equations in LaTeX format.
+    #[wasm_bindgen(js_name = "polynomialODEEquations")]
+    pub fn polynomial_ode_equations(
+        &self,
+        model: &DblModel,
+        data: PolynomialODEEquationsData,
+    ) -> Result<LatexEquations, String> {
+        polynomial_ode_equations(model, data)
+    }
+}
+
+/// A theory of systems of signed polynomial ODEs
+#[wasm_bindgen]
+pub struct ThSignedPolynomialODE(Rc<theory::ModalDblTheory<NonUnital>>);
+
+#[wasm_bindgen]
+impl ThSignedPolynomialODE {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self(Rc::new(theories::th_signed_polynomial_ode_system()))
+    }
+
+    #[wasm_bindgen]
+    pub fn theory(&self) -> DblTheory {
+        DblTheory(self.0.clone().into())
+    }
+
+    /// Simulates the ODE system derived from a model.
+    #[wasm_bindgen(js_name = "polynomialODESimulation")]
+    pub fn polynomial_ode_simulation(
+        &self,
+        model: &DblModel,
+        data: analyses::ode::PolynomialODEProblemData,
+    ) -> Result<ODEResultWithEquations, String> {
+        polynomial_ode_simulation(model, data)
+    }
+
+    /// Returns the symbolic equations in LaTeX format.
+    #[wasm_bindgen(js_name = "polynomialODEEquations")]
+    pub fn polynomial_ode_equations(
+        &self,
+        model: &DblModel,
+        data: PolynomialODEEquationsData,
+    ) -> Result<LatexEquations, String> {
+        polynomial_ode_equations(model, data)
     }
 }
 
@@ -467,7 +537,7 @@ impl ThPowerSystem {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use notebook_types::current::theory::*;
+    use catcolab_document_types::current::theory::*;
     use ustr::ustr;
 
     #[test]

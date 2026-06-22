@@ -9,7 +9,54 @@ announcement and a blog post. Minor versions are not announced but allow
 features and fixes to be released with greater frequency. Minor versions often
 include notable new features.
 
-## [Unreleased]
+## [v0.6.0](https://github.com/ToposInstitute/CatColab/releases/tag/v0.6.0) (2026-05-27)
+
+Blog post: [CatColab v0.6:
+Starling](https://topos.institute/blog/2026-06-01-catcolab-0-6-starling/)
+
+### Added
+
+- Composing stock and flow diagrams by sharing/identifying stocks
+  ([#1196](https://github.com/ToposInstitute/CatColab/pull/1196)). Composing
+  models is now supported for *all* logics.
+- New logics: systems of polynomial ODEs, in which the coefficients have
+  arbitrary sign ([#1176](https://github.com/ToposInstitute/CatColab/pull/1176),
+  [#1211](https://github.com/ToposInstitute/CatColab/pull/1211)) or fixed sign
+  ([#1194](https://github.com/ToposInstitute/CatColab/pull/1194))
+- The history of a document is now viewable, and a document can be reverted to a
+  previous state ([#1175](https://github.com/ToposInstitute/CatColab/pull/1175))
+- New service: the backend now provides a compute service for
+  [Julia](https://julialang.org/) and
+  [AlgebraicJulia](https://www.algebraicjulia.org/)
+  ([#1132](https://github.com/ToposInstitute/CatColab/pull/1132))
+- New analysis: table view for instances of a schema
+  ([#835](https://github.com/ToposInstitute/CatColab/pull/835)), based on the
+  new Julia service
+- Experimental: Petri nets created in
+  [Petrinaut](https://www.npmjs.com/package/@hashintel/petrinaut) and exported
+  as JSON can be imported into CatColab
+  ([#1187](https://github.com/ToposInstitute/CatColab/pull/1187))
+
+### Changed
+
+- UI/UX: Better interface to instantiate and specialize models, including a new
+  widget to search over existing models
+  ([#1210](https://github.com/ToposInstitute/CatColab/pull/1210),
+  [#1244](https://github.com/ToposInstitute/CatColab/pull/1244))
+- Backend architecture: Automerge meta-documents are now created by the backend
+  to maintain user state, such as the user's list of documents
+  ([#976](https://github.com/ToposInstitute/CatColab/pull/976))
+- Frontend architecture: TypeScript methods to manipulate CatColab documents
+  independent of the UI have been extracted into a new package
+  (`packages/document-methods`)
+  ([#1238](https://github.com/ToposInstitute/CatColab/pull/1238))
+- Experimental: the plugin for
+  [Patchwork](https://www.inkandswitch.com/project/patchwork/) (previously
+  `packages/patchwork`) has been replaced with a plugin for new Patchwork/GAIOS
+  (now `packages/gaios`)
+  ([#1233](https://github.com/ToposInstitute/CatColab/pull/1233))
+
+## [v0.5.1](https://github.com/ToposInstitute/CatColab/releases/tag/v0.5.1) & [v0.5.2](https://github.com/ToposInstitute/CatColab/releases/tag/v0.5.2) (2026-03-24)
 
 ### Added
 
@@ -29,6 +76,9 @@ include notable new features.
 
 ## [v0.5.0](https://github.com/ToposInstitute/CatColab/releases/tag/v0.5.0) (2026-03-09)
 
+Blog post: [CatColab v0.5:
+Sandpiper](https://topos.institute/blog/2026-03-23-catcolab-0-5-sandpiper/)
+
 ### Added
 
 - Composing Petri nets by sharing/identifying places
@@ -46,7 +96,7 @@ include notable new features.
 
 ### Changed
 
-- Backend re-architecture
+- Backend architecture
   ([#875](https://github.com/ToposInstitute/CatColab/pull/875)): syncing of
   [Automerge](https://automerge.org/) documents is now provided by the Rust
   crate [samod](https://github.com/alexjg/samod) instead of the Node package

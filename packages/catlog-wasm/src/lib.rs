@@ -21,6 +21,7 @@ pub mod theory;
 pub mod wd;
 
 pub mod analyses;
+pub mod latex;
 #[allow(clippy::new_without_default)]
 #[allow(missing_docs)]
 pub mod theories;

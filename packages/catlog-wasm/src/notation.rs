@@ -3,7 +3,7 @@
 /// An elaborator.
 ///
 /// Elaboration is the process of transforming notation (as declared in
-/// notebook-types) into syntax and values. This can possibly fail. Eventually, this
+/// document-types) into syntax and values. This can possibly fail. Eventually, this
 /// struct may have some role to play in accumulating errors, but for now it is a
 /// singleton.
 pub struct Elaborator;

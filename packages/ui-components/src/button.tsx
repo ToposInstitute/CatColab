@@ -12,7 +12,7 @@ export function Button(
         children: JSX.Element;
     } & ComponentProps<"button">,
 ) {
-    const [props, buttonProps] = splitProps(allProps, ["variant", "children"]);
+    const [props, buttonProps] = splitProps(allProps, ["variant", "children", "class"]);
 
     const variantClass = () => {
         switch (props.variant) {
@@ -29,9 +29,9 @@ export function Button(
 
     return (
         <button
-            class={`button ${variantClass()}`}
-            type={buttonProps.type || "button"}
             {...buttonProps}
+            class={`button ${variantClass()}${props.class ? ` ${props.class}` : ""}`}
+            type={buttonProps.type || "button"}
         >
             {props.children}
         </button>

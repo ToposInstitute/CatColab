@@ -1,3 +1,24 @@
+.separator {
+    display: flex;
+    align-items: center;
+    text-align: center;
+}
+
+.separator::before,
+.separator::after {
+    content: "";
+    flex: 1;
+    border-bottom: 2px solid var(--color-gray-750);
+}
+
+.separator:not(:empty)::before {
+    margin-right: 0.5em;
+}
+
+.separator:not(:empty)::after {
+    margin-left: 0.5em;
+}
+
 .login {
     min-width: 20em;
 
@@ -23,27 +44,6 @@
     & .separator {
         margin: 1rem 0;
     }
-}
-
-.separator {
-    display: flex;
-    align-items: center;
-    text-align: center;
-}
-
-.separator::before,
-.separator::after {
-    content: "";
-    flex: 1;
-    border-bottom: 2px solid var(--color-gray-750);
-}
-
-.separator:not(:empty)::before {
-    margin-right: 0.5em;
-}
-
-.separator:not(:empty)::after {
-    margin-left: 0.5em;
 }
 
 .login-gate {

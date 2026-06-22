@@ -88,6 +88,7 @@ impl<'a> Evaluator<'a> {
             TmS_::Proj(tm, field, label) => self.proj(&self.eval_tm(tm), *field, *label),
             TmS_::Tt => TmV::tt(),
             TmS_::Id(x) => TmV::id(self.eval_tm(x)),
+            TmS_::Tab(mor) => TmV::tab(self.eval_tm(mor)),
             TmS_::Compose(f, g) => TmV::compose(self.eval_tm(f), self.eval_tm(g)),
             TmS_::ObApp(name, x) => TmV::app(*name, self.eval_tm(x)),
             TmS_::List(elems) => TmV::list(elems.iter().map(|tm| self.eval_tm(tm)).collect()),
@@ -215,6 +216,7 @@ impl<'a> Evaluator<'a> {
             TmV_::Cons(fields) => TmS::cons(fields.map(|tm| self.quote_tm(tm))),
             TmV_::Tt => TmS::tt(),
             TmV_::Id(x) => TmS::id(self.quote_tm(x)),
+            TmV_::Tab(mor) => TmS::tab(self.quote_tm(mor)),
             TmV_::Compose(f, g) => TmS::compose(self.quote_tm(f), self.quote_tm(g)),
             TmV_::Meta(mv) => TmS::meta(*mv),
         }
@@ -260,7 +262,7 @@ impl<'a> Evaluator<'a> {
     ///
     /// Ignores specializations: specializations are handled in [`Evaluator::subtype`].
     ///
-    /// On failure, returns a doc which describes the obstruction to convertability.
+    /// On failure, returns a doc which describes the obstruction to convertibility.
     pub fn convertible_ty<'b>(&self, ty1: &TyV, ty2: &TyV) -> Result<(), D<'b>> {
         match (&**ty1, &**ty2) {
             (TyV_::Object(ot1), TyV_::Object(ot2)) => {
@@ -337,12 +339,15 @@ impl<'a> Evaluator<'a> {
                         })
                         .collect();
                     TmV::cons(row)
-                } else {
+                }
+                // Is this right? Couldn't a cons be nested below top-level and so not get expanded right?
+                else {
                     v.clone()
                 }
             }
             TmV_::Tt => TmV::tt(),
             TmV_::Id(x) => TmV::id(self.eta(x, None)),
+            TmV_::Tab(mor) => TmV::tab(self.eta(mor, None)),
             TmV_::Compose(f, g) => TmV::compose(self.eta(f, None), self.eta(g, None)),
             TmV_::Meta(_) => v.clone(),
         }
@@ -350,7 +355,7 @@ impl<'a> Evaluator<'a> {
 
     /// Check if two terms are definitionally equal.
     ///
-    /// On failure, returns a doc which describes the obstruction to convertability.
+    /// On failure, returns a doc which describes the obstruction to convertibility.
     ///
     /// Assumes that the type of tm1 is convertible with the type of tm2. First
     /// attempts to do conversion checking without eta-expansion (strict mode),
@@ -401,6 +406,14 @@ impl<'a> Evaluator<'a> {
                 } else {
                     Err(t(format!("Holes {} and {} are not equal.", mv1, mv2)))
                 }
+            }
+            (TmV_::Id(x1), TmV_::Id(x2)) => self.equal_tm_helper(x1, x2, strict1, strict2),
+            (TmV_::Compose(f1, g1), TmV_::Compose(f2, g2)) => {
+                self.equal_tm_helper(f1, f2, strict1, strict2)?;
+                self.equal_tm_helper(g1, g2, strict1, strict2)
+            }
+            (TmV_::Tab(mor1), TmV_::Tab(mor2)) => {
+                self.equal_tm_helper(mor1, mor2, strict1, strict2)
             }
             _ => Err(t(format!(
                 "failed to match terms {} and {}",

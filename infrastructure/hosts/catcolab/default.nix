@@ -32,6 +32,7 @@ in
       port = 8000;
       hostname = "backend.catcolab.org";
     };
+    julia.enable = true;
     environmentFile = config.age.secrets.catcolabSecrets.path;
     host = {
       enable = true;

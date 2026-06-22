@@ -1,0 +1,18 @@
+/*-- scss:defaults --*/
+
+/*-- scss:rules --*/
+
+// Callouts
+// ========
+.callout .callout-header,
+.callout .callout-body {
+    font-size: 1rem !important;
+}
+
+// TikZ images
+// ===========
+.tikz {
+    display: flex;
+    justify-content: center;
+    padding-bottom: 1em;
+}

@@ -2,12 +2,9 @@ import { Match, Switch, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
-import {
-    type CellConstructor,
-    type FormalCellEditorProps,
-    NotebookEditor,
-    newFormalCell,
-} from "../notebook";
+import { Nb } from "catcolab-document-methods";
+import { type FocusHandle } from "catcolab-ui-components";
+import { type CellConstructor, type FormalCellEditorProps, NotebookEditor } from "../notebook";
 import type { AnalysisMeta, DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
 import { LiveAnalysisContext } from "./context";
 import {
@@ -20,7 +17,10 @@ import type { Analysis } from "./types";
 
 /** Notebook editor for analyses of models of double theories.
  */
-export function AnalysisNotebookEditor(props: { liveAnalysis: LiveAnalysisDoc }) {
+export function AnalysisNotebookEditor(props: {
+    liveAnalysis: LiveAnalysisDoc;
+    focus: FocusHandle;
+}) {
     const liveDoc = () => props.liveAnalysis.liveDoc;
 
     const cellConstructors = () => {
@@ -43,7 +43,7 @@ export function AnalysisNotebookEditor(props: { liveAnalysis: LiveAnalysisDoc })
                 changeNotebook={(f) => liveDoc().changeDoc((doc) => f(doc.notebook))}
                 formalCellEditor={AnalysisCellEditor}
                 cellConstructors={cellConstructors()}
-                noShortcuts={true}
+                focus={props.focus}
             />
         </LiveAnalysisContext.Provider>
     );
@@ -100,7 +100,7 @@ function analysisCellConstructor<T>(meta: AnalysisMeta<T>): CellConstructor<Anal
         name,
         description,
         construct: () =>
-            newFormalCell({
+            Nb.newFormalCell({
                 id,
                 content: initialContent(),
             }),

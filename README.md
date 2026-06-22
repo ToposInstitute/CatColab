@@ -41,8 +41,12 @@ A version history is maintained in the [`CHANGELOG`](CHANGELOG.md).
 | General user | [catcolab.org/help](https://catcolab.org/help) |
 | Software developer | [next.catcolab.org/dev](https://next.catcolab.org/dev) |
 | Mathematician | [next.catcolab.org/math](https://next.catcolab.org/math) |
+| Researcher/developer | [next.catcolab.org/rfc](https://next.catcolab.org/rfc) |
 
 ## License
 
-CatColab is dual-licensed under the MIT license and the Apache License (Version
-2.0). You may use the source code of CatColab under the terms of either license.
+CatColab is dual-licensed under the [MIT](LICENSE-MIT) and
+[Apache-2.0](LICENSE-APACHE) licenses. You may use the source code of CatColab
+under the terms of either license.
+
+You can find a copy of our privacy policy in [`PRIVACY`](PRIVACY.md).

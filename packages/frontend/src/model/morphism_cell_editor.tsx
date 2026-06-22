@@ -1,11 +1,10 @@
-import { createMemo, createSignal, useContext } from "solid-js";
+import { createMemo, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { NameInput } from "catcolab-ui-components";
-import type { MorDecl } from "catlog-wasm";
-import type { CellActions } from "../notebook";
-import type { Theory } from "../theory";
+import { NameInput, useChildFocus } from "catcolab-ui-components";
+import { removeProxyAndCopy } from "../util/remove_proxy_and_copy";
 import { LiveModelContext } from "./context";
+import type { MorphismEditorProps } from "./editors";
 import { obClasses } from "./object_cell_editor";
 import { ObInput } from "./object_input";
 
@@ -13,17 +12,12 @@ import arrowStyles from "../stdlib/arrow_styles.module.css";
 import "./morphism_cell_editor.css";
 
 /** Editor for a morphism declaration cell in a model. */
-export function MorphismCellEditor(props: {
-    morphism: MorDecl;
-    modifyMorphism: (f: (decl: MorDecl) => void) => void;
-    isActive: boolean;
-    actions: CellActions;
-    theory: Theory;
-}) {
+export default function MorphismCellEditor(props: MorphismEditorProps) {
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
 
-    const [activeInput, setActiveInput] = createSignal<MorphismCellInput>("name");
+    // oxlint-disable-next-line solid/reactivity -- Focus handles are stable for a mounted cell.
+    const focus = useChildFocus<MorphismCellInput>(props.focus, { default: "name" });
 
     const morTypeMeta = () => props.theory.modelMorTypeMeta(props.morphism.morType);
 
@@ -75,21 +69,17 @@ export function MorphismCellEditor(props: {
                     ob={props.morphism.dom}
                     setOb={(ob) => {
                         props.modifyMorphism((mor) => {
-                            mor.dom = ob;
+                            mor.dom = removeProxyAndCopy(ob);
                         });
                     }}
                     obType={domType()}
                     applyOp={morTypeMeta()?.domain?.apply}
                     isInvalid={errors().some((err) => err.tag === "Dom" || err.tag === "DomType")}
-                    isActive={props.isActive && activeInput() === "dom"}
-                    deleteForward={() => setActiveInput("name")}
-                    exitBackward={() => setActiveInput("name")}
-                    exitForward={() => setActiveInput("cod")}
-                    exitRight={() => setActiveInput("name")}
-                    hasFocused={() => {
-                        setActiveInput("dom");
-                        props.actions.hasFocused?.();
-                    }}
+                    focus={focus.childFocus("dom")}
+                    deleteForward={() => focus.setActiveChild("name")}
+                    exitBackward={() => focus.setActiveChild("name")}
+                    exitForward={() => focus.setActiveChild("cod")}
+                    exitRight={() => focus.setActiveChild("name")}
                 />
             </div>
             <div class={arrowStyles.arrowWithName}>
@@ -102,19 +92,15 @@ export function MorphismCellEditor(props: {
                                 mor.name = name;
                             });
                         }}
-                        isActive={props.isActive && activeInput() === "name"}
+                        focus={focus.childFocus("name")}
                         deleteBackward={props.actions.deleteBackward}
                         deleteForward={props.actions.deleteForward}
                         exitBackward={props.actions.activateAbove}
-                        exitForward={() => setActiveInput("dom")}
+                        exitForward={() => focus.setActiveChild("dom")}
                         exitUp={props.actions.activateAbove}
                         exitDown={props.actions.activateBelow}
-                        exitLeft={() => setActiveInput("dom")}
-                        exitRight={() => setActiveInput("cod")}
-                        hasFocused={() => {
-                            setActiveInput("name");
-                            props.actions.hasFocused?.();
-                        }}
+                        exitLeft={() => focus.setActiveChild("dom")}
+                        exitRight={() => focus.setActiveChild("cod")}
                     />
                 </div>
                 <div class={[arrowStyles.arrowContainer, arrowClass()].join(" ")}>
@@ -127,21 +113,17 @@ export function MorphismCellEditor(props: {
                     ob={props.morphism.cod}
                     setOb={(ob) => {
                         props.modifyMorphism((mor) => {
-                            mor.cod = ob;
+                            mor.cod = removeProxyAndCopy(ob);
                         });
                     }}
                     obType={codType()}
                     applyOp={morTypeMeta()?.codomain?.apply}
                     isInvalid={errors().some((err) => err.tag === "Cod" || err.tag === "CodType")}
-                    isActive={props.isActive && activeInput() === "cod"}
-                    deleteBackward={() => setActiveInput("name")}
-                    exitBackward={() => setActiveInput("dom")}
+                    focus={focus.childFocus("cod")}
+                    deleteBackward={() => focus.setActiveChild("name")}
+                    exitBackward={() => focus.setActiveChild("dom")}
                     exitForward={props.actions.activateBelow}
-                    exitLeft={() => setActiveInput("name")}
-                    hasFocused={() => {
-                        setActiveInput("cod");
-                        props.actions.hasFocused?.();
-                    }}
+                    exitLeft={() => focus.setActiveChild("name")}
                 />
             </div>
         </div>

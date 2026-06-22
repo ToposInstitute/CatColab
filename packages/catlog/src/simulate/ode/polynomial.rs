@@ -17,7 +17,7 @@ use tsify::Tsify;
 #[cfg(test)]
 use super::ODEProblem;
 use super::ODESystem;
-use crate::zero::alg::Polynomial;
+use crate::zero::{alg::Polynomial, rig::DisplayCoef};
 
 /// A system of polynomial differential equations.
 #[derive(Clone, Derivative)]
@@ -98,7 +98,7 @@ where
     pub fn to_latex_equations(&self) -> Vec<LatexEquation>
     where
         Var: Display,
-        Coef: Display + PartialEq + One + Neg<Output = Coef>,
+        Coef: Display + DisplayCoef + Clone + PartialEq + One + Neg<Output = Coef>,
         Exp: Display + PartialEq + One,
     {
         self.components
@@ -147,8 +147,7 @@ where
 impl<Var, Coef, Exp> Display for PolynomialSystem<Var, Coef, Exp>
 where
     Var: Display,
-    Coef: Display + PartialEq + One + Neg<Output = Coef>,
-    Exp: Display + PartialEq + One,
+    Polynomial<Var, Coef, Exp>: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for (var, component) in self.components.iter() {
@@ -195,6 +194,21 @@ where
     }
 }
 
+impl<Exp> Display for NumericalPolynomialSystem<Exp>
+where
+    Exp: Clone + Ord + Add<Output = Exp> + One + Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let var_name = |i: usize| format!("x{i}");
+        for (var, component) in self.components.iter().enumerate() {
+            let var = var_name(var);
+            let component = component.map_variables(|i| var_name(*i));
+            writeln!(f, "d{var} = {component}")?;
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use expect_test::expect;
@@ -216,8 +230,8 @@ mod tests {
         ];
         let sys: PolynomialSystem<_, _, _> = terms.into_iter().collect();
         let expected = expect![[r#"
-            dS = (-β) I S
-            dI = (-γ) I + β I S
+            dS = -β I S
+            dI = -γ I + β I S
             dR = γ I
         "#]];
         expected.assert_eq(&sys.to_string());

@@ -1,20 +1,19 @@
 import { useNavigate } from "@solidjs/router";
 import { createMemo, createResource, For, Show, useContext } from "solid-js";
-import invariant from "tiny-invariant";
+import { stringify as uuidStringify } from "uuid";
 
-import { DocumentTypeIcon } from "catcolab-ui-components";
+import { DocumentTypeIcon, type FocusHandle } from "catcolab-ui-components";
 import type { Document, Link } from "catlog-wasm";
 import { type Api, type LiveDocWithRef, useApi } from "../api";
 import { TheoryLibraryContext } from "../theory";
+import { useUserState } from "../user/user_state_context";
 import { DocumentMenu } from "./document_menu";
-
-function isDocOwnerless(doc: LiveDocWithRef) {
-    return doc.docRef.permissions.anyone === "Own";
-}
 
 export function DocumentSidebar(props: {
     primaryDoc?: LiveDocWithRef;
     secondaryDoc?: LiveDocWithRef;
+    primaryPaneFocus: FocusHandle;
+    secondaryPaneFocus: FocusHandle;
     refetchPrimaryDoc: () => void;
     refetchSecondaryDoc: () => void;
 }) {
@@ -24,6 +23,8 @@ export function DocumentSidebar(props: {
                 <RelatedDocuments
                     primaryDoc={primaryDoc()}
                     secondaryDoc={props.secondaryDoc}
+                    primaryPaneFocus={props.primaryPaneFocus}
+                    secondaryPaneFocus={props.secondaryPaneFocus}
                     refetchPrimaryDoc={props.refetchPrimaryDoc}
                     refetchSecondaryDoc={props.refetchSecondaryDoc}
                 />
@@ -62,6 +63,8 @@ async function getDocParent(doc: Document, api: Api): Promise<LiveDocWithRef | u
 function RelatedDocuments(props: {
     primaryDoc: LiveDocWithRef;
     secondaryDoc?: LiveDocWithRef;
+    primaryPaneFocus: FocusHandle;
+    secondaryPaneFocus: FocusHandle;
     refetchPrimaryDoc: () => void;
     refetchSecondaryDoc: () => void;
 }) {
@@ -81,6 +84,8 @@ function RelatedDocuments(props: {
                         indent={1}
                         primaryDoc={props.primaryDoc}
                         secondaryDoc={props.secondaryDoc}
+                        primaryPaneFocus={props.primaryPaneFocus}
+                        secondaryPaneFocus={props.secondaryPaneFocus}
                         refetchPrimaryDoc={props.refetchPrimaryDoc}
                         refetchSecondaryDoc={props.refetchSecondaryDoc}
                     />
@@ -95,69 +100,74 @@ function DocumentsTreeNode(props: {
     indent: number;
     primaryDoc: LiveDocWithRef;
     secondaryDoc?: LiveDocWithRef;
+    primaryPaneFocus: FocusHandle;
+    secondaryPaneFocus: FocusHandle;
     refetchPrimaryDoc: () => void;
     refetchSecondaryDoc: () => void;
 }) {
     const api = useApi();
+    const userState = useUserState();
 
-    const [childDocs, { refetch }] = createResource(
-        () => props.doc,
-        // oxlint-disable-next-line solid/reactivity -- createResource fetcher
-        async (doc) => {
-            const docRefId = doc.docRef.refId;
-            invariant(docRefId, "Doc must have a valid ref");
+    const childRefIds = createMemo(() => {
+        const docRefId = props.doc.docRef.refId;
+        if (!docRefId) {
+            return [];
+        }
+        const docInfo = userState.documents[docRefId];
+        if (!docInfo) {
+            return [];
+        }
+        return docInfo.usedBy
+            .filter(
+                (rel) => rel.relationType === "diagram-in" || rel.relationType === "analysis-of",
+            )
+            .map((rel) => uuidStringify(rel.refId));
+    });
 
-            const results = await api.rpc.get_ref_children_stubs.query(docRefId);
+    const childDocSource = createMemo(() => {
+        const refIds = childRefIds();
+        return {
+            createdAtByRefId: Object.fromEntries(
+                refIds.map((refId) => [refId, userState.documents[refId]?.createdAt ?? 0]),
+            ),
+            isParentOwnerless: props.doc.docRef.permissions.anyone === "Own",
+            refIds,
+        };
+    });
 
-            if (results.tag !== "Ok") {
-                throw new Error("couldn't load child documents!");
-            }
+    const [childDocs] = createResource(childDocSource, async (source) => {
+        // Individual failures are skipped to prevent one corrupt document
+        // from crashing the entire sidebar.
+        const childDocs = await Promise.all(
+            source.refIds.map(async (refId) => {
+                try {
+                    return await api.getLiveDoc(refId);
+                } catch (e) {
+                    console.warn(`Failed to load document ${refId}:`, e);
+                    return null;
+                }
+            }),
+        );
+        const loadedChildDocs = childDocs.filter(
+            (doc): doc is NonNullable<typeof doc> => doc !== null,
+        );
 
-            // Pre-filter: resolve doc refs to check deleted status before
-            // loading full documents. Individual failures are skipped to
-            // prevent one corrupt document from crashing the entire sidebar.
-            const docRefs = await Promise.all(
-                results.content.map(async (childStub) => {
-                    try {
-                        return {
-                            stub: childStub,
-                            ref: await api.getDocRef(childStub.refId),
-                        };
-                    } catch (e) {
-                        console.warn(`Failed to load doc ref ${childStub.refId}:`, e);
-                        return null;
-                    }
-                }),
-            );
-            const nonDeletedStubs = docRefs
-                .filter(
-                    (entry): entry is NonNullable<typeof entry> =>
-                        entry !== null && !entry.ref.isDeleted,
-                )
-                .map(({ stub }) => stub);
+        // Don't show ownerless children or deleted documents
+        const filtered = loadedChildDocs.filter(
+            (childDoc) =>
+                !childDoc.docRef.isDeleted &&
+                (source.isParentOwnerless || childDoc.docRef.permissions.anyone !== "Own"),
+        );
 
-            const childDocs = await Promise.all(
-                nonDeletedStubs.map(async (childStub) => {
-                    try {
-                        return await api.getLiveDoc(childStub.refId);
-                    } catch (e) {
-                        console.warn(`Failed to load document ${childStub.refId}:`, e);
-                        return null;
-                    }
-                }),
-            );
-            const loadedChildDocs = childDocs.filter(
-                (doc): doc is NonNullable<typeof doc> => doc !== null,
-            );
+        // Sort by createdAt descending (newest first)
+        filtered.sort((a, b) => {
+            const aCreatedAt = a.docRef.refId ? (source.createdAtByRefId[a.docRef.refId] ?? 0) : 0;
+            const bCreatedAt = b.docRef.refId ? (source.createdAtByRefId[b.docRef.refId] ?? 0) : 0;
+            return bCreatedAt - aCreatedAt;
+        });
 
-            const isParentOwnerless = isDocOwnerless(props.doc);
-
-            // Don't show ownerless children
-            return loadedChildDocs.filter(
-                (childDoc) => isParentOwnerless || !isDocOwnerless(childDoc),
-            );
-        },
-    );
+        return filtered;
+    });
 
     return (
         <>
@@ -166,7 +176,8 @@ function DocumentsTreeNode(props: {
                 indent={props.indent}
                 primaryDoc={props.primaryDoc}
                 secondaryDoc={props.secondaryDoc}
-                refetchDoc={refetch}
+                primaryPaneFocus={props.primaryPaneFocus}
+                secondaryPaneFocus={props.secondaryPaneFocus}
                 refetchPrimaryDoc={props.refetchPrimaryDoc}
                 refetchSecondaryDoc={props.refetchSecondaryDoc}
             />
@@ -177,6 +188,8 @@ function DocumentsTreeNode(props: {
                         indent={props.indent + 1}
                         primaryDoc={props.primaryDoc}
                         secondaryDoc={props.secondaryDoc}
+                        primaryPaneFocus={props.primaryPaneFocus}
+                        secondaryPaneFocus={props.secondaryPaneFocus}
                         refetchPrimaryDoc={props.refetchPrimaryDoc}
                         refetchSecondaryDoc={props.refetchSecondaryDoc}
                     />
@@ -191,7 +204,8 @@ function DocumentsTreeLeaf(props: {
     indent: number;
     primaryDoc: LiveDocWithRef;
     secondaryDoc?: LiveDocWithRef;
-    refetchDoc: () => void;
+    primaryPaneFocus: FocusHandle;
+    secondaryPaneFocus: FocusHandle;
     refetchPrimaryDoc: () => void;
     refetchSecondaryDoc: () => void;
 }) {
@@ -202,11 +216,16 @@ function DocumentsTreeLeaf(props: {
     const clickedRefId = createMemo(() => props.doc.docRef.refId);
     const primaryRefId = createMemo(() => props.primaryDoc.docRef.refId);
     const secondaryRefId = createMemo(() => props.secondaryDoc?.docRef.refId);
+    const isPrimary = () => clickedRefId() === primaryRefId();
+    const isSecondary = () => clickedRefId() === secondaryRefId();
+    const isFocused = () =>
+        (isPrimary() && props.primaryPaneFocus.hasFocus()) ||
+        (isSecondary() && props.secondaryPaneFocus.hasFocus());
 
     const iconLetters = createMemo(() => {
         const doc = props.doc.liveDoc.doc;
-        const theoryId = doc.type === "model" ? doc.theory : undefined;
-        if (theoryId && theories && props.doc.liveDoc.doc.type === "model") {
+        if (doc.type === "model" && theories) {
+            const theoryId = doc.theory;
             try {
                 const theoryMeta = theories.getMetadata(theoryId);
                 return theoryMeta.iconLetters;
@@ -220,14 +239,17 @@ function DocumentsTreeLeaf(props: {
     const handleClick = async () => {
         // If clicking on primary or secondary doc, navigate to just that doc
         if (clickedRefId() === primaryRefId() || clickedRefId() === secondaryRefId()) {
+            props.primaryPaneFocus.setFocused(true);
             navigate(`/${createLinkPart(props.doc)}`);
         } else {
             // Otherwise, open it as a side panel or put on the left if it is a parent doc
             const clickedDoc = props.doc;
             const parentOfPrimary = await getDocParent(props.primaryDoc.liveDoc.doc, api);
             if (parentOfPrimary && clickedDoc.docRef.refId === parentOfPrimary.docRef.refId) {
+                props.primaryPaneFocus.setFocused(true);
                 navigate(`/${createLinkPart(clickedDoc)}/${createLinkPart(props.primaryDoc)}`);
             } else {
+                props.secondaryPaneFocus.setFocused(true);
                 navigate(`/${createLinkPart(props.primaryDoc)}/${createLinkPart(clickedDoc)}`);
             }
         }
@@ -238,7 +260,8 @@ function DocumentsTreeLeaf(props: {
             onClick={handleClick}
             class="related-document"
             classList={{
-                active: props.doc.docRef.refId === props.primaryDoc.docRef.refId,
+                active: isPrimary() || isSecondary(),
+                focused: isFocused(),
             }}
             style={{ "padding-left": `${props.indent * 16}px` }}
         >
@@ -258,29 +281,27 @@ function DocumentsTreeLeaf(props: {
                     liveDoc={props.doc.liveDoc}
                     docRef={props.doc.docRef}
                     onDocCreated={(docType, refId) => {
-                        props.refetchDoc();
                         navigate(`/${createLinkPart(props.doc)}/${docType}/${refId}`);
                     }}
-                    // oxlint-disable-next-line solid/reactivity -- event handler prop
-                    onDocDeleted={async () => {
+                    onDocDeleted={() => {
                         const deletedRefId = props.doc.docRef.refId;
                         const isPrimaryDeleted = deletedRefId === primaryRefId();
                         const isSecondaryDeleted = deletedRefId === secondaryRefId();
+                        const doc = props.doc;
 
-                        props.refetchDoc();
                         props.refetchPrimaryDoc();
                         props.refetchSecondaryDoc();
 
                         // Navigate away if the deleted document is currently being viewed
                         if (isPrimaryDeleted || isSecondaryDeleted) {
-                            const parentDoc = await getDocParent(props.doc.liveDoc.doc, api);
-
-                            if (!parentDoc) {
-                                // This is a root document: navigate to documents list
-                                navigate("/documents");
-                            } else {
-                                navigate(`/${createLinkPart(parentDoc)}`);
-                            }
+                            void getDocParent(doc.liveDoc.doc, api).then((parentDoc) => {
+                                if (!parentDoc) {
+                                    // This is a root document: navigate to documents list
+                                    navigate("/documents");
+                                } else {
+                                    navigate(`/${createLinkPart(parentDoc)}`);
+                                }
+                            });
                         }
                     }}
                 />

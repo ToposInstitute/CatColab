@@ -1,29 +1,19 @@
 import { Match, Switch, useContext } from "solid-js";
+import { Dynamic } from "solid-js/web";
 import invariant from "tiny-invariant";
 
-import type { InstantiatedModel, ModelJudgment, MorDecl, ObDecl } from "catlog-wasm";
-import {
-    type CellConstructor,
-    type FormalCellEditorProps,
-    NotebookEditor,
-    newFormalCell,
-} from "../notebook";
-import type { ModelTypeMeta, Theory } from "../theory";
+import { Model, Nb } from "catcolab-document-methods";
+import type { InstantiatedModel, ModelJudgment, MorDecl, ObDecl } from "catcolab-document-types";
+import { type FocusHandle } from "catcolab-ui-components";
+import { type CellConstructor, type FormalCellEditorProps, NotebookEditor } from "../notebook";
+import { TheoryLibraryContext, type ModelTypeMeta, type Theory } from "../theory";
 import { LiveModelContext } from "./context";
 import type { LiveModelDoc } from "./document";
 import { InstantiationCellEditor } from "./instantiation_cell_editor";
-import { MorphismCellEditor } from "./morphism_cell_editor";
-import { ObjectCellEditor } from "./object_cell_editor";
-import {
-    duplicateModelJudgment,
-    newInstantiatedModel,
-    newMorphismDecl,
-    newObjectDecl,
-} from "./types";
 
 /** Notebook editor for a model of a double theory.
  */
-export function ModelNotebookEditor(props: { liveModel: LiveModelDoc }) {
+export function ModelNotebookEditor(props: { liveModel: LiveModelDoc; focus: FocusHandle }) {
     const liveDoc = () => props.liveModel.liveDoc;
 
     const cellConstructors = () => {
@@ -44,7 +34,8 @@ export function ModelNotebookEditor(props: { liveModel: LiveModelDoc }) {
                 formalCellEditor={ModelCellEditor}
                 cellConstructors={cellConstructors()}
                 cellLabel={judgmentLabel}
-                duplicateCell={duplicateModelJudgment}
+                duplicateCell={Model.duplicateModelJudgment}
+                focus={props.focus}
             />
         </LiveModelContext.Provider>
     );
@@ -54,32 +45,54 @@ export function ModelNotebookEditor(props: { liveModel: LiveModelDoc }) {
 export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
     const liveModel = useContext(LiveModelContext);
     invariant(liveModel, "Live model should be provided as context");
+    const theories = useContext(TheoryLibraryContext);
+
+    const editorOverrides = () => {
+        const variantId = liveModel().liveDoc.doc.editorVariant;
+        return variantId && theories ? theories.getEditorOverrides(variantId) : undefined;
+    };
 
     return (
         <Switch>
             <Match when={props.content.tag === "object" && liveModel().theory()}>
-                {(theory) => (
-                    <ObjectCellEditor
-                        object={props.content as ObDecl}
-                        modifyObject={(f) => props.changeContent((content) => f(content as ObDecl))}
-                        isActive={props.isActive}
-                        actions={props.actions}
-                        theory={theory()}
-                    />
-                )}
+                {(theory) => {
+                    const obDecl = () => props.content as ObDecl;
+                    const editor = () =>
+                        editorOverrides()?.obEditors?.get(obDecl().obType) ??
+                        theory().modelObTypeMeta(obDecl().obType)?.editor;
+                    return (
+                        <Dynamic
+                            component={editor()}
+                            object={obDecl()}
+                            modifyObject={(f: (decl: ObDecl) => void) =>
+                                props.changeContent((content) => f(content as ObDecl))
+                            }
+                            focus={props.focus}
+                            actions={props.actions}
+                            theory={theory()}
+                        />
+                    );
+                }}
             </Match>
             <Match when={props.content.tag === "morphism" && liveModel().theory()}>
-                {(theory) => (
-                    <MorphismCellEditor
-                        morphism={props.content as MorDecl}
-                        modifyMorphism={(f) =>
-                            props.changeContent((content) => f(content as MorDecl))
-                        }
-                        isActive={props.isActive}
-                        actions={props.actions}
-                        theory={theory()}
-                    />
-                )}
+                {(theory) => {
+                    const morDecl = () => props.content as MorDecl;
+                    const editor = () =>
+                        editorOverrides()?.morEditors?.get(morDecl().morType) ??
+                        theory().modelMorTypeMeta(morDecl().morType)?.editor;
+                    return (
+                        <Dynamic
+                            component={editor()}
+                            morphism={morDecl()}
+                            modifyMorphism={(f: (decl: MorDecl) => void) =>
+                                props.changeContent((content) => f(content as MorDecl))
+                            }
+                            focus={props.focus}
+                            actions={props.actions}
+                            theory={theory()}
+                        />
+                    );
+                }}
             </Match>
             <Match when={props.content.tag === "instantiation"}>
                 <InstantiationCellEditor
@@ -87,7 +100,7 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
                     modifyInstantiation={(f) =>
                         props.changeContent((content) => f(content as InstantiatedModel))
                     }
-                    isActive={props.isActive}
+                    focus={props.focus}
                     actions={props.actions}
                 />
             </Match>
@@ -97,16 +110,14 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
 
 function modelCellConstructors(theory: Theory): CellConstructor<ModelJudgment>[] {
     const constructors: CellConstructor<ModelJudgment>[] = [];
-    if (theory.theory.canInstantiateModels()) {
-        constructors.push({
-            name: "Instantiate",
-            description: "Instantiate an existing model into this one",
-            shortcut: ["I"],
-            construct() {
-                return newFormalCell(newInstantiatedModel());
-            },
-        });
-    }
+    constructors.push({
+        name: "Instantiate",
+        description: "Instantiate an existing model into this one",
+        shortcut: ["I"],
+        construct() {
+            return Nb.newFormalCell(Model.newInstantiatedModel());
+        },
+    });
     for (const meta of theory.modelTypes ?? []) {
         constructors.push(modelCellConstructor(meta));
     }
@@ -122,9 +133,9 @@ function modelCellConstructor(meta: ModelTypeMeta): CellConstructor<ModelJudgmen
         construct() {
             switch (tag) {
                 case "ObType":
-                    return newFormalCell(newObjectDecl(meta.obType));
+                    return Nb.newFormalCell(Model.newObjectDecl(meta.obType));
                 case "MorType":
-                    return newFormalCell(newMorphismDecl(meta.morType));
+                    return Nb.newFormalCell(Model.newMorphismDecl(meta.morType));
                 default:
                     throw tag satisfies never;
             }

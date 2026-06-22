@@ -6,7 +6,6 @@ export const stdTheories = new TheoryLibrary();
 
 stdTheories.addGenericModelAnalysis({
     construct: compositionPattern,
-    when: (theory) => theory.theory.canInstantiateModels(),
 });
 
 stdTheories.add(
@@ -52,6 +51,28 @@ stdTheories.add(
         group: "Systems",
     },
     async () => (await import("./theories/petri-net")).default,
+);
+
+stdTheories.add(
+    {
+        id: "polynomial-ode",
+        name: "Polynomial ODEs",
+        description: "Systems of polynomial ordinary differential equations",
+        iconLetters: ["O", " "],
+        group: "Systems",
+    },
+    async () => (await import("./theories/polynomial-ode")).default,
+);
+
+stdTheories.add(
+    {
+        id: "signed-polynomial-ode",
+        name: "Signed polynomial ODEs",
+        description: "Systems of polynomial ODEs with signed coefficients",
+        iconLetters: ["O", "s"],
+        group: "Systems",
+    },
+    async () => (await import("./theories/signed-polynomial-ode")).default,
 );
 
 stdTheories.add(

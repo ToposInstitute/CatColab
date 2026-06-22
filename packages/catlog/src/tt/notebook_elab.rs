@@ -5,8 +5,8 @@
 //! must be completely different to be well adapted to the notebook interface.
 //! As a first pass, we are associating cell UUIDs with errors.
 
+use catcolab_document_types::current as nb;
 use nonempty::NonEmpty;
-use notebook_types::current as nb;
 use std::str::FromStr;
 use uuid::Uuid;
 
@@ -155,6 +155,14 @@ impl<'a> Elaborator<'a> {
                 let val = TmV::app(name, arg_val);
                 Some((stx, val, self.theory().ob_op_cod(&ob_op)))
             }
+            nb::Ob::Tabulated(mor) => {
+                let (mor_stx, mor_val, mor_ty) = self.mor_syn(mor)?;
+                let TyV_::Morphism(mt, _, _) = &*mor_ty else {
+                    return None;
+                };
+                let ob_type = self.theory().tabulator(mt.clone())?;
+                Some((TmS::tab(mor_stx), TmV::tab(mor_val), ob_type))
+            }
             _ => None,
         }
     }
@@ -172,7 +180,7 @@ impl<'a> Elaborator<'a> {
             nb::Mor::Composite(path) => match path.as_ref() {
                 nb::path::Path::Id(ob) => {
                     let (stx, val, ob_type) = self.ob_syn(ob)?;
-                    let mor_type = self.theory().hom_type(ob_type);
+                    let mor_type = self.theory().hom_type(ob_type)?;
                     Some((stx, val.clone(), TyV::morphism(mor_type, val.clone(), val.clone())))
                 }
                 nb::path::Path::Seq(ms) => match ms.as_slice() {
@@ -248,7 +256,10 @@ impl<'a> Elaborator<'a> {
                 }
             }
             nb::MorType::Hom(ob_type) => match self.ob_type(ob_type.as_ref()) {
-                Some(ot) => (self.theory().hom_type(ot.clone()), ot.clone(), ot),
+                Some(ot) => match self.theory().hom_type(ot.clone()) {
+                    Some(mt) => (mt, ot.clone(), ot),
+                    None => return self.ty_error(InvalidDblModel::MorType(id)),
+                },
                 None => return self.ty_error(InvalidDblModel::MorType(id)),
             },
             _ => {
@@ -350,7 +361,7 @@ impl<'a> Elaborator<'a> {
             Some(l) => l,
             None => return self.ty_error(InvalidDblModel::InvalidLink(name)),
         };
-        let notebook_types::current::LinkType::Instantiation = link.r#type else {
+        let catcolab_document_types::current::LinkType::Instantiation = link.r#type else {
             return self.ty_error(InvalidDblModel::InvalidLink(name));
         };
         let ref_id = ustr(&link.stable_ref.id);
@@ -500,7 +511,7 @@ mod test {
         toplevel::Toplevel,
     };
     use crate::zero::name;
-    use notebook_types::current::ModelDocumentContent;
+    use catcolab_document_types::current::ModelDocumentContent;
 
     fn elab_example(theory: &Theory, name: &str, expected: Expect) -> Model {
         let src = fs::read_to_string(format!("examples/tt/notebook/{name}.json")).unwrap();
@@ -536,7 +547,8 @@ mod test {
 
     #[test]
     fn modal_theories() {
-        let th_smc = Theory::new(name("ThSMC"), TheoryDef::modal(th_sym_monoidal_category()));
+        let th_smc =
+            Theory::new(name("ThSMC"), TheoryDef::modal_unital(th_sym_monoidal_category()));
         elab_example(
             &th_smc,
             "sir_petri",

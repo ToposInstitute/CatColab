@@ -7,7 +7,7 @@ use rebop::gillespie;
 use std::collections::HashMap;
 
 use crate::{
-    dbl::{modal::*, model::FpDblModel},
+    dbl::{modal::*, model::FpDblModel, theory::Unital},
     stdlib::analyses::{ode::ODESolution, petri::transition_interface},
     zero::{QualifiedName, name},
 };
@@ -96,7 +96,7 @@ impl PetriNetStochasticMassActionAnalysis {
     /// Creates a stochastic mass-action system.
     pub fn build_stochastic_system(
         &self,
-        model: &ModalDblModel,
+        model: &ModalDblModel<Unital>,
         data: StochasticMassActionProblemData,
     ) -> StochasticMassActionAnalysis {
         let ob_generators: Vec<_> = model.ob_generators_with_type(&self.place_ob_type).collect();

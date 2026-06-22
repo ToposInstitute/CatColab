@@ -32,7 +32,7 @@ import {
 } from "catcolab-ui-components";
 import type { Document } from "catlog-wasm";
 import { type DocRef, type LiveDoc, useApi } from "../api";
-import { deepCopyJSON } from "../util/deepcopy";
+import { removeProxyAndCopy } from "../util/remove_proxy_and_copy";
 import { Login } from "./login";
 import { AddUserInput, NameUser } from "./username";
 
@@ -78,7 +78,7 @@ export function PermissionsForm(props: { refId: string; onComplete?: () => void 
     createEffect(() => {
         const permissions = currentPermissions();
         if (permissions) {
-            setState(deepCopyJSON(permissions));
+            setState(removeProxyAndCopy(permissions));
         }
     });
 

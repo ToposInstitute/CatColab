@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                INSERT INTO users (id, created, signed_in, username, display_name)\n                VALUES ($1, NOW(), NOW(), $2, $3)\n                ON CONFLICT (id) DO UPDATE SET username = COALESCE($2, users.username), display_name = $3\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "596d9471dd756f57170ac751d2c6608c38c55ab3a45d12e96b6256032358ddaa"
+}

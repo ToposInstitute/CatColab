@@ -1,0 +1,105 @@
+use serde::{Deserialize, Serialize};
+use tsify::Tsify;
+
+/// A stable reference to a document in the database.
+///
+/// Such a reference identifies a specific document, possibly at a specific
+/// version. The keys are prefixed with an underscore, e.g. `_id` instead of
+/// `id`, to avoid conflicts with other keys and unambiguously signal that the
+/// data occur at the *database* level, rather than merely the *document* level.
+/// The same convention is used in document databases like CouchDB and MongoDB.
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+#[tsify(missing_as_null)]
+pub struct StableRef {
+    /// Unique identifier of the referenced document.
+    ///
+    /// When using CatColab's official backend, this should be a document ref ID
+    /// (a UUID).
+    #[serde(rename = "_id")]
+    pub id: String,
+
+    /// Version of the document.
+    ///
+    /// If null, refers to the head commit of document. This is the case when
+    /// the referenced document will receive live updates.
+    #[serde(rename = "_version")]
+    pub version: Option<String>,
+
+    /// Server containing the document.
+    ///
+    /// Assuming one of the official deployments is used, this will be either
+    /// `catcolab.org` or `next.catcolab.org`.
+    #[serde(rename = "_server")]
+    pub server: String,
+}
+
+/// A link from one document to another.
+///
+/// The source of the link is the document containing this data and the target
+/// of link is given by the data itself.
+#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub struct Link {
+    #[serde(flatten)]
+    pub stable_ref: StableRef,
+
+    pub r#type: LinkType,
+}
+
+/// Type of link between documents.
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[tsify(into_wasm_abi, from_wasm_abi)]
+pub enum LinkType {
+    #[serde(rename = "analysis-of")]
+    AnalysisOf,
+
+    #[serde(rename = "diagram-in")]
+    DiagramIn,
+
+    #[serde(rename = "instantiation")]
+    Instantiation,
+}
+
+/// Arbitrary instances for property-based testing.
+#[cfg(feature = "property-tests")]
+pub(crate) mod arbitrary {
+    use super::*;
+    use proptest::prelude::*;
+
+    impl Arbitrary for LinkType {
+        type Parameters = ();
+        type Strategy = BoxedStrategy<Self>;
+
+        fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
+            proptest::sample::select(&[
+                LinkType::AnalysisOf,
+                LinkType::DiagramIn,
+                LinkType::Instantiation,
+            ])
+            .boxed()
+        }
+    }
+
+    impl Arbitrary for StableRef {
+        type Parameters = ();
+        type Strategy = BoxedStrategy<Self>;
+
+        fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
+            (any::<String>(), proptest::option::of(any::<String>()), any::<String>())
+                .prop_map(|(id, version, server)| StableRef { id, version, server })
+                .boxed()
+        }
+    }
+
+    impl Arbitrary for Link {
+        type Parameters = ();
+        type Strategy = BoxedStrategy<Self>;
+
+        fn arbitrary_with(_: Self::Parameters) -> Self::Strategy {
+            (any::<StableRef>(), any::<LinkType>())
+                .prop_map(|(stable_ref, r#type)| Link { stable_ref, r#type })
+                .boxed()
+        }
+    }
+}

@@ -9,8 +9,11 @@ export type Completion = {
     /** Short name of completion. */
     name: string;
 
+    /** Extra CSS class applied to the name element. */
+    nameClass?: string;
+
     /** One-line description of completion. */
-    description?: string;
+    description?: string | JSX.Element;
 
     /** Icon to show with completion. */
     icon?: JSX.Element;
@@ -34,6 +37,7 @@ export type CompletionsRef = {
 export function Completions(props: {
     completions: Completion[];
     text?: string;
+    emptyText?: string;
     onComplete?: () => void;
     ref?: (ref: CompletionsRef) => void;
 }) {
@@ -83,7 +87,9 @@ export function Completions(props: {
         <ul role="listbox" class="completion-list">
             <For
                 each={remainingCompletions()}
-                fallback={<span class="completion-empty">No completions</span>}
+                fallback={
+                    <span class="completion-empty">{props.emptyText ?? "No completions"}</span>
+                }
             >
                 {(c, i) => (
                     <li
@@ -96,7 +102,7 @@ export function Completions(props: {
                             <Show when={c.icon}>
                                 <div class="completion-icon">{c.icon}</div>
                             </Show>
-                            <div class="completion-name">{c.name}</div>
+                            <div class={`completion-name ${c.nameClass ?? ""}`}>{c.name}</div>
                             <Show when={c.shortcut}>
                                 <div class="completion-shortcut">
                                     <KbdShortcut shortcut={c.shortcut ?? []} />

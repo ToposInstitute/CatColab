@@ -369,6 +369,53 @@ export const WithDeletionCallbacks: Story = {
     },
 };
 
+export const WithPopupClass: Story = {
+    render: () => {
+        const [text, setText] = createSignal("");
+
+        const completions: Completion[] = [
+            { name: "A very long document name that should be truncated with ellipsis" },
+            { name: "Short name" },
+            { name: "Another long document name that overflows the popup boundary" },
+        ];
+
+        return (
+            <div style={{ padding: "16px" }}>
+                <style>{`.custom-popup { min-width: 200px; max-width: 300px; }`}</style>
+                <p>Popup has a custom class with constrained width:</p>
+                <TextInput
+                    text={text()}
+                    setText={setText}
+                    placeholder="Click to see constrained popup"
+                    completions={completions}
+                    showCompletionsOnFocus
+                    popupClass="custom-popup"
+                />
+            </div>
+        );
+    },
+};
+
+export const WithCustomEmptyText: Story = {
+    render: () => {
+        const [text, setText] = createSignal("");
+
+        return (
+            <div style={{ padding: "16px" }}>
+                <p>Shows custom empty text when no completions match:</p>
+                <TextInput
+                    text={text()}
+                    setText={setText}
+                    placeholder="Search..."
+                    completions={[{ name: "Only option" }]}
+                    showCompletionsOnFocus
+                    completionsEmptyText="No results"
+                />
+            </div>
+        );
+    },
+};
+
 export const WithCreateBelow: Story = {
     render: () => {
         const [items, setItems] = createSignal(["First item"]);

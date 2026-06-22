@@ -1,0 +1,31 @@
+.monomial {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.delimiter {
+    color: var(--color-gray-800);
+    transform: scale(1, 1.5);
+}
+
+.separator {
+    color: var(--color-gray-800);
+}
+
+.collapsed {
+    cursor: text;
+}
+
+.exponent {
+    font-size: 0.75em;
+    line-height: 0.5ex;
+}
+
+.emptyMonomial {
+    color: var(--color-text-placeholder);
+}
+
+.productSeparator {
+    padding: 0.25ex;
+}
