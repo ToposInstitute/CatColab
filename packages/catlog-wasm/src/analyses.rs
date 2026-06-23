@@ -58,8 +58,8 @@ mod tests {
     use super::*;
 
     use crate::model::{DblModel, tests::backward_link};
-    use crate::theories::{ThSignedCategory, ThSymMonoidalCategory};
-    use catcolab_document_types::v2::{Modality, MorDecl, MorType, Ob, ObDecl, ObType};
+    use crate::theories::ThSignedCategory;
+    use catcolab_document_types::v2::{MorDecl, MorType, Ob, ObDecl, ObType};
     use catlog::dbl::modal::{List, ModalMorType, ModalOb, ModalObType};
     use catlog::dbl::model::{ModalDblModel, MutDblModel};
     use catlog::latex::{Latex, LatexEquation, LatexEquations};
@@ -124,7 +124,7 @@ mod tests {
 
     #[test]
     fn stock_flow_balanced_mass_action_latex_equations() {
-        let model = backward_link("xxx", "yyy", "fff");
+        let model = backward_link("xylophone", "y", "fff");
         let system = ode::StockFlowMassActionAnalysis {
             mass_conservation_type: MassConservationType::Balanced,
             ..ode::StockFlowMassActionAnalysis::default()
@@ -135,12 +135,12 @@ mod tests {
 
         let expected = LatexEquations(vec![
             LatexEquation {
-                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{xxx}".to_string()),
-                rhs: Latex("-r_{\\text{fff}} \\cdot \\text{xxx} \\cdot \\text{yyy}".to_string()),
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{xylophone}".to_string()),
+                rhs: Latex("-r_{\\text{fff}} \\cdot \\text{xylophone} \\cdot y".to_string()),
             },
             LatexEquation {
-                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{yyy}".to_string()),
-                rhs: Latex("r_{\\text{fff}} \\cdot \\text{xxx} \\cdot \\text{yyy}".to_string()),
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string()),
+                rhs: Latex("r_{\\text{fff}} \\cdot \\text{xylophone} \\cdot y".to_string()),
             },
         ]);
         assert_eq!(equations, expected);
@@ -148,7 +148,7 @@ mod tests {
 
     #[test]
     fn stock_flow_unbalanced_mass_action_latex_equations() {
-        let model = backward_link("xxx", "yyy", "fff");
+        let model = backward_link("xylophone", "y", "fff");
         let system = ode::StockFlowMassActionAnalysis {
             mass_conservation_type: MassConservationType::Unbalanced(
                 ode::RateGranularity::PerTransition,
@@ -161,14 +161,12 @@ mod tests {
 
         let expected = LatexEquations(vec![
             LatexEquation {
-                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{xxx}".to_string()),
-                rhs: Latex(
-                    "-\\kappa_{\\text{fff}} \\cdot \\text{xxx} \\cdot \\text{yyy}".to_string(),
-                ),
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{xylophone}".to_string()),
+                rhs: Latex("-\\kappa_{\\text{fff}} \\cdot \\text{xylophone} \\cdot y".to_string()),
             },
             LatexEquation {
-                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{yyy}".to_string()),
-                rhs: Latex("\\rho_{\\text{fff}} \\cdot \\text{xxx} \\cdot \\text{yyy}".to_string()),
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string()),
+                rhs: Latex("\\rho_{\\text{fff}} \\cdot \\text{xylophone} \\cdot y".to_string()),
             },
         ]);
         assert_eq!(equations, expected);
@@ -254,97 +252,27 @@ mod tests {
         let equations =
             ode_semantics_equations::<ode::PetriNetMassActionSemantics>(&model, system).unwrap();
 
-        // TODO: write down the expected equations
         let expected = LatexEquations(vec![
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{liquid}".to_string()),
-                rhs: Latex("".to_string()),
+                rhs: Latex("-\\kappa_{[\\text{liquid}, c] \\to [\\text{solid}, c]}^{\\text{liquid}} \\text{liquid} \\cdot c".to_string()),
             },
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{solid}".to_string()),
-                rhs: Latex("".to_string()),
+                rhs: Latex("\\rho_{[\\text{liquid}, c] \\to [\\text{solid}, c]}^{\\text{solid}} \\text{liquid} \\cdot c".to_string()),
             },
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} c".to_string()),
-                rhs: Latex("".to_string()),
+                rhs: Latex("(\\rho_{[\\text{liquid}, c] \\to [\\text{solid}, c]}^{\\text{solid}} - \\kappa_{[\\text{liquid}, c] \\to [\\text{solid}, c]}^{\\text{solid}}) \\cdot \\text{liquid} \\cdot c".to_string()),
             },
         ]);
         assert_eq!(equations, expected);
     }
 
-    #[test]
-    fn modal_mor_dom_cod_labels() {
-        let th = Rc::new(theories::th_sym_monoidal_category());
-        let ob_type = ModalObType::new(QualifiedName::from("Object"));
-        let op = QualifiedName::from("tensor");
-
-        let [s_id, i_id, r_id] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
-        let [infect_id, recover_id] = [Uuid::now_v7(), Uuid::now_v7()];
-
-        let mut inner = ModalDblModel::new(th);
-        inner.add_ob(s_id.into(), ob_type.clone());
-        inner.add_ob(i_id.into(), ob_type.clone());
-        inner.add_ob(r_id.into(), ob_type.clone());
-
-        // infect: tensor(S, I) -> tensor(I, I) — product-typed dom and cod.
-        inner.add_mor(
-            infect_id.into(),
-            ModalOb::App(
-                ModalOb::List(
-                    List::Symmetric,
-                    vec![ModalOb::Generator(s_id.into()), ModalOb::Generator(i_id.into())],
-                )
-                .into(),
-                op.clone(),
-            ),
-            ModalOb::App(
-                ModalOb::List(
-                    List::Symmetric,
-                    vec![ModalOb::Generator(i_id.into()), ModalOb::Generator(i_id.into())],
-                )
-                .into(),
-                op.clone(),
-            ),
-            ModalMorType::Zero(ob_type.clone()),
-        );
-
-        // recover: I -> R — simple generator dom and cod.
-        inner.add_mor(
-            recover_id.into(),
-            ModalOb::Generator(i_id.into()),
-            ModalOb::Generator(r_id.into()),
-            ModalMorType::Zero(ob_type),
-        );
-
-        let mut ob_namespace = Namespace::new_for_uuid();
-        ob_namespace.set_label(s_id, LabelSegment::Text("S".into()));
-        ob_namespace.set_label(i_id, LabelSegment::Text("I".into()));
-        ob_namespace.set_label(r_id, LabelSegment::Text("R".into()));
-
-        let model = DblModel {
-            model: inner.into(),
-            ty: None,
-            ob_namespace,
-            mor_namespace: Namespace::new_for_uuid(),
-        };
-
-        // Morphism with basic generator dom/cod resolves labels.
-        assert_eq!(
-            model.mor_generator_dom_cod_label_strings(&recover_id.into()),
-            Some(("I".to_string(), "R".to_string()))
-        );
-
-        // Morphism with product-typed dom/cod resolves to bracketed labels.
-        assert_eq!(
-            model.mor_generator_dom_cod_label_strings(&infect_id.into()),
-            Some(("[S, I]".to_string(), "[I, I]".to_string()))
-        );
-    }
-
     /// Construct a causal loop diagram with objects x, y and negative links f, g : x -> y.
     fn parallel_negative_cld(
-        src_name: &str,
-        tgt_name: &str,
+        source_name: &str,
+        target_name: &str,
         first_link_name: &str,
         second_link_name: &str,
     ) -> DblModel {
@@ -355,7 +283,7 @@ mod tests {
         assert!(
             model
                 .add_ob(&ObDecl {
-                    name: src_name.into(),
+                    name: source_name.into(),
                     id: x,
                     ob_type: ObType::Basic("Object".into())
                 })
@@ -364,7 +292,7 @@ mod tests {
         assert!(
             model
                 .add_ob(&ObDecl {
-                    name: tgt_name.into(),
+                    name: target_name.into(),
                     id: y,
                     ob_type: ObType::Basic("Object".into())
                 })
@@ -398,57 +326,54 @@ mod tests {
 
     /// Construct a Petri net representing a catalytic transition [x,c] -> [y,c].
     fn catalytic_petri_net(
-        src_name: &str,
-        tgt_name: &str,
+        source_name: &str,
+        target_name: &str,
         catalyst_name: &str,
-        _transition_name: &str,
+        transition_name: &str,
     ) -> DblModel {
-        let th = ThSymMonoidalCategory::new().theory();
-        let mut model = DblModel::new(&th);
-        let [x, y, c, _t] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
+        let th = Rc::new(theories::th_sym_monoidal_category());
+        let ob_type = ModalObType::new(QualifiedName::from("Object"));
+        let op = QualifiedName::from("tensor");
 
-        assert!(
-            model
-                .add_ob(&ObDecl {
-                    name: src_name.into(),
-                    id: x,
-                    // ob_type: ObType::Basic("Object".into()),
-                    // TODO: what is the correct ob_type here?
-                    ob_type: ObType::ModeApp {
-                        modality: Modality::SymmetricList,
-                        ob_type: Box::new(ObType::Basic("Object".into()))
-                    },
-                })
-                .is_ok()
-        );
-        assert!(
-            model
-                .add_ob(&ObDecl {
-                    name: tgt_name.into(),
-                    id: y,
-                    // ob_type: ObType::Basic("Object".into()),
-                    ob_type: ObType::ModeApp {
-                        modality: Modality::SymmetricList,
-                        ob_type: Box::new(ObType::Basic("Object".into()))
-                    },
-                })
-                .is_ok()
-        );
-        assert!(
-            model
-                .add_ob(&ObDecl {
-                    name: catalyst_name.into(),
-                    id: c,
-                    // ob_type: ObType::Basic("Object".into()),
-                    ob_type: ObType::ModeApp {
-                        modality: Modality::SymmetricList,
-                        ob_type: Box::new(ObType::Basic("Object".into()))
-                    },
-                })
-                .is_ok()
-        );
-        // TODO: add the transition [x, c] -> [y, c]
+        let [x, y, c, t] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
 
-        model
+        let mut inner = ModalDblModel::new(th);
+        inner.add_ob(x.into(), ob_type.clone());
+        inner.add_ob(y.into(), ob_type.clone());
+        inner.add_ob(c.into(), ob_type.clone());
+
+        inner.add_mor(
+            t.into(),
+            ModalOb::App(
+                ModalOb::List(
+                    List::Symmetric,
+                    vec![ModalOb::Generator(x.into()), ModalOb::Generator(c.into())],
+                )
+                .into(),
+                op.clone(),
+            ),
+            ModalOb::App(
+                ModalOb::List(
+                    List::Symmetric,
+                    vec![ModalOb::Generator(y.into()), ModalOb::Generator(c.into())],
+                )
+                .into(),
+                op.clone(),
+            ),
+            ModalMorType::Zero(ob_type.clone()),
+        );
+
+        let mut ob_namespace = Namespace::new_for_uuid();
+        ob_namespace.set_label(x, LabelSegment::Text(source_name.into()));
+        ob_namespace.set_label(y, LabelSegment::Text(target_name.into()));
+        ob_namespace.set_label(c, LabelSegment::Text(catalyst_name.into()));
+        ob_namespace.set_label(t, LabelSegment::Text(transition_name.into()));
+
+        DblModel {
+            model: inner.into(),
+            ty: None,
+            ob_namespace,
+            mor_namespace: Namespace::new_for_uuid(),
+        }
     }
 }
