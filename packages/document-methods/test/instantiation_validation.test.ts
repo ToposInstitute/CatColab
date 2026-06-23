@@ -41,7 +41,6 @@ function createResolvingStore(): {
             _id: idFor(handle),
             _version: null,
             _server: "",
-            type: "instantiation",
         }),
         resolveModel: async (link: Link) => {
             if (failOnResolve.value) {

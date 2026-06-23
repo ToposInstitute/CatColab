@@ -37,8 +37,14 @@ export interface DocumentStore<Handle> {
     changeDocument(handle: Handle, fn: (doc: ModelDocument) => void): void;
     /** Make a detached plain-JS copy of a store-owned value before cloning it. */
     copyValue?<T>(handle: Handle, value: T): T;
-    /** Convert a store handle into a serializable document link, when available. */
-    linkForHandle?(handle: Handle): Link | null;
+    /**
+     * Convert a store handle into the referenced document's stable reference,
+     * when available. The reference omits the link `type`: a handle only
+     * identifies a document, not how it is being referenced, so the caller
+     * supplies the `type` per the kind of link being created (e.g.
+     * `"instantiation"`).
+     */
+    linkForHandle?(handle: Handle): Omit<Link, "type"> | undefined;
     /**
      * Resolve an instantiation link to its elaborated, validated model.
      *
@@ -78,7 +84,6 @@ export const plainStore: DocumentStore<ModelDocument> = {
         _id: plainDocumentId(handle),
         _version: null,
         _server: "",
-        type: "instantiation",
     }),
 };
 
@@ -777,7 +782,8 @@ function attachNotebook<TShape extends AnyShape, Handle>(
         if ("_id" in model) {
             return model;
         }
-        return store.linkForHandle?.(model.handle) ?? null;
+        const ref = store.linkForHandle?.(model.handle);
+        return ref ? { ...ref, type: "instantiation" } : null;
     };
 
     const encodeSpecializations = (
