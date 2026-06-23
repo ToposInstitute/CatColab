@@ -224,7 +224,7 @@ import { SimpleSchema } from "catcolab-logics/simple-schema";
 const migratable = automergeBinder.createNotebook(SimpleOlog, { name: "To migrate" });
 const urlBefore = migratable.handle.url;
 
-const migrated = migratable.migrateTo(SimpleSchema);
+const migrated = await migratable.migrateTo(SimpleSchema);
 
 console.log("same handle:", migrated.handle === migratable.handle);
 console.log("same url:", migrated.handle.url === urlBefore);

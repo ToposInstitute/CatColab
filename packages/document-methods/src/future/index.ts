@@ -39,6 +39,20 @@ export interface DocumentStore<Handle> {
     copyValue?<T>(handle: Handle, value: T): T;
     /** Convert a store handle into a serializable document link, when available. */
     linkForHandle?(handle: Handle): Link | null;
+    /**
+     * Resolve an instantiation link to its elaborated, validated model.
+     *
+     * Validation and migration need the elaborated model of every model an
+     * instantiation cell references. Resolution is inherently asynchronous (the
+     * referenced document may live in a repo or on a server) and is the store's
+     * responsibility, including fetching the document, elaborating it against
+     * its own theory, and detecting cycles of instantiations. A store that
+     * cannot resolve links (e.g. the plain in-memory store) omits this method;
+     * a notebook containing instantiation cells then validates as `Illformed`.
+     * The promise rejects when the referenced model is unavailable or itself
+     * ill-formed.
+     */
+    resolveModel?(link: Link): Promise<DblModel>;
 }
 
 const plainDocumentIds = new WeakMap<ModelDocument, string>();
@@ -702,6 +716,46 @@ function attachNotebook<TShape extends AnyShape, Handle>(
     const change = (fn: (doc: ModelDocument) => void) => store.changeDocument(handle, fn);
     const copy = store.copyValue ? <T>(value: T) => store.copyValue!(handle, value) : undefined;
 
+    /**
+     * Build the map of elaborated models that an instantiation-bearing notebook
+     * needs to elaborate, resolving each referenced model through the store.
+     * Returns the populated map, or an error string when a reference cannot be
+     * resolved (no `resolveModel` on the store, or the resolver rejects). The
+     * snapshot is a detached copy so reads are stable across the await points.
+     */
+    const buildInstantiatedMap = async (
+        snapshot: ModelDocument,
+    ): Promise<DblModelMap | { error: string }> => {
+        const instantiated = new DblModelMap();
+        for (const cellId of snapshot.notebook.cellOrder) {
+            const cell = snapshot.notebook.cellContents[cellId];
+            if (cell?.tag !== "formal") {
+                continue;
+            }
+            const judgment = cell.content as ModelJudgment;
+            if (judgment.tag !== "instantiation" || !judgment.model) {
+                continue;
+            }
+            const link = judgment.model;
+            if (instantiated.has(link._id)) {
+                continue;
+            }
+            if (!store.resolveModel) {
+                return {
+                    error:
+                        "Notebook contains an instantiation, but its store cannot " +
+                        "resolve model references (no `resolveModel`).",
+                };
+            }
+            try {
+                instantiated.set(link._id, await store.resolveModel(link));
+            } catch (e) {
+                return { error: `Failed to resolve instantiated model: ${String(e)}` };
+            }
+        }
+        return instantiated;
+    };
+
     /** Read a cell's content, or `undefined` if the cell is no longer in the
     notebook (e.g. it was deleted after the handle was obtained). Reads off a
     stale handle thus yield `undefined` rather than throwing. */
@@ -1012,7 +1066,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
         dump() {
             return copy ? copy(doc) : structuredClone(doc);
         },
-        validate(coreTheory?: DblTheory): ModelValidationResult {
+        async validate(coreTheory?: DblTheory): Promise<ModelValidationResult> {
             const theory = coreTheory ?? shape.coreTheory;
             if (!theory) {
                 throw new Error(
@@ -1021,11 +1075,15 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                 );
             }
             const snapshot = copy ? copy(doc) : structuredClone(doc);
+            const instantiated = await buildInstantiatedMap(snapshot);
+            if ("error" in instantiated) {
+                return { tag: "Illformed", model: null, error: instantiated.error };
+            }
             let model: DblModel;
             try {
                 model = elaborateModel(
                     snapshot.notebook as unknown as WasmModelNotebook,
-                    new DblModelMap(),
+                    instantiated,
                     theory,
                     v7(),
                 );
@@ -1038,7 +1096,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
             }
             return { tag: "Invalid", model, errors: result.content };
         },
-        migrateTo<TTarget extends CreatableShape>(targetShape: TTarget) {
+        async migrateTo<TTarget extends CreatableShape>(targetShape: TTarget) {
             // Trivial migration: an empty notebook or an inclusion target only
             // needs its theory rewritten; cell types are left untouched.
             const hasFormalCells = doc.notebook.cellOrder.some(
@@ -1068,11 +1126,18 @@ function attachNotebook<TShape extends AnyShape, Handle>(
             }
 
             const snapshot = copy ? copy(doc) : structuredClone(doc);
+            const instantiated = await buildInstantiatedMap(snapshot);
+            if ("error" in instantiated) {
+                throw new Error(
+                    `Cannot migrate notebook from "${shape.theory}" to ` +
+                        `"${targetShape.theory}": ${instantiated.error}`,
+                );
+            }
             let model: DblModel;
             try {
                 model = elaborateModel(
                     snapshot.notebook as unknown as WasmModelNotebook,
-                    new DblModelMap(),
+                    instantiated,
                     shape.coreTheory,
                     v7(),
                 );
@@ -1297,16 +1362,28 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
      * The core theory to elaborate into defaults to the shape's `coreTheory`;
      * pass one explicitly to elaborate against a different theory, or when the
      * shape has no `coreTheory`.
+     *
+     * Asynchronous because a notebook may contain instantiation cells, whose
+     * referenced models are resolved through {@link DocumentStore.resolveModel}
+     * (which fetches and elaborates them, handling any cycles). A notebook with
+     * instantiations over a store lacking `resolveModel`, or whose resolution
+     * fails, validates as `Illformed`.
      */
-    validate(coreTheory?: DblTheory): ModelValidationResult;
+    validate(coreTheory?: DblTheory): Promise<ModelValidationResult>;
     /**
      * Migrate the notebook's document to another shape, **mutating it in
      * place**: the underlying document is rewritten to the target theory rather
      * than copied. Returns a new notebook handle bound to the target shape; the
      * original handle is now stale, so continue through the returned handle.
      * Throws if no migration to the target is defined.
+     *
+     * Asynchronous because a pushforward migration elaborates the model, so a
+     * notebook with instantiation cells resolves them through {@link
+     * DocumentStore.resolveModel} just as {@link Notebook.validate} does.
      */
-    migrateTo<TTarget extends CreatableShape>(targetShape: TTarget): Notebook<TTarget, Handle>;
+    migrateTo<TTarget extends CreatableShape>(
+        targetShape: TTarget,
+    ): Promise<Notebook<TTarget, Handle>>;
     /**
      * Whether this notebook's shape declares a cell type structurally equal to
      * the given object or morphism type. A function written against a shape

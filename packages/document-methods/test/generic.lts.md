@@ -118,7 +118,7 @@ order: has, Source, B
 ```ts
 import { ThCategory } from "catlog-wasm";
 
-const result = notebook.validate(new ThCategory().theory());
+const result = await notebook.validate(new ThCategory().theory());
 console.log("tag:", result.tag);
 if (result.tag === "Valid") {
     console.log("objects:", result.model.obGenerators().length);

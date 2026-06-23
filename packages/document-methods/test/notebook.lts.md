@@ -438,7 +438,7 @@ notebook.add(Aspect, { name: "has", from: source, to: target });
 A well-formed notebook validates to a `Valid` model.
 
 ```ts
-const result = notebook.validate();
+const result = await notebook.validate();
 console.log("tag:", result.tag);
 ```
 
@@ -449,7 +449,7 @@ tag: Valid
 The validated model is available on the result and can be queried.
 
 ```ts
-const result = notebook.validate();
+const result = await notebook.validate();
 if (result.tag === "Valid") {
     console.log("objects:", result.model.obGenerators().length);
     console.log("morphisms:", result.model.morGenerators().length);
@@ -475,7 +475,7 @@ function describe(result: ModelValidationResult): string {
     }
 }
 
-console.log(describe(notebook.validate()));
+console.log(describe(await notebook.validate()));
 ```
 
 ```
@@ -562,7 +562,7 @@ Because `migrateTo` mutates in place, the olog notebook's own document is now a
 schema; `migrateTo` hands back a schema-typed handle over it.
 
 ```ts
-const schema = olog.migrateTo(SimpleSchema);
+const schema = await olog.migrateTo(SimpleSchema);
 
 // The original document was rewritten in place, not copied.
 console.log("same document:", schema.document === olog.document);
@@ -581,7 +581,7 @@ console.log(
         .map((cell) => cell.name)
         .join(", "),
 );
-console.log("tag:", schema.validate().tag);
+console.log("tag:", (await schema.validate()).tag);
 ```
 
 ```
@@ -616,7 +616,7 @@ olog.add(Aspect, { name: "has", from: a, to: b });
 <!-- verifier:throws -->
 
 ```ts
-olog.migrateTo(PetriNet);
+await olog.migrateTo(PetriNet);
 ```
 
 ```
