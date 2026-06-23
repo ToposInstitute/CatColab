@@ -75,12 +75,23 @@ const plainDocumentId = (document: ModelDocument): string => {
 
 /**
  * Elaborated models the plain store has seen, keyed by {@link plainDocumentId}.
- * The plain store has no theory of its own and so cannot elaborate a referenced
- * document on demand; instead {@link Notebook.validate}/{@link
- * Notebook.migrateTo} (which do have a core theory) populate this cache as a
- * side effect, and {@link plainStore.resolveModel} serves resolutions from it.
+ * The plain store has no theory of its own; instead {@link Notebook.validate}
+ * (which does have a core theory) populates this cache as a side effect, so a
+ * model that has already been elaborated locally can be resolved without
+ * re-elaborating it.
  */
 const plainElaboratedModels = new Map<string, DblModel>();
+
+/**
+ * The `validate` thunk of every notebook the plain store has attached, keyed by
+ * {@link plainDocumentId}. A model that has not yet been elaborated is resolved
+ * by running its own notebook's validation (which elaborates it against the
+ * shape's core theory and caches the result in {@link plainElaboratedModels}).
+ */
+const plainNotebookValidators = new Map<string, () => Promise<ModelValidationResult>>();
+
+/** Ids whose resolution is in progress, used to detect cyclic instantiations. */
+const plainResolving = new Set<string>();
 
 /** Record an elaborated model for a plain-store handle; see {@link plainElaboratedModels}. */
 const cachePlainModel = (handle: ModelDocument, model: DblModel): void => {
@@ -102,14 +113,30 @@ export const plainStore: DocumentStore<ModelDocument> = {
         _server: "",
     }),
     resolveModel: async (link) => {
-        const model = plainElaboratedModels.get(link._id);
-        if (!model) {
+        const cached = plainElaboratedModels.get(link._id);
+        if (cached) {
+            return cached;
+        }
+        const validate = plainNotebookValidators.get(link._id);
+        if (!validate) {
             throw new Error(
-                "The plain in-memory store can only resolve a model it has already " +
-                    "elaborated locally; validate the referenced notebook first.",
+                "The plain in-memory store cannot resolve a model for a document " +
+                    "it did not create.",
             );
         }
-        return model;
+        if (plainResolving.has(link._id)) {
+            throw new Error(`Cyclic instantiation detected while resolving model ${link._id}.`);
+        }
+        plainResolving.add(link._id);
+        try {
+            const result = await validate();
+            if (result.tag === "Illformed") {
+                throw new Error(result.error);
+            }
+            return result.model;
+        } finally {
+            plainResolving.delete(link._id);
+        }
     },
 };
 
@@ -1081,7 +1108,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
         return instantiationHandle(formalCell.id);
     };
 
-    return {
+    const notebook = {
         get name() {
             return doc.name;
         },
@@ -1092,13 +1119,10 @@ function attachNotebook<TShape extends AnyShape, Handle>(
         dump() {
             return copy(doc);
         },
-        async validate(coreTheory?: DblTheory): Promise<ModelValidationResult> {
-            const theory = coreTheory ?? shape.coreTheory;
+        async validate(): Promise<ModelValidationResult> {
+            const theory = shape.coreTheory;
             if (!theory) {
-                throw new Error(
-                    "validate() needs a core theory: this shape has no `coreTheory`, " +
-                        "so pass one explicitly.",
-                );
+                throw new Error("validate() needs a core theory: this shape has no `coreTheory`.");
             }
             const snapshot = copy(doc);
             const instantiated = await buildInstantiatedMap(snapshot);
@@ -1176,9 +1200,6 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                         `"${targetShape.theory}": the model failed to elaborate (${String(e)}).`,
                     { cause: e },
                 );
-            }
-            if (isPlainStore) {
-                cachePlainModel(handle as ModelDocument, model);
             }
 
             const migrated = migration.migrate(model, targetShape.coreTheory);
@@ -1309,6 +1330,14 @@ function attachNotebook<TShape extends AnyShape, Handle>(
             return addObjectCell(def, (args as { name: string }).name);
         },
     } as unknown as Notebook<TShape, Handle>;
+
+    if (isPlainStore) {
+        plainNotebookValidators.set(plainDocumentId(handle as ModelDocument), () =>
+            notebook.validate(),
+        );
+    }
+
+    return notebook;
 }
 
 /**
@@ -1391,9 +1420,8 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
      * tagged result: `Valid` with the model, `Invalid` with the model and its
      * validation errors, or `Illformed` if elaboration itself failed.
      *
-     * The core theory to elaborate into defaults to the shape's `coreTheory`;
-     * pass one explicitly to elaborate against a different theory, or when the
-     * shape has no `coreTheory`.
+     * Elaborates into the shape's `coreTheory`, so the shape must define one;
+     * calling `validate()` on a shape without a `coreTheory` throws.
      *
      * Asynchronous because a notebook may contain instantiation cells, whose
      * referenced models are resolved through {@link DocumentStore.resolveModel}
@@ -1401,7 +1429,7 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
      * instantiations whose resolution fails (the store rejects the link)
      * validates as `Illformed`.
      */
-    validate(coreTheory?: DblTheory): Promise<ModelValidationResult>;
+    validate(): Promise<ModelValidationResult>;
     /**
      * Migrate the notebook's document to another shape, **mutating it in
      * place**: the underlying document is rewritten to the target theory rather

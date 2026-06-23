@@ -14,6 +14,8 @@ import {
 <!-- verifier:prepend-to-following -->
 
 ```ts
+import { ThCategory } from "catlog-wasm";
+
 const Object = defineObject({ tag: "Basic", content: "Object" });
 const Aspect = defineMorphism({
     tag: "Hom",
@@ -22,6 +24,7 @@ const Aspect = defineMorphism({
 
 const Olog = defineShape({
     theory: "simple-olog",
+    coreTheory: new ThCategory().theory(),
     objects: [Object],
     morphisms: [Aspect],
 });
@@ -116,9 +119,7 @@ order: has, Source, B
 ```
 
 ```ts
-import { ThCategory } from "catlog-wasm";
-
-const result = await notebook.validate(new ThCategory().theory());
+const result = await notebook.validate();
 console.log("tag:", result.tag);
 if (result.tag === "Valid") {
     console.log("objects:", result.model.obGenerators().length);

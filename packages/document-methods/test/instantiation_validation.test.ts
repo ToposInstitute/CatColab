@@ -99,20 +99,6 @@ describe("instantiation validation", () => {
         expect(result.model).toBeInstanceOf(DblModel);
     });
 
-    test("the plain store reports an unvalidated local instantiation as Illformed", async () => {
-        const imported = binder.createNotebook(SimpleOlog, { name: "Imported" });
-        imported.add(Type, { name: "Thing" });
-
-        // `imported` is never validated, so the plain store has no elaborated
-        // model to resolve the instantiation against.
-        const notebook = binder.createNotebook(SimpleOlog, { name: "Main" });
-        notebook.add(Instantiation, { name: "ImportedOlog", model: imported });
-
-        const result = await notebook.validate();
-        expect(result.tag).toBe("Illformed");
-        expect(result.tag === "Illformed" && result.error).toContain("Failed to resolve");
-    });
-
     test("a failed resolution is reported as Illformed", async () => {
         const { store, failOnResolve } = createResolvingStore();
         const resolvingBinder = createBinder(store);
