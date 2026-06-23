@@ -526,6 +526,21 @@ type ShapeMorphismList<TShape extends AnyShape> = "morphisms" extends keyof TSha
     ? NonNullable<TShape["morphisms"]>
     : readonly [];
 
+/**
+ * Whether a shape *definitely* declares a `coreTheory`. Tested by requiredness
+ * rather than mere key presence: a concrete shape built with {@link
+ * defineShape} that provides `coreTheory` has it as a required property (so
+ * `true`), whereas one that omits it — and the base {@link Shape}, whose
+ * `coreTheory` key is only optional — resolves to `false`. This gates {@link
+ * Notebook.validate} and {@link Notebook.migrateTo}, both of which elaborate
+ * into the shape's core theory, so calling them on a shape that may lack one is
+ * a compile error rather than a runtime throw. The fully-generic `Notebook`
+ * (over the base {@link Shape}) therefore exposes neither, which is what keeps a
+ * concrete coreTheory-less notebook assignable to it.
+ */
+type HasCoreTheory<TShape extends AnyShape> =
+    {} extends Pick<TShape, "coreTheory" & keyof TShape> ? false : true;
+
 /** The list element types, defaulted to the widest def for indexing safety. */
 type ObjectDefOf<TShape extends AnyShape> = ShapeObjectList<TShape>[number] & ObjectDef;
 type MorphismDefOf<TShape extends AnyShape> = ShapeMorphismList<TShape>[number] & MorphismDef;
@@ -1108,7 +1123,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
         return instantiationHandle(formalCell.id);
     };
 
-    const notebook = {
+    const impl = {
         get name() {
             return doc.name;
         },
@@ -1266,14 +1281,10 @@ function attachNotebook<TShape extends AnyShape, Handle>(
         ): Array<NotebookCell> {
             // `RichText` selects just the rich-text cells.
             if (isRichTextType(arg)) {
-                return (this as Notebook<TShape, Handle>)
-                    .cells()
-                    .filter((cell) => cell.kind === CellKind.RichText);
+                return impl.cells().filter((cell) => cell.kind === CellKind.RichText);
             }
             if (isInstantiationType(arg)) {
-                return (this as Notebook<TShape, Handle>)
-                    .cells()
-                    .filter((cell) => cell.kind === CellKind.Instantiation);
+                return impl.cells().filter((cell) => cell.kind === CellKind.Instantiation);
             }
             // A def carries an "object"/"morphism" `tag`; a shape does not. A
             // single def selects only its own cells (rich-text excluded), while a
@@ -1286,7 +1297,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                 : arg;
             const objectDefs = shape.objects ?? [];
             const morphismDefs = shape.morphisms ?? [];
-            return (this as Notebook<TShape, Handle>).cells().filter((cell) => {
+            return impl.cells().filter((cell) => {
                 if (cell.kind === CellKind.RichText) {
                     return !isDef;
                 }
@@ -1329,11 +1340,13 @@ function attachNotebook<TShape extends AnyShape, Handle>(
             }
             return addObjectCell(def, (args as { name: string }).name);
         },
-    } as unknown as Notebook<TShape, Handle>;
+    };
+
+    const notebook = impl as unknown as Notebook<TShape, Handle>;
 
     if (isPlainStore) {
         plainNotebookValidators.set(plainDocumentId(handle as ModelDocument), () =>
-            notebook.validate(),
+            impl.validate(),
         );
     }
 
@@ -1415,35 +1428,6 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
     readonly document: ModelDocument;
     /** Make a detached plain-JS snapshot of the underlying document. */
     dump(): ModelDocument;
-    /**
-     * Elaborate the notebook into a core model and validate it. Returns a
-     * tagged result: `Valid` with the model, `Invalid` with the model and its
-     * validation errors, or `Illformed` if elaboration itself failed.
-     *
-     * Elaborates into the shape's `coreTheory`, so the shape must define one;
-     * calling `validate()` on a shape without a `coreTheory` throws.
-     *
-     * Asynchronous because a notebook may contain instantiation cells, whose
-     * referenced models are resolved through {@link DocumentStore.resolveModel}
-     * (which fetches and elaborates them, handling any cycles). A notebook with
-     * instantiations whose resolution fails (the store rejects the link)
-     * validates as `Illformed`.
-     */
-    validate(): Promise<ModelValidationResult>;
-    /**
-     * Migrate the notebook's document to another shape, **mutating it in
-     * place**: the underlying document is rewritten to the target theory rather
-     * than copied. Returns a new notebook handle bound to the target shape; the
-     * original handle is now stale, so continue through the returned handle.
-     * Throws if no migration to the target is defined.
-     *
-     * Asynchronous because a pushforward migration elaborates the model, so a
-     * notebook with instantiation cells resolves them through {@link
-     * DocumentStore.resolveModel} just as {@link Notebook.validate} does.
-     */
-    migrateTo<TTarget extends CreatableShape>(
-        targetShape: TTarget,
-    ): Promise<Notebook<TTarget, Handle>>;
     /**
      * Whether this notebook's shape declares a cell type structurally equal to
      * the given object or morphism type. A function written against a shape
@@ -1527,7 +1511,53 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
         args: { name: string; from: DomOf<M>; to: CodOf<M> },
     ): MorphismCell<M>;
     add<O extends ShapeObjects<TShape>>(type: O, args: { name: string }): ObjectCell<O>;
-};
+} & CoreTheoryMethods<TShape, Handle>;
+
+/**
+ * The notebook methods that elaborate into the shape's `coreTheory`, present
+ * only when the shape declares one (see {@link HasCoreTheory}). A shape without
+ * a `coreTheory` (e.g. a sub-shape, or a creatable shape that omits it) yields
+ * no such methods, so calling them is a compile error rather than a runtime
+ * throw.
+ */
+type CoreTheoryMethods<TShape extends AnyShape, Handle> =
+    HasCoreTheory<TShape> extends true
+        ? {
+              /**
+               * Elaborate the notebook into a core model and validate it. Returns a
+               * tagged result: `Valid` with the model, `Invalid` with the model and
+               * its validation errors, or `Illformed` if elaboration itself failed.
+               *
+               * Elaborates into the shape's `coreTheory`; available only on a shape
+               * that declares one.
+               *
+               * Asynchronous because a notebook may contain instantiation cells,
+               * whose referenced models are resolved through {@link
+               * DocumentStore.resolveModel} (which fetches and elaborates them,
+               * handling any cycles). A notebook with instantiations whose
+               * resolution fails (the store rejects the link) validates as
+               * `Illformed`.
+               */
+              validate(): Promise<ModelValidationResult>;
+              /**
+               * Migrate the notebook's document to another shape, **mutating it in
+               * place**: the underlying document is rewritten to the target theory
+               * rather than copied. Returns a new notebook handle bound to the
+               * target shape; the original handle is now stale, so continue through
+               * the returned handle. Throws if no migration to the target is
+               * defined.
+               *
+               * Available only on a shape that declares a `coreTheory`, since a
+               * pushforward migration elaborates the model. Asynchronous for the
+               * same reason as {@link Notebook.validate}: a notebook with
+               * instantiation cells resolves them through {@link
+               * DocumentStore.resolveModel}.
+               */
+              migrateTo<TTarget extends CreatableShape>(
+                  targetShape: TTarget,
+              ): Promise<Notebook<TTarget, Handle>>;
+          }
+        : object;
 
 /**
  * Entry points for notebooks over a fixed store. Obtain one with

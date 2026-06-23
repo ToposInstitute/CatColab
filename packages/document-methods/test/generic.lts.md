@@ -155,3 +155,29 @@ console.log("objects:", generic.cells().filter((cell) => cell.kind === CellKind.
 name: Renamed via generic interface
 objects: 1
 ```
+
+### Validation and migration require a core theory
+
+A shape elaborates into its `coreTheory`, so `validate()` and `migrateTo()` are
+only available on a notebook whose shape declares one. A shape with a `theory`
+but no `coreTheory` can still create and edit notebooks, but calling either is a
+compile error.
+
+<!-- verifier:reset -->
+
+```ts
+import { binder, defineObject, defineShape } from "catcolab-documents";
+
+const NoCore = defineShape({
+    theory: "no-core",
+    objects: [defineObject({ tag: "Basic", content: "Object" })],
+});
+
+const noCore = binder.createNotebook(NoCore, { name: "No core theory" });
+
+// @ts-expect-error A shape without a `coreTheory` cannot be validated.
+await noCore.validate();
+
+// @ts-expect-error A shape without a `coreTheory` cannot be migrated.
+await noCore.migrateTo(NoCore);
+```
