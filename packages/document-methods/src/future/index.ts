@@ -96,8 +96,8 @@ type Reorder = {
     moveTo(index: number): void;
     /**
      * Remove this cell from the notebook. After deletion, reads of the
-     * handle's fields (e.g. `name`, `content`) will throw. Deleting a cell
-     * that is no longer in the notebook is a silent no-op.
+     * handle's fields (e.g. `name`, `content`) return `undefined`. Deleting a
+     * cell that is no longer in the notebook is a silent no-op.
      */
     delete(): void;
 };
@@ -643,10 +643,13 @@ function attachNotebook<TShape extends AnyShape, Handle>(
     const change = (fn: (doc: ModelDocument) => void) => store.changeDocument(handle, fn);
     const copy = store.copyValue ? <T>(value: T) => store.copyValue!(handle, value) : undefined;
 
-    const readCellContent = <T>(cellId: string): T => {
+    /** Read a cell's content, or `undefined` if the cell is no longer in the
+    notebook (e.g. it was deleted after the handle was obtained). Reads off a
+    stale handle thus yield `undefined` rather than throwing. */
+    const readCellContent = <T>(cellId: string): T | undefined => {
         const cell = doc.notebook.cellContents[cellId];
         if (!cell) {
-            throw new Error(`Notebook cell '${cellId}' not found (it may have been deleted).`);
+            return undefined;
         }
         return (cell as unknown as { content: T }).content;
     };
@@ -711,11 +714,11 @@ function attachNotebook<TShape extends AnyShape, Handle>(
         ({
             kind: CellKind.Object,
             get id() {
-                return readCellContent<{ id: string }>(cellId).id;
+                return readCellContent<{ id: string }>(cellId)?.id;
             },
             type,
             get name() {
-                return readCellContent<{ name: string }>(cellId).name;
+                return readCellContent<{ name: string }>(cellId)?.name;
             },
             update(u: { name?: string }) {
                 change((d) => {
@@ -779,23 +782,19 @@ function attachNotebook<TShape extends AnyShape, Handle>(
         ({
             kind: CellKind.Morphism,
             get id() {
-                return readCellContent<{ id: string }>(cellId).id;
+                return readCellContent<{ id: string }>(cellId)?.id;
             },
             type,
             get name() {
-                return readCellContent<{ name: string }>(cellId).name;
+                return readCellContent<{ name: string }>(cellId)?.name;
             },
             get dom() {
-                return decodeEndpoint(
-                    type.morType,
-                    readCellContent<{ dom: Ob | null }>(cellId).dom,
-                );
+                const content = readCellContent<{ dom: Ob | null }>(cellId);
+                return content && decodeEndpoint(type.morType, content.dom);
             },
             get cod() {
-                return decodeEndpoint(
-                    type.morType,
-                    readCellContent<{ cod: Ob | null }>(cellId).cod,
-                );
+                const content = readCellContent<{ cod: Ob | null }>(cellId);
+                return content && decodeEndpoint(type.morType, content.cod);
             },
             update(u: { name?: string; dom?: unknown; cod?: unknown }) {
                 change((d) => {

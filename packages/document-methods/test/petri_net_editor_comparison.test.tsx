@@ -36,16 +36,16 @@ const EXPECTED_INITIAL =
     '<li><span class="cell-label">Place: B</span></li>' +
     '<li><span class="cell-label">Place: C</span></li>' +
     '<li><span class="cell-label">Transition: <span>[A<!---->]</span><span> -&gt; </span>' +
-    "<span>[C<!---->]</span><span> fires</span></span>" +
+    "<span>[C<!---->]</span><span>fires</span></span>" +
     '<button aria-label="run test mutation"></button></li></ul></section>';
 
 const EXPECTED_AFTER_APPEND =
     "<section><h1>Petri net</h1><ul>" +
     '<li><span class="cell-label">Place: A</span></li>' +
-    '<li><span class="cell-label">Place: B</span></li>' +
+    '<li><span class="cell-label">Place: B</span></li>' 
     '<li><span class="cell-label">Place: C</span></li>' +
     '<li><span class="cell-label">Transition: <span>[A, B<!---->]</span><span> -&gt; </span>' +
-    "<span>[C<!---->]</span><span> fires</span></span>" +
+    "<span>[C<!---->]</span><span>fires</span></span>" +
     '<button aria-label="run test mutation"></button></li></ul></section>';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -383,7 +383,7 @@ describe("Petri-net editor comparison", () => {
                         <ObListEditor placeIds={placeIds(props.transition.dom)} placeName={name} />
                         <span> -&gt; </span>
                         <ObListEditor placeIds={placeIds(props.transition.cod)} placeName={name} />
-                        <span> {props.transition.name}</span>
+                        <span>{props.transition.name}</span>
                     </span>
                     <button aria-label="run test mutation" onClick={runTestMutation} />
                 </li>
@@ -608,7 +608,7 @@ describe("Petri-net editor comparison", () => {
                         Transition: <ObListEditor objects={props.morphism.dom} />
                         <span> -&gt; </span>
                         <ObListEditor objects={props.morphism.cod} />
-                        <span> {props.morphism.name}</span>
+                        <span>{props.morphism.name}</span>
                     </span>
                     <button aria-label="run test mutation" onClick={runTestMutation} />
                 </li>

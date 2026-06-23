@@ -332,9 +332,7 @@ console.log(notebook.cells().length);
 3
 ```
 
-After deletion, reading fields off the stale handle throws.
-
-<!-- verifier:throws -->
+After deletion, reading fields off the stale handle returns `undefined`.
 
 ```ts
 b.delete();
@@ -342,7 +340,7 @@ console.log(b.name);
 ```
 
 ```
-❌ not found (it may have been deleted).
+undefined
 ```
 
 Deleting an already-deleted cell is a silent no-op.
