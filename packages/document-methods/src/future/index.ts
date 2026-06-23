@@ -36,15 +36,16 @@ export interface DocumentStore<Handle> {
     /** Apply a mutation by mutating a draft document. */
     changeDocument(handle: Handle, fn: (doc: ModelDocument) => void): void;
     /** Make a detached plain-JS copy of a store-owned value before cloning it. */
-    copyValue?<T>(handle: Handle, value: T): T;
+    copyValue<T>(handle: Handle, value: T): T;
     /**
      * Convert a store handle into the referenced document's stable reference,
      * when available. The reference omits the link `type`: a handle only
      * identifies a document, not how it is being referenced, so the caller
      * supplies the `type` per the kind of link being created (e.g.
-     * `"instantiation"`).
+     * `"instantiation"`). Returns `undefined` when the handle has no stable
+     * reference (e.g. a store that cannot mint links).
      */
-    linkForHandle?(handle: Handle): Omit<Link, "type"> | undefined;
+    linkForHandle(handle: Handle): Omit<Link, "type"> | undefined;
     /**
      * Resolve an instantiation link to its elaborated, validated model.
      *
@@ -53,12 +54,12 @@ export interface DocumentStore<Handle> {
      * referenced document may live in a repo or on a server) and is the store's
      * responsibility, including fetching the document, elaborating it against
      * its own theory, and detecting cycles of instantiations. A store that
-     * cannot resolve links (e.g. the plain in-memory store) omits this method;
-     * a notebook containing instantiation cells then validates as `Illformed`.
-     * The promise rejects when the referenced model is unavailable or itself
+     * cannot resolve a given link rejects the returned promise; a notebook
+     * containing such an instantiation then validates as `Illformed`. The
+     * promise also rejects when the referenced model is unavailable or itself
      * ill-formed.
      */
-    resolveModel?(link: Link): Promise<DblModel>;
+    resolveModel(link: Link): Promise<DblModel>;
 }
 
 const plainDocumentIds = new WeakMap<ModelDocument, string>();
@@ -72,6 +73,20 @@ const plainDocumentId = (document: ModelDocument): string => {
     return id;
 };
 
+/**
+ * Elaborated models the plain store has seen, keyed by {@link plainDocumentId}.
+ * The plain store has no theory of its own and so cannot elaborate a referenced
+ * document on demand; instead {@link Notebook.validate}/{@link
+ * Notebook.migrateTo} (which do have a core theory) populate this cache as a
+ * side effect, and {@link plainStore.resolveModel} serves resolutions from it.
+ */
+const plainElaboratedModels = new Map<string, DblModel>();
+
+/** Record an elaborated model for a plain-store handle; see {@link plainElaboratedModels}. */
+const cachePlainModel = (handle: ModelDocument, model: DblModel): void => {
+    plainElaboratedModels.set(plainDocumentId(handle), model);
+};
+
 /** A plain in-memory store whose handle is the document itself. */
 export const plainStore: DocumentStore<ModelDocument> = {
     createHandle: (initialDoc) => {
@@ -80,11 +95,22 @@ export const plainStore: DocumentStore<ModelDocument> = {
     },
     viewDocument: (handle) => handle,
     changeDocument: (handle, fn) => fn(handle),
+    copyValue: (_handle, value) => structuredClone(value),
     linkForHandle: (handle) => ({
         _id: plainDocumentId(handle),
         _version: null,
         _server: "",
     }),
+    resolveModel: async (link) => {
+        const model = plainElaboratedModels.get(link._id);
+        if (!model) {
+            throw new Error(
+                "The plain in-memory store can only resolve a model it has already " +
+                    "elaborated locally; validate the referenced notebook first.",
+            );
+        }
+        return model;
+    },
 };
 
 const richTextKind: unique symbol = Symbol("richText");
@@ -719,7 +745,8 @@ function attachNotebook<TShape extends AnyShape, Handle>(
 ): Notebook<TShape, Handle> {
     const doc = store.viewDocument(handle);
     const change = (fn: (doc: ModelDocument) => void) => store.changeDocument(handle, fn);
-    const copy = store.copyValue ? <T>(value: T) => store.copyValue!(handle, value) : undefined;
+    const copy = <T>(value: T): T => store.copyValue(handle, value);
+    const isPlainStore = (store as DocumentStore<unknown>) === plainStore;
 
     /**
      * Build the map of elaborated models that an instantiation-bearing notebook
@@ -745,13 +772,6 @@ function attachNotebook<TShape extends AnyShape, Handle>(
             if (instantiated.has(link._id)) {
                 continue;
             }
-            if (!store.resolveModel) {
-                return {
-                    error:
-                        "Notebook contains an instantiation, but its store cannot " +
-                        "resolve model references (no `resolveModel`).",
-                };
-            }
             try {
                 instantiated.set(link._id, await store.resolveModel(link));
             } catch (e) {
@@ -773,7 +793,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
     };
 
     const cloneJudgment = (judgment: ModelJudgment): ModelJudgment =>
-        duplicateModelJudgment(copy ? copy(judgment) : judgment);
+        duplicateModelJudgment(copy(judgment));
 
     const linkForModel = (model: Notebook<AnyShape, Handle> | Link | null): Link | null => {
         if (model === null) {
@@ -782,7 +802,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
         if ("_id" in model) {
             return model;
         }
-        const ref = store.linkForHandle?.(model.handle);
+        const ref = store.linkForHandle(model.handle);
         return ref ? { ...ref, type: "instantiation" } : null;
     };
 
@@ -1070,7 +1090,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
             return doc;
         },
         dump() {
-            return copy ? copy(doc) : structuredClone(doc);
+            return copy(doc);
         },
         async validate(coreTheory?: DblTheory): Promise<ModelValidationResult> {
             const theory = coreTheory ?? shape.coreTheory;
@@ -1080,7 +1100,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                         "so pass one explicitly.",
                 );
             }
-            const snapshot = copy ? copy(doc) : structuredClone(doc);
+            const snapshot = copy(doc);
             const instantiated = await buildInstantiatedMap(snapshot);
             if ("error" in instantiated) {
                 return { tag: "Illformed", model: null, error: instantiated.error };
@@ -1095,6 +1115,9 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                 );
             } catch (e) {
                 return { tag: "Illformed", model: null, error: String(e) };
+            }
+            if (isPlainStore) {
+                cachePlainModel(handle as ModelDocument, model);
             }
             const result = model.validate();
             if (result.tag === "Ok") {
@@ -1131,7 +1154,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                 );
             }
 
-            const snapshot = copy ? copy(doc) : structuredClone(doc);
+            const snapshot = copy(doc);
             const instantiated = await buildInstantiatedMap(snapshot);
             if ("error" in instantiated) {
                 throw new Error(
@@ -1153,6 +1176,9 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                         `"${targetShape.theory}": the model failed to elaborate (${String(e)}).`,
                     { cause: e },
                 );
+            }
+            if (isPlainStore) {
+                cachePlainModel(handle as ModelDocument, model);
             }
 
             const migrated = migration.migrate(model, targetShape.coreTheory);
@@ -1372,8 +1398,8 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
      * Asynchronous because a notebook may contain instantiation cells, whose
      * referenced models are resolved through {@link DocumentStore.resolveModel}
      * (which fetches and elaborates them, handling any cycles). A notebook with
-     * instantiations over a store lacking `resolveModel`, or whose resolution
-     * fails, validates as `Illformed`.
+     * instantiations whose resolution fails (the store rejects the link)
+     * validates as `Illformed`.
      */
     validate(coreTheory?: DblTheory): Promise<ModelValidationResult>;
     /**

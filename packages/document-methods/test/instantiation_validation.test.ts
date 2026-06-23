@@ -37,6 +37,7 @@ function createResolvingStore(): {
         },
         viewDocument: (handle) => handle,
         changeDocument: (handle, fn) => fn(handle),
+        copyValue: (_handle, value) => structuredClone(value),
         linkForHandle: (handle) => ({
             _id: idFor(handle),
             _version: null,
@@ -82,16 +83,34 @@ describe("instantiation validation", () => {
         expect(result.model).toBeInstanceOf(DblModel);
     });
 
-    test("an instantiation over a store without resolveModel is Illformed", async () => {
+    test("the plain store resolves an instantiation of a locally-validated model", async () => {
+        const imported = binder.createNotebook(SimpleOlog, { name: "Imported" });
+        imported.add(Type, { name: "Thing" });
+        // Validating the imported notebook elaborates it; the plain store caches
+        // the resulting model so the instantiation below can resolve it.
+        expect((await imported.validate()).tag).toBe("Valid");
+
+        const notebook = binder.createNotebook(SimpleOlog, { name: "Main" });
+        notebook.add(Type, { name: "A" });
+        notebook.add(Instantiation, { name: "ImportedOlog", model: imported });
+
+        const result = await notebook.validate();
+        expect(result.tag).toBe("Valid");
+        expect(result.model).toBeInstanceOf(DblModel);
+    });
+
+    test("the plain store reports an unvalidated local instantiation as Illformed", async () => {
         const imported = binder.createNotebook(SimpleOlog, { name: "Imported" });
         imported.add(Type, { name: "Thing" });
 
+        // `imported` is never validated, so the plain store has no elaborated
+        // model to resolve the instantiation against.
         const notebook = binder.createNotebook(SimpleOlog, { name: "Main" });
         notebook.add(Instantiation, { name: "ImportedOlog", model: imported });
 
         const result = await notebook.validate();
         expect(result.tag).toBe("Illformed");
-        expect(result.tag === "Illformed" && result.error).toContain("resolveModel");
+        expect(result.tag === "Illformed" && result.error).toContain("Failed to resolve");
     });
 
     test("a failed resolution is reported as Illformed", async () => {
