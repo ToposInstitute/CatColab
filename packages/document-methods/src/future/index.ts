@@ -388,9 +388,26 @@ export type InstantiationSpecialization = {
     readonly as: ObjectCell;
 };
 
+/**
+ * A notebook that can be {@link Notebook.validate}d, i.e. whose shape declares a
+ * `coreTheory`. An instantiation resolves its referenced model by validating it,
+ * so only a validatable notebook may be an instantiation's `model`; a notebook
+ * over a shape without a `coreTheory` is rejected at compile time. A notebook
+ * over a richer shape stays assignable here, since `validate` is the structural
+ * marker {@link CoreTheoryMethods} adds exactly when the shape has a core theory.
+ */
+export type ValidatableNotebook<Handle = ModelDocument> = Notebook<AnyShape, Handle> & {
+    validate(): Promise<ModelValidationResult>;
+};
+
 export type InstantiationArgs<Handle = unknown> = {
     name: string;
-    model: Notebook<AnyShape, Handle> | Link | null;
+    /**
+     * The referenced model: a {@link ValidatableNotebook} (its shape must
+     * declare a `coreTheory`, so it can be resolved by validation), a stable
+     * {@link Link} the store resolves at runtime, or `null` for none.
+     */
+    model: ValidatableNotebook<Handle> | Link | null;
     specializations?: readonly InstantiationSpecialization[];
 };
 

@@ -161,23 +161,46 @@ objects: 1
 A shape elaborates into its `coreTheory`, so `validate()` and `migrateTo()` are
 only available on a notebook whose shape declares one. A shape with a `theory`
 but no `coreTheory` can still create and edit notebooks, but calling either is a
-compile error.
+compile error. The same requirement applies to an instantiation's `model`: an
+instantiation resolves its referenced model by validating it, so only a
+validatable notebook (one whose shape declares a `coreTheory`) may be used.
 
 <!-- verifier:reset -->
 
 ```ts
-import { binder, defineObject, defineShape } from "catcolab-documents";
+import {
+    binder,
+    defineMorphism,
+    defineObject,
+    defineShape,
+    Instantiation,
+} from "catcolab-documents";
+import { ThCategory } from "catlog-wasm";
 
-const NoCore = defineShape({
-    theory: "no-core",
-    objects: [defineObject({ tag: "Basic", content: "Object" })],
+const Obj = defineObject({ tag: "Basic", content: "Object" });
+const Mor = defineMorphism({ tag: "Hom", content: Obj.obType });
+
+const NoCore = defineShape({ theory: "no-core", objects: [Obj], morphisms: [Mor] });
+const WithCore = defineShape({
+    theory: "with-core",
+    coreTheory: new ThCategory().theory(),
+    objects: [Obj],
+    morphisms: [Mor],
 });
 
 const noCore = binder.createNotebook(NoCore, { name: "No core theory" });
+const host = binder.createNotebook(WithCore, { name: "Host" });
+const core = binder.createNotebook(WithCore, { name: "Core model" });
 
 // @ts-expect-error A shape without a `coreTheory` cannot be validated.
 await noCore.validate();
 
 // @ts-expect-error A shape without a `coreTheory` cannot be migrated.
 await noCore.migrateTo(NoCore);
+
+// A validatable notebook is accepted as an instantiation model.
+host.add(Instantiation, { name: "ok", model: core });
+
+// @ts-expect-error An instantiation model must be validatable (its shape needs a `coreTheory`).
+host.add(Instantiation, { name: "bad", model: noCore });
 ```
