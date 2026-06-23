@@ -8,14 +8,7 @@ no endpoints in its literal, so it declares them with `defineMorphism(morType, {
 <!-- verifier:prepend-to-following -->
 
 ```ts
-import {
-    binder,
-    byMorphismType,
-    byObjectType,
-    defineMorphism,
-    defineObject,
-    defineShape,
-} from "catcolab-documents";
+import { binder, defineMorphism, defineObject, defineShape } from "catcolab-documents";
 import { ThSchema } from "catlog-wasm";
 
 const Entity = defineObject({ tag: "Basic", content: "Entity" });
@@ -52,8 +45,8 @@ notebook.add(Operation, { name: "uppercase", dom: str, cod: upper });
 ```
 
 ```ts
-const entities = notebook.cells().filter(byObjectType(Entity));
-const operations = notebook.cells().filter(byMorphismType(Operation));
+const entities = notebook.cellsOf(Entity);
+const operations = notebook.cellsOf(Operation);
 
 console.log("entities:", entities.map((cell) => cell.name).join(", "));
 console.log("operations:", operations.map((cell) => cell.name).join(", "));

@@ -317,8 +317,7 @@ type MorphismCellTuple<Ms extends readonly MorphismDef[]> = {
  *
  * The default {@link AnyShape} instantiation (the bare `NotebookCell`) widens
  * the object and morphism members to `ObjectCell`/`MorphismCell`; recover
- * precise handles from it by filtering with {@link byObjectType} or {@link
- * byMorphismType}.
+ * precise handles with {@link Notebook.cellsOf}.
  */
 export type NotebookCell<TShape extends AnyShape = AnyShape> =
     | RichTextCell
@@ -553,30 +552,6 @@ export type ModelValidationResult =
  */
 export function defineShape<const TSpec extends Shape>(spec: TSpec): TSpec {
     return spec;
-}
-
-/**
- * Typed filter for cells of exactly the given object def. TypeScript only
- * narrows `===` comparisons on unit types, so a comparison like `cell.type ===
- * Place` cannot narrow a cell handle by itself; this guard carries the
- * narrowing instead. Matching is structural, so a cell whose stored def
- * equals `type` is selected regardless of which shape produced `type`.
- */
-export function byObjectType<Def extends ObjectDef>(
-    type: Def,
-): (cell: { readonly kind: symbol }) => cell is ObjectCell<Def> {
-    return (cell): cell is ObjectCell<Def> =>
-        (cell as { kind: symbol }).kind === CellKind.Object &&
-        sameTypeValue((cell as { type?: unknown }).type, type);
-}
-
-/** Typed filter for cells of exactly the given morphism def. */
-export function byMorphismType<Def extends MorphismDef>(
-    type: Def,
-): (cell: { readonly kind: symbol }) => cell is MorphismCell<Def> {
-    return (cell): cell is MorphismCell<Def> =>
-        (cell as { kind: symbol }).kind === CellKind.Morphism &&
-        sameTypeValue((cell as { type?: unknown }).type, type);
 }
 
 /** Structural equality of stored type expressions (plain JSON-like values). */
@@ -1034,12 +1009,27 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                 }
             });
         },
-        cellsOf(shape: AnyShape): Array<NotebookCell> {
+        cellsOf(arg: RichTextType | ObjectDef | MorphismDef | AnyShape): Array<NotebookCell> {
+            // `RichText` selects just the rich-text cells.
+            if (isRichTextType(arg)) {
+                return (this as Notebook<TShape, Handle>)
+                    .cells()
+                    .filter((cell) => cell.kind === CellKind.RichText);
+            }
+            // A def carries an "object"/"morphism" `tag`; a shape does not. A
+            // single def selects only its own cells (rich-text excluded), while a
+            // shape also includes rich-text cells.
+            const isDef = "tag" in arg;
+            const shape: AnyShape = isDef
+                ? arg.tag === "object"
+                    ? { objects: [arg] }
+                    : { morphisms: [arg] }
+                : arg;
             const objectDefs = shape.objects ?? [];
             const morphismDefs = shape.morphisms ?? [];
             return (this as Notebook<TShape, Handle>).cells().filter((cell) => {
                 if (cell.kind === CellKind.RichText) {
-                    return true;
+                    return !isDef;
                 }
                 if (cell.kind === CellKind.Object) {
                     const type = (cell as { type?: unknown }).type;
@@ -1207,8 +1197,7 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
      * assignable where a narrower shape is expected (e.g. a notebook with an
      * extra object type handed to a consumer over a union of list shapes); the
      * tradeoff is that the result may include cell types beyond that shape.
-     * Recover precise handles with {@link Notebook.cellsOf}, or filter with
-     * {@link byObjectType}/{@link byMorphismType}.
+     * Recover precise handles with {@link Notebook.cellsOf}.
      */
     cells(): Array<NotebookCell>;
     /**
@@ -1217,10 +1206,19 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
      * object/morphism types contributes its own handle, so `cell.kind`
      * discriminates to a precise `ObjectCell`/`MorphismCell`. Rich-text cells
      * are always included (they belong to no shape), so an editor can render
-     * them alongside the shape's typed cells. Matching is structural, like
-     * {@link byObjectType}, so cells are selected by their stored type value
-     * regardless of which shape produced `shape`.
+     * them alongside the shape's typed cells. Matching is structural, so cells
+     * are selected by their stored type value regardless of which shape produced
+     * `shape`.
+     *
+     * A single object or morphism def may be passed directly instead of a
+     * shape, selecting just that type's cells as precise
+     * `ObjectCell`/`MorphismCell` handles (rich-text cells are excluded).
+     *
+     * Passing {@link RichText} selects just the notebook's rich-text cells.
      */
+    cellsOf(type: RichTextType): Array<RichTextCell>;
+    cellsOf<Def extends ObjectDef>(type: Def): Array<ObjectCell<Def>>;
+    cellsOf<Def extends MorphismDef>(type: Def): Array<MorphismCell<Def>>;
     cellsOf<S extends AnyShape>(shape: S): Array<NotebookCell<S>>;
     /**
      * Add a cell to the notebook. The kind of cell is selected by the first

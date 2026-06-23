@@ -38,7 +38,7 @@ const SimpleSchema = defineShape({
 <!-- verifier:prepend-to-following -->
 
 ```ts
-import { binder, byMorphismType, byObjectType } from "catcolab-documents";
+import { binder } from "catcolab-documents";
 
 const notebook = binder.createNotebook(SimpleSchema, { name: "Company schema" });
 ```
@@ -57,10 +57,10 @@ notebook.add(Operation, { name: "uppercase", dom: str, cod: upper });
 ```
 
 ```ts
-const entities = notebook.cells().filter(byObjectType(Entity));
-const mappings = notebook.cells().filter(byMorphismType(Mapping));
-const attrs = notebook.cells().filter(byMorphismType(Attr));
-const operations = notebook.cells().filter(byMorphismType(Operation));
+const entities = notebook.cellsOf(Entity);
+const mappings = notebook.cellsOf(Mapping);
+const attrs = notebook.cellsOf(Attr);
+const operations = notebook.cellsOf(Operation);
 
 console.log("entities:", entities.map((cell) => cell.name).join(", "));
 console.log("mappings:", mappings.map((cell) => cell.name).join(", "));

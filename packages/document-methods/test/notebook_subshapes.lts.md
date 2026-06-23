@@ -5,34 +5,31 @@ A shape declares the object and morphism types a notebook is built from, and
 handle every cell type the shape implies. A reusable component therefore does
 not pin itself to one theory's shape; it is written against the generic
 `Notebook` interface, whose `cells()` yields the widest `NotebookCell` union. It
-stays fully interactive — it reads cells with `byObjectType`/`byMorphismType`,
-edits them with `update`, and adds new ones with `add` — and because a notebook
-over any shape is assignable to the generic `Notebook`, the component accepts a
-notebook of any theory.
+stays fully interactive — it reads cells with `cellsOf`, edits them with
+`update`, and adds new ones with `add` — and because a notebook over any shape
+is assignable to the generic `Notebook`, the component accepts a notebook of any
+theory.
 
 <!-- verifier:prepend-to-following -->
 
 ```ts
-import { binder, byObjectType, defineObject, defineShape, type Notebook } from "catcolab-documents";
+import { binder, defineObject, defineShape, type Notebook } from "catcolab-documents";
 import { PetriNet, Place, Transition } from "catcolab-logics/petri-net";
 ```
 
 `renamePlaces` is written against the generic `Notebook`. It filters the
 notebook's places, renames each, and adds one — selecting the cells it handles
-with `byObjectType`, ignoring the rest.
+with `cellsOf`, ignoring the rest.
 
 <!-- verifier:prepend-to-following -->
 
 ```ts
 function renamePlaces(notebook: Notebook): string[] {
-    for (const place of notebook.cells().filter(byObjectType(Place))) {
+    for (const place of notebook.cellsOf(Place)) {
         place.update({ name: place.name.toUpperCase() });
     }
     notebook.add(Place, { name: "new" });
-    return notebook
-        .cells()
-        .filter(byObjectType(Place))
-        .map((place) => place.name);
+    return notebook.cellsOf(Place).map((place) => place.name);
 }
 ```
 

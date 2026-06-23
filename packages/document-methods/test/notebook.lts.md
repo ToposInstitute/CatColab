@@ -134,7 +134,7 @@ We can filter cells by their type, not just their kind and we provide some utili
 
 ```ts
 import { Attr, AttrType, Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
-import { binder, byMorphismType, byObjectType } from "catcolab-documents";
+import { binder } from "catcolab-documents";
 
 const notebook = binder.createNotebook(SimpleSchema, { name: "Example schema" });
 
@@ -145,8 +145,8 @@ const str = notebook.add(AttrType, { name: "String" });
 notebook.add(Mapping, { name: "employer", dom: person, cod: company });
 notebook.add(Attr, { name: "name", dom: person, cod: str });
 
-const entities = notebook.cells().filter(byObjectType(Entity));
-const attrs = notebook.cells().filter(byMorphismType(Attr));
+const entities = notebook.cellsOf(Entity);
+const attrs = notebook.cellsOf(Attr);
 
 console.log("entities:", entities.map((cell) => cell.name).join(", "));
 console.log("attrs:", attrs.map((cell) => cell.name).join(", "));
@@ -246,7 +246,7 @@ notebook was edited after the handle was obtained.
 
 ```ts
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
-import { binder, byObjectType, RichText } from "catcolab-documents";
+import { binder, RichText } from "catcolab-documents";
 
 const notebook = binder.createNotebook(SimpleOlog, { name: "An Olog" });
 
@@ -256,8 +256,7 @@ const c = notebook.add(Type, { name: "C" });
 
 function names() {
     return notebook
-        .cells()
-        .filter(byObjectType(Type))
+        .cellsOf(Type)
         .map((cell) => cell.name)
         .join(", ");
 }
@@ -493,7 +492,7 @@ references held elsewhere (links, open editors, sync peers) still resolve.
 ```ts
 import { Aspect, SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
-import { binder, byMorphismType, byObjectType } from "catcolab-documents";
+import { binder } from "catcolab-documents";
 
 const olog = binder.createNotebook(SimpleOlog, { name: "An Olog" });
 
@@ -516,16 +515,14 @@ console.log("theory:", schema.document.theory);
 console.log(
     "entities:",
     schema
-        .cells()
-        .filter(byObjectType(Entity))
+        .cellsOf(Entity)
         .map((cell) => cell.name)
         .join(", "),
 );
 console.log(
     "mappings:",
     schema
-        .cells()
-        .filter(byMorphismType(Mapping))
+        .cellsOf(Mapping)
         .map((cell) => cell.name)
         .join(", "),
 );

@@ -4,8 +4,6 @@
 // `consistent-function-scoping`; hoisting them out would scatter each scenario.
 /* oxlint-disable unicorn/consistent-function-scoping */
 import {
-    byMorphismType,
-    byObjectType,
     CellKind,
     createBinder,
     defineMorphism,
@@ -470,9 +468,6 @@ describe("Petri-net editor comparison", () => {
     });
 
     test("catcolab-documents, typed logic", () => {
-        const isPlace = byObjectType(Place);
-        const isTransition = byMorphismType(Transition);
-
         function InlinePlaceListEditor(props: { places: PlaceCell[] }) {
             return <span>[{props.places.map((place) => place.name).join(", ")}]</span>;
         }
@@ -487,8 +482,7 @@ describe("Petri-net editor comparison", () => {
                     [...props.transition.dom, ...props.transition.cod].map((place) => place.id),
                 );
                 const input = props.notebook
-                    .cells()
-                    .filter(isPlace)
+                    .cellsOf(Place)
                     .find((place) => !referenced.has(place.id));
                 if (input) {
                     props.transition.update({ dom: [...props.transition.dom, input] });
@@ -500,7 +494,7 @@ describe("Petri-net editor comparison", () => {
                         Transition: <InlinePlaceListEditor places={props.transition.dom} />
                         <span> -&gt; </span>
                         <InlinePlaceListEditor places={props.transition.cod} />
-                        <span> {props.transition.name}</span>
+                        <span>{props.transition.name}</span>
                     </span>
                     <button aria-label="run test mutation" onClick={runTestMutation} />
                 </li>
@@ -512,10 +506,10 @@ describe("Petri-net editor comparison", () => {
             cell: NotebookCell<typeof PetriNet>;
         }) {
             const cell = props.cell;
-            if (isTransition(cell)) {
+            if (cell.kind === CellKind.Morphism) {
                 return <TransitionCell notebook={props.notebook} transition={cell} />;
             }
-            if (isPlace(cell)) {
+            if (cell.kind === CellKind.Object) {
                 return (
                     <li>
                         <span class="cell-label">Place: {cell.name}</span>
@@ -588,9 +582,6 @@ describe("Petri-net editor comparison", () => {
             morphisms: [symmetricListMorphism],
         });
 
-        const isOb = byObjectType(basicObject);
-        const isMor = byMorphismType(symmetricListMorphism);
-
         function ObListEditor(props: { objects: BasicObCell[] }) {
             return <span>[{props.objects.map((place) => place.name).join(", ")}]</span>;
         }
@@ -605,8 +596,7 @@ describe("Petri-net editor comparison", () => {
                     [...props.morphism.dom, ...props.morphism.cod].map((ob) => ob.id),
                 );
                 const input = props.notebook
-                    .cells()
-                    .filter(isOb)
+                    .cellsOf(basicObject)
                     .find((ob) => !referenced.has(ob.id));
                 if (input) {
                     props.morphism.update({ dom: [...props.morphism.dom, input] });
@@ -630,10 +620,10 @@ describe("Petri-net editor comparison", () => {
             cell: NotebookCell<typeof GenericShape>;
         }) {
             const cell = props.cell;
-            if (isMor(cell)) {
+            if (cell.kind === CellKind.Morphism) {
                 return <MorphismCellEditor notebook={props.notebook} morphism={cell} />;
             }
-            if (isOb(cell)) {
+            if (cell.kind === CellKind.Object) {
                 return (
                     <li>
                         <span class="cell-label">Place: {cell.name}</span>

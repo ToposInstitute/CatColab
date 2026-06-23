@@ -80,6 +80,5 @@ Declaring a shape moves the endpoint contract into the type system: `add` is
 constrained to the shape's cell types, and each morphism's endpoints are derived
 from its `MorType` (`Hom(Entity)` wants an `Entity` cell; a `SymmetricList`
 `Hom` wants a list). Wrong-type, wrong-arity, and cross-theory endpoints become
-compile-time errors instead of runtime surprises, while reads still go through
-the untyped `cells()` and recover precise handles with
-`byObjectType`/`byMorphismType`.
+compile-time errors instead of runtime surprises, while reads recover precise
+handles with `cellsOf`.
