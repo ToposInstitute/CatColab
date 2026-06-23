@@ -472,7 +472,7 @@ another logic. Migration mirrors the core: it transports the elaborated model
 along a theory morphism and re-types each cell, preserving cell ids, names, and
 morphism endpoints. Only the cell types change.
 
-`migrate` **mutates the notebook in place**: it rewrites the underlying
+`migrateTo` **mutates the notebook in place**: it rewrites the underlying
 document to the target theory rather than producing a copy. It returns a new
 notebook handle bound to the target logic over that same document. The original
 handle is now stale — its implicit types no longer matches the document it points at — so
@@ -501,11 +501,11 @@ olog.add(Aspect, { name: "has", dom: a, cod: b });
 
 Migrating an olog to a schema turns each `Type` into an `Entity` and each
 `Aspect` into a `Mapping`. Names and endpoints are carried over unchanged.
-Because `migrate` mutates in place, the olog notebook's own document is now a
-schema; `migrate` hands back a schema-typed handle over it.
+Because `migrateTo` mutates in place, the olog notebook's own document is now a
+schema; `migrateTo` hands back a schema-typed handle over it.
 
 ```ts
-const schema = olog.migrate(SimpleSchema);
+const schema = olog.migrateTo(SimpleSchema);
 
 // The original document was rewritten in place, not copied.
 console.log("same document:", schema.document === olog.document);
@@ -559,7 +559,7 @@ olog.add(Aspect, { name: "has", dom: a, cod: b });
 <!-- verifier:throws -->
 
 ```ts
-olog.migrate(PetriNet);
+olog.migrateTo(PetriNet);
 ```
 
 ```

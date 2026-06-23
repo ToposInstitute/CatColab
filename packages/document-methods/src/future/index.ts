@@ -327,7 +327,7 @@ export type NotebookCell<TShape extends AnyShape = AnyShape> =
 /**
  * A pushforward migration from this shape to another. Mirrors the core: it
  * transports an elaborated model along a theory morphism into the target
- * theory. The target's core theory is supplied by the caller of `migrate`.
+ * theory. The target's core theory is supplied by the caller of `migrateTo`.
  */
 export type ModelMigration = {
     /** Identifier of the document theory migrated into. */
@@ -905,7 +905,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
             }
             return { tag: "Invalid", model, errors: result.content };
         },
-        migrate<TTarget extends CreatableShape>(targetShape: TTarget) {
+        migrateTo<TTarget extends CreatableShape>(targetShape: TTarget) {
             // Trivial migration: an empty notebook or an inclusion target only
             // needs its theory rewritten; cell types are left untouched.
             const hasFormalCells = doc.notebook.cellOrder.some(
@@ -1154,7 +1154,7 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
      * original handle is now stale, so continue through the returned handle.
      * Throws if no migration to the target is defined.
      */
-    migrate<TTarget extends CreatableShape>(targetShape: TTarget): Notebook<TTarget, Handle>;
+    migrateTo<TTarget extends CreatableShape>(targetShape: TTarget): Notebook<TTarget, Handle>;
     /**
      * Whether this notebook's shape declares a cell type structurally equal to
      * the given object or morphism type. A function written against a shape
