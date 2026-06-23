@@ -105,10 +105,7 @@ impl Theory for Schema {
         };
 
         // the objects must all be valid
-        if ![&b.dom_dom_object, &b.dom_cod_object, &b.cod_dom_object, &b.cod_cod_object]
-            .into_iter()
-            .all(Self::has_object)
-        {
+        if !b.objects().into_iter().all(Self::has_object) {
             return false;
         }
 

@@ -106,7 +106,9 @@ pub enum TheoryProArrow<T: Theory> {
 }
 
 // TODO: drop this!
-pub fn pro_arrow_is_constrained<T: Theory>(pro_arrow: &Composite<TheoryProArrow<T>>) -> bool {
+pub fn delete_me_pro_arrow_is_constrained<T: Theory>(
+    pro_arrow: &Composite<TheoryProArrow<T>>,
+) -> bool {
     !matches!(pro_arrow.only(), Some(p) if p.is_hole())
 }
 
@@ -130,6 +132,19 @@ pub struct Boundary<T: Theory> {
     pub cod_vertical: Composite<TheoryArrow<T>>,
     /// The bottom, pro-arrow boundary.
     pub cod_proarrow: Composite<TheoryProArrow<T>>,
+}
+
+impl<T: Theory> Boundary<T> {
+    /// Obtain an array into the four corner objects of the cell. Call-sites
+    /// must not depend on the ordering of these objects.
+    pub fn objects(&self) -> [&TheoryObject<T>; 4] {
+        [
+            &self.dom_dom_object,
+            &self.dom_cod_object,
+            &self.cod_dom_object,
+            &self.cod_cod_object,
+        ]
+    }
 }
 
 // -----------------------------------------------------------------------------

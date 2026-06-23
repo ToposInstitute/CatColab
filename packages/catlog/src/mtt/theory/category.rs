@@ -59,11 +59,9 @@ impl Theory for Category {
         // This accepts unit cells, and inlines the unitality equations of hom.
         b.dom_vertical.is_empty()
             && b.cod_vertical.is_empty()
+            && !b.cod_proarrow.is_empty()
             && b.dom_proarrow.iter().all(Self::has_pro_arrow)
             && b.cod_proarrow.iter().all(Self::has_pro_arrow)
-            && !b.cod_proarrow.is_empty()
-            && [&b.dom_dom_object, &b.dom_cod_object, &b.cod_dom_object, &b.cod_cod_object]
-                .into_iter()
-                .all(Self::has_object)
+            && b.objects().into_iter().all(Self::has_object)
     }
 }
