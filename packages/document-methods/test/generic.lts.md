@@ -50,8 +50,8 @@ const target = notebook.add(Object, { name: "B" });
 
 const arrow = notebook.add(Aspect, {
     name: "has",
-    dom: source,
-    cod: target,
+    from: source,
+    to: target,
 });
 ```
 

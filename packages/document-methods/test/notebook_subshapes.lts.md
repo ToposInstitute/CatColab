@@ -42,7 +42,7 @@ accepted wherever a generic `Notebook` is expected.
 const net = binder.createNotebook(PetriNet, { name: "Net" });
 const a = net.add(Place, { name: "a" });
 const c = net.add(Place, { name: "c" });
-const transition = net.add(Transition, { name: "fires", dom: [a], cod: [c] });
+const transition = net.add(Transition, { name: "fires", from: [a], to: [c] });
 ```
 
 ```ts
@@ -60,7 +60,7 @@ boundaries above are typed, so the classic editor mistakes are compile errors.
 
 ### A list endpoint read as a single cell
 
-A morphism cell's `dom` is either a single cell or a list, so reading a field
+A morphism cell's `from` is either a single cell or a list, so reading a field
 like `.name` off it directly is a type error.
 
 ```ts
@@ -68,8 +68,8 @@ import { CellKind } from "catcolab-documents";
 
 for (const cell of net.cells()) {
     if (cell.kind === CellKind.Morphism) {
-        // @ts-expect-error `dom` is a single cell or a list; a list has no `name`.
-        console.log(cell.dom.name);
+        // @ts-expect-error `from` is a single cell or a list; a list has no `name`.
+        console.log(cell.from.name);
     }
 }
 ```
@@ -97,7 +97,7 @@ renderPlaces([person]);
 
 ### An update with a foreign cell
 
-A transition's `dom` is `PlaceCell[]`, and `update` constrains the new value the
+A transition's `from` is `PlaceCell[]`, and `update` constrains the new value the
 same way, so appending a cell of another object type is rejected.
 
 ```ts
@@ -106,8 +106,8 @@ import { Entity, SimpleSchema } from "catcolab-logics/simple-schema";
 const schema = binder.createNotebook(SimpleSchema, { name: "Schema" });
 const entity = schema.add(Entity, { name: "Person" });
 
-// @ts-expect-error A transition's `dom` is `PlaceCell[]`; an `Entity` cell is rejected.
-transition.update({ dom: [...transition.dom, entity] });
+// @ts-expect-error A transition's `from` is `PlaceCell[]`; an `Entity` cell is rejected.
+transition.update({ from: [...transition.from, entity] });
 ```
 
 ### A theory-less shape cannot create a document

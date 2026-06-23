@@ -84,8 +84,8 @@ function addCurrentAspect(
     notebook: CurrentOlogNotebook,
     args: {
         name: string;
-        dom: CurrentObjectDecl;
-        cod: CurrentObjectDecl;
+        from: CurrentObjectDecl;
+        to: CurrentObjectDecl;
     },
 ): CurrentMorphismDecl {
     const cell = aspectCellConstructor.construct();
@@ -93,8 +93,8 @@ function addCurrentAspect(
         throw new Error("Aspect constructor produced the wrong cell shape");
     }
     cell.content.name = args.name;
-    cell.content.dom = encodeCurrentObjectRef(args.dom);
-    cell.content.cod = encodeCurrentObjectRef(args.cod);
+    cell.content.dom = encodeCurrentObjectRef(args.from);
+    cell.content.cod = encodeCurrentObjectRef(args.to);
     appendConstructedCell(notebook, cell);
     return cell.content;
 }
@@ -151,7 +151,7 @@ function CurrentOlogEditor(props: { notebook: CurrentOlogNotebook }) {
 const notebook = createCurrentOlogNotebook({ name: "An Olog" });
 const person = addCurrentType(notebook, { name: "Person" });
 const company = addCurrentType(notebook, { name: "Company" });
-addCurrentAspect(notebook, { name: "works for", dom: person, cod: company });
+addCurrentAspect(notebook, { name: "works for", from: person, to: company });
 
 const container = document.createElement("div");
 document.body.appendChild(container);
@@ -254,7 +254,7 @@ function GenericOlogEditor(props: { notebook: Notebook<Shape, SolidStoreHandle> 
 const notebook = solidBinder.createNotebook(Olog, { name: "An Olog" });
 const person = notebook.add(ologObjectType, { name: "Person" });
 const company = notebook.add(ologObjectType, { name: "Company" });
-notebook.add(ologAspectType, { name: "works for", dom: person, cod: company });
+notebook.add(ologAspectType, { name: "works for", from: person, to: company });
 
 const container = document.createElement("div");
 document.body.appendChild(container);
@@ -340,7 +340,7 @@ function TypedOlogEditor(props: { notebook: TypedOlogNotebook }) {
 const notebook = solidBinder.createNotebook(SimpleOlog, { name: "An Olog" });
 const person = notebook.add(Type, { name: "Person" });
 const company = notebook.add(Type, { name: "Company" });
-notebook.add(Aspect, { name: "works for", dom: person, cod: company });
+notebook.add(Aspect, { name: "works for", from: person, to: company });
 
 const container = document.createElement("div");
 document.body.appendChild(container);

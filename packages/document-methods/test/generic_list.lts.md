@@ -95,16 +95,16 @@ function addListMorphism(notebook: NotebookOfLists) {
     const c = notebook.add(BasicObj, { name: "C" });
 
     if (notebook.supports(ListMor)) {
-        notebook.add(ListMor, { name: "L", dom: [a, b], cod: [c] });
+        notebook.add(ListMor, { name: "L", from: [a, b], to: [c] });
     } else if (notebook.supports(SymmetricListMor)) {
         console.log("Adding SymmetricListMor!");
-        notebook.add(SymmetricListMor, { name: "L", dom: [a, b], cod: [c] });
+        notebook.add(SymmetricListMor, { name: "L", from: [a, b], to: [c] });
     } else if (notebook.supports(CocartesianListMor)) {
-        notebook.add(CocartesianListMor, { name: "L", dom: [a, b], cod: [c] });
+        notebook.add(CocartesianListMor, { name: "L", from: [a, b], to: [c] });
     } else if (notebook.supports(CartesianListMor)) {
-        notebook.add(CartesianListMor, { name: "L", dom: [a, b], cod: [c] });
+        notebook.add(CartesianListMor, { name: "L", from: [a, b], to: [c] });
     } else if (notebook.supports(AdditiveListMor)) {
-        notebook.add(AdditiveListMor, { name: "L", dom: [a, b], cod: [c] });
+        notebook.add(AdditiveListMor, { name: "L", from: [a, b], to: [c] });
     } else {
         // If the code type checked this should be unreachable.
         throw new Error("Did not find any supported List morphism in the notebook.");
@@ -119,7 +119,7 @@ function badAddListMorphism(notebook: NotebookOfLists) {
     const c = notebook.add(BasicObj, { name: "C" });
 
     //@ts-expect-error Not all variants support adding a `ListMor`. You need to narrow the type using the `supports` method.
-    notebook.add(ListMor, { name: "L", dom: [a, b], cod: [c] });
+    notebook.add(ListMor, { name: "L", from: [a, b], to: [c] });
 }
 ```
 
@@ -209,9 +209,9 @@ function badAddListMorphism2(notebook: Notebook<typeof MultiObjectListShape, unk
     const b = notebook.add(BasicObj, { name: "B" });
     const e = notebook.add(entityObType, { name: "E" });
 
-    notebook.add(ListMor, { name: "L1", dom: [a, b], cod: [b] });
+    notebook.add(ListMor, { name: "L1", from: [a, b], to: [b] });
     //@ts-expect-error We can't use an EntityObj with a ListMor
-    notebook.add(ListMor, { name: "L2", dom: [a, b], cod: [e] });
+    notebook.add(ListMor, { name: "L2", from: [a, b], to: [e] });
 }
 ```
 
@@ -285,7 +285,7 @@ function badAddObject2(notebook: Notebook<typeof BothObjectsShape, unknown>) {
     //@ts-expect-error BothObjectsShape can never support CocartesianListMor.
     if (notebook.supports(CocartesianListMor)) {
         //@ts-expect-error BothObjectsShape does not support CocartesianListMor.
-        notebook.add(CocartesianListMor, { name: "L", dom: [a, b], cod: [b] });
+        notebook.add(CocartesianListMor, { name: "L", from: [a, b], to: [b] });
     }
 }
 ```

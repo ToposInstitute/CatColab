@@ -29,7 +29,7 @@ const person = notebook.add(Entity, { name: "Person" });
 const age = notebook.add(AttrType, { name: "Age" });
 
 // @ts-expect-error A Mapping's codomain must be an Entity cell, not an AttrType cell.
-notebook.add(Mapping, { name: "broken", dom: person, cod: age });
+notebook.add(Mapping, { name: "broken", from: person, to: age });
 ```
 
 ## Bug 2: a single object where an endpoint list is required
@@ -48,7 +48,7 @@ const a = notebook.add(Place, { name: "A" });
 const c = notebook.add(Place, { name: "C" });
 
 // @ts-expect-error A transition endpoint is an array of Place cells, not a single Place.
-notebook.add(Transition, { name: "fires", dom: a, cod: [c] });
+notebook.add(Transition, { name: "fires", from: a, to: [c] });
 ```
 
 ## Bug 3: a cell from another theory or another notebook
@@ -71,7 +71,7 @@ const schema = binder.createNotebook(SimpleSchema, { name: "Schema" });
 const person = schema.add(Entity, { name: "Person" });
 
 // @ts-expect-error `place` is a Place cell from another theory; a Mapping endpoint needs an Entity cell.
-schema.add(Mapping, { name: "tangled", dom: person, cod: place });
+schema.add(Mapping, { name: "tangled", from: person, to: place });
 ```
 
 ## Why this matters

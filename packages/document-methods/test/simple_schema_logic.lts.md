@@ -51,9 +51,9 @@ const company = notebook.add(Entity, { name: "Company" });
 const str = notebook.add(AttrType, { name: "String" });
 const upper = notebook.add(AttrType, { name: "UpperString" });
 
-notebook.add(Mapping, { name: "employer", dom: person, cod: company });
-notebook.add(Attr, { name: "name", dom: person, cod: str });
-notebook.add(Operation, { name: "uppercase", dom: str, cod: upper });
+notebook.add(Mapping, { name: "employer", from: person, to: company });
+notebook.add(Attr, { name: "name", from: person, to: str });
+notebook.add(Operation, { name: "uppercase", from: str, to: upper });
 ```
 
 ```ts
@@ -82,8 +82,8 @@ attribute type is a compile error.
 // @ts-expect-error A mapping's codomain must be an Entity cell, not an AttrType cell.
 notebook.add(Mapping, {
     name: "bad",
-    dom: person,
-    cod: str,
+    from: person,
+    to: str,
 });
 ```
 
@@ -94,8 +94,8 @@ entity domain is rejected.
 // @ts-expect-error An operation's domain must be an AttrType cell, not an Entity cell.
 notebook.add(Operation, {
     name: "bad",
-    dom: person,
-    cod: str,
+    from: person,
+    to: str,
 });
 ```
 
@@ -107,8 +107,8 @@ is a compile error even though `Attr` is a `Basic` morphism.
 // @ts-expect-error An attr's domain must be an Entity cell and its codomain an AttrType cell.
 notebook.add(Attr, {
     name: "bad",
-    dom: str,
-    cod: person,
+    from: str,
+    to: person,
 });
 ```
 

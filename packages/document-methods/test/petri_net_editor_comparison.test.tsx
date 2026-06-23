@@ -305,8 +305,8 @@ describe("Petri-net editor comparison", () => {
             notebook: CurrentNotebook,
             args: {
                 name: string;
-                dom: CurrentPlaceDecl[];
-                cod: CurrentPlaceDecl[];
+                from: CurrentPlaceDecl[];
+                to: CurrentPlaceDecl[];
             },
         ): CurrentTransitionDecl {
             const cell = transitionCellConstructor.construct();
@@ -314,8 +314,8 @@ describe("Petri-net editor comparison", () => {
                 throw new Error("Transition constructor produced the wrong cell shape");
             }
             cell.content.name = args.name;
-            cell.content.dom = encodePlaceIds(args.dom.map((place) => place.id));
-            cell.content.cod = encodePlaceIds(args.cod.map((place) => place.id));
+            cell.content.dom = encodePlaceIds(args.from.map((place) => place.id));
+            cell.content.cod = encodePlaceIds(args.to.map((place) => place.id));
             appendConstructedCell(notebook, cell);
             return cell.content;
         }
@@ -444,7 +444,7 @@ describe("Petri-net editor comparison", () => {
         const a = addCurrentPlace(notebook, { name: "A" });
         addCurrentPlace(notebook, { name: "B" });
         const c = addCurrentPlace(notebook, { name: "C" });
-        addCurrentTransition(notebook, { name: "fires", dom: [a], cod: [c] });
+        addCurrentTransition(notebook, { name: "fires", from: [a], to: [c] });
 
         const container = document.createElement("div");
         document.body.appendChild(container);
@@ -479,21 +479,21 @@ describe("Petri-net editor comparison", () => {
             // Contrived test example: adding an arbitrary but valid input place
             const runTestMutation = () => {
                 const referenced = new Set(
-                    [...props.transition.dom, ...props.transition.cod].map((place) => place.id),
+                    [...props.transition.from, ...props.transition.to].map((place) => place.id),
                 );
                 const input = props.notebook
                     .cellsOf(Place)
                     .find((place) => !referenced.has(place.id));
                 if (input) {
-                    props.transition.update({ dom: [...props.transition.dom, input] });
+                    props.transition.update({ from: [...props.transition.from, input] });
                 }
             };
             return (
                 <li>
                     <span class="cell-label">
-                        Transition: <InlinePlaceListEditor places={props.transition.dom} />
+                        Transition: <InlinePlaceListEditor places={props.transition.from} />
                         <span> -&gt; </span>
-                        <InlinePlaceListEditor places={props.transition.cod} />
+                        <InlinePlaceListEditor places={props.transition.to} />
                         <span>{props.transition.name}</span>
                     </span>
                     <button aria-label="run test mutation" onClick={runTestMutation} />
@@ -543,7 +543,7 @@ describe("Petri-net editor comparison", () => {
         const a = notebook.add(Place, { name: "A" });
         notebook.add(Place, { name: "B" });
         const c = notebook.add(Place, { name: "C" });
-        notebook.add(Transition, { name: "fires", dom: [a], cod: [c] });
+        notebook.add(Transition, { name: "fires", from: [a], to: [c] });
 
         const container = document.createElement("div");
         document.body.appendChild(container);
@@ -593,21 +593,21 @@ describe("Petri-net editor comparison", () => {
             // Contrived test example: adding an arbitrary but valid input place
             const runTestMutation = () => {
                 const referenced = new Set(
-                    [...props.morphism.dom, ...props.morphism.cod].map((ob) => ob.id),
+                    [...props.morphism.from, ...props.morphism.to].map((ob) => ob.id),
                 );
                 const input = props.notebook
                     .cellsOf(basicObject)
                     .find((ob) => !referenced.has(ob.id));
                 if (input) {
-                    props.morphism.update({ dom: [...props.morphism.dom, input] });
+                    props.morphism.update({ from: [...props.morphism.from, input] });
                 }
             };
             return (
                 <li>
                     <span class="cell-label">
-                        Transition: <ObListEditor objects={props.morphism.dom} />
+                        Transition: <ObListEditor objects={props.morphism.from} />
                         <span> -&gt; </span>
-                        <ObListEditor objects={props.morphism.cod} />
+                        <ObListEditor objects={props.morphism.to} />
                         <span>{props.morphism.name}</span>
                     </span>
                     <button aria-label="run test mutation" onClick={runTestMutation} />
@@ -659,7 +659,7 @@ describe("Petri-net editor comparison", () => {
         const a = notebook.add(Place, { name: "A" });
         notebook.add(Place, { name: "B" });
         const c = notebook.add(Place, { name: "C" });
-        notebook.add(Transition, { name: "fires", dom: [a], cod: [c] });
+        notebook.add(Transition, { name: "fires", from: [a], to: [c] });
 
         const container = document.createElement("div");
         document.body.appendChild(container);

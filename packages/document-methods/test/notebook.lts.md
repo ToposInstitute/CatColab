@@ -43,8 +43,8 @@ const target = notebook.add(Type, {
 
 const arrow = notebook.add(Aspect, {
     name: "has",
-    dom: source,
-    cod: target,
+    from: source,
+    to: target,
 });
 ```
 
@@ -65,8 +65,8 @@ source.update({
 
 arrow.update({
     name: "has as",
-    dom: source,
-    cod: target,
+    from: source,
+    to: target,
 });
 ```
 
@@ -163,7 +163,7 @@ const notebook = binder.createNotebook(SimpleSchema, { name: "Example schema" })
 const person = notebook.add(Entity, { name: "Person" });
 const company = notebook.add(Entity, { name: "Company" });
 
-notebook.add(Mapping, { name: "employer", dom: person, cod: company });
+notebook.add(Mapping, { name: "employer", from: person, to: company });
 ```
 
 ```ts
@@ -189,7 +189,7 @@ import { Instantiation } from "catcolab-documents";
 const anotherSchema = binder.createNotebook(SimpleSchema, { name: "Another schema" });
 const enterprise = anotherSchema.add(Entity, { name: "Enterprise" });
 const building = anotherSchema.add(Entity, { name: "Building" });
-const owner = anotherSchema.add(Mapping, { name: "owner", dom: enterprise, cod: building });
+const owner = anotherSchema.add(Mapping, { name: "owner", from: enterprise, to: building });
 
 const instantiation = notebook.add(Instantiation, {
     name: "ImportedSchema",
@@ -228,17 +228,17 @@ const notebook = binder.createNotebook(SimpleOlog, { name: "An Olog" });
 
 const source = notebook.add(Type, { name: "A" });
 const target = notebook.add(Type, { name: "B" });
-const arrow = notebook.add(Aspect, { name: "has", dom: source, cod: target });
+const arrow = notebook.add(Aspect, { name: "has", from: source, to: target });
 ```
 
 Invalid shapes should be type errors:
 
 ```ts
 // @ts-expect-error Arrays are not valid endpoints in a simple olog.
-arrow.update({ dom: [source] });
+arrow.update({ from: [source] });
 
 // @ts-expect-error Arrays are not valid endpoints in a simple olog.
-notebook.add(Aspect, { name: "bad", dom: [source, target], cod: target });
+notebook.add(Aspect, { name: "bad", from: [source, target], to: target });
 ```
 
 <!-- verifier:reset -->
@@ -254,8 +254,8 @@ const str = schema.add(AttrType, { name: "String" });
 // @ts-expect-error A mapping's endpoints must be entities, not attribute types.
 schema.add(Mapping, {
     name: "bad",
-    dom: str,
-    cod: str,
+    from: str,
+    to: str,
 });
 ```
 
@@ -279,15 +279,15 @@ const c = notebook.add(Place, { name: "C" });
 
 notebook.add(Transition, {
     name: "t1",
-    dom: [a, b],
-    cod: [c],
+    from: [a, b],
+    to: [c],
 });
 
 // @ts-expect-error Petri net transitions require arrays of places.
 notebook.add(Transition, {
     name: "bad",
-    dom: a,
-    cod: [c],
+    from: a,
+    to: [c],
 });
 ```
 
@@ -432,7 +432,7 @@ const notebook = binder.createNotebook(SimpleOlog, { name: "An Olog" });
 
 const source = notebook.add(Type, { name: "A" });
 const target = notebook.add(Type, { name: "B" });
-notebook.add(Aspect, { name: "has", dom: source, cod: target });
+notebook.add(Aspect, { name: "has", from: source, to: target });
 ```
 
 A well-formed notebook validates to a `Valid` model.
@@ -553,7 +553,7 @@ const olog = binder.createNotebook(SimpleOlog, { name: "An Olog" });
 
 const a = olog.add(Type, { name: "A" });
 const b = olog.add(Type, { name: "B" });
-olog.add(Aspect, { name: "has", dom: a, cod: b });
+olog.add(Aspect, { name: "has", from: a, to: b });
 ```
 
 Migrating an olog to a schema turns each `Type` into an `Entity` and each
@@ -610,7 +610,7 @@ const olog = binder.createNotebook(SimpleOlog, { name: "An Olog" });
 
 const a = olog.add(Type, { name: "A" });
 const b = olog.add(Type, { name: "B" });
-olog.add(Aspect, { name: "has", dom: a, cod: b });
+olog.add(Aspect, { name: "has", from: a, to: b });
 ```
 
 <!-- verifier:throws -->

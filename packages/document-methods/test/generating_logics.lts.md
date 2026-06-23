@@ -39,9 +39,9 @@ const company = notebook.add(Entity, { name: "Company" });
 const str = notebook.add(AttrType, { name: "String" });
 const upper = notebook.add(AttrType, { name: "UpperString" });
 
-notebook.add(Mapping, { name: "employer", dom: person, cod: company });
-notebook.add(Attr, { name: "name", dom: person, cod: str });
-notebook.add(Operation, { name: "uppercase", dom: str, cod: upper });
+notebook.add(Mapping, { name: "employer", from: person, to: company });
+notebook.add(Attr, { name: "name", from: person, to: str });
+notebook.add(Operation, { name: "uppercase", from: str, to: upper });
 ```
 
 ```ts
@@ -74,17 +74,17 @@ Endpoint types are inferred from each morphism's `MorType`. A `Mapping` is
 attribute type is rejected.
 
 ```ts
-const employer = notebook.add(Mapping, { name: "employer2", dom: person, cod: company });
+const employer = notebook.add(Mapping, { name: "employer2", from: person, to: company });
 
 // @ts-expect-error A mapping's codomain must be an Entity cell, not an AttrType cell.
-employer.update({ cod: str });
+employer.update({ to: str });
 ```
 
 An `Operation` is `Hom(AttrType)`, so its domain must be an attribute type.
 
 ```ts
 // @ts-expect-error An operation's domain must be an AttrType cell, not an Entity cell.
-notebook.add(Operation, { name: "op2", dom: person, cod: str });
+notebook.add(Operation, { name: "op2", from: person, to: str });
 ```
 
 Endpoint arity is taken from the morphism type: a `Hom` over a list modality
@@ -124,16 +124,16 @@ const b = notebook.add(Place, { name: "B" });
 
 notebook.add(Transition, {
     name: "fires",
-    dom: [a],
-    cod: [b],
+    from: [a],
+    to: [b],
 });
 ```
 
 A transition's endpoints are arrays of places, so a single place is rejected.
 
 ```ts
-const fires = notebook.add(Transition, { name: "fires2", dom: [a], cod: [b] });
+const fires = notebook.add(Transition, { name: "fires2", from: [a], to: [b] });
 
 // @ts-expect-error A transition endpoint is an array of places, not a single place.
-fires.update({ dom: a });
+fires.update({ from: a });
 ```

@@ -286,21 +286,21 @@ export type CodOf<Def extends MorphismDef> = [Def] extends [
  * required, is a compile error. The widest instantiation,
  * `MorphismCell<MorphismDef>` (or the default `MorphismCell`), is the untyped
  * form a generic notebook yields; its endpoints are then the union of a single
- * object cell or a list, so reading a single field like `cell.dom.name` is a
+ * object cell or a list, so reading a single field like `cell.from.name` is a
  * type error.
  */
 export type MorphismCell<Def extends MorphismDef = MorphismDef> = Update<{
     name: string;
-    dom: DomOf<Def>;
-    cod: CodOf<Def>;
+    from: DomOf<Def>;
+    to: CodOf<Def>;
 }> &
     Reorder & {
         readonly kind: typeof CellKind.Morphism;
         readonly id: string;
         readonly type: Def;
         readonly name: string;
-        readonly dom: DomOf<Def>;
-        readonly cod: CodOf<Def>;
+        readonly from: DomOf<Def>;
+        readonly to: CodOf<Def>;
         duplicate(): MorphismCell<Def>;
     };
 
@@ -370,7 +370,7 @@ type MorphismCellTuple<Ms extends readonly MorphismDef[]> = {
  * Notebook.cells} yields, parametrized by the notebook's {@link Shape}. Each of
  * the shape's object and morphism types contributes its own precise handle
  * (e.g. a Petri-net `NotebookCell<typeof PetriNet>` is `RichTextCell |
- * PlaceCell | TransitionCell`), so a single-type endpoint like `cell.dom.name`
+ * PlaceCell | TransitionCell`), so a single-type endpoint like `cell.from.name`
  * type-checks after discriminating on `cell.kind`.
  *
  * The default {@link AnyShape} instantiation (the bare `NotebookCell`) widens
@@ -559,7 +559,7 @@ type DeclaresObject<TShape extends AnyShape> = [DeclaredObjects<TShape>] extends
  */
 type AddCapability<T extends ObjectDef | MorphismDef> = T extends MorphismDef
     ? {
-          add(type: T, args: { name: string; dom: DomOf<T>; cod: CodOf<T> }): MorphismCell<T>;
+          add(type: T, args: { name: string; from: DomOf<T>; to: CodOf<T> }): MorphismCell<T>;
       }
     : T extends ObjectDef
       ? { add(type: T, args: { name: string }): ObjectCell<T> }
@@ -865,15 +865,15 @@ function attachNotebook<TShape extends AnyShape, Handle>(
             get name() {
                 return readCellContent<{ name: string }>(cellId)?.name;
             },
-            get dom() {
+            get from() {
                 const content = readCellContent<{ dom: Ob | null }>(cellId);
                 return content && decodeEndpoint(type.morType, content.dom);
             },
-            get cod() {
+            get to() {
                 const content = readCellContent<{ cod: Ob | null }>(cellId);
                 return content && decodeEndpoint(type.morType, content.cod);
             },
-            update(u: { name?: string; dom?: unknown; cod?: unknown }) {
+            update(u: { name?: string; from?: unknown; to?: unknown }) {
                 change((d) => {
                     const content = (
                         d.notebook.cellContents[cellId] as {
@@ -883,11 +883,11 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                     if (u.name !== undefined) {
                         content.name = u.name;
                     }
-                    if ("dom" in u) {
-                        content.dom = encodeEndpoint(type.morType, u.dom);
+                    if ("from" in u) {
+                        content.dom = encodeEndpoint(type.morType, u.from);
                     }
-                    if ("cod" in u) {
-                        content.cod = encodeEndpoint(type.morType, u.cod);
+                    if ("to" in u) {
+                        content.cod = encodeEndpoint(type.morType, u.to);
                     }
                 });
             },
@@ -975,12 +975,12 @@ function attachNotebook<TShape extends AnyShape, Handle>(
 
     const addMorphismCell = (
         def: MorphismDef,
-        args: { name: string; dom?: unknown; cod?: unknown },
+        args: { name: string; from?: unknown; to?: unknown },
     ): MorphismCell => {
         const judgment = newMorphismDecl(def.morType);
         judgment.name = args.name;
-        judgment.dom = encodeEndpoint(def.morType, args.dom);
-        judgment.cod = encodeEndpoint(def.morType, args.cod);
+        judgment.dom = encodeEndpoint(def.morType, args.from);
+        judgment.cod = encodeEndpoint(def.morType, args.to);
         const formalCell = newFormalCell(judgment);
         change((d) => {
             d.notebook.cellContents[formalCell.id] = formalCell;
@@ -1188,8 +1188,8 @@ function attachNotebook<TShape extends AnyShape, Handle>(
             args: {
                 content?: string;
                 name?: string;
-                dom?: unknown;
-                cod?: unknown;
+                from?: unknown;
+                to?: unknown;
                 model?: Notebook<AnyShape, Handle> | Link | null;
                 specializations?: readonly InstantiationSpecialization[];
             },
@@ -1380,14 +1380,14 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
      * - {@link Instantiation} adds an instantiated model; `args` is
      *   `{ name, model, specializations }`.
      * - A morphism type from the shape adds a morphism cell; `args` is
-     *   `{ name, dom, cod }`, with `dom`/`cod` constrained by the morphism type.
+     *   `{ name, from, to }`, with `from`/`to` constrained by the morphism type.
      * - An object type from the shape adds an object cell; `args` is `{ name }`.
      */
     add(type: RichTextType, args: { content: string }): RichTextCell;
     add(type: InstantiationType, args: InstantiationArgs<Handle>): InstantiationCell<Handle>;
     add<M extends ShapeMorphisms<TShape>>(
         type: M,
-        args: { name: string; dom: DomOf<M>; cod: CodOf<M> },
+        args: { name: string; from: DomOf<M>; to: CodOf<M> },
     ): MorphismCell<M>;
     add<O extends ShapeObjects<TShape>>(type: O, args: { name: string }): ObjectCell<O>;
 };
