@@ -40,7 +40,7 @@ const viz = analysis.add(Visualization);
 
 ```ts
 console.log("analysis id:", viz.type.id);
-console.log("layout:", viz.content.layout);
+console.log("layout:", viz.params.layout);
 ```
 
 ```
@@ -51,8 +51,8 @@ layout: graphviz-directed
 ```ts
 viz.update({ direction: "horizontal" });
 
-console.log("layout:", viz.content.layout);
-console.log("direction:", viz.content.direction);
+console.log("layout:", viz.params.layout);
+console.log("direction:", viz.params.direction);
 ```
 
 ```
@@ -102,8 +102,8 @@ const sim = analysis.add(Simulation);
 
 ```ts
 console.log("analysis id:", sim.type.id);
-console.log("duration:", sim.content.duration);
-console.log("step:", sim.content.step);
+console.log("duration:", sim.params.duration);
+console.log("step:", sim.params.step);
 ```
 
 ```
@@ -119,8 +119,8 @@ sim.update({ duration: 3, initialValues: { [susceptible.id]: 1 } });
 ```
 
 ```ts
-console.log("duration:", sim.content.duration);
-console.log("S initial:", sim.content.initialValues[susceptible.id]);
+console.log("duration:", sim.params.duration);
+console.log("S initial:", sim.params.initialValues[susceptible.id]);
 ```
 
 ```
