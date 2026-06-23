@@ -1,7 +1,7 @@
 import { lazy } from "solid-js";
 
 import type {
-    LCCEquationsData,
+    LinearODEEquationsData,
     LotkaVolterraEquationsData,
     MassActionEquationsData,
     MorType,
@@ -109,9 +109,9 @@ const Kuramoto = lazy(() => import("./analyses/kuramoto"));
 
 export function linearODE(
     options: Partial<AnalysisOptions> & {
-        simulate: Simulators.LCCSimulator;
+        simulate: Simulators.LinearODESimulator;
     },
-): ModelAnalysisMeta<Simulators.LCCProblemData> {
+): ModelAnalysisMeta<Simulators.LinearODEProblemData> {
     const {
         id = "linear-ode",
         name = "Linear ODE dynamics",
@@ -124,7 +124,7 @@ export function linearODE(
         name,
         description,
         help,
-        component: (props) => <LCC simulate={simulate} title={name} {...props} />,
+        component: (props) => <LinearODE simulate={simulate} title={name} {...props} />,
         initialContent: () => ({
             coefficients: {},
             initialValues: {},
@@ -133,13 +133,13 @@ export function linearODE(
     };
 }
 
-const LCC = lazy(() => import("./analyses/linear_ode"));
+const LinearODE = lazy(() => import("./analyses/linear_ode"));
 
 export function linearODEEquations(
     options: Partial<AnalysisOptions> & {
-        getEquations: Simulators.LCCEquations;
+        getEquations: Simulators.LinearODEEquations;
     },
-): ModelAnalysisMeta<LCCEquationsData> {
+): ModelAnalysisMeta<LinearODEEquationsData> {
     const {
         id = "linear-ode-equations",
         name = "Linear ODE equations",
@@ -152,13 +152,13 @@ export function linearODEEquations(
         name,
         description,
         help,
-        component: (props) => <LCCEquationsDisplay title={name} {...otherOptions} {...props} />,
+        component: (props) => <LinearODEEquationsDisplay title={name} {...otherOptions} {...props} />,
         initialContent: () => ({
             trivialData: true,
         }),
     };
 }
-const LCCEquationsDisplay = lazy(() => import("./analyses/linear_ode_equations"));
+const LinearODEEquationsDisplay = lazy(() => import("./analyses/linear_ode_equations"));
 
 export function lotkaVolterra(
     options: Partial<AnalysisOptions> & {

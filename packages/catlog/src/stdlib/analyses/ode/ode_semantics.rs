@@ -1,25 +1,22 @@
 //! Analyses for different ODE semantics on models.
 //!
 //! Inspired by schema migration, we define the data of an ODE semantics on models in a theory to
-//! consist of (in particular) a `PolynomialODESystemBuilder`, which contains all the data needed
-//! for [`ode::polynomial_ode::PolynomialODEAnalysis`] to do the following:
-//!
-// TODO: is this true????????????
-//! 1. Build the system as a model of the theory of polynomial ODE systems (i.e. multicategories)
-//!    with abstract coefficients, using `build_system_custom_parameters()`.
-//! 2. Substitute in numerical coefficients, using `extend_polynomial_ode_scalars()`.
-//! 3. Build an `ODEAnalysis<NumericalPolynomialSystem<i8>>` that can be fed into an ODE solver,
-//!    using `polynomial_ode_analysis()`.
-//!
+//! consist of (in particular) a `PolynomialODESystemBuilder`, which constructs a model of the
+//! theory of multicategories (viewed as polynomial ODE systems with abstract coefficients). This
+//! is then passed to [`ode::polynomial_ode::PolynomialODEAnalysis`] which constructs from this a
+//! `PolynomialSystem`, using `build_system_custom_parameters()`.
+
 //! In short, this module constructs multicategories from models, and [`ode::polynomial_ode`] then
 //! constructs `PolynomialSystem` from multicategories.
 //!
 //! To implement a new ODE semantics for models in some theory, one essentially needs to create an
 //! empty struct and implement `ODESemantics`, and then follow the compiler. For more documentation,
-//! see [`ode::polynomial_ode`]; for an example implementation, see [`ode::mass_action`].
+//! see [`ode::polynomial_ode`]; for a simple example see [`ode::lotka_volterra`], and for a more
+//! complicated example see [`ode::mass_action`].
 //!
 //! [`ode::polynomial_ode`]: crate::stdlib::analyses::ode::polynomial_ode
 //! [`ode::polynomial_ode::PolynomialODEAnalysis`]: crate::stdlib::analyses::ode::polynomial_ode::PolynomialODEAnalysis
+//! [`ode::lotka_volterra`]: crate::stdlib::analyses::ode::lotka_volterra
 //! [`ode::mass_action`]: crate::stdlib::analyses::ode::mass_action
 
 use indexmap::IndexMap;
@@ -229,15 +226,19 @@ pub enum ContributionSign {
     Negative,
 }
 
-/// TODO: documentation.
-// TODO: similar question about including all the serde stuff here
+/// For some ODE semantics, it might be the case there extra information can be given to determine
+/// the equations. For example, a boolean describing whether or not mass should be conserved, or
+/// something more complicated. This is generally data that will be exposed to the frontend in the
+/// corresponding analysis. For an example, see `mass_action::MassActionEquationsData`.
 pub trait ODESemanticsEquationsData {}
 impl ODESemanticsEquationsData for () {}
 
 /// The trait describing how to turn the formal system of ODEs into a numerical problem, to be
 /// solved by an ODE solver and presented to the front-end. At minimum, such data must contain
 /// initial values for variables and the intended duration of simulation, as well as the method for
-/// converting the parameters (which are of type `ODEParameterType`) into floats.
+/// converting the parameters (which are of type `ODEParameterType`) into floats. Note that it must
+/// also contain `ODESemanticsEquationsData`, since we need to know how to build the equations
+/// before we are able to solve them numerically.
 // REQUEST  | If you look at a struct that implements this trait (such as `LotkaVolterraProblemData`),
 //   FOR    | there are a lot of serde statements going on. Should I be able to just move them
 // FEEDBACK | (that is, those that come *before* the struct) here and have things all work? I'm still
@@ -257,7 +258,6 @@ pub trait ODESemanticsProblemData<P: ODEParameterType> {
     // In short:
     //     is there a better way to ensure that any struct implementing a trait has specific fields?
     /// Further data needed to specify the ODE equations.
-    /// TODO: documenation.
     fn equations_data(&self) -> impl ODESemanticsEquationsData {
         ()
     }
