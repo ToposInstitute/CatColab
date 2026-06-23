@@ -3,7 +3,7 @@ use crate::mtt::{
     composite::Composite,
     theory::{
         Boundary, ListVariant, ProArrowByBoundary, Theory, TheoryArrow, TheoryObject,
-        TheoryProArrow, UnificationResult,
+        TheoryProArrow,
     },
 };
 
@@ -84,16 +84,6 @@ impl Theory for Multicategory {
             (None, None) => ProArrowByBoundary::None,
             _ => ProArrowByBoundary::Ambiguous,
         }
-    }
-
-    fn unify_pro_arrows(
-        _composites: &[&Composite<TheoryProArrow<Self>>],
-    ) -> UnificationResult<Composite<TheoryProArrow<Self>>> {
-        // TODO: the default (`default_pro_arrow_composite_unify`) only knows the
-        // unitality of hom. This theory has further equations --- the list
-        // monad's `μ`/`η` and interchange laws such as List(Hom) = Hom(List) ---
-        // so unification must be reworked to respect them.
-        todo!()
     }
 
     fn has_object(obj: &TheoryObject<Self>) -> bool {

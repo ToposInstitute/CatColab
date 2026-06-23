@@ -67,7 +67,9 @@ pub trait Theory: Sized {
 
     /// Unify a collection of composites of theory pro-arrows, returning the
     /// single common composite they all coincide with modulo the theory's
-    /// pro-arrow equations, or `None` if they cannot be made to coincide.
+    /// pro-arrow equations, or `None` if they cannot be made to coincide. See
+    /// [default_pro_arrow_composite_unify] for details about the default
+    /// implementation.
     fn unify_pro_arrows(
         composites: &[&Composite<TheoryProArrow<Self>>],
     ) -> UnificationResult<Composite<TheoryProArrow<Self>>> {

@@ -16,7 +16,7 @@ use crate::mtt::{
     hole::Holy,
     theory::{
         Boundary, Theory, TheoryArrow, TheoryObject, TheoryProArrow, UnificationResult,
-        pro_arrow_is_constrained,
+        delete_me_pro_arrow_is_constrained,
     },
 };
 
@@ -239,7 +239,9 @@ impl<T: Theory> ModelEntry<T> {
         codomain_theory_object: &TheoryObject<T>,
     ) -> Result<Composite<TheoryProArrow<T>>, Error> {
         match hint {
-            Some(want) if pro_arrow_is_constrained(&want.pro_arrow) => Ok(want.pro_arrow.clone()),
+            Some(want) if delete_me_pro_arrow_is_constrained(&want.pro_arrow) => {
+                Ok(want.pro_arrow.clone())
+            }
             _ => self
                 .infer_theory_pro_arrow_by_boundary(domain_theory_object, codomain_theory_object)
                 .map_err(|_| {

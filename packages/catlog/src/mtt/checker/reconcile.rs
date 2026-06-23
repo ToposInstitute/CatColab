@@ -9,7 +9,9 @@ use crate::mtt::{
         error::{EType, Error},
     },
     composite::Composite,
-    theory::{Theory, TheoryArrow, TheoryObject, TheoryProArrow, pro_arrow_is_constrained},
+    theory::{
+        Theory, TheoryArrow, TheoryObject, TheoryProArrow, delete_me_pro_arrow_is_constrained,
+    },
 };
 
 // TODO: check this whole file
@@ -47,7 +49,7 @@ impl<T: Theory> ModelEntry<T> {
 
         // Pro-arrow: if the target constrains it and it is not already met,
         // reshape the domain to bridge the gap.
-        let derivation = if pro_arrow_is_constrained(&want.pro_arrow)
+        let derivation = if delete_me_pro_arrow_is_constrained(&want.pro_arrow)
             && !T::unify_pro_arrows(&[&judgement.pro_arrow, &want.pro_arrow]).is_compatible()
         {
             self.reshape_domain_to(pro_term, judgement, &want.pro_arrow)?
