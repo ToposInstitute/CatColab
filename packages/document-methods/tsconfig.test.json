@@ -8,6 +8,8 @@
         "lib": ["ES2023", "DOM"],
         "paths": {
             "catcolab-logics/*": ["./test/literate-ts/catcolab-logics/*.ts"],
+            "catcolab-analyses": ["./test/literate-ts/catcolab-analyses/index.ts"],
+            "catcolab-analyses/*": ["./test/literate-ts/catcolab-analyses/*.ts"],
             "catcolab-documents": ["./src/future/index.ts"]
         }
     },
