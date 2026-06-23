@@ -74,7 +74,96 @@ nodes: A, B
 edges: 0
 ```
 
+## Simulation
+
+<!-- verifier:reset -->
+
+<!-- verifier:prepend-to-following -->
+
+```ts
+import { Simulation } from "catcolab-analyses";
+import { PetriNet, Place, Transition } from "catcolab-logics/petri-net";
+import { binder } from "catcolab-documents";
+
+const petriNet = binder.createNotebook(PetriNet, { name: "SIR" });
+
+const susceptible = petriNet.add(Place, { name: "S" });
+const infected = petriNet.add(Place, { name: "I" });
+
+petriNet.add(Transition, { name: "infection", from: [susceptible, infected], to: [infected] });
+
+const analysis = binder.createNotebook(PetriNet.Analysis, {
+    name: "Petri net analysis",
+    of: petriNet,
+});
+
+const sim = analysis.add(Simulation);
+```
+
+```ts
+console.log("analysis id:", sim.type.id);
+console.log("duration:", sim.content.duration);
+console.log("step:", sim.content.step);
+```
+
+```
+analysis id: simulation
+duration: 10
+step: 1
+```
+
+<!-- verifier:prepend-to-following -->
+
+```ts
+sim.update({ duration: 3, initialValues: { [susceptible.id]: 1 } });
+```
+
+```ts
+console.log("duration:", sim.content.duration);
+console.log("S initial:", sim.content.initialValues[susceptible.id]);
+```
+
+```
+duration: 3
+S initial: 1
+```
+
+```ts
+const trajectories = await sim.run();
+
+console.log("times:", trajectories.time.join(", "));
+console.log("states:", trajectories.states.map((state) => state.label).join(", "));
+console.log("S samples:", trajectories.states[0].values.length);
+```
+
+```
+times: 0, 1, 2, 3
+states: S, I
+S samples: 4
+```
+
 ## Iterating through cells
+
+<!-- verifier:reset -->
+
+<!-- verifier:prepend-to-following -->
+
+```ts
+import { Visualization } from "catcolab-analyses";
+import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
+import { binder, RichText } from "catcolab-documents";
+
+const model = binder.createNotebook(SimpleOlog, { name: "An Olog" });
+model.add(Type, { name: "A" });
+
+const analysis = binder.createNotebook(SimpleOlog.Analysis, {
+    name: "Olog analysis",
+    of: model,
+});
+
+analysis.add(RichText, { content: "We visualize the olog." });
+analysis.add(Visualization);
+```
 
 ```ts
 import { CellKind } from "catcolab-documents";
@@ -85,7 +174,7 @@ for (const cell of analysis.cells()) {
             console.log("text:", cell.content);
             break;
         case CellKind.Analysis:
-            console.log("analysis:", cell.type.id, "layout:", cell.content.layout);
+            console.log("analysis:", cell.type.id);
             break;
     }
 }
@@ -93,7 +182,7 @@ for (const cell of analysis.cells()) {
 
 ```
 text: We visualize the olog.
-analysis: diagram layout: graphviz-directed
+analysis: diagram
 ```
 
 ## Type safety
