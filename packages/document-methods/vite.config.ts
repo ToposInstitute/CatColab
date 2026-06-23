@@ -22,6 +22,12 @@ export default defineConfig({
                 replacement: fileURLToPath(new URL("./src/index.ts", import.meta.url)),
             },
             {
+                find: "catcolab-analyses",
+                replacement: fileURLToPath(
+                    new URL("./test/literate-ts/catcolab-analyses/index.ts", import.meta.url),
+                ),
+            },
+            {
                 find: /^catcolab-logics\/(.*)$/,
                 replacement: `${root}test/literate-ts/catcolab-logics/$1.ts`,
             },

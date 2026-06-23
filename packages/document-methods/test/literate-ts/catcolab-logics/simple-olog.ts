@@ -1,7 +1,7 @@
+import { Visualization } from "catcolab-analyses";
 import type { AnalysisCell, MorphismCell, ObjectCell } from "catcolab-documents";
 import { defineMorphism, defineObject, defineShape } from "catcolab-documents";
 
-import { Visualization } from "catcolab-analyses";
 import { ThCategory } from "catlog-wasm";
 
 export const Type = defineObject({ tag: "Basic", content: "Object" });

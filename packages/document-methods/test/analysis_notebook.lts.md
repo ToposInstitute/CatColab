@@ -133,7 +133,7 @@ const trajectories = await sim.run();
 
 console.log("times:", trajectories.time.join(", "));
 console.log("states:", trajectories.states.map((state) => state.label).join(", "));
-console.log("S samples:", trajectories.states[0].values.length);
+console.log("S samples:", trajectories.states[0]!.values.length);
 ```
 
 ```

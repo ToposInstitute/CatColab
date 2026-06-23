@@ -144,6 +144,7 @@ const richTextKind: unique symbol = Symbol("richText");
 const objectKind: unique symbol = Symbol("object");
 const morphismKind: unique symbol = Symbol("morphism");
 const instantiationKind: unique symbol = Symbol("instantiation");
+const analysisKind: unique symbol = Symbol("analysis");
 
 /** Precise discriminants for notebook cell handles. */
 export const CellKind = {
@@ -151,6 +152,7 @@ export const CellKind = {
     Object: objectKind,
     Morphism: morphismKind,
     Instantiation: instantiationKind,
+    Analysis: analysisKind,
 } as const;
 
 const richTextTypeBrand: unique symbol = Symbol("richTextType");
@@ -523,6 +525,12 @@ export type Shape = {
     readonly inclusions?: readonly string[];
     /** Non-trivial migrations to other shapes, keyed by target theory. */
     readonly migrations?: readonly ModelMigration[];
+    /**
+     * Analyses that can be added to an analysis notebook for this shape.
+     * When present, `defineShape` attaches an `.Analysis` property that can be
+     * passed to {@link Binder.createNotebook} to create an analysis notebook.
+     */
+    readonly modelAnalyses?: readonly AnalysisDef[];
 };
 
 /** Any shape, used as the default and as a generic constraint. */
@@ -706,6 +714,56 @@ export type ModelValidationResult =
     | { tag: "Illformed"; model: null; error: string };
 
 /**
+ * An analysis that can be added to an analysis notebook. An analysis has a
+ * stable `id`, an `initialContent` factory for default parameters, and a
+ * `run` function that computes the analysis result from the analyzed model.
+ * Define one with {@link defineAnalysis}.
+ */
+export type AnalysisDef<
+    Params extends Record<string, unknown> = Record<string, unknown>,
+    Output = unknown,
+> = {
+    readonly id: string;
+    initialContent(): Params;
+    run(model: ValidatableNotebook, params: Params): Promise<Output>;
+};
+
+/** Define an analysis from a compact spec. */
+export function defineAnalysis<Params extends Record<string, unknown>, Output>(spec: {
+    id: string;
+    initialContent(): Params;
+    run(model: ValidatableNotebook, params: Params): Promise<Output>;
+}): AnalysisDef<Params, Output> {
+    return spec;
+}
+
+/** Extract the `Params` type from an `AnalysisDef`. */
+type ParamsOf<Def extends AnalysisDef> =
+    Def extends AnalysisDef<infer P, unknown> ? P : Record<string, unknown>;
+
+/** Extract the `Output` type from an `AnalysisDef`. */
+type OutputOf<Def extends AnalysisDef> =
+    Def extends AnalysisDef<Record<string, unknown>, infer O> ? O : unknown;
+
+/**
+ * A handle for an analysis cell in an {@link AnalysisNotebook}. The persisted
+ * `params` are seeded by `def.initialContent()` and updated with {@link
+ * AnalysisCell.update}; `run()` calls the def's `run` with the analyzed model
+ * and current params.
+ */
+export type AnalysisCell<Def extends AnalysisDef = AnalysisDef> = Reorder & {
+    readonly kind: typeof CellKind.Analysis;
+    readonly id: string;
+    readonly type: Def;
+    /** The persisted parameters for this analysis cell. */
+    readonly params: ParamsOf<Def>;
+    /** Merge `partial` into the cell's params. */
+    update(partial: Partial<ParamsOf<Def>>): void;
+    /** Run the analysis, returning its output. */
+    run(): Promise<OutputOf<Def>>;
+};
+
+/**
  * Define a shape from a compact declaration of object and morphism defs.
  * Object and morphism defs are built with {@link defineObject}/{@link
  * defineMorphism} (declare each as a `const`). A `Hom` morphism's endpoint
@@ -714,8 +772,209 @@ export type ModelValidationResult =
  * `theory`/`coreTheory` are optional: include them for a creatable shape, omit
  * them for a sub-shape contract.
  */
-export function defineShape<const TSpec extends Shape>(spec: TSpec): TSpec {
-    return spec;
+export function defineShape<const TSpec extends Shape>(
+    spec: TSpec,
+): TSpec &
+    ("modelAnalyses" extends keyof TSpec
+        ? { readonly Analysis: AnalysisShape<NonNullable<TSpec["modelAnalyses"]>> }
+        : object) {
+    if (spec.modelAnalyses) {
+        const analysisShape: AnalysisShape<NonNullable<TSpec["modelAnalyses"]>> = {
+            [analysisShapeBrand]: true as const,
+            analyses: spec.modelAnalyses as NonNullable<TSpec["modelAnalyses"]>,
+        };
+        return { ...spec, Analysis: analysisShape } as ReturnType<typeof defineShape<TSpec>>;
+    }
+    return spec as ReturnType<typeof defineShape<TSpec>>;
+}
+
+// ---------------------------------------------------------------------------
+// Analysis shapes and analysis notebooks
+// ---------------------------------------------------------------------------
+
+const analysisShapeBrand: unique symbol = Symbol("analysisShape");
+
+/**
+ * A shape for analysis notebooks. Obtained via `shape.Analysis` when the
+ * shape declares `modelAnalyses`. Pass it to {@link Binder.createNotebook}
+ * together with `{ name, of: validatableNotebook }` to create an analysis
+ * notebook.
+ */
+export type AnalysisShape<Analyses extends readonly AnalysisDef[] = readonly AnalysisDef[]> = {
+    readonly [analysisShapeBrand]: true;
+    readonly analyses: Analyses;
+};
+
+const isAnalysisShape = (value: unknown): value is AnalysisShape =>
+    typeof value === "object" &&
+    value !== null &&
+    Boolean((value as Record<symbol, unknown>)[analysisShapeBrand]);
+
+/**
+ * The union of analysis-cell handles an analysis notebook's {@link
+ * AnalysisNotebook.cells} yields, one member per declared analysis type plus
+ * rich-text cells.
+ */
+export type AnalysisNotebookCell<Analyses extends readonly AnalysisDef[] = readonly AnalysisDef[]> =
+    | RichTextCell
+    | { [K in keyof Analyses]: AnalysisCell<Analyses[K] & AnalysisDef> }[number];
+
+/**
+ * A notebook of analyses over a validated model. Produced by {@link
+ * Binder.createNotebook} when given an {@link AnalysisShape}. Holds a
+ * reference to the analyzed model; each {@link AnalysisCell.run} call
+ * delegates to the analysis def's `run` with that model.
+ */
+export type AnalysisNotebook<Analyses extends readonly AnalysisDef[] = readonly AnalysisDef[]> =
+    Update<{ name: string }> & {
+        readonly name: string;
+        /** Whether this notebook analyzes a model or a diagram. */
+        readonly analysisType: "model" | "diagram";
+        /** Add a rich-text cell. */
+        add(type: RichTextType, args: { content: string }): RichTextCell;
+        /** Add an analysis cell, seeded with the def's `initialContent`. */
+        add<A extends Analyses[number]>(type: A): AnalysisCell<A>;
+        /** All cells in notebook order. */
+        cells(): Array<AnalysisNotebookCell<Analyses>>;
+    };
+
+function attachAnalysisNotebook<A extends readonly AnalysisDef[], Handle>(
+    of: ValidatableNotebook<Handle>,
+    analysisShape: AnalysisShape<A>,
+    initialName: string,
+): AnalysisNotebook<A> {
+    let docName = initialName;
+    const cellOrder: string[] = [];
+    type StoredCell =
+        | { tag: "rich-text"; id: string; content: string }
+        | { tag: "analysis"; id: string; def: AnalysisDef; params: Record<string, unknown> };
+    const cellContents: Record<string, StoredCell> = {};
+
+    const reorderMethods = (cellId: string): Reorder => ({
+        moveUp() {
+            const i = cellOrder.indexOf(cellId);
+            if (i > 0) {
+                cellOrder.splice(i - 1, 2, cellOrder[i]!, cellOrder[i - 1]!);
+            }
+        },
+        moveDown() {
+            const i = cellOrder.indexOf(cellId);
+            if (i >= 0 && i < cellOrder.length - 1) {
+                cellOrder.splice(i, 2, cellOrder[i + 1]!, cellOrder[i]!);
+            }
+        },
+        moveTo(index: number) {
+            const i = cellOrder.indexOf(cellId);
+            if (i < 0) {
+                return;
+            }
+            cellOrder.splice(i, 1);
+            cellOrder.splice(Math.max(0, Math.min(index, cellOrder.length)), 0, cellId);
+        },
+        delete() {
+            const i = cellOrder.indexOf(cellId);
+            if (i >= 0) {
+                cellOrder.splice(i, 1);
+                delete cellContents[cellId];
+            }
+        },
+    });
+
+    const richTextHandle = (cellId: string): RichTextCell =>
+        ({
+            kind: CellKind.RichText,
+            id: cellId,
+            get content() {
+                return (cellContents[cellId] as { content: string } | undefined)?.content ?? "";
+            },
+            update(u: { content?: string }) {
+                const cell = cellContents[cellId];
+                if (cell?.tag === "rich-text" && u.content !== undefined) {
+                    cell.content = u.content;
+                }
+            },
+            ...reorderMethods(cellId),
+        }) as unknown as RichTextCell;
+
+    const analysisHandle = <Def extends AnalysisDef>(cellId: string, def: Def): AnalysisCell<Def> =>
+        ({
+            kind: CellKind.Analysis,
+            get id() {
+                return cellId;
+            },
+            type: def,
+            get params() {
+                const cell = cellContents[cellId];
+                return ((cell as { params?: unknown } | undefined)?.params ?? {}) as ParamsOf<Def> &
+                    Record<string, unknown>;
+            },
+            update(partial: Partial<ParamsOf<Def>>) {
+                const cell = cellContents[cellId];
+                if (cell?.tag === "analysis") {
+                    Object.assign(cell.params, partial);
+                }
+            },
+            run() {
+                const cell = cellContents[cellId];
+                const params =
+                    (cell as { params?: Record<string, unknown> } | undefined)?.params ?? {};
+                return def.run(
+                    of as unknown as ValidatableNotebook,
+                    params as ParamsOf<Def>,
+                ) as Promise<OutputOf<Def>>;
+            },
+            ...reorderMethods(cellId),
+        }) as unknown as AnalysisCell<Def>;
+
+    // Silence unused-variable warning: the analyses list is part of the shape's
+    // type contract and is read by the `add` overloads at the type level.
+    void analysisShape;
+
+    return {
+        get name() {
+            return docName;
+        },
+        analysisType: "model",
+        update(u: { name?: string }) {
+            if (u.name !== undefined) {
+                docName = u.name;
+            }
+        },
+        add(type: unknown, args?: { content?: string }) {
+            if (isRichTextType(type)) {
+                const cellId = v7();
+                cellContents[cellId] = {
+                    tag: "rich-text",
+                    id: cellId,
+                    content: args?.content ?? "",
+                };
+                cellOrder.push(cellId);
+                return richTextHandle(cellId) as RichTextCell;
+            }
+            const def = type as AnalysisDef;
+            const cellId = v7();
+            cellContents[cellId] = {
+                tag: "analysis",
+                id: cellId,
+                def,
+                params: def.initialContent() as Record<string, unknown>,
+            };
+            cellOrder.push(cellId);
+            return analysisHandle(cellId, def);
+        },
+        cells() {
+            return cellOrder.map((cellId) => {
+                const cell = cellContents[cellId];
+                if (!cell) {
+                    throw new Error(`Cell not found: ${cellId}`);
+                }
+                if (cell.tag === "rich-text") {
+                    return richTextHandle(cellId);
+                }
+                return analysisHandle(cellId, cell.def);
+            });
+        },
+    } as unknown as AnalysisNotebook<A>;
 }
 
 /** Structural equality of stored type expressions (plain JSON-like values). */
@@ -1580,6 +1839,15 @@ type CoreTheoryMethods<TShape extends AnyShape, Handle> =
  */
 export interface Binder<Handle> {
     /**
+     * Build an analysis notebook from fresh data. The `of` model must be
+     * validatable (its shape must declare a `coreTheory`), so it can be
+     * resolved by calling `validate()` before each analysis run.
+     */
+    createNotebook<A extends readonly AnalysisDef[]>(
+        shape: AnalysisShape<A>,
+        data: { name: string; of: ValidatableNotebook<Handle> },
+    ): AnalysisNotebook<A>;
+    /**
      * Build a notebook from fresh data. The document seed is constructed
      * internally from `data.name` and the shape's `theory`.
      */
@@ -1608,13 +1876,24 @@ export interface Binder<Handle> {
 
 /** Bind a store once, yielding the notebook entry points. */
 export function createBinder<Handle>(store: DocumentStore<Handle>): Binder<Handle> {
-    return {
-        createNotebook(shape, data) {
-            const seed = newModelDocument({ theory: shape.theory });
+    const binder = {
+        createNotebook(shape: unknown, data: { name: string; of?: ValidatableNotebook<Handle> }) {
+            if (isAnalysisShape(shape)) {
+                const of = data.of;
+                if (!of) {
+                    throw new Error("Analysis notebook requires an `of` notebook.");
+                }
+                return attachAnalysisNotebook(of, shape as AnalysisShape, data.name);
+            }
+            const creatableShape = shape as CreatableShape;
+            const seed = newModelDocument({ theory: creatableShape.theory });
             seed.name = data.name;
-            return this.loadNotebook(shape, seed);
+            return binder.loadNotebook(creatableShape, seed);
         },
-        loadNotebook(shape, document) {
+        loadNotebook<TShape extends CreatableShape>(
+            shape: TShape,
+            document: ModelDocument,
+        ): Notebook<TShape, Handle> {
             if (document.theory !== shape.theory) {
                 throw new Error(
                     `Cannot load document with theory "${document.theory}" ` +
@@ -1623,10 +1902,14 @@ export function createBinder<Handle>(store: DocumentStore<Handle>): Binder<Handl
             }
             return attachNotebook(store, store.createHandle(document), shape);
         },
-        loadNotebookFromHandle(shape, handle) {
+        loadNotebookFromHandle<TShape extends CreatableShape>(
+            shape: TShape,
+            handle: Handle,
+        ): Notebook<TShape, Handle> {
             return attachNotebook(store, handle, shape);
         },
     };
+    return binder as unknown as Binder<Handle>;
 }
 
 /** A ready-made binder over the plain in-memory store. */

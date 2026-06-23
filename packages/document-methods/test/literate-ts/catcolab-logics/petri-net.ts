@@ -1,4 +1,5 @@
-import type { MorphismCell, ObjectCell } from "catcolab-documents";
+import { Simulation } from "catcolab-analyses";
+import type { AnalysisCell, MorphismCell, ObjectCell } from "catcolab-documents";
 import { defineMorphism, defineObject, defineShape } from "catcolab-documents";
 
 import { ThSymMonoidalCategory } from "catlog-wasm";
@@ -17,7 +18,9 @@ export const PetriNet = defineShape({
     coreTheory: new ThSymMonoidalCategory().theory(),
     objects: [Place],
     morphisms: [Transition],
+    modelAnalyses: [Simulation],
 });
 
 export type PlaceCell = ObjectCell<typeof Place>;
 export type TransitionCell = MorphismCell<typeof Transition>;
+export type SimulationCell = AnalysisCell<typeof Simulation>;
