@@ -404,10 +404,11 @@ export type InstantiationArgs<Handle = unknown> = {
     name: string;
     /**
      * The referenced model: a {@link ValidatableNotebook} (its shape must
-     * declare a `coreTheory`, so it can be resolved by validation), a stable
-     * {@link Link} the store resolves at runtime, or `null` for none.
+     * declare a `coreTheory`, so it can be resolved by validation), or `null`
+     * for none. A reference is made by passing the notebook itself, not a
+     * {@link Link}; the cell records the corresponding link internally.
      */
-    model: ValidatableNotebook<Handle> | Link | null;
+    model: ValidatableNotebook<Handle> | null;
     specializations?: readonly InstantiationSpecialization[];
 };
 
@@ -854,12 +855,9 @@ function attachNotebook<TShape extends AnyShape, Handle>(
     const cloneJudgment = (judgment: ModelJudgment): ModelJudgment =>
         duplicateModelJudgment(copy(judgment));
 
-    const linkForModel = (model: Notebook<AnyShape, Handle> | Link | null): Link | null => {
+    const linkForModel = (model: ValidatableNotebook<Handle> | null): Link | null => {
         if (model === null) {
             return null;
-        }
-        if ("_id" in model) {
-            return model;
         }
         const ref = store.linkForHandle(model.handle);
         return ref ? { ...ref, type: "instantiation" } : null;
@@ -1336,7 +1334,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                 name?: string;
                 from?: unknown;
                 to?: unknown;
-                model?: Notebook<AnyShape, Handle> | Link | null;
+                model?: ValidatableNotebook<Handle> | null;
                 specializations?: readonly InstantiationSpecialization[];
             },
         ) {

@@ -203,4 +203,7 @@ host.add(Instantiation, { name: "ok", model: core });
 
 // @ts-expect-error An instantiation model must be validatable (its shape needs a `coreTheory`).
 host.add(Instantiation, { name: "bad", model: noCore });
+
+// @ts-expect-error An instantiation model must be a notebook, not a link.
+host.add(Instantiation, { name: "linked", model: { _id: "x", _version: null, _server: "" } });
 ```
