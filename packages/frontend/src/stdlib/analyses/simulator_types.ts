@@ -2,8 +2,8 @@ import type {
     DblModel,
     KuramotoProblemData,
     LatexEquations,
-    LCCProblemData,
-    LCCEquationsData,
+    LinearODEProblemData,
+    LinearODEEquationsData,
     LotkaVolterraProblemData,
     LotkaVolterraEquationsData,
     MassActionEquationsData,
@@ -17,15 +17,15 @@ import type {
 
 export type {
     KuramotoProblemData,
-    LCCProblemData,
+    LinearODEProblemData,
     LotkaVolterraProblemData,
     MassActionProblemData,
     PolynomialODEProblemData,
 };
 
 export type KuramotoSimulator = (model: DblModel, data: KuramotoProblemData) => ODEResult;
-export type LCCSimulator = (model: DblModel, data: LCCProblemData) => ODEResultWithEquations;
-export type LCCEquations = (model: DblModel, data: LCCEquationsData) => LatexEquations;
+export type LinearODESimulator = (model: DblModel, data: LinearODEProblemData) => ODEResultWithEquations;
+export type LinearODEEquations = (model: DblModel, data: LinearODEEquationsData) => LatexEquations;
 export type LotkaVolterraSimulator = (
     model: DblModel,
     data: LotkaVolterraProblemData,

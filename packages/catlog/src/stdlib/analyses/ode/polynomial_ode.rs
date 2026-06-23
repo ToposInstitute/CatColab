@@ -67,7 +67,11 @@ impl Default for PolynomialODEAnalysis {
     }
 }
 
-// TODO: remove this implementation? it's so silly?????????? but we need it????????????????????????
+// We give a trivial implementation of `ODESemanticsAnalysis` using the helper method
+// `PolynomialODESystemBuilder::identity`. This is nice from a conceptual point of view (in that all
+// polynomial ODE semantics are unified under one trait), but also concretely helpful in reducing
+// boilerplate since we can then use `catlog-wasm::src::analyses::ode_semantics_simulation` and
+// `catlog-wasm::src::analyses::ode_semantics_equations`.
 impl
     ODESemanticsAnalysis<
         <PolynomialODESemantics as ODESemantics>::ModelType,

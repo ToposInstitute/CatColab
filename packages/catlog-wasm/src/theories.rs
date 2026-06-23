@@ -9,13 +9,13 @@ use wasm_bindgen::prelude::*;
 use catlog::dbl::theory::{self as theory, NonUnital, Unital};
 use catlog::latex::LatexEquations;
 use catlog::one::Path;
+use catlog::stdlib::analyses::ode::ODESemanticsAnalysis;
 use catlog::stdlib::{analyses, models, theories, theory_morphisms};
 use catlog::zero::name;
 
 use super::latex::LatexEquations;
 use super::model_morphism::{MotifOccurrence, MotifsOptions, motifs};
 use super::result::JsResult;
-use super::theories::MassActionAnalysisLogic;
 use super::{analyses::*, model::DblModel, theory::DblTheory};
 
 /// The empty or initial theory.
@@ -152,15 +152,17 @@ impl ThSignedCategory {
         model: &DblModel,
         data: analyses::ode::LotkaVolterraProblemData,
     ) -> Result<ODEResultWithEquations, String> {
-        let system = lotka_volterra_system(model);
-        ode_semantics_simulation::<analyses::ode::LotkaVolterraSemantics>(model, data, system?)
+        let system =
+            analyses::ode::LotkaVolterraAnalysis::default().build_system(model.discrete()?);
+        ode_semantics_simulation::<analyses::ode::LotkaVolterraSemantics>(model, data, system)
     }
 
     /// Show the equations of the Lotka-Volterra system derived from a model.
     #[wasm_bindgen(js_name = "lotkaVolterraEquations")]
     pub fn lotka_volterra_equations(&self, model: &DblModel) -> Result<LatexEquations, String> {
-        let system = lotka_volterra_system(model);
-        ode_semantics_equations::<analyses::ode::LotkaVolterraSemantics>(model, system?)
+        let system =
+            analyses::ode::LotkaVolterraAnalysis::default().build_system(model.discrete()?);
+        ode_semantics_equations::<analyses::ode::LotkaVolterraSemantics>(model, system)
     }
 
     /// Simulate the linear ODE system derived from a model.
@@ -168,17 +170,17 @@ impl ThSignedCategory {
     pub fn linear_ode(
         &self,
         model: &DblModel,
-        data: analyses::ode::LCCProblemData,
+        data: analyses::ode::LinearODEProblemData,
     ) -> Result<ODEResultWithEquations, String> {
-        let system = linear_ode_system(model);
-        ode_semantics_simulation::<analyses::ode::LCCSemantics>(model, data, system?)
+        let system = analyses::ode::LinearODEAnalysis::default().build_system(model.discrete()?);
+        ode_semantics_simulation::<analyses::ode::LinearODESemantics>(model, data, system)
     }
 
     /// Show the equations of the linear ODE system derived from a model.
     #[wasm_bindgen(js_name = "linearODEEquations")]
     pub fn linear_ode_equations(&self, model: &DblModel) -> Result<LatexEquations, String> {
-        let system = linear_ode_system(model);
-        ode_semantics_equations::<analyses::ode::LCCSemantics>(model, system?)
+        let system = analyses::ode::LinearODEAnalysis::default().build_system(model.discrete()?);
+        ode_semantics_equations::<analyses::ode::LinearODESemantics>(model, system)
     }
 }
 
@@ -342,14 +344,12 @@ impl ThCategoryLinks {
         model: &DblModel,
         data: analyses::ode::MassActionProblemData,
     ) -> Result<ODEResultWithEquations, String> {
-        let system = mass_action_system(
-            model,
-            data.equations_data.mass_conservation_type,
-            MassActionAnalysisLogic::StockFlow,
-        );
-        ode_semantics_simulation::<analyses::ode::StockFlowMassActionSemantics>(
-            model, data, system?,
-        )
+        let system = analyses::ode::StockFlowMassActionAnalysis {
+            mass_conservation_type: data.equations_data.mass_conservation_type,
+            ..analyses::ode::StockFlowMassActionAnalysis::default()
+        }
+        .build_system(model.discrete_tab()?);
+        ode_semantics_simulation::<analyses::ode::StockFlowMassActionSemantics>(model, data, system)
     }
 
     /// Returns the symbolic mass-action equations in LaTeX format.
@@ -359,12 +359,12 @@ impl ThCategoryLinks {
         model: &DblModel,
         data: analyses::ode::MassActionEquationsData,
     ) -> Result<LatexEquations, String> {
-        let system = mass_action_system(
-            model,
-            data.mass_conservation_type,
-            MassActionAnalysisLogic::StockFlow,
-        );
-        ode_semantics_equations::<analyses::ode::StockFlowMassActionSemantics>(model, system?)
+        let system = analyses::ode::StockFlowMassActionAnalysis {
+            mass_conservation_type: data.mass_conservation_type,
+            ..analyses::ode::StockFlowMassActionAnalysis::default()
+        }
+        .build_system(model.discrete_tab()?);
+        ode_semantics_equations::<analyses::ode::StockFlowMassActionSemantics>(model, system)
     }
 }
 
@@ -408,14 +408,12 @@ impl ThSymMonoidalCategory {
         model: &DblModel,
         data: analyses::ode::MassActionProblemData,
     ) -> Result<ODEResultWithEquations, String> {
-        let system = mass_action_system(
-            model,
-            data.equations_data.mass_conservation_type,
-            MassActionAnalysisLogic::PetriNet,
-        );
-        ode_semantics_simulation::<analyses::ode::StockFlowMassActionSemantics>(
-            model, data, system?,
-        )
+        let system = analyses::ode::PetriNetMassActionAnalysis {
+            mass_conservation_type: data.equations_data.mass_conservation_type,
+            ..analyses::ode::PetriNetMassActionAnalysis::default()
+        }
+        .build_system(model.modal_unital()?);
+        ode_semantics_simulation::<analyses::ode::PetriNetMassActionSemantics>(model, data, system)
     }
 
     /// Returns the symbolic mass-action equations in LaTeX format.
@@ -425,12 +423,12 @@ impl ThSymMonoidalCategory {
         model: &DblModel,
         data: analyses::ode::MassActionEquationsData,
     ) -> Result<LatexEquations, String> {
-        let system = mass_action_system(
-            model,
-            data.mass_conservation_type,
-            MassActionAnalysisLogic::PetriNet,
-        );
-        ode_semantics_equations::<analyses::ode::PetriNetMassActionSemantics>(model, system?)
+        let system = analyses::ode::PetriNetMassActionAnalysis {
+            mass_conservation_type: data.mass_conservation_type,
+            ..analyses::ode::PetriNetMassActionAnalysis::default()
+        }
+        .build_system(model.modal_unital()?);
+        ode_semantics_equations::<analyses::ode::PetriNetMassActionSemantics>(model, system)
     }
 
     /// Simulates the stochastic mass-action system derived from a model.
@@ -482,13 +480,17 @@ impl ThPolynomialODE {
         model: &DblModel,
         data: analyses::ode::PolynomialODEProblemData,
     ) -> Result<ODEResultWithEquations, String> {
-        polynomial_ode_simulation(model, data)
+        let system =
+            analyses::ode::PolynomialODEAnalysis::default().build_system(model.modal_nonunital()?);
+        ode_semantics_simulation::<analyses::ode::PolynomialODESemantics>(model, data, system)
     }
 
     /// Returns the symbolic equations in LaTeX format.
     #[wasm_bindgen(js_name = "polynomialODEEquations")]
     pub fn polynomial_ode_equations(&self, model: &DblModel) -> Result<LatexEquations, String> {
-        polynomial_ode_equations(model)
+        let system =
+            analyses::ode::PolynomialODEAnalysis::default().build_system(model.modal_nonunital()?);
+        ode_semantics_equations::<analyses::ode::PolynomialODESemantics>(model, system)
     }
 }
 
@@ -515,13 +517,17 @@ impl ThSignedPolynomialODE {
         model: &DblModel,
         data: analyses::ode::PolynomialODEProblemData,
     ) -> Result<ODEResultWithEquations, String> {
-        polynomial_ode_simulation(model, data)
+        let system =
+            analyses::ode::PolynomialODEAnalysis::default().build_system(model.modal_nonunital()?);
+        ode_semantics_simulation::<analyses::ode::PolynomialODESemantics>(model, data, system)
     }
 
     /// Returns the symbolic equations in LaTeX format.
     #[wasm_bindgen(js_name = "polynomialODEEquations")]
     pub fn polynomial_ode_equations(&self, model: &DblModel) -> Result<LatexEquations, String> {
-        polynomial_ode_equations(model)
+        let system =
+            analyses::ode::PolynomialODEAnalysis::default().build_system(model.modal_nonunital()?);
+        ode_semantics_equations::<analyses::ode::PolynomialODESemantics>(model, system)
     }
 }
 

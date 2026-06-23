@@ -5,9 +5,7 @@ use serde::{Deserialize, Serialize};
 use tsify::Tsify;
 
 use catlog::simulate::ode::PolynomialSystem;
-use catlog::stdlib::analyses::ode::{
-    self, ODESemantics, ODESemanticsAnalysis, ODESemanticsProblemData, Parameter,
-};
+use catlog::stdlib::analyses::ode::{self, ODESemantics, ODESemanticsProblemData, Parameter};
 use catlog::zero::QualifiedName;
 
 use super::latex::latex_names;
@@ -30,124 +28,7 @@ pub struct ODEResultWithEquations {
     pub latex_equations: LatexEquations,
 }
 
-/// Generates the PolynomialSystem for the systems of polynomial ODEs.
-pub(crate) fn polynomial_ode_system(
-    model: &DblModel,
-) -> Result<PolynomialSystem<QualifiedName, ode::Parameter<QualifiedName>, i8>, String> {
-    let realised_model = model.modal_nonunital()?;
-    let analysis = ode::PolynomialODEAnalysis::default();
-    Ok(analysis.build_system(realised_model))
-}
-
-// // TODO: This enum should already be defined somewhere else...
-// enum Doctrine {
-//     Discrete,
-//     Tabulated,
-//     ModalUnital,
-//     ModalNonUnital,
-// }
-
-//     match doctrine {
-//         Doctrine::Discrete => {
-//             let realised_model = model.discrete()?;
-//             let analysis = <S::AnalysisType>::default();
-//             Ok(analysis.build_system(realised_model))
-//         }
-//         Doctrine::Tabulated => {
-//             let realised_model = model.discrete_tab()?;
-//             let analysis = S::AnalysisType::default();
-//             Ok(analysis.build_system(realised_model))
-//         }
-//         Doctrine::ModalUnital => {
-//             let realised_model = model.modal_unital()?;
-//             let analysis = S::AnalysisType::default();
-//             Ok(analysis.build_system(realised_model))
-//         }
-//         Doctrine::ModalNonUnital => {
-//             let realised_model = model.modal_nonunital()?;
-//             let analysis = S::AnalysisType::default();
-//             Ok(analysis.build_system(realised_model))
-//         }
-//     }
-
-// // TODO: define `fn polynomial_system<S: ODESemantics>` ??????????
-// fn ode_semantics_system<S: ODESemantics>(
-//     model: &DblModel,
-//     // doctrine: Doctrine,
-// ) -> Result<PolynomialSystem<QualifiedName, ode::Parameter<S::ParameterType>, i8>, String> {
-//     let realised_model = model.discrete()?;
-//     let analysis = <S::AnalysisType>::default();
-//     Ok(analysis.build_system(std::rc::Rc::<catlog::dbl::model::DiscreteDblModel>::unwrap_or_clone(realised_model)))
-// }
-
-// fn ode_semantics_system<S: ODESemantics>(
-//     model: &Rc<S::ModelType>,
-// ) -> Result<PolynomialSystem<QualifiedName, ode::Parameter<S::ParameterType>, i8>, String> {
-//     let analysis = S::AnalysisType::default();
-//     // TODO: can we just use .try_into() directly? as in e.g. the definition for modal_nonunital()
-//     Ok(analysis.build_system(model))
-// }
-
-/// Generates the PolynomialSystem for Lotka-Volterra dynamics.
-pub(crate) fn lotka_volterra_system(
-    model: &DblModel,
-) -> Result<PolynomialSystem<QualifiedName, ode::Parameter<ode::LotkaVolterraParameter>, i8>, String>
-{
-    let realised_model = model.discrete()?;
-    let analysis = ode::LotkaVolterraAnalysis::default();
-    Ok(analysis.build_system(realised_model))
-}
-
-/// Generates the PolynomialSystem for LCC dynamics.
-pub(crate) fn linear_ode_system(
-    model: &DblModel,
-) -> Result<PolynomialSystem<QualifiedName, ode::Parameter<ode::LCCParameter>, i8>, String> {
-    let realised_model = model.discrete()?;
-    let analysis = ode::LCCAnalysis::default();
-    Ok(analysis.build_system(realised_model))
-}
-
-// TODO: you should be able to REMOVE this enum
-/// Mass-action analysis is currently implemented for Petri nets and stock-flow diagrams
-/// and we can avoid some code reduplication by making this explicit.
-#[derive(Copy, Clone)]
-pub(crate) enum MassActionAnalysisLogic {
-    /// The modal theory of Petri nets.
-    PetriNet,
-    /// The discrete tabulator theory of stock-flow diagrams.
-    StockFlow,
-}
-
-/// Generates the PolynomialSystem for mass-action dynamics.
-pub(crate) fn mass_action_system(
-    model: &DblModel,
-    mass_conservation_type: ode::MassConservationType,
-    logic: MassActionAnalysisLogic,
-) -> Result<PolynomialSystem<QualifiedName, ode::Parameter<ode::MassActionParameter>, i8>, String> {
-    match logic {
-        MassActionAnalysisLogic::PetriNet => {
-            let realised_model = model.modal_unital()?;
-            let analysis = ode::PetriNetMassActionAnalysis {
-                mass_conservation_type,
-                ..ode::PetriNetMassActionAnalysis::default()
-            };
-            Ok(analysis.build_system(realised_model))
-        }
-        MassActionAnalysisLogic::StockFlow => {
-            let realised_model = model.discrete_tab()?;
-            let analysis = ode::StockFlowMassActionAnalysis {
-                mass_conservation_type,
-                ..ode::StockFlowMassActionAnalysis::default()
-            };
-            Ok(analysis.build_system(realised_model))
-        }
-    }
-}
-
-/// TODO: documentation.
-// TODO: rewrite this to use ode_semantics_system, so that there's no need to preface with e.g.
-//          let system = lotka_volterra_system(model);
-//       in theories.rs
+/// Simulate specific ODE semantics on a model, for use in a simulation analysis.
 pub(crate) fn ode_semantics_simulation<S: ODESemantics>(
     model: &DblModel,
     problem_data: S::ProblemDataType,
@@ -164,10 +45,7 @@ pub(crate) fn ode_semantics_simulation<S: ODESemantics>(
     })
 }
 
-/// TODO: documentation.
-// TODO: rewrite this to use ode_semantics_system, so that there's no need to preface with e.g.
-//          let system = lotka_volterra_system(model);
-//       in theories.rs
+/// Generate the equations of specific ODE semantics on a model, for use in an equations analysis.
 pub(crate) fn ode_semantics_equations<S: ODESemantics>(
     model: &DblModel,
     system: PolynomialSystem<QualifiedName, Parameter<S::ParameterType>, i8>,
@@ -175,53 +53,30 @@ pub(crate) fn ode_semantics_equations<S: ODESemantics>(
     Ok(system.to_latex_equations_with_map(|param| latex_names(model)(param)))
 }
 
-// TODO: replace this with ode_semantics_simulation by implementing ODESemantics for polynomial_ode ???
-/// Simulates polynomial ODE equations.
-pub(crate) fn polynomial_ode_simulation(
-    model: &DblModel,
-    problem_data: ode::PolynomialODEProblemData,
-) -> Result<ODEResultWithEquations, String> {
-    let system = polynomial_ode_system(model);
-    let sys_extended_scalars = problem_data.extend_scalars(system?);
-    let latex_equations =
-        sys_extended_scalars.map_variables(latex_names(model)).to_latex_equations();
-    let analysis = problem_data.build_analysis(sys_extended_scalars);
-    let solution = analysis.solve_with_defaults().map_err(|err| format!("{err:?}"));
-    Ok(ODEResultWithEquations {
-        solution: ODEResult(solution.into()),
-        latex_equations,
-    })
-}
-
-// TODO: replace this with ode_semantics_equations by implementing ODESemantics for polynomial_ode ???
-/// Generates equations for the system of polynomial ODEs.
-pub(crate) fn polynomial_ode_equations(model: &DblModel) -> Result<LatexEquations, String> {
-    let system = polynomial_ode_system(model);
-    let equations = system?.to_latex_equations_with_map(|param| latex_names(model)(param));
-    Ok(equations)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    use crate::latex::latex_names;
     use crate::model::{DblModel, tests::backward_link};
     use crate::theories::{ThSignedCategory, ThSymMonoidalCategory};
     use catcolab_document_types::v2::{Modality, MorDecl, MorType, Ob, ObDecl, ObType};
     use catlog::dbl::modal::{List, ModalMorType, ModalOb, ModalObType};
     use catlog::dbl::model::{ModalDblModel, MutDblModel};
     use catlog::latex::{Latex, LatexEquation, LatexEquations};
-    use catlog::stdlib::analyses::ode::{MassConservationType, PetriNetMassActionAnalysis, StockFlowMassActionAnalysis};
-    use catlog::stdlib::{analyses::ode, theories};
+    use catlog::stdlib::{
+        analyses::ode::{self, MassConservationType, ODESemanticsAnalysis},
+        theories,
+    };
     use catlog::zero::{LabelSegment, Namespace, QualifiedName};
     use std::rc::Rc;
     use uuid::Uuid;
 
+    // TODO: test for polynomial_ode_simulation
+
     #[test]
     fn cld_lotka_volterra_latex_equations() {
         let model = parallel_negative_cld("x", "yellow", "f", "");
-        let system = lotka_volterra_system(&model).unwrap();
+        let system = ode::LotkaVolterraAnalysis::default().build_system(model.discrete().unwrap());
         let equations =
             ode_semantics_equations::<ode::LotkaVolterraSemantics>(&model, system).unwrap();
 
@@ -248,8 +103,8 @@ mod tests {
     #[test]
     fn cld_lcc_latex_equations() {
         let model = parallel_negative_cld("x", "yellow", "f", "");
-        let system = linear_ode_system(&model).unwrap();
-        let equations = ode_semantics_equations::<ode::LCCSemantics>(&model, system).unwrap();
+        let system = ode::LinearODEAnalysis::default().build_system(model.discrete().unwrap());
+        let equations = ode_semantics_equations::<ode::LinearODESemantics>(&model, system).unwrap();
 
         let expected = LatexEquations(vec![
             LatexEquation {
@@ -270,12 +125,13 @@ mod tests {
     #[test]
     fn stock_flow_balanced_mass_action_latex_equations() {
         let model = backward_link("xxx", "yyy", "fff");
-        let system = mass_action_system(
-            &model,
-            MassConservationType::Balanced,
-            MassActionAnalysisLogic::StockFlow,
-        ).unwrap();
-        let equations = ode_semantics_equations::<ode::StockFlowMassActionSemantics>(&model, system).unwrap();
+        let system = ode::StockFlowMassActionAnalysis {
+            mass_conservation_type: MassConservationType::Balanced,
+            ..ode::StockFlowMassActionAnalysis::default()
+        }
+        .build_system(model.discrete_tab().unwrap());
+        let equations =
+            ode_semantics_equations::<ode::StockFlowMassActionSemantics>(&model, system).unwrap();
 
         let expected = LatexEquations(vec![
             LatexEquation {
@@ -293,12 +149,15 @@ mod tests {
     #[test]
     fn stock_flow_unbalanced_mass_action_latex_equations() {
         let model = backward_link("xxx", "yyy", "fff");
-        let system = mass_action_system(
-            &model,
-            MassConservationType::Unbalanced(ode::RateGranularity::PerTransition),
-            MassActionAnalysisLogic::StockFlow,
-        ).unwrap();
-        let equations = ode_semantics_equations::<ode::StockFlowMassActionSemantics>(&model, system).unwrap();
+        let system = ode::StockFlowMassActionAnalysis {
+            mass_conservation_type: MassConservationType::Unbalanced(
+                ode::RateGranularity::PerTransition,
+            ),
+            ..ode::StockFlowMassActionAnalysis::default()
+        }
+        .build_system(model.discrete_tab().unwrap());
+        let equations =
+            ode_semantics_equations::<ode::StockFlowMassActionSemantics>(&model, system).unwrap();
 
         let expected = LatexEquations(vec![
             LatexEquation {
@@ -315,18 +174,17 @@ mod tests {
         assert_eq!(equations, expected);
     }
 
-    // TODO: REMOVE THIS #[ignore]
     #[test]
-    #[ignore]
     fn petri_net_balanced_mass_action_latex_equations() {
         // The Petri net with places "liquid", "solid", and "c", and one (unnamed) transition [liquid, c] -> [solid, c].
         let model = catalytic_petri_net("liquid", "solid", "c", "");
-        let system = mass_action_system(
-            &model,
-            MassConservationType::Balanced,
-            MassActionAnalysisLogic::PetriNet,
-        ).unwrap();
-        let equations = ode_semantics_equations::<ode::PetriNetMassActionSemantics>(&model, system).unwrap();
+        let system = ode::PetriNetMassActionAnalysis {
+            mass_conservation_type: MassConservationType::Balanced,
+            ..ode::PetriNetMassActionAnalysis::default()
+        }
+        .build_system(model.modal_unital().unwrap());
+        let equations =
+            ode_semantics_equations::<ode::PetriNetMassActionSemantics>(&model, system).unwrap();
 
         let expected = LatexEquations(vec![
             LatexEquation {
@@ -351,18 +209,19 @@ mod tests {
         assert_eq!(equations, expected);
     }
 
-    // TODO: REMOVE THIS #[ignore]
     #[test]
-    #[ignore]
     fn petri_net_unbalanced_pt_mass_action_latex_equations() {
         // The Petri net with places "liquid", "solid", and "c", and one (unnamed) transition [liquid, c] -> [solid, c].
         let model = catalytic_petri_net("liquid", "solid", "c", "");
-        let system = mass_action_system(
-            &model,
-            MassConservationType::Unbalanced(ode::RateGranularity::PerTransition),
-            MassActionAnalysisLogic::PetriNet,
-        ).unwrap();
-        let equations = ode_semantics_equations::<ode::PetriNetMassActionSemantics>(&model, system).unwrap();
+        let system = ode::PetriNetMassActionAnalysis {
+            mass_conservation_type: MassConservationType::Unbalanced(
+                ode::RateGranularity::PerTransition,
+            ),
+            ..ode::PetriNetMassActionAnalysis::default()
+        }
+        .build_system(model.modal_unital().unwrap());
+        let equations =
+            ode_semantics_equations::<ode::PetriNetMassActionSemantics>(&model, system).unwrap();
 
         let expected = LatexEquations(vec![
             LatexEquation {
@@ -381,18 +240,19 @@ mod tests {
         assert_eq!(equations, expected);
     }
 
-    // TODO: REMOVE THIS #[ignore]
     #[test]
-    #[ignore]
     fn petri_net_unbalanced_pp_mass_action_latex_equations() {
         // The Petri net with places "liquid", "solid", and "c", and one (unnamed) transition [liquid, c] -> [solid, c].
         let model = catalytic_petri_net("liquid", "solid", "c", "");
-        let system = mass_action_system(
-            &model,
-            MassConservationType::Unbalanced(ode::RateGranularity::PerPlace),
-            MassActionAnalysisLogic::PetriNet,
-        ).unwrap();
-        let equations = ode_semantics_equations::<ode::PetriNetMassActionSemantics>(&model, system).unwrap();
+        let system = ode::PetriNetMassActionAnalysis {
+            mass_conservation_type: MassConservationType::Unbalanced(
+                ode::RateGranularity::PerPlace,
+            ),
+            ..ode::PetriNetMassActionAnalysis::default()
+        }
+        .build_system(model.modal_unital().unwrap());
+        let equations =
+            ode_semantics_equations::<ode::PetriNetMassActionSemantics>(&model, system).unwrap();
 
         // TODO: write down the expected equations
         let expected = LatexEquations(vec![

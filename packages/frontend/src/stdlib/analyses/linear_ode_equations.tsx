@@ -1,16 +1,16 @@
 import { BlockTitle, ExpandableTable, KatexDisplay } from "catcolab-ui-components";
-import { LCCEquationsData } from "catlog-wasm";
+import { LinearODEEquationsData } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { createModelODELatex } from "./model_ode_plot";
-import type { LCCEquations } from "./simulator_types";
+import type { LinearODEEquations } from "./simulator_types";
 
 import "./simulation.css";
 
 /** Display the symbolic mass-action dynamics equations for a model. */
-export default function LCCEquationsDisplay(
-    props: ModelAnalysisProps<LCCEquationsData> & {
-        content: LCCEquationsData;
-        getEquations: LCCEquations;
+export default function LinearODEEquationsDisplay(
+    props: ModelAnalysisProps<LinearODEEquationsData> & {
+        content: LinearODEEquationsData;
+        getEquations: LinearODEEquations;
         title?: string;
     },
 ) {
