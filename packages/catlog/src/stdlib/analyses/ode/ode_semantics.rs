@@ -258,9 +258,7 @@ pub trait ODESemanticsProblemData<P: ODEParameterType> {
     // In short:
     //     is there a better way to ensure that any struct implementing a trait has specific fields?
     /// Further data needed to specify the ODE equations.
-    fn equations_data(&self) -> impl ODESemanticsEquationsData {
-        ()
-    }
+    fn equations_data(&self) -> impl ODESemanticsEquationsData {}
     /// Map from object IDs to initial values (nonnegative reals).
     fn initial_values(&self) -> HashMap<QualifiedName, f32>;
     /// Duration of simulation.
