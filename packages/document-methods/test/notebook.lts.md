@@ -96,6 +96,28 @@ source: Source
 source copy: Source copy
 ```
 
+## Instantiation
+
+```ts
+import { Instantiation } from "catcolab-documents";
+
+const anotherOlog = binder.createNotebook(SimpleOlog, { name: "Another Olog" });
+const thing = anotherOlog.add(Type, { name: "Thing" });
+
+const instantiation = notebook.add(Instantiation, {
+    name: "ImportedOlog",
+    model: anotherOlog,
+    // maps ImportedOlog.Thing <- B
+    specializations: [{ object: thing, as: target }],
+});
+
+console.log("instantiation:", instantiation.name);
+```
+
+```
+instantiation: ImportedOlog
+```
+
 ## Iterating through cells
 
 We can iterate through cells: both informal cells and formal judgment cells.
@@ -140,21 +162,56 @@ const notebook = binder.createNotebook(SimpleSchema, { name: "Example schema" })
 
 const person = notebook.add(Entity, { name: "Person" });
 const company = notebook.add(Entity, { name: "Company" });
-const str = notebook.add(AttrType, { name: "String" });
 
 notebook.add(Mapping, { name: "employer", dom: person, cod: company });
-notebook.add(Attr, { name: "name", dom: person, cod: str });
+```
 
+```ts
 const entities = notebook.cellsOf(Entity);
-const attrs = notebook.cellsOf(Attr);
+const mappings = notebook.cellsOf(Mapping);
 
 console.log("entities:", entities.map((cell) => cell.name).join(", "));
-console.log("attrs:", attrs.map((cell) => cell.name).join(", "));
+console.log("mappings:", mappings.map((cell) => cell.name).join(", "));
 ```
 
 ```
 entities: Person, Company
-attrs: name
+mappings: employer
+```
+
+`cells` and `cellsOf` do not recurse into instantiations.
+
+<!-- verifier:prepend-to-following -->
+
+```ts
+import { Instantiation } from "catcolab-documents";
+
+const anotherSchema = binder.createNotebook(SimpleSchema, { name: "Another schema" });
+const enterprise = anotherSchema.add(Entity, { name: "Enterprise" });
+const building = anotherSchema.add(Entity, { name: "Building" });
+const owner = anotherSchema.add(Mapping, { name: "owner", dom: enterprise, cod: building });
+
+const instantiation = notebook.add(Instantiation, {
+    name: "ImportedSchema",
+    model: anotherSchema,
+    specializations: [{ object: enterprise, as: company }],
+});
+```
+
+```ts
+const instantiations = notebook.cellsOf(Instantiation);
+const entities = notebook.cellsOf(Entity);
+const mappings = notebook.cellsOf(Mapping);
+
+console.log("instantiations:", instantiations.map((cell) => cell.name).join(", "));
+console.log("entities:", entities.map((cell) => cell.name).join(", "));
+console.log("mappings:", mappings.map((cell) => cell.name).join(", "));
+```
+
+```
+instantiations: ImportedSchema
+entities: Person, Company
+mappings: employer
 ```
 
 ## Type safety
@@ -564,4 +621,12 @@ olog.migrateTo(PetriNet);
 
 ```
 ❌ No migration defined from "simple-olog" to "petri-net".
+```
+
+```
+
+```
+
+```
+
 ```

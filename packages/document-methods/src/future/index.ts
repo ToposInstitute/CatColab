@@ -1,6 +1,6 @@
 import { v7 } from "uuid";
 
-import type { Modality, MorType, Ob, ObType } from "catcolab-document-types";
+import type { Link, Modality, MorType, Ob, ObType, SpecializeModel } from "catcolab-document-types";
 import type { Cell, ModelJudgment } from "catcolab-document-types";
 import {
     type DblModel,
@@ -13,6 +13,7 @@ import {
 import {
     duplicateModelJudgment,
     type ModelDocument,
+    newInstantiatedModel,
     newModelDocument,
     newMorphismDecl,
     newObjectDecl,
@@ -36,27 +37,52 @@ export interface DocumentStore<Handle> {
     changeDocument(handle: Handle, fn: (doc: ModelDocument) => void): void;
     /** Make a detached plain-JS copy of a store-owned value before cloning it. */
     copyValue?<T>(handle: Handle, value: T): T;
+    /** Convert a store handle into a serializable document link, when available. */
+    linkForHandle?(handle: Handle): Link | null;
 }
+
+const plainDocumentIds = new WeakMap<ModelDocument, string>();
+
+const plainDocumentId = (document: ModelDocument): string => {
+    let id = plainDocumentIds.get(document);
+    if (!id) {
+        id = v7();
+        plainDocumentIds.set(document, id);
+    }
+    return id;
+};
 
 /** A plain in-memory store whose handle is the document itself. */
 export const plainStore: DocumentStore<ModelDocument> = {
-    createHandle: (initialDoc) => initialDoc,
+    createHandle: (initialDoc) => {
+        plainDocumentId(initialDoc);
+        return initialDoc;
+    },
     viewDocument: (handle) => handle,
     changeDocument: (handle, fn) => fn(handle),
+    linkForHandle: (handle) => ({
+        _id: plainDocumentId(handle),
+        _version: null,
+        _server: "",
+        type: "instantiation",
+    }),
 };
 
 const richTextKind: unique symbol = Symbol("richText");
 const objectKind: unique symbol = Symbol("object");
 const morphismKind: unique symbol = Symbol("morphism");
+const instantiationKind: unique symbol = Symbol("instantiation");
 
 /** Precise discriminants for notebook cell handles. */
 export const CellKind = {
     RichText: richTextKind,
     Object: objectKind,
     Morphism: morphismKind,
+    Instantiation: instantiationKind,
 } as const;
 
 const richTextTypeBrand: unique symbol = Symbol("richTextType");
+const instantiationTypeBrand: unique symbol = Symbol("instantiationType");
 
 /**
  * The sentinel cell-type used to add rich-text cells to a notebook. Pass it
@@ -73,6 +99,17 @@ const isRichTextType = (value: unknown): value is RichTextType =>
     typeof value === "object" &&
     value !== null &&
     (value as RichTextType)[richTextTypeBrand] === true;
+
+/** The sentinel cell-type used to add model instantiations to a notebook. */
+export type InstantiationType = { readonly [instantiationTypeBrand]: true };
+
+/** The singleton {@link InstantiationType} value. */
+export const Instantiation: InstantiationType = { [instantiationTypeBrand]: true };
+
+const isInstantiationType = (value: unknown): value is InstantiationType =>
+    typeof value === "object" &&
+    value !== null &&
+    (value as InstantiationType)[instantiationTypeBrand] === true;
 
 /** Methods shared by all cell handles for editing a field. */
 type Update<T> = {
@@ -274,6 +311,27 @@ export type RichTextCell = Update<{ content: string }> &
         readonly content: string;
     };
 
+export type InstantiationSpecialization = {
+    readonly object: ObjectCell;
+    readonly as: ObjectCell;
+};
+
+export type InstantiationArgs<Handle = unknown> = {
+    name: string;
+    model: Notebook<AnyShape, Handle> | Link | null;
+    specializations?: readonly InstantiationSpecialization[];
+};
+
+export type InstantiationCell<Handle = unknown> = Update<Partial<InstantiationArgs<Handle>>> &
+    Reorder & {
+        readonly kind: typeof CellKind.Instantiation;
+        readonly id: string;
+        readonly name: string;
+        readonly model: Link | null;
+        readonly specializations: readonly SpecializeModel[];
+        duplicate(): InstantiationCell<Handle>;
+    };
+
 /**
  * The union of object-cell handles a shape declares, one member per object
  * type listed in the shape. Distributing over the shape's listed types (rather
@@ -321,6 +379,7 @@ type MorphismCellTuple<Ms extends readonly MorphismDef[]> = {
  */
 export type NotebookCell<TShape extends AnyShape = AnyShape> =
     | RichTextCell
+    | InstantiationCell
     | ObjectCellsOf<TShape>
     | MorphismCellsOf<TShape>;
 
@@ -657,6 +716,24 @@ function attachNotebook<TShape extends AnyShape, Handle>(
     const cloneJudgment = (judgment: ModelJudgment): ModelJudgment =>
         duplicateModelJudgment(copy ? copy(judgment) : judgment);
 
+    const linkForModel = (model: Notebook<AnyShape, Handle> | Link | null): Link | null => {
+        if (model === null) {
+            return null;
+        }
+        if ("_id" in model) {
+            return model;
+        }
+        return store.linkForHandle?.(model.handle) ?? null;
+    };
+
+    const encodeSpecializations = (
+        specializations: readonly InstantiationSpecialization[] | undefined,
+    ): SpecializeModel[] =>
+        (specializations ?? []).map((specialization) => ({
+            id: specialization.object.id,
+            ob: encodeObjectRef(specialization.as),
+        }));
+
     const duplicateFormalCell = (cellId: string): Cell<ModelJudgment> => {
         const cell = doc.notebook.cellContents[cellId];
         if (!cell) {
@@ -835,6 +912,50 @@ function attachNotebook<TShape extends AnyShape, Handle>(
             ...reorderMethods(cellId),
         }) as unknown as RichTextCell;
 
+    const instantiationHandle = (cellId: string): InstantiationCell<Handle> =>
+        ({
+            kind: CellKind.Instantiation,
+            get id() {
+                return readCellContent<{ id: string }>(cellId)?.id;
+            },
+            get name() {
+                return readCellContent<{ name: string }>(cellId)?.name;
+            },
+            get model() {
+                return readCellContent<{ model: Link | null }>(cellId)?.model;
+            },
+            get specializations() {
+                return readCellContent<{ specializations: SpecializeModel[] }>(cellId)
+                    ?.specializations;
+            },
+            update(u: Partial<InstantiationArgs<Handle>>) {
+                change((d) => {
+                    const content = (
+                        d.notebook.cellContents[cellId] as {
+                            content: {
+                                name: string;
+                                model: Link | null;
+                                specializations: SpecializeModel[];
+                            };
+                        }
+                    ).content;
+                    if (u.name !== undefined) {
+                        content.name = u.name;
+                    }
+                    if ("model" in u) {
+                        content.model = linkForModel(u.model ?? null);
+                    }
+                    if ("specializations" in u) {
+                        content.specializations = encodeSpecializations(u.specializations);
+                    }
+                });
+            },
+            duplicate() {
+                return instantiationHandle(appendDuplicate(cellId));
+            },
+            ...reorderMethods(cellId),
+        }) as unknown as InstantiationCell<Handle>;
+
     const isShapeMorphism = (def: MorphismDef): boolean =>
         (shape.morphisms ?? []).some((t) => sameTypeValue(t, def));
 
@@ -866,6 +987,18 @@ function attachNotebook<TShape extends AnyShape, Handle>(
             d.notebook.cellOrder.push(formalCell.id);
         });
         return morphismHandle(formalCell.id, def);
+    };
+
+    const addInstantiationCell = (args: InstantiationArgs<Handle>): InstantiationCell<Handle> => {
+        const judgment = newInstantiatedModel(linkForModel(args.model));
+        judgment.name = args.name;
+        judgment.specializations = encodeSpecializations(args.specializations);
+        const formalCell = newFormalCell(judgment);
+        change((d) => {
+            d.notebook.cellContents[formalCell.id] = formalCell;
+            d.notebook.cellOrder.push(formalCell.id);
+        });
+        return instantiationHandle(formalCell.id);
     };
 
     return {
@@ -1003,17 +1136,26 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                             tag: "morphism",
                             morType: judgment.morType,
                         });
+                    case "instantiation":
+                        return instantiationHandle(cellId);
                     default:
                         throw new Error(`Unsupported judgment tag: ${judgment.tag}`);
                 }
             });
         },
-        cellsOf(arg: RichTextType | ObjectDef | MorphismDef | AnyShape): Array<NotebookCell> {
+        cellsOf(
+            arg: RichTextType | InstantiationType | ObjectDef | MorphismDef | AnyShape,
+        ): Array<NotebookCell> {
             // `RichText` selects just the rich-text cells.
             if (isRichTextType(arg)) {
                 return (this as Notebook<TShape, Handle>)
                     .cells()
                     .filter((cell) => cell.kind === CellKind.RichText);
+            }
+            if (isInstantiationType(arg)) {
+                return (this as Notebook<TShape, Handle>)
+                    .cells()
+                    .filter((cell) => cell.kind === CellKind.Instantiation);
             }
             // A def carries an "object"/"morphism" `tag`; a shape does not. A
             // single def selects only its own cells (rich-text excluded), while a
@@ -1043,7 +1185,14 @@ function attachNotebook<TShape extends AnyShape, Handle>(
         },
         add(
             type: unknown,
-            args: { content?: string; name?: string; dom?: unknown; cod?: unknown },
+            args: {
+                content?: string;
+                name?: string;
+                dom?: unknown;
+                cod?: unknown;
+                model?: Notebook<AnyShape, Handle> | Link | null;
+                specializations?: readonly InstantiationSpecialization[];
+            },
         ) {
             if (isRichTextType(type)) {
                 const cell = newRichTextCell((args as { content: string }).content);
@@ -1052,6 +1201,9 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                     d.notebook.cellOrder.push(cell.id);
                 });
                 return richTextHandle(cell.id);
+            }
+            if (isInstantiationType(type)) {
+                return addInstantiationCell(args as InstantiationArgs<Handle>);
             }
             const def = type as ObjectDef | MorphismDef;
             if (def.tag === "morphism") {
@@ -1216,6 +1368,7 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
      * Passing {@link RichText} selects just the notebook's rich-text cells.
      */
     cellsOf(type: RichTextType): Array<RichTextCell>;
+    cellsOf(type: InstantiationType): Array<InstantiationCell<Handle>>;
     cellsOf<Def extends ObjectDef>(type: Def): Array<ObjectCell<Def>>;
     cellsOf<Def extends MorphismDef>(type: Def): Array<MorphismCell<Def>>;
     cellsOf<S extends AnyShape>(shape: S): Array<NotebookCell<S>>;
@@ -1224,11 +1377,14 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
      * argument:
      *
      * - {@link RichText} adds a rich-text cell; `args` is `{ content }`.
+     * - {@link Instantiation} adds an instantiated model; `args` is
+     *   `{ name, model, specializations }`.
      * - A morphism type from the shape adds a morphism cell; `args` is
      *   `{ name, dom, cod }`, with `dom`/`cod` constrained by the morphism type.
      * - An object type from the shape adds an object cell; `args` is `{ name }`.
      */
     add(type: RichTextType, args: { content: string }): RichTextCell;
+    add(type: InstantiationType, args: InstantiationArgs<Handle>): InstantiationCell<Handle>;
     add<M extends ShapeMorphisms<TShape>>(
         type: M,
         args: { name: string; dom: DomOf<M>; cod: CodOf<M> },
