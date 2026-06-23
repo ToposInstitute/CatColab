@@ -42,7 +42,7 @@ const EXPECTED_INITIAL =
 const EXPECTED_AFTER_APPEND =
     "<section><h1>Petri net</h1><ul>" +
     '<li><span class="cell-label">Place: A</span></li>' +
-    '<li><span class="cell-label">Place: B</span></li>' 
+    '<li><span class="cell-label">Place: B</span></li>' +
     '<li><span class="cell-label">Place: C</span></li>' +
     '<li><span class="cell-label">Transition: <span>[A, B<!---->]</span><span> -&gt; </span>' +
     "<span>[C<!---->]</span><span>fires</span></span>" +
