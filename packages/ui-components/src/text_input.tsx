@@ -262,7 +262,12 @@ export function TextInput(allProps: TextInputProps) {
                         text={props.text}
                         emptyText={options.completionsEmptyText}
                         ref={setCompletionsRef}
-                        onComplete={() => setCompletionsOpen(false)}
+                        onComplete={() => {
+                            setCompletionsOpen(false);
+                            // Move to the next item once the input is filled
+                            // via a completion.
+                            options.exitRight?.();
+                        }}
                     />
                 </Popover.Content>
             </Popover.Portal>
