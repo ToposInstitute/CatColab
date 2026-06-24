@@ -22,11 +22,17 @@ export function BasicMorInput(
     const completions = (): QualifiedName[] | undefined =>
         props.morType && liveModel().elaboratedModel()?.morGeneratorsWithType(props.morType);
 
+    const obCompletions = (): QualifiedName[] | undefined =>
+        liveModel().elaboratedModel()?.obGenerators();
+
     return (
         <MorIdInput
             completions={completions()}
             idToLabel={(id) => liveModel().elaboratedModel()?.morGeneratorLabel(id)}
             labelToId={(label) => liveModel().elaboratedModel()?.morGeneratorWithLabel(label)}
+            obCompletions={obCompletions()}
+            obIdToLabel={(id) => liveModel().elaboratedModel()?.obGeneratorLabel(id)}
+            obLabelToId={(label) => liveModel().elaboratedModel()?.obGeneratorWithLabel(label)}
             {...otherProps}
         />
     );

@@ -1,0 +1,53 @@
+.decl {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.125rem;
+    margin-top: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.name {
+    display: inline-flex;
+    align-items: baseline;
+}
+
+.nameSeparator {
+    color: var(--color-gray-800);
+    padding-left: 0.375rem;
+    padding-right: 0.625rem;
+}
+
+/* Lay the two sides out horizontally, but allow them to wrap onto separate
+   lines when there is not enough horizontal space. */
+.equation {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25ex 1ex;
+    min-width: 0;
+}
+
+.equals {
+    font-size: 1.5em;
+    text-align: center;
+    line-height: 1;
+    color: var(--color-gray-950);
+    margin: 0 0.25rem;
+}
+
+.morList {
+    display: flex;
+    min-width: 0;
+
+    ul {
+        flex-wrap: wrap;
+    }
+}
+
+.separator {
+    color: var(--color-gray-800);
+    padding: 0 0.25em;
+}
