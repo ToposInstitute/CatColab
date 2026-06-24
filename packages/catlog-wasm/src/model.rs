@@ -427,46 +427,42 @@ impl DblModel {
         Ok(())
     }
 
-    /// Gets label strings for the domain and codomain of a morphism generator.
+    /// Gets the domain and codomain of a morphism generator.
     ///
-    /// Returns `Some((dom_label, cod_label))` when the morphism has a domain
-    /// and codomain whose labels can be resolved from the namespace.
-    pub fn mor_generator_dom_cod_label_strings(
-        &self,
-        id: &QualifiedName,
-    ) -> Option<(String, String)> {
+    /// Returns `Some((dom, cod))`.
+    pub fn mor_generator_dom_cod(&self, id: &QualifiedName) -> Option<(Ob, Ob)> {
         let (dom, cod) = all_the_same!(match &self.model {
             DblModelBox::[Discrete, DiscreteTab, ModalUnital, ModalNonUnital](model) => {
                 (Quoter.quote(model.get_dom(id)?),
                  Quoter.quote(model.get_cod(id)?))
             }
         });
-        Some((self.ob_label_string(&dom)?, self.ob_label_string(&cod)?))
+        Some((dom, cod))
     }
 
-    /// Gets a label string for an object.
+    /// Gets the list of labels for an object.
     ///
-    /// For a single object returns its label (e.g. `"S"`). For a list of
-    /// objects returns bracketed labels (e.g. `"[S, I]"`).
-    fn ob_label_string(&self, ob: &Ob) -> Option<String> {
+    /// This works for both basic objects and list objects (e.g. "[x,y]" in a Petri net).
+    pub fn get_ob_label(&self, ob: &Ob) -> Option<Vec<QualifiedLabel>> {
         match ob {
             Ob::Basic(s) => {
                 let name = QualifiedName::deserialize_str(s).ok()?;
-                Some(self.ob_namespace.label_string(&name))
+                self.ob_namespace.label(&name).map(|var| vec![var])
             }
             Ob::App { ob, .. } => {
                 // FIXME: This is incorrect in general. The design issue is that
                 // this pretty printer claims to handles all models, but is
                 // customized to Petri nets as free SMCs where we prefer to omit
                 // the tensor application.
-                self.ob_label_string(ob)
+                self.get_ob_label(ob)
             }
             Ob::List { objects, .. } => {
-                let labels: Option<Vec<String>> = objects
+                let labels: Vec<_> = objects
                     .iter()
-                    .map(|ob| ob.as_ref().and_then(|ob| self.ob_label_string(ob)))
+                    .filter_map(|ob| ob.as_ref().and_then(|ob| self.get_ob_label(ob)))
+                    .flatten()
                     .collect();
-                Some(format!("[{}]", labels?.join(", ")))
+                Some(labels)
             }
             _ => None,
         }
@@ -777,14 +773,6 @@ pub fn elaborate_model(
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use catlog::{
-        dbl::{
-            modal::{List, ModalMorType, ModalObType},
-            model::ModalDblModel,
-        },
-        stdlib::theories,
-        zero::LabelSegment,
-    };
     use uuid::Uuid;
 
     use super::*;
@@ -927,74 +915,5 @@ pub(crate) mod tests {
         assert_eq!(model.ob_generators().len(), 2);
         assert_eq!(model.mor_generators().len(), 2);
         assert_eq!(model.validate().0, JsResult::Ok(()));
-    }
-
-    #[test]
-    fn modal_mor_dom_cod_labels() {
-        let th = Rc::new(theories::th_sym_monoidal_category());
-        let ob_type = ModalObType::new(QualifiedName::from("Object"));
-        let op = QualifiedName::from("tensor");
-
-        let [s_id, i_id, r_id] = [Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7()];
-        let [infect_id, recover_id] = [Uuid::now_v7(), Uuid::now_v7()];
-
-        let mut inner = ModalDblModel::new(th);
-        inner.add_ob(s_id.into(), ob_type.clone());
-        inner.add_ob(i_id.into(), ob_type.clone());
-        inner.add_ob(r_id.into(), ob_type.clone());
-
-        // infect: tensor(S, I) -> tensor(I, I) — product-typed dom and cod.
-        inner.add_mor(
-            infect_id.into(),
-            ModalOb::App(
-                ModalOb::List(
-                    List::Symmetric,
-                    vec![ModalOb::Generator(s_id.into()), ModalOb::Generator(i_id.into())],
-                )
-                .into(),
-                op.clone(),
-            ),
-            ModalOb::App(
-                ModalOb::List(
-                    List::Symmetric,
-                    vec![ModalOb::Generator(i_id.into()), ModalOb::Generator(i_id.into())],
-                )
-                .into(),
-                op.clone(),
-            ),
-            ModalMorType::Zero(ob_type.clone()),
-        );
-
-        // recover: I -> R — simple generator dom and cod.
-        inner.add_mor(
-            recover_id.into(),
-            ModalOb::Generator(i_id.into()),
-            ModalOb::Generator(r_id.into()),
-            ModalMorType::Zero(ob_type),
-        );
-
-        let mut ob_namespace = Namespace::new_for_uuid();
-        ob_namespace.set_label(s_id, LabelSegment::Text("S".into()));
-        ob_namespace.set_label(i_id, LabelSegment::Text("I".into()));
-        ob_namespace.set_label(r_id, LabelSegment::Text("R".into()));
-
-        let model = DblModel {
-            model: inner.into(),
-            ty: None,
-            ob_namespace,
-            mor_namespace: Namespace::new_for_uuid(),
-        };
-
-        // Morphism with basic generator dom/cod resolves labels.
-        assert_eq!(
-            model.mor_generator_dom_cod_label_strings(&recover_id.into()),
-            Some(("I".to_string(), "R".to_string()))
-        );
-
-        // Morphism with product-typed dom/cod resolves to bracketed labels.
-        assert_eq!(
-            model.mor_generator_dom_cod_label_strings(&infect_id.into()),
-            Some(("[S, I]".to_string(), "[I, I]".to_string()))
-        );
     }
 }
