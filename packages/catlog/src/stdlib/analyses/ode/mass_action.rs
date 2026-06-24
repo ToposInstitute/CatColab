@@ -461,6 +461,7 @@ impl ODESemanticsEquationsData for MassActionEquationsData {}
 )]
 pub struct MassActionProblemData {
     /// Data used for generating the equations (namely, whether or not mass is conserved).
+    #[cfg_attr(feature = "serde", serde(rename = "equationsData"))]
     pub equations_data: MassActionEquationsData,
 
     /// Map from morphism IDs to consumption rate coefficients (nonnegative reals),
