@@ -271,8 +271,21 @@ export default function StringDiagramMorphismCellEditor(props: MorphismEditorPro
         return validated.errors.filter((err) => err.content === props.morphism.id);
     };
 
+    let rootRef!: HTMLDivElement;
+
     return (
-        <div class={`formal-judgment ${styles.morphism}`}>
+        <div
+            ref={rootRef}
+            class={`formal-judgment ${styles.morphism}`}
+            onFocusOut={(evt) => {
+                // Lose focus only when it moves outside the editor entirely.
+                const next = evt.relatedTarget as Element | null;
+                if (next && rootRef.contains(next)) {
+                    return;
+                }
+                props.focus.setFocused(false);
+            }}
+        >
             <WireColumn
                 obs={domObs()}
                 side="left"
