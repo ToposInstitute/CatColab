@@ -46,6 +46,12 @@ export type TextInputOptions = TextInputActions & {
     Return `true` to intercept the event and prevent normal processing.
      */
     interceptKeyDown?: (evt: InputElementKeyboardEvent) => boolean;
+
+    /** Called when the input is filled out by selecting an auto-completion.
+
+    Defaults to `exitRight`, moving to the next item in a horizontal list.
+     */
+    onComplete?: () => void;
 };
 
 type InputElementKeyboardEvent = Parameters<JSX.EventHandler<HTMLInputElement, KeyboardEvent>>[0];
@@ -116,6 +122,7 @@ const TEXT_INPUT_OPTIONS = [
     "popupClass",
     "completionsEmptyText",
     "interceptKeyDown",
+    "onComplete",
     "autofill",
     "createBelow",
     "deleteBackward",
@@ -265,8 +272,8 @@ export function TextInput(allProps: TextInputProps) {
                         onComplete={() => {
                             setCompletionsOpen(false);
                             // Move to the next item once the input is filled
-                            // via a completion.
-                            options.exitRight?.();
+                            // via a completion. Defaults to moving right.
+                            (options.onComplete ?? options.exitRight)?.();
                         }}
                     />
                 </Popover.Content>

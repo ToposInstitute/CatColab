@@ -81,6 +81,11 @@ function WireColumn(props: {
             }}
             exitLeft={props.side === "right" ? props.activateName : undefined}
             exitRight={props.side === "left" ? props.activateName : undefined}
+            onComplete={() => {
+                // Add a new wire below once the input is filled via a
+                // completion and move focus down into it.
+                props.insertWire(i + 1);
+            }}
             interceptKeyDown={(evt) => {
                 if (evt.key === ",") {
                     props.insertWire(i + 1);
