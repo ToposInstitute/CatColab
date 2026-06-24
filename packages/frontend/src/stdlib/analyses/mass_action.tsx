@@ -253,13 +253,13 @@ export default function MassAction(
     // Now we can generate the parameter tables that will actually be rendered.
     const ParameterTables = () => (
         <Switch>
-            <Match when={props.content.massConservationType.type === "Balanced"}>
+            <Match when={props.content.equationsData.massConservationType.type === "Balanced"}>
                 <FixedTableEditor rows={morGenerators()} schema={morSchema} />
             </Match>
             <Match
                 when={
-                    props.content.massConservationType.type === "Unbalanced" &&
-                    props.content.massConservationType.granularity === "PerTransition"
+                    props.content.equationsData.massConservationType.type === "Unbalanced" &&
+                    props.content.equationsData.massConservationType.granularity === "PerTransition"
                 }
             >
                 <FixedTableEditor rows={morGenerators()} schema={morInputSchema} />
@@ -267,8 +267,8 @@ export default function MassAction(
             </Match>
             <Match
                 when={
-                    props.content.massConservationType.type === "Unbalanced" &&
-                    props.content.massConservationType.granularity === "PerPlace"
+                    props.content.equationsData.massConservationType.type === "Unbalanced" &&
+                    props.content.equationsData.massConservationType.granularity === "PerPlace"
                 }
             >
                 <FixedTableEditor rows={morGeneratorsInputs()} schema={morInputsSchema} />
@@ -304,7 +304,7 @@ export default function MassAction(
                 title={props.title}
                 settingsPane={
                     <MassActionConfigForm
-                        config={props.content}
+                        config={props.content.equationsData}
                         changeConfig={props.changeContent}
                         enableGranularity={props.ratesHaveGranularity}
                     />
