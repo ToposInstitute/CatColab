@@ -1,4 +1,5 @@
 import { NameInput, type FocusHandle, useChildFocus } from "catcolab-ui-components";
+
 import type { DiagramObDecl } from "catlog-wasm";
 import { ObInput } from "../model/object_input";
 import type { CellActions } from "../notebook";

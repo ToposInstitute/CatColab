@@ -8,7 +8,7 @@ import { BasicMorInput } from "../model/morphism_input";
 import type { CellActions } from "../notebook";
 import type { Theory } from "../theory";
 import { LiveDiagramContext } from "./context";
-import { BasicObInput } from "./object_input";
+import { ObInput } from "./object_input";
 
 import arrowStyles from "../stdlib/arrow_styles.module.css";
 import "./morphism_cell_editor.css";
@@ -45,7 +45,7 @@ export function DiagramMorphismCellEditor(props: {
 
     return (
         <div class="formal-judgment diagram-morphism-decl">
-            <BasicObInput
+            <ObInput
                 placeholder="..."
                 ob={props.decl.dom}
                 setOb={(ob) => {
@@ -53,8 +53,8 @@ export function DiagramMorphismCellEditor(props: {
                         decl.dom = ob;
                     });
                 }}
-                obType={domType()}
                 generateId={v7}
+                obType={domType()}
                 isInvalid={domInvalid()}
                 focus={focus.childFocus("dom")}
                 deleteForward={() => focus.setActiveChild("mor")}
@@ -88,7 +88,7 @@ export function DiagramMorphismCellEditor(props: {
                     <div class={[arrowStyles.arrow, arrowStyles.default].join(" ")} />
                 </div>
             </div>
-            <BasicObInput
+            <ObInput
                 placeholder="..."
                 ob={props.decl.cod}
                 setOb={(ob) => {
@@ -96,8 +96,8 @@ export function DiagramMorphismCellEditor(props: {
                         decl.cod = ob;
                     });
                 }}
-                obType={codType()}
                 generateId={v7}
+                obType={codType()}
                 isInvalid={codInvalid()}
                 focus={focus.childFocus("cod")}
                 deleteBackward={() => focus.setActiveChild("mor")}
