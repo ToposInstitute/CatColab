@@ -2,6 +2,7 @@ import {
     type Accessor,
     batch,
     createEffect,
+    createSignal,
     Index,
     type JSX,
     mergeProps,
@@ -146,10 +147,11 @@ export function InlineListEditor<T>(originalProps: InlineListEditorProps<T>) {
         }
     });
 
+    // Show the trailing "add item" when the list is focused or hovered.
+    const [isHovered, setIsHovered] = createSignal(false);
+
     const hasTrailingAddItem = () =>
-        parentFocus.hasFocus() &&
-        props.items.length > 0 &&
-        props.items[props.items.length - 1] !== null;
+        (parentFocus.hasFocus() || isHovered()) && props.items[props.items.length - 1] !== null;
 
     const lastNavigableIndex = () =>
         hasTrailingAddItem() ? props.items.length : props.items.length - 1;
@@ -236,9 +238,18 @@ export function InlineListEditor<T>(originalProps: InlineListEditorProps<T>) {
                 }
                 parentFocus.setFocused(false);
             }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
         >
             {props.startDelimiter}
-            <Index each={props.items} fallback={<input class={styles.emptyListInput} />}>
+            <Index
+                each={props.items}
+                fallback={
+                    <Show when={!hasTrailingAddItem()}>
+                        <input class={styles.emptyListInput} />
+                    </Show>
+                }
+            >
                 {(item, i) => (
                     <li>
                         <Show when={i > 0 && props.separator}>{(sep) => sep()(i)}</Show>
@@ -257,7 +268,9 @@ export function InlineListEditor<T>(originalProps: InlineListEditorProps<T>) {
             </Index>
             <Show when={hasTrailingAddItem()}>
                 <li>
-                    <Show when={props.separator}>{(sep) => sep()(props.items.length)}</Show>
+                    <Show when={props.items.length > 0 && props.separator}>
+                        {(sep) => sep()(props.items.length)}
+                    </Show>
                     {props.children(
                         () => null,
                         appendItem,
