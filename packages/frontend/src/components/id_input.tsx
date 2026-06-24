@@ -191,74 +191,17 @@ export function ObIdInput(
     return <IdInput id={id()} setId={setId} {...inputProps} />;
 }
 
-/** Options specific to inputting object generators, e.g. for identity morphisms. */
-export type MorIdInputObjectOptions = {
-    /** Map an object generator id to its human-readable label. */
-    obIdToLabel?: (id: QualifiedName) => QualifiedLabel | undefined;
-    /** Look up an object generator by its human-readable label. */
-    obLabelToId?: (label: QualifiedLabel) => NameLookup | undefined;
-    /** Object generators offered as `id(...)` completions. */
-    obCompletions?: Uuid[];
-};
-
-const ID_PREFIX = "id(";
-const ID_SUFFIX = ")";
-
-/** Extract the object generator of an identity morphism, if any. */
-function identityOb(mor: Mor | null): Uuid | null {
-    return match(mor)
-        .with(
-            {
-                tag: "Composite",
-                content: {
-                    tag: "Id",
-                    content: { tag: "Basic", content: P.select() },
-                },
-            },
-            (id) => id,
-        )
-        .otherwise(() => null);
-}
-
-/** Build an identity morphism on a basic object generator. */
-function identityMor(obId: Uuid): Mor {
-    return {
-        tag: "Composite",
-        content: {
-            tag: "Id",
-            content: { tag: "Basic", content: obId },
-        },
-    };
-}
-
-/** Parse the object label out of `id(<label>)` text, if it matches. */
-function parseIdentityLabel(text: string): string | null {
-    const trimmed = text.trim();
-    if (trimmed.startsWith(ID_PREFIX) && trimmed.endsWith(ID_SUFFIX)) {
-        return trimmed.slice(ID_PREFIX.length, trimmed.length - ID_SUFFIX.length).trim();
-    }
-    return null;
-}
-
-/** Input a morphism by specifying its human-readable name.
-
-Supports basic morphism generators, entered by name, as well as identity
-morphisms, entered as `id(<object name>)` and displayed the same way.
+/** Input a basic morphism by specifying its human-readable name.
  */
 export function MorIdInput(
     allProps: {
         mor: Mor | null;
         setMor: (mor: Mor | null) => void;
-    } & IdInputOptions &
-        MorIdInputObjectOptions,
+    } & IdInputOptions,
 ) {
-    const [props, idProps, inputProps] = splitProps(
-        allProps,
-        ["mor", "setMor"],
-        ["obIdToLabel", "obLabelToId", "obCompletions", "idToLabel", "labelToId", "completions"],
-    );
+    const [props, inputProps] = splitProps(allProps, ["mor", "setMor"]);
 
-    const basicId = (mor: Mor | null): Uuid | null =>
+    const getId = (mor: Mor | null): Uuid | null =>
         match(mor)
             .with(
                 {
@@ -269,91 +212,20 @@ export function MorIdInput(
             )
             .otherwise(() => null);
 
-    // Render an identity morphism on `obId` as `id(<object label>)`.
-    const obIdToText = (obId: Uuid): string => {
-        const label = idProps.obIdToLabel?.(obId);
-        const text = label && label.length > 0 ? label.join(".") : "?";
-        return `${ID_PREFIX}${text}${ID_SUFFIX}`;
-    };
-
-    // The "id" managed by the underlying `IdInput` is the morphism's basic
-    // generator id, with identity morphisms encoded as a synthetic key.
-    const idToLabel = (id: QualifiedName): QualifiedLabel | undefined => {
-        const obId = identityObFromKey(id);
-        if (obId !== null) {
-            return [obIdToText(obId)];
-        }
-        return idProps.idToLabel?.(id);
-    };
-
-    const labelToId = (label: QualifiedLabel): NameLookup | undefined => {
-        const text = label.length === 1 && typeof label[0] === "string" ? label[0] : null;
-        const obLabelText = text !== null ? parseIdentityLabel(text) : null;
-        if (obLabelText !== null) {
-            const obLabel: LabelSegment = /^\d+$/.test(obLabelText)
-                ? Number.parseInt(obLabelText, 10)
-                : obLabelText;
-            const lookup = idProps.obLabelToId?.([obLabel]);
-            if (lookup && lookup.tag !== "None") {
-                return { ...lookup, content: identityKey(lookup.content) };
-            }
-            return { tag: "None" };
-        }
-        return idProps.labelToId?.(label);
-    };
-
-    const completions = (): Uuid[] | undefined => {
-        const basic = idProps.completions ?? [];
-        const identities = (idProps.obCompletions ?? []).map((obId) => identityKey(obId));
-        if (idProps.completions === undefined && idProps.obCompletions === undefined) {
-            return undefined;
-        }
-        return [...basic, ...identities];
-    };
-
-    const id = (): Uuid | null => {
-        const obId = identityOb(props.mor);
-        if (obId !== null) {
-            return identityKey(obId);
-        }
-        return basicId(props.mor);
-    };
+    const id = (): Uuid | null => getId(props.mor);
 
     const setId = (id: Uuid | null) => {
-        if (id === null) {
-            props.setMor(null);
-            return;
-        }
-        const obId = identityObFromKey(id);
-        if (obId !== null) {
-            props.setMor(identityMor(obId));
-            return;
-        }
-        props.setMor({ tag: "Basic", content: id });
+        props.setMor(
+            id === null
+                ? null
+                : {
+                      tag: "Basic",
+                      content: id,
+                  },
+        );
     };
 
-    return (
-        <IdInput
-            id={id()}
-            setId={setId}
-            idToLabel={idToLabel}
-            labelToId={labelToId}
-            completions={completions()}
-            {...inputProps}
-        />
-    );
-}
-
-// Encode an identity morphism on object generator `obId` as an opaque key,
-// distinguishable from a basic morphism generator id.
-const IDENTITY_KEY_PREFIX = "\u0000id\u0000";
-
-function identityKey(obId: Uuid): Uuid {
-    return `${IDENTITY_KEY_PREFIX}${obId}`;
-}
-
-function identityObFromKey(key: Uuid): Uuid | null {
-    return key.startsWith(IDENTITY_KEY_PREFIX) ? key.slice(IDENTITY_KEY_PREFIX.length) : null;
+    return <IdInput id={id()} setId={setId} {...inputProps} />;
 }
 
 /** A non-editable placeholder shaped like an `IdInput`.
