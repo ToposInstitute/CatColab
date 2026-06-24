@@ -90,6 +90,7 @@ function endpoint(::Val{:DecapodesString})
         req = stream.message
         uri = HTTP.URI(req.target)
         params = HTTP.queryparams(uri)
+
         pode = pop!(params, "pode")
         duration = parse(Int, pop!(params, "duration"))
         constants = ComponentArray(; (Symbol(k) => parse(Float64, v) for (k, v) in params)...)
@@ -137,6 +138,53 @@ function endpoint(::Val{:DecapodesString})
         write(stream, JSON3.write(Dict("progress" => 1.0, "data" => formatted)) * "\n")
         closewrite(stream)
     end
+end
+
+
+
+using InteractiveUtils
+
+""" Supported geometries, in the JSON format expected by the frontend. """
+# function supported_decapodes_geometries()
+#     mesh_tys = InteractiveUtils.subtypes(AbstractMeshSpec)
+#     meshes = string.(nameof.(mesh_tys))
+#     ms = methods(initial_condition)
+#     @info ms
+#     mesh_to_ics = Dict(map(mesh_tys) do mesh
+#         @info methodswith(Geometry{mesh})
+#         ics = map(intersect(methodswith(Geometry{mesh}), ms)) do m
+#             ic = m.sig.parameters[2]
+#             string(nameof(ic))
+#         end
+#         mesh = string(nameof(mesh))
+#         mesh => ics
+#     end)
+#     @info mesh_to_ics
+#     Dict(:meshes => meshes, :ics => mesh_to_ics)    
+# end
+# export supported_decapodes_geometries
+
+function supported_decapodes_geometries()
+    mesh_tys = subtypes(AbstractMeshSpec)
+    meshes   = string.(nameof.(mesh_tys))
+    ms       = methods(initial_condition)
+
+    ics = Dict(map(mesh_tys) do mesh
+        names = String[]
+        for m in ms
+            params = Base.unwrap_unionall(m.sig).parameters
+            length(params) >= 3 || continue
+            geom = params[3]
+            geom isa DataType && nameof(geom) === :Geometry || continue
+            meshparam = geom.parameters[1]
+            if meshparam isa TypeVar || meshparam === mesh
+                push!(names, string(nameof(params[2])))
+            end
+        end
+        string(nameof(mesh)) => unique(names)
+    end)
+
+    Dict(:meshes => meshes, :ics => ics)
 end
 
 function endpoint(::Val{:DecapodesOptions})

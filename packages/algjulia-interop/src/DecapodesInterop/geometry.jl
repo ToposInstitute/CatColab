@@ -1,43 +1,76 @@
-""" Supported domains. """
-const domain_names = [:Plane, :Sphere]
+abstract type AbstractMeshSpec end
 
-""" Mapping from supported domains to meshes for the domain. """
-const mesh_names = Dict(
-    :Plane => [:Rectangle, :Periodic],
-    :Sphere => [:Icosphere6, :Icosphere7, :Icosphere8, :UV],
-)
+name(::AbstractMeshSpec) = "No name provided"
 
-""" Mapping from supported domains to initial/boundary conditions. """
-const initial_condition_names = Dict(
-    :Plane => [:Constant, :Gaussian],
-    :Sphere => [:TaylorVortex, :SixVortex],
-)
+struct Geometry{D<:AbstractMeshSpec}
+    domain::D
+    mesh::HasDeltaSet
+    dualmesh::HasDeltaSet
+end
 
-""" Supported geometries, in the JSON format expected by the frontend. """
-function supported_decapodes_geometries()
-    domains = map(domain_names) do domain
-        Dict(
-            :name => domain,
-            :meshes => mesh_names[domain],
-            :initialConditions => initial_condition_names[domain],
-        )
+Geometry(domain, args...) = Geometry{typeof(domain)}(domain, args...)
+
+function Geometry(dict::AbstractDict)
+    mesh = Symbol(dict["mesh"])
+    domain = PREDEFINED_MESHES[mesh]
+    Geometry(domain)
+end
+
+"""    
+"""
+struct Circle <: AbstractMeshSpec
+    n::Int
+    c::Float64
+end
+
+name(::Circle) = "Circle"
+
+function Geometry(c::Circle; division::SimplexCenter=Circumcenter())
+    mesh = EmbeddedDeltaSet1D{Bool, Point2D}()
+    map(range(0, 2pi - (pi/(2^(c.n-1))); step=pi/(2^(c.n-1)))) do t
+        add_vertex!(mesh, point=Point2D(cos(t),sin(t))*(c.c/2pi))
     end
-    Dict(:domains => domains)
-end
-export supported_decapodes_geometries
-
-## DOMAINS
-
-abstract type Domain end
-
-# meshes associated with Planes
-@data Planar <: Domain begin
-    Constant
-    Rectangle(max_x::Int, max_y::Int, dx::Float64, dy::Float64)
-    Periodic # TODO
+    add_edges!(mesh, 1:(nv(mesh)-1), 2:nv(mesh))
+    add_edge!(mesh, nv(mesh), 1)
+    dualmesh = EmbeddedDeltaDualComplex1D{Bool, Float64, Point2D}(mesh)
+    subdivide_duals!(dualmesh, division)
+    Geometry(c, mesh, dualmesh)
 end
 
-# rectangle methods
+struct Sphere <: AbstractMeshSpec
+    dim::Int
+    radius::Float64
+end
+
+Sphere(dim) = Sphere(dim, 1.0)
+
+function Geometry(m::Sphere; division::SimplexCenter=Circumcenter())
+    s = loadmesh(Icosphere(m.dim, m.radius))
+    sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point3{Float64}}(s)
+    subdivide_duals!(sd, division)
+    Geometry(m, s, sd)
+end
+
+# function Geometry(m::UV; division::SimplexCenter=Circumcenter())
+#     s, _, _ = makeSphere(m)
+#     sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point3{Float64}}(s)
+#     subdivide_duals!(sd, division)
+#     Geometry(m, s, sd)
+# end
+
+struct Rectangle <: AbstractMeshSpec
+    max_x::Int
+    max_y::Int
+    dx::Float64
+    dy::Float64
+end
+
+function Geometry(r::Rectangle; division::SimplexCenter=Circumcenter())
+    s = triangulated_grid(r.max_x, r.max_y, r.dx, r.dy, Point2{Float64})
+    sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point2{Float64}}(s)
+    subdivide_duals!(sd, division)
+    Geometry(r, s, sd)
+end
 
 # TODO it is semantically better to case to Point2?
 middle(r::Rectangle) = [r.max_x/2, r.max_y/2]
@@ -46,61 +79,15 @@ function indexing_bounds(r::Rectangle)
     (x=floor(Int, r.max_x/r.dx), y=floor(Int, r.max_y/r.dy))
 end
 
-# meshes associated with Spheres
-@data Spheric <: Domain begin
-    Sphere(dim::Int, radius::Float64)
-    UV(minlat::Int, maxlat::Int, dlat::Float64, minlong::Int, maxlong::Int, dlong::Float64, radius::Float64)
-end
-
-# default
-Sphere(dim) = Sphere(dim, 1.0)
-
 # TODO XXX hardcoded alert!
 indexing_bounds(m::Sphere) = (x=100, y=100)
 
-""" helper function for UV """
-makeSphere(m::UV) = makeSphere(m.minlat, m.maxlat, m.dlat, m.minlong, m.maxlong, m.dlong, m.radius)
-
-# GEOMETRY
-
-struct Geometry
-    domain::Domain
-    mesh::HasDeltaSet
-    dualmesh::HasDeltaSet
-end
-
-function Geometry(dict::AbstractDict)
-    mesh = Symbol(dict["mesh"])
-    domain = PREDEFINED_MESHES[mesh]
-    Geometry(domain)
-end
-
-function Geometry(r::Rectangle, division::SimplexCenter=Circumcenter())
-    s = triangulated_grid(r.max_x, r.max_y, r.dx, r.dy, Point2{Float64})
-    sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point2{Float64}}(s)
-    subdivide_duals!(sd, division)
-    Geometry(r, s, sd)
-end
-
-# function Geometry(r::Periodic, division::SimplexCenter=Circumcenter()) end
-
-function Geometry(m::Sphere, division::SimplexCenter=Circumcenter())
-    s = loadmesh(Icosphere(m.dim, m.radius))
-    sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point3{Float64}}(s)
-    subdivide_duals!(sd, division)
-    Geometry(m, s, sd)
-end
-
-function Geometry(m::UV, division::SimplexCenter=Circumcenter())
-    s, _, _ = makeSphere(m)
-    sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point3{Float64}}(s)
-    subdivide_duals!(sd, division)
-    Geometry(m, s, sd)
-end
+# """ helper function for UV """
+# makeSphere(m::UV) = makeSphere(m.minlat, m.maxlat, m.dlat, m.minlong, m.maxlong, m.dlong, m.radius)
 
 const PREDEFINED_MESHES = Dict(
     :Rectangle => Rectangle(100, 100, 2, 2),
     :Icosphere6 => Sphere(6, 1.0),
     :Icosphere7 => Sphere(7, 1.0),
-    :Icosphere8 => Sphere(8, 1.0),
-    :UV => UV(0, 180, 2.5, 0, 360, 2.5, 1.0))
+    :Icosphere8 => Sphere(8, 1.0))
+    # :UV => UV(0, 180, 2.5, 0, 360, 2.5, 1.0))

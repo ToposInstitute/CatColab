@@ -27,41 +27,41 @@ end
 
 # FORMATTER -----------------------------------------------------------------------------------
 
-struct Projector{S<:Domain,T<:Domain}
-    src::S # simulated on
-    tgt::T # displayed on
+struct Projector{S,T}
+    src::Geometry{S} # simulated on
+    tgt::Geometry{T} # displayed on
 end
 
-function project(p::Projector, result::SolutionResult, var::Symbol)
-    [project(p, result, var, t) for t in 1:length(result.soln.t)]
-end
+# function project(p::Projector, result::SolutionResult, var::Symbol)
+#     [project(p, result, var, t) for t in 1:length(result.soln.t)]
+# end
 
 # TODO need a method for projecting without specifying time. this will substitute out the method above
     
-function project(::Projector{Rectangle, Rectangle}, result::SolutionResult, var::Symbol, t::Int)
-    (x, y) = indexing_bounds(result.system.geometry.domain)
-    coord(i, j) = (x+1)*(i-1) + j
-    # TODO scale
-    [SVector(i, j, result[var, t, coord(i,j)]) for i in 1:x+1, j in 1:y+1]
-end
+# function project(::Projector{Rectangle, Rectangle}, result::SolutionResult, var::Symbol, t::Int)
+#     (x, y) = indexing_bounds(result.system.geometry.domain)
+#     coord(i, j) = (x+1)*(i-1) + j
+#     # TODO scale
+#     [SVector(i, j, result[var, t, coord(i,j)]) for i in 1:x+1, j in 1:y+1]
+# end
 
-indexing_bounds(p::Projector{Rectangle, Rectangle}) = indexing_bounds(p.tgt)
+# indexing_bounds(p::Projector{Rectangle, Rectangle}) = indexing_bounds(p.tgt)
 
-function project(p::Projector{Sphere, Rectangle}, result::SolutionResult, var::Symbol, t::Int)
-    function grid(pt3::Point3, grid_size::Vector{Int})
-        pt2 = [(pt3[1]+1)/2, (pt3[2]+1)/2]
-        [round(Int, pt2[1]*grid_size[1]), round(Int, pt2[2]*grid_size[2])]
-    end   
-    pts = points(result.system)
-    l , _ = indexing_bounds(p.tgt)
-    northern_indices = filter(i -> pts[i][3] > 0, keys(pts))
-    map(northern_indices) do n
-        i, j = grid(pts[n], [l, l]) # TODO
-        SVector(i, j, result[var, t, n])
-    end
-end
+# function project(p::Projector{Sphere, Rectangle}, result::SolutionResult, var::Symbol, t::Int)
+#     function grid(pt3::Point3, grid_size::Vector{Int})
+#         pt2 = [(pt3[1]+1)/2, (pt3[2]+1)/2]
+#         [round(Int, pt2[1]*grid_size[1]), round(Int, pt2[2]*grid_size[2])]
+#     end   
+#     pts = points(result.system)
+#     l , _ = indexing_bounds(p.tgt)
+#     northern_indices = filter(i -> pts[i][3] > 0, keys(pts))
+#     map(northern_indices) do n
+#         i, j = grid(pts[n], [l, l]) # TODO
+#         SVector(i, j, result[var, t, n])
+#     end
+# end
 
-indexing_bounds(p::Projector{Sphere, Rectangle}) = indexing_bounds(p.tgt)
+# indexing_bounds(p::Projector{Sphere, Rectangle}) = indexing_bounds(p.tgt)
 
 # -----
 
@@ -71,19 +71,19 @@ indexing_bounds(p::Projector{Sphere, Rectangle}) = indexing_bounds(p.tgt)
 # function var_to_state(p::Projector, result::SolutionResult)
 # 	Dict(var => project(p, result, var) for var in keys(result.system.init))
 # end
-function var_to_state(p::Projector, result::SolutionResult)
-    sd = result.system.geometry.dualmesh
-    nv = nparts(sd, :V)
-    plottable = filter(keys(result.system.init)) do var
-        length(getproperty(result.system.init, var)) == nv
-    end
-    Dict(var => project(p, result, var) for var in plottable)
-end
+# function var_to_state(p::Projector, result::SolutionResult)
+#     sd = result.system.geometry.dualmesh
+#     nv = nparts(sd, :V)
+#     plottable = filter(keys(result.system.init)) do var
+#         length(getproperty(result.system.init, var)) == nv
+#     end
+#     Dict(var => project(p, result, var) for var in plottable)
+# end
 
 
 function SimulationResult(result::SolutionResult)
-    p = Projector(result.system.geometry.domain, PREDEFINED_MESHES[:Rectangle]) # TODO frontend should let us choose
-    idx_bounds = indexing_bounds(p.tgt)
-    var_to_formatted_state = var_to_state(p, result) # Dict("UUID1" => VectorMatrixSVectr...)
-    SimulationResult(result.soln.t, var_to_formatted_state, 0:idx_bounds.x, 0:idx_bounds.y)
+    # p = Projector(result.system.geometry.domain, PREDEFINED_MESHES[:Rectangle]) # TODO frontend should let us choose
+    # idx_bounds = indexing_bounds(p.tgt)
+    # var_to_formatted_state = var_to_state(p, result) # Dict("UUID1" => VectorMatrixSVectr...)
+    # SimulationResult(result.soln.t, var_to_formatted_state, 0:idx_bounds.x, 0:idx_bounds.y)
 end

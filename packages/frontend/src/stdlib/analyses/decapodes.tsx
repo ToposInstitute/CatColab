@@ -41,7 +41,13 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
     const [kernel, { refetch: restartKernel }] = createResource(() => undefined);
 
     // Step 2: Run initialization code in the kernel.
-    const [options] = createResource<SimulationOptions | undefined>(() => undefined);
+
+    const juliaUrl = "http://127.0.0.1:8080"; // TODO replace with vite
+    const [options] = createResource<SimulationOptions>(async () => {
+        const response = await fetch(`${juliaUrl}/decapodes-options`);
+        if (!response.ok) throw new Error(`HTTP error! status ${response.status}`);
+        return (await response.json()) as SimulationOptions;
+    });
 
     // Step 3: Run the simulation in the kernel!
     const [result, { refetch: rerunSimulation }] = createResource(() => undefined);
@@ -58,6 +64,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         return js.filter((j) => "diagram" in j && j.diagram).map((j) => j.diagram._id);
     });
 
+    // this is a shim to get nested diagrams
     const [subDiagramDocs] = createResource(instantiatedRefIds, async (refIds) => {
         const entries = await Promise.all(
             refIds.map(async (id) => {
@@ -101,6 +108,33 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
     //             }),
     //     }),
     // ];
+
+    const icSchema: ColumnSchema<string>[] = [
+        {
+            contentType: "string",
+            header: true,
+            name: "State variable",
+            content: (name) => name,
+        },
+        {
+            contentType: "enum",
+            name: "Initial condition",
+            variants: () => {
+                const mesh = props.content.mesh;
+                if (!mesh) return [];
+                return options()?.ics[mesh] ?? []; // mesh-name → IC names
+            },
+            content: (name) => props.content.initialConditions[name] ?? null,
+            setContent: (name, value) =>
+                props.changeContent((content) => {
+                    if (value === null) {
+                        delete content.initialConditions[name];
+                    } else {
+                        content.initialConditions[name] = value; // Record<string,string>
+                    }
+                }),
+        },
+    ];
 
     // const variableSchema: ColumnSchema<QualifiedName>[] = [
     //     {
@@ -173,7 +207,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         </Switch>
     );
 
-    const DomainConfig = (domains: Map<string, Domain>) => (
+    const DomainConfig = (domains: Domain[]) => (
         <div class="decapodes-domain">
             <span>Domain:</span>
             <select
@@ -185,17 +219,17 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                             return;
                         }
                         content.domain = domain;
-                        //content.mesh = options()?.domains.get(domain)?.meshes[0] ?? null;
-                        content.mesh = null;
+                        content.mesh = options()?.domains.get(domain)?.ics[0] ?? null;
+                        // content.mesh = null;
                         content.initialConditions = {};
                     })
                 }
             >
-                <For each={Array.from(domains.values())}>
-                    {(domain) => <option value={domain.name}>{domain.name}</option>}
+                <For each={Array.from(domains.meshes)}>
+                    {(domain) => <option value={domain}>{domain}</option>}
                 </For>
             </select>
-            <Show when={props.content.domain}>
+            <Show when={false}>
                 {(name) => (
                     <>
                         <span>Mesh:</span>
@@ -254,7 +288,6 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
     >(undefined);
 
     const [res] = createResource(runPayload, async ({ pode, constants, duration }) => {
-        const juliaUrl = "http://127.0.0.1:8080";
         setProgress(0);
 
         const params = new URLSearchParams({ pode });
@@ -300,7 +333,11 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
     const runSimulation = () => {
         const pd = podeData();
         if (!pd) return;
-        setRunPayload({ pode: pd.pode, constants: constantValues(), duration: props.content.duration ?? 10, });
+        setRunPayload({
+            pode: pd.pode,
+            constants: constantValues(),
+            duration: props.content.duration ?? 10,
+        });
     };
 
     return (
@@ -308,10 +345,28 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
             <BlockTitle title="Simulation" actions={RestartOrRerunButton()} />
             <Foldable title="Parameters" defaultExpanded>
                 <Show when={options()}>
-                    {(_options) => {
-                        //DomainConfig(options().domains)
-                        return DomainConfig(new Map());
-                    }}
+                    {(opts) => (
+                        <div class="decapodes-domain">
+                            <span>Mesh:</span>
+                            <select
+                                value={props.content.mesh ?? undefined}
+                                onInput={(evt) =>
+                                    props.changeContent((content) => {
+                                        content.mesh = evt.currentTarget.value;
+                                        content.initialConditions = {};
+                                    })
+                                }
+                            >
+                                <For each={opts().meshes}>
+                                    {(mesh) => <option value={mesh}>{mesh}</option>}
+                                </For>
+                            </select>
+                        </div>
+                    )}
+                </Show>
+
+                <Show when={props.content.mesh}>
+                    <FixedTableEditor rows={["n", "w"]} schema={icSchema} />
                 </Show>
                 <Show when={podeData()}>
                     {(pd) => <FixedTableEditor rows={pd().constants} schema={constantSchema} />}
@@ -384,20 +439,11 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
 
 /** Options supported by Decapodes, defined by the Julia service. */
 type SimulationOptions = {
-    /** Geometric domains supported by Decapodes. */
-    domains: Domain[];
-};
-
-/** A geometric domain and its allow discretizations. */
-type Domain = {
-    /** Name of the domain. */
-    name: string;
-
     /** Supported meshes that discretize the domain. */
     meshes: string[];
 
     /** Initial/boundary conditions supported for the domain. */
-    initialConditions: string[];
+    ics: Record<string, string[]>;
 };
 
 /** Data sent to the Julia kernel defining a simulation. */
