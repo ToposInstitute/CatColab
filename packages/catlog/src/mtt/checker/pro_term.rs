@@ -89,8 +89,6 @@ impl<T: Theory> ModelEntry<T> {
         if let Some(entry) = scope.get(literal) {
             let derivation = self.synthesise_variable(literal, entry)?;
             self.finish(derivation, hint)
-        } else if let Ok(ge) = self.lookup_generating_pro_arrow_entry(literal) {
-            self.synthesise_post_composition(ge, &Expression::List(Vec::new()), hint, scope)
         } else {
             Err(EType::UnboundVariable(literal.to_string()).into())
         }
@@ -159,8 +157,8 @@ impl<T: Theory> ModelEntry<T> {
         hint: Option<&ProTermJudgement<T>>,
         scope: &Scope<T>,
     ) -> Result<Derivation<T>, Error> {
-        // TODO: it would seem that the only useful hint we can pass to the body
-        // is that the codomain_theory_object is determined.
+        // It would seem that the only useful hint we can pass to the body is
+        // that the codomain_theory_object is determined.
         let arg_hint = ProTermJudgement {
             codomain_theory_object: arrow.dom(),
             ..ProTermJudgement::unconstrained("_".to_string())
@@ -258,9 +256,10 @@ impl<T: Theory> ModelEntry<T> {
         scope: &Scope<T>,
     ) -> Result<Derivation<T>, Error> {
         let applicand_vars = extract_variables(&entry.derivation.judgement.domain_object_term);
-        let argument_vars = argument_leaves(arg);
 
-        if applicand_vars.len() != argument_vars.len() {
+        let argument_expressions = destruct_expression(arg);
+
+        if applicand_vars.len() != argument_expressions.len() {
             return Err(EType::MalformedBinder {
                 term: arg.to_string(),
                 object_type: entry.derivation.judgement.domain_object_type.to_string(),
@@ -268,7 +267,7 @@ impl<T: Theory> ModelEntry<T> {
             .into());
         }
 
-        let substitution = std::iter::zip(applicand_vars, argument_vars)
+        let substitution = std::iter::zip(applicand_vars, argument_expressions)
             .map(|(f, a)| (f, a.clone()))
             .collect();
 
@@ -304,7 +303,6 @@ impl<T: Theory> ModelEntry<T> {
         // Now build `P ⊙ Q` from what we have computed
         let mut over = inner.judgement.pro_arrow.clone();
         if over.extend(generator_over.clone()).is_err() {
-            // TODO: actually be helpful with this error
             return Err(EType::CodomainTheoryObjectMismatch {
                 expected: generator_over.dom().to_string(),
                 found: over.cod().to_string(),
@@ -341,12 +339,6 @@ impl<T: Theory> ModelEntry<T> {
         let Some(modality) = T::list_modality() else {
             return Err(EType::NoListModality(T::name()).into());
         };
-
-        if items.is_empty() {
-            todo!(
-                "what should we do in this case? should be impossible for the caller to produce this i think"
-            )
-        }
 
         // We do not currently decompose the list's hint (`List Q`) into a
         // per-element hint (`Q`) as this may not be possible or easy in
@@ -423,28 +415,43 @@ impl<T: Theory> ModelEntry<T> {
 }
 
 // -----------------------------------------------------------------------------
-// Structural helpers shared by synthesis and reconciliation
+// Structural helpers for application
 
 fn extract_variables<T: Theory>(term: &ObjectTerm<T>) -> Vec<String> {
     match term {
         ObjectTerm::Variable(v) => vec![v.clone()],
-        ObjectTerm::List(items) => items.iter().flat_map(extract_variables).collect(),
+        ObjectTerm::Tuple(items) | ObjectTerm::List(items) => {
+            items.iter().flat_map(extract_variables).collect()
+        }
         ObjectTerm::FunctionApplication { on, .. } => extract_variables(on),
-        ObjectTerm::Tuple(items) => items.iter().flat_map(extract_variables).collect(),
-        ObjectTerm::Hole(_) => unreachable!("checked binder: no holes"),
+        ObjectTerm::Hole(_) => {
+            unreachable!("checked binders have no holes, and elaboration doesn't produce them")
+        }
     }
 }
 
-// TODO: check below this line
-fn argument_leaves(expr: &Expression) -> Vec<&Expression> {
+fn destruct_expression(expr: &Expression) -> Vec<&Expression> {
     match expr {
-        Expression::List(items) => items.iter().flat_map(argument_leaves).collect(),
-        other => vec![other],
+        Expression::Tuple(items) | Expression::List(items) => {
+            items.iter().flat_map(destruct_expression).collect()
+        }
+        // it doesn't matter that these are not potentially not meaningful or
+        // incorrect to have in argument positions, the flow of the code is such
+        // that we will in-line these values into an expression, and the whole
+        // thing will be checked again for validity.
+        Expression::Literal(_)
+        | Expression::Juxtaposition { .. }
+        | Expression::ProArrowAnnotation { .. } => vec![expr],
     }
 }
 
 fn substitute_expression(body: &Expression, subst: &HashMap<String, Expression>) -> Expression {
     match body {
+        // A literal in the body is either a binder variable (to be substituted)
+        // or a named referent (a pro-arrow/definition/theory-arrow name in head
+        // position) which must pass through untouched. We know that keys(subst)
+        // is exactly the binder variable set, so the `.get` is telling us
+        // exactly which class we're in.
         Expression::Literal(name) => subst.get(name).cloned().unwrap_or_else(|| body.clone()),
         Expression::Juxtaposition { post, pre } => Expression::Juxtaposition {
             post: Box::new(substitute_expression(post, subst)),

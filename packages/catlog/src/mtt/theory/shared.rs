@@ -130,8 +130,15 @@ pub fn default_arrow_unify<T: Theory>(
 pub fn default_pro_arrow_composite_unify<T: Theory>(
     composites: &[&Composite<TheoryProArrow<T>>],
 ) -> UnificationResult<Composite<TheoryProArrow<T>>> {
+    // With no composites there are no rigid demands, so the meet is the
+    // most general pro-arrow: a singleton hole whose boundary is itself
+    // unconstrained. This mirrors [structural_object_unification]'s handling
+    // of an empty object collection, and lets the empty-list degenerate case
+    // flow through the general element-unification path in synthesise_list.
     if composites.is_empty() {
-        return UnificationResult::Incompatible;
+        return UnificationResult::MostSpecific(Composite::singleton(
+            TheoryProArrow::unconstrained("unify".to_string()),
+        ));
     }
 
     let canonical_composites: Vec<Vec<_>> = composites

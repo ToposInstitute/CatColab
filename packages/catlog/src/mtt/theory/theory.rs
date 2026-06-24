@@ -28,6 +28,7 @@ pub trait Theory: Sized {
     /// Unify a collection of theory objects, returning the single most specific
     /// object they all refine to (their meet), or
     /// [UnificationResult::Incompatible] if they cannot be made to coincide.
+    /// An empty collection has no rigid demands, so its meet is a fresh hole.
     ///
     /// There are presently no object-level equations in a theory, so this is
     /// always the purely structural notion and is not a customisation point
@@ -67,7 +68,9 @@ pub trait Theory: Sized {
 
     /// Unify a collection of composites of theory pro-arrows, returning the
     /// single common composite they all coincide with modulo the theory's
-    /// pro-arrow equations, or `None` if they cannot be made to coincide. See
+    /// pro-arrow equations, or `None` if they cannot be made to coincide. An
+    /// empty collection has no rigid demands, so its meet is a singleton hole
+    /// pro-arrow (mirroring [Self::unify_objects] on an empty input). See
     /// [default_pro_arrow_composite_unify] for details about the default
     /// implementation.
     fn unify_pro_arrows(
