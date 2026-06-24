@@ -305,6 +305,7 @@ export default function MassAction(
                 settingsPane={
                     <MassActionConfigForm
                         config={props.content.equationsData}
+                        // TODO: this type checks but doesn't work
                         changeConfig={(change) => {
                             change(props.content.equationsData);
                         }}
