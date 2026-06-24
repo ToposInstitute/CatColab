@@ -250,7 +250,6 @@ impl<T: Theory> ModelEntry<T> {
         }
     }
 
-    // TODO: check this logic
     fn apply_definition(
         &self,
         entry: &DefinitionEntry<T>,
@@ -258,22 +257,21 @@ impl<T: Theory> ModelEntry<T> {
         hint: Option<&ProTermJudgement<T>>,
         scope: &Scope<T>,
     ) -> Result<Derivation<T>, Error> {
-        // The formal parameters are the leaves of the definition's binder; the
-        // actuals are the leaves of the (surface) argument, paired positionally.
-        let formals = object_term_variables(&entry.derivation.judgement.domain_object_term);
-        let actuals = argument_leaves(arg);
-        if formals.len() != actuals.len() {
+        let applicand_vars = extract_variables(&entry.derivation.judgement.domain_object_term);
+        let argument_vars = argument_leaves(arg);
+
+        if applicand_vars.len() != argument_vars.len() {
             return Err(EType::MalformedBinder {
                 term: arg.to_string(),
                 object_type: entry.derivation.judgement.domain_object_type.to_string(),
             }
             .into());
         }
-        let substitution: HashMap<String, Expression> =
-            std::iter::zip(formals, actuals).map(|(f, a)| (f, a.clone())).collect();
 
-        // A definition is inlined at its use site, so the outer hint applies
-        // unchanged to the inlined body.
+        let substitution = std::iter::zip(applicand_vars, argument_vars)
+            .map(|(f, a)| (f, a.clone()))
+            .collect();
+
         let inlined = substitute_expression(&entry.body, &substitution);
         self.elaborate_body(&inlined, hint, scope)
     }
@@ -334,7 +332,6 @@ impl<T: Theory> ModelEntry<T> {
 
     /// From `Γ | u_i: X_i ⊢_Q t_i: Y_i` over one common pro-arrow `Q`, build
     /// the list `Γ | [u1,…]: [X1,…] ⊢_{List Q} [t1,…]: [Y1,…]`.
-    // TODO: check  this
     fn synthesise_list(
         &self,
         items: &[Expression],
@@ -345,73 +342,70 @@ impl<T: Theory> ModelEntry<T> {
             return Err(EType::NoListModality(T::name()).into());
         };
 
+        if items.is_empty() {
+            todo!(
+                "what should we do in this case? should be impossible for the caller to produce this i think"
+            )
+        }
+
         // We do not currently decompose the list's hint (`List Q`) into a
-        // per-element hint (`Q`); the elements synthesise freely and their
-        // common pro-arrow is recovered below. The whole list is then finished
-        // against the hint.
+        // per-element hint (`Q`) as this may not be possible or easy in
+        // general; the elements synthesise freely and their common pro-arrow is
+        // recovered below. The whole list is then finished against the hint.
         let elements = items
             .iter()
             .map(|item| self.elaborate_body(item, None, scope))
             .collect::<Result<Vec<_>, _>>()?;
 
-        // A list lies over `List Q` for a single common atomic `Q`, so every
-        // element must already lie over one common pro-arrow. The theory
-        // unifies the elements' pro-arrows: failure is a genuine clash. An
-        // empty list has no elements to unify and lies over `List Hom` on a
-        // hole.
-        let overs: Vec<&Composite<TheoryProArrow<T>>> =
-            elements.iter().map(|e| &e.judgement.pro_arrow).collect();
-        let common = if overs.is_empty() {
-            None
-        } else {
-            match T::unify_pro_arrows(&overs) {
-                UnificationResult::MostSpecific(common) => common.only().cloned(),
-                UnificationResult::Incompatible => {
-                    let found =
-                        overs.iter().map(ToString::to_string).collect::<Vec<_>>().join(", ");
-                    return Err(EType::HeterogeneousListProArrows { found }.into());
-                }
-            }
+        // A list lies over `List Q` for a common `Q`, so every element
+        // must already lie over one common pro-arrow
+        let overs: Vec<_> = elements.iter().map(|e| &e.judgement.pro_arrow).collect();
+        let UnificationResult::MostSpecific(common) = T::unify_pro_arrows(&overs) else {
+            let found = overs.iter().map(ToString::to_string).collect::<Vec<_>>().join(", ");
+            return Err(EType::HeterogeneousListTheoryProArrow { found }.into());
         };
+        let over = Composite::try_from(
+            common
+                .into_iter()
+                .map(|p| TheoryProArrow::ModalApplication {
+                    modality: modality.clone(),
+                    on: Box::new(p),
+                })
+                .collect::<Vec<_>>(),
+        )
+        .expect("mapping modal operation over a composite should result in a composite");
 
-        let modal = |children: Vec<TheoryObject<T>>| -> TheoryObject<T> {
-            let child_refs: Vec<&TheoryObject<T>> = children.iter().collect();
-            let on = T::unify_objects(&child_refs)
-                .most_specific()
-                .unwrap_or_else(|| TheoryObject::unconstrained("list_element".to_string()));
-            TheoryObject::ModalApplication {
-                modality: modality.clone(),
-                on: Box::new(on),
-            }
+        let make_modal_object = |theory_objects: Vec<TheoryObject<T>>| -> Result<_, Error> {
+            let refs: Vec<&TheoryObject<T>> = theory_objects.iter().collect();
+            T::unify_objects(&refs).most_specific().map_or(
+                Err(EType::HeterogeneousTheoryObject {
+                    found: refs.iter().map(ToString::to_string).collect::<Vec<_>>().join(", "),
+                }
+                .into()),
+                |object| {
+                    Ok(TheoryObject::ModalApplication {
+                        modality: modality.clone(),
+                        on: Box::new(object),
+                    })
+                },
+            )
         };
 
         let domain_object_term = ObjectTerm::List(
             elements.iter().map(|e| e.judgement.domain_object_term.clone()).collect(),
         );
+
         let domain_object_type =
             ObjectType::List(elements.iter().map(BinarySignature::dom).collect());
-        let domain_theory_object = modal(elements.iter().map(BinarySignature::dom).collect());
+
+        let domain_theory_object =
+            make_modal_object(elements.iter().map(BinarySignature::dom).collect())?;
+
         let codomain_object_type =
             ObjectType::List(elements.iter().map(BinarySignature::cod).collect());
-        let codomain_theory_object = modal(elements.iter().map(BinarySignature::cod).collect());
 
-        // The list pro-arrow lifts the common atomic pro-arrow once under the
-        // modality, at the list's modal boundary: `List Hom = Hom` when the
-        // elements are homs (or the list is empty), else `List Q` for the
-        // common generator `Q`.
-        let lifted = match &common {
-            None | Some(TheoryProArrow::Hom(_)) => {
-                T::make_hom_pro_arrow(&domain_theory_object, &codomain_theory_object)
-                    .expect("a list of homs lies over the hom on its modal object")
-            }
-            Some(TheoryProArrow::Generator { name, .. }) => TheoryProArrow::Generator {
-                name: name.clone(),
-                dom: domain_theory_object.clone(),
-                cod: codomain_theory_object.clone(),
-            },
-            Some(other) => other.clone(),
-        };
-        let over = Composite::singleton(lifted);
+        let codomain_theory_object =
+            make_modal_object(elements.iter().map(BinarySignature::cod).collect())?;
 
         let derivation = Derivation {
             pro_term: ProTerm::List(elements.into_iter().map(|e| e.pro_term).collect()),
@@ -430,25 +424,18 @@ impl<T: Theory> ModelEntry<T> {
 
 // -----------------------------------------------------------------------------
 // Structural helpers shared by synthesis and reconciliation
-// TODO: check below this line
 
-/// The variable names at the leaves of an object term, flattening every list,
-/// in left-to-right order. Used to read a definition's formal parameters from
-/// its binder. A non-variable leaf would mean a malformed binder, which the
-/// binder check rejects upstream.
-fn object_term_variables<T: Theory>(term: &ObjectTerm<T>) -> Vec<String> {
+fn extract_variables<T: Theory>(term: &ObjectTerm<T>) -> Vec<String> {
     match term {
         ObjectTerm::Variable(v) => vec![v.clone()],
-        ObjectTerm::List(items) => items.iter().flat_map(object_term_variables).collect(),
-        ObjectTerm::FunctionApplication { on, .. } => object_term_variables(on),
-        ObjectTerm::Tuple(_) => todo!("tuple binder formal parameters"),
+        ObjectTerm::List(items) => items.iter().flat_map(extract_variables).collect(),
+        ObjectTerm::FunctionApplication { on, .. } => extract_variables(on),
+        ObjectTerm::Tuple(items) => items.iter().flat_map(extract_variables).collect(),
         ObjectTerm::Hole(_) => unreachable!("checked binder: no holes"),
     }
 }
 
-/// The leaves of a (surface) argument expression, flattening every list, in
-/// left-to-right order. These are the actuals positionally matched to a
-/// definition's formal parameters.
+// TODO: check below this line
 fn argument_leaves(expr: &Expression) -> Vec<&Expression> {
     match expr {
         Expression::List(items) => items.iter().flat_map(argument_leaves).collect(),
@@ -456,10 +443,6 @@ fn argument_leaves(expr: &Expression) -> Vec<&Expression> {
     }
 }
 
-/// Substitute argument expressions for a definition's formal parameters
-/// throughout its body, so the call site can re-synthesise the inlined body.
-/// Only the formal *variables* are replaced; every other literal (an operation
-/// name, say) is left intact, as are the structural forms, recursing into them.
 fn substitute_expression(body: &Expression, subst: &HashMap<String, Expression>) -> Expression {
     match body {
         Expression::Literal(name) => subst.get(name).cloned().unwrap_or_else(|| body.clone()),

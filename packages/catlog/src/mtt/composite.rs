@@ -84,6 +84,15 @@ impl<T> Composite<T> {
     }
 }
 
+impl<T> IntoIterator for Composite<T> {
+    type Item = T;
+    type IntoIter = std::vec::IntoIter<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.path.into_iter()
+    }
+}
+
 impl<T: Composable + std::fmt::Display> Composite<T> {
     /// Extend a composite by a single T.
     pub fn extend(&mut self, next: T) -> Result<(), String> {

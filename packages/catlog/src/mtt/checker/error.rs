@@ -133,20 +133,17 @@ pub enum EType {
     },
 
     #[display(
-        "The operation {operation} does not determine its transported pro-arrow; annotate the result"
+        "The operation {operation} does not determine its theory pro-arrow; annotate the result"
     )]
     /// An operation (theory vertical arrow) was applied without a hint, and the
-    /// transported pro-arrow could not be inferred from the boundary. Because a
-    /// general vertical arrow has no canonical pushforward of a pro-arrow, the
-    /// result must be annotated to name the transported pro-arrow.
+    /// theory pro-arrow could not be inferred from the boundary.
     OperationNeedsAnnotation {
         /// The operation (theory vertical arrow) being applied.
         operation: String,
     },
 
-    #[display("The theory {theory} has no cell witnessing the application of {operation}")]
-    /// An operation application would require a cell transporting the
-    /// pro-term's pro-arrow along the operation, but the theory has none.
+    #[display("The theory {theory} has no cell witnessing the application of {operation}.")]
+    /// An operation application would require a cell that the theory does not have.
     NoApplicableCell {
         /// The theory consulted.
         theory: String,
@@ -158,14 +155,17 @@ pub enum EType {
     /// A list term was encountered but the theory does not support lists.
     NoListModality(String),
 
-    #[display(
-        "A list's elements do not lie over a common pro-arrow (found {found}); a list lies over a single common pro-arrow"
-    )]
-    /// A list pro-term's elements were found not to unify to a single common
-    /// pro-arrow. The list-formation rule requires every element to lie over
-    /// one common atomic pro-arrow.
-    HeterogeneousListProArrows {
-        /// The distinct pro-arrows found among the elements.
+    #[display("A list's elements do not lie over a common pro-arrow (found {found}).")]
+    /// A list pro-term's constituents did not unify to a common theory pro-arrow.
+    HeterogeneousListTheoryProArrow {
+        /// The distinct pro-arrows found.
+        found: String,
+    },
+
+    #[display("A list's elements do not lie over a common theory object (found {found}).")]
+    /// A list pro-term's constituents did not unify to a common theory object.
+    HeterogeneousTheoryObject {
+        /// The distinct theory objects found.
         found: String,
     },
 
