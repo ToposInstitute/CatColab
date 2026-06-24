@@ -17,13 +17,16 @@ function materializeFromAutomerge<T>(doc: Doc<unknown>, subtree: T): T {
 const repo = new Repo();
 
 const solidAutomergeStore: DocumentStore<DocHandle<ModelDocument>> = {
-    createHandle: (initialDoc) => repo.create<ModelDocument>(initialDoc),
+    createHandle: (initialDoc) => repo.create<ModelDocument>(initialDoc as ModelDocument),
     viewDocument: (handle) => makeDocumentProjection(handle),
     changeDocument: (handle, fn) => handle.change(fn),
     copyValue: (handle, value) => materializeFromAutomerge(handle.doc(), value),
     linkForHandle: () => undefined,
     resolveModel: async () => {
         throw new Error("this store cannot resolve model references");
+    },
+    resolveAnalysis: async () => {
+        throw new Error("this store cannot resolve analyses");
     },
 };
 

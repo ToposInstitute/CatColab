@@ -1,6 +1,16 @@
 import { v7 } from "uuid";
 
-import type { Link, Modality, MorType, Ob, ObType, SpecializeModel } from "catcolab-document-types";
+import type {
+    Analysis,
+    AnalysisType,
+    Document,
+    Link,
+    Modality,
+    MorType,
+    Ob,
+    ObType,
+    SpecializeModel,
+} from "catcolab-document-types";
 import type { Cell, ModelJudgment } from "catcolab-document-types";
 import {
     type DblModel,
@@ -19,8 +29,10 @@ import {
     newObjectDecl,
 } from "../model";
 import { duplicateCell, newFormalCell, newRichTextCell } from "../notebook";
+import { type AnalysisDocument, newAnalysisCell, newAnalysisDocument } from "./analysis";
 
 export { type ModelDocument, newModelDocument } from "../model";
+export { type AnalysisDocument, newAnalysisDocument } from "./analysis";
 
 /**
  * A document store abstracts the storage that notebooks operate over. A
@@ -30,11 +42,11 @@ export { type ModelDocument, newModelDocument } from "../model";
  */
 export interface DocumentStore<Handle> {
     /** Initialize a store handle from an initial document. */
-    createHandle(initialDoc: ModelDocument): Handle;
+    createHandle(initialDoc: Document): Handle;
     /** Read view of the document for a handle (reactive where applicable). */
-    viewDocument(handle: Handle): ModelDocument;
+    viewDocument(handle: Handle): Document;
     /** Apply a mutation by mutating a draft document. */
-    changeDocument(handle: Handle, fn: (doc: ModelDocument) => void): void;
+    changeDocument(handle: Handle, fn: (doc: Document) => void): void;
     /** Make a detached plain-JS copy of a store-owned value before cloning it. */
     copyValue<T>(handle: Handle, value: T): T;
     /**
@@ -60,11 +72,23 @@ export interface DocumentStore<Handle> {
      * ill-formed.
      */
     resolveModel(link: Link): Promise<DblModel>;
+    /**
+     * Resolve an `analysis-of` link to a validatable notebook for the analyzed
+     * document, so an analysis cell's `run` can elaborate and validate it.
+     *
+     * An analysis document references the document it analyzes by an
+     * `analysis-of` {@link Link} rather than by holding the notebook directly;
+     * resolution fetches that document through the store and rebuilds an
+     * interactive, validatable notebook over it. Resolution is asynchronous (the
+     * referenced document may live in a repo or on a server). A store that
+     * cannot resolve a given link rejects the returned promise.
+     */
+    resolveAnalysis(link: Link): Promise<ValidatableNotebook>;
 }
 
-const plainDocumentIds = new WeakMap<ModelDocument, string>();
+const plainDocumentIds = new WeakMap<Document, string>();
 
-const plainDocumentId = (document: ModelDocument): string => {
+const plainDocumentId = (document: Document): string => {
     let id = plainDocumentIds.get(document);
     if (!id) {
         id = v7();
@@ -93,13 +117,26 @@ const plainNotebookValidators = new Map<string, () => Promise<ModelValidationRes
 /** Ids whose resolution is in progress, used to detect cyclic instantiations. */
 const plainResolving = new Set<string>();
 
+/**
+ * The validatable notebook of every model the plain store has attached, keyed
+ * by {@link plainDocumentId}. An analysis document resolves the model it
+ * analyzes (referenced by an `analysis-of` link) by looking it up here, so a
+ * model created locally can be re-attached and validated without a closure.
+ */
+const plainAnalyzableNotebooks = new Map<string, ValidatableNotebook>();
+
 /** Record an elaborated model for a plain-store handle; see {@link plainElaboratedModels}. */
-const cachePlainModel = (handle: ModelDocument, model: DblModel): void => {
+const cachePlainModel = (handle: Document, model: DblModel): void => {
     plainElaboratedModels.set(plainDocumentId(handle), model);
 };
 
+/** Record a validatable notebook for a plain-store handle; see {@link plainAnalyzableNotebooks}. */
+const cachePlainAnalyzable = (handle: Document, notebook: ValidatableNotebook): void => {
+    plainAnalyzableNotebooks.set(plainDocumentId(handle), notebook);
+};
+
 /** A plain in-memory store whose handle is the document itself. */
-export const plainStore: DocumentStore<ModelDocument> = {
+export const plainStore: DocumentStore<Document> = {
     createHandle: (initialDoc) => {
         plainDocumentId(initialDoc);
         return initialDoc;
@@ -137,6 +174,16 @@ export const plainStore: DocumentStore<ModelDocument> = {
         } finally {
             plainResolving.delete(link._id);
         }
+    },
+    resolveAnalysis: async (link) => {
+        const notebook = plainAnalyzableNotebooks.get(link._id);
+        if (!notebook) {
+            throw new Error(
+                "The plain in-memory store cannot resolve the analyzed model for a " +
+                    "document it did not create.",
+            );
+        }
+        return notebook;
     },
 };
 
@@ -398,7 +445,7 @@ export type InstantiationSpecialization = {
  * over a richer shape stays assignable here, since `validate` is the structural
  * marker {@link CoreTheoryMethods} adds exactly when the shape has a core theory.
  */
-export type ValidatableNotebook<Handle = ModelDocument> = Notebook<AnyShape, Handle> & {
+export type ValidatableNotebook<Handle = Document> = Notebook<AnyShape, Handle> & {
     validate(): Promise<ModelValidationResult>;
 };
 
@@ -458,6 +505,24 @@ type MorphismCellTuple<Ms extends readonly MorphismDef[]> = {
 };
 
 /**
+ * The union of analysis-cell handles a shape declares; see {@link
+ * ObjectCellsOf}. Gated on {@link HasAnalyses} so only an analysis shape
+ * contributes analysis cells: an ordinary model shape (and the base {@link
+ * Shape}, whose `analyses` key is merely optional) contributes `never`, keeping
+ * `AnalysisCell` out of a model notebook's {@link NotebookCell} union.
+ */
+type AnalysisCellsOf<TShape extends AnyShape> = TShape extends AnyShape
+    ? HasAnalyses<TShape> extends true
+        ? AnalysisCellTuple<ShapeAnalysisList<TShape>>[number]
+        : never
+    : never;
+
+/** Analysis-side counterpart of {@link ObjectCellTuple}. */
+type AnalysisCellTuple<As extends readonly AnalysisDef[]> = {
+    [K in keyof As]: AnalysisCell<As[K] & AnalysisDef>;
+};
+
+/**
  * The union of cell handles that iterating a notebook with {@link
  * Notebook.cells} yields, parametrized by the notebook's {@link Shape}. Each of
  * the shape's object and morphism types contributes its own precise handle
@@ -473,7 +538,8 @@ export type NotebookCell<TShape extends AnyShape = AnyShape> =
     | RichTextCell
     | InstantiationCell
     | ObjectCellsOf<TShape>
-    | MorphismCellsOf<TShape>;
+    | MorphismCellsOf<TShape>
+    | AnalysisCellsOf<TShape>;
 
 /**
  * A pushforward migration from this shape to another. Mirrors the core: it
@@ -527,10 +593,24 @@ export type Shape = {
     readonly migrations?: readonly ModelMigration[];
     /**
      * Analyses that can be added to an analysis notebook for this shape.
-     * When present, `defineShape` attaches an `.Analysis` property that can be
-     * passed to {@link Binder.createNotebook} to create an analysis notebook.
+     * When present, `defineShape` attaches an `.Analysis` property — itself a
+     * {@link Shape} declaring these as its `analyses` — that can be passed to
+     * {@link Binder.createNotebook} to create an analysis notebook.
      */
     readonly modelAnalyses?: readonly AnalysisDef[];
+    /**
+     * The analyses an *analysis* shape declares. A notebook over a shape with
+     * `analyses` is an analysis notebook: its {@link Notebook.add} accepts these
+     * analysis defs, and its cells store analysis params rather than model
+     * judgments. Absent for an ordinary model shape; populated by the `.Analysis`
+     * shape that {@link defineShape} derives from `modelAnalyses`.
+     */
+    readonly analyses?: readonly AnalysisDef[];
+    /**
+     * Whether an analysis shape analyzes a model or a diagram. Present exactly
+     * when {@link Shape.analyses} is, and surfaced as {@link Notebook.analysisType}.
+     */
+    readonly analysisType?: AnalysisType;
 };
 
 /** Any shape, used as the default and as a generic constraint. */
@@ -570,6 +650,25 @@ type HasCoreTheory<TShape extends AnyShape> =
 /** The list element types, defaulted to the widest def for indexing safety. */
 type ObjectDefOf<TShape extends AnyShape> = ShapeObjectList<TShape>[number] & ObjectDef;
 type MorphismDefOf<TShape extends AnyShape> = ShapeMorphismList<TShape>[number] & MorphismDef;
+
+/** A shape's analysis list; see {@link ShapeObjectList}. */
+type ShapeAnalysisList<TShape extends AnyShape> = "analyses" extends keyof TShape
+    ? NonNullable<TShape["analyses"]>
+    : readonly [];
+
+/** The analysis def element type, defaulted to the widest def for indexing. */
+type AnalysisDefOf<TShape extends AnyShape> = ShapeAnalysisList<TShape>[number] & AnalysisDef;
+
+/**
+ * Whether a shape *definitely* declares `analyses`, i.e. is an analysis shape.
+ * Tested by requiredness like {@link HasCoreTheory}: a shape built with the
+ * `.Analysis` derivation has `analyses` as a required property (so `true`),
+ * whereas an ordinary model shape — and the base {@link Shape}, whose `analyses`
+ * key is only optional — resolves to `false`. Gates the analysis-only surface
+ * ({@link Notebook.analysisType} and the analysis {@link Notebook.add} overload).
+ */
+type HasAnalyses<TShape extends AnyShape> =
+    {} extends Pick<TShape, "analyses" & keyof TShape> ? false : true;
 
 /** A shape that can originate a document: it carries a document theory. */
 type CreatableShape = Shape & { readonly theory: string };
@@ -746,10 +845,11 @@ type OutputOf<Def extends AnalysisDef> =
     Def extends AnalysisDef<Record<string, unknown>, infer O> ? O : unknown;
 
 /**
- * A handle for an analysis cell in an {@link AnalysisNotebook}. The persisted
- * `params` are seeded by `def.initialContent()` and updated with {@link
- * AnalysisCell.update}; `run()` calls the def's `run` with the analyzed model
- * and current params.
+ * A handle for an analysis cell in an analysis notebook (a {@link Notebook}
+ * over an {@link AnalysisShape}). The persisted `params` are seeded by
+ * `def.initialContent()` and updated with {@link AnalysisCell.update}; `run()`
+ * resolves the analyzed model from the document's `analysis-of` link through the
+ * store and calls the def's `run` with that model and the current params.
  */
 export type AnalysisCell<Def extends AnalysisDef = AnalysisDef> = Reorder & {
     readonly kind: typeof CellKind.Analysis;
@@ -780,202 +880,30 @@ export function defineShape<const TSpec extends Shape>(
         : object) {
     if (spec.modelAnalyses) {
         const analysisShape: AnalysisShape<NonNullable<TSpec["modelAnalyses"]>> = {
-            [analysisShapeBrand]: true as const,
             analyses: spec.modelAnalyses as NonNullable<TSpec["modelAnalyses"]>,
+            analysisType: "model",
         };
         return { ...spec, Analysis: analysisShape } as ReturnType<typeof defineShape<TSpec>>;
     }
     return spec as ReturnType<typeof defineShape<TSpec>>;
 }
 
-// ---------------------------------------------------------------------------
-// Analysis shapes and analysis notebooks
-// ---------------------------------------------------------------------------
-
-const analysisShapeBrand: unique symbol = Symbol("analysisShape");
-
 /**
- * A shape for analysis notebooks. Obtained via `shape.Analysis` when the
+ * A {@link Shape} for analysis notebooks: an ordinary shape that declares
+ * `analyses` (and an `analysisType`). Obtained via `shape.Analysis` when the
  * shape declares `modelAnalyses`. Pass it to {@link Binder.createNotebook}
  * together with `{ name, of: validatableNotebook }` to create an analysis
- * notebook.
+ * notebook, just like any other shape.
  */
-export type AnalysisShape<Analyses extends readonly AnalysisDef[] = readonly AnalysisDef[]> = {
-    readonly [analysisShapeBrand]: true;
-    readonly analyses: Analyses;
-};
-
-const isAnalysisShape = (value: unknown): value is AnalysisShape =>
-    typeof value === "object" &&
-    value !== null &&
-    Boolean((value as Record<symbol, unknown>)[analysisShapeBrand]);
-
-/**
- * The union of analysis-cell handles an analysis notebook's {@link
- * AnalysisNotebook.cells} yields, one member per declared analysis type plus
- * rich-text cells.
- */
-export type AnalysisNotebookCell<Analyses extends readonly AnalysisDef[] = readonly AnalysisDef[]> =
-    | RichTextCell
-    | { [K in keyof Analyses]: AnalysisCell<Analyses[K] & AnalysisDef> }[number];
-
-/**
- * A notebook of analyses over a validated model. Produced by {@link
- * Binder.createNotebook} when given an {@link AnalysisShape}. Holds a
- * reference to the analyzed model; each {@link AnalysisCell.run} call
- * delegates to the analysis def's `run` with that model.
- */
-export type AnalysisNotebook<Analyses extends readonly AnalysisDef[] = readonly AnalysisDef[]> =
-    Update<{ name: string }> & {
-        readonly name: string;
-        /** Whether this notebook analyzes a model or a diagram. */
-        readonly analysisType: "model" | "diagram";
-        /** Add a rich-text cell. */
-        add(type: RichTextType, args: { content: string }): RichTextCell;
-        /** Add an analysis cell, seeded with the def's `initialContent`. */
-        add<A extends Analyses[number]>(type: A): AnalysisCell<A>;
-        /** All cells in notebook order. */
-        cells(): Array<AnalysisNotebookCell<Analyses>>;
+export type AnalysisShape<Analyses extends readonly AnalysisDef[] = readonly AnalysisDef[]> =
+    Shape & {
+        readonly analyses: Analyses;
+        readonly analysisType: AnalysisType;
     };
 
-function attachAnalysisNotebook<A extends readonly AnalysisDef[], Handle>(
-    of: ValidatableNotebook<Handle>,
-    analysisShape: AnalysisShape<A>,
-    initialName: string,
-): AnalysisNotebook<A> {
-    let docName = initialName;
-    const cellOrder: string[] = [];
-    type StoredCell =
-        | { tag: "rich-text"; id: string; content: string }
-        | { tag: "analysis"; id: string; def: AnalysisDef; params: Record<string, unknown> };
-    const cellContents: Record<string, StoredCell> = {};
-
-    const reorderMethods = (cellId: string): Reorder => ({
-        moveUp() {
-            const i = cellOrder.indexOf(cellId);
-            if (i > 0) {
-                cellOrder.splice(i - 1, 2, cellOrder[i]!, cellOrder[i - 1]!);
-            }
-        },
-        moveDown() {
-            const i = cellOrder.indexOf(cellId);
-            if (i >= 0 && i < cellOrder.length - 1) {
-                cellOrder.splice(i, 2, cellOrder[i + 1]!, cellOrder[i]!);
-            }
-        },
-        moveTo(index: number) {
-            const i = cellOrder.indexOf(cellId);
-            if (i < 0) {
-                return;
-            }
-            cellOrder.splice(i, 1);
-            cellOrder.splice(Math.max(0, Math.min(index, cellOrder.length)), 0, cellId);
-        },
-        delete() {
-            const i = cellOrder.indexOf(cellId);
-            if (i >= 0) {
-                cellOrder.splice(i, 1);
-                delete cellContents[cellId];
-            }
-        },
-    });
-
-    const richTextHandle = (cellId: string): RichTextCell =>
-        ({
-            kind: CellKind.RichText,
-            id: cellId,
-            get content() {
-                return (cellContents[cellId] as { content: string } | undefined)?.content ?? "";
-            },
-            update(u: { content?: string }) {
-                const cell = cellContents[cellId];
-                if (cell?.tag === "rich-text" && u.content !== undefined) {
-                    cell.content = u.content;
-                }
-            },
-            ...reorderMethods(cellId),
-        }) as unknown as RichTextCell;
-
-    const analysisHandle = <Def extends AnalysisDef>(cellId: string, def: Def): AnalysisCell<Def> =>
-        ({
-            kind: CellKind.Analysis,
-            get id() {
-                return cellId;
-            },
-            type: def,
-            get params() {
-                const cell = cellContents[cellId];
-                return ((cell as { params?: unknown } | undefined)?.params ?? {}) as ParamsOf<Def> &
-                    Record<string, unknown>;
-            },
-            update(partial: Partial<ParamsOf<Def>>) {
-                const cell = cellContents[cellId];
-                if (cell?.tag === "analysis") {
-                    Object.assign(cell.params, partial);
-                }
-            },
-            run() {
-                const cell = cellContents[cellId];
-                const params =
-                    (cell as { params?: Record<string, unknown> } | undefined)?.params ?? {};
-                return def.run(
-                    of as unknown as ValidatableNotebook,
-                    params as ParamsOf<Def>,
-                ) as Promise<OutputOf<Def>>;
-            },
-            ...reorderMethods(cellId),
-        }) as unknown as AnalysisCell<Def>;
-
-    // Silence unused-variable warning: the analyses list is part of the shape's
-    // type contract and is read by the `add` overloads at the type level.
-    void analysisShape;
-
-    return {
-        get name() {
-            return docName;
-        },
-        analysisType: "model",
-        update(u: { name?: string }) {
-            if (u.name !== undefined) {
-                docName = u.name;
-            }
-        },
-        add(type: unknown, args?: { content?: string }) {
-            if (isRichTextType(type)) {
-                const cellId = v7();
-                cellContents[cellId] = {
-                    tag: "rich-text",
-                    id: cellId,
-                    content: args?.content ?? "",
-                };
-                cellOrder.push(cellId);
-                return richTextHandle(cellId) as RichTextCell;
-            }
-            const def = type as AnalysisDef;
-            const cellId = v7();
-            cellContents[cellId] = {
-                tag: "analysis",
-                id: cellId,
-                def,
-                params: def.initialContent() as Record<string, unknown>,
-            };
-            cellOrder.push(cellId);
-            return analysisHandle(cellId, def);
-        },
-        cells() {
-            return cellOrder.map((cellId) => {
-                const cell = cellContents[cellId];
-                if (!cell) {
-                    throw new Error(`Cell not found: ${cellId}`);
-                }
-                if (cell.tag === "rich-text") {
-                    return richTextHandle(cellId);
-                }
-                return analysisHandle(cellId, cell.def);
-            });
-        },
-    } as unknown as AnalysisNotebook<A>;
-}
+/** Whether a shape value declares analyses, i.e. is an analysis shape. */
+const isAnalysisShape = (shape: AnyShape): shape is AnalysisShape =>
+    Array.isArray((shape as { analyses?: unknown }).analyses);
 
 /** Structural equality of stored type expressions (plain JSON-like values). */
 const sameTypeValue = (a: unknown, b: unknown): boolean => {
@@ -1057,13 +985,197 @@ const encodeEndpoint = (morType: MorType, value: unknown): Ob | null => {
     return encodeObjectRef(value as { readonly id: string });
 };
 
+/**
+ * Attach an analysis notebook over a real {@link AnalysisDocument} held by the
+ * store. Cells are stored as {@link Analysis} formal cells (`{ id, content }`),
+ * coexisting with rich-text cells. Each {@link AnalysisCell.run} resolves the
+ * analyzed model from the document's `analysisOf` link through the store, then
+ * delegates to the analysis def's `run`.
+ */
+function attachAnalysisNotebook<TShape extends AnalysisShape, Handle>(
+    store: DocumentStore<Handle>,
+    handle: Handle,
+    shape: TShape,
+): Notebook<TShape, Handle> {
+    const doc = store.viewDocument(handle) as AnalysisDocument;
+    const change = (fn: (doc: AnalysisDocument) => void) =>
+        store.changeDocument(handle, fn as (doc: Document) => void);
+
+    /** The analysis def for a given id, looked up in the shape's `analyses`. */
+    const defForId = (id: string): AnalysisDef | undefined =>
+        (shape.analyses ?? []).find((def) => def.id === id);
+
+    const readCell = (cellId: string): Cell<Analysis> | undefined =>
+        doc.notebook.cellContents[cellId] as Cell<Analysis> | undefined;
+
+    /** Read an analysis cell's stored params, or `{}` if missing/non-formal. */
+    const readParams = (cellId: string): Record<string, unknown> => {
+        const cell = readCell(cellId);
+        if (cell?.tag !== "formal") {
+            return {};
+        }
+        return cell.content.content;
+    };
+
+    const moveCell = (cellId: string, target: (from: number) => number) =>
+        change((d) => {
+            const order = d.notebook.cellOrder;
+            const from = order.indexOf(cellId);
+            if (from < 0) {
+                return;
+            }
+            const to = Math.max(0, Math.min(target(from), order.length - 1));
+            if (to === from) {
+                return;
+            }
+            order.splice(from, 1);
+            order.splice(to, 0, cellId);
+        });
+
+    const deleteCell = (cellId: string) =>
+        change((d) => {
+            const order = d.notebook.cellOrder;
+            const from = order.indexOf(cellId);
+            if (from < 0) {
+                return;
+            }
+            order.splice(from, 1);
+            delete d.notebook.cellContents[cellId];
+        });
+
+    const reorderMethods = (cellId: string): Reorder => ({
+        moveUp: () => moveCell(cellId, (from) => from - 1),
+        moveDown: () => moveCell(cellId, (from) => from + 1),
+        moveTo: (index: number) => moveCell(cellId, () => index),
+        delete: () => deleteCell(cellId),
+    });
+
+    const richTextHandle = (cellId: string): RichTextCell =>
+        ({
+            kind: CellKind.RichText,
+            id: cellId,
+            get content() {
+                return (readCell(cellId) as { content?: string } | undefined)?.content;
+            },
+            update(u: { content?: string }) {
+                change((d) => {
+                    Object.assign(d.notebook.cellContents[cellId] as object, u);
+                });
+            },
+            ...reorderMethods(cellId),
+        }) as unknown as RichTextCell;
+
+    const analysisHandle = <Def extends AnalysisDef>(cellId: string, def: Def): AnalysisCell<Def> =>
+        ({
+            kind: CellKind.Analysis,
+            get id() {
+                return cellId;
+            },
+            type: def,
+            get params() {
+                return readParams(cellId) as ParamsOf<Def>;
+            },
+            update(partial: Partial<ParamsOf<Def>>) {
+                change((d) => {
+                    const cell = d.notebook.cellContents[cellId] as Cell<Analysis> | undefined;
+                    if (cell?.tag === "formal") {
+                        Object.assign(cell.content.content, partial);
+                    }
+                });
+            },
+            async run() {
+                const params = readParams(cellId) as ParamsOf<Def>;
+                const model = await store.resolveAnalysis(doc.analysisOf);
+                return def.run(model, params) as Promise<OutputOf<Def>>;
+            },
+            ...reorderMethods(cellId),
+        }) as unknown as AnalysisCell<Def>;
+
+    const impl = {
+        get name() {
+            return doc.name;
+        },
+        handle,
+        get document() {
+            return doc;
+        },
+        get analysisType(): AnalysisType {
+            return doc.analysisType;
+        },
+        dump() {
+            return store.copyValue(handle, doc);
+        },
+        update(u: { name?: string }) {
+            change((d) => {
+                Object.assign(d, u);
+            });
+        },
+        add(type: unknown, args?: { content?: string }) {
+            if (isRichTextType(type)) {
+                const cell = newRichTextCell((args as { content: string }).content);
+                change((d) => {
+                    d.notebook.cellContents[cell.id] = cell as unknown as Cell<Analysis>;
+                    d.notebook.cellOrder.push(cell.id);
+                });
+                return richTextHandle(cell.id);
+            }
+            const def = type as AnalysisDef;
+            const cell = newFormalCell(
+                newAnalysisCell(def.id, def.initialContent() as Record<string, unknown>),
+            );
+            change((d) => {
+                d.notebook.cellContents[cell.id] = cell;
+                d.notebook.cellOrder.push(cell.id);
+            });
+            return analysisHandle(cell.id, def);
+        },
+        cells(): Array<RichTextCell | AnalysisCell> {
+            return doc.notebook.cellOrder.map((cellId) => {
+                const cell = doc.notebook.cellContents[cellId];
+                if (!cell) {
+                    throw new Error(`Failed to find notebook cell contents for cell '${cellId}'`);
+                }
+                if (cell.tag === "rich-text") {
+                    return richTextHandle(cellId);
+                }
+                const content = cell.content as Analysis;
+                const def = defForId(content.id);
+                if (!def) {
+                    throw new Error(`No analysis declared for id '${content.id}'.`);
+                }
+                return analysisHandle(cellId, def);
+            });
+        },
+        cellsOf(arg: RichTextType | AnalysisDef): Array<RichTextCell | AnalysisCell> {
+            if (isRichTextType(arg)) {
+                return impl.cells().filter((cell) => cell.kind === CellKind.RichText);
+            }
+            return impl
+                .cells()
+                .filter((cell) => cell.kind === CellKind.Analysis && cell.type.id === arg.id);
+        },
+    };
+
+    const notebook = impl as unknown as Notebook<TShape, Handle>;
+
+    if ((store as DocumentStore<unknown>) === plainStore) {
+        plainDocumentId(handle as Document);
+    }
+
+    return notebook;
+}
+
 function attachNotebook<TShape extends AnyShape, Handle>(
     store: DocumentStore<Handle>,
     handle: Handle,
     shape: TShape,
 ): Notebook<TShape, Handle> {
-    const doc = store.viewDocument(handle);
-    const change = (fn: (doc: ModelDocument) => void) => store.changeDocument(handle, fn);
+    if (isAnalysisShape(shape)) {
+        return attachAnalysisNotebook(store, handle, shape) as Notebook<TShape, Handle>;
+    }
+    const doc = store.viewDocument(handle) as ModelDocument;
+    const change = (fn: (doc: ModelDocument) => void) =>
+        store.changeDocument(handle, fn as (doc: Document) => void);
     const copy = <T>(value: T): T => store.copyValue(handle, value);
     const isPlainStore = (store as DocumentStore<unknown>) === plainStore;
 
@@ -1619,9 +1731,9 @@ function attachNotebook<TShape extends AnyShape, Handle>(
     const notebook = impl as unknown as Notebook<TShape, Handle>;
 
     if (isPlainStore) {
-        plainNotebookValidators.set(plainDocumentId(handle as ModelDocument), () =>
-            impl.validate(),
-        );
+        const id = plainDocumentId(handle as Document);
+        plainNotebookValidators.set(id, () => impl.validate());
+        cachePlainAnalyzable(handle as Document, notebook as unknown as ValidatableNotebook);
     }
 
     return notebook;
@@ -1637,7 +1749,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
  * so a fully-interactive component can be written against a sub-shape (e.g.
  * `Notebook<typeof PlacesShape>`) and handed a notebook of the full theory.
  */
-export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument> = Update<{
+export type Notebook<TShape extends AnyShape = AnyShape, Handle = Document> = Update<{
     name: string;
 }> & {
     /**
@@ -1697,11 +1809,12 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
     /**
      * The underlying document. With a reactive store (Solid, Automerge), this
      * is the reactive proxy; with the plain in-memory store it is the raw
-     * object.
+     * object. Its type follows the shape: an analysis shape yields an {@link
+     * AnalysisDocument}, any other shape a {@link ModelDocument}.
      */
-    readonly document: ModelDocument;
+    readonly document: DocumentOf<TShape>;
     /** Make a detached plain-JS snapshot of the underlying document. */
-    dump(): ModelDocument;
+    dump(): DocumentOf<TShape>;
     /**
      * Whether this notebook's shape declares a cell type structurally equal to
      * the given object or morphism type. A function written against a shape
@@ -1744,8 +1857,13 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
      * extra object type handed to a consumer over a union of list shapes); the
      * tradeoff is that the result may include cell types beyond that shape.
      * Recover precise handles with {@link Notebook.cellsOf}.
+     *
+     * For an analysis notebook the union additionally carries the shape's
+     * analysis-cell handles (see {@link AnalysisCellsOf}), so `cell.kind`
+     * discriminates a {@link CellKind.Analysis} cell to a precise {@link
+     * AnalysisCell}.
      */
-    cells(): Array<NotebookCell>;
+    cells(): Array<NotebookCell | AnalysisCellsOf<TShape>>;
     /**
      * Handles for the cells whose object or morphism type is declared by the
      * given sub-shape, precisely typed by that shape: each of its declared
@@ -1764,6 +1882,7 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
      */
     cellsOf(type: RichTextType): Array<RichTextCell>;
     cellsOf(type: InstantiationType): Array<InstantiationCell<Handle>>;
+    cellsOf<Def extends AnalysisDef>(type: Def): Array<AnalysisCell<Def>>;
     cellsOf<Def extends ObjectDef>(type: Def): Array<ObjectCell<Def>>;
     cellsOf<Def extends MorphismDef>(type: Def): Array<MorphismCell<Def>>;
     cellsOf<S extends AnyShape>(shape: S): Array<NotebookCell<S>>;
@@ -1780,12 +1899,40 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = ModelDocument>
      */
     add(type: RichTextType, args: { content: string }): RichTextCell;
     add(type: InstantiationType, args: InstantiationArgs<Handle>): InstantiationCell<Handle>;
+    add<A extends AnalysisDefOf<TShape>>(type: A): AnalysisCell<A>;
     add<M extends ShapeMorphisms<TShape>>(
         type: M,
         args: { name: string; from: DomOf<M>; to: CodOf<M> },
     ): MorphismCell<M>;
     add<O extends ShapeObjects<TShape>>(type: O, args: { name: string }): ObjectCell<O>;
-} & CoreTheoryMethods<TShape, Handle>;
+} & CoreTheoryMethods<TShape, Handle> &
+    AnalysisMethods<TShape>;
+
+/**
+ * The document type a shape's notebook is backed by: an {@link AnalysisDocument}
+ * for an analysis shape (one that declares `analyses`), a {@link ModelDocument}
+ * otherwise. The base {@link Shape} (optional `analyses`) yields the full
+ * {@link Document}, keeping a concrete notebook assignable to the generic one.
+ */
+type DocumentOf<TShape extends AnyShape> =
+    HasAnalyses<TShape> extends true
+        ? AnalysisDocument
+        : "analyses" extends keyof TShape
+          ? Document
+          : ModelDocument;
+
+/**
+ * The analysis-only notebook surface, present only when the shape declares
+ * `analyses` (see {@link HasAnalyses}). A model notebook yields no such members,
+ * so reading `analysisType` off one is a compile error.
+ */
+type AnalysisMethods<TShape extends AnyShape> =
+    HasAnalyses<TShape> extends true
+        ? {
+              /** Whether this notebook analyzes a model or a diagram. */
+              readonly analysisType: AnalysisType;
+          }
+        : object;
 
 /**
  * The notebook methods that elaborate into the shape's `coreTheory`, present
@@ -1841,12 +1988,14 @@ export interface Binder<Handle> {
     /**
      * Build an analysis notebook from fresh data. The `of` model must be
      * validatable (its shape must declare a `coreTheory`), so it can be
-     * resolved by calling `validate()` before each analysis run.
+     * resolved by calling `validate()` before each analysis run. The notebook
+     * is backed by a real {@link AnalysisDocument} whose `analysisOf` link
+     * references `of`.
      */
-    createNotebook<A extends readonly AnalysisDef[]>(
-        shape: AnalysisShape<A>,
+    createNotebook<S extends AnalysisShape>(
+        shape: S,
         data: { name: string; of: ValidatableNotebook<Handle> },
-    ): AnalysisNotebook<A>;
+    ): Notebook<S, Handle>;
     /**
      * Build a notebook from fresh data. The document seed is constructed
      * internally from `data.name` and the shape's `theory`.
@@ -1877,13 +2026,25 @@ export interface Binder<Handle> {
 /** Bind a store once, yielding the notebook entry points. */
 export function createBinder<Handle>(store: DocumentStore<Handle>): Binder<Handle> {
     const binder = {
-        createNotebook(shape: unknown, data: { name: string; of?: ValidatableNotebook<Handle> }) {
+        createNotebook(shape: AnyShape, data: { name: string; of?: ValidatableNotebook<Handle> }) {
             if (isAnalysisShape(shape)) {
                 const of = data.of;
                 if (!of) {
                     throw new Error("Analysis notebook requires an `of` notebook.");
                 }
-                return attachAnalysisNotebook(of, shape as AnalysisShape, data.name);
+                const ref = store.linkForHandle(of.handle);
+                if (!ref) {
+                    throw new Error(
+                        "Cannot create an analysis notebook: the store cannot mint a " +
+                            "link for the analyzed model's handle.",
+                    );
+                }
+                const seed = newAnalysisDocument({
+                    analysisType: shape.analysisType,
+                    analysisOf: { ...ref, type: "analysis-of" },
+                    name: data.name,
+                });
+                return attachNotebook(store, store.createHandle(seed), shape);
             }
             const creatableShape = shape as CreatableShape;
             const seed = newModelDocument({ theory: creatableShape.theory });
@@ -1913,4 +2074,4 @@ export function createBinder<Handle>(store: DocumentStore<Handle>): Binder<Handl
 }
 
 /** A ready-made binder over the plain in-memory store. */
-export const binder: Binder<ModelDocument> = createBinder(plainStore);
+export const binder: Binder<Document> = createBinder(plainStore);

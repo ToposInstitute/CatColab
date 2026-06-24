@@ -14,7 +14,7 @@ type SolidStoreHandle = {
 
 const solidStore: DocumentStore<SolidStoreHandle> = {
     createHandle(initialDoc) {
-        const [doc, setDoc] = createStore<ModelDocument>(initialDoc);
+        const [doc, setDoc] = createStore<ModelDocument>(initialDoc as ModelDocument);
         return { doc, setDoc };
     },
     viewDocument: (handle) => handle.doc,
@@ -23,6 +23,9 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
     linkForHandle: () => undefined,
     resolveModel: async () => {
         throw new Error("this store cannot resolve model references");
+    },
+    resolveAnalysis: async () => {
+        throw new Error("this store cannot resolve analyses");
     },
 };
 

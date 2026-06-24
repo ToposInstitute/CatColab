@@ -32,8 +32,9 @@ function createResolvingStore(): {
 
     const store: DocumentStore<ModelDocument> = {
         createHandle: (initialDoc) => {
-            idFor(initialDoc);
-            return initialDoc;
+            const doc = initialDoc as ModelDocument;
+            idFor(doc);
+            return doc;
         },
         viewDocument: (handle) => handle,
         changeDocument: (handle, fn) => fn(handle),
@@ -43,6 +44,9 @@ function createResolvingStore(): {
             _version: null,
             _server: "",
         }),
+        resolveAnalysis: async () => {
+            throw new Error("This store does not resolve analyses.");
+        },
         resolveModel: async (link: Link) => {
             if (failOnResolve.value) {
                 throw new Error("resolver unavailable");
