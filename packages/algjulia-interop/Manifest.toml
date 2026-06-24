@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "bb210926d4c5ee37c61bcb1df4db8f43a5dc2678"
+project_hash = "ad7f2b478ddd5a495ab5babd87f4974f96c9eab2"
 
 [[deps.ACSets]]
 deps = ["AlgebraicInterfaces", "Base64", "CompTime", "DataStructures", "JSON3", "MLStyle", "OrderedCollections", "PEG", "Permutations", "Pkg", "PrettyTables", "Random", "Reexport", "SHA", "StaticArrays", "StructEquality", "StructTypes", "Tables"]
@@ -215,7 +215,7 @@ uuid = "2a0fbf3d-bb9c-48f3-b0a9-814d99fd7ab9"
 version = "0.2.7"
 
 [[deps.CatColabInterop]]
-deps = ["ACSets", "Catlab", "CombinatorialSpaces", "ComponentArrays", "CoordRefSystems", "Decapodes", "DiagrammaticEquations", "DiffEqCallbacks", "Distributions", "HTTP", "JSON3", "LinearAlgebra", "MLStyle", "OrdinaryDiffEq", "Oxygen", "Reexport", "StaticArrays", "StructTypes"]
+deps = ["ACSets", "Catlab", "CombinatorialSpaces", "ComponentArrays", "CoordRefSystems", "Decapodes", "DiagrammaticEquations", "DiffEqCallbacks", "Distributions", "HTTP", "InteractiveUtils", "JSON3", "LinearAlgebra", "MLStyle", "OrdinaryDiffEq", "Oxygen", "Reexport", "StaticArrays", "StructTypes"]
 path = "."
 uuid = "9ecda8fb-39ab-46a2-a496-7285fa6368c1"
 version = "0.1.1"

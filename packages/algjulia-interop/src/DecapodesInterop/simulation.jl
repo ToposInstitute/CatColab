@@ -63,22 +63,10 @@ function default_initial_conditions(pode::SummationDecapode, sd)
     ComponentArray(; pairs...)
 end
 
-# Luke Morris
-function circle(n, c)
-    mesh = EmbeddedDeltaSet1D{Bool, Point2D}()
-    map(range(0, 2pi - (pi/(2^(n-1))); step=pi/(2^(n-1)))) do t
-      add_vertex!(mesh, point=Point2D(cos(t),sin(t))*(c/2pi))
-    end
-    add_edges!(mesh, 1:(nv(mesh)-1), 2:nv(mesh))
-    add_edge!(mesh, nv(mesh), 1)
-    dualmesh = EmbeddedDeltaDualComplex1D{Bool, Float64, Point2D}(mesh)
-    subdivide_duals!(dualmesh, Circumcenter())
-    mesh,dualmesh
-end
-
-function klausmeier_initial_conditions(pode::SummationDecapode, dualmesh)
-    n_dist = Normal(pi)
-    n = [Distributions.pdf(n_dist, t)*(√(2pi))*7.2 + 0.08 - 5e-2 for t in range(0,2pi; length=ne(dualmesh))]
+function initial_conditions(pode::SummationDecapode, geometry::Geometry)
+    # n_dist = Normal(pi)
+    # n = [Distributions.pdf(n_dist, t)*(√(2pi))*7.2 + 0.08 - 5e-2 for t in range(0,2pi; length=ne(dualmesh))]
+    n = GaussianIC(geometry)
     
     w_dist = Normal(pi, 20)
     w = [Distributions.pdf(w_dist, t) for t in range(0,2pi; length=ne(dualmesh))]
@@ -94,7 +82,7 @@ function DecapodesSystem(pode::SummationDecapode; duration=10)
     s,sd = circle(9,500)
     geometry = Geometry(Constant,s,sd)    
 
-    u0 = klausmeier_initial_conditions(pode, geometry.dualmesh)
+    u0 = klausmeier_initial_conditions(pode, geometry)
 
     ops = Operators()
     ops.operators[:square_dual0] = x -> x.^2
