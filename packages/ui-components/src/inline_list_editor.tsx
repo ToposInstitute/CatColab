@@ -215,8 +215,11 @@ export function InlineListEditor<T>(originalProps: InlineListEditorProps<T>) {
         props.setItems(item === null ? props.items : [...props.items, item]);
     };
 
+    let listRef!: HTMLUListElement;
+
     return (
         <ul
+            ref={listRef}
             class={styles.inlineList}
             onMouseDown={(evt) => {
                 if (props.items.length === 0) {
@@ -224,6 +227,14 @@ export function InlineListEditor<T>(originalProps: InlineListEditorProps<T>) {
                     parentFocus.setFocused(true);
                     evt.preventDefault();
                 }
+            }}
+            onFocusOut={(evt) => {
+                // Lose focus only when it moves outside the list entirely.
+                const next = evt.relatedTarget as Element | null;
+                if (next && listRef.contains(next)) {
+                    return;
+                }
+                parentFocus.setFocused(false);
             }}
         >
             {props.startDelimiter}
