@@ -305,7 +305,9 @@ export default function MassAction(
                 settingsPane={
                     <MassActionConfigForm
                         config={props.content.equationsData}
-                        changeConfig={props.changeContent}
+                        changeConfig={(change) => {
+                            change(props.content.equationsData);
+                        }}
                         enableGranularity={props.ratesHaveGranularity}
                     />
                 }

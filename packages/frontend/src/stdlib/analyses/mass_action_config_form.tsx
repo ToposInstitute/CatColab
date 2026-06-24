@@ -4,7 +4,7 @@ import { CheckboxField, FormGroup, SelectField } from "catcolab-ui-components";
 import type { MassActionEquationsData, RateGranularity } from "catlog-wasm";
 
 /** Configuration of a mass-action analysis. */
-export type Config =  MassActionEquationsData;
+export type Config = MassActionEquationsData;
 
 /** Form to configure a mass-action analysis. */
 export function MassActionConfigForm(props: {
