@@ -151,7 +151,9 @@ export function InlineListEditor<T>(originalProps: InlineListEditorProps<T>) {
     const [isHovered, setIsHovered] = createSignal(false);
 
     const hasTrailingAddItem = () =>
-        (parentFocus.hasFocus() || isHovered()) && props.items[props.items.length - 1] !== null;
+        (parentFocus.hasFocus() || isHovered()) &&
+        props.items.length > 0 &&
+        props.items[props.items.length - 1] !== null;
 
     const lastNavigableIndex = () =>
         hasTrailingAddItem() ? props.items.length : props.items.length - 1;
@@ -242,14 +244,7 @@ export function InlineListEditor<T>(originalProps: InlineListEditorProps<T>) {
             onMouseLeave={() => setIsHovered(false)}
         >
             {props.startDelimiter}
-            <Index
-                each={props.items}
-                fallback={
-                    <Show when={!hasTrailingAddItem()}>
-                        <input class={styles.emptyListInput} />
-                    </Show>
-                }
-            >
+            <Index each={props.items}>
                 {(item, i) => (
                     <li>
                         <Show when={i > 0 && props.separator}>{(sep) => sep()(i)}</Show>
@@ -266,7 +261,7 @@ export function InlineListEditor<T>(originalProps: InlineListEditorProps<T>) {
                     </li>
                 )}
             </Index>
-            <Show when={hasTrailingAddItem()}>
+            <Show when={props.items.length === 0 || hasTrailingAddItem()}>
                 <li>
                     <Show when={props.items.length > 0 && props.separator}>
                         {(sep) => sep()(props.items.length)}
