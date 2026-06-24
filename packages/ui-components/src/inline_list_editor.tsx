@@ -146,14 +146,24 @@ export function InlineListEditor<T>(originalProps: InlineListEditorProps<T>) {
         }
     });
 
+    const hasTrailingAddItem = () =>
+        parentFocus.hasFocus() &&
+        props.items.length > 0 &&
+        props.items[props.items.length - 1] !== null;
+
+    const lastNavigableIndex = () =>
+        hasTrailingAddItem() ? props.items.length : props.items.length - 1;
+
     const itemOptions = (i: number): InlineListItemOptions => ({
         onTextChange: (text) => inputTexts.set(i, text),
         focus: focus.childFocus(i),
         deleteBackward: () =>
             batch(() => {
-                updateItems((items) => {
-                    items.splice(i, 1);
-                });
+                if (i < props.items.length) {
+                    updateItems((items) => {
+                        items.splice(i, 1);
+                    });
+                }
                 if (i === 0) {
                     props.deleteBackward?.();
                 } else {
@@ -162,9 +172,11 @@ export function InlineListEditor<T>(originalProps: InlineListEditorProps<T>) {
             }),
         deleteForward: () =>
             batch(() => {
-                updateItems((items) => {
-                    items.splice(i, 1);
-                });
+                if (i < props.items.length) {
+                    updateItems((items) => {
+                        items.splice(i, 1);
+                    });
+                }
                 if (i === 0) {
                     props.deleteForward?.();
                 }
@@ -179,7 +191,7 @@ export function InlineListEditor<T>(originalProps: InlineListEditorProps<T>) {
             }
         },
         exitRight: () => {
-            if (i === props.items.length - 1) {
+            if (i === lastNavigableIndex()) {
                 props.exitRight?.();
             } else {
                 focus.setActiveChild(i + 1);
@@ -193,11 +205,15 @@ export function InlineListEditor<T>(originalProps: InlineListEditorProps<T>) {
                 // TODO: Should move to beginning of input.
                 focus.setActiveChild(0);
             } else if (evt.key === "End" && !evt.shiftKey) {
-                focus.setActiveChild(props.items.length - 1);
+                focus.setActiveChild(lastNavigableIndex());
             }
             return false;
         },
     });
+
+    const appendItem = (item: T | null) => {
+        props.setItems(item === null ? props.items : [...props.items, item]);
+    };
 
     return (
         <ul
@@ -228,6 +244,17 @@ export function InlineListEditor<T>(originalProps: InlineListEditorProps<T>) {
                     </li>
                 )}
             </Index>
+            <Show when={hasTrailingAddItem()}>
+                <li>
+                    <Show when={props.separator}>{(sep) => sep()(props.items.length)}</Show>
+                    {props.children(
+                        () => null,
+                        appendItem,
+                        itemOptions(props.items.length),
+                        props.items.length,
+                    )}
+                </li>
+            </Show>
             {props.endDelimiter}
         </ul>
     );
