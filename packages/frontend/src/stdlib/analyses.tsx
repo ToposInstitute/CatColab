@@ -152,7 +152,9 @@ export function linearODEEquations(
         name,
         description,
         help,
-        component: (props) => <LinearODEEquationsDisplay title={name} {...otherOptions} {...props} />,
+        component: (props) => (
+            <LinearODEEquationsDisplay title={name} {...otherOptions} {...props} />
+        ),
         initialContent: () => ({
             trivialData: true,
         }),

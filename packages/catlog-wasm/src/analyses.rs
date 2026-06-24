@@ -188,14 +188,14 @@ mod tests {
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{liquid}".to_string()),
                 rhs: Latex(
-                    "-r_{[\\text{liquid}, c] \\to [\\text{solid}, c]} \\text{liquid} \\cdot c"
+                    "-r_{[\\text{liquid}, c] \\to [\\text{solid}, c]} \\cdot \\text{liquid} \\cdot c"
                         .to_string(),
                 ),
             },
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{solid}".to_string()),
                 rhs: Latex(
-                    "r_{[\\text{liquid}, c] \\to [\\text{solid}, c]} \\text{liquid} \\cdot c"
+                    "r_{[\\text{liquid}, c] \\to [\\text{solid}, c]} \\cdot \\text{liquid} \\cdot c"
                         .to_string(),
                 ),
             },
@@ -224,11 +224,11 @@ mod tests {
         let expected = LatexEquations(vec![
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{liquid}".to_string()),
-                rhs: Latex("-\\kappa_{[\\text{liquid}, c] \\to [\\text{solid}, c]} \\text{liquid} \\cdot c".to_string()),
+                rhs: Latex("-\\kappa_{[\\text{liquid}, c] \\to [\\text{solid}, c]} \\cdot \\text{liquid} \\cdot c".to_string()),
             },
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{solid}".to_string()),
-                rhs: Latex("\\rho_{[\\text{liquid}, c] \\to [\\text{solid}, c]} \\text{liquid} \\cdot c".to_string()),
+                rhs: Latex("\\rho_{[\\text{liquid}, c] \\to [\\text{solid}, c]} \\cdot \\text{liquid} \\cdot c".to_string()),
             },
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} c".to_string()),
@@ -255,15 +255,15 @@ mod tests {
         let expected = LatexEquations(vec![
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{liquid}".to_string()),
-                rhs: Latex("-\\kappa_{[\\text{liquid}, c] \\to [\\text{solid}, c]}^{\\text{liquid}} \\text{liquid} \\cdot c".to_string()),
+                rhs: Latex("-\\kappa_{[\\text{liquid}, c] \\to [\\text{solid}, c]}^{\\text{liquid}} \\cdot \\text{liquid} \\cdot c".to_string()),
             },
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{solid}".to_string()),
-                rhs: Latex("\\rho_{[\\text{liquid}, c] \\to [\\text{solid}, c]}^{\\text{solid}} \\text{liquid} \\cdot c".to_string()),
+                rhs: Latex("\\rho_{[\\text{liquid}, c] \\to [\\text{solid}, c]}^{\\text{solid}} \\cdot \\text{liquid} \\cdot c".to_string()),
             },
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} c".to_string()),
-                rhs: Latex("(\\rho_{[\\text{liquid}, c] \\to [\\text{solid}, c]}^{\\text{solid}} - \\kappa_{[\\text{liquid}, c] \\to [\\text{solid}, c]}^{\\text{solid}}) \\cdot \\text{liquid} \\cdot c".to_string()),
+                rhs: Latex("(\\rho_{[\\text{liquid}, c] \\to [\\text{solid}, c]}^{c} - \\kappa_{[\\text{liquid}, c] \\to [\\text{solid}, c]}^{c}) \\cdot \\text{liquid} \\cdot c".to_string()),
             },
         ]);
         assert_eq!(equations, expected);
