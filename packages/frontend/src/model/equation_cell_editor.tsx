@@ -9,10 +9,10 @@ import {
     useChildFocus,
 } from "catcolab-ui-components";
 import type { DblModel, Mor, Ob, QualifiedName, Uuid } from "catlog-wasm";
-import { MorIdInput } from "../components";
 import { removeProxyAndCopy } from "../util/remove_proxy_and_copy";
 import { LiveModelContext } from "./context";
 import type { EquationEditorProps } from "./editors";
+import { PathMorInput } from "./path_mor_input";
 
 import styles from "./equation_cell_editor.module.css";
 
@@ -209,20 +209,12 @@ function MorListEditor(props: {
                 deleteForward={props.deleteForward}
             >
                 {(mor, setMor, options, index) => (
-                    <MorIdInput
+                    <PathMorInput
                         mor={mor()}
                         setMor={setMor}
                         placeholder="..."
-                        completions={morCompletions(index)}
-                        idToLabel={(id) => liveModel().elaboratedModel()?.morGeneratorLabel(id)}
-                        labelToId={(label) =>
-                            liveModel().elaboratedModel()?.morGeneratorWithLabel(label)
-                        }
+                        morCompletions={morCompletions(index)}
                         obCompletions={obCompletions(index)}
-                        obIdToLabel={(id) => liveModel().elaboratedModel()?.obGeneratorLabel(id)}
-                        obLabelToId={(label) =>
-                            liveModel().elaboratedModel()?.obGeneratorWithLabel(label)
-                        }
                         {...options}
                     />
                 )}
