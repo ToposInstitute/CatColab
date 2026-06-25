@@ -14,7 +14,7 @@ name: GitHub PR Sync with Notion
 
 on:
   pull_request:
-    types: [opened, edited, closed, ready_for_review, converted_to_draft]
+    types: [opened, edited, closed, ready_for_review, converted_to_draft] # we're not matching on draft?
   pull_request_review:
     types: [submitted]
 
