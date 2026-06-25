@@ -6,26 +6,35 @@
 import { defineMorphism, defineObject, defineShape, type Notebook } from "catcolab-documents";
 
 const BasicObj = defineObject({ tag: "Basic", content: "Object" });
+
+// The `tensor` operation turns a list of objects into the single object an
+// endpoint connects, so declaring it on the domain and codomain is what makes a
+// morphism's endpoints list-like.
+const tensor = { apply: { tag: "Basic", content: "tensor" } } as const;
+
 const SymmetricListMor = defineMorphism(
     { tag: "Hom", content: BasicObj.obType },
-    { modality: "SymmetricList" },
+    { modality: "SymmetricList", domain: tensor, codomain: tensor },
 );
 
-const ListMor = defineMorphism({ tag: "Hom", content: BasicObj.obType }, { modality: "List" });
+const ListMor = defineMorphism(
+    { tag: "Hom", content: BasicObj.obType },
+    { modality: "List", domain: tensor, codomain: tensor },
+);
 
 const CocartesianListMor = defineMorphism(
     { tag: "Hom", content: BasicObj.obType },
-    { modality: "CocartesianList" },
+    { modality: "CocartesianList", domain: tensor, codomain: tensor },
 );
 
 const CartesianListMor = defineMorphism(
     { tag: "Hom", content: BasicObj.obType },
-    { modality: "CartesianList" },
+    { modality: "CartesianList", domain: tensor, codomain: tensor },
 );
 
 const AdditiveListMor = defineMorphism(
     { tag: "Hom", content: BasicObj.obType },
-    { modality: "AdditiveList" },
+    { modality: "AdditiveList", domain: tensor, codomain: tensor },
 );
 
 const ListShape = defineShape({
@@ -175,7 +184,7 @@ const entityObType = defineObject({ tag: "Basic", content: "Entity" });
 
 const entityListMorType = defineMorphism(
     { tag: "Hom", content: entityObType.obType },
-    { modality: "List" },
+    { modality: "List", domain: tensor, codomain: tensor },
 );
 
 const MultiObjectListShape = defineShape({
@@ -199,7 +208,7 @@ const entityObType = defineObject({ tag: "Basic", content: "Entity" });
 
 const entityListMorType = defineMorphism(
     { tag: "Hom", content: entityObType.obType },
-    { modality: "List" },
+    { modality: "List", domain: tensor, codomain: tensor },
 );
 
 const EntityObjectListShape = defineShape({

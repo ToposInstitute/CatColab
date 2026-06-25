@@ -7,7 +7,11 @@ import { ThSymMonoidalCategory } from "catlog-wasm";
 export const Place = defineObject({ tag: "Basic", content: "Object" });
 export const Transition = defineMorphism(
     { tag: "Hom", content: Place.obType },
-    { modality: "SymmetricList" },
+    {
+        modality: "SymmetricList",
+        domain: { apply: { tag: "Basic", content: "tensor" } },
+        codomain: { apply: { tag: "Basic", content: "tensor" } },
+    },
 );
 
 export const PetriNet = defineShape({

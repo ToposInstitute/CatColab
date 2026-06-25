@@ -562,7 +562,11 @@ describe("Petri-net editor comparison", () => {
         const basicObject = defineObject({ tag: "Basic", content: "Object" });
         const symmetricListMorphism = defineMorphism(
             { tag: "Hom", content: basicObject.obType },
-            { modality: "SymmetricList" },
+            {
+                modality: "SymmetricList",
+                domain: { apply: { tag: "Basic", content: "tensor" } },
+                codomain: { apply: { tag: "Basic", content: "tensor" } },
+            },
         );
 
         type BasicObCell = ObjectCell<typeof basicObject>;

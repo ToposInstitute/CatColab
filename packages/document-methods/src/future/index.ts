@@ -8,6 +8,7 @@ import type {
     Modality,
     MorType,
     Ob,
+    ObOp,
     ObType,
     SpecializeModel,
 } from "catcolab-document-types";
@@ -367,17 +368,35 @@ export type ModalityBrand<Mod extends ListModality | null> = {
 
 /**
  * A tagged wrapper declaring a morphism type, built with {@link defineMorphism}.
+/**
+ * Metadata controlling a morphism's domain or codomain, mirroring the
+ * frontend's theory `MorDomainMeta`. An `apply` operation (e.g. a Petri-net's
+ * `tensor`) turns a list of objects into the single object the morphism's
+ * endpoint actually is, so its presence is what makes an endpoint list-like.
+ */
+export type MorEndpointMeta = {
+    readonly apply?: ObOp | undefined;
+};
+
+/**
+ * A tagged wrapper declaring a morphism type, built with {@link defineMorphism}.
  * For a `Hom` morphism the endpoints are derived from its `MorType` structure;
- * for a list morphism (declared with a `modality`) they are arrays of the
- * `Hom`'s object type, with the modality carried in the phantom {@link
- * ModalityBrand} and the runtime `modality` field; for any other (e.g. a
- * `Basic` morphism such as a schema `Attr`) the endpoint object types are
- * carried in the phantom {@link Endpoints} brand.
+ * for a list morphism (declared with a `modality` and `domain`/`codomain`
+ * `apply` ops) they are arrays of the `Hom`'s object type, stored as
+ * `App(apply, List(modality, …))`: the `apply` operation is what turns a list
+ * of objects into the single object the morphism connects, and so is what makes
+ * the endpoint list-like. The modality is carried in the phantom {@link
+ * ModalityBrand} and the runtime `modality` field, the operations in the
+ * runtime `domain`/`codomain` fields. For any other morphism (e.g. a `Basic`
+ * morphism such as a schema `Attr`) the endpoint object types are carried in
+ * the phantom {@link Endpoints} brand.
  */
 export type MorphismDef<M extends MorType = MorType> = {
     readonly tag: "morphism";
     readonly morType: M;
     readonly modality?: Modality | undefined;
+    readonly domain?: MorEndpointMeta | undefined;
+    readonly codomain?: MorEndpointMeta | undefined;
 };
 
 /** The inner `MorType` of a {@link MorphismDef}. */
@@ -388,12 +407,15 @@ type MorTypeOf<Def extends MorphismDef> = Def extends MorphismDef<infer M> ? M :
  *
  * - For a plain `Hom` morphism, the endpoint object type is read from the
  *   `MorType` structure, so only the morphism type is passed.
- * - For a list morphism (e.g. a Petri-net transition), pass a `{ modality }`
- *   such as `{ modality: "SymmetricList" }`. The morphism type stays the plain
- *   `Hom(Object)` the core theory understands; the modality makes its endpoints
- *   arrays and tells the encoder to store them as a tensor product (see {@link
- *   encodeEndpoint}). It is carried in the phantom {@link ModalityBrand} and the
- *   runtime `modality` field.
+ * - For a list morphism (e.g. a Petri-net transition), pass a `{ modality,
+ *   domain, codomain }` such as `{ modality: "SymmetricList", domain: { apply: {
+ *   tag: "Basic", content: "tensor" } }, codomain: { apply: { tag: "Basic",
+ *   content: "tensor" } } }`. The morphism type stays the plain `Hom(Object)`
+ *   the core theory understands; each `apply` operation turns a list into the
+ *   single object the endpoint connects, so endpoints are stored as `App(apply,
+ *   List(modality, …))` (see {@link encodeEndpoint}) and read back as arrays. The
+ *   modality is carried in the phantom {@link ModalityBrand} and the runtime
+ *   `modality` field, the operations in the runtime `domain`/`codomain` fields.
  * - For any other morphism (e.g. a `Basic` morphism), the endpoint object types
  *   are not recorded in the literal, so they must be passed explicitly as a
  *   `{ domObType, codObType }` object; they are carried in the phantom {@link
@@ -408,7 +430,10 @@ export function defineMorphism<const M extends MorType & { tag: "Hom" }>(
 export function defineMorphism<
     const M extends MorType & { tag: "Hom" },
     const Mod extends ListModality,
->(morType: M, options: { modality: Mod }): MorphismDef<M> & ModalityBrand<Mod>;
+>(
+    morType: M,
+    options: { modality: Mod; domain: MorEndpointMeta; codomain: MorEndpointMeta },
+): MorphismDef<M> & ModalityBrand<Mod>;
 export function defineMorphism<
     const M extends MorType,
     const D extends ObType,
@@ -419,9 +444,21 @@ export function defineMorphism<
 ): MorphismDef<M> & Endpoints<D, C> & ModalityBrand<null>;
 export function defineMorphism(
     morType: MorType,
-    options?: { modality?: Modality; domObType?: ObType; codObType?: ObType },
+    options?: {
+        modality?: Modality;
+        domain?: MorEndpointMeta;
+        codomain?: MorEndpointMeta;
+        domObType?: ObType;
+        codObType?: ObType;
+    },
 ): MorphismDef {
-    return { tag: "morphism", morType, modality: options?.modality };
+    return {
+        tag: "morphism",
+        morType,
+        modality: options?.modality,
+        domain: options?.domain,
+        codomain: options?.codomain,
+    };
 }
 
 /**
@@ -972,10 +1009,10 @@ const LIST_MODALITIES: ReadonlySet<Modality> = new Set<Modality>([
     "AdditiveList",
 ]);
 
-/** The list modality of a stored endpoint, read from a `Tensor(List(...))`
-wrapper, or `null` when the endpoint is not a list. Used to recover a list
-morphism's modality when reading a cell back from the document, recognizing a
-list endpoint by its stored shape. */
+/** Whether a stored endpoint is a list, recognized by its `App(op, List(...))`
+shape: the `apply` operation (e.g. `tensor`) wrapping a `List` is what makes the
+endpoint list-like. Returns its modality, or `null` when not a list. Used to
+recover a list morphism's modality when reading a cell back from the document. */
 const endpointListModality = (ob: Ob | null): Modality | null => {
     if (ob?.tag === "App" && ob.content.ob.tag === "List") {
         const modality = ob.content.ob.content.modality;
@@ -983,6 +1020,12 @@ const endpointListModality = (ob: Ob | null): Modality | null => {
     }
     return null;
 };
+
+/** The `apply` operation wrapping a stored list endpoint (the counterpart of
+{@link endpointListModality}), or `null` when the endpoint is not a list. Used
+to recover a list morphism's `domain`/`codomain` `apply` op on read. */
+const endpointApplyOp = (ob: Ob | null): ObOp | null =>
+    ob?.tag === "App" && ob.content.ob.tag === "List" ? ob.content.op : null;
 
 /** Encode an object-cell endpoint reference as a model object. */
 const encodeObjectRef = (cell: { readonly id: string }): Ob => ({
@@ -992,31 +1035,29 @@ const encodeObjectRef = (cell: { readonly id: string }): Ob => ({
 
 /**
  * Encode a morphism endpoint into the document's object notation. The shape is
- * chosen from the morphism's declared `modality`: a list morphism (e.g. a
- * Petri-net transition, `modality: "SymmetricList"`) wraps an array of cells as
- * a tensor product over the modality's list; a morphism with no modality
- * encodes a single object cell as a basic object. This is exactly what the
- * frontend persists, so the morphism type stored in the document stays the
- * plain `Hom(Object)` the core theory understands and exposes as a generator.
+ * chosen from the morphism's declared `modality` and endpoint `apply` op: a list
+ * endpoint (e.g. a Petri-net transition's, `modality: "SymmetricList"` with an
+ * `apply: tensor`) wraps an array of cells as `App(apply, List(modality, …))` —
+ * the operation turning the list into the single object the endpoint connects;
+ * an endpoint with no modality encodes a single object cell as a basic object.
+ * This is exactly what the frontend persists, so the morphism type stored in the
+ * document stays the plain `Hom(Object)` the core theory exposes as a generator.
  */
-const encodeEndpoint = (modality: Modality | null, value: unknown): Ob | null => {
+const encodeEndpoint = (
+    apply: ObOp | null,
+    modality: Modality | null,
+    value: unknown,
+): Ob | null => {
     if (modality !== null) {
         const cells = Array.isArray(value) ? value : value == null ? [] : [value];
-        return {
-            tag: "App",
+        const list: Ob = {
+            tag: "List",
             content: {
-                op: { tag: "Basic", content: "tensor" },
-                ob: {
-                    tag: "List",
-                    content: {
-                        modality,
-                        objects: cells.map((cell) =>
-                            encodeObjectRef(cell as { readonly id: string }),
-                        ),
-                    },
-                },
+                modality,
+                objects: cells.map((cell) => encodeObjectRef(cell as { readonly id: string })),
             },
         };
+        return apply ? { tag: "App", content: { op: apply, ob: list } } : list;
     }
     if (value == null) {
         return null;
@@ -1434,10 +1475,18 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                         content.name = u.name;
                     }
                     if ("from" in u) {
-                        content.dom = encodeEndpoint(type.modality ?? null, u.from);
+                        content.dom = encodeEndpoint(
+                            type.domain?.apply ?? null,
+                            type.modality ?? null,
+                            u.from,
+                        );
                     }
                     if ("to" in u) {
-                        content.cod = encodeEndpoint(type.modality ?? null, u.to);
+                        content.cod = encodeEndpoint(
+                            type.codomain?.apply ?? null,
+                            type.modality ?? null,
+                            u.to,
+                        );
                     }
                 });
             },
@@ -1529,8 +1578,8 @@ function attachNotebook<TShape extends AnyShape, Handle>(
     ): MorphismCell => {
         const judgment = newMorphismDecl(def.morType);
         judgment.name = args.name;
-        judgment.dom = encodeEndpoint(def.modality ?? null, args.from);
-        judgment.cod = encodeEndpoint(def.modality ?? null, args.to);
+        judgment.dom = encodeEndpoint(def.domain?.apply ?? null, def.modality ?? null, args.from);
+        judgment.cod = encodeEndpoint(def.codomain?.apply ?? null, def.modality ?? null, args.to);
         const formalCell = newFormalCell(judgment);
         change((d) => {
             d.notebook.cellContents[formalCell.id] = formalCell;
@@ -1692,19 +1741,25 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                 switch (judgment.tag) {
                     case "object":
                         return objectHandle(cellId, defineObject(judgment.obType));
-                    case "morphism":
+                    case "morphism": {
+                        // Recover a list morphism's modality and endpoint `apply`
+                        // ops from the stored `App(apply, List(modality, …))`
+                        // endpoints, inverting the encoding in `encodeEndpoint`,
+                        // so the reconstructed def matches the one its
+                        // `MorphismDef` declares (see `cellsOf`).
+                        const domApply = endpointApplyOp(judgment.dom);
+                        const codApply = endpointApplyOp(judgment.cod);
                         return morphismHandle(cellId, {
                             tag: "morphism",
                             morType: judgment.morType,
-                            // Recover a list morphism's modality from the stored
-                            // tensor-product endpoints, inverting the encoding in
-                            // `encodeEndpoint`, so the reconstructed def matches
-                            // the one its `MorphismDef` declares (see `cellsOf`).
                             modality:
                                 endpointListModality(judgment.dom) ??
                                 endpointListModality(judgment.cod) ??
                                 undefined,
+                            domain: domApply ? { apply: domApply } : undefined,
+                            codomain: codApply ? { apply: codApply } : undefined,
                         });
+                    }
                     case "instantiation":
                         return instantiationHandle(cellId);
                     default:
