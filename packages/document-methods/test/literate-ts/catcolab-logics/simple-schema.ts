@@ -11,7 +11,7 @@ export const Mapping = defineMorphism({ tag: "Hom", content: Entity.obType });
 // they are declared explicitly (Entity -> AttrType).
 export const Attr = defineMorphism(
     { tag: "Basic", content: "Attr" },
-    { domObType: Entity.obType, codObType: AttrType.obType },
+    { domain: Entity.obType, codomain: AttrType.obType },
 );
 
 export const SimpleSchema = defineShape({

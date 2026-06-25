@@ -3,7 +3,7 @@
 A shape is defined from a compact specification of object and morphism types,
 built with `defineObject`/`defineMorphism`. A `Hom` morphism's endpoint object
 type and arity are read from its `MorType` structure; a `Basic` morphism records
-no endpoints in its literal, so it declares them with `defineMorphism(morType, { domObType, codObType })`.
+no endpoints in its literal, so it declares them with `defineMorphism(morType, { domain, codomain })`, passing each endpoint's `ObType`.
 
 <!-- verifier:prepend-to-following -->
 
@@ -17,7 +17,7 @@ const AttrType = defineObject({ tag: "Basic", content: "AttrType" });
 const Mapping = defineMorphism({ tag: "Hom", content: Entity.obType });
 const Attr = defineMorphism(
     { tag: "Basic", content: "Attr" },
-    { domObType: Entity.obType, codObType: AttrType.obType },
+    { domain: Entity.obType, codomain: AttrType.obType },
 );
 const Operation = defineMorphism({ tag: "Hom", content: AttrType.obType });
 
@@ -52,7 +52,7 @@ console.log("entities:", entities.map((cell) => cell.name).join(", "));
 console.log("operations:", operations.map((cell) => cell.name).join(", "));
 ```
 
-```txt
+```
 entities: Person, Company
 operations: uppercase
 ```

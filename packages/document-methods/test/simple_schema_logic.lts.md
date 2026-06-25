@@ -4,8 +4,8 @@ A shape declares a notebook's object and morphism types as tagged wrappers built
 with `defineObject`/`defineMorphism`. A `Hom` morphism's endpoint object type and
 arity are read from its `MorType` structure. A `Basic` morphism records no
 endpoints in its literal, so it must declare them with
-`defineMorphism(morType, { domObType, codObType })`; a bare `Basic` literal is not a
-`MorphismDef` and is a compile error.
+`defineMorphism(morType, { domain, codomain })`, passing each endpoint's
+`ObType`; a bare `Basic` literal is not a `MorphismDef` and is a compile error.
 
 <!-- verifier:prepend-to-following -->
 
@@ -22,7 +22,7 @@ const Mapping = defineMorphism({ tag: "Hom", content: Entity.obType });
 // an `Attr` goes from an `Entity` to an `AttrType`.
 const Attr = defineMorphism(
     { tag: "Basic", content: "Attr" },
-    { domObType: Entity.obType, codObType: AttrType.obType },
+    { domain: Entity.obType, codomain: AttrType.obType },
 );
 // `Hom(AttrType)`: an operation between attribute types.
 const Operation = defineMorphism({ tag: "Hom", content: AttrType.obType });
@@ -122,7 +122,7 @@ defineShape({
     coreTheory: SimpleSchema.coreTheory,
     objects: [Entity],
     morphisms: [
-        // @ts-expect-error A Basic morphism must be wrapped with defineMorphism(morType, { domObType, codObType }).
+        // @ts-expect-error A Basic morphism must be wrapped with defineMorphism(morType, { domain, codomain }).
         { tag: "Basic", content: "Attr" },
     ],
 });

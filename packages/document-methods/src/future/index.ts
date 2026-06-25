@@ -422,10 +422,15 @@ type MorTypeOf<Def extends MorphismDef> = Def extends MorphismDef<infer M> ? M :
  *   back as arrays. The operations and modalities live in the runtime
  *   `domain`/`codomain` fields; the modality is also carried in the phantom
  *   {@link ModalityBrand}.
- * - For any other morphism (e.g. a `Basic` morphism), the endpoint object types
- *   are not recorded in the literal, so they must be passed explicitly as a
- *   `{ domObType, codObType }` object; they are carried in the phantom {@link
- *   Endpoints} brand.
+ * - For any other morphism (e.g. a `Basic` morphism, such as a schema `Attr`),
+ *   the endpoint object types are not recorded in the literal, so each is
+ *   passed as the endpoint's `ObType` in the same `{ domain, codomain }`
+ *   options object, e.g. `{ domain: Entity.obType, codomain: AttrType.obType
+ *   }`; they are carried in the phantom {@link Endpoints} brand.
+ *
+ * The `{ domain, codomain }` options are thus unified across the `Basic` and
+ * list `Hom` cases: each endpoint is either an `ObType` (a single object of
+ * that type) or an `apply` definition `{ apply, modality }` (a list endpoint).
  *
  * Every result carries a {@link ModalityBrand} (`null` when no modality is
  * declared) so list and non-list morphisms are mutually non-assignable.
@@ -450,22 +455,29 @@ export function defineMorphism<
     const C extends ObType,
 >(
     morType: M,
-    endpoints: { domObType: D; codObType: C },
+    options: { domain: D; codomain: C },
 ): MorphismDef<M> & Endpoints<D, C> & ModalityBrand<null>;
 export function defineMorphism(
     morType: MorType,
     options?: {
-        domain?: MorEndpointMeta;
-        codomain?: MorEndpointMeta;
-        domObType?: ObType;
-        codObType?: ObType;
+        domain?: ObType | MorEndpointMeta;
+        codomain?: ObType | MorEndpointMeta;
     },
 ): MorphismDef {
+    // An endpoint is either an `ObType` (`{ tag, content }`) — a single object
+    // of that type, recorded only in the phantom {@link Endpoints} brand and so
+    // contributing no runtime metadata — or an `apply` definition (`{ apply,
+    // modality }`) for a list endpoint, whose `apply`/`modality` are the only
+    // fields the runtime reads (see {@link encodeEndpoint}).
+    const toMeta = (endpoint: ObType | MorEndpointMeta | undefined): MorEndpointMeta | undefined =>
+        endpoint && ("apply" in endpoint || "modality" in endpoint)
+            ? (endpoint as MorEndpointMeta)
+            : undefined;
     return {
         tag: "morphism",
         morType,
-        domain: options?.domain,
-        codomain: options?.codomain,
+        domain: toMeta(options?.domain),
+        codomain: toMeta(options?.codomain),
     };
 }
 
