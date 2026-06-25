@@ -200,16 +200,16 @@ pub(crate) fn lotka_volterra_simulation(
 /// Generates the PolynomialSystem for linear ODE dynamics.
 fn linear_ode_system(
     model: &DblModel,
-) -> Result<PolynomialSystem<QualifiedName, ode::Parameter<ode::LCCParameter>, i8>, String> {
+) -> Result<PolynomialSystem<QualifiedName, ode::Parameter<ode::LinearODEParameter>, i8>, String> {
     let realised_model = model.discrete()?;
-    let analysis = ode::LCCAnalysis::default();
+    let analysis = ode::LinearODEAnalysis::default();
     Ok(analysis.build_system(realised_model))
 }
 
 /// The analysis data for polynomial ODE equations.
 #[derive(Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct LCCEquationsData {
+pub struct LinearODEEquationsData {
     #[serde(rename = "trivialData")]
     trivial_data: bool,
 }
@@ -227,7 +227,7 @@ pub(crate) fn linear_ode_equations(model: &DblModel) -> Result<LatexEquations, S
 /// Simulates linear ODE equations.
 pub(crate) fn linear_ode_simulation(
     model: &DblModel,
-    data: ode::LCCProblemData,
+    data: ode::LinearODEProblemData,
 ) -> Result<ODEResultWithEquations, String> {
     let sys = linear_ode_system(model);
     let sys_extended_scalars = data.extend_scalars(sys?);
