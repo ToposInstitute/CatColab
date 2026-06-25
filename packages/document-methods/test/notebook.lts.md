@@ -148,6 +148,24 @@ object: B type: Object
 morphism: has as type tag: Hom
 ```
 
+`formalCells` yields only the formal judgment cells, excluding rich text.
+
+```ts
+console.log("all:", notebook.cells().length);
+console.log("formal:", notebook.formalCells().length);
+for (const cell of notebook.formalCells()) {
+    console.log("formal kind:", cell.kind.toString());
+}
+```
+
+```
+all: 4
+formal: 3
+formal kind: Symbol(object)
+formal kind: Symbol(object)
+formal kind: Symbol(morphism)
+```
+
 We can filter cells by their type, not just their kind and we provide some utilities to do so.
 
 <!-- verifier:reset -->

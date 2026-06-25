@@ -12,14 +12,11 @@
  *   2. Each id is labelled with `obGeneratorLabel(id)?.join(".")`.
  *   3. Typed text filters the list to substring matches.
  *   4. Selecting one edits the typed notebook; a `createResource` keyed on the
- *      notebook's cells re-validates reactively into a fresh elaborated model.
+ *      notebook's formal cells re-validates reactively into a fresh elaborated
+ *      model.
  */
 /* oxlint-disable unicorn/consistent-function-scoping */
-import {
-    createBinder,
-    type DocumentStore,
-    type ModelValidationResult,
-} from "catcolab-documents";
+import { createBinder, type DocumentStore, type ModelValidationResult } from "catcolab-documents";
 import { Attr, AttrType, Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
 import { createResource, createSignal, For, type Resource, Show } from "solid-js";
 import { createStore, produce, type SetStoreFunction, unwrap } from "solid-js/store";
@@ -119,11 +116,11 @@ describe("simple-schema completions consumer", () => {
         const [text, setText] = createSignal("");
 
         // The consumer component owns the reactive validation: a resource keyed
-        // on the notebook's cells re-elaborates on every edit, and the derived
-        // `model` accessor exposes its elaborated `DblModel`.
+        // on the notebook's formal cells re-elaborates on every edit, and the
+        // derived `model` accessor exposes its elaborated `DblModel`.
         function Consumer(props: { text: string }) {
             const [validation] = createResource(
-                () => notebook.cells(),
+                () => notebook.formalCells(),
                 () => notebook.validate(),
             );
             const model = (): DblModel | undefined => {

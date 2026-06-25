@@ -18,11 +18,7 @@
  * which the view re-renders.
  */
 /* oxlint-disable unicorn/consistent-function-scoping */
-import {
-    createBinder,
-    type DocumentStore,
-    type ModelValidationResult,
-} from "catcolab-documents";
+import { createBinder, type DocumentStore, type ModelValidationResult } from "catcolab-documents";
 import { Place, PetriNet, Transition } from "catcolab-logics/petri-net";
 import { createResource, For, type Resource, Show } from "solid-js";
 import { createStore, produce, type SetStoreFunction, unwrap } from "solid-js/store";

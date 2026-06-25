@@ -1246,6 +1246,11 @@ function attachAnalysisNotebook<TShape extends AnalysisShape, Handle>(
                 return analysisHandle(cellId, def);
             });
         },
+        formalCells(): Array<AnalysisCell> {
+            return impl
+                .cells()
+                .filter((cell) => cell.kind !== CellKind.RichText) as Array<AnalysisCell>;
+        },
         cellsOf(arg: RichTextType | AnalysisDef): Array<RichTextCell | AnalysisCell> {
             if (isRichTextType(arg)) {
                 return impl.cells().filter((cell) => cell.kind === CellKind.RichText);
@@ -1795,6 +1800,11 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                 }
             });
         },
+        formalCells(): Array<Exclude<NotebookCell, RichTextCell>> {
+            return impl.cells().filter((cell) => cell.kind !== CellKind.RichText) as Array<
+                Exclude<NotebookCell, RichTextCell>
+            >;
+        },
         cellsOf(
             arg: RichTextType | InstantiationType | ObjectDef | MorphismDef | AnyShape,
         ): Array<NotebookCell> {
@@ -2003,6 +2013,17 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = Document> = Up
      * AnalysisCell}.
      */
     cells(): Array<NotebookCell | AnalysisCellsOf<TShape>>;
+    /**
+     * Handles for the notebook's *formal* cells — every cell except rich-text —
+     * in notebook order. These are the cells backed by a formal judgment
+     * (object, morphism, instantiation, or analysis), i.e. the ones that
+     * contribute to {@link Notebook.validate}; rich-text cells are excluded.
+     *
+     * The element type is {@link Notebook.cells}' union with {@link
+     * RichTextCell} removed, so `cell.kind` never discriminates to {@link
+     * CellKind.RichText}.
+     */
+    formalCells(): Array<Exclude<NotebookCell | AnalysisCellsOf<TShape>, RichTextCell>>;
     /**
      * Handles for the cells whose object or morphism type is declared by the
      * given sub-shape, precisely typed by that shape: each of its declared
