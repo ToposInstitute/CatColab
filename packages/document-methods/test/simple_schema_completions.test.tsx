@@ -109,7 +109,7 @@ describe("simple-schema completions consumer", () => {
         let mutationDone: Promise<void> = Promise.resolve();
         const onSelect = (id: QualifiedName) => {
             mutationDone = (async () => {
-                const cell = notebook.cellsOf(AttrType).find((c) => c.id === id);
+                const cell = notebook.get(AttrType, id);
                 if (cell) {
                     attr.update({ to: cell });
                     const next = await notebook.validate();

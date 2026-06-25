@@ -163,7 +163,7 @@ const notebook = binder.createNotebook(SimpleSchema, { name: "Example schema" })
 const person = notebook.add(Entity, { name: "Person" });
 const company = notebook.add(Entity, { name: "Company" });
 
-notebook.add(Mapping, { name: "employer", from: person, to: company });
+const mapping = notebook.add(Mapping, { name: "employer", from: person, to: company });
 ```
 
 ```ts
@@ -212,6 +212,31 @@ console.log("mappings:", mappings.map((cell) => cell.name).join(", "));
 instantiations: ImportedSchema
 entities: Person, Company
 mappings: employer
+```
+
+## Getting a cell by id
+
+```ts
+const found = notebook.get(Entity, person.id);
+console.log("found:", found?.name);
+```
+
+```
+found: Person
+```
+
+```ts
+const missing = notebook.get(Entity, "00000000-0000-0000-0000-000000000000");
+console.log("missing:", missing);
+
+// `employer` is a mapping, not an entity.
+const wrongType = notebook.get(Entity, mapping.id);
+console.log("wrong type:", wrongType);
+```
+
+```
+missing: undefined
+wrong type: undefined
 ```
 
 ## Type safety

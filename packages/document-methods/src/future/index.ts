@@ -1831,6 +1831,12 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                 return false;
             });
         },
+        get(
+            arg: RichTextType | InstantiationType | ObjectDef | MorphismDef,
+            id: string,
+        ): NotebookCell | undefined {
+            return impl.cellsOf(arg).find((cell) => cell.id === id);
+        },
         add(
             type: unknown,
             args: {
@@ -2019,6 +2025,17 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = Document> = Up
     cellsOf<Def extends ObjectDef>(type: Def): Array<ObjectCell<Def>>;
     cellsOf<Def extends MorphismDef>(type: Def): Array<MorphismCell<Def>>;
     cellsOf<S extends AnyShape>(shape: S): Array<NotebookCell<S>>;
+    /**
+     * Handle for the single cell of the given type with the given id, or
+     * `undefined` if no such cell exists. The type selects the precise handle
+     * just as {@link Notebook.cellsOf} does, so a cell whose id matches but
+     * whose type differs is not returned.
+     */
+    get(type: RichTextType, id: string): RichTextCell | undefined;
+    get(type: InstantiationType, id: string): InstantiationCell<Handle> | undefined;
+    get<Def extends AnalysisDef>(type: Def, id: string): AnalysisCell<Def> | undefined;
+    get<Def extends ObjectDef>(type: Def, id: string): ObjectCell<Def> | undefined;
+    get<Def extends MorphismDef>(type: Def, id: string): MorphismCell<Def> | undefined;
     /**
      * Add a cell to the notebook. The kind of cell is selected by the first
      * argument:
