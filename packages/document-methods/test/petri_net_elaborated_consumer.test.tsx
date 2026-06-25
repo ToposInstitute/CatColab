@@ -73,7 +73,7 @@ describe("Petri-net elaborated-model consumer", () => {
     test("catcolab-documents, elaborated-model consumer", async () => {
         // Resolve a place's display label from the elaborated model, exactly as
         // the frontend does (`ob.label?.join(".")`).
-        
+
         function placeLabel(model: DblModel, id: QualifiedName): string {
             return model.obGeneratorLabel(id)?.join(".") ?? "?";
         }
