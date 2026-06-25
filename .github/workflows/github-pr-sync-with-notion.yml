@@ -21,4 +21,4 @@ jobs:
           notion_status_property: 'Status'      # Status property name (Status type, not Select)
           notion_status_value_done: 'Done'      # Status value when PR is merged
           notion_pr_property: 'GitHub PR'       # Property name for PR links (Rich text type)
-          pr_title_prefix: 'TASK'               # Prefix in PR title (e.g., TASK-123)
+          pr_title_prefix: 'OBEE'               # Prefix in PR title (e.g., TASK-123)
