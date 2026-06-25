@@ -75,7 +75,7 @@ mod tests {
     fn signed_polynomial_ode_latex_equations() {
         // The signed multicategory with objects `x`, `y`, and `zonk`, (unnamed) positive morphisms
         // `[x,y] -+-> z` and `q : z -+-> y`, and a negative morphism `negative : [x,x,y,z] ---> x`.
-        let model = example_signed_multicategory("x", "y", "zonk", "", "", "negative");
+        let model = example_signed_multicategory("x", "y", "zonk", "P", "", "negative");
         let system =
             ode::PolynomialODEAnalysis::default().build_system(model.modal_nonunital().unwrap());
         let equations =
@@ -238,7 +238,8 @@ mod tests {
 
     #[test]
     fn petri_net_unbalanced_pt_mass_action_latex_equations() {
-        // The Petri net with places "liquid", "solid", and "c", and one (unnamed) transition [liquid, c] -> [solid, c].
+        // The Petri net with places "liquid", "solid", and "c", and one transition
+        // `transition : [liquid, c] -> [solid, c]`.
         let model = catalytic_petri_net("liquid", "solid", "c", "");
         let system = ode::PetriNetMassActionAnalysis {
             mass_conservation_type: MassConservationType::Unbalanced(
@@ -253,15 +254,15 @@ mod tests {
         let expected = LatexEquations(vec![
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{liquid}".to_string()),
-                rhs: Latex("-\\kappa_{[\\text{liquid}, c] \\to [\\text{solid}, c]} \\cdot \\text{liquid} \\cdot c".to_string()),
+                rhs: Latex("-\\kappa_{\\text{transition}} \\cdot \\text{liquid} \\cdot c".to_string()),
             },
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{solid}".to_string()),
-                rhs: Latex("\\rho_{[\\text{liquid}, c] \\to [\\text{solid}, c]} \\cdot \\text{liquid} \\cdot c".to_string()),
+                rhs: Latex("\\rho_{\\text{transition}} \\cdot \\text{liquid} \\cdot c".to_string()),
             },
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} c".to_string()),
-                rhs: Latex("(\\rho_{[\\text{liquid}, c] \\to [\\text{solid}, c]} - \\kappa_{[\\text{liquid}, c] \\to [\\text{solid}, c]}) \\cdot \\text{liquid} \\cdot c".to_string()),
+                rhs: Latex("(\\rho_{\\text{transition}} - \\kappa_{[\\text{liquid}, c] \\to [\\text{solid}, c]}) \\cdot \\text{liquid} \\cdot c".to_string()),
             },
         ]);
         assert_eq!(equations, expected);
@@ -417,15 +418,17 @@ mod tests {
         ob_namespace.set_label(x, LabelSegment::Text(x_name.into()));
         ob_namespace.set_label(y, LabelSegment::Text(y_name.into()));
         ob_namespace.set_label(z, LabelSegment::Text(z_name.into()));
-        ob_namespace.set_label(p, LabelSegment::Text(p_name.into()));
-        ob_namespace.set_label(q, LabelSegment::Text(q_name.into()));
-        ob_namespace.set_label(n, LabelSegment::Text(n_name.into()));
+
+        let mut mor_namespace = Namespace::new_for_uuid();
+        mor_namespace.set_label(p, LabelSegment::Text(p_name.into()));
+        mor_namespace.set_label(q, LabelSegment::Text(q_name.into()));
+        mor_namespace.set_label(n, LabelSegment::Text(n_name.into()));
 
         DblModel {
             model: inner.into(),
             ty: None,
             ob_namespace,
-            mor_namespace: Namespace::new_for_uuid(),
+            mor_namespace,
         }
     }
 
@@ -472,13 +475,15 @@ mod tests {
         ob_namespace.set_label(x, LabelSegment::Text(source_name.into()));
         ob_namespace.set_label(y, LabelSegment::Text(target_name.into()));
         ob_namespace.set_label(c, LabelSegment::Text(catalyst_name.into()));
-        ob_namespace.set_label(t, LabelSegment::Text(transition_name.into()));
+
+        let mut mor_namespace = Namespace::new_for_uuid();
+        mor_namespace.set_label(t, LabelSegment::Text(transition_name.into()));
 
         DblModel {
             model: inner.into(),
             ty: None,
             ob_namespace,
-            mor_namespace: Namespace::new_for_uuid(),
+            mor_namespace,
         }
     }
 }
