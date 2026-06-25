@@ -1,10 +1,14 @@
 import { Show } from "solid-js";
 
 import { CheckboxField, FormGroup, SelectField } from "catcolab-ui-components";
-import type { MassActionEquationsData, RateGranularity } from "catlog-wasm";
+import type { MassActionEquationsData, MassActionProblemData, RateGranularity } from "catlog-wasm";
 
 /** Configuration of a mass-action analysis. */
-export type Config = MassActionEquationsData;
+export type Config = MassActionEquationsData | MassActionProblemData;
+
+function isMassActionProblemData (config: Config): config is MassActionProblemData {
+    return (config as MassActionProblemData).equationsData !== undefined
+}
 
 /** Form to configure a mass-action analysis. */
 export function MassActionConfigForm(props: {
@@ -12,10 +16,17 @@ export function MassActionConfigForm(props: {
     changeConfig: (f: (config: Config) => void) => void;
     enableGranularity: boolean;
 }) {
-    const massConservation = () => props.config.massConservationType;
+    let correctConfig: MassActionEquationsData;
+    if (isMassActionProblemData(props.config)) {
+        correctConfig = props.config.equationsData;
+    } else {
+        correctConfig = props.config;
+    }
+
+    const massConservation = () => correctConfig.massConservationType;
     const massConservationGranularity = () =>
-        props.config.massConservationType.type === "Unbalanced"
-            ? props.config.massConservationType.granularity
+        correctConfig.massConservationType.type === "Unbalanced"
+            ? correctConfig.massConservationType.granularity
             : undefined;
 
     return (
@@ -25,12 +36,18 @@ export function MassActionConfigForm(props: {
                 checked={massConservation().type === "Balanced"}
                 onChange={(evt) => {
                     props.changeConfig((content) => {
+                        let correctConfig: MassActionEquationsData;
+                        if (isMassActionProblemData(content)) {
+                            correctConfig = content.equationsData;
+                        } else {
+                            correctConfig = content;
+                        }
                         if (evt.currentTarget.checked) {
-                            content.massConservationType = {
+                            correctConfig.massConservationType = {
                                 type: "Balanced",
                             };
                         } else {
-                            content.massConservationType = {
+                            correctConfig.massConservationType = {
                                 type: "Unbalanced",
                                 granularity: "PerPlace",
                             };
@@ -44,8 +61,14 @@ export function MassActionConfigForm(props: {
                     value={massConservationGranularity() ?? "PerPlace"}
                     onChange={(evt) => {
                         props.changeConfig((content) => {
-                            if (content.massConservationType.type === "Unbalanced") {
-                                content.massConservationType.granularity = evt.currentTarget
+                            let correctConfig: MassActionEquationsData;
+                            if (isMassActionProblemData(content)) {
+                                correctConfig = content.equationsData;
+                            } else {
+                                correctConfig = content;
+                            }
+                            if (correctConfig.massConservationType.type === "Unbalanced") {
+                                correctConfig.massConservationType.granularity = evt.currentTarget
                                     .value as RateGranularity;
                             }
                         });
