@@ -13,13 +13,18 @@
  *
  * Editing still goes through the document (the typed notebook), exactly as in
  * the frontend, where the elaborated model is a derived, read-only artifact:
- * the mutation button edits a cell and then re-validates to obtain a fresh
- * elaborated model, which the view re-renders reactively.
+ * the mutation button only edits a cell, and a `createResource` keyed on the
+ * document re-validates reactively to obtain a fresh elaborated model, which
+ * the view re-renders.
  */
 /* oxlint-disable unicorn/consistent-function-scoping */
-import { createBinder, type DocumentStore } from "catcolab-documents";
+import {
+    createBinder,
+    type DocumentStore,
+    type ModelValidationResult,
+} from "catcolab-documents";
 import { Place, PetriNet, Transition } from "catcolab-logics/petri-net";
-import { createSignal, For } from "solid-js";
+import { createResource, createRoot, For, Show } from "solid-js";
 import { createStore, produce, type SetStoreFunction, unwrap } from "solid-js/store";
 import { render } from "solid-js/web";
 import { describe, expect, test } from "vitest";
@@ -154,52 +159,60 @@ describe("Petri-net elaborated-model consumer", () => {
         const c = notebook.add(Place, { name: "C" });
         notebook.add(Transition, { name: "fires", from: [a], to: [c] });
 
-        const initial = await notebook.validate();
-        expect(initial.tag).toBe("Valid");
-        if (initial.tag === "Illformed") {
-            throw new Error(initial.error);
-        }
+        // Validation runs reactively: the resource re-elaborates whenever the
+        // notebook's document changes. Re-elaboration is async (a notebook may
+        // resolve instantiations through the store), so `validated` exposes the
+        // in-flight promise for the test to await before re-asserting. The
+        // fetcher runs synchronously on creation, so `validated` is assigned
+        // before the first await below.
+        let validated!: Promise<ModelValidationResult>;
+        let disposeRoot!: () => void;
+        const model = createRoot((dispose) => {
+            disposeRoot = dispose;
+            const [validation] = createResource(
+                () => JSON.stringify(notebook.document),
+                () => (validated = notebook.validate()),
+            );
+            return (): DblModel | undefined => {
+                const result = validation();
+                return result && result.tag !== "Illformed" ? result.model : undefined;
+            };
+        });
 
-        const [model, setModel] = createSignal<DblModel>(initial.model);
+        expect((await validated).tag).toBe("Valid");
 
-        // The button edits the document, then re-validates to obtain a fresh
-        // elaborated model. Re-elaboration is async (a notebook may resolve
-        // instantiations through the store), so the test awaits this promise
-        // before re-asserting the rendered output.
-        let mutationDone: Promise<void> = Promise.resolve();
+        // The button only edits the document; the reactive resource above
+        // re-validates on its own, yielding a fresh elaborated model that the
+        // view re-renders.
         const runTestMutation = () => {
-            mutationDone = (async () => {
-                const m = model();
-                // Generically find a place not yet wired into any transition,
-                // reading only the elaborated structure.
-                const referenced = new Set<QualifiedName>();
-                for (const morId of m.morGenerators()) {
-                    const mor = m.morPresentation(morId);
-                    if (!mor) {
-                        continue;
-                    }
-                    for (const id of [...placeIds(mor.dom), ...placeIds(mor.cod)]) {
-                        referenced.add(id);
-                    }
+            const m = model();
+            if (!m) {
+                return;
+            }
+            // Generically find a place not yet wired into any transition,
+            // reading only the elaborated structure.
+            const referenced = new Set<QualifiedName>();
+            for (const morId of m.morGenerators()) {
+                const mor = m.morPresentation(morId);
+                if (!mor) {
+                    continue;
                 }
-                const inputId = m.obGenerators().find((id) => !referenced.has(id));
-                if (!inputId) {
-                    return;
+                for (const id of [...placeIds(mor.dom), ...placeIds(mor.cod)]) {
+                    referenced.add(id);
                 }
-                // An object generator's id is its object cell's id, so the
-                // generic choice maps straight back to a document cell to edit.
-                const place = notebook.cellsOf(Place).find((p) => p.id === inputId);
-                const transition = notebook.cellsOf(Transition).at(0);
-                if (!place || !transition) {
-                    return;
-                }
-                transition.update({ from: [...transition.from, place] });
-
-                const next = await notebook.validate();
-                if (next.tag !== "Illformed") {
-                    setModel(next.model);
-                }
-            })();
+            }
+            const inputId = m.obGenerators().find((id) => !referenced.has(id));
+            if (!inputId) {
+                return;
+            }
+            // An object generator's id is its object cell's id, so the generic
+            // choice maps straight back to a document cell to edit.
+            const place = notebook.cellsOf(Place).find((p) => p.id === inputId);
+            const transition = notebook.cellsOf(Transition).at(0);
+            if (!place || !transition) {
+                return;
+            }
+            transition.update({ from: [...transition.from, place] });
         };
 
         const container = document.createElement("div");
@@ -207,11 +220,15 @@ describe("Petri-net elaborated-model consumer", () => {
 
         const dispose = render(
             () => (
-                <ElaboratedModelView
-                    name={notebook.name}
-                    model={model()}
-                    onMutate={runTestMutation}
-                />
+                <Show when={model()}>
+                    {(model) => (
+                        <ElaboratedModelView
+                            name={notebook.name}
+                            model={model()}
+                            onMutate={runTestMutation}
+                        />
+                    )}
+                </Show>
             ),
             container,
         );
@@ -222,10 +239,11 @@ describe("Petri-net elaborated-model consumer", () => {
             '[aria-label="run test mutation"]',
         )!;
         appendButton.click();
-        await mutationDone;
+        await validated;
         expect(container.innerHTML).toBe(EXPECTED_AFTER_APPEND);
 
         dispose();
+        disposeRoot();
         container.remove();
     });
 });

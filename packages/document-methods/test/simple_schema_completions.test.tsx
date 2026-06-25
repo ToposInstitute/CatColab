@@ -11,13 +11,17 @@
  *      endpoint's object type (`AttrType` for an `Attr`'s codomain).
  *   2. Each id is labelled with `obGeneratorLabel(id)?.join(".")`.
  *   3. Typed text filters the list to substring matches.
- *   4. Selecting one edits the typed notebook, which is re-validated into a
- *      fresh elaborated model.
+ *   4. Selecting one edits the typed notebook; a `createResource` keyed on the
+ *      document re-validates reactively into a fresh elaborated model.
  */
 /* oxlint-disable unicorn/consistent-function-scoping */
-import { createBinder, type DocumentStore } from "catcolab-documents";
+import {
+    createBinder,
+    type DocumentStore,
+    type ModelValidationResult,
+} from "catcolab-documents";
 import { Attr, AttrType, Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
-import { createSignal, For } from "solid-js";
+import { createResource, createRoot, createSignal, For, Show } from "solid-js";
 import { createStore, produce, type SetStoreFunction, unwrap } from "solid-js/store";
 import { render } from "solid-js/web";
 import { describe, expect, test } from "vitest";
@@ -96,45 +100,56 @@ describe("simple-schema completions consumer", () => {
         notebook.add(AttrType, { name: "Boolean" });
         const attr = notebook.add(Attr, { name: "name", from: person, to: str });
 
-        const initial = await notebook.validate();
-        if (initial.tag === "Illformed") {
-            throw new Error(initial.error);
-        }
-
-        const [model, setModel] = createSignal<DblModel>(initial.model);
+        // Validation runs reactively: the resource re-elaborates whenever the
+        // notebook's document changes. The fetcher runs synchronously on
+        // creation, so `validated` is assigned before the first await below.
+        let validated!: Promise<ModelValidationResult>;
+        let disposeRoot!: () => void;
+        const model = createRoot((dispose) => {
+            disposeRoot = dispose;
+            const [validation] = createResource(
+                () => JSON.stringify(notebook.document),
+                () => (validated = notebook.validate()),
+            );
+            return (): DblModel | undefined => {
+                const result = validation();
+                return result && result.tag !== "Illformed" ? result.model : undefined;
+            };
+        });
         const [text, setText] = createSignal("");
 
-        // Selecting an id edits the morphism cell, then re-validates to get a
-        // fresh elaborated model (an object generator's id is its cell's id).
-        let mutationDone: Promise<void> = Promise.resolve();
+        // Selecting an id only edits the morphism cell (an object generator's id
+        // is its cell's id); the reactive resource above re-validates into a
+        // fresh elaborated model.
         const onSelect = (id: QualifiedName) => {
-            mutationDone = (async () => {
-                const cell = notebook.get(AttrType, id);
-                if (cell) {
-                    attr.update({ to: cell });
-                    const next = await notebook.validate();
-                    if (next.tag !== "Illformed") {
-                        setModel(next.model);
-                    }
-                }
-            })();
+            const cell = notebook.get(AttrType, id);
+            if (cell) {
+                attr.update({ to: cell });
+            }
         };
 
         const codomain = () => {
-            const cod = model().morPresentation(attr.id)?.cod;
-            return cod?.tag === "Basic" ? model().obGeneratorLabel(cod.content)?.join(".") : "?";
+            const m = model();
+            const cod = m?.morPresentation(attr.id)?.cod;
+            return cod?.tag === "Basic" ? m?.obGeneratorLabel(cod.content)?.join(".") : "?";
         };
+
+        expect((await validated).tag).not.toBe("Illformed");
 
         const container = document.createElement("div");
         document.body.appendChild(container);
         const dispose = render(
             () => (
-                <Completions
-                    model={model()}
-                    obType={AttrType.obType}
-                    text={text()}
-                    onSelect={onSelect}
-                />
+                <Show when={model()}>
+                    {(model) => (
+                        <Completions
+                            model={model()}
+                            obType={AttrType.obType}
+                            text={text()}
+                            onSelect={onSelect}
+                        />
+                    )}
+                </Show>
             ),
             container,
         );
@@ -157,10 +172,11 @@ describe("simple-schema completions consumer", () => {
             (li) => li.textContent === "Integer",
         )!;
         integer.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
-        await mutationDone;
+        await validated;
         expect(codomain()).toBe("Integer");
 
         dispose();
+        disposeRoot();
         container.remove();
     });
 });
