@@ -524,22 +524,6 @@ binder.loadNotebook(SimpleOlog, notebookData);
 
 ## Migrating between logics
 
-A notebook is bound to a single logic, but its document can be migrated to
-another logic. Migration mirrors the core: it transports the elaborated model
-along a theory morphism and re-types each cell, preserving cell ids, names, and
-morphism endpoints. Only the cell types change.
-
-`migrateTo` **mutates the notebook in place**: it rewrites the underlying
-document to the target theory rather than producing a copy. It returns a new
-notebook handle bound to the target logic over that same document. The original
-handle is now stale — its implicit types no longer matches the document it points at — so
-continue through the returned handle.
-
-Migrating in place means the store handle is preserved: the document keeps its
-identity across the migration. With the Automerge store, for example, the
-migrated notebook shares the same `DocHandle` and Automerge URL as before, so
-references held elsewhere (links, open editors, sync peers) still resolve.
-
 <!-- verifier:reset -->
 
 <!-- verifier:prepend-to-following -->
@@ -555,11 +539,6 @@ const a = olog.add(Type, { name: "A" });
 const b = olog.add(Type, { name: "B" });
 olog.add(Aspect, { name: "has", from: a, to: b });
 ```
-
-Migrating an olog to a schema turns each `Type` into an `Entity` and each
-`Aspect` into a `Mapping`. Names and endpoints are carried over unchanged.
-Because `migrateTo` mutates in place, the olog notebook's own document is now a
-schema; `migrateTo` hands back a schema-typed handle over it.
 
 ```ts
 const schema = await olog.migrateTo(SimpleSchema);
@@ -621,12 +600,4 @@ await olog.migrateTo(PetriNet);
 
 ```
 ❌ No migration defined from "simple-olog" to "petri-net".
-```
-
-```
-
-```
-
-```
-
 ```
