@@ -21,13 +21,27 @@ import {
     type ModelValidationResult,
 } from "catcolab-documents";
 import { Attr, AttrType, Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
-import { createResource, createSignal, For, Show } from "solid-js";
+import { createResource, createSignal, For, type Resource, Show } from "solid-js";
 import { createStore, produce, type SetStoreFunction, unwrap } from "solid-js/store";
 import { render } from "solid-js/web";
 import { describe, expect, test } from "vitest";
 
 import type { ModelDocument } from "catcolab-document-methods";
 import type { DblModel, ObType, QualifiedName } from "catlog-wasm";
+
+/** Test helper: wait until a resource has finished (re)loading. */
+async function settled(resource: Resource<unknown>) {
+    while (resource.loading) {
+        await new Promise((resolve) => setTimeout(resolve));
+    }
+}
+
+// Test hooks: a real consumer keeps the validation resource and the derived
+// model accessor component-local. `Consumer` assigns these so the test can
+// await re-validation (`globalValidation`) and read the elaborated model
+// (`globalModel`) from outside the component.
+let globalValidation!: Resource<ModelValidationResult>;
+let globalModel!: () => DblModel | undefined;
 
 type SolidStoreHandle = {
     doc: ModelDocument;
@@ -105,18 +119,14 @@ describe("simple-schema completions consumer", () => {
         const [text, setText] = createSignal("");
 
         // The consumer component owns the reactive validation: a resource keyed
-        // on the notebook's cells re-elaborates on every edit. It publishes the
-        // in-flight `validated` promise and the `model` accessor for the test to
-        // await and inspect; the fetcher runs synchronously on creation, so both
-        // are assigned as soon as the component renders.
-        let validated!: Promise<ModelValidationResult>;
-        let model!: () => DblModel | undefined;
+        // on the notebook's cells re-elaborates on every edit, and the derived
+        // `model` accessor exposes its elaborated `DblModel`.
         function Consumer(props: { text: string }) {
             const [validation] = createResource(
                 () => notebook.cells(),
-                () => (validated = notebook.validate()),
+                () => notebook.validate(),
             );
-            model = () => {
+            const model = (): DblModel | undefined => {
                 const result = validation();
                 return result && result.tag !== "Illformed" ? result.model : undefined;
             };
@@ -130,6 +140,11 @@ describe("simple-schema completions consumer", () => {
                     attr.update({ to: cell });
                 }
             };
+
+            // Test hooks only: expose the resource and model so the test can
+            // await re-validation and inspect the codomain from outside.
+            globalValidation = validation;
+            globalModel = model;
 
             return (
                 <Show when={model()}>
@@ -150,12 +165,13 @@ describe("simple-schema completions consumer", () => {
         const dispose = render(() => <Consumer text={text()} />, container);
 
         function codomain() {
-            const m = model();
+            const m = globalModel();
             const cod = m?.morPresentation(attr.id)?.cod;
             return cod?.tag === "Basic" ? m?.obGeneratorLabel(cod.content)?.join(".") : "?";
         }
 
-        expect((await validated).tag).not.toBe("Illformed");
+        await settled(globalValidation);
+        expect(globalValidation()?.tag).not.toBe("Illformed");
 
         // Empty text: every `AttrType` generator, in generator order.
         expect(container.innerHTML).toBe(
@@ -175,7 +191,7 @@ describe("simple-schema completions consumer", () => {
             (li) => li.textContent === "Integer",
         )!;
         integer.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
-        await validated;
+        await settled(globalValidation);
         expect(codomain()).toBe("Integer");
 
         dispose();

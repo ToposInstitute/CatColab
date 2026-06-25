@@ -24,13 +24,25 @@ import {
     type ModelValidationResult,
 } from "catcolab-documents";
 import { Place, PetriNet, Transition } from "catcolab-logics/petri-net";
-import { createResource, For, Show } from "solid-js";
+import { createResource, For, type Resource, Show } from "solid-js";
 import { createStore, produce, type SetStoreFunction, unwrap } from "solid-js/store";
 import { render } from "solid-js/web";
 import { describe, expect, test } from "vitest";
 
 import type { ModelDocument } from "catcolab-document-methods";
 import { collectProduct, type DblModel, type Ob, type QualifiedName } from "catlog-wasm";
+
+/** Test helper: wait until a resource has finished (re)loading. */
+async function settled(resource: Resource<unknown>) {
+    while (resource.loading) {
+        await new Promise((resolve) => setTimeout(resolve));
+    }
+}
+
+// Test hook: a real consumer keeps the validation resource component-local.
+// `Consumer` assigns this so the test can await re-validation from outside the
+// component.
+let globalValidation!: Resource<ModelValidationResult>;
 
 const EXPECTED_INITIAL =
     "<section><h1>Petri net</h1><ul>" +
@@ -162,20 +174,20 @@ describe("Petri-net elaborated-model consumer", () => {
         // The consumer component owns the reactive validation: a resource keyed
         // on the notebook's cells re-elaborates on every edit, and the view
         // re-renders from the fresh elaborated model. Re-elaboration is async (a
-        // notebook may resolve instantiations through the store), so the
-        // component publishes the in-flight promise through `validated` for the
-        // test to await before asserting; the fetcher runs synchronously on
-        // creation, so `validated` is assigned as soon as the component renders.
-        let validated!: Promise<ModelValidationResult>;
+        // notebook may resolve instantiations through the store).
         function Consumer() {
             const [validation] = createResource(
                 () => notebook.cells(),
-                () => (validated = notebook.validate()),
+                () => notebook.validate(),
             );
             const model = (): DblModel | undefined => {
                 const result = validation();
                 return result && result.tag !== "Illformed" ? result.model : undefined;
             };
+
+            // Test hook only: expose the resource so the test can await
+            // re-validation from outside the component.
+            globalValidation = validation;
 
             // The button only edits the document; the reactive resource above
             // re-validates on its own, yielding a fresh elaborated model that
@@ -228,14 +240,15 @@ describe("Petri-net elaborated-model consumer", () => {
         document.body.appendChild(container);
         const dispose = render(() => <Consumer />, container);
 
-        expect((await validated).tag).toBe("Valid");
+        await settled(globalValidation);
+        expect(globalValidation()?.tag).toBe("Valid");
         expect(container.innerHTML).toBe(EXPECTED_INITIAL);
 
         const appendButton = container.querySelector<HTMLButtonElement>(
             '[aria-label="run test mutation"]',
         )!;
         appendButton.click();
-        await validated;
+        await settled(globalValidation);
         expect(container.innerHTML).toBe(EXPECTED_AFTER_APPEND);
 
         dispose();
