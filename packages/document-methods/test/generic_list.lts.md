@@ -191,10 +191,10 @@ addListMorphism(justMorphisms);
 ```
 
 ```ts
-const entityObType = defineObject({ tag: "Basic", content: "Entity" });
+const EntityObj = defineObject({ tag: "Basic", content: "Entity" });
 
-const entityListMorType = defineMorphism(
-    { tag: "Hom", content: entityObType.obType },
+const EntityListMor = defineMorphism(
+    { tag: "Hom", content: EntityObj.obType },
     {
         domain: { apply: tensor, modality: "List" },
         codomain: { apply: tensor, modality: "List" },
@@ -202,14 +202,14 @@ const entityListMorType = defineMorphism(
 );
 
 const MultiObjectListShape = defineShape({
-    objects: [BasicObj, entityObType],
-    morphisms: [ListMor, entityListMorType],
+    objects: [BasicObj, EntityObj],
+    morphisms: [ListMor, EntityListMor],
 });
 
 function badAddListMorphism2(notebook: Notebook<typeof MultiObjectListShape, unknown>) {
     const a = notebook.add(BasicObj, { name: "A" });
     const b = notebook.add(BasicObj, { name: "B" });
-    const e = notebook.add(entityObType, { name: "E" });
+    const e = notebook.add(EntityObj, { name: "E" });
 
     notebook.add(ListMor, { name: "L1", from: [a, b], to: [b] });
     //@ts-expect-error We can't use an EntityObj with a ListMor
