@@ -29,10 +29,11 @@ impl fmt::Display for Latex {
 }
 
 /// An equation in Latex format with a left-hand side and a right-hand side.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
+#[derive(Clone)]
 pub struct LatexEquation {
     /// The left-hand side of the equation.
     pub lhs: Latex,
@@ -40,12 +41,25 @@ pub struct LatexEquation {
     pub rhs: Latex,
 }
 
+impl fmt::Display for LatexEquation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}  =  {}", self.lhs, self.rhs)
+    }
+}
+
 /// Symbolic equations in Latex format.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 pub struct LatexEquations(pub Vec<LatexEquation>);
+
+impl fmt::Debug for LatexEquations {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let eqns: Vec<String> = self.0.clone().into_iter().map(|eqn| format!("{}", eqn)).collect();
+        write!(f, "\n{}", eqns.join("\n"))
+    }
+}
 
 /// An object that can be rendered to Latex.
 pub trait ToLatex {
@@ -98,7 +112,7 @@ pub fn wrap_with_backslash_text(name: String) -> String {
     }
 }
 
-/// Display a single-object list [x] directly as `x`, but display any longer list as `[x, y ,z]`.
+/// Display a single-object list `[x]` directly as `x`, but display any longer list as `[x, y ,z]`.
 pub fn list_object_as_latex(vec: Vec<String>) -> String {
     if vec.len() > 1 {
         format!("[{}]", vec.join(", "))
