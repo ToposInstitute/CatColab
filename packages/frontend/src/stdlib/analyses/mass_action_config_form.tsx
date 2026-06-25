@@ -6,8 +6,8 @@ import type { MassActionEquationsData, MassActionProblemData, RateGranularity } 
 /** Configuration of a mass-action analysis. */
 export type Config = MassActionEquationsData | MassActionProblemData;
 
-function isMassActionProblemData (config: Config): config is MassActionProblemData {
-    return (config as MassActionProblemData).equationsData !== undefined
+function isMassActionProblemData(config: Config): config is MassActionProblemData {
+    return (config as MassActionProblemData).equationsData !== undefined;
 }
 
 /** Form to configure a mass-action analysis. */

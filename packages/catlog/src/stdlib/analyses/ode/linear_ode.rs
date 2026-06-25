@@ -98,8 +98,8 @@ impl
     /// A system of ODEs for building arbitrary LinearODE ODEs from CLDs.
     fn build_system_builder(
         &self,
-        model: &<LinearODESemantics as ODESemantics>::ModelType,
-    ) -> PolynomialODESystemBuilder<<LinearODESemantics as ODESemantics>::ParameterType> {
+        model: &DiscreteDblModel,
+    ) -> PolynomialODESystemBuilder<LinearODEParameter> {
         let mut builder = PolynomialODESystemBuilder::new();
 
         for var in model.ob_generators_with_type(&self.var_ob_type) {
@@ -180,11 +180,7 @@ impl ODESemanticsProblemData<<LinearODESemantics as ODESemantics>::ParameterType
 
     fn extend_scalars(
         &self,
-        sys: PolynomialSystem<
-            QualifiedName,
-            Parameter<<LinearODESemantics as ODESemantics>::ParameterType>,
-            i8,
-        >,
+        sys: PolynomialSystem<QualifiedName, Parameter<LinearODEParameter>, i8>,
     ) -> PolynomialSystem<QualifiedName, f32, i8> {
         let sys = sys.extend_scalars(|poly| {
             poly.eval(|param| match param {
@@ -206,7 +202,7 @@ mod test {
     use super::*;
     use crate::{
         dbl::model::MutDblModel,
-        latex::{LatexEquation, LatexEquations},
+        latex::{LatexEquation, LatexEquations, wrap_with_backslash_text},
         stdlib::{models::*, theories::*},
     };
 
@@ -254,19 +250,20 @@ mod test {
     fn to_latex() {
         let th = Rc::new(th_signed_category());
         let model = negative_feedback(th);
-        let sys = LinearODEAnalysis::default().build_system(&model);
-        // .extend_scalars(|param| param.map_variables(to_latex))
+        let system = LinearODEAnalysis::default().build_system(&model);
+        let equations =
+            system.to_latex_equations_with_map(|name| wrap_with_backslash_text(name.to_string()));
         let expected = LatexEquations(vec![
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string()),
-                rhs: Latex("-\\lambda_{negative} \\cdot y".to_string()),
+                rhs: Latex("-\\lambda_{\\text{negative}} \\cdot y".to_string()),
             },
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string()),
-                rhs: Latex("\\lambda_{positive} \\cdot x".to_string()),
+                rhs: Latex("\\lambda_{\\text{positive}} \\cdot x".to_string()),
             },
         ]);
-        assert_eq!(expected, sys.to_latex_equations());
+        assert_eq!(expected, equations);
     }
 
     // Numerical test.

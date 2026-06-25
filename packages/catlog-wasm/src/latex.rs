@@ -1,29 +1,11 @@
 //! Auxiliary structs and glue code for any LaTeX code being passed through analyses.
 
-use catlog::zero::QualifiedName;
+use catlog::{
+    latex::{list_object_as_latex, wrap_with_backslash_text},
+    zero::QualifiedName,
+};
 
 use super::model::DblModel;
-
-/// Wrap a string with a Latex text literal if it is longer than a single character.
-///
-/// Note that this is not a perfect solution, and is built on a lot of assumptions. Ideally, the
-/// frontend should allow users to mark names as Latex or not.
-fn wrap_with_backslash_text(name: String) -> String {
-    if name.chars().count() > 1 {
-        format!("\\text{{{name}}}")
-    } else {
-        name.to_string()
-    }
-}
-
-/// Display a single-object list [x] directly as "x", but display any longer list as "[x, y ,z]".
-fn list_object_as_latex(vec: Vec<String>) -> String {
-    if vec.len() > 1 {
-        format!("[{}]", vec.join(", "))
-    } else {
-        vec[0].to_string()
-    }
-}
 
 /// Creates a closure that formats object and morphism names for LaTeX output. When a morphism has a
 /// name (and thus label), it is used directly; when unnamed, the label falls back to the format

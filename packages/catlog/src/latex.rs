@@ -85,3 +85,24 @@ impl ToLatexWithMap for T {
         Latex(self.to_string())
     }
 }
+
+/// Wrap a string with a Latex text literal if it is longer than a single character.
+// FIXME: This is built on the assumption that any single letter should be rendered as a variable
+//        name, and any longer name should be a text literal. A more correct solution should allow
+//        us to write e.g. `$\pi_1$` as a name directly.
+pub fn wrap_with_backslash_text(name: String) -> String {
+    if name.chars().count() > 1 {
+        format!("\\text{{{name}}}")
+    } else {
+        name.to_string()
+    }
+}
+
+/// Display a single-object list [x] directly as `x`, but display any longer list as `[x, y ,z]`.
+pub fn list_object_as_latex(vec: Vec<String>) -> String {
+    if vec.len() > 1 {
+        format!("[{}]", vec.join(", "))
+    } else {
+        vec[0].to_string()
+    }
+}
