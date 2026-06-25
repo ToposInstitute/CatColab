@@ -73,14 +73,17 @@ describe("Petri-net elaborated-model consumer", () => {
     test("catcolab-documents, elaborated-model consumer", async () => {
         // Resolve a place's display label from the elaborated model, exactly as
         // the frontend does (`ob.label?.join(".")`).
-        const placeLabel = (model: DblModel, id: QualifiedName): string =>
-            model.obGeneratorLabel(id)?.join(".") ?? "?";
+        
+        function placeLabel(model: DblModel, id: QualifiedName): string {
+            return model.obGeneratorLabel(id)?.join(".") ?? "?";
+        }
 
         // Collect the place ids of a transition's input/output from the
         // elaborated morphism's tensor-product endpoint, mirroring the
         // `collectProduct(mor.dom)` usage in `petri_net_visualization.tsx`.
-        const placeIds = (ob: Ob): QualifiedName[] =>
-            collectProduct(ob).flatMap((o) => (o.tag === "Basic" ? [o.content] : []));
+        function placeIds(ob: Ob): QualifiedName[] {
+            return collectProduct(ob).flatMap((o) => (o.tag === "Basic" ? [o.content] : []));
+        }
 
         function ObListView(props: { model: DblModel; ids: QualifiedName[] }) {
             return <span>[{props.ids.map((id) => placeLabel(props.model, id)).join(", ")}]</span>;
