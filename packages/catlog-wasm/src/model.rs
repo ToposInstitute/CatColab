@@ -442,7 +442,7 @@ impl DblModel {
 
     /// Gets the list of labels for an object.
     ///
-    /// This works for both basic objects and list objects (e.g. "[x,y]" in a Petri net).
+    /// This works for both basic objects and list objects (e.g. `[x,y]` in a Petri net).
     pub fn get_ob_label(&self, ob: &Ob) -> Option<Vec<QualifiedLabel>> {
         match ob {
             Ob::Basic(s) => {

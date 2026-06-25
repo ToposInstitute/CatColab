@@ -25,9 +25,10 @@ use crate::{
         model::{FpDblModel, ModalDblModel, ModalOb, MutDblModel},
         theory::NonUnital,
     },
+    latex::{Latex, ToLatexWithMap},
     simulate::ode::PolynomialSystem,
     stdlib::analyses::ode::{
-        ODESemantics, ODESemanticsAnalysis, ODESemanticsProblemData, Parameter,
+        ODEParameterType, ODESemantics, ODESemanticsAnalysis, ODESemanticsProblemData, Parameter,
         PolynomialODESystemBuilder,
     },
     zero::{QualifiedName, alg::Polynomial, name, rig::Monomial},
@@ -38,11 +39,37 @@ pub struct PolynomialODESemantics;
 
 impl ODESemantics for PolynomialODESemantics {
     type ModelType = ModalDblModel<NonUnital>;
-    type ParameterType = QualifiedName;
+    type ParameterType = PolynomialODEParameter;
     type AnalysisType = PolynomialODEAnalysis;
     type EquationsDataType = ();
     type ProblemDataType = PolynomialODEProblemData;
 }
+
+/// Parameters come precisely from contributions.
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
+pub enum PolynomialODEParameter {
+    /// The parameter associated to a contribution.
+    Coefficient {
+        /// The contribution.
+        contribution: QualifiedName,
+    },
+}
+
+impl fmt::Display for PolynomialODEParameter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Self::Coefficient { contribution } = &self;
+        write!(f, "Coefficient({})", contribution)
+    }
+}
+
+impl ToLatexWithMap for PolynomialODEParameter {
+    fn to_latex_with_map<T: Fn(&QualifiedName) -> String>(&self, f: T) -> Latex {
+        let Self::Coefficient { contribution } = self;
+        Latex(format!("\\lambda_{{{}}}", f(contribution)))
+    }
+}
+
+impl ODEParameterType for PolynomialODEParameter {}
 
 /// Polynomial ODE analysis.
 ///
@@ -80,31 +107,41 @@ impl
 {
     fn build_system_builder(
         &self,
-        model: &<PolynomialODESemantics as ODESemantics>::ModelType,
-    ) -> PolynomialODESystemBuilder<<PolynomialODESemantics as ODESemantics>::ParameterType> {
+        model: &ModalDblModel<NonUnital>,
+    ) -> PolynomialODESystemBuilder<PolynomialODEParameter> {
         PolynomialODESystemBuilder::identity(model.clone())
     }
 }
 
 impl PolynomialODEAnalysis {
-    /// Creates a `PolynomialSystem` with symbolic coefficients of type `QualifiedName`.
+    /// Creates a `PolynomialSystem` with symbolic coefficients of type `PolynomialODEParameter`.
     pub fn build_system(
         &self,
         model: &ModalDblModel<NonUnital>,
-    ) -> PolynomialSystem<QualifiedName, Parameter<QualifiedName>, i8> {
+    ) -> PolynomialSystem<
+        QualifiedName,
+        Parameter<<PolynomialODESemantics as ODESemantics>::ParameterType>,
+        i8,
+    > {
         // The default is to build a system whose parameters are in bijective correspondence
         // with morphisms, given by using the `QualifiedName` of the morphism as the parameter
-        // generator. We thus build the graph of the identity function to pass as the HashMap
-        // of associated parameters.
-        let mut associated_parameters: HashMap<QualifiedName, QualifiedName> = HashMap::new();
+        // generator.
+        let mut associated_parameters: HashMap<QualifiedName, PolynomialODEParameter> =
+            HashMap::new();
         for mor in model.mor_generators_with_type(&self.positive_contribution_mor_type) {
-            associated_parameters.insert(mor.clone(), mor.clone());
+            associated_parameters.insert(
+                mor.clone(),
+                PolynomialODEParameter::Coefficient { contribution: mor.clone() },
+            );
         }
         for mor in model.mor_generators_with_type(&self.negative_contribution_mor_type) {
-            associated_parameters.insert(mor.clone(), mor.clone());
+            associated_parameters.insert(
+                mor.clone(),
+                PolynomialODEParameter::Coefficient { contribution: mor.clone() },
+            );
         }
 
-        self.build_system_custom_parameters::<QualifiedName>(model, associated_parameters)
+        self.build_system_custom_parameters::<PolynomialODEParameter>(model, associated_parameters)
     }
 
     /// Creates a `PolynomialSystem` with symbolic coefficients of some generic type.
@@ -210,7 +247,11 @@ impl ODESemanticsProblemData<<PolynomialODESemantics as ODESemantics>::Parameter
         >,
     ) -> PolynomialSystem<QualifiedName, f32, i8> {
         let sys = sys.extend_scalars(|poly| {
-            poly.eval(|mor| self.coefficients.get(mor).cloned().unwrap_or_default())
+            poly.eval(|mor| match mor {
+                PolynomialODEParameter::Coefficient { contribution } => {
+                    self.coefficients.get(contribution).cloned().unwrap_or_default()
+                }
+            })
         });
 
         sys.normalize()
@@ -224,42 +265,44 @@ mod tests {
 
     use super::*;
     use crate::{
-        latex::{Latex, LatexEquation, LatexEquations},
+        latex::{Latex, LatexEquation, LatexEquations, wrap_with_backslash_text},
         stdlib::{models::*, theories::*},
         tt,
     };
 
     /// (Unsigned) Lotka-Volterra dynamics on a two-level model.
     #[test]
-    fn unsigned_lotka_volterra_equations() {
+    fn polynomial_ode_unsigned_lotka_volterra_equations() {
         let th = Rc::new(th_polynomial_ode_system());
         let model = unsigned_lotka_volterra_dynamics(th);
         let sys = PolynomialODEAnalysis::default().build_system(&model);
         let expected = expect!([r#"
-            dA = A_growth A + BA_interaction A B
-            dB = AB_interaction A B + B_growth B + CB_interaction B C
-            dC = BC_interaction B C + C_growth C
+            dA = Coefficient(A_growth) A + Coefficient(BA_interaction) A B
+            dB = Coefficient(AB_interaction) A B + Coefficient(B_growth) B + Coefficient(CB_interaction) B C
+            dC = Coefficient(BC_interaction) B C + Coefficient(C_growth) C
         "#]);
         expected.assert_eq(&sys.to_string());
     }
 
     /// Lotka-Volterra dynamics on a two-level model with LaTeX.
     #[test]
-    fn lotka_volterra_equations_latex() {
+    fn polynomial_ode_lotka_volterra_equations_latex() {
         let th = Rc::new(th_signed_polynomial_ode_system());
         let model = signed_lotka_volterra_dynamics(th);
-        let sys = PolynomialODEAnalysis::default().build_system(&model);
+        let system = PolynomialODEAnalysis::default().build_system(&model);
+        let equations =
+            system.to_latex_equations_with_map(|name| wrap_with_backslash_text(name.to_string()));
         let expected = LatexEquations(vec![
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} A".to_string()),
-                rhs: Latex("A_growth \\cdot A - BA_interaction \\cdot A \\cdot B".to_string()),
+                rhs: Latex("\\lambda_{\\text{A_growth}} \\cdot A - \\lambda_{\\text{BA_interaction}} \\cdot A \\cdot B".to_string()),
             },
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} B".to_string()),
-                rhs: Latex("AB_interaction \\cdot A \\cdot B + B_growth \\cdot B".to_string()),
+                rhs: Latex("\\lambda_{\\text{AB_interaction}} \\cdot A \\cdot B + \\lambda_{\\text{B_growth}} \\cdot B".to_string()),
             },
         ]);
-        assert_eq!(expected, sys.to_latex_equations());
+        assert_eq!(expected, equations);
     }
 
     /// DoubleTT elaboration from text.
@@ -280,9 +323,9 @@ mod tests {
         let model = model.unwrap().as_modal_non_unital().unwrap();
         let sys = PolynomialODEAnalysis::default().build_system(&model);
         let expected = expect!([r#"
-            dX = h A
-            dY = g X^2
-            dA = f X Y^2
+            dX = Coefficient(h) A
+            dY = Coefficient(g) X^2
+            dA = Coefficient(f) X Y^2
         "#]);
         expected.assert_eq(&sys.to_string());
     }

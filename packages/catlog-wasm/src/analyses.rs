@@ -60,7 +60,7 @@ mod tests {
     use crate::model::{DblModel, tests::backward_link};
     use crate::theories::ThSignedCategory;
     use catcolab_document_types::v2::{MorDecl, MorType, Ob, ObDecl, ObType};
-    use catlog::dbl::modal::{List, ModalMorType, ModalOb, ModalObType};
+    use catlog::dbl::modal::{List, ModalMorType, ModalOb, ModalObType, ModeApp};
     use catlog::dbl::model::{ModalDblModel, MutDblModel};
     use catlog::latex::{Latex, LatexEquation, LatexEquations};
     use catlog::stdlib::{
@@ -71,7 +71,36 @@ mod tests {
     use std::rc::Rc;
     use uuid::Uuid;
 
-    // TODO: test for polynomial_ode_simulation
+    #[test]
+    fn signed_polynomial_ode_latex_equations() {
+        // The signed multicategory with objects `x`, `y`, and `zonk`, (unnamed) positive morphisms
+        // `[x,y] -+-> z` and `q : z -+-> y`, and a negative morphism `negative : [x,x,y,z] ---> x`.
+        let model = example_signed_multicategory("x", "y", "zonk", "", "", "negative");
+        let system =
+            ode::PolynomialODEAnalysis::default().build_system(model.modal_nonunital().unwrap());
+        let equations =
+            ode_semantics_equations::<ode::PolynomialODESemantics>(&model, system).unwrap();
+
+        let expected = LatexEquations(vec![
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string()),
+                rhs: Latex(
+                    "-\\lambda_{\\text{negative}} \\cdot x^2 \\cdot y \\cdot \\text{zonk}"
+                        .to_string(),
+                ),
+            },
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string()),
+                rhs: Latex("\\lambda_{\\text{zonk} \\to y} \\cdot \\text{zonk}".to_string()),
+            },
+            LatexEquation {
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{zonk}".to_string()),
+                rhs: Latex("\\lambda_{[x,y] \\to \\text{zonk}} \\cdot x \\cdot y".to_string()),
+            },
+        ]);
+
+        assert_eq!(equations, expected);
+    }
 
     #[test]
     fn cld_lotka_volterra_latex_equations() {
@@ -174,7 +203,7 @@ mod tests {
 
     #[test]
     fn petri_net_balanced_mass_action_latex_equations() {
-        // The Petri net with places "liquid", "solid", and "c", and one (unnamed) transition [liquid, c] -> [solid, c].
+        // The Petri net with places `liquid`, `solid`, and `c`, and one (unnamed) transition `[liquid, c] -> [solid, c]`.
         let model = catalytic_petri_net("liquid", "solid", "c", "");
         let system = ode::PetriNetMassActionAnalysis {
             mass_conservation_type: MassConservationType::Balanced,
@@ -322,6 +351,82 @@ mod tests {
         );
 
         model
+    }
+
+    /// Construct a signed multicategory with objects `x, y, z`, positive morphisms `p : [x,y] -+-> z`
+    /// and `q : z -+-> y`, and negative morphism `n : [x,x,y,z] ---> x`.
+    fn example_signed_multicategory(
+        x_name: &str,
+        y_name: &str,
+        z_name: &str,
+        p_name: &str,
+        q_name: &str,
+        n_name: &str,
+    ) -> DblModel {
+        let th = Rc::new(theories::th_signed_polynomial_ode_system());
+        let ob_type = ModalObType::new(("State").into());
+        let pos_mor_type: ModalMorType = ModeApp::new(("Contribution").into()).into();
+        let neg_mor_type: ModalMorType = ModeApp::new(("NegativeContribution").into()).into();
+
+        let mut inner = ModalDblModel::new(th);
+
+        let [x, y, z, p, q, n] = [
+            Uuid::now_v7(),
+            Uuid::now_v7(),
+            Uuid::now_v7(),
+            Uuid::now_v7(),
+            Uuid::now_v7(),
+            Uuid::now_v7(),
+        ];
+
+        inner.add_ob(x.into(), ob_type.clone());
+        inner.add_ob(y.into(), ob_type.clone());
+        inner.add_ob(z.into(), ob_type.clone());
+
+        inner.add_mor(
+            p_name.into(),
+            ModalOb::List(
+                List::Symmetric,
+                vec![ModalOb::Generator(x.into()), ModalOb::Generator(y.into())],
+            ),
+            ModalOb::Generator(z.into()),
+            pos_mor_type.clone(),
+        );
+        inner.add_mor(
+            q_name.into(),
+            ModalOb::List(List::Symmetric, vec![ModalOb::Generator(z.into())]),
+            ModalOb::Generator(y.into()),
+            pos_mor_type.clone(),
+        );
+        inner.add_mor(
+            n_name.into(),
+            ModalOb::List(
+                List::Symmetric,
+                vec![
+                    ModalOb::Generator(x.into()),
+                    ModalOb::Generator(x.into()),
+                    ModalOb::Generator(y.into()),
+                    ModalOb::Generator(z.into()),
+                ],
+            ),
+            ModalOb::Generator(x.into()),
+            neg_mor_type.clone(),
+        );
+
+        let mut ob_namespace = Namespace::new_for_uuid();
+        ob_namespace.set_label(x, LabelSegment::Text(x_name.into()));
+        ob_namespace.set_label(y, LabelSegment::Text(y_name.into()));
+        ob_namespace.set_label(z, LabelSegment::Text(z_name.into()));
+        ob_namespace.set_label(p, LabelSegment::Text(p_name.into()));
+        ob_namespace.set_label(q, LabelSegment::Text(q_name.into()));
+        ob_namespace.set_label(n, LabelSegment::Text(n_name.into()));
+
+        DblModel {
+            model: inner.into(),
+            ty: None,
+            ob_namespace,
+            mor_namespace: Namespace::new_for_uuid(),
+        }
     }
 
     /// Construct a Petri net representing a catalytic transition [x,c] -> [y,c].

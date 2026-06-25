@@ -111,8 +111,8 @@ impl
     /// and [our paper on regulatory networks](crate::refs::RegNets).
     fn build_system_builder(
         &self,
-        model: &<LotkaVolterraSemantics as ODESemantics>::ModelType,
-    ) -> PolynomialODESystemBuilder<<LotkaVolterraSemantics as ODESemantics>::ParameterType> {
+        model: &DiscreteDblModel,
+    ) -> PolynomialODESystemBuilder<LotkaVolterraParameter> {
         let mut builder = PolynomialODESystemBuilder::new();
 
         for var in model.ob_generators_with_type(&self.var_ob_type) {
@@ -209,11 +209,7 @@ impl ODESemanticsProblemData<<LotkaVolterraSemantics as ODESemantics>::Parameter
 
     fn extend_scalars(
         &self,
-        sys: PolynomialSystem<
-            QualifiedName,
-            Parameter<<LotkaVolterraSemantics as ODESemantics>::ParameterType>,
-            i8,
-        >,
+        sys: PolynomialSystem<QualifiedName, Parameter<LotkaVolterraParameter>, i8>,
     ) -> PolynomialSystem<QualifiedName, f32, i8> {
         let sys = sys.extend_scalars(|poly| {
             poly.eval(|param| match param {
@@ -238,7 +234,7 @@ mod test {
     use super::*;
     use crate::{
         dbl::model::MutDblModel,
-        latex::{LatexEquation, LatexEquations},
+        latex::{LatexEquation, LatexEquations, wrap_with_backslash_text},
         stdlib::{models::*, theories::*},
     };
 
@@ -286,18 +282,20 @@ mod test {
     fn to_latex() {
         let th = Rc::new(th_signed_category());
         let model = negative_feedback(th);
-        let sys = LotkaVolterraAnalysis::default().build_system(&model);
+        let system = LotkaVolterraAnalysis::default().build_system(&model);
+        let equations =
+            system.to_latex_equations_with_map(|name| wrap_with_backslash_text(name.to_string()));
         let expected = LatexEquations(vec![
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string()),
-                rhs: Latex("g_{x} \\cdot x - k_{negative} \\cdot x \\cdot y".to_string()),
+                rhs: Latex("g_{x} \\cdot x - k_{\\text{negative}} \\cdot x \\cdot y".to_string()),
             },
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string()),
-                rhs: Latex("k_{positive} \\cdot x \\cdot y + g_{y} \\cdot y".to_string()),
+                rhs: Latex("k_{\\text{positive}} \\cdot x \\cdot y + g_{y} \\cdot y".to_string()),
             },
         ]);
-        assert_eq!(expected, sys.to_latex_equations());
+        assert_eq!(expected, equations);
     }
 
     // Numerical test.

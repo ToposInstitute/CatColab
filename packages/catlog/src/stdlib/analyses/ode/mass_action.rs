@@ -221,9 +221,8 @@ impl
 {
     fn build_system_builder(
         &self,
-        model: &<PetriNetMassActionSemantics as ODESemantics>::ModelType,
-    ) -> PolynomialODESystemBuilder<<PetriNetMassActionSemantics as ODESemantics>::ParameterType>
-    {
+        model: &ModalDblModel<Unital>,
+    ) -> PolynomialODESystemBuilder<MassActionParameter> {
         let mut builder = PolynomialODESystemBuilder::new();
 
         for place in model.ob_generators_with_type(&self.place_ob_type) {
@@ -358,9 +357,8 @@ impl
 {
     fn build_system_builder(
         &self,
-        model: &<StockFlowMassActionSemantics as ODESemantics>::ModelType,
-    ) -> PolynomialODESystemBuilder<<StockFlowMassActionSemantics as ODESemantics>::ParameterType>
-    {
+        model: &DiscreteTabModel,
+    ) -> PolynomialODESystemBuilder<MassActionParameter> {
         let mut builder = PolynomialODESystemBuilder::new();
 
         for stock in model.ob_generators_with_type(&self.stock_ob_type) {
