@@ -1,29 +1,141 @@
-//! Constant-coefficient linear first-order ODE analysis of models.
+//! Linear constant-coefficient first-order ODE analysis of models.
 //!
-//! The main entry point for this module is
-//! [`linear_ode_analysis`](SignedCoefficientBuilder::linear_ode_analysis).
+//! This follows the structure of [`ode::ode_semantics`], implementing `ODESemantics` for the struct
+//! `LinearODESemantics`.
+//!
+//! [`ode::ode_semantics`]: crate::stdlib::analyses::ode::ode_semantics
 
 use std::collections::HashMap;
-use std::hash::Hash;
-use std::ops::Add;
-
-use indexmap::IndexMap;
-use itertools::Itertools;
-use nalgebra::{DMatrix, DVector};
-use num_traits::Zero;
+use std::fmt;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
-use super::{ODEAnalysis, Parameter, SignedCoefficientBuilder};
-use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
-use crate::{
-    dbl::model::DiscreteDblModel,
-    one::QualifiedPath,
-    zero::{QualifiedName, rig::Monomial},
+use super::Parameter;
+use crate::dbl::model::{FpDblModel, MutDblModel};
+use crate::one::Path;
+use crate::simulate::ode::PolynomialSystem;
+use crate::stdlib::analyses::ode::ode_semantics::{
+    ContributionSign, ODEParameterType, ODESemantics, ODESemanticsAnalysis,
+    ODESemanticsProblemData, PolynomialODESystemBuilder,
 };
+use crate::zero::name;
+use crate::{dbl::model::DiscreteDblModel, one::QualifiedPath, zero::QualifiedName};
+
+/// Implementing LinearODE as an ODE semantics for models of type `DiscreteDblModel`.
+pub struct LinearODESemantics;
+
+impl ODESemantics for LinearODESemantics {
+    type ModelType = DiscreteDblModel;
+    type ParameterType = LinearODEParameter;
+    type AnalysisType = LinearODEAnalysis;
+    type ProblemDataType = LinearODEProblemData;
+}
+
+/// Parameters in the linear equations correspond only to morphisms.
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
+pub enum LinearODEParameter {
+    /// The parameter associated to a morphism.
+    Parameter {
+        /// The morphism.
+        morphism: QualifiedName,
+    },
+}
+
+impl fmt::Display for LinearODEParameter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Parameter { morphism } => {
+                write!(f, "Parameter({})", morphism)
+            }
+        }
+    }
+}
+
+impl ODEParameterType for LinearODEParameter {}
+
+/// Linear ODE analysis for causal loop diagrams (CLDs).
+pub struct LinearODEAnalysis {
+    /// Object type for variables.
+    pub var_ob_type: QualifiedName,
+    /// Morphism type for positive links.
+    pub pos_link_type: QualifiedPath,
+    /// Morphism type for negative links.
+    pub neg_link_type: QualifiedPath,
+}
+
+impl Default for LinearODEAnalysis {
+    fn default() -> Self {
+        let ob_type = name("Object");
+        Self {
+            var_ob_type: ob_type.clone(),
+            pos_link_type: Path::Id(ob_type.clone()),
+            neg_link_type: Path::single(name("Negative")),
+        }
+    }
+}
+
+impl
+    ODESemanticsAnalysis<
+        <LinearODESemantics as ODESemantics>::ModelType,
+        <LinearODESemantics as ODESemantics>::ParameterType,
+    > for LinearODEAnalysis
+{
+    /// Creates a linear system with symbolic rate coefficients.
+    ///
+    /// A system of ODEs for building arbitrary LinearODE ODEs from CLDs.
+    fn build_system_builder(
+        &self,
+        model: &<LinearODESemantics as ODESemantics>::ModelType,
+    ) -> PolynomialODESystemBuilder<<LinearODESemantics as ODESemantics>::ParameterType> {
+        let mut builder = PolynomialODESystemBuilder::new();
+
+        for var in model.ob_generators_with_type(&self.var_ob_type) {
+            // For each object, we create a variable.
+            builder.add_variable(var.clone());
+        }
+
+        for mor in model.mor_generators_with_type(&self.pos_link_type) {
+            let (Some(dom), Some(cod)) = (model.get_dom(&mor), model.get_cod(&mor)) else {
+                continue;
+            };
+
+            // The morphism
+            //   f: x -> y
+            // becomes the contribution
+            //   \dot{y} += Parameter_f x
+            builder.add_contribution(
+                mor.clone(),
+                cod.clone(),
+                ContributionSign::Positive,
+                LinearODEParameter::Parameter { morphism: mor },
+                [dom.clone()],
+            );
+        }
+
+        for mor in model.mor_generators_with_type(&self.neg_link_type) {
+            let (Some(dom), Some(cod)) = (model.get_dom(&mor), model.get_cod(&mor)) else {
+                continue;
+            };
+
+            // The morphism
+            //   f: x -> y
+            // becomes the contribution
+            //   \dot{y} -= Parameter_f x
+            builder.add_contribution(
+                mor.clone(),
+                cod.clone(),
+                ContributionSign::Negative,
+                LinearODEParameter::Parameter { morphism: mor },
+                [dom.clone()],
+            );
+        }
+
+        builder
+    }
+}
 
 /// Data defining a linear ODE problem for a model.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -45,73 +157,34 @@ pub struct LinearODEProblemData {
     duration: f32,
 }
 
-/// Construct a linear (first-order) dynamical system;
-/// a semantics for causal loop diagrams.
-pub fn linear_polynomial_system<Var, Coef>(
-    vars: &[Var],
-    coefficients: DMatrix<Coef>,
-) -> PolynomialSystem<Var, Coef, u8>
-where
-    Var: Clone + Hash + Ord,
-    Coef: Clone + Add<Output = Coef> + Zero,
+impl ODESemanticsProblemData<<LinearODESemantics as ODESemantics>::ParameterType>
+    for LinearODEProblemData
 {
-    let system = PolynomialSystem {
-        components: coefficients
-            .row_iter()
-            .zip(vars)
-            .map(|(row, i)| {
-                (
-                    i.clone(),
-                    row.iter()
-                        .zip(vars)
-                        .map(|(a, j)| (a.clone(), Monomial::generator(j.clone())))
-                        .collect(),
-                )
-            })
-            .collect(),
-    };
-    system.normalize()
-}
-
-impl SignedCoefficientBuilder<QualifiedName, QualifiedPath> {
-    /// Linear ODE analysis for a model of a double theory.
-    ///
-    /// This analysis is a special case of linear ODE analysis for *extended* causal
-    /// loop diagrams but can serve as a simple/naive semantics for causal loop
-    /// diagrams, hopefully useful for toy models and demonstration purposes.
-    pub fn linear_ode_analysis(
-        &self,
-        model: &DiscreteDblModel,
-        data: LinearODEProblemData,
-    ) -> ODEAnalysis<NumericalPolynomialSystem<u8>> {
-        let (system, ob_index) = self.linear_ode_system(model);
-        let n = ob_index.len();
-
-        let initial_values = ob_index
-            .keys()
-            .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
-        let x0 = DVector::from_iterator(n, initial_values);
-
-        let system = system
-            .extend_scalars(|poly| {
-                poly.eval(|id| data.coefficients.get(id).copied().unwrap_or_default())
-            })
-            .to_numerical();
-        let problem = ODEProblem::new(system, x0).end_time(data.duration);
-        ODEAnalysis::new(problem, ob_index)
+    fn initial_values(&self) -> HashMap<QualifiedName, f32> {
+        self.initial_values.clone()
     }
 
-    /// Linear ODE system for a model of a double theory.
-    pub fn linear_ode_system(
+    fn duration(&self) -> f32 {
+        self.duration
+    }
+
+    fn extend_scalars(
         &self,
-        model: &DiscreteDblModel,
-    ) -> (
-        PolynomialSystem<QualifiedName, Parameter<QualifiedName>, u8>,
-        IndexMap<QualifiedName, usize>,
-    ) {
-        let (matrix, ob_index) = self.build_matrix(model);
-        let system = linear_polynomial_system(&ob_index.keys().cloned().collect_vec(), matrix);
-        (system, ob_index)
+        sys: PolynomialSystem<
+            QualifiedName,
+            Parameter<<LinearODESemantics as ODESemantics>::ParameterType>,
+            i8,
+        >,
+    ) -> PolynomialSystem<QualifiedName, f32, i8> {
+        let sys = sys.extend_scalars(|poly| {
+            poly.eval(|param| match param {
+                LinearODEParameter::Parameter { morphism } => {
+                    self.coefficients.get(morphism).cloned().unwrap_or_default()
+                }
+            })
+        });
+
+        sys.normalize()
     }
 }
 
@@ -121,43 +194,89 @@ mod test {
     use std::rc::Rc;
 
     use super::*;
-    use crate::stdlib;
-    use crate::{one::Path, zero::name};
+    use crate::{
+        dbl::model::MutDblModel,
+        simulate::ode::LatexEquation,
+        stdlib::{models::*, theories::*},
+    };
 
-    fn builder() -> SignedCoefficientBuilder<QualifiedName, QualifiedPath> {
-        SignedCoefficientBuilder::new(name("Object"))
-            .add_positive(Path::Id(name("Object")))
-            .add_negative(Path::single(name("Negative")))
-    }
+    // Symbolic tests.
 
     #[test]
-    fn negative_feedback_symbolic() {
-        let th = Rc::new(stdlib::theories::th_signed_category());
-        let neg_feedback = stdlib::models::negative_feedback(th);
-        let (sys, _) = builder().linear_ode_system(&neg_feedback);
-        let expected = expect![[r#"
-            dx = -negative y
-            dy = positive x
-        "#]];
+    fn predator_prey_symbolic() {
+        let th = Rc::new(th_signed_category());
+        let model = negative_feedback(th);
+        let sys = LinearODEAnalysis::default().build_system(&model);
+        let expected = expect!([r#"
+            dx = -Parameter(negative) y
+            dy = Parameter(positive) x
+        "#]);
         expected.assert_eq(&sys.to_string());
     }
 
     #[test]
-    fn negative_feedback_numerical() {
-        let th = Rc::new(stdlib::theories::th_signed_category());
-        let neg_feedback = stdlib::models::negative_feedback(th);
+    fn complicated_symbolic() {
+        let th = Rc::new(th_signed_category());
+        let mut model = DiscreteDblModel::new(th);
+        model.add_ob(name("a"), name("Object"));
+        model.add_ob(name("b"), name("Object"));
+        model.add_ob(name("c"), name("Object"));
+        model.add_ob(name("d"), name("Object"));
+        model.add_mor(name("f"), name("a"), name("b"), Path::Id(name("Object")));
+        model.add_mor(name("g"), name("b"), name("a"), Path::Id(name("Object")));
+        model.add_mor(name("h"), name("b"), name("a"), name("Negative").into());
+        model.add_mor(name("i"), name("a"), name("c"), name("Negative").into());
+        model.add_mor(name("j"), name("c"), name("d"), Path::Id(name("Object")));
+        model.add_mor(name("k"), name("d"), name("b"), name("Negative").into());
+        let sys = LinearODEAnalysis::default().build_system(&model);
+        let expected = expect!([r#"
+            da = (Parameter(g) - Parameter(h)) b
+            db = Parameter(f) a - Parameter(k) d
+            dc = -Parameter(i) a
+            dd = Parameter(j) c
+        "#]);
+        expected.assert_eq(&sys.to_string());
+    }
+
+    // Test for LaTeX.
+
+    #[test]
+    fn to_latex() {
+        let th = Rc::new(th_signed_category());
+        let model = negative_feedback(th);
+        let sys = LinearODEAnalysis::default().build_system(&model);
+        let expected = vec![
+            LatexEquation {
+                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string(),
+                rhs: "-Parameter(negative) \\cdot y".to_string(),
+            },
+            LatexEquation {
+                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string(),
+                rhs: "Parameter(positive) \\cdot x".to_string(),
+            },
+        ];
+        assert_eq!(expected, sys.to_latex_equations());
+    }
+
+    // Numerical test.
+
+    #[test]
+    fn predator_prey_numerical() {
+        let th = Rc::new(th_signed_category());
+        let model = negative_feedback(th);
 
         let data = LinearODEProblemData {
-            coefficients: [(name("positive"), 2.0), (name("negative"), 1.0)].into_iter().collect(),
+            coefficients: [(name("positive"), 3.0), (name("negative"), 2.0)].into_iter().collect(),
             initial_values: [(name("x"), 1.0), (name("y"), 1.0)].into_iter().collect(),
             duration: 10.0,
         };
 
-        let sys = builder().linear_ode_analysis(&neg_feedback, data).problem.system;
-        let expected = expect![[r#"
-            dx0 = -x1
-            dx1 = 2 x0
-        "#]];
-        expected.assert_eq(&sys.to_string());
+        let sys = LinearODEAnalysis::default().build_system(&model);
+        let analysis = data.extend_scalars(sys);
+        let expected = expect!([r#"
+            dx = -2 y
+            dy = 3 x
+        "#]);
+        expected.assert_eq(&analysis.to_string());
     }
 }

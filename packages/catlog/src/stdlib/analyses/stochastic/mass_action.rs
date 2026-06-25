@@ -8,7 +8,10 @@ use std::collections::HashMap;
 
 use crate::{
     dbl::{modal::*, model::FpDblModel, theory::Unital},
-    stdlib::analyses::{ode::ODESolution, petri::transition_interface},
+    stdlib::analyses::{
+        ode::ODESolution,
+        petri::{TransitionInterface, transition_interface},
+    },
     zero::{QualifiedName, name},
 };
 
@@ -108,20 +111,16 @@ impl PetriNetStochasticMassActionAnalysis {
         let mut problem = gillespie::Gillespie::new(initial, false);
 
         for mor in model.mor_generators_with_type(&self.transition_mor_type) {
-            let (inputs, outputs) = transition_interface(model, &mor);
+            let transition_interface: TransitionInterface = transition_interface(model, &mor);
+            let inputs = transition_interface.input_places.clone();
+            let outputs = transition_interface.output_places.clone();
 
             // 1. convert the inputs/outputs to sequences of counts
             let input_vec = ob_generators.iter().map(|id| {
-                inputs
-                    .iter()
-                    .filter(|&ob| matches!(ob, ModalOb::Generator(id2) if id2 == id))
-                    .count() as u32
+                inputs.iter().filter(|&ob| matches!(ob, id2 if id2 == id)).count() as u32
             });
             let output_vec = ob_generators.iter().map(|id| {
-                outputs
-                    .iter()
-                    .filter(|&ob| matches!(ob, ModalOb::Generator(id2) if id2 == id))
-                    .count() as isize
+                outputs.iter().filter(|&ob| matches!(ob, id2 if id2 == id)).count() as isize
             });
 
             // 2. output := output - input

@@ -7,24 +7,43 @@
 
 use std::{collections::HashMap, fmt};
 
-use indexmap::IndexMap;
-use nalgebra::DVector;
-use num_traits::Zero;
-
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
-use super::{ODEAnalysis, Parameter};
-use crate::dbl::{
-    model::{DiscreteTabModel, FpDblModel, ModalDblModel, TabEdge},
-    theory::{ModalMorType, ModalObType, TabMorType, TabObType, Unital},
-};
-use crate::one::FgCategory;
-use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
+use super::Parameter;
+use crate::simulate::ode::PolynomialSystem;
+use crate::stdlib::analyses::ode::ode_semantics::*;
 use crate::stdlib::analyses::petri::transition_interface;
-use crate::zero::{QualifiedName, alg::Polynomial, name, rig::Monomial};
+use crate::stdlib::analyses::stock_flow::flow_interface;
+use crate::zero::{QualifiedName, name};
+use crate::{
+    dbl::{
+        model::{DiscreteTabModel, FpDblModel, ModalDblModel},
+        theory::{ModalMorType, ModalObType, TabMorType, TabObType, Unital},
+    },
+    zero::name_seg,
+};
+
+/// Mass-action semantics for Petri nets.
+pub struct PetriNetMassActionSemantics;
+/// Mass-action semantics for stock-flow diagrams.
+pub struct StockFlowMassActionSemantics;
+
+impl ODESemantics for PetriNetMassActionSemantics {
+    type ModelType = ModalDblModel<Unital>;
+    type ParameterType = MassActionParameter;
+    type AnalysisType = PetriNetMassActionAnalysis;
+    type ProblemDataType = MassActionProblemData;
+}
+
+impl ODESemantics for StockFlowMassActionSemantics {
+    type ModelType = DiscreteTabModel;
+    type ParameterType = MassActionParameter;
+    type AnalysisType = StockFlowMassActionAnalysis;
+    type ProblemDataType = MassActionProblemData;
+}
 
 /// There are three types of mass-action semantics, each more expressive than the previous:
 /// - balanced
@@ -49,22 +68,23 @@ pub enum MassConservationType {
 #[cfg_attr(feature = "serde-wasm", derive(Tsify))]
 #[cfg_attr(feature = "serde-wasm", tsify(into_wasm_abi, from_wasm_abi))]
 pub enum RateGranularity {
-    /// Each transition gets assigned a single consumption and single production rate.
+    /// Each flow gets assigned a single consumption and single production rate.
     PerTransition,
 
-    /// Each transition gets assigned a consumption rate for each input place and
-    /// a production rate for each output place.
+    /// Each flow gets assigned a consumption rate for each input stock and
+    /// a production rate for each output stock.
     PerPlace,
 }
 
-/// Parameters in the generated polynomial equations are *undirected* in the
-/// balanced case and *directed* in the unbalanced case.
+/// Now, corresponding to each term of `MassConvervationType`, we have different
+/// terms for `MassActionParameter`. Parameters in the generated polynomial equations
+/// are *undirected* in the balanced case and *directed* in the unbalanced case.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
-pub enum FlowParameter {
+pub enum MassActionParameter {
     /// If mass is conserved, we don't need to worry whether a flow is incoming or outgoing.
     Balanced {
         /// Since there is no direction, the rate parameter corresponds to a single transition.
-        transition: QualifiedName,
+        flow: QualifiedName,
     },
     /// If mass is not conserved, then we need to know whether a flow is incoming or outgoing.
     Unbalanced {
@@ -78,19 +98,19 @@ pub enum FlowParameter {
 /// Depending on the rate granularity, the parameters are specified by different structures.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub enum RateParameter {
-    /// For per transition rates, we simply need to know the associated transition.
+    /// For per flow rates, we simply need to know the associated flow.
     PerTransition {
-        /// The transition to which we associate the rate parameter.
-        transition: QualifiedName,
+        /// The flow to which we associate the rate parameter.
+        flow: QualifiedName,
     },
 
-    /// For per place rates, we need to know both the transition and the corresponding
-    /// input/output place.
+    /// For per stock rates, we need to know both the transition and the corresponding
+    /// input/output stock.
     PerPlace {
-        /// The transition whose input/output objects we wish to associate rate parameters.
-        transition: QualifiedName,
-        /// The input/output object to which we associate the rate parameter.
-        place: QualifiedName,
+        /// The flow whose input/output objects we wish to associate rate parameters.
+        flow: QualifiedName,
+        /// The input/output stock to which we associate the rate parameter.
+        stock: QualifiedName,
     },
 }
 
@@ -106,37 +126,281 @@ pub enum Direction {
     OutgoingFlow,
 }
 
-impl fmt::Display for FlowParameter {
+impl fmt::Display for MassActionParameter {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self {
-            FlowParameter::Balanced { transition: trans } => {
+            Self::Balanced { flow: trans } => {
                 write!(f, "{}", trans)
             }
-            FlowParameter::Unbalanced {
+            Self::Unbalanced {
                 direction: Direction::IncomingFlow,
-                parameter: RateParameter::PerTransition { transition: trans },
+                parameter: RateParameter::PerTransition { flow: trans },
             } => {
                 write!(f, "Incoming({})", trans)
             }
-            FlowParameter::Unbalanced {
+            Self::Unbalanced {
                 direction: Direction::IncomingFlow,
-                parameter: RateParameter::PerPlace { transition: trans, place: output },
+                parameter: RateParameter::PerPlace { flow: trans, stock: output },
             } => {
                 write!(f, "([{}]->{})", trans, output)
             }
-            FlowParameter::Unbalanced {
+            Self::Unbalanced {
                 direction: Direction::OutgoingFlow,
-                parameter: RateParameter::PerTransition { transition: trans },
+                parameter: RateParameter::PerTransition { flow: trans },
             } => {
                 write!(f, "Outgoing({})", trans)
             }
-            FlowParameter::Unbalanced {
+            Self::Unbalanced {
                 direction: Direction::OutgoingFlow,
-                parameter: RateParameter::PerPlace { transition: trans, place: input },
+                parameter: RateParameter::PerPlace { flow: trans, stock: input },
             } => {
                 write!(f, "({}->[{}])", input, trans)
             }
         }
+    }
+}
+
+impl ODEParameterType for MassActionParameter {}
+
+/// Mass-action ODE analysis for Petri nets.
+///
+/// This struct implements the object part of the functorial semantics for reaction
+/// networks (aka, Petri nets) due to [Baez & Pollard](crate::refs::ReactionNets).
+pub struct PetriNetMassActionAnalysis {
+    /// Object type for places.
+    pub place_ob_type: ModalObType,
+    /// Morphism type for transitions.
+    pub transition_mor_type: ModalMorType,
+    /// Mass-conservation type.
+    pub mass_conservation_type: MassConservationType,
+}
+
+impl Default for PetriNetMassActionAnalysis {
+    fn default() -> Self {
+        let ob_type = ModalObType::new(name("Object"));
+        Self {
+            place_ob_type: ob_type.clone(),
+            transition_mor_type: ModalMorType::Zero(ob_type),
+            mass_conservation_type: MassConservationType::Balanced,
+        }
+    }
+}
+
+impl
+    ODESemanticsAnalysis<
+        <PetriNetMassActionSemantics as ODESemantics>::ModelType,
+        <PetriNetMassActionSemantics as ODESemantics>::ParameterType,
+    > for PetriNetMassActionAnalysis
+{
+    fn build_system_builder(
+        &self,
+        model: &<PetriNetMassActionSemantics as ODESemantics>::ModelType,
+    ) -> PolynomialODESystemBuilder<<PetriNetMassActionSemantics as ODESemantics>::ParameterType>
+    {
+        let mut builder = PolynomialODESystemBuilder::new();
+
+        for place in model.ob_generators_with_type(&self.place_ob_type) {
+            // For each place, we create a variable.
+            builder.add_variable(place.clone());
+        }
+
+        for transition in model.mor_generators_with_type(&self.transition_mor_type) {
+            let interface = transition_interface(model, &transition);
+            let (inputs, outputs) =
+                (interface.input_places.clone(), interface.output_places.clone());
+
+            // Each transition gives a positive contribution to each term corresponding to
+            // one of its outputs, and a negative contribution to each term corresponding to
+            // one of its inputs. For example, a single transition T: [a,b] -> [x,y] will give
+            // four contributions, namely two positive contributions (ab -> x , ab -> y)
+            // and two negative (ab -> a , ab -> b).
+
+            for output in outputs.clone() {
+                let id = output.cons(name_seg("ToOutput")).cons(transition.only().unwrap());
+                // The transition
+                //   T : [x_1, ..., x_n] -> [y_1, ..., y_n]
+                // becomes the contributions
+                //   \dot{y_i} += Parameter_! \cdot x_1...x_n
+                // where Parameter_! depends on `mass_conservation_type`:
+                //   Balanced                  => Parameter_T
+                //   Unbalanced::PerTransition => Parameter_T^inflow
+                //   Unbalanced::PerPlace      => Parameter_{T,y_i}^inflow
+                let parameter = match self.mass_conservation_type {
+                    MassConservationType::Balanced => {
+                        MassActionParameter::Balanced { flow: transition.clone() }
+                    }
+                    MassConservationType::Unbalanced(granularity) => match granularity {
+                        RateGranularity::PerTransition => MassActionParameter::Unbalanced {
+                            direction: Direction::IncomingFlow,
+                            parameter: RateParameter::PerTransition { flow: transition.clone() },
+                        },
+                        RateGranularity::PerPlace => MassActionParameter::Unbalanced {
+                            direction: Direction::IncomingFlow,
+                            parameter: RateParameter::PerPlace {
+                                flow: transition.clone(),
+                                stock: output.clone(),
+                            },
+                        },
+                    },
+                };
+
+                builder.add_contribution(
+                    id,
+                    output,
+                    ContributionSign::Positive,
+                    parameter,
+                    inputs.clone(),
+                );
+            }
+
+            for input in inputs.clone() {
+                let id = input.cons(name_seg("ToInput")).cons(transition.only().unwrap());
+                // The transition
+                //   T : [x_1, ..., x_n] -> [y_1, ..., y_n]
+                // becomes the contributions
+                //   \dot{x_i} -= Parameter_! \cdot x_1...x_n
+                // where Parameter_! depends on `mass_conservation_type`:
+                //   Balanced             => Parameter_T
+                //   Unbalanced::PerTransition  => Parameter_T^outflow
+                //   Unbalanced::PerPlace => Parameter_{T,x_i}^outflow
+                let parameter = match self.mass_conservation_type {
+                    MassConservationType::Balanced => {
+                        MassActionParameter::Balanced { flow: transition.clone() }
+                    }
+                    MassConservationType::Unbalanced(granularity) => match granularity {
+                        RateGranularity::PerTransition => MassActionParameter::Unbalanced {
+                            direction: Direction::OutgoingFlow,
+                            parameter: RateParameter::PerTransition { flow: transition.clone() },
+                        },
+                        RateGranularity::PerPlace => MassActionParameter::Unbalanced {
+                            direction: Direction::OutgoingFlow,
+                            parameter: RateParameter::PerPlace {
+                                flow: transition.clone(),
+                                stock: input.clone(),
+                            },
+                        },
+                    },
+                };
+
+                builder.add_contribution(
+                    id,
+                    input,
+                    ContributionSign::Negative,
+                    parameter,
+                    inputs.clone(),
+                );
+            }
+        }
+
+        builder
+    }
+}
+
+/// Mass-action ODE analysis for stock-flow models.
+pub struct StockFlowMassActionAnalysis {
+    /// Object type for stocks.
+    pub stock_ob_type: TabObType,
+    /// Morphism type for flows between stocks.
+    pub flow_mor_type: TabMorType,
+    /// Morphism type for positive links from stocks to flows.
+    pub pos_link_mor_type: TabMorType,
+    /// Morphism type for negative links from stocks to flows.
+    pub neg_link_mor_type: TabMorType,
+    /// Mass-conservation type.
+    pub mass_conservation_type: MassConservationType,
+}
+
+impl Default for StockFlowMassActionAnalysis {
+    fn default() -> Self {
+        let ob_type = TabObType::Basic(name("Object"));
+        Self {
+            stock_ob_type: ob_type.clone(),
+            flow_mor_type: TabMorType::Hom(Box::new(ob_type.clone())),
+            pos_link_mor_type: TabMorType::Basic(name("Link")),
+            neg_link_mor_type: TabMorType::Basic(name("NegativeLink")),
+            mass_conservation_type: MassConservationType::Balanced,
+        }
+    }
+}
+
+impl
+    ODESemanticsAnalysis<
+        <StockFlowMassActionSemantics as ODESemantics>::ModelType,
+        <StockFlowMassActionSemantics as ODESemantics>::ParameterType,
+    > for StockFlowMassActionAnalysis
+{
+    fn build_system_builder(
+        &self,
+        model: &<StockFlowMassActionSemantics as ODESemantics>::ModelType,
+    ) -> PolynomialODESystemBuilder<<StockFlowMassActionSemantics as ODESemantics>::ParameterType>
+    {
+        let mut builder = PolynomialODESystemBuilder::new();
+
+        for stock in model.ob_generators_with_type(&self.stock_ob_type) {
+            // For each stock, we create a variable.
+            builder.add_variable(stock.clone());
+        }
+
+        for flow in model.mor_generators_with_type(&self.flow_mor_type) {
+            let interface = flow_interface(model, &flow);
+            let (input, output) = (interface.input_stock, interface.output_stock);
+
+            // Each flow gives a positive contribution to the term corresponding to its output, and
+            // a negative contribution to the term corresponding to its input; the term is given by
+            // the product of the input with the sources of all incoming links.
+            let monomial = [interface.input_pos_link_doms, vec![input.clone()]].concat();
+
+            // The flow
+            //   F : a -> b
+            // with links
+            //   l_i : x_i -> F
+            // becomes the contributions
+            //   \dot{b} += Parameter_! \cdot a x_1.. x_n
+            //   \dot{a} -= Parameter_? \cdot a x_1.. x_n
+            // where Parameter_! and Parameter_? depend on `mass_conservation_type`:
+            //   Balanced            => Parameter_! = Parameter_F
+            //                          Parameter_? = Parameter_F
+            //   Unbalanced::PerTransition => Parameter_! = Parameter_F^inflow
+            //                          Parameter_? = Parameter_F^outflow
+
+            let output_id = output.cons(name_seg("ToOutput")).cons(flow.only().unwrap());
+            let output_parameter = match self.mass_conservation_type {
+                MassConservationType::Balanced => {
+                    MassActionParameter::Balanced { flow: flow.clone() }
+                }
+                MassConservationType::Unbalanced(_) => MassActionParameter::Unbalanced {
+                    direction: Direction::IncomingFlow,
+                    parameter: RateParameter::PerTransition { flow: flow.clone() },
+                },
+            };
+            builder.add_contribution(
+                output_id,
+                output.clone(),
+                ContributionSign::Positive,
+                output_parameter,
+                monomial.clone(),
+            );
+
+            let input_id = input.cons(name_seg("ToInput")).cons(flow.only().unwrap());
+            let input_parameter = match self.mass_conservation_type {
+                MassConservationType::Balanced => {
+                    MassActionParameter::Balanced { flow: flow.clone() }
+                }
+                MassConservationType::Unbalanced(_) => MassActionParameter::Unbalanced {
+                    direction: Direction::OutgoingFlow,
+                    parameter: RateParameter::PerTransition { flow: flow.clone() },
+                },
+            };
+            builder.add_contribution(
+                input_id,
+                input.clone(),
+                ContributionSign::Negative,
+                input_parameter,
+                monomial,
+            );
+        }
+
+        builder
     }
 }
 
@@ -186,284 +450,67 @@ pub struct MassActionProblemData {
     pub duration: f32,
 }
 
-/// Mass-action ODE analysis for Petri nets.
-///
-/// This struct implements the object part of the functorial semantics for reaction
-/// networks (aka, Petri nets) due to [Baez & Pollard](crate::refs::ReactionNets).
-pub struct PetriNetMassActionAnalysis {
-    /// Object type for places.
-    pub place_ob_type: ModalObType,
-    /// Morphism type for transitions.
-    pub transition_mor_type: ModalMorType,
-}
-
-impl Default for PetriNetMassActionAnalysis {
-    fn default() -> Self {
-        let ob_type = ModalObType::new(name("Object"));
-        Self {
-            place_ob_type: ob_type.clone(),
-            transition_mor_type: ModalMorType::Zero(ob_type),
-        }
+impl ODESemanticsProblemData<MassActionParameter> for MassActionProblemData {
+    fn initial_values(&self) -> HashMap<QualifiedName, f32> {
+        self.initial_values.clone()
     }
-}
 
-impl PetriNetMassActionAnalysis {
-    /// Creates a mass-action system with symbolic rate coefficients.
-    pub fn build_system(
+    fn duration(&self) -> f32 {
+        self.duration
+    }
+
+    fn extend_scalars(
         &self,
-        model: &ModalDblModel<Unital>,
-        mass_conservation_type: MassConservationType,
-    ) -> PolynomialSystem<QualifiedName, Parameter<FlowParameter>, i8> {
-        let mut sys = PolynomialSystem::new();
-        for ob in model.ob_generators_with_type(&self.place_ob_type) {
-            sys.add_term(ob, Polynomial::zero());
-        }
-        for mor in model.mor_generators_with_type(&self.transition_mor_type) {
-            let (inputs, outputs) = transition_interface(model, &mor);
-            let term: Monomial<_, _> =
-                inputs.iter().map(|ob| (ob.clone().unwrap_generator(), 1)).collect();
-
-            match mass_conservation_type {
-                MassConservationType::Balanced => {
-                    let term: Polynomial<_, _, _> = [(
-                        Parameter::generator(FlowParameter::Balanced { transition: mor }),
-                        term.clone(),
-                    )]
-                    .into_iter()
-                    .collect();
-
-                    for input in inputs {
-                        sys.add_term(input.unwrap_generator(), -term.clone());
-                    }
-
-                    for output in outputs {
-                        sys.add_term(output.unwrap_generator(), term.clone());
+        sys: PolynomialSystem<QualifiedName, Parameter<MassActionParameter>, i8>,
+    ) -> PolynomialSystem<QualifiedName, f32, i8> {
+        let sys = sys.extend_scalars(|poly| {
+            poly.eval(|flow| match flow {
+                MassActionParameter::Balanced { flow: transition } => {
+                    self.transition_rates.get(transition).cloned().unwrap_or_default()
+                }
+                MassActionParameter::Unbalanced { direction, parameter } => {
+                    match (direction, parameter) {
+                        (
+                            Direction::IncomingFlow,
+                            RateParameter::PerTransition { flow: transition },
+                        ) => self
+                            .transition_production_rates
+                            .get(transition)
+                            .cloned()
+                            .unwrap_or_default(),
+                        (
+                            Direction::OutgoingFlow,
+                            RateParameter::PerTransition { flow: transition },
+                        ) => self
+                            .transition_consumption_rates
+                            .get(transition)
+                            .cloned()
+                            .unwrap_or_default(),
+                        (
+                            Direction::IncomingFlow,
+                            RateParameter::PerPlace { flow: transition, stock: place },
+                        ) => self
+                            .place_production_rates
+                            .get(transition)
+                            .and_then(|rate| rate.get(place))
+                            .copied()
+                            .unwrap_or_default(),
+                        (
+                            Direction::OutgoingFlow,
+                            RateParameter::PerPlace { flow: transition, stock: place },
+                        ) => self
+                            .place_consumption_rates
+                            .get(transition)
+                            .and_then(|rate| rate.get(place))
+                            .copied()
+                            .unwrap_or_default(),
                     }
                 }
-
-                MassConservationType::Unbalanced(granularity) => {
-                    for input in inputs {
-                        let input_term: Polynomial<_, _, _> = match granularity {
-                            RateGranularity::PerTransition => [(
-                                Parameter::generator(FlowParameter::Unbalanced {
-                                    direction: Direction::OutgoingFlow,
-                                    parameter: RateParameter::PerTransition {
-                                        transition: mor.clone(),
-                                    },
-                                }),
-                                term.clone(),
-                            )],
-                            RateGranularity::PerPlace => [(
-                                Parameter::generator(FlowParameter::Unbalanced {
-                                    direction: Direction::OutgoingFlow,
-                                    parameter: RateParameter::PerPlace {
-                                        transition: mor.clone(),
-                                        place: input.clone().unwrap_generator(),
-                                    },
-                                }),
-                                term.clone(),
-                            )],
-                        }
-                        .into_iter()
-                        .collect();
-
-                        sys.add_term(input.unwrap_generator(), -input_term.clone());
-                    }
-                    for output in outputs {
-                        let output_term: Polynomial<_, _, _> = match granularity {
-                            RateGranularity::PerTransition => [(
-                                Parameter::generator(FlowParameter::Unbalanced {
-                                    direction: Direction::IncomingFlow,
-                                    parameter: RateParameter::PerTransition {
-                                        transition: mor.clone(),
-                                    },
-                                }),
-                                term.clone(),
-                            )],
-                            RateGranularity::PerPlace => [(
-                                Parameter::generator(FlowParameter::Unbalanced {
-                                    direction: Direction::IncomingFlow,
-                                    parameter: RateParameter::PerPlace {
-                                        transition: mor.clone(),
-                                        place: output.clone().unwrap_generator(),
-                                    },
-                                }),
-                                term.clone(),
-                            )],
-                        }
-                        .into_iter()
-                        .collect();
-
-                        sys.add_term(output.unwrap_generator(), output_term.clone());
-                    }
-                }
-            }
-        }
+            })
+        });
 
         sys.normalize()
     }
-}
-
-/// Mass-action ODE analysis for stock-flow models.
-pub struct StockFlowMassActionAnalysis {
-    /// Object type for stocks.
-    pub stock_ob_type: TabObType,
-    /// Morphism type for flows between stocks.
-    pub flow_mor_type: TabMorType,
-    /// Morphism type for positive links from stocks to flows.
-    pub pos_link_mor_type: TabMorType,
-    /// Morphism type for negative links from stocks to flows.
-    pub neg_link_mor_type: TabMorType,
-}
-
-impl Default for StockFlowMassActionAnalysis {
-    fn default() -> Self {
-        let stock_ob_type = TabObType::Basic(name("Object"));
-        let flow_mor_type = TabMorType::Hom(Box::new(stock_ob_type.clone()));
-        Self {
-            stock_ob_type,
-            flow_mor_type,
-            pos_link_mor_type: TabMorType::Basic(name("Link")),
-            neg_link_mor_type: TabMorType::Basic(name("NegativeLink")),
-        }
-    }
-}
-
-impl StockFlowMassActionAnalysis {
-    /// Creates a mass-action system with symbolic rate coefficients.
-    pub fn build_system(
-        &self,
-        model: &DiscreteTabModel,
-        mass_conservation_type: MassConservationType,
-    ) -> PolynomialSystem<QualifiedName, Parameter<FlowParameter>, i8> {
-        let terms: Vec<_> = self.flow_monomials(model).into_iter().collect();
-
-        let mut sys = PolynomialSystem::new();
-        for ob in model.ob_generators_with_type(&self.stock_ob_type) {
-            sys.add_term(ob, Polynomial::zero());
-        }
-        for (flow, term) in terms {
-            let dom = model.mor_generator_dom(&flow).unwrap_basic();
-            let cod = model.mor_generator_cod(&flow).unwrap_basic();
-            match mass_conservation_type {
-                MassConservationType::Balanced => {
-                    let param = Parameter::generator(FlowParameter::Balanced { transition: flow });
-                    let term: Polynomial<_, _, _> = [(param, term.clone())].into_iter().collect();
-                    sys.add_term(dom, -term.clone());
-                    sys.add_term(cod, term);
-                }
-                MassConservationType::Unbalanced(_) => {
-                    let dom_param = Parameter::generator(FlowParameter::Unbalanced {
-                        direction: Direction::OutgoingFlow,
-                        parameter: RateParameter::PerTransition { transition: flow.clone() },
-                    });
-                    let cod_param = Parameter::generator(FlowParameter::Unbalanced {
-                        direction: Direction::IncomingFlow,
-                        parameter: RateParameter::PerTransition { transition: flow },
-                    });
-                    let dom_term: Polynomial<_, _, _> =
-                        [(dom_param, term.clone())].into_iter().collect();
-                    let cod_term: Polynomial<_, _, _> = [(cod_param, term)].into_iter().collect();
-                    sys.add_term(dom, -dom_term);
-                    sys.add_term(cod, cod_term);
-                }
-            }
-        }
-        sys
-    }
-
-    /// Constructs a monomial for each flow in the model.
-    pub(super) fn flow_monomials(
-        &self,
-        model: &DiscreteTabModel,
-    ) -> HashMap<QualifiedName, Monomial<QualifiedName, i8>> {
-        let mut terms: HashMap<_, _> = model
-            .mor_generators_with_type(&self.flow_mor_type)
-            .map(|flow| {
-                let dom = model.mor_generator_dom(&flow).unwrap_basic();
-                (flow, Monomial::generator(dom))
-            })
-            .collect();
-
-        let mut multiply_for_link = |link: QualifiedName, exponent: i8| {
-            let dom = model.mor_generator_dom(&link).unwrap_basic();
-            let path = model.mor_generator_cod(&link).unwrap_tabulated();
-            let Some(TabEdge::Basic(cod)) = path.only() else {
-                panic!("Codomain of link should be basic morphism");
-            };
-            if let Some(term) = terms.get_mut(&cod) {
-                let mon: Monomial<_, i8> = [(dom, exponent)].into_iter().collect();
-                *term = std::mem::take(term) * mon;
-            } else {
-                panic!("Codomain of link does not belong to model");
-            };
-        };
-
-        for link in model.mor_generators_with_type(&self.pos_link_mor_type) {
-            multiply_for_link(link, 1);
-        }
-        for link in model.mor_generators_with_type(&self.neg_link_mor_type) {
-            multiply_for_link(link, -1);
-        }
-
-        terms
-    }
-}
-
-/// Substitutes numerical rate coefficients into a symbolic mass-action system.
-pub fn extend_mass_action_scalars(
-    sys: PolynomialSystem<QualifiedName, Parameter<FlowParameter>, i8>,
-    data: &MassActionProblemData,
-) -> PolynomialSystem<QualifiedName, f32, i8> {
-    let sys = sys.extend_scalars(|poly| {
-        poly.eval(|flow| match flow {
-            FlowParameter::Balanced { transition } => {
-                data.transition_rates.get(transition).cloned().unwrap_or_default()
-            }
-            FlowParameter::Unbalanced { direction, parameter } => match (direction, parameter) {
-                (Direction::IncomingFlow, RateParameter::PerTransition { transition }) => {
-                    data.transition_production_rates.get(transition).cloned().unwrap_or_default()
-                }
-                (Direction::OutgoingFlow, RateParameter::PerTransition { transition }) => {
-                    data.transition_consumption_rates.get(transition).cloned().unwrap_or_default()
-                }
-                (Direction::IncomingFlow, RateParameter::PerPlace { transition, place }) => data
-                    .place_production_rates
-                    .get(transition)
-                    .and_then(|rate| rate.get(place))
-                    .copied()
-                    .unwrap_or_default(),
-                (Direction::OutgoingFlow, RateParameter::PerPlace { transition, place }) => data
-                    .place_consumption_rates
-                    .get(transition)
-                    .and_then(|rate| rate.get(place))
-                    .copied()
-                    .unwrap_or_default(),
-            },
-        })
-    });
-
-    sys.normalize()
-}
-
-/// Builds the numerical ODE analysis for a mass-action system whose scalars have been substituted.
-pub fn into_mass_action_analysis(
-    sys: PolynomialSystem<QualifiedName, f32, i8>,
-    data: MassActionProblemData,
-) -> ODEAnalysis<NumericalPolynomialSystem<i8>> {
-    let ob_index: IndexMap<_, _> =
-        sys.components.keys().cloned().enumerate().map(|(i, x)| (x, i)).collect();
-    let n = ob_index.len();
-
-    let initial_values = ob_index
-        .keys()
-        .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
-    let x0 = DVector::from_iterator(n, initial_values);
-
-    let num_sys = sys.to_numerical();
-    let problem = ODEProblem::new(num_sys, x0).end_time(data.duration);
-
-    ODEAnalysis::new(problem, ob_index)
 }
 
 #[cfg(test)]
@@ -482,8 +529,7 @@ mod tests {
     fn balanced_stock_flow() {
         let th = Rc::new(th_category_links());
         let model = backward_link(th);
-        let sys = StockFlowMassActionAnalysis::default()
-            .build_system(&model, analyses::ode::MassConservationType::Balanced);
+        let sys = StockFlowMassActionAnalysis::default().build_system(&model);
         let expected = expect!([r#"
             dx = -f x y
             dy = f x y
@@ -495,48 +541,16 @@ mod tests {
     fn unbalanced_stock_flow() {
         let th = Rc::new(th_category_links());
         let model = backward_link(th);
-        let sys = StockFlowMassActionAnalysis::default().build_system(
-            &model,
-            analyses::ode::MassConservationType::Unbalanced(
+        let sys = StockFlowMassActionAnalysis {
+            mass_conservation_type: analyses::ode::MassConservationType::Unbalanced(
                 analyses::ode::RateGranularity::PerTransition,
             ),
-        );
+            ..StockFlowMassActionAnalysis::default()
+        }
+        .build_system(&model);
         let expected = expect!([r#"
             dx = -Outgoing(f) x y
             dy = Incoming(f) x y
-        "#]);
-        expected.assert_eq(&sys.to_string());
-    }
-
-    // Tests for signed stock-flow diagrams. These all use the negative_backwards_link()
-    // model, which has a single flow x==f=>y and a single negative link y->f.
-
-    #[test]
-    fn balanced_signed_stock_flow() {
-        let th = Rc::new(th_category_signed_links());
-        let model = negative_backward_link(th);
-        let sys = StockFlowMassActionAnalysis::default()
-            .build_system(&model, analyses::ode::MassConservationType::Balanced);
-        let expected = expect!([r#"
-            dx = -f x y^{-1}
-            dy = f x y^{-1}
-        "#]);
-        expected.assert_eq(&sys.to_string());
-    }
-
-    #[test]
-    fn unbalanced_signed_stock_flow() {
-        let th = Rc::new(th_category_signed_links());
-        let model = negative_backward_link(th);
-        let sys = StockFlowMassActionAnalysis::default().build_system(
-            &model,
-            analyses::ode::MassConservationType::Unbalanced(
-                analyses::ode::RateGranularity::PerTransition,
-            ),
-        );
-        let expected = expect!([r#"
-            dx = -Outgoing(f) x y^{-1}
-            dy = Incoming(f) x y^{-1}
         "#]);
         expected.assert_eq(&sys.to_string());
     }
@@ -548,8 +562,7 @@ mod tests {
     fn balanced_petri() {
         let th = Rc::new(th_sym_monoidal_category());
         let model = catalyzed_reaction(th);
-        let sys = PetriNetMassActionAnalysis::default()
-            .build_system(&model, analyses::ode::MassConservationType::Balanced);
+        let sys = PetriNetMassActionAnalysis::default().build_system(&model);
         let expected = expect!([r#"
             dx = -f c x
             dy = f c x
@@ -562,12 +575,13 @@ mod tests {
     fn unbalanced_petri_per_transition() {
         let th = Rc::new(th_sym_monoidal_category());
         let model = catalyzed_reaction(th);
-        let sys = PetriNetMassActionAnalysis::default().build_system(
-            &model,
-            analyses::ode::MassConservationType::Unbalanced(
+        let sys = PetriNetMassActionAnalysis {
+            mass_conservation_type: analyses::ode::MassConservationType::Unbalanced(
                 analyses::ode::RateGranularity::PerTransition,
             ),
-        );
+            ..PetriNetMassActionAnalysis::default()
+        }
+        .build_system(&model);
         let expected = expect!([r#"
             dx = -Outgoing(f) c x
             dy = Incoming(f) c x
@@ -580,12 +594,13 @@ mod tests {
     fn unbalanced_petri_per_place() {
         let th = Rc::new(th_sym_monoidal_category());
         let model = catalyzed_reaction(th);
-        let sys = PetriNetMassActionAnalysis::default().build_system(
-            &model,
-            analyses::ode::MassConservationType::Unbalanced(
+        let sys = PetriNetMassActionAnalysis {
+            mass_conservation_type: analyses::ode::MassConservationType::Unbalanced(
                 analyses::ode::RateGranularity::PerPlace,
             ),
-        );
+            ..PetriNetMassActionAnalysis::default()
+        }
+        .build_system(&model);
         let expected = expect!([r#"
             dx = -(x->[f]) c x
             dy = ([f]->y) c x
@@ -600,12 +615,13 @@ mod tests {
     fn to_latex() {
         let th = Rc::new(th_category_links());
         let model = backward_link(th);
-        let sys = StockFlowMassActionAnalysis::default().build_system(
-            &model,
-            analyses::ode::MassConservationType::Unbalanced(
+        let sys = StockFlowMassActionAnalysis {
+            mass_conservation_type: analyses::ode::MassConservationType::Unbalanced(
                 analyses::ode::RateGranularity::PerTransition,
             ),
-        );
+            ..StockFlowMassActionAnalysis::default()
+        }
+        .build_system(&model);
         let expected = vec![
             LatexEquation {
                 lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string(),

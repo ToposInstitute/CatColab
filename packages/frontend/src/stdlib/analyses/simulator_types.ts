@@ -3,7 +3,9 @@ import type {
     KuramotoProblemData,
     LatexEquations,
     LinearODEProblemData,
+    LinearODEEquationsData,
     LotkaVolterraProblemData,
+    LotkaVolterraEquationsData,
     MassActionEquationsData,
     MassActionProblemData,
     ODEResult,
@@ -22,20 +24,31 @@ export type {
 };
 
 export type KuramotoSimulator = (model: DblModel, data: KuramotoProblemData) => ODEResult;
-export type LinearODESimulator = (model: DblModel, data: LinearODEProblemData) => ODEResult;
-export type LotkaVolterraSimulator = (model: DblModel, data: LotkaVolterraProblemData) => ODEResult;
+export type LinearODESimulator = (
+    model: DblModel,
+    data: LinearODEProblemData,
+) => ODEResultWithEquations;
+export type LinearODEEquations = (model: DblModel, data: LinearODEEquationsData) => LatexEquations;
+export type LotkaVolterraSimulator = (
+    model: DblModel,
+    data: LotkaVolterraProblemData,
+) => ODEResultWithEquations;
+export type LotkaVolterraEquations = (
+    model: DblModel,
+    data: LotkaVolterraEquationsData,
+) => LatexEquations;
 export type MassActionSimulator = (
     model: DblModel,
     data: MassActionProblemData,
 ) => ODEResultWithEquations;
-export type StochasticMassActionSimulator = (
-    model: DblModel,
-    data: StochasticMassActionProblemData,
-) => ODEResult;
 export type MassActionEquations = (
     model: DblModel,
     data: MassActionEquationsData,
 ) => LatexEquations;
+export type StochasticMassActionSimulator = (
+    model: DblModel,
+    data: StochasticMassActionProblemData,
+) => ODEResult;
 export type PolynomialODESimulator = (
     model: DblModel,
     data: PolynomialODEProblemData,

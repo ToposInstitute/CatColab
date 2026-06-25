@@ -1,29 +1,165 @@
 //! Lotka-Volterra ODE analysis of models.
 //!
-//! The main entry point for this module is
-//! [`lotka_volterra_analysis`](SignedCoefficientBuilder::lotka_volterra_analysis).
+//! This follows the structure of [`ode::ode_semantics`], implementing `ODESemantics` for
+//! the struct `LotkaVolterraSemantics`.
+//!
+//! [`ode::ode_semantics`]: crate::stdlib::analyses::ode::ode_semantics
 
 use std::collections::HashMap;
-use std::hash::Hash;
-use std::ops::Add;
-
-use indexmap::IndexMap;
-use itertools::Itertools;
-use nalgebra::{DMatrix, DVector, Scalar};
-use num_traits::{One, Zero};
+use std::fmt;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde-wasm")]
 use tsify::Tsify;
 
-use super::{ODEAnalysis, Parameter, SignedCoefficientBuilder};
-use crate::simulate::ode::{NumericalPolynomialSystem, ODEProblem, PolynomialSystem};
-use crate::{
-    dbl::model::DiscreteDblModel,
-    one::QualifiedPath,
-    zero::{QualifiedName, alg::Polynomial, rig::Monomial},
+use super::Parameter;
+use crate::dbl::model::{FpDblModel, MutDblModel};
+use crate::one::Path;
+use crate::simulate::ode::PolynomialSystem;
+use crate::stdlib::analyses::ode::ode_semantics::{
+    ContributionSign, ODEParameterType, ODESemantics, ODESemanticsAnalysis,
+    ODESemanticsProblemData, PolynomialODESystemBuilder,
 };
+use crate::zero::name;
+use crate::{dbl::model::DiscreteDblModel, one::QualifiedPath, zero::QualifiedName};
+
+/// Implementing Lotka-Volterra as an ODE semantics for models of type `DiscreteDblModel`.
+pub struct LotkaVolterraSemantics;
+
+impl ODESemantics for LotkaVolterraSemantics {
+    type ModelType = DiscreteDblModel;
+    type ParameterType = LotkaVolterraParameter;
+    type AnalysisType = LotkaVolterraAnalysis;
+    type ProblemDataType = LotkaVolterraProblemData;
+}
+
+/// Parameters in the Lotka-Volterra equations come in two flavours, corresponding to
+/// either variables or links.
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
+pub enum LotkaVolterraParameter {
+    /// The parameter associated to a variable.
+    Growth {
+        /// The variable.
+        variable: QualifiedName,
+    },
+    /// The parameter associated to a link.
+    Interaction {
+        /// The link.
+        link: QualifiedName,
+    },
+}
+
+impl fmt::Display for LotkaVolterraParameter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self {
+            Self::Growth { variable } => {
+                write!(f, "Growth({})", variable)
+            }
+            Self::Interaction { link } => {
+                write!(f, "Interaction({})", link)
+            }
+        }
+    }
+}
+
+impl ODEParameterType for LotkaVolterraParameter {}
+
+/// This Lotka-Volterra ODE analysis is intended for application to CLDs.
+pub struct LotkaVolterraAnalysis {
+    /// Object type for variables.
+    pub var_ob_type: QualifiedName,
+    /// Morphism type for positive links.
+    pub pos_link_type: QualifiedPath,
+    /// Morphism type for negative links.
+    pub neg_link_type: QualifiedPath,
+}
+
+impl Default for LotkaVolterraAnalysis {
+    fn default() -> Self {
+        let ob_type = name("Object");
+        Self {
+            var_ob_type: ob_type.clone(),
+            pos_link_type: Path::Id(ob_type.clone()),
+            neg_link_type: Path::single(name("Negative")),
+        }
+    }
+}
+
+impl
+    ODESemanticsAnalysis<
+        <LotkaVolterraSemantics as ODESemantics>::ModelType,
+        <LotkaVolterraSemantics as ODESemantics>::ParameterType,
+    > for LotkaVolterraAnalysis
+{
+    /// Creates a Lotka-Volterra system with symbolic rate coefficients.
+    ///
+    /// A system of ODEs that is affine in its *logarithmic* derivative. These are
+    /// sometimes called the "generalized Lotka-Volterra equations." For more, see
+    /// [Wikipedia](https://en.wikipedia.org/wiki/Generalized_Lotka%E2%80%93Volterra_equation)
+    /// and [our paper on regulatory networks](crate::refs::RegNets).
+    fn build_system_builder(
+        &self,
+        model: &<LotkaVolterraSemantics as ODESemantics>::ModelType,
+    ) -> PolynomialODESystemBuilder<<LotkaVolterraSemantics as ODESemantics>::ParameterType> {
+        let mut builder = PolynomialODESystemBuilder::new();
+
+        for var in model.ob_generators_with_type(&self.var_ob_type) {
+            // For each object, we create a variable.
+            builder.add_variable(var.clone());
+
+            // The object
+            //   x
+            // becomes the contribution
+            //   \dot{x} += Growth_x \cdot x
+            builder.add_contribution(
+                var.clone(),
+                var.clone(),
+                ContributionSign::Positive,
+                LotkaVolterraParameter::Growth { variable: var.clone() },
+                [var],
+            );
+        }
+
+        for mor in model.mor_generators_with_type(&self.pos_link_type) {
+            let (Some(dom), Some(cod)) = (model.get_dom(&mor), model.get_cod(&mor)) else {
+                continue;
+            };
+
+            // The morphism
+            //   f: x -> y
+            // becomes the contribution
+            //   \dot{y} += Interaction_f \cdot xy
+            builder.add_contribution(
+                mor.clone(),
+                cod.clone(),
+                ContributionSign::Positive,
+                LotkaVolterraParameter::Interaction { link: mor },
+                [dom.clone(), cod.clone()],
+            );
+        }
+
+        for mor in model.mor_generators_with_type(&self.neg_link_type) {
+            let (Some(dom), Some(cod)) = (model.get_dom(&mor), model.get_cod(&mor)) else {
+                continue;
+            };
+
+            // The morphism
+            //   f: x -> y
+            // becomes the contribution
+            //   \dot{y} -= Interaction_f \cdot xy
+            builder.add_contribution(
+                mor.clone(),
+                cod.clone(),
+                ContributionSign::Negative,
+                LotkaVolterraParameter::Interaction { link: mor },
+                [dom.clone(), cod.clone()],
+            );
+        }
+
+        builder
+    }
+}
 
 /// Data defining a Lotka-Volterra ODE problem for a model.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -49,94 +185,38 @@ pub struct LotkaVolterraProblemData {
     duration: f32,
 }
 
-/// Construct a Lotka-Volterra dynamical system.
-///
-/// A system of ODEs that is affine in its *logarithmic* derivative. These are
-/// sometimes called the "generalized Lotka-Volterra equations." For more, see
-/// [Wikipedia](https://en.wikipedia.org/wiki/Generalized_Lotka%E2%80%93Volterra_equation).
-pub fn lotka_volterra_system<Var, Coef>(
-    vars: &[Var],
-    interaction_coeffs: DMatrix<Coef>,
-    growth_rates: DVector<Coef>,
-) -> PolynomialSystem<Var, Coef, u8>
-where
-    Var: Clone + Hash + Ord,
-    Coef: Clone + Add<Output = Coef> + One + Scalar + Zero,
+impl ODESemanticsProblemData<<LotkaVolterraSemantics as ODESemantics>::ParameterType>
+    for LotkaVolterraProblemData
 {
-    let system = PolynomialSystem {
-        components: interaction_coeffs
-            .row_iter()
-            .zip(vars)
-            .zip(&growth_rates)
-            .map(|((row, i), r)| {
-                (
-                    i.clone(),
-                    Polynomial::<_, Coef, _>::generator(i.clone())
-                        * (row
-                            .iter()
-                            .zip(vars)
-                            .map(|(a, j)| (a.clone(), Monomial::generator(j.clone())))
-                            .collect::<Polynomial<_, _, _>>()
-                            + r.clone()),
-                )
-            })
-            .collect(),
-    };
-    system.normalize()
-}
-
-impl SignedCoefficientBuilder<QualifiedName, QualifiedPath> {
-    /// Lotka-Volterra ODE analysis for a model of a double theory.
-    ///
-    /// The main application we have in mind is the Lotka-Volterra ODE semantics for
-    /// signed graphs described in our [paper on regulatory
-    /// networks](crate::refs::RegNets).
-    pub fn lotka_volterra_analysis(
-        &self,
-        model: &DiscreteDblModel,
-        data: LotkaVolterraProblemData,
-    ) -> ODEAnalysis<NumericalPolynomialSystem<u8>> {
-        let (system, ob_index) = self.lotka_volterra_system(model);
-        let n = ob_index.len();
-
-        let initial_values = ob_index
-            .keys()
-            .map(|ob| data.initial_values.get(ob).copied().unwrap_or_default());
-        let x0 = DVector::from_iterator(n, initial_values);
-
-        let system = system
-            .extend_scalars(|poly| {
-                poly.eval(|id| {
-                    data.interaction_coeffs
-                        .get(id)
-                        .or(data.growth_rates.get(id))
-                        .copied()
-                        .unwrap_or_default()
-                })
-            })
-            .to_numerical();
-        let problem = ODEProblem::new(system, x0).end_time(data.duration);
-        ODEAnalysis::new(problem, ob_index)
+    fn initial_values(&self) -> HashMap<QualifiedName, f32> {
+        self.initial_values.clone()
     }
 
-    /// Lotka-Volterra ODE system for an model of a double theory.
-    pub fn lotka_volterra_system(
+    fn duration(&self) -> f32 {
+        self.duration
+    }
+
+    fn extend_scalars(
         &self,
-        model: &DiscreteDblModel,
-    ) -> (
-        PolynomialSystem<QualifiedName, Parameter<QualifiedName>, u8>,
-        IndexMap<QualifiedName, usize>,
-    ) {
-        let (matrix, ob_index) = self.build_matrix(model);
-        let n = ob_index.len();
+        sys: PolynomialSystem<
+            QualifiedName,
+            Parameter<<LotkaVolterraSemantics as ODESemantics>::ParameterType>,
+            i8,
+        >,
+    ) -> PolynomialSystem<QualifiedName, f32, i8> {
+        let sys = sys.extend_scalars(|poly| {
+            poly.eval(|param| match param {
+                LotkaVolterraParameter::Growth { variable } => {
+                    // FIXME: this won't work, because `variable` will now be `Growth.variable`
+                    self.growth_rates.get(variable).cloned().unwrap_or_default()
+                }
+                LotkaVolterraParameter::Interaction { link } => {
+                    self.interaction_coeffs.get(link).cloned().unwrap_or_default()
+                }
+            })
+        });
 
-        let growth_rate_params = ob_index
-            .keys()
-            .map(|ob| [(1.0, Monomial::generator(ob.clone()))].into_iter().collect());
-        let b = DVector::from_iterator(n, growth_rate_params);
-
-        let system = lotka_volterra_system(&ob_index.keys().cloned().collect_vec(), matrix, b);
-        (system, ob_index)
+        sys.normalize()
     }
 }
 
@@ -146,32 +226,76 @@ mod test {
     use std::rc::Rc;
 
     use super::*;
-    use crate::stdlib;
-    use crate::{one::Path, zero::name};
+    use crate::{
+        dbl::model::MutDblModel,
+        simulate::ode::LatexEquation,
+        stdlib::{models::*, theories::*},
+    };
 
-    fn builder() -> SignedCoefficientBuilder<QualifiedName, QualifiedPath> {
-        SignedCoefficientBuilder::new(name("Object"))
-            .add_positive(Path::Id(name("Object")))
-            .add_negative(Path::single(name("Negative")))
-    }
+    // Symbolic tests.
 
     #[test]
     fn predator_prey_symbolic() {
-        let th = Rc::new(stdlib::theories::th_signed_category());
-        let neg_feedback = stdlib::models::negative_feedback(th);
-        let (sys, _) = builder().lotka_volterra_system(&neg_feedback);
-        let sys = sys.extend_scalars(|coef| coef.map_variables(|name| format!("Param({name})")));
+        let th = Rc::new(th_signed_category());
+        let model = negative_feedback(th);
+        let sys = LotkaVolterraAnalysis::default().build_system(&model);
         let expected = expect!([r#"
-            dx = Param(x) x - Param(negative) x y
-            dy = Param(positive) x y + Param(y) y
+            dx = Growth(x) x - Interaction(negative) x y
+            dy = Interaction(positive) x y + Growth(y) y
         "#]);
         expected.assert_eq(&sys.to_string());
     }
 
     #[test]
+    fn complicated_symbolic() {
+        let th = Rc::new(th_signed_category());
+        let mut model = DiscreteDblModel::new(th);
+        model.add_ob(name("a"), name("Object"));
+        model.add_ob(name("b"), name("Object"));
+        model.add_ob(name("c"), name("Object"));
+        model.add_ob(name("d"), name("Object"));
+        model.add_mor(name("f"), name("a"), name("b"), Path::Id(name("Object")));
+        model.add_mor(name("g"), name("b"), name("a"), Path::Id(name("Object")));
+        model.add_mor(name("h"), name("b"), name("a"), name("Negative").into());
+        model.add_mor(name("i"), name("a"), name("c"), name("Negative").into());
+        model.add_mor(name("j"), name("c"), name("d"), Path::Id(name("Object")));
+        model.add_mor(name("k"), name("d"), name("b"), name("Negative").into());
+        let sys = LotkaVolterraAnalysis::default().build_system(&model);
+        let expected = expect!([r#"
+            da = Growth(a) a + (Interaction(g) - Interaction(h)) a b
+            db = Interaction(f) a b + Growth(b) b - Interaction(k) b d
+            dc = -Interaction(i) a c + Growth(c) c
+            dd = Interaction(j) c d + Growth(d) d
+        "#]);
+        expected.assert_eq(&sys.to_string());
+    }
+
+    // Test for LaTeX.
+
+    #[test]
+    fn to_latex() {
+        let th = Rc::new(th_signed_category());
+        let model = negative_feedback(th);
+        let sys = LotkaVolterraAnalysis::default().build_system(&model);
+        let expected = vec![
+            LatexEquation {
+                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string(),
+                rhs: "Growth(x) \\cdot x - Interaction(negative) \\cdot x \\cdot y".to_string(),
+            },
+            LatexEquation {
+                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string(),
+                rhs: "Interaction(positive) \\cdot x \\cdot y + Growth(y) \\cdot y".to_string(),
+            },
+        ];
+        assert_eq!(expected, sys.to_latex_equations());
+    }
+
+    // Numerical test.
+
+    #[test]
     fn predator_prey_numerical() {
-        let th = Rc::new(stdlib::theories::th_signed_category());
-        let neg_feedback = stdlib::models::negative_feedback(th);
+        let th = Rc::new(th_signed_category());
+        let model = negative_feedback(th);
 
         let data = LotkaVolterraProblemData {
             interaction_coeffs: [(name("positive"), 1.0), (name("negative"), 1.0)]
@@ -182,11 +306,12 @@ mod test {
             duration: 10.0,
         };
 
-        let sys = builder().lotka_volterra_analysis(&neg_feedback, data).problem.system;
+        let sys = LotkaVolterraAnalysis::default().build_system(&model);
+        let analysis = data.extend_scalars(sys);
         let expected = expect!([r#"
-            dx0 = 2 x0 - x0 x1
-            dx1 = x0 x1 - x1
+            dx = 2 x - x y
+            dy = x y - y
         "#]);
-        expected.assert_eq(&sys.to_string());
+        expected.assert_eq(&analysis.to_string());
     }
 }

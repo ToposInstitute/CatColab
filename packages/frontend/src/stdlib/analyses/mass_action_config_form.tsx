@@ -51,8 +51,8 @@ export function MassActionConfigForm(props: {
                         });
                     }}
                 >
-                    <option value={"PerTransition"}>{"Per transition"}</option>
-                    <option value={"PerPlace"}>{"Per place"}</option>
+                    <option value={"PerTransition"}>{"Per flow"}</option>
+                    <option value={"PerPlace"}>{"Per stock"}</option>
                 </SelectField>
             </Show>
         </FormGroup>
