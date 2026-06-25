@@ -7,19 +7,19 @@ import {
     ExpandableTable,
     KatexDisplay,
 } from "catcolab-ui-components";
-import type { LCCProblemData, QualifiedName } from "catlog-wasm";
+import type { LinearODEProblemData, QualifiedName } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { morLabelOrDefault } from "../../model";
 import { ODEResultPlot } from "../../visualization";
 import { createModelODEPlotWithEquations } from "./model_ode_plot";
-import type { LCCSimulator } from "./simulator_types";
+import type { LinearODESimulator } from "./simulator_types";
 
 import "./simulation.css";
 
-/** Analyze a model using LCC dynamics. */
-export default function LCC(
-    props: ModelAnalysisProps<LCCProblemData> & {
-        simulate: LCCSimulator;
+/** Analyze a model using LinearODE dynamics. */
+export default function LinearODE(
+    props: ModelAnalysisProps<LinearODEProblemData> & {
+        simulate: LinearODESimulator;
         title?: string;
     },
 ) {

@@ -165,7 +165,7 @@ impl ThSignedCategory {
     pub fn linear_ode(
         &self,
         model: &DblModel,
-        data: analyses::ode::LCCProblemData,
+        data: analyses::ode::LinearODEProblemData,
     ) -> Result<ODEResultWithEquations, String> {
         linear_ode_simulation(model, data)
     }

@@ -152,7 +152,7 @@ pub(crate) fn latex_mor_names_lotka_volterra(
 /// falls back to the domain→codomain format (e.g., `X \to Y`).
 pub(crate) fn latex_mor_names_linear_ode(
     model: &DblModel,
-) -> impl Fn(&ode::LCCParameter) -> String {
+) -> impl Fn(&ode::LinearODEParameter) -> String {
     // Returns a LaTeX fragment for a transition, suitable for use as a subscript.
     // Named morphisms produce `\text{name}`, unnamed ones produce
     // `\text{dom} \to \text{cod}` so that `\to` is in math mode.
@@ -167,8 +167,8 @@ pub(crate) fn latex_mor_names_linear_ode(
         }
     };
 
-    move |id: &ode::LCCParameter| match id {
-        ode::LCCParameter::Parameter { morphism } => {
+    move |id: &ode::LinearODEParameter| match id {
+        ode::LinearODEParameter::Parameter { morphism } => {
             let sub = transition_subscript(morphism);
             format!("\\lambda_{{{sub}}}")
         }
