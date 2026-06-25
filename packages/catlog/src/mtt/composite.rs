@@ -82,6 +82,11 @@ impl<T> Composite<T> {
     pub fn is_empty(&self) -> bool {
         self.path.is_empty()
     }
+
+    /// Length of the composite.
+    pub fn len(&self) -> usize {
+        self.path.len()
+    }
 }
 
 impl<T> IntoIterator for Composite<T> {

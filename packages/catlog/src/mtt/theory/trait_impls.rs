@@ -7,7 +7,11 @@ use crate::mtt::{
     binary_signature::BinarySignature,
     composite::Composable,
     hole::Holy,
-    theory::{Theory, TheoryArrow, TheoryObject, TheoryProArrow},
+    theory::{
+        Theory, TheoryArrow, TheoryObject, TheoryProArrow,
+        list_modality::{ListModality, StructureMap},
+        modal_depth::ModalDepth,
+    },
 };
 
 // -----------------------------------------------------------------------------
@@ -27,10 +31,7 @@ impl<T: Theory> Clone for TheoryObject<T> {
     fn clone(&self) -> Self {
         match self {
             Self::Generator(g) => Self::Generator(g.clone()),
-            Self::ModalApplication { modality, on } => Self::ModalApplication {
-                modality: modality.clone(),
-                on: on.clone(),
-            },
+            Self::ModalApplication { on } => Self::ModalApplication { on: on.clone() },
             Self::Hole { name, .. } => Self::Hole { name: name.clone(), _theory: PhantomData },
         }
     }
@@ -40,7 +41,9 @@ impl<T: Theory> std::fmt::Display for TheoryObject<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Generator(g) => write!(f, "{g}"),
-            Self::ModalApplication { modality, on } => write!(f, "{modality}({on})"),
+            Self::ModalApplication { on } => {
+                write!(f, "{}({on})", <T::ListModality as ListModality>::NAME)
+            }
             Self::Hole { name, .. } => write!(f, "?{name}"),
         }
     }
@@ -56,14 +59,17 @@ impl<T: Theory> BinarySignature<TheoryObject<T>> for TheoryArrow<T> {
         // TODO: check this.
         match self {
             TheoryArrow::Generator { dom, .. } => dom.clone(),
-            TheoryArrow::ModalApplication { modality, on } => TheoryObject::ModalApplication {
-                modality: modality.clone(),
-                on: Box::new(on.as_ref().dom()),
-            },
+            TheoryArrow::ModalApplication { on } => {
+                TheoryObject::ModalApplication { on: Box::new(on.as_ref().dom()) }
+            }
             // The base object is fixed by the surrounding boundary; here we
             // expose the modal tower over an unconstrained base so that
             // structural unification can refine it against the actual corner.
-            TheoryArrow::ModalCoherence { from_depth, .. } => modal_tower::<T>(*from_depth),
+            TheoryArrow::ModalStructureMap { map } => {
+                TheoryObject::unconstrained("modal_structure_map_base".to_string())
+                    .re_nest(map.dom_depth())
+                    .expect("re-nesting an unconstrained base to a non-negative depth never fails")
+            }
         }
     }
 
@@ -73,11 +79,14 @@ impl<T: Theory> BinarySignature<TheoryObject<T>> for TheoryArrow<T> {
         // TODO: check this.
         match self {
             TheoryArrow::Generator { cod, .. } => cod.clone(),
-            TheoryArrow::ModalApplication { modality, on } => TheoryObject::ModalApplication {
-                modality: modality.clone(),
-                on: Box::new(on.as_ref().cod()),
-            },
-            TheoryArrow::ModalCoherence { to_depth, .. } => modal_tower::<T>(*to_depth),
+            TheoryArrow::ModalApplication { on } => {
+                TheoryObject::ModalApplication { on: Box::new(on.as_ref().cod()) }
+            }
+            TheoryArrow::ModalStructureMap { map } => {
+                TheoryObject::unconstrained("modal_structure_map_base".to_string())
+                    .re_nest(map.cod_depth())
+                    .expect("re-nesting an unconstrained base to a non-negative depth never fails")
+            }
         }
     }
 }
@@ -91,12 +100,11 @@ impl<T: Theory> Clone for TheoryArrow<T> {
                 dom: dom.clone(),
                 cod: cod.clone(),
             },
-            TheoryArrow::ModalApplication { modality, on } => TheoryArrow::ModalApplication {
-                modality: modality.clone(),
-                on: on.clone(),
-            },
-            TheoryArrow::ModalCoherence { from_depth, to_depth } => {
-                TheoryArrow::ModalCoherence { from_depth: *from_depth, to_depth: *to_depth }
+            TheoryArrow::ModalApplication { on } => {
+                TheoryArrow::ModalApplication { on: on.clone() }
+            }
+            TheoryArrow::ModalStructureMap { map } => {
+                TheoryArrow::ModalStructureMap { map: map.clone() }
             }
         }
     }
@@ -109,12 +117,10 @@ impl<T: Theory> std::fmt::Display for TheoryArrow<T> {
             TheoryArrow::Generator { name, dom, cod } => {
                 write!(f, "{name}: {dom} -> {cod}")
             }
-            TheoryArrow::ModalApplication { modality, on } => {
-                write!(f, "{modality}({on})")
+            TheoryArrow::ModalApplication { on } => {
+                write!(f, "{}({on})", <T::ListModality as ListModality>::NAME)
             }
-            TheoryArrow::ModalCoherence { from_depth, to_depth } => {
-                write!(f, "coh({from_depth}->{to_depth})")
-            }
+            TheoryArrow::ModalStructureMap { map } => write!(f, "{map}"),
         }
     }
 }
@@ -123,22 +129,6 @@ impl<T: Theory> Composable for TheoryArrow<T> {
     fn composable(&self, next: &Self) -> bool {
         T::unify_objects(&[&self.cod(), &next.dom()]).is_compatible()
     }
-}
-
-/// A modal tower of the given depth over an unconstrained base object, using
-/// the theory's list modality. Used to expose the boundary of a
-/// [TheoryArrow::ModalCoherence] before the surrounding boundary's corner has
-/// refined it.
-//
-// TODO: check this.
-fn modal_tower<T: Theory>(depth: usize) -> TheoryObject<T> {
-    let mut obj = TheoryObject::unconstrained("modal_coherence_base".to_string());
-    if let Some(modality) = T::list_modality() {
-        for _ in 0..depth {
-            obj = TheoryObject::ModalApplication { modality: modality.clone(), on: Box::new(obj) };
-        }
-    }
-    obj
 }
 
 // -----------------------------------------------------------------------------
@@ -164,10 +154,9 @@ impl<T: Theory> BinarySignature<TheoryObject<T>> for TheoryProArrow<T> {
         match self {
             TheoryProArrow::Hom(o) => o.clone(),
             TheoryProArrow::Generator { dom, .. } => dom.clone(),
-            TheoryProArrow::ModalApplication { modality, on } => TheoryObject::ModalApplication {
-                modality: modality.clone(),
-                on: Box::new(on.as_ref().dom()),
-            },
+            TheoryProArrow::ModalApplication { on } => {
+                TheoryObject::ModalApplication { on: Box::new(on.as_ref().dom()) }
+            }
             TheoryProArrow::Restriction { dom_leg, .. } => dom_leg.dom(),
             TheoryProArrow::Hole { dom, .. } => dom.clone(),
         }
@@ -179,10 +168,9 @@ impl<T: Theory> BinarySignature<TheoryObject<T>> for TheoryProArrow<T> {
         match self {
             TheoryProArrow::Hom(o) => o.clone(),
             TheoryProArrow::Generator { cod, .. } => cod.clone(),
-            TheoryProArrow::ModalApplication { modality, on } => TheoryObject::ModalApplication {
-                modality: modality.clone(),
-                on: Box::new(on.as_ref().cod()),
-            },
+            TheoryProArrow::ModalApplication { on } => {
+                TheoryObject::ModalApplication { on: Box::new(on.as_ref().cod()) }
+            }
             TheoryProArrow::Restriction { cod_leg, .. } => cod_leg.dom(),
             TheoryProArrow::Hole { cod, .. } => cod.clone(),
         }
@@ -198,10 +186,9 @@ impl<T: Theory> Clone for TheoryProArrow<T> {
                 dom: dom.clone(),
                 cod: cod.clone(),
             },
-            TheoryProArrow::ModalApplication { modality, on } => TheoryProArrow::ModalApplication {
-                modality: modality.clone(),
-                on: on.clone(),
-            },
+            TheoryProArrow::ModalApplication { on } => {
+                TheoryProArrow::ModalApplication { on: on.clone() }
+            }
             TheoryProArrow::Restriction { base, dom_leg, cod_leg } => TheoryProArrow::Restriction {
                 base: base.clone(),
                 dom_leg: dom_leg.clone(),
@@ -219,7 +206,9 @@ impl<T: Theory> std::fmt::Display for TheoryProArrow<T> {
         match self {
             TheoryProArrow::Hom(o) => write!(f, "Hom({o})"),
             TheoryProArrow::Generator { name, dom, cod } => write!(f, "{name}: {dom} -|-> {cod}"),
-            TheoryProArrow::ModalApplication { modality, on } => write!(f, "{modality}({on})"),
+            TheoryProArrow::ModalApplication { on } => {
+                write!(f, "{}({on})", <T::ListModality as ListModality>::NAME)
+            }
             TheoryProArrow::Restriction { base, dom_leg, cod_leg } => {
                 write!(f, "({base})({dom_leg}, {cod_leg})")
             }

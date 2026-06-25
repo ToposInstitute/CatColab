@@ -53,7 +53,7 @@ impl<T: Theory> ModelEntry<T> {
                 let ObjectType::List(types) = object_type else {
                     unreachable!("checked binder: a list term has a list type")
                 };
-                let TheoryObject::ModalApplication { on, .. } = theory_object else {
+                let TheoryObject::ModalApplication { on } = theory_object else {
                     unreachable!("checked binder: a list type lies over a modal application")
                 };
                 for (t, ty) in std::iter::zip(terms, types) {

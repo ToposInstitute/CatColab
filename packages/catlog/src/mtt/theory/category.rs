@@ -1,6 +1,7 @@
 use crate::mtt::composite::Composite;
 use crate::mtt::theory::{
-    Boundary, ListVariant, ProArrowByBoundary, Theory, TheoryArrow, TheoryObject, TheoryProArrow,
+    Boundary, ProArrowByBoundary, Theory, TheoryArrow, TheoryObject, TheoryProArrow,
+    list_modality::NoList,
 };
 
 /// The theory of categories: a single object `Object`, whose pro-arrows are all
@@ -10,13 +11,9 @@ pub struct Category;
 const OBJECT: &str = "Object";
 
 impl Theory for Category {
-    fn name() -> String {
-        "Category".to_string()
-    }
+    const NAME: &'static str = "Category";
 
-    fn list_modality() -> Option<ListVariant> {
-        None
-    }
+    type ListModality = NoList;
 
     fn make_hom_pro_arrow(
         obj_a: &TheoryObject<Self>,
@@ -56,15 +53,15 @@ impl Theory for Category {
         matches!(pro, TheoryProArrow::Hom(o) if Self::has_object(o))
     }
 
-    fn has_cell(b: &Boundary<Self>) -> bool {
-        // This accepts unit cells, and inlines the unitality equations of hom.
-        b.dom_vertical.is_empty()
-            && b.cod_vertical.is_empty()
-            && !b.cod_proarrow.is_empty()
-            && b.dom_proarrow.iter().all(Self::has_pro_arrow)
-            && b.cod_proarrow.iter().all(Self::has_pro_arrow)
-            && b.objects().into_iter().all(Self::has_object)
-    }
+    // fn has_cell(b: &Boundary<Self>) -> bool {
+    //     // This accepts unit cells, and inlines the unitality equations of hom.
+    //     b.dom_vertical.is_empty()
+    //         && b.cod_vertical.is_empty()
+    //         && !b.cod_proarrow.is_empty()
+    //         && b.dom_proarrow.iter().all(Self::has_pro_arrow)
+    //         && b.cod_proarrow.iter().all(Self::has_pro_arrow)
+    //         && b.objects().into_iter().all(Self::has_object)
+    // }
 
     fn cell_search(
         top: &Composite<TheoryProArrow<Self>>,

@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 use crate::mtt::{
     composite::Composite,
     hole::Holy,
-    theory::{ListVariant, Theory},
+    theory::{Theory, ListModality},
 };
 
 // -----------------------------------------------------------------------------
@@ -22,8 +22,6 @@ pub enum TheoryObject<T: Theory> {
 
     /// A modal application to an object of the theory.
     ModalApplication {
-        /// The modality in question.
-        modality: ListVariant,
         /// Which theory object it was applied to.
         on: Box<TheoryObject<T>>,
     },
@@ -56,30 +54,15 @@ pub enum TheoryArrow<T: Theory> {
     },
     /// A vertical arrow under a list modality.
     ModalApplication {
-        /// The modality applied.
-        modality: ListVariant,
         /// The vertical arrow acted on.
         on: Box<TheoryArrow<T>>,
     },
-    /// The unique coherence map of the list monad between two modal depths,
-    /// bundling the monad's unit (η) and multiplication (μ) into a single
-    /// framework-provided vertical arrow. By the monad's coherence, there is at
-    /// most one such map between `T^m X` and `T^n X`, so the pair of depths
-    /// determines it uniquely; the base object is fixed by the surrounding
-    /// [Boundary]'s corner objects.
-    ///
-    /// This variant exists so that a flat theory's [Theory::cell_search] can
-    /// name cells whose vertical legs involve monad structure --- such as the
-    /// multicategory composition or normalisation cells --- without admitting
-    /// η/μ as named, equational generators in any theory's presentation. It is
-    /// distinct from the modality's leaf reindexings (σ), which are handled at
-    /// the pro-term level by [ProTerm::ListReindex].
-    ModalCoherence {
-        /// The modal depth of the domain, i.e. the number of list modalities
-        /// wrapping the base object.
-        from_depth: usize,
-        /// The modal depth of the codomain.
-        to_depth: usize,
+    /// An application of structure map for the [ListModality] specified by the
+    /// theory, that is, a (normalised form of a) composite of μ and η in some
+    /// way.
+    ModalStructureMap {
+        /// TODO: doc
+        map: <T::ListModality as ListModality>::Map,
     },
 }
 
@@ -98,21 +81,19 @@ pub enum TheoryProArrow<T: Theory> {
     },
     /// A pro-arrow  under a list modality.
     ModalApplication {
-        /// The list modality being applied.
-        modality: ListVariant,
         /// The pro-arrow being acted on.
         on: Box<TheoryProArrow<T>>,
     },
-    /// A base pro-arrow restricted along a vertical arrow on each side: the
-    /// `base` pulled back along `dom_leg` on the left and `cod_leg` on the
-    /// right.
+    /// A base pro-arrow restricted by composites of vertical arrows.
     Restriction {
         /// The pro-arrow being restricted.
         base: Box<TheoryProArrow<T>>,
-        /// The vertical arrow restricting the domain side.
-        dom_leg: TheoryArrow<T>,
-        /// The vertical arrow restricting the codomain side.
-        cod_leg: TheoryArrow<T>,
+        /// The vertical composite restricting the domain side. An empty
+        /// composite is the identity, i.e. no restriction on this side.
+        dom_leg: Composite<TheoryArrow<T>>,
+        /// The vertical composite restricting the codomain side. An empty
+        /// composite is the identity, i.e. no restriction on this side.
+        cod_leg: Composite<TheoryArrow<T>>,
     },
     /// A hole for a pro-arrow, the matching information for which is carried by
     /// its domain and codomain. Note that [TheoryObject] also has "hole"

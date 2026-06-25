@@ -2,8 +2,8 @@ use crate::mtt::{
     binary_signature::BinarySignature,
     composite::Composite,
     theory::{
-        Boundary, ListVariant, ProArrowByBoundary, Theory, TheoryArrow, TheoryObject,
-        TheoryProArrow,
+        Boundary, ProArrowByBoundary, Theory, TheoryArrow, TheoryObject, TheoryProArrow,
+        list_modality::PlanarList,
     },
 };
 
@@ -25,10 +25,7 @@ impl Multicategory {
     }
 
     fn list_of(o: &TheoryObject<Self>) -> TheoryObject<Self> {
-        TheoryObject::ModalApplication {
-            modality: ListVariant::Planar,
-            on: Box::new(o.clone()),
-        }
+        TheoryObject::ModalApplication { on: Box::new(o.clone()) }
     }
 
     /// The generating pro-arrow `P: List 𝕏 -|-> 𝕏`.
@@ -42,13 +39,9 @@ impl Multicategory {
 }
 
 impl Theory for Multicategory {
-    fn name() -> String {
-        "Multicategory".to_string()
-    }
+    const NAME: &'static str = "Multicategory";
 
-    fn list_modality() -> Option<ListVariant> {
-        Some(ListVariant::Planar)
-    }
+    type ListModality = PlanarList;
 
     fn make_hom_pro_arrow(
         obj_a: &TheoryObject<Self>,
@@ -90,9 +83,7 @@ impl Theory for Multicategory {
         // The objects are the modal tower over the single generator.
         match obj {
             TheoryObject::Generator(g) => g == OBJECT,
-            TheoryObject::ModalApplication { modality, on } => {
-                *modality == ListVariant::Planar && Self::has_object(on)
-            }
+            TheoryObject::ModalApplication { on } => Self::has_object(on),
             TheoryObject::Hole { .. } => true,
         }
     }
@@ -111,54 +102,52 @@ impl Theory for Multicategory {
                     && Self::unify_objects(&[dom, &Self::list_of(cod)]).is_compatible()
             }
 
-            TheoryProArrow::ModalApplication { modality, on } => {
-                Self::list_modality().as_ref() == Some(modality) && Self::has_pro_arrow(on)
-            }
+            TheoryProArrow::ModalApplication { on } => Self::has_pro_arrow(on),
 
             TheoryProArrow::Restriction { .. } | TheoryProArrow::Hole { .. } => false,
         }
     }
 
-    fn has_cell(b: &Boundary<Self>) -> bool {
-        // Because we have no vertical arrows in this presentation of a theory,
-        // all the remaining valid cells are globular.
-        if !(b.dom_vertical.is_empty() && b.cod_vertical.is_empty()) {
-            return false;
-        };
+    // fn has_cell(b: &Boundary<Self>) -> bool {
+    //     // Because we have no vertical arrows in this presentation of a theory,
+    //     // all the remaining valid cells are globular.
+    //     if !(b.dom_vertical.is_empty() && b.cod_vertical.is_empty()) {
+    //         return false;
+    //     };
 
-        // the objects must all be valid, along with all of the pro-arrows, and
-        // the bottom composite must be non-empty
-        if !b.objects().into_iter().all(Self::has_object)
-            || !b.dom_proarrow.iter().all(Self::has_pro_arrow)
-            || !b.cod_proarrow.iter().all(Self::has_pro_arrow)
-            || b.cod_proarrow.is_empty()
-        {
-            return false;
-        }
+    //     // the objects must all be valid, along with all of the pro-arrows, and
+    //     // the bottom composite must be non-empty
+    //     if !b.objects().into_iter().all(Self::has_object)
+    //         || !b.dom_proarrow.iter().all(Self::has_pro_arrow)
+    //         || !b.cod_proarrow.iter().all(Self::has_pro_arrow)
+    //         || b.cod_proarrow.is_empty()
+    //     {
+    //         return false;
+    //     }
 
-        let hom = |o: &TheoryObject<Self>| Composite::singleton(TheoryProArrow::Hom(o.clone()));
+    //     let hom = |o: &TheoryObject<Self>| Composite::singleton(TheoryProArrow::Hom(o.clone()));
 
-        if b.dom_proarrow.is_empty() {
-            // if the top is empty the bottom must be unifiable with a single
-            // hom (unification is up-to laws)
-            Self::unify_pro_arrows(&[&b.cod_proarrow, &hom(&b.cod_dom_object)]).is_compatible()
-        } else if Self::unify_pro_arrows(&[&b.dom_proarrow, &hom(&b.dom_dom_object)])
-            .is_compatible()
-        {
-            // if the top unifies against a single hom, so too must the bottom
-            Self::unify_pro_arrows(&[&b.cod_proarrow, &hom(&b.cod_dom_object)]).is_compatible()
-        } else {
-            // at this point the top boundary is of the form List P^n ; ... ;
-            // List P^0 because:
-            // * it is non-empty
-            // * it does not unify against hom (recall List hom = hom_List)
-            // * it is comprised of valid pro-arrows in the theory (hom & P,
-            //   List on those, no restrictions)
-            // with that in mind, all that remains to check is whether the top
-            // and bottom boundary unify because there are no non-trivial cells.
-            Self::unify_pro_arrows(&[&b.dom_proarrow, &b.cod_proarrow]).is_compatible()
-        }
-    }
+    //     if b.dom_proarrow.is_empty() {
+    //         // if the top is empty the bottom must be unifiable with a single
+    //         // hom (unification is up-to laws)
+    //         Self::unify_pro_arrows(&[&b.cod_proarrow, &hom(&b.cod_dom_object)]).is_compatible()
+    //     } else if Self::unify_pro_arrows(&[&b.dom_proarrow, &hom(&b.dom_dom_object)])
+    //         .is_compatible()
+    //     {
+    //         // if the top unifies against a single hom, so too must the bottom
+    //         Self::unify_pro_arrows(&[&b.cod_proarrow, &hom(&b.cod_dom_object)]).is_compatible()
+    //     } else {
+    //         // at this point the top boundary is of the form List P^n ; ... ;
+    //         // List P^0 because:
+    //         // * it is non-empty
+    //         // * it does not unify against hom (recall List hom = hom_List)
+    //         // * it is comprised of valid pro-arrows in the theory (hom & P,
+    //         //   List on those, no restrictions)
+    //         // with that in mind, all that remains to check is whether the top
+    //         // and bottom boundary unify because there are no non-trivial cells.
+    //         Self::unify_pro_arrows(&[&b.dom_proarrow, &b.cod_proarrow]).is_compatible()
+    //     }
+    // }
 
     fn cell_search(
         top: &Composite<TheoryProArrow<Self>>,

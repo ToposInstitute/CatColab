@@ -152,7 +152,7 @@ pro_arrow_generators ~> {}
 definitions ~> {}
 relations ~> {}
 "#,
-            T::name(),
+            T::NAME.to_string(),
             DHMap(&self.object_generators),
             DHMap(&self.pro_arrow_generators),
             DHMap(&self.definitions),

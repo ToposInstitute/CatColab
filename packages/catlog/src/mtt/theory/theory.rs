@@ -2,9 +2,10 @@
 use crate::mtt::{
     composite::Composite,
     theory::{
-        Boundary, ListVariant, ProArrowByBoundary, TheoryArrow, TheoryObject, TheoryProArrow,
-        UnificationResult,
-        shared::{default_pro_arrow_composite_unify, structural_object_unification},
+        Boundary, ProArrowByBoundary, TheoryArrow, TheoryObject, TheoryProArrow,
+        UnificationResult, cell_search::default_cell_search, ListModality,
+        unify_arrows::default_unify_vertical_arrows, unify_objects::default_unify_objects,
+        unify_pro_arrows::default_unify_pro_arrows,
     },
 };
 
@@ -14,10 +15,12 @@ pub trait Theory: Sized {
     // Basic information
 
     /// The name of the theory.
-    fn name() -> String;
+    const NAME: &'static str;
 
-    /// Theories may support up to one list modality.
-    fn list_modality() -> Option<ListVariant>;
+    /// The unique list modality this theory supports, of which [NoList] is an
+    /// option. To determine whether a theory has a list modality, see
+    /// [ListModality::PRESENT].
+    type ListModality: ListModality;
 
     // --------------------------------------------------------------------
     // Objects
@@ -35,7 +38,7 @@ pub trait Theory: Sized {
     /// yet: two rigid (non-hole) objects unify iff they share a head and their
     /// children unify, and holes are bare wildcards that unify with anything.
     fn unify_objects(objects: &[&TheoryObject<Self>]) -> UnificationResult<TheoryObject<Self>> {
-        structural_object_unification::<Self>(objects)
+        default_unify_objects::<Self>(objects)
     }
 
     // --------------------------------------------------------------------
@@ -48,6 +51,18 @@ pub trait Theory: Sized {
 
     /// Decide whether a given [TheoryArrow] is valid in this theory.
     fn has_theory_arrow(arr: TheoryArrow<Self>) -> bool;
+
+    /// Unify a collection of composites of theory vertical arrows, returning
+    /// the single common composite they all coincide modulo the theory's arrow
+    /// equations, or `None` if they cannot be made to coincide. An empty
+    /// collection has no rigid demands, but there are no "holes" for vertical
+    /// arrows and so unification must return [UnificationResult::Incompatible]
+    /// in this case.
+    fn unify_vertical_arrows(
+        composites: &[&Composite<TheoryArrow<Self>>],
+    ) -> UnificationResult<Composite<TheoryArrow<Self>>> {
+        default_unify_vertical_arrows(composites)
+    }
 
     // --------------------------------------------------------------------
     // Pro-arrows
@@ -67,16 +82,16 @@ pub trait Theory: Sized {
     ) -> Option<TheoryProArrow<Self>>;
 
     /// Unify a collection of composites of theory pro-arrows, returning the
-    /// single common composite they all coincide with modulo the theory's
+    /// single common composite they all coincide modulo the theory's
     /// pro-arrow equations, or `None` if they cannot be made to coincide. An
     /// empty collection has no rigid demands, so its meet is a singleton hole
     /// pro-arrow (mirroring [Self::unify_objects] on an empty input). See
-    /// [default_pro_arrow_composite_unify] for details about the default
+    /// [default_unify_pro_arrows] for details about the default
     /// implementation.
     fn unify_pro_arrows(
         composites: &[&Composite<TheoryProArrow<Self>>],
     ) -> UnificationResult<Composite<TheoryProArrow<Self>>> {
-        default_pro_arrow_composite_unify(composites)
+        default_unify_pro_arrows(composites)
     }
 
     /// Decide what information is available about pro-arrows given the
@@ -91,35 +106,18 @@ pub trait Theory: Sized {
 
     // --------------------------------------------------------------------
     // Cells
-    /// Decide whether a given [Boundary] admits a, necessarily unique, cell
-    /// filler in this theory.
-    fn has_cell(b: &Boundary<Self>) -> bool;
 
-    /// Search for the unique flat cell connecting a top pro-arrow composite to
-    /// a bottom one, returning the full [Boundary] --- with its vertical legs
-    /// filled in --- if one exists.
+    /// Search for the at most unique flat cell connecting a top pro-arrow
+    /// composite to a bottom one, returning the full [Boundary].
     ///
-    /// Unlike [Self::has_cell], which validates an already-complete boundary,
-    /// this method figures out the vertical legs itself. Those legs may include
-    /// [TheoryArrow::ModalCoherence] (the bundled monad structure map) wherever
-    /// the cell's movement involves η/μ, plus generator-arrow composites for
-    /// the theory's own verticals. The boundary's four corner objects are
-    /// recovered from the two pro-arrow composites' domains and codomains.
-    ///
-    /// Because the theory is flat, there is at most one such cell, so this is a
-    /// decision procedure, not a search: it returns the boundary if a cell
-    /// exists and `None` otherwise. The axiom-awareness needed to relate the
-    /// pro-arrows across a change of modal depth (e.g. the multicategory
-    /// composition axiom `List P ; P = P(μ, 1)`) lives here, in this one
-    /// depth-aware entry point, rather than in [Self::unify_pro_arrows].
+    /// In general there may not be a unique such boundary specialising to the
+    /// given `top` and `bottom`, and in such a case we expect that callers
+    /// would provide finer-grained contracts or are invariant to the choice, so
+    /// that implementors may provide any boundary of their choosing.
     fn cell_search(
         top: &Composite<TheoryProArrow<Self>>,
         bottom: &Composite<TheoryProArrow<Self>>,
     ) -> Option<Boundary<Self>> {
-        // TODO: check this.
-        let _ = (top, bottom);
-        todo!("cell_search is not yet implemented for this theory")
+        default_cell_search(top, bottom)
     }
-
-    // TODO
 }

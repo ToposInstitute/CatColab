@@ -15,8 +15,8 @@ use crate::mtt::{
     composite::Composite,
     hole::Holy,
     theory::{
-        Boundary, Theory, TheoryArrow, TheoryObject, TheoryProArrow,
-        UnificationResult, delete_me_pro_arrow_is_constrained,
+        ListModality, Theory, TheoryArrow, TheoryObject, TheoryProArrow, UnificationResult,
+        delete_me_pro_arrow_is_constrained,
     },
 };
 
@@ -117,17 +117,16 @@ impl<T: Theory> ModelEntry<T> {
         })?;
 
         // Phase 2: syntactic alignment of the domain terms.
-        let reindex =
-            domain_leaf_map::<T>(&judgement.domain_object_term, &want.domain_object_term);
+        let reindex = domain_leaf_map::<T>(&judgement.domain_object_term, &want.domain_object_term);
         let is_identity = reindex.iter().enumerate().all(|(i, &j)| i == j);
         let inner = if is_identity {
             pro_term
         } else {
             // The modality must admit this leaf map between the two domain
             // shapes.
-            if let Some(modality) = T::list_modality() {
+            if <T::ListModality as ListModality>::PRESENT {
                 let source_arity = domain_leaf_count::<T>(&judgement.domain_object_term);
-                if !modality.admits_reindexing(&reindex, source_arity) {
+                if !<T::ListModality as ListModality>::admits_reindexing(&reindex, source_arity) {
                     return Err(EType::DomainMismatch {
                         expected: want.domain_object_term.to_string(),
                         found: judgement.domain_object_term.to_string(),
@@ -270,23 +269,13 @@ impl<T: Theory> ModelEntry<T> {
             &codomain_theory_object,
         )?;
 
-        let boundary = Boundary {
-            dom_dom_object: inner.judgement.domain_theory_object.clone(),
-            dom_cod_object: inner.judgement.codomain_theory_object.clone(),
-            cod_dom_object: inner.judgement.domain_theory_object.clone(),
-            cod_cod_object: codomain_theory_object.clone(),
-            dom_vertical: Composite::empty(),
-            dom_proarrow: inner.judgement.pro_arrow.clone(),
-            cod_vertical: Composite::singleton(arrow.clone()),
-            cod_proarrow: cod_proarrow.clone(),
-        };
-        if !T::has_cell(&boundary) {
+        let Some(boundary) = T::cell_search(&inner.judgement.pro_arrow, &cod_proarrow) else {
             return Err(EType::NoApplicableCell {
-                theory: T::name(),
+                theory: T::NAME.to_string(),
                 operation: arrow.to_string(),
             }
             .into());
-        }
+        };
 
         let derivation = Derivation {
             pro_term: ProTerm::CellApplication {
@@ -412,9 +401,9 @@ impl<T: Theory> ModelEntry<T> {
         hint: Option<&ProTermJudgement<T>>,
         scope: &Scope<T>,
     ) -> Result<Derivation<T>, Error> {
-        let Some(modality) = T::list_modality() else {
-            return Err(EType::NoListModality(T::name()).into());
-        };
+        if !<T::ListModality as ListModality>::PRESENT {
+            return Err(EType::NoListModality(T::NAME.to_string()).into());
+        }
 
         // We do not currently decompose the list's hint (`List Q`) into a
         // per-element hint (`Q`) as this may not be possible or easy in
@@ -435,10 +424,7 @@ impl<T: Theory> ModelEntry<T> {
         let over = Composite::try_from(
             common
                 .into_iter()
-                .map(|p| TheoryProArrow::ModalApplication {
-                    modality: modality.clone(),
-                    on: Box::new(p),
-                })
+                .map(|p| TheoryProArrow::ModalApplication { on: Box::new(p) })
                 .collect::<Vec<_>>(),
         )
         .expect("mapping modal operation over a composite should result in a composite");
@@ -451,10 +437,7 @@ impl<T: Theory> ModelEntry<T> {
                 }
                 .into()),
                 |object| {
-                    Ok(TheoryObject::ModalApplication {
-                        modality: modality.clone(),
-                        on: Box::new(object),
-                    })
+                    Ok(TheoryObject::ModalApplication { on: Box::new(object) })
                 },
             )
         };
@@ -571,10 +554,7 @@ fn domain_leaf_count<T: Theory>(term: &ObjectTerm<T>) -> usize {
 
 /// Collect the leaf variables of a domain object term left-to-right, flattening
 /// every list.
-fn collect_domain_leaves<'a, T: Theory>(
-    term: &'a ObjectTerm<T>,
-    out: &mut Vec<&'a String>,
-) {
+fn collect_domain_leaves<'a, T: Theory>(term: &'a ObjectTerm<T>, out: &mut Vec<&'a String>) {
     // TODO: check this.
     match term {
         ObjectTerm::Variable(v) => out.push(v),
@@ -593,10 +573,7 @@ fn collect_domain_leaves<'a, T: Theory>(
 /// variable does not appear in the source, the reindex is inadmissible and this
 /// returns an identity --- the modality's `admits_reindexing` will then reject
 /// it.
-fn domain_leaf_map<T: Theory>(
-    source: &ObjectTerm<T>,
-    target: &ObjectTerm<T>,
-) -> Vec<usize> {
+fn domain_leaf_map<T: Theory>(source: &ObjectTerm<T>, target: &ObjectTerm<T>) -> Vec<usize> {
     // TODO: check this.
     let mut src_leaves = Vec::new();
     collect_domain_leaves::<T>(source, &mut src_leaves);

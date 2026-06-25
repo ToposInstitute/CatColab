@@ -13,7 +13,7 @@ use crate::mtt::{
     },
     composite::Composite,
     hole::Holy,
-    theory::{ProArrowByBoundary, Theory, TheoryObject, TheoryProArrow, UnificationResult},
+    theory::{ListModality, ProArrowByBoundary, Theory, TheoryObject, TheoryProArrow, UnificationResult},
 };
 
 impl<T: Theory> ModelEntry<T> {
@@ -35,7 +35,7 @@ impl<T: Theory> ModelEntry<T> {
                 let over = self.elaborate_theory_object(over)?;
                 if !T::has_object(&over) {
                     return Err(EType::InvalidTheoryObject {
-                        theory: T::name(),
+                        theory: T::NAME.to_string(),
                         object: over.to_string(),
                     }
                     .into());
@@ -86,7 +86,7 @@ impl<T: Theory> ModelEntry<T> {
 
                 if !T::has_pro_arrow(&over) {
                     return Err(EType::InvalidTheoryProArrow {
-                        theory: T::name(),
+                        theory: T::NAME.to_string(),
                         pro_arrow: over.to_string(),
                     }
                     .into());
@@ -163,7 +163,7 @@ impl<T: Theory> ModelEntry<T> {
                 for atomic in stated.iter() {
                     if !T::has_pro_arrow(atomic) {
                         return Err(EType::InvalidTheoryProArrow {
-                            theory: T::name(),
+                            theory: T::NAME.to_string(),
                             pro_arrow: atomic.to_string(),
                         }
                         .into());
@@ -217,7 +217,7 @@ impl<T: Theory> ModelEntry<T> {
                 }
             }
             ObjectType::List(list) => {
-                let TheoryObject::ModalApplication { on, .. } = over else {
+                let TheoryObject::ModalApplication { on } = over else {
                     return Err(EType::BadObjectTypeTheoryObject {
                         object_type: obj.to_string(),
                         theory_object: over.to_string(),
@@ -305,13 +305,12 @@ impl<T: Theory> ModelEntry<T> {
         match obj {
             ObjectType::Generator(g) => Ok(self.lookup_generating_object(g)?.over.clone()),
             ObjectType::List(list) => {
-                let Some(modality) = T::list_modality() else {
+                if !<T::ListModality as ListModality>::PRESENT {
                     return Err(EInfer::NoTheoryListModality.into());
-                };
+                }
 
                 if list.is_empty() {
                     return Ok(TheoryObject::ModalApplication {
-                        modality,
                         on: Box::new(TheoryObject::unconstrained(
                             "theory_object_for_empty_list".to_string(),
                         )),
@@ -325,7 +324,7 @@ impl<T: Theory> ModelEntry<T> {
                     return Err(EInfer::InconsistentTheoryObjectForList.into());
                 };
 
-                Ok(TheoryObject::ModalApplication { modality, on: Box::new(on) })
+                Ok(TheoryObject::ModalApplication { on: Box::new(on) })
             }
             ObjectType::FunctionApplication { function, on } => {
                 if function.is_empty() {

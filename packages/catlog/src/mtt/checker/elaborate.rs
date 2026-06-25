@@ -8,7 +8,7 @@ use crate::mtt::{
     },
     composite::Composite,
     hole::Holy,
-    theory::{Theory, TheoryArrow, TheoryObject, TheoryProArrow},
+    theory::{ListModality, Theory, TheoryArrow, TheoryObject, TheoryProArrow},
 };
 
 /// Procedures for transforming raw AST inputs into various core types. The
@@ -32,9 +32,9 @@ impl<T: Theory> ModelEntry<T> {
                     panic!("we re-associated a juxtaposition, this must still be a juxtaposition")
                 };
                 if let Expression::Literal(post) = *post {
-                    if let Some(modality) = T::list_modality() {
+                    if <T::ListModality as ListModality>::PRESENT {
                         let on = Box::new(self.elaborate_theory_object(&pre)?);
-                        Ok(TheoryObject::ModalApplication { modality: modality.clone(), on })
+                        Ok(TheoryObject::ModalApplication { on })
                     } else {
                         Err(EElaborate::UnknownModality(post.clone()))
                     }
