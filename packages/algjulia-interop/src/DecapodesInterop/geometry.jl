@@ -18,9 +18,9 @@ end
 
 """    
 """
-struct Circle <: AbstractMeshSpec
-    n::Int
-    c::Float64
+@kwdef struct Circle <: AbstractMeshSpec
+    n::Int = 1
+    c::Float64 = 0.5
 end
 
 name(::Circle) = "Circle"
@@ -37,9 +37,9 @@ function Geometry(c::Circle; division::SimplexCenter=Circumcenter())
     Geometry(c, mesh, dualmesh)
 end
 
-struct Sphere <: AbstractMeshSpec
-    dim::Int
-    radius::Float64
+@kwdef struct Sphere <: AbstractMeshSpec
+    dim::Int = 1
+    radius::Float64 = 1.0
 end
 
 Sphere(dim) = Sphere(dim, 1.0)
@@ -58,11 +58,11 @@ end
 #     Geometry(m, s, sd)
 # end
 
-struct Rectangle <: AbstractMeshSpec
-    max_x::Int
-    max_y::Int
-    dx::Float64
-    dy::Float64
+@kwdef struct Rectangle <: AbstractMeshSpec
+    max_x::Int = 100
+    max_y::Int = 100
+    dx::Float64 = 0.1
+    dy::Float64 = 0.1
 end
 
 function Geometry(r::Rectangle; division::SimplexCenter=Circumcenter())
