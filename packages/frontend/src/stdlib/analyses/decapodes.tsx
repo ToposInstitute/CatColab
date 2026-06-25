@@ -122,7 +122,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
             variants: () => {
                 const mesh = props.content.mesh;
                 if (!mesh) return [];
-                return options()?.ics[mesh] ?? []; // mesh-name → IC names
+                return options()?.mesh_info[mesh].ics ?? [];
             },
             content: (name) => props.content.initialConditions[name] ?? null,
             setContent: (name, value) =>
@@ -209,7 +209,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
 
     const DomainConfig = (domains: Domain[]) => (
         <div class="decapodes-domain">
-            <span>Domain:</span>
+            <span>Mesh:</span>
             <select
                 value={props.content.domain ?? undefined}
                 onInput={(evt) =>
@@ -219,8 +219,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                             return;
                         }
                         content.domain = domain;
-                        content.mesh = options()?.domains.get(domain)?.ics[0] ?? null;
-                        // content.mesh = null;
+                        content.mesh = options()?.mesh_info[domain].ics[0] ?? null;
                         content.initialConditions = {};
                     })
                 }
@@ -229,7 +228,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                     {(domain) => <option value={domain}>{domain}</option>}
                 </For>
             </select>
-            <Show when={false}>
+            <Show when={props.content.mesh}>
                 {(name) => (
                     <>
                         <span>Mesh:</span>
@@ -282,6 +281,25 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
             setData: (name, value) => setConstantValues((prev) => ({ ...prev, [name]: value })),
         }),
     ];
+
+    const [fieldValues, setFieldValues] = createSignal<Record<string, number>>({});
+
+    const fieldSchema = (default_value: Record<string, unknown>): ColumnSchema<string>[] => [
+        {
+            contentType: "string",
+            header: true,
+            name: "Field",
+            content: (field) => field,
+        },
+        createNumericalColumn({
+            name: "Value",
+            data: (field) => fieldValues()[field],
+            default: (field) => default_value[field],
+            setData: (field, v) => setFieldValues((prev) => ({ ...prev, [field]: v })),
+        }),
+    ];
+
+    const fieldNames = (mesh: string): string[] => Object.keys(options()?.mesh_info[mesh].specs ?? {});
 
     const [runPayload, setRunPayload] = createSignal<
         { pode: string; constants: Record<string, number>; duration: number } | undefined
@@ -361,16 +379,29 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                                     {(mesh) => <option value={mesh}>{mesh}</option>}
                                 </For>
                             </select>
+                            <Show when={options() && props.content.mesh}>
+                                {(mesh) => {
+                                console.log(options());
+                                    return (
+                                    <FixedTableEditor
+                                        rows={fieldNames(mesh())}
+                                        schema={fieldSchema(options()?.mesh_info[mesh()].defaults)}
+                                    />
+                                )}}
+                            </Show>{" "}
                         </div>
                     )}
                 </Show>
 
+                <div class="decapodes-domain">
                 <Show when={props.content.mesh}>
                     <FixedTableEditor rows={["n", "w"]} schema={icSchema} />
                 </Show>
+
                 <Show when={podeData()}>
                     {(pd) => <FixedTableEditor rows={pd().constants} schema={constantSchema} />}
                 </Show>
+                </div>
                 <FixedTableEditor rows={[null]} schema={toplevelSchema} />
 
                 <button onClick={runSimulation} disabled={!podeData() || res.loading}>
@@ -426,24 +457,22 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                         {"Cannot run the simulation because the diagram is invalid"}
                     </ErrorAlert>
                 </Match>
-                <Match when={res()}>
-                    {(data) => {
-                        console.log("plot data:", data().data.time.length);
-                        return <PDEPlot2D data={data().data} />;
-                    }}
-                </Match>
+                <Match when={res()}>{(data) => <PDEPlot2D data={data().data} />}</Match>
             </Switch>
         </div>
     );
 }
 
+type MeshInfo = {
+    specs: Record<string, string>;
+    defaults: Record<string, number>;
+    ics: string[];
+};
+
 /** Options supported by Decapodes, defined by the Julia service. */
 type SimulationOptions = {
-    /** Supported meshes that discretize the domain. */
     meshes: string[];
-
-    /** Initial/boundary conditions supported for the domain. */
-    ics: Record<string, string[]>;
+    mesh_info: Record<string, MeshInfo>;
 };
 
 /** Data sent to the Julia kernel defining a simulation. */

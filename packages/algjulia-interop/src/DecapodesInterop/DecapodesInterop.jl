@@ -141,33 +141,61 @@ function endpoint(::Val{:DecapodesString})
 end
 
 
+struct MeshInfo{Mesh <: AbstractMeshSpec}
+    # field names and their types
+    specs::Dict{String, String}
 
-using InteractiveUtils
+    # mapping between geometry fields and their defaults
+    # TODO embiggen to an Enum, later
+    defaults::Dict{String, Number}
 
-""" Supported geometries, in the JSON format expected by the frontend. """
-# function supported_decapodes_geometries()
-#     mesh_tys = InteractiveUtils.subtypes(AbstractMeshSpec)
-#     meshes = string.(nameof.(mesh_tys))
-#     ms = methods(initial_condition)
-#     @info ms
-#     mesh_to_ics = Dict(map(mesh_tys) do mesh
-#         @info methodswith(Geometry{mesh})
-#         ics = map(intersect(methodswith(Geometry{mesh}), ms)) do m
-#             ic = m.sig.parameters[2]
-#             string(nameof(ic))
-#         end
-#         mesh = string(nameof(mesh))
-#         mesh => ics
-#     end)
-#     @info mesh_to_ics
-#     Dict(:meshes => meshes, :ics => mesh_to_ics)    
-# end
-# export supported_decapodes_geometries
+    # valid initial conditions
+    ics::Vector{String}
+end
+
+function MeshInfo(mesh_type::Type{Mesh}) where Mesh <: AbstractMeshSpec
+    specs = Dict(string.(fieldnames(mesh_type)) .=> string.(nameof.(fieldtypes(mesh_type))))
+    defaults = Dict(string(k) => v for (k,v) in pairs(kwdef_defaults(mesh_type)))
+
+    # Initial Conditions
+    ic_methods = methods(initial_condition)
+    names = String[]
+    for m in ic_methods
+        params = Base.unwrap_unionall(m.sig).parameters
+        length(params) >= 3 || continue
+        geom = params[3]
+        geom isa DataType && nameof(geom) === :Geometry || continue
+        meshparam = geom.parameters[1]
+        if meshparam isa TypeVar || meshparam === mesh_type
+            push!(names, string(nameof(params[2])))
+        end
+    end
+    ics = unique(names)
+    MeshInfo{Mesh}(specs, defaults, ics)
+end
+     
+using InteractiveUtils: subtypes
+
+function supported_geometries()
+    mesh_types = subtypes(AbstractMeshSpec)
+    meshes = string.(nameof.(mesh_types))
+
+    mesh_info = Dict(map(mesh_types) do mesh
+        string(nameof(mesh)) => MeshInfo(mesh)
+    end)
+
+    Dict(:meshes => meshes, :mesh_info => mesh_info)
+end
 
 function supported_decapodes_geometries()
     mesh_tys = subtypes(AbstractMeshSpec)
     meshes   = string.(nameof.(mesh_tys))
     ms       = methods(initial_condition)
+
+    # the association between meshes and their fieldnames, types
+    mesh_specs = Dict(map(mesh_tys) do mesh
+        string(nameof(mesh)) => Dict(string.(fieldnames(mesh)) .=> string.(nameof.(fieldtypes(mesh))))
+    end)
 
     ics = Dict(map(mesh_tys) do mesh
         names = String[]
@@ -184,12 +212,16 @@ function supported_decapodes_geometries()
         string(nameof(mesh)) => unique(names)
     end)
 
-    Dict(:meshes => meshes, :ics => ics)
+    mesh_defaults = Dict(map(mesh_tys) do mesh
+        string(nameof(mesh)) => Dict(pairs(kwdef_defaults(mesh)))
+    end)
+
+    Dict(:meshes => meshes, :mesh_specs => mesh_specs, :mesh_defaults => mesh_defaults, :ics => ics)
 end
 
 function endpoint(::Val{:DecapodesOptions})
     @get "/decapodes-options" function (req::HTTP.Request)
-        supported_decapodes_geometries()
+        supported_geometries()
     end
 end
 
@@ -251,7 +283,11 @@ function format(sd::EmbeddedDeltaDualComplex1D, result::SolutionResult)
     )
 end
 
-
-
+function kwdef_defaults(::Type{T}) where {T}
+    ci = only(code_lowered(T, Tuple{}))
+    i = findlast(e -> Meta.isexpr(e, :call), ci.code)
+    vals = ci.code[i].args[2:end-1]
+    return NamedTuple{fieldnames(T)}(Tuple(vals))
+end
 
 end # module
