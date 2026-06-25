@@ -73,9 +73,9 @@ mod tests {
 
     #[test]
     fn signed_polynomial_ode_latex_equations() {
-        // The signed multicategory with objects `x`, `y`, and `zonk`, (unnamed) positive morphisms
+        // The signed multicategory with objects `x`, `yum`, and `z`, (unnamed) positive morphisms
         // `[x,y] -+-> z` and `q : z -+-> y`, and a negative morphism `negative : [x,x,y,z] ---> x`.
-        let model = example_signed_multicategory("x", "y", "zonk", "P", "", "negative");
+        let model = example_signed_multicategory("x", "yum", "z", "", "", "negative");
         let system =
             ode::PolynomialODEAnalysis::default().build_system(model.modal_nonunital().unwrap());
         let equations =
@@ -85,17 +85,19 @@ mod tests {
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string()),
                 rhs: Latex(
-                    "-\\lambda_{\\text{negative}} \\cdot x^2 \\cdot y \\cdot \\text{zonk}"
+                    "-\\lambda_{\\text{negative}} \\cdot x^2 \\cdot \\text{yum} \\cdot z"
                         .to_string(),
                 ),
             },
             LatexEquation {
-                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string()),
-                rhs: Latex("\\lambda_{\\text{zonk} \\to y} \\cdot \\text{zonk}".to_string()),
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{yum}".to_string()),
+                rhs: Latex("\\lambda_{z \\to \\text{yum}} \\cdot z".to_string()),
             },
             LatexEquation {
-                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} \\text{zonk}".to_string()),
-                rhs: Latex("\\lambda_{[x,y] \\to \\text{zonk}} \\cdot x \\cdot y".to_string()),
+                lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} z".to_string()),
+                rhs: Latex(
+                    "\\lambda_{[x, \\text{yum}] \\to z} \\cdot x \\cdot \\text{yum}".to_string(),
+                ),
             },
         ]);
 
@@ -240,7 +242,7 @@ mod tests {
     fn petri_net_unbalanced_pt_mass_action_latex_equations() {
         // The Petri net with places "liquid", "solid", and "c", and one transition
         // `transition : [liquid, c] -> [solid, c]`.
-        let model = catalytic_petri_net("liquid", "solid", "c", "");
+        let model = catalytic_petri_net("liquid", "solid", "c", "transition");
         let system = ode::PetriNetMassActionAnalysis {
             mass_conservation_type: MassConservationType::Unbalanced(
                 ode::RateGranularity::PerTransition,
@@ -262,7 +264,7 @@ mod tests {
             },
             LatexEquation {
                 lhs: Latex("\\frac{\\mathrm{d}}{\\mathrm{d}t} c".to_string()),
-                rhs: Latex("(\\rho_{\\text{transition}} - \\kappa_{[\\text{liquid}, c] \\to [\\text{solid}, c]}) \\cdot \\text{liquid} \\cdot c".to_string()),
+                rhs: Latex("(\\rho_{\\text{transition}} - \\kappa_{\\text{transition}}) \\cdot \\text{liquid} \\cdot c".to_string()),
             },
         ]);
         assert_eq!(equations, expected);
@@ -385,7 +387,7 @@ mod tests {
         inner.add_ob(z.into(), ob_type.clone());
 
         inner.add_mor(
-            p_name.into(),
+            p.into(),
             ModalOb::List(
                 List::Symmetric,
                 vec![ModalOb::Generator(x.into()), ModalOb::Generator(y.into())],
@@ -394,13 +396,13 @@ mod tests {
             pos_mor_type.clone(),
         );
         inner.add_mor(
-            q_name.into(),
+            q.into(),
             ModalOb::List(List::Symmetric, vec![ModalOb::Generator(z.into())]),
             ModalOb::Generator(y.into()),
             pos_mor_type.clone(),
         );
         inner.add_mor(
-            n_name.into(),
+            n.into(),
             ModalOb::List(
                 List::Symmetric,
                 vec![
