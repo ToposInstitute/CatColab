@@ -141,16 +141,7 @@ const EXPECTED_NOTEBOOK_JSON = {
                     tag: "morphism",
                     id: "uuid:7",
                     name: "fires",
-                    morType: {
-                        tag: "Hom",
-                        content: {
-                            tag: "ModeApp",
-                            content: {
-                                modality: "SymmetricList",
-                                obType: { tag: "Basic", content: "Object" },
-                            },
-                        },
-                    },
+                    morType: { tag: "Hom", content: { tag: "Basic", content: "Object" } },
                     dom: {
                         tag: "App",
                         content: {
@@ -227,13 +218,9 @@ describe("Petri-net editor comparison", () => {
         };
 
         const placeObType: ObType = { tag: "Basic", content: "Object" };
-        const transitionMorType: MorType = {
-            tag: "Hom",
-            content: {
-                tag: "ModeApp",
-                content: { modality: "SymmetricList", obType: placeObType },
-            },
-        };
+        // The core morphism type persisted by the frontend: a plain `Hom(Object)`
+        // whose list-ness lives in the tensor-product endpoints, not the type.
+        const transitionMorType: MorType = { tag: "Hom", content: placeObType };
         const tensorOp = { tag: "Basic", content: "tensor" } as const;
 
         const placeCellConstructor: CurrentCellConstructor = {

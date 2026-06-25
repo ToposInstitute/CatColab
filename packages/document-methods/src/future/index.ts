@@ -946,6 +946,59 @@ const morTypeListModality = (morType: MorType): Modality | null => {
     return null;
 };
 
+/**
+ * Lower a morphism type to the *core* form that is persisted into the document
+ * and handed to the core theory's elaborator. A list-modality `Hom` such as a
+ * Petri-net transition's `Hom(ModeApp(SymmetricList, Object))` is stored as the
+ * plain `Hom(Object)` that the core theory understands; the list-ness lives in
+ * the tensor-product endpoints instead (see {@link encodeEndpoint}). This is
+ * exactly what the frontend persists, so the two representations agree and the
+ * elaborated model exposes the morphism as a generator. Any other morphism type
+ * is already in core form and is returned unchanged.
+ */
+const coreMorType = (morType: MorType): MorType => {
+    if (
+        morType.tag === "Hom" &&
+        morType.content.tag === "ModeApp" &&
+        LIST_MODALITIES.has(morType.content.content.modality)
+    ) {
+        return { tag: "Hom", content: morType.content.content.obType };
+    }
+    return morType;
+};
+
+/** The list modality of a stored endpoint, read from a `Tensor(List(...))`
+wrapper, or `null` when the endpoint is not a list. The runtime counterpart to
+recognizing a list endpoint by its shape rather than its morphism type. */
+const endpointListModality = (ob: Ob | null): Modality | null => {
+    if (ob?.tag === "App" && ob.content.ob.tag === "List") {
+        const modality = ob.content.ob.content.modality;
+        return LIST_MODALITIES.has(modality) ? modality : null;
+    }
+    return null;
+};
+
+/**
+ * Raise a persisted *core* morphism type back to the document-methods form,
+ * inverting {@link coreMorType}. A `Hom(Object)` whose stored endpoints are a
+ * tensor product over a list modality is recovered as `Hom(ModeApp(mod,
+ * Object))`, so a morphism cell read back from the document reports the same
+ * rich type its {@link MorphismDef} declares (and {@link Notebook.cellsOf}
+ * matches it). A morphism type that is already in `ModeApp` form, or whose
+ * endpoints are not lists, is returned unchanged.
+ */
+const richMorType = (morType: MorType, dom: Ob | null, cod: Ob | null): MorType => {
+    if (morType.tag !== "Hom" || morType.content.tag === "ModeApp") {
+        return morType;
+    }
+    const obType = morType.content;
+    const modality = endpointListModality(dom) ?? endpointListModality(cod);
+    if (modality === null) {
+        return morType;
+    }
+    return { tag: "Hom", content: { tag: "ModeApp", content: { modality, obType } } };
+};
+
 /** Encode an object-cell endpoint reference as a model object. */
 const encodeObjectRef = (cell: { readonly id: string }): Ob => ({
     tag: "Basic",
@@ -1485,7 +1538,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
         def: MorphismDef,
         args: { name: string; from?: unknown; to?: unknown },
     ): MorphismCell => {
-        const judgment = newMorphismDecl(def.morType);
+        const judgment = newMorphismDecl(coreMorType(def.morType));
         judgment.name = args.name;
         judgment.dom = encodeEndpoint(def.morType, args.from);
         judgment.cod = encodeEndpoint(def.morType, args.to);
@@ -1653,7 +1706,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                     case "morphism":
                         return morphismHandle(cellId, {
                             tag: "morphism",
-                            morType: judgment.morType,
+                            morType: richMorType(judgment.morType, judgment.dom, judgment.cod),
                         });
                     case "instantiation":
                         return instantiationHandle(cellId);
