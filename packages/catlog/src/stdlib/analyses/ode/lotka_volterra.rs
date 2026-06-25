@@ -301,6 +301,52 @@ mod test {
     // Numerical test.
 
     #[test]
+    fn complicated_symbolic() {
+        let th = Rc::new(th_signed_category());
+        let mut model = DiscreteDblModel::new(th);
+        model.add_ob(name("a"), name("Object"));
+        model.add_ob(name("b"), name("Object"));
+        model.add_ob(name("c"), name("Object"));
+        model.add_ob(name("d"), name("Object"));
+        model.add_mor(name("f"), name("a"), name("b"), Path::Id(name("Object")));
+        model.add_mor(name("g"), name("b"), name("a"), Path::Id(name("Object")));
+        model.add_mor(name("h"), name("b"), name("a"), name("Negative").into());
+        model.add_mor(name("i"), name("a"), name("c"), name("Negative").into());
+        model.add_mor(name("j"), name("c"), name("d"), Path::Id(name("Object")));
+        model.add_mor(name("k"), name("d"), name("b"), name("Negative").into());
+        let sys = LotkaVolterraAnalysis::default().build_system(&model);
+        let expected = expect!([r#"
+            da = Growth(a) a + (Interaction(g) - Interaction(h)) a b
+            db = Interaction(f) a b + Growth(b) b - Interaction(k) b d
+            dc = -Interaction(i) a c + Growth(c) c
+            dd = Interaction(j) c d + Growth(d) d
+        "#]);
+        expected.assert_eq(&sys.to_string());
+    }
+
+    // Test for LaTeX.
+
+    #[test]
+    fn to_latex() {
+        let th = Rc::new(th_signed_category());
+        let model = negative_feedback(th);
+        let sys = LotkaVolterraAnalysis::default().build_system(&model);
+        let expected = vec![
+            LatexEquation {
+                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} x".to_string(),
+                rhs: "Growth(x) \\cdot x - Interaction(negative) \\cdot x \\cdot y".to_string(),
+            },
+            LatexEquation {
+                lhs: "\\frac{\\mathrm{d}}{\\mathrm{d}t} y".to_string(),
+                rhs: "Interaction(positive) \\cdot x \\cdot y + Growth(y) \\cdot y".to_string(),
+            },
+        ];
+        assert_eq!(expected, sys.to_latex_equations());
+    }
+
+    // Numerical test.
+
+    #[test]
     fn predator_prey_numerical() {
         let th = Rc::new(th_signed_category());
         let model = negative_feedback(th);

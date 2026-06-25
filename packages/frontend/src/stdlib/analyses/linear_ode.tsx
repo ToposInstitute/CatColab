@@ -16,10 +16,10 @@ import type { LinearODESimulator } from "./simulator_types";
 
 import "./simulation.css";
 
-/** Analyze a model using LinearODE dynamics. */
-export default function LinearODE(
-    props: ModelAnalysisProps<LinearODEProblemData> & {
-        simulate: LinearODESimulator;
+/** Analyze a model using LCC dynamics. */
+export default function LCC(
+    props: ModelAnalysisProps<LCCProblemData> & {
+        simulate: LCCSimulator;
         title?: string;
     },
 ) {

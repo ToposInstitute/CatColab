@@ -1,0 +1,474 @@
+# GitHub PR Sync with Notion
+#
+# Based on https://github.com/isoppp/github-pr-sync-with-notion
+# Copyright (c) 2026 isoppp
+#
+# MIT License; see LICENSE-MIT for full text. The original copyright notice
+# and permission notice are reproduced here as required by the license.
+#
+# The inline script below is derived from isoppp's composite action, extended
+# with draft / ready-for-review / changes-requested / closed-unmerged status
+# mapping for our Notion database.
+
+name: GitHub PR Sync with Notion
+
+on:
+  pull_request:
+    types: [opened, edited, closed, ready_for_review, converted_to_draft]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Sync to Notion
+        uses: actions/github-script@v7
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+          NOTION_ID_PROPERTY: 'ID'
+          NOTION_STATUS_PROPERTY: 'Status'
+          NOTION_PR_PROPERTY: 'GitHub PR'
+          PR_TITLE_PREFIX: 'OBEE'
+          # Status labels mapped from PR state (must exist as options on the
+          # Notion Status property). Override here if your DB uses different names.
+          NOTION_STATUS_IN_PROGRESS: 'In progress'
+          NOTION_STATUS_IN_REVIEW: 'In review'
+          NOTION_STATUS_DONE: 'Done'
+          NOTION_STATUS_CLOSED: 'Closed'
+        with:
+          script: |
+            const eventName = context.eventName;            // 'pull_request' | 'pull_request_review'
+            const eventAction = context.payload.action;      // 'opened' | 'edited' | 'closed' | 'ready_for_review' | 'converted_to_draft' | 'submitted'
+            const pr = context.payload.pull_request;
+            const prNumber = pr.number;
+            const prUrl = pr.html_url;
+            const prefix = process.env.PR_TITLE_PREFIX;
+
+            const headers = {
+              'Authorization': `Bearer ${process.env.NOTION_TOKEN}`,
+              'Notion-Version': '2022-06-28',
+              'Content-Type': 'application/json'
+            };
+
+            // Escape regex special characters for safe use in RegExp
+            function escapeRegex(str) {
+              return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            }
+
+            function extractTaskIds(title) {
+              if (!title) return [];
+              const escapedPrefix = escapeRegex(prefix);
+              const pattern = new RegExp(`${escapedPrefix}-(\\d+)`, 'g');
+              const matches = [...title.matchAll(pattern)];
+              return matches.map(match => parseInt(match[1]));
+            }
+
+            async function findNotionPage(taskId) {
+              console.log(`Searching for task ID: ${prefix}-${taskId}`);
+              const response = await fetch(
+                `https://api.notion.com/v1/databases/${process.env.NOTION_DATABASE_ID}/query`,
+                {
+                  method: 'POST',
+                  headers,
+                  body: JSON.stringify({
+                    filter: {
+                      property: process.env.NOTION_ID_PROPERTY,
+                      number: { equals: taskId }
+                    }
+                  })
+                }
+              );
+
+              if (!response.ok) {
+                const error = await response.text();
+                throw new Error(`Notion search failed (${response.status}): ${error}`);
+              }
+
+              const data = await response.json();
+              return data.results.length > 0 ? data.results[0] : null;
+            }
+
+            async function getNotionPage(pageId) {
+              const response = await fetch(
+                `https://api.notion.com/v1/pages/${pageId}`,
+                {
+                  method: 'GET',
+                  headers
+                }
+              );
+
+              if (!response.ok) {
+                const error = await response.text();
+                throw new Error(`Failed to get Notion page (${response.status}): ${error}`);
+              }
+
+              return await response.json();
+            }
+
+            function addPrLinkToRichText(existingRichText, prNumber, prUrl) {
+              const newLink = {
+                text: {
+                  content: `PR #${prNumber}`,
+                  link: { url: prUrl }
+                }
+              };
+
+              // Remove existing link with same PR number (use strict equality to avoid PR #1 matching PR #10)
+              const filtered = existingRichText.filter(item => {
+                const content = item.text?.content || '';
+                const isPrLink = content === `PR #${prNumber}`;
+                return !isPrLink;
+              });
+
+              if (filtered.length > 0) {
+                return [...filtered, { text: { content: '\n' } }, newLink];
+              }
+              return [newLink];
+            }
+
+            function removePrLinkFromRichText(existingRichText, prNumber) {
+              // Filter out exact PR link match (e.g., "PR #123")
+              // Use strict equality check to avoid false positives (PR #1 vs PR #10)
+              const filtered = existingRichText.filter(item => {
+                const content = item.text?.content || '';
+                const isPrLink = content === `PR #${prNumber}`;
+                return !isPrLink;
+              });
+
+              // Remove orphaned newlines (consecutive newlines or leading/trailing)
+              const cleaned = [];
+              for (let i = 0; i < filtered.length; i++) {
+                const current = filtered[i];
+                const content = current.text?.content || '';
+                const isNewline = content === '\n';
+
+                if (!isNewline) {
+                  cleaned.push(current);
+                } else {
+                  // Keep newline only if:
+                  // 1. Not at the beginning
+                  // 2. Not at the end
+                  // 3. Not consecutive with previous newline
+                  const isFirst = i === 0;
+                  const isLast = i === filtered.length - 1;
+                  const prevIsNewline = i > 0 && (filtered[i - 1].text?.content || '') === '\n';
+
+                  if (!isFirst && !isLast && !prevIsNewline) {
+                    cleaned.push(current);
+                  }
+                }
+              }
+
+              return cleaned;
+            }
+
+            async function updateNotionPage(pageId, properties) {
+              console.log('Updating Notion page...');
+              const response = await fetch(
+                `https://api.notion.com/v1/pages/${pageId}`,
+                {
+                  method: 'PATCH',
+                  headers,
+                  body: JSON.stringify({ properties })
+                }
+              );
+
+              if (!response.ok) {
+                const error = await response.text();
+                throw new Error(`Notion update failed (${response.status}): ${error}`);
+              }
+
+              return await response.json();
+            }
+
+            // Set the Status property on every Notion page whose task ID appears
+            // in the PR title. No-op if the title carries no task IDs or if the
+            // target status value is empty.
+            async function setStatusForTasks(statusValue) {
+              if (!statusValue) {
+                console.log(`⏭️  Skipped status update (status value is empty)`);
+                return;
+              }
+              const title = pr.title;
+              const taskIds = extractTaskIds(title);
+              if (taskIds.length === 0) {
+                console.log(`No ${prefix} ID found in PR title: ${title}`);
+                return;
+              }
+              for (const taskId of taskIds) {
+                const page = await findNotionPage(taskId);
+                if (!page) {
+                  console.log(`No Notion page found with ${process.env.NOTION_ID_PROPERTY}=${taskId}`);
+                  continue;
+                }
+                await updateNotionPage(page.id, {
+                  [process.env.NOTION_STATUS_PROPERTY]: {
+                    status: { name: statusValue }
+                  }
+                });
+                console.log(`✅ Updated status for ${prefix}-${taskId} to "${statusValue}"`);
+              }
+            }
+
+            // Find existing Notion sync comment
+            async function findNotionSyncComment() {
+              // Use paginate to fetch all comments (handles PRs with 30+ comments)
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber
+              });
+
+              return comments.find(comment =>
+                comment.user.login === 'github-actions[bot]' &&
+                comment.body.includes('<!-- notion-pr-sync -->')
+              );
+            }
+
+            // Post or update PR comment
+            async function postOrUpdatePrComment(notionPages) {
+              const lines = notionPages.map(({ page, taskId }) => {
+                const pageTitle = page.properties.Name?.title?.[0]?.plain_text ||
+                                 page.properties.Title?.title?.[0]?.plain_text ||
+                                 `Task ${taskId}`;
+                const pageUrl = page.url;
+                return `- [${prefix}-${taskId}: ${pageTitle}](${pageUrl})`;
+              });
+
+              const message = `<!-- notion-pr-sync -->\n## Notion Integration\n\n${lines.join('\n')}`;
+
+              // Search for existing comment
+              const existingComment = await findNotionSyncComment();
+
+              if (existingComment) {
+                // Update comment
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existingComment.id,
+                  body: message
+                });
+                console.log('Updated existing PR comment');
+              } else {
+                // Post new comment
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                  body: message
+                });
+                console.log('Posted new PR comment');
+              }
+            }
+
+            // Delete Notion sync comment
+            async function deleteNotionSyncComment() {
+              const existingComment = await findNotionSyncComment();
+              if (existingComment) {
+                await github.rest.issues.deleteComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existingComment.id
+                });
+                console.log('Deleted PR comment');
+              }
+            }
+
+            // Main processing
+            try {
+              console.log(`Event: ${eventName}/${eventAction}`);
+
+              // =====================================================
+              // pull_request_review: changes requested -> In progress
+              // (approved / commented do not trigger a status change)
+              // =====================================================
+              if (eventName === 'pull_request_review') {
+                const reviewState = context.payload.review?.state;
+                console.log(`Review state: ${reviewState}`);
+                if (reviewState === 'changes_requested') {
+                  await setStatusForTasks(process.env.NOTION_STATUS_IN_PROGRESS);
+                } else {
+                  console.log(`Review state "${reviewState}" does not trigger a status change`);
+                }
+
+              // =====================================
+              // PR opened: sync PR link + set status
+              //   draft     -> In progress
+              //   non-draft -> In review
+              // =====================================
+              } else if (eventAction === 'opened') {
+                const title = pr.title;
+                const taskIds = extractTaskIds(title);
+
+                const notionPages = [];
+
+                if (taskIds.length > 0) {
+                  for (const taskId of taskIds) {
+                    const page = await findNotionPage(taskId);
+                    if (!page) {
+                      console.log(`No Notion page found with ${process.env.NOTION_ID_PROPERTY}=${taskId}`);
+                      continue;
+                    }
+
+                    // Get existing rich text
+                    const pageData = await getNotionPage(page.id);
+                    const existingRichText = pageData.properties[process.env.NOTION_PR_PROPERTY]?.rich_text || [];
+
+                    // Add PR link
+                    const updatedRichText = addPrLinkToRichText(existingRichText, prNumber, prUrl);
+
+                    const updatedPage = await updateNotionPage(page.id, {
+                      [process.env.NOTION_PR_PROPERTY]: {
+                        rich_text: updatedRichText
+                      }
+                    });
+
+                    console.log(`✅ Added PR link to ${prefix}-${taskId}`);
+                    console.log(`   PR: ${prUrl}`);
+
+                    notionPages.push({ page: updatedPage, taskId });
+                  }
+
+                  // Post or update PR comment
+                  if (notionPages.length > 0) {
+                    await postOrUpdatePrComment(notionPages);
+                  }
+                } else {
+                  console.log(`No ${prefix} ID found in PR title: ${title}`);
+                }
+
+                // Status based on draft state
+                if (pr.draft) {
+                  await setStatusForTasks(process.env.NOTION_STATUS_IN_PROGRESS);
+                } else {
+                  await setStatusForTasks(process.env.NOTION_STATUS_IN_REVIEW);
+                }
+
+              // =====================================
+              // PR edited: sync PR links on title change (no status change)
+              // =====================================
+              } else if (eventAction === 'edited') {
+                // Skip if title is unchanged (e.g., Description change)
+                if (!context.payload.changes?.title) {
+                  console.log('Title unchanged, skipping sync');
+                  return;
+                }
+
+                const oldTitle = context.payload.changes.title.from;
+                const newTitle = pr.title;
+
+                const oldTaskIds = extractTaskIds(oldTitle);
+                const newTaskIds = extractTaskIds(newTitle);
+
+                console.log(`Title changed: "${oldTitle}" -> "${newTitle}"`);
+                console.log(`Task IDs changed: [${oldTaskIds.join(', ') || 'none'}] -> [${newTaskIds.join(', ') || 'none'}]`);
+
+                // Skip if task IDs are unchanged
+                const oldTaskIdsSet = new Set(oldTaskIds);
+                const newTaskIdsSet = new Set(newTaskIds);
+                const hasChanges = oldTaskIds.length !== newTaskIds.length ||
+                                  oldTaskIds.some(id => !newTaskIdsSet.has(id)) ||
+                                  newTaskIds.some(id => !oldTaskIdsSet.has(id));
+
+                if (!hasChanges) {
+                  console.log('Task IDs unchanged, skipping sync');
+                  return;
+                }
+
+                const notionPages = [];
+
+                // Remove PR link from tasks no longer in title
+                const removedTaskIds = oldTaskIds.filter(id => !newTaskIdsSet.has(id));
+                for (const taskId of removedTaskIds) {
+                  const oldPage = await findNotionPage(taskId);
+                  if (oldPage) {
+                    const oldPageData = await getNotionPage(oldPage.id);
+                    const oldRichText = oldPageData.properties[process.env.NOTION_PR_PROPERTY]?.rich_text || [];
+                    const updatedOldRichText = removePrLinkFromRichText(oldRichText, prNumber);
+
+                    await updateNotionPage(oldPage.id, {
+                      [process.env.NOTION_PR_PROPERTY]: {
+                        rich_text: updatedOldRichText
+                      }
+                    });
+
+                    console.log(`✅ Removed PR link from ${prefix}-${taskId}`);
+                  }
+                }
+
+                // Add PR link to new tasks
+                const addedTaskIds = newTaskIds.filter(id => !oldTaskIdsSet.has(id));
+                for (const taskId of addedTaskIds) {
+                  const newPage = await findNotionPage(taskId);
+                  if (newPage) {
+                    const newPageData = await getNotionPage(newPage.id);
+                    const newRichText = newPageData.properties[process.env.NOTION_PR_PROPERTY]?.rich_text || [];
+                    const updatedNewRichText = addPrLinkToRichText(newRichText, prNumber, prUrl);
+
+                    const updatedNewPage = await updateNotionPage(newPage.id, {
+                      [process.env.NOTION_PR_PROPERTY]: {
+                        rich_text: updatedNewRichText
+                      }
+                    });
+
+                    console.log(`✅ Added PR link to ${prefix}-${taskId}`);
+                    console.log(`   PR: ${prUrl}`);
+                    notionPages.push({ page: updatedNewPage, taskId });
+                  }
+                }
+
+                // Also include existing tasks (not added, but still in title) in comment
+                const existingTaskIds = newTaskIds.filter(id => oldTaskIdsSet.has(id));
+                for (const taskId of existingTaskIds) {
+                  const page = await findNotionPage(taskId);
+                  if (page) {
+                    const pageData = await getNotionPage(page.id);
+                    notionPages.push({ page: pageData, taskId });
+                  }
+                }
+
+                // Sort by task ID for consistent display
+                notionPages.sort((a, b) => a.taskId - b.taskId);
+
+                // Post or update PR comment
+                if (notionPages.length > 0) {
+                  await postOrUpdatePrComment(notionPages);
+                } else {
+                  // Delete comment if all task IDs were removed from title
+                  await deleteNotionSyncComment();
+                }
+
+              // =====================================
+              // ready_for_review: draft -> In review
+              // =====================================
+              } else if (eventAction === 'ready_for_review') {
+                await setStatusForTasks(process.env.NOTION_STATUS_IN_REVIEW);
+
+              // =====================================
+              // converted_to_draft: -> In progress
+              // =====================================
+              } else if (eventAction === 'converted_to_draft') {
+                await setStatusForTasks(process.env.NOTION_STATUS_IN_PROGRESS);
+
+              // =====================================
+              // closed: merged -> Done | unmerged -> Closed
+              // =====================================
+              } else if (eventAction === 'closed') {
+                if (pr.merged) {
+                  await setStatusForTasks(process.env.NOTION_STATUS_DONE);
+                } else {
+                  await setStatusForTasks(process.env.NOTION_STATUS_CLOSED);
+                }
+
+              } else {
+                console.log(`Event action "${eventAction}" is not handled`);
+              }
+
+            } catch (error) {
+              core.setFailed(`Failed to sync: ${error.message}`);
+            }

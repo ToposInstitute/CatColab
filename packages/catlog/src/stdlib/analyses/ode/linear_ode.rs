@@ -154,7 +154,7 @@ impl
     feature = "serde-wasm",
     tsify(into_wasm_abi, from_wasm_abi, hashmap_as_object)
 )]
-pub struct LinearODEProblemData {
+pub struct LCCProblemData {
     /// Map from morphism IDs to interaction coefficients (nonnegative reals).
     #[cfg_attr(feature = "serde", serde(rename = "coefficients"))]
     coefficients: HashMap<QualifiedName, f32>,

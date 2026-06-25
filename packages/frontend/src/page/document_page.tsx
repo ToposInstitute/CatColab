@@ -1,4 +1,5 @@
 import Resizable, { type ContextValue } from "@corvu/resizable";
+import { makeEventListener } from "@solid-primitives/event-listener";
 import { Title } from "@solidjs/meta";
 import { useNavigate, useParams } from "@solidjs/router";
 import ChevronsRight from "lucide-solid/icons/chevrons-right";
@@ -17,7 +18,17 @@ import {
 } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { Button, IconButton, ResizableHandle, WarningBanner } from "catcolab-ui-components";
+import {
+    Button,
+    type FocusHandle,
+    IconButton,
+    keyEventHasModifier,
+    primaryModifier,
+    ResizableHandle,
+    rootFocus,
+    useChildFocus,
+    WarningBanner,
+} from "catcolab-ui-components";
 import { getLiveAnalysis, type LiveAnalysisDoc } from "../analysis";
 import { AnalysisNotebookEditor } from "../analysis/analysis_editor";
 import { AnalysisInfo } from "../analysis/analysis_info";
@@ -63,6 +74,7 @@ export default function DocumentPage() {
     const params = useParams();
     const navigate = useNavigate();
     const isSidePanelOpen = () => !!params.subkind && !!params.subref;
+    const paneFocus = useChildFocus<"primary" | "secondary">(rootFocus, { default: "primary" });
 
     // Redirect if primary and secondary refs match
     createEffect(() => {
@@ -101,6 +113,7 @@ export default function DocumentPage() {
     );
 
     const closeSidePanel = () => {
+        paneFocus.setActiveChild("primary");
         navigate(`/${params.kind}/${params.ref}`);
     };
 
@@ -120,6 +133,7 @@ export default function DocumentPage() {
             // expand the second panel
             context?.expand(1);
         } else {
+            paneFocus.setActiveChild("primary");
             // collapse the second panel
             context?.collapse(1);
             // Set the first panel to be the full size
@@ -161,6 +175,8 @@ export default function DocumentPage() {
                                 closeSidePanel={closeSidePanel}
                                 togglePrimaryHistorySidebar={togglePrimaryHistorySidebar}
                                 toggleSecondaryHistorySidebar={toggleSecondaryHistorySidebar}
+                                primaryPaneFocus={paneFocus.childFocus("primary")}
+                                secondaryPaneFocus={paneFocus.childFocus("secondary")}
                             />
                         }
                         sidebarContents={
@@ -178,6 +194,8 @@ export default function DocumentPage() {
                                           }
                                         : undefined;
                                 })()}
+                                primaryPaneFocus={paneFocus.childFocus("primary")}
+                                secondaryPaneFocus={paneFocus.childFocus("secondary")}
                                 refetchPrimaryDoc={refetchPrimaryDoc}
                                 refetchSecondaryDoc={refetchSecondaryDoc}
                             />
@@ -194,6 +212,8 @@ export default function DocumentPage() {
                             setResizableContext={setResizableContext}
                             primaryHistoryOpen={primaryHistoryOpen()}
                             secondaryHistoryOpen={secondaryHistoryOpen()}
+                            primaryPaneFocus={paneFocus.childFocus("primary")}
+                            secondaryPaneFocus={paneFocus.childFocus("secondary")}
                         />
                     </SidebarLayout>
                 )}
@@ -212,6 +232,8 @@ function SplitPaneToolbar(props: {
     maximizeSidePanel: () => void;
     togglePrimaryHistorySidebar: () => void;
     toggleSecondaryHistorySidebar: () => void;
+    primaryPaneFocus: FocusHandle;
+    secondaryPaneFocus: FocusHandle;
 }) {
     const secondaryPanelSize = () => props.panelSizes?.[1];
     const primaryPanelSize = () => props.panelSizes?.[0];
@@ -221,7 +243,13 @@ function SplitPaneToolbar(props: {
             <DocumentBreadcrumbs liveDoc={props.doc.liveDoc} docRefId={props.docRef.refId} />
             <span class="filler" />
             <Show when={!secondaryPanelSize()}>
-                <IconButton onClick={props.togglePrimaryHistorySidebar} tooltip="Toggle history">
+                <IconButton
+                    onClick={() => {
+                        props.primaryPaneFocus.setFocused(true);
+                        props.togglePrimaryHistorySidebar();
+                    }}
+                    tooltip="Toggle history"
+                >
                     <History size={20} />
                 </IconButton>
                 <PermissionsButton liveDoc={props.doc.liveDoc} docRef={props.docRef} />
@@ -232,7 +260,10 @@ function SplitPaneToolbar(props: {
                     style={{ left: `${(primaryPanelSize() ?? 0) * 100}%` }}
                 >
                     <IconButton
-                        onClick={props.togglePrimaryHistorySidebar}
+                        onClick={() => {
+                            props.primaryPaneFocus.setFocused(true);
+                            props.togglePrimaryHistorySidebar();
+                        }}
                         tooltip="Toggle history"
                     >
                         <History size={20} />
@@ -249,6 +280,7 @@ function SplitPaneToolbar(props: {
                         closeSidePanel={props.closeSidePanel}
                         maximizeSidePanel={props.maximizeSidePanel}
                         toggleHistorySidebar={props.toggleSecondaryHistorySidebar}
+                        secondaryPaneFocus={props.secondaryPaneFocus}
                     />
                 )}
             </Show>
@@ -263,6 +295,7 @@ function SecondaryToolbar(props: {
     closeSidePanel: () => void;
     maximizeSidePanel: () => void;
     toggleHistorySidebar: () => void;
+    secondaryPaneFocus: FocusHandle;
 }) {
     return (
         <>
@@ -288,7 +321,13 @@ function SecondaryToolbar(props: {
             >
                 {(secondary) => (
                     <div class="secondary-permissions-toolbar toolbar">
-                        <IconButton onClick={props.toggleHistorySidebar} tooltip="Toggle history">
+                        <IconButton
+                            onClick={() => {
+                                props.secondaryPaneFocus.setFocused(true);
+                                props.toggleHistorySidebar();
+                            }}
+                            tooltip="Toggle history"
+                        >
                             <History size={20} />
                         </IconButton>
                         <PermissionsButton
@@ -313,6 +352,8 @@ function ResizablePanels(props: {
     setResizableContext: (context: ContextValue) => void;
     primaryHistoryOpen: boolean;
     secondaryHistoryOpen: boolean;
+    primaryPaneFocus: FocusHandle;
+    secondaryPaneFocus: FocusHandle;
 }) {
     return (
         <Resizable class="resizeable-panels">
@@ -329,6 +370,7 @@ function ResizablePanels(props: {
                                 refetchPrimaryDoc={props.refetchPrimaryDoc}
                                 refetchSecondaryDoc={props.refetchSecondaryDoc}
                                 historySidebarOpen={props.primaryHistoryOpen}
+                                focus={props.primaryPaneFocus}
                             />
                         </Resizable.Panel>
                         <Show when={props.isSidePanelOpen}>
@@ -347,6 +389,7 @@ function ResizablePanels(props: {
                                             refetchPrimaryDoc={props.refetchPrimaryDoc}
                                             refetchSecondaryDoc={props.refetchSecondaryDoc}
                                             historySidebarOpen={props.secondaryHistoryOpen}
+                                            focus={props.secondaryPaneFocus}
                                         />
                                     )}
                                 </Show>
@@ -365,6 +408,7 @@ export function DocumentPane(props: {
     refetchPrimaryDoc: () => void;
     refetchSecondaryDoc: () => void;
     historySidebarOpen: boolean;
+    focus: FocusHandle;
 }) {
     const api = useApi();
     const [isDeleted, setIsDeleted] = createSignal(false);
@@ -401,10 +445,33 @@ export function DocumentPane(props: {
 
     const history = useSnapshotHistory(() => props.docRef.refId);
 
+    makeEventListener(window, "keydown", (evt) => {
+        if (!props.focus.hasFocus()) {
+            return;
+        }
+        const key = evt.key.toUpperCase();
+        const hasPrimary = keyEventHasModifier(evt, primaryModifier);
+        if (!hasPrimary || evt.altKey) {
+            return;
+        }
+
+        if (key === "Z" && !evt.shiftKey && history.canUndo()) {
+            history.onUndo();
+            return evt.preventDefault();
+        }
+        if (
+            ((key === "Z" && evt.shiftKey) || (key === "Y" && !evt.shiftKey)) &&
+            history.canRedo()
+        ) {
+            history.onRedo();
+            return evt.preventDefault();
+        }
+    });
+
     // oxlint-disable solid/reactivity -- Context.Provider value getter is reactive
     return (
         <DocRefIdContext.Provider value={() => props.docRef.refId}>
-            <div class="document-pane-layout">
+            <div class="document-pane-layout" onMouseDown={() => props.focus.setFocused(true)}>
                 <div class="document-pane-content">
                     <Show when={isDeleted()}>
                         <WarningBanner
@@ -448,16 +515,27 @@ export function DocumentPane(props: {
                         </Switch>
                         <Switch>
                             <Match keyed when={props.doc.type === "model" && props.doc}>
-                                {(liveModel) => <ModelNotebookEditor liveModel={liveModel} />}
+                                {(liveModel) => (
+                                    <ModelNotebookEditor
+                                        liveModel={liveModel}
+                                        focus={props.focus}
+                                    />
+                                )}
                             </Match>
                             <Match keyed when={props.doc.type === "diagram" && props.doc}>
                                 {(liveDiagram) => (
-                                    <DiagramNotebookEditor liveDiagram={liveDiagram} />
+                                    <DiagramNotebookEditor
+                                        liveDiagram={liveDiagram}
+                                        focus={props.focus}
+                                    />
                                 )}
                             </Match>
                             <Match keyed when={props.doc.type === "analysis" && props.doc}>
                                 {(liveAnalysis) => (
-                                    <AnalysisNotebookEditor liveAnalysis={liveAnalysis} />
+                                    <AnalysisNotebookEditor
+                                        liveAnalysis={liveAnalysis}
+                                        focus={props.focus}
+                                    />
                                 )}
                             </Match>
                         </Switch>

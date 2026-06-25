@@ -1,5 +1,6 @@
 import type { Component } from "solid-js";
 
+import type { FocusHandle } from "catcolab-ui-components";
 import type { MorDecl, ObDecl } from "catlog-wasm";
 import type { CellActions } from "../notebook";
 import type { Theory } from "../theory";
@@ -19,7 +20,7 @@ export type EditorVariantOverrides = {
 export type ObjectEditorProps = {
     object: ObDecl;
     modifyObject: (f: (decl: ObDecl) => void) => void;
-    isActive: boolean;
+    focus: FocusHandle;
     actions: CellActions;
     theory: Theory;
 };
@@ -28,7 +29,7 @@ export type ObjectEditorProps = {
 export type MorphismEditorProps = {
     morphism: MorDecl;
     modifyMorphism: (f: (decl: MorDecl) => void) => void;
-    isActive: boolean;
+    focus: FocusHandle;
     actions: CellActions;
     theory: Theory;
 };

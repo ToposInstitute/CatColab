@@ -23,6 +23,7 @@ pub fn doc_to_json(doc: &Automerge) -> Value {
 }
 
 /// Roundtrip a JSON object through Automerge and back.
+#[cfg(feature = "property-tests")]
 pub fn roundtrip_json(json: &Value) -> Value {
     let doc = doc_from_json(json);
     doc_to_json(&doc)

@@ -1,0 +1,29 @@
+name: julia-tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/algjulia-interop/**'
+      - '.github/workflows/julia-tests.yml'
+  pull_request:
+    paths:
+      - 'packages/algjulia-interop/**'
+      - '.github/workflows/julia-tests.yml'
+
+jobs:
+  julia-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Julia
+        uses: julia-actions/setup-julia@v2
+        with:
+          version: '1'
+
+      - name: Tests
+        run: |
+          julia --project=packages/algjulia-interop -e 'import Pkg; Pkg.test()'

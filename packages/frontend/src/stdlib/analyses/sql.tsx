@@ -4,9 +4,11 @@ import Copy from "lucide-solid/icons/copy";
 import Download from "lucide-solid/icons/download";
 import { For, Match, Show, Switch } from "solid-js";
 
-import { BlockTitle, ErrorAlert, IconButton } from "catcolab-ui-components";
+import { CodeView, BlockTitle, ErrorAlert, IconButton } from "catcolab-ui-components";
 import type { ModelAnalysisProps } from "../../analysis";
 import * as SQL from "./sql_types.ts";
+
+import styles from "./sql.module.css";
 
 const copyToClipboard = (text: string) => navigator.clipboard.writeText(text);
 
@@ -31,14 +33,7 @@ const tooltip = () => (
 
 export function SQLHeader(sql: string) {
     return (
-        <div
-            style={{
-                display: "flex",
-                "align-items": "center",
-                "justify-content": "flex-end",
-                gap: "4px",
-            }}
-        >
+        <div class={styles.headerContainer}>
             <IconButton
                 onClick={() => copyToClipboard(sql)}
                 disabled={false}
@@ -105,15 +100,20 @@ export default function SQLSchemaAnalysis(
                                         actions={SQLHeader(sql())}
                                         settingsPane={BackendConfig()}
                                     />
-                                    <pre>{sql()}</pre>
+                                    <Show when={props.content.backend}>
+                                        <CodeView lang="sql" text={sql()} />
+                                    </Show>
                                 </div>
                             )}
                         </Match>
                         <Match when={result().tag === "Err"}>
-                            <ErrorAlert>
-                                <p>{"The model failed to compile into a SQL script."}</p>
-                                <p>{"Check for cycles in foreign key constraints."}</p>
-                            </ErrorAlert>
+                            <div>
+                                <BlockTitle title={props.title} settingsPane={BackendConfig()} />
+                                <ErrorAlert>
+                                    <p>{"The model failed to compile into a SQL script."}</p>
+                                    <p>{"Check for cycles in foreign key constraints."}</p>
+                                </ErrorAlert>
+                            </div>
                         </Match>
                     </Switch>
                 )}
