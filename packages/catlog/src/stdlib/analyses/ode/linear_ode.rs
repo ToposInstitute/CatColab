@@ -157,7 +157,9 @@ pub struct LinearODEProblemData {
     duration: f32,
 }
 
-impl ODESemanticsProblemData<<LinearODESemantics as ODESemantics>::ParameterType> for LinearODEProblemData {
+impl ODESemanticsProblemData<<LinearODESemantics as ODESemantics>::ParameterType>
+    for LinearODEProblemData
+{
     fn initial_values(&self) -> HashMap<QualifiedName, f32> {
         self.initial_values.clone()
     }
