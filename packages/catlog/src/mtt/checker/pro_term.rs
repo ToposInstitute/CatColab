@@ -15,8 +15,8 @@ use crate::mtt::{
     composite::Composite,
     hole::Holy,
     theory::{
-        Boundary, Theory, TheoryArrow, TheoryObject, TheoryProArrow, UnificationResult,
-        delete_me_pro_arrow_is_constrained,
+        Boundary, Theory, TheoryArrow, TheoryObject, TheoryProArrow,
+        UnificationResult, delete_me_pro_arrow_is_constrained,
     },
 };
 
@@ -64,7 +64,6 @@ impl<T: Theory> ModelEntry<T> {
         }
     }
 
-    /// Reconcile a synthesised derivation against the hint, if any.
     fn finish(
         &self,
         derivation: Derivation<T>,
@@ -74,6 +73,83 @@ impl<T: Theory> ModelEntry<T> {
             Some(want) => self.reconcile(derivation, want),
             None => Ok(derivation),
         }
+    }
+
+    /// Reconcile a synthesised derivation against the declared target
+    /// judgement.
+    ///
+    /// This is the two-phase procedure by which the type checker bridges the
+    /// gap between what synthesis produced and what the declaration demands:
+    ///
+    /// 1. **Theory-level cell search.** Ask the theory
+    ///    ([Theory::cell_search]) whether a flat cell connects the
+    ///    synthesised pro-arrow composite to the wanted one. The theory figures
+    ///    out the vertical legs itself; those legs may include
+    ///    [TheoryArrow::ModalCoherence] wherever the cell's movement involves
+    ///    η/μ, plus generator-arrow composites for the theory's own verticals.
+    ///    Flatness guarantees at most one such cell.
+    ///
+    /// 2. **Syntactic domain alignment.** The cell's vertical legs take care of
+    ///    the theory-level boundary (including any change in modal depth). The
+    ///    last detail is whether the actual domain *terms* line up with the
+    ///    declared binder: compute the leaf map from the variable correspondence
+    ///    of the two domain object terms, gate it with the modality's
+    ///    [ListVariant::admits_reindexing], and emit a [ProTerm::ListReindex]
+    ///    if (and only if) the terms don't already coincide.
+    ///
+    /// There is no codomain reindex: the pro-term *is* the codomain, so any
+    /// codomain-level structural change is borne entirely by the cell's
+    /// vertical leg, not by a separate pro-term node.
+    fn reconcile(
+        &self,
+        have: Derivation<T>,
+        want: &ProTermJudgement<T>,
+    ) -> Result<Derivation<T>, Error> {
+        // TODO: check this.
+        let Derivation { pro_term, judgement } = have;
+
+        // Phase 1: does the theory have a cell connecting the two pro-arrows?
+        let boundary = T::cell_search(&judgement.pro_arrow, &want.pro_arrow).ok_or_else(|| {
+            EType::ProArrowMismatch {
+                expected: want.pro_arrow.to_string(),
+                found: judgement.pro_arrow.to_string(),
+            }
+        })?;
+
+        // Phase 2: syntactic alignment of the domain terms.
+        let reindex =
+            domain_leaf_map::<T>(&judgement.domain_object_term, &want.domain_object_term);
+        let is_identity = reindex.iter().enumerate().all(|(i, &j)| i == j);
+        let inner = if is_identity {
+            pro_term
+        } else {
+            // The modality must admit this leaf map between the two domain
+            // shapes.
+            if let Some(modality) = T::list_modality() {
+                let source_arity = domain_leaf_count::<T>(&judgement.domain_object_term);
+                if !modality.admits_reindexing(&reindex, source_arity) {
+                    return Err(EType::DomainMismatch {
+                        expected: want.domain_object_term.to_string(),
+                        found: judgement.domain_object_term.to_string(),
+                    }
+                    .into());
+                }
+            }
+            ProTerm::ListReindex {
+                before: judgement.domain_object_type.clone(),
+                after: want.domain_object_type.clone(),
+                reindex,
+                on: Box::new(pro_term),
+            }
+        };
+
+        Ok(Derivation {
+            pro_term: ProTerm::CellApplication {
+                theory_boundary: boundary,
+                on: Box::new(inner),
+            },
+            judgement: want.clone(),
+        })
     }
 
     // It is intentional that we do not allow a free-standing literal to
@@ -472,4 +548,63 @@ fn substitute_expression(body: &Expression, subst: &HashMap<String, Expression>)
             }
         }
     }
+}
+
+// -----------------------------------------------------------------------------
+// Helpers for reconciliation
+
+/// The number of leaves of a domain object term, i.e. the count of variables
+/// reached by flattening every list. Used to compute the source arity against
+/// which the modality checks a reindex.
+fn domain_leaf_count<T: Theory>(term: &ObjectTerm<T>) -> usize {
+    // TODO: check this.
+    match term {
+        ObjectTerm::Variable(_) => 1,
+        ObjectTerm::List(items) => items.iter().map(domain_leaf_count::<T>).sum(),
+        ObjectTerm::Tuple(items) => items.iter().map(domain_leaf_count::<T>).sum(),
+        ObjectTerm::FunctionApplication { on, .. } => domain_leaf_count::<T>(on),
+        ObjectTerm::Hole(_) => {
+            unreachable!("checked binders have no holes, and elaboration doesn't produce them")
+        }
+    }
+}
+
+/// Collect the leaf variables of a domain object term left-to-right, flattening
+/// every list.
+fn collect_domain_leaves<'a, T: Theory>(
+    term: &'a ObjectTerm<T>,
+    out: &mut Vec<&'a String>,
+) {
+    // TODO: check this.
+    match term {
+        ObjectTerm::Variable(v) => out.push(v),
+        ObjectTerm::List(items) => items.iter().for_each(|i| collect_domain_leaves(i, out)),
+        ObjectTerm::Tuple(items) => items.iter().for_each(|i| collect_domain_leaves(i, out)),
+        ObjectTerm::FunctionApplication { on, .. } => collect_domain_leaves(on, out),
+        ObjectTerm::Hole(_) => {
+            unreachable!("checked binders have no holes, and elaboration doesn't produce them")
+        }
+    }
+}
+
+/// Compute the leaf map reindexing `source` onto `target`. The map is
+/// determined by variable identity: for each target leaf (read left-to-right),
+/// find the index of the matching variable in the source leaves. If a target
+/// variable does not appear in the source, the reindex is inadmissible and this
+/// returns an identity --- the modality's `admits_reindexing` will then reject
+/// it.
+fn domain_leaf_map<T: Theory>(
+    source: &ObjectTerm<T>,
+    target: &ObjectTerm<T>,
+) -> Vec<usize> {
+    // TODO: check this.
+    let mut src_leaves = Vec::new();
+    collect_domain_leaves::<T>(source, &mut src_leaves);
+    let mut tgt_leaves = Vec::new();
+    collect_domain_leaves::<T>(target, &mut tgt_leaves);
+
+    tgt_leaves
+        .iter()
+        .map(|t| src_leaves.iter().position(|s| s == t).unwrap_or(0))
+        .collect()
 }

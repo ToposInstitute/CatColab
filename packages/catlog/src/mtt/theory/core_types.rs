@@ -61,6 +61,26 @@ pub enum TheoryArrow<T: Theory> {
         /// The vertical arrow acted on.
         on: Box<TheoryArrow<T>>,
     },
+    /// The unique coherence map of the list monad between two modal depths,
+    /// bundling the monad's unit (η) and multiplication (μ) into a single
+    /// framework-provided vertical arrow. By the monad's coherence, there is at
+    /// most one such map between `T^m X` and `T^n X`, so the pair of depths
+    /// determines it uniquely; the base object is fixed by the surrounding
+    /// [Boundary]'s corner objects.
+    ///
+    /// This variant exists so that a flat theory's [Theory::cell_search] can
+    /// name cells whose vertical legs involve monad structure --- such as the
+    /// multicategory composition or normalisation cells --- without admitting
+    /// η/μ as named, equational generators in any theory's presentation. It is
+    /// distinct from the modality's leaf reindexings (σ), which are handled at
+    /// the pro-term level by [ProTerm::ListReindex].
+    ModalCoherence {
+        /// The modal depth of the domain, i.e. the number of list modalities
+        /// wrapping the base object.
+        from_depth: usize,
+        /// The modal depth of the codomain.
+        to_depth: usize,
+    },
 }
 
 /// An atomic (non-composite) theory pro-arrow.

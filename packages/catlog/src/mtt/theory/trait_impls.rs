@@ -53,30 +53,38 @@ impl<T: Theory> BinarySignature<TheoryObject<T>> for TheoryArrow<T> {
     /// The domain object of the vertical arrow. A modal application lifts its
     /// inner arrow's domain under the modality.
     fn dom(&self) -> TheoryObject<T> {
+        // TODO: check this.
         match self {
             TheoryArrow::Generator { dom, .. } => dom.clone(),
             TheoryArrow::ModalApplication { modality, on } => TheoryObject::ModalApplication {
                 modality: modality.clone(),
                 on: Box::new(on.as_ref().dom()),
             },
+            // The base object is fixed by the surrounding boundary; here we
+            // expose the modal tower over an unconstrained base so that
+            // structural unification can refine it against the actual corner.
+            TheoryArrow::ModalCoherence { from_depth, .. } => modal_tower::<T>(*from_depth),
         }
     }
 
     /// The codomain object of the vertical arrow. A modal application lifts its
     /// inner arrow's codomain under the modality.
     fn cod(&self) -> TheoryObject<T> {
+        // TODO: check this.
         match self {
             TheoryArrow::Generator { cod, .. } => cod.clone(),
             TheoryArrow::ModalApplication { modality, on } => TheoryObject::ModalApplication {
                 modality: modality.clone(),
                 on: Box::new(on.as_ref().cod()),
             },
+            TheoryArrow::ModalCoherence { to_depth, .. } => modal_tower::<T>(*to_depth),
         }
     }
 }
 
 impl<T: Theory> Clone for TheoryArrow<T> {
     fn clone(&self) -> Self {
+        // TODO: check this.
         match self {
             TheoryArrow::Generator { name, dom, cod } => TheoryArrow::Generator {
                 name: name.clone(),
@@ -87,18 +95,25 @@ impl<T: Theory> Clone for TheoryArrow<T> {
                 modality: modality.clone(),
                 on: on.clone(),
             },
+            TheoryArrow::ModalCoherence { from_depth, to_depth } => {
+                TheoryArrow::ModalCoherence { from_depth: *from_depth, to_depth: *to_depth }
+            }
         }
     }
 }
 
 impl<T: Theory> std::fmt::Display for TheoryArrow<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // TODO: check this.
         match self {
             TheoryArrow::Generator { name, dom, cod } => {
                 write!(f, "{name}: {dom} -> {cod}")
             }
             TheoryArrow::ModalApplication { modality, on } => {
                 write!(f, "{modality}({on})")
+            }
+            TheoryArrow::ModalCoherence { from_depth, to_depth } => {
+                write!(f, "coh({from_depth}->{to_depth})")
             }
         }
     }
@@ -108,6 +123,22 @@ impl<T: Theory> Composable for TheoryArrow<T> {
     fn composable(&self, next: &Self) -> bool {
         T::unify_objects(&[&self.cod(), &next.dom()]).is_compatible()
     }
+}
+
+/// A modal tower of the given depth over an unconstrained base object, using
+/// the theory's list modality. Used to expose the boundary of a
+/// [TheoryArrow::ModalCoherence] before the surrounding boundary's corner has
+/// refined it.
+//
+// TODO: check this.
+fn modal_tower<T: Theory>(depth: usize) -> TheoryObject<T> {
+    let mut obj = TheoryObject::unconstrained("modal_coherence_base".to_string());
+    if let Some(modality) = T::list_modality() {
+        for _ in 0..depth {
+            obj = TheoryObject::ModalApplication { modality: modality.clone(), on: Box::new(obj) };
+        }
+    }
+    obj
 }
 
 // -----------------------------------------------------------------------------

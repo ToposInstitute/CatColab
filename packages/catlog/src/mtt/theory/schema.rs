@@ -138,4 +138,18 @@ impl Theory for Schema {
             false
         }
     }
+
+    fn cell_search(
+        top: &Composite<TheoryProArrow<Self>>,
+        bottom: &Composite<TheoryProArrow<Self>>,
+    ) -> Option<Boundary<Self>> {
+        // TODO: check this.
+        //
+        // TODO: implement cell_search for the theory of database schemas. This
+        // theory has no list modality, so the search amounts to finding globular
+        // cells whose vertical legs are identity, governed by the Attr/Hom
+        // structure of the theory.
+        let _ = (top, bottom);
+        todo!("cell_search for Schema")
+    }
 }

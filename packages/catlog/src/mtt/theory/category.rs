@@ -1,3 +1,4 @@
+use crate::mtt::composite::Composite;
 use crate::mtt::theory::{
     Boundary, ListVariant, ProArrowByBoundary, Theory, TheoryArrow, TheoryObject, TheoryProArrow,
 };
@@ -63,5 +64,19 @@ impl Theory for Category {
             && b.dom_proarrow.iter().all(Self::has_pro_arrow)
             && b.cod_proarrow.iter().all(Self::has_pro_arrow)
             && b.objects().into_iter().all(Self::has_object)
+    }
+
+    fn cell_search(
+        top: &Composite<TheoryProArrow<Self>>,
+        bottom: &Composite<TheoryProArrow<Self>>,
+    ) -> Option<Boundary<Self>> {
+        // TODO: check this.
+        //
+        // TODO: implement cell_search for the theory of categories. This theory
+        // has no list modality and no generating arrows, so the only cells are
+        // globular hom-cells; the search amounts to checking whether `top` and
+        // `bottom` unify over a common boundary with identity verticals.
+        let _ = (top, bottom);
+        todo!("cell_search for Category")
     }
 }

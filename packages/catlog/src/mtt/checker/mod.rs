@@ -6,7 +6,6 @@ mod elaborate;
 mod error;
 mod model;
 mod pro_term;
-mod reconcile;
 mod scope;
 mod trait_impls;
 

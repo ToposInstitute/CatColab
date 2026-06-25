@@ -152,21 +152,28 @@ pub enum ProTerm<T: Theory> {
         on: Box<ProTerm<T>>,
     },
 
-    /// For ease of implementation, we once again treat lists as a special case
-    /// and first class list operations in our inductive structure. Thus we
-    /// avoid having to treat the various restriction, cell applications, and
-    /// pre-composition re-indexing that would arise when we consider all
-    /// list-reindexing, flattening, and insertion operations carried by the
-    /// various List modalities and theories.
-    ListManipulation {
-        /// The target domain shape is a planar tree with n leaves, using the
-        /// ordering of these under a fixed traversal we specify which leaves
-        /// from the domain tree of `on` to use. Note that we don't store the
-        /// target domain shape, in the same way we're not storing any shapes
-        /// for pro-terms, so it's up to the checker to attempt unification and
-        /// emit this correctly.
-        target_leaf: Vec<usize>,
-        /// The pro-term whose domain lists we are manipulating.
+    /// A syntactic reindexing of a pro-term's domain variables, realising the
+    /// leaf map (reorder/duplicate/drop) admitted by the theory's list
+    /// modality. This is the model-level residue of reconciliation once the
+    /// theory has agreed (via [Theory::cell_search]) that a cell connects the
+    /// synthesised pro-arrow to the wanted one: the cell's vertical legs carry
+    /// any change in modal depth ([TheoryArrow::ModalCoherence]), while this
+    /// node carries the within-level permutation of the domain's variables so
+    /// that the synthesised domain term lines up with the declared binder.
+    ///
+    /// The `before` and `after` object types record the domain's shape on each
+    /// side of the reindex; the modality decides whether `reindex` is admissible
+    /// between them. There is no codomain counterpart, as the pro-term *is* the
+    /// codomain and has no separate term to reindex.
+    ListReindex {
+        /// The domain object type before reindexing (the synthesised domain).
+        before: ObjectType<T>,
+        /// The domain object type after reindexing (the declared binder).
+        after: ObjectType<T>,
+        /// The leaf map: `reindex[i]` is the source leaf placed at target
+        /// position `i`. The identity is `(0..n).collect()`.
+        reindex: Vec<usize>,
+        /// The pro-term whose domain variables are being reindexed.
         on: Box<ProTerm<T>>,
     },
 

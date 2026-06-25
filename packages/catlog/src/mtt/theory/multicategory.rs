@@ -13,7 +13,7 @@ use crate::mtt::{
 /// morphisms. The reason for this is the overall philosophy of [Theory]: the
 /// monad structure is not given in terms of explicit generators and relations
 /// which could complicate a decision procedure, but rather borne by the use of
-/// [ProTerm::ListManipulation]. See [list] for additional details.
+/// [ProTerm::ListReindex]. See [list] for additional details.
 pub struct Multicategory;
 
 const OBJECT: &str = "Object";
@@ -158,5 +158,22 @@ impl Theory for Multicategory {
             // and bottom boundary unify because there are no non-trivial cells.
             Self::unify_pro_arrows(&[&b.dom_proarrow, &b.cod_proarrow]).is_compatible()
         }
+    }
+
+    fn cell_search(
+        top: &Composite<TheoryProArrow<Self>>,
+        bottom: &Composite<TheoryProArrow<Self>>,
+    ) -> Option<Boundary<Self>> {
+        // TODO: check this.
+        //
+        // TODO: implement cell_search for multicategories. The interesting
+        // cells here are the composition cell (`List P ; P` under a domain μ
+        // flattening to `P`) and the normalisation cell (`Hom` under a domain
+        // η to `P`), whose vertical legs involve [TheoryArrow::ModalCoherence].
+        // The axiom-awareness that relates the pro-arrows across the change of
+        // modal depth (the composition axiom `List P ; P = P(μ, 1)` and the
+        // normalisation axiom `Hom = P(η, 1)`) lives here.
+        let _ = (top, bottom);
+        todo!("cell_search for Multicategory")
     }
 }

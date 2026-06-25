@@ -120,6 +120,30 @@ pub fn default_arrow_unify<T: Theory>(
                 on: Box::new(child),
             })
         }
+
+        // TODO: check this.
+        //
+        // TODO: ModalCoherence unification. Two coherence maps unify iff their
+        // depth pairs coincide: coh(m->n) = coh(m'->n') exactly when m == m'
+        // and n == n'. The base object is fixed by the surrounding boundary, so
+        // there is nothing further to unify here. When the depth pairs differ
+        // the result is incompatible.
+        TheoryArrow::ModalCoherence { from_depth, to_depth } => {
+            if rest.iter().all(|a| {
+                matches!(
+                    a,
+                    TheoryArrow::ModalCoherence { from_depth: f, to_depth: t }
+                        if *f == *from_depth && *t == *to_depth
+                )
+            }) {
+                UnificationResult::MostSpecific(TheoryArrow::ModalCoherence {
+                    from_depth: *from_depth,
+                    to_depth: *to_depth,
+                })
+            } else {
+                UnificationResult::Incompatible
+            }
+        }
     }
 }
 
@@ -303,6 +327,14 @@ fn structural_pro_arrow_unification<T: Theory>(
         }
 
         TheoryProArrow::Restriction { base, dom_leg, cod_leg } => {
+            // TODO: when a restriction's legs include [TheoryArrow::ModalCoherence],
+            // the default structural unification below will only recognise two
+            // restrictions as equal when their legs unify structurally. It does
+            // *not* apply the theory's restriction/composition axioms (such as
+            // the multicategory composition axiom `List P ; P = P(μ, 1)`), so a
+            // restricted pro-arrow and its expanded composite form will not
+            // unify here. That axiom-awareness is the responsibility of
+            // [Theory::cell_search], not this default unifier.
             let mut bases: Vec<&TheoryProArrow<T>> = vec![base.as_ref()];
             let mut dom_legs: Vec<&TheoryArrow<T>> = vec![dom_leg];
             let mut cod_legs: Vec<&TheoryArrow<T>> = vec![cod_leg];

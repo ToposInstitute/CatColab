@@ -95,5 +95,31 @@ pub trait Theory: Sized {
     /// filler in this theory.
     fn has_cell(b: &Boundary<Self>) -> bool;
 
+    /// Search for the unique flat cell connecting a top pro-arrow composite to
+    /// a bottom one, returning the full [Boundary] --- with its vertical legs
+    /// filled in --- if one exists.
+    ///
+    /// Unlike [Self::has_cell], which validates an already-complete boundary,
+    /// this method figures out the vertical legs itself. Those legs may include
+    /// [TheoryArrow::ModalCoherence] (the bundled monad structure map) wherever
+    /// the cell's movement involves η/μ, plus generator-arrow composites for
+    /// the theory's own verticals. The boundary's four corner objects are
+    /// recovered from the two pro-arrow composites' domains and codomains.
+    ///
+    /// Because the theory is flat, there is at most one such cell, so this is a
+    /// decision procedure, not a search: it returns the boundary if a cell
+    /// exists and `None` otherwise. The axiom-awareness needed to relate the
+    /// pro-arrows across a change of modal depth (e.g. the multicategory
+    /// composition axiom `List P ; P = P(μ, 1)`) lives here, in this one
+    /// depth-aware entry point, rather than in [Self::unify_pro_arrows].
+    fn cell_search(
+        top: &Composite<TheoryProArrow<Self>>,
+        bottom: &Composite<TheoryProArrow<Self>>,
+    ) -> Option<Boundary<Self>> {
+        // TODO: check this.
+        let _ = (top, bottom);
+        todo!("cell_search is not yet implemented for this theory")
+    }
+
     // TODO
 }
