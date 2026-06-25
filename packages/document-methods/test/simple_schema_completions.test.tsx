@@ -12,7 +12,7 @@
  *   2. Each id is labelled with `obGeneratorLabel(id)?.join(".")`.
  *   3. Typed text filters the list to substring matches.
  *   4. Selecting one edits the typed notebook; a `createResource` keyed on the
- *      document re-validates reactively into a fresh elaborated model.
+ *      notebook's cells re-validates reactively into a fresh elaborated model.
  */
 /* oxlint-disable unicorn/consistent-function-scoping */
 import {
@@ -108,7 +108,7 @@ describe("simple-schema completions consumer", () => {
         const model = createRoot((dispose) => {
             disposeRoot = dispose;
             const [validation] = createResource(
-                () => JSON.stringify(notebook.document),
+                () => notebook.cells(),
                 () => (validated = notebook.validate()),
             );
             return (): DblModel | undefined => {

@@ -14,8 +14,8 @@
  * Editing still goes through the document (the typed notebook), exactly as in
  * the frontend, where the elaborated model is a derived, read-only artifact:
  * the mutation button only edits a cell, and a `createResource` keyed on the
- * document re-validates reactively to obtain a fresh elaborated model, which
- * the view re-renders.
+ * notebook's cells re-validates reactively to obtain a fresh elaborated model,
+ * which the view re-renders.
  */
 /* oxlint-disable unicorn/consistent-function-scoping */
 import {
@@ -170,7 +170,7 @@ describe("Petri-net elaborated-model consumer", () => {
         const model = createRoot((dispose) => {
             disposeRoot = dispose;
             const [validation] = createResource(
-                () => JSON.stringify(notebook.document),
+                () => notebook.cells(),
                 () => (validated = notebook.validate()),
             );
             return (): DblModel | undefined => {
