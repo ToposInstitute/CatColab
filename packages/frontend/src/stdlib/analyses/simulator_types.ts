@@ -2,10 +2,8 @@ import type {
     DblModel,
     KuramotoProblemData,
     LatexEquations,
-    LCCProblemData,
-    LCCEquationsData,
+    LinearODEProblemData,
     LotkaVolterraProblemData,
-    LotkaVolterraEquationsData,
     MassActionEquationsData,
     MassActionProblemData,
     ODEResult,
@@ -16,7 +14,7 @@ import type {
 
 export type {
     KuramotoProblemData,
-    LCCProblemData,
+    LinearODEProblemData,
     LotkaVolterraProblemData,
     MassActionProblemData,
     PolynomialODEProblemData,
