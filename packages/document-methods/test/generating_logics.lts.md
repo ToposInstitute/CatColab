@@ -102,9 +102,8 @@ const Place = defineObject({ tag: "Basic", content: "Object" });
 const Transition = defineMorphism(
     { tag: "Hom", content: Place.obType },
     {
-        modality: "SymmetricList",
-        domain: { apply: { tag: "Basic", content: "tensor" } },
-        codomain: { apply: { tag: "Basic", content: "tensor" } },
+        domain: { apply: { tag: "Basic", content: "tensor" }, modality: "SymmetricList" },
+        codomain: { apply: { tag: "Basic", content: "tensor" }, modality: "SymmetricList" },
     },
 );
 

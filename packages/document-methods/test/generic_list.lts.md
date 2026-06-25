@@ -7,34 +7,14 @@ import { defineMorphism, defineObject, defineShape, type Notebook } from "catcol
 
 const BasicObj = defineObject({ tag: "Basic", content: "Object" });
 
-// The `tensor` operation turns a list of objects into the single object an
-// endpoint connects, so declaring it on the domain and codomain is what makes a
-// morphism's endpoints list-like.
-const tensor = { apply: { tag: "Basic", content: "tensor" } } as const;
-
-const SymmetricListMor = defineMorphism(
-    { tag: "Hom", content: BasicObj.obType },
-    { modality: "SymmetricList", domain: tensor, codomain: tensor },
-);
+const tensor = { tag: "Basic", content: "tensor" } as const;
 
 const ListMor = defineMorphism(
     { tag: "Hom", content: BasicObj.obType },
-    { modality: "List", domain: tensor, codomain: tensor },
-);
-
-const CocartesianListMor = defineMorphism(
-    { tag: "Hom", content: BasicObj.obType },
-    { modality: "CocartesianList", domain: tensor, codomain: tensor },
-);
-
-const CartesianListMor = defineMorphism(
-    { tag: "Hom", content: BasicObj.obType },
-    { modality: "CartesianList", domain: tensor, codomain: tensor },
-);
-
-const AdditiveListMor = defineMorphism(
-    { tag: "Hom", content: BasicObj.obType },
-    { modality: "AdditiveList", domain: tensor, codomain: tensor },
+    {
+        domain: { apply: tensor, modality: "List" },
+        codomain: { apply: tensor, modality: "List" },
+    },
 );
 
 const ListShape = defineShape({
@@ -42,20 +22,51 @@ const ListShape = defineShape({
     morphisms: [ListMor],
 });
 
+const SymmetricListMor = defineMorphism(
+    { tag: "Hom", content: BasicObj.obType },
+    {
+        domain: { apply: tensor, modality: "SymmetricList" },
+        codomain: { apply: tensor, modality: "SymmetricList" },
+    },
+);
 const SymmetricListShape = defineShape({
     objects: [BasicObj],
     morphisms: [SymmetricListMor],
 });
+
+const CocartesianListMor = defineMorphism(
+    { tag: "Hom", content: BasicObj.obType },
+    {
+        domain: { apply: tensor, modality: "CocartesianList" },
+        codomain: { apply: tensor, modality: "CocartesianList" },
+    },
+);
 
 const CocartesianListShape = defineShape({
     objects: [BasicObj],
     morphisms: [CocartesianListMor],
 });
 
+const CartesianListMor = defineMorphism(
+    { tag: "Hom", content: BasicObj.obType },
+    {
+        domain: { apply: tensor, modality: "CartesianList" },
+        codomain: { apply: tensor, modality: "CartesianList" },
+    },
+);
+
 const CartesianListShape = defineShape({
     objects: [BasicObj],
     morphisms: [CartesianListMor],
 });
+
+const AdditiveListMor = defineMorphism(
+    { tag: "Hom", content: BasicObj.obType },
+    {
+        domain: { apply: tensor, modality: "AdditiveList" },
+        codomain: { apply: tensor, modality: "AdditiveList" },
+    },
+);
 
 const AdditiveListShape = defineShape({
     objects: [BasicObj],
@@ -184,7 +195,10 @@ const entityObType = defineObject({ tag: "Basic", content: "Entity" });
 
 const entityListMorType = defineMorphism(
     { tag: "Hom", content: entityObType.obType },
-    { modality: "List", domain: tensor, codomain: tensor },
+    {
+        domain: { apply: tensor, modality: "List" },
+        codomain: { apply: tensor, modality: "List" },
+    },
 );
 
 const MultiObjectListShape = defineShape({
@@ -208,7 +222,10 @@ const entityObType = defineObject({ tag: "Basic", content: "Entity" });
 
 const entityListMorType = defineMorphism(
     { tag: "Hom", content: entityObType.obType },
-    { modality: "List", domain: tensor, codomain: tensor },
+    {
+        domain: { apply: tensor, modality: "List" },
+        codomain: { apply: tensor, modality: "List" },
+    },
 );
 
 const EntityObjectListShape = defineShape({

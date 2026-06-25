@@ -563,9 +563,8 @@ describe("Petri-net editor comparison", () => {
         const symmetricListMorphism = defineMorphism(
             { tag: "Hom", content: basicObject.obType },
             {
-                modality: "SymmetricList",
-                domain: { apply: { tag: "Basic", content: "tensor" } },
-                codomain: { apply: { tag: "Basic", content: "tensor" } },
+                domain: { apply: { tag: "Basic", content: "tensor" }, modality: "SymmetricList" },
+                codomain: { apply: { tag: "Basic", content: "tensor" }, modality: "SymmetricList" },
             },
         );
 

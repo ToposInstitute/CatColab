@@ -351,7 +351,8 @@ export type Endpoints<D extends ObType, C extends ObType> = {
  * Petri-net transition's `SymmetricList`) or `null` for an ordinary morphism.
  * The morphism type itself stays the plain `Hom(Object)` the core theory
  * understands; the list-ness lives here in the type system (driving {@link
- * DomOf}/{@link CodOf} to array endpoints) and in the runtime `modality` field.
+ * DomOf}/{@link CodOf} to array endpoints) and in the runtime
+ * `domain`/`codomain` endpoint metadata.
  *
  * Because the brand is carried by all morphisms with a *distinct* value per
  * modality (and `null` for none), any two morphisms with different modalities
@@ -371,30 +372,34 @@ export type ModalityBrand<Mod extends ListModality | null> = {
 /**
  * Metadata controlling a morphism's domain or codomain, mirroring the
  * frontend's theory `MorDomainMeta`. An `apply` operation (e.g. a Petri-net's
- * `tensor`) turns a list of objects into the single object the morphism's
- * endpoint actually is, so its presence is what makes an endpoint list-like.
+ * `tensor`) turns a list of objects into the single object the endpoint
+ * actually is, so its presence is what makes an endpoint list-like; the
+ * `modality` is the kind of list that operation consumes. They belong together
+ * here, on the endpoint, because the modality is a property of the `apply`
+ * operation's domain (the frontend reads it back as `theory.dom(apply)`), not
+ * of the morphism as a whole — so the two endpoints may even differ.
  */
 export type MorEndpointMeta = {
     readonly apply?: ObOp | undefined;
+    readonly modality?: Modality | undefined;
 };
 
 /**
  * A tagged wrapper declaring a morphism type, built with {@link defineMorphism}.
  * For a `Hom` morphism the endpoints are derived from its `MorType` structure;
- * for a list morphism (declared with a `modality` and `domain`/`codomain`
- * `apply` ops) they are arrays of the `Hom`'s object type, stored as
+ * for a list morphism (whose `domain`/`codomain` each declare an `apply` op and
+ * a `modality`) they are arrays of the `Hom`'s object type, stored as
  * `App(apply, List(modality, …))`: the `apply` operation is what turns a list
  * of objects into the single object the morphism connects, and so is what makes
- * the endpoint list-like. The modality is carried in the phantom {@link
- * ModalityBrand} and the runtime `modality` field, the operations in the
- * runtime `domain`/`codomain` fields. For any other morphism (e.g. a `Basic`
- * morphism such as a schema `Attr`) the endpoint object types are carried in
- * the phantom {@link Endpoints} brand.
+ * the endpoint list-like. The endpoint operations and modalities live in the
+ * runtime `domain`/`codomain` fields; the modality is also carried in the
+ * phantom {@link ModalityBrand} for type-level distinctness. For any other
+ * morphism (e.g. a `Basic` morphism such as a schema `Attr`) the endpoint
+ * object types are carried in the phantom {@link Endpoints} brand.
  */
 export type MorphismDef<M extends MorType = MorType> = {
     readonly tag: "morphism";
     readonly morType: M;
-    readonly modality?: Modality | undefined;
     readonly domain?: MorEndpointMeta | undefined;
     readonly codomain?: MorEndpointMeta | undefined;
 };
@@ -407,15 +412,16 @@ type MorTypeOf<Def extends MorphismDef> = Def extends MorphismDef<infer M> ? M :
  *
  * - For a plain `Hom` morphism, the endpoint object type is read from the
  *   `MorType` structure, so only the morphism type is passed.
- * - For a list morphism (e.g. a Petri-net transition), pass a `{ modality,
- *   domain, codomain }` such as `{ modality: "SymmetricList", domain: { apply: {
- *   tag: "Basic", content: "tensor" } }, codomain: { apply: { tag: "Basic",
- *   content: "tensor" } } }`. The morphism type stays the plain `Hom(Object)`
- *   the core theory understands; each `apply` operation turns a list into the
- *   single object the endpoint connects, so endpoints are stored as `App(apply,
- *   List(modality, …))` (see {@link encodeEndpoint}) and read back as arrays. The
- *   modality is carried in the phantom {@link ModalityBrand} and the runtime
- *   `modality` field, the operations in the runtime `domain`/`codomain` fields.
+ * - For a list morphism (e.g. a Petri-net transition), pass `{ domain, codomain
+ *   }` whose endpoints each declare an `apply` op and a `modality`, such as `{
+ *   domain: { apply: { tag: "Basic", content: "tensor" }, modality:
+ *   "SymmetricList" }, codomain: { … } }`. The morphism type stays the plain
+ *   `Hom(Object)` the core theory understands; each `apply` operation turns a
+ *   list into the single object the endpoint connects, so endpoints are stored
+ *   as `App(apply, List(modality, …))` (see {@link encodeEndpoint}) and read
+ *   back as arrays. The operations and modalities live in the runtime
+ *   `domain`/`codomain` fields; the modality is also carried in the phantom
+ *   {@link ModalityBrand}.
  * - For any other morphism (e.g. a `Basic` morphism), the endpoint object types
  *   are not recorded in the literal, so they must be passed explicitly as a
  *   `{ domObType, codObType }` object; they are carried in the phantom {@link
@@ -429,11 +435,15 @@ export function defineMorphism<const M extends MorType & { tag: "Hom" }>(
 ): MorphismDef<M> & ModalityBrand<null>;
 export function defineMorphism<
     const M extends MorType & { tag: "Hom" },
-    const Mod extends ListModality,
+    const DomMod extends ListModality,
+    const CodMod extends ListModality,
 >(
     morType: M,
-    options: { modality: Mod; domain: MorEndpointMeta; codomain: MorEndpointMeta },
-): MorphismDef<M> & ModalityBrand<Mod>;
+    options: {
+        domain: { apply: ObOp; modality: DomMod };
+        codomain: { apply: ObOp; modality: CodMod };
+    },
+): MorphismDef<M> & ModalityBrand<DomMod | CodMod>;
 export function defineMorphism<
     const M extends MorType,
     const D extends ObType,
@@ -445,7 +455,6 @@ export function defineMorphism<
 export function defineMorphism(
     morType: MorType,
     options?: {
-        modality?: Modality;
         domain?: MorEndpointMeta;
         codomain?: MorEndpointMeta;
         domObType?: ObType;
@@ -455,7 +464,6 @@ export function defineMorphism(
     return {
         tag: "morphism",
         morType,
-        modality: options?.modality,
         domain: options?.domain,
         codomain: options?.codomain,
     };
@@ -1458,11 +1466,11 @@ function attachNotebook<TShape extends AnyShape, Handle>(
             },
             get from() {
                 const content = readCellContent<{ dom: Ob | null }>(cellId);
-                return content && decodeEndpoint(type.modality ?? null, content.dom);
+                return content && decodeEndpoint(type.domain?.modality ?? null, content.dom);
             },
             get to() {
                 const content = readCellContent<{ cod: Ob | null }>(cellId);
-                return content && decodeEndpoint(type.modality ?? null, content.cod);
+                return content && decodeEndpoint(type.codomain?.modality ?? null, content.cod);
             },
             update(u: { name?: string; from?: unknown; to?: unknown }) {
                 change((d) => {
@@ -1477,14 +1485,14 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                     if ("from" in u) {
                         content.dom = encodeEndpoint(
                             type.domain?.apply ?? null,
-                            type.modality ?? null,
+                            type.domain?.modality ?? null,
                             u.from,
                         );
                     }
                     if ("to" in u) {
                         content.cod = encodeEndpoint(
                             type.codomain?.apply ?? null,
-                            type.modality ?? null,
+                            type.codomain?.modality ?? null,
                             u.to,
                         );
                     }
@@ -1578,8 +1586,16 @@ function attachNotebook<TShape extends AnyShape, Handle>(
     ): MorphismCell => {
         const judgment = newMorphismDecl(def.morType);
         judgment.name = args.name;
-        judgment.dom = encodeEndpoint(def.domain?.apply ?? null, def.modality ?? null, args.from);
-        judgment.cod = encodeEndpoint(def.codomain?.apply ?? null, def.modality ?? null, args.to);
+        judgment.dom = encodeEndpoint(
+            def.domain?.apply ?? null,
+            def.domain?.modality ?? null,
+            args.from,
+        );
+        judgment.cod = encodeEndpoint(
+            def.codomain?.apply ?? null,
+            def.codomain?.modality ?? null,
+            args.to,
+        );
         const formalCell = newFormalCell(judgment);
         change((d) => {
             d.notebook.cellContents[formalCell.id] = formalCell;
@@ -1742,22 +1758,22 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                     case "object":
                         return objectHandle(cellId, defineObject(judgment.obType));
                     case "morphism": {
-                        // Recover a list morphism's modality and endpoint `apply`
-                        // ops from the stored `App(apply, List(modality, …))`
-                        // endpoints, inverting the encoding in `encodeEndpoint`,
-                        // so the reconstructed def matches the one its
-                        // `MorphismDef` declares (see `cellsOf`).
-                        const domApply = endpointApplyOp(judgment.dom);
-                        const codApply = endpointApplyOp(judgment.cod);
+                        // Recover each list endpoint's `apply` op and modality
+                        // from the stored `App(apply, List(modality, …))`,
+                        // inverting the encoding in `encodeEndpoint`, so the
+                        // reconstructed def matches the one its `MorphismDef`
+                        // declares (see `cellsOf`).
+                        const endpointMeta = (ob: Ob | null): MorEndpointMeta | undefined => {
+                            const apply = endpointApplyOp(ob);
+                            return apply
+                                ? { apply, modality: endpointListModality(ob) ?? undefined }
+                                : undefined;
+                        };
                         return morphismHandle(cellId, {
                             tag: "morphism",
                             morType: judgment.morType,
-                            modality:
-                                endpointListModality(judgment.dom) ??
-                                endpointListModality(judgment.cod) ??
-                                undefined,
-                            domain: domApply ? { apply: domApply } : undefined,
-                            codomain: codApply ? { apply: codApply } : undefined,
+                            domain: endpointMeta(judgment.dom),
+                            codomain: endpointMeta(judgment.cod),
                         });
                     }
                     case "instantiation":
