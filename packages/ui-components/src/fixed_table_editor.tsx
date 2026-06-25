@@ -88,7 +88,7 @@ export const createNumericalColumn = <Row,>(args: {
     name?: string;
     header?: boolean;
     data: (row: Row) => number | undefined;
-    default?: number;
+    default?: number | ((row: Row) => number);
     validate?: (row: Row, data: number) => boolean;
     setData?: (row: Row, data: number) => void;
 }): TextColumnSchema<Row> => ({
@@ -98,9 +98,12 @@ export const createNumericalColumn = <Row,>(args: {
     content(row) {
         let value = args.data(row);
         if (value === undefined) {
-            value = args.default ?? 0;
-            args.setData?.(row, value);
-        }
+        const def = typeof args.default === "function"
+            ? args.default(row)
+            : (args.default ?? 0);
+        args.setData?.(row, def);
+        return def.toString();
+    }
         return value.toString();
     },
     validate(row, text) {
