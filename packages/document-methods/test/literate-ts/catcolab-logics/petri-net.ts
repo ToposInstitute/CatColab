@@ -5,13 +5,10 @@ import { defineMorphism, defineObject, defineShape } from "catcolab-documents";
 import { ThSymMonoidalCategory } from "catlog-wasm";
 
 export const Place = defineObject({ tag: "Basic", content: "Object" });
-export const Transition = defineMorphism({
-    tag: "Hom",
-    content: {
-        tag: "ModeApp",
-        content: { modality: "SymmetricList", obType: Place.obType },
-    },
-});
+export const Transition = defineMorphism(
+    { tag: "Hom", content: Place.obType },
+    { modality: "SymmetricList" },
+);
 
 export const PetriNet = defineShape({
     theory: "petri-net",

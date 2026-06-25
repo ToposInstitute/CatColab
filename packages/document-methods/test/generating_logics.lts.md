@@ -87,8 +87,8 @@ An `Operation` is `Hom(AttrType)`, so its domain must be an attribute type.
 notebook.add(Operation, { name: "op2", from: person, to: str });
 ```
 
-Endpoint arity is taken from the morphism type: a `Hom` over a list modality
-such as `SymmetricList` produces array-valued endpoints.
+Endpoint arity is taken from the declared list `modality`: a `Hom` morphism
+given a modality such as `SymmetricList` produces array-valued endpoints.
 
 <!-- verifier:reset -->
 
@@ -99,13 +99,10 @@ import { binder, defineMorphism, defineObject, defineShape } from "catcolab-docu
 import { ThSymMonoidalCategory } from "catlog-wasm";
 
 const Place = defineObject({ tag: "Basic", content: "Object" });
-const Transition = defineMorphism({
-    tag: "Hom",
-    content: {
-        tag: "ModeApp",
-        content: { modality: "SymmetricList", obType: Place.obType },
-    },
-});
+const Transition = defineMorphism(
+    { tag: "Hom", content: Place.obType },
+    { modality: "SymmetricList" },
+);
 
 const PetriNet = defineShape({
     theory: "petri-net",

@@ -560,13 +560,10 @@ describe("Petri-net editor comparison", () => {
 
     test("catcolab-documents, generic consumer", () => {
         const basicObject = defineObject({ tag: "Basic", content: "Object" });
-        const symmetricListMorphism = defineMorphism({
-            tag: "Hom",
-            content: {
-                tag: "ModeApp",
-                content: { modality: "SymmetricList", obType: basicObject.obType },
-            },
-        });
+        const symmetricListMorphism = defineMorphism(
+            { tag: "Hom", content: basicObject.obType },
+            { modality: "SymmetricList" },
+        );
 
         type BasicObCell = ObjectCell<typeof basicObject>;
         type SymmetricListCell = MorphismCell<typeof symmetricListMorphism>;

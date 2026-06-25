@@ -301,35 +301,36 @@ type ListModality = "List" | "SymmetricList" | "CocartesianList" | "CartesianLis
 /**
  * The endpoint type of a morphism cell, derived from the morphism's `MorType`:
  *
- * - a `Hom` over a list modality (e.g. a Petri-net transition's
- *   `Hom(ModeApp(SymmetricList, Object))`) has array-valued endpoints of the
- *   inner object type;
  * - a plain `Hom` over an object type (e.g. a schema `Mapping`,
  *   `Hom(Entity)`) has a single object cell of that type;
  * - any other morphism type does not record its endpoint object type, so its
  *   endpoints stay untyped: a single object cell or a list of them.
  *
- * For the precise cases the `MorType` must be a literal, which {@link
- * defineMorphism}'s `const` type parameter preserves automatically.
+ * A morphism whose endpoints are *lists* (e.g. a Petri-net transition) declares
+ * a list `modality` instead; its array endpoints are given by {@link
+ * ListEndpointOf}. For the precise cases the `MorType` must be a literal, which
+ * {@link defineMorphism}'s `const` type parameter preserves automatically.
  */
 export type EndpointOf<M extends MorType> = [M] extends [
-    {
-        tag: "Hom";
-        content: {
-            tag: "ModeApp";
-            content: { modality: infer Mod; obType: infer O extends ObType };
-        };
-    },
+    { tag: "Hom"; content: infer O extends ObType },
 ]
-    ? Mod extends ListModality
-        ? ObjectCell<ObjectDef<O>>[]
-        : ObjectCell<ObjectDef<O>>
-    : [M] extends [{ tag: "Hom"; content: infer O extends ObType }]
-      ? ObjectCell<ObjectDef<O>>
-      : ObjectCell | ObjectCell[];
+    ? ObjectCell<ObjectDef<O>>
+    : ObjectCell | ObjectCell[];
+
+/**
+ * The array endpoint type of a list morphism (one declared with a `modality`,
+ * e.g. a Petri-net transition): an array of object cells of the `Hom`'s object
+ * type. The list counterpart of {@link EndpointOf}.
+ */
+type ListEndpointOf<M extends MorType> = [M] extends [
+    { tag: "Hom"; content: infer O extends ObType },
+]
+    ? ObjectCell<ObjectDef<O>>[]
+    : ObjectCell[];
 
 declare const domBrand: unique symbol;
 declare const codBrand: unique symbol;
+declare const modalityBrand: unique symbol;
 
 /**
  * Phantom carrier of a morphism's endpoint object types. A `Hom` morphism reads
@@ -344,14 +345,39 @@ export type Endpoints<D extends ObType, C extends ObType> = {
 };
 
 /**
+ * Phantom carrier of a morphism's list modality, present on *every* {@link
+ * MorphismDef}: `Mod` is the list modality for a list morphism (e.g. a
+ * Petri-net transition's `SymmetricList`) or `null` for an ordinary morphism.
+ * The morphism type itself stays the plain `Hom(Object)` the core theory
+ * understands; the list-ness lives here in the type system (driving {@link
+ * DomOf}/{@link CodOf} to array endpoints) and in the runtime `modality` field.
+ *
+ * Because the brand is carried by all morphisms with a *distinct* value per
+ * modality (and `null` for none), any two morphisms with different modalities
+ * are *mutually* non-assignable — a `List` is interchangeable with neither a
+ * `SymmetricList` nor a plain `Hom`. The shape-assignability bivariance (see the
+ * `__morphismShapeBound` phantom on {@link Notebook}) depends on this: now that
+ * a list morphism's type is structurally the plain `Hom(Object)` shared with
+ * e.g. an olog `Aspect`, the modality is the only thing keeping their notebooks
+ * from being wrongly interchangeable.
+ */
+export type ModalityBrand<Mod extends ListModality | null> = {
+    readonly [modalityBrand]: Mod;
+};
+
+/**
  * A tagged wrapper declaring a morphism type, built with {@link defineMorphism}.
  * For a `Hom` morphism the endpoints are derived from its `MorType` structure;
- * for any other (e.g. a `Basic` morphism such as a schema `Attr`) the endpoint
- * object types are carried in the phantom {@link Endpoints} brand.
+ * for a list morphism (declared with a `modality`) they are arrays of the
+ * `Hom`'s object type, with the modality carried in the phantom {@link
+ * ModalityBrand} and the runtime `modality` field; for any other (e.g. a
+ * `Basic` morphism such as a schema `Attr`) the endpoint object types are
+ * carried in the phantom {@link Endpoints} brand.
  */
 export type MorphismDef<M extends MorType = MorType> = {
     readonly tag: "morphism";
     readonly morType: M;
+    readonly modality?: Modality | undefined;
 };
 
 /** The inner `MorType` of a {@link MorphismDef}. */
@@ -360,26 +386,42 @@ type MorTypeOf<Def extends MorphismDef> = Def extends MorphismDef<infer M> ? M :
 /**
  * Declare a morphism type as a {@link MorphismDef}.
  *
- * - For a `Hom` morphism, the endpoint object types and arity are read from the
+ * - For a plain `Hom` morphism, the endpoint object type is read from the
  *   `MorType` structure, so only the morphism type is passed.
+ * - For a list morphism (e.g. a Petri-net transition), pass a `{ modality }`
+ *   such as `{ modality: "SymmetricList" }`. The morphism type stays the plain
+ *   `Hom(Object)` the core theory understands; the modality makes its endpoints
+ *   arrays and tells the encoder to store them as a tensor product (see {@link
+ *   encodeEndpoint}). It is carried in the phantom {@link ModalityBrand} and the
+ *   runtime `modality` field.
  * - For any other morphism (e.g. a `Basic` morphism), the endpoint object types
  *   are not recorded in the literal, so they must be passed explicitly as a
  *   `{ domObType, codObType }` object; they are carried in the phantom {@link
  *   Endpoints} brand.
+ *
+ * Every result carries a {@link ModalityBrand} (`null` when no modality is
+ * declared) so list and non-list morphisms are mutually non-assignable.
  */
 export function defineMorphism<const M extends MorType & { tag: "Hom" }>(
     morType: M,
-): MorphismDef<M>;
+): MorphismDef<M> & ModalityBrand<null>;
+export function defineMorphism<
+    const M extends MorType & { tag: "Hom" },
+    const Mod extends ListModality,
+>(morType: M, options: { modality: Mod }): MorphismDef<M> & ModalityBrand<Mod>;
 export function defineMorphism<
     const M extends MorType,
     const D extends ObType,
     const C extends ObType,
->(morType: M, endpoints: { domObType: D; codObType: C }): MorphismDef<M> & Endpoints<D, C>;
+>(
+    morType: M,
+    endpoints: { domObType: D; codObType: C },
+): MorphismDef<M> & Endpoints<D, C> & ModalityBrand<null>;
 export function defineMorphism(
     morType: MorType,
-    _endpoints?: { domObType: ObType; codObType: ObType },
+    options?: { modality?: Modality; domObType?: ObType; codObType?: ObType },
 ): MorphismDef {
-    return { tag: "morphism", morType };
+    return { tag: "morphism", morType, modality: options?.modality };
 }
 
 /**
@@ -387,18 +429,18 @@ export function defineMorphism(
  * morphism uses its declared domain; otherwise the endpoints are derived from
  * the morphism type via {@link EndpointOf}.
  */
-export type DomOf<Def extends MorphismDef> = [Def] extends [
-    Endpoints<infer D extends ObType, ObType>,
-]
-    ? ObjectCell<ObjectDef<D>>
-    : EndpointOf<MorTypeOf<Def>>;
+export type DomOf<Def extends MorphismDef> = [Def] extends [ModalityBrand<ListModality>]
+    ? ListEndpointOf<MorTypeOf<Def>>
+    : [Def] extends [Endpoints<infer D extends ObType, ObType>]
+      ? ObjectCell<ObjectDef<D>>
+      : EndpointOf<MorTypeOf<Def>>;
 
 /** The codomain endpoint type of a morphism cell; see {@link DomOf}. */
-export type CodOf<Def extends MorphismDef> = [Def] extends [
-    Endpoints<ObType, infer C extends ObType>,
-]
-    ? ObjectCell<ObjectDef<C>>
-    : EndpointOf<MorTypeOf<Def>>;
+export type CodOf<Def extends MorphismDef> = [Def] extends [ModalityBrand<ListModality>]
+    ? ListEndpointOf<MorTypeOf<Def>>
+    : [Def] extends [Endpoints<ObType, infer C extends ObType>]
+      ? ObjectCell<ObjectDef<C>>
+      : EndpointOf<MorTypeOf<Def>>;
 
 /**
  * A morphism-cell handle, parametrized by its {@link MorphismDef}. The domain
@@ -930,73 +972,16 @@ const LIST_MODALITIES: ReadonlySet<Modality> = new Set<Modality>([
     "AdditiveList",
 ]);
 
-/**
- * The list modality of a morphism type's endpoints, read from the modality in
- * its `Hom` content, or `null` when the endpoints are single objects. This is
- * the runtime counterpart of the list branch of {@link EndpointOf}.
- */
-const morTypeListModality = (morType: MorType): Modality | null => {
-    if (morType.tag !== "Hom") {
-        return null;
-    }
-    const inner = morType.content;
-    if (inner.tag === "ModeApp" && LIST_MODALITIES.has(inner.content.modality)) {
-        return inner.content.modality;
-    }
-    return null;
-};
-
-/**
- * Lower a morphism type to the *core* form that is persisted into the document
- * and handed to the core theory's elaborator. A list-modality `Hom` such as a
- * Petri-net transition's `Hom(ModeApp(SymmetricList, Object))` is stored as the
- * plain `Hom(Object)` that the core theory understands; the list-ness lives in
- * the tensor-product endpoints instead (see {@link encodeEndpoint}). This is
- * exactly what the frontend persists, so the two representations agree and the
- * elaborated model exposes the morphism as a generator. Any other morphism type
- * is already in core form and is returned unchanged.
- */
-const coreMorType = (morType: MorType): MorType => {
-    if (
-        morType.tag === "Hom" &&
-        morType.content.tag === "ModeApp" &&
-        LIST_MODALITIES.has(morType.content.content.modality)
-    ) {
-        return { tag: "Hom", content: morType.content.content.obType };
-    }
-    return morType;
-};
-
 /** The list modality of a stored endpoint, read from a `Tensor(List(...))`
-wrapper, or `null` when the endpoint is not a list. The runtime counterpart to
-recognizing a list endpoint by its shape rather than its morphism type. */
+wrapper, or `null` when the endpoint is not a list. Used to recover a list
+morphism's modality when reading a cell back from the document, recognizing a
+list endpoint by its stored shape. */
 const endpointListModality = (ob: Ob | null): Modality | null => {
     if (ob?.tag === "App" && ob.content.ob.tag === "List") {
         const modality = ob.content.ob.content.modality;
         return LIST_MODALITIES.has(modality) ? modality : null;
     }
     return null;
-};
-
-/**
- * Raise a persisted *core* morphism type back to the document-methods form,
- * inverting {@link coreMorType}. A `Hom(Object)` whose stored endpoints are a
- * tensor product over a list modality is recovered as `Hom(ModeApp(mod,
- * Object))`, so a morphism cell read back from the document reports the same
- * rich type its {@link MorphismDef} declares (and {@link Notebook.cellsOf}
- * matches it). A morphism type that is already in `ModeApp` form, or whose
- * endpoints are not lists, is returned unchanged.
- */
-const richMorType = (morType: MorType, dom: Ob | null, cod: Ob | null): MorType => {
-    if (morType.tag !== "Hom" || morType.content.tag === "ModeApp") {
-        return morType;
-    }
-    const obType = morType.content;
-    const modality = endpointListModality(dom) ?? endpointListModality(cod);
-    if (modality === null) {
-        return morType;
-    }
-    return { tag: "Hom", content: { tag: "ModeApp", content: { modality, obType } } };
 };
 
 /** Encode an object-cell endpoint reference as a model object. */
@@ -1007,13 +992,14 @@ const encodeObjectRef = (cell: { readonly id: string }): Ob => ({
 
 /**
  * Encode a morphism endpoint into the document's object notation. The shape is
- * chosen from the morphism type: a list-modality `Hom` (e.g. a Petri-net
- * transition) wraps an array of cells as a tensor product over the modality's
- * list; any other morphism type encodes a single object cell as a basic
- * object.
+ * chosen from the morphism's declared `modality`: a list morphism (e.g. a
+ * Petri-net transition, `modality: "SymmetricList"`) wraps an array of cells as
+ * a tensor product over the modality's list; a morphism with no modality
+ * encodes a single object cell as a basic object. This is exactly what the
+ * frontend persists, so the morphism type stored in the document stays the
+ * plain `Hom(Object)` the core theory understands and exposes as a generator.
  */
-const encodeEndpoint = (morType: MorType, value: unknown): Ob | null => {
-    const modality = morTypeListModality(morType);
+const encodeEndpoint = (modality: Modality | null, value: unknown): Ob | null => {
     if (modality !== null) {
         const cells = Array.isArray(value) ? value : value == null ? [] : [value];
         return {
@@ -1404,10 +1390,13 @@ function attachNotebook<TShape extends AnyShape, Handle>(
     };
 
     /** Decode a stored endpoint, choosing array vs single shape from the
-    morphism type's modality rather than from the stored value's shape. */
-    const decodeEndpoint = (morType: MorType, value: Ob | null): ObjectCell | ObjectCell[] => {
+    morphism's declared modality rather than from the stored value's shape. */
+    const decodeEndpoint = (
+        modality: Modality | null,
+        value: Ob | null,
+    ): ObjectCell | ObjectCell[] => {
         const objects = decodeEndpointObjects(value);
-        if (morTypeListModality(morType) !== null) {
+        if (modality !== null) {
             return objects;
         }
         return objects[0] as ObjectCell;
@@ -1428,11 +1417,11 @@ function attachNotebook<TShape extends AnyShape, Handle>(
             },
             get from() {
                 const content = readCellContent<{ dom: Ob | null }>(cellId);
-                return content && decodeEndpoint(type.morType, content.dom);
+                return content && decodeEndpoint(type.modality ?? null, content.dom);
             },
             get to() {
                 const content = readCellContent<{ cod: Ob | null }>(cellId);
-                return content && decodeEndpoint(type.morType, content.cod);
+                return content && decodeEndpoint(type.modality ?? null, content.cod);
             },
             update(u: { name?: string; from?: unknown; to?: unknown }) {
                 change((d) => {
@@ -1445,10 +1434,10 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                         content.name = u.name;
                     }
                     if ("from" in u) {
-                        content.dom = encodeEndpoint(type.morType, u.from);
+                        content.dom = encodeEndpoint(type.modality ?? null, u.from);
                     }
                     if ("to" in u) {
-                        content.cod = encodeEndpoint(type.morType, u.to);
+                        content.cod = encodeEndpoint(type.modality ?? null, u.to);
                     }
                 });
             },
@@ -1538,10 +1527,10 @@ function attachNotebook<TShape extends AnyShape, Handle>(
         def: MorphismDef,
         args: { name: string; from?: unknown; to?: unknown },
     ): MorphismCell => {
-        const judgment = newMorphismDecl(coreMorType(def.morType));
+        const judgment = newMorphismDecl(def.morType);
         judgment.name = args.name;
-        judgment.dom = encodeEndpoint(def.morType, args.from);
-        judgment.cod = encodeEndpoint(def.morType, args.to);
+        judgment.dom = encodeEndpoint(def.modality ?? null, args.from);
+        judgment.cod = encodeEndpoint(def.modality ?? null, args.to);
         const formalCell = newFormalCell(judgment);
         change((d) => {
             d.notebook.cellContents[formalCell.id] = formalCell;
@@ -1706,7 +1695,15 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                     case "morphism":
                         return morphismHandle(cellId, {
                             tag: "morphism",
-                            morType: richMorType(judgment.morType, judgment.dom, judgment.cod),
+                            morType: judgment.morType,
+                            // Recover a list morphism's modality from the stored
+                            // tensor-product endpoints, inverting the encoding in
+                            // `encodeEndpoint`, so the reconstructed def matches
+                            // the one its `MorphismDef` declares (see `cellsOf`).
+                            modality:
+                                endpointListModality(judgment.dom) ??
+                                endpointListModality(judgment.cod) ??
+                                undefined,
                         });
                     case "instantiation":
                         return instantiationHandle(cellId);

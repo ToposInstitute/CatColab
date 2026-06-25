@@ -5,8 +5,9 @@ The olog and Petri-net editor comparisons
 [`petri_net_editor_comparison.lts.md`](./petri_net_editor_comparison.lts.md))
 build the same editor over the unified `Notebook` API. A notebook over a shape
 that declares its cell types constrains `add` to those types and derives each
-morphism's endpoints from its `MorType`, so wiring an endpoint with the wrong
-cell is a compile error rather than a corrupt document.
+morphism's endpoints from its `MorType` (and, for a list morphism, its declared
+`modality`), so wiring an endpoint with the wrong cell is a compile error rather
+than a corrupt document.
 
 The examples below take three classes of endpoint mistake and show that a shaped
 notebook rejects each at compile time, before any document is written.
@@ -34,8 +35,9 @@ notebook.add(Mapping, { name: "broken", from: person, to: age });
 
 ## Bug 2: a single object where an endpoint list is required
 
-A Petri-net transition's endpoints are _lists_ of places, recorded as a
-`SymmetricList` modality on its morphism type. A shaped `Transition` derives
+A Petri-net transition's endpoints are _lists_ of places, declared with a
+`SymmetricList` modality on the morphism (its morphism type stays the plain
+`Hom(Object)` the core theory understands). A shaped `Transition` derives
 `ObjectCell[]` for each endpoint from that modality, so a single place where a
 list is required is rejected at compile time.
 
@@ -78,7 +80,8 @@ schema.add(Mapping, { name: "tangled", from: person, to: place });
 
 Declaring a shape moves the endpoint contract into the type system: `add` is
 constrained to the shape's cell types, and each morphism's endpoints are derived
-from its `MorType` (`Hom(Entity)` wants an `Entity` cell; a `SymmetricList`
-`Hom` wants a list). Wrong-type, wrong-arity, and cross-theory endpoints become
+from its `MorType` and declared `modality` (`Hom(Entity)` wants an `Entity`
+cell; a `SymmetricList` `Hom` wants a list). Wrong-type, wrong-arity, and
+cross-theory endpoints become
 compile-time errors instead of runtime surprises, while reads recover precise
 handles with `cellsOf`.
