@@ -21,7 +21,7 @@ import {
     type ModelValidationResult,
 } from "catcolab-documents";
 import { Attr, AttrType, Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
-import { createResource, createRoot, createSignal, For, Show } from "solid-js";
+import { createResource, createSignal, For, Show } from "solid-js";
 import { createStore, produce, type SetStoreFunction, unwrap } from "solid-js/store";
 import { render } from "solid-js/web";
 import { describe, expect, test } from "vitest";
@@ -100,59 +100,62 @@ describe("simple-schema completions consumer", () => {
         notebook.add(AttrType, { name: "Boolean" });
         const attr = notebook.add(Attr, { name: "name", from: person, to: str });
 
-        // Validation runs reactively: the resource re-elaborates whenever the
-        // notebook's document changes. The fetcher runs synchronously on
-        // creation, so `validated` is assigned before the first await below.
+        // The typed text is test-driven UI state, lifted so the test can
+        // simulate typing; the consumer component below reads it as a prop.
+        const [text, setText] = createSignal("");
+
+        // The consumer component owns the reactive validation: a resource keyed
+        // on the notebook's cells re-elaborates on every edit. It publishes the
+        // in-flight `validated` promise and the `model` accessor for the test to
+        // await and inspect; the fetcher runs synchronously on creation, so both
+        // are assigned as soon as the component renders.
         let validated!: Promise<ModelValidationResult>;
-        let disposeRoot!: () => void;
-        const model = createRoot((dispose) => {
-            disposeRoot = dispose;
+        let model!: () => DblModel | undefined;
+        function Consumer(props: { text: string }) {
             const [validation] = createResource(
                 () => notebook.cells(),
                 () => (validated = notebook.validate()),
             );
-            return (): DblModel | undefined => {
+            model = () => {
                 const result = validation();
                 return result && result.tag !== "Illformed" ? result.model : undefined;
             };
-        });
-        const [text, setText] = createSignal("");
 
-        // Selecting an id only edits the morphism cell (an object generator's id
-        // is its cell's id); the reactive resource above re-validates into a
-        // fresh elaborated model.
-        const onSelect = (id: QualifiedName) => {
-            const cell = notebook.get(AttrType, id);
-            if (cell) {
-                attr.update({ to: cell });
-            }
-        };
+            // Selecting an id only edits the morphism cell (an object
+            // generator's id is its cell's id); the reactive resource above
+            // re-validates into a fresh elaborated model.
+            const onSelect = (id: QualifiedName) => {
+                const cell = notebook.get(AttrType, id);
+                if (cell) {
+                    attr.update({ to: cell });
+                }
+            };
 
-        const codomain = () => {
-            const m = model();
-            const cod = m?.morPresentation(attr.id)?.cod;
-            return cod?.tag === "Basic" ? m?.obGeneratorLabel(cod.content)?.join(".") : "?";
-        };
-
-        expect((await validated).tag).not.toBe("Illformed");
-
-        const container = document.createElement("div");
-        document.body.appendChild(container);
-        const dispose = render(
-            () => (
+            return (
                 <Show when={model()}>
                     {(model) => (
                         <Completions
                             model={model()}
                             obType={AttrType.obType}
-                            text={text()}
+                            text={props.text}
                             onSelect={onSelect}
                         />
                     )}
                 </Show>
-            ),
-            container,
-        );
+            );
+        }
+
+        const container = document.createElement("div");
+        document.body.appendChild(container);
+        const dispose = render(() => <Consumer text={text()} />, container);
+
+        function codomain() {
+            const m = model();
+            const cod = m?.morPresentation(attr.id)?.cod;
+            return cod?.tag === "Basic" ? m?.obGeneratorLabel(cod.content)?.join(".") : "?";
+        }
+
+        expect((await validated).tag).not.toBe("Illformed");
 
         // Empty text: every `AttrType` generator, in generator order.
         expect(container.innerHTML).toBe(
@@ -176,7 +179,6 @@ describe("simple-schema completions consumer", () => {
         expect(codomain()).toBe("Integer");
 
         dispose();
-        disposeRoot();
         container.remove();
     });
 });

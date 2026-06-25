@@ -24,7 +24,7 @@ import {
     type ModelValidationResult,
 } from "catcolab-documents";
 import { Place, PetriNet, Transition } from "catcolab-logics/petri-net";
-import { createResource, createRoot, For, Show } from "solid-js";
+import { createResource, For, Show } from "solid-js";
 import { createStore, produce, type SetStoreFunction, unwrap } from "solid-js/store";
 import { render } from "solid-js/web";
 import { describe, expect, test } from "vitest";
@@ -159,67 +159,59 @@ describe("Petri-net elaborated-model consumer", () => {
         const c = notebook.add(Place, { name: "C" });
         notebook.add(Transition, { name: "fires", from: [a], to: [c] });
 
-        // Validation runs reactively: the resource re-elaborates whenever the
-        // notebook's document changes. Re-elaboration is async (a notebook may
-        // resolve instantiations through the store), so `validated` exposes the
-        // in-flight promise for the test to await before re-asserting. The
-        // fetcher runs synchronously on creation, so `validated` is assigned
-        // before the first await below.
+        // The consumer component owns the reactive validation: a resource keyed
+        // on the notebook's cells re-elaborates on every edit, and the view
+        // re-renders from the fresh elaborated model. Re-elaboration is async (a
+        // notebook may resolve instantiations through the store), so the
+        // component publishes the in-flight promise through `validated` for the
+        // test to await before asserting; the fetcher runs synchronously on
+        // creation, so `validated` is assigned as soon as the component renders.
         let validated!: Promise<ModelValidationResult>;
-        let disposeRoot!: () => void;
-        const model = createRoot((dispose) => {
-            disposeRoot = dispose;
+        function Consumer() {
             const [validation] = createResource(
                 () => notebook.cells(),
                 () => (validated = notebook.validate()),
             );
-            return (): DblModel | undefined => {
+            const model = (): DblModel | undefined => {
                 const result = validation();
                 return result && result.tag !== "Illformed" ? result.model : undefined;
             };
-        });
 
-        expect((await validated).tag).toBe("Valid");
-
-        // The button only edits the document; the reactive resource above
-        // re-validates on its own, yielding a fresh elaborated model that the
-        // view re-renders.
-        const runTestMutation = () => {
-            const m = model();
-            if (!m) {
-                return;
-            }
-            // Generically find a place not yet wired into any transition,
-            // reading only the elaborated structure.
-            const referenced = new Set<QualifiedName>();
-            for (const morId of m.morGenerators()) {
-                const mor = m.morPresentation(morId);
-                if (!mor) {
-                    continue;
+            // The button only edits the document; the reactive resource above
+            // re-validates on its own, yielding a fresh elaborated model that
+            // the view re-renders.
+            const runTestMutation = () => {
+                const m = model();
+                if (!m) {
+                    return;
                 }
-                for (const id of [...placeIds(mor.dom), ...placeIds(mor.cod)]) {
-                    referenced.add(id);
+                // Generically find a place not yet wired into any transition,
+                // reading only the elaborated structure.
+                const referenced = new Set<QualifiedName>();
+                for (const morId of m.morGenerators()) {
+                    const mor = m.morPresentation(morId);
+                    if (!mor) {
+                        continue;
+                    }
+                    for (const id of [...placeIds(mor.dom), ...placeIds(mor.cod)]) {
+                        referenced.add(id);
+                    }
                 }
-            }
-            const inputId = m.obGenerators().find((id) => !referenced.has(id));
-            if (!inputId) {
-                return;
-            }
-            // An object generator's id is its object cell's id, so the generic
-            // choice maps straight back to a document cell to edit.
-            const place = notebook.cellsOf(Place).find((p) => p.id === inputId);
-            const transition = notebook.cellsOf(Transition).at(0);
-            if (!place || !transition) {
-                return;
-            }
-            transition.update({ from: [...transition.from, place] });
-        };
+                const inputId = m.obGenerators().find((id) => !referenced.has(id));
+                if (!inputId) {
+                    return;
+                }
+                // An object generator's id is its object cell's id, so the
+                // generic choice maps straight back to a document cell to edit.
+                const place = notebook.cellsOf(Place).find((p) => p.id === inputId);
+                const transition = notebook.cellsOf(Transition).at(0);
+                if (!place || !transition) {
+                    return;
+                }
+                transition.update({ from: [...transition.from, place] });
+            };
 
-        const container = document.createElement("div");
-        document.body.appendChild(container);
-
-        const dispose = render(
-            () => (
+            return (
                 <Show when={model()}>
                     {(model) => (
                         <ElaboratedModelView
@@ -229,10 +221,14 @@ describe("Petri-net elaborated-model consumer", () => {
                         />
                     )}
                 </Show>
-            ),
-            container,
-        );
+            );
+        }
 
+        const container = document.createElement("div");
+        document.body.appendChild(container);
+        const dispose = render(() => <Consumer />, container);
+
+        expect((await validated).tag).toBe("Valid");
         expect(container.innerHTML).toBe(EXPECTED_INITIAL);
 
         const appendButton = container.querySelector<HTMLButtonElement>(
@@ -243,7 +239,6 @@ describe("Petri-net elaborated-model consumer", () => {
         expect(container.innerHTML).toBe(EXPECTED_AFTER_APPEND);
 
         dispose();
-        disposeRoot();
         container.remove();
     });
 });
