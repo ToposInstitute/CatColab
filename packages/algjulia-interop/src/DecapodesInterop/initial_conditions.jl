@@ -21,18 +21,20 @@ end
 @default struct GaussianIC{dim} <: AbstractInitialConditionSpec
     mean::Vector{Float64} = [0.0 for _ in 1:dim]
     var::Diagonal{Float64, Vector{Float64}} = Diagonal{Float64, Vector{Float64}}([1.0 for _ in 1:dim])
+    # need to convert the default value for `var` into a function
+    # need to tell typescript what type of component to render this
 end
 
 dimension(::GaussianIC{d}) where d = d
 
-function initial_condition(g::GaussianIC, geometry::Geometry{Circle}; f::Function=identity)
+function initial_condition(g::GaussianIC{1}, geometry::Geometry{Circle}; f::Function=identity)
     @assert dimension(g) == dimension(geometry) || error("!")
     dist = Normal(pi)
     m(t) = Distributions.pdf(dist, t) * GAUSS_NORM |> f
     [m(t) for t in range(0, 2*pi; length=ne(geometry.dualmesh))]
 end
 
-function initial_condition(g::GaussianIC, geometry::Geometry{Rectangle})
+function initial_condition(g::GaussianIC{2}, geometry::Geometry{Rectangle})
     c_dist = MvNormal(g.mean, g.var)
     c = [Distributions.pdf(c_dist, [p[1], p[2]]) for p ∈ geometry.dualmesh[:point]]
     return c
@@ -57,7 +59,7 @@ vort_ring(tv::TaylorVortexIC, geometry::Geometry) = vort_ring(tv.d, tv.ξ.lat, t
 
 """ associates the values in a dictionary to their initial condition flags, and passes the output to initial_conditions
 """
-function initial_conditions(ics::Dict{Symbol, <:Union{DataType, UnionAll}}, geometry::Geometry) 
+function initial_conditions(ics::Dict{Symbol, <:Union{UnionAll, Type}}, geometry::Geometry) 
     # Now we have a mapping between variables and their initial condition specs.
     ic(var) = begin
         x = ics[var]

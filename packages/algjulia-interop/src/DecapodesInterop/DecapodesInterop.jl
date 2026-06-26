@@ -51,43 +51,10 @@ function endpoint(::Val{:Decapodes})
     end
 end
 
-const progress_channel = Channel{Dict{String,Any}}(64)
-
-function make_progress_callback(channel::Channel, tspan)
+function make_progress_callback(stream::HTTP.Stream, tspan)
     t0, tf = tspan
+    last_write = Ref(time())
     DiscreteCallback(
-        (u, t, integrator) -> true,  # fire every step
-        (integrator) -> begin
-            frac = (integrator.t - t0) / (tf - t0)
-            try
-                push!(channel, Dict("t" => integrator.t, "progress" => frac))
-            catch end  # channel closed
-        end;
-        save_positions = (false, false)
-    )
-end
-
-function endpoint(::Val{:DecapodesString})
-    @stream "/decapodes-string" function(stream::HTTP.Stream)
-        req = stream.message
-        uri = HTTP.URI(req.target)
-
-        system, params = DecapodesSystem(uri)
-
-        @info "Starting"
-        HTTP.setheader(stream, "Content-Type" => "application/x-ndjson")
-        HTTP.setheader(stream, "Access-Control-Allow-Origin" => "*")
-        
-        startwrite(stream)
-
-        t0, tf = 0, system.duration
-        @info "Duration set to $tf"
-        last_write = Ref(time())
-
-        write(stream, JSON3.write(Dict("status" => "initializing")) * "\n")
-        flush(stream)
-
-        cb = DiscreteCallback(
             (u, t, integrator) -> true,
             (integrator) -> begin
                 now = time()
@@ -106,15 +73,35 @@ function endpoint(::Val{:DecapodesString})
                 end
             end;
             save_positions = (false, false)
-        )
+    )
+end
 
-        result = run(system, params; callback=cb)
+function endpoint(::Val{:DecapodesString})
+    @stream "/decapodes-string" function(stream::HTTP.Stream)
+        req = stream.message
+        uri = HTTP.URI(req.target)
+
+        system, params = DecapodesSystem(uri)
+
+        @info "Starting"
+        HTTP.setheader(stream, "Content-Type" => "application/x-ndjson")
+        HTTP.setheader(stream, "Access-Control-Allow-Origin" => "*")
+        
+        startwrite(stream)
+
+        write(stream, JSON3.write(Dict("status" => "initializing")) * "\n")
+        flush(stream)
+
+        callback = make_progress_callback(stream, (0, system.duration))
+
+        result = run(system, params; callback=callback)
         formatted = format(system.geometry.dualmesh, result)
         write(stream, JSON3.write(Dict("progress" => 1.0, "data" => formatted)) * "\n")
         closewrite(stream)
     end
 end
 
+# TODO this is just here until we can elaborate a diagram fully.
 function DecapodesSystem(uri::URIs.URI)
     params = HTTP.queryparams(uri)
     pode = pop!(params, "pode")
@@ -176,8 +163,22 @@ struct MeshInfo{Mesh <: AbstractMeshSpec}
     ics::Vector{String}
 end
 
+function spec(::Type{T}) where T
+    Dict(string.(fieldnames(T)) .=> string.(nameof.(fieldtypes(T))))
+end
+
+struct IC
+    ic::String
+    params::Vector{Any}
+end
+
+function IC(::Type{T}) where T
+    name = string(nameof(T))
+    IC(name, [T.parameters...])
+end
+
 function MeshInfo(mesh_type::Type{Mesh}) where Mesh <: AbstractMeshSpec
-    specs = Dict(string.(fieldnames(mesh_type)) .=> string.(nameof.(fieldtypes(mesh_type))))
+    specs = spec(mesh_type)
     defaults = Dict(string(k) => v for (k,v) in pairs(default_values(mesh_type)))
 
     # Initial Conditions
@@ -186,6 +187,11 @@ function MeshInfo(mesh_type::Type{Mesh}) where Mesh <: AbstractMeshSpec
     for m in ic_methods
         params = Base.unwrap_unionall(m.sig).parameters
         length(params) >= 3 || continue
+
+        ic = IC(params[2])
+        @info default_values(params[2])
+
+        # parse the signature for Geometric data
         geom = params[3]
         geom isa DataType && nameof(geom) === :Geometry || continue
         meshparam = geom.parameters[1]
@@ -194,12 +200,13 @@ function MeshInfo(mesh_type::Type{Mesh}) where Mesh <: AbstractMeshSpec
         end
     end
     ics = unique(names)
+    
     MeshInfo{Mesh}(specs, defaults, ics)
 end
      
 using InteractiveUtils: subtypes
 
-function supported_geometries()
+function supported_options()
     mesh_types = subtypes(AbstractMeshSpec)
     meshes = string.(nameof.(mesh_types))
 
@@ -207,12 +214,23 @@ function supported_geometries()
         string(nameof(mesh)) => MeshInfo(mesh)
     end)
 
+    ic_types = subtypes(AbstractInitialConditionSpec)
+    ics = string.(nameof.(initial_conditions))
+    
+
+
+    # TS should receive a string which it knows how to interpret into a component. So
+    # "AbstractVortexParams" should be interpereted into a table
+    # ic_info = Dict(map(ic_types) do ic
+    #     string(nameof(ic)) => typeof(ic) == UnionAll ? default_values(ic{1}) : default_values(ic)
+    # end)
+
     Dict(:meshes => meshes, :mesh_info => mesh_info)
 end
 
 function endpoint(::Val{:DecapodesOptions})
     @get "/decapodes-options" function (req::HTTP.Request)
-        supported_geometries()
+        supported_options()
     end
 end
 

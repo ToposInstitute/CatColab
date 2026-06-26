@@ -49,7 +49,6 @@ const DEFAULT_ICS = Dict()
 function DecapodesSystem(pode::SummationDecapode; duration=DEFAULT_DURATION, mesh=nothing, constants=DEFAULT_CONSTANTS, ics=DEFAULT_ICS)
     
     geometry = Geometry(mesh)
-    @info ics
     u0 = initial_conditions(ics, geometry)
 
     ops = Operators()
@@ -89,9 +88,6 @@ function Base.getindex(result::SolutionResult, state_var::Symbol, t::Int, nth=no
     out = getproperty(result.soln.u[t], state_var)
     isnothing(nth) ? out : out[nth]
 end
-
-
-
 
 function DecapodesSystem(a::Types.Analysis; hodge=GeometricHodge())
     pode, vars = diagram_to_pode(a.model, a.diagram)
