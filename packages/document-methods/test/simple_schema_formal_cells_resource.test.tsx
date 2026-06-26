@@ -118,6 +118,31 @@ describe("simple-schema formalCells() validation resource", () => {
         expect(changes).toBe(3);
     });
 
+    test("onChange fires when an entity's name is updated", () => {
+        const notebook = solidBinder.createNotebook(SimpleSchema, { name: "Company schema" });
+        const person = notebook.add(Entity, { name: "Person" });
+
+        let changes = 0;
+        const unsubscribe = notebook.onChange(() => {
+            changes += 1;
+        });
+
+        // Updating an entity's name mutates nested cell content
+        // (`cellContents[id].content.name`) rather than replacing the cell. The
+        // change still flows through `changeDocument`, so `onChange` fires and
+        // the new name is observable.
+        person.update({ name: "Human" });
+        expect(changes).toBe(1);
+        expect(person.name).toBe("Human");
+
+        // A second update to the same nested content fires `onChange` again.
+        person.update({ name: "Individual" });
+        expect(changes).toBe(2);
+        expect(person.name).toBe("Individual");
+
+        unsubscribe();
+    });
+
     test("keying validation on onChange + formal-cell ids dedupes unrelated edits", async () => {
         const notebook = solidBinder.createNotebook(SimpleSchema, { name: "Company schema" });
         const person = notebook.add(Entity, { name: "Person" });
