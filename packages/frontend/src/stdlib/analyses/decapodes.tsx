@@ -23,6 +23,7 @@ import {
     Foldable,
     IconButton,
     Warning,
+    ProgressBar,
 } from "catcolab-ui-components";
 import type { ModelDiagramPresentation, ModelPresentation, QualifiedName } from "catlog-wasm";
 import { ThDEC } from "catlog-wasm";
@@ -188,6 +189,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                         content.domain = domain;
                         content.mesh = options()?.mesh_info[domain].ics[0] ?? null;
                         content.initialConditions = {};
+                        setMeshParams({});
                     })
                 }
             >
@@ -249,7 +251,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         }),
     ];
 
-    const [fieldValues, setFieldValues] = createSignal<Record<string, number>>({});
+    const [meshParams, setMeshParams] = createSignal<Record<string, number>>({});
 
     const fieldSchema = (default_value: Record<string, unknown>): ColumnSchema<string>[] => [
         {
@@ -260,9 +262,9 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         },
         createNumericalColumn({
             name: "Value",
-            data: (field) => fieldValues()[field],
+            data: (field) => meshParams()[field],
             default: (field) => default_value[field],
-            setData: (field, v) => setFieldValues((prev) => ({ ...prev, [field]: v })),
+            setData: (field, v) => setMeshParams((prev) => ({ ...prev, [field]: v })),
         }),
     ];
 
@@ -273,6 +275,24 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         { pode: string; constants: Record<string, number>; duration: number } | undefined
     >(undefined);
 
+    async function* ndjson(body: ReadableStream<Uint8Array>): AsyncGenerator<StreamMsg> {
+        const reader = body.getReader();
+        const decoder = new TextDecoder();
+        let buf = "";
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buf += decoder.decode(value, { stream: true });
+                const lines = buf.split("\n");
+                buf = lines.pop()!;
+                for (const line of lines) if (line.trim()) yield JSON.parse(line) as StreamMsg;
+            }
+        } finally {
+            reader.releaseLock();
+        }
+    }
+
     const [res] = createResource(runPayload, async ({ pode, constants, duration }) => {
         setProgress(0);
 
@@ -281,9 +301,12 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
             params.set(`constants.${k}`, String(v));
         }
         params.set("mesh", String(props.content.mesh));
-        for (const [k, v] of Object.entries(fieldValues())) {
-            params.set(`mesh.${k}`, String(v));
+
+        const valid = new Set(fieldNames(String(props.content.mesh)));
+        for (const [k, v] of Object.entries(meshParams())) {
+            if (valid.has(k)) params.set(`mesh.${k}`, String(v));
         }
+
         for (const [k, v] of Object.entries(props.content.initialConditions)) {
             params.set(`initialConditions.${k}`, String(v));
         }
@@ -295,29 +318,14 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         const response = await fetch(url);
         if (!response.ok) throw new Error(`HTTP error! status ${response.status}`);
 
-        const reader = response.body!.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
         let resultData = null;
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split("\n");
-            buffer = lines.pop()!;
-            for (const line of lines) {
-                if (!line.trim()) continue;
-                const msg = JSON.parse(line);
-                if ("status" in msg) {
-                    setStatus(msg.status);
-                    setProgress(null);
-                } else if ("progress" in msg) {
-                    setStatus(null); // clear status so progress bar shows
-                    setProgress(msg.progress);
-                }
-                if ("data" in msg) resultData = msg.data;
+        for await (const msg of ndjson(response.body!)) {
+            if ("status" in msg) setStatus(msg.status);
+            if ("progress" in msg) {
+                setStatus(null);
+                setProgress(msg.progress);
             }
+            if ("data" in msg) resultData = msg.data;
         }
 
         setProgress(null);
@@ -355,8 +363,10 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                                 value={props.content.mesh ?? undefined}
                                 onInput={(evt) =>
                                     props.changeContent((content) => {
+                                        setMeshParams({});
                                         content.mesh = evt.currentTarget.value;
                                         content.initialConditions = {};
+                                        console.log("meshParams after reset:", meshParams());
                                     })
                                 }
                             >
@@ -366,7 +376,6 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                             </select>
                             <Show when={options() && props.content.mesh}>
                                 {(mesh) => {
-                                    console.log(options());
                                     return (
                                         <FixedTableEditor
                                             rows={fieldNames(mesh())}
@@ -419,23 +428,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                     )}
                 </Match>
                 <Match when={res.loading}>
-                    <Switch fallback="Running the simulation...">
-                        <Match when={status() === "initializing"}>Initializing simulation...</Match>
-                        <Match when={status() === "finalizing"}>Finalizing results...</Match>
-                        <Match when={progress() !== null}>
-                            <div class="simulation-progress">
-                                <div class="progress-bar">
-                                    <div
-                                        class="progress-fill"
-                                        style={{ width: `${(progress()! * 100).toFixed(0)}%` }}
-                                    />
-                                </div>
-                                <span class="progress-label">
-                                    {(progress()! * 100).toFixed(0)}%
-                                </span>
-                            </div>
-                        </Match>
-                    </Switch>
+                    <ProgressBar progress={progress} status={status} />
                 </Match>
                 <Match when={res.error}>
                     {(error) => (

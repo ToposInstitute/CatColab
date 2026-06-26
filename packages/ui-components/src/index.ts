@@ -28,3 +28,4 @@ export * from "./util/focus";
 export * from "./util/keyboard";
 export * from "./virtual_list";
 export * from "./warning_banner";
+export * from "./progress-bar";
