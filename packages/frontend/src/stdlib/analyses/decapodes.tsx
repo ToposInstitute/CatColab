@@ -75,40 +75,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         return Object.fromEntries(entries);
     });
 
-    // createEffect(() => {
-    //     const subs = subDiagramDocs();
-    //     if (!subs) return;
-    //     const model = props.liveDiagram.liveModel.liveDoc.doc;
-    //     if (!model) return;
-    //     const diagramDoc = props.liveDiagram.liveDoc.doc;
-    //     const out = ThDEC.simulatePode(model, diagramDoc, subs);
-    // });
-
-    // const scalars = createMemo<QualifiedName[]>(
-    //     () =>
-    //         elaboratedModel()?.morGeneratorsWithType({
-    //             tag: "Hom",
-    //             content: { tag: "Basic", content: "Object" },
-    //         }) ?? [],
-    // );
-
-    // const scalarSchema: ColumnSchema<QualifiedName>[] = [
-    //     {
-    //         contentType: "string",
-    //         header: true,
-    //         name: "Scalar constant",
-    //         content: (id) => elaboratedModel()?.morGeneratorLabel(id)?.join(".") ?? "",
-    //     },
-    //     createNumericalColumn({
-    //         name: "Value",
-    //         data: (id) => props.content.scalars[id],
-    //         setData: (id, value) =>
-    //             props.changeContent((content) => {
-    //                 content.scalars[id] = value;
-    //             }),
-    //     }),
-    // ];
-
+    const icRows = ["n", "w", "Hydrodynamics_dX"];
     const icSchema: ColumnSchema<string>[] = [
         {
             contentType: "string",
@@ -130,7 +97,7 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                     if (value === null) {
                         delete content.initialConditions[name];
                     } else {
-                        content.initialConditions[name] = value; // Record<string,string>
+                        content.initialConditions[name] = value;
                     }
                 }),
         },
@@ -299,7 +266,8 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         }),
     ];
 
-    const fieldNames = (mesh: string): string[] => Object.keys(options()?.mesh_info[mesh].specs ?? {});
+    const fieldNames = (mesh: string): string[] =>
+        Object.keys(options()?.mesh_info[mesh].specs ?? {});
 
     const [runPayload, setRunPayload] = createSignal<
         { pode: string; constants: Record<string, number>; duration: number } | undefined
@@ -310,10 +278,19 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
 
         const params = new URLSearchParams({ pode });
         for (const [k, v] of Object.entries(constants)) {
-            params.set(k, String(v));
+            params.set(`constants.${k}`, String(v));
+        }
+        params.set("mesh", String(props.content.mesh));
+        for (const [k, v] of Object.entries(fieldValues())) {
+            params.set(`mesh.${k}`, String(v));
+        }
+        for (const [k, v] of Object.entries(props.content.initialConditions)) {
+            params.set(`initialConditions.${k}`, String(v));
         }
         params.set("duration", String(duration));
         const url = `${juliaUrl}/decapodes-string?${params.toString()}`;
+
+        console.log(url);
 
         const response = await fetch(url);
         if (!response.ok) throw new Error(`HTTP error! status ${response.status}`);
@@ -358,6 +335,14 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
         });
     };
 
+    const isDisabled = () => {
+        const isICsAllCompleted = icRows.every((name) => {
+            const v = props.content.initialConditions[name];
+            return v != null && v !== "";
+        });
+        !isICsAllCompleted;
+    };
+
     return (
         <div class="simulation">
             <BlockTitle title="Simulation" actions={RestartOrRerunButton()} />
@@ -381,30 +366,37 @@ export default function Decapodes(props: DiagramAnalysisProps<DecapodesAnalysisC
                             </select>
                             <Show when={options() && props.content.mesh}>
                                 {(mesh) => {
-                                console.log(options());
+                                    console.log(options());
                                     return (
-                                    <FixedTableEditor
-                                        rows={fieldNames(mesh())}
-                                        schema={fieldSchema(options()?.mesh_info[mesh()].defaults)}
-                                    />
-                                )}}
+                                        <FixedTableEditor
+                                            rows={fieldNames(mesh())}
+                                            schema={fieldSchema(
+                                                options()?.mesh_info[mesh()].defaults,
+                                            )}
+                                        />
+                                    );
+                                }}
                             </Show>{" "}
                         </div>
                     )}
                 </Show>
 
                 <div class="decapodes-domain">
-                <Show when={props.content.mesh}>
-                    <FixedTableEditor rows={["n", "w"]} schema={icSchema} />
-                </Show>
+                    <Show when={props.content.mesh}>
+                        <FixedTableEditor rows={icRows} schema={icSchema} />
+                    </Show>
+                </div>
 
                 <Show when={podeData()}>
                     {(pd) => <FixedTableEditor rows={pd().constants} schema={constantSchema} />}
                 </Show>
-                </div>
+
                 <FixedTableEditor rows={[null]} schema={toplevelSchema} />
 
-                <button onClick={runSimulation} disabled={!podeData() || res.loading}>
+                <button
+                    onClick={runSimulation}
+                    disabled={!podeData() || isDisabled() || res.loading}
+                >
                     Run Simulation
                 </button>
             </Foldable>

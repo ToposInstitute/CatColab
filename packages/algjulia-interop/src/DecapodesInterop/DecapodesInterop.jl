@@ -15,7 +15,8 @@ import DiagrammaticEquations: SummationDecapode
 using Decapodes
 using ACSets
 
-using CatColabInterop, Oxygen, HTTP, JSON3
+using ..Defaults
+using CatColabInterop, Oxygen, HTTP, JSON3, URIs
 import CatColabInterop: endpoint
 
 struct ImplError <: Exception
@@ -66,38 +67,12 @@ function make_progress_callback(channel::Channel, tspan)
     )
 end
 
-
-# function endpoint(::Val{:DecapodesString})
-#     @post "/decapodes-string" function (req::HTTP.Request)
-#         j = JSON3.read(req.body)
-#         pode = j["pode"]
-#         pode = SummationDecapode(parse_decapode(Meta.parse("begin\n$pode\nend")))
-#         infer_types!(pode)
-#         system = DecapodesSystem(pode)
-
-#         cb = make_progress_callback(progress_channel, system.tspan)
-#         result = run(system; callback=cb)
-
-#         # Signal completion
-#         push!(progress_channel, Dict("progress" => 1.0, "done" => true))
-        
-#         format(system.geometry.dualmesh, result)
-#     end
-# end
-
 function endpoint(::Val{:DecapodesString})
     @stream "/decapodes-string" function(stream::HTTP.Stream)
         req = stream.message
         uri = HTTP.URI(req.target)
-        params = HTTP.queryparams(uri)
 
-        pode = pop!(params, "pode")
-        duration = parse(Int, pop!(params, "duration"))
-        constants = ComponentArray(; (Symbol(k) => parse(Float64, v) for (k, v) in params)...)
-        
-        pode = SummationDecapode(parse_decapode(Meta.parse("begin\n$pode\nend")))
-        infer_types!(pode)
-        system = DecapodesSystem(pode; duration=duration)
+        system, params = DecapodesSystem(uri)
 
         @info "Starting"
         HTTP.setheader(stream, "Content-Type" => "application/x-ndjson")
@@ -133,13 +108,61 @@ function endpoint(::Val{:DecapodesString})
             save_positions = (false, false)
         )
 
-        result = run(system, constants; callback=cb)
+        result = run(system, params; callback=cb)
         formatted = format(system.geometry.dualmesh, result)
         write(stream, JSON3.write(Dict("progress" => 1.0, "data" => formatted)) * "\n")
         closewrite(stream)
     end
 end
 
+function DecapodesSystem(uri::URIs.URI)
+    params = HTTP.queryparams(uri)
+    pode = pop!(params, "pode")
+    duration = parse(Int, pop!(params, "duration"))
+    mesh = pop!(params, "mesh")
+    params = collect(params)
+
+    meshdata = map(params) do (k, v)
+        m = match(r"mesh.(.+)", k)
+        if isnothing(m)
+            nothing
+        else
+            Symbol(only(m.captures)) => try
+                parse(Int64, v)
+            catch
+                parse(Float64, v)
+            end
+        end
+    end
+    meshdata = filter(!isnothing, meshdata)
+    mesh = getproperty(DecapodesInterop, Symbol(mesh))
+    mesh = mesh(;meshdata...)
+    
+    constants = map(enumerate(params)) do (i, (k,v))
+        m = match(r"constants\.(.+)", k)
+        if isnothing(m)
+            nothing
+        else
+            Symbol(only(m.captures)) => parse(Float64, v)
+        end
+    end
+    constants = ComponentArray(; filter(!isnothing, constants)...)
+
+    ics = map(params) do (k,v)
+        m = match(r"initialConditions.(.+)", k)
+        if isnothing(m)
+            nothing
+        else
+            var = only(m.captures)
+            Symbol(var) => getproperty(DecapodesInterop, Symbol(v))
+        end
+    end
+    ics = Dict(filter(!isnothing, ics))
+    
+    pode = SummationDecapode(parse_decapode(Meta.parse("begin\n$pode\nend")))
+    infer_types!(pode)
+    DecapodesSystem(pode; duration=duration, constants=constants, ics=ics, mesh=mesh)
+end
 
 struct MeshInfo{Mesh <: AbstractMeshSpec}
     # field names and their types
@@ -155,7 +178,7 @@ end
 
 function MeshInfo(mesh_type::Type{Mesh}) where Mesh <: AbstractMeshSpec
     specs = Dict(string.(fieldnames(mesh_type)) .=> string.(nameof.(fieldtypes(mesh_type))))
-    defaults = Dict(string(k) => v for (k,v) in pairs(kwdef_defaults(mesh_type)))
+    defaults = Dict(string(k) => v for (k,v) in pairs(default_values(mesh_type)))
 
     # Initial Conditions
     ic_methods = methods(initial_condition)
@@ -185,38 +208,6 @@ function supported_geometries()
     end)
 
     Dict(:meshes => meshes, :mesh_info => mesh_info)
-end
-
-function supported_decapodes_geometries()
-    mesh_tys = subtypes(AbstractMeshSpec)
-    meshes   = string.(nameof.(mesh_tys))
-    ms       = methods(initial_condition)
-
-    # the association between meshes and their fieldnames, types
-    mesh_specs = Dict(map(mesh_tys) do mesh
-        string(nameof(mesh)) => Dict(string.(fieldnames(mesh)) .=> string.(nameof.(fieldtypes(mesh))))
-    end)
-
-    ics = Dict(map(mesh_tys) do mesh
-        names = String[]
-        for m in ms
-            params = Base.unwrap_unionall(m.sig).parameters
-            length(params) >= 3 || continue
-            geom = params[3]
-            geom isa DataType && nameof(geom) === :Geometry || continue
-            meshparam = geom.parameters[1]
-            if meshparam isa TypeVar || meshparam === mesh
-                push!(names, string(nameof(params[2])))
-            end
-        end
-        string(nameof(mesh)) => unique(names)
-    end)
-
-    mesh_defaults = Dict(map(mesh_tys) do mesh
-        string(nameof(mesh)) => Dict(pairs(kwdef_defaults(mesh)))
-    end)
-
-    Dict(:meshes => meshes, :mesh_specs => mesh_specs, :mesh_defaults => mesh_defaults, :ics => ics)
 end
 
 function endpoint(::Val{:DecapodesOptions})
@@ -283,11 +274,5 @@ function format(sd::EmbeddedDeltaDualComplex1D, result::SolutionResult)
     )
 end
 
-function kwdef_defaults(::Type{T}) where {T}
-    ci = only(code_lowered(T, Tuple{}))
-    i = findlast(e -> Meta.isexpr(e, :call), ci.code)
-    vals = ci.code[i].args[2:end-1]
-    return NamedTuple{fieldnames(T)}(Tuple(vals))
-end
 
 end # module

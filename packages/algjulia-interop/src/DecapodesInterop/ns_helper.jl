@@ -54,7 +54,7 @@ Compute vorticity as primal 0-forms for a ring of vortices.
 
 Specify the latitude, number of vortices, and a formula for computing vortex strength centered at a point.
 """
-function vort_ring(d::Sphere, lat, n_vorts, p::T, sd, formula) where {T<:AbstractVortexParams}
+function vort_ring(d::Icosphere, lat, n_vorts, p::T, sd, formula) where {T<:AbstractVortexParams}
   sum(map(x -> formula(sd, d.radius, x, p), ring_centers(lat, n_vorts, d.radius)))
 end
 
