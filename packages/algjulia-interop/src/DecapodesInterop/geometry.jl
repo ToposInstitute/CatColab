@@ -1,3 +1,5 @@
+using .Defaults: @default
+
 abstract type AbstractMeshSpec end
 
 name(::AbstractMeshSpec) = "No name provided"
@@ -7,6 +9,8 @@ struct Geometry{D<:AbstractMeshSpec}
     mesh::HasDeltaSet
     dualmesh::HasDeltaSet
 end
+
+dimension(g::Geometry) = dimension(g.domain)
 
 Geometry(domain, args...) = Geometry{typeof(domain)}(domain, args...)
 
@@ -18,12 +22,12 @@ end
 
 """    
 """
-@kwdef struct Circle <: AbstractMeshSpec
-    n::Int = 1
-    c::Float64 = 0.5
+@default struct Circle <: AbstractMeshSpec
+    n::Int = 9
+    c::Float64 = 500
 end
 
-name(::Circle) = "Circle"
+dimension(::Circle) = 1
 
 function Geometry(c::Circle; division::SimplexCenter=Circumcenter())
     mesh = EmbeddedDeltaSet1D{Bool, Point2D}()
@@ -37,15 +41,15 @@ function Geometry(c::Circle; division::SimplexCenter=Circumcenter())
     Geometry(c, mesh, dualmesh)
 end
 
-@kwdef struct Sphere <: AbstractMeshSpec
-    dim::Int = 1
+@default struct Icosphere <: AbstractMeshSpec
+    order::Int = 6
     radius::Float64 = 1.0
 end
 
-Sphere(dim) = Sphere(dim, 1.0)
+dimension(::Icosphere) = 2
 
-function Geometry(m::Sphere; division::SimplexCenter=Circumcenter())
-    s = loadmesh(Icosphere(m.dim, m.radius))
+function Geometry(m::Icosphere; division::SimplexCenter=Circumcenter())
+    s = loadmesh(Icosphere(m.order, m.radius))
     sd = EmbeddedDeltaDualComplex2D{Bool, Float64, Point3{Float64}}(s)
     subdivide_duals!(sd, division)
     Geometry(m, s, sd)
@@ -58,12 +62,14 @@ end
 #     Geometry(m, s, sd)
 # end
 
-@kwdef struct Rectangle <: AbstractMeshSpec
+@default struct Rectangle <: AbstractMeshSpec
     max_x::Int = 100
     max_y::Int = 100
     dx::Float64 = 0.1
     dy::Float64 = 0.1
 end
+
+dimension(::Rectangle) = 2
 
 function Geometry(r::Rectangle; division::SimplexCenter=Circumcenter())
     s = triangulated_grid(r.max_x, r.max_y, r.dx, r.dy, Point2{Float64})
@@ -80,14 +86,14 @@ function indexing_bounds(r::Rectangle)
 end
 
 # TODO XXX hardcoded alert!
-indexing_bounds(m::Sphere) = (x=100, y=100)
+indexing_bounds(m::Icosphere) = (x=100, y=100)
 
 # """ helper function for UV """
 # makeSphere(m::UV) = makeSphere(m.minlat, m.maxlat, m.dlat, m.minlong, m.maxlong, m.dlong, m.radius)
 
 const PREDEFINED_MESHES = Dict(
     :Rectangle => Rectangle(100, 100, 2, 2),
-    :Icosphere6 => Sphere(6, 1.0),
-    :Icosphere7 => Sphere(7, 1.0),
-    :Icosphere8 => Sphere(8, 1.0))
+    :Icosphere6 => Icosphere(6, 1.0),
+    :Icosphere7 => Icosphere(7, 1.0),
+    :Icosphere8 => Icosphere(8, 1.0))
     # :UV => UV(0, 180, 2.5, 0, 360, 2.5, 1.0))
