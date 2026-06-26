@@ -25,9 +25,6 @@ const solidAutomergeStore: DocumentStore<DocHandle<ModelDocument>> = {
     resolveModel: async () => {
         throw new Error("this store cannot resolve model references");
     },
-    resolveAnalysis: async () => {
-        throw new Error("this store cannot resolve analyses");
-    },
 };
 
 const automergeBinder = createBinder(solidAutomergeStore);

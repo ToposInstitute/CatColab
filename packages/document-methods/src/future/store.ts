@@ -2,7 +2,7 @@ import { v7 } from "uuid";
 
 import type { Document, Link } from "catcolab-document-types";
 import type { DblModel } from "catlog-wasm";
-import type { ModelValidationResult, ValidatableNotebook } from "./definitions";
+import type { ModelValidationResult } from "./definitions";
 
 /**
  * A document store abstracts the storage that notebooks operate over. A
@@ -42,31 +42,20 @@ export interface DocumentStore<Handle> {
      */
     linkForHandle(handle: Handle): Omit<Link, "type"> | undefined;
     /**
-     * Resolve an instantiation link to its elaborated, validated model.
+     * Resolve a link to a model document into its elaborated, validated model.
      *
-     * Validation and migration need the elaborated model of every model an
-     * instantiation cell references. Resolution is inherently asynchronous (the
-     * referenced document may live in a repo or on a server) and is the store's
-     * responsibility, including fetching the document, elaborating it against
-     * its own theory, and detecting cycles of instantiations. A store that
-     * cannot resolve a given link rejects the returned promise; a notebook
-     * containing such an instantiation then validates as `Illformed`. The
-     * promise also rejects when the referenced model is unavailable or itself
-     * ill-formed.
+     * Both an instantiation cell (`instantiation` link) and an analysis document
+     * (`analysis-of` link) reference a model by {@link Link}; validation,
+     * migration, and analysis `run` all need that model's elaborated form.
+     * Resolution is inherently asynchronous (the referenced document may live in
+     * a repo or on a server) and is the store's responsibility, including
+     * fetching the document, elaborating it against its own theory, and
+     * detecting cycles of instantiations. A store that cannot resolve a given
+     * link rejects the returned promise; a notebook containing such an
+     * instantiation then validates as `Illformed`. The promise also rejects when
+     * the referenced model is unavailable or itself ill-formed.
      */
     resolveModel(link: Link): Promise<DblModel>;
-    /**
-     * Resolve an `analysis-of` link to a validatable notebook for the analyzed
-     * document, so an analysis cell's `run` can elaborate and validate it.
-     *
-     * An analysis document references the document it analyzes by an
-     * `analysis-of` {@link Link} rather than by holding the notebook directly;
-     * resolution fetches that document through the store and rebuilds an
-     * interactive, validatable notebook over it. Resolution is asynchronous (the
-     * referenced document may live in a repo or on a server). A store that
-     * cannot resolve a given link rejects the returned promise.
-     */
-    resolveAnalysis(link: Link): Promise<ValidatableNotebook>;
 }
 
 const plainDocumentIds = new WeakMap<Document, string>();
@@ -100,22 +89,9 @@ export const plainNotebookValidators = new Map<string, () => Promise<ModelValida
 /** Ids whose resolution is in progress, used to detect cyclic instantiations. */
 const plainResolving = new Set<string>();
 
-/**
- * The validatable notebook of every model the plain store has attached, keyed
- * by {@link plainDocumentId}. An analysis document resolves the model it
- * analyzes (referenced by an `analysis-of` link) by looking it up here, so a
- * model created locally can be re-attached and validated without a closure.
- */
-const plainAnalyzableNotebooks = new Map<string, ValidatableNotebook>();
-
 /** Record an elaborated model for a plain-store handle; see {@link plainElaboratedModels}. */
 export const cachePlainModel = (handle: Document, model: DblModel): void => {
     plainElaboratedModels.set(plainDocumentId(handle), model);
-};
-
-/** Record a validatable notebook for a plain-store handle; see {@link plainAnalyzableNotebooks}. */
-export const cachePlainAnalyzable = (handle: Document, notebook: ValidatableNotebook): void => {
-    plainAnalyzableNotebooks.set(plainDocumentId(handle), notebook);
 };
 
 /**
@@ -185,15 +161,5 @@ export const plainStore: DocumentStore<Document> = {
         } finally {
             plainResolving.delete(link._id);
         }
-    },
-    resolveAnalysis: async (link) => {
-        const notebook = plainAnalyzableNotebooks.get(link._id);
-        if (!notebook) {
-            throw new Error(
-                "The plain in-memory store cannot resolve the analyzed model for a " +
-                    "document it did not create.",
-            );
-        }
-        return notebook;
     },
 };

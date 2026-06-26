@@ -44,9 +44,6 @@ function createResolvingStore(): {
             _version: null,
             _server: "",
         }),
-        resolveAnalysis: async () => {
-            throw new Error("This store does not resolve analyses.");
-        },
         resolveModel: async (link: Link) => {
             if (failOnResolve.value) {
                 throw new Error("resolver unavailable");

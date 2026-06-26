@@ -78,7 +78,6 @@ import {
     type ValidatableNotebook,
 } from "./definitions";
 import {
-    cachePlainAnalyzable,
     cachePlainModel,
     type DocumentStore,
     plainDocumentId,
@@ -206,7 +205,7 @@ function attachAnalysisNotebook<TShape extends AnalysisShape, Handle>(
             },
             async run() {
                 const params = readParams(cellId) as ParamsOf<Def>;
-                const model = await store.resolveAnalysis(doc.analysisOf);
+                const model = await store.resolveModel(doc.analysisOf);
                 return def.run(model, params) as Promise<OutputOf<Def>>;
             },
             ...reorderMethods(cellId),
@@ -931,7 +930,6 @@ function attachNotebook<TShape extends AnyShape, Handle>(
     if (isPlainStore) {
         const id = plainDocumentId(handle as Document);
         plainNotebookValidators.set(id, () => impl.validate());
-        cachePlainAnalyzable(handle as Document, notebook as unknown as ValidatableNotebook);
     }
 
     return notebook;

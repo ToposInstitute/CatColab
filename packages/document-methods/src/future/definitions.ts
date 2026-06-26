@@ -739,8 +739,8 @@ export type ModelValidationResult =
 /**
  * An analysis that can be added to an analysis notebook. An analysis has a
  * stable `id`, an `initialContent` factory for default parameters, and a
- * `run` function that computes the analysis result from the analyzed model.
- * Define one with {@link defineAnalysis}.
+ * `run` function that computes the analysis result from the analyzed model's
+ * elaborated {@link DblModel}. Define one with {@link defineAnalysis}.
  */
 export type AnalysisDef<
     Params extends Record<string, unknown> = Record<string, unknown>,
@@ -748,14 +748,14 @@ export type AnalysisDef<
 > = {
     readonly id: string;
     initialContent(): Params;
-    run(model: ValidatableNotebook, params: Params): Promise<Output>;
+    run(model: DblModel, params: Params): Promise<Output>;
 };
 
 /** Define an analysis from a compact spec. */
 export function defineAnalysis<Params extends Record<string, unknown>, Output>(spec: {
     id: string;
     initialContent(): Params;
-    run(model: ValidatableNotebook, params: Params): Promise<Output>;
+    run(model: DblModel, params: Params): Promise<Output>;
 }): AnalysisDef<Params, Output> {
     return spec;
 }
@@ -772,8 +772,9 @@ export type OutputOf<Def extends AnalysisDef> =
  * A handle for an analysis cell in an analysis notebook (a {@link Notebook}
  * over an {@link AnalysisShape}). The persisted `params` are seeded by
  * `def.initialContent()` and updated with {@link AnalysisCell.update}; `run()`
- * resolves the analyzed model from the document's `analysis-of` link through the
- * store and calls the def's `run` with that model and the current params.
+ * resolves the analyzed model's elaborated {@link DblModel} from the document's
+ * `analysis-of` link through the store (via {@link DocumentStore.resolveModel})
+ * and calls the def's `run` with that model and the current params.
  */
 export type AnalysisCell<Def extends AnalysisDef = AnalysisDef> = Reorder & {
     readonly kind: typeof CellKind.Analysis;

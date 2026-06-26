@@ -9,7 +9,9 @@ analysis is attached to a logic by listing it in the logic's `modelAnalyses`
 (see `catcolab-logics/simple-olog`); the analysis itself declares its `id`
 (unique relative to the logic), the `initialContent` created when an analysis
 cell is added, and an async `run` that computes the analysis's output from the
-analyzed model.
+analyzed model's elaborated `DblModel`. The cell resolves and validates that
+model through the store (`resolveModel`) before invoking `run`, so `run`
+receives the elaborated model directly.
 
 `content` is the persisted, user-editable config stored on the cell. For a
 visualization it is a graph-layout config: a `layout` engine and an optional
@@ -17,19 +19,11 @@ visualization it is a graph-layout config: a `layout` engine and an optional
 the run output.
 
 `run` produces the abstract graph — lists of nodes and edges derived from the
-elaborated model — without any layout applied. It is asynchronous because
-producing the output requires the elaborated, validated model, which may itself
-be asynchronous (e.g. a model with instantiations resolves referenced models
-through the store). */
+elaborated model — without any layout applied. */
 export const Visualization = defineAnalysis({
     id: "diagram",
     initialContent: (): { layout: string; direction?: string } => ({ layout: "graphviz-directed" }),
-    run: async (model) => {
-        const result = await model.validate();
-        if (result.tag !== "Valid") {
-            throw new Error("Cannot visualize a model that does not validate.");
-        }
-        const elaborated = result.model;
+    run: async (elaborated) => {
         return {
             nodes: elaborated.obGenerators().map((id) => ({
                 id,
@@ -55,7 +49,7 @@ export const Visualization = defineAnalysis({
 
 /** Simulate a Petri-net model using mass-action kinetics.
 
-`run` validates the analyzed model, builds a mass-action ODE from it using
+`run` builds a mass-action ODE from the elaborated model using
 `ThSymMonoidalCategory.massAction`, and resamples the solver output at
 `step`-sized intervals to produce a trajectory with one sample per step.
 
@@ -69,12 +63,7 @@ export const Simulation = defineAnalysis({
         step: 1,
         initialValues: {} as Record<string, number>,
     }),
-    run: async (model, params) => {
-        const result = await model.validate();
-        if (result.tag !== "Valid") {
-            throw new Error("Cannot simulate a model that does not validate.");
-        }
-        const elaborated = result.model;
+    run: async (elaborated, params) => {
         const th = new ThSymMonoidalCategory();
 
         const obGens = elaborated.obGenerators();

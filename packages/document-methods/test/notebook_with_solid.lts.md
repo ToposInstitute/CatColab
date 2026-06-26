@@ -32,9 +32,6 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
     resolveModel: async () => {
         throw new Error("this store cannot resolve model references");
     },
-    resolveAnalysis: async () => {
-        throw new Error("this store cannot resolve analyses");
-    },
 };
 
 const solidBinder = createBinder(solidStore);
@@ -171,9 +168,6 @@ const solidAutomergeStore: DocumentStore<DocHandle<ModelDocument>> = {
     linkForHandle: () => undefined,
     resolveModel: async () => {
         throw new Error("this store cannot resolve model references");
-    },
-    resolveAnalysis: async () => {
-        throw new Error("this store cannot resolve analyses");
     },
 };
 
