@@ -23,10 +23,10 @@ For each `.lts.md` file passed on the command line, it:
       next code fence starts fresh.
 2. If a code fence is immediately followed by a non-code fence, the non-code
    fence is treated as that sample's expected stdout.
-3. Writes each assembled sample to
-   `<pkgRoot>/.lts/<markdownSlug>/<sampleId>.{ts,tsx}`, where `<pkgRoot>` is the
-   directory of the nearest ancestor `package.json` of the markdown file. A
-   sample is `tsx` if its body or any active prepend is a `tsx` fence.
+3. Writes each assembled sample to a package-local temporary directory as
+   `<sampleId>.{ts,tsx}`. A sample is `tsx` if its body or any active prepend is
+   a `tsx` fence. The temporary files are removed after that markdown file is
+   checked.
 4. Type-checks all materialised samples with the consuming package's TypeScript
    config (`tsconfig.lts.json` if present, else `tsconfig.json`). Use
    `@ts-expect-error` to assert that a particular line should fail to type-check.
@@ -48,8 +48,9 @@ For each `.lts.md` file passed on the command line, it:
   before the sample runs, so `render` from `solid-js/web` can mount components
   and examples can assert on `container.innerHTML`.
 - Type-checking uses the consuming package's tsconfig; for Solid set
-  `"jsx": "preserve"` and `"jsxImportSource": "solid-js"`, and include
-  `.lts/**/*.tsx` alongside `.lts/**/*.ts` in `tsconfig.lts.json`.
+  `"jsx": "preserve"` and `"jsxImportSource": "solid-js"`. The generated
+  sample files are passed to TypeScript directly, so they do not need to be
+  listed in `include`.
 - `solid-js` is resolved from the consuming package (it must be a dependency
   there); the Babel and happy-dom machinery is owned by this tool.
 
@@ -59,4 +60,4 @@ For each `.lts.md` file passed on the command line, it:
 literate-typescript path/to/file.lts.md [more.lts.md ...]
 ```
 
-Add `.lts/` to the consuming package's `.gitignore`.
+No `.lts/` directory needs to be added to the consuming package's `.gitignore`.

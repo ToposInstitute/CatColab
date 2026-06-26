@@ -1,9 +1,9 @@
 /**
- * Helpers for locating the consuming package root, its tsconfig, and the .lts
- * output directory.
+ * Helpers for locating the consuming package root, its tsconfig, and the
+ * temporary sample output directory.
  */
 
-import { existsSync, mkdirSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { basename, dirname, join, parse as parsePath, resolve } from "node:path";
 
 /**
@@ -59,13 +59,20 @@ export function markdownSlug(mdPath: string): string {
 }
 
 /**
- * Resolve and (re-)create the per-markdown output directory under `<pkgRoot>/.lts/`.
+ * Create a per-markdown output directory in the package root.
  *
- * @returns Absolute path to the cleared output directory.
+ * Keeping samples inside the package preserves package self-resolution and
+ * normal `node_modules` lookup without writing to the old `.lts` directory.
+ *
+ * @returns Absolute path to the output directory.
  */
 export function prepareOutDir(pkgRoot: string, slug: string): string {
-    const dir = join(pkgRoot, ".lts", slug);
+    return mkdtempSync(join(pkgRoot, `.literate-typescript-${slug}-`));
+}
+
+/**
+ * Remove a temporary output directory created by `prepareOutDir`.
+ */
+export function cleanupOutDir(dir: string): void {
     rmSync(dir, { recursive: true, force: true });
-    mkdirSync(dir, { recursive: true });
-    return dir;
 }

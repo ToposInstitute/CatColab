@@ -11,7 +11,13 @@ import { resolve } from "node:path";
 import { assemble } from "./assemble.ts";
 import { type MaterialisedSample, materialise, typeCheck } from "./check.ts";
 import { parse } from "./parse.ts";
-import { findPackageRoot, findTsConfig, markdownSlug, prepareOutDir } from "./paths.ts";
+import {
+    cleanupOutDir,
+    findPackageRoot,
+    findTsConfig,
+    markdownSlug,
+    prepareOutDir,
+} from "./paths.ts";
 import { type FileReport, printFileReport, totalFailures } from "./report.ts";
 import { type RunFailure, runPairs } from "./run.ts";
 
@@ -34,29 +40,32 @@ async function main(): Promise<void> {
         const pkgRoot = findPackageRoot(mdPath);
         const tsconfigPath = findTsConfig(pkgRoot);
         const outDir = prepareOutDir(pkgRoot, slug);
+        try {
+            const materialised = materialise(tsSamples, outDir);
+            const { diagnostics, typeFailures } = typeCheck(materialised, tsconfigPath, mdPathRaw);
 
-        const materialised = materialise(tsSamples, outDir);
-        const { diagnostics, typeFailures } = typeCheck(materialised, tsconfigPath, mdPathRaw);
+            // Only attempt to run if type-checking passed; running broken samples
+            // produces noisier failures.
+            let runFailures: RunFailure[] = [];
+            if (diagnostics.length === 0 && typeFailures.length === 0) {
+                runFailures = await runPairs(materialised, pkgRoot, tsconfigPath);
+            }
 
-        // Only attempt to run if type-checking passed; running broken samples
-        // produces noisier failures.
-        let runFailures: RunFailure[] = [];
-        if (diagnostics.length === 0 && typeFailures.length === 0) {
-            runFailures = await runPairs(materialised, pkgRoot, tsconfigPath);
+            const runCount = countRunnable(materialised);
+
+            const report: FileReport = {
+                mdPath: mdPathRaw,
+                sampleCount: tsSamples.length,
+                runCount,
+                diagnostics,
+                typeFailures,
+                runFailures,
+            };
+            reports.push(report);
+            printFileReport(report);
+        } finally {
+            cleanupOutDir(outDir);
         }
-
-        const runCount = countRunnable(materialised);
-
-        const report: FileReport = {
-            mdPath: mdPathRaw,
-            sampleCount: tsSamples.length,
-            runCount,
-            diagnostics,
-            typeFailures,
-            runFailures,
-        };
-        reports.push(report);
-        printFileReport(report);
     }
 
     const total = totalFailures(reports);

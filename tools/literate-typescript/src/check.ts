@@ -78,8 +78,9 @@ function loadTsConfig(tsconfigPath: string): {
         undefined,
         tsconfigPath,
     );
-    if (result.errors && result.errors.length > 0) {
-        const msg = result.errors
+    const errors = (result.errors ?? []).filter((e) => e.code !== 18003);
+    if (errors.length > 0) {
+        const msg = errors
             .map((e) => ts.flattenDiagnosticMessageText(e.messageText, "\n"))
             .join("\n");
         throw new Error(`Errors loading ${tsconfigPath}:\n${msg}`);
