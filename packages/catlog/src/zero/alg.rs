@@ -9,6 +9,9 @@ use std::ops::{Add, AddAssign, Mul, Neg};
 
 use derivative::Derivative;
 
+use crate::latex::{Latex, ToLatex, ToLatexWithMap};
+use crate::zero::QualifiedName;
+
 use super::rig::*;
 
 /// A commutative algebra over a commutative ring.
@@ -147,30 +150,31 @@ where
     }
 }
 
-impl<Var, Coef, Exp> Polynomial<Var, Coef, Exp>
+impl<Var, Coef, Exp> ToLatexWithMap for Polynomial<Var, Coef, Exp>
 where
-    Var: Display,
-    Coef: Display + DisplayCoef + Clone + PartialEq + One + Neg<Output = Coef>,
-    Exp: Display + PartialEq + One,
+    Var: Display + ToLatexWithMap,
+    Coef: Display + ToLatexWithMap + DisplayCoef + Clone + PartialEq + One + Neg<Output = Coef>,
+    Exp: Display + ToLatex + PartialEq + One,
 {
-    /// Convert to a LaTeX string, formatting each monomial via [`Monomial::to_latex`].
-    pub fn to_latex(&self) -> String {
+    /// Convert to a LaTeX string, formatting each monomial via [`Monomial::to_latex_with_map`].
+    fn to_latex_with_map<F: Fn(&QualifiedName) -> String>(&self, f: F) -> Latex {
         let fmt_term = |coef: &Coef, monomial: &Monomial<Var, Exp>| -> String {
-            let monomial = monomial.to_latex();
+            let Latex(monomial_latex) = monomial.to_latex_with_map(|mon| f(mon));
+            let Latex(coef_latex) = coef.to_latex_with_map(|param| f(param));
             if coef.is_one() {
-                monomial
+                monomial_latex
             } else if *coef == Coef::one().neg() {
-                format!("-{monomial}")
+                format!("-{monomial_latex}")
             } else if coef.needs_parentheses() {
-                format!("({coef}) \\cdot {monomial}")
+                format!("({coef_latex}) \\cdot {monomial_latex}")
             } else {
-                format!("{coef} \\cdot {monomial}")
+                format!("{coef_latex} \\cdot {monomial_latex}")
             }
         };
 
         let mut terms = (&self.0).into_iter();
         let Some((coef, monomial)) = terms.next() else {
-            return "0".to_string();
+            return Latex("0".to_string());
         };
         let mut output = fmt_term(coef, monomial);
         for (coef, monomial) in terms {
@@ -182,7 +186,7 @@ where
                 output.push_str(&fmt_term(coef, monomial));
             }
         }
-        output
+        Latex(output)
     }
 }
 

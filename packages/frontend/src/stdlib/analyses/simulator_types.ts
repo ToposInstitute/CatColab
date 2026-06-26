@@ -3,14 +3,11 @@ import type {
     KuramotoProblemData,
     LatexEquations,
     LinearODEProblemData,
-    LinearODEEquationsData,
     LotkaVolterraProblemData,
-    LotkaVolterraEquationsData,
     MassActionEquationsData,
     MassActionProblemData,
     ODEResult,
     ODEResultWithEquations,
-    PolynomialODEEquationsData,
     PolynomialODEProblemData,
     StochasticMassActionProblemData,
 } from "catlog-wasm";
@@ -28,15 +25,12 @@ export type LinearODESimulator = (
     model: DblModel,
     data: LinearODEProblemData,
 ) => ODEResultWithEquations;
-export type LinearODEEquations = (model: DblModel, data: LinearODEEquationsData) => LatexEquations;
+export type LinearODEEquations = (model: DblModel) => LatexEquations;
 export type LotkaVolterraSimulator = (
     model: DblModel,
     data: LotkaVolterraProblemData,
 ) => ODEResultWithEquations;
-export type LotkaVolterraEquations = (
-    model: DblModel,
-    data: LotkaVolterraEquationsData,
-) => LatexEquations;
+export type LotkaVolterraEquations = (model: DblModel) => LatexEquations;
 export type MassActionSimulator = (
     model: DblModel,
     data: MassActionProblemData,
@@ -53,10 +47,7 @@ export type PolynomialODESimulator = (
     model: DblModel,
     data: PolynomialODEProblemData,
 ) => ODEResultWithEquations;
-export type PolynomialODEEquations = (
-    model: DblModel,
-    data: PolynomialODEEquationsData,
-) => LatexEquations;
+export type PolynomialODEEquations = (model: DblModel) => LatexEquations;
 
 /** Configuration for a Decapodes analysis of a diagram. */
 export type DecapodesAnalysisContent = {

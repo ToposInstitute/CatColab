@@ -17,7 +17,8 @@
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
         "build:deps": "pnpm --filter ./packages/frontend run build:deps",
-        "dev": "pnpm --filter ./packages/frontend run dev"
+        "dev": "pnpm --filter ./packages/frontend run dev",
+        "check": "cargo +nightly fmt && cargo clippy && pnpm --filter ./packages/frontend run check"
     },
     "devDependencies": {
         "depcheck": "^1.4.7",
