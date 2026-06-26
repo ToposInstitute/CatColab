@@ -48,6 +48,19 @@ export interface DocumentStore<Handle> {
     viewDocument(handle: Handle): Document;
     /** Apply a mutation by mutating a draft document. */
     changeDocument(handle: Handle, fn: (doc: Document) => void): void;
+    /**
+     * Subscribe to changes of the document behind a handle, including remote
+     * changes — e.g. another collaborator editing a shared Automerge document.
+     * The callback takes no arguments: it is a pure notification, so a consumer
+     * re-reads whatever notebook state it cares about. Returns an unsubscribe
+     * function that removes the listener.
+     *
+     * Optional: a store with no asynchronous or remote change source (the plain
+     * in-memory store) may still implement it to report local mutations made
+     * through the notebook, but a store that omits it leaves {@link
+     * Notebook.onChange} a no-op subscription.
+     */
+    subscribe?(handle: Handle, callback: () => void): () => void;
     /** Make a detached plain-JS copy of a store-owned value before cloning it. */
     copyValue<T>(handle: Handle, value: T): T;
     /**
@@ -136,6 +149,14 @@ const cachePlainAnalyzable = (handle: Document, notebook: ValidatableNotebook): 
     plainAnalyzableNotebooks.set(plainDocumentId(handle), notebook);
 };
 
+/**
+ * Change listeners registered against plain-store documents. The plain store has
+ * no remote change source, so the only changes it can report are the local
+ * mutations made through {@link plainStore.changeDocument}, which notifies every
+ * listener registered for that document after applying the mutation.
+ */
+const plainChangeListeners = new WeakMap<Document, Set<() => void>>();
+
 /** A plain in-memory store whose handle is the document itself. */
 export const plainStore: DocumentStore<Document> = {
     createHandle: (initialDoc) => {
@@ -143,7 +164,27 @@ export const plainStore: DocumentStore<Document> = {
         return initialDoc;
     },
     viewDocument: (handle) => handle,
-    changeDocument: (handle, fn) => fn(handle),
+    changeDocument: (handle, fn) => {
+        fn(handle);
+        const listeners = plainChangeListeners.get(handle);
+        if (listeners) {
+            // Snapshot so a listener may unsubscribe during notification.
+            for (const listener of Array.from(listeners)) {
+                listener();
+            }
+        }
+    },
+    subscribe: (handle, callback) => {
+        let listeners = plainChangeListeners.get(handle);
+        if (!listeners) {
+            listeners = new Set();
+            plainChangeListeners.set(handle, listeners);
+        }
+        listeners.add(callback);
+        return () => {
+            listeners.delete(callback);
+        };
+    },
     copyValue: (_handle, value) => structuredClone(value),
     linkForHandle: (handle) => ({
         _id: plainDocumentId(handle),
@@ -1210,6 +1251,9 @@ function attachAnalysisNotebook<TShape extends AnalysisShape, Handle>(
                 Object.assign(d, u);
             });
         },
+        onChange(callback: () => void): () => void {
+            return store.subscribe?.(handle, callback) ?? (() => {});
+        },
         add(type: unknown, args?: { content?: string }) {
             if (isRichTextType(type)) {
                 const cell = newRichTextCell((args as { content: string }).content);
@@ -1644,6 +1688,9 @@ function attachNotebook<TShape extends AnyShape, Handle>(
         dump() {
             return copy(doc);
         },
+        onChange(callback: () => void): () => void {
+            return store.subscribe?.(handle, callback) ?? (() => {});
+        },
         async validate(): Promise<ModelValidationResult> {
             const theory = shape.coreTheory;
             if (!theory) {
@@ -1964,6 +2011,24 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = Document> = Up
     readonly document: DocumentOf<TShape>;
     /** Make a detached plain-JS snapshot of the underlying document. */
     dump(): DocumentOf<TShape>;
+    /**
+     * Subscribe to changes to this notebook's document. The callback fires after
+     * each change — including remote changes from other collaborators where the
+     * store supports it (e.g. an Automerge `DocHandle`'s `change` event) — and
+     * takes no arguments, so re-read whatever notebook state you need inside it.
+     * Returns an unsubscribe function that removes the listener.
+     *
+     * This is the change source to drive a validation `createResource` off:
+     * reading `formalCells()` directly as a resource source re-validates on every
+     * tracked change because it rebuilds a fresh array each call (so it never
+     * compares equal). Instead, bump a signal from `onChange` and key the
+     * fetcher on a stable signature (e.g. the formal-cell ids), so unrelated
+     * edits — such as adding a rich-text comment — do not re-validate.
+     *
+     * A store with no change source leaves this a no-op subscription (see {@link
+     * DocumentStore.subscribe}).
+     */
+    onChange(callback: () => void): () => void;
     /**
      * Whether this notebook's shape declares a cell type structurally equal to
      * the given object or morphism type. A function written against a shape

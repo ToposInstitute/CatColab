@@ -162,6 +162,11 @@ const solidAutomergeStore: DocumentStore<DocHandle<ModelDocument>> = {
     createHandle: (initialDoc) => repo.create<ModelDocument>(initialDoc as ModelDocument),
     viewDocument: (handle) => makeDocumentProjection(handle),
     changeDocument: (handle, fn) => handle.change(fn),
+    subscribe: (handle, callback) => {
+        const onChange = () => callback();
+        handle.on("change", onChange);
+        return () => handle.off("change", onChange);
+    },
     copyValue: (handle, value) => materializeFromAutomerge(handle.doc(), value),
     linkForHandle: () => undefined,
     resolveModel: async () => {
@@ -249,4 +254,34 @@ console.log("theory:", migrated.document.theory);
 same handle: true
 same url: true
 theory: simple-schema
+```
+
+Because the store wires `subscribe` to the `DocHandle`'s `change` event,
+`notebook.onChange` fires for changes arriving from _any_ source — including
+remote edits made by another collaborator on the same Automerge document. Here
+we simulate a remote collaborator by editing through a second handle on the same
+document found in the repo.
+
+```ts
+const shared = automergeBinder.createNotebook(SimpleOlog, { name: "Shared Olog" });
+
+let observedChanges = 0;
+const unsubscribe = shared.onChange(() => {
+    observedChanges += 1;
+});
+
+const remoteHandle = await repo.find<ModelDocument>(shared.handle.url);
+remoteHandle.change((doc) => {
+    doc.name = "Edited by a collaborator";
+});
+
+await Promise.resolve();
+console.log("observed remote change:", observedChanges > 0);
+console.log("name after remote edit:", shared.name);
+unsubscribe();
+```
+
+```
+observed remote change: true
+name after remote edit: Edited by a collaborator
 ```
