@@ -7,22 +7,14 @@ import { describe, expect, test } from "vitest";
 import type { ModelDocument } from "catcolab-document-methods";
 import { DblModel } from "catlog-wasm";
 
-// The shapes whose documents this store can resolve, looked up by the
-// document's `theory` id so a referenced model is validated against its own
-// shape (and thus its own core theory): a Petri-net model resolves against
-// `ThSymMonoidalCategory` while an olog resolves against `ThCategory`.
-const resolvableShapes = [SimpleOlog, PetriNet];
-
-const shapeFor = (theory: string) => resolvableShapes.find((shape) => shape.theory === theory);
-
-// A bespoke store augmented with `getHandle`/`coreTheoryFor`, so notebooks
-// containing instantiation cells can be validated. Handles are registered by a
-// stable id; the store contributes only how to fetch a handle by id
-// (`getHandle`, whose document the resolver reads with `viewDocument`) and how
-// to find a document theory's core theory (`coreTheoryFor`, via `shapeFor`). The
-// shared recursive elaborator (the same one the plain store uses) walks the
-// referenced model's own instantiations, elaborates against the looked-up core
-// theory, and detects cycles, so this store reimplements none of that.
+// A bespoke store augmented with `getHandle`, so notebooks containing
+// instantiation cells can be validated. Handles are registered by a stable id;
+// the store contributes only how to fetch a handle by id (`getHandle`, whose
+// document the resolver reads with `viewDocument`). The shared recursive
+// elaborator (the same one the plain store uses) walks the referenced model's
+// own instantiations, elaborates each against the host notebook's core theory
+// (supplied by `validate`), and detects cycles, so this store reimplements none
+// of that.
 //
 // `failOnResolve` makes `getHandle` return `undefined`, so resolution rejects
 // with "unknown model" and `validate` reports `Illformed` — modelling a store
@@ -53,7 +45,6 @@ function createResolvingStore(): {
             const id = ids.get(handle);
             return id ? { _id: id, _version: null, _server: "" } : undefined;
         },
-        coreTheoryFor: (theory) => shapeFor(theory)?.coreTheory,
     };
 
     return { store, failOnResolve };
@@ -119,13 +110,13 @@ describe("instantiation validation", () => {
         expect(result.tag === "Illformed" && result.error).toContain("Failed to resolve");
     });
 
-    test("resolution elaborates the referenced document against its own theory", async () => {
+    test("resolution elaborates instantiations against the host notebook's theory", async () => {
         const { store } = createResolvingStore();
         const resolvingBinder = createBinder(store);
 
-        // A Petri-net model elaborates against `ThSymMonoidalCategory`, so the
-        // resolver must look its theory up by the document's `theory` id rather
-        // than assuming an olog's `ThCategory`.
+        // A Petri-net notebook instantiating another Petri-net model: every
+        // instantiation is validatable against the host's core theory
+        // (`ThSymMonoidalCategory`), which `validate` threads through resolution.
         const imported = resolvingBinder.createNotebook(PetriNet, {
             name: "Imported",
         });

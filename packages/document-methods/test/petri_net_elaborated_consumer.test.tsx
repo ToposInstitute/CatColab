@@ -73,7 +73,7 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
     changeDocument: (handle, fn) => handle.setDoc(produce<ModelDocument>(fn)),
     copyValue: (_handle, value) => structuredClone(unwrap(value)),
     // Resolve a notebook's own model (validation now goes through the store).
-    ...selfResolving<SolidStoreHandle>([PetriNet]),
+    ...selfResolving<SolidStoreHandle>(),
 };
 
 const solidBinder = createBinder(solidStore);

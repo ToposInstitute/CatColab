@@ -773,9 +773,9 @@ export type OutputOf<Def extends AnalysisDef> =
  * over an {@link AnalysisShape}). The persisted `params` are seeded by
  * `def.initialContent()` and updated with {@link AnalysisCell.update}; `run()`
  * resolves the analyzed model's elaborated {@link DblModel} from the document's
- * `analysis-of` link through the store (via {@link DocumentStore.getHandle}
- * and {@link DocumentStore.coreTheoryFor}) and calls the def's `run` with that
- * model and the current params.
+ * `analysis-of` link through the store (via {@link DocumentStore.getHandle},
+ * elaborating against the shape's `analysisOfCoreTheory`) and calls the def's
+ * `run` with that model and the current params.
  */
 export type AnalysisCell<Def extends AnalysisDef = AnalysisDef> = Reorder & {
     readonly kind: typeof CellKind.Analysis;
@@ -808,6 +808,7 @@ export function defineShape<const TSpec extends Shape>(
         const analysisShape: AnalysisShape<NonNullable<TSpec["modelAnalyses"]>> = {
             analyses: spec.modelAnalyses as NonNullable<TSpec["modelAnalyses"]>,
             analysisType: "model",
+            ...(spec.coreTheory ? { analysisOfCoreTheory: spec.coreTheory } : {}),
         };
         return { ...spec, Analysis: analysisShape } as ReturnType<typeof defineShape<TSpec>>;
     }
@@ -825,6 +826,14 @@ export type AnalysisShape<Analyses extends readonly AnalysisDef[] = readonly Ana
     Shape & {
         readonly analyses: Analyses;
         readonly analysisType: AnalysisType;
+        /**
+         * The core theory the *analyzed* model elaborates against, copied from
+         * the analyzed logic's `coreTheory` by {@link defineShape}. The analysis
+         * shape itself carries no `coreTheory` (so it exposes no `validate`),
+         * but `run()` needs the analyzed model's core theory to resolve it; this
+         * is kept under a distinct key for that purpose.
+         */
+        readonly analysisOfCoreTheory?: DblTheory;
     };
 
 /** Whether a shape value declares analyses, i.e. is an analysis shape. */

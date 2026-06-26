@@ -66,7 +66,7 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
     },
     copyValue: (_handle, value) => structuredClone(unwrap(value)),
     // Resolve a notebook's own model (validation now goes through the store).
-    ...selfResolving<SolidStoreHandle>([SimpleSchema]),
+    ...selfResolving<SolidStoreHandle>(),
 };
 
 const solidBinder = createBinder(solidStore);

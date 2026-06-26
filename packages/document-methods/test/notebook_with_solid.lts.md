@@ -1,6 +1,6 @@
 A notebook's storage is abstracted to allow plugging in custom stores. This could be used with anything but our concrete plan is to use this with Solid and Automerge.
 
-A `DocumentStore` is a stateless object that works on handles of its own choosing. `createHandle` creates a handle from an initial document; the other methods receive that handle back: `viewDocument` returns the read view, `changeDocument` applies a draft mutation, and `copyValue` makes detached plain-JS copies of values from the store's canonical document. A store also provides `linkForHandle` (the handle's stable reference, or `undefined`), `getHandle` (fetches a referenced handle by id, the inverse of `linkForHandle`), and `coreTheoryFor` (the core theory a document's theory elaborates against). The shared recursive resolver uses `getHandle`/`coreTheoryFor` to resolve an instantiation link to an elaborated model, rejecting when it cannot.
+A `DocumentStore` is a stateless object that works on handles of its own choosing. `createHandle` creates a handle from an initial document; the other methods receive that handle back: `viewDocument` returns the read view, `changeDocument` applies a draft mutation, and `copyValue` makes detached plain-JS copies of values from the store's canonical document. A store also provides `linkForHandle` (the handle's stable reference, or `undefined`) and `getHandle` (fetches a referenced handle by id, the inverse of `linkForHandle`). The shared recursive resolver uses `getHandle` to resolve an instantiation link to an elaborated model, elaborating every node against the host notebook's core theory, and rejecting when it cannot.
 
 A store is bound once with `createBinder`, which yields the notebook entry points `createNotebook`, `loadNotebook`, and `loadNotebookFromHandle`.
 
@@ -30,7 +30,6 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
     copyValue: (_handle, value) => structuredClone(unwrap(value)),
     linkForHandle: () => undefined,
     getHandle: () => undefined,
-    coreTheoryFor: () => undefined,
 };
 
 const solidBinder = createBinder(solidStore);
@@ -166,7 +165,6 @@ const solidAutomergeStore: DocumentStore<DocHandle<ModelDocument>> = {
     copyValue: (handle, value) => materializeFromAutomerge(handle.doc(), value),
     linkForHandle: () => undefined,
     getHandle: () => undefined,
-    coreTheoryFor: () => undefined,
 };
 
 const automergeBinder = createBinder(solidAutomergeStore);

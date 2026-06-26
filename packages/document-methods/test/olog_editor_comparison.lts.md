@@ -214,7 +214,6 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
     copyValue: (_handle, value) => structuredClone(unwrap(value)),
     linkForHandle: () => undefined,
     getHandle: () => undefined,
-    coreTheoryFor: () => undefined,
 };
 
 const solidBinder = createBinder(solidStore);
@@ -313,7 +312,6 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
     copyValue: (_handle, value) => structuredClone(unwrap(value)),
     linkForHandle: () => undefined,
     getHandle: () => undefined,
-    coreTheoryFor: () => undefined,
 };
 
 const solidBinder = createBinder(solidStore);

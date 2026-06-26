@@ -52,25 +52,17 @@ export interface DocumentStore<Handle> {
      * not know it. The referenced document is read off the handle with
      * {@link viewDocument}, the inverse of {@link linkForHandle}.
      *
-     * This is half of the store's contribution to resolution: validation's
-     * recursive elaborator (see {@link resolveModelInStore}) walks a model's
-     * instantiations by calling `getHandle` for each referenced id, viewing its
-     * document, then elaborating each against the core theory found by
-     * {@link coreTheoryFor}. Because `validate` resolves a notebook's *own* model
-     * by minting a link to its handle (via {@link linkForHandle}), a store over
-     * validatable notebooks must be able to return the handle for that link too.
+     * This is the store's contribution to resolution: validation's recursive
+     * elaborator (see {@link resolveModelInStore}) walks a model's
+     * instantiations by calling `getHandle` for each referenced id and viewing
+     * its document, then elaborates each against the host notebook's core theory
+     * (supplied by the caller, since every instantiation in a notebook is
+     * validatable against that one core theory). Because `validate` resolves a
+     * notebook's *own* model by minting a link to its handle (via
+     * {@link linkForHandle}), a store over validatable notebooks must be able to
+     * return the handle for that link too.
      */
     getHandle(id: string): Handle | undefined;
-    /**
-     * The core theory a document's `theory` id elaborates against, or
-     * `undefined` if the store has no theory registered for it.
-     *
-     * The other half of resolution: each document fetched via {@link getHandle}
-     * is elaborated against the core theory returned here for its `theory` id. A
-     * document whose theory has no registered core theory cannot be resolved, so
-     * the notebook whose `validate` triggered resolution reports `Illformed`.
-     */
-    coreTheoryFor(theory: string): DblTheory | undefined;
 }
 
 /** The instantiation links a model document references in its own notebook. */
@@ -90,22 +82,22 @@ const instantiationLinks = (doc: ModelDocument): Link[] => {
 };
 
 /**
- * The shared recursive elaborator behind validation. Given a store and a link,
- * it fetches the handle (via {@link DocumentStore.getHandle}) and views its
- * document, recursively resolves the document's own instantiations (so it
- * elaborates against a populated map, not an empty one), elaborates against the
- * document's core
- * theory (via {@link DocumentStore.coreTheoryFor}), and detects cycles. Stores
- * differ only in how they fetch documents and look up core theories, so this is
- * the single place resolution lives — `validate` delegates here rather than the
- * reverse.
+ * The shared recursive elaborator behind validation. Given a store, a link, and
+ * the core theory to elaborate against, it fetches the handle (via
+ * {@link DocumentStore.getHandle}) and views its document, recursively resolves
+ * the document's own instantiations (so it elaborates against a populated map,
+ * not an empty one), elaborates against `coreTheory`, and detects cycles. Every
+ * instantiation in a notebook is validatable against the host's core theory, so
+ * the same `coreTheory` is threaded through the whole resolution tree rather
+ * than looked up per document. Stores differ only in how they fetch documents,
+ * so this is the single place resolution lives — `validate` delegates here
+ * rather than the reverse.
  *
  * It returns the elaborated {@link DblModel} without running `model.validate()`:
  * the `Valid`/`Invalid` distinction is made by the top-level
  * {@link Notebook.validate}, not by resolution. It rejects when a referenced
- * document is unavailable, has no registered core theory, fails to elaborate, or
- * participates in a cycle; the notebook whose `validate` triggered resolution
- * then reports `Illformed`.
+ * document is unavailable, fails to elaborate, or participates in a cycle; the
+ * notebook whose `validate` triggered resolution then reports `Illformed`.
  *
  * The cache of elaborated models and the in-progress set are created fresh for
  * each top-level call and threaded through the recursion, so they dedupe within
@@ -116,6 +108,7 @@ const instantiationLinks = (doc: ModelDocument): Link[] => {
 export async function resolveModelInStore<Handle>(
     store: DocumentStore<Handle>,
     link: Link,
+    coreTheory: DblTheory,
 ): Promise<DblModel> {
     // Per-resolution-tree state: dedupe within this call, persist across none.
     const cache = new Map<string, DblModel>();
@@ -134,10 +127,6 @@ export async function resolveModelInStore<Handle>(
             throw new Error(`unknown model ${link._id}`);
         }
         const doc = store.viewDocument(handle) as ModelDocument;
-        const coreTheory = store.coreTheoryFor(doc.theory);
-        if (!coreTheory) {
-            throw new Error(`No core theory registered for document theory "${doc.theory}".`);
-        }
         resolving.add(link._id);
         try {
             // Recursively resolve the document's own instantiations so it
@@ -178,24 +167,6 @@ export const plainDocumentId = (document: Document): string => {
         plainDocumentsById.set(id, document);
     }
     return id;
-};
-
-/**
- * Core theories the plain store knows, keyed by a document's `theory` id. The
- * plain store has no theory of its own; instead {@link Notebook.validate} (which
- * does know its shape's `coreTheory`) registers it here via
- * {@link registerCoreTheory} before delegating resolution, so the shared
- * resolver can elaborate any document the store has attached.
- */
-const plainCoreTheories = new Map<string, DblTheory>();
-
-/**
- * Register a document's `theory` id with the core theory it elaborates against,
- * so the plain store's resolver can elaborate documents of that theory. Called
- * by {@link Notebook.validate}, which knows its shape's `coreTheory`.
- */
-export const registerCoreTheory = (theory: string, coreTheory: DblTheory): void => {
-    plainCoreTheories.set(theory, coreTheory);
 };
 
 /**
@@ -241,5 +212,4 @@ export const plainStore: DocumentStore<Document> = {
         _version: null,
         _server: "",
     }),
-    coreTheoryFor: (theory) => plainCoreTheories.get(theory),
 };

@@ -23,7 +23,6 @@ const solidAutomergeStore: DocumentStore<DocHandle<ModelDocument>> = {
     copyValue: (handle, value) => materializeFromAutomerge(handle.doc(), value),
     linkForHandle: () => undefined,
     getHandle: () => undefined,
-    coreTheoryFor: () => undefined,
 };
 
 const automergeBinder = createBinder(solidAutomergeStore);
