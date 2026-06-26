@@ -1,5 +1,6 @@
 import { binder, createBinder, type DocumentStore, Instantiation } from "catcolab-documents";
 import { PetriNet, Place } from "catcolab-logics/petri-net";
+import { Entity, SimpleSchema } from "catcolab-logics/simple-schema";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { v7 } from "uuid";
 import { describe, expect, test } from "vitest";
@@ -125,6 +126,29 @@ describe("instantiation validation", () => {
         const notebook = resolvingBinder.createNotebook(PetriNet, { name: "Main" });
         notebook.add(Place, { name: "A" });
         notebook.add(Instantiation, { name: "ImportedNet", model: imported });
+
+        const result = await notebook.validate();
+        expect(result.tag).toBe("Valid");
+        expect(result.model).toBeInstanceOf(DblModel);
+    });
+
+    test("a schema can instantiate an olog because their theories are compatible", async () => {
+        const { store } = createResolvingStore();
+        const resolvingBinder = createBinder(store);
+
+        // The olog's `ThCategory` embeds into the schema's `ThSchema`, so the
+        // instantiated olog is validatable against the host schema's core
+        // theory — the single theory `validate` threads through resolution.
+        const imported = resolvingBinder.createNotebook(SimpleOlog, {
+            name: "Imported",
+        });
+        imported.add(Type, { name: "Thing" });
+
+        const notebook = resolvingBinder.createNotebook(SimpleSchema, {
+            name: "Main",
+        });
+        notebook.add(Entity, { name: "A" });
+        notebook.add(Instantiation, { name: "ImportedOlog", model: imported });
 
         const result = await notebook.validate();
         expect(result.tag).toBe("Valid");
