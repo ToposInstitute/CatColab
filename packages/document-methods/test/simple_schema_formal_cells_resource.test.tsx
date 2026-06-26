@@ -28,6 +28,7 @@ import { createStore, produce, type SetStoreFunction, unwrap } from "solid-js/st
 import { describe, expect, test } from "vitest";
 
 import type { ModelDocument } from "catcolab-document-methods";
+import { selfResolving } from "./self_resolving";
 
 /** Test helper: wait until a resource has finished (re)loading. */
 async function settled(resource: Resource<unknown>) {
@@ -64,10 +65,8 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
         };
     },
     copyValue: (_handle, value) => structuredClone(unwrap(value)),
-    linkForHandle: () => undefined,
-    resolveModel: async () => {
-        throw new Error("this store cannot resolve model references");
-    },
+    // Resolve a notebook's own model (validation now goes through the store).
+    ...selfResolving<SolidStoreHandle>((handle) => handle.doc, [SimpleSchema]),
 };
 
 const solidBinder = createBinder(solidStore);

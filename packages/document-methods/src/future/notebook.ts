@@ -1,5 +1,3 @@
-import { v7 } from "uuid";
-
 import type {
     Analysis,
     AnalysisType,
@@ -11,12 +9,7 @@ import type {
     Ob,
     SpecializeModel,
 } from "catcolab-document-types";
-import {
-    type DblModel,
-    DblModelMap,
-    elaborateModel,
-    type ModelNotebook as WasmModelNotebook,
-} from "catlog-wasm";
+import type { DblModel, DblTheory } from "catlog-wasm";
 import {
     duplicateModelJudgment,
     type ModelDocument,
@@ -77,13 +70,7 @@ import {
     type Update,
     type ValidatableNotebook,
 } from "./definitions";
-import {
-    cachePlainModel,
-    type DocumentStore,
-    plainDocumentId,
-    plainNotebookValidators,
-    plainStore,
-} from "./store";
+import { type DocumentStore, plainDocumentId, plainStore, registerCoreTheory } from "./store";
 
 /**
  * A stable string capturing the document's *formal* cells — every cell except
@@ -319,36 +306,27 @@ function attachNotebook<TShape extends AnyShape, Handle>(
     const isPlainStore = (store as DocumentStore<unknown>) === plainStore;
 
     /**
-     * Build the map of elaborated models that an instantiation-bearing notebook
-     * needs to elaborate, resolving each referenced model through the store.
-     * Returns the populated map, or an error string when a reference cannot be
-     * resolved (no `resolveModel` on the store, or the resolver rejects). The
-     * snapshot is a detached copy so reads are stable across the await points.
+     * Elaborate this notebook's own model by minting a link to its own handle
+     * and resolving it through the store. Resolution is the store's recursive
+     * workhorse — it walks this notebook's instantiations (resolving each), and
+     * elaborates against the document's core theory — so `validate` and
+     * `migrateTo` delegate here rather than building the instantiated map and
+     * elaborating themselves. The shape's `coreTheory` is registered first so the
+     * store can elaborate this document (and others of its theory) by `theory`
+     * id. Returns the elaborated {@link DblModel}, or an error string when the
+     * handle has no stable link or resolution rejects.
      */
-    const buildInstantiatedMap = async (
-        snapshot: ModelDocument,
-    ): Promise<DblModelMap | { error: string }> => {
-        const instantiated = new DblModelMap();
-        for (const cellId of snapshot.notebook.cellOrder) {
-            const cell = snapshot.notebook.cellContents[cellId];
-            if (cell?.tag !== "formal") {
-                continue;
-            }
-            const judgment = cell.content as ModelJudgment;
-            if (judgment.tag !== "instantiation" || !judgment.model) {
-                continue;
-            }
-            const link = judgment.model;
-            if (instantiated.has(link._id)) {
-                continue;
-            }
-            try {
-                instantiated.set(link._id, await store.resolveModel(link));
-            } catch (e) {
-                return { error: `Failed to resolve instantiated model: ${String(e)}` };
-            }
+    const resolveSelf = async (coreTheory: DblTheory): Promise<DblModel | { error: string }> => {
+        registerCoreTheory(doc.theory, coreTheory);
+        const ref = store.linkForHandle(handle);
+        if (!ref) {
+            return { error: "the store cannot mint a link for this notebook's handle" };
         }
-        return instantiated;
+        try {
+            return await store.resolveModel({ ...ref, type: "instantiation" });
+        } catch (e) {
+            return { error: `Failed to resolve instantiated model: ${String(e)}` };
+        }
     };
 
     /** Read a cell's content, or `undefined` if the cell is no longer in the
@@ -697,25 +675,16 @@ function attachNotebook<TShape extends AnyShape, Handle>(
             if (!theory) {
                 throw new Error("validate() needs a core theory: this shape has no `coreTheory`.");
             }
-            const snapshot = copy(doc);
-            const instantiated = await buildInstantiatedMap(snapshot);
-            if ("error" in instantiated) {
-                return { tag: "Illformed", model: null, error: instantiated.error };
+            // Delegate elaboration to the store: mint a link to this notebook's
+            // own handle and resolve it. The store walks this notebook's
+            // instantiations (resolving each recursively) and elaborates against
+            // the registered core theory; `validate` only splits the resulting
+            // model into Valid/Invalid (and a rejection into Illformed).
+            const resolved = await resolveSelf(theory);
+            if ("error" in resolved) {
+                return { tag: "Illformed", model: null, error: resolved.error };
             }
-            let model: DblModel;
-            try {
-                model = elaborateModel(
-                    snapshot.notebook as unknown as WasmModelNotebook,
-                    instantiated,
-                    theory,
-                    v7(),
-                );
-            } catch (e) {
-                return { tag: "Illformed", model: null, error: String(e) };
-            }
-            if (isPlainStore) {
-                cachePlainModel(handle as ModelDocument, model);
-            }
+            const model = resolved;
             const result = model.validate();
             if (result.tag === "Ok") {
                 return { tag: "Valid", model };
@@ -751,29 +720,16 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                 );
             }
 
-            const snapshot = copy(doc);
-            const instantiated = await buildInstantiatedMap(snapshot);
-            if ("error" in instantiated) {
+            // Obtain the source model through the store (same recursive
+            // resolution as `validate`), then transport it along the morphism.
+            const resolved = await resolveSelf(shape.coreTheory);
+            if ("error" in resolved) {
                 throw new Error(
                     `Cannot migrate notebook from "${shape.theory}" to ` +
-                        `"${targetShape.theory}": ${instantiated.error}`,
+                        `"${targetShape.theory}": ${resolved.error}`,
                 );
             }
-            let model: DblModel;
-            try {
-                model = elaborateModel(
-                    snapshot.notebook as unknown as WasmModelNotebook,
-                    instantiated,
-                    shape.coreTheory,
-                    v7(),
-                );
-            } catch (e) {
-                throw new Error(
-                    `Cannot migrate notebook from "${shape.theory}" to ` +
-                        `"${targetShape.theory}": the model failed to elaborate (${String(e)}).`,
-                    { cause: e },
-                );
-            }
+            const model = resolved;
 
             const migrated = migration.migrate(model, targetShape.coreTheory);
             change((d) => {
@@ -928,8 +884,13 @@ function attachNotebook<TShape extends AnyShape, Handle>(
     const notebook = impl as unknown as Notebook<TShape, Handle>;
 
     if (isPlainStore) {
-        const id = plainDocumentId(handle as Document);
-        plainNotebookValidators.set(id, () => impl.validate());
+        // Ensure the document is reachable by id for the plain store's resolver,
+        // and register its core theory so any document of this theory can be
+        // elaborated by `theory` id (the plain store has no theory of its own).
+        plainDocumentId(handle as Document);
+        if (shape.coreTheory) {
+            registerCoreTheory((doc as ModelDocument).theory, shape.coreTheory);
+        }
     }
 
     return notebook;
