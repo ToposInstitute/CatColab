@@ -143,11 +143,11 @@ describe("simple-schema formalCells() validation resource", () => {
         unsubscribe();
     });
 
-    test("onChangeFormalCells fires for formal-cell changes but not rich-text edits", () => {
+    test("onChangeFormalContent fires for formal-cell changes but not rich-text edits", () => {
         const notebook = solidBinder.createNotebook(SimpleSchema, { name: "Company schema" });
 
         let changes = 0;
-        const unsubscribe = notebook.onChangeFormalCells(() => {
+        const unsubscribe = notebook.onChangeFormalContent(() => {
             changes += 1;
         });
 
@@ -173,7 +173,7 @@ describe("simple-schema formalCells() validation resource", () => {
         expect(changes).toBe(3);
     });
 
-    test("keying validation on onChangeFormalCells dedupes unrelated edits", async () => {
+    test("keying validation on onChangeFormalContent dedupes unrelated edits", async () => {
         const notebook = solidBinder.createNotebook(SimpleSchema, { name: "Company schema" });
         const person = notebook.add(Entity, { name: "Person" });
         const str = notebook.add(AttrType, { name: "String" });
@@ -183,13 +183,13 @@ describe("simple-schema formalCells() validation resource", () => {
         let validations = 0;
 
         await createRoot(async (dispose) => {
-            // `onChangeFormalCells` fires only when the formal cells change —
+            // `onChangeFormalContent` fires only when the formal cells change —
             // added, removed, reordered, or edited in place — and never for an
             // unrelated edit such as a rich-text comment. So it can bump a signal
             // the resource source reads directly, with no manual signature: the
             // method already dedupes on the formal-cell signature internally.
             const [revision, setRevision] = createSignal(0);
-            const unsubscribe = notebook.onChangeFormalCells(() => setRevision((n) => n + 1));
+            const unsubscribe = notebook.onChangeFormalContent(() => setRevision((n) => n + 1));
 
             const [validation] = createResource(
                 () => revision(),

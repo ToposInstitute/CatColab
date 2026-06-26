@@ -11,9 +11,9 @@
  *      endpoint's object type (`AttrType` for an `Attr`'s codomain).
  *   2. Each id is labelled with `obGeneratorLabel(id)?.join(".")`.
  *   3. Typed text filters the list to substring matches.
- *   4. Selecting one edits the typed notebook; a `createResource` keyed on the
- *      notebook's formal cells re-validates reactively into a fresh elaborated
- *      model.
+ *   4. Selecting one edits the typed notebook; a `createResource` driven by
+ *      `Notebook.onChangeFormalContent` re-validates reactively into a fresh
+ *      elaborated model.
  */
 /* oxlint-disable unicorn/consistent-function-scoping */
 import { createBinder, type DocumentStore, type ModelValidationResult } from "catcolab-documents";
@@ -43,15 +43,27 @@ let globalModel!: () => DblModel | undefined;
 type SolidStoreHandle = {
     doc: ModelDocument;
     setDoc: SetStoreFunction<ModelDocument>;
+    listeners: Set<() => void>;
 };
 
 const solidStore: DocumentStore<SolidStoreHandle> = {
     createHandle(initialDoc) {
         const [doc, setDoc] = createStore<ModelDocument>(initialDoc as ModelDocument);
-        return { doc, setDoc };
+        return { doc, setDoc, listeners: new Set() };
     },
     viewDocument: (handle) => handle.doc,
-    changeDocument: (handle, fn) => handle.setDoc(produce<ModelDocument>(fn)),
+    changeDocument: (handle, fn) => {
+        handle.setDoc(produce<ModelDocument>(fn));
+        for (const listener of Array.from(handle.listeners)) {
+            listener();
+        }
+    },
+    subscribe: (handle, callback) => {
+        handle.listeners.add(callback);
+        return () => {
+            handle.listeners.delete(callback);
+        };
+    },
     copyValue: (_handle, value) => structuredClone(unwrap(value)),
     linkForHandle: () => undefined,
     resolveModel: async () => {
@@ -115,12 +127,19 @@ describe("simple-schema completions consumer", () => {
         // simulate typing; the consumer component below reads it as a prop.
         const [text, setText] = createSignal("");
 
-        // The consumer component owns the reactive validation: a resource keyed
-        // on the notebook's formal cells re-elaborates on every edit, and the
-        // derived `model` accessor exposes its elaborated `DblModel`.
+        // The consumer component owns the reactive validation: a resource
+        // driven by `onChangeFormalContent` re-elaborates when the formal cells
+        // change, and the derived `model` accessor exposes its elaborated
+        // `DblModel`.
         function Consumer(props: { text: string }) {
+            // `onChangeFormalContent` fires only when the formal cells change,
+            // so it can bump a signal the resource source reads directly: the
+            // resource re-elaborates on a formal-cell edit but not, say, a
+            // rich-text comment.
+            const [revision, setRevision] = createSignal(0);
+            notebook.onChangeFormalContent(() => setRevision((n) => n + 1));
             const [validation] = createResource(
-                () => notebook.formalCells(),
+                () => revision(),
                 () => notebook.validate(),
             );
             const model = (): DblModel | undefined => {
