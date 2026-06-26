@@ -1,15 +1,15 @@
 import { BlockTitle, ExpandableTable, KatexDisplay } from "catcolab-ui-components";
+import { DblModel, LatexEquations } from "catlog-wasm";
 import type { ModelAnalysisProps } from "../../analysis";
 import { createModelODELatex } from "./model_ode_plot";
-import type { LinearODEEquations } from "./simulator_types";
 
 import "./simulation.css";
 
 /** Display the symbolic mass-action dynamics equations for a model. */
-export default function LinearODEEquationsDisplay(
+export default function ODESemanticsEquationsDisplay(
     props: ModelAnalysisProps<null> & {
         content: null;
-        getEquations: LinearODEEquations;
+        getEquations: (model: DblModel) => LatexEquations;
         title?: string;
     },
 ) {

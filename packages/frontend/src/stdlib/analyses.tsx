@@ -9,6 +9,7 @@ import type {
 import type { DiagramAnalysisMeta, ModelAnalysisMeta } from "../theory";
 import * as GraphLayoutConfig from "../visualization/graph_layout_config";
 import type * as Checkers from "./analyses/checker_types";
+import ODESemanticsEquationsDisplay from "./analyses/ode_semantics_equations";
 import { defaultSchemaERDConfig, type SchemaERDConfig } from "./analyses/schema_erd_config";
 import type * as Simulators from "./analyses/simulator_types";
 import type * as SQLDownloadConfig from "./analyses/sql";
@@ -150,12 +151,11 @@ export function linearODEEquations(
         description,
         help,
         component: (props) => (
-            <LinearODEEquationsDisplay title={name} {...otherOptions} {...props} />
+            <ODESemanticsEquationsDisplay title={name} {...otherOptions} {...props} />
         ),
         initialContent: () => null,
     };
 }
-const LinearODEEquationsDisplay = lazy(() => import("./analyses/linear_ode_equations"));
 
 export function lotkaVolterra(
     options: Partial<AnalysisOptions> & {
@@ -204,12 +204,11 @@ export function lotkaVolterraEquations(
         description,
         help,
         component: (props) => (
-            <LotkaVolterraEquationsDisplay title={name} {...otherOptions} {...props} />
+            <ODESemanticsEquationsDisplay title={name} {...otherOptions} {...props} />
         ),
         initialContent: () => null,
     };
 }
-const LotkaVolterraEquationsDisplay = lazy(() => import("./analyses/lotka_volterra_equations"));
 
 export function massAction(
     options: Partial<AnalysisOptions> & {
@@ -433,12 +432,11 @@ export function polynomialODEEquations(
         description,
         help,
         component: (props) => (
-            <PolynomialODEEquationsDisplay title={name} {...otherOptions} {...props} />
+            <ODESemanticsEquationsDisplay title={name} {...otherOptions} {...props} />
         ),
         initialContent: () => null,
     };
 }
-const PolynomialODEEquationsDisplay = lazy(() => import("./analyses/polynomial_ode_equations"));
 
 export function polynomialODESimulation(
     options: Partial<AnalysisOptions> & {
