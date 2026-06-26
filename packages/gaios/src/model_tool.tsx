@@ -11,6 +11,7 @@ import { ModelNotebookEditor } from "../../frontend/src/model/model_editor";
 import { ModelDocumentHead } from "../../frontend/src/model/model_info";
 import { stdTheories } from "../../frontend/src/stdlib";
 import { TheoryLibraryContext } from "../../frontend/src/theory";
+import { rootFocus } from "../../ui-components/src/util/focus";
 import type { ModelDoc } from "./model_datatype";
 
 import "../../ui-components/src/global.css";
@@ -54,7 +55,10 @@ export function renderModelTool(handle: DocHandle<ModelDoc>, element: ToolElemen
                             <TheoryLibraryContext.Provider value={stdTheories}>
                                 <ModelLibraryContext.Provider value={modelLibrary}>
                                     <ModelDocumentHead liveModel={liveModel()} />
-                                    <ModelNotebookEditor liveModel={liveModel()} />
+                                    <ModelNotebookEditor
+                                        liveModel={liveModel()}
+                                        focus={rootFocus}
+                                    />
                                 </ModelLibraryContext.Provider>
                             </TheoryLibraryContext.Provider>
                         )}

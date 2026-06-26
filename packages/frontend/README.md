@@ -31,16 +31,3 @@ where `$MODE` is replaced with one of the following:
 
 Running the command above builds the Wasm and other local dependencies (by
 running `pnpm run build:deps`) before launching the Vite preview server.
-
-## Troubleshooting
-
-### Nix Hash Mismatches
-
-If this package fails to build in Nix with the error:
-
-```
-> ERROR: pnpm failed to install dependencies
-```
-
-Refer to the "pnpm Dependencies" section in [Fixing Hash Mismatches in
-Nix](../../dev-docs/fixing-hash-mismatches.md).

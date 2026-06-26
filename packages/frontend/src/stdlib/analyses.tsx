@@ -407,7 +407,7 @@ export function renderSQL(
         help,
         component: (props) => <SQLSchemaAnalysis title={name} render={render} {...props} />,
         initialContent: () => ({
-            backend: SQLBackend.MySQL,
+            backend: SQLBackend.PostgresSQL,
             filename: "schema.sql",
         }),
     };

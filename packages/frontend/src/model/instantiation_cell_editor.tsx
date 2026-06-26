@@ -1,17 +1,13 @@
 import type { DocInfo } from "catcolab-api/src/user_state";
-import {
-    batch,
-    createEffect,
-    createSignal,
-    Index,
-    Show,
-    splitProps,
-    untrack,
-    useContext,
-} from "solid-js";
+import { batch, createEffect, Index, Show, splitProps, untrack, useContext } from "solid-js";
 import invariant from "tiny-invariant";
 
-import { NameInput, type TextInputOptions } from "catcolab-ui-components";
+import {
+    type FocusHandle,
+    NameInput,
+    type TextInputOptions,
+    useChildFocus,
+} from "catcolab-ui-components";
 import type { DblModel, InstantiatedModel, Ob, SpecializeModel } from "catlog-wasm";
 import { useApi } from "../api";
 import { DocumentPicker, IdInput, IdInputPlaceholder } from "../components";
@@ -27,7 +23,7 @@ import "./instantiation_cell_editor.css";
 export function InstantiationCellEditor(props: {
     instantiation: InstantiatedModel;
     modifyInstantiation: (f: (inst: InstantiatedModel) => void) => void;
-    isActive: boolean;
+    focus: FocusHandle;
     actions: CellActions;
 }) {
     const api = useApi();
@@ -67,25 +63,18 @@ export function InstantiationCellEditor(props: {
     invariant(models);
     const instantiated = models.useElaboratedModel(refId);
 
-    const [activeComponent, setActiveComponent] = createSignal<InstantiationCellComponent>(
-        refId() == null ? "model" : "name",
-    );
-    const [activeIndex, setActiveIndex] = createSignal(0);
+    // oxlint-disable-next-line solid/reactivity -- Focus handles are stable for a mounted cell.
+    const focus = useChildFocus<InstantiationCellComponent>(props.focus, {
+        default: refId() == null ? "model" : "name",
+    });
+    const specializationFocus = useChildFocus<number>(focus.childFocus("specializations"), {
+        default: 0,
+    });
     const activateIndex = (index: number) =>
         batch(() => {
-            setActiveComponent("specializations");
-            setActiveIndex(index);
+            focus.setActiveChild("specializations");
+            specializationFocus.setActiveChild(index);
         });
-
-    // Reset to default on deactivation so re-entry lands on the name input.
-    createEffect(() => {
-        if (!props.isActive) {
-            batch(() => {
-                setActiveComponent("name");
-                setActiveIndex(0);
-            });
-        }
-    });
 
     const insertSpecializationAtTop = () => {
         props.modifyInstantiation((inst) => {
@@ -156,7 +145,7 @@ export function InstantiationCellEditor(props: {
 
     // Clean up empty rows when the cell becomes inactive.
     createEffect(() => {
-        if (!props.isActive) {
+        if (!props.focus.hasFocus()) {
             untrack(() => pruneEmptySpecializations());
         }
     });
@@ -185,13 +174,9 @@ export function InstantiationCellEditor(props: {
                     deleteForward={props.actions.deleteForward}
                     exitUp={props.actions.activateAbove}
                     exitDown={exitDownFromTop}
-                    exitRight={() => setActiveComponent("model")}
-                    exitForward={() => setActiveComponent("model")}
-                    isActive={props.isActive && activeComponent() === "name"}
-                    hasFocused={() => {
-                        setActiveComponent("name");
-                        props.actions.hasFocused();
-                    }}
+                    exitRight={() => focus.setActiveChild("model")}
+                    exitForward={() => focus.setActiveChild("model")}
+                    focus={focus.childFocus("name")}
                 />
                 <span class="is-a" />
                 <DocumentPicker
@@ -212,16 +197,12 @@ export function InstantiationCellEditor(props: {
                     }}
                     filterCompletions={filterCompletions}
                     placeholder="..."
-                    deleteBackward={() => setActiveComponent("name")}
+                    deleteBackward={() => focus.setActiveChild("name")}
                     exitUp={props.actions.activateAbove}
                     exitDown={exitDownFromTop}
-                    exitLeft={() => setActiveComponent("name")}
-                    exitBackward={() => setActiveComponent("name")}
-                    isActive={props.isActive && activeComponent() === "model"}
-                    hasFocused={() => {
-                        setActiveComponent("model");
-                        props.actions.hasFocused();
-                    }}
+                    exitLeft={() => focus.setActiveChild("name")}
+                    exitBackward={() => focus.setActiveChild("name")}
+                    focus={focus.childFocus("model")}
                 />
             </div>
             <ul
@@ -242,15 +223,7 @@ export function InstantiationCellEditor(props: {
                                 }}
                                 onIdTextChange={(text) => idInputTexts.set(i, text)}
                                 instantiatedModel={instantiated()?.validatedModel.model ?? null}
-                                isActive={
-                                    props.isActive &&
-                                    activeComponent() === "specializations" &&
-                                    activeIndex() === i
-                                }
-                                hasFocused={() => {
-                                    activateIndex(i);
-                                    props.actions.hasFocused();
-                                }}
+                                focus={specializationFocus.childFocus(i)}
                                 createBelow={() => {
                                     props.modifyInstantiation((inst) => {
                                         const spec = { id: null, ob: null };
@@ -262,7 +235,7 @@ export function InstantiationCellEditor(props: {
                                     props.modifyInstantiation((inst) =>
                                         inst.specializations.splice(i, 1),
                                     );
-                                    i === 0 ? setActiveComponent("name") : activateIndex(i - 1);
+                                    i === 0 ? focus.setActiveChild("name") : activateIndex(i - 1);
                                 }}
                                 exitDown={() => {
                                     if (i >= props.instantiation.specializations.length - 1) {
@@ -272,7 +245,7 @@ export function InstantiationCellEditor(props: {
                                     }
                                 }}
                                 exitUp={() => {
-                                    i === 0 ? setActiveComponent("name") : activateIndex(i - 1);
+                                    i === 0 ? focus.setActiveChild("name") : activateIndex(i - 1);
                                 }}
                             />
                         </li>
@@ -283,7 +256,7 @@ export function InstantiationCellEditor(props: {
                         class="model-specialization-add"
                         onMouseDown={(evt) => {
                             appendSpecialization();
-                            props.actions.hasFocused();
+                            props.focus.setFocused(true);
                             evt.preventDefault();
                         }}
                     >
@@ -308,21 +281,13 @@ function SpecializationEditor(
         instantiatedModel: DblModel | null;
         /** Called when the displayed text of the id input changes. */
         onIdTextChange?: (text: string) => void;
-    } & Pick<
-        TextInputOptions,
-        "isActive" | "hasFocused" | "createBelow" | "deleteBackward" | "exitDown" | "exitUp"
-    >,
+        focus: FocusHandle;
+    } & Pick<TextInputOptions, "createBelow" | "deleteBackward" | "exitDown" | "exitUp">,
 ) {
     const [inputProps, props] = splitProps(allProps, ["createBelow", "exitDown", "exitUp"]);
 
-    const [activeInput, setActiveInput] = createSignal<SpecializationEditorInput>("id");
-
-    // Reset to default on deactivation so re-entry lands on the id input.
-    createEffect(() => {
-        if (!props.isActive) {
-            setActiveInput("id");
-        }
-    });
+    // oxlint-disable-next-line solid/reactivity -- Focus handles are stable for a mounted row.
+    const focus = useChildFocus<SpecializationEditorInput>(props.focus, { default: "id" });
 
     const obType = () => {
         const id = props.specialization.id;
@@ -348,14 +313,10 @@ function SpecializationEditor(
                 completions={props.instantiatedModel?.obGenerators()}
                 idToLabel={(id) => props.instantiatedModel?.obGeneratorLabel(id)}
                 labelToId={(label) => props.instantiatedModel?.obGeneratorWithLabel(label)}
-                isActive={props.isActive && activeInput() === "id"}
-                hasFocused={() => {
-                    setActiveInput("id");
-                    props.hasFocused?.();
-                }}
+                focus={focus.childFocus("id")}
                 deleteBackward={props.deleteBackward}
-                exitForward={() => setActiveInput("ob")}
-                exitRight={() => setActiveInput("ob")}
+                exitForward={() => focus.setActiveChild("ob")}
+                exitRight={() => focus.setActiveChild("ob")}
                 {...inputProps}
             />
             <span class="specialize-as" />
@@ -370,14 +331,10 @@ function SpecializationEditor(
                             });
                         }}
                         obType={obType()}
-                        isActive={props.isActive && activeInput() === "ob"}
-                        hasFocused={() => {
-                            setActiveInput("ob");
-                            props.hasFocused?.();
-                        }}
-                        deleteBackward={() => setActiveInput("id")}
-                        exitBackward={() => setActiveInput("id")}
-                        exitLeft={() => setActiveInput("id")}
+                        focus={focus.childFocus("ob")}
+                        deleteBackward={() => focus.setActiveChild("id")}
+                        exitBackward={() => focus.setActiveChild("id")}
+                        exitLeft={() => focus.setActiveChild("id")}
                         {...inputProps}
                     />
                 )}

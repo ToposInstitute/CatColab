@@ -1,0 +1,23 @@
+{
+    "name": "@catcolab-dev-tools/vite-plugin-monorepo-dedupe",
+    "version": "0.0.0",
+    "private": true,
+    "type": "module",
+    "exports": {
+        ".": {
+            "types": "./src/index.ts",
+            "default": "./src/index.ts"
+        }
+    },
+    "scripts": {
+        "format": "oxfmt .",
+        "lint": "oxlint --fix && oxfmt .",
+        "check": "tsc && pnpm run lint",
+        "ci": "tsc && oxlint --deny-warnings && oxfmt --check ."
+    },
+    "devDependencies": {
+        "@types/node": "^24.0.0",
+        "typescript": "^6.0.3",
+        "vite": "^7.2.2"
+    }
+}
