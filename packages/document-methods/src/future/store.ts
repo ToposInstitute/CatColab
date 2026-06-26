@@ -48,47 +48,27 @@ export interface DocumentStore<Handle> {
      */
     linkForHandle(handle: Handle): Omit<Link, "type"> | undefined;
     /**
-     * Resolve a link to a model document into its elaborated model.
+     * Fetch the model document a link `_id` refers to, or `undefined` if the
+     * store does not know it.
      *
-     * This is the recursive workhorse of validation: a model's own
-     * {@link Notebook.validate} resolves the model by minting a link to its own
-     * handle and calling `resolveModel`, and each instantiation the model
-     * references is resolved by `resolveModel` calling itself. Resolution is the
-     * store's responsibility — fetching the referenced document, elaborating it
-     * against its own core theory (looked up by the document's `theory` id),
-     * recursively resolving the document's own instantiations, and detecting
-     * cycles. It is inherently asynchronous (the document may live in a repo or
-     * on a server).
-     *
-     * Because `validate` resolves a notebook's *own* model this way, a store
-     * over validatable notebooks must be able to resolve the link minted by
-     * {@link linkForHandle} for one of its own handles: `linkForHandle` must
-     * return a link, and `resolveModel` must elaborate it. A store that cannot
-     * resolve a given link rejects the returned promise; the notebook whose
-     * `validate` triggered it then reports `Illformed`. The promise also rejects
-     * when the document is unavailable, has no registered core theory, fails to
-     * elaborate, or participates in a cycle.
-     *
-     * `resolveModel` returns the elaborated {@link DblModel} without running
-     * `model.validate()`: the `Valid`/`Invalid` distinction is made by the
-     * top-level {@link Notebook.validate}, not by resolution.
+     * This is half of the store's contribution to resolution: validation's
+     * recursive elaborator (see {@link resolveModelInStore}) walks a model's
+     * instantiations by calling `getDocument` for each referenced id, then
+     * elaborates each against the core theory found by {@link coreTheoryFor}.
+     * Because `validate` resolves a notebook's *own* model by minting a link to
+     * its handle (via {@link linkForHandle}), a store over validatable notebooks
+     * must be able to return the document for that link too.
      */
-    resolveModel(link: Link): Promise<DblModel>;
-}
-
-/**
- * The store-agnostic dependencies the shared resolver needs: how to fetch a
- * document by id and how to find a theory's core theory. The cache of
- * elaborated models and the in-progress set used for cycle detection are *not*
- * supplied — they are created fresh per top-level {@link resolveModelWith} call
- * and live only for that resolution tree, so every resolution re-elaborates
- * against the current document state (no stale cache survives an edit). See
- * {@link resolveModelWith}.
- */
-export interface ResolverDeps {
-    /** Fetch the model document for an id, or `undefined` if unknown. */
     getDocument(id: string): ModelDocument | undefined;
-    /** The core theory a document's `theory` id elaborates against, if known. */
+    /**
+     * The core theory a document's `theory` id elaborates against, or
+     * `undefined` if the store has no theory registered for it.
+     *
+     * The other half of resolution: each document fetched by {@link getDocument}
+     * is elaborated against the core theory returned here for its `theory` id. A
+     * document whose theory has no registered core theory cannot be resolved, so
+     * the notebook whose `validate` triggered resolution reports `Illformed`.
+     */
     coreTheoryFor(theory: string): DblTheory | undefined;
 }
 
@@ -109,12 +89,21 @@ const instantiationLinks = (doc: ModelDocument): Link[] => {
 };
 
 /**
- * The shared recursive elaborator behind every store's `resolveModel`. Given a
- * link, it fetches the document, recursively resolves the document's own
- * instantiations (so it elaborates against a populated map, not an empty one),
- * elaborates against the document's core theory, and detects cycles. Stores
- * differ only in {@link ResolverDeps}, so this is the single place resolution
- * lives — `validate` delegates here rather than the reverse.
+ * The shared recursive elaborator behind validation. Given a store and a link,
+ * it fetches the document (via {@link DocumentStore.getDocument}), recursively
+ * resolves the document's own instantiations (so it elaborates against a
+ * populated map, not an empty one), elaborates against the document's core
+ * theory (via {@link DocumentStore.coreTheoryFor}), and detects cycles. Stores
+ * differ only in how they fetch documents and look up core theories, so this is
+ * the single place resolution lives — `validate` delegates here rather than the
+ * reverse.
+ *
+ * It returns the elaborated {@link DblModel} without running `model.validate()`:
+ * the `Valid`/`Invalid` distinction is made by the top-level
+ * {@link Notebook.validate}, not by resolution. It rejects when a referenced
+ * document is unavailable, has no registered core theory, fails to elaborate, or
+ * participates in a cycle; the notebook whose `validate` triggered resolution
+ * then reports `Illformed`.
  *
  * The cache of elaborated models and the in-progress set are created fresh for
  * each top-level call and threaded through the recursion, so they dedupe within
@@ -122,7 +111,10 @@ const instantiationLinks = (doc: ModelDocument): Link[] => {
  * once) but never persist across calls: a later `validate` always re-elaborates
  * against the current document, never a model staled by an intervening edit.
  */
-export async function resolveModelWith(deps: ResolverDeps, link: Link): Promise<DblModel> {
+export async function resolveModelInStore<Handle>(
+    store: DocumentStore<Handle>,
+    link: Link,
+): Promise<DblModel> {
     // Per-resolution-tree state: dedupe within this call, persist across none.
     const cache = new Map<string, DblModel>();
     const resolving = new Set<string>();
@@ -135,11 +127,11 @@ export async function resolveModelWith(deps: ResolverDeps, link: Link): Promise<
         if (resolving.has(link._id)) {
             throw new Error(`Cyclic instantiation detected while resolving model ${link._id}.`);
         }
-        const doc = deps.getDocument(link._id);
+        const doc = store.getDocument(link._id);
         if (!doc) {
             throw new Error(`unknown model ${link._id}`);
         }
-        const coreTheory = deps.coreTheoryFor(doc.theory);
+        const coreTheory = store.coreTheoryFor(doc.theory);
         if (!coreTheory) {
             throw new Error(`No core theory registered for document theory "${doc.theory}".`);
         }
@@ -245,12 +237,6 @@ export const plainStore: DocumentStore<Document> = {
         _version: null,
         _server: "",
     }),
-    resolveModel: (link) =>
-        resolveModelWith(
-            {
-                getDocument: (id) => plainDocumentsById.get(id) as ModelDocument | undefined,
-                coreTheoryFor: (theory) => plainCoreTheories.get(theory),
-            },
-            link,
-        ),
+    getDocument: (id) => plainDocumentsById.get(id) as ModelDocument | undefined,
+    coreTheoryFor: (theory) => plainCoreTheories.get(theory),
 };

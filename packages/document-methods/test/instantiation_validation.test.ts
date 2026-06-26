@@ -1,17 +1,10 @@
-import {
-    binder,
-    createBinder,
-    type DocumentStore,
-    Instantiation,
-    resolveModelWith,
-} from "catcolab-documents";
+import { binder, createBinder, type DocumentStore, Instantiation } from "catcolab-documents";
 import { PetriNet, Place } from "catcolab-logics/petri-net";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
 import { v7 } from "uuid";
 import { describe, expect, test } from "vitest";
 
 import type { ModelDocument } from "catcolab-document-methods";
-import type { Link } from "catcolab-document-types";
 import { DblModel } from "catlog-wasm";
 
 // The shapes whose documents this store can resolve, looked up by the
@@ -22,14 +15,18 @@ const resolvableShapes = [SimpleOlog, PetriNet];
 
 const shapeFor = (theory: string) => resolvableShapes.find((shape) => shape.theory === theory);
 
-// A bespoke store augmented with `resolveModel`, so notebooks containing
-// instantiation cells can be validated. Documents are registered by a stable
-// id; `resolveModel` defers to the shared `resolveModelWith` recursive
-// elaborator (the same one the plain store uses), supplying only how to fetch a
-// document by id and how to find a document theory's core theory (via
-// `shapeFor`). The shared helper walks the referenced model's own
-// instantiations, elaborates against the looked-up core theory, and detects
-// cycles, so this store reimplements none of that.
+// A bespoke store augmented with `getDocument`/`coreTheoryFor`, so notebooks
+// containing instantiation cells can be validated. Documents are registered by a
+// stable id; the store contributes only how to fetch a document by id
+// (`getDocument`) and how to find a document theory's core theory
+// (`coreTheoryFor`, via `shapeFor`). The shared recursive elaborator (the same
+// one the plain store uses) walks the referenced model's own instantiations,
+// elaborates against the looked-up core theory, and detects cycles, so this
+// store reimplements none of that.
+//
+// `failOnResolve` makes `getDocument` return `undefined`, so resolution rejects
+// with "unknown model" and `validate` reports `Illformed` — modelling a store
+// that cannot fetch a referenced document.
 function createResolvingStore(): {
     store: DocumentStore<ModelDocument>;
     failOnResolve: { value: boolean };
@@ -48,19 +45,6 @@ function createResolvingStore(): {
         return id;
     };
 
-    const resolveModel = (link: Link): Promise<DblModel> => {
-        if (failOnResolve.value) {
-            return Promise.reject(new Error("resolver unavailable"));
-        }
-        return resolveModelWith(
-            {
-                getDocument: (id) => byId.get(id),
-                coreTheoryFor: (theory) => shapeFor(theory)?.coreTheory,
-            },
-            link,
-        );
-    };
-
     const store: DocumentStore<ModelDocument> = {
         createHandle: (initialDoc) => {
             const doc = initialDoc as ModelDocument;
@@ -75,7 +59,8 @@ function createResolvingStore(): {
             _version: null,
             _server: "",
         }),
-        resolveModel,
+        getDocument: (id) => (failOnResolve.value ? undefined : byId.get(id)),
+        coreTheoryFor: (theory) => shapeFor(theory)?.coreTheory,
     };
 
     return { store, failOnResolve };
@@ -141,7 +126,7 @@ describe("instantiation validation", () => {
         expect(result.tag === "Illformed" && result.error).toContain("Failed to resolve");
     });
 
-    test("resolveModel elaborates the referenced document against its own theory", async () => {
+    test("resolution elaborates the referenced document against its own theory", async () => {
         const { store } = createResolvingStore();
         const resolvingBinder = createBinder(store);
 
@@ -162,7 +147,7 @@ describe("instantiation validation", () => {
         expect(result.model).toBeInstanceOf(DblModel);
     });
 
-    test("resolveModel recursively resolves the referenced model's own instantiations", async () => {
+    test("resolution recursively resolves the referenced model's own instantiations", async () => {
         const { store } = createResolvingStore();
         const resolvingBinder = createBinder(store);
 

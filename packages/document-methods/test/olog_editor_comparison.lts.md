@@ -213,9 +213,8 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
     changeDocument: (handle, fn) => handle.setDoc(produce<ModelDocument>(fn)),
     copyValue: (_handle, value) => structuredClone(unwrap(value)),
     linkForHandle: () => undefined,
-    resolveModel: async () => {
-        throw new Error("this store cannot resolve model references");
-    },
+    getDocument: () => undefined,
+    coreTheoryFor: () => undefined,
 };
 
 const solidBinder = createBinder(solidStore);
@@ -313,9 +312,8 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
     changeDocument: (handle, fn) => handle.setDoc(produce<ModelDocument>(fn)),
     copyValue: (_handle, value) => structuredClone(unwrap(value)),
     linkForHandle: () => undefined,
-    resolveModel: async () => {
-        throw new Error("this store cannot resolve model references");
-    },
+    getDocument: () => undefined,
+    coreTheoryFor: () => undefined,
 };
 
 const solidBinder = createBinder(solidStore);

@@ -22,9 +22,8 @@ const solidAutomergeStore: DocumentStore<DocHandle<ModelDocument>> = {
     changeDocument: (handle, fn) => handle.change(fn),
     copyValue: (handle, value) => materializeFromAutomerge(handle.doc(), value),
     linkForHandle: () => undefined,
-    resolveModel: async () => {
-        throw new Error("this store cannot resolve model references");
-    },
+    getDocument: () => undefined,
+    coreTheoryFor: () => undefined,
 };
 
 const automergeBinder = createBinder(solidAutomergeStore);

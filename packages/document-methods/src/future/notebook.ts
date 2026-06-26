@@ -70,7 +70,13 @@ import {
     type Update,
     type ValidatableNotebook,
 } from "./definitions";
-import { type DocumentStore, plainDocumentId, plainStore, registerCoreTheory } from "./store";
+import {
+    type DocumentStore,
+    plainDocumentId,
+    plainStore,
+    registerCoreTheory,
+    resolveModelInStore,
+} from "./store";
 
 /**
  * A stable string capturing the document's *formal* cells — every cell except
@@ -192,7 +198,7 @@ function attachAnalysisNotebook<TShape extends AnalysisShape, Handle>(
             },
             async run() {
                 const params = readParams(cellId) as ParamsOf<Def>;
-                const model = await store.resolveModel(doc.analysisOf);
+                const model = await resolveModelInStore(store, doc.analysisOf);
                 return def.run(model, params) as Promise<OutputOf<Def>>;
             },
             ...reorderMethods(cellId),
@@ -307,14 +313,15 @@ function attachNotebook<TShape extends AnyShape, Handle>(
 
     /**
      * Elaborate this notebook's own model by minting a link to its own handle
-     * and resolving it through the store. Resolution is the store's recursive
-     * workhorse — it walks this notebook's instantiations (resolving each), and
-     * elaborates against the document's core theory — so `validate` and
-     * `migrateTo` delegate here rather than building the instantiated map and
-     * elaborating themselves. The shape's `coreTheory` is registered first so the
-     * store can elaborate this document (and others of its theory) by `theory`
-     * id. Returns the elaborated {@link DblModel}, or an error string when the
-     * handle has no stable link or resolution rejects.
+     * and resolving it through the shared resolver against the store. Resolution
+     * is the recursive workhorse — it walks this notebook's instantiations
+     * (resolving each via {@link DocumentStore.getDocument}), and elaborates
+     * against the document's core theory (via {@link DocumentStore.coreTheoryFor})
+     * — so `validate` and `migrateTo` delegate here rather than building the
+     * instantiated map and elaborating themselves. The shape's `coreTheory` is
+     * registered first so the store can elaborate this document (and others of
+     * its theory) by `theory` id. Returns the elaborated {@link DblModel}, or an
+     * error string when the handle has no stable link or resolution rejects.
      */
     const resolveSelf = async (coreTheory: DblTheory): Promise<DblModel | { error: string }> => {
         registerCoreTheory(doc.theory, coreTheory);
@@ -323,7 +330,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
             return { error: "the store cannot mint a link for this notebook's handle" };
         }
         try {
-            return await store.resolveModel({ ...ref, type: "instantiation" });
+            return await resolveModelInStore(store, { ...ref, type: "instantiation" });
         } catch (e) {
             return { error: `Failed to resolve instantiated model: ${String(e)}` };
         }
@@ -1165,11 +1172,11 @@ type CoreTheoryMethods<TShape extends AnyShape, Handle> =
                * that declares one.
                *
                * Asynchronous because a notebook may contain instantiation cells,
-               * whose referenced models are resolved through {@link
-               * DocumentStore.resolveModel} (which fetches and elaborates them,
-               * handling any cycles). A notebook with instantiations whose
-               * resolution fails (the store rejects the link) validates as
-               * `Illformed`.
+               * whose referenced models are resolved through the store (which
+               * fetches them via {@link DocumentStore.getDocument} and elaborates
+               * them against {@link DocumentStore.coreTheoryFor}, handling any
+               * cycles). A notebook with instantiations whose resolution fails
+               * validates as `Illformed`.
                */
               validate(): Promise<ModelValidationResult>;
               /**
@@ -1183,8 +1190,9 @@ type CoreTheoryMethods<TShape extends AnyShape, Handle> =
                * Available only on a shape that declares a `coreTheory`, since a
                * pushforward migration elaborates the model. Asynchronous for the
                * same reason as {@link Notebook.validate}: a notebook with
-               * instantiation cells resolves them through {@link
-               * DocumentStore.resolveModel}.
+               * instantiation cells resolves them through the store (via
+               * {@link DocumentStore.getDocument} and
+               * {@link DocumentStore.coreTheoryFor}).
                */
               migrateTo<TTarget extends CreatableShape>(
                   targetShape: TTarget,

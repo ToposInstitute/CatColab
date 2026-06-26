@@ -10,8 +10,8 @@ analysis is attached to a logic by listing it in the logic's `modelAnalyses`
 (unique relative to the logic), the `initialContent` created when an analysis
 cell is added, and an async `run` that computes the analysis's output from the
 analyzed model's elaborated `DblModel`. The cell resolves and validates that
-model through the store (`resolveModel`) before invoking `run`, so `run`
-receives the elaborated model directly.
+model through the store (via `getDocument`/`coreTheoryFor`) before invoking
+`run`, so `run` receives the elaborated model directly.
 
 `content` is the persisted, user-editable config stored on the cell. For a
 visualization it is a graph-layout config: a `layout` engine and an optional

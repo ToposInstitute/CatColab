@@ -1,7 +1,7 @@
 export { type ModelDocument, newModelDocument } from "../model";
 export { type AnalysisDocument, newAnalysisDocument } from "./analysis";
 
-export { plainStore, type DocumentStore, type ResolverDeps, resolveModelWith } from "./store";
+export { plainStore, type DocumentStore, resolveModelInStore } from "./store";
 export { binder, createBinder, type Binder, type Notebook } from "./notebook";
 export {
     CellKind,

@@ -773,8 +773,9 @@ export type OutputOf<Def extends AnalysisDef> =
  * over an {@link AnalysisShape}). The persisted `params` are seeded by
  * `def.initialContent()` and updated with {@link AnalysisCell.update}; `run()`
  * resolves the analyzed model's elaborated {@link DblModel} from the document's
- * `analysis-of` link through the store (via {@link DocumentStore.resolveModel})
- * and calls the def's `run` with that model and the current params.
+ * `analysis-of` link through the store (via {@link DocumentStore.getDocument}
+ * and {@link DocumentStore.coreTheoryFor}) and calls the def's `run` with that
+ * model and the current params.
  */
 export type AnalysisCell<Def extends AnalysisDef = AnalysisDef> = Reorder & {
     readonly kind: typeof CellKind.Analysis;
