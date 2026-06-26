@@ -31,35 +31,28 @@ function createResolvingStore(): {
     store: DocumentStore<ModelDocument>;
     failOnResolve: { value: boolean };
 } {
+    // Each handle gets a stable id when `createHandle` registers it, so
+    // `linkForHandle` is a plain lookup and `getHandle` its inverse.
     const ids = new WeakMap<ModelDocument, string>();
     const byId = new Map<string, ModelDocument>();
     const failOnResolve = { value: false };
 
-    const idFor = (doc: ModelDocument): string => {
-        let id = ids.get(doc);
-        if (!id) {
-            id = v7();
-            ids.set(doc, id);
-            byId.set(id, doc);
-        }
-        return id;
-    };
-
     const store: DocumentStore<ModelDocument> = {
         createHandle: (initialDoc) => {
             const doc = initialDoc as ModelDocument;
-            idFor(doc);
+            const id = v7();
+            ids.set(doc, id);
+            byId.set(id, doc);
             return doc;
         },
+        getHandle: (id) => (failOnResolve.value ? undefined : byId.get(id)),
         viewDocument: (handle) => handle,
         changeDocument: (handle, fn) => fn(handle),
         copyValue: (_handle, value) => structuredClone(value),
-        linkForHandle: (handle) => ({
-            _id: idFor(handle),
-            _version: null,
-            _server: "",
-        }),
-        getHandle: (id) => (failOnResolve.value ? undefined : byId.get(id)),
+        linkForHandle: (handle) => {
+            const id = ids.get(handle);
+            return id ? { _id: id, _version: null, _server: "" } : undefined;
+        },
         coreTheoryFor: (theory) => shapeFor(theory)?.coreTheory,
     };
 

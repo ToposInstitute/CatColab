@@ -212,6 +212,7 @@ export const plainStore: DocumentStore<Document> = {
         plainDocumentId(initialDoc);
         return initialDoc;
     },
+    getHandle: (id) => plainDocumentsById.get(id),
     viewDocument: (handle) => handle,
     changeDocument: (handle, fn) => {
         fn(handle);
@@ -240,6 +241,5 @@ export const plainStore: DocumentStore<Document> = {
         _version: null,
         _server: "",
     }),
-    getHandle: (id) => plainDocumentsById.get(id),
     coreTheoryFor: (theory) => plainCoreTheories.get(theory),
 };
