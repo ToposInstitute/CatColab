@@ -16,18 +16,21 @@ export function MassActionConfigForm(props: {
     changeConfig: (f: (config: Config) => void) => void;
     enableGranularity: boolean;
 }) {
-    let correctConfig: MassActionEquationsData;
-    if (isMassActionProblemData(props.config)) {
-        correctConfig = props.config.equationsData;
-    } else {
-        correctConfig = props.config;
+    function massActionEquationsData(): MassActionEquationsData {
+        if (isMassActionProblemData(props.config)) {
+            return props.config.equationsData;
+        } else {
+            return props.config;
+        }
     }
 
-    const massConservation = () => correctConfig.massConservationType;
-    const massConservationGranularity = () =>
-        correctConfig.massConservationType.type === "Unbalanced"
-            ? correctConfig.massConservationType.granularity
+    const massConservation = () => massActionEquationsData().massConservationType;
+    const massConservationGranularity = () => {
+        const massConversarvation = massActionEquationsData().massConservationType;
+        return massConversarvation.type === "Unbalanced"
+            ? massConversarvation.granularity
             : undefined;
+    };
 
     return (
         <FormGroup compact style={{ "min-width": "286px" }}>
@@ -36,18 +39,18 @@ export function MassActionConfigForm(props: {
                 checked={massConservation().type === "Balanced"}
                 onChange={(evt) => {
                     props.changeConfig((content) => {
-                        let correctConfig: MassActionEquationsData;
+                        let massActionEquationsData: MassActionEquationsData;
                         if (isMassActionProblemData(content)) {
-                            correctConfig = content.equationsData;
+                            massActionEquationsData = content.equationsData;
                         } else {
-                            correctConfig = content;
+                            massActionEquationsData = content;
                         }
                         if (evt.currentTarget.checked) {
-                            correctConfig.massConservationType = {
+                            massActionEquationsData.massConservationType = {
                                 type: "Balanced",
                             };
                         } else {
-                            correctConfig.massConservationType = {
+                            massActionEquationsData.massConservationType = {
                                 type: "Unbalanced",
                                 granularity: "PerPlace",
                             };
@@ -61,15 +64,17 @@ export function MassActionConfigForm(props: {
                     value={massConservationGranularity() ?? "PerPlace"}
                     onChange={(evt) => {
                         props.changeConfig((content) => {
-                            let correctConfig: MassActionEquationsData;
+                            let massActionEquationsData: MassActionEquationsData;
                             if (isMassActionProblemData(content)) {
-                                correctConfig = content.equationsData;
+                                massActionEquationsData = content.equationsData;
                             } else {
-                                correctConfig = content;
+                                massActionEquationsData = content;
                             }
-                            if (correctConfig.massConservationType.type === "Unbalanced") {
-                                correctConfig.massConservationType.granularity = evt.currentTarget
-                                    .value as RateGranularity;
+                            if (
+                                massActionEquationsData.massConservationType.type === "Unbalanced"
+                            ) {
+                                massActionEquationsData.massConservationType.granularity = evt
+                                    .currentTarget.value as RateGranularity;
                             }
                         });
                     }}
