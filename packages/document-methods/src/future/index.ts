@@ -157,6 +157,26 @@ const cachePlainAnalyzable = (handle: Document, notebook: ValidatableNotebook): 
  */
 const plainChangeListeners = new WeakMap<Document, Set<() => void>>();
 
+/**
+ * A stable string capturing the document's *formal* cells — every cell except
+ * rich text — in notebook order, including each cell's id and serialized
+ * content. {@link Notebook.onChangeFormalCells} compares this signature across
+ * changes and fires only when it differs, so adding, removing, reordering, or
+ * editing a formal cell is reported, while a change confined to rich text (or
+ * any other non-formal field) leaves it unchanged. Content is included so a
+ * formal cell edited in place (e.g. renaming an object) still re-reports.
+ */
+const formalCellsSignature = (document: Document): string => {
+    const parts: Array<string> = [];
+    for (const cellId of document.notebook.cellOrder) {
+        const cell = document.notebook.cellContents[cellId];
+        if (cell?.tag === "formal") {
+            parts.push(`${cellId}:${JSON.stringify(cell.content)}`);
+        }
+    }
+    return parts.join("\u0000");
+};
+
 /** A plain in-memory store whose handle is the document itself. */
 export const plainStore: DocumentStore<Document> = {
     createHandle: (initialDoc) => {
@@ -1254,6 +1274,17 @@ function attachAnalysisNotebook<TShape extends AnalysisShape, Handle>(
         onChange(callback: () => void): () => void {
             return store.subscribe?.(handle, callback) ?? (() => {});
         },
+        onChangeFormalCells(callback: () => void): () => void {
+            const signature = () => formalCellsSignature(doc);
+            let previous = signature();
+            return impl.onChange(() => {
+                const next = signature();
+                if (next !== previous) {
+                    previous = next;
+                    callback();
+                }
+            });
+        },
         add(type: unknown, args?: { content?: string }) {
             if (isRichTextType(type)) {
                 const cell = newRichTextCell((args as { content: string }).content);
@@ -1691,6 +1722,17 @@ function attachNotebook<TShape extends AnyShape, Handle>(
         onChange(callback: () => void): () => void {
             return store.subscribe?.(handle, callback) ?? (() => {});
         },
+        onChangeFormalCells(callback: () => void): () => void {
+            const signature = () => formalCellsSignature(doc);
+            let previous = signature();
+            return impl.onChange(() => {
+                const next = signature();
+                if (next !== previous) {
+                    previous = next;
+                    callback();
+                }
+            });
+        },
         async validate(): Promise<ModelValidationResult> {
             const theory = shape.coreTheory;
             if (!theory) {
@@ -2029,6 +2071,24 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = Document> = Up
      * DocumentStore.subscribe}).
      */
     onChange(callback: () => void): () => void;
+    /**
+     * Subscribe to changes to the notebook's *formal* cells. The callback fires
+     * only when the set of formal-cell ids changes — a cell added, removed, or
+     * reordered — and is skipped for changes that leave that set intact, such as
+     * adding or editing a {@link RichText} comment.
+     *
+     * It is the ready-made source for a validation `createResource`: unlike
+     * {@link Notebook.onChange}, which fires on every change, this dedupes on the
+     * formal-cell id signature, so wiring it to bump a signal re-validates only
+     * when the formal cells actually change. It is built on `onChange` (and so
+     * also reacts to remote edits where the store supports them); a store with no
+     * change source leaves it a no-op subscription.
+     *
+     * Note it keys on formal-cell *identity*, not content: editing a formal
+     * cell's value in place does not change the id set and so does not fire. Use
+     * {@link Notebook.onChange} when content edits must be observed too.
+     */
+    onChangeFormalCells(callback: () => void): () => void;
     /**
      * Whether this notebook's shape declares a cell type structurally equal to
      * the given object or morphism type. A function written against a shape

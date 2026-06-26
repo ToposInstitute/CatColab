@@ -143,7 +143,37 @@ describe("simple-schema formalCells() validation resource", () => {
         unsubscribe();
     });
 
-    test("keying validation on onChange + formal-cell ids dedupes unrelated edits", async () => {
+    test("onChangeFormalCells fires for formal-cell changes but not rich-text edits", () => {
+        const notebook = solidBinder.createNotebook(SimpleSchema, { name: "Company schema" });
+
+        let changes = 0;
+        const unsubscribe = notebook.onChangeFormalCells(() => {
+            changes += 1;
+        });
+
+        // Adding a formal cell changes the signature.
+        const person = notebook.add(Entity, { name: "Person" });
+        expect(changes).toBe(1);
+
+        // Editing a formal cell's content in place changes the signature.
+        person.update({ name: "Human" });
+        expect(changes).toBe(2);
+
+        // Adding rich text does not — it is not a formal cell.
+        notebook.add(RichText, { content: "A note." });
+        expect(changes).toBe(2);
+
+        // Adding another formal cell fires again.
+        notebook.add(AttrType, { name: "String" });
+        expect(changes).toBe(3);
+
+        // After unsubscribing, further formal-cell edits are not reported.
+        unsubscribe();
+        notebook.add(Entity, { name: "Company" });
+        expect(changes).toBe(3);
+    });
+
+    test("keying validation on onChangeFormalCells dedupes unrelated edits", async () => {
         const notebook = solidBinder.createNotebook(SimpleSchema, { name: "Company schema" });
         const person = notebook.add(Entity, { name: "Person" });
         const str = notebook.add(AttrType, { name: "String" });
@@ -153,21 +183,16 @@ describe("simple-schema formalCells() validation resource", () => {
         let validations = 0;
 
         await createRoot(async (dispose) => {
-            // `onChange` bumps a signal; the resource source reads that signal
-            // (so it re-runs on any change) but returns a *stable* signature —
-            // the formal-cell ids — so the resource only refetches when the
-            // formal cells themselves change.
+            // `onChangeFormalCells` fires only when the formal cells change —
+            // added, removed, reordered, or edited in place — and never for an
+            // unrelated edit such as a rich-text comment. So it can bump a signal
+            // the resource source reads directly, with no manual signature: the
+            // method already dedupes on the formal-cell signature internally.
             const [revision, setRevision] = createSignal(0);
-            const unsubscribe = notebook.onChange(() => setRevision((n) => n + 1));
+            const unsubscribe = notebook.onChangeFormalCells(() => setRevision((n) => n + 1));
 
             const [validation] = createResource(
-                () => {
-                    revision();
-                    return notebook
-                        .formalCells()
-                        .map((cell) => cell.id)
-                        .join("\u0000");
-                },
+                () => revision(),
                 () => {
                     validations += 1;
                     return notebook.validate();
@@ -178,22 +203,22 @@ describe("simple-schema formalCells() validation resource", () => {
             expect(validation()?.tag).not.toBe("Illformed");
             expect(validations).toBe(1);
 
-            const formalIdsBefore = notebook.formalCells().map((cell) => cell.id);
-
-            // Add a rich-text comment. `formalCells()` filters rich text out, so
-            // the formal-cell signature is unchanged: no re-validation warranted.
+            // Add a rich-text comment. It is not a formal cell, so the formal-cell
+            // signature is unchanged: no re-validation warranted.
             notebook.add(RichText, { content: "An explanatory note." });
             await settled(validation);
-
-            const formalIdsAfter = notebook.formalCells().map((cell) => cell.id);
-            expect(formalIdsAfter).toEqual(formalIdsBefore);
-            // The signature did not change, so the resource did not refetch.
             expect(validations).toBe(1);
+
+            // Editing a *formal* cell in place changes its serialized content, so
+            // the signature changes and the resource re-validates.
+            person.update({ name: "Human" });
+            await settled(validation);
+            expect(validations).toBe(2);
 
             // Adding a *formal* cell changes the signature and does re-validate.
             notebook.add(Entity, { name: "Company" });
             await settled(validation);
-            expect(validations).toBe(2);
+            expect(validations).toBe(3);
 
             unsubscribe();
             dispose();
