@@ -48,23 +48,24 @@ export interface DocumentStore<Handle> {
      */
     linkForHandle(handle: Handle): Omit<Link, "type"> | undefined;
     /**
-     * Fetch the model document a link `_id` refers to, or `undefined` if the
-     * store does not know it.
+     * Fetch the handle a link `_id` refers to, or `undefined` if the store does
+     * not know it. The referenced document is read off the handle with
+     * {@link viewDocument}, the inverse of {@link linkForHandle}.
      *
      * This is half of the store's contribution to resolution: validation's
      * recursive elaborator (see {@link resolveModelInStore}) walks a model's
-     * instantiations by calling `getDocument` for each referenced id, then
-     * elaborates each against the core theory found by {@link coreTheoryFor}.
-     * Because `validate` resolves a notebook's *own* model by minting a link to
-     * its handle (via {@link linkForHandle}), a store over validatable notebooks
-     * must be able to return the document for that link too.
+     * instantiations by calling `getHandle` for each referenced id, viewing its
+     * document, then elaborating each against the core theory found by
+     * {@link coreTheoryFor}. Because `validate` resolves a notebook's *own* model
+     * by minting a link to its handle (via {@link linkForHandle}), a store over
+     * validatable notebooks must be able to return the handle for that link too.
      */
-    getDocument(id: string): ModelDocument | undefined;
+    getHandle(id: string): Handle | undefined;
     /**
      * The core theory a document's `theory` id elaborates against, or
      * `undefined` if the store has no theory registered for it.
      *
-     * The other half of resolution: each document fetched by {@link getDocument}
+     * The other half of resolution: each document fetched via {@link getHandle}
      * is elaborated against the core theory returned here for its `theory` id. A
      * document whose theory has no registered core theory cannot be resolved, so
      * the notebook whose `validate` triggered resolution reports `Illformed`.
@@ -90,9 +91,10 @@ const instantiationLinks = (doc: ModelDocument): Link[] => {
 
 /**
  * The shared recursive elaborator behind validation. Given a store and a link,
- * it fetches the document (via {@link DocumentStore.getDocument}), recursively
- * resolves the document's own instantiations (so it elaborates against a
- * populated map, not an empty one), elaborates against the document's core
+ * it fetches the handle (via {@link DocumentStore.getHandle}) and views its
+ * document, recursively resolves the document's own instantiations (so it
+ * elaborates against a populated map, not an empty one), elaborates against the
+ * document's core
  * theory (via {@link DocumentStore.coreTheoryFor}), and detects cycles. Stores
  * differ only in how they fetch documents and look up core theories, so this is
  * the single place resolution lives — `validate` delegates here rather than the
@@ -127,10 +129,11 @@ export async function resolveModelInStore<Handle>(
         if (resolving.has(link._id)) {
             throw new Error(`Cyclic instantiation detected while resolving model ${link._id}.`);
         }
-        const doc = store.getDocument(link._id);
-        if (!doc) {
+        const handle = store.getHandle(link._id);
+        if (handle === undefined) {
             throw new Error(`unknown model ${link._id}`);
         }
+        const doc = store.viewDocument(handle) as ModelDocument;
         const coreTheory = store.coreTheoryFor(doc.theory);
         if (!coreTheory) {
             throw new Error(`No core theory registered for document theory "${doc.theory}".`);
@@ -237,6 +240,6 @@ export const plainStore: DocumentStore<Document> = {
         _version: null,
         _server: "",
     }),
-    getDocument: (id) => plainDocumentsById.get(id) as ModelDocument | undefined,
+    getHandle: (id) => plainDocumentsById.get(id),
     coreTheoryFor: (theory) => plainCoreTheories.get(theory),
 };

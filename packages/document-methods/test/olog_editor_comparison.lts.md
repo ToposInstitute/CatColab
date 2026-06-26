@@ -213,7 +213,7 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
     changeDocument: (handle, fn) => handle.setDoc(produce<ModelDocument>(fn)),
     copyValue: (_handle, value) => structuredClone(unwrap(value)),
     linkForHandle: () => undefined,
-    getDocument: () => undefined,
+    getHandle: () => undefined,
     coreTheoryFor: () => undefined,
 };
 
@@ -312,7 +312,7 @@ const solidStore: DocumentStore<SolidStoreHandle> = {
     changeDocument: (handle, fn) => handle.setDoc(produce<ModelDocument>(fn)),
     copyValue: (_handle, value) => structuredClone(unwrap(value)),
     linkForHandle: () => undefined,
-    getDocument: () => undefined,
+    getHandle: () => undefined,
     coreTheoryFor: () => undefined,
 };
 

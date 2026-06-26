@@ -15,16 +15,16 @@ const resolvableShapes = [SimpleOlog, PetriNet];
 
 const shapeFor = (theory: string) => resolvableShapes.find((shape) => shape.theory === theory);
 
-// A bespoke store augmented with `getDocument`/`coreTheoryFor`, so notebooks
-// containing instantiation cells can be validated. Documents are registered by a
-// stable id; the store contributes only how to fetch a document by id
-// (`getDocument`) and how to find a document theory's core theory
-// (`coreTheoryFor`, via `shapeFor`). The shared recursive elaborator (the same
-// one the plain store uses) walks the referenced model's own instantiations,
-// elaborates against the looked-up core theory, and detects cycles, so this
-// store reimplements none of that.
+// A bespoke store augmented with `getHandle`/`coreTheoryFor`, so notebooks
+// containing instantiation cells can be validated. Handles are registered by a
+// stable id; the store contributes only how to fetch a handle by id
+// (`getHandle`, whose document the resolver reads with `viewDocument`) and how
+// to find a document theory's core theory (`coreTheoryFor`, via `shapeFor`). The
+// shared recursive elaborator (the same one the plain store uses) walks the
+// referenced model's own instantiations, elaborates against the looked-up core
+// theory, and detects cycles, so this store reimplements none of that.
 //
-// `failOnResolve` makes `getDocument` return `undefined`, so resolution rejects
+// `failOnResolve` makes `getHandle` return `undefined`, so resolution rejects
 // with "unknown model" and `validate` reports `Illformed` — modelling a store
 // that cannot fetch a referenced document.
 function createResolvingStore(): {
@@ -59,7 +59,7 @@ function createResolvingStore(): {
             _version: null,
             _server: "",
         }),
-        getDocument: (id) => (failOnResolve.value ? undefined : byId.get(id)),
+        getHandle: (id) => (failOnResolve.value ? undefined : byId.get(id)),
         coreTheoryFor: (theory) => shapeFor(theory)?.coreTheory,
     };
 

@@ -315,7 +315,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
      * Elaborate this notebook's own model by minting a link to its own handle
      * and resolving it through the shared resolver against the store. Resolution
      * is the recursive workhorse — it walks this notebook's instantiations
-     * (resolving each via {@link DocumentStore.getDocument}), and elaborates
+     * (resolving each via {@link DocumentStore.getHandle}), and elaborates
      * against the document's core theory (via {@link DocumentStore.coreTheoryFor})
      * — so `validate` and `migrateTo` delegate here rather than building the
      * instantiated map and elaborating themselves. The shape's `coreTheory` is
@@ -1173,7 +1173,7 @@ type CoreTheoryMethods<TShape extends AnyShape, Handle> =
                *
                * Asynchronous because a notebook may contain instantiation cells,
                * whose referenced models are resolved through the store (which
-               * fetches them via {@link DocumentStore.getDocument} and elaborates
+               * fetches them via {@link DocumentStore.getHandle} and elaborates
                * them against {@link DocumentStore.coreTheoryFor}, handling any
                * cycles). A notebook with instantiations whose resolution fails
                * validates as `Illformed`.
@@ -1191,7 +1191,7 @@ type CoreTheoryMethods<TShape extends AnyShape, Handle> =
                * pushforward migration elaborates the model. Asynchronous for the
                * same reason as {@link Notebook.validate}: a notebook with
                * instantiation cells resolves them through the store (via
-               * {@link DocumentStore.getDocument} and
+               * {@link DocumentStore.getHandle} and
                * {@link DocumentStore.coreTheoryFor}).
                */
               migrateTo<TTarget extends CreatableShape>(
