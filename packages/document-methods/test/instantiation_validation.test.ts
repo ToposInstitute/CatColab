@@ -1,6 +1,7 @@
 import type { ModelDocument } from "catcolab-document-methods";
 import type { Link } from "catcolab-document-types";
 import {
+	type Binder,
 	binder,
 	createBinder,
 	type DocumentStore,
@@ -8,46 +9,26 @@ import {
 } from "catcolab-documents";
 import { PetriNet, Place } from "catcolab-logics/petri-net";
 import { SimpleOlog, Type } from "catcolab-logics/simple-olog";
-import {
-	DblModel,
-	DblModelMap,
-	type DblTheory,
-	elaborateModel,
-	type ModelNotebook,
-} from "catlog-wasm";
+import { DblModel } from "catlog-wasm";
 import { v7 } from "uuid";
 import { describe, expect, test } from "vitest";
 
-// The shapes whose documents this store can resolve. A referenced model is
-// elaborated against its *own* core theory (looked up by the document's
-// `theory` id), not a hardcoded one, so a Petri-net model resolves against
+// The shapes whose documents this store can resolve, looked up by the
+// document's `theory` id so a referenced model is validated against its own
+// shape (and thus its own core theory): a Petri-net model resolves against
 // `ThSymMonoidalCategory` while an olog resolves against `ThCategory`.
 const resolvableShapes = [SimpleOlog, PetriNet];
 
-const coreTheoryFor = (theory: string): DblTheory | undefined =>
-	resolvableShapes.find((shape) => shape.theory === theory)?.coreTheory;
-
-/** The instantiation links a model document references in its own notebook. */
-function instantiationLinks(doc: ModelDocument): Link[] {
-	const links: Link[] = [];
-	for (const cellId of doc.notebook.cellOrder) {
-		const cell = doc.notebook.cellContents[cellId];
-		if (cell?.tag !== "formal") {
-			continue;
-		}
-		const judgment = cell.content as { tag: string; model?: Link | null };
-		if (judgment.tag === "instantiation" && judgment.model) {
-			links.push(judgment.model);
-		}
-	}
-	return links;
-}
+const shapeFor = (theory: string) =>
+	resolvableShapes.find((shape) => shape.theory === theory);
 
 // A plain store augmented with `resolveModel`, so notebooks containing
 // instantiation cells can be validated. Documents are registered by a stable
-// id; `resolveModel` elaborates the referenced document against its own core
-// theory, recursively resolving the referenced model's own instantiations and
-// detecting cycles along the way.
+// id; `resolveModel` resolves a referenced model by attaching a notebook to its
+// handle and calling `validate()`, reusing the notebook machinery (which walks
+// the model's own instantiations and elaborates against the shape's core
+// theory) rather than reimplementing it. The store only tracks ids whose
+// resolution is in progress, to detect cyclic instantiations.
 function createResolvingStore(): {
 	store: DocumentStore<ModelDocument>;
 	failOnResolve: { value: boolean };
@@ -57,6 +38,9 @@ function createResolvingStore(): {
 	const failOnResolve = { value: false };
 	// Ids whose resolution is in progress, used to detect cyclic instantiations.
 	const resolving = new Set<string>();
+	// Assigned below; a binder over this same store, used to attach a notebook
+	// to a referenced document's handle so its own `validate()` can be run.
+	let selfBinder: Binder<ModelDocument>;
 
 	const idFor = (doc: ModelDocument): string => {
 		let id = ids.get(doc);
@@ -81,28 +65,25 @@ function createResolvingStore(): {
 		if (!doc) {
 			throw new Error(`unknown model ${link._id}`);
 		}
-		const coreTheory = coreTheoryFor(doc.theory);
-		if (!coreTheory) {
+		const shape = shapeFor(doc.theory);
+		if (!shape) {
 			throw new Error(
-				`No core theory registered for document theory "${doc.theory}"`,
+				`No shape registered for document theory "${doc.theory}"`,
 			);
 		}
 		resolving.add(link._id);
 		try {
-			// Recursively resolve the referenced model's own instantiations so
-			// it elaborates against a populated map, not an empty one.
-			const instantiated = new DblModelMap();
-			for (const childLink of instantiationLinks(doc)) {
-				if (!instantiated.has(childLink._id)) {
-					instantiated.set(childLink._id, await resolveModel(childLink));
-				}
+			// Resolve by validating the referenced notebook: `validate()` walks
+			// its instantiations (calling back into this `resolveModel` for each,
+			// so the `resolving` set catches cycles) and elaborates against the
+			// shape's core theory.
+			const result = await selfBinder
+				.loadNotebookFromHandle(shape, doc)
+				.validate();
+			if (result.tag === "Illformed") {
+				throw new Error(result.error);
 			}
-			return elaborateModel(
-				doc.notebook as unknown as ModelNotebook,
-				instantiated,
-				coreTheory,
-				link._id,
-			);
+			return result.model;
 		} finally {
 			resolving.delete(link._id);
 		}
@@ -124,6 +105,8 @@ function createResolvingStore(): {
 		}),
 		resolveModel,
 	};
+
+	selfBinder = createBinder(store);
 
 	return { store, failOnResolve };
 }
