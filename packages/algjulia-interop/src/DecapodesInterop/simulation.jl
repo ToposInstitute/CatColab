@@ -16,7 +16,6 @@ struct DecapodesSystem
     duration::Int
     generate::Any
     plotVariables::Dict{String, Any}
-    uuiddict::Dict{Symbol, String}
 end
 
 mutable struct Operators
@@ -28,6 +27,7 @@ end
 
 Base.getindex(the::Operators, var::Symbol) = the.operators[var]
 
+# TODO HasDeltaSet
 function (ops::Operators)(mesh::Any, symbol::Symbol; hodge=GeometricHodge())
     op = @match symbol begin
         :♭♯ => x -> ops[:♭♯_m] * x
@@ -42,55 +42,56 @@ function (ops::Operators)(mesh::Any, symbol::Symbol; hodge=GeometricHodge())
     return (args...) -> op(args...)
 end
 
-function default_initial_conditions(pode::SummationDecapode, sd)
-    states = infer_states(pode)
-    pairs = map(states) do v
-        name = pode[v, :name]
-        type = pode[v, :type]
-        n = @match type begin
-            :Form0     => nparts(sd, :V)
-            :Form1     => nparts(sd, :E)
-            :Form2     => nparts(sd, :Tri)
-            :DualForm0 => nparts(sd, :Tri)
-            :DualForm1 => nparts(sd, :E)
-            :DualForm2 => nparts(sd, :V)
-            :Literal   => 1
-            :Constant  => 1
-            _          => error("Unknown type $type for variable $name")
-        end
-        name => randn(Float64, n)  # random instead of zeros
-    end
-    ComponentArray(; pairs...)
-end
+const DEFAULT_DURATION = 10
+const DEFAULT_CONSTANTS = ComponentArray()
+const DEFAULT_ICS = Dict()
 
-function initial_conditions(pode::SummationDecapode, geometry::Geometry)
-    # n_dist = Normal(pi)
-    # n = [Distributions.pdf(n_dist, t)*(√(2pi))*7.2 + 0.08 - 5e-2 for t in range(0,2pi; length=ne(dualmesh))]
-    n = GaussianIC(geometry)
+function DecapodesSystem(pode::SummationDecapode; duration=DEFAULT_DURATION, mesh=nothing, constants=DEFAULT_CONSTANTS, ics=DEFAULT_ICS)
     
-    w_dist = Normal(pi, 20)
-    w = [Distributions.pdf(w_dist, t) for t in range(0,2pi; length=ne(dualmesh))]
-    
-    dX = dualmesh[:length]
-
-    ComponentArray(n = n, w = w, Hydrodynamics_dX = dX)
-end
-
-function DecapodesSystem(pode::SummationDecapode; duration=10)
-    # geometry = Geometry(PREDEFINED_MESHES[:Rectangle])
-
-    s,sd = circle(9,500)
-    geometry = Geometry(Constant,s,sd)    
-
-    u0 = klausmeier_initial_conditions(pode, geometry)
+    geometry = Geometry(mesh)
+    @info ics
+    u0 = initial_conditions(ics, geometry)
 
     ops = Operators()
     ops.operators[:square_dual0] = x -> x.^2
     
     plotVariables = Dict("n" => true, "w" => false, "Hydrodynamics_dX" => false)
 
-    return DecapodesSystem(pode, geometry, u0, duration, ops, plotVariables, Dict())
+    return DecapodesSystem(pode, geometry, u0, duration, ops, plotVariables), constants
 end
+
+function Base.show(io::IO, d::DecapodesSystem)
+	show(io, "$(d.pode)")
+end
+
+dimension(system::DecapodesSystem) = dimension(system.geometry)
+
+points(system::DecapodesSystem) = system.geometry.dualmesh[:point]
+
+""" This stores the result of the simulation. 
+"""
+struct SolutionResult
+    soln::ODESolution  
+    system::DecapodesSystem
+end
+
+function Base.run(system::DecapodesSystem, params::ComponentArray; callback=nothing)::SolutionResult
+    simulator = evalsim(system.pode; dimension=dimension(system))
+    f = Base.invokelatest(simulator, system.geometry.dualmesh, system.generate, GeometricHodge())
+    prob = ODEProblem(f, system.init, system.duration, params)
+    # dt = max(0.01, system.duration / MAX_FRAMES)
+    soln = solve(prob, Tsit5(), saveat=0.01; callback=callback)
+    # soln
+    SolutionResult(soln, system)
+end
+
+function Base.getindex(result::SolutionResult, state_var::Symbol, t::Int, nth=nothing)
+    out = getproperty(result.soln.u[t], state_var)
+    isnothing(nth) ? out : out[nth]
+end
+
+
+
 
 function DecapodesSystem(a::Types.Analysis; hodge=GeometricHodge())
     pode, vars = diagram_to_pode(a.model, a.diagram)
@@ -113,37 +114,7 @@ function DecapodesSystem(a::Types.Analysis; hodge=GeometricHodge())
 
     # initial conditions
     u0 = initial_conditions(analysis["initialConditions"], geometry, uuid2symb)
-
-    symb2uuid = Dict(v => k for (k, v) in pairs(uuid2symb))
     
     # return the system
-    return DecapodesSystem(pode, geometry, u0, duration, ops, plotVariables, symb2uuid) 
-end
-
-function Base.show(io::IO, d::DecapodesSystem)
-	show(io, "$(d.pode)")
-end
-
-points(system::DecapodesSystem) = system.geometry.dualmesh[:point]
-
-""" This stores the result of the simulation. 
-"""
-struct SolutionResult
-    soln::ODESolution    
-    system::DecapodesSystem
-end
-
-function Base.run(system::DecapodesSystem, params::ComponentArray; callback=nothing)::SolutionResult
-    simulator = evalsim(system.pode; dimension=1)
-    f = Base.invokelatest(simulator, system.geometry.dualmesh, system.generate, DiagonalHodge())
-    prob = ODEProblem(f, system.init, system.duration, params)
-    dt = max(0.01, system.duration / MAX_FRAMES)
-    soln = solve(prob, Tsit5(), saveat=dt; callback=callback)
-    # soln
-    SolutionResult(soln, system)
-end
-
-function Base.getindex(result::SolutionResult, state_var::Symbol, t::Int, nth=nothing)
-    out = getproperty(result.soln.u[t], state_var)
-    isnothing(nth) ? out : out[nth]
+    return DecapodesSystem(pode, geometry, u0, duration, ops, plotVariables) 
 end
