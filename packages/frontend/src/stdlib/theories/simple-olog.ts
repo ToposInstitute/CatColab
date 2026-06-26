@@ -16,6 +16,11 @@ export default function createOlogTheory(theoryMeta: TheoryMeta): Theory {
     return new Theory({
         ...theoryMeta,
         theory: thCategory.theory(),
+        equationCellMeta: {
+            name: "Fact",
+            description: "Add a fact relating aspects",
+            shortcut: ["F"],
+        },
         pushforwards: [
             {
                 target: "simple-schema",
