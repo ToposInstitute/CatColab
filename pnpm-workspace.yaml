@@ -1,5 +1,8 @@
 # 9 days, in minutes
 minimumReleaseAge: 12960
+minimumReleaseAgeExclude:
+  - wasm-pack
+  - echarts
 packages:
   - "dev-docs"
   - "packages/backend/pkg"
@@ -7,3 +10,4 @@ packages:
   - "packages/document-methods"
   - "packages/ui-components"
   - "packages/gaios"
+  - "tools/vite-plugin-monorepo-dedupe"

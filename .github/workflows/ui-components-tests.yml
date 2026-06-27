@@ -1,0 +1,52 @@
+name: ui-components-tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/ui-components/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "flake.nix"
+      - "flake.lock"
+      - ".github/workflows/ui-components-tests.yml"
+  pull_request:
+    paths:
+      - "packages/ui-components/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "flake.nix"
+      - "flake.lock"
+      - ".github/workflows/ui-components-tests.yml"
+
+jobs:
+  ui-components-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v25
+
+      - name: Configure Cachix
+        uses: cachix/cachix-action@v14
+        with:
+          name: catcolab-jmoggr
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+
+      # The ui-components-tests devShell provides nodejs_24, pnpm, and
+      # playwright-driver.browsers (set via PLAYWRIGHT_BROWSERS_PATH).
+      # PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 is exported from the shell so
+      # `pnpm install` will not try to fetch browsers.
+      # See https://wiki.nixos.org/wiki/Playwright.
+      - name: Run ui-components tests
+        run: |
+          nix develop .#ui-components-tests --command bash -c '
+            set -euo pipefail
+            pnpm install --frozen-lockfile
+            pnpm --filter ./packages/ui-components run test
+          '

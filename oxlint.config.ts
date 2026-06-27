@@ -75,6 +75,12 @@ export default defineConfig({
         // Ternary-as-statement (`condition ? doA() : doB()`) is idiomatic in
         // this codebase for concise branching in callbacks.
         "no-unused-expressions": ["warn", { allowTernary: true }],
+        // Requires adding explicit `return undefined` in places seems to add too much noise
+        "consistent-return": "off",
+        // We use _ prefix in places
+        "no-underscore-dangle": "off",
+        // We have some tests that just see if anything breaks when things are run
+        "vitest/expect-expect": "off",
         // Allow underscore-prefixed names for intentionally unused bindings
         // (e.g., `_e` in catch blocks, `_unused` destructured fields).
         "no-unused-vars": [

@@ -5,7 +5,7 @@ import { Navigate, type RouteDefinition, Router, type RouteSectionProps } from "
 import { type FirebaseOptions, initializeApp } from "firebase/app";
 import { getAuth, signOut } from "firebase/auth";
 import { FirebaseProvider } from "solid-firebase";
-import { createResource, createSignal, ErrorBoundary, lazy, Show } from "solid-js";
+import { createResource, createSignal, ErrorBoundary, lazy, onMount, Show } from "solid-js";
 import invariant from "tiny-invariant";
 import * as uuid from "uuid";
 
@@ -31,20 +31,15 @@ const Root = (props: RouteSectionProps) => {
     const firebaseApp = initializeApp(firebaseOptions);
     const api = new Api({ serverUrl, repoUrl, firebaseApp });
 
-    const [isSessionInvalid] = createResource(
-        // oxlint-disable-next-line solid/reactivity -- createResource fetcher
-        async () => {
-            const result = await api.rpc.validate_session.query();
-            if (result.tag === "Err") {
-                await signOut(getAuth(firebaseApp));
-                return true;
-            }
-            return false;
-        },
-        {
-            initialValue: false,
-        },
-    );
+    const [isSessionInvalid, setIsSessionInvalid] = createSignal(false);
+
+    onMount(async () => {
+        const result = await api.rpc.validate_session.query();
+        if (result.tag === "Err") {
+            await signOut(getAuth(firebaseApp));
+            setIsSessionInvalid(true);
+        }
+    });
 
     const theories = stdTheories;
     const models = createModelLibraryWithApi(api, theories);

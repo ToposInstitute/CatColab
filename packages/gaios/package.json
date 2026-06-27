@@ -32,6 +32,7 @@
         "uuid": "^11.0.3"
     },
     "devDependencies": {
+        "@catcolab-dev-tools/vite-plugin-monorepo-dedupe": "link:../../tools/vite-plugin-monorepo-dedupe",
         "@types/react": "^18.3.3",
         "@types/uuid": "^10.0.0",
         "@vitejs/plugin-react": "^4.3.1",
@@ -39,7 +40,7 @@
         "eslint-plugin-solid": "^0.14.5",
         "nodemon": "^3.1.9",
         "pushwork": "^1.1.8",
-        "typescript": "^5.2.2",
+        "typescript": "^6.0.3",
         "vite": "^5.3.4",
         "vite-plugin-css-injected-by-js": "^3.5.2",
         "vite-plugin-solid": "^2.10.2",

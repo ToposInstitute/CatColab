@@ -2,7 +2,7 @@ import { useNavigate } from "@solidjs/router";
 import { createMemo, createResource, For, Show, useContext } from "solid-js";
 import { stringify as uuidStringify } from "uuid";
 
-import { DocumentTypeIcon } from "catcolab-ui-components";
+import { DocumentTypeIcon, type FocusHandle } from "catcolab-ui-components";
 import type { Document, Link } from "catlog-wasm";
 import { type Api, type LiveDocWithRef, useApi } from "../api";
 import { TheoryLibraryContext } from "../theory";
@@ -12,6 +12,8 @@ import { DocumentMenu } from "./document_menu";
 export function DocumentSidebar(props: {
     primaryDoc?: LiveDocWithRef;
     secondaryDoc?: LiveDocWithRef;
+    primaryPaneFocus: FocusHandle;
+    secondaryPaneFocus: FocusHandle;
     refetchPrimaryDoc: () => void;
     refetchSecondaryDoc: () => void;
 }) {
@@ -21,6 +23,8 @@ export function DocumentSidebar(props: {
                 <RelatedDocuments
                     primaryDoc={primaryDoc()}
                     secondaryDoc={props.secondaryDoc}
+                    primaryPaneFocus={props.primaryPaneFocus}
+                    secondaryPaneFocus={props.secondaryPaneFocus}
                     refetchPrimaryDoc={props.refetchPrimaryDoc}
                     refetchSecondaryDoc={props.refetchSecondaryDoc}
                 />
@@ -59,6 +63,8 @@ async function getDocParent(doc: Document, api: Api): Promise<LiveDocWithRef | u
 function RelatedDocuments(props: {
     primaryDoc: LiveDocWithRef;
     secondaryDoc?: LiveDocWithRef;
+    primaryPaneFocus: FocusHandle;
+    secondaryPaneFocus: FocusHandle;
     refetchPrimaryDoc: () => void;
     refetchSecondaryDoc: () => void;
 }) {
@@ -78,6 +84,8 @@ function RelatedDocuments(props: {
                         indent={1}
                         primaryDoc={props.primaryDoc}
                         secondaryDoc={props.secondaryDoc}
+                        primaryPaneFocus={props.primaryPaneFocus}
+                        secondaryPaneFocus={props.secondaryPaneFocus}
                         refetchPrimaryDoc={props.refetchPrimaryDoc}
                         refetchSecondaryDoc={props.refetchSecondaryDoc}
                     />
@@ -92,6 +100,8 @@ function DocumentsTreeNode(props: {
     indent: number;
     primaryDoc: LiveDocWithRef;
     secondaryDoc?: LiveDocWithRef;
+    primaryPaneFocus: FocusHandle;
+    secondaryPaneFocus: FocusHandle;
     refetchPrimaryDoc: () => void;
     refetchSecondaryDoc: () => void;
 }) {
@@ -114,12 +124,22 @@ function DocumentsTreeNode(props: {
             .map((rel) => uuidStringify(rel.refId));
     });
 
-    // oxlint-disable-next-line solid/reactivity -- createResource fetcher
-    const [childDocs] = createResource(childRefIds, async (refIds) => {
+    const childDocSource = createMemo(() => {
+        const refIds = childRefIds();
+        return {
+            createdAtByRefId: Object.fromEntries(
+                refIds.map((refId) => [refId, userState.documents[refId]?.createdAt ?? 0]),
+            ),
+            isParentOwnerless: props.doc.docRef.permissions.anyone === "Own",
+            refIds,
+        };
+    });
+
+    const [childDocs] = createResource(childDocSource, async (source) => {
         // Individual failures are skipped to prevent one corrupt document
         // from crashing the entire sidebar.
         const childDocs = await Promise.all(
-            refIds.map(async (refId) => {
+            source.refIds.map(async (refId) => {
                 try {
                     return await api.getLiveDoc(refId);
                 } catch (e) {
@@ -132,21 +152,18 @@ function DocumentsTreeNode(props: {
             (doc): doc is NonNullable<typeof doc> => doc !== null,
         );
 
-        const isParentOwnerless = props.doc.docRef.permissions.anyone === "Own";
-
         // Don't show ownerless children or deleted documents
         const filtered = loadedChildDocs.filter(
             (childDoc) =>
                 !childDoc.docRef.isDeleted &&
-                (isParentOwnerless || childDoc.docRef.permissions.anyone !== "Own"),
+                (source.isParentOwnerless || childDoc.docRef.permissions.anyone !== "Own"),
         );
 
         // Sort by createdAt descending (newest first)
-        const docs = userState.documents;
         filtered.sort((a, b) => {
-            const aInfo = a.docRef.refId ? docs[a.docRef.refId] : undefined;
-            const bInfo = b.docRef.refId ? docs[b.docRef.refId] : undefined;
-            return (bInfo?.createdAt ?? 0) - (aInfo?.createdAt ?? 0);
+            const aCreatedAt = a.docRef.refId ? (source.createdAtByRefId[a.docRef.refId] ?? 0) : 0;
+            const bCreatedAt = b.docRef.refId ? (source.createdAtByRefId[b.docRef.refId] ?? 0) : 0;
+            return bCreatedAt - aCreatedAt;
         });
 
         return filtered;
@@ -159,6 +176,8 @@ function DocumentsTreeNode(props: {
                 indent={props.indent}
                 primaryDoc={props.primaryDoc}
                 secondaryDoc={props.secondaryDoc}
+                primaryPaneFocus={props.primaryPaneFocus}
+                secondaryPaneFocus={props.secondaryPaneFocus}
                 refetchPrimaryDoc={props.refetchPrimaryDoc}
                 refetchSecondaryDoc={props.refetchSecondaryDoc}
             />
@@ -169,6 +188,8 @@ function DocumentsTreeNode(props: {
                         indent={props.indent + 1}
                         primaryDoc={props.primaryDoc}
                         secondaryDoc={props.secondaryDoc}
+                        primaryPaneFocus={props.primaryPaneFocus}
+                        secondaryPaneFocus={props.secondaryPaneFocus}
                         refetchPrimaryDoc={props.refetchPrimaryDoc}
                         refetchSecondaryDoc={props.refetchSecondaryDoc}
                     />
@@ -183,6 +204,8 @@ function DocumentsTreeLeaf(props: {
     indent: number;
     primaryDoc: LiveDocWithRef;
     secondaryDoc?: LiveDocWithRef;
+    primaryPaneFocus: FocusHandle;
+    secondaryPaneFocus: FocusHandle;
     refetchPrimaryDoc: () => void;
     refetchSecondaryDoc: () => void;
 }) {
@@ -193,6 +216,11 @@ function DocumentsTreeLeaf(props: {
     const clickedRefId = createMemo(() => props.doc.docRef.refId);
     const primaryRefId = createMemo(() => props.primaryDoc.docRef.refId);
     const secondaryRefId = createMemo(() => props.secondaryDoc?.docRef.refId);
+    const isPrimary = () => clickedRefId() === primaryRefId();
+    const isSecondary = () => clickedRefId() === secondaryRefId();
+    const isFocused = () =>
+        (isPrimary() && props.primaryPaneFocus.hasFocus()) ||
+        (isSecondary() && props.secondaryPaneFocus.hasFocus());
 
     const iconLetters = createMemo(() => {
         const doc = props.doc.liveDoc.doc;
@@ -211,14 +239,17 @@ function DocumentsTreeLeaf(props: {
     const handleClick = async () => {
         // If clicking on primary or secondary doc, navigate to just that doc
         if (clickedRefId() === primaryRefId() || clickedRefId() === secondaryRefId()) {
+            props.primaryPaneFocus.setFocused(true);
             navigate(`/${createLinkPart(props.doc)}`);
         } else {
             // Otherwise, open it as a side panel or put on the left if it is a parent doc
             const clickedDoc = props.doc;
             const parentOfPrimary = await getDocParent(props.primaryDoc.liveDoc.doc, api);
             if (parentOfPrimary && clickedDoc.docRef.refId === parentOfPrimary.docRef.refId) {
+                props.primaryPaneFocus.setFocused(true);
                 navigate(`/${createLinkPart(clickedDoc)}/${createLinkPart(props.primaryDoc)}`);
             } else {
+                props.secondaryPaneFocus.setFocused(true);
                 navigate(`/${createLinkPart(props.primaryDoc)}/${createLinkPart(clickedDoc)}`);
             }
         }
@@ -229,7 +260,8 @@ function DocumentsTreeLeaf(props: {
             onClick={handleClick}
             class="related-document"
             classList={{
-                active: props.doc.docRef.refId === props.primaryDoc.docRef.refId,
+                active: isPrimary() || isSecondary(),
+                focused: isFocused(),
             }}
             style={{ "padding-left": `${props.indent * 16}px` }}
         >
