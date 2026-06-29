@@ -40,5 +40,12 @@ instance I3 : WeightedGraph := [
     E := [e1, e2]
 ]
 
+instance SelfNamed : WeightedGraph := [
+    V := [self, v2],
+    E := [e],
+    src(e) := self,
+    tgt(e) := v2
+]
+
 #(should_fail)
 syn I.E
