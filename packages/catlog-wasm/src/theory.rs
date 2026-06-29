@@ -324,6 +324,14 @@ impl DblTheory {
             }
         })
     }
+
+    /// Does the theory support elaboriating diagrams?
+    ///
+    /// Eventually diagrams will be replaced by instances.
+    #[wasm_bindgen(js_name = "canElaborateDiagrams")]
+    pub fn can_elaborate_diagrams(&self) -> bool {
+        matches!(&self.0, DblTheoryBox::Discrete(_))
+    }
 }
 
 /// Mapping from object types to numerical indices.

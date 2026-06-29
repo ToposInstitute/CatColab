@@ -6,10 +6,10 @@ import { Model, Nb } from "catcolab-document-methods";
 import type { InstantiatedModel, ModelJudgment, MorDecl, ObDecl } from "catcolab-document-types";
 import { type FocusHandle } from "catcolab-ui-components";
 import { type CellConstructor, type FormalCellEditorProps, NotebookEditor } from "../notebook";
+import { ModelInstantiationCellEditor } from "./model_instantiation_cell.tsx";
 import { TheoryLibraryContext, type ModelTypeMeta, type Theory } from "../theory";
 import { LiveModelContext } from "./context";
 import type { LiveModelDoc } from "./document";
-import { InstantiationCellEditor } from "./instantiation_cell_editor";
 
 /** Notebook editor for a model of a double theory.
  */
@@ -95,11 +95,9 @@ export function ModelCellEditor(props: FormalCellEditorProps<ModelJudgment>) {
                 }}
             </Match>
             <Match when={props.content.tag === "instantiation"}>
-                <InstantiationCellEditor
+                <ModelInstantiationCellEditor
                     instantiation={props.content as InstantiatedModel}
-                    modifyInstantiation={(f) =>
-                        props.changeContent((content) => f(content as InstantiatedModel))
-                    }
+                    changeContent={(f) => props.changeContent((c) => f(c as InstantiatedModel))}
                     focus={props.focus}
                     actions={props.actions}
                 />
