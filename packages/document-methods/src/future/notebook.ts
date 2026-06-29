@@ -71,7 +71,7 @@ import {
     type ValidatableNotebook,
 } from "./definitions";
 import { type DocumentStore, plainDocumentId, plainStore, resolveModelInStore } from "./store";
-import { validateAddArgs, type ValidationResult } from "./validation";
+import { validateAddArgs, type Result } from "./validation";
 
 /**
  * A stable string capturing the document's *formal* cells — every cell except
@@ -886,8 +886,24 @@ function attachNotebook<TShape extends AnyShape, Handle>(
         get(
             arg: RichTextType | InstantiationType | ObjectDef | MorphismDef,
             id: string,
-        ): NotebookCell | undefined {
-            return impl.cellsOf(arg).find((cell) => cell.id === id);
+        ): Result<NotebookCell> {
+            const cell = impl.cellsOf(arg).find((cell) => cell.id === id);
+            if (cell !== undefined) {
+                return { value: cell };
+            }
+            const existsWithOtherType = impl
+                .cells()
+                .some((other) => (other as { id: string }).id === id);
+            return {
+                issues: [
+                    existsWithOtherType
+                        ? {
+                              message: `Cell "${id}" is not of the expected type.`,
+                              path: ["id"],
+                          }
+                        : { message: `No cell with id "${id}".`, path: ["id"] },
+                ],
+            };
         },
         add(
             type: unknown,
@@ -1126,16 +1142,19 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = Document> = Up
     cellsOf<Def extends MorphismDef>(type: Def): Array<MorphismCell<Def>>;
     cellsOf<S extends AnyShape>(shape: S): Array<NotebookCell<S>>;
     /**
-     * Handle for the single cell of the given type with the given id, or
-     * `undefined` if no such cell exists. The type selects the precise handle
-     * just as {@link Notebook.cellsOf} does, so a cell whose id matches but
-     * whose type differs is not returned.
+     * Look up the single cell of the given type with the given id. The type
+     * selects the precise handle just as {@link Notebook.cellsOf} does, so a
+     * cell whose id matches but whose type differs is not returned.
+     *
+     * Returns a [Standard Schema](https://standardschema.dev) {@link Result}: a
+     * `{ value: cell }` success, or a `{ issues }` failure when no cell with
+     * that id exists or the cell has a different type.
      */
-    get(type: RichTextType, id: string): RichTextCell | undefined;
-    get(type: InstantiationType, id: string): InstantiationCell<Handle> | undefined;
-    get<Def extends AnalysisDef>(type: Def, id: string): AnalysisCell<Def> | undefined;
-    get<Def extends ObjectDef>(type: Def, id: string): ObjectCell<Def> | undefined;
-    get<Def extends MorphismDef>(type: Def, id: string): MorphismCell<Def> | undefined;
+    get(type: RichTextType, id: string): Result<RichTextCell>;
+    get(type: InstantiationType, id: string): Result<InstantiationCell<Handle>>;
+    get<Def extends AnalysisDef>(type: Def, id: string): Result<AnalysisCell<Def>>;
+    get<Def extends ObjectDef>(type: Def, id: string): Result<ObjectCell<Def>>;
+    get<Def extends MorphismDef>(type: Def, id: string): Result<MorphismCell<Def>>;
     /**
      * Add a cell to the notebook. The kind of cell is selected by the first
      * argument:
@@ -1257,14 +1276,13 @@ export interface Binder<Handle> {
     /**
      * Build a notebook around an existing plain document by initializing store
      * storage from it. Returns a [Standard Schema](https://standardschema.dev)
-     * {@link ValidationResult}: a `{ value: Notebook }` success, or a
-     * `{ issues }` failure when the document's theory does not match the
-     * shape's theory.
+     * {@link Result}: a `{ value: Notebook }` success, or a `{ issues }`
+     * failure when the document's theory does not match the shape's theory.
      */
     loadNotebook<TShape extends CreatableShape>(
         shape: TShape,
         document: ModelDocument,
-    ): ValidationResult<Notebook<TShape, Handle>>;
+    ): Result<Notebook<TShape, Handle>>;
     /**
      * Build a notebook around an existing store handle, e.g. an Automerge
      * `DocHandle` found in a repo. No store storage is created.
@@ -1308,7 +1326,7 @@ export function createBinder<Handle>(store: DocumentStore<Handle>): Binder<Handl
         loadNotebook<TShape extends CreatableShape>(
             shape: TShape,
             document: ModelDocument,
-        ): ValidationResult<Notebook<TShape, Handle>> {
+        ): Result<Notebook<TShape, Handle>> {
             if (document.theory !== shape.theory) {
                 return {
                     issues: [

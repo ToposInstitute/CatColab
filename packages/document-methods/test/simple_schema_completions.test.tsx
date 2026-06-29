@@ -147,9 +147,9 @@ describe("simple-schema completions consumer", () => {
             // generator's id is its cell's id); the reactive resource above
             // re-validates into a fresh elaborated model.
             const onSelect = (id: QualifiedName) => {
-                const cell = notebook.get(AttrType, id);
-                if (cell) {
-                    attr.update({ to: cell });
+                const result = notebook.get(AttrType, id);
+                if (!result.issues) {
+                    attr.update({ to: result.value });
                 }
             };
 

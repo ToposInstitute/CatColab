@@ -250,27 +250,40 @@ const company = notebook.add(Entity, { name: "Company" });
 const mapping = notebook.add(Mapping, { name: "employer", from: person, to: company });
 ```
 
+`get` returns a [Standard Schema](https://standardschema.dev) result: a
+`{ value }` on success, or a `{ issues }` failure.
+
 ```ts
 const found = notebook.get(Entity, person.id);
-console.log("found:", found?.name);
+console.log("issues:", found.issues ?? []);
+if (!found.issues) {
+    console.log("found:", found.value.name);
+}
 ```
 
 ```
+issues: []
 found: Person
 ```
 
+A missing id, or an id whose cell has a different type, yields a failure result
+whose `issues` describe the problem.
+
 ```ts
 const missing = notebook.get(Entity, "00000000-0000-0000-0000-000000000000");
-console.log("missing:", missing);
+console.log("missing:", missing.issues?.map((issue) => issue.message).join("; "));
 
 // `employer` is a mapping, not an entity.
 const wrongType = notebook.get(Entity, mapping.id);
-console.log("wrong type:", wrongType);
+console.log(
+    "wrong type:",
+    wrongType.issues?.map((issue) => issue.message.replace(mapping.id, "<id>")).join("; "),
+);
 ```
 
 ```
-missing: undefined
-wrong type: undefined
+missing: No cell with id "00000000-0000-0000-0000-000000000000".
+wrong type: Cell "<id>" is not of the expected type.
 ```
 
 ## Type safety

@@ -34,16 +34,16 @@ import {
  * `message` and an optional `path`. Aliased from the spec's own
  * {@link StandardSchemaV1.Issue}.
  */
-export type ValidationIssue = StandardSchemaV1.Issue;
+export type Issue = StandardSchemaV1.Issue;
 
 /**
- * A [Standard Schema](https://standardschema.dev) validation result: either a
- * success carrying the produced `value`, or a failure carrying an `issues`
- * array. Aliased from the spec's own {@link StandardSchemaV1.Result}, so callers
- * can branch on the presence of `issues` without importing anything
+ * A [Standard Schema](https://standardschema.dev) result: either a success
+ * carrying the produced `value`, or a failure carrying an `issues` array.
+ * Aliased from the spec's own {@link StandardSchemaV1.Result}, so callers can
+ * branch on the presence of `issues` without importing anything
  * validator-specific.
  */
-export type ValidationResult<T> = StandardSchemaV1.Result<T>;
+export type Result<T> = StandardSchemaV1.Result<T>;
 
 /**
  * An error thrown when {@link Notebook.add} arguments fail validation. It is a
@@ -51,9 +51,9 @@ export type ValidationResult<T> = StandardSchemaV1.Result<T>;
  * a Standard Schema `issues` array, mirroring ArkType's own failure result.
  */
 export class ValidationError extends Error {
-    readonly issues: ReadonlyArray<ValidationIssue>;
+    readonly issues: ReadonlyArray<Issue>;
 
-    constructor(issues: ReadonlyArray<ValidationIssue>) {
+    constructor(issues: ReadonlyArray<Issue>) {
         super(issues.map((issue) => issue.message).join("; "));
         this.name = "ValidationError";
         this.issues = issues;
