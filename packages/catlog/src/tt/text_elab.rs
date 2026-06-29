@@ -312,11 +312,27 @@ impl<'a> Elaborator<'a> {
         }
     }
 
+    /// Reserved name under which an instance's codomain model is bound
+    /// as a context variable (see [`Self::instance_body`]). It contains
+    /// a space, so the lexer — which restricts identifiers to
+    /// alphanumerics and `_` — can never produce it; hence a
+    /// user-declared generator, sub-instance, or field can never shadow
+    /// the codomain binding.
+    const CODOMAIN_BINDER: &'static str = "instance self";
+
     /// The codomain model of the instance body currently being
     /// elaborated, if any. Its fields are the codomain's generators,
     /// looked up by name by the instance-clause arms.
+    ///
+    /// The model is held as a record variable in the context under the
+    /// reserved [`Self::CODOMAIN_BINDER`] name (see
+    /// [`Self::instance_body`]).
     fn instance_codomain(&self) -> Option<Rc<RecordV>> {
-        self.ctx.codomain.clone()
+        let (_, _, ty) = self.ctx.lookup(name_seg(Self::CODOMAIN_BINDER))?;
+        match &*ty? {
+            TyV_::Record(r) => Some(Rc::new(r.clone())),
+            _ => None,
+        }
     }
 
     fn theory(&self) -> &TheoryDef {
@@ -464,13 +480,20 @@ impl<'a> Elaborator<'a> {
     /// / [`TmV_::Instance`] pair whose payload is the instance's
     /// generator slots, equation witnesses, and sub-instance imports.
     ///
-    /// The codomain is set on the context (and restored on exit) so
-    /// that generator (fiber) clauses and applied-codomain-morphism
-    /// syntax inside the body resolve their generators by name.
+    /// The codomain model is bound into the context as a `self`-typed
+    /// record variable (and the binding is dropped on exit) so that
+    /// generator (fiber) clauses and applied-codomain-morphism syntax
+    /// inside the body resolve their generators by name, against a real
+    /// context variable. Introducing `self`
+    /// at the bottom of the context leaves every generator's index
+    /// unchanged, and the codomain is never referenced by variable (only
+    /// by stored path), so this perturbs no index arithmetic.
     fn instance_body(&mut self, codomain: &RecordV, n: &FNtn) -> (TmS, TmV) {
-        let saved = self.ctx.codomain.replace(Rc::new(codomain.clone()));
+        let c = self.checkpoint();
+        let binder = name_seg(Self::CODOMAIN_BINDER);
+        self.intro(binder, label_seg(Self::CODOMAIN_BINDER), Some(TyV::record(codomain.clone())));
         let result = self.instance_body_inner(n);
-        self.ctx.codomain = saved;
+        self.reset_to(c);
         result
     }
 

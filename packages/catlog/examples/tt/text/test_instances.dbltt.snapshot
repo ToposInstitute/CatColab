@@ -77,12 +77,27 @@ instance I3 : WeightedGraph := [
 #/   e1 : E
 #/   e2 : E
 
+instance SelfNamed : WeightedGraph := [
+    V := [self, v2],
+    E := [e],
+    src(e) := self,
+    tgt(e) := v2
+]
+#/ declared: SelfNamed
+#/ instance generators:
+#/   self : V
+#/   v2 : V
+#/   e : E
+#/ instance equations:
+#/   src(e) == self
+#/   tgt(e) == v2
+
 #(should_fail)
 syn I.E
 #/ result: ?0 : ?1
 #/ expected errors:
 #/ error[elab]: cannot project a field out of an instance; an instance is eliminated by mapping out of it, not by projection
-#/ --> examples/tt/text/test_instances.dbltt:44:5
-#/ 44| syn I.E
-#/ 44|     ^^^
+#/ --> examples/tt/text/test_instances.dbltt:51:5
+#/ 51| syn I.E
+#/ 51|     ^^^
 
