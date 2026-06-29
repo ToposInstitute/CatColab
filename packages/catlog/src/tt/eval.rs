@@ -78,39 +78,41 @@ impl<'a> Evaluator<'a> {
     ///
     /// Assumes that the term syntax is well-formed and well-scoped with respect
     /// to self.env.
-    pub fn eval_tm(&self, tm: &TmS) -> TmV {
+    pub fn eval_tm(&self, tm: &BaseTmS) -> BaseTmV {
         match &**tm {
-            TmS_::TopApp(tv, args_s) => {
+            BaseTmS_::TopApp(tv, args_s) => {
                 let env = Env::nil().extend_by(args_s.iter().map(|arg_s| self.eval_tm(arg_s)));
                 let def = self.toplevel.declarations.get(tv).unwrap().clone().unwrap_def();
                 self.with_env(env).eval_tm(&def.body)
             }
-            TmS_::Var(i, _, _) => self.env.get(**i).cloned().unwrap(),
-            TmS_::Cons(fields) => TmV::cons(fields.map(|tm| self.eval_tm(tm))),
-            TmS_::Proj(tm, field, label) => self.proj(&self.eval_tm(tm), *field, *label),
-            TmS_::Id(x) => TmV::id(self.eval_tm(x)),
-            TmS_::Tab(mor) => TmV::tab(self.eval_tm(mor)),
-            TmS_::Compose(f, g) => TmV::compose(self.eval_tm(f), self.eval_tm(g)),
-            TmS_::ObApp(name, x) => TmV::app(*name, self.eval_tm(x)),
-            TmS_::List(elems) => TmV::list(elems.iter().map(|tm| self.eval_tm(tm)).collect()),
-            TmS_::Meta(mv) => TmV::meta(*mv),
+            BaseTmS_::Var(i, _, _) => self.env.get(**i).cloned().unwrap(),
+            BaseTmS_::Cons(fields) => BaseTmV::cons(fields.map(|tm| self.eval_tm(tm))),
+            BaseTmS_::Proj(tm, field, label) => self.proj(&self.eval_tm(tm), *field, *label),
+            BaseTmS_::Id(x) => BaseTmV::id(self.eval_tm(x)),
+            BaseTmS_::Tab(mor) => BaseTmV::tab(self.eval_tm(mor)),
+            BaseTmS_::Compose(f, g) => BaseTmV::compose(self.eval_tm(f), self.eval_tm(g)),
+            BaseTmS_::ObApp(name, x) => BaseTmV::app(*name, self.eval_tm(x)),
+            BaseTmS_::List(elems) => {
+                BaseTmV::list(elems.iter().map(|tm| self.eval_tm(tm)).collect())
+            }
+            BaseTmS_::Meta(mv) => BaseTmV::meta(*mv),
         }
     }
 
     /// Compute the projection of a field from a term value.
-    pub fn proj(&self, tm: &TmV, field_name: FieldName, field_label: LabelSegment) -> TmV {
+    pub fn proj(&self, tm: &BaseTmV, field_name: FieldName, field_label: LabelSegment) -> BaseTmV {
         match &**tm {
-            TmV_::Neu(n, ty) => TmV::neu(
+            BaseTmV_::Neu(n, ty) => BaseTmV::neu(
                 TmN::proj(n.clone(), field_name, field_label),
                 self.field_ty(ty, tm, field_name),
             ),
-            TmV_::Cons(fields) => fields.get(field_name).cloned().unwrap(),
+            BaseTmV_::Cons(fields) => fields.get(field_name).cloned().unwrap(),
             _ => unreachable!("projected field {field_name} from a non-record term value"),
         }
     }
 
     /// Evaluate the type of the field `field_name` of `val : ty`.
-    pub fn field_ty(&self, ty: &BaseTyV, val: &TmV, field_name: FieldName) -> BaseTyV {
+    pub fn field_ty(&self, ty: &BaseTyV, val: &BaseTmV, field_name: FieldName) -> BaseTyV {
         match &**ty {
             BaseTyV_::Record(r) => {
                 let field_ty_s = r.fields.get(field_name).unwrap();
@@ -128,7 +130,7 @@ impl<'a> Evaluator<'a> {
     /// Bind a new neutral of type `ty`.
     pub fn bind_neu(&self, name: VarName, label: LabelSegment, ty: BaseTyV) -> (TmN, Self) {
         let n = TmN::var(self.scope_length.into(), name, label);
-        let v = TmV::neu(n.clone(), ty);
+        let v = BaseTmV::neu(n.clone(), ty);
         (
             n,
             Self {
@@ -198,26 +200,28 @@ impl<'a> Evaluator<'a> {
     /// Produce term syntax from a neutral term.
     ///
     /// The documentation for [Evaluator::quote_ty] is also applicable here.
-    pub fn quote_neu(&self, n: &TmN) -> TmS {
+    pub fn quote_neu(&self, n: &TmN) -> BaseTmS {
         match &**n {
-            TmN_::Var(i, name, label) => TmS::var(i.as_bwd(self.scope_length), *name, *label),
-            TmN_::Proj(tm, field, label) => TmS::proj(self.quote_neu(tm), *field, *label),
+            TmN_::Var(i, name, label) => BaseTmS::var(i.as_bwd(self.scope_length), *name, *label),
+            TmN_::Proj(tm, field, label) => BaseTmS::proj(self.quote_neu(tm), *field, *label),
         }
     }
 
     /// Produce term syntax from a term value.
     ///
     /// The documentation for [Evaluator::quote_ty] is also applicable here.
-    pub fn quote_tm(&self, tm: &TmV) -> TmS {
+    pub fn quote_tm(&self, tm: &BaseTmV) -> BaseTmS {
         match &**tm {
-            TmV_::Neu(n, _) => self.quote_neu(n),
-            TmV_::App(name, x) => TmS::ob_app(*name, self.quote_tm(x)),
-            TmV_::List(elems) => TmS::list(elems.iter().map(|tm| self.quote_tm(tm)).collect()),
-            TmV_::Cons(fields) => TmS::cons(fields.map(|tm| self.quote_tm(tm))),
-            TmV_::Id(x) => TmS::id(self.quote_tm(x)),
-            TmV_::Tab(mor) => TmS::tab(self.quote_tm(mor)),
-            TmV_::Compose(f, g) => TmS::compose(self.quote_tm(f), self.quote_tm(g)),
-            TmV_::Meta(mv) => TmS::meta(*mv),
+            BaseTmV_::Neu(n, _) => self.quote_neu(n),
+            BaseTmV_::App(name, x) => BaseTmS::ob_app(*name, self.quote_tm(x)),
+            BaseTmV_::List(elems) => {
+                BaseTmS::list(elems.iter().map(|tm| self.quote_tm(tm)).collect())
+            }
+            BaseTmV_::Cons(fields) => BaseTmS::cons(fields.map(|tm| self.quote_tm(tm))),
+            BaseTmV_::Id(x) => BaseTmS::id(self.quote_tm(x)),
+            BaseTmV_::Tab(mor) => BaseTmS::tab(self.quote_tm(mor)),
+            BaseTmV_::Compose(f, g) => BaseTmS::compose(self.quote_tm(f), self.quote_tm(g)),
+            BaseTmV_::Meta(mv) => BaseTmS::meta(*mv),
         }
     }
 
@@ -240,7 +244,7 @@ impl<'a> Evaluator<'a> {
     ///
     /// Example: if `a : Entity` and `b : Entity` are neutrals, then `a` is not an
     /// element of `@sing b`, but `a` is an element of `@sing a`.
-    pub fn element_of<'b>(&self, tm: &TmV, ty: &BaseTyV) -> Result<(), D<'b>> {
+    pub fn element_of<'b>(&self, tm: &BaseTmV, ty: &BaseTyV) -> Result<(), D<'b>> {
         match &**ty {
             BaseTyV_::Object(_) => Ok(()),
             BaseTyV_::Morphism(_, _, _) => Ok(()),
@@ -284,13 +288,13 @@ impl<'a> Evaluator<'a> {
                 for ((name, (label, field_ty1_s)), (_, (_, field_ty2_s))) in
                     r1.fields.iter().zip(r2.fields.iter())
                 {
-                    let v = TmV::cons(fields.clone().into());
+                    let v = BaseTmV::cons(fields.clone().into());
                     let field_ty1_v = self1.with_env(r1.env.snoc(v.clone())).eval_ty(field_ty1_s);
                     let field_ty2_v = self1.with_env(r2.env.snoc(v.clone())).eval_ty(field_ty2_s);
                     self1.convertible_ty(&field_ty1_v, &field_ty2_v)?;
                     let (field_val, self_next) = self.bind_neu(*name, *label, field_ty1_v.clone());
                     self1 = self_next;
-                    fields.insert(*name, (*label, TmV::neu(field_val, field_ty1_v)));
+                    fields.insert(*name, (*label, BaseTmV::neu(field_val, field_ty1_v)));
                 }
                 Ok(())
             }
@@ -301,32 +305,34 @@ impl<'a> Evaluator<'a> {
     }
 
     /// Performs eta-expansion of the neutral `n` at type `ty`.
-    pub fn eta_neu(&self, n: &TmN, ty: &BaseTyV) -> TmV {
+    pub fn eta_neu(&self, n: &TmN, ty: &BaseTyV) -> BaseTmV {
         match &**ty {
-            BaseTyV_::Object(_) => TmV::neu(n.clone(), ty.clone()),
-            BaseTyV_::Morphism(_, _, _) => TmV::neu(n.clone(), ty.clone()),
+            BaseTyV_::Object(_) => BaseTmV::neu(n.clone(), ty.clone()),
+            BaseTyV_::Morphism(_, _, _) => BaseTmV::neu(n.clone(), ty.clone()),
             BaseTyV_::Record(r) => {
                 let mut fields = Row::empty();
                 for (name, (label, _)) in r.fields.iter() {
-                    let ty_v = self.field_ty(ty, &TmV::cons(fields.clone()), *name);
+                    let ty_v = self.field_ty(ty, &BaseTmV::cons(fields.clone()), *name);
                     let v = self.eta_neu(&TmN::proj(n.clone(), *name, *label), &ty_v);
                     fields.insert(*name, *label, v);
                 }
-                TmV::cons(fields)
+                BaseTmV::cons(fields)
             }
             BaseTyV_::Sing(_, x) => x.clone(),
-            BaseTyV_::Id(_, _, _) => TmV::empty_cons(), // Extensional equality at a 100% discount!
-            BaseTyV_::Meta(_) => TmV::neu(n.clone(), ty.clone()),
+            BaseTyV_::Id(_, _, _) => BaseTmV::empty_cons(), /* Extensional equality at a 100% discount! */
+            BaseTyV_::Meta(_) => BaseTmV::neu(n.clone(), ty.clone()),
         }
     }
 
     /// Performs eta-expansion of the term `v` at type `ty`.
-    pub fn eta(&self, v: &TmV, ty: Option<&BaseTyV>) -> TmV {
+    pub fn eta(&self, v: &BaseTmV, ty: Option<&BaseTyV>) -> BaseTmV {
         match &**v {
-            TmV_::Neu(tm_n, ty_v) => self.eta_neu(tm_n, ty_v),
-            TmV_::App(name, x) => TmV::app(*name, self.eta(x, None)),
-            TmV_::List(elems) => TmV::list(elems.iter().map(|elem| self.eta(elem, None)).collect()),
-            TmV_::Cons(row) => {
+            BaseTmV_::Neu(tm_n, ty_v) => self.eta_neu(tm_n, ty_v),
+            BaseTmV_::App(name, x) => BaseTmV::app(*name, self.eta(x, None)),
+            BaseTmV_::List(elems) => {
+                BaseTmV::list(elems.iter().map(|elem| self.eta(elem, None)).collect())
+            }
+            BaseTmV_::Cons(row) => {
                 if let Some(ty) = ty {
                     let row = row
                         .iter()
@@ -334,17 +340,17 @@ impl<'a> Evaluator<'a> {
                             (*name, (*label, self.eta(field_v, Some(&self.field_ty(ty, v, *name)))))
                         })
                         .collect();
-                    TmV::cons(row)
+                    BaseTmV::cons(row)
                 }
                 // Is this right? Couldn't a cons be nested below top-level and so not get expanded right?
                 else {
                     v.clone()
                 }
             }
-            TmV_::Id(x) => TmV::id(self.eta(x, None)),
-            TmV_::Tab(mor) => TmV::tab(self.eta(mor, None)),
-            TmV_::Compose(f, g) => TmV::compose(self.eta(f, None), self.eta(g, None)),
-            TmV_::Meta(_) => v.clone(),
+            BaseTmV_::Id(x) => BaseTmV::id(self.eta(x, None)),
+            BaseTmV_::Tab(mor) => BaseTmV::tab(self.eta(mor, None)),
+            BaseTmV_::Compose(f, g) => BaseTmV::compose(self.eta(f, None), self.eta(g, None)),
+            BaseTmV_::Meta(_) => v.clone(),
         }
     }
 
@@ -355,7 +361,7 @@ impl<'a> Evaluator<'a> {
     /// Assumes that the type of tm1 is convertible with the type of tm2. First
     /// attempts to do conversion checking without eta-expansion (strict mode),
     /// and if that fails, does conversion checking with eta-expansion.
-    pub fn equal_tm<'b>(&self, tm1: &TmV, tm2: &TmV) -> Result<(), D<'b>> {
+    pub fn equal_tm<'b>(&self, tm1: &BaseTmV, tm2: &BaseTmV) -> Result<(), D<'b>> {
         if self.equal_tm_helper(tm1, tm2, true, true).is_err() {
             self.equal_tm_helper(tm1, tm2, false, false)
         } else {
@@ -365,19 +371,19 @@ impl<'a> Evaluator<'a> {
 
     fn equal_tm_helper<'b>(
         &self,
-        tm1: &TmV,
-        tm2: &TmV,
+        tm1: &BaseTmV,
+        tm2: &BaseTmV,
         strict1: bool,
         strict2: bool,
     ) -> Result<(), D<'b>> {
         match (&**tm1, &**tm2) {
-            (TmV_::Neu(n1, ty1), _) if !strict1 => {
+            (BaseTmV_::Neu(n1, ty1), _) if !strict1 => {
                 self.equal_tm_helper(&self.eta_neu(n1, ty1), tm2, true, strict2)
             }
-            (_, TmV_::Neu(n2, ty2)) if !strict2 => {
+            (_, BaseTmV_::Neu(n2, ty2)) if !strict2 => {
                 self.equal_tm_helper(tm1, &self.eta_neu(n2, ty2), strict1, true)
             }
-            (TmV_::Neu(n1, _), TmV_::Neu(n2, _)) => {
+            (BaseTmV_::Neu(n1, _), BaseTmV_::Neu(n2, _)) => {
                 if n1 == n2 {
                     Ok(())
                 } else {
@@ -388,25 +394,25 @@ impl<'a> Evaluator<'a> {
                     )))
                 }
             }
-            (TmV_::Cons(fields1), TmV_::Cons(fields2)) => {
+            (BaseTmV_::Cons(fields1), BaseTmV_::Cons(fields2)) => {
                 for ((_, (_, tm1)), (_, (_, tm2))) in fields1.iter().zip(fields2.iter()) {
                     self.equal_tm_helper(tm1, tm2, strict1, strict2)?
                 }
                 Ok(())
             }
-            (TmV_::Meta(mv1), TmV_::Meta(mv2)) => {
+            (BaseTmV_::Meta(mv1), BaseTmV_::Meta(mv2)) => {
                 if mv1 == mv2 {
                     Ok(())
                 } else {
                     Err(t(format!("Holes {} and {} are not equal.", mv1, mv2)))
                 }
             }
-            (TmV_::Id(x1), TmV_::Id(x2)) => self.equal_tm_helper(x1, x2, strict1, strict2),
-            (TmV_::Compose(f1, g1), TmV_::Compose(f2, g2)) => {
+            (BaseTmV_::Id(x1), BaseTmV_::Id(x2)) => self.equal_tm_helper(x1, x2, strict1, strict2),
+            (BaseTmV_::Compose(f1, g1), BaseTmV_::Compose(f2, g2)) => {
                 self.equal_tm_helper(f1, f2, strict1, strict2)?;
                 self.equal_tm_helper(g1, g2, strict1, strict2)
             }
-            (TmV_::Tab(mor1), TmV_::Tab(mor2)) => {
+            (BaseTmV_::Tab(mor1), BaseTmV_::Tab(mor2)) => {
                 self.equal_tm_helper(mor1, mor2, strict1, strict2)
             }
             _ => Err(t(format!(
@@ -420,7 +426,7 @@ impl<'a> Evaluator<'a> {
     fn can_specialize(
         &self,
         ty: &BaseTyV,
-        val: &TmV,
+        val: &BaseTmV,
         path: &[(FieldName, LabelSegment)],
         field_ty: BaseTyV,
     ) -> Result<(), String> {
@@ -444,7 +450,7 @@ impl<'a> Evaluator<'a> {
     pub fn path_ty(
         &self,
         ty: &BaseTyV,
-        val: &TmV,
+        val: &BaseTmV,
         path: &[(FieldName, LabelSegment)],
     ) -> Result<BaseTyV, String> {
         let mut ty = ty.clone();

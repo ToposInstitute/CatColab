@@ -67,8 +67,8 @@ impl<'a> Elaborator<'a> {
         Evaluator::new(self.toplevel, self.ctx.env.clone(), self.ctx.scope.len())
     }
 
-    fn intro(&mut self, name: VarName, label: LabelSegment, ty: Option<BaseTyV>) -> TmV {
-        let v = TmV::neu(
+    fn intro(&mut self, name: VarName, label: LabelSegment, ty: Option<BaseTyV>) -> BaseTmV {
+        let v = BaseTmV::neu(
             TmN::var(self.ctx.scope.len().into(), name, label),
             ty.clone().unwrap_or(BaseTyV::empty_record()),
         );
@@ -115,13 +115,13 @@ impl<'a> Elaborator<'a> {
         (name, label, ty_s, ty_v)
     }
 
-    fn lookup_tm(&self, name: VarName) -> Option<(TmS, TmV, BaseTyV)> {
+    fn lookup_tm(&self, name: VarName) -> Option<(BaseTmS, BaseTmV, BaseTyV)> {
         let (i, label, ty) = self.ctx.lookup(name)?;
         let v = self.ctx.env.get(*i).unwrap().clone();
-        Some((TmS::var(i, name, label), v, ty.clone().unwrap()))
+        Some((BaseTmS::var(i, name, label), v, ty.clone().unwrap()))
     }
 
-    fn resolve_name(&self, segments: &[VarName]) -> Option<(TmS, TmV, BaseTyV)> {
+    fn resolve_name(&self, segments: &[VarName]) -> Option<(BaseTmS, BaseTmV, BaseTyV)> {
         let (&last, rest) = segments.split_last()?;
         if rest.is_empty() {
             self.lookup_tm(last)
@@ -132,14 +132,14 @@ impl<'a> Elaborator<'a> {
             };
             let &(label, _) = r.fields.get_with_label(last)?;
             Some((
-                TmS::proj(tm_s, last, label),
+                BaseTmS::proj(tm_s, last, label),
                 self.evaluator().proj(&tm_v, last, label),
                 self.evaluator().field_ty(&ty_v, &tm_v, last),
             ))
         }
     }
 
-    fn ob_syn(&self, n: &nb::Ob) -> Option<(TmS, TmV, ObType)> {
+    fn ob_syn(&self, n: &nb::Ob) -> Option<(BaseTmS, BaseTmV, ObType)> {
         match n {
             nb::Ob::Basic(name) => {
                 let name = QualifiedName::deserialize_str(name).unwrap();
@@ -154,8 +154,8 @@ impl<'a> Elaborator<'a> {
                 let ob_op = self.theory().basic_ob_op([name].into())?;
                 let arg_type = self.theory().ob_op_dom(&ob_op);
                 let (arg_stx, arg_val) = self.ob_chk(ob, &arg_type)?;
-                let stx = TmS::ob_app(name, arg_stx);
-                let val = TmV::app(name, arg_val);
+                let stx = BaseTmS::ob_app(name, arg_stx);
+                let val = BaseTmV::app(name, arg_val);
                 Some((stx, val, self.theory().ob_op_cod(&ob_op)))
             }
             nb::Ob::Tabulated(mor) => {
@@ -164,13 +164,13 @@ impl<'a> Elaborator<'a> {
                     return None;
                 };
                 let ob_type = self.theory().tabulator(mt.clone())?;
-                Some((TmS::tab(mor_stx), TmV::tab(mor_val), ob_type))
+                Some((BaseTmS::tab(mor_stx), BaseTmV::tab(mor_val), ob_type))
             }
             _ => None,
         }
     }
 
-    fn mor_syn(&self, n: &nb::Mor) -> Option<(TmS, TmV, BaseTyV)> {
+    fn mor_syn(&self, n: &nb::Mor) -> Option<(BaseTmS, BaseTmV, BaseTyV)> {
         match n {
             nb::Mor::Basic(name) => {
                 let name = QualifiedName::deserialize_str(name).unwrap();
@@ -206,8 +206,8 @@ impl<'a> Elaborator<'a> {
                         if self.evaluator().equal_tm(cod_first, dom_rest).is_err() {
                             return None;
                         }
-                        let stx = TmS::compose(stx_first, stx_rest);
-                        let val = TmV::compose(val_first, val_rest);
+                        let stx = BaseTmS::compose(stx_first, stx_rest);
+                        let val = BaseTmV::compose(val_first, val_rest);
                         Some((
                             stx,
                             val,
@@ -224,7 +224,7 @@ impl<'a> Elaborator<'a> {
         }
     }
 
-    fn ob_chk(&self, n: &nb::Ob, ob_type: &ObType) -> Option<(TmS, TmV)> {
+    fn ob_chk(&self, n: &nb::Ob, ob_type: &ObType) -> Option<(BaseTmS, BaseTmV)> {
         match n {
             nb::Ob::List { modality: nb_modality, objects: elems } => {
                 let (modality, ob_type) = ob_type.clone().mode_app()?;
@@ -238,7 +238,7 @@ impl<'a> Elaborator<'a> {
                     elem_stxs.push(tm_s);
                     elem_vals.push(tm_v);
                 }
-                Some((TmS::list(elem_stxs), TmV::list(elem_vals)))
+                Some((BaseTmS::list(elem_stxs), BaseTmV::list(elem_vals)))
             }
             _ => {
                 let (tm_s, tm_v, synthed) = self.ob_syn(n)?;
@@ -468,7 +468,7 @@ impl<'a> Elaborator<'a> {
             field_ty_vs.push((name, (label, ty_v.clone())));
             self.ctx.scope.push(VarInContext::new(name, label, Some(ty_v.clone())));
             self.ctx.env =
-                self.ctx.env.snoc(TmV::neu(TmN::proj(self_var.clone(), name, label), ty_v));
+                self.ctx.env.snoc(BaseTmV::neu(TmN::proj(self_var.clone(), name, label), ty_v));
         }
 
         self.reset_to(c);

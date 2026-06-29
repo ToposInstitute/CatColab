@@ -380,23 +380,23 @@ impl<'a> Elaborator<'a> {
         self.ty_hole()
     }
 
-    fn syn_hole(&mut self) -> (TmS, TmV, BaseTyV) {
+    fn syn_hole(&mut self) -> (BaseTmS, BaseTmV, BaseTyV) {
         let tm_m = self.fresh_meta();
         let ty_m = self.fresh_meta();
-        (TmS::meta(tm_m), TmV::meta(tm_m), BaseTyV::meta(ty_m))
+        (BaseTmS::meta(tm_m), BaseTmV::meta(tm_m), BaseTyV::meta(ty_m))
     }
 
-    fn syn_error(&mut self, msg: impl Into<String>) -> (TmS, TmV, BaseTyV) {
+    fn syn_error(&mut self, msg: impl Into<String>) -> (BaseTmS, BaseTmV, BaseTyV) {
         self.reporter.error_option_loc(self.loc, ELAB_ERROR, msg.into());
         self.syn_hole()
     }
 
-    fn chk_hole(&mut self) -> (TmS, TmV) {
+    fn chk_hole(&mut self) -> (BaseTmS, BaseTmV) {
         let tm_m = self.fresh_meta();
-        (TmS::meta(tm_m), TmV::meta(tm_m))
+        (BaseTmS::meta(tm_m), BaseTmV::meta(tm_m))
     }
 
-    fn chk_error(&mut self, msg: impl Into<String>) -> (TmS, TmV) {
+    fn chk_error(&mut self, msg: impl Into<String>) -> (BaseTmS, BaseTmV) {
         self.reporter.error_option_loc(self.loc, ELAB_ERROR, msg.into());
         self.chk_hole()
     }
@@ -405,8 +405,8 @@ impl<'a> Elaborator<'a> {
         Evaluator::new(self.toplevel, self.ctx.env.clone(), self.ctx.scope.len())
     }
 
-    fn intro(&mut self, name: VarName, label: LabelSegment, ty: Option<BaseTyV>) -> TmV {
-        let v = TmV::neu(
+    fn intro(&mut self, name: VarName, label: LabelSegment, ty: Option<BaseTyV>) -> BaseTmV {
+        let v = BaseTmV::neu(
             TmN::var(self.ctx.scope.len().into(), name, label),
             ty.clone().unwrap_or(BaseTyV::empty_record()),
         );
@@ -1021,8 +1021,10 @@ impl<'a> Elaborator<'a> {
                     let (_, ty_v) = elab.ty(ty_n);
                     field_ty_vs.push((name, (label, ty_v.clone())));
                     elab.ctx.push_scope(name, label, Some(ty_v.clone()));
-                    elab.ctx.env =
-                        elab.ctx.env.snoc(TmV::neu(TmN::proj(self_var.clone(), name, label), ty_v));
+                    elab.ctx.env = elab
+                        .ctx
+                        .env
+                        .snoc(BaseTmV::neu(TmN::proj(self_var.clone(), name, label), ty_v));
                 }
                 if failed {
                     return elab.ty_hole();
@@ -1089,12 +1091,12 @@ impl<'a> Elaborator<'a> {
         }
     }
 
-    fn lookup_tm(&mut self, name: Ustr) -> (TmS, TmV, BaseTyV) {
+    fn lookup_tm(&mut self, name: Ustr) -> (BaseTmS, BaseTmV, BaseTyV) {
         let label = label_seg(name);
         let name = name_seg(name);
         if let Some((i, _, ty)) = self.ctx.lookup(name) {
             (
-                TmS::var(i, name, label),
+                BaseTmS::var(i, name, label),
                 self.ctx.env.get(*i).unwrap().clone(),
                 ty.clone().unwrap(),
             )
@@ -1107,7 +1109,11 @@ impl<'a> Elaborator<'a> {
                 TopDecl::Def(d) if d.args.is_empty() => {
                     let def = d.clone();
                     let eval = self.evaluator();
-                    (TmS::topapp(name, vec![]), eval.eval_tm(&def.body), eval.eval_ty(&def.ret_ty))
+                    (
+                        BaseTmS::topapp(name, vec![]),
+                        eval.eval_tm(&def.body),
+                        eval.eval_ty(&def.ret_ty),
+                    )
                 }
                 TopDecl::Def(_) => self.syn_error(format!("{name} must be applied to arguments")),
                 TopDecl::Instance(_) => self.syn_error(format!(
@@ -1121,7 +1127,7 @@ impl<'a> Elaborator<'a> {
     }
 
     /// Elaborates a term from notation, returning syntax, value, and synthesized type.
-    fn syn(&mut self, n: &FNtn) -> (TmS, TmV, BaseTyV) {
+    fn syn(&mut self, n: &FNtn) -> (BaseTmS, BaseTmV, BaseTyV) {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
             Var(name) => elab.lookup_tm(ustr(name)),
@@ -1151,7 +1157,7 @@ impl<'a> Elaborator<'a> {
                     return elab.syn_error(format!("no such field {f}"));
                 }
                 (
-                    TmS::proj(tm_s, f, label),
+                    BaseTmS::proj(tm_s, f, label),
                     elab.evaluator().proj(&tm_v, f, label),
                     elab.evaluator().field_ty(&ty_v, &tm_v, f),
                 )
@@ -1168,8 +1174,8 @@ impl<'a> Elaborator<'a> {
                     return elab.syn_error("object type does not have a hom type");
                 };
                 (
-                    TmS::id(ob_s),
-                    TmV::id(ob_v.clone()),
+                    BaseTmS::id(ob_s),
+                    BaseTmV::id(ob_v.clone()),
                     BaseTyV::morphism(mor_type, ob_v.clone(), ob_v),
                 )
             }
@@ -1181,7 +1187,7 @@ impl<'a> Elaborator<'a> {
                 let Some(ob_type) = elab.theory().tabulator(mor_type.clone()) else {
                     return elab.syn_error("theory does not have tabulators");
                 };
-                (TmS::tab(mor_s), TmV::tab(mor_v.clone()), BaseTyV::object(ob_type))
+                (BaseTmS::tab(mor_s), BaseTmV::tab(mor_v.clone()), BaseTyV::object(ob_type))
             }
             App1(L(_, Prim(name)), ob_n) => {
                 let name = name_seg(*name);
@@ -1192,7 +1198,7 @@ impl<'a> Elaborator<'a> {
                 let dom = elab.theory().ob_op_dom(&ob_op);
                 let (arg_s, arg_v) = elab.chk(&BaseTyV::object(dom), ob_n);
                 let cod = elab.theory().ob_op_cod(&ob_op);
-                (TmS::ob_app(name, arg_s), TmV::app(name, arg_v), BaseTyV::object(cod))
+                (BaseTmS::ob_app(name, arg_s), BaseTmV::app(name, arg_v), BaseTyV::object(cod))
             }
             App2(L(_, Keyword("*")), f_n, g_n) => {
                 let (f_s, f_v, f_ty) = elab.syn(f_n);
@@ -1220,8 +1226,8 @@ impl<'a> Elaborator<'a> {
                     ));
                 }
                 (
-                    TmS::compose(f_s, g_s),
-                    TmV::compose(f_v, g_v),
+                    BaseTmS::compose(f_s, g_s),
+                    BaseTmV::compose(f_v, g_v),
                     BaseTyV::morphism(
                         elab.theory().compose_types2(f_mt.clone(), g_mt.clone()).unwrap(),
                         f_dom.clone(),
@@ -1250,12 +1256,12 @@ impl<'a> Elaborator<'a> {
                     env = env.snoc(arg_v);
                 }
                 let eval = elab.evaluator().with_env(env.clone());
-                (TmS::topapp(tv, arg_stxs), eval.eval_tm(&d.body), eval.eval_ty(&d.ret_ty))
+                (BaseTmS::topapp(tv, arg_stxs), eval.eval_tm(&d.body), eval.eval_ty(&d.ret_ty))
             }
             Tag("tt") => {
                 // `tt` is the unique element of `Unit`, i.e. the empty record `[]`.
                 let (_, ty_v) = elab.empty_record_ty();
-                (TmS::cons(Row::empty()), TmV::cons(Row::empty()), ty_v)
+                (BaseTmS::cons(Row::empty()), BaseTmV::cons(Row::empty()), ty_v)
             }
             Tuple(_) => elab.syn_error("must check against a type in order to construct a record"),
             Prim("hole") => elab.syn_error("explicit hole"),
@@ -1264,7 +1270,7 @@ impl<'a> Elaborator<'a> {
     }
 
     /// Elaborates a term from notation, checking against an expected type, and returning syntax and value.
-    fn chk(&mut self, ty: &BaseTyV, n: &FNtn) -> (TmS, TmV) {
+    fn chk(&mut self, ty: &BaseTyV, n: &FNtn) -> (BaseTmS, BaseTmV) {
         let mut elab = self.enter(n.loc());
         match (&**ty, n.ast0()) {
             (BaseTyV_::Record(r), Tuple(field_ns)) => {
@@ -1296,14 +1302,14 @@ impl<'a> Elaborator<'a> {
                             return elab.chk_error("unexpected notation for field");
                         }
                     };
-                    let v = TmV::cons(field_vals.clone().into());
+                    let v = BaseTmV::cons(field_vals.clone().into());
                     let field_ty_v =
                         elab.evaluator().with_env(r.env.snoc(v.clone())).eval_ty(field_ty_s);
                     let (tm_s, tm_v) = elab.chk(&field_ty_v, tm_n);
                     field_stxs.insert(*name, (*label, tm_s));
                     field_vals.insert(*name, (*label, tm_v));
                 }
-                (TmS::cons(field_stxs.into()), TmV::cons(field_vals.into()))
+                (BaseTmS::cons(field_stxs.into()), BaseTmV::cons(field_vals.into()))
             }
             (BaseTyV_::Object(ob_type), Tuple(ob_ns)) => {
                 let Some(ob_type) = ob_type.clone().list_arg() else {
@@ -1318,7 +1324,7 @@ impl<'a> Elaborator<'a> {
                     elem_stxs.push(tm_s);
                     elem_vals.push(tm_v);
                 }
-                (TmS::list(elem_stxs), TmV::list(elem_vals))
+                (BaseTmS::list(elem_stxs), BaseTmV::list(elem_vals))
             }
             (_, Tuple(_)) => elab.chk_error("tuple expected to be record or object/morphism type"),
             (_, Prim("hole")) => elab.chk_error("explicit hole"),
@@ -1369,10 +1375,10 @@ fn next_eq_field(eq_count: &mut usize) -> (FieldName, LabelSegment) {
     (name_seg(key.as_str()), label_seg(key.as_str()))
 }
 
-fn tms_to_path(tm: &TmS) -> Option<Vec<(NameSegment, LabelSegment)>> {
+fn tms_to_path(tm: &BaseTmS) -> Option<Vec<(NameSegment, LabelSegment)>> {
     match &**tm {
-        TmS_::Var(_, _, _) => Some(vec![]),
-        TmS_::Proj(inner, name, label) => {
+        BaseTmS_::Var(_, _, _) => Some(vec![]),
+        BaseTmS_::Proj(inner, name, label) => {
             let mut p = tms_to_path(inner)?;
             p.push((*name, *label));
             Some(p)

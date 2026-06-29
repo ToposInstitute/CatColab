@@ -72,7 +72,7 @@ pub struct Def {
     pub ret_ty: BaseTyS,
     /// The body of the definition (to be evaluated in an environment with
     /// values for the arguments).
-    pub body: TmS,
+    pub body: BaseTmS,
 }
 
 impl TopDecl {
