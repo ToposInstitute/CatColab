@@ -46,7 +46,7 @@ pub enum BaseTyS_ {
     ///
     /// A term of type `Morphism(mt, dom, cod)` represents an morphism of morphism
     /// type `mt` from `dom` to `cod`.
-    Morphism(MorType, TmS, TmS),
+    Morphism(MorType, BaseTmS, BaseTmS),
 
     /// Type constructor for record types.
     ///
@@ -62,14 +62,14 @@ pub enum BaseTyS_ {
     ///
     /// A term `x` of type `Sing(ty, tm)` is a term of `ty` that is convertible with
     /// `tm`.
-    Sing(BaseTyS, TmS),
+    Sing(BaseTyS, BaseTmS),
 
     /// Type constructor for identity types.
     ///
     /// Example syntax: `a == b` (assuming `a` and `b` are terms that synthesize the same type).
     ///
     /// A term `p` of type `a == b` is a proof that `a` and `b` are equal.
-    Id(BaseTyS, TmS, TmS),
+    Id(BaseTyS, BaseTmS, BaseTmS),
 
     /// Type constructor for specialized types.
     ///
@@ -109,7 +109,7 @@ impl BaseTyS {
     }
 
     /// Smart constructor for [BaseTyS], [BaseTyS_::Morphism] case.
-    pub fn morphism(morphism_type: MorType, dom: TmS, cod: TmS) -> Self {
+    pub fn morphism(morphism_type: MorType, dom: BaseTmS, cod: BaseTmS) -> Self {
         Self(Rc::new(BaseTyS_::Morphism(morphism_type, dom, cod)))
     }
 
@@ -119,12 +119,12 @@ impl BaseTyS {
     }
 
     /// Smart constructor for [BaseTyS], [BaseTyS_::Sing] case.
-    pub fn sing(ty: BaseTyS, tm: TmS) -> Self {
+    pub fn sing(ty: BaseTyS, tm: BaseTmS) -> Self {
         Self(Rc::new(BaseTyS_::Sing(ty, tm)))
     }
 
     /// Smart constructor for [BaseTyS], [BaseTyS_::Id] case.
-    pub fn id(ty: BaseTyS, tm1: TmS, tm2: TmS) -> Self {
+    pub fn id(ty: BaseTyS, tm1: BaseTmS, tm2: BaseTmS) -> Self {
         Self(Rc::new(BaseTyS_::Id(ty, tm1, tm2)))
     }
 
@@ -187,121 +187,121 @@ impl fmt::Display for BaseTyS {
     }
 }
 
-/// Inner enum for [TmS].
-pub enum TmS_ {
+/// Inner enum for [BaseTmS].
+pub enum BaseTmS_ {
     /// An application of a top-level term judgment to arguments.
     ///
     /// A closed term (a nullary `def`, e.g. `tt : Unit`) is the empty-argument
     /// case `TopApp(name, [])`.
-    TopApp(TopVarName, Vec<TmS>),
+    TopApp(TopVarName, Vec<BaseTmS>),
     /// Variable syntax.
     ///
     /// We use a backward index, as when we evaluate we store the
     /// environment in a [bwd::Bwd], and this indexes into that.
     Var(BwdIdx, VarName, LabelSegment),
     /// Record introduction.
-    Cons(Row<TmS>),
+    Cons(Row<BaseTmS>),
     /// Record elimination.
-    Proj(TmS, FieldName, LabelSegment),
+    Proj(BaseTmS, FieldName, LabelSegment),
     /// Identity morphism at an object.
-    Id(TmS),
+    Id(BaseTmS),
     /// Tabulation of a morphism.
-    Tab(TmS),
+    Tab(BaseTmS),
     /// Composite of two morphisms.
-    Compose(TmS, TmS),
+    Compose(BaseTmS, BaseTmS),
     /// Application of an object operation in the theory.
-    ObApp(VarName, TmS),
+    ObApp(VarName, BaseTmS),
     /// List of objects.
-    List(Vec<TmS>),
+    List(Vec<BaseTmS>),
     /// A metavar.
     ///
     /// This only appears when we have an error in elaboration.
     Meta(MetaVar),
 }
 
-/// Syntax for total terms, dereferences to [TmS_].
+/// Syntax for total terms, dereferences to [BaseTmS_].
 ///
 /// See [crate::tt] for an explanation of what total types are, and for an
 /// explanation of our approach to Rc pointers in abstract syntax trees.
 #[derive(Clone, Deref)]
 #[deref(forward)]
-pub struct TmS(Rc<TmS_>);
+pub struct BaseTmS(Rc<BaseTmS_>);
 
-impl TmS {
-    /// Smart constructor for [TmS], [TmS_::TopApp] case.
-    pub fn topapp(var_name: VarName, args: Vec<TmS>) -> Self {
-        Self(Rc::new(TmS_::TopApp(var_name, args)))
+impl BaseTmS {
+    /// Smart constructor for [BaseTmS], [BaseTmS_::TopApp] case.
+    pub fn topapp(var_name: VarName, args: Vec<BaseTmS>) -> Self {
+        Self(Rc::new(BaseTmS_::TopApp(var_name, args)))
     }
 
-    /// Smart constructor for [TmS], [TmS_::Var] case.
+    /// Smart constructor for [BaseTmS], [BaseTmS_::Var] case.
     pub fn var(bwd_idx: BwdIdx, var_name: VarName, label: LabelSegment) -> Self {
-        Self(Rc::new(TmS_::Var(bwd_idx, var_name, label)))
+        Self(Rc::new(BaseTmS_::Var(bwd_idx, var_name, label)))
     }
 
-    /// Smart constructor for [TmS], [TmS_::Cons] case.
-    pub fn cons(row: Row<TmS>) -> Self {
-        Self(Rc::new(TmS_::Cons(row)))
+    /// Smart constructor for [BaseTmS], [BaseTmS_::Cons] case.
+    pub fn cons(row: Row<BaseTmS>) -> Self {
+        Self(Rc::new(BaseTmS_::Cons(row)))
     }
 
-    /// Smart constructor for [TmS], [TmS_::Proj] case.
-    pub fn proj(tm_s: TmS, field_name: FieldName, label: LabelSegment) -> Self {
-        Self(Rc::new(TmS_::Proj(tm_s, field_name, label)))
+    /// Smart constructor for [BaseTmS], [BaseTmS_::Proj] case.
+    pub fn proj(tm_s: BaseTmS, field_name: FieldName, label: LabelSegment) -> Self {
+        Self(Rc::new(BaseTmS_::Proj(tm_s, field_name, label)))
     }
 
-    /// Smart constructor for [TmS], [TmS_::Id] case.
-    pub fn id(ob: TmS) -> Self {
-        Self(Rc::new(TmS_::Id(ob)))
+    /// Smart constructor for [BaseTmS], [BaseTmS_::Id] case.
+    pub fn id(ob: BaseTmS) -> Self {
+        Self(Rc::new(BaseTmS_::Id(ob)))
     }
 
-    /// Smart constructor for [TmS], [TmS_::Tab] case.
-    pub fn tab(mor: TmS) -> Self {
-        Self(Rc::new(TmS_::Tab(mor)))
+    /// Smart constructor for [BaseTmS], [BaseTmS_::Tab] case.
+    pub fn tab(mor: BaseTmS) -> Self {
+        Self(Rc::new(BaseTmS_::Tab(mor)))
     }
 
-    /// Smart constructor for [TmS], [TmS_::Compose] case.
-    pub fn compose(f: TmS, g: TmS) -> Self {
-        Self(Rc::new(TmS_::Compose(f, g)))
+    /// Smart constructor for [BaseTmS], [BaseTmS_::Compose] case.
+    pub fn compose(f: BaseTmS, g: BaseTmS) -> Self {
+        Self(Rc::new(BaseTmS_::Compose(f, g)))
     }
 
-    /// Smart constructor for [TmS], [TmS_::ObApp] case.
-    pub fn ob_app(name: VarName, x: TmS) -> Self {
-        Self(Rc::new(TmS_::ObApp(name, x)))
+    /// Smart constructor for [BaseTmS], [BaseTmS_::ObApp] case.
+    pub fn ob_app(name: VarName, x: BaseTmS) -> Self {
+        Self(Rc::new(BaseTmS_::ObApp(name, x)))
     }
 
-    /// Smart constructor for [TmS], [TmS_::List] case.
-    pub fn list(elems: Vec<TmS>) -> Self {
-        Self(Rc::new(TmS_::List(elems)))
+    /// Smart constructor for [BaseTmS], [BaseTmS_::List] case.
+    pub fn list(elems: Vec<BaseTmS>) -> Self {
+        Self(Rc::new(BaseTmS_::List(elems)))
     }
 
-    /// Smart constructor for [TmS], [TmS_::Meta] case.
+    /// Smart constructor for [BaseTmS], [BaseTmS_::Meta] case.
     pub fn meta(mv: MetaVar) -> Self {
-        Self(Rc::new(TmS_::Meta(mv)))
+        Self(Rc::new(BaseTmS_::Meta(mv)))
     }
 }
 
-impl ToDoc for TmS {
+impl ToDoc for BaseTmS {
     fn to_doc<'a>(&self) -> D<'a> {
         match &**self {
-            TmS_::TopApp(name, args) if args.is_empty() => t(format!("{}", name)),
-            TmS_::TopApp(name, args) => {
+            BaseTmS_::TopApp(name, args) if args.is_empty() => t(format!("{}", name)),
+            BaseTmS_::TopApp(name, args) => {
                 t(format!("{}", name)) + tuple(args.iter().map(|arg| arg.to_doc()))
             }
-            TmS_::Var(_, _, label) => t(format!("{}", label)),
-            TmS_::Proj(tm, _, label) => tm.to_doc() + t(format!(".{}", label)),
-            TmS_::Cons(fields) => tuple(fields.iter().map(|(_, (label, field))| {
+            BaseTmS_::Var(_, _, label) => t(format!("{}", label)),
+            BaseTmS_::Proj(tm, _, label) => tm.to_doc() + t(format!(".{}", label)),
+            BaseTmS_::Cons(fields) => tuple(fields.iter().map(|(_, (label, field))| {
                 binop(t(":="), t(format!("{}", label)), field.to_doc())
             })),
-            TmS_::Id(ob) => (t("@id") + s() + ob.to_doc()).parens(),
-            TmS_::Tab(mor) => (t("@tab") + s() + mor.to_doc()).parens(),
-            TmS_::Compose(f, g) => binop(t("·"), f.to_doc(), g.to_doc()),
-            TmS_::ObApp(name, x) => unop(t(format!("@{name}")), x.to_doc()),
-            TmS_::List(elems) => tuple(elems.iter().map(|elem| elem.to_doc())),
-            TmS_::Meta(mv) => t(format!("?{}", mv.id)),
+            BaseTmS_::Id(ob) => (t("@id") + s() + ob.to_doc()).parens(),
+            BaseTmS_::Tab(mor) => (t("@tab") + s() + mor.to_doc()).parens(),
+            BaseTmS_::Compose(f, g) => binop(t("·"), f.to_doc(), g.to_doc()),
+            BaseTmS_::ObApp(name, x) => unop(t(format!("@{name}")), x.to_doc()),
+            BaseTmS_::List(elems) => tuple(elems.iter().map(|elem| elem.to_doc())),
+            BaseTmS_::Meta(mv) => t(format!("?{}", mv.id)),
         }
     }
 }
 
-impl fmt::Display for TmS {
+impl fmt::Display for BaseTmS {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.to_doc().group().pretty())
     }

@@ -8,8 +8,8 @@ use derive_more::Deref;
 use super::{prelude::*, stx::*, theory::*};
 use crate::zero::{LabelSegment, QualifiedName};
 
-/// A way of resolving [BwdIdx] found in [TmS_::Var] to values.
-pub type Env = Bwd<TmV>;
+/// A way of resolving [BwdIdx] found in [BaseTmS_::Var] to values.
+pub type Env = Bwd<BaseTmV>;
 
 /// The fiber environment: resolves [BwdIdx] found in
 /// [`super::stx::FiberTmS_::Var`] to fiber-term values. Separate from
@@ -86,7 +86,7 @@ pub enum BaseTyV_ {
     /// Type constructor for object types, also see [BaseTyS_::Object].
     Object(ObType),
     /// Type constructor for morphism types, also see [BaseTyS_::Morphism].
-    Morphism(MorType, TmV, TmV),
+    Morphism(MorType, BaseTmV, BaseTmV),
     /// Type constructor for specialized record types.
     ///
     /// This is the target of both [BaseTyS_::Specialize] and [BaseTyS_::Record].
@@ -96,9 +96,9 @@ pub enum BaseTyV_ {
     /// evaluate to a value of form `BaseTyV_::Record(_)`).
     Record(RecordV),
     /// Type constructor for singleton types, also see [BaseTyS_::Sing].
-    Sing(BaseTyV, TmV),
+    Sing(BaseTyV, BaseTmV),
     /// Type constructor for identity types, also see [BaseTyS_::Id].
-    Id(BaseTyV, TmV, TmV),
+    Id(BaseTyV, BaseTmV, BaseTmV),
     /// A metavariable, also see [BaseTyS_::Meta].
     Meta(MetaVar),
 }
@@ -115,7 +115,7 @@ impl BaseTyV {
     }
 
     /// Smart constructor for [BaseTyV], [BaseTyV_::Morphism] case.
-    pub fn morphism(morphism_type: MorType, dom: TmV, cod: TmV) -> Self {
+    pub fn morphism(morphism_type: MorType, dom: BaseTmV, cod: BaseTmV) -> Self {
         Self(Rc::new(BaseTyV_::Morphism(morphism_type, dom, cod)))
     }
 
@@ -125,12 +125,12 @@ impl BaseTyV {
     }
 
     /// Smart constructor for [BaseTyV], [BaseTyV_::Sing] case.
-    pub fn sing(ty_v: BaseTyV, tm_v: TmV) -> Self {
+    pub fn sing(ty_v: BaseTyV, tm_v: BaseTmV) -> Self {
         Self(Rc::new(BaseTyV_::Sing(ty_v, tm_v)))
     }
 
     /// Smart constructor for [BaseTyV], [BaseTyV_::Id] case.
-    pub fn id(ty_v: BaseTyV, tm_v1: TmV, tm_v2: TmV) -> Self {
+    pub fn id(ty_v: BaseTyV, tm_v1: BaseTmV, tm_v2: BaseTmV) -> Self {
         Self(Rc::new(BaseTyV_::Id(ty_v, tm_v1, tm_v2)))
     }
 
@@ -193,7 +193,7 @@ pub enum TmN_ {
     Proj(TmN, FieldName, LabelSegment),
 }
 
-/// Neutrals for [terms](TmV), dereferences to [TmN_].
+/// Neutrals for [terms](BaseTmV), dereferences to [TmN_].
 #[derive(Clone, Deref, PartialEq, Eq)]
 #[deref(forward)]
 pub struct TmN(Rc<TmN_>);
@@ -222,85 +222,85 @@ impl TmN {
     }
 }
 
-/// Inner enum for [TmV].
-pub enum TmV_ {
+/// Inner enum for [BaseTmV].
+pub enum BaseTmV_ {
     /// Neutrals.
     ///
     /// We store the type because we need it for eta-expansion.
     Neu(TmN, BaseTyV),
     /// Application of an object operation in the theory.
-    App(VarName, TmV),
+    App(VarName, BaseTmV),
     /// Lists of objects.
-    List(Vec<TmV>),
+    List(Vec<BaseTmV>),
     /// Records.
-    Cons(Row<TmV>),
+    Cons(Row<BaseTmV>),
     /// The identity morphism of an object.
-    Id(TmV),
+    Id(BaseTmV),
     /// The tabulation of a morphism.
-    Tab(TmV),
+    Tab(BaseTmV),
     /// Composition of morphisms.
-    Compose(TmV, TmV),
+    Compose(BaseTmV, BaseTmV),
     /// A metavariable.
     Meta(MetaVar),
 }
 
-/// Values for terms, dereferences to [TmV_].
+/// Values for terms, dereferences to [BaseTmV_].
 #[derive(Clone, Deref)]
 #[deref(forward)]
-pub struct TmV(Rc<TmV_>);
+pub struct BaseTmV(Rc<BaseTmV_>);
 
-impl TmV {
-    /// Smart constructor for [TmV], [TmV_::Neu] case.
+impl BaseTmV {
+    /// Smart constructor for [BaseTmV], [BaseTmV_::Neu] case.
     pub fn neu(n: TmN, ty: BaseTyV) -> Self {
-        TmV(Rc::new(TmV_::Neu(n, ty)))
+        BaseTmV(Rc::new(BaseTmV_::Neu(n, ty)))
     }
 
-    /// Smart constructor for [TmV], [TmV_::App] case.
-    pub fn app(name: VarName, x: TmV) -> Self {
-        TmV(Rc::new(TmV_::App(name, x)))
+    /// Smart constructor for [BaseTmV], [BaseTmV_::App] case.
+    pub fn app(name: VarName, x: BaseTmV) -> Self {
+        BaseTmV(Rc::new(BaseTmV_::App(name, x)))
     }
 
-    /// Smart constructor for [TmV], [TmV_::List] case.
-    pub fn list(elems: Vec<TmV>) -> Self {
-        TmV(Rc::new(TmV_::List(elems)))
+    /// Smart constructor for [BaseTmV], [BaseTmV_::List] case.
+    pub fn list(elems: Vec<BaseTmV>) -> Self {
+        BaseTmV(Rc::new(BaseTmV_::List(elems)))
     }
 
-    /// Smart constructor for [TmV], [TmV_::Cons] case.
-    pub fn cons(fields: Row<TmV>) -> Self {
-        TmV(Rc::new(TmV_::Cons(fields)))
+    /// Smart constructor for [BaseTmV], [BaseTmV_::Cons] case.
+    pub fn cons(fields: Row<BaseTmV>) -> Self {
+        BaseTmV(Rc::new(BaseTmV_::Cons(fields)))
     }
 
     /// The empty record value `[]` — the unique element of the empty
     /// record type. Also serves as the (proof-irrelevant) canonical
     /// inhabitant of `Id` types under eta.
     pub fn empty_cons() -> Self {
-        TmV(Rc::new(TmV_::Cons(Row::empty())))
+        BaseTmV(Rc::new(BaseTmV_::Cons(Row::empty())))
     }
 
-    /// Smart constructor for [TmV], [TmV_::Id] case.
-    pub fn id(x: TmV) -> Self {
-        TmV(Rc::new(TmV_::Id(x)))
+    /// Smart constructor for [BaseTmV], [BaseTmV_::Id] case.
+    pub fn id(x: BaseTmV) -> Self {
+        BaseTmV(Rc::new(BaseTmV_::Id(x)))
     }
 
-    /// Smart constructor for [TmV], [TmV_::Tab] case.
-    pub fn tab(mor: TmV) -> Self {
-        TmV(Rc::new(TmV_::Tab(mor)))
+    /// Smart constructor for [BaseTmV], [BaseTmV_::Tab] case.
+    pub fn tab(mor: BaseTmV) -> Self {
+        BaseTmV(Rc::new(BaseTmV_::Tab(mor)))
     }
 
-    /// Smart constructor for [TmV], [TmV_::Compose] case.
-    pub fn compose(f: TmV, g: TmV) -> Self {
-        TmV(Rc::new(TmV_::Compose(f, g)))
+    /// Smart constructor for [BaseTmV], [BaseTmV_::Compose] case.
+    pub fn compose(f: BaseTmV, g: BaseTmV) -> Self {
+        BaseTmV(Rc::new(BaseTmV_::Compose(f, g)))
     }
 
-    /// Smart constructor for [TmV], [TmV_::Meta] case.
+    /// Smart constructor for [BaseTmV], [BaseTmV_::Meta] case.
     pub fn meta(mv: MetaVar) -> Self {
-        TmV(Rc::new(TmV_::Meta(mv)))
+        BaseTmV(Rc::new(BaseTmV_::Meta(mv)))
     }
 
     /// Unwraps a neutral term, or panics.
     pub fn unwrap_neu(&self) -> TmN {
         match &**self {
-            TmV_::Neu(n, _) => n.clone(),
+            BaseTmV_::Neu(n, _) => n.clone(),
             _ => panic!("expected term to be a neutral"),
         }
     }
@@ -349,7 +349,7 @@ impl FiberTyV {
 
 /// Inner enum for [FiberTmV]; value counterpart of [`super::stx::FiberTmS_`].
 ///
-/// Every fiber term is neutral, so — unlike [`TmV_`] — there is no
+/// Every fiber term is neutral, so — unlike [`BaseTmV_`] — there is no
 /// closure/neutral split and no stored type for eta. Variables carry a
 /// forward index into the fiber environment.
 pub enum FiberTmV_ {
