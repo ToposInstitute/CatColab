@@ -3,6 +3,7 @@ export { type AnalysisDocument, newAnalysisDocument } from "./analysis";
 
 export { plainStore, type DocumentStore, resolveModelInStore } from "./store";
 export { binder, createBinder, type Binder, type Notebook } from "./notebook";
+export { type ValidationIssue, type ValidationResult } from "./validation";
 export {
     CellKind,
     RichText,

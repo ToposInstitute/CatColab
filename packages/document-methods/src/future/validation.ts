@@ -1,3 +1,4 @@
+import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { type } from "arktype";
 import type { ObType } from "catcolab-document-types";
 import {
@@ -28,11 +29,21 @@ import {
  * check and the static shape.
  */
 
-/** A Standard Schema issue: a human-readable `message` and an optional `path`. */
-export type ValidationIssue = {
-    readonly message: string;
-    readonly path?: ReadonlyArray<PropertyKey>;
-};
+/**
+ * A [Standard Schema](https://standardschema.dev) issue: a human-readable
+ * `message` and an optional `path`. Aliased from the spec's own
+ * {@link StandardSchemaV1.Issue}.
+ */
+export type ValidationIssue = StandardSchemaV1.Issue;
+
+/**
+ * A [Standard Schema](https://standardschema.dev) validation result: either a
+ * success carrying the produced `value`, or a failure carrying an `issues`
+ * array. Aliased from the spec's own {@link StandardSchemaV1.Result}, so callers
+ * can branch on the presence of `issues` without importing anything
+ * validator-specific.
+ */
+export type ValidationResult<T> = StandardSchemaV1.Result<T>;
 
 /**
  * An error thrown when {@link Notebook.add} arguments fail validation. It is a

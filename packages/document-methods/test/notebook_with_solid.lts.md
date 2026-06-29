@@ -43,7 +43,11 @@ notebook. The store initializes its storage from the document.
 ```ts
 const existingSolidDoc = binder.createNotebook(SimpleOlog, { name: "Loaded Olog" }).document;
 
-const loadedSolidNotebook = solidBinder.loadNotebook(SimpleOlog, existingSolidDoc);
+const loadedResult = solidBinder.loadNotebook(SimpleOlog, existingSolidDoc);
+if (loadedResult.issues) {
+    throw new Error(loadedResult.issues.map((issue) => issue.message).join("; "));
+}
+const loadedSolidNotebook = loadedResult.value;
 
 createRoot(async () => {
     createEffect(() => {

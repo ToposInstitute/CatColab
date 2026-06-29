@@ -71,7 +71,7 @@ import {
     type ValidatableNotebook,
 } from "./definitions";
 import { type DocumentStore, plainDocumentId, plainStore, resolveModelInStore } from "./store";
-import { validateAddArgs } from "./validation";
+import { validateAddArgs, type ValidationResult } from "./validation";
 
 /**
  * A stable string capturing the document's *formal* cells — every cell except
@@ -1256,13 +1256,15 @@ export interface Binder<Handle> {
     ): Notebook<TShape, Handle>;
     /**
      * Build a notebook around an existing plain document by initializing store
-     * storage from it. Throws if the document's theory does not match the
+     * storage from it. Returns a [Standard Schema](https://standardschema.dev)
+     * {@link ValidationResult}: a `{ value: Notebook }` success, or a
+     * `{ issues }` failure when the document's theory does not match the
      * shape's theory.
      */
     loadNotebook<TShape extends CreatableShape>(
         shape: TShape,
         document: ModelDocument,
-    ): Notebook<TShape, Handle>;
+    ): ValidationResult<Notebook<TShape, Handle>>;
     /**
      * Build a notebook around an existing store handle, e.g. an Automerge
      * `DocHandle` found in a repo. No store storage is created.
@@ -1299,19 +1301,27 @@ export function createBinder<Handle>(store: DocumentStore<Handle>): Binder<Handl
             const creatableShape = shape as CreatableShape;
             const seed = newModelDocument({ theory: creatableShape.theory });
             seed.name = data.name;
-            return binder.loadNotebook(creatableShape, seed);
+            // The seed is constructed with the shape's own theory, so loading
+            // always succeeds.
+            return attachNotebook(store, store.createHandle(seed), creatableShape);
         },
         loadNotebook<TShape extends CreatableShape>(
             shape: TShape,
             document: ModelDocument,
-        ): Notebook<TShape, Handle> {
+        ): ValidationResult<Notebook<TShape, Handle>> {
             if (document.theory !== shape.theory) {
-                throw new Error(
-                    `Cannot load document with theory "${document.theory}" ` +
-                        `using a shape with theory "${shape.theory}".`,
-                );
+                return {
+                    issues: [
+                        {
+                            message:
+                                `Cannot load document with theory "${document.theory}" ` +
+                                `using a shape with theory "${shape.theory}".`,
+                            path: ["theory"],
+                        },
+                    ],
+                };
             }
-            return attachNotebook(store, store.createHandle(document), shape);
+            return { value: attachNotebook(store, store.createHandle(document), shape) };
         },
         loadNotebookFromHandle<TShape extends CreatableShape>(
             shape: TShape,

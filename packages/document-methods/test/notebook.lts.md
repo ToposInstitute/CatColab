@@ -562,23 +562,34 @@ We can dump a notebook.
 const notebookData = notebook.dump();
 ```
 
-And load it.
+And load it. `loadNotebook` returns a [Standard Schema](https://standardschema.dev)
+result: a `{ value }` on success, or a `{ issues }` failure.
 
 ```ts
-const notebook2 = binder.loadNotebook(PetriNet, notebookData);
+const loaded = binder.loadNotebook(PetriNet, notebookData);
+console.log("issues:", loaded.issues ?? []);
+if (!loaded.issues) {
+    console.log("loaded:", loaded.value.name);
+}
 ```
 
-Trying to load a document with the wrong shape will throw an error.
+```
+issues: []
+loaded: Example Petri-net
+```
 
-<!-- verifier:throws -->
+Trying to load a document with the wrong shape yields a failure result whose
+`issues` describe the mismatch, instead of throwing.
 
 ```ts
 import { SimpleOlog } from "catcolab-logics/simple-olog";
-binder.loadNotebook(SimpleOlog, notebookData);
+
+const wrong = binder.loadNotebook(SimpleOlog, notebookData);
+console.log("issues:", wrong.issues?.map((issue) => issue.message).join("; "));
 ```
 
 ```
-❌ Cannot load document with theory "petri-net" using a shape with theory "simple-olog".
+issues: Cannot load document with theory "petri-net" using a shape with theory "simple-olog".
 ```
 
 ## Migrating between logics
