@@ -88,7 +88,7 @@ impl Theory for Schema {
                     && Self::unify_objects(&[cod, &attr.cod()]).is_compatible()
             }
             // Schema has no list modality, so modal pro-arrows are invalid.
-            TheoryProArrow::ModalApplication { .. }
+            TheoryProArrow::ModalApplication(_)
             | TheoryProArrow::Restriction { .. }
             | TheoryProArrow::Hole { .. } => false,
         }

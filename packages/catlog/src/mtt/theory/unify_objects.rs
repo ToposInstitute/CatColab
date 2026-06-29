@@ -45,20 +45,18 @@ pub fn default_unify_objects<T: Theory>(
         // Modal applications unify iff they share a modality and their children
         // unify simultaneously (again unbiased); the meet re-wraps the
         // children's meet under that modality.
-        TheoryObject::ModalApplication { on } => {
+        TheoryObject::ModalApplication(on) => {
             let mut children: Vec<&TheoryObject<T>> = vec![on.as_ref()];
             for o in rest {
-                let TheoryObject::ModalApplication { on } = o else {
+                let TheoryObject::ModalApplication(on) = o else {
                     return UnificationResult::Incompatible;
                 };
                 children.push(on.as_ref());
             }
             match default_unify_objects(&children) {
-                UnificationResult::MostSpecific(child) => {
-                    UnificationResult::MostSpecific(TheoryObject::ModalApplication {
-                        on: Box::new(child),
-                    })
-                }
+                UnificationResult::MostSpecific(child) => UnificationResult::MostSpecific(
+                    TheoryObject::ModalApplication(Box::new(child)),
+                ),
                 UnificationResult::Incompatible => UnificationResult::Incompatible,
             }
         }

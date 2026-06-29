@@ -217,7 +217,7 @@ impl<T: Theory> ModelEntry<T> {
                 }
             }
             ObjectType::List(list) => {
-                let TheoryObject::ModalApplication { on } = over else {
+                let TheoryObject::ModalApplication(on) = over else {
                     return Err(EType::BadObjectTypeTheoryObject {
                         object_type: obj.to_string(),
                         theory_object: over.to_string(),
@@ -310,11 +310,11 @@ impl<T: Theory> ModelEntry<T> {
                 }
 
                 if list.is_empty() {
-                    return Ok(TheoryObject::ModalApplication {
-                        on: Box::new(TheoryObject::unconstrained(
+                    return Ok(TheoryObject::ModalApplication(Box::new(
+                        TheoryObject::unconstrained(
                             "theory_object_for_empty_list".to_string(),
-                        )),
-                    });
+                        ),
+                    )));
                 }
 
                 let theory_objects: Vec<TheoryObject<T>> =
@@ -324,7 +324,7 @@ impl<T: Theory> ModelEntry<T> {
                     return Err(EInfer::InconsistentTheoryObjectForList.into());
                 };
 
-                Ok(TheoryObject::ModalApplication { on: Box::new(on) })
+                Ok(TheoryObject::ModalApplication(Box::new(on)))
             }
             ObjectType::FunctionApplication { function, on } => {
                 if function.is_empty() {

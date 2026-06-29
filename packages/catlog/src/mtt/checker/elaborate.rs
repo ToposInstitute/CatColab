@@ -34,7 +34,7 @@ impl<T: Theory> ModelEntry<T> {
                 if let Expression::Literal(post) = *post {
                     if <T::ListModality as ListModality>::PRESENT {
                         let on = Box::new(self.elaborate_theory_object(&pre)?);
-                        Ok(TheoryObject::ModalApplication { on })
+                        Ok(TheoryObject::ModalApplication(on))
                     } else {
                         Err(EElaborate::UnknownModality(post.clone()))
                     }

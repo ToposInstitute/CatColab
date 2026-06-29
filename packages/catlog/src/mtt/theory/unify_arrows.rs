@@ -4,7 +4,10 @@ use itertools::Itertools;
 
 use crate::mtt::{
     composite::Composite,
-    theory::{Theory, TheoryArrow, TheoryObject, UnificationResult},
+    theory::{
+        Theory, TheoryArrow, TheoryObject, UnificationResult, list_modality::StructureMap,
+        modal_depth::ModalDepth,
+    },
 };
 
 /// Default unification algorithm for composites of vertical arrows. The equations
@@ -76,25 +79,22 @@ fn unify_arrow<T: Theory>(arrows: &[&TheoryArrow<T>]) -> UnificationResult<Theor
             UnificationResult::MostSpecific(TheoryArrow::Generator { name: name.clone(), dom, cod })
         }
 
-        TheoryArrow::ModalApplication { on } => {
+        TheoryArrow::ModalApplication(on) => {
             let mut children: Vec<&TheoryArrow<T>> = vec![on.as_ref()];
             for a in rest {
-                let TheoryArrow::ModalApplication { on } = a else {
+                let TheoryArrow::ModalApplication(on) = a else {
                     return UnificationResult::Incompatible;
                 };
                 children.push(on.as_ref());
             }
-            unify_arrow(&children).map(|child| TheoryArrow::ModalApplication {
-                on: Box::new(child),
-            })
+            unify_arrow(&children).map(|child| TheoryArrow::ModalApplication(Box::new(child)))
         }
-        TheoryArrow::ModalStructureMap { map } => {
-            if rest.iter().all(|a| {
-                matches!(a, TheoryArrow::ModalStructureMap { map: other } if other == map)
-            }) {
-                UnificationResult::MostSpecific(TheoryArrow::ModalStructureMap {
-                    map: map.clone(),
-                })
+        TheoryArrow::ModalStructureMap(map) => {
+            if rest
+                .iter()
+                .all(|a| matches!(a, TheoryArrow::ModalStructureMap(other) if other == map))
+            {
+                UnificationResult::MostSpecific(TheoryArrow::ModalStructureMap(map.clone()))
             } else {
                 UnificationResult::Incompatible
             }
@@ -104,8 +104,101 @@ fn unify_arrow<T: Theory>(arrows: &[&TheoryArrow<T>]) -> UnificationResult<Theor
 
 /// TODO: doc --- put a [Composite] of [TheoryArrow]s into the epi-mono normal
 /// form for the theory's [ListModality] structure maps, using
-/// [StructureMap::compose], [StructureMap::lift], and [StructureMap::unlift].
-fn destruct_normalise_composite<T: Theory>(c: &Composite<TheoryArrow<T>>) -> Vec<TheoryArrow<T>> {
-    let _ = c;
-    todo!("destruct_normalise_composite using the epi-mono normal form of T::ListModality")
+/// [StructureMap::compose], [StructureMap::outer_lift], [StructureMap::inner_lift],
+/// and [StructureMap::inner_unlift].
+
+/// Take a [Composite] of [TheoryArrow]s to a normal form
+fn destruct_normalise_composite<T: Theory>(
+    composite: &Composite<TheoryArrow<T>>,
+) -> Vec<TheoryArrow<T>> {
+    // Rewrite 1: per-arrow, absorb any prefix of ModalApplication wrappers
+    // sitting above a ModalStructureMap into the map via outer_lift.
+    let mut arrows: Vec<_> =
+        composite.iter().cloned().map(absorb_outer_modal_applications).collect();
+
+    // A "bubble-sort" style loop to apply the two remaining rewrites for the
+    // normal form.
+    let mut done = false;
+    while !done {
+        done = true;
+        for i in 0..arrows.len().saturating_sub(1) {
+            // Rewrite 2: compose adjacent ModalStructureMaps
+            if let TheoryArrow::ModalStructureMap(m1) = &arrows[i]
+                && let TheoryArrow::ModalStructureMap(m2) = &arrows[i + 1]
+                && let Some(composite) = StructureMap::compose(m1, m2)
+            {
+                arrows[i] = TheoryArrow::ModalStructureMap(composite);
+                arrows.remove(i + 1);
+                done = false;
+                break;
+            }
+
+            // Rewrite 3: commute a ModalStructureMap leftward past a generator
+            if let TheoryArrow::ModalStructureMap(map) = &arrows[i + 1]
+                && is_eventually_generator(&arrows[i])
+                && let Some((d_dom, d_cod)) = inner_generator_boundary_depths(&arrows[i])
+                && let Some(map) = if d_dom >= d_cod {
+                    Some(map.inner_lift(d_dom - d_cod))
+                } else {
+                    map.inner_unlift(d_cod - d_dom)
+                }
+            {
+                let generator = arrows.remove(i);
+                arrows[i] = TheoryArrow::ModalStructureMap(map);
+                arrows.insert(i + 1, generator);
+                done = false;
+                break;
+            }
+        }
+    }
+
+    arrows
+}
+
+/// Determine whether a [TheoryArrow] is a generator, allowing for layers of
+/// [TheoryArrow::ModalApplication].
+fn is_eventually_generator<T: Theory>(arrow: &TheoryArrow<T>) -> bool {
+    // Rust makes no guarantees about tail recursion, and in context by abusing the
+    // normal form and the current state of the TheoryArrow enum it would be
+    // possible to make a "shorter" implementation. In the face of these options, we
+    // nevertheless choose obviousness over terseness, and force any changes to the
+    // structure of the enum to also visit this decision point.
+    match arrow {
+        TheoryArrow::ModalStructureMap(_) => false,
+        TheoryArrow::Generator { .. } => true,
+        TheoryArrow::ModalApplication(on) => is_eventually_generator(on),
+    }
+}
+
+/// Transform iterates of [TheoryArrow::ModalApplication] on
+/// [TheoryArrow::ModalStructureMap] to a single
+/// [TheoryArrow::ModalStructureMap] by using the [ListModality] structure.
+fn absorb_outer_modal_applications<T: Theory>(arrow: TheoryArrow<T>) -> TheoryArrow<T> {
+    let mut depth = 0;
+    let mut cursor = &arrow;
+    while let TheoryArrow::ModalApplication(on) = cursor {
+        depth += 1;
+        cursor = on.as_ref();
+    }
+    match cursor {
+        TheoryArrow::ModalStructureMap(map) => {
+            TheoryArrow::ModalStructureMap(map.outer_lift(depth))
+        }
+        TheoryArrow::Generator { .. } | TheoryArrow::ModalApplication(_) => arrow,
+    }
+}
+
+/// Compute the modal depth of the domain and codomain (respectively) of a
+/// [TheoryArrow::Generator], potentially wrapped in iterated layers of
+/// [TheoryArrow::ModalApplication]. These additional layers do not contribute
+/// to the computed depth. In any other case, return None.
+fn inner_generator_boundary_depths<T: Theory>(arrow: &TheoryArrow<T>) -> Option<(usize, usize)> {
+    let mut cursor = arrow;
+    while let TheoryArrow::ModalApplication(on) = cursor {
+        cursor = on.as_ref();
+    }
+    match cursor {
+        TheoryArrow::Generator { dom, cod, .. } => Some((dom.modal_depth(), cod.modal_depth())),
+        TheoryArrow::ModalStructureMap(_) | TheoryArrow::ModalApplication(_) => None,
+    }
 }

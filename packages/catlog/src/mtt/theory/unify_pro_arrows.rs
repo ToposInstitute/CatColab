@@ -106,17 +106,17 @@ fn default_canonicalise_pro_arrow<T: Theory>(pro_arrow: &TheoryProArrow<T>) -> T
             dom_leg: dom_leg.clone(),
             cod_leg: cod_leg.clone(),
         },
-        TheoryProArrow::ModalApplication { on } => {
+        TheoryProArrow::ModalApplication(on) => {
             let on = default_canonicalise_pro_arrow(on);
             match on {
                 TheoryProArrow::Hom(o) => {
-                    TheoryProArrow::Hom(TheoryObject::ModalApplication { on: Box::new(o) })
+                    TheoryProArrow::Hom(TheoryObject::ModalApplication(Box::new(o)))
                 }
                 TheoryProArrow::Generator { .. }
                 | TheoryProArrow::Hole { .. }
                 | TheoryProArrow::Restriction { .. }
-                | TheoryProArrow::ModalApplication { .. } => {
-                    TheoryProArrow::ModalApplication { on: Box::new(on) }
+                | TheoryProArrow::ModalApplication(_) => {
+                    TheoryProArrow::ModalApplication(Box::new(on))
                 }
             }
         }
@@ -127,7 +127,7 @@ fn unwrap_modal_theory_object<T: Theory>(
     obj: TheoryObject<T>,
 ) -> Option<TheoryObject<T>> {
     match obj {
-        TheoryObject::ModalApplication { on } => Some(*on),
+        TheoryObject::ModalApplication(on) => Some(*on),
         _ => None,
     }
 }
@@ -215,7 +215,7 @@ fn structural_pro_arrow_unification<T: Theory>(
             })
         }
 
-        TheoryProArrow::ModalApplication { on } => {
+        TheoryProArrow::ModalApplication(on) => {
             // The boundaries should be of the form "modality(dom)" and
             // "modality(cod)", so we "unwrap" the modality to obtain the dom
             // and cod objects so that we may recursively unify the "unwrapped"
@@ -229,15 +229,14 @@ fn structural_pro_arrow_unification<T: Theory>(
 
             let mut unwrapped: Vec<&TheoryProArrow<T>> = vec![on.as_ref()];
             for p in rest {
-                let TheoryProArrow::ModalApplication { on } = p else {
+                let TheoryProArrow::ModalApplication(on) = p else {
                     return UnificationResult::Incompatible;
                 };
                 unwrapped.push(on.as_ref());
             }
 
-            structural_pro_arrow_unification(&unwrapped, dom, cod).map(|result| {
-                TheoryProArrow::ModalApplication { on: Box::new(result) }
-            })
+            structural_pro_arrow_unification(&unwrapped, dom, cod)
+                .map(|result| TheoryProArrow::ModalApplication(Box::new(result)))
         }
 
         TheoryProArrow::Hole { .. } => unreachable!("holes were already filtered"),

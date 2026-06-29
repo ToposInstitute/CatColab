@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 use crate::mtt::{
     composite::Composite,
     hole::Holy,
-    theory::{Theory, ListModality},
+    theory::{ListModality, Theory},
 };
 
 // -----------------------------------------------------------------------------
@@ -21,10 +21,7 @@ pub enum TheoryObject<T: Theory> {
     Generator(TheoryGeneratingObject),
 
     /// A modal application to an object of the theory.
-    ModalApplication {
-        /// Which theory object it was applied to.
-        on: Box<TheoryObject<T>>,
-    },
+    ModalApplication(Box<TheoryObject<T>>),
 
     /// A hole generated during type checking, and used for unification. A
     /// [TheoryObject] is a linear chain of modal applications terminating in a
@@ -53,17 +50,11 @@ pub enum TheoryArrow<T: Theory> {
         cod: TheoryObject<T>,
     },
     /// A vertical arrow under a list modality.
-    ModalApplication {
-        /// The vertical arrow acted on.
-        on: Box<TheoryArrow<T>>,
-    },
+    ModalApplication(Box<TheoryArrow<T>>),
     /// An application of structure map for the [ListModality] specified by the
     /// theory, that is, a (normalised form of a) composite of μ and η in some
     /// way.
-    ModalStructureMap {
-        /// TODO: doc
-        map: <T::ListModality as ListModality>::Map,
-    },
+    ModalStructureMap(<T::ListModality as ListModality>::Map),
 }
 
 /// An atomic (non-composite) theory pro-arrow.
@@ -80,10 +71,7 @@ pub enum TheoryProArrow<T: Theory> {
         cod: TheoryObject<T>,
     },
     /// A pro-arrow  under a list modality.
-    ModalApplication {
-        /// The pro-arrow being acted on.
-        on: Box<TheoryProArrow<T>>,
-    },
+    ModalApplication(Box<TheoryProArrow<T>>),
     /// A base pro-arrow restricted by composites of vertical arrows.
     Restriction {
         /// The pro-arrow being restricted.

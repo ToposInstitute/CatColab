@@ -25,7 +25,7 @@ impl Multicategory {
     }
 
     fn list_of(o: &TheoryObject<Self>) -> TheoryObject<Self> {
-        TheoryObject::ModalApplication { on: Box::new(o.clone()) }
+        TheoryObject::ModalApplication(Box::new(o.clone()))
     }
 
     /// The generating pro-arrow `P: List 𝕏 -|-> 𝕏`.
@@ -83,7 +83,7 @@ impl Theory for Multicategory {
         // The objects are the modal tower over the single generator.
         match obj {
             TheoryObject::Generator(g) => g == OBJECT,
-            TheoryObject::ModalApplication { on } => Self::has_object(on),
+            TheoryObject::ModalApplication(on) => Self::has_object(on),
             TheoryObject::Hole { .. } => true,
         }
     }
@@ -102,7 +102,7 @@ impl Theory for Multicategory {
                     && Self::unify_objects(&[dom, &Self::list_of(cod)]).is_compatible()
             }
 
-            TheoryProArrow::ModalApplication { on } => Self::has_pro_arrow(on),
+            TheoryProArrow::ModalApplication(on) => Self::has_pro_arrow(on),
 
             TheoryProArrow::Restriction { .. } | TheoryProArrow::Hole { .. } => false,
         }

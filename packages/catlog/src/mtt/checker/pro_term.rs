@@ -424,7 +424,7 @@ impl<T: Theory> ModelEntry<T> {
         let over = Composite::try_from(
             common
                 .into_iter()
-                .map(|p| TheoryProArrow::ModalApplication { on: Box::new(p) })
+                .map(|p| TheoryProArrow::ModalApplication(Box::new(p)))
                 .collect::<Vec<_>>(),
         )
         .expect("mapping modal operation over a composite should result in a composite");
@@ -437,7 +437,7 @@ impl<T: Theory> ModelEntry<T> {
                 }
                 .into()),
                 |object| {
-                    Ok(TheoryObject::ModalApplication { on: Box::new(object) })
+                    Ok(TheoryObject::ModalApplication(Box::new(object)))
                 },
             )
         };

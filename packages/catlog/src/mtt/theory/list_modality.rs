@@ -8,9 +8,6 @@ use crate::mtt::display_helpers::DHList;
 /// map" for a given list modality. These structure maps are composites of modal
 /// applications of η and μ.
 pub trait StructureMap: Clone + PartialEq + Eq + std::fmt::Display {
-    /// The identity map on an iteration of the modality `depth` times.
-    fn identity(depth: usize) -> Self;
-
     /// The modal depth of the domain of `&self`.
     fn dom_depth(&self) -> usize;
 
@@ -22,14 +19,13 @@ pub trait StructureMap: Clone + PartialEq + Eq + std::fmt::Display {
     fn compose(f: &Self, g: &Self) -> Option<Self>;
 
     /// Apply `k` outer applications of the modality to this map.
-    fn lift(&self, k: usize) -> Self;
+    fn outer_lift(&self, k: usize) -> Self;
 
-    /// If there are at least `k` outer applications of the modality to this
-    /// map, remove them, otherwise return `None`.
-    fn unlift(&self, k: usize) -> Option<Self>;
+    /// TODO: doc
+    fn inner_lift(&self, k: usize) -> Self;
 
-    /// Determine whether `&self` is the identity.
-    fn is_identity(&self) -> bool;
+    /// TODO: doc
+    fn inner_unlift(&self, k: usize) -> Option<Self>;
 }
 
 /// The pure combinatorics of a list modality.
@@ -59,9 +55,6 @@ pub enum NoList {}
 pub enum NoMap {}
 
 impl StructureMap for NoMap {
-    fn identity(_: usize) -> Self {
-        unreachable!("NoList has no structure maps; identity cannot be constructed")
-    }
     fn dom_depth(&self) -> usize {
         match *self {}
     }
@@ -71,13 +64,13 @@ impl StructureMap for NoMap {
     fn compose(f: &Self, _: &Self) -> Option<Self> {
         match *f {}
     }
-    fn lift(&self, _: usize) -> Self {
+    fn outer_lift(&self, _: usize) -> Self {
         match *self {}
     }
-    fn unlift(&self, _: usize) -> Option<Self> {
+    fn inner_lift(&self, _: usize) -> Self {
         match *self {}
     }
-    fn is_identity(&self) -> bool {
+    fn inner_unlift(&self, _: usize) -> Option<Self> {
         match *self {}
     }
 }
@@ -112,14 +105,6 @@ pub struct OrderPreservingMap {
 }
 
 impl StructureMap for OrderPreservingMap {
-    fn identity(depth: usize) -> Self {
-        OrderPreservingMap {
-            epi: (0..depth).collect(),
-            mono: (0..depth).collect(),
-            dom_depth: depth,
-            cod_depth: depth,
-        }
-    }
     fn dom_depth(&self) -> usize {
         self.dom_depth
     }
@@ -130,8 +115,7 @@ impl StructureMap for OrderPreservingMap {
         if f.cod_depth != g.dom_depth {
             return None;
         }
-        let h: Vec<usize> =
-            (0..f.dom_depth).map(|i| g.mono[g.epi[f.mono[f.epi[i]]]]).collect();
+        let h: Vec<usize> = (0..f.dom_depth).map(|i| g.mono[g.epi[f.mono[f.epi[i]]]]).collect();
         let (epi, mono) = refactor_epi_mono(&h);
         Some(OrderPreservingMap {
             epi,
@@ -140,8 +124,8 @@ impl StructureMap for OrderPreservingMap {
             cod_depth: g.cod_depth,
         })
     }
-    fn lift(&self, k: usize) -> Self {
-        let (epi, mono) = lift_epi_mono(&self.epi, &self.mono, k);
+    fn outer_lift(&self, k: usize) -> Self {
+        let (epi, mono) = outer_lift_epi_mono(&self.epi, &self.mono, k);
         OrderPreservingMap {
             epi,
             mono,
@@ -149,20 +133,24 @@ impl StructureMap for OrderPreservingMap {
             cod_depth: self.cod_depth + k,
         }
     }
-    fn unlift(&self, k: usize) -> Option<Self> {
+    fn inner_lift(&self, k: usize) -> Self {
+        let (epi, mono) = inner_lift_epi_mono(&self.epi, &self.mono, self.cod_depth, k);
+        OrderPreservingMap {
+            epi,
+            mono,
+            dom_depth: self.dom_depth + k,
+            cod_depth: self.cod_depth + k,
+        }
+    }
+    fn inner_unlift(&self, k: usize) -> Option<Self> {
         let (epi, mono) =
-            unlift_epi_mono(&self.epi, &self.mono, self.dom_depth, self.cod_depth, k)?;
+            inner_unlift_epi_mono(&self.epi, &self.mono, self.dom_depth, self.cod_depth, k)?;
         Some(OrderPreservingMap {
             epi,
             mono,
             dom_depth: self.dom_depth - k,
             cod_depth: self.cod_depth - k,
         })
-    }
-    fn is_identity(&self) -> bool {
-        self.dom_depth == self.cod_depth
-            && self.epi.iter().enumerate().all(|(i, &j)| i == j)
-            && self.mono.iter().enumerate().all(|(i, &j)| i == j)
     }
 }
 
@@ -191,9 +179,6 @@ pub struct Bijection {
 }
 
 impl StructureMap for Bijection {
-    fn identity(depth: usize) -> Self {
-        Bijection { permutation: (0..depth).collect() }
-    }
     fn dom_depth(&self) -> usize {
         self.permutation.len()
     }
@@ -208,24 +193,29 @@ impl StructureMap for Bijection {
             permutation: f.permutation.iter().map(|&i| g.permutation[i]).collect(),
         })
     }
-    fn lift(&self, k: usize) -> Self {
+    fn outer_lift(&self, k: usize) -> Self {
         let mut permutation: Vec<usize> = (0..k).collect();
         permutation.extend(self.permutation.iter().map(|&v| v + k));
         Bijection { permutation }
     }
-    fn unlift(&self, k: usize) -> Option<Self> {
-        if k > self.permutation.len() {
+    fn inner_lift(&self, k: usize) -> Self {
+        let n = self.permutation.len();
+        Bijection {
+            permutation: self.permutation.iter().copied().chain(n..n + k).collect(),
+        }
+    }
+    fn inner_unlift(&self, k: usize) -> Option<Self> {
+        let n = self.permutation.len();
+        if k > n {
             return None;
         }
-        if self.permutation[..k].iter().enumerate().any(|(i, &v)| v != i) {
+        let cutoff = n - k;
+        if self.permutation[cutoff..].iter().enumerate().any(|(i, &v)| v != cutoff + i) {
             return None;
         }
         Some(Bijection {
-            permutation: self.permutation[k..].iter().map(|&v| v - k).collect(),
+            permutation: self.permutation[..cutoff].to_vec(),
         })
-    }
-    fn is_identity(&self) -> bool {
-        self.permutation.iter().enumerate().all(|(i, &j)| i == j)
     }
 }
 
@@ -276,14 +266,6 @@ pub struct FiniteMap {
 }
 
 impl StructureMap for FiniteMap {
-    fn identity(depth: usize) -> Self {
-        FiniteMap {
-            epi: (0..depth).collect(),
-            mono: (0..depth).collect(),
-            dom_depth: depth,
-            cod_depth: depth,
-        }
-    }
     fn dom_depth(&self) -> usize {
         self.dom_depth
     }
@@ -294,8 +276,7 @@ impl StructureMap for FiniteMap {
         if f.cod_depth != g.dom_depth {
             return None;
         }
-        let h: Vec<usize> =
-            (0..f.dom_depth).map(|i| g.mono[g.epi[f.mono[f.epi[i]]]]).collect();
+        let h: Vec<usize> = (0..f.dom_depth).map(|i| g.mono[g.epi[f.mono[f.epi[i]]]]).collect();
         let (epi, mono) = refactor_epi_mono(&h);
         Some(FiniteMap {
             epi,
@@ -304,8 +285,8 @@ impl StructureMap for FiniteMap {
             cod_depth: g.cod_depth,
         })
     }
-    fn lift(&self, k: usize) -> Self {
-        let (epi, mono) = lift_epi_mono(&self.epi, &self.mono, k);
+    fn outer_lift(&self, k: usize) -> Self {
+        let (epi, mono) = outer_lift_epi_mono(&self.epi, &self.mono, k);
         FiniteMap {
             epi,
             mono,
@@ -313,20 +294,24 @@ impl StructureMap for FiniteMap {
             cod_depth: self.cod_depth + k,
         }
     }
-    fn unlift(&self, k: usize) -> Option<Self> {
+    fn inner_lift(&self, k: usize) -> Self {
+        let (epi, mono) = inner_lift_epi_mono(&self.epi, &self.mono, self.cod_depth, k);
+        FiniteMap {
+            epi,
+            mono,
+            dom_depth: self.dom_depth + k,
+            cod_depth: self.cod_depth + k,
+        }
+    }
+    fn inner_unlift(&self, k: usize) -> Option<Self> {
         let (epi, mono) =
-            unlift_epi_mono(&self.epi, &self.mono, self.dom_depth, self.cod_depth, k)?;
+            inner_unlift_epi_mono(&self.epi, &self.mono, self.dom_depth, self.cod_depth, k)?;
         Some(FiniteMap {
             epi,
             mono,
             dom_depth: self.dom_depth - k,
             cod_depth: self.cod_depth - k,
         })
-    }
-    fn is_identity(&self) -> bool {
-        self.dom_depth == self.cod_depth
-            && self.epi.iter().enumerate().all(|(i, &j)| i == j)
-            && self.mono.iter().enumerate().all(|(i, &j)| i == j)
     }
 }
 
@@ -345,7 +330,7 @@ impl ListModality for CartesianList {
 /// TODO: doc
 fn refactor_epi_mono(eval: &[usize]) -> (Vec<usize>, Vec<usize>) {
     let mut mono: Vec<usize> = eval.to_vec();
-    mono.sort_unstable();
+    mono.sort();
     mono.dedup();
     let epi: Vec<usize> = eval
         .iter()
@@ -358,16 +343,27 @@ fn refactor_epi_mono(eval: &[usize]) -> (Vec<usize>, Vec<usize>) {
 }
 
 /// TODO: doc
-fn lift_epi_mono(epi: &[usize], mono: &[usize], k: usize) -> (Vec<usize>, Vec<usize>) {
-    let new_epi: Vec<usize> =
-        (0..k).chain(epi.iter().map(|&v| v + k)).collect();
-    let new_mono: Vec<usize> =
-        (0..k).chain(mono.iter().map(|&v| v + k)).collect();
+fn outer_lift_epi_mono(epi: &[usize], mono: &[usize], k: usize) -> (Vec<usize>, Vec<usize>) {
+    let new_epi: Vec<usize> = (0..k).chain(epi.iter().map(|&v| v + k)).collect();
+    let new_mono: Vec<usize> = (0..k).chain(mono.iter().map(|&v| v + k)).collect();
     (new_epi, new_mono)
 }
 
 /// TODO: doc
-fn unlift_epi_mono(
+fn inner_lift_epi_mono(
+    epi: &[usize],
+    mono: &[usize],
+    cod_depth: usize,
+    k: usize,
+) -> (Vec<usize>, Vec<usize>) {
+    let inter = mono.len();
+    let new_epi: Vec<usize> = epi.iter().copied().chain(inter..inter + k).collect();
+    let new_mono: Vec<usize> = mono.iter().copied().chain(cod_depth..cod_depth + k).collect();
+    (new_epi, new_mono)
+}
+
+/// TODO: doc
+fn inner_unlift_epi_mono(
     epi: &[usize],
     mono: &[usize],
     dom_depth: usize,
@@ -377,19 +373,22 @@ fn unlift_epi_mono(
     if k > dom_depth || k > mono.len() || k > cod_depth {
         return None;
     }
-    // outer k positions of dom must be the identity prefix of the image
-    if epi[..k].iter().enumerate().any(|(i, &v)| v != i) {
+    let new_inter = mono.len() - k;
+    let new_dom = dom_depth - k;
+    let new_cod = cod_depth - k;
+    // inner k positions of dom must map identity-wise to the inner k of the image
+    if (0..k).any(|i| epi[new_dom + i] != new_inter + i) {
         return None;
     }
-    // outer k positions of the image must be the identity prefix of cod
-    if mono[..k].iter().enumerate().any(|(i, &v)| v != i) {
+    // inner k positions of the image must map identity-wise to the inner k of cod
+    if (0..k).any(|i| mono[new_inter + i] != new_cod + i) {
         return None;
     }
-    // no inner source position may land in the outer image block
-    if epi[k..].iter().any(|&v| v < k) {
+    // no outer source position may land in the inner image block
+    if epi[..new_dom].iter().any(|&v| v >= new_inter) {
         return None;
     }
-    let new_epi: Vec<usize> = epi[k..].iter().map(|&v| v - k).collect();
-    let new_mono: Vec<usize> = mono[k..].iter().map(|&v| v - k).collect();
+    let new_epi: Vec<usize> = epi[..new_dom].to_vec();
+    let new_mono: Vec<usize> = mono[..new_inter].to_vec();
     Some((new_epi, new_mono))
 }
