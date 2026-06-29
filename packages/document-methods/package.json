@@ -19,6 +19,7 @@
         "ci": "tsc && tsc -p tsconfig.test.json && oxlint --deny-warnings && oxfmt --check ."
     },
     "dependencies": {
+        "arktype": "^2.2.1",
         "catcolab-document-types": "link:../document-types/pkg",
         "catlog-wasm": "link:../catlog-wasm/dist/pkg-browser",
         "tiny-invariant": "^1.3.3",

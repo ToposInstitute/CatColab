@@ -15,10 +15,10 @@ import { describe, expect, test } from "vitest";
 // issue an `{ message, path? }` — so callers inspect failures vendor-neutrally
 // without importing anything validator-specific.
 //
-// They are EXPECTED TO FAIL today: the runtime `add` (src/future/notebook.ts)
-// does no argument validation, so each call below currently succeeds silently
-// rather than throwing. They describe the behaviour we want once `add`
-// validates its arguments.
+// The runtime `add` (src/future/notebook.ts) validates its arguments with
+// ArkType (src/future/validation.ts) and throws a `ValidationError` carrying
+// that `issues` array, so each call below is rejected rather than silently
+// corrupting the document.
 
 /**
  * Assert that `fn` throws an error carrying a Standard Schema `issues` array.

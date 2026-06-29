@@ -71,6 +71,7 @@ import {
     type ValidatableNotebook,
 } from "./definitions";
 import { type DocumentStore, plainDocumentId, plainStore, resolveModelInStore } from "./store";
+import { validateAddArgs } from "./validation";
 
 /**
  * A stable string capturing the document's *formal* cells — every cell except
@@ -91,6 +92,35 @@ const formalCellsSignature = (document: Document): string => {
     }
     return parts.join("\u0000");
 };
+
+/**
+ * Drop the endpoint `obType` metadata from a morphism def's `domain`/`codomain`.
+ * That field is only an *expectation* used to validate `add` (see
+ * `defineMorphism`); it is not part of what the document stores, so a def
+ * reconstructed from storage in `cells()` cannot recover it for a `Basic`
+ * morphism. {@link sameMorphismType} compares on the rest (the `morType` and
+ * each endpoint's `apply`/`modality`), which keeps `cellsOf`/`supports`
+ * selecting the right cells regardless of the recorded `obType`.
+ */
+const stripObTypeFromMeta = (
+    meta: MorEndpointMeta | undefined,
+): MorEndpointMeta | undefined => {
+    if (!meta) {
+        return undefined;
+    }
+    const { obType: _obType, ...rest } = meta;
+    return Object.keys(rest).length > 0 ? rest : undefined;
+};
+
+const stripEndpointObType = (def: MorphismDef): MorphismDef => ({
+    ...def,
+    domain: stripObTypeFromMeta(def.domain),
+    codomain: stripObTypeFromMeta(def.codomain),
+});
+
+/** Structural equality of two morphism defs ignoring endpoint `obType`. */
+const sameMorphismType = (a: MorphismDef, b: MorphismDef): boolean =>
+    sameTypeValue(stripEndpointObType(a), stripEndpointObType(b));
 
 /**
  * Attach an analysis notebook over a real {@link AnalysisDocument} held by the
@@ -601,7 +631,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
         }) as unknown as InstantiationCell<Handle>;
 
     const isShapeMorphism = (def: MorphismDef): boolean =>
-        (shape.morphisms ?? []).some((t) => sameTypeValue(t, def));
+        (shape.morphisms ?? []).some((t) => sameMorphismType(t, def));
 
     const isShapeObject = (def: ObjectDef): boolean =>
         (shape.objects ?? []).some((t) => sameTypeValue(t, def));
@@ -847,8 +877,8 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                     return objectDefs.some((def) => sameTypeValue(type, def));
                 }
                 if (cell.kind === CellKind.Morphism) {
-                    const type = (cell as { type?: unknown }).type;
-                    return morphismDefs.some((def) => sameTypeValue(type, def));
+                    const type = (cell as { type?: MorphismDef }).type;
+                    return type !== undefined && morphismDefs.some((def) => sameMorphismType(type, def));
                 }
                 return false;
             });
@@ -882,6 +912,11 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                 return addInstantiationCell(args as InstantiationArgs<Handle>);
             }
             const def = type as ObjectDef | MorphismDef;
+            // Re-check the arguments at runtime: the typed `add` rejects endpoint
+            // mistakes at compile time, but an untyped (plain-JS) caller bypasses
+            // that, so validate here and throw a `ValidationError` rather than
+            // silently writing a corrupt cell.
+            validateAddArgs(def, args);
             if (def.tag === "morphism") {
                 return addMorphismCell(def, args as { name: string });
             }

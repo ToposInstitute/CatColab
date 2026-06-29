@@ -206,6 +206,16 @@ export type ModalityBrand<Mod extends ListModality | null> = {
 export type MorEndpointMeta = {
     readonly apply?: ObOp | undefined;
     readonly modality?: Modality | undefined;
+    /**
+     * The object type an endpoint cell must have, recorded so {@link
+     * Notebook.add} can reject an endpoint of the wrong type (or from another
+     * theory) at runtime — the check the phantom {@link Endpoints} brand makes
+     * at compile time. For a `Hom` morphism it is the `Hom`'s object type; for a
+     * list morphism it is the list element's object type; for a `Basic`
+     * morphism it is the explicitly declared endpoint `ObType`. Absent only for
+     * a morphism whose endpoint object type is genuinely unconstrained.
+     */
+    readonly obType?: ObType | undefined;
 };
 
 /**
@@ -288,15 +298,32 @@ export function defineMorphism(
         codomain?: ObType | MorEndpointMeta;
     },
 ): MorphismDef {
-    // An endpoint is either an `ObType` (`{ tag, content }`) — a single object
-    // of that type, recorded only in the phantom {@link Endpoints} brand and so
-    // contributing no runtime metadata — or an `apply` definition (`{ apply,
-    // modality }`) for a list endpoint, whose `apply`/`modality` are the only
-    // fields the runtime reads (see {@link encodeEndpoint}).
-    const toMeta = (endpoint: ObType | MorEndpointMeta | undefined): MorEndpointMeta | undefined =>
-        endpoint && ("apply" in endpoint || "modality" in endpoint)
-            ? (endpoint as MorEndpointMeta)
-            : undefined;
+    // The object type a `Hom` morphism's endpoints connect, read from the
+    // `MorType` literal (and shared by both endpoints). A list morphism's
+    // endpoints are lists of this same object type; a `Basic` morphism records
+    // nothing here, so its endpoint types come from `options` instead.
+    const homObType: ObType | undefined =
+        morType.tag === "Hom" ? (morType.content as ObType) : undefined;
+
+    // Build the runtime metadata for one endpoint. An endpoint is either an
+    // `ObType` (`{ tag, content }`) — a single object of that type — or an
+    // `apply` definition (`{ apply, modality }`) for a list endpoint. Either
+    // way the endpoint's expected object type is recorded so {@link
+    // Notebook.add} can validate it: a `Basic` endpoint supplies it directly,
+    // while a `Hom`/list endpoint takes it from the `MorType`.
+    const toMeta = (
+        endpoint: ObType | MorEndpointMeta | undefined,
+    ): MorEndpointMeta | undefined => {
+        const isApply = endpoint && ("apply" in endpoint || "modality" in endpoint);
+        if (isApply) {
+            const meta = endpoint as MorEndpointMeta;
+            return { ...meta, obType: meta.obType ?? homObType };
+        }
+        // A bare `ObType` endpoint (a `Basic` morphism's declared endpoint).
+        const obType = (endpoint as ObType | undefined) ?? homObType;
+        return obType ? { obType } : undefined;
+    };
+
     return {
         tag: "morphism",
         morType,
