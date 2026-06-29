@@ -212,7 +212,7 @@ handle in the repo and load it using `loadNotebookFromHandle`.
 
 ```ts
 const sourceNotebook = automergeBinder.createNotebook(SimpleOlog, {
-    name: "Loaded Automerge Olog",
+    name: "Automerge Olog",
 });
 
 const handle = await repo.find<ModelDocument>(sourceNotebook.handle.url);
@@ -221,14 +221,14 @@ console.log("issues:", result.issues ?? []);
 if (!result.issues) {
     const loadedNotebook = result.value;
 
-    loadedNotebook.update({ name: "Updated loaded Automerge Olog" });
+    loadedNotebook.update({ name: `Loaded ${loadedNotebook.name}` });
     console.log("loaded automerge notebook:", loadedNotebook.name);
 }
 ```
 
 ```
 issues: []
-loaded automerge notebook: Updated loaded Automerge Olog
+loaded automerge notebook: Loaded Automerge Olog
 ```
 
 Migration mutates the document in place, so the store handle is preserved. The
