@@ -18,7 +18,7 @@ pub struct VarInContext {
     ///
     /// We allow the type to be null as a hack for the `self` variable before we
     /// know the type of the `self` variable.
-    pub ty: Option<TyV>,
+    pub ty: Option<BaseTyV>,
 }
 
 /// The variable context during elaboration.
@@ -62,12 +62,12 @@ impl Context {
     }
 
     /// Add a new variable to scope (note: does not add it to the environment).
-    pub fn push_scope(&mut self, name: VarName, label: LabelSegment, ty: Option<TyV>) {
+    pub fn push_scope(&mut self, name: VarName, label: LabelSegment, ty: Option<BaseTyV>) {
         self.scope.push(VarInContext::new(name, label, ty))
     }
 
     /// Lookup a variable by name.
-    pub fn lookup(&self, name: VarName) -> Option<(BwdIdx, LabelSegment, Option<TyV>)> {
+    pub fn lookup(&self, name: VarName) -> Option<(BwdIdx, LabelSegment, Option<BaseTyV>)> {
         self.scope
             .iter()
             .rev()

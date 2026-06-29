@@ -94,7 +94,7 @@ impl Model {
     /// Generates a model from a type.
     ///
     /// Precondition: `ty` must be valid in the empty context.
-    pub fn from_ty(toplevel: &Toplevel, th: &TheoryDef, ty: &TyV) -> (Self, Namespace) {
+    pub fn from_ty(toplevel: &Toplevel, th: &TheoryDef, ty: &BaseTyV) -> (Self, Namespace) {
         let mut generator = ModelGenerator::new(toplevel, th);
         let namespace = generator.generate(ty);
         (generator.model, namespace)
@@ -218,7 +218,7 @@ impl<'a> ModelGenerator<'a> {
         Self { eval, theory, model }
     }
 
-    fn generate(&mut self, ty: &TyV) -> Namespace {
+    fn generate(&mut self, ty: &BaseTyV) -> Namespace {
         let tm_n;
         (tm_n, self.eval) = self.eval.bind_self(ty.clone());
         let tm_v = self.eval.eta_neu(&tm_n, ty);
@@ -285,7 +285,7 @@ impl<'a> ModelGenerator<'a> {
     fn make_ob_synth_type(&self, val: &TmV) -> Option<(Ob, ObType)> {
         match &**val {
             TmV_::Neu(n, ty_v) => {
-                let TyV_::Object(ob_type) = &**ty_v else {
+                let BaseTyV_::Object(ob_type) = &**ty_v else {
                     return None;
                 };
                 let name = n.to_qualified_name();
@@ -332,7 +332,7 @@ impl<'a> ModelGenerator<'a> {
     fn synth_mor(&self, val: &TmV) -> Option<(Mor, MorType)> {
         match &**val {
             TmV_::Neu(n, ty_v) => {
-                let TyV_::Morphism(mor_type, _, _) = &**ty_v else {
+                let BaseTyV_::Morphism(mor_type, _, _) = &**ty_v else {
                     return None;
                 };
                 let name = n.to_qualified_name();
@@ -361,19 +361,19 @@ impl<'a> ModelGenerator<'a> {
         (mt == *mor_type).then_some(mor)
     }
 
-    fn extract(&mut self, prefix: Vec<NameSegment>, val: &TmV, ty: &TyV) -> Option<Namespace> {
+    fn extract(&mut self, prefix: Vec<NameSegment>, val: &TmV, ty: &BaseTyV) -> Option<Namespace> {
         match &**ty {
-            TyV_::Object(ot) => {
+            BaseTyV_::Object(ot) => {
                 self.model.add_ob(prefix.into(), ot.clone());
                 None
             }
-            TyV_::Morphism(mt, dom, cod) => {
+            BaseTyV_::Morphism(mt, dom, cod) => {
                 let dom = self.make_ob_check_type(dom, &self.theory.src_type(mt))?;
                 let cod = self.make_ob_check_type(cod, &self.theory.tgt_type(mt))?;
                 self.model.add_mor(prefix.into(), dom, cod, mt.clone());
                 None
             }
-            TyV_::Record(r) => {
+            BaseTyV_::Record(r) => {
                 let mut namespace = Namespace::new_for_uuid();
                 for (name, (label, _)) in r.fields.iter() {
                     let mut prefix = prefix.clone();
@@ -389,9 +389,9 @@ impl<'a> ModelGenerator<'a> {
                 }
                 Some(namespace)
             }
-            TyV_::Sing(_, _) => None,
-            TyV_::Id(mor_ty, lhs, rhs) => {
-                let TyV_::Morphism(mt, _, _) = &**mor_ty else {
+            BaseTyV_::Sing(_, _) => None,
+            BaseTyV_::Id(mor_ty, lhs, rhs) => {
+                let BaseTyV_::Morphism(mt, _, _) = &**mor_ty else {
                     return None;
                 };
                 if let (Some(lhs), Some(rhs)) = (self.make_mor(lhs, mt), self.make_mor(rhs, mt)) {
@@ -399,8 +399,8 @@ impl<'a> ModelGenerator<'a> {
                 }
                 None
             }
-            TyV_::Meta(_) => None,
-            TyV_::Over(_) => None,
+            BaseTyV_::Meta(_) => None,
+            BaseTyV_::Over(_) => None,
         }
     }
 }
@@ -642,7 +642,7 @@ instance UseLoop : WeightedGraph := [
         };
         let eval = Evaluator::empty(&toplevel);
         let body_ty = eval.synth_instance_body_ty(loop_body);
-        let TyV_::Record(r) = &*body_ty else {
+        let BaseTyV_::Record(r) = &*body_ty else {
             panic!("synthesized instance type should be a record");
         };
         assert!(r.fields.get(name_seg("e")).is_some(), "generator field e");

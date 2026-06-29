@@ -204,7 +204,7 @@ impl TopElaborator {
                 let (_, ret_ty_v) = elab.ty(ty_n);
                 // An instance body is checked against its codomain model, a
                 // record type.
-                let TyV_::Record(r) = &*ret_ty_v else {
+                let BaseTyV_::Record(r) = &*ret_ty_v else {
                     return self
                         .error(tn.loc, "an instance must be declared against a record type");
                 };
@@ -330,7 +330,7 @@ impl<'a> Elaborator<'a> {
     fn instance_codomain(&self) -> Option<Rc<RecordV>> {
         let (_, _, ty) = self.ctx.lookup(name_seg(Self::CODOMAIN_BINDER))?;
         match &*ty? {
-            TyV_::Record(r) => Some(Rc::new(r.clone())),
+            BaseTyV_::Record(r) => Some(Rc::new(r.clone())),
             _ => None,
         }
     }
@@ -370,23 +370,23 @@ impl<'a> Elaborator<'a> {
         None
     }
 
-    fn ty_hole(&mut self) -> (TyS, TyV) {
+    fn ty_hole(&mut self) -> (BaseTyS, BaseTyV) {
         let ty_m = self.fresh_meta();
-        (TyS::meta(ty_m), TyV::meta(ty_m))
+        (BaseTyS::meta(ty_m), BaseTyV::meta(ty_m))
     }
 
-    fn ty_error(&mut self, msg: impl Into<String>) -> (TyS, TyV) {
+    fn ty_error(&mut self, msg: impl Into<String>) -> (BaseTyS, BaseTyV) {
         self.reporter.error_option_loc(self.loc, ELAB_ERROR, msg.into());
         self.ty_hole()
     }
 
-    fn syn_hole(&mut self) -> (TmS, TmV, TyV) {
+    fn syn_hole(&mut self) -> (TmS, TmV, BaseTyV) {
         let tm_m = self.fresh_meta();
         let ty_m = self.fresh_meta();
-        (TmS::meta(tm_m), TmV::meta(tm_m), TyV::meta(ty_m))
+        (TmS::meta(tm_m), TmV::meta(tm_m), BaseTyV::meta(ty_m))
     }
 
-    fn syn_error(&mut self, msg: impl Into<String>) -> (TmS, TmV, TyV) {
+    fn syn_error(&mut self, msg: impl Into<String>) -> (TmS, TmV, BaseTyV) {
         self.reporter.error_option_loc(self.loc, ELAB_ERROR, msg.into());
         self.syn_hole()
     }
@@ -405,10 +405,10 @@ impl<'a> Elaborator<'a> {
         Evaluator::new(self.toplevel, self.ctx.env.clone(), self.ctx.scope.len())
     }
 
-    fn intro(&mut self, name: VarName, label: LabelSegment, ty: Option<TyV>) -> TmV {
+    fn intro(&mut self, name: VarName, label: LabelSegment, ty: Option<BaseTyV>) -> TmV {
         let v = TmV::neu(
             TmN::var(self.ctx.scope.len().into(), name, label),
-            ty.clone().unwrap_or(TyV::empty_record()),
+            ty.clone().unwrap_or(BaseTyV::empty_record()),
         );
         let v = if ty.is_some() {
             self.evaluator().eta(&v, ty.as_ref())
@@ -423,8 +423,8 @@ impl<'a> Elaborator<'a> {
     /// The unit type, elaborated as the empty record — i.e. the empty
     /// model. `Unit` and `tt` are surface sugar for the empty record type
     /// and its unique element, the empty cons `[]`.
-    fn empty_record_ty(&self) -> (TyS, TyV) {
-        (TyS::record(Row::empty()), TyV::empty_record())
+    fn empty_record_ty(&self) -> (BaseTyS, BaseTyV) {
+        (BaseTyS::record(Row::empty()), BaseTyV::empty_record())
     }
 
     /// Apply a codomain morphism `f` to an already-elaborated argument
@@ -435,14 +435,14 @@ impl<'a> Elaborator<'a> {
         f: &str,
         arg_s: TmS,
         arg_v: TmV,
-        arg_ty: TyV,
+        arg_ty: BaseTyV,
         arg_label_str: &str,
-    ) -> (TmS, TmV, TyV) {
+    ) -> (TmS, TmV, BaseTyV) {
         let Some(codomain) = self.instance_codomain() else {
             return self
                 .syn_error("applied codomain morphism is only allowed inside an instance body");
         };
-        let TyV_::Over(src_path) = &*arg_ty else {
+        let BaseTyV_::Over(src_path) = &*arg_ty else {
             let quoted = self.evaluator().quote_ty(&arg_ty);
             return self.syn_error(format!(
                 "argument {arg_label_str} has type {quoted}, expected a fiber type",
@@ -453,7 +453,7 @@ impl<'a> Elaborator<'a> {
         let Some(mor_ty_s) = codomain.fields.get(f_name) else {
             return self.syn_error(format!("no such codomain morphism {f_name}"));
         };
-        let TyS_::Morphism(_, dom_s, cod_s) = &**mor_ty_s else {
+        let BaseTyS_::Morphism(_, dom_s, cod_s) = &**mor_ty_s else {
             return self.syn_error(format!("codomain field {f_name} is not a morphism"));
         };
         let (Some(dom_path), Some(cod_path)) = (tms_to_path(dom_s), tms_to_path(cod_s)) else {
@@ -470,7 +470,7 @@ impl<'a> Elaborator<'a> {
         (
             TmS::over_app(f_name, f_label, cod_path.clone(), arg_s),
             TmV::over_app(f_name, f_label, cod_path.clone(), arg_v),
-            TyV::over(cod_path),
+            BaseTyV::over(cod_path),
         )
     }
 
@@ -491,7 +491,11 @@ impl<'a> Elaborator<'a> {
     fn instance_body(&mut self, codomain: &RecordV, n: &FNtn) -> (TmS, TmV) {
         let c = self.checkpoint();
         let binder = name_seg(Self::CODOMAIN_BINDER);
-        self.intro(binder, label_seg(Self::CODOMAIN_BINDER), Some(TyV::record(codomain.clone())));
+        self.intro(
+            binder,
+            label_seg(Self::CODOMAIN_BINDER),
+            Some(BaseTyV::record(codomain.clone())),
+        );
         let result = self.instance_body_inner(n);
         self.reset_to(c);
         result
@@ -554,11 +558,11 @@ impl<'a> Elaborator<'a> {
                     let label = label_seg(name_str);
                     let (_, ty_v) = elab.ty(ty_n);
                     match &*ty_v {
-                        TyV_::Over(path) => {
+                        BaseTyV_::Over(path) => {
                             gens.insert(n_seg, (label, path.clone()));
                             elab.intro(n_seg, label, Some(ty_v));
                         }
-                        TyV_::Record(_) => {
+                        BaseTyV_::Record(_) => {
                             let (sub_s, sub_v) = match ty_n.ast0() {
                                 Var(sub_name) => {
                                     let topvar = name_seg(*sub_name);
@@ -588,8 +592,8 @@ impl<'a> Elaborator<'a> {
                             subs_v.insert(n_seg, (label, sub_v));
                             elab.intro(n_seg, label, Some(ty_v));
                         }
-                        TyV_::Id(eq_ty, lhs, rhs) => {
-                            if !matches!(&**eq_ty, TyV_::Over(_)) {
+                        BaseTyV_::Id(eq_ty, lhs, rhs) => {
+                            if !matches!(&**eq_ty, BaseTyV_::Over(_)) {
                                 let quoted = elab.evaluator().quote_ty(eq_ty);
                                 elab.error::<()>(format!(
                                     "instance equation {name_str} is over {quoted}, but an \
@@ -640,7 +644,7 @@ impl<'a> Elaborator<'a> {
                         failed = true;
                         continue;
                     };
-                    let TyS_::Morphism(_, dom_s, cod_s) = &**mor_ty_s else {
+                    let BaseTyS_::Morphism(_, dom_s, cod_s) = &**mor_ty_s else {
                         elab.error::<()>(format!(
                             "mapping-literal assignment requires field {field_name} to be \
                              morphism-typed",
@@ -664,7 +668,7 @@ impl<'a> Elaborator<'a> {
                             unreachable!("guard ensured all entries are `:=` clauses");
                         };
                         let (key_s, key_v, key_ty) = elab.syn(key_n);
-                        let TyV_::Over(key_path) = &*key_ty else {
+                        let BaseTyV_::Over(key_path) = &*key_ty else {
                             let quoted = elab.evaluator().quote_ty(&key_ty);
                             elab.error::<()>(format!(
                                 "mapping-literal key has type {quoted}, expected an element over {}",
@@ -682,7 +686,7 @@ impl<'a> Elaborator<'a> {
                             entry_failed = true;
                             break;
                         }
-                        let lhs_ty = TyV::over(cod_path.clone());
+                        let lhs_ty = BaseTyV::over(cod_path.clone());
                         let lhs_s = TmS::over_app(f_seg, f_label, cod_path.clone(), key_s);
                         let lhs_v = TmV::over_app(f_seg, f_label, cod_path.clone(), key_v);
                         let (rhs_s, rhs_v) = elab.chk(&lhs_ty, target_n);
@@ -712,7 +716,7 @@ impl<'a> Elaborator<'a> {
                         failed = true;
                         continue;
                     };
-                    if !matches!(&**field_ty_s, TyS_::Object(_)) {
+                    if !matches!(&**field_ty_s, BaseTyS_::Object(_)) {
                         elab.error::<()>(format!(
                             "set-literal assignment requires field {field_name} to be \
                              object-typed",
@@ -721,7 +725,7 @@ impl<'a> Elaborator<'a> {
                         continue;
                     }
                     let path = vec![(f_seg, f_label)];
-                    let gen_ty = TyV::over(path.clone());
+                    let gen_ty = BaseTyV::over(path.clone());
                     for name_n in name_ns.iter() {
                         let Var(gen_name) = name_n.ast0() else {
                             elab.loc = Some(name_n.loc());
@@ -739,7 +743,7 @@ impl<'a> Elaborator<'a> {
                 // an equation witness.
                 App2(L(_, Keyword(":=")), lhs_n, rhs_n) => {
                     let (lhs_s, lhs_v, lhs_ty) = elab.syn(lhs_n);
-                    if !matches!(&*lhs_ty, TyV_::Over(_)) {
+                    if !matches!(&*lhs_ty, BaseTyV_::Over(_)) {
                         elab.loc = Some(lhs_n.loc());
                         elab.error::<()>(
                             "mapping-entry clause `mor(arg) := target` requires the LHS \
@@ -785,7 +789,7 @@ impl<'a> Elaborator<'a> {
         (TmS::instance(body_s), TmV::instance(body_v))
     }
 
-    fn binding(&mut self, n: &FNtn) -> Option<(VarName, LabelSegment, TyS, TyV)> {
+    fn binding(&mut self, n: &FNtn) -> Option<(VarName, LabelSegment, BaseTyS, BaseTyV)> {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
             App2(L(_, Keyword(":")), L(_, Var(name)), ty_n) => {
@@ -796,15 +800,15 @@ impl<'a> Elaborator<'a> {
         }
     }
 
-    fn lookup_ty(&mut self, name: VarName) -> (TyS, TyV) {
+    fn lookup_ty(&mut self, name: VarName) -> (BaseTyS, BaseTyV) {
         let qname = QualifiedName::single(name);
         if let Some(ob_type) = self.theory().basic_ob_type(qname) {
-            (TyS::object(ob_type.clone()), TyV::object(ob_type))
+            (BaseTyS::object(ob_type.clone()), BaseTyV::object(ob_type))
         } else if let Some(d) = self.toplevel.declarations.get(&name) {
             match d {
                 TopDecl::Type(t) => {
                     if t.theory == self.theory {
-                        (TyS::topvar(name), t.val.clone())
+                        (BaseTyS::topvar(name), t.val.clone())
                     } else {
                         self.ty_error(format!(
                             "{name} refers to a type in theory {}, expected a type in theory {}",
@@ -821,7 +825,7 @@ impl<'a> Elaborator<'a> {
                             unreachable!("an Instance always has an instance body")
                         };
                         let body_ty = self.evaluator().synth_instance_body_ty(body);
-                        (TyS::topvar(name), body_ty)
+                        (BaseTyS::topvar(name), body_ty)
                     } else {
                         self.ty_error(format!(
                             "{name} refers to an instance in theory {}, expected theory {}",
@@ -879,7 +883,10 @@ impl<'a> Elaborator<'a> {
     }
 
     #[allow(clippy::type_complexity)]
-    fn specialization(&mut self, n: &FNtn) -> Option<(Vec<(NameSegment, LabelSegment)>, TyS, TyV)> {
+    fn specialization(
+        &mut self,
+        n: &FNtn,
+    ) -> Option<(Vec<(NameSegment, LabelSegment)>, BaseTyS, BaseTyV)> {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
             App2(L(_, Keyword(":")), p_n, ty_n) => {
@@ -890,21 +897,25 @@ impl<'a> Elaborator<'a> {
             App2(L(_, Keyword(":=")), p_n, tm_n) => {
                 let p = elab.path(p_n)?;
                 let (tm_s, tm_v, ty_v) = elab.syn(tm_n);
-                Some((p, TyS::sing(elab.evaluator().quote_ty(&ty_v), tm_s), TyV::sing(ty_v, tm_v)))
+                Some((
+                    p,
+                    BaseTyS::sing(elab.evaluator().quote_ty(&ty_v), tm_s),
+                    BaseTyV::sing(ty_v, tm_v),
+                ))
             }
             _ => elab.error("unexpected notation for specialization"),
         }
     }
 
     /// Elaborates a type from notation, returning both syntax and value.
-    pub fn ty(&mut self, n: &FNtn) -> (TyS, TyV) {
+    pub fn ty(&mut self, n: &FNtn) -> (BaseTyS, BaseTyV) {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
             Var(name) => elab.lookup_ty(name_seg(*name)),
             Keyword("Unit") => elab.empty_record_ty(),
             App1(L(_, Prim("sing")), tm_n) => {
                 let (tm_s, tm_v, ty_v) = elab.syn(tm_n);
-                (TyS::sing(elab.evaluator().quote_ty(&ty_v), tm_s), TyV::sing(ty_v, tm_v))
+                (BaseTyS::sing(elab.evaluator().quote_ty(&ty_v), tm_s), BaseTyV::sing(ty_v, tm_v))
             }
             App1(mt_n, L(_, Tuple(domcod_n))) => {
                 let [dom_n, cod_n] = domcod_n.as_slice() else {
@@ -913,12 +924,15 @@ impl<'a> Elaborator<'a> {
                 let Some((mt, dom_ty, cod_ty)) = elab.morphism_ty(mt_n) else {
                     return elab.ty_hole();
                 };
-                let (dom_s, dom_v) = elab.chk(&TyV::object(dom_ty.clone()), dom_n);
-                let (cod_s, cod_v) = elab.chk(&TyV::object(cod_ty.clone()), cod_n);
-                (TyS::morphism(mt.clone(), dom_s, cod_s), TyV::morphism(mt.clone(), dom_v, cod_v))
+                let (dom_s, dom_v) = elab.chk(&BaseTyV::object(dom_ty.clone()), dom_n);
+                let (cod_s, cod_v) = elab.chk(&BaseTyV::object(cod_ty.clone()), cod_n);
+                (
+                    BaseTyS::morphism(mt.clone(), dom_s, cod_s),
+                    BaseTyV::morphism(mt.clone(), dom_v, cod_v),
+                )
             }
             Tuple(field_ns) => {
-                let mut field_ty_vs = Vec::<(FieldName, (LabelSegment, TyV))>::new();
+                let mut field_ty_vs = Vec::<(FieldName, (LabelSegment, BaseTyV))>::new();
                 let mut failed = false;
                 let self_var = elab.intro(name_seg("self"), label_seg("self"), None).unwrap_neu();
                 let c = elab.checkpoint();
@@ -949,7 +963,7 @@ impl<'a> Elaborator<'a> {
                     .map(|(name, (label, ty_v))| (*name, (*label, elab.evaluator().quote_ty(ty_v))))
                     .collect();
                 let r_v = RecordV::new(elab.ctx.env.clone(), field_tys.clone(), Dtry::empty());
-                (TyS::record(field_tys), TyV::record(r_v))
+                (BaseTyS::record(field_tys), BaseTyV::record(r_v))
             }
             App2(L(_, Keyword("&")), ty_n, L(_, Tuple(specialization_ns))) => {
                 let (ty_s, mut ty_v) = elab.ty(ty_n);
@@ -976,12 +990,12 @@ impl<'a> Elaborator<'a> {
                         }
                     }
                 }
-                (TyS::specialize(ty_s, specializations), ty_v)
+                (BaseTyS::specialize(ty_s, specializations), ty_v)
             }
             App2(L(_, Keyword("==")), tm1_n, tm2_n) => {
                 let (tm1_s, tm1_v, tm1_ty) = elab.syn(tm1_n);
                 let (tm2_s, tm2_v, tm2_ty) = elab.syn(tm2_n);
-                if !matches!(&*tm1_ty, TyV_::Morphism(_, _, _) | TyV_::Over(_)) {
+                if !matches!(&*tm1_ty, BaseTyV_::Morphism(_, _, _) | BaseTyV_::Over(_)) {
                     elab.loc = Some(tm1_n.loc());
                     return elab
                         .ty_error(
@@ -997,15 +1011,15 @@ impl<'a> Elaborator<'a> {
                         e.pretty()
                     ));
                 }
-                let eq_ty_s = TyS::id(elab.evaluator().quote_ty(&tm1_ty), tm1_s, tm2_s);
-                let eq_ty_v = TyV::id(tm1_ty, tm1_v, tm2_v);
+                let eq_ty_s = BaseTyS::id(elab.evaluator().quote_ty(&tm1_ty), tm1_s, tm2_s);
+                let eq_ty_v = BaseTyV::id(tm1_ty, tm1_v, tm2_v);
                 (eq_ty_s, eq_ty_v)
             }
             _ => elab.ty_error("unexpected notation for type"),
         }
     }
 
-    fn lookup_tm(&mut self, name: Ustr) -> (TmS, TmV, TyV) {
+    fn lookup_tm(&mut self, name: Ustr) -> (TmS, TmV, BaseTyV) {
         let label = label_seg(name);
         let name = name_seg(name);
         if let Some((i, _, ty)) = self.ctx.lookup(name) {
@@ -1037,7 +1051,7 @@ impl<'a> Elaborator<'a> {
     }
 
     /// Elaborates a term from notation, returning syntax, value, and synthesized type.
-    fn syn(&mut self, n: &FNtn) -> (TmS, TmV, TyV) {
+    fn syn(&mut self, n: &FNtn) -> (TmS, TmV, BaseTyV) {
         let mut elab = self.enter(n.loc());
         match n.ast0() {
             Var(name) => elab.lookup_tm(ustr(name)),
@@ -1058,7 +1072,7 @@ impl<'a> Elaborator<'a> {
                     );
                 }
                 let (tm_s, tm_v, ty_v) = elab.syn(tm_n);
-                let TyV_::Record(r) = &*ty_v else {
+                let BaseTyV_::Record(r) = &*ty_v else {
                     return elab.syn_error("can only project from record type");
                 };
                 let label = label_seg(*f);
@@ -1099,7 +1113,7 @@ impl<'a> Elaborator<'a> {
                     );
                 }
                 let (recv_s, recv_v, recv_ty) = elab.syn(recv_n);
-                let TyV_::Record(r) = &*recv_ty else {
+                let BaseTyV_::Record(r) = &*recv_ty else {
                     return elab.syn_error("can only project from record type");
                 };
                 let arg_name = name_seg(*arg_field);
@@ -1114,7 +1128,7 @@ impl<'a> Elaborator<'a> {
             }
             App1(L(_, Prim("id")), ob_n) => {
                 let (ob_s, ob_v, ob_t) = elab.syn(ob_n);
-                let TyV_::Object(ob_type) = &*ob_t else {
+                let BaseTyV_::Object(ob_type) = &*ob_t else {
                     return elab.syn_error("can only apply @id to objects");
                 };
                 let Some(mor_type) = elab.theory().hom_type(ob_type.clone()) else {
@@ -1123,18 +1137,18 @@ impl<'a> Elaborator<'a> {
                 (
                     TmS::id(ob_s),
                     TmV::id(ob_v.clone()),
-                    TyV::morphism(mor_type, ob_v.clone(), ob_v),
+                    BaseTyV::morphism(mor_type, ob_v.clone(), ob_v),
                 )
             }
             App1(L(_, Prim("tab")), mor_n) => {
                 let (mor_s, mor_v, mor_t) = elab.syn(mor_n);
-                let TyV_::Morphism(mor_type, _, _) = &*mor_t else {
+                let BaseTyV_::Morphism(mor_type, _, _) = &*mor_t else {
                     return elab.syn_error("can only apply @tab to morphisms");
                 };
                 let Some(ob_type) = elab.theory().tabulator(mor_type.clone()) else {
                     return elab.syn_error("theory does not have tabulators");
                 };
-                (TmS::tab(mor_s), TmV::tab(mor_v.clone()), TyV::object(ob_type))
+                (TmS::tab(mor_s), TmV::tab(mor_v.clone()), BaseTyV::object(ob_type))
             }
             App1(L(_, Prim(name)), ob_n) => {
                 let name = name_seg(*name);
@@ -1143,18 +1157,18 @@ impl<'a> Elaborator<'a> {
                     return elab.syn_error(format!("operation @{name} not in theory {th_name}"));
                 };
                 let dom = elab.theory().ob_op_dom(&ob_op);
-                let (arg_s, arg_v) = elab.chk(&TyV::object(dom), ob_n);
+                let (arg_s, arg_v) = elab.chk(&BaseTyV::object(dom), ob_n);
                 let cod = elab.theory().ob_op_cod(&ob_op);
-                (TmS::ob_app(name, arg_s), TmV::app(name, arg_v), TyV::object(cod))
+                (TmS::ob_app(name, arg_s), TmV::app(name, arg_v), BaseTyV::object(cod))
             }
             App2(L(_, Keyword("*")), f_n, g_n) => {
                 let (f_s, f_v, f_ty) = elab.syn(f_n);
                 let (g_s, g_v, g_ty) = elab.syn(g_n);
-                let TyV_::Morphism(f_mt, f_dom, f_cod) = &*f_ty else {
+                let BaseTyV_::Morphism(f_mt, f_dom, f_cod) = &*f_ty else {
                     elab.loc = Some(f_n.loc());
                     return elab.syn_error("expected a morphism");
                 };
-                let TyV_::Morphism(g_mt, g_dom, g_cod) = &*g_ty else {
+                let BaseTyV_::Morphism(g_mt, g_dom, g_cod) = &*g_ty else {
                     elab.loc = Some(g_n.loc());
                     return elab.syn_error("expected a morphism");
                 };
@@ -1175,7 +1189,7 @@ impl<'a> Elaborator<'a> {
                 (
                     TmS::compose(f_s, g_s),
                     TmV::compose(f_v, g_v),
-                    TyV::morphism(
+                    BaseTyV::morphism(
                         elab.theory().compose_types2(f_mt.clone(), g_mt.clone()).unwrap(),
                         f_dom.clone(),
                         g_cod.clone(),
@@ -1217,10 +1231,10 @@ impl<'a> Elaborator<'a> {
     }
 
     /// Elaborates a term from notation, checking against an expected type, and returning syntax and value.
-    fn chk(&mut self, ty: &TyV, n: &FNtn) -> (TmS, TmV) {
+    fn chk(&mut self, ty: &BaseTyV, n: &FNtn) -> (TmS, TmV) {
         let mut elab = self.enter(n.loc());
         match (&**ty, n.ast0()) {
-            (TyV_::Record(r), Tuple(field_ns)) => {
+            (BaseTyV_::Record(r), Tuple(field_ns)) => {
                 // Ordinary record construction (a tight transformation /
                 // generalized element). Instance bodies are *not* dispatched
                 // here — they are introduced by the `instance` keyword, which
@@ -1258,11 +1272,11 @@ impl<'a> Elaborator<'a> {
                 }
                 (TmS::cons(field_stxs.into()), TmV::cons(field_vals.into()))
             }
-            (TyV_::Object(ob_type), Tuple(ob_ns)) => {
+            (BaseTyV_::Object(ob_type), Tuple(ob_ns)) => {
                 let Some(ob_type) = ob_type.clone().list_arg() else {
                     return elab.chk_error("expected to object type to be a list");
                 };
-                let elem_ty_v = TyV::object(ob_type);
+                let elem_ty_v = BaseTyV::object(ob_type);
                 let mut elem_stxs = Vec::new();
                 let mut elem_vals = Vec::new();
                 for ob_n in ob_ns {
