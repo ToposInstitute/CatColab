@@ -420,6 +420,132 @@ impl<'a> Elaborator<'a> {
         v
     }
 
+    /// Introduce a fiber variable (a generator or sub-instance import)
+    /// into the fiber scope, returning its neutral value.
+    fn intro_fiber(&mut self, name: VarName, label: LabelSegment, ty: FiberTyV) -> FiberTmV {
+        let v = FiberTmV::var(self.ctx.fiber_scope.len().into(), name, label);
+        self.ctx.fiber_env = self.ctx.fiber_env.snoc(v.clone());
+        self.ctx.push_fiber(name, label, ty);
+        v
+    }
+
+    /// Look up a fiber variable by name, returning its syntax, value, and
+    /// fiber type.
+    fn lookup_fiber_tm(&self, name: VarName) -> Option<(FiberTmS, FiberTmV, FiberTyV)> {
+        let (i, label, ty) = self.ctx.lookup_fiber(name)?;
+        Some((FiberTmS::var(i, name, label), self.ctx.fiber_env.get(*i).unwrap().clone(), ty))
+    }
+
+    fn fiber_syn_hole(&mut self) -> (FiberTmS, FiberTmV, FiberTyV) {
+        let tm_m = self.fresh_meta();
+        (FiberTmS::meta(tm_m), FiberTmV::meta(tm_m), FiberTyV::over(Vec::new()))
+    }
+
+    fn fiber_syn_error(&mut self, msg: impl Into<String>) -> (FiberTmS, FiberTmV, FiberTyV) {
+        self.reporter.error_option_loc(self.loc, ELAB_ERROR, msg.into());
+        self.fiber_syn_hole()
+    }
+
+    fn fiber_chk_error(&mut self, msg: impl Into<String>) -> (FiberTmS, FiberTmV) {
+        self.reporter.error_option_loc(self.loc, ELAB_ERROR, msg.into());
+        let tm_m = self.fresh_meta();
+        (FiberTmS::meta(tm_m), FiberTmV::meta(tm_m))
+    }
+
+    /// Synthesize a fiber term and its fiber type. A fiber term is a
+    /// generator/import variable, a projection out of a sub-instance
+    /// (`we.e`), or a codomain-morphism application (`src(we.e)`).
+    fn fiber_syn(&mut self, n: &FNtn) -> (FiberTmS, FiberTmV, FiberTyV) {
+        let mut elab = self.enter(n.loc());
+        match n.ast0() {
+            Var(name) => match elab.lookup_fiber_tm(name_seg(*name)) {
+                Some(r) => r,
+                None => elab.fiber_syn_error(format!("no such fiber element {name}")),
+            },
+            // Projection of a generator out of a sub-instance import: `we.e`.
+            App1(recv_n, L(_, Field(f))) => {
+                let (recv_s, recv_v, recv_ty) = elab.fiber_syn(recv_n);
+                let FiberTyV_::Record(r) = &*recv_ty else {
+                    return elab
+                        .fiber_syn_error("can only project a generator out of a sub-instance");
+                };
+                let fname = name_seg(*f);
+                let flabel = label_seg(*f);
+                let Some(field_ty) = r.get(fname).cloned() else {
+                    return elab
+                        .fiber_syn_error(format!("no such generator {fname} in sub-instance"));
+                };
+                (
+                    FiberTmS::proj(recv_s, fname, flabel),
+                    FiberTmV::proj(recv_v, fname, flabel),
+                    field_ty,
+                )
+            }
+            // Codomain-morphism application: `f(arg)`.
+            App1(L(_, Var(f)), arg_n) => {
+                // A display label for the argument, used only in errors.
+                let label = match arg_n.ast0() {
+                    Var(x) => x.to_string(),
+                    App1(_, L(_, Field(fld))) => fld.to_string(),
+                    _ => "argument".to_string(),
+                };
+                let (arg_s, arg_v, arg_ty) = elab.fiber_syn(arg_n);
+                elab.apply_codomain_morphism(f, arg_s, arg_v, arg_ty, &label)
+            }
+            _ => elab.fiber_syn_error(
+                "expected a fiber element: a generator, a projection `we.e`, or a \
+                 codomain-morphism application `f(..)`",
+            ),
+        }
+    }
+
+    /// Check a fiber term against an expected fiber type. Fiber terms are
+    /// all synthesizing, so this synthesizes and checks convertibility.
+    fn fiber_chk(&mut self, expected: &FiberTyV, n: &FNtn) -> (FiberTmS, FiberTmV) {
+        let (s, v, ty) = self.fiber_syn(n);
+        if let Err(e) = self.evaluator().convertible_fiber_ty(&ty, expected) {
+            return self
+                .fiber_chk_error(format!("fiber element has the wrong type:\n{}", e.pretty()));
+        }
+        (s, v)
+    }
+
+    /// Elaborate a fiber-type annotation. Used for sub-instance imports
+    /// (`we : Edge`, where `Edge` names a top-level instance) and anonymous
+    /// equations (`name : (a == b)`).
+    fn fiber_ty(&mut self, n: &FNtn) -> Option<(FiberTyS, FiberTyV)> {
+        match n.ast0() {
+            Var(name) => {
+                let topvar = name_seg(*name);
+                match self.toplevel.declarations.get(&topvar) {
+                    Some(TopDecl::Instance(i)) => Some((i.stx.clone(), i.val.clone())),
+                    _ => self
+                        .error(format!("{name} must reference a top-level instance declaration")),
+                }
+            }
+            App2(L(_, Keyword("==")), a_n, b_n) => {
+                let (a_s, a_v, a_ty) = self.fiber_syn(a_n);
+                let (b_s, b_v, b_ty) = self.fiber_syn(b_n);
+                if let Err(e) = self.evaluator().convertible_fiber_ty(&a_ty, &b_ty) {
+                    return self.error(format!(
+                        "equation sides have inconvertible fiber types:\n{}",
+                        e.pretty()
+                    ));
+                }
+                let FiberTyV_::Over(path) = &*a_ty else {
+                    return self.error(
+                        "instance equations must be between elements over an object \
+                         (fiber elements); morphism equations constrain the model, not \
+                         an instance",
+                    );
+                };
+                let over_s = FiberTyS::over(path.clone());
+                Some((FiberTyS::id(over_s, a_s, b_s), FiberTyV::id(a_ty.clone(), a_v, b_v)))
+            }
+            _ => self.error("expected an instance name or an equation `a == b`"),
+        }
+    }
+
     /// The unit type, elaborated as the empty record — i.e. the empty
     /// model. `Unit` and `tt` are surface sugar for the empty record type
     /// and its unique element, the empty cons `[]`.
@@ -433,62 +559,61 @@ impl<'a> Elaborator<'a> {
     fn apply_codomain_morphism(
         &mut self,
         f: &str,
-        arg_s: TmS,
-        arg_v: TmV,
-        arg_ty: BaseTyV,
+        arg_s: FiberTmS,
+        arg_v: FiberTmV,
+        arg_ty: FiberTyV,
         arg_label_str: &str,
-    ) -> (TmS, TmV, BaseTyV) {
+    ) -> (FiberTmS, FiberTmV, FiberTyV) {
         let Some(codomain) = self.instance_codomain() else {
-            return self
-                .syn_error("applied codomain morphism is only allowed inside an instance body");
+            return self.fiber_syn_error(
+                "applied codomain morphism is only allowed inside an instance body",
+            );
         };
-        let BaseTyV_::Over(src_path) = &*arg_ty else {
-            let quoted = self.evaluator().quote_ty(&arg_ty);
-            return self.syn_error(format!(
-                "argument {arg_label_str} has type {quoted}, expected a fiber type",
+        let FiberTyV_::Over(src_path) = &*arg_ty else {
+            return self.fiber_syn_error(format!(
+                "argument {arg_label_str} is not an element over an object",
             ));
         };
         let f_label = label_seg(f);
         let f_name = name_seg(f);
         let Some(mor_ty_s) = codomain.fields.get(f_name) else {
-            return self.syn_error(format!("no such codomain morphism {f_name}"));
+            return self.fiber_syn_error(format!("no such codomain morphism {f_name}"));
         };
         let BaseTyS_::Morphism(_, dom_s, cod_s) = &**mor_ty_s else {
-            return self.syn_error(format!("codomain field {f_name} is not a morphism"));
+            return self.fiber_syn_error(format!("codomain field {f_name} is not a morphism"));
         };
         let (Some(dom_path), Some(cod_path)) = (tms_to_path(dom_s), tms_to_path(cod_s)) else {
-            return self.syn_error(format!(
+            return self.fiber_syn_error(format!(
                 "codomain morphism {f_name} has non-path dom/cod; \
                  applied-morphism syntax requires both to be paths",
             ));
         };
         if dom_path != *src_path {
-            return self.syn_error(format!(
+            return self.fiber_syn_error(format!(
                 "codomain morphism {f_name} has source path differing from the argument",
             ));
         }
         (
-            TmS::over_app(f_name, f_label, cod_path.clone(), arg_s),
-            TmV::over_app(f_name, f_label, cod_path.clone(), arg_v),
-            BaseTyV::over(cod_path),
+            FiberTmS::over_app(f_name, f_label, cod_path.clone(), arg_s),
+            FiberTmV::over_app(f_name, f_label, cod_path.clone(), arg_v),
+            FiberTyV::over(cod_path),
         )
     }
 
     /// Elaborate an instance body — a tuple of `name : type`, `field
     /// := [names]`, and `mor(arg) := target` clauses — against the
-    /// enclosing sketch type `codomain`. Produces a [`TmS_::Instance`]
-    /// / [`TmV_::Instance`] pair whose payload is the instance's
-    /// generator slots, equation witnesses, and sub-instance imports.
+    /// enclosing codomain model. Produces the instance as a fiber
+    /// [`Record`](FiberTyS_::Record): generators become
+    /// [`Over`](FiberTyS_::Over) fields, sub-instance imports nested
+    /// [`Record`](FiberTyS_::Record) fields, and equations
+    /// [`Id`](FiberTyS_::Id) fields.
     ///
-    /// The codomain model is bound into the context as a `self`-typed
+    /// The codomain model is bound into the *base* context as a `self`-typed
     /// record variable (and the binding is dropped on exit) so that
-    /// generator (fiber) clauses and applied-codomain-morphism syntax
-    /// inside the body resolve their generators by name, against a real
-    /// context variable. Introducing `self`
-    /// at the bottom of the context leaves every generator's index
-    /// unchanged, and the codomain is never referenced by variable (only
-    /// by stored path), so this perturbs no index arithmetic.
-    fn instance_body(&mut self, codomain: &RecordV, n: &FNtn) -> (TmS, TmV) {
+    /// applied-codomain-morphism syntax resolves morphisms by name. The
+    /// instance's own generators and imports live in the separate *fiber*
+    /// scope.
+    fn instance_body(&mut self, codomain: &RecordV, n: &FNtn) -> (FiberTyS, FiberTyV) {
         let c = self.checkpoint();
         let binder = name_seg(Self::CODOMAIN_BINDER);
         self.intro(
@@ -501,9 +626,9 @@ impl<'a> Elaborator<'a> {
         result
     }
 
-    /// Elaborate the clauses of an instance body (the f-notation `n`) into the
-    /// payload of an [`InstanceBodyS`]/[`InstanceBodyV`]. The codomain is
-    /// already set on the context by [`Self::instance_body`].
+    /// Elaborate the clauses of an instance body (the f-notation `n`) into a
+    /// fiber [`Record`](FiberTyS_::Record). The codomain is already set on
+    /// the context by [`Self::instance_body`].
     ///
     /// Steps:
     /// 1. Set up empty accumulators (see below) for the clauses to fill.
@@ -525,105 +650,60 @@ impl<'a> Elaborator<'a> {
     /// - `field := [n1, n2, ...]` — set-literal: declares generators in
     ///   the fiber over a codomain *object* `field`.
     /// - `mor(arg) := target` — a single equation witness.
-    fn instance_body_inner(&mut self, n: &FNtn) -> (TmS, TmV) {
+    fn instance_body_inner(&mut self, n: &FNtn) -> (FiberTyS, FiberTyV) {
         let mut elab = self.enter(n.loc());
+        let empty = || (FiberTyS::record(Row::empty()), FiberTyV::record(Row::empty()));
         let Tuple(field_ns) = n.ast0() else {
             elab.error::<()>("expected a tuple instance body");
-            return (
-                TmS::instance(InstanceBodyS::default()),
-                TmV::instance(InstanceBodyV::default()),
-            );
+            return empty();
         };
-        // Accumulators, assembled into the instance payload at the end:
-        // generators (with the codomain fiber path each lives over),
-        // equation witnesses (quoted lhs/rhs pairs), and imported
-        // sub-instances. `_s`/`_v` hold the syntactic / value forms.
-        let mut gens: IndexMap<FieldName, (LabelSegment, Vec<(FieldName, LabelSegment)>)> =
-            IndexMap::new();
-        let mut eqns_s: Vec<(TmS, TmS)> = Vec::new();
-        let mut eqns_v: Vec<(TmV, TmV)> = Vec::new();
-        let mut subs_s: IndexMap<FieldName, (LabelSegment, TmS)> = IndexMap::new();
-        let mut subs_v: IndexMap<FieldName, (LabelSegment, TmV)> = IndexMap::new();
+        // The instance is assembled as a fiber record: a generator is an
+        // `Over` field, a sub-instance import a nested `Record` field, and
+        // an equation an `Id` field (with a synthetic `_eqN` name).
+        // `fields_s`/`fields_v` hold the syntactic / value rows; `eq_count`
+        // names successive equation fields.
+        let mut fields_s: Row<FiberTyS> = Row::empty();
+        let mut fields_v: Row<FiberTyV> = Row::empty();
+        let mut eq_count = 0usize;
         let mut failed = false;
 
         for field_n in field_ns.iter() {
             elab.loc = Some(field_n.loc());
             match field_n.ast0() {
-                // `name : type` — generator, sub-instance, or
-                // anonymous equation clause (dispatched on the
-                // elaborated type's shape).
+                // `name : type` — a sub-instance import (`we : Edge`) or an
+                // anonymous equation (`name : (a == b)`), dispatched on the
+                // elaborated fiber type's shape.
                 App2(L(_, Keyword(":")), L(_, Var(name)), ty_n) => {
-                    let name_str = *name;
-                    let n_seg = name_seg(name_str);
-                    let label = label_seg(name_str);
-                    let (_, ty_v) = elab.ty(ty_n);
+                    let n_seg = name_seg(*name);
+                    let label = label_seg(*name);
+                    let Some((ty_s, ty_v)) = elab.fiber_ty(ty_n) else {
+                        failed = true;
+                        continue;
+                    };
                     match &*ty_v {
-                        BaseTyV_::Over(path) => {
-                            gens.insert(n_seg, (label, path.clone()));
-                            elab.intro(n_seg, label, Some(ty_v));
+                        // A sub-instance import: bind it in the fiber scope
+                        // (so `name.gen` projections resolve) and record it.
+                        FiberTyV_::Record(_) => {
+                            elab.intro_fiber(n_seg, label, ty_v.clone());
+                            fields_s.insert(n_seg, label, ty_s);
+                            fields_v.insert(n_seg, label, ty_v);
                         }
-                        BaseTyV_::Record(_) => {
-                            let (sub_s, sub_v) = match ty_n.ast0() {
-                                Var(sub_name) => {
-                                    let topvar = name_seg(*sub_name);
-                                    match elab.toplevel.declarations.get(&topvar) {
-                                        Some(TopDecl::Instance(i)) => {
-                                            (i.stx.clone(), i.val.clone())
-                                        }
-                                        _ => {
-                                            elab.error::<()>(format!(
-                                                "sub-instance {sub_name} must reference a \
-                                                 top-level instance declaration",
-                                            ));
-                                            failed = true;
-                                            continue;
-                                        }
-                                    }
-                                }
-                                _ => {
-                                    elab.error::<()>(
-                                        "sub-instance type must be a top-level def name",
-                                    );
-                                    failed = true;
-                                    continue;
-                                }
-                            };
-                            subs_s.insert(n_seg, (label, sub_s));
-                            subs_v.insert(n_seg, (label, sub_v));
-                            elab.intro(n_seg, label, Some(ty_v));
+                        // A named equation (e.g. `eq : (.src(e) == .src(f))`).
+                        FiberTyV_::Id(_, _, _) => {
+                            fields_s.insert(n_seg, label, ty_s);
+                            fields_v.insert(n_seg, label, ty_v);
                         }
-                        BaseTyV_::Id(eq_ty, lhs, rhs) => {
-                            if !matches!(&**eq_ty, BaseTyV_::Over(_)) {
-                                let quoted = elab.evaluator().quote_ty(eq_ty);
-                                elab.error::<()>(format!(
-                                    "instance equation {name_str} is over {quoted}, but an \
-                                     instance's equations must be between elements over an \
-                                     object (fiber elements); morphism equations constrain \
-                                     the model, not an instance",
-                                ));
-                                failed = true;
-                                continue;
-                            }
-                            let evaluator = elab.evaluator();
-                            let lhs_s = evaluator.quote_tm(lhs);
-                            let rhs_s = evaluator.quote_tm(rhs);
-                            eqns_s.push((lhs_s, rhs_s));
-                            eqns_v.push((lhs.clone(), rhs.clone()));
-                        }
-                        _ => {
-                            let quoted = elab.evaluator().quote_ty(&ty_v);
+                        FiberTyV_::Over(_) => {
                             elab.error::<()>(format!(
-                                "instance clause {name_str} has type {quoted}, expected \
-                                 an element over an object generator, a sub-sketch, or an equation",
+                                "instance clause {name} cannot be annotated with a bare \
+                                 element type",
                             ));
                             failed = true;
                         }
                     }
                 }
-                // `field := [k1 := t1, k2 := t2, ...]` — mapping-literal
-                // assignment to a morphism-typed field of the codomain.
-                // Equivalent to a sequence of per-entry mapping clauses
-                // `field(k1) := t1`, `field(k2) := t2`, ...
+                // `field := [k1 := t1, ...]` — mapping-literal: a batch of
+                // per-key equations against a morphism-typed codomain field.
                 App2(L(_, Keyword(":=")), L(_, Var(field_name)), L(_, Tuple(entries)))
                     if !entries.is_empty()
                         && entries
@@ -667,11 +747,10 @@ impl<'a> Elaborator<'a> {
                         let App2(L(_, Keyword(":=")), key_n, target_n) = entry_n.ast0() else {
                             unreachable!("guard ensured all entries are `:=` clauses");
                         };
-                        let (key_s, key_v, key_ty) = elab.syn(key_n);
-                        let BaseTyV_::Over(key_path) = &*key_ty else {
-                            let quoted = elab.evaluator().quote_ty(&key_ty);
+                        let (key_s, key_v, key_ty) = elab.fiber_syn(key_n);
+                        let FiberTyV_::Over(key_path) = &*key_ty else {
                             elab.error::<()>(format!(
-                                "mapping-literal key has type {quoted}, expected an element over {}",
+                                "mapping-literal key is not an element over {}",
                                 object_path_str(&dom_path),
                             ));
                             entry_failed = true;
@@ -686,20 +765,25 @@ impl<'a> Elaborator<'a> {
                             entry_failed = true;
                             break;
                         }
-                        let lhs_ty = BaseTyV::over(cod_path.clone());
-                        let lhs_s = TmS::over_app(f_seg, f_label, cod_path.clone(), key_s);
-                        let lhs_v = TmV::over_app(f_seg, f_label, cod_path.clone(), key_v);
-                        let (rhs_s, rhs_v) = elab.chk(&lhs_ty, target_n);
-                        eqns_s.push((lhs_s, rhs_s));
-                        eqns_v.push((lhs_v, rhs_v));
+                        let lhs_ty_v = FiberTyV::over(cod_path.clone());
+                        let lhs_s = FiberTmS::over_app(f_seg, f_label, cod_path.clone(), key_s);
+                        let lhs_v = FiberTmV::over_app(f_seg, f_label, cod_path.clone(), key_v);
+                        let (rhs_s, rhs_v) = elab.fiber_chk(&lhs_ty_v, target_n);
+                        let (eqn, eql) = next_eq_field(&mut eq_count);
+                        fields_s.insert(
+                            eqn,
+                            eql,
+                            FiberTyS::id(FiberTyS::over(cod_path.clone()), lhs_s, rhs_s),
+                        );
+                        fields_v.insert(eqn, eql, FiberTyV::id(lhs_ty_v, lhs_v, rhs_v));
                     }
                     if entry_failed {
                         failed = true;
                         continue;
                     }
                 }
-                // `field := [n1, n2, ...]` — set-literal assignment to
-                // an object-typed field of the codomain.
+                // `field := [n1, n2, ...]` — set-literal: declare generators
+                // in the fiber over an object-typed codomain field.
                 App2(L(_, Keyword(":=")), L(_, Var(field_name)), L(_, Tuple(name_ns))) => {
                     let Some(codomain) = elab.instance_codomain() else {
                         elab.error::<()>(
@@ -725,7 +809,6 @@ impl<'a> Elaborator<'a> {
                         continue;
                     }
                     let path = vec![(f_seg, f_label)];
-                    let gen_ty = BaseTyV::over(path.clone());
                     for name_n in name_ns.iter() {
                         let Var(gen_name) = name_n.ast0() else {
                             elab.loc = Some(name_n.loc());
@@ -735,15 +818,15 @@ impl<'a> Elaborator<'a> {
                         };
                         let gen_seg = name_seg(*gen_name);
                         let gen_label = label_seg(*gen_name);
-                        gens.insert(gen_seg, (gen_label, path.clone()));
-                        elab.intro(gen_seg, gen_label, Some(gen_ty.clone()));
+                        elab.intro_fiber(gen_seg, gen_label, FiberTyV::over(path.clone()));
+                        fields_s.insert(gen_seg, gen_label, FiberTyS::over(path.clone()));
+                        fields_v.insert(gen_seg, gen_label, FiberTyV::over(path.clone()));
                     }
                 }
-                // `mor(arg) := target` — mapping-entry clause:
-                // an equation witness.
+                // `mor(arg) := target` — a single equation witness.
                 App2(L(_, Keyword(":=")), lhs_n, rhs_n) => {
-                    let (lhs_s, lhs_v, lhs_ty) = elab.syn(lhs_n);
-                    if !matches!(&*lhs_ty, BaseTyV_::Over(_)) {
+                    let (lhs_s, lhs_v, lhs_ty) = elab.fiber_syn(lhs_n);
+                    let FiberTyV_::Over(over_path) = &*lhs_ty else {
                         elab.loc = Some(lhs_n.loc());
                         elab.error::<()>(
                             "mapping-entry clause `mor(arg) := target` requires the LHS \
@@ -752,10 +835,20 @@ impl<'a> Elaborator<'a> {
                         );
                         failed = true;
                         continue;
-                    }
-                    let (rhs_s, rhs_v) = elab.chk(&lhs_ty, rhs_n);
-                    eqns_s.push((lhs_s, rhs_s));
-                    eqns_v.push((lhs_v, rhs_v));
+                    };
+                    let over_path = over_path.clone();
+                    let (rhs_s, rhs_v) = elab.fiber_chk(&lhs_ty, rhs_n);
+                    let (eqn, eql) = next_eq_field(&mut eq_count);
+                    fields_s.insert(
+                        eqn,
+                        eql,
+                        FiberTyS::id(FiberTyS::over(over_path.clone()), lhs_s, rhs_s),
+                    );
+                    fields_v.insert(
+                        eqn,
+                        eql,
+                        FiberTyV::id(FiberTyV::over(over_path), lhs_v, rhs_v),
+                    );
                 }
                 _ => {
                     elab.error::<()>(
@@ -767,26 +860,12 @@ impl<'a> Elaborator<'a> {
             }
         }
 
-        // Assemble the accumulators into the instance payload, unless a
-        // clause failed — then errors are already reported, so bail with
-        // an empty instance rather than a half-built one.
+        // On any failure, errors are already reported, so bail with an
+        // empty instance rather than a half-built one.
         if failed {
-            return (
-                TmS::instance(InstanceBodyS::default()),
-                TmV::instance(InstanceBodyV::default()),
-            );
+            return empty();
         }
-        let body_s = InstanceBodyS {
-            generators: gens.clone(),
-            equations: eqns_s,
-            sub_instances: subs_s,
-        };
-        let body_v = InstanceBodyV {
-            generators: gens,
-            equations: eqns_v,
-            sub_instances: subs_v,
-        };
-        (TmS::instance(body_s), TmV::instance(body_v))
+        (FiberTyS::record(fields_s), FiberTyV::record(fields_v))
     }
 
     fn binding(&mut self, n: &FNtn) -> Option<(VarName, LabelSegment, BaseTyS, BaseTyV)> {
@@ -816,23 +895,14 @@ impl<'a> Elaborator<'a> {
                         ))
                     }
                 }
-                // An instance used in type position yields the representable
-                // record type synthesized from its body, allowing sub-instance
-                // imports (`we : Edge`) to project into Edge's fields.
-                TopDecl::Instance(i) => {
-                    if i.theory == self.theory {
-                        let TmV_::Instance(body) = &*i.val else {
-                            unreachable!("an Instance always has an instance body")
-                        };
-                        let body_ty = self.evaluator().synth_instance_body_ty(body);
-                        (BaseTyS::topvar(name), body_ty)
-                    } else {
-                        self.ty_error(format!(
-                            "{name} refers to an instance in theory {}, expected theory {}",
-                            i.theory, self.theory
-                        ))
-                    }
-                }
+                // An instance is a fiber type, not a base type. It can only
+                // appear as the annotation of a sub-instance import inside an
+                // instance body (handled by `fiber_ty`), not in base-type
+                // position.
+                TopDecl::Instance(_) => self.ty_error(format!(
+                    "{name} refers to an instance, which is not a base type; \
+                     an instance can only be imported inside another instance body"
+                )),
                 TopDecl::Def(_) => self.ty_error(format!("{name} refers to a term not a type")),
             }
         } else {
@@ -995,12 +1065,12 @@ impl<'a> Elaborator<'a> {
             App2(L(_, Keyword("==")), tm1_n, tm2_n) => {
                 let (tm1_s, tm1_v, tm1_ty) = elab.syn(tm1_n);
                 let (tm2_s, tm2_v, tm2_ty) = elab.syn(tm2_n);
-                if !matches!(&*tm1_ty, BaseTyV_::Morphism(_, _, _) | BaseTyV_::Over(_)) {
+                if !matches!(&*tm1_ty, BaseTyV_::Morphism(_, _, _)) {
                     elab.loc = Some(tm1_n.loc());
-                    return elab
-                        .ty_error(
-                            "Equality types are only supported for morphisms and elements over an object",
-                        );
+                    return elab.ty_error(
+                        "Equality types are only supported for morphisms; equations \
+                         between instance elements live inside an instance body",
+                    );
                 }
                 if let Err(e) = elab.evaluator().convertible_ty(&tm1_ty, &tm2_ty) {
                     let eval = elab.evaluator();
@@ -1086,46 +1156,9 @@ impl<'a> Elaborator<'a> {
                     elab.evaluator().field_ty(&ty_v, &tm_v, f),
                 )
             }
-            // Applied codomain-morphism syntax. Two shapes:
-            //
-            //   `f(x)`            — `x` is a variable of fiber type in
-            //                       scope.
-            //   `f(receiver.fld)` — argument is a record projection
-            //                       (e.g. `src(we.e)`).
-            //
-            // Both elaborate to a [`TmS_::OverApp`] applying `f` (a
-            // codomain morphism in the enclosing instance) to the
-            // resolved argument term.
-            App1(L(_, Var(f)), L(_, Var(x))) => {
-                let (inner_s, inner_v, inner_ty) = elab.lookup_tm(ustr(x));
-                elab.apply_codomain_morphism(f, inner_s, inner_v, inner_ty, x)
-            }
-            App1(L(_, Var(f)), L(_, App1(recv_n, L(_, Field(arg_field))))) => {
-                if let Var(inst) = recv_n.ast0()
-                    && matches!(
-                        elab.toplevel.declarations.get(&name_seg(*inst)),
-                        Some(TopDecl::Instance(_))
-                    )
-                {
-                    return elab.syn_error(
-                        "cannot project a field out of an instance; an instance is \
-                         eliminated by mapping out of it, not by projection",
-                    );
-                }
-                let (recv_s, recv_v, recv_ty) = elab.syn(recv_n);
-                let BaseTyV_::Record(r) = &*recv_ty else {
-                    return elab.syn_error("can only project from record type");
-                };
-                let arg_name = name_seg(*arg_field);
-                let arg_label = label_seg(*arg_field);
-                if !r.fields.has(arg_name) {
-                    return elab.syn_error(format!("no such field {arg_name}"));
-                }
-                let arg_ty = elab.evaluator().field_ty(&recv_ty, &recv_v, arg_name);
-                let arg_s = TmS::proj(recv_s, arg_name, arg_label);
-                let arg_v = elab.evaluator().proj(&recv_v, arg_name, arg_label);
-                elab.apply_codomain_morphism(f, arg_s, arg_v, arg_ty, arg_field)
-            }
+            // Codomain-morphism application (`src(we.e)`, `f(x)`) is fiber
+            // syntax, elaborated by `fiber_syn` inside an instance body — it
+            // is not a base term, so base `syn` does not handle it.
             App1(L(_, Prim("id")), ob_n) => {
                 let (ob_s, ob_v, ob_t) = elab.syn(ob_n);
                 let BaseTyV_::Object(ob_type) = &*ob_t else {
@@ -1326,6 +1359,14 @@ impl<'a> Elaborator<'a> {
 /// (e.g. `V`, or `we.E` for a nested path) for use in error messages.
 fn object_path_str(path: &[(FieldName, LabelSegment)]) -> String {
     path.iter().map(|(_, seg)| seg.to_string()).collect::<Vec<_>>().join(".")
+}
+
+/// The synthetic field name/label `_eqN` for the next auto-named equation
+/// field of an instance record, advancing the counter.
+fn next_eq_field(eq_count: &mut usize) -> (FieldName, LabelSegment) {
+    let key = format!("_eq{}", *eq_count);
+    *eq_count += 1;
+    (name_seg(key.as_str()), label_seg(key.as_str()))
 }
 
 fn tms_to_path(tm: &TmS) -> Option<Vec<(NameSegment, LabelSegment)>> {
