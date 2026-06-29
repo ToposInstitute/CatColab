@@ -234,6 +234,22 @@ mappings: employer
 
 ## Getting a cell by id
 
+<!-- verifier:reset -->
+
+<!-- verifier:prepend-to-following -->
+
+```ts
+import { Entity, Mapping, SimpleSchema } from "catcolab-logics/simple-schema";
+import { binder } from "catcolab-documents";
+
+const notebook = binder.createNotebook(SimpleSchema, { name: "Example schema" });
+
+const person = notebook.add(Entity, { name: "Person" });
+const company = notebook.add(Entity, { name: "Company" });
+
+const mapping = notebook.add(Mapping, { name: "employer", from: person, to: company });
+```
+
 ```ts
 const found = notebook.get(Entity, person.id);
 console.log("found:", found?.name);
