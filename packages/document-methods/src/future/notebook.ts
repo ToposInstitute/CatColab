@@ -2,14 +2,16 @@ import type {
     Analysis,
     AnalysisType,
     Cell,
+    DiagramJudgment,
     Document,
     Link,
     Modality,
     ModelJudgment,
+    Mor,
     Ob,
     SpecializeModel,
 } from "catcolab-document-types";
-import type { DblModel, DblTheory } from "catlog-wasm";
+import { type DblModel, type DblModelDiagram, type DblTheory, elaborateDiagram } from "catlog-wasm";
 import {
     duplicateModelJudgment,
     type ModelDocument,
@@ -28,6 +30,8 @@ import {
     type AnalysisShape,
     type AddCapability,
     type AnyShape,
+    type AspectCell,
+    type AspectDef,
     CellKind,
     type CodOf,
     type CreatableShape,
@@ -36,6 +40,9 @@ import {
     type DeclaredTypes,
     type DeclaresMorphism,
     type DeclaresObject,
+    type DiagramCell,
+    type DiagramShape,
+    type DiagramValidationResult,
     defineObject,
     type DomOf,
     encodeEndpoint,
@@ -44,11 +51,15 @@ import {
     endpointListModality,
     type HasAnalyses,
     type HasCoreTheory,
+    type HasDiagram,
+    type IndividualCell,
+    type IndividualDef,
     type InstantiationArgs,
     type InstantiationCell,
     type InstantiationSpecialization,
     type InstantiationType,
     isAnalysisShape,
+    isDiagramShape,
     isInstantiationType,
     isRichTextType,
     type ModelValidationResult,
@@ -70,6 +81,13 @@ import {
     type Update,
     type ValidatableNotebook,
 } from "./definitions";
+import {
+    type DiagramDocument,
+    duplicateDiagramJudgment,
+    newDiagramDocument,
+    newDiagramMorphismDecl,
+    newDiagramObjectDecl,
+} from "./diagram";
 import { type DocumentStore, plainDocumentId, plainStore, resolveModelInStore } from "./store";
 import { validateAddArgs, type Result } from "./validation";
 
@@ -102,9 +120,7 @@ const formalCellsSignature = (document: Document): string => {
  * each endpoint's `apply`/`modality`), which keeps `cellsOf`/`supports`
  * selecting the right cells regardless of the recorded `obType`.
  */
-const stripObTypeFromMeta = (
-    meta: MorEndpointMeta | undefined,
-): MorEndpointMeta | undefined => {
+const stripObTypeFromMeta = (meta: MorEndpointMeta | undefined): MorEndpointMeta | undefined => {
     if (!meta) {
         return undefined;
     }
@@ -328,6 +344,420 @@ function attachAnalysisNotebook<TShape extends AnalysisShape, Handle>(
     return notebook;
 }
 
+/**
+ * Attach a diagram notebook over a real {@link DiagramDocument} held by the
+ * store. Cells are stored as {@link DiagramJudgment} formal cells — objects and
+ * morphisms drawn `over` the cells of the model the diagram is in — coexisting
+ * with rich-text cells. The model is referenced by the document's `diagramIn`
+ * link and read through the store, so endpoint and `over` handles resolve to the
+ * model's own object/morphism cells. {@link Notebook.validate} resolves and
+ * elaborates the model, elaborates the diagram against the model's core theory,
+ * and validates the diagram in the model.
+ */
+function attachDiagramNotebook<TShape extends DiagramShape, Handle>(
+    store: DocumentStore<Handle>,
+    handle: Handle,
+    shape: TShape,
+): Notebook<TShape, Handle> {
+    const doc = store.viewDocument(handle) as DiagramDocument;
+    const change = (fn: (doc: DiagramDocument) => void) =>
+        store.changeDocument(handle, fn as (doc: Document) => void);
+    const copy = <T>(value: T): T => store.copyValue(handle, value);
+    const isPlainStore = (store as DocumentStore<unknown>) === plainStore;
+
+    /** The model document the diagram is drawn in, fetched through the store. */
+    const modelDocument = (): ModelDocument | undefined => {
+        const modelHandle = store.getHandle(doc.diagramIn._id);
+        return modelHandle === undefined
+            ? undefined
+            : (store.viewDocument(modelHandle) as ModelDocument);
+    };
+
+    /** Read a model judgment by its generator id from the model document. */
+    const modelJudgment = (id: string): ModelJudgment | undefined => {
+        const model = modelDocument();
+        if (!model) {
+            return undefined;
+        }
+        for (const cellId of model.notebook.cellOrder) {
+            const cell = model.notebook.cellContents[cellId];
+            if (cell?.tag === "formal" && (cell.content as ModelJudgment).id === id) {
+                return cell.content as ModelJudgment;
+            }
+        }
+        return undefined;
+    };
+
+    /** A read-only handle for the model object a diagram individual is over. */
+    const modelObjectHandle = (id: string): ObjectCell => {
+        const judgment = modelJudgment(id);
+        const obType =
+            judgment?.tag === "object" ? judgment.obType : { tag: "Basic" as const, content: "" };
+        return {
+            kind: CellKind.Object,
+            id,
+            type: defineObject(obType),
+            get name() {
+                const current = modelJudgment(id);
+                return current?.tag === "object" ? current.name : undefined;
+            },
+        } as unknown as ObjectCell;
+    };
+
+    /** A read-only handle for the model morphism a diagram aspect is over. */
+    const modelMorphismHandle = (id: string): MorphismCell => {
+        return {
+            kind: CellKind.Morphism,
+            id,
+            get name() {
+                const current = modelJudgment(id);
+                return current?.tag === "morphism" ? current.name : undefined;
+            },
+        } as unknown as MorphismCell;
+    };
+
+    const readCellContent = <T>(cellId: string): T | undefined => {
+        const cell = doc.notebook.cellContents[cellId];
+        if (!cell) {
+            return undefined;
+        }
+        return (cell as unknown as { content: T }).content;
+    };
+
+    const moveCell = (cellId: string, target: (from: number) => number) =>
+        change((d) => {
+            const order = d.notebook.cellOrder;
+            const from = order.indexOf(cellId);
+            if (from < 0) {
+                return;
+            }
+            const to = Math.max(0, Math.min(target(from), order.length - 1));
+            if (to === from) {
+                return;
+            }
+            order.splice(from, 1);
+            order.splice(to, 0, cellId);
+        });
+
+    const deleteCell = (cellId: string) =>
+        change((d) => {
+            const order = d.notebook.cellOrder;
+            const from = order.indexOf(cellId);
+            if (from < 0) {
+                return;
+            }
+            order.splice(from, 1);
+            delete d.notebook.cellContents[cellId];
+        });
+
+    const reorderMethods = (cellId: string): Reorder => ({
+        moveUp: () => moveCell(cellId, (from) => from - 1),
+        moveDown: () => moveCell(cellId, (from) => from + 1),
+        moveTo: (index: number) => moveCell(cellId, () => index),
+        delete: () => deleteCell(cellId),
+    });
+
+    const appendDuplicate = (cellId: string): string => {
+        const cell = doc.notebook.cellContents[cellId];
+        if (!cell || cell.tag !== "formal") {
+            throw new Error(`Cannot duplicate cell '${cellId}'.`);
+        }
+        const duplicated = newFormalCell(
+            duplicateDiagramJudgment(copy(cell.content as DiagramJudgment)),
+        );
+        change((d) => {
+            d.notebook.cellContents[duplicated.id] = duplicated as unknown as Cell<DiagramJudgment>;
+            d.notebook.cellOrder.push(duplicated.id);
+        });
+        return duplicated.id;
+    };
+
+    /** Resolve a stored endpoint `Ob` to the diagram individual cell it names. */
+    const individualForId = (id: string): IndividualCell => {
+        for (const cellId of doc.notebook.cellOrder) {
+            const cell = doc.notebook.cellContents[cellId];
+            if (cell?.tag !== "formal") {
+                continue;
+            }
+            const judgment = cell.content as DiagramJudgment;
+            if (judgment.tag === "object" && judgment.id === id) {
+                return individualHandle(cellId, shape.Individual);
+            }
+        }
+        throw new Error(`No individual cell found for endpoint '${id}'.`);
+    };
+
+    const decodeIndividualEndpoint = (ob: Ob | null): IndividualCell | undefined =>
+        ob?.tag === "Basic" ? individualForId(ob.content) : undefined;
+
+    const individualHandle = <Def extends IndividualDef>(
+        cellId: string,
+        type: Def,
+    ): IndividualCell<Def> =>
+        ({
+            kind: CellKind.Object,
+            get id() {
+                return readCellContent<{ id: string }>(cellId)?.id;
+            },
+            type,
+            get name() {
+                return readCellContent<{ name: string }>(cellId)?.name;
+            },
+            get over() {
+                const over = readCellContent<{ over: Ob | null }>(cellId)?.over;
+                return over?.tag === "Basic" ? modelObjectHandle(over.content) : undefined;
+            },
+            update(u: { name?: string; over?: { id: string } }) {
+                change((d) => {
+                    const content = (
+                        d.notebook.cellContents[cellId] as {
+                            content: { name: string; over: Ob | null };
+                        }
+                    ).content;
+                    if (u.name !== undefined) {
+                        content.name = u.name;
+                    }
+                    if ("over" in u) {
+                        content.over = u.over ? encodeObjectRef(u.over) : null;
+                    }
+                });
+            },
+            duplicate() {
+                return individualHandle(appendDuplicate(cellId), type);
+            },
+            ...reorderMethods(cellId),
+        }) as unknown as IndividualCell<Def>;
+
+    const aspectHandle = <Def extends AspectDef>(cellId: string, type: Def): AspectCell<Def> =>
+        ({
+            kind: CellKind.Morphism,
+            get id() {
+                return readCellContent<{ id: string }>(cellId)?.id;
+            },
+            type,
+            get name() {
+                return readCellContent<{ name: string }>(cellId)?.name;
+            },
+            get from() {
+                return decodeIndividualEndpoint(
+                    readCellContent<{ dom: Ob | null }>(cellId)?.dom ?? null,
+                );
+            },
+            get to() {
+                return decodeIndividualEndpoint(
+                    readCellContent<{ cod: Ob | null }>(cellId)?.cod ?? null,
+                );
+            },
+            get over() {
+                const over = readCellContent<{ over: Mor | null }>(cellId)?.over;
+                return over?.tag === "Basic" ? modelMorphismHandle(over.content) : undefined;
+            },
+            update(u: {
+                name?: string;
+                from?: { id: string };
+                to?: { id: string };
+                over?: { id: string };
+            }) {
+                change((d) => {
+                    const content = (
+                        d.notebook.cellContents[cellId] as {
+                            content: {
+                                name: string;
+                                dom: Ob | null;
+                                cod: Ob | null;
+                                over: Mor | null;
+                            };
+                        }
+                    ).content;
+                    if (u.name !== undefined) {
+                        content.name = u.name;
+                    }
+                    if ("from" in u) {
+                        content.dom = u.from ? encodeObjectRef(u.from) : null;
+                    }
+                    if ("to" in u) {
+                        content.cod = u.to ? encodeObjectRef(u.to) : null;
+                    }
+                    if ("over" in u) {
+                        content.over = u.over ? { tag: "Basic", content: u.over.id } : null;
+                    }
+                });
+            },
+            duplicate() {
+                return aspectHandle(appendDuplicate(cellId), type);
+            },
+            ...reorderMethods(cellId),
+        }) as unknown as AspectCell<Def>;
+
+    const richTextHandle = (cellId: string): RichTextCell =>
+        ({
+            kind: CellKind.RichText,
+            id: cellId,
+            get content() {
+                return readCellContent<string>(cellId);
+            },
+            update(u: { content?: string }) {
+                change((d) => {
+                    Object.assign(d.notebook.cellContents[cellId] as object, u);
+                });
+            },
+            ...reorderMethods(cellId),
+        }) as unknown as RichTextCell;
+
+    const impl = {
+        get name() {
+            return doc.name;
+        },
+        get theory() {
+            return shape.theory;
+        },
+        handle,
+        get document() {
+            return doc;
+        },
+        dump() {
+            return copy(doc);
+        },
+        update(u: { name?: string }) {
+            change((d) => {
+                Object.assign(d, u);
+            });
+        },
+        onChange(callback: () => void): () => void {
+            return store.subscribe?.(handle, callback) ?? (() => {});
+        },
+        onChangeFormalContent(callback: () => void): () => void {
+            const signature = () => formalCellsSignature(doc);
+            let previous = signature();
+            return impl.onChange(() => {
+                const next = signature();
+                if (next !== previous) {
+                    previous = next;
+                    callback();
+                }
+            });
+        },
+        add(
+            type: unknown,
+            args: {
+                content?: string;
+                name?: string;
+                over?: { id: string };
+                from?: { id: string };
+                to?: { id: string };
+            },
+        ) {
+            if (isRichTextType(type)) {
+                const cell = newRichTextCell((args as { content: string }).content);
+                change((d) => {
+                    d.notebook.cellContents[cell.id] = cell as unknown as Cell<DiagramJudgment>;
+                    d.notebook.cellOrder.push(cell.id);
+                });
+                return richTextHandle(cell.id);
+            }
+            const def = type as IndividualDef | AspectDef;
+            if (def.tag === "individual") {
+                const judgment = newDiagramObjectDecl(
+                    def.obType,
+                    args.over ? encodeObjectRef(args.over) : null,
+                );
+                judgment.name = args.name ?? "";
+                const formalCell = newFormalCell(judgment);
+                change((d) => {
+                    d.notebook.cellContents[formalCell.id] = formalCell;
+                    d.notebook.cellOrder.push(formalCell.id);
+                });
+                return individualHandle(formalCell.id, def);
+            }
+            const judgment = newDiagramMorphismDecl(
+                def.morType,
+                args.over ? { tag: "Basic", content: args.over.id } : null,
+            );
+            judgment.name = args.name ?? "";
+            judgment.dom = args.from ? encodeObjectRef(args.from) : null;
+            judgment.cod = args.to ? encodeObjectRef(args.to) : null;
+            const formalCell = newFormalCell(judgment);
+            change((d) => {
+                d.notebook.cellContents[formalCell.id] = formalCell;
+                d.notebook.cellOrder.push(formalCell.id);
+            });
+            return aspectHandle(formalCell.id, def);
+        },
+        cells(): Array<DiagramCell> {
+            return doc.notebook.cellOrder.map((cellId) => {
+                const cell = doc.notebook.cellContents[cellId];
+                if (!cell) {
+                    throw new Error(`Failed to find notebook cell contents for cell '${cellId}'`);
+                }
+                if (cell.tag === "rich-text") {
+                    return richTextHandle(cellId);
+                }
+                const judgment = cell.content as DiagramJudgment;
+                switch (judgment.tag) {
+                    case "object":
+                        return individualHandle(cellId, shape.Individual);
+                    case "morphism":
+                        return aspectHandle(
+                            cellId,
+                            shape.Aspect ??
+                                ({
+                                    tag: "aspect",
+                                    morphism: { tag: "morphism", morType: judgment.morType },
+                                    morType: judgment.morType,
+                                } satisfies AspectDef),
+                        );
+                    default:
+                        throw new Error(`Unsupported diagram judgment tag: ${judgment.tag}`);
+                }
+            });
+        },
+        formalCells(): Array<Exclude<DiagramCell, RichTextCell>> {
+            return impl.cells().filter((cell) => cell.kind !== CellKind.RichText) as Array<
+                Exclude<DiagramCell, RichTextCell>
+            >;
+        },
+        async validate(): Promise<DiagramValidationResult> {
+            const coreTheory = shape.diagramInCoreTheory;
+            if (!coreTheory) {
+                throw new Error(
+                    "validate() needs the model's core theory: this diagram shape has " +
+                        "no `diagramInCoreTheory`.",
+                );
+            }
+            let model: DblModel;
+            try {
+                model = await resolveModelInStore(store, doc.diagramIn, coreTheory);
+            } catch (e) {
+                return { tag: "Illformed", diagram: null, error: String(e) };
+            }
+            let diagram: DblModelDiagram;
+            try {
+                const judgments = doc.notebook.cellOrder.flatMap((cellId) => {
+                    const cell = doc.notebook.cellContents[cellId];
+                    return cell?.tag === "formal" ? [cell.content as DiagramJudgment] : [];
+                });
+                diagram = elaborateDiagram(judgments, coreTheory);
+            } catch (e) {
+                return { tag: "Illformed", diagram: null, error: String(e) };
+            }
+            diagram.inferMissingFrom(model);
+            const result = diagram.validateIn(model);
+            if (result.tag === "Ok") {
+                return { tag: "Valid", diagram };
+            }
+            return { tag: "Invalid", diagram, errors: result.content };
+        },
+    };
+
+    const notebook = impl as unknown as Notebook<TShape, Handle>;
+
+    if (isPlainStore) {
+        plainDocumentId(handle as Document);
+    }
+
+    return notebook;
+}
+
 function attachNotebook<TShape extends AnyShape, Handle>(
     store: DocumentStore<Handle>,
     handle: Handle,
@@ -335,6 +765,9 @@ function attachNotebook<TShape extends AnyShape, Handle>(
 ): Notebook<TShape, Handle> {
     if (isAnalysisShape(shape)) {
         return attachAnalysisNotebook(store, handle, shape) as Notebook<TShape, Handle>;
+    }
+    if (isDiagramShape(shape)) {
+        return attachDiagramNotebook(store, handle, shape) as Notebook<TShape, Handle>;
     }
     const doc = store.viewDocument(handle) as ModelDocument;
     const change = (fn: (doc: ModelDocument) => void) =>
@@ -892,7 +1325,10 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                 }
                 if (cell.kind === CellKind.Morphism) {
                     const type = (cell as { type?: MorphismDef }).type;
-                    return type !== undefined && morphismDefs.some((def) => sameMorphismType(type, def));
+                    return (
+                        type !== undefined &&
+                        morphismDefs.some((def) => sameMorphismType(type, def))
+                    );
                 }
                 return false;
             });
@@ -1121,7 +1557,9 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = Document> = Up
      * discriminates a {@link CellKind.Analysis} cell to a precise {@link
      * AnalysisCell}.
      */
-    cells(): Array<NotebookCell | AnalysisCellsOf<TShape>>;
+    cells(): HasDiagram<TShape> extends true
+        ? Array<DiagramCell>
+        : Array<NotebookCell | AnalysisCellsOf<TShape>>;
     /**
      * Handles for the notebook's *formal* cells — every cell except rich-text —
      * in notebook order. These are the cells backed by a formal judgment
@@ -1132,7 +1570,9 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = Document> = Up
      * RichTextCell} removed, so `cell.kind` never discriminates to {@link
      * CellKind.RichText}.
      */
-    formalCells(): Array<Exclude<NotebookCell | AnalysisCellsOf<TShape>, RichTextCell>>;
+    formalCells(): HasDiagram<TShape> extends true
+        ? Array<Exclude<DiagramCell, RichTextCell>>
+        : Array<Exclude<NotebookCell | AnalysisCellsOf<TShape>, RichTextCell>>;
     /**
      * Handles for the cells whose object or morphism type is declared by the
      * given sub-shape, precisely typed by that shape: each of its declared
@@ -1183,13 +1623,61 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = Document> = Up
     add(type: RichTextType, args: { content: string }): RichTextCell;
     add(type: InstantiationType, args: InstantiationArgs<Handle>): InstantiationCell<Handle>;
     add<A extends AnalysisDefOf<TShape>>(type: A): AnalysisCell<A>;
+    add<I extends IndividualDefOf<TShape>>(
+        type: I,
+        args: { name: string; over: ObjectCell<I["object"]> },
+    ): IndividualCell<I>;
+    add<P extends AspectDefOf<TShape>>(
+        type: P,
+        args: {
+            name?: string;
+            from: IndividualCell;
+            to: IndividualCell;
+            over: MorphismCell<P["morphism"]>;
+        },
+    ): AspectCell<P>;
     add<M extends ShapeMorphisms<TShape>>(
         type: M,
         args: { name: string; from: DomOf<M>; to: CodOf<M> },
     ): MorphismCell<M>;
     add<O extends ShapeObjects<TShape>>(type: O, args: { name: string }): ObjectCell<O>;
 } & CoreTheoryMethods<TShape, Handle> &
-    AnalysisMethods<TShape>;
+    AnalysisMethods<TShape> &
+    DiagramMethods<TShape>;
+
+/** A diagram shape's individual-def list, defaulted to empty for indexing. */
+type IndividualDefOf<TShape extends AnyShape> = ("individuals" extends keyof TShape
+    ? NonNullable<TShape["individuals"]>
+    : readonly [])[number] &
+    IndividualDef;
+
+/** A diagram shape's aspect-def list; see {@link IndividualDefOf}. */
+type AspectDefOf<TShape extends AnyShape> = ("aspects" extends keyof TShape
+    ? NonNullable<TShape["aspects"]>
+    : readonly [])[number] &
+    AspectDef;
+
+/**
+ * The diagram-only notebook surface, present only when the shape declares
+ * `individuals` (see {@link HasDiagram}). A diagram notebook surfaces its model
+ * `theory`, iterates {@link DiagramCell}s, and validates against its model. A
+ * model or analysis notebook yields no such members.
+ */
+type DiagramMethods<TShape extends AnyShape> =
+    HasDiagram<TShape> extends true
+        ? {
+              /** The document theory of the model this diagram is drawn in. */
+              readonly theory: string;
+              /**
+               * Elaborate the diagram into its model and validate it there.
+               * Returns a tagged {@link DiagramValidationResult}: `Valid` with the
+               * elaborated diagram, `Invalid` with the diagram and its validation
+               * errors, or `Illformed` when elaboration (or resolving the model)
+               * failed.
+               */
+              validate(): Promise<DiagramValidationResult>;
+          }
+        : object;
 
 /**
  * The document type a shape's notebook is backed by: an {@link AnalysisDocument}
@@ -1200,9 +1688,13 @@ export type Notebook<TShape extends AnyShape = AnyShape, Handle = Document> = Up
 type DocumentOf<TShape extends AnyShape> =
     HasAnalyses<TShape> extends true
         ? AnalysisDocument
-        : "analyses" extends keyof TShape
-          ? Document
-          : ModelDocument;
+        : HasDiagram<TShape> extends true
+          ? DiagramDocument
+          : "analyses" extends keyof TShape
+            ? Document
+            : "individuals" extends keyof TShape
+              ? Document
+              : ModelDocument;
 
 /**
  * The analysis-only notebook surface, present only when the shape declares
@@ -1283,6 +1775,16 @@ export interface Binder<Handle> {
         data: { name: string; of: ValidatableNotebook<Handle> },
     ): Notebook<S, Handle>;
     /**
+     * Build a diagram notebook from fresh data. The `in` model must be
+     * validatable (its shape must declare a `coreTheory`), so the diagram can be
+     * elaborated and validated against it. The notebook is backed by a real
+     * {@link DiagramDocument} whose `diagramIn` link references `in`.
+     */
+    createNotebook<S extends DiagramShape>(
+        shape: S,
+        data: { name: string; in: ValidatableNotebook<Handle> },
+    ): Notebook<S, Handle>;
+    /**
      * Build a notebook from fresh data. The document seed is constructed
      * internally from `data.name` and the shape's `theory`.
      */
@@ -1313,7 +1815,14 @@ export interface Binder<Handle> {
 /** Bind a store once, yielding the notebook entry points. */
 export function createBinder<Handle>(store: DocumentStore<Handle>): Binder<Handle> {
     const binder = {
-        createNotebook(shape: AnyShape, data: { name: string; of?: ValidatableNotebook<Handle> }) {
+        createNotebook(
+            shape: AnyShape,
+            data: {
+                name: string;
+                of?: ValidatableNotebook<Handle>;
+                in?: ValidatableNotebook<Handle>;
+            },
+        ) {
             if (isAnalysisShape(shape)) {
                 const of = data.of;
                 if (!of) {
@@ -1329,6 +1838,24 @@ export function createBinder<Handle>(store: DocumentStore<Handle>): Binder<Handl
                 const seed = newAnalysisDocument({
                     analysisType: shape.analysisType,
                     analysisOf: { ...ref, type: "analysis-of" },
+                    name: data.name,
+                });
+                return attachNotebook(store, store.createHandle(seed), shape);
+            }
+            if (isDiagramShape(shape)) {
+                const model = data.in;
+                if (!model) {
+                    throw new Error("Diagram notebook requires an `in` model notebook.");
+                }
+                const ref = store.linkForHandle(model.handle);
+                if (!ref) {
+                    throw new Error(
+                        "Cannot create a diagram notebook: the store cannot mint a " +
+                            "link for the model's handle.",
+                    );
+                }
+                const seed = newDiagramDocument({
+                    diagramIn: { ...ref, type: "diagram-in" },
                     name: data.name,
                 });
                 return attachNotebook(store, store.createHandle(seed), shape);

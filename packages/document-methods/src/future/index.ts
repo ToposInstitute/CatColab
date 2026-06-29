@@ -1,5 +1,6 @@
 export { type ModelDocument, newModelDocument } from "../model";
 export { type AnalysisDocument, newAnalysisDocument } from "./analysis";
+export { type DiagramDocument, newDiagramDocument } from "./diagram";
 
 export { plainStore, type DocumentStore, resolveModelInStore } from "./store";
 export { binder, createBinder, type Binder, type Notebook } from "./notebook";
@@ -11,6 +12,8 @@ export {
     defineObject,
     defineMorphism,
     defineAnalysis,
+    defineIndividual,
+    defineAspect,
     defineShape,
     type RichTextType,
     type InstantiationType,
@@ -36,4 +39,12 @@ export {
     type AnalysisDef,
     type AnalysisCell,
     type AnalysisShape,
+    type IndividualDef,
+    type AspectDef,
+    type IndividualCell,
+    type AspectCell,
+    type DiagramCell,
+    type DiagramShape,
+    type DiagramShapeOf,
+    type DiagramValidationResult,
 } from "./definitions";

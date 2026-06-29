@@ -9,7 +9,13 @@ import type {
     ObType,
     SpecializeModel,
 } from "catcolab-document-types";
-import type { DblModel, DblTheory, InvalidDblModel } from "catlog-wasm";
+import type {
+    DblModel,
+    DblModelDiagram,
+    DblTheory,
+    InvalidDblModel,
+    InvalidDiscreteDblModelDiagram,
+} from "catlog-wasm";
 import type { Notebook } from "./notebook";
 
 const richTextKind: unique symbol = Symbol("richText");
@@ -382,6 +388,100 @@ export type RichTextCell = Update<{ content: string }> &
         readonly content: string;
     };
 
+/**
+ * A tagged wrapper declaring an *individual* type in a diagram: an instance of a
+ * model object type, built with {@link defineIndividual}. It carries the {@link
+ * ObjectDef} of the model object type its individuals are drawn over (e.g. the
+ * olog `Object` type), so {@link Notebook.add} can record the diagram object's
+ * `obType` and check that the model object an individual is `over` has that
+ * type. Discriminated from {@link AspectDef} by its `tag`.
+ */
+export type IndividualDef<O extends ObjectDef = ObjectDef> = {
+    readonly tag: "individual";
+    readonly object: O;
+    /** The model object type an individual instantiates. */
+    readonly obType: O["obType"];
+};
+
+/** Wrap a model {@link ObjectDef} as an {@link IndividualDef}, the diagram-level
+ * type for instances of that model object type. */
+export function defineIndividual<const O extends ObjectDef>(object: O): IndividualDef<O> {
+    return { tag: "individual", object, obType: object.obType };
+}
+
+/**
+ * A tagged wrapper declaring an *aspect* type in a diagram: an instance of a
+ * model morphism type, built with {@link defineAspect}. It carries the {@link
+ * MorphismDef} of the model morphism type its aspects are drawn over (e.g. the
+ * olog `has` aspect). Discriminated from {@link IndividualDef} by its `tag`.
+ */
+export type AspectDef<M extends MorphismDef = MorphismDef> = {
+    readonly tag: "aspect";
+    readonly morphism: M;
+    readonly morType: M["morType"];
+};
+
+/** Wrap a model {@link MorphismDef} as an {@link AspectDef}, the diagram-level
+ * type for instances of that model morphism type. */
+export function defineAspect<const M extends MorphismDef>(morphism: M): AspectDef<M> {
+    return { tag: "aspect", morphism, morType: morphism.morType };
+}
+
+/**
+ * An individual-cell handle in a diagram notebook (see {@link Notebook.cells}).
+ * Like an {@link ObjectCell} it carries the {@link CellKind.Object} discriminant,
+ * but it additionally records the model object it is drawn `over` — an {@link
+ * ObjectCell} of the model the diagram is in. Reading `over` yields that model
+ * object cell, so `cell.over.name` is the model object's name.
+ */
+export type IndividualCell<Def extends IndividualDef = IndividualDef> = Update<{
+    name: string;
+    over: ObjectCell<Def["object"]>;
+}> &
+    Reorder & {
+        readonly kind: typeof CellKind.Object;
+        readonly id: string;
+        readonly type: Def;
+        readonly name: string;
+        /** The model object this individual is drawn over. */
+        readonly over: ObjectCell<Def["object"]>;
+        duplicate(): IndividualCell<Def>;
+    };
+
+/**
+ * An aspect-cell handle in a diagram notebook (see {@link Notebook.cells}). Like
+ * a {@link MorphismCell} it carries the {@link CellKind.Morphism} discriminant,
+ * but its `from`/`to` endpoints are diagram {@link IndividualCell}s (single
+ * cells, never arrays) and it additionally records the model morphism it is
+ * drawn `over` — a {@link MorphismCell} of the model the diagram is in.
+ */
+export type AspectCell<Def extends AspectDef = AspectDef> = Update<{
+    name: string;
+    from: IndividualCell;
+    to: IndividualCell;
+    over: MorphismCell<Def["morphism"]>;
+}> &
+    Reorder & {
+        readonly kind: typeof CellKind.Morphism;
+        readonly id: string;
+        readonly type: Def;
+        readonly name: string;
+        readonly from: IndividualCell;
+        readonly to: IndividualCell;
+        /** The model morphism this aspect is drawn over. */
+        readonly over: MorphismCell<Def["morphism"]>;
+        duplicate(): AspectCell<Def>;
+    };
+
+/**
+ * The union of cell handles that iterating a *diagram* notebook with {@link
+ * Notebook.cells} yields: rich-text cells plus the diagram's individual and
+ * aspect cells. `cell.kind` discriminates an {@link IndividualCell} as {@link
+ * CellKind.Object} and an {@link AspectCell} as {@link CellKind.Morphism}, so a
+ * `switch` on `kind` narrows to the precise diagram handle.
+ */
+export type DiagramCell = RichTextCell | IndividualCell | AspectCell;
+
 export type InstantiationSpecialization = {
     readonly object: ObjectCell;
     readonly as: ObjectCell;
@@ -561,6 +661,26 @@ export type Shape = {
      * when {@link Shape.analyses} is, and surfaced as {@link Notebook.analysisType}.
      */
     readonly analysisType?: AnalysisType;
+    /**
+     * The individual types a *diagram* shape declares. A notebook over a shape
+     * with `individuals` is a diagram notebook: its {@link Notebook.add} accepts
+     * these individual defs (and the {@link Shape.aspects} below), and its cells
+     * store diagram judgments — objects/morphisms drawn `over` a model's — rather
+     * than plain model judgments. Absent for an ordinary model shape; populated
+     * by the `.Diagram` shape that {@link defineShape} derives.
+     */
+    readonly individuals?: readonly IndividualDef[];
+    /** The aspect types a *diagram* shape declares; see {@link Shape.individuals}. */
+    readonly aspects?: readonly AspectDef[];
+    /**
+     * The core theory the *model* a diagram is drawn in elaborates against,
+     * copied from the model logic's `coreTheory` by {@link defineShape}. A
+     * diagram is elaborated against this theory and validated in that model, so
+     * {@link Notebook.validate} on a diagram notebook needs it. Kept under a
+     * distinct key from {@link Shape.coreTheory} (which a diagram shape leaves
+     * absent) for that purpose.
+     */
+    readonly diagramInCoreTheory?: DblTheory;
 };
 
 /** Any shape, used as the default and as a generic constraint. */
@@ -620,6 +740,16 @@ export type AnalysisDefOf<TShape extends AnyShape> = ShapeAnalysisList<TShape>[n
  */
 export type HasAnalyses<TShape extends AnyShape> =
     {} extends Pick<TShape, "analyses" & keyof TShape> ? false : true;
+
+/**
+ * Whether a shape *definitely* declares `individuals`, i.e. is a diagram shape.
+ * Tested by requiredness like {@link HasAnalyses}: a shape built with the
+ * `.Diagram` derivation has `individuals` as a required property (so `true`),
+ * whereas an ordinary model shape — and the base {@link Shape}, whose
+ * `individuals` key is only optional — resolves to `false`.
+ */
+export type HasDiagram<TShape extends AnyShape> =
+    {} extends Pick<TShape, "individuals" & keyof TShape> ? false : true;
 
 /** A shape that can originate a document: it carries a document theory. */
 export type CreatableShape = Shape & { readonly theory: string };
@@ -830,17 +960,82 @@ export function defineShape<const TSpec extends Shape>(
 ): TSpec &
     ("modelAnalyses" extends keyof TSpec
         ? { readonly Analysis: AnalysisShape<NonNullable<TSpec["modelAnalyses"]>> }
-        : object) {
+        : object) &
+    ("theory" extends keyof TSpec ? { readonly Diagram: DiagramShapeOf<TSpec> } : object) {
+    const derived: Shape & { Analysis?: AnalysisShape; Diagram?: DiagramShape } = { ...spec };
     if (spec.modelAnalyses) {
-        const analysisShape: AnalysisShape<NonNullable<TSpec["modelAnalyses"]>> = {
+        derived.Analysis = {
             analyses: spec.modelAnalyses as NonNullable<TSpec["modelAnalyses"]>,
             analysisType: "model",
             ...(spec.coreTheory ? { analysisOfCoreTheory: spec.coreTheory } : {}),
-        };
-        return { ...spec, Analysis: analysisShape } as ReturnType<typeof defineShape<TSpec>>;
+        } satisfies AnalysisShape<NonNullable<TSpec["modelAnalyses"]>>;
     }
-    return spec as ReturnType<typeof defineShape<TSpec>>;
+    if (spec.theory !== undefined) {
+        const individuals = (spec.objects ?? []).map((object) => defineIndividual(object));
+        const aspects = (spec.morphisms ?? []).map((morphism) => defineAspect(morphism));
+        // `Individual`/`Aspect` are the diagram-level cell types: a single
+        // `IndividualDef`/`AspectDef` accepting any of the model's object/morphism
+        // types. (A model object cell — not a morphism — for `over`.)
+        const Individual = defineIndividual(
+            spec.objects?.[0] ?? defineObject({ tag: "Basic", content: "Object" }),
+        );
+        const Aspect =
+            spec.morphisms?.[0] !== undefined ? defineAspect(spec.morphisms[0]) : undefined;
+        derived.Diagram = {
+            theory: spec.theory,
+            individuals,
+            aspects,
+            Individual,
+            ...(Aspect ? { Aspect } : {}),
+            ...(spec.coreTheory ? { diagramInCoreTheory: spec.coreTheory } : {}),
+        };
+    }
+    return derived as ReturnType<typeof defineShape<TSpec>>;
 }
+
+/**
+ * The diagram shape derived from a creatable model shape by {@link defineShape},
+ * exposed as `shape.Diagram`. It declares an {@link IndividualDef} per model
+ * object type and an {@link AspectDef} per model morphism type, and surfaces the
+ * single diagram cell types {@link DiagramShape.Individual} / {@link
+ * DiagramShape.Aspect} to pass to {@link Notebook.add}.
+ */
+export type DiagramShapeOf<TSpec extends Shape> = DiagramShape & {
+    readonly theory: NonNullable<TSpec["theory"]>;
+    readonly Individual: IndividualDef<DeclaredObjects<TSpec> & ObjectDef>;
+    readonly Aspect: AspectDef<DeclaredMorphisms<TSpec> & MorphismDef>;
+};
+
+/**
+ * A {@link Shape} for diagram notebooks: a shape that declares `individuals` and
+ * `aspects` — the diagram-level types drawn over a model's objects and
+ * morphisms. Obtained via `shape.Diagram` on a creatable model shape. Pass it to
+ * {@link Binder.createNotebook} together with `{ name, in: validatableNotebook }`
+ * to create a diagram notebook. It carries the model's `theory` (surfaced as
+ * {@link Notebook.theory}) but no `coreTheory` of its own; the model's core
+ * theory is kept under {@link Shape.diagramInCoreTheory} for validation.
+ */
+export type DiagramShape = Shape & {
+    readonly individuals: readonly IndividualDef[];
+    readonly aspects: readonly AspectDef[];
+    /** The diagram-level individual cell type to pass to {@link Notebook.add}. */
+    readonly Individual: IndividualDef;
+    /** The diagram-level aspect cell type to pass to {@link Notebook.add}. */
+    readonly Aspect?: AspectDef;
+};
+
+/** Whether a shape value declares individuals, i.e. is a diagram shape. */
+export const isDiagramShape = (shape: AnyShape): shape is DiagramShape =>
+    Array.isArray((shape as { individuals?: unknown }).individuals);
+
+/** An elaborated diagram together with its validation status against its model. */
+export type DiagramValidationResult =
+    /** Successfully elaborated and validated in its model. */
+    | { tag: "Valid"; diagram: DblModelDiagram }
+    /** Elaborated, but failing one or more validation checks in its model. */
+    | { tag: "Invalid"; diagram: DblModelDiagram; errors: InvalidDiscreteDblModelDiagram[] }
+    /** Failed to even elaborate (e.g. its model is ill-formed). */
+    | { tag: "Illformed"; diagram: null; error: string };
 
 /**
  * A {@link Shape} for analysis notebooks: an ordinary shape that declares
