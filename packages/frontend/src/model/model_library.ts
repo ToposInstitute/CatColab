@@ -317,6 +317,13 @@ function isPatchToFormalContent(doc: Document, patch: Patch): boolean {
         return false;
     }
     if (path[0] === "notebook" && path[1] === "cellContents" && path[2]) {
+        // TODO: Clean this up. ModelLibrary.addModel installs this on a
+        // DocHandle<Document>, so this helper is called for non-ModelDocuments
+        // even though notebook cell checks are model-specific. Probably make
+        // the caller narrow to ModelDocument, or split from notebook handling.
+        if (!("notebook" in doc)) {
+            return false;
+        }
         // Ignores changes to cells without formal content.
         const cell = doc.notebook.cellContents[path[2]];
         if (cell?.tag !== "formal") {

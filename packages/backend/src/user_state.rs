@@ -505,6 +505,8 @@ pub mod arbitrary {
             DocumentType::Model,
             DocumentType::Diagram,
             DocumentType::Analysis,
+            // TODO: Re-enable once DocumentType::PetriNet is restored in document-types.
+            // DocumentType::PetriNet,
         ])
         .boxed()
     }

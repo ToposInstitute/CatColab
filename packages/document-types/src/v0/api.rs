@@ -8,7 +8,7 @@ use tsify::Tsify;
 /// `id`, to avoid conflicts with other keys and unambiguously signal that the
 /// data occur at the *database* level, rather than merely the *document* level.
 /// The same convention is used in document databases like CouchDB and MongoDB.
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 #[tsify(missing_as_null)]
 pub struct StableRef {
@@ -38,7 +38,7 @@ pub struct StableRef {
 ///
 /// The source of the link is the document containing this data and the target
 /// of link is given by the data itself.
-#[derive(PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct Link {
     #[serde(flatten)]
