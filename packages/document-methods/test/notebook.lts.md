@@ -277,13 +277,15 @@ console.log("missing:", missing.issues?.map((issue) => issue.message).join("; ")
 const wrongType = notebook.get(Entity, mapping.id);
 console.log(
     "wrong type:",
-    wrongType.issues?.map((issue) => issue.message.replace(mapping.id, "<id>")).join("; "),
+    wrongType.issues
+        ?.map((issue) => issue.message.replace(mapping.id, "<our-random-uuid>"))
+        .join("; "),
 );
 ```
 
 ```
 missing: No cell with id "00000000-0000-0000-0000-000000000000".
-wrong type: Cell "<id>" is not of the expected type.
+wrong type: Cell "<our-random-uuid>" is not of the expected type.
 ```
 
 ## Type safety
