@@ -19,7 +19,7 @@
 //! |      | Syntax | Value |
 //! |------|--------|-------|
 //! | Term | [TmS]  | [TmV] |
-//! | Type | [TyS]  | [TyV] |
+//! | Type | [BaseTyS]  | [BaseTyV] |
 //!
 //! Evaluation is the process of going from syntax to values. Evaluation is used to
 //! *normalize types*. We need to normalize types because there are many different

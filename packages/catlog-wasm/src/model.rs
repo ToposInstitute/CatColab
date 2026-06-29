@@ -321,7 +321,7 @@ pub struct DblModel {
 
     /// The elaborated type for the model.
     #[wasm_bindgen(skip)]
-    pub ty: Option<(tt::stx::TyS, tt::val::TyV)>,
+    pub ty: Option<(tt::stx::BaseTyS, tt::val::BaseTyV)>,
 
     /// The namespace for the objects.
     #[wasm_bindgen(skip)]

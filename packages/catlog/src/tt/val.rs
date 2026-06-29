@@ -17,17 +17,17 @@ pub struct RecordV {
     /// The closed-over environment.
     pub env: Env,
     /// The types for the fields.
-    pub fields: Rc<Row<TyS>>,
+    pub fields: Rc<Row<BaseTyS>>,
     /// Specializations of the fields.
     ///
     /// When we get to actually computing the type of fields, we will look here
     /// to see if they have been specialized.
-    pub specializations: Dtry<TyV>,
+    pub specializations: Dtry<BaseTyV>,
 }
 
 impl RecordV {
     /// Construct a record type value.
-    pub fn new(env: Env, fields: Row<TyS>, specializations: Dtry<TyV>) -> Self {
+    pub fn new(env: Env, fields: Row<BaseTyS>, specializations: Dtry<BaseTyV>) -> Self {
         Self {
             env,
             fields: Rc::new(fields),
@@ -38,7 +38,7 @@ impl RecordV {
     /// Add a specialization a path `path` to type `ty`.
     ///
     /// Precondition: assumes that this produces a subtype.
-    pub fn add_specialization(&self, path: &[(FieldName, LabelSegment)], ty: TyV) -> Self {
+    pub fn add_specialization(&self, path: &[(FieldName, LabelSegment)], ty: BaseTyV) -> Self {
         Self {
             specializations: merge_specializations(
                 &self.specializations,
@@ -51,7 +51,7 @@ impl RecordV {
     /// Merge in the specializations in `specializations`.
     ///
     /// Precondition: assumes that this produces a subtype.
-    pub fn specialize(&self, specializations: &Dtry<TyV>) -> Self {
+    pub fn specialize(&self, specializations: &Dtry<BaseTyV>) -> Self {
         Self {
             specializations: merge_specializations(&self.specializations, specializations),
             ..self.clone()
@@ -60,7 +60,7 @@ impl RecordV {
 }
 
 /// Merge new specializations with old specializations.
-pub fn merge_specializations(old: &Dtry<TyV>, new: &Dtry<TyV>) -> Dtry<TyV> {
+pub fn merge_specializations(old: &Dtry<BaseTyV>, new: &Dtry<BaseTyV>) -> Dtry<BaseTyV> {
     let mut result: IndexMap<_, _> = old.entries().map(|(name, e)| (*name, e.clone())).collect();
     for (field, entry) in new.entries() {
         let new_entry = match (old.entry(field), &entry.1) {
@@ -76,63 +76,63 @@ pub fn merge_specializations(old: &Dtry<TyV>, new: &Dtry<TyV>) -> Dtry<TyV> {
     result.into()
 }
 
-/// Inner enum for [TyV].
-pub enum TyV_ {
-    /// Type constructor for object types, also see [TyS_::Object].
+/// Inner enum for [BaseTyV].
+pub enum BaseTyV_ {
+    /// Type constructor for object types, also see [BaseTyS_::Object].
     Object(ObType),
-    /// Type constructor for morphism types, also see [TyS_::Morphism].
+    /// Type constructor for morphism types, also see [BaseTyS_::Morphism].
     Morphism(MorType, TmV, TmV),
     /// Type constructor for specialized record types.
     ///
-    /// This is the target of both [TyS_::Specialize] and [TyS_::Record].
-    /// Specifically, [TyS_::Record] evaluates to `TyV_::Record(r)` with
-    /// `r.specializations = Dtry::empty()`, and then `TyS_::Specialize(ty, d)` will
+    /// This is the target of both [BaseTyS_::Specialize] and [BaseTyS_::Record].
+    /// Specifically, [BaseTyS_::Record] evaluates to `BaseTyV_::Record(r)` with
+    /// `r.specializations = Dtry::empty()`, and then `BaseTyS_::Specialize(ty, d)` will
     /// add the specializations in `d` to the evaluation of `ty` (which must
-    /// evaluate to a value of form `TyV_::Record(_)`).
+    /// evaluate to a value of form `BaseTyV_::Record(_)`).
     Record(RecordV),
-    /// Type constructor for singleton types, also see [TyS_::Sing].
-    Sing(TyV, TmV),
-    /// Type constructor for identity types, also see [TyS_::Id].
-    Id(TyV, TmV, TmV),
-    /// A metavariable, also see [TyS_::Meta].
+    /// Type constructor for singleton types, also see [BaseTyS_::Sing].
+    Sing(BaseTyV, TmV),
+    /// Type constructor for identity types, also see [BaseTyS_::Id].
+    Id(BaseTyV, TmV, TmV),
+    /// A metavariable, also see [BaseTyS_::Meta].
     Meta(MetaVar),
     /// The type of terms in a fiber over an object generator of some
     /// instance's codomain model.
     ///
-    /// See [TyS_::Over] for the syntactic counterpart and explanation
+    /// See [BaseTyS_::Over] for the syntactic counterpart and explanation
     /// of why instance identity is not part of this type.
     Over(Vec<(FieldName, LabelSegment)>),
 }
 
-/// Value for total types, dereferences to [TyV_].
+/// Value for total types, dereferences to [BaseTyV_].
 #[derive(Clone, Deref)]
 #[deref(forward)]
-pub struct TyV(Rc<TyV_>);
+pub struct BaseTyV(Rc<BaseTyV_>);
 
-impl TyV {
-    /// Smart constructor for [TyV], [TyV_::Object] case.
+impl BaseTyV {
+    /// Smart constructor for [BaseTyV], [BaseTyV_::Object] case.
     pub fn object(object_type: ObType) -> Self {
-        Self(Rc::new(TyV_::Object(object_type)))
+        Self(Rc::new(BaseTyV_::Object(object_type)))
     }
 
-    /// Smart constructor for [TyV], [TyV_::Morphism] case.
+    /// Smart constructor for [BaseTyV], [BaseTyV_::Morphism] case.
     pub fn morphism(morphism_type: MorType, dom: TmV, cod: TmV) -> Self {
-        Self(Rc::new(TyV_::Morphism(morphism_type, dom, cod)))
+        Self(Rc::new(BaseTyV_::Morphism(morphism_type, dom, cod)))
     }
 
-    /// Smart constructor for [TyV], [TyV_::Record] case.
+    /// Smart constructor for [BaseTyV], [BaseTyV_::Record] case.
     pub fn record(record_v: RecordV) -> Self {
-        Self(Rc::new(TyV_::Record(record_v)))
+        Self(Rc::new(BaseTyV_::Record(record_v)))
     }
 
-    /// Smart constructor for [TyV], [TyV_::Sing] case.
-    pub fn sing(ty_v: TyV, tm_v: TmV) -> Self {
-        Self(Rc::new(TyV_::Sing(ty_v, tm_v)))
+    /// Smart constructor for [BaseTyV], [BaseTyV_::Sing] case.
+    pub fn sing(ty_v: BaseTyV, tm_v: TmV) -> Self {
+        Self(Rc::new(BaseTyV_::Sing(ty_v, tm_v)))
     }
 
-    /// Smart constructor for [TyV], [TyV_::Id] case.
-    pub fn id(ty_v: TyV, tm_v1: TmV, tm_v2: TmV) -> Self {
-        Self(Rc::new(TyV_::Id(ty_v, tm_v1, tm_v2)))
+    /// Smart constructor for [BaseTyV], [BaseTyV_::Id] case.
+    pub fn id(ty_v: BaseTyV, tm_v1: TmV, tm_v2: TmV) -> Self {
+        Self(Rc::new(BaseTyV_::Id(ty_v, tm_v1, tm_v2)))
     }
 
     /// Compute the specialization of `self` by `specializations`.
@@ -155,9 +155,9 @@ impl TyV {
     ///
     /// r3 and r3' should be represented in the same way, and r3, r3' and r3''
     /// should all be equivalent.
-    pub fn specialize(&self, specializations: &Dtry<TyV>) -> Self {
+    pub fn specialize(&self, specializations: &Dtry<BaseTyV>) -> Self {
         match &**self {
-            TyV_::Record(r) => TyV::record(r.specialize(specializations)),
+            BaseTyV_::Record(r) => BaseTyV::record(r.specialize(specializations)),
             _ => panic!("can only specialize a record type"),
         }
     }
@@ -165,9 +165,9 @@ impl TyV {
     /// Specializes the field at `path` to `ty`.
     ///
     /// Precondition: assumes that this produces a subtype.
-    pub fn add_specialization(&self, path: &[(FieldName, LabelSegment)], ty: TyV) -> Self {
+    pub fn add_specialization(&self, path: &[(FieldName, LabelSegment)], ty: BaseTyV) -> Self {
         match &**self {
-            TyV_::Record(r) => TyV::record(r.add_specialization(path, ty)),
+            BaseTyV_::Record(r) => BaseTyV::record(r.add_specialization(path, ty)),
             _ => panic!("can only specialize a record type"),
         }
     }
@@ -176,17 +176,17 @@ impl TyV {
     /// Also used as a throwaway type for
     /// untyped placeholder binders (whose type is discarded).
     pub fn empty_record() -> Self {
-        Self(Rc::new(TyV_::Record(RecordV::new(Env::nil(), Row::empty(), Dtry::empty()))))
+        Self(Rc::new(BaseTyV_::Record(RecordV::new(Env::nil(), Row::empty(), Dtry::empty()))))
     }
 
-    /// Smart constructor for [TyV], [TyV_::Meta] case.
+    /// Smart constructor for [BaseTyV], [BaseTyV_::Meta] case.
     pub fn meta(mv: MetaVar) -> Self {
-        Self(Rc::new(TyV_::Meta(mv)))
+        Self(Rc::new(BaseTyV_::Meta(mv)))
     }
 
-    /// Smart constructor for [TyV], [TyV_::Over] case.
+    /// Smart constructor for [BaseTyV], [BaseTyV_::Over] case.
     pub fn over(path: Vec<(FieldName, LabelSegment)>) -> Self {
-        Self(Rc::new(TyV_::Over(path)))
+        Self(Rc::new(BaseTyV_::Over(path)))
     }
 }
 
@@ -245,10 +245,10 @@ pub enum TmV_ {
     /// Neutrals.
     ///
     /// We store the type because we need it for eta-expansion.
-    Neu(TmN, TyV),
+    Neu(TmN, BaseTyV),
     /// Application of an object operation in the theory.
     App(VarName, TmV),
-    /// Application of a codomain morphism to an [`Over`-typed](TyV_::Over)
+    /// Application of a codomain morphism to an [`Over`-typed](BaseTyV_::Over)
     /// term. See [`TmS_::OverApp`] for the syntactic counterpart and
     /// argument-by-argument documentation.
     OverApp(FieldName, LabelSegment, Vec<(FieldName, LabelSegment)>, TmV),
@@ -277,7 +277,7 @@ pub struct TmV(Rc<TmV_>);
 
 impl TmV {
     /// Smart constructor for [TmV], [TmV_::Neu] case.
-    pub fn neu(n: TmN, ty: TyV) -> Self {
+    pub fn neu(n: TmN, ty: BaseTyV) -> Self {
         TmV(Rc::new(TmV_::Neu(n, ty)))
     }
 

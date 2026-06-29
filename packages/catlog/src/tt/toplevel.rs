@@ -30,9 +30,9 @@ pub struct Type {
     /// The theory for the type.
     pub theory: Theory,
     /// The syntax of the type (unnormalized).
-    pub stx: TyS,
+    pub stx: BaseTyS,
     /// The value of the type (normalized).
-    pub val: TyV,
+    pub val: BaseTyV,
 }
 
 /// A toplevel declaration of an instance of a model.
@@ -56,7 +56,7 @@ pub struct Instance {
     /// The value of the instance body (normalized); always a [`TmV_::Instance`].
     pub val: TmV,
     /// The codomain model `X` that this is an instance of.
-    pub codomain: TyV,
+    pub codomain: BaseTyV,
 }
 
 /// A toplevel declaration of a term judgment.
@@ -65,10 +65,10 @@ pub struct Def {
     /// The theory that the definition is defined in.
     pub theory: Theory,
     /// The arguments for the definition.
-    pub args: Row<TyS>,
+    pub args: Row<BaseTyS>,
     /// The return type of the definition (to be evaluated in an environment
     /// with values for the arguments).
-    pub ret_ty: TyS,
+    pub ret_ty: BaseTyS,
     /// The body of the definition (to be evaluated in an environment with
     /// values for the arguments).
     pub body: TmS,

@@ -27,8 +27,8 @@ impl fmt::Display for MetaVar {
     }
 }
 
-/// Inner enum for [TyS].
-pub enum TyS_ {
+/// Inner enum for [BaseTyS].
+pub enum BaseTyS_ {
     /// A reference to a top-level declaration.
     TopVar(TopVarName),
     /// Type constructor for object types.
@@ -54,7 +54,7 @@ pub enum TyS_ {
     ///
     /// A term `x` of type `Record(r)` represents a record where field `f` has type
     /// `eval(env.snoc(eval(env, x)), r.fields1[f])`.
-    Record(Row<TyS>),
+    Record(Row<BaseTyS>),
 
     /// Type constructor for singleton types.
     ///
@@ -62,14 +62,14 @@ pub enum TyS_ {
     ///
     /// A term `x` of type `Sing(ty, tm)` is a term of `ty` that is convertible with
     /// `tm`.
-    Sing(TyS, TmS),
+    Sing(BaseTyS, TmS),
 
     /// Type constructor for identity types.
     ///
     /// Example syntax: `a == b` (assuming `a` and `b` are terms that synthesize the same type).
     ///
     /// A term `p` of type `a == b` is a proof that `a` and `b` are equal.
-    Id(TyS, TmS, TmS),
+    Id(BaseTyS, TmS, TmS),
 
     /// Type constructor for specialized types.
     ///
@@ -80,7 +80,7 @@ pub enum TyS_ {
     ///
     /// In order to form this type, it must be the case that `d[p]` is a subtype of
     /// the type of the field at path `p`.
-    Specialize(TyS, Vec<(Vec<(FieldName, LabelSegment)>, TyS)>),
+    Specialize(BaseTyS, Vec<(Vec<(FieldName, LabelSegment)>, BaseTyS)>),
 
     /// A metavar.
     ///
@@ -104,86 +104,86 @@ pub enum TyS_ {
     Over(Vec<(FieldName, LabelSegment)>),
 }
 
-/// Syntax for total types, dereferences to [TyS_].
+/// Syntax for total types, dereferences to [BaseTyS_].
 ///
 /// See [crate::tt] for an explanation of what total types are, and for an
 /// explanation of our approach to Rc pointers in abstract syntax trees.
 #[derive(Clone, Deref)]
 #[deref(forward)]
-pub struct TyS(Rc<TyS_>);
+pub struct BaseTyS(Rc<BaseTyS_>);
 
-impl TyS {
-    /// Smart constructor for [TyS], [TyS_::TopVar] case.
+impl BaseTyS {
+    /// Smart constructor for [BaseTyS], [BaseTyS_::TopVar] case.
     pub fn topvar(name: TopVarName) -> Self {
-        Self(Rc::new(TyS_::TopVar(name)))
+        Self(Rc::new(BaseTyS_::TopVar(name)))
     }
 
-    /// Smart constructor for [TyS], [TyS_::Object] case.
+    /// Smart constructor for [BaseTyS], [BaseTyS_::Object] case.
     pub fn object(object_type: ObType) -> Self {
-        Self(Rc::new(TyS_::Object(object_type)))
+        Self(Rc::new(BaseTyS_::Object(object_type)))
     }
 
-    /// Smart constructor for [TyS], [TyS_::Morphism] case.
+    /// Smart constructor for [BaseTyS], [BaseTyS_::Morphism] case.
     pub fn morphism(morphism_type: MorType, dom: TmS, cod: TmS) -> Self {
-        Self(Rc::new(TyS_::Morphism(morphism_type, dom, cod)))
+        Self(Rc::new(BaseTyS_::Morphism(morphism_type, dom, cod)))
     }
 
-    /// Smart constructor for [TyS], [TyS_::Record] case.
-    pub fn record(fields: Row<TyS>) -> Self {
-        Self(Rc::new(TyS_::Record(fields)))
+    /// Smart constructor for [BaseTyS], [BaseTyS_::Record] case.
+    pub fn record(fields: Row<BaseTyS>) -> Self {
+        Self(Rc::new(BaseTyS_::Record(fields)))
     }
 
-    /// Smart constructor for [TyS], [TyS_::Sing] case.
-    pub fn sing(ty: TyS, tm: TmS) -> Self {
-        Self(Rc::new(TyS_::Sing(ty, tm)))
+    /// Smart constructor for [BaseTyS], [BaseTyS_::Sing] case.
+    pub fn sing(ty: BaseTyS, tm: TmS) -> Self {
+        Self(Rc::new(BaseTyS_::Sing(ty, tm)))
     }
 
-    /// Smart constructor for [TyS], [TyS_::Id] case.
-    pub fn id(ty: TyS, tm1: TmS, tm2: TmS) -> Self {
-        Self(Rc::new(TyS_::Id(ty, tm1, tm2)))
+    /// Smart constructor for [BaseTyS], [BaseTyS_::Id] case.
+    pub fn id(ty: BaseTyS, tm1: TmS, tm2: TmS) -> Self {
+        Self(Rc::new(BaseTyS_::Id(ty, tm1, tm2)))
     }
 
-    /// Smart constructor for [TyS], [TyS_::Specialize] case.
+    /// Smart constructor for [BaseTyS], [BaseTyS_::Specialize] case.
     pub fn specialize(
-        ty: TyS,
-        specializations: Vec<(Vec<(FieldName, LabelSegment)>, TyS)>,
+        ty: BaseTyS,
+        specializations: Vec<(Vec<(FieldName, LabelSegment)>, BaseTyS)>,
     ) -> Self {
-        Self(Rc::new(TyS_::Specialize(ty, specializations)))
+        Self(Rc::new(BaseTyS_::Specialize(ty, specializations)))
     }
 
-    /// Smart constructor for [TyS], [TyS_::Meta] case.
+    /// Smart constructor for [BaseTyS], [BaseTyS_::Meta] case.
     pub fn meta(mv: MetaVar) -> Self {
-        Self(Rc::new(TyS_::Meta(mv)))
+        Self(Rc::new(BaseTyS_::Meta(mv)))
     }
 
-    /// Smart constructor for [TyS], [TyS_::Over] case.
+    /// Smart constructor for [BaseTyS], [BaseTyS_::Over] case.
     pub fn over(path: Vec<(FieldName, LabelSegment)>) -> Self {
-        Self(Rc::new(TyS_::Over(path)))
+        Self(Rc::new(BaseTyS_::Over(path)))
     }
 }
 
-impl ToDoc for TyS {
+impl ToDoc for BaseTyS {
     fn to_doc<'a>(&self) -> D<'a> {
         match &**self {
-            TyS_::TopVar(name) => t(format!("{}", name)),
-            TyS_::Object(ob_type) => t(format!("{}", ob_type)),
-            TyS_::Morphism(mor_type, dom, cod) => {
+            BaseTyS_::TopVar(name) => t(format!("{}", name)),
+            BaseTyS_::Object(ob_type) => t(format!("{}", ob_type)),
+            BaseTyS_::Morphism(mor_type, dom, cod) => {
                 mor_type.to_doc().parens() + tuple([dom.to_doc(), cod.to_doc()])
             }
-            TyS_::Record(fields) => tuple(fields.iter().map(|(_, (label, ty))| {
+            BaseTyS_::Record(fields) => tuple(fields.iter().map(|(_, (label, ty))| {
                 binop(t(":"), t(format!("{}", label)).group(), ty.to_doc())
             })),
-            TyS_::Sing(_, tm) => t("@sing") + s() + tm.to_doc(),
-            TyS_::Id(_, tm1, tm2) => binop(t("=="), tm1.to_doc(), tm2.to_doc()),
-            TyS_::Specialize(ty, d) => binop(
+            BaseTyS_::Sing(_, tm) => t("@sing") + s() + tm.to_doc(),
+            BaseTyS_::Id(_, tm1, tm2) => binop(t("=="), tm1.to_doc(), tm2.to_doc()),
+            BaseTyS_::Specialize(ty, d) => binop(
                 t("&"),
                 ty.to_doc(),
                 tuple(
                     d.iter().map(|(name, ty)| binop(t(":"), t(path_to_string(name)), ty.to_doc())),
                 ),
             ),
-            TyS_::Meta(mv) => t(format!("?{}", mv.id)),
-            TyS_::Over(path) => t(format!("Over({})", object_path_to_string(path))),
+            BaseTyS_::Meta(mv) => t(format!("?{}", mv.id)),
+            BaseTyS_::Over(path) => t(format!("Over({})", object_path_to_string(path))),
         }
     }
 }
@@ -221,7 +221,7 @@ fn instance_body_to_doc<'a>(body: &InstanceBodyS) -> D<'a> {
     tuple(gens.chain(subs).chain(eqns))
 }
 
-impl fmt::Display for TyS {
+impl fmt::Display for BaseTyS {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.to_doc().group().pretty())
     }
@@ -254,7 +254,7 @@ pub enum TmS_ {
     /// List of objects.
     List(Vec<TmS>),
     /// Application of a codomain morphism to a fiber-typed
-    /// ([`TyS_::Over`]) term. Only well-formed inside an instance body.
+    /// ([`BaseTyS_::Over`]) term. Only well-formed inside an instance body.
     ///
     /// Arguments, in order:
     /// 1. `mor` — name of the codomain morphism being applied
@@ -300,7 +300,7 @@ pub enum TmS_ {
 ///   generator's fiber it lives over. Generators are introduced by
 ///   surface set-literal clauses `field := [...]` in the instance body.
 /// - `equations` is a list of `(lhs, rhs)` pairs over fiber
-///   ([`TyS_::Over`]) types.
+///   ([`BaseTyS_::Over`]) types.
 /// - `sub_instances` maps each sub-instance import's local name to a
 ///   nested instance term. This is what surface `we : Edge` lowers to.
 #[derive(Default)]
