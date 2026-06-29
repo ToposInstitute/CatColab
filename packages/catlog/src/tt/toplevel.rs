@@ -42,19 +42,20 @@ pub struct Type {
 /// body packaged as the presentation of an `X`-instance. It is declared with
 /// `instance NAME : X := [...]`.
 ///
-/// When an instance name is used in *type* position (for a sub-instance
-/// import), its type is the representable record type synthesized from that
-/// body by
-/// [`synth_instance_body_ty`](super::eval::Evaluator::synth_instance_body_ty),
-/// whose terms are the instance morphisms out of it.
+/// The instance is represented directly as a fiber type — a fiber
+/// [`Record`](super::stx::FiberTyS_::Record) whose fields are its
+/// generators ([`Over`](super::stx::FiberTyS_::Over)), sub-instance
+/// imports (nested records), and equations
+/// ([`Id`](super::stx::FiberTyS_::Id)). A sub-instance import `we : Edge`
+/// uses this fiber type directly.
 #[derive(Constructor, Clone)]
 pub struct Instance {
     /// The theory that the instance is defined in.
     pub theory: Theory,
-    /// The syntax of the instance body (unnormalized).
-    pub stx: TmS,
-    /// The value of the instance body (normalized); always a [`TmV_::Instance`].
-    pub val: TmV,
+    /// The syntax of the instance, as a fiber record type.
+    pub stx: FiberTyS,
+    /// The value of the instance, as a fiber record type.
+    pub val: FiberTyV,
     /// The codomain model `X` that this is an instance of.
     pub codomain: BaseTyV,
 }

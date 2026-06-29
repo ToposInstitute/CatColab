@@ -400,7 +400,6 @@ impl<'a> ModelGenerator<'a> {
                 None
             }
             BaseTyV_::Meta(_) => None,
-            BaseTyV_::Over(_) => None,
         }
     }
 }
@@ -408,7 +407,7 @@ impl<'a> ModelGenerator<'a> {
 /// Generates a [`DiscreteDblModelInstance`] from an elaborated [`Instance`]
 /// declaration.
 ///
-/// Walks the instance body's [`TmV_::Instance`] payload, registering
+/// Walks the instance's fiber [`Record`](FiberTyV_::Record), registering
 /// each generator with its fiber, each equation as a pair of
 /// [`DiscreteInstanceTerm`]s, and each sub-instance's contents under
 /// the appropriate prefix.
@@ -427,59 +426,71 @@ pub fn instance_from_def(
         .as_discrete()
         .ok_or_else(|| "expected a discrete codomain model".to_string())?;
     let mut instance = DiscreteDblModelInstance::new(Rc::new(cod_model));
-    let TmV_::Instance(body) = &*inst.val else {
-        return Err("expected a TmV::Instance body".into());
+    let FiberTyV_::Record(fields) = &*inst.val else {
+        return Err("expected an instance (a fiber record)".into());
     };
     let mut namespace = Namespace::new_for_uuid();
-    extract_instance_body(&mut instance, &mut namespace, &[], body)?;
+    extract_instance_record(&mut instance, &mut namespace, &[], fields)?;
     Ok((instance, namespace))
 }
 
-fn extract_instance_body(
+/// Register the contents of an instance (a fiber record) into the model
+/// instance under construction, recursing into sub-instance imports under
+/// their prefix.
+///
+/// Two passes so that every generator — including those of sub-instances
+/// — is registered before any equation that may mention it: first the
+/// [`Over`](FiberTyV_::Over) generator fields and [`Record`](FiberTyV_::Record)
+/// sub-instances, then the [`Id`](FiberTyV_::Id) equation fields.
+fn extract_instance_record(
     instance: &mut DiscreteDblModelInstance,
     namespace: &mut Namespace,
     prefix: &[NameSegment],
-    body: &InstanceBodyV,
+    fields: &Row<FiberTyV>,
 ) -> Result<(), String> {
-    for (name, (label, path)) in &body.generators {
-        if let NameSegment::Uuid(uuid) = name {
-            namespace.set_label(*uuid, *label);
+    for (name, (label, field_ty)) in fields.iter() {
+        match &**field_ty {
+            FiberTyV_::Over(path) => {
+                if let NameSegment::Uuid(uuid) = name {
+                    namespace.set_label(*uuid, *label);
+                }
+                let mut qsegs = prefix.to_vec();
+                qsegs.push(*name);
+                let qname: QualifiedName = qsegs.into();
+                let fiber: QualifiedName =
+                    path.iter().map(|(seg, _)| *seg).collect::<Vec<_>>().into();
+                instance.add_generator(qname, fiber);
+            }
+            FiberTyV_::Record(sub_fields) => {
+                if let NameSegment::Uuid(uuid) = name {
+                    namespace.set_label(*uuid, *label);
+                }
+                let mut sub_prefix = prefix.to_vec();
+                sub_prefix.push(*name);
+                extract_instance_record(instance, namespace, &sub_prefix, sub_fields)?;
+            }
+            FiberTyV_::Id(_, _, _) => {}
         }
-        let mut qsegs = prefix.to_vec();
-        qsegs.push(*name);
-        let qname: QualifiedName = qsegs.into();
-        let fiber: QualifiedName = path.iter().map(|(seg, _)| *seg).collect::<Vec<_>>().into();
-        instance.add_generator(qname, fiber);
     }
-    for (lhs, rhs) in &body.equations {
-        let lhs_t = tm_to_discrete_instance_term_with_prefix(instance, lhs, prefix)?;
-        let rhs_t = tm_to_discrete_instance_term_with_prefix(instance, rhs, prefix)?;
-        instance.add_equation(lhs_t, rhs_t);
-    }
-    for (name, (label, sub_v)) in &body.sub_instances {
-        if let NameSegment::Uuid(uuid) = name {
-            namespace.set_label(*uuid, *label);
+    for (_, (_, field_ty)) in fields.iter() {
+        if let FiberTyV_::Id(_, lhs, rhs) = &**field_ty {
+            let lhs_t = fiber_tm_to_discrete_instance_term(instance, lhs, prefix)?;
+            let rhs_t = fiber_tm_to_discrete_instance_term(instance, rhs, prefix)?;
+            instance.add_equation(lhs_t, rhs_t);
         }
-        let TmV_::Instance(sub_body) = &**sub_v else {
-            return Err("sub-instance is not a TmV::Instance".into());
-        };
-        let mut sub_prefix = prefix.to_vec();
-        sub_prefix.push(*name);
-        extract_instance_body(instance, namespace, &sub_prefix, sub_body)?;
     }
     Ok(())
 }
 
-/// Convert an `Over`-typed term value into a [`DiscreteInstanceTerm`],
-/// prefixing each generator name with the path into any enclosing
-/// sub-instances.
+/// Convert a fiber term into a [`DiscreteInstanceTerm`], prefixing each
+/// generator name with the path into any enclosing sub-instances.
 ///
-/// Nested [`TmV_::OverApp`]s are flattened into a single morphism path
-/// applied to the generator at the leaf, matching the flat canonical
-/// shape of [`DiscreteInstanceTerm`].
-fn tm_to_discrete_instance_term_with_prefix(
+/// Nested [`OverApp`](FiberTmV_::OverApp)s are flattened into a single
+/// morphism path applied to the generator at the leaf, matching the flat
+/// canonical shape of [`DiscreteInstanceTerm`].
+fn fiber_tm_to_discrete_instance_term(
     instance: &DiscreteDblModelInstance,
-    tm: &TmV,
+    tm: &FiberTmV,
     prefix: &[NameSegment],
 ) -> Result<DiscreteInstanceTerm, String> {
     // Walk outer-to-inner, recording each applied morphism.
@@ -487,16 +498,15 @@ fn tm_to_discrete_instance_term_with_prefix(
     let mut cur = tm;
     let base: QualifiedName = loop {
         match &**cur {
-            TmV_::Neu(n, _) => {
-                let mut segs = prefix.to_vec();
-                segs.extend(neu_full_name(n));
-                break segs.into();
-            }
-            TmV_::OverApp(mor_name, _, _, inner) => {
+            FiberTmV_::OverApp(mor_name, _, _, inner) => {
                 mors_outer_first.push(QualifiedName::single(*mor_name));
                 cur = inner;
             }
-            _ => return Err("term is not a generator or codomain-morphism application".into()),
+            _ => {
+                let mut segs = prefix.to_vec();
+                segs.extend(fiber_full_name(cur)?);
+                break segs.into();
+            }
         }
     };
     // Path order is innermost-first (apply first goes first).
@@ -513,29 +523,28 @@ fn tm_to_discrete_instance_term_with_prefix(
     Ok(DiscreteInstanceTerm { path, base })
 }
 
-/// Read off the full name of a neutral, including its leading variable
-/// name and any subsequent projection segments. Unlike
-/// [`TmN::to_qualified_name`] this does *not* treat the leading
-/// variable as an implicit root — for instance-body terms the leading
-/// variable is itself a generator name (e.g. `v1`) or sub-instance
-/// name (e.g. `we`), and must contribute a segment.
-fn neu_full_name(n: &TmN) -> Vec<NameSegment> {
+/// Read off the full name of a fiber term that is a generator or a chain
+/// of projections out of a sub-instance import (e.g. `we.e`): the leading
+/// variable contributes a segment (it is itself a generator/import name),
+/// followed by each projected field.
+fn fiber_full_name(tm: &FiberTmV) -> Result<Vec<NameSegment>, String> {
     let mut segments = Vec::new();
-    let mut cur = n;
+    let mut cur = tm;
     loop {
         match &**cur {
-            TmN_::Var(_, name, _) => {
+            FiberTmV_::Var(_, name, _) => {
                 segments.push(*name);
                 break;
             }
-            TmN_::Proj(n1, f, _) => {
+            FiberTmV_::Proj(inner, f, _) => {
                 segments.push(*f);
-                cur = n1;
+                cur = inner;
             }
+            _ => return Err("expected a fiber generator or projection".into()),
         }
     }
     segments.reverse();
-    segments
+    Ok(segments)
 }
 
 #[cfg(test)]
@@ -597,11 +606,9 @@ instance I : WeightedGraph := [
 
     /// An instance carrying fiber equations, imported as a sub-instance.
     ///
-    /// Exercises the presented-representable synthesis: `Loop`'s type (as
-    /// used by the import `l : Loop`) must carry an `Id`-typed field per
-    /// fiber equation, and that type must quote/evaluate without panicking.
-    /// Extraction of the importer must still recover both copies of the
-    /// loop's structure.
+    /// `Loop` is itself a fiber record carrying an `Id`-typed field per
+    /// fiber equation alongside its `e`/`v` generators, and extraction of
+    /// the importer must recover both copies of the loop's structure.
     #[test]
     fn import_of_instance_with_fiber_equations() {
         let src = r#"
@@ -629,28 +636,19 @@ instance UseLoop : WeightedGraph := [
 "#;
         let toplevel = elaborate_to_toplevel(src);
 
-        // `Loop`'s representable type must expose its two fiber equations as
-        // `Id`-typed fields alongside the `e`/`v` generators, and quoting it
-        // (which re-evaluates every field type against a bound `self`) must
-        // not panic.
+        // `Loop` is a fiber record exposing its two fiber equations as
+        // `Id`-typed fields alongside the `e`/`v` generators.
         let loop_def = match toplevel.declarations.get(&name_seg("Loop")) {
             Some(TopDecl::Instance(i)) => i.clone(),
             _ => panic!("expected Loop to be an instance declaration"),
         };
-        let TmV_::Instance(loop_body) = &*loop_def.val else {
-            panic!("Loop should evaluate to an instance");
+        let FiberTyV_::Record(r) = &*loop_def.val else {
+            panic!("Loop should be a fiber record");
         };
-        let eval = Evaluator::empty(&toplevel);
-        let body_ty = eval.synth_instance_body_ty(loop_body);
-        let BaseTyV_::Record(r) = &*body_ty else {
-            panic!("synthesized instance type should be a record");
-        };
-        assert!(r.fields.get(name_seg("e")).is_some(), "generator field e");
-        assert!(r.fields.get(name_seg("v")).is_some(), "generator field v");
-        assert!(r.fields.get(name_seg("_eq0")).is_some(), "first fiber equation");
-        assert!(r.fields.get(name_seg("_eq1")).is_some(), "second fiber equation");
-        // Round-trips through eval+quote of the dependent `Id` fields.
-        let _ = eval.quote_ty(&body_ty);
+        assert!(r.get(name_seg("e")).is_some(), "generator field e");
+        assert!(r.get(name_seg("v")).is_some(), "generator field v");
+        assert!(r.get(name_seg("_eq0")).is_some(), "first fiber equation");
+        assert!(r.get(name_seg("_eq1")).is_some(), "second fiber equation");
 
         // The importer still extracts both generators and the imported
         // copy's two equations.

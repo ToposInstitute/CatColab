@@ -87,21 +87,6 @@ pub enum BaseTyS_ {
     /// Currently, this is only used for handling elaboration errors, we might
     /// add more unification/holes later.
     Meta(MetaVar),
-
-    /// The type of terms in a fiber over an object generator of some
-    /// instance's codomain model. Internal-only; no surface syntax —
-    /// inhabitants are introduced via set-literal clauses `field :=
-    /// [...]` inside an instance body, and applications via the
-    /// `mor(arg)` and `mor(receiver.fld)` syn arms.
-    ///
-    /// The path identifies the object generator in the codomain.
-    /// Instance identity is contextual rather than part of the type:
-    /// any instance body in scope contributes its terms to this type,
-    /// so two fiber-types over the same codomain path from different
-    /// instance declarations are convertible. The elaborator validates
-    /// the path against the enclosing instance's codomain at
-    /// construction time.
-    Over(Vec<(FieldName, LabelSegment)>),
 }
 
 /// Syntax for total types, dereferences to [BaseTyS_].
@@ -155,11 +140,6 @@ impl BaseTyS {
     pub fn meta(mv: MetaVar) -> Self {
         Self(Rc::new(BaseTyS_::Meta(mv)))
     }
-
-    /// Smart constructor for [BaseTyS], [BaseTyS_::Over] case.
-    pub fn over(path: Vec<(FieldName, LabelSegment)>) -> Self {
-        Self(Rc::new(BaseTyS_::Over(path)))
-    }
 }
 
 impl ToDoc for BaseTyS {
@@ -183,7 +163,6 @@ impl ToDoc for BaseTyS {
                 ),
             ),
             BaseTyS_::Meta(mv) => t(format!("?{}", mv.id)),
-            BaseTyS_::Over(path) => t(format!("Over({})", object_path_to_string(path))),
         }
     }
 }
@@ -200,25 +179,6 @@ fn path_to_string(path: &[(FieldName, LabelSegment)]) -> String {
 /// (e.g. `V`, or `we.E` for a nested path), for use inside `Over(...)`.
 fn object_path_to_string(path: &[(FieldName, LabelSegment)]) -> String {
     path.iter().map(|(_, seg)| seg.to_string()).collect::<Vec<_>>().join(".")
-}
-
-fn instance_body_to_doc<'a>(body: &InstanceBodyS) -> D<'a> {
-    let gens = body.generators.iter().map(|(_, (label, path))| {
-        binop(
-            t(":"),
-            t(format!("{label}")),
-            t(format!("Over({})", object_path_to_string(path))),
-        )
-    });
-    let eqns = body
-        .equations
-        .iter()
-        .map(|(lhs, rhs)| binop(t(":="), lhs.to_doc(), rhs.to_doc()));
-    let subs = body
-        .sub_instances
-        .iter()
-        .map(|(_, (label, inner))| binop(t(":"), t(format!("{label}")), inner.to_doc()));
-    tuple(gens.chain(subs).chain(eqns))
 }
 
 impl fmt::Display for BaseTyS {
@@ -253,64 +213,10 @@ pub enum TmS_ {
     ObApp(VarName, TmS),
     /// List of objects.
     List(Vec<TmS>),
-    /// Application of a codomain morphism to a fiber-typed
-    /// ([`BaseTyS_::Over`]) term. Only well-formed inside an instance body.
-    ///
-    /// Arguments, in order:
-    /// 1. `mor` — name of the codomain morphism being applied
-    ///    (e.g. `src` in `src(we.e)`).
-    /// 2. `mor_label` — display label for that name.
-    /// 3. `tgt_path` — the codomain object-path that `mor` lands at.
-    ///    Stored on the node so [`super::eval::Evaluator::eval_tm`]
-    ///    can recover the result fiber type without consulting the
-    ///    codomain.
-    /// 4. `inner` — the fiber-typed argument (e.g. the elaboration of
-    ///    `we.e`, whose type is the fiber over `<src_path>` where the
-    ///    codomain morphism `mor : <src_path> → <tgt_path>`).
-    ///
-    /// Here is an example:
-    /// ```text
-    /// instance Edge : WeightedGraph := [E := [e]]
-    /// instance I : WeightedGraph := [
-    ///     V := [v1],
-    ///     we : Edge,
-    ///     src(we.e) := v1,
-    /// ]
-    /// ```
-    /// The LHS of the mapping clause elaborates to
-    /// `OverApp(src, src, [(V, V)], Proj(Var(we), e, e))` of fiber-type
-    /// over `.V`.
-    OverApp(FieldName, LabelSegment, Vec<(FieldName, LabelSegment)>, TmS),
-    /// An instance value: the level-shifted introduction rule for terms
-    /// of a model (sketch) type. See [`InstanceBodyS`] for the payload.
-    Instance(InstanceBodyS),
     /// A metavar.
     ///
     /// This only appears when we have an error in elaboration.
     Meta(MetaVar),
-}
-
-/// Payload of [`TmS_::Instance`].
-///
-/// Captures the data needed to build a `DblModelInstance` at extraction
-/// time, while staying theory-agnostic at the term-syntax level.
-///
-/// - `generators` maps each generator's local name (within this
-///   instance) to a path into the model identifying which object
-///   generator's fiber it lives over. Generators are introduced by
-///   surface set-literal clauses `field := [...]` in the instance body.
-/// - `equations` is a list of `(lhs, rhs)` pairs over fiber
-///   ([`BaseTyS_::Over`]) types.
-/// - `sub_instances` maps each sub-instance import's local name to a
-///   nested instance term. This is what surface `we : Edge` lowers to.
-#[derive(Default)]
-pub struct InstanceBodyS {
-    /// Generators introduced by this instance, with their fibers.
-    pub generators: IndexMap<FieldName, (LabelSegment, Vec<(FieldName, LabelSegment)>)>,
-    /// Equation witnesses, asserted to hold in this instance.
-    pub equations: Vec<(TmS, TmS)>,
-    /// Sub-instance imports, keyed by import name.
-    pub sub_instances: IndexMap<FieldName, (LabelSegment, TmS)>,
 }
 
 /// Syntax for total terms, dereferences to [TmS_].
@@ -367,21 +273,6 @@ impl TmS {
         Self(Rc::new(TmS_::List(elems)))
     }
 
-    /// Smart constructor for [TmS], [TmS_::OverApp] case.
-    pub fn over_app(
-        mor: FieldName,
-        mor_label: LabelSegment,
-        tgt_path: Vec<(FieldName, LabelSegment)>,
-        inner: TmS,
-    ) -> Self {
-        Self(Rc::new(TmS_::OverApp(mor, mor_label, tgt_path, inner)))
-    }
-
-    /// Smart constructor for [TmS], [TmS_::Instance] case.
-    pub fn instance(body: InstanceBodyS) -> Self {
-        Self(Rc::new(TmS_::Instance(body)))
-    }
-
     /// Smart constructor for [TmS], [TmS_::Meta] case.
     pub fn meta(mv: MetaVar) -> Self {
         Self(Rc::new(TmS_::Meta(mv)))
@@ -405,14 +296,163 @@ impl ToDoc for TmS {
             TmS_::Compose(f, g) => binop(t("·"), f.to_doc(), g.to_doc()),
             TmS_::ObApp(name, x) => unop(t(format!("@{name}")), x.to_doc()),
             TmS_::List(elems) => tuple(elems.iter().map(|elem| elem.to_doc())),
-            TmS_::OverApp(_, mor_label, _, inner) => inner.to_doc() + t(format!(".{mor_label}")),
-            TmS_::Instance(body) => instance_body_to_doc(body),
             TmS_::Meta(mv) => t(format!("?{}", mv.id)),
         }
     }
 }
 
 impl fmt::Display for TmS {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_doc().group().pretty())
+    }
+}
+
+/// Inner enum for [FiberTyS].
+///
+/// Fiber types type the fiber world — instances of a model and their
+/// elements — mirroring how [`BaseTyS`] types the base world (models).
+/// See [`crate::tt::toplevel`] for the comprehension-category picture.
+/// The three constructors parallel the base world: [`Over`](Self::Over)
+/// is the atomic fiber-element type, [`Record`](Self::Record) assembles
+/// them into an instance, and [`Id`](Self::Id) imposes a (propositional)
+/// equation, just as [`BaseTyS_::Id`] does in the base.
+pub enum FiberTyS_ {
+    /// The type of a fiber element lying over the object generator of the
+    /// codomain model identified by `path`. No surface syntax — its
+    /// inhabitants ([`FiberTmS`]) are introduced by set-literal clauses
+    /// `field := [...]`, by projection out of a sub-instance import, and
+    /// by codomain-morphism application inside an instance body.
+    Over(Vec<(FieldName, LabelSegment)>),
+    /// An instance of a model — an object of the fiber over the codomain
+    /// model — presented as a record of fiber types. A generator is an
+    /// [`Over`](Self::Over) field, a sub-instance import is a nested
+    /// [`Record`](Self::Record) field, and an equation is an
+    /// [`Id`](Self::Id) field. This is what `instance I : X := [...]`
+    /// elaborates to, and also the type of a sub-instance import `we :
+    /// Edge` (whose generators are then projected as `we.e`).
+    Record(Row<FiberTyS>),
+    /// A propositional equation between two fiber elements of the given
+    /// fiber type, asserted to hold in the enclosing instance. Mirrors
+    /// [`BaseTyS_::Id`]; like it, these are proof-irrelevant.
+    Id(FiberTyS, FiberTmS, FiberTmS),
+}
+
+/// Syntax for fiber types, dereferences to [FiberTyS_].
+#[derive(Clone, Deref)]
+#[deref(forward)]
+pub struct FiberTyS(Rc<FiberTyS_>);
+
+impl FiberTyS {
+    /// Smart constructor for [FiberTyS], [FiberTyS_::Over] case.
+    pub fn over(path: Vec<(FieldName, LabelSegment)>) -> Self {
+        Self(Rc::new(FiberTyS_::Over(path)))
+    }
+
+    /// Smart constructor for [FiberTyS], [FiberTyS_::Record] case.
+    pub fn record(fields: Row<FiberTyS>) -> Self {
+        Self(Rc::new(FiberTyS_::Record(fields)))
+    }
+
+    /// Smart constructor for [FiberTyS], [FiberTyS_::Id] case.
+    pub fn id(ty: FiberTyS, tm1: FiberTmS, tm2: FiberTmS) -> Self {
+        Self(Rc::new(FiberTyS_::Id(ty, tm1, tm2)))
+    }
+}
+
+impl ToDoc for FiberTyS {
+    fn to_doc<'a>(&self) -> D<'a> {
+        match &**self {
+            FiberTyS_::Over(path) => t(format!("Over({})", object_path_to_string(path))),
+            FiberTyS_::Record(fields) => tuple(fields.iter().map(|(_, (label, ty))| {
+                binop(t(":"), t(format!("{}", label)).group(), ty.to_doc())
+            })),
+            FiberTyS_::Id(_, tm1, tm2) => binop(t("=="), tm1.to_doc(), tm2.to_doc()),
+        }
+    }
+}
+
+impl fmt::Display for FiberTyS {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_doc().group().pretty())
+    }
+}
+
+/// Inner enum for [FiberTmS]: a term of a fiber type, i.e. an element of
+/// an instance.
+///
+/// Fiber terms reference the elaborator's *fiber* scope (generators and
+/// sub-instance imports), which is separate from the base context; see
+/// [`crate::tt::context::Context`]. They are all neutral — there is no
+/// fiber introduction form yet (mapping out of an instance by a record
+/// literal is future work), so a fiber term is always a variable, a
+/// projection, or a codomain-morphism application.
+pub enum FiberTmS_ {
+    /// A fiber-context variable: a generator or a sub-instance import.
+    /// Backward index into the fiber environment.
+    Var(BwdIdx, VarName, LabelSegment),
+    /// Projection of a generator out of a sub-instance import, e.g.
+    /// `we.e`.
+    Proj(FiberTmS, FieldName, LabelSegment),
+    /// Application of a codomain morphism to a fiber element. Arguments,
+    /// in order: the morphism name (e.g. `src`), its display label, the
+    /// codomain object-path it lands at (stored so the result fiber type
+    /// is recoverable without consulting the codomain), and the
+    /// fiber-typed argument (e.g. the elaboration of `we.e`).
+    ///
+    /// Example: in `src(we.e) := v1`, the LHS elaborates to
+    /// `OverApp(src, src, [(V, V)], Proj(Var(we), e, e))` of fiber type
+    /// `Over(.V)`.
+    OverApp(FieldName, LabelSegment, Vec<(FieldName, LabelSegment)>, FiberTmS),
+    /// A metavar (elaboration-error placeholder).
+    Meta(MetaVar),
+}
+
+/// Syntax for fiber terms, dereferences to [FiberTmS_].
+#[derive(Clone, Deref)]
+#[deref(forward)]
+pub struct FiberTmS(Rc<FiberTmS_>);
+
+impl FiberTmS {
+    /// Smart constructor for [FiberTmS], [FiberTmS_::Var] case.
+    pub fn var(bwd_idx: BwdIdx, var_name: VarName, label: LabelSegment) -> Self {
+        Self(Rc::new(FiberTmS_::Var(bwd_idx, var_name, label)))
+    }
+
+    /// Smart constructor for [FiberTmS], [FiberTmS_::Proj] case.
+    pub fn proj(tm: FiberTmS, field_name: FieldName, label: LabelSegment) -> Self {
+        Self(Rc::new(FiberTmS_::Proj(tm, field_name, label)))
+    }
+
+    /// Smart constructor for [FiberTmS], [FiberTmS_::OverApp] case.
+    pub fn over_app(
+        mor: FieldName,
+        mor_label: LabelSegment,
+        tgt_path: Vec<(FieldName, LabelSegment)>,
+        inner: FiberTmS,
+    ) -> Self {
+        Self(Rc::new(FiberTmS_::OverApp(mor, mor_label, tgt_path, inner)))
+    }
+
+    /// Smart constructor for [FiberTmS], [FiberTmS_::Meta] case.
+    pub fn meta(mv: MetaVar) -> Self {
+        Self(Rc::new(FiberTmS_::Meta(mv)))
+    }
+}
+
+impl ToDoc for FiberTmS {
+    fn to_doc<'a>(&self) -> D<'a> {
+        match &**self {
+            FiberTmS_::Var(_, _, label) => t(format!("{}", label)),
+            FiberTmS_::Proj(tm, _, label) => tm.to_doc() + t(format!(".{}", label)),
+            FiberTmS_::OverApp(_, mor_label, _, inner) => {
+                inner.to_doc() + t(format!(".{mor_label}"))
+            }
+            FiberTmS_::Meta(mv) => t(format!("?{}", mv.id)),
+        }
+    }
+}
+
+impl fmt::Display for FiberTmS {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.to_doc().group().pretty())
     }
