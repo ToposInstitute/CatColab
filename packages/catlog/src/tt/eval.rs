@@ -51,9 +51,6 @@ impl<'a> Evaluator<'a> {
         match &**ty {
             BaseTyS_::TopVar(tv) => match self.toplevel.declarations.get(tv).unwrap() {
                 TopDecl::Type(t) => t.val.clone(),
-                // Instances are fiber types, not base types, so a base
-                // top-var never refers to one (the elaborator rejects an
-                // instance name in base-type position before we get here).
                 _ => panic!("top-level {tv} should be a type declaration"),
             },
             BaseTyS_::Object(ot) => BaseTyV::object(ot.clone()),
