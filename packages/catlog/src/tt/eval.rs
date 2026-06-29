@@ -39,7 +39,7 @@ impl<'a> Evaluator<'a> {
         Self { env, ..self.clone() }
     }
 
-    fn eval_record(&self, fields: &Row<TyS>) -> RecordV {
+    fn eval_record(&self, fields: &Row<BaseTyS>) -> RecordV {
         RecordV::new(self.env.clone(), fields.clone(), Dtry::empty())
     }
 
@@ -47,9 +47,9 @@ impl<'a> Evaluator<'a> {
     ///
     /// Assumes that the type syntax is well-formed and well-scoped with respect
     /// to self.env.
-    pub fn eval_ty(&self, ty: &TyS) -> TyV {
+    pub fn eval_ty(&self, ty: &BaseTyS) -> BaseTyV {
         match &**ty {
-            TyS_::TopVar(tv) => match self.toplevel.declarations.get(tv).unwrap() {
+            BaseTyS_::TopVar(tv) => match self.toplevel.declarations.get(tv).unwrap() {
                 TopDecl::Type(t) => t.val.clone(),
                 // An instance used in type position evaluates to the
                 // representable record type synthesized from its body (see
@@ -60,22 +60,22 @@ impl<'a> Evaluator<'a> {
                 },
                 _ => panic!("top-level {tv} should be a type or instance declaration"),
             },
-            TyS_::Object(ot) => TyV::object(ot.clone()),
-            TyS_::Morphism(pt, dom, cod) => {
-                TyV::morphism(pt.clone(), self.eval_tm(dom), self.eval_tm(cod))
+            BaseTyS_::Object(ot) => BaseTyV::object(ot.clone()),
+            BaseTyS_::Morphism(pt, dom, cod) => {
+                BaseTyV::morphism(pt.clone(), self.eval_tm(dom), self.eval_tm(cod))
             }
-            TyS_::Record(r) => TyV::record(self.eval_record(r)),
-            TyS_::Sing(ty_s, tm_s) => TyV::sing(self.eval_ty(ty_s), self.eval_tm(tm_s)),
-            TyS_::Id(ty_s, tm_s1, tm_s2) => {
-                TyV::id(self.eval_ty(ty_s), self.eval_tm(tm_s1), self.eval_tm(tm_s2))
+            BaseTyS_::Record(r) => BaseTyV::record(self.eval_record(r)),
+            BaseTyS_::Sing(ty_s, tm_s) => BaseTyV::sing(self.eval_ty(ty_s), self.eval_tm(tm_s)),
+            BaseTyS_::Id(ty_s, tm_s1, tm_s2) => {
+                BaseTyV::id(self.eval_ty(ty_s), self.eval_tm(tm_s1), self.eval_tm(tm_s2))
             }
-            TyS_::Specialize(ty_s, specializations) => {
+            BaseTyS_::Specialize(ty_s, specializations) => {
                 specializations.iter().fold(self.eval_ty(ty_s), |ty_v, (path, s)| {
                     ty_v.add_specialization(path, self.eval_ty(s))
                 })
             }
-            TyS_::Meta(mv) => TyV::meta(*mv),
-            TyS_::Over(path) => TyV::over(path.clone()),
+            BaseTyS_::Meta(mv) => BaseTyV::meta(*mv),
+            BaseTyS_::Over(path) => BaseTyV::over(path.clone()),
         }
     }
 
@@ -131,9 +131,9 @@ impl<'a> Evaluator<'a> {
     }
 
     /// Evaluate the type of the field `field_name` of `val : ty`.
-    pub fn field_ty(&self, ty: &TyV, val: &TmV, field_name: FieldName) -> TyV {
+    pub fn field_ty(&self, ty: &BaseTyV, val: &TmV, field_name: FieldName) -> BaseTyV {
         match &**ty {
-            TyV_::Record(r) => {
+            BaseTyV_::Record(r) => {
                 let field_ty_s = r.fields.get(field_name).unwrap();
                 let orig_field_ty = self.with_env(r.env.snoc(val.clone())).eval_ty(field_ty_s);
                 match r.specializations.entry(&field_name) {
@@ -147,7 +147,7 @@ impl<'a> Evaluator<'a> {
     }
 
     /// Bind a new neutral of type `ty`.
-    pub fn bind_neu(&self, name: VarName, label: LabelSegment, ty: TyV) -> (TmN, Self) {
+    pub fn bind_neu(&self, name: VarName, label: LabelSegment, ty: BaseTyV) -> (TmN, Self) {
         let n = TmN::var(self.scope_length.into(), name, label);
         let v = TmV::neu(n.clone(), ty);
         (
@@ -161,7 +161,7 @@ impl<'a> Evaluator<'a> {
     }
 
     /// Bind a variable called "self" to `ty`.
-    pub fn bind_self(&self, ty: TyV) -> (TmN, Self) {
+    pub fn bind_self(&self, ty: BaseTyV) -> (TmN, Self) {
         self.bind_neu("self".into(), "self".into(), ty)
     }
 
@@ -181,10 +181,10 @@ impl<'a> Evaluator<'a> {
     /// Because these `Id` fields are inert, the *concrete* way of mapping out
     /// of `D` — building a record literal (`Cons`) of this type by hand — only
     /// currently works when `D` is equation-free.
-    pub fn synth_instance_body_ty(&self, body: &InstanceBodyV) -> TyV {
-        let mut fields: Row<TyS> = Row::empty();
+    pub fn synth_instance_body_ty(&self, body: &InstanceBodyV) -> BaseTyV {
+        let mut fields: Row<BaseTyS> = Row::empty();
         for (name, (label, path)) in &body.generators {
-            fields.insert(*name, *label, TyS::over(path.clone()));
+            fields.insert(*name, *label, BaseTyS::over(path.clone()));
         }
         for (name, (label, sub_v)) in &body.sub_instances {
             let TmV_::Instance(sub_body) = &**sub_v else {
@@ -201,19 +201,19 @@ impl<'a> Evaluator<'a> {
         // so a placeholder suffices. Quoting in `ev`
         // (one binder deeper) sends `self` to de Bruijn index 0, matching
         // how `field_ty` snocs the record value when projecting.
-        let (self_n, ev) = self.bind_self(TyV::empty_record());
+        let (self_n, ev) = self.bind_self(BaseTyV::empty_record());
         for (i, (lhs_v, rhs_v)) in body.equations.iter().enumerate() {
             let Some(over_ty) = fiber_equation_ty(lhs_v) else {
                 unreachable!("instance equation LHS is not a fiber element");
             };
             let lhs_s = ev.quote_tm(&reroot_at_self(lhs_v, &self_n, body));
             let rhs_s = ev.quote_tm(&reroot_at_self(rhs_v, &self_n, body));
-            let eq_ty = TyS::id(ev.quote_ty(&over_ty), lhs_s, rhs_s);
+            let eq_ty = BaseTyS::id(ev.quote_ty(&over_ty), lhs_s, rhs_s);
             let key = format!("_eq{i}");
             fields.insert(name_seg(key.as_str()), label_seg(key.as_str()), eq_ty);
         }
         let r_v = RecordV::new(self.env.clone(), fields, Dtry::empty());
-        TyV::record(r_v)
+        BaseTyV::record(r_v)
     }
 
     /// Produce type syntax from a type value.
@@ -221,27 +221,27 @@ impl<'a> Evaluator<'a> {
     /// This is a *section* of eval, in that `self.eval_ty(self.quote_ty(ty_v)) == ty_v`
     /// but it is not necessarily true that `self.quote_ty(self.eval_ty(ty_s)) == ty_v`.
     ///
-    /// This is used for displaying [TyV] to the user in type errors, and for
+    /// This is used for displaying [BaseTyV] to the user in type errors, and for
     /// creating syntax that can be re-evaluated in other contexts. In theory this
     /// could be used for conversion checking, but it's more efficient to implement
     /// that directly, and it's better to *not* do eta-expansion for user-facing
     /// messages or for syntax that is meant to be re-evaluated.
-    pub fn quote_ty(&self, ty: &TyV) -> TyS {
+    pub fn quote_ty(&self, ty: &BaseTyV) -> BaseTyS {
         match &**ty {
-            TyV_::Object(object_type) => TyS::object(object_type.clone()),
-            TyV_::Morphism(morphism_type, dom, cod) => {
-                TyS::morphism(morphism_type.clone(), self.quote_tm(dom), self.quote_tm(cod))
+            BaseTyV_::Object(object_type) => BaseTyS::object(object_type.clone()),
+            BaseTyV_::Morphism(morphism_type, dom, cod) => {
+                BaseTyS::morphism(morphism_type.clone(), self.quote_tm(dom), self.quote_tm(cod))
             }
-            TyV_::Record(r) => {
+            BaseTyV_::Record(r) => {
                 let r_eval = self.with_env(r.env.clone()).bind_self(ty.clone()).1;
                 let fields = r
                     .fields
                     .map(|ty_s| self.bind_self(ty.clone()).1.quote_ty(&r_eval.eval_ty(ty_s)));
-                let record_ty_s = TyS::record(fields);
+                let record_ty_s = BaseTyS::record(fields);
                 if r.specializations.is_empty() {
                     record_ty_s
                 } else {
-                    TyS::specialize(
+                    BaseTyS::specialize(
                         record_ty_s,
                         r.specializations
                             .flatten()
@@ -259,12 +259,12 @@ impl<'a> Evaluator<'a> {
                     )
                 }
             }
-            TyV_::Sing(ty, tm) => TyS::sing(self.quote_ty(ty), self.quote_tm(tm)),
-            TyV_::Id(ty, tm1, tm2) => {
-                TyS::id(self.quote_ty(ty), self.quote_tm(tm1), self.quote_tm(tm2))
+            BaseTyV_::Sing(ty, tm) => BaseTyS::sing(self.quote_ty(ty), self.quote_tm(tm)),
+            BaseTyV_::Id(ty, tm1, tm2) => {
+                BaseTyS::id(self.quote_ty(ty), self.quote_tm(tm1), self.quote_tm(tm2))
             }
-            TyV_::Meta(mv) => TyS::meta(*mv),
-            TyV_::Over(path) => TyS::over(path.clone()),
+            BaseTyV_::Meta(mv) => BaseTyS::meta(*mv),
+            BaseTyV_::Over(path) => BaseTyS::over(path.clone()),
         }
     }
 
@@ -314,7 +314,7 @@ impl<'a> Evaluator<'a> {
     ///
     /// This is true iff `ty1` is convertible with `ty2`, and an eta-expanded
     /// neutral of type `ty1` is an element of `ty2`.
-    pub fn subtype<'b>(&self, ty1: &TyV, ty2: &TyV) -> Result<(), D<'b>> {
+    pub fn subtype<'b>(&self, ty1: &BaseTyV, ty2: &BaseTyV) -> Result<(), D<'b>> {
         self.convertible_ty(ty1, ty2)?;
         let (n, _) = self.bind_self(ty1.clone());
         let v = self.eta_neu(&n, ty1);
@@ -329,20 +329,20 @@ impl<'a> Evaluator<'a> {
     ///
     /// Example: if `a : Entity` and `b : Entity` are neutrals, then `a` is not an
     /// element of `@sing b`, but `a` is an element of `@sing a`.
-    pub fn element_of<'b>(&self, tm: &TmV, ty: &TyV) -> Result<(), D<'b>> {
+    pub fn element_of<'b>(&self, tm: &TmV, ty: &BaseTyV) -> Result<(), D<'b>> {
         match &**ty {
-            TyV_::Object(_) => Ok(()),
-            TyV_::Morphism(_, _, _) => Ok(()),
-            TyV_::Record(r) => {
+            BaseTyV_::Object(_) => Ok(()),
+            BaseTyV_::Morphism(_, _, _) => Ok(()),
+            BaseTyV_::Record(r) => {
                 for (name, (label, _)) in r.fields.iter() {
                     self.element_of(&self.proj(tm, *name, *label), &self.field_ty(ty, tm, *name))?
                 }
                 Ok(())
             }
-            TyV_::Sing(_, x) => self.equal_tm(tm, x),
-            TyV_::Id(_, _, _) => Ok(()),
-            TyV_::Meta(_) => Ok(()),
-            TyV_::Over(_) => Ok(()),
+            BaseTyV_::Sing(_, x) => self.equal_tm(tm, x),
+            BaseTyV_::Id(_, _, _) => Ok(()),
+            BaseTyV_::Meta(_) => Ok(()),
+            BaseTyV_::Over(_) => Ok(()),
         }
     }
 
@@ -351,16 +351,16 @@ impl<'a> Evaluator<'a> {
     /// Ignores specializations: specializations are handled in [`Evaluator::subtype`].
     ///
     /// On failure, returns a doc which describes the obstruction to convertibility.
-    pub fn convertible_ty<'b>(&self, ty1: &TyV, ty2: &TyV) -> Result<(), D<'b>> {
+    pub fn convertible_ty<'b>(&self, ty1: &BaseTyV, ty2: &BaseTyV) -> Result<(), D<'b>> {
         match (&**ty1, &**ty2) {
-            (TyV_::Object(ot1), TyV_::Object(ot2)) => {
+            (BaseTyV_::Object(ot1), BaseTyV_::Object(ot2)) => {
                 if ot1 == ot2 {
                     Ok(())
                 } else {
                     Err(t(format!("object types {ot1} and {ot2} are not equal")))
                 }
             }
-            (TyV_::Morphism(mt1, dom1, cod1), TyV_::Morphism(mt2, dom2, cod2)) => {
+            (BaseTyV_::Morphism(mt1, dom1, cod1), BaseTyV_::Morphism(mt2, dom2, cod2)) => {
                 if mt1 != mt2 {
                     return Err(t(format!("morphism types {mt1} and {mt2} are not equal")));
                 }
@@ -368,7 +368,7 @@ impl<'a> Evaluator<'a> {
                 self.equal_tm(cod1, cod2).map_err(|d| t("could not convert codomains: ") + d)?;
                 Ok(())
             }
-            (TyV_::Record(r1), TyV_::Record(r2)) => {
+            (BaseTyV_::Record(r1), BaseTyV_::Record(r2)) => {
                 let mut fields = IndexMap::new();
                 let mut self1 = self.clone();
                 for ((name, (label, field_ty1_s)), (_, (_, field_ty2_s))) in
@@ -384,9 +384,9 @@ impl<'a> Evaluator<'a> {
                 }
                 Ok(())
             }
-            (TyV_::Sing(ty1, _), _) => self.convertible_ty(ty1, ty2),
-            (_, TyV_::Sing(ty2, _)) => self.convertible_ty(ty1, ty2),
-            (TyV_::Over(p1), TyV_::Over(p2)) => {
+            (BaseTyV_::Sing(ty1, _), _) => self.convertible_ty(ty1, ty2),
+            (_, BaseTyV_::Sing(ty2, _)) => self.convertible_ty(ty1, ty2),
+            (BaseTyV_::Over(p1), BaseTyV_::Over(p2)) => {
                 if p1 == p2 {
                     Ok(())
                 } else {
@@ -398,11 +398,11 @@ impl<'a> Evaluator<'a> {
     }
 
     /// Performs eta-expansion of the neutral `n` at type `ty`.
-    pub fn eta_neu(&self, n: &TmN, ty: &TyV) -> TmV {
+    pub fn eta_neu(&self, n: &TmN, ty: &BaseTyV) -> TmV {
         match &**ty {
-            TyV_::Object(_) => TmV::neu(n.clone(), ty.clone()),
-            TyV_::Morphism(_, _, _) => TmV::neu(n.clone(), ty.clone()),
-            TyV_::Record(r) => {
+            BaseTyV_::Object(_) => TmV::neu(n.clone(), ty.clone()),
+            BaseTyV_::Morphism(_, _, _) => TmV::neu(n.clone(), ty.clone()),
+            BaseTyV_::Record(r) => {
                 let mut fields = Row::empty();
                 for (name, (label, _)) in r.fields.iter() {
                     let ty_v = self.field_ty(ty, &TmV::cons(fields.clone()), *name);
@@ -411,15 +411,15 @@ impl<'a> Evaluator<'a> {
                 }
                 TmV::cons(fields)
             }
-            TyV_::Sing(_, x) => x.clone(),
-            TyV_::Id(_, _, _) => TmV::empty_cons(), // Extensional equality at a 100% discount!
-            TyV_::Meta(_) => TmV::neu(n.clone(), ty.clone()),
-            TyV_::Over(_) => TmV::neu(n.clone(), ty.clone()),
+            BaseTyV_::Sing(_, x) => x.clone(),
+            BaseTyV_::Id(_, _, _) => TmV::empty_cons(), // Extensional equality at a 100% discount!
+            BaseTyV_::Meta(_) => TmV::neu(n.clone(), ty.clone()),
+            BaseTyV_::Over(_) => TmV::neu(n.clone(), ty.clone()),
         }
     }
 
     /// Performs eta-expansion of the term `v` at type `ty`.
-    pub fn eta(&self, v: &TmV, ty: Option<&TyV>) -> TmV {
+    pub fn eta(&self, v: &TmV, ty: Option<&BaseTyV>) -> TmV {
         match &**v {
             TmV_::Neu(tm_n, ty_v) => self.eta_neu(tm_n, ty_v),
             TmV_::App(name, x) => TmV::app(*name, self.eta(x, None)),
@@ -554,10 +554,10 @@ impl<'a> Evaluator<'a> {
 
     fn can_specialize(
         &self,
-        ty: &TyV,
+        ty: &BaseTyV,
         val: &TmV,
         path: &[(FieldName, LabelSegment)],
-        field_ty: TyV,
+        field_ty: BaseTyV,
     ) -> Result<(), String> {
         assert!(!path.is_empty());
         let orig_field_ty = self.path_ty(ty, val, path)?;
@@ -578,14 +578,14 @@ impl<'a> Evaluator<'a> {
     /// current type to be a record containing the named field.
     pub fn path_ty(
         &self,
-        ty: &TyV,
+        ty: &BaseTyV,
         val: &TmV,
         path: &[(FieldName, LabelSegment)],
-    ) -> Result<TyV, String> {
+    ) -> Result<BaseTyV, String> {
         let mut ty = ty.clone();
         let mut val = val.clone();
         for &(name, label) in path {
-            let TyV_::Record(r) = &*ty.clone() else {
+            let BaseTyV_::Record(r) = &*ty.clone() else {
                 return Err(format!("expected a record type at .{label}"));
             };
             if !r.fields.has(name) {
@@ -604,17 +604,17 @@ impl<'a> Evaluator<'a> {
     /// Precondition: `path` is non-empty.
     pub fn try_specialize(
         &self,
-        ty: &TyV,
+        ty: &BaseTyV,
         path: &[(FieldName, LabelSegment)],
-        field_ty: TyV,
-    ) -> Result<TyV, String> {
+        field_ty: BaseTyV,
+    ) -> Result<BaseTyV, String> {
         let (self_var, _) = self.bind_self(ty.clone());
         let self_val = self.eta_neu(&self_var, ty);
         self.can_specialize(ty, &self_val, path, field_ty.clone())?;
-        let TyV_::Record(r) = &**ty else {
+        let BaseTyV_::Record(r) = &**ty else {
             panic!("Input to `try_specialize` should be a record type")
         };
-        Ok(TyV::record(r.add_specialization(path, field_ty)))
+        Ok(BaseTyV::record(r.add_specialization(path, field_ty)))
     }
 }
 
@@ -622,10 +622,10 @@ impl<'a> Evaluator<'a> {
 ///
 /// Fiber equations (`mor(gen) := target`) relate `Over`-typed terms; their
 /// common type is recoverable from the left-hand side.
-fn fiber_equation_ty(tm: &TmV) -> Option<TyV> {
+fn fiber_equation_ty(tm: &TmV) -> Option<BaseTyV> {
     match &**tm {
-        TmV_::OverApp(_, _, tgt_path, _) => Some(TyV::over(tgt_path.clone())),
-        TmV_::Neu(_, ty) => matches!(&**ty, TyV_::Over(_)).then(|| ty.clone()),
+        TmV_::OverApp(_, _, tgt_path, _) => Some(BaseTyV::over(tgt_path.clone())),
+        TmV_::Neu(_, ty) => matches!(&**ty, BaseTyV_::Over(_)).then(|| ty.clone()),
         _ => None,
     }
 }
