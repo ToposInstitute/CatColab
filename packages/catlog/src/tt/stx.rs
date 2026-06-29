@@ -312,11 +312,19 @@ impl fmt::Display for BaseTmS {
 /// Fiber types type the fiber world — instances of a model and their
 /// elements — mirroring how [`BaseTyS`] types the base world (models).
 /// See [`crate::tt::toplevel`] for the comprehension-category picture.
-/// The three constructors parallel the base world: [`Over`](Self::Over)
-/// is the atomic fiber-element type, [`Record`](Self::Record) assembles
-/// them into an instance, and [`Id`](Self::Id) imposes a (propositional)
-/// equation, just as [`BaseTyS_::Id`] does in the base.
+/// The constructors parallel the base world: [`TopVar`](Self::TopVar)
+/// references a top-level instance, [`Over`](Self::Over) is the atomic
+/// fiber-element type, [`Record`](Self::Record) assembles them into an
+/// instance, and [`Id`](Self::Id) imposes a (propositional) equation —
+/// just as [`BaseTyS_::TopVar`] and [`BaseTyS_::Id`] do in the base.
 pub enum FiberTyS_ {
+    /// A reference to a top-level instance declaration, as in a
+    /// sub-instance import `we : Edge`. Mirrors [`BaseTyS_::TopVar`]: it
+    /// appears only in *syntax* and exists to preserve the instance's
+    /// name for display — like base top-vars, it is resolved away in the
+    /// value world (there is no `FiberTyV_::TopVar`), where it becomes the
+    /// referenced instance's [`Record`](Self::Record).
+    TopVar(TopVarName),
     /// The type of a fiber element lying over the object generator of the
     /// codomain model identified by `path`. No surface syntax — its
     /// inhabitants ([`FiberTmS`]) are introduced by set-literal clauses
@@ -343,6 +351,11 @@ pub enum FiberTyS_ {
 pub struct FiberTyS(Rc<FiberTyS_>);
 
 impl FiberTyS {
+    /// Smart constructor for [FiberTyS], [FiberTyS_::TopVar] case.
+    pub fn topvar(name: TopVarName) -> Self {
+        Self(Rc::new(FiberTyS_::TopVar(name)))
+    }
+
     /// Smart constructor for [FiberTyS], [FiberTyS_::Over] case.
     pub fn over(path: Vec<(FieldName, LabelSegment)>) -> Self {
         Self(Rc::new(FiberTyS_::Over(path)))
@@ -362,6 +375,7 @@ impl FiberTyS {
 impl ToDoc for FiberTyS {
     fn to_doc<'a>(&self) -> D<'a> {
         match &**self {
+            FiberTyS_::TopVar(name) => t(format!("{}", name)),
             FiberTyS_::Over(path) => t(format!("Over({})", object_path_to_string(path))),
             FiberTyS_::Record(fields) => tuple(fields.iter().map(|(_, (label, ty))| {
                 binop(t(":"), t(format!("{}", label)).group(), ty.to_doc())

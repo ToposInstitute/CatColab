@@ -510,6 +510,25 @@ impl<'a> Elaborator<'a> {
         (s, v)
     }
 
+    /// Whether two codomain models agree closely enough to import an
+    /// instance of one into an instance of the other: identical top-level
+    /// field names (in order) and convertible field types.
+    ///
+    /// This is deliberately stricter than [`Evaluator::convertible_ty`],
+    /// which for records is positional and ignores field names and arity
+    /// — so it would wrongly accept e.g. `[V : Entity, E : Entity]` as
+    /// convertible with `[W : Entity, F : Entity]`.
+    fn codomains_match(&self, a: &BaseTyV, b: &BaseTyV) -> bool {
+        if let (BaseTyV_::Record(r1), BaseTyV_::Record(r2)) = (&**a, &**b) {
+            let names_a: Vec<_> = r1.fields.iter().map(|(n, _)| n).collect();
+            let names_b: Vec<_> = r2.fields.iter().map(|(n, _)| n).collect();
+            if names_a != names_b {
+                return false;
+            }
+        }
+        self.evaluator().convertible_ty(a, b).is_ok()
+    }
+
     /// Elaborate a fiber-type annotation. Used for sub-instance imports
     /// (`we : Edge`, where `Edge` names a top-level instance) and anonymous
     /// equations (`name : (a == b)`).
@@ -517,11 +536,32 @@ impl<'a> Elaborator<'a> {
         match n.ast0() {
             Var(name) => {
                 let topvar = name_seg(*name);
-                match self.toplevel.declarations.get(&topvar) {
-                    Some(TopDecl::Instance(i)) => Some((i.stx.clone(), i.val.clone())),
-                    _ => self
-                        .error(format!("{name} must reference a top-level instance declaration")),
+                let (imported_codomain, val) = match self.toplevel.declarations.get(&topvar) {
+                    Some(TopDecl::Instance(i)) => (i.codomain.clone(), i.val.clone()),
+                    _ => {
+                        return self.error(format!(
+                            "{name} must reference a top-level instance declaration"
+                        ));
+                    }
+                };
+                // The imported instance must be an instance of the *same*
+                // model as the enclosing one — otherwise its `Over` paths
+                // refer to objects foreign to this codomain, producing a
+                // malformed instance.
+                if let Some(cod) = self.instance_codomain() {
+                    let enclosing = BaseTyV::record((*cod).clone());
+                    if !self.codomains_match(&enclosing, &imported_codomain) {
+                        return self.error(format!(
+                            "cannot import {name}: it is an instance of a different model than \
+                             the enclosing instance"
+                        ));
+                    }
                 }
+                // The syntax keeps the instance's name (for display); the
+                // value is the referenced instance's resolved record, just
+                // as a base top-var evaluates to its model. See
+                // [`FiberTyS_::TopVar`].
+                Some((FiberTyS::topvar(topvar), val))
             }
             App2(L(_, Keyword("==")), a_n, b_n) => {
                 let (a_s, a_v, a_ty) = self.fiber_syn(a_n);

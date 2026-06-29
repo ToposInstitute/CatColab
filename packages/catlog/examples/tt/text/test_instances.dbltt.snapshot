@@ -101,3 +101,27 @@ syn I.E
 #/ 51| syn I.E
 #/ 51|     ^^^
 
+model OtherSchema := [
+    W : Entity
+]
+#/ declared: OtherSchema
+
+instance OtherInst : OtherSchema := [
+    W := [w0]
+]
+#/ declared: OtherInst
+#/ instance generators:
+#/   w0 : W
+
+#(should_fail)
+instance MismatchedImport : WeightedGraph := [
+    bad : OtherInst
+]
+#/ declared: MismatchedImport
+#/ instance has no generators or equations
+#/ expected errors:
+#/ error[elab]: cannot import OtherInst: it is an instance of a different model than the enclosing instance
+#/ --> examples/tt/text/test_instances.dbltt:63:5
+#/ 63|     bad : OtherInst
+#/ 63|     ^^^^^^^^^^^^^^^
+

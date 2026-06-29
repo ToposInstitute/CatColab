@@ -49,3 +49,16 @@ instance SelfNamed : WeightedGraph := [
 
 #(should_fail)
 syn I.E
+
+model OtherSchema := [
+    W : Entity
+]
+
+instance OtherInst : OtherSchema := [
+    W := [w0]
+]
+
+#(should_fail)
+instance MismatchedImport : WeightedGraph := [
+    bad : OtherInst
+]
