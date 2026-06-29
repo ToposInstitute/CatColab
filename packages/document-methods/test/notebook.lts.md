@@ -623,30 +623,38 @@ const b = olog.add(Type, { name: "B" });
 olog.add(Aspect, { name: "has", from: a, to: b });
 ```
 
+`migrateTo` returns a [Standard Schema](https://standardschema.dev) result: a
+`{ value }` on success, or a `{ issues }` failure.
+
 ```ts
-const schema = await olog.migrateTo(SimpleSchema);
+const migration = await olog.migrateTo(SimpleSchema);
+console.log("issues:", migration.issues ?? []);
+if (!migration.issues) {
+    const schema = migration.value;
 
-// The original document was rewritten in place, not copied.
-console.log("same document:", schema.document === olog.document);
-console.log("theory:", schema.document.theory);
-console.log(
-    "entities:",
-    schema
-        .cellsOf(Entity)
-        .map((cell) => cell.name)
-        .join(", "),
-);
-console.log(
-    "mappings:",
-    schema
-        .cellsOf(Mapping)
-        .map((cell) => cell.name)
-        .join(", "),
-);
-console.log("tag:", (await schema.validate()).tag);
+    // The original document was rewritten in place, not copied.
+    console.log("same document:", schema.document === olog.document);
+    console.log("theory:", schema.document.theory);
+    console.log(
+        "entities:",
+        schema
+            .cellsOf(Entity)
+            .map((cell) => cell.name)
+            .join(", "),
+    );
+    console.log(
+        "mappings:",
+        schema
+            .cellsOf(Mapping)
+            .map((cell) => cell.name)
+            .join(", "),
+    );
+    console.log("tag:", (await schema.validate()).tag);
+}
 ```
 
 ```
+issues: []
 same document: true
 theory: simple-schema
 entities: A, B
@@ -657,7 +665,8 @@ tag: Valid
 ### When migration goes wrong
 
 Not every pair of logics is connected by a migration. Migrating to a logic
-with no defined path throws.
+with no defined path yields a failure result whose `issues` describe the
+problem, instead of throwing.
 
 <!-- verifier:reset -->
 
@@ -675,12 +684,11 @@ const b = olog.add(Type, { name: "B" });
 olog.add(Aspect, { name: "has", from: a, to: b });
 ```
 
-<!-- verifier:throws -->
-
 ```ts
-await olog.migrateTo(PetriNet);
+const result = await olog.migrateTo(PetriNet);
+console.log("issues:", result.issues?.map((issue) => issue.message).join("; "));
 ```
 
 ```
-❌ No migration defined from "simple-olog" to "petri-net".
+issues: No migration defined from "simple-olog" to "petri-net".
 ```

@@ -741,31 +741,45 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                     d.theory = targetShape.theory;
                     delete d.editorVariant;
                 });
-                return attachNotebook(store, handle, targetShape);
+                return { value: attachNotebook(store, handle, targetShape) };
             }
 
             // Pushforward migration: transport the elaborated model along the
             // theory morphism, then re-type each cell from the migrated model.
             const migration = (shape.migrations ?? []).find((m) => m.target === targetShape.theory);
             if (!migration) {
-                throw new Error(
-                    `No migration defined from "${shape.theory}" to "${targetShape.theory}".`,
-                );
+                return {
+                    issues: [
+                        {
+                            message: `No migration defined from "${shape.theory}" to "${targetShape.theory}".`,
+                        },
+                    ],
+                };
             }
             if (!shape.coreTheory || !targetShape.coreTheory) {
-                throw new Error(
-                    "Migration needs the source and target core theories; one shape has none.",
-                );
+                return {
+                    issues: [
+                        {
+                            message:
+                                "Migration needs the source and target core theories; one shape has none.",
+                        },
+                    ],
+                };
             }
 
             // Obtain the source model through the store (same recursive
             // resolution as `validate`), then transport it along the morphism.
             const resolved = await resolveSelf(shape.coreTheory);
             if ("error" in resolved) {
-                throw new Error(
-                    `Cannot migrate notebook from "${shape.theory}" to ` +
-                        `"${targetShape.theory}": ${resolved.error}`,
-                );
+                return {
+                    issues: [
+                        {
+                            message:
+                                `Cannot migrate notebook from "${shape.theory}" to ` +
+                                `"${targetShape.theory}": ${resolved.error}`,
+                        },
+                    ],
+                };
             }
             const model = resolved;
 
@@ -786,7 +800,7 @@ function attachNotebook<TShape extends AnyShape, Handle>(
                     }
                 }
             });
-            return attachNotebook(store, handle, targetShape);
+            return { value: attachNotebook(store, handle, targetShape) };
         },
         update(u: { name?: string }) {
             change((d) => {
@@ -1232,10 +1246,13 @@ type CoreTheoryMethods<TShape extends AnyShape, Handle> =
               /**
                * Migrate the notebook's document to another shape, **mutating it in
                * place**: the underlying document is rewritten to the target theory
-               * rather than copied. Returns a new notebook handle bound to the
-               * target shape; the original handle is now stale, so continue through
-               * the returned handle. Throws if no migration to the target is
-               * defined.
+               * rather than copied.
+               *
+               * Returns a [Standard Schema](https://standardschema.dev) {@link
+               * Result}: a `{ value: Notebook }` success bound to the target shape
+               * (the original handle is now stale, so continue through the returned
+               * handle), or a `{ issues }` failure when no migration to the target
+               * is defined or the source model cannot be resolved.
                *
                * Available only on a shape that declares a `coreTheory`, since a
                * pushforward migration elaborates the model. Asynchronous for the
@@ -1245,7 +1262,7 @@ type CoreTheoryMethods<TShape extends AnyShape, Handle> =
                */
               migrateTo<TTarget extends CreatableShape>(
                   targetShape: TTarget,
-              ): Promise<Notebook<TTarget, Handle>>;
+              ): Promise<Result<Notebook<TTarget, Handle>>>;
           }
         : object;
 
@@ -1290,7 +1307,7 @@ export interface Binder<Handle> {
     loadNotebookFromHandle<TShape extends CreatableShape>(
         shape: TShape,
         handle: Handle,
-    ): Notebook<TShape, Handle>;
+    ): Result<Notebook<TShape, Handle>>;
 }
 
 /** Bind a store once, yielding the notebook entry points. */
@@ -1344,8 +1361,22 @@ export function createBinder<Handle>(store: DocumentStore<Handle>): Binder<Handl
         loadNotebookFromHandle<TShape extends CreatableShape>(
             shape: TShape,
             handle: Handle,
-        ): Notebook<TShape, Handle> {
-            return attachNotebook(store, handle, shape);
+        ): Result<Notebook<TShape, Handle>> {
+            const document = store.viewDocument(handle);
+            const theory = document.type === "model" ? document.theory : undefined;
+            if (theory !== shape.theory) {
+                return {
+                    issues: [
+                        {
+                            message:
+                                `Cannot load document with theory "${theory}" ` +
+                                `using a shape with theory "${shape.theory}".`,
+                            path: ["theory"],
+                        },
+                    ],
+                };
+            }
+            return { value: attachNotebook(store, handle, shape) };
         },
     };
     return binder as unknown as Binder<Handle>;

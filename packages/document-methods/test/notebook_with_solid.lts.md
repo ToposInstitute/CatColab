@@ -44,23 +44,24 @@ notebook. The store initializes its storage from the document.
 const existingSolidDoc = binder.createNotebook(SimpleOlog, { name: "Loaded Olog" }).document;
 
 const loadedResult = solidBinder.loadNotebook(SimpleOlog, existingSolidDoc);
-if (loadedResult.issues) {
-    throw new Error(loadedResult.issues.map((issue) => issue.message).join("; "));
-}
-const loadedSolidNotebook = loadedResult.value;
+console.log("issues:", loadedResult.issues ?? []);
+if (!loadedResult.issues) {
+    const loadedSolidNotebook = loadedResult.value;
 
-createRoot(async () => {
-    createEffect(() => {
-        console.log("loaded notebook name:", loadedSolidNotebook.name);
+    createRoot(async () => {
+        createEffect(() => {
+            console.log("loaded notebook name:", loadedSolidNotebook.name);
+        });
+
+        await Promise.resolve();
+        loadedSolidNotebook.update({ name: "Updated loaded Olog" });
+        await Promise.resolve();
     });
-
-    await Promise.resolve();
-    loadedSolidNotebook.update({ name: "Updated loaded Olog" });
-    await Promise.resolve();
-});
+}
 ```
 
 ```
+issues: []
 loaded notebook name: Loaded Olog
 loaded notebook name: Updated loaded Olog
 ```
@@ -207,24 +208,26 @@ automerge copy: Updated Automerge copy
 
 The notebook exposes its store handle, so e.g. the Automerge URL is available
 as `notebook.handle.url`. To work with an existing Automerge document, find its
-handle in the repo and attach to it.
+handle in the repo and load it using `loadNotebookFromHandle`.
 
 ```ts
 const sourceNotebook = automergeBinder.createNotebook(SimpleOlog, {
     name: "Loaded Automerge Olog",
 });
 
-const loadedAutomergeHandle = await repo.find<ModelDocument>(sourceNotebook.handle.url);
-const loadedAutomergeNotebook = automergeBinder.loadNotebookFromHandle(
-    SimpleOlog,
-    loadedAutomergeHandle,
-);
+const handle = await repo.find<ModelDocument>(sourceNotebook.handle.url);
+const result = automergeBinder.loadNotebookFromHandle(SimpleOlog, handle);
+console.log("issues:", result.issues ?? []);
+if (!result.issues) {
+    const loadedNotebook = result.value;
 
-loadedAutomergeNotebook.update({ name: "Updated loaded Automerge Olog" });
-console.log("loaded automerge notebook:", loadedAutomergeNotebook.name);
+    loadedNotebook.update({ name: "Updated loaded Automerge Olog" });
+    console.log("loaded automerge notebook:", loadedNotebook.name);
+}
 ```
 
 ```
+issues: []
 loaded automerge notebook: Updated loaded Automerge Olog
 ```
 
@@ -237,14 +240,19 @@ import { SimpleSchema } from "catcolab-logics/simple-schema";
 const migratable = automergeBinder.createNotebook(SimpleOlog, { name: "To migrate" });
 const urlBefore = migratable.handle.url;
 
-const migrated = await migratable.migrateTo(SimpleSchema);
+const migration = await migratable.migrateTo(SimpleSchema);
+console.log("issues:", migration.issues ?? []);
+if (!migration.issues) {
+    const migrated = migration.value;
 
-console.log("same handle:", migrated.handle === migratable.handle);
-console.log("same url:", migrated.handle.url === urlBefore);
-console.log("theory:", migrated.document.theory);
+    console.log("same handle:", migrated.handle === migratable.handle);
+    console.log("same url:", migrated.handle.url === urlBefore);
+    console.log("theory:", migrated.document.theory);
+}
 ```
 
 ```
+issues: []
 same handle: true
 same url: true
 theory: simple-schema
