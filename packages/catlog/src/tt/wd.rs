@@ -52,7 +52,7 @@ pub fn record_to_uwd(ty: &BaseTyV) -> Option<UWD<ObType, QualifiedName>> {
             let BaseTyV_::Sing(ty, tm) = &**spec_type else {
                 continue;
             };
-            let (BaseTyV_::Object(ob_type), TmV_::Neu(n, _)) = (&**ty, &**tm) else {
+            let (BaseTyV_::Object(ob_type), BaseTmV_::Neu(n, _)) = (&**ty, &**tm) else {
                 continue;
             };
             let qual_name = n.to_qualified_name();
