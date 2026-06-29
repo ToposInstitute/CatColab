@@ -11,6 +11,11 @@ use crate::zero::{LabelSegment, QualifiedName};
 /// A way of resolving [BwdIdx] found in [TmS_::Var] to values.
 pub type Env = Bwd<TmV>;
 
+/// The fiber environment: resolves [BwdIdx] found in
+/// [`super::stx::FiberTmS_::Var`] to fiber-term values. Separate from
+/// [Env], the base environment.
+pub type FiberEnv = Bwd<FiberTmV>;
+
 /// The content of a record type value.
 #[derive(Clone)]
 pub struct RecordV {
@@ -96,12 +101,6 @@ pub enum BaseTyV_ {
     Id(BaseTyV, TmV, TmV),
     /// A metavariable, also see [BaseTyS_::Meta].
     Meta(MetaVar),
-    /// The type of terms in a fiber over an object generator of some
-    /// instance's codomain model.
-    ///
-    /// See [BaseTyS_::Over] for the syntactic counterpart and explanation
-    /// of why instance identity is not part of this type.
-    Over(Vec<(FieldName, LabelSegment)>),
 }
 
 /// Value for total types, dereferences to [BaseTyV_].
@@ -183,11 +182,6 @@ impl BaseTyV {
     pub fn meta(mv: MetaVar) -> Self {
         Self(Rc::new(BaseTyV_::Meta(mv)))
     }
-
-    /// Smart constructor for [BaseTyV], [BaseTyV_::Over] case.
-    pub fn over(path: Vec<(FieldName, LabelSegment)>) -> Self {
-        Self(Rc::new(BaseTyV_::Over(path)))
-    }
 }
 
 /// Inner enum for [TmN].
@@ -228,18 +222,6 @@ impl TmN {
     }
 }
 
-/// Value-level payload of [`TmV_::Instance`]. Parallels
-/// [`super::stx::InstanceBodyS`].
-#[derive(Default)]
-pub struct InstanceBodyV {
-    /// Generators introduced by this instance, with their fibers.
-    pub generators: IndexMap<FieldName, (LabelSegment, Vec<(FieldName, LabelSegment)>)>,
-    /// Equation witnesses, asserted to hold in this instance.
-    pub equations: Vec<(TmV, TmV)>,
-    /// Sub-instance imports, keyed by import name.
-    pub sub_instances: IndexMap<FieldName, (LabelSegment, TmV)>,
-}
-
 /// Inner enum for [TmV].
 pub enum TmV_ {
     /// Neutrals.
@@ -248,14 +230,6 @@ pub enum TmV_ {
     Neu(TmN, BaseTyV),
     /// Application of an object operation in the theory.
     App(VarName, TmV),
-    /// Application of a codomain morphism to an [`Over`-typed](BaseTyV_::Over)
-    /// term. See [`TmS_::OverApp`] for the syntactic counterpart and
-    /// argument-by-argument documentation.
-    OverApp(FieldName, LabelSegment, Vec<(FieldName, LabelSegment)>, TmV),
-    /// An instance value of a model (sketch) type. See
-    /// [`super::stx::InstanceBodyS`] for the payload description; this
-    /// is its value-level counterpart.
-    Instance(InstanceBodyV),
     /// Lists of objects.
     List(Vec<TmV>),
     /// Records.
@@ -284,21 +258,6 @@ impl TmV {
     /// Smart constructor for [TmV], [TmV_::App] case.
     pub fn app(name: VarName, x: TmV) -> Self {
         TmV(Rc::new(TmV_::App(name, x)))
-    }
-
-    /// Smart constructor for [TmV], [TmV_::OverApp] case.
-    pub fn over_app(
-        mor: FieldName,
-        mor_label: LabelSegment,
-        tgt_path: Vec<(FieldName, LabelSegment)>,
-        inner: TmV,
-    ) -> Self {
-        TmV(Rc::new(TmV_::OverApp(mor, mor_label, tgt_path, inner)))
-    }
-
-    /// Smart constructor for [TmV], [TmV_::Instance] case.
-    pub fn instance(body: InstanceBodyV) -> Self {
-        TmV(Rc::new(TmV_::Instance(body)))
     }
 
     /// Smart constructor for [TmV], [TmV_::List] case.
@@ -344,5 +303,95 @@ impl TmV {
             TmV_::Neu(n, _) => n.clone(),
             _ => panic!("expected term to be a neutral"),
         }
+    }
+}
+
+/// Inner enum for [FiberTyV]; value counterpart of [`super::stx::FiberTyS_`].
+///
+/// A fiber record stores its evaluated field types directly (no captured
+/// environment, unlike [`RecordV`]): the only fields ever projected are
+/// the closed [`Over`](Self::Over) generators, and the dependent
+/// [`Id`](Self::Id) equation fields are read off by name downstream
+/// (conversion and model generation) rather than re-evaluated.
+pub enum FiberTyV_ {
+    /// The type of a fiber element over the codomain object at `path`.
+    /// See [`super::stx::FiberTyS_::Over`].
+    Over(Vec<(FieldName, LabelSegment)>),
+    /// An instance presented as a record of fiber types. See
+    /// [`super::stx::FiberTyS_::Record`].
+    Record(Row<FiberTyV>),
+    /// A propositional equation between fiber elements. See
+    /// [`super::stx::FiberTyS_::Id`].
+    Id(FiberTyV, FiberTmV, FiberTmV),
+}
+
+/// Values for fiber types, dereferences to [FiberTyV_].
+#[derive(Clone, Deref)]
+#[deref(forward)]
+pub struct FiberTyV(Rc<FiberTyV_>);
+
+impl FiberTyV {
+    /// Smart constructor for [FiberTyV], [FiberTyV_::Over] case.
+    pub fn over(path: Vec<(FieldName, LabelSegment)>) -> Self {
+        Self(Rc::new(FiberTyV_::Over(path)))
+    }
+
+    /// Smart constructor for [FiberTyV], [FiberTyV_::Record] case.
+    pub fn record(fields: Row<FiberTyV>) -> Self {
+        Self(Rc::new(FiberTyV_::Record(fields)))
+    }
+
+    /// Smart constructor for [FiberTyV], [FiberTyV_::Id] case.
+    pub fn id(ty: FiberTyV, tm1: FiberTmV, tm2: FiberTmV) -> Self {
+        Self(Rc::new(FiberTyV_::Id(ty, tm1, tm2)))
+    }
+}
+
+/// Inner enum for [FiberTmV]; value counterpart of [`super::stx::FiberTmS_`].
+///
+/// Every fiber term is neutral, so — unlike [`TmV_`] — there is no
+/// closure/neutral split and no stored type for eta. Variables carry a
+/// forward index into the fiber environment.
+pub enum FiberTmV_ {
+    /// A fiber-context variable (generator or sub-instance import).
+    Var(FwdIdx, VarName, LabelSegment),
+    /// Projection of a generator out of a sub-instance import (`we.e`).
+    Proj(FiberTmV, FieldName, LabelSegment),
+    /// Application of a codomain morphism to a fiber element. See
+    /// [`super::stx::FiberTmS_::OverApp`].
+    OverApp(FieldName, LabelSegment, Vec<(FieldName, LabelSegment)>, FiberTmV),
+    /// A metavariable.
+    Meta(MetaVar),
+}
+
+/// Values for fiber terms, dereferences to [FiberTmV_].
+#[derive(Clone, Deref)]
+#[deref(forward)]
+pub struct FiberTmV(Rc<FiberTmV_>);
+
+impl FiberTmV {
+    /// Smart constructor for [FiberTmV], [FiberTmV_::Var] case.
+    pub fn var(fwd_idx: FwdIdx, var_name: VarName, label: LabelSegment) -> Self {
+        Self(Rc::new(FiberTmV_::Var(fwd_idx, var_name, label)))
+    }
+
+    /// Smart constructor for [FiberTmV], [FiberTmV_::Proj] case.
+    pub fn proj(tm: FiberTmV, field_name: FieldName, label: LabelSegment) -> Self {
+        Self(Rc::new(FiberTmV_::Proj(tm, field_name, label)))
+    }
+
+    /// Smart constructor for [FiberTmV], [FiberTmV_::OverApp] case.
+    pub fn over_app(
+        mor: FieldName,
+        mor_label: LabelSegment,
+        tgt_path: Vec<(FieldName, LabelSegment)>,
+        inner: FiberTmV,
+    ) -> Self {
+        Self(Rc::new(FiberTmV_::OverApp(mor, mor_label, tgt_path, inner)))
+    }
+
+    /// Smart constructor for [FiberTmV], [FiberTmV_::Meta] case.
+    pub fn meta(mv: MetaVar) -> Self {
+        Self(Rc::new(FiberTmV_::Meta(mv)))
     }
 }

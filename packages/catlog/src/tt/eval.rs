@@ -51,14 +51,10 @@ impl<'a> Evaluator<'a> {
         match &**ty {
             BaseTyS_::TopVar(tv) => match self.toplevel.declarations.get(tv).unwrap() {
                 TopDecl::Type(t) => t.val.clone(),
-                // An instance used in type position evaluates to the
-                // representable record type synthesized from its body (see
-                // `lookup_ty`).
-                TopDecl::Instance(i) => match &*i.val {
-                    TmV_::Instance(body) => self.synth_instance_body_ty(body),
-                    _ => panic!("instance {tv} should have an instance body"),
-                },
-                _ => panic!("top-level {tv} should be a type or instance declaration"),
+                // Instances are fiber types, not base types, so a base
+                // top-var never refers to one (the elaborator rejects an
+                // instance name in base-type position before we get here).
+                _ => panic!("top-level {tv} should be a type declaration"),
             },
             BaseTyS_::Object(ot) => BaseTyV::object(ot.clone()),
             BaseTyS_::Morphism(pt, dom, cod) => {
@@ -75,7 +71,6 @@ impl<'a> Evaluator<'a> {
                 })
             }
             BaseTyS_::Meta(mv) => BaseTyV::meta(*mv),
-            BaseTyS_::Over(path) => BaseTyV::over(path.clone()),
         }
     }
 
@@ -98,22 +93,6 @@ impl<'a> Evaluator<'a> {
             TmS_::Compose(f, g) => TmV::compose(self.eval_tm(f), self.eval_tm(g)),
             TmS_::ObApp(name, x) => TmV::app(*name, self.eval_tm(x)),
             TmS_::List(elems) => TmV::list(elems.iter().map(|tm| self.eval_tm(tm)).collect()),
-            TmS_::OverApp(mor, mor_label, tgt_path, inner) => {
-                TmV::over_app(*mor, *mor_label, tgt_path.clone(), self.eval_tm(inner))
-            }
-            TmS_::Instance(body) => TmV::instance(InstanceBodyV {
-                generators: body.generators.clone(),
-                equations: body
-                    .equations
-                    .iter()
-                    .map(|(lhs, rhs)| (self.eval_tm(lhs), self.eval_tm(rhs)))
-                    .collect(),
-                sub_instances: body
-                    .sub_instances
-                    .iter()
-                    .map(|(name, (label, inner))| (*name, (*label, self.eval_tm(inner))))
-                    .collect(),
-            }),
             TmS_::Meta(mv) => TmV::meta(*mv),
         }
     }
@@ -165,57 +144,6 @@ impl<'a> Evaluator<'a> {
         self.bind_neu("self".into(), "self".into(), ty)
     }
 
-    /// Synthesize the type of an instance body when its name is used in
-    /// *type* position — i.e. the representable `Hom_Inst(D, self)`, the
-    /// type of instance morphisms out of the instance `D`.
-    ///
-    /// Such a morphism is determined by where `D`'s generators
-    /// land, so each generator becomes an `Over`-typed field and each
-    /// sub-instance recurses. A fiber equation (`mor(gen) := target`)
-    /// becomes an `Id`-typed field witnessing that the constraint
-    /// holds for the morphism's images.
-    ///
-    /// Note that these `Id` fields make the type *honest* but are not
-    /// *enforced*. An import that contradicts `D`'s fiber equations is
-    /// not rejected here at this time.
-    /// Because these `Id` fields are inert, the *concrete* way of mapping out
-    /// of `D` — building a record literal (`Cons`) of this type by hand — only
-    /// currently works when `D` is equation-free.
-    pub fn synth_instance_body_ty(&self, body: &InstanceBodyV) -> BaseTyV {
-        let mut fields: Row<BaseTyS> = Row::empty();
-        for (name, (label, path)) in &body.generators {
-            fields.insert(*name, *label, BaseTyS::over(path.clone()));
-        }
-        for (name, (label, sub_v)) in &body.sub_instances {
-            let TmV_::Instance(sub_body) = &**sub_v else {
-                continue;
-            };
-            let sub_ty_v = self.synth_instance_body_ty(sub_body);
-            let sub_ty_s = self.quote_ty(&sub_ty_v);
-            fields.insert(*name, *label, sub_ty_s);
-        }
-        // The equation terms reference this body's generators as local
-        // binders; re-root them at `self` (the record being built) so they
-        // read as field projections, exactly as sibling references do in an
-        // ordinary record type. The self var's type is irrelevant,
-        // so a placeholder suffices. Quoting in `ev`
-        // (one binder deeper) sends `self` to de Bruijn index 0, matching
-        // how `field_ty` snocs the record value when projecting.
-        let (self_n, ev) = self.bind_self(BaseTyV::empty_record());
-        for (i, (lhs_v, rhs_v)) in body.equations.iter().enumerate() {
-            let Some(over_ty) = fiber_equation_ty(lhs_v) else {
-                unreachable!("instance equation LHS is not a fiber element");
-            };
-            let lhs_s = ev.quote_tm(&reroot_at_self(lhs_v, &self_n, body));
-            let rhs_s = ev.quote_tm(&reroot_at_self(rhs_v, &self_n, body));
-            let eq_ty = BaseTyS::id(ev.quote_ty(&over_ty), lhs_s, rhs_s);
-            let key = format!("_eq{i}");
-            fields.insert(name_seg(key.as_str()), label_seg(key.as_str()), eq_ty);
-        }
-        let r_v = RecordV::new(self.env.clone(), fields, Dtry::empty());
-        BaseTyV::record(r_v)
-    }
-
     /// Produce type syntax from a type value.
     ///
     /// This is a *section* of eval, in that `self.eval_ty(self.quote_ty(ty_v)) == ty_v`
@@ -264,7 +192,6 @@ impl<'a> Evaluator<'a> {
                 BaseTyS::id(self.quote_ty(ty), self.quote_tm(tm1), self.quote_tm(tm2))
             }
             BaseTyV_::Meta(mv) => BaseTyS::meta(*mv),
-            BaseTyV_::Over(path) => BaseTyS::over(path.clone()),
         }
     }
 
@@ -285,22 +212,6 @@ impl<'a> Evaluator<'a> {
         match &**tm {
             TmV_::Neu(n, _) => self.quote_neu(n),
             TmV_::App(name, x) => TmS::ob_app(*name, self.quote_tm(x)),
-            TmV_::OverApp(mor, mor_label, tgt_path, inner) => {
-                TmS::over_app(*mor, *mor_label, tgt_path.clone(), self.quote_tm(inner))
-            }
-            TmV_::Instance(body) => TmS::instance(InstanceBodyS {
-                generators: body.generators.clone(),
-                equations: body
-                    .equations
-                    .iter()
-                    .map(|(lhs, rhs)| (self.quote_tm(lhs), self.quote_tm(rhs)))
-                    .collect(),
-                sub_instances: body
-                    .sub_instances
-                    .iter()
-                    .map(|(name, (label, inner))| (*name, (*label, self.quote_tm(inner))))
-                    .collect(),
-            }),
             TmV_::List(elems) => TmS::list(elems.iter().map(|tm| self.quote_tm(tm)).collect()),
             TmV_::Cons(fields) => TmS::cons(fields.map(|tm| self.quote_tm(tm))),
             TmV_::Id(x) => TmS::id(self.quote_tm(x)),
@@ -342,7 +253,6 @@ impl<'a> Evaluator<'a> {
             BaseTyV_::Sing(_, x) => self.equal_tm(tm, x),
             BaseTyV_::Id(_, _, _) => Ok(()),
             BaseTyV_::Meta(_) => Ok(()),
-            BaseTyV_::Over(_) => Ok(()),
         }
     }
 
@@ -386,13 +296,6 @@ impl<'a> Evaluator<'a> {
             }
             (BaseTyV_::Sing(ty1, _), _) => self.convertible_ty(ty1, ty2),
             (_, BaseTyV_::Sing(ty2, _)) => self.convertible_ty(ty1, ty2),
-            (BaseTyV_::Over(p1), BaseTyV_::Over(p2)) => {
-                if p1 == p2 {
-                    Ok(())
-                } else {
-                    Err(t("over-types refer to different paths in the codomain"))
-                }
-            }
             _ => Err(t("tried to convert between types of different type constructors")),
         }
     }
@@ -414,7 +317,6 @@ impl<'a> Evaluator<'a> {
             BaseTyV_::Sing(_, x) => x.clone(),
             BaseTyV_::Id(_, _, _) => TmV::empty_cons(), // Extensional equality at a 100% discount!
             BaseTyV_::Meta(_) => TmV::neu(n.clone(), ty.clone()),
-            BaseTyV_::Over(_) => TmV::neu(n.clone(), ty.clone()),
         }
     }
 
@@ -423,10 +325,6 @@ impl<'a> Evaluator<'a> {
         match &**v {
             TmV_::Neu(tm_n, ty_v) => self.eta_neu(tm_n, ty_v),
             TmV_::App(name, x) => TmV::app(*name, self.eta(x, None)),
-            TmV_::OverApp(mor, mor_label, tgt_path, inner) => {
-                TmV::over_app(*mor, *mor_label, tgt_path.clone(), self.eta(inner, None))
-            }
-            TmV_::Instance(_) => v.clone(),
             TmV_::List(elems) => TmV::list(elems.iter().map(|elem| self.eta(elem, None)).collect()),
             TmV_::Cons(row) => {
                 if let Some(ty) = ty {
@@ -511,39 +409,6 @@ impl<'a> Evaluator<'a> {
             (TmV_::Tab(mor1), TmV_::Tab(mor2)) => {
                 self.equal_tm_helper(mor1, mor2, strict1, strict2)
             }
-            (TmV_::OverApp(mor1, _, _, inner1), TmV_::OverApp(mor2, _, _, inner2)) => {
-                if mor1 != mor2 {
-                    return Err(t(format!("OverApp morphisms {mor1} and {mor2} are not equal")));
-                }
-                self.equal_tm_helper(inner1, inner2, strict1, strict2)
-            }
-            (TmV_::Instance(b1), TmV_::Instance(b2)) => {
-                if b1.generators.len() != b2.generators.len()
-                    || b1.equations.len() != b2.equations.len()
-                    || b1.sub_instances.len() != b2.sub_instances.len()
-                {
-                    return Err(t("instance bodies have differing shapes"));
-                }
-                for ((n1, (_, p1)), (n2, (_, p2))) in b1.generators.iter().zip(b2.generators.iter())
-                {
-                    if n1 != n2 || p1 != p2 {
-                        return Err(t(format!("instance generator {n1} differs from {n2}")));
-                    }
-                }
-                for ((lhs1, rhs1), (lhs2, rhs2)) in b1.equations.iter().zip(b2.equations.iter()) {
-                    self.equal_tm_helper(lhs1, lhs2, strict1, strict2)?;
-                    self.equal_tm_helper(rhs1, rhs2, strict1, strict2)?;
-                }
-                for ((n1, (_, t1)), (n2, (_, t2))) in
-                    b1.sub_instances.iter().zip(b2.sub_instances.iter())
-                {
-                    if n1 != n2 {
-                        return Err(t(format!("instance sub-instance {n1} differs from {n2}")));
-                    }
-                    self.equal_tm_helper(t1, t2, strict1, strict2)?;
-                }
-                Ok(())
-            }
             _ => Err(t(format!(
                 "failed to match terms {} and {}",
                 self.quote_tm(tm1),
@@ -616,59 +481,88 @@ impl<'a> Evaluator<'a> {
         };
         Ok(BaseTyV::record(r.add_specialization(path, field_ty)))
     }
-}
 
-/// The `Over` type of a *fiber* equation's side, if it is one.
-///
-/// Fiber equations (`mor(gen) := target`) relate `Over`-typed terms; their
-/// common type is recoverable from the left-hand side.
-fn fiber_equation_ty(tm: &TmV) -> Option<BaseTyV> {
-    match &**tm {
-        TmV_::OverApp(_, _, tgt_path, _) => Some(BaseTyV::over(tgt_path.clone())),
-        TmV_::Neu(_, ty) => matches!(&**ty, BaseTyV_::Over(_)).then(|| ty.clone()),
-        _ => None,
+    // --- Fiber-world NbE and conversion ---------------------------------
+    //
+    // Fiber types/terms carry no closures or computation rules (every
+    // fiber term is neutral), so there is no fiber eval/quote: the
+    // elaborator builds [`FiberTyS`]/[`FiberTyV`] (and the term sorts) in
+    // parallel. What remains is conversion checking and field projection.
+
+    /// The fiber type of field `field` of a fiber record type, if present.
+    ///
+    /// Only [`Over`](FiberTyV_::Over) generator fields are ever projected
+    /// (as `we.e`); their types are closed, so this is a plain lookup with
+    /// no environment.
+    pub fn fiber_field_ty(&self, ty: &FiberTyV, field: FieldName) -> Option<FiberTyV> {
+        match &**ty {
+            FiberTyV_::Record(r) => r.get(field).cloned(),
+            _ => None,
+        }
     }
-}
 
-/// Re-root an instance-body term so its generator/sub-instance references
-/// become projections of `self_n`.
-///
-/// In an instance body a generator (e.g. `v1`) or sub-instance (e.g. `we`)
-/// is a local binder, so it appears as the leading [`TmN_::Var`] of a
-/// neutral. To reuse such a term as a field type of the representable
-/// record `Hom_Inst(D, self)`, that leading variable must instead read as
-/// `self.v1` / `self.we` — a projection of the record. Names not bound by
-/// this body are left untouched.
-fn reroot_at_self(tm: &TmV, self_n: &TmN, body: &InstanceBodyV) -> TmV {
-    match &**tm {
-        TmV_::Neu(n, ty) => TmV::neu(reroot_neu_at_self(n, self_n, body), ty.clone()),
-        TmV_::OverApp(mor, mor_label, tgt_path, inner) => {
-            TmV::over_app(*mor, *mor_label, tgt_path.clone(), reroot_at_self(inner, self_n, body))
-        }
-        TmV_::App(name, x) => TmV::app(*name, reroot_at_self(x, self_n, body)),
-        TmV_::Compose(f, g) => {
-            TmV::compose(reroot_at_self(f, self_n, body), reroot_at_self(g, self_n, body))
-        }
-        TmV_::Id(x) => TmV::id(reroot_at_self(x, self_n, body)),
-        TmV_::Tab(x) => TmV::tab(reroot_at_self(x, self_n, body)),
-        TmV_::List(elems) => {
-            TmV::list(elems.iter().map(|e| reroot_at_self(e, self_n, body)).collect())
-        }
-        _ => tm.clone(),
-    }
-}
-
-fn reroot_neu_at_self(n: &TmN, self_n: &TmN, body: &InstanceBodyV) -> TmN {
-    match &**n {
-        TmN_::Var(_, name, label) => {
-            if body.generators.contains_key(name) || body.sub_instances.contains_key(name) {
-                TmN::proj(self_n.clone(), *name, *label)
-            } else {
-                n.clone()
+    /// Check that two fiber types are convertible.
+    pub fn convertible_fiber_ty<'b>(&self, ty1: &FiberTyV, ty2: &FiberTyV) -> Result<(), D<'b>> {
+        match (&**ty1, &**ty2) {
+            (FiberTyV_::Over(p1), FiberTyV_::Over(p2)) => {
+                if p1 == p2 {
+                    Ok(())
+                } else {
+                    Err(t("over-types refer to different paths in the codomain"))
+                }
             }
+            (FiberTyV_::Record(r1), FiberTyV_::Record(r2)) => {
+                if r1.iter().count() != r2.iter().count() {
+                    return Err(t("instance records have differing shapes"));
+                }
+                for ((n1, (_, f1)), (n2, (_, f2))) in r1.iter().zip(r2.iter()) {
+                    if n1 != n2 {
+                        return Err(t(format!("instance field {n1} differs from {n2}")));
+                    }
+                    self.convertible_fiber_ty(f1, f2)?;
+                }
+                Ok(())
+            }
+            (FiberTyV_::Id(ty1, l1, r1), FiberTyV_::Id(ty2, l2, r2)) => {
+                self.convertible_fiber_ty(ty1, ty2)?;
+                self.equal_fiber_tm(l1, l2)?;
+                self.equal_fiber_tm(r1, r2)
+            }
+            _ => Err(t("tried to convert between fiber types of different constructors")),
         }
-        TmN_::Proj(inner, field, label) => {
-            TmN::proj(reroot_neu_at_self(inner, self_n, body), *field, *label)
+    }
+
+    /// Check that two fiber terms are equal. Fiber terms are all neutral,
+    /// so this is structural.
+    pub fn equal_fiber_tm<'b>(&self, tm1: &FiberTmV, tm2: &FiberTmV) -> Result<(), D<'b>> {
+        match (&**tm1, &**tm2) {
+            (FiberTmV_::Var(i1, _, _), FiberTmV_::Var(i2, _, _)) => {
+                if i1 == i2 {
+                    Ok(())
+                } else {
+                    Err(t("fiber variables are not equal"))
+                }
+            }
+            (FiberTmV_::Proj(t1, f1, _), FiberTmV_::Proj(t2, f2, _)) => {
+                if f1 != f2 {
+                    return Err(t(format!("fiber projections {f1} and {f2} are not equal")));
+                }
+                self.equal_fiber_tm(t1, t2)
+            }
+            (FiberTmV_::OverApp(m1, _, _, i1), FiberTmV_::OverApp(m2, _, _, i2)) => {
+                if m1 != m2 {
+                    return Err(t(format!("OverApp morphisms {m1} and {m2} are not equal")));
+                }
+                self.equal_fiber_tm(i1, i2)
+            }
+            (FiberTmV_::Meta(a), FiberTmV_::Meta(b)) => {
+                if a == b {
+                    Ok(())
+                } else {
+                    Err(t(format!("Holes {a} and {b} are not equal.")))
+                }
+            }
+            _ => Err(t("fiber terms are not equal")),
         }
     }
 }
